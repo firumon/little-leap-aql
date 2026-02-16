@@ -1,0 +1,3 @@
+Primary: #E44072
+Secondary: #61ACC3
+Background: #F1F1F3

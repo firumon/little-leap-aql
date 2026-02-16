@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * Little Leap — Custom Menu & Management UI
+ * Little Leap AQL — Custom Menu & Management UI
  * ============================================================
  * 
  * This script adds a "Little Leap" menu to the Google Sheet.
@@ -30,7 +30,7 @@ const UI_COLOR = '#4a86c8'; // Little Leap Brand Color
 
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
-  ui.createMenu('Little Leap')
+  ui.createMenu('Little Leap AQL')
     .addSubMenu(ui.createMenu('User Management')
       .addItem('Create New User', 'showCreateUserDialog')
       .addItem('Update User Details', 'showUpdateUserDialog')

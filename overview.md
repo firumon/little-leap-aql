@@ -1,6 +1,6 @@
-# Little Leap - Baby Products Distribution Management System
+# Little Leap AQL
 
-**Project Overview:** A complete digital transformation system for Little Leap, a UAE-based startup distributing 21 newborn baby products (e.g., feeding bottles, temperature-sensitive dishes) imported from China to ~50 pharmacy outlets. The system tracks the full workflow from import to sale, including warehouse management, outlet distribution, sales tracking, invoicing, payments, and reporting, replacing manual processes managed part-time by a friend's brother-in-law. 
+**Project Overview:** A complete digital transformation system for Little Leap—the "brain" (AQL) of the company. It manages UAE-based baby product distribution, tracking the full workflow from import to sale, including warehouse management, outlet distribution, sales tracking, invoicing, payments, and reporting.
 
 **Business Model:** Products are displayed on stands in pharmacies where customers purchase directly; Little Leap collects sales data and payments monthly. The startup is partner-run (friends & family) with no dedicated staff yet; a second sales staff will join after the full-stack developer (10-15 years in PHP, Vue.js, Laravel, MySQL). 
 

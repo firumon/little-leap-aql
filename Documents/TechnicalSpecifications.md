@@ -1,4 +1,4 @@
-# Technical Specifications
+﻿# Technical Specifications
 
 This document details the technical implementation of the Little Leap AQL system, including authentication, API structure, and frontend-backend integration.
 
@@ -6,35 +6,35 @@ This document details the technical implementation of the Little Leap AQL system
 
 The system follows a **Serverless** architecture using Google's ecosystem:
 
-*   **Frontend:** Quasar Framework (Vue.js 3 + Vite) PWA.
-*   **Backend:** Google Apps Script (GAS) published as a Web App.
-*   **Database:** Google Sheets (Relational data modeled in sheets).
+* **Frontend:** Quasar Framework (Vue.js 3 + Vite) PWA.
+* **Backend:** Google Apps Script (GAS) published as a Web App.
+* **Database:** Google Sheets (Relational data modeled in sheets).
 
 ## 2. Authentication & Security
 
-### user Identity
-*   **Credential Storage:** User data is stored in the `Users` sheet.
-*   **Password Handling:** Passwords are **never** stored in plain text. They are hashed using **SHA-256** before storage.
-*   **Login Flow:**
-    1.  Frontend sends email & password to GAS `doPost`.
-    2.  GAS hashes the input password and compares it with the stored hash.
-    3.  If valid, GAS generates a `token` (UUID), stores it in the `ApiKey` column, and returns it to the client.
+### User Identity
+* **Credential Storage:** User data is stored in the `Users` sheet.
+* **Password Handling:** Passwords are never stored in plain text. They are hashed with SHA-256.
+* **Login Flow:**
+  1. Frontend sends email and password to GAS `doPost`.
+  2. GAS verifies password hash.
+  3. GAS generates/stores a UUID token in `ApiKey` and returns user profile.
 
 ### Stateless API Authentication
-*   **Token-Based:** Subsequent API requests must include this `token`.
-*   **Validation:** The `validateToken(token)` function in `auth.gs` checks if the received token matches a valid user's `ApiKey`.
-*   **Session:** The frontend stores the token in `localStorage`. There is no server-side session; validation is purely simple token matching against the sheet.
+* **Token-Based:** All protected actions include `token`.
+* **Validation:** `validateToken(token)` resolves the exact user row and returns context (`rowNumber`, sheet, indexes, user data).
+* **Benefit:** Update actions avoid scanning all rows repeatedly.
 
 ## 3. API Design (Google Apps Script)
 
-All traffic is handled via a single entry point: `doPost(e)`.
+All requests are handled via `doPost(e)`.
 
 ### Request Format
 ```json
 {
   "action": "functionName",
   "token": "user-auth-token",
-  "data": { ...payload }
+  "otherFields": "action-specific payload"
 }
 ```
 
@@ -43,28 +43,56 @@ All traffic is handled via a single entry point: `doPost(e)`.
 {
   "success": true,
   "message": "Optional message",
-  "data": { ...resultObject }
+  "...": "action-specific payload"
 }
 ```
 
-### Key Functions
-*   `handleLogin(email, password)`: Authenticates user.
-*   `crud(action, sheetName, data)`: Generic handler for Create, Read, Update, Delete operations.
+### Global Request/Response Helpers
+* `parseRequestPayload(e)`: central request JSON parsing.
+* `jsonResponse(payload)`: central JSON response generator.
+
+### Implemented Auth Actions (as of 2026-02-18)
+* `login`
+* `getProfile`
+* `updateAvatar`
+* `updateName`
+* `updateEmail`
+* `updatePassword`
 
 ## 4. Frontend Implementation
 
 ### Stack
-*   **Quasar CLI with Vite**
-*   **Pinia**: For state management (Auth, Dashboard data).
-*   **Axios**: For HTTP requests to the GAS Web App URL.
+* **Quasar CLI with Vite**
+* **Pinia** for state management
+* **Axios** for HTTP calls to GAS
 
-### PWA & Offline Capabilities
-*   **Service Worker:** Uses Workbox for caching assets and API responses.
-*   **Local Persistence:** Critical data (e.g., Product Master) is cached in IndexedDB/localStorage to allow order taking even without internet connectivity. Sync occurs when connection is restored.
+### Auth Store Pattern
+`src/stores/auth.js` now uses a shared API helper:
+* `callAuthApi(action, payload, requireAuth)`
 
-## 5. Data Persistence (Google Sheets)
+This reduces repeated Axios setup (`URL`, headers, token-injection pattern) across actions.
+
+### Profile Management
+`src/pages/ProfilePage/ProfilePage.vue` provides dialogs to update:
+* Avatar
+* Name
+* Email
+* Password
+
+`src/stores/auth.js` actions:
+* `updateAvatar(avatarUrl)`
+* `updateName(name)`
+* `updateEmail(email)`
+* `updatePassword(currentPassword, newPassword)`
+
+## 5. PWA & Offline Capabilities
+
+* **Service Worker:** Workbox-based caching.
+* **Local Persistence:** IndexedDB/localStorage support for cached data and queued operations.
+
+## 6. Data Persistence (Google Sheets)
 
 ### Optimization
-*   **Skipping Headers:** Scripts are configured to skip the first $N$ rows (headers) for faster reads.
-*   **Batch Operations:** `getValues()` and `setValues()` are used to minimize calls to the SpreadsheetApp API, which is slow.
-*   **Concurrency:** Google Sheets has limits on concurrent writes. The system uses lock services where critical to prevent race conditions.
+* Header/index mapping is reused per request context.
+* Token validation returns direct row context for writes.
+* `getRange(row, col)` updates are used for profile field updates.

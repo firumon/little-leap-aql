@@ -2,6 +2,16 @@
 
 This document outlines the core business logic, entities, and end-to-end workflows for the Little Leap AQL system.
 
+## Operational Priority (Source-of-Truth)
+The primary business heartbeat is:
+1. Distribute stock to outlets.
+2. Track outlet sales periodically.
+3. Collect outlet payments on strict intervals.
+4. Approve and execute outlet refills.
+5. Raise supplier purchase orders before stock-out risk.
+
+Inbound shipment and receiving operations are critical supporting processes for this cycle, not the core heartbeat by themselves.
+
 ## Core Entities
 
 The system revolves around the following key entities, managed as "Resources" in the Google Sheet configuration.
@@ -18,28 +28,34 @@ The system revolves around the following key entities, managed as "Resources" in
 
 ## End-to-End Workflow
 
-The business process follows a linear flow from product import to final sale and collection.
+The business process is outlet-distribution-led, with inbound logistics supporting commercial continuity.
 
-### 1. Procurement & Logistics
+### 1. Outlet Distribution & Sales Cycle (Primary)
+* **Distribution to Outlets:**
+  * Approved stock is dispatched from warehouse to outlets.
+  * Delivery and receiving records are captured per outlet and SKU.
+* **Periodic Sales Tracking:**
+  * Sales are captured per outlet at defined intervals.
+  * Variance between supplied, sold, returned, and on-hand stock is monitored.
+* **Strict Payment Collection:**
+  * Payments are collected on scheduled intervals against outstanding invoices/balances.
+  * Delays and partial payments are tracked explicitly for follow-up.
+* **Refill with Approval:**
+  * Outlet refill requests are reviewed and approved by authorized roles before dispatch.
+* **Reorder Planning / Purchase Orders:**
+  * Reorder thresholds trigger purchase planning.
+  * Purchase orders are raised to suppliers before projected stock depletion.
+
+### 2. Procurement & Logistics (Supporting)
 * **Import Process:**
   * **Shipment Booking:** A new shipment is created when goods are ordered from a supplier.
   * **Port Clearance:** Upon arrival, goods go through clearance. Costs associated with clearance are tracked.
   * **Warehouse Intake:** Goods are received into a specific Warehouse. This increases the global stock level for the respective Products.
 
-### 2. Inventory Management
+### 3. Inventory Management
 * **Stock Tracking:** Inventory is tracked per Warehouse.
 * **Transfers:** Stock can be moved between Warehouses or from a Warehouse to a Salesman's vehicle (treated as a mobile location).
 * **Adjustments:** Manual corrections for damaged or lost goods.
-
-### 3. Sales & Distribution
-* **Route Planning:** Salesmen visit Outlets based on assigned territories.
-* **Direct Sales / Van Sales:**
-  * Salesman creates an **Invoice** on the spot via the PWA.
-  * Stock is deducted immediately from the Salesman's "vehicle" inventory.
-  * Invoice is generated (PDF) and shared with the Outlet.
-* **Order Taking:**
-  * Salesman takes an **Order** for later delivery.
-  * Refill orders are processed by the Warehouse for next-day delivery.
 
 ### 4. Financials
 * **Invoicing:** Generates a debt record for the Outlet.

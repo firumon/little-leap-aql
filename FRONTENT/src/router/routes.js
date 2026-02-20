@@ -1,4 +1,4 @@
-import { isStandalone } from 'src/utils/pwa-utils'
+﻿import { isStandalone } from 'src/utils/pwa-utils'
 
 const routes = [
   {
@@ -10,11 +10,11 @@ const routes = [
         name: 'home',
         beforeEnter: (to, from, next) => {
           if (process.env.DEV) {
-            next({ name: 'login' });
+            next({ name: 'login' })
           } else if (isStandalone()) {
-            next({ name: 'login' });
+            next({ name: 'login' })
           } else {
-            next({ name: 'landing' });
+            next({ name: 'landing' })
           }
         }
       },
@@ -37,12 +37,15 @@ const routes = [
     meta: { requiresAuth: true },
     children: [
       { path: '', component: () => import('pages/Dashboard/DashboardIndex.vue') },
-      { path: '/profile', component: () => import('pages/ProfilePage/ProfilePage.vue') }
+      { path: '/profile', component: () => import('pages/ProfilePage/ProfilePage.vue') },
+      {
+        path: '/masters/:resourceSlug',
+        component: () => import('pages/Masters/MasterEntityPage.vue'),
+        meta: { scope: 'master' }
+      }
     ]
   },
 
-  // Always leave this as last one,
-  // but you can also remove it
   {
     path: '/:catchAll(.*)*',
     component: () => import('pages/ErrorNotFound/ErrorNotFound.vue'),

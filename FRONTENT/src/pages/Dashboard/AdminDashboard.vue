@@ -1,4 +1,4 @@
-<template>
+﻿<template>
     <q-page padding class="bg-grey-2">
         <!-- Header -->
         <div class="row items-center q-mb-md">
@@ -54,7 +54,7 @@ const activities = computed(() => dashboardStore.recentActivities)
 
 const quickActions = [
     { label: 'New Order', icon: 'add_shopping_cart', color: 'primary', to: '/sales/orders/create' },
-    { label: 'Add Product', icon: 'add_box', color: 'secondary', to: '/masters/products/create' },
+    { label: 'Add Product', icon: 'add_box', color: 'secondary', to: '/masters/products' },
     { label: 'New Shipment', icon: 'local_shipping', color: 'accent', to: '/logistics/shipments/create' },
     { label: 'Create Invoice', icon: 'receipt', color: 'info', to: '/sales/invoices/create' }
 ]
@@ -63,3 +63,4 @@ onMounted(() => {
     dashboardStore.fetchDashboardData()
 })
 </script>
+

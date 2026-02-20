@@ -16,7 +16,7 @@ import { openDB } from 'idb'
 import { BackgroundSyncPlugin } from 'workbox-background-sync'
 
 const DB_NAME = 'little-leap-aql-db'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 const dbPromise = openDB(DB_NAME, DB_VERSION, {
   upgrade(db) {

@@ -8,8 +8,8 @@
   "private": true,
   "scripts": {
     "test": "echo \"No test specified\" && exit 0",
-    "dev": "quasar dev",
-    "build": "quasar build",
+    "dev": "quasar dev -m pwa",
+    "build": "quasar build -m pwa",
     "postinstall": "quasar prepare"
   },
   "dependencies": {

@@ -1,17 +1,8 @@
-﻿import { defineStore } from 'pinia'
+import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import axios from 'axios'
 import { useRouter } from 'vue-router'
-
-/**
- * Replace this with your actual Google Apps Script Web App URL
- * after deploying auth.gs as a Web App.
- */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwax5j9YZ7m-nwpC-t1MH4BDltfwfjTEz6kxO7xoyMhIRwC2Wnmf22pNk8iBw_AB2tACg/exec'
-
-const API_HEADERS = {
-  'Content-Type': 'text/plain'
-}
+import { callGasApi } from 'src/services/gasApi'
+import { setAuthorizedResources } from 'src/utils/db'
 
 export const useAuthStore = defineStore('auth', () => {
   const router = useRouter()
@@ -19,15 +10,27 @@ export const useAuthStore = defineStore('auth', () => {
   // State
   const user = ref(JSON.parse(localStorage.getItem('user')) || null)
   const token = ref(localStorage.getItem('token') || null)
+  const resources = ref(JSON.parse(localStorage.getItem('resources')) || [])
   const loading = ref(false)
 
   // Getters
   const isAuthenticated = computed(() => !!token.value)
   const userProfile = computed(() => user.value)
-  const userRole = computed(() => user.value?.role || 'User')
+  const userRole = computed(() => {
+    if (Array.isArray(user.value?.roles) && user.value.roles.length) {
+      return user.value.roles.map((entry) => entry?.name || '').filter(Boolean).join(', ')
+    }
+    return user.value?.role || 'User'
+  })
+  const userDesignation = computed(() => user.value?.designation?.name || '')
+  const authorizedResources = computed(() => resources.value)
 
   function persistUser() {
     localStorage.setItem('user', JSON.stringify(user.value))
+  }
+
+  function persistResources() {
+    localStorage.setItem('resources', JSON.stringify(resources.value))
   }
 
   // Actions
@@ -41,22 +44,10 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function callAuthApi(action, payload = {}, requireAuth = true) {
-    if (requireAuth && !token.value) {
-      return { success: false, message: 'Not authenticated' }
-    }
-
-    const requestBody = {
-      action,
-      ...(requireAuth ? { token: token.value } : {}),
-      ...payload
-    }
-
-    try {
-      const response = await axios.post(GAS_URL, requestBody, { headers: API_HEADERS })
-      return response.data
-    } catch (error) {
-      return { success: false, message: 'Unable to connect to service' }
-    }
+    return callGasApi(action, payload, {
+      requireAuth,
+      token: token.value
+    })
   }
 
   async function login(email, password) {
@@ -67,10 +58,14 @@ export const useAuthStore = defineStore('auth', () => {
       if (data.success) {
         token.value = data.token
         user.value = data.user
+        resources.value = Array.isArray(data.resources) ? data.resources : []
 
         // Persist to local storage
         localStorage.setItem('token', data.token)
         persistUser()
+        persistResources()
+        // IndexedDB persistence should not block login navigation.
+        setAuthorizedResources(resources.value).catch(() => {})
 
         // Notify Service Worker for token injection
         notifyServiceWorker(data.token)
@@ -79,6 +74,8 @@ export const useAuthStore = defineStore('auth', () => {
       }
 
       return { success: false, message: data.message || 'Login failed' }
+    } catch (error) {
+      return { success: false, message: error?.message || 'Login failed' }
     } finally {
       loading.value = false
     }
@@ -138,8 +135,10 @@ export const useAuthStore = defineStore('auth', () => {
   function logout() {
     user.value = null
     token.value = null
+    resources.value = []
     localStorage.removeItem('token')
     localStorage.removeItem('user')
+    localStorage.removeItem('resources')
 
     notifyServiceWorker(null)
 
@@ -155,12 +154,15 @@ export const useAuthStore = defineStore('auth', () => {
     // State
     user,
     token,
+    resources,
     loading,
 
     // Getters
     isAuthenticated,
     userProfile,
     userRole,
+    userDesignation,
+    authorizedResources,
 
     // Actions
     login,
@@ -173,4 +175,3 @@ export const useAuthStore = defineStore('auth', () => {
     callAuthApi
   }
 })
-

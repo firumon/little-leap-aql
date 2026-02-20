@@ -1,24 +1,18 @@
 /**
  * ============================================================
- * Little Leap AQL — APP Database Sheet Setup Script
+ * Little Leap AQL - APP Database Sheet Setup Script
  * ============================================================
  */
 
 // Shared constants are located in Constants.gs
 
-
-/**
- * Main entry point — run this function.
- */
 function setupAppSheets() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
 
-  // ── Sheet Definitions ──────────────────────────────────────
   const sheetConfigs = [
     {
       name: CONFIG.SHEETS.USERS,
-      headers: ['UserID', 'Name', 'Email', 'PasswordHash', 'RoleID', 'Status', 'Avatar', 'ApiKey'],
-      // Auto-ID formula for column 1: generates U0001, U0002, ...
+      headers: ['UserID', 'Name', 'Email', 'PasswordHash', 'DesignationID', 'Roles', 'Status', 'Avatar', 'ApiKey'],
       autoIdFormula: '="U"&TEXT(ROW()-1,"0000")',
       validations: [
         {
@@ -30,89 +24,166 @@ function setupAppSheets() {
         }
       ],
       columnWidths: {
-        'UserID': 100,
-        'Name': 180,
-        'Email': 220,
-        'PasswordHash': 260,
-        'RoleID': 100,
-        'Status': 100,
-        'Avatar': 200,
-        'ApiKey': 220
+        UserID: 100,
+        Name: 180,
+        Email: 220,
+        PasswordHash: 260,
+        DesignationID: 120,
+        Roles: 180,
+        Status: 100,
+        Avatar: 200,
+        ApiKey: 220
+      }
+    },
+    {
+      name: CONFIG.SHEETS.DESIGNATIONS,
+      headers: ['DesignationID', 'Name', 'HierarchyLevel', 'Status', 'Description'],
+      autoIdFormula: '="D"&TEXT(ROW()-1,"0000")',
+      validations: [
+        {
+          colHeader: 'Status',
+          rule: SpreadsheetApp.newDataValidation()
+            .requireValueInList(['Active', 'Inactive'], true)
+            .setAllowInvalid(false)
+            .build()
+        }
+      ],
+      columnWidths: {
+        DesignationID: 120,
+        Name: 180,
+        HierarchyLevel: 120,
+        Status: 100,
+        Description: 320
       }
     },
     {
       name: CONFIG.SHEETS.ROLES,
       headers: ['RoleID', 'Name', 'Description'],
-      // Auto-ID formula for column 1: generates R0001, R0002, ...
       autoIdFormula: '="R"&TEXT(ROW()-1,"0000")',
       validations: [],
       columnWidths: {
-        'RoleID': 100,
-        'Name': 180,
-        'Description': 320
+        RoleID: 100,
+        Name: 180,
+        Description: 320
       }
     },
     {
       name: CONFIG.SHEETS.ROLE_PERMISSIONS,
-      headers: ['RoleID', 'Resource', 'CanRead', 'CanWrite', 'CanUpdate', 'CanDelete'],
-      autoIdFormula: null,  // No ID column — junction table
+      headers: ['RoleID', 'Resource', 'Actions'],
+      autoIdFormula: null,
+      validations: [],
+      columnWidths: {
+        RoleID: 100,
+        Resource: 180,
+        Actions: 300
+      }
+    },
+    {
+      name: CONFIG.SHEETS.RESOURCES,
+      headers: [
+        'Name',
+        'Scope',
+        'IsActive',
+        'FileID',
+        'SheetName',
+        'CodePrefix',
+        'CodeSequenceLength',
+        'SkipColumns',
+        'Audit',
+        'RequiredHeaders',
+        'UniqueHeaders',
+        'UniqueCompositeHeaders',
+        'DefaultValues',
+        'RecordAccessPolicy',
+        'OwnerUserField',
+        'AdditionalActions',
+        'MenuGroup',
+        'MenuOrder',
+        'MenuLabel',
+        'MenuIcon',
+        'RoutePath',
+        'PageTitle',
+        'PageDescription',
+        'UIFields',
+        'ShowInMenu',
+        'IncludeInAuthorizationPayload'
+      ],
+      autoIdFormula: null,
       validations: [
         {
-          colHeader: 'CanRead',
+          colHeader: 'IsActive',
           rule: SpreadsheetApp.newDataValidation()
-            .requireCheckbox()
+            .requireValueInList(['TRUE', 'FALSE'], true)
+            .setAllowInvalid(false)
             .build()
         },
         {
-          colHeader: 'CanWrite',
+          colHeader: 'Audit',
           rule: SpreadsheetApp.newDataValidation()
-            .requireCheckbox()
+            .requireValueInList(['TRUE', 'FALSE'], true)
+            .setAllowInvalid(false)
             .build()
         },
         {
-          colHeader: 'CanUpdate',
+          colHeader: 'ShowInMenu',
           rule: SpreadsheetApp.newDataValidation()
-            .requireCheckbox()
+            .requireValueInList(['TRUE', 'FALSE'], true)
+            .setAllowInvalid(false)
             .build()
         },
         {
-          colHeader: 'CanDelete',
+          colHeader: 'IncludeInAuthorizationPayload',
           rule: SpreadsheetApp.newDataValidation()
-            .requireCheckbox()
+            .requireValueInList(['TRUE', 'FALSE'], true)
+            .setAllowInvalid(false)
             .build()
         }
       ],
       columnWidths: {
-        'RoleID': 100,
-        'Resource': 180,
-        'CanRead': 90,
-        'CanWrite': 90,
-        'CanUpdate': 100,
-        'CanDelete': 100
+        Name: 180,
+        Scope: 100,
+        IsActive: 90,
+        FileID: 280,
+        SheetName: 160,
+        CodePrefix: 120,
+        CodeSequenceLength: 140,
+        SkipColumns: 110,
+        Audit: 90,
+        RequiredHeaders: 220,
+        UniqueHeaders: 220,
+        UniqueCompositeHeaders: 260,
+        DefaultValues: 260,
+        RecordAccessPolicy: 160,
+        OwnerUserField: 150,
+        AdditionalActions: 220,
+        MenuGroup: 120,
+        MenuOrder: 110,
+        MenuLabel: 140,
+        MenuIcon: 120,
+        RoutePath: 220,
+        PageTitle: 180,
+        PageDescription: 260,
+        UIFields: 320,
+        ShowInMenu: 100,
+        IncludeInAuthorizationPayload: 220
       }
     }
   ];
 
-  // ── Process Each Sheet ─────────────────────────────────────
   const results = [];
 
   sheetConfigs.forEach(function(config) {
-    // Check if sheet already exists
     let sheet = ss.getSheetByName(config.name);
 
     if (sheet) {
-      results.push('⏭️  Sheet "' + config.name + '" already exists — skipped.');
+      results.push('Skipped existing sheet: ' + config.name);
       return;
     }
 
-    // Create the sheet
     sheet = ss.insertSheet(config.name);
 
-    // 1. Write headers
     const headerRange = sheet.getRange(1, 1, 1, config.headers.length);
     headerRange.setValues([config.headers]);
-
-    // 2. Format headers — bold, background color, white text, center-aligned
     headerRange
       .setFontWeight('bold')
       .setBackground(CONFIG.BRAND_COLOR)
@@ -121,79 +192,89 @@ function setupAppSheets() {
       .setVerticalAlignment('middle')
       .setFontSize(10);
 
-    // 3. Set header row height
     sheet.setRowHeight(1, 32);
-
-    // 4. Freeze header row
     sheet.setFrozenRows(1);
 
-    // 5. Set column widths
     config.headers.forEach(function(header, index) {
       if (config.columnWidths && config.columnWidths[header]) {
         sheet.setColumnWidth(index + 1, config.columnWidths[header]);
       }
     });
 
-    // 6. Remove extra columns (Google Sheets defaults to 26 columns)
     var totalCols = sheet.getMaxColumns();
     if (totalCols > config.headers.length) {
       sheet.deleteColumns(config.headers.length + 1, totalCols - config.headers.length);
     }
 
-    // 7. Remove extra rows — keep only header + 1 data row
     var totalRows = sheet.getMaxRows();
     if (totalRows > 2) {
       sheet.deleteRows(3, totalRows - 2);
     }
 
-    // 8. Set auto-ID formula in row 2, column 1 (if applicable)
     if (config.autoIdFormula) {
       sheet.getRange(2, 1).setFormula(config.autoIdFormula);
     }
 
-    // 9. Apply data validation rules to data row(s)
     if (config.validations && config.validations.length > 0) {
       config.validations.forEach(function(v) {
         var colIndex = config.headers.indexOf(v.colHeader);
         if (colIndex === -1) return;
-
-        var validationRange = sheet.getRange(2, colIndex + 1, 1, 1);
-        validationRange.setDataValidation(v.rule);
+        sheet.getRange(2, colIndex + 1, 1, 1).setDataValidation(v.rule);
       });
     }
 
-    // 10. Create named table (banded range) — header + 1 data row
     var tableRange = sheet.getRange(1, 1, 2, config.headers.length);
     var banding = tableRange.applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY);
     banding.setHeaderRowColor(CONFIG.BRAND_COLOR)
-           .setFirstRowColor('#ffffff')
-           .setSecondRowColor('#f3f6fb');
+      .setFirstRowColor('#ffffff')
+      .setSecondRowColor('#f3f6fb');
 
-    // 11. Add header row protection (warning only — no hard lock)
     var protection = sheet.getRange(1, 1, 1, config.headers.length).protect();
-    protection.setDescription(config.name + ' Headers — Do Not Edit');
+    protection.setDescription(config.name + ' Headers - Do Not Edit');
     protection.setWarningOnly(true);
 
-    // 12. Set default number format for data row to plain text
-    //     (prevents auto-formatting of IDs, hashes, etc.)
     sheet.getRange(2, 1, 1, config.headers.length).setNumberFormat('@');
 
-    results.push('✅  Sheet "' + config.name + '" created successfully.');
+    results.push('Created sheet: ' + config.name);
   });
 
-  // ── Remove default "Sheet1" if it exists and is empty ──────
   var defaultSheet = ss.getSheetByName('Sheet1');
   if (defaultSheet && defaultSheet.getLastRow() === 0) {
     ss.deleteSheet(defaultSheet);
-    results.push('🗑️  Removed empty default "Sheet1".');
+    results.push('Removed empty default Sheet1');
   }
 
-  // ── Summary ────────────────────────────────────────────────
-  var summary = '🏁 Setup Complete!\n\n' + results.join('\n');
+  var summary = 'Setup complete.\n\n' + results.join('\n');
   Logger.log(summary);
   try {
     SpreadsheetApp.getUi().alert(summary);
-  } catch (e) {
-    // getUi() not available in this context — summary is in the Execution Log
-  }
+  } catch (e) {}
+}
+
+/**
+ * Run this on existing APP sheets to fix Resources boolean validation
+ * for text-based TSV paste (TRUE/FALSE).
+ */
+function fixResourcesBooleanValidation() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(CONFIG.SHEETS.RESOURCES);
+  if (!sheet) throw new Error('Resources sheet not found');
+
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const idx = {};
+  headers.forEach(function(h, i) { idx[h] = i; });
+
+  const targets = ['IsActive', 'Audit', 'ShowInMenu', 'IncludeInAuthorizationPayload'];
+  const rule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(['TRUE', 'FALSE'], true)
+    .setAllowInvalid(false)
+    .build();
+
+  const maxRows = Math.max(sheet.getMaxRows() - 1, 1);
+  targets.forEach(function(header) {
+    if (idx[header] === undefined) return;
+    sheet.getRange(2, idx[header] + 1, maxRows, 1).setDataValidation(rule);
+  });
+
+  SpreadsheetApp.getUi().alert('Resources boolean validation updated to TRUE/FALSE dropdown.');
 }

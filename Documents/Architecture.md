@@ -4,52 +4,140 @@
 
 ```mermaid
 graph TD
-    User((User)) -->|HTTPS| PWA[Quasar PWA Client]
-    
-    subgraph "Client Side (Device)"
-        PWA --> Store[Pinia State]
-        PWA --> Cache[LocalStorage / IndexedDB]
+    User((User)) -->|HTTPS JSON POST| PWA[Quasar PWA Client]
+
+    subgraph "Client (Device)"
+        PWA --> AuthStore[Pinia Auth Store]
+        PWA --> MasterPages[Dynamic Master Pages]
+        PWA --> IDB[(IndexedDB Cache)]
         PWA --> SW[Service Worker]
     end
-    
-    subgraph "Cloud Backend (Google)"
-        PWA -->|JSON via POST| GAS[Google Apps Script Web App]
-        GAS -->|Read/Write| DB[(Google Sheets Database)]
-        GAS -->|Auth| Users[(Users Sheet)]
+
+    subgraph "APP Spreadsheet + Apps Script Project"
+        PWA -->|action payloads| GAS[doPost Dispatcher]
+        GAS --> AUTH[auth.gs]
+        GAS --> MASTER[masterApi.gs]
+        GAS --> REGISTRY[resourceRegistry.gs]
+        AUTH --> USERS[(APP.Users)]
+        AUTH --> ROLES[(APP.Roles)]
+        AUTH --> ROLEPERM[(APP.RolePermissions)]
+        REGISTRY --> RESOURCES[(APP.Resources)]
+    end
+
+    subgraph "External Data Files"
+        REGISTRY --> MASTERS[(MASTERS file)]
+        REGISTRY --> TRANS[(TRANSACTIONS file)]
+        REGISTRY --> REPORTS[(REPORTS file)]
     end
 ```
 
-## Component Breakdown
+## Core Architecture Principles
+- Single Apps Script project lives in APP file.
+- `APP.Resources` is the runtime registry for both backend behavior and frontend metadata.
+- Resource routing is dynamic through `FileID` + `SheetName`; no hardcoded per-file script projects.
+- Role-based and record-level access are both metadata-driven.
 
-### 1. Frontend (Quasar PWA)
-*   **`src/layouts/MainLayout.vue`**: The core shell with navigation, header, and user profile controls.
-*   **`src/stores/auth.js`**: Manages user session, login/logout, and token persistence.
-*   **`src/boot/axios.js`**: Configures the global HTTP client with the GAS endpoint.
+## Backend Components (Apps Script)
+- `GAS/apiDispatcher.gs`
+  - Hosts `doPost`.
+  - Performs request parsing/response shaping.
+  - Routes protected actions across auth and master scopes.
+- `GAS/auth.gs`
+  - Handles `login`, `getProfile`, profile update actions.
+  - Validates token and user context.
+  - Returns role-authorized `resources` in login payload.
+- `GAS/sheetHelpers.gs`
+  - Shared helpers for header/index/row access patterns across auth/resource/master modules.
+- `GAS/resourceRegistry.gs`
+  - Resolves resource config from `APP.Resources`.
+  - Builds permissioned resource list from `RolePermissions.Actions`.
+  - Provides `ui`, `headers`, and permission metadata used by frontend.
+  - Isolates per-resource failures so one bad sheet config does not break whole authorization payload.
+- `GAS/masterApi.gs`
+  - Generic master CRUD (`get/create/update`) with `scope=master`.
+  - Resource-driven schema validation/defaults/uniqueness checks.
+  - Supports incremental sync payloads (`lastUpdatedAt` -> `meta.lastSyncAt`).
 
-### 2. Backend Logic (Apps Script)
-The logic is split across multiple `.gs` files for maintainability:
+## Frontend Components
+- `FRONTENT/src/stores/auth.js`
+  - Stores `token`, `user`, and `resources` from login response.
+  - Persists auth data to local storage.
+- `FRONTENT/src/layouts/MainLayout/MainLayout.vue`
+  - Builds sidebar from `resources[].ui`.
+  - Shows only resources with `permissions.canRead === true`.
+- `FRONTENT/src/router/index.js`
+  - Guards auth routes.
+  - Enforces resource-level route access using `resources[].ui.routePath` + permissions.
+- `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+  - Generic master page driven by authorized resource metadata.
+- `FRONTENT/src/services/masterRecords.js`
+  - Uses cached headers and incremental sync for master resources.
+- `FRONTENT/src/utils/db.js`
+  - IDB stores: `resource-meta`, `resource-records`, API cache and sync queue.
 
-*   **`auth.gs`**: Handles `doPost` routing, login logic, password hashing, and token generation.
-*   **`appMenu.gs`**: A standalone script that adds a custom menu *inside* the Google Sheet UI for administrators to manage users and permissions directly from the sheet.
-*   **`setupAppSheets.gs`**: A utility script to initialize the sheet structure (create missing sheets, set headers) ensuring the DB schema is correct.
+## Auth Login Payload Contract
 
-### 3. Database Layer (Google Sheets)
-*   **`APP` Spreadsheet**: Contains configuration data (Users, Roles, Resources).
-*   **`TRANSACTIONS` Spreadsheet**: High-volume data (Sales, Invoices).
-*   **`MASTERS` Spreadsheet**: Static data (Products, Customers).
+Frontend expects this shape from `action=login`:
 
-## Data Flow Example: Creating an Invoice
+```json
+{
+  "success": true,
+  "token": "uuid",
+  "user": {
+    "id": "U0001",
+    "name": "User Name",
+    "email": "user@example.com",
+    "avatar": "",
+    "designation": { "id": "D0001", "name": "Manager", "hierarchyLevel": 2 },
+    "roles": [{ "id": "R0001", "name": "Administrator" }],
+    "role": "Administrator"
+  },
+  "resources": [
+    {
+      "name": "Products",
+      "scope": "master",
+      "fileId": "...",
+      "sheetName": "Products",
+      "codePrefix": "LLMP",
+      "codeSequenceLength": 5,
+      "headers": ["Code", "Name", "SKU", "Status", "CreatedAt", "UpdatedAt", "CreatedBy", "UpdatedBy"],
+      "permissions": {
+        "canRead": true,
+        "canWrite": true,
+        "canUpdate": true,
+        "canDelete": false
+      },
+      "ui": {
+        "menuGroup": "Masters",
+        "menuOrder": 10,
+        "menuLabel": "Products",
+        "menuIcon": "inventory_2",
+        "routePath": "/masters/products",
+        "pageTitle": "Products",
+        "pageDescription": "Manage product master records",
+        "fields": [],
+        "showInMenu": true
+      },
+      "actions": ["Approve"],
+      "allowedActions": ["READ", "WRITE", "UPDATE", "APPROVE"]
+    }
+  ]
+}
+```
 
-1.  **User Action**: Salesman fills invoice form in PWA.
-2.  **Client Processing**: app validates input, calculates totals locally.
-3.  **API Request**:
-    *   `POST` to GAS URL.
-    *   Payload: `{ action: "createInvoice", token: "...", data: { ...invoiceDetails } }`
-4.  **Server Processing**:
-    *   `auth.gs` validates token.
-    *   Request routed to Invoice Service.
-    *   Script locks the `Invoices` sheet.
-    *   New row appended.
-    *   Stock deducted from `Inventory` sheet.
-5.  **Response**: JSON `{ success: true, invoiceId: "INV-1001" }` returned to PWA.
-6.  **UI Update**: Success message shown, user redirected to list view.
+`getProfile` remains user-only, while `getAuthorizedResources` is the protected refresh endpoint for resource catalog updates.
+
+## Request Flow (Login)
+1. Frontend posts `{ action: "login", email, password }`.
+2. `apiDispatcher.gs` routes `login` to auth handlers.
+3. `auth.gs` validates credentials from `APP.Users`, writes new UUID to `Users.ApiKey`.
+4. `auth.gs` resolves user roles and designation.
+5. `resourceRegistry.gs` aggregates resource permissions from `RolePermissions` and resource metadata from `Resources`.
+6. Login response returns `token`, `user`, and role-authorized `resources`.
+
+## Request Flow (Master Read)
+1. Frontend posts `{ action: "get", scope: "master", resource, lastUpdatedAt }`.
+2. `apiDispatcher.gs` validates token via `auth.gs` and routes to master handlers.
+3. `masterApi.gs` checks resource-level permission + record-level policy.
+4. Target file/sheet is resolved dynamically via `resourceRegistry.gs`.
+5. Response returns compact `rows` and `meta.lastSyncAt` for incremental merge.

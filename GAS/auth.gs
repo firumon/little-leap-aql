@@ -1,74 +1,10 @@
-﻿/**
+/**
  * ============================================================
- * Little Leap AQL - Authentication & API Logic
+ * Little Leap AQL - Authentication Logic
  * ============================================================
  */
 
 // Shared constants are located in Constants.gs
-
-const JSON_MIME_TYPE = ContentService.MimeType.JSON;
-
-function doPost(e) {
-  let result = { success: false, message: 'Invalid request' };
-
-  try {
-    const data = parseRequestPayload(e);
-    const action = data.action;
-
-    if (action === 'login') {
-      return jsonResponse(handleLogin(data.email, data.password));
-    }
-
-    const authContext = validateToken(data.token);
-    if (!authContext) {
-      return jsonResponse({ success: false, message: 'Unauthorized' });
-    }
-
-    switch (action) {
-      case 'getProfile':
-        result = handleGetProfile(authContext);
-        break;
-      case 'updateAvatar':
-        result = handleUpdateAvatar(authContext, data.avatarUrl);
-        break;
-      case 'updateName':
-        result = handleUpdateName(authContext, data.name);
-        break;
-      case 'updateEmail':
-        result = handleUpdateEmail(authContext, data.email);
-        break;
-      case 'updatePassword':
-        result = handleUpdatePassword(authContext, data.currentPassword, data.newPassword);
-        break;
-      default:
-        result = { success: false, message: 'Action not found' };
-    }
-  } catch (err) {
-    result = { success: false, message: err.toString() };
-  }
-
-  return jsonResponse(result);
-}
-
-/**
- * Global JSON response helper.
- */
-function jsonResponse(payload) {
-  return ContentService
-    .createTextOutput(JSON.stringify(payload))
-    .setMimeType(JSON_MIME_TYPE);
-}
-
-/**
- * Global request parser (accepts JSON body from frontend).
- */
-function parseRequestPayload(e) {
-  if (!e || !e.postData || !e.postData.contents) {
-    throw new Error('Empty request body');
-  }
-
-  return JSON.parse(e.postData.contents);
-}
 
 /**
  * Build headers/index context once for Users sheet.
@@ -83,49 +19,6 @@ function getUsersContext() {
   const idx = getHeaderIndexMap(headers);
 
   return { sheet, headers, idx };
-}
-
-function getSheetHeaders(sheet) {
-  const lastColumn = sheet.getLastColumn();
-  if (!lastColumn) return [];
-  return sheet.getRange(1, 1, 1, lastColumn).getValues()[0];
-}
-
-function getHeaderIndexMap(headers) {
-  const map = {};
-  headers.forEach((header, index) => {
-    map[header] = index;
-  });
-  return map;
-}
-
-function findRowByValue(sheet, colIndex, value, startRow, matchCase) {
-  if (colIndex === undefined || colIndex < 0 || value === undefined || value === null || value === '') {
-    return -1;
-  }
-
-  const rowStart = startRow || 2;
-  const totalRows = sheet.getLastRow();
-  if (totalRows < rowStart) return -1;
-
-  const range = sheet.getRange(rowStart, colIndex + 1, totalRows - rowStart + 1, 1);
-  const finder = range.createTextFinder(String(value)).matchEntireCell(true);
-
-  if (typeof matchCase === 'boolean') {
-    finder.matchCase(matchCase);
-  }
-
-  const match = finder.findNext();
-  return match ? match.getRow() : -1;
-}
-
-function getRowAsObject(sheet, rowNumber, headers) {
-  const values = sheet.getRange(rowNumber, 1, 1, headers.length).getValues()[0];
-  const rowObj = {};
-  headers.forEach((header, index) => {
-    rowObj[header] = values[index];
-  });
-  return rowObj;
 }
 
 /**
@@ -152,17 +45,13 @@ function handleLogin(email, password) {
 
   const token = Utilities.getUuid();
   users.sheet.getRange(emailRow, users.idx.ApiKey + 1).setValue(token);
+  const roleIds = resolveUserRoleIds(row);
 
   return {
     success: true,
     token,
-    user: {
-      id: row.UserID,
-      name: row.Name,
-      email: row.Email,
-      avatar: row.Avatar || '',
-      role: getRoleNameById(row.RoleID)
-    }
+    user: buildAuthUserPayload(row, roleIds),
+    resources: getLoginAuthorizedResources(roleIds)
   };
 }
 
@@ -180,9 +69,11 @@ function validateToken(token) {
   }
 
   const user = getRowAsObject(users.sheet, rowNumber, users.headers);
+  const roleIds = resolveUserRoleIds(user);
   return {
     rowNumber,
     user,
+    roleIds,
     sheet: users.sheet,
     headers: users.headers,
     idx: users.idx
@@ -195,14 +86,75 @@ function validateToken(token) {
 function handleGetProfile(auth) {
   return {
     success: true,
-    user: {
-      id: auth.user.UserID,
-      name: auth.user.Name,
-      email: auth.user.Email,
-      avatar: auth.user.Avatar || '',
-      role: getRoleNameById(auth.user.RoleID)
-    }
+    user: buildAuthUserPayload(auth.user, auth.roleIds)
   };
+}
+
+function handleGetAuthorizedResources(auth, payload) {
+  const includeHeaders = !(payload && payload.includeHeaders === false);
+  const scope = payload && payload.scope ? payload.scope : '';
+  return {
+    success: true,
+    resources: safeGetRoleResourceAccess(auth.roleIds, {
+      includeHeaders: includeHeaders,
+      includeUiConfig: true,
+      scope: scope,
+      sortByMenuOrder: true
+    })
+  };
+}
+
+function getLoginAuthorizedResources(roleIds) {
+  return safeGetRoleResourceAccess(roleIds, {
+    includeHeaders: true,
+    includeUiConfig: true,
+    scope: '',
+    sortByMenuOrder: true
+  });
+}
+
+function buildAuthUserPayload(userRow, roleIds) {
+  return {
+    id: userRow.UserID,
+    name: userRow.Name,
+    email: userRow.Email,
+    avatar: userRow.Avatar || '',
+    designation: getDesignationById(userRow.DesignationID),
+    roles: getRoleNamesByIds(roleIds || resolveUserRoleIds(userRow)),
+    role: getPrimaryRoleName(userRow)
+  };
+}
+
+function sortAuthorizedResources(resources) {
+  const entries = Array.isArray(resources) ? resources.slice() : [];
+  entries.sort(function(a, b) {
+    const aOrder = Number(a && a.ui ? a.ui.menuOrder : 9999);
+    const bOrder = Number(b && b.ui ? b.ui.menuOrder : 9999);
+    if (aOrder !== bOrder) {
+      return aOrder - bOrder;
+    }
+
+    const aName = (a && a.name ? a.name : '').toString().toLowerCase();
+    const bName = (b && b.name ? b.name : '').toString().toLowerCase();
+    if (aName < bName) return -1;
+    if (aName > bName) return 1;
+    return 0;
+  });
+  return entries;
+}
+
+function safeGetRoleResourceAccess(roleId, options) {
+  const opts = options || {};
+  try {
+    const resources = getRoleResourceAccess(roleId, {
+      includeHeaders: opts.includeHeaders === true,
+      includeUiConfig: opts.includeUiConfig !== false,
+      scope: opts.scope || ''
+    });
+    return opts.sortByMenuOrder === false ? resources : sortAuthorizedResources(resources);
+  } catch (err) {
+    return [];
+  }
 }
 
 function handleUpdateAvatar(auth, avatarUrl) {
@@ -277,6 +229,77 @@ function getRoleNameById(roleId) {
   return roleSheet.getRange(roleRow, idx.Name + 1).getValue() || 'User';
 }
 
+function getDesignationById(designationId) {
+  if (!designationId) {
+    return { id: '', name: '', hierarchyLevel: null };
+  }
+
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.DESIGNATIONS);
+  if (!sheet) {
+    return { id: designationId, name: '', hierarchyLevel: null };
+  }
+
+  const headers = getSheetHeaders(sheet);
+  const idx = getHeaderIndexMap(headers);
+  if (idx.DesignationID === undefined || idx.Name === undefined) {
+    return { id: designationId, name: '', hierarchyLevel: null };
+  }
+  const rowNumber = findRowByValue(sheet, idx.DesignationID, designationId, 2, true);
+  if (rowNumber === -1) {
+    return { id: designationId, name: '', hierarchyLevel: null };
+  }
+
+  const hierarchyLevel = idx.HierarchyLevel === undefined
+    ? null
+    : Number(sheet.getRange(rowNumber, idx.HierarchyLevel + 1).getValue() || 0) || null;
+
+  return {
+    id: designationId,
+    name: sheet.getRange(rowNumber, idx.Name + 1).getValue() || '',
+    hierarchyLevel: hierarchyLevel
+  };
+}
+
+function getUserRoleIds(userId) {
+  if (!userId) return [];
+  const users = getUsersContext();
+  const rowNumber = findRowByValue(users.sheet, users.idx.UserID, userId, 2, true);
+  if (rowNumber === -1) return [];
+  const row = getRowAsObject(users.sheet, rowNumber, users.headers);
+  return resolveUserRoleIds(row);
+}
+
+function resolveUserRoleIds(userRow) {
+  const csv = (userRow.Roles || '').toString().trim();
+  if (!csv) return [];
+  const seen = {};
+  return csv.split(',').map(function(roleId) {
+    return (roleId || '').toString().trim();
+  }).filter(function(roleId) {
+    if (!roleId) return false;
+    if (seen[roleId]) return false;
+    seen[roleId] = true;
+    return true;
+  });
+}
+
+function getRoleNamesByIds(roleIds) {
+  const ids = normalizeRoleIds(roleIds);
+  if (!ids.length) return [];
+  return ids.map(function(roleId) {
+    return {
+      id: roleId,
+      name: getRoleNameById(roleId)
+    };
+  });
+}
+
+function getPrimaryRoleName(userRow) {
+  const roleIds = resolveUserRoleIds(userRow);
+  if (!roleIds.length) return 'User';
+  return getRoleNameById(roleIds[0]);
+}
+
 /**
  * Backward-compatible role resolver by UserID (implemented without full-sheet loops).
  */
@@ -287,8 +310,10 @@ function getUserRole(userId) {
   const userRow = findRowByValue(users.sheet, users.idx.UserID, userId, 2, true);
   if (userRow === -1) return 'User';
 
-  const roleId = users.sheet.getRange(userRow, users.idx.RoleID + 1).getValue();
-  return getRoleNameById(roleId);
+  const row = getRowAsObject(users.sheet, userRow, users.headers);
+  const roleIds = resolveUserRoleIds(row);
+  if (!roleIds.length) return 'User';
+  return getRoleNameById(roleIds[0]);
 }
 
 /**

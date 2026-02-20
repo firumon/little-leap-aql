@@ -29,9 +29,13 @@ export default defineRouter(function (/* { store, ssrContext } */) {
   Router.beforeEach((to, from, next) => {
     const token = localStorage.getItem('token')
     const isAuthenticated = !!token
+    const resources = JSON.parse(localStorage.getItem('resources') || '[]')
 
     // Check if the route requires authentication
     const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+    const requiredResource = to.matched
+      .map((record) => record.meta?.requiredResource)
+      .find((resource) => !!resource)
 
     // Public pages (always accessible)
     const publicPages = ['login', 'landing', 'home']
@@ -45,6 +49,21 @@ export default defineRouter(function (/* { store, ssrContext } */) {
     // Redirect to login if auth is required and not logged in
     if (requiresAuth && !isAuthenticated) {
       return next('/login')
+    }
+
+    const matchedByPath = Array.isArray(resources) ? resources.find((resource) => {
+      return resource?.ui?.routePath === to.path
+    }) : null
+    const effectiveRequiredResource = requiredResource || matchedByPath?.name
+
+    if (effectiveRequiredResource && isAuthenticated) {
+      const hasResourceReadAccess = Array.isArray(resources) && resources.some((resource) => {
+        return resource?.name === effectiveRequiredResource && resource?.permissions?.canRead === true
+      })
+
+      if (!hasResourceReadAccess) {
+        return next('/dashboard')
+      }
     }
 
     // Default: allow navigation

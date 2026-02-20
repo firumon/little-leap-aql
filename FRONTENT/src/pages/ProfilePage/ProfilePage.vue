@@ -18,8 +18,11 @@
 
         <h1 class="text-h4 text-weight-bold q-mt-sm q-mb-xs">{{ profileData.name }}</h1>
         <q-chip color="primary" text-color="white" icon="verified_user" class="text-weight-medium">
-          {{ profileData.role }}
+          {{ profileData.designation?.name || profileData.role }}
         </q-chip>
+        <div class="text-caption text-grey-7 q-mt-sm">
+          Roles: {{ roleNames }}
+        </div>
       </q-card-section>
 
       <q-separator inset class="q-my-md" />
@@ -221,7 +224,16 @@ const profileData = computed(() => auth.userProfile || {
   email: '...',
   id: '...',
   role: '...',
+  designation: null,
+  roles: [],
   avatar: ''
+})
+const roleNames = computed(() => {
+  const roles = profileData.value?.roles
+  if (!Array.isArray(roles) || !roles.length) {
+    return profileData.value?.role || '-'
+  }
+  return roles.map((entry) => entry?.name || '').filter(Boolean).join(', ')
 })
 
 const showAvatarDialog = ref(false)

@@ -38,15 +38,24 @@ Configured at:
 
 ### 4. Boot Files
 `src/boot/axios.js` is configured via `quasar.config.js`.
+- It now exposes a centralized API client (`$api`) backed by `src/services/apiClient.js`.
 
 ### 5. Project Structure (Frontend)
 Frontend source is in `FRONTENT/src`:
 - `boot/`
+- `config/`
+- `services/`
 - `css/`
 - `layouts/`
 - `pages/`
 - `stores/`
 - `utils/`
+
+### 6. API Architecture (Centralized)
+Frontend API calls are organized in one place:
+- `src/config/api.js`: GAS endpoint and API constants.
+- `src/services/apiClient.js`: shared Axios instance with common headers.
+- `src/services/gasApi.js`: shared request utility (`callGasApi`) for action payload, token injection, and normalized errors.
 
 ## Layout & Navigation
 Main shell is in `MainLayout.vue` with grouped ERP navigation and profile menu.
@@ -59,9 +68,50 @@ Main shell is in `MainLayout.vue` with grouped ERP navigation and profile menu.
 - Password update
 
 Store/API wiring:
-- `src/stores/auth.js` uses shared `callAuthApi(...)` for all auth API actions.
+- `src/stores/auth.js` uses shared `callGasApi(...)` through `callAuthApi(...)` wrapper.
 - Profile update actions call GAS: `updateAvatar`, `updateName`, `updateEmail`, `updatePassword`.
-- `GAS/auth.gs` validates token and resolves row context once, then performs direct row updates.
+
+## Master Module Progress (2026-02-19)
+Implemented reusable frontend module:
+- `src/pages/Masters/MasterEntityPage.vue` (generic page for all configured masters)
+- `src/services/masterRecords.js` (shared sync + CRUD service)
+- `src/stores/products.js` (aligned to shared service)
+
+Configured route:
+- `/masters/:resourceSlug` (resource resolved via authorized metadata + `ui.routePath`)
+
+Capabilities:
+- Shared list/create/update workflow for all configured master resources
+- Include inactive toggle
+- IDB-backed incremental sync with compact payloads (`rows` array format)
+- Role-based master navigation visibility (read-permission driven)
+- Route-level resource guard for unauthorized direct URL access
+
+Backend actions consumed:
+- Preferred generic verbs with scope:
+  - `action=get`, `scope=master`
+  - `action=create`, `scope=master`
+  - `action=update`, `scope=master`
+- Product wrappers remain backward-compatible in GAS.
+
+Transport note:
+- Master flows use shared `src/services/masterRecords.js` so stores/pages avoid duplicated API+sync logic.
+- Access note: `src/router/index.js` checks matched resource via authorized `resources[].ui.routePath` (with optional `meta.requiredResource` fallback).
+
+## PWA, Service Worker, and IDB Sync (2026-02-19)
+- Service Worker uses `InjectManifest` and intercepts GAS API requests for network strategy/background sync where applicable.
+- Login response includes role-authorized resources with resource headers; frontend persists this catalog for schema-aware rendering.
+- Master list sync flow (common):
+  1. Read headers + last sync cursor from IDB (`resource-meta`).
+  2. Load cached rows from IDB (`resource-records`) for instant UI.
+  3. If sync interval has elapsed (or user clicks refresh), call `action=get` with `scope=master`, `resource`, `lastUpdatedAt` when `UpdatedAt` header exists.
+  4. Merge returned `rows` (array of arrays) into IDB.
+  5. Convert rows to objects inside frontend service/store and render.
+
+Delta strategy notes:
+- Re-opening master pages within sync interval does not call Apps Script again.
+- Manual refresh forces sync.
+- If `UpdatedAt` is unavailable for a resource, flow falls back to periodic full sync instead of per-visit full fetch.
 
 ## Development Workflow
 - Run `npm run dev` in `FRONTENT` (port 9000).

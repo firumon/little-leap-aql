@@ -1,109 +1,82 @@
 # Little Leap AQL - APP Google Sheet Structure
 
-This document outlines the structure of the **APP** Google Sheet, which serves as the configuration and access control layer—the "brain"—of the Little Leap AQL system.
+This document defines the **APP** Google Sheet as the control plane for authentication, authorization, and resource metadata used by both GAS backend and frontend runtime.
 
-## Overview
-The APP sheet manages user authentication, role-based access control (RBAC), and resource definitions. It is critical for the application's security and modularity.
+## Core Sheets
 
----
+### 1) Users
+Purpose: User identity and auth record.
 
-## Sheet Breakdown
+Columns:
+- `UserID` (PK, `U####`)
+- `Name`
+- `Email`
+- `PasswordHash`
+- `DesignationID` (FK -> `Designations.DesignationID`)
+- `Roles` (CSV RoleIDs, example: `R0001,R0003`)
+- `Status` (`Active`/`Inactive`)
+- `Avatar`
+- `ApiKey`
 
-### 1. Users
-**Purpose:** Stores user profile information and authentication credentials.
-- **UserID (PK):** Unique identifier (Format: `U####`, e.g., `U0001`). Generated via auto-ID formula.
-- **Name:** Full name of the user.
-- **Email:** User's email address (used for login).
-- **PasswordHash:** SHA-256 (Base64) hashed password.
-- **RoleID (FK):** Reference to `Roles.RoleID`. (Many-to-One). Replaces the old `UserRoles` sheet.
-- **Status:** User status (`Active` or `Inactive`). Managed via data validation.
-- **Avatar:** URL or reference to the user's profile picture.
-- **ApiKey:** Unique API key for programmatic access.
+### 2) Designations
+Purpose: Organization designation and hierarchy model for record-level access.
 
-### 2. Roles
-**Purpose:** Defines the roles available in the system (e.g., Administrator, Sales).
-- **RoleID (PK):** Unique identifier (Format: `R####`, e.g., `R0001`). Generated via auto-ID formula.
-- **Name:** Descriptive name of the role.
-- **Description:** Details about the role's responsibilities.
+Columns:
+- `DesignationID` (PK, `D####`)
+- `Name`
+- `HierarchyLevel` (`1` = topmost)
+- `Status`
+- `Description`
 
-### 3. RolePermissions
-**Purpose:** Granular permissions for each role on specific resources.
-- **RoleID (FK):** Reference to `Roles.RoleID`.
-- **Resource:** The name of the resource (as defined in the `Resources` sheet).
-- **CanRead:** Boolean (Checkbox).
-- **CanWrite:** Boolean (Checkbox).
-- **CanUpdate:** Boolean (Checkbox).
-- **CanDelete:** Boolean (Checkbox).
+### 3) Roles
+Purpose: Functional roles.
 
-### 4. Resources
-**Purpose:** Registry of all entities/sheets managed by the system.
-- **Name:** Unique resource identifier (e.g., `Products`, `Invoices`).
-- **FileID:** The Google Sheet ID where the resource resides.
-- **SheetName:** The specific sheet name within that file.
-- **SkipColumns:** Number of columns to skip at the beginning of the sheet.
-- **Timestamps:** Boolean. If true, `CreatedAt` and `UpdatedAt` fields are managed.
-- **UserDetails:** Boolean. If true, `CreatedBy` and `UpdatedBy` (UserID) are tracked.
+Columns:
+- `RoleID` (PK, `R####`)
+- `Name`
+- `Description`
 
----
+### 4) RolePermissions
+Purpose: Role-to-resource permissions and non-CRUD actions.
 
-## Relationship Diagram
+Columns:
+- `RoleID` (FK)
+- `Resource` (FK -> `Resources.Name`)
+- `Actions` (CSV, example: `Read,Write,Update,Delete,Approve,Reject`)
 
-```mermaid
-erDiagram
-    Users }o--|| Roles : "belongs to"
-    Roles ||--o{ RolePermissions : "defines"
-    RolePermissions }o--|| Resources : "governs access to"
+### 5) Resources
+Purpose: Single metadata registry for backend CRUD rules and frontend menu/page/field rendering.
 
-    Users {
-        string UserID PK
-        string Name
-        string Email
-        string PasswordHash
-        string RoleID FK
-        string Status
-        string Avatar
-        string ApiKey
-    }
+Detailed per-column meaning and sample values:
+- `documents/RESOURCE_COLUMNS_GUIDE.md`
 
-    Roles {
-        string RoleID PK
-        string Name
-        string Description
-    }
+Columns (in order):
+- `Name`
+- `Scope` (`master|transaction|report|system`)
+- `IsActive`
+- `FileID`
+- `SheetName`
+- `CodePrefix`
+- `CodeSequenceLength`
+- `SkipColumns`
+- `Audit` (if true: manage `CreatedAt,UpdatedAt,CreatedBy,UpdatedBy`)
+- `RequiredHeaders` (CSV)
+- `UniqueHeaders` (CSV)
+- `UniqueCompositeHeaders` (`A+B;C+D` or JSON)
+- `DefaultValues` (JSON object)
+- `RecordAccessPolicy` (`ALL|OWNER|OWNER_GROUP|OWNER_AND_UPLINE`)
+- `OwnerUserField` (usually `CreatedBy`)
+- `AdditionalActions` (CSV)
+- `MenuGroup`
+- `MenuOrder`
+- `MenuLabel`
+- `MenuIcon`
+- `RoutePath`
+- `PageTitle`
+- `PageDescription`
+- `UIFields` (JSON array)
+- `ShowInMenu`
+- `IncludeInAuthorizationPayload`
 
-    RolePermissions {
-        string RoleID FK
-        string Resource FK
-        boolean CanRead
-        boolean CanWrite
-        boolean CanUpdate
-        boolean CanDelete
-    }
-
-    Resources {
-        string Name PK
-        string FileID
-        string SheetName
-        int SkipColumns
-        boolean Timestamps
-        boolean UserDetails
-    }
-```
-
----
-
-## Technical Details
-
-### Auto-ID Generation
-Sheets with a primary ID (Users, Roles) use a formula in the first data row (row 2) to automatically generate sequential IDs:
-- **Formula:** `="U"&TEXT(ROW()-1,"0000")` (for Users)
-- **Behavior:** Ensures unique, formatted identifiers that scale as rows are added.
-
-### Data Validation
-- **Status (Users):** Restricted to `Active` or `Inactive`.
-- **Permissions (RolePermissions):** Implemented using Checkboxes for intuitive management.
-
-### Management
-The sheet structure is initialized and maintained via:
-- `setupAppSheets.gs`: Idempotent script for creating sheets and formatting.
-- `appMenu.gs`: Provides a custom "Little Leap" menu in the Google Sheet for CRUD operations on these masters.
+## Setup Script
+Use `GAS/setupAppSheets.gs` (`setupAppSheets()`) to create these sheets.

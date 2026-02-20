@@ -16,7 +16,7 @@ const activeDashboard = computed(() => {
   const role = authStore.userRole?.toLowerCase() || 'user'
 
   switch (role) {
-    case 'admin':
+    case 'administrator':
       return AdminDashboard
     case 'manager':
       return ManagerDashboard

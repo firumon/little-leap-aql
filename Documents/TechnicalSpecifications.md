@@ -1,98 +1,71 @@
-﻿# Technical Specifications
+# Technical Specifications
 
-This document details the technical implementation of the Little Leap AQL system, including authentication, API structure, and frontend-backend integration.
+## 1) Stack
+- Frontend: Quasar (Vue 3 + Vite)
+- Backend: Google Apps Script (`doPost`)
+- Data: Google Sheets (APP/MASTERS/TRANSACTIONS/REPORTS)
 
-## 1. Architecture Overview
+## 2) Identity & Access
 
-The system follows a **Serverless** architecture using Google's ecosystem:
+### Authentication
+- Users are authenticated from `APP.Users`.
+- Passwords are SHA-256 hashes.
+- Login stores UUID token in `Users.ApiKey`.
 
-* **Frontend:** Quasar Framework (Vue.js 3 + Vite) PWA.
-* **Backend:** Google Apps Script (GAS) published as a Web App.
-* **Database:** Google Sheets (Relational data modeled in sheets).
+### Identity model
+- One designation per user (`Users.DesignationID`).
+- Multiple roles per user via CSV (`Users.Roles`).
 
-## 2. Authentication & Security
+### Permission model
+- `RolePermissions.Actions` drives permission (CSV actions like `Read,Write,Update,Delete,Approve`).
+- Resource-level auth is aggregated across all user roles.
+- Record-level access enforced via `Resources.RecordAccessPolicy` + designation hierarchy.
 
-### User Identity
-* **Credential Storage:** User data is stored in the `Users` sheet.
-* **Password Handling:** Passwords are never stored in plain text. They are hashed with SHA-256.
-* **Login Flow:**
-  1. Frontend sends email and password to GAS `doPost`.
-  2. GAS verifies password hash.
-  3. GAS generates/stores a UUID token in `ApiKey` and returns user profile.
+## 3) Resource-Driven Runtime
 
-### Stateless API Authentication
-* **Token-Based:** All protected actions include `token`.
-* **Validation:** `validateToken(token)` resolves the exact user row and returns context (`rowNumber`, sheet, indexes, user data).
-* **Benefit:** Update actions avoid scanning all rows repeatedly.
+`APP.Resources` is backend + frontend control plane.
 
-## 3. API Design (Google Apps Script)
+Backend uses it for:
+- file/sheet routing
+- code generation config
+- schema defaults/validation config
+- audit behavior (`Audit`)
+- record-level policy
 
-All requests are handled via `doPost(e)`.
+Frontend uses it for:
+- menu visibility and order
+- route mapping (`RoutePath`)
+- page title/description
+- field metadata (`UIFields`)
 
-### Request Format
-```json
-{
-  "action": "functionName",
-  "token": "user-auth-token",
-  "otherFields": "action-specific payload"
-}
-```
+## 4) CRUD API
+- Generic verbs:
+  - `{ action: "get", scope: "master", resource }`
+  - `{ action: "create", scope: "master", resource, record }`
+  - `{ action: "update", scope: "master", resource, code, record }`
 
-### Response Format
-```json
-{
-  "success": true,
-  "message": "Optional message",
-  "...": "action-specific payload"
-}
-```
+### Apps Script Runtime File Ownership
+- `GAS/apiDispatcher.gs`: owns `doPost`, request parsing/JSON response helpers, and protected action routing.
+- `GAS/auth.gs`: owns authentication/profile logic (`login`, token validation, profile update handlers, authorized resources payload).
+- `GAS/sheetHelpers.gs`: shared sheet utilities (`getSheetHeaders`, `getHeaderIndexMap`, `findRowByValue`, `getRowAsObject`).
 
-### Global Request/Response Helpers
-* `parseRequestPayload(e)`: central request JSON parsing.
-* `jsonResponse(payload)`: central JSON response generator.
+## 5) Master Sync Strategy (IndexedDB + Delta)
+- Master pages are **IDB-first**:
+  - Read cached rows from `resource-records` immediately for fast paint.
+  - Read `resource-meta.lastSyncAt` as sync cursor.
+- Network sync is **interval-gated**:
+  - Re-entering a master page within sync interval uses cache without calling Apps Script.
+  - Manual refresh forces a network sync.
+- Delta request behavior:
+  - If resource headers contain `UpdatedAt`, frontend sends `lastUpdatedAt` and server returns only changed rows.
+  - Delta rows are upserted into IDB.
+- Full-sync fallback:
+  - If `UpdatedAt` is not present, frontend falls back to periodic full-sync (not on every visit).
+- Requirement for reliable delta:
+  - Master sheets should include audit columns and resource metadata should keep `Resources.Audit=TRUE`, so `UpdatedAt` is maintained on write/update.
 
-### Implemented Auth Actions (as of 2026-02-18)
-* `login`
-* `getProfile`
-* `updateAvatar`
-* `updateName`
-* `updateEmail`
-* `updatePassword`
-
-## 4. Frontend Implementation
-
-### Stack
-* **Quasar CLI with Vite**
-* **Pinia** for state management
-* **Axios** for HTTP calls to GAS
-
-### Auth Store Pattern
-`src/stores/auth.js` now uses a shared API helper:
-* `callAuthApi(action, payload, requireAuth)`
-
-This reduces repeated Axios setup (`URL`, headers, token-injection pattern) across actions.
-
-### Profile Management
-`src/pages/ProfilePage/ProfilePage.vue` provides dialogs to update:
-* Avatar
-* Name
-* Email
-* Password
-
-`src/stores/auth.js` actions:
-* `updateAvatar(avatarUrl)`
-* `updateName(name)`
-* `updateEmail(email)`
-* `updatePassword(currentPassword, newPassword)`
-
-## 5. PWA & Offline Capabilities
-
-* **Service Worker:** Workbox-based caching.
-* **Local Persistence:** IndexedDB/localStorage support for cached data and queued operations.
-
-## 6. Data Persistence (Google Sheets)
-
-### Optimization
-* Header/index mapping is reused per request context.
-* Token validation returns direct row context for writes.
-* `getRange(row, col)` updates are used for profile field updates.
+## 6) Deployment Notes
+1. Update APP sheet headers as documented.
+2. Paste GAS files into APP Apps Script.
+3. Run `setupAppSheets()` (for new/clean setup).
+4. Redeploy Web App.

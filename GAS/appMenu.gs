@@ -1,647 +1,422 @@
 /**
- * ============================================================
- * Little Leap AQL — Custom Menu & Management UI
- * ============================================================
- * 
- * This script adds a "Little Leap" menu to the Google Sheet.
- * It provides dialog-based interfaces for managing Users, Roles,
- * Access Control, and Resources.
- * ============================================================
+ * AQL Admin Menu
+ * Aligned with latest APP schema.
  */
-
-// Shared constants are located in Constants.gs
-
-
-// ── MENU CREATION ────────────────────────────────────────────
 
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
-  ui.createMenu('Little Leap AQL')
-    .addSubMenu(ui.createMenu('User Management')
-      .addItem('Create New User', 'showCreateUserDialog')
-      .addItem('Update User Details', 'showUpdateUserDialog')
+  ui.createMenu('AQL')
+    .addSubMenu(ui.createMenu('Users')
+      .addItem('Create User', 'showCreateUserDialog')
+      .addItem('Update User', 'showUpdateUserDialog')
       .addItem('Toggle User Status', 'showToggleUserStatusDialog'))
-    .addSubMenu(ui.createMenu('Role Management')
-      .addItem('Create New Role', 'showCreateRoleDialog')
-      .addItem('Update Role Details', 'showUpdateRoleDialog'))
-    .addSubMenu(ui.createMenu('Access Control')
-      .addItem('Assign Role to User', 'showAssignRoleDialog')
-      .addItem('Manage Role Permissions', 'showManagePermissionsDialog'))
-    .addSubMenu(ui.createMenu('Resource Management')
-      .addItem('Add New Resource', 'showAddResourceDialog')
+    .addSubMenu(ui.createMenu('Designations')
+      .addItem('Create Designation', 'showCreateDesignationDialog')
+      .addItem('Update Designation', 'showUpdateDesignationDialog'))
+    .addSubMenu(ui.createMenu('Roles')
+      .addItem('Create Role', 'showCreateRoleDialog')
+      .addItem('Update Role', 'showUpdateRoleDialog'))
+    .addSubMenu(ui.createMenu('Resources')
+      .addItem('Add Resource', 'showAddResourceDialog')
       .addItem('Edit Resource', 'showEditResourceDialog'))
     .addToUi();
 }
 
-// ── UI SHOW FUNCTIONS ────────────────────────────────────────
-
 function showCreateUserDialog() {
-  showDialog('createUser', 'Create New User', 400, 600, { roles: getRolesList() });
+  showDialog('createUser', 'Create User', 620, 760, baseDialogData());
 }
-
 function showUpdateUserDialog() {
-  showDialog('updateUser', 'Update User Details', 400, 650, { users: getUsersList(), roles: getRolesList() });
+  showDialog('updateUser', 'Update User', 620, 780, baseDialogData());
 }
-
 function showToggleUserStatusDialog() {
-  showDialog('toggleUser', 'Toggle User Status', 400, 350, { users: getUsersList() });
+  showDialog('toggleUser', 'Toggle User Status', 460, 360, baseDialogData());
 }
-
+function showCreateDesignationDialog() {
+  showDialog('createDesignation', 'Create Designation', 480, 450, baseDialogData());
+}
+function showUpdateDesignationDialog() {
+  showDialog('updateDesignation', 'Update Designation', 500, 520, baseDialogData());
+}
 function showCreateRoleDialog() {
-  showDialog('createRole', 'Create New Role', 400, 400);
+  showDialog('createRole', 'Create Role', 900, 760, baseDialogData());
 }
-
 function showUpdateRoleDialog() {
-  showDialog('updateRole', 'Update Role Details', 400, 450, { roles: getRolesList() });
+  showDialog('updateRole', 'Update Role', 900, 800, baseDialogData());
 }
-
-function showAssignRoleDialog() {
-  showDialog('assignRole', 'Assign Role to User', 400, 400, { users: getUsersList(), roles: getRolesList() });
-}
-
-function showManagePermissionsDialog() {
-  showDialog('managePermissions', 'Manage Role Permissions', 600, 600, { roles: getRolesList(), resources: getResourcesList() });
-}
-
 function showAddResourceDialog() {
-  showDialog('addResource', 'Add New Resource', 450, 650);
+  showDialog('addResource', 'Add Resource', 780, 920, baseDialogData());
 }
-
 function showEditResourceDialog() {
-  showDialog('editResource', 'Edit Resource', 450, 700, { resources: getResourcesList() });
+  showDialog('editResource', 'Edit Resource', 780, 950, baseDialogData());
 }
 
-/**
- * Generic function to render HTML dialogs
- */
-function showDialog(action, title, width, height, data = {}) {
-  const htmlTemplate = getHtmlTemplate(action, data);
-  const html = HtmlService.createHtmlOutput(htmlTemplate)
-    .setWidth(width)
-    .setHeight(height);
-  SpreadsheetApp.getUi().showModalDialog(html, title);
+function baseDialogData() {
+  return {
+    users: getUsersList(),
+    roles: getRolesList(),
+    designations: getDesignationsList(),
+    resources: getResourcesList(),
+    roleActionsMatrix: getRoleActionMatrix()
+  };
 }
 
-// ── SERVER-SIDE ACTIONS ──────────────────────────────────────
+function showDialog(action, title, width, height, data) {
+  SpreadsheetApp.getUi().showModalDialog(
+    HtmlService.createHtmlOutput(getHtmlTemplate(action, data || {})).setWidth(width).setHeight(height),
+    title
+  );
+}
 
 function handleCreateUser(form) {
   try {
-    const sheet = getSheet(CONFIG.SHEETS.USERS);
-    const existing = findRow(sheet, 2, form.email);
-    if (existing !== -1) throw new Error('User with this email already exists.');
+    const ctx = ctxOf(CONFIG.SHEETS.USERS);
+    const name = txt(form.name), email = txt(form.email), password = txt(form.password);
+    if (!name || !email || !password) throw new Error('Name, Email, Password are required.');
+    if (findRow(ctx.sheet, ctx.idx.Email, email, 2, false) !== -1) throw new Error('Email already exists.');
 
-    const nextRow = sheet.getLastRow() + 1;
-    const passwordHash = Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, form.password));
-    
-    // Headers: ['UserID', 'Name', 'Email', 'PasswordHash', 'RoleID', 'Status']
-    sheet.getRange(nextRow, 2, 1, 5).setValues([[form.name, form.email, passwordHash, form.roleId, 'Active']]);
-    return { success: true, message: `User created: ${form.name}` };
-  } catch (e) {
-    return { success: false, message: e.message };
-  }
+    ctx.sheet.appendRow(toRow(ctx.headers, {
+      UserID: nextId(ctx, 'UserID', 'U', 4),
+      Name: name,
+      Email: email,
+      PasswordHash: hashPasswordMenu(password),
+      DesignationID: txt(form.designationId),
+      Roles: rolesInputToCsv(form.roles),
+      Status: 'Active',
+      Avatar: '',
+      ApiKey: ''
+    }));
+    return ok('User created.');
+  } catch (e) { return fail(e); }
 }
 
 function handleUpdateUser(form) {
   try {
-    const sheet = getSheet(CONFIG.SHEETS.USERS);
-    const row = findRow(sheet, 0, form.userId);
+    const ctx = ctxOf(CONFIG.SHEETS.USERS);
+    const userId = txt(form.userId);
+    const row = findRow(ctx.sheet, ctx.idx.UserID, userId, 2, true);
     if (row === -1) throw new Error('User not found.');
-    
-    sheet.getRange(row, 2).setValue(form.name);
-    sheet.getRange(row, 3).setValue(form.email);
-    sheet.getRange(row, 5).setValue(form.roleId);
-    
-    if (form.password) {
-       const passwordHash = Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, form.password));
-       sheet.getRange(row, 4).setValue(passwordHash);
-    }
 
-    return { success: true, message: `User updated successfully.` };
-  } catch (e) {
-    return { success: false, message: e.message };
-  }
+    const name = txt(form.name), email = txt(form.email);
+    if (!name || !email) throw new Error('Name and Email are required.');
+    const er = findRow(ctx.sheet, ctx.idx.Email, email, 2, false);
+    if (er !== -1 && er !== row) throw new Error('Email already exists.');
+
+    put(ctx.sheet, row, ctx.idx.Name, name);
+    put(ctx.sheet, row, ctx.idx.Email, email);
+    put(ctx.sheet, row, ctx.idx.DesignationID, txt(form.designationId));
+    put(ctx.sheet, row, ctx.idx.Roles, rolesInputToCsv(form.roles));
+    if (txt(form.password)) put(ctx.sheet, row, ctx.idx.PasswordHash, hashPasswordMenu(form.password));
+    return ok('User updated.');
+  } catch (e) { return fail(e); }
 }
 
 function handleToggleUserStatus(form) {
   try {
-    const sheet = getSheet(CONFIG.SHEETS.USERS);
-    const row = findRow(sheet, 0, form.userId);
+    const ctx = ctxOf(CONFIG.SHEETS.USERS);
+    const row = findRow(ctx.sheet, ctx.idx.UserID, txt(form.userId), 2, true);
     if (row === -1) throw new Error('User not found.');
-    
-    const currentStatus = sheet.getRange(row, 6).getValue();
-    const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
-    sheet.getRange(row, 6).setValue(newStatus);
-    
-    return { success: true, message: `User status changed to ${newStatus}.` };
-  } catch (e) {
-    return { success: false, message: e.message };
-  }
+    const cur = (get(ctx.sheet, row, ctx.idx.Status) || 'Active').toString().trim();
+    put(ctx.sheet, row, ctx.idx.Status, cur === 'Active' ? 'Inactive' : 'Active');
+    return ok('Status updated.');
+  } catch (e) { return fail(e); }
+}
+
+function handleCreateDesignation(form) {
+  try {
+    const ctx = ctxOf(CONFIG.SHEETS.DESIGNATIONS);
+    const name = txt(form.name);
+    if (!name) throw new Error('Designation name required.');
+    if (findRow(ctx.sheet, ctx.idx.Name, name, 2, false) !== -1) throw new Error('Designation already exists.');
+    ctx.sheet.appendRow(toRow(ctx.headers, {
+      DesignationID: nextId(ctx, 'DesignationID', 'D', 4),
+      Name: name,
+      HierarchyLevel: Number(form.hierarchyLevel || 0) || '',
+      Status: txt(form.status || 'Active'),
+      Description: txt(form.description)
+    }));
+    return ok('Designation created.');
+  } catch (e) { return fail(e); }
+}
+
+function handleUpdateDesignation(form) {
+  try {
+    const ctx = ctxOf(CONFIG.SHEETS.DESIGNATIONS);
+    const row = findRow(ctx.sheet, ctx.idx.DesignationID, txt(form.designationId), 2, true);
+    if (row === -1) throw new Error('Designation not found.');
+    if (!txt(form.name)) throw new Error('Designation name required.');
+    put(ctx.sheet, row, ctx.idx.Name, txt(form.name));
+    put(ctx.sheet, row, ctx.idx.HierarchyLevel, Number(form.hierarchyLevel || 0) || '');
+    put(ctx.sheet, row, ctx.idx.Status, txt(form.status || 'Active'));
+    put(ctx.sheet, row, ctx.idx.Description, txt(form.description));
+    return ok('Designation updated.');
+  } catch (e) { return fail(e); }
 }
 
 function handleCreateRole(form) {
   try {
-    const sheet = getSheet(CONFIG.SHEETS.ROLES);
-    const existing = findRow(sheet, 1, form.name);
-    if (existing !== -1) throw new Error('Role with this name already exists.');
+    const ctx = ctxOf(CONFIG.SHEETS.ROLES);
+    const name = txt(form.name);
+    if (!name) throw new Error('Role name required.');
+    if (findRow(ctx.sheet, ctx.idx.Name, name, 2, false) !== -1) throw new Error('Role already exists.');
 
-    const nextRow = sheet.getLastRow() + 1;
-    sheet.getRange(nextRow, 2, 1, 2).setValues([[form.name, form.description]]);
-    return { success: true, message: `Role created: ${form.name}` };
-  } catch (e) {
-    return { success: false, message: e.message };
-  }
+    const roleId = nextId(ctx, 'RoleID', 'R', 4);
+    ctx.sheet.appendRow(toRow(ctx.headers, { RoleID: roleId, Name: name, Description: txt(form.description) }));
+    saveRolePermissionMatrix(roleId, form);
+    return ok('Role created.');
+  } catch (e) { return fail(e); }
 }
 
 function handleUpdateRole(form) {
   try {
-    const sheet = getSheet(CONFIG.SHEETS.ROLES);
-    const row = findRow(sheet, 0, form.roleId);
+    const ctx = ctxOf(CONFIG.SHEETS.ROLES);
+    const roleId = txt(form.roleId);
+    const row = findRow(ctx.sheet, ctx.idx.RoleID, roleId, 2, true);
     if (row === -1) throw new Error('Role not found.');
-
-    sheet.getRange(row, 2).setValue(form.name);
-    sheet.getRange(row, 3).setValue(form.description);
-    return { success: true, message: `Role updated successfully.` };
-  } catch (e) {
-    return { success: false, message: e.message };
-  }
+    if (!txt(form.name)) throw new Error('Role name required.');
+    put(ctx.sheet, row, ctx.idx.Name, txt(form.name));
+    put(ctx.sheet, row, ctx.idx.Description, txt(form.description));
+    saveRolePermissionMatrix(roleId, form);
+    return ok('Role updated.');
+  } catch (e) { return fail(e); }
 }
 
-function handleAssignRole(form) {
-  try {
-    const userId = form.userId;
-    const roleId = form.roleId;
-
-    const sheet = getSheet(CONFIG.SHEETS.USERS);
-    const row = findRow(sheet, 0, userId);
-    if (row === -1) throw new Error('User not found.');
-    
-    sheet.getRange(row, 5).setValue(roleId);
-    
-    return { success: true, message: `Role assigned to user.` };
-  } catch (e) {
-    return { success: false, message: e.message };
+function saveRolePermissionMatrix(roleId, form) {
+  const ctx = ctxOf(CONFIG.SHEETS.ROLE_PERMISSIONS);
+  const values = ctx.sheet.getDataRange().getValues();
+  for (let i = values.length; i >= 2; i--) {
+    if ((values[i - 1][ctx.idx.RoleID] || '').toString().trim() === roleId) {
+      ctx.sheet.deleteRow(i);
+    }
   }
-}
 
-function handleSavePermissions(form) {
-  try {
-      const sheet = getSheet(CONFIG.SHEETS.ROLE_PERMISSIONS);
-      const roleId = form.roleId;
-      const resource = form.resource;
-      
-      deletePermissionRows(sheet, roleId, resource);
-      
-      sheet.appendRow([
-          roleId,
-          resource,
-          form.canRead || false,
-          form.canWrite || false,
-          form.canUpdate || false,
-          form.canDelete || false
-      ]);
-      
-      return { success: true, message: `Permissions saved.` };
-  } catch (e) {
-    return { success: false, message: e.message };
-  }
+  const matrix = getRoleActionMatrix();
+  matrix.resources.forEach(function(resource) {
+    const selected = [];
+    matrix.actionsByResource[resource].forEach(function(action) {
+      const key = permKey(resource, action);
+      if (form[key] === true || String(form[key]).toLowerCase() === 'true') selected.push(action);
+    });
+    if (selected.length) {
+      ctx.sheet.appendRow(toRow(ctx.headers, {
+        RoleID: roleId,
+        Resource: resource,
+        Actions: selected.join(',')
+      }));
+    }
+  });
 }
 
 function handleAddResource(form) {
   try {
-    const sheet = getSheet(CONFIG.SHEETS.RESOURCES);
-    const existing = findRow(sheet, 0, form.name);
-    if (existing !== -1) throw new Error('Resource with this name already exists.');
-    
-    const rowData = [
-       form.name,
-       form.fileId,
-       form.sheetName,
-       form.skipColumns || 0,
-       form.timestamps || false,
-       form.userDetails || false
-    ];
-    
-    sheet.appendRow(rowData);
-    return { success: true, message: `Resource added: ${form.name}` };
-  } catch (e) {
-    return { success: false, message: e.message };
-  }
+    const ctx = ctxOf(CONFIG.SHEETS.RESOURCES);
+    const name = txt(form.name);
+    if (!name) throw new Error('Resource Name required.');
+    if (findRow(ctx.sheet, ctx.idx.Name, name, 2, true) !== -1) throw new Error('Resource already exists.');
+    const rowObj = mapResource(form); rowObj.Name = name;
+    ctx.sheet.appendRow(toRow(ctx.headers, rowObj));
+    return ok('Resource added.');
+  } catch (e) { return fail(e); }
 }
 
 function handleEditResource(form) {
   try {
-    const sheet = getSheet(CONFIG.SHEETS.RESOURCES);
-    const row = findRow(sheet, 0, form.originalName);
+    const ctx = ctxOf(CONFIG.SHEETS.RESOURCES);
+    const key = txt(form.originalName || form.resourceId);
+    const row = findRow(ctx.sheet, ctx.idx.Name, key, 2, true);
     if (row === -1) throw new Error('Resource not found.');
-    
-    sheet.getRange(row, 1).setValue(form.name);
-    sheet.getRange(row, 2).setValue(form.fileId);
-    sheet.getRange(row, 3).setValue(form.sheetName);
-    sheet.getRange(row, 4).setValue(form.skipColumns || 0);
-    sheet.getRange(row, 5).setValue(form.timestamps || false);
-    sheet.getRange(row, 6).setValue(form.userDetails || false);
-    
-    return { success: true, message: `Resource updated.` };
-  } catch (e) {
-    return { success: false, message: e.message };
-  }
+    const rowObj = mapResource(form); rowObj.Name = txt(form.name || key);
+    Object.keys(rowObj).forEach(function(h) { put(ctx.sheet, row, ctx.idx[h], rowObj[h]); });
+    return ok('Resource updated.');
+  } catch (e) { return fail(e); }
 }
-
-function getUserAssignedRole(userId) {
-    const sheet = getSheet(CONFIG.SHEETS.USERS);
-    const row = findRow(sheet, 0, userId);
-    if (row === -1) return null;
-    return sheet.getRange(row, 5).getValue(); // RoleID is at column 5
-}
-
 
 function getUserDetails(userId) {
-   const sheet = getSheet(CONFIG.SHEETS.USERS);
-   const row = findRow(sheet, 0, userId);
-   if (row === -1) return null;
-   const values = sheet.getRange(row, 1, 1, 8).getValues()[0];
-   return { 
-     id: values[0], 
-     name: values[1], 
-     email: values[2], 
-     roleId: values[4],
-     status: values[5],
-     avatar: values[6],
-     apiKey: values[7]
-   };
+  const ctx = ctxOf(CONFIG.SHEETS.USERS), row = findRow(ctx.sheet, ctx.idx.UserID, txt(userId), 2, true);
+  if (row === -1) return null;
+  return { userId: get(ctx.sheet, row, ctx.idx.UserID), name: get(ctx.sheet, row, ctx.idx.Name), email: get(ctx.sheet, row, ctx.idx.Email), designationId: get(ctx.sheet, row, ctx.idx.DesignationID), roles: get(ctx.sheet, row, ctx.idx.Roles) };
 }
-
+function getDesignationDetails(designationId) {
+  const ctx = ctxOf(CONFIG.SHEETS.DESIGNATIONS), row = findRow(ctx.sheet, ctx.idx.DesignationID, txt(designationId), 2, true);
+  if (row === -1) return null;
+  return { designationId: get(ctx.sheet, row, ctx.idx.DesignationID), name: get(ctx.sheet, row, ctx.idx.Name), hierarchyLevel: get(ctx.sheet, row, ctx.idx.HierarchyLevel), status: get(ctx.sheet, row, ctx.idx.Status), description: get(ctx.sheet, row, ctx.idx.Description) };
+}
 function getRoleDetails(roleId) {
-   const sheet = getSheet(CONFIG.SHEETS.ROLES);
-   const row = findRow(sheet, 0, roleId);
-    if (row === -1) return null;
-   const values = sheet.getRange(row, 1, 1, 3).getValues()[0];
-   return { id: values[0], name: values[1], description: values[2] };
+  const ctx = ctxOf(CONFIG.SHEETS.ROLES), row = findRow(ctx.sheet, ctx.idx.RoleID, txt(roleId), 2, true);
+  if (row === -1) return null;
+  const roleActions = getRoleActionsByResource(roleId);
+  return { roleId: get(ctx.sheet, row, ctx.idx.RoleID), name: get(ctx.sheet, row, ctx.idx.Name), description: get(ctx.sheet, row, ctx.idx.Description), roleActions: roleActions };
 }
-
 function getResourceDetails(resourceName) {
-   const sheet = getSheet(CONFIG.SHEETS.RESOURCES);
-   const row = findRow(sheet, 0, resourceName);
-   if (row === -1) return null;
-   const values = sheet.getRange(row, 1, 1, 6).getValues()[0];
-   return { 
-     name: values[0], 
-     fileId: values[1], 
-     sheetName: values[2], 
-     skipColumns: values[3], 
-     timestamps: values[4], 
-     userDetails: values[5] 
-   };
+  const ctx = ctxOf(CONFIG.SHEETS.RESOURCES), row = findRow(ctx.sheet, ctx.idx.Name, txt(resourceName), 2, true);
+  if (row === -1) return null;
+  const out = { originalName: get(ctx.sheet, row, ctx.idx.Name) };
+  ctx.headers.forEach(function(h) { out[toFormName(h)] = get(ctx.sheet, row, ctx.idx[h]); });
+  return out;
 }
 
-// ── HELPERS ──────────────────────────────────────────────────
+function getUsersList() { return listRows(CONFIG.SHEETS.USERS, 'UserID', 'Name', 'Email'); }
+function getRolesList() { return listRows(CONFIG.SHEETS.ROLES, 'RoleID', 'Name'); }
+function getDesignationsList() { return listRows(CONFIG.SHEETS.DESIGNATIONS, 'DesignationID', 'Name').map(function(d){ return { id: d.id, name: d.name }; }); }
+function getResourcesList() { return listRows(CONFIG.SHEETS.RESOURCES, 'Name', 'Name').map(function(r){ return { name: r.name }; }); }
 
-function getSheet(name) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = ss.getSheetByName(name);
-  if (!sheet) throw new Error(`Sheet "${name}" not found.`);
-  return sheet;
-}
-
-function findRow(sheet, colIndex, value) {
-  const data = sheet.getDataRange().getValues();
-  for (let i = 1; i < data.length; i++) { // Skip header
-    if (data[i][colIndex] == value) {
-      return i + 1; // 1-based row index
-    }
+function getRoleActionMatrix() {
+  try {
+    const resources = getResourcesList().map(function(r){ return r.name; });
+    const ctx = ctxOf(CONFIG.SHEETS.RESOURCES);
+    const matrix = { resources: resources, actionsByResource: {} };
+    resources.forEach(function(resourceName) {
+      const row = findRow(ctx.sheet, ctx.idx.Name, resourceName, 2, true);
+      let extra = '';
+      if (row !== -1 && ctx.idx.AdditionalActions !== undefined) extra = (get(ctx.sheet, row, ctx.idx.AdditionalActions) || '').toString();
+      const base = ['Read', 'Write', 'Update', 'Delete'];
+      const merged = base.concat(extra.split(',').map(function(x){ return x.trim(); }).filter(Boolean));
+      matrix.actionsByResource[resourceName] = uniqueKeepOrder(merged);
+    });
+    return matrix;
+  } catch (e) {
+    return { resources: [], actionsByResource: {} };
   }
-  return -1;
 }
 
-function deletePermissionRows(sheet, roleId, resource) {
-    const data = sheet.getDataRange().getValues();
-    for (let i = data.length - 1; i >= 1; i--) {
-        if (data[i][0] == roleId && data[i][1] == resource) {
-            sheet.deleteRow(i + 1);
-        }
-    }
-}
-
-function getUsersList() {
-  const sheet = getSheet(CONFIG.SHEETS.USERS);
-  const data = sheet.getDataRange().getValues();
-  const list = [];
-  for (let i = 1; i < data.length; i++) {
-    if (data[i][0]) list.push({ id: data[i][0], name: data[i][1], email: data[i][2] });
+function getRoleActionsByResource(roleId) {
+  const ctx = ctxOf(CONFIG.SHEETS.ROLE_PERMISSIONS);
+  const values = ctx.sheet.getDataRange().getValues();
+  const out = {};
+  for (let i = 1; i < values.length; i++) {
+    const r = (values[i][ctx.idx.RoleID] || '').toString().trim();
+    if (r !== roleId) continue;
+    const resource = (values[i][ctx.idx.Resource] || '').toString().trim();
+    const actions = (values[i][ctx.idx.Actions] || '').toString().split(',').map(function(a){ return a.trim(); }).filter(Boolean);
+    out[resource] = actions;
   }
-  return list;
+  return out;
 }
 
-function getRolesList() {
-    const sheet = getSheet(CONFIG.SHEETS.ROLES);
-    const data = sheet.getDataRange().getValues();
-    const list = [];
-    for (let i = 1; i < data.length; i++) {
-        if (data[i][0]) list.push({ id: data[i][0], name: data[i][1] });
+function listRows(sheetName, idHeader, nameHeader, extraHeader) {
+  try {
+    const ctx = ctxOf(sheetName), values = ctx.sheet.getDataRange().getValues(), out = [];
+    for (let i = 1; i < values.length; i++) {
+      const id = (values[i][ctx.idx[idHeader]] || '').toString().trim(); if (!id) continue;
+      const row = { id: id, name: values[i][ctx.idx[nameHeader]] || id };
+      if (extraHeader && ctx.idx[extraHeader] !== undefined) row.email = values[i][ctx.idx[extraHeader]] || '';
+      out.push(row);
     }
-    return list;
+    return out;
+  } catch (e) { return []; }
 }
 
-function getResourcesList() {
-    try {
-        const sheet = getSheet(CONFIG.SHEETS.RESOURCES);
-        const data = sheet.getDataRange().getValues();
-        const list = [];
-        for (let i = 1; i < data.length; i++) {
-            if (data[i][0]) list.push({ name: data[i][0] });
-        }
-        return list;
-    } catch (e) { return []; }
+function mapResource(form) {
+  return {
+    Scope: txt(form.scope || 'master').toLowerCase(),
+    IsActive: boolText(form.isActive, true),
+    FileID: txt(form.fileId),
+    SheetName: txt(form.sheetName),
+    CodePrefix: txt(form.codePrefix),
+    CodeSequenceLength: numOrBlank(form.codeSequenceLength),
+    SkipColumns: Number(form.skipColumns || 0) || 0,
+    Audit: boolText(form.audit, false),
+    RequiredHeaders: txt(form.requiredHeaders),
+    UniqueHeaders: txt(form.uniqueHeaders),
+    UniqueCompositeHeaders: txt(form.uniqueCompositeHeaders),
+    DefaultValues: txt(form.defaultValues),
+    RecordAccessPolicy: txt(form.recordAccessPolicy || 'ALL').toUpperCase(),
+    OwnerUserField: txt(form.ownerUserField || 'CreatedBy'),
+    AdditionalActions: txt(form.additionalActions),
+    MenuGroup: txt(form.menuGroup),
+    MenuOrder: numOrBlank(form.menuOrder),
+    MenuLabel: txt(form.menuLabel),
+    MenuIcon: txt(form.menuIcon),
+    RoutePath: txt(form.routePath),
+    PageTitle: txt(form.pageTitle),
+    PageDescription: txt(form.pageDescription),
+    UIFields: txt(form.uiFields),
+    ShowInMenu: boolText(form.showInMenu, true),
+    IncludeInAuthorizationPayload: boolText(form.includeInAuthorizationPayload, true)
+  };
 }
 
-// ── HTML TEMPLATE GENERATOR ──────────────────────────────────
+function ctxOf(sheetName) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+  if (!sheet) throw new Error('Sheet not found: ' + sheetName);
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const idx = {};
+  headers.forEach(function(h, i) { idx[h] = i; });
+  return { sheet: sheet, headers: headers, idx: idx };
+}
+function toRow(headers, obj) { return headers.map(function(h) { return obj[h] !== undefined ? obj[h] : ''; }); }
+function put(sheet, row, idx, value) { if (idx !== undefined) sheet.getRange(row, idx + 1).setValue(value); }
+function get(sheet, row, idx) { return idx === undefined ? '' : sheet.getRange(row, idx + 1).getValue(); }
+function txt(v) { return (v || '').toString().trim(); }
+function numOrBlank(v) { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : ''; }
+function boolText(v, fallback) { if (v === true || String(v).toUpperCase() === 'TRUE') return 'TRUE'; if (v === false || String(v).toUpperCase() === 'FALSE') return 'FALSE'; return fallback ? 'TRUE' : 'FALSE'; }
+function rolesInputToCsv(value) { return csv(Array.isArray(value) ? value.join(',') : value); }
+function csv(v) { const seen = {}; return (v || '').toString().split(',').map(function(x){ return x.trim(); }).filter(function(x){ if (!x) return false; if (seen[x]) return false; seen[x] = 1; return true; }).join(','); }
+function hashPasswordMenu(password) { return Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, password || '')); }
+function findRow(sheet, colIndex, value, startRow, matchCase) {
+  if (colIndex === undefined || value === undefined || value === null || value === '') return -1;
+  const from = startRow || 2;
+  if (sheet.getLastRow() < from) return -1;
+  const range = sheet.getRange(from, colIndex + 1, sheet.getLastRow() - from + 1, 1);
+  const finder = range.createTextFinder(String(value)).matchEntireCell(true);
+  finder.matchCase(matchCase === true);
+  const m = finder.findNext();
+  return m ? m.getRow() : -1;
+}
+function nextId(ctx, header, prefix, digits) {
+  if (ctx.idx[header] === undefined) return '';
+  const values = ctx.sheet.getDataRange().getValues(), re = new RegExp('^' + prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(\\d+)$'); let max = 0;
+  for (let i = 1; i < values.length; i++) {
+    const m = ((values[i][ctx.idx[header]] || '').toString().trim()).match(re);
+    if (m) { const n = Number(m[1]); if (n > max) max = n; }
+  }
+  return prefix + String(max + 1).padStart(digits || 4, '0');
+}
+function uniqueKeepOrder(list) { const s = {}; const out = []; list.forEach(function(v){ const k = (v || '').toString().trim(); if (!k) return; const nk = k.toUpperCase(); if (s[nk]) return; s[nk] = 1; out.push(k); }); return out; }
+function permKey(resource, action) { return 'perm__' + sanitizeKey(resource) + '__' + sanitizeKey(action); }
+function sanitizeKey(v) { return (v || '').toString().replace(/[^a-zA-Z0-9]/g, '_'); }
+function ok(msg) { return { success: true, message: msg }; }
+function fail(err) { return { success: false, message: err.message || String(err) }; }
+function toFormName(h) {
+  const m = { FileID:'fileId', SheetName:'sheetName', CodePrefix:'codePrefix', CodeSequenceLength:'codeSequenceLength', SkipColumns:'skipColumns', IsActive:'isActive', RequiredHeaders:'requiredHeaders', UniqueHeaders:'uniqueHeaders', UniqueCompositeHeaders:'uniqueCompositeHeaders', DefaultValues:'defaultValues', RecordAccessPolicy:'recordAccessPolicy', OwnerUserField:'ownerUserField', AdditionalActions:'additionalActions', MenuGroup:'menuGroup', MenuOrder:'menuOrder', MenuLabel:'menuLabel', MenuIcon:'menuIcon', RoutePath:'routePath', PageTitle:'pageTitle', PageDescription:'pageDescription', UIFields:'uiFields', ShowInMenu:'showInMenu', IncludeInAuthorizationPayload:'includeInAuthorizationPayload' };
+  return m[h] || (h.charAt(0).toLowerCase() + h.slice(1));
+}
+function esc(v) { return (v == null ? '' : String(v)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
 function getHtmlTemplate(action, data) {
-  let content = '';
-  const styles = `
-    <style>
-      body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 20px; color: #333; }
-      h2 { color: ${CONFIG.BRAND_COLOR}; margin-top: 0; }
-      .form-group { margin-bottom: 12px; }
-      label { display: block; margin-bottom: 4px; font-weight: 600; font-size: 0.85em; }
-      input[type="text"], input[type="email"], input[type="password"], input[type="number"], select, textarea {
-        width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;
-      }
-      button {
-        background-color: ${CONFIG.BRAND_COLOR}; color: white; border: none; padding: 10px;
-        border-radius: 4px; cursor: pointer; font-size: 1em; width: 100%; margin-top: 10px;
-      }
-      button:hover { background-color: #357ebd; }
-      button:disabled { background-color: #ccc; cursor: not-allowed; }
-      #message { margin-top: 15px; padding: 8px; border-radius: 4px; display: none; font-size: 0.85em; text-align: center; }
-      .success { background-color: #dff0d8; color: #3c763d; border: 1px solid #d6e9c6; }
-      .error { background-color: #f2dede; color: #a94442; border: 1px solid #ebccd1; }
-      .checkbox-group { display: flex; align-items: center; gap: 8px; font-size: 0.9em; font-weight: normal; margin-top: 5px; }
-      input[type="checkbox"] { width: auto; margin: 0; }
-      .perm-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 5px; }
-      .checkbox-list { border: 1px solid #ccc; border-radius: 4px; padding: 10px; max-height: 200px; overflow-y: auto; background: #fdfdfd; }
-    </style>
-  `;
+  const users = data.users || [], roles = data.roles || [], resources = data.resources || [], designations = data.designations || [], matrix = data.roleActionsMatrix || { resources: [], actionsByResource: {} };
+  const uo = users.map(function(x){ return '<option value="' + esc(x.id) + '">' + esc(x.name) + ' (' + esc(x.id) + ')</option>'; }).join('');
+  const ro = roles.map(function(x){ return '<option value="' + esc(x.id) + '">' + esc(x.name) + ' (' + esc(x.id) + ')</option>'; }).join('');
+  const rso = resources.map(function(x){ return '<option value="' + esc(x.name) + '">' + esc(x.name) + '</option>'; }).join('');
+  const doo = designations.map(function(x){ return '<option value="' + esc(x.id) + '">' + esc(x.name) + '</option>'; }).join('');
 
-  const commonScript = `
-    <script>
-      function submitForm(handlerName) {
-         const btn = document.getElementById('submitBtn');
-         const msg = document.getElementById('message');
-         const form = document.getElementById('mainForm');
-         
-         btn.disabled = true;
-         const originalText = btn.innerText;
-         btn.innerText = 'Processing...';
-         msg.style.display = 'none';
+  const style = '<style>body{font-family:Segoe UI,Arial,sans-serif;padding:14px}.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.g{margin:8px 0}label{display:block;font-size:12px;font-weight:600}input,select,textarea{width:100%;padding:7px;box-sizing:border-box;border:1px solid #ccc;border-radius:6px}textarea{min-height:60px}.note{font-size:12px;color:#666}button{width:100%;padding:9px;background:#2563eb;border:0;border-radius:7px;color:#fff;font-weight:600;margin-top:8px}.msg{display:none;margin-top:8px;padding:8px;border-radius:6px;font-size:12px}.ok{background:#ecfdf5;color:#065f46}.er{background:#fef2f2;color:#991b1b}.box{border:1px solid #ddd;border-radius:8px;padding:8px;margin-top:8px}.small{font-size:11px;color:#666}.checks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.checks label{font-weight:400;font-size:12px;display:flex;gap:6px;align-items:center}</style>';
+  const js = '<script>function submitForm(h){const f=document.getElementById("mainForm"),b=document.getElementById("submitBtn"),m=document.getElementById("msg"),p={};Array.from(f.elements).forEach(function(el){if(!el.name)return;if(el.type==="checkbox"){if(el.name==="roles"){if(!p.roles)p.roles=[];if(el.checked)p.roles.push(el.value);}else{p[el.name]=el.checked;}}else p[el.name]=el.value;});b.disabled=true;const t=b.innerText;b.innerText="Processing...";m.style.display="none";google.script.run.withSuccessHandler(function(r){b.disabled=false;b.innerText=t;m.style.display="block";m.className="msg "+(r.success?"ok":"er");m.innerText=r.message||"Done";if(r.success)setTimeout(function(){google.script.host.close();},800);}).withFailureHandler(function(e){b.disabled=false;b.innerText=t;m.style.display="block";m.className="msg er";m.innerText=e.message||String(e);})[h](p);}function loadDetails(t,id){if(!id)return;google.script.run.withSuccessHandler(function(d){fillForm(d,t);})["get"+t+"Details"](id);}function fillForm(d,t){if(!d)return;Object.keys(d).forEach(function(k){const el=document.querySelector("[name=\'"+k+"\']");if(!el)return;if(el.type==="checkbox"){const v=d[k];el.checked=(v===true||String(v).toUpperCase()==="TRUE");}else el.value=d[k]==null?"":d[k];});if(t==="User"){const roles=(d.roles||"").toString().split(",").map(function(x){return x.trim();});document.querySelectorAll("input[name=roles]").forEach(function(cb){cb.checked=roles.indexOf(cb.value)!==-1;});}if(t==="Role"){document.querySelectorAll("input[data-perm=1]").forEach(function(cb){cb.checked=false;});const map=d.roleActions||{};Object.keys(map).forEach(function(res){(map[res]||[]).forEach(function(act){const k="perm__"+res.replace(/[^a-zA-Z0-9]/g,"_")+"__"+act.replace(/[^a-zA-Z0-9]/g,"_");const cb=document.querySelector("input[name=\'"+k+"\']");if(cb)cb.checked=true;});});}}</script>';
 
-         const formData = {};
-         for(let i=0; i<form.elements.length; i++){
-             const e = form.elements[i];
-             if(e.name) {
-                 if(e.type === 'checkbox') formData[e.name] = e.checked;
-                 else formData[e.name] = e.value;
-             }
-         }
-
-         google.script.run
-           .withSuccessHandler((res) => {
-              btn.disabled = false;
-              btn.innerText = originalText;
-              msg.style.display = 'block';
-              msg.className = res.success ? 'success' : 'error';
-              msg.innerText = res.message;
-              if (res.success) {
-                  // Keep open for bulk actions (Sync Roles & Manage Permissions)
-                  if (handlerName === 'handleSyncRoles' || handlerName === 'handleSavePermissions') {
-                      form.reset();
-                      // Briefly highlight success then hide message
-                      setTimeout(() => { msg.style.display = 'none'; }, 3000);
-                  } else {
-                      form.reset();
-                      setTimeout(() => google.script.host.close(), 1500);
-                  }
-              }
-           })
-           .withFailureHandler((err) => {
-              btn.disabled = false;
-              btn.innerText = originalText;
-              msg.style.display = 'block';
-              msg.className = 'error';
-              msg.innerText = 'System Error: ' + err.message;
-           })
-           [handlerName](formData);
-      }
-      
-      function loadDetails(type, id) {
-          if(!id) return;
-          google.script.run.withSuccessHandler(fillForm).withFailureHandler(alert)['get'+type+'Details'](id);
-      }
-      
-      function fillForm(data) {
-          if(!data) return;
-          for (const key in data) {
-              const el = document.querySelector('[name="' + key + '"]');
-              if(el) {
-                 if(el.type === 'checkbox') el.checked = !!data[key];
-                 else el.value = data[key];
-              }
-          }
-          const origEl = document.querySelector('[name="originalName"]');
-          if(origEl && data.name) origEl.value = data.name;
-      }
-      
-      function loadCurrentRole(userId) {
-          if(!userId) return;
-          google.script.run.withSuccessHandler((roleId) => {
-              const el = document.querySelector('[name="roleId"]');
-              if(el) el.value = roleId || "";
-          }).getUserAssignedRole(userId);
-      }
-    </script>
-  `;
-
-  switch(action) {
-    case 'createUser':
-      const createRoleOpts = data.roles.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
-      content = `
-        <h2>Create User</h2>
-        <form id="mainForm" onsubmit="event.preventDefault(); submitForm('handleCreateUser');">
-          <div class="form-group"><label>Name</label><input type="text" name="name" required></div>
-          <div class="form-group"><label>Email</label><input type="email" name="email" required></div>
-          <div class="form-group"><label>Password</label><input type="password" name="password" required></div>
-          <div class="form-group">
-            <label>Assign Role</label>
-            <select name="roleId" required>
-                <option value="">-- Select Role --</option>
-                ${createRoleOpts}
-            </select>
-          </div>
-          <button id="submitBtn">Create User</button>
-        </form>`;
-      break;
-
-    case 'updateUser':
-      const userOpts = data.users.map(u => `<option value="${u.id}">${u.name} (${u.email})</option>`).join('');
-      const updateRoleOpts = data.roles.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
-      content = `
-        <h2>Update User</h2>
-        <form id="mainForm" onsubmit="event.preventDefault(); submitForm('handleUpdateUser');">
-           <div class="form-group">
-            <label>Select User</label>
-            <select name="userId" onchange="loadDetails('User', this.value)" required>
-                <option value="">-- Select --</option>
-                ${userOpts}
-            </select>
-          </div>
-          <div class="form-group"><label>Name</label><input type="text" name="name" required></div>
-          <div class="form-group"><label>Email</label><input type="email" name="email" required></div>
-          <div class="form-group"><label>New Password (optional)</label><input type="password" name="password"></div>
-          <div class="form-group">
-            <label>Role</label>
-            <select name="roleId" required>
-                <option value="">-- Select Role --</option>
-                ${updateRoleOpts}
-            </select>
-          </div>
-          <button id="submitBtn">Update User</button>
-        </form>`;
-      break;
-      
-    case 'toggleUser':
-       const tUserOpts = data.users.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
-       content = `
-         <h2>Toggle User Status</h2>
-         <form id="mainForm" onsubmit="event.preventDefault(); submitForm('handleToggleUserStatus');">
-            <div class="form-group">
-             <label>Select User</label>
-             <select name="userId" required><option value="">-- Select --</option>${tUserOpts}</select>
-           </div>
-           <p style="font-size:0.85em; color:#666;">Flips status between Active and Inactive.</p>
-           <button id="submitBtn">Toggle Status</button>
-         </form>`;
-       break;
-
-    case 'createRole':
-      content = `
-        <h2>Create Role</h2>
-        <form id="mainForm" onsubmit="event.preventDefault(); submitForm('handleCreateRole');">
-          <div class="form-group"><label>Role Name</label><input type="text" name="name" required></div>
-          <div class="form-group"><label>Description</label><textarea name="description" rows="3"></textarea></div>
-          <button id="submitBtn">Create Role</button>
-        </form>`;
-      break;
-
-    case 'updateRole':
-      const roleOpts = data.roles.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
-      content = `
-        <h2>Update Role</h2>
-        <form id="mainForm" onsubmit="event.preventDefault(); submitForm('handleUpdateRole');">
-           <div class="form-group">
-            <label>Select Role</label>
-            <select name="roleId" onchange="loadDetails('Role', this.value)" required>
-                <option value="">-- Select --</option>
-                ${roleOpts}
-            </select>
-          </div>
-          <div class="form-group"><label>Role Name</label><input type="text" name="name" required></div>
-          <div class="form-group"><label>Description</label><textarea name="description" rows="3"></textarea></div>
-          <button id="submitBtn">Update Role</button>
-        </form>`;
-      break;
-      
-    case 'assignRole':
-      const syncUserOpts = data.users.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
-      const syncRoleOpts = data.roles.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
-      content = `
-        <h2>Assign Role</h2>
-        <form id="mainForm" onsubmit="event.preventDefault(); submitForm('handleAssignRole');">
-           <div class="form-group">
-             <label>Select User</label>
-             <select name="userId" onchange="loadCurrentRole(this.value)" required>
-               <option value="">-- Select User --</option>
-               ${syncUserOpts}
-             </select>
-           </div>
-           <div class="form-group">
-             <label>Select Role</label>
-             <select name="roleId" required>
-               <option value="">-- Select Role --</option>
-               ${syncRoleOpts}
-             </select>
-           </div>
-           <button id="submitBtn">Assign Role</button>
-        </form>`;
-      break;
-      
-   case 'managePermissions':
-      const mpRoleOpts = data.roles.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
-      const mpResOpts = data.resources.map(r => `<option value="${r.name}">${r.name}</option>`).join('');
-      content = `
-        <h2>Manage Permissions</h2>
-        <form id="mainForm" onsubmit="event.preventDefault(); submitForm('handleSavePermissions');">
-           <div class="form-group"><label>Role</label><select name="roleId" required><option value="">-- Select Role --</option>${mpRoleOpts}</select></div>
-           <div class="form-group"><label>Resource</label><select name="resource" required><option value="">-- Select Resource --</option>${mpResOpts}</select></div>
-           <div class="form-group">
-              <label>Permissions</label>
-              <div class="perm-row">
-                  <label class="checkbox-group"><input type="checkbox" name="canRead" checked> Read</label>
-                  <label class="checkbox-group"><input type="checkbox" name="canWrite"> Write</label>
-                  <label class="checkbox-group"><input type="checkbox" name="canUpdate"> Update</label>
-                  <label class="checkbox-group"><input type="checkbox" name="canDelete"> Delete</label>
-              </div>
-           </div>
-           <button id="submitBtn">Save Permissions</button>
-        </form>`;
-      break;
-      
-    case 'addResource':
-      content = `
-        <h2>Add Resource</h2>
-        <form id="mainForm" onsubmit="event.preventDefault(); submitForm('handleAddResource');">
-          <div class="form-group"><label>Resource Name</label><input type="text" name="name" required></div>
-          <div class="form-group"><label>File ID</label><input type="text" name="fileId" placeholder="Google Sheet ID" required></div>
-          <div class="form-group"><label>Sheet Name</label><input type="text" name="sheetName" required></div>
-          <div class="form-group"><label>Skip Columns at Beginning</label><input type="number" name="skipColumns" value="0"></div>
-          <div class="form-group"><label class="checkbox-group"><input type="checkbox" name="timestamps"> Enable Timestamps (CreatedAt/UpdatedAt)</label></div>
-          <div class="form-group"><label class="checkbox-group"><input type="checkbox" name="userDetails"> Enable User Details (CreatedUserId/UpdatedUserId)</label></div>
-          <button id="submitBtn">Add Resource</button>
-        </form>`;
-      break;
-
-    case 'editResource':
-      const resOpts = data.resources.map(r => `<option value="${r.name}">${r.name}</option>`).join('');
-      content = `
-        <h2>Edit Resource</h2>
-        <form id="mainForm" onsubmit="event.preventDefault(); submitForm('handleEditResource');">
-          <input type="hidden" name="originalName">
-           <div class="form-group">
-            <label>Select Resource</label>
-            <select name="resourceId" onchange="loadDetails('Resource', this.value)" required>
-                <option value="">-- Select --</option>
-                ${resOpts}
-            </select>
-          </div>
-          <div class="form-group"><label>Resource Name</label><input type="text" name="name" required></div>
-          <div class="form-group"><label>File ID</label><input type="text" name="fileId" required></div>
-          <div class="form-group"><label>Sheet Name</label><input type="text" name="sheetName" required></div>
-          <div class="form-group"><label>Skip Columns at Beginning</label><input type="number" name="skipColumns"></div>
-          <div class="form-group"><label class="checkbox-group"><input type="checkbox" name="timestamps"> Enable Timestamps</label></div>
-          <div class="form-group"><label class="checkbox-group"><input type="checkbox" name="userDetails"> Enable User Details</label></div>
-          <button id="submitBtn">Update Resource</button>
-        </form>`;
-      break;
+  function roleChecks() {
+    return '<div class="box"><div class="small">Select Roles</div><div class="checks">' + roles.map(function(r){ return '<label><input type="checkbox" name="roles" value="' + esc(r.id) + '"> ' + esc(r.name) + '</label>'; }).join('') + '</div></div>';
+  }
+  function roleMatrix() {
+    return '<div class="box">' + matrix.resources.map(function(resource){
+      const actions = matrix.actionsByResource[resource] || [];
+      return '<div class="g"><div><b>' + esc(resource) + '</b></div><div class="checks">' + actions.map(function(action){
+        const k = permKey(resource, action);
+        return '<label><input data-perm="1" type="checkbox" name="' + esc(k) + '" value="true"> ' + esc(action) + '</label>';
+      }).join('') + '</div></div>';
+    }).join('') + '</div>';
   }
 
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head><base target="_top">${styles}</head>
-      <body>
-        ${content}
-        <div id="message"></div>
-        ${commonScript}
-      </body>
-    </html>
-  `;
+  let body = '';
+  if (action === 'createUser') body = '<h2>Create User</h2><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleCreateUser\')"><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Email</label><input name="email" type="email" required></div><div class="g"><label>Password</label><input name="password" type="password" required></div><div class="g"><label>Designation</label><select name="designationId"><option value="">-- Select --</option>'+doo+'</select></div>'+roleChecks()+'<button id="submitBtn">Create User</button></form>';
+  else if (action === 'updateUser') body = '<h2>Update User</h2><p class="note">Select user to auto-fill all fields and role checks.</p><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleUpdateUser\')"><div class="g"><label>User</label><select name="userId" onchange="loadDetails(\'User\',this.value)" required><option value="">-- Select --</option>'+uo+'</select></div><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Email</label><input name="email" type="email" required></div><div class="g"><label>Designation</label><select name="designationId"><option value="">-- Select --</option>'+doo+'</select></div>'+roleChecks()+'<div class="g"><label>New Password (optional)</label><input name="password" type="password"></div><button id="submitBtn">Update User</button></form>';
+  else if (action === 'toggleUser') body = '<h2>Toggle User Status</h2><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleToggleUserStatus\')"><div class="g"><label>User</label><select name="userId" required><option value="">-- Select --</option>'+uo+'</select></div><button id="submitBtn">Toggle</button></form>';
+  else if (action === 'createDesignation') body = '<h2>Create Designation</h2><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleCreateDesignation\')"><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>HierarchyLevel</label><input name="hierarchyLevel" type="number"></div><div class="g"><label>Status</label><select name="status"><option>Active</option><option>Inactive</option></select></div><div class="g"><label>Description</label><textarea name="description"></textarea></div><button id="submitBtn">Create</button></form>';
+  else if (action === 'updateDesignation') body = '<h2>Update Designation</h2><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleUpdateDesignation\')"><div class="g"><label>Designation</label><select name="designationId" onchange="loadDetails(\'Designation\',this.value)" required><option value="">-- Select --</option>'+doo+'</select></div><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>HierarchyLevel</label><input name="hierarchyLevel" type="number"></div><div class="g"><label>Status</label><select name="status"><option>Active</option><option>Inactive</option></select></div><div class="g"><label>Description</label><textarea name="description"></textarea></div><button id="submitBtn">Update</button></form>';
+  else if (action === 'createRole') body = '<h2>Create Role</h2><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleCreateRole\')"><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Description</label><textarea name="description"></textarea></div><div class="small">Select actions per resource</div>'+roleMatrix()+'<button id="submitBtn">Create Role</button></form>';
+  else if (action === 'updateRole') body = '<h2>Update Role</h2><p class="note">Select role to auto-check assigned resource actions.</p><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleUpdateRole\')"><div class="g"><label>Role</label><select name="roleId" onchange="loadDetails(\'Role\',this.value)" required><option value="">-- Select --</option>'+ro+'</select></div><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Description</label><textarea name="description"></textarea></div><div class="small">Select actions per resource</div>'+roleMatrix()+'<button id="submitBtn">Update Role</button></form>';
+  else if (action === 'addResource' || action === 'editResource') {
+    const ed = action === 'editResource';
+    body = '<h2>'+(ed?'Edit':'Add')+' Resource</h2><form id="mainForm" onsubmit="event.preventDefault();submitForm(\''+(ed?'handleEditResource':'handleAddResource')+'\')">'+(ed?'<div class="g"><label>Resource</label><select name="resourceId" onchange="loadDetails(\'Resource\',this.value)" required><option value="">-- Select --</option>'+rso+'</select></div><input type="hidden" name="originalName">':'')+'<div class="row"><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Scope</label><input name="scope" value="master"></div></div><div class="row"><div class="g"><label>FileID</label><input name="fileId" required></div><div class="g"><label>SheetName</label><input name="sheetName" required></div></div><div class="row"><div class="g"><label>CodePrefix</label><input name="codePrefix"></div><div class="g"><label>CodeSequenceLength</label><input name="codeSequenceLength" type="number"></div></div><div class="row"><div class="g"><label>SkipColumns</label><input name="skipColumns" type="number" value="0"></div><div class="g"><label>RecordAccessPolicy</label><select name="recordAccessPolicy"><option>ALL</option><option>OWNER</option><option>OWNER_GROUP</option><option>OWNER_AND_UPLINE</option></select></div></div><div class="g"><label>RequiredHeaders</label><input name="requiredHeaders"></div><div class="g"><label>UniqueHeaders</label><input name="uniqueHeaders"></div><div class="g"><label>UniqueCompositeHeaders</label><input name="uniqueCompositeHeaders"></div><div class="g"><label>DefaultValues (JSON)</label><textarea name="defaultValues"></textarea></div><div class="g"><label>OwnerUserField</label><input name="ownerUserField" value="CreatedBy"></div><div class="g"><label>AdditionalActions</label><input name="additionalActions"></div><div class="row"><div class="g"><label>MenuGroup</label><input name="menuGroup"></div><div class="g"><label>MenuOrder</label><input name="menuOrder" type="number"></div></div><div class="row"><div class="g"><label>MenuLabel</label><input name="menuLabel"></div><div class="g"><label>MenuIcon</label><input name="menuIcon"></div></div><div class="g"><label>RoutePath</label><input name="routePath"></div><div class="g"><label>PageTitle</label><input name="pageTitle"></div><div class="g"><label>PageDescription</label><textarea name="pageDescription"></textarea></div><div class="g"><label>UIFields</label><textarea name="uiFields"></textarea></div><div class="checks"><label><input type="checkbox" name="isActive" value="true" checked> IsActive</label><label><input type="checkbox" name="audit" value="true"> Audit</label><label><input type="checkbox" name="showInMenu" value="true" checked> ShowInMenu</label><label><input type="checkbox" name="includeInAuthorizationPayload" value="true" checked> IncludeInAuthorizationPayload</label></div><button id="submitBtn">'+(ed?'Update':'Add')+' Resource</button></form>';
+  } else body = '<h2>Unsupported</h2>';
+
+  return '<!doctype html><html><head><base target="_top">' + style + '</head><body>' + body + '<div id="msg" class="msg"></div>' + js + '</body></html>';
 }

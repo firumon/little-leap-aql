@@ -47,7 +47,7 @@
               <q-list style="min-width: 150px">
                 <q-item-section class="q-pa-md text-grey-8 bg-grey-2">
                   <div class="text-weight-bold">{{ auth.userProfile?.name }}</div>
-                  <div class="text-caption">{{ auth.userRole }}</div>
+                  <div class="text-caption">{{ auth.userDesignation || auth.userRole }}</div>
                 </q-item-section>
                 <q-separator />
                 <q-item clickable v-close-popup to="/profile">
@@ -94,101 +94,29 @@
 
           <q-separator class="q-my-md" />
 
-          <!-- Masters Group -->
           <q-expansion-item
-            icon="admin_panel_settings"
-            label="Masters"
-            header-class="text-weight-medium"
-            :default-opened="false"
-          >
-            <q-list class="q-pl-lg">
-              <q-item to="/masters/products" clickable v-ripple>
-                <q-item-section avatar><q-icon name="inventory_2" size="xs" /></q-item-section>
-                <q-item-section>Products</q-item-section>
-              </q-item>
-              <q-item to="/masters/warehouses" clickable v-ripple>
-                <q-item-section avatar><q-icon name="warehouse" size="xs" /></q-item-section>
-                <q-item-section>Warehouses</q-item-section>
-              </q-item>
-              <q-item to="/masters/outlets" clickable v-ripple>
-                <q-item-section avatar><q-icon name="storefront" size="xs" /></q-item-section>
-                <q-item-section>Outlets</q-item-section>
-              </q-item>
-              <q-item to="/masters/salesmen" clickable v-ripple>
-                <q-item-section avatar><q-icon name="badge" size="xs" /></q-item-section>
-                <q-item-section>Salesmen</q-item-section>
-              </q-item>
-            </q-list>
-          </q-expansion-item>
-
-          <!-- Logistics Group -->
-          <q-expansion-item
-            icon="local_shipping"
-            label="Logistics"
+            v-for="group in visibleResourceMenuGroups"
+            :key="group.key"
+            :icon="group.icon"
+            :label="group.label"
             header-class="text-weight-medium"
           >
             <q-list class="q-pl-lg">
-              <q-item to="/logistics/shipments" clickable v-ripple>
-                <q-item-section avatar><q-icon name="ship" size="xs" /></q-item-section>
-                <q-item-section>Shipment Booking</q-item-section>
-              </q-item>
-              <q-item to="/logistics/clearance" clickable v-ripple>
-                <q-item-section avatar><q-icon name="assignment_turned_in" size="xs" /></q-item-section>
-                <q-item-section>Port Clearance</q-item-section>
-              </q-item>
-            </q-list>
-          </q-expansion-item>
-
-          <!-- Inventory Group -->
-          <q-expansion-item
-            icon="inventory"
-            label="Inventory"
-            header-class="text-weight-medium"
-          >
-            <q-list class="q-pl-lg">
-              <q-item to="/inventory/stock-report" clickable v-ripple>
-                <q-item-section avatar><q-icon name="summarize" size="xs" /></q-item-section>
-                <q-item-section>Stock Report</q-item-section>
-              </q-item>
-              <q-item to="/inventory/transfers" clickable v-ripple>
-                <q-item-section avatar><q-icon name="swap_horiz" size="xs" /></q-item-section>
-                <q-item-section>WH Transfers</q-item-section>
-              </q-item>
-              <q-item to="/inventory/received" clickable v-ripple>
-                <q-item-section avatar><q-icon name="download_done" size="xs" /></q-item-section>
-                <q-item-section>Received Items</q-item-section>
+              <q-item
+                v-for="menuItem in group.items"
+                :key="menuItem.resource"
+                :to="menuItem.routePath"
+                clickable
+                v-ripple
+              >
+                <q-item-section avatar><q-icon :name="menuItem.navIcon" size="xs" /></q-item-section>
+                <q-item-section>{{ menuItem.navLabel }}</q-item-section>
               </q-item>
             </q-list>
           </q-expansion-item>
-
-          <!-- Sales Group -->
-          <q-expansion-item
-            icon="receipt_long"
-            label="Sales & Orders"
-            header-class="text-weight-medium"
-          >
-            <q-list class="q-pl-lg">
-              <q-item to="/sales/invoices" clickable v-ripple>
-                <q-item-section avatar><q-icon name="description" size="xs" /></q-item-section>
-                <q-item-section>Invoices</q-item-section>
-              </q-item>
-              <q-item to="/sales/refill" clickable v-ripple>
-                <q-item-section avatar><q-icon name="autofps_select" size="xs" /></q-item-section>
-                <q-item-section>Stock Refill</q-item-section>
-              </q-item>
-              <q-item to="/sales/purchase-orders" clickable v-ripple>
-                <q-item-section avatar><q-icon name="shopping_cart" size="xs" /></q-item-section>
-                <q-item-section>Purchase Orders</q-item-section>
-              </q-item>
-            </q-list>
-          </q-expansion-item>
-
-          <q-item to="/reports" clickable v-ripple>
-            <q-item-section avatar>
-              <q-icon name="picture_as_pdf" />
-            </q-item-section>
-            <q-item-section>Reports & Exports</q-item-section>
-          </q-item>
+          <q-item-label v-if="visibleResourceMenuGroups.length === 0" caption class="q-px-md q-py-sm text-grey-6">
+            No master resources assigned for this role.
+          </q-item-label>
 
           <q-separator class="q-my-md" />
 
@@ -216,7 +144,94 @@ const auth = useAuthStore()
 const leftDrawerOpen = ref(false)
 const search = ref('')
 
+const groupIconByName = {
+  masters: 'admin_panel_settings',
+  logistics: 'local_shipping',
+  inventory: 'inventory',
+  'sales & orders': 'receipt_long',
+  reports: 'assessment',
+  system: 'settings'
+}
+
+function normalizeText(value) {
+  return (value || '').toString().trim().toLowerCase()
+}
+
+function resolveGroupIcon(groupLabel, resources) {
+  const byName = groupIconByName[normalizeText(groupLabel)]
+  if (byName) return byName
+
+  const withIcon = (resources || []).find((entry) => entry?.navIcon)
+  if (withIcon) return withIcon.navIcon
+
+  return 'menu_open'
+}
+
+function isMasterRoute(routePath) {
+  return typeof routePath === 'string' && /^\/masters\/[^/]+$/.test(routePath)
+}
+
 const userAvatar = computed(() => auth.userProfile?.avatar || 'https://cdn.quasar.dev/img/avatar.png')
+const readableResources = computed(() => {
+  const resources = Array.isArray(auth.resources) ? auth.resources : []
+  return new Set(
+    resources
+      .filter((resource) => resource?.permissions?.canRead === true)
+      .map((resource) => resource.name)
+  )
+})
+
+const menuSearchQuery = computed(() => search.value.trim().toLowerCase())
+
+const visibleResourceMenuGroups = computed(() => {
+  const resources = Array.isArray(auth.resources) ? auth.resources : []
+  const grouped = {}
+
+  resources
+    .filter((resource) => {
+      const routePath = resource?.ui?.routePath || ''
+      return resource?.scope === 'master' &&
+        resource?.permissions?.canRead === true &&
+        resource?.ui?.showInMenu !== false &&
+        isMasterRoute(routePath) &&
+        readableResources.value.has(resource.name)
+    })
+    .forEach((resource) => {
+      const navLabel = resource.ui?.menuLabel || resource.name
+      if (menuSearchQuery.value && !navLabel.toLowerCase().includes(menuSearchQuery.value)) {
+        return
+      }
+
+      const groupLabel = resource.ui?.menuGroup || 'Masters'
+      if (!grouped[groupLabel]) {
+        grouped[groupLabel] = []
+      }
+
+      grouped[groupLabel].push({
+        resource: resource.name,
+        routePath: resource.ui?.routePath || `/masters/${resource.name.toLowerCase()}`,
+        navLabel,
+        navIcon: resource.ui?.menuIcon || 'list_alt',
+        order: Number(resource.ui?.menuOrder || 9999)
+      })
+    })
+
+  return Object.keys(grouped)
+    .map((groupLabel) => {
+      const items = grouped[groupLabel].sort((a, b) => a.order - b.order)
+      return {
+        key: normalizeText(groupLabel) || 'masters',
+        label: groupLabel,
+        icon: resolveGroupIcon(groupLabel, items),
+        order: items.length ? items[0].order : 9999,
+        items
+      }
+    })
+    .sort((a, b) => {
+      if (a.order !== b.order) return a.order - b.order
+      return a.label.localeCompare(b.label)
+    })
+})
 
 function toggleLeftDrawer () {
   leftDrawerOpen.value = !leftDrawerOpen.value

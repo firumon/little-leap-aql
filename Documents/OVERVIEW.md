@@ -5,6 +5,7 @@ Little Leap AQL is the operating system for Little Leap's UAE baby-product distr
 ## Current Architecture Direction
 - Single Google Apps Script project in the `APP` spreadsheet.
 - `APP.Resources` is the control plane for backend routing and frontend runtime metadata.
+- `GAS/syncAppResources.gs` serves as the hardcoded Source of Truth for resource schemas, which syncs directly to the `APP.Resources` sheet using the "AQL > Setup & Refactor" menu.
 - External sheets (`MASTERS`, `TRANSACTIONS`, `REPORTS`) are accessed dynamically via `Resources.FileID` + `Resources.SheetName`.
 - No separate Apps Script projects are required in external spreadsheet files unless explicitly requested.
 
@@ -18,10 +19,12 @@ Little Leap AQL is the operating system for Little Leap's UAE baby-product distr
 - User org context:
   - `Users.DesignationID` (single designation)
   - `Users.Roles` (CSV multi-role IDs)
+  - `Users.AccessRegion` (empty = universe access; non-empty = assigned region subtree)
 - Resource permissions come from `APP.RolePermissions` (`Actions` CSV such as `Read,Write,Update,Delete,Approve`).
 - Record-level policy comes from `APP.Resources`:
   - `RecordAccessPolicy`
   - `OwnerUserField`
+- Region-level policy comes from `APP.AccessRegions` tree and row `AccessRegion` values.
 
 ## Resource-Driven Runtime (Backend + Frontend)
 `APP.Resources` drives both sides:
@@ -39,7 +42,7 @@ Little Leap AQL is the operating system for Little Leap's UAE baby-product distr
 ## Auth/Login Contract (Current)
 `action=login` returns:
 - `token`
-- `user` with `designation` and `roles`
+- `user` with `designation`, `roles`, and `accessRegion` scope payload
 - `resources[]` authorized for the user role set, including:
   - identity: `name`, `scope`
   - routing/config: `ui` object (`menuGroup`, `menuOrder`, `menuLabel`, `menuIcon`, `routePath`, `pageTitle`, `pageDescription`, `fields`, `showInMenu`)

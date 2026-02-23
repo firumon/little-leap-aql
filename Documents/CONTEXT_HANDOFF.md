@@ -54,6 +54,13 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
 
 ## 6) Current Implementation Status
 ### Completed
+- Access Region hierarchy foundation:
+  - New APP sheet `AccessRegions` (`Code`, `Name`, `Parent`) for region tree modeling.
+  - `Users` now includes `AccessRegion` (empty = universe access).
+  - `GAS/accessRegion.gs` added for subtree expansion + code validation.
+  - `masterApi.gs` enforces region scope in read/create/update when row has `AccessRegion`.
+  - `AccessRegion` is assigned on create and remains immutable on update.
+  - `setupMasterSheets()` now includes `AccessRegion` column in all current master sheets.
 - Resource metadata-driven master schema/runtime:
   - `masterApi.gs` no longer uses hardcoded master schema maps.
   - Required/unique/default schema now resolved from APP `Resources`.
@@ -61,6 +68,7 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - `Users` supports `DesignationID`.
   - `Users.Roles` stores active role IDs as CSV.
   - Login/profile payload includes `designation` + `roles`.
+  - Login/profile payload now includes `accessRegion` scope object.
 - Record-level policy foundation from APP `Resources`:
   - `RecordAccessPolicy` (`ALL/OWNER/OWNER_GROUP/OWNER_AND_UPLINE`)
   - `OwnerUserField` used to evaluate ownership.
@@ -86,6 +94,11 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - Preferred generic verbs: `get/create/update` with `scope=master` and `resource`
   - Multi-resource fetch supported via `resources` (comma string or array)
   - Compatibility wrappers for Products and other current master entities
+- Schema Refactoring & Synchronization Engine:
+  - `AQL > Setup & Refactor` menu added to Google Sheets for 1-click schema syncs.
+  - `GAS/syncAppResources.gs` is now the code-level source of truth for the `APP.Resources` registry. Users don't need to manually type columns into `APP.Resources`.
+  - `setupMasterSheets()` and `setupTransactionSheets()` intelligently refactor columns (`app_normalizeSheetSchema`) without dropping business data when headers are redefined.
+  - Required reading: `Documents/SCHEMA_REFACTORING_GUIDE.md`
 - Frontend master module:
   - Generic page: `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
   - Resource config map: `FRONTENT/src/config/masters.js`
@@ -110,6 +123,10 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
 - Code generation uses `Resources.CodePrefix` + `Resources.CodeSequenceLength`.
 - Initial resource schema (headers) is delivered in login payload based on role permissions.
 - Login resource payload is sorted by `ui.menuOrder` then `name` for stable frontend menu/order behavior.
+- User scope payload now includes:
+  - `accessRegion.code`
+  - `accessRegion.isUniverse`
+  - `accessRegion.accessibleCodes`
 - Frontend authorization behavior:
   - UI visibility uses `authorizedResources` from login payload.
   - Routing enforces authorized resource match via `resources[].ui.routePath` (and optional `meta.requiredResource` fallback).
@@ -123,8 +140,9 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - Request uses `lastUpdatedAt`.
   - Response uses `meta.lastSyncAt`.
   - Frontend merges delta rows into IndexedDB.
-  - Network sync is interval-gated; revisiting master pages within interval serves from IDB without API call.
-  - Manual refresh forces network sync.
+  - Master pages are cache-first; revisits serve from IDB without API call when cache exists.
+  - Network sync runs on manual refresh (or initial empty cache).
+  - Products master data is also hydrated into Pinia for cross-page name/code lookups.
 
 ## 7) Required Resources Columns (APP file)
 `Resources` must include:
@@ -158,6 +176,10 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
 Column meaning and value guidance:
 - `Documents/RESOURCE_COLUMNS_GUIDE.md`
 
+Other APP requirements:
+- `Users` must include `AccessRegion`.
+- APP must include `AccessRegions` sheet with columns `Code`, `Name`, `Parent`.
+
 ## 8) Master Resources and Prefixes
 Recommended values:
 - Products: `CodePrefix=LLMP`, `CodeSequenceLength=5`
@@ -190,13 +212,7 @@ References:
 - `/masters/carriers`
 - `/masters/ports`
 
-## 11) Next Recommended Development Steps
-1. Build outlet distribution + periodic sales capture module.
-2. Build strict-cycle outlet collection and due follow-up module.
-3. Build refill request/approval/dispatch flow.
-4. Build reorder-threshold alerts + purchase order flow to suppliers.
-5. Continue inbound enabler modules (`Shipments`, `GRN`, `Putaway`, stock movements).
-6. Extend role-permission enforcement to transactions/reports actions (master scope already enforced).
+
 
 ## 12) Manual Actions User Usually Needs
 When Apps Script changes:

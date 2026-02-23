@@ -594,23 +594,15 @@ function padSequence(numberValue, sequenceLength) {
 
 function parseDateInput(value) {
   if (!value) return null;
+
+  // Google Sheets auto-formatting could still cast to a Date object natively
   if (value instanceof Date) {
     return isNaN(value.getTime()) ? null : value;
   }
 
-  if (typeof value === 'number') {
-    return new Date(value);
-  }
-
-  if (typeof value === 'string' && /^\d+$/.test(value)) {
-    return new Date(Number(value));
-  }
-
-  const parsed = new Date(value);
-  if (isNaN(parsed.getTime())) {
-    return null;
-  }
-  return parsed;
+  // Assuming value is strictly a Unix Timestamp (either Number or String representation of Number)
+  const parsed = new Date(Number(value));
+  return isNaN(parsed.getTime()) ? null : parsed;
 }
 
 function extractRequestedResourceCandidates(payload) {

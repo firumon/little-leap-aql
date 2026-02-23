@@ -71,6 +71,10 @@ Frontend uses it for:
   - Frontend sends `lastUpdatedAt` whenever `resource-meta.lastSyncAt` is available.
   - Server returns only changed rows when `UpdatedAt` is present in resource headers.
   - Delta rows are upserted into IDB.
+- Timestamp format contract:
+  - `CreatedAt` and `UpdatedAt` are written by GAS as Unix epoch milliseconds.
+  - `lastUpdatedAt` must be sent as Unix epoch milliseconds for delta filtering.
+  - Runtime parser expects Unix timestamp input (number or numeric string).
 - Full-sync fallback:
   - If no sync cursor exists yet, request is full sync.
   - If `UpdatedAt` is not present, server naturally returns full rows for subsequent sync calls.
@@ -85,4 +89,5 @@ Frontend uses it for:
 1. Update APP sheet headers as documented.
 2. Paste GAS files into APP Apps Script.
 3. Run `setupAppSheets()` (for new/clean setup).
-4. Redeploy Web App.
+4. `setupAppSheets()` now triggers `syncAppResourcesFromCode(true)` automatically after setup/refactor to align `APP.Resources` with code defaults.
+5. Redeploy Web App.

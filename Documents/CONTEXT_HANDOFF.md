@@ -98,6 +98,8 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - `AQL > Setup & Refactor` menu added to Google Sheets for 1-click schema syncs.
   - `GAS/syncAppResources.gs` is now the code-level source of truth for the `APP.Resources` registry. Users don't need to manually type columns into `APP.Resources`.
   - `setupMasterSheets()` and `setupTransactionSheets()` intelligently refactor columns (`app_normalizeSheetSchema`) without dropping business data when headers are redefined.
+  - `setupAppSheets()` now auto-runs `syncAppResourcesFromCode(true)` after setup/refactor, so APP resource config stays aligned with code defaults.
+  - `app_normalizeSheetSchema` now clears stale data validations before header rebuild to avoid validation/range drift after schema changes.
   - Required reading: `Documents/SCHEMA_REFACTORING_GUIDE.md`
 - Frontend master module:
   - Generic page: `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
@@ -154,6 +156,10 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - Master pages are cache-first; revisits serve from IDB without API call when cache exists.
   - Network sync runs on manual refresh (or initial empty cache).
   - Products master data is also hydrated into Pinia for cross-page name/code lookups.
+- Audit timestamp contract:
+  - `CreatedAt` and `UpdatedAt` are now stored as Unix epoch milliseconds (number).
+  - `lastUpdatedAt` delta cursor should also use Unix epoch milliseconds.
+  - Server date parser expects Unix timestamp inputs (number or numeric string); native `Date` objects are still tolerated when passed by Google runtime.
 
 ## 7) Required Resources Columns (APP file)
 `Resources` must include:

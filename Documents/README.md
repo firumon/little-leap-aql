@@ -3,6 +3,8 @@
 Welcome to the technical documentation for the Little Leap AQL project. This folder contains detailed guides on the system's logic, architecture, and setup.
 
 ## Latest Development Updates
+- 2026-02-23: GAS master audit fields now write Unix epoch milliseconds in `CreatedAt`/`UpdatedAt`, and date parsing for sync/filter flow is standardized to Unix timestamp input.
+- 2026-02-23: `setupAppSheets()` refactor flow now clears stale data validations during schema normalization and auto-syncs `APP.Resources` from code via `syncAppResourcesFromCode(true)`.
 - 2026-02-21: Master sync is now strict cache-first (IDB-first with no per-visit API call when cache exists), sync requests send `lastUpdatedAt` from local sync cursor, and Products master data hydrates into Pinia for cross-page code-to-name resolution.
 - 2026-02-21: Added hierarchical `Access Region` architecture (`APP.AccessRegions` + `Users.AccessRegion`) with subtree-based data access enforcement in GAS master read/create/update flows; empty user region now means universe access.
 - 2026-02-20: Business-priority docs corrected: project heartbeat is now explicitly documented as outlet distribution, periodic sales tracking, strict-cycle collection, approved refill, and low-stock purchase ordering (with inbound logistics as supporting enabler).

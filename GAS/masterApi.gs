@@ -51,7 +51,7 @@ function handleMasterGetMultiRecords(auth, payload) {
   }
 
   const data = {};
-  requestedResources.forEach(function(resourceName) {
+  requestedResources.forEach(function (resourceName) {
     const singlePayload = cloneWithResource(payload, resourceName);
     data[resourceName] = handleMasterGetRecords(auth, singlePayload);
   });
@@ -88,6 +88,7 @@ function handleMasterCreateRecord(auth, payload) {
   const rowData = buildNewMasterRow(headers, idx, providedValues, schema);
   rowData[idx.Code] = code;
 
+  applyAccessRegionOnWrite(rowData, idx, auth);
   applyAuditFields(rowData, idx, auth, resource.config, true);
   validateRequiredFields(rowData, idx, schema.requiredHeaders, resourceName);
   validateMasterUniqueness(values, idx, rowData, schema, -1, resourceName);
@@ -192,18 +193,18 @@ function resolveMasterResourceNames(payload) {
     return [];
   }
 
-  const supported = getResourcesByScope('master').map(function(config) {
+  const supported = getResourcesByScope('master').map(function (config) {
     return config.name;
   });
   const canonicalMap = {};
-  supported.forEach(function(name) {
+  supported.forEach(function (name) {
     const variants = getResourceNameVariants(name);
-    variants.forEach(function(variant) {
+    variants.forEach(function (variant) {
       canonicalMap[variant] = name;
     });
   });
 
-  return candidates.map(function(candidate) {
+  return candidates.map(function (candidate) {
     const key = normalizeResourceAlias(candidate);
     const match = canonicalMap[key];
     if (!match) {
@@ -216,7 +217,7 @@ function resolveMasterResourceNames(payload) {
 function attachMasterResource(payload, resourceName) {
   const source = payload || {};
   const cloned = {};
-  Object.keys(source).forEach(function(key) {
+  Object.keys(source).forEach(function (key) {
     cloned[key] = source[key];
   });
   cloned.resource = resourceName;
@@ -234,7 +235,7 @@ function enforceMasterPermission(auth, resourceName, permissionName) {
 function buildMasterRowsResponse(auth, resourceName, resource, rows, lastUpdatedAt) {
   const headers = getSheetHeaders(resource.sheet);
   const idx = getHeaderIndexMap(headers);
-  const filteredRows = rows.filter(function(row) {
+  const filteredRows = rows.filter(function (row) {
     return canAccessRowByPolicy(auth, resource.config, row, idx);
   });
 
@@ -260,6 +261,10 @@ function enforceRecordLevelAccess(auth, resourceConfig, headers, rowValues) {
 }
 
 function canAccessRowByPolicy(auth, resourceConfig, rowValues, idx) {
+  if (!canAccessRowByAccessRegion(auth, rowValues, idx)) {
+    return false;
+  }
+
   const policy = resourceConfig && resourceConfig.recordAccessPolicy
     ? resourceConfig.recordAccessPolicy
     : 'ALL';
@@ -314,7 +319,7 @@ function extractProvidedHeaderValues(headers, payload) {
   const normalizedRecord = buildNormalizedValueMap(sourceRecord);
   const normalizedPayload = buildNormalizedValueMap(sourcePayload);
 
-  headers.forEach(function(header) {
+  headers.forEach(function (header) {
     const key = normalizeFieldKey(header);
     if (key in normalizedRecord) {
       result[header] = normalizedRecord[key];
@@ -331,7 +336,7 @@ function extractProvidedHeaderValues(headers, payload) {
 
 function buildNormalizedValueMap(source) {
   const map = {};
-  Object.keys(source || {}).forEach(function(key) {
+  Object.keys(source || {}).forEach(function (key) {
     map[normalizeFieldKey(key)] = source[key];
   });
   return map;
@@ -358,7 +363,7 @@ function resolveCodeValue(payload) {
 function buildNewMasterRow(headers, idx, providedValues, schema) {
   const row = new Array(headers.length).fill('');
 
-  headers.forEach(function(header) {
+  headers.forEach(function (header) {
     const headerIndex = idx[header];
     if (header === 'Code' || isAuditHeader(header)) {
       return;
@@ -384,8 +389,8 @@ function buildNewMasterRow(headers, idx, providedValues, schema) {
 
 function mergeMasterRow(existingRow, idx, providedValues, schema) {
   const row = existingRow.slice();
-  Object.keys(providedValues).forEach(function(header) {
-    if (header === 'Code' || isAuditHeader(header) || idx[header] === undefined) {
+  Object.keys(providedValues).forEach(function (header) {
+    if (header === 'Code' || isAuditHeader(header) || idx[header] === undefined || isRegionHeader(header)) {
       return;
     }
     row[idx[header]] = normalizeValueByHeader(header, providedValues[header]);
@@ -401,6 +406,54 @@ function mergeMasterRow(existingRow, idx, providedValues, schema) {
   return row;
 }
 
+function canAccessRowByAccessRegion(auth, rowValues, idx) {
+  const regionHeader = resolveAccessRegionHeader(idx);
+  if (!regionHeader) return true;
+
+  const regionCode = normalizeAccessRegionCode(rowValues[idx[regionHeader]]);
+  if (!regionCode) {
+    // Universe records are readable across all regions.
+    return true;
+  }
+
+  return canAuthAccessRegionCode(auth, regionCode);
+}
+
+function applyAccessRegionOnWrite(row, idx, auth) {
+  const regionHeader = resolveAccessRegionHeader(idx);
+  if (!regionHeader) return;
+
+  const colIndex = idx[regionHeader];
+  const requestedCode = normalizeAccessRegionCode(row[colIndex]);
+  const scope = buildAuthAccessRegionScope(auth);
+  let effectiveCode = requestedCode;
+
+  if (!scope.isUniverse) {
+    // Restricted users cannot write outside assigned subtree.
+    effectiveCode = requestedCode || scope.assignedCode;
+    if (!effectiveCode) {
+      throw new Error('AccessRegion is required for scoped users');
+    }
+    if (!canAuthAccessRegionCode(auth, effectiveCode)) {
+      throw new Error('Access denied for AccessRegion: ' + effectiveCode);
+    }
+  }
+
+  validateAccessRegionCodeExists(effectiveCode);
+  row[colIndex] = effectiveCode;
+}
+
+function resolveAccessRegionHeader(idx) {
+  if (!idx || typeof idx !== 'object') return '';
+  if (idx.AccessRegion !== undefined) return 'AccessRegion';
+  if (idx.ServiceRegion !== undefined) return 'ServiceRegion';
+  return '';
+}
+
+function isRegionHeader(header) {
+  return header === 'AccessRegion' || header === 'ServiceRegion';
+}
+
 function normalizeValueByHeader(header, value) {
   if (header === 'Status') {
     return sanitizeStatus(value);
@@ -412,7 +465,7 @@ function normalizeValueByHeader(header, value) {
 }
 
 function applyAuditFields(row, idx, auth, resourceConfig, isCreate) {
-  const now = new Date();
+  const now = Date.now();
 
   if (resourceConfig.audit) {
     if (isCreate && idx.CreatedAt !== undefined) row[idx.CreatedAt] = now;
@@ -423,7 +476,7 @@ function applyAuditFields(row, idx, auth, resourceConfig, isCreate) {
 }
 
 function validateRequiredFields(row, idx, requiredHeaders, resourceName) {
-  (requiredHeaders || []).forEach(function(header) {
+  (requiredHeaders || []).forEach(function (header) {
     const headerIdx = idx[header];
     if (headerIdx === undefined) return;
 
@@ -545,6 +598,14 @@ function parseDateInput(value) {
     return isNaN(value.getTime()) ? null : value;
   }
 
+  if (typeof value === 'number') {
+    return new Date(value);
+  }
+
+  if (typeof value === 'string' && /^\d+$/.test(value)) {
+    return new Date(Number(value));
+  }
+
   const parsed = new Date(value);
   if (isNaN(parsed.getTime())) {
     return null;
@@ -557,12 +618,12 @@ function extractRequestedResourceCandidates(payload) {
   const result = [];
 
   if (Array.isArray(source.resources)) {
-    source.resources.forEach(function(item) {
+    source.resources.forEach(function (item) {
       const value = (item || '').toString().trim();
       if (value) result.push(value);
     });
   } else if (typeof source.resources === 'string') {
-    source.resources.split(',').forEach(function(item) {
+    source.resources.split(',').forEach(function (item) {
       const value = (item || '').toString().trim();
       if (value) result.push(value);
     });
@@ -576,7 +637,7 @@ function extractRequestedResourceCandidates(payload) {
   // Deduplicate while preserving order
   const unique = [];
   const seen = {};
-  result.forEach(function(item) {
+  result.forEach(function (item) {
     const key = item.toLowerCase();
     if (!seen[key]) {
       seen[key] = true;
@@ -603,7 +664,7 @@ function getResourceNameVariants(resourceName) {
 function cloneWithResource(payload, resourceName) {
   const source = payload || {};
   const cloned = {};
-  Object.keys(source).forEach(function(key) {
+  Object.keys(source).forEach(function (key) {
     cloned[key] = source[key];
   });
   cloned.resource = resourceName;

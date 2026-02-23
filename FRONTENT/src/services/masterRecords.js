@@ -8,7 +8,6 @@ import {
 } from 'src/utils/db'
 
 const DB_TIMEOUT_MS = 1200
-const DEFAULT_SYNC_INTERVAL_MS = 2 * 60 * 1000
 
 async function withTimeout(promise, fallbackValue) {
   try {
@@ -20,6 +19,27 @@ async function withTimeout(promise, fallbackValue) {
     ])
   } catch (error) {
     return fallbackValue
+  }
+}
+
+function getCursorStorageKey(resourceName) {
+  return `master-sync-cursor::${resourceName}`
+}
+
+function getLocalSyncCursor(resourceName) {
+  try {
+    return localStorage.getItem(getCursorStorageKey(resourceName)) || ''
+  } catch (error) {
+    return ''
+  }
+}
+
+function setLocalSyncCursor(resourceName, cursor) {
+  try {
+    if (!cursor) return
+    localStorage.setItem(getCursorStorageKey(resourceName), cursor)
+  } catch (error) {
+    // no-op
   }
 }
 
@@ -91,93 +111,104 @@ export function mapRowsToObjects(rows = [], headers = []) {
 }
 
 export async function fetchMasterRecords(resourceName, options = {}) {
-  const includeInactive = options.includeInactive === true
-  const forceSync = options.forceSync === true
-  const syncIntervalMs = Number(options.syncIntervalMs || DEFAULT_SYNC_INTERVAL_MS)
-  const headers = await ensureHeaders(resourceName)
-  if (!headers.length) {
-    return { success: false, message: `Headers unavailable for ${resourceName}`, headers: [], rows: [], records: [] }
-  }
+  try {
+    const includeInactive = options.includeInactive === true
+    const forceSync = options.forceSync === true
+    const syncWhenCacheExists = options.syncWhenCacheExists === true
+    const headers = await ensureHeaders(resourceName)
+    if (!headers.length) {
+      return { success: false, message: `Headers unavailable for ${resourceName}`, headers: [], rows: [], records: [] }
+    }
 
-  const meta = await withTimeout(getResourceMeta(resourceName), null)
-  const lastSyncTs = meta?.lastSyncAt ? Date.parse(meta.lastSyncAt) : NaN
-  const hasRecentSync = Number.isFinite(lastSyncTs) && (Date.now() - lastSyncTs) < syncIntervalMs
-  const statusIndex = headers.indexOf('Status')
-  const supportsIncremental = headers.includes('UpdatedAt')
-  const cachedRows = await withTimeout(getResourceRows(resourceName, {
-    includeInactive,
-    statusIndex
-  }), [])
+    const meta = await withTimeout(getResourceMeta(resourceName), null)
+    const syncCursor = meta?.lastSyncAt || getLocalSyncCursor(resourceName)
+    const statusIndex = headers.indexOf('Status')
+    const cachedRows = await withTimeout(getResourceRows(resourceName, {
+      includeInactive,
+      statusIndex
+    }), [])
 
-  if (!forceSync && hasRecentSync) {
+    // Default behavior: IDB-first and no server call when cache exists.
+    if (!forceSync && !syncWhenCacheExists && cachedRows.length > 0) {
+      return {
+        success: true,
+        stale: false,
+        message: '',
+        headers,
+        rows: cachedRows,
+        records: mapRowsToObjects(cachedRows, headers),
+        meta: { resource: resourceName, source: 'cache', lastSyncAt: syncCursor || null }
+      }
+    }
+
+    const payload = {
+      scope: 'master',
+      resource: resourceName,
+      includeInactive: true,
+      ...(syncCursor ? { lastUpdatedAt: syncCursor } : {})
+    }
+
+    const syncResponse = await callGasApi('get', payload)
+    let stale = false
+    let staleMessage = ''
+    let syncRows = []
+
+    if (syncResponse.success) {
+      if (Array.isArray(syncResponse.rows)) {
+        syncRows = syncResponse.rows
+      } else if (Array.isArray(syncResponse.records)) {
+        syncRows = mapObjectsToRows(syncResponse.records, headers)
+      } else if (Array.isArray(syncResponse.data)) {
+        syncRows = Array.isArray(syncResponse.data[0])
+          ? syncResponse.data
+          : mapObjectsToRows(syncResponse.data, headers)
+      }
+
+      const deltaRows = Array.isArray(syncRows) ? syncRows : []
+      if (deltaRows.length) {
+        await withTimeout(upsertResourceRows(resourceName, headers, deltaRows), 0)
+      }
+      const nextSyncCursor = syncResponse?.meta?.lastSyncAt || new Date().toISOString()
+      await withTimeout(setResourceMeta(resourceName, {
+        headers,
+        lastSyncAt: nextSyncCursor
+      }), null)
+      setLocalSyncCursor(resourceName, nextSyncCursor)
+    } else {
+      stale = true
+      staleMessage = syncResponse.message || `Failed to sync ${resourceName}`
+    }
+
+    const freshRows = await withTimeout(getResourceRows(resourceName, {
+      includeInactive,
+      statusIndex
+    }), [])
+
+    const syncRowsFiltered = includeInactive || statusIndex === -1
+      ? syncRows
+      : syncRows.filter((row) => (row?.[statusIndex] || '').toString().trim() === 'Active')
+
+    const effectiveRows = freshRows.length
+      ? freshRows
+      : (syncRowsFiltered.length ? syncRowsFiltered : cachedRows)
+
     return {
-      success: true,
-      stale: false,
-      message: '',
+      success: syncResponse.success || effectiveRows.length > 0,
+      stale,
+      message: staleMessage,
       headers,
-      rows: cachedRows,
-      records: mapRowsToObjects(cachedRows, headers),
-      meta: { resource: resourceName, source: 'cache', lastSyncAt: meta?.lastSyncAt || null }
+      rows: effectiveRows,
+      records: mapRowsToObjects(effectiveRows, headers),
+      meta: syncResponse.meta || { resource: resourceName }
     }
-  }
-
-  const payload = {
-    scope: 'master',
-    resource: resourceName,
-    includeInactive: true,
-    ...(supportsIncremental && meta?.lastSyncAt ? { lastUpdatedAt: meta.lastSyncAt } : {})
-  }
-
-  const syncResponse = await callGasApi('get', payload)
-  let stale = false
-  let staleMessage = ''
-  let syncRows = []
-
-  if (syncResponse.success) {
-    if (Array.isArray(syncResponse.rows)) {
-      syncRows = syncResponse.rows
-    } else if (Array.isArray(syncResponse.records)) {
-      syncRows = mapObjectsToRows(syncResponse.records, headers)
-    } else if (Array.isArray(syncResponse.data)) {
-      syncRows = Array.isArray(syncResponse.data[0])
-        ? syncResponse.data
-        : mapObjectsToRows(syncResponse.data, headers)
+  } catch (error) {
+    return {
+      success: false,
+      message: error?.message || `Failed to load ${resourceName}`,
+      headers: [],
+      rows: [],
+      records: []
     }
-
-    const deltaRows = Array.isArray(syncRows) ? syncRows : []
-    if (deltaRows.length) {
-      await withTimeout(upsertResourceRows(resourceName, headers, deltaRows), 0)
-    }
-    await withTimeout(setResourceMeta(resourceName, {
-      headers,
-      lastSyncAt: syncResponse?.meta?.lastSyncAt || new Date().toISOString()
-    }), null)
-  } else {
-    stale = true
-    staleMessage = syncResponse.message || `Failed to sync ${resourceName}`
-  }
-
-  const freshRows = await withTimeout(getResourceRows(resourceName, {
-    includeInactive,
-    statusIndex
-  }), [])
-
-  const syncRowsFiltered = includeInactive || statusIndex === -1
-    ? syncRows
-    : syncRows.filter((row) => (row?.[statusIndex] || '').toString().trim() === 'Active')
-
-  const effectiveRows = freshRows.length
-    ? freshRows
-    : (syncRowsFiltered.length ? syncRowsFiltered : cachedRows)
-
-  return {
-    success: syncResponse.success || effectiveRows.length > 0,
-    stale,
-    message: staleMessage,
-    headers,
-    rows: effectiveRows,
-    records: mapRowsToObjects(effectiveRows, headers),
-    meta: syncResponse.meta || { resource: resourceName }
   }
 }
 

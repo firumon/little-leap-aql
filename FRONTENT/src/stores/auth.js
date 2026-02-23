@@ -23,6 +23,7 @@ export const useAuthStore = defineStore('auth', () => {
     return user.value?.role || 'User'
   })
   const userDesignation = computed(() => user.value?.designation?.name || '')
+  const userAccessRegion = computed(() => user.value?.accessRegion || { code: '', isUniverse: true, accessibleCodes: [], accessibleRegions: [] })
   const authorizedResources = computed(() => resources.value)
 
   function persistUser() {
@@ -162,6 +163,7 @@ export const useAuthStore = defineStore('auth', () => {
     userProfile,
     userRole,
     userDesignation,
+    userAccessRegion,
     authorizedResources,
 
     // Actions

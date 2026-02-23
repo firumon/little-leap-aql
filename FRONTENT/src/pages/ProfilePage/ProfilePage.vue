@@ -20,9 +20,6 @@
         <q-chip color="primary" text-color="white" icon="verified_user" class="text-weight-medium">
           {{ profileData.designation?.name || profileData.role }}
         </q-chip>
-        <div class="text-caption text-grey-7 q-mt-sm">
-          Roles: {{ roleNames }}
-        </div>
       </q-card-section>
 
       <q-separator inset class="q-my-md" />
@@ -66,6 +63,16 @@
                 color="primary"
                 @click="openEmailDialog"
               />
+            </q-item-section>
+          </q-item>
+
+          <q-item>
+            <q-item-section avatar>
+              <q-icon name="public" color="grey-7" size="sm" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label caption class="text-grey-7">Access Region</q-item-label>
+              <q-item-label>{{ profileData.accessRegion?.isUniverse ? 'Universe (All Regions)' : (profileData.accessRegion?.code || '-') }}</q-item-label>
             </q-item-section>
           </q-item>
         </q-list>
@@ -226,14 +233,8 @@ const profileData = computed(() => auth.userProfile || {
   role: '...',
   designation: null,
   roles: [],
+  accessRegion: { code: '', isUniverse: true, accessibleCodes: [], accessibleRegions: [] },
   avatar: ''
-})
-const roleNames = computed(() => {
-  const roles = profileData.value?.roles
-  if (!Array.isArray(roles) || !roles.length) {
-    return profileData.value?.role || '-'
-  }
-  return roles.map((entry) => entry?.name || '').filter(Boolean).join(', ')
 })
 
 const showAvatarDialog = ref(false)

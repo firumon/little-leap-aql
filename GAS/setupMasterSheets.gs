@@ -13,13 +13,34 @@ function setupMasterSheets() {
   const schemaByResource = [
     {
       resourceName: CONFIG.MASTER_SHEETS.PRODUCTS,
-      headers: ['Code', 'Name', 'SKU', 'Status'].concat(commonAuditColumns),
+      headers: ['Code', 'Name', 'VariantTypes', 'AccessRegion', 'Status'].concat(commonAuditColumns),
       statusDefault: 'Active',
       defaults: { Status: 'Active' },
       columnWidths: {
         Code: 130,
         Name: 260,
-        SKU: 140,
+        VariantTypes: 200,
+        AccessRegion: 130,
+        Status: 100,
+        CreatedAt: 170,
+        UpdatedAt: 170,
+        CreatedBy: 140,
+        UpdatedBy: 140
+      }
+    },
+    {
+      resourceName: CONFIG.MASTER_SHEETS.SKUS,
+      headers: ['Code', 'ProductCode', 'Variant1', 'Variant2', 'Variant3', 'Variant4', 'Variant5', 'Status'].concat(commonAuditColumns),
+      statusDefault: 'Active',
+      defaults: { Status: 'Active' },
+      columnWidths: {
+        Code: 140,
+        ProductCode: 140,
+        Variant1: 150,
+        Variant2: 150,
+        Variant3: 150,
+        Variant4: 150,
+        Variant5: 150,
         Status: 100,
         CreatedAt: 170,
         UpdatedAt: 170,
@@ -29,7 +50,7 @@ function setupMasterSheets() {
     },
     {
       resourceName: CONFIG.MASTER_SHEETS.SUPPLIERS,
-      headers: ['Code', 'Name', 'Country', 'ContactPerson', 'Phone', 'Email', 'Status'].concat(commonAuditColumns),
+      headers: ['Code', 'Name', 'Country', 'ContactPerson', 'Phone', 'Email', 'AccessRegion', 'Status'].concat(commonAuditColumns),
       statusDefault: 'Active',
       defaults: { Status: 'Active' },
       columnWidths: {
@@ -39,6 +60,7 @@ function setupMasterSheets() {
         ContactPerson: 180,
         Phone: 140,
         Email: 220,
+        AccessRegion: 130,
         Status: 100,
         CreatedAt: 170,
         UpdatedAt: 170,
@@ -48,7 +70,7 @@ function setupMasterSheets() {
     },
     {
       resourceName: CONFIG.MASTER_SHEETS.WAREHOUSES,
-      headers: ['Code', 'Name', 'City', 'Country', 'Type', 'Status'].concat(commonAuditColumns),
+      headers: ['Code', 'Name', 'City', 'Country', 'Type', 'AccessRegion', 'Status'].concat(commonAuditColumns),
       statusDefault: 'Active',
       defaults: { Status: 'Active', Country: 'UAE', Type: 'Main' },
       columnWidths: {
@@ -57,6 +79,7 @@ function setupMasterSheets() {
         City: 150,
         Country: 130,
         Type: 120,
+        AccessRegion: 130,
         Status: 100,
         CreatedAt: 170,
         UpdatedAt: 170,
@@ -83,7 +106,7 @@ function setupMasterSheets() {
     },
     {
       resourceName: CONFIG.MASTER_SHEETS.CARRIERS,
-      headers: ['Code', 'Name', 'Type', 'Phone', 'ContactPerson', 'Status'].concat(commonAuditColumns),
+      headers: ['Code', 'Name', 'Type', 'Phone', 'ContactPerson', 'AccessRegion', 'Status'].concat(commonAuditColumns),
       statusDefault: 'Active',
       defaults: { Status: 'Active' },
       columnWidths: {
@@ -92,6 +115,7 @@ function setupMasterSheets() {
         Type: 120,
         Phone: 140,
         ContactPerson: 180,
+        AccessRegion: 130,
         Status: 100,
         CreatedAt: 170,
         UpdatedAt: 170,
@@ -101,7 +125,7 @@ function setupMasterSheets() {
     },
     {
       resourceName: CONFIG.MASTER_SHEETS.PORTS,
-      headers: ['Code', 'Name', 'Country', 'PortType', 'Status'].concat(commonAuditColumns),
+      headers: ['Code', 'Name', 'Country', 'PortType', 'AccessRegion', 'Status'].concat(commonAuditColumns),
       statusDefault: 'Active',
       defaults: { Status: 'Active', Country: 'UAE' },
       columnWidths: {
@@ -109,6 +133,7 @@ function setupMasterSheets() {
         Name: 220,
         Country: 130,
         PortType: 130,
+        AccessRegion: 130,
         Status: 100,
         CreatedAt: 170,
         UpdatedAt: 170,
@@ -125,7 +150,7 @@ function setupMasterSheets() {
 
   const results = [];
 
-  schemaByResource.forEach(function(schema) {
+  schemaByResource.forEach(function (schema) {
     try {
       const resource = getResourceConfig(schema.resourceName);
       if (!resource.codePrefix) {
@@ -154,6 +179,7 @@ function setupMasterSheets() {
       }
 
       applyColumnDefaults(sheet, schema.headers, schema.defaults || {});
+      clearDataValidationForTable(sheet, schema.headers.length);
       applyStatusValidation(sheet, schema.headers, statusValidationRule);
       fillBlankStatus(sheet, schema.headers, schema.statusDefault || 'Active');
       protectHeaderRow(sheet, schema.headers.length);
@@ -185,15 +211,15 @@ function normalizeSheetSchema(sheet, targetHeaders) {
   const headerIndexMap = buildHeaderIndexMap(currentHeaders);
 
   const existingRows = currentValues.slice(1);
-  const normalizedRows = existingRows.map(function(row) {
-    return targetHeaders.map(function(header) {
+  const normalizedRows = existingRows.map(function (row) {
+    return targetHeaders.map(function (header) {
       const idx = headerIndexMap[header];
       return idx === undefined ? '' : row[idx];
     });
   });
 
   sheet.clearContents();
-
+  sheet.getRange(1, 1, lastRow, lastCol).clearDataValidations();
   sheet.getRange(1, 1, 1, targetHeaders.length).setValues([targetHeaders]);
 
   if (normalizedRows.length > 0) {
@@ -219,7 +245,7 @@ function applyMasterSheetFormatting(sheet, headers, columnWidths) {
   sheet.setRowHeight(1, 32);
   sheet.setFrozenRows(1);
 
-  headers.forEach(function(header, i) {
+  headers.forEach(function (header, i) {
     if (columnWidths && columnWidths[header]) {
       sheet.setColumnWidth(i + 1, columnWidths[header]);
     }
@@ -237,7 +263,7 @@ function applyColumnDefaults(sheet, headers, defaults) {
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) return;
 
-  Object.keys(defaults).forEach(function(key) {
+  Object.keys(defaults).forEach(function (key) {
     const colIdx = headers.indexOf(key);
     if (colIdx === -1) return;
 
@@ -249,6 +275,12 @@ function applyColumnDefaults(sheet, headers, defaults) {
       }
     }
   });
+}
+
+function clearDataValidationForTable(sheet, colCount) {
+  const maxRows = sheet.getMaxRows();
+  if (maxRows < 2 || colCount < 1) return;
+  sheet.getRange(2, 1, maxRows - 1, colCount).clearDataValidations();
 }
 
 function applyStatusValidation(sheet, headers, validationRule) {
@@ -278,7 +310,7 @@ function fillBlankStatus(sheet, headers, defaultStatus) {
 
 function applyBanding(sheet, headerCount) {
   const bandings = sheet.getBandings();
-  bandings.forEach(function(b) { b.remove(); });
+  bandings.forEach(function (b) { b.remove(); });
 
   const rowCount = Math.max(sheet.getLastRow(), 2);
   const tableRange = sheet.getRange(1, 1, rowCount, headerCount);
@@ -291,7 +323,7 @@ function applyBanding(sheet, headerCount) {
 
 function protectHeaderRow(sheet, colCount) {
   const protections = sheet.getProtections(SpreadsheetApp.ProtectionType.RANGE);
-  protections.forEach(function(p) {
+  protections.forEach(function (p) {
     const r = p.getRange();
     if (r && r.getRow() === 1) {
       p.remove();
@@ -305,7 +337,7 @@ function protectHeaderRow(sheet, colCount) {
 
 function buildHeaderIndexMap(headers) {
   const map = {};
-  headers.forEach(function(h, i) {
+  headers.forEach(function (h, i) {
     map[h] = i;
   });
   return map;

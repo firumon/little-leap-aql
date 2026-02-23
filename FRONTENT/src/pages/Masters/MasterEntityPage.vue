@@ -99,11 +99,13 @@ import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { createMasterRecord, fetchMasterRecords, updateMasterRecord } from 'src/services/masterRecords'
 import { useAuthStore } from 'src/stores/auth'
+import { useProductsStore } from 'src/stores/products'
 
 const route = useRoute()
 const router = useRouter()
 const $q = useQuasar()
 const auth = useAuthStore()
+const productsStore = useProductsStore()
 
 const lastHeaders = ref([])
 const config = computed(() => {
@@ -120,6 +122,7 @@ const config = computed(() => {
 const items = ref([])
 const loading = ref(false)
 const saving = ref(false)
+const backgroundSyncing = ref(false)
 const showInactive = ref(false)
 const showDialog = ref(false)
 const isEdit = ref(false)
@@ -171,6 +174,34 @@ function notify(type, message) {
   $q.notify({ type, message, timeout: 2200 })
 }
 
+function applyRecordsResponse(response) {
+  lastHeaders.value = Array.isArray(response.headers) ? response.headers : []
+  items.value = response.records
+  if (config.value?.name === 'Products') {
+    productsStore.hydrateFromMasterRecords(response.records, response.headers, showInactive.value)
+  }
+}
+
+async function runBackgroundSync() {
+  if (!config.value || backgroundSyncing.value) return
+
+  backgroundSyncing.value = true
+  try {
+    const response = await fetchMasterRecords(config.value.name, {
+      includeInactive: showInactive.value,
+      syncWhenCacheExists: true
+    })
+
+    if (!response.success) {
+      return
+    }
+
+    applyRecordsResponse(response)
+  } finally {
+    backgroundSyncing.value = false
+  }
+}
+
 function createEmptyForm() {
   const result = { Code: '' }
   if (!config.value) return result
@@ -215,10 +246,14 @@ async function reload(forceSync = false) {
       return
     }
 
-    lastHeaders.value = Array.isArray(response.headers) ? response.headers : []
-    items.value = response.records
+    applyRecordsResponse(response)
     if (response.stale) {
       notify('warning', response.message || 'Showing cached data')
+    }
+
+    // Cache-first render, then silently pull latest delta/full sync.
+    if (!forceSync && response?.meta?.source === 'cache') {
+      runBackgroundSync()
     }
   } finally {
     loading.value = false

@@ -70,10 +70,12 @@ function validateToken(token) {
 
   const user = getRowAsObject(users.sheet, rowNumber, users.headers);
   const roleIds = resolveUserRoleIds(user);
+  const accessRegionScope = buildUserAccessRegionScope(user);
   return {
     rowNumber,
     user,
     roleIds,
+    accessRegionScope,
     sheet: users.sheet,
     headers: users.headers,
     idx: users.idx
@@ -119,6 +121,7 @@ function buildAuthUserPayload(userRow, roleIds) {
     name: userRow.Name,
     email: userRow.Email,
     avatar: userRow.Avatar || '',
+    accessRegion: buildUserAccessRegionPayload(userRow),
     designation: getDesignationById(userRow.DesignationID),
     roles: getRoleNamesByIds(roleIds || resolveUserRoleIds(userRow)),
     role: getPrimaryRoleName(userRow)

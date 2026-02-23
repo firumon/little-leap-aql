@@ -31,7 +31,6 @@ export const useProductsStore = defineStore('products', () => {
       items.value = response.records.map((record) => ({
         code: record.Code || '',
         name: record.Name || '',
-        sku: record.SKU || '',
         status: (record.Status || '').toString().trim() || 'Active'
       }))
 
@@ -45,12 +44,28 @@ export const useProductsStore = defineStore('products', () => {
     }
   }
 
+  function hydrateFromMasterRecords(records = [], responseHeaders = [], includeInactiveParam = includeInactive.value) {
+    includeInactive.value = includeInactiveParam
+    headers.value = Array.isArray(responseHeaders) ? responseHeaders : []
+    items.value = (Array.isArray(records) ? records : []).map((record) => ({
+      code: record.Code || '',
+      name: record.Name || '',
+      status: (record.Status || '').toString().trim() || 'Active'
+    }))
+  }
+
+  function getProductNameByCode(code) {
+    const normalized = (code || '').toString().trim()
+    if (!normalized) return ''
+    const found = items.value.find((product) => product.code === normalized)
+    return found?.name || ''
+  }
+
   async function createProduct(payload) {
     saving.value = true
     try {
       const data = await createMasterRecord(RESOURCE_NAME, {
         Name: payload?.name,
-        SKU: payload?.sku,
         Status: payload?.status
       })
 
@@ -70,7 +85,6 @@ export const useProductsStore = defineStore('products', () => {
     try {
       const data = await updateMasterRecord(RESOURCE_NAME, payload?.code, {
         Name: payload?.name,
-        SKU: payload?.sku,
         Status: payload?.status
       })
 
@@ -92,6 +106,8 @@ export const useProductsStore = defineStore('products', () => {
     saving,
     includeInactive,
     fetchProducts,
+    hydrateFromMasterRecords,
+    getProductNameByCode,
     createProduct,
     updateProduct
   }

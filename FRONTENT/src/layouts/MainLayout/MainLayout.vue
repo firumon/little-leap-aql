@@ -167,8 +167,8 @@ function resolveGroupIcon(groupLabel, resources) {
   return 'menu_open'
 }
 
-function isMasterRoute(routePath) {
-  return typeof routePath === 'string' && /^\/masters\/[^/]+$/.test(routePath)
+function isValidRoute(routePath) {
+  return typeof routePath === 'string' && routePath.trim() !== ''
 }
 
 const userAvatar = computed(() => auth.userProfile?.avatar || 'https://cdn.quasar.dev/img/avatar.png')
@@ -190,10 +190,10 @@ const visibleResourceMenuGroups = computed(() => {
   resources
     .filter((resource) => {
       const routePath = resource?.ui?.routePath || ''
-      return resource?.scope === 'master' &&
+      return (resource?.scope === 'master' || resource?.scope === 'transaction') &&
         resource?.permissions?.canRead === true &&
         resource?.ui?.showInMenu !== false &&
-        isMasterRoute(routePath) &&
+        isValidRoute(routePath) &&
         readableResources.value.has(resource.name)
     })
     .forEach((resource) => {

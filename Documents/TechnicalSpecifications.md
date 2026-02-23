@@ -15,11 +15,16 @@
 ### Identity model
 - One designation per user (`Users.DesignationID`).
 - Multiple roles per user via CSV (`Users.Roles`).
+- Region scope per user via `Users.AccessRegion` (empty means universe access).
 
 ### Permission model
 - `RolePermissions.Actions` drives permission (CSV actions like `Read,Write,Update,Delete,Approve`).
 - Resource-level auth is aggregated across all user roles.
 - Record-level access enforced via `Resources.RecordAccessPolicy` + designation hierarchy.
+- Region-level access enforced via `AccessRegions` hierarchy:
+  - User with `AccessRegion=X` can access `X` + descendants.
+  - User with empty `AccessRegion` can access all regions.
+  - Record with empty `AccessRegion` is globally accessible.
 
 ## 3) Resource-Driven Runtime
 
@@ -31,6 +36,7 @@ Backend uses it for:
 - schema defaults/validation config
 - audit behavior (`Audit`)
 - record-level policy
+- region-level filtering (`AccessRegion`)
 
 Frontend uses it for:
 - menu visibility and order
@@ -43,6 +49,10 @@ Frontend uses it for:
   - `{ action: "get", scope: "master", resource }`
   - `{ action: "create", scope: "master", resource, record }`
   - `{ action: "update", scope: "master", resource, code, record }`
+- For region-aware resources, `record.AccessRegion` is allowed:
+  - Scoped users can only write within assigned subtree.
+  - Empty `record.AccessRegion` is auto-filled with user scope root for scoped users.
+  - `AccessRegion` is immutable after create (update requests cannot change it).
 
 ### Apps Script Runtime File Ownership
 - `GAS/apiDispatcher.gs`: owns `doPost`, request parsing/JSON response helpers, and protected action routing.
@@ -53,16 +63,23 @@ Frontend uses it for:
 - Master pages are **IDB-first**:
   - Read cached rows from `resource-records` immediately for fast paint.
   - Read `resource-meta.lastSyncAt` as sync cursor.
-- Network sync is **interval-gated**:
-  - Re-entering a master page within sync interval uses cache without calling Apps Script.
-  - Manual refresh forces a network sync.
+- Re-entering a master page uses local cache by default and does not call Apps Script when cache exists.
+- Network sync happens when:
+  - User explicitly triggers refresh (force sync), or
+  - No cached rows exist yet for the resource.
 - Delta request behavior:
-  - If resource headers contain `UpdatedAt`, frontend sends `lastUpdatedAt` and server returns only changed rows.
+  - Frontend sends `lastUpdatedAt` whenever `resource-meta.lastSyncAt` is available.
+  - Server returns only changed rows when `UpdatedAt` is present in resource headers.
   - Delta rows are upserted into IDB.
 - Full-sync fallback:
-  - If `UpdatedAt` is not present, frontend falls back to periodic full-sync (not on every visit).
+  - If no sync cursor exists yet, request is full sync.
+  - If `UpdatedAt` is not present, server naturally returns full rows for subsequent sync calls.
 - Requirement for reliable delta:
   - Master sheets should include audit columns and resource metadata should keep `Resources.Audit=TRUE`, so `UpdatedAt` is maintained on write/update.
+
+### Pinia Master Cache (Products)
+- Product master rows are hydrated into Pinia (`products` store) when Products master data is loaded.
+- This allows non-master pages (for example invoice lines) to map product code/id to product name without extra API calls.
 
 ## 6) Deployment Notes
 1. Update APP sheet headers as documented.

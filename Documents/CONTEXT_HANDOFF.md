@@ -117,6 +117,17 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
 - MASTER setup script:
   - `GAS/setupMasterSheets.gs`
   - Reads APP `Resources` and creates/updates target sheets.
+- PWA & Offline Support:
+  - Custom service worker (`custom-service-worker.js`) implemented for caching and offline capabilities.
+  - IndexedDB-backed data synchronization for seamless offline UX.
+- Resource & Entity Updates:
+  - Transitioned architecture to use `SKUs` instead of `ProductVariants`.
+  - Configured `APP.Resources` to include mapping for transaction resources: Shipments, Port Clearance, Goods Receipts, and Stock Movements.
+- Identity & Role Architecture (Updates):
+  - Simplified role mapping: `Roles` are now directly assigned to users via `RoleID` in the `Users` sheet, deprecating the `UserRoles` sheet.
+  - Built Role-Based Dashboards routing and layouts (redirect based on role logic).
+- Frontend Store Architecture:
+  - Refactored the `auth` store and related stores to Vue 3 Composition API (Setup Store syntax) for better maintainability.
 
 ### Key behavior now
 - Code is generated in Apps Script (not by sheet formula).
@@ -180,26 +191,43 @@ Other APP requirements:
 - `Users` must include `AccessRegion`.
 - APP must include `AccessRegions` sheet with columns `Code`, `Name`, `Parent`.
 
-## 8) Master Resources and Prefixes
-Recommended values:
+## 8) Master & Transaction Resources Defaults
+Recommended Prefix/Sequence:
 - Products: `CodePrefix=LLMP`, `CodeSequenceLength=5`
+- SKUs: `CodePrefix=LLMSKU`, `CodeSequenceLength=6`
 - Suppliers: `CodePrefix=LLMS`, `CodeSequenceLength=3`
 - Warehouses: `CodePrefix=LLMW`, `CodeSequenceLength=3`
 - WarehouseLocations: `CodePrefix=LLML`, `CodeSequenceLength=4`
 - Carriers: `CodePrefix=LLMC`, `CodeSequenceLength=4`
 - Ports: `CodePrefix=LLMPT`, `CodeSequenceLength=3`
+- Shipments: `CodePrefix=LLMSH`, `CodeSequenceLength=6`
+- ShipmentItems: `CodePrefix=LLMSI`, `CodeSequenceLength=6`
+- PortClearance: `CodePrefix=LLMPC`, `CodeSequenceLength=6`
+- GoodsReceipts: `CodePrefix=LLMGRN`, `CodeSequenceLength=6`
+- GoodsReceiptItems: `CodePrefix=LLMGRI`, `CodeSequenceLength=6`
+- StockMovements: `CodePrefix=LLMSM`, `CodeSequenceLength=6`
 
-## 9) Current MASTER Schema (Step-1 Foundation)
-Sheets:
+## 9) Current Shema Sheets
+MASTER Sheets:
 - Products
+- SKUs
 - Suppliers
 - Warehouses
 - WarehouseLocations
 - Carriers
 - Ports
 
+TRANSACTION Sheets:
+- Shipments
+- ShipmentItems
+- PortClearance
+- GoodsReceipts
+- GoodsReceiptItems
+- StockMovements
+
 References:
 - `Documents/MASTER_SHEET_STRUCTURE.md`
+- `Documents/TRANSACTION_SHEET_STRUCTURE.md`
 - `Documents/APP_SHEET_STRUCTURE.md`
 
 ## 10) Frontend Routes Implemented

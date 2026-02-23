@@ -12,6 +12,7 @@ This document explains each `APP > Resources` column, what to fill, and common v
 |---|---|---|---|---|---|
 | `Name` | Yes | Text | Unique resource key used in API + permissions | PascalCase resource name | `Products` |
 | `Scope` | Yes | Text | Logical module for resource | `master`, `transaction`, `report`, `system` | `master` |
+| `ParentResource` | Optional | Text | Points to a parent resource definition | Exact matched Name of another resource | `Products` |
 | `IsActive` | Yes | Boolean | Enables/disables resource at runtime | `TRUE` / `FALSE` | `TRUE` |
 | `FileID` | Yes | Text | Spreadsheet ID where sheet exists | Google Sheet file id | `1AbC...xyz` |
 | `SheetName` | Yes | Text | Tab name inside target file | Exact tab name | `Products` |

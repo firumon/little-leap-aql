@@ -45,19 +45,7 @@ This document captures the real operational flow that AQL must support on the gr
 - Putaway/Shelf Assignment: map accepted stock to shelf/bin/location in Ajman warehouse.
 - Stock Ledger Movement: create auditable inventory movements for every inbound action.
 
-## Recommended Implementation Sequence (Next)
-1. Finalize `Products` sheet for 21 SKUs.
-2. Build `OutletStockAllocations` + periodic sales capture.
-3. Build collection cycles and payment tracking per outlet.
-4. Build refill request + approval + dispatch flow.
-5. Build low-stock reorder alerts + supplier purchase order flow.
-6. Build/continue inbound enablers: `Shipments`, `PortClearance`, `GRN`, `Putaway`.
-7. Add operational reports:
-- Outlet sales by period
-- Collection due vs collected
-- Refill approval aging
-- Reorder risk and open POs
-- Current stock by SKU and location
+
 
 ## Data Entities for Next Sprint
 - `Products`

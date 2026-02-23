@@ -19,6 +19,7 @@ graph TD
         GAS --> MASTER[masterApi.gs]
         GAS --> REGISTRY[resourceRegistry.gs]
         AUTH --> USERS[(APP.Users)]
+        AUTH --> ACCESSREG[(APP.AccessRegions)]
         AUTH --> ROLES[(APP.Roles)]
         AUTH --> ROLEPERM[(APP.RolePermissions)]
         REGISTRY --> RESOURCES[(APP.Resources)]
@@ -35,7 +36,7 @@ graph TD
 - Single Apps Script project lives in APP file.
 - `APP.Resources` is the runtime registry for both backend behavior and frontend metadata.
 - Resource routing is dynamic through `FileID` + `SheetName`; no hardcoded per-file script projects.
-- Role-based and record-level access are both metadata-driven.
+- Role-based, record-level, and access-region-level controls are metadata-driven.
 
 ## Backend Components (Apps Script)
 - `GAS/apiDispatcher.gs`
@@ -45,7 +46,11 @@ graph TD
 - `GAS/auth.gs`
   - Handles `login`, `getProfile`, profile update actions.
   - Validates token and user context.
-  - Returns role-authorized `resources` in login payload.
+  - Returns role-authorized `resources` and user `accessRegion` scope in login payload.
+- `GAS/accessRegion.gs`
+  - Resolves `APP.AccessRegions` hierarchy.
+  - Expands user scope to assigned region + descendants.
+  - Validates region codes and universe-access behavior.
 - `GAS/sheetHelpers.gs`
   - Shared helpers for header/index/row access patterns across auth/resource/master modules.
 - `GAS/resourceRegistry.gs`
@@ -56,6 +61,7 @@ graph TD
 - `GAS/masterApi.gs`
   - Generic master CRUD (`get/create/update`) with `scope=master`.
   - Resource-driven schema validation/defaults/uniqueness checks.
+  - Enforces `AccessRegion` row filtering and write boundaries.
   - Supports incremental sync payloads (`lastUpdatedAt` -> `meta.lastSyncAt`).
 
 ## Frontend Components
@@ -88,6 +94,7 @@ Frontend expects this shape from `action=login`:
     "name": "User Name",
     "email": "user@example.com",
     "avatar": "",
+    "accessRegion": { "code": "UAE001", "isUniverse": false, "accessibleCodes": ["UAE001", "UAE002"] },
     "designation": { "id": "D0001", "name": "Manager", "hierarchyLevel": 2 },
     "roles": [{ "id": "R0001", "name": "Administrator" }],
     "role": "Administrator"
@@ -100,7 +107,7 @@ Frontend expects this shape from `action=login`:
       "sheetName": "Products",
       "codePrefix": "LLMP",
       "codeSequenceLength": 5,
-      "headers": ["Code", "Name", "SKU", "Status", "CreatedAt", "UpdatedAt", "CreatedBy", "UpdatedBy"],
+      "headers": ["Code", "Name", "SKU", "AccessRegion", "Status", "CreatedAt", "UpdatedAt", "CreatedBy", "UpdatedBy"],
       "permissions": {
         "canRead": true,
         "canWrite": true,
@@ -131,13 +138,13 @@ Frontend expects this shape from `action=login`:
 1. Frontend posts `{ action: "login", email, password }`.
 2. `apiDispatcher.gs` routes `login` to auth handlers.
 3. `auth.gs` validates credentials from `APP.Users`, writes new UUID to `Users.ApiKey`.
-4. `auth.gs` resolves user roles and designation.
+4. `auth.gs` resolves user roles, designation, and access-region scope.
 5. `resourceRegistry.gs` aggregates resource permissions from `RolePermissions` and resource metadata from `Resources`.
 6. Login response returns `token`, `user`, and role-authorized `resources`.
 
 ## Request Flow (Master Read)
 1. Frontend posts `{ action: "get", scope: "master", resource, lastUpdatedAt }`.
 2. `apiDispatcher.gs` validates token via `auth.gs` and routes to master handlers.
-3. `masterApi.gs` checks resource-level permission + record-level policy.
+3. `masterApi.gs` checks resource-level permission + record-level policy + access-region scope.
 4. Target file/sheet is resolved dynamically via `resourceRegistry.gs`.
 5. Response returns compact `rows` and `meta.lastSyncAt` for incremental merge.

@@ -92,7 +92,7 @@ function isGenericMasterCrudAction(action, payload) {
     return true;
   }
 
-  if (normalizedScope !== 'master') {
+  if (normalizedScope !== 'master' && normalizedScope !== 'transaction') {
     return false;
   }
 
@@ -169,7 +169,7 @@ function normalizeLegacyMasterResource(value) {
 function cloneWithMasterResource(payload, resourceName) {
   const source = payload || {};
   const cloned = {};
-  Object.keys(source).forEach(function(key) {
+  Object.keys(source).forEach(function (key) {
     cloned[key] = source[key];
   });
   cloned.resource = resourceName;

@@ -7,15 +7,34 @@ export const MASTER_ENTITY_CONFIG = {
     navLabel: 'Products',
     navIcon: 'inventory_2',
     title: 'Products',
-    description: 'Manage product master records',
+    description: 'Manage product master records (parent models)',
     fields: [
       { header: 'Name', label: 'Name', type: 'text', required: true },
-      { header: 'SKU', label: 'SKU', type: 'text', required: true },
+      { header: 'VariantTypes', label: 'Variant Types', type: 'text', hint: 'CSV e.g. Size,Color,Material' },
+      { header: 'Status', label: 'Status', type: 'status', required: true }
+    ]
+  },
+  skus: {
+    order: 2,
+    key: 'skus',
+    resource: 'SKUs',
+    routePath: '/masters/skus',
+    navLabel: 'SKUs',
+    navIcon: 'style',
+    title: 'SKUs',
+    description: 'Manage sellable SKUs (child variants of a product)',
+    fields: [
+      { header: 'ProductCode', label: 'Product Code', type: 'text', required: true },
+      { header: 'Variant1', label: 'Variant 1', type: 'text' },
+      { header: 'Variant2', label: 'Variant 2', type: 'text' },
+      { header: 'Variant3', label: 'Variant 3', type: 'text' },
+      { header: 'Variant4', label: 'Variant 4', type: 'text' },
+      { header: 'Variant5', label: 'Variant 5', type: 'text' },
       { header: 'Status', label: 'Status', type: 'status', required: true }
     ]
   },
   suppliers: {
-    order: 2,
+    order: 3,
     key: 'suppliers',
     resource: 'Suppliers',
     routePath: '/masters/suppliers',
@@ -33,7 +52,7 @@ export const MASTER_ENTITY_CONFIG = {
     ]
   },
   warehouses: {
-    order: 3,
+    order: 4,
     key: 'warehouses',
     resource: 'Warehouses',
     routePath: '/masters/warehouses',
@@ -50,7 +69,7 @@ export const MASTER_ENTITY_CONFIG = {
     ]
   },
   warehouseLocations: {
-    order: 4,
+    order: 5,
     key: 'warehouseLocations',
     resource: 'WarehouseLocations',
     routePath: '/masters/warehouse-locations',
@@ -66,7 +85,7 @@ export const MASTER_ENTITY_CONFIG = {
     ]
   },
   carriers: {
-    order: 5,
+    order: 6,
     key: 'carriers',
     resource: 'Carriers',
     routePath: '/masters/carriers',
@@ -83,7 +102,7 @@ export const MASTER_ENTITY_CONFIG = {
     ]
   },
   ports: {
-    order: 6,
+    order: 7,
     key: 'ports',
     resource: 'Ports',
     routePath: '/masters/ports',

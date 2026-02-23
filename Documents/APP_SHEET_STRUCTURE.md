@@ -14,11 +14,25 @@ Columns:
 - `PasswordHash`
 - `DesignationID` (FK -> `Designations.DesignationID`)
 - `Roles` (CSV RoleIDs, example: `R0001,R0003`)
+- `AccessRegion` (FK -> `AccessRegions.Code`, empty = universe/all regions)
 - `Status` (`Active`/`Inactive`)
 - `Avatar`
 - `ApiKey`
 
-### 2) Designations
+### 2) AccessRegions
+Purpose: Hierarchical data-access boundary model.
+
+Columns:
+- `Code` (PK, format: country 3-letter prefix + 3-digit sequence, example: `UAE001`, `QTR001`)
+- `Name`
+- `Parent` (optional FK -> `AccessRegions.Code`)
+
+Notes:
+- Empty `Users.AccessRegion` means universe access (no region restriction).
+- Non-empty `Users.AccessRegion` grants access to that region + all descendants.
+- Records with empty `AccessRegion` are treated as universe records.
+
+### 3) Designations
 Purpose: Organization designation and hierarchy model for record-level access.
 
 Columns:
@@ -28,7 +42,7 @@ Columns:
 - `Status`
 - `Description`
 
-### 3) Roles
+### 4) Roles
 Purpose: Functional roles.
 
 Columns:
@@ -36,7 +50,7 @@ Columns:
 - `Name`
 - `Description`
 
-### 4) RolePermissions
+### 5) RolePermissions
 Purpose: Role-to-resource permissions and non-CRUD actions.
 
 Columns:
@@ -44,7 +58,7 @@ Columns:
 - `Resource` (FK -> `Resources.Name`)
 - `Actions` (CSV, example: `Read,Write,Update,Delete,Approve,Reject`)
 
-### 5) Resources
+### 6) Resources
 Purpose: Single metadata registry for backend CRUD rules and frontend menu/page/field rendering.
 
 Detailed per-column meaning and sample values:
@@ -53,6 +67,7 @@ Detailed per-column meaning and sample values:
 Columns (in order):
 - `Name`
 - `Scope` (`master|transaction|report|system`)
+- `ParentResource` (Optional FK -> parent `Resources.Name`)
 - `IsActive`
 - `FileID`
 - `SheetName`
@@ -80,3 +95,4 @@ Columns (in order):
 
 ## Setup Script
 Use `GAS/setupAppSheets.gs` (`setupAppSheets()`) to create these sheets.
+For existing APP files, run `upgradeAppSheetsForAccessRegions()` to add `Users.AccessRegion` and create `AccessRegions` if missing.

@@ -103,6 +103,7 @@ function setupAppSheets() {
       headers: [
         'Name',
         'Scope',
+        'ParentResource',
         'IsActive',
         'FileID',
         'SheetName',
@@ -162,6 +163,7 @@ function setupAppSheets() {
       columnWidths: {
         Name: 180,
         Scope: 100,
+        ParentResource: 180,
         IsActive: 90,
         FileID: 280,
         SheetName: 160,
@@ -285,6 +287,14 @@ function setupAppSheets() {
 
   var summary = 'Setup complete.\n\n' + results.join('\n');
   Logger.log(summary);
+
+  try {
+    syncAppResourcesFromCode(true);
+    summary += '\n\nAutomatically synced APP.Resources from code.';
+  } catch (e) {
+    summary += '\n\n(Note: Auto-sync of APP.Resources failed: ' + e.message + ')';
+  }
+
   try {
     SpreadsheetApp.getUi().alert(summary);
   } catch (e) { }
@@ -384,6 +394,7 @@ function app_normalizeSheetSchema(sheet, targetHeaders) {
   });
 
   sheet.clearContents();
+  sheet.getRange(1, 1, lastRow, lastCol).clearDataValidations();
   sheet.getRange(1, 1, 1, targetHeaders.length).setValues([targetHeaders]);
 
   if (normalizedRows.length > 0) {

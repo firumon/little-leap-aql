@@ -66,6 +66,7 @@ Main shell is in `MainLayout.vue` with grouped ERP navigation and profile menu.
 - Name update
 - Email update
 - Password update
+- Displays user `Access Region` scope from login/profile payload
 
 Store/API wiring:
 - `src/stores/auth.js` uses shared `callGasApi(...)` through `callAuthApi(...)` wrapper.
@@ -104,14 +105,18 @@ Transport note:
 - Master list sync flow (common):
   1. Read headers + last sync cursor from IDB (`resource-meta`).
   2. Load cached rows from IDB (`resource-records`) for instant UI.
-  3. If sync interval has elapsed (or user clicks refresh), call `action=get` with `scope=master`, `resource`, `lastUpdatedAt` when `UpdatedAt` header exists.
+  3. If user clicks refresh (or cache is empty), call `action=get` with `scope=master`, `resource`, and `lastUpdatedAt` when cursor exists.
   4. Merge returned `rows` (array of arrays) into IDB.
   5. Convert rows to objects inside frontend service/store and render.
 
 Delta strategy notes:
-- Re-opening master pages within sync interval does not call Apps Script again.
+- Re-opening master pages uses IDB cache and does not call Apps Script when cache exists.
 - Manual refresh forces sync.
-- If `UpdatedAt` is unavailable for a resource, flow falls back to periodic full sync instead of per-visit full fetch.
+- Sync requests include `lastUpdatedAt` when `resource-meta.lastSyncAt` exists.
+- If `UpdatedAt` is unavailable for a resource, server returns full rows (no delta optimization).
+
+Pinia data note:
+- Product master results are also hydrated into `src/stores/products.js` so other screens can resolve product code/id to product name locally.
 
 ## Development Workflow
 - Run `npm run dev` in `FRONTENT` (port 9000).

@@ -4,34 +4,45 @@ This document defines the MASTER file structure for the current implementation p
 
 ## Scope
 Current scope supports inbound setup from China to Ajman warehouse.
+All master resources now include `AccessRegion` for hierarchical region-based access control.
 
 ## 1) Products
-Primary source of sellable items.
+Parent entity for sellable items. Each Product defines a model/line and declares which variant dimensions apply to it.
 
 Columns:
-- `Code` (Apps Script generated using `Resources.CodePrefix`)
+- `Code` (Apps Script generated, prefix `LLMP`)
 - `Name`
-- `SKU`
+- `VariantTypes` (CSV of applicable variant dimensions, e.g. `Size,Color` or `Size,Material,Color`)
+- `AccessRegion` (empty = universe record)
 - `Status` (`Active`/`Inactive`)
 - `CreatedAt`
 - `UpdatedAt`
 - `CreatedBy`
 - `UpdatedBy`
 
-Current API actions:
-- Generic (all master resources):
-  - Preferred: `action=get/create/update` with `scope=master` and `resource`
-  - Optional batch read: `action=get`, `scope=master`, `resources=...`
+## 2) SKUs
+Child entity representing the actual sellable SKU. Each variant row belongs to a parent Product and carries up to five dynamic variant values whose semantics are defined by the parent's `VariantTypes` column.
+
+Columns:
+- `Code` (Apps Script generated, prefix `LLMSKU` — this is the SKU used in shipments, stock, and sales)
+- `ProductCode` (FK -> `Products.Code`)
+- `Variant1` (value for `VariantTypes` index 0, e.g. "250ml")
+- `Variant2` (value for `VariantTypes` index 1, e.g. "Blue")
+- `Variant3` (value for `VariantTypes` index 2, e.g. "Silicone")
+- `Variant4`
+- `Variant5`
+- `Status` (`Active`/`Inactive`)
+- `CreatedAt`
+- `UpdatedAt`
+- `CreatedBy`
+- `UpdatedBy`
+
+Current API actions (apply to both Products and SKUs):
+- Preferred: `action=get/create/update` with `scope=master` and `resource`
+- Optional batch read: `action=get`, `scope=master`, `resources=...`
 - Legacy compatibility: `master.getRecords`, `master.createRecord`, `master.updateRecord`
-- Compatibility (Products): `master.getProducts`, `master.createProduct`, `master.updateProduct`
 
-Master `get` data contract:
-- Request requires `resource` (for example `Products`, `Suppliers`, `Warehouses`, `WarehouseLocations`, `Carriers`, `Ports`).
-- Request can use `resources` (comma string or array) to fetch multiple resources in one call.
-- Request can include `lastUpdatedAt` for incremental sync.
-- Response returns compact `rows` (array-of-arrays in sheet header order) and `meta.lastSyncAt`.
-
-## 2) Suppliers
+## 3) Suppliers
 Supplier master (China vendors).
 
 Columns:
@@ -41,13 +52,14 @@ Columns:
 - `ContactPerson`
 - `Phone`
 - `Email`
+- `AccessRegion`
 - `Status`
 - `CreatedAt`
 - `UpdatedAt`
 - `CreatedBy`
 - `UpdatedBy`
 
-## 3) Warehouses
+## 4) Warehouses
 Warehouse definitions (including Ajman warehouse).
 
 Columns:
@@ -56,13 +68,14 @@ Columns:
 - `City`
 - `Country`
 - `Type`
+- `AccessRegion`
 - `Status`
 - `CreatedAt`
 - `UpdatedAt`
 - `CreatedBy`
 - `UpdatedBy`
 
-## 4) WarehouseLocations
+## 5) WarehouseLocations
 Shelf/bin/location structure for putaway.
 
 Columns:
@@ -76,7 +89,7 @@ Columns:
 - `CreatedBy`
 - `UpdatedBy`
 
-## 5) Carriers
+## 6) Carriers
 Transport partner master (port to warehouse movement).
 
 Columns:
@@ -85,13 +98,14 @@ Columns:
 - `Type`
 - `Phone`
 - `ContactPerson`
+- `AccessRegion`
 - `Status`
 - `CreatedAt`
 - `UpdatedAt`
 - `CreatedBy`
 - `UpdatedBy`
 
-## 6) Ports
+## 7) Ports
 Port master for import/clearance reference.
 
 Columns:
@@ -99,6 +113,7 @@ Columns:
 - `Name`
 - `Country`
 - `PortType`
+- `AccessRegion`
 - `Status`
 - `CreatedAt`
 - `UpdatedAt`
@@ -110,12 +125,14 @@ Run from APP Apps Script project only:
 - `GAS/setupMasterSheets.gs` -> run `setupMasterSheets()`
 
 The function reads APP `Resources` rows and creates/updates each target sheet in the file specified by `FileID` and `SheetName`.
+It also normalizes headers, including required `AccessRegion` column for region-scoped visibility.
 
 No separate Apps Script project is required in MASTER file.
 
 ## Important
 In APP `Resources`, ensure rows exist for:
 - `Products`
+- `SKUs`
 - `Suppliers`
 - `Warehouses`
 - `WarehouseLocations`

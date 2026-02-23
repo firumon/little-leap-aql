@@ -4,7 +4,7 @@
       <q-card-section class="row items-center q-col-gutter-md">
         <div class="col-12 col-md">
           <div class="text-h6 text-weight-bold">Products</div>
-          <div class="text-caption text-grey-7">Manage product master (Code, Name, SKU, Status)</div>
+          <div class="text-caption text-grey-7">Manage product master (Code, Name, Status)</div>
         </div>
 
         <div class="col-12 col-md-auto row items-center q-gutter-sm">
@@ -78,12 +78,6 @@
             autofocus
           />
 
-          <q-input
-            v-model="form.sku"
-            label="SKU"
-            dense
-            outlined
-          />
 
           <q-select
             v-model="form.status"
@@ -125,7 +119,6 @@ const isEdit = ref(false)
 const form = ref({
   code: '',
   name: '',
-  sku: '',
   status: 'Active'
 })
 
@@ -141,7 +134,6 @@ const pagination = {
 const columns = [
   { name: 'code', label: 'Code', field: 'code', align: 'left', sortable: true },
   { name: 'name', label: 'Name', field: 'name', align: 'left', sortable: true },
-  { name: 'sku', label: 'SKU', field: 'sku', align: 'left', sortable: true },
   { name: 'status', label: 'Status', field: 'status', align: 'left', sortable: true },
   { name: 'actions', label: '', field: 'actions', align: 'right' }
 ]
@@ -162,7 +154,6 @@ function openCreateDialog() {
   form.value = {
     code: '',
     name: '',
-    sku: '',
     status: 'Active'
   }
   showDialog.value = true
@@ -173,7 +164,6 @@ function openEditDialog(row) {
   form.value = {
     code: row.code,
     name: row.name,
-    sku: row.sku,
     status: row.status || 'Active'
   }
   showDialog.value = true
@@ -181,16 +171,14 @@ function openEditDialog(row) {
 
 async function save() {
   const name = (form.value.name || '').trim()
-  const sku = (form.value.sku || '').trim()
 
-  if (!name || !sku) {
-    notify('negative', 'Name and SKU are required')
+  if (!name) {
+    notify('negative', 'Name is required')
     return
   }
 
   const payload = {
     name,
-    sku,
     status: form.value.status || 'Active'
   }
 

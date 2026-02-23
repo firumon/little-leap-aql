@@ -48,6 +48,9 @@ self.addEventListener('message', (event) => {
     authToken = event.data.token
     console.log('[SW] Auth Token updated')
   }
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting()
+  }
 })
 
 // Intercept and handle GAS API requests

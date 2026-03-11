@@ -50,35 +50,18 @@ const loginForm = reactive({
 
 async function handleLogin() {
   loading.value = true
-  try {
-    const result = await auth.login(loginForm.identifier, loginForm.password)
+  const result = await auth.login(loginForm.identifier, loginForm.password)
+  loading.value = false
 
-    if (result.success) {
-      $q.notify({
-        type: 'positive',
-        color: 'secondary',
-        message: 'Logged in successfully',
-        position: 'top',
-        timeout: 2000
-      })
-      router.push('/dashboard')
-    } else {
-      $q.notify({
-        type: 'negative',
-        message: result.message || 'Login failed. Please check your credentials.',
-        position: 'top',
-        timeout: 3000
-      })
-    }
-  } catch (error) {
+  if (result.success) {
     $q.notify({
-      type: 'negative',
-      message: error?.message || 'Login failed. Please try again.',
+      type: 'positive',
+      color: 'secondary',
+      message: 'Logged in successfully',
       position: 'top',
-      timeout: 3000
+      timeout: 2000
     })
-  } finally {
-    loading.value = false
+    router.push('/dashboard')
   }
 }
 </script>

@@ -108,9 +108,10 @@ Since agents cannot communicate directly, the shared medium is the repository it
 1. Read the entire plan before editing files.
 2. Follow plan instructions literally unless they would break production behavior.
 3. Mark progress in the plan file continuously.
-4. Avoid undocumented architecture changes; flag ambiguous points with `[?]`.
-5. Always complete required documentation updates.
-6. Commit by logical chunks with descriptive messages referencing the plan.
+4. **Mandatory Metadata Update**: Update plan `Status` to `IN_PROGRESS` when starting, and `COMPLETED` (or `BLOCKED`) when finishing. Update `Executed By` with your identity.
+5. Avoid undocumented architecture changes; flag ambiguous points with `[?]`.
+6. Always complete required documentation updates.
+7. Commit by logical chunks with descriptive messages referencing the plan.
 
 ## Rules for User
 1. Start with Brain Agent to create/adjust the plan.

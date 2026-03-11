@@ -13,21 +13,6 @@ You are acting as an expert developer on the Little Leap AQL system, an operatin
 1. **`APP.Resources` is the Supreme Source of Truth**
    - It acts as the routing and metadata control plane for *both* the backend and frontend.
    - For backend: Routes API verbs (`get/create/update`) to target `FileID` and `SheetName`. Defines required headers, default values, and `RecordAccessPolicy`.
----
-name: little-leap-expert
-description: Implement and maintain the Little Leap AQL system across the Quasar frontend, Google Apps Script backend, and Google Sheets database. Ensures strict alignment with architecture, schema metadata, and AI collaboration protocols.
----
-
-# Little Leap AQL Antigravity Expert Skill
-
-## Overview
-You are acting as an expert developer on the Little Leap AQL system, an operating system for UAE baby-product distribution. The architecture consists of a Quasar Framework (Vue 3 + Vite) frontend, a Google Apps Script (GAS) backend (single `doPost` endpoint in `GAS/apiDispatcher.gs`), and Google Sheets acting as the distributed database (APP, MASTERS, TRANSACTIONS, REPORTS files).
-
-## Core Directives
-
-1. **`APP.Resources` is the Supreme Source of Truth**
-   - It acts as the routing and metadata control plane for *both* the backend and frontend.
-   - For backend: Routes API verbs (`get/create/update`) to target `FileID` and `SheetName`. Defines required headers, default values, and `RecordAccessPolicy`.
    - For frontend: Configures dynamic routing (`ui.routePath`), role-based menu generation (`showInMenu`, `menuGroup`), and permissions.
 
 2. **Single GAS Project Strategy**
@@ -49,9 +34,10 @@ You are acting as an expert developer on the Little Leap AQL system, an operatin
 ## Architecture Guidelines
 
 ### Frontend (Quasar)
-- **API Flow:** Use `callGasApi` in `src/services/gasApi.js` for all backend communication to ensure consistent token injection and error handling.
+- **Quasar-First UI Policy:** Default to Quasar components (`q-input`, `q-table`, etc.) for UI structure, forms, and tables. Avoid raw HTML unless strictly necessary.
+- **Single API UX Contract:** Use `callGasApi` in `src/services/gasApi.js` for *all* backend communication to centrally handle token injection, loading states, normalized error mapping, and `$q.notify` success/error alerts. Never implement ad-hoc loaders or `$q.notify` alerts for API actions directly inside page components.
 - **State:** Use Pinia. Auth store persists `resources` permissions from the login payload.
-- **Sync Model:** Master models fetch incremental updates utilizing IndexedDB `resource-meta` (`lastSyncAt`) and `resource-records`. Use `lastUpdatedAt` cursors for delta syncs without requesting full datasets when the cache exists.
+- **PWA-SW-IDB-Pinia Data Contract:** Master and Operation models fetch incremental updates first from IndexedDB `resource-records` for instant local paint. Background sync uses `lastUpdatedAt` cursors from `resource-meta`, upserting deltas into IndexedDB and Pinia. Service Worker explicitly manages only offline/cache boundaries, never UI state logic.
 
 ### Backend (GAS)
 - **Verbs:** Use generic verbs (`action=get`, `scope=master`, `resource=Products`) instead of hardcoded bespoke endpoints where possible.

@@ -1,5 +1,6 @@
 import { defineRouter } from '#q-app/wrappers'
 import { createRouter, createMemoryHistory, createWebHistory, createWebHashHistory } from 'vue-router'
+import { isStandalone } from 'src/utils/pwa-utils'
 import routes from './routes'
 
 /*
@@ -27,6 +28,14 @@ export default defineRouter(function (/* { store, ssrContext } */) {
   })
 
   Router.beforeEach((to, from, next) => {
+    const isProdNonStandalone = !process.env.DEV && !isStandalone()
+    if (isProdNonStandalone) {
+      if (to.name !== 'landing') {
+        return next({ name: 'landing' })
+      }
+      return next()
+    }
+
     const token = localStorage.getItem('token')
     const isAuthenticated = !!token
     const resources = JSON.parse(localStorage.getItem('resources') || '[]')
@@ -38,9 +47,6 @@ export default defineRouter(function (/* { store, ssrContext } */) {
       .find((resource) => !!resource)
 
     // Public pages (always accessible)
-    const publicPages = ['login', 'landing', 'home']
-    const isPublicPage = publicPages.includes(to.name)
-
     // Redirect to dashboard if logged in and trying to access public auth pages
     if (isAuthenticated && (to.name === 'login' || to.name === 'landing')) {
       return next('/dashboard')

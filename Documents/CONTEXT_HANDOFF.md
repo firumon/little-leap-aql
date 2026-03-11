@@ -60,6 +60,11 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
 
 ## 6) Current Implementation Status
 ### Completed
+- Standardized Frontend UX & PWA Data Contract (Pre-Warehouse):
+  - Enforced Quasar-First UI policy across all components.
+  - Centralized API Request UX in `callGasApi`: standardizes Loading states and success/error Notifications without requiring manual ad-hoc handling in Vue components.
+  - Formalized PWA-SW-IDB-Pinia contract: UI reads from IndexedDB first for instant paint, Service Worker only handles network/cache boundaries, never UI/business logic.
+  - Validated server-side Authorization Matrix tracing (Roles > Record Policy > Region).
 - Access Region hierarchy foundation:
   - New APP sheet `AccessRegions` (`Code`, `Name`, `Parent`) for region tree modeling.
   - `Users` now includes `AccessRegion` (empty = universe access).
@@ -136,6 +141,10 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - Built Role-Based Dashboards routing and layouts (redirect based on role logic).
 - Frontend Store Architecture:
   - Refactored the `auth` store and related stores to Vue 3 Composition API (Setup Store syntax) for better maintainability.
+- Frontend Hardening & Page Prune (Production Baseline Correction):
+  - Removed obsolete operation test pages. The app officially operates on `LandingPage.vue`, `LoginPage.vue`, `DashboardIndex.vue`, `MasterEntityPage.vue` (generic rendering for any master list), and `ProfilePage.vue`.
+  - Protected interactive views against stuck loading states using `try/finally`.
+  - Removed duplicate ad-hoc notification toasts; single API result mapping handled uniformly by `callGasApi`.
 
 ### Key behavior now
 - Code is generated in Apps Script (not by sheet formula).
@@ -293,31 +302,11 @@ References:
 - `Documents/APP_SHEET_STRUCTURE.md`
 
 ## 10) Frontend Routes Implemented
-- `/dashboard`
-- `/profile`
-- `/masters/products`
-- `/masters/skus`
-- `/masters/suppliers`
-- `/masters/warehouses`
-- `/masters/warehouse-storages`
-- `/masters/carriers`
-- `/masters/ports`
-- `/masters/chart-of-accounts`
-- `/masters/entry-templates`
-- `/operations/shipments`
-- `/operations/goods-receipts`
-- `/operations/port-clearance`
-- `/operations/stock-movements`
-- `/operations/procurements`
-- `/operations/prs`
-- `/operations/rfqs`
-- `/operations/quotations`
-- `/operations/pos`
-- `/accounts/assets`
-- `/accounts/liabilities`
-- `/accounts/equity`
-- `/accounts/revenue`
-- `/accounts/expenses`
+- `/landing` (AuthPage/LandingPage.vue)
+- `/login` (AuthPage/LoginPage.vue)
+- `/dashboard` (Dashboard/DashboardIndex.vue)
+- `/profile` (ProfilePage/ProfilePage.vue)
+- `/masters/:resourceSlug` (Masters/MasterEntityPage.vue)
 
 
 ## 11) Manual Actions User Usually Needs

@@ -148,7 +148,10 @@ export async function fetchMasterRecords(resourceName, options = {}) {
       ...(syncCursor ? { lastUpdatedAt: syncCursor } : {})
     }
 
-    const syncResponse = await callGasApi('get', payload)
+    const syncResponse = await callGasApi('get', payload, {
+      showError: !syncWhenCacheExists,
+      showLoading: forceSync
+    })
     let stale = false
     let staleMessage = ''
     let syncRows = []
@@ -217,7 +220,7 @@ export async function createMasterRecord(resourceName, record) {
     scope: 'master',
     resource: resourceName,
     record
-  })
+  }, { showLoading: true, loadingMessage: 'Creating record...', successMessage: 'Record created successfully' })
 }
 
 export async function updateMasterRecord(resourceName, code, record) {
@@ -226,5 +229,5 @@ export async function updateMasterRecord(resourceName, code, record) {
     resource: resourceName,
     code,
     record
-  })
+  }, { showLoading: true, loadingMessage: 'Updating record...', successMessage: 'Record updated successfully' })
 }

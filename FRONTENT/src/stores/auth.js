@@ -44,9 +44,10 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function callAuthApi(action, payload = {}, requireAuth = true) {
+  async function callAuthApi(action, payload = {}, options = {}) {
     return callGasApi(action, payload, {
-      requireAuth,
+      ...options,
+      requireAuth: options.requireAuth !== false,
       token: token.value
     })
   }
@@ -54,7 +55,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(email, password) {
     loading.value = true
     try {
-      const data = await callAuthApi('login', { email, password }, false)
+      const data = await callAuthApi('login', { email, password }, { requireAuth: false })
 
       if (data.success) {
         token.value = data.token
@@ -83,7 +84,11 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function updateAvatar(avatarUrl) {
-    const data = await callAuthApi('updateAvatar', { avatarUrl })
+    const data = await callAuthApi('updateAvatar', { avatarUrl }, {
+      showLoading: true,
+      loadingMessage: 'Updating avatar...',
+      successMessage: 'Avatar updated successfully'
+    })
     if (!data.success) {
       return { success: false, message: data.message || 'Failed to update avatar' }
     }
@@ -97,7 +102,11 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function updateName(name) {
-    const data = await callAuthApi('updateName', { name })
+    const data = await callAuthApi('updateName', { name }, {
+      showLoading: true,
+      loadingMessage: 'Updating name...',
+      successMessage: 'Name updated successfully'
+    })
     if (!data.success) {
       return { success: false, message: data.message || 'Failed to update name' }
     }
@@ -111,7 +120,11 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function updateEmail(email) {
-    const data = await callAuthApi('updateEmail', { email })
+    const data = await callAuthApi('updateEmail', { email }, {
+      showLoading: true,
+      loadingMessage: 'Updating email...',
+      successMessage: 'Email updated successfully'
+    })
     if (!data.success) {
       return { success: false, message: data.message || 'Failed to update email' }
     }
@@ -125,7 +138,11 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function updatePassword(currentPassword, newPassword) {
-    const data = await callAuthApi('updatePassword', { currentPassword, newPassword })
+    const data = await callAuthApi('updatePassword', { currentPassword, newPassword }, {
+      showLoading: true,
+      loadingMessage: 'Updating password...',
+      successMessage: 'Password updated successfully'
+    })
     if (!data.success) {
       return { success: false, message: data.message || 'Failed to update password' }
     }

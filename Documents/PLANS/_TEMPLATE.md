@@ -42,6 +42,8 @@
 - [ ] [No regression condition]
 
 ## Post-Execution Notes (Execution Agent fills this)
+*(Status Update Discipline: Ensure you change `Status` to `IN_PROGRESS` or `COMPLETED` and update `Executed By` at the top of the file before finishing.)*
+
 ### Progress Log
 - [ ] Step 1 completed
 - [ ] Step 2 completed

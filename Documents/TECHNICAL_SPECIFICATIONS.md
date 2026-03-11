@@ -44,7 +44,13 @@ Frontend uses it for:
 - page title/description
 - field metadata (`UIFields`)
 
-## 4) CRUD API
+## 4) Single Channel CRUD API & UX Contract
+- **Centralized Endpoint**: All API communication occurs via the centralized utility (`callGasApi`) to enforce standard behavior.
+- **Request UX Lifecycle:**
+  - Automatic `loading` state propagation to components.
+  - Uniform `$q.notify` toasts on mutation success (save/delete).
+  - Normalized error interception and consistent error dialog/toast notification across the application.
+  - Direct, ad-hoc API posts or ad-hoc loaders in pages are strictly prohibited. 
 - Generic verbs:
   - `{ action: "get", scope: "master", resource }`
   - `{ action: "create", scope: "master", resource, record }`
@@ -59,8 +65,10 @@ Frontend uses it for:
 - `GAS/auth.gs`: owns authentication/profile logic (`login`, token validation, profile update handlers, authorized resources payload).
 - `GAS/sheetHelpers.gs`: shared sheet utilities (`getSheetHeaders`, `getHeaderIndexMap`, `findRowByValue`, `getRowAsObject`).
 
-## 5) Master Sync Strategy (IndexedDB + Delta)
-- Master pages are **IDB-first**:
+## 5) PWA-SW-IDB-Pinia Data Contract
+A single app-wide data agreement governs offline and incremental sync functionality:
+- **Service Worker Boundary:** The SW intercepts network requests, manages background syncs, and handles raw precaching logic. It DOES NOT manage UI state or component logic.
+- Master, Operation, and Warehouse pages are **IDB-first**:
   - Read cached rows from `resource-records` immediately for fast paint.
   - Read `resource-meta.lastSyncAt` as sync cursor.
 - Re-entering a master page uses local cache by default and does not call Apps Script when cache exists.

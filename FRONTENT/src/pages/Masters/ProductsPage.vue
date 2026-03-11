@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <q-page class="q-pa-md bg-grey-1">
     <q-card flat bordered>
       <q-card-section class="row items-center q-col-gutter-md">
@@ -143,10 +143,7 @@ function notify(type, message) {
 }
 
 async function reload() {
-  const result = await products.fetchProducts(showInactive.value)
-  if (!result.success) {
-    notify('negative', result.message || 'Failed to load products')
-  }
+  await products.fetchProducts(showInactive.value)
 }
 
 function openCreateDialog() {
@@ -190,11 +187,9 @@ async function save() {
   }
 
   if (!result.success) {
-    notify('negative', result.message || 'Save failed')
     return
   }
 
-  notify('positive', isEdit.value ? 'Product updated' : 'Product created')
   showDialog.value = false
 }
 

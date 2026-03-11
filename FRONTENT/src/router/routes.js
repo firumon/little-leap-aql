@@ -9,13 +9,14 @@ const routes = [
         path: '',
         name: 'home',
         beforeEnter: (to, from, next) => {
-          if (process.env.DEV) {
-            next({ name: 'login' })
-          } else if (isStandalone()) {
-            next({ name: 'login' })
-          } else {
+          const isProdNonStandalone = !process.env.DEV && !isStandalone()
+          if (isProdNonStandalone) {
             next({ name: 'landing' })
+            return
           }
+
+          const isAuthenticated = !!localStorage.getItem('token')
+          next({ name: isAuthenticated ? 'dashboard' : 'login' })
         }
       },
       {
@@ -36,18 +37,8 @@ const routes = [
     component: () => import('layouts/MainLayout/MainLayout.vue'),
     meta: { requiresAuth: true },
     children: [
-      { path: '', component: () => import('pages/Dashboard/DashboardIndex.vue') },
+      { path: '', name: 'dashboard', component: () => import('pages/Dashboard/DashboardIndex.vue') },
       { path: '/profile', component: () => import('pages/ProfilePage/ProfilePage.vue') },
-      {
-        path: '/operations/shipments',
-        component: () => import('pages/Operations/ShipmentsPage.vue'),
-        meta: { scope: 'operation', resource: 'Shipments' }
-      },
-      {
-        path: '/operations/goods-receipts',
-        component: () => import('pages/Operations/GoodsReceiptsPage.vue'),
-        meta: { scope: 'operation', resource: 'GoodsReceipts' }
-      },
       {
         path: '/masters/:resourceSlug',
         component: () => import('pages/Masters/MasterEntityPage.vue'),
@@ -58,8 +49,7 @@ const routes = [
 
   {
     path: '/:catchAll(.*)*',
-    component: () => import('pages/ErrorNotFound/ErrorNotFound.vue'),
-    meta: { requiresAuth: true }
+    redirect: '/dashboard'
   }
 ]
 

@@ -80,6 +80,17 @@ graph TD
   - Uses cached headers and incremental sync for master resources.
 - `FRONTENT/src/utils/db.js`
   - IDB stores: `resource-meta`, `resource-records`, API cache and sync queue.
+- `Service Worker (sw.js)`
+  - Responsibility boundary: Strictly manages network interception, background syncs, and asset caching.
+  - Does NOT manage UI state or business logic (which belongs in Pinia/Vue components).
+
+## Authorization Enforcement Matrix
+The server explicitly enforces three layers of authorization for every protected request:
+| Enforcement Layer | Source | Validation Mechanism | Unmet Condition |
+| --- | --- | --- | --- |
+| **Role Permissions** | `APP.RolePermissions` joining user `roles` to `Resources` | User's cumulative `RolePermissions` must contain matching action (`Read`, `Write`, etc.) for target resource. | Throw `403 Forbidden` early. |
+| **Record Access Policy** | `APP.Resources` (`RecordAccessPolicy`, `OwnerUserField`) | Checks if target record matches policy (e.g., `CREATED_BY_ME`, `HIERARCHY`) relative to user's `id` or `designation`. | Omit from `rows` (GET) or throw `403` (UPDATE/DELETE). |
+| **Region Scope** | `APP.Users` (`AccessRegion`) + request payload | For scoped users, requested record's `AccessRegion` must fall under user's assigned region tree. | Omit from `rows` (GET) or throw `403` (all other actions). |
 
 ## Auth Login Payload Contract
 

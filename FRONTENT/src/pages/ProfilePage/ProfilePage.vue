@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <q-page padding class="flex flex-center bg-grey-1">
     <q-card class="profile-card shadow-12 q-pa-lg" style="width: 100%; max-width: 500px; border-radius: 16px;">
       <q-card-section class="text-center">
@@ -255,35 +255,20 @@ const newPassword = ref('')
 const confirmPassword = ref('')
 const updatingPassword = ref(false)
 
-function notifyError(message) {
-  $q.notify({
-    type: 'negative',
-    message,
-    timeout: 2500
-  })
-}
-
-function notifySuccess(message) {
-  $q.notify({
-    type: 'positive',
-    message,
-    timeout: 2000
-  })
-}
+// Notifications handled by gasApi
 
 async function updateAvatar() {
   if (!newAvatarUrl.value) return
 
   updatingAvatar.value = true
-  const result = await auth.updateAvatar(newAvatarUrl.value)
-  updatingAvatar.value = false
-
-  if (result.success) {
-    notifySuccess('Avatar updated successfully')
-    showAvatarDialog.value = false
-    newAvatarUrl.value = ''
-  } else {
-    notifyError(result.message || 'Failed to update avatar')
+  try {
+    const result = await auth.updateAvatar(newAvatarUrl.value)
+    if (result.success) {
+      showAvatarDialog.value = false
+      newAvatarUrl.value = ''
+    }
+  } finally {
+    updatingAvatar.value = false
   }
 }
 
@@ -295,19 +280,18 @@ function openNameDialog() {
 async function updateName() {
   const name = (newName.value || '').trim()
   if (!name) {
-    notifyError('Please enter a valid name')
+    $q.notify({ type: 'negative', message: 'Please enter a valid name' })
     return
   }
 
   updatingName.value = true
-  const result = await auth.updateName(name)
-  updatingName.value = false
-
-  if (result.success) {
-    notifySuccess('Name updated successfully')
-    showNameDialog.value = false
-  } else {
-    notifyError(result.message || 'Failed to update name')
+  try {
+    const result = await auth.updateName(name)
+    if (result.success) {
+      showNameDialog.value = false
+    }
+  } finally {
+    updatingName.value = false
   }
 }
 
@@ -319,50 +303,48 @@ function openEmailDialog() {
 async function updateEmail() {
   const email = (newEmail.value || '').trim()
   if (!email) {
-    notifyError('Please enter an email address')
+    $q.notify({ type: 'negative', message: 'Please enter an email address' })
     return
   }
 
   updatingEmail.value = true
-  const result = await auth.updateEmail(email)
-  updatingEmail.value = false
-
-  if (result.success) {
-    notifySuccess('Email updated successfully')
-    showEmailDialog.value = false
-  } else {
-    notifyError(result.message || 'Failed to update email')
+  try {
+    const result = await auth.updateEmail(email)
+    if (result.success) {
+      showEmailDialog.value = false
+    }
+  } finally {
+    updatingEmail.value = false
   }
 }
 
 async function updatePassword() {
   if (!currentPassword.value || !newPassword.value || !confirmPassword.value) {
-    notifyError('Please fill all password fields')
+    $q.notify({ type: 'negative', message: 'Please fill all password fields' })
     return
   }
 
   if (newPassword.value !== confirmPassword.value) {
-    notifyError('New password and confirmation do not match')
+    $q.notify({ type: 'negative', message: 'New password and confirmation do not match' })
     return
   }
 
   if (newPassword.value.length < 6) {
-    notifyError('New password must be at least 6 characters')
+    $q.notify({ type: 'negative', message: 'New password must be at least 6 characters' })
     return
   }
 
   updatingPassword.value = true
-  const result = await auth.updatePassword(currentPassword.value, newPassword.value)
-  updatingPassword.value = false
-
-  if (result.success) {
-    notifySuccess('Password updated successfully')
-    showPasswordDialog.value = false
-    currentPassword.value = ''
-    newPassword.value = ''
-    confirmPassword.value = ''
-  } else {
-    notifyError(result.message || 'Failed to update password')
+  try {
+    const result = await auth.updatePassword(currentPassword.value, newPassword.value)
+    if (result.success) {
+      showPasswordDialog.value = false
+      currentPassword.value = ''
+      newPassword.value = ''
+      confirmPassword.value = ''
+    }
+  } finally {
+    updatingPassword.value = false
   }
 }
 </script>

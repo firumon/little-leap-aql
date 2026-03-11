@@ -11,6 +11,22 @@ This document serves as a guide for AI agents and developers to understand the s
 - **Routing:** Vue Router (History mode)
 - **HTTP Client:** Axios
 
+## Frontend Engineering Standards (Mandatory)
+### 1. Quasar-First UI Policy
+- **Rule:** Default to Quasar components (`q-input`, `q-table`, `q-dialog`, etc.) for all UI structure, forms, tables, actions, and dialogs.
+- **Exception Protocol:** Use native/custom HTML only when a Quasar component cannot satisfy a requirement. When this exception is applied, document the reason in the PR or plan notes and ensure custom styling rigorously aligns with Quasar theme tokens.
+
+### 2. Single API Channel & Request UX Contract
+- **Rule:** No direct ad-hoc API `post` flows or inconsistent loading/notify handling inside page components.
+- **Contract:** All API calls must route through the centralized transport (`callGasApi` / `apiClient.js`), which handles the full request lifecycle: request dispatch, uniform loading state management, normalized error mapping, and standardized success/error notifications (`$q.notify`).
+
+### 3. PWA-SW-IDB-Pinia Data Contract
+- **Rule:** All modules (Masters, Operations, Warehouse) must follow a strict IndexedDB-first sync pipeline:
+  1. Pinia stores read cached records from IndexedDB first for an instant UI paint.
+  2. Incremental refresh is triggered from the server.
+  3. Delta updates are upserted into both IndexedDB and Pinia state.
+- **Service Worker Boundary:** The SW is strictly responsible for network/cache/sync mediation, while application modules retain all UI state and business logic.
+
 ## Setup Steps Taken
 
 ### 1. Project Initialization
@@ -52,10 +68,10 @@ Frontend source is in `FRONTENT/src`:
 - `utils/`
 
 ### 6. API Architecture (Centralized)
-Frontend API calls are organized in one place:
+Frontend API calls are organized in one place under the Single API Channel Contract:
 - `src/config/api.js`: GAS endpoint and API constants.
-- `src/services/apiClient.js`: shared Axios instance with common headers.
-- `src/services/gasApi.js`: shared request utility (`callGasApi`) for action payload, token injection, and normalized errors.
+- `src/services/apiClient.js`: shared Axios instance handling common headers.
+- `src/services/gasApi.js`: shared request utility (`callGasApi`) enforcing the standardized UX lifecycle (loading state, token injection, shared `$q.notify` success/error alerts, and normalized error mapping).
 
 ## Layout & Navigation
 Main shell is in `MainLayout.vue` with grouped ERP navigation and profile menu.
@@ -72,9 +88,9 @@ Store/API wiring:
 - `src/stores/auth.js` uses shared `callGasApi(...)` through `callAuthApi(...)` wrapper.
 - Profile update actions call GAS: `updateAvatar`, `updateName`, `updateEmail`, `updatePassword`.
 
-## Master Module Progress (2026-02-19)
-Implemented reusable frontend module:
-- `src/pages/Masters/MasterEntityPage.vue` (generic page for all configured masters)
+## Master Module Progress (2026-03-11)
+Implemented reusable frontend module for all configured masters:
+- `src/pages/Masters/MasterEntityPage.vue` (generic page for configured masters)
 - `src/services/masterRecords.js` (shared sync + CRUD service)
 - `src/stores/products.js` (aligned to shared service)
 
@@ -118,16 +134,9 @@ Delta strategy notes:
 Pinia data note:
 - Product master results are also hydrated into `src/stores/products.js` so other screens can resolve product code/id to product name locally.
 
-## Operation Module Progress (2026-02-22)
-Implemented initial operation pages:
-- `src/pages/Operations/ShipmentsPage.vue` — Shipment list and creation
-- `src/pages/Operations/GoodsReceiptsPage.vue` — GRN list and creation
-
-Routes configured in `src/router/routes.js`:
-- `/operations/shipments` (meta: scope=operation, resource=Shipments)
-- `/operations/goods-receipts` (meta: scope=operation, resource=GoodsReceipts)
-
-Note: Additional operation routes (PortClearance, StockMovements, Procurement cycle, Accounts) are registered in `syncAppResources.gs` with corresponding `RoutePath` values but do not yet have dedicated frontend page components. The MainLayout sidebar will show menu items for these routes when authorized, linking to routes that will need page components.
+## Operation Module Progress (2026-03-11)
+- Operations test pages were pruned to establish a hardened production baseline. The active production UI modules restored are Auth (Landing/Login), Dashboard (Index with widgets), Profile, and the generic Master list (`MasterEntityPage`).
+- Unused operation test pages were deleted to ensure the build only bundles finalized, approved application flows.
 
 ## Development Workflow
 - Run `npm run dev` in `FRONTENT` (port 9000).

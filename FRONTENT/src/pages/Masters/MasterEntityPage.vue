@@ -241,15 +241,11 @@ async function reload(forceSync = false) {
       forceSync
     })
 
-    if (!response.success) {
-      notify('negative', response.message || `Failed to load ${config.value.ui?.pageTitle || config.value.name}`)
+    if (!response.success && !response.records?.length) {
       return
     }
 
     applyRecordsResponse(response)
-    if (response.stale) {
-      notify('warning', response.message || 'Showing cached data')
-    }
 
     // Cache-first render, then silently pull latest delta/full sync.
     if (!forceSync && response?.meta?.source === 'cache') {
@@ -289,11 +285,9 @@ async function save() {
       : await createMasterRecord(config.value.name, record)
 
     if (!response.success) {
-      notify('negative', response.message || 'Save failed')
       return
     }
 
-    notify('positive', isEdit.value ? 'Record updated' : 'Record created')
     showDialog.value = false
     await reload()
   } finally {

@@ -1,4 +1,4 @@
-﻿# MASTER Google Sheet Structure (Inbound Foundation)
+# MASTER Google Sheet Structure (Inbound Foundation)
 
 This document defines the MASTER file structure for the current implementation phase.
 
@@ -31,6 +31,7 @@ Columns:
 - `Variant3` (value for `VariantTypes` index 2, e.g. "Silicone")
 - `Variant4`
 - `Variant5`
+- `AccessRegion` (empty = universe record)
 - `Status` (`Active`/`Inactive`)
 - `CreatedAt`
 - `UpdatedAt`
@@ -75,29 +76,14 @@ Columns:
 - `CreatedBy`
 - `UpdatedBy`
 
-## 5) WarehouseLocations
-Shelf/bin/location structure for putaway.
+## 5) Ports
+Port master for import/clearance reference (used in Shipments operation to declare destination/clearance points).
 
 Columns:
-- `Code` (`LLML` prefix)
-- `WarehouseCode`
-- `LocationCode`
-- `Description`
-- `Status`
-- `CreatedAt`
-- `UpdatedAt`
-- `CreatedBy`
-- `UpdatedBy`
-
-## 6) Carriers
-Transport partner master (port to warehouse movement).
-
-Columns:
-- `Code` (`LLMC` prefix)
+- `Code` (`LLMPT` prefix)
 - `Name`
-- `Type`
-- `Phone`
-- `ContactPerson`
+- `Country`
+- `PortType`
 - `AccessRegion`
 - `Status`
 - `CreatedAt`
@@ -105,14 +91,15 @@ Columns:
 - `CreatedBy`
 - `UpdatedBy`
 
-## 7) Ports
-Port master for import/clearance reference.
+## 6) Carriers
+Transport partner master (used in Shipments operation to assign freight carriers).
 
 Columns:
-- `Code` (`LLMPT` prefix)
+- `Code` (`LLMC` prefix)
 - `Name`
-- `Country`
-- `PortType`
+- `Type`
+- `Phone`
+- `ContactPerson`
 - `AccessRegion`
 - `Status`
 - `CreatedAt`
@@ -135,14 +122,13 @@ In APP `Resources`, ensure rows exist for:
 - `SKUs`
 - `Suppliers`
 - `Warehouses`
-- `WarehouseLocations`
-- `Carriers`
 - `Ports`
+- `Carriers`
 
 For these rows:
 - `FileID` = target spreadsheet file id
 - `SheetName` = exact tab name to create/update
 - `CodePrefix` = code prefix used for generated codes
 - `CodeSequenceLength` = number of digits in sequence part
-- `SkipColumns` = 0
+- `` = 0
 - `Audit` = TRUE

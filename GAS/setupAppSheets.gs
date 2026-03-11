@@ -11,94 +11,6 @@ function setupAppSheets() {
 
   const sheetConfigs = [
     {
-      name: CONFIG.SHEETS.USERS,
-      headers: ['UserID', 'Name', 'Email', 'PasswordHash', 'DesignationID', 'Roles', 'AccessRegion', 'Status', 'Avatar', 'ApiKey'],
-      autoIdFormula: '="U"&TEXT(ROW()-1,"0000")',
-      validations: [
-        {
-          colHeader: 'Status',
-          rule: SpreadsheetApp.newDataValidation()
-            .requireValueInList(['Active', 'Inactive'], true)
-            .setAllowInvalid(false)
-            .build()
-        }
-      ],
-      columnWidths: {
-        UserID: 100,
-        Name: 180,
-        Email: 220,
-        PasswordHash: 260,
-        DesignationID: 120,
-        Roles: 180,
-        AccessRegion: 120,
-        Status: 100,
-        Avatar: 200,
-        ApiKey: 220
-      }
-    },
-    {
-      name: CONFIG.SHEETS.ACCESS_REGIONS,
-      headers: ['Code', 'Name', 'Parent'],
-      autoIdFormula: null,
-      validations: [
-        {
-          colHeader: 'Code',
-          rule: SpreadsheetApp.newDataValidation()
-            .requireFormulaSatisfied('=REGEXMATCH(A2, "^[A-Z]{3}[0-9]{3}$")')
-            .setAllowInvalid(false)
-            .build()
-        }
-      ],
-      columnWidths: {
-        Code: 120,
-        Name: 200,
-        Parent: 120
-      }
-    },
-    {
-      name: CONFIG.SHEETS.DESIGNATIONS,
-      headers: ['DesignationID', 'Name', 'HierarchyLevel', 'Status', 'Description'],
-      autoIdFormula: '="D"&TEXT(ROW()-1,"0000")',
-      validations: [
-        {
-          colHeader: 'Status',
-          rule: SpreadsheetApp.newDataValidation()
-            .requireValueInList(['Active', 'Inactive'], true)
-            .setAllowInvalid(false)
-            .build()
-        }
-      ],
-      columnWidths: {
-        DesignationID: 120,
-        Name: 180,
-        HierarchyLevel: 120,
-        Status: 100,
-        Description: 320
-      }
-    },
-    {
-      name: CONFIG.SHEETS.ROLES,
-      headers: ['RoleID', 'Name', 'Description'],
-      autoIdFormula: '="R"&TEXT(ROW()-1,"0000")',
-      validations: [],
-      columnWidths: {
-        RoleID: 100,
-        Name: 180,
-        Description: 320
-      }
-    },
-    {
-      name: CONFIG.SHEETS.ROLE_PERMISSIONS,
-      headers: ['RoleID', 'Resource', 'Actions'],
-      autoIdFormula: null,
-      validations: [],
-      columnWidths: {
-        RoleID: 100,
-        Resource: 180,
-        Actions: 300
-      }
-    },
-    {
       name: CONFIG.SHEETS.RESOURCES,
       headers: [
         'Name',
@@ -169,7 +81,6 @@ function setupAppSheets() {
         SheetName: 160,
         CodePrefix: 120,
         CodeSequenceLength: 140,
-        SkipColumns: 110,
         Audit: 90,
         RequiredHeaders: 220,
         UniqueHeaders: 220,
@@ -189,10 +100,99 @@ function setupAppSheets() {
         ShowInMenu: 100,
         IncludeInAuthorizationPayload: 220
       }
+    },
+    {
+      name: CONFIG.SHEETS.ROLES,
+      headers: ['RoleID', 'Name', 'Description'],
+      autoIdFormula: null,
+      validations: [],
+      columnWidths: {
+        RoleID: 100,
+        Name: 180,
+        Description: 320
+      }
+    },
+    {
+      name: CONFIG.SHEETS.ROLE_PERMISSIONS,
+      headers: ['RoleID', 'Resource', 'Actions'],
+      autoIdFormula: null,
+      validations: [],
+      columnWidths: {
+        RoleID: 100,
+        Resource: 180,
+        Actions: 300
+      }
+    },
+    {
+      name: CONFIG.SHEETS.DESIGNATIONS,
+      headers: ['DesignationID', 'Name', 'HierarchyLevel', 'Status', 'Description'],
+      autoIdFormula: null,
+      validations: [
+        {
+          colHeader: 'Status',
+          rule: SpreadsheetApp.newDataValidation()
+            .requireValueInList(['Active', 'Inactive'], true)
+            .setAllowInvalid(false)
+            .build()
+        }
+      ],
+      columnWidths: {
+        DesignationID: 120,
+        Name: 180,
+        HierarchyLevel: 120,
+        Status: 100,
+        Description: 320
+      }
+    },
+    {
+      name: CONFIG.SHEETS.USERS,
+      headers: ['UserID', 'Name', 'Email', 'PasswordHash', 'DesignationID', 'Roles', 'AccessRegion', 'Status', 'Avatar', 'ApiKey'],
+      autoIdFormula: null,
+      validations: [
+        {
+          colHeader: 'Status',
+          rule: SpreadsheetApp.newDataValidation()
+            .requireValueInList(['Active', 'Inactive'], true)
+            .setAllowInvalid(false)
+            .build()
+        }
+      ],
+      columnWidths: {
+        UserID: 100,
+        Name: 180,
+        Email: 220,
+        PasswordHash: 260,
+        DesignationID: 120,
+        Roles: 180,
+        AccessRegion: 120,
+        Status: 100,
+        Avatar: 200,
+        ApiKey: 220
+      }
+    },
+    {
+      name: CONFIG.SHEETS.ACCESS_REGIONS,
+      headers: ['Code', 'Name', 'Parent'],
+      autoIdFormula: null,
+      validations: [
+        {
+          colHeader: 'Code',
+          rule: SpreadsheetApp.newDataValidation()
+            .requireFormulaSatisfied('=REGEXMATCH(A2, "^[A-Z]{3}[0-9]{3}$")')
+            .setAllowInvalid(false)
+            .build()
+        }
+      ],
+      columnWidths: {
+        Code: 120,
+        Name: 200,
+        Parent: 120
+      }
     }
   ];
 
   const results = [];
+  let fileSheetIndex = 0;
 
   sheetConfigs.forEach(function (config) {
     let sheet = ss.getSheetByName(config.name);
@@ -277,6 +277,11 @@ function setupAppSheets() {
     if (sheet.getMaxRows() > 1) {
       sheet.getRange(2, 1, Math.max(sheet.getMaxRows() - 1, 1), config.headers.length).setNumberFormat('@');
     }
+
+    fileSheetIndex++;
+    ss.setActiveSheet(sheet);
+    ss.moveActiveSheet(fileSheetIndex);
+
   });
 
   var defaultSheet = ss.getSheetByName('Sheet1');

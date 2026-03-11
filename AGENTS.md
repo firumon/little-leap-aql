@@ -1,10 +1,30 @@
+## Default Operating Mode (Mandatory)
+- This file is the startup instruction source for this repository. In every new context window, apply this mode before starting implementation work.
+- Default collaboration mode is dual-agent:
+  - `Brain Agent`: planning, architecture decisions, rule capture, review.
+  - `Execution Agent`: implementation, terminal execution, tests, commits, documentation updates.
+- Default behavior for new tasks:
+  1) Read `Documents/DUAL_AGENT_PROTOCOL.md`.
+  2) Read `Documents/AI_COLLABORATION_PROTOCOL.md`.
+  3) Read `Documents/CONTEXT_HANDOFF.md`.
+  4) Check `Documents/PLANS/` for active plans.
+- Plan-first rule:
+  - If no executable plan exists for the requested task, create a plan in `Documents/PLANS/` first.
+  - All new plan files must be created from `Documents/PLANS/_TEMPLATE.md`.
+  - Do not start code implementation until a plan exists, except for small documentation/rule-capture updates explicitly requested by the user.
+  - After planning is complete, provide the execution handoff prompt with the exact plan filename:
+    - `Execution Agent, read Documents/PLANS/<plan-file>.md and execute it end-to-end.`
+- Naming rule:
+  - Use role names only in project docs and plan templates: `Brain Agent` and `Execution Agent`.
+  - Avoid model-specific names in protocol instructions.
+
 ## Skills
 A skill is a set of local instructions to follow that is stored in a `SKILL.md` file. Below is the list of skills that can be used. Each entry includes a name, description, and file path so you can open the source for full instructions when using a specific skill.
 ### Available skills
 - little-leap-aql-engineer: Implement and maintain the Little Leap AQL system across Quasar frontend, Google Apps Script backend, and Google Sheets metadata with strict documentation alignment. Use when tasks involve files under FRONTENT/, GAS/, or Documents/, especially resource-driven auth/master runtime changes, APP.Resources schema changes, route/menu authorization changes, setup script updates, or handoff/protocol documentation updates. (file: C:/Users/firum/.codex/skills/little-leap-aql-engineer/SKILL.md)
 - little-leap-aql-project: Implement and maintain the Little Leap AQL system across Quasar frontend, APP Apps Script backend, and Google Sheets metadata with strict documentation alignment. Use when tasks touch FRONTENT/, GAS/, or Documents/, especially resource-driven auth/master runtime changes, APP.Resources schema or permissions updates, route/menu authorization behavior, setup script updates, or project handoff/protocol maintenance. (file: C:/Users/firum/.codex/skills/little-leap-aql-project/SKILL.md)
-- skill-creator: Guide for creating effective skills. This skill should be used when users want to create a new skill (or update an existing skill) that extends Codex's capabilities with specialized knowledge, workflows, or tool integrations. (file: C:/Users/firum/.codex/skills/.system/skill-creator/SKILL.md)
-- skill-installer: Install Codex skills into $CODEX_HOME/skills from a curated list or a GitHub repo path. Use when a user asks to list installable skills, install a curated skill, or install a skill from another repo (including private repos). (file: C:/Users/firum/.codex/skills/.system/skill-installer/SKILL.md)
+- skill-creator: Guide for creating effective skills. This skill should be used when users want to create a new skill (or update an existing skill) that extends agent capabilities with specialized knowledge, workflows, or tool integrations. (file: C:/Users/firum/.codex/skills/.system/skill-creator/SKILL.md)
+- skill-installer: Install skills into $CODEX_HOME/skills from a curated list or a GitHub repo path. Use when a user asks to list installable skills, install a curated skill, or install a skill from another repo (including private repos). (file: C:/Users/firum/.codex/skills/.system/skill-installer/SKILL.md)
 ### How to use skills
 - Discovery: The list above is the skills available in this session (name + description + file path). Skill bodies live on disk at the listed paths.
 - Trigger rules: If the user names a skill (with `$SkillName` or plain text) OR the task clearly matches a skill's description shown above, you must use that skill for that turn. Multiple mentions mean use them all. Do not carry skills across turns unless re-mentioned.

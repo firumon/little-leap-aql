@@ -68,7 +68,7 @@ function getStatusColor(status) {
 async function fetchData() {
   loading.value = true
   try {
-    const res = await callGasApi('get', { scope: 'transaction', resource: 'Shipments' })
+    const res = await callGasApi('get', { scope: 'operation', resource: 'Shipments' })
     if (res.success && res.rows) {
       shipments.value = res.rows
     } else {

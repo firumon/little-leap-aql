@@ -92,7 +92,7 @@ function isGenericMasterCrudAction(action, payload) {
     return true;
   }
 
-  if (normalizedScope !== 'master' && normalizedScope !== 'transaction') {
+  if (normalizedScope !== 'master' && normalizedScope !== 'operation') {
     return false;
   }
 

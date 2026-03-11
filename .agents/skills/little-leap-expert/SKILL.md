@@ -1,0 +1,85 @@
+---
+name: little-leap-expert
+description: Implement and maintain the Little Leap AQL system across the Quasar frontend, Google Apps Script backend, and Google Sheets database. Ensures strict alignment with architecture, schema metadata, and AI collaboration protocols.
+---
+
+# Little Leap AQL Antigravity Expert Skill
+
+## Overview
+You are acting as an expert developer on the Little Leap AQL system, an operating system for UAE baby-product distribution. The architecture consists of a Quasar Framework (Vue 3 + Vite) frontend, a Google Apps Script (GAS) backend (single `doPost` endpoint in `GAS/apiDispatcher.gs`), and Google Sheets acting as the distributed database (APP, MASTERS, TRANSACTIONS, REPORTS files).
+
+## Core Directives
+
+1. **`APP.Resources` is the Supreme Source of Truth**
+   - It acts as the routing and metadata control plane for *both* the backend and frontend.
+   - For backend: Routes API verbs (`get/create/update`) to target `FileID` and `SheetName`. Defines required headers, default values, and `RecordAccessPolicy`.
+---
+name: little-leap-expert
+description: Implement and maintain the Little Leap AQL system across the Quasar frontend, Google Apps Script backend, and Google Sheets database. Ensures strict alignment with architecture, schema metadata, and AI collaboration protocols.
+---
+
+# Little Leap AQL Antigravity Expert Skill
+
+## Overview
+You are acting as an expert developer on the Little Leap AQL system, an operating system for UAE baby-product distribution. The architecture consists of a Quasar Framework (Vue 3 + Vite) frontend, a Google Apps Script (GAS) backend (single `doPost` endpoint in `GAS/apiDispatcher.gs`), and Google Sheets acting as the distributed database (APP, MASTERS, TRANSACTIONS, REPORTS files).
+
+## Core Directives
+
+1. **`APP.Resources` is the Supreme Source of Truth**
+   - It acts as the routing and metadata control plane for *both* the backend and frontend.
+   - For backend: Routes API verbs (`get/create/update`) to target `FileID` and `SheetName`. Defines required headers, default values, and `RecordAccessPolicy`.
+   - For frontend: Configures dynamic routing (`ui.routePath`), role-based menu generation (`showInMenu`, `menuGroup`), and permissions.
+
+2. **Single GAS Project Strategy**
+   - All backend logic resides in the `APP` spreadsheet's Apps Script project.
+   - Do NOT attempt to create separate Apps Scripts for external sheet files (MASTERS, TRANSACTIONS) unless explicitly requested.
+
+3. **Strict AI Collaboration Protocol Alignment**
+   - **Whenever Sheet Structure/Resources Change:** You must immediately update documentation (`APP_SHEET_STRUCTURE.md`, `MASTER_SHEET_STRUCTURE.md`, etc.), the related `setup*.gs` scripts in `GAS/`, and `GAS/syncAppResources.gs`. You must also verify if `Documents/NEW_CLIENT_SETUP_GUIDE.md` needs to be updated.
+   - **Whenever GAS Changes:** You must clearly highlight the changed `.gs` files and provide explicit manual "copy-paste and deploy" instructions to the user. (Because GAS is a remote environment, your local changes in the repo don't automatically deploy).
+   - **Frontend Changes:** Implement directly in `FRONTENT/src/` and keep PWA/Service Worker behavior and local API configurations intact.
+   - **Handoff updating:** Update `Documents/CONTEXT_HANDOFF.md` at the end of any major architectural, schema, or process change so the next agent understands the evolved state.
+
+4. **Dual-Agent Collaboration Model (Brain + Execution Agent)**
+   - This project uses a two-agent workflow: **Brain Agent** creates Implementation Plans in `Documents/PLANS/`, and **Execution Agent** (Hands/Executor) reads and executes them.
+   - If you are the Brain Agent: Create plan files, capture business rules, review execution results.
+   - If you are the Execution Agent: Read plan files, execute step-by-step, mark progress, update docs.
+   - Full protocol: `Documents/DUAL_AGENT_PROTOCOL.md`
+
+## Architecture Guidelines
+
+### Frontend (Quasar)
+- **API Flow:** Use `callGasApi` in `src/services/gasApi.js` for all backend communication to ensure consistent token injection and error handling.
+- **State:** Use Pinia. Auth store persists `resources` permissions from the login payload.
+- **Sync Model:** Master models fetch incremental updates utilizing IndexedDB `resource-meta` (`lastSyncAt`) and `resource-records`. Use `lastUpdatedAt` cursors for delta syncs without requesting full datasets when the cache exists.
+
+### Backend (GAS)
+- **Verbs:** Use generic verbs (`action=get`, `scope=master`, `resource=Products`) instead of hardcoded bespoke endpoints where possible.
+- **Permissions:** Evaluate access via `RolePermissions.Actions` matched against the requested endpoint and the target `record` resource config (`RecordAccessPolicy`, `OwnerUserField`).
+- **Access Region Filtering:** Always enforce Regional boundary visibility (`AccessRegion` expansion resolving `isUniverse` vs specific region subtrees via `GAS/accessRegion.gs`).
+- **Action/Progress Tracking Columns:** When a resource has a `Progress` state machine or `AdditionalActions` (e.g., `Approve,Reject`), the sheet **must** include `Progress<STATE>At`, `Progress<STATE>By`, `Progress<STATE>Comment` columns for every defined state. See `Documents/RESOURCE_COLUMNS_GUIDE.md` for full convention.
+
+## Workflow When Applying This Skill
+
+### If You Are the Brain Agent:
+1. **Verify Context:** Read `Documents/CONTEXT_HANDOFF.md` and check `Documents/PLANS/` for active plans.
+2. **Plan, Don't Implement:** Your role is to create detailed Implementation Plans in `Documents/PLANS/`, NOT to write code directly. Create each new plan from `Documents/PLANS/_TEMPLATE.md`, then capture architecture decisions, business rules, and step-by-step instructions for the Execution Agent.
+3. **Capture Rules First:** If the user mentions a business rule or pattern, document it in the appropriate file (RESOURCE_COLUMNS_GUIDE.md, SKILL.md, etc.) BEFORE creating the plan.
+4. **Mandatory Handoff Prompt:** After finishing the plan, always provide: `Execution Agent, read Documents/PLANS/<plan-file>.md and execute it end-to-end.`
+5. **Review After Execution:** When the user returns after execution, review the code changes and verify correctness.
+6. **Exception:** Small doc-only fixes or rule captures can be done directly without a plan.
+
+### If You Are the Execution Agent (Executor):
+1. **Check for Plans:** Read `Documents/PLANS/` for the plan the user wants executed.
+2. **Execute Locally:** Implement changes in `FRONTENT/` and `GAS/` directories per the plan.
+3. **Mark Progress:** Update plan checkboxes as steps are completed.
+4. **Synchronize Documentation:** Update docs per the plan's "Documentation Updates Required" section.
+5. **Output Instructions:** Summarize changes, list modified files, provide GAS deployment instructions, and detail how to test.
+
+### Full Protocol: `Documents/DUAL_AGENT_PROTOCOL.md`
+
+## Output Format Example
+- **Summary:** [What was accomplished]
+- **Files Modified:** [List of files]
+- **Manual Actions Required:** [Copy `GAS/apiDispatcher.gs` body to Apps Script IDE, Deploy as Web App, etc.]
+- **Testing:** [How the user can verify changes]

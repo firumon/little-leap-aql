@@ -1,18 +1,100 @@
 /**
  * ============================================================
- * Little Leap AQL - TRANSACTION Sheet Setup (Resources Driven)
+ * Little Leap AQL - OPERATION Sheet Setup (Resources Driven)
  * ============================================================
  * Run this function in APP Apps Script project only.
  * It reads APP.Resources, opens target files by FileID,
- * and creates/updates configured TRANSACTION sheets there.
+ * and creates/updates configured OPERATION sheets there.
  */
 
-function setupTransactionSheets() {
+function setupOperationSheets() {
     const commonAuditColumns = ['CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy'];
 
     const schemaByResource = [
         {
-            resourceName: CONFIG.TRANSACTION_SHEETS.SHIPMENTS,
+            resourceName: CONFIG.OPERATION_SHEETS.PROCUREMENTS,
+            headers: ['Code', 'Progress', 'InitiatedDate', 'CreatedRole', 'Status', 'AccessRegion'].concat(commonAuditColumns),
+            statusDefault: 'Active',
+            defaults: { Status: 'Active', Progress: 'INITIATED' },
+            progressValidation: ['INITIATED', 'PR_CREATED', 'PR_APPROVED', 'RFQ_GENERATED', 'QUOTATIONS_RECEIVED', 'PO_ISSUED', 'IN_TRANSIT', 'ARRIVED_AT_PORT', 'COMPLETED', 'CANCELLED'],
+            columnWidths: { Code: 150, Progress: 180, InitiatedDate: 150, CreatedRole: 150, Status: 100, AccessRegion: 130 }
+        },
+        {
+            resourceName: CONFIG.OPERATION_SHEETS.PURCHASE_REQUISITIONS,
+            headers: ['Code', 'ProcurementCode', 'Progress', 'ProgressPENDINGAt', 'ProgressPENDINGBy', 'ProgressPENDINGComment', 'Status', 'AccessRegion'].concat(commonAuditColumns),
+            statusDefault: 'Active',
+            defaults: { Status: 'Active', Progress: 'PENDING' },
+            progressValidation: ['PENDING', 'VERIFIED', 'APPROVED', 'REJECTED'],
+            columnWidths: { Code: 150, ProcurementCode: 150, Progress: 120, ProgressPENDINGAt: 150, ProgressPENDINGBy: 150, ProgressPENDINGComment: 200, Status: 100 }
+        },
+        {
+            resourceName: CONFIG.OPERATION_SHEETS.PURCHASE_REQUISITION_ITEMS,
+            headers: ['Code', 'PRCode', 'SKU', 'Quantity', 'ExpectedDate', 'Notes', 'Status'].concat(commonAuditColumns),
+            statusDefault: 'Active',
+            defaults: { Status: 'Active', Quantity: 0 },
+            columnWidths: { Code: 150, PRCode: 150, SKU: 150, Quantity: 100, ExpectedDate: 150, Notes: 200, Status: 100 }
+        },
+        {
+            resourceName: CONFIG.OPERATION_SHEETS.RFQS,
+            headers: ['Code', 'ProcurementCode', 'Deadline', 'Terms', 'Progress', 'Status', 'AccessRegion'].concat(commonAuditColumns),
+            statusDefault: 'Active',
+            defaults: { Status: 'Active', Progress: 'DRAFT' },
+            progressValidation: ['DRAFT', 'PUBLISHED', 'CLOSED', 'CANCELLED'],
+            columnWidths: { Code: 150, ProcurementCode: 150, Deadline: 150, Terms: 250, Progress: 120, Status: 100 }
+        },
+        {
+            resourceName: CONFIG.OPERATION_SHEETS.RFQ_ITEMS,
+            headers: ['Code', 'RFQCode', 'SKU', 'Quantity', 'Status'].concat(commonAuditColumns),
+            statusDefault: 'Active',
+            defaults: { Status: 'Active', Quantity: 0 },
+            columnWidths: { Code: 150, RFQCode: 150, SKU: 150, Quantity: 100, Status: 100 }
+        },
+        {
+            resourceName: CONFIG.OPERATION_SHEETS.RFQ_SUPPLIERS,
+            headers: ['Code', 'ProcurementCode', 'RFQCode', 'SupplierCode', 'Progress', 'Status'].concat(commonAuditColumns),
+            statusDefault: 'Active',
+            defaults: { Status: 'Active', Progress: 'SENT' },
+            progressValidation: ['SENT', 'QUOTATION_RECEIVED', 'REJECTED', 'APPROVED'],
+            columnWidths: { Code: 150, ProcurementCode: 150, RFQCode: 150, SupplierCode: 150, Progress: 150, Status: 100 }
+        },
+        {
+            resourceName: CONFIG.OPERATION_SHEETS.SUPPLIER_QUOTATIONS,
+            headers: ['Code', 'ProcurementCode', 'SupplierCode', 'RFQCode', 'DocumentUrl', 'TotalAmount', 'Currency', 'ValidUntil', 'Status'].concat(commonAuditColumns),
+            statusDefault: 'Active',
+            defaults: { Status: 'Active', TotalAmount: 0, Currency: 'AED' },
+            columnWidths: { Code: 150, ProcurementCode: 150, SupplierCode: 150, RFQCode: 150, DocumentUrl: 250, TotalAmount: 120, Currency: 100, ValidUntil: 150, Status: 100 }
+        },
+        {
+            resourceName: CONFIG.OPERATION_SHEETS.SUPPLIER_QUOTATION_ITEMS,
+            headers: ['Code', 'QuotationCode', 'SKU', 'SupplierItemCode', 'Quantity', 'UnitPrice', 'Status'].concat(commonAuditColumns),
+            statusDefault: 'Active',
+            defaults: { Status: 'Active', Quantity: 0, UnitPrice: 0 },
+            columnWidths: { Code: 150, QuotationCode: 150, SKU: 150, SupplierItemCode: 150, Quantity: 100, UnitPrice: 100, Status: 100 }
+        },
+        {
+            resourceName: CONFIG.OPERATION_SHEETS.PURCHASE_ORDERS,
+            headers: ['Code', 'ProcurementCode', 'SupplierCode', 'RFQCode', 'QuotationCode', 'Progress', 'TotalAmount', 'Currency', 'Status', 'AccessRegion'].concat(commonAuditColumns),
+            statusDefault: 'Active',
+            defaults: { Status: 'Active', Progress: 'DRAFT', TotalAmount: 0, Currency: 'AED' },
+            progressValidation: ['DRAFT', 'APPROVED', 'SENT_TO_SUPPLIER', 'SUPPLIER_ACKNOWLEDGED', 'SUPPLIER_ACCEPTED', 'CANCELLED'],
+            columnWidths: { Code: 150, ProcurementCode: 150, SupplierCode: 150, RFQCode: 150, QuotationCode: 150, Progress: 180, TotalAmount: 120, Currency: 100, Status: 100 }
+        },
+        {
+            resourceName: CONFIG.OPERATION_SHEETS.PURCHASE_ORDER_ITEMS,
+            headers: ['Code', 'POCode', 'SKU', 'SupplierItemCode', 'Quantity', 'UnitPrice', 'TotalPrice', 'Status'].concat(commonAuditColumns),
+            statusDefault: 'Active',
+            defaults: { Status: 'Active', Quantity: 0, UnitPrice: 0, TotalPrice: 0 },
+            columnWidths: { Code: 150, POCode: 150, SKU: 150, SupplierItemCode: 150, Quantity: 100, UnitPrice: 100, TotalPrice: 100, Status: 100 }
+        },
+        {
+            resourceName: CONFIG.OPERATION_SHEETS.PO_FULFILLMENTS,
+            headers: ['Code', 'ProcurementCode', 'POCode', 'DocumentName', 'Description', 'Purpose', 'DocumentUrl', 'Status'].concat(commonAuditColumns),
+            statusDefault: 'Active',
+            defaults: { Status: 'Active' },
+            columnWidths: { Code: 150, ProcurementCode: 150, POCode: 150, DocumentName: 180, Description: 250, Purpose: 150, DocumentUrl: 250, Status: 100 }
+        },
+        {
+            resourceName: CONFIG.OPERATION_SHEETS.SHIPMENTS,
             headers: ['Code', 'SupplierCode', 'ETD', 'ETA', 'Status', 'CarrierCode', 'PortCode', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Draft',
             defaults: { Status: 'Draft' },
@@ -33,15 +115,15 @@ function setupTransactionSheets() {
             }
         },
         {
-            resourceName: CONFIG.TRANSACTION_SHEETS.SHIPMENT_ITEMS,
-            headers: ['Code', 'ShipmentCode', 'VariantCode', 'ExpectedQty', 'Status'].concat(commonAuditColumns),
+            resourceName: CONFIG.OPERATION_SHEETS.SHIPMENT_ITEMS,
+            headers: ['Code', 'ShipmentCode', 'SKU', 'ExpectedQty', 'Status'].concat(commonAuditColumns),
             statusDefault: 'Active',
             defaults: { Status: 'Active', ExpectedQty: 0 },
             statusValidation: ['Active', 'Inactive'],
             columnWidths: {
                 Code: 150,
                 ShipmentCode: 150,
-                VariantCode: 150,
+                SKU: 150,
                 ExpectedQty: 120,
                 Status: 100,
                 CreatedAt: 170,
@@ -51,7 +133,7 @@ function setupTransactionSheets() {
             }
         },
         {
-            resourceName: CONFIG.TRANSACTION_SHEETS.PORT_CLEARANCE,
+            resourceName: CONFIG.OPERATION_SHEETS.PORT_CLEARANCE,
             headers: ['Code', 'ShipmentCode', 'ClearanceDate', 'CustomsStatus', 'DutyAmount', 'AccessRegion', 'Status'].concat(commonAuditColumns),
             statusDefault: 'Active',
             defaults: { Status: 'Active', CustomsStatus: 'Pending', DutyAmount: 0 },
@@ -72,7 +154,7 @@ function setupTransactionSheets() {
             }
         },
         {
-            resourceName: CONFIG.TRANSACTION_SHEETS.GOODS_RECEIPTS,
+            resourceName: CONFIG.OPERATION_SHEETS.GOODS_RECEIPTS,
             headers: ['Code', 'ShipmentCode', 'ReceivedDate', 'WarehouseCode', 'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Draft',
             defaults: { Status: 'Draft' },
@@ -91,16 +173,16 @@ function setupTransactionSheets() {
             }
         },
         {
-            resourceName: CONFIG.TRANSACTION_SHEETS.GOODS_RECEIPT_ITEMS,
-            headers: ['Code', 'GRNCode', 'VariantCode', 'LocationCode', 'ExpectedQty', 'ReceivedQty', 'DamagedQty', 'AcceptedQty', 'Status'].concat(commonAuditColumns),
+            resourceName: CONFIG.OPERATION_SHEETS.GOODS_RECEIPT_ITEMS,
+            headers: ['Code', 'GRNCode', 'SKU', 'StorageName', 'ExpectedQty', 'ReceivedQty', 'DamagedQty', 'AcceptedQty', 'Status'].concat(commonAuditColumns),
             statusDefault: 'Active',
             defaults: { Status: 'Active', ExpectedQty: 0, ReceivedQty: 0, DamagedQty: 0, AcceptedQty: 0 },
             statusValidation: ['Active', 'Inactive'],
             columnWidths: {
                 Code: 150,
                 GRNCode: 150,
-                VariantCode: 150,
-                LocationCode: 150,
+                SKU: 150,
+                StorageName: 150,
                 ExpectedQty: 120,
                 ReceivedQty: 120,
                 DamagedQty: 120,
@@ -113,16 +195,16 @@ function setupTransactionSheets() {
             }
         },
         {
-            resourceName: CONFIG.TRANSACTION_SHEETS.STOCK_MOVEMENTS,
-            headers: ['Code', 'WarehouseCode', 'LocationCode', 'VariantCode', 'QtyChange', 'ReferenceType', 'ReferenceCode', 'Status', 'AccessRegion'].concat(commonAuditColumns),
+            resourceName: CONFIG.OPERATION_SHEETS.STOCK_MOVEMENTS,
+            headers: ['Code', 'WarehouseCode', 'StorageName', 'SKU', 'QtyChange', 'ReferenceType', 'ReferenceCode', 'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active',
             defaults: { Status: 'Active', QtyChange: 0 },
             statusValidation: ['Active', 'Inactive'],
             columnWidths: {
                 Code: 150,
                 WarehouseCode: 130,
-                LocationCode: 130,
-                VariantCode: 150,
+                StorageName: 130,
+                SKU: 150,
                 QtyChange: 120,
                 ReferenceType: 140,
                 ReferenceCode: 150,
@@ -133,9 +215,26 @@ function setupTransactionSheets() {
                 CreatedBy: 140,
                 UpdatedBy: 140
             }
+        },
+        {
+            resourceName: CONFIG.OPERATION_SHEETS.WAREHOUSE_STORAGES,
+            headers: ['Code', 'WarehouseCode', 'StorageName', 'SKU', 'Quantity'].concat(commonAuditColumns),
+            defaults: { Quantity: 0 },
+            columnWidths: {
+                Code: 150,
+                WarehouseCode: 150,
+                StorageName: 200,
+                SKU: 150,
+                Quantity: 120,
+                CreatedAt: 170,
+                UpdatedAt: 170,
+                CreatedBy: 140,
+                UpdatedBy: 140
+            }
         }
     ];
 
+    const fileSheetIndex = {};
     const results = [];
 
     schemaByResource.forEach(function (schema) {
@@ -187,12 +286,18 @@ function setupTransactionSheets() {
             if (sheet.getMaxRows() > 1) {
                 sheet.getRange(2, 1, Math.max(sheet.getMaxRows() - 1, 1), schema.headers.length).setNumberFormat('@');
             }
+
+            if (!fileSheetIndex[resource.fileId]) fileSheetIndex[resource.fileId] = 0;
+            fileSheetIndex[resource.fileId]++;
+            file.setActiveSheet(sheet);
+            file.moveActiveSheet(fileSheetIndex[resource.fileId]);
+
         } catch (err) {
             results.push('Error for ' + schema.resourceName + ': ' + err.message);
         }
     });
 
-    const summary = 'TRANSACTION setup (Resources driven) complete.\n\n' + results.join('\n');
+    const summary = 'OPERATION setup (Resources driven) complete.\n\n' + results.join('\n');
     Logger.log(summary);
     try {
         SpreadsheetApp.getUi().alert(summary);
@@ -238,7 +343,7 @@ function trx_applySheetFormatting(sheet, headers, columnWidths) {
     const headerRange = sheet.getRange(1, 1, 1, headers.length);
     headerRange
         .setFontWeight('bold')
-        .setBackground('#2E7D32') // Greenish for transactions
+        .setBackground('#2E7D32') // Greenish for operations
         .setFontColor('#ffffff')
         .setHorizontalAlignment('center')
         .setVerticalAlignment('middle')

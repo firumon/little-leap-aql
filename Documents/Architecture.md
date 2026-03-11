@@ -27,7 +27,7 @@ graph TD
 
     subgraph "External Data Files"
         REGISTRY --> MASTERS[(MASTERS file)]
-        REGISTRY --> TRANS[(TRANSACTIONS file)]
+        REGISTRY --> TRANS[(OPERATIONS file)]
         REGISTRY --> REPORTS[(REPORTS file)]
     end
 ```

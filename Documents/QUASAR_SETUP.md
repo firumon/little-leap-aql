@@ -62,13 +62,12 @@ Recently, a professional ERP-style layout was implemented in `MainLayout.vue`.
 - **Profile Menu:** A dropdown containing Profile, Settings, and Logout options.
 
 ### Navigation (Sidebar)
-The sidebar navigation is grouped into logical business areas:
-- **Dashboard:** Main overview and metrics.
-- **Masters:** Core data management (Products, Warehouses, Outlets, Salesmen).
-- **Logistics:** Supply chain activities (Shipment Booking, Port Clearance).
-- **Inventory:** Warehouse management (Stock Reports, Transfers, Receipts).
-- **Sales & Orders:** Commercial activities (Invoices, Refills, Purchase Orders).
-- **Reports:** Summarized data and PDF exports.
+The sidebar navigation is now **dynamic and resource-driven**:
+- Menu groups are generated from `resources[].ui.menuGroup` in the authorized login payload.
+- Only resources with `permissions.canRead === true` and `showInMenu === true` are shown.
+- Current groups (from `syncAppResources.gs`): **Masters**, **Operations**, **Procurement**, **Accounts**.
+- Group icons are resolved via a built-in map or fallback to the first resource icon in the group.
+- The sidebar supports search filtering via the header search bar.
 
 ## Development Workflow
 - **Development Server:** Run `npm run dev` inside the `FRONTENT` directory (port 9000).

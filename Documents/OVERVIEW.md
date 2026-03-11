@@ -6,13 +6,13 @@ Little Leap AQL is the operating system for Little Leap's UAE baby-product distr
 - Single Google Apps Script project in the `APP` spreadsheet.
 - `APP.Resources` is the control plane for backend routing and frontend runtime metadata.
 - `GAS/syncAppResources.gs` serves as the hardcoded Source of Truth for resource schemas, which syncs directly to the `APP.Resources` sheet using the "AQL > Setup & Refactor" menu.
-- External sheets (`MASTERS`, `TRANSACTIONS`, `REPORTS`) are accessed dynamically via `Resources.FileID` + `Resources.SheetName`.
+- External sheets (`MASTERS`, `OPERATIONS`, `REPORTS`) are accessed dynamically via `Resources.FileID` + `Resources.SheetName`.
 - No separate Apps Script projects are required in external spreadsheet files unless explicitly requested.
 
 ## Current Tech Stack
 - Frontend: Quasar (Vue 3 + Vite), Pinia, Axios, IndexedDB cache.
 - Backend API: Google Apps Script Web App (`doPost`).
-- Data layer: Google Sheets split across APP / MASTERS / TRANSACTIONS / REPORTS.
+- Data layer: Google Sheets split across APP / MASTERS / OPERATIONS / REPORTS.
 
 ## Identity and Access Model
 - Authentication uses `APP.Users` (`Email`, `PasswordHash`, `ApiKey` token).

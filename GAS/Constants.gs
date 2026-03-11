@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ============================================================
  * Little Leap AQL - Global Constants
  * ============================================================
@@ -19,16 +19,36 @@ const CONFIG = {
     SKUS: 'SKUs',
     SUPPLIERS: 'Suppliers',
     WAREHOUSES: 'Warehouses',
-    WAREHOUSE_LOCATIONS: 'WarehouseLocations',
-    CARRIERS: 'Carriers',
-    PORTS: 'Ports'
+    PORTS: 'Ports',
+    CARRIERS: 'Carriers'
   },
-  TRANSACTION_SHEETS: {
+  OPERATION_SHEETS: {
+    PROCUREMENTS: 'Procurements',
+    PURCHASE_REQUISITIONS: 'PurchaseRequisitions',
+    PURCHASE_REQUISITION_ITEMS: 'PurchaseRequisitionItems',
+    RFQS: 'RFQs',
+    RFQ_ITEMS: 'RFQItems',
+    RFQ_SUPPLIERS: 'RFQSuppliers',
+    SUPPLIER_QUOTATIONS: 'SupplierQuotations',
+    SUPPLIER_QUOTATION_ITEMS: 'SupplierQuotationItems',
+    PURCHASE_ORDERS: 'PurchaseOrders',
+    PURCHASE_ORDER_ITEMS: 'PurchaseOrderItems',
+    PO_FULFILLMENTS: 'POFulfillments',
     SHIPMENTS: 'Shipments',
     SHIPMENT_ITEMS: 'ShipmentItems',
     PORT_CLEARANCE: 'PortClearance',
     GOODS_RECEIPTS: 'GoodsReceipts',
     GOODS_RECEIPT_ITEMS: 'GoodsReceiptItems',
-    STOCK_MOVEMENTS: 'StockMovements'
+    STOCK_MOVEMENTS: 'StockMovements',
+    WAREHOUSE_STORAGES: 'WarehouseStorages'
+  },
+  ACCOUNTS_SHEETS: {
+    ASSETS: 'Assets',
+    LIABILITIES: 'Liabilities',
+    EQUITY: 'Equity',
+    REVENUE: 'Revenue',
+    EXPENSES: 'Expenses',
+    CHART_OF_ACCOUNTS: 'ChartOfAccounts',
+    ENTRY_TEMPLATES: 'EntryTemplates'
   }
 };

@@ -146,6 +146,9 @@ const search = ref('')
 
 const groupIconByName = {
   masters: 'admin_panel_settings',
+  operations: 'swap_horiz',
+  procurement: 'shopping_cart',
+  accounts: 'account_balance',
   logistics: 'local_shipping',
   inventory: 'inventory',
   'sales & orders': 'receipt_long',
@@ -190,7 +193,7 @@ const visibleResourceMenuGroups = computed(() => {
   resources
     .filter((resource) => {
       const routePath = resource?.ui?.routePath || ''
-      return (resource?.scope === 'master' || resource?.scope === 'transaction') &&
+      return (resource?.scope === 'master' || resource?.scope === 'operation' || resource?.scope === 'accounts') &&
         resource?.permissions?.canRead === true &&
         resource?.ui?.showInMenu !== false &&
         isValidRoute(routePath) &&

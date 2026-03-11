@@ -68,19 +68,19 @@ export const MASTER_ENTITY_CONFIG = {
       { header: 'Status', label: 'Status', type: 'status', required: true }
     ]
   },
-  warehouseLocations: {
+  ports: {
     order: 5,
-    key: 'warehouseLocations',
-    resource: 'WarehouseLocations',
-    routePath: '/masters/warehouse-locations',
-    navLabel: 'Locations',
-    navIcon: 'grid_on',
-    title: 'Warehouse Locations',
-    description: 'Manage shelf/bin location master records',
+    key: 'ports',
+    resource: 'Ports',
+    routePath: '/masters/ports',
+    navLabel: 'Ports',
+    navIcon: 'anchor',
+    title: 'Ports',
+    description: 'Manage port master records',
     fields: [
-      { header: 'WarehouseCode', label: 'Warehouse Code', type: 'text', required: true },
-      { header: 'LocationCode', label: 'Location Code', type: 'text', required: true },
-      { header: 'Description', label: 'Description', type: 'text' },
+      { header: 'Name', label: 'Name', type: 'text', required: true },
+      { header: 'Country', label: 'Country', type: 'text' },
+      { header: 'PortType', label: 'Port Type', type: 'text' },
       { header: 'Status', label: 'Status', type: 'status', required: true }
     ]
   },
@@ -98,22 +98,6 @@ export const MASTER_ENTITY_CONFIG = {
       { header: 'Type', label: 'Type', type: 'text' },
       { header: 'Phone', label: 'Phone', type: 'text' },
       { header: 'ContactPerson', label: 'Contact Person', type: 'text' },
-      { header: 'Status', label: 'Status', type: 'status', required: true }
-    ]
-  },
-  ports: {
-    order: 7,
-    key: 'ports',
-    resource: 'Ports',
-    routePath: '/masters/ports',
-    navLabel: 'Ports',
-    navIcon: 'anchor',
-    title: 'Ports',
-    description: 'Manage port master records',
-    fields: [
-      { header: 'Name', label: 'Name', type: 'text', required: true },
-      { header: 'Country', label: 'Country', type: 'text' },
-      { header: 'PortType', label: 'Port Type', type: 'text' },
       { header: 'Status', label: 'Status', type: 'status', required: true }
     ]
   }

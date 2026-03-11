@@ -38,7 +38,6 @@ function getResourceConfig(resourceName) {
         sheetName: (row[registry.idx.SheetName] || '').toString().trim(),
         scope: normalizeResourceScope(readOptionalCell(row, registry.idx.Scope, 'master')),
         isActive: toBooleanCell(readOptionalCell(row, registry.idx.IsActive, true)),
-        skipColumns: Number(row[registry.idx.SkipColumns] || 0),
         audit: toBooleanCell(readOptionalCell(row, registry.idx.Audit, false)),
         codePrefix: registry.idx.CodePrefix === undefined
           ? ''
@@ -100,7 +99,7 @@ function normalizeCodeSequenceLength(value) {
 
 function normalizeResourceScope(value) {
   const normalized = (value || 'master').toString().trim().toLowerCase();
-  if (normalized === 'transaction') return 'transaction';
+  if (normalized === 'operation') return 'operation';
   if (normalized === 'report') return 'report';
   if (normalized === 'system') return 'system';
   return 'master';

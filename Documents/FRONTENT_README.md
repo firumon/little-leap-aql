@@ -1,4 +1,4 @@
-﻿# Quasar Application Setup Documentation
+# Quasar Application Setup Documentation
 
 This document serves as a guide for AI agents and developers to understand the setup and configuration of the Quasar application in this project.
 
@@ -117,6 +117,17 @@ Delta strategy notes:
 
 Pinia data note:
 - Product master results are also hydrated into `src/stores/products.js` so other screens can resolve product code/id to product name locally.
+
+## Operation Module Progress (2026-02-22)
+Implemented initial operation pages:
+- `src/pages/Operations/ShipmentsPage.vue` — Shipment list and creation
+- `src/pages/Operations/GoodsReceiptsPage.vue` — GRN list and creation
+
+Routes configured in `src/router/routes.js`:
+- `/operations/shipments` (meta: scope=operation, resource=Shipments)
+- `/operations/goods-receipts` (meta: scope=operation, resource=GoodsReceipts)
+
+Note: Additional operation routes (PortClearance, StockMovements, Procurement cycle, Accounts) are registered in `syncAppResources.gs` with corresponding `RoutePath` values but do not yet have dedicated frontend page components. The MainLayout sidebar will show menu items for these routes when authorized, linking to routes that will need page components.
 
 ## Development Workflow
 - Run `npm run dev` in `FRONTENT` (port 9000).

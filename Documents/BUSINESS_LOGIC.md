@@ -1,4 +1,4 @@
-﻿# Business Logic & Workflows
+# Business Logic & Workflows
 
 This document outlines the core business logic, entities, and end-to-end workflows for the Little Leap AQL system.
 
@@ -18,13 +18,18 @@ The system revolves around the following key entities, managed as "Resources" in
 
 | Entity | Description | Key Attributes |
 | :--- | :--- | :--- |
-| **Product** | Items distributed by the company. | SKU, Name, Description, Unit Price, Tax Rate, Category. |
-| **Warehouse** | Physical storage locations for stock. | Name, Location, Manager, Capacity. |
-| **Outlet** | Pharmacies or retail points where products are sold. | Name, Location, Contact Person, Credit Limit. |
-| **Salesman** | Staff members responsible for sales and distribution. | Name, Route/Territory, Commission Rate. |
-| **Shipment** | Imports of goods from suppliers (e.g., China). | Shipment ID, Supplier, Date, Status (Ordered/Shipped/Arrived). |
-| **Invoice** | Records of sales to outlets. | Invoice No, Date, Outlet, Salesman, Line Items, Total Amount. |
-| **Payment** | Collections from outlets against invoices. | Payment ID, Invoice Reference, Amount, Method, Date. |
+| **Product** | Parent items (models/lines) distributed by the company. | Code, Name, VariantTypes, AccessRegion, Status. |
+| **SKU** | Sellable child variants of a Product. | Code, ProductCode, Variant1-5, Status. |
+| **Supplier** | Vendors (e.g. China manufacturers). | Code, Name, Country, ContactPerson, Phone, Email. |
+| **Warehouse** | Physical storage locations for stock. | Code, Name, City, Country, Type. |
+| **WarehouseStorage** | Shelf/bin positions within a warehouse. | Code, WarehouseCode, StorageName, SKU, Quantity, Status. |
+| **Carrier** | Transport partners for port-to-warehouse movement. | Code, Name, Type, Phone, ContactPerson. |
+| **Port** | Import/clearance port reference. | Code, Name, Country, PortType. |
+| **Shipment** | Inbound sea freight from suppliers to UAE. | Code, SupplierCode, ETD, ETA, CarrierCode, PortCode, Status. |
+| **GoodsReceipt** | Warehouse receiving against a cleared shipment. | Code, ShipmentCode, ReceivedDate, WarehouseCode, Status. |
+| **Outlet** | Pharmacies or retail points where products are sold. | (Planned — not yet implemented) |
+| **Invoice** | Records of sales to outlets. | (Planned — not yet implemented) |
+| **Payment** | Collections from outlets against invoices. | (Planned — not yet implemented) |
 
 ## End-to-End Workflow
 
@@ -86,5 +91,5 @@ Reference document:
 ## Audit & Compliance
 
 * **Audit Trails:** Every record creation and modification is timestamped (`CreatedAt`, `UpdatedAt`) and tagged with the user performing the action (`CreatedBy`, `UpdatedBy`).
-* **Archiving:** To maintain performance in Google Sheets, historical transaction data (Sales, Payments) is periodically moved to Archive sheets (e.g., yearly).
+* **Archiving:** To maintain performance in Google Sheets, historical operation data (Sales, Payments) is periodically moved to Archive sheets (e.g., yearly).
 * **Role-Based Access:** Users can only perform actions permitted by their role (e.g., Salesmen cannot delete confirmed Invoices).

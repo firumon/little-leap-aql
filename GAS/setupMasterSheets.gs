@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ============================================================
  * Little Leap AQL - MASTER Sheet Setup (Resources Driven)
  * ============================================================
@@ -88,15 +88,16 @@ function setupMasterSheets() {
       }
     },
     {
-      resourceName: CONFIG.MASTER_SHEETS.WAREHOUSE_LOCATIONS,
-      headers: ['Code', 'WarehouseCode', 'LocationCode', 'Description', 'Status'].concat(commonAuditColumns),
+      resourceName: CONFIG.MASTER_SHEETS.PORTS,
+      headers: ['Code', 'Name', 'Country', 'PortType', 'AccessRegion', 'Status'].concat(commonAuditColumns),
       statusDefault: 'Active',
-      defaults: { Status: 'Active' },
+      defaults: { Status: 'Active', Country: 'UAE' },
       columnWidths: {
         Code: 130,
-        WarehouseCode: 150,
-        LocationCode: 150,
-        Description: 240,
+        Name: 220,
+        Country: 130,
+        PortType: 130,
+        AccessRegion: 130,
         Status: 100,
         CreatedAt: 170,
         UpdatedAt: 170,
@@ -122,26 +123,10 @@ function setupMasterSheets() {
         CreatedBy: 140,
         UpdatedBy: 140
       }
-    },
-    {
-      resourceName: CONFIG.MASTER_SHEETS.PORTS,
-      headers: ['Code', 'Name', 'Country', 'PortType', 'AccessRegion', 'Status'].concat(commonAuditColumns),
-      statusDefault: 'Active',
-      defaults: { Status: 'Active', Country: 'UAE' },
-      columnWidths: {
-        Code: 130,
-        Name: 220,
-        Country: 130,
-        PortType: 130,
-        AccessRegion: 130,
-        Status: 100,
-        CreatedAt: 170,
-        UpdatedAt: 170,
-        CreatedBy: 140,
-        UpdatedBy: 140
-      }
     }
   ];
+
+  const fileSheetIndex = {};
 
   const statusValidationRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(['Active', 'Inactive'], true)
@@ -188,6 +173,12 @@ function setupMasterSheets() {
       if (sheet.getMaxRows() > 1) {
         sheet.getRange(2, 1, Math.max(sheet.getMaxRows() - 1, 1), schema.headers.length).setNumberFormat('@');
       }
+
+      if (!fileSheetIndex[resource.fileId]) fileSheetIndex[resource.fileId] = 0;
+      fileSheetIndex[resource.fileId]++;
+      file.setActiveSheet(sheet);
+      file.moveActiveSheet(fileSheetIndex[resource.fileId]);
+
     } catch (err) {
       results.push('Error for ' + schema.resourceName + ': ' + err.message);
     }

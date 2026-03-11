@@ -1,13 +1,19 @@
-﻿# CONTEXT HANDOFF - Little Leap AQL
+# CONTEXT HANDOFF - Little Leap AQL
 
-Use this file when starting a new Codex context window.
+Use this file when starting a new AI agent session.
 
 ## 0) Quick Start Instruction for New Context
-Tell Codex:
+Tell the AI agent:
 1. Read `Documents/CONTEXT_HANDOFF.md` first.
-2. Then read `Documents/AI_COLLABORATION_PROTOCOL.md` and `Documents/README.md`.
-3. For resource metadata tasks, read `Documents/RESOURCE_COLUMNS_GUIDE.md`.
-4. Continue work from current implementation status in this handoff.
+2. Read `Documents/AI_COLLABORATION_PROTOCOL.md` and `Documents/README.md`.
+3. **Read `Documents/DUAL_AGENT_PROTOCOL.md`** - this project uses a dual-agent model:
+   - **Brain Agent:** Creates implementation plans in `Documents/PLANS/`.
+   - **Execution Agent:** Executes approved plans from `Documents/PLANS/` (code, terminal, git, docs).
+4. Check `Documents/PLANS/` for any active or pending implementation plans.
+5. For any new plan, create it from `Documents/PLANS/_TEMPLATE.md`.
+6. After planning, provide handoff prompt: `Execution Agent, read Documents/PLANS/<plan-file>.md and execute it end-to-end.`
+7. For resource metadata tasks, read `Documents/RESOURCE_COLUMNS_GUIDE.md`.
+8. Continue work from current implementation status in this handoff.
 
 ## 1) Project Identity
 - Project: Little Leap AQL
@@ -17,7 +23,7 @@ Tell Codex:
 ## 2) Current Tech Stack
 - Frontend: Quasar (Vue 3 + Vite), Pinia, Axios
 - Backend API: Google Apps Script Web App (single endpoint `doPost`)
-- Database: Google Sheets split across APP / MASTERS / TRANSACTIONS / REPORTS files
+- Database: Google Sheets split across APP / MASTERS / OPERATIONS / REPORTS files
 
 ## 3) Operating Model (Important)
 - Preferred model: Single Apps Script project in APP file.
@@ -97,7 +103,7 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
 - Schema Refactoring & Synchronization Engine:
   - `AQL > Setup & Refactor` menu added to Google Sheets for 1-click schema syncs.
   - `GAS/syncAppResources.gs` is now the code-level source of truth for the `APP.Resources` registry. Users don't need to manually type columns into `APP.Resources`.
-  - `setupMasterSheets()` and `setupTransactionSheets()` intelligently refactor columns (`app_normalizeSheetSchema`) without dropping business data when headers are redefined.
+  - `setupMasterSheets()` and `setupAllOperations()` intelligently refactor columns (`app_normalizeSheetSchema`) without dropping business data when headers are redefined.
   - `setupAppSheets()` now auto-runs `syncAppResourcesFromCode(true)` after setup/refactor, so APP resource config stays aligned with code defaults.
   - `app_normalizeSheetSchema` now clears stale data validations before header rebuild to avoid validation/range drift after schema changes.
   - Required reading: `Documents/SCHEMA_REFACTORING_GUIDE.md`
@@ -106,7 +112,7 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - Resource config map: `FRONTENT/src/config/masters.js`
   - Shared service: `FRONTENT/src/services/masterRecords.js`
   - Product store remains aligned: `FRONTENT/src/stores/products.js`
-  - Supports list/create/update across Products/Suppliers/Warehouses/WarehouseLocations/Carriers/Ports.
+  - Supports list/create/update across Products/Suppliers/Warehouses/WarehouseStorages/Carriers/Ports.
   - Uses IndexedDB-backed incremental sync (`resource-meta`, `resource-records`).
   - Role-based UI filter active:
     - Sidebar master menu shows only resources with `permissions.canRead = true`
@@ -124,7 +130,7 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - IndexedDB-backed data synchronization for seamless offline UX.
 - Resource & Entity Updates:
   - Transitioned architecture to use `SKUs` instead of `ProductVariants`.
-  - Configured `APP.Resources` to include mapping for transaction resources: Shipments, Port Clearance, Goods Receipts, and Stock Movements.
+  - Configured `APP.Resources` to include mapping for operation resources: Shipments, Port Clearance, Goods Receipts, and Stock Movements.
 - Identity & Role Architecture (Updates):
   - Simplified role mapping: `Roles` are now directly assigned to users via `RoleID` in the `Users` sheet, deprecating the `UserRoles` sheet.
   - Built Role-Based Dashboards routing and layouts (redirect based on role logic).
@@ -170,7 +176,7 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
 - `SheetName`
 - `CodePrefix`
 - `CodeSequenceLength`
-- `SkipColumns`
+- ``
 - `Audit`
 - `RequiredHeaders`
 - `UniqueHeaders`
@@ -197,33 +203,59 @@ Other APP requirements:
 - `Users` must include `AccessRegion`.
 - APP must include `AccessRegions` sheet with columns `Code`, `Name`, `Parent`.
 
-## 8) Master & Transaction Resources Defaults
-Recommended Prefix/Sequence:
-- Products: `CodePrefix=LLMP`, `CodeSequenceLength=5`
-- SKUs: `CodePrefix=LLMSKU`, `CodeSequenceLength=6`
-- Suppliers: `CodePrefix=LLMS`, `CodeSequenceLength=3`
-- Warehouses: `CodePrefix=LLMW`, `CodeSequenceLength=3`
-- WarehouseLocations: `CodePrefix=LLML`, `CodeSequenceLength=4`
-- Carriers: `CodePrefix=LLMC`, `CodeSequenceLength=4`
-- Ports: `CodePrefix=LLMPT`, `CodeSequenceLength=3`
-- Shipments: `CodePrefix=LLMSH`, `CodeSequenceLength=6`
-- ShipmentItems: `CodePrefix=LLMSI`, `CodeSequenceLength=6`
-- PortClearance: `CodePrefix=LLMPC`, `CodeSequenceLength=6`
-- GoodsReceipts: `CodePrefix=LLMGRN`, `CodeSequenceLength=6`
-- GoodsReceiptItems: `CodePrefix=LLMGRI`, `CodeSequenceLength=6`
-- StockMovements: `CodePrefix=LLMSM`, `CodeSequenceLength=6`
+## 8) Resource Code Prefixes (from syncAppResources.gs)
+These are the actual values used by the code-level source of truth (`GAS/syncAppResources.gs`):
 
-## 9) Current Shema Sheets
+MASTER:
+- Products: `CodePrefix=PRD`, `CodeSequenceLength=5`
+- SKUs: `CodePrefix=SKU`, `CodeSequenceLength=6`
+- Suppliers: `CodePrefix=SUP`, `CodeSequenceLength=4`
+- Warehouses: `CodePrefix=WH`, `CodeSequenceLength=3`
+- WarehouseStorages: `CodePrefix=LOC`, `CodeSequenceLength=5`
+- Carriers: `CodePrefix=CARR`, `CodeSequenceLength=4`
+- Ports: `CodePrefix=PORT`, `CodeSequenceLength=3`
+
+OPERATION (Inbound):
+- Shipments: `CodePrefix=SHP`, `CodeSequenceLength=6`
+- ShipmentItems: `CodePrefix=SHPI`, `CodeSequenceLength=6`
+- PortClearance: `CodePrefix=CLR`, `CodeSequenceLength=5`
+- GoodsReceipts: `CodePrefix=GRN`, `CodeSequenceLength=6`
+- GoodsReceiptItems: `CodePrefix=GRNI`, `CodeSequenceLength=6`
+- StockMovements: `CodePrefix=STKMOV`, `CodeSequenceLength=7`
+
+OPERATION (Procurement):
+- Procurements: `CodePrefix=PRC`, `CodeSequenceLength=5`
+- PurchaseRequisitions: `CodePrefix=PR`, `CodeSequenceLength=6`
+- PurchaseRequisitionItems: `CodePrefix=PRI`, `CodeSequenceLength=6`
+- RFQs: `CodePrefix=RFQ`, `CodeSequenceLength=5`
+- RFQItems: `CodePrefix=RFQI`, `CodeSequenceLength=6`
+- RFQSuppliers: `CodePrefix=RFQS`, `CodeSequenceLength=6`
+- SupplierQuotations: `CodePrefix=SQ`, `CodeSequenceLength=5`
+- SupplierQuotationItems: `CodePrefix=SQI`, `CodeSequenceLength=6`
+- PurchaseOrders: `CodePrefix=PO`, `CodeSequenceLength=5`
+- PurchaseOrderItems: `CodePrefix=POI`, `CodeSequenceLength=6`
+- POFulfillments: `CodePrefix=POF`, `CodeSequenceLength=6`
+
+ACCOUNTS:
+- ChartOfAccounts: `CodePrefix=COA`, `CodeSequenceLength=4`
+- EntryTemplates: `CodePrefix=ETPL`, `CodeSequenceLength=4`
+- Assets: `CodePrefix=AST`, `CodeSequenceLength=6`
+- Liabilities: `CodePrefix=LIA`, `CodeSequenceLength=6`
+- Equity: `CodePrefix=EQT`, `CodeSequenceLength=6`
+- Revenue: `CodePrefix=REV`, `CodeSequenceLength=6`
+- Expenses: `CodePrefix=EXP`, `CodeSequenceLength=6`
+
+## 9) Current Schema Sheets
 MASTER Sheets:
 - Products
 - SKUs
 - Suppliers
 - Warehouses
-- WarehouseLocations
+- WarehouseStorages
 - Carriers
 - Ports
 
-TRANSACTION Sheets:
+OPERATION Sheets (Inbound):
 - Shipments
 - ShipmentItems
 - PortClearance
@@ -231,24 +263,64 @@ TRANSACTION Sheets:
 - GoodsReceiptItems
 - StockMovements
 
+OPERATION Sheets (Procurement):
+- Procurements
+- PurchaseRequisitions
+- PurchaseRequisitionItems
+- RFQs
+- RFQItems
+- RFQSuppliers
+- SupplierQuotations
+- SupplierQuotationItems
+- PurchaseOrders
+- PurchaseOrderItems
+- POFulfillments
+
+ACCOUNTS Sheets:
+- ChartOfAccounts (scope: master)
+- EntryTemplates (scope: master)
+- Assets (scope: accounts)
+- Liabilities (scope: accounts)
+- Equity (scope: accounts)
+- Revenue (scope: accounts)
+- Expenses (scope: accounts)
+
 References:
 - `Documents/MASTER_SHEET_STRUCTURE.md`
-- `Documents/TRANSACTION_SHEET_STRUCTURE.md`
+- `Documents/OPERATION_SHEET_STRUCTURE.md`
+- `Documents/PROCUREMENT_SHEET_STRUCTURE.md`
+- `Documents/ACCOUNTS_SHEET_STRUCTURE.md`
 - `Documents/APP_SHEET_STRUCTURE.md`
 
 ## 10) Frontend Routes Implemented
 - `/dashboard`
 - `/profile`
 - `/masters/products`
+- `/masters/skus`
 - `/masters/suppliers`
 - `/masters/warehouses`
-- `/masters/warehouse-locations`
+- `/masters/warehouse-storages`
 - `/masters/carriers`
 - `/masters/ports`
+- `/masters/chart-of-accounts`
+- `/masters/entry-templates`
+- `/operations/shipments`
+- `/operations/goods-receipts`
+- `/operations/port-clearance`
+- `/operations/stock-movements`
+- `/operations/procurements`
+- `/operations/prs`
+- `/operations/rfqs`
+- `/operations/quotations`
+- `/operations/pos`
+- `/accounts/assets`
+- `/accounts/liabilities`
+- `/accounts/equity`
+- `/accounts/revenue`
+- `/accounts/expenses`
 
 
-
-## 12) Manual Actions User Usually Needs
+## 11) Manual Actions User Usually Needs
 When Apps Script changes:
 1. Copy updated `.gs` files to APP Apps Script project.
 2. Save and deploy new Web App version if API behavior changed.
@@ -257,22 +329,25 @@ When setup scripts are added/changed:
 1. Ensure `Resources` rows are correct.
 2. Run setup function (for example `setupMasterSheets()`).
 
-## 13) Primary Docs Map
+## 12) Primary Docs Map
 - Docs index: `Documents/README.md`
 - Collaboration rules: `Documents/AI_COLLABORATION_PROTOCOL.md`
+- **Dual-agent protocol: `Documents/DUAL_AGENT_PROTOCOL.md`**
+- **Active implementation plans: `Documents/PLANS/`**
 - Resource architecture: `Documents/RESOURCE_REGISTRY_ARCHITECTURE.md`
 - Resource column definitions: `Documents/RESOURCE_COLUMNS_GUIDE.md`
-- Technical details: `Documents/TechnicalSpecifications.md`
+- Technical details: `Documents/TECHNICAL_SPECIFICATIONS.md`
 - Ground workflow: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
 - APP structure: `Documents/APP_SHEET_STRUCTURE.md`
 - MASTER structure: `Documents/MASTER_SHEET_STRUCTURE.md`
+- Client Setup Guide: `Documents/NEW_CLIENT_SETUP_GUIDE.md`
 
-## 14) Note to Future Codex Sessions
+## 13) Note to Future AI Sessions
 Do not start implementation blindly.
 Always read this file and protocol docs first, then continue from current status with aligned updates to code + Apps Script + docs.
 
-## 15) Mandatory Handoff Maintenance Rule
-For every significant implementation update, future Codex sessions must also update this file (`Documents/CONTEXT_HANDOFF.md`) before closing the task.
+## 14) Mandatory Handoff Maintenance Rule
+For every significant implementation update, AI agents must also update this file (`Documents/CONTEXT_HANDOFF.md`) before closing the task.
 
 Significant updates include:
 - New architecture/runtime decisions
@@ -287,3 +362,4 @@ Expected behavior for future joiners:
 2. Implement requested changes.
 3. Update related technical/business docs.
 4. Update this handoff with latest status and decisions so the next context can continue without re-discovery.
+

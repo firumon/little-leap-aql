@@ -5,28 +5,34 @@
 
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
-  ui.createMenu('AQL')
-    .addSubMenu(ui.createMenu('Users')
+  ui.createMenu('AQL 🚀')
+    .addSubMenu(ui.createMenu('👥 Users')
       .addItem('Create User', 'showCreateUserDialog')
       .addItem('Update User', 'showUpdateUserDialog')
       .addItem('Toggle User Status', 'showToggleUserStatusDialog'))
-    .addSubMenu(ui.createMenu('Designations')
+    .addSubMenu(ui.createMenu('💼 Designations')
       .addItem('Create Designation', 'showCreateDesignationDialog')
       .addItem('Update Designation', 'showUpdateDesignationDialog'))
-    .addSubMenu(ui.createMenu('Access Regions')
+    .addSubMenu(ui.createMenu('🌍 Access Regions')
       .addItem('Create Access Region', 'showCreateAccessRegionDialog')
       .addItem('Update Access Region', 'showUpdateAccessRegionDialog'))
-    .addSubMenu(ui.createMenu('Roles')
+    .addSubMenu(ui.createMenu('🛡️ Roles')
       .addItem('Create Role', 'showCreateRoleDialog')
-      .addItem('Update Role', 'showUpdateRoleDialog'))
-    .addSubMenu(ui.createMenu('Resources')
+      .addItem('Update Role', 'showUpdateRoleDialog')
+      .addSeparator()
+      .addItem('Inject Default Roles', 'setupDefaultRoles'))
+    .addSubMenu(ui.createMenu('📚 Resources')
       .addItem('Add Resource', 'showAddResourceDialog')
-      .addItem('Edit Resource', 'showEditResourceDialog'))
-    .addSubMenu(ui.createMenu('Setup & Refactor')
-      .addItem('Sync APP.Resources from Code', 'syncAppResourcesFromCode')
+      .addItem('Edit Resource', 'showEditResourceDialog')
+      .addSeparator()
+      .addItem('Sync APP.Resources from Code', 'syncAppResourcesFromCode'))
+    .addSeparator()
+    .addSubMenu(ui.createMenu('⚙️ Setup & Refactor')
       .addItem('Refactor APP Sheets', 'setupAppSheets')
       .addItem('Refactor MASTER Sheets', 'setupMasterSheets')
-      .addItem('Refactor TRANSACTION Sheets', 'setupTransactionSheets'))
+      .addSeparator()
+      .addItem('Setup All Operations', 'setupOperationSheets')
+      .addItem('Setup Base Accounts', 'setupAccountSheets'))
     .addToUi();
 }
 
@@ -384,7 +390,6 @@ function mapResource(form) {
     SheetName: txt(form.sheetName),
     CodePrefix: txt(form.codePrefix),
     CodeSequenceLength: numOrBlank(form.codeSequenceLength),
-    SkipColumns: Number(form.skipColumns || 0) || 0,
     Audit: boolText(form.audit, false),
     RequiredHeaders: txt(form.requiredHeaders),
     UniqueHeaders: txt(form.uniqueHeaders),
@@ -448,7 +453,7 @@ function sanitizeKey(v) { return (v || '').toString().replace(/[^a-zA-Z0-9]/g, '
 function ok(msg) { return { success: true, message: msg }; }
 function fail(err) { return { success: false, message: err.message || String(err) }; }
 function toFormName(h) {
-  const m = { FileID: 'fileId', SheetName: 'sheetName', CodePrefix: 'codePrefix', CodeSequenceLength: 'codeSequenceLength', SkipColumns: 'skipColumns', IsActive: 'isActive', RequiredHeaders: 'requiredHeaders', UniqueHeaders: 'uniqueHeaders', UniqueCompositeHeaders: 'uniqueCompositeHeaders', DefaultValues: 'defaultValues', RecordAccessPolicy: 'recordAccessPolicy', OwnerUserField: 'ownerUserField', AdditionalActions: 'additionalActions', MenuGroup: 'menuGroup', MenuOrder: 'menuOrder', MenuLabel: 'menuLabel', MenuIcon: 'menuIcon', RoutePath: 'routePath', PageTitle: 'pageTitle', PageDescription: 'pageDescription', UIFields: 'uiFields', ShowInMenu: 'showInMenu', IncludeInAuthorizationPayload: 'includeInAuthorizationPayload' };
+  const m = { FileID: 'fileId', SheetName: 'sheetName', CodePrefix: 'codePrefix', CodeSequenceLength: 'codeSequenceLength', IsActive: 'isActive', RequiredHeaders: 'requiredHeaders', UniqueHeaders: 'uniqueHeaders', UniqueCompositeHeaders: 'uniqueCompositeHeaders', DefaultValues: 'defaultValues', RecordAccessPolicy: 'recordAccessPolicy', OwnerUserField: 'ownerUserField', AdditionalActions: 'additionalActions', MenuGroup: 'menuGroup', MenuOrder: 'menuOrder', MenuLabel: 'menuLabel', MenuIcon: 'menuIcon', RoutePath: 'routePath', PageTitle: 'pageTitle', PageDescription: 'pageDescription', UIFields: 'uiFields', ShowInMenu: 'showInMenu', IncludeInAuthorizationPayload: 'includeInAuthorizationPayload' };
   return m[h] || (h.charAt(0).toLowerCase() + h.slice(1));
 }
 function normalizeAccessRegionInputCode(code) {
@@ -499,7 +504,7 @@ function getHtmlTemplate(action, data) {
   else if (action === 'updateRole') body = '<h2>Update Role</h2><p class="note">Select role to auto-check assigned resource actions.</p><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleUpdateRole\')"><div class="g"><label>Role</label><select name="roleId" onchange="loadDetails(\'Role\',this.value)" required><option value="">-- Select --</option>' + ro + '</select></div><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Description</label><textarea name="description"></textarea></div><div class="small">Select actions per resource</div>' + roleMatrix() + '<button id="submitBtn">Update Role</button></form>';
   else if (action === 'addResource' || action === 'editResource') {
     const ed = action === 'editResource';
-    body = '<h2>' + (ed ? 'Edit' : 'Add') + ' Resource</h2><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'' + (ed ? 'handleEditResource' : 'handleAddResource') + '\')">' + (ed ? '<div class="g"><label>Resource</label><select name="resourceId" onchange="loadDetails(\'Resource\',this.value)" required><option value="">-- Select --</option>' + rso + '</select></div><input type="hidden" name="originalName">' : '') + '<div class="row"><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Scope</label><input name="scope" value="master"></div></div><div class="row"><div class="g"><label>FileID</label><input name="fileId" required></div><div class="g"><label>SheetName</label><input name="sheetName" required></div></div><div class="row"><div class="g"><label>CodePrefix</label><input name="codePrefix"></div><div class="g"><label>CodeSequenceLength</label><input name="codeSequenceLength" type="number"></div></div><div class="row"><div class="g"><label>SkipColumns</label><input name="skipColumns" type="number" value="0"></div><div class="g"><label>RecordAccessPolicy</label><select name="recordAccessPolicy"><option>ALL</option><option>OWNER</option><option>OWNER_GROUP</option><option>OWNER_AND_UPLINE</option></select></div></div><div class="g"><label>RequiredHeaders</label><input name="requiredHeaders"></div><div class="g"><label>UniqueHeaders</label><input name="uniqueHeaders"></div><div class="g"><label>UniqueCompositeHeaders</label><input name="uniqueCompositeHeaders"></div><div class="g"><label>DefaultValues (JSON)</label><textarea name="defaultValues"></textarea></div><div class="g"><label>OwnerUserField</label><input name="ownerUserField" value="CreatedBy"></div><div class="g"><label>AdditionalActions</label><input name="additionalActions"></div><div class="row"><div class="g"><label>MenuGroup</label><input name="menuGroup"></div><div class="g"><label>MenuOrder</label><input name="menuOrder" type="number"></div></div><div class="row"><div class="g"><label>MenuLabel</label><input name="menuLabel"></div><div class="g"><label>MenuIcon</label><input name="menuIcon"></div></div><div class="g"><label>RoutePath</label><input name="routePath"></div><div class="g"><label>PageTitle</label><input name="pageTitle"></div><div class="g"><label>PageDescription</label><textarea name="pageDescription"></textarea></div><div class="g"><label>UIFields</label><textarea name="uiFields"></textarea></div><div class="checks"><label><input type="checkbox" name="isActive" value="true" checked> IsActive</label><label><input type="checkbox" name="audit" value="true"> Audit</label><label><input type="checkbox" name="showInMenu" value="true" checked> ShowInMenu</label><label><input type="checkbox" name="includeInAuthorizationPayload" value="true" checked> IncludeInAuthorizationPayload</label></div><button id="submitBtn">' + (ed ? 'Update' : 'Add') + ' Resource</button></form>';
+    body = '<h2>' + (ed ? 'Edit' : 'Add') + ' Resource</h2><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'' + (ed ? 'handleEditResource' : 'handleAddResource') + '\')">' + (ed ? '<div class="g"><label>Resource</label><select name="resourceId" onchange="loadDetails(\'Resource\',this.value)" required><option value="">-- Select --</option>' + rso + '</select></div><input type="hidden" name="originalName">' : '') + '<div class="row"><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Scope</label><input name="scope" value="master"></div></div><div class="row"><div class="g"><label>FileID</label><input name="fileId" required></div><div class="g"><label>SheetName</label><input name="sheetName" required></div></div><div class="row"><div class="g"><label>CodePrefix</label><input name="codePrefix"></div><div class="g"><label>CodeSequenceLength</label><input name="codeSequenceLength" type="number"></div></div><div class="g"><label>RecordAccessPolicy</label><select name="recordAccessPolicy"><option>ALL</option><option>OWNER</option><option>OWNER_GROUP</option><option>OWNER_AND_UPLINE</option></select></div><div class="g"><label>RequiredHeaders</label><input name="requiredHeaders"></div><div class="g"><label>UniqueHeaders</label><input name="uniqueHeaders"></div><div class="g"><label>UniqueCompositeHeaders</label><input name="uniqueCompositeHeaders"></div><div class="g"><label>DefaultValues (JSON)</label><textarea name="defaultValues"></textarea></div><div class="g"><label>OwnerUserField</label><input name="ownerUserField" value="CreatedBy"></div><div class="g"><label>AdditionalActions</label><input name="additionalActions"></div><div class="row"><div class="g"><label>MenuGroup</label><input name="menuGroup"></div><div class="g"><label>MenuOrder</label><input name="menuOrder" type="number"></div></div><div class="row"><div class="g"><label>MenuLabel</label><input name="menuLabel"></div><div class="g"><label>MenuIcon</label><input name="menuIcon"></div></div><div class="g"><label>RoutePath</label><input name="routePath"></div><div class="g"><label>PageTitle</label><input name="pageTitle"></div><div class="g"><label>PageDescription</label><textarea name="pageDescription"></textarea></div><div class="g"><label>UIFields</label><textarea name="uiFields"></textarea></div><div class="checks"><label><input type="checkbox" name="isActive" value="true" checked> IsActive</label><label><input type="checkbox" name="audit" value="true"> Audit</label><label><input type="checkbox" name="showInMenu" value="true" checked> ShowInMenu</label><label><input type="checkbox" name="includeInAuthorizationPayload" value="true" checked> IncludeInAuthorizationPayload</label></div><button id="submitBtn">' + (ed ? 'Update' : 'Add') + ' Resource</button></form>';
   } else body = '<h2>Unsupported</h2>';
 
   return '<!doctype html><html><head><base target="_top">' + style + '</head><body>' + body + '<div id="msg" class="msg"></div>' + js + '</body></html>';

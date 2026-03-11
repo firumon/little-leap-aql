@@ -66,14 +66,13 @@ Detailed per-column meaning and sample values:
 
 Columns (in order):
 - `Name`
-- `Scope` (`master|transaction|report|system`)
+- `Scope` (`master|operation|accounts|report|system`)
 - `ParentResource` (Optional FK -> parent `Resources.Name`)
 - `IsActive`
 - `FileID`
 - `SheetName`
 - `CodePrefix`
 - `CodeSequenceLength`
-- `SkipColumns`
 - `Audit` (if true: manage `CreatedAt,UpdatedAt,CreatedBy,UpdatedBy`)
 - `RequiredHeaders` (CSV)
 - `UniqueHeaders` (CSV)

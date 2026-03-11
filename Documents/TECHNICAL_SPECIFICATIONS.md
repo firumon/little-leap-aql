@@ -3,7 +3,7 @@
 ## 1) Stack
 - Frontend: Quasar (Vue 3 + Vite)
 - Backend: Google Apps Script (`doPost`)
-- Data: Google Sheets (APP/MASTERS/TRANSACTIONS/REPORTS)
+- Data: Google Sheets (APP/MASTERS/OPERATIONS/REPORTS)
 
 ## 2) Identity & Access
 

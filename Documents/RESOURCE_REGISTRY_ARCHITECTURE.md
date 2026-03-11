@@ -10,7 +10,7 @@ APP `Resources` is the runtime registry used by GAS to resolve where each resour
 - `SheetName`
 - `CodePrefix`
 - `CodeSequenceLength`
-- `SkipColumns`
+- ``
 - `Audit`
 - `RequiredHeaders`
 - `UniqueHeaders`

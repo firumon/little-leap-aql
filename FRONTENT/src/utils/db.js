@@ -79,7 +79,7 @@ export async function getResourceMeta(resource) {
 
 export async function setAuthorizedResources(resources = []) {
     const db = await dbPromise;
-    const tx = db.transaction('resource-meta', 'readwrite');
+    const tx = db.operation('resource-meta', 'readwrite');
     for (const resource of resources) {
         const name = (resource?.name || '').toString().trim();
         if (!name) continue;
@@ -121,7 +121,7 @@ export async function upsertResourceRows(resource, headers = [], rows = []) {
 
     const updatedAtIndex = headers.indexOf('UpdatedAt');
     const db = await dbPromise;
-    const tx = db.transaction('resource-records', 'readwrite');
+    const tx = db.operation('resource-records', 'readwrite');
     let affected = 0;
 
     for (const row of rows) {
@@ -150,7 +150,7 @@ export async function getResourceRows(resource, options = {}) {
     if (!resource) return [];
     const { includeInactive = true, statusIndex = -1 } = options;
     const db = await dbPromise;
-    const tx = db.transaction('resource-records', 'readonly');
+    const tx = db.operation('resource-records', 'readonly');
     const index = tx.store.index('by-resource');
     const allRows = await index.getAll(resource);
     await tx.done;

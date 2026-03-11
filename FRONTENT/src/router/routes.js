@@ -1,4 +1,4 @@
-﻿import { isStandalone } from 'src/utils/pwa-utils'
+import { isStandalone } from 'src/utils/pwa-utils'
 
 const routes = [
   {
@@ -39,14 +39,14 @@ const routes = [
       { path: '', component: () => import('pages/Dashboard/DashboardIndex.vue') },
       { path: '/profile', component: () => import('pages/ProfilePage/ProfilePage.vue') },
       {
-        path: '/transactions/shipments',
-        component: () => import('pages/Transactions/ShipmentsPage.vue'),
-        meta: { scope: 'transaction', resource: 'Shipments' }
+        path: '/operations/shipments',
+        component: () => import('pages/Operations/ShipmentsPage.vue'),
+        meta: { scope: 'operation', resource: 'Shipments' }
       },
       {
-        path: '/transactions/grn',
-        component: () => import('pages/Transactions/GoodsReceiptsPage.vue'),
-        meta: { scope: 'transaction', resource: 'GoodsReceipts' }
+        path: '/operations/goods-receipts',
+        component: () => import('pages/Operations/GoodsReceiptsPage.vue'),
+        meta: { scope: 'operation', resource: 'GoodsReceipts' }
       },
       {
         path: '/masters/:resourceSlug',

@@ -11,18 +11,17 @@ This document explains each `APP > Resources` column, what to fill, and common v
 | Column | Required | Type | Meaning | Typical Values / Format | Example |
 |---|---|---|---|---|---|
 | `Name` | Yes | Text | Unique resource key used in API + permissions | PascalCase resource name | `Products` |
-| `Scope` | Yes | Text | Logical module for resource | `master`, `transaction`, `report`, `system` | `master` |
+| `Scope` | Yes | Text | Logical module for resource | `master`, `operation`, `accounts`, `report`, `system` | `master` |
 | `ParentResource` | Optional | Text | Points to a parent resource definition | Exact matched Name of another resource | `Products` |
 | `IsActive` | Yes | Boolean | Enables/disables resource at runtime | `TRUE` / `FALSE` | `TRUE` |
 | `FileID` | Yes | Text | Spreadsheet ID where sheet exists | Google Sheet file id | `1AbC...xyz` |
 | `SheetName` | Yes | Text | Tab name inside target file | Exact tab name | `Products` |
 | `CodePrefix` | Optional | Text | Prefix for generated `Code` | Any uppercase prefix | `LLMP` |
 | `CodeSequenceLength` | Optional | Number | Digits for sequence part | Positive integer | `5` |
-| `SkipColumns` | Optional | Number | Reserved offset for custom handlers | Integer (usually `0`) | `0` |
 | `Audit` | Yes | Boolean | If true, backend manages audit fields | `TRUE` / `FALSE` | `TRUE` |
 | `RequiredHeaders` | Optional | CSV Text | Fields required on create/update | Comma-separated header names | `Name,SKU` |
 | `UniqueHeaders` | Optional | CSV Text | Single-column uniqueness checks | Comma-separated header names | `SKU` |
-| `UniqueCompositeHeaders` | Optional | Text | Multi-column uniqueness checks | `A+B;C+D` or JSON array | `WarehouseCode+LocationCode` |
+| `UniqueCompositeHeaders` | Optional | Text | Multi-column uniqueness checks | `A+B;C+D` or JSON array | `WarehouseCode+StorageName` |
 | `DefaultValues` | Optional | JSON Text | Default values used by backend | JSON object | `{"Status":"Active","Country":"UAE"}` |
 | `RecordAccessPolicy` | Yes | Text | Row-level authorization model | `ALL`, `OWNER`, `OWNER_GROUP`, `OWNER_AND_UPLINE` | `OWNER_AND_UPLINE` |
 | `OwnerUserField` | Optional | Text | Header used as owner column | Usually `CreatedBy` | `CreatedBy` |
@@ -52,3 +51,50 @@ This document explains each `APP > Resources` column, what to fill, and common v
   - `Update` -> update permission
   - `Delete` -> delete permission
 - Additional actions (like `Approve`) are checked from same `Actions` list.
+
+## Action & Progress Tracking Columns Convention
+
+When a resource has `AdditionalActions` or uses a `Progress` state machine, the **sheet must include tracking columns** for each progress state or action. This provides a full audit trail of who did what and when.
+
+### Column Naming Pattern
+For each progress state `<STATE>`, add these columns to the sheet schema (in the setup script):
+- `Progress<STATE>At` — Timestamp when the action/transition happened
+- `Progress<STATE>By` — UserID who performed the action
+- `Progress<STATE>Comment` — Optional comment/reason for the action
+
+### Example: PurchaseRequisitions
+Progress states: `PENDING → VERIFIED → APPROVED → REJECTED`
+
+Required tracking columns:
+```
+ProgressPENDINGAt, ProgressPENDINGBy, ProgressPENDINGComment
+ProgressVERIFIEDAt, ProgressVERIFIEDBy, ProgressVERIFIEDComment
+ProgressAPPROVEDAt, ProgressAPPROVEDBy, ProgressAPPROVEDComment
+ProgressREJECTEDAt, ProgressREJECTEDBy, ProgressREJECTEDComment
+```
+
+### When to Apply
+| Condition | Action |
+|---|---|
+| Resource has `Progress` column with a state machine | Add tracking columns for **every** defined progress state |
+| Resource has `AdditionalActions` like `Approve,Reject` | Add tracking columns for each action (`ApprovedAt/By/Comment`, `RejectedAt/By/Comment`) |
+| Resource has only basic CRUD + `Status` (Active/Inactive) | No extra tracking columns needed — standard audit columns (`CreatedAt`, `UpdatedAt`, etc.) suffice |
+
+### Checklist for Adding a New Progress State or Action
+1. Add the new state/action value to the `progressValidation` array in the setup script.
+2. Add the corresponding `Progress<STATE>At`, `Progress<STATE>By`, `Progress<STATE>Comment` columns to the `headers` array.
+3. Add column widths for the new columns.
+4. Update `RESOURCE_COLUMNS_GUIDE.md` and the relevant sheet structure doc.
+5. Run the setup/refactor function to apply the new schema.
+
+### Resources That Need This Pattern (Current)
+| Resource | Progress States | AdditionalActions |
+|---|---|---|
+| Procurements | INITIATED → PR_CREATED → ... → COMPLETED/CANCELLED | — |
+| PurchaseRequisitions | PENDING → VERIFIED → APPROVED/REJECTED | Approve, Reject, Verify |
+| RFQs | DRAFT → PUBLISHED → CLOSED/CANCELLED | Publish, Close |
+| RFQSuppliers | SENT → QUOTATION_RECEIVED → APPROVED/REJECTED | — |
+| PurchaseOrders | DRAFT → APPROVED → SENT_TO_SUPPLIER → ACKNOWLEDGED → ACCEPTED/CANCELLED | Approve, Send, Acknowledge, Accept |
+| Shipments | Draft → InTransit → Arrived → Cleared → Received | Submit, Dispatch, Arrive, Clear |
+| PortClearance | Pending → InProgress → Cleared/Held | Submit, Hold, Clear |
+| GoodsReceipts | Draft → Verified → Accepted | Verify, Accept |

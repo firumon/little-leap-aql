@@ -10,7 +10,7 @@ For every new context window, the agent should:
 1. Read `AGENTS.md` first.
 2. Read this file (`Documents/DUAL_AGENT_PROTOCOL.md`).
 3. Read `Documents/AI_COLLABORATION_PROTOCOL.md` and `Documents/CONTEXT_HANDOFF.md`.
-4. Check `Documents/PLANS/` for active plans before starting implementation.
+4. Check `PLANS/` for active plans before starting implementation.
 
 ## Communication Channel
 Since agents cannot communicate directly, the shared medium is the repository itself:
@@ -22,7 +22,7 @@ Since agents cannot communicate directly, the shared medium is the repository it
 
 ### Phase 1: Planning (Brain Agent)
 1. User describes the requirement to the Brain Agent.
-2. Brain Agent creates a detailed **Implementation Plan** in `Documents/PLANS/` using `Documents/PLANS/_TEMPLATE.md`.
+2. Brain Agent creates a detailed **Implementation Plan** in `PLANS/` using `PLANS/_TEMPLATE.md`.
 3. The plan file includes:
    - Context and objective
    - Step-by-step instructions (clear enough for direct execution)
@@ -32,7 +32,7 @@ Since agents cannot communicate directly, the shared medium is the repository it
    - Acceptance criteria
    - Required documentation updates
 4. After finalizing the plan, Brain Agent must provide a direct handoff prompt with the exact file name:
-   - `Execution Agent, read Documents/PLANS/<plan-file>.md and execute it end-to-end.`
+   - `Execution Agent, read PLANS/<plan-file>.md and execute it end-to-end.`
 
 ### Phase 2: Execution (Execution Agent)
 1. User instructs the Execution Agent to execute a specific plan file.
@@ -101,7 +101,7 @@ Since agents cannot communicate directly, the shared medium is the repository it
 3. Capture business rules in docs before finalizing the plan.
 4. Keep plans small enough for one execution session.
 5. Always include documentation update instructions.
-6. Always create plans from `Documents/PLANS/_TEMPLATE.md`.
+6. Always create plans from `PLANS/_TEMPLATE.md`.
 7. Always end planning output with the execution handoff prompt containing the exact plan filename.
 
 ## Rules for Execution Agent
@@ -127,5 +127,5 @@ Since agents cannot communicate directly, the shared medium is the repository it
 | `Documents/AI_COLLABORATION_PROTOCOL.md` | Sync rules for code/sheets/docs |
 | `Documents/RESOURCE_COLUMNS_GUIDE.md` | `APP.Resources` column definitions |
 | `Documents/SCHEMA_REFACTORING_GUIDE.md` | Safe schema change workflow |
-| `Documents/PLANS/*.md` | Active and completed implementation plans |
+| `PLANS/*.md` | Active and completed implementation plans |
 | `.agents/skills/little-leap-expert/SKILL.md` | Project skill workflow |

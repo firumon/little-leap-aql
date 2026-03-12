@@ -61,7 +61,7 @@ Remove duplicate API toasts, protect loading flags, and simplify the frontend to
   - Set `**Status**` to `COMPLETED` (or `BLOCKED`) at the end.
   - Set `**Executed By**` with actual executor identity when done.
 - [x] Update plan template to include a brief “Status Update Discipline” note for executors.
-**Files**: `Documents/DUAL_AGENT_PROTOCOL.md`, `Documents/PLANS/_TEMPLATE.md`
+**Files**: `Documents/DUAL_AGENT_PROTOCOL.md`, `PLANS/_TEMPLATE.md`
 **Pattern**: Existing phase/rule sections in dual-agent protocol.
 **Rule**: Execution is not complete without final plan metadata state update.
 
@@ -76,7 +76,7 @@ Remove duplicate API toasts, protect loading flags, and simplify the frontend to
 
 ## Documentation Updates Required
 - [x] Update `Documents/DUAL_AGENT_PROTOCOL.md` with explicit plan status transition responsibilities for Execution Agent.
-- [x] Update `Documents/PLANS/_TEMPLATE.md` to reinforce execution metadata update behavior.
+- [x] Update `PLANS/_TEMPLATE.md` to reinforce execution metadata update behavior.
 - [x] Update `Documents/FRONTENT_README.md` to remove references to deleted test pages/routes.
 - [x] Update `Documents/CONTEXT_HANDOFF.md` with new active-page baseline.
 - [x] Update `Documents/README.md` if route/page status summary now differs.

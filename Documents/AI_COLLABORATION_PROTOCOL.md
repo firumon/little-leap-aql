@@ -57,7 +57,7 @@ This project uses two AI roles with distinct responsibilities:
 - **Execution Agent** - Executes plans step-by-step (code, terminal commands, browser actions, git operations, and doc updates).
 
 Communication happens through repository artifacts:
-- Brain Agent writes **Implementation Plans** to `Documents/PLANS/`.
+- Brain Agent writes **Implementation Plans** to `PLANS/`.
 - Execution Agent reads plans, executes, marks progress, and updates docs.
 - Brain Agent reviews results and creates follow-up plans if needed.
 
@@ -65,6 +65,6 @@ Communication happens through repository artifacts:
 For each new context window, agents must follow:
 1. Read `AGENTS.md` first.
 2. Apply `Documents/DUAL_AGENT_PROTOCOL.md`.
-3. Check `Documents/PLANS/` before starting implementation work.
-4. Create new plans from `Documents/PLANS/_TEMPLATE.md`.
+3. Check `PLANS/` before starting implementation work.
+4. Create new plans from `PLANS/_TEMPLATE.md`.
 5. After planning, provide the execution handoff prompt with the exact plan filename.

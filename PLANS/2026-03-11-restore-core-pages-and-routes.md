@@ -72,7 +72,7 @@ Correct only the mistaken deletion scope by restoring required pages and route a
 - [x] Update docs to reflect corrected retained page set and route structure.
 - [x] Update handoff summary to state this correction explicitly.
 - [x] Mark this plan metadata and checkboxes accurately (`IN_PROGRESS` -> `COMPLETED/BLOCKED`) per protocol.
-**Files**: `Documents/FRONTENT_README.md`, `Documents/CONTEXT_HANDOFF.md`, `Documents/README.md` (if route/page summary changed), `Documents/PLANS/2026-03-11-restore-core-pages-and-routes.md`
+**Files**: `Documents/FRONTENT_README.md`, `Documents/CONTEXT_HANDOFF.md`, `Documents/README.md` (if route/page summary changed), `PLANS/2026-03-11-restore-core-pages-and-routes.md`
 **Pattern**: Documentation discipline and execution status discipline from dual-agent protocol.
 **Rule**: Repo docs must match actual active frontend structure.
 

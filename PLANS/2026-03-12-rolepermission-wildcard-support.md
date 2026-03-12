@@ -53,7 +53,7 @@ Implement wildcard (`*`) support in role-permission resolution so RolePermission
 - [ ] `[!]` Issue/blocker:
 
 ### Files Actually Changed
-- `Documents/PLANS/2026-03-12-rolepermission-wildcard-support.md`
+- `PLANS/2026-03-12-rolepermission-wildcard-support.md`
 - `GAS/resourceRegistry.gs`
 
 ### Validation Performed

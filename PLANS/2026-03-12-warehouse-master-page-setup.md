@@ -40,7 +40,7 @@ Ensure Warehouse page is set up as a Master entity using the same resource-drive
 **Rule**: Page visibility and API access must be permission-driven.
 
 ## Documentation Updates Required
-- [x] Add this execution plan record in `Documents/PLANS/` for handoff traceability.
+- [x] Add this execution plan record in `PLANS/` for handoff traceability.
 - [x] No additional architecture or schema doc changes required (Warehouse setup already aligned in current docs/code).
 - [x] `Documents/CONTEXT_HANDOFF.md` update not required (no architecture/process change introduced).
 
@@ -61,7 +61,7 @@ Ensure Warehouse page is set up as a Master entity using the same resource-drive
 - [x] `[!]` Issue/blocker: None.
 
 ### Files Actually Changed
-- `Documents/PLANS/2026-03-12-warehouse-master-page-setup.md`
+- `PLANS/2026-03-12-warehouse-master-page-setup.md`
 
 ### Validation Performed
 - [x] Manual codebase verification completed.

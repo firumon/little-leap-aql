@@ -7,11 +7,11 @@ Tell the AI agent:
 1. Read `Documents/CONTEXT_HANDOFF.md` first.
 2. Read `Documents/AI_COLLABORATION_PROTOCOL.md` and `Documents/README.md`.
 3. **Read `Documents/DUAL_AGENT_PROTOCOL.md`** - this project uses a dual-agent model:
-   - **Brain Agent:** Creates implementation plans in `Documents/PLANS/`.
-   - **Execution Agent:** Executes approved plans from `Documents/PLANS/` (code, terminal, git, docs).
-4. Check `Documents/PLANS/` for any active or pending implementation plans.
-5. For any new plan, create it from `Documents/PLANS/_TEMPLATE.md`.
-6. After planning, provide handoff prompt: `Execution Agent, read Documents/PLANS/<plan-file>.md and execute it end-to-end.`
+   - **Brain Agent:** Creates implementation plans in `PLANS/`.
+   - **Execution Agent:** Executes approved plans from `PLANS/` (code, terminal, git, docs).
+4. Check `PLANS/` for any active or pending implementation plans.
+5. For any new plan, create it from `PLANS/_TEMPLATE.md`.
+6. After planning, provide handoff prompt: `Execution Agent, read PLANS/<plan-file>.md and execute it end-to-end.`
 7. For resource metadata tasks, read `Documents/RESOURCE_COLUMNS_GUIDE.md`.
 8. Continue work from current implementation status in this handoff.
 
@@ -322,7 +322,7 @@ When setup scripts are added/changed:
 - Docs index: `Documents/README.md`
 - Collaboration rules: `Documents/AI_COLLABORATION_PROTOCOL.md`
 - **Dual-agent protocol: `Documents/DUAL_AGENT_PROTOCOL.md`**
-- **Active implementation plans: `Documents/PLANS/`**
+- **Active implementation plans: `PLANS/`**
 - Resource architecture: `Documents/RESOURCE_REGISTRY_ARCHITECTURE.md`
 - Resource column definitions: `Documents/RESOURCE_COLUMNS_GUIDE.md`
 - Technical details: `Documents/TECHNICAL_SPECIFICATIONS.md`

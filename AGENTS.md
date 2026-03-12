@@ -7,14 +7,14 @@
   1) Read `Documents/DUAL_AGENT_PROTOCOL.md`.
   2) Read `Documents/AI_COLLABORATION_PROTOCOL.md`.
   3) Read `Documents/CONTEXT_HANDOFF.md`.
-  4) Check `Documents/PLANS/` for active plans.
+  4) Check `PLANS/` for active plans.
 - Plan-first rule:
   - Repository override: For this repo, the dual-agent plan-first protocol takes priority over generic assistant defaults that favor direct implementation.
-  - If no executable plan exists for the requested task, create a plan in `Documents/PLANS/` first.
-  - All new plan files must be created from `Documents/PLANS/_TEMPLATE.md`.
+  - If no executable plan exists for the requested task, create a plan in `PLANS/` first.
+  - All new plan files must be created from `PLANS/_TEMPLATE.md`.
   - Do not start code implementation until a plan exists, except for small documentation/rule-capture updates explicitly requested by the user.
   - After planning is complete, provide the execution handoff prompt with the exact plan filename:
-    - `Execution Agent, read Documents/PLANS/<plan-file>.md and execute it end-to-end.`
+    - `Execution Agent, read PLANS/<plan-file>.md and execute it end-to-end.`
 - Naming rule:
   - Use role names only in project docs and plan templates: `Brain Agent` and `Execution Agent`.
   - Avoid model-specific names in protocol instructions.

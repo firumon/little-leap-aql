@@ -198,6 +198,7 @@ function getRoleResourceAccess(roleId, options) {
   const includeUiConfig = !(options && options.includeUiConfig === false);
   const scopeFilter = options && options.scope ? normalizeResourceScope(options.scope) : '';
   const permissionsContext = getRolePermissionsContext();
+  const wildcardTargets = getAllConfiguredResourceNames();
   const resourceMap = {};
 
   for (let i = 1; i < permissionsContext.values.length; i++) {
@@ -205,34 +206,42 @@ function getRoleResourceAccess(roleId, options) {
     const rowRoleId = (row[permissionsContext.idx.RoleID] || '').toString().trim();
     if (roleIds.indexOf(rowRoleId) === -1) continue;
 
-    const resourceName = (row[permissionsContext.idx.Resource] || '').toString().trim();
-    if (!resourceName) continue;
+    const rowResource = (row[permissionsContext.idx.Resource] || '').toString().trim();
+    if (!rowResource) continue;
+
+    const targetResources = isWildcardValue(rowResource) ? wildcardTargets : [rowResource];
+    if (!targetResources.length) continue;
 
     const actionList = parseStringList(readOptionalCell(row, permissionsContext.idx.Actions, ''));
-    const permissionSet = buildPermissionSetFromActions(actionList);
+    for (let t = 0; t < targetResources.length; t++) {
+      const resourceName = targetResources[t];
 
-    const hasAnyPermission = permissionSet.canRead || permissionSet.canWrite || permissionSet.canUpdate || permissionSet.canDelete;
-    if (!hasAnyPermission) continue;
-
-    if (!resourceMap[resourceName]) {
-      const entry = buildAuthorizedResourceEntry(resourceName, {
-        includeHeaders: includeHeaders,
-        includeUiConfig: includeUiConfig,
-        scopeFilter: scopeFilter
-      });
-      if (!entry) continue;
-      resourceMap[resourceName] = entry;
-      if (includeUiConfig) {
-        resourceMap[resourceName].allowedActions = [];
+      if (!resourceMap[resourceName]) {
+        const entry = buildAuthorizedResourceEntry(resourceName, {
+          includeHeaders: includeHeaders,
+          includeUiConfig: includeUiConfig,
+          scopeFilter: scopeFilter
+        });
+        if (!entry) continue;
+        resourceMap[resourceName] = entry;
+        if (includeUiConfig) {
+          resourceMap[resourceName].allowedActions = [];
+        }
       }
-    }
 
-    resourceMap[resourceName].permissions.canRead = resourceMap[resourceName].permissions.canRead || permissionSet.canRead;
-    resourceMap[resourceName].permissions.canWrite = resourceMap[resourceName].permissions.canWrite || permissionSet.canWrite;
-    resourceMap[resourceName].permissions.canUpdate = resourceMap[resourceName].permissions.canUpdate || permissionSet.canUpdate;
-    resourceMap[resourceName].permissions.canDelete = resourceMap[resourceName].permissions.canDelete || permissionSet.canDelete;
-    if (permissionSet.actions && permissionSet.actions.length) {
-      resourceMap[resourceName].allowedActions = mergeStringLists(resourceMap[resourceName].allowedActions, permissionSet.actions);
+      const permissionSet = buildPermissionSetFromActions(actionList, {
+        resourceActions: includeUiConfig ? resourceMap[resourceName].actions : []
+      });
+      const hasAnyPermission = permissionSet.canRead || permissionSet.canWrite || permissionSet.canUpdate || permissionSet.canDelete;
+      if (!hasAnyPermission) continue;
+
+      resourceMap[resourceName].permissions.canRead = resourceMap[resourceName].permissions.canRead || permissionSet.canRead;
+      resourceMap[resourceName].permissions.canWrite = resourceMap[resourceName].permissions.canWrite || permissionSet.canWrite;
+      resourceMap[resourceName].permissions.canUpdate = resourceMap[resourceName].permissions.canUpdate || permissionSet.canUpdate;
+      resourceMap[resourceName].permissions.canDelete = resourceMap[resourceName].permissions.canDelete || permissionSet.canDelete;
+      if (permissionSet.actions && permissionSet.actions.length) {
+        resourceMap[resourceName].allowedActions = mergeStringLists(resourceMap[resourceName].allowedActions, permissionSet.actions);
+      }
     }
   }
 
@@ -333,7 +342,10 @@ function getRolePermissionForResource(roleId, resourceName) {
     const rowRoleId = (row[permissionsContext.idx.RoleID] || '').toString().trim();
     const rowResource = (row[permissionsContext.idx.Resource] || '').toString().trim();
 
-    if (normalizedRoleIds.indexOf(rowRoleId) === -1 || rowResource !== normalizedResourceName) {
+    if (normalizedRoleIds.indexOf(rowRoleId) === -1) {
+      continue;
+    }
+    if (!isWildcardValue(rowResource) && rowResource !== normalizedResourceName) {
       continue;
     }
 
@@ -366,19 +378,98 @@ function hasRoleActionPermission(roleId, resourceName, actionName) {
     const row = permissionsContext.values[i];
     const rowRoleId = (row[permissionsContext.idx.RoleID] || '').toString().trim();
     const rowResource = (row[permissionsContext.idx.Resource] || '').toString().trim();
-    if (roleIds.indexOf(rowRoleId) === -1 || rowResource !== resourceName) {
+    if (roleIds.indexOf(rowRoleId) === -1) {
+      continue;
+    }
+    if (!isWildcardValue(rowResource) && rowResource !== resourceName) {
       continue;
     }
 
-    const actions = parseStringList(readOptionalCell(row, permissionsContext.idx.Actions, '')).map(function(action) {
-      return normalizeActionName(action);
-    });
-    if (actions.indexOf(normalizedAction) !== -1) {
+    const permissionSet = buildPermissionSetFromActions(
+      parseStringList(readOptionalCell(row, permissionsContext.idx.Actions, '')),
+      { resourceActions: getResourceAdditionalActions(resourceName) }
+    );
+    if (permissionSet.actions.indexOf(normalizedAction) !== -1) {
+      return true;
+    }
+    if (normalizedAction === 'CREATE' && permissionSet.canWrite) {
+      return true;
+    }
+    if (normalizedAction === 'WRITE' && permissionSet.canWrite) {
+      return true;
+    }
+    if (normalizedAction === 'READ' && permissionSet.canRead) {
+      return true;
+    }
+    if (normalizedAction === 'UPDATE' && permissionSet.canUpdate) {
+      return true;
+    }
+    if (normalizedAction === 'DELETE' && permissionSet.canDelete) {
       return true;
     }
   }
 
   return false;
+}
+
+function getResourceAdditionalActions(resourceName) {
+  try {
+    const config = getResourceConfig(resourceName);
+    return Array.isArray(config.additionalActions) ? config.additionalActions : [];
+  } catch (err) {
+    return [];
+  }
+}
+
+function getAllConfiguredResourceNames() {
+  const registry = getResourceRegistryContext();
+  const names = [];
+  const seen = {};
+
+  for (let i = 1; i < registry.values.length; i++) {
+    const row = registry.values[i];
+    const name = (row[registry.idx.Name] || '').toString().trim();
+    if (!name) continue;
+    const key = name.toLowerCase();
+    if (seen[key]) continue;
+    seen[key] = true;
+    names.push(name);
+  }
+
+  return names;
+}
+
+function isWildcardValue(value) {
+  return (value || '').toString().trim() === '*';
+}
+
+function buildPermissionSetFromActions(actions, options) {
+  const normalizedActions = (actions || []).map(function(action) {
+    return normalizeActionName(action);
+  }).filter(function(action) {
+    return !!action;
+  });
+  const hasAllActions = normalizedActions.indexOf('*') !== -1;
+  const resourceActions = options && Array.isArray(options.resourceActions)
+    ? options.resourceActions.map(function(action) {
+      return normalizeActionName(action);
+    }).filter(function(action) {
+      return !!action;
+    })
+    : [];
+  const allActionsSet = mergeStringLists(
+    ['READ', 'CREATE', 'WRITE', 'UPDATE', 'DELETE'],
+    resourceActions
+  );
+  const effectiveActions = hasAllActions ? allActionsSet : normalizedActions;
+
+  return {
+    canRead: hasAllActions || effectiveActions.indexOf('READ') !== -1,
+    canWrite: hasAllActions || effectiveActions.indexOf('WRITE') !== -1 || effectiveActions.indexOf('CREATE') !== -1,
+    canUpdate: hasAllActions || effectiveActions.indexOf('UPDATE') !== -1,
+    canDelete: hasAllActions || effectiveActions.indexOf('DELETE') !== -1,
+    actions: effectiveActions
+  };
 }
 
 function normalizeRoleIds(roleIdsOrSingle) {
@@ -406,20 +497,6 @@ function mergeStringLists(currentList, incomingList) {
     if (key) set[key] = true;
   });
   return Object.keys(set);
-}
-
-function buildPermissionSetFromActions(actions) {
-  const normalizedActions = (actions || []).map(function(action) {
-    return normalizeActionName(action);
-  });
-
-  return {
-    canRead: normalizedActions.indexOf('READ') !== -1,
-    canWrite: normalizedActions.indexOf('WRITE') !== -1 || normalizedActions.indexOf('CREATE') !== -1,
-    canUpdate: normalizedActions.indexOf('UPDATE') !== -1,
-    canDelete: normalizedActions.indexOf('DELETE') !== -1,
-    actions: normalizedActions
-  };
 }
 
 function normalizeActionName(value) {

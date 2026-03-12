@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { callGasApi } from 'src/services/gasApi'
-import { setAuthorizedResources } from 'src/utils/db'
+import { clearAllClientStorage, setAuthorizedResources } from 'src/utils/db'
 
 export const useAuthStore = defineStore('auth', () => {
   const router = useRouter()
@@ -150,18 +150,16 @@ export const useAuthStore = defineStore('auth', () => {
     return { success: true }
   }
 
-  function logout() {
+  async function logout() {
     user.value = null
     token.value = null
     resources.value = []
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    localStorage.removeItem('resources')
 
     notifyServiceWorker(null)
+    await clearAllClientStorage()
 
     if (router) {
-      router.push('/login')
+      await router.push('/login')
     } else {
       // Fallback if router is not available (e.g. called outside component setup)
       window.location.href = '#/login'

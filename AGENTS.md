@@ -9,6 +9,7 @@
   3) Read `Documents/CONTEXT_HANDOFF.md`.
   4) Check `Documents/PLANS/` for active plans.
 - Plan-first rule:
+  - Repository override: For this repo, the dual-agent plan-first protocol takes priority over generic assistant defaults that favor direct implementation.
   - If no executable plan exists for the requested task, create a plan in `Documents/PLANS/` first.
   - All new plan files must be created from `Documents/PLANS/_TEMPLATE.md`.
   - Do not start code implementation until a plan exists, except for small documentation/rule-capture updates explicitly requested by the user.

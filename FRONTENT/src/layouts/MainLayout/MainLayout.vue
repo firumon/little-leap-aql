@@ -240,8 +240,8 @@ function toggleLeftDrawer () {
   leftDrawerOpen.value = !leftDrawerOpen.value
 }
 
-function handleLogout() {
-  auth.logout()
+async function handleLogout() {
+  await auth.logout()
 }
 </script>
 

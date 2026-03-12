@@ -162,3 +162,65 @@ export async function getResourceRows(resource, options = {}) {
 
     return filtered.filter((row) => (row[statusIndex] || '').toString().trim() === 'Active');
 }
+
+async function deleteIndexedDbByName(databaseName) {
+    if (!databaseName || typeof indexedDB === 'undefined') return false;
+    return new Promise((resolve) => {
+        try {
+            const request = indexedDB.deleteDatabase(databaseName);
+            request.onsuccess = () => resolve(true);
+            request.onerror = () => resolve(false);
+            request.onblocked = () => resolve(false);
+        } catch (error) {
+            resolve(false);
+        }
+    });
+}
+
+export async function clearAllClientStorage() {
+    if (typeof window === 'undefined') {
+        return;
+    }
+
+    try {
+        const db = await dbPromise;
+        db.close();
+    } catch (error) {
+        // no-op
+    }
+
+    const databaseNames = [];
+    if (typeof indexedDB !== 'undefined') {
+        if (typeof indexedDB.databases === 'function') {
+            try {
+                const databases = await indexedDB.databases();
+                (databases || []).forEach((entry) => {
+                    const name = (entry?.name || '').toString().trim();
+                    if (name) {
+                        databaseNames.push(name);
+                    }
+                });
+            } catch (error) {
+                // no-op
+            }
+        }
+
+        if (!databaseNames.length) {
+            databaseNames.push(DB_NAME);
+        }
+
+        const seen = {};
+        for (const name of databaseNames) {
+            const key = name.toLowerCase();
+            if (seen[key]) continue;
+            seen[key] = true;
+            await deleteIndexedDbByName(name);
+        }
+    }
+
+    try {
+        localStorage.clear();
+    } catch (error) {
+        // no-op
+    }
+}

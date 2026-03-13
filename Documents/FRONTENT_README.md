@@ -95,14 +95,14 @@ Implemented reusable frontend module for all configured masters:
 - `src/stores/products.js` (aligned to shared service)
 
 Configured route:
-- `/masters/:resourceSlug` (resource resolved via authorized metadata + `ui.routePath`)
+- `/masters/:resourceSlug` (Dynamically routed via `MasterIndexPage.vue`)
 
-Capabilities:
-- Shared list/create/update workflow for all configured master resources
-- Include inactive toggle
-- IDB-backed incremental sync with compact payloads (`rows` array format)
-- Role-based master navigation visibility (read-permission driven)
-- Route-level resource guard for unauthorized direct URL access
+### Discovery Pattern (Custom vs. Generic UI)
+The master module supports **Implicit Global Resolution** for UI:
+- **Generic Fallback**: `MasterEntityPage.vue` provides a metadata-driven UI for any resource.
+- **Custom Overrides**: By creating a file named `{EntityName}Page.vue` in `src/pages/Masters/`, the system automatically bypasses the generic page and loads the custom implementation.
+- **Benefits**: This allows starting with zero-code generic management and progressively adding custom interfaces (grids, charts, etc.) only where needed.
+- **Note**: Custom pages are encouraged to import and embed `MasterEntityPage` for standard CRUD capabilities.
 
 Backend actions consumed:
 - Preferred generic verbs with scope:

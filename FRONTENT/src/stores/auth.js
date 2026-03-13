@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { callGasApi } from 'src/services/gasApi'
-import { clearAllClientStorage, setAuthorizedResources } from 'src/utils/db'
+import { clearAllClientStorage, setAuthorizedResources, reinitializeDB } from 'src/utils/db'
 
 export const useAuthStore = defineStore('auth', () => {
   const router = useRouter()
@@ -12,6 +12,7 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('token') || null)
   const resources = ref(JSON.parse(localStorage.getItem('resources')) || [])
   const loading = ref(false)
+  const isGlobalSyncing = ref(false)
 
   // Getters
   const isAuthenticated = computed(() => !!token.value)
@@ -44,6 +45,14 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  function closeDBInServiceWorker() {
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({
+        type: 'CLOSE_DB'
+      })
+    }
+  }
+
   async function callAuthApi(action, payload = {}, options = {}) {
     return callGasApi(action, payload, {
       ...options,
@@ -66,11 +75,24 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.setItem('token', data.token)
         persistUser()
         persistResources()
-        // IndexedDB persistence should not block login navigation.
-        setAuthorizedResources(resources.value).catch(() => {})
 
-        // Notify Service Worker for token injection
+        // Sync token to HW if possible
         notifyServiceWorker(data.token)
+
+        // Background tasks for IndexedDB
+        // We don't await these to prevent login from hanging if IDB is slow
+        setAuthorizedResources(resources.value).catch(err => console.warn('IDB sync error:', err))
+        reinitializeDB().catch(err => console.warn('DB init error:', err))
+
+        isGlobalSyncing.value = true
+        import('src/services/masterRecords')
+          .then(({ syncAllMasterResources }) => syncAllMasterResources())
+          .catch((err) => {
+            console.warn('Global master sync error:', err)
+          })
+          .finally(() => {
+            isGlobalSyncing.value = false
+          })
 
         return { success: true }
       }
@@ -151,18 +173,26 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function logout() {
+    // 1. Clear in-memory state first so UI reacts immediately
     user.value = null
     token.value = null
     resources.value = []
+    isGlobalSyncing.value = false
 
-    notifyServiceWorker(null)
-    await clearAllClientStorage()
-
+    // 2. Perform navigation as soon as possible
     if (router) {
-      await router.push('/login')
+      router.push('/login').catch(() => {})
     } else {
-      // Fallback if router is not available (e.g. called outside component setup)
-      window.location.href = '#/login'
+      window.location.hash = '/login'
+    }
+
+    // 3. Cleanup storage in background
+    try {
+      notifyServiceWorker(null)
+      closeDBInServiceWorker()
+      await clearAllClientStorage()
+    } catch (e) {
+      console.warn('Logout cleanup error:', e)
     }
   }
 
@@ -172,6 +202,7 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     resources,
     loading,
+    isGlobalSyncing,
 
     // Getters
     isAuthenticated,

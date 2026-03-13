@@ -68,6 +68,8 @@ graph TD
 - `FRONTENT/src/stores/auth.js`
   - Stores `token`, `user`, and `resources` from login response.
   - Persists auth data to local storage.
+  - Triggers non-blocking global master eager sync after successful login (`syncAllMasterResources`).
+  - Exposes `isGlobalSyncing` state for optional global sync indicators.
 - `FRONTENT/src/layouts/MainLayout/MainLayout.vue`
   - Builds sidebar from `resources[].ui`.
   - Shows only resources with `permissions.canRead === true`.
@@ -78,6 +80,7 @@ graph TD
   - Generic master page driven by authorized resource metadata.
 - `FRONTENT/src/services/masterRecords.js`
   - Uses cached headers and incremental sync for master resources.
+  - Supports batched eager sync across all authorized master resources using one `getMulti` request (`action=get`, `scope=master`, `resources[]`).
 - `FRONTENT/src/utils/db.js`
   - IDB stores: `resource-meta`, `resource-records`, API cache and sync queue.
 - `Service Worker (sw.js)`
@@ -159,3 +162,11 @@ Frontend expects this shape from `action=login`:
 3. `masterApi.gs` checks resource-level permission + record-level policy + access-region scope.
 4. Target file/sheet is resolved dynamically via `resourceRegistry.gs`.
 5. Response returns compact `rows` and `meta.lastSyncAt` for incremental merge.
+
+## Request Flow (Post-Login Eager Master Sync)
+1. Login succeeds and auth state/resources are persisted.
+2. Frontend starts `syncAllMasterResources()` in background without blocking navigation/UI.
+3. Frontend sends one batched request: `{ action: "get", scope: "master", resources: [...], lastUpdatedAtByResource: {...} }`.
+4. `masterApi.gs` dispatches internal per-resource reads with each resource cursor while still enforcing role, record policy, and `AccessRegion` filtering.
+5. Frontend upserts deltas into IndexedDB (`resource-records`) and updates per-resource cursors in `resource-meta`.
+6. Subsequent master page loads paint instantly from local cache and then continue normal incremental sync behavior.

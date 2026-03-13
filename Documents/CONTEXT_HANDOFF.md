@@ -60,6 +60,7 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
 
 ## 6) Current Implementation Status
 ### Completed
+- **Unified Master UI**: Rolled back the Master Entity Page to a standard table-based UI to ensure data visibility and resolve UI duplication issues, while maintaining the `v-if` guard for stability.
 - Standardized Frontend UX & PWA Data Contract (Pre-Warehouse):
   - Enforced Quasar-First UI policy across all components.
   - Centralized API Request UX in `callGasApi`: standardizes Loading states and success/error Notifications without requiring manual ad-hoc handling in Vue components.
@@ -113,7 +114,9 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - `app_normalizeSheetSchema` now clears stale data validations before header rebuild to avoid validation/range drift after schema changes.
   - Required reading: `Documents/SCHEMA_REFACTORING_GUIDE.md`
 - Frontend master module:
-  - Generic page: `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+  - Router Entry: `FRONTENT/src/pages/Masters/MasterIndexPage.vue`
+  - Generic implementation: `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+  - **Discovery Pattern**: System automatically loads `{EntityName}Page.vue` for route `/masters/:entity-slug` if the file exists, with a generic fallback.
   - Resource config map: `FRONTENT/src/config/masters.js`
   - Shared service: `FRONTENT/src/services/masterRecords.js`
   - Product store remains aligned: `FRONTENT/src/stores/products.js`
@@ -143,8 +146,18 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - Refactored the `auth` store and related stores to Vue 3 Composition API (Setup Store syntax) for better maintainability.
 - Frontend Hardening & Page Prune (Production Baseline Correction):
   - Removed obsolete operation test pages. The app officially operates on `LandingPage.vue`, `LoginPage.vue`, `DashboardIndex.vue`, `MasterEntityPage.vue` (generic rendering for any master list), and `ProfilePage.vue`.
-  - Protected interactive views against stuck loading states using `try/finally`.
+  - **IndexedDB & Performance Hardening**:
+    - Fixed critical `IDBTransaction` naming issues and stabilized Service Worker registration to prevent evaluation failures.
+    - Implemented dynamic IDB re-initialization: DB is explicitly closed on `logout` and recreated on next `login`.
+    - **Optimistic UI Updates**: All Master CRUD operations (Create/Update) now reflect in the UI immediately (<200ms) with background reconciliation.
+    - **Cache-First Instant Paint**: MasterEntityPage renders from IndexedDB cache immediately, then silently updates from server. Navigation between same-resource pages no longer wipes data.
+    - Added subtle pulsed sync indicator for non-blocking background operations.
   - Removed duplicate ad-hoc notification toasts; single API result mapping handled uniformly by `callGasApi`.
+- Global post-login eager master sync:
+  - `FRONTENT/src/services/masterRecords.js` now exposes `syncAllMasterResources()` for batched cache warmup.
+  - Auth login (`FRONTENT/src/stores/auth.js`) triggers this sync in background (non-blocking) immediately after successful login.
+  - Batch payload sends per-resource incremental cursors (`lastUpdatedAtByResource`) to `action=get` + `scope=master` + `resources[]`.
+  - `GAS/masterApi.gs` `handleMasterGetMultiRecords` now applies cursor per resource and keeps existing access/region policy enforcement via `handleMasterGetRecords`.
 
 ### Key behavior now
 - Code is generated in Apps Script (not by sheet formula).
@@ -168,9 +181,13 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - Request uses `lastUpdatedAt`.
   - Response uses `meta.lastSyncAt`.
   - Frontend merges delta rows into IndexedDB.
-  - Master pages are cache-first; revisits serve from IDB without API call when cache exists.
-  - Network sync runs on manual refresh (or initial empty cache).
-  - Products master data is also hydrated into Pinia for cross-page name/code lookups.
+  - Master pages are cache-first; revisits serve from IDB instantly without blocking UI.
+  - Optimistic UI: Create/Update operations close dialogs immediately and update local items while syncing in background.
+  - IDB Lifecycle: IndexedDB is completely purged on logout and recreated on login to ensure clean state and security across user sessions.
+- Eager cache warmup on login:
+  - One background `getMulti` request fetches all authorized master resources after login.
+  - Master pages opened after login usually render from IDB instantly without the first-page 10s wait.
+  - Auth store now exposes `isGlobalSyncing` for optional top-level sync indicators.
 - Audit timestamp contract:
   - `CreatedAt` and `UpdatedAt` are now stored as Unix epoch milliseconds (number).
   - `lastUpdatedAt` delta cursor should also use Unix epoch milliseconds.

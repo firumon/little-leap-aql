@@ -1,45 +1,63 @@
+import 'src/utils/idbCompat';
 import { openDB } from 'idb';
 
 const DB_NAME = 'little-leap-aql-db';
 const DB_VERSION = 2;
 
-export const dbPromise = openDB(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-        // Store for API responses used as a local cache
-        if (!db.objectStoreNames.contains('api-cache')) {
-            db.createObjectStore('api-cache', { keyPath: 'url' });
-        }
+let dbPromise = null;
 
-        // Store for pending mutations (POST/PUT/DELETE) that need to be synced
-        if (!db.objectStoreNames.contains('sync-queue')) {
-            db.createObjectStore('sync-queue', { keyPath: 'id', autoIncrement: true });
-        }
+export function reinitializeDB() {
+    // If we already have a promise and it's not null, return it to avoid duplicate open requests
+    if (dbPromise) return dbPromise;
 
-        // Generic store for application state/data
-        if (!db.objectStoreNames.contains('app-data')) {
-            db.createObjectStore('app-data');
+    dbPromise = openDB(DB_NAME, DB_VERSION, {
+        upgrade(db) {
+            console.log('[DB] Upgrading to version', DB_VERSION);
+            if (!db.objectStoreNames.contains('api-cache')) {
+                db.createObjectStore('api-cache', { keyPath: 'url' });
+            }
+            if (!db.objectStoreNames.contains('sync-queue')) {
+                db.createObjectStore('sync-queue', { keyPath: 'id', autoIncrement: true });
+            }
+            if (!db.objectStoreNames.contains('app-data')) {
+                db.createObjectStore('app-data');
+            }
+            if (!db.objectStoreNames.contains('resource-meta')) {
+                db.createObjectStore('resource-meta', { keyPath: 'resource' });
+            }
+            if (!db.objectStoreNames.contains('resource-records')) {
+                const store = db.createObjectStore('resource-records', { keyPath: 'id' });
+                store.createIndex('by-resource', 'resource', { unique: false });
+                store.createIndex('by-resource-updatedAt', ['resource', 'updatedAt'], { unique: false });
+            }
+        },
+        blocked() {
+            console.warn('[DB] Upgrade blocked by another connection');
+        },
+        blocking() {
+            console.warn('[DB] version change requested elsewhere, closing current connection...');
+            if (dbPromise) {
+                dbPromise.then(db => db.close()).catch(() => {});
+            }
+            dbPromise = null;
         }
+    });
+    return dbPromise;
+}
 
-        // Per-resource metadata such as headers and sync cursor
-        if (!db.objectStoreNames.contains('resource-meta')) {
-            db.createObjectStore('resource-meta', { keyPath: 'resource' });
-        }
-
-        // Per-resource row cache keyed by resource + business code
-        if (!db.objectStoreNames.contains('resource-records')) {
-            const store = db.createObjectStore('resource-records', { keyPath: 'id' });
-            store.createIndex('by-resource', 'resource', { unique: false });
-            store.createIndex('by-resource-updatedAt', ['resource', 'updatedAt'], { unique: false });
-        }
-    },
-});
+export async function ensureDB() {
+    if (!dbPromise) {
+        return reinitializeDB();
+    }
+    return dbPromise;
+}
 
 export async function getCache(url) {
-    return (await dbPromise).get('api-cache', url);
+    return (await ensureDB()).get('api-cache', url);
 }
 
 export async function setCache(url, data) {
-    return (await dbPromise).put('api-cache', {
+    return (await ensureDB()).put('api-cache', {
         url,
         data,
         timestamp: Date.now()
@@ -47,23 +65,23 @@ export async function setCache(url, data) {
 }
 
 export async function addToSyncQueue(requestData) {
-    return (await dbPromise).add('sync-queue', {
+    return (await ensureDB()).add('sync-queue', {
         ...requestData,
         timestamp: Date.now()
     });
 }
 
 export async function getSyncQueue() {
-    return (await dbPromise).getAll('sync-queue');
+    return (await ensureDB()).getAll('sync-queue');
 }
 
 export async function removeFromSyncQueue(id) {
-    return (await dbPromise).delete('sync-queue', id);
+    return (await ensureDB()).delete('sync-queue', id);
 }
 
 export async function setResourceMeta(resource, meta = {}) {
     if (!resource) return null;
-    const db = await dbPromise;
+    const db = await ensureDB();
     const current = await db.get('resource-meta', resource);
     return db.put('resource-meta', {
         ...(current || {}),
@@ -74,12 +92,12 @@ export async function setResourceMeta(resource, meta = {}) {
 
 export async function getResourceMeta(resource) {
     if (!resource) return null;
-    return (await dbPromise).get('resource-meta', resource);
+    return (await ensureDB()).get('resource-meta', resource);
 }
 
 export async function setAuthorizedResources(resources = []) {
-    const db = await dbPromise;
-    const tx = db.operation('resource-meta', 'readwrite');
+    const db = await ensureDB();
+    const tx = db.transaction('resource-meta', 'readwrite');
     for (const resource of resources) {
         const name = (resource?.name || '').toString().trim();
         if (!name) continue;
@@ -120,8 +138,8 @@ export async function upsertResourceRows(resource, headers = [], rows = []) {
     if (codeIndex === -1) return 0;
 
     const updatedAtIndex = headers.indexOf('UpdatedAt');
-    const db = await dbPromise;
-    const tx = db.operation('resource-records', 'readwrite');
+    const db = await ensureDB();
+    const tx = db.transaction('resource-records', 'readwrite');
     let affected = 0;
 
     for (const row of rows) {
@@ -149,8 +167,8 @@ export async function upsertResourceRows(resource, headers = [], rows = []) {
 export async function getResourceRows(resource, options = {}) {
     if (!resource) return [];
     const { includeInactive = true, statusIndex = -1 } = options;
-    const db = await dbPromise;
-    const tx = db.operation('resource-records', 'readonly');
+    const db = await ensureDB();
+    const tx = db.transaction('resource-records', 'readonly');
     const index = tx.store.index('by-resource');
     const allRows = await index.getAll(resource);
     await tx.done;
@@ -183,8 +201,20 @@ export async function clearAllClientStorage() {
     }
 
     try {
-        const db = await dbPromise;
-        db.close();
+        if (dbPromise) {
+            const db = await dbPromise.catch(() => null);
+            if (db && typeof db.close === 'function') {
+                db.close();
+            }
+        }
+    } catch (error) {
+        // no-op
+    }
+    dbPromise = null;
+
+    try {
+        localStorage.clear();
+        sessionStorage.clear();
     } catch (error) {
         // no-op
     }
@@ -214,13 +244,12 @@ export async function clearAllClientStorage() {
             const key = name.toLowerCase();
             if (seen[key]) continue;
             seen[key] = true;
-            await deleteIndexedDbByName(name);
+            try {
+                // Don't await forever, delete can be blocked
+                deleteIndexedDbByName(name);
+            } catch (e) {
+                // no-op
+            }
         }
-    }
-
-    try {
-        localStorage.clear();
-    } catch (error) {
-        // no-op
     }
 }

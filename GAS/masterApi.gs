@@ -53,6 +53,12 @@ function handleMasterGetMultiRecords(auth, payload) {
   const data = {};
   requestedResources.forEach(function (resourceName) {
     const singlePayload = cloneWithResource(payload, resourceName);
+    const cursor = resolveMultiResourceCursor(payload, resourceName);
+    if (cursor !== null && cursor !== undefined && cursor !== '') {
+      singlePayload.lastUpdatedAt = cursor;
+    } else {
+      delete singlePayload.lastUpdatedAt;
+    }
     data[resourceName] = handleMasterGetRecords(auth, singlePayload);
   });
 
@@ -61,7 +67,7 @@ function handleMasterGetMultiRecords(auth, payload) {
     data: data,
     meta: {
       resources: requestedResources,
-      lastSyncAt: new Date().toISOString()
+      lastSyncAt: Date.now()
     }
   };
 }
@@ -248,7 +254,7 @@ function buildMasterRowsResponse(auth, resourceName, resource, rows, lastUpdated
       sheetName: resource.config.sheetName,
       requestedBy: auth && auth.user ? auth.user.UserID : null,
       hasDeltaFilter: !!lastUpdatedAt,
-      lastSyncAt: new Date().toISOString()
+      lastSyncAt: Date.now()
     }
   };
 }
@@ -611,7 +617,7 @@ function extractRequestedResourceCandidates(payload) {
 
   if (Array.isArray(source.resources)) {
     source.resources.forEach(function (item) {
-      const value = (item || '').toString().trim();
+      const value = extractResourceNameFromCandidate(item);
       if (value) result.push(value);
     });
   } else if (typeof source.resources === 'string') {
@@ -661,4 +667,86 @@ function cloneWithResource(payload, resourceName) {
   });
   cloned.resource = resourceName;
   return cloned;
+}
+
+function resolveMultiResourceCursor(payload, resourceName) {
+  const source = payload || {};
+  const resourceKey = normalizeResourceAlias(resourceName);
+
+  var cursorFromMap = readCursorFromMap(source.lastUpdatedAtByResource, resourceKey);
+  if (cursorFromMap === null || cursorFromMap === undefined || cursorFromMap === '') {
+    cursorFromMap = readCursorFromMap(source.resourceCursors, resourceKey);
+  }
+  if (cursorFromMap === null || cursorFromMap === undefined || cursorFromMap === '') {
+    cursorFromMap = readCursorFromMap(source.cursors, resourceKey);
+  }
+  if (cursorFromMap !== null && cursorFromMap !== undefined && cursorFromMap !== '') {
+    return cursorFromMap;
+  }
+
+  if (Array.isArray(source.resources)) {
+    for (var i = 0; i < source.resources.length; i++) {
+      var item = source.resources[i];
+      if (!item || typeof item !== 'object') {
+        continue;
+      }
+
+      var candidateName = extractResourceNameFromCandidate(item);
+      if (!candidateName) {
+        continue;
+      }
+
+      if (normalizeResourceAlias(candidateName) !== resourceKey) {
+        continue;
+      }
+
+      if (item.lastUpdatedAt !== undefined && item.lastUpdatedAt !== null && item.lastUpdatedAt !== '') {
+        return item.lastUpdatedAt;
+      }
+    }
+  }
+
+  if (source.lastUpdatedAt !== undefined && source.lastUpdatedAt !== null && source.lastUpdatedAt !== '') {
+    return source.lastUpdatedAt;
+  }
+
+  return null;
+}
+
+function readCursorFromMap(cursorMap, resourceKey) {
+  if (!cursorMap || typeof cursorMap !== 'object') {
+    return null;
+  }
+
+  var keys = Object.keys(cursorMap);
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    if (normalizeResourceAlias(key) !== resourceKey) {
+      continue;
+    }
+    return cursorMap[key];
+  }
+
+  return null;
+}
+
+function extractResourceNameFromCandidate(candidate) {
+  if (candidate === null || candidate === undefined) {
+    return '';
+  }
+
+  if (typeof candidate === 'string') {
+    return candidate.toString().trim();
+  }
+
+  if (typeof candidate === 'object') {
+    if (candidate.resource !== undefined && candidate.resource !== null && candidate.resource !== '') {
+      return candidate.resource.toString().trim();
+    }
+    if (candidate.name !== undefined && candidate.name !== null && candidate.name !== '') {
+      return candidate.name.toString().trim();
+    }
+  }
+
+  return '';
 }

@@ -6,6 +6,7 @@
  * quasar.config file > pwa > workboxMode is set to "InjectManifest"
  */
 
+import './idb-compat'
 import { clientsClaim } from 'workbox-core'
 import { precacheAndRoute, cleanupOutdatedCaches, createHandlerBoundToURL } from 'workbox-precaching'
 import { registerRoute, NavigationRoute } from 'workbox-routing'
@@ -18,13 +19,43 @@ import { BackgroundSyncPlugin } from 'workbox-background-sync'
 const DB_NAME = 'little-leap-aql-db'
 const DB_VERSION = 2
 
-const dbPromise = openDB(DB_NAME, DB_VERSION, {
-  upgrade(db) {
-    if (!db.objectStoreNames.contains('api-cache')) {
-      db.createObjectStore('api-cache', { keyPath: 'url' })
+let swDbPromise = null
+function getDB() {
+  if (swDbPromise) return swDbPromise
+
+  swDbPromise = openDB(DB_NAME, DB_VERSION, {
+    upgrade(db) {
+      if (!db.objectStoreNames.contains('api-cache')) {
+        db.createObjectStore('api-cache', { keyPath: 'url' })
+      }
+      if (!db.objectStoreNames.contains('sync-queue')) {
+        db.createObjectStore('sync-queue', { keyPath: 'id', autoIncrement: true })
+      }
+      if (!db.objectStoreNames.contains('app-data')) {
+        db.createObjectStore('app-data')
+      }
+      if (!db.objectStoreNames.contains('resource-meta')) {
+        db.createObjectStore('resource-meta', { keyPath: 'resource' })
+      }
+      if (!db.objectStoreNames.contains('resource-records')) {
+        const store = db.createObjectStore('resource-records', { keyPath: 'id' })
+        store.createIndex('by-resource', 'resource', { unique: false })
+        store.createIndex('by-resource-updatedAt', ['resource', 'updatedAt'], { unique: false })
+      }
+    },
+    blocked() {
+      console.warn('[SW] DB open blocked')
+    },
+    blocking() {
+      console.warn('[SW] DB version change requested elsewhere, closing...')
+      if (swDbPromise) {
+        swDbPromise.then(db => db.close()).catch(() => {})
+        swDbPromise = null
+      }
     }
-  }
-})
+  })
+  return swDbPromise
+}
 
 const bgSyncPlugin = new BackgroundSyncPlugin('api-sync-queue', {
   maxRetentionTime: 24 * 60 // Retry for max 24 Hours (in minutes)
@@ -47,6 +78,17 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SET_AUTH_TOKEN') {
     authToken = event.data.token
     console.log('[SW] Auth Token updated')
+    if (authToken === null && swDbPromise) {
+      swDbPromise.then(db => db.close()).catch(() => {})
+      swDbPromise = null
+    }
+  }
+  if (event.data && event.data.type === 'CLOSE_DB') {
+    console.log('[SW] Close DB requested')
+    if (swDbPromise) {
+      swDbPromise.then(db => db.close()).catch(() => {})
+      swDbPromise = null
+    }
   }
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting()
@@ -94,7 +136,7 @@ registerRoute(
             const clonedResponse = response.clone()
             try {
               const data = await clonedResponse.json()
-              const db = await dbPromise
+              const db = await getDB()
               await db.put('api-cache', {
                 url: request.url,
                 data: data,
@@ -192,10 +234,11 @@ registerRoute(
 
 // Non-SSR fallbacks to index.html
 if (process.env.MODE !== 'ssr' || process.env.PROD) {
+  const swRegex = process.env.PWA_SERVICE_WORKER_REGEX || 'sw.js'
   registerRoute(
     new NavigationRoute(
       createHandlerBoundToURL(process.env.PWA_FALLBACK_HTML),
-      { denylist: [new RegExp(process.env.PWA_SERVICE_WORKER_REGEX), /workbox-(.)*\.js$/] }
+      { denylist: [new RegExp(swRegex), /workbox-(.)*\.js$/] }
     )
   )
 }

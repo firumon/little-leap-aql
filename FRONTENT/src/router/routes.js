@@ -41,7 +41,7 @@ const routes = [
       { path: '/profile', component: () => import('pages/ProfilePage/ProfilePage.vue') },
       {
         path: '/masters/:resourceSlug',
-        component: () => import('pages/Masters/MasterEntityPage.vue'),
+        component: () => import('pages/Masters/MasterIndexPage.vue'),
         meta: { scope: 'master' }
       }
     ]

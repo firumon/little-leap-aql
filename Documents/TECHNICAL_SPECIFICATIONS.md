@@ -40,9 +40,18 @@ Backend uses it for:
 
 Frontend uses it for:
 - menu visibility and order
-- route mapping (`RoutePath`)
+- route mapping (`RoutePath`) /masters/:resourceSlug
 - page title/description
 - field metadata (`UIFields`)
+
+### Master Discovery Pattern (Generic vs. Custom)
+The system uses an **Automatic Discovery Pattern** to resolve UI for master resources:
+1. **Dispatcher**: `MasterIndexPage.vue` acts as the router entry point.
+2. **Naming Convention**: Slugs are converted to PascalCase (e.g., `/masters/price-lists` -> `PriceListsPage.vue`).
+3. **Implicit Loading**:
+   - If a custom `{Entity}Page.vue` exists in `src/pages/Masters/`, it is automatically used.
+   - If no custom file is found, it falls back to the generic `MasterEntityPage.vue`.
+4. **Component Composition**: Custom pages can import and embed `MasterEntityPage` to retain standard CRUD functionality while adding specialized UI components or logic.
 
 ## 4) Single Channel CRUD API & UX Contract
 - **Centralized Endpoint**: All API communication occurs via the centralized utility (`callGasApi`) to enforce standard behavior.

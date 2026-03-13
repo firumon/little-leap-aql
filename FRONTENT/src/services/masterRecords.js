@@ -91,6 +91,38 @@ function mapObjectsToRows(records = [], headers = []) {
   return records.map((record) => headers.map((header) => record?.[header]))
 }
 
+function normalizeCursorValue(value) {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+
+  const timestamp = Number(value)
+  if (Number.isFinite(timestamp) && timestamp > 0) {
+    return timestamp
+  }
+
+  const parsedTime = new Date(value).getTime()
+  return Number.isFinite(parsedTime) ? parsedTime : null
+}
+
+function resolveSyncRows(responseData, headers) {
+  if (Array.isArray(responseData?.rows)) {
+    return responseData.rows
+  }
+
+  if (Array.isArray(responseData?.records)) {
+    return mapObjectsToRows(responseData.records, headers)
+  }
+
+  if (Array.isArray(responseData?.data)) {
+    return Array.isArray(responseData.data[0])
+      ? responseData.data
+      : mapObjectsToRows(responseData.data, headers)
+  }
+
+  return []
+}
+
 export function mapRowsToObjects(rows = [], headers = []) {
   if (!Array.isArray(rows) || rows.length === 0) {
     return []
@@ -145,7 +177,7 @@ export async function fetchMasterRecords(resourceName, options = {}) {
       scope: 'master',
       resource: resourceName,
       includeInactive: true,
-      ...(syncCursor ? { lastUpdatedAt: syncCursor } : {})
+      ...(syncCursor ? { lastUpdatedAt: new Date(syncCursor).getTime() } : {})
     }
 
     const syncResponse = await callGasApi('get', payload, {
@@ -171,7 +203,7 @@ export async function fetchMasterRecords(resourceName, options = {}) {
       if (deltaRows.length) {
         await withTimeout(upsertResourceRows(resourceName, headers, deltaRows), 0)
       }
-      const nextSyncCursor = syncResponse?.meta?.lastSyncAt || new Date().toISOString()
+      const nextSyncCursor = syncResponse?.meta?.lastSyncAt || Date.now()
       await withTimeout(setResourceMeta(resourceName, {
         headers,
         lastSyncAt: nextSyncCursor
@@ -211,6 +243,115 @@ export async function fetchMasterRecords(resourceName, options = {}) {
       headers: [],
       rows: [],
       records: []
+    }
+  }
+}
+
+export async function syncAllMasterResources() {
+  try {
+    const auth = useAuthStore()
+    const resources = Array.isArray(auth.authorizedResources)
+      ? auth.authorizedResources
+      : auth.authorizedResources?.value
+    const masterResources = Array.isArray(resources)
+      ? resources.filter((entry) => {
+        const scope = (entry?.scope || '').toString().trim().toLowerCase()
+        return scope === 'master' && entry?.permissions?.canRead !== false && entry?.name
+      })
+      : []
+
+    if (!masterResources.length) {
+      return { success: true, data: {}, meta: { resources: [], lastSyncAt: Date.now() } }
+    }
+
+    const headersByResource = {}
+    const cursorByResource = {}
+    const resourceNames = []
+
+    for (const resource of masterResources) {
+      const resourceName = (resource?.name || '').toString().trim()
+      if (!resourceName) continue
+      resourceNames.push(resourceName)
+
+      const headers = await ensureHeaders(resourceName)
+      if (headers.length) {
+        headersByResource[resourceName] = headers
+      }
+
+      const meta = await withTimeout(getResourceMeta(resourceName), null)
+      const rawCursor = meta?.lastSyncAt || getLocalSyncCursor(resourceName)
+      const cursor = normalizeCursorValue(rawCursor)
+      if (cursor) {
+        cursorByResource[resourceName] = cursor
+      }
+    }
+
+    if (!resourceNames.length) {
+      return { success: true, data: {}, meta: { resources: [], lastSyncAt: Date.now() } }
+    }
+
+    const payload = {
+      scope: 'master',
+      resources: resourceNames,
+      includeInactive: true,
+      ...(Object.keys(cursorByResource).length
+        ? { lastUpdatedAtByResource: cursorByResource }
+        : {})
+    }
+
+    const response = await callGasApi('get', payload, {
+      showLoading: false,
+      showError: false
+    })
+
+    if (!response.success) {
+      return {
+        success: false,
+        message: response.message || 'Failed to sync master resources',
+        data: response?.data || {},
+        meta: response?.meta || {}
+      }
+    }
+
+    const responseData = (response && typeof response.data === 'object' && response.data !== null)
+      ? response.data
+      : {}
+
+    for (const resourceName of resourceNames) {
+      const resourceResponse = responseData[resourceName]
+      if (!resourceResponse || resourceResponse.success === false) {
+        continue
+      }
+
+      const headers = headersByResource[resourceName] || await ensureHeaders(resourceName)
+      if (!headers.length) {
+        continue
+      }
+
+      const deltaRows = resolveSyncRows(resourceResponse, headers)
+      if (deltaRows.length) {
+        await withTimeout(upsertResourceRows(resourceName, headers, deltaRows), 0)
+      }
+
+      const nextSyncCursor = resourceResponse?.meta?.lastSyncAt || Date.now()
+      await withTimeout(setResourceMeta(resourceName, {
+        headers,
+        lastSyncAt: nextSyncCursor
+      }), null)
+      setLocalSyncCursor(resourceName, nextSyncCursor)
+    }
+
+    return {
+      success: true,
+      data: responseData,
+      meta: response?.meta || {}
+    }
+  } catch (error) {
+    return {
+      success: false,
+      message: error?.message || 'Failed to sync master resources',
+      data: {},
+      meta: {}
     }
   }
 }

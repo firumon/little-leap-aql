@@ -38,6 +38,7 @@ You are acting as an expert developer on the Little Leap AQL system, an operatin
 - **Single API UX Contract:** Use `callGasApi` in `src/services/gasApi.js` for *all* backend communication to centrally handle token injection, loading states, normalized error mapping, and `$q.notify` success/error alerts. Never implement ad-hoc loaders or `$q.notify` alerts for API actions directly inside page components.
 - **State:** Use Pinia. Auth store persists `resources` permissions from the login payload.
 - **PWA-SW-IDB-Pinia Data Contract:** Master and Operation models fetch incremental updates first from IndexedDB `resource-records` for instant local paint. Background sync uses `lastUpdatedAt` cursors from `resource-meta`, upserting deltas into IndexedDB and Pinia. Service Worker explicitly manages only offline/cache boundaries, never UI state logic.
+- **Master Discovery Pattern:** Generic UI is provided by `MasterEntityPage.vue`. To override for a specific resource, create `{EntityName}Page.vue` in `src/pages/Masters/`. The dispatcher (`MasterIndexPage.vue`) will automatically prefer the custom file based on naming convention (`kebab-slug` -> `PascalCasePage`).
 
 ### Backend (GAS)
 - **Verbs:** Use generic verbs (`action=get`, `scope=master`, `resource=Products`) instead of hardcoded bespoke endpoints where possible.

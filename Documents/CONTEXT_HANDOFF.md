@@ -116,6 +116,10 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
 - Frontend master module:
   - Router Entry: `FRONTENT/src/pages/Masters/MasterIndexPage.vue`
   - Generic implementation: `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+  - Master page architecture is now componentized:
+    - Shared logic composable: `FRONTENT/src/composables/useMasterPage.js`
+    - UI components: `FRONTENT/src/components/Masters/MasterHeader.vue`, `MasterToolbar.vue`, `MasterList.vue`, `MasterRecordCard.vue`, `MasterDetailDialog.vue`, `MasterEditorDialog.vue`
+    - `MasterEntityPage.vue` is now a thin orchestration layer (layout + component wiring).
   - **Discovery Pattern**: System automatically loads `{EntityName}Page.vue` for route `/masters/:entity-slug` if the file exists, with a generic fallback.
   - Resource config map: `FRONTENT/src/config/masters.js`
   - Shared service: `FRONTENT/src/services/masterRecords.js`

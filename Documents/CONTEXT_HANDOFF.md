@@ -192,6 +192,11 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - One background `getMulti` request fetches all authorized master resources after login.
   - Master pages opened after login usually render from IDB instantly without the first-page 10s wait.
   - Auth store now exposes `isGlobalSyncing` for optional top-level sync indicators.
+- GAS backend master-sync performance optimization (2026-03-14):
+  - `GAS/resourceRegistry.gs` now uses request-level memory caches for `SpreadsheetApp.openById` and `getSheetByName` (`_resource_file_cache`, `_resource_sheet_cache`).
+  - `GAS/auth.gs` now preloads and caches `Users` and `Designations` lookup maps per execution (`_users_context_cache`, `_designations_cache`).
+  - `GAS/masterApi.gs` now reuses already-loaded headers during list responses and short-circuits row checks when `RecordAccessPolicy=ALL` and no scoped region check is needed.
+  - `getUserById` now resolves from in-memory user maps, reducing repeated User sheet scans during `getMulti`.
 - Audit timestamp contract:
   - `CreatedAt` and `UpdatedAt` are now stored as Unix epoch milliseconds (number).
   - `lastUpdatedAt` delta cursor should also use Unix epoch milliseconds.

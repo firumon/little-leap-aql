@@ -74,6 +74,17 @@ The system uses an **Automatic Discovery Pattern** to resolve UI for master reso
 - `GAS/auth.gs`: owns authentication/profile logic (`login`, token validation, profile update handlers, authorized resources payload).
 - `GAS/sheetHelpers.gs`: shared sheet utilities (`getSheetHeaders`, `getHeaderIndexMap`, `findRowByValue`, `getRowAsObject`).
 
+### GAS Request-Level Caching (Master Sync Performance)
+- `GAS/resourceRegistry.gs` keeps in-memory request caches for opened files and sheets:
+  - `_resource_file_cache[fileId]`
+  - `_resource_sheet_cache[fileId::sheetName]`
+- `openResourceSheet(resourceName)` is now cache-first, so repeated master resource operations in one request avoid repeated `SpreadsheetApp.openById(...)`.
+- `GAS/auth.gs` now preloads `Users` and `Designations` once per execution:
+  - `_users_context_cache` stores headers plus row maps (`rowByUserId`, `rowByEmail`, `rowByApiKey`, `userById`).
+  - `_designations_cache` stores designation lookup map by `DesignationID`.
+- Record-level policy checks in `GAS/masterApi.gs` use these in-memory maps to avoid repeated sheet scans during `getMulti`.
+- `buildMasterRowsResponse(...)` accepts already-loaded headers from `handleMasterGetRecords(...)` to avoid redundant header reads.
+
 ## 5) PWA-SW-IDB-Pinia Data Contract
 A single app-wide data agreement governs offline and incremental sync functionality:
 - **Service Worker Boundary:** The SW intercepts network requests, manages background syncs, and handles raw precaching logic. It DOES NOT manage UI state or component logic.

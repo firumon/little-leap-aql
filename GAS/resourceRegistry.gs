@@ -5,6 +5,9 @@
  * Reads the APP.Resources sheet to resolve target file/sheet dynamically.
  */
 
+var _resource_file_cache = {};
+var _resource_sheet_cache = {};
+
 function getResourceRegistryContext() {
   const appSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.RESOURCES);
   if (!appSheet) {
@@ -80,8 +83,21 @@ function openResourceSheet(resourceName) {
     throw new Error('Resource sheetName is missing for: ' + resourceName);
   }
 
-  const file = SpreadsheetApp.openById(config.fileId);
-  const sheet = file.getSheetByName(config.sheetName);
+  const fileCacheKey = config.fileId;
+  var file = _resource_file_cache[fileCacheKey];
+  if (!file) {
+    file = SpreadsheetApp.openById(config.fileId);
+    _resource_file_cache[fileCacheKey] = file;
+  }
+
+  const sheetCacheKey = config.fileId + '::' + config.sheetName;
+  var sheet = _resource_sheet_cache[sheetCacheKey];
+  if (!sheet) {
+    sheet = file.getSheetByName(config.sheetName);
+    if (sheet) {
+      _resource_sheet_cache[sheetCacheKey] = sheet;
+    }
+  }
   if (!sheet) {
     throw new Error('Sheet not found for resource ' + resourceName + ': ' + config.sheetName);
   }

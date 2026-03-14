@@ -6,19 +6,82 @@
 
 // Shared constants are located in Constants.gs
 
+var _users_context_cache = null;
+var _designations_cache = null;
+
+function normalizeEmailKey(value) {
+  return (value || '').toString().trim().toLowerCase();
+}
+
+function normalizeTokenKey(value) {
+  return (value || '').toString().trim();
+}
+
+function buildUserRowObject(headers, rowValues) {
+  const rowObj = {};
+  (headers || []).forEach(function(header, index) {
+    rowObj[header] = rowValues[index];
+  });
+  return rowObj;
+}
+
 /**
  * Build headers/index context once for Users sheet.
  */
 function getUsersContext() {
+  if (_users_context_cache) {
+    return _users_context_cache;
+  }
+
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.USERS);
   if (!sheet) {
     throw new Error('Users sheet not found');
   }
 
-  const headers = getSheetHeaders(sheet);
+  const values = sheet.getDataRange().getValues();
+  const headers = values && values.length ? values[0] : [];
   const idx = getHeaderIndexMap(headers);
+  const rowsByNumber = {};
+  const rowByUserId = {};
+  const rowByEmail = {};
+  const rowByApiKey = {};
+  const userById = {};
 
-  return { sheet, headers, idx };
+  for (let i = 1; i < values.length; i++) {
+    const rowValues = values[i];
+    const rowNumber = i + 1;
+    const rowObj = buildUserRowObject(headers, rowValues);
+    rowsByNumber[rowNumber] = rowObj;
+
+    const userId = (idx.UserID === undefined ? '' : (rowValues[idx.UserID] || '')).toString().trim();
+    if (userId && rowByUserId[userId] === undefined) {
+      rowByUserId[userId] = rowNumber;
+      userById[userId] = rowObj;
+    }
+
+    const email = normalizeEmailKey(idx.Email === undefined ? '' : rowValues[idx.Email]);
+    if (email && rowByEmail[email] === undefined) {
+      rowByEmail[email] = rowNumber;
+    }
+
+    const token = normalizeTokenKey(idx.ApiKey === undefined ? '' : rowValues[idx.ApiKey]);
+    if (token && rowByApiKey[token] === undefined) {
+      rowByApiKey[token] = rowNumber;
+    }
+  }
+
+  _users_context_cache = {
+    sheet: sheet,
+    values: values,
+    headers: headers,
+    idx: idx,
+    rowsByNumber: rowsByNumber,
+    rowByUserId: rowByUserId,
+    rowByEmail: rowByEmail,
+    rowByApiKey: rowByApiKey,
+    userById: userById
+  };
+  return _users_context_cache;
 }
 
 /**
@@ -26,13 +89,14 @@ function getUsersContext() {
  */
 function handleLogin(email, password) {
   const users = getUsersContext();
-  const emailRow = findRowByValue(users.sheet, users.idx.Email, (email || '').trim(), 2, false);
+  const emailKey = normalizeEmailKey(email);
+  const emailRow = users.rowByEmail[emailKey] || -1;
 
   if (emailRow === -1) {
     return { success: false, message: 'Invalid credentials' };
   }
 
-  const row = getRowAsObject(users.sheet, emailRow, users.headers);
+  const row = users.rowsByNumber[emailRow] || getRowAsObject(users.sheet, emailRow, users.headers);
   const passwordHash = hashPassword(password || '');
 
   if (row.PasswordHash !== passwordHash) {
@@ -45,6 +109,7 @@ function handleLogin(email, password) {
 
   const token = Utilities.getUuid();
   users.sheet.getRange(emailRow, users.idx.ApiKey + 1).setValue(token);
+  users.rowByApiKey[normalizeTokenKey(token)] = emailRow;
   const roleIds = resolveUserRoleIds(row);
 
   return {
@@ -62,13 +127,13 @@ function validateToken(token) {
   if (!token) return null;
 
   const users = getUsersContext();
-  const rowNumber = findRowByValue(users.sheet, users.idx.ApiKey, token, 2, true);
+  const rowNumber = users.rowByApiKey[normalizeTokenKey(token)] || -1;
 
   if (rowNumber === -1) {
     return null;
   }
 
-  const user = getRowAsObject(users.sheet, rowNumber, users.headers);
+  const user = users.rowsByNumber[rowNumber] || getRowAsObject(users.sheet, rowNumber, users.headers);
   const roleIds = resolveUserRoleIds(user);
   const accessRegionScope = buildUserAccessRegionScope(user);
   return {
@@ -163,6 +228,9 @@ function safeGetRoleResourceAccess(roleId, options) {
 function handleUpdateAvatar(auth, avatarUrl) {
   const value = (avatarUrl || '').toString().trim();
   auth.sheet.getRange(auth.rowNumber, auth.idx.Avatar + 1).setValue(value);
+  if (_users_context_cache && _users_context_cache.rowsByNumber[auth.rowNumber]) {
+    _users_context_cache.rowsByNumber[auth.rowNumber].Avatar = value;
+  }
   return { success: true, avatarUrl: value };
 }
 
@@ -173,6 +241,9 @@ function handleUpdateName(auth, name) {
   }
 
   auth.sheet.getRange(auth.rowNumber, auth.idx.Name + 1).setValue(value);
+  if (_users_context_cache && _users_context_cache.rowsByNumber[auth.rowNumber]) {
+    _users_context_cache.rowsByNumber[auth.rowNumber].Name = value;
+  }
   return { success: true, name: value };
 }
 
@@ -182,12 +253,18 @@ function handleUpdateEmail(auth, newEmail) {
     return { success: false, message: 'Email is required' };
   }
 
-  const emailRow = findRowByValue(auth.sheet, auth.idx.Email, email, 2, false);
+  const users = getUsersContext();
+  const emailKey = normalizeEmailKey(email);
+  const emailRow = users.rowByEmail[emailKey] || -1;
   if (emailRow !== -1 && emailRow !== auth.rowNumber) {
     return { success: false, message: 'Email already in use' };
   }
 
   auth.sheet.getRange(auth.rowNumber, auth.idx.Email + 1).setValue(email);
+  if (_users_context_cache && _users_context_cache.rowsByNumber[auth.rowNumber]) {
+    _users_context_cache.rowsByNumber[auth.rowNumber].Email = email;
+    _users_context_cache.rowByEmail[emailKey] = auth.rowNumber;
+  }
   return { success: true, email: email };
 }
 
@@ -210,7 +287,11 @@ function handleUpdatePassword(auth, currentPassword, newPassword) {
     return { success: false, message: 'Current password is incorrect' };
   }
 
-  auth.sheet.getRange(auth.rowNumber, auth.idx.PasswordHash + 1).setValue(hashPassword(updated));
+  const updatedHash = hashPassword(updated);
+  auth.sheet.getRange(auth.rowNumber, auth.idx.PasswordHash + 1).setValue(updatedHash);
+  if (_users_context_cache && _users_context_cache.rowsByNumber[auth.rowNumber]) {
+    _users_context_cache.rowsByNumber[auth.rowNumber].PasswordHash = updatedHash;
+  }
   return { success: true };
 }
 
@@ -233,42 +314,52 @@ function getRoleNameById(roleId) {
 }
 
 function getDesignationById(designationId) {
-  if (!designationId) {
+  const normalizedId = (designationId || '').toString().trim();
+  if (!normalizedId) {
     return { id: '', name: '', hierarchyLevel: null };
   }
 
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.DESIGNATIONS);
-  if (!sheet) {
-    return { id: designationId, name: '', hierarchyLevel: null };
+  if (!_designations_cache) {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.DESIGNATIONS);
+    const byId = {};
+    if (sheet) {
+      const values = sheet.getDataRange().getValues();
+      const headers = values && values.length ? values[0] : [];
+      const idx = getHeaderIndexMap(headers);
+
+      if (idx.DesignationID !== undefined && idx.Name !== undefined) {
+        for (let i = 1; i < values.length; i++) {
+          const row = values[i];
+          const id = (row[idx.DesignationID] || '').toString().trim();
+          if (!id || byId[id]) continue;
+
+          byId[id] = {
+            id: id,
+            name: (row[idx.Name] || '').toString().trim(),
+            hierarchyLevel: idx.HierarchyLevel === undefined
+              ? null
+              : Number(row[idx.HierarchyLevel] || 0) || null
+          };
+        }
+      }
+    }
+    _designations_cache = { byId: byId };
   }
 
-  const headers = getSheetHeaders(sheet);
-  const idx = getHeaderIndexMap(headers);
-  if (idx.DesignationID === undefined || idx.Name === undefined) {
-    return { id: designationId, name: '', hierarchyLevel: null };
-  }
-  const rowNumber = findRowByValue(sheet, idx.DesignationID, designationId, 2, true);
-  if (rowNumber === -1) {
-    return { id: designationId, name: '', hierarchyLevel: null };
+  const designation = _designations_cache.byId[normalizedId];
+  if (!designation) {
+    return { id: normalizedId, name: '', hierarchyLevel: null };
   }
 
-  const hierarchyLevel = idx.HierarchyLevel === undefined
-    ? null
-    : Number(sheet.getRange(rowNumber, idx.HierarchyLevel + 1).getValue() || 0) || null;
-
-  return {
-    id: designationId,
-    name: sheet.getRange(rowNumber, idx.Name + 1).getValue() || '',
-    hierarchyLevel: hierarchyLevel
-  };
+  return designation;
 }
 
 function getUserRoleIds(userId) {
   if (!userId) return [];
   const users = getUsersContext();
-  const rowNumber = findRowByValue(users.sheet, users.idx.UserID, userId, 2, true);
+  const rowNumber = users.rowByUserId[(userId || '').toString().trim()] || -1;
   if (rowNumber === -1) return [];
-  const row = getRowAsObject(users.sheet, rowNumber, users.headers);
+  const row = users.rowsByNumber[rowNumber] || getRowAsObject(users.sheet, rowNumber, users.headers);
   return resolveUserRoleIds(row);
 }
 
@@ -310,10 +401,10 @@ function getUserRole(userId) {
   if (!userId) return 'User';
 
   const users = getUsersContext();
-  const userRow = findRowByValue(users.sheet, users.idx.UserID, userId, 2, true);
+  const userRow = users.rowByUserId[(userId || '').toString().trim()] || -1;
   if (userRow === -1) return 'User';
 
-  const row = getRowAsObject(users.sheet, userRow, users.headers);
+  const row = users.rowsByNumber[userRow] || getRowAsObject(users.sheet, userRow, users.headers);
   const roleIds = resolveUserRoleIds(row);
   if (!roleIds.length) return 'User';
   return getRoleNameById(roleIds[0]);

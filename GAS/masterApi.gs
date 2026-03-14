@@ -12,12 +12,16 @@ function handleMasterGetRecords(auth, payload) {
   const includeInactive = payload && payload.includeInactive === true;
   const lastUpdatedAt = payload && payload.lastUpdatedAt ? parseDateInput(payload.lastUpdatedAt) : null;
   const values = resource.sheet.getDataRange().getValues();
+  const headers = values && values.length ? values[0] : getSheetHeaders(resource.sheet);
 
-  if (!values || values.length < 2) {
-    return buildMasterRowsResponse(auth, resourceName, resource, [], lastUpdatedAt);
+  if (!headers.length) {
+    return buildMasterRowsResponse(auth, resourceName, resource, [], lastUpdatedAt, []);
   }
 
-  const headers = values[0];
+  if (!values || values.length < 2) {
+    return buildMasterRowsResponse(auth, resourceName, resource, [], lastUpdatedAt, headers);
+  }
+
   const idx = getHeaderIndexMap(headers);
   const statusIdx = idx.Status;
   const updatedAtIdx = idx.UpdatedAt;
@@ -41,7 +45,7 @@ function handleMasterGetRecords(auth, payload) {
     rows.push(row);
   }
 
-  return buildMasterRowsResponse(auth, resourceName, resource, rows, lastUpdatedAt);
+  return buildMasterRowsResponse(auth, resourceName, resource, rows, lastUpdatedAt, headers);
 }
 
 function handleMasterGetMultiRecords(auth, payload) {
@@ -238,8 +242,8 @@ function enforceMasterPermission(auth, resourceName, permissionName) {
   }
 }
 
-function buildMasterRowsResponse(auth, resourceName, resource, rows, lastUpdatedAt) {
-  const headers = getSheetHeaders(resource.sheet);
+function buildMasterRowsResponse(auth, resourceName, resource, rows, lastUpdatedAt, headersInput) {
+  const headers = Array.isArray(headersInput) && headersInput.length ? headersInput : getSheetHeaders(resource.sheet);
   const idx = getHeaderIndexMap(headers);
   const filteredRows = rows.filter(function (row) {
     return canAccessRowByPolicy(auth, resource.config, row, idx);
@@ -267,13 +271,18 @@ function enforceRecordLevelAccess(auth, resourceConfig, headers, rowValues) {
 }
 
 function canAccessRowByPolicy(auth, resourceConfig, rowValues, idx) {
-  if (!canAccessRowByAccessRegion(auth, rowValues, idx)) {
-    return false;
-  }
-
   const policy = resourceConfig && resourceConfig.recordAccessPolicy
     ? resourceConfig.recordAccessPolicy
     : 'ALL';
+  const regionCheckRequired = requiresAccessRegionCheck(auth, idx);
+
+  if (policy === 'ALL' && !regionCheckRequired) {
+    return true;
+  }
+
+  if (regionCheckRequired && !canAccessRowByAccessRegion(auth, rowValues, idx)) {
+    return false;
+  }
 
   if (policy === 'ALL') return true;
   if (!auth || !auth.user) return false;
@@ -313,9 +322,15 @@ function canAccessRowByPolicy(auth, resourceConfig, rowValues, idx) {
 function getUserById(userId) {
   if (!userId) return null;
   const users = getUsersContext();
-  const row = findRowByValue(users.sheet, users.idx.UserID, userId, 2, true);
-  if (row === -1) return null;
-  return getRowAsObject(users.sheet, row, users.headers);
+  return users.userById[(userId || '').toString().trim()] || null;
+}
+
+function requiresAccessRegionCheck(auth, idx) {
+  const regionHeader = resolveAccessRegionHeader(idx);
+  if (!regionHeader) return false;
+
+  const scope = buildAuthAccessRegionScope(auth);
+  return !scope.isUniverse;
 }
 
 function extractProvidedHeaderValues(headers, payload) {

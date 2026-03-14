@@ -11,13 +11,21 @@ function handleMasterGetRecords(auth, payload) {
 
   const includeInactive = payload && payload.includeInactive === true;
   const lastUpdatedAt = payload && payload.lastUpdatedAt ? parseDateInput(payload.lastUpdatedAt) : null;
-  const values = resource.sheet.getDataRange().getValues();
-  const headers = values && values.length ? values[0] : getSheetHeaders(resource.sheet);
+  const headers = getSheetHeaders(resource.sheet);
 
   if (!headers.length) {
     return buildMasterRowsResponse(auth, resourceName, resource, [], lastUpdatedAt, []);
   }
 
+  if (
+    lastUpdatedAt &&
+    resource.config.lastDataUpdatedAt &&
+    lastUpdatedAt.getTime() >= resource.config.lastDataUpdatedAt
+  ) {
+    return buildMasterRowsResponse(auth, resourceName, resource, [], lastUpdatedAt, headers);
+  }
+
+  const values = resource.sheet.getDataRange().getValues();
   if (!values || values.length < 2) {
     return buildMasterRowsResponse(auth, resourceName, resource, [], lastUpdatedAt, headers);
   }
@@ -105,6 +113,7 @@ function handleMasterCreateRecord(auth, payload) {
 
   const targetRow = sheet.getLastRow() + 1;
   sheet.getRange(targetRow, 1, 1, headers.length).setValues([rowData]);
+  updateResourceSyncCursor(resourceName);
 
   return {
     success: true,
@@ -141,6 +150,7 @@ function handleMasterUpdateRecord(auth, payload) {
   validateMasterUniqueness(values, idx, mergedRow, schema, rowNumber, resourceName);
 
   sheet.getRange(rowNumber, 1, 1, headers.length).setValues([mergedRow]);
+  updateResourceSyncCursor(resourceName);
 
   return {
     success: true,

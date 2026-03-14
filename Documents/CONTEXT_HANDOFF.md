@@ -197,6 +197,10 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - `GAS/auth.gs` now preloads and caches `Users` and `Designations` lookup maps per execution (`_users_context_cache`, `_designations_cache`).
   - `GAS/masterApi.gs` now reuses already-loaded headers during list responses and short-circuits row checks when `RecordAccessPolicy=ALL` and no scoped region check is needed.
   - `getUserById` now resolves from in-memory user maps, reducing repeated User sheet scans during `getMulti`.
+- Registry sync-cursor optimization (2026-03-14):
+  - `APP.Resources` schema now includes `LastDataUpdatedAt` (Unix epoch milliseconds) and no longer uses `SkipColumns`.
+  - `GAS/resourceRegistry.gs` exposes `updateResourceSyncCursor(resourceName)` to update `LastDataUpdatedAt` after successful write operations.
+  - `GAS/masterApi.gs` now updates this cursor after `create/update`, and `handleMasterGetRecords` can return immediately with zero rows when client cursor is current, before full data-range scans.
 - Audit timestamp contract:
   - `CreatedAt` and `UpdatedAt` are now stored as Unix epoch milliseconds (number).
   - `lastUpdatedAt` delta cursor should also use Unix epoch milliseconds.
@@ -211,7 +215,7 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
 - `SheetName`
 - `CodePrefix`
 - `CodeSequenceLength`
-- ``
+- `LastDataUpdatedAt`
 - `Audit`
 - `RequiredHeaders`
 - `UniqueHeaders`

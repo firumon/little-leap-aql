@@ -50,6 +50,7 @@ function getResourceConfig(resourceName) {
             ? ''
             : row[registry.idx.CodeSequenceLength]
         ),
+        lastDataUpdatedAt: Number(readOptionalCell(row, registry.idx.LastDataUpdatedAt, 0)) || 0,
         requiredHeaders: parseHeaderList(readOptionalCell(row, registry.idx.RequiredHeaders, '')),
         uniqueHeaders: parseHeaderList(readOptionalCell(row, registry.idx.UniqueHeaders, '')),
         uniqueCompositeHeaders: parseCompositeHeaders(readOptionalCell(row, registry.idx.UniqueCompositeHeaders, '')),
@@ -103,6 +104,29 @@ function openResourceSheet(resourceName) {
   }
 
   return { config, file, sheet };
+}
+
+function updateResourceSyncCursor(resourceName) {
+  const name = (resourceName || '').toString().trim();
+  if (!name) {
+    throw new Error('Resource name is required');
+  }
+
+  const registry = getResourceRegistryContext();
+  if (registry.idx.LastDataUpdatedAt === undefined) {
+    return;
+  }
+
+  for (let i = 1; i < registry.values.length; i++) {
+    const row = registry.values[i];
+    const rowName = (row[registry.idx.Name] || '').toString().trim();
+    if (rowName !== name) continue;
+
+    registry.appSheet.getRange(i + 1, registry.idx.LastDataUpdatedAt + 1).setValue(Date.now());
+    return;
+  }
+
+  throw new Error('Resource not configured: ' + name);
 }
 
 function normalizeCodeSequenceLength(value) {

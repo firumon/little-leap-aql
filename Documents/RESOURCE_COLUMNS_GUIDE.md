@@ -18,6 +18,7 @@ This document explains each `APP > Resources` column, what to fill, and common v
 | `SheetName` | Yes | Text | Tab name inside target file | Exact tab name | `Products` |
 | `CodePrefix` | Optional | Text | Prefix for generated `Code` | Any uppercase prefix | `LLMP` |
 | `CodeSequenceLength` | Optional | Number | Digits for sequence part | Positive integer | `5` |
+| `LastDataUpdatedAt` | Optional | Number | Last write timestamp (Unix ms) used for fast delta-sync early exit | Unix epoch milliseconds | `1710420000000` |
 | `Audit` | Yes | Boolean | If true, backend manages audit fields | `TRUE` / `FALSE` | `TRUE` |
 | `RequiredHeaders` | Optional | CSV Text | Fields required on create/update | Comma-separated header names | `Name,SKU` |
 | `UniqueHeaders` | Optional | CSV Text | Single-column uniqueness checks | Comma-separated header names | `SKU` |

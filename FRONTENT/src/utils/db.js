@@ -2,7 +2,7 @@ import 'src/utils/idbCompat';
 import { openDB } from 'idb';
 
 const DB_NAME = 'little-leap-aql-db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let dbPromise = null;
 
@@ -29,6 +29,9 @@ export function reinitializeDB() {
                 const store = db.createObjectStore('resource-records', { keyPath: 'id' });
                 store.createIndex('by-resource', 'resource', { unique: false });
                 store.createIndex('by-resource-updatedAt', ['resource', 'updatedAt'], { unique: false });
+            }
+            if (!db.objectStoreNames.contains('functional-drafts')) {
+                db.createObjectStore('functional-drafts', { keyPath: 'key' });
             }
         },
         blocked() {
@@ -95,6 +98,30 @@ export async function getResourceMeta(resource) {
     return (await ensureDB()).get('resource-meta', resource);
 }
 
+function toPlainStringArray(value, fallback = []) {
+    if (!Array.isArray(value)) {
+        return Array.isArray(fallback) ? fallback : [];
+    }
+
+    return value.map((item) => (item === null || item === undefined ? '' : String(item)));
+}
+
+function toCloneSafeObject(value, fallback = null) {
+    if (value === null || value === undefined) {
+        return fallback;
+    }
+
+    if (typeof value !== 'object') {
+        return value;
+    }
+
+    try {
+        return JSON.parse(JSON.stringify(value));
+    } catch (error) {
+        return fallback;
+    }
+}
+
 export async function setAuthorizedResources(resources = []) {
     const db = await ensureDB();
     const tx = db.transaction('resource-meta', 'readwrite');
@@ -103,10 +130,15 @@ export async function setAuthorizedResources(resources = []) {
         if (!name) continue;
 
         const existing = await tx.store.get(name);
+        const headers = toPlainStringArray(resource?.headers, existing?.headers || []);
+        const permissions = toCloneSafeObject(
+            resource?.permissions,
+            toCloneSafeObject(existing?.permissions, null)
+        );
         await tx.store.put({
             resource: name,
-            headers: Array.isArray(resource.headers) ? resource.headers : (existing?.headers || []),
-            permissions: resource.permissions || existing?.permissions || null,
+            headers,
+            permissions,
             fileId: resource.fileId || existing?.fileId || '',
             sheetName: resource.sheetName || existing?.sheetName || '',
             codePrefix: resource.codePrefix || existing?.codePrefix || '',
@@ -179,6 +211,22 @@ export async function getResourceRows(resource, options = {}) {
     }
 
     return filtered.filter((row) => (row[statusIndex] || '').toString().trim() === 'Active');
+}
+
+export async function saveFunctionalDraft(key, data) {
+    if (!key) return null;
+    const db = await ensureDB();
+    return db.put('functional-drafts', { key, data, savedAt: Date.now() });
+}
+
+export async function getFunctionalDraft(key) {
+    if (!key) return null;
+    return (await ensureDB()).get('functional-drafts', key);
+}
+
+export async function deleteFunctionalDraft(key) {
+    if (!key) return null;
+    return (await ensureDB()).delete('functional-drafts', key);
 }
 
 async function deleteIndexedDbByName(databaseName) {

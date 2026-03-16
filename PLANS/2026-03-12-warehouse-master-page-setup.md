@@ -2,7 +2,7 @@
 **Status**: COMPLETED
 **Created**: 2026-03-12
 **Created By**: Brain Agent
-**Executed By**: Execution Agent
+**Executed By**: Build Agent
 
 ## Objective
 Ensure Warehouse page is set up as a Master entity using the same resource-driven pattern as Product.
@@ -49,7 +49,7 @@ Ensure Warehouse page is set up as a Master entity using the same resource-drive
 - [x] Warehouse CRUD uses the same generic master API/page flow as Product.
 - [x] No regression in existing master entity architecture.
 
-## Post-Execution Notes (Execution Agent fills this)
+## Post-Execution Notes (Build Agent fills this)
 
 ### Progress Log
 - [x] Step 1 completed

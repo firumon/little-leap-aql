@@ -37,6 +37,9 @@ This document explains each `APP > Resources` column, what to fill, and common v
 | `UIFields` | Optional | JSON Text | Field config for dynamic form/table | JSON array of field objects | `[{"header":"Name","label":"Name","type":"text","required":true}]` |
 | `ShowInMenu` | Yes | Boolean | Whether to show in frontend menu | `TRUE` / `FALSE` | `TRUE` |
 | `IncludeInAuthorizationPayload` | Yes | Boolean | Include this resource in login/getAuthorizedResources payload | `TRUE` / `FALSE` | `TRUE` |
+| `Functional` | Yes | Boolean | If `TRUE`, resource is a UI tool with no backing sheet (FileID/SheetName ignored). Skipped during data sync. | `TRUE` / `FALSE` | `FALSE` |
+| `PreAction` | Optional | Text | Function name executed **before** the main action handler when the resource is invoked | GAS function name | `validateBulkPayload` |
+| `PostAction` | Optional | Text | Function name executed **after** routing (or as the primary handler for functional resources) | GAS function name | `handleMasterBulkRecords` |
 
 ## `RecordAccessPolicy` Meaning
 - `ALL`: Any user with role action permission can access records.

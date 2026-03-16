@@ -39,7 +39,10 @@ function setupAppSheets() {
         'PageDescription',
         'UIFields',
         'ShowInMenu',
-        'IncludeInAuthorizationPayload'
+        'IncludeInAuthorizationPayload',
+        'Functional',
+        'PreAction',
+        'PostAction'
       ],
       autoIdFormula: null,
       validations: [
@@ -66,6 +69,13 @@ function setupAppSheets() {
         },
         {
           colHeader: 'IncludeInAuthorizationPayload',
+          rule: SpreadsheetApp.newDataValidation()
+            .requireValueInList(['TRUE', 'FALSE'], true)
+            .setAllowInvalid(false)
+            .build()
+        },
+        {
+          colHeader: 'Functional',
           rule: SpreadsheetApp.newDataValidation()
             .requireValueInList(['TRUE', 'FALSE'], true)
             .setAllowInvalid(false)
@@ -99,7 +109,10 @@ function setupAppSheets() {
         PageDescription: 260,
         UIFields: 320,
         ShowInMenu: 100,
-        IncludeInAuthorizationPayload: 220
+        IncludeInAuthorizationPayload: 220,
+        Functional: 100,
+        PreAction: 180,
+        PostAction: 180
       }
     },
     {
@@ -319,7 +332,7 @@ function fixResourcesBooleanValidation() {
   const idx = {};
   headers.forEach(function (h, i) { idx[h] = i; });
 
-  const targets = ['IsActive', 'Audit', 'ShowInMenu', 'IncludeInAuthorizationPayload'];
+  const targets = ['IsActive', 'Audit', 'ShowInMenu', 'IncludeInAuthorizationPayload', 'Functional'];
   const rule = SpreadsheetApp.newDataValidation()
     .requireValueInList(['TRUE', 'FALSE'], true)
     .setAllowInvalid(false)

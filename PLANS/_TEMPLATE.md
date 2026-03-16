@@ -1,8 +1,8 @@
 # PLAN: [Short Title]
 **Status**: DRAFT
 **Created**: [YYYY-MM-DD]
-**Created By**: Brain Agent
-**Executed By**: Execution Agent (pending)
+**Created By**: Brain Agent ([AgentName])
+**Executed By**: Build Agent ([AgentName] | pending)
 
 ## Objective
 [What we want to achieve and why]
@@ -41,8 +41,9 @@
 - [ ] [Testable behavior outcome 2]
 - [ ] [No regression condition]
 
-## Post-Execution Notes (Execution Agent fills this)
+## Post-Execution Notes (Build Agent fills this)
 *(Status Update Discipline: Ensure you change `Status` to `IN_PROGRESS` or `COMPLETED` and update `Executed By` at the top of the file before finishing.)*
+*(Identity Discipline: Always replace `[AgentName]` with the concrete agent/runtime identity used in that session. Build Agent must remove `| pending` when execution completes.)*
 
 ### Progress Log
 - [ ] Step 1 completed

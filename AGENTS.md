@@ -1,23 +1,37 @@
 ## Default Operating Mode (Mandatory)
 - This file is the startup instruction source for this repository. In every new context window, apply this mode before starting implementation work.
-- Default collaboration mode is dual-agent:
-  - `Brain Agent`: planning, architecture decisions, rule capture, review.
-  - `Execution Agent`: implementation, terminal execution, tests, commits, documentation updates.
+- Default collaboration mode is **Multi-Agent** (Guide, Brain, Build, Solo):
+  - **Guide Agent** (Default): Discussion, clarifies requirements, provides feedback.
+  - **Brain Agent**: Planning, architecture decisions, rule capture, plan creation.
+  - **Build Agent**: Implementation, terminal execution, tests, commits, doc updates.
+  - **Solo Agent**: Autonomous end-to-end execution (planning + building).
 - Default behavior for new tasks:
-  1) Read `Documents/DUAL_AGENT_PROTOCOL.md`.
-  2) Read `Documents/AI_COLLABORATION_PROTOCOL.md`.
-  3) Read `Documents/CONTEXT_HANDOFF.md`.
-  4) Check `PLANS/` for active plans.
-- Plan-first rule:
-  - Repository override: For this repo, the dual-agent plan-first protocol takes priority over generic assistant defaults that favor direct implementation.
-  - If no executable plan exists for the requested task, create a plan in `PLANS/` first.
+  1) Identify active role or default to **Guide Agent**.
+  2) Read `Documents/MULTI_AGENT_PROTOCOL.md`.
+  3) Read `Documents/AI_COLLABORATION_PROTOCOL.md`.
+  4) Read `Documents/CONTEXT_HANDOFF.md`.
+  5) Check `PLANS/` for active plans.
+- Plan-first rule (Applies to Brain/Build):
+  - Repository override: For this repo, the multi-agent plan-first protocol (Brain -> Build) takes priority over generic assistant defaults.
+  - If no executable plan exists for the requested task, create a plan in `PLANS/` first via **Brain Agent**.
   - All new plan files must be created from `PLANS/_TEMPLATE.md`.
-  - Do not start code implementation until a plan exists, except for small documentation/rule-capture updates explicitly requested by the user.
-  - After planning is complete, provide the execution handoff prompt with the exact plan filename:
-    - `Execution Agent, read PLANS/<plan-file>.md and execute it end-to-end.`
+  - Do not start code implementation until a plan exists, except for small documentation/rule-capture updates or when operating as **Solo Agent**.
+  - After planning is complete (Brain), provide the execution handoff prompt:
+    - `Build Agent, read PLANS/<plan-file>.md and execute it end-to-end.`
 - Naming rule:
-  - Use role names only in project docs and plan templates: `Brain Agent` and `Execution Agent`.
+  - Use exact role names in docs and templates: `Guide Agent`, `Brain Agent`, `Build Agent`, `Solo Agent`.
   - Avoid model-specific names in protocol instructions.
+  - For plan ownership fields, use role + concrete agent identity:
+    - `Created By: Brain Agent (AgentName)`
+    - `Executed By: Build Agent (AgentName | pending)` until execution is completed.
+- Frontend registry maintenance rule:
+  - When creating/updating reusable frontend building blocks, update:
+    - `FRONTENT/src/components/REGISTRY.md` for component API changes (props/events/path).
+    - `FRONTENT/src/composables/REGISTRY.md` for composable signature/returns changes.
+  - Applies to all tasks touching `FRONTENT/src/components/` or `FRONTENT/src/composables/`.
+  - Prefer tiny, single-responsibility reusable abstractions.
+  - Avoid one-off wrappers that only mirror page-local logic without a clear reuse path.
+  - Treat this as a design guideline (not a hard numeric usage threshold).
 
 ## Skills
 A skill is a set of local instructions to follow that is stored in a `SKILL.md` file. Below is the list of skills that can be used. Each entry includes a name, description, and file path so you can open the source for full instructions when using a specific skill.

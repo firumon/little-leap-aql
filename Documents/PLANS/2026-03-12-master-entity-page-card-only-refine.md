@@ -2,7 +2,7 @@
 **Status**: COMPLETED
 **Created**: 2026-03-12
 **Created By**: Brain Agent
-**Executed By**: Execution Agent
+**Executed By**: Build Agent
 
 ## Objective
 Refine `MasterEntityPage.vue` to a card-only list experience (no table), with a smaller top area and record detail popup on card click, without breaking listing/create/update flows.
@@ -53,7 +53,7 @@ Refine `MasterEntityPage.vue` to a card-only list experience (no table), with a 
 - [x] Add/update/list flows remain functional and unchanged in behavior.
 - [x] Header area is compact and visually aligned with page theme.
 
-## Post-Execution Notes (Execution Agent fills this)
+## Post-Execution Notes (Build Agent fills this)
 
 ### Progress Log
 - [x] Step 1 completed

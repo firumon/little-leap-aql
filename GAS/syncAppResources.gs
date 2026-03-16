@@ -37,7 +37,10 @@ const APP_RESOURCES_CODE_CONFIG = [
             { header: 'Status', label: 'Status', type: 'status', required: true }
         ]),
         ShowInMenu: 'TRUE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.MASTER_SHEETS.SKUS,
@@ -73,7 +76,10 @@ const APP_RESOURCES_CODE_CONFIG = [
             { header: 'Status', label: 'Status', type: 'status', required: true }
         ]),
         ShowInMenu: 'TRUE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.MASTER_SHEETS.SUPPLIERS,
@@ -107,7 +113,10 @@ const APP_RESOURCES_CODE_CONFIG = [
             { header: 'Status', label: 'Status', type: 'status', required: true }
         ]),
         ShowInMenu: 'TRUE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.MASTER_SHEETS.WAREHOUSES,
@@ -140,7 +149,10 @@ const APP_RESOURCES_CODE_CONFIG = [
             { header: 'Status', label: 'Status', type: 'status', required: true }
         ]),
         ShowInMenu: 'TRUE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.MASTER_SHEETS.PORTS,
@@ -172,7 +184,10 @@ const APP_RESOURCES_CODE_CONFIG = [
             { header: 'Status', label: 'Status', type: 'status', required: true }
         ]),
         ShowInMenu: 'TRUE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.MASTER_SHEETS.CARRIERS,
@@ -205,7 +220,10 @@ const APP_RESOURCES_CODE_CONFIG = [
             { header: 'Status', label: 'Status', type: 'status', required: true }
         ]),
         ShowInMenu: 'TRUE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.PROCUREMENTS,
@@ -232,7 +250,10 @@ const APP_RESOURCES_CODE_CONFIG = [
         PageDescription: 'Central tracked procurement request',
         UIFields: JSON.stringify([]),
         ShowInMenu: 'TRUE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.PURCHASE_REQUISITIONS,
@@ -260,7 +281,10 @@ const APP_RESOURCES_CODE_CONFIG = [
         PageDescription: 'Internal requests for purchase',
         UIFields: JSON.stringify([]),
         ShowInMenu: 'TRUE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.PURCHASE_REQUISITION_ITEMS,
@@ -288,7 +312,10 @@ const APP_RESOURCES_CODE_CONFIG = [
         PageDescription: 'Items in Purchase Requisition',
         UIFields: JSON.stringify([]),
         ShowInMenu: 'FALSE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.RFQS,
@@ -316,7 +343,10 @@ const APP_RESOURCES_CODE_CONFIG = [
         PageDescription: 'Request For Quotation',
         UIFields: JSON.stringify([]),
         ShowInMenu: 'TRUE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.RFQ_ITEMS,
@@ -344,7 +374,10 @@ const APP_RESOURCES_CODE_CONFIG = [
         PageDescription: 'Items requested for quotation',
         UIFields: JSON.stringify([]),
         ShowInMenu: 'FALSE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.RFQ_SUPPLIERS,
@@ -372,7 +405,10 @@ const APP_RESOURCES_CODE_CONFIG = [
         PageDescription: 'Suppliers targeted for RFQ',
         UIFields: JSON.stringify([]),
         ShowInMenu: 'FALSE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.SUPPLIER_QUOTATIONS,
@@ -400,7 +436,10 @@ const APP_RESOURCES_CODE_CONFIG = [
         PageDescription: 'Quotations received from suppliers',
         UIFields: JSON.stringify([]),
         ShowInMenu: 'TRUE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.SUPPLIER_QUOTATION_ITEMS,
@@ -428,7 +467,10 @@ const APP_RESOURCES_CODE_CONFIG = [
         PageDescription: '',
         UIFields: JSON.stringify([]),
         ShowInMenu: 'FALSE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.PURCHASE_ORDERS,
@@ -456,7 +498,10 @@ const APP_RESOURCES_CODE_CONFIG = [
         PageDescription: 'Orders sent to suppliers',
         UIFields: JSON.stringify([]),
         ShowInMenu: 'TRUE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.PURCHASE_ORDER_ITEMS,
@@ -484,7 +529,10 @@ const APP_RESOURCES_CODE_CONFIG = [
         PageDescription: '',
         UIFields: JSON.stringify([]),
         ShowInMenu: 'FALSE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.PO_FULFILLMENTS,
@@ -512,7 +560,10 @@ const APP_RESOURCES_CODE_CONFIG = [
         PageDescription: 'Documents related to POs',
         UIFields: JSON.stringify([]),
         ShowInMenu: 'FALSE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.SHIPMENTS,
@@ -539,7 +590,10 @@ const APP_RESOURCES_CODE_CONFIG = [
         PageDescription: 'Manage inward shipments',
         UIFields: JSON.stringify([]),
         ShowInMenu: 'TRUE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.SHIPMENT_ITEMS,
@@ -567,7 +621,10 @@ const APP_RESOURCES_CODE_CONFIG = [
         PageDescription: 'Items in a shipment',
         UIFields: JSON.stringify([]),
         ShowInMenu: 'FALSE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.PORT_CLEARANCE,
@@ -594,7 +651,10 @@ const APP_RESOURCES_CODE_CONFIG = [
         PageDescription: 'Manage customs clearance',
         UIFields: JSON.stringify([]),
         ShowInMenu: 'TRUE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.GOODS_RECEIPTS,
@@ -621,7 +681,10 @@ const APP_RESOURCES_CODE_CONFIG = [
         PageDescription: 'Manage inward warehouse receiving',
         UIFields: JSON.stringify([]),
         ShowInMenu: 'TRUE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.GOODS_RECEIPT_ITEMS,
@@ -649,7 +712,10 @@ const APP_RESOURCES_CODE_CONFIG = [
         PageDescription: 'Items in a goods receipt',
         UIFields: JSON.stringify([]),
         ShowInMenu: 'FALSE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.STOCK_MOVEMENTS,
@@ -676,7 +742,10 @@ const APP_RESOURCES_CODE_CONFIG = [
         PageDescription: 'Global ledger of inventory flows',
         UIFields: JSON.stringify([]),
         ShowInMenu: 'TRUE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.WAREHOUSE_STORAGES,
@@ -708,7 +777,10 @@ const APP_RESOURCES_CODE_CONFIG = [
             { header: 'Quantity', label: 'Quantity', type: 'number', required: true }
         ]),
         ShowInMenu: 'TRUE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.ACCOUNTS_SHEETS.CHART_OF_ACCOUNTS,
@@ -735,7 +807,10 @@ const APP_RESOURCES_CODE_CONFIG = [
         PageDescription: 'COA Ledger structure',
         UIFields: JSON.stringify([]),
         ShowInMenu: 'TRUE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.ACCOUNTS_SHEETS.ENTRY_TEMPLATES,
@@ -762,7 +837,10 @@ const APP_RESOURCES_CODE_CONFIG = [
         PageDescription: 'Templates for accounting entries',
         UIFields: JSON.stringify([]),
         ShowInMenu: 'TRUE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.ACCOUNTS_SHEETS.ASSETS,
@@ -789,7 +867,10 @@ const APP_RESOURCES_CODE_CONFIG = [
         PageDescription: 'Asset account entries',
         UIFields: JSON.stringify([]),
         ShowInMenu: 'TRUE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.ACCOUNTS_SHEETS.LIABILITIES,
@@ -816,7 +897,10 @@ const APP_RESOURCES_CODE_CONFIG = [
         PageDescription: 'Liability account entries',
         UIFields: JSON.stringify([]),
         ShowInMenu: 'TRUE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.ACCOUNTS_SHEETS.EQUITY,
@@ -843,7 +927,10 @@ const APP_RESOURCES_CODE_CONFIG = [
         PageDescription: 'Equity account entries',
         UIFields: JSON.stringify([]),
         ShowInMenu: 'TRUE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.ACCOUNTS_SHEETS.REVENUE,
@@ -870,7 +957,10 @@ const APP_RESOURCES_CODE_CONFIG = [
         PageDescription: 'Revenue account entries',
         UIFields: JSON.stringify([]),
         ShowInMenu: 'TRUE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
     },
     {
         Name: CONFIG.ACCOUNTS_SHEETS.EXPENSES,
@@ -897,7 +987,41 @@ const APP_RESOURCES_CODE_CONFIG = [
         PageDescription: 'Expense account entries',
         UIFields: JSON.stringify([]),
         ShowInMenu: 'TRUE',
-        IncludeInAuthorizationPayload: 'TRUE'
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: ''
+    },
+    // --- FUNCTIONAL RESOURCES ---
+    {
+        Name: 'BulkUploadMasters',
+        Scope: 'master',
+        IsActive: 'TRUE',
+        SheetName: '',
+        CodePrefix: '',
+        CodeSequenceLength: 0,
+        LastDataUpdatedAt: 0,
+        Audit: 'FALSE',
+        RequiredHeaders: '',
+        UniqueHeaders: '',
+        UniqueCompositeHeaders: '',
+        DefaultValues: '',
+        RecordAccessPolicy: 'ALL',
+        OwnerUserField: '',
+        AdditionalActions: '',
+        MenuGroup: 'Masters',
+        MenuOrder: 99,
+        MenuLabel: 'Bulk Upload',
+        MenuIcon: 'cloud_upload',
+        RoutePath: '/masters/bulk-upload',
+        PageTitle: 'Bulk Upload Masters',
+        PageDescription: 'Upload bulk data to any master resource',
+        UIFields: JSON.stringify([]),
+        ShowInMenu: 'TRUE',
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'TRUE',
+        PreAction: '',
+        PostAction: 'handleMasterBulkRecords'
     }
 ];
 
@@ -906,7 +1030,41 @@ function syncAppResourcesFromCode(silent) {
     const sheet = ss.getSheetByName(CONFIG.SHEETS.RESOURCES);
     if (!sheet) throw new Error('Resources sheet not found');
 
-    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    // ── Detect and add missing column headers ──
+    var lastColumn = sheet.getLastColumn();
+    var headers = [];
+    if (lastColumn > 0) {
+        headers = sheet.getRange(1, 1, 1, Math.max(lastColumn, 1)).getValues()[0];
+    }
+    if (headers.length === 1 && headers[0] === '') {
+        headers = [];
+    }
+    var headersAdded = 0;
+    var allCodeKeys = {};
+    APP_RESOURCES_CODE_CONFIG.forEach(function (resource) {
+        Object.keys(resource).forEach(function (key) {
+            allCodeKeys[key] = true;
+        });
+    });
+    Object.keys(allCodeKeys).forEach(function (key) {
+        if (headers.indexOf(key) === -1) {
+            var nextCol = headers.length + 1;
+            if (nextCol > sheet.getMaxColumns()) {
+                var missingHeaderCols = nextCol - sheet.getMaxColumns();
+                sheet.insertColumnsAfter(sheet.getMaxColumns(), missingHeaderCols);
+            }
+            sheet.getRange(1, nextCol).setValue(key);
+            headers.push(key);
+            headersAdded++;
+        }
+    });
+
+    // Re-read headers if new ones were added
+    if (headersAdded > 0) {
+        var latestColCount = Math.max(sheet.getLastColumn(), 1);
+        headers = sheet.getRange(1, 1, 1, latestColCount).getValues()[0];
+    }
+
     const idx = {};
     headers.forEach(function (h, i) { idx[h] = i; });
 
@@ -938,7 +1096,7 @@ function syncAppResourcesFromCode(silent) {
             }
             updated++;
         } else {
-            // Add new record
+            // Add new record — use setValues after clearing any inherited data validation
             const newRow = [];
             headers.forEach(function (h) {
                 if (resource[h] !== undefined) {
@@ -950,14 +1108,25 @@ function syncAppResourcesFromCode(silent) {
                     newRow.push('');
                 }
             });
-            sheet.appendRow(newRow);
+            if (newRow.length > sheet.getMaxColumns()) {
+                var neededColumns = newRow.length - sheet.getMaxColumns();
+                sheet.insertColumnsAfter(sheet.getMaxColumns(), neededColumns);
+            }
+            var targetRowNum = sheet.getLastRow() + 1;
+            if (targetRowNum > sheet.getMaxRows()) {
+                var neededRows = targetRowNum - sheet.getMaxRows();
+                sheet.insertRowsAfter(sheet.getMaxRows(), neededRows);
+            }
+            var targetRange = sheet.getRange(targetRowNum, 1, 1, newRow.length);
+            targetRange.clearDataValidations();
+            targetRange.setValues([newRow]);
             added++;
         }
     });
 
     if (!silent) {
         try {
-            SpreadsheetApp.getUi().alert('APP.Resources Sync Complete.\n\nAdded: ' + added + '\nUpdated: ' + updated + '\n\nNote: If any resources exist in an external file instead of the core APP file, make sure to manually set their FileID in the sheet.');
+            SpreadsheetApp.getUi().alert('APP.Resources Sync Complete.\n\nNew columns added: ' + headersAdded + '\nResources added: ' + added + '\nResources updated: ' + updated + '\n\nNote: If any resources exist in an external file instead of the core APP file, make sure to manually set their FileID in the sheet.');
         } catch (e) {
             // Context without UI
         }

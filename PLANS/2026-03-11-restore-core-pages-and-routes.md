@@ -2,7 +2,7 @@
 **Status**: COMPLETED
 **Created**: 2026-03-11
 **Created By**: Brain Agent
-**Executed By**: Execution Agent
+**Executed By**: Build Agent
 
 ## Objective
 Correct only the mistaken deletion scope by restoring required pages and route architecture: `LandingPage`, `DashboardIndex`, and generic `MasterEntityPage` (including their corresponding routes), without rolling back unrelated frontend hardening changes. `LoginPage.vue` must remain preserved.
@@ -73,7 +73,7 @@ Correct only the mistaken deletion scope by restoring required pages and route a
 - [x] Update handoff summary to state this correction explicitly.
 - [x] Mark this plan metadata and checkboxes accurately (`IN_PROGRESS` -> `COMPLETED/BLOCKED`) per protocol.
 **Files**: `Documents/FRONTENT_README.md`, `Documents/CONTEXT_HANDOFF.md`, `Documents/README.md` (if route/page summary changed), `PLANS/2026-03-11-restore-core-pages-and-routes.md`
-**Pattern**: Documentation discipline and execution status discipline from dual-agent protocol.
+**Pattern**: Documentation discipline and execution status discipline from Multi-Agent protocol.
 **Rule**: Repo docs must match actual active frontend structure.
 
 ## Documentation Updates Required
@@ -94,7 +94,7 @@ Correct only the mistaken deletion scope by restoring required pages and route a
 - [x] `npm run build` succeeds.
 - [x] Docs/handoff reflect final corrected structure.
 
-## Post-Execution Notes (Execution Agent fills this)
+## Post-Execution Notes (Build Agent fills this)
 ### Progress Log
 - [x] Step 1 completed: Checked out `LandingPage`, `DashboardIndex` and `MasterEntityPage`. Also supplied 5 stubbed `Dashboard/widgets/*` to satisfy the defined `DashboardIndex.vue` dynamic `import` definitions.
 - [x] Step 2 completed: Rewrote `routes.js` exactly matching dev vs prod routing environment conditionals, assigning index accurately, adding the generic `/masters/:resourceSlug` master list path.

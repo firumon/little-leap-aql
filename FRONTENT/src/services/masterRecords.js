@@ -153,7 +153,8 @@ export async function fetchMasterRecords(resourceName, options = {}) {
     }
 
     const meta = await withTimeout(getResourceMeta(resourceName), null)
-    const syncCursor = meta?.lastSyncAt || getLocalSyncCursor(resourceName)
+    const rawSyncCursor = meta?.lastSyncAt || getLocalSyncCursor(resourceName)
+    const syncCursor = normalizeCursorValue(rawSyncCursor)
     const statusIndex = headers.indexOf('Status')
     const cachedRows = await withTimeout(getResourceRows(resourceName, {
       includeInactive,
@@ -177,7 +178,7 @@ export async function fetchMasterRecords(resourceName, options = {}) {
       scope: 'master',
       resource: resourceName,
       includeInactive: true,
-      ...(syncCursor ? { lastUpdatedAt: new Date(syncCursor).getTime() } : {})
+      ...(syncCursor ? { lastUpdatedAt: syncCursor } : {})
     }
 
     const syncResponse = await callGasApi('get', payload, {
@@ -256,7 +257,7 @@ export async function syncAllMasterResources() {
     const masterResources = Array.isArray(resources)
       ? resources.filter((entry) => {
         const scope = (entry?.scope || '').toString().trim().toLowerCase()
-        return scope === 'master' && entry?.permissions?.canRead !== false && entry?.name
+        return scope === 'master' && entry?.permissions?.canRead !== false && entry?.name && entry?.functional !== true
       })
       : []
 
@@ -371,4 +372,14 @@ export async function updateMasterRecord(resourceName, code, record) {
     code,
     record
   }, { showLoading: true, loadingMessage: 'Updating record...', successMessage: 'Record updated successfully' })
+}
+
+export async function bulkMasterRecords(targetResourceName, records) {
+  return callGasApi('bulk', {
+    scope: 'master',
+    resource: 'BulkUploadMasters',
+    callerResource: 'BulkUploadMasters',
+    targetResource: targetResourceName,
+    records
+  }, { showLoading: false, successMessage: null, showError: false })
 }

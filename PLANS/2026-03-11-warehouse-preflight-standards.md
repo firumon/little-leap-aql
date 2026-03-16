@@ -2,7 +2,7 @@
 **Status**: DRAFT
 **Created**: 2026-03-11
 **Created By**: Brain Agent
-**Executed By**: Execution Agent (pending)
+**Executed By**: Build Agent (pending)
 
 ## Objective
 Align and formalize mandatory engineering standards before implementing Warehouse add flow, so frontend/backend behavior remains consistent, reusable, and policy-driven.
@@ -68,7 +68,7 @@ Align and formalize mandatory engineering standards before implementing Warehous
 - [x] Server-side authorization coverage is confirmed and traceable in docs (role/resource + record policy + region scope).
 - [x] No regression in existing login/master/operation data fetch behavior.
 
-## Post-Execution Notes (Execution Agent fills this)
+## Post-Execution Notes (Build Agent fills this)
 ### Progress Log
 - [x] Step 1 completed: Updated PR/Dev docs with Quasar component rule and PWA fallback info.
 - [x] Step 2 completed: Overhauled `callGasApi` to utilize `Loading` and `Notify` internally; modified MasterEntityPage, ShipmentsPage, and GoodsReceiptsPage to drop ad-hoc $q.notify implementation.

@@ -44,8 +44,8 @@ const router = useRouter()
 const loading = ref(false)
 
 const loginForm = reactive({
-  identifier: '',
-  password: ''
+  identifier: 'f@ll.c',
+  password: '111111'
 })
 
 async function handleLogin() {

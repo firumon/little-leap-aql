@@ -6,12 +6,14 @@ Use this file when starting a new AI agent session.
 Tell the AI agent:
 1. Read `Documents/CONTEXT_HANDOFF.md` first.
 2. Read `Documents/AI_COLLABORATION_PROTOCOL.md` and `Documents/README.md`.
-3. **Read `Documents/DUAL_AGENT_PROTOCOL.md`** - this project uses a dual-agent model:
+3. **Read `Documents/MULTI_AGENT_PROTOCOL.md`** - this project uses a multi-agent model:
+   - **Guide Agent** (Default): Discussion and brainstorming.
    - **Brain Agent:** Creates implementation plans in `PLANS/`.
-   - **Execution Agent:** Executes approved plans from `PLANS/` (code, terminal, git, docs).
+   - **Build Agent:** Executes approved plans from `PLANS/` (code, terminal, docs).
+   - **Solo Agent:** Autonomous planning + building.
 4. Check `PLANS/` for any active or pending implementation plans.
 5. For any new plan, create it from `PLANS/_TEMPLATE.md`.
-6. After planning, provide handoff prompt: `Execution Agent, read PLANS/<plan-file>.md and execute it end-to-end.`
+6. After planning (Brain), provide handoff prompt: `Build Agent, read PLANS/<plan-file>.md and execute it end-to-end.`
 7. For resource metadata tasks, read `Documents/RESOURCE_COLUMNS_GUIDE.md`.
 8. Continue work from current implementation status in this handoff.
 
@@ -21,9 +23,9 @@ Tell the AI agent:
 - Goal: End-to-end control from import (China) to warehouse (Ajman) to sales, invoicing, payments, and reports.
 
 ## 2) Current Tech Stack
-- Frontend: Quasar (Vue 3 + Vite), Pinia, Axios
-- Backend API: Google Apps Script Web App (single endpoint `doPost`)
-- Database: Google Sheets split across APP / MASTERS / OPERATIONS / REPORTS files
+- Frontend: High-fidelity Quasar (Vue 3 + Vite), Pinia, Axios.
+- Backend API: Google Apps Script Web App (single endpoint `doPost`).
+- Database: Google Sheets split across APP / MASTERS / OPERATIONS / REPORTS files.
 
 ## 3) Operating Model (Important)
 - Preferred model: Single Apps Script project in APP file.
@@ -36,6 +38,9 @@ Tell the AI agent:
 - If Sheets change: update structure docs and setup scripts.
 - If Apps Script changes: show changed files and tell user what to copy-paste and redeploy.
 - If frontend changes: implement directly and update docs.
+- Process standard: New plan files must use role + concrete identity in ownership metadata:
+  - `Created By: Brain Agent (AgentName)`
+  - `Executed By: Build Agent (AgentName | pending)` (remove `| pending` on completion).
 - Source of this rule: `Documents/AI_COLLABORATION_PROTOCOL.md`.
 
 ## 5) Ground Operations Reality (Business Flow)
@@ -112,6 +117,7 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - `setupMasterSheets()` and `setupAllOperations()` intelligently refactor columns (`app_normalizeSheetSchema`) without dropping business data when headers are redefined.
   - `setupAppSheets()` now auto-runs `syncAppResourcesFromCode(true)` after setup/refactor, so APP resource config stays aligned with code defaults.
   - `app_normalizeSheetSchema` now clears stale data validations before header rebuild to avoid validation/range drift after schema changes.
+  - Robustness fix (2026-03-16): `setupAppSheets()` now preserves/validates `Functional`, `PreAction`, and `PostAction` headers; `syncAppResourcesFromCode()` now guards empty-header reads (`getLastColumn() > 0`), uses `Math.max(lastColumn, 1)` safe reads, and auto-expands columns/rows before writing headers or new resource rows (covers heavily trimmed sheets).
   - Required reading: `Documents/SCHEMA_REFACTORING_GUIDE.md`
 - Frontend master module:
   - Router Entry: `FRONTENT/src/pages/Masters/MasterIndexPage.vue`
@@ -126,6 +132,8 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - Product store remains aligned: `FRONTENT/src/stores/products.js`
   - Supports list/create/update across Products/Suppliers/Warehouses/WarehouseStorages/Carriers/Ports.
   - Uses IndexedDB-backed incremental sync (`resource-meta`, `resource-records`).
+  - Bulk upload page refactor (2026-03-16): `FRONTENT/src/pages/Masters/BulkUploadPage.vue` is now a thin orchestrator using `FRONTENT/src/composables/useBulkUpload.js` and reusable components under `FRONTENT/src/components/Masters/BulkUpload/`. Header-driven row mapping now strictly follows user-provided header list to prevent column misalignment.
+  - Frontend registry standard (2026-03-16): reusable UI/state catalogs are now maintained in `FRONTENT/src/components/REGISTRY.md` and `FRONTENT/src/composables/REGISTRY.md`. Frontend tasks that add/change reusable components/composables must update these registries.
   - Role-based UI filter active:
     - Sidebar master menu shows only resources with `permissions.canRead = true`
     - Route guard blocks direct URL access when role lacks resource read permission
@@ -162,6 +170,10 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - Auth login (`FRONTENT/src/stores/auth.js`) triggers this sync in background (non-blocking) immediately after successful login.
   - Batch payload sends per-resource incremental cursors (`lastUpdatedAtByResource`) to `action=get` + `scope=master` + `resources[]`.
   - `GAS/masterApi.gs` `handleMasterGetMultiRecords` now applies cursor per resource and keeps existing access/region policy enforcement via `handleMasterGetRecords`.
+- Delta cursor serialization fix (2026-03-15):
+  - `FRONTENT/src/services/masterRecords.js` now normalizes single-resource cursor values using numeric-first parsing before request build.
+  - Single-resource sync sends `lastUpdatedAt` only when cursor is a valid Unix epoch milliseconds number.
+  - This prevents JSON `NaN -> null` payload serialization (seen when cursor came from localStorage as numeric string), restoring incremental delta behavior.
 
 ### Key behavior now
 - Code is generated in Apps Script (not by sheet formula).
@@ -351,7 +363,7 @@ When setup scripts are added/changed:
 ## 12) Primary Docs Map
 - Docs index: `Documents/README.md`
 - Collaboration rules: `Documents/AI_COLLABORATION_PROTOCOL.md`
-- **Dual-agent protocol: `Documents/DUAL_AGENT_PROTOCOL.md`**
+- **Multi-Agent protocol: `Documents/MULTI_AGENT_PROTOCOL.md`**
 - **Active implementation plans: `PLANS/`**
 - Resource architecture: `Documents/RESOURCE_REGISTRY_ARCHITECTURE.md`
 - Resource column definitions: `Documents/RESOURCE_COLUMNS_GUIDE.md`
@@ -381,4 +393,3 @@ Expected behavior for future joiners:
 2. Implement requested changes.
 3. Update related technical/business docs.
 4. Update this handoff with latest status and decisions so the next context can continue without re-discovery.
-

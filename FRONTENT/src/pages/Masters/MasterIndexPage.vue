@@ -8,10 +8,26 @@
 <script setup>
 import { watch, shallowRef, markRaw } from 'vue'
 import { useRoute } from 'vue-router'
-import MasterEntityPage from './MasterEntityPage.vue'
 
 const route = useRoute()
 const resolvedComponent = shallowRef(null)
+const customPageModules = import.meta.glob('./*Page.vue')
+const loadMasterEntityPageModule = customPageModules['./MasterEntityPage.vue']
+let fallbackComponent = null
+
+async function ensureFallbackComponent() {
+  if (fallbackComponent) {
+    return fallbackComponent
+  }
+
+  if (!loadMasterEntityPageModule) {
+    throw new Error('MasterEntityPage module not found')
+  }
+
+  const module = await loadMasterEntityPageModule()
+  fallbackComponent = markRaw(module.default || module)
+  return fallbackComponent
+}
 
 /**
  * Convert resource slug to PascalCase component name
@@ -35,20 +51,25 @@ function getCustomPageName(resourceSlug) {
  */
 async function resolvePageComponent(resourceSlug) {
   if (!resourceSlug) {
-    resolvedComponent.value = markRaw(MasterEntityPage)
+    resolvedComponent.value = await ensureFallbackComponent()
     return
   }
 
   const customPageName = getCustomPageName(resourceSlug)
+  const modulePath = `./${customPageName}.vue`
+  const loadModule = customPageModules[modulePath]
+
+  if (!loadModule) {
+    resolvedComponent.value = await ensureFallbackComponent()
+    return
+  }
 
   try {
-    // Attempt to dynamically import custom page
-    // If file doesn't exist, import will fail silently and we'll use fallback
-    const module = await import(`./${customPageName}.vue`)
+    const module = await loadModule()
     resolvedComponent.value = markRaw(module.default || module)
   } catch (error) {
     // Custom page doesn't exist, use generic page (silent fallback)
-    resolvedComponent.value = markRaw(MasterEntityPage)
+    resolvedComponent.value = await ensureFallbackComponent()
   }
 }
 

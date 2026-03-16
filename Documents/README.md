@@ -3,6 +3,7 @@
 Welcome to the technical documentation for the Little Leap AQL project. This folder contains detailed guides on the system's logic, architecture, and setup.
 
 ## Latest Development Updates
+- 2026-03-16: Bulk upload frontend refactored to composable + reusable components (`useBulkUpload`, controls/preview/empty-state components). Header-to-data plotting now follows user-provided header list strictly. Upload flow also removed service-level global loading/notify calls for bulk action to avoid Quasar `createChildApp` console noise.
 - 2026-02-23: GAS master audit fields now write Unix epoch milliseconds in `CreatedAt`/`UpdatedAt`, and date parsing for sync/filter flow is standardized to Unix timestamp input.
 - 2026-02-23: `setupAppSheets()` refactor flow now clears stale data validations during schema normalization and auto-syncs `APP.Resources` from code via `syncAppResourcesFromCode(true)`.
 - 2026-02-21: Master sync is now strict cache-first (IDB-first with no per-visit API call when cache exists), sync requests send `lastUpdatedAt` from local sync cursor, and Products master data hydrates into Pinia for cross-page code-to-name resolution.
@@ -112,6 +113,6 @@ Welcome to the technical documentation for the Little Leap AQL project. This fol
 *   **Context:** Detailed progress log and technical reference for the Quasar frontend (API architecture, master module, PWA sync, profile features).
 *   **Audience:** Frontend Developers, AI Agents.
 
-### 19. [Dual-Agent Collaboration Protocol](DUAL_AGENT_PROTOCOL.md)
-*   **Context:** How the Brain Agent and Execution Agent collaborate on this project via file-based implementation plans.
+### 19. [Multi-Agent Collaboration Protocol](MULTI_AGENT_PROTOCOL.md)
+*   **Context:** How the Brain Agent and Build Agent collaborate on this project via file-based implementation plans.
 *   **Audience:** AI Agents, Project Owner.

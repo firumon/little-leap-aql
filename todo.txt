@@ -1,3 +1,2 @@
-request loading time
-component composition
-many requests, load all master on login
+Data bulk upload
+dowload list

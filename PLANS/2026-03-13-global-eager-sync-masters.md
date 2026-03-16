@@ -2,7 +2,7 @@
 **Status**: COMPLETED
 **Created**: 2026-03-13
 **Created By**: Brain Agent
-**Executed By**: Execution Agent (Codex GPT-5)
+**Executed By**: Build Agent (Codex GPT-5)
 
 ## Objective
 Implement an "Eager Sync" mechanism that fetches all authorized master resources in a single batch immediately after a successful login. This eliminates the 10-second "per-page" latency by pre-populating the IndexedDB cache in the background.
@@ -51,7 +51,7 @@ Implement an "Eager Sync" mechanism that fetches all authorized master resources
 - [x] The sync happens in the background without blocking the user from the dashboard.
 - [x] Incremental sync (cursors) still works correctly in the batch payload.
 
-## Post-Execution Notes (Execution Agent fills this)
+## Post-Execution Notes (Build Agent fills this)
 *(Status Update Discipline: Ensure you change `Status` to `IN_PROGRESS` or `COMPLETED` and update `Executed By` at the top of the file before finishing.)*
 
 ### Progress Log

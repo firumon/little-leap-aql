@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ============================================================
  * Little Leap AQL - Resource Registry Helpers
  * ============================================================
@@ -67,7 +67,10 @@ function getResourceConfig(resourceName) {
         uiFields: parseJsonCell(readOptionalCell(row, registry.idx.UIFields, '[]'), []),
         showInMenu: toBooleanCell(readOptionalCell(row, registry.idx.ShowInMenu, true)),
         includeInAuthorizationPayload: toBooleanCell(readOptionalCell(row, registry.idx.IncludeInAuthorizationPayload, true)),
-        additionalActions: parseStringList(readOptionalCell(row, registry.idx.AdditionalActions, ''))
+        additionalActions: parseStringList(readOptionalCell(row, registry.idx.AdditionalActions, '')),
+        functional: toBooleanCell(readOptionalCell(row, registry.idx.Functional, false)),
+        preAction: (readOptionalCell(row, registry.idx.PreAction, '') || '').toString().trim(),
+        postAction: (readOptionalCell(row, registry.idx.PostAction, '') || '').toString().trim()
       };
     }
   }
@@ -311,6 +314,7 @@ function buildAuthorizedResourceEntry(resourceName, options) {
     sheetName: config.sheetName,
     codePrefix: config.codePrefix,
     codeSequenceLength: config.codeSequenceLength,
+    functional: config.functional || false,
     permissions: {
       canRead: false,
       canWrite: false,
@@ -319,13 +323,15 @@ function buildAuthorizedResourceEntry(resourceName, options) {
     }
   };
 
-  if (opts.includeHeaders) {
+  if (opts.includeHeaders && !config.functional) {
     try {
       const resource = openResourceSheet(resourceName);
       entry.headers = getSheetHeaders(resource.sheet);
     } catch (err) {
       entry.headers = [];
     }
+  } else if (opts.includeHeaders && config.functional) {
+    entry.headers = [];
   }
 
   if (opts.includeUiConfig) {

@@ -2,7 +2,7 @@
 **Status**: COMPLETED
 **Created**: 2026-03-12
 **Created By**: Brain Agent
-**Executed By**: Execution Agent
+**Executed By**: Build Agent
 
 ## Objective
 Fix the Vue template error: `[plugin:vite:vue] v-else/v-else-if has no adjacent v-if or v-else-if` in `MasterEntityPage.vue`.
@@ -38,7 +38,7 @@ A recent refactor of `MasterEntityPage.vue` introduced a `v-else-if` inside a `v
 - [ ] The page correctly displays the "Config not found" error state when `config` is missing and loading is finished.
 - [ ] The "stunning" Card UI remains intact when `config` is present.
 
-## Post-Execution Notes (Execution Agent fills this)
+## Post-Execution Notes (Build Agent fills this)
 *(Status Update Discipline: Ensure you change `Status` to `IN_PROGRESS` or `COMPLETED` and update `Executed By` at the top of the file before finishing.)*
 
 ### Progress Log

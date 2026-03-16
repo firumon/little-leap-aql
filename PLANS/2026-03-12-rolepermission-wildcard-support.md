@@ -2,7 +2,7 @@
 **Status**: COMPLETED
 **Created**: 2026-03-12
 **Created By**: Brain Agent
-**Executed By**: Execution Agent
+**Executed By**: Build Agent
 
 ## Objective
 Implement wildcard (`*`) support in role-permission resolution so RolePermissions rows like `Resource=*` and/or `Actions=*` grant expected access in login payload and runtime authorization checks.
@@ -41,7 +41,7 @@ Implement wildcard (`*`) support in role-permission resolution so RolePermission
 - [x] Role row `Resource=<specific>`, `Actions=*` grants full CRUD and all additional actions for that resource.
 - [x] Existing explicit action rows (e.g. `Create,Read,Update`) remain functional.
 
-## Post-Execution Notes (Execution Agent fills this)
+## Post-Execution Notes (Build Agent fills this)
 *(Status Update Discipline: Ensure you change `Status` to `IN_PROGRESS` or `COMPLETED` and update `Executed By` at the top of the file before finishing.)*
 
 ### Progress Log

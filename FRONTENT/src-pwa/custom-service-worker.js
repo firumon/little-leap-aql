@@ -10,11 +10,10 @@ import './idb-compat'
 import { clientsClaim } from 'workbox-core'
 import { precacheAndRoute, cleanupOutdatedCaches, createHandlerBoundToURL } from 'workbox-precaching'
 import { registerRoute, NavigationRoute } from 'workbox-routing'
-import { StaleWhileRevalidate, CacheFirst, NetworkFirst } from 'workbox-strategies'
+import { StaleWhileRevalidate, CacheFirst } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
 import { CacheableResponsePlugin } from 'workbox-cacheable-response'
 import { openDB } from 'idb'
-import { BackgroundSyncPlugin } from 'workbox-background-sync'
 
 const DB_NAME = 'little-leap-aql-db'
 const DB_VERSION = 2
@@ -56,10 +55,6 @@ function getDB() {
   })
   return swDbPromise
 }
-
-const bgSyncPlugin = new BackgroundSyncPlugin('api-sync-queue', {
-  maxRetentionTime: 24 * 60 // Retry for max 24 Hours (in minutes)
-})
 
 self.skipWaiting()
 clientsClaim()
@@ -120,38 +115,23 @@ registerRoute(
       mode: 'cors'
     })
 
-    // Use NetworkFirst for API calls
-    const strategy = new NetworkFirst({
-      cacheName: 'api-responses',
-      plugins: [
-        new CacheableResponsePlugin({ statuses: [0, 200] }),
-        new ExpirationPlugin({
-          maxEntries: 50,
-          maxAgeSeconds: 300 // 5 minutes
-        }),
-        bgSyncPlugin,
-        {
-          // Custom plugin to save to IndexedDB
-          fetchDidSucceed: async ({ response, request }) => {
-            const clonedResponse = response.clone()
-            try {
-              const data = await clonedResponse.json()
-              const db = await getDB()
-              await db.put('api-cache', {
-                url: request.url,
-                data: data,
-                timestamp: Date.now()
-              })
-            } catch (e) {
-              // Ignore non-json or errors
-            }
-            return response
-          }
-        }
-      ]
-    })
+    const response = await fetch(newRequest)
 
-    return strategy.handle({ request: newRequest })
+    // Mirror successful JSON responses to IDB for optional offline diagnostics.
+    const clonedResponse = response.clone()
+    try {
+      const data = await clonedResponse.json()
+      const db = await getDB()
+      await db.put('api-cache', {
+        url: newRequest.url,
+        data: data,
+        timestamp: Date.now()
+      })
+    } catch (e) {
+      // Ignore non-json or cache write errors
+    }
+
+    return response
   },
   'POST'
 )

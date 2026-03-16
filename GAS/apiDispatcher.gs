@@ -88,7 +88,7 @@ function isGenericMasterCrudAction(action, payload) {
   const normalizedAction = (action || '').toString().trim().toLowerCase();
   const normalizedScope = (payload && payload.scope ? payload.scope : '').toString().trim().toLowerCase();
 
-  if (normalizedAction === 'master.get' || normalizedAction === 'master.create' || normalizedAction === 'master.update') {
+  if (normalizedAction === 'master.get' || normalizedAction === 'master.create' || normalizedAction === 'master.update' || normalizedAction === 'master.bulk') {
     return true;
   }
 
@@ -96,7 +96,7 @@ function isGenericMasterCrudAction(action, payload) {
     return false;
   }
 
-  return normalizedAction === 'get' || normalizedAction === 'create' || normalizedAction === 'update';
+  return normalizedAction === 'get' || normalizedAction === 'create' || normalizedAction === 'update' || normalizedAction === 'bulk';
 }
 
 function dispatchGenericMasterCrudAction(action, auth, payload) {
@@ -116,6 +116,10 @@ function dispatchGenericMasterCrudAction(action, auth, payload) {
 
   if (normalizedAction === 'master.update' || normalizedAction === 'update') {
     return handleMasterUpdateRecord(auth, payload);
+  }
+
+  if (normalizedAction === 'master.bulk' || normalizedAction === 'bulk') {
+    return dispatchBulkAction(auth, payload);
   }
 
   return { success: false, message: 'Unsupported master action' };
@@ -174,4 +178,36 @@ function cloneWithMasterResource(payload, resourceName) {
   });
   cloned.resource = resourceName;
   return cloned;
+}
+
+function dispatchBulkAction(auth, payload) {
+  var callerResourceName = '';
+  try {
+    callerResourceName = (payload.callerResource || payload.resource || '').toString().trim();
+  } catch (e) {
+    callerResourceName = '';
+  }
+
+  if (!callerResourceName) {
+    return { success: false, message: 'Resource name is required for bulk action' };
+  }
+
+  var config;
+  try {
+    config = getResourceConfig(callerResourceName);
+  } catch (e) {
+    return { success: false, message: 'Resource not found: ' + callerResourceName };
+  }
+
+  var handlerName = (config.postAction || '').toString().trim();
+  if (!handlerName) {
+    return { success: false, message: 'No PostAction handler defined for resource: ' + callerResourceName };
+  }
+
+  var handler = this[handlerName];
+  if (typeof handler !== 'function') {
+    return { success: false, message: 'PostAction handler not found: ' + handlerName };
+  }
+
+  return handler(auth, payload);
 }

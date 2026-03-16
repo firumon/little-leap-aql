@@ -775,3 +775,88 @@ function extractResourceNameFromCandidate(candidate) {
 
   return '';
 }
+
+/**
+ * Handles bulk insert/update of master records.
+ * Payload: { targetResource: 'Products', records: [{...}, {...}] }
+ * The 'targetResource' field names the actual master (e.g. Products),
+ * while 'resource' may refer to the caller (e.g. BulkUploadMasters).
+ */
+function handleMasterBulkRecords(auth, payload) {
+  var targetResourceName = (payload.targetResource || '').toString().trim();
+  if (!targetResourceName) {
+    return { success: false, message: 'targetResource is required for bulk upload' };
+  }
+
+  var records = Array.isArray(payload.records) ? payload.records : [];
+  if (!records.length) {
+    return { success: false, message: 'No records provided' };
+  }
+
+  // Enforce permissions on the TARGET resource (not the caller)
+  enforceMasterPermission(auth, targetResourceName, 'canWrite');
+  enforceMasterPermission(auth, targetResourceName, 'canUpdate');
+
+  var resource = openResourceSheet(targetResourceName);
+  var schema = buildMasterSchemaFromResourceConfig(resource.config);
+  var sheet = resource.sheet;
+  var values = sheet.getDataRange().getValues();
+  var headers = values[0] || [];
+  var idx = getHeaderIndexMap(headers);
+  var codePrefix = (resource.config.codePrefix || '').toString().trim();
+  var seqLength = resource.config.codeSequenceLength || 6;
+
+  var results = { created: 0, updated: 0, skipped: 0, errors: [] };
+
+  // Local copy for uniqueness checks within the batch
+  var currentValues = values.slice();
+
+  records.forEach(function (recordData, index) {
+    try {
+      var code = resolveCodeValue({ record: recordData });
+      var rowNumber = code ? findRowByValue(sheet, idx.Code, code, 2, true) : -1;
+
+      var providedValues = extractProvidedHeaderValues(headers, { record: recordData });
+      var rowData;
+
+      if (rowNumber === -1) {
+        // --- INSERT ---
+        var newCode = code || generateNextCode(currentValues, idx, codePrefix, seqLength);
+        rowData = buildNewMasterRow(headers, idx, providedValues, schema);
+        rowData[idx.Code] = newCode;
+        applyAccessRegionOnWrite(rowData, idx, auth);
+        applyAuditFields(rowData, idx, auth, resource.config, true);
+        validateRequiredFields(rowData, idx, schema.requiredHeaders, targetResourceName);
+        validateMasterUniqueness(currentValues, idx, rowData, schema, -1, targetResourceName);
+
+        var targetRow = sheet.getLastRow() + 1;
+        sheet.getRange(targetRow, 1, 1, headers.length).setValues([rowData]);
+        currentValues.push(rowData);
+        results.created++;
+      } else {
+        // --- UPDATE ---
+        var existingRow = sheet.getRange(rowNumber, 1, 1, headers.length).getValues()[0];
+        enforceRecordLevelAccess(auth, resource.config, headers, existingRow);
+        rowData = mergeMasterRow(existingRow, idx, providedValues, schema);
+        rowData[idx.Code] = code;
+        applyAuditFields(rowData, idx, auth, resource.config, false);
+        validateRequiredFields(rowData, idx, schema.requiredHeaders, targetResourceName);
+        validateMasterUniqueness(currentValues, idx, rowData, schema, rowNumber, targetResourceName);
+
+        sheet.getRange(rowNumber, 1, 1, headers.length).setValues([rowData]);
+        currentValues[rowNumber - 1] = rowData;
+        results.updated++;
+      }
+    } catch (err) {
+      results.errors.push({ index: index, message: err.toString() });
+    }
+  });
+
+  updateResourceSyncCursor(targetResourceName);
+
+  return {
+    success: results.errors.length < records.length,
+    message: 'Bulk processing completed',
+    data: results
+  };
+}

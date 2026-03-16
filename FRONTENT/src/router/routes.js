@@ -40,6 +40,11 @@ const routes = [
       { path: '', name: 'dashboard', component: () => import('pages/Dashboard/DashboardIndex.vue') },
       { path: '/profile', component: () => import('pages/ProfilePage/ProfilePage.vue') },
       {
+        path: '/masters/bulk-upload',
+        component: () => import('pages/Masters/BulkUploadPage.vue'),
+        meta: { scope: 'master', requiresAuth: true }
+      },
+      {
         path: '/masters/:resourceSlug',
         component: () => import('pages/Masters/MasterIndexPage.vue'),
         meta: { scope: 'master' }

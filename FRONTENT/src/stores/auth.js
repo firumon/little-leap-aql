@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { callGasApi } from 'src/services/gasApi'
+import { syncAllMasterResources } from 'src/services/masterRecords'
 import { clearAllClientStorage, setAuthorizedResources, reinitializeDB } from 'src/utils/db'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -85,8 +86,7 @@ export const useAuthStore = defineStore('auth', () => {
         reinitializeDB().catch(err => console.warn('DB init error:', err))
 
         isGlobalSyncing.value = true
-        import('src/services/masterRecords')
-          .then(({ syncAllMasterResources }) => syncAllMasterResources())
+        Promise.resolve(syncAllMasterResources())
           .catch((err) => {
             console.warn('Global master sync error:', err)
           })

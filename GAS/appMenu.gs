@@ -25,6 +25,8 @@ function onOpen() {
       .addItem('Add Resource', 'showAddResourceDialog')
       .addItem('Edit Resource', 'showEditResourceDialog')
       .addSeparator()
+      .addItem('Manage Reports', 'app_showReportManagerDialog')
+      .addSeparator()
       .addItem('Sync APP.Resources from Code', 'syncAppResourcesFromCode'))
     .addSeparator()
     .addSubMenu(ui.createMenu('⚙️ Setup & Refactor')
@@ -407,7 +409,8 @@ function mapResource(form) {
     PageDescription: txt(form.pageDescription),
     UIFields: txt(form.uiFields),
     ShowInMenu: boolText(form.showInMenu, true),
-    IncludeInAuthorizationPayload: boolText(form.includeInAuthorizationPayload, true)
+    IncludeInAuthorizationPayload: boolText(form.includeInAuthorizationPayload, true),
+    Reports: txt(form.reports)
   };
 }
 
@@ -509,3 +512,84 @@ function getHtmlTemplate(action, data) {
 
   return '<!doctype html><html><head><base target="_top">' + style + '</head><body>' + body + '<div id="msg" class="msg"></div>' + js + '</body></html>';
 }
+
+function app_showReportManagerDialog() {
+  const html = HtmlService.createHtmlOutputFromFile('reportManager')
+    .setWidth(900)
+    .setHeight(600)
+    .setTitle('Manage Resource Reports');
+  SpreadsheetApp.getUi().showModalDialog(html, 'Manage Resource Reports');
+}
+
+/**
+ * Fetches all data needed for the Report Manager UI
+ */
+function app_getReportManagerData() {
+  try {
+    const resources = getAllResourcesConfigs({ includeInactive: true });
+    const templateSheets = [];
+    
+    // Fetch template sheets from REPORTS file
+    if (CONFIG.REPORTS_FILE_ID) {
+      const reportsSs = SpreadsheetApp.openById(CONFIG.REPORTS_FILE_ID);
+      reportsSs.getSheets().forEach(s => templateSheets.push(s.getName()));
+    }
+
+    // Build resource list with headers
+    const resourceList = resources.map(res => {
+      let headers = [];
+      try {
+        if (!res.functional && res.fileId && res.sheetName) {
+          const ss = SpreadsheetApp.openById(res.fileId);
+          const sheet = ss.getSheetByName(res.sheetName);
+          if (sheet) {
+            headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+          }
+        }
+      } catch (e) {
+        console.error('Error fetching headers for ' + res.name, e);
+      }
+      
+      return {
+        name: res.name,
+        label: res.menuLabel || res.name,
+        headers: headers,
+        reports: res.reports || []
+      };
+    });
+
+    return {
+      resources: resourceList,
+      templateSheets: templateSheets.sort()
+    };
+  } catch (e) {
+    throw new Error('Failed to load report manager data: ' + e.message);
+  }
+}
+
+/**
+ * Saves reports for a specific resource
+ */
+function app_saveResourceReports(resourceName, reportsJson) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(CONFIG.SHEETS.RESOURCES);
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const nameIdx = headers.indexOf('Name');
+    const reportsIdx = headers.indexOf('Reports');
+
+    if (nameIdx === -1 || reportsIdx === -1) throw new Error('Columns Name or Reports not found');
+
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][nameIdx] === resourceName) {
+        sheet.getRange(i + 1, reportsIdx + 1).setValue(reportsJson);
+        return true;
+      }
+    }
+    throw new Error('Resource not found: ' + resourceName);
+  } catch (e) {
+    throw new Error('Failed to save reports: ' + e.message);
+  }
+}
+

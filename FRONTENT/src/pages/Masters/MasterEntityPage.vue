@@ -12,9 +12,12 @@
     <MasterToolbar
       :search-term="searchTerm"
       :show-inactive="showInactive"
+      :reports="config?.reports || []"
+      :is-generating="isGenerating"
       @update:search-term="searchTerm = $event"
       @update:show-inactive="showInactive = $event"
       @reload="reload"
+      @generate-report="(report) => initiateReport(report)"
     />
 
     <MasterList
@@ -46,7 +49,10 @@
       :detail-row="detailRow"
       :detail-fields="detailFields"
       :resolve-primary-text="resolvePrimaryText"
+      :reports="config?.reports || []"
+      :is-generating="isGenerating"
       @edit="editFromDetail"
+      @generate-report="(report, row) => initiateReport(report, row)"
     />
 
     <MasterEditorDialog
@@ -60,6 +66,16 @@
       @update:form="form = $event"
       @save="save"
     />
+
+    <ReportInputDialog
+      v-model="showReportDialog"
+      :report="activeReport"
+      :form-values="reportInputs"
+      :is-generating="isGenerating"
+      @update:form-values="reportInputs = $event"
+      @confirm="confirmReportDialog"
+      @cancel="cancelReportDialog"
+    />
   </q-page>
 </template>
 
@@ -69,7 +85,9 @@ import MasterEditorDialog from 'src/components/Masters/MasterEditorDialog.vue'
 import MasterHeader from 'src/components/Masters/MasterHeader.vue'
 import MasterList from 'src/components/Masters/MasterList.vue'
 import MasterToolbar from 'src/components/Masters/MasterToolbar.vue'
+import ReportInputDialog from 'src/components/Masters/ReportInputDialog.vue'
 import { useMasterPage } from 'src/composables/useMasterPage'
+import { useReports } from 'src/composables/useReports'
 
 const {
   route,
@@ -98,6 +116,16 @@ const {
   editFromDetail,
   save
 } = useMasterPage()
+
+const {
+  isGenerating,
+  showReportDialog,
+  activeReport,
+  reportInputs,
+  initiateReport,
+  confirmReportDialog,
+  cancelReportDialog
+} = useReports()
 </script>
 
 <style scoped>
@@ -132,4 +160,5 @@ const {
   z-index: 30;
 }
 </style>
+
 

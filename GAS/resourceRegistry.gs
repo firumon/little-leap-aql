@@ -70,7 +70,8 @@ function getResourceConfig(resourceName) {
         additionalActions: parseStringList(readOptionalCell(row, registry.idx.AdditionalActions, '')),
         functional: toBooleanCell(readOptionalCell(row, registry.idx.Functional, false)),
         preAction: (readOptionalCell(row, registry.idx.PreAction, '') || '').toString().trim(),
-        postAction: (readOptionalCell(row, registry.idx.PostAction, '') || '').toString().trim()
+        postAction: (readOptionalCell(row, registry.idx.PostAction, '') || '').toString().trim(),
+        reports: parseJsonCell(readOptionalCell(row, registry.idx.Reports, '[]'), [])
       };
     }
   }
@@ -348,6 +349,7 @@ function buildAuthorizedResourceEntry(resourceName, options) {
     };
     entry.actions = config.additionalActions || [];
     entry.allowedActions = [];
+    entry.reports = Array.isArray(config.reports) ? config.reports : [];
   }
 
   return entry;
@@ -564,6 +566,27 @@ function getResourcesByScope(scope, options) {
     if (config.scope !== normalizedScope) continue;
     if (!includeInactive && !config.isActive) continue;
     result.push(config);
+  }
+
+  return result;
+}
+function getAllResourcesConfigs(options) {
+  const includeInactive = options && options.includeInactive === true;
+  const registry = getResourceRegistryContext();
+  const result = [];
+
+  for (let i = 1; i < registry.values.length; i++) {
+    const row = registry.values[i];
+    const name = (row[registry.idx.Name] || '').toString().trim();
+    if (!name) continue;
+
+    try {
+      const config = getResourceConfig(name, registry);
+      if (!includeInactive && !config.isActive) continue;
+      result.push(config);
+    } catch (e) {
+      console.error('Error fetching config for ' + name, e);
+    }
   }
 
   return result;

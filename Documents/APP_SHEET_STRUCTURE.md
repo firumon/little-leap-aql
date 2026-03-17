@@ -91,6 +91,35 @@ Columns (in order):
 - `UIFields` (JSON array)
 - `ShowInMenu`
 - `IncludeInAuthorizationPayload`
+- `Reports` (JSON array — downloadable document configs; see Reports Column JSON Schema below)
+
+### Reports Column JSON Schema
+
+The `Reports` column in `APP.Resources` contains a JSON array of report objects.
+
+```json
+[
+  {
+    "name": "report-id",
+    "label": "Report Display Name",
+    "templateSheet": "SheetNameInREPORTS",
+    "isRecordLevel": true,
+    "inputs": [
+      { "field": "Code", "targetCell": "B2" },
+      { "label": "As of Date", "type": "date", "targetCell": "B3", "required": true },
+      { "default": "Title", "targetCell": "A1" }
+    ]
+  }
+]
+```
+
+**Input Logic:**
+- **Record Context**: Use `field`. Value is taken from the current record's header match.
+- **User Input**: Use `label` and `type`. User is prompted via dialog.
+- **Static**: Use `default` without `field` and `type`.
+- `isRecordLevel: false` → button in toolbar; `true` → button in row detail dialog.
+- `cell` → target cell in the REPORTS template sheet.
+- `templateSheet` → sheet name inside the REPORTS spreadsheet to clone.
 
 ## Setup Script
 Use `GAS/setupAppSheets.gs` (`setupAppSheets()`) to create these sheets.

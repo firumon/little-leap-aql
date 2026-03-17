@@ -40,6 +40,7 @@ This document explains each `APP > Resources` column, what to fill, and common v
 | `Functional` | Yes | Boolean | If `TRUE`, resource is a UI tool with no backing sheet (FileID/SheetName ignored). Skipped during data sync. | `TRUE` / `FALSE` | `FALSE` |
 | `PreAction` | Optional | Text | Function name executed **before** the main action handler when the resource is invoked | GAS function name | `validateBulkPayload` |
 | `PostAction` | Optional | Text | Function name executed **after** routing (or as the primary handler for functional resources) | GAS function name | `handleMasterBulkRecords` |
+| `Reports` | Optional | JSON Text | Downloadable document configs (JSON array) | JSON array of report objects | `[{"name":"pkg","templateSheet":"Package"}]` |
 
 ## `RecordAccessPolicy` Meaning
 - `ALL`: Any user with role action permission can access records.

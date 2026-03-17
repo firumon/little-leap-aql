@@ -7,7 +7,9 @@ import {
   getFunctionalDraft,
   getResourceMeta,
   getResourceRows,
-  saveFunctionalDraft
+  saveFunctionalDraft,
+  setResourceMeta,
+  upsertResourceRows
 } from 'src/utils/db'
 
 const AUDIT_HEADERS = ['CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy']
@@ -237,6 +239,22 @@ export function useBulkUpload() {
         icon: errors.length ? 'warning' : 'check',
         timeout: 5000
       })
+
+      // Cache the full snapshot returned by the server into IDB
+      const bulkRows = response.data?.rows
+      const bulkHeaders = response.data?.headers
+      const bulkSyncAt = response.data?.meta?.lastSyncAt
+      if (Array.isArray(bulkRows) && bulkRows.length && Array.isArray(bulkHeaders) && bulkHeaders.length) {
+        try {
+          await upsertResourceRows(selectedResourceName.value, bulkHeaders, bulkRows)
+          await setResourceMeta(selectedResourceName.value, {
+            headers: bulkHeaders,
+            lastSyncAt: bulkSyncAt || Date.now()
+          })
+        } catch (cacheError) {
+          console.warn('Failed to cache bulk upload rows in IDB:', cacheError)
+        }
+      }
 
       if (!errors.length) {
         await clearAll()

@@ -854,9 +854,32 @@ function handleMasterBulkRecords(auth, payload) {
 
   updateResourceSyncCursor(targetResourceName);
 
+  // Re-read full sheet so the frontend can cache a complete snapshot in IDB
+  var freshValues = sheet.getDataRange().getValues();
+  var freshHeaders = freshValues[0] || [];
+  var freshIdx = getHeaderIndexMap(freshHeaders);
+  var allRows = [];
+  for (var r = 1; r < freshValues.length; r++) {
+    allRows.push(freshValues[r]);
+  }
+  var filtered = allRows.filter(function (row) {
+    return canAccessRowByPolicy(auth, resource.config, row, freshIdx);
+  });
+
   return {
     success: results.errors.length < records.length,
     message: 'Bulk processing completed',
-    data: results
+    data: {
+      created: results.created,
+      updated: results.updated,
+      skipped: results.skipped,
+      errors: results.errors,
+      rows: filtered,
+      headers: freshHeaders,
+      meta: {
+        resource: targetResourceName,
+        lastSyncAt: Date.now()
+      }
+    }
   };
 }

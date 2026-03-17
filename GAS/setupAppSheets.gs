@@ -42,7 +42,8 @@ function setupAppSheets() {
         'IncludeInAuthorizationPayload',
         'Functional',
         'PreAction',
-        'PostAction'
+        'PostAction',
+        'Reports'
       ],
       autoIdFormula: null,
       validations: [
@@ -112,7 +113,8 @@ function setupAppSheets() {
         IncludeInAuthorizationPayload: 220,
         Functional: 100,
         PreAction: 180,
-        PostAction: 180
+        PostAction: 180,
+        Reports: 320
       }
     },
     {

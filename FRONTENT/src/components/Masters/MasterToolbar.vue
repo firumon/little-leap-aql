@@ -25,6 +25,22 @@
             color="primary"
             @update:model-value="onToggleInactive"
           />
+          <q-btn
+            v-for="report in toolbarReports"
+            :key="report.name"
+            flat
+            dense
+            no-caps
+            :icon="report.icon || 'picture_as_pdf'"
+            :label="report.label || report.name"
+            color="deep-orange-7"
+            class="report-btn"
+            :loading="isGenerating"
+            :disable="isGenerating"
+            @click="$emit('generate-report', report)"
+          >
+            <q-tooltip>{{ report.label || report.name }}</q-tooltip>
+          </q-btn>
         </div>
       </div>
     </q-card-section>
@@ -32,7 +48,9 @@
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue'
+
+const props = defineProps({
   searchTerm: {
     type: String,
     default: ''
@@ -40,10 +58,22 @@ defineProps({
   showInactive: {
     type: Boolean,
     default: false
+  },
+  reports: {
+    type: Array,
+    default: () => []
+  },
+  isGenerating: {
+    type: Boolean,
+    default: false
   }
 })
 
-const emit = defineEmits(['update:searchTerm', 'update:showInactive', 'reload'])
+const emit = defineEmits(['update:searchTerm', 'update:showInactive', 'reload', 'generate-report'])
+
+const toolbarReports = computed(() => {
+  return (props.reports || []).filter((r) => !r.isRecordLevel)
+})
 
 function onToggleInactive(value) {
   emit('update:showInactive', value)
@@ -64,6 +94,13 @@ function onToggleInactive(value) {
   background: #fff;
 }
 
+.report-btn {
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
 @keyframes rise-in {
   0% {
     transform: translateY(10px);
@@ -75,3 +112,4 @@ function onToggleInactive(value) {
   }
 }
 </style>
+

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; padding: 14px; background: #fff; color: #333; }
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f3f6fb; padding-bottom: 10px; margin-bottom: 15px; }
+    h2, h3, h4 { margin: 0; color: #1e293b; }
+    .g { margin: 12px 0; }
+    label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #475569; }
+    input, select, textarea { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; }
+    textarea { min-height: 50px; }
+    .btn { padding: 8px 16px; border: 0; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px; transition: opacity 0.2s; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: #2563eb; color: #fff; }
+    .btn-secondary { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+    .btn-danger { background: #fee2e2; color: #991b1b; }
+    .btn-sm { padding: 4px 8px; font-size: 11px; }
+    
+    .card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 10px; background: #fff; }
+    .report-item { display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #2563eb; background: #f8fafc; padding: 10px; margin-bottom: 8px; border-radius: 4px; }
+    .report-info b { display: block; font-size: 14px; }
+    .report-info span { font-size: 11px; color: #64748b; }
+    
+    .input-row { display: grid; grid-template-columns: 1.5fr 1.5fr 1fr 1fr 60px 40px; gap: 8px; align-items: end; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px dashed #e2e8f0; }
+    .input-row:last-child { border-bottom: 0; }
+    
+    .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
+    .modal-content { background: #fff; width: 850px; max-height: 90vh; border-radius: 12px; padding: 20px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); overflow-y: auto; }
+    
+    .msg { padding: 10px; border-radius: 6px; font-size: 12px; margin: 10px 0; display: none; }
+    .ok { background: #ecfdf5; color: #065f46; border: 1px solid #d1fae5; }
+    .er { background: #fef2f2; color: #991b1b; border: 1px solid #fee2e2; }
+    
+    .hidden { display: none; }
+    .flex { display: flex; gap: 8px; align-items: center; }
+    .loader { text-align: center; padding: 40px; color: #64748b; }
+  </style>
+</head>
+<body>
+
+<div id="mainLoader" class="loader">Loading Report Manager...</div>
+
+<div id="app" class="hidden">
+  <div class="g">
+    <label>Select Resource</label>
+    <select id="resSelect" onchange="onResourceSelect()">
+      <option value="">-- Choose a Resource --</option>
+    </select>
+  </div>
+
+  <div id="managerUI" class="hidden">
+    <div id="msg" class="msg"></div>
+    
+    <div style="display:flex; justify-content:space-between; align-items:center; margin: 20px 0 10px 0">
+      <h3 id="resTitle">Resource Reports</h3>
+      <button class="btn btn-primary" onclick="openEditor()">+ Add New Report</button>
+    </div>
+
+    <div id="reportsList"></div>
+  </div>
+</div>
+
+<!-- Editor Modal -->
+<div id="editor" class="modal hidden">
+  <div class="modal-content">
+    <h3 id="editorTitle">Edit Report</h3>
+    
+    <div class="g">
+      <label>Report Title</label>
+      <input type="text" id="repLabel" placeholder="e.g. Purchase Order">
+    </div>
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px">
+      <div class="g">
+        <label>Template Sheet</label>
+        <select id="repTemplate"></select>
+      </div>
+      <div class="g">
+        <label>Display Location</label>
+        <div class="flex" style="margin-top:8px">
+          <input type="checkbox" id="repIsRecord" style="width: auto">
+          <span style="font-size:13px">Show inside Record Detail (Record Level)</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top: 20px; border-top: 1px solid #f1f5f9; padding-top: 15px">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px">
+        <h4>Data Mappings</h4>
+        <button class="btn btn-secondary btn-sm" onclick="addMappingRow()">+ Add Row</button>
+      </div>
+      
+      <div id="mappingHeaders" class="input-row" style="border:0; padding:0; margin-bottom: 4px">
+        <label>Source Field</label>
+        <label>User Label / Value</label>
+        <label>Input Type</label>
+        <label>Target Cell</label>
+        <label>Req?</label>
+        <div></div>
+      </div>
+      <div id="mappingsList"></div>
+    </div>
+
+    <div style="display:flex; justify-content: flex-end; gap: 10px; margin-top: 20px; border-top: 1px solid #f1f5f9; padding-top: 15px">
+      <button class="btn btn-secondary" onclick="closeEditor()">Cancel</button>
+      <button class="btn btn-primary" id="saveBtn" onclick="saveReport()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let DATA = { resources: [], templateSheets: [] };
+  let ACTIVE_RES = null;
+  let EDIT_IDX = -1;
+
+  window.onload = function() {
+    google.script.run
+      .withSuccessHandler(res => {
+        DATA = res;
+        initUI();
+      })
+      .withFailureHandler(err => showMsg(err.message, true))
+      .app_getReportManagerData();
+  };
+
+  function initUI() {
+    const sel = document.getElementById('resSelect');
+    DATA.resources.forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r.name;
+      opt.textContent = r.label || r.name;
+      sel.appendChild(opt);
+    });
+
+    const tpl = document.getElementById('repTemplate');
+    DATA.templateSheets.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s;
+      opt.textContent = s;
+      tpl.appendChild(opt);
+    });
+
+    document.getElementById('mainLoader').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+  }
+
+  function onResourceSelect() {
+    const name = document.getElementById('resSelect').value;
+    if (!name) {
+      document.getElementById('managerUI').classList.add('hidden');
+      return;
+    }
+    ACTIVE_RES = DATA.resources.find(r => r.name === name);
+    document.getElementById('resTitle').textContent = 'Reports for ' + (ACTIVE_RES.label || ACTIVE_RES.name);
+    renderReports();
+    document.getElementById('managerUI').classList.remove('hidden');
+  }
+
+  function renderReports() {
+    const list = document.getElementById('reportsList');
+    list.innerHTML = '';
+    
+    if (!ACTIVE_RES.reports || ACTIVE_RES.reports.length === 0) {
+      list.innerHTML = '<div style="text-align:center; padding: 20px; color: #94a3b8">No reports found.</div>';
+      return;
+    }
+
+    ACTIVE_RES.reports.forEach((rep, i) => {
+      const div = document.createElement('div');
+      div.className = 'report-item';
+      div.innerHTML = `
+        <div class="report-info">
+          <b>${rep.label}</b>
+          <span>Template: ${rep.templateSheet} | Link: ${rep.isRecordLevel ? 'Record Context' : 'General'}</span>
+        </div>
+        <div class="flex">
+          <button class="btn btn-secondary btn-sm" onclick="openEditor(${i})">Edit</button>
+          <button class="btn btn-danger btn-sm" onclick="removeReport(${i})">Delete</button>
+        </div>
+      `;
+      list.appendChild(div);
+    });
+  }
+
+  function openEditor(idx = -1) {
+    EDIT_IDX = idx;
+    document.getElementById('editor').classList.remove('hidden');
+    document.getElementById('mappingsList').innerHTML = '';
+    
+    if (idx > -1) {
+      const r = ACTIVE_RES.reports[idx];
+      document.getElementById('editorTitle').textContent = 'Edit Report';
+      document.getElementById('repLabel').value = r.label;
+      document.getElementById('repTemplate').value = r.templateSheet;
+      document.getElementById('repIsRecord').checked = !!r.isRecordLevel;
+      if (r.inputs) r.inputs.forEach(inp => addMappingRow(inp));
+    } else {
+      document.getElementById('editorTitle').textContent = 'New Report';
+      document.getElementById('repLabel').value = '';
+      document.getElementById('repTemplate').value = DATA.templateSheets[0] || '';
+      document.getElementById('repIsRecord').checked = false;
+      addMappingRow();
+    }
+  }
+
+  function closeEditor() {
+    document.getElementById('editor').classList.add('hidden');
+  }
+
+  function addMappingRow(data = {}) {
+    const row = document.createElement('div');
+    row.className = 'input-row';
+    
+    const fieldsHtml = ACTIVE_RES.headers.map(h => `<option value="${h}" ${data.field === h ? 'selected' : ''}>${h}</option>`).join('');
+    
+    row.innerHTML = `
+      <div>
+        <select class="m-field" onchange="toggleMapping(this)">
+          <option value="">-- Manual/Input --</option>
+          ${fieldsHtml}
+        </select>
+      </div>
+      <div><input type="text" class="m-label" value="${data.label || data.default || ''}" placeholder="Label or Value"></div>
+      <div>
+        <select class="m-type">
+          <option value="text" ${data.type === 'text' ? 'selected' : ''}>Text</option>
+          <option value="number" ${data.type === 'number' ? 'selected' : ''}>Number</option>
+          <option value="date" ${data.type === 'date' ? 'selected' : ''}>Date</option>
+          <option value="boolean" ${data.type === 'boolean' ? 'selected' : ''}>Boolean</option>
+          <option value="static" ${(!data.type && !data.field && data.default) ? 'selected' : ''}>Static Value</option>
+        </select>
+      </div>
+      <div><input type="text" class="m-cell" value="${data.targetCell || data.cell || ''}" placeholder="e.g. B2"></div>
+      <div><input type="checkbox" class="m-req" style="width:auto" ${data.required ? 'checked' : ''}></div>
+      <div><button class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove()">X</button></div>
+    `;
+    
+    document.getElementById('mappingsList').appendChild(row);
+    toggleMapping(row.querySelector('.m-field'));
+  }
+
+  function toggleMapping(sel) {
+    const row = sel.parentElement.parentElement;
+    const isField = !!sel.value;
+    row.querySelector('.m-label').disabled = isField;
+    row.querySelector('.m-type').disabled = isField;
+    row.querySelector('.m-req').disabled = isField;
+    row.querySelector('.m-label').style.opacity = isField ? 0.4 : 1;
+    row.querySelector('.m-type').style.opacity = isField ? 0.4 : 1;
+  }
+
+  function saveReport() {
+    const label = document.getElementById('repLabel').value.trim();
+    const tpl = document.getElementById('repTemplate').value;
+    if (!label) { alert('Please enter report title'); return; }
+
+    const inputs = [];
+    document.querySelectorAll('#mappingsList .input-row').forEach(row => {
+      const field = row.querySelector('.m-field').value;
+      const cell = row.querySelector('.m-cell').value.trim().toUpperCase();
+      if (!cell) return;
+
+      const obj = { targetCell: cell };
+      if (field) {
+        obj.field = field;
+      } else {
+        const type = row.querySelector('.m-type').value;
+        const val = row.querySelector('.m-label').value.trim();
+        if (type === 'static') {
+          obj.default = val;
+        } else {
+          obj.label = val || label;
+          obj.type = type;
+          obj.required = row.querySelector('.m-req').checked;
+        }
+      }
+      inputs.push(obj);
+    });
+
+    const report = {
+      id: (EDIT_IDX > -1 && ACTIVE_RES.reports[EDIT_IDX].id) ? ACTIVE_RES.reports[EDIT_IDX].id : ('rep_' + Date.now()),
+      name: label.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+      label: label,
+      templateSheet: tpl,
+      isRecordLevel: document.getElementById('repIsRecord').checked,
+      inputs: inputs
+    };
+
+    if (EDIT_IDX > -1) ACTIVE_RES.reports[EDIT_IDX] = report;
+    else ACTIVE_RES.reports.push(report);
+
+    sync();
+  }
+
+  function removeReport(idx) {
+    if (!confirm('Permanently delete this report configuration?')) return;
+    ACTIVE_RES.reports.splice(idx, 1);
+    sync();
+  }
+
+  function sync() {
+    const btn = document.getElementById('saveBtn');
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
+    
+    google.script.run
+      .withSuccessHandler(() => {
+        btn.disabled = false;
+        btn.textContent = 'Save Changes';
+        closeEditor();
+        renderReports();
+        showMsg('Saved successfully.');
+      })
+      .withFailureHandler(err => {
+        btn.disabled = false;
+        btn.textContent = 'Save Changes';
+        showMsg(err.message, true);
+      })
+      .app_saveResourceReports(ACTIVE_RES.name, JSON.stringify(ACTIVE_RES.reports));
+  }
+
+  function showMsg(m, isErr) {
+    const el = document.getElementById('msg');
+    el.style.display = 'block';
+    el.className = 'msg ' + (isErr ? 'er' : 'ok');
+    el.textContent = m;
+    if (!isErr) setTimeout(() => el.style.display='none', 3000);
+  }
+</script>
+
+</body>
+</html>

@@ -14,7 +14,22 @@
           <span class="detail-val">{{ detailRow?.[field.header] || '-' }}</span>
         </div>
       </q-card-section>
-      <q-card-actions align="right">
+      <q-card-actions align="right" class="q-px-md q-pb-md">
+        <q-btn
+          v-for="report in recordReports"
+          :key="report.name"
+          flat
+          no-caps
+          dense
+          :icon="report.icon || 'picture_as_pdf'"
+          :label="report.label || report.name"
+          color="deep-orange-7"
+          class="report-action-btn"
+          :loading="isGenerating"
+          :disable="isGenerating"
+          @click="$emit('generate-report', report, detailRow)"
+        />
+        <q-space />
         <q-btn flat label="Close" @click="$emit('update:modelValue', false)" />
         <q-btn color="primary" icon="edit" label="Edit" @click="$emit('edit')" />
       </q-card-actions>
@@ -23,7 +38,9 @@
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue'
+
+const props = defineProps({
   modelValue: {
     type: Boolean,
     default: false
@@ -39,10 +56,22 @@ defineProps({
   resolvePrimaryText: {
     type: Function,
     required: true
+  },
+  reports: {
+    type: Array,
+    default: () => []
+  },
+  isGenerating: {
+    type: Boolean,
+    default: false
   }
 })
 
-defineEmits(['update:modelValue', 'edit'])
+defineEmits(['update:modelValue', 'edit', 'generate-report'])
+
+const recordReports = computed(() => {
+  return (props.reports || []).filter((r) => r.isRecordLevel)
+})
 </script>
 
 <style scoped>
@@ -77,5 +106,11 @@ defineEmits(['update:modelValue', 'edit'])
   color: #1f2937;
   font-size: 12px;
   text-align: right;
+}
+
+.report-action-btn {
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 12px;
 }
 </style>

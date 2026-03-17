@@ -65,6 +65,10 @@ function dispatchProtectedAction(action, auth, data) {
     case 'master.health':
       return handleMasterHealth(auth);
 
+    // Report scope
+    case 'generateReport':
+      return generateReportPdf(auth, data);
+
     default:
       return { success: false, message: 'Action not found' };
   }

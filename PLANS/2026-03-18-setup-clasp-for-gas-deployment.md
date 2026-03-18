@@ -282,7 +282,7 @@ Replace the current Step 2 content with:
 ### Step 12: Commit all changes
 - [x] Stage the new files: `GAS/appsscript.json`, `.gitignore` changes, `package.json` (root, if created/modified), documentation updates.
 - [x] Do NOT stage `GAS/.clasp.json` or `GAS/clasp-configs/*.clasp.json` (they contain client-specific Script IDs and are gitignored).
-- [ ] Create a commit with message:
+- [x] Create a commit with message:
   ```
   feat: setup clasp CLI for GAS deployment to Apps Script
 

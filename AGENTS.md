@@ -24,6 +24,10 @@
   - For plan ownership fields, use role + concrete agent identity:
     - `Created By: Brain Agent (AgentName)`
     - `Executed By: Build Agent (AgentName | pending)` until execution is completed.
+- GAS deployment rule:
+  - `clasp` is configured. When GAS files change, the agent runs `cd GAS && clasp push` to deploy automatically.
+  - Do NOT ask the user to manually copy-paste `.gs` files into the Apps Script IDE.
+  - Manual user actions are limited to: Google Sheet menu actions (AQL 🚀 > ...), editing sheet data, and creating new Web App deployment versions (only when API behavior changes).
 - Frontend registry maintenance rule:
   - When creating/updating reusable frontend building blocks, update:
     - `FRONTENT/src/components/REGISTRY.md` for component API changes (props/events/path).

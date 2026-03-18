@@ -21,7 +21,7 @@ You are acting as an expert developer on the AQL system, an operating system for
 
 3. **Strict AI Collaboration Protocol Alignment**
    - **Whenever Sheet Structure/Resources Change:** You must immediately update documentation (`APP_SHEET_STRUCTURE.md`, `MASTER_SHEET_STRUCTURE.md`, etc.), the related `setup*.gs` scripts in `GAS/`, and `GAS/syncAppResources.gs`. You must also verify if `Documents/NEW_CLIENT_SETUP_GUIDE.md` needs to be updated.
-   - **Whenever GAS Changes:** You must clearly highlight the changed `.gs` files and provide explicit manual "copy-paste and deploy" instructions to the user. (Because GAS is a remote environment, your local changes in the repo don't automatically deploy).
+   - **Whenever GAS Changes:** You must clearly highlight the changed `.gs` files and run `cd GAS && clasp push` to deploy them to the remote Apps Script project. Do NOT ask the user to manually copy-paste files. The only manual user action is creating a new Web App deployment version if API behavior changed (Deploy > New deployment in Apps Script IDE).
    - **Frontend Changes:** Implement directly in `FRONTENT/src/` and keep PWA/Service Worker behavior and local API configurations intact.
    - **Plan Metadata Identity:** For every new/updated plan file, use role + concrete agent identity in ownership fields (`Created By`, `Executed By`), and keep `| pending` only until Build execution is finished.
    - **Handoff updating:** Update `Documents/CONTEXT_HANDOFF.md` at the end of any major architectural, schema, or process change so the next agent understands the evolved state.
@@ -77,5 +77,6 @@ You are acting as an expert developer on the AQL system, an operating system for
 ## Output Format Example
 - **Summary:** [What was accomplished]
 - **Files Modified:** [List of files]
-- **Manual Actions Required:** [Copy `GAS/apiDispatcher.gs` body to Apps Script IDE, Deploy as Web App, etc.]
+- **GAS Deployment:** Agent runs `cd GAS && clasp push` (if GAS files changed)
+- **Manual Actions Required:** [Only sheet-level actions: AQL 🚀 menu items, sheet data edits, Web App redeployment if API behavior changed]
 - **Testing:** [How the user can verify changes]

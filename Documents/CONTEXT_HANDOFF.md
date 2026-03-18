@@ -38,7 +38,7 @@ Tell the AI agent:
 ## 4) Must-Follow Collaboration Rules
 - Keep code + Apps Script + Sheets + docs aligned for every significant change.
 - If Sheets change: update structure docs and setup scripts.
-- If Apps Script changes: show changed files and tell user what to copy-paste and redeploy.
+- If Apps Script changes: show changed files and run `cd GAS && clasp push` to deploy. Only instruct user for Web App redeployment if API behavior changed.
 - If frontend changes: implement directly and update docs.
 - Process standard: New plan files must use role + concrete identity in ownership metadata:
   - `Created By: Brain Agent (AgentName)`
@@ -182,7 +182,7 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - FileID resolution is now a 3-tier fallback: `Resource.FileID` → `Config[{Scope}FileID]` → `ss.getId()`.
   - `syncAppResources.gs`, `resourceRegistry.gs`, `reportGenerator.gs`, `appMenu.gs` all use the new fallback chain.
   - Hardcoded `CONFIG.REPORTS_FILE_ID` removed from `Constants.gs`.
-  - `setupAppSheets.gs` creates the Config sheet with pre-populated expected keys.
+  - `setupAppSheets.gs` creates the Config sheet with pre-populated expected keys. It is now the first sheet created and positioned in the APP spreadsheet.
 
 ### Key behavior now
 - Code is generated in Apps Script (not by sheet formula).
@@ -434,12 +434,12 @@ References:
 
 ## 11) Manual Actions User Usually Needs
 When Apps Script changes:
-1. Run `cd GAS && clasp push` to deploy (or `npm run gas:push` if root package.json scripts are set up).
-2. If API behavior changed, create a new Web App deployment version in the Apps Script IDE.
+1. The agent runs `cd GAS && clasp push` automatically — no manual copy-paste needed.
+2. **User action only if** API behavior changed (new actions, changed response shape): Create a new Web App deployment version in Apps Script IDE (Deploy > New deployment).
 
 When setup scripts are added/changed:
-1. Ensure `Resources` rows are correct.
-2. Run setup function (for example `setupMasterSheets()`).
+1. User runs the relevant menu action from AQL 🚀 menu in the APP spreadsheet.
+2. Verify `Resources` rows are correct in the APP sheet.
 
 ## 12) Primary Docs Map
 - Docs index: `Documents/README.md`

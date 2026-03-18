@@ -35,11 +35,14 @@ function getResourceConfig(resourceName) {
   for (let i = 1; i < registry.values.length; i++) {
     const row = registry.values[i];
     if ((row[registry.idx.Name] || '').toString().trim() === name) {
+      const scope = normalizeResourceScope(readOptionalCell(row, registry.idx.Scope, 'master'));
+      const rawFileId = (row[registry.idx.FileID] || '').toString().trim();
+      
       return {
         name,
-        fileId: (row[registry.idx.FileID] || '').toString().trim(),
+        scope,
+        fileId: resolveFileIdForScope(scope, rawFileId),
         sheetName: (row[registry.idx.SheetName] || '').toString().trim(),
-        scope: normalizeResourceScope(readOptionalCell(row, registry.idx.Scope, 'master')),
         isActive: toBooleanCell(readOptionalCell(row, registry.idx.IsActive, true)),
         audit: toBooleanCell(readOptionalCell(row, registry.idx.Audit, false)),
         codePrefix: registry.idx.CodePrefix === undefined
@@ -81,9 +84,6 @@ function getResourceConfig(resourceName) {
 
 function openResourceSheet(resourceName) {
   const config = getResourceConfig(resourceName);
-  if (!config.fileId) {
-    config.fileId = resolveFileIdForScope(config.scope, '');
-  }
   if (!config.fileId) {
     throw new Error('Resource fileId is missing for: ' + resourceName);
   }

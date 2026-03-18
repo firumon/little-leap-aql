@@ -11,6 +11,16 @@ function setupAppSheets() {
 
   const sheetConfigs = [
     {
+      name: CONFIG.SHEETS.CONFIG,
+      headers: ['Key', 'Value'],
+      autoIdFormula: null,
+      validations: [],
+      columnWidths: {
+        Key: 200,
+        Value: 400
+      }
+    },
+    {
       name: CONFIG.SHEETS.RESOURCES,
       headers: [
         'Name',
@@ -205,16 +215,6 @@ function setupAppSheets() {
         Parent: 120
       }
     },
-    {
-      name: CONFIG.SHEETS.CONFIG,
-      headers: ['Key', 'Value'],
-      autoIdFormula: null,
-      validations: [],
-      columnWidths: {
-        Key: 200,
-        Value: 400
-      }
-    }
   ];
 
   const results = [];
@@ -318,6 +318,8 @@ function setupAppSheets() {
       ['CompanyLogo', ''],
       ['ContactEmail', ''],
       ['ContactPhone', ''],
+      ['ColorPrimary', ''],
+      ['ColorSecondary', ''],
       ['MastersFileID', ''],
       ['OperationsFileID', ''],
       ['ReportsFileID', ''],

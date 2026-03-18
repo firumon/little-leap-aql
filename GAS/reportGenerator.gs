@@ -160,29 +160,5 @@ function _deleteTemporarySheet(spreadsheet, sheetName) {
  * @returns {string|null} File ID or null if not found.
  */
 function _resolveReportsFileId() {
-  // Option 1: APP.Config sheet lookup
-  var configReportsId = getAppConfigValue('ReportsFileID');
-  if (configReportsId) {
-    return configReportsId;
-  }
-
-  // Option 2: Look up from Resources registry
-  try {
-    var registry = getResourceRegistryContext();
-    for (var i = 1; i < registry.values.length; i++) {
-      var row = registry.values[i];
-      var name = (row[registry.idx.Name] || '').toString().trim();
-      var scope = (row[registry.idx.Scope] || '').toString().trim().toLowerCase();
-      var fileId = (row[registry.idx.FileID] || '').toString().trim();
-
-      // Match by scope=report or name containing 'REPORTS'
-      if ((scope === 'report' || name.toUpperCase() === 'REPORTS') && fileId) {
-        return fileId;
-      }
-    }
-  } catch (err) {
-    // Registry unavailable
-  }
-
-  return null;
+  return resolveFileIdForScope('report', '');
 }

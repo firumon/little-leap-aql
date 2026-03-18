@@ -62,4 +62,4 @@
 - [ ] Acceptance criteria verified
 
 ### Manual Actions Required
-- [ ] [Any user-required action: deploy/copy-paste/setup]
+- [ ] [Only user-required actions: AQL 🚀 menu items, sheet data edits, Web App redeployment — NOT GAS copy-paste (agent runs `clasp push`)]

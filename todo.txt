@@ -1,4 +1,4 @@
-download list
+Common config/settings page
 Custom Prooduct master
 Remove inactive load
 

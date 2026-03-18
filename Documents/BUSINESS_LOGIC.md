@@ -1,6 +1,6 @@
 # Business Logic & Workflows
 
-This document outlines the core business logic, entities, and end-to-end workflows for the Little Leap AQL system.
+This document outlines the core business logic, entities, and end-to-end workflows for the AQL system.
 
 ## Operational Priority (Source-of-Truth)
 The primary business heartbeat is:

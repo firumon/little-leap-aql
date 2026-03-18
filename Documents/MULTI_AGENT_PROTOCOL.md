@@ -1,7 +1,7 @@
 # Multi-Agent Collaboration Protocol
 
 ## Purpose
-This document defines how four AI roles collaborate on the Little Leap AQL project:
+This document defines how four AI roles collaborate on the AQL project:
 - **Guide Agent** (Default) - Brainstorming, general discussion, feedback, and requirement clarification.
 - **Brain Agent** - Architecture, planning, business rules, and implementation plan creation.
 - **Build Agent** - Implementing code changes, terminal commands, and documentation updates based on a plan.
@@ -85,4 +85,4 @@ Build Agent must replace `| pending` when execution is completed.
 | `Documents/CONTEXT_HANDOFF.md` | Current project state and resume context |
 | `Documents/AI_COLLABORATION_PROTOCOL.md` | Sync rules for code/sheets/docs |
 | `PLANS/*.md` | Active and completed implementation plans |
-| `.agents/skills/little-leap-expert/SKILL.md` | Project skill workflow |
+| `.agents/skills/aql-expert/SKILL.md` | Project skill workflow |

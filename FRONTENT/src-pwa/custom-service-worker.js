@@ -15,7 +15,7 @@ import { ExpirationPlugin } from 'workbox-expiration'
 import { CacheableResponsePlugin } from 'workbox-cacheable-response'
 import { openDB } from 'idb'
 
-const DB_NAME = 'little-leap-aql-db'
+const DB_NAME = 'aql-db'
 const DB_VERSION = 2
 
 let swDbPromise = null

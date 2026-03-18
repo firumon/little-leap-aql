@@ -1,7 +1,7 @@
 import 'src/utils/idbCompat';
 import { openDB } from 'idb';
 
-const DB_NAME = 'little-leap-aql-db';
+const DB_NAME = 'aql-db';
 const DB_VERSION = 3;
 
 let dbPromise = null;

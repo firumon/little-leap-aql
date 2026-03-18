@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * Little Leap AQL - MASTER Sheet Setup (Resources Driven)
+ * AQL - MASTER Sheet Setup (Resources Driven)
  * ============================================================
  * Run this function in APP Apps Script project only.
  * It reads APP.Resources, opens target files by FileID,

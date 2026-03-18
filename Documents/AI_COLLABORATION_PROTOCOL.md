@@ -1,4 +1,4 @@
-# AI Collaboration Protocol for Little Leap AQL
+# AI Collaboration Protocol for AQL
 
 This document defines how AI agents should collaborate on this project.
 

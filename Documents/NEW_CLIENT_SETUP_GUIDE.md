@@ -1,6 +1,6 @@
 # New Client Setup Guide
 
-This document outlines the step-by-step process for deploying a brand new instance of Little Leap AQL for a new client (e.g., Loyal Promise). Everything can be done without touching code after the initial script copy.
+This document outlines the step-by-step process for deploying a brand new instance of AQL for a new client (e.g., Loyal Promise). Everything can be done without touching code after the initial script copy.
 
 ## Prerequisites
 - A Google Account for the client (preferably a shared/service workspace account).

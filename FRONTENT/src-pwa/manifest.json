@@ -1,6 +1,6 @@
 {
-  "name": "Little Leap AQL",
-  "short_name": "Little Leap",
+  "name": "AQL",
+  "short_name": "AQL",
   "description": "Premium AQL Management System",
   "display": "standalone",
   "start_url": "/",

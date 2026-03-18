@@ -1,6 +1,6 @@
-# Little Leap AQL
+# AQL
 
-Little Leap AQL is the operating system for Little Leap's UAE baby-product distribution business. The core heartbeat is outlet distribution, periodic sales tracking, strict-cycle payment collection, controlled refills, and timely supplier purchase ordering.
+AQL is the operating system for Little Leap's UAE baby-product distribution business. The core heartbeat is outlet distribution, periodic sales tracking, strict-cycle payment collection, controlled refills, and timely supplier purchase ordering.
 
 ## Current Architecture Direction
 - Single Google Apps Script project in the `APP` spreadsheet.

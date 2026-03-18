@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * Little Leap AQL - ACCOUNTS Sheet Setup
+ * AQL - ACCOUNTS Sheet Setup
  * ============================================================
  * Run this function in APP Apps Script project to setup accounts
  * related sheets.

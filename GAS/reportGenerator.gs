@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * Little Leap AQL - Report Generator
+ * AQL - Report Generator
  * ============================================================
  * Generates PDF reports from REPORTS spreadsheet templates.
  * Duplicates a template sheet, injects cell data, flushes

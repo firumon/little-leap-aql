@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * Little Leap AQL - Access Region Helpers
+ * AQL - Access Region Helpers
  * ============================================================
  * Access Region is a hierarchical data-access boundary.
  * - User with empty AccessRegion => universe access

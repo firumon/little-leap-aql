@@ -13,7 +13,7 @@
 
         <q-toolbar-title class="text-weight-bold row no-wrap items-center">
           <q-icon name="auto_graph" size="28px" class="q-mr-sm" />
-          <span>Little Leap AQL</span>
+          <span>AQL</span>
         </q-toolbar-title>
 
         <q-space />

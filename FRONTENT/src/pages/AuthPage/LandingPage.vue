@@ -64,7 +64,7 @@ async function handleInstall() {
   if (outcome === 'accepted') {
     $q.notify({
       type: 'positive',
-      message: 'Installing Little Leap AQL...',
+      message: 'Installing AQL...',
       position: 'top'
     })
   } else if (outcome === 'dismissed') {

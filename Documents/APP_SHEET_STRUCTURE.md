@@ -1,4 +1,4 @@
-# Little Leap AQL - APP Google Sheet Structure
+# AQL - APP Google Sheet Structure
 
 This document defines the **APP** Google Sheet as the control plane for authentication, authorization, and resource metadata used by both GAS backend and frontend runtime.
 

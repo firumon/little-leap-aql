@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * Little Leap AQL - Sync APP.Resources from Code
+ * AQL - Sync APP.Resources from Code
  * ============================================================
  * Defines the default registry of APP.Resources in code so they can
  * be synced to the Google Sheet with one click.

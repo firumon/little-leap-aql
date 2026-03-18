@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * Little Leap AQL - Roles Setup
+ * AQL - Roles Setup
  * ============================================================
  * Setup default roles to kickstart the system permission assignments.
  */

@@ -1,12 +1,12 @@
 ---
-name: little-leap-expert
-description: Implement and maintain the Little Leap AQL system across the Quasar frontend, Google Apps Script backend, and Google Sheets database. Ensures strict alignment with architecture, schema metadata, and AI collaboration protocols.
+name: aql-expert
+description: Implement and maintain the AQL system across the Quasar frontend, Google Apps Script backend, and Google Sheets database. Ensures strict alignment with architecture, schema metadata, and AI collaboration protocols.
 ---
 
-# Little Leap AQL Antigravity Expert Skill
+# AQL Expert Skill
 
 ## Overview
-You are acting as an expert developer on the Little Leap AQL system, an operating system for UAE baby-product distribution. The architecture consists of a Quasar Framework (Vue 3 + Vite) frontend, a Google Apps Script (GAS) backend (single `doPost` endpoint in `GAS/apiDispatcher.gs`), and Google Sheets acting as the distributed database (APP, MASTERS, TRANSACTIONS, REPORTS files).
+You are acting as an expert developer on the AQL system, an operating system for UAE baby-product distribution. The architecture consists of a Quasar Framework (Vue 3 + Vite) frontend, a Google Apps Script (GAS) backend (single `doPost` endpoint in `GAS/apiDispatcher.gs`), and Google Sheets acting as the distributed database (APP, MASTERS, TRANSACTIONS, REPORTS files).
 
 ## Core Directives
 

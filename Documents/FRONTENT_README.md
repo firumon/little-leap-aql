@@ -31,7 +31,7 @@ This document serves as a guide for AI agents and developers to understand the s
 
 ### 1. Project Initialization
 The project was initialized using the Quasar CLI with:
-- Project Name: `little-leap-aql`
+- Project Name: `aql`
 - Quasar v2 (Vue 3)
 - Composition API
 - Vite

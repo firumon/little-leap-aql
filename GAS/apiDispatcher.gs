@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * Little Leap AQL - API Dispatcher
+ * AQL - API Dispatcher
  * ============================================================
  * Owns doPost and action routing across auth/master scopes.
  */

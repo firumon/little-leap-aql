@@ -1,8 +1,8 @@
 {
-  "name": "little-leap-aql",
+  "name": "aql",
   "version": "0.0.1",
   "description": "A Quasar Project",
-  "productName": "Little Leap AQL",
+  "productName": "AQL",
   "author": "Firose Hussain <github@firumon.com>",
   "type": "module",
   "private": true,

@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * Little Leap AQL - Resource Registry Helpers
+ * AQL - Resource Registry Helpers
  * ============================================================
  * Reads the APP.Resources sheet to resolve target file/sheet dynamically.
  */

@@ -1,6 +1,6 @@
-# Little Leap AQL Documentation
+# AQL Documentation
 
-Welcome to the technical documentation for the Little Leap AQL project. This folder contains detailed guides on the system's logic, architecture, and setup.
+Welcome to the technical documentation for the AQL project. This folder contains detailed guides on the system's logic, architecture, and setup.
 
 ## Latest Development Updates
 - 2026-03-16: Bulk upload frontend refactored to composable + reusable components (`useBulkUpload`, controls/preview/empty-state components). Header-to-data plotting now follows user-provided header list strictly. Upload flow also removed service-level global loading/notify calls for bulk action to avoid Quasar `createChildApp` console noise.

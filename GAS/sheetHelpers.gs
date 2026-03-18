@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * Little Leap AQL - Sheet Helpers
+ * AQL - Sheet Helpers
  * ============================================================
  * Shared helper functions for header/index/row access patterns.
  */

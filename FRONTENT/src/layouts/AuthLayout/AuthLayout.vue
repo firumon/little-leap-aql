@@ -5,8 +5,8 @@
         <div class="glass-container q-pa-xl">
           <div class="brand-section text-center q-mb-lg">
             <img src="~assets/logo.png" style="width: 80px; height: 80px" class="q-mb-sm" />
-            <h1 class="text-h4 text-weight-bold q-mt-none q-mb-xs">Little Leap</h1>
-            <div class="text-subtitle1 text-grey-7">AQL Management System</div>
+            <h1 class="text-h4 text-weight-bold q-mt-none q-mb-xs">AQL</h1>
+            <div class="text-subtitle1 text-grey-7">Management System</div>
           </div>
           
           <router-view v-slot="{ Component }">

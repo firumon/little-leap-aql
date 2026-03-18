@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * Little Leap AQL - APP Database Sheet Setup Script
+ * AQL - APP Database Sheet Setup Script
  * ============================================================
  */
 

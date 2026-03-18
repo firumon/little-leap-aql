@@ -1,4 +1,4 @@
-# CONTEXT HANDOFF - Little Leap AQL
+# CONTEXT HANDOFF - AQL
 
 Use this file when starting a new AI agent session.
 
@@ -18,7 +18,7 @@ Tell the AI agent:
 8. Continue work from current implementation status in this handoff.
 
 ## 1) Project Identity
-- Project: Little Leap AQL
+- Project: AQL
 - Domain: UAE baby product distribution operations
 - Goal: End-to-end control from import (China) to warehouse (Ajman) to sales, invoicing, payments, and reports.
 

@@ -32,6 +32,7 @@ Tell the AI agent:
 - APP sheet contains `Resources` registry with `FileID` + `SheetName` for external files.
 - API handlers resolve target file/sheet dynamically from `Resources`.
 - Do not maintain separate Apps Script projects in external files unless explicitly requested.
+- APP now includes a `Config` sheet (Key-Value pairs) as the Source of Truth for deployment-specific settings (file IDs, company branding). FileID resolution chain: `Resource.FileID` → `Config[{Scope}FileID]` → APP file ID. Helpers: `getConfigMap()`, `getAppConfigValue()`, `resolveFileIdForScope()` in `sheetHelpers.gs`.
 
 ## 4) Must-Follow Collaboration Rules
 - Keep code + Apps Script + Sheets + docs aligned for every significant change.
@@ -174,6 +175,13 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - `FRONTENT/src/services/masterRecords.js` now normalizes single-resource cursor values using numeric-first parsing before request build.
   - Single-resource sync sends `lastUpdatedAt` only when cursor is a valid Unix epoch milliseconds number.
   - This prevents JSON `NaN -> null` payload serialization (seen when cursor came from localStorage as numeric string), restoring incremental delta behavior.
+- APP.Config sheet for multi-client deployment support (2026-03-18):
+  - New `Config` sheet in APP spreadsheet stores deployment-specific Key-Value settings.
+  - `GAS/sheetHelpers.gs` adds `getConfigMap()`, `getAppConfigValue()`, `resolveFileIdForScope()`.
+  - FileID resolution is now a 3-tier fallback: `Resource.FileID` → `Config[{Scope}FileID]` → `ss.getId()`.
+  - `syncAppResources.gs`, `resourceRegistry.gs`, `reportGenerator.gs`, `appMenu.gs` all use the new fallback chain.
+  - Hardcoded `CONFIG.REPORTS_FILE_ID` removed from `Constants.gs`.
+  - `setupAppSheets.gs` creates the Config sheet with pre-populated expected keys.
 
 ### Key behavior now
 - Code is generated in Apps Script (not by sheet formula).

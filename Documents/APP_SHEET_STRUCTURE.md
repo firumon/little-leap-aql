@@ -124,3 +124,26 @@ The `Reports` column in `APP.Resources` contains a JSON array of report objects.
 ## Setup Script
 Use `GAS/setupAppSheets.gs` (`setupAppSheets()`) to create these sheets.
 For existing APP files, run `upgradeAppSheetsForAccessRegions()` to add `Users.AccessRegion` and create `AccessRegions` if missing.
+
+### 7) Config
+Purpose: Deployment-specific settings for multi-client support. Simple Key-Value store.
+
+Columns:
+- `Key` — Configuration key name
+- `Value` — Configuration value
+
+Expected Keys:
+- `CompanyName` — Client company display name (used in reports/documents)
+- `CompanyLogo` — URL to company logo (used in reports/documents)
+- `ContactEmail` — Company contact email
+- `ContactPhone` — Company contact phone
+- `MastersFileID` — Google Sheet File ID for the MASTERS spreadsheet
+- `OperationsFileID` — Google Sheet File ID for the OPERATIONS spreadsheet
+- `ReportsFileID` — Google Sheet File ID for the REPORTS spreadsheet
+- `AccountsFileID` — Google Sheet File ID for the ACCOUNTS spreadsheet
+
+Notes:
+- Config is the Source of Truth for deployment-level settings (file IDs, company branding).
+- FileID resolution chain: `Resource.FileID` (if present) → `Config[{Scope}FileID]` → APP file ID.
+- Config values are cached via `CacheService` (6-hour TTL) for performance.
+- Created automatically by `setupAppSheets()` with pre-populated key rows.

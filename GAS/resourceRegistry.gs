@@ -82,6 +82,9 @@ function getResourceConfig(resourceName) {
 function openResourceSheet(resourceName) {
   const config = getResourceConfig(resourceName);
   if (!config.fileId) {
+    config.fileId = resolveFileIdForScope(config.scope, '');
+  }
+  if (!config.fileId) {
     throw new Error('Resource fileId is missing for: ' + resourceName);
   }
   if (!config.sheetName) {

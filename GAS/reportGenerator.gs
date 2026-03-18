@@ -154,15 +154,16 @@ function _deleteTemporarySheet(spreadsheet, sheetName) {
 
 /**
  * Resolves the REPORTS file ID.
- * Tries CONFIG.REPORTS_FILE_ID first, then searches Resources for a
+ * Tries APP.Config sheet first, then searches Resources for a
  * report-scoped or REPORTS-named entry.
  *
  * @returns {string|null} File ID or null if not found.
  */
 function _resolveReportsFileId() {
-  // Option 1: Direct config constant
-  if (typeof CONFIG !== 'undefined' && CONFIG.REPORTS_FILE_ID) {
-    return CONFIG.REPORTS_FILE_ID;
+  // Option 1: APP.Config sheet lookup
+  var configReportsId = getAppConfigValue('ReportsFileID');
+  if (configReportsId) {
+    return configReportsId;
   }
 
   // Option 2: Look up from Resources registry

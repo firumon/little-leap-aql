@@ -1121,10 +1121,10 @@ function syncAppResourcesFromCode(silent) {
                     sheet.getRange(rowNum, idx[key] + 1).setValue(resource[key]);
                 }
             });
-            // Optionally sync FileID if empty:
+            // Sync FileID if empty — resolve from APP.Config by scope, then fall back to APP file ID
             const existingFileID = sheet.getRange(rowNum, idx['FileID'] + 1).getValue();
             if (!existingFileID) {
-                sheet.getRange(rowNum, idx['FileID'] + 1).setValue(ss.getId());
+                sheet.getRange(rowNum, idx['FileID'] + 1).setValue(resolveFileIdForScope(resource.Scope, ''));
             }
             updated++;
         } else {
@@ -1134,8 +1134,8 @@ function syncAppResourcesFromCode(silent) {
                 if (resource[h] !== undefined) {
                     newRow.push(resource[h]);
                 } else if (h === 'FileID') {
-                    // Default to current APP file ID, but this could be changed manually by users later if modularized
-                    newRow.push(ss.getId());
+                    // Resolve from APP.Config by scope, then fall back to APP file ID
+                    newRow.push(resolveFileIdForScope(resource.Scope, ''));
                 } else {
                     newRow.push('');
                 }

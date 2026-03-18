@@ -530,8 +530,9 @@ function app_getReportManagerData() {
     const templateSheets = [];
     
     // Fetch template sheets from REPORTS file
-    if (CONFIG.REPORTS_FILE_ID) {
-      const reportsSs = SpreadsheetApp.openById(CONFIG.REPORTS_FILE_ID);
+    var reportsFileId = getAppConfigValue('ReportsFileID');
+    if (reportsFileId) {
+      const reportsSs = SpreadsheetApp.openById(reportsFileId);
       reportsSs.getSheets().forEach(s => templateSheets.push(s.getName()));
     }
 

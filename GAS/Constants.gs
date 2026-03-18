@@ -12,7 +12,8 @@ const CONFIG = {
     DESIGNATIONS: 'Designations',
     ROLES: 'Roles',
     ROLE_PERMISSIONS: 'RolePermissions',
-    RESOURCES: 'Resources'
+    RESOURCES: 'Resources',
+    CONFIG: 'Config'
   },
   MASTER_SHEETS: {
     PRODUCTS: 'Products',
@@ -50,6 +51,5 @@ const CONFIG = {
     EXPENSES: 'Expenses',
     CHART_OF_ACCOUNTS: 'ChartOfAccounts',
     ENTRY_TEMPLATES: 'EntryTemplates'
-  },
-  REPORTS_FILE_ID: '10wAJaxB41u37B4aWW9G4G5iyjeSZS9nIxP_yXTw9V9U'
+  }
 };

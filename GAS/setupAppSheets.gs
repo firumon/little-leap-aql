@@ -204,6 +204,16 @@ function setupAppSheets() {
         Name: 200,
         Parent: 120
       }
+    },
+    {
+      name: CONFIG.SHEETS.CONFIG,
+      headers: ['Key', 'Value'],
+      autoIdFormula: null,
+      validations: [],
+      columnWidths: {
+        Key: 200,
+        Value: 400
+      }
     }
   ];
 
@@ -299,6 +309,22 @@ function setupAppSheets() {
     ss.moveActiveSheet(fileSheetIndex);
 
   });
+
+  // Pre-populate Config sheet with expected keys if empty
+  var configSheet = ss.getSheetByName(CONFIG.SHEETS.CONFIG);
+  if (configSheet && configSheet.getLastRow() <= 1) {
+    var defaultKeys = [
+      ['CompanyName', ''],
+      ['CompanyLogo', ''],
+      ['ContactEmail', ''],
+      ['ContactPhone', ''],
+      ['MastersFileID', ''],
+      ['OperationsFileID', ''],
+      ['ReportsFileID', ''],
+      ['AccountsFileID', '']
+    ];
+    configSheet.getRange(2, 1, defaultKeys.length, 2).setValues(defaultKeys);
+  }
 
   var defaultSheet = ss.getSheetByName('Sheet1');
   if (defaultSheet && defaultSheet.getLastRow() === 0) {

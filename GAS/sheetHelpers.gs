@@ -47,3 +47,63 @@ function getRowAsObject(sheet, rowNumber, headers) {
   });
   return rowObj;
 }
+
+// ── APP.Config Helpers ──────────────────────────────────────
+
+/**
+ * Returns the full config map from APP.Config sheet as {Key: Value}.
+ * Uses CacheService (6-hour TTL) since config rarely changes.
+ */
+function getConfigMap() {
+  var cache = CacheService.getScriptCache();
+  var cached = cache.get('APP_CONFIG_MAP');
+  if (cached) {
+    try { return JSON.parse(cached); } catch (e) { /* fall through */ }
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(CONFIG.SHEETS.CONFIG);
+  if (!sheet) return {};
+
+  var data = sheet.getDataRange().getValues();
+  var map = {};
+  for (var i = 1; i < data.length; i++) {
+    var key = (data[i][0] || '').toString().trim();
+    var value = (data[i][1] || '').toString().trim();
+    if (key) map[key] = value;
+  }
+
+  cache.put('APP_CONFIG_MAP', JSON.stringify(map), 21600); // 6 hours
+  return map;
+}
+
+/**
+ * Returns a single config value by key from APP.Config sheet.
+ */
+function getAppConfigValue(key) {
+  var map = getConfigMap();
+  return map[key] || '';
+}
+
+/**
+ * Resolves a file ID for a given resource scope using the fallback chain:
+ * Resource.FileID (if present) -> Config[{Scope}FileID] -> ss.getId()
+ */
+function resolveFileIdForScope(scope, resourceFileId) {
+  if (resourceFileId) return resourceFileId;
+
+  var scopeKeyMap = {
+    master: 'MastersFileID',
+    operation: 'OperationsFileID',
+    report: 'ReportsFileID',
+    accounts: 'AccountsFileID'
+  };
+
+  var configKey = scopeKeyMap[(scope || '').toLowerCase()];
+  if (configKey) {
+    var configValue = getAppConfigValue(configKey);
+    if (configValue) return configValue;
+  }
+
+  return SpreadsheetApp.getActiveSpreadsheet().getId();
+}

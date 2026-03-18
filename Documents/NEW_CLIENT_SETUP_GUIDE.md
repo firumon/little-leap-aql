@@ -15,10 +15,26 @@ This document outlines the step-by-step process for deploying a brand new instan
 2. **Copy the File IDs** for `MASTERS`, `OPERATIONS`, and `REPORTS` from their URLs (the long string between `/d/` and `/edit`). You will need these shortly.
 
 ## Step 2: Establish the Codebase
-1. Open the `APP` spreadsheet.
-2. Go to **Extensions > Apps Script**.
-3. Copy all `.gs` files from the repository's `GAS/` folder into this single Apps Script project. *(Alternatively, use `clasp push` if configured).*
-4. Save the project and return to the `APP` spreadsheet. Refresh the page. You should now see an **AQL 🚀** menu at the top.
+### Option A: Using clasp (Recommended)
+1. Open the `APP` spreadsheet → **Extensions > Apps Script** → click the **gear icon** (Project Settings) → copy the **Script ID**.
+2. Create `GAS/clasp-configs/{client-name}.clasp.json`:
+   ```json
+   {
+     "scriptId": "PASTE_SCRIPT_ID_HERE",
+     "rootDir": "."
+   }
+   ```
+3. Switch to the new client and push:
+   ```bash
+   cp GAS/clasp-configs/{client-name}.clasp.json GAS/.clasp.json
+   cd GAS && clasp push
+   ```
+4. Return to the `APP` spreadsheet and refresh. You should see the **AQL 🚀** menu.
+
+### Option B: Manual Copy-Paste
+1. Open the `APP` spreadsheet → **Extensions > Apps Script**.
+2. Copy all `.gs` and `.html` files from `GAS/` into the Apps Script project.
+3. Save the project, return to the spreadsheet, and refresh. You should see the **AQL 🚀** menu.
 
 ## Step 3: Initialize the APP Database
 1. From the `APP` spreadsheet menu, click **AQL 🚀 > ⚙️ Setup & Refactor > Refactor APP Sheets**.

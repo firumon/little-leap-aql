@@ -33,6 +33,7 @@ Tell the AI agent:
 - API handlers resolve target file/sheet dynamically from `Resources`.
 - Do not maintain separate Apps Script projects in external files unless explicitly requested.
 - APP now includes a `Config` sheet (Key-Value pairs) as the Source of Truth for deployment-specific settings (file IDs, company branding). FileID resolution chain: `Resource.FileID` → `Config[{Scope}FileID]` → APP file ID. Helpers: `getConfigMap()`, `getAppConfigValue()`, `resolveFileIdForScope()` in `sheetHelpers.gs`.
+- `clasp` CLI is configured for GAS deployment. Config files per client are stored in `GAS/clasp-configs/`. Run `cd GAS && clasp push` to deploy. See `Documents/NEW_CLIENT_SETUP_GUIDE.md` Step 2 for details.
 
 ## 4) Must-Follow Collaboration Rules
 - Keep code + Apps Script + Sheets + docs aligned for every significant change.
@@ -433,8 +434,8 @@ References:
 
 ## 11) Manual Actions User Usually Needs
 When Apps Script changes:
-1. Copy updated `.gs` files to APP Apps Script project.
-2. Save and deploy new Web App version if API behavior changed.
+1. Run `cd GAS && clasp push` to deploy (or `npm run gas:push` if root package.json scripts are set up).
+2. If API behavior changed, create a new Web App deployment version in the Apps Script IDE.
 
 When setup scripts are added/changed:
 1. Ensure `Resources` rows are correct.

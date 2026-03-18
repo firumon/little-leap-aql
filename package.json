@@ -1,0 +1,13 @@
+{
+    "name": "aql-workspace",
+    "private": true,
+    "scripts": {
+      "gas:push": "cd GAS && clasp push",
+      "gas:pull": "cd GAS && clasp pull",
+      "gas:status": "cd GAS && clasp status",
+      "gas:open": "cd GAS && clasp open",
+      "gas:use:little-leap": "cp GAS/clasp-configs/little-leap.clasp.json GAS/.clasp.json && echo 'Switched to Little Leap'",
+      "gas:use:heilung": "cp GAS/clasp-configs/heilung.clasp.json GAS/.clasp.json && echo 'Switched to Heilung'",
+      "gas:use:loyal": "cp GAS/clasp-configs/loyal.clasp.json GAS/.clasp.json && echo 'Switched to Loyal'"
+    }
+  }

@@ -30,3 +30,7 @@ npm-debug.log*
 
 # Misc
 .cache/
+
+# clasp - Script ID is deployment-specific, should not be committed
+GAS/.clasp.json
+GAS/clasp-configs/

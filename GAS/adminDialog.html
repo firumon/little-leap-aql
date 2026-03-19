@@ -1,0 +1,109 @@
+<!doctype html>
+<html>
+<head>
+<base target="_top">
+<style>
+body { font-family: Segoe UI, Arial, sans-serif; padding: 14px; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.g { margin: 8px 0; }
+label { display: block; font-size: 12px; font-weight: 600; }
+input, select, textarea { width: 100%; padding: 7px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; }
+textarea { min-height: 60px; }
+.note { font-size: 12px; color: #666; }
+button { width: 100%; padding: 9px; background: #2563eb; border: 0; border-radius: 7px; color: #fff; font-weight: 600; margin-top: 8px; }
+.msg { display: none; margin-top: 8px; padding: 8px; border-radius: 6px; font-size: 12px; }
+.ok { background: #ecfdf5; color: #065f46; }
+.er { background: #fef2f2; color: #991b1b; }
+.box { border: 1px solid #ddd; border-radius: 8px; padding: 8px; margin-top: 8px; }
+.small { font-size: 11px; color: #666; }
+.checks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.checks label { font-weight: 400; font-size: 12px; display: flex; gap: 6px; align-items: center; }
+</style>
+</head>
+<body>
+
+<?= bodyHtml ?>
+
+<div id="msg" class="msg"></div>
+
+<script>
+function submitForm(h) {
+  var f = document.getElementById("mainForm");
+  var b = document.getElementById("submitBtn");
+  var m = document.getElementById("msg");
+  var p = {};
+  Array.from(f.elements).forEach(function(el) {
+    if (!el.name) return;
+    if (el.type === "checkbox") {
+      if (el.name === "roles") {
+        if (!p.roles) p.roles = [];
+        if (el.checked) p.roles.push(el.value);
+      } else {
+        p[el.name] = el.checked;
+      }
+    } else {
+      p[el.name] = el.value;
+    }
+  });
+  b.disabled = true;
+  var t = b.innerText;
+  b.innerText = "Processing...";
+  m.style.display = "none";
+  google.script.run
+    .withSuccessHandler(function(r) {
+      b.disabled = false;
+      b.innerText = t;
+      m.style.display = "block";
+      m.className = "msg " + (r.success ? "ok" : "er");
+      m.innerText = r.message || "Done";
+      if (r.success) setTimeout(function() { google.script.host.close(); }, 800);
+    })
+    .withFailureHandler(function(e) {
+      b.disabled = false;
+      b.innerText = t;
+      m.style.display = "block";
+      m.className = "msg er";
+      m.innerText = e.message || String(e);
+    })[h](p);
+}
+
+function loadDetails(t, id) {
+  if (!id) return;
+  google.script.run
+    .withSuccessHandler(function(d) { fillForm(d, t); })
+    ["get" + t + "Details"](id);
+}
+
+function fillForm(d, t) {
+  if (!d) return;
+  Object.keys(d).forEach(function(k) {
+    var el = document.querySelector("[name='" + k + "']");
+    if (!el) return;
+    if (el.type === "checkbox") {
+      var v = d[k];
+      el.checked = (v === true || String(v).toUpperCase() === "TRUE");
+    } else {
+      el.value = d[k] == null ? "" : d[k];
+    }
+  });
+  if (t === "User") {
+    var roles = (d.roles || "").toString().split(",").map(function(x) { return x.trim(); });
+    document.querySelectorAll("input[name=roles]").forEach(function(cb) {
+      cb.checked = roles.indexOf(cb.value) !== -1;
+    });
+  }
+  if (t === "Role") {
+    document.querySelectorAll("input[data-perm=1]").forEach(function(cb) { cb.checked = false; });
+    var map = d.roleActions || {};
+    Object.keys(map).forEach(function(res) {
+      (map[res] || []).forEach(function(act) {
+        var k = "perm__" + res.replace(/[^a-zA-Z0-9]/g, "_") + "__" + act.replace(/[^a-zA-Z0-9]/g, "_");
+        var cb = document.querySelector("input[name='" + k + "']");
+        if (cb) cb.checked = true;
+      });
+    });
+  }
+}
+</script>
+</body>
+</html>

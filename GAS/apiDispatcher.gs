@@ -85,7 +85,11 @@ function parseRequestPayload(e) {
     throw new Error('Empty request body');
   }
 
-  return JSON.parse(e.postData.contents);
+  try {
+    return JSON.parse(e.postData.contents);
+  } catch (parseErr) {
+    throw new Error('Malformed JSON payload: ' + parseErr.message);
+  }
 }
 
 function isGenericMasterCrudAction(action, payload) {
@@ -96,7 +100,7 @@ function isGenericMasterCrudAction(action, payload) {
     return true;
   }
 
-  if (normalizedScope !== 'master' && normalizedScope !== 'operation') {
+  if (normalizedScope !== 'master' && normalizedScope !== 'operation' && normalizedScope !== 'accounts') {
     return false;
   }
 

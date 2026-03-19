@@ -53,6 +53,13 @@ This document outlines the step-by-step process for deploying a brand new instan
    - `ReportsFileID`: Paste the REPORTS spreadsheet File ID from Step 1
    - `AccountsFileID`: (Optional) If using a separate ACCOUNTS file, paste its File ID
 
+## Step 4b: Validate Config Resolution
+After filling Config values, verify that file IDs resolve correctly:
+1. Open **Extensions > Apps Script** in the APP spreadsheet.
+2. Run the function `diagLogResolvedFileIds()` from the Script Editor.
+3. Check the **Execution Log** — each resource should show the correct resolved file ID matching the Config keys you set.
+4. If any resource shows the APP file ID when it should point to MASTERS/OPERATIONS/ACCOUNTS, double-check the Config key spelling (e.g., `MasterFileID`, `OperationFileID`, `AccountsFileID`).
+
 ## Step 5: Link External Databases (Optional Override)
 1. If specific resources need to point to a different file than the scope default configured in Step 4, open the `Resources` sheet.
 2. Set the `FileID` column for those specific resource rows only.

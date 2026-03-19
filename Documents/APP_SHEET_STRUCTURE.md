@@ -137,13 +137,16 @@ Expected Keys:
 - `CompanyLogo` — URL to company logo (used in reports/documents)
 - `ContactEmail` — Company contact email
 - `ContactPhone` — Company contact phone
-- `MastersFileID` — Google Sheet File ID for the MASTERS spreadsheet
-- `OperationsFileID` — Google Sheet File ID for the OPERATIONS spreadsheet
-- `ReportsFileID` — Google Sheet File ID for the REPORTS spreadsheet
+- `MasterFileID` — Google Sheet File ID for the MASTERS spreadsheet
+- `OperationFileID` — Google Sheet File ID for the OPERATIONS spreadsheet
+- `ReportFileID` — Google Sheet File ID for the REPORTS spreadsheet
 - `AccountsFileID` — Google Sheet File ID for the ACCOUNTS spreadsheet
 
 Notes:
 - Config is the Source of Truth for deployment-level settings (file IDs, company branding).
 - FileID resolution chain: `Resource.FileID` (if present) → `Config[{Scope}FileID]` → APP file ID.
-- Config values are cached via `CacheService` (6-hour TTL) for performance.
+- Config values are cached via `CacheService` (5-minute TTL) for performance. Call `clearConfigCache()` to force a fresh read after manual Config edits.
+- APP spreadsheet fallback in web app context uses `ScriptProperties.APP_FILE_ID` via `getAppSpreadsheet()`. Use `AQL > Setup & Refactor > Store APP File ID in Properties` if needed.
 - Created automatically by `setupAppSheets()` with pre-populated key rows.
+- `FileID` in `Resources` is optional — blank values trigger config-driven resolution via the fallback chain.
+

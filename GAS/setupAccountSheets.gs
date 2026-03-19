@@ -4,7 +4,12 @@
  * ============================================================
  * Run this function in APP Apps Script project to setup accounts
  * related sheets.
+ *
+ * Shared helpers: setupSheetUtils.gs (setup_* functions)
  */
+
+var ACCOUNTS_HEADER_COLOR = '#5C6BC0';
+var ACCOUNTS_ALT_ROW_COLOR = '#f0f1fa';
 
 function setupAccountSheets() {
     const commonAuditColumns = ['CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy'];
@@ -83,30 +88,26 @@ function setupAccountSheets() {
                 results.push('Updated: ' + schema.resourceName);
             }
 
-            // Using existing trx_ helper functions from setupOperationSheets.gs
-            trx_normalizeSheetSchema(sheet, schema.headers);
-            trx_applySheetFormatting(sheet, schema.headers, schema.columnWidths);
+            setup_normalizeSheetSchema(sheet, schema.headers);
+            setup_applyHeaderFormatting(sheet, schema.headers, schema.columnWidths, ACCOUNTS_HEADER_COLOR);
 
-            if (isNewSheet) trx_trimToHeaderOnly(sheet);
+            if (isNewSheet) setup_trimToHeaderOnly(sheet);
 
-            trx_applyColumnDefaults(sheet, schema.headers, schema.defaults || {});
-            trx_clearDataValidationForTable(sheet, schema.headers.length);
+            setup_applyColumnDefaults(sheet, schema.headers, schema.defaults || {});
+            setup_clearDataValidations(sheet, schema.headers.length);
 
             if (schema.headers.indexOf('Status') !== -1) {
-                trx_applyListValidation(sheet, schema.headers, 'Status', ['Active', 'Inactive', 'Draft']);
-                trx_fillBlankColumn(sheet, schema.headers, 'Status', schema.statusDefault || 'Active');
+                setup_applyListValidation(sheet, schema.headers, 'Status', ['Active', 'Inactive', 'Draft']);
+                setup_fillBlankColumn(sheet, schema.headers, 'Status', schema.statusDefault || 'Active');
             }
 
             if (schema.typeValidation && schema.headers.indexOf('AccountType') !== -1) {
-                trx_applyListValidation(sheet, schema.headers, 'AccountType', schema.typeValidation);
+                setup_applyListValidation(sheet, schema.headers, 'AccountType', schema.typeValidation);
             }
 
-            trx_protectHeaderRow(sheet, schema.headers.length);
-            trx_applyBanding(sheet, schema.headers.length);
-
-            if (sheet.getMaxRows() > 1) {
-                sheet.getRange(2, 1, Math.max(sheet.getMaxRows() - 1, 1), schema.headers.length).setNumberFormat('@');
-            }
+            setup_protectHeaderRow(sheet, schema.headers.length);
+            setup_applyBanding(sheet, schema.headers.length, ACCOUNTS_HEADER_COLOR, ACCOUNTS_ALT_ROW_COLOR);
+            setup_setPlainTextFormat(sheet, schema.headers.length);
 
             if (!fileSheetIndex[resource.fileId]) fileSheetIndex[resource.fileId] = 0;
             fileSheetIndex[resource.fileId]++;

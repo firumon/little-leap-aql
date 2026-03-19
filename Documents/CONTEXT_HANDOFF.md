@@ -183,83 +183,24 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - `syncAppResources.gs`, `resourceRegistry.gs`, `reportGenerator.gs`, `appMenu.gs` all use the new fallback chain.
   - Hardcoded `CONFIG.REPORTS_FILE_ID` removed from `Constants.gs`.
   - `setupAppSheets.gs` creates the Config sheet with pre-populated expected keys. It is now the first sheet created and positioned in the APP spreadsheet.
-
-### Key behavior now
-- Code is generated in Apps Script (not by sheet formula).
-- Code generation uses `Resources.CodePrefix` + `Resources.CodeSequenceLength`.
-- Initial resource schema (headers) is delivered in login payload based on role permissions.
-- Login resource payload is sorted by `ui.menuOrder` then `name` for stable frontend menu/order behavior.
-- User scope payload now includes:
-  - `accessRegion.code`
-  - `accessRegion.isUniverse`
-  - `accessRegion.accessibleCodes`
-- Frontend authorization behavior:
-  - UI visibility uses `authorizedResources` from login payload.
-  - Routing enforces authorized resource match via `resources[].ui.routePath` (and optional `meta.requiredResource` fallback).
-- Master list fetch can use compact transport:
-  - API verb style can be generic:
-    - `action=get`, `scope=master`, `resource=...` (or `resources=...`)
-    - `action=create/update`, `scope=master`, `resource=...`
-  - Server sends `rows` (array of arrays) without JSON field keys.
-  - Frontend converts arrays to objects using cached headers.
-- Incremental sync cursor flow is active for all configured master resources:
-  - Request uses `lastUpdatedAt`.
-  - Response uses `meta.lastSyncAt`.
-  - Frontend merges delta rows into IndexedDB.
-  - Master pages are cache-first; revisits serve from IDB instantly without blocking UI.
-  - Optimistic UI: Create/Update operations close dialogs immediately and update local items while syncing in background.
-  - IDB Lifecycle: IndexedDB is completely purged on logout and recreated on login to ensure clean state and security across user sessions.
-- Eager cache warmup on login:
-  - One background `getMulti` request fetches all authorized master resources after login.
-  - Master pages opened after login usually render from IDB instantly without the first-page 10s wait.
-  - Auth store now exposes `isGlobalSyncing` for optional top-level sync indicators.
-- GAS backend master-sync performance optimization (2026-03-14):
-  - `GAS/resourceRegistry.gs` now uses request-level memory caches for `SpreadsheetApp.openById` and `getSheetByName` (`_resource_file_cache`, `_resource_sheet_cache`).
-  - `GAS/auth.gs` now preloads and caches `Users` and `Designations` lookup maps per execution (`_users_context_cache`, `_designations_cache`).
-  - `GAS/masterApi.gs` now reuses already-loaded headers during list responses and short-circuits row checks when `RecordAccessPolicy=ALL` and no scoped region check is needed.
-  - `getUserById` now resolves from in-memory user maps, reducing repeated User sheet scans during `getMulti`.
-- Registry sync-cursor optimization (2026-03-14):
-  - `APP.Resources` schema now includes `LastDataUpdatedAt` (Unix epoch milliseconds) and no longer uses `SkipColumns`.
-  - `GAS/resourceRegistry.gs` exposes `updateResourceSyncCursor(resourceName)` to update `LastDataUpdatedAt` after successful write operations.
-    - Sidebar master menu shows only resources with `permissions.canRead = true`
-    - Route guard blocks direct URL access when role lacks resource read permission
-- Frontend API transport centralization:
-  - `FRONTENT/src/config/api.js`
-  - `FRONTENT/src/services/apiClient.js`
-  - `FRONTENT/src/services/gasApi.js`
-  - `products` store no longer depends on `auth` store for generic API calls.
-- MASTER setup script:
-  - `GAS/setupMasterSheets.gs`
-  - Reads APP `Resources` and creates/updates target sheets.
-- PWA & Offline Support:
-  - Custom service worker (`custom-service-worker.js`) implemented for caching and offline capabilities.
-  - IndexedDB-backed data synchronization for seamless offline UX.
-- Resource & Entity Updates:
-  - Transitioned architecture to use `SKUs` instead of `ProductVariants`.
-  - Configured `APP.Resources` to include mapping for operation resources: Shipments, Port Clearance, Goods Receipts, and Stock Movements.
-- Identity & Role Architecture (Updates):
-  - Simplified role mapping: `Roles` are now directly assigned to users via `RoleID` in the `Users` sheet, deprecating the `UserRoles` sheet.
-  - Built Role-Based Dashboards routing and layouts (redirect based on role logic).
-- Frontend Store Architecture:
-  - Refactored the `auth` store and related stores to Vue 3 Composition API (Setup Store syntax) for better maintainability.
-- Frontend Hardening & Page Prune (Production Baseline Correction):
-  - Removed obsolete operation test pages. The app officially operates on `LandingPage.vue`, `LoginPage.vue`, `DashboardIndex.vue`, `MasterEntityPage.vue` (generic rendering for any master list), and `ProfilePage.vue`.
-  - **IndexedDB & Performance Hardening**:
-    - Fixed critical `IDBTransaction` naming issues and stabilized Service Worker registration to prevent evaluation failures.
-    - Implemented dynamic IDB re-initialization: DB is explicitly closed on `logout` and recreated on next `login`.
-    - **Optimistic UI Updates**: All Master CRUD operations (Create/Update) now reflect in the UI immediately (<200ms) with background reconciliation.
-    - **Cache-First Instant Paint**: MasterEntityPage renders from IndexedDB cache immediately, then silently updates from server. Navigation between same-resource pages no longer wipes data.
-    - Added subtle pulsed sync indicator for non-blocking background operations.
-  - Removed duplicate ad-hoc notification toasts; single API result mapping handled uniformly by `callGasApi`.
-- Global post-login eager master sync:
-  - `FRONTENT/src/services/masterRecords.js` now exposes `syncAllMasterResources()` for batched cache warmup.
-  - Auth login (`FRONTENT/src/stores/auth.js`) triggers this sync in background (non-blocking) immediately after successful login.
-  - Batch payload sends per-resource incremental cursors (`lastUpdatedAtByResource`) to `action=get` + `scope=master` + `resources[]`.
-  - `GAS/masterApi.gs` `handleMasterGetMultiRecords` now applies cursor per resource and keeps existing access/region policy enforcement via `handleMasterGetRecords`.
-- Delta cursor serialization fix (2026-03-15):
-  - `FRONTENT/src/services/masterRecords.js` now normalizes single-resource cursor values using numeric-first parsing before request build.
-  - Single-resource sync sends `lastUpdatedAt` only when cursor is a valid Unix epoch milliseconds number.
-  - This prevents JSON `NaN -> null` payload serialization (seen when cursor came from localStorage as numeric string), restoring incremental delta behavior.
+- GAS Audit Refactor Hardening (2026-03-19):
+  - **Config cache TTL** reduced from 6h to 5min; added `clearConfigCache()` for manual invalidation.
+  - **FileID auto-population removed**: `syncAppResourcesFromCode()` no longer writes resolved FileIDs into blank `Resources.FileID` cells — blank is preserved for config-driven runtime resolution.
+  - **`accounts` scope** added to `normalizeResourceScope()` and API dispatcher scope allowlist — accounts resources no longer collapse to `master`.
+  - **Progress validation** now applied in `setupOperationSheets.gs` — `progressValidation` arrays were defined but never applied before.
+  - **Setup utility deduplication**: Created `GAS/setupSheetUtils.gs` with shared `setup_*` helpers. All 4 setup scripts (`setupAppSheets.gs`, `setupMasterSheets.gs`, `setupOperationSheets.gs`, `setupAccountSheets.gs`) now use these shared helpers. ~420 lines of duplicate code removed.
+  - **Admin dialog HTML separation**: Extracted inline HTML/CSS/JS from `appMenu.gs` into `GAS/adminDialog.html` template. Server logic stays in `.gs`, form markup/client JS in `.html`.
+  - **Duplicate utility removal**: `appMenu.gs` `findRow` and `hashPasswordMenu` replaced with thin wrappers to shared `findRowByValue` and `hashPassword`.
+  - **Error handling**: Added try/catch for JSON.parse in `apiDispatcher.gs`; improved error messages for FileID/SheetName resolution failures in `resourceRegistry.gs`.
+  - **Diagnostics**: Added `diagLogResolvedFileIds()` in `sheetHelpers.gs` for troubleshooting FileID resolution per resource.
+  - Plan: `PLANS/2026-03-19-gas-audit-refactor-hardening.md`
+- Authorization payload/FileID resolution hardening (2026-03-19):
+  - Added `getAppSpreadsheet()` in `GAS/sheetHelpers.gs` with fallback chain: `getActiveSpreadsheet()` -> `ScriptProperties.APP_FILE_ID` (`openById`) -> explicit error.
+  - Added `setAppFileId()` utility and wired it to both `setupAppSheets()` (auto-store) and menu `AQL > Setup & Refactor > Store APP File ID in Properties`.
+  - Replaced doPost-reachable APP sheet access points in `auth.gs` and `resourceRegistry.gs` to use `getAppSpreadsheet()`.
+  - Corrected Config default key from `AccountFileID` to `AccountsFileID`.
+  - Added execution logging in auth/resource authorization paths (`safeGetRoleResourceAccess`, `buildAuthorizedResourceEntry`) to avoid silent failures.
+  - Removed `fileId` from authorized resource payload sent to frontend; kept internal runtime file resolution untouched.
 
 ### Key behavior now
 - Code is generated in Apps Script (not by sheet formula).
@@ -303,33 +244,18 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - `CreatedAt` and `UpdatedAt` are now stored as Unix epoch milliseconds (number).
   - `lastUpdatedAt` delta cursor should also use Unix epoch milliseconds.
   - Server date parser expects Unix timestamp inputs (number or numeric string); native `Date` objects are still tolerated when passed by Google runtime.
-- `FileID`
-- `SheetName`
-- `CodePrefix`
-- `CodeSequenceLength`
-- `LastDataUpdatedAt`
-- `Audit`
-- `RequiredHeaders`
-- `UniqueHeaders`
-- `UniqueCompositeHeaders`
-- `DefaultValues`
-- `RecordAccessPolicy`
-- `OwnerUserField`
-- `AdditionalActions`
-- `MenuGroup`
-- `MenuOrder`
-- `MenuLabel`
-- `MenuIcon`
-- `RoutePath`
-- `PageTitle`
-- `PageDescription`
-- `UIFields`
-- `ShowInMenu`
-- `IncludeInAuthorizationPayload`
-- `Reports`
 
-Column meaning and value guidance:
-- `Documents/RESOURCE_COLUMNS_GUIDE.md`
+## 7) APP.Resources Columns
+Required columns (managed by `syncAppResources.gs`):
+- `Name`, `Scope`, `ParentResource`, `IsActive`, `FileID`, `SheetName`
+- `CodePrefix`, `CodeSequenceLength`, `LastDataUpdatedAt`, `Audit`
+- `RequiredHeaders`, `UniqueHeaders`, `UniqueCompositeHeaders`, `DefaultValues`
+- `RecordAccessPolicy`, `OwnerUserField`, `AdditionalActions`
+- `MenuGroup`, `MenuOrder`, `MenuLabel`, `MenuIcon`
+- `RoutePath`, `PageTitle`, `PageDescription`, `UIFields`
+- `ShowInMenu`, `IncludeInAuthorizationPayload`, `Reports`
+
+Column meaning and value guidance: `Documents/RESOURCE_COLUMNS_GUIDE.md`
 
 Other APP requirements:
 - `Users` must include `AccessRegion`.

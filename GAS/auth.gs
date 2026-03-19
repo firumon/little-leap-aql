@@ -33,7 +33,7 @@ function getUsersContext() {
     return _users_context_cache;
   }
 
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.USERS);
+  const sheet = getAppSpreadsheet().getSheetByName(CONFIG.SHEETS.USERS);
   if (!sheet) {
     throw new Error('Users sheet not found');
   }
@@ -221,6 +221,7 @@ function safeGetRoleResourceAccess(roleId, options) {
     });
     return opts.sortByMenuOrder === false ? resources : sortAuthorizedResources(resources);
   } catch (err) {
+    console.error('safeGetRoleResourceAccess failed for role(s): ' + JSON.stringify(roleId) + '. Error: ' + (err && err.message ? err.message : err));
     return [];
   }
 }
@@ -301,7 +302,7 @@ function handleUpdatePassword(auth, currentPassword, newPassword) {
 function getRoleNameById(roleId) {
   if (!roleId) return 'User';
 
-  const roleSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.ROLES);
+  const roleSheet = getAppSpreadsheet().getSheetByName(CONFIG.SHEETS.ROLES);
   if (!roleSheet) return 'User';
 
   const headers = getSheetHeaders(roleSheet);
@@ -320,7 +321,7 @@ function getDesignationById(designationId) {
   }
 
   if (!_designations_cache) {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.DESIGNATIONS);
+    const sheet = getAppSpreadsheet().getSheetByName(CONFIG.SHEETS.DESIGNATIONS);
     const byId = {};
     if (sheet) {
       const values = sheet.getDataRange().getValues();

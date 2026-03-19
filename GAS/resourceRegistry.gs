@@ -9,7 +9,7 @@ var _resource_file_cache = {};
 var _resource_sheet_cache = {};
 
 function getResourceRegistryContext() {
-  const appSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.RESOURCES);
+  const appSheet = getAppSpreadsheet().getSheetByName(CONFIG.SHEETS.RESOURCES);
   if (!appSheet) {
     throw new Error('Resources sheet not found in APP file');
   }
@@ -85,10 +85,10 @@ function getResourceConfig(resourceName) {
 function openResourceSheet(resourceName) {
   const config = getResourceConfig(resourceName);
   if (!config.fileId) {
-    throw new Error('Resource fileId is missing for: ' + resourceName);
+    throw new Error('Resource fileId could not be resolved for: ' + resourceName + ' (scope=' + config.scope + '). Check Resources.FileID or Config[' + config.scope.charAt(0).toUpperCase() + config.scope.slice(1) + 'FileID].');
   }
   if (!config.sheetName) {
-    throw new Error('Resource sheetName is missing for: ' + resourceName);
+    throw new Error('Resource sheetName is missing for: ' + resourceName + '. Set SheetName in APP.Resources.');
   }
 
   const fileCacheKey = config.fileId;
@@ -147,6 +147,7 @@ function normalizeCodeSequenceLength(value) {
 function normalizeResourceScope(value) {
   const normalized = (value || 'master').toString().trim().toLowerCase();
   if (normalized === 'operation') return 'operation';
+  if (normalized === 'accounts') return 'accounts';
   if (normalized === 'report') return 'report';
   if (normalized === 'system') return 'system';
   return 'master';
@@ -226,7 +227,7 @@ function parseCompositeHeaders(value) {
 }
 
 function getRolePermissionsContext() {
-  const rolePermSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.ROLE_PERMISSIONS);
+  const rolePermSheet = getAppSpreadsheet().getSheetByName(CONFIG.SHEETS.ROLE_PERMISSIONS);
   if (!rolePermSheet) {
     throw new Error('RolePermissions sheet not found in APP file');
   }
@@ -304,6 +305,7 @@ function buildAuthorizedResourceEntry(resourceName, options) {
   try {
     config = getResourceConfig(resourceName);
   } catch (err) {
+    console.warn('buildAuthorizedResourceEntry skipped resource "' + resourceName + '": ' + (err && err.message ? err.message : err));
     return null;
   }
 
@@ -314,7 +316,6 @@ function buildAuthorizedResourceEntry(resourceName, options) {
   const entry = {
     name: resourceName,
     scope: config.scope,
-    fileId: config.fileId,
     sheetName: config.sheetName,
     codePrefix: config.codePrefix,
     codeSequenceLength: config.codeSequenceLength,

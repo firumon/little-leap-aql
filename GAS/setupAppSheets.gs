@@ -233,7 +233,7 @@ function setupAppSheets() {
     }
 
     // Refactor schema dynamically (preserves data if sheet exists)
-    app_normalizeSheetSchema(sheet, config.headers);
+    setup_normalizeSheetSchema(sheet, config.headers);
 
     // Styling
     const headerRange = sheet.getRange(1, 1, 1, config.headers.length);
@@ -320,9 +320,9 @@ function setupAppSheets() {
       ['ContactPhone', ''],
       ['ColorPrimary', ''],
       ['ColorSecondary', ''],
-      ['MastersFileID', ''],
-      ['OperationsFileID', ''],
-      ['ReportsFileID', ''],
+      ['MasterFileID', ''],
+      ['OperationFileID', ''],
+      ['ReportFileID', ''],
       ['AccountsFileID', '']
     ];
     configSheet.getRange(2, 1, defaultKeys.length, 2).setValues(defaultKeys);
@@ -342,6 +342,13 @@ function setupAppSheets() {
     summary += '\n\nAutomatically synced APP.Resources from code.';
   } catch (e) {
     summary += '\n\n(Note: Auto-sync of APP.Resources failed: ' + e.message + ')';
+  }
+
+  try {
+    setAppFileId();
+    summary += '\nStored APP_FILE_ID in Script Properties.';
+  } catch (e) {
+    summary += '\n(Note: Failed to store APP_FILE_ID in Script Properties: ' + e.message + ')';
   }
 
   try {
@@ -423,35 +430,4 @@ function upgradeAppSheetsForAccessRegions() {
   SpreadsheetApp.getUi().alert('Upgrade complete: Users.AccessRegion and AccessRegions sheet are ready.');
 }
 
-// ------ Helper methods ------
-
-function app_normalizeSheetSchema(sheet, targetHeaders) {
-  const lastRow = Math.max(sheet.getLastRow(), 1);
-  const lastCol = Math.max(sheet.getLastColumn(), 1);
-
-  const currentValues = sheet.getRange(1, 1, lastRow, lastCol).getValues();
-  const currentHeaders = currentValues[0] || [];
-  const headerIndexMap = {};
-  currentHeaders.forEach(function (h, i) { headerIndexMap[h] = i; });
-
-  const existingRows = currentValues.slice(1);
-  const normalizedRows = existingRows.map(function (row) {
-    return targetHeaders.map(function (header) {
-      const idx = headerIndexMap[header];
-      return idx === undefined ? '' : row[idx];
-    });
-  });
-
-  sheet.clearContents();
-  sheet.getRange(1, 1, lastRow, lastCol).clearDataValidations();
-  sheet.getRange(1, 1, 1, targetHeaders.length).setValues([targetHeaders]);
-
-  if (normalizedRows.length > 0) {
-    sheet.getRange(2, 1, normalizedRows.length, targetHeaders.length).setValues(normalizedRows);
-  }
-
-  const totalCols = sheet.getMaxColumns();
-  if (totalCols > targetHeaders.length) {
-    sheet.deleteColumns(targetHeaders.length + 1, totalCols - targetHeaders.length);
-  }
-}
+// Local helpers removed — now using shared setup_* from setupSheetUtils.gs

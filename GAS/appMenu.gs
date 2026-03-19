@@ -31,6 +31,7 @@ function onOpen() {
     .addSeparator()
     .addSubMenu(ui.createMenu('⚙️ Setup & Refactor')
       .addItem('Refactor APP Sheets', 'setupAppSheets')
+      .addItem('Store APP File ID in Properties', 'setAppFileId')
       .addItem('Refactor MASTER Sheets', 'setupMasterSheets')
       .addSeparator()
       .addItem('Setup All Operations', 'setupOperationSheets')
@@ -84,8 +85,10 @@ function baseDialogData() {
 }
 
 function showDialog(action, title, width, height, data) {
+  var template = HtmlService.createTemplateFromFile('adminDialog');
+  template.bodyHtml = buildDialogBody(action, data || {});
   SpreadsheetApp.getUi().showModalDialog(
-    HtmlService.createHtmlOutput(getHtmlTemplate(action, data || {})).setWidth(width).setHeight(height),
+    template.evaluate().setWidth(width).setHeight(height),
     title
   );
 }
@@ -430,16 +433,9 @@ function numOrBlank(v) { const n = Number(v); return Number.isFinite(n) && n > 0
 function boolText(v, fallback) { if (v === true || String(v).toUpperCase() === 'TRUE') return 'TRUE'; if (v === false || String(v).toUpperCase() === 'FALSE') return 'FALSE'; return fallback ? 'TRUE' : 'FALSE'; }
 function rolesInputToCsv(value) { return csv(Array.isArray(value) ? value.join(',') : value); }
 function csv(v) { const seen = {}; return (v || '').toString().split(',').map(function (x) { return x.trim(); }).filter(function (x) { if (!x) return false; if (seen[x]) return false; seen[x] = 1; return true; }).join(','); }
-function hashPasswordMenu(password) { return Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, password || '')); }
+function hashPasswordMenu(password) { return hashPassword(password || ''); }
 function findRow(sheet, colIndex, value, startRow, matchCase) {
-  if (colIndex === undefined || value === undefined || value === null || value === '') return -1;
-  const from = startRow || 2;
-  if (sheet.getLastRow() < from) return -1;
-  const range = sheet.getRange(from, colIndex + 1, sheet.getLastRow() - from + 1, 1);
-  const finder = range.createTextFinder(String(value)).matchEntireCell(true);
-  finder.matchCase(matchCase === true);
-  const m = finder.findNext();
-  return m ? m.getRow() : -1;
+  return findRowByValue(sheet, colIndex, value, startRow, matchCase);
 }
 function nextId(ctx, header, prefix, digits) {
   if (ctx.idx[header] === undefined) return '';
@@ -469,33 +465,30 @@ function normalizeAccessRegionInputCode(code) {
 }
 function esc(v) { return (v == null ? '' : String(v)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 
-function getHtmlTemplate(action, data) {
-  const users = data.users || [], roles = data.roles || [], resources = data.resources || [], designations = data.designations || [], accessRegions = data.accessRegions || [], matrix = data.roleActionsMatrix || { resources: [], actionsByResource: {} };
-  const uo = users.map(function (x) { return '<option value="' + esc(x.id) + '">' + esc(x.name) + ' (' + esc(x.id) + ')</option>'; }).join('');
-  const ro = roles.map(function (x) { return '<option value="' + esc(x.id) + '">' + esc(x.name) + ' (' + esc(x.id) + ')</option>'; }).join('');
-  const rso = resources.map(function (x) { return '<option value="' + esc(x.name) + '">' + esc(x.name) + '</option>'; }).join('');
-  const doo = designations.map(function (x) { return '<option value="' + esc(x.id) + '">' + esc(x.name) + '</option>'; }).join('');
-  const aro = '<option value="">Universe (All Regions)</option>' + accessRegions.map(function (x) { return '<option value="' + esc(x.code) + '">' + esc(x.name) + ' (' + esc(x.code) + ')</option>'; }).join('');
-  const acro = accessRegions.map(function (x) { return '<option value="' + esc(x.code) + '">' + esc(x.name) + ' (' + esc(x.code) + ')</option>'; }).join('');
-  const apro = '<option value="">-- None --</option>' + acro;
-
-  const style = '<style>body{font-family:Segoe UI,Arial,sans-serif;padding:14px}.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.g{margin:8px 0}label{display:block;font-size:12px;font-weight:600}input,select,textarea{width:100%;padding:7px;box-sizing:border-box;border:1px solid #ccc;border-radius:6px}textarea{min-height:60px}.note{font-size:12px;color:#666}button{width:100%;padding:9px;background:#2563eb;border:0;border-radius:7px;color:#fff;font-weight:600;margin-top:8px}.msg{display:none;margin-top:8px;padding:8px;border-radius:6px;font-size:12px}.ok{background:#ecfdf5;color:#065f46}.er{background:#fef2f2;color:#991b1b}.box{border:1px solid #ddd;border-radius:8px;padding:8px;margin-top:8px}.small{font-size:11px;color:#666}.checks{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.checks label{font-weight:400;font-size:12px;display:flex;gap:6px;align-items:center}</style>';
-  const js = '<script>function submitForm(h){const f=document.getElementById("mainForm"),b=document.getElementById("submitBtn"),m=document.getElementById("msg"),p={};Array.from(f.elements).forEach(function(el){if(!el.name)return;if(el.type==="checkbox"){if(el.name==="roles"){if(!p.roles)p.roles=[];if(el.checked)p.roles.push(el.value);}else{p[el.name]=el.checked;}}else p[el.name]=el.value;});b.disabled=true;const t=b.innerText;b.innerText="Processing...";m.style.display="none";google.script.run.withSuccessHandler(function(r){b.disabled=false;b.innerText=t;m.style.display="block";m.className="msg "+(r.success?"ok":"er");m.innerText=r.message||"Done";if(r.success)setTimeout(function(){google.script.host.close();},800);}).withFailureHandler(function(e){b.disabled=false;b.innerText=t;m.style.display="block";m.className="msg er";m.innerText=e.message||String(e);})[h](p);}function loadDetails(t,id){if(!id)return;google.script.run.withSuccessHandler(function(d){fillForm(d,t);})["get"+t+"Details"](id);}function fillForm(d,t){if(!d)return;Object.keys(d).forEach(function(k){const el=document.querySelector("[name=\'"+k+"\']");if(!el)return;if(el.type==="checkbox"){const v=d[k];el.checked=(v===true||String(v).toUpperCase()==="TRUE");}else el.value=d[k]==null?"":d[k];});if(t==="User"){const roles=(d.roles||"").toString().split(",").map(function(x){return x.trim();});document.querySelectorAll("input[name=roles]").forEach(function(cb){cb.checked=roles.indexOf(cb.value)!==-1;});}if(t==="Role"){document.querySelectorAll("input[data-perm=1]").forEach(function(cb){cb.checked=false;});const map=d.roleActions||{};Object.keys(map).forEach(function(res){(map[res]||[]).forEach(function(act){const k="perm__"+res.replace(/[^a-zA-Z0-9]/g,"_")+"__"+act.replace(/[^a-zA-Z0-9]/g,"_");const cb=document.querySelector("input[name=\'"+k+"\']");if(cb)cb.checked=true;});});}}</script>';
+function buildDialogBody(action, data) {
+  var users = data.users || [], roles = data.roles || [], resources = data.resources || [], designations = data.designations || [], accessRegions = data.accessRegions || [], matrix = data.roleActionsMatrix || { resources: [], actionsByResource: {} };
+  var uo = users.map(function (x) { return '<option value="' + esc(x.id) + '">' + esc(x.name) + ' (' + esc(x.id) + ')</option>'; }).join('');
+  var ro = roles.map(function (x) { return '<option value="' + esc(x.id) + '">' + esc(x.name) + ' (' + esc(x.id) + ')</option>'; }).join('');
+  var rso = resources.map(function (x) { return '<option value="' + esc(x.name) + '">' + esc(x.name) + '</option>'; }).join('');
+  var doo = designations.map(function (x) { return '<option value="' + esc(x.id) + '">' + esc(x.name) + '</option>'; }).join('');
+  var aro = '<option value="">Universe (All Regions)</option>' + accessRegions.map(function (x) { return '<option value="' + esc(x.code) + '">' + esc(x.name) + ' (' + esc(x.code) + ')</option>'; }).join('');
+  var acro = accessRegions.map(function (x) { return '<option value="' + esc(x.code) + '">' + esc(x.name) + ' (' + esc(x.code) + ')</option>'; }).join('');
+  var apro = '<option value="">-- None --</option>' + acro;
 
   function roleChecks() {
     return '<div class="box"><div class="small">Select Roles</div><div class="checks">' + roles.map(function (r) { return '<label><input type="checkbox" name="roles" value="' + esc(r.id) + '"> ' + esc(r.name) + '</label>'; }).join('') + '</div></div>';
   }
   function roleMatrix() {
     return '<div class="box">' + matrix.resources.map(function (resource) {
-      const actions = matrix.actionsByResource[resource] || [];
+      var actions = matrix.actionsByResource[resource] || [];
       return '<div class="g"><div><b>' + esc(resource) + '</b></div><div class="checks">' + actions.map(function (action) {
-        const k = permKey(resource, action);
+        var k = permKey(resource, action);
         return '<label><input data-perm="1" type="checkbox" name="' + esc(k) + '" value="true"> ' + esc(action) + '</label>';
       }).join('') + '</div></div>';
     }).join('') + '</div>';
   }
 
-  let body = '';
+  var body = '';
   if (action === 'createUser') body = '<h2>Create User</h2><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleCreateUser\')"><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Email</label><input name="email" type="email" required></div><div class="g"><label>Password</label><input name="password" type="password" required></div><div class="g"><label>Designation</label><select name="designationId"><option value="">-- Select --</option>' + doo + '</select></div><div class="g"><label>Access Region</label><select name="accessRegion">' + aro + '</select></div>' + roleChecks() + '<button id="submitBtn">Create User</button></form>';
   else if (action === 'updateUser') body = '<h2>Update User</h2><p class="note">Select user to auto-fill all fields and role checks.</p><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleUpdateUser\')"><div class="g"><label>User</label><select name="userId" onchange="loadDetails(\'User\',this.value)" required><option value="">-- Select --</option>' + uo + '</select></div><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Email</label><input name="email" type="email" required></div><div class="g"><label>Designation</label><select name="designationId"><option value="">-- Select --</option>' + doo + '</select></div><div class="g"><label>Access Region</label><select name="accessRegion">' + aro + '</select></div>' + roleChecks() + '<div class="g"><label>New Password (optional)</label><input name="password" type="password"></div><button id="submitBtn">Update User</button></form>';
   else if (action === 'toggleUser') body = '<h2>Toggle User Status</h2><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleToggleUserStatus\')"><div class="g"><label>User</label><select name="userId" required><option value="">-- Select --</option>' + uo + '</select></div><button id="submitBtn">Toggle</button></form>';
@@ -506,11 +499,11 @@ function getHtmlTemplate(action, data) {
   else if (action === 'createRole') body = '<h2>Create Role</h2><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleCreateRole\')"><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Description</label><textarea name="description"></textarea></div><div class="small">Select actions per resource</div>' + roleMatrix() + '<button id="submitBtn">Create Role</button></form>';
   else if (action === 'updateRole') body = '<h2>Update Role</h2><p class="note">Select role to auto-check assigned resource actions.</p><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleUpdateRole\')"><div class="g"><label>Role</label><select name="roleId" onchange="loadDetails(\'Role\',this.value)" required><option value="">-- Select --</option>' + ro + '</select></div><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Description</label><textarea name="description"></textarea></div><div class="small">Select actions per resource</div>' + roleMatrix() + '<button id="submitBtn">Update Role</button></form>';
   else if (action === 'addResource' || action === 'editResource') {
-    const ed = action === 'editResource';
-    body = '<h2>' + (ed ? 'Edit' : 'Add') + ' Resource</h2><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'' + (ed ? 'handleEditResource' : 'handleAddResource') + '\')">' + (ed ? '<div class="g"><label>Resource</label><select name="resourceId" onchange="loadDetails(\'Resource\',this.value)" required><option value="">-- Select --</option>' + rso + '</select></div><input type="hidden" name="originalName">' : '') + '<div class="row"><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Scope</label><input name="scope" value="master"></div></div><div class="row"><div class="g"><label>FileID</label><input name="fileId" required></div><div class="g"><label>SheetName</label><input name="sheetName" required></div></div><div class="row"><div class="g"><label>CodePrefix</label><input name="codePrefix"></div><div class="g"><label>CodeSequenceLength</label><input name="codeSequenceLength" type="number"></div></div><div class="g"><label>RecordAccessPolicy</label><select name="recordAccessPolicy"><option>ALL</option><option>OWNER</option><option>OWNER_GROUP</option><option>OWNER_AND_UPLINE</option></select></div><div class="g"><label>RequiredHeaders</label><input name="requiredHeaders"></div><div class="g"><label>UniqueHeaders</label><input name="uniqueHeaders"></div><div class="g"><label>UniqueCompositeHeaders</label><input name="uniqueCompositeHeaders"></div><div class="g"><label>DefaultValues (JSON)</label><textarea name="defaultValues"></textarea></div><div class="g"><label>OwnerUserField</label><input name="ownerUserField" value="CreatedBy"></div><div class="g"><label>AdditionalActions</label><input name="additionalActions"></div><div class="row"><div class="g"><label>MenuGroup</label><input name="menuGroup"></div><div class="g"><label>MenuOrder</label><input name="menuOrder" type="number"></div></div><div class="row"><div class="g"><label>MenuLabel</label><input name="menuLabel"></div><div class="g"><label>MenuIcon</label><input name="menuIcon"></div></div><div class="g"><label>RoutePath</label><input name="routePath"></div><div class="g"><label>PageTitle</label><input name="pageTitle"></div><div class="g"><label>PageDescription</label><textarea name="pageDescription"></textarea></div><div class="g"><label>UIFields</label><textarea name="uiFields"></textarea></div><div class="checks"><label><input type="checkbox" name="isActive" value="true" checked> IsActive</label><label><input type="checkbox" name="audit" value="true"> Audit</label><label><input type="checkbox" name="showInMenu" value="true" checked> ShowInMenu</label><label><input type="checkbox" name="includeInAuthorizationPayload" value="true" checked> IncludeInAuthorizationPayload</label></div><button id="submitBtn">' + (ed ? 'Update' : 'Add') + ' Resource</button></form>';
+    var ed = action === 'editResource';
+    body = '<h2>' + (ed ? 'Edit' : 'Add') + ' Resource</h2><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'' + (ed ? 'handleEditResource' : 'handleAddResource') + '\')">' + (ed ? '<div class="g"><label>Resource</label><select name="resourceId" onchange="loadDetails(\'Resource\',this.value)" required><option value="">-- Select --</option>' + rso + '</select></div><input type="hidden" name="originalName">' : '') + '<div class="row"><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Scope</label><input name="scope" value="master"></div></div><div class="row"><div class="g"><label>FileID</label><input name="fileId" placeholder="Leave blank for config-driven"></div><div class="g"><label>SheetName</label><input name="sheetName"></div></div><div class="row"><div class="g"><label>CodePrefix</label><input name="codePrefix"></div><div class="g"><label>CodeSequenceLength</label><input name="codeSequenceLength" type="number"></div></div><div class="g"><label>RecordAccessPolicy</label><select name="recordAccessPolicy"><option>ALL</option><option>OWNER</option><option>OWNER_GROUP</option><option>OWNER_AND_UPLINE</option></select></div><div class="g"><label>RequiredHeaders</label><input name="requiredHeaders"></div><div class="g"><label>UniqueHeaders</label><input name="uniqueHeaders"></div><div class="g"><label>UniqueCompositeHeaders</label><input name="uniqueCompositeHeaders"></div><div class="g"><label>DefaultValues (JSON)</label><textarea name="defaultValues"></textarea></div><div class="g"><label>OwnerUserField</label><input name="ownerUserField" value="CreatedBy"></div><div class="g"><label>AdditionalActions</label><input name="additionalActions"></div><div class="row"><div class="g"><label>MenuGroup</label><input name="menuGroup"></div><div class="g"><label>MenuOrder</label><input name="menuOrder" type="number"></div></div><div class="row"><div class="g"><label>MenuLabel</label><input name="menuLabel"></div><div class="g"><label>MenuIcon</label><input name="menuIcon"></div></div><div class="g"><label>RoutePath</label><input name="routePath"></div><div class="g"><label>PageTitle</label><input name="pageTitle"></div><div class="g"><label>PageDescription</label><textarea name="pageDescription"></textarea></div><div class="g"><label>UIFields</label><textarea name="uiFields"></textarea></div><div class="checks"><label><input type="checkbox" name="isActive" value="true" checked> IsActive</label><label><input type="checkbox" name="audit" value="true"> Audit</label><label><input type="checkbox" name="showInMenu" value="true" checked> ShowInMenu</label><label><input type="checkbox" name="includeInAuthorizationPayload" value="true" checked> IncludeInAuthorizationPayload</label></div><button id="submitBtn">' + (ed ? 'Update' : 'Add') + ' Resource</button></form>';
   } else body = '<h2>Unsupported</h2>';
 
-  return '<!doctype html><html><head><base target="_top">' + style + '</head><body>' + body + '<div id="msg" class="msg"></div>' + js + '</body></html>';
+  return body;
 }
 
 function app_showReportManagerDialog() {

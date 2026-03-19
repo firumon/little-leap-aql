@@ -1121,11 +1121,7 @@ function syncAppResourcesFromCode(silent) {
                     sheet.getRange(rowNum, idx[key] + 1).setValue(resource[key]);
                 }
             });
-            // Sync FileID if empty — resolve from APP.Config by scope, then fall back to APP file ID
-            const existingFileID = sheet.getRange(rowNum, idx['FileID'] + 1).getValue();
-            if (!existingFileID) {
-                sheet.getRange(rowNum, idx['FileID'] + 1).setValue(resolveFileIdForScope(resource.Scope, ''));
-            }
+            // FileID is intentionally left as-is (blank = config-driven resolution at runtime)
             updated++;
         } else {
             // Add new record — use setValues after clearing any inherited data validation
@@ -1134,8 +1130,8 @@ function syncAppResourcesFromCode(silent) {
                 if (resource[h] !== undefined) {
                     newRow.push(resource[h]);
                 } else if (h === 'FileID') {
-                    // Resolve from APP.Config by scope, then fall back to APP file ID
-                    newRow.push(resolveFileIdForScope(resource.Scope, ''));
+                    // Leave blank — config-driven resolution at runtime
+                    newRow.push('');
                 } else {
                     newRow.push('');
                 }

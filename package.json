@@ -5,6 +5,7 @@
       "gas:push": "cd GAS && clasp push",
       "gas:pull": "cd GAS && clasp pull",
       "gas:status": "cd GAS && clasp status",
-      "gas:open": "cd GAS && clasp open"
+      "gas:open": "cd GAS && clasp open",
+      "gas:deploy": "node scripts/deploy-gas.js"
     }
   }

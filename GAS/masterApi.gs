@@ -811,6 +811,9 @@ function handleMasterBulkRecords(auth, payload) {
   // Local copy for uniqueness checks within the batch
   var currentValues = values.slice();
 
+  var newRows = [];       // Array of rowData arrays to append
+  var updateOps = [];     // Array of {rowNumber, rowData} to write back
+
   records.forEach(function (recordData, index) {
     try {
       var code = resolveCodeValue({ record: recordData });
@@ -820,7 +823,7 @@ function handleMasterBulkRecords(auth, payload) {
       var rowData;
 
       if (rowNumber === -1) {
-        // --- INSERT ---
+        // --- INSERT (collect for batch) ---
         var newCode = code || generateNextCode(currentValues, idx, codePrefix, seqLength);
         rowData = buildNewMasterRow(headers, idx, providedValues, schema);
         rowData[idx.Code] = newCode;
@@ -829,12 +832,11 @@ function handleMasterBulkRecords(auth, payload) {
         validateRequiredFields(rowData, idx, schema.requiredHeaders, targetResourceName);
         validateMasterUniqueness(currentValues, idx, rowData, schema, -1, targetResourceName);
 
-        var targetRow = sheet.getLastRow() + 1;
-        sheet.getRange(targetRow, 1, 1, headers.length).setValues([rowData]);
+        newRows.push(rowData);
         currentValues.push(rowData);
         results.created++;
       } else {
-        // --- UPDATE ---
+        // --- UPDATE (collect for batch) ---
         var existingRow = sheet.getRange(rowNumber, 1, 1, headers.length).getValues()[0];
         enforceRecordLevelAccess(auth, resource.config, headers, existingRow);
         rowData = mergeMasterRow(existingRow, idx, providedValues, schema);
@@ -843,7 +845,7 @@ function handleMasterBulkRecords(auth, payload) {
         validateRequiredFields(rowData, idx, schema.requiredHeaders, targetResourceName);
         validateMasterUniqueness(currentValues, idx, rowData, schema, rowNumber, targetResourceName);
 
-        sheet.getRange(rowNumber, 1, 1, headers.length).setValues([rowData]);
+        updateOps.push({ rowNumber: rowNumber, rowData: rowData });
         currentValues[rowNumber - 1] = rowData;
         results.updated++;
       }
@@ -851,6 +853,17 @@ function handleMasterBulkRecords(auth, payload) {
       results.errors.push({ index: index, message: err.toString() });
     }
   });
+
+  // Batch write: new rows as a single block append
+  if (newRows.length) {
+    var startRow = sheet.getLastRow() + 1;
+    sheet.getRange(startRow, 1, newRows.length, headers.length).setValues(newRows);
+  }
+
+  // Batch write: updates (individual rows — scattered positions prevent single setValues)
+  for (var u = 0; u < updateOps.length; u++) {
+    sheet.getRange(updateOps[u].rowNumber, 1, 1, headers.length).setValues([updateOps[u].rowData]);
+  }
 
   updateResourceSyncCursor(targetResourceName);
 

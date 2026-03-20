@@ -201,6 +201,15 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - Corrected Config default key from `AccountFileID` to `AccountsFileID`.
   - Added execution logging in auth/resource authorization paths (`safeGetRoleResourceAccess`, `buildAuthorizedResourceEntry`) to avoid silent failures.
   - Removed `fileId` from authorized resource payload sent to frontend; kept internal runtime file resolution untouched.
+- **GAS Backend Performance Optimization — Two-Tier Caching & Redundancy Elimination (2026-03-20)**:
+  - Implemented request-scoped global variable caching for `getAppSpreadsheet()`, `getResourceRegistryContext()`, and `getRolePermissionsContext()`.
+  - Created a high-performance `getResourceConfigMap()` with cross-execution persistence via `CacheService` (5-min TTL), eliminating linear O(N) scans for resource configurations.
+  - Added a bulk-loading roles cache (`getRolesCache()`) with `CacheService` persistence, replacing per-role sheet reads during authorization.
+  - Optimized `handleMasterBulkRecords()` in `masterApi.gs` to batch new-row inserts into a single `setValues()` RPC.
+  - Fixed `accessRegion.gs` to use the cached `getAppSpreadsheet()` helper for consistent fallback and Web App safety.
+  - Implemented a centralized `clearAllAppCaches()` utility and module-specific invalidation functions, wired into setup, sync, and admin menu paths.
+  - Target: reduce login time from ~12s to 3-5s and master get/bulk from ~3min to <60s.
+  - Plan: `PLANS/2026-03-20-gas-performance-optimization.md`.
 
 ### Key behavior now
 - Code is generated in Apps Script (not by sheet formula).

@@ -8,6 +8,7 @@
 
 var _users_context_cache = null;
 var _designations_cache = null;
+var _roles_cache = null;
 
 function normalizeEmailKey(value) {
   return (value || '').toString().trim().toLowerCase();
@@ -297,21 +298,72 @@ function handleUpdatePassword(auth, currentPassword, newPassword) {
 }
 
 /**
- * Helper to fetch role name from role ID.
+ * Bulk-loads all roles into an in-memory cache.
+ * Pattern mirrors _designations_cache approach.
  */
+function getRolesCache() {
+  if (_roles_cache) return _roles_cache;
+
+  // Try CacheService
+  var scriptCache = CacheService.getScriptCache();
+  var cachedJson = scriptCache.get('AQL_ROLES_CACHE_V1');
+  if (cachedJson) {
+    try {
+      _roles_cache = JSON.parse(cachedJson);
+      return _roles_cache;
+    } catch (e) { /* fall through */ }
+  }
+
+  var sheet = getAppSpreadsheet().getSheetByName(CONFIG.SHEETS.ROLES);
+  var byId = {};
+  if (sheet) {
+    var values = sheet.getDataRange().getValues();
+    var headers = values && values.length ? values[0] : [];
+    var idx = getHeaderIndexMap(headers);
+
+    if (idx.RoleID !== undefined && idx.Name !== undefined) {
+      for (var i = 1; i < values.length; i++) {
+        var row = values[i];
+        var id = (row[idx.RoleID] || '').toString().trim();
+        if (!id || byId[id]) continue;
+        byId[id] = {
+          id: id,
+          name: (row[idx.Name] || '').toString().trim() || 'User',
+          description: idx.Description !== undefined ? (row[idx.Description] || '').toString().trim() : ''
+        };
+      }
+    }
+  }
+
+  _roles_cache = { byId: byId };
+
+  // Persist to CacheService
+  try {
+    var json = JSON.stringify(_roles_cache);
+    if (json.length < 100000) {
+      scriptCache.put('AQL_ROLES_CACHE_V1', json, 300);
+    }
+  } catch (e) { /* non-fatal */ }
+
+  return _roles_cache;
+}
+
+/**
+ * Clears the cached roles data.
+ * Call after any write to the Roles sheet.
+ */
+function clearRolesCache() {
+  _roles_cache = null;
+  try {
+    CacheService.getScriptCache().remove('AQL_ROLES_CACHE_V1');
+  } catch (e) { /* non-fatal */ }
+}
+
 function getRoleNameById(roleId) {
   if (!roleId) return 'User';
-
-  const roleSheet = getAppSpreadsheet().getSheetByName(CONFIG.SHEETS.ROLES);
-  if (!roleSheet) return 'User';
-
-  const headers = getSheetHeaders(roleSheet);
-  const idx = getHeaderIndexMap(headers);
-
-  const roleRow = findRowByValue(roleSheet, idx.RoleID, roleId, 2, true);
-  if (roleRow === -1) return 'User';
-
-  return roleSheet.getRange(roleRow, idx.Name + 1).getValue() || 'User';
+  var cache = getRolesCache();
+  var role = cache.byId[(roleId || '').toString().trim()];
+  return role ? role.name : 'User';
 }
 
 function getDesignationById(designationId) {

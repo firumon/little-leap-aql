@@ -238,6 +238,7 @@ function handleCreateRole(form) {
     const roleId = nextId(ctx, 'RoleID', 'R', 4);
     ctx.sheet.appendRow(toRow(ctx.headers, { RoleID: roleId, Name: name, Description: txt(form.description) }));
     saveRolePermissionMatrix(roleId, form);
+    if (typeof clearRolesCache === 'function') clearRolesCache();
     return ok('Role created.');
   } catch (e) { return fail(e); }
 }
@@ -252,6 +253,7 @@ function handleUpdateRole(form) {
     put(ctx.sheet, row, ctx.idx.Name, txt(form.name));
     put(ctx.sheet, row, ctx.idx.Description, txt(form.description));
     saveRolePermissionMatrix(roleId, form);
+    if (typeof clearRolesCache === 'function') clearRolesCache();
     return ok('Role updated.');
   } catch (e) { return fail(e); }
 }
@@ -280,6 +282,7 @@ function saveRolePermissionMatrix(roleId, form) {
       }));
     }
   });
+  if (typeof clearRolePermissionsCache === 'function') clearRolePermissionsCache();
 }
 
 function handleAddResource(form) {
@@ -290,6 +293,7 @@ function handleAddResource(form) {
     if (findRow(ctx.sheet, ctx.idx.Name, name, 2, true) !== -1) throw new Error('Resource already exists.');
     const rowObj = mapResource(form); rowObj.Name = name;
     ctx.sheet.appendRow(toRow(ctx.headers, rowObj));
+    if (typeof clearResourceConfigCache === 'function') clearResourceConfigCache();
     return ok('Resource added.');
   } catch (e) { return fail(e); }
 }
@@ -302,6 +306,7 @@ function handleEditResource(form) {
     if (row === -1) throw new Error('Resource not found.');
     const rowObj = mapResource(form); rowObj.Name = txt(form.name || key);
     Object.keys(rowObj).forEach(function (h) { put(ctx.sheet, row, ctx.idx[h], rowObj[h]); });
+    if (typeof clearResourceConfigCache === 'function') clearResourceConfigCache();
     return ok('Resource updated.');
   } catch (e) { return fail(e); }
 }

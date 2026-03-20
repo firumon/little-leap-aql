@@ -7,8 +7,13 @@
 
 var _resource_file_cache = {};
 var _resource_sheet_cache = {};
+var _resource_registry_context_cache = null;
+var _resource_config_map_cache = null;
+var _role_permissions_context_cache = null;
 
 function getResourceRegistryContext() {
+  if (_resource_registry_context_cache) return _resource_registry_context_cache;
+
   const appSheet = getAppSpreadsheet().getSheetByName(CONFIG.SHEETS.RESOURCES);
   if (!appSheet) {
     throw new Error('Resources sheet not found in APP file');
@@ -21,65 +26,116 @@ function getResourceRegistryContext() {
 
   const headers = values[0];
   const idx = getHeaderIndexMap(headers);
-  return { appSheet, values, headers, idx };
+  _resource_registry_context_cache = { appSheet, values, headers, idx };
+  return _resource_registry_context_cache;
+}
+
+/**
+ * Builds and caches a map of resourceName -> config for all resources.
+ * Uses getResourceRegistryContext() (itself cached) as the data source.
+ * Parses each resource row exactly once.
+ */
+function getResourceConfigMap() {
+  if (_resource_config_map_cache) return _resource_config_map_cache;
+
+  // Try CacheService for cross-execution persistence
+  var scriptCache = CacheService.getScriptCache();
+  var cachedJson = scriptCache.get('AQL_RESOURCE_CONFIG_MAP_V1');
+  if (cachedJson) {
+    try {
+      _resource_config_map_cache = JSON.parse(cachedJson);
+      return _resource_config_map_cache;
+    } catch (e) { /* fall through to fresh build */ }
+  }
+
+  var registry = getResourceRegistryContext();
+  var map = {};
+
+  for (var i = 1; i < registry.values.length; i++) {
+    var row = registry.values[i];
+    var name = (row[registry.idx.Name] || '').toString().trim();
+    if (!name || map[name]) continue;
+
+    var scope = normalizeResourceScope(readOptionalCell(row, registry.idx.Scope, 'master'));
+    var rawFileId = (row[registry.idx.FileID] || '').toString().trim();
+
+    map[name] = {
+      name: name,
+      scope: scope,
+      fileId: resolveFileIdForScope(scope, rawFileId),
+      sheetName: (row[registry.idx.SheetName] || '').toString().trim(),
+      isActive: toBooleanCell(readOptionalCell(row, registry.idx.IsActive, true)),
+      audit: toBooleanCell(readOptionalCell(row, registry.idx.Audit, false)),
+      codePrefix: registry.idx.CodePrefix === undefined
+        ? ''
+        : (row[registry.idx.CodePrefix] || '').toString().trim(),
+      codeSequenceLength: normalizeCodeSequenceLength(
+        registry.idx.CodeSequenceLength === undefined
+          ? ''
+          : row[registry.idx.CodeSequenceLength]
+      ),
+      lastDataUpdatedAt: Number(readOptionalCell(row, registry.idx.LastDataUpdatedAt, 0)) || 0,
+      requiredHeaders: parseHeaderList(readOptionalCell(row, registry.idx.RequiredHeaders, '')),
+      uniqueHeaders: parseHeaderList(readOptionalCell(row, registry.idx.UniqueHeaders, '')),
+      uniqueCompositeHeaders: parseCompositeHeaders(readOptionalCell(row, registry.idx.UniqueCompositeHeaders, '')),
+      defaultValues: parseJsonCell(readOptionalCell(row, registry.idx.DefaultValues, '{}'), {}),
+      recordAccessPolicy: normalizeRecordAccessPolicy(readOptionalCell(row, registry.idx.RecordAccessPolicy, 'all')),
+      ownerUserField: (readOptionalCell(row, registry.idx.OwnerUserField, 'CreatedBy') || '').toString().trim() || 'CreatedBy',
+      menuGroup: (readOptionalCell(row, registry.idx.MenuGroup, '') || '').toString().trim(),
+      menuOrder: Number(readOptionalCell(row, registry.idx.MenuOrder, 9999) || 9999),
+      menuLabel: (readOptionalCell(row, registry.idx.MenuLabel, name) || '').toString().trim() || name,
+      menuIcon: (readOptionalCell(row, registry.idx.MenuIcon, 'list_alt') || '').toString().trim() || 'list_alt',
+      routePath: (readOptionalCell(row, registry.idx.RoutePath, '') || '').toString().trim(),
+      pageTitle: (readOptionalCell(row, registry.idx.PageTitle, name) || '').toString().trim() || name,
+      pageDescription: (readOptionalCell(row, registry.idx.PageDescription, '') || '').toString().trim(),
+      uiFields: parseJsonCell(readOptionalCell(row, registry.idx.UIFields, '[]'), []),
+      showInMenu: toBooleanCell(readOptionalCell(row, registry.idx.ShowInMenu, true)),
+      includeInAuthorizationPayload: toBooleanCell(readOptionalCell(row, registry.idx.IncludeInAuthorizationPayload, true)),
+      additionalActions: parseStringList(readOptionalCell(row, registry.idx.AdditionalActions, '')),
+      functional: toBooleanCell(readOptionalCell(row, registry.idx.Functional, false)),
+      preAction: (readOptionalCell(row, registry.idx.PreAction, '') || '').toString().trim(),
+      postAction: (readOptionalCell(row, registry.idx.PostAction, '') || '').toString().trim(),
+      reports: parseJsonCell(readOptionalCell(row, registry.idx.Reports, '[]'), [])
+    };
+  }
+
+  _resource_config_map_cache = map;
+
+  // Persist to CacheService (5 min TTL)
+  try {
+    var json = JSON.stringify(map);
+    if (json.length < 100000) {
+      scriptCache.put('AQL_RESOURCE_CONFIG_MAP_V1', json, 300);
+    }
+  } catch (e) { /* non-fatal */ }
+
+  return map;
+}
+
+/**
+ * Clears the cached resource config map from both memory and CacheService.
+ * Call after any write to the Resources sheet (setup, sync, manual edits).
+ */
+function clearResourceConfigCache() {
+  _resource_config_map_cache = null;
+  _resource_registry_context_cache = null;
+  try {
+    CacheService.getScriptCache().remove('AQL_RESOURCE_CONFIG_MAP_V1');
+  } catch (e) { /* non-fatal */ }
 }
 
 function getResourceConfig(resourceName) {
-  const name = (resourceName || '').toString().trim();
+  var name = (resourceName || '').toString().trim();
   if (!name) {
     throw new Error('Resource name is required');
   }
 
-  const registry = getResourceRegistryContext();
-
-  for (let i = 1; i < registry.values.length; i++) {
-    const row = registry.values[i];
-    if ((row[registry.idx.Name] || '').toString().trim() === name) {
-      const scope = normalizeResourceScope(readOptionalCell(row, registry.idx.Scope, 'master'));
-      const rawFileId = (row[registry.idx.FileID] || '').toString().trim();
-      
-      return {
-        name,
-        scope,
-        fileId: resolveFileIdForScope(scope, rawFileId),
-        sheetName: (row[registry.idx.SheetName] || '').toString().trim(),
-        isActive: toBooleanCell(readOptionalCell(row, registry.idx.IsActive, true)),
-        audit: toBooleanCell(readOptionalCell(row, registry.idx.Audit, false)),
-        codePrefix: registry.idx.CodePrefix === undefined
-          ? ''
-          : (row[registry.idx.CodePrefix] || '').toString().trim(),
-        codeSequenceLength: normalizeCodeSequenceLength(
-          registry.idx.CodeSequenceLength === undefined
-            ? ''
-            : row[registry.idx.CodeSequenceLength]
-        ),
-        lastDataUpdatedAt: Number(readOptionalCell(row, registry.idx.LastDataUpdatedAt, 0)) || 0,
-        requiredHeaders: parseHeaderList(readOptionalCell(row, registry.idx.RequiredHeaders, '')),
-        uniqueHeaders: parseHeaderList(readOptionalCell(row, registry.idx.UniqueHeaders, '')),
-        uniqueCompositeHeaders: parseCompositeHeaders(readOptionalCell(row, registry.idx.UniqueCompositeHeaders, '')),
-        defaultValues: parseJsonCell(readOptionalCell(row, registry.idx.DefaultValues, '{}'), {}),
-        recordAccessPolicy: normalizeRecordAccessPolicy(readOptionalCell(row, registry.idx.RecordAccessPolicy, 'all')),
-        ownerUserField: (readOptionalCell(row, registry.idx.OwnerUserField, 'CreatedBy') || '').toString().trim() || 'CreatedBy',
-        menuGroup: (readOptionalCell(row, registry.idx.MenuGroup, '') || '').toString().trim(),
-        menuOrder: Number(readOptionalCell(row, registry.idx.MenuOrder, 9999) || 9999),
-        menuLabel: (readOptionalCell(row, registry.idx.MenuLabel, name) || '').toString().trim() || name,
-        menuIcon: (readOptionalCell(row, registry.idx.MenuIcon, 'list_alt') || '').toString().trim() || 'list_alt',
-        routePath: (readOptionalCell(row, registry.idx.RoutePath, '') || '').toString().trim(),
-        pageTitle: (readOptionalCell(row, registry.idx.PageTitle, name) || '').toString().trim() || name,
-        pageDescription: (readOptionalCell(row, registry.idx.PageDescription, '') || '').toString().trim(),
-        uiFields: parseJsonCell(readOptionalCell(row, registry.idx.UIFields, '[]'), []),
-        showInMenu: toBooleanCell(readOptionalCell(row, registry.idx.ShowInMenu, true)),
-        includeInAuthorizationPayload: toBooleanCell(readOptionalCell(row, registry.idx.IncludeInAuthorizationPayload, true)),
-        additionalActions: parseStringList(readOptionalCell(row, registry.idx.AdditionalActions, '')),
-        functional: toBooleanCell(readOptionalCell(row, registry.idx.Functional, false)),
-        preAction: (readOptionalCell(row, registry.idx.PreAction, '') || '').toString().trim(),
-        postAction: (readOptionalCell(row, registry.idx.PostAction, '') || '').toString().trim(),
-        reports: parseJsonCell(readOptionalCell(row, registry.idx.Reports, '[]'), [])
-      };
-    }
+  var map = getResourceConfigMap();
+  var config = map[name];
+  if (!config) {
+    throw new Error('Resource not configured: ' + name);
   }
-
-  throw new Error('Resource not configured: ' + name);
+  return config;
 }
 
 function openResourceSheet(resourceName) {
@@ -114,22 +170,29 @@ function openResourceSheet(resourceName) {
 }
 
 function updateResourceSyncCursor(resourceName) {
-  const name = (resourceName || '').toString().trim();
+  var name = (resourceName || '').toString().trim();
   if (!name) {
     throw new Error('Resource name is required');
   }
 
-  const registry = getResourceRegistryContext();
+  var registry = getResourceRegistryContext();
   if (registry.idx.LastDataUpdatedAt === undefined) {
     return;
   }
 
-  for (let i = 1; i < registry.values.length; i++) {
-    const row = registry.values[i];
-    const rowName = (row[registry.idx.Name] || '').toString().trim();
+  for (var i = 1; i < registry.values.length; i++) {
+    var row = registry.values[i];
+    var rowName = (row[registry.idx.Name] || '').toString().trim();
     if (rowName !== name) continue;
 
-    registry.appSheet.getRange(i + 1, registry.idx.LastDataUpdatedAt + 1).setValue(Date.now());
+    var now = Date.now();
+    registry.appSheet.getRange(i + 1, registry.idx.LastDataUpdatedAt + 1).setValue(now);
+
+    // Update the in-memory config map if loaded, so subsequent reads in
+    // the same execution see the new cursor without re-reading the sheet
+    if (_resource_config_map_cache && _resource_config_map_cache[name]) {
+      _resource_config_map_cache[name].lastDataUpdatedAt = now;
+    }
     return;
   }
 
@@ -227,15 +290,57 @@ function parseCompositeHeaders(value) {
 }
 
 function getRolePermissionsContext() {
-  const rolePermSheet = getAppSpreadsheet().getSheetByName(CONFIG.SHEETS.ROLE_PERMISSIONS);
+  if (_role_permissions_context_cache) return _role_permissions_context_cache;
+
+  // Try CacheService
+  var scriptCache = CacheService.getScriptCache();
+  var cachedJson = scriptCache.get('AQL_ROLE_PERMS_CONTEXT_V1');
+  if (cachedJson) {
+    try {
+      var parsed = JSON.parse(cachedJson);
+      // Reconstruct: we cache {values, headers, idx} but NOT the sheet object
+      // The sheet object is only needed for writes — permissions context is read-only in API paths
+      _role_permissions_context_cache = {
+        rolePermSheet: null,
+        values: parsed.values,
+        headers: parsed.headers,
+        idx: parsed.idx
+      };
+      return _role_permissions_context_cache;
+    } catch (e) { /* fall through */ }
+  }
+
+  var rolePermSheet = getAppSpreadsheet().getSheetByName(CONFIG.SHEETS.ROLE_PERMISSIONS);
   if (!rolePermSheet) {
     throw new Error('RolePermissions sheet not found in APP file');
   }
 
-  const values = rolePermSheet.getDataRange().getValues();
-  const headers = values && values.length ? values[0] : [];
-  const idx = getHeaderIndexMap(headers);
-  return { rolePermSheet, values, headers, idx };
+  var values = rolePermSheet.getDataRange().getValues();
+  var headers = values && values.length ? values[0] : [];
+  var idx = getHeaderIndexMap(headers);
+
+  _role_permissions_context_cache = { rolePermSheet: rolePermSheet, values: values, headers: headers, idx: idx };
+
+  // Persist to CacheService (serializable parts only — exclude sheet object)
+  try {
+    var json = JSON.stringify({ values: values, headers: headers, idx: idx });
+    if (json.length < 100000) {
+      scriptCache.put('AQL_ROLE_PERMS_CONTEXT_V1', json, 300);
+    }
+  } catch (e) { /* non-fatal */ }
+
+  return _role_permissions_context_cache;
+}
+
+/**
+ * Clears the cached role permissions context.
+ * Call after any write to the RolePermissions sheet.
+ */
+function clearRolePermissionsCache() {
+  _role_permissions_context_cache = null;
+  try {
+    CacheService.getScriptCache().remove('AQL_ROLE_PERMS_CONTEXT_V1');
+  } catch (e) { /* non-fatal */ }
 }
 
 function getRoleResourceAccess(roleId, options) {
@@ -474,21 +579,8 @@ function getResourceAdditionalActions(resourceName) {
 }
 
 function getAllConfiguredResourceNames() {
-  const registry = getResourceRegistryContext();
-  const names = [];
-  const seen = {};
-
-  for (let i = 1; i < registry.values.length; i++) {
-    const row = registry.values[i];
-    const name = (row[registry.idx.Name] || '').toString().trim();
-    if (!name) continue;
-    const key = name.toLowerCase();
-    if (seen[key]) continue;
-    seen[key] = true;
-    names.push(name);
-  }
-
-  return names;
+  var map = getResourceConfigMap();
+  return Object.keys(map);
 }
 
 function isWildcardValue(value) {
@@ -556,17 +648,14 @@ function normalizeActionName(value) {
 }
 
 function getResourcesByScope(scope, options) {
-  const normalizedScope = normalizeResourceScope(scope);
-  const includeInactive = options && options.includeInactive === true;
-  const registry = getResourceRegistryContext();
-  const result = [];
+  var normalizedScope = normalizeResourceScope(scope);
+  var includeInactive = options && options.includeInactive === true;
+  var map = getResourceConfigMap();
+  var result = [];
 
-  for (let i = 1; i < registry.values.length; i++) {
-    const row = registry.values[i];
-    const name = (row[registry.idx.Name] || '').toString().trim();
-    if (!name) continue;
-
-    const config = getResourceConfig(name);
+  var names = Object.keys(map);
+  for (var i = 0; i < names.length; i++) {
+    var config = map[names[i]];
     if (config.scope !== normalizedScope) continue;
     if (!includeInactive && !config.isActive) continue;
     result.push(config);
@@ -575,22 +664,15 @@ function getResourcesByScope(scope, options) {
   return result;
 }
 function getAllResourcesConfigs(options) {
-  const includeInactive = options && options.includeInactive === true;
-  const registry = getResourceRegistryContext();
-  const result = [];
+  var includeInactive = options && options.includeInactive === true;
+  var map = getResourceConfigMap();
+  var result = [];
 
-  for (let i = 1; i < registry.values.length; i++) {
-    const row = registry.values[i];
-    const name = (row[registry.idx.Name] || '').toString().trim();
-    if (!name) continue;
-
-    try {
-      const config = getResourceConfig(name, registry);
-      if (!includeInactive && !config.isActive) continue;
-      result.push(config);
-    } catch (e) {
-      console.error('Error fetching config for ' + name, e);
-    }
+  var names = Object.keys(map);
+  for (var i = 0; i < names.length; i++) {
+    var config = map[names[i]];
+    if (!includeInactive && !config.isActive) continue;
+    result.push(config);
   }
 
   return result;

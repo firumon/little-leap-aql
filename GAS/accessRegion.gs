@@ -15,7 +15,7 @@ function getAccessRegionContext() {
     return __accessRegionContextCache;
   }
 
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.SHEETS.ACCESS_REGIONS);
+  const sheet = getAppSpreadsheet().getSheetByName(CONFIG.SHEETS.ACCESS_REGIONS);
   if (!sheet) {
     __accessRegionContextCache = {
       exists: false,

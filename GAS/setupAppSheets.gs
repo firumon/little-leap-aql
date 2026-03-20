@@ -351,6 +351,11 @@ function setupAppSheets() {
     summary += '\n(Note: Failed to store APP_FILE_ID in Script Properties: ' + e.message + ')';
   }
 
+  // Clear caches after full setup
+  if (typeof clearAllAppCaches === 'function') {
+    clearAllAppCaches();
+  }
+
   try {
     SpreadsheetApp.getUi().alert(summary);
   } catch (e) { }

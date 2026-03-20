@@ -5,6 +5,8 @@
  * Shared helper functions for header/index/row access patterns.
  */
 
+var _appSpreadsheetCache = null;
+
 function getSheetHeaders(sheet) {
   const lastColumn = sheet.getLastColumn();
   if (!lastColumn) return [];
@@ -51,16 +53,23 @@ function getRowAsObject(sheet, rowNumber, headers) {
 /**
  * Resolves the APP spreadsheet safely for both bound and web app execution contexts.
  * Fallback: ScriptProperties.APP_FILE_ID when getActiveSpreadsheet() is unavailable.
+ * Uses a global variable to cache the result for the duration of the request.
  */
 function getAppSpreadsheet() {
+  if (_appSpreadsheetCache) return _appSpreadsheetCache;
+
   var active = SpreadsheetApp.getActiveSpreadsheet();
-  if (active) return active;
+  if (active) {
+    _appSpreadsheetCache = active;
+    return active;
+  }
   var appFileId = PropertiesService.getScriptProperties().getProperty('APP_FILE_ID');
   if (!appFileId) {
     throw new Error('APP spreadsheet is unavailable (no active spreadsheet). Set ScriptProperties.APP_FILE_ID first.');
   }
   try {
-    return SpreadsheetApp.openById(appFileId);
+    _appSpreadsheetCache = SpreadsheetApp.openById(appFileId);
+    return _appSpreadsheetCache;
   } catch (err) {
     throw new Error('Failed to open APP spreadsheet using ScriptProperties.APP_FILE_ID. Please re-run setup and store the APP file ID.');
   }
@@ -178,5 +187,20 @@ function diagLogResolvedFileIds() {
     lines.push(name + ' | scope=' + scope + ' | raw=' + (rawFileId || '(blank)') + ' | resolved=' + resolved);
   }
   Logger.log(lines.join('\n'));
+}
+
+/**
+ * Clears all in-memory and CacheService caches.
+ * Call from setup/sync operations that modify APP sheets.
+ */
+function clearAllAppCaches() {
+  // In-memory: spreadsheet cache
+  _appSpreadsheetCache = null;
+
+  // Delegate to module-specific cache clears
+  if (typeof clearConfigCache === 'function') clearConfigCache();
+  if (typeof clearResourceConfigCache === 'function') clearResourceConfigCache();
+  if (typeof clearRolePermissionsCache === 'function') clearRolePermissionsCache();
+  if (typeof clearRolesCache === 'function') clearRolesCache();
 }
 

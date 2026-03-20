@@ -116,6 +116,11 @@ function setupDefaultRoles() {
     });
 
     const summary = `Roles Setup Complete.\nAdded Roles: ${addedRolesCount}\nAdded RolePermissions: ${addedPermsCount}`;
+    
+    // Clear caches
+    if (typeof clearRolesCache === 'function') clearRolesCache();
+    if (typeof clearRolePermissionsCache === 'function') clearRolePermissionsCache();
+
     Logger.log(summary);
     try {
         SpreadsheetApp.getUi().alert(summary);

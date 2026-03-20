@@ -1,5 +1,5 @@
 Common config/settings page
-Custom Prooduct master
+Custom Product master
 Remove inactive load
 
 

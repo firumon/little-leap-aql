@@ -1159,4 +1159,9 @@ function syncAppResourcesFromCode(silent) {
             // Context without UI
         }
     }
+    
+    // Clear the resource config cache after sync
+    if (typeof clearAllAppCaches === 'function') {
+        clearAllAppCaches();
+    }
 }

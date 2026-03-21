@@ -215,6 +215,16 @@ function setupAppSheets() {
         Parent: 120
       }
     },
+    {
+      name: CONFIG.SHEETS.METADATA,
+      headers: ['Key', 'Value'],
+      autoIdFormula: null,
+      validations: [],
+      columnWidths: {
+        Key: 300,
+        Value: 600
+      }
+    },
   ];
 
   const results = [];

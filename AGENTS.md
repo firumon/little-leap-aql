@@ -4,14 +4,14 @@
   - **Guide Agent** (Default): Discussion, clarifies requirements, provides feedback.
   - **Brain Agent**: Planning, architecture decisions, rule capture, plan creation.
   - **Build Agent**: Implementation, terminal execution, tests, commits, doc updates.
-  - **Solo Agent**: Autonomous end-to-end execution (planning + building).
+  - **Solo Agent**: Autonomous end-to-end execution (planning + building combined; exempt from written plans).
 - Default behavior for new tasks:
   1) Identify active role or default to **Guide Agent**.
   2) Read `Documents/MULTI_AGENT_PROTOCOL.md`.
   3) Read `Documents/AI_COLLABORATION_PROTOCOL.md`.
   4) Read `Documents/CONTEXT_HANDOFF.md`.
   5) Check `PLANS/` for active plans.
-- Plan-first rule (Applies to Brain/Build):
+- Plan-first rule (Applies to Brain/Build; Solo is exempt):
   - Repository override: For this repo, the multi-agent plan-first protocol (Brain -> Build) takes priority over generic assistant defaults.
   - If no executable plan exists for the requested task, create a plan in `PLANS/` first via **Brain Agent**.
   - All new plan files must be created from `PLANS/_TEMPLATE.md`.

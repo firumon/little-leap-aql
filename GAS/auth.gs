@@ -366,40 +366,71 @@ function getRoleNameById(roleId) {
   return role ? role.name : 'User';
 }
 
+function getDesignationsCache() {
+  if (_designations_cache) return _designations_cache;
+
+  // Try CacheService
+  var scriptCache = CacheService.getScriptCache();
+  var cachedJson = scriptCache.get('AQL_DESIGNATIONS_CACHE_V1');
+  if (cachedJson) {
+    try {
+      _designations_cache = JSON.parse(cachedJson);
+      return _designations_cache;
+    } catch (e) { /* fall through */ }
+  }
+
+  var sheet = getAppSpreadsheet().getSheetByName(CONFIG.SHEETS.DESIGNATIONS);
+  var byId = {};
+  if (sheet) {
+    var values = sheet.getDataRange().getValues();
+    var headers = values && values.length ? values[0] : [];
+    var idx = getHeaderIndexMap(headers);
+
+    if (idx.DesignationID !== undefined && idx.Name !== undefined) {
+      for (var i = 1; i < values.length; i++) {
+        var row = values[i];
+        var id = (row[idx.DesignationID] || '').toString().trim();
+        if (!id || byId[id]) continue;
+
+        byId[id] = {
+          id: id,
+          name: (row[idx.Name] || '').toString().trim(),
+          hierarchyLevel: idx.HierarchyLevel === undefined
+            ? null
+            : Number(row[idx.HierarchyLevel] || 0) || null
+        };
+      }
+    }
+  }
+
+  _designations_cache = { byId: byId };
+
+  // Persist to CacheService
+  try {
+    var json = JSON.stringify(_designations_cache);
+    if (json.length < 100000) {
+      scriptCache.put('AQL_DESIGNATIONS_CACHE_V1', json, 300);
+    }
+  } catch (e) { /* non-fatal */ }
+
+  return _designations_cache;
+}
+
+function clearDesignationsCache() {
+  _designations_cache = null;
+  try {
+    CacheService.getScriptCache().remove('AQL_DESIGNATIONS_CACHE_V1');
+  } catch (e) { /* non-fatal */ }
+}
+
 function getDesignationById(designationId) {
   const normalizedId = (designationId || '').toString().trim();
   if (!normalizedId) {
     return { id: '', name: '', hierarchyLevel: null };
   }
 
-  if (!_designations_cache) {
-    const sheet = getAppSpreadsheet().getSheetByName(CONFIG.SHEETS.DESIGNATIONS);
-    const byId = {};
-    if (sheet) {
-      const values = sheet.getDataRange().getValues();
-      const headers = values && values.length ? values[0] : [];
-      const idx = getHeaderIndexMap(headers);
-
-      if (idx.DesignationID !== undefined && idx.Name !== undefined) {
-        for (let i = 1; i < values.length; i++) {
-          const row = values[i];
-          const id = (row[idx.DesignationID] || '').toString().trim();
-          if (!id || byId[id]) continue;
-
-          byId[id] = {
-            id: id,
-            name: (row[idx.Name] || '').toString().trim(),
-            hierarchyLevel: idx.HierarchyLevel === undefined
-              ? null
-              : Number(row[idx.HierarchyLevel] || 0) || null
-          };
-        }
-      }
-    }
-    _designations_cache = { byId: byId };
-  }
-
-  const designation = _designations_cache.byId[normalizedId];
+  var cache = getDesignationsCache();
+  var designation = cache.byId[normalizedId];
   if (!designation) {
     return { id: normalizedId, name: '', hierarchyLevel: null };
   }

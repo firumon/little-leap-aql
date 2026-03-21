@@ -6,11 +6,64 @@
  */
 
 var _appSpreadsheetCache = null;
+var _sheet_headers_cache = {};
 
 function getSheetHeaders(sheet) {
+  if (!sheet) return [];
+  return getSheetHeadersByMeta(sheet.getParent().getId(), sheet.getName(), sheet);
+}
+
+/**
+ * Fetches headers using fileId and sheetName, checking CacheService first.
+ * Only opens the sheet if not in cache.
+ */
+function getSheetHeadersByMeta(fileId, sheetName, sheetObject) {
+  if (!fileId || !sheetName) return [];
+  var cacheKey = 'HEADERS_' + fileId + '_' + sheetName;
+
+  // 1. Memory Cache
+  if (_sheet_headers_cache[cacheKey]) return _sheet_headers_cache[cacheKey];
+
+  // 2. CacheService
+  var scriptCache = CacheService.getScriptCache();
+  var cached = scriptCache.get(cacheKey);
+  if (!cached) {
+    // 2.5 Permanent Metadata (fallback for CacheService)
+    cached = getPermanentMetadata(cacheKey);
+  }
+
+  if (cached) {
+    try {
+      var cachedHeaders = JSON.parse(cached);
+      _sheet_headers_cache[cacheKey] = cachedHeaders;
+      return cachedHeaders;
+    } catch (e) { /* fall through */ }
+  }
+
+  // 3. Sheet Read (Expensive)
+  var sheet = sheetObject;
+  if (!sheet) {
+    try {
+      var ss = SpreadsheetApp.openById(fileId);
+      sheet = ss.getSheetByName(sheetName);
+    } catch (e) { return []; }
+  }
+  if (!sheet) return [];
+
   const lastColumn = sheet.getLastColumn();
   if (!lastColumn) return [];
-  return sheet.getRange(1, 1, 1, lastColumn).getValues()[0];
+  const headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0];
+
+  _sheet_headers_cache[cacheKey] = headers;
+
+  // Persist to CacheService AND Permanent Metadata
+  try {
+    var jsonValue = JSON.stringify(headers);
+    scriptCache.put(cacheKey, jsonValue, 300);
+    setPermanentMetadata(cacheKey, jsonValue);
+  } catch (e) { /* non-fatal */ }
+
+  return headers;
 }
 
 function getHeaderIndexMap(headers) {
@@ -188,6 +241,71 @@ function diagLogResolvedFileIds() {
   }
   Logger.log(lines.join('\n'));
 }
+/**
+ * Gets the metadata context from the APP file.
+ */
+var _metadata_cache = null;
+function getMetadataContext() {
+  if (_metadata_cache) return _metadata_cache;
+  var ss = getAppSpreadsheet();
+  var sheet = ss.getSheetByName(CONFIG.SHEETS.METADATA);
+  
+  var defaultHeaders = ['Key', 'Value'];
+  var defaultIdx = { Key: 0, Value: 1 };
+
+  if (!sheet) return { sheet: null, values: [], headers: defaultHeaders, idx: defaultIdx, map: {} };
+
+  var values = sheet.getDataRange().getValues();
+  var headers = values.length > 0 ? values[0] : defaultHeaders;
+  var idx = getHeaderIndexMap(headers);
+  
+  // Safety fallback if headers are malformed
+  if (idx.Key === undefined) idx.Key = 0;
+  if (idx.Value === undefined) idx.Value = 1;
+
+  var map = {};
+  for (var i = 1; i < values.length; i++) {
+    var key = (values[i][idx.Key] || '').toString().trim();
+    if (key) map[key] = values[i][idx.Value];
+  }
+  _metadata_cache = { sheet: sheet, values: values, headers: headers, idx: idx, map: map };
+  return _metadata_cache;
+}
+
+/**
+ * Gets a value from the permanent Metadata sheet.
+ */
+function getPermanentMetadata(key) {
+  var ctx = getMetadataContext();
+  return ctx.map[key];
+}
+
+/**
+ * Saves a value to the permanent Metadata sheet.
+ */
+function setPermanentMetadata(key, value) {
+  var ctx = getMetadataContext();
+  if (!ctx.sheet) {
+    var ss = getAppSpreadsheet();
+    ctx.sheet = ss.insertSheet(CONFIG.SHEETS.METADATA);
+    ctx.sheet.appendRow(['Key', 'Value']);
+    ctx.idx = { Key: 0, Value: 1 };
+    ctx.sheet.setColumnWidth(1, 300);
+    ctx.sheet.setColumnWidth(2, 600);
+    ctx.sheet.setFrozenRows(1);
+    ctx.sheet.hideSheet();
+  }
+
+  var row = findRowByValue(ctx.sheet, ctx.idx.Key, key, 2, true);
+  var jsonValue = typeof value === 'string' ? value : JSON.stringify(value);
+
+  if (row !== -1) {
+    ctx.sheet.getRange(row, ctx.idx.Value + 1).setValue(jsonValue);
+  } else {
+    ctx.sheet.appendRow([key, jsonValue]);
+  }
+  if (ctx.map) ctx.map[key] = jsonValue;
+}
 
 /**
  * Clears all in-memory and CacheService caches.
@@ -196,11 +314,24 @@ function diagLogResolvedFileIds() {
 function clearAllAppCaches() {
   // In-memory: spreadsheet cache
   _appSpreadsheetCache = null;
+  _sheet_headers_cache = {};
+  _metadata_cache = null;
+
+  // Clear Metadata sheet if exists (to force full rebuild)
+  try {
+    var ss = getAppSpreadsheet();
+    var metaSheet = ss.getSheetByName(CONFIG.SHEETS.METADATA);
+    if (metaSheet && metaSheet.getLastRow() > 1) {
+      metaSheet.deleteRows(2, metaSheet.getLastRow() - 1);
+    }
+  } catch (e) { /* non-fatal */ }
 
   // Delegate to module-specific cache clears
   if (typeof clearConfigCache === 'function') clearConfigCache();
   if (typeof clearResourceConfigCache === 'function') clearResourceConfigCache();
   if (typeof clearRolePermissionsCache === 'function') clearRolePermissionsCache();
   if (typeof clearRolesCache === 'function') clearRolesCache();
+  if (typeof clearAccessRegionCache === 'function') clearAccessRegionCache();
+  if (typeof clearDesignationsCache === 'function') clearDesignationsCache();
 }
 

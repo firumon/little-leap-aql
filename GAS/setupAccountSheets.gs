@@ -120,6 +120,10 @@ function setupAccountSheets() {
     });
 
     const summary = 'Accounts sheets setup complete.\n\n' + results.join('\n');
+    
+    // Clear all caches after setup
+    if (typeof clearAllAppCaches === 'function') clearAllAppCaches();
+
     Logger.log(summary);
     try {
         SpreadsheetApp.getUi().alert(summary);

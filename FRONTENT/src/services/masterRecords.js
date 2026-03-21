@@ -357,6 +357,21 @@ export async function syncAllMasterResources() {
   }
 }
 
+export function clearAllSyncCursors() {
+  try {
+    const keysToRemove = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith('master-sync-cursor::')) {
+        keysToRemove.push(key)
+      }
+    }
+    keysToRemove.forEach((key) => localStorage.removeItem(key))
+  } catch (error) {
+    // no-op
+  }
+}
+
 export async function createMasterRecord(resourceName, record) {
   return callGasApi('create', {
     scope: 'master',

@@ -122,7 +122,7 @@ function toCloneSafeObject(value, fallback = null) {
     }
 }
 
-export async function setAuthorizedResources(resources = []) {
+export async function setAuthorizedResources(resources = [], resetCursors = false) {
     const db = await ensureDB();
     const tx = db.transaction('resource-meta', 'readwrite');
     for (const resource of resources) {
@@ -143,7 +143,7 @@ export async function setAuthorizedResources(resources = []) {
             sheetName: resource.sheetName || existing?.sheetName || '',
             codePrefix: resource.codePrefix || existing?.codePrefix || '',
             codeSequenceLength: resource.codeSequenceLength || existing?.codeSequenceLength || null,
-            lastSyncAt: existing?.lastSyncAt || null
+            lastSyncAt: resetCursors ? null : (existing?.lastSyncAt || null)
         });
     }
     await tx.done;

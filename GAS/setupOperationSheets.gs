@@ -219,6 +219,10 @@ function setupOperationSheets() {
     });
 
     const summary = 'OPERATION setup (Resources driven) complete.\n\n' + results.join('\n');
+    
+    // Clear all caches after setup
+    if (typeof clearAllAppCaches === 'function') clearAllAppCaches();
+
     Logger.log(summary);
     try {
         SpreadsheetApp.getUi().alert(summary);

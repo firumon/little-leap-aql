@@ -47,7 +47,8 @@ For every new context window, the agent should:
 - **Focus**: "Speed and Autonomy".
 - **Usage**: For well-defined tasks where the user wants the AI to handle both planning and building without handoffs.
 - **Rules**:
-  - Even in Solo mode, document intent/steps briefly in the response or a temporary plan.
+  - Solo agents are **exempt** from creating written implementation plans in `PLANS/`.
+  - Planning is performed internally and executed directly.
   - Follow all documentation and code quality rules as if split between Brain/Build.
 
 ## Workflow

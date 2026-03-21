@@ -40,7 +40,13 @@ function getResourceConfigMap() {
 
   // Try CacheService for cross-execution persistence
   var scriptCache = CacheService.getScriptCache();
-  var cachedJson = scriptCache.get('AQL_RESOURCE_CONFIG_MAP_V1');
+  var cacheKey = 'AQL_RESOURCE_CONFIG_MAP_V1';
+  var cachedJson = scriptCache.get(cacheKey);
+  if (!cachedJson) {
+    // Try Permanent Metadata fallback
+    cachedJson = getPermanentMetadata(cacheKey);
+  }
+
   if (cachedJson) {
     try {
       _resource_config_map_cache = JSON.parse(cachedJson);
@@ -101,12 +107,13 @@ function getResourceConfigMap() {
 
   _resource_config_map_cache = map;
 
-  // Persist to CacheService (5 min TTL)
+  // Persist to CacheService AND Permanent Metadata
   try {
     var json = JSON.stringify(map);
     if (json.length < 100000) {
-      scriptCache.put('AQL_RESOURCE_CONFIG_MAP_V1', json, 300);
+      scriptCache.put(cacheKey, json, 300);
     }
+    setPermanentMetadata(cacheKey, json);
   } catch (e) { /* non-fatal */ }
 
   return map;
@@ -435,8 +442,8 @@ function buildAuthorizedResourceEntry(resourceName, options) {
 
   if (opts.includeHeaders && !config.functional) {
     try {
-      const resource = openResourceSheet(resourceName);
-      entry.headers = getSheetHeaders(resource.sheet);
+      // Use meta-only fetch (checks cache first before openById)
+      entry.headers = getSheetHeadersByMeta(config.fileId, config.sheetName);
     } catch (err) {
       entry.headers = [];
     }

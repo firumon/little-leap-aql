@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { callGasApi } from 'src/services/gasApi'
-import { syncAllMasterResources } from 'src/services/masterRecords'
+import { clearAllSyncCursors, syncAllMasterResources } from 'src/services/masterRecords'
 import { clearAllClientStorage, setAuthorizedResources, reinitializeDB } from 'src/utils/db'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -80,9 +80,12 @@ export const useAuthStore = defineStore('auth', () => {
         // Sync token to HW if possible
         notifyServiceWorker(data.token)
 
+        // Clear stale sync cursors from previous session so first fetch is a full sync
+        clearAllSyncCursors()
+
         // Background tasks for IndexedDB
         // We don't await these to prevent login from hanging if IDB is slow
-        setAuthorizedResources(resources.value).catch(err => console.warn('IDB sync error:', err))
+        setAuthorizedResources(resources.value, true).catch(err => console.warn('IDB sync error:', err))
         reinitializeDB().catch(err => console.warn('DB init error:', err))
 
         isGlobalSyncing.value = true

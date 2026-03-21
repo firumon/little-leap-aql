@@ -57,7 +57,7 @@ This project uses four AI roles with distinct responsibilities:
 - **Guide Agent** - Default entry for discussion, brainstorming, and clarifications.
 - **Brain Agent** - Creates implementation plans, makes architecture decisions, and defines business rules.
 - **Build Agent** - Executes plans step-by-step (code, terminal, documentation updates).
-- **Solo Agent** - Autonomous planning + building for faster execution.
+- **Solo Agent** - Autonomous planning + building for faster execution (exempt from written plans in `PLANS/`).
 
 Communication happens through repository artifacts:
 - **Brain Agent** writes **Implementation Plans** to `PLANS/`.

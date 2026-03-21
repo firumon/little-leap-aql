@@ -13,7 +13,8 @@ const CONFIG = {
     ROLES: 'Roles',
     ROLE_PERMISSIONS: 'RolePermissions',
     RESOURCES: 'Resources',
-    CONFIG: 'Config'
+    CONFIG: 'Config',
+    METADATA: 'Metadata'
   },
   MASTER_SHEETS: {
     PRODUCTS: 'Products',

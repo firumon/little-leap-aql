@@ -15,6 +15,16 @@ function getAccessRegionContext() {
     return __accessRegionContextCache;
   }
 
+  // Try CacheService first
+  var scriptCache = CacheService.getScriptCache();
+  var cachedJson = scriptCache.get('AQL_ACCESS_REGIONS_V1');
+  if (cachedJson) {
+    try {
+      __accessRegionContextCache = JSON.parse(cachedJson);
+      return __accessRegionContextCache;
+    } catch (e) { /* fall through */ }
+  }
+
   const sheet = getAppSpreadsheet().getSheetByName(CONFIG.SHEETS.ACCESS_REGIONS);
   if (!sheet) {
     __accessRegionContextCache = {
@@ -57,7 +67,23 @@ function getAccessRegionContext() {
     byCode: byCode,
     childMap: childMap
   };
+
+  // Persist to CacheService
+  try {
+    var json = JSON.stringify(__accessRegionContextCache);
+    if (json.length < 100000) {
+      scriptCache.put('AQL_ACCESS_REGIONS_V1', json, 300);
+    }
+  } catch (e) { /* non-fatal */ }
+
   return __accessRegionContextCache;
+}
+
+function clearAccessRegionCache() {
+  __accessRegionContextCache = null;
+  try {
+    CacheService.getScriptCache().remove('AQL_ACCESS_REGIONS_V1');
+  } catch (e) { /* non-fatal */ }
 }
 
 function normalizeAccessRegionCode(value) {
@@ -75,7 +101,6 @@ function resolveUserAccessRegionCode(userRow) {
 
 function buildUserAccessRegionScope(userRow) {
   const assignedCode = resolveUserAccessRegionCode(userRow);
-  const context = getAccessRegionContext();
 
   if (!assignedCode) {
     return {
@@ -86,6 +111,7 @@ function buildUserAccessRegionScope(userRow) {
     };
   }
 
+  const context = getAccessRegionContext();
   const descendants = expandAccessRegionCodes(assignedCode, context);
   const normalized = descendants.length ? descendants : [assignedCode];
   const deduped = [];

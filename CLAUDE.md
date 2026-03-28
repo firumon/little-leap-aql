@@ -84,6 +84,7 @@ Manual user actions are limited to:
 | `Documents/RESOURCE_REGISTRY_ARCHITECTURE.md` | APP.Resources architecture |
 | `Documents/RESOURCE_COLUMNS_GUIDE.md` | Column conventions for resources |
 | `Documents/NEW_CLIENT_SETUP_GUIDE.md` | Client onboarding steps |
+| `Documents/MODULE_WORKFLOWS.md` | End-to-end workflow docs per feature (Reports, etc.) |
 | `PLANS/_TEMPLATE.md` | Template for new implementation plans |
 | `.agents/skills/aql-expert/SKILL.md` | AQL expert skill for agents |
 
@@ -94,3 +95,4 @@ When completing implementation tasks, include:
 3. **GAS Deployment**: If GAS files changed → agent runs `cd GAS && clasp push`.
 4. **Manual Actions**: Only sheet-level user actions (menu clicks, data edits, Web App redeployment if needed).
 5. **Testing**: How to verify the changes.
+6. **Doc Updates**: If any documented module workflow was changed, update the relevant section in `Documents/MODULE_WORKFLOWS.md`.

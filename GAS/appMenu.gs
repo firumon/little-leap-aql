@@ -583,6 +583,7 @@ function app_saveResourceReports(resourceName, reportsJson) {
     for (let i = 1; i < data.length; i++) {
       if (data[i][nameIdx] === resourceName) {
         sheet.getRange(i + 1, reportsIdx + 1).setValue(reportsJson);
+        clearResourceConfigCache();
         return true;
       }
     }

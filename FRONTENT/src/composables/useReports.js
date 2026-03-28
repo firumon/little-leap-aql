@@ -11,7 +11,7 @@ import { callGasApi } from 'src/services/gasApi'
  * from the current record, and calls the GAS backend to
  * generate a PDF which is then downloaded.
  */
-export function useReports() {
+export function useReports(resourceNameRef) {
   const $q = useQuasar()
 
   const isGenerating = ref(false)
@@ -155,8 +155,13 @@ export function useReports() {
     try {
       const cellData = buildCellData(report, record, userValues)
 
+      // Resolve resource name from ref/computed, string, or fallback
+      const resName = typeof resourceNameRef === 'function' ? resourceNameRef()
+        : resourceNameRef?.value !== undefined ? resourceNameRef.value
+        : (resourceNameRef || '')
+
       const result = await callGasApi('generateReport', {
-        resource: report.resource || '',
+        resource: resName,
         reportName: report.label || report.name || '',
         templateSheet: report.templateSheet || '',
         cellData

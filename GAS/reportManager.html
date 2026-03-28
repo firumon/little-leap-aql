@@ -87,6 +87,46 @@
 
     <div style="margin-top: 20px; border-top: 1px solid #f1f5f9; padding-top: 15px">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px">
+        <h4>PDF Options</h4>
+        <span style="font-size:11px; color:#94a3b8">Leave blank to use defaults</span>
+      </div>
+      <div style="display:grid; grid-template-columns: repeat(4, 1fr) 1fr 1fr; gap: 10px; align-items: end">
+        <div class="g" style="margin:0">
+          <label>Top Margin (in)</label>
+          <input type="number" id="pdfTop" step="0.05" min="0" placeholder="0">
+        </div>
+        <div class="g" style="margin:0">
+          <label>Bottom Margin (in)</label>
+          <input type="number" id="pdfBottom" step="0.05" min="0" placeholder="0.25">
+        </div>
+        <div class="g" style="margin:0">
+          <label>Left Margin (in)</label>
+          <input type="number" id="pdfLeft" step="0.05" min="0" placeholder="0">
+        </div>
+        <div class="g" style="margin:0">
+          <label>Right Margin (in)</label>
+          <input type="number" id="pdfRight" step="0.05" min="0" placeholder="0">
+        </div>
+        <div class="g" style="margin:0">
+          <label>Paper Size</label>
+          <select id="pdfSize">
+            <option value="">A4</option>
+            <option value="Letter">Letter</option>
+            <option value="Legal">Legal</option>
+          </select>
+        </div>
+        <div class="g" style="margin:0">
+          <label>Orientation</label>
+          <select id="pdfOrientation">
+            <option value="">Portrait</option>
+            <option value="false">Landscape</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top: 20px; border-top: 1px solid #f1f5f9; padding-top: 15px">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px">
         <h4>Data Mappings</h4>
         <button class="btn btn-secondary btn-sm" onclick="addMappingRow()">+ Add Row</button>
       </div>
@@ -194,12 +234,27 @@
       document.getElementById('repLabel').value = r.label;
       document.getElementById('repTemplate').value = r.templateSheet;
       document.getElementById('repIsRecord').checked = !!r.isRecordLevel;
+      // Populate PDF options
+      const po = r.pdfOptions || {};
+      document.getElementById('pdfTop').value = po.topMargin != null ? po.topMargin : '';
+      document.getElementById('pdfBottom').value = po.bottomMargin != null ? po.bottomMargin : '';
+      document.getElementById('pdfLeft').value = po.leftMargin != null ? po.leftMargin : '';
+      document.getElementById('pdfRight').value = po.rightMargin != null ? po.rightMargin : '';
+      document.getElementById('pdfSize').value = po.size || '';
+      document.getElementById('pdfOrientation').value = po.portrait === false ? 'false' : '';
       if (r.inputs) r.inputs.forEach(inp => addMappingRow(inp));
     } else {
       document.getElementById('editorTitle').textContent = 'New Report';
       document.getElementById('repLabel').value = '';
       document.getElementById('repTemplate').value = DATA.templateSheets[0] || '';
       document.getElementById('repIsRecord').checked = false;
+      // Reset PDF options
+      document.getElementById('pdfTop').value = '';
+      document.getElementById('pdfBottom').value = '';
+      document.getElementById('pdfLeft').value = '';
+      document.getElementById('pdfRight').value = '';
+      document.getElementById('pdfSize').value = '';
+      document.getElementById('pdfOrientation').value = '';
       addMappingRow();
     }
   }
@@ -278,6 +333,21 @@
       inputs.push(obj);
     });
 
+    // Build pdfOptions — only include fields that have values
+    const pdfOptions = {};
+    const pTop = document.getElementById('pdfTop').value;
+    const pBot = document.getElementById('pdfBottom').value;
+    const pLeft = document.getElementById('pdfLeft').value;
+    const pRight = document.getElementById('pdfRight').value;
+    const pSize = document.getElementById('pdfSize').value;
+    const pOrient = document.getElementById('pdfOrientation').value;
+    if (pTop !== '') pdfOptions.topMargin = parseFloat(pTop);
+    if (pBot !== '') pdfOptions.bottomMargin = parseFloat(pBot);
+    if (pLeft !== '') pdfOptions.leftMargin = parseFloat(pLeft);
+    if (pRight !== '') pdfOptions.rightMargin = parseFloat(pRight);
+    if (pSize) pdfOptions.size = pSize;
+    if (pOrient === 'false') pdfOptions.portrait = false;
+
     const report = {
       id: (EDIT_IDX > -1 && ACTIVE_RES.reports[EDIT_IDX].id) ? ACTIVE_RES.reports[EDIT_IDX].id : ('rep_' + Date.now()),
       name: label.toLowerCase().replace(/[^a-z0-9]/g, '-'),
@@ -286,6 +356,7 @@
       isRecordLevel: document.getElementById('repIsRecord').checked,
       inputs: inputs
     };
+    if (Object.keys(pdfOptions).length > 0) report.pdfOptions = pdfOptions;
 
     if (EDIT_IDX > -1) ACTIVE_RES.reports[EDIT_IDX] = report;
     else ACTIVE_RES.reports.push(report);

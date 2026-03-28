@@ -15,7 +15,8 @@ Tell the AI agent:
 5. For any new plan, create it from `PLANS/_TEMPLATE.md`.
 6. After planning (Brain), provide handoff prompt: `Build Agent, read PLANS/<plan-file>.md and execute it end-to-end.`
 7. For resource metadata tasks, read `Documents/RESOURCE_COLUMNS_GUIDE.md`.
-8. Continue work from current implementation status in this handoff.
+8. For feature-specific work (Reports, etc.), read the relevant section in `Documents/MODULE_WORKFLOWS.md`.
+9. Continue work from current implementation status in this handoff.
 
 ## 1) Project Identity
 - Project: AQL
@@ -382,6 +383,7 @@ When setup scripts are added/changed:
 - Collaboration rules: `Documents/AI_COLLABORATION_PROTOCOL.md`
 - **Multi-Agent protocol: `Documents/MULTI_AGENT_PROTOCOL.md`**
 - **Active implementation plans: `PLANS/`**
+- **Module Workflows: `Documents/MODULE_WORKFLOWS.md`** — end-to-end flow docs per feature (Reports, etc.). Read the relevant section before working on any documented module.
 - Resource architecture: `Documents/RESOURCE_REGISTRY_ARCHITECTURE.md`
 - Resource column definitions: `Documents/RESOURCE_COLUMNS_GUIDE.md`
 - Technical details: `Documents/TECHNICAL_SPECIFICATIONS.md`
@@ -404,6 +406,7 @@ Significant updates include:
 - New sheet structure standards
 - Major frontend module additions
 - Important process/protocol changes for collaborators
+- **Any change to a module workflow** (Reports, Bulk Upload, etc.) — update the relevant section in `Documents/MODULE_WORKFLOWS.md` to reflect the new flow, files, config, or behavior
 
 Expected behavior for future joiners:
 1. Read this file first.

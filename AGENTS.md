@@ -28,6 +28,9 @@
   - `clasp` is configured. When GAS files change, the agent runs `cd GAS && clasp push` to deploy automatically.
   - Do NOT ask the user to manually copy-paste `.gs` files into the Apps Script IDE.
   - Manual user actions are limited to: Google Sheet menu actions (AQL 🚀 > ...), editing sheet data, and creating new Web App deployment versions (only when API behavior changes).
+- Module workflow maintenance rule:
+  - Before working on a documented module (Reports, etc.), read the relevant section in `Documents/MODULE_WORKFLOWS.md`.
+  - If any documented module workflow is changed during implementation, update the relevant section in `Documents/MODULE_WORKFLOWS.md` before closing the task.
 - Frontend registry maintenance rule:
   - When creating/updating reusable frontend building blocks, update:
     - `FRONTENT/src/components/REGISTRY.md` for component API changes (props/events/path).
@@ -39,6 +42,7 @@
 
 ## Skills
 A skill is a set of local instructions to follow that is stored in a `SKILL.md` file. Below is the list of skills that can be used. Each entry includes a name, description, and file path so you can open the source for full instructions when using a specific skill.
+- **Module Workflows:** Before working on a documented module (Reports, etc.), read the relevant section in `Documents/MODULE_WORKFLOWS.md` for the complete end-to-end flow, responsible files, configuration surface, and known behaviors.
 - **PWA-SW-IDB-Pinia Data Contract:** Master and Operation models fetch incremental updates first from IndexedDB `resource-records` for instant local paint. Background sync uses `lastUpdatedAt` cursors from `resource-meta`, upserting deltas into IndexedDB and Pinia. Service Worker explicitly manages only offline/cache boundaries, never UI state logic.
 - **Master Discovery Pattern:** Generic UI is provided by `MasterEntityPage.vue`. To override for a specific resource, create `{EntityName}Page.vue` in `src/pages/Masters/`. The dispatcher (`MasterIndexPage.vue`) will automatically prefer the custom file.
 ### Available skills

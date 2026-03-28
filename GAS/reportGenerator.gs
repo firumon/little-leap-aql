@@ -75,8 +75,21 @@ function generateReportPdf(auth, data) {
     // Flush to recalculate formulas
     SpreadsheetApp.flush();
 
-    // Export the temporary sheet to PDF
-    var pdfBlob = _exportSheetAsPdf(reportsFile, tempSheet);
+    // Resolve pdfOptions from APP.Resources report config (cached, no extra sheet read)
+    var pdfOptions = {};
+    if (resource && reportName) {
+      try {
+        var resConfig = getResourceConfig(resource);
+        var reports = resConfig.reports || [];
+        for (var r = 0; r < reports.length; r++) {
+          if (reports[r].label === reportName || reports[r].name === reportName) {
+            pdfOptions = reports[r].pdfOptions || {};
+            break;
+          }
+        }
+      } catch (e) { /* non-fatal — use defaults */ }
+    }
+    var pdfBlob = _exportSheetAsPdf(reportsFile, tempSheet, pdfOptions);
     var base64 = Utilities.base64Encode(pdfBlob.getBytes());
 
     // Generate a meaningful file name
@@ -105,21 +118,32 @@ function generateReportPdf(auth, data) {
  * @param {Sheet} sheet - The sheet to export.
  * @returns {Blob} PDF blob of the exported sheet.
  */
-function _exportSheetAsPdf(spreadsheet, sheet) {
+function _exportSheetAsPdf(spreadsheet, sheet, options) {
   var ssId = spreadsheet.getId();
   var sheetId = sheet.getSheetId();
+  var opts = options || {};
+
+  // Margin values in inches (defaults: top/left/right=0, bottom=0.25")
+  var top    = opts.topMargin    !== undefined ? Number(opts.topMargin)    : 0;
+  var bottom = opts.bottomMargin !== undefined ? Number(opts.bottomMargin) : 0.25;
+  var left   = opts.leftMargin   !== undefined ? Number(opts.leftMargin)   : 0;
+  var right  = opts.rightMargin  !== undefined ? Number(opts.rightMargin)  : 0;
 
   var url = 'https://docs.google.com/spreadsheets/d/' + ssId + '/export?'
     + 'exportFormat=pdf'
     + '&format=pdf'
-    + '&size=A4'
-    + '&portrait=true'
+    + '&size=' + (opts.size || 'A4')
+    + '&portrait=' + (opts.portrait !== undefined ? opts.portrait : true)
     + '&fitw=true'
     + '&gridlines=false'
     + '&printtitle=false'
     + '&sheetnames=false'
     + '&pagenum=UNDEFINED'
-    + '&fzr=false'
+    + '&fzr=true'
+    + '&top_margin=' + top
+    + '&bottom_margin=' + bottom
+    + '&left_margin=' + left
+    + '&right_margin=' + right
     + '&gid=' + sheetId;
 
   var token = ScriptApp.getOAuthToken();

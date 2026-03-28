@@ -129,6 +129,17 @@ function clearResourceConfigCache() {
   try {
     CacheService.getScriptCache().remove('AQL_RESOURCE_CONFIG_MAP_V1');
   } catch (e) { /* non-fatal */ }
+  // Clear Permanent Metadata fallback so stale data is not served on cold start
+  try {
+    var ctx = getMetadataContext();
+    if (ctx.sheet) {
+      var row = findRowByValue(ctx.sheet, ctx.idx.Key, 'AQL_RESOURCE_CONFIG_MAP_V1', 2, true);
+      if (row !== -1) {
+        ctx.sheet.deleteRow(row);
+        if (ctx.map) delete ctx.map['AQL_RESOURCE_CONFIG_MAP_V1'];
+      }
+    }
+  } catch (e) { /* non-fatal */ }
 }
 
 function getResourceConfig(resourceName) {

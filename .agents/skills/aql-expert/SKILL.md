@@ -20,6 +20,7 @@ You are acting as an expert developer on the AQL system, an operating system for
    - Do NOT attempt to create separate Apps Scripts for external sheet files (MASTERS, TRANSACTIONS) unless explicitly requested.
 
 3. **Strict AI Collaboration Protocol Alignment**
+   - **Module Workflow Awareness:** Before working on a documented module (Reports, Bulk Upload, etc.), read the relevant section in `Documents/MODULE_WORKFLOWS.md` for the complete end-to-end flow, responsible files, configuration surface, and known behaviors. When a module workflow is added or modified, update that document before closing the task.
    - **Whenever Sheet Structure/Resources Change:** You must immediately update documentation (`APP_SHEET_STRUCTURE.md`, `MASTER_SHEET_STRUCTURE.md`, etc.), the related `setup*.gs` scripts in `GAS/`, and `GAS/syncAppResources.gs`. You must also verify if `Documents/NEW_CLIENT_SETUP_GUIDE.md` needs to be updated.
    - **Whenever GAS Changes:** You must clearly highlight the changed `.gs` files and run `cd GAS && clasp push` to deploy them to the remote Apps Script project. Do NOT ask the user to manually copy-paste files. The only manual user action is creating a new Web App deployment version if API behavior changed (Deploy > New deployment in Apps Script IDE).
    - **Frontend Changes:** Implement directly in `FRONTENT/src/` and keep PWA/Service Worker behavior and local API configurations intact.

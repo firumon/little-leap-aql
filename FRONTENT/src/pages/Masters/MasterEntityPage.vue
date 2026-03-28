@@ -125,7 +125,7 @@ const {
   initiateReport,
   confirmReportDialog,
   cancelReportDialog
-} = useReports()
+} = useReports(currentResource)
 </script>
 
 <style scoped>

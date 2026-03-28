@@ -41,7 +41,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: JSON.stringify([{"id":"rep_1774663957785","name":"product-list","label":"Product List","templateSheet":"ProductList","isRecordLevel":false,"inputs":[],"pdfOptions":{}}])
     },
     {
         Name: CONFIG.MASTER_SHEETS.SKUS,

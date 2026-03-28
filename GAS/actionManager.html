@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Google Sans', Roboto, Arial, sans-serif; font-size: 13px; color: #202124; padding: 16px; }
+  h2 { font-size: 16px; font-weight: 500; margin-bottom: 12px; }
+  .row { display: flex; gap: 8px; margin-bottom: 8px; }
+  .row > * { flex: 1; }
+  label { display: block; font-size: 11px; color: #5f6368; margin-bottom: 2px; font-weight: 500; }
+  select, input, textarea { width: 100%; padding: 6px 8px; border: 1px solid #dadce0; border-radius: 4px; font-size: 13px; }
+  select:focus, input:focus, textarea:focus { outline: none; border-color: #1a73e8; }
+  textarea { min-height: 60px; resize: vertical; }
+  button { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; }
+  .btn-primary { background: #1a73e8; color: #fff; }
+  .btn-primary:hover { background: #1557b0; }
+  .btn-danger { background: #d93025; color: #fff; }
+  .btn-danger:hover { background: #b3261e; }
+  .btn-secondary { background: #f1f3f4; color: #202124; }
+  .btn-secondary:hover { background: #e8eaed; }
+  .action-card { border: 1px solid #dadce0; border-radius: 8px; padding: 12px; margin-bottom: 8px; background: #fafafa; }
+  .action-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .action-title { font-weight: 600; font-size: 14px; }
+  .field-row { display: flex; gap: 6px; align-items: center; margin-top: 4px; }
+  .field-row input { flex: 1; }
+  .field-row select { width: 100px; }
+  .field-row .remove-field { cursor: pointer; color: #d93025; font-size: 16px; padding: 2px 6px; }
+  .no-actions { color: #5f6368; text-align: center; padding: 24px; }
+  .status-bar { padding: 8px; border-radius: 4px; margin-bottom: 12px; display: none; }
+  .status-bar.error { display: block; background: #fce8e6; color: #d93025; }
+  .status-bar.success { display: block; background: #e6f4ea; color: #137333; }
+  .actions-toolbar { display: flex; gap: 8px; margin-bottom: 12px; justify-content: space-between; }
+  .checkbox-row { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+  .checkbox-row input[type=checkbox] { width: auto; }
+</style>
+</head>
+<body>
+
+<div id="status" class="status-bar"></div>
+
+<div class="row">
+  <div>
+    <label>Resource</label>
+    <select id="resourceSelect" onchange="onResourceChange()">
+      <option value="">-- Select Resource --</option>
+    </select>
+  </div>
+</div>
+
+<div class="actions-toolbar">
+  <h2 id="actionsTitle">Actions</h2>
+  <button class="btn-primary" onclick="addAction()" id="addBtn" disabled>+ Add Action</button>
+</div>
+
+<div id="actionsList"></div>
+
+<div style="margin-top:16px; display:flex; gap:8px; justify-content:flex-end;">
+  <button class="btn-secondary" onclick="google.script.host.close()">Close</button>
+  <button class="btn-primary" onclick="saveActions()" id="saveBtn" disabled>Save Actions</button>
+</div>
+
+<script>
+var resourceData = [];
+var currentActions = [];
+
+google.script.run.withSuccessHandler(function(data) {
+  resourceData = data.resources || [];
+  var sel = document.getElementById('resourceSelect');
+  resourceData.forEach(function(r) {
+    var opt = document.createElement('option');
+    opt.value = r.name;
+    opt.textContent = r.label + ' (' + r.name + ')';
+    sel.appendChild(opt);
+  });
+}).withFailureHandler(function(err) {
+  showStatus('Failed to load: ' + err.message, 'error');
+}).app_getActionManagerData();
+
+function onResourceChange() {
+  var name = document.getElementById('resourceSelect').value;
+  document.getElementById('addBtn').disabled = !name;
+  document.getElementById('saveBtn').disabled = !name;
+  if (!name) { currentActions = []; renderActions(); return; }
+
+  var res = resourceData.find(function(r) { return r.name === name; });
+  currentActions = JSON.parse(JSON.stringify(res ? res.additionalActions : []));
+  renderActions();
+}
+
+function addAction() {
+  currentActions.push({
+    action: '', label: '', icon: '', color: 'primary',
+    column: 'Progress', columnValue: '', columnValueOptions: [],
+    confirm: false, fields: []
+  });
+  renderActions();
+}
+
+function removeAction(idx) {
+  currentActions.splice(idx, 1);
+  renderActions();
+}
+
+function addField(actionIdx) {
+  currentActions[actionIdx].fields.push({ name: '', type: 'text', label: '', required: false });
+  renderActions();
+}
+
+function removeField(actionIdx, fieldIdx) {
+  currentActions[actionIdx].fields.splice(fieldIdx, 1);
+  renderActions();
+}
+
+function renderActions() {
+  var container = document.getElementById('actionsList');
+  if (!currentActions.length) {
+    container.innerHTML = '<div class="no-actions">No actions configured. Click "+ Add Action" to begin.</div>';
+    return;
+  }
+
+  var html = '';
+  currentActions.forEach(function(action, i) {
+    html += '<div class="action-card">';
+    html += '<div class="action-header"><span class="action-title">' + (action.label || action.action || 'New Action') + '</span>';
+    html += '<button class="btn-danger" onclick="removeAction(' + i + ')" style="padding:4px 8px;font-size:11px;">Remove</button></div>';
+
+    html += '<div class="row">';
+    html += '<div><label>Action Key</label><input value="' + esc(action.action) + '" onchange="currentActions[' + i + '].action=this.value" placeholder="Approve"></div>';
+    html += '<div><label>Label</label><input value="' + esc(action.label) + '" onchange="currentActions[' + i + '].label=this.value" placeholder="Approve"></div>';
+    html += '<div><label>Icon</label><input value="' + esc(action.icon || '') + '" onchange="currentActions[' + i + '].icon=this.value" placeholder="check_circle"></div>';
+    html += '<div><label>Color</label><input value="' + esc(action.color || 'primary') + '" onchange="currentActions[' + i + '].color=this.value" placeholder="primary"></div>';
+    html += '</div>';
+
+    html += '<div class="row">';
+    html += '<div><label>Column</label><input value="' + esc(action.column || 'Progress') + '" onchange="currentActions[' + i + '].column=this.value" placeholder="Progress"></div>';
+    html += '<div><label>Column Value (fixed outcome)</label><input value="' + esc(action.columnValue || '') + '" onchange="currentActions[' + i + '].columnValue=this.value" placeholder="Approved"></div>';
+    html += '<div><label>Column Value Options (comma-separated, for multi-outcome)</label><input value="' + esc((action.columnValueOptions || []).join(',')) + '" onchange="currentActions[' + i + '].columnValueOptions=this.value?this.value.split(\',\').map(function(s){return s.trim()}).filter(Boolean):[]"></div>';
+    html += '</div>';
+
+    html += '<div class="checkbox-row"><input type="checkbox" ' + (action.confirm ? 'checked' : '') + ' onchange="currentActions[' + i + '].confirm=this.checked"> <label style="margin:0">Require confirmation</label></div>';
+
+    html += '<div style="margin-top:8px;"><label>Fields</label>';
+    (action.fields || []).forEach(function(field, fi) {
+      html += '<div class="field-row">';
+      html += '<input value="' + esc(field.name) + '" onchange="currentActions[' + i + '].fields[' + fi + '].name=this.value" placeholder="Name (e.g. Comment)">';
+      html += '<input value="' + esc(field.label || '') + '" onchange="currentActions[' + i + '].fields[' + fi + '].label=this.value" placeholder="Label (optional)">';
+      html += '<select onchange="currentActions[' + i + '].fields[' + fi + '].type=this.value">';
+      ['text','textarea','date','number'].forEach(function(t) {
+        html += '<option value="' + t + '"' + (field.type === t ? ' selected' : '') + '>' + t + '</option>';
+      });
+      html += '</select>';
+      html += '<input type="checkbox" ' + (field.required ? 'checked' : '') + ' onchange="currentActions[' + i + '].fields[' + fi + '].required=this.checked" title="Required"> <span style="font-size:11px">Req</span>';
+      html += '<span class="remove-field" onclick="removeField(' + i + ',' + fi + ')" title="Remove field">&times;</span>';
+      html += '</div>';
+    });
+    html += '<button class="btn-secondary" onclick="addField(' + i + ')" style="margin-top:4px;padding:3px 10px;font-size:11px;">+ Add Field</button>';
+    html += '</div>';
+
+    html += '</div>';
+  });
+
+  container.innerHTML = html;
+}
+
+function saveActions() {
+  var resourceName = document.getElementById('resourceSelect').value;
+  if (!resourceName) return;
+
+  // Clean up empty actions
+  var clean = currentActions.filter(function(a) { return a.action; });
+  var json = JSON.stringify(clean);
+
+  document.getElementById('saveBtn').disabled = true;
+  document.getElementById('saveBtn').textContent = 'Saving...';
+
+  google.script.run.withSuccessHandler(function() {
+    showStatus('Actions saved successfully!', 'success');
+    document.getElementById('saveBtn').disabled = false;
+    document.getElementById('saveBtn').textContent = 'Save Actions';
+    // Update local data
+    var res = resourceData.find(function(r) { return r.name === resourceName; });
+    if (res) res.additionalActions = clean;
+  }).withFailureHandler(function(err) {
+    showStatus('Failed to save: ' + err.message, 'error');
+    document.getElementById('saveBtn').disabled = false;
+    document.getElementById('saveBtn').textContent = 'Save Actions';
+  }).app_saveResourceActions(resourceName, json);
+}
+
+function showStatus(msg, type) {
+  var el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status-bar ' + type;
+  if (type === 'success') setTimeout(function() { el.style.display = 'none'; }, 3000);
+}
+
+function esc(v) { return (v == null ? '' : String(v)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+</script>
+</body>
+</html>

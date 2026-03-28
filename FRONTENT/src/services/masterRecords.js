@@ -398,3 +398,27 @@ export async function bulkMasterRecords(targetResourceName, records) {
     records
   }, { showLoading: false, successMessage: null, showError: false })
 }
+
+export async function compositeSave(payload) {
+  return callGasApi('compositeSave', payload, {
+    showLoading: true,
+    loadingMessage: 'Saving...',
+    successMessage: 'Saved successfully'
+  })
+}
+
+export async function executeAction(resourceName, code, actionConfig, fields = {}) {
+  return callGasApi('executeAction', {
+    scope: 'master',
+    resource: resourceName,
+    code,
+    action: actionConfig.action,
+    column: actionConfig.column,
+    columnValue: actionConfig.columnValue,
+    fields
+  }, {
+    showLoading: true,
+    loadingMessage: `Executing ${actionConfig.label || actionConfig.action}...`,
+    successMessage: `${actionConfig.label || actionConfig.action} completed successfully`
+  })
+}

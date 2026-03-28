@@ -65,6 +65,14 @@ function dispatchProtectedAction(action, auth, data) {
     case 'master.health':
       return handleMasterHealth(auth);
 
+    // Composite save (parent + children atomic)
+    case 'compositeSave':
+      return handleCompositeSave(auth, data);
+
+    // Additional action execution (Approve, Reject, etc.)
+    case 'executeAction':
+      return handleExecuteAction(auth, data);
+
     // Report scope
     case 'generateReport':
       return generateReportPdf(auth, data);

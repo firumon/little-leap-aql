@@ -45,9 +45,41 @@ const routes = [
         meta: { scope: 'master', requiresAuth: true }
       },
       {
-        path: '/masters/:resourceSlug',
-        component: () => import('pages/Masters/MasterIndexPage.vue'),
-        meta: { scope: 'master' }
+        path: '/:scope(masters|operations|accounts)/:resourceSlug',
+        component: () => import('pages/Masters/ResourcePageShell.vue'),
+        props: true,
+        children: [
+          {
+            path: '',
+            name: 'resource-list',
+            component: () => import('pages/Masters/ActionResolverPage.vue'),
+            meta: { action: 'list', level: 'resource' }
+          },
+          {
+            path: 'add',
+            name: 'resource-add',
+            component: () => import('pages/Masters/ActionResolverPage.vue'),
+            meta: { action: 'add', level: 'resource' }
+          },
+          {
+            path: ':code',
+            name: 'resource-view',
+            component: () => import('pages/Masters/ActionResolverPage.vue'),
+            meta: { action: 'view', level: 'record' }
+          },
+          {
+            path: ':code/edit',
+            name: 'resource-edit',
+            component: () => import('pages/Masters/ActionResolverPage.vue'),
+            meta: { action: 'edit', level: 'record' }
+          },
+          {
+            path: ':code/:action',
+            name: 'resource-action',
+            component: () => import('pages/Masters/ActionResolverPage.vue'),
+            meta: { level: 'record' }
+          }
+        ]
       }
     ]
   },

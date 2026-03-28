@@ -97,7 +97,8 @@ function getResourceConfigMap() {
       uiFields: parseJsonCell(readOptionalCell(row, registry.idx.UIFields, '[]'), []),
       showInMenu: toBooleanCell(readOptionalCell(row, registry.idx.ShowInMenu, true)),
       includeInAuthorizationPayload: toBooleanCell(readOptionalCell(row, registry.idx.IncludeInAuthorizationPayload, true)),
-      additionalActions: parseStringList(readOptionalCell(row, registry.idx.AdditionalActions, '')),
+      parentResource: (readOptionalCell(row, registry.idx.ParentResource, '') || '').toString().trim(),
+      additionalActions: parseAdditionalActions(readOptionalCell(row, registry.idx.AdditionalActions, '')),
       functional: toBooleanCell(readOptionalCell(row, registry.idx.Functional, false)),
       preAction: (readOptionalCell(row, registry.idx.PreAction, '') || '').toString().trim(),
       postAction: (readOptionalCell(row, registry.idx.PostAction, '') || '').toString().trim(),
@@ -285,6 +286,17 @@ function parseStringList(value) {
   });
 }
 
+/**
+ * Parses AdditionalActions JSON from the resource config cell.
+ * Always JSON: [{action:"Approve",label:"Approve",column:"Progress",...}]
+ */
+function parseAdditionalActions(value) {
+  if (!value) return [];
+  var str = (value || '').toString().trim();
+  if (!str) return [];
+  try { return JSON.parse(str); } catch (e) { return []; }
+}
+
 function parseCompositeHeaders(value) {
   if (!value) return [];
 
@@ -439,6 +451,7 @@ function buildAuthorizedResourceEntry(resourceName, options) {
   const entry = {
     name: resourceName,
     scope: config.scope,
+    parentResource: config.parentResource || '',
     sheetName: config.sheetName,
     codePrefix: config.codePrefix,
     codeSequenceLength: config.codeSequenceLength,
@@ -474,7 +487,8 @@ function buildAuthorizedResourceEntry(resourceName, options) {
       fields: Array.isArray(config.uiFields) ? config.uiFields : [],
       showInMenu: config.showInMenu
     };
-    entry.actions = config.additionalActions || [];
+    entry.additionalActions = Array.isArray(config.additionalActions) ? config.additionalActions : [];
+    entry.actions = entry.additionalActions.map(function(a) { return (a.action || ''); }).filter(Boolean);
     entry.allowedActions = [];
     entry.reports = Array.isArray(config.reports) ? config.reports : [];
   }

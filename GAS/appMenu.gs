@@ -26,6 +26,7 @@ function onOpen() {
       .addItem('Edit Resource', 'showEditResourceDialog')
       .addSeparator()
       .addItem('Manage Reports', 'app_showReportManagerDialog')
+      .addItem('Manage Actions', 'app_showActionManagerDialog')
       .addSeparator()
       .addItem('Sync APP.Resources from Code', 'syncAppResourcesFromCode'))
     .addSeparator()
@@ -590,6 +591,77 @@ function app_saveResourceReports(resourceName, reportsJson) {
     throw new Error('Resource not found: ' + resourceName);
   } catch (e) {
     throw new Error('Failed to save reports: ' + e.message);
+  }
+}
+
+// =====================================================
+// Manage Actions Dialog
+// =====================================================
+
+function app_showActionManagerDialog() {
+  const html = HtmlService.createHtmlOutputFromFile('actionManager')
+    .setWidth(920)
+    .setHeight(640)
+    .setTitle('Manage Resource Actions');
+  SpreadsheetApp.getUi().showModalDialog(html, 'Manage Resource Actions');
+}
+
+/**
+ * Fetches all data needed for the Action Manager UI
+ */
+function app_getActionManagerData() {
+  try {
+    const resources = getAllResourcesConfigs({ includeInactive: true });
+    const resourceList = resources.map(function(res) {
+      var headers = [];
+      try {
+        if (!res.functional && res.fileId && res.sheetName) {
+          var ss = SpreadsheetApp.openById(res.fileId);
+          var sheet = ss.getSheetByName(res.sheetName);
+          if (sheet) {
+            headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+          }
+        }
+      } catch (e) { /* skip */ }
+
+      return {
+        name: res.name,
+        label: res.menuLabel || res.name,
+        headers: headers,
+        additionalActions: res.additionalActions || []
+      };
+    });
+
+    return { resources: resourceList };
+  } catch (e) {
+    throw new Error('Failed to load action manager data: ' + e.message);
+  }
+}
+
+/**
+ * Saves actions for a specific resource as JSON to AdditionalActions column
+ */
+function app_saveResourceActions(resourceName, actionsJson) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(CONFIG.SHEETS.RESOURCES);
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    var nameIdx = headers.indexOf('Name');
+    var actionsIdx = headers.indexOf('AdditionalActions');
+
+    if (nameIdx === -1 || actionsIdx === -1) throw new Error('Columns Name or AdditionalActions not found');
+
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][nameIdx] === resourceName) {
+        sheet.getRange(i + 1, actionsIdx + 1).setValue(actionsJson);
+        clearResourceConfigCache();
+        return true;
+      }
+    }
+    throw new Error('Resource not found: ' + resourceName);
+  } catch (e) {
+    throw new Error('Failed to save actions: ' + e.message);
   }
 }
 

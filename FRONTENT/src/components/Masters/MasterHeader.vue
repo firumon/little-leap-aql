@@ -6,13 +6,14 @@
           <div class="header-title">{{ config?.ui?.pageTitle || config?.name }}</div>
           <div class="header-subtitle">{{ config?.ui?.pageDescription || 'Manage records' }}</div>
         </div>
-        <div class="row items-center">
+        <div class="row items-center q-gutter-xs">
           <q-btn
             v-if="!backgroundSyncing"
             flat
             round
             icon="refresh"
             color="primary"
+            size="sm"
             :loading="loading"
             :disable="loading || backgroundSyncing"
             @click="$emit('reload')"
@@ -44,11 +45,38 @@
         </div>
       </div>
     </q-card-section>
+
+    <!-- Report action bar — only renders when reports exist -->
+    <template v-if="toolbarReports.length">
+      <q-separator />
+      <q-card-section class="action-bar q-pa-sm">
+        <div class="row items-center q-gutter-xs">
+          <q-btn
+            v-for="report in toolbarReports"
+            :key="report.name"
+            unelevated
+            no-caps
+            dense
+            :icon="report.icon || 'picture_as_pdf'"
+            :label="report.label || report.name"
+            color="deep-orange-7"
+            class="report-btn"
+            :loading="isGenerating"
+            :disable="isGenerating"
+            @click="$emit('generate-report', report)"
+          >
+            <q-tooltip>{{ report.label || report.name }}</q-tooltip>
+          </q-btn>
+        </div>
+      </q-card-section>
+    </template>
   </q-card>
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue'
+
+const props = defineProps({
   config: {
     type: Object,
     default: null
@@ -68,10 +96,22 @@ defineProps({
   backgroundSyncing: {
     type: Boolean,
     default: false
+  },
+  reports: {
+    type: Array,
+    default: () => []
+  },
+  isGenerating: {
+    type: Boolean,
+    default: false
   }
 })
 
-defineEmits(['reload'])
+defineEmits(['reload', 'generate-report'])
+
+const toolbarReports = computed(() => {
+  return (props.reports || []).filter((r) => !r.isRecordLevel)
+})
 </script>
 
 <style scoped>
@@ -92,6 +132,18 @@ defineEmits(['reload'])
   margin-top: 2px;
   font-size: 12px;
   color: #64748b;
+}
+
+.action-bar {
+  background: #f8fafc;
+}
+
+.report-btn {
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  padding: 4px 14px;
 }
 
 .mini-stat {

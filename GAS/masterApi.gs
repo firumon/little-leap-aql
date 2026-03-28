@@ -782,6 +782,311 @@ function extractResourceNameFromCandidate(candidate) {
  * The 'targetResource' field names the actual master (e.g. Products),
  * while 'resource' may refer to the caller (e.g. BulkUploadMasters).
  */
+/**
+ * Handles composite (parent + children) save.
+ * Validates ALL records first, then writes atomically.
+ * Recursive — children can have their own children.
+ *
+ * Payload: {
+ *   resource: 'Products',
+ *   data: { Name: 'Widget', Status: 'Active' },
+ *   code: 'PRD00001',               // present for edit, absent for create
+ *   children: [{
+ *     resource: 'SKUs',
+ *     records: [{ data: {...}, _action: 'create'|'update'|'deactivate' }]
+ *   }]
+ * }
+ */
+function handleCompositeSave(auth, payload) {
+  var parentResourceName = (payload.resource || '').toString().trim();
+  if (!parentResourceName) {
+    return { success: false, message: 'Resource is required for composite save' };
+  }
+
+  var isEdit = !!(payload.code && payload.code.toString().trim());
+  var parentData = payload.data || {};
+  var childrenPayload = Array.isArray(payload.children) ? payload.children : [];
+
+  // Phase 1: Validate everything
+  var validationErrors = [];
+  var parentResource = openResourceSheet(parentResourceName);
+  var parentSchema = buildMasterSchemaFromResourceConfig(parentResource.config);
+
+  // Check permissions
+  if (isEdit) {
+    enforceMasterPermission(auth, parentResourceName, 'canUpdate');
+  } else {
+    enforceMasterPermission(auth, parentResourceName, 'canWrite');
+  }
+
+  var parentSheet = parentResource.sheet;
+  var parentValues = parentSheet.getDataRange().getValues();
+  var parentHeaders = parentValues[0] || [];
+  var parentIdx = getHeaderIndexMap(parentHeaders);
+
+  // Build parent row
+  var parentProvidedValues = {};
+  Object.keys(parentData).forEach(function(key) {
+    if (key === 'Code' || isAuditHeader(key)) return;
+    parentProvidedValues[key] = parentData[key];
+  });
+
+  var parentCode;
+  var parentRowData;
+  var parentRowNumber = -1;
+
+  if (isEdit) {
+    parentCode = payload.code.toString().trim();
+    parentRowNumber = findRowByValue(parentSheet, parentIdx.Code, parentCode, 2, true);
+    if (parentRowNumber === -1) {
+      return { success: false, message: parentResourceName + ' record not found: ' + parentCode };
+    }
+    var existingRow = parentSheet.getRange(parentRowNumber, 1, 1, parentHeaders.length).getValues()[0];
+    enforceRecordLevelAccess(auth, parentResource.config, parentHeaders, existingRow);
+    parentRowData = mergeMasterRow(existingRow, parentIdx, parentProvidedValues, parentSchema);
+    parentRowData[parentIdx.Code] = parentCode;
+    applyAuditFields(parentRowData, parentIdx, auth, parentResource.config, false);
+  } else {
+    var codePrefix = (parentResource.config.codePrefix || '').toString().trim();
+    if (!codePrefix) {
+      return { success: false, message: 'CodePrefix is missing for resource: ' + parentResourceName };
+    }
+    var seqLength = parentResource.config.codeSequenceLength || 6;
+    parentCode = generateNextCode(parentValues, parentIdx, codePrefix, seqLength);
+    parentRowData = buildNewMasterRow(parentHeaders, parentIdx, parentProvidedValues, parentSchema);
+    parentRowData[parentIdx.Code] = parentCode;
+    applyAccessRegionOnWrite(parentRowData, parentIdx, auth);
+    applyAuditFields(parentRowData, parentIdx, auth, parentResource.config, true);
+  }
+
+  // Validate parent
+  try {
+    validateRequiredFields(parentRowData, parentIdx, parentSchema.requiredHeaders, parentResourceName);
+    validateMasterUniqueness(parentValues, parentIdx, parentRowData, parentSchema, parentRowNumber, parentResourceName);
+  } catch (err) {
+    validationErrors.push({ resource: parentResourceName, message: err.message || err.toString() });
+  }
+
+  // Phase 1b: Validate all children
+  var childWriteOps = [];
+
+  for (var c = 0; c < childrenPayload.length; c++) {
+    var childGroup = childrenPayload[c];
+    var childResourceName = (childGroup.resource || '').toString().trim();
+    if (!childResourceName) continue;
+
+    var childRecords = Array.isArray(childGroup.records) ? childGroup.records : [];
+    if (!childRecords.length) continue;
+
+    try {
+      enforceMasterPermission(auth, childResourceName, 'canWrite');
+      enforceMasterPermission(auth, childResourceName, 'canUpdate');
+    } catch (err) {
+      validationErrors.push({ resource: childResourceName, message: err.message || err.toString() });
+      continue;
+    }
+
+    var childResource = openResourceSheet(childResourceName);
+    var childSchema = buildMasterSchemaFromResourceConfig(childResource.config);
+    var childSheet = childResource.sheet;
+    var childValues = childSheet.getDataRange().getValues();
+    var childHeaders = childValues[0] || [];
+    var childIdx = getHeaderIndexMap(childHeaders);
+    var childCodePrefix = (childResource.config.codePrefix || '').toString().trim();
+    var childSeqLength = childResource.config.codeSequenceLength || 6;
+    var childCurrentValues = childValues.slice();
+
+    var childOps = { resourceName: childResourceName, sheet: childSheet, headers: childHeaders, newRows: [], updateOps: [] };
+
+    for (var r = 0; r < childRecords.length; r++) {
+      var rec = childRecords[r];
+      var recData = rec.data || {};
+      var recAction = rec._action || 'create';
+
+      try {
+        var childProvidedValues = {};
+        Object.keys(recData).forEach(function(key) {
+          if (key === 'Code' || isAuditHeader(key)) return;
+          childProvidedValues[key] = recData[key];
+        });
+
+        // Inject parent code into child (find the right field)
+        var parentCodeField = resolveParentCodeField(childHeaders, parentResourceName);
+        if (parentCodeField) {
+          childProvidedValues[parentCodeField] = parentCode;
+        }
+
+        if (recAction === 'deactivate' && recData.Code) {
+          var deactivateRowNum = findRowByValue(childSheet, childIdx.Code, recData.Code, 2, true);
+          if (deactivateRowNum !== -1) {
+            var deactivateRow = childSheet.getRange(deactivateRowNum, 1, 1, childHeaders.length).getValues()[0];
+            deactivateRow[childIdx.Status] = 'Inactive';
+            applyAuditFields(deactivateRow, childIdx, auth, childResource.config, false);
+            childOps.updateOps.push({ rowNumber: deactivateRowNum, rowData: deactivateRow });
+          }
+        } else if (recAction === 'update' && recData.Code) {
+          var updateRowNum = findRowByValue(childSheet, childIdx.Code, recData.Code, 2, true);
+          if (updateRowNum === -1) {
+            validationErrors.push({ resource: childResourceName, index: r, message: 'Record not found: ' + recData.Code });
+            continue;
+          }
+          var existingChildRow = childSheet.getRange(updateRowNum, 1, 1, childHeaders.length).getValues()[0];
+          var mergedChild = mergeMasterRow(existingChildRow, childIdx, childProvidedValues, childSchema);
+          mergedChild[childIdx.Code] = recData.Code;
+          applyAuditFields(mergedChild, childIdx, auth, childResource.config, false);
+          validateRequiredFields(mergedChild, childIdx, childSchema.requiredHeaders, childResourceName);
+          validateMasterUniqueness(childCurrentValues, childIdx, mergedChild, childSchema, updateRowNum, childResourceName);
+          childOps.updateOps.push({ rowNumber: updateRowNum, rowData: mergedChild });
+          childCurrentValues[updateRowNum - 1] = mergedChild;
+        } else {
+          // create
+          var newChildCode = generateNextCode(childCurrentValues, childIdx, childCodePrefix, childSeqLength);
+          var newChildRow = buildNewMasterRow(childHeaders, childIdx, childProvidedValues, childSchema);
+          newChildRow[childIdx.Code] = newChildCode;
+          applyAccessRegionOnWrite(newChildRow, childIdx, auth);
+          applyAuditFields(newChildRow, childIdx, auth, childResource.config, true);
+          validateRequiredFields(newChildRow, childIdx, childSchema.requiredHeaders, childResourceName);
+          validateMasterUniqueness(childCurrentValues, childIdx, newChildRow, childSchema, -1, childResourceName);
+          childOps.newRows.push(newChildRow);
+          childCurrentValues.push(newChildRow);
+        }
+      } catch (err) {
+        validationErrors.push({ resource: childResourceName, index: r, message: err.message || err.toString() });
+      }
+    }
+
+    childWriteOps.push(childOps);
+  }
+
+  // If validation errors — abort, write nothing
+  if (validationErrors.length) {
+    return {
+      success: false,
+      message: 'Validation failed',
+      errors: validationErrors
+    };
+  }
+
+  // Phase 2: Write everything
+  // Write parent
+  if (isEdit) {
+    parentSheet.getRange(parentRowNumber, 1, 1, parentHeaders.length).setValues([parentRowData]);
+  } else {
+    var parentTargetRow = parentSheet.getLastRow() + 1;
+    parentSheet.getRange(parentTargetRow, 1, 1, parentHeaders.length).setValues([parentRowData]);
+  }
+  updateResourceSyncCursor(parentResourceName);
+
+  // Write children
+  for (var w = 0; w < childWriteOps.length; w++) {
+    var ops = childWriteOps[w];
+    if (ops.newRows.length) {
+      var startRow = ops.sheet.getLastRow() + 1;
+      ops.sheet.getRange(startRow, 1, ops.newRows.length, ops.headers.length).setValues(ops.newRows);
+    }
+    for (var u = 0; u < ops.updateOps.length; u++) {
+      ops.sheet.getRange(ops.updateOps[u].rowNumber, 1, 1, ops.headers.length).setValues([ops.updateOps[u].rowData]);
+    }
+    updateResourceSyncCursor(ops.resourceName);
+  }
+
+  return {
+    success: true,
+    message: parentResourceName + ' saved successfully',
+    data: { parentCode: parentCode }
+  };
+}
+
+/**
+ * Resolves the parent code field name in a child resource's headers.
+ * Convention: ParentCode or {SingularParentName}Code (e.g., ProductCode).
+ */
+function resolveParentCodeField(childHeaders, parentResourceName) {
+  if (childHeaders.indexOf('ParentCode') !== -1) return 'ParentCode';
+  var singular = parentResourceName.replace(/s$/, '');
+  var candidate = singular + 'Code';
+  if (childHeaders.indexOf(candidate) !== -1) return candidate;
+  return '';
+}
+
+/**
+ * Handles additional action execution (Approve, Reject, etc.)
+ * Updates the record's column + auto-fill fields + user-provided fields.
+ *
+ * Payload: {
+ *   resource: 'Procurements',
+ *   code: 'PRC00001',
+ *   actionName: 'Approve',
+ *   column: 'Progress',
+ *   columnValue: 'Approved',
+ *   fields: { ProgressApprovedComment: 'Looks good' }
+ * }
+ */
+function handleExecuteAction(auth, payload) {
+  var resourceName = (payload.resource || '').toString().trim();
+  if (!resourceName) return { success: false, message: 'Resource is required' };
+
+  var code = (payload.code || '').toString().trim();
+  if (!code) return { success: false, message: 'Record code is required' };
+
+  var actionName = (payload.actionName || '').toString().trim();
+  if (!actionName) return { success: false, message: 'Action name is required' };
+
+  var column = (payload.column || 'Progress').toString().trim();
+  var columnValue = (payload.columnValue || '').toString().trim();
+  if (!columnValue) return { success: false, message: 'Column value is required' };
+
+  var userFields = payload.fields || {};
+
+  // Permission check
+  enforceMasterPermission(auth, resourceName, 'canUpdate');
+
+  var resource = openResourceSheet(resourceName);
+  var sheet = resource.sheet;
+  var values = sheet.getDataRange().getValues();
+  var headers = values[0] || [];
+  var idx = getHeaderIndexMap(headers);
+
+  var rowNumber = findRowByValue(sheet, idx.Code, code, 2, true);
+  if (rowNumber === -1) {
+    return { success: false, message: resourceName + ' record not found: ' + code };
+  }
+
+  var existingRow = sheet.getRange(rowNumber, 1, 1, headers.length).getValues()[0];
+  enforceRecordLevelAccess(auth, resource.config, headers, existingRow);
+
+  // Set the column value (e.g., Progress = 'Approved')
+  if (idx[column] !== undefined) {
+    existingRow[idx[column]] = columnValue;
+  }
+
+  // Set auto-fill fields: {column}{value}At and {column}{value}By
+  var atField = column + columnValue + 'At';
+  var byField = column + columnValue + 'By';
+  if (idx[atField] !== undefined) existingRow[idx[atField]] = Date.now();
+  if (idx[byField] !== undefined) existingRow[idx[byField]] = auth.user.UserID;
+
+  // Set user-provided fields
+  Object.keys(userFields).forEach(function(fieldName) {
+    if (idx[fieldName] !== undefined) {
+      existingRow[idx[fieldName]] = userFields[fieldName];
+    }
+  });
+
+  // Apply audit
+  applyAuditFields(existingRow, idx, auth, resource.config, false);
+
+  // Write back
+  sheet.getRange(rowNumber, 1, 1, headers.length).setValues([existingRow]);
+  updateResourceSyncCursor(resourceName);
+
+  return {
+    success: true,
+    message: actionName + ' completed successfully',
+    data: { code: code, column: column, columnValue: columnValue }
+  };
+}
+
 function handleMasterBulkRecords(auth, payload) {
   var targetResourceName = (payload.targetResource || '').toString().trim();
   if (!targetResourceName) {

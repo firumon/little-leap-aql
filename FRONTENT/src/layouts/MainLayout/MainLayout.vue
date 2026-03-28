@@ -212,7 +212,7 @@ const visibleResourceMenuGroups = computed(() => {
 
       grouped[groupLabel].push({
         resource: resource.name,
-        routePath: resource.ui?.routePath || `/masters/${resource.name.toLowerCase()}`,
+        routePath: resource.ui?.routePath || `/${resource.scope === 'operation' ? 'operations' : resource.scope === 'accounts' ? 'accounts' : 'masters'}/${resource.name.toLowerCase()}`,
         navLabel,
         navIcon: resource.ui?.menuIcon || 'list_alt',
         order: Number(resource.ui?.menuOrder || 9999)

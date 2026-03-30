@@ -124,11 +124,13 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - Required reading: `Documents/SCHEMA_REFACTORING_GUIDE.md`
 - Frontend master module:
   - Router Entry: `FRONTENT/src/pages/Masters/MasterIndexPage.vue`
-  - Generic implementation: `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
-  - Master page architecture is now componentized:
-    - Shared logic composable: `FRONTENT/src/composables/useMasterPage.js`
-    - UI components: `FRONTENT/src/components/Masters/MasterHeader.vue`, `MasterToolbar.vue`, `MasterList.vue`, `MasterRecordCard.vue`, `MasterDetailDialog.vue`, `MasterEditorDialog.vue`
-    - `MasterEntityPage.vue` is now a thin orchestration layer (layout + component wiring).
+  - Generic implementation: `FRONTENT/src/pages/Masters/_common/ListPage.vue` (for list action, via resolver)
+  - Master list architecture is now section-level componentized:
+    - Shared section resolver composable: `FRONTENT/src/composables/useListSectionResolver.js`
+    - Default list sections: `FRONTENT/src/components/Masters/MasterListHeader.vue`, `MasterListReportBar.vue`, `MasterListToolbar.vue`, `MasterListRecords.vue`
+    - Reusable card component remains: `FRONTENT/src/components/Masters/MasterRecordCard.vue`
+    - `_common/ListPage.vue` is now a thin orchestration layer (layout + composable wiring + navigation + report dialog + FAB).
+  - **Section-Level Discovery Pattern**: Each list section supports resource override via `FRONTENT/src/pages/Masters/{EntityName}/List{Section}.vue` with automatic fallback to default components.
   - **Discovery Pattern**: System automatically loads `{EntityName}Page.vue` for route `/masters/:entity-slug` if the file exists, with a generic fallback.
   - Resource config map: `FRONTENT/src/config/masters.js`
   - Shared service: `FRONTENT/src/services/masterRecords.js`

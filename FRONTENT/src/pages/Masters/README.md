@@ -56,7 +56,7 @@ Generic pages that work for any resource:
 
 | Page | Description |
 |---|---|
-| `ListPage.vue` | Card list with MasterHeader, MasterToolbar, search, FAB to add |
+| `ListPage.vue` | Section-orchestrator list page (Header, Report Bar, Toolbar, Records), search, FAB to add |
 | `ViewPage.vue` | Detail view with fields, child tables, action buttons, reports |
 | `AddPage.vue` | Create form with composite parent + child save |
 | `EditPage.vue` | Edit form loading existing record + children |
@@ -147,3 +147,4 @@ Configured as JSON in the `AdditionalActions` column of APP.Resources:
 | `ActionResolverPage.vue` | Two-level auto-discovery resolver |
 | `_common/*.vue` | Generic pages for all resources |
 | `{Entity}/*.vue` | Custom entity-specific page overrides |
+

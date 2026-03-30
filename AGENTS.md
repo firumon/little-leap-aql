@@ -24,10 +24,13 @@
   - For plan ownership fields, use role + concrete agent identity:
     - `Created By: Brain Agent (AgentName)`
     - `Executed By: Build Agent (AgentName | pending)` until execution is completed.
+  - Plan file naming: `YYYY-MM-DD-kebab-case-title.md` for dated plans, or `feature-name.md` for feature-specific plans.
 - GAS deployment rule:
   - `clasp` is configured. When GAS files change, the agent runs `cd GAS && clasp push` to deploy automatically.
+  - Alternatively, use workspace npm scripts: `npm run gas:push` (from root), which is equivalent to `cd GAS && clasp push`.
   - Do NOT ask the user to manually copy-paste `.gs` files into the Apps Script IDE.
   - Manual user actions are limited to: Google Sheet menu actions (AQL 🚀 > ...), editing sheet data, and creating new Web App deployment versions (only when API behavior changes).
+  - Web App deployment: Only create a new deployment version in Apps Script IDE if the API endpoint contract changed (new actions, response shape changes). Normal GAS file updates via `clasp push` do not require Web App redeployment.
 - Module workflow maintenance rule:
   - Before working on a documented module (Reports, etc.), read the relevant section in `Documents/MODULE_WORKFLOWS.md`.
   - If any documented module workflow is changed during implementation, update the relevant section in `Documents/MODULE_WORKFLOWS.md` before closing the task.
@@ -40,7 +43,66 @@
   - Avoid one-off wrappers that only mirror page-local logic without a clear reuse path.
   - Treat this as a design guideline (not a hard numeric usage threshold).
 
-## Skills
+## Project Structure
+```
+AQL/
+├── GAS/                  # Google Apps Script backend (all .gs + .html files)
+│   ├── appsscript.json   # GAS manifest (committed)
+│   ├── .clasp.json       # clasp config with Script ID (gitignored)
+│   └── clasp-configs/    # Per-client .clasp.json files (gitignored)
+├── FRONTENT/             # Quasar (Vue 3 + Vite) frontend
+│   └── src/
+│       ├── components/   # Reusable UI components (maintain REGISTRY.md)
+│       ├── composables/  # Stateful logic hooks (maintain REGISTRY.md)
+│       ├── pages/        # Thin orchestration layers
+│       ├── services/     # API services (callGasApi)
+│       └── stores/       # Pinia stores
+├── Documents/            # Architecture docs, sheet structures, protocols
+├── PLANS/                # Implementation plans (Brain → Build workflow)
+├── scripts/              # Build and deployment scripts
+├── AGENTS.md             # This file (Codex agent startup)
+└── CLAUDE.md             # Claude Code startup (mirrors this file)
+```
+
+## Frontend Rules
+- **Quasar-First UI**: Default to Quasar components (`q-input`, `q-table`, etc.).
+- **Single API contract**: Use `callGasApi` in `src/services/gasApi.js` for all backend calls.
+- **Composable + Component architecture**: Keep pages thin; move logic to `src/composables/`, split UI into `src/components/`.
+- **Registry maintenance**: Update `FRONTENT/src/components/REGISTRY.md` and `FRONTENT/src/composables/REGISTRY.md` when creating/modifying reusable blocks.
+- **PWA-SW-IDB-Pinia Data Contract**: IndexedDB for offline-first, `lastUpdatedAt` cursors for incremental sync, Service Worker for cache boundaries only.
+- **Build and dev**: Use `npm run dev` (in FRONTENT/) for local development, `npm run build` for PWA build, `npm run gas:push` (from root) for backend deployment.
+
+## Backend Rules (GAS)
+- **Single script project** in the APP spreadsheet — no separate scripts in external files.
+- **Generic verbs**: `action=get`, `scope=master`, `resource=Products` — avoid hardcoded endpoints.
+- **APP.Resources** is the supreme source of truth for routing, metadata, and permissions.
+- **Config sheet** holds deployment-specific settings (file IDs, company branding). FileID resolution: `Resource.FileID` → `Config[{Scope}FileID]` → APP file ID.
+- **Dynamic file resolution**: Use helpers `resolveFileIdForScope()`, `getAppConfigValue()`, `getConfigMap()` from `sheetHelpers.gs` instead of hardcoded file IDs.
+
+## Key Documents
+| Document | Purpose |
+|---|---|
+| `AGENTS.md` | Codex agent startup (this file) |
+| `CLAUDE.md` | Claude Code startup (mirrors AGENTS.md) |
+| `Documents/MULTI_AGENT_PROTOCOL.md` | Role definitions and workflow |
+| `Documents/AI_COLLABORATION_PROTOCOL.md` | Sync rules for code/sheets/docs |
+| `Documents/CONTEXT_HANDOFF.md` | Current state + resume context |
+| `Documents/RESOURCE_REGISTRY_ARCHITECTURE.md` | APP.Resources architecture |
+| `Documents/RESOURCE_COLUMNS_GUIDE.md` | Column conventions for resources |
+| `Documents/NEW_CLIENT_SETUP_GUIDE.md` | Client onboarding steps |
+| `Documents/MODULE_WORKFLOWS.md` | End-to-end workflow docs per feature (Reports, Bulk Upload, etc.) |
+| `PLANS/_TEMPLATE.md` | Template for new implementation plans |
+
+## Response Format
+When completing implementation tasks, include:
+1. **Summary**: What was accomplished.
+2. **Files Modified**: List of changed files.
+3. **GAS Deployment**: If GAS files changed → agent runs `npm run gas:push` (from root) or `cd GAS && clasp push`.
+4. **Manual Actions**: Only sheet-level user actions (menu clicks, data edits, Web App redeployment if needed).
+5. **Testing**: How to verify the changes.
+6. **Doc Updates**: If any documented module workflow was changed, update the relevant section in `Documents/MODULE_WORKFLOWS.md`.
+
+
 A skill is a set of local instructions to follow that is stored in a `SKILL.md` file. Below is the list of skills that can be used. Each entry includes a name, description, and file path so you can open the source for full instructions when using a specific skill.
 - **Module Workflows:** Before working on a documented module (Reports, etc.), read the relevant section in `Documents/MODULE_WORKFLOWS.md` for the complete end-to-end flow, responsible files, configuration surface, and known behaviors.
 - **PWA-SW-IDB-Pinia Data Contract:** Master and Operation models fetch incremental updates first from IndexedDB `resource-records` for instant local paint. Background sync uses `lastUpdatedAt` cursors from `resource-meta`, upserting deltas into IndexedDB and Pinia. Service Worker explicitly manages only offline/cache boundaries, never UI state logic.

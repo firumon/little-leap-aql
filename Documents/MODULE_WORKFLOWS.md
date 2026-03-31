@@ -31,7 +31,7 @@ The report system generates PDF documents from Google Sheets templates. A user c
 ┌─────────────────────────────────────────────────────────────────────┐
 │  FRONTEND (Quasar)                                                  │
 │                                                                     │
-│  _common/ListPage.vue                                               │
+│  _common/IndexPage.vue                                              │
 │    ├── MasterListReportBar.vue ──── toolbar-level report buttons          │
 │    └── MasterDetailDialog.vue ── record-level report buttons        │
 │           │                                                         │
@@ -91,7 +91,7 @@ The report system generates PDF documents from Google Sheets templates. A user c
 | `GAS/resourceRegistry.gs` | Caches `APP.Resources` config including `reports` array and `pdfOptions` |
 | `GAS/apiDispatcher.gs` | Routes `generateReport` action to `generateReportPdf()` |
 | `FRONTENT/src/composables/useReports.js` | Frontend composable: report filtering, input collection, API call, PDF download |
-| `FRONTENT/src/pages/Masters/_common/ListPage.vue` | Integrates `useReports(currentResource)` with the master page |
+| `FRONTENT/src/pages/Masters/_common/IndexPage.vue` | Integrates `useReports(currentResource)` with the master page |
 | `FRONTENT/src/components/Masters/MasterListReportBar.vue` | Renders toolbar-level report buttons |
 | `FRONTENT/src/components/Masters/MasterDetailDialog.vue` | Renders record-level report buttons |
 | `FRONTENT/src/components/Masters/ReportInputDialog.vue` | Dialog for collecting user inputs before generation |
@@ -275,236 +275,228 @@ initiateReport(report, record)  // record-level (injects record fields)
 
 ---
 
-## 2. Master List Page — Section-Level Component Architecture
+## 2. Master Pages — 3-Tier Section-Level Component Architecture
 
 ### 2.1 Overview
 
-The master/operation/accounts list page uses a **section-level component architecture** where each visual section of the page is an independently replaceable component. The system automatically discovers custom per-resource overrides and falls back to default components when no custom version exists.
+All master/operation/accounts pages (Index, View, Add, Edit, Action) use a **3-tier section-level component architecture** where each visual section is an independently replaceable component. The system supports **per-tenant customization** driven by `APP.Resources.CustomUIName`, with automatic fallback through three resolution tiers.
 
-This means you can customize just the **header** of the Products page without duplicating the entire list page — the search toolbar, record list, and report bar all continue using their defaults.
+This means you can customize just the **header** of the Products page for a specific tenant without duplicating the entire page — all other sections continue using their defaults.
 
 ### 2.2 Architecture Diagram
 
 ```
-Route: /:scope(masters|operations|accounts)/:resourceSlug
+Route: /:scope(masters|operations|accounts)/:resourceSlug/:code?/:action?
          │
          ▼
-ActionResolverPage.vue  ← Page-level discovery (unchanged)
-  Resolves: ./Products/ListPage.vue  OR  ./_common/ListPage.vue
+ActionResolverPage.vue  ← Page-level 3-tier resolution
+  Tier 1: ./_custom/{CustomUIName}/{Entity}.vue (or {Entity}{Action}.vue)
+  Tier 2: ./{Entity}/IndexPage.vue (or {Action}Page.vue)
+  Tier 3: ./_common/IndexPage.vue (or {Action}Page.vue)
          │
          ▼
-_common/ListPage.vue  ← Thin orchestrator (default for all resources)
-  Uses: useListSectionResolver(resourceSlug)
+_common/{Action}Page.vue  ← Thin orchestrator (default)
+  Uses: useSectionResolver({ resourceSlug, customUIName, sectionDefs })
          │
-         ├── Section 1: Header
-         │     Custom:  pages/Masters/Products/ListHeader.vue
-         │     Default: components/Masters/MasterListHeader.vue
-         │
-         ├── Section 2: ReportBar
-         │     Custom:  pages/Masters/Products/ListReportBar.vue
-         │     Default: components/Masters/MasterListReportBar.vue
-         │
-         ├── Section 3: Toolbar
-         │     Custom:  pages/Masters/Products/ListToolbar.vue
-         │     Default: components/Masters/MasterListToolbar.vue
-         │
-         ├── Section 4: Records
-         │     Custom:  pages/Masters/Products/ListRecords.vue
-         │     Default: components/Masters/MasterListRecords.vue
-         │
-         ├── FAB (Add button) ← always in ListPage, not a section
-         └── ReportInputDialog ← always in ListPage, not a section
+         ├── Tier 1 (tenant-custom):  components/Masters/_custom/{Code}/{Entity}{Section}.vue
+         ├── Tier 2 (entity-custom):  components/Masters/{Entity}/{Section}.vue
+         └── Tier 3 (default):        components/Masters/Master{Action}{Section}.vue
 ```
 
-### 2.3 Two-Level Discovery: How It Works
+### 2.3 Three-Tier Discovery
 
-There are **two independent discovery layers**:
+There are **two independent discovery layers**, each with 3-tier resolution:
 
-1. **Page-level discovery** (`ActionResolverPage.vue`): Resolves the entire page component.
-   - Custom: `pages/Masters/{EntityName}/ListPage.vue` → replaces the whole list page.
-   - Fallback: `pages/Masters/_common/ListPage.vue`.
+#### Page-Level Discovery (`ActionResolverPage.vue`)
+Resolves the entire page component for a given action.
 
-2. **Section-level discovery** (`useListSectionResolver.js`): Resolves individual sections within `_common/ListPage.vue`.
-   - Custom: `pages/Masters/{EntityName}/List{Section}.vue` → replaces one section.
-   - Fallback: `components/Masters/MasterList{Section}.vue`.
+| Tier | Path Pattern | Example |
+|------|-------------|---------|
+| 1. Tenant-custom | `_custom/{CustomUIName}/{Entity}.vue` or `{Entity}{Action}.vue` | `_custom/A2930/Products.vue` |
+| 2. Entity-custom | `{Entity}/{Action}Page.vue` | `Products/IndexPage.vue` |
+| 3. Default | `_common/{Action}Page.vue` | `_common/IndexPage.vue` |
 
-**Priority**: If a full custom `ListPage.vue` exists for an entity, page-level discovery picks it up and section-level discovery is never reached (because `_common/ListPage.vue` is never rendered).
+#### Section-Level Discovery (`useSectionResolver.js`)
+Resolves individual sections within a default page.
 
-**Typical usage**: Use section-level overrides. Only create a full custom `ListPage.vue` if you need to change the orchestrator layout itself (rare).
+| Tier | Path Pattern | Example |
+|------|-------------|---------|
+| 1. Tenant-custom | `_custom/{CustomUIName}/{Entity}{Section}.vue` | `_custom/A2930/ProductsListHeader.vue` |
+| 2. Entity-custom | `{Entity}/{Section}.vue` | `Products/ListHeader.vue` |
+| 3. Default | `Master{Action}{Section}.vue` | `MasterListHeader.vue` |
 
-### 2.4 Files Involved
+**Priority**: If a full custom page exists at tier 1 or 2, section-level discovery is bypassed (the custom page controls its own sections).
+
+**`CustomUIName`**: Stored in `APP.Resources` per resource. Delivered to frontend via auth payload at `config.ui.customUIName`. The same value drives both page-level and section-level resolution.
+
+### 2.4 Action Pages & Their Sections
+
+#### Index Page (`_common/IndexPage.vue`)
+| Section | Default Component | Props | Events |
+|---------|-------------------|-------|--------|
+| ListHeader | `MasterListHeader.vue` | `config, filteredCount, totalCount, loading, backgroundSyncing` | `reload` |
+| ListReportBar | `MasterListReportBar.vue` | `reports, isGenerating` | `generate-report(report)` |
+| ListToolbar | `MasterListToolbar.vue` | `searchTerm` | `update:searchTerm(value)` |
+| ListRecords | `MasterListRecords.vue` | `items, loading, resolvedFields, childCountMap` | `navigate-to-view(row)` |
+
+#### View Page (`_common/ViewPage.vue`)
+| Section | Default Component | Props | Events |
+|---------|-------------------|-------|--------|
+| ViewHeader | `MasterViewHeader.vue` | `config, record, resourceName, code, primaryText` | — |
+| ViewActionBar | `MasterViewActionBar.vue` | `config, record, code, resourceSlug, scope, additionalActions, permissions` | — |
+| ViewDetails | `MasterViewDetails.vue` | `record, resolvedFields, resourceHeaders` | — |
+| ViewAudit | `MasterViewAudit.vue` | `record` | — |
+| ViewChildren | `MasterViewChildren.vue` | `childResources, record, code` | — |
+
+#### Add Page (`_common/AddPage.vue`)
+| Section | Default Component | Props | Events |
+|---------|-------------------|-------|--------|
+| AddHeader | `MasterAddHeader.vue` | `config, resourceName` | — |
+| AddForm | `MasterAddForm.vue` | `resolvedFields, parentForm, resourceHeaders` | `update:field(header, value)` |
+| AddChildren | `MasterAddChildren.vue` | `childResources, childRecords` | `add-child, remove-child, update-child-field` |
+| AddActions | `MasterAddActions.vue` | `saving, submitLabel` | `cancel, submit` |
+
+#### Edit Page (`_common/EditPage.vue`)
+| Section | Default Component | Props | Events |
+|---------|-------------------|-------|--------|
+| EditHeader | `MasterEditHeader.vue` | `config, resourceName, code` | — |
+| EditForm | `MasterEditForm.vue` | `resolvedFields, parentForm, resourceHeaders, code` | `update:field(header, value)` |
+| EditChildren | `MasterEditChildren.vue` | `childResources, childRecords` | `add-child, remove-child, update-child-field` |
+| EditActions | `MasterEditActions.vue` | `saving, submitLabel` | `cancel, submit` |
+
+#### Action Page (`_common/ActionPage.vue`)
+| Section | Default Component | Props | Events |
+|---------|-------------------|-------|--------|
+| ActionHeader | `MasterActionHeader.vue` | `config, record, code, actionConfig, primaryText` | — |
+| ActionForm | `MasterActionForm.vue` | `actionConfig, actionFields, actionForm` | `update:field(key, value), update:outcome(value)` |
+| ActionActions | `MasterActionActions.vue` | `actionConfig, saving, submitDisabled` | `cancel, submit` |
+
+### 2.5 Files Involved
 
 | File | Role |
 |---|---|
-| `FRONTENT/src/composables/useListSectionResolver.js` | Section resolver composable — glob-based discovery + fallback |
-| `FRONTENT/src/pages/Masters/ActionResolverPage.vue` | Page-level resolver (existing, unchanged) |
-| `FRONTENT/src/pages/Masters/_common/ListPage.vue` | Orchestrator — layout, composable wiring, FAB, dialog |
-| `FRONTENT/src/components/Masters/MasterListHeader.vue` | Default header: title, description, visible/total counts, refresh |
-| `FRONTENT/src/components/Masters/MasterListReportBar.vue` | Default report bar: toolbar-level report buttons (hidden if none) |
-| `FRONTENT/src/components/Masters/MasterListToolbar.vue` | Default toolbar: search input |
-| `FRONTENT/src/components/Masters/MasterListRecords.vue` | Default records: card grid with child count badges |
+| `FRONTENT/src/composables/useSectionResolver.js` | Generic 3-tier section resolver composable |
+| `FRONTENT/src/pages/Masters/ActionResolverPage.vue` | 3-tier page-level resolver with `CustomUIName` support |
+| `FRONTENT/src/pages/Masters/_common/IndexPage.vue` | Index (list) orchestrator — layout, composables, FAB, dialog |
+| `FRONTENT/src/pages/Masters/_common/ViewPage.vue` | View orchestrator — record details, children, actions, reports |
+| `FRONTENT/src/pages/Masters/_common/AddPage.vue` | Add orchestrator — composite form, children, submit |
+| `FRONTENT/src/pages/Masters/_common/EditPage.vue` | Edit orchestrator — load record, composite form, submit |
+| `FRONTENT/src/pages/Masters/_common/ActionPage.vue` | Action orchestrator — additional action form + outcome |
+| `FRONTENT/src/components/Masters/Master*.vue` | 20 default section components (4 Index + 5 View + 4 Add + 4 Edit + 3 Action) |
 | `FRONTENT/src/components/Masters/MasterRecordCard.vue` | Individual record card (used by MasterListRecords) |
+| `FRONTENT/src/pages/Masters/_custom/REGISTRY.md` | Registry for tenant-custom full pages |
+| `FRONTENT/src/components/Masters/_custom/REGISTRY.md` | Registry for tenant-custom section components |
 
-### 2.5 Section Props Contract
+### 2.6 How to Create Custom Overrides
 
-Each section receives a specific set of props from `ListPage.vue`. Custom components **must accept the same prop names** (they may ignore props they don't need).
+#### Option A: Tenant-Custom Section (Most Common)
 
-| Section | Props | Events |
-|---------|-------|--------|
-| **Header** | `config: Object`, `filteredCount: Number`, `totalCount: Number`, `loading: Boolean`, `backgroundSyncing: Boolean` | `reload` |
-| **ReportBar** | `reports: Array`, `isGenerating: Boolean` | `generate-report(report)` |
-| **Toolbar** | `searchTerm: String` | `update:searchTerm(value)` |
-| **Records** | `items: Array`, `loading: Boolean`, `resolvedFields: Array`, `childCountMap: Object` | `navigate-to-view(row)` |
+For a specific tenant (identified by `CustomUIName` in `APP.Resources`), override one section:
 
-### 2.6 How to Create a Custom Section Override
-
-**Step-by-step example**: Custom header for Products showing Active/Inactive counts.
-
-#### Step 1: Determine the directory name
-
-Convert the resource slug to PascalCase:
-
-| Resource Slug | PascalCase Directory |
-|---------------|---------------------|
-| `products` | `Products` |
-| `warehouse-storages` | `WarehouseStorages` |
-| `purchase-orders` | `PurchaseOrders` |
-| `chart-of-accounts` | `ChartOfAccounts` |
-
-#### Step 2: Create the file
-
-Create the file at:
 ```
-FRONTENT/src/pages/Masters/{EntityName}/List{Section}.vue
+FRONTENT/src/components/Masters/_custom/{CustomUIName}/{Entity}{Section}.vue
 ```
 
-For Products custom header:
+Example: Custom list header for Products under tenant code `A2930`:
 ```
-FRONTENT/src/pages/Masters/Products/ListHeader.vue
-```
-
-Valid section file names:
-- `ListHeader.vue`
-- `ListReportBar.vue`
-- `ListToolbar.vue`
-- `ListRecords.vue`
-
-#### Step 3: Implement the component
-
-The custom component receives the same props as the default. Use what you need:
-
-```vue
-<template>
-  <q-card flat bordered class="header-card">
-    <q-card-section class="q-pa-sm">
-      <div class="header-title">{{ config?.ui?.pageTitle || config?.name }}</div>
-      <div class="row q-col-gutter-sm q-mt-sm">
-        <div class="col-4">
-          <div class="mini-stat">
-            <div class="mini-label">Active</div>
-            <div class="mini-value">{{ activeCount }}</div>
-          </div>
-        </div>
-        <div class="col-4">
-          <div class="mini-stat">
-            <div class="mini-label">Inactive</div>
-            <div class="mini-value">{{ totalCount - activeCount }}</div>
-          </div>
-        </div>
-        <div class="col-4">
-          <div class="mini-stat">
-            <div class="mini-label">Total</div>
-            <div class="mini-value">{{ totalCount }}</div>
-          </div>
-        </div>
-      </div>
-    </q-card-section>
-  </q-card>
-</template>
-
-<script setup>
-import { computed } from 'vue'
-
-const props = defineProps({
-  config: { type: Object, default: null },
-  filteredCount: { type: Number, default: 0 },
-  totalCount: { type: Number, default: 0 },
-  loading: { type: Boolean, default: false },
-  backgroundSyncing: { type: Boolean, default: false }
-})
-
-defineEmits(['reload'])
-
-const activeCount = computed(() => props.filteredCount)
-</script>
+FRONTENT/src/components/Masters/_custom/A2930/ProductsListHeader.vue
 ```
 
-#### Step 4: That's it — no registration needed
+#### Option B: Entity-Custom Section (All Tenants)
 
-The `useListSectionResolver` composable uses `import.meta.glob` to auto-discover files matching `pages/Masters/*/List*.vue`. The new file is picked up automatically on next dev server restart (or HMR in most cases).
+Override one section for an entity across all tenants:
 
-**No changes needed in**: router, ListPage.vue, any config file, or any registry.
+```
+FRONTENT/src/components/Masters/{Entity}/{Section}.vue
+```
 
-### 2.7 Glob Pattern Details
+Example: Custom view details for all Products:
+```
+FRONTENT/src/components/Masters/Products/ViewDetails.vue
+```
 
-The resolver composable (`useListSectionResolver.js`) uses this glob:
+#### Option C: Tenant-Custom Full Page (Rare)
+
+Replace the entire page for a specific tenant:
+
+```
+FRONTENT/src/pages/Masters/_custom/{CustomUIName}/{Entity}.vue          → Index
+FRONTENT/src/pages/Masters/_custom/{CustomUIName}/{Entity}{Action}.vue  → Other actions
+```
+
+#### Guidelines
+- Custom components should be **tiny layout shells** that reuse shared composables and components.
+- Props and events must match the default component's contract.
+- No registration needed — `import.meta.glob` auto-discovers files at build time.
+- Dev server restart may be needed after creating new files.
+- PascalCase is strict: `products` → `Products`, `warehouse-storages` → `WarehouseStorages`.
+
+### 2.7 Glob Patterns
 
 ```js
-const customSectionModules = import.meta.glob('../pages/Masters/*/List*.vue')
+// useSectionResolver.js — section-level
+const entitySectionModules = import.meta.glob([
+  '../components/Masters/*/*.vue',
+  '!../components/Masters/_custom/**',
+  '!../components/Masters/BulkUpload/**'
+])
+const customSectionModules = import.meta.glob('../components/Masters/_custom/**/*.vue')
+
+// ActionResolverPage.vue — page-level
+const customPageModules = import.meta.glob(['./*/*.vue', '!./_custom/**', '!./_common/**'])
+const customTenantModules = import.meta.glob('./_custom/**/*.vue')
 ```
 
-This matches:
-- `../pages/Masters/Products/ListHeader.vue` — YES
-- `../pages/Masters/WarehouseStorages/ListRecords.vue` — YES
-- `../pages/Masters/_common/ListPage.vue` — NO (starts with `_`)
-- `../pages/Masters/Products/ViewPage.vue` — NO (doesn't start with `List`)
-- `../pages/Masters/Products/helpers.js` — NO (not `.vue`)
+All globs are **lazy** — components are only loaded when navigated to.
 
-The glob is **lazy** (not eager) — custom components are only loaded when their resource is navigated to.
-
-### 2.8 Resolution Flow (Runtime)
+### 2.8 Resolution Flow (Runtime Example)
 
 ```
 User navigates to /masters/products
   │
   ▼
 ActionResolverPage watches route change
-  → slug = "products", action = "list"
-  → Checks: ./Products/ListPage.vue exists? NO
-  → Loads: ./_common/ListPage.vue
+  → slug = "products", action = "index", customUIName = "A2930"
+  │
+  ├── Tier 1: ./_custom/A2930/Products.vue exists? NO
+  ├── Tier 2: ./Products/IndexPage.vue exists? NO
+  └── Tier 3: ./_common/IndexPage.vue → LOAD
   │
   ▼
-_common/ListPage.vue mounts
-  → useListSectionResolver(resourceSlug) called with "products"
-  → toPascalCase("products") = "Products"
+_common/IndexPage.vue mounts
+  → useSectionResolver({ resourceSlug, customUIName: "A2930", sectionDefs })
+  → entityName = "Products"
   │
-  ├── resolveSection("Products", "Header", MasterListHeader)
-  │     → Check glob: ../pages/Masters/Products/ListHeader.vue ?
-  │     → Found? → async import → use custom
-  │     → Not found? → use MasterListHeader (default)
+  ├── resolveSection("Products", "ListHeader", MasterListHeader, "A2930")
+  │     → Tier 1: _custom/A2930/ProductsListHeader.vue? → Found → USE
   │
-  ├── resolveSection("Products", "ReportBar", MasterListReportBar)
-  │     → same pattern...
+  ├── resolveSection("Products", "ListReportBar", MasterListReportBar, "A2930")
+  │     → Tier 1: not found → Tier 2: Products/ListReportBar.vue? → not found
+  │     → Tier 3: MasterListReportBar (default)
   │
-  ├── resolveSection("Products", "Toolbar", MasterListToolbar)
-  │     → same pattern...
-  │
-  └── resolveSection("Products", "Records", MasterListRecords)
-        → same pattern...
+  └── ... (same for Toolbar, Records)
   │
   ▼
-sectionsReady = true → template renders all 4 <component :is="...">
+sectionsReady = true → template renders all <component :is="...">
 ```
 
-### 2.9 Known Behaviors & Rules
+### 2.9 APP.Resources.CustomUIName Column
 
-1. **Mix and match**: You can override just one section (e.g., only `ListHeader.vue`) while all other sections use defaults. Each section resolves independently.
-2. **Full page override takes priority**: If `pages/Masters/Products/ListPage.vue` exists, `ActionResolverPage.vue` loads it directly and section-level discovery is bypassed entirely.
-3. **Props must match**: Custom components receive the same props as the default. Unrecognized props are silently ignored by Vue, so you can accept only the ones you need.
-4. **Events must match**: If a section emits events (e.g., `reload`, `navigate-to-view`), the custom component must emit the same event names for the orchestrator to function correctly.
-5. **Dev server restart**: After creating a new custom file, Vite may need a dev server restart to pick up new glob matches (the `import.meta.glob` result is determined at build/startup time).
-6. **PascalCase is strict**: The directory name must exactly match the PascalCase conversion of the slug. `products` → `Products`, `warehouse-storages` → `WarehouseStorages`. Mismatch = custom file ignored.
-7. **Registries**: Custom section overrides in `pages/Masters/{Entity}/` are page-specific, NOT reusable components. Do **not** add them to `components/REGISTRY.md`. Only default components in `components/Masters/` are registered.
+- Added to all 32 resources in `GAS/syncAppResources.gs` (default: empty string).
+- Read in `GAS/resourceRegistry.gs` and delivered in auth payload at `ui.customUIName`.
+- Empty value = skip tier 1 resolution (go straight to entity-custom → default).
+- Same value can be shared across resources for one tenant, or unique per resource.
+
+### 2.10 Known Behaviors & Rules
+
+1. **Mix and match**: Override just one section while all others use defaults. Each section resolves independently.
+2. **Full page override takes priority**: If a custom page exists at tier 1 or 2, section-level discovery is bypassed entirely.
+3. **Props must match**: Custom components receive the same props as the default.
+4. **Events must match**: Custom components must emit the same event names for the orchestrator to function.
+5. **Dev server restart**: After creating new files, Vite may need a restart to pick up new glob matches.
+6. **PascalCase is strict**: Directory/file names must match the PascalCase conversion of the slug exactly.
+7. **Registries**: Tenant-custom overrides should be registered in the `_custom/REGISTRY.md` files. Default components are in `components/REGISTRY.md`.
+8. **Tiny custom files**: Custom components should be small layout glue over shared composables/components — not duplicated logic.
 
 ---
 

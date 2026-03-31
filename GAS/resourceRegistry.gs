@@ -102,7 +102,8 @@ function getResourceConfigMap() {
       functional: toBooleanCell(readOptionalCell(row, registry.idx.Functional, false)),
       preAction: (readOptionalCell(row, registry.idx.PreAction, '') || '').toString().trim(),
       postAction: (readOptionalCell(row, registry.idx.PostAction, '') || '').toString().trim(),
-      reports: parseJsonCell(readOptionalCell(row, registry.idx.Reports, '[]'), [])
+      reports: parseJsonCell(readOptionalCell(row, registry.idx.Reports, '[]'), []),
+      customUIName: (readOptionalCell(row, registry.idx.CustomUIName, '') || '').toString().trim()
     };
   }
 
@@ -485,7 +486,8 @@ function buildAuthorizedResourceEntry(resourceName, options) {
       pageTitle: config.pageTitle,
       pageDescription: config.pageDescription,
       fields: Array.isArray(config.uiFields) ? config.uiFields : [],
-      showInMenu: config.showInMenu
+      showInMenu: config.showInMenu,
+      customUIName: config.customUIName || ''
     };
     entry.additionalActions = Array.isArray(config.additionalActions) ? config.additionalActions : [];
     entry.actions = entry.additionalActions.map(function(a) { return (a.action || ''); }).filter(Boolean);

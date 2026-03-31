@@ -125,13 +125,18 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
 - Frontend master module:
   - Router Entry: `FRONTENT/src/pages/Masters/MasterIndexPage.vue`
   - Generic implementation: `FRONTENT/src/pages/Masters/_common/ListPage.vue` (for list action, via resolver)
-  - Master list architecture is now section-level componentized:
-    - Shared section resolver composable: `FRONTENT/src/composables/useListSectionResolver.js`
-    - Default list sections: `FRONTENT/src/components/Masters/MasterListHeader.vue`, `MasterListReportBar.vue`, `MasterListToolbar.vue`, `MasterListRecords.vue`
-    - Reusable card component remains: `FRONTENT/src/components/Masters/MasterRecordCard.vue`
-    - `_common/ListPage.vue` is now a thin orchestration layer (layout + composable wiring + navigation + report dialog + FAB).
-  - **Section-Level Discovery Pattern**: Each list section supports resource override via `FRONTENT/src/pages/Masters/{EntityName}/List{Section}.vue` with automatic fallback to default components.
-  - **Discovery Pattern**: System automatically loads `{EntityName}Page.vue` for route `/masters/:entity-slug` if the file exists, with a generic fallback.
+  - **3-Tier Section-Level Component Architecture** (all 5 action pages):
+    - Generic section resolver composable: `FRONTENT/src/composables/useSectionResolver.js`
+    - 20 default section components in `FRONTENT/src/components/Masters/Master*.vue` (4 Index + 5 View + 4 Add + 4 Edit + 3 Action)
+    - Reusable card component: `FRONTENT/src/components/Masters/MasterRecordCard.vue`
+    - All `_common/` pages are thin orchestration layers (layout + composable wiring).
+    - `ListPage.vue` renamed to `IndexPage.vue`; route action `list` → `index`.
+  - **3-Tier Resolution** (page-level and section-level):
+    - Tier 1 (tenant-custom): `_custom/{CustomUIName}/{Entity}.vue` or `{Entity}{Section}.vue`
+    - Tier 2 (entity-custom): `{Entity}/{Action}Page.vue` or `{Entity}/{Section}.vue`
+    - Tier 3 (default): `_common/{Action}Page.vue` or `Master{Action}{Section}.vue`
+  - **CustomUIName**: `APP.Resources.CustomUIName` column drives per-tenant UI customization. Read in `resourceRegistry.gs`, delivered via auth payload at `config.ui.customUIName`.
+  - **Discovery Pattern**: `ActionResolverPage.vue` resolves pages with 3-tier priority using `import.meta.glob` and `useResourceConfig` for `customUIName`.
   - Resource config map: `FRONTENT/src/config/masters.js`
   - Shared service: `FRONTENT/src/services/masterRecords.js`
   - Product store remains aligned: `FRONTENT/src/stores/products.js`
@@ -266,7 +271,7 @@ Required columns (managed by `syncAppResources.gs`):
 - `RecordAccessPolicy`, `OwnerUserField`, `AdditionalActions`
 - `MenuGroup`, `MenuOrder`, `MenuLabel`, `MenuIcon`
 - `RoutePath`, `PageTitle`, `PageDescription`, `UIFields`
-- `ShowInMenu`, `IncludeInAuthorizationPayload`, `Reports`
+- `ShowInMenu`, `IncludeInAuthorizationPayload`, `Reports`, `CustomUIName`
 
 Column meaning and value guidance: `Documents/RESOURCE_COLUMNS_GUIDE.md`
 

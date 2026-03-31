@@ -1,7 +1,7 @@
 <template>
-  <div class="list-page" v-if="sectionsReady">
+  <div class="index-page" v-if="sectionsReady">
     <component
-      :is="HeaderComponent"
+      :is="sections.ListHeader"
       :config="config"
       :filtered-count="filteredItems.length"
       :total-count="items.length"
@@ -11,20 +11,20 @@
     />
 
     <component
-      :is="ReportBarComponent"
+      :is="sections.ListReportBar"
       :reports="config?.reports || []"
       :is-generating="isGenerating"
       @generate-report="(report) => initiateReport(report)"
     />
 
     <component
-      :is="ToolbarComponent"
+      :is="sections.ListToolbar"
       :search-term="searchTerm"
       @update:search-term="searchTerm = $event"
     />
 
     <component
-      :is="RecordsComponent"
+      :is="sections.ListRecords"
       :items="filteredItems"
       :loading="loading"
       :resolved-fields="resolvedFields"
@@ -56,16 +56,20 @@
       @cancel="cancelReportDialog"
     />
   </div>
-  <div v-else class="list-page-loading">
+  <div v-else class="index-page-loading">
     <q-spinner-dots color="primary" size="32px" />
   </div>
 </template>
 
 <script setup>
-import { watch, ref } from 'vue'
+import { watch, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import ReportInputDialog from 'src/components/Masters/ReportInputDialog.vue'
-import { useListSectionResolver } from 'src/composables/useListSectionResolver'
+import MasterListHeader from 'src/components/Masters/MasterListHeader.vue'
+import MasterListReportBar from 'src/components/Masters/MasterListReportBar.vue'
+import MasterListToolbar from 'src/components/Masters/MasterListToolbar.vue'
+import MasterListRecords from 'src/components/Masters/MasterListRecords.vue'
+import { useSectionResolver } from 'src/composables/useSectionResolver'
 import { useResourceConfig } from 'src/composables/useResourceConfig'
 import { useResourceData } from 'src/composables/useResourceData'
 import { useResourceRelations } from 'src/composables/useResourceRelations'
@@ -75,7 +79,18 @@ const router = useRouter()
 const { scope, resourceSlug, config, resourceName, resolvedFields, permissions } = useResourceConfig()
 const { items, filteredItems, loading, backgroundSyncing, searchTerm, reload } = useResourceData(resourceName)
 const { childResources } = useResourceRelations(resourceName)
-const { HeaderComponent, ReportBarComponent, ToolbarComponent, RecordsComponent, sectionsReady } = useListSectionResolver(resourceSlug)
+
+const customUIName = computed(() => config.value?.ui?.customUIName || '')
+const { sections, sectionsReady } = useSectionResolver({
+  resourceSlug,
+  customUIName,
+  sectionDefs: {
+    ListHeader: MasterListHeader,
+    ListReportBar: MasterListReportBar,
+    ListToolbar: MasterListToolbar,
+    ListRecords: MasterListRecords
+  }
+})
 
 const {
   isGenerating, showReportDialog, activeReport, reportInputs,
@@ -109,12 +124,12 @@ watch(() => resourceName.value, async (newName) => {
 </script>
 
 <style scoped>
-.list-page {
+.index-page {
   display: grid;
   gap: 8px;
 }
 
-.list-page-loading {
+.index-page-loading {
   min-height: 220px;
   display: flex;
   align-items: center;

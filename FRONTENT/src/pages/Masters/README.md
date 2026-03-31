@@ -2,13 +2,13 @@
 
 ## Overview
 
-The Master Pages system uses **sub-route pages** with **two-level auto-discovery** for managing master, operation, and account resources. Each action (list, add, view, edit, custom actions) gets its own full page instead of dialogs.
+The Master Pages system uses **sub-route pages** with **3-tier auto-discovery** for managing master, operation, and account resources. Each action (index, add, view, edit, custom actions) gets its own full page instead of dialogs. Per-tenant customization is driven by `APP.Resources.CustomUIName`.
 
 ## Route Structure
 
 ```
 /:scope(masters|operations|accounts)/:resourceSlug
-  ├── /                     → ListPage   (resource-list)
+  ├── /                     → IndexPage  (resource-list)
   ├── /add                  → AddPage    (resource-add)
   ├── /:code                → ViewPage   (resource-view)
   ├── /:code/edit           → EditPage   (resource-edit)
@@ -17,29 +17,32 @@ The Master Pages system uses **sub-route pages** with **two-level auto-discovery
 
 ## How It Works
 
-### Two-Level Auto-Discovery
+### 3-Tier Auto-Discovery
 
 `ActionResolverPage.vue` resolves the correct page component at runtime:
 
 ```
 User navigates to /masters/products/add
          |
-   ActionResolverPage checks:
+   ActionResolverPage checks (customUIName = "A2930"):
          |
-   1. ./Products/AddPage.vue  (custom entity folder)
+   1. ./_custom/A2930/ProductsAdd.vue  (tenant-custom)
          |
-   2. ./_common/AddPage.vue   (generic fallback)
+   2. ./Products/AddPage.vue           (entity-custom)
+         |
+   3. ./_common/AddPage.vue            (generic fallback)
 ```
 
 **Resolution order** for each action:
-1. `./Products/AddPage.vue` — custom entity-specific page
-2. `./_common/AddPage.vue` — generic shared page
+1. `./_custom/{CustomUIName}/{Entity}{Action}.vue` — tenant-specific page
+2. `./{Entity}/{Action}Page.vue` — entity-specific page
+3. `./_common/{Action}Page.vue` — generic shared page
 
 ### Action-to-File Mapping
 
 | Route Action | File Name | Purpose |
 |---|---|---|
-| `/` (list) | `ListPage.vue` | Card-based list with search/filter |
+| `/` (index) | `IndexPage.vue` | Card-based list with search/filter |
 | `/add` | `AddPage.vue` | Create form with child records |
 | `/:code` | `ViewPage.vue` | Read-only detail with actions |
 | `/:code/edit` | `EditPage.vue` | Edit form with child records |
@@ -48,7 +51,17 @@ User navigates to /masters/products/add
 ## Shell & Resolver
 
 - **`ResourcePageShell.vue`** — Provides breadcrumbs and `<router-view>` wrapper
-- **`ActionResolverPage.vue`** — Two-level `import.meta.glob` discovery, renders resolved component
+- **`ActionResolverPage.vue`** — 3-tier `import.meta.glob` discovery with `CustomUIName` support
+
+## Section-Level Component Architecture
+
+Each page is split into independently replaceable **sections** using `useSectionResolver`. Sections also follow 3-tier resolution:
+
+1. **Tenant-custom**: `components/Masters/_custom/{CustomUIName}/{Entity}{Section}.vue`
+2. **Entity-custom**: `components/Masters/{Entity}/{Section}.vue`
+3. **Default**: `components/Masters/Master{Action}{Section}.vue`
+
+See `Documents/MODULE_WORKFLOWS.md` Section 2 for full details on sections, props, and events.
 
 ## Common Pages (`_common/`)
 
@@ -56,34 +69,58 @@ Generic pages that work for any resource:
 
 | Page | Description |
 |---|---|
-| `ListPage.vue` | Section-orchestrator list page (Header, Report Bar, Toolbar, Records), search, FAB to add |
+| `IndexPage.vue` | Section-orchestrator index page (Header, Report Bar, Toolbar, Records), search, FAB to add |
 | `ViewPage.vue` | Detail view with fields, child tables, action buttons, reports |
 | `AddPage.vue` | Create form with composite parent + child save |
 | `EditPage.vue` | Edit form loading existing record + children |
 | `ActionPage.vue` | Column-driven action form (Approve, Reject, etc.) |
 
-## Creating a Custom Page
+## Creating Custom Overrides
 
-### When to Customize
+### Option A: Tenant-Custom Section (Most Common)
 
-Create a custom page when you need entity-specific UI beyond what `_common/` provides.
+Override one section for a specific tenant:
+```
+FRONTENT/src/components/Masters/_custom/{CustomUIName}/{Entity}{Section}.vue
+```
 
-### Steps
+### Option B: Entity-Custom Section
 
-1. Create folder: `FRONTENT/src/pages/Masters/{EntityName}/`
-2. Add the specific page file (e.g., `ListPage.vue`, `AddPage.vue`)
-3. Only override the actions you need — others fall back to `_common/`
+Override one section for all tenants:
+```
+FRONTENT/src/components/Masters/{Entity}/{Section}.vue
+```
+
+### Option C: Tenant-Custom Full Page
+
+Replace the entire page for a specific tenant:
+```
+FRONTENT/src/pages/Masters/_custom/{CustomUIName}/{Entity}.vue
+FRONTENT/src/pages/Masters/_custom/{CustomUIName}/{Entity}{Action}.vue
+```
+
+### Option D: Entity-Custom Full Page
+
+Replace the entire page for all tenants:
+```
+FRONTENT/src/pages/Masters/{Entity}/{Action}Page.vue
+```
+
+### Directory Structure
 
 ```
 FRONTENT/src/pages/Masters/
 ├── _common/
-│   ├── ListPage.vue
+│   ├── IndexPage.vue
 │   ├── ViewPage.vue
 │   ├── AddPage.vue
 │   ├── EditPage.vue
 │   └── ActionPage.vue
+├── _custom/
+│   └── A2930/
+│       └── Products.vue       # Tenant-custom index page
 ├── Products/
-│   └── ListPage.vue       # Custom list only; Add/View/Edit use _common/
+│   └── IndexPage.vue          # Entity-custom; other actions use _common/
 ├── ResourcePageShell.vue
 ├── ActionResolverPage.vue
 └── README.md
@@ -91,7 +128,7 @@ FRONTENT/src/pages/Masters/
 
 ### Naming Convention
 
-Route slug → PascalCase folder name:
+Route slug → PascalCase folder/file name:
 - `products` → `Products/`
 - `price-lists` → `PriceLists/`
 - `customer-groups` → `CustomerGroups/`
@@ -105,6 +142,7 @@ Route slug → PascalCase folder name:
 | `useResourceRelations` | Parent-child discovery from auth store |
 | `useCompositeForm` | Parent + child form state, atomic composite save |
 | `useActionFields` | Column-driven field resolution for action pages |
+| `useSectionResolver` | Generic 3-tier section resolver for all page actions |
 
 ## Parent-Child (Composite) Records
 
@@ -144,7 +182,7 @@ Configured as JSON in the `AdditionalActions` column of APP.Resources:
 | File | Purpose |
 |---|---|
 | `ResourcePageShell.vue` | Breadcrumb wrapper + router-view |
-| `ActionResolverPage.vue` | Two-level auto-discovery resolver |
-| `_common/*.vue` | Generic pages for all resources |
-| `{Entity}/*.vue` | Custom entity-specific page overrides |
-
+| `ActionResolverPage.vue` | 3-tier auto-discovery resolver with CustomUIName |
+| `_common/*.vue` | Generic pages for all resources (5 action pages) |
+| `_custom/{Code}/*.vue` | Tenant-specific page overrides |
+| `{Entity}/*.vue` | Entity-specific page overrides |

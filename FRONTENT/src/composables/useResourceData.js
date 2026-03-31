@@ -4,7 +4,7 @@ import { fetchMasterRecords } from 'src/services/masterRecords'
 
 /**
  * Manages data loading, search, and filtering for a resource.
- * Used by ListPage (all records) and View/Edit pages (single record by code).
+ * Used by IndexPage (all records) and View/Edit pages (single record by code).
  */
 export function useResourceData(resourceNameRef) {
   const $q = useQuasar()

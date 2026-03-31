@@ -53,7 +53,7 @@ const routes = [
             path: '',
             name: 'resource-list',
             component: () => import('pages/Masters/ActionResolverPage.vue'),
-            meta: { action: 'list', level: 'resource' }
+            meta: { action: 'index', level: 'resource' }
           },
           {
             path: 'add',

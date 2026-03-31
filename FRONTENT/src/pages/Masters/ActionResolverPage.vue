@@ -8,18 +8,23 @@
 <script setup>
 import { watch, shallowRef, markRaw } from 'vue'
 import { useRoute } from 'vue-router'
+import { useResourceConfig } from 'src/composables/useResourceConfig'
 
 const route = useRoute()
+const { config } = useResourceConfig()
 const resolvedComponent = shallowRef(null)
 
 /**
- * Two-level auto-discovery:
- *   1. Custom: ./Products/EditPage.vue  (entity-specific override)
- *   2. Fallback: ./_common/EditPage.vue  (generic for all entities)
+ * Three-tier auto-discovery:
+ *   1. Tenant-custom: ./_custom/A2930/Products.vue (index) or ./_custom/A2930/ProductsView.vue
+ *   2. Entity-custom: ./Products/IndexPage.vue
+ *   3. Default:       ./_common/IndexPage.vue
  */
+const customTenantModules = import.meta.glob('./_custom/**/*.vue')
 const customPageModules = import.meta.glob([
   './*/**Page.vue',
-  '!./_common/**'
+  '!./_common/**',
+  '!./_custom/**'
 ])
 const fallbackModules = import.meta.glob('./_common/**Page.vue')
 
@@ -34,25 +39,41 @@ function toPascalCase(slug) {
 function resolveActionName(routeMeta, routeParams) {
   if (routeMeta?.action) return routeMeta.action
   if (routeParams?.action) return routeParams.action
-  return 'list'
+  return 'index'
 }
 
-async function resolveComponent(resourceSlug, actionName) {
+async function resolveComponent(resourceSlug, actionName, customUIName) {
   const entityName = toPascalCase(resourceSlug)
   const actionPageName = toPascalCase(actionName) + 'Page'
 
-  // Step 1: Try custom entity page → ./Products/EditPage.vue
-  const customPath = `./${entityName}/${actionPageName}.vue`
-  if (customPageModules[customPath]) {
-    try {
-      const module = await customPageModules[customPath]()
-      return markRaw(module.default || module)
-    } catch {
-      // Custom page failed to load — fall through to fallback
+  // Step 1: Try tenant-custom page → ./_custom/A2930/Products.vue (index) or ./_custom/A2930/ProductsView.vue
+  if (customUIName) {
+    const customFileName = actionName === 'index'
+      ? `${entityName}`
+      : `${entityName}${toPascalCase(actionName)}`
+    const tenantPath = `./_custom/${customUIName}/${customFileName}.vue`
+    if (customTenantModules[tenantPath]) {
+      try {
+        const module = await customTenantModules[tenantPath]()
+        return markRaw(module.default || module)
+      } catch {
+        // Tenant-custom page failed — fall through
+      }
     }
   }
 
-  // Step 2: Try fallback → ./_common/EditPage.vue
+  // Step 2: Try entity-custom page → ./Products/IndexPage.vue
+  const entityPath = `./${entityName}/${actionPageName}.vue`
+  if (customPageModules[entityPath]) {
+    try {
+      const module = await customPageModules[entityPath]()
+      return markRaw(module.default || module)
+    } catch {
+      // Entity-custom page failed — fall through
+    }
+  }
+
+  // Step 3: Try default → ./_common/IndexPage.vue
   const fallbackPath = `./_common/${actionPageName}.vue`
   if (fallbackModules[fallbackPath]) {
     try {
@@ -63,8 +84,8 @@ async function resolveComponent(resourceSlug, actionName) {
     }
   }
 
-  // Step 3: No page found — use ActionPage as catch-all for additional actions
-  if (actionName !== 'list' && actionName !== 'add' && actionName !== 'view' && actionName !== 'edit') {
+  // Step 4: No page found — use ActionPage as catch-all for additional actions
+  if (actionName !== 'index' && actionName !== 'add' && actionName !== 'view' && actionName !== 'edit') {
     const actionFallbackPath = './_common/ActionPage.vue'
     if (fallbackModules[actionFallbackPath]) {
       try {
@@ -80,12 +101,13 @@ async function resolveComponent(resourceSlug, actionName) {
 }
 
 watch(
-  () => [route.params.resourceSlug, route.meta?.action, route.params.action, route.fullPath],
+  () => [route.params.resourceSlug, route.meta?.action, route.params.action, route.fullPath, config.value],
   async () => {
     resolvedComponent.value = null
     const slug = route.params.resourceSlug
     const action = resolveActionName(route.meta, route.params)
-    const component = await resolveComponent(slug, action)
+    const customUIName = config.value?.ui?.customUIName || ''
+    const component = await resolveComponent(slug, action, customUIName)
     resolvedComponent.value = component
   },
   { immediate: true }

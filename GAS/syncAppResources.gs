@@ -41,7 +41,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: JSON.stringify([{"id":"rep_1774663957785","name":"product-list","label":"Product List","templateSheet":"ProductList","isRecordLevel":false,"inputs":[],"pdfOptions":{}}])
+        Reports: JSON.stringify([{"id":"rep_1774663957785","name":"product-list","label":"Product List","templateSheet":"ProductList","isRecordLevel":false,"inputs":[],"pdfOptions":{}}]),
+        CustomUIName: ''
     },
     {
         Name: CONFIG.MASTER_SHEETS.SKUS,
@@ -81,7 +82,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.MASTER_SHEETS.SUPPLIERS,
@@ -119,7 +121,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.MASTER_SHEETS.WAREHOUSES,
@@ -156,7 +159,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.MASTER_SHEETS.PORTS,
@@ -192,7 +196,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.MASTER_SHEETS.CARRIERS,
@@ -229,7 +234,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.PROCUREMENTS,
@@ -260,7 +266,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.PURCHASE_REQUISITIONS,
@@ -292,7 +299,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.PURCHASE_REQUISITION_ITEMS,
@@ -324,7 +332,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.RFQS,
@@ -356,7 +365,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.RFQ_ITEMS,
@@ -388,7 +398,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.RFQ_SUPPLIERS,
@@ -420,7 +431,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.SUPPLIER_QUOTATIONS,
@@ -452,7 +464,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.SUPPLIER_QUOTATION_ITEMS,
@@ -484,7 +497,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.PURCHASE_ORDERS,
@@ -516,7 +530,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.PURCHASE_ORDER_ITEMS,
@@ -548,7 +563,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.PO_FULFILLMENTS,
@@ -580,7 +596,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.SHIPMENTS,
@@ -611,7 +628,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.SHIPMENT_ITEMS,
@@ -643,7 +661,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.PORT_CLEARANCE,
@@ -674,7 +693,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.GOODS_RECEIPTS,
@@ -705,7 +725,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.GOODS_RECEIPT_ITEMS,
@@ -737,7 +758,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.STOCK_MOVEMENTS,
@@ -768,7 +790,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.WAREHOUSE_STORAGES,
@@ -804,7 +827,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.ACCOUNTS_SHEETS.CHART_OF_ACCOUNTS,
@@ -835,7 +859,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.ACCOUNTS_SHEETS.ENTRY_TEMPLATES,
@@ -866,7 +891,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.ACCOUNTS_SHEETS.ASSETS,
@@ -897,7 +923,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.ACCOUNTS_SHEETS.LIABILITIES,
@@ -928,7 +955,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.ACCOUNTS_SHEETS.EQUITY,
@@ -959,7 +987,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.ACCOUNTS_SHEETS.REVENUE,
@@ -990,7 +1019,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     {
         Name: CONFIG.ACCOUNTS_SHEETS.EXPENSES,
@@ -1021,7 +1051,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     },
     // --- FUNCTIONAL RESOURCES ---
     {
@@ -1053,7 +1084,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'TRUE',
         PreAction: '',
         PostAction: 'handleMasterBulkRecords',
-        Reports: ''
+        Reports: '',
+        CustomUIName: ''
     }
 ];
 

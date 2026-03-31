@@ -24,111 +24,35 @@
     </q-card>
 
     <!-- Action form -->
-    <template v-else>
-      <q-card flat bordered class="page-card">
-        <q-card-section>
-          <div class="page-title">
-            <q-icon
-              :name="currentActionConfig.icon || 'play_arrow'"
-              size="24px"
-              :color="currentActionConfig.color || 'primary'"
-              class="q-mr-sm"
-            />
-            {{ currentActionConfig.label || actionName }} — {{ record.Code }}
-          </div>
-          <div class="text-grey-7 q-mt-xs">
-            {{ resolvePrimaryText(record) }}
-          </div>
-        </q-card-section>
+    <template v-else-if="sectionsReady">
+      <component
+        :is="sections.ActionHeader"
+        :action-config="currentActionConfig"
+        :action-name="actionName"
+        :record="record"
+      />
 
-        <q-separator />
+      <component
+        :is="sections.ActionForm"
+        :is-multi-outcome="isMultiOutcome"
+        :outcome-options="outcomeOptions"
+        :selected-outcome="selectedOutcome"
+        :resolved-action-fields="resolvedActionFields"
+        :action-form="actionForm"
+        @update:selected-outcome="selectedOutcome = $event"
+        @update:action-field="(header, val) => { actionForm[header] = val }"
+      />
 
-        <q-card-section class="q-gutter-y-md">
-          <!-- Multi-outcome selector -->
-          <div v-if="isMultiOutcome">
-            <div class="field-label q-mb-sm">Select Outcome</div>
-            <q-option-group
-              v-if="outcomeOptions.length <= 4"
-              :model-value="selectedOutcome"
-              :options="outcomeSelectOptions"
-              type="radio"
-              color="primary"
-              @update:model-value="selectedOutcome = $event"
-            />
-            <q-select
-              v-else
-              :model-value="selectedOutcome"
-              :options="outcomeSelectOptions"
-              label="Outcome"
-              dense
-              outlined
-              emit-value
-              map-options
-              @update:model-value="selectedOutcome = $event"
-            />
-          </div>
-
-          <!-- Dynamic fields based on column existence -->
-          <template v-for="field in resolvedActionFields" :key="field.header">
-            <q-input
-              v-if="field.type === 'textarea'"
-              :model-value="actionForm[field.header]"
-              :label="field.label + (field.required ? ' *' : '')"
-              dense
-              outlined
-              type="textarea"
-              autogrow
-              @update:model-value="actionForm[field.header] = $event"
-            />
-            <q-input
-              v-else-if="field.type === 'date'"
-              :model-value="actionForm[field.header]"
-              :label="field.label + (field.required ? ' *' : '')"
-              dense
-              outlined
-              type="date"
-              @update:model-value="actionForm[field.header] = $event"
-            />
-            <q-input
-              v-else-if="field.type === 'number'"
-              :model-value="actionForm[field.header]"
-              :label="field.label + (field.required ? ' *' : '')"
-              dense
-              outlined
-              type="number"
-              @update:model-value="actionForm[field.header] = $event"
-            />
-            <q-input
-              v-else
-              :model-value="actionForm[field.header]"
-              :label="field.label + (field.required ? ' *' : '')"
-              dense
-              outlined
-              @update:model-value="actionForm[field.header] = $event"
-            />
-          </template>
-
-          <!-- No fields message -->
-          <div v-if="!resolvedActionFields.length && selectedOutcome" class="text-grey-6 q-py-sm">
-            No additional input required. Click submit to proceed.
-          </div>
-        </q-card-section>
-      </q-card>
-
-      <!-- Actions -->
-      <div class="row q-mt-md q-gutter-sm justify-end">
-        <q-btn flat no-caps label="Cancel" icon="arrow_back" @click="navigateToView" />
-        <q-btn
-          unelevated
-          no-caps
-          :color="currentActionConfig.color || 'primary'"
-          :label="currentActionConfig.label || actionName"
-          :icon="currentActionConfig.icon || 'check'"
-          :loading="submitting"
-          :disable="isMultiOutcome && !selectedOutcome"
-          @click="handleSubmit"
-        />
-      </div>
+      <component
+        :is="sections.ActionActions"
+        :action-label="currentActionConfig.label || actionName"
+        :action-icon="currentActionConfig.icon || 'check'"
+        :action-color="currentActionConfig.color || 'primary'"
+        :submitting="submitting"
+        :submit-disabled="isMultiOutcome && !selectedOutcome"
+        @cancel="navigateToView"
+        @submit="handleSubmit"
+      />
     </template>
   </div>
 </template>
@@ -137,6 +61,10 @@
 import { ref, computed, watch, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
+import MasterActionHeader from 'src/components/Masters/MasterActionHeader.vue'
+import MasterActionForm from 'src/components/Masters/MasterActionForm.vue'
+import MasterActionActions from 'src/components/Masters/MasterActionActions.vue'
+import { useSectionResolver } from 'src/composables/useSectionResolver'
 import { useResourceConfig } from 'src/composables/useResourceConfig'
 import { useResourceData } from 'src/composables/useResourceData'
 import { useActionFields } from 'src/composables/useActionFields'
@@ -151,6 +79,18 @@ const {
 } = useResourceConfig()
 
 const { items, loading, reload } = useResourceData(resourceName)
+
+const customUIName = computed(() => config.value?.ui?.customUIName || '')
+const { sections, sectionsReady } = useSectionResolver({
+  resourceSlug,
+  customUIName,
+  sectionDefs: {
+    ActionHeader: MasterActionHeader,
+    ActionForm: MasterActionForm,
+    ActionActions: MasterActionActions
+  }
+})
+
 const actionName = computed(() => {
   const route = router.currentRoute.value
   return route.params.action || route.meta?.action || ''
@@ -170,25 +110,11 @@ const {
   column, isMultiOutcome, outcomeOptions, resolvedFields: resolvedActionFields, autoFillColumns
 } = useActionFields(resourceHeaders, currentActionConfig, () => selectedOutcome.value)
 
-const outcomeSelectOptions = computed(() => {
-  return outcomeOptions.value.map((opt) => ({
-    label: opt.replace(/([a-z])([A-Z])/g, '$1 $2'),
-    value: opt
-  }))
-})
-
 const record = computed(() => {
   if (!code.value || !items.value.length) return null
   return items.value.find((r) => r.Code === code.value) || null
 })
 
-function resolvePrimaryText(row) {
-  if (!row) return '-'
-  if (row.Name) return row.Name
-  return '-'
-}
-
-// Initialize selectedOutcome for fixed-value actions
 watch(currentActionConfig, (cfg) => {
   if (cfg?.columnValue) {
     selectedOutcome.value = cfg.columnValue
@@ -197,14 +123,12 @@ watch(currentActionConfig, (cfg) => {
   }
 }, { immediate: true })
 
-// Reset form when action fields change
 watch(resolvedActionFields, (fields) => {
   Object.keys(actionForm).forEach((k) => delete actionForm[k])
   fields.forEach((f) => { actionForm[f.header] = '' })
 }, { immediate: true })
 
 async function handleSubmit() {
-  // Validate required fields
   for (const field of resolvedActionFields.value) {
     if (field.required && !(actionForm[field.header] || '').toString().trim()) {
       $q.notify({ type: 'negative', message: `${field.label} is required`, timeout: 2200 })
@@ -259,21 +183,6 @@ watch(() => resourceName.value, (n) => { if (n) reload() }, { immediate: true })
   background: rgba(255, 255, 255, 0.95);
   animation: rise-in 280ms ease-out both;
 }
-
-.page-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--master-ink);
-  display: flex;
-  align-items: center;
-}
-
-.field-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: #475569;
-}
-
 @keyframes rise-in {
   0% { transform: translateY(10px); opacity: 0; }
   100% { transform: translateY(0); opacity: 1; }

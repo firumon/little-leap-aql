@@ -41,6 +41,7 @@ This document explains each `APP > Resources` column, what to fill, and common v
 | `PreAction` | Optional | Text | Function name executed **before** the main action handler when the resource is invoked | GAS function name | `validateBulkPayload` |
 | `PostAction` | Optional | Text | Function name executed **after** routing (or as the primary handler for functional resources) | GAS function name | `handleMasterBulkRecords` |
 | `Reports` | Optional | JSON Text | Downloadable document configs (JSON array) | JSON array of report objects | `[{"name":"pkg","templateSheet":"Package"}]` |
+| `CustomUIName` | Optional | Text | Tenant/client UI code that drives 3-tier component resolution. When set, the frontend looks for custom pages in `pages/Masters/_custom/{CustomUIName}/` and custom sections in `components/Masters/_custom/{CustomUIName}/` before falling back to entity-custom or default components. Empty = no tenant-custom tier (skip straight to entity-custom → default). The same value can be shared across multiple resources for one tenant. | Any short code string | `A2930` |
 
 ## `RecordAccessPolicy` Meaning
 - `ALL`: Any user with role action permission can access records.

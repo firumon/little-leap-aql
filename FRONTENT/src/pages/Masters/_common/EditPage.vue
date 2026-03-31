@@ -15,74 +15,34 @@
     </q-card>
 
     <!-- Edit form -->
-    <template v-else>
-      <q-card flat bordered class="page-card">
-        <q-card-section>
-          <div class="page-title">
-            <q-icon name="edit" size="24px" color="primary" class="q-mr-sm" />
-            Edit {{ config?.ui?.pageTitle || config?.name }} — {{ code }}
-          </div>
-        </q-card-section>
+    <template v-else-if="sectionsReady">
+      <component :is="sections.EditHeader" :config="config" :code="code" />
 
-        <q-separator />
-
-        <q-card-section class="q-gutter-y-sm">
-          <!-- Code (read-only) -->
-          <q-input :model-value="code" label="Code" dense outlined disable />
-
-          <!-- Parent fields -->
-          <template v-for="field in resolvedFields" :key="field.header">
-            <q-select
-              v-if="field.type === 'status'"
-              :model-value="parentForm[field.header]"
-              :options="statusOptions"
-              :label="field.label"
-              dense
-              outlined
-              emit-value
-              map-options
-              @update:model-value="parentForm[field.header] = $event"
-            />
-            <q-input
-              v-else
-              :model-value="parentForm[field.header]"
-              :label="field.label + (field.required ? ' *' : '')"
-              :hint="field.hint"
-              dense
-              outlined
-              @update:model-value="parentForm[field.header] = $event"
-            />
-          </template>
-        </q-card-section>
-      </q-card>
-
-      <!-- Child resource tables -->
-      <ChildRecordsTable
-        v-for="group in childGroups"
-        :key="group.resource.name"
-        :title="group.resource.ui?.pageTitle || group.resource.name"
-        :records="group.records"
-        :fields="group.resolvedFields"
+      <component
+        :is="sections.EditForm"
+        :code="code"
+        :resolved-fields="resolvedFields"
+        :parent-form="parentForm"
         :status-options="statusOptions"
-        class="q-mt-sm"
-        @add="addChildRecord(group.resource.name)"
-        @remove="(idx) => removeChildRecord(group.resource.name, idx)"
-        @update-field="(idx, header, val) => updateChildField(group.resource.name, idx, header, val)"
+        @update:field="(header, val) => { parentForm[header] = val }"
       />
 
-      <!-- Actions -->
-      <div class="row q-mt-md q-gutter-sm justify-end">
-        <q-btn flat no-caps label="Cancel" icon="arrow_back" @click="navigateBack" />
-        <q-btn
-          unelevated
-          no-caps
-          color="primary"
-          label="Update"
-          icon="check"
-          :loading="saving"
-          @click="handleSave"
-        />
-      </div>
+      <component
+        :is="sections.EditChildren"
+        :child-groups="childGroups"
+        :status-options="statusOptions"
+        @add-child="addChildRecord"
+        @remove-child="removeChildRecord"
+        @update-child-field="updateChildField"
+      />
+
+      <component
+        :is="sections.EditActions"
+        submit-label="Update"
+        :saving="saving"
+        @cancel="navigateBack"
+        @submit="handleSave"
+      />
     </template>
   </div>
 </template>
@@ -90,7 +50,11 @@
 <script setup>
 import { computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import ChildRecordsTable from 'src/components/Masters/ChildRecordsTable.vue'
+import MasterEditHeader from 'src/components/Masters/MasterEditHeader.vue'
+import MasterEditForm from 'src/components/Masters/MasterEditForm.vue'
+import MasterEditChildren from 'src/components/Masters/MasterEditChildren.vue'
+import MasterEditActions from 'src/components/Masters/MasterEditActions.vue'
+import { useSectionResolver } from 'src/composables/useSectionResolver'
 import { useResourceConfig } from 'src/composables/useResourceConfig'
 import { useResourceData } from 'src/composables/useResourceData'
 import { useResourceRelations } from 'src/composables/useResourceRelations'
@@ -101,6 +65,19 @@ const router = useRouter()
 const { scope, resourceSlug, code, config, resourceName, resolvedFields } = useResourceConfig()
 const { items, loading, reload } = useResourceData(resourceName)
 const { childResources } = useResourceRelations(resourceName)
+
+const customUIName = computed(() => config.value?.ui?.customUIName || '')
+const { sections, sectionsReady } = useSectionResolver({
+  resourceSlug,
+  customUIName,
+  sectionDefs: {
+    EditHeader: MasterEditHeader,
+    EditForm: MasterEditForm,
+    EditChildren: MasterEditChildren,
+    EditActions: MasterEditActions
+  }
+})
+
 const {
   parentForm, childGroups, saving, statusOptions,
   initializeForEdit, addChildRecord, removeChildRecord,
@@ -126,7 +103,6 @@ async function loadAndInitialize() {
   await reload()
   if (!record.value) return
 
-  // Load child records for editing
   const childRecordsByResource = {}
   for (const child of childResources.value) {
     try {
@@ -168,15 +144,6 @@ function navigateToList() {
   background: rgba(255, 255, 255, 0.95);
   animation: rise-in 280ms ease-out both;
 }
-
-.page-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--master-ink);
-  display: flex;
-  align-items: center;
-}
-
 @keyframes rise-in {
   0% { transform: translateY(10px); opacity: 0; }
   100% { transform: translateY(0); opacity: 1; }

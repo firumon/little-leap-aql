@@ -324,9 +324,9 @@ function setupAppSheets() {
 
   });
 
-  // Pre-populate Config sheet with expected keys if empty
+  // Ensure Config sheet includes expected keys (append any missing keys).
   var configSheet = ss.getSheetByName(CONFIG.SHEETS.CONFIG);
-  if (configSheet && configSheet.getLastRow() <= 1) {
+  if (configSheet) {
     var defaultKeys = [
       ['CompanyName', ''],
       ['CompanyLogo', ''],
@@ -337,9 +337,36 @@ function setupAppSheets() {
       ['MasterFileID', ''],
       ['OperationFileID', ''],
       ['ReportFileID', ''],
-      ['AccountsFileID', '']
+      ['AccountsFileID', ''],
+      ['MasterSyncTTL', '900'],
+      ['AccountsSyncTTL', '60'],
+      ['OperationsSyncTTL', '300']
     ];
-    configSheet.getRange(2, 1, defaultKeys.length, 2).setValues(defaultKeys);
+
+    var lastRow = configSheet.getLastRow();
+    if (lastRow <= 1) {
+      configSheet.getRange(2, 1, defaultKeys.length, 2).setValues(defaultKeys);
+    } else {
+      var existingKeys = {};
+      var keyValues = configSheet.getRange(2, 1, lastRow - 1, 1).getValues();
+      for (var k = 0; k < keyValues.length; k++) {
+        var existingKey = (keyValues[k][0] || '').toString().trim().toLowerCase();
+        if (existingKey) existingKeys[existingKey] = true;
+      }
+
+      var missingRows = [];
+      for (var i = 0; i < defaultKeys.length; i++) {
+        var expectedKey = (defaultKeys[i][0] || '').toString().trim().toLowerCase();
+        if (!expectedKey || existingKeys[expectedKey]) continue;
+        missingRows.push(defaultKeys[i]);
+      }
+
+      if (missingRows.length) {
+        configSheet
+          .getRange(configSheet.getLastRow() + 1, 1, missingRows.length, 2)
+          .setValues(missingRows);
+      }
+    }
   }
 
   var defaultSheet = ss.getSheetByName('Sheet1');

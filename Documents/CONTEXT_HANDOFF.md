@@ -240,6 +240,14 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - Supported operators: `eq`, `neq`, `in`, `not_in`, `gt`, `gte`, `lt`, `lte`, `contains`.
   - Plan: `PLANS/2026-04-01-filtered-list-views.md`.
 
+- **TTL-based Master Sync Queue (2026-04-01)**:
+  - `FRONTENT/src/services/masterRecords.js` now uses resource TTL-aware scheduling instead of immediate background fetch on every cache-hit page visit.
+  - Scope TTLs are loaded from `APP.Config` keys: `MasterSyncTTL`, `AccountsSyncTTL`, `OperationsSyncTTL` (fallback defaults: `900/60/300` seconds).
+  - Login/profile auth payload now includes full `appConfig` (all `APP.Config` key-value pairs) for frontend runtime use.
+  - Cache-hit navigations enqueue sync by `nextEligibleSyncAt`; cold resources (no Pinia/IDB hydration yet) trigger immediate queue flush with a batched delta request.
+  - Queue flush uses `action=get` + `scope=master` + `resources[]` + `lastUpdatedAtByResource` to reduce request count.
+  - Legacy interval-based per-resource sync loop in `FRONTENT/src/App.vue` was removed to prevent duplicate background network traffic.
+
 ### Key behavior now
 - Code is generated in Apps Script (not by sheet formula).
 - Code generation uses `Resources.CodePrefix` + `Resources.CodeSequenceLength`.

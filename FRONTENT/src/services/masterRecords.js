@@ -8,6 +8,17 @@ import {
 } from 'src/utils/db'
 
 const DB_TIMEOUT_MS = 1200
+const DEFAULT_SCOPE_SYNC_TTL_SEC = {
+  master: 900,
+  accounts: 60,
+  operations: 300
+}
+const DEFAULT_RESOURCE_SYNC_TTL_SEC = 300
+const MIN_QUEUE_WAIT_MS = 250
+
+const masterSyncQueue = new Map()
+let queueTimerId = null
+let queueFlushPromise = null
 
 async function withTimeout(promise, fallbackValue) {
   try {
@@ -51,6 +62,121 @@ function getAuthorizedResourceFromStore(resourceName) {
 
   if (!Array.isArray(resources)) return null
   return resources.find((entry) => entry?.name === resourceName) || null
+}
+
+function getAuthorizedMasterResources() {
+  const auth = useAuthStore()
+  const resources = Array.isArray(auth.authorizedResources)
+    ? auth.authorizedResources
+    : auth.authorizedResources?.value
+
+  if (!Array.isArray(resources)) return []
+  return resources.filter((entry) => {
+    const scope = (entry?.scope || '').toString().trim().toLowerCase()
+    return scope === 'master' && entry?.permissions?.canRead !== false && entry?.name && entry?.functional !== true
+  })
+}
+
+function getResourceSyncTtlSec(resourceName) {
+  const auth = useAuthStore()
+  const appConfig = auth?.appConfigMap || auth?.appConfig || {}
+  const scopeSyncConfig = auth?.scopeSyncConfig || {}
+  const resource = getAuthorizedResourceFromStore(resourceName)
+  const scope = (resource?.scope || '').toString().trim().toLowerCase()
+  const scopePascal = scope ? `${scope.charAt(0).toUpperCase()}${scope.slice(1)}` : ''
+  const scopeConfigKeyLower = `${scope}syncttl`
+  const scopeConfigKeyCamel = `${scope}SyncTTL`
+  const scopeConfigKeyPascal = `${scopePascal}SyncTTL`
+  const scopeTtlFromConfig = Number(
+    appConfig?.[scopeConfigKeyLower]
+    ?? appConfig?.[scopeConfigKeyCamel]
+    ?? appConfig?.[scopeConfigKeyPascal]
+    ?? scopeSyncConfig?.[scopeConfigKeyCamel]
+    ?? scopeSyncConfig?.[scopeConfigKeyPascal]
+  )
+  if (Number.isFinite(scopeTtlFromConfig) && scopeTtlFromConfig > 0) {
+    return Math.floor(scopeTtlFromConfig)
+  }
+
+  const scopeTtl = DEFAULT_SCOPE_SYNC_TTL_SEC[scope]
+  if (Number.isFinite(scopeTtl) && scopeTtl > 0) {
+    return scopeTtl
+  }
+  return DEFAULT_RESOURCE_SYNC_TTL_SEC
+}
+
+function clearQueueTimer() {
+  if (queueTimerId) {
+    clearTimeout(queueTimerId)
+    queueTimerId = null
+  }
+}
+
+async function flushMasterSyncQueue(forceAll = false, syncOptions = {}) {
+  if (queueFlushPromise) {
+    return queueFlushPromise
+  }
+
+  queueFlushPromise = (async () => {
+    const now = Date.now()
+    const dueResourceNames = []
+
+    for (const [resourceName, queued] of masterSyncQueue.entries()) {
+      if (forceAll || (queued?.dueAt || 0) <= now) {
+        dueResourceNames.push(resourceName)
+      }
+    }
+
+    if (!dueResourceNames.length) {
+      scheduleMasterSyncQueueFlush()
+      return { success: true, data: {}, meta: { resources: [] } }
+    }
+
+    dueResourceNames.forEach((resourceName) => masterSyncQueue.delete(resourceName))
+    const response = await syncMasterResourcesBatch(dueResourceNames, {
+      showError: syncOptions.showError === true,
+      showLoading: syncOptions.showLoading === true
+    })
+    scheduleMasterSyncQueueFlush()
+    return response
+  })().finally(() => {
+    queueFlushPromise = null
+  })
+
+  return queueFlushPromise
+}
+
+function scheduleMasterSyncQueueFlush() {
+  clearQueueTimer()
+  if (!masterSyncQueue.size) return
+
+  let nextDueAt = Number.POSITIVE_INFINITY
+  for (const queued of masterSyncQueue.values()) {
+    const dueAt = Number(queued?.dueAt || 0)
+    if (dueAt > 0 && dueAt < nextDueAt) {
+      nextDueAt = dueAt
+    }
+  }
+
+  const waitMs = Number.isFinite(nextDueAt)
+    ? Math.max(nextDueAt - Date.now(), MIN_QUEUE_WAIT_MS)
+    : MIN_QUEUE_WAIT_MS
+  queueTimerId = setTimeout(() => {
+    flushMasterSyncQueue(false, { showError: false, showLoading: false }).catch(() => {})
+  }, waitMs)
+}
+
+function queueMasterResourceSync(resourceName, dueAt, reason = '') {
+  if (!resourceName) return
+  const normalizedDueAt = Number.isFinite(Number(dueAt)) ? Number(dueAt) : Date.now()
+  const existing = masterSyncQueue.get(resourceName)
+  if (!existing || normalizedDueAt < existing.dueAt) {
+    masterSyncQueue.set(resourceName, {
+      dueAt: normalizedDueAt,
+      reason
+    })
+  }
+  scheduleMasterSyncQueueFlush()
 }
 
 async function ensureHeaders(resourceName) {
@@ -123,6 +249,91 @@ function resolveSyncRows(responseData, headers) {
   return []
 }
 
+async function syncMasterResourcesBatch(resourceNames = [], options = {}) {
+  const uniqueNames = Array.from(new Set((Array.isArray(resourceNames) ? resourceNames : []).filter(Boolean)))
+  if (!uniqueNames.length) {
+    return { success: true, data: {}, meta: { resources: [] } }
+  }
+
+  const showLoading = options.showLoading === true
+  const showError = options.showError === true
+
+  const headersByResource = {}
+  const cursorByResource = {}
+
+  for (const resourceName of uniqueNames) {
+    const headers = await ensureHeaders(resourceName)
+    if (headers.length) {
+      headersByResource[resourceName] = headers
+    }
+
+    const meta = await withTimeout(getResourceMeta(resourceName), null)
+    const rawCursor = meta?.lastSyncAt || getLocalSyncCursor(resourceName)
+    const cursor = normalizeCursorValue(rawCursor)
+    if (cursor) {
+      cursorByResource[resourceName] = cursor
+    }
+  }
+
+  const payload = {
+    scope: 'master',
+    resources: uniqueNames,
+    includeInactive: true,
+    ...(Object.keys(cursorByResource).length
+      ? { lastUpdatedAtByResource: cursorByResource }
+      : {})
+  }
+
+  const response = await callGasApi('get', payload, {
+    showLoading,
+    showError
+  })
+
+  if (!response.success) {
+    return {
+      success: false,
+      message: response.message || 'Failed to sync master resources',
+      data: response?.data || {},
+      meta: response?.meta || {}
+    }
+  }
+
+  const responseData = (response && typeof response.data === 'object' && response.data !== null)
+    ? response.data
+    : {}
+
+  for (const resourceName of uniqueNames) {
+    const resourceResponse = responseData[resourceName]
+    if (!resourceResponse || resourceResponse.success === false) {
+      continue
+    }
+
+    const headers = headersByResource[resourceName] || await ensureHeaders(resourceName)
+    if (!headers.length) {
+      continue
+    }
+
+    const deltaRows = resolveSyncRows(resourceResponse, headers)
+    if (deltaRows.length) {
+      await withTimeout(upsertResourceRows(resourceName, headers, deltaRows), 0)
+    }
+
+    const nextSyncCursor = resourceResponse?.meta?.lastSyncAt || Date.now()
+    await withTimeout(setResourceMeta(resourceName, {
+      headers,
+      lastSyncAt: nextSyncCursor,
+      hasHydratedOnce: true
+    }), null)
+    setLocalSyncCursor(resourceName, nextSyncCursor)
+  }
+
+  return {
+    success: true,
+    data: responseData,
+    meta: response?.meta || {}
+  }
+}
+
 export function mapRowsToObjects(rows = [], headers = []) {
   if (!Array.isArray(rows) || rows.length === 0) {
     return []
@@ -174,68 +385,55 @@ export async function fetchMasterRecords(resourceName, options = {}) {
       }
     }
 
-    const payload = {
-      scope: 'master',
-      resource: resourceName,
-      includeInactive: true,
-      ...(syncCursor ? { lastUpdatedAt: syncCursor } : {})
-    }
-
-    const syncResponse = await callGasApi('get', payload, {
-      showError: !syncWhenCacheExists,
-      showLoading: forceSync
-    })
     let stale = false
     let staleMessage = ''
-    let syncRows = []
+    if (forceSync || syncWhenCacheExists || !cachedRows.length) {
+      const hasHydratedOnce = meta?.hasHydratedOnce === true || !!syncCursor
+      const ttlMs = getResourceSyncTtlSec(resourceName) * 1000
+      const nextEligibleSyncAt = syncCursor ? syncCursor + ttlMs : 0
+      const now = Date.now()
+      const shouldImmediateSync = forceSync
+        || !cachedRows.length
+        || !hasHydratedOnce
+        || !syncCursor
+        || now >= nextEligibleSyncAt
 
-    if (syncResponse.success) {
-      if (Array.isArray(syncResponse.rows)) {
-        syncRows = syncResponse.rows
-      } else if (Array.isArray(syncResponse.records)) {
-        syncRows = mapObjectsToRows(syncResponse.records, headers)
-      } else if (Array.isArray(syncResponse.data)) {
-        syncRows = Array.isArray(syncResponse.data[0])
-          ? syncResponse.data
-          : mapObjectsToRows(syncResponse.data, headers)
-      }
+      queueMasterResourceSync(
+        resourceName,
+        shouldImmediateSync ? now : nextEligibleSyncAt,
+        shouldImmediateSync ? (forceSync ? 'force' : 'due-or-cold') : 'ttl-defer'
+      )
 
-      const deltaRows = Array.isArray(syncRows) ? syncRows : []
-      if (deltaRows.length) {
-        await withTimeout(upsertResourceRows(resourceName, headers, deltaRows), 0)
+      if (shouldImmediateSync) {
+        const batchSyncResponse = await flushMasterSyncQueue(true, {
+          showError: !syncWhenCacheExists || !cachedRows.length,
+          showLoading: forceSync || (!syncWhenCacheExists && !cachedRows.length)
+        })
+        if (!batchSyncResponse.success) {
+          stale = true
+          staleMessage = batchSyncResponse.message || `Failed to sync ${resourceName}`
+        }
       }
-      const nextSyncCursor = syncResponse?.meta?.lastSyncAt || Date.now()
-      await withTimeout(setResourceMeta(resourceName, {
-        headers,
-        lastSyncAt: nextSyncCursor
-      }), null)
-      setLocalSyncCursor(resourceName, nextSyncCursor)
-    } else {
-      stale = true
-      staleMessage = syncResponse.message || `Failed to sync ${resourceName}`
     }
 
     const freshRows = await withTimeout(getResourceRows(resourceName, {
       includeInactive,
       statusIndex
     }), [])
-
-    const syncRowsFiltered = includeInactive || statusIndex === -1
-      ? syncRows
-      : syncRows.filter((row) => (row?.[statusIndex] || '').toString().trim() === 'Active')
-
-    const effectiveRows = freshRows.length
-      ? freshRows
-      : (syncRowsFiltered.length ? syncRowsFiltered : cachedRows)
+    const effectiveRows = freshRows.length ? freshRows : cachedRows
 
     return {
-      success: syncResponse.success || effectiveRows.length > 0,
+      success: !stale || effectiveRows.length > 0,
       stale,
       message: staleMessage,
       headers,
       rows: effectiveRows,
       records: mapRowsToObjects(effectiveRows, headers),
-      meta: syncResponse.meta || { resource: resourceName }
+      meta: {
+        resource: resourceName,
+        source: effectiveRows.length ? (freshRows.length ? 'cache+sync' : 'cache') : 'sync',
+        lastSyncAt: normalizeCursorValue((await withTimeout(getResourceMeta(resourceName), null))?.lastSyncAt) || syncCursor || null
+      }
     }
   } catch (error) {
     return {
@@ -250,103 +448,23 @@ export async function fetchMasterRecords(resourceName, options = {}) {
 
 export async function syncAllMasterResources() {
   try {
-    const auth = useAuthStore()
-    const resources = Array.isArray(auth.authorizedResources)
-      ? auth.authorizedResources
-      : auth.authorizedResources?.value
-    const masterResources = Array.isArray(resources)
-      ? resources.filter((entry) => {
-        const scope = (entry?.scope || '').toString().trim().toLowerCase()
-        return scope === 'master' && entry?.permissions?.canRead !== false && entry?.name && entry?.functional !== true
-      })
-      : []
+    const masterResources = getAuthorizedMasterResources()
 
     if (!masterResources.length) {
       return { success: true, data: {}, meta: { resources: [], lastSyncAt: Date.now() } }
     }
 
-    const headersByResource = {}
-    const cursorByResource = {}
-    const resourceNames = []
-
-    for (const resource of masterResources) {
-      const resourceName = (resource?.name || '').toString().trim()
-      if (!resourceName) continue
-      resourceNames.push(resourceName)
-
-      const headers = await ensureHeaders(resourceName)
-      if (headers.length) {
-        headersByResource[resourceName] = headers
-      }
-
-      const meta = await withTimeout(getResourceMeta(resourceName), null)
-      const rawCursor = meta?.lastSyncAt || getLocalSyncCursor(resourceName)
-      const cursor = normalizeCursorValue(rawCursor)
-      if (cursor) {
-        cursorByResource[resourceName] = cursor
-      }
-    }
-
+    const resourceNames = masterResources
+      .map((resource) => (resource?.name || '').toString().trim())
+      .filter(Boolean)
     if (!resourceNames.length) {
       return { success: true, data: {}, meta: { resources: [], lastSyncAt: Date.now() } }
     }
 
-    const payload = {
-      scope: 'master',
-      resources: resourceNames,
-      includeInactive: true,
-      ...(Object.keys(cursorByResource).length
-        ? { lastUpdatedAtByResource: cursorByResource }
-        : {})
-    }
-
-    const response = await callGasApi('get', payload, {
+    return syncMasterResourcesBatch(resourceNames, {
       showLoading: false,
       showError: false
     })
-
-    if (!response.success) {
-      return {
-        success: false,
-        message: response.message || 'Failed to sync master resources',
-        data: response?.data || {},
-        meta: response?.meta || {}
-      }
-    }
-
-    const responseData = (response && typeof response.data === 'object' && response.data !== null)
-      ? response.data
-      : {}
-
-    for (const resourceName of resourceNames) {
-      const resourceResponse = responseData[resourceName]
-      if (!resourceResponse || resourceResponse.success === false) {
-        continue
-      }
-
-      const headers = headersByResource[resourceName] || await ensureHeaders(resourceName)
-      if (!headers.length) {
-        continue
-      }
-
-      const deltaRows = resolveSyncRows(resourceResponse, headers)
-      if (deltaRows.length) {
-        await withTimeout(upsertResourceRows(resourceName, headers, deltaRows), 0)
-      }
-
-      const nextSyncCursor = resourceResponse?.meta?.lastSyncAt || Date.now()
-      await withTimeout(setResourceMeta(resourceName, {
-        headers,
-        lastSyncAt: nextSyncCursor
-      }), null)
-      setLocalSyncCursor(resourceName, nextSyncCursor)
-    }
-
-    return {
-      success: true,
-      data: responseData,
-      meta: response?.meta || {}
-    }
   } catch (error) {
     return {
       success: false,

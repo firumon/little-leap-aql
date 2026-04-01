@@ -48,10 +48,13 @@ This document outlines the step-by-step process for deploying a brand new instan
    - `CompanyLogo`: URL to the client's logo image
    - `ContactEmail`: Client's primary contact email
    - `ContactPhone`: Client's primary contact phone
-   - `MastersFileID`: Paste the MASTERS spreadsheet File ID from Step 1
-   - `OperationsFileID`: Paste the OPERATIONS spreadsheet File ID from Step 1
-   - `ReportsFileID`: Paste the REPORTS spreadsheet File ID from Step 1
+   - `MasterFileID`: Paste the MASTERS spreadsheet File ID from Step 1
+   - `OperationFileID`: Paste the OPERATIONS spreadsheet File ID from Step 1
+   - `ReportFileID`: Paste the REPORTS spreadsheet File ID from Step 1
    - `AccountsFileID`: (Optional) If using a separate ACCOUNTS file, paste its File ID
+   - `MasterSyncTTL`: Master scope sync TTL in seconds (recommended: `900`)
+   - `AccountsSyncTTL`: Accounts scope sync TTL in seconds (recommended: `60`)
+   - `OperationsSyncTTL`: Operations scope sync TTL in seconds (recommended: `300`)
 
 ## Step 4b: Validate Config Resolution
 After filling Config values, verify that file IDs resolve correctly:

@@ -12,6 +12,7 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref(JSON.parse(localStorage.getItem('user')) || null)
   const token = ref(localStorage.getItem('token') || null)
   const resources = ref(JSON.parse(localStorage.getItem('resources')) || [])
+  const appConfig = ref(JSON.parse(localStorage.getItem('appConfig')) || {})
   const loading = ref(false)
   const isGlobalSyncing = ref(false)
 
@@ -27,6 +28,19 @@ export const useAuthStore = defineStore('auth', () => {
   const userDesignation = computed(() => user.value?.designation?.name || '')
   const userAccessRegion = computed(() => user.value?.accessRegion || { code: '', isUniverse: true, accessibleCodes: [], accessibleRegions: [] })
   const authorizedResources = computed(() => resources.value)
+  const appConfigMap = computed(() => appConfig.value || {})
+  const scopeSyncConfig = computed(() => {
+    const config = appConfig.value || {}
+    const pickNumber = (value, fallback) => {
+      const parsed = Number(value)
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
+    }
+    return {
+      masterSyncTTL: pickNumber(config.MasterSyncTTL ?? config.masterSyncTTL ?? config.mastersyncttl, 900),
+      accountsSyncTTL: pickNumber(config.AccountsSyncTTL ?? config.accountsSyncTTL ?? config.accountssyncttl, 60),
+      operationsSyncTTL: pickNumber(config.OperationsSyncTTL ?? config.operationsSyncTTL ?? config.operationssyncttl, 300)
+    }
+  })
 
   function persistUser() {
     localStorage.setItem('user', JSON.stringify(user.value))
@@ -34,6 +48,10 @@ export const useAuthStore = defineStore('auth', () => {
 
   function persistResources() {
     localStorage.setItem('resources', JSON.stringify(resources.value))
+  }
+
+  function persistAppConfig() {
+    localStorage.setItem('appConfig', JSON.stringify(appConfig.value || {}))
   }
 
   // Actions
@@ -71,11 +89,13 @@ export const useAuthStore = defineStore('auth', () => {
         token.value = data.token
         user.value = data.user
         resources.value = Array.isArray(data.resources) ? data.resources : []
+        appConfig.value = data?.appConfig && typeof data.appConfig === 'object' ? data.appConfig : {}
 
         // Persist to local storage
         localStorage.setItem('token', data.token)
         persistUser()
         persistResources()
+        persistAppConfig()
 
         // Sync token to HW if possible
         notifyServiceWorker(data.token)
@@ -180,6 +200,7 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
     token.value = null
     resources.value = []
+    appConfig.value = {}
     isGlobalSyncing.value = false
 
     // 2. Perform navigation as soon as possible
@@ -204,6 +225,7 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     token,
     resources,
+    appConfig,
     loading,
     isGlobalSyncing,
 
@@ -214,6 +236,8 @@ export const useAuthStore = defineStore('auth', () => {
     userDesignation,
     userAccessRegion,
     authorizedResources,
+    appConfigMap,
+    scopeSyncConfig,
 
     // Actions
     login,

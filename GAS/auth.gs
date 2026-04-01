@@ -117,7 +117,8 @@ function handleLogin(email, password) {
     success: true,
     token,
     user: buildAuthUserPayload(row, roleIds),
-    resources: getLoginAuthorizedResources(roleIds)
+    resources: getLoginAuthorizedResources(roleIds),
+    appConfig: getLoginAppConfig()
   };
 }
 
@@ -154,8 +155,27 @@ function validateToken(token) {
 function handleGetProfile(auth) {
   return {
     success: true,
-    user: buildAuthUserPayload(auth.user, auth.roleIds)
+    user: buildAuthUserPayload(auth.user, auth.roleIds),
+    appConfig: getLoginAppConfig()
   };
+}
+
+function getLoginAppConfig() {
+  try {
+    var ss = getAppSpreadsheet();
+    var sheet = ss.getSheetByName(CONFIG.SHEETS.CONFIG);
+    if (!sheet) return {};
+    var values = sheet.getDataRange().getValues();
+    var map = {};
+    for (var i = 1; i < values.length; i++) {
+      var key = (values[i][0] || '').toString().trim();
+      if (!key) continue;
+      map[key] = values[i][1];
+    }
+    return map;
+  } catch (err) {
+    return {};
+  }
 }
 
 function handleGetAuthorizedResources(auth, payload) {

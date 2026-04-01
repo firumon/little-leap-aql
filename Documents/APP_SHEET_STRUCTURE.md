@@ -146,6 +146,9 @@ Expected Keys:
 - `OperationFileID` — Google Sheet File ID for the OPERATIONS spreadsheet
 - `ReportFileID` — Google Sheet File ID for the REPORTS spreadsheet
 - `AccountsFileID` — Google Sheet File ID for the ACCOUNTS spreadsheet
+- `MasterSyncTTL` — Scope-level master sync TTL in seconds (used by frontend cache sync queue)
+- `AccountsSyncTTL` — Scope-level accounts sync TTL in seconds
+- `OperationsSyncTTL` — Scope-level operations sync TTL in seconds
 
 Notes:
 - Config is the Source of Truth for deployment-level settings (file IDs, company branding).
@@ -154,4 +157,5 @@ Notes:
 - APP spreadsheet fallback in web app context uses `ScriptProperties.APP_FILE_ID` via `getAppSpreadsheet()`. Use `AQL > Setup & Refactor > Store APP File ID in Properties` if needed.
 - Created automatically by `setupAppSheets()` with pre-populated key rows.
 - `FileID` in `Resources` is optional — blank values trigger config-driven resolution via the fallback chain.
+
 

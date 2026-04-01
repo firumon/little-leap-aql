@@ -72,6 +72,12 @@ Plans must record role + concrete agent identity for traceability:
 - `Executed By: Build Agent (AgentName | pending)`
 Build Agent must replace `| pending` when execution is completed.
 
+## Context Efficiency Rule
+All roles should minimize context bloat:
+1. Avoid full-file/full-diff/raw-log dumps unless explicitly required.
+2. Prefer scoped reads and concise summaries.
+3. After startup context is loaded, read only task-relevant docs/files unless requirements changed.
+
 ## Rules for User
 1. Use **Guide** for discussions.
 2. Use **Brain** to prepare for implementation.

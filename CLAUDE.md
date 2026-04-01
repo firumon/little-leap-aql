@@ -11,6 +11,11 @@ In every new context window, before doing any work:
 5. Check `PLANS/` for active or pending implementation plans.
 6. Identify your role (default: **Guide Agent**).
 
+## Context Budget Guardrails (Mandatory)
+- Avoid full-file dumps, full `git diff`, or long raw logs unless explicitly needed.
+- Prefer targeted file/section reads and concise summaries over large pasted output.
+- After startup reads are done, do not repeatedly re-read broad docs every turn; read only what is relevant to the active task or changed areas.
+
 ## Multi-Agent Collaboration Model
 This project uses four AI roles:
 - **Guide Agent** (Default): Discussion, requirements clarification, feedback.

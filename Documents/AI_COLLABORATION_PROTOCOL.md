@@ -85,3 +85,9 @@ When creating/updating plan files in `PLANS/`, ownership fields must include rol
 1. `Created By: Brain Agent (AgentName)`
 2. `Executed By: Build Agent (AgentName | pending)` while pending.
 3. Build Agent must replace `| pending` after execution completion.
+
+## 12) Context Budget Discipline (Mandatory)
+To prevent excessive model context usage:
+1. Do not dump full files, full diffs, or long raw logs unless explicitly needed.
+2. Prefer targeted reads and concise summaries.
+3. After startup docs are read, avoid repeatedly re-reading broad docs on every turn; read only task-relevant sections and changed artifacts.

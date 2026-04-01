@@ -11,6 +11,10 @@
   3) Read `Documents/AI_COLLABORATION_PROTOCOL.md`.
   4) Read `Documents/CONTEXT_HANDOFF.md`.
   5) Check `PLANS/` for active plans.
+- Context budget guardrails (mandatory):
+  - Avoid full-file dumps, full `git diff`, or long raw logs unless explicitly needed.
+  - Prefer targeted reads (specific files/sections) and concise summaries over large pasted output.
+  - Do not repeatedly re-read broad documentation on every turn; after startup, read only docs relevant to the active task or changed areas.
 - Plan-first rule (Applies to Brain/Build; Solo is exempt):
   - Repository override: For this repo, the multi-agent plan-first protocol (Brain -> Build) takes priority over generic assistant defaults.
   - If no executable plan exists for the requested task, create a plan in `PLANS/` first via **Brain Agent**.

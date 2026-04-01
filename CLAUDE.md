@@ -74,6 +74,11 @@ Manual user actions are limited to:
 - Use exact role names: `Guide Agent`, `Brain Agent`, `Build Agent`, `Solo Agent`.
 - Plan ownership: `Created By: Brain Agent (AgentName)`, `Executed By: Build Agent (AgentName | pending)`.
 
+## Menu Admin Guide Maintenance Rule
+- `Documents/AQL_MENU_ADMIN_GUIDE.md` is the canonical admin-facing guide for all `AQL 🚀` menu actions.
+- If any menu action is added, removed, renamed, or behavior-changed, update `Documents/AQL_MENU_ADMIN_GUIDE.md` in the same task.
+- Keep `Documents/README.md` index entry aligned if the guide location/name changes.
+
 ## Key Documents
 | Document | Purpose |
 |---|---|
@@ -83,6 +88,7 @@ Manual user actions are limited to:
 | `Documents/CONTEXT_HANDOFF.md` | Current state + resume context |
 | `Documents/RESOURCE_REGISTRY_ARCHITECTURE.md` | APP.Resources architecture |
 | `Documents/RESOURCE_COLUMNS_GUIDE.md` | Column conventions for resources |
+| `Documents/AQL_MENU_ADMIN_GUIDE.md` | Admin-facing how-to for all AQL menu actions |
 | `Documents/NEW_CLIENT_SETUP_GUIDE.md` | Client onboarding steps |
 | `Documents/MODULE_WORKFLOWS.md` | End-to-end workflow docs per feature (Reports, etc.) |
 | `PLANS/_TEMPLATE.md` | Template for new implementation plans |

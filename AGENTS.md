@@ -34,6 +34,10 @@
 - Module workflow maintenance rule:
   - Before working on a documented module (Reports, etc.), read the relevant section in `Documents/MODULE_WORKFLOWS.md`.
   - If any documented module workflow is changed during implementation, update the relevant section in `Documents/MODULE_WORKFLOWS.md` before closing the task.
+- AQL menu admin guide maintenance rule:
+  - `Documents/AQL_MENU_ADMIN_GUIDE.md` is the canonical admin-facing guide for all `AQL 🚀` menu actions.
+  - If any menu action is added, removed, renamed, or behavior-changed, update `Documents/AQL_MENU_ADMIN_GUIDE.md` in the same task.
+  - Keep `Documents/README.md` index entry aligned if the guide location/name changes.
 - Frontend registry maintenance rule:
   - When creating/updating reusable frontend building blocks, update:
     - `FRONTENT/src/components/REGISTRY.md` for component API changes (props/events/path).
@@ -89,6 +93,7 @@ AQL/
 | `Documents/CONTEXT_HANDOFF.md` | Current state + resume context |
 | `Documents/RESOURCE_REGISTRY_ARCHITECTURE.md` | APP.Resources architecture |
 | `Documents/RESOURCE_COLUMNS_GUIDE.md` | Column conventions for resources |
+| `Documents/AQL_MENU_ADMIN_GUIDE.md` | Admin-facing how-to for all AQL menu actions |
 | `Documents/NEW_CLIENT_SETUP_GUIDE.md` | Client onboarding steps |
 | `Documents/MODULE_WORKFLOWS.md` | End-to-end workflow docs per feature (Reports, Bulk Upload, etc.) |
 | `PLANS/_TEMPLATE.md` | Template for new implementation plans |

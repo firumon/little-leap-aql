@@ -39,6 +39,7 @@ For all significant changes, update:
 - Why it changed
 - Current behavior
 - Next expected operational step (if any)
+- If an `AQL 🚀` menu action is added, removed, renamed, or behavior-changed, update `Documents/AQL_MENU_ADMIN_GUIDE.md` in the same task.
 
 ## 6) Response Format Expectation
 For implementation responses, AI agent should include:

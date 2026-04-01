@@ -116,3 +116,7 @@ Welcome to the technical documentation for the AQL project. This folder contains
 ### 19. [Multi-Agent Collaboration Protocol](MULTI_AGENT_PROTOCOL.md)
 *   **Context:** How the Brain Agent and Build Agent collaborate on this project via file-based implementation plans.
 *   **Audience:** AI Agents, Project Owner.
+
+### 20. [AQL Menu Admin Guide](AQL_MENU_ADMIN_GUIDE.md)
+*   **Context:** Admin-friendly operational guide for every `AQL 🚀` menu action (what it does, required inputs, and step-by-step usage).
+*   **Audience:** Admin users, operations owners, support team, AI agents.

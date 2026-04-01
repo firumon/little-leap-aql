@@ -5,7 +5,7 @@ This document explains each `APP > Resources` column, what to fill, and common v
 ## Usage Notes
 - One row = one resource (`Products`, `PurchaseOrders`, `Shipments`, etc.).
 - Keep `Name` stable after frontend routes/permissions go live.
-- JSON columns must contain valid JSON (`{}` or `[]` format).
+- JSON columns should contain valid JSON (`{}` or `[]` format). Exception: `ListViews` can be intentionally blank (`""`) to enable auto mode.
 
 ## Column Reference
 | Column | Required | Type | Meaning | Typical Values / Format | Example |
@@ -41,6 +41,7 @@ This document explains each `APP > Resources` column, what to fill, and common v
 | `PreAction` | Optional | Text | Function name executed **before** the main action handler when the resource is invoked | GAS function name | `validateBulkPayload` |
 | `PostAction` | Optional | Text | Function name executed **after** routing (or as the primary handler for functional resources) | GAS function name | `handleMasterBulkRecords` |
 | `Reports` | Optional | JSON Text | Downloadable document configs (JSON array) | JSON array of report objects | `[{"name":"pkg","templateSheet":"Package"}]` |
+| `ListViews` | Optional | JSON Text | Filter-driven list view configurations with single-cell mode control. `""` (blank) = auto mode, `[]` = off mode, non-empty JSON array = custom mode. | `""`, `[]`, or JSON array of view objects | `[{"name":"Active","default":true,"color":"positive","filter":{"type":"group","logic":"AND","items":[{"type":"condition","column":"Status","operator":"eq","value":"Active"}]}}]` |
 | `CustomUIName` | Optional | Text | Tenant/client UI code that drives 3-tier component resolution. When set, the frontend looks for custom pages in `pages/Masters/_custom/{CustomUIName}/` and custom sections in `components/Masters/_custom/{CustomUIName}/` before falling back to entity-custom or default components. Empty = no tenant-custom tier (skip straight to entity-custom → default). The same value can be shared across multiple resources for one tenant. | Any short code string | `A2930` |
 
 ## `RecordAccessPolicy` Meaning
@@ -104,3 +105,82 @@ ProgressREJECTEDAt, ProgressREJECTEDBy, ProgressREJECTEDComment
 | Shipments | Draft → InTransit → Arrived → Cleared → Received | Submit, Dispatch, Arrive, Clear |
 | PortClearance | Pending → InProgress → Cleared/Held | Submit, Hold, Clear |
 | GoodsReceipts | Draft → Verified → Accepted | Verify, Accept |
+
+## `ListViews` JSON Schema
+
+The `ListViews` column stores a JSON array of view definitions. Each view defines a filter tree that controls which records appear when the view chip is selected.
+
+### View Object
+```json
+{
+  "name": "Pending/New",
+  "default": true,
+  "color": "warning",
+  "filter": {
+    "type": "group",
+    "logic": "AND",
+    "items": [...]
+  }
+}
+```
+
+| Field | Required | Type | Meaning |
+|---|---|---|---|
+| `name` | Yes | String | Display name shown on chip (also used as URL query value) |
+| `default` | No | Boolean | If `true`, this view is selected by default. Only one view should be default. |
+| `color` | No | String | Quasar color name for the chip (`positive`, `warning`, `negative`, `primary`, etc.) |
+| `filter` | Yes | Object | Filter tree (group or condition) |
+
+### Filter Group
+```json
+{ "type": "group", "logic": "AND", "items": [...] }
+```
+- `logic`: `AND` (all must match) or `OR` (any must match)
+- `items`: Array of conditions or nested groups
+- Empty `items: []` matches all records (useful for an explicit "All" view)
+
+### Filter Condition
+```json
+{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }
+```
+
+### Supported Operators (v1)
+| Code | Label | Value Type |
+|---|---|---|
+| `eq` | Is equal to | Single value |
+| `neq` | Is not equal to | Single value |
+| `in` | Is one of | Array of values |
+| `not_in` | Is not one of | Array of values |
+| `gt` | Greater than | Single value |
+| `gte` | Greater than or equal | Single value |
+| `lt` | Less than | Single value |
+| `lte` | Less than or equal | Single value |
+| `contains` | Contains | Single value |
+
+### Runtime Tokens
+| Token | Resolved To |
+|---|---|
+| `$now` | Current timestamp (Unix ms) at evaluation time |
+
+### Evaluation Rules
+1. String comparisons are case-insensitive.
+2. Numeric/date comparison attempts numeric coercion first; if coercion fails, fallback to string compare.
+3. Missing column in a condition evaluates to `false`.
+4. Empty group (`items: []`) evaluates to `true`.
+
+### `ListViews` Mode Behavior (Single Column)
+- `ListViews = ""` (blank cell): **Auto mode**
+  - If resource has `Status` header: auto-generates `Active` (default) + `Inactive`.
+  - If resource has no `Status` header: no view switcher shown.
+- `ListViews = []`: **Off mode**
+  - No view switcher is shown, even if `Status` exists.
+- `ListViews = [ ...non-empty view objects... ]`: **Custom mode**
+  - Uses only configured views (full override, no merge with defaults).
+
+### Manage Lists UI Behavior (`AQL > Resources > Manage Lists`)
+- When custom views exist, the dialog shows those views for edit/delete.
+- When no custom views exist, the dialog shows a single select + `Update` control:
+  - `Fallback to default Active/Inactive` (writes blank `ListViews` cell)
+  - `Switch off ListViews for <Resource>` (writes `[]`)
+- Adding a new view always saves a non-empty JSON array (custom mode).
+- Deleting the last custom view writes `[]` (off mode).

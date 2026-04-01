@@ -338,7 +338,30 @@ Resolves individual sections within a default page.
 | ListHeader | `MasterListHeader.vue` | `config, filteredCount, totalCount, loading, backgroundSyncing` | `reload` |
 | ListReportBar | `MasterListReportBar.vue` | `reports, isGenerating` | `generate-report(report)` |
 | ListToolbar | `MasterListToolbar.vue` | `searchTerm` | `update:searchTerm(value)` |
+| ListViewSwitcher | `MasterListViewSwitcher.vue` | `views, activeViewName, counts` | `update:activeViewName(name)` |
 | ListRecords | `MasterListRecords.vue` | `items, loading, resolvedFields, childCountMap` | `navigate-to-view(row)` |
+
+**List Views Filtering Flow:**
+- `useListViews` composable evaluates filter trees from `APP.Resources.ListViews` JSON.
+- `ListViews` mode is derived from the same cell:
+  - blank (`""`) => auto mode
+  - `[]` => off mode
+  - non-empty array => custom mode
+- In custom mode, configured views fully override defaults (no merge).
+- In auto mode with `Status` header, frontend auto-generates `Active` (default) and `Inactive`.
+- In off mode (or auto mode without `Status`), no view switcher is shown.
+- View chip counts are computed from the full item set (ignoring search text).
+- Search is applied on top of the selected view filter.
+- Current runtime mode: local state switching (no URL query sync), so list view changes do not remount the page shell.
+
+**Manage Lists Admin Flow (Sheet UI):**
+- Menu: `AQL > Resources > Manage Lists`.
+- If a resource has custom views, dialog shows list view cards (add/edit/delete).
+- If a resource has no custom views, dialog shows one select + `Update`:
+  - Fallback option -> writes blank `ListViews` cell (auto mode).
+  - Off option -> writes `[]` (off mode).
+- Adding a new view writes non-empty JSON (custom mode).
+- Deleting the last custom view writes `[]` (off mode).
 
 #### View Page (`_common/ViewPage.vue`)
 | Section | Default Component | Props | Events |
@@ -549,5 +572,3 @@ Products now use entity-custom pages under `FRONTENT/src/pages/Masters/Products/
 ## 6. Dashboard Widgets
 (To be documented when implemented)
 -->
-
-

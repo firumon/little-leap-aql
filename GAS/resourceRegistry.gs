@@ -65,6 +65,8 @@ function getResourceConfigMap() {
     var scope = normalizeResourceScope(readOptionalCell(row, registry.idx.Scope, 'master'));
     var rawFileId = (row[registry.idx.FileID] || '').toString().trim();
 
+    var listViewsMeta = parseListViewsCell(readOptionalCell(row, registry.idx.ListViews, ''));
+
     map[name] = {
       name: name,
       scope: scope,
@@ -103,7 +105,9 @@ function getResourceConfigMap() {
       preAction: (readOptionalCell(row, registry.idx.PreAction, '') || '').toString().trim(),
       postAction: (readOptionalCell(row, registry.idx.PostAction, '') || '').toString().trim(),
       reports: parseJsonCell(readOptionalCell(row, registry.idx.Reports, '[]'), []),
-      customUIName: (readOptionalCell(row, registry.idx.CustomUIName, '') || '').toString().trim()
+      customUIName: (readOptionalCell(row, registry.idx.CustomUIName, '') || '').toString().trim(),
+      listViews: listViewsMeta.views,
+      listViewsMode: listViewsMeta.mode
     };
   }
 
@@ -263,6 +267,44 @@ function parseJsonCell(value, fallback) {
     return JSON.parse(value);
   } catch (err) {
     return fallback;
+  }
+}
+
+/**
+ * ListViews mode contract from a single cell:
+ * - "" (blank) => auto
+ * - [] => off
+ * - [ ...non-empty ] => custom
+ * - invalid => auto (safe fallback)
+ */
+function parseListViewsCell(value) {
+  if (value === undefined || value === null) {
+    return { mode: 'auto', views: [] };
+  }
+
+  if (Array.isArray(value)) {
+    return {
+      mode: value.length ? 'custom' : 'off',
+      views: value
+    };
+  }
+
+  var raw = (value || '').toString().trim();
+  if (!raw) {
+    return { mode: 'auto', views: [] };
+  }
+
+  try {
+    var parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return { mode: 'auto', views: [] };
+    }
+    return {
+      mode: parsed.length ? 'custom' : 'off',
+      views: parsed
+    };
+  } catch (e) {
+    return { mode: 'auto', views: [] };
   }
 }
 
@@ -487,7 +529,9 @@ function buildAuthorizedResourceEntry(resourceName, options) {
       pageDescription: config.pageDescription,
       fields: Array.isArray(config.uiFields) ? config.uiFields : [],
       showInMenu: config.showInMenu,
-      customUIName: config.customUIName || ''
+      customUIName: config.customUIName || '',
+      listViews: Array.isArray(config.listViews) ? config.listViews : [],
+      listViewsMode: (config.listViewsMode || 'auto').toString()
     };
     entry.additionalActions = Array.isArray(config.additionalActions) ? config.additionalActions : [];
     entry.actions = entry.additionalActions.map(function(a) { return (a.action || ''); }).filter(Boolean);

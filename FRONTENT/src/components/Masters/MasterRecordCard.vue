@@ -7,9 +7,6 @@
           <div class="record-name">{{ resolvePrimaryText(row) }}</div>
           <div class="record-secondary">{{ resolveSecondaryText(row) }}</div>
         </div>
-        <q-badge :color="row.Status === 'Active' ? 'positive' : 'grey-6'" class="status-badge">
-          {{ row.Status || 'Unknown' }}
-        </q-badge>
       </div>
     </q-card-section>
   </q-card>
@@ -69,11 +66,5 @@ defineEmits(['open-detail'])
   margin-top: 3px;
   font-size: 12px;
   color: #64748b;
-}
-
-.status-badge {
-  border-radius: 8px;
-  font-weight: 600;
-  padding: 2px 9px;
 }
 </style>

@@ -2,7 +2,7 @@
   <div class="index-page">
     <MasterListHeader
       :config="config"
-      :filtered-count="combinedFilteredItems.length"
+      :filtered-count="displayedItems.length"
       :total-count="items.length"
       :loading="loading"
       :background-syncing="backgroundSyncing"
@@ -20,12 +20,19 @@
       @update:search-term="searchTerm = $event"
     />
 
+    <MasterListViewSwitcher
+      :views="effectiveViews"
+      :active-view-name="activeViewName"
+      :counts="viewCounts"
+      @update:active-view-name="setActiveView"
+    />
+
     <q-card flat bordered class="records-card q-mt-sm">
       <q-card-section v-if="loading" class="q-py-xl text-center">
         <q-spinner-dots color="primary" size="32px" />
       </q-card-section>
 
-      <q-card-section v-else-if="!combinedFilteredItems.length" class="q-py-xl text-center">
+      <q-card-section v-else-if="!displayedItems.length" class="q-py-xl text-center">
         <q-icon name="inventory_2" size="48px" color="grey-5" />
         <div class="text-subtitle1 text-grey-7 q-mt-md">No products found</div>
       </q-card-section>
@@ -33,7 +40,7 @@
       <q-card-section v-else class="q-pa-sm q-pa-md">
         <div class="column q-gutter-sm">
           <q-card
-            v-for="row in combinedFilteredItems"
+            v-for="row in displayedItems"
             :key="row.Code"
             flat
             bordered
@@ -64,9 +71,6 @@
                 </div>
 
                 <div class="column items-end q-gutter-xs">
-                  <q-badge :color="(row.Status || 'Active') === 'Active' ? 'positive' : 'grey-6'" outline>
-                    {{ row.Status || 'Active' }}
-                  </q-badge>
                   <q-badge color="primary" text-color="white">
                     {{ skuCountByProduct[row.Code] || 0 }} SKUs
                   </q-badge>
@@ -110,17 +114,30 @@ import { useRouter } from 'vue-router'
 import MasterListHeader from 'src/components/Masters/MasterListHeader.vue'
 import MasterListReportBar from 'src/components/Masters/MasterListReportBar.vue'
 import MasterListToolbar from 'src/components/Masters/MasterListToolbar.vue'
+import MasterListViewSwitcher from 'src/components/Masters/MasterListViewSwitcher.vue'
 import ReportInputDialog from 'src/components/Masters/ReportInputDialog.vue'
 import { useResourceConfig } from 'src/composables/useResourceConfig'
 import { useResourceData } from 'src/composables/useResourceData'
 import { useReports } from 'src/composables/useReports'
+import { useListViews } from 'src/composables/useListViews'
 import { parseVariantTypes } from 'src/composables/useProductVariants'
 import { fetchMasterRecords } from 'src/services/masterRecords'
 
 const router = useRouter()
-const { scope, resourceSlug, config, resourceName, permissions } = useResourceConfig()
-const { items, loading, backgroundSyncing, searchTerm, showInactive, reload } = useResourceData(resourceName)
+const { scope, resourceSlug, config, resourceName, resourceHeaders, permissions } = useResourceConfig()
+const { items, loading, backgroundSyncing, searchTerm, reload } = useResourceData(resourceName)
 const { isGenerating, showReportDialog, activeReport, reportInputs, initiateReport, confirmReportDialog, cancelReportDialog } = useReports(resourceName)
+
+const configuredListViews = computed(() => config.value?.ui?.listViews || [])
+const configuredListViewsMode = computed(() => config.value?.ui?.listViewsMode || '')
+
+const { effectiveViews, activeViewName, viewCounts, viewFilteredItems, setActiveView } = useListViews({
+  items,
+  resourceHeaders,
+  configuredListViews,
+  configuredListViewsMode,
+  enableUrlSync: false
+})
 
 const skuRecords = ref([])
 
@@ -135,12 +152,9 @@ const skuCountByProduct = computed(() => {
   return result
 })
 
-const combinedFilteredItems = computed(() => {
-  let list = Array.isArray(items.value) ? items.value : []
-  if (!showInactive.value) {
-    list = list.filter((row) => (row.Status || 'Active') === 'Active')
-  }
-
+// Final displayed items: view filter -> SKU-aware search
+const displayedItems = computed(() => {
+  const list = viewFilteredItems.value
   const keyword = (searchTerm.value || '').toString().trim().toLowerCase()
   if (!keyword) return list
 

@@ -91,7 +91,12 @@ Columns (in order):
 - `UIFields` (JSON array)
 - `ShowInMenu`
 - `IncludeInAuthorizationPayload`
+- `ListViews` (single-cell mode + JSON views: blank=`auto`, `[]`=`off`, non-empty array=`custom`; see `Documents/RESOURCE_COLUMNS_GUIDE.md` for full schema)
 - `Reports` (JSON array — downloadable document configs; see Reports Column JSON Schema below)
+- `Functional`
+- `PreAction`
+- `PostAction`
+- `CustomUIName`
 
 ### Reports Column JSON Schema
 

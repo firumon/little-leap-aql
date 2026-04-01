@@ -101,12 +101,11 @@ async function resolveComponent(resourceSlug, actionName, customUIName) {
 }
 
 watch(
-  () => [route.params.resourceSlug, route.meta?.action, route.params.action, route.fullPath, config.value],
-  async () => {
+  () => [route.params.resourceSlug, route.meta?.action, route.params.action, config.value?.ui?.customUIName || ''],
+  async ([resourceSlug, metaAction, paramAction, customUIName]) => {
     resolvedComponent.value = null
-    const slug = route.params.resourceSlug
-    const action = resolveActionName(route.meta, route.params)
-    const customUIName = config.value?.ui?.customUIName || ''
+    const slug = resourceSlug
+    const action = resolveActionName({ action: metaAction }, { action: paramAction })
     const component = await resolveComponent(slug, action, customUIName)
     resolvedComponent.value = component
   },

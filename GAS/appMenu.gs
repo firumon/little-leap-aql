@@ -27,6 +27,7 @@ function onOpen() {
       .addSeparator()
       .addItem('Manage Reports', 'app_showReportManagerDialog')
       .addItem('Manage Actions', 'app_showActionManagerDialog')
+      .addItem('Manage Lists', 'app_showListViewsManagerDialog')
       .addSeparator()
       .addItem('Sync APP.Resources from Code', 'syncAppResourcesFromCode'))
     .addSeparator()
@@ -662,6 +663,98 @@ function app_saveResourceActions(resourceName, actionsJson) {
     throw new Error('Resource not found: ' + resourceName);
   } catch (e) {
     throw new Error('Failed to save actions: ' + e.message);
+  }
+}
+
+// =====================================================
+// Manage List Views Dialog
+// =====================================================
+
+function app_showListViewsManagerDialog() {
+  const html = HtmlService.createHtmlOutputFromFile('listViewsManager')
+    .setWidth(940)
+    .setHeight(660)
+    .setTitle('Manage Resource List Views');
+  SpreadsheetApp.getUi().showModalDialog(html, 'Manage Resource List Views');
+}
+
+/**
+ * Fetches all data needed for the List Views Manager UI
+ */
+function app_getListViewsManagerData() {
+  try {
+    var resources = getAllResourcesConfigs({ includeInactive: true });
+    var resourceList = resources.map(function(res) {
+      var headers = [];
+      try {
+        if (!res.functional && res.fileId && res.sheetName) {
+          var ss = SpreadsheetApp.openById(res.fileId);
+          var sheet = ss.getSheetByName(res.sheetName);
+          if (sheet) {
+            headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+          }
+        }
+      } catch (e) { /* skip */ }
+
+      return {
+        name: res.name,
+        label: res.menuLabel || res.name,
+        headers: headers,
+        listViews: res.listViews || [],
+        listViewsMode: (res.listViewsMode || 'auto').toString()
+      };
+    });
+
+    return { resources: resourceList };
+  } catch (e) {
+    throw new Error('Failed to load list views manager data: ' + e.message);
+  }
+}
+
+/**
+ * Saves list views for a specific resource as JSON to ListViews column
+ */
+function app_saveResourceListViews(resourceName, listViewsJson, listViewsMode) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(CONFIG.SHEETS.RESOURCES);
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    var nameIdx = headers.indexOf('Name');
+    var listViewsIdx = headers.indexOf('ListViews');
+
+    if (nameIdx === -1 || listViewsIdx === -1) throw new Error('Columns Name or ListViews not found');
+
+    var mode = (listViewsMode || '').toString().trim().toLowerCase();
+    var valueToSave = listViewsJson == null ? '' : listViewsJson.toString();
+
+    if (mode === 'auto') {
+      valueToSave = '';
+    } else if (mode === 'off') {
+      valueToSave = '[]';
+    } else if (mode === 'custom') {
+      var parsed;
+      try {
+        parsed = JSON.parse(valueToSave || '[]');
+      } catch (e) {
+        throw new Error('Invalid custom list views JSON');
+      }
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        throw new Error('Custom mode requires at least one list view');
+      }
+      valueToSave = JSON.stringify(parsed);
+    }
+
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][nameIdx] === resourceName) {
+        sheet.getRange(i + 1, listViewsIdx + 1).setValue(valueToSave);
+        clearResourceConfigCache();
+        return true;
+      }
+    }
+    throw new Error('Resource not found: ' + resourceName);
+  } catch (e) {
+    throw new Error('Failed to save list views: ' + e.message);
   }
 }
 

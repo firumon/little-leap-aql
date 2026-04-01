@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; padding: 14px; background: #fff; color: #333; }
+    h2, h3, h4 { margin: 0; color: #1e293b; }
+    .g { margin: 12px 0; }
+    label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #475569; }
+    input, select, textarea { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; }
+    .btn { padding: 8px 16px; border: 0; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px; transition: opacity 0.2s; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: #2563eb; color: #fff; }
+    .btn-secondary { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+    .btn-danger { background: #fee2e2; color: #991b1b; }
+    .btn-sm { padding: 4px 8px; font-size: 11px; }
+    .view-item { display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #2563eb; background: #f8fafc; padding: 10px; margin-bottom: 8px; border-radius: 4px; }
+    .view-info b { display: block; font-size: 14px; }
+    .view-info span { font-size: 11px; color: #64748b; }
+    .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15,23,42,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
+    .modal-content { background: #fff; width: 860px; max-height: 90vh; border-radius: 12px; padding: 20px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); overflow-y: auto; }
+    .msg { padding: 10px; border-radius: 6px; font-size: 12px; margin: 10px 0; display: none; }
+    .ok { background: #ecfdf5; color: #065f46; border: 1px solid #d1fae5; }
+    .er { background: #fef2f2; color: #991b1b; border: 1px solid #fee2e2; }
+    .hidden { display: none; }
+    .flex { display: flex; gap: 8px; align-items: center; }
+    .loader { text-align: center; padding: 40px; color: #64748b; }
+    .condition-row { display: grid; grid-template-columns: 1fr 1fr 1.5fr 40px; gap: 8px; align-items: end; margin-bottom: 8px; padding: 8px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0; }
+    .group-box { border: 2px solid #cbd5e1; border-radius: 8px; padding: 12px; margin: 8px 0; background: #fafbfc; }
+    .group-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .logic-toggle { padding: 4px 12px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff; font-weight: 600; cursor: pointer; font-size: 12px; }
+    .logic-toggle.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+    .chip-preview { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 16px; font-size: 12px; font-weight: 600; margin-right: 6px; margin-bottom: 4px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .checks { display: flex; gap: 12px; flex-wrap: wrap; }
+    .checks label { display: flex; align-items: center; gap: 4px; font-size: 13px; cursor: pointer; }
+    .checks input[type="checkbox"] { width: auto; }
+
+    /* Operator friendly labels */
+    .op-label { font-size: 11px; color: #64748b; }
+  </style>
+</head>
+<body>
+
+<div id="mainLoader" class="loader">Loading List Views Manager...</div>
+
+<div id="app" class="hidden">
+  <div class="g">
+    <label>Select Resource</label>
+    <select id="resSelect" onchange="onResourceSelect()">
+      <option value="">-- Choose a Resource --</option>
+    </select>
+  </div>
+
+  <div id="managerUI" class="hidden">
+    <div id="msg" class="msg"></div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin: 20px 0 10px 0">
+      <h3 id="resTitle">Resource List Views</h3>
+      <button id="addViewBtn" class="btn btn-primary" onclick="openEditor()">+ Add New View</button>
+    </div>
+
+    <div id="viewsList"></div>
+  </div>
+</div>
+
+<!-- Editor Modal -->
+<div id="editor" class="modal hidden">
+  <div class="modal-content">
+    <h3 id="editorTitle">Edit View</h3>
+
+    <div class="row" style="margin-top:12px">
+      <div class="g">
+        <label>View Name</label>
+        <input type="text" id="viewName" placeholder="e.g. Pending/New">
+      </div>
+      <div class="g">
+        <label>Chip Color</label>
+        <select id="viewColor">
+          <option value="">Default (grey)</option>
+          <option value="primary">Primary (blue)</option>
+          <option value="positive">Positive (green)</option>
+          <option value="negative">Negative (red)</option>
+          <option value="warning">Warning (orange)</option>
+          <option value="info">Info (cyan)</option>
+          <option value="accent">Accent (purple)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="checks" style="margin: 8px 0 16px 0">
+      <label><input type="checkbox" id="viewDefault"> Set as Default View</label>
+    </div>
+
+    <div style="border-top: 1px solid #f1f5f9; padding-top: 15px">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px">
+        <h4>Filter Conditions</h4>
+      </div>
+      <div id="filterRoot"></div>
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:20px; border-top:1px solid #f1f5f9; padding-top:15px">
+      <button class="btn btn-secondary" onclick="closeEditor()">Cancel</button>
+      <button class="btn btn-primary" id="saveBtn" onclick="saveView()">Save View</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  var DATA = { resources: [] };
+  var ACTIVE_RES = null;
+  var EDIT_IDX = -1;
+
+  var OPERATORS = [
+    { code: 'eq', label: 'Is equal to' },
+    { code: 'neq', label: 'Is not equal to' },
+    { code: 'in', label: 'Is one of' },
+    { code: 'not_in', label: 'Is not one of' },
+    { code: 'gt', label: 'Greater than' },
+    { code: 'gte', label: 'Greater than or equal' },
+    { code: 'lt', label: 'Less than' },
+    { code: 'lte', label: 'Less than or equal' },
+    { code: 'contains', label: 'Contains' }
+  ];
+
+  var TOKENS = [
+    { code: '$now', label: 'Current Date/Time ($now)' }
+  ];
+
+  window.onload = function() {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        DATA = res;
+        initUI();
+      })
+      .withFailureHandler(function(err) { showMsg(err.message, true); })
+      .app_getListViewsManagerData();
+  };
+
+  function initUI() {
+    var sel = document.getElementById('resSelect');
+    DATA.resources.forEach(function(r) {
+      var opt = document.createElement('option');
+      opt.value = r.name;
+      opt.textContent = r.label || r.name;
+      sel.appendChild(opt);
+    });
+    document.getElementById('mainLoader').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+  }
+
+  function onResourceSelect() {
+    var name = document.getElementById('resSelect').value;
+    if (!name) { document.getElementById('managerUI').classList.add('hidden'); return; }
+    ACTIVE_RES = DATA.resources.find(function(r) { return r.name === name; });
+    ACTIVE_RES.listViewsMode = normalizeMode(ACTIVE_RES.listViewsMode);
+    if (ACTIVE_RES.listViews && ACTIVE_RES.listViews.length > 0) {
+      ACTIVE_RES.listViewsMode = 'custom';
+    }
+    document.getElementById('resTitle').textContent = 'List Views for ' + (ACTIVE_RES.label || ACTIVE_RES.name);
+    renderViews();
+    document.getElementById('managerUI').classList.remove('hidden');
+  }
+
+  function normalizeMode(mode) {
+    var m = (mode || '').toString().trim().toLowerCase();
+    if (m === 'off' || m === 'custom') return m;
+    return 'auto';
+  }
+
+  function renderViews() {
+    var list = document.getElementById('viewsList');
+    var mode = normalizeMode(ACTIVE_RES && ACTIVE_RES.listViewsMode);
+    var hasStatus = (ACTIVE_RES && ACTIVE_RES.headers || []).some(function(h) {
+      return (h || '').toString().trim().toLowerCase() === 'status';
+    });
+
+    list.innerHTML = '';
+    if (!ACTIVE_RES.listViews || ACTIVE_RES.listViews.length === 0) {
+      var autoChecked = mode !== 'off';
+      var hint = hasStatus
+        ? 'Fallback will show default Active/Inactive based on Status.'
+        : 'Fallback will show no chips because this resource has no Status column.';
+
+      list.innerHTML =
+        '<div style="padding:14px; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc">' +
+          '<div style="font-weight:600; margin-bottom:8px">No custom list views configured.</div>' +
+          '<div style="font-size:12px; color:#64748b; margin-bottom:12px">' + esc(hint) + '</div>' +
+          '<div style="display:flex; gap:8px; align-items:center; max-width:640px">' +
+            '<select id="emptyModeSelect" style="flex:1">' +
+              '<option value="auto" ' + (autoChecked ? 'selected' : '') + '>Fallback to default Active/Inactive</option>' +
+              '<option value="off" ' + (!autoChecked ? 'selected' : '') + '>Switch off ListViews for ' + esc(ACTIVE_RES.label || ACTIVE_RES.name) + '</option>' +
+            '</select>' +
+            '<button class="btn btn-secondary" onclick="applyEmptyMode()">Update</button>' +
+          '</div>' +
+        '</div>';
+      return;
+    }
+
+    ACTIVE_RES.listViews.forEach(function(view, i) {
+      var div = document.createElement('div');
+      div.className = 'view-item';
+      var condCount = countConditions(view.filter);
+      var defaultTag = view.default ? ' <span style="color:#2563eb; font-weight:600">[DEFAULT]</span>' : '';
+      div.innerHTML =
+        '<div class="view-info">' +
+          '<b>' + esc(view.name) + defaultTag + '</b>' +
+          '<span>Color: ' + (view.color || 'default') + ' | Conditions: ' + condCount + '</span>' +
+        '</div>' +
+        '<div class="flex">' +
+          '<button class="btn btn-secondary btn-sm" onclick="openEditor(' + i + ')">Edit</button>' +
+          '<button class="btn btn-danger btn-sm" onclick="removeView(' + i + ')">Delete</button>' +
+        '</div>';
+      list.appendChild(div);
+    });
+  }
+
+  function countConditions(filter) {
+    if (!filter) return 0;
+    if (filter.type === 'condition') return 1;
+    if (filter.type === 'group' && Array.isArray(filter.items)) {
+      var total = 0;
+      filter.items.forEach(function(item) { total += countConditions(item); });
+      return total;
+    }
+    return 0;
+  }
+
+  function openEditor(idx) {
+    EDIT_IDX = typeof idx === 'number' ? idx : -1;
+    document.getElementById('editor').classList.remove('hidden');
+
+    if (EDIT_IDX > -1) {
+      var v = ACTIVE_RES.listViews[EDIT_IDX];
+      document.getElementById('editorTitle').textContent = 'Edit View';
+      document.getElementById('viewName').value = v.name || '';
+      document.getElementById('viewColor').value = v.color || '';
+      document.getElementById('viewDefault').checked = !!v.default;
+      renderFilterGroup(document.getElementById('filterRoot'), v.filter || { type: 'group', logic: 'AND', items: [] });
+    } else {
+      document.getElementById('editorTitle').textContent = 'New View';
+      document.getElementById('viewName').value = '';
+      document.getElementById('viewColor').value = '';
+      document.getElementById('viewDefault').checked = false;
+      renderFilterGroup(document.getElementById('filterRoot'), { type: 'group', logic: 'AND', items: [] });
+    }
+  }
+
+  function closeEditor() {
+    document.getElementById('editor').classList.add('hidden');
+  }
+
+  function renderFilterGroup(container, group) {
+    container.innerHTML = '';
+    var box = document.createElement('div');
+    box.className = 'group-box';
+
+    var header = document.createElement('div');
+    header.className = 'group-header';
+    header.innerHTML =
+      '<div class="flex">' +
+        '<span style="font-size:12px; font-weight:600; color:#475569">Match</span>' +
+        '<button class="logic-toggle ' + (group.logic === 'AND' ? 'active' : '') + '" onclick="toggleLogic(this, \'AND\')">ALL (AND)</button>' +
+        '<button class="logic-toggle ' + (group.logic === 'OR' ? 'active' : '') + '" onclick="toggleLogic(this, \'OR\')">ANY (OR)</button>' +
+      '</div>' +
+      '<div class="flex">' +
+        '<button class="btn btn-secondary btn-sm" onclick="addCondition(this)">+ Condition</button>' +
+        '<button class="btn btn-secondary btn-sm" onclick="addNestedGroup(this)">+ Group</button>' +
+      '</div>';
+    box.appendChild(header);
+
+    var itemsContainer = document.createElement('div');
+    itemsContainer.className = 'group-items';
+    box.appendChild(itemsContainer);
+    container.appendChild(box);
+
+    (group.items || []).forEach(function(item) {
+      if (item.type === 'group') {
+        var nestedDiv = document.createElement('div');
+        itemsContainer.appendChild(nestedDiv);
+        renderFilterGroup(nestedDiv, item);
+      } else if (item.type === 'condition') {
+        appendConditionRow(itemsContainer, item);
+      }
+    });
+  }
+
+  function appendConditionRow(container, condition) {
+    var row = document.createElement('div');
+    row.className = 'condition-row';
+
+    var colOpts = (ACTIVE_RES.headers || []).map(function(h) {
+      return '<option value="' + esc(h) + '"' + (condition.column === h ? ' selected' : '') + '>' + esc(h) + '</option>';
+    }).join('');
+
+    var opOpts = OPERATORS.map(function(op) {
+      return '<option value="' + op.code + '"' + (condition.operator === op.code ? ' selected' : '') + '>' + op.label + '</option>';
+    }).join('');
+
+    var valueStr = '';
+    if (Array.isArray(condition.value)) {
+      valueStr = condition.value.join(', ');
+    } else {
+      valueStr = (condition.value || '').toString();
+    }
+
+    row.innerHTML =
+      '<div>' +
+        '<label>Column</label>' +
+        '<select class="c-col"><option value="">-- Select --</option>' + colOpts + '</select>' +
+      '</div>' +
+      '<div>' +
+        '<label>Operator</label>' +
+        '<select class="c-op" onchange="onOperatorChange(this)">' + opOpts + '</select>' +
+      '</div>' +
+      '<div>' +
+        '<label>Value <span class="op-label">(comma-separate for lists)</span></label>' +
+        '<div class="flex">' +
+          '<input type="text" class="c-val" value="' + esc(valueStr) + '" style="flex:1">' +
+          '<select class="c-token" style="width:auto; min-width: 80px" onchange="onTokenSelect(this)">' +
+            '<option value="">Token...</option>' +
+            TOKENS.map(function(t) { return '<option value="' + t.code + '"' + (valueStr === t.code ? ' selected' : '') + '>' + t.label + '</option>'; }).join('') +
+          '</select>' +
+        '</div>' +
+      '</div>' +
+      '<div><button class="btn btn-danger btn-sm" style="margin-top:20px" onclick="removeItem(this)">X</button></div>';
+
+    container.appendChild(row);
+  }
+
+  function toggleLogic(btn, logic) {
+    var parent = btn.parentElement;
+    parent.querySelectorAll('.logic-toggle').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+  }
+
+  function addCondition(btn) {
+    var groupBox = btn.closest('.group-box');
+    var itemsContainer = groupBox.querySelector('.group-items');
+    appendConditionRow(itemsContainer, { column: '', operator: 'eq', value: '' });
+  }
+
+  function addNestedGroup(btn) {
+    var groupBox = btn.closest('.group-box');
+    var itemsContainer = groupBox.querySelector('.group-items');
+    var div = document.createElement('div');
+    itemsContainer.appendChild(div);
+    renderFilterGroup(div, { type: 'group', logic: 'AND', items: [] });
+  }
+
+  function removeItem(btn) {
+    var el = btn.closest('.condition-row') || btn.closest('.group-box').parentElement;
+    el.remove();
+  }
+
+  function onOperatorChange(sel) {
+    // No special handling needed — value input handles both single and list
+  }
+
+  function onTokenSelect(sel) {
+    var row = sel.closest('.condition-row');
+    var valInput = row.querySelector('.c-val');
+    if (sel.value) {
+      valInput.value = sel.value;
+    }
+  }
+
+  function readFilterFromDOM(container) {
+    var groupBox = container.querySelector('.group-box');
+    if (!groupBox) return { type: 'group', logic: 'AND', items: [] };
+
+    var logicBtns = groupBox.querySelector('.group-header').querySelectorAll('.logic-toggle');
+    var logic = 'AND';
+    logicBtns.forEach(function(b) { if (b.classList.contains('active') && b.textContent.indexOf('OR') !== -1) logic = 'OR'; });
+
+    var items = [];
+    var itemsContainer = groupBox.querySelector('.group-items');
+
+    Array.from(itemsContainer.children).forEach(function(child) {
+      if (child.classList.contains('condition-row')) {
+        var col = child.querySelector('.c-col').value.trim();
+        var op = child.querySelector('.c-op').value;
+        var rawVal = child.querySelector('.c-val').value.trim();
+
+        if (!col) return; // skip empty conditions
+
+        var value = rawVal;
+        if (op === 'in' || op === 'not_in') {
+          value = rawVal.split(',').map(function(v) { return v.trim(); }).filter(Boolean);
+        }
+
+        items.push({ type: 'condition', column: col, operator: op, value: value });
+      } else {
+        // Nested group
+        var nested = readFilterFromDOM(child);
+        if (nested && nested.items && nested.items.length > 0) {
+          items.push(nested);
+        }
+      }
+    });
+
+    return { type: 'group', logic: logic, items: items };
+  }
+
+  function saveView() {
+    var name = document.getElementById('viewName').value.trim();
+    if (!name) { alert('Please enter a view name'); return; }
+
+    var filter = readFilterFromDOM(document.getElementById('filterRoot'));
+
+    var view = {
+      name: name,
+      filter: filter
+    };
+
+    var color = document.getElementById('viewColor').value;
+    if (color) view.color = color;
+
+    if (document.getElementById('viewDefault').checked) {
+      // Clear default from all other views
+      (ACTIVE_RES.listViews || []).forEach(function(v, i) {
+        if (EDIT_IDX === -1 || i !== EDIT_IDX) delete v.default;
+      });
+      view.default = true;
+    }
+
+    if (EDIT_IDX > -1) {
+      ACTIVE_RES.listViews[EDIT_IDX] = view;
+    } else {
+      if (!ACTIVE_RES.listViews) ACTIVE_RES.listViews = [];
+      ACTIVE_RES.listViews.push(view);
+    }
+    ACTIVE_RES.listViewsMode = 'custom';
+
+    syncToServer({ editorFlow: true });
+  }
+
+  function removeView(idx) {
+    if (!confirm('Permanently delete this list view?')) return;
+    ACTIVE_RES.listViews.splice(idx, 1);
+    if (ACTIVE_RES.listViews.length === 0) {
+      ACTIVE_RES.listViewsMode = 'off';
+    }
+    syncToServer();
+  }
+
+  function applyEmptyMode() {
+    var selector = document.getElementById('emptyModeSelect');
+    ACTIVE_RES.listViewsMode = selector ? normalizeMode(selector.value) : 'auto';
+    syncToServer();
+  }
+
+  function syncToServer(opts) {
+    var options = opts || {};
+    var editorFlow = options.editorFlow === true;
+    var btn = editorFlow ? document.getElementById('saveBtn') : null;
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Saving...';
+    }
+
+    google.script.run
+      .withSuccessHandler(function() {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Save View';
+          closeEditor();
+        }
+        renderViews();
+        showMsg('Saved successfully.');
+      })
+      .withFailureHandler(function(err) {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Save View';
+        }
+        showMsg(err.message, true);
+      })
+      .app_saveResourceListViews(
+        ACTIVE_RES.name,
+        JSON.stringify(ACTIVE_RES.listViews || []),
+        normalizeMode(ACTIVE_RES.listViewsMode)
+      );
+  }
+
+  function showMsg(m, isErr) {
+    var el = document.getElementById('msg');
+    el.style.display = 'block';
+    el.className = 'msg ' + (isErr ? 'er' : 'ok');
+    el.textContent = m;
+    if (!isErr) setTimeout(function() { el.style.display = 'none'; }, 3000);
+  }
+
+  function esc(v) {
+    return (v == null ? '' : String(v)).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+</script>
+
+</body>
+</html>

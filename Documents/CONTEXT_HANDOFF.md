@@ -1,4 +1,4 @@
-# CONTEXT HANDOFF - AQL
+﻿# CONTEXT HANDOFF - AQL
 
 Use this file when starting a new AI agent session.
 
@@ -33,7 +33,7 @@ Tell the AI agent:
 - APP sheet contains `Resources` registry with `FileID` + `SheetName` for external files.
 - API handlers resolve target file/sheet dynamically from `Resources`.
 - Do not maintain separate Apps Script projects in external files unless explicitly requested.
-- APP now includes a `Config` sheet (Key-Value pairs) as the Source of Truth for deployment-specific settings (file IDs, company branding). FileID resolution chain: `Resource.FileID` → `Config[{Scope}FileID]` → APP file ID. Helpers: `getConfigMap()`, `getAppConfigValue()`, `resolveFileIdForScope()` in `sheetHelpers.gs`.
+- APP now includes a `Config` sheet (Key-Value pairs) as the Source of Truth for deployment-specific settings (file IDs, company branding). FileID resolution chain: `Resource.FileID` â†’ `Config[{Scope}FileID]` â†’ APP file ID. Helpers: `getConfigMap()`, `getAppConfigValue()`, `resolveFileIdForScope()` in `sheetHelpers.gs`.
 - `clasp` CLI is configured for GAS deployment. Config files per client are stored in `GAS/clasp-configs/`. Run `cd GAS && clasp push` to deploy. See `Documents/NEW_CLIENT_SETUP_GUIDE.md` Step 2 for details.
 
 ## 4) Must-Follow Collaboration Rules
@@ -135,7 +135,7 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
     - 20 default section components in `FRONTENT/src/components/Masters/Master*.vue` (4 Index + 5 View + 4 Add + 4 Edit + 3 Action)
     - Reusable card component: `FRONTENT/src/components/Masters/MasterRecordCard.vue`
     - All `_common/` pages are thin orchestration layers (layout + composable wiring).
-    - `ListPage.vue` renamed to `IndexPage.vue`; route action `list` → `index`.
+    - `ListPage.vue` renamed to `IndexPage.vue`; route action `list` â†’ `index`.
   - **3-Tier Resolution** (page-level and section-level):
     - Tier 1 (tenant-custom): `_custom/{CustomUIName}/{Entity}.vue` or `{Entity}{Section}.vue`
     - Tier 2 (entity-custom): `{Entity}/{Action}Page.vue` or `{Entity}/{Section}.vue`
@@ -192,15 +192,15 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
 - APP.Config sheet for multi-client deployment support (2026-03-18):
   - New `Config` sheet in APP spreadsheet stores deployment-specific Key-Value settings.
   - `GAS/sheetHelpers.gs` adds `getConfigMap()`, `getAppConfigValue()`, `resolveFileIdForScope()`.
-  - FileID resolution is now a 3-tier fallback: `Resource.FileID` → `Config[{Scope}FileID]` → `ss.getId()`.
+  - FileID resolution is now a 3-tier fallback: `Resource.FileID` â†’ `Config[{Scope}FileID]` â†’ `ss.getId()`.
   - `syncAppResources.gs`, `resourceRegistry.gs`, `reportGenerator.gs`, `appMenu.gs` all use the new fallback chain.
   - Hardcoded `CONFIG.REPORTS_FILE_ID` removed from `Constants.gs`.
   - `setupAppSheets.gs` creates the Config sheet with pre-populated expected keys. It is now the first sheet created and positioned in the APP spreadsheet.
 - GAS Audit Refactor Hardening (2026-03-19):
   - **Config cache TTL** reduced from 6h to 5min; added `clearConfigCache()` for manual invalidation.
-  - **FileID auto-population removed**: `syncAppResourcesFromCode()` no longer writes resolved FileIDs into blank `Resources.FileID` cells — blank is preserved for config-driven runtime resolution.
-  - **`accounts` scope** added to `normalizeResourceScope()` and API dispatcher scope allowlist — accounts resources no longer collapse to `master`.
-  - **Progress validation** now applied in `setupOperationSheets.gs` — `progressValidation` arrays were defined but never applied before.
+  - **FileID auto-population removed**: `syncAppResourcesFromCode()` no longer writes resolved FileIDs into blank `Resources.FileID` cells â€” blank is preserved for config-driven runtime resolution.
+  - **`accounts` scope** added to `normalizeResourceScope()` and API dispatcher scope allowlist â€” accounts resources no longer collapse to `master`.
+  - **Progress validation** now applied in `setupOperationSheets.gs` â€” `progressValidation` arrays were defined but never applied before.
   - **Setup utility deduplication**: Created `GAS/setupSheetUtils.gs` with shared `setup_*` helpers. All 4 setup scripts (`setupAppSheets.gs`, `setupMasterSheets.gs`, `setupOperationSheets.gs`, `setupAccountSheets.gs`) now use these shared helpers. ~420 lines of duplicate code removed.
   - **Admin dialog HTML separation**: Extracted inline HTML/CSS/JS from `appMenu.gs` into `GAS/adminDialog.html` template. Server logic stays in `.gs`, form markup/client JS in `.html`.
   - **Duplicate utility removal**: `appMenu.gs` `findRow` and `hashPasswordMenu` replaced with thin wrappers to shared `findRowByValue` and `hashPassword`.
@@ -214,7 +214,7 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - Corrected Config default key from `AccountFileID` to `AccountsFileID`.
   - Added execution logging in auth/resource authorization paths (`safeGetRoleResourceAccess`, `buildAuthorizedResourceEntry`) to avoid silent failures.
   - Removed `fileId` from authorized resource payload sent to frontend; kept internal runtime file resolution untouched.
-- **GAS Backend Performance Optimization — Two-Tier Caching & Permanent Metadata Store (2026-03-20)**:
+- **GAS Backend Performance Optimization â€” Two-Tier Caching & Permanent Metadata Store (2026-03-20)**:
   - Implemented request-scoped global variable caching for `getAppSpreadsheet()`, `getResourceRegistryContext()`, and `getRolePermissionsContext()`.
   - Created a high-performance `getResourceConfigMap()` with cross-execution persistence via `CacheService` (5-min TTL) and **Permanent Metadata Store** (hidden `Metadata` sheet).
   - Permanent Store eliminates the "cold-start" delay (25s -> 8s) by caching resource configs and sheet headers indefinitely in the APP file.
@@ -224,6 +224,21 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - Updated `scripts/deploy-gas.js` to support custom deployment descriptions and ensure `ANYONE` access.
   - Final Performance: Login reduced from ~25s to ~8s; Multi-resource sync reduced from ~3min to ~9s.
   - Plan: `PLANS/2026-03-20-gas-performance-optimization.md`.
+
+- **Filtered List Views â€” APP.Resources.ListViews (2026-04-01)**:
+  - New `ListViews` JSON column in `APP.Resources` for filter-driven list view configurations per resource.
+  - `GAS/setupAppSheets.gs` and `GAS/syncAppResources.gs` include `ListViews` in schema (additive, non-destructive).
+  - `GAS/resourceRegistry.gs` parses `ListViews` with mode semantics and exposes in auth payload as `entry.ui.listViews` + `entry.ui.listViewsMode`.
+  - **AQL Menu > Manage Lists**: Sheet UI dialog (`GAS/listViewsManager.html`) for managing list view configs per resource. Supports nested AND/OR filter groups, user-friendly operator labels, `$now` token, and validation.
+  - Empty-state admin control in Manage Lists: select + Update (Fallback => blank cell, Off => `[]`).
+  - GAS server functions: `app_showListViewsManagerDialog()`, `app_getListViewsManagerData()`, `app_saveResourceListViews()` in `GAS/appMenu.gs`.
+  - Frontend composable: `FRONTENT/src/composables/useListViews.js` â€” evaluates filter trees, applies mode semantics (`auto` / `off` / `custom`), computes per-view counts (ignoring search), local-state switching (URL sync optional but currently disabled).
+  - Frontend component: `FRONTENT/src/components/Masters/MasterListViewSwitcher.vue` â€” chip bar with outlined/filled toggle, counts, color coding.
+  - Integrated into `FRONTENT/src/pages/Masters/_common/IndexPage.vue` (default index) and `FRONTENT/src/pages/Masters/Products/IndexPage.vue` (custom Products index).
+  - Status badge removed from `MasterRecordCard.vue` and Products index cards.
+  - Mode behavior: blank `ListViews` cell => auto mode; `[]` => off mode (hide switcher); non-empty array => custom override mode.
+  - Supported operators: `eq`, `neq`, `in`, `not_in`, `gt`, `gte`, `lt`, `lte`, `contains`.
+  - Plan: `PLANS/2026-04-01-filtered-list-views.md`.
 
 ### Key behavior now
 - Code is generated in Apps Script (not by sheet formula).
@@ -383,11 +398,11 @@ References:
 
 ## 11) Manual Actions User Usually Needs
 When Apps Script changes:
-1. The agent runs `cd GAS && clasp push` automatically — no manual copy-paste needed.
+1. The agent runs `cd GAS && clasp push` automatically â€” no manual copy-paste needed.
 2. **User action only if** API behavior changed (new actions, changed response shape): Create a new Web App deployment version in Apps Script IDE (Deploy > New deployment).
 
 When setup scripts are added/changed:
-1. User runs the relevant menu action from AQL 🚀 menu in the APP spreadsheet.
+1. User runs the relevant menu action from AQL ðŸš€ menu in the APP spreadsheet.
 2. Verify `Resources` rows are correct in the APP sheet.
 
 ## 12) Primary Docs Map
@@ -395,7 +410,7 @@ When setup scripts are added/changed:
 - Collaboration rules: `Documents/AI_COLLABORATION_PROTOCOL.md`
 - **Multi-Agent protocol: `Documents/MULTI_AGENT_PROTOCOL.md`**
 - **Active implementation plans: `PLANS/`**
-- **Module Workflows: `Documents/MODULE_WORKFLOWS.md`** — end-to-end flow docs per feature (Reports, etc.). Read the relevant section before working on any documented module.
+- **Module Workflows: `Documents/MODULE_WORKFLOWS.md`** â€” end-to-end flow docs per feature (Reports, etc.). Read the relevant section before working on any documented module.
 - Resource architecture: `Documents/RESOURCE_REGISTRY_ARCHITECTURE.md`
 - Resource column definitions: `Documents/RESOURCE_COLUMNS_GUIDE.md`
 - Technical details: `Documents/TECHNICAL_SPECIFICATIONS.md`
@@ -418,10 +433,11 @@ Significant updates include:
 - New sheet structure standards
 - Major frontend module additions
 - Important process/protocol changes for collaborators
-- **Any change to a module workflow** (Reports, Bulk Upload, etc.) — update the relevant section in `Documents/MODULE_WORKFLOWS.md` to reflect the new flow, files, config, or behavior
+- **Any change to a module workflow** (Reports, Bulk Upload, etc.) â€” update the relevant section in `Documents/MODULE_WORKFLOWS.md` to reflect the new flow, files, config, or behavior
 
 Expected behavior for future joiners:
 1. Read this file first.
 2. Implement requested changes.
 3. Update related technical/business docs.
 4. Update this handoff with latest status and decisions so the next context can continue without re-discovery.
+

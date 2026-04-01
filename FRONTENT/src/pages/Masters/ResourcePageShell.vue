@@ -36,7 +36,9 @@ const actionLabel = computed(() => {
   return actionConfig?.label || a.charAt(0).toUpperCase() + a.slice(1)
 })
 
-const routeKey = computed(() => `${route.fullPath}`)
+// Keep router-view stable across query-only changes (e.g. ?view=),
+// so switching list views does not remount the whole page.
+const routeKey = computed(() => `${route.path}`)
 </script>
 
 <style scoped>

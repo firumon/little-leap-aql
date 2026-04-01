@@ -15,8 +15,8 @@ function getErrorMessage(error) {
 }
 
 export async function callGasApi(action, payload = {}, options = {}) {
-  const { 
-    requireAuth = true, 
+  const {
+    requireAuth = true,
     token = null,
     showLoading = false,
     loadingMessage = 'Processing...',

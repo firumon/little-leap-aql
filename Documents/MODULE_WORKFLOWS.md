@@ -9,12 +9,13 @@ This document captures the **end-to-end workflow knowledge** for each major feat
 ## Table of Contents
 
 1. [Report Generation (PDF)](#1-report-generation-pdf)
-2. [Master List Page — Section-Level Component Architecture](#2-master-list-page--section-level-component-architecture)
+2. [Master Pages - 3-Tier Section-Level Component Architecture](#2-master-pages--3-tier-section-level-component-architecture)
+3. [Products Variant Management (Custom Pages)](#3-products-variant-management-custom-pages)
 
-<!-- Future modules — add sections as they are built:
-3. [Data Backup & Restore](#3-data-backup--restore)
-4. [Bulk Upload](#4-bulk-upload)
-5. [Dashboard Widgets](#5-dashboard-widgets)
+<!-- Future modules -- add sections as they are built:
+4. [Data Backup & Restore](#4-data-backup--restore)
+5. [Bulk Upload](#5-bulk-upload)
+6. [Dashboard Widgets](#6-dashboard-widgets)
 -->
 
 ---
@@ -500,14 +501,53 @@ sectionsReady = true → template renders all <component :is="...">
 
 ---
 
+## 3. Products Variant Management (Custom Pages)
+
+### 3.1 Overview
+
+Products now use entity-custom pages under `FRONTENT/src/pages/Masters/Products/` for variant-aware UX across index, view, add, and edit actions.
+
+- Parent resource: `Products`
+- Child resource: `SKUs` (joined by `SKUs.ProductCode = Products.Code`)
+- Variant schema source: `Products.VariantTypes` (CSV)
+- Variant mapping: CSV position maps to `SKUs.Variant1` to `SKUs.Variant5`
+
+### 3.2 Files Involved
+
+| File | Role |
+|---|---|
+| `FRONTENT/src/composables/useProductVariants.js` | Shared helper for parsing `VariantTypes`, building dynamic columns, SKU variant validation, and duplicate variant-set detection |
+| `FRONTENT/src/pages/Masters/Products/IndexPage.vue` | Custom list page with combined search (product fields + SKU variant values) and SKU counts |
+| `FRONTENT/src/pages/Masters/Products/ViewPage.vue` | Custom detail page with dynamic SKU table columns labeled from `VariantTypes` |
+| `FRONTENT/src/pages/Masters/Products/AddPage.vue` | Composite create page for Product + SKU rows with dynamic variant inputs |
+| `FRONTENT/src/pages/Masters/Products/EditPage.vue` | Composite edit page with variant type impact handling and SKU row lifecycle controls |
+
+### 3.3 Runtime Flow
+
+1. Route resolver picks `Products/IndexPage.vue`, `ViewPage.vue`, `AddPage.vue`, `EditPage.vue` via entity-custom page tier.
+2. Pages load Products with `useResourceData(resourceName)`.
+3. SKU data is loaded through `fetchMasterRecords('SKUs')` and filtered by `ProductCode`.
+4. `useProductVariants` converts `VariantTypes` CSV into dynamic variant columns.
+5. Add/Edit pages manage Product + SKUs through `useCompositeForm(config)` and save atomically using `compositeSave`.
+
+### 3.4 Validation and Behavior Rules
+
+1. Variant dimension count is capped at 5.
+2. Variant labels are user-defined and displayed as dynamic column headers.
+3. SKU rows must fill all active variant columns before save.
+4. Duplicate active SKU variant-value sets are blocked before save.
+5. SKU delete in Edit follows existing composite pattern (`_action = deactivate`, `Status = Inactive`), not hard delete.
+6. Edit page variant removal prompts for confirmation and remaps SKU variant columns in-memory before save.
+
 <!--
-## 3. Data Backup & Restore
+## 4. Data Backup & Restore
 (To be documented when implemented)
 
-## 4. Bulk Upload
+## 5. Bulk Upload
 (To be documented when implemented)
 
-## 5. Dashboard Widgets
+## 6. Dashboard Widgets
 (To be documented when implemented)
 -->
+
 

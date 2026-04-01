@@ -213,6 +213,12 @@ export async function getResourceRows(resource, options = {}) {
     return filtered.filter((row) => (row[statusIndex] || '').toString().trim() === 'Active');
 }
 
+export async function deleteResourceRowByCode(resource, code) {
+    if (!resource || !code) return null;
+    const db = await ensureDB();
+    return db.delete('resource-records', `${resource}::${normalizeKeyValue(code)}`);
+}
+
 export async function saveFunctionalDraft(key, data) {
     if (!key) return null;
     const db = await ensureDB();

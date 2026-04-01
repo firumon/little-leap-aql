@@ -68,6 +68,11 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
 
 ## 6) Current Implementation Status
 ### Completed
+- Products entity-custom pages delivered (2026-03-31):
+  - `FRONTENT/src/pages/Masters/Products/IndexPage.vue` custom index with product + SKU-variant combined search and SKU counts.
+  - `FRONTENT/src/pages/Masters/Products/ViewPage.vue` custom view with dynamic SKU columns from `VariantTypes`.
+  - `FRONTENT/src/pages/Masters/Products/AddPage.vue` and `EditPage.vue` composite Product + SKU management with variant-aware validation.
+  - Shared helper `FRONTENT/src/composables/useProductVariants.js` for variant parsing, required-field validation, and duplicate variant-set detection.
 - **Unified Master UI**: Rolled back the Master Entity Page to a standard table-based UI to ensure data visibility and resolve UI duplication issues, while maintaining the `v-if` guard for stability.
 - Standardized Frontend UX & PWA Data Contract (Pre-Warehouse):
   - Enforced Quasar-First UI policy across all components.

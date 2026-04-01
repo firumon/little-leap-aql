@@ -85,7 +85,8 @@ export function useCompositeForm(configRef, options = {}) {
       const records = existing.map((rec, i) => ({
         data: { ...rec },
         _action: 'update',
-        _key: rec.Code || `existing-${i}`
+        _key: rec.Code || `existing-${i}`,
+        _originalCode: rec.Code || ''
       }))
 
       return {
@@ -104,7 +105,8 @@ export function useCompositeForm(configRef, options = {}) {
     group.records.push({
       data: emptyForm,
       _action: 'create',
-      _key: `new-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      _key: `new-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      _originalCode: ''
     })
   }
 
@@ -201,7 +203,8 @@ export function useCompositeForm(configRef, options = {}) {
           .filter((r) => r._action !== 'deactivate' || r.data.Code) // keep deactivate only for existing
           .map((r) => ({
             data: { ...r.data },
-            _action: r._action
+            _action: r._action,
+            _originalCode: r._originalCode || ''
           }))
       }))
   }

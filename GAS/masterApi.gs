@@ -916,23 +916,26 @@ function handleCompositeSave(auth, payload) {
           childProvidedValues[parentCodeField] = parentCode;
         }
 
-        if (recAction === 'deactivate' && recData.Code) {
-          var deactivateRowNum = findRowByValue(childSheet, childIdx.Code, recData.Code, 2, true);
+        var originalCode = (rec._originalCode || recData.Code || '').toString().trim();
+        var nextCode = (recData.Code || originalCode || '').toString().trim();
+
+        if (recAction === 'deactivate' && originalCode) {
+          var deactivateRowNum = findRowByValue(childSheet, childIdx.Code, originalCode, 2, true);
           if (deactivateRowNum !== -1) {
             var deactivateRow = childSheet.getRange(deactivateRowNum, 1, 1, childHeaders.length).getValues()[0];
             deactivateRow[childIdx.Status] = 'Inactive';
             applyAuditFields(deactivateRow, childIdx, auth, childResource.config, false);
             childOps.updateOps.push({ rowNumber: deactivateRowNum, rowData: deactivateRow });
           }
-        } else if (recAction === 'update' && recData.Code) {
-          var updateRowNum = findRowByValue(childSheet, childIdx.Code, recData.Code, 2, true);
+        } else if (recAction === 'update' && originalCode) {
+          var updateRowNum = findRowByValue(childSheet, childIdx.Code, originalCode, 2, true);
           if (updateRowNum === -1) {
-            validationErrors.push({ resource: childResourceName, index: r, message: 'Record not found: ' + recData.Code });
+            validationErrors.push({ resource: childResourceName, index: r, message: 'Record not found: ' + originalCode });
             continue;
           }
           var existingChildRow = childSheet.getRange(updateRowNum, 1, 1, childHeaders.length).getValues()[0];
           var mergedChild = mergeMasterRow(existingChildRow, childIdx, childProvidedValues, childSchema);
-          mergedChild[childIdx.Code] = recData.Code;
+          mergedChild[childIdx.Code] = nextCode;
           applyAuditFields(mergedChild, childIdx, auth, childResource.config, false);
           validateRequiredFields(mergedChild, childIdx, childSchema.requiredHeaders, childResourceName);
           validateMasterUniqueness(childCurrentValues, childIdx, mergedChild, childSchema, updateRowNum, childResourceName);
@@ -940,7 +943,7 @@ function handleCompositeSave(auth, payload) {
           childCurrentValues[updateRowNum - 1] = mergedChild;
         } else {
           // create
-          var newChildCode = generateNextCode(childCurrentValues, childIdx, childCodePrefix, childSeqLength);
+          var newChildCode = nextCode || generateNextCode(childCurrentValues, childIdx, childCodePrefix, childSeqLength);
           var newChildRow = buildNewMasterRow(childHeaders, childIdx, childProvidedValues, childSchema);
           newChildRow[childIdx.Code] = newChildCode;
           applyAccessRegionOnWrite(newChildRow, childIdx, auth);

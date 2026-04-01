@@ -89,6 +89,33 @@ export function useResourceData(resourceNameRef) {
     return items.value.find((row) => row.Code === code) || null
   }
 
+  /**
+   * Optimistically update a record in the local items array and IDB.
+   * Call this after a successful save to reflect changes immediately
+   * without waiting for a full server round-trip.
+   */
+  async function updateLocalRecord(updatedRecord) {
+    if (!updatedRecord?.Code) return
+    const idx = items.value.findIndex((r) => r.Code === updatedRecord.Code)
+    if (idx >= 0) {
+      items.value[idx] = { ...items.value[idx], ...updatedRecord }
+    } else {
+      items.value.push({ ...updatedRecord })
+    }
+    // Also persist to IDB so subsequent navigations see it immediately
+    try {
+      if (lastHeaders.value.length) {
+        const { upsertResourceRows } = await import('src/utils/db')
+        const row = lastHeaders.value.map((h) => (items.value.find((r) => r.Code === updatedRecord.Code) || {})[h] ?? '')
+        await upsertResourceRows(
+          typeof resourceNameRef === 'function' ? resourceNameRef() : (resourceNameRef?.value || resourceNameRef),
+          lastHeaders.value,
+          [row]
+        )
+      }
+    } catch (_) { /* non-critical */ }
+  }
+
   function reset() {
     items.value = []
     lastHeaders.value = []
@@ -110,6 +137,7 @@ export function useResourceData(resourceNameRef) {
     reload,
     reset,
     getRecordByCode,
+    updateLocalRecord,
     notify
   }
 }

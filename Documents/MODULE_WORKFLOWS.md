@@ -11,6 +11,7 @@ This document captures the **end-to-end workflow knowledge** for each major feat
 1. [Report Generation (PDF)](#1-report-generation-pdf)
 2. [Master Pages - 3-Tier Section-Level Component Architecture](#2-master-pages--3-tier-section-level-component-architecture)
 3. [Products Variant Management (Custom Pages)](#3-products-variant-management-custom-pages)
+4. [Menu Access Control](#4-menu-access-control)
 
 <!-- Future modules -- add sections as they are built:
 4. [Data Backup & Restore](#4-data-backup--restore)
@@ -562,7 +563,131 @@ Products now use entity-custom pages under `FRONTENT/src/pages/Masters/Products/
 5. SKU delete in Edit follows existing composite pattern (`_action = deactivate`, `Status = Inactive`), not hard delete.
 6. Edit page variant removal prompts for confirmation and remaps SKU variant columns in-memory before save.
 
-<!--
+---
+
+## 4. Menu Access Control
+
+### 4.1 Overview
+
+Menu Access Control enables fine-grained permission-based visibility of resources in the sidebar and route protection using a flexible `menuAccess` rule inside the `Menu` JSON column of `APP.Resources`. Rules support single-resource permission checks and cross-resource AND/OR logic.
+
+### 4.2 Architecture
+
+**Backend (GAS):**
+- `GAS/syncAppResources.gs` — Defines `menuAccess` inside the `Menu` JSON for each resource (code-level source of truth).
+- `GAS/resourceRegistry.gs` — Parses `Menu` JSON including `menuAccess` and delivers it in the auth payload as `entry.ui.menu.menuAccess`.
+
+**Frontend:**
+- `FRONTENT/src/composables/useMenuAccess.js` — Reusable composable that evaluates `menuAccess` rules against auth store permissions.
+- `FRONTENT/src/layouts/MainLayout/MainLayout.vue` — Imports `useMenuAccess`, filters sidebar menu items based on evaluation result.
+- `FRONTENT/src/router/index.js` — Uses inline `evaluateMenuAccessInline()` function (no composable context) to guard route access.
+
+### 4.3 `menuAccess` Rule Formats
+
+All rules evaluate against the current logged-in user's permissions (from auth store). If `menuAccess` is absent, the fallback is `canRead` on the resource itself.
+
+**Format 1: No rule (absent)**
+```json
+// No menuAccess field → fallback to canRead
+```
+
+**Format 2: Single permission on own resource**
+```json
+"menuAccess": { "require": "canWrite" }
+"menuAccess": { "require": ["canWrite", "canDelete"] }  // AND logic
+```
+
+**Format 3: All rules must pass (AND)**
+```json
+"menuAccess": {
+  "all": [
+    { "resource": "Products", "require": "canWrite" },
+    { "resource": "SKUs", "require": "canRead" }
+  ]
+}
+```
+If any rule fails, access is denied.
+
+**Format 4: Any rule must pass (OR)**
+```json
+"menuAccess": {
+  "any": [
+    { "resource": "Products", "require": "canWrite" },
+    { "resource": "Variants", "require": "canWrite" }
+  ]
+}
+```
+If at least one rule passes, access is granted.
+
+### 4.4 Evaluation Flow
+
+1. **Backend Setup:**
+   - Admin updates `menuAccess` inside `Menu` JSON in `APP.Resources` (directly in sheet or via code-level config in `syncAppResources.gs`).
+   - GAS delivers resource metadata including `ui.menu.menuAccess` to frontend in login/auth payload.
+
+2. **Frontend Sidebar Filtering (MainLayout.vue):**
+   - On component render, `visibleResourceMenuGroups` computed property filters resources.
+   - For each resource, calls `evaluateMenuAccess(resource)` from `useMenuAccess()` composable.
+   - Only resources where evaluation returns `true` appear in the sidebar.
+
+3. **Frontend Route Guard (router/index.js):**
+   - Before navigation, `beforeEach` hook checks if route matches a resource route.
+   - If a resource is required, calls `evaluateMenuAccessInline(targetEntry, allResources)` to check permissions.
+   - If evaluation fails, redirects to `/dashboard`; otherwise, allows navigation.
+
+### 4.5 Permission Keys
+
+Valid permission keys depend on role configuration. Common keys:
+- `canRead`, `canWrite`, `canUpdate`, `canDelete` (CRUD standard)
+- `canApprove`, `canReject`, `canCancel` (custom actions)
+- Any key matching the pattern `can<ActionName>`
+
+### 4.6 Configuration & Testing
+
+**To add `menuAccess` to a resource:**
+
+1. In `GAS/syncAppResources.gs`, find the resource's config object and update its `Menu` JSON:
+   ```js
+   Menu: JSON.stringify({
+     group: 'Masters',
+     order: 1,
+     label: 'Products',
+     icon: 'inventory_2',
+     route: '/masters/products',
+     pageTitle: 'Products',
+     pageDescription: '...',
+     show: true,
+     menuAccess: { require: 'canWrite' }
+   })
+   ```
+
+2. Run `clasp push --force` to deploy GAS changes.
+
+3. In the APP sheet, run **AQL 🚀 > Resources > Sync APP.Resources from Code** to pull code changes into the sheet.
+
+4. Run **AQL 🚀 > Resources > Clear Resource Config Cache** to purge server-side cache.
+
+5. Create a **new Web App deployment** in Apps Script IDE (Deploy > New deployment) to serve the updated auth payload to the frontend.
+
+6. Clear browser cache and login as a test user:
+   - User WITH the required permission → resource visible in sidebar, route accessible.
+   - User WITHOUT the required permission → resource hidden from sidebar, route redirects to dashboard.
+
+### 4.7 Error Handling & Defaults
+
+- If `menuAccess` is malformed (invalid JSON, missing fields), safe defaults apply.
+- Missing `resource` in a rule defaults to the current resource name.
+- Unknown permission keys return `false` (denied).
+- If auth store is unavailable or `resources` list is empty, all visibility checks return `false`.
+
+### 4.8 Implementation Details
+
+- Evaluation is **fully frontend-side** — no extra GAS calls needed.
+- Composable `useMenuAccess()` is lightweight; each check is O(n) where n = number of rules (typically 1–5).
+- Router guard uses inline `evaluateMenuAccessInline()` (not composable) because Vue composables require `setup()` context, unavailable in the router.
+- Both evaluators use identical logic to ensure consistency.
+
+
 ## 4. Data Backup & Restore
 (To be documented when implemented)
 

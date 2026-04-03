@@ -64,7 +64,7 @@ function getAuthorizedResourceFromStore(resourceName) {
   return resources.find((entry) => entry?.name === resourceName) || null
 }
 
-function getAuthorizedMasterResources() {
+function getAuthorizedSyncableResources() {
   const auth = useAuthStore()
   const resources = Array.isArray(auth.authorizedResources)
     ? auth.authorizedResources
@@ -73,8 +73,14 @@ function getAuthorizedMasterResources() {
   if (!Array.isArray(resources)) return []
   return resources.filter((entry) => {
     const scope = (entry?.scope || '').toString().trim().toLowerCase()
-    return scope === 'master' && entry?.permissions?.canRead !== false && entry?.name && entry?.functional !== true
+    return ['master', 'operation', 'accounts'].includes(scope) &&
+      entry?.permissions?.canRead !== false && entry?.name && entry?.functional !== true
   })
+}
+
+function resolveResourceScope(resourceName) {
+  const resource = getAuthorizedResourceFromStore(resourceName)
+  return (resource?.scope || 'master').toString().trim().toLowerCase()
 }
 
 function getResourceSyncTtlSec(resourceName) {
@@ -275,32 +281,60 @@ async function syncMasterResourcesBatch(resourceNames = [], options = {}) {
     }
   }
 
-  const payload = {
-    scope: 'master',
-    resources: uniqueNames,
-    includeInactive: true,
-    ...(Object.keys(cursorByResource).length
-      ? { lastUpdatedAtByResource: cursorByResource }
-      : {})
+  // Group resources by scope so each batch call uses the correct scope
+  const byScope = {}
+  for (const name of uniqueNames) {
+    const scope = resolveResourceScope(name)
+    if (!byScope[scope]) byScope[scope] = []
+    byScope[scope].push(name)
   }
 
-  const response = await callGasApi('get', payload, {
-    showLoading,
-    showError
-  })
+  const mergedResponseData = {}
+  let anyFailed = false
+  let failMessage = ''
 
-  if (!response.success) {
+  for (const [scope, scopeNames] of Object.entries(byScope)) {
+    const scopeCursors = {}
+    for (const name of scopeNames) {
+      if (cursorByResource[name]) scopeCursors[name] = cursorByResource[name]
+    }
+
+    const payload = {
+      scope,
+      resources: scopeNames,
+      includeInactive: true,
+      ...(Object.keys(scopeCursors).length
+        ? { lastUpdatedAtByResource: scopeCursors }
+        : {})
+    }
+
+    const response = await callGasApi('get', payload, {
+      showLoading,
+      showError
+    })
+
+    if (!response.success) {
+      anyFailed = true
+      failMessage = response.message || `Failed to sync ${scope} resources`
+      continue
+    }
+
+    const scopeData = (response && typeof response.data === 'object' && response.data !== null)
+      ? response.data
+      : {}
+    Object.assign(mergedResponseData, scopeData)
+  }
+
+  if (anyFailed && !Object.keys(mergedResponseData).length) {
     return {
       success: false,
-      message: response.message || 'Failed to sync master resources',
-      data: response?.data || {},
-      meta: response?.meta || {}
+      message: failMessage || 'Failed to sync resources',
+      data: {},
+      meta: {}
     }
   }
 
-  const responseData = (response && typeof response.data === 'object' && response.data !== null)
-    ? response.data
-    : {}
+  const responseData = mergedResponseData
 
   for (const resourceName of uniqueNames) {
     const resourceResponse = responseData[resourceName]
@@ -448,7 +482,7 @@ export async function fetchMasterRecords(resourceName, options = {}) {
 
 export async function syncAllMasterResources() {
   try {
-    const masterResources = getAuthorizedMasterResources()
+    const masterResources = getAuthorizedSyncableResources()
 
     if (!masterResources.length) {
       return { success: true, data: {}, meta: { resources: [], lastSyncAt: Date.now() } }
@@ -492,7 +526,7 @@ export function clearAllSyncCursors() {
 
 export async function createMasterRecord(resourceName, record) {
   return callGasApi('create', {
-    scope: 'master',
+    scope: resolveResourceScope(resourceName),
     resource: resourceName,
     record
   }, { showLoading: true, loadingMessage: 'Creating record...', successMessage: 'Record created successfully' })
@@ -500,7 +534,7 @@ export async function createMasterRecord(resourceName, record) {
 
 export async function updateMasterRecord(resourceName, code, record) {
   return callGasApi('update', {
-    scope: 'master',
+    scope: resolveResourceScope(resourceName),
     resource: resourceName,
     code,
     record
@@ -509,7 +543,7 @@ export async function updateMasterRecord(resourceName, code, record) {
 
 export async function bulkMasterRecords(targetResourceName, records) {
   return callGasApi('bulk', {
-    scope: 'master',
+    scope: resolveResourceScope(targetResourceName),
     resource: 'BulkUploadMasters',
     callerResource: 'BulkUploadMasters',
     targetResource: targetResourceName,
@@ -527,7 +561,7 @@ export async function compositeSave(payload) {
 
 export async function executeAction(resourceName, code, actionConfig, fields = {}) {
   return callGasApi('executeAction', {
-    scope: 'master',
+    scope: resolveResourceScope(resourceName),
     resource: resourceName,
     code,
     action: actionConfig.action,

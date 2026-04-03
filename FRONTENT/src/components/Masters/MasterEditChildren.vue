@@ -2,7 +2,7 @@
   <ChildRecordsTable
     v-for="group in childGroups"
     :key="group.resource.name"
-    :title="group.resource.ui?.pageTitle || group.resource.name"
+    :title="group.resource.ui?.menu?.pageTitle || group.resource.name"
     :records="group.records"
     :fields="group.resolvedFields"
     :status-options="statusOptions"

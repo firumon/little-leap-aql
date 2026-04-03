@@ -2,9 +2,9 @@
   <template v-for="childRes in childResources" :key="childRes.name">
     <q-card flat bordered class="page-card q-mt-sm">
       <q-card-section>
-        <div class="section-title">{{ childRes.ui?.pageTitle || childRes.name }}</div>
+        <div class="section-title">{{ childRes.ui?.menu?.pageTitle || childRes.name }}</div>
         <div v-if="!childRecords[childRes.name]?.length" class="text-grey-6 text-center q-py-md">
-          No {{ (childRes.ui?.pageTitle || childRes.name).toLowerCase() }} found
+          No {{ (childRes.ui?.menu?.pageTitle || childRes.name).toLowerCase() }} found
         </div>
         <q-markup-table v-else flat dense separator="horizontal" class="child-view-table">
           <thead>

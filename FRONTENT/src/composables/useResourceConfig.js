@@ -22,7 +22,7 @@ export function useResourceConfig() {
     // Match by route path (most reliable)
     const currentPath = `/${scope.value}/${resourceSlug.value}`
     const byRoutePath = resources.find((entry) => {
-      const entryPath = entry?.ui?.routePath || ''
+      const entryPath = entry?.ui?.menu?.route || ''
       return entryPath === currentPath
     })
     if (byRoutePath) return byRoutePath

@@ -38,7 +38,7 @@
           <q-btn round flat icon="notifications">
             <q-badge floating color="red" rounded />
           </q-btn>
-          
+
           <q-btn round flat>
             <q-avatar size="32px">
               <img :src="userAvatar">
@@ -139,8 +139,10 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useAuthStore } from 'src/stores/auth'
+import { useMenuAccess } from 'src/composables/useMenuAccess'
 
 const auth = useAuthStore()
+const { evaluateMenuAccess } = useMenuAccess()
 const leftDrawerOpen = ref(false)
 const search = ref('')
 
@@ -175,14 +177,6 @@ function isValidRoute(routePath) {
 }
 
 const userAvatar = computed(() => auth.userProfile?.avatar || 'https://cdn.quasar.dev/img/avatar.png')
-const readableResources = computed(() => {
-  const resources = Array.isArray(auth.resources) ? auth.resources : []
-  return new Set(
-    resources
-      .filter((resource) => resource?.permissions?.canRead === true)
-      .map((resource) => resource.name)
-  )
-})
 
 const menuSearchQuery = computed(() => search.value.trim().toLowerCase())
 
@@ -192,30 +186,32 @@ const visibleResourceMenuGroups = computed(() => {
 
   resources
     .filter((resource) => {
-      const routePath = resource?.ui?.routePath || ''
-      return (resource?.scope === 'master' || resource?.scope === 'operation' || resource?.scope === 'accounts') &&
-        resource?.permissions?.canRead === true &&
-        resource?.ui?.showInMenu !== false &&
-        isValidRoute(routePath) &&
-        readableResources.value.has(resource.name)
+      const menu = resource?.ui?.menu
+      return menu?.show !== false &&
+        menu?.route &&
+        evaluateMenuAccess(resource)
     })
     .forEach((resource) => {
-      const navLabel = resource.ui?.menuLabel || resource.name
+      const menu = resource.ui?.menu || {}
+      const route = menu.route
+      if (!isValidRoute(route)) return
+
+      const navLabel = menu.label || resource.name
       if (menuSearchQuery.value && !navLabel.toLowerCase().includes(menuSearchQuery.value)) {
         return
       }
 
-      const groupLabel = resource.ui?.menuGroup || 'Masters'
+      const groupLabel = menu.group || 'General'
       if (!grouped[groupLabel]) {
         grouped[groupLabel] = []
       }
 
       grouped[groupLabel].push({
         resource: resource.name,
-        routePath: resource.ui?.routePath || `/${resource.scope === 'operation' ? 'operations' : resource.scope === 'accounts' ? 'accounts' : 'masters'}/${resource.name.toLowerCase()}`,
+        routePath: route,
         navLabel,
-        navIcon: resource.ui?.menuIcon || 'list_alt',
-        order: Number(resource.ui?.menuOrder || 9999)
+        navIcon: menu.icon || 'list_alt',
+        order: Number(menu.order || 9999)
       })
     })
 

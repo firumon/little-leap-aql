@@ -12,6 +12,47 @@ import routes from './routes'
  * with the Router instance.
  */
 
+/**
+ * Plain (non-composable) version of evaluateMenuAccess for use in the router guard.
+ * Cannot use composables here (no setup context).
+ *
+ * @param {object} resource - The full resource entry to evaluate
+ * @param {Array} allResources - Full list of authorized resources (for cross-resource checks)
+ * @returns {boolean}
+ */
+function evaluateMenuAccessInline(resource, allResources) {
+  if (!resource) return false
+
+  const resourceName = resource.name
+  const menuAccess = resource?.ui?.menu?.menuAccess
+
+  function checkPerms(resName, require) {
+    const entry = allResources.find((r) => r?.name === resName)
+    if (!entry) return false
+    const perms = entry.permissions || {}
+    const keys = Array.isArray(require) ? require : [require]
+    return keys.every((k) => perms[k] === true)
+  }
+
+  if (!menuAccess || typeof menuAccess !== 'object') {
+    return checkPerms(resourceName, 'canRead')
+  }
+
+  if (menuAccess.require !== undefined) {
+    return checkPerms(resourceName, menuAccess.require)
+  }
+
+  if (Array.isArray(menuAccess.all)) {
+    return menuAccess.all.every((rule) => checkPerms(rule.resource || resourceName, rule.require))
+  }
+
+  if (Array.isArray(menuAccess.any)) {
+    return menuAccess.any.some((rule) => checkPerms(rule.resource || resourceName, rule.require))
+  }
+
+  return false
+}
+
 export default defineRouter(function (/* { store, ssrContext } */) {
   const createHistory = process.env.SERVER
     ? createMemoryHistory
@@ -57,17 +98,22 @@ export default defineRouter(function (/* { store, ssrContext } */) {
       return next('/login')
     }
 
-    const matchedByPath = Array.isArray(resources) ? resources.find((resource) => {
-      return resource?.ui?.routePath === to.path
-    }) : null
-    const effectiveRequiredResource = requiredResource || matchedByPath?.name
+    // Find the resource entry whose menu.route matches the navigation target
+    const matchedResource = Array.isArray(resources)
+      ? resources.find((r) => r?.ui?.menu?.route === to.path)
+      : null
+
+    const effectiveRequiredResource = requiredResource || matchedResource?.name
 
     if (effectiveRequiredResource && isAuthenticated) {
-      const hasResourceReadAccess = Array.isArray(resources) && resources.some((resource) => {
-        return resource?.name === effectiveRequiredResource && resource?.permissions?.canRead === true
-      })
+      // Find the full resource entry for permission evaluation
+      const targetEntry = Array.isArray(resources)
+        ? resources.find((r) => r?.name === effectiveRequiredResource)
+        : null
 
-      if (!hasResourceReadAccess) {
+      const allowed = targetEntry ? evaluateMenuAccessInline(targetEntry, resources) : false
+
+      if (!allowed) {
         return next('/dashboard')
       }
     }

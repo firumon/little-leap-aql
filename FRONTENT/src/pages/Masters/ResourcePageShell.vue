@@ -21,7 +21,7 @@ import { useResourceConfig } from 'src/composables/useResourceConfig'
 const route = useRoute()
 const { scope, resourceSlug, code, action, config, additionalActions } = useResourceConfig()
 
-const resourceTitle = computed(() => config.value?.ui?.pageTitle || config.value?.name || resourceSlug.value)
+const resourceTitle = computed(() => config.value?.ui?.menu?.pageTitle || config.value?.name || resourceSlug.value)
 
 const actionLabel = computed(() => {
   const a = action.value

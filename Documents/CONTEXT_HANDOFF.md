@@ -248,6 +248,28 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - Queue flush uses `action=get` + `scope=master` + `resources[]` + `lastUpdatedAtByResource` to reduce request count.
   - Legacy interval-based per-resource sync loop in `FRONTENT/src/App.vue` was removed to prevent duplicate background network traffic.
 
+- **Menu Column Consolidation (2026-04-03)**:
+  - Consolidated 8 separate menu columns (`MenuGroup`, `MenuOrder`, `MenuLabel`, `MenuIcon`, `RoutePath`, `PageTitle`, `PageDescription`, `ShowInMenu`) into a single `Menu` JSON column in `APP.Resources`.
+  - `GAS/syncAppResources.gs`: Each resource now has a single `Menu` key containing a JSON object with `group`, `order`, `label`, `icon`, `route`, `pageTitle`, `pageDescription`, `show`.
+  - `GAS/setupAppSheets.gs`: Resources sheet schema uses single `Menu` column header instead of 8.
+  - `GAS/resourceRegistry.gs`: Parses `Menu` JSON into the same internal config properties (`menuGroup`, `menuOrder`, `menuLabel`, etc.) so the auth payload `entry.ui` shape is unchanged.
+  - `GAS/appMenu.gs`: Admin dialog still shows individual form fields; `mapResource()` composes them into `Menu` JSON on save, `getResourceDetails()` parses `Menu` JSON back into individual fields on load.
+  - **Frontend fully refactored** — auth payload now delivers `entry.ui.menu` as a nested object. All frontend consumers updated from `resource.ui.menuGroup` → `resource.ui.menu.group`, `resource.ui.routePath` → `resource.ui.menu.route`, `resource.ui.pageTitle` → `resource.ui.menu.pageTitle`, etc.
+  - Frontend files updated: `MainLayout.vue`, `router/index.js`, `useResourceConfig.js`, `useCompositeForm.js`, `ResourcePageShell.vue`, `MasterListHeader.vue`, `MasterAddHeader.vue`, `MasterEditHeader.vue`, `MasterAddChildren.vue`, `MasterEditChildren.vue`, `MasterViewChildren.vue`.
+  - Plan: `PLANS/2026-04-03-menu-column-consolidation.md`.
+
+- **Menu Access Control via `menuAccess` Rules (2026-04-03)**:
+   - Added permission-based menu visibility control using `menuAccess` field inside the `Menu` JSON column.
+   - `GAS/syncAppResources.gs`: Code-level source of truth for `menuAccess` rules (e.g., `menuAccess: { require: 'canWrite' }`).
+   - `GAS/resourceRegistry.gs`: Parses and delivers `entry.ui.menu.menuAccess` in auth payload.
+   - `FRONTENT/src/composables/useMenuAccess.js`: Reusable composable that evaluates `menuAccess` rules against user permissions. Supports: absent (fallback `canRead`), single resource (`require`), cross-resource AND (`all`), cross-resource OR (`any`).
+   - `FRONTENT/src/layouts/MainLayout/MainLayout.vue`: Uses `evaluateMenuAccess()` to filter sidebar menu items instead of hardcoded `canRead` check. Removed `readableResources` computed property.
+   - `FRONTENT/src/router/index.js`: Added inline `evaluateMenuAccessInline()` function (non-composable) to guard route access using same logic.
+   - `menuAccess` schema documented in `RESOURCE_COLUMNS_GUIDE.md` with examples for all 4 cases.
+   - Full workflow documented in `MODULE_WORKFLOWS.md` section 4.
+   - Test case: Products resource configured with `menuAccess: { require: 'canWrite' }` in `syncAppResources.gs`.
+   - Plan: `PLANS/2026-04-03-menu-access-control.md`.
+
 ### Key behavior now
 - Code is generated in Apps Script (not by sheet formula).
 - Code generation uses `Resources.CodePrefix` + `Resources.CodeSequenceLength`.
@@ -297,9 +319,8 @@ Required columns (managed by `syncAppResources.gs`):
 - `CodePrefix`, `CodeSequenceLength`, `LastDataUpdatedAt`, `Audit`
 - `RequiredHeaders`, `UniqueHeaders`, `UniqueCompositeHeaders`, `DefaultValues`
 - `RecordAccessPolicy`, `OwnerUserField`, `AdditionalActions`
-- `MenuGroup`, `MenuOrder`, `MenuLabel`, `MenuIcon`
-- `RoutePath`, `PageTitle`, `PageDescription`, `UIFields`
-- `ShowInMenu`, `IncludeInAuthorizationPayload`, `Reports`, `CustomUIName`
+- `Menu` (JSON: group, order, label, icon, route, pageTitle, pageDescription, show)
+- `UIFields`, `IncludeInAuthorizationPayload`, `Reports`, `CustomUIName`
 
 Column meaning and value guidance: `Documents/RESOURCE_COLUMNS_GUIDE.md`
 

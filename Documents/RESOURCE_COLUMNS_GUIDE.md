@@ -27,15 +27,8 @@ This document explains each `APP > Resources` column, what to fill, and common v
 | `RecordAccessPolicy` | Yes | Text | Row-level authorization model | `ALL`, `OWNER`, `OWNER_GROUP`, `OWNER_AND_UPLINE` | `OWNER_AND_UPLINE` |
 | `OwnerUserField` | Optional | Text | Header used as owner column | Usually `CreatedBy` | `CreatedBy` |
 | `AdditionalActions` | Optional | CSV Text | Declares domain actions supported by resource | Comma-separated action names | `Approve,Reject,Cancel` |
-| `MenuGroup` | Optional | Text | Sidebar group label/classification | Any text | `Masters` |
-| `MenuOrder` | Optional | Number | Sidebar order within group | Integer | `10` |
-| `MenuLabel` | Optional | Text | Sidebar label | Any text | `Products` |
-| `MenuIcon` | Optional | Text | Quasar/Material icon name | Icon id | `inventory_2` |
-| `RoutePath` | Optional | Text | Frontend path mapped to resource | Absolute app route | `/masters/products` |
-| `PageTitle` | Optional | Text | Page title shown in UI | Any text | `Products` |
-| `PageDescription` | Optional | Text | Subtitle/help text | Any text | `Manage product master records` |
+| `Menu` | Optional | JSON Text | Consolidated menu/navigation config. Contains: `group` (sidebar group), `order` (sort within group), `label` (sidebar text), `icon` (Quasar/Material icon), `route` (frontend path), `pageTitle`, `pageDescription`, `show` (boolean, show in menu). Blank/`{}` = auto-derive defaults from `Name`/`Scope`. | JSON object | `{"group":"Masters","order":1,"label":"Products","icon":"inventory_2","route":"/masters/products","pageTitle":"Products","pageDescription":"Manage products","show":true}` |
 | `UIFields` | Optional | JSON Text | Field config for dynamic form/table | JSON array of field objects | `[{"header":"Name","label":"Name","type":"text","required":true}]` |
-| `ShowInMenu` | Yes | Boolean | Whether to show in frontend menu | `TRUE` / `FALSE` | `TRUE` |
 | `IncludeInAuthorizationPayload` | Yes | Boolean | Include this resource in login/getAuthorizedResources payload | `TRUE` / `FALSE` | `TRUE` |
 | `Functional` | Yes | Boolean | If `TRUE`, resource is a UI tool with no backing sheet (FileID/SheetName ignored). Skipped during data sync. | `TRUE` / `FALSE` | `FALSE` |
 | `PreAction` | Optional | Text | Function name executed **before** the main action handler when the resource is invoked | GAS function name | `validateBulkPayload` |
@@ -58,6 +51,84 @@ This document explains each `APP > Resources` column, what to fill, and common v
   - `Update` -> update permission
   - `Delete` -> delete permission
 - Additional actions (like `Approve`) are checked from same `Actions` list.
+
+## `Menu` JSON Schema
+
+The `Menu` column stores a single JSON object that consolidates all menu/navigation config for the resource. This replaced the former 8 separate columns (`MenuGroup`, `MenuOrder`, `MenuLabel`, `MenuIcon`, `RoutePath`, `PageTitle`, `PageDescription`, `ShowInMenu`).
+
+```json
+{
+  "group": "Masters",
+  "order": 1,
+  "label": "Products",
+  "icon": "inventory_2",
+  "route": "/masters/products",
+  "pageTitle": "Products",
+  "pageDescription": "Manage product master records",
+  "show": true
+}
+```
+
+| Field | Required | Type | Meaning | Default (when missing) |
+|---|---|---|---|---|
+| `group` | No | String | Sidebar group label | `""` |
+| `order` | No | Number | Sort order within group | `9999` |
+| `label` | No | String | Sidebar display text | Resource `Name` |
+| `icon` | No | String | Quasar/Material icon id | `list_alt` |
+| `route` | No | String | Frontend route path | `""` |
+| `pageTitle` | No | String | Page title in UI | Resource `Name` |
+| `pageDescription` | No | String | Subtitle/help text | `""` |
+| `show` | No | Boolean | Show in sidebar menu | `true` |
+| `menuAccess` | No | Object | Permission-based menu visibility rule (see `menuAccess` schema below) | `undefined` (fallback: `canRead` on own resource) |
+
+**Fallback**: If the `Menu` cell is blank or `{}`, all fields auto-derive sensible defaults from the resource `Name` and `Scope`. This means existing resources continue working without migration.
+
+### `menuAccess` Sub-schema
+
+The `menuAccess` field inside `Menu` JSON controls whether a user sees the resource in the sidebar and can access its route. If `menuAccess` is absent, the fallback is `canRead` on the resource itself.
+
+**Supported `menuAccess` formats:**
+
+1. **No `menuAccess` field (absent or undefined)**
+   - Fallback: User must have `canRead` on this resource.
+   
+2. **Single permission on own resource**
+   ```json
+   "menuAccess": { "require": "canWrite" }
+   ```
+   - User must have the specified permission on this resource.
+   - `require` can be a string (`"canWrite"`) or array (`["canWrite", "canDelete"]`).
+   - Array means ALL permissions must be true (AND).
+
+3. **Cross-resource AND rule (all rules must pass)**
+   ```json
+   "menuAccess": {
+     "all": [
+       { "resource": "Products", "require": "canWrite" },
+       { "resource": "Variants", "require": "canRead" }
+     ]
+   }
+   ```
+   - All listed rules must be satisfied.
+   - Each rule specifies a `resource` name and `require` (string or array).
+   - If `resource` is omitted in a rule, it defaults to the current resource.
+
+4. **Cross-resource OR rule (any rule must pass)**
+   ```json
+   "menuAccess": {
+     "any": [
+       { "resource": "Products", "require": "canWrite" },
+       { "resource": "Variants", "require": "canWrite" }
+     ]
+   }
+   ```
+   - At least ONE rule must be satisfied.
+   - If no rules pass, access is denied.
+
+**Evaluation Logic:**
+- Frontend reads `menuAccess` from the auth payload and evaluates it against the current user's permissions.
+- Used in: `MainLayout.vue` (sidebar filtering) and `router/index.js` (route guard).
+- If `menuAccess` is malformed or absent, safe defaults apply (deny by default for defined rules, `canRead` fallback otherwise).
 
 ## Action & Progress Tracking Columns Convention
 

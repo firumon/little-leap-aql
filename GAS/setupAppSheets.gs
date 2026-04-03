@@ -40,15 +40,8 @@ function setupAppSheets() {
         'RecordAccessPolicy',
         'OwnerUserField',
         'AdditionalActions',
-        'MenuGroup',
-        'MenuOrder',
-        'MenuLabel',
-        'MenuIcon',
-        'RoutePath',
-        'PageTitle',
-        'PageDescription',
+        'Menu',
         'UIFields',
-        'ShowInMenu',
         'IncludeInAuthorizationPayload',
         'Functional',
         'PreAction',
@@ -68,13 +61,6 @@ function setupAppSheets() {
         },
         {
           colHeader: 'Audit',
-          rule: SpreadsheetApp.newDataValidation()
-            .requireValueInList(['TRUE', 'FALSE'], true)
-            .setAllowInvalid(false)
-            .build()
-        },
-        {
-          colHeader: 'ShowInMenu',
           rule: SpreadsheetApp.newDataValidation()
             .requireValueInList(['TRUE', 'FALSE'], true)
             .setAllowInvalid(false)
@@ -113,15 +99,8 @@ function setupAppSheets() {
         RecordAccessPolicy: 160,
         OwnerUserField: 150,
         AdditionalActions: 220,
-        MenuGroup: 120,
-        MenuOrder: 110,
-        MenuLabel: 140,
-        MenuIcon: 120,
-        RoutePath: 220,
-        PageTitle: 180,
-        PageDescription: 260,
+        Menu: 400,
         UIFields: 320,
-        ShowInMenu: 100,
         IncludeInAuthorizationPayload: 220,
         Functional: 100,
         PreAction: 180,
@@ -415,7 +394,7 @@ function fixResourcesBooleanValidation() {
   const idx = {};
   headers.forEach(function (h, i) { idx[h] = i; });
 
-  const targets = ['IsActive', 'Audit', 'ShowInMenu', 'IncludeInAuthorizationPayload', 'Functional'];
+  const targets = ['IsActive', 'Audit', 'IncludeInAuthorizationPayload', 'Functional'];
   const rule = SpreadsheetApp.newDataValidation()
     .requireValueInList(['TRUE', 'FALSE'], true)
     .setAllowInvalid(false)

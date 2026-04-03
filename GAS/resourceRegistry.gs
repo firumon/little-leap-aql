@@ -40,7 +40,7 @@ function getResourceConfigMap() {
 
   // Try CacheService for cross-execution persistence
   var scriptCache = CacheService.getScriptCache();
-  var cacheKey = 'AQL_RESOURCE_CONFIG_MAP_V1';
+  var cacheKey = 'AQL_RESOURCE_CONFIG_MAP_V2';
   var cachedJson = scriptCache.get(cacheKey);
   if (!cachedJson) {
     // Try Permanent Metadata fallback
@@ -66,6 +66,7 @@ function getResourceConfigMap() {
     var rawFileId = (row[registry.idx.FileID] || '').toString().trim();
 
     var listViewsMeta = parseListViewsCell(readOptionalCell(row, registry.idx.ListViews, ''));
+    var menuObj = parseJsonCell(readOptionalCell(row, registry.idx.Menu, '{}'), {});
 
     map[name] = {
       name: name,
@@ -89,15 +90,17 @@ function getResourceConfigMap() {
       defaultValues: parseJsonCell(readOptionalCell(row, registry.idx.DefaultValues, '{}'), {}),
       recordAccessPolicy: normalizeRecordAccessPolicy(readOptionalCell(row, registry.idx.RecordAccessPolicy, 'all')),
       ownerUserField: (readOptionalCell(row, registry.idx.OwnerUserField, 'CreatedBy') || '').toString().trim() || 'CreatedBy',
-      menuGroup: (readOptionalCell(row, registry.idx.MenuGroup, '') || '').toString().trim(),
-      menuOrder: Number(readOptionalCell(row, registry.idx.MenuOrder, 9999) || 9999),
-      menuLabel: (readOptionalCell(row, registry.idx.MenuLabel, name) || '').toString().trim() || name,
-      menuIcon: (readOptionalCell(row, registry.idx.MenuIcon, 'list_alt') || '').toString().trim() || 'list_alt',
-      routePath: (readOptionalCell(row, registry.idx.RoutePath, '') || '').toString().trim(),
-      pageTitle: (readOptionalCell(row, registry.idx.PageTitle, name) || '').toString().trim() || name,
-      pageDescription: (readOptionalCell(row, registry.idx.PageDescription, '') || '').toString().trim(),
+      menu: Object.assign({}, menuObj, {
+        group: menuObj.group || '',
+        order: Number(menuObj.order) || 9999,
+        label: menuObj.label || name,
+        icon: menuObj.icon || 'list_alt',
+        route: menuObj.route || '',
+        pageTitle: menuObj.pageTitle || name,
+        pageDescription: menuObj.pageDescription || '',
+        show: menuObj.show !== undefined ? toBooleanCell(menuObj.show) : true
+      }),
       uiFields: parseJsonCell(readOptionalCell(row, registry.idx.UIFields, '[]'), []),
-      showInMenu: toBooleanCell(readOptionalCell(row, registry.idx.ShowInMenu, true)),
       includeInAuthorizationPayload: toBooleanCell(readOptionalCell(row, registry.idx.IncludeInAuthorizationPayload, true)),
       parentResource: (readOptionalCell(row, registry.idx.ParentResource, '') || '').toString().trim(),
       additionalActions: parseAdditionalActions(readOptionalCell(row, registry.idx.AdditionalActions, '')),
@@ -133,16 +136,16 @@ function clearResourceConfigCache() {
   _resource_config_map_cache = null;
   _resource_registry_context_cache = null;
   try {
-    CacheService.getScriptCache().remove('AQL_RESOURCE_CONFIG_MAP_V1');
+    CacheService.getScriptCache().remove('AQL_RESOURCE_CONFIG_MAP_V2');
   } catch (e) { /* non-fatal */ }
   // Clear Permanent Metadata fallback so stale data is not served on cold start
   try {
     var ctx = getMetadataContext();
     if (ctx.sheet) {
-      var row = findRowByValue(ctx.sheet, ctx.idx.Key, 'AQL_RESOURCE_CONFIG_MAP_V1', 2, true);
+      var row = findRowByValue(ctx.sheet, ctx.idx.Key, 'AQL_RESOURCE_CONFIG_MAP_V2', 2, true);
       if (row !== -1) {
         ctx.sheet.deleteRow(row);
-        if (ctx.map) delete ctx.map['AQL_RESOURCE_CONFIG_MAP_V1'];
+        if (ctx.map) delete ctx.map['AQL_RESOURCE_CONFIG_MAP_V2'];
       }
     }
   } catch (e) { /* non-fatal */ }
@@ -520,15 +523,8 @@ function buildAuthorizedResourceEntry(resourceName, options) {
 
   if (opts.includeUiConfig) {
     entry.ui = {
-      menuGroup: config.menuGroup,
-      menuOrder: config.menuOrder,
-      menuLabel: config.menuLabel,
-      menuIcon: config.menuIcon,
-      routePath: config.routePath,
-      pageTitle: config.pageTitle,
-      pageDescription: config.pageDescription,
+      menu: config.menu || {},
       fields: Array.isArray(config.uiFields) ? config.uiFields : [],
-      showInMenu: config.showInMenu,
       customUIName: config.customUIName || '',
       listViews: Array.isArray(config.listViews) ? config.listViews : [],
       listViewsMode: (config.listViewsMode || 'auto').toString()

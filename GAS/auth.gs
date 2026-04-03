@@ -217,8 +217,8 @@ function buildAuthUserPayload(userRow, roleIds) {
 function sortAuthorizedResources(resources) {
   const entries = Array.isArray(resources) ? resources.slice() : [];
   entries.sort(function(a, b) {
-    const aOrder = Number(a && a.ui ? a.ui.menuOrder : 9999);
-    const bOrder = Number(b && b.ui ? b.ui.menuOrder : 9999);
+    const aOrder = Number(a && a.ui && a.ui.menu ? a.ui.menu.order : 9999);
+    const bOrder = Number(b && b.ui && b.ui.menu ? b.ui.menu.order : 9999);
     if (aOrder !== bOrder) {
       return aOrder - bOrder;
     }

@@ -29,7 +29,8 @@ function onOpen() {
       .addItem('Manage Actions', 'app_showActionManagerDialog')
       .addItem('Manage Lists', 'app_showListViewsManagerDialog')
       .addSeparator()
-      .addItem('Sync APP.Resources from Code', 'syncAppResourcesFromCode'))
+      .addItem('Sync APP.Resources from Code', 'syncAppResourcesFromCode')
+      .addItem('Clear Resource Config Cache', 'clearResourceConfigCacheAndNotify'))
     .addSeparator()
     .addSubMenu(ui.createMenu('⚙️ Setup & Refactor')
       .addItem('Refactor APP Sheets', 'setupAppSheets')
@@ -339,6 +340,21 @@ function getResourceDetails(resourceName) {
   if (row === -1) return null;
   const out = { originalName: get(ctx.sheet, row, ctx.idx.Name) };
   ctx.headers.forEach(function (h) { out[toFormName(h)] = get(ctx.sheet, row, ctx.idx[h]); });
+  // Expand Menu JSON into individual form fields for the admin dialog
+  if (out.menu) {
+    try {
+      var menuObj = typeof out.menu === 'object' ? out.menu : JSON.parse(out.menu);
+      out.menuGroup = menuObj.group || '';
+      out.menuOrder = menuObj.order || '';
+      out.menuLabel = menuObj.label || '';
+      out.menuIcon = menuObj.icon || '';
+      out.routePath = menuObj.route || '';
+      out.pageTitle = menuObj.pageTitle || '';
+      out.pageDescription = menuObj.pageDescription || '';
+      out.showInMenu = menuObj.show === true || menuObj.show === 'true';
+    } catch (e) { /* invalid JSON — leave fields empty */ }
+    delete out.menu;
+  }
   return out;
 }
 
@@ -410,15 +426,17 @@ function mapResource(form) {
     RecordAccessPolicy: txt(form.recordAccessPolicy || 'ALL').toUpperCase(),
     OwnerUserField: txt(form.ownerUserField || 'CreatedBy'),
     AdditionalActions: txt(form.additionalActions),
-    MenuGroup: txt(form.menuGroup),
-    MenuOrder: numOrBlank(form.menuOrder),
-    MenuLabel: txt(form.menuLabel),
-    MenuIcon: txt(form.menuIcon),
-    RoutePath: txt(form.routePath),
-    PageTitle: txt(form.pageTitle),
-    PageDescription: txt(form.pageDescription),
+    Menu: JSON.stringify({
+      group: txt(form.menuGroup),
+      order: Number(form.menuOrder) || 0,
+      label: txt(form.menuLabel),
+      icon: txt(form.menuIcon),
+      route: txt(form.routePath),
+      pageTitle: txt(form.pageTitle),
+      pageDescription: txt(form.pageDescription),
+      show: boolText(form.showInMenu, true) === 'TRUE'
+    }),
     UIFields: txt(form.uiFields),
-    ShowInMenu: boolText(form.showInMenu, true),
     IncludeInAuthorizationPayload: boolText(form.includeInAuthorizationPayload, true),
     Reports: txt(form.reports)
   };
@@ -459,7 +477,7 @@ function sanitizeKey(v) { return (v || '').toString().replace(/[^a-zA-Z0-9]/g, '
 function ok(msg) { return { success: true, message: msg }; }
 function fail(err) { return { success: false, message: err.message || String(err) }; }
 function toFormName(h) {
-  const m = { FileID: 'fileId', SheetName: 'sheetName', CodePrefix: 'codePrefix', CodeSequenceLength: 'codeSequenceLength', IsActive: 'isActive', RequiredHeaders: 'requiredHeaders', UniqueHeaders: 'uniqueHeaders', UniqueCompositeHeaders: 'uniqueCompositeHeaders', DefaultValues: 'defaultValues', RecordAccessPolicy: 'recordAccessPolicy', OwnerUserField: 'ownerUserField', AdditionalActions: 'additionalActions', MenuGroup: 'menuGroup', MenuOrder: 'menuOrder', MenuLabel: 'menuLabel', MenuIcon: 'menuIcon', RoutePath: 'routePath', PageTitle: 'pageTitle', PageDescription: 'pageDescription', UIFields: 'uiFields', ShowInMenu: 'showInMenu', IncludeInAuthorizationPayload: 'includeInAuthorizationPayload' };
+  const m = { FileID: 'fileId', SheetName: 'sheetName', CodePrefix: 'codePrefix', CodeSequenceLength: 'codeSequenceLength', IsActive: 'isActive', RequiredHeaders: 'requiredHeaders', UniqueHeaders: 'uniqueHeaders', UniqueCompositeHeaders: 'uniqueCompositeHeaders', DefaultValues: 'defaultValues', RecordAccessPolicy: 'recordAccessPolicy', OwnerUserField: 'ownerUserField', AdditionalActions: 'additionalActions', Menu: 'menu', UIFields: 'uiFields', IncludeInAuthorizationPayload: 'includeInAuthorizationPayload' };
   return m[h] || (h.charAt(0).toLowerCase() + h.slice(1));
 }
 function normalizeAccessRegionInputCode(code) {
@@ -613,25 +631,15 @@ function app_showActionManagerDialog() {
 function app_getActionManagerData() {
   try {
     const resources = getAllResourcesConfigs({ includeInactive: true });
-    const resourceList = resources.map(function(res) {
-      var headers = [];
-      try {
-        if (!res.functional && res.fileId && res.sheetName) {
-          var ss = SpreadsheetApp.openById(res.fileId);
-          var sheet = ss.getSheetByName(res.sheetName);
-          if (sheet) {
-            headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-          }
-        }
-      } catch (e) { /* skip */ }
-
-      return {
-        name: res.name,
-        label: res.menuLabel || res.name,
-        headers: headers,
-        additionalActions: res.additionalActions || []
-      };
-    });
+    const resourceList = resources
+      .filter(function(res) { return !res.functional; })
+      .map(function(res) {
+        return {
+          name: res.name,
+          label: (res.menu && res.menu.label) || res.name,
+          additionalActions: res.additionalActions || []
+        };
+      });
 
     return { resources: resourceList };
   } catch (e) {
@@ -758,3 +766,11 @@ function app_saveResourceListViews(resourceName, listViewsJson, listViewsMode) {
   }
 }
 
+function clearResourceConfigCacheAndNotify() {
+  try {
+    clearResourceConfigCache();
+    SpreadsheetApp.getUi().alert('Resource config cache cleared. The next API call will rebuild it fresh from the sheet.');
+  } catch (e) {
+    SpreadsheetApp.getUi().alert('Error clearing cache: ' + e.message);
+  }
+}

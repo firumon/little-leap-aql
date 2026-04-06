@@ -81,15 +81,8 @@ Columns (in order):
 - `RecordAccessPolicy` (`ALL|OWNER|OWNER_GROUP|OWNER_AND_UPLINE`)
 - `OwnerUserField` (usually `CreatedBy`)
 - `AdditionalActions` (CSV)
-- `MenuGroup`
-- `MenuOrder`
-- `MenuLabel`
-- `MenuIcon`
-- `RoutePath`
-- `PageTitle`
-- `PageDescription`
+- `Menu` (JSON array of sidebar entry objects. Each entry defines `groupPath` (string array, canonical N-level hierarchy), `order`, `label`, `icon`, `route`, `pageTitle`, `pageDescription`, `show`, and optional `menuAccess`. Blank/`[]` defaults are derived from `Name`/`Scope`. See `Documents/RESOURCE_COLUMNS_GUIDE.md` for schema and examples.)
 - `UIFields` (JSON array)
-- `ShowInMenu`
 - `IncludeInAuthorizationPayload`
 - `ListViews` (single-cell mode + JSON views: blank=`auto`, `[]`=`off`, non-empty array=`custom`; see `Documents/RESOURCE_COLUMNS_GUIDE.md` for full schema)
 - `Reports` (JSON array — downloadable document configs; see Reports Column JSON Schema below)

@@ -166,7 +166,7 @@ const visibleResourceMenuGroups = computed(() => {
 
       const groupPath = Array.isArray(menu.groupPath) && menu.groupPath.length > 0
         ? menu.groupPath
-        : (menu.group ? [menu.group] : ['General'])
+        : ['General']
 
       // Walk / create group nodes along the path
       let currentChildren = root

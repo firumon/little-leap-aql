@@ -343,8 +343,10 @@ function getResourceDetails(resourceName) {
   // Expand Menu JSON into individual form fields for the admin dialog
   if (out.menu) {
     try {
-      var menuObj = typeof out.menu === 'object' ? out.menu : JSON.parse(out.menu);
-      out.menuGroup = menuObj.group || '';
+      var menuParsed = typeof out.menu === 'string' ? JSON.parse(out.menu) : out.menu;
+      var menuArr = Array.isArray(menuParsed) ? menuParsed : (menuParsed && typeof menuParsed === 'object' ? [menuParsed] : []);
+      var menuObj = menuArr[0] || {};
+      out.menuGroupPath = Array.isArray(menuObj.groupPath) ? menuObj.groupPath.join(',') : '';
       out.menuOrder = menuObj.order || '';
       out.menuLabel = menuObj.label || '';
       out.menuIcon = menuObj.icon || '';
@@ -352,6 +354,7 @@ function getResourceDetails(resourceName) {
       out.pageTitle = menuObj.pageTitle || '';
       out.pageDescription = menuObj.pageDescription || '';
       out.showInMenu = menuObj.show === true || menuObj.show === 'true';
+      out._menuArrayFull = menuArr;   // preserve remaining items for re-save
     } catch (e) { /* invalid JSON — leave fields empty */ }
     delete out.menu;
   }
@@ -426,16 +429,21 @@ function mapResource(form) {
     RecordAccessPolicy: txt(form.recordAccessPolicy || 'ALL').toUpperCase(),
     OwnerUserField: txt(form.ownerUserField || 'CreatedBy'),
     AdditionalActions: txt(form.additionalActions),
-    Menu: JSON.stringify({
-      group: txt(form.menuGroup),
-      order: Number(form.menuOrder) || 0,
-      label: txt(form.menuLabel),
-      icon: txt(form.menuIcon),
-      route: txt(form.routePath),
-      pageTitle: txt(form.pageTitle),
-      pageDescription: txt(form.pageDescription),
-      show: boolText(form.showInMenu, true) === 'TRUE'
-    }),
+    Menu: (function() {
+      var editedItem = {
+        groupPath: txt(form.menuGroupPath).split(',').map(function(s){ return s.trim(); }).filter(Boolean),
+        order: Number(form.menuOrder) || 0,
+        label: txt(form.menuLabel),
+        icon: txt(form.menuIcon),
+        route: txt(form.routePath),
+        pageTitle: txt(form.pageTitle),
+        pageDescription: txt(form.pageDescription),
+        show: boolText(form.showInMenu, true) === 'TRUE'
+      };
+      // Preserve additional menu items beyond the first
+      var existing = Array.isArray(form._menuArrayFull) ? form._menuArrayFull.slice(1) : [];
+      return JSON.stringify([editedItem].concat(existing));
+    })(),
     UIFields: txt(form.uiFields),
     IncludeInAuthorizationPayload: boolText(form.includeInAuthorizationPayload, true),
     Reports: txt(form.reports)
@@ -525,7 +533,7 @@ function buildDialogBody(action, data) {
   else if (action === 'updateRole') body = '<h2>Update Role</h2><p class="note">Select role to auto-check assigned resource actions.</p><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleUpdateRole\')"><div class="g"><label>Role</label><select name="roleId" onchange="loadDetails(\'Role\',this.value)" required><option value="">-- Select --</option>' + ro + '</select></div><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Description</label><textarea name="description"></textarea></div><div class="small">Select actions per resource</div>' + roleMatrix() + '<button id="submitBtn">Update Role</button></form>';
   else if (action === 'addResource' || action === 'editResource') {
     var ed = action === 'editResource';
-    body = '<h2>' + (ed ? 'Edit' : 'Add') + ' Resource</h2><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'' + (ed ? 'handleEditResource' : 'handleAddResource') + '\')">' + (ed ? '<div class="g"><label>Resource</label><select name="resourceId" onchange="loadDetails(\'Resource\',this.value)" required><option value="">-- Select --</option>' + rso + '</select></div><input type="hidden" name="originalName">' : '') + '<div class="row"><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Scope</label><input name="scope" value="master"></div></div><div class="row"><div class="g"><label>FileID</label><input name="fileId" placeholder="Leave blank for config-driven"></div><div class="g"><label>SheetName</label><input name="sheetName"></div></div><div class="row"><div class="g"><label>CodePrefix</label><input name="codePrefix"></div><div class="g"><label>CodeSequenceLength</label><input name="codeSequenceLength" type="number"></div></div><div class="g"><label>RecordAccessPolicy</label><select name="recordAccessPolicy"><option>ALL</option><option>OWNER</option><option>OWNER_GROUP</option><option>OWNER_AND_UPLINE</option></select></div><div class="g"><label>RequiredHeaders</label><input name="requiredHeaders"></div><div class="g"><label>UniqueHeaders</label><input name="uniqueHeaders"></div><div class="g"><label>UniqueCompositeHeaders</label><input name="uniqueCompositeHeaders"></div><div class="g"><label>DefaultValues (JSON)</label><textarea name="defaultValues"></textarea></div><div class="g"><label>OwnerUserField</label><input name="ownerUserField" value="CreatedBy"></div><div class="g"><label>AdditionalActions</label><input name="additionalActions"></div><div class="row"><div class="g"><label>MenuGroup</label><input name="menuGroup"></div><div class="g"><label>MenuOrder</label><input name="menuOrder" type="number"></div></div><div class="row"><div class="g"><label>MenuLabel</label><input name="menuLabel"></div><div class="g"><label>MenuIcon</label><input name="menuIcon"></div></div><div class="g"><label>RoutePath</label><input name="routePath"></div><div class="g"><label>PageTitle</label><input name="pageTitle"></div><div class="g"><label>PageDescription</label><textarea name="pageDescription"></textarea></div><div class="g"><label>UIFields</label><textarea name="uiFields"></textarea></div><div class="checks"><label><input type="checkbox" name="isActive" value="true" checked> IsActive</label><label><input type="checkbox" name="audit" value="true"> Audit</label><label><input type="checkbox" name="showInMenu" value="true" checked> ShowInMenu</label><label><input type="checkbox" name="includeInAuthorizationPayload" value="true" checked> IncludeInAuthorizationPayload</label></div><button id="submitBtn">' + (ed ? 'Update' : 'Add') + ' Resource</button></form>';
+    body = '<h2>' + (ed ? 'Edit' : 'Add') + ' Resource</h2><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'' + (ed ? 'handleEditResource' : 'handleAddResource') + '\')">' + (ed ? '<div class="g"><label>Resource</label><select name="resourceId" onchange="loadDetails(\'Resource\',this.value)" required><option value="">-- Select --</option>' + rso + '</select></div><input type="hidden" name="originalName">' : '') + '<div class="row"><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Scope</label><input name="scope" value="master"></div></div><div class="row"><div class="g"><label>FileID</label><input name="fileId" placeholder="Leave blank for config-driven"></div><div class="g"><label>SheetName</label><input name="sheetName"></div></div><div class="row"><div class="g"><label>CodePrefix</label><input name="codePrefix"></div><div class="g"><label>CodeSequenceLength</label><input name="codeSequenceLength" type="number"></div></div><div class="g"><label>RecordAccessPolicy</label><select name="recordAccessPolicy"><option>ALL</option><option>OWNER</option><option>OWNER_GROUP</option><option>OWNER_AND_UPLINE</option></select></div><div class="g"><label>RequiredHeaders</label><input name="requiredHeaders"></div><div class="g"><label>UniqueHeaders</label><input name="uniqueHeaders"></div><div class="g"><label>UniqueCompositeHeaders</label><input name="uniqueCompositeHeaders"></div><div class="g"><label>DefaultValues (JSON)</label><textarea name="defaultValues"></textarea></div><div class="g"><label>OwnerUserField</label><input name="ownerUserField" value="CreatedBy"></div><div class="g"><label>AdditionalActions</label><input name="additionalActions"></div><div class="row"><div class="g"><label>Menu Path (CSV)</label><input name="menuGroupPath" placeholder="e.g. Masters,Product"></div><div class="g"><label>MenuOrder</label><input name="menuOrder" type="number"></div></div><div class="row"><div class="g"><label>MenuLabel</label><input name="menuLabel"></div><div class="g"><label>MenuIcon</label><input name="menuIcon"></div></div><div class="g"><label>RoutePath</label><input name="routePath"></div><div class="g"><label>PageTitle</label><input name="pageTitle"></div><div class="g"><label>PageDescription</label><textarea name="pageDescription"></textarea></div><div class="g"><label>UIFields</label><textarea name="uiFields"></textarea></div><div class="checks"><label><input type="checkbox" name="isActive" value="true" checked> IsActive</label><label><input type="checkbox" name="audit" value="true"> Audit</label><label><input type="checkbox" name="showInMenu" value="true" checked> ShowInMenu</label><label><input type="checkbox" name="includeInAuthorizationPayload" value="true" checked> IncludeInAuthorizationPayload</label></div><button id="submitBtn">' + (ed ? 'Update' : 'Add') + ' Resource</button></form>';
   } else body = '<h2>Unsupported</h2>';
 
   return body;
@@ -636,7 +644,7 @@ function app_getActionManagerData() {
       .map(function(res) {
         return {
           name: res.name,
-          label: (res.menu && res.menu.label) || res.name,
+          label: (Array.isArray(res.menus) && res.menus.length > 0 && res.menus[0].label) || res.name,
           additionalActions: res.additionalActions || []
         };
       });
@@ -706,7 +714,7 @@ function app_getListViewsManagerData() {
 
       return {
         name: res.name,
-        label: res.menuLabel || res.name,
+        label: (Array.isArray(res.menus) && res.menus.length > 0 && res.menus[0].label) || res.name,
         headers: headers,
         listViews: res.listViews || [],
         listViewsMode: (res.listViewsMode || 'auto').toString()

@@ -574,13 +574,13 @@ Menu Access Control enables fine-grained permission-based visibility of resource
 ### 4.2 Architecture
 
 **Backend (GAS):**
-- `GAS/syncAppResources.gs` — Defines `menuAccess` inside the `Menu` JSON for each resource (code-level source of truth).
-- `GAS/resourceRegistry.gs` — Parses `Menu` JSON including `menuAccess` and delivers it in the auth payload as `entry.ui.menu.menuAccess`.
+- `GAS/syncAppResources.gs` — Defines `menuAccess` inside each entry of the `Menu` JSON array for every resource, so multiple sidebar menu rows can share one resource entry.
+- `GAS/resourceRegistry.gs` — Parses the `Menu` array, normalizes each entry, and exposes it in the auth payload as `entry.ui.menus` so the frontend can evaluate visibility per menu item.
 
 **Frontend:**
-- `FRONTENT/src/composables/useMenuAccess.js` — Reusable composable that evaluates `menuAccess` rules against auth store permissions.
-- `FRONTENT/src/layouts/MainLayout/MainLayout.vue` — Imports `useMenuAccess`, filters sidebar menu items based on evaluation result.
-- `FRONTENT/src/router/index.js` — Uses inline `evaluateMenuAccessInline()` function (no composable context) to guard route access.
+- `FRONTENT/src/composables/useMenuAccess.js` — Reusable composable that accepts `resource` plus an optional `menuItem` (the matched entry from `ui.menus`) to evaluate permission rules, defaulting to `canRead` when no rule exists.
+- `FRONTENT/src/layouts/MainLayout/MainLayout.vue` — Iterates over every `menu` entry in `resource.ui.menus`, calling `evaluateMenuAccess(resource, menu)` and rendering one sidebar row per visible entry.
+- `FRONTENT/src/router/index.js` — Matches `to.path` against all `ui.menus` entries and passes the matched entry to `evaluateMenuAccessInline()` before allowing navigation.
 
 ### 4.3 `menuAccess` Rule Formats
 
@@ -622,18 +622,18 @@ If at least one rule passes, access is granted.
 ### 4.4 Evaluation Flow
 
 1. **Backend Setup:**
-   - Admin updates `menuAccess` inside `Menu` JSON in `APP.Resources` (directly in sheet or via code-level config in `syncAppResources.gs`).
-   - GAS delivers resource metadata including `ui.menu.menuAccess` to frontend in login/auth payload.
+   - Admin updates `menuAccess` on each entry inside the `Menu` JSON array in `APP.Resources` (either by hand in the sheet or by syncing `syncAppResources.gs` defaults).
+   - GAS delivers the parsed entries as `ui.menus` in the auth payload so that each sidebar route can be guarded independently.
 
 2. **Frontend Sidebar Filtering (MainLayout.vue):**
-   - On component render, `visibleResourceMenuGroups` computed property filters resources.
-   - For each resource, calls `evaluateMenuAccess(resource)` from `useMenuAccess()` composable.
-   - Only resources where evaluation returns `true` appear in the sidebar.
+   - `visibleResourceMenuGroups` iterates every `resource.ui.menus` entry.
+   - For each entry, it calls `evaluateMenuAccess(resource, menu)` and only renders the menu row if access is granted.
+   - This produces one sidebar row per visible menu entry even when multiple entries share the same resource.
 
 3. **Frontend Route Guard (router/index.js):**
-   - Before navigation, `beforeEach` hook checks if route matches a resource route.
-   - If a resource is required, calls `evaluateMenuAccessInline(targetEntry, allResources)` to check permissions.
-   - If evaluation fails, redirects to `/dashboard`; otherwise, allows navigation.
+   - `beforeEach` locates the resource entry whose `ui.menus` contains `to.path`.
+   - It passes that matched menu entry into `evaluateMenuAccessInline(targetEntry, allResources, to.path)` before allowing navigation.
+   - A failed evaluation redirects back to `/dashboard`; when allowed, navigation proceeds.
 
 ### 4.5 Permission Keys
 
@@ -649,7 +649,7 @@ Valid permission keys depend on role configuration. Common keys:
 1. In `GAS/syncAppResources.gs`, find the resource's config object and update its `Menu` JSON:
    ```js
    Menu: JSON.stringify({
-     group: 'Masters',
+     groupPath: ['Masters', 'Product'],
      order: 1,
      label: 'Products',
      icon: 'inventory_2',
@@ -688,6 +688,86 @@ Valid permission keys depend on role configuration. Common keys:
 - Both evaluators use identical logic to ensure consistency.
 
 
+## 5. Manage Stock
+
+### 5.1 Overview
+
+The Manage Stock page (`/operations/manage-stock`) is a type-agnostic operator-facing tool for recording any stock change in the warehouse. It writes `StockMovements` ledger rows and automatically upserts `WarehouseStorages` summary rows. The same single page serves all movement types (`GRN`, `DirectEntry`, `StockAdjustment`, and any future type added via `APP.AppOptions`) without per-type branching logic.
+
+### 5.2 Architecture Diagram
+
+```
+FRONTEND (Quasar)
+  ManageStockPage.vue  ← thin orchestrator, two-step wizard
+    Step 1: ManageStockContextStep.vue
+      - Warehouse cards (from fetchMasterRecords('Warehouses'))
+      - Type cards (from authStore.appOptionsMap['StockMovementReferenceType'])
+      - Reference Code q-input (free text, optional)
+      - Proceed button (enabled when warehouse + type selected)
+    Step 2: ManageStockEditGrid.vue
+      - Context chip strip (click chip → back to step 1)
+      - "Add SKU" q-select (from fetchMasterRecords('SKUs') + Products)
+      - "Load all stock in warehouse" button
+      - StockMovementRow rows (per-row Storage Location + bi-directional Change (Delta) / New Qty fields)
+      - Submit → useStockMovements().submitBatch()
+        - Sequential callGasApi per non-zero row (no toast spam)
+        - Single aggregate q-notify at the end
+
+BACKEND (Google Apps Script)
+  apiDispatcher.gs → action=create, scope=operation, resource=StockMovements
+  masterApi.gs → handleMasterCreateRecord()
+    → writes ledger row to StockMovements sheet
+    → applyStockMovementToWarehouseStorages(record, auth)  ← hook in stockMovements.gs
+        → upserts WarehouseStorages (create or increment Quantity)
+```
+
+### 5.3 The Dual-Field Row (Core Concept)
+
+Every row in the grid exposes two bound fields for the same delta:
+
+| SKU | Product | Storage Location | Current | Change (Delta) | New Qty | Note |
+|---|---|---|---|---|---|---|
+| S-001 | Widget A | Rack-A1 | 42 | [input] | [input] | |
+
+- **Change (Δ)** — signed number (positive = add, negative = remove).
+- **New Qty** — absolute count at this location after the movement.
+- Bi-directionally bound: `New = Current + Δ` ↔ `Δ = New − Current`.
+- The value written to `StockMovements.QtyChange` is **always the signed delta**.
+- **GRN** operator uses Change column ("I received 10").
+- **StockAdjustment** operator uses New Qty column ("I counted 39").
+- **Dispatch** (future) operator types negative number in Change column.
+- Zero-delta rows are visually muted and excluded from submission.
+
+### 5.4 Future-Proof Movement Types
+
+The type card list is driven entirely by `APP.AppOptions.StockMovementReferenceType`. To add a new type (e.g., `Dispatch`):
+1. Edit the `APP.AppOptions` sheet: add `Dispatch` in a new column on the `StockMovementReferenceType` row.
+2. (Optional) If the new type needs a column dropdown validation in `StockMovements`, update `GAS/setupOperationSheets.gs` and run **AQL 🚀 > Setup All Operations**.
+3. Users re-login → the new type card appears automatically. **No code change required.**
+
+### 5.5 Files Involved
+
+| File | Role |
+|---|---|
+| `FRONTENT/src/pages/Warehouse/ManageStockPage.vue` | Thin page orchestrator — two-step wizard state |
+| `FRONTENT/src/components/Warehouse/ManageStockContextStep.vue` | Step 1 — context selection (warehouse, type, optional reference code) |
+| `FRONTENT/src/components/Warehouse/ManageStockEditGrid.vue` | Step 2 — SKU grid with submit |
+| `FRONTENT/src/components/Warehouse/StockMovementRow.vue` | Single editable row with per-row storage + bi-directional Change (Delta)/New Qty|
+| `FRONTENT/src/composables/useStockMovements.js` | Load storages, resolve current qty, submit batch silently |
+| `FRONTENT/src/router/routes.js` | Explicit route `/operations/manage-stock` |
+| `GAS/stockMovements.gs` | `applyStockMovementToWarehouseStorages()` hook |
+| `GAS/masterApi.gs` | Hook wired in `handleMasterCreateRecord` post-insert |
+| `GAS/syncAppResources.gs` | `StockMovements` menu array includes both `/operations/stock-movements` and `/operations/manage-stock` entries |
+
+### 5.6 Known Behaviors
+
+1. **Partial batch failures**: If some rows fail mid-batch, the aggregate notify reports "X of Y saved, Z failed" with the failed SKU codes. Already-submitted rows are not rolled back (ledger is append-only).
+2. **WarehouseStorages drift**: If the hook throws (e.g., sheet access error), the ledger row is committed but the summary is not updated. Drift can be detected by summing `StockMovements.QtyChange` per `(WarehouseCode, StorageName, SKU)` and comparing to `WarehouseStorages.Quantity`.
+3. **Context is kept after submit**: After a batch is saved, the grid clears but the context (warehouse, type, reference code) stays so the operator can immediately enter another batch.
+4. **Zero-delta rows are excluded**: Only rows where `QtyChange !== 0` are submitted. The count shown on the Submit button reflects this.
+
+---
+
 ## 4. Data Backup & Restore
 (To be documented when implemented)
 
@@ -697,3 +777,6 @@ Valid permission keys depend on role configuration. Common keys:
 ## 6. Dashboard Widgets
 (To be documented when implemented)
 -->
+
+
+

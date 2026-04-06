@@ -108,7 +108,8 @@ function isGenericMasterCrudAction(action, payload) {
     return true;
   }
 
-  if (normalizedScope !== 'master' && normalizedScope !== 'operation' && normalizedScope !== 'accounts') {
+  const canonicalScopes = ['master', 'operation', 'accounts', 'report'];
+  if (canonicalScopes.indexOf(normalizedScope) === -1) {
     return false;
   }
 

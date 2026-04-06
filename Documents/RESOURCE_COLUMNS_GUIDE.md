@@ -27,7 +27,7 @@ This document explains each `APP > Resources` column, what to fill, and common v
 | `RecordAccessPolicy` | Yes | Text | Row-level authorization model | `ALL`, `OWNER`, `OWNER_GROUP`, `OWNER_AND_UPLINE` | `OWNER_AND_UPLINE` |
 | `OwnerUserField` | Optional | Text | Header used as owner column | Usually `CreatedBy` | `CreatedBy` |
 | `AdditionalActions` | Optional | CSV Text | Declares domain actions supported by resource | Comma-separated action names | `Approve,Reject,Cancel` |
-| `Menu` | Optional | JSON Text | Consolidated menu/navigation config. Contains: `group` (sidebar group), `order` (sort within group), `label` (sidebar text), `icon` (Quasar/Material icon), `route` (frontend path), `pageTitle`, `pageDescription`, `show` (boolean, show in menu). Blank/`{}` = auto-derive defaults from `Name`/`Scope`. | JSON object | `{"group":"Masters","order":1,"label":"Products","icon":"inventory_2","route":"/masters/products","pageTitle":"Products","pageDescription":"Manage products","show":true}` |
+| `Menu` | Optional | JSON Text | Ordered array of sidebar menu entry objects. Each entry defines `group`, `order`, `label`, `icon`, `route`, `pageTitle`, `pageDescription`, `show`, and optional `menuAccess` rules. The first entry is treated as the primary CRUD menu item and also drives the admin dialog fields. Blank/`[]` = auto-derive defaults from `Name`/`Scope`. | JSON array | `[{"group":"Masters","order":1,"label":"Products","icon":"inventory_2","route":"/masters/products","pageTitle":"Products","pageDescription":"Manage products","show":true}]` |
 | `UIFields` | Optional | JSON Text | Field config for dynamic form/table | JSON array of field objects | `[{"header":"Name","label":"Name","type":"text","required":true}]` |
 | `IncludeInAuthorizationPayload` | Yes | Boolean | Include this resource in login/getAuthorizedResources payload | `TRUE` / `FALSE` | `TRUE` |
 | `Functional` | Yes | Boolean | If `TRUE`, resource is a UI tool with no backing sheet (FileID/SheetName ignored). Skipped during data sync. | `TRUE` / `FALSE` | `FALSE` |
@@ -54,24 +54,37 @@ This document explains each `APP > Resources` column, what to fill, and common v
 
 ## `Menu` JSON Schema
 
-The `Menu` column stores a single JSON object that consolidates all menu/navigation config for the resource. This replaced the former 8 separate columns (`MenuGroup`, `MenuOrder`, `MenuLabel`, `MenuIcon`, `RoutePath`, `PageTitle`, `PageDescription`, `ShowInMenu`).
+The `Menu` column stores a JSON array of menu entry objects. Each entry declares the sidebar `groupPath` (N-level hierarchy), order, label, icon, route, titles, visibility, and optional `menuAccess` controls for that particular menu item. The first entry is treated as the primary CRUD menu item (e.g., the List/Add/Edit pages), and the admin dialog updates only that entry by default—any additional entries are preserved transparently when saving.
 
 ```json
-{
-  "group": "Masters",
-  "order": 1,
-  "label": "Products",
-  "icon": "inventory_2",
-  "route": "/masters/products",
-  "pageTitle": "Products",
-  "pageDescription": "Manage product master records",
-  "show": true
-}
+[
+  {
+    "groupPath": ["Masters", "Product"],
+    "order": 1,
+    "label": "Products",
+    "icon": "inventory_2",
+    "route": "/masters/products",
+    "pageTitle": "Products",
+    "pageDescription": "Manage product master records",
+    "show": true
+  },
+  {
+    "groupPath": ["Operations", "Warehouse"],
+    "order": 99,
+    "label": "Manage Stock",
+    "icon": "manage_accounts",
+    "route": "/operations/manage-stock",
+    "pageTitle": "Manage Stock",
+    "pageDescription": "Guided stock movement wizard",
+    "show": true,
+    "menuAccess": { "require": "canWrite" }
+  }
+]
 ```
 
 | Field | Required | Type | Meaning | Default (when missing) |
 |---|---|---|---|---|
-| `group` | No | String | Sidebar group label | `""` |
+| `groupPath` | Yes | String array | N-level sidebar hierarchy path (e.g. `["Masters","Product"]`) | `["General"]` |
 | `order` | No | Number | Sort order within group | `9999` |
 | `label` | No | String | Sidebar display text | Resource `Name` |
 | `icon` | No | String | Quasar/Material icon id | `list_alt` |
@@ -79,13 +92,13 @@ The `Menu` column stores a single JSON object that consolidates all menu/navigat
 | `pageTitle` | No | String | Page title in UI | Resource `Name` |
 | `pageDescription` | No | String | Subtitle/help text | `""` |
 | `show` | No | Boolean | Show in sidebar menu | `true` |
-| `menuAccess` | No | Object | Permission-based menu visibility rule (see `menuAccess` schema below) | `undefined` (fallback: `canRead` on own resource) |
+| `menuAccess` | No | Object | Permission-based menu visibility rule evaluated per menu entry | `undefined` (fallback: `canRead` on own resource) |
 
-**Fallback**: If the `Menu` cell is blank or `{}`, all fields auto-derive sensible defaults from the resource `Name` and `Scope`. This means existing resources continue working without migration.
+**Fallback**: If the `Menu` cell is blank, `[]`, or the array is empty, defaults auto-derive from the resource `Name` and `Scope`, so existing rows continue working without changes.
 
 ### `menuAccess` Sub-schema
 
-The `menuAccess` field inside `Menu` JSON controls whether a user sees the resource in the sidebar and can access its route. If `menuAccess` is absent, the fallback is `canRead` on the resource itself.
+Each menu entry can include its own `menuAccess` rule. The frontend route guard now matches the current `route` to the corresponding entry in `ui.menus` and evaluates that menu entry’s `menuAccess`. If multiple entries share the same resource, each may have distinct combinations of `require`, `all`, or `any` clauses.
 
 **Supported `menuAccess` formats:**
 

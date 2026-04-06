@@ -92,12 +92,11 @@ function getResourceConfigMap() {
       recordAccessPolicy: normalizeRecordAccessPolicy(readOptionalCell(row, registry.idx.RecordAccessPolicy, 'all')),
       ownerUserField: (readOptionalCell(row, registry.idx.OwnerUserField, 'CreatedBy') || '').toString().trim() || 'CreatedBy',
       menus: menuArr.map(function(m) {
-        var group = m.group || '';
+        // groupPath is the canonical field — no group fallback
         var groupPath = Array.isArray(m.groupPath) && m.groupPath.length > 0
           ? m.groupPath
-          : (group ? [group] : ['General']);
+          : ['General'];
         return {
-          group: group,
           groupPath: groupPath,
           order: Number(m.order) || 9999,
           label: m.label || name,
@@ -245,12 +244,12 @@ function normalizeCodeSequenceLength(value) {
 
 function normalizeResourceScope(value) {
   const normalized = (value || 'master').toString().trim().toLowerCase();
-  if (normalized === 'operation' || normalized === 'operations') return 'operation';
+  if (normalized === 'operation') return 'operation';
   if (normalized === 'accounts') return 'accounts';
-  if (normalized === 'report' || normalized === 'reports') return 'report';
+  if (normalized === 'report') return 'report';
   if (normalized === 'system') return 'system';
-  if (normalized === 'master' || normalized === 'masters') return 'master';
-  return 'master';
+  if (normalized === 'master') return 'master';
+  throw new Error('Invalid scope value: "' + value + '". Must be one of: master, operation, accounts, report, system.');
 }
 
 function normalizeRecordAccessPolicy(value) {

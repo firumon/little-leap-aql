@@ -299,6 +299,16 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - **N-level sidebar tree renderer**: `FRONTENT/src/layouts/MainLayout/MainLayout.vue` `visibleResourceMenuGroups` now builds a recursive tree from `groupPath` arrays. New `FRONTENT/src/components/MenuTreeNode.vue` recursive component handles N-level group nesting with `q-expansion-item` for groups and `q-item` for leaves.
   - **Compact Manage Stock grid**: Removed "Product" and "Note" columns from the stock entry table. Product name shown as a secondary line under SKU. Storage field narrowed to 120-180px max. Input widths trimmed to 80px. No horizontal scroll on standard desktop widths.
   - Plan: `PLANS/2026-04-06-scope-normalization-and-multilevel-menu-tree.md`.
+- **Remove Compat Overheads — Menu + Scope Canonicalization (2026-04-06)**:
+  - Removed all backward-compatibility layers introduced in prior plan.
+  - `groupPath` is now the **only** canonical menu hierarchy field. `group` is no longer written, parsed, or used anywhere in GAS or frontend.
+  - `normalizeResourceScope()` in `GAS/resourceRegistry.gs` now throws an explicit error for non-canonical scope values instead of silently defaulting. Accepted values: `master`, `operation`, `accounts`, `report`, `system`.
+  - `isGenericMasterCrudAction()` in `GAS/apiDispatcher.gs` allowlist updated to include `report` scope.
+  - Admin dialog field renamed: `MenuGroup` → `Menu Path (CSV)` (`name="menuGroupPath"`); `getResourceDetails()` reads `menuObj.groupPath` (array→CSV); `mapResource()` writes `groupPath` (CSV→array).
+  - All 33 resource entries in `GAS/syncAppResources.gs` updated to `groupPath`-only format (`group:` fields removed).
+  - `MainLayout.vue` `group` fallback removed; `groupPath` is the only source for tree hierarchy.
+  - Post-sync required: run `AQL 🚀 > Resources > Sync APP.Resources from Code`, then re-login.
+  - Plan: `PLANS/2026-04-06-remove-compat-overheads-menu-scope.md`.
 
 - **Standalone Wizard Resource Removal + StockMovements Dual-Menu Ownership (2026-04-06)**:
   - Removed the standalone warehouse wizard resource definition from `GAS/syncAppResources.gs`.

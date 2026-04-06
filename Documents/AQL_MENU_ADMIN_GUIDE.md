@@ -162,6 +162,9 @@ Minimum critical fields:
 Important references:
 - `Documents/RESOURCE_COLUMNS_GUIDE.md` (column-by-column meaning)
 - `Documents/APP_SHEET_STRUCTURE.md` (`Resources` schema)
+- `Menu` column now stores a JSON array of menu entries. The admin dialog edits the first entry (list/add/edit) and preserves the rest via `_menuArrayFull`, so extra sidebar rows can be added by writing `[primaryEntry, {...}]` in the sheet or via `syncAppResources.gs`.
+- Each entry carries its own `menuAccess` rule, and the frontend route guard matches the current path to the entry before evaluating permissions so multiple entries per resource can have distinct access controls.
+- **Menu Path (CSV)**: Enter the sidebar hierarchy as comma-separated labels (e.g. `Masters,Product` or `Operations,Warehouse`). This is stored as `groupPath` (string array) in the `Menu` JSON. The legacy `group` field is no longer used.
 
 ### 7.2 Manage Reports
 Purpose:
@@ -233,14 +236,66 @@ Use when:
 Use when:
 - Accounts baseline sheets are missing or need schema alignment.
 
-## 9. Common Admin Mistakes
+## 9. Sidebar Menu Taxonomy (Product / Warehouse / Procurement)
+
+These groups appear in the **frontend application sidebar**, not in the Google Sheet `AQL` menu. They are controlled by `APP.Resources.Menu` JSON arrays (code source: `GAS/syncAppResources.gs`) and are now grouped by business relevance instead of strict scope names.
+
+### 9.1 Product Group
+
+- `Manage Products` -> `/masters/products`
+- `Manage Stock` -> `/operations/manage-stock`
+
+### 9.2 Warehouse Group
+
+- `Manage Warehouses` -> `/masters/warehouses`
+- `Manage Stock` -> `/operations/manage-stock`
+- `Stock Movements` -> `/operations/stock-movements`
+
+### 9.3 Procurement Group
+
+- `Purchase Requisitions` -> `/operations/prs`
+- `RFQs` -> `/operations/rfqs`
+- `Supplier Quotations` -> `/operations/quotations`
+- `Purchase Orders` -> `/operations/pos`
+- `Shipments` -> `/operations/shipments`
+
+### 9.4 Manage Stock
+
+**Route:** `/operations/manage-stock`
+
+**Required permission:** `canRead` on `StockMovements` resource (controlled via `APP.RolePermissions`).
+
+**What it does:**
+- Lets authorized users record stock changes (additions, removals, adjustments) for any warehouse location.
+- Step 1: Operator selects Warehouse, Movement Type (`GRN`, `DirectEntry`, `StockAdjustment`, or any future type added via `APP.AppOptions`), and optional Reference Code.
+- Step 2: Operator adds SKUs to a grid, sets Storage Location per row, enters a Change (Delta) or New Qty, and submits.
+- Each submitted row creates a `StockMovements` ledger row and automatically upserts the corresponding `WarehouseStorages` summary row (via `applyStockMovementToWarehouseStorages` hook in `GAS/stockMovements.gs`).
+
+**Who should have access:**
+- Warehouse Operator role (and any role with warehouse inventory responsibility).
+- Admin role (for full visibility and testing).
+
+**To grant/revoke access:**
+1. In APP spreadsheet, update `APP.RolePermissions` to include/remove `StockMovements` permission for the relevant role.
+2. User must re-login to pick up the updated resource list.
+
+**To add a new Movement Type:**
+1. Edit the `APP.AppOptions` sheet: Row with key `StockMovementReferenceType`, add value in the next available column.
+2. The new type card appears on the frontend context step automatically after re-login � **no code change required**.
+
+**Reference:**
+- `GAS/stockMovements.gs` � the WarehouseStorages upsert hook
+- `Documents/MODULE_WORKFLOWS.md` � Manage Stock workflow section
+- `Documents/LOGIN_RESPONSE.md` � `appOptions.StockMovementReferenceType`
+
+## 11. Common Admin Mistakes
 
 1. Running menu actions from non-APP spreadsheet.
 2. Editing `APP.Resources` JSON columns manually without valid JSON.
 3. Changing resource names casually after routes/permissions already depend on them.
 4. Forgetting to sync/refactor after schema-related code updates.
 
-## 10. Maintenance Rule (Mandatory)
+## 12. Maintenance Rule (Mandatory)
 
 When any `AQL 🚀` menu item is **added, removed, renamed, or behavior-changed** in code:
 
@@ -249,3 +304,5 @@ When any `AQL 🚀` menu item is **added, removed, renamed, or behavior-changed*
 3. Update `Documents/CONTEXT_HANDOFF.md` if runtime behavior changed.
 
 Do not close the task until these docs are aligned.
+
+

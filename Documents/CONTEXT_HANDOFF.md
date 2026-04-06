@@ -1,4 +1,4 @@
-﻿# CONTEXT HANDOFF - AQL
+# CONTEXT HANDOFF - AQL
 
 Use this file when starting a new AI agent session.
 
@@ -33,7 +33,7 @@ Tell the AI agent:
 - APP sheet contains `Resources` registry with `FileID` + `SheetName` for external files.
 - API handlers resolve target file/sheet dynamically from `Resources`.
 - Do not maintain separate Apps Script projects in external files unless explicitly requested.
-- APP now includes a `Config` sheet (Key-Value pairs) as the Source of Truth for deployment-specific settings (file IDs, company branding). FileID resolution chain: `Resource.FileID` â†’ `Config[{Scope}FileID]` â†’ APP file ID. Helpers: `getConfigMap()`, `getAppConfigValue()`, `resolveFileIdForScope()` in `sheetHelpers.gs`.
+- APP now includes a `Config` sheet (Key-Value pairs) as the Source of Truth for deployment-specific settings (file IDs, company branding). FileID resolution chain: `Resource.FileID` → `Config[{Scope}FileID]` → APP file ID. Helpers: `getConfigMap()`, `getAppConfigValue()`, `resolveFileIdForScope()` in `sheetHelpers.gs`.
 - `clasp` CLI is configured for GAS deployment. Config files per client are stored in `GAS/clasp-configs/`. Run `cd GAS && clasp push` to deploy. See `Documents/NEW_CLIENT_SETUP_GUIDE.md` Step 2 for details.
 
 ## 4) Must-Follow Collaboration Rules
@@ -135,7 +135,7 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
     - 20 default section components in `FRONTENT/src/components/Masters/Master*.vue` (4 Index + 5 View + 4 Add + 4 Edit + 3 Action)
     - Reusable card component: `FRONTENT/src/components/Masters/MasterRecordCard.vue`
     - All `_common/` pages are thin orchestration layers (layout + composable wiring).
-    - `ListPage.vue` renamed to `IndexPage.vue`; route action `list` â†’ `index`.
+    - `ListPage.vue` renamed to `IndexPage.vue`; route action `list` → `index`.
   - **3-Tier Resolution** (page-level and section-level):
     - Tier 1 (tenant-custom): `_custom/{CustomUIName}/{Entity}.vue` or `{Entity}{Section}.vue`
     - Tier 2 (entity-custom): `{Entity}/{Action}Page.vue` or `{Entity}/{Section}.vue`
@@ -192,15 +192,15 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
 - APP.Config sheet for multi-client deployment support (2026-03-18):
   - New `Config` sheet in APP spreadsheet stores deployment-specific Key-Value settings.
   - `GAS/sheetHelpers.gs` adds `getConfigMap()`, `getAppConfigValue()`, `resolveFileIdForScope()`.
-  - FileID resolution is now a 3-tier fallback: `Resource.FileID` â†’ `Config[{Scope}FileID]` â†’ `ss.getId()`.
+  - FileID resolution is now a 3-tier fallback: `Resource.FileID` → `Config[{Scope}FileID]` → `ss.getId()`.
   - `syncAppResources.gs`, `resourceRegistry.gs`, `reportGenerator.gs`, `appMenu.gs` all use the new fallback chain.
   - Hardcoded `CONFIG.REPORTS_FILE_ID` removed from `Constants.gs`.
   - `setupAppSheets.gs` creates the Config sheet with pre-populated expected keys. It is now the first sheet created and positioned in the APP spreadsheet.
 - GAS Audit Refactor Hardening (2026-03-19):
   - **Config cache TTL** reduced from 6h to 5min; added `clearConfigCache()` for manual invalidation.
-  - **FileID auto-population removed**: `syncAppResourcesFromCode()` no longer writes resolved FileIDs into blank `Resources.FileID` cells â€” blank is preserved for config-driven runtime resolution.
-  - **`accounts` scope** added to `normalizeResourceScope()` and API dispatcher scope allowlist â€” accounts resources no longer collapse to `master`.
-  - **Progress validation** now applied in `setupOperationSheets.gs` â€” `progressValidation` arrays were defined but never applied before.
+  - **FileID auto-population removed**: `syncAppResourcesFromCode()` no longer writes resolved FileIDs into blank `Resources.FileID` cells — blank is preserved for config-driven runtime resolution.
+  - **`accounts` scope** added to `normalizeResourceScope()` and API dispatcher scope allowlist — accounts resources no longer collapse to `master`.
+  - **Progress validation** now applied in `setupOperationSheets.gs` — `progressValidation` arrays were defined but never applied before.
   - **Setup utility deduplication**: Created `GAS/setupSheetUtils.gs` with shared `setup_*` helpers. All 4 setup scripts (`setupAppSheets.gs`, `setupMasterSheets.gs`, `setupOperationSheets.gs`, `setupAccountSheets.gs`) now use these shared helpers. ~420 lines of duplicate code removed.
   - **Admin dialog HTML separation**: Extracted inline HTML/CSS/JS from `appMenu.gs` into `GAS/adminDialog.html` template. Server logic stays in `.gs`, form markup/client JS in `.html`.
   - **Duplicate utility removal**: `appMenu.gs` `findRow` and `hashPasswordMenu` replaced with thin wrappers to shared `findRowByValue` and `hashPassword`.
@@ -214,7 +214,7 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - Corrected Config default key from `AccountFileID` to `AccountsFileID`.
   - Added execution logging in auth/resource authorization paths (`safeGetRoleResourceAccess`, `buildAuthorizedResourceEntry`) to avoid silent failures.
   - Removed `fileId` from authorized resource payload sent to frontend; kept internal runtime file resolution untouched.
-- **GAS Backend Performance Optimization â€” Two-Tier Caching & Permanent Metadata Store (2026-03-20)**:
+- **GAS Backend Performance Optimization — Two-Tier Caching & Permanent Metadata Store (2026-03-20)**:
   - Implemented request-scoped global variable caching for `getAppSpreadsheet()`, `getResourceRegistryContext()`, and `getRolePermissionsContext()`.
   - Created a high-performance `getResourceConfigMap()` with cross-execution persistence via `CacheService` (5-min TTL) and **Permanent Metadata Store** (hidden `Metadata` sheet).
   - Permanent Store eliminates the "cold-start" delay (25s -> 8s) by caching resource configs and sheet headers indefinitely in the APP file.
@@ -225,15 +225,15 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - Final Performance: Login reduced from ~25s to ~8s; Multi-resource sync reduced from ~3min to ~9s.
   - Plan: `PLANS/2026-03-20-gas-performance-optimization.md`.
 
-- **Filtered List Views â€” APP.Resources.ListViews (2026-04-01)**:
+- **Filtered List Views — APP.Resources.ListViews (2026-04-01)**:
   - New `ListViews` JSON column in `APP.Resources` for filter-driven list view configurations per resource.
   - `GAS/setupAppSheets.gs` and `GAS/syncAppResources.gs` include `ListViews` in schema (additive, non-destructive).
   - `GAS/resourceRegistry.gs` parses `ListViews` with mode semantics and exposes in auth payload as `entry.ui.listViews` + `entry.ui.listViewsMode`.
   - **AQL Menu > Manage Lists**: Sheet UI dialog (`GAS/listViewsManager.html`) for managing list view configs per resource. Supports nested AND/OR filter groups, user-friendly operator labels, `$now` token, and validation.
   - Empty-state admin control in Manage Lists: select + Update (Fallback => blank cell, Off => `[]`).
   - GAS server functions: `app_showListViewsManagerDialog()`, `app_getListViewsManagerData()`, `app_saveResourceListViews()` in `GAS/appMenu.gs`.
-  - Frontend composable: `FRONTENT/src/composables/useListViews.js` â€” evaluates filter trees, applies mode semantics (`auto` / `off` / `custom`), computes per-view counts (ignoring search), local-state switching (URL sync optional but currently disabled).
-  - Frontend component: `FRONTENT/src/components/Masters/MasterListViewSwitcher.vue` â€” chip bar with outlined/filled toggle, counts, color coding.
+  - Frontend composable: `FRONTENT/src/composables/useListViews.js` — evaluates filter trees, applies mode semantics (`auto` / `off` / `custom`), computes per-view counts (ignoring search), local-state switching (URL sync optional but currently disabled).
+  - Frontend component: `FRONTENT/src/components/Masters/MasterListViewSwitcher.vue` — chip bar with outlined/filled toggle, counts, color coding.
   - Integrated into `FRONTENT/src/pages/Masters/_common/IndexPage.vue` (default index) and `FRONTENT/src/pages/Masters/Products/IndexPage.vue` (custom Products index).
   - Status badge removed from `MasterRecordCard.vue` and Products index cards.
   - Mode behavior: blank `ListViews` cell => auto mode; `[]` => off mode (hide switcher); non-empty array => custom override mode.
@@ -252,16 +252,63 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - Consolidated 8 separate menu columns (`MenuGroup`, `MenuOrder`, `MenuLabel`, `MenuIcon`, `RoutePath`, `PageTitle`, `PageDescription`, `ShowInMenu`) into a single `Menu` JSON column in `APP.Resources`.
   - `GAS/syncAppResources.gs`: Each resource now has a single `Menu` key containing a JSON object with `group`, `order`, `label`, `icon`, `route`, `pageTitle`, `pageDescription`, `show`.
   - `GAS/setupAppSheets.gs`: Resources sheet schema uses single `Menu` column header instead of 8.
-  - `GAS/resourceRegistry.gs`: Parses `Menu` JSON into the same internal config properties (`menuGroup`, `menuOrder`, `menuLabel`, etc.) so the auth payload `entry.ui` shape is unchanged.
+  - `GAS/resourceRegistry.gs`: Parses `Menu` JSON for normalized sidebar config used by auth payload builders.
   - `GAS/appMenu.gs`: Admin dialog still shows individual form fields; `mapResource()` composes them into `Menu` JSON on save, `getResourceDetails()` parses `Menu` JSON back into individual fields on load.
-  - **Frontend fully refactored** — auth payload now delivers `entry.ui.menu` as a nested object. All frontend consumers updated from `resource.ui.menuGroup` → `resource.ui.menu.group`, `resource.ui.routePath` → `resource.ui.menu.route`, `resource.ui.pageTitle` → `resource.ui.menu.pageTitle`, etc.
+- **Menu Column Array + Multi-item Entries (2026-04-06)**:
+  - `APP.Resources.Menu` now stores a JSON **array** (`[{...}, {...}]`), letting a single resource expose multiple sidebar menu entries and route guards.
+  - `GAS/resourceRegistry.gs` normalizes `menu` entries into `config.menus` and delivers them as `entry.ui.menus`; configuration-level helpers now treat the first entry as the primary CRUD view.
+  - `GAS/appMenu.gs` only edits the first array item in the admin dialog while preserving `_menuArrayFull`; `mapResource()` writes `[editedItem, ...rest]`.
+  - Frontend sidebar (MainLayout), router guard, `useMenuAccess`, `useResourceConfig`, and CRUD headers now iterate `ui.menus`, match routes to the correct entry, and evaluate `menuAccess` per item so multiple items can share one resource�s permissions.
+  - `Documents/RESOURCE_COLUMNS_GUIDE.md` and `Documents/APP_SHEET_STRUCTURE.md` document the array format; login payload now names the field `ui.menus` to signal the change.
   - Frontend files updated: `MainLayout.vue`, `router/index.js`, `useResourceConfig.js`, `useCompositeForm.js`, `ResourcePageShell.vue`, `MasterListHeader.vue`, `MasterAddHeader.vue`, `MasterEditHeader.vue`, `MasterAddChildren.vue`, `MasterEditChildren.vue`, `MasterViewChildren.vue`.
   - Plan: `PLANS/2026-04-03-menu-column-consolidation.md`.
+
+- **AppOptions Infrastructure (2026-04-05)**:
+  - New `AppOptions` sheet in the APP spreadsheet stores named option lists for use across forms. Sheet layout: horizontal rows � Column A = option group key, B onwards = selectable values. No header row.
+  - Seed data managed in `GAS/Constants.gs` as `APP_OPTIONS_SEED` (single source of truth). `setupAppSheets()` seeds missing option groups on first run, never overwrites admin-edited rows.
+  - Initial option group: `StockMovementReferenceType` ? `['GRN', 'DirectEntry', 'StockAdjustment']`. Dropdown validation applied to `StockMovements.ReferenceType` by `setupOperationSheets()`.
+  - New `GAS/appOptions.gs` provides `getAppOptions()` which reads the sheet and returns `{ key: [values] }`. Called by `handleLogin()` in `auth.gs`.
+  - Login payload now includes `appOptions` key alongside `appConfig`. Stored in Pinia auth store and localStorage. Frontend access: `authStore.appOptionsMap['StockMovementReferenceType']`.
+  - **Adding new option groups**: Add key + values to `APP_OPTIONS_SEED` in `Constants.gs`, add matching `referenceTypeValidation` (or appropriate schema key) in the relevant setup script, run `clasp push`, re-run setup menu actions, re-login.
+  - Plan: `PLANS/synchronous-churning-riddle.md`.
+
+- **Warehouse > Manage Stock feature + WarehouseStorages hook + Login Response doc (2026-04-06)**:
+  - New `GAS/stockMovements.gs` � `applyStockMovementToWarehouseStorages()` hook that upserts `WarehouseStorages` on every `StockMovements` insert. Closes the gap where `WarehouseStorages` was documented as "automatically managed" but no code path existed.
+  - `GAS/masterApi.gs` � hook wired into `handleMasterCreateRecord` post-insert for `StockMovements` resource. Added `rowArrayToObject()` helper.
+  - `GAS/syncAppResources.gs` � `StockMovements` now carries two menu entries: `/operations/stock-movements` and `/operations/manage-stock` (Warehouse group).
+  - Frontend: `ManageStockPage.vue`, `ManageStockContextStep.vue`, `ManageStockEditGrid.vue`, `StockMovementRow.vue`, `useStockMovements.js`. Type-agnostic: movement types driven by `appOptions.StockMovementReferenceType` � new types need only an `APP.AppOptions` row.
+  - `Documents/LOGIN_RESPONSE.md` created � canonical login payload spec with all fields, generators, file:line refs, and maintenance rule.
+  - `CLAUDE.md`, `AGENTS.md` � Login Response Documentation Maintenance Rule added.
+  - Plan: `PLANS/2026-04-05-warehouse-manage-stock-and-login-response-doc.md`.
+
+- **Manage Stock UX + Sidebar Taxonomy Refactor (2026-04-06)**:
+  - Manage Stock context step no longer asks storage in step 1; storage is captured per SKU row in step 2.
+  - `useStockMovements.loadStoragesForWarehouse()` now reads `WarehouseStorages` through operation-scope API call with non-blocking/no-error-toast options for background hydration.
+  - Stock movement rows now submit row-level `StorageName` (`StockMovementRow` includes per-row storage picker + same Delta/New Qty dual binding).
+  - Sidebar menu taxonomy in `GAS/syncAppResources.gs` shifted toward business groups:
+    - `Product`: `Manage Products`, `Manage Stock`
+    - `Warehouse`: `Manage Warehouses`, `Manage Stock`, `Stock Movements`, `Warehouse Storages`, `Port Clearance`, `Goods Receipts`
+    - `Procurement`: `Purchase Requisitions`, `RFQs`, `Supplier Quotations`, `Purchase Orders`, `Shipments`
+  - `Procurements` menu entry is retained as hidden (`show: false`) registry row.
+  - Plan: `PLANS/2026-04-06-manage-stock-ux-and-menu-taxonomy-refactor.md`.
+- **Scope Normalization + Multi-Level Menu Tree + Compact Stock Grid (2026-04-06)**:
+  - **Critical bug fix**: `resolveMasterResourceNames()` in `GAS/masterApi.gs` was hardcoded to `getResourcesByScope('master')`, causing "Unsupported master resource" errors for operation-scope resources (e.g., saving StockMovements). Now reads `payload.scope` and resolves supported resources by the actual requested scope.
+  - **Scope alias normalization**: `normalizeResourceScope()` in `GAS/resourceRegistry.gs` now handles plural aliases: `operations` → `operation`, `masters` → `master`, `reports` → `report`.
+  - **`groupPath` menu field**: All 33 resources in `GAS/syncAppResources.gs` now include `groupPath: string[]` in each menu item object. `GAS/resourceRegistry.gs` normalizes it (falls back to `[group]` for backward compat) and delivers it in the auth payload as `menus[*].groupPath`.
+  - **Business taxonomy applied via `groupPath`**: Masters (`['Masters', 'Product']`, `['Masters', 'Warehouse']`, `['Masters', 'Procurement']`, `['Masters', 'Logistics']`), Operations (`['Operations', 'Procurement']`, `['Operations', 'Warehouse']`), Accounts (`['Accounts']`).
+  - **N-level sidebar tree renderer**: `FRONTENT/src/layouts/MainLayout/MainLayout.vue` `visibleResourceMenuGroups` now builds a recursive tree from `groupPath` arrays. New `FRONTENT/src/components/MenuTreeNode.vue` recursive component handles N-level group nesting with `q-expansion-item` for groups and `q-item` for leaves.
+  - **Compact Manage Stock grid**: Removed "Product" and "Note" columns from the stock entry table. Product name shown as a secondary line under SKU. Storage field narrowed to 120-180px max. Input widths trimmed to 80px. No horizontal scroll on standard desktop widths.
+  - Plan: `PLANS/2026-04-06-scope-normalization-and-multilevel-menu-tree.md`.
+
+- **Standalone Wizard Resource Removal + StockMovements Dual-Menu Ownership (2026-04-06)**:
+  - Removed the standalone warehouse wizard resource definition from `GAS/syncAppResources.gs`.
+  - `StockMovements.Menu` now owns both sidebar entries: "Stock Movements" and "Manage Stock".
+  - Access for both routes is controlled by `StockMovements` permissions (`APP.RolePermissions`), not a separate resource.
 
 - **Menu Access Control via `menuAccess` Rules (2026-04-03)**:
    - Added permission-based menu visibility control using `menuAccess` field inside the `Menu` JSON column.
    - `GAS/syncAppResources.gs`: Code-level source of truth for `menuAccess` rules (e.g., `menuAccess: { require: 'canWrite' }`).
-   - `GAS/resourceRegistry.gs`: Parses and delivers `entry.ui.menu.menuAccess` in auth payload.
+   - `GAS/resourceRegistry.gs`: Parses and delivers menu-access rules in `entry.ui.menus[*].menuAccess` in auth payload.
    - `FRONTENT/src/composables/useMenuAccess.js`: Reusable composable that evaluates `menuAccess` rules against user permissions. Supports: absent (fallback `canRead`), single resource (`require`), cross-resource AND (`all`), cross-resource OR (`any`).
    - `FRONTENT/src/layouts/MainLayout/MainLayout.vue`: Uses `evaluateMenuAccess()` to filter sidebar menu items instead of hardcoded `canRead` check. Removed `readableResources` computed property.
    - `FRONTENT/src/router/index.js`: Added inline `evaluateMenuAccessInline()` function (non-composable) to guard route access using same logic.
@@ -274,14 +321,14 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
 - Code is generated in Apps Script (not by sheet formula).
 - Code generation uses `Resources.CodePrefix` + `Resources.CodeSequenceLength`.
 - Initial resource schema (headers) is delivered in login payload based on role permissions.
-- Login resource payload is sorted by `ui.menuOrder` then `name` for stable frontend menu/order behavior.
+- Login resource payload is sorted by the minimum value among `ui.menus[*].order`, then `name` for stable frontend menu/order behavior.
 - User scope payload now includes:
   - `accessRegion.code`
   - `accessRegion.isUniverse`
   - `accessRegion.accessibleCodes`
 - Frontend authorization behavior:
   - UI visibility uses `authorizedResources` from login payload.
-  - Routing enforces authorized resource match via `resources[].ui.routePath` (and optional `meta.requiredResource` fallback).
+  - Routing enforces authorized resource match via `resources[].ui.menus[*].route` (and optional `meta.requiredResource` fallback).
 - Master list fetch can use compact transport:
   - API verb style can be generic:
     - `action=get`, `scope=master`, `resource=...` (or `resources=...`)
@@ -427,11 +474,11 @@ References:
 
 ## 11) Manual Actions User Usually Needs
 When Apps Script changes:
-1. The agent runs `cd GAS && clasp push` automatically â€” no manual copy-paste needed.
+1. The agent runs `cd GAS && clasp push` automatically — no manual copy-paste needed.
 2. **User action only if** API behavior changed (new actions, changed response shape): Create a new Web App deployment version in Apps Script IDE (Deploy > New deployment).
 
 When setup scripts are added/changed:
-1. User runs the relevant menu action from AQL ðŸš€ menu in the APP spreadsheet.
+1. User runs the relevant menu action from AQL 🚀 menu in the APP spreadsheet.
 2. Verify `Resources` rows are correct in the APP sheet.
 
 ## 12) Primary Docs Map
@@ -439,7 +486,7 @@ When setup scripts are added/changed:
 - Collaboration rules: `Documents/AI_COLLABORATION_PROTOCOL.md`
 - **Multi-Agent protocol: `Documents/MULTI_AGENT_PROTOCOL.md`**
 - **Active implementation plans: `PLANS/`**
-- **Module Workflows: `Documents/MODULE_WORKFLOWS.md`** â€” end-to-end flow docs per feature (Reports, etc.). Read the relevant section before working on any documented module.
+- **Module Workflows: `Documents/MODULE_WORKFLOWS.md`** — end-to-end flow docs per feature (Reports, etc.). Read the relevant section before working on any documented module.
 - Resource architecture: `Documents/RESOURCE_REGISTRY_ARCHITECTURE.md`
 - Resource column definitions: `Documents/RESOURCE_COLUMNS_GUIDE.md`
 - Technical details: `Documents/TECHNICAL_SPECIFICATIONS.md`
@@ -462,11 +509,12 @@ Significant updates include:
 - New sheet structure standards
 - Major frontend module additions
 - Important process/protocol changes for collaborators
-- **Any change to a module workflow** (Reports, Bulk Upload, etc.) â€” update the relevant section in `Documents/MODULE_WORKFLOWS.md` to reflect the new flow, files, config, or behavior
+- **Any change to a module workflow** (Reports, Bulk Upload, etc.) — update the relevant section in `Documents/MODULE_WORKFLOWS.md` to reflect the new flow, files, config, or behavior
 
 Expected behavior for future joiners:
 1. Read this file first.
 2. Implement requested changes.
 3. Update related technical/business docs.
 4. Update this handoff with latest status and decisions so the next context can continue without re-discovery.
+
 

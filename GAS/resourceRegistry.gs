@@ -66,7 +66,8 @@ function getResourceConfigMap() {
     var rawFileId = (row[registry.idx.FileID] || '').toString().trim();
 
     var listViewsMeta = parseListViewsCell(readOptionalCell(row, registry.idx.ListViews, ''));
-    var menuObj = parseJsonCell(readOptionalCell(row, registry.idx.Menu, '{}'), {});
+    var menuRaw = parseJsonCell(readOptionalCell(row, registry.idx.Menu, '[]'), []);
+    var menuArr = Array.isArray(menuRaw) ? menuRaw : (menuRaw && typeof menuRaw === 'object' ? [menuRaw] : []);
 
     map[name] = {
       name: name,
@@ -90,15 +91,23 @@ function getResourceConfigMap() {
       defaultValues: parseJsonCell(readOptionalCell(row, registry.idx.DefaultValues, '{}'), {}),
       recordAccessPolicy: normalizeRecordAccessPolicy(readOptionalCell(row, registry.idx.RecordAccessPolicy, 'all')),
       ownerUserField: (readOptionalCell(row, registry.idx.OwnerUserField, 'CreatedBy') || '').toString().trim() || 'CreatedBy',
-      menu: Object.assign({}, menuObj, {
-        group: menuObj.group || '',
-        order: Number(menuObj.order) || 9999,
-        label: menuObj.label || name,
-        icon: menuObj.icon || 'list_alt',
-        route: menuObj.route || '',
-        pageTitle: menuObj.pageTitle || name,
-        pageDescription: menuObj.pageDescription || '',
-        show: menuObj.show !== undefined ? toBooleanCell(menuObj.show) : true
+      menus: menuArr.map(function(m) {
+        var group = m.group || '';
+        var groupPath = Array.isArray(m.groupPath) && m.groupPath.length > 0
+          ? m.groupPath
+          : (group ? [group] : ['General']);
+        return {
+          group: group,
+          groupPath: groupPath,
+          order: Number(m.order) || 9999,
+          label: m.label || name,
+          icon: m.icon || 'list_alt',
+          route: m.route || '',
+          pageTitle: m.pageTitle || name,
+          pageDescription: m.pageDescription || '',
+          show: m.show !== undefined ? toBooleanCell(m.show) : true,
+          menuAccess: m.menuAccess || null
+        };
       }),
       uiFields: parseJsonCell(readOptionalCell(row, registry.idx.UIFields, '[]'), []),
       includeInAuthorizationPayload: toBooleanCell(readOptionalCell(row, registry.idx.IncludeInAuthorizationPayload, true)),
@@ -236,10 +245,11 @@ function normalizeCodeSequenceLength(value) {
 
 function normalizeResourceScope(value) {
   const normalized = (value || 'master').toString().trim().toLowerCase();
-  if (normalized === 'operation') return 'operation';
+  if (normalized === 'operation' || normalized === 'operations') return 'operation';
   if (normalized === 'accounts') return 'accounts';
-  if (normalized === 'report') return 'report';
+  if (normalized === 'report' || normalized === 'reports') return 'report';
   if (normalized === 'system') return 'system';
+  if (normalized === 'master' || normalized === 'masters') return 'master';
   return 'master';
 }
 
@@ -523,7 +533,7 @@ function buildAuthorizedResourceEntry(resourceName, options) {
 
   if (opts.includeUiConfig) {
     entry.ui = {
-      menu: config.menu || {},
+      menus: Array.isArray(config.menus) ? config.menus : [],
       fields: Array.isArray(config.uiFields) ? config.uiFields : [],
       customUIName: config.customUIName || '',
       listViews: Array.isArray(config.listViews) ? config.listViews : [],

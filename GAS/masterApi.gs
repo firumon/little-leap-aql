@@ -115,6 +115,15 @@ function handleMasterCreateRecord(auth, payload) {
   sheet.getRange(targetRow, 1, 1, headers.length).setValues([rowData]);
   updateResourceSyncCursor(resourceName);
 
+  if (resourceName === 'StockMovements') {
+    try {
+      applyStockMovementToWarehouseStorages(rowArrayToObject(headers, rowData), auth);
+    } catch (hookError) {
+      Logger.log('applyStockMovementToWarehouseStorages failed: ' + hookError);
+      // Do NOT fail the outer create — ledger row is already committed.
+    }
+  }
+
   return {
     success: true,
     message: resourceName + ' record created successfully',
@@ -213,7 +222,8 @@ function resolveMasterResourceNames(payload) {
     return [];
   }
 
-  const supported = getResourcesByScope('master').map(function (config) {
+  const requestedScope = normalizeResourceScope((payload && payload.scope) ? payload.scope : 'master');
+  const supported = getResourcesByScope(requestedScope).map(function (config) {
     return config.name;
   });
   const canonicalMap = {};
@@ -228,7 +238,7 @@ function resolveMasterResourceNames(payload) {
     const key = normalizeResourceAlias(candidate);
     const match = canonicalMap[key];
     if (!match) {
-      throw new Error('Unsupported master resource: ' + candidate);
+      throw new Error('Unsupported resource "' + candidate + '" for scope "' + requestedScope + '"');
     }
     return match;
   });
@@ -1010,6 +1020,21 @@ function resolveParentCodeField(childHeaders, parentResourceName) {
   var candidate = singular + 'Code';
   if (childHeaders.indexOf(candidate) !== -1) return candidate;
   return '';
+}
+
+/**
+ * Zips a headers array and a row data array into a plain object.
+ * Used to pass a record to post-insert hooks without re-reading the sheet.
+ * @param {string[]} headers - Column header names
+ * @param {Array}    rowData - Parallel array of cell values
+ * @returns {Object} Plain { [header]: value } object
+ */
+function rowArrayToObject(headers, rowData) {
+  var obj = {};
+  for (var i = 0; i < headers.length; i++) {
+    obj[headers[i]] = rowData[i];
+  }
+  return obj;
 }
 
 /**

@@ -19,22 +19,6 @@
         <q-space />
 
         <div class="q-gutter-sm row items-center no-wrap">
-          <q-input
-            dark
-            dense
-            standout
-            v-model="search"
-            input-class="text-right"
-            class="q-ml-md desktop-only"
-            placeholder="Search resources..."
-            style="width: 250px"
-          >
-            <template v-slot:append>
-              <q-icon v-if="search === ''" name="search" />
-              <q-icon v-else name="clear" class="cursor-pointer" @click="search = ''" />
-            </template>
-          </q-input>
-
           <q-btn round flat icon="notifications">
             <q-badge floating color="red" rounded />
           </q-btn>
@@ -94,28 +78,13 @@
 
           <q-separator class="q-my-md" />
 
-          <q-expansion-item
-            v-for="group in visibleResourceMenuGroups"
-            :key="group.key"
-            :icon="group.icon"
-            :label="group.label"
-            header-class="text-weight-medium"
-          >
-            <q-list class="q-pl-lg">
-              <q-item
-                v-for="menuItem in group.items"
-                :key="menuItem.resource"
-                :to="menuItem.routePath"
-                clickable
-                v-ripple
-              >
-                <q-item-section avatar><q-icon :name="menuItem.navIcon" size="xs" /></q-item-section>
-                <q-item-section>{{ menuItem.navLabel }}</q-item-section>
-              </q-item>
-            </q-list>
-          </q-expansion-item>
+          <MenuTreeNode
+            v-for="node in visibleResourceMenuGroups"
+            :key="node.key"
+            :node="node"
+          />
           <q-item-label v-if="visibleResourceMenuGroups.length === 0" caption class="q-px-md q-py-sm text-grey-6">
-            No master resources assigned for this role.
+            No resources assigned for this role.
           </q-item-label>
 
           <q-separator class="q-my-md" />
@@ -140,11 +109,12 @@
 import { ref, computed } from 'vue'
 import { useAuthStore } from 'src/stores/auth'
 import { useMenuAccess } from 'src/composables/useMenuAccess'
+import MenuTreeNode from 'src/components/MenuTreeNode.vue'
 
 const auth = useAuthStore()
 const { evaluateMenuAccess } = useMenuAccess()
 const leftDrawerOpen = ref(false)
-const search = ref('')
+const menuSearchQuery = ref('')
 
 const groupIconByName = {
   masters: 'admin_panel_settings',
@@ -178,58 +148,77 @@ function isValidRoute(routePath) {
 
 const userAvatar = computed(() => auth.userProfile?.avatar || 'https://cdn.quasar.dev/img/avatar.png')
 
-const menuSearchQuery = computed(() => search.value.trim().toLowerCase())
-
 const visibleResourceMenuGroups = computed(() => {
   const resources = Array.isArray(auth.resources) ? auth.resources : []
-  const grouped = {}
+  const root = []
+  const seenRoutes = new Set()
 
-  resources
-    .filter((resource) => {
-      const menu = resource?.ui?.menu
-      return menu?.show !== false &&
-        menu?.route &&
-        evaluateMenuAccess(resource)
-    })
-    .forEach((resource) => {
-      const menu = resource.ui?.menu || {}
-      const route = menu.route
-      if (!isValidRoute(route)) return
+  resources.forEach((resource) => {
+    const menus = Array.isArray(resource?.ui?.menus) ? resource.ui.menus : []
+    menus.forEach((menu) => {
+      if (menu.show === false || !isValidRoute(menu.route)) return
+      if (!evaluateMenuAccess(resource, menu)) return
+      if (seenRoutes.has(menu.route)) return
+      seenRoutes.add(menu.route)
 
       const navLabel = menu.label || resource.name
-      if (menuSearchQuery.value && !navLabel.toLowerCase().includes(menuSearchQuery.value)) {
-        return
-      }
+      if (menuSearchQuery.value && !navLabel.toLowerCase().includes(menuSearchQuery.value)) return
 
-      const groupLabel = menu.group || 'General'
-      if (!grouped[groupLabel]) {
-        grouped[groupLabel] = []
-      }
+      const groupPath = Array.isArray(menu.groupPath) && menu.groupPath.length > 0
+        ? menu.groupPath
+        : (menu.group ? [menu.group] : ['General'])
 
-      grouped[groupLabel].push({
+      // Walk / create group nodes along the path
+      let currentChildren = root
+      groupPath.forEach((segment, idx) => {
+        const pathKey = groupPath.slice(0, idx + 1).join('/')
+        let groupNode = currentChildren.find((n) => n.type === 'group' && n.key === pathKey)
+        if (!groupNode) {
+          groupNode = {
+            type: 'group',
+            key: pathKey,
+            label: segment,
+            icon: resolveGroupIcon(segment, []),
+            order: 9999,
+            children: []
+          }
+          currentChildren.push(groupNode)
+        }
+        currentChildren = groupNode.children
+      })
+
+      // Add leaf at the deepest level
+      currentChildren.push({
+        type: 'leaf',
+        key: `${resource.name}::${menu.route}`,
         resource: resource.name,
-        routePath: route,
+        routePath: menu.route,
         navLabel,
         navIcon: menu.icon || 'list_alt',
         order: Number(menu.order || 9999)
       })
     })
+  })
 
-  return Object.keys(grouped)
-    .map((groupLabel) => {
-      const items = grouped[groupLabel].sort((a, b) => a.order - b.order)
-      return {
-        key: normalizeText(groupLabel) || 'masters',
-        label: groupLabel,
-        icon: resolveGroupIcon(groupLabel, items),
-        order: items.length ? items[0].order : 9999,
-        items
+  // Sort each level: leaves and groups by order then label
+  function sortNodes(nodes) {
+    nodes.sort((a, b) => {
+      const ao = a.order !== undefined ? a.order : 9999
+      const bo = b.order !== undefined ? b.order : 9999
+      if (ao !== bo) return ao - bo
+      return (a.label || a.navLabel || '').localeCompare(b.label || b.navLabel || '')
+    })
+    nodes.forEach((n) => {
+      if (n.type === 'group') {
+        // Propagate min-order from children so group sorts correctly
+        n.order = n.children.reduce((min, c) => Math.min(min, c.order !== undefined ? c.order : 9999), 9999)
+        sortNodes(n.children)
       }
     })
-    .sort((a, b) => {
-      if (a.order !== b.order) return a.order - b.order
-      return a.label.localeCompare(b.label)
-    })
+  }
+  sortNodes(root)
+
+  return root
 })
 
 function toggleLeftDrawer () {

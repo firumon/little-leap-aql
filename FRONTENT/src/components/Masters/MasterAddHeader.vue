@@ -3,7 +3,7 @@
     <q-card-section>
       <div class="page-title">
         <q-icon name="add_circle_outline" size="24px" color="primary" class="q-mr-sm" />
-        Create {{ config?.ui?.menu?.pageTitle || config?.name || 'Record' }}
+        Create {{ config?.ui?.menus?.[0]?.pageTitle || config?.name || 'Record' }}
       </div>
     </q-card-section>
   </q-card>

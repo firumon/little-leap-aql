@@ -68,6 +68,11 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
 
 ## 6) Current Implementation Status
 ### Completed
+- Direct Stock Entry cache/cursor + storage dropdown fixes (2026-04-11):
+  - `FRONTENT/src/composables/useStockMovements.js` — `submitBatch()` now resolves `WarehouseStorages` headers locally via `ensureHeaders()` (IDB meta → auth store → `getAuthorizedResources`) and only advances `lastSyncAt` after a successful IDB upsert. Removes the stale-data bug where the force-sync delta request would return empty and leave cached rows in place.
+  - `FRONTENT/src/services/resourceRecords.js` — existing `ensureHeaders()` helper is now exported for reuse.
+  - `FRONTENT/src/components/Warehouse/StockEntryGrid.vue` — post-save reload switched to `fetchData(false)` (cache-first rebuild, since IDB is already fresh). Storage dropdown options are now a reactive union of fetched `WarehouseStorages` names plus draft `StorageName` values in `newRows`, so a location typed in one new row is immediately selectable in subsequent rows.
+  - GAS response shapes untouched — no header payload added to `buildMasterRowsResponse()`.
 - Products entity-custom pages delivered (2026-03-31):
   - `FRONTENT/src/pages/Masters/Products/IndexPage.vue` custom index with product + SKU-variant combined search and SKU counts.
   - `FRONTENT/src/pages/Masters/Products/ViewPage.vue` custom view with dynamic SKU columns from `VariantTypes`.
@@ -258,27 +263,27 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - `APP.Resources.Menu` now stores a JSON **array** (`[{...}, {...}]`), letting a single resource expose multiple sidebar menu entries and route guards.
   - `GAS/resourceRegistry.gs` normalizes `menu` entries into `config.menus` and delivers them as `entry.ui.menus`; configuration-level helpers now treat the first entry as the primary CRUD view.
   - `GAS/appMenu.gs` only edits the first array item in the admin dialog while preserving `_menuArrayFull`; `mapResource()` writes `[editedItem, ...rest]`.
-  - Frontend sidebar (MainLayout), router guard, `useMenuAccess`, `useResourceConfig`, and CRUD headers now iterate `ui.menus`, match routes to the correct entry, and evaluate `menuAccess` per item so multiple items can share one resource�s permissions.
+  - Frontend sidebar (MainLayout), router guard, `useMenuAccess`, `useResourceConfig`, and CRUD headers now iterate `ui.menus`, match routes to the correct entry, and evaluate `menuAccess` per item so multiple items can share one resource's permissions.
   - `Documents/RESOURCE_COLUMNS_GUIDE.md` and `Documents/APP_SHEET_STRUCTURE.md` document the array format; login payload now names the field `ui.menus` to signal the change.
   - Frontend files updated: `MainLayout.vue`, `router/index.js`, `useResourceConfig.js`, `useCompositeForm.js`, `ResourcePageShell.vue`, `MasterListHeader.vue`, `MasterAddHeader.vue`, `MasterEditHeader.vue`, `MasterAddChildren.vue`, `MasterEditChildren.vue`, `MasterViewChildren.vue`.
   - Plan: `PLANS/2026-04-03-menu-column-consolidation.md`.
 
 - **AppOptions Infrastructure (2026-04-05)**:
-  - New `AppOptions` sheet in the APP spreadsheet stores named option lists for use across forms. Sheet layout: horizontal rows � Column A = option group key, B onwards = selectable values. No header row.
+  - New `AppOptions` sheet in the APP spreadsheet stores named option lists for use across forms. Sheet layout: horizontal rows — Column A = option group key, B onwards = selectable values. No header row.
   - Seed data managed in `GAS/Constants.gs` as `APP_OPTIONS_SEED` (single source of truth). `setupAppSheets()` seeds missing option groups on first run, never overwrites admin-edited rows.
-  - Initial option group: `StockMovementReferenceType` ? `['GRN', 'DirectEntry', 'StockAdjustment']`. Dropdown validation applied to `StockMovements.ReferenceType` by `setupOperationSheets()`.
+  - Initial option group: `StockMovementReferenceType` → `['GRN', 'DirectEntry', 'StockAdjustment']`. Dropdown validation applied to `StockMovements.ReferenceType` by `setupOperationSheets()`.
   - New `GAS/appOptions.gs` provides `getAppOptions()` which reads the sheet and returns `{ key: [values] }`. Called by `handleLogin()` in `auth.gs`.
   - Login payload now includes `appOptions` key alongside `appConfig`. Stored in Pinia auth store and localStorage. Frontend access: `authStore.appOptionsMap['StockMovementReferenceType']`.
   - **Adding new option groups**: Add key + values to `APP_OPTIONS_SEED` in `Constants.gs`, add matching `referenceTypeValidation` (or appropriate schema key) in the relevant setup script, run `clasp push`, re-run setup menu actions, re-login.
   - Plan: `PLANS/synchronous-churning-riddle.md`.
 
 - **Warehouse > Manage Stock feature + WarehouseStorages hook + Login Response doc (2026-04-06)**:
-  - New `GAS/stockMovements.gs` � `applyStockMovementToWarehouseStorages()` hook that upserts `WarehouseStorages` on every `StockMovements` insert. Closes the gap where `WarehouseStorages` was documented as "automatically managed" but no code path existed.
-  - `GAS/masterApi.gs` � hook wired into `handleMasterCreateRecord` post-insert for `StockMovements` resource. Added `rowArrayToObject()` helper.
-  - `GAS/syncAppResources.gs` � `StockMovements` now carries two menu entries: `/operations/stock-movements` and `/operations/manage-stock` (Warehouse group).
-  - Frontend: `ManageStockPage.vue`, `ManageStockContextStep.vue`, `ManageStockEditGrid.vue`, `StockMovementRow.vue`, `useStockMovements.js`. Type-agnostic: movement types driven by `appOptions.StockMovementReferenceType` � new types need only an `APP.AppOptions` row.
-  - `Documents/LOGIN_RESPONSE.md` created � canonical login payload spec with all fields, generators, file:line refs, and maintenance rule.
-  - `CLAUDE.md`, `AGENTS.md` � Login Response Documentation Maintenance Rule added.
+  - New `GAS/stockMovements.gs` — `applyStockMovementToWarehouseStorages()` hook that upserts `WarehouseStorages` on every `StockMovements` insert. Closes the gap where `WarehouseStorages` was documented as "automatically managed" but no code path existed.
+  - `GAS/masterApi.gs` — hook wired into `handleMasterCreateRecord` post-insert for `StockMovements` resource. Added `rowArrayToObject()` helper.
+  - `GAS/syncAppResources.gs` — `StockMovements` now carries two menu entries: `/operations/stock-movements` and `/operations/manage-stock` (Warehouse group).
+  - Frontend: `ManageStockPage.vue`, `ManageStockContextStep.vue`, `ManageStockEditGrid.vue`, `StockMovementRow.vue`, `useStockMovements.js`. Type-agnostic: movement types driven by `appOptions.StockMovementReferenceType` — new types need only an `APP.AppOptions` row.
+  - `Documents/LOGIN_RESPONSE.md` created — canonical login payload spec with all fields, generators, file:line refs, and maintenance rule.
+  - `CLAUDE.md`, `AGENTS.md` — Login Response Documentation Maintenance Rule added.
   - Plan: `PLANS/2026-04-05-warehouse-manage-stock-and-login-response-doc.md`.
 
 - **Manage Stock UX + Sidebar Taxonomy Refactor (2026-04-06)**:
@@ -291,22 +296,33 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
     - `Procurement`: `Purchase Requisitions`, `RFQs`, `Supplier Quotations`, `Purchase Orders`, `Shipments`
   - `Procurements` menu entry is retained as hidden (`show: false`) registry row.
   - Plan: `PLANS/2026-04-06-manage-stock-ux-and-menu-taxonomy-refactor.md`.
+- **Manage Stock Card-Based Entry UX (2026-04-07)**:
+  - `FRONTENT/src/components/Warehouse/ManageStockEditGrid.vue` migrated from wide table layout to card-based layout.
+  - Step 2 now auto-renders one card per SKU from selected warehouse stock, with per-location lines and total footer.
+  - Added "new SKU movement" draft card flow with animated reveal and inline location + delta/absolute entry.
+  - Save is per-card and background (card header spinner only), no page-level blocking overlay.
+  - `FRONTENT/src/composables/useStockMovements.js` now returns `succeededRows` from `submitBatch()` so card state updates only for successful movement rows.
+  - Plan: `PLANS/2026-04-07-manage-stock-card-ux-implementation.md`.
+- **Menu Group + First-Load Reactivity Fixes (2026-04-07)**:
+  - `GAS/resourceRegistry.gs` menu normalization now tolerates both `group` and legacy `groupPath` input, while always outputting canonical `group` in auth payload.
+  - `GAS/appMenu.gs` edit dialog now reads `menuObj.group` with legacy fallback to `menuObj.groupPath` for existing sheet rows.
+  - `FRONTENT/src/services/masterRecords.js` now falls back to immediate sync response rows when IDB read returns empty right after sync, fixing first-visit empty-list rendering on Index pages and Manage Stock warehouse cards.
 - **Scope Normalization + Multi-Level Menu Tree + Compact Stock Grid (2026-04-06)**:
   - **Critical bug fix**: `resolveMasterResourceNames()` in `GAS/masterApi.gs` was hardcoded to `getResourcesByScope('master')`, causing "Unsupported master resource" errors for operation-scope resources (e.g., saving StockMovements). Now reads `payload.scope` and resolves supported resources by the actual requested scope.
   - **Scope alias normalization**: `normalizeResourceScope()` in `GAS/resourceRegistry.gs` now handles plural aliases: `operations` → `operation`, `masters` → `master`, `reports` → `report`.
-  - **`groupPath` menu field**: All 33 resources in `GAS/syncAppResources.gs` now include `groupPath: string[]` in each menu item object. `GAS/resourceRegistry.gs` normalizes it (falls back to `[group]` for backward compat) and delivers it in the auth payload as `menus[*].groupPath`.
-  - **Business taxonomy applied via `groupPath`**: Masters (`['Masters', 'Product']`, `['Masters', 'Warehouse']`, `['Masters', 'Procurement']`, `['Masters', 'Logistics']`), Operations (`['Operations', 'Procurement']`, `['Operations', 'Warehouse']`), Accounts (`['Accounts']`).
-  - **N-level sidebar tree renderer**: `FRONTENT/src/layouts/MainLayout/MainLayout.vue` `visibleResourceMenuGroups` now builds a recursive tree from `groupPath` arrays. New `FRONTENT/src/components/MenuTreeNode.vue` recursive component handles N-level group nesting with `q-expansion-item` for groups and `q-item` for leaves.
+  - **`group` menu field**: Resource menu metadata now uses `group: string[]` in each menu item. Auth payload exposes `ui.menus[*].group`.
+  - **Business taxonomy via `group` path**: Masters (`['Masters', 'Product']`, `['Masters', 'Warehouse']`, `['Masters', 'Procurement']`, `['Masters', 'Logistics']`), Operations (`['Operations', 'Procurement']`, `['Operations', 'Warehouse']`), Accounts (`['Accounts']`).
+  - **N-level sidebar tree renderer**: `FRONTENT/src/layouts/MainLayout/MainLayout.vue` builds recursive menu groups from `group` arrays. `FRONTENT/src/components/MenuTreeNode.vue` handles nested rendering.
   - **Compact Manage Stock grid**: Removed "Product" and "Note" columns from the stock entry table. Product name shown as a secondary line under SKU. Storage field narrowed to 120-180px max. Input widths trimmed to 80px. No horizontal scroll on standard desktop widths.
   - Plan: `PLANS/2026-04-06-scope-normalization-and-multilevel-menu-tree.md`.
 - **Remove Compat Overheads — Menu + Scope Canonicalization (2026-04-06)**:
   - Removed all backward-compatibility layers introduced in prior plan.
-  - `groupPath` is now the **only** canonical menu hierarchy field. `group` is no longer written, parsed, or used anywhere in GAS or frontend.
+  - `group` is now the canonical menu hierarchy field in active code paths.
   - `normalizeResourceScope()` in `GAS/resourceRegistry.gs` now throws an explicit error for non-canonical scope values instead of silently defaulting. Accepted values: `master`, `operation`, `accounts`, `report`, `system`.
   - `isGenericMasterCrudAction()` in `GAS/apiDispatcher.gs` allowlist updated to include `report` scope.
-  - Admin dialog field renamed: `MenuGroup` → `Menu Path (CSV)` (`name="menuGroupPath"`); `getResourceDetails()` reads `menuObj.groupPath` (array→CSV); `mapResource()` writes `groupPath` (CSV→array).
-  - All 33 resource entries in `GAS/syncAppResources.gs` updated to `groupPath`-only format (`group:` fields removed).
-  - `MainLayout.vue` `group` fallback removed; `groupPath` is the only source for tree hierarchy.
+  - Admin dialog field remains **Menu Path (CSV)** (`name="menuGroup"`); `getResourceDetails()` reads `menuObj.group` (array→CSV); `mapResource()` writes `group` (CSV→array).
+  - `GAS/syncAppResources.gs` emits `group` arrays for all menu entries.
+  - `MainLayout.vue` consumes `menu.group` as the tree hierarchy source.
   - Post-sync required: run `AQL 🚀 > Resources > Sync APP.Resources from Code`, then re-login.
   - Plan: `PLANS/2026-04-06-remove-compat-overheads-menu-scope.md`.
 
@@ -314,6 +330,15 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
   - Removed the standalone warehouse wizard resource definition from `GAS/syncAppResources.gs`.
   - `StockMovements.Menu` now owns both sidebar entries: "Stock Movements" and "Manage Stock".
   - Access for both routes is controlled by `StockMovements` permissions (`APP.RolePermissions`), not a separate resource.
+
+- **GAS Architecture Governance + Bulk Save Refactor + Menu Restructure (2026-04-10)**:
+  - **Root problem fixed**: `handleBatchStockMovements` in `stockMovements.gs` and its `batchStockMovements` dispatcher case were one-off custom handlers that bypassed the PostAction pattern. Removed both.
+  - **Generic PostAction hook**: `masterApi.gs` `handleMasterCreateRecord` no longer hardcodes `if resourceName === 'StockMovements'`. Replaced with `dispatchAfterCreateHook(config, record, auth)` which calls `{config.postAction}_afterCreate` if defined. Works for any future resource.
+  - **`stockMovements.gs` restructured**: Now contains only hook functions. `handleStockMovementsBulkSave(auth, payload)` is the PostAction bulk handler; `handleStockMovementsBulkSave_afterCreate(record, auth)` is the single-record hook.
+  - **`syncAppResources.gs`**: `StockMovements.PostAction = 'handleStockMovementsBulkSave'`. Menu restructured to top-level groups: `['Product']` (Manage, Stock) and `['Warehouse']` (Manage, Direct Stock Entry, Stock Adjustment, GRN Stock Entry, Stock Transfer Out, Stock Transfer In, Product Dispatch).
+  - **Frontend**: `useStockMovements.js` now uses `action=bulk, resource=StockMovements` (one call, N rows). `ManageStockPage.vue` supports `?referenceType=` and `?warehouseCode=` query params so menu items pre-select context.
+  - **`Documents/GAS_PATTERNS.md` created**: Authoritative GAS patterns guide. All 6 patterns documented with code examples and anti-patterns. Added to startup sequence in `CLAUDE.md` and `AGENTS.md`.
+  - **Manual action required after clasp push**: Run `AQL 🚀 > Setup & Refactor > Sync APP.Resources from Code` to push PostAction + new menu config to the APP.Resources sheet, then re-login.
 
 - **Menu Access Control via `menuAccess` Rules (2026-04-03)**:
    - Added permission-based menu visibility control using `menuAccess` field inside the `Menu` JSON column.
@@ -326,6 +351,20 @@ Reference: `Documents/GROUND_OPERATIONS_WORKFLOW.md`
    - Full workflow documented in `MODULE_WORKFLOWS.md` section 4.
    - Test case: Products resource configured with `menuAccess: { require: 'canWrite' }` in `syncAppResources.gs`.
    - Plan: `PLANS/2026-04-03-menu-access-control.md`.
+
+- **Rebuild Direct Stock Entry — Mobile-First Editable Register (2026-04-10)**:
+  - Replaced the card-based stock editor (`ManageStockEditGrid.vue`, `ManageStockContextStep.vue`, `StockMovementRow.vue`) with a new mobile-first spreadsheet view `StockEntryGrid.vue`.
+  - Flow: Select warehouse (Step 1) → Editable grid of all warehouse stock (Step 2).
+  - Grid: Shows existing stock with inline-editable Qty. Automatically includes one empty "add new" row at bottom with auto-append. Features sticky filter bar, "remove" trash icon with undo, and subtle dirty-row highlighting.
+  - Backend integration: Submits deltas via `submitBatch()` sending `referenceType: 'DirectEntry'`. Uses `useStockMovements.js` which now encapsulates fetching active warehouses, SKUs with product names, and storages.
+  - Plan: `PLANS/2026-04-10-manual-stock-entry-rebuild.md`
+
+- **Generic Batch Action Endpoint (2026-04-10)**:
+  - Added `action: 'batch'` to `GAS/apiDispatcher.gs`.
+  - Enables grouping multiple independent request payloads into a single HTTP call to minimize latency.
+  - `handleBatchActions` iterates over `requests` array and executes each sequentially.
+  - Adapted `useStockMovements.js` to dispatch both `create` (StockMovements) and `get` (WarehouseStorages) in a single batch, updating local IDB instantly upon save.
+  - Plan: `PLANS/2026-04-10-batch-request-action.md`
 
 ### Key behavior now
 - Code is generated in Apps Script (not by sheet formula).
@@ -526,5 +565,3 @@ Expected behavior for future joiners:
 2. Implement requested changes.
 3. Update related technical/business docs.
 4. Update this handoff with latest status and decisions so the next context can continue without re-discovery.
-
-

@@ -14,7 +14,8 @@ const CONFIG = {
     ROLE_PERMISSIONS: 'RolePermissions',
     RESOURCES: 'Resources',
     CONFIG: 'Config',
-    METADATA: 'Metadata'
+    METADATA: 'Metadata',
+    APP_OPTIONS: 'AppOptions'
   },
   MASTER_SHEETS: {
     PRODUCTS: 'Products',
@@ -53,4 +54,14 @@ const CONFIG = {
     CHART_OF_ACCOUNTS: 'ChartOfAccounts',
     ENTRY_TEMPLATES: 'EntryTemplates'
   }
+};
+
+/**
+ * Seed data for the AppOptions sheet.
+ * Each key maps to an ordered list of selectable option values.
+ * Rule: When adding a new option group here, also add a matching
+ *       dropdown validation in the relevant setup script.
+ */
+const APP_OPTIONS_SEED = {
+  StockMovementReferenceType: ['GRN', 'DirectEntry', 'StockAdjustment']
 };

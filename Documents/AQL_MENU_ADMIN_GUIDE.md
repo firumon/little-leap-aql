@@ -164,7 +164,7 @@ Important references:
 - `Documents/APP_SHEET_STRUCTURE.md` (`Resources` schema)
 - `Menu` column now stores a JSON array of menu entries. The admin dialog edits the first entry (list/add/edit) and preserves the rest via `_menuArrayFull`, so extra sidebar rows can be added by writing `[primaryEntry, {...}]` in the sheet or via `syncAppResources.gs`.
 - Each entry carries its own `menuAccess` rule, and the frontend route guard matches the current path to the entry before evaluating permissions so multiple entries per resource can have distinct access controls.
-- **Menu Path (CSV)**: Enter the sidebar hierarchy as comma-separated labels (e.g. `Masters,Product` or `Operations,Warehouse`). This is stored as `groupPath` (string array) in the `Menu` JSON. The legacy `group` field is no longer used.
+- **Menu Path (CSV)**: Enter the sidebar hierarchy as comma-separated labels (e.g. `Masters,Product` or `Operations,Warehouse`). This is stored as `group` (string array path) in the `Menu` JSON.
 
 ### 7.2 Manage Reports
 Purpose:
@@ -243,13 +243,13 @@ These groups appear in the **frontend application sidebar**, not in the Google S
 ### 9.1 Product Group
 
 - `Manage Products` -> `/masters/products`
-- `Manage Stock` -> `/operations/manage-stock`
+- `SKUs` -> `/masters/skus`
 
 ### 9.2 Warehouse Group
 
 - `Manage Warehouses` -> `/masters/warehouses`
-- `Manage Stock` -> `/operations/manage-stock`
 - `Stock Movements` -> `/operations/stock-movements`
+- `Direct Stock Entry` -> `/operations/stock-movements/direct-entry`
 
 ### 9.3 Procurement Group
 
@@ -259,34 +259,30 @@ These groups appear in the **frontend application sidebar**, not in the Google S
 - `Purchase Orders` -> `/operations/pos`
 - `Shipments` -> `/operations/shipments`
 
-### 9.4 Manage Stock
+### 9.4 Direct Stock Entry
 
-**Route:** `/operations/manage-stock`
+**Route:** `/operations/stock-movements/direct-entry`
 
-**Required permission:** `canRead` on `StockMovements` resource (controlled via `APP.RolePermissions`).
+**Required permission:** `canWrite` on `StockMovements` resource (controlled via `APP.RolePermissions`).
 
 **What it does:**
-- Lets authorized users record stock changes (additions, removals, adjustments) for any warehouse location.
-- Step 1: Operator selects Warehouse, Movement Type (`GRN`, `DirectEntry`, `StockAdjustment`, or any future type added via `APP.AppOptions`), and optional Reference Code.
-- Step 2: Operator adds SKUs to a grid, sets Storage Location per row, enters a Change (Delta) or New Qty, and submits.
-- Each submitted row creates a `StockMovements` ledger row and automatically upserts the corresponding `WarehouseStorages` summary row (via `applyStockMovementToWarehouseStorages` hook in `GAS/stockMovements.gs`).
+- Provides a fast, mobile-first editable register for adding or adjusting stock quantities directly.
+- Step 1: Operator selects a Warehouse from tappable cards.
+- Step 2: Editable grid loads all existing stock for the selected warehouse, allows inline editing of quantities, adding new rows, and submitting deltas.
+- Each submitted row creates a `StockMovements` ledger row with `ReferenceType: 'DirectEntry'` and automatically upserts the corresponding `WarehouseStorages` summary row (via `applyStockMovementToWarehouseStorages` hook in `GAS/stockMovements.gs`).
 
 **Who should have access:**
 - Warehouse Operator role (and any role with warehouse inventory responsibility).
 - Admin role (for full visibility and testing).
 
 **To grant/revoke access:**
-1. In APP spreadsheet, update `APP.RolePermissions` to include/remove `StockMovements` permission for the relevant role.
+1. In APP spreadsheet, update `APP.RolePermissions` to include/remove `StockMovements.canWrite` for the relevant role.
 2. User must re-login to pick up the updated resource list.
 
-**To add a new Movement Type:**
-1. Edit the `APP.AppOptions` sheet: Row with key `StockMovementReferenceType`, add value in the next available column.
-2. The new type card appears on the frontend context step automatically after re-login � **no code change required**.
-
 **Reference:**
-- `GAS/stockMovements.gs` � the WarehouseStorages upsert hook
-- `Documents/MODULE_WORKFLOWS.md` � Manage Stock workflow section
-- `Documents/LOGIN_RESPONSE.md` � `appOptions.StockMovementReferenceType`
+- `GAS/stockMovements.gs` — the WarehouseStorages upsert hook
+- `Documents/MODULE_WORKFLOWS.md` — Direct Stock Entry workflow section
+- `Documents/LOGIN_RESPONSE.md` — `appOptions.StockMovementReferenceType`
 
 ## 11. Common Admin Mistakes
 
@@ -304,5 +300,3 @@ When any `AQL 🚀` menu item is **added, removed, renamed, or behavior-changed*
 3. Update `Documents/CONTEXT_HANDOFF.md` if runtime behavior changed.
 
 Do not close the task until these docs are aligned.
-
-

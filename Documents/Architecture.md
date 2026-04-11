@@ -72,10 +72,10 @@ graph TD
   - Exposes `isGlobalSyncing` state for optional global sync indicators.
 - `FRONTENT/src/layouts/MainLayout/MainLayout.vue`
   - Builds sidebar from `resources[].ui`.
-  - Shows only resources with `permissions.canRead === true`.
+  - Flattens `resources[].ui.menus[]` into sidebar entries and evaluates per-entry menu access.
 - `FRONTENT/src/router/index.js`
   - Guards auth routes.
-  - Enforces resource-level route access using `resources[].ui.routePath` + permissions.
+  - Enforces route access by matching `to.path` against `resources[].ui.menus[].route` and evaluating menu access.
 - `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
   - Generic master page driven by authorized resource metadata.
 - `FRONTENT/src/services/masterRecords.js`
@@ -129,15 +129,19 @@ Frontend expects this shape from `action=login`:
         "canDelete": false
       },
       "ui": {
-        "menuGroup": "Masters",
-        "menuOrder": 10,
-        "menuLabel": "Products",
-        "menuIcon": "inventory_2",
-        "routePath": "/masters/products",
-        "pageTitle": "Products",
-        "pageDescription": "Manage product master records",
-        "fields": [],
-        "showInMenu": true
+        "menus": [
+          {
+            "group": "Masters",
+            "order": 10,
+            "label": "Products",
+            "icon": "inventory_2",
+            "route": "/masters/products",
+            "pageTitle": "Products",
+            "pageDescription": "Manage product master records",
+            "show": true
+          }
+        ],
+        "fields": []
       },
       "actions": ["Approve"],
       "allowedActions": ["READ", "WRITE", "UPDATE", "APPROVE"]

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ============================================================
  * AQL - Sync APP.Resources from Code
  * ============================================================
@@ -24,7 +24,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{ groupPath: ['Masters', 'Product'], order: 1, label: 'Manage Products', icon: 'inventory_2', route: '/masters/products', pageTitle: 'Products', pageDescription: 'Manage product master records (parent models)', show: true, menuAccess: { require: 'canWrite' } }]),
+        Menu: JSON.stringify([{ group: ['Product'], order: 1, label: 'Manage', icon: 'inventory_2', route: '/masters/products', pageTitle: 'Products', pageDescription: 'Manage product master records (parent models)', show: true, menuAccess: { require: 'canWrite' } }]),
         UIFields: JSON.stringify([
             { header: 'Name', label: 'Name', type: 'text', required: true },
             { header: 'VariantTypes', label: 'Variant Types', type: 'text', hint: 'CSV e.g. Size,Color,Material' },
@@ -55,7 +55,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{ groupPath: ['Masters', 'Product'], order: 2, label: 'SKUs', icon: 'style', route: '/masters/skus', pageTitle: 'SKUs', pageDescription: 'Manage sellable SKUs (child variants of a product)', show: true }]),
+        Menu: JSON.stringify([{ group: ['Masters', 'Product'], order: 2, label: 'SKUs', icon: 'style', route: '/masters/skus', pageTitle: 'SKUs', pageDescription: 'Manage sellable SKUs (child variants of a product)', show: true }]),
         UIFields: JSON.stringify([
             { header: 'ProductCode', label: 'Product Code', type: 'text', required: true },
             { header: 'Variant1', label: 'Variant 1', type: 'text' },
@@ -89,7 +89,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{ groupPath: ['Masters', 'Procurement'], order: 3, label: 'Suppliers', icon: 'handshake', route: '/masters/suppliers', pageTitle: 'Suppliers', pageDescription: 'Manage supplier master records', show: true }]),
+        Menu: JSON.stringify([{ group: ['Masters', 'Procurement'], order: 3, label: 'Suppliers', icon: 'handshake', route: '/masters/suppliers', pageTitle: 'Suppliers', pageDescription: 'Manage supplier master records', show: true }]),
         UIFields: JSON.stringify([
             { header: 'Name', label: 'Name', type: 'text', required: true },
             { header: 'Country', label: 'Country', type: 'text' },
@@ -122,7 +122,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{ groupPath: ['Masters', 'Warehouse'], order: 1, label: 'Manage Warehouses', icon: 'warehouse', route: '/masters/warehouses', pageTitle: 'Warehouses', pageDescription: 'Manage warehouse master records', show: true }]),
+        Menu: JSON.stringify([{ group: ['Warehouse'], order: 1, label: 'Manage', icon: 'warehouse', route: '/masters/warehouses', pageTitle: 'Warehouses', pageDescription: 'Manage warehouse master records', show: true }]),
         UIFields: JSON.stringify([
             { header: 'Name', label: 'Name', type: 'text', required: true },
             { header: 'City', label: 'City', type: 'text' },
@@ -154,7 +154,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{ groupPath: ['Masters', 'Logistics'], order: 5, label: 'Ports', icon: 'anchor', route: '/masters/ports', pageTitle: 'Ports', pageDescription: 'Manage port master records', show: true }]),
+        Menu: JSON.stringify([{ group: ['Masters', 'Logistics'], order: 5, label: 'Ports', icon: 'anchor', route: '/masters/ports', pageTitle: 'Ports', pageDescription: 'Manage port master records', show: true }]),
         UIFields: JSON.stringify([
             { header: 'Name', label: 'Name', type: 'text', required: true },
             { header: 'Country', label: 'Country', type: 'text' },
@@ -185,7 +185,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{ groupPath: ['Masters', 'Logistics'], order: 6, label: 'Carriers', icon: 'local_shipping', route: '/masters/carriers', pageTitle: 'Carriers', pageDescription: 'Manage carrier master records', show: true }]),
+        Menu: JSON.stringify([{ group: ['Masters', 'Logistics'], order: 6, label: 'Carriers', icon: 'local_shipping', route: '/masters/carriers', pageTitle: 'Carriers', pageDescription: 'Manage carrier master records', show: true }]),
         UIFields: JSON.stringify([
             { header: 'Name', label: 'Name', type: 'text', required: true },
             { header: 'Type', label: 'Type', type: 'text' },
@@ -217,7 +217,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'OWNER_AND_UPLINE',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{ groupPath: ['Operations', 'Procurement'], order: 0, label: 'Procurements', icon: 'shopping_cart', route: '/operations/procurements', pageTitle: 'Procurements', pageDescription: 'Central tracked procurement request', show: false }]),
+        Menu: JSON.stringify([{ group: ['Operations', 'Procurement'], order: 0, label: 'Procurements', icon: 'shopping_cart', route: '/operations/procurements', pageTitle: 'Procurements', pageDescription: 'Central tracked procurement request', show: false }]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
@@ -244,7 +244,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'OWNER_AND_UPLINE',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: 'Approve,Reject,Verify',
-        Menu: JSON.stringify([{ groupPath: ['Operations', 'Procurement'], order: 1, label: 'Purchase Requisitions', icon: 'request_quote', route: '/operations/prs', pageTitle: 'Purchase Requisitions', pageDescription: 'Internal requests for purchase', show: true }]),
+        Menu: JSON.stringify([{ group: ['Operations', 'Procurement'], order: 1, label: 'Purchase Requisitions', icon: 'request_quote', route: '/operations/prs', pageTitle: 'Purchase Requisitions', pageDescription: 'Internal requests for purchase', show: true }]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
@@ -271,7 +271,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'OWNER_AND_UPLINE',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{ groupPath: ['Operations', 'Procurement'], order: 3, label: 'PR Items', icon: 'list', route: '', pageTitle: 'PR Items', pageDescription: 'Items in Purchase Requisition', show: false }]),
+        Menu: JSON.stringify([{ group: ['Operations', 'Procurement'], order: 3, label: 'PR Items', icon: 'list', route: '', pageTitle: 'PR Items', pageDescription: 'Items in Purchase Requisition', show: false }]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
@@ -298,7 +298,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'OWNER_AND_UPLINE',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: 'Publish,Close',
-        Menu: JSON.stringify([{ groupPath: ['Operations', 'Procurement'], order: 2, label: 'RFQs', icon: 'compare_arrows', route: '/operations/rfqs', pageTitle: 'RFQs', pageDescription: 'Request For Quotation', show: true }]),
+        Menu: JSON.stringify([{ group: ['Operations', 'Procurement'], order: 2, label: 'RFQs', icon: 'compare_arrows', route: '/operations/rfqs', pageTitle: 'RFQs', pageDescription: 'Request For Quotation', show: true }]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
@@ -325,7 +325,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'OWNER_AND_UPLINE',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{ groupPath: ['Operations', 'Procurement'], order: 5, label: 'RFQ Items', icon: 'list', route: '', pageTitle: 'RFQ Items', pageDescription: 'Items requested for quotation', show: false }]),
+        Menu: JSON.stringify([{ group: ['Operations', 'Procurement'], order: 5, label: 'RFQ Items', icon: 'list', route: '', pageTitle: 'RFQ Items', pageDescription: 'Items requested for quotation', show: false }]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
@@ -352,7 +352,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'OWNER_AND_UPLINE',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{ groupPath: ['Operations', 'Procurement'], order: 6, label: 'RFQ Suppliers', icon: 'people', route: '', pageTitle: 'RFQ Suppliers', pageDescription: 'Suppliers targeted for RFQ', show: false }]),
+        Menu: JSON.stringify([{ group: ['Operations', 'Procurement'], order: 6, label: 'RFQ Suppliers', icon: 'people', route: '', pageTitle: 'RFQ Suppliers', pageDescription: 'Suppliers targeted for RFQ', show: false }]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
@@ -379,7 +379,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{ groupPath: ['Operations', 'Procurement'], order: 3, label: 'Supplier Quotations', icon: 'attach_money', route: '/operations/quotations', pageTitle: 'Supplier Quotations', pageDescription: 'Quotations received from suppliers', show: true }]),
+        Menu: JSON.stringify([{ group: ['Operations', 'Procurement'], order: 3, label: 'Supplier Quotations', icon: 'attach_money', route: '/operations/quotations', pageTitle: 'Supplier Quotations', pageDescription: 'Quotations received from suppliers', show: true }]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
@@ -406,7 +406,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{ groupPath: ['Operations', 'Procurement'], order: 8, label: 'Quotation Items', icon: 'list', route: '', pageTitle: 'Quotation Items', pageDescription: '', show: false }]),
+        Menu: JSON.stringify([{ group: ['Operations', 'Procurement'], order: 8, label: 'Quotation Items', icon: 'list', route: '', pageTitle: 'Quotation Items', pageDescription: '', show: false }]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
@@ -433,7 +433,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'OWNER_AND_UPLINE',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: 'Approve,Send,Acknowledge,Accept',
-        Menu: JSON.stringify([{ groupPath: ['Operations', 'Procurement'], order: 4, label: 'Purchase Orders', icon: 'fact_check', route: '/operations/pos', pageTitle: 'Purchase Orders', pageDescription: 'Orders sent to suppliers', show: true }]),
+        Menu: JSON.stringify([{ group: ['Operations', 'Procurement'], order: 4, label: 'Purchase Orders', icon: 'fact_check', route: '/operations/pos', pageTitle: 'Purchase Orders', pageDescription: 'Orders sent to suppliers', show: true }]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
@@ -460,7 +460,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'OWNER_AND_UPLINE',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{ groupPath: ['Operations', 'Procurement'], order: 10, label: 'PO Items', icon: 'list', route: '', pageTitle: 'PO Items', pageDescription: '', show: false }]),
+        Menu: JSON.stringify([{ group: ['Operations', 'Procurement'], order: 10, label: 'PO Items', icon: 'list', route: '', pageTitle: 'PO Items', pageDescription: '', show: false }]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
@@ -487,7 +487,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'OWNER_AND_UPLINE',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{ groupPath: ['Operations', 'Procurement'], order: 11, label: 'PO Documents', icon: 'folder', route: '', pageTitle: 'PO Fulfillments', pageDescription: 'Documents related to POs', show: false }]),
+        Menu: JSON.stringify([{ group: ['Operations', 'Procurement'], order: 11, label: 'PO Documents', icon: 'folder', route: '', pageTitle: 'PO Fulfillments', pageDescription: 'Documents related to POs', show: false }]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
@@ -513,7 +513,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'OWNER_AND_UPLINE',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: 'Submit,Dispatch,Arrive,Clear',
-        Menu: JSON.stringify([{ groupPath: ['Operations', 'Procurement'], order: 5, label: 'Shipments', icon: 'directions_boat', route: '/operations/shipments', pageTitle: 'Shipments', pageDescription: 'Manage inward shipments', show: true }]),
+        Menu: JSON.stringify([{ group: ['Operations', 'Procurement'], order: 5, label: 'Shipments', icon: 'directions_boat', route: '/operations/shipments', pageTitle: 'Shipments', pageDescription: 'Manage inward shipments', show: true }]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
@@ -540,7 +540,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'OWNER_AND_UPLINE',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{ groupPath: ['Operations', 'Procurement'], order: 2, label: 'Shipment Items', icon: 'view_list', route: '', pageTitle: 'Shipment Items', pageDescription: 'Items in a shipment', show: false }]),
+        Menu: JSON.stringify([{ group: ['Operations', 'Procurement'], order: 2, label: 'Shipment Items', icon: 'view_list', route: '', pageTitle: 'Shipment Items', pageDescription: 'Items in a shipment', show: false }]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
@@ -566,7 +566,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'OWNER_AND_UPLINE',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: 'Submit,Hold,Clear',
-        Menu: JSON.stringify([{ groupPath: ['Operations', 'Warehouse'], order: 5, label: 'Port Clearance', icon: 'verified_user', route: '/operations/port-clearance', pageTitle: 'Port Clearance', pageDescription: 'Manage customs clearance', show: true }]),
+        Menu: JSON.stringify([{ group: ['Operations', 'Warehouse'], order: 5, label: 'Port Clearance', icon: 'verified_user', route: '/operations/port-clearance', pageTitle: 'Port Clearance', pageDescription: 'Manage customs clearance', show: true }]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
@@ -592,7 +592,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'OWNER_AND_UPLINE',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: 'Verify,Accept',
-        Menu: JSON.stringify([{ groupPath: ['Operations', 'Warehouse'], order: 6, label: 'Goods Receipts', icon: 'receipt_long', route: '/operations/goods-receipts', pageTitle: 'Goods Receipts', pageDescription: 'Manage inward warehouse receiving', show: true }]),
+        Menu: JSON.stringify([{ group: ['Operations', 'Warehouse'], order: 6, label: 'Goods Receipts', icon: 'receipt_long', route: '/operations/goods-receipts', pageTitle: 'Goods Receipts', pageDescription: 'Manage inward warehouse receiving', show: true }]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
@@ -619,7 +619,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'OWNER_AND_UPLINE',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{ groupPath: ['Operations', 'Warehouse'], order: 5, label: 'GRN Items', icon: 'view_list', route: '', pageTitle: 'GRN Items', pageDescription: 'Items in a goods receipt', show: false }]),
+        Menu: JSON.stringify([{ group: ['Operations', 'Warehouse'], order: 5, label: 'GRN Items', icon: 'view_list', route: '', pageTitle: 'GRN Items', pageDescription: 'Items in a goods receipt', show: false }]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
@@ -646,15 +646,14 @@ const APP_RESOURCES_CODE_CONFIG = [
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
         Menu: JSON.stringify([
-            { groupPath: ['Masters', 'Product'], order: 2, label: 'Manage Stock', icon: 'inventory', route: '/operations/manage-stock', pageTitle: 'Manage Stock', pageDescription: 'Add, adjust, or directly enter stock movements', show: true },
-            { groupPath: ['Masters', 'Warehouse'], order: 2, label: 'Manage Stock', icon: 'inventory', route: '/operations/manage-stock', pageTitle: 'Manage Stock', pageDescription: 'Add, adjust, or directly enter stock movements', show: true },
-            { groupPath: ['Operations', 'Warehouse'], order: 3, label: 'Stock Movements', icon: 'swap_horiz', route: '/operations/stock-movements', pageTitle: 'Stock Movements', pageDescription: 'Global ledger of inventory flows', show: true }
+            { group: ['Warehouse'], order: 2, label: 'Stock Movements', icon: 'inventory', route: '/operations/stock-movements', pageTitle: 'Stock Movements', pageDescription: 'View stock movement records', show: true },
+            { group: ['Warehouse'], order: 3, label: 'Direct Stock Entry', icon: 'edit_note', route: '/operations/stock-movements/direct-entry', pageTitle: 'Direct Stock Entry', pageDescription: 'Directly enter stock quantities', show: true, menuAccess: { require: 'canWrite' } }
         ]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
         PreAction: '',
-        PostAction: '',
+        PostAction: 'handleStockMovementsBulkSave',
         Reports: '',
         CustomUIName: '',
         ListViews: ''
@@ -675,7 +674,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'UpdatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{ groupPath: ['Operations', 'Warehouse'], order: 4, label: 'Warehouse Storages', icon: 'inventory', route: '/operations/warehouse-storages', pageTitle: 'Warehouse Storages', pageDescription: 'Real-time updated inventory locations', show: true }]),
+        Menu: JSON.stringify([{ group: ['Operations', 'Warehouse'], order: 4, label: 'Warehouse Storages', icon: 'inventory', route: '/operations/warehouse-storages', pageTitle: 'Warehouse Storages', pageDescription: 'Real-time updated inventory locations', show: true }]),
         UIFields: JSON.stringify([
             { header: 'WarehouseCode', label: 'Warehouse Code', type: 'text', required: true },
             { header: 'StorageName', label: 'Storage Name', type: 'text', required: true },
@@ -706,7 +705,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{ groupPath: ['Accounts'], order: 1, label: 'Chart Of Accounts', icon: 'account_balance_wallet', route: '/masters/chart-of-accounts', pageTitle: 'Chart of Accounts', pageDescription: 'COA Ledger structure', show: true }]),
+        Menu: JSON.stringify([{ group: ['Accounts'], order: 1, label: 'Chart Of Accounts', icon: 'account_balance_wallet', route: '/masters/chart-of-accounts', pageTitle: 'Chart of Accounts', pageDescription: 'COA Ledger structure', show: true }]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
@@ -732,7 +731,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{ groupPath: ['Accounts'], order: 2, label: 'Entry Templates', icon: 'dynamic_form', route: '/masters/entry-templates', pageTitle: 'Entry Templates', pageDescription: 'Templates for accounting entries', show: true }]),
+        Menu: JSON.stringify([{ group: ['Accounts'], order: 2, label: 'Entry Templates', icon: 'dynamic_form', route: '/masters/entry-templates', pageTitle: 'Entry Templates', pageDescription: 'Templates for accounting entries', show: true }]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
@@ -758,7 +757,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{ groupPath: ['Accounts'], order: 3, label: 'Assets', icon: 'assured_workload', route: '/accounts/assets', pageTitle: 'Assets Tracker', pageDescription: 'Asset account entries', show: true }]),
+        Menu: JSON.stringify([{ group: ['Accounts'], order: 3, label: 'Assets', icon: 'assured_workload', route: '/accounts/assets', pageTitle: 'Assets Tracker', pageDescription: 'Asset account entries', show: true }]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
@@ -784,7 +783,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{ groupPath: ['Accounts'], order: 4, label: 'Liabilities', icon: 'account_balance', route: '/accounts/liabilities', pageTitle: 'Liabilities Tracker', pageDescription: 'Liability account entries', show: true }]),
+        Menu: JSON.stringify([{ group: ['Accounts'], order: 4, label: 'Liabilities', icon: 'account_balance', route: '/accounts/liabilities', pageTitle: 'Liabilities Tracker', pageDescription: 'Liability account entries', show: true }]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
@@ -810,7 +809,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{ groupPath: ['Accounts'], order: 5, label: 'Equity', icon: 'monetization_on', route: '/accounts/equity', pageTitle: 'Equity Tracker', pageDescription: 'Equity account entries', show: true }]),
+        Menu: JSON.stringify([{ group: ['Accounts'], order: 5, label: 'Equity', icon: 'monetization_on', route: '/accounts/equity', pageTitle: 'Equity Tracker', pageDescription: 'Equity account entries', show: true }]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
@@ -836,7 +835,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{ groupPath: ['Accounts'], order: 6, label: 'Revenue', icon: 'trending_up', route: '/accounts/revenue', pageTitle: 'Revenue Tracker', pageDescription: 'Revenue account entries', show: true }]),
+        Menu: JSON.stringify([{ group: ['Accounts'], order: 6, label: 'Revenue', icon: 'trending_up', route: '/accounts/revenue', pageTitle: 'Revenue Tracker', pageDescription: 'Revenue account entries', show: true }]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
@@ -862,7 +861,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{ groupPath: ['Accounts'], order: 7, label: 'Expenses', icon: 'trending_down', route: '/accounts/expenses', pageTitle: 'Expenses Tracker', pageDescription: 'Expense account entries', show: true }]),
+        Menu: JSON.stringify([{ group: ['Accounts'], order: 7, label: 'Expenses', icon: 'trending_down', route: '/accounts/expenses', pageTitle: 'Expenses Tracker', pageDescription: 'Expense account entries', show: true }]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
@@ -889,12 +888,12 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'ALL',
         OwnerUserField: '',
         AdditionalActions: '',
-        Menu: JSON.stringify([{ groupPath: ['Masters'], order: 99, label: 'Bulk Upload', icon: 'cloud_upload', route: '/masters/bulk-upload', pageTitle: 'Bulk Upload Masters', pageDescription: 'Upload bulk data to any master resource', show: true }]),
+        Menu: JSON.stringify([{ group: ['Masters'], order: 99, label: 'Bulk Upload', icon: 'cloud_upload', route: '/masters/bulk-upload', pageTitle: 'Bulk Upload Masters', pageDescription: 'Upload bulk data to any master resource', show: true }]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'TRUE',
         PreAction: '',
-        PostAction: 'handleMasterBulkRecords',
+        PostAction: 'handleBulkUpsertRecords',
         Reports: '',
         CustomUIName: '',
         ListViews: ''
@@ -906,7 +905,7 @@ function syncAppResourcesFromCode(silent) {
     const sheet = ss.getSheetByName(CONFIG.SHEETS.RESOURCES);
     if (!sheet) throw new Error('Resources sheet not found');
 
-    // ── Detect and add missing column headers ──
+    // â”€â”€ Detect and add missing column headers â”€â”€
     var lastColumn = sheet.getLastColumn();
     var headers = [];
     if (lastColumn > 0) {
@@ -969,13 +968,13 @@ function syncAppResourcesFromCode(silent) {
             // FileID and ListViews are intentionally left as-is on existing rows.
             updated++;
         } else {
-            // Add new record — use setValues after clearing any inherited data validation
+            // Add new record â€” use setValues after clearing any inherited data validation
             const newRow = [];
             headers.forEach(function (h) {
                 if (resource[h] !== undefined) {
                     newRow.push(resource[h]);
                 } else if (h === 'FileID') {
-                    // Leave blank — config-driven resolution at runtime
+                    // Leave blank â€” config-driven resolution at runtime
                     newRow.push('');
                 } else {
                     newRow.push('');

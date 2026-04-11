@@ -77,7 +77,7 @@ import { useResourceConfig } from 'src/composables/useResourceConfig'
 import { useResourceData } from 'src/composables/useResourceData'
 import { useResourceRelations } from 'src/composables/useResourceRelations'
 import { useReports } from 'src/composables/useReports'
-import { fetchMasterRecords } from 'src/services/masterRecords'
+import { fetchResourceRecords } from 'src/services/resourceRecords'
 
 const router = useRouter()
 const {
@@ -138,7 +138,7 @@ async function loadChildRecords() {
   if (!code.value || !childResources.value.length) return
   for (const child of childResources.value) {
     try {
-      const response = await fetchMasterRecords(child.name, { includeInactive: true })
+      const response = await fetchResourceRecords(child.name, { includeInactive: true })
       if (response.success && response.records) {
         const parentCodeField = findParentCodeField(child, config.value)
         childRecords.value[child.name] = response.records.filter((r) => {

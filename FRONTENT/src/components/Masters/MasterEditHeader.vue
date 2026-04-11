@@ -3,7 +3,7 @@
     <q-card-section>
       <div class="page-title">
         <q-icon name="edit" size="24px" color="primary" class="q-mr-sm" />
-        Edit {{ config?.ui?.menu?.pageTitle || config?.name }} — {{ code }}
+        Edit {{ config?.ui?.menus?.[0]?.pageTitle || config?.name }} — {{ code }}
       </div>
     </q-card-section>
   </q-card>

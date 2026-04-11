@@ -3,8 +3,8 @@
     <q-card-section class="q-pa-sm">
       <div class="row items-center no-wrap">
         <div class="col">
-          <div class="header-title">{{ config?.ui?.menu?.pageTitle || config?.name }}</div>
-          <div class="header-subtitle">{{ config?.ui?.menu?.pageDescription || 'Manage records' }}</div>
+          <div class="header-title">{{ config?.ui?.menus?.[0]?.pageTitle || config?.name }}</div>
+          <div class="header-subtitle">{{ config?.ui?.menus?.[0]?.pageDescription || 'Manage records' }}</div>
         </div>
         <div class="row items-center q-gutter-xs">
           <q-btn

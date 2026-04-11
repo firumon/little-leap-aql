@@ -121,7 +121,7 @@ import { useResourceData } from 'src/composables/useResourceData'
 import { useReports } from 'src/composables/useReports'
 import { useListViews } from 'src/composables/useListViews'
 import { parseVariantTypes } from 'src/composables/useProductVariants'
-import { fetchMasterRecords } from 'src/services/masterRecords'
+import { fetchResourceRecords } from 'src/services/resourceRecords'
 
 const router = useRouter()
 const { scope, resourceSlug, config, resourceName, resourceHeaders, permissions } = useResourceConfig()
@@ -180,7 +180,7 @@ const displayedItems = computed(() => {
 })
 
 async function loadSkuRecords(forceSync = false) {
-  const response = await fetchMasterRecords('SKUs', {
+  const response = await fetchResourceRecords('SKUs', {
     includeInactive: true,
     forceSync
   })

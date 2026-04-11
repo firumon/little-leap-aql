@@ -10,7 +10,9 @@
   2) Read `Documents/MULTI_AGENT_PROTOCOL.md`.
   3) Read `Documents/AI_COLLABORATION_PROTOCOL.md`.
   4) Read `Documents/CONTEXT_HANDOFF.md`.
-  5) Check `PLANS/` for active plans.
+  5) Read `Documents/GAS_API_CAPABILITIES.md` — **mandatory before designing any new module or feature**; covers all existing backend capabilities.
+  6) Read `Documents/GAS_PATTERNS.md` — **mandatory before writing any GAS code**; implementation patterns and anti-patterns.
+  7) Check `PLANS/` for active plans.
 - Context budget guardrails (mandatory):
   - Avoid full-file dumps, full `git diff`, or long raw logs unless explicitly needed.
   - Prefer targeted reads (specific files/sections) and concise summaries over large pasted output.
@@ -42,6 +44,10 @@
   - `Documents/AQL_MENU_ADMIN_GUIDE.md` is the canonical admin-facing guide for all `AQL 🚀` menu actions.
   - If any menu action is added, removed, renamed, or behavior-changed, update `Documents/AQL_MENU_ADMIN_GUIDE.md` in the same task.
   - Keep `Documents/README.md` index entry aligned if the guide location/name changes.
+- Login response documentation maintenance rule:
+  - `Documents/LOGIN_RESPONSE.md` is the canonical specification of the login response payload returned by `handleLogin()`.
+  - Any change to the login response shape, field generators, source sheets/columns, AppConfig keys, AppOptions groups, or frontend storage locations MUST update `Documents/LOGIN_RESPONSE.md` in the same task.
+  - Keep `Documents/README.md` index entry aligned if the file location or name changes.
 - Frontend registry maintenance rule:
   - When creating/updating reusable frontend building blocks, update:
     - `FRONTENT/src/components/REGISTRY.md` for component API changes (props/events/path).
@@ -87,6 +93,16 @@ AQL/
 - **Config sheet** holds deployment-specific settings (file IDs, company branding). FileID resolution: `Resource.FileID` → `Config[{Scope}FileID]` → APP file ID.
 - **Dynamic file resolution**: Use helpers `resolveFileIdForScope()`, `getAppConfigValue()`, `getConfigMap()` from `sheetHelpers.gs` instead of hardcoded file IDs.
 
+### GAS Governance Rules (Mandatory)
+- **No new `.gs` files** for new modules. Fixed file set. New logic belongs in existing files using existing patterns.
+- **No resource-name conditions** in `masterApi.gs` or `apiDispatcher.gs` (e.g. `if resourceName === 'X'`). Use PostAction hooks.
+- **No custom action cases** in `apiDispatcher.gs` for resource-specific logic. Use PostAction hooks.
+- **All resource metadata** (PostAction, Menu, UIFields, etc.) belongs in `syncAppResources.gs → APP_RESOURCES_CODE_CONFIG`.
+- **Before writing any GAS code**, read `Documents/GAS_API_CAPABILITIES.md` then `Documents/GAS_PATTERNS.md`. Most features need zero new GAS code.
+- **Pattern priority**: Pure CRUD → After-create hook → Bulk PostAction (`action=create, records:[]`) → Additional Actions → Composite Save → (propose new pattern if none fit).
+- **`action=bulk` is reserved for the Bulk Upload UI only** (`resource=BulkUploadMasters`). Operational multi-record saves use `action=create` or `action=update` with `records: []` — GAS auto-detects the array and routes correctly.
+- **If no existing pattern fits**: stop, discuss with user, write a plan in `PLANS/` before any implementation.
+
 ## Key Documents
 | Document | Purpose |
 |---|---|
@@ -98,6 +114,9 @@ AQL/
 | `Documents/RESOURCE_REGISTRY_ARCHITECTURE.md` | APP.Resources architecture |
 | `Documents/RESOURCE_COLUMNS_GUIDE.md` | Column conventions for resources |
 | `Documents/AQL_MENU_ADMIN_GUIDE.md` | Admin-facing how-to for all AQL menu actions |
+| `Documents/LOGIN_RESPONSE.md` | Canonical login response shape, field sources, and frontend storage locations |
+| `Documents/GAS_API_CAPABILITIES.md` | **Mandatory** — complete GAS backend capabilities; read before designing any new module |
+| `Documents/GAS_PATTERNS.md` | **Mandatory** — GAS implementation patterns, anti-patterns, action→handler map |
 | `Documents/NEW_CLIENT_SETUP_GUIDE.md` | Client onboarding steps |
 | `Documents/MODULE_WORKFLOWS.md` | End-to-end workflow docs per feature (Reports, Bulk Upload, etc.) |
 | `PLANS/_TEMPLATE.md` | Template for new implementation plans |

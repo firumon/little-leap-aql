@@ -115,20 +115,128 @@ function handleMasterCreateRecord(auth, payload) {
   sheet.getRange(targetRow, 1, 1, headers.length).setValues([rowData]);
   updateResourceSyncCursor(resourceName);
 
-  if (resourceName === 'StockMovements') {
-    try {
-      applyStockMovementToWarehouseStorages(rowArrayToObject(headers, rowData), auth);
-    } catch (hookError) {
-      Logger.log('applyStockMovementToWarehouseStorages failed: ' + hookError);
-      // Do NOT fail the outer create — ledger row is already committed.
-    }
-  }
+  // Generic after-create hook: if the resource has PostAction configured,
+  // call {postAction}_afterCreate(record, auth). No new GAS files needed —
+  // just add the function to the relevant resource hook file.
+  dispatchAfterCreateHook(resource.config, rowArrayToObject(headers, rowData), auth);
 
   return {
     success: true,
     message: resourceName + ' record created successfully',
     data: { code: code }
   };
+}
+
+/**
+ * Generic after-create hook dispatcher.
+ *
+ * Convention: if a resource has PostAction = 'myHandler', then
+ * a function named 'myHandler_afterCreate(record, auth)' is called
+ * after each single-record create for that resource.
+ *
+ * This keeps all resource-specific logic in dedicated hook files
+ * (e.g. stockMovements.gs) without hardcoding resource names here.
+ *
+ * @param {Object} config - Resource config from getResourceConfig()
+ * @param {Object} record - Plain object (headers as keys)
+ * @param {Object} auth
+ */
+function dispatchAfterCreateHook(config, record, auth) {
+  var postAction = config && config.postAction ? config.postAction.toString().trim() : '';
+  if (!postAction) return;
+
+  var hookName = postAction + '_afterCreate';
+  try {
+    // In GAS V8, global functions are accessible via this[name] in global context
+    var fn = this[hookName];
+    if (typeof fn === 'function') {
+      fn(record, auth);
+    }
+  } catch (e) {
+    // Log but never throw — ledger row is already committed
+    Logger.log('dispatchAfterCreateHook error for "' + hookName + '": ' + String(e));
+  }
+}
+
+/**
+ * Handles create/update when payload.records is an array.
+ *
+ * Called by dispatchGenericMasterCrudAction when action=create or action=update
+ * and payload.records is a non-empty array. Keeps action=bulk exclusively for the
+ * Bulk Upload UI (BulkUploadMasters).
+ *
+ * Flow:
+ *   1. Always write rows via handleBulkUpsertRecords (generic bulk upsert).
+ *   2. After the write, fire dispatchAfterBulkHook as a side-effect:
+ *      calls {postAction}_afterBulk(records, auth) if the resource has PostAction set.
+ *      Hook failures are logged and never fail the write response.
+ *
+ * PostAction is a SIDE-EFFECT hook here, not a primary write handler.
+ *
+ * @param {Object} auth
+ * @param {Object} payload - Must contain .resource and .records[]
+ */
+function dispatchBulkCreateRecords(auth, payload) {
+  var resourceName = '';
+  try {
+    resourceName = (payload.resource || '').toString().trim();
+  } catch (e) {}
+
+  if (!resourceName) {
+    return { success: false, message: 'Resource name is required' };
+  }
+
+  var config;
+  try {
+    config = getResourceConfig(resourceName);
+  } catch (e) {
+    return { success: false, message: 'Resource not found: ' + resourceName };
+  }
+
+  // Always use the generic bulk upsert for the actual row write
+  var bulkPayload = {};
+  var keys = Object.keys(payload || {});
+  for (var i = 0; i < keys.length; i++) {
+    bulkPayload[keys[i]] = payload[keys[i]];
+  }
+  bulkPayload.targetResource = resourceName;
+
+  var result = handleBulkUpsertRecords(auth, bulkPayload);
+
+  // Side-effect hook: {postAction}_afterBulk(records, auth) — never fails the response
+  dispatchAfterBulkHook(config, Array.isArray(payload.records) ? payload.records : [], auth);
+
+  return result;
+}
+
+/**
+ * Generic after-bulk hook dispatcher.
+ *
+ * Convention: if a resource has PostAction = 'myHandler', then a function named
+ * 'myHandler_afterBulk(records, auth)' is called after a bulk array write completes.
+ * Bulk equivalent of dispatchAfterCreateHook.
+ *
+ * PostAction purpose: SIDE EFFECTS only — updating derived sheets, sending
+ * notifications, calling external services. The write is always handled by
+ * handleBulkUpsertRecords above.
+ *
+ * @param {Object} config   - Resource config from getResourceConfig()
+ * @param {Array}  records  - The original records[] from the payload
+ * @param {Object} auth
+ */
+function dispatchAfterBulkHook(config, records, auth) {
+  var postAction = config && config.postAction ? config.postAction.toString().trim() : '';
+  if (!postAction) return;
+
+  var hookName = postAction + '_afterBulk';
+  try {
+    var fn = this[hookName];
+    if (typeof fn === 'function') {
+      fn(records, auth);
+    }
+  } catch (e) {
+    Logger.log('dispatchAfterBulkHook error for "' + hookName + '": ' + String(e));
+  }
 }
 
 function handleMasterUpdateRecord(auth, payload) {
@@ -1115,7 +1223,7 @@ function handleExecuteAction(auth, payload) {
   };
 }
 
-function handleMasterBulkRecords(auth, payload) {
+function handleBulkUpsertRecords(auth, payload) {
   var targetResourceName = (payload.targetResource || '').toString().trim();
   if (!targetResourceName) {
     return { success: false, message: 'targetResource is required for bulk upload' };

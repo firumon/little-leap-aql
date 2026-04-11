@@ -47,6 +47,10 @@ function dispatchProtectedAction(action, auth, data) {
   }
 
   switch (action) {
+    // Generic batch action processing
+    case 'batch':
+      return handleBatchActions(auth, data);
+
     // Auth/Profile scope
     case 'getProfile':
       return handleGetProfile(auth);
@@ -100,6 +104,47 @@ function parseRequestPayload(e) {
   }
 }
 
+/**
+ * Handles batching multiple API actions together sequentially.
+ */
+function handleBatchActions(auth, payload) {
+  var requests = Array.isArray(payload.requests) ? payload.requests : [];
+  if (!requests.length) {
+    return { success: false, message: 'No requests provided for batch action' };
+  }
+
+  var results = [];
+  var anyFailed = false;
+
+  for (var i = 0; i < requests.length; i++) {
+    var req = requests[i];
+    var action = (req.action || '').toString().trim();
+    if (!action) {
+      results.push({ success: false, message: 'Action is required' });
+      anyFailed = true;
+      continue;
+    }
+
+    try {
+      var res = dispatchProtectedAction(action, auth, req);
+      results.push(res);
+      if (!res.success) {
+        anyFailed = true;
+      }
+    } catch (e) {
+      results.push({ success: false, message: e.toString() });
+      anyFailed = true;
+    }
+  }
+
+  return {
+    success: !anyFailed,
+    message: anyFailed ? 'One or more batch actions failed' : 'Batch actions completed successfully',
+    data: results
+  };
+}
+
+
 function isGenericMasterCrudAction(action, payload) {
   const normalizedAction = (action || '').toString().trim().toLowerCase();
   const normalizedScope = (payload && payload.scope ? payload.scope : '').toString().trim().toLowerCase();
@@ -128,14 +173,24 @@ function dispatchGenericMasterCrudAction(action, auth, payload) {
   }
 
   if (normalizedAction === 'master.create' || normalizedAction === 'create') {
+    // Array payload → bulk create/upsert via PostAction (or generic bulk fallback).
+    // action=bulk is reserved exclusively for the Bulk Upload UI (BulkUploadMasters).
+    if (Array.isArray(payload.records) && payload.records.length > 0) {
+      return dispatchBulkCreateRecords(auth, payload);
+    }
     return handleMasterCreateRecord(auth, payload);
   }
 
   if (normalizedAction === 'master.update' || normalizedAction === 'update') {
+    // Array payload → bulk update via PostAction (or generic bulk fallback).
+    if (Array.isArray(payload.records) && payload.records.length > 0) {
+      return dispatchBulkCreateRecords(auth, payload);
+    }
     return handleMasterUpdateRecord(auth, payload);
   }
 
   if (normalizedAction === 'master.bulk' || normalizedAction === 'bulk') {
+    // Reserved for Bulk Upload UI only (resource=BulkUploadMasters).
     return dispatchBulkAction(auth, payload);
   }
 

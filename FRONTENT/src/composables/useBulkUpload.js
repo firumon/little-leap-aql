@@ -1,7 +1,7 @@
 import { computed, ref, toRaw } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
-import { bulkMasterRecords } from 'src/services/masterRecords'
+import { bulkMasterRecords } from 'src/services/resourceRecords'
 import {
   deleteFunctionalDraft,
   getFunctionalDraft,

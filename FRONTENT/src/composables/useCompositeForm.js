@@ -157,7 +157,7 @@ export function useCompositeForm(configRef, options = {}) {
           if (!value) {
             $q.notify({
               type: 'negative',
-              message: `${group.resource.ui?.menu?.pageTitle || group.resource.name} row ${i + 1}: ${field.label} is required`,
+              message: `${group.resource.ui?.menus?.[0]?.pageTitle || group.resource.name} row ${i + 1}: ${field.label} is required`,
               timeout: 2200
             })
             return false

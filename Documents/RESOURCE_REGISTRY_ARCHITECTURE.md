@@ -62,7 +62,7 @@ For full per-column meaning, accepted values, and examples, see:
 - CRUD flags are inferred from `Actions` (Read/Write/Update/Delete).
 - Extra actions (Approve/Reject/etc.) are also read from `Actions`.
 - Region boundary is evaluated separately from `Users.AccessRegion` and `AccessRegions` hierarchy.
-- **Menu visibility control**: `entry.ui.menu.menuAccess` field (optional, inside the `Menu` JSON column) drives sidebar filtering and route guard enforcement. Supports single-resource permission checks and cross-resource AND/OR logic. Fallback: `canRead` on own resource if `menuAccess` is absent.
+- **Menu visibility control**: `entry.ui.menus` is an array of sidebar entries whose optional `menuAccess` rules drive filtering/route guards. The frontend matches the current route to the corresponding entry and evaluates its rule, while MainLayout filters every entry independently. Supports single-resource permission checks and cross-resource AND/OR logic. Fallback: `canRead` on the resource if a rule is absent.
 
 ## Runtime flow
 1. Request hits APP `doPost`.

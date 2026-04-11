@@ -118,7 +118,8 @@ function handleLogin(email, password) {
     token,
     user: buildAuthUserPayload(row, roleIds),
     resources: getLoginAuthorizedResources(roleIds),
-    appConfig: getLoginAppConfig()
+    appConfig: getLoginAppConfig(),
+    appOptions: getAppOptions()
   };
 }
 
@@ -216,9 +217,16 @@ function buildAuthUserPayload(userRow, roleIds) {
 
 function sortAuthorizedResources(resources) {
   const entries = Array.isArray(resources) ? resources.slice() : [];
+
+  function minOrder(entry) {
+    var menus = entry && entry.ui && Array.isArray(entry.ui.menus) ? entry.ui.menus : [];
+    if (menus.length === 0) return 9999;
+    return menus.reduce(function(min, m) { var o = Number(m.order) || 9999; return o < min ? o : min; }, 9999);
+  }
+
   entries.sort(function(a, b) {
-    const aOrder = Number(a && a.ui && a.ui.menu ? a.ui.menu.order : 9999);
-    const bOrder = Number(b && b.ui && b.ui.menu ? b.ui.menu.order : 9999);
+    const aOrder = minOrder(a);
+    const bOrder = minOrder(b);
     if (aOrder !== bOrder) {
       return aOrder - bOrder;
     }

@@ -348,6 +348,53 @@ function setupAppSheets() {
     }
   }
 
+  // AppOptions sheet — horizontal layout, no header row, each row = [key, val1, val2, ...]
+  var appOptionsSheet = ss.getSheetByName(CONFIG.SHEETS.APP_OPTIONS);
+  if (!appOptionsSheet) {
+    appOptionsSheet = ss.insertSheet(CONFIG.SHEETS.APP_OPTIONS);
+    results.push('Created sheet: ' + CONFIG.SHEETS.APP_OPTIONS);
+  } else {
+    results.push('Updated sheet: ' + CONFIG.SHEETS.APP_OPTIONS);
+  }
+
+  // Column widths: key column wider, value columns standard
+  appOptionsSheet.setColumnWidth(1, 250);
+  for (var col = 2; col <= 10; col++) {
+    appOptionsSheet.setColumnWidth(col, 160);
+  }
+
+  // Banding
+  var appOptionsBandings = appOptionsSheet.getBandings();
+  appOptionsBandings.forEach(function (b) { b.remove(); });
+  var appOptionsLastRow = Math.max(appOptionsSheet.getLastRow(), 1);
+  appOptionsSheet.getRange(1, 1, appOptionsLastRow, 10)
+    .applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY)
+    .setFirstRowColor('#ffffff')
+    .setSecondRowColor('#f3f6fb');
+
+  // Seed missing option groups — never overwrites existing rows
+  var appOptionsData = appOptionsSheet.getLastRow() > 0
+    ? appOptionsSheet.getRange(1, 1, appOptionsSheet.getLastRow(), 1).getValues()
+    : [];
+  var existingOptionKeys = appOptionsData.map(function (r) { return (r[0] || '').toString().trim(); }).filter(Boolean);
+  var seedKeys = Object.keys(APP_OPTIONS_SEED);
+  var optionRowsToAppend = [];
+  for (var s = 0; s < seedKeys.length; s++) {
+    var seedKey = seedKeys[s];
+    if (existingOptionKeys.indexOf(seedKey) === -1) {
+      optionRowsToAppend.push([seedKey].concat(APP_OPTIONS_SEED[seedKey]));
+    }
+  }
+  if (optionRowsToAppend.length > 0) {
+    var appendStartRow = appOptionsSheet.getLastRow() + 1;
+    var maxCols = optionRowsToAppend.reduce(function (max, r) { return Math.max(max, r.length); }, 1);
+    appOptionsSheet.getRange(appendStartRow, 1, optionRowsToAppend.length, maxCols).setValues(optionRowsToAppend);
+  }
+
+  fileSheetIndex++;
+  ss.setActiveSheet(appOptionsSheet);
+  ss.moveActiveSheet(fileSheetIndex);
+
   var defaultSheet = ss.getSheetByName('Sheet1');
   if (defaultSheet && defaultSheet.getLastRow() === 0) {
     ss.deleteSheet(defaultSheet);

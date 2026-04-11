@@ -120,3 +120,7 @@ Welcome to the technical documentation for the AQL project. This folder contains
 ### 20. [AQL Menu Admin Guide](AQL_MENU_ADMIN_GUIDE.md)
 *   **Context:** Admin-friendly operational guide for every `AQL 🚀` menu action (what it does, required inputs, and step-by-step usage).
 *   **Audience:** Admin users, operations owners, support team, AI agents.
+
+### 21. [Login Response Specification](LOGIN_RESPONSE.md)
+*   **Context:** Canonical reference for the `handleLogin()` response payload — all top-level fields, their source sheets/generators, frontend storage locations, and maintenance rules.
+*   **Audience:** Backend Developers, Frontend Developers, AI Agents.

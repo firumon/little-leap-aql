@@ -113,7 +113,7 @@ Backend actions consumed:
 
 Transport note:
 - Master flows use shared `src/services/masterRecords.js` so stores/pages avoid duplicated API+sync logic.
-- Access note: `src/router/index.js` checks matched resource via authorized `resources[].ui.routePath` (with optional `meta.requiredResource` fallback).
+- Access note: `src/router/index.js` checks matched resource via authorized `resources[].ui.menus[*].route` (with optional `meta.requiredResource` fallback).
 
 ## PWA, Service Worker, and IDB Sync (2026-02-19)
 - Service Worker uses `InjectManifest` and intercepts GAS API requests for network strategy/background sync where applicable.

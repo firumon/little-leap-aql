@@ -90,7 +90,7 @@ Array of resource entries built by `buildAuthorizedResourceEntry()` at `GAS/reso
   "headers": ["Code", "Name", "VariantTypes", "Status", "..."],
   "ui": {
     "menus": [{
-      "groupPath":       ["Masters", "Product"],
+      "group":           ["Masters", "Product"],
       "order":           1,
       "label":           "Products",
       "icon":            "inventory_2",

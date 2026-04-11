@@ -59,7 +59,7 @@ import { useResourceConfig } from 'src/composables/useResourceConfig'
 import { useResourceData } from 'src/composables/useResourceData'
 import { useResourceRelations } from 'src/composables/useResourceRelations'
 import { useCompositeForm } from 'src/composables/useCompositeForm'
-import { fetchMasterRecords } from 'src/services/masterRecords'
+import { fetchResourceRecords } from 'src/services/resourceRecords'
 
 const router = useRouter()
 const { scope, resourceSlug, code, config, resourceName, resolvedFields } = useResourceConfig()
@@ -106,7 +106,7 @@ async function loadAndInitialize() {
   const childRecordsByResource = {}
   for (const child of childResources.value) {
     try {
-      const resp = await fetchMasterRecords(child.name, { includeInactive: true })
+      const resp = await fetchResourceRecords(child.name, { includeInactive: true })
       if (resp.success && resp.records) {
         const parentCodeField = findParentCodeField(child, config.value)
         childRecordsByResource[child.name] = resp.records.filter((r) => r[parentCodeField] === code.value)

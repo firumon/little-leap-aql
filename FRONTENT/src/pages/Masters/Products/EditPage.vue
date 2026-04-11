@@ -178,7 +178,7 @@ import { useProductVariants, hasDuplicateVariantSet, validateSkuVariants } from 
 import { useResourceConfig } from 'src/composables/useResourceConfig'
 import { useResourceData } from 'src/composables/useResourceData'
 import { useCompositeForm } from 'src/composables/useCompositeForm'
-import { fetchMasterRecords } from 'src/services/masterRecords'
+import { fetchResourceRecords } from 'src/services/resourceRecords'
 import { getResourceMeta, upsertResourceRows, deleteResourceRowByCode } from 'src/utils/db'
 
 const router = useRouter()
@@ -377,7 +377,7 @@ async function loadAndInitialize(forceSync = false) {
     await reload(forceSync)
     if (!record.value) return
 
-    const skuResponse = await fetchMasterRecords('SKUs', {
+    const skuResponse = await fetchResourceRecords('SKUs', {
       includeInactive: true,
       forceSync
     })

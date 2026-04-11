@@ -27,12 +27,12 @@ This document explains each `APP > Resources` column, what to fill, and common v
 | `RecordAccessPolicy` | Yes | Text | Row-level authorization model | `ALL`, `OWNER`, `OWNER_GROUP`, `OWNER_AND_UPLINE` | `OWNER_AND_UPLINE` |
 | `OwnerUserField` | Optional | Text | Header used as owner column | Usually `CreatedBy` | `CreatedBy` |
 | `AdditionalActions` | Optional | CSV Text | Declares domain actions supported by resource | Comma-separated action names | `Approve,Reject,Cancel` |
-| `Menu` | Optional | JSON Text | Ordered array of sidebar menu entry objects. Each entry defines `group`, `order`, `label`, `icon`, `route`, `pageTitle`, `pageDescription`, `show`, and optional `menuAccess` rules. The first entry is treated as the primary CRUD menu item and also drives the admin dialog fields. Blank/`[]` = auto-derive defaults from `Name`/`Scope`. | JSON array | `[{"group":"Masters","order":1,"label":"Products","icon":"inventory_2","route":"/masters/products","pageTitle":"Products","pageDescription":"Manage products","show":true}]` |
+| `Menu` | Optional | JSON Text | Ordered array of sidebar menu entry objects. Each entry defines `group`, `order`, `label`, `icon`, `route`, `pageTitle`, `pageDescription`, `show`, and optional `menuAccess` rules. `group` is a string array path (N-level hierarchy). The first entry is treated as the primary CRUD menu item and also drives the admin dialog fields. Blank/`[]` = auto-derive defaults from `Name`/`Scope`. | JSON array | `[{"group":["Masters","Product"],"order":1,"label":"Products","icon":"inventory_2","route":"/masters/products","pageTitle":"Products","pageDescription":"Manage products","show":true},{"group":["Operations","Warehouse"],"order":99,"label":"Direct Stock Entry","icon":"manage_accounts","route":"/operations/stock-movements/direct-entry","pageTitle":"Direct Stock Entry","pageDescription":"Fast editable register for stock adjustments","show":true}]` |
 | `UIFields` | Optional | JSON Text | Field config for dynamic form/table | JSON array of field objects | `[{"header":"Name","label":"Name","type":"text","required":true}]` |
 | `IncludeInAuthorizationPayload` | Yes | Boolean | Include this resource in login/getAuthorizedResources payload | `TRUE` / `FALSE` | `TRUE` |
 | `Functional` | Yes | Boolean | If `TRUE`, resource is a UI tool with no backing sheet (FileID/SheetName ignored). Skipped during data sync. | `TRUE` / `FALSE` | `FALSE` |
 | `PreAction` | Optional | Text | Function name executed **before** the main action handler when the resource is invoked | GAS function name | `validateBulkPayload` |
-| `PostAction` | Optional | Text | Function name executed **after** routing (or as the primary handler for functional resources) | GAS function name | `handleMasterBulkRecords` |
+| `PostAction` | Optional | Text | Side-effect hook name. For `action=create, record:{}` → calls `{name}_afterCreate(record,auth)`. For `action=create, records:[]` → calls `{name}_afterBulk(records,auth)`. For Bulk Upload UI (`action=bulk`) → called as primary handler directly. | GAS function name | `handleBulkUpsertRecords` |
 | `Reports` | Optional | JSON Text | Downloadable document configs (JSON array) | JSON array of report objects | `[{"name":"pkg","templateSheet":"Package"}]` |
 | `ListViews` | Optional | JSON Text | Filter-driven list view configurations with single-cell mode control. `""` (blank) = auto mode, `[]` = off mode, non-empty JSON array = custom mode. | `""`, `[]`, or JSON array of view objects | `[{"name":"Active","default":true,"color":"positive","filter":{"type":"group","logic":"AND","items":[{"type":"condition","column":"Status","operator":"eq","value":"Active"}]}}]` |
 | `CustomUIName` | Optional | Text | Tenant/client UI code that drives 3-tier component resolution. When set, the frontend looks for custom pages in `pages/Masters/_custom/{CustomUIName}/` and custom sections in `components/Masters/_custom/{CustomUIName}/` before falling back to entity-custom or default components. Empty = no tenant-custom tier (skip straight to entity-custom → default). The same value can be shared across multiple resources for one tenant. | Any short code string | `A2930` |
@@ -54,12 +54,12 @@ This document explains each `APP > Resources` column, what to fill, and common v
 
 ## `Menu` JSON Schema
 
-The `Menu` column stores a JSON array of menu entry objects. Each entry declares the sidebar `groupPath` (N-level hierarchy), order, label, icon, route, titles, visibility, and optional `menuAccess` controls for that particular menu item. The first entry is treated as the primary CRUD menu item (e.g., the List/Add/Edit pages), and the admin dialog updates only that entry by default—any additional entries are preserved transparently when saving.
+The `Menu` column stores a JSON array of menu entry objects. Each entry declares the sidebar `group` path (N-level hierarchy), order, label, icon, route, titles, visibility, and optional `menuAccess` controls for that particular menu item. The first entry is treated as the primary CRUD menu item (e.g., the List/Add/Edit pages), and the admin dialog updates only that entry by default—any additional entries are preserved transparently when saving.
 
 ```json
 [
   {
-    "groupPath": ["Masters", "Product"],
+    "group": ["Masters", "Product"],
     "order": 1,
     "label": "Products",
     "icon": "inventory_2",
@@ -69,13 +69,13 @@ The `Menu` column stores a JSON array of menu entry objects. Each entry declares
     "show": true
   },
   {
-    "groupPath": ["Operations", "Warehouse"],
+    "group": ["Operations", "Warehouse"],
     "order": 99,
-    "label": "Manage Stock",
+    "label": "Direct Stock Entry",
     "icon": "manage_accounts",
-    "route": "/operations/manage-stock",
-    "pageTitle": "Manage Stock",
-    "pageDescription": "Guided stock movement wizard",
+    "route": "/operations/stock-movements/direct-entry",
+    "pageTitle": "Direct Stock Entry",
+    "pageDescription": "Fast editable register for stock adjustments",
     "show": true,
     "menuAccess": { "require": "canWrite" }
   }
@@ -84,7 +84,7 @@ The `Menu` column stores a JSON array of menu entry objects. Each entry declares
 
 | Field | Required | Type | Meaning | Default (when missing) |
 |---|---|---|---|---|
-| `groupPath` | Yes | String array | N-level sidebar hierarchy path (e.g. `["Masters","Product"]`) | `["General"]` |
+| `group` | Yes | String array | N-level sidebar hierarchy path (e.g. `["Masters","Product"]`) | `["General"]` |
 | `order` | No | Number | Sort order within group | `9999` |
 | `label` | No | String | Sidebar display text | Resource `Name` |
 | `icon` | No | String | Quasar/Material icon id | `list_alt` |

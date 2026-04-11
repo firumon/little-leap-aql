@@ -94,7 +94,7 @@ Columns:
 - `StorageName`
 - `SKU`
 - `QtyChange` (Numeric, can be negative for dispatch/sales)
-- `ReferenceType` (e.g., 'GRN', 'Dispatch', 'Adjustment')
+- `ReferenceType` — values sourced from `AppOptions` sheet key `StockMovementReferenceType`. Current values: `GRN`, `DirectEntry`, `StockAdjustment`. Sheet dropdown validation is applied by `setupOperationSheets()`. New values are added by updating `APP_OPTIONS_SEED` in `Constants.gs` and re-running setup.
 - `ReferenceCode` (FK to the source document, e.g., GRNCode)
 - `AccessRegion`
 - `Status`
@@ -104,7 +104,13 @@ Columns:
 - `UpdatedBy`
 
 ## 7) WarehouseStorages (Real-time Inventory)
-Real-time updated inventory locations. Automatically managed by stock movements.
+Real-time updated inventory locations. Automatically maintained as a materialized summary of `StockMovements`.
+
+**How it is updated:** `handleMasterCreateRecord` in `GAS/masterApi.gs` calls `applyStockMovementToWarehouseStorages()` (defined in `GAS/stockMovements.gs`) immediately after writing every `StockMovements` row. The hook upserts the matching `(WarehouseCode, StorageName, SKU)` row — creating it if absent, incrementing `Quantity` if present.
+
+**Manual editing:** Do not edit `Quantity` directly. If drift occurs, rebuild by summing all `StockMovements.QtyChange` for each `(WarehouseCode, StorageName, SKU)` tuple.
+
+**Trigger chain:** `StockMovements` create → `applyStockMovementToWarehouseStorages()` → upsert `WarehouseStorages`. Non-throwing: if the summary update fails, the ledger row is already committed and the error is only logged.
 
 Columns:
 - `Code` (`LLML` prefix)

@@ -22,8 +22,8 @@ export function useResourceConfig() {
     // Match by route path (most reliable)
     const currentPath = `/${scope.value}/${resourceSlug.value}`
     const byRoutePath = resources.find((entry) => {
-      const entryPath = entry?.ui?.menu?.route || ''
-      return entryPath === currentPath
+      const menus = Array.isArray(entry?.ui?.menus) ? entry.ui.menus : []
+      return menus.some(m => m.route === currentPath)
     })
     if (byRoutePath) return byRoutePath
 

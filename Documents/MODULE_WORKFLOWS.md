@@ -12,11 +12,12 @@ This document captures the **end-to-end workflow knowledge** for each major feat
 2. [Master Pages - 3-Tier Section-Level Component Architecture](#2-master-pages--3-tier-section-level-component-architecture)
 3. [Products Variant Management (Custom Pages)](#3-products-variant-management-custom-pages)
 4. [Menu Access Control](#4-menu-access-control)
+5. [Direct Stock Entry (Editable Register)](#5-direct-stock-entry-editable-register)
 
 <!-- Future modules -- add sections as they are built:
-4. [Data Backup & Restore](#4-data-backup--restore)
-5. [Bulk Upload](#5-bulk-upload)
-6. [Dashboard Widgets](#6-dashboard-widgets)
+6. [Data Backup & Restore](#6-data-backup--restore)
+7. [Bulk Upload](#7-bulk-upload)
+8. [Dashboard Widgets](#8-dashboard-widgets)
 -->
 
 ---
@@ -649,7 +650,7 @@ Valid permission keys depend on role configuration. Common keys:
 1. In `GAS/syncAppResources.gs`, find the resource's config object and update its `Menu` JSON:
    ```js
    Menu: JSON.stringify({
-     groupPath: ['Masters', 'Product'],
+     group: ['Masters', 'Product'],
      order: 1,
      label: 'Products',
      icon: 'inventory_2',
@@ -687,96 +688,60 @@ Valid permission keys depend on role configuration. Common keys:
 - Router guard uses inline `evaluateMenuAccessInline()` (not composable) because Vue composables require `setup()` context, unavailable in the router.
 - Both evaluators use identical logic to ensure consistency.
 
-
-## 5. Manage Stock
+## 5. Direct Stock Entry (Editable Register)
 
 ### 5.1 Overview
 
-The Manage Stock page (`/operations/manage-stock`) is a type-agnostic operator-facing tool for recording any stock change in the warehouse. It writes `StockMovements` ledger rows and automatically upserts `WarehouseStorages` summary rows. The same single page serves all movement types (`GRN`, `DirectEntry`, `StockAdjustment`, and any future type added via `APP.AppOptions`) without per-type branching logic.
+The Direct Stock Entry page (`/operations/stock-movements/direct-entry`) provides a fast, mobile-first editable register for adding or adjusting stock quantities. It operates strictly as a `DirectEntry` movement type, writing to the `StockMovements` ledger which in turn auto-updates the `WarehouseStorages` summary via a backend hook.
 
 ### 5.2 Architecture Diagram
 
 ```
 FRONTEND (Quasar)
-  ManageStockPage.vue  ← thin orchestrator, two-step wizard
-    Step 1: ManageStockContextStep.vue
-      - Warehouse cards (from fetchMasterRecords('Warehouses'))
-      - Type cards (from authStore.appOptionsMap['StockMovementReferenceType'])
-      - Reference Code q-input (free text, optional)
-      - Proceed button (enabled when warehouse + type selected)
-    Step 2: ManageStockEditGrid.vue
-      - Context chip strip (click chip → back to step 1)
-      - "Add SKU" q-select (from fetchMasterRecords('SKUs') + Products)
-      - "Load all stock in warehouse" button
-      - StockMovementRow rows (per-row Storage Location + bi-directional Change (Delta) / New Qty fields)
-      - Submit → useStockMovements().submitBatch()
-        - Sequential callGasApi per non-zero row (no toast spam)
-        - Single aggregate q-notify at the end
+  ManageStockPage.vue  ← Thin orchestrator, 2-step flow
+    Step 1: Warehouse Selection (tappable cards)
+    Step 2: StockEntryGrid.vue
+      - Loads ALL existing WarehouseStorages for the selected warehouse
+      - Loads all active SKUs with Product names
+      - Displays rows for existing stock (read-only SKU/Storage, editable Qty)
+      - Always shows one empty "add new" row at the bottom with auto-append
+      - Highlights unsaved changes (dirty rows)
+      - Sends ONLY deltas (QtyChange = NewQty - OriginalQty) on Save
+      - Save calls useStockMovements().submitBatch()
+      - After save: rebuilds grid from IDB (cache-first) — submitBatch
+        has already upserted WarehouseStorages into IDB using locally
+        resolved headers (no response-header dependency)
 
 BACKEND (Google Apps Script)
   apiDispatcher.gs → action=create, scope=operation, resource=StockMovements
   masterApi.gs → handleMasterCreateRecord()
     → writes ledger row to StockMovements sheet
-    → applyStockMovementToWarehouseStorages(record, auth)  ← hook in stockMovements.gs
-        → upserts WarehouseStorages (create or increment Quantity)
+    → dispatchAfterCreateHook() calls handleStockMovementsBulkSave_afterCreate()
+    → applyStockMovementToWarehouseStorages() upserts WarehouseStorages
 ```
 
-### 5.3 The Dual-Field Row (Core Concept)
-
-Every row in the grid exposes two bound fields for the same delta:
-
-| SKU | Product | Storage Location | Current | Change (Delta) | New Qty | Note |
-|---|---|---|---|---|---|---|
-| S-001 | Widget A | Rack-A1 | 42 | [input] | [input] | |
-
-- **Change (Δ)** — signed number (positive = add, negative = remove).
-- **New Qty** — absolute count at this location after the movement.
-- Bi-directionally bound: `New = Current + Δ` ↔ `Δ = New − Current`.
-- The value written to `StockMovements.QtyChange` is **always the signed delta**.
-- **GRN** operator uses Change column ("I received 10").
-- **StockAdjustment** operator uses New Qty column ("I counted 39").
-- **Dispatch** (future) operator types negative number in Change column.
-- Zero-delta rows are visually muted and excluded from submission.
-
-### 5.4 Future-Proof Movement Types
-
-The type card list is driven entirely by `APP.AppOptions.StockMovementReferenceType`. To add a new type (e.g., `Dispatch`):
-1. Edit the `APP.AppOptions` sheet: add `Dispatch` in a new column on the `StockMovementReferenceType` row.
-2. (Optional) If the new type needs a column dropdown validation in `StockMovements`, update `GAS/setupOperationSheets.gs` and run **AQL 🚀 > Setup All Operations**.
-3. Users re-login → the new type card appears automatically. **No code change required.**
-
-### 5.5 Files Involved
+### 5.3 Files Involved
 
 | File | Role |
 |---|---|
 | `FRONTENT/src/pages/Warehouse/ManageStockPage.vue` | Thin page orchestrator — two-step wizard state |
-| `FRONTENT/src/components/Warehouse/ManageStockContextStep.vue` | Step 1 — context selection (warehouse, type, optional reference code) |
-| `FRONTENT/src/components/Warehouse/ManageStockEditGrid.vue` | Step 2 — SKU grid with submit |
-| `FRONTENT/src/components/Warehouse/StockMovementRow.vue` | Single editable row with per-row storage + bi-directional Change (Delta)/New Qty|
-| `FRONTENT/src/composables/useStockMovements.js` | Load storages, resolve current qty, submit batch silently |
-| `FRONTENT/src/router/routes.js` | Explicit route `/operations/manage-stock` |
-| `GAS/stockMovements.gs` | `applyStockMovementToWarehouseStorages()` hook |
-| `GAS/masterApi.gs` | Hook wired in `handleMasterCreateRecord` post-insert |
-| `GAS/syncAppResources.gs` | `StockMovements` menu array includes both `/operations/stock-movements` and `/operations/manage-stock` entries |
+| `FRONTENT/src/components/Warehouse/StockEntryGrid.vue` | Core grid UI — editable rows, new rows, delta tracking, save logic |
+| `FRONTENT/src/composables/useStockMovements.js` | Loads warehouses, SKUs, and storages. Submits batches via API. |
+| `FRONTENT/src/router/routes.js` | Explicit route `/operations/stock-movements/direct-entry` |
+| `GAS/stockMovements.gs` | Hook logic to sync `WarehouseStorages` based on `StockMovements` |
+| `GAS/masterApi.gs` | Executes `dispatchAfterCreateHook()` during save |
 
-### 5.6 Known Behaviors
+### 5.4 Key Behaviors
+1. **Delta Calculation**: The UI tracks `originalQty` and `currentQty`. On save, it only submits rows where `currentQty !== originalQty`. The submitted value is the difference (`QtyChange = currentQty - originalQty`).
+2. **Remove Icon**: Clicking the trash icon on an existing row sets its quantity to 0 and visually strikes it out. This generates a negative delta equal to the original quantity. This action is reversible until saved.
+3. **Auto-Append New Rows**: Filling out the single empty row at the bottom automatically spawns a new empty row beneath it, allowing rapid entry of new stock.
+4. **Reference Type**: Hardcoded to `DirectEntry`. This bypasses the need for the user to select a movement type, optimizing for speed.
+5. **Mobile First**: Row layout uses compact flex grids rather than native HTML tables to prevent horizontal scrolling on mobile devices.
+6. **Post-Save Cache Refresh (2026-04-11)**: `submitBatch()` pairs the `create StockMovements` request with a `get WarehouseStorages` request in a single batch. On success, it upserts the returned rows into IndexedDB using headers resolved locally (IDB meta → auth store → `getAuthorizedResources` fallback). The `WarehouseStorages` sync cursor (`lastSyncAt`) is advanced **only** when the IDB upsert actually writes rows — if local headers cannot be resolved, the cursor is left untouched so the next normal sync path can recover. After a successful save, `StockEntryGrid.vue` rebuilds from the (now-fresh) cache via `fetchData(false)` — no extra network round-trip.
+7. **Draft Storage Dropdown (2026-04-11)**: The storage-location dropdown for new rows is a reactive union of fetched `WarehouseStorages` names plus any non-empty `StorageName` values currently typed in `newRows`. Typing a new location in row 1 immediately makes it selectable in row 2, before save. `q-select`'s `new-value-mode="add-unique"` still commits typed values to the row's model as before.
 
-1. **Partial batch failures**: If some rows fail mid-batch, the aggregate notify reports "X of Y saved, Z failed" with the failed SKU codes. Already-submitted rows are not rolled back (ledger is append-only).
-2. **WarehouseStorages drift**: If the hook throws (e.g., sheet access error), the ledger row is committed but the summary is not updated. Drift can be detected by summing `StockMovements.QtyChange` per `(WarehouseCode, StorageName, SKU)` and comparing to `WarehouseStorages.Quantity`.
-3. **Context is kept after submit**: After a batch is saved, the grid clears but the context (warehouse, type, reference code) stays so the operator can immediately enter another batch.
-4. **Zero-delta rows are excluded**: Only rows where `QtyChange !== 0` are submitted. The count shown on the Submit button reflects this.
-
----
-
-## 4. Data Backup & Restore
-(To be documented when implemented)
-
-## 5. Bulk Upload
-(To be documented when implemented)
-
-## 6. Dashboard Widgets
-(To be documented when implemented)
+<!-- Future modules -- add sections as they are built:
+6. [Data Backup & Restore](#6-data-backup--restore)
+7. [Bulk Upload](#7-bulk-upload)
+8. [Dashboard Widgets](#8-dashboard-widgets)
 -->
-
-
-

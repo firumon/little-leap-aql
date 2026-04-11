@@ -81,7 +81,7 @@ Columns (in order):
 - `RecordAccessPolicy` (`ALL|OWNER|OWNER_GROUP|OWNER_AND_UPLINE`)
 - `OwnerUserField` (usually `CreatedBy`)
 - `AdditionalActions` (CSV)
-- `Menu` (JSON array of sidebar entry objects. Each entry defines `groupPath` (string array, canonical N-level hierarchy), `order`, `label`, `icon`, `route`, `pageTitle`, `pageDescription`, `show`, and optional `menuAccess`. Blank/`[]` defaults are derived from `Name`/`Scope`. See `Documents/RESOURCE_COLUMNS_GUIDE.md` for schema and examples.)
+- `Menu` (JSON array of sidebar entry objects. Each entry defines `group` (string array, canonical N-level hierarchy), `order`, `label`, `icon`, `route`, `pageTitle`, `pageDescription`, `show`, and optional `menuAccess`. Blank/`[]` defaults are derived from `Name`/`Scope`. See `Documents/RESOURCE_COLUMNS_GUIDE.md` for schema and examples.)
 - `UIFields` (JSON array)
 - `IncludeInAuthorizationPayload`
 - `ListViews` (single-cell mode + JSON views: blank=`auto`, `[]`=`off`, non-empty array=`custom`; see `Documents/RESOURCE_COLUMNS_GUIDE.md` for full schema)

@@ -18,13 +18,16 @@ import routes from './routes'
  *
  * @param {object} resource - The full resource entry to evaluate
  * @param {Array} allResources - Full list of authorized resources (for cross-resource checks)
+ * @param {string} routePath - The path being navigated to (to match the correct menu item)
  * @returns {boolean}
  */
-function evaluateMenuAccessInline(resource, allResources) {
+function evaluateMenuAccessInline(resource, allResources, routePath) {
   if (!resource) return false
 
   const resourceName = resource.name
-  const menuAccess = resource?.ui?.menu?.menuAccess
+  const menus = Array.isArray(resource?.ui?.menus) ? resource.ui.menus : []
+  const matchedMenu = routePath ? menus.find(m => m.route === routePath) : menus[0]
+  const menuAccess = matchedMenu?.menuAccess ?? null
 
   function checkPerms(resName, require) {
     const entry = allResources.find((r) => r?.name === resName)
@@ -98,9 +101,18 @@ export default defineRouter(function (/* { store, ssrContext } */) {
       return next('/login')
     }
 
-    // Find the resource entry whose menu.route matches the navigation target
+    // Find an authorized resource entry whose menus array contains a route matching the navigation target.
+    // Multiple resources can temporarily expose the same route during metadata transitions.
     const matchedResource = Array.isArray(resources)
-      ? resources.find((r) => r?.ui?.menu?.route === to.path)
+      ? resources.find((r) => {
+          const menus = Array.isArray(r?.ui?.menus) ? r.ui.menus : []
+          const hasRoute = menus.some(m => m.route === to.path)
+          if (!hasRoute) return false
+          return evaluateMenuAccessInline(r, resources, to.path)
+        }) || resources.find((r) => {
+          const menus = Array.isArray(r?.ui?.menus) ? r.ui.menus : []
+          return menus.some(m => m.route === to.path)
+        })
       : null
 
     const effectiveRequiredResource = requiredResource || matchedResource?.name
@@ -111,7 +123,7 @@ export default defineRouter(function (/* { store, ssrContext } */) {
         ? resources.find((r) => r?.name === effectiveRequiredResource)
         : null
 
-      const allowed = targetEntry ? evaluateMenuAccessInline(targetEntry, resources) : false
+      const allowed = targetEntry ? evaluateMenuAccessInline(targetEntry, resources, to.path) : false
 
       if (!allowed) {
         return next('/dashboard')

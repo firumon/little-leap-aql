@@ -36,7 +36,7 @@ AQL is the operating system for Little Leap's UAE baby-product distribution busi
   - Audit and row-level access policy.
 - Frontend:
   - Authorized menu items.
-  - Dynamic page routing (`ui.routePath`).
+  - Dynamic page routing (`ui.menus[*].route`).
   - Titles/descriptions and optional dynamic fields.
 
 ## Auth/Login Contract (Current)
@@ -45,7 +45,7 @@ AQL is the operating system for Little Leap's UAE baby-product distribution busi
 - `user` with `designation`, `roles`, and `accessRegion` scope payload
 - `resources[]` authorized for the user role set, including:
   - identity: `name`, `scope`
-  - routing/config: `ui` object (`menuGroup`, `menuOrder`, `menuLabel`, `menuIcon`, `routePath`, `pageTitle`, `pageDescription`, `fields`, `showInMenu`)
+  - routing/config: `ui` object with `menus[]` entries (`group`, `order`, `label`, `icon`, `route`, `pageTitle`, `pageDescription`, `show`, optional `menuAccess`) plus `fields`
   - permissions: `permissions.canRead/canWrite/canUpdate/canDelete`
   - schema/cache support: `headers`
   - metadata: `fileId`, `sheetName`, `codePrefix`, `codeSequenceLength`, `actions`, `allowedActions`

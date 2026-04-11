@@ -45,6 +45,11 @@ const routes = [
         meta: { scope: 'master', requiresAuth: true }
       },
       {
+        path: '/operations/stock-movements/direct-entry',
+        component: () => import('pages/Warehouse/ManageStockPage.vue'),
+        meta: { scope: 'operation', requiresAuth: true }
+      },
+      {
         path: '/:scope(masters|operations|accounts)/:resourceSlug',
         component: () => import('pages/Masters/ResourcePageShell.vue'),
         props: true,

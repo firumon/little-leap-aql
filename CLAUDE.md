@@ -8,8 +8,10 @@ In every new context window, before doing any work:
 2. Read `Documents/MULTI_AGENT_PROTOCOL.md` — defines the four agent roles.
 3. Read `Documents/AI_COLLABORATION_PROTOCOL.md` — sync rules for code/sheets/docs.
 4. Read `Documents/CONTEXT_HANDOFF.md` — current project state and resume context.
-5. Check `PLANS/` for active or pending implementation plans.
-6. Identify your role (default: **Guide Agent**).
+5. Read `Documents/GAS_API_CAPABILITIES.md` — full backend capabilities reference; mandatory before any GAS or new-module work.
+6. Read `Documents/GAS_PATTERNS.md` — implementation patterns and anti-patterns; mandatory before writing any GAS code.
+7. Check `PLANS/` for active or pending implementation plans.
+8. Identify your role (default: **Guide Agent**).
 
 ## Context Budget Guardrails (Mandatory)
 - Avoid full-file dumps, full `git diff`, or long raw logs unless explicitly needed.
@@ -79,10 +81,48 @@ Manual user actions are limited to:
 - Use exact role names: `Guide Agent`, `Brain Agent`, `Build Agent`, `Solo Agent`.
 - Plan ownership: `Created By: Brain Agent (AgentName)`, `Executed By: Build Agent (AgentName | pending)`.
 
+## GAS Backend Rules (Mandatory — read Documents/GAS_PATTERNS.md first)
+
+### No New GAS Files
+**Never create a new `.gs` file for a new module or feature.** The GAS file set is fixed. New resource logic belongs in one of the existing files, attached to an existing pattern.
+
+### Use Existing Patterns — In Order of Preference
+1. **Pure CRUD** — add resource to `syncAppResources.gs`, leave `PostAction` blank. Zero GAS code needed.
+2. **After-create hook** — set `PostAction: 'myHandler'` in `syncAppResources.gs`; add `myHandler_afterCreate(record, auth)` to an existing hook file.
+3. **Bulk save (array payload)** — same PostAction; add `myHandler(auth, payload)` to the same hook file; frontend calls `action=create, records: [...]`. Auto-detected by GAS. **Do NOT use `action=bulk` for operational saves** — that is reserved for the Bulk Upload UI only.
+4. **No PostAction bulk** — for resources without side effects, `action=create, records: []` automatically uses `handleBulkUpsertRecords` (generic upsert). Zero GAS code needed.
+5. **Additional actions (Approve/Reject)** — set `AdditionalActions` JSON in `syncAppResources.gs`; zero GAS code needed.
+6. **Composite save (parent+children)** — use `handleCompositeSave` via `action=compositeSave`; zero GAS code needed.
+
+### action=bulk Is Reserved for Bulk Upload UI Only
+`action=bulk` routes through `dispatchBulkAction` and is exclusively used by the Bulk Upload page (`resource=BulkUploadMasters`). All other multi-record saves must use `action=create` or `action=update` with `records: []`.
+
+### Never Hardcode Resource Names in Core Files
+- Do NOT add `if (resourceName === 'SomeResource')` inside `masterApi.gs` or `apiDispatcher.gs`.
+- Do NOT add new `case 'customAction'` in `apiDispatcher.gs` for resource-specific logic.
+- Use the PostAction hook pattern instead.
+
+### syncAppResources.gs Is the Single Source of Truth for Resource Config
+All resource metadata (menu structure, PostAction, PreAction, UIFields, etc.) is defined in `APP_RESOURCES_CODE_CONFIG` in `syncAppResources.gs`. After any change, run: `AQL 🚀 > Setup & Refactor > Sync APP.Resources from Code`.
+
+### Menu Structure Convention
+Menu group arrays define the sidebar hierarchy. Top-level groups currently in use:
+- `['Product']` — Product section (Manage, Stock)
+- `['Warehouse']` — Warehouse section (Manage, Manual Stock Entry, GRN, etc.)
+- `['Masters', 'Procurement']` — existing procurement items
+- `['Operations']` — operational views
+
+Full capabilities: **`Documents/GAS_API_CAPABILITIES.md`** | Patterns and anti-patterns: **`Documents/GAS_PATTERNS.md`**
+
 ## Menu Admin Guide Maintenance Rule
 - `Documents/AQL_MENU_ADMIN_GUIDE.md` is the canonical admin-facing guide for all `AQL 🚀` menu actions.
 - If any menu action is added, removed, renamed, or behavior-changed, update `Documents/AQL_MENU_ADMIN_GUIDE.md` in the same task.
 - Keep `Documents/README.md` index entry aligned if the guide location/name changes.
+
+## Login Response Documentation Maintenance Rule
+- `Documents/LOGIN_RESPONSE.md` is the canonical specification of the login response payload returned by `handleLogin()`.
+- Any change to the login response shape, field generators, source sheets/columns, AppConfig keys, AppOptions groups, or frontend storage locations MUST update `Documents/LOGIN_RESPONSE.md` in the same task.
+- Keep `Documents/README.md` index entry aligned if the file location or name changes.
 
 ## Key Documents
 | Document | Purpose |
@@ -94,6 +134,9 @@ Manual user actions are limited to:
 | `Documents/RESOURCE_REGISTRY_ARCHITECTURE.md` | APP.Resources architecture |
 | `Documents/RESOURCE_COLUMNS_GUIDE.md` | Column conventions for resources |
 | `Documents/AQL_MENU_ADMIN_GUIDE.md` | Admin-facing how-to for all AQL menu actions |
+| `Documents/LOGIN_RESPONSE.md` | Canonical login response shape, field sources, and frontend storage locations |
+| `Documents/GAS_API_CAPABILITIES.md` | **Mandatory** — complete GAS backend capabilities; read before designing any new module |
+| `Documents/GAS_PATTERNS.md` | **Mandatory** — GAS implementation patterns, anti-patterns, action→handler map |
 | `Documents/NEW_CLIENT_SETUP_GUIDE.md` | Client onboarding steps |
 | `Documents/MODULE_WORKFLOWS.md` | End-to-end workflow docs per feature (Reports, etc.) |
 | `PLANS/_TEMPLATE.md` | Template for new implementation plans |

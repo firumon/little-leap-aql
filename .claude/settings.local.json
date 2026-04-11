@@ -5,7 +5,11 @@
       "Bash(find 'F:\\\\LITTLE LEAP\\\\AQL\\\\.claude' -type f -name *.md -o -name *.json -o -name *.txt)",
       "Bash(grep -rn \"manual\\\\|copy-paste\" 'F:\\\\LITTLE LEAP\\\\AQL' --include=*.md)",
       "Bash(git -C \"F:/LITTLE LEAP/AQL\" diff --stat)",
-      "Bash(git -C \"F:/LITTLE LEAP/AQL\" diff -- AGENTS.md Documents/AI_COLLABORATION_PROTOCOL.md Documents/CONTEXT_HANDOFF.md .agents/skills/aql-expert/SKILL.md PLANS/_TEMPLATE.md)"
+      "Bash(git -C \"F:/LITTLE LEAP/AQL\" diff -- AGENTS.md Documents/AI_COLLABORATION_PROTOCOL.md Documents/CONTEXT_HANDOFF.md .agents/skills/aql-expert/SKILL.md PLANS/_TEMPLATE.md)",
+      "Bash(clasp push:*)",
+      "Bash(clasp status:*)",
+      "Bash(cd /f)",
+      "Bash(find . -name *.vue -path *Warehouse* -type f)"
     ]
   }
 }

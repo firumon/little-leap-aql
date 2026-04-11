@@ -21,7 +21,12 @@ import { useResourceConfig } from 'src/composables/useResourceConfig'
 const route = useRoute()
 const { scope, resourceSlug, code, action, config, additionalActions } = useResourceConfig()
 
-const resourceTitle = computed(() => config.value?.ui?.menu?.pageTitle || config.value?.name || resourceSlug.value)
+const resourceTitle = computed(() => {
+  const menus = config.value?.ui?.menus || []
+  const currentPath = `/${scope.value}/${resourceSlug.value}`
+  const matched = menus.find(m => m.route === currentPath)
+  return matched?.pageTitle || menus[0]?.pageTitle || config.value?.name || resourceSlug.value
+})
 
 const actionLabel = computed(() => {
   const a = action.value

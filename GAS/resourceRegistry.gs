@@ -92,12 +92,18 @@ function getResourceConfigMap() {
       recordAccessPolicy: normalizeRecordAccessPolicy(readOptionalCell(row, registry.idx.RecordAccessPolicy, 'all')),
       ownerUserField: (readOptionalCell(row, registry.idx.OwnerUserField, 'CreatedBy') || '').toString().trim() || 'CreatedBy',
       menus: menuArr.map(function(m) {
-        // groupPath is the canonical field — no group fallback
-        var groupPath = Array.isArray(m.groupPath) && m.groupPath.length > 0
-          ? m.groupPath
-          : ['General'];
+        // Canonical outbound key is `group`; tolerate legacy sheet/menu shapes on read.
+        var rawGroup = m.group;
+        if (!rawGroup && m.groupPath) rawGroup = m.groupPath;
+        var group = [];
+        if (Array.isArray(rawGroup)) {
+          group = rawGroup.map(function(part) { return (part || '').toString().trim(); }).filter(Boolean);
+        } else if (rawGroup !== null && rawGroup !== undefined && rawGroup !== '') {
+          group = [(rawGroup || '').toString().trim()].filter(Boolean);
+        }
+        if (!group.length) group = ['General'];
         return {
-          groupPath: groupPath,
+          group: group,
           order: Number(m.order) || 9999,
           label: m.label || name,
           icon: m.icon || 'list_alt',
@@ -384,7 +390,7 @@ function getRolePermissionsContext() {
     try {
       var parsed = JSON.parse(cachedJson);
       // Reconstruct: we cache {values, headers, idx} but NOT the sheet object
-      // The sheet object is only needed for writes — permissions context is read-only in API paths
+      // The sheet object is only needed for writes â€” permissions context is read-only in API paths
       _role_permissions_context_cache = {
         rolePermSheet: null,
         values: parsed.values,
@@ -406,7 +412,7 @@ function getRolePermissionsContext() {
 
   _role_permissions_context_cache = { rolePermSheet: rolePermSheet, values: values, headers: headers, idx: idx };
 
-  // Persist to CacheService (serializable parts only — exclude sheet object)
+  // Persist to CacheService (serializable parts only â€” exclude sheet object)
   try {
     var json = JSON.stringify({ values: values, headers: headers, idx: idx });
     if (json.length < 100000) {
@@ -760,3 +766,4 @@ function getAllResourcesConfigs(options) {
 
   return result;
 }
+

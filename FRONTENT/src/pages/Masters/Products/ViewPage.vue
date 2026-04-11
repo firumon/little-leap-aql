@@ -100,7 +100,7 @@ import { useProductVariants } from 'src/composables/useProductVariants'
 import { useResourceConfig } from 'src/composables/useResourceConfig'
 import { useResourceData } from 'src/composables/useResourceData'
 import { useReports } from 'src/composables/useReports'
-import { fetchMasterRecords } from 'src/services/masterRecords'
+import { fetchResourceRecords } from 'src/services/resourceRecords'
 
 const router = useRouter()
 const { scope, resourceSlug, code, config, resourceName, permissions } = useResourceConfig()
@@ -142,7 +142,7 @@ function applySkuRows(records = []) {
 
 async function syncSkuRowsInBackground() {
   try {
-    const response = await fetchMasterRecords('SKUs', {
+    const response = await fetchResourceRecords('SKUs', {
       includeInactive: true,
       syncWhenCacheExists: true
     })
@@ -158,7 +158,7 @@ async function loadSkuRows() {
   if (!code.value) return
   skuLoading.value = true
   try {
-    const response = await fetchMasterRecords('SKUs', {
+    const response = await fetchResourceRecords('SKUs', {
       includeInactive: true
     })
     if (response.success && Array.isArray(response.records)) {

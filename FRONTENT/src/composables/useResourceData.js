@@ -1,6 +1,7 @@
 import { ref, computed, watch } from 'vue'
 import { useQuasar } from 'quasar'
-import { fetchMasterRecords } from 'src/services/masterRecords'
+import { fetchResourceRecords } from 'src/services/resourceRecords'
+import { useAuthStore } from 'src/stores/auth'
 
 /**
  * Manages data loading, search, and filtering for a resource.
@@ -8,6 +9,7 @@ import { fetchMasterRecords } from 'src/services/masterRecords'
  */
 export function useResourceData(resourceNameRef) {
   const $q = useQuasar()
+  const authStore = useAuthStore()
 
   const items = ref([])
   const lastHeaders = ref([])
@@ -16,6 +18,13 @@ export function useResourceData(resourceNameRef) {
   const searchTerm = ref('')
   const showInactive = ref(false)
   const loadRequestId = ref(0)
+
+  // Re-read from IDB when global sync completes and we have no data yet
+  watch(() => authStore.isGlobalSyncing, (syncing, wasSyncing) => {
+    if (wasSyncing && !syncing && items.value.length === 0) {
+      reload()
+    }
+  })
 
   const filteredItems = computed(() => {
     let list = items.value
@@ -40,7 +49,7 @@ export function useResourceData(resourceNameRef) {
     if (!resourceName || backgroundSyncing.value) return
     backgroundSyncing.value = true
     try {
-      const response = await fetchMasterRecords(resourceName, {
+      const response = await fetchResourceRecords(resourceName, {
         includeInactive: true,
         syncWhenCacheExists: true
       })
@@ -54,8 +63,13 @@ export function useResourceData(resourceNameRef) {
   }
 
   function applyRecordsResponse(response) {
-    lastHeaders.value = Array.isArray(response.headers) ? response.headers : []
-    items.value = Array.isArray(response.records) ? response.records : []
+    const headers = Array.isArray(response.headers) ? response.headers : []
+    const records = Array.isArray(response.records)
+      ? response.records
+      : rowsToObjects(Array.isArray(response.rows) ? response.rows : [], headers)
+
+    lastHeaders.value = headers
+    items.value = records
   }
 
   async function reload(forceSync = false) {
@@ -68,7 +82,7 @@ export function useResourceData(resourceNameRef) {
     if (!items.value.length) loading.value = true
 
     try {
-      const response = await fetchMasterRecords(resourceName, {
+      const response = await fetchResourceRecords(resourceName, {
         includeInactive: true,
         forceSync
       })
@@ -140,4 +154,13 @@ export function useResourceData(resourceNameRef) {
     updateLocalRecord,
     notify
   }
+}
+function rowsToObjects(rows, headers) {
+  if (!Array.isArray(rows) || !rows.length) return []
+  if (!Array.isArray(rows[0])) return rows.map((r) => ({ ...r }))
+  return rows.map((row) => {
+    const obj = {}
+    headers.forEach((h, i) => { obj[h] = row[i] })
+    return obj
+  })
 }

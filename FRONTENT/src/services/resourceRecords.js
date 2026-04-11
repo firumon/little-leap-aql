@@ -17,6 +17,7 @@ const DEFAULT_RESOURCE_SYNC_TTL_SEC = 300
 const MIN_QUEUE_WAIT_MS = 250
 
 const masterSyncQueue = new Map()
+const inFlightResourceNames = new Set()
 let queueTimerId = null
 let queueFlushPromise = null
 
@@ -120,7 +121,12 @@ function clearQueueTimer() {
 
 async function flushMasterSyncQueue(forceAll = false, syncOptions = {}) {
   if (queueFlushPromise) {
-    return queueFlushPromise
+    const result = await queueFlushPromise
+    // Retry if new items were queued while we waited
+    if (masterSyncQueue.size > 0) {
+      return flushMasterSyncQueue(forceAll, syncOptions)
+    }
+    return result
   }
 
   queueFlushPromise = (async () => {
@@ -138,13 +144,21 @@ async function flushMasterSyncQueue(forceAll = false, syncOptions = {}) {
       return { success: true, data: {}, meta: { resources: [] } }
     }
 
-    dueResourceNames.forEach((resourceName) => masterSyncQueue.delete(resourceName))
-    const response = await syncMasterResourcesBatch(dueResourceNames, {
-      showError: syncOptions.showError === true,
-      showLoading: syncOptions.showLoading === true
+    dueResourceNames.forEach((resourceName) => {
+      masterSyncQueue.delete(resourceName)
+      inFlightResourceNames.add(resourceName)
     })
-    scheduleMasterSyncQueueFlush()
-    return response
+
+    try {
+      const response = await syncMasterResourcesBatch(dueResourceNames, {
+        showError: syncOptions.showError === true,
+        showLoading: syncOptions.showLoading === true
+      })
+      scheduleMasterSyncQueueFlush()
+      return response
+    } finally {
+      dueResourceNames.forEach((name) => inFlightResourceNames.delete(name))
+    }
   })().finally(() => {
     queueFlushPromise = null
   })
@@ -174,6 +188,7 @@ function scheduleMasterSyncQueueFlush() {
 
 function queueMasterResourceSync(resourceName, dueAt, reason = '') {
   if (!resourceName) return
+  if (inFlightResourceNames.has(resourceName)) return
   const normalizedDueAt = Number.isFinite(Number(dueAt)) ? Number(dueAt) : Date.now()
   const existing = masterSyncQueue.get(resourceName)
   if (!existing || normalizedDueAt < existing.dueAt) {
@@ -185,7 +200,7 @@ function queueMasterResourceSync(resourceName, dueAt, reason = '') {
   scheduleMasterSyncQueueFlush()
 }
 
-async function ensureHeaders(resourceName) {
+export async function ensureHeaders(resourceName) {
   const meta = await withTimeout(getResourceMeta(resourceName), null)
   if (Array.isArray(meta?.headers) && meta.headers.length) {
     return meta.headers
@@ -364,7 +379,7 @@ async function syncMasterResourcesBatch(resourceNames = [], options = {}) {
   return {
     success: true,
     data: responseData,
-    meta: response?.meta || {}
+    meta: { resources: uniqueNames }
   }
 }
 
@@ -387,7 +402,7 @@ export function mapRowsToObjects(rows = [], headers = []) {
   })
 }
 
-export async function fetchMasterRecords(resourceName, options = {}) {
+export async function fetchResourceRecords(resourceName, options = {}) {
   try {
     const includeInactive = options.includeInactive === true
     const forceSync = options.forceSync === true
@@ -421,6 +436,7 @@ export async function fetchMasterRecords(resourceName, options = {}) {
 
     let stale = false
     let staleMessage = ''
+    let immediateSyncedRows = []
     if (forceSync || syncWhenCacheExists || !cachedRows.length) {
       const hasHydratedOnce = meta?.hasHydratedOnce === true || !!syncCursor
       const ttlMs = getResourceSyncTtlSec(resourceName) * 1000
@@ -443,6 +459,10 @@ export async function fetchMasterRecords(resourceName, options = {}) {
           showError: !syncWhenCacheExists || !cachedRows.length,
           showLoading: forceSync || (!syncWhenCacheExists && !cachedRows.length)
         })
+        const resourceSyncPayload = batchSyncResponse?.data?.[resourceName]
+        if (resourceSyncPayload && resourceSyncPayload.success !== false) {
+          immediateSyncedRows = resolveSyncRows(resourceSyncPayload, headers)
+        }
         if (!batchSyncResponse.success) {
           stale = true
           staleMessage = batchSyncResponse.message || `Failed to sync ${resourceName}`
@@ -454,7 +474,9 @@ export async function fetchMasterRecords(resourceName, options = {}) {
       includeInactive,
       statusIndex
     }), [])
-    const effectiveRows = freshRows.length ? freshRows : cachedRows
+    const effectiveRows = freshRows.length
+      ? freshRows
+      : (immediateSyncedRows.length ? immediateSyncedRows : cachedRows)
 
     return {
       success: !stale || effectiveRows.length > 0,
@@ -495,10 +517,32 @@ export async function syncAllMasterResources() {
       return { success: true, data: {}, meta: { resources: [], lastSyncAt: Date.now() } }
     }
 
-    return syncMasterResourcesBatch(resourceNames, {
-      showLoading: false,
-      showError: false
-    })
+    // Group by scope so each scope flushes as a separate promise.
+    // This lets page-level fetches resolve as soon as their scope completes
+    // instead of waiting for all scopes.
+    const byScope = {}
+    for (const name of resourceNames) {
+      const scope = resolveResourceScope(name)
+      if (!byScope[scope]) byScope[scope] = []
+      byScope[scope].push(name)
+    }
+
+    // Process master first, then remaining scopes
+    const scopeOrder = ['master', ...Object.keys(byScope).filter((s) => s !== 'master')]
+    const mergedData = {}
+
+    for (const scope of scopeOrder) {
+      const names = byScope[scope]
+      if (!names?.length) continue
+      const now = Date.now()
+      names.forEach((name) => queueMasterResourceSync(name, now, 'global-sync'))
+      try {
+        const result = await flushMasterSyncQueue(true, { showLoading: false, showError: false })
+        if (result?.data) Object.assign(mergedData, result.data)
+      } catch (_) { /* continue with next scope */ }
+    }
+
+    return { success: true, data: mergedData, meta: { resources: resourceNames, lastSyncAt: Date.now() } }
   } catch (error) {
     return {
       success: false,

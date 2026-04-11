@@ -2,9 +2,9 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import {
   createMasterRecord,
-  fetchMasterRecords,
+  fetchResourceRecords,
   updateMasterRecord
-} from 'src/services/masterRecords'
+} from 'src/services/resourceRecords'
 
 const RESOURCE_NAME = 'Products'
 
@@ -19,7 +19,7 @@ export const useProductsStore = defineStore('products', () => {
     loading.value = true
     try {
       includeInactive.value = includeInactiveParam
-      const response = await fetchMasterRecords(RESOURCE_NAME, {
+      const response = await fetchResourceRecords(RESOURCE_NAME, {
         includeInactive: includeInactiveParam
       })
 

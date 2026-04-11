@@ -145,6 +145,7 @@ function setupOperationSheets() {
             statusDefault: 'Active',
             defaults: { Status: 'Active', QtyChange: 0 },
             statusValidation: ['Active', 'Inactive'],
+            referenceTypeValidation: APP_OPTIONS_SEED.StockMovementReferenceType,
             columnWidths: { Code: 150, WarehouseCode: 130, StorageName: 130, SKU: 150, QtyChange: 120, ReferenceType: 140, ReferenceCode: 150, Status: 100, AccessRegion: 130, CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140 }
         },
         {
@@ -198,6 +199,9 @@ function setupOperationSheets() {
             }
             if (schema.progressValidation && schema.headers.indexOf('Progress') !== -1) {
                 setup_applyListValidation(sheet, schema.headers, 'Progress', schema.progressValidation);
+            }
+            if (schema.referenceTypeValidation && schema.headers.indexOf('ReferenceType') !== -1) {
+                setup_applyListValidation(sheet, schema.headers, 'ReferenceType', schema.referenceTypeValidation);
             }
 
             if (schema.headers.indexOf('Status') !== -1) {

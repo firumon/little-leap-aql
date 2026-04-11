@@ -114,7 +114,6 @@ import MenuTreeNode from 'src/components/MenuTreeNode.vue'
 const auth = useAuthStore()
 const { evaluateMenuAccess } = useMenuAccess()
 const leftDrawerOpen = ref(false)
-const menuSearchQuery = ref('')
 
 const groupIconByName = {
   masters: 'admin_panel_settings',
@@ -151,27 +150,28 @@ const userAvatar = computed(() => auth.userProfile?.avatar || 'https://cdn.quasa
 const visibleResourceMenuGroups = computed(() => {
   const resources = Array.isArray(auth.resources) ? auth.resources : []
   const root = []
-  const seenRoutes = new Set()
+  const seenKeys = new Set()
 
   resources.forEach((resource) => {
     const menus = Array.isArray(resource?.ui?.menus) ? resource.ui.menus : []
     menus.forEach((menu) => {
       if (menu.show === false || !isValidRoute(menu.route)) return
       if (!evaluateMenuAccess(resource, menu)) return
-      if (seenRoutes.has(menu.route)) return
-      seenRoutes.add(menu.route)
 
       const navLabel = menu.label || resource.name
-      if (menuSearchQuery.value && !navLabel.toLowerCase().includes(menuSearchQuery.value)) return
-
-      const groupPath = Array.isArray(menu.groupPath) && menu.groupPath.length > 0
-        ? menu.groupPath
+      const groupSegments = Array.isArray(menu.group) && menu.group.length > 0
+        ? menu.group
         : ['General']
+      const groupPath = groupSegments.join('/')
+      const dedupeKey = `${groupPath}::${navLabel}::${menu.route}`
+
+      if (seenKeys.has(dedupeKey)) return
+      seenKeys.add(dedupeKey)
 
       // Walk / create group nodes along the path
       let currentChildren = root
-      groupPath.forEach((segment, idx) => {
-        const pathKey = groupPath.slice(0, idx + 1).join('/')
+      groupSegments.forEach((segment, idx) => {
+        const pathKey = groupSegments.slice(0, idx + 1).join('/')
         let groupNode = currentChildren.find((n) => n.type === 'group' && n.key === pathKey)
         if (!groupNode) {
           groupNode = {

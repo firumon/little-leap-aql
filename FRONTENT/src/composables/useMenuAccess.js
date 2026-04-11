@@ -6,7 +6,7 @@ import { useAuthStore } from 'src/stores/auth'
  *
  * Usage:
  *   const { evaluateMenuAccess } = useMenuAccess()
- *   const allowed = evaluateMenuAccess(resource)
+ *   const allowed = evaluateMenuAccess(resource, menuItem)
  */
 export function useMenuAccess() {
   const auth = useAuthStore()
@@ -40,14 +40,15 @@ export function useMenuAccess() {
    * Evaluate a menuAccess rule object.
    * Supports: absent (fallback canRead), { require }, { all }, { any }
    *
-   * @param {object} resource - Full resource entry from auth store (has .name, .permissions, .ui.menu)
+   * @param {object} resource - Full resource entry from auth store (has .name, .permissions, .ui.menus)
+   * @param {object|null} menuItem - Specific menu item from resource.ui.menus array
    * @returns {boolean} true = user is allowed to access this menu item
    */
-  function evaluateMenuAccess(resource) {
+  function evaluateMenuAccess(resource, menuItem = null) {
     if (!resource) return false
 
     const resourceName = resource.name
-    const menuAccess = resource?.ui?.menu?.menuAccess
+    const menuAccess = menuItem?.menuAccess ?? null
 
     // Case 1: No menuAccess defined → fallback to canRead on own resource
     if (!menuAccess || typeof menuAccess !== 'object') {
@@ -81,4 +82,3 @@ export function useMenuAccess() {
 
   return { evaluateMenuAccess }
 }
-

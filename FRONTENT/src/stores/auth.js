@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { callGasApi } from 'src/services/gasApi'
-import { clearAllSyncCursors, syncAllMasterResources } from 'src/services/masterRecords'
+import { clearAllSyncCursors, syncAllMasterResources } from 'src/services/resourceRecords'
 import { clearAllClientStorage, setAuthorizedResources, reinitializeDB } from 'src/utils/db'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -13,6 +13,7 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('token') || null)
   const resources = ref(JSON.parse(localStorage.getItem('resources')) || [])
   const appConfig = ref(JSON.parse(localStorage.getItem('appConfig')) || {})
+  const appOptions = ref(JSON.parse(localStorage.getItem('appOptions')) || {})
   const loading = ref(false)
   const isGlobalSyncing = ref(false)
 
@@ -29,6 +30,7 @@ export const useAuthStore = defineStore('auth', () => {
   const userAccessRegion = computed(() => user.value?.accessRegion || { code: '', isUniverse: true, accessibleCodes: [], accessibleRegions: [] })
   const authorizedResources = computed(() => resources.value)
   const appConfigMap = computed(() => appConfig.value || {})
+  const appOptionsMap = computed(() => appOptions.value || {})
   const scopeSyncConfig = computed(() => {
     const config = appConfig.value || {}
     const pickNumber = (value, fallback) => {
@@ -52,6 +54,10 @@ export const useAuthStore = defineStore('auth', () => {
 
   function persistAppConfig() {
     localStorage.setItem('appConfig', JSON.stringify(appConfig.value || {}))
+  }
+
+  function persistAppOptions() {
+    localStorage.setItem('appOptions', JSON.stringify(appOptions.value || {}))
   }
 
   // Actions
@@ -90,12 +96,14 @@ export const useAuthStore = defineStore('auth', () => {
         user.value = data.user
         resources.value = Array.isArray(data.resources) ? data.resources : []
         appConfig.value = data?.appConfig && typeof data.appConfig === 'object' ? data.appConfig : {}
+        appOptions.value = data?.appOptions && typeof data.appOptions === 'object' ? data.appOptions : {}
 
         // Persist to local storage
         localStorage.setItem('token', data.token)
         persistUser()
         persistResources()
         persistAppConfig()
+        persistAppOptions()
 
         // Sync token to HW if possible
         notifyServiceWorker(data.token)
@@ -201,6 +209,7 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = null
     resources.value = []
     appConfig.value = {}
+    appOptions.value = {}
     isGlobalSyncing.value = false
 
     // 2. Perform navigation as soon as possible
@@ -226,6 +235,7 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     resources,
     appConfig,
+    appOptions,
     loading,
     isGlobalSyncing,
 
@@ -237,6 +247,7 @@ export const useAuthStore = defineStore('auth', () => {
     userAccessRegion,
     authorizedResources,
     appConfigMap,
+    appOptionsMap,
     scopeSyncConfig,
 
     // Actions

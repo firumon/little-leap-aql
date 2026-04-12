@@ -1,74 +1,41 @@
-# Resource Registry & Multi-File Access Architecture
+# Resource Registry Architecture
 
-APP `Resources` is the runtime registry used by GAS to resolve where each resource lives and how it behaves.
+## Purpose
+This document explains how `APP.Resources` and related config determine runtime routing and metadata behavior.
 
-## Scope Values
-Valid scope values for `Resources.Scope`:
-- `master` (default) — Master data entities (Products, SKUs, Suppliers, etc.)
-- `operation` — Operational/transactional entities (Shipments, Procurements, etc.)
-- `accounts` — Financial/accounting entities (Assets, Liabilities, Revenue, etc.)
-- `report` — Report templates and configurations
-- `system` — System-level resources
+## Core Model
+- `APP.Resources` is the runtime registry for resource configuration.
+- Resource metadata drives backend routing and frontend metadata exposure.
+- Scope-level config can provide default file resolution when a resource-level `FileID` is blank.
 
-Scope is normalized at runtime by `normalizeResourceScope()` in `resourceRegistry.gs`. Unrecognized values default to `master`.
+## Scope Model
+Canonical scopes are:
+- `master`
+- `operation`
+- `accounts`
+- `report`
+- `system`
 
-## FileID Resolution
-`FileID` in `Resources` is **optional**. When blank, the system resolves the target file dynamically using the fallback chain:
+Scope values should be treated as canonical resource metadata, not casual aliases.
 
-1. `Resource.FileID` (if present in the Resources row)
-2. `Config[{Scope}FileID]` (e.g., `MasterFileID`, `OperationFileID`, `AccountsFileID`)
-3. APP file ID (`getAppSpreadsheet().getId()`)
+## File Resolution
+Resolution order is:
+1. resource-level `FileID`
+2. scope-level config fallback
+3. APP file fallback where applicable
 
-This design supports multi-file deployments where scope-level file IDs are set once in `APP.Config` rather than per-resource. Only override `FileID` at the resource level when a specific resource must live in a different file than its scope default.
+## Permission Model
+- user roles map to resource permissions
+- resource metadata defines runtime behavior and UI exposure
+- region and record rules are evaluated separately from raw CRUD permission
 
-`getAppSpreadsheet()` resolution chain:
-1. `SpreadsheetApp.getActiveSpreadsheet()`
-2. `SpreadsheetApp.openById(ScriptProperties.APP_FILE_ID)` when active spreadsheet is unavailable (web app context)
-3. Throw a clear error if both are unavailable
+## Canonical Detail Owners
+- Column-level semantics: [RESOURCE_COLUMNS_GUIDE.md](F:/LITTLE%20LEAP/AQL/Documents/RESOURCE_COLUMNS_GUIDE.md)
+- APP control-plane structure: [APP_SHEET_STRUCTURE.md](F:/LITTLE%20LEAP/AQL/Documents/APP_SHEET_STRUCTURE.md)
+- Current technical/runtime conventions: [TECHNICAL_SPECIFICATIONS.md](F:/LITTLE%20LEAP/AQL/Documents/TECHNICAL_SPECIFICATIONS.md)
 
-`APP_FILE_ID` is stored in Script Properties by `setAppFileId()` and is automatically refreshed by `setupAppSheets()`. It can also be set from menu: `AQL > Setup & Refactor > Store APP File ID in Properties`.
-
-**Diagnostics**: Run `diagLogResolvedFileIds()` from the Script Editor to log the resolved file ID for every resource row.
-
-## Required `Resources` columns
-- `Name`
-- `Scope`
-- `IsActive`
-- `FileID` (optional — blank = config-driven resolution)
-- `SheetName`
-- `CodePrefix`
-- `CodeSequenceLength`
-- ``
-- `Audit`
-- `RequiredHeaders`
-- `UniqueHeaders`
-- `UniqueCompositeHeaders`
-- `DefaultValues`
-- `RecordAccessPolicy`
-- `OwnerUserField`
-- `AdditionalActions`
-- `Menu`
-- `UIFields`
-- `IncludeInAuthorizationPayload`
-
-**Note:** The actual layout of these columns in the sheet is now managed centrally by `GAS/syncAppResources.gs`. Developers should modify `APP_RESOURCES_CODE_CONFIG` inside that file and use the `AQL > Setup & Refactor > Sync APP.Resources from Code` menu to push changes safely to the sheet.
-
-For full per-column meaning, accepted values, and examples, see:
-- `documents/RESOURCE_COLUMNS_GUIDE.md`
-
-## Permission model
-- User roles are read from `Users.Roles` CSV.
-- `RolePermissions` has `RoleID, Resource, Actions`.
-- CRUD flags are inferred from `Actions` (Read/Write/Update/Delete).
-- Extra actions (Approve/Reject/etc.) are also read from `Actions`.
-- Region boundary is evaluated separately from `Users.AccessRegion` and `AccessRegions` hierarchy.
-- **Menu visibility control**: `entry.ui.menus` is an array of sidebar entries whose optional `menuAccess` rules drive filtering/route guards. The frontend matches the current route to the corresponding entry and evaluates its rule, while MainLayout filters every entry independently. Supports single-resource permission checks and cross-resource AND/OR logic. Fallback: `canRead` on the resource if a rule is absent.
-
-## Runtime flow
-1. Request hits APP `doPost`.
-2. Token resolves user + roles.
-3. Permission checked from `RolePermissions.Actions`.
-4. Resource config resolved from `Resources`.
-5. Target file/sheet opened by resolved FileID (fallback chain) + `SheetName`.
-6. CRUD/validation/audit behavior follows metadata from `Resources`.
-7. Generic CRUD dispatch supports `master`, `operation`, and `accounts` scopes.
+## Maintenance Rule
+Update this file when:
+- resource scope behavior changes
+- file-resolution behavior changes
+- permission or registry runtime ownership changes

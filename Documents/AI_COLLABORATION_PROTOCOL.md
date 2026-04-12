@@ -1,93 +1,59 @@
 # AI Collaboration Protocol for AQL
 
-This document defines how AI agents should collaborate on this project.
+## Purpose
+This document defines the cross-surface alignment rules for implementation work in AQL.
+
+## When To Read This File
+Read this file only when the task involves one of the following:
+- planning implementation work
+- executing implementation work
+- modifying frontend code, GAS code, setup scripts, or project docs
+- changing sheet structure, API behavior, or documented workflows
+
+It is optional for short discussions, brainstorming, and other Guide Agent-only conversations.
 
 ## Core Rule
-Every functional change must keep code, Apps Script, Google Sheet structure, and documentation aligned.
+For functional changes, keep code, Google Apps Script, Google Sheet structure, and documentation aligned.
 
-## 1) Script Project Strategy
-Single-script-project model is preferred:
-- Maintain Apps Script code primarily in APP Google Sheet project.
-- Use APP `Resources` (`Name`, `FileID`, `SheetName`) to operate on external files (`MASTERS`, `OPERATIONS`, `REPORTS`).
-- Avoid maintaining separate Apps Script projects in other sheet files unless explicitly requested.
+## Implementation Alignment Rules
 
-## 2) When Google Sheet Structure Changes
-Applies to: `APP`, `MASTERS`, `OPERATIONS`, `REPORTS`.
+### When Google Sheet Structure Changes
+- Update the relevant structure docs.
+- Update supporting setup or sync scripts if needed.
+- Update onboarding/setup docs if the setup flow changed.
+- Tell the user only the sheet-level manual actions that cannot be done locally.
 
-AI agent must:
-1. Update relevant documentation (`APP_SHEET_STRUCTURE`, `MASTER_SHEET_STRUCTURE`, etc.).
-2. Create/update setup scripts in `GAS/` (`setupAppSheets.gs`, `setupMasterSheets.gs`, `syncAppResources.gs` etc.) that can be run from APP project. This is crucial for new client setups.
-3. Verify if `Documents/NEW_CLIENT_SETUP_GUIDE.md` needs updates if the overall deployment flow has changed.
-4. Clearly instruct the user what to create/change in Google Sheets (menu actions, sheet edits, etc.).
+### When GAS Changes
+- Edit the repository files under `GAS/`.
+- Show which GAS files changed.
+- Run `cd GAS && clasp push` or `npm run gas:push` after GAS changes.
+- Ask the user to create a new Web App deployment version only if the API contract changed.
 
-## 3) When Apps Script Changes
-AI agent must:
-1. Edit/create files under `GAS/` in this repository.
-2. Show exactly which files were changed/created.
-3. **Deploy via clasp**: Run `cd GAS && clasp push` (or `npm run gas:push` from repo root) to push changes to the remote Apps Script project. The agent should run this command itself — do NOT ask the user to manually copy-paste files into the Apps Script IDE.
-4. If the API endpoint behavior changed (new actions, changed response shape), instruct the user to create a new Web App deployment version in the Apps Script IDE (Deploy > New deployment).
+### When Frontend Changes
+- Implement the requested changes directly in the repo.
+- Keep pages thin and move reusable logic into composables/components when the task meaningfully changes frontend structure.
+- Update related docs only when behavior, structure, or reusable interfaces changed.
 
-## 4) When Frontend/Local Code Changes
-AI agent must:
-1. Implement code changes directly in repository files.
-2. Update related docs so future contributors understand current state and progress.
-3. Mention files changed and any required follow-up actions.
+### When Docs Must Be Updated
+Update the relevant canonical doc when the task changes its subject area, for example:
+- `Documents/AQL_MENU_ADMIN_GUIDE.md` for menu action changes
+- `Documents/LOGIN_RESPONSE.md` for login payload changes
+- `Documents/MODULE_WORKFLOWS.md` when a documented module workflow changes
+- frontend registries when reusable components/composables change
 
-## 5) Documentation Discipline
-For all significant changes, update:
-- What changed
-- Why it changed
-- Current behavior
-- Next expected operational step (if any)
-- If an `AQL 🚀` menu action is added, removed, renamed, or behavior-changed, update `Documents/AQL_MENU_ADMIN_GUIDE.md` in the same task.
+## Planning and Execution Notes
+- Brain Agent writes plans in `PLANS/`.
+- Build Agent executes the assigned plan and updates its status.
+- Solo Agent creates a written plan only when explicitly requested.
 
-## 6) Response Format Expectation
-For implementation responses, AI agent should include:
-1. Summary of what was done.
-2. Files changed/created.
-3. GAS deployment: If GAS files changed, the agent runs `cd GAS && clasp push` to deploy automatically.
-4. Manual user actions (if applicable): Only for things the agent cannot do — e.g., Google Sheet menu actions (AQL 🚀 > ...), editing sheet data, creating a new Web App deployment version, or browser-based Google actions.
-5. Deployment/testing note (if applicable).
+## Testing Guidance
+- Do not run broad verification by default.
+- Prefer targeted checks that match the changed area.
+- Run a full frontend build only for major or cross-cutting frontend changes, typically around 10 or more touched files or equivalent risk.
 
-## 7) Practical Constraint
-Google Sheets are external to this local workspace — AI agent must provide explicit instructions for any sheet-level manual actions (menu clicks, data entry, deployment versioning). However, Apps Script code deployment is handled locally via `clasp push` and should be executed by the agent directly, not delegated to the user.
-
-## 8) Multi-Agent Collaboration Model
-This project uses four AI roles with distinct responsibilities:
-
-- **Guide Agent** - Default entry for discussion, brainstorming, and clarifications.
-- **Brain Agent** - Creates implementation plans, makes architecture decisions, and defines business rules.
-- **Build Agent** - Executes plans step-by-step (code, terminal, documentation updates).
-- **Solo Agent** - Autonomous planning + building for faster execution (exempt from written plans in `PLANS/`).
-
-Communication happens through repository artifacts:
-- **Brain Agent** writes **Implementation Plans** to `PLANS/`.
-- **Build Agent** reads plans, executes, marks progress, and updates docs.
-- **Guide Agent** reviews results and facilitates discussion.
-
-## 9) Startup Consistency Rule
-For each new context window, agents must follow:
-1. Read `AGENTS.md` first.
-2. Apply `Documents/MULTI_AGENT_PROTOCOL.md`.
-3. Check `PLANS/` before starting implementation work.
-4. Create new plans from `PLANS/_TEMPLATE.md`.
-5. After planning (Brain), provide the execution handoff prompt for **Build Agent**.
-
-## 10) Frontend Structure Rule (Mandatory)
-For frontend changes under `FRONTENT/src/`:
-1. Keep page files thin orchestration layers; move stateful logic to composables in `src/composables/`.
-2. Extract reusable UI sections into self-contained components under `src/components/`.
-3. Avoid large monolithic page files; when a page grows beyond a practical review size, split it into composable + components in the same task.
-4. Preserve shared service contracts (`callGasApi`, IndexedDB helpers, Pinia stores); do not duplicate API/loading logic ad-hoc inside components.
-
-## 11) Plan Metadata Identity Rule
-When creating/updating plan files in `PLANS/`, ownership fields must include role + concrete agent identity:
-1. `Created By: Brain Agent (AgentName)`
-2. `Executed By: Build Agent (AgentName | pending)` while pending.
-3. Build Agent must replace `| pending` after execution completion.
-
-## 12) Context Budget Discipline (Mandatory)
-To prevent excessive model context usage:
-1. Do not dump full files, full diffs, or long raw logs unless explicitly needed.
-2. Prefer targeted reads and concise summaries.
-3. After startup docs are read, avoid repeatedly re-reading broad docs on every turn; read only task-relevant sections and changed artifacts.
+## Maintenance Rule
+Update this file when any of the following changes:
+- cross-surface alignment expectations
+- deployment responsibility or redeployment rules
+- documentation update triggers
+- verification/testing policy for implementation work

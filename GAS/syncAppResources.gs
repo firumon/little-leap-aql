@@ -123,6 +123,10 @@ const APP_RESOURCES_CODE_CONFIG = [
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
         Menu: JSON.stringify([{ group: ['Warehouse'], order: 1, label: 'Manage', icon: 'warehouse', route: '/masters/warehouses', pageTitle: 'Warehouses', pageDescription: 'Manage warehouse master records', show: true }]),
+        Menu: JSON.stringify([
+            {"group":["Warehouse"],"order":1,"label":"Manage","icon":"warehouse","route":"/masters/warehouses","pageTitle":"Warehouses","pageDescription":"Manage warehouse master records","show":true},
+            {"group":["Stock"],"order":2,"label":"Warehouse","icon":"warehouse","route":"/masters/warehouses/stock","pageTitle":"Warehouse Product Stocks","pageDescription":"Get the report of Stocks of a Warehouse","show":true}
+        ]),
         UIFields: JSON.stringify([
             { header: 'Name', label: 'Name', type: 'text', required: true },
             { header: 'City', label: 'City', type: 'text' },
@@ -134,7 +138,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: '',
+        Reports: JSON.stringify([{"id":"rep_1775978359788","name":"stock-report","label":"Stock Report","templateSheet":"WarehouseStockReport","isRecordLevel":true,"inputs":[{"targetCell":"AD10","field":"Code"}]}]),
         CustomUIName: '',
         ListViews: ''
     },

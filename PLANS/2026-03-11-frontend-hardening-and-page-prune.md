@@ -109,7 +109,7 @@ Remove duplicate API toasts, protect loading flags, and simplify the frontend to
 - `f:\LITTLE LEAP\AQL\FRONTENT\src\pages\Masters\ProductsPage.vue`
 - `f:\LITTLE LEAP\AQL\FRONTENT\src\router\routes.js`
 - `f:\LITTLE LEAP\AQL\Documents\MULTI_AGENT_PROTOCOL.md`
-- `f:\LITTLE LEAP\AQL\Documents\PLANS\_TEMPLATE.md`
+- `f:\LITTLE LEAP\AQL\PLANS\_TEMPLATE.md`
 - `f:\LITTLE LEAP\AQL\Documents\CONTEXT_HANDOFF.md`
 - `f:\LITTLE LEAP\AQL\Documents\FRONTENT_README.md`
 - Deleted extraneous `.vue` files.

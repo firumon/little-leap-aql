@@ -116,7 +116,7 @@ Correct only the mistaken deletion scope by restoring required pages and route a
 - `f:\LITTLE LEAP\AQL\FRONTENT\src\pages\Dashboard\widgets\WidgetPlaceholder.vue`
 - `f:\LITTLE LEAP\AQL\Documents\CONTEXT_HANDOFF.md`
 - `f:\LITTLE LEAP\AQL\Documents\FRONTENT_README.md`
-- `f:\LITTLE LEAP\AQL\Documents\PLANS\2026-03-11-restore-core-pages-and-routes.md`
+- `f:\LITTLE LEAP\AQL\PLANS\2026-03-11-restore-core-pages-and-routes.md`
 
 ### Validation Performed
 - [x] Unit/manual validation completed

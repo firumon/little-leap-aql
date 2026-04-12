@@ -1,121 +1,58 @@
 # Technical Specifications
 
-## 1) Stack
-- Frontend: Quasar (Vue 3 + Vite)
-- Backend: Google Apps Script (`doPost`)
-- Data: Google Sheets (APP/MASTERS/OPERATIONS/REPORTS)
+## Purpose
+This document owns technical contracts and implementation conventions that apply across the codebase. It should link to deeper canonical docs instead of duplicating them.
 
-## 2) Identity & Access
+## Stack
+- Frontend: Quasar, Vue 3, Vite, Pinia
+- Backend: Google Apps Script
+- Data layer: Google Sheets
+- Local persistence: IndexedDB
 
-### Authentication
-- Users are authenticated from `APP.Users`.
-- Passwords are SHA-256 hashes.
-- Login stores UUID token in `Users.ApiKey`.
+## Identity and Access Model
+- Users authenticate through `APP.Users`.
+- Users have one designation, one or more roles, and optional region scope.
+- Resource permissions are derived from `APP.RolePermissions`.
+- Record-level and region-level access are enforced by backend runtime.
 
-### Identity model
-- One designation per user (`Users.DesignationID`).
-- Multiple roles per user via CSV (`Users.Roles`).
-- Region scope per user via `Users.AccessRegion` (empty means universe access).
+Detailed auth payload contract: [LOGIN_RESPONSE.md](F:/LITTLE%20LEAP/AQL/Documents/LOGIN_RESPONSE.md)
 
-### Permission model
-- `RolePermissions.Actions` drives permission (CSV actions like `Read,Write,Update,Delete,Approve`).
-- Resource-level auth is aggregated across all user roles.
-- Record-level access enforced via `Resources.RecordAccessPolicy` + designation hierarchy.
-- Region-level access enforced via `AccessRegions` hierarchy:
-  - User with `AccessRegion=X` can access `X` + descendants.
-  - User with empty `AccessRegion` can access all regions.
-  - Record with empty `AccessRegion` is globally accessible.
+## Resource-Driven Runtime Contract
+- `APP.Resources` is the runtime metadata source for:
+  - resource discovery
+  - file/sheet resolution
+  - validation/default rules
+  - UI metadata
+  - hook/action/report metadata
+- Resource column meanings are owned by [RESOURCE_COLUMNS_GUIDE.md](F:/LITTLE%20LEAP/AQL/Documents/RESOURCE_COLUMNS_GUIDE.md)
 
-## 3) Resource-Driven Runtime
+## Frontend Contracts
+- All backend calls must go through `callGasApi`.
+- Reusable logic should live in composables/services instead of page-local duplication.
+- For meaningful frontend structural work, keep pages thin and move reusable logic into composables/components.
+- Update frontend registries only when reusable interfaces change.
 
-`APP.Resources` is backend + frontend control plane.
+Canonical frontend guidance: [FRONTENT_README.md](F:/LITTLE%20LEAP/AQL/Documents/FRONTENT_README.md)
 
-Backend uses it for:
-- file/sheet routing
-- code generation config
-- schema defaults/validation config
-- audit behavior (`Audit`)
-- record-level policy
-- region-level filtering (`AccessRegion`)
+## Backend Contracts
+- Prefer generic CRUD, bulk-array writes, additional actions, composite save, and hook-based extensions before proposing new backend patterns.
+- Do not hardcode resource-specific runtime logic in generic core files when a metadata-driven pattern exists.
+- Backend capability inventory and implementation patterns are owned by:
+  - [GAS_API_CAPABILITIES.md](F:/LITTLE%20LEAP/AQL/Documents/GAS_API_CAPABILITIES.md)
+  - [GAS_PATTERNS.md](F:/LITTLE%20LEAP/AQL/Documents/GAS_PATTERNS.md)
 
-Frontend uses it for:
-- menu visibility and order
-- route mapping (`RoutePath`) /masters/:resourceSlug
-- page title/description
-- field metadata (`UIFields`)
+## Cache and Sync Conventions
+- Cache-first flows should read IndexedDB first where implemented.
+- Incremental sync should use stored cursors when available.
+- Full refresh/build verification is not required for every change; targeted verification is preferred.
 
-### Master Discovery Pattern (Generic vs. Custom)
-The system uses an **Automatic Discovery Pattern** to resolve UI for master resources:
-1. **Dispatcher**: `MasterIndexPage.vue` acts as the router entry point.
-2. **Naming Convention**: Slugs are converted to PascalCase (e.g., `/masters/price-lists` -> `PriceListsPage.vue`).
-3. **Implicit Loading**:
-   - If a custom `{Entity}Page.vue` exists in `src/pages/Masters/`, it is automatically used.
-   - If no custom file is found, it falls back to the generic `MasterEntityPage.vue`.
-4. **Component Composition**: Custom pages can import and embed `MasterEntityPage` to retain standard CRUD functionality while adding specialized UI components or logic.
+## Deployment Conventions
+- GAS deployment uses `clasp push`.
+- A new Apps Script Web App deployment version is needed only when the API contract changes.
+- New client setup is documented in [NEW_CLIENT_SETUP_GUIDE.md](F:/LITTLE%20LEAP/AQL/Documents/NEW_CLIENT_SETUP_GUIDE.md)
 
-## 4) Single Channel CRUD API & UX Contract
-- **Centralized Endpoint**: All API communication occurs via the centralized utility (`callGasApi`) to enforce standard behavior.
-- **Request UX Lifecycle:**
-  - Automatic `loading` state propagation to components.
-  - Uniform `$q.notify` toasts on mutation success (save/delete).
-  - Normalized error interception and consistent error dialog/toast notification across the application.
-  - Direct, ad-hoc API posts or ad-hoc loaders in pages are strictly prohibited. 
-- Generic verbs:
-  - `{ action: "get", scope: "master", resource }`
-  - `{ action: "create", scope: "master", resource, record }`
-  - `{ action: "update", scope: "master", resource, code, record }`
-- For region-aware resources, `record.AccessRegion` is allowed:
-  - Scoped users can only write within assigned subtree.
-  - Empty `record.AccessRegion` is auto-filled with user scope root for scoped users.
-  - `AccessRegion` is immutable after create (update requests cannot change it).
-
-### Apps Script Runtime File Ownership
-- `GAS/apiDispatcher.gs`: owns `doPost`, request parsing/JSON response helpers, and protected action routing.
-- `GAS/auth.gs`: owns authentication/profile logic (`login`, token validation, profile update handlers, authorized resources payload).
-- `GAS/sheetHelpers.gs`: shared sheet utilities (`getSheetHeaders`, `getHeaderIndexMap`, `findRowByValue`, `getRowAsObject`).
-
-### GAS Request-Level Caching (Master Sync Performance)
-- `GAS/resourceRegistry.gs` keeps in-memory request caches for opened files and sheets:
-  - `_resource_file_cache[fileId]`
-  - `_resource_sheet_cache[fileId::sheetName]`
-- `openResourceSheet(resourceName)` is now cache-first, so repeated master resource operations in one request avoid repeated `SpreadsheetApp.openById(...)`.
-- `GAS/auth.gs` now preloads `Users` and `Designations` once per execution:
-  - `_users_context_cache` stores headers plus row maps (`rowByUserId`, `rowByEmail`, `rowByApiKey`, `userById`).
-  - `_designations_cache` stores designation lookup map by `DesignationID`.
-- Record-level policy checks in `GAS/masterApi.gs` use these in-memory maps to avoid repeated sheet scans during `getMulti`.
-- `buildMasterRowsResponse(...)` accepts already-loaded headers from `handleMasterGetRecords(...)` to avoid redundant header reads.
-
-## 5) PWA-SW-IDB-Pinia Data Contract
-A single app-wide data agreement governs offline and incremental sync functionality:
-- **Service Worker Boundary:** The SW intercepts network requests, manages background syncs, and handles raw precaching logic. It DOES NOT manage UI state or component logic.
-- Master, Operation, and Warehouse pages are **IDB-first**:
-  - Read cached rows from `resource-records` immediately for fast paint.
-  - Read `resource-meta.lastSyncAt` as sync cursor.
-- Re-entering a master page uses local cache by default and does not call Apps Script when cache exists.
-- Network sync happens when:
-  - User explicitly triggers refresh (force sync), or
-  - No cached rows exist yet for the resource.
-- Delta request behavior:
-  - Frontend sends `lastUpdatedAt` whenever `resource-meta.lastSyncAt` is available.
-  - Server returns only changed rows when `UpdatedAt` is present in resource headers.
-  - Delta rows are upserted into IDB.
-- Timestamp format contract:
-  - `CreatedAt` and `UpdatedAt` are written by GAS as Unix epoch milliseconds.
-  - `lastUpdatedAt` must be sent as Unix epoch milliseconds for delta filtering.
-  - Runtime parser expects Unix timestamp input (number or numeric string).
-- Full-sync fallback:
-  - If no sync cursor exists yet, request is full sync.
-  - If `UpdatedAt` is not present, server naturally returns full rows for subsequent sync calls.
-- Requirement for reliable delta:
-  - Master sheets should include audit columns and resource metadata should keep `Resources.Audit=TRUE`, so `UpdatedAt` is maintained on write/update.
-
-### Pinia Master Cache (Products)
-- Product master rows are hydrated into Pinia (`products` store) when Products master data is loaded.
-- This allows non-master pages (for example invoice lines) to map product code/id to product name without extra API calls.
-
-## 6) Deployment Notes
-1. Update APP sheet headers as documented.
-2. Paste GAS files into APP Apps Script.
-3. Run `setupAppSheets()` (for new/clean setup).
-4. `setupAppSheets()` now triggers `syncAppResourcesFromCode(true)` automatically after setup/refactor to align `APP.Resources` with code defaults.
-5. Redeploy Web App.
+## Maintenance Rule
+Update this file when:
+- a cross-cutting technical contract changes
+- a shared implementation convention changes
+- canonical technical reference ownership changes

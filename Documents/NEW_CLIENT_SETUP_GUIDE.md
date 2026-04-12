@@ -1,99 +1,65 @@
 # New Client Setup Guide
 
-This document outlines the step-by-step process for deploying a brand new instance of AQL for a new client (e.g., Loyal Promise). Everything can be done without touching code after the initial script copy.
+## Purpose
+This guide covers the current recommended process for setting up a new AQL client instance.
 
 ## Prerequisites
-- A Google Account for the client (preferably a shared/service workspace account).
-- Node.js installed locally for building the frontend.
+- Google account/workspace for the client
+- Local access to this repository
+- `clasp` configured for GAS deployment
 
-## Step 1: Create the Database Files
-1. In the client's Google Drive, create **four new, empty Google Spreadsheets**:
-   - `APP`
-   - `MASTERS`
-   - `OPERATIONS`
-   - `REPORTS`
-2. **Copy the File IDs** for `MASTERS`, `OPERATIONS`, and `REPORTS` from their URLs (the long string between `/d/` and `/edit`). You will need these shortly.
+## Setup Flow
 
-## Step 2: Establish the Codebase
-### Option A: Using clasp (Recommended)
-1. Open the `APP` spreadsheet → **Extensions > Apps Script** → click the **gear icon** (Project Settings) → copy the **Script ID**.
-2. Create `GAS/clasp-configs/{client-name}.clasp.json`:
-   ```json
-   {
-     "scriptId": "PASTE_SCRIPT_ID_HERE",
-     "rootDir": "."
-   }
-   ```
-3. Switch to the new client and push:
-   ```bash
-   cp GAS/clasp-configs/{client-name}.clasp.json GAS/.clasp.json
-   cd GAS && clasp push
-   ```
-4. Return to the `APP` spreadsheet and refresh. You should see the **AQL 🚀** menu.
+### Step 1: Create Spreadsheet Files
+Create the required spreadsheets:
+- `APP`
+- `MASTERS`
+- `OPERATIONS`
+- `REPORTS`
+- optional separate `ACCOUNTS`
 
-### Option B: Manual Copy-Paste
-1. Open the `APP` spreadsheet → **Extensions > Apps Script**.
-2. Copy all `.gs` and `.html` files from `GAS/` into the Apps Script project.
-3. Save the project, return to the spreadsheet, and refresh. You should see the **AQL 🚀** menu.
+Collect their file IDs for config setup.
 
-## Step 3: Initialize the APP Database
-1. From the `APP` spreadsheet menu, click **AQL 🚀 > ⚙️ Setup & Refactor > Refactor APP Sheets**.
-   - **What happens:** It creates the core structural sheets (`Users`, `AccessRegions`, `Designations`, `Roles`, `RolePermissions`). It also automatically generates the `Resources` sheet complete with all required configuration columns.
-2. Accept the Google authorization prompts (first-time run only) and run it again if the prompt interrupts the process.
+### Step 2: Connect the APP Script Project
+1. Open the `APP` spreadsheet and create/open its Apps Script project.
+2. Copy the Script ID.
+3. Create a client-specific `GAS/clasp-configs/{client-name}.clasp.json`.
+4. Point `GAS/.clasp.json` to that client config.
+5. Run `cd GAS && clasp push`.
 
-## Step 4: Configure Deployment Settings
-1. Open the `Config` sheet in the APP spreadsheet (created automatically by Step 3).
-2. Fill in the following values:
-   - `CompanyName`: The client's company name (e.g., "Heilung Trading LLC")
-   - `CompanyLogo`: URL to the client's logo image
-   - `ContactEmail`: Client's primary contact email
-   - `ContactPhone`: Client's primary contact phone
-   - `MasterFileID`: Paste the MASTERS spreadsheet File ID from Step 1
-   - `OperationFileID`: Paste the OPERATIONS spreadsheet File ID from Step 1
-   - `ReportFileID`: Paste the REPORTS spreadsheet File ID from Step 1
-   - `AccountsFileID`: (Optional) If using a separate ACCOUNTS file, paste its File ID
-   - `MasterSyncTTL`: Master scope sync TTL in seconds (recommended: `900`)
-   - `AccountsSyncTTL`: Accounts scope sync TTL in seconds (recommended: `60`)
-   - `OperationsSyncTTL`: Operations scope sync TTL in seconds (recommended: `300`)
+This is the preferred setup path. Manual copy-paste is not the standard deployment workflow.
 
-## Step 4b: Validate Config Resolution
-After filling Config values, verify that file IDs resolve correctly:
-1. Open **Extensions > Apps Script** in the APP spreadsheet.
-2. Run the function `diagLogResolvedFileIds()` from the Script Editor.
-3. Check the **Execution Log** — each resource should show the correct resolved file ID matching the Config keys you set.
-4. If any resource shows the APP file ID when it should point to MASTERS/OPERATIONS/ACCOUNTS, double-check the Config key spelling (e.g., `MasterFileID`, `OperationFileID`, `AccountsFileID`).
+### Step 3: Initialize APP Structure
+From the APP spreadsheet, run the setup/refactor menu actions needed to create APP control sheets and sync resource metadata.
 
-## Step 5: Link External Databases (Optional Override)
-1. If specific resources need to point to a different file than the scope default configured in Step 4, open the `Resources` sheet.
-2. Set the `FileID` column for those specific resource rows only.
-3. Resources with an empty `FileID` will automatically use the scope-based file ID from the `Config` sheet.
+### Step 4: Configure APP Settings
+Populate the `Config` sheet with:
+- company branding/contact values
+- file IDs for MASTER / OPERATION / REPORT / ACCOUNTS scopes
+- sync TTL settings
 
-## Step 6: Generate Data Sheets via Menu
-Use the custom menu in the `APP` spreadsheet to generate all database tabs. Click these sequentially:
-1. **AQL 🚀 > ⚙️ Setup & Refactor > Refactor MASTER Sheets**
-2. **AQL 🚀 > ⚙️ Setup & Refactor > Operations > Setup All Operations**
-3. **AQL 🚀 > ⚙️ Setup & Refactor > Accounts > Setup Base Accounts**
+### Step 5: Validate Resolution
+Validate that resource/file resolution works correctly after config is filled.
 
-## Step 7: Initial Security & Role Seeding
-1. Stay in the `APP` spreadsheet.
-2. Click **AQL 🚀 > 🛡️ Roles > Inject Default Roles**.
-   - **What happens:** It builds the default `Admin` role with full matrix access and adds an initial admin user to the `Users` sheet if one does not exist.
-3. Open the `Users` sheet and verify your email is listed as an active user, mapped to the `Admin` RoleID.
+### Step 6: Generate Target Sheets
+Run the relevant setup/refactor actions to create or refactor master, operation, and accounts sheets.
 
-## Step 8: Deploy the API
-1. Go back to **Extensions > Apps Script**.
-2. Click **Deploy > New deployment**.
-3. Select type: **Web app**.
-4. Description: `Initial Deployment [Client Name]`.
-5. Run as: **Me** (the account owner).
-6. Who has access: **Anyone** (the API secures endpoints via standard token policies, but the web endpoint must be publicly reachable).
-7. Click Deploy and **Copy the Web App URL**.
+### Step 7: Seed Security and Access
+Create or inject initial roles and ensure an admin user exists with the right access.
 
-## Step 9: Frontend Wiring
-1. In your local repository's `FRONTENT/` directory, create or update an environment file (e.g., `.env.production`).
-2. Set the API variable:
-   ```env
-   VITE_GAS_API_URL=https://script.google.com/macros/s/YOUR_WEB_APP_ID/exec
-   ```
-3. Run `npm run build` to compile the Vue/Quasar frontend.
-4. Host the `dist/` payload on the client's preferred hosting platform (Firebase, Vercel, Netlify).
+### Step 8: Deploy API
+Create a Web App deployment for the APP Apps Script project and capture the Web App URL.
+
+### Step 9: Wire Frontend
+Set the frontend environment to the deployed GAS Web App URL and build/deploy the frontend as needed.
+
+## Canonical Detail Owners
+- APP structure: [APP_SHEET_STRUCTURE.md](F:/LITTLE%20LEAP/AQL/Documents/APP_SHEET_STRUCTURE.md)
+- Resource/runtime config: [RESOURCE_REGISTRY_ARCHITECTURE.md](F:/LITTLE%20LEAP/AQL/Documents/RESOURCE_REGISTRY_ARCHITECTURE.md)
+- Schema refactor flow: [SCHEMA_REFACTORING_GUIDE.md](F:/LITTLE%20LEAP/AQL/Documents/SCHEMA_REFACTORING_GUIDE.md)
+
+## Maintenance Rule
+Update this file when:
+- the preferred setup/deployment flow changes
+- required setup steps or prerequisites change
+- config keys or deployment expectations change materially

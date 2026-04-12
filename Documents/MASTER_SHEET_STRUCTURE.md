@@ -1,123 +1,9 @@
-# MASTER Google Sheet Structure (Inbound Foundation)
+# MASTER Sheet Structure
 
-This document defines the MASTER file structure for the current implementation phase.
+## Purpose
+This document describes the current master-scope sheet families and their roles.
 
-## Scope
-Current scope supports inbound setup from China to Ajman warehouse.
-All master resources now include `AccessRegion` for hierarchical region-based access control.
-
-## 1) Products
-Parent entity for sellable items. Each Product defines a model/line and declares which variant dimensions apply to it.
-
-Columns:
-- `Code` (Apps Script generated, prefix `LLMP`)
-- `Name`
-- `VariantTypes` (CSV of applicable variant dimensions, e.g. `Size,Color` or `Size,Material,Color`)
-- `AccessRegion` (empty = universe record)
-- `Status` (`Active`/`Inactive`)
-- `CreatedAt`
-- `UpdatedAt`
-- `CreatedBy`
-- `UpdatedBy`
-
-## 2) SKUs
-Child entity representing the actual sellable SKU. Each variant row belongs to a parent Product and carries up to five dynamic variant values whose semantics are defined by the parent's `VariantTypes` column.
-
-Columns:
-- `Code` (Apps Script generated, prefix `LLMSKU` — this is the SKU used in shipments, stock, and sales)
-- `ProductCode` (FK -> `Products.Code`)
-- `Variant1` (value for `VariantTypes` index 0, e.g. "250ml")
-- `Variant2` (value for `VariantTypes` index 1, e.g. "Blue")
-- `Variant3` (value for `VariantTypes` index 2, e.g. "Silicone")
-- `Variant4`
-- `Variant5`
-- `AccessRegion` (empty = universe record)
-- `Status` (`Active`/`Inactive`)
-- `CreatedAt`
-- `UpdatedAt`
-- `CreatedBy`
-- `UpdatedBy`
-
-Current API actions (apply to both Products and SKUs):
-- Preferred: `action=get/create/update` with `scope=master` and `resource`
-- Optional batch read: `action=get`, `scope=master`, `resources=...`
-- Legacy compatibility: `master.getRecords`, `master.createRecord`, `master.updateRecord`
-
-## 3) Suppliers
-Supplier master (China vendors).
-
-Columns:
-- `Code` (`LLMS` prefix)
-- `Name`
-- `Country`
-- `ContactPerson`
-- `Phone`
-- `Email`
-- `AccessRegion`
-- `Status`
-- `CreatedAt`
-- `UpdatedAt`
-- `CreatedBy`
-- `UpdatedBy`
-
-## 4) Warehouses
-Warehouse definitions (including Ajman warehouse).
-
-Columns:
-- `Code` (`LLMW` prefix)
-- `Name`
-- `City`
-- `Country`
-- `Type`
-- `AccessRegion`
-- `Status`
-- `CreatedAt`
-- `UpdatedAt`
-- `CreatedBy`
-- `UpdatedBy`
-
-## 5) Ports
-Port master for import/clearance reference (used in Shipments operation to declare destination/clearance points).
-
-Columns:
-- `Code` (`LLMPT` prefix)
-- `Name`
-- `Country`
-- `PortType`
-- `AccessRegion`
-- `Status`
-- `CreatedAt`
-- `UpdatedAt`
-- `CreatedBy`
-- `UpdatedBy`
-
-## 6) Carriers
-Transport partner master (used in Shipments operation to assign freight carriers).
-
-Columns:
-- `Code` (`LLMC` prefix)
-- `Name`
-- `Type`
-- `Phone`
-- `ContactPerson`
-- `AccessRegion`
-- `Status`
-- `CreatedAt`
-- `UpdatedAt`
-- `CreatedBy`
-- `UpdatedBy`
-
-## Setup Script (Single Project Model)
-Run from APP Apps Script project only:
-- `GAS/setupMasterSheets.gs` -> run `setupMasterSheets()`
-
-The function reads APP `Resources` rows and creates/updates each target sheet in the file specified by `FileID` and `SheetName`.
-It also normalizes headers, including required `AccessRegion` column for region-scoped visibility.
-
-No separate Apps Script project is required in MASTER file.
-
-## Important
-In APP `Resources`, ensure rows exist for:
+## Current Master Resources
 - `Products`
 - `SKUs`
 - `Suppliers`
@@ -125,10 +11,16 @@ In APP `Resources`, ensure rows exist for:
 - `Ports`
 - `Carriers`
 
-For these rows:
-- `FileID` = target spreadsheet file id
-- `SheetName` = exact tab name to create/update
-- `CodePrefix` = code prefix used for generated codes
-- `CodeSequenceLength` = number of digits in sequence part
-- `` = 0
-- `Audit` = TRUE
+## Structural Expectations
+- each master sheet has a generated `Code`
+- resource-specific business columns vary by sheet
+- audit/access columns depend on current resource metadata and setup rules
+
+## Notes
+- Exact code prefixes and metadata-driven validation rules are owned by runtime configuration, not by this document.
+- For detailed resource metadata rules, use [RESOURCE_COLUMNS_GUIDE.md](F:/LITTLE%20LEAP/AQL/Documents/RESOURCE_COLUMNS_GUIDE.md)
+
+## Maintenance Rule
+Update this file when:
+- a master-scope sheet is added, removed, or repurposed
+- the structural expectations of master sheets change materially

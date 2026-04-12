@@ -66,7 +66,7 @@ Refine `MasterEntityPage.vue` to a card-only list experience (no table), with a 
 
 ### Files Actually Changed
 - `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
-- `Documents/PLANS/2026-03-12-master-entity-page-card-only-refine.md`
+- `PLANS/2026-03-12-master-entity-page-card-only-refine.md`
 
 ### Validation Performed
 - [x] Manual validation completed.

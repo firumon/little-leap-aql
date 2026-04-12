@@ -1,154 +1,52 @@
-# AQL - APP Google Sheet Structure
+# APP Sheet Structure
 
-This document defines the **APP** Google Sheet as the control plane for authentication, authorization, and resource metadata used by both GAS backend and frontend runtime.
+## Purpose
+This document describes the APP spreadsheet as the control plane for authentication, authorization, config, and resource metadata.
 
 ## Core Sheets
+- `Users`
+- `AccessRegions`
+- `Designations`
+- `Roles`
+- `RolePermissions`
+- `Resources`
+- `Config`
 
-### 1) Users
-Purpose: User identity and auth record.
+## Sheet Responsibilities
 
-Columns:
-- `UserID` (PK, `U####`)
-- `Name`
-- `Email`
-- `PasswordHash`
-- `DesignationID` (FK -> `Designations.DesignationID`)
-- `Roles` (CSV RoleIDs, example: `R0001,R0003`)
-- `AccessRegion` (FK -> `AccessRegions.Code`, empty = universe/all regions)
-- `Status` (`Active`/`Inactive`)
-- `Avatar`
-- `ApiKey`
+### Users
+- identity and authentication record
+- role/designation/region assignment
 
-### 2) AccessRegions
-Purpose: Hierarchical data-access boundary model.
+### AccessRegions
+- region hierarchy for scoped access
 
-Columns:
-- `Code` (PK, format: country 3-letter prefix + 3-digit sequence, example: `UAE001`, `QTR001`)
-- `Name`
-- `Parent` (optional FK -> `AccessRegions.Code`)
+### Designations
+- hierarchy/authority model
 
-Notes:
-- Empty `Users.AccessRegion` means universe access (no region restriction).
-- Non-empty `Users.AccessRegion` grants access to that region + all descendants.
-- Records with empty `AccessRegion` are treated as universe records.
+### Roles
+- functional role definitions
 
-### 3) Designations
-Purpose: Organization designation and hierarchy model for record-level access.
+### RolePermissions
+- role-to-resource action matrix
 
-Columns:
-- `DesignationID` (PK, `D####`)
-- `Name`
-- `HierarchyLevel` (`1` = topmost)
-- `Status`
-- `Description`
+### Resources
+- runtime metadata registry for backend and frontend
+- column meanings are owned by [RESOURCE_COLUMNS_GUIDE.md](F:/LITTLE%20LEAP/AQL/Documents/RESOURCE_COLUMNS_GUIDE.md)
 
-### 4) Roles
-Purpose: Functional roles.
+### Config
+- deployment-specific settings such as file IDs and sync-related values
 
-Columns:
-- `RoleID` (PK, `R####`)
-- `Name`
-- `Description`
+## Setup
+APP structure is created/refreshed through setup/refactor scripts and related menu actions.
 
-### 5) RolePermissions
-Purpose: Role-to-resource permissions and non-CRUD actions.
+## Canonical Detail Owners
+- Resource column semantics: [RESOURCE_COLUMNS_GUIDE.md](F:/LITTLE%20LEAP/AQL/Documents/RESOURCE_COLUMNS_GUIDE.md)
+- Resource/runtime routing: [RESOURCE_REGISTRY_ARCHITECTURE.md](F:/LITTLE%20LEAP/AQL/Documents/RESOURCE_REGISTRY_ARCHITECTURE.md)
+- Setup flow: [NEW_CLIENT_SETUP_GUIDE.md](F:/LITTLE%20LEAP/AQL/Documents/NEW_CLIENT_SETUP_GUIDE.md)
 
-Columns:
-- `RoleID` (FK)
-- `Resource` (FK -> `Resources.Name`)
-- `Actions` (CSV, example: `Read,Write,Update,Delete,Approve,Reject`)
-
-### 6) Resources
-Purpose: Single metadata registry for backend CRUD rules and frontend menu/page/field rendering.
-
-Detailed per-column meaning and sample values:
-- `documents/RESOURCE_COLUMNS_GUIDE.md`
-
-Columns (in order):
-- `Name`
-- `Scope` (`master|operation|accounts|report|system`)
-- `ParentResource` (Optional FK -> parent `Resources.Name`)
-- `IsActive`
-- `FileID`
-- `SheetName`
-- `CodePrefix`
-- `CodeSequenceLength`
-- `Audit` (if true: manage `CreatedAt,UpdatedAt,CreatedBy,UpdatedBy`)
-- `RequiredHeaders` (CSV)
-- `UniqueHeaders` (CSV)
-- `UniqueCompositeHeaders` (`A+B;C+D` or JSON)
-- `DefaultValues` (JSON object)
-- `RecordAccessPolicy` (`ALL|OWNER|OWNER_GROUP|OWNER_AND_UPLINE`)
-- `OwnerUserField` (usually `CreatedBy`)
-- `AdditionalActions` (CSV)
-- `Menu` (JSON array of sidebar entry objects. Each entry defines `group` (string array, canonical N-level hierarchy), `order`, `label`, `icon`, `route`, `pageTitle`, `pageDescription`, `show`, and optional `menuAccess`. Blank/`[]` defaults are derived from `Name`/`Scope`. See `Documents/RESOURCE_COLUMNS_GUIDE.md` for schema and examples.)
-- `UIFields` (JSON array)
-- `IncludeInAuthorizationPayload`
-- `ListViews` (single-cell mode + JSON views: blank=`auto`, `[]`=`off`, non-empty array=`custom`; see `Documents/RESOURCE_COLUMNS_GUIDE.md` for full schema)
-- `Reports` (JSON array — downloadable document configs; see Reports Column JSON Schema below)
-- `Functional`
-- `PreAction`
-- `PostAction`
-- `CustomUIName`
-
-### Reports Column JSON Schema
-
-The `Reports` column in `APP.Resources` contains a JSON array of report objects.
-
-```json
-[
-  {
-    "name": "report-id",
-    "label": "Report Display Name",
-    "templateSheet": "SheetNameInREPORTS",
-    "isRecordLevel": true,
-    "inputs": [
-      { "field": "Code", "targetCell": "B2" },
-      { "label": "As of Date", "type": "date", "targetCell": "B3", "required": true },
-      { "default": "Title", "targetCell": "A1" }
-    ]
-  }
-]
-```
-
-**Input Logic:**
-- **Record Context**: Use `field`. Value is taken from the current record's header match.
-- **User Input**: Use `label` and `type`. User is prompted via dialog.
-- **Static**: Use `default` without `field` and `type`.
-- `isRecordLevel: false` → button in toolbar; `true` → button in row detail dialog.
-- `cell` → target cell in the REPORTS template sheet.
-- `templateSheet` → sheet name inside the REPORTS spreadsheet to clone.
-
-## Setup Script
-Use `GAS/setupAppSheets.gs` (`setupAppSheets()`) to create these sheets.
-For existing APP files, run `upgradeAppSheetsForAccessRegions()` to add `Users.AccessRegion` and create `AccessRegions` if missing.
-
-### 7) Config
-Purpose: Deployment-specific settings for multi-client support. Simple Key-Value store.
-
-Columns:
-- `Key` — Configuration key name
-- `Value` — Configuration value
-
-Expected Keys:
-- `CompanyName` — Client company display name (used in reports/documents)
-- `CompanyLogo` — URL to company logo (used in reports/documents)
-- `ContactEmail` — Company contact email
-- `ContactPhone` — Company contact phone
-- `MasterFileID` — Google Sheet File ID for the MASTERS spreadsheet
-- `OperationFileID` — Google Sheet File ID for the OPERATIONS spreadsheet
-- `ReportFileID` — Google Sheet File ID for the REPORTS spreadsheet
-- `AccountsFileID` — Google Sheet File ID for the ACCOUNTS spreadsheet
-- `MasterSyncTTL` — Scope-level master sync TTL in seconds (used by frontend cache sync queue)
-- `AccountsSyncTTL` — Scope-level accounts sync TTL in seconds
-- `OperationsSyncTTL` — Scope-level operations sync TTL in seconds
-
-Notes:
-- Config is the Source of Truth for deployment-level settings (file IDs, company branding).
-- FileID resolution chain: `Resource.FileID` (if present) → `Config[{Scope}FileID]` → APP file ID.
-- Config values are cached via `CacheService` (5-minute TTL) for performance. Call `clearConfigCache()` to force a fresh read after manual Config edits.
-- APP spreadsheet fallback in web app context uses `ScriptProperties.APP_FILE_ID` via `getAppSpreadsheet()`. Use `AQL > Setup & Refactor > Store APP File ID in Properties` if needed.
-- Created automatically by `setupAppSheets()` with pre-populated key rows.
-- `FileID` in `Resources` is optional — blank values trigger config-driven resolution via the fallback chain.
-
-
+## Maintenance Rule
+Update this file when:
+- APP control sheets are added, removed, or repurposed
+- APP responsibilities change materially
+- canonical detail-owner references change

@@ -1,176 +1,98 @@
 # System Architecture
 
-## System Context Diagram
+## Purpose
+This document owns system boundaries, component responsibilities, and interaction flows. It should not be the canonical source for detailed payload contracts or step-by-step operational setup.
+
+## System Context
 
 ```mermaid
 graph TD
-    User((User)) -->|HTTPS JSON POST| PWA[Quasar PWA Client]
+    User((User)) -->|HTTPS JSON POST| PWA["Quasar PWA Client"]
 
-    subgraph "Client (Device)"
-        PWA --> AuthStore[Pinia Auth Store]
-        PWA --> MasterPages[Dynamic Master Pages]
-        PWA --> IDB[(IndexedDB Cache)]
-        PWA --> SW[Service Worker]
+    subgraph "Client"
+        PWA --> AuthStore["Pinia Auth Store"]
+        PWA --> MasterPages["Dynamic Pages"]
+        PWA --> IDB["IndexedDB Cache"]
+        PWA --> SW["Service Worker"]
     end
 
-    subgraph "APP Spreadsheet + Apps Script Project"
-        PWA -->|action payloads| GAS[doPost Dispatcher]
-        GAS --> AUTH[auth.gs]
-        GAS --> MASTER[masterApi.gs]
-        GAS --> REGISTRY[resourceRegistry.gs]
-        AUTH --> USERS[(APP.Users)]
-        AUTH --> ACCESSREG[(APP.AccessRegions)]
-        AUTH --> ROLES[(APP.Roles)]
-        AUTH --> ROLEPERM[(APP.RolePermissions)]
-        REGISTRY --> RESOURCES[(APP.Resources)]
+    subgraph "APP Spreadsheet + Apps Script"
+        PWA -->|action payloads| GAS["doPost Dispatcher"]
+        GAS --> AUTH["auth.gs"]
+        GAS --> MASTER["masterApi.gs"]
+        GAS --> REGISTRY["resourceRegistry.gs"]
+        REGISTRY --> APPRES["APP.Resources"]
     end
 
-    subgraph "External Data Files"
-        REGISTRY --> MASTERS[(MASTERS file)]
-        REGISTRY --> TRANS[(OPERATIONS file)]
-        REGISTRY --> REPORTS[(REPORTS file)]
+    subgraph "Data Files"
+        REGISTRY --> MASTERS["MASTERS"]
+        REGISTRY --> OPERATIONS["OPERATIONS"]
+        REGISTRY --> REPORTS["REPORTS"]
+        REGISTRY --> ACCOUNTS["ACCOUNTS (optional)"]
     end
 ```
 
-## Core Architecture Principles
-- Single Apps Script project lives in APP file.
-- `APP.Resources` is the runtime registry for both backend behavior and frontend metadata.
-- Resource routing is dynamic through `FileID` + `SheetName`; no hardcoded per-file script projects.
-- Role-based, record-level, and access-region-level controls are metadata-driven.
+## Core Principles
+- One APP Apps Script project is preferred for runtime behavior.
+- `APP.Resources` is the control plane for routing, permissions, and UI metadata.
+- Frontend reads from IndexedDB first where cache-first flows are implemented.
+- Service Worker manages cache/network boundaries, not UI state or business logic.
+- Role, record, and region access rules are metadata-driven.
 
-## Backend Components (Apps Script)
-- `GAS/apiDispatcher.gs`
-  - Hosts `doPost`.
-  - Performs request parsing/response shaping.
-  - Routes protected actions across auth and master scopes.
-- `GAS/auth.gs`
-  - Handles `login`, `getProfile`, profile update actions.
-  - Validates token and user context.
-  - Returns role-authorized `resources` and user `accessRegion` scope in login payload.
-- `GAS/accessRegion.gs`
-  - Resolves `APP.AccessRegions` hierarchy.
-  - Expands user scope to assigned region + descendants.
-  - Validates region codes and universe-access behavior.
-- `GAS/sheetHelpers.gs`
-  - Shared helpers for header/index/row access patterns across auth/resource/master modules.
-- `GAS/resourceRegistry.gs`
-  - Resolves resource config from `APP.Resources`.
-  - Builds permissioned resource list from `RolePermissions.Actions`.
-  - Provides `ui`, `headers`, and permission metadata used by frontend.
-  - Isolates per-resource failures so one bad sheet config does not break whole authorization payload.
-- `GAS/masterApi.gs`
-  - Generic master CRUD (`get/create/update`) with `scope=master`.
-  - Resource-driven schema validation/defaults/uniqueness checks.
-  - Enforces `AccessRegion` row filtering and write boundaries.
-  - Supports incremental sync payloads (`lastUpdatedAt` -> `meta.lastSyncAt`).
+## Backend Boundaries
+- `apiDispatcher.gs`
+  - request parsing, routing, and response shaping
+- `auth.gs`
+  - login, token validation, profile-related behavior
+- `resourceRegistry.gs`
+  - resource config lookup, scope normalization, permission assembly
+- `masterApi.gs`
+  - generic CRUD and hook dispatching
+- `sheetHelpers.gs`
+  - low-level helpers for file, sheet, header, and config access
 
-## Frontend Components
-- `FRONTENT/src/stores/auth.js`
-  - Stores `token`, `user`, and `resources` from login response.
-  - Persists auth data to local storage.
-  - Triggers non-blocking global master eager sync after successful login (`syncAllMasterResources`).
-  - Exposes `isGlobalSyncing` state for optional global sync indicators.
-- `FRONTENT/src/layouts/MainLayout/MainLayout.vue`
-  - Builds sidebar from `resources[].ui`.
-  - Flattens `resources[].ui.menus[]` into sidebar entries and evaluates per-entry menu access.
-- `FRONTENT/src/router/index.js`
-  - Guards auth routes.
-  - Enforces route access by matching `to.path` against `resources[].ui.menus[].route` and evaluating menu access.
-- `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
-  - Generic master page driven by authorized resource metadata.
-- `FRONTENT/src/services/masterRecords.js`
-  - Uses cached headers and incremental sync for master resources.
-  - Supports batched eager sync across all authorized master resources using one `getMulti` request (`action=get`, `scope=master`, `resources[]`).
-- `FRONTENT/src/utils/db.js`
-  - IDB stores: `resource-meta`, `resource-records`, API cache and sync queue.
-- `Service Worker (sw.js)`
-  - Responsibility boundary: Strictly manages network interception, background syncs, and asset caching.
-  - Does NOT manage UI state or business logic (which belongs in Pinia/Vue components).
+## Frontend Boundaries
+- `stores/auth.js`
+  - session, user, resource catalog, app config/options
+- `layouts/MainLayout`
+  - menu rendering from authorized resource metadata
+- `router`
+  - route guards based on auth/resource access
+- `services/gasApi.js`
+  - single frontend entry point for backend requests
+- `services/masterRecords.js`
+  - cache-aware master data sync/read helpers
 
-## Authorization Enforcement Matrix
-The server explicitly enforces three layers of authorization for every protected request:
-| Enforcement Layer | Source | Validation Mechanism | Unmet Condition |
-| --- | --- | --- | --- |
-| **Role Permissions** | `APP.RolePermissions` joining user `roles` to `Resources` | User's cumulative `RolePermissions` must contain matching action (`Read`, `Write`, etc.) for target resource. | Throw `403 Forbidden` early. |
-| **Record Access Policy** | `APP.Resources` (`RecordAccessPolicy`, `OwnerUserField`) | Checks if target record matches policy (e.g., `CREATED_BY_ME`, `HIERARCHY`) relative to user's `id` or `designation`. | Omit from `rows` (GET) or throw `403` (UPDATE/DELETE). |
-| **Region Scope** | `APP.Users` (`AccessRegion`) + request payload | For scoped users, requested record's `AccessRegion` must fall under user's assigned region tree. | Omit from `rows` (GET) or throw `403` (all other actions). |
+## Key Interaction Flows
 
-## Auth Login Payload Contract
+### Login
+1. Frontend posts `action=login`.
+2. Backend validates user/token context.
+3. Backend returns user identity, authorized resources, app config, and app options.
+4. Frontend persists auth state and may begin background sync.
 
-Frontend expects this shape from `action=login`:
+Detailed login contract: [LOGIN_RESPONSE.md](F:/LITTLE%20LEAP/AQL/Documents/LOGIN_RESPONSE.md)
 
-```json
-{
-  "success": true,
-  "token": "uuid",
-  "user": {
-    "id": "U0001",
-    "name": "User Name",
-    "email": "user@example.com",
-    "avatar": "",
-    "accessRegion": { "code": "UAE001", "isUniverse": false, "accessibleCodes": ["UAE001", "UAE002"] },
-    "designation": { "id": "D0001", "name": "Manager", "hierarchyLevel": 2 },
-    "roles": [{ "id": "R0001", "name": "Administrator" }],
-    "role": "Administrator"
-  },
-  "resources": [
-    {
-      "name": "Products",
-      "scope": "master",
-      "fileId": "...",
-      "sheetName": "Products",
-      "codePrefix": "LLMP",
-      "codeSequenceLength": 5,
-      "headers": ["Code", "Name", "SKU", "AccessRegion", "Status", "CreatedAt", "UpdatedAt", "CreatedBy", "UpdatedBy"],
-      "permissions": {
-        "canRead": true,
-        "canWrite": true,
-        "canUpdate": true,
-        "canDelete": false
-      },
-      "ui": {
-        "menus": [
-          {
-            "group": "Masters",
-            "order": 10,
-            "label": "Products",
-            "icon": "inventory_2",
-            "route": "/masters/products",
-            "pageTitle": "Products",
-            "pageDescription": "Manage product master records",
-            "show": true
-          }
-        ],
-        "fields": []
-      },
-      "actions": ["Approve"],
-      "allowedActions": ["READ", "WRITE", "UPDATE", "APPROVE"]
-    }
-  ]
-}
-```
+### Generic Resource Read/Write
+1. Frontend calls `callGasApi(...)`.
+2. `apiDispatcher.gs` validates auth and routes by action/scope.
+3. `resourceRegistry.gs` resolves resource metadata and target file/sheet.
+4. `masterApi.gs` applies permission, region, validation, and hook logic.
 
-`getProfile` remains user-only, while `getAuthorizedResources` is the protected refresh endpoint for resource catalog updates.
+### Cache-First Master Experience
+1. Frontend reads cached rows from IndexedDB.
+2. If needed, frontend sends an incremental sync request using the stored cursor.
+3. Response rows are merged back into IndexedDB and UI state.
 
-## Request Flow (Login)
-1. Frontend posts `{ action: "login", email, password }`.
-2. `apiDispatcher.gs` routes `login` to auth handlers.
-3. `auth.gs` validates credentials from `APP.Users`, writes new UUID to `Users.ApiKey`.
-4. `auth.gs` resolves user roles, designation, and access-region scope.
-5. `resourceRegistry.gs` aggregates resource permissions from `RolePermissions` and resource metadata from `Resources`.
-6. Login response returns `token`, `user`, and role-authorized `resources`.
+## Canonical Detail Owners
+- Login payload: [LOGIN_RESPONSE.md](F:/LITTLE%20LEAP/AQL/Documents/LOGIN_RESPONSE.md)
+- Backend capability inventory: [GAS_API_CAPABILITIES.md](F:/LITTLE%20LEAP/AQL/Documents/GAS_API_CAPABILITIES.md)
+- Backend implementation patterns: [GAS_PATTERNS.md](F:/LITTLE%20LEAP/AQL/Documents/GAS_PATTERNS.md)
+- Resource column semantics: [RESOURCE_COLUMNS_GUIDE.md](F:/LITTLE%20LEAP/AQL/Documents/RESOURCE_COLUMNS_GUIDE.md)
 
-## Request Flow (Master Read)
-1. Frontend posts `{ action: "get", scope: "master", resource, lastUpdatedAt }`.
-2. `apiDispatcher.gs` validates token via `auth.gs` and routes to master handlers.
-3. `masterApi.gs` checks resource-level permission + record-level policy + access-region scope.
-4. Target file/sheet is resolved dynamically via `resourceRegistry.gs`.
-5. Response returns compact `rows` and `meta.lastSyncAt` for incremental merge.
-
-## Request Flow (Post-Login Eager Master Sync)
-1. Login succeeds and auth state/resources are persisted.
-2. Frontend starts `syncAllMasterResources()` in background without blocking navigation/UI.
-3. Frontend sends one batched request: `{ action: "get", scope: "master", resources: [...], lastUpdatedAtByResource: {...} }`.
-4. `masterApi.gs` dispatches internal per-resource reads with each resource cursor while still enforcing role, record policy, and `AccessRegion` filtering.
-5. Frontend upserts deltas into IndexedDB (`resource-records`) and updates per-resource cursors in `resource-meta`.
-6. Subsequent master page loads paint instantly from local cache and then continue normal incremental sync behavior.
+## Maintenance Rule
+Update this file when:
+- major system boundaries change
+- a component's core responsibility changes
+- a major interaction flow changes materially
+- canonical detail-owner references change

@@ -63,7 +63,7 @@ Refactor `MasterEntityPage.vue` to deliver a stunning, attractive, and easy-to-u
 
 ### Files Actually Changed
 - `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
-- `Documents/PLANS/2026-03-12-master-entity-page-mobile-ui-refactor.md`
+- `PLANS/2026-03-12-master-entity-page-mobile-ui-refactor.md`
 
 ### Validation Performed
 - [x] Manual validation completed.

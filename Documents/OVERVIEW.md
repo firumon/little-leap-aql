@@ -1,75 +1,29 @@
-# AQL
+# AQL Overview
 
-AQL is the operating system for Little Leap's UAE baby-product distribution business. The core heartbeat is outlet distribution, periodic sales tracking, strict-cycle payment collection, controlled refills, and timely supplier purchase ordering.
+## Purpose
+This is the short orientation document for AQL. It should explain what the system is, what it supports, and where to go next for deeper detail.
 
-## Current Architecture Direction
-- Single Google Apps Script project in the `APP` spreadsheet.
-- `APP.Resources` is the control plane for backend routing and frontend runtime metadata.
-- `GAS/syncAppResources.gs` serves as the hardcoded Source of Truth for resource schemas, which syncs directly to the `APP.Resources` sheet using the "AQL > Setup & Refactor" menu.
-- External sheets (`MASTERS`, `OPERATIONS`, `REPORTS`) are accessed dynamically via `Resources.FileID` + `Resources.SheetName`.
-- No separate Apps Script projects are required in external spreadsheet files unless explicitly requested.
+## What AQL Is
+AQL is the operating system for Little Leap's UAE baby-product distribution business. The primary operational heartbeat is:
+1. distribute products to outlets
+2. track outlet sales on recurring cycles
+3. collect payments on strict intervals
+4. approve and execute refills
+5. raise supplier purchase orders before stock-out risk
 
-## Current Tech Stack
-- Frontend: Quasar (Vue 3 + Vite), Pinia, Axios, IndexedDB cache.
-- Backend API: Google Apps Script Web App (`doPost`).
-- Data layer: Google Sheets split across APP / MASTERS / OPERATIONS / REPORTS.
+Inbound logistics, warehouse intake, and internal stock control support that commercial cycle.
 
-## Identity and Access Model
-- Authentication uses `APP.Users` (`Email`, `PasswordHash`, `ApiKey` token).
-- User org context:
-  - `Users.DesignationID` (single designation)
-  - `Users.Roles` (CSV multi-role IDs)
-  - `Users.AccessRegion` (empty = universe access; non-empty = assigned region subtree)
-- Resource permissions come from `APP.RolePermissions` (`Actions` CSV such as `Read,Write,Update,Delete,Approve`).
-- Record-level policy comes from `APP.Resources`:
-  - `RecordAccessPolicy`
-  - `OwnerUserField`
-- Region-level policy comes from `APP.AccessRegions` tree and row `AccessRegion` values.
+## Current Runtime Direction
+- Frontend: Quasar, Vue 3, Pinia, Vite
+- Backend: Google Apps Script Web App with a single `doPost` entry
+- Data model: Google Sheets split across APP, MASTERS, OPERATIONS, REPORTS, and optionally ACCOUNTS
+- Control plane: `APP.Resources` drives routing, permissions, metadata, and sheet resolution
 
-## Resource-Driven Runtime (Backend + Frontend)
-`APP.Resources` drives both sides:
+## Where To Read Next
+- Business workflow: [GROUND_OPERATIONS_WORKFLOW.md](F:/LITTLE%20LEAP/AQL/Documents/GROUND_OPERATIONS_WORKFLOW.md)
+- System boundaries: [ARCHITECTURE.md](F:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE.md)
+- Technical contracts: [TECHNICAL_SPECIFICATIONS.md](F:/LITTLE%20LEAP/AQL/Documents/TECHNICAL_SPECIFICATIONS.md)
+- Task-based loading: [DOC_ROUTING.md](F:/LITTLE%20LEAP/AQL/Documents/DOC_ROUTING.md)
 
-- Backend:
-  - Which file/sheet to open.
-  - Required/unique/default validation.
-  - Code generation behavior (`CodePrefix`, `CodeSequenceLength`).
-  - Audit and row-level access policy.
-- Frontend:
-  - Authorized menu items.
-  - Dynamic page routing (`ui.menus[*].route`).
-  - Titles/descriptions and optional dynamic fields.
-
-## Auth/Login Contract (Current)
-`action=login` returns:
-- `token`
-- `user` with `designation`, `roles`, and `accessRegion` scope payload
-- `resources[]` authorized for the user role set, including:
-  - identity: `name`, `scope`
-  - routing/config: `ui` object with `menus[]` entries (`group`, `order`, `label`, `icon`, `route`, `pageTitle`, `pageDescription`, `show`, optional `menuAccess`) plus `fields`
-  - permissions: `permissions.canRead/canWrite/canUpdate/canDelete`
-  - schema/cache support: `headers`
-  - metadata: `fileId`, `sheetName`, `codePrefix`, `codeSequenceLength`, `actions`, `allowedActions`
-
-This payload is consumed directly by frontend auth, menu rendering, route guard, and master data sync services.
-
-## Master API Shape (Current)
-Preferred generic API pattern:
-- `action=get`, `scope=master`, `resource` (or `resources`)
-- `action=create`, `scope=master`, `resource`, `record`
-- `action=update`, `scope=master`, `resource`, `code`, `record`
-
-Master list transport supports compact row payloads (`rows` array-of-arrays) plus incremental sync cursor (`lastUpdatedAt`, `meta.lastSyncAt`).
-
-## Current Delivery Focus
-Commercial operations heartbeat (primary):
-1. Distribute products to outlets.
-2. Track outlet sales on periodic cycles.
-3. Collect payments from outlets on strict intervals.
-4. Refill outlet stock only after approval from authorized roles.
-5. Raise purchase orders to suppliers when stock reaches reorder risk.
-
-Inbound and warehouse operations (supporting):
-1. Shipment booking and port clearance.
-2. Warehouse receiving/GRN and variance.
-3. Putaway to shelf/bin locations.
-4. Inventory movement and stock visibility.
+## Maintenance Rule
+Update this file when the project identity, primary business heartbeat, major runtime direction, or canonical next-doc references change.

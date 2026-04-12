@@ -1,48 +1,27 @@
 # Schema Refactoring Guide
 
-When changing the schema (columns/headers) of existing Master, Operation, or App sheets, there is a built-in mechanism that allows for a "one-click" refactoring that safely repositions columns without data loss.
+## Purpose
+This guide explains how schema-related setup/refactor flows should be used to align sheets with current code-defined structure.
 
-## How it works (The Refactor Operations)
+## Core Idea
+When headers/columns change, use the setup/refactor workflow rather than making uncontrolled manual structural edits.
 
-In the `AQL` menu in the Google Sheet, under `Setup & Refactor`, you will find four options:
-1. **Sync APP.Resources from Code**
-2. **Refactor APP Sheets**
-3. **Refactor MASTER Sheets**
-4. **Refactor OPERATION Sheets**
+## Typical Flow
+1. update the relevant code-defined schema/config
+2. sync `APP.Resources` from code if resource metadata changed
+3. run the relevant APP / MASTER / OPERATION / ACCOUNTS setup or refactor action
+4. verify any dependent frontend/runtime assumptions
 
-### What does "Sync APP.Resources from Code" do?
-The `APP.Resources` sheet dictates the overall architecture (what FileID a sheet belongs to, what Frontend columns it supports, Menu Groups, Code Prefixes, etc.). Now, there is an array in `GAS/syncAppResources.gs` which serves as the "source of truth". Clicking this ensures that any new modules or schema definitions created by developers are immediately pushed into the `APP.Resources` data matrix. Existing data (like custom FileIDs set by the user) is preserved safely.
+## Notes
+- resource metadata and sheet structure should stay aligned
+- workflow/action-related columns should remain aligned with current process design
 
-### Backend Execution
-When you click one of these buttons, the script will:
-1. Loop through the configured schemas in the code (`setupMasterSheets.gs` or `setupAllOperations.gs`).
-2. Backup all the existing data currently stored in the sheet into memory.
-3. Automatically clear the sheet contents and recreate the columns in the exact order defined by the updated script.
-4. Restore the backed-up data into the **new structure** by matching the exact column names (headers).
-5. If a sheet does not exist yet, it simply creates it with the new schema.
-6. Existing data under columns that are no longer defined mathematically drop off. Data added to new columns are initialized with null/defaults if configured.
+## Canonical Detail Owners
+- Resource metadata semantics: [RESOURCE_COLUMNS_GUIDE.md](F:/LITTLE%20LEAP/AQL/Documents/RESOURCE_COLUMNS_GUIDE.md)
+- Setup flow: [NEW_CLIENT_SETUP_GUIDE.md](F:/LITTLE%20LEAP/AQL/Documents/NEW_CLIENT_SETUP_GUIDE.md)
 
-This process ensures that column orders strictly match the code configuration and the data is safely rearranged instead of blindly deleted. Note: The script clears the sheet contents rather than deleting the sheet directly so that the sheet ID (GID) won't change, which avoids breaking external data links or filters.
-
----
-
-## Modifying Frontend Along with Sheet Schema
-
-Whenever a column is added or removed in the Google Apps Script (`setupMasterSheets.gs` or `setupAllOperations.gs`), corresponding changes must be made in the frontend to tell the Quasar UI to render that new column/field.
-
-### Updating Frontend Configuration
-To add the newly defined columns to the frontend:
-1. Open the file `FRONTENT/src/config/masters.js` (for master entities) or `FRONTENT/src/config/operations.js` (for operation entities).
-2. Locate the object matching the resource you modified.
-3. Inside the `fields: [...]` array, add your new column configuration object.
-   Example:
-   ```javascript
-   { header: 'NewColumnName', label: 'User Friendly Name', type: 'text', required: false }
-   ```
-
-### Workflow Summary for Schema Updates
-1. **Update GS File**: Add/Remove columns in the `headers` array of `setupMasterSheets.gs` or `setupAllOperations.gs`.
-2. **Action/Progress Tracking**: If the resource has a `Progress` state machine or `AdditionalActions`, add `Progress<STATE>At`, `Progress<STATE>By`, `Progress<STATE>Comment` columns for **every** state. See full convention in `RESOURCE_COLUMNS_GUIDE.md § Action & Progress Tracking Columns Convention`.
-3. **Run Refactor**: Go to Google Sheet menu `AQL` -> `Setup & Refactor` -> Select the correct Refactor button (e.g., Refactor MASTER Sheets).
-4. **Update Frontend Config**: Open `FRONTENT/src/config/masters.js` or `operations.js` and update the `fields` array.
-5. **Test UI**: Hot-reload the frontend app to see the updated table and form fields correctly writing to & reading from the backend.
+## Maintenance Rule
+Update this file when:
+- the setup/refactor workflow changes
+- schema alignment expectations change
+- canonical detail-owner references change

@@ -547,7 +547,7 @@ The following files reference `config?.ui?.menu?.pageTitle` or `config?.ui?.menu
 - `Documents/MODULE_WORKFLOWS.md`
 - `Documents/CONTEXT_HANDOFF.md`
 - `Documents/RESOURCE_REGISTRY_ARCHITECTURE.md`
-- `Documents/QUASAR_SETUP.md`
+- `Documents/FRONTENT_README.md`
 
 ### Validation Performed
 - [x] All GAS code references `config.menus` (array), zero references to `config.menu` (object)

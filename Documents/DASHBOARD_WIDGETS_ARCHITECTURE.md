@@ -1,39 +1,40 @@
 # Dashboard Widgets Architecture
 
+## Purpose
+This document captures the planned dashboard-widgets architecture for upcoming work. It is intentionally future-facing.
+
 ## Concept Overview
-The dashboard is no longer a static layout tied exclusively to a single role. Instead, a user can be granted multiple roles (e.g., ProcurementManager, StoreKeeper) simultaneously. To deliver a customized and prioritized experience, the dashboard will dynamically aggregate **role-based widgets**.
+The dashboard should support multiple roles per user and assemble a prioritized widget set from those roles instead of relying on one fixed layout.
 
 ## Design Philosophy
-1. **Widgets Array**: Every role owns a set of specific dashboard widgets defined in constant files or database.
-2. **Weighting Mechanism**: Each widget has an assigned `weight` (priority integer).
-3. **Dynamic Rendering**: When a user logs in, the app cross-references their assigned roles and pulls the authorized widgets. These are then rendered in order based on their assigned `weight` on the dashboard.
+1. each role can own a set of widgets
+2. widgets can be prioritized with weights
+3. the dashboard can aggregate and order widgets across the user's active roles
 
-## Proposed Roles & Respective Widgets
+## Example Role Areas
 
 ### ProcurementManager
-- **Pending purchase requisitions** (Widget ID: `pm_pending_prs`, Weight: 100)
-    - Shows Awaiting PRs metrics.
-- **Awaiting RFQs** (Widget ID: `pm_awaiting_rfqs`, Weight: 90)
-    - Shows how many quotes were sent but pending response.
-- **PO Progress** (Widget ID: `pm_pos_in_transit`, Weight: 80)
-    - Lists all active IN_TRANSIT procurements.
+- pending purchase requisitions
+- awaiting RFQs
+- purchase-order progress
 
 ### StoreKeeper
-- **Pending GRNs** (Widget ID: `sk_pending_grn`, Weight: 100)
-    - Goods Receipt pending physical count update.
-- **Awaiting Shipments** (Widget ID: `sk_arrival_alerts`, Weight: 90)
-    - ETA count within next week.
-- **Low Stock Alerts** (Widget ID: `sk_low_stock`, Weight: 80)
-    - Highlights critical variant shortages.
+- pending GRNs
+- shipment arrival alerts
+- low-stock alerts
 
 ### Accountant
-- **Pending Port Clearance Duty** (Widget ID: `acc_pending_duty`, Weight: 100)
-    - Unpaid port clearance records.
-- **Recent Expenses** (Widget ID: `acc_recent_expenses`, Weight: 80)
-    - Quick glance at recent outflows.
+- pending duty/clearance costs
+- recent expense visibility
 
-### Implementation Checklist Whenever Adding a New Role
-- [ ] Define what primary objective this role achieves.
-- [ ] Document 1-3 critical monitoring widgets that help the user achieve that objective.
-- [ ] Add the widget IDs, endpoints used to fetch their data, and assign an appropriate comparative `weight` so it correctly layers against components of other roles.
-- [ ] Build the Vue UI component for the widget in `frontend/src/components/widgets/`.
+## Implementation Checklist
+- define each role's primary objectives
+- define the most useful widgets for those objectives
+- define how widget authorization and ordering should work
+- define the data sources/endpoints required for each widget
+
+## Maintenance Rule
+Update this file when:
+- dashboard widget strategy becomes active implementation work
+- role-to-widget mapping changes
+- the planned widget architecture or prioritization model changes

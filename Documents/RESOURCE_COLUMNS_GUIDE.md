@@ -26,6 +26,13 @@ This document is the canonical meaning reference for `APP.Resources` columns.
 - `Menu` and other UI metadata should be treated as runtime configuration, not casual prose.
 - Progress/action-tracking columns in target sheets must stay aligned with workflow/action design.
 
+## Scope Characteristics
+- `master`: Standard CRUD with auto-generated codes, audit columns, full sync.
+- `operation`: Transactional records with auto-generated year-scoped codes (e.g., PR26000001), audit columns, full sync.
+- `accounts`: Financial/accounting records, similar to operation scope.
+- `report`: Read-only aggregated data, no CRUD operations.
+- `view`: Read-only formula-driven sheets, no CRUD operations, no audit, no code generation, returns all non-empty rows without pagination.
+
 ## Canonical Detail Owners
 - APP control-plane context: [APP_SHEET_STRUCTURE.md](F:/LITTLE%20LEAP/AQL/Documents/APP_SHEET_STRUCTURE.md)
 - Registry/runtime behavior: [RESOURCE_REGISTRY_ARCHITECTURE.md](F:/LITTLE%20LEAP/AQL/Documents/RESOURCE_REGISTRY_ARCHITECTURE.md)

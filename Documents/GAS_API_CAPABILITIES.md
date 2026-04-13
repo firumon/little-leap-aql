@@ -20,6 +20,8 @@ Do not treat this as a universal startup read for every task.
 - composite save for parent + children
 - report generation
 - batch action execution
+- year-scoped code generation for operation-scope resources (e.g., PR26000001)
+- view scope read-only behavior (no CRUD operations, full dataset return without pagination)
 
 ## Key Rules
 - Prefer existing capabilities before proposing new backend patterns.

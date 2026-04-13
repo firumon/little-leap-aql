@@ -30,6 +30,18 @@ function handleMasterGetRecords(auth, payload) {
     return buildMasterRowsResponse(auth, resourceName, resource, [], lastUpdatedAt, headers);
   }
 
+  // For view scope, return all non-empty rows (no pagination, no delta filtering)
+  if (resource.config.scope === 'view') {
+    const allRows = [];
+    for (let i = 1; i < values.length; i++) {
+      const row = values[i];
+      // Filter out rows where all cells are blank (formula rows with no source data)
+      const hasData = row.some(cell => cell !== '' && cell !== null && cell !== undefined);
+      if (hasData) allRows.push(row);
+    }
+    return buildMasterRowsResponse(auth, resourceName, resource, allRows, null, headers);
+  }
+
   const idx = getHeaderIndexMap(headers);
   const statusIdx = idx.Status;
   const updatedAtIdx = idx.UpdatedAt;
@@ -102,7 +114,9 @@ function handleMasterCreateRecord(auth, payload) {
   }
 
   const seqLength = resource.config.codeSequenceLength || 6;
-  const code = generateNextCode(values, idx, codePrefix, seqLength);
+  const code = resource.config.scope === 'operation'
+    ? generateNextYearScopedCode(values, idx, codePrefix, seqLength)
+    : generateNextCode(values, idx, codePrefix, seqLength);
   const rowData = buildNewMasterRow(headers, idx, providedValues, schema);
   rowData[idx.Code] = code;
 
@@ -728,6 +742,30 @@ function generateNextCode(values, idx, prefix, sequenceLength) {
   return prefix + padSequence(nextNum, sequenceLength);
 }
 
+/**
+ * Generates a year-scoped code: <Prefix><2DigitYear><PaddedSequence>
+ * Scans only codes matching the current year to determine next sequence.
+ * Example: PR26000001, PR26000002, ... PR27000001 (year rollover)
+ */
+function generateNextYearScopedCode(values, idx, prefix, sequenceLength) {
+  var year2 = new Date().getFullYear().toString().slice(-2);
+  var escapedPrefix = escapeRegex(prefix);
+  var codePattern = new RegExp('^' + escapedPrefix + year2 + '(\\d+)$');
+  var maxSeq = 0;
+
+  for (var i = 1; i < values.length; i++) {
+    var code = (values[i][idx.Code] || '').toString().trim();
+    var match = code.match(codePattern);
+    if (match) {
+      var num = Number(match[1]);
+      if (num > maxSeq) maxSeq = num;
+    }
+  }
+
+  var nextSeq = maxSeq + 1;
+  return prefix + year2 + padSequence(nextSeq, sequenceLength);
+}
+
 function escapeRegex(value) {
   return (value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -970,7 +1008,9 @@ function handleCompositeSave(auth, payload) {
       return { success: false, message: 'CodePrefix is missing for resource: ' + parentResourceName };
     }
     var seqLength = parentResource.config.codeSequenceLength || 6;
-    parentCode = generateNextCode(parentValues, parentIdx, codePrefix, seqLength);
+    parentCode = parentResource.config.scope === 'operation'
+      ? generateNextYearScopedCode(parentValues, parentIdx, codePrefix, seqLength)
+      : generateNextCode(parentValues, parentIdx, codePrefix, seqLength);
     parentRowData = buildNewMasterRow(parentHeaders, parentIdx, parentProvidedValues, parentSchema);
     parentRowData[parentIdx.Code] = parentCode;
     applyAccessRegionOnWrite(parentRowData, parentIdx, auth);
@@ -1061,7 +1101,9 @@ function handleCompositeSave(auth, payload) {
           childCurrentValues[updateRowNum - 1] = mergedChild;
         } else {
           // create
-          var newChildCode = nextCode || generateNextCode(childCurrentValues, childIdx, childCodePrefix, childSeqLength);
+          var newChildCode = nextCode || (childResource.config.scope === 'operation'
+            ? generateNextYearScopedCode(childCurrentValues, childIdx, childCodePrefix, childSeqLength)
+            : generateNextCode(childCurrentValues, childIdx, childCodePrefix, childSeqLength));
           var newChildRow = buildNewMasterRow(childHeaders, childIdx, childProvidedValues, childSchema);
           newChildRow[childIdx.Code] = newChildCode;
           applyAccessRegionOnWrite(newChildRow, childIdx, auth);
@@ -1265,7 +1307,9 @@ function handleBulkUpsertRecords(auth, payload) {
 
       if (rowNumber === -1) {
         // --- INSERT (collect for batch) ---
-        var newCode = code || generateNextCode(currentValues, idx, codePrefix, seqLength);
+        var newCode = code || (resource.config.scope === 'operation'
+          ? generateNextYearScopedCode(currentValues, idx, codePrefix, seqLength)
+          : generateNextCode(currentValues, idx, codePrefix, seqLength));
         rowData = buildNewMasterRow(headers, idx, providedValues, schema);
         rowData[idx.Code] = newCode;
         applyAccessRegionOnWrite(rowData, idx, auth);

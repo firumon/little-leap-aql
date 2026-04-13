@@ -191,6 +191,16 @@ function getAppConfigValue(key) {
 }
 
 /**
+ * Returns the list of valid scopes from App.Config "Scopes" key.
+ * Falls back to a default set if not configured.
+ */
+function getConfiguredScopes() {
+  var raw = getAppConfigValue('Scopes');
+  if (!raw) return ['master', 'operation', 'accounts', 'report', 'view'];
+  return raw.toString().split(',').map(function(s) { return s.trim().toLowerCase(); }).filter(Boolean);
+}
+
+/**
  * Resolves a file ID for a given resource scope using the fallback chain:
  * Resource.FileID (if present) -> Config[{Scope}FileID] -> ss.getId()
  */
@@ -334,4 +344,3 @@ function clearAllAppCaches() {
   if (typeof clearAccessRegionCache === 'function') clearAccessRegionCache();
   if (typeof clearDesignationsCache === 'function') clearDesignationsCache();
 }
-

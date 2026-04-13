@@ -33,6 +33,9 @@ Read this file only when:
 - Login payload includes authorization/resource context and profile identity context.
 - Master pages use cache-first IndexedDB sync with incremental updates.
 - The project uses documented module workflows and canonical docs for menu and login payload behavior.
+- Scope infrastructure is now data-driven via App.Config "Scopes" key, supporting dynamic scope addition without code changes.
+- Procurement module schema initiated with PurchaseRequisitions, PurchaseRequisitionItems, and UOM master resources.
+- Operation-scope resources use year-scoped code generation (e.g., PR26000001).
 
 ## Deep-Dive References
 - Role boundaries: `Documents/MULTI_AGENT_PROTOCOL.md`

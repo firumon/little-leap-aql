@@ -9,12 +9,14 @@ This document explains how `APP.Resources` and related config determine runtime 
 - Scope-level config can provide default file resolution when a resource-level `FileID` is blank.
 
 ## Scope Model
-Canonical scopes are:
-- `master`
-- `operation`
-- `accounts`
-- `report`
-- `system`
+Scopes are defined in `App.Config` under the key `Scopes` as a CSV string. Default scopes if not configured: `master,operation,accounts,report,view`.
+
+Canonical scopes include:
+- `master`: Static reference data with auto-generated codes.
+- `operation`: Transactional records with year-scoped auto-generated codes.
+- `accounts`: Financial/accounting records.
+- `report`: Read-only aggregated data.
+- `view`: Read-only formula-driven sheets.
 
 Scope values should be treated as canonical resource metadata, not casual aliases.
 

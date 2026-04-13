@@ -10,6 +10,7 @@ This document describes the current master-scope sheet families and their roles.
 - `Warehouses`
 - `Ports`
 - `Carriers`
+- `UOMs`
 
 ## Structural Expectations
 - each master sheet has a generated `Code`

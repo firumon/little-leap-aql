@@ -23,7 +23,8 @@ const CONFIG = {
     SUPPLIERS: 'Suppliers',
     WAREHOUSES: 'Warehouses',
     PORTS: 'Ports',
-    CARRIERS: 'Carriers'
+    CARRIERS: 'Carriers',
+    UOMS: 'UOMs'
   },
   OPERATION_SHEETS: {
     PROCUREMENTS: 'Procurements',
@@ -53,6 +54,9 @@ const CONFIG = {
     EXPENSES: 'Expenses',
     CHART_OF_ACCOUNTS: 'ChartOfAccounts',
     ENTRY_TEMPLATES: 'EntryTemplates'
+  },
+  VIEW_SHEETS: {
+    // Placeholder — view sheets will be added as they are designed
   }
 };
 
@@ -63,5 +67,8 @@ const CONFIG = {
  *       dropdown validation in the relevant setup script.
  */
 const APP_OPTIONS_SEED = {
-  StockMovementReferenceType: ['GRN', 'DirectEntry', 'StockAdjustment']
+  StockMovementReferenceType: ['GRN', 'DirectEntry', 'StockAdjustment'],
+  PurchaseRequisitionType: ['STOCK', 'PROJECT', 'SALES', 'ASSET'],
+  PurchaseRequisitionPriority: ['Low', 'Medium', 'High', 'Urgent'],
+  PurchaseRequisitionProgress: ['Draft', 'New', 'Approved', 'Rejected', 'RFQ Processed']
 };

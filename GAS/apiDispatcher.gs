@@ -153,7 +153,7 @@ function isGenericMasterCrudAction(action, payload) {
     return true;
   }
 
-  const canonicalScopes = ['master', 'operation', 'accounts', 'report'];
+  const canonicalScopes = getConfiguredScopes();
   if (canonicalScopes.indexOf(normalizedScope) === -1) {
     return false;
   }
@@ -163,6 +163,13 @@ function isGenericMasterCrudAction(action, payload) {
 
 function dispatchGenericMasterCrudAction(action, auth, payload) {
   const normalizedAction = (action || '').toString().trim().toLowerCase();
+
+  // Resolve resource config for view scope validation
+  const resourceName = resolveMasterResourceName(payload);
+  const resource = openResourceSheet(resourceName);
+  if (resource.config.scope === 'view' && normalizedAction !== 'get') {
+    return { success: false, error: 'View-scope resources are read-only.' };
+  }
 
   if (normalizedAction === 'master.get' || normalizedAction === 'get') {
     const hasMultiResourceRequest = payload && payload.resources !== undefined && payload.resources !== null && payload.resources !== '';

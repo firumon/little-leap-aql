@@ -242,20 +242,17 @@ function updateResourceSyncCursor(resourceName) {
 
 function normalizeCodeSequenceLength(value) {
   const num = Number(value);
-  if (!Number.isFinite(num) || num <= 0) {
+  if (!Number.isFinite(num) || num < 0) {
     return 6;
   }
   return Math.floor(num);
 }
 
 function normalizeResourceScope(value) {
-  const normalized = (value || 'master').toString().trim().toLowerCase();
-  if (normalized === 'operation') return 'operation';
-  if (normalized === 'accounts') return 'accounts';
-  if (normalized === 'report') return 'report';
-  if (normalized === 'system') return 'system';
-  if (normalized === 'master') return 'master';
-  throw new Error('Invalid scope value: "' + value + '". Must be one of: master, operation, accounts, report, system.');
+  var normalized = (value || 'master').toString().trim().toLowerCase();
+  var validScopes = getConfiguredScopes();
+  if (validScopes.indexOf(normalized) !== -1) return normalized;
+  throw new Error('Invalid scope value: "' + value + '". Must be one of: ' + validScopes.join(', ') + '.');
 }
 
 function normalizeRecordAccessPolicy(value) {

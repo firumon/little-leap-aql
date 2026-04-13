@@ -72,6 +72,16 @@ function setupMasterSheets() {
         Code: 130, Name: 220, Type: 120, Phone: 140, ContactPerson: 180, AccessRegion: 130, Status: 100,
         CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
       }
+    },
+    {
+      resourceName: CONFIG.MASTER_SHEETS.UOMS,
+      headers: ['Code', 'Name', 'BaseUOM', 'ConversionFactor', 'Status'].concat(commonAuditColumns),
+      statusDefault: 'Active',
+      defaults: { Status: 'Active' },
+      columnWidths: {
+        Code: 100, Name: 200, BaseUOM: 100, ConversionFactor: 150, Status: 100,
+        CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
+      }
     }
   ];
 
@@ -81,11 +91,10 @@ function setupMasterSheets() {
   schemaByResource.forEach(function (schema) {
     try {
       const resource = getResourceConfig(schema.resourceName);
-      if (!resource.codePrefix) {
-        throw new Error('CodePrefix is missing in Resources for ' + schema.resourceName);
-      }
-      if (!resource.codeSequenceLength || resource.codeSequenceLength <= 0) {
-        throw new Error('CodeSequenceLength is missing/invalid in Resources for ' + schema.resourceName);
+      if (resource.codeSequenceLength > 0) {
+        if (!resource.codePrefix) {
+          throw new Error('CodePrefix is missing in Resources for ' + schema.resourceName);
+        }
       }
 
       const file = SpreadsheetApp.openById(resource.fileId);

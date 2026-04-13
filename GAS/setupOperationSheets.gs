@@ -26,18 +26,28 @@ function setupOperationSheets() {
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.PURCHASE_REQUISITIONS,
-            headers: ['Code', 'ProcurementCode', 'Progress', 'ProgressPENDINGAt', 'ProgressPENDINGBy', 'ProgressPENDINGComment', 'Status', 'AccessRegion'].concat(commonAuditColumns),
+            headers: ['Code', 'ProcurementCode', 'PRDate', 'Type', 'Priority', 'RequiredDate', 'WarehouseCode', 'TypeReferenceCode', 'Progress',
+                      'ProgressApprovedAt', 'ProgressApprovedBy', 'ProgressApprovedComment',
+                      'ProgressRejectedAt', 'ProgressRejectedBy', 'ProgressRejectedComment',
+                      'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active',
-            defaults: { Status: 'Active', Progress: 'PENDING' },
-            progressValidation: ['PENDING', 'VERIFIED', 'APPROVED', 'REJECTED'],
-            columnWidths: { Code: 150, ProcurementCode: 150, Progress: 120, ProgressPENDINGAt: 150, ProgressPENDINGBy: 150, ProgressPENDINGComment: 200, Status: 100 }
+            defaults: { Status: 'Active', Progress: 'Draft' },
+            progressValidation: ['Draft', 'New', 'Approved', 'Rejected', 'RFQ Processed'],
+            typeValidation: APP_OPTIONS_SEED.PurchaseRequisitionType,
+            priorityValidation: APP_OPTIONS_SEED.PurchaseRequisitionPriority,
+            columnWidths: {
+                Code: 150, ProcurementCode: 150, PRDate: 130, Type: 100, Priority: 100,
+                RequiredDate: 130, WarehouseCode: 140, TypeReferenceCode: 160, Progress: 130,
+                ProgressApprovedAt: 160, ProgressApprovedBy: 150, ProgressApprovedComment: 200,
+                ProgressRejectedAt: 160, ProgressRejectedBy: 150, ProgressRejectedComment: 200,
+                Status: 100, AccessRegion: 130
+            }
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.PURCHASE_REQUISITION_ITEMS,
-            headers: ['Code', 'PRCode', 'SKU', 'Quantity', 'ExpectedDate', 'Notes', 'Status'].concat(commonAuditColumns),
-            statusDefault: 'Active',
-            defaults: { Status: 'Active', Quantity: 0 },
-            columnWidths: { Code: 150, PRCode: 150, SKU: 150, Quantity: 100, ExpectedDate: 150, Notes: 200, Status: 100 }
+            headers: ['PRCode', 'SKU', 'UOM', 'Quantity', 'EstimatedRate'],
+            defaults: { Quantity: 0, EstimatedRate: 0 },
+            columnWidths: { PRCode: 150, SKU: 150, UOM: 100, Quantity: 100, EstimatedRate: 130 }
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.RFQS,
@@ -162,11 +172,10 @@ function setupOperationSheets() {
     schemaByResource.forEach(function (schema) {
         try {
             const resource = getResourceConfig(schema.resourceName);
-            if (!resource.codePrefix) {
-                throw new Error('CodePrefix is missing in Resources for ' + schema.resourceName);
-            }
-            if (!resource.codeSequenceLength || resource.codeSequenceLength <= 0) {
-                throw new Error('CodeSequenceLength is missing/invalid in Resources for ' + schema.resourceName);
+            if (resource.codeSequenceLength > 0) {
+                if (!resource.codePrefix) {
+                    throw new Error('CodePrefix is missing in Resources for ' + schema.resourceName);
+                }
             }
 
             const file = SpreadsheetApp.openById(resource.fileId);
@@ -202,6 +211,12 @@ function setupOperationSheets() {
             }
             if (schema.referenceTypeValidation && schema.headers.indexOf('ReferenceType') !== -1) {
                 setup_applyListValidation(sheet, schema.headers, 'ReferenceType', schema.referenceTypeValidation);
+            }
+            if (schema.typeValidation && schema.headers.indexOf('Type') !== -1) {
+                setup_applyListValidation(sheet, schema.headers, 'Type', schema.typeValidation);
+            }
+            if (schema.priorityValidation && schema.headers.indexOf('Priority') !== -1) {
+                setup_applyListValidation(sheet, schema.headers, 'Priority', schema.priorityValidation);
             }
 
             if (schema.headers.indexOf('Status') !== -1) {

@@ -93,8 +93,8 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import MasterViewActionBar from 'src/components/Masters/MasterViewActionBar.vue'
-import MasterViewAudit from 'src/components/Masters/MasterViewAudit.vue'
+import MasterViewActionBar from 'components/Masters/_common/MasterViewActionBar.vue'
+import MasterViewAudit from 'components/Masters/_common/MasterViewAudit.vue'
 import ReportInputDialog from 'src/components/Masters/ReportInputDialog.vue'
 import { useProductVariants } from 'src/composables/useProductVariants'
 import { useResourceConfig } from 'src/composables/useResourceConfig'

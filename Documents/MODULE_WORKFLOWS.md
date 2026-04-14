@@ -10,14 +10,15 @@ This document captures the **end-to-end workflow knowledge** for each major feat
 
 1. [Report Generation (PDF)](#1-report-generation-pdf)
 2. [Master Pages - 3-Tier Section-Level Component Architecture](#2-master-pages--3-tier-section-level-component-architecture)
-3. [Products Variant Management (Custom Pages)](#3-products-variant-management-custom-pages)
-4. [Menu Access Control](#4-menu-access-control)
-5. [Direct Stock Entry (Editable Register)](#5-direct-stock-entry-editable-register)
+3. [Operation Pages — 3-Tier Architecture](#3-operation-pages--3-tier-architecture)
+4. [Products Variant Management (Custom Pages)](#4-products-variant-management-custom-pages)
+5. [Menu Access Control](#5-menu-access-control)
+6. [Direct Stock Entry (Editable Register)](#6-direct-stock-entry-editable-register)
 
 <!-- Future modules -- add sections as they are built:
-6. [Data Backup & Restore](#6-data-backup--restore)
-7. [Bulk Upload](#7-bulk-upload)
-8. [Dashboard Widgets](#8-dashboard-widgets)
+7. [Data Backup & Restore](#7-data-backup--restore)
+8. [Bulk Upload](#8-bulk-upload)
+9. [Dashboard Widgets](#9-dashboard-widgets)
 -->
 
 ---
@@ -526,9 +527,40 @@ sectionsReady = true → template renders all <component :is="...">
 
 ---
 
-## 3. Products Variant Management (Custom Pages)
+## 3. Operation Pages — 3-Tier Architecture
 
 ### 3.1 Overview
+
+Operations pages use an identical 3-tier discovery mechanism as Masters, but with a different default section set — particularly for the `ViewPage`. 
+
+Operations data generally flows top-down (e.g. Purchase Requisitions → Purchase Orders → Receipts) and tracks complex lifecycles via `additionalActions`. Operations views exclude the generic `ViewAudit` section and substitute a `ViewParent` section.
+
+### 3.2 Key Differences vs Masters
+
+- **Router Split**: Operations route dynamic block (`/operations/:resourceSlug/...`) hits `pages/Operations/ActionResolverPage.vue`, completely detached from the masters/accounts routing block.
+- **Section Resolver Scope**: `useSectionResolver` takes an optional `scope` parameter (`'operations'`). When set, it uses independent glob maps pointing to `components/Operations/`.
+- **ViewPage Orchestrator**: The default operations `ViewPage.vue` orchestrator includes `ViewHeader`, `ViewActionBar`, `ViewDetails`, `ViewParent`, and `ViewChildren`.
+- **ViewDetails Filtering**: The default `OperationViewDetails` dynamically filters out both audit columns (`CreatedAt`, `UpdatedAt`, `CreatedBy`, `UpdatedBy`) and any action stamp columns dynamically generated from the resource's `additionalActions` configuration (e.g. `ApprovedBy`, `ApprovedAt`, `RejectedBy`, `RejectedAt`).
+- **ViewParent Handling**: `OperationViewParent` automatically fetches the parent record (based on the `{ParentName}Code` header resolution logic). 
+  - If the parent record has a `Name` field, it displays as a minimal inline link: `Name (Code)`.
+  - If the parent record has no `Name` field, it displays a full embedded data card excluding audit/action fields.
+
+### 3.3 Files Involved
+
+| File | Role |
+|---|---|
+| `FRONTENT/src/pages/Operations/ActionResolverPage.vue` | 3-tier page-level resolver for Operations scope |
+| `FRONTENT/src/pages/Operations/_common/ViewPage.vue` | View orchestrator for Operations (custom section set) |
+| `FRONTENT/src/pages/Operations/_common/{Add,Edit,Action,Index}Page.vue` | Other orchestrators (structural mirrors of Masters) |
+| `FRONTENT/src/components/Operations/_common/Operation*.vue` | 22 default section components for Operations |
+| `FRONTENT/src/pages/Operations/_custom/REGISTRY.md` | Registry for tenant-custom full pages |
+| `FRONTENT/src/components/Operations/_custom/REGISTRY.md` | Registry for tenant-custom section components |
+
+---
+
+## 4. Products Variant Management (Custom Pages)
+
+### 4.1 Overview
 
 Products now use entity-custom pages under `FRONTENT/src/pages/Masters/Products/` for variant-aware UX across index, view, add, and edit actions.
 
@@ -537,7 +569,7 @@ Products now use entity-custom pages under `FRONTENT/src/pages/Masters/Products/
 - Variant schema source: `Products.VariantTypes` (CSV)
 - Variant mapping: CSV position maps to `SKUs.Variant1` to `SKUs.Variant5`
 
-### 3.2 Files Involved
+### 4.2 Files Involved
 
 | File | Role |
 |---|---|
@@ -547,7 +579,7 @@ Products now use entity-custom pages under `FRONTENT/src/pages/Masters/Products/
 | `FRONTENT/src/pages/Masters/Products/AddPage.vue` | Composite create page for Product + SKU rows with dynamic variant inputs |
 | `FRONTENT/src/pages/Masters/Products/EditPage.vue` | Composite edit page with variant type impact handling and SKU row lifecycle controls |
 
-### 3.3 Runtime Flow
+### 4.3 Runtime Flow
 
 1. Route resolver picks `Products/IndexPage.vue`, `ViewPage.vue`, `AddPage.vue`, `EditPage.vue` via entity-custom page tier.
 2. Pages load Products with `useResourceData(resourceName)`.
@@ -555,7 +587,7 @@ Products now use entity-custom pages under `FRONTENT/src/pages/Masters/Products/
 4. `useProductVariants` converts `VariantTypes` CSV into dynamic variant columns.
 5. Add/Edit pages manage Product + SKUs through `useCompositeForm(config)` and save atomically using `compositeSave`.
 
-### 3.4 Validation and Behavior Rules
+### 4.4 Validation and Behavior Rules
 
 1. Variant dimension count is capped at 5.
 2. Variant labels are user-defined and displayed as dynamic column headers.
@@ -566,13 +598,13 @@ Products now use entity-custom pages under `FRONTENT/src/pages/Masters/Products/
 
 ---
 
-## 4. Menu Access Control
+## 5. Menu Access Control
 
-### 4.1 Overview
+### 5.1 Overview
 
 Menu Access Control enables fine-grained permission-based visibility of resources in the sidebar and route protection using a flexible `menuAccess` rule inside the `Menu` JSON column of `APP.Resources`. Rules support single-resource permission checks and cross-resource AND/OR logic.
 
-### 4.2 Architecture
+### 5.2 Architecture
 
 **Backend (GAS):**
 - `GAS/syncAppResources.gs` — Defines `menuAccess` inside each entry of the `Menu` JSON array for every resource, so multiple sidebar menu rows can share one resource entry.
@@ -583,7 +615,7 @@ Menu Access Control enables fine-grained permission-based visibility of resource
 - `FRONTENT/src/layouts/MainLayout/MainLayout.vue` — Iterates over every `menu` entry in `resource.ui.menus`, calling `evaluateMenuAccess(resource, menu)` and rendering one sidebar row per visible entry.
 - `FRONTENT/src/router/index.js` — Matches `to.path` against all `ui.menus` entries and passes the matched entry to `evaluateMenuAccessInline()` before allowing navigation.
 
-### 4.3 `menuAccess` Rule Formats
+### 5.3 `menuAccess` Rule Formats
 
 All rules evaluate against the current logged-in user's permissions (from auth store). If `menuAccess` is absent, the fallback is `canRead` on the resource itself.
 
@@ -620,7 +652,7 @@ If any rule fails, access is denied.
 ```
 If at least one rule passes, access is granted.
 
-### 4.4 Evaluation Flow
+### 5.4 Evaluation Flow
 
 1. **Backend Setup:**
    - Admin updates `menuAccess` on each entry inside the `Menu` JSON array in `APP.Resources` (either by hand in the sheet or by syncing `syncAppResources.gs` defaults).
@@ -636,14 +668,14 @@ If at least one rule passes, access is granted.
    - It passes that matched menu entry into `evaluateMenuAccessInline(targetEntry, allResources, to.path)` before allowing navigation.
    - A failed evaluation redirects back to `/dashboard`; when allowed, navigation proceeds.
 
-### 4.5 Permission Keys
+### 5.5 Permission Keys
 
 Valid permission keys depend on role configuration. Common keys:
 - `canRead`, `canWrite`, `canUpdate`, `canDelete` (CRUD standard)
 - `canApprove`, `canReject`, `canCancel` (custom actions)
 - Any key matching the pattern `can<ActionName>`
 
-### 4.6 Configuration & Testing
+### 5.6 Configuration & Testing
 
 **To add `menuAccess` to a resource:**
 
@@ -674,27 +706,27 @@ Valid permission keys depend on role configuration. Common keys:
    - User WITH the required permission → resource visible in sidebar, route accessible.
    - User WITHOUT the required permission → resource hidden from sidebar, route redirects to dashboard.
 
-### 4.7 Error Handling & Defaults
+### 5.7 Error Handling & Defaults
 
 - If `menuAccess` is malformed (invalid JSON, missing fields), safe defaults apply.
 - Missing `resource` in a rule defaults to the current resource name.
 - Unknown permission keys return `false` (denied).
 - If auth store is unavailable or `resources` list is empty, all visibility checks return `false`.
 
-### 4.8 Implementation Details
+### 5.8 Implementation Details
 
 - Evaluation is **fully frontend-side** — no extra GAS calls needed.
 - Composable `useMenuAccess()` is lightweight; each check is O(n) where n = number of rules (typically 1–5).
 - Router guard uses inline `evaluateMenuAccessInline()` (not composable) because Vue composables require `setup()` context, unavailable in the router.
 - Both evaluators use identical logic to ensure consistency.
 
-## 5. Direct Stock Entry (Editable Register)
+## 6. Direct Stock Entry (Editable Register)
 
-### 5.1 Overview
+### 6.1 Overview
 
 The Direct Stock Entry page (`/operations/stock-movements/direct-entry`) provides a fast, mobile-first editable register for adding or adjusting stock quantities. It operates strictly as a `DirectEntry` movement type, writing to the `StockMovements` ledger which in turn auto-updates the `WarehouseStorages` summary via a backend hook.
 
-### 5.2 Architecture Diagram
+### 6.2 Architecture Diagram
 
 ```
 FRONTEND (Quasar)
@@ -720,7 +752,7 @@ BACKEND (Google Apps Script)
     → applyStockMovementToWarehouseStorages() upserts WarehouseStorages
 ```
 
-### 5.3 Files Involved
+### 6.3 Files Involved
 
 | File | Role |
 |---|---|
@@ -731,7 +763,7 @@ BACKEND (Google Apps Script)
 | `GAS/stockMovements.gs` | Hook logic to sync `WarehouseStorages` based on `StockMovements` |
 | `GAS/masterApi.gs` | Executes `dispatchAfterCreateHook()` during save |
 
-### 5.4 Key Behaviors
+### 6.4 Key Behaviors
 1. **Delta Calculation**: The UI tracks `originalQty` and `currentQty`. On save, it only submits rows where `currentQty !== originalQty`. The submitted value is the difference (`QtyChange = currentQty - originalQty`).
 2. **Remove Icon**: Clicking the trash icon on an existing row sets its quantity to 0 and visually strikes it out. This generates a negative delta equal to the original quantity. This action is reversible until saved.
 3. **Auto-Append New Rows**: Filling out the single empty row at the bottom automatically spawns a new empty row beneath it, allowing rapid entry of new stock.
@@ -741,7 +773,7 @@ BACKEND (Google Apps Script)
 7. **Draft Storage Dropdown (2026-04-11)**: The storage-location dropdown for new rows is a reactive union of fetched `WarehouseStorages` names plus any non-empty `StorageName` values currently typed in `newRows`. Typing a new location in row 1 immediately makes it selectable in row 2, before save. `q-select`'s `new-value-mode="add-unique"` still commits typed values to the row's model as before.
 
 <!-- Future modules -- add sections as they are built:
-6. [Data Backup & Restore](#6-data-backup--restore)
-7. [Bulk Upload](#7-bulk-upload)
-8. [Dashboard Widgets](#8-dashboard-widgets)
+7. [Data Backup & Restore](#7-data-backup--restore)
+8. [Bulk Upload](#8-bulk-upload)
+9. [Dashboard Widgets](#9-dashboard-widgets)
 -->

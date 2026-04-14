@@ -363,15 +363,6 @@ function setupAppSheets() {
     appOptionsSheet.setColumnWidth(col, 160);
   }
 
-  // Banding
-  var appOptionsBandings = appOptionsSheet.getBandings();
-  appOptionsBandings.forEach(function (b) { b.remove(); });
-  var appOptionsLastRow = Math.max(appOptionsSheet.getLastRow(), 1);
-  appOptionsSheet.getRange(1, 1, appOptionsLastRow, 10)
-    .applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY)
-    .setFirstRowColor('#ffffff')
-    .setSecondRowColor('#f3f6fb');
-
   // Seed missing option groups — never overwrites existing rows
   var appOptionsData = appOptionsSheet.getLastRow() > 0
     ? appOptionsSheet.getRange(1, 1, appOptionsSheet.getLastRow(), 1).getValues()
@@ -388,7 +379,21 @@ function setupAppSheets() {
   if (optionRowsToAppend.length > 0) {
     var appendStartRow = appOptionsSheet.getLastRow() + 1;
     var maxCols = optionRowsToAppend.reduce(function (max, r) { return Math.max(max, r.length); }, 1);
-    appOptionsSheet.getRange(appendStartRow, 1, optionRowsToAppend.length, maxCols).setValues(optionRowsToAppend);
+    // Pad all rows to maxCols to match range dimensions
+    var paddedRows = optionRowsToAppend.map(function (r) {
+      while (r.length < maxCols) {
+        r.push('');
+      }
+      return r;
+    });
+    appOptionsSheet.getRange(appendStartRow, 1, paddedRows.length, maxCols).setValues(paddedRows);
+  }
+
+  // Delete empty rows beyond the last row with data
+  var finalLastRow = appOptionsSheet.getLastRow();
+  if (finalLastRow < appOptionsSheet.getMaxRows()) {
+    var rowsToDelete = appOptionsSheet.getMaxRows() - finalLastRow;
+    appOptionsSheet.deleteRows(finalLastRow + 1, rowsToDelete);
   }
 
   fileSheetIndex++;

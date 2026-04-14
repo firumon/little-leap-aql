@@ -4,7 +4,7 @@ import { computed, markRaw, reactive, watch } from 'vue'
  * Scans components/Masters/{Entity}/ for entity-level section overrides.
  * Excludes _custom/ and BulkUpload/ subdirectories.
  */
-const entitySectionModules = import.meta.glob([
+const mastersEntitySectionModules = import.meta.glob([
   '../components/Masters/*/*.vue',
   '!../components/Masters/_custom/**',
   '!../components/Masters/BulkUpload/**'
@@ -13,7 +13,21 @@ const entitySectionModules = import.meta.glob([
 /**
  * Scans components/Masters/_custom/{Code}/ for tenant-custom section overrides.
  */
-const customSectionModules = import.meta.glob('../components/Masters/_custom/**/*.vue')
+const mastersCustomSectionModules = import.meta.glob('../components/Masters/_custom/**/*.vue')
+
+/**
+ * Scans components/Operations/{Entity}/ for entity-level section overrides.
+ */
+const operationsEntitySectionModules = import.meta.glob([
+  '../components/Operations/*/*.vue',
+  '!../components/Operations/_custom/**'
+])
+
+/**
+ * Scans components/Operations/_custom/{Code}/ for tenant-custom section overrides.
+ */
+const operationsCustomSectionModules = import.meta.glob('../components/Operations/_custom/**/*.vue')
+
 
 function toPascalCase(slug) {
   if (!slug) return ''
@@ -25,32 +39,37 @@ function toPascalCase(slug) {
 
 /**
  * Resolves a single section component using 3-tier discovery:
- *   1. Tenant-custom: components/Masters/_custom/{Code}/{Entity}{Action}{Section}.vue
- *   2. Entity-custom: components/Masters/{Entity}/{Action}{Section}.vue
+ *   1. Tenant-custom: components/{Scope}/_custom/{Code}/{Entity}{Action}{Section}.vue
+ *   2. Entity-custom: components/{Scope}/{Entity}/{Action}{Section}.vue
  *   3. Default:       (passed in as defaultComponent)
  */
-async function resolveSection(entityName, sectionName, defaultComponent, customUIName) {
+async function resolveSection(entityName, sectionName, defaultComponent, customUIName, scope = 'masters') {
+
+  const customSectionModules = scope === 'operations' ? operationsCustomSectionModules : mastersCustomSectionModules
+  const entitySectionModules = scope === 'operations' ? operationsEntitySectionModules : mastersEntitySectionModules
+  const folder = scope === 'operations' ? 'Operations' : 'Masters'
+
   // Tier 1: Tenant-custom
   if (customUIName) {
-    const customPath = `../components/Masters/_custom/${customUIName}/${entityName}${sectionName}.vue`
+    const customPath = `../components/${folder}/_custom/${customUIName}/${entityName}${sectionName}.vue`
     if (customSectionModules[customPath]) {
       try {
         const mod = await customSectionModules[customPath]()
         return markRaw(mod.default || mod)
       } catch (e) {
-        console.warn(`[SectionResolver] Failed to load custom ${sectionName} for ${customUIName}/${entityName}`, e)
+        console.warn(`[SectionResolver] Failed to load custom ${sectionName} for ${customUIName}/${entityName} in ${scope}`, e)
       }
     }
   }
 
   // Tier 2: Entity-custom
-  const entityPath = `../components/Masters/${entityName}/${sectionName}.vue`
+  const entityPath = `../components/${folder}/${entityName}/${sectionName}.vue`
   if (entitySectionModules[entityPath]) {
     try {
       const mod = await entitySectionModules[entityPath]()
       return markRaw(mod.default || mod)
     } catch (e) {
-      console.warn(`[SectionResolver] Failed to load entity ${sectionName} for ${entityName}`, e)
+      console.warn(`[SectionResolver] Failed to load entity ${sectionName} for ${entityName} in ${scope}`, e)
     }
   }
 
@@ -66,11 +85,12 @@ async function resolveSection(entityName, sectionName, defaultComponent, customU
  * @param {import('vue').Ref<string>} options.customUIName - CustomUIName from resource config (e.g., 'A2930')
  * @param {Object} options.sectionDefs - Map of section names to their default components
  *   e.g., { ListHeader: MasterListHeader, ListReportBar: MasterListReportBar, ... }
+ * @param {string} options.scope - Target scope ('masters' or 'operations'). Defaults to 'masters'.
  *
  * @returns {{ sections: Object, sectionsReady: import('vue').ComputedRef<boolean> }}
  *   sections is a reactive object with shallowRef for each section key.
  */
-export function useSectionResolver({ resourceSlug, customUIName, sectionDefs }) {
+export function useSectionResolver({ resourceSlug, customUIName, sectionDefs, scope = 'masters' }) {
   const sectionNames = Object.keys(sectionDefs)
   const sections = reactive(
     Object.fromEntries(sectionNames.map((name) => [name, null]))
@@ -83,7 +103,8 @@ export function useSectionResolver({ resourceSlug, customUIName, sectionDefs }) 
         entityName,
         sectionName,
         sectionDefs[sectionName],
-        uiName
+        uiName,
+        scope
       )
     }
   }

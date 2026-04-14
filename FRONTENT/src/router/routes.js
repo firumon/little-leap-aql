@@ -46,11 +46,63 @@ const routes = [
       },
       {
         path: '/operations/stock-movements/direct-entry',
-        component: () => import('pages/Warehouse/ManageStockPage.vue'),
+        component: () => import('pages/Masters/Warehouse/ManageStockPage.vue'),
         meta: { scope: 'operation', requiresAuth: true }
       },
       {
-        path: '/:scope(masters|operations|accounts)/:resourceSlug',
+        path: '/operations/purchase-requisitions/initiate-purchase-requisitions',
+        component: () => import('pages/Procurement/PRInitiationPage.vue'),
+        meta: { scope: 'operation', requiresAuth: true }
+      },
+      {
+        path: '/operations/purchase-requisitions/:code/draft',
+        component: () => import('pages/Procurement/PRDraftViewPage.vue'),
+        meta: { scope: 'operation', requiresAuth: true }
+      },
+      {
+        path: '/operations/purchase-requisitions/:code/view',
+        component: () => import('pages/Procurement/PRViewPage.vue'),
+        meta: { scope: 'operation', requiresAuth: true }
+      },
+      {
+        path: '/operations/:resourceSlug',
+        component: () => import('pages/Operations/ResourcePageShell.vue'),
+        props: true,
+        children: [
+          {
+            path: '',
+            name: 'operations-list',
+            component: () => import('pages/Operations/ActionResolverPage.vue'),
+            meta: { action: 'index', level: 'resource' }
+          },
+          {
+            path: 'add',
+            name: 'operations-add',
+            component: () => import('pages/Operations/ActionResolverPage.vue'),
+            meta: { action: 'add', level: 'resource' }
+          },
+          {
+            path: ':code',
+            name: 'operations-view',
+            component: () => import('pages/Operations/ActionResolverPage.vue'),
+            meta: { action: 'view', level: 'record' }
+          },
+          {
+            path: ':code/edit',
+            name: 'operations-edit',
+            component: () => import('pages/Operations/ActionResolverPage.vue'),
+            meta: { action: 'edit', level: 'record' }
+          },
+          {
+            path: ':code/:action',
+            name: 'operations-action',
+            component: () => import('pages/Operations/ActionResolverPage.vue'),
+            meta: { level: 'record' }
+          }
+        ]
+      },
+      {
+        path: '/masters/:resourceSlug',
         component: () => import('pages/Masters/ResourcePageShell.vue'),
         props: true,
         children: [

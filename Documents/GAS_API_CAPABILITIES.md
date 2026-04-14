@@ -15,7 +15,7 @@ Do not treat this as a universal startup read for every task.
 - generic CRUD by action/scope/resource
 - bulk create/update with `records: []`
 - bulk upload flow for the dedicated Bulk Upload UI
-- post-write hook support
+- post-write hook support (e.g., PostAction-based cross-resource progress sync)
 - additional actions / workflow transitions
 - composite save for parent + children
 - report generation

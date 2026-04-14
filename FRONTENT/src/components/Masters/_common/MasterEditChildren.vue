@@ -14,7 +14,7 @@
 </template>
 
 <script setup>
-import ChildRecordsTable from 'src/components/Masters/ChildRecordsTable.vue'
+import ChildRecordsTable from 'components/Masters/ChildRecordsTable.vue'
 
 defineProps({
   childGroups: { type: Array, default: () => [] },

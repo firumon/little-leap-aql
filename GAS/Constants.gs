@@ -70,5 +70,6 @@ const APP_OPTIONS_SEED = {
   StockMovementReferenceType: ['GRN', 'DirectEntry', 'StockAdjustment'],
   PurchaseRequisitionType: ['STOCK', 'PROJECT', 'SALES', 'ASSET'],
   PurchaseRequisitionPriority: ['Low', 'Medium', 'High', 'Urgent'],
-  PurchaseRequisitionProgress: ['Draft', 'New', 'Approved', 'Rejected', 'RFQ Processed']
+  PurchaseRequisitionProgress: ['Draft', 'New', 'Review', 'Approved', 'Rejected', 'RFQ Processed'],
+  ProcurementProgress: ['INITIATED', 'PR_CREATED', 'PR_APPROVED', 'RFQ_GENERATED', 'QUOTATIONS_RECEIVED', 'PO_ISSUED', 'IN_TRANSIT', 'ARRIVED_AT_PORT', 'COMPLETED', 'CANCELLED']
 };

@@ -18,26 +18,28 @@ function setupOperationSheets() {
     const schemaByResource = [
         {
             resourceName: CONFIG.OPERATION_SHEETS.PROCUREMENTS,
-            headers: ['Code', 'Progress', 'InitiatedDate', 'CreatedRole', 'Status', 'AccessRegion'].concat(commonAuditColumns),
+            headers: ['Code', 'Progress', 'InitiatedDate', 'CreatedUser', 'CreatedRole', 'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active',
             defaults: { Status: 'Active', Progress: 'INITIATED' },
             progressValidation: ['INITIATED', 'PR_CREATED', 'PR_APPROVED', 'RFQ_GENERATED', 'QUOTATIONS_RECEIVED', 'PO_ISSUED', 'IN_TRANSIT', 'ARRIVED_AT_PORT', 'COMPLETED', 'CANCELLED'],
-            columnWidths: { Code: 150, Progress: 180, InitiatedDate: 150, CreatedRole: 150, Status: 100, AccessRegion: 130 }
+            columnWidths: { Code: 150, Progress: 180, InitiatedDate: 150, CreatedUser: 150, CreatedRole: 150, Status: 100, AccessRegion: 130 }
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.PURCHASE_REQUISITIONS,
             headers: ['Code', 'ProcurementCode', 'PRDate', 'Type', 'Priority', 'RequiredDate', 'WarehouseCode', 'TypeReferenceCode', 'Progress',
+                      'ProgressReviewAt', 'ProgressReviewBy', 'ProgressReviewComment',
                       'ProgressApprovedAt', 'ProgressApprovedBy', 'ProgressApprovedComment',
                       'ProgressRejectedAt', 'ProgressRejectedBy', 'ProgressRejectedComment',
                       'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active',
             defaults: { Status: 'Active', Progress: 'Draft' },
-            progressValidation: ['Draft', 'New', 'Approved', 'Rejected', 'RFQ Processed'],
+            progressValidation: ['Draft', 'New', 'Review', 'Approved', 'Rejected', 'RFQ Processed'],
             typeValidation: APP_OPTIONS_SEED.PurchaseRequisitionType,
             priorityValidation: APP_OPTIONS_SEED.PurchaseRequisitionPriority,
             columnWidths: {
                 Code: 150, ProcurementCode: 150, PRDate: 130, Type: 100, Priority: 100,
                 RequiredDate: 130, WarehouseCode: 140, TypeReferenceCode: 160, Progress: 130,
+                ProgressReviewAt: 160, ProgressReviewBy: 150, ProgressReviewComment: 200,
                 ProgressApprovedAt: 160, ProgressApprovedBy: 150, ProgressApprovedComment: 200,
                 ProgressRejectedAt: 160, ProgressRejectedBy: 150, ProgressRejectedComment: 200,
                 Status: 100, AccessRegion: 130
@@ -45,9 +47,9 @@ function setupOperationSheets() {
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.PURCHASE_REQUISITION_ITEMS,
-            headers: ['PRCode', 'SKU', 'UOM', 'Quantity', 'EstimatedRate'],
+            headers: ['PurchaseRequisitionCode', 'SKU', 'UOM', 'Quantity', 'EstimatedRate'],
             defaults: { Quantity: 0, EstimatedRate: 0 },
-            columnWidths: { PRCode: 150, SKU: 150, UOM: 100, Quantity: 100, EstimatedRate: 130 }
+            columnWidths: { PurchaseRequisitionCode: 200, SKU: 150, UOM: 100, Quantity: 100, EstimatedRate: 130 }
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.RFQS,

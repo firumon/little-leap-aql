@@ -36,6 +36,9 @@ Read this file only when:
 - Scope infrastructure is now data-driven via App.Config "Scopes" key, supporting dynamic scope addition without code changes.
 - Procurement module schema initiated with PurchaseRequisitions, PurchaseRequisitionItems, and UOM master resources.
 - Operation-scope resources use year-scoped code generation (e.g., PR26000001).
+- PR frontend flow implemented (initiation, draft editing, and read-only views).
+- `procurement.gs` handler created for cross-resource progress sync (e.g., auto-creating Procurement on PR submission).
+- Operations 3-tier UI architecture implemented, mirroring Masters but customized for operations context (ViewParent instead of ViewAudit, filtered details).
 
 ## Deep-Dive References
 - Role boundaries: `Documents/MULTI_AGENT_PROTOCOL.md`

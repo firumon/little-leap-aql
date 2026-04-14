@@ -73,11 +73,11 @@
 import { watch, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import ReportInputDialog from 'src/components/Masters/ReportInputDialog.vue'
-import MasterListHeader from 'src/components/Masters/MasterListHeader.vue'
-import MasterListReportBar from 'src/components/Masters/MasterListReportBar.vue'
-import MasterListToolbar from 'src/components/Masters/MasterListToolbar.vue'
-import MasterListRecords from 'src/components/Masters/MasterListRecords.vue'
-import MasterListViewSwitcher from 'src/components/Masters/MasterListViewSwitcher.vue'
+import MasterListHeader from 'components/Masters/_common/MasterListHeader.vue'
+import MasterListReportBar from 'components/Masters/_common/MasterListReportBar.vue'
+import MasterListToolbar from 'components/Masters/_common/MasterListToolbar.vue'
+import MasterListRecords from 'components/Masters/_common/MasterListRecords.vue'
+import MasterListViewSwitcher from 'components/Masters/_common/MasterListViewSwitcher.vue'
 import { useSectionResolver } from 'src/composables/useSectionResolver'
 import { useResourceConfig } from 'src/composables/useResourceConfig'
 import { useResourceData } from 'src/composables/useResourceData'
@@ -135,7 +135,15 @@ const {
 const childCountMap = ref({})
 
 function navigateToView(row) {
-  router.push(`/${scope.value}/${resourceSlug.value}/${row.Code}`)
+  if (resourceSlug.value === 'purchase-requisitions') {
+    if (['Draft', 'Review'].includes(row.Progress)) {
+      router.push(`/${scope.value}/${resourceSlug.value}/${row.Code}/draft`)
+    } else {
+      router.push(`/${scope.value}/${resourceSlug.value}/${row.Code}/view`)
+    }
+  } else {
+    router.push(`/${scope.value}/${resourceSlug.value}/${row.Code}`)
+  }
 }
 
 function navigateToAdd() {

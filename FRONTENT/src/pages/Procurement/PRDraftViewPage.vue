@@ -224,7 +224,7 @@ const loadData = async () => {
   try {
     const [prRes, itemsRes, whRes, skuRes] = await Promise.all([
       callGasApi('getRecords', { resourceName: 'PurchaseRequisitions', filters: JSON.stringify([{ field: 'Code', operator: 'eq', value: prCode }]) }),
-      callGasApi('getRecords', { resourceName: 'PurchaseRequisitionItems', filters: JSON.stringify([{ field: 'PRCode', operator: 'eq', value: prCode }]) }),
+      callGasApi('getRecords', { resourceName: 'PurchaseRequisitionItems', filters: JSON.stringify([{ field: 'PurchaseRequisitionCode', operator: 'eq', value: prCode }]) }),
       loadWarehouses(),
       callGasApi('getRecords', { resourceName: 'SKUs', limit: 3000 })
     ])

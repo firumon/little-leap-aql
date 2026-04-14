@@ -26,6 +26,11 @@ This document is the canonical meaning reference for `APP.Resources` columns.
 - `Menu` and other UI metadata should be treated as runtime configuration, not casual prose.
 - Progress/action-tracking columns in target sheets must stay aligned with workflow/action design.
 
+## Notable Column Dependencies
+- `SKUs` resource now requires `UOM` column.
+- `Procurements` resource now requires `CreatedUser` column.
+- `PurchaseRequisitions` resource tracks Review progress using `ProgressReviewAt`, `ProgressReviewBy`, and `ProgressReviewComment` columns.
+
 ## Scope Characteristics
 - `master`: Standard CRUD with auto-generated codes, audit columns, full sync.
 - `operation`: Transactional records with auto-generated year-scoped codes (e.g., PR26000001), audit columns, full sync.

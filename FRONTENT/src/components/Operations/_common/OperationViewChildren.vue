@@ -1,0 +1,77 @@
+<template>
+  <template v-for="childRes in childResources" :key="childRes.name">
+    <q-card flat bordered class="page-card q-mt-sm">
+      <q-card-section>
+        <div class="section-title">{{ childRes.ui?.menus?.[0]?.pageTitle || childRes.name }}</div>
+        <div v-if="!childRecordsMap[childRes.name]?.length" class="text-grey-6 text-center q-py-md">
+          No {{ (childRes.ui?.menus?.[0]?.pageTitle || childRes.name).toLowerCase() }} found
+        </div>
+        <q-markup-table v-else flat dense separator="horizontal" class="child-view-table">
+          <thead>
+            <tr>
+              <th class="text-left">Code</th>
+              <th
+                v-for="field in getChildFields(childRes)"
+                :key="field.header"
+                class="text-left"
+              >
+                {{ field.label }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="childRow in childRecordsMap[childRes.name]" :key="childRow.Code" @click="$emit('view-child', childRes, childRow.Code)" class="cursor-pointer child-row">
+              <td class="text-primary text-weight-medium">{{ childRow.Code }}</td>
+              <td v-for="field in getChildFields(childRes)" :key="field.header">
+                {{ childRow[field.header] || '-' }}
+              </td>
+            </tr>
+          </tbody>
+        </q-markup-table>
+      </q-card-section>
+    </q-card>
+  </template>
+</template>
+
+<script setup>
+defineProps({
+  childResources: { type: Array, default: () => [] },
+  childRecordsMap: { type: Object, default: () => ({}) },
+  parentCode: { type: String, default: '' }
+})
+
+defineEmits(['view-child'])
+
+function getChildFields(childRes) {
+  const uiFields = childRes?.ui?.fields
+  if (Array.isArray(uiFields) && uiFields.length) {
+    return uiFields.filter((f) => f.header !== 'Code' && f.header !== 'ParentCode')
+  }
+  const headers = Array.isArray(childRes?.headers) ? childRes.headers : []
+  return headers
+    .filter((h) => !['Code', 'ParentCode', 'CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy'].includes(h))
+    .map((h) => ({
+      header: h,
+      label: h.replace(/([a-z])([A-Z])/g, '$1 $2'),
+      type: 'text'
+    }))
+}
+</script>
+
+<style scoped>
+.page-card {
+  border-radius: 16px;
+  border-color: var(--operation-border, #e2e8f0);
+  background: rgba(255, 255, 255, 0.95);
+  animation: rise-in 280ms ease-out both;
+}
+.section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 12px; }
+.child-view-table { font-size: 13px; }
+.child-view-table th { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; color: #64748b; padding: 8px 12px; }
+.child-view-table td { padding: 6px 12px; }
+.child-row:hover { background-color: #f1f5f9; }
+@keyframes rise-in {
+  0% { transform: translateY(10px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+</style>

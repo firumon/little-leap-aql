@@ -95,6 +95,7 @@ The report system generates PDF documents from Google Sheets templates. A user c
 | `GAS/resourceRegistry.gs` | Caches `APP.Resources` config including `reports` array and `pdfOptions` |
 | `GAS/apiDispatcher.gs` | Routes `generateReport` action to `generateReportPdf()` |
 | `FRONTENT/src/composables/useReports.js` | Frontend composable: report filtering, input collection, API call, PDF download |
+| `FRONTENT/src/composables/useResourceNav.js` | Composable for route navigation logic across scopes. |
 | `FRONTENT/src/pages/Masters/_common/IndexPage.vue` | Integrates `useReports(currentResource)` with the master page |
 | `FRONTENT/src/components/Masters/MasterListReportBar.vue` | Renders toolbar-level report buttons |
 | `FRONTENT/src/components/Masters/MasterDetailDialog.vue` | Renders record-level report buttons |
@@ -283,20 +284,20 @@ initiateReport(report, record)  // record-level (injects record fields)
 
 ### 2.1 Overview
 
-All master/operation/accounts pages (Index, View, Add, Edit, Action) use a **3-tier section-level component architecture** where each visual section is an independently replaceable component. The system supports **per-tenant customization** driven by `APP.Resources.CustomUIName`, with automatic fallback through three resolution tiers.
+All master/operation/accounts pages (Index, View, Add, Edit, Action, Resource/Record custom pages) use a **3-tier section-level component architecture** where each visual section is an independently replaceable component. The system supports **per-tenant customization** driven by `APP.Resources.CustomUIName`, with automatic fallback through three resolution tiers.
 
-This means you can customize just the **header** of the Products page for a specific tenant without duplicating the entire page — all other sections continue using their defaults.
+This means you can customize just the **header** of the Products page for a specific tenant without duplicating the entire page — all other sections continue using their defaults. Custom pages (`resource-page` and `record-page`) use file naming conventions like `{Entity}{PageSlug}.vue` and `{Entity}Record{PageSlug}.vue`.
 
 ### 2.2 Architecture Diagram
 
 ```
-Route: /:scope(masters|operations|accounts)/:resourceSlug/:code?/:action?
+Route: /:scope(masters|operations)/:resourceSlug/(_add|:pageSlug|:code/(_view|_edit|_action/:action|:pageSlug))
          │
          ▼
 ActionResolverPage.vue  ← Page-level 3-tier resolution
-  Tier 1: ./_custom/{CustomUIName}/{Entity}.vue (or {Entity}{Action}.vue)
-  Tier 2: ./{Entity}/IndexPage.vue (or {Action}Page.vue)
-  Tier 3: ./_common/IndexPage.vue (or {Action}Page.vue)
+  Tier 1: ./_custom/{CustomUIName}/{Entity}.vue (or {Entity}{Action}.vue, or {Entity}{PageSlug}.vue)
+  Tier 2: ./{Entity}/IndexPage.vue (or {Action}Page.vue, or {PageSlug}Page.vue)
+  Tier 3: ./_common/IndexPage.vue (or {Action}Page.vue)  ← (No fallback for custom pages)
          │
          ▼
 _common/{Action}Page.vue  ← Thin orchestrator (default)
@@ -319,6 +320,12 @@ Resolves the entire page component for a given action.
 | 1. Tenant-custom | `_custom/{CustomUIName}/{Entity}.vue` or `{Entity}{Action}.vue` | `_custom/A2930/Products.vue` |
 | 2. Entity-custom | `{Entity}/{Action}Page.vue` | `Products/IndexPage.vue` |
 | 3. Default | `_common/{Action}Page.vue` | `_common/IndexPage.vue` |
+
+**Custom Page Fallbacks:**
+Custom pages (`action: 'resource-page'` or `'record-page'`) resolve through Tier 1 and Tier 2 only, using the `pageSlug` URL parameter.
+- `resource-page`: `_custom/{CustomUIName}/{Entity}{PascalCase(pageSlug)}.vue` → `{Entity}/{PascalCase(pageSlug)}Page.vue`
+- `record-page`: `_custom/{CustomUIName}/{Entity}Record{PascalCase(pageSlug)}.vue` → `{Entity}/Record{PascalCase(pageSlug)}Page.vue`
+If not found, it renders a "Page not found" card.
 
 #### Section-Level Discovery (`useSectionResolver.js`)
 Resolves individual sections within a default page.
@@ -535,6 +542,10 @@ Operations pages use an identical 3-tier discovery mechanism as Masters, but wit
 
 Operations data generally flows top-down (e.g. Purchase Requisitions → Purchase Orders → Receipts) and tracks complex lifecycles via `additionalActions`. Operations views exclude the generic `ViewAudit` section and substitute a `ViewParent` section.
 
+```
+Route: /:scope(masters|operations)/:resourceSlug/(_add|:pageSlug|:code/(_view|_edit|_action/:action|:pageSlug))
+```
+
 ### 3.2 Key Differences vs Masters
 
 - **Router Split**: Operations route dynamic block (`/operations/:resourceSlug/...`) hits `pages/Operations/ActionResolverPage.vue`, completely detached from the masters/accounts routing block.
@@ -555,6 +566,7 @@ Operations data generally flows top-down (e.g. Purchase Requisitions → Purchas
 | `FRONTENT/src/components/Operations/_common/Operation*.vue` | 22 default section components for Operations |
 | `FRONTENT/src/pages/Operations/_custom/REGISTRY.md` | Registry for tenant-custom full pages |
 | `FRONTENT/src/components/Operations/_custom/REGISTRY.md` | Registry for tenant-custom section components |
+| `FRONTENT/src/composables/useResourceNav.js` | Composable for route navigation logic across scopes. |
 
 ---
 

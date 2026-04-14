@@ -34,7 +34,6 @@
 
 <script setup>
 import { onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
 import OperationAddHeader from 'components/Operations/_common/OperationAddHeader.vue'
 import OperationAddForm from 'components/Operations/_common/OperationAddForm.vue'
 import OperationAddChildren from 'components/Operations/_common/OperationAddChildren.vue'
@@ -42,8 +41,9 @@ import OperationAddActions from 'components/Operations/_common/OperationAddActio
 import { useSectionResolver } from 'src/composables/useSectionResolver'
 import { useResourceConfig } from 'src/composables/useResourceConfig'
 import { useCompositeForm } from 'src/composables/useCompositeForm'
+import { useResourceNav } from 'src/composables/useResourceNav'
 
-const router = useRouter()
+const nav = useResourceNav()
 const { scope, resourceSlug, config, resolvedFields } = useResourceConfig()
 
 const customUIName = computed(() => config.value?.ui?.customUIName || '')
@@ -74,14 +74,14 @@ async function handleSave() {
   if (response.success) {
     const newCode = response.data?.code || response.data?.parentCode
     if (newCode) {
-      router.push(`/${scope.value}/${resourceSlug.value}/${newCode}`)
+      nav.goTo('view', { code: newCode })
     } else {
-      router.push(`/${scope.value}/${resourceSlug.value}`)
+      nav.goTo('list')
     }
   }
 }
 
 function navigateBack() {
-  router.push(`/${scope.value}/${resourceSlug.value}`)
+  nav.goTo('list')
 }
 </script>

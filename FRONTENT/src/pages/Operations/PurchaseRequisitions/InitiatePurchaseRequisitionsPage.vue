@@ -246,15 +246,15 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useStockMovements } from 'src/composables/useStockMovements'
 import { fetchResourceRecords } from 'src/services/resourceRecords'
 import { callGasApi } from 'src/services/gasApi'
 import { format } from 'date-fns'
+import { useResourceNav } from 'src/composables/useResourceNav'
 
 const $q = useQuasar()
-const router = useRouter()
+const nav = useResourceNav()
 const { loadWarehouses } = useStockMovements()
 
 const currentStep = ref(1)
@@ -450,7 +450,7 @@ const savePR = async () => {
     })
 
     if (response.success && response.data?.parentCode) {
-      router.push(`/operations/purchase-requisitions/${response.data.parentCode}/draft`)
+      nav.goTo('record-page', { code: response.data.parentCode, pageSlug: 'draft' })
     }
   } catch (error) {
     $q.notify({ type: 'negative', message: 'Failed to create PR: ' + error.message })

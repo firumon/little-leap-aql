@@ -28,13 +28,30 @@ const resourceTitle = computed(() => {
   return matched?.pageTitle || menus[0]?.pageTitle || config.value?.name || resourceSlug.value
 })
 
+function humanize(slug) {
+  if (!slug) return ''
+  return slug
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+}
+
 const actionLabel = computed(() => {
   const a = action.value
   if (!a || a === 'list') return ''
   if (a === 'add') return 'Add'
   if (a === 'view') return ''
   if (a === 'edit') return 'Edit'
-  // Additional actions — find label from config
+  if (a === 'resource-page' || a === 'record-page') {
+    return humanize(route.params.pageSlug)
+  }
+  if (a === 'action') {
+    const actionConfig = additionalActions.value.find(
+      (ac) => ac.action.toLowerCase() === route.params.action?.toLowerCase()
+    )
+    return actionConfig?.label || humanize(route.params.action)
+  }
+  // Additional actions — find label from config (legacy fallback)
   const actionConfig = additionalActions.value.find(
     (ac) => ac.action.toLowerCase() === a.toLowerCase()
   )

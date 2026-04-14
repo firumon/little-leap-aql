@@ -1,18 +1,25 @@
 <template>
   <component :is="resolvedComponent" v-if="resolvedComponent" />
+  <q-card v-else-if="notFound" flat bordered class="page-card">
+    <q-card-section class="text-center q-py-xl">
+      <q-icon name="search_off" size="48px" color="grey-5" />
+      <div class="text-subtitle1 text-grey-7 q-mt-md">Page not found</div>
+    </q-card-section>
+  </q-card>
   <div v-else class="resolver-loading">
     <q-spinner-dots color="primary" size="32px" />
   </div>
 </template>
 
 <script setup>
-import { watch, shallowRef, markRaw } from 'vue'
+import { watch, shallowRef, markRaw, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useResourceConfig } from 'src/composables/useResourceConfig'
 
 const route = useRoute()
 const { config } = useResourceConfig()
 const resolvedComponent = shallowRef(null)
+const notFound = ref(false)
 
 /**
  * Three-tier auto-discovery:
@@ -42,8 +49,42 @@ function resolveActionName(routeMeta, routeParams) {
   return 'index'
 }
 
-async function resolveComponent(resourceSlug, actionName, customUIName) {
+async function resolveComponent(resourceSlug, actionName, customUIName, pageSlug) {
   const entityName = toPascalCase(resourceSlug)
+
+  if (actionName === 'resource-page' || actionName === 'record-page') {
+    const customPageName = toPascalCase(pageSlug)
+    const customFileName = actionName === 'resource-page'
+      ? `${entityName}${customPageName}`
+      : `${entityName}Record${customPageName}`
+
+    // Tier 1: Tenant-custom
+    if (customUIName) {
+      const tenantPath = `./_custom/${customUIName}/${customFileName}.vue`
+      if (customTenantModules[tenantPath]) {
+        try {
+          const module = await customTenantModules[tenantPath]()
+          return markRaw(module.default || module)
+        } catch {}
+      }
+    }
+
+    // Tier 2: Entity-custom
+    const entityFileName = actionName === 'resource-page'
+      ? `${customPageName}Page`
+      : `Record${customPageName}Page`
+    const entityPath = `./${entityName}/${entityFileName}.vue`
+    if (customPageModules[entityPath]) {
+      try {
+        const module = await customPageModules[entityPath]()
+        return markRaw(module.default || module)
+      } catch {}
+    }
+
+    // No fallback for custom pages
+    return null
+  }
+
   const actionPageName = toPascalCase(actionName) + 'Page'
 
   // Step 1: Try tenant-custom page → ./_custom/A2930/Products.vue (index) or ./_custom/A2930/ProductsView.vue
@@ -101,13 +142,18 @@ async function resolveComponent(resourceSlug, actionName, customUIName) {
 }
 
 watch(
-  () => [route.params.resourceSlug, route.meta?.action, route.params.action, config.value?.ui?.customUIName || ''],
-  async ([resourceSlug, metaAction, paramAction, customUIName]) => {
+  () => [route.params.resourceSlug, route.meta?.action, route.params.action, config.value?.ui?.customUIName || '', route.params.pageSlug],
+  async ([resourceSlug, metaAction, paramAction, customUIName, pageSlug]) => {
     resolvedComponent.value = null
+    notFound.value = false
     const slug = resourceSlug
     const action = resolveActionName({ action: metaAction }, { action: paramAction })
-    const component = await resolveComponent(slug, action, customUIName)
-    resolvedComponent.value = component
+    const component = await resolveComponent(slug, action, customUIName, pageSlug)
+    if (component) {
+      resolvedComponent.value = component
+    } else {
+      notFound.value = true
+    }
   },
   { immediate: true }
 )
@@ -120,5 +166,15 @@ watch(
   align-items: center;
   justify-content: center;
   padding: 2rem;
+}
+.page-card {
+  border-radius: 16px;
+  border-color: var(--operation-border, #e2e8f0);
+  background: rgba(255, 255, 255, 0.95);
+  animation: rise-in 280ms ease-out both;
+}
+@keyframes rise-in {
+  0% { transform: translateY(10px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
 }
 </style>

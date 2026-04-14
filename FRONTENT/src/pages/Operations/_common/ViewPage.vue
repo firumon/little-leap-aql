@@ -71,8 +71,10 @@ import { useResourceConfig } from 'src/composables/useResourceConfig'
 import { useResourceData } from 'src/composables/useResourceData'
 import { useResourceRelations } from 'src/composables/useResourceRelations'
 import { fetchResourceRecords } from 'src/services/resourceRecords'
+import { useResourceNav } from 'src/composables/useResourceNav'
 
 const router = useRouter()
+const nav = useResourceNav()
 const { scope, resourceSlug, code, config, resourceName, resolvedFields, additionalActions } = useResourceConfig()
 const { items, loading, reload } = useResourceData(resourceName)
 const { parentResource, childResources } = useResourceRelations(resourceName)
@@ -167,19 +169,22 @@ watch(
 )
 
 function navigateToList() {
-  router.push(`/${scope.value}/${resourceSlug.value}`)
+  nav.goTo('list')
 }
 
 function navigateToEdit() {
-  router.push(`/${scope.value}/${resourceSlug.value}/${code.value}/edit`)
+  nav.goTo('edit')
 }
 
 function navigateToAction(action) {
-  router.push(`/${scope.value}/${resourceSlug.value}/${code.value}/${action.action}`)
+  nav.goTo('action', { action: action.action })
 }
 
 function navigateToChildView(childResource, childRecordCode) {
-  router.push(`/${childResource.scope || 'masters'}/${childResource.slug}/${childRecordCode}`)
+  router.push({
+    name: childResource.scope === 'operations' ? 'operations-view' : 'resource-view',
+    params: { resourceSlug: childResource.slug, code: childRecordCode }
+  })
 }
 </script>
 

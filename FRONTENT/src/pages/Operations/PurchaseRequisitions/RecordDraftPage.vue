@@ -1,7 +1,7 @@
 <template>
   <q-page padding>
     <div class="row items-center q-mb-md">
-      <q-btn flat icon="arrow_back" color="primary" @click="$router.push('/operations/prs')" />
+      <q-btn flat icon="arrow_back" color="primary" @click="goBack" />
       <h1 class="text-h5 q-mt-none q-mb-none q-ml-sm">Draft Purchase Requisition: {{ prCode }}</h1>
       <q-space />
       <q-chip :color="progressColor(prForm.Progress)" text-color="white" class="text-weight-bold">
@@ -173,13 +173,14 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { callGasApi } from 'src/services/gasApi'
 import { useStockMovements } from 'src/composables/useStockMovements'
+import { useResourceNav } from 'src/composables/useResourceNav'
 
 const route = useRoute()
-const router = useRouter()
+const nav = useResourceNav()
 const $q = useQuasar()
 const { loadWarehouses } = useStockMovements()
 
@@ -219,6 +220,10 @@ const progressColor = (progress) => {
   return 'primary'
 }
 
+function goBack() {
+  nav.goTo('list')
+}
+
 const loadData = async () => {
   loading.value = true
   try {
@@ -233,11 +238,11 @@ const loadData = async () => {
       prForm.value = prRes.records[0]
       // Ensure only Draft/Review access
       if (!['Draft', 'Review'].includes(prForm.value.Progress)) {
-        router.replace(`/operations/purchase-requisitions/${prCode}/view`)
+        nav.goTo('view')
       }
     } else {
       $q.notify({ type: 'negative', message: 'PR not found' })
-      router.push('/operations/prs')
+      nav.goTo('list')
       return
     }
 
@@ -395,7 +400,7 @@ const submitPR = async () => {
       })
 
       if (response.success) {
-        router.push(`/operations/purchase-requisitions/${prCode}/view`)
+        nav.goTo('view')
       }
     } catch (error) {
       $q.notify({ type: 'negative', message: 'Failed to submit PR: ' + error.message })

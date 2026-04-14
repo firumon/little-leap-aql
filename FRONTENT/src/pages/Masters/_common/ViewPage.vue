@@ -65,7 +65,6 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import ReportInputDialog from 'src/components/Masters/ReportInputDialog.vue'
 import MasterViewHeader from 'components/Masters/_common/MasterViewHeader.vue'
 import MasterViewActionBar from 'components/Masters/_common/MasterViewActionBar.vue'
@@ -78,8 +77,9 @@ import { useResourceData } from 'src/composables/useResourceData'
 import { useResourceRelations } from 'src/composables/useResourceRelations'
 import { useReports } from 'src/composables/useReports'
 import { fetchResourceRecords } from 'src/services/resourceRecords'
+import { useResourceNav } from 'src/composables/useResourceNav'
 
-const router = useRouter()
+const nav = useResourceNav()
 const {
   scope, resourceSlug, code, config, resourceName,
   resolvedFields, additionalActions, permissions
@@ -113,15 +113,15 @@ const record = computed(() => {
 })
 
 function navigateToList() {
-  router.push(`/${scope.value}/${resourceSlug.value}`)
+  nav.goTo('list')
 }
 
 function navigateToEdit() {
-  router.push(`/${scope.value}/${resourceSlug.value}/${code.value}/edit`)
+  nav.goTo('edit')
 }
 
 function navigateToAction(action) {
-  router.push(`/${scope.value}/${resourceSlug.value}/${code.value}/${action.action.toLowerCase()}`)
+  nav.goTo('action', { action: action.action.toLowerCase() })
 }
 
 function findParentCodeField(childResource, parentResource) {

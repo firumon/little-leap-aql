@@ -71,7 +71,6 @@
 
 <script setup>
 import { watch, ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
 import ReportInputDialog from 'src/components/Masters/ReportInputDialog.vue'
 import OperationListHeader from 'components/Operations/_common/OperationListHeader.vue'
 import OperationListReportBar from 'components/Operations/_common/OperationListReportBar.vue'
@@ -84,8 +83,9 @@ import { useResourceData } from 'src/composables/useResourceData'
 import { useResourceRelations } from 'src/composables/useResourceRelations'
 import { useReports } from 'src/composables/useReports'
 import { useListViews } from 'src/composables/useListViews'
+import { useResourceNav } from 'src/composables/useResourceNav'
 
-const router = useRouter()
+const nav = useResourceNav()
 const { scope, resourceSlug, config, resourceName, resourceHeaders, resolvedFields, permissions } = useResourceConfig()
 const { items, loading, backgroundSyncing, searchTerm, reload } = useResourceData(resourceName)
 const { childResources } = useResourceRelations(resourceName)
@@ -136,19 +136,11 @@ const {
 const childCountMap = ref({})
 
 function navigateToView(row) {
-  if (resourceSlug.value === 'purchase-requisitions') {
-    if (['Draft', 'Review'].includes(row.Progress)) {
-      router.push(`/${scope.value}/${resourceSlug.value}/${row.Code}/draft`)
-    } else {
-      router.push(`/${scope.value}/${resourceSlug.value}/${row.Code}/view`)
-    }
-  } else {
-    router.push(`/${scope.value}/${resourceSlug.value}/${row.Code}`)
-  }
+  nav.goTo('view', { code: row.Code })
 }
 
 function navigateToAdd() {
-  router.push(`/${scope.value}/${resourceSlug.value}/add`)
+  nav.goTo('add')
 }
 
 function computeChildCounts() {

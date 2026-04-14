@@ -49,7 +49,6 @@
 
 <script setup>
 import { computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import OperationEditHeader from 'components/Operations/_common/OperationEditHeader.vue'
 import OperationEditForm from 'components/Operations/_common/OperationEditForm.vue'
 import OperationEditChildren from 'components/Operations/_common/OperationEditChildren.vue'
@@ -60,8 +59,9 @@ import { useResourceData } from 'src/composables/useResourceData'
 import { useResourceRelations } from 'src/composables/useResourceRelations'
 import { useCompositeForm } from 'src/composables/useCompositeForm'
 import { fetchResourceRecords } from 'src/services/resourceRecords'
+import { useResourceNav } from 'src/composables/useResourceNav'
 
-const router = useRouter()
+const nav = useResourceNav()
 const { scope, resourceSlug, code, config, resourceName, resolvedFields } = useResourceConfig()
 const { items, loading, reload } = useResourceData(resourceName)
 const { childResources } = useResourceRelations(resourceName)
@@ -125,16 +125,16 @@ watch(() => resourceName.value, (n) => { if (n) loadAndInitialize() }, { immedia
 async function handleSave() {
   const response = await save()
   if (response.success) {
-    router.push(`/${scope.value}/${resourceSlug.value}/${code.value}`)
+    nav.goTo('view')
   }
 }
 
 function navigateBack() {
-  router.push(`/${scope.value}/${resourceSlug.value}/${code.value}`)
+  nav.goTo('view')
 }
 
 function navigateToList() {
-  router.push(`/${scope.value}/${resourceSlug.value}`)
+  nav.goTo('list')
 }
 </script>
 

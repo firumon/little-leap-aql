@@ -45,26 +45,6 @@ const routes = [
         meta: { scope: 'master', requiresAuth: true }
       },
       {
-        path: '/operations/stock-movements/direct-entry',
-        component: () => import('pages/Masters/Warehouse/ManageStockPage.vue'),
-        meta: { scope: 'operation', requiresAuth: true }
-      },
-      {
-        path: '/operations/purchase-requisitions/initiate-purchase-requisitions',
-        component: () => import('pages/Procurement/PRInitiationPage.vue'),
-        meta: { scope: 'operation', requiresAuth: true }
-      },
-      {
-        path: '/operations/purchase-requisitions/:code/draft',
-        component: () => import('pages/Procurement/PRDraftViewPage.vue'),
-        meta: { scope: 'operation', requiresAuth: true }
-      },
-      {
-        path: '/operations/purchase-requisitions/:code/view',
-        component: () => import('pages/Procurement/PRViewPage.vue'),
-        meta: { scope: 'operation', requiresAuth: true }
-      },
-      {
         path: '/operations/:resourceSlug',
         component: () => import('pages/Operations/ResourcePageShell.vue'),
         props: true,
@@ -76,28 +56,40 @@ const routes = [
             meta: { action: 'index', level: 'resource' }
           },
           {
-            path: 'add',
+            path: '_add',
             name: 'operations-add',
             component: () => import('pages/Operations/ActionResolverPage.vue'),
             meta: { action: 'add', level: 'resource' }
           },
           {
-            path: ':code',
+            path: ':pageSlug',
+            name: 'operations-resource-page',
+            component: () => import('pages/Operations/ActionResolverPage.vue'),
+            meta: { action: 'resource-page', level: 'resource' }
+          },
+          {
+            path: ':code/_view',
             name: 'operations-view',
             component: () => import('pages/Operations/ActionResolverPage.vue'),
             meta: { action: 'view', level: 'record' }
           },
           {
-            path: ':code/edit',
+            path: ':code/_edit',
             name: 'operations-edit',
             component: () => import('pages/Operations/ActionResolverPage.vue'),
             meta: { action: 'edit', level: 'record' }
           },
           {
-            path: ':code/:action',
+            path: ':code/_action/:action',
             name: 'operations-action',
             component: () => import('pages/Operations/ActionResolverPage.vue'),
-            meta: { level: 'record' }
+            meta: { action: 'action', level: 'record' }
+          },
+          {
+            path: ':code/:pageSlug',
+            name: 'operations-record-page',
+            component: () => import('pages/Operations/ActionResolverPage.vue'),
+            meta: { action: 'record-page', level: 'record' }
           }
         ]
       },
@@ -113,28 +105,40 @@ const routes = [
             meta: { action: 'index', level: 'resource' }
           },
           {
-            path: 'add',
+            path: '_add',
             name: 'resource-add',
             component: () => import('pages/Masters/ActionResolverPage.vue'),
             meta: { action: 'add', level: 'resource' }
           },
           {
-            path: ':code',
+            path: ':pageSlug',
+            name: 'resource-resource-page',
+            component: () => import('pages/Masters/ActionResolverPage.vue'),
+            meta: { action: 'resource-page', level: 'resource' }
+          },
+          {
+            path: ':code/_view',
             name: 'resource-view',
             component: () => import('pages/Masters/ActionResolverPage.vue'),
             meta: { action: 'view', level: 'record' }
           },
           {
-            path: ':code/edit',
+            path: ':code/_edit',
             name: 'resource-edit',
             component: () => import('pages/Masters/ActionResolverPage.vue'),
             meta: { action: 'edit', level: 'record' }
           },
           {
-            path: ':code/:action',
+            path: ':code/_action/:action',
             name: 'resource-action',
             component: () => import('pages/Masters/ActionResolverPage.vue'),
-            meta: { level: 'record' }
+            meta: { action: 'action', level: 'record' }
+          },
+          {
+            path: ':code/:pageSlug',
+            name: 'resource-record-page',
+            component: () => import('pages/Masters/ActionResolverPage.vue'),
+            meta: { action: 'record-page', level: 'record' }
           }
         ]
       }

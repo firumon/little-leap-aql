@@ -69,8 +69,10 @@ import { useResourceConfig } from 'src/composables/useResourceConfig'
 import { useResourceData } from 'src/composables/useResourceData'
 import { useActionFields } from 'src/composables/useActionFields'
 import { callGasApi } from 'src/services/gasApi'
+import { useResourceNav } from 'src/composables/useResourceNav'
 
-const router = useRouter()
+const router = useRouter() // Kept for currentRoute
+const nav = useResourceNav()
 const $q = useQuasar()
 
 const {
@@ -156,7 +158,7 @@ async function handleSubmit() {
     })
 
     if (response.success) {
-      router.push(`/${scope.value}/${resourceSlug.value}/${code.value}`)
+      nav.goTo('view')
     }
   } catch (err) {
     $q.notify({ type: 'negative', message: `Action failed: ${err.message}`, timeout: 3000 })
@@ -166,11 +168,11 @@ async function handleSubmit() {
 }
 
 function navigateToView() {
-  router.push(`/${scope.value}/${resourceSlug.value}/${code.value}`)
+  nav.goTo('view')
 }
 
 function navigateToList() {
-  router.push(`/${scope.value}/${resourceSlug.value}`)
+  nav.goTo('list')
 }
 
 watch(() => resourceName.value, (n) => { if (n) reload() }, { immediate: true })

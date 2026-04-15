@@ -23,7 +23,7 @@
           <span class="detail-val">{{ val || '-' }}</span>
         </div>
         <div class="q-mt-md flex justify-end">
-          <q-btn flat color="primary" label="View Parent" icon-right="arrow_forward" @click="navigateToParent" />
+          <q-btn flat color="primary" :label="`View ${humanizedParentName}`" icon-right="arrow_forward" @click="navigateToParent" />
         </div>
       </div>
     </q-card-section>
@@ -32,9 +32,9 @@
 
 <script setup>
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useResourceNav } from 'src/composables/useResourceNav'
 
-const router = useRouter()
+const nav = useResourceNav()
 
 const props = defineProps({
   parentResource: { type: Object, default: null },
@@ -88,8 +88,11 @@ const filteredParentFields = computed(() => {
 
 function navigateToParent() {
   if (props.parentResource && props.parentRecord?.Code) {
-    const targetScope = props.parentResource.scope || props.scope
-    router.push(`/${targetScope}/${props.parentResource.slug}/${props.parentRecord.Code}`)
+    nav.goTo('view', {
+      scope: props.parentResource.scope || props.scope,
+      resourceSlug: props.parentResource.slug,
+      code: props.parentRecord.Code
+    })
   }
 }
 </script>

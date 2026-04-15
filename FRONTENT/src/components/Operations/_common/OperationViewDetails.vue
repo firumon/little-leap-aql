@@ -26,12 +26,12 @@ const auditHeaders = new Set(['CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy'
 const actionStampHeaders = computed(() => {
   const stamps = new Set()
   props.additionalActions.forEach(action => {
-    let actionName = action.action || ''
-    if (actionName) {
-       actionName = actionName.charAt(0).toUpperCase() + actionName.slice(1)
-       stamps.add(`${actionName}By`)
-       stamps.add(`${actionName}At`)
-    }
+    const raw = action.action || ''
+    if (!raw) return
+    // Ensure PascalCase: capitalize first letter, preserve rest (handles camelCase input)
+    const pascal = raw.charAt(0).toUpperCase() + raw.slice(1)
+    stamps.add(`${pascal}By`)
+    stamps.add(`${pascal}At`)
   })
   return stamps
 })

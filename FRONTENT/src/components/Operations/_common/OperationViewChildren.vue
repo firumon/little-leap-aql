@@ -2,9 +2,9 @@
   <template v-for="childRes in childResources" :key="childRes.name">
     <q-card flat bordered class="page-card q-mt-sm">
       <q-card-section>
-        <div class="section-title">{{ childRes.ui?.menus?.[0]?.pageTitle || childRes.name }}</div>
+        <div class="section-title">{{ getChildTitle(childRes) }}</div>
         <div v-if="!childRecordsMap[childRes.name]?.length" class="text-grey-6 text-center q-py-md">
-          No {{ (childRes.ui?.menus?.[0]?.pageTitle || childRes.name).toLowerCase() }} found
+          No {{ getChildTitle(childRes).toLowerCase() }} found
         </div>
         <q-markup-table v-else flat dense separator="horizontal" class="child-view-table">
           <thead>
@@ -41,6 +41,15 @@ defineProps({
 })
 
 defineEmits(['view-child'])
+
+function humanizeName(str) {
+  if (!str) return ''
+  return str.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2').trim()
+}
+
+function getChildTitle(childRes) {
+  return childRes.ui?.menus?.[0]?.pageTitle || humanizeName(childRes.name)
+}
 
 function getChildFields(childRes) {
   const uiFields = childRes?.ui?.fields

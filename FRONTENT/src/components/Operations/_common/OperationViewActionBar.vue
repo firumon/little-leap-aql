@@ -1,5 +1,5 @@
 <template>
-  <q-card flat bordered class="action-bar-card q-mt-sm">
+  <q-card v-if="hasAnyContent" flat bordered class="action-bar-card q-mt-sm">
     <q-card-section class="action-bar q-pa-sm">
       <div class="row items-center q-gutter-xs">
         <q-btn
@@ -62,6 +62,10 @@ const visibleActions = computed(() => {
 
 const recordReports = computed(() => {
   return (props.reports || []).filter((r) => r.isRecordLevel)
+})
+
+const hasAnyContent = computed(() => {
+  return !!(props.permissions?.canUpdate) || visibleActions.value.length > 0 || recordReports.value.length > 0
 })
 </script>
 

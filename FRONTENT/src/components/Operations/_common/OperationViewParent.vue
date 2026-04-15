@@ -1,5 +1,5 @@
 <template>
-  <q-card v-if="parentResource" flat bordered class="page-card q-mt-sm">
+  <q-card v-if="parentResource && parentRecord" flat bordered class="page-card q-mt-sm">
     <q-card-section>
       <div class="section-title">{{ hasName ? 'Parent' : humanizedParentName }}</div>
 

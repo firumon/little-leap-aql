@@ -42,10 +42,10 @@ const routes = [
       {
         path: '/masters/bulk-upload',
         component: () => import('pages/Masters/BulkUploadPage.vue'),
-        meta: { scope: 'master', requiresAuth: true }
+        meta: { scope: 'master' }
       },
       {
-        path: '/operations/:resourceSlug',
+        path: '/:scope(operations)/:resourceSlug',
         component: () => import('pages/Operations/ResourcePageShell.vue'),
         props: true,
         children: [
@@ -94,7 +94,7 @@ const routes = [
         ]
       },
       {
-        path: '/masters/:resourceSlug',
+        path: '/:scope(masters)/:resourceSlug',
         component: () => import('pages/Masters/ResourcePageShell.vue'),
         props: true,
         children: [
@@ -137,6 +137,55 @@ const routes = [
           {
             path: ':code/:pageSlug',
             name: 'resource-record-page',
+            component: () => import('pages/Masters/ActionResolverPage.vue'),
+            meta: { action: 'record-page', level: 'record' }
+          }
+        ]
+      },
+      {
+        path: '/:scope(accounts)/:resourceSlug',
+        component: () => import('pages/Masters/ResourcePageShell.vue'),
+        props: true,
+        children: [
+          {
+            path: '',
+            name: 'accounts-list',
+            component: () => import('pages/Masters/ActionResolverPage.vue'),
+            meta: { action: 'index', level: 'resource' }
+          },
+          {
+            path: '_add',
+            name: 'accounts-add',
+            component: () => import('pages/Masters/ActionResolverPage.vue'),
+            meta: { action: 'add', level: 'resource' }
+          },
+          {
+            path: ':pageSlug',
+            name: 'accounts-resource-page',
+            component: () => import('pages/Masters/ActionResolverPage.vue'),
+            meta: { action: 'resource-page', level: 'resource' }
+          },
+          {
+            path: ':code/_view',
+            name: 'accounts-view',
+            component: () => import('pages/Masters/ActionResolverPage.vue'),
+            meta: { action: 'view', level: 'record' }
+          },
+          {
+            path: ':code/_edit',
+            name: 'accounts-edit',
+            component: () => import('pages/Masters/ActionResolverPage.vue'),
+            meta: { action: 'edit', level: 'record' }
+          },
+          {
+            path: ':code/_action/:action',
+            name: 'accounts-action',
+            component: () => import('pages/Masters/ActionResolverPage.vue'),
+            meta: { action: 'action', level: 'record' }
+          },
+          {
+            path: ':code/:pageSlug',
+            name: 'accounts-record-page',
             component: () => import('pages/Masters/ActionResolverPage.vue'),
             meta: { action: 'record-page', level: 'record' }
           }

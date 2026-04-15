@@ -60,7 +60,6 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import OperationViewHeader from 'components/Operations/_common/OperationViewHeader.vue'
 import OperationViewActionBar from 'components/Operations/_common/OperationViewActionBar.vue'
 import OperationViewDetails from 'components/Operations/_common/OperationViewDetails.vue'
@@ -73,7 +72,6 @@ import { useResourceRelations } from 'src/composables/useResourceRelations'
 import { fetchResourceRecords } from 'src/services/resourceRecords'
 import { useResourceNav } from 'src/composables/useResourceNav'
 
-const router = useRouter()
 const nav = useResourceNav()
 const { scope, resourceSlug, code, config, resourceName, resolvedFields, additionalActions } = useResourceConfig()
 const { items, loading, reload } = useResourceData(resourceName)
@@ -181,9 +179,10 @@ function navigateToAction(action) {
 }
 
 function navigateToChildView(childResource, childRecordCode) {
-  router.push({
-    name: childResource.scope === 'operations' ? 'operations-view' : 'resource-view',
-    params: { resourceSlug: childResource.slug, code: childRecordCode }
+  nav.goTo('view', {
+    scope: childResource.scope || 'operations',
+    resourceSlug: childResource.slug,
+    code: childRecordCode
   })
 }
 </script>

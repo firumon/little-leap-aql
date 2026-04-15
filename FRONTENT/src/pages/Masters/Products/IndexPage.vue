@@ -45,7 +45,7 @@
             flat
             bordered
             class="product-card"
-            @click="navigateToView(row)"
+            @click="nav.goTo('view',{ code:row.Code })"
           >
             <q-card-section class="q-pa-sm q-pa-md">
               <div class="row items-start no-wrap">
@@ -122,8 +122,10 @@ import { useReports } from 'src/composables/useReports'
 import { useListViews } from 'src/composables/useListViews'
 import { parseVariantTypes } from 'src/composables/useProductVariants'
 import { fetchResourceRecords } from 'src/services/resourceRecords'
+import { useResourceNav } from 'src/composables/useResourceNav.js'
 
 const router = useRouter()
+const nav = useResourceNav()
 const { scope, resourceSlug, config, resourceName, resourceHeaders, permissions } = useResourceConfig()
 const { items, loading, backgroundSyncing, searchTerm, reload } = useResourceData(resourceName)
 const { isGenerating, showReportDialog, activeReport, reportInputs, initiateReport, confirmReportDialog, cancelReportDialog } = useReports(resourceName)

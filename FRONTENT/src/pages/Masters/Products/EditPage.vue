@@ -178,13 +178,17 @@ import { useProductVariants, hasDuplicateVariantSet, validateSkuVariants } from 
 import { useResourceConfig } from 'src/composables/useResourceConfig'
 import { useResourceData } from 'src/composables/useResourceData'
 import { useCompositeForm } from 'src/composables/useCompositeForm'
-import { fetchResourceRecords } from 'src/services/resourceRecords'
-import { getResourceMeta, upsertResourceRows, deleteResourceRowByCode } from 'src/utils/db'
+import { useResourceNav } from 'src/composables/useResourceNav'
+import { useDataStore } from 'src/stores/data'
 
 const router = useRouter()
 const $q = useQuasar()
+const nav = useResourceNav()
+const dataStore = useDataStore()
+
 const { scope, resourceSlug, code, config, resourceName } = useResourceConfig()
 const { items, loading: resourceLoading, reload, updateLocalRecord } = useResourceData(resourceName)
+const skusResource = useResourceData(ref('SKUs'))
 
 const {
   parentForm,
@@ -375,15 +379,11 @@ async function loadAndInitialize(forceSync = false) {
   initLoading.value = true
   try {
     await reload(forceSync)
+    await skusResource.reload(forceSync)
     if (!record.value) return
 
-    const skuResponse = await fetchResourceRecords('SKUs', {
-      includeInactive: true,
-      forceSync
-    })
-    const skuRows = skuResponse.success && Array.isArray(skuResponse.records)
-      ? skuResponse.records.filter((row) => row.ProductCode === code.value)
-      : []
+    const allSkus = dataStore.getRecords('SKUs')
+    const skuRows = allSkus.filter((row) => row.ProductCode === code.value)
 
     initializeForEdit(record.value, { SKUs: skuRows })
     relaxSkuSystemFieldValidation()
@@ -427,45 +427,26 @@ async function handleSave() {
   if (!validateBeforeSave()) return
   const response = await save()
   if (response.success) {
-    // Optimistic: update local items + IDB immediately so View page sees fresh data
     await updateLocalRecord({ ...parentForm.value, Code: code.value })
-    await reconcileSkuCacheAfterSave()
-    router.push(`/${scope.value}/${resourceSlug.value}/${code.value}`)
-  }
-}
 
-async function reconcileSkuCacheAfterSave() {
-  const codeChanges = skuRecords.value
-    .filter((row) => row?._action === 'update')
-    .map((row) => ({
-      from: (row._originalCode || '').toString().trim(),
-      to: (row.data?.Code || '').toString().trim()
-    }))
-    .filter((entry) => entry.from && entry.to && entry.from !== entry.to)
+    const skuRowsToUpdate = skuRecords.value
+      .filter((row) => row && row.data && row.data.Code)
+      .map(row => row.data)
 
-  for (const change of codeChanges) {
-    await deleteResourceRowByCode('SKUs', change.from)
-  }
+    for(const sku of skuRowsToUpdate) {
+      await skusResource.updateLocalRecord(sku)
+    }
 
-  const meta = await getResourceMeta('SKUs')
-  const headers = Array.isArray(meta?.headers) ? meta.headers : []
-  if (!headers.length) return
-
-  const rows = skuRecords.value
-    .filter((row) => row && row.data && row.data.Code)
-    .map((row) => headers.map((header) => row.data[header] ?? ''))
-
-  if (rows.length) {
-    await upsertResourceRows('SKUs', headers, rows)
+    nav.goTo('view')
   }
 }
 
 function navigateBack() {
-  router.push(`/${scope.value}/${resourceSlug.value}/${code.value}`)
+  nav.goTo('view')
 }
 
 function navigateToList() {
-  router.push(`/${scope.value}/${resourceSlug.value}`)
+  nav.goTo('list')
 }
 
 watch(

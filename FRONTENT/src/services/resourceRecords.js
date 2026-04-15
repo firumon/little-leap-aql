@@ -34,27 +34,6 @@ async function withTimeout(promise, fallbackValue) {
   }
 }
 
-function getCursorStorageKey(resourceName) {
-  return `master-sync-cursor::${resourceName}`
-}
-
-function getLocalSyncCursor(resourceName) {
-  try {
-    return localStorage.getItem(getCursorStorageKey(resourceName)) || ''
-  } catch (error) {
-    return ''
-  }
-}
-
-function setLocalSyncCursor(resourceName, cursor) {
-  try {
-    if (!cursor) return
-    localStorage.setItem(getCursorStorageKey(resourceName), cursor)
-  } catch (error) {
-    // no-op
-  }
-}
-
 function getAuthorizedResourceFromStore(resourceName) {
   const auth = useAuthStore()
   const resources = Array.isArray(auth.authorizedResources)
@@ -289,7 +268,7 @@ async function syncMasterResourcesBatch(resourceNames = [], options = {}) {
     }
 
     const meta = await withTimeout(getResourceMeta(resourceName), null)
-    const rawCursor = meta?.lastSyncAt || getLocalSyncCursor(resourceName)
+    const rawCursor = meta?.lastSyncAt
     const cursor = normalizeCursorValue(rawCursor)
     if (cursor) {
       cursorByResource[resourceName] = cursor
@@ -373,7 +352,6 @@ async function syncMasterResourcesBatch(resourceNames = [], options = {}) {
       lastSyncAt: nextSyncCursor,
       hasHydratedOnce: true
     }), null)
-    setLocalSyncCursor(resourceName, nextSyncCursor)
   }
 
   return {
@@ -413,13 +391,18 @@ export async function fetchResourceRecords(resourceName, options = {}) {
     }
 
     const meta = await withTimeout(getResourceMeta(resourceName), null)
-    const rawSyncCursor = meta?.lastSyncAt || getLocalSyncCursor(resourceName)
-    const syncCursor = normalizeCursorValue(rawSyncCursor)
+    let rawSyncCursor = meta?.lastSyncAt
+    let syncCursor = normalizeCursorValue(rawSyncCursor)
     const statusIndex = headers.indexOf('Status')
     const cachedRows = await withTimeout(getResourceRows(resourceName, {
       includeInactive,
       statusIndex
     }), [])
+
+    let effectiveCursor = syncCursor ?? null
+    if (!cachedRows.length && effectiveCursor) {
+      effectiveCursor = null  // IDB cold + stale cursor → force full sync
+    }
 
     // Default behavior: IDB-first and no server call when cache exists.
     if (!forceSync && !syncWhenCacheExists && cachedRows.length > 0) {
@@ -430,7 +413,7 @@ export async function fetchResourceRecords(resourceName, options = {}) {
         headers,
         rows: cachedRows,
         records: mapRowsToObjects(cachedRows, headers),
-        meta: { resource: resourceName, source: 'cache', lastSyncAt: syncCursor || null }
+        meta: { resource: resourceName, source: 'cache', lastSyncAt: effectiveCursor || null }
       }
     }
 
@@ -438,14 +421,14 @@ export async function fetchResourceRecords(resourceName, options = {}) {
     let staleMessage = ''
     let immediateSyncedRows = []
     if (forceSync || syncWhenCacheExists || !cachedRows.length) {
-      const hasHydratedOnce = meta?.hasHydratedOnce === true || !!syncCursor
+      const hasHydratedOnce = meta?.hasHydratedOnce === true || !!effectiveCursor
       const ttlMs = getResourceSyncTtlSec(resourceName) * 1000
-      const nextEligibleSyncAt = syncCursor ? syncCursor + ttlMs : 0
+      const nextEligibleSyncAt = effectiveCursor ? effectiveCursor + ttlMs : 0
       const now = Date.now()
       const shouldImmediateSync = forceSync
         || !cachedRows.length
         || !hasHydratedOnce
-        || !syncCursor
+        || !effectiveCursor
         || now >= nextEligibleSyncAt
 
       queueMasterResourceSync(
@@ -455,6 +438,14 @@ export async function fetchResourceRecords(resourceName, options = {}) {
       )
 
       if (shouldImmediateSync) {
+        // We ensure that if effectiveCursor is null due to cold IDB, cursorByResource logic in syncMasterResourcesBatch won't use it, triggering full sync
+        // Temporarily clear it in DB just in case? No, syncMasterResourcesBatch reads DB directly.
+        // Wait, syncMasterResourcesBatch reads getResourceMeta().lastSyncAt!
+        // So we need to ensure syncMasterResourcesBatch acts as full sync if cachedRows is empty.
+        if (!cachedRows.length && syncCursor) {
+           await setResourceMeta(resourceName, { lastSyncAt: null })
+        }
+
         const batchSyncResponse = await flushMasterSyncQueue(true, {
           showError: !syncWhenCacheExists || !cachedRows.length,
           showLoading: forceSync || (!syncWhenCacheExists && !cachedRows.length)
@@ -488,7 +479,7 @@ export async function fetchResourceRecords(resourceName, options = {}) {
       meta: {
         resource: resourceName,
         source: effectiveRows.length ? (freshRows.length ? 'cache+sync' : 'cache') : 'sync',
-        lastSyncAt: normalizeCursorValue((await withTimeout(getResourceMeta(resourceName), null))?.lastSyncAt) || syncCursor || null
+        lastSyncAt: normalizeCursorValue((await withTimeout(getResourceMeta(resourceName), null))?.lastSyncAt) || effectiveCursor || null
       }
     }
   } catch (error) {
@@ -550,21 +541,6 @@ export async function syncAllMasterResources() {
       data: {},
       meta: {}
     }
-  }
-}
-
-export function clearAllSyncCursors() {
-  try {
-    const keysToRemove = []
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (key && key.startsWith('master-sync-cursor::')) {
-        keysToRemove.push(key)
-      }
-    }
-    keysToRemove.forEach((key) => localStorage.removeItem(key))
-  } catch (error) {
-    // no-op
   }
 }
 

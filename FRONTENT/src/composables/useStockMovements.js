@@ -18,16 +18,17 @@
 
 import { useQuasar } from 'quasar'
 import { callGasApi } from 'src/services/gasApi'
-import { fetchResourceRecords, ensureHeaders } from 'src/services/resourceRecords'
-import { upsertResourceRows, setResourceMeta } from 'src/utils/db'
+import { fetchResourceRecords } from 'src/services/resourceRecords'
+import { useDataStore } from 'src/stores/data'
 
 export function useStockMovements() {
   const $q = useQuasar()
+  const dataStore = useDataStore()
 
   async function loadWarehouses() {
     try {
-      const result = await fetchResourceRecords('Warehouses', { includeInactive: false })
-      return Array.isArray(result?.records) ? result.records : []
+      await fetchResourceRecords('Warehouses', { includeInactive: false })
+      return dataStore.getRecords('Warehouses')
     } catch {
       return []
     }
@@ -35,12 +36,12 @@ export function useStockMovements() {
 
   async function loadSkusWithProducts() {
     try {
-      const [skusRes, prodsRes] = await Promise.all([
+      await Promise.all([
         fetchResourceRecords('SKUs', { includeInactive: false }),
         fetchResourceRecords('Products', { includeInactive: false })
       ])
-      const skus = Array.isArray(skusRes?.records) ? skusRes.records : []
-      const prods = Array.isArray(prodsRes?.records) ? prodsRes.records : []
+      const skus = dataStore.getRecords('SKUs')
+      const prods = dataStore.getRecords('Products')
 
       const prodMap = new Map(prods.map(p => [p.Code, p.Name]))
 
@@ -58,8 +59,8 @@ export function useStockMovements() {
   async function loadStoragesForWarehouse(warehouseCode, forceSync = false) {
     if (!warehouseCode) return []
     try {
-      const result = await fetchResourceRecords('WarehouseStorages', { includeInactive: true, forceSync })
-      const records = Array.isArray(result?.records) ? result.records : []
+      await fetchResourceRecords('WarehouseStorages', { includeInactive: true, forceSync })
+      const records = dataStore.getRecords('WarehouseStorages')
       return records.filter(r => r.WarehouseCode === warehouseCode)
     } catch {
       return []
@@ -98,12 +99,6 @@ export function useStockMovements() {
         scope: 'operation',
         resource: 'StockMovements',
         records: movementRecords
-      },
-      {
-        action: 'get',
-        scope: 'operation',
-        resource: 'WarehouseStorages',
-        includeInactive: true
       }
     ]
 
@@ -114,7 +109,7 @@ export function useStockMovements() {
         throw new Error(batchResult.message || 'Batch operation failed')
       }
 
-      const [createResponse, getResponse] = batchResult.data
+      const [createResponse] = batchResult.data
 
       const created  = createResponse?.data?.created ?? 0
       const updated  = createResponse?.data?.updated ?? 0
@@ -149,25 +144,9 @@ export function useStockMovements() {
         }
       }
 
-      // Update local IDB cache using locally-known headers (no response-header dependency)
-      if (getResponse && getResponse.success && Array.isArray(getResponse.rows)) {
-        const localHeaders = await ensureHeaders('WarehouseStorages')
-        if (localHeaders.length) {
-          const rowsForIdb = getResponse.rows.length === 0 || Array.isArray(getResponse.rows[0])
-            ? getResponse.rows
-            : getResponse.rows.map((r) => localHeaders.map((h) => r?.[h]))
-          const written = await upsertResourceRows('WarehouseStorages', localHeaders, rowsForIdb)
-          if (written > 0) {
-            const nextCursor = Number(getResponse?.meta?.lastSyncAt) || Date.now()
-            await setResourceMeta('WarehouseStorages', {
-              headers: localHeaders,
-              lastSyncAt: nextCursor,
-              hasHydratedOnce: true
-            })
-          }
-        }
-        // If local headers unavailable OR upsert did not write, do NOT advance the cursor.
-        // The caller's subsequent fetchData() will handle re-hydration via the normal sync path.
+      // After a successful batch, force a sync of WarehouseStorages to get the latest state
+      if(succeeded > 0) {
+        await fetchResourceRecords('WarehouseStorages', { forceSync: true })
       }
 
       return { succeeded, failed, succeededRows }

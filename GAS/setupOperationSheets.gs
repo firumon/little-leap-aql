@@ -47,9 +47,9 @@ function setupOperationSheets() {
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.PURCHASE_REQUISITION_ITEMS,
-            headers: ['PurchaseRequisitionCode', 'SKU', 'UOM', 'Quantity', 'EstimatedRate'],
+            headers: ['Code','PurchaseRequisitionCode', 'SKU', 'UOM', 'Quantity', 'EstimatedRate'],
             defaults: { Quantity: 0, EstimatedRate: 0 },
-            columnWidths: { PurchaseRequisitionCode: 200, SKU: 150, UOM: 100, Quantity: 100, EstimatedRate: 130 }
+            columnWidths: { Code: 150, PurchaseRequisitionCode: 200, SKU: 150, UOM: 100, Quantity: 100, EstimatedRate: 130 }
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.RFQS,

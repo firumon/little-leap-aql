@@ -2,16 +2,22 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { callGasApi } from 'src/services/gasApi'
-import { clearAllSyncCursors, syncAllMasterResources } from 'src/services/resourceRecords'
+import { syncAllMasterResources } from 'src/services/resourceRecords'
 import { clearAllClientStorage, setAuthorizedResources, reinitializeDB } from 'src/utils/db'
 
 export const useAuthStore = defineStore('auth', () => {
   const router = useRouter()
 
   // State
+  const auth = ref({
+    resources: JSON.parse(localStorage.getItem('resources')) || []
+  })
   const user = ref(JSON.parse(localStorage.getItem('user')) || null)
   const token = ref(localStorage.getItem('token') || null)
-  const resources = ref(JSON.parse(localStorage.getItem('resources')) || [])
+  const resources = computed({
+    get: () => auth.value.resources,
+    set: (val) => { auth.value.resources = val }
+  })
   const appConfig = ref(JSON.parse(localStorage.getItem('appConfig')) || {})
   const appOptions = ref(JSON.parse(localStorage.getItem('appOptions')) || {})
   const loading = ref(false)
@@ -107,9 +113,6 @@ export const useAuthStore = defineStore('auth', () => {
 
         // Sync token to HW if possible
         notifyServiceWorker(data.token)
-
-        // Clear stale sync cursors from previous session so first fetch is a full sync
-        clearAllSyncCursors()
 
         // Background tasks for IndexedDB
         // We don't await these to prevent login from hanging if IDB is slow
@@ -231,6 +234,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     // State
+    auth,
     user,
     token,
     resources,

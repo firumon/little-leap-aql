@@ -1,7 +1,8 @@
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, unref } from 'vue'
 import { useQuasar } from 'quasar'
 import { fetchResourceRecords } from 'src/services/resourceRecords'
 import { useAuthStore } from 'src/stores/auth'
+import { useDataStore } from 'src/stores/data'
 
 /**
  * Manages data loading, search, and filtering for a resource.
@@ -10,16 +11,27 @@ import { useAuthStore } from 'src/stores/auth'
 export function useResourceData(resourceNameRef) {
   const $q = useQuasar()
   const authStore = useAuthStore()
+  const dataStore = useDataStore()
 
-  const items = ref([])
-  const lastHeaders = ref([])
   const loading = ref(false)
   const backgroundSyncing = ref(false)
   const searchTerm = ref('')
   const showInactive = ref(false)
   const loadRequestId = ref(0)
 
-  // Re-read from IDB when global sync completes and we have no data yet
+  const resolvedResourceName = computed(() => {
+    return typeof resourceNameRef === 'function'
+      ? resourceNameRef()
+      : unref(resourceNameRef)
+  })
+
+  // Read items directly from Pinia store, meaning it reacts to any IDB callback automatically
+  const items = computed(() => dataStore.getRecords(resolvedResourceName.value))
+
+  // Exposing headers as computed so templates can read them if needed
+  const lastHeaders = computed(() => dataStore.headers[resolvedResourceName.value] || [])
+
+  // Re-read from server when global sync completes and we have no data yet
   watch(() => authStore.isGlobalSyncing, (syncing, wasSyncing) => {
     if (wasSyncing && !syncing && items.value.length === 0) {
       reload()
@@ -49,33 +61,20 @@ export function useResourceData(resourceNameRef) {
     if (!resourceName || backgroundSyncing.value) return
     backgroundSyncing.value = true
     try {
-      const response = await fetchResourceRecords(resourceName, {
+      await fetchResourceRecords(resourceName, {
         includeInactive: true,
         syncWhenCacheExists: true
       })
-      if (requestId !== loadRequestId.value) return
-      if (response.success || (response.records && response.records.length > 0)) {
-        applyRecordsResponse(response)
-      }
+      // The fetch updates IDB, which fires onRowsUpserted listener,
+      // which sets rows in dataStore, which triggers items computed.
+      // So no manual assignment here.
     } finally {
-      backgroundSyncing.value = false
+      if (requestId === loadRequestId.value) backgroundSyncing.value = false
     }
   }
 
-  function applyRecordsResponse(response) {
-    const headers = Array.isArray(response.headers) ? response.headers : []
-    const records = Array.isArray(response.records)
-      ? response.records
-      : rowsToObjects(Array.isArray(response.rows) ? response.rows : [], headers)
-
-    lastHeaders.value = headers
-    items.value = records
-  }
-
   async function reload(forceSync = false) {
-    const resourceName = typeof resourceNameRef === 'function'
-      ? resourceNameRef()
-      : (resourceNameRef?.value || resourceNameRef)
+    const resourceName = resolvedResourceName.value
     if (!resourceName) return
 
     const requestId = ++loadRequestId.value
@@ -86,10 +85,12 @@ export function useResourceData(resourceNameRef) {
         includeInactive: true,
         forceSync
       })
+
+      // Again, data store is populated automatically via IDB callback.
+      // fetchResourceRecords writes to IDB and that updates the store.
+
       if (requestId !== loadRequestId.value) return
-      if (response.success || (response.records && response.records.length > 0)) {
-        applyRecordsResponse(response)
-      }
+
       if (!forceSync && response?.meta?.source === 'cache') {
         runBackgroundSync(resourceName, requestId)
       }
@@ -110,29 +111,30 @@ export function useResourceData(resourceNameRef) {
    */
   async function updateLocalRecord(updatedRecord) {
     if (!updatedRecord?.Code) return
-    const idx = items.value.findIndex((r) => r.Code === updatedRecord.Code)
-    if (idx >= 0) {
-      items.value[idx] = { ...items.value[idx], ...updatedRecord }
-    } else {
-      items.value.push({ ...updatedRecord })
-    }
-    // Also persist to IDB so subsequent navigations see it immediately
+
+    const resourceName = resolvedResourceName.value
+    const headers = lastHeaders.value
+
+    if (!resourceName || !headers.length) return
+
+    // Find the record in the array and merge
+    const existing = items.value.find(r => r.Code === updatedRecord.Code) || {}
+    const merged = { ...existing, ...updatedRecord }
+
+    // Map object back to a row array
+    const row = headers.map(h => merged[h] ?? '')
+
+    // Update the reactive Pinia store immediately
+    dataStore.setRows(resourceName, [row])
+
+    // Also persist to IDB
     try {
-      if (lastHeaders.value.length) {
-        const { upsertResourceRows } = await import('src/utils/db')
-        const row = lastHeaders.value.map((h) => (items.value.find((r) => r.Code === updatedRecord.Code) || {})[h] ?? '')
-        await upsertResourceRows(
-          typeof resourceNameRef === 'function' ? resourceNameRef() : (resourceNameRef?.value || resourceNameRef),
-          lastHeaders.value,
-          [row]
-        )
-      }
+      const { upsertResourceRows } = await import('src/utils/db')
+      await upsertResourceRows(resourceName, headers, [row])
     } catch (_) { /* non-critical */ }
   }
 
   function reset() {
-    items.value = []
-    lastHeaders.value = []
     searchTerm.value = ''
     showInactive.value = false
     loading.value = false
@@ -154,13 +156,4 @@ export function useResourceData(resourceNameRef) {
     updateLocalRecord,
     notify
   }
-}
-function rowsToObjects(rows, headers) {
-  if (!Array.isArray(rows) || !rows.length) return []
-  if (!Array.isArray(rows[0])) return rows.map((r) => ({ ...r }))
-  return rows.map((row) => {
-    const obj = {}
-    headers.forEach((h, i) => { obj[h] = row[i] })
-    return obj
-  })
 }

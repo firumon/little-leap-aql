@@ -6,6 +6,19 @@ const DB_VERSION = 3;
 
 let dbPromise = null;
 
+// Module-level array to hold listeners for row upserts
+const _rowListeners = [];
+
+/**
+ * Register a listener to be called when rows are upserted to IDB.
+ * The listener function receives `(resource, rows)`.
+ */
+export function onRowsUpserted(fn) {
+    if (typeof fn === 'function') {
+        _rowListeners.push(fn);
+    }
+}
+
 export function reinitializeDB() {
     // If we already have a promise and it's not null, return it to avoid duplicate open requests
     if (dbPromise) return dbPromise;
@@ -193,6 +206,16 @@ export async function upsertResourceRows(resource, headers = [], rows = []) {
     }
 
     await tx.done;
+
+    // Call listeners after IDB write completes
+    for (const fn of _rowListeners) {
+        try {
+            fn(resource, rows);
+        } catch (err) {
+            console.error('[DB] Error in row listener', err);
+        }
+    }
+
     return affected;
 }
 

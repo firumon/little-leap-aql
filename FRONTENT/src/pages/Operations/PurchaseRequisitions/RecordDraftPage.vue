@@ -178,10 +178,13 @@ import { useQuasar } from 'quasar'
 import { callGasApi } from 'src/services/gasApi'
 import { useStockMovements } from 'src/composables/useStockMovements'
 import { useResourceNav } from 'src/composables/useResourceNav'
+import { useResourceData } from 'src/composables/useResourceData'
+import { useDataStore } from 'src/stores/data'
 
 const route = useRoute()
 const nav = useResourceNav()
 const $q = useQuasar()
+const dataStore = useDataStore()
 const { loadWarehouses } = useStockMovements()
 
 const prCode = route.params.code
@@ -227,16 +230,21 @@ function goBack() {
 const loadData = async () => {
   loading.value = true
   try {
-    const [prRes, itemsRes, whRes, skuRes] = await Promise.all([
-      callGasApi('getRecords', { resourceName: 'PurchaseRequisitions', filters: JSON.stringify([{ field: 'Code', operator: 'eq', value: prCode }]) }),
-      callGasApi('getRecords', { resourceName: 'PurchaseRequisitionItems', filters: JSON.stringify([{ field: 'PurchaseRequisitionCode', operator: 'eq', value: prCode }]) }),
-      loadWarehouses(),
-      callGasApi('getRecords', { resourceName: 'SKUs', limit: 3000 })
+    const prResource = useResourceData(ref('PurchaseRequisitions'))
+    const itemsResource = useResourceData(ref('PurchaseRequisitionItems'))
+    const skusResource = useResourceData(ref('SKUs'))
+
+    await Promise.all([
+        prResource.reload(),
+        itemsResource.reload(),
+        skusResource.reload(),
+        loadWarehouses().then(w => { warehouses.value = w })
     ])
 
-    if (prRes.success && prRes.records.length > 0) {
-      prForm.value = prRes.records[0]
-      // Ensure only Draft/Review access
+    const prRecord = prResource.getRecordByCode(prCode)
+
+    if (prRecord) {
+      prForm.value = prRecord
       if (!['Draft', 'Review'].includes(prForm.value.Progress)) {
         nav.goTo('view')
       }
@@ -246,17 +254,12 @@ const loadData = async () => {
       return
     }
 
-    if (itemsRes.success) {
-      items.value = itemsRes.records.map(i => ({ ...i }))
-      originalItems.value = JSON.parse(JSON.stringify(itemsRes.records))
-    }
+    items.value = itemsResource.items.value.filter(i => i.PurchaseRequisitionCode === prCode)
+    originalItems.value = JSON.parse(JSON.stringify(items.value))
 
-    warehouses.value = whRes
+    allSkus.value = skusResource.items.value.filter(s => s.Status === 'Active')
+    skuOptions.value = allSkus.value.map(s => ({ label: s.Code, value: s.Code, ...s }))
 
-    if (skuRes.success) {
-      allSkus.value = skuRes.records.filter(s => s.Status === 'Active')
-      skuOptions.value = allSkus.value.map(s => ({ label: s.Code, value: s.Code, ...s }))
-    }
   } catch (error) {
     $q.notify({ type: 'negative', message: 'Failed to load PR details' })
   } finally {
@@ -277,7 +280,6 @@ const confirmAddItem = () => {
     return
   }
 
-  // Check if exists
   const existing = items.value.find(i => i.SKU === newItem.value.SKU.value)
   if (existing) {
     existing.Quantity += newItem.value.Quantity
@@ -297,7 +299,6 @@ const confirmAddItem = () => {
 const removeItem = (index) => {
   const item = items.value[index]
   if (item.Code) {
-    // Has a backend code, mark for deletion or track it
     deletedItemCodes.value.push(item.Code)
   }
   items.value.splice(index, 1)
@@ -330,7 +331,6 @@ const buildPayload = (targetProgress = prForm.value.Progress) => {
     ]
   }
 
-  // Handle active/updated/new items
   items.value.forEach(item => {
     payload.children[0].records.push({
       _action: item.Code ? 'update' : 'create',
@@ -345,10 +345,9 @@ const buildPayload = (targetProgress = prForm.value.Progress) => {
     })
   })
 
-  // Handle deleted items
   deletedItemCodes.value.forEach(code => {
     payload.children[0].records.push({
-      _action: 'deactivate', // Use standard AQL convention for soft delete in composite
+      _action: 'deactivate',
       _originalCode: code,
       data: { Status: 'Inactive' }
     })
@@ -368,8 +367,8 @@ const saveDraft = async () => {
 
     if (response.success) {
       $q.notify({ type: 'positive', message: 'Draft saved successfully' })
-      deletedItemCodes.value = [] // Reset
-      await loadData() // Reload to get new codes
+      deletedItemCodes.value = []
+      await loadData()
     }
   } catch (error) {
     $q.notify({ type: 'negative', message: 'Failed to save draft: ' + error.message })

@@ -21,6 +21,7 @@ Read this file only when:
 - A single APP Apps Script project is preferred for runtime behavior.
 - `Config` in APP stores deployment-specific settings such as file IDs.
 - GAS deployment is done with `clasp push`; manual Apps Script copy-paste is not part of the workflow.
+- **Frontend Architecture**: Pinia (`useDataStore`) is the unified, reactive in-memory layer for all record data. IDB is the persistence layer. `localStorage` no longer holds sync cursors; cursors live exclusively in IDB `resource-meta`. Components read only from Pinia, and any IDB writes automatically trigger Pinia updates via a listener pattern.
 
 ## Current Important Constraints
 - Use `Documents/DOC_ROUTING.md` to decide which docs to read for the task.

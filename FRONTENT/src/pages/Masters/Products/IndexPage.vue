@@ -121,11 +121,13 @@ import { useResourceData } from 'src/composables/useResourceData'
 import { useReports } from 'src/composables/useReports'
 import { useListViews } from 'src/composables/useListViews'
 import { parseVariantTypes } from 'src/composables/useProductVariants'
-import { fetchResourceRecords } from 'src/services/resourceRecords'
 import { useResourceNav } from 'src/composables/useResourceNav.js'
+import { useDataStore } from 'src/stores/data'
 
 const router = useRouter()
 const nav = useResourceNav()
+const dataStore = useDataStore()
+
 const { scope, resourceSlug, config, resourceName, resourceHeaders, permissions } = useResourceConfig()
 const { items, loading, backgroundSyncing, searchTerm, reload } = useResourceData(resourceName)
 const { isGenerating, showReportDialog, activeReport, reportInputs, initiateReport, confirmReportDialog, cancelReportDialog } = useReports(resourceName)
@@ -141,7 +143,7 @@ const { effectiveViews, activeViewName, viewCounts, viewFilteredItems, setActive
   enableUrlSync: false
 })
 
-const skuRecords = ref([])
+const skuRecords = computed(() => dataStore.getRecords('SKUs'))
 
 const skuCountByProduct = computed(() => {
   const result = {}
@@ -181,22 +183,12 @@ const displayedItems = computed(() => {
   })
 })
 
-async function loadSkuRecords(forceSync = false) {
-  const response = await fetchResourceRecords('SKUs', {
-    includeInactive: true,
-    forceSync
-  })
-  if (response.success && Array.isArray(response.records)) {
-    skuRecords.value = response.records
-  } else {
-    skuRecords.value = []
-  }
-}
-
 async function reloadAll(forceSync = false) {
+  // useResourceData's reload will trigger fetchResourceRecords for Products
+  // and for SKUs separately.
   await Promise.all([
     reload(forceSync),
-    loadSkuRecords(forceSync)
+    useResourceData(ref('SKUs')).reload(forceSync)
   ])
 }
 

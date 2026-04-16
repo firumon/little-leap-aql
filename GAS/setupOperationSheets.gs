@@ -27,19 +27,19 @@ function setupOperationSheets() {
         {
             resourceName: CONFIG.OPERATION_SHEETS.PURCHASE_REQUISITIONS,
             headers: ['Code', 'ProcurementCode', 'PRDate', 'Type', 'Priority', 'RequiredDate', 'WarehouseCode', 'TypeReferenceCode', 'Progress',
-                      'ProgressReviewAt', 'ProgressReviewBy', 'ProgressReviewComment',
+                      'ProgressRevisionRequiredAt', 'ProgressRevisionRequiredBy', 'ProgressRevisionRequiredComment',
                       'ProgressApprovedAt', 'ProgressApprovedBy', 'ProgressApprovedComment',
                       'ProgressRejectedAt', 'ProgressRejectedBy', 'ProgressRejectedComment',
                       'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active',
             defaults: { Status: 'Active', Progress: 'Draft' },
-            progressValidation: ['Draft', 'New', 'Review', 'Approved', 'Rejected', 'RFQ Processed'],
+            progressValidation: ['Draft', 'Pending Approval', 'Revision Required', 'Approved', 'Rejected', 'RFQ Processed'],
             typeValidation: APP_OPTIONS_SEED.PurchaseRequisitionType,
             priorityValidation: APP_OPTIONS_SEED.PurchaseRequisitionPriority,
             columnWidths: {
                 Code: 150, ProcurementCode: 150, PRDate: 130, Type: 100, Priority: 100,
                 RequiredDate: 130, WarehouseCode: 140, TypeReferenceCode: 160, Progress: 130,
-                ProgressReviewAt: 160, ProgressReviewBy: 150, ProgressReviewComment: 200,
+                ProgressRevisionRequiredAt: 160, ProgressRevisionRequiredBy: 150, ProgressRevisionRequiredComment: 200,
                 ProgressApprovedAt: 160, ProgressApprovedBy: 150, ProgressApprovedComment: 200,
                 ProgressRejectedAt: 160, ProgressRejectedBy: 150, ProgressRejectedComment: 200,
                 Status: 100, AccessRegion: 130

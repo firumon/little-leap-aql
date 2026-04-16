@@ -279,7 +279,11 @@ const APP_RESOURCES_CODE_CONFIG = [
         DefaultValues: '{"Status":"Active","Progress":"Draft"}',
         RecordAccessPolicy: 'OWNER_AND_UPLINE',
         OwnerUserField: 'CreatedBy',
-        AdditionalActions: 'Approve,Reject',
+        AdditionalActions: JSON.stringify([
+            {"action":"Approve","label":"Approve","icon":"","color":"primary","column":"Progress","columnValue":"Approved","columnValueOptions":[],"confirm":false,"fields":[]},
+            {"action":"Reject","label":"Reject","icon":"","color":"warning","column":"Progress","columnValue":"Rejected","columnValueOptions":[],"confirm":false,"fields":[{"name":"Comment","type":"textarea","label":"Comment","required":true}]},
+            {"action":"SendBack","label":"Send Back","icon":"","color":"info","column":"Progress","columnValue":"Revision Required","columnValueOptions":[],"confirm":false,"fields":[{"name":"Comment","type":"textarea","label":"Comment","required":true}]}
+        ]),
         Menu: JSON.stringify([
             {"group":["Procurement"],"order":1,"label":"Requisitions","icon":"request_quote","route":"/operations/purchase-requisitions","pageTitle":"Purchase Requisitions","pageDescription":"Internal requests for purchase","show":true},
             {"group":["Procurement"],"order":2,"label":"Initiate Purchase Requisitions","icon":"request_quote","route":"/operations/purchase-requisitions/initiate-purchase-requisitions","pageTitle":"Purchase Requisitions","pageDescription":"Initiate Purchase Requisition","show":true,"menuAccess":{"require":"canWrite"}}

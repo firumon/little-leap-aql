@@ -97,18 +97,18 @@ function handlePurchaseRequisitionPostAction(payload, auth, result) {
         }
         // If ProcurementCode exists, it's Review -> New (re-confirm), no Procurement progress change needed
     }
-    else if (pr.Progress === 'Review') {
-        // New -> Review
+    else if (pr.Progress === 'Revision Required') {
+        // Pending Approval -> Revision Required
         targetProcurementProgress = 'PR_CREATED';
         needsProcurementUpdate = true;
     }
     else if (pr.Progress === 'Approved') {
-        // New -> Approved
+        // Pending Approval/Revision Required -> Approved
         targetProcurementProgress = 'PR_APPROVED';
         needsProcurementUpdate = true;
     }
     else if (pr.Progress === 'Rejected') {
-        // New -> Rejected
+        // Pending Approval/Revision Required -> Rejected
         targetProcurementProgress = 'CANCELLED';
         needsProcurementUpdate = true;
     }

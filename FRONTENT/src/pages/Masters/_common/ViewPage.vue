@@ -1,21 +1,14 @@
 <template>
   <div class="view-page">
     <!-- Loading state -->
-    <div v-if="loading" class="q-py-xl text-center">
+    <div v-if="!sectionsReady" class="q-py-xl text-center">
       <q-spinner-dots color="primary" size="32px" />
     </div>
-
-    <!-- Record not found -->
-    <q-card v-else-if="!record" flat bordered class="page-card">
-      <q-card-section class="text-center q-py-xl">
-        <q-icon name="search_off" size="48px" color="grey-5" />
-        <div class="text-subtitle1 text-grey-7 q-mt-md">Record not found</div>
-        <q-btn flat color="primary" label="Back to List" icon="arrow_back" class="q-mt-md" @click="navigateToList" />
-      </q-card-section>
-    </q-card>
+    <component v-else-if="loading" :is="sections.ViewLoading" />
+    <component v-else-if="!record" :is="sections.ViewEmpty" @back="navigateToList" />
 
     <!-- Record detail -->
-    <template v-else-if="sectionsReady">
+    <template v-else>
       <component
         :is="sections.ViewHeader"
         :record="record"
@@ -47,7 +40,12 @@
       <component
         :is="sections.ViewChildren"
         :child-resources="childResources"
-        :child-records="childRecords"
+        :child-records-map="childRecords"
+        :resource-slug="resourceSlug"
+        :custom-u-i-name="customUIName"
+        :entity-name="resourceName"
+        :additional-actions="additionalActions"
+        @view-child="navigateToChildView"
       />
     </template>
 
@@ -71,6 +69,8 @@ import MasterViewActionBar from 'components/Masters/_common/MasterViewActionBar.
 import MasterViewDetails from 'components/Masters/_common/MasterViewDetails.vue'
 import MasterViewAudit from 'components/Masters/_common/MasterViewAudit.vue'
 import MasterViewChildren from 'components/Masters/_common/MasterViewChildren.vue'
+import MasterViewLoading from 'components/Masters/_common/MasterViewLoading.vue'
+import MasterViewEmpty from 'components/Masters/_common/MasterViewEmpty.vue'
 import { useSectionResolver } from 'src/composables/useSectionResolver'
 import { useResourceConfig } from 'src/composables/useResourceConfig'
 import { useResourceData } from 'src/composables/useResourceData'
@@ -82,7 +82,7 @@ import { useResourceNav } from 'src/composables/useResourceNav'
 const nav = useResourceNav()
 const {
   scope, resourceSlug, code, config, resourceName,
-  resolvedFields, additionalActions, permissions
+  resolvedFields, additionalActions, permissions, customUIName
 } = useResourceConfig()
 
 const { items, loading, reload } = useResourceData(resourceName)
@@ -92,16 +92,18 @@ const {
   initiateReport, confirmReportDialog, cancelReportDialog
 } = useReports(resourceName)
 
-const customUIName = computed(() => config.value?.ui?.customUIName || '')
 const { sections, sectionsReady } = useSectionResolver({
   resourceSlug,
   customUIName,
+  scope: 'masters',
   sectionDefs: {
     ViewHeader: MasterViewHeader,
     ViewActionBar: MasterViewActionBar,
     ViewDetails: MasterViewDetails,
     ViewAudit: MasterViewAudit,
-    ViewChildren: MasterViewChildren
+    ViewChildren: MasterViewChildren,
+    ViewLoading: MasterViewLoading,
+    ViewEmpty: MasterViewEmpty
   }
 })
 
@@ -153,6 +155,14 @@ async function loadChildRecords() {
 
 watch(() => resourceName.value, async (n) => { if (n) await reload() }, { immediate: true })
 watch([() => code.value, () => items.value.length], () => { loadChildRecords() })
+
+function navigateToChildView(childResource, childRecordCode) {
+  nav.goTo('view', {
+    scope: childResource.scope || 'masters',
+    resourceSlug: childResource.slug,
+    code: childRecordCode
+  })
+}
 </script>
 
 <style scoped>

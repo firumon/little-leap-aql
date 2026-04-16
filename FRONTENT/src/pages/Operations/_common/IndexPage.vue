@@ -37,6 +37,8 @@
       :loading="loading"
       :resolved-fields="resolvedFields"
       :child-count-map="childCountMap"
+      :resource-slug="resourceSlug"
+      :custom-u-i-name="customUIName"
       @navigate-to-view="navigateToView"
     />
 
@@ -86,7 +88,7 @@ import { useListViews } from 'src/composables/useListViews'
 import { useResourceNav } from 'src/composables/useResourceNav'
 
 const nav = useResourceNav()
-const { scope, resourceSlug, config, resourceName, resourceHeaders, resolvedFields, permissions } = useResourceConfig()
+const { scope, resourceSlug, config, resourceName, resourceHeaders, resolvedFields, permissions, customUIName } = useResourceConfig()
 const { items, loading, backgroundSyncing, searchTerm, reload } = useResourceData(resourceName)
 const { childResources } = useResourceRelations(resourceName)
 
@@ -114,7 +116,6 @@ const displayedItems = computed(() => {
   })
 })
 
-const customUIName = computed(() => config.value?.ui?.customUIName || '')
 const { sections, sectionsReady } = useSectionResolver({
   resourceSlug,
   customUIName,

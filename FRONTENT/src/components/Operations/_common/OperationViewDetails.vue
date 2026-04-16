@@ -14,6 +14,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { deriveActionStampHeaders, filterDetailFields } from 'src/utils/appHelpers'
 
 const props = defineProps({
   record: { type: Object, default: null },
@@ -21,27 +22,10 @@ const props = defineProps({
   additionalActions: { type: Array, default: () => [] }
 })
 
-const auditHeaders = new Set(['CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy'])
-
-const actionStampHeaders = computed(() => {
-  const stamps = new Set()
-  props.additionalActions.forEach(action => {
-    const raw = action.action || ''
-    if (!raw) return
-    // Ensure PascalCase: capitalize first letter, preserve rest (handles camelCase input)
-    const pascal = raw.charAt(0).toUpperCase() + raw.slice(1)
-    stamps.add(`${pascal}By`)
-    stamps.add(`${pascal}At`)
-  })
-  return stamps
-})
+const actionStampHeaders = computed(() => deriveActionStampHeaders(props.additionalActions))
 
 const detailFields = computed(() => {
-  return props.resolvedFields.filter((f) =>
-    f.header !== 'Code' &&
-    !auditHeaders.has(f.header) &&
-    !actionStampHeaders.value.has(f.header)
-  )
+  return filterDetailFields(props.resolvedFields, actionStampHeaders.value)
 })
 </script>
 

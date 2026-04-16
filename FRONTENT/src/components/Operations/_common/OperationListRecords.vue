@@ -1,20 +1,15 @@
 <template>
   <q-card flat bordered class="records-card q-mt-sm">
     <q-card-section class="q-pa-sm q-pa-md">
-      <div v-if="loading" class="q-py-lg text-center text-grey-7">
+      <div v-if="!sectionsReady" class="q-py-lg text-center">
         <q-spinner-dots color="primary" size="32px" />
       </div>
-      <div v-else-if="!items.length" class="empty-state">
-        <q-icon name="inventory_2" size="30px" />
-        <div>No records found</div>
-      </div>
+      <component v-else-if="loading" :is="sections.ListRecordsLoading" />
+      <component v-else-if="!items.length" :is="sections.ListRecordsEmpty" />
       <div v-else class="card-list q-gutter-sm">
-        <div
-          v-for="row in items"
-          :key="row.Code"
-          class="record-card-wrap"
-        >
-          <OperationRecordCard
+        <div v-for="row in items" :key="row.Code" class="record-card-wrap">
+          <component
+            :is="sections.ListRecordsRecord"
             :row="row"
             :resolve-primary-text="resolvePrimaryText"
             :resolve-secondary-text="resolveSecondaryText"
@@ -38,28 +33,33 @@
 </template>
 
 <script setup>
-import OperationRecordCard from './OperationRecordCard.vue'
+import { computed } from 'vue'
+import { useSectionResolver } from 'src/composables/useSectionResolver'
+import OperationListRecordsLoading from './OperationListRecordsLoading.vue'
+import OperationListRecordsEmpty from './OperationListRecordsEmpty.vue'
+import OperationListRecordsRecord from './OperationListRecordsRecord.vue'
 
 const props = defineProps({
-  items: {
-    type: Array,
-    default: () => []
-  },
-  loading: {
-    type: Boolean,
-    default: false
-  },
-  resolvedFields: {
-    type: Array,
-    default: () => []
-  },
-  childCountMap: {
-    type: Object,
-    default: () => ({})
-  }
+  items: { type: Array, default: () => [] },
+  loading: { type: Boolean, default: false },
+  resolvedFields: { type: Array, default: () => [] },
+  childCountMap: { type: Object, default: () => ({}) },
+  resourceSlug: { type: String, required: true },
+  customUIName: { type: String, required: true }
 })
 
 defineEmits(['navigate-to-view'])
+
+const { sections, sectionsReady } = useSectionResolver({
+  scope: 'operations',
+  resourceSlug: computed(() => props.resourceSlug),
+  customUIName: computed(() => props.customUIName),
+  sectionDefs: {
+    ListRecordsLoading: OperationListRecordsLoading,
+    ListRecordsEmpty: OperationListRecordsEmpty,
+    ListRecordsRecord: OperationListRecordsRecord,
+  }
+})
 
 function resolvePrimaryText(row) {
   if (!row || typeof row !== 'object') return '-'
@@ -91,15 +91,6 @@ function resolveSecondaryText(row) {
   animation: rise-in 280ms ease-out both;
 }
 
-.empty-state {
-  text-align: center;
-  color: #667085;
-  display: grid;
-  gap: 8px;
-  justify-items: center;
-  padding: 20px 10px;
-}
-
 .card-list {
   display: grid;
   grid-template-columns: 1fr;
@@ -122,13 +113,7 @@ function resolveSecondaryText(row) {
 }
 
 @keyframes rise-in {
-  0% {
-    transform: translateY(10px);
-    opacity: 0;
-  }
-  100% {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  0% { transform: translateY(10px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
 }
 </style>

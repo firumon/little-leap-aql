@@ -1,86 +1,89 @@
 <template>
-  <template v-for="childRes in childResources" :key="childRes.name">
-    <q-card flat bordered class="page-card q-mt-sm">
-      <q-card-section>
-        <div class="section-title">{{ getChildTitle(childRes) }}</div>
-        <div v-if="!childRecordsMap[childRes.name]?.length" class="text-grey-6 text-center q-py-md">
-          No {{ getChildTitle(childRes).toLowerCase() }} found
-        </div>
-        <q-markup-table v-else flat dense separator="horizontal" class="child-view-table">
-          <thead>
-            <tr>
-              <th class="text-left">Code</th>
-              <th
-                v-for="field in getChildFields(childRes)"
-                :key="field.header"
-                class="text-left"
-              >
-                {{ field.label }}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="childRow in childRecordsMap[childRes.name]" :key="childRow.Code" @click="$emit('view-child', childRes, childRow.Code)" class="cursor-pointer child-row">
-              <td class="text-primary text-weight-medium">{{ childRow.Code }}</td>
-              <td v-for="field in getChildFields(childRes)" :key="field.header">
-                {{ childRow[field.header] || '-' }}
-              </td>
-            </tr>
-          </tbody>
-        </q-markup-table>
-      </q-card-section>
-    </q-card>
+  <div v-if="!resolversReady" class="q-py-md text-center">
+    <q-spinner-dots color="primary" size="24px" />
+  </div>
+  <template v-else>
+    <component
+      v-for="(resolver, index) in childResolvers"
+      :key="childResources[index].name"
+      :is="resolver.component"
+      :child-resource="childResources[index]"
+      :child-records="childRecordsMap[childResources[index].name] || []"
+      :additional-actions="additionalActions"
+      @view-child="(childRes, code) => $emit('view-child', childRes, code)"
+    />
   </template>
 </template>
 
 <script setup>
-defineProps({
+import { ref, watch, markRaw, computed } from 'vue'
+import { toPascalCase } from 'src/utils/appHelpers'
+import OperationViewChild from './OperationViewChild.vue'
+
+const props = defineProps({
   childResources: { type: Array, default: () => [] },
   childRecordsMap: { type: Object, default: () => ({}) },
-  parentCode: { type: String, default: '' }
+  parentCode: { type: String, default: '' },
+  resourceSlug: { type: String, default: '' },
+  customUIName: { type: String, default: '' },
+  entityName: { type: String, default: '' },
+  additionalActions: { type: Array, default: () => [] }
 })
 
 defineEmits(['view-child'])
 
-function humanizeName(str) {
-  if (!str) return ''
-  return str.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2').trim()
-}
+const childResolvers = ref([])
+const resolversReady = ref(false)
 
-function getChildTitle(childRes) {
-  return childRes.ui?.menus?.[0]?.pageTitle || humanizeName(childRes.name)
-}
+const customModules = import.meta.glob('../_custom/**/*.vue')
+const entityModules = import.meta.glob('../*/*.vue')
 
-function getChildFields(childRes) {
-  const uiFields = childRes?.ui?.fields
-  if (Array.isArray(uiFields) && uiFields.length) {
-    return uiFields.filter((f) => f.header !== 'Code' && f.header !== 'ParentCode')
+async function resolveChildComponents() {
+  resolversReady.value = false
+  const resolvers = []
+  const entityName = props.entityName || toPascalCase(props.resourceSlug)
+  const customUIName = props.customUIName
+
+  for (const childRes of props.childResources) {
+    const pascalChildName = toPascalCase(childRes.name)
+    const pathsToTry = []
+
+    if (customUIName) {
+      pathsToTry.push(`../_custom/${customUIName}/${entityName}/OperationViewChild${pascalChildName}.vue`)
+      pathsToTry.push(`../_custom/${customUIName}/${entityName}/OperationViewChild.vue`)
+      pathsToTry.push(`../_custom/${customUIName}/OperationViewChild.vue`)
+    }
+
+    pathsToTry.push(`../${entityName}/OperationViewChild${pascalChildName}.vue`)
+    pathsToTry.push(`../${entityName}/OperationViewChild.vue`)
+
+    let resolvedComponent = null
+    for (const path of pathsToTry) {
+      const modules = path.includes('_custom') ? customModules : entityModules
+      if (modules[path]) {
+        try {
+          const mod = await modules[path]()
+          resolvedComponent = markRaw(mod.default || mod)
+          break
+        } catch (e) {
+          console.warn(`Failed to load custom child component at ${path}`, e)
+        }
+      }
+    }
+
+    resolvers.push({
+      name: childRes.name,
+      component: resolvedComponent || markRaw(OperationViewChild)
+    })
   }
-  const headers = Array.isArray(childRes?.headers) ? childRes.headers : []
-  return headers
-    .filter((h) => !['Code', 'ParentCode', 'CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy'].includes(h))
-    .map((h) => ({
-      header: h,
-      label: h.replace(/([a-z])([A-Z])/g, '$1 $2'),
-      type: 'text'
-    }))
-}
-</script>
 
-<style scoped>
-.page-card {
-  border-radius: 16px;
-  border-color: var(--operation-border, #e2e8f0);
-  background: rgba(255, 255, 255, 0.95);
-  animation: rise-in 280ms ease-out both;
+  childResolvers.value = resolvers
+  resolversReady.value = true
 }
-.section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 12px; }
-.child-view-table { font-size: 13px; }
-.child-view-table th { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; color: #64748b; padding: 8px 12px; }
-.child-view-table td { padding: 6px 12px; }
-.child-row:hover { background-color: #f1f5f9; }
-@keyframes rise-in {
-  0% { transform: translateY(10px); opacity: 0; }
-  100% { transform: translateY(0); opacity: 1; }
-}
-</style>
+
+watch(
+  () => [props.childResources, props.entityName, props.customUIName],
+  () => { resolveChildComponents() },
+  { immediate: true, deep: true }
+)
+</script>

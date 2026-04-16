@@ -77,12 +77,11 @@ const $q = useQuasar()
 
 const {
   scope, resourceSlug, code, config, resourceName,
-  resourceHeaders, resolvedFields, additionalActions
+  resourceHeaders, resolvedFields, additionalActions, customUIName
 } = useResourceConfig()
 
 const { items, loading, reload } = useResourceData(resourceName)
 
-const customUIName = computed(() => config.value?.ui?.customUIName || '')
 const { sections, sectionsReady } = useSectionResolver({
   resourceSlug,
   customUIName,

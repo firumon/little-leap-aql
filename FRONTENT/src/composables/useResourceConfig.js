@@ -36,6 +36,8 @@ export function useResourceConfig() {
   })
 
   const resourceName = computed(() => config.value?.name || '')
+  const customUIName = computed(() => config.value?.ui?.customUIName || '')
+
   const resourceHeaders = computed(() => {
     const h = config.value?.headers
     return Array.isArray(h) ? h : []
@@ -78,6 +80,7 @@ export function useResourceConfig() {
     level,
     config,
     resourceName,
+    customUIName,
     resourceHeaders,
     resolvedFields,
     additionalActions,

@@ -44,9 +44,8 @@ import { useCompositeForm } from 'src/composables/useCompositeForm'
 import { useResourceNav } from 'src/composables/useResourceNav'
 
 const nav = useResourceNav()
-const { scope, resourceSlug, config, resolvedFields } = useResourceConfig()
+const { scope, resourceSlug, config, resolvedFields, customUIName } = useResourceConfig()
 
-const customUIName = computed(() => config.value?.ui?.customUIName || '')
 const { sections, sectionsReady } = useSectionResolver({
   resourceSlug,
   customUIName,

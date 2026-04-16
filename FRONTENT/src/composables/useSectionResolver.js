@@ -1,4 +1,5 @@
 import { computed, markRaw, reactive, watch } from 'vue'
+import { toPascalCase } from 'src/utils/appHelpers'
 
 /**
  * Scans components/Masters/{Entity}/ for entity-level section overrides.
@@ -29,19 +30,12 @@ const operationsEntitySectionModules = import.meta.glob([
 const operationsCustomSectionModules = import.meta.glob('../components/Operations/_custom/**/*.vue')
 
 
-function toPascalCase(slug) {
-  if (!slug) return ''
-  return slug
-    .split('-')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join('')
-}
-
 /**
- * Resolves a single section component using 3-tier discovery:
- *   1. Tenant-custom: components/{Scope}/_custom/{Code}/{Entity}{Action}{Section}.vue
- *   2. Entity-custom: components/{Scope}/{Entity}/{Action}{Section}.vue
- *   3. Default:       (passed in as defaultComponent)
+ * Resolves a single section component using 4-tier discovery:
+ *   1. Tenant-custom (entity-specific): components/{Scope}/_custom/{CustomUIName}/{Entity}/{Section}.vue
+ *   2. Tenant-custom (cross-entity): components/{Scope}/_custom/{CustomUIName}/{Section}.vue
+ *   3. Entity-custom: components/{Scope}/{Entity}/{Section}.vue
+ *   4. Default:       (passed in as defaultComponent)
  */
 async function resolveSection(entityName, sectionName, defaultComponent, customUIName, scope = 'masters') {
 
@@ -49,20 +43,31 @@ async function resolveSection(entityName, sectionName, defaultComponent, customU
   const entitySectionModules = scope === 'operations' ? operationsEntitySectionModules : mastersEntitySectionModules
   const folder = scope === 'operations' ? 'Operations' : 'Masters'
 
-  // Tier 1: Tenant-custom
+  // Tier 1: Tenant-custom (entity-specific)
   if (customUIName) {
-    const customPath = `../components/${folder}/_custom/${customUIName}/${entityName}${sectionName}.vue`
-    if (customSectionModules[customPath]) {
+    const customEntitySpecificPath = `../components/${folder}/_custom/${customUIName}/${entityName}/${sectionName}.vue`
+    if (customSectionModules[customEntitySpecificPath]) {
       try {
-        const mod = await customSectionModules[customPath]()
+        const mod = await customSectionModules[customEntitySpecificPath]()
         return markRaw(mod.default || mod)
       } catch (e) {
-        console.warn(`[SectionResolver] Failed to load custom ${sectionName} for ${customUIName}/${entityName} in ${scope}`, e)
+        console.warn(`[SectionResolver] Failed to load custom entity-specific ${sectionName} for ${customUIName}/${entityName} in ${scope}`, e)
+      }
+    }
+
+    // Tier 2: Tenant-custom (cross-entity)
+    const customCrossEntityPath = `../components/${folder}/_custom/${customUIName}/${sectionName}.vue`
+    if (customSectionModules[customCrossEntityPath]) {
+      try {
+        const mod = await customSectionModules[customCrossEntityPath]()
+        return markRaw(mod.default || mod)
+      } catch (e) {
+        console.warn(`[SectionResolver] Failed to load custom cross-entity ${sectionName} for ${customUIName} in ${scope}`, e)
       }
     }
   }
 
-  // Tier 2: Entity-custom
+  // Tier 3: Entity-custom
   const entityPath = `../components/${folder}/${entityName}/${sectionName}.vue`
   if (entitySectionModules[entityPath]) {
     try {
@@ -73,7 +78,7 @@ async function resolveSection(entityName, sectionName, defaultComponent, customU
     }
   }
 
-  // Tier 3: Default
+  // Tier 4: Default
   return markRaw(defaultComponent)
 }
 

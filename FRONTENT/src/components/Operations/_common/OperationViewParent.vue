@@ -1,5 +1,16 @@
 <template>
-  <q-card v-if="parentResource && parentRecord" flat bordered class="page-card q-mt-sm">
+  <component
+    v-if="resolvedParentDisplay && parentResource && parentRecord"
+    :is="resolvedParentDisplay"
+    :parent-resource="parentResource"
+    :parent-record="parentRecord"
+    :additional-actions="additionalActions"
+    :scope="scope"
+    :resource-slug="resourceSlug"
+    :custom-u-i-name="customUIName"
+    :entity-name="entityName"
+  />
+  <q-card v-else-if="parentResource && parentRecord" flat bordered class="page-card q-mt-sm">
     <q-card-section>
       <div class="section-title">{{ hasName ? 'Parent' : humanizedParentName }}</div>
 
@@ -31,8 +42,9 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch, markRaw } from 'vue'
 import { useResourceNav } from 'src/composables/useResourceNav'
+import { humanizeString, toPascalCase, deriveActionStampHeaders, filterParentFields } from 'src/utils/appHelpers'
 
 const nav = useResourceNav()
 
@@ -40,27 +52,61 @@ const props = defineProps({
   parentResource: { type: Object, default: null },
   parentRecord: { type: Object, default: null },
   additionalActions: { type: Array, default: () => [] },
-  scope: { type: String, default: 'operations' }
+  scope: { type: String, default: 'operations' },
+  resourceSlug: { type: String, default: '' },
+  customUIName: { type: String, default: '' },
+  entityName: { type: String, default: '' }
 })
 
-const auditHeaders = new Set(['CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy'])
-const actionStampHeaders = computed(() => {
-  const stamps = new Set()
-  props.additionalActions.forEach(action => {
-    let actionName = action.action || ''
-    if (actionName) {
-       actionName = actionName.charAt(0).toUpperCase() + actionName.slice(1)
-       stamps.add(`${actionName}By`)
-       stamps.add(`${actionName}At`)
+// 6-tier resolution
+const resolvedParentDisplay = ref(null)
+const customModules = import.meta.glob('../_custom/**/*.vue')
+const entityModules = import.meta.glob('../*/*.vue')
+
+async function resolveComponent() {
+  if (!props.parentResource) {
+    resolvedParentDisplay.value = null
+    return
+  }
+
+  const pascalParentName = toPascalCase(props.parentResource.name || '')
+  const entityName = props.entityName || toPascalCase(props.resourceSlug)
+  const customUIName = props.customUIName
+
+  const pathsToTry = []
+
+  if (customUIName) {
+    pathsToTry.push(`../_custom/${customUIName}/${entityName}/OperationViewParent${pascalParentName}.vue`)
+    pathsToTry.push(`../_custom/${customUIName}/${entityName}/OperationViewParent.vue`)
+    pathsToTry.push(`../_custom/${customUIName}/OperationViewParent.vue`)
+  }
+
+  pathsToTry.push(`../${entityName}/OperationViewParent${pascalParentName}.vue`)
+  pathsToTry.push(`../${entityName}/OperationViewParent.vue`)
+
+  for (const path of pathsToTry) {
+    const modules = path.includes('_custom') ? customModules : entityModules
+    if (modules[path]) {
+      try {
+        const mod = await modules[path]()
+        resolvedParentDisplay.value = markRaw(mod.default || mod)
+        return
+      } catch (e) {
+        console.warn(`Failed to load custom parent component at ${path}`, e)
+      }
     }
-  })
-  return stamps
-})
+  }
 
-function humanizeString(str) {
-  if (!str) return ''
-  return str.replace(/([A-Z])/g, ' $1').trim()
+  resolvedParentDisplay.value = null // Render default self
 }
+
+watch(
+  () => [props.parentResource, props.entityName, props.customUIName],
+  () => { resolveComponent() },
+  { immediate: true }
+)
+
+const actionStampHeaders = computed(() => deriveActionStampHeaders(props.additionalActions))
 
 const humanizedParentName = computed(() => {
   return humanizeString(props.parentResource?.name || '')
@@ -71,19 +117,7 @@ const hasName = computed(() => {
 })
 
 const filteredParentFields = computed(() => {
-  if (!props.parentRecord) return {}
-  const result = {}
-  for (const [key, value] of Object.entries(props.parentRecord)) {
-    if (
-      key !== 'Code' &&
-      !auditHeaders.has(key) &&
-      !actionStampHeaders.value.has(key) &&
-      !key.startsWith('_') // skip internal properties like _id
-    ) {
-      result[key] = value
-    }
-  }
-  return result
+  return filterParentFields(props.parentRecord, actionStampHeaders.value)
 })
 
 function navigateToParent() {

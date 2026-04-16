@@ -1,21 +1,13 @@
 <template>
   <div class="view-page">
-    <!-- Loading -->
-    <div v-if="loading" class="q-py-xl text-center">
+    <div v-if="!sectionsReady" class="q-py-xl text-center">
       <q-spinner-dots color="primary" size="32px" />
     </div>
-
-    <!-- Record not found -->
-    <q-card v-else-if="!record" flat bordered class="page-card">
-      <q-card-section class="text-center q-py-xl">
-        <q-icon name="search_off" size="48px" color="grey-5" />
-        <div class="text-subtitle1 text-grey-7 q-mt-md">Record not found</div>
-        <q-btn flat color="primary" label="Back to List" icon="arrow_back" class="q-mt-md" @click="navigateToList" />
-      </q-card-section>
-    </q-card>
+    <component v-else-if="loading" :is="sections.ViewLoading" />
+    <component v-else-if="!record" :is="sections.ViewEmpty" @back="navigateToList" />
 
     <!-- View Content -->
-    <template v-else-if="sectionsReady">
+    <template v-else>
       <component
         :is="sections.ViewHeader"
         :config="config"
@@ -44,6 +36,9 @@
         :parent-record="parentRecord"
         :additional-actions="additionalActions"
         :scope="scope"
+        :resource-slug="resourceSlug"
+        :custom-u-i-name="customUIName"
+        :entity-name="resourceName"
       />
 
       <component
@@ -52,6 +47,10 @@
         :child-resources="childResources"
         :child-records-map="childRecordsByResource"
         :parent-code="code"
+        :resource-slug="resourceSlug"
+        :custom-u-i-name="customUIName"
+        :entity-name="resourceName"
+        :additional-actions="additionalActions"
         @view-child="navigateToChildView"
       />
     </template>
@@ -65,6 +64,8 @@ import OperationViewActionBar from 'components/Operations/_common/OperationViewA
 import OperationViewDetails from 'components/Operations/_common/OperationViewDetails.vue'
 import OperationViewParent from 'components/Operations/_common/OperationViewParent.vue'
 import OperationViewChildren from 'components/Operations/_common/OperationViewChildren.vue'
+import OperationViewLoading from 'components/Operations/_common/OperationViewLoading.vue'
+import OperationViewEmpty from 'components/Operations/_common/OperationViewEmpty.vue'
 import { useSectionResolver } from 'src/composables/useSectionResolver'
 import { useResourceConfig } from 'src/composables/useResourceConfig'
 import { useResourceData } from 'src/composables/useResourceData'
@@ -73,11 +74,10 @@ import { fetchResourceRecords } from 'src/services/resourceRecords'
 import { useResourceNav } from 'src/composables/useResourceNav'
 
 const nav = useResourceNav()
-const { scope, resourceSlug, code, config, resourceName, resolvedFields, additionalActions } = useResourceConfig()
+const { scope, resourceSlug, code, config, resourceName, resolvedFields, additionalActions, customUIName } = useResourceConfig()
 const { items, loading, reload } = useResourceData(resourceName)
 const { parentResource, childResources } = useResourceRelations(resourceName)
 
-const customUIName = computed(() => config.value?.ui?.customUIName || '')
 const { sections, sectionsReady } = useSectionResolver({
   resourceSlug,
   customUIName,
@@ -87,7 +87,9 @@ const { sections, sectionsReady } = useSectionResolver({
     ViewActionBar: OperationViewActionBar,
     ViewDetails: OperationViewDetails,
     ViewParent: OperationViewParent,
-    ViewChildren: OperationViewChildren
+    ViewChildren: OperationViewChildren,
+    ViewLoading: OperationViewLoading,
+    ViewEmpty: OperationViewEmpty
   }
 })
 
@@ -192,15 +194,5 @@ function navigateToChildView(childResource, childRecordCode) {
   display: grid;
   gap: 12px;
   padding-bottom: 32px;
-}
-.page-card {
-  border-radius: 16px;
-  border-color: var(--operation-border, #e2e8f0);
-  background: rgba(255, 255, 255, 0.95);
-  animation: rise-in 280ms ease-out both;
-}
-@keyframes rise-in {
-  0% { transform: translateY(10px); opacity: 0; }
-  100% { transform: translateY(0); opacity: 1; }
 }
 </style>

@@ -48,6 +48,18 @@ Use when editing files under `FRONTENT/`.
 - If the task affects a documented module, also read only the relevant section of:
   - `Documents/MODULE_WORKFLOWS.md`
 
+### Operations Resource Customization
+Use when overriding or creating custom section or sub-components for an operations resource
+(e.g. custom record card, custom parent display, custom child layout, custom loading/empty states).
+- Read:
+  - `Documents/OPERATION_CUSTOMIZATION.md`
+
+### Masters Resource Customization
+Use when overriding or creating custom section or sub-components for a masters resource
+(e.g. custom record card, custom child layout, custom loading/empty states).
+- Read:
+  - `Documents/MASTER_CUSTOMIZATION.md`
+
 ### Backend Design
 Use when designing new backend behavior, evaluating options, or checking whether existing GAS capabilities already support the request.
 - Read:

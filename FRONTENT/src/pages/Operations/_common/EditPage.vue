@@ -62,11 +62,10 @@ import { fetchResourceRecords } from 'src/services/resourceRecords'
 import { useResourceNav } from 'src/composables/useResourceNav'
 
 const nav = useResourceNav()
-const { scope, resourceSlug, code, config, resourceName, resolvedFields } = useResourceConfig()
+const { scope, resourceSlug, code, config, resourceName, resolvedFields, customUIName } = useResourceConfig()
 const { items, loading, reload } = useResourceData(resourceName)
 const { childResources } = useResourceRelations(resourceName)
 
-const customUIName = computed(() => config.value?.ui?.customUIName || '')
 const { sections, sectionsReady } = useSectionResolver({
   resourceSlug,
   customUIName,

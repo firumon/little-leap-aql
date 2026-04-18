@@ -4,7 +4,6 @@
       :to="node.routePath"
       clickable
       v-ripple
-      active-class="text-primary"
     >
       <q-item-section avatar>
         <q-icon :name="node.navIcon" size="xs" />

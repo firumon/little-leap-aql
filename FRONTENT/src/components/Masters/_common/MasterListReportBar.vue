@@ -1,6 +1,6 @@
 <template>
   <q-card v-if="toolbarReports.length" flat bordered class="report-bar-card q-mt-sm">
-    <q-card-section class="action-bar q-pa-sm">
+    <q-card-section class="report-bar-inner q-pa-sm">
       <div class="row items-center q-gutter-xs">
         <q-btn
           v-for="report in toolbarReports"
@@ -52,7 +52,7 @@ const toolbarReports = computed(() => {
   animation: rise-in 280ms ease-out both;
 }
 
-.action-bar {
+.report-bar-inner {
   background: #f8fafc;
 }
 

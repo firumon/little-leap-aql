@@ -159,7 +159,7 @@
             <div class="edit-group">
               <div class="edit-group__label">Required Date</div>
               <div class="edit-field">
-                <q-icon name="event" size="18px" style="color:var(--hero-gold);flex-shrink:0" />
+                <q-icon name="event" size="18px" style="color:var(--hero-secondary);flex-shrink:0" />
                 <div class="edit-field__value">
                   <div class="edit-field__label">Date</div>
                   <div
@@ -195,10 +195,10 @@
             <!-- Reference Code (PROJECT / SALES) -->
             <div v-if="['PROJECT', 'SALES'].includes(prForm.Type)" class="edit-group">
               <div class="edit-group__label">
-                Reference Code <span style="color:var(--hero-gold)">*</span>
+                Reference Code <span style="color:var(--hero-secondary)">*</span>
               </div>
               <div class="edit-field">
-                <q-icon name="tag" size="18px" style="color:var(--hero-gold);flex-shrink:0" />
+                <q-icon name="tag" size="18px" style="color:var(--hero-secondary);flex-shrink:0" />
                 <input
                   v-model="prForm.TypeReferenceCode"
                   type="text"

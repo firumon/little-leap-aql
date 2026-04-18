@@ -63,31 +63,41 @@
     <q-drawer
       v-model="leftDrawerOpen"
       show-if-above
-      bordered
       :width="260"
-      class="bg-white"
+      class="nav-drawer"
     >
       <q-scroll-area class="fit">
-        <q-list padding>
-          <q-item to="/dashboard" active-class="bg-blue-1 text-primary" clickable v-ripple>
+        <!-- Logo block -->
+        <div class="nav-logo">
+          <div class="nav-logo__mark">
+            <q-icon name="auto_graph" size="18px" color="white" />
+          </div>
+          <div>
+            <div class="nav-logo__title">AQL</div>
+            <div class="nav-logo__subtitle">Operations</div>
+          </div>
+        </div>
+
+        <q-list padding class="q-pt-sm">
+          <q-item to="/dashboard" exact clickable v-ripple>
             <q-item-section avatar>
               <q-icon name="dashboard" />
             </q-item-section>
             <q-item-section>Dashboard</q-item-section>
           </q-item>
 
-          <q-separator class="q-my-md" />
+          <q-separator class="q-my-sm" />
 
           <MenuTreeNode
             v-for="node in visibleResourceMenuGroups"
             :key="node.key"
             :node="node"
           />
-          <q-item-label v-if="visibleResourceMenuGroups.length === 0" caption class="q-px-md q-py-sm text-grey-6">
+          <q-item-label v-if="visibleResourceMenuGroups.length === 0" caption class="q-px-md q-py-sm" style="color: rgba(255,255,255,0.35); font-size: 11px;">
             No resources assigned for this role.
           </q-item-label>
 
-          <q-separator class="q-my-md" />
+          <q-separator class="q-my-sm" />
 
           <q-item to="/settings" clickable v-ripple>
             <q-item-section avatar>
@@ -231,15 +241,8 @@ async function handleLogout() {
 </script>
 
 <style lang="scss">
-.q-drawer {
-  .q-item {
-    border-radius: 0 24px 24px 0;
-    margin-right: 12px;
-    &.q-router-link--active {
-      background: rgba($primary, 0.1);
-      color: $primary;
-      font-weight: bold;
-    }
-  }
+// Nav drawer global overrides — selectors must be non-scoped to reach q-drawer portal
+.q-drawer--left .q-drawer__content {
+  background: $primary;
 }
 </style>

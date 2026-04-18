@@ -16,12 +16,22 @@ $negative  : #C0362C;
 $info      : #1A6FAD;
 $warning   : #C97B1A;
 
+// ── Primary shades ─────────────────────────────────────────────────────────
+$primary-600 : #163C66;
+$primary-400 : #2A5A8C;
+$primary-100 : #D0DEF0;
+$primary-50  : #EEF3F9;
+
+// ── Secondary shades ────────────────────────────────────────────────────────
+$secondary-50 : #FBF5E5;
+
 // ── Ink hierarchy (for light-background surfaces) ──────────────────────────
 // On dark hero backgrounds, use rgba(white, 0.55–0.65) instead — opacity-
 // reduced white is the correct semantic choice there, not these ink vars.
 $ink       : #0B1A2C;   // primary text
 $ink-2     : #334155;   // secondary text
 $ink-muted : #64748B;   // captions, muted labels (Items · count, PR Date hints)
+$ink-4     : #94A3B8;   // quaternary / placeholder text
 
 // ── Surface & canvas ───────────────────────────────────────────────────────
 $bg-page   : #F4F4F2;   // off-white page canvas
@@ -30,6 +40,13 @@ $surface   : #FFFFFF;   // card / panel surface
 // ── Border tokens ──────────────────────────────────────────────────────────
 $border        : #E6E6E1;
 $border-strong : #D6D6CF;
+
+// ── Border radius scale ────────────────────────────────────────────────────
+$r-xs : 6px;    // inline code pills, tiny chips
+$r-sm : 10px;   // inputs, segment buttons, small cards
+$r-md : 14px;   // standard cards, dialog headers
+$r-lg : 18px;   // section cards, items panel
+$r-xl : 24px;   // hero card, nav drawer items
 
 // ── Typography ─────────────────────────────────────────────────────────────
 $font-mono : 'JetBrains Mono', 'Courier New', monospace;

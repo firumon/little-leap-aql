@@ -1,4 +1,4 @@
-// hero.scss — Shared hero-card layout system
+// hero.scss — Shared hero-card layout system + global design system
 // ─────────────────────────────────────────────────────────────────────────────
 // All values derive from quasar.variables.scss — never hardcode brand colours.
 // Quasar auto-injects quasar.variables.scss so those variables are always in scope.
@@ -9,25 +9,182 @@ $_hero-mid  : lighten($primary, 8%);
 $_hero-end  : lighten($primary, 14%);
 $_gold-fg   : lighten($secondary, 22%);   // cream-gold text on dark gold chips
 
-// ── CSS custom properties (bridge SCSS → inline template :style bindings) ────
+// ── CSS custom properties (design system tokens → inline :style bindings) ────
 :root {
-  --hero-gold   : #{$secondary};
-  --hero-navy   : #{$primary};
-  --hero-ink-3  : #{$ink-muted};
+  // Brand
+  --primary     : #{$primary};
+  --primary-600 : #{$primary-600};
+  --primary-400 : #{$primary-400};
+  --primary-100 : #{$primary-100};
+  --primary-50  : #{$primary-50};
+
+  --secondary        : #{$secondary};
+  --secondary-light  : #{$accent};
+  --secondary-50     : #{$secondary-50};
+
+  // Semantic
+  --positive    : #{$positive};
+  --negative    : #{$negative};
+  --warning     : #{$warning};
+  --info        : #{$info};
+
+  // Ink
+  --ink         : #{$ink};
+  --ink-2       : #{$ink-2};
+  --ink-3       : #{$ink-muted};
+  --ink-4       : #{$ink-4};
+
+  // Surfaces
+  --bg          : #{$bg-page};
+  --surface     : #{$surface};
+  --border      : #{$border};
+  --border-strong: #{$border-strong};
+
+  // Border radii
+  --r-xs        : #{$r-xs};
+  --r-sm        : #{$r-sm};
+  --r-md        : #{$r-md};
+  --r-lg        : #{$r-lg};
+  --r-xl        : #{$r-xl};
+
+  // Elevation
+  --shadow-sm   : 0 1px 4px rgba(0, 0, 0, 0.08);
+  --shadow-md   : 0 4px 24px rgba(0, 0, 0, 0.10);
+  --shadow-lg   : 0 12px 28px -12px rgba(#{$primary}, 0.45);
+  --shadow-gold : 0 0 6px rgba(#{$secondary}, 0.60);
+
+  // Typography
   --font-mono   : #{$font-mono};
+
+  // Legacy aliases kept for existing template :style bindings
+  --hero-secondary : #{$secondary};
+  --hero-navy      : #{$primary};
+  --hero-ink-3     : #{$ink-muted};
 }
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// NAVIGATION SIDEBAR
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Applied to q-drawer element — overrides Quasar's bg-white
+.nav-drawer {
+  background: $primary !important;
+
+  // Logo block at the top of the drawer
+  .nav-logo {
+    padding: 24px 20px 18px;
+    border-bottom: 1px solid rgba(white, 0.08);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .nav-logo__mark {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, $secondary 0%, #B68A2D 100%);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+
+  .nav-logo__title {
+    font-size: 18px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.5px;
+    line-height: 1.2;
+  }
+
+  .nav-logo__subtitle {
+    font-size: 10px;
+    color: rgba(white, 0.45);
+    letter-spacing: 0.5px;
+  }
+
+  // Section group labels (Masters, Operations, etc.)
+  .q-item-label[header] {
+    font-size: 9px !important;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 700;
+    color: rgba(white, 0.35) !important;
+    padding: 16px 20px 6px;
+  }
+
+  // All nav items inside the drawer
+  .q-item {
+    border-radius: 0 $r-xl $r-xl 0;
+    margin-right: 12px;
+    color: rgba(white, 0.65);
+    font-size: 13px;
+    font-weight: 500;
+    min-height: 40px;
+    padding: 10px 20px;
+    transition: background 120ms, color 120ms;
+
+    .q-item__section--avatar {
+      min-width: 32px;
+      color: inherit;
+
+      .q-icon {
+        font-size: 18px;
+        color: inherit;
+        transition: text-shadow 120ms;
+      }
+    }
+
+    &:hover {
+      background: rgba(white, 0.07) !important;
+      color: #fff !important;
+    }
+
+    // Active / current route
+    &.q-router-link--active,
+    &.router-link-exact-active {
+      background: rgba($secondary, 0.18) !important;
+      color: $secondary !important;
+      font-weight: 600;
+      border-right: 2px solid $secondary;
+
+      .q-icon {
+        color: $secondary !important;
+        text-shadow: 0 0 6px rgba($secondary, 0.60);
+      }
+    }
+  }
+
+  // Expansion item (group header) inside dark drawer
+  .q-expansion-item {
+    .q-item {
+      color: rgba(white, 0.65);
+    }
+
+    &--expanded > .q-item {
+      color: #fff;
+    }
+  }
+
+  // Separator between nav sections
+  .q-separator {
+    background: rgba(white, 0.08) !important;
+  }
+}
+
 
 // ══════════════════════════════════════════════════════════════════════════════
 // HERO CARD
 // ══════════════════════════════════════════════════════════════════════════════
 
 .hero-card {
-  border-radius: 20px;
+  border-radius: $r-xl;
   background: linear-gradient(160deg, $primary 0%, $_hero-mid 55%, $_hero-end 100%);
   color: #fff;
   overflow: hidden;
   position: relative;
-  box-shadow: 0 12px 28px -12px rgba($primary, 0.45);
+  box-shadow: var(--shadow-lg);
 }
 
 .hero-card__gold-line {
@@ -54,7 +211,7 @@ $_gold-fg   : lighten($secondary, 22%);   // cream-gold text on dark gold chips
 
 .hero-back-btn {
   width: 36px; height: 36px;
-  border-radius: 12px;
+  border-radius: $r-sm;
   background: rgba(white, 0.10);
   border: 1px solid rgba(white, 0.18);
   color: #fff;
@@ -162,7 +319,7 @@ $_gold-fg   : lighten($secondary, 22%);   // cream-gold text on dark gold chips
   align-items: center;
   gap: 5px;
   padding: 5px 9px;
-  border-radius: 8px;
+  border-radius: $r-sm;
   background: rgba(white, 0.10);
   color: #fff;
   font-size: 11px;
@@ -187,7 +344,7 @@ $_gold-fg   : lighten($secondary, 22%);   // cream-gold text on dark gold chips
   flex-shrink: 0;
   height: 30px;
   padding: 0 10px;
-  border-radius: 8px;
+  border-radius: $r-sm;
   background: rgba($secondary, 0.16);
   color: $secondary;
   border: 1px solid rgba($secondary, 0.35);
@@ -236,7 +393,7 @@ $_gold-fg   : lighten($secondary, 22%);   // cream-gold text on dark gold chips
 // Segment selector buttons
 .seg-btn {
   padding: 9px 6px;
-  border-radius: 10px;
+  border-radius: $r-sm;
   border: 1px solid rgba(white, 0.14);
   background: rgba(white, 0.04);
   color: rgba(white, 0.85);
@@ -277,7 +434,7 @@ $_gold-fg   : lighten($secondary, 22%);   // cream-gold text on dark gold chips
 .edit-field {
   background: rgba(white, 0.08);
   border: 1px solid rgba(white, 0.18);
-  border-radius: 10px;
+  border-radius: $r-sm;
   padding: 10px 14px;
   cursor: pointer;
   display: flex;
@@ -331,7 +488,7 @@ $_gold-fg   : lighten($secondary, 22%);   // cream-gold text on dark gold chips
 .revision-box {
   background: rgba($negative, 0.12);
   border: 1px solid rgba($negative, 0.30);
-  border-radius: 10px;
+  border-radius: $r-sm;
   padding: 12px;
 }
 
@@ -353,7 +510,7 @@ $_gold-fg   : lighten($secondary, 22%);   // cream-gold text on dark gold chips
 // ══════════════════════════════════════════════════════════════════════════════
 
 .items-card {
-  border-radius: 18px !important;
+  border-radius: $r-lg !important;
   border: 1px solid $border !important;
   background: $surface !important;
   overflow: hidden;
@@ -361,7 +518,7 @@ $_gold-fg   : lighten($secondary, 22%);   // cream-gold text on dark gold chips
 
 .items-icon-box {
   width: 34px; height: 34px;
-  border-radius: 10px;
+  border-radius: $r-sm;
   background: rgba($primary, 0.08);
   display: grid;
   place-items: center;
@@ -385,7 +542,7 @@ $_gold-fg   : lighten($secondary, 22%);   // cream-gold text on dark gold chips
 }
 
 .add-item-btn {
-  border-radius: 10px !important;
+  border-radius: $r-sm !important;
   font-weight: 600 !important;
   padding: 0 16px !important;
   height: 36px !important;
@@ -398,7 +555,7 @@ $_gold-fg   : lighten($secondary, 22%);   // cream-gold text on dark gold chips
   height: 38px;
   background: $bg-page;
   border: 1px solid $border;
-  border-radius: 10px;
+  border-radius: $r-sm;
   padding: 0 10px;
 }
 
@@ -443,7 +600,7 @@ $_gold-fg   : lighten($secondary, 22%);   // cream-gold text on dark gold chips
   background: rgba($primary, 0.08);
   color: $primary;
   padding: 1px 6px;
-  border-radius: 4px;
+  border-radius: $r-xs;
 }
 
 .item-variants { color: $ink-muted; }
@@ -464,7 +621,7 @@ $_gold-fg   : lighten($secondary, 22%);   // cream-gold text on dark gold chips
   gap: 8px;
   background: darken($surface, 2%);
   border: 1px solid $border;
-  border-radius: 10px;
+  border-radius: $r-sm;
   padding: 6px 10px;
   cursor: text;
   transition: border-color 120ms, background 120ms;

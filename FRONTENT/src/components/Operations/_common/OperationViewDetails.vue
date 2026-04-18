@@ -15,14 +15,16 @@
 <script setup>
 import { computed } from 'vue'
 import { deriveActionStampHeaders, filterDetailFields } from 'src/utils/appHelpers'
+import { useResourceConfig } from 'src/composables/useResourceConfig'
 
 const props = defineProps({
   record: { type: Object, default: null },
-  resolvedFields: { type: Array, default: () => [] },
-  additionalActions: { type: Array, default: () => [] }
+  resolvedFields: { type: Array, default: () => [] }
 })
 
-const actionStampHeaders = computed(() => deriveActionStampHeaders(props.additionalActions))
+const { additionalActions } = useResourceConfig()
+
+const actionStampHeaders = computed(() => deriveActionStampHeaders(additionalActions.value))
 
 const detailFields = computed(() => {
   return filterDetailFields(props.resolvedFields, actionStampHeaders.value)

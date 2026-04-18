@@ -110,7 +110,6 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import MasterListHeader from 'components/Masters/_common/MasterListHeader.vue'
 import MasterListReportBar from 'components/Masters/_common/MasterListReportBar.vue'
 import MasterListToolbar from 'components/Masters/_common/MasterListToolbar.vue'
@@ -124,11 +123,10 @@ import { parseVariantTypes } from 'src/composables/useProductVariants'
 import { useResourceNav } from 'src/composables/useResourceNav.js'
 import { useDataStore } from 'src/stores/data'
 
-const router = useRouter()
 const nav = useResourceNav()
 const dataStore = useDataStore()
 
-const { scope, resourceSlug, config, resourceName, resourceHeaders, permissions } = useResourceConfig()
+const { config, resourceName, resourceHeaders, permissions } = useResourceConfig()
 const { items, loading, backgroundSyncing, searchTerm, reload } = useResourceData(resourceName)
 const { isGenerating, showReportDialog, activeReport, reportInputs, initiateReport, confirmReportDialog, cancelReportDialog } = useReports(resourceName)
 
@@ -192,12 +190,8 @@ async function reloadAll(forceSync = false) {
   ])
 }
 
-function navigateToView(row) {
-  router.push(`/${scope.value}/${resourceSlug.value}/${row.Code}`)
-}
-
 function navigateToAdd() {
-  router.push(`/${scope.value}/${resourceSlug.value}/add`)
+  nav.goTo('add')
 }
 
 watch(

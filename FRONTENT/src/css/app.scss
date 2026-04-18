@@ -1,1 +1,11 @@
 // app global css in SCSS form
+
+// ── Shared layout systems ───────────────────────────────────────────────────
+@import 'hero';
+
+// ── Base typography ─────────────────────────────────────────────────────────
+// Inter is loaded in index.html; $font-mono is defined in quasar.variables.scss.
+// The body override below aligns Quasar's default Roboto with our design font.
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+}

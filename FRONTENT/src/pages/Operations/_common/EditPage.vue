@@ -60,6 +60,7 @@ import { useResourceRelations } from 'src/composables/useResourceRelations'
 import { useCompositeForm } from 'src/composables/useCompositeForm'
 import { fetchResourceRecords } from 'src/services/resourceRecords'
 import { useResourceNav } from 'src/composables/useResourceNav'
+import { findParentCodeField } from 'src/utils/appHelpers'
 
 const nav = useResourceNav()
 const { scope, resourceSlug, code, config, resourceName, resolvedFields, customUIName } = useResourceConfig()
@@ -88,16 +89,6 @@ const record = computed(() => {
   if (!code.value || !items.value.length) return null
   return items.value.find((r) => r.Code === code.value) || null
 })
-
-function findParentCodeField(childResource, parentResource) {
-  const headers = Array.isArray(childResource.headers) ? childResource.headers : []
-  if (headers.includes('ParentCode')) return 'ParentCode'
-  const parentName = parentResource?.name || ''
-  const singularParent = parentName.replace(/s$/, '')
-  const candidate = `${singularParent}Code`
-  if (headers.includes(candidate)) return candidate
-  return 'ParentCode'
-}
 
 async function loadAndInitialize() {
   await reload()

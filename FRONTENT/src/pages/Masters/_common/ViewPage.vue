@@ -18,7 +18,7 @@
       <component
         :is="sections.ViewActionBar"
         :permissions="permissions"
-        :additional-actions="additionalActions"
+        :additional-actions="visibleActions"
         :reports="config?.reports || []"
         :is-generating="isGenerating"
         @edit="navigateToEdit"
@@ -44,7 +44,7 @@
         :resource-slug="resourceSlug"
         :custom-u-i-name="customUIName"
         :entity-name="resourceName"
-        :additional-actions="additionalActions"
+        :additional-actions="visibleActions"
         @view-child="navigateToChildView"
       />
     </template>
@@ -72,12 +72,13 @@ import MasterViewChildren from 'components/Masters/_common/MasterViewChildren.vu
 import MasterViewLoading from 'components/Masters/_common/MasterViewLoading.vue'
 import MasterViewEmpty from 'components/Masters/_common/MasterViewEmpty.vue'
 import { useSectionResolver } from 'src/composables/useSectionResolver'
-import { useResourceConfig } from 'src/composables/useResourceConfig'
+import { useResourceConfig, isActionVisible } from 'src/composables/useResourceConfig'
 import { useResourceData } from 'src/composables/useResourceData'
 import { useResourceRelations } from 'src/composables/useResourceRelations'
 import { useReports } from 'src/composables/useReports'
 import { fetchResourceRecords } from 'src/services/resourceRecords'
 import { useResourceNav } from 'src/composables/useResourceNav'
+import { findParentCodeField } from 'src/utils/appHelpers'
 
 const nav = useResourceNav()
 const {
@@ -114,6 +115,10 @@ const record = computed(() => {
   return items.value.find((row) => row.Code === code.value) || null
 })
 
+const visibleActions = computed(() =>
+  additionalActions.value.filter((a) => isActionVisible(a, record.value))
+)
+
 function navigateToList() {
   nav.goTo('list')
 }
@@ -123,17 +128,15 @@ function navigateToEdit() {
 }
 
 function navigateToAction(action) {
+  if (action?.kind === 'navigate') {
+    const n = action.navigate || {}
+    const params = { pageSlug: n.pageSlug }
+    if (n.resourceSlug) params.resourceSlug = n.resourceSlug
+    if (n.scope) params.scope = n.scope
+    nav.goTo(n.target || 'record-page', params)
+    return
+  }
   nav.goTo('action', { action: action.action.toLowerCase() })
-}
-
-function findParentCodeField(childResource, parentResource) {
-  const headers = Array.isArray(childResource.headers) ? childResource.headers : []
-  if (headers.includes('ParentCode')) return 'ParentCode'
-  const parentName = parentResource?.name || ''
-  const singularParent = parentName.replace(/s$/, '')
-  const candidate = `${singularParent}Code`
-  if (headers.includes(candidate)) return candidate
-  return 'ParentCode'
 }
 
 async function loadChildRecords() {

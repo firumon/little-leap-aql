@@ -18,23 +18,23 @@
 
       <component
         :is="sections.ViewActionBar"
-        :additional-actions="additionalActions"
-        :record="record"
-        @action="navigateToAction"
+        :additional-actions="visibleActions"
+        :permissions="permissions"
+        @edit="navigateToEdit"
+        @action-clicked="navigateToAction"
       />
 
       <component
         :is="sections.ViewDetails"
         :record="record"
         :resolved-fields="resolvedFields"
-        :additional-actions="additionalActions"
       />
 
       <component
         :is="sections.ViewParent"
         :parent-resource="parentResource"
         :parent-record="parentRecord"
-        :additional-actions="additionalActions"
+        :additional-actions="visibleActions"
         :scope="scope"
         :resource-slug="resourceSlug"
         :custom-u-i-name="customUIName"
@@ -50,7 +50,7 @@
         :resource-slug="resourceSlug"
         :custom-u-i-name="customUIName"
         :entity-name="resourceName"
-        :additional-actions="additionalActions"
+        :additional-actions="visibleActions"
         @view-child="navigateToChildView"
       />
     </template>
@@ -67,14 +67,15 @@ import OperationViewChildren from 'components/Operations/_common/OperationViewCh
 import OperationViewLoading from 'components/Operations/_common/OperationViewLoading.vue'
 import OperationViewEmpty from 'components/Operations/_common/OperationViewEmpty.vue'
 import { useSectionResolver } from 'src/composables/useSectionResolver'
-import { useResourceConfig } from 'src/composables/useResourceConfig'
+import { useResourceConfig, isActionVisible } from 'src/composables/useResourceConfig'
 import { useResourceData } from 'src/composables/useResourceData'
 import { useResourceRelations } from 'src/composables/useResourceRelations'
 import { fetchResourceRecords } from 'src/services/resourceRecords'
 import { useResourceNav } from 'src/composables/useResourceNav'
+import { findParentCodeField } from 'src/utils/appHelpers'
 
 const nav = useResourceNav()
-const { scope, resourceSlug, code, config, resourceName, resolvedFields, additionalActions, customUIName } = useResourceConfig()
+const { scope, resourceSlug, code, config, resourceName, resolvedFields, additionalActions, permissions, customUIName } = useResourceConfig()
 const { items, loading, reload } = useResourceData(resourceName)
 const { parentResource, childResources } = useResourceRelations(resourceName)
 
@@ -98,18 +99,12 @@ const record = computed(() => {
   return items.value.find((r) => r.Code === code.value) || null
 })
 
+const visibleActions = computed(() =>
+  additionalActions.value.filter((a) => isActionVisible(a, record.value))
+)
+
 const childRecordsByResource = ref({})
 const parentRecord = ref(null)
-
-function findParentCodeField(childResourceConfig, parentResourceConfig) {
-  const headers = Array.isArray(childResourceConfig?.headers) ? childResourceConfig.headers : []
-  if (headers.includes('ParentCode')) return 'ParentCode'
-  const parentName = parentResourceConfig?.name || ''
-  const singularParent = parentName.replace(/s$/, '')
-  const candidate = `${singularParent}Code`
-  if (headers.includes(candidate)) return candidate
-  return 'ParentCode'
-}
 
 async function fetchParentRecord() {
   if (!parentResource.value || !record.value) {
@@ -177,6 +172,14 @@ function navigateToEdit() {
 }
 
 function navigateToAction(action) {
+  if (action?.kind === 'navigate') {
+    const n = action.navigate || {}
+    const params = { pageSlug: n.pageSlug }
+    if (n.resourceSlug) params.resourceSlug = n.resourceSlug
+    if (n.scope) params.scope = n.scope
+    nav.goTo(n.target || 'record-page', params)
+    return
+  }
   nav.goTo('action', { action: action.action })
 }
 

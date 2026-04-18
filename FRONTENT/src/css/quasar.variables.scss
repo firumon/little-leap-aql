@@ -3,18 +3,10 @@
 // To customize the look and feel of this app, you can override
 // the Sass/SCSS variables found in Quasar's source Sass/SCSS files.
 
-// Check documentation for full list of Quasar variables
-
-// Your own variables (that are declared here) and Quasar's own
-// ones will be available out of the box in your .vue/.scss/.sass files
-
-// It's highly recommended to change the default colors
-// to match your app's branding.
-// Tip: Use the "Theme Builder" on Quasar's documentation website.
-
-$primary   : #0F2B4A;
-$secondary : #D4A843;
-$accent    : #E8C060;
+// ── Brand palette ──────────────────────────────────────────────────────────
+$primary   : #0F2B4A;   // deep navy
+$secondary : #D4A843;   // gold
+$accent    : #E8C060;   // lighter gold (foreground on dark gold chips)
 
 $dark      : #071824;
 $dark-page : #071824;
@@ -23,3 +15,21 @@ $positive  : #1A7A4A;
 $negative  : #C0362C;
 $info      : #1A6FAD;
 $warning   : #C97B1A;
+
+// ── Ink hierarchy (for light-background surfaces) ──────────────────────────
+// On dark hero backgrounds, use rgba(white, 0.55–0.65) instead — opacity-
+// reduced white is the correct semantic choice there, not these ink vars.
+$ink       : #0B1A2C;   // primary text
+$ink-2     : #334155;   // secondary text
+$ink-muted : #64748B;   // captions, muted labels (Items · count, PR Date hints)
+
+// ── Surface & canvas ───────────────────────────────────────────────────────
+$bg-page   : #F4F4F2;   // off-white page canvas
+$surface   : #FFFFFF;   // card / panel surface
+
+// ── Border tokens ──────────────────────────────────────────────────────────
+$border        : #E6E6E1;
+$border-strong : #D6D6CF;
+
+// ── Typography ─────────────────────────────────────────────────────────────
+$font-mono : 'JetBrains Mono', 'Courier New', monospace;

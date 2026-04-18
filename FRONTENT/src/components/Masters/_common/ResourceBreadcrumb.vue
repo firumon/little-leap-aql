@@ -1,19 +1,19 @@
 <template>
   <nav class="breadcrumb-bar" aria-label="Breadcrumb">
-    <router-link :to="`/${scope}/${resourceSlug}`" class="crumb crumb-link">
+    <span class="crumb crumb-link" @click="nav.goTo('list')">
       <q-icon name="home" size="16px" class="crumb-icon" />
       <span>{{ resourceTitle }}</span>
-    </router-link>
+    </span>
 
     <template v-if="code">
       <q-icon name="chevron_right" size="16px" class="crumb-sep" />
-      <router-link
+      <span
         v-if="action && action !== 'view'"
-        :to="`/${scope}/${resourceSlug}/${code}`"
         class="crumb crumb-link"
+        @click="nav.goTo('view')"
       >
         {{ code }}
-      </router-link>
+      </span>
       <span v-else class="crumb crumb-current">{{ code }}</span>
     </template>
 
@@ -25,6 +25,10 @@
 </template>
 
 <script setup>
+import { useResourceNav } from 'src/composables/useResourceNav'
+
+const nav = useResourceNav()
+
 defineProps({
   scope: { type: String, default: 'masters' },
   resourceSlug: { type: String, default: '' },

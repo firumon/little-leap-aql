@@ -1,14 +1,18 @@
 import { computed } from 'vue'
+import { toPascalCase } from 'src/utils/appHelpers'
 
 /**
  * Resolves form fields for an additional action page (Approve, Reject, etc.)
  * based on the resource headers and AdditionalActions config.
  *
  * Rules:
- * - Column derived as: {column}{columnValue}{name} (e.g., ProgressApprovedComment)
- * - Only show fields whose derived column EXISTS in resource headers (sheet = source of truth)
- * - *At and *By suffixed columns are auto-filled by backend, never shown in form
- * - If columnValueOptions exists, user picks the outcome; fields derived per selection
+ * - Column derived as: {column}{PascalCase(columnValue)}{name}
+ *   (e.g., Progress + "Revision Required" + Comment → ProgressRevisionRequiredComment)
+ * - A field renders ONLY when BOTH are true:
+ *     (a) it is listed in action.fields[] (JSON is authoritative — no auto-detect)
+ *     (b) its derived header exists in the resource's sheet headers
+ * - If either is missing, the field is hidden.
+ * - If columnValueOptions exists, user picks the outcome; fields derived per selection.
  */
 export function useActionFields(resourceHeadersRef, actionConfigRef, selectedValueRef) {
 
@@ -32,30 +36,8 @@ export function useActionFields(resourceHeadersRef, actionConfigRef, selectedVal
   const outcomeOptions = computed(() => actionConfig.value.columnValueOptions || [])
 
   /**
-   * Auto-detect fields from headers when no explicit fields defined.
-   * Scans headers matching {column}{selectedValue}* pattern,
-   * excluding *At and *By suffixes.
-   */
-  function autoDetectFields(col, val, hdrs) {
-    if (!col || !val || !hdrs.length) return []
-    const prefix = col + val
-    return hdrs
-      .filter((h) => h.startsWith(prefix) && h !== col)
-      .filter((h) => !h.endsWith('At') && !h.endsWith('By'))
-      .map((h) => {
-        const name = h.slice(prefix.length)
-        return {
-          header: h,
-          name,
-          label: name.replace(/([a-z])([A-Z])/g, '$1 $2'),
-          type: guessFieldType(name),
-          required: false
-        }
-      })
-  }
-
-  /**
-   * Resolve fields — combines explicit config fields with column existence check.
+   * Resolve fields — intersection of JSON-configured fields and sheet headers.
+   * No auto-detect: if action.fields is not an array, no fields render.
    */
   const resolvedFields = computed(() => {
     const col = column.value
@@ -64,25 +46,22 @@ export function useActionFields(resourceHeadersRef, actionConfigRef, selectedVal
     if (!val) return []
 
     const configFields = actionConfig.value.fields
-    if (Array.isArray(configFields) && configFields.length) {
-      // Explicit fields: derive header from {column}{value}{name}, check existence
-      return configFields
-        .map((f) => {
-          const derivedHeader = col + val + f.name
-          if (!hdrs.includes(derivedHeader)) return null
-          return {
-            header: derivedHeader,
-            name: f.name,
-            label: f.label || f.name.replace(/([a-z])([A-Z])/g, '$1 $2'),
-            type: f.type || guessFieldType(f.name),
-            required: f.required || false
-          }
-        })
-        .filter(Boolean)
-    }
+    if (!Array.isArray(configFields)) return []
 
-    // No explicit fields — auto-detect from headers
-    return autoDetectFields(col, val, hdrs)
+    const valPascal = toPascalCase(val)
+    return configFields
+      .map((f) => {
+        const derivedHeader = col + valPascal + f.name
+        if (!hdrs.includes(derivedHeader)) return null
+        return {
+          header: derivedHeader,
+          name: f.name,
+          label: f.label || f.name.replace(/([a-z])([A-Z])/g, '$1 $2'),
+          type: f.type || guessFieldType(f.name),
+          required: f.required || false
+        }
+      })
+      .filter(Boolean)
   })
 
   /**
@@ -92,10 +71,11 @@ export function useActionFields(resourceHeadersRef, actionConfigRef, selectedVal
     const col = column.value
     const val = selectedValue.value
     if (!col || !val) return {}
+    const valPascal = toPascalCase(val)
     return {
       [`${col}`]: val,
-      [`${col}${val}At`]: '__auto__',
-      [`${col}${val}By`]: '__auto__'
+      [`${col}${valPascal}At`]: '__auto__',
+      [`${col}${valPascal}By`]: '__auto__'
     }
   })
 

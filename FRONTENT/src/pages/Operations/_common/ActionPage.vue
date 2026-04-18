@@ -1,39 +1,52 @@
 <template>
   <div class="action-page">
-    <!-- Loading -->
-    <div v-if="loading" class="q-py-xl text-center">
-      <q-spinner-dots color="primary" size="32px" />
-    </div>
+    <!-- Wait for section resolution -->
+    <component v-if="!sectionsReady" :is="fallbackLoading" />
+
+    <!-- Loading record -->
+    <component v-else-if="loading" :is="sections.Loading" />
 
     <!-- Record not found -->
-    <q-card v-else-if="!record" flat bordered class="page-card">
-      <q-card-section class="text-center q-py-xl">
-        <q-icon name="search_off" size="48px" color="grey-5" />
-        <div class="text-subtitle1 text-grey-7 q-mt-md">Record not found</div>
-        <q-btn flat color="primary" label="Back to List" icon="arrow_back" class="q-mt-md" @click="navigateToList" />
-      </q-card-section>
-    </q-card>
+    <component
+      v-else-if="!record"
+      :is="sections.Empty"
+      icon="search_off"
+      message="Record not found"
+      back-label="Back to List"
+      @back="navigateToList"
+    />
 
     <!-- Action not configured -->
-    <q-card v-else-if="!currentActionConfig" flat bordered class="page-card">
-      <q-card-section class="text-center q-py-xl">
-        <q-icon name="block" size="48px" color="grey-5" />
-        <div class="text-subtitle1 text-grey-7 q-mt-md">Action "{{ actionName }}" is not configured</div>
-        <q-btn flat color="primary" label="Back" icon="arrow_back" class="q-mt-md" @click="navigateToView" />
-      </q-card-section>
-    </q-card>
+    <component
+      v-else-if="!currentActionConfig"
+      :is="sections.Empty"
+      icon="block"
+      :message="`Action &quot;${actionName}&quot; is not configured`"
+      back-label="Back"
+      @back="navigateToView"
+    />
+
+    <!-- Action not available for this record (visibleWhen failed) -->
+    <component
+      v-else-if="!actionAllowedForRecord"
+      :is="sections.Empty"
+      icon="block"
+      :message="`Action &quot;${currentActionConfig.label || actionName}&quot; is not available for this record in its current state`"
+      back-label="Back"
+      @back="navigateToView"
+    />
 
     <!-- Action form -->
-    <template v-else-if="sectionsReady">
+    <template v-else>
       <component
-        :is="sections.ActionHeader"
+        :is="sections.Header"
         :action-config="currentActionConfig"
         :action-name="actionName"
         :record="record"
       />
 
       <component
-        :is="sections.ActionForm"
+        :is="sections.Form"
         :is-multi-outcome="isMultiOutcome"
         :outcome-options="outcomeOptions"
         :selected-outcome="selectedOutcome"
@@ -44,7 +57,7 @@
       />
 
       <component
-        :is="sections.ActionActions"
+        :is="sections.Actions"
         :action-label="currentActionConfig.label || actionName"
         :action-icon="currentActionConfig.icon || 'check'"
         :action-color="currentActionConfig.color || 'primary'"
@@ -58,14 +71,16 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, reactive } from 'vue'
+import { ref, computed, watch, reactive, h } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
+import OperationActionLoading from 'components/Operations/_common/OperationActionLoading.vue'
+import OperationActionEmpty from 'components/Operations/_common/OperationActionEmpty.vue'
 import OperationActionHeader from 'components/Operations/_common/OperationActionHeader.vue'
 import OperationActionForm from 'components/Operations/_common/OperationActionForm.vue'
 import OperationActionActions from 'components/Operations/_common/OperationActionActions.vue'
-import { useSectionResolver } from 'src/composables/useSectionResolver'
-import { useResourceConfig } from 'src/composables/useResourceConfig'
+import { useActionResolver } from 'src/composables/useActionResolver'
+import { useResourceConfig, isActionVisible } from 'src/composables/useResourceConfig'
 import { useResourceData } from 'src/composables/useResourceData'
 import { useActionFields } from 'src/composables/useActionFields'
 import { callGasApi } from 'src/services/gasApi'
@@ -76,31 +91,36 @@ const nav = useResourceNav()
 const $q = useQuasar()
 
 const {
-  scope, resourceSlug, code, config, resourceName,
-  resourceHeaders, resolvedFields, additionalActions, customUIName
+  resourceSlug, code, config, resourceName,
+  resourceHeaders, additionalActions, customUIName
 } = useResourceConfig()
 
 const { items, loading, reload } = useResourceData(resourceName)
-
-const { sections, sectionsReady } = useSectionResolver({
-  resourceSlug,
-  customUIName,
-  scope: 'operations',
-  sectionDefs: {
-    ActionHeader: OperationActionHeader,
-    ActionForm: OperationActionForm,
-    ActionActions: OperationActionActions
-  }
-})
 
 const actionName = computed(() => {
   const route = router.currentRoute.value
   return route.params.action || route.meta?.action || ''
 })
 
+const { sections, sectionsReady } = useActionResolver({
+  resourceSlug,
+  customUIName,
+  actionKey: actionName,
+  scope: 'operations',
+  sectionDefs: {
+    Loading: OperationActionLoading,
+    Empty: OperationActionEmpty,
+    Header: OperationActionHeader,
+    Form: OperationActionForm,
+    Actions: OperationActionActions
+  }
+})
+
+const fallbackLoading = { render: () => h(OperationActionLoading) }
+
 const currentActionConfig = computed(() => {
   return additionalActions.value.find(
-    (a) => a.action.toLowerCase() === actionName.value.toLowerCase()
+    (a) => a.action.toLowerCase() === actionName.value.toLowerCase() && a.kind !== 'navigate'
   ) || null
 })
 
@@ -109,7 +129,7 @@ const actionForm = reactive({})
 const submitting = ref(false)
 
 const {
-  column, isMultiOutcome, outcomeOptions, resolvedFields: resolvedActionFields, autoFillColumns
+  column, isMultiOutcome, outcomeOptions, resolvedFields: resolvedActionFields
 } = useActionFields(resourceHeaders, currentActionConfig, () => selectedOutcome.value)
 
 const record = computed(() => {
@@ -117,12 +137,12 @@ const record = computed(() => {
   return items.value.find((r) => r.Code === code.value) || null
 })
 
+const actionAllowedForRecord = computed(() =>
+  !currentActionConfig.value || isActionVisible(currentActionConfig.value, record.value)
+)
+
 watch(currentActionConfig, (cfg) => {
-  if (cfg?.columnValue) {
-    selectedOutcome.value = cfg.columnValue
-  } else {
-    selectedOutcome.value = ''
-  }
+  selectedOutcome.value = cfg?.columnValue || ''
 }, { immediate: true })
 
 watch(resolvedActionFields, (fields) => {
@@ -179,14 +199,9 @@ watch(() => resourceName.value, (n) => { if (n) reload() }, { immediate: true })
 </script>
 
 <style scoped>
-.page-card {
-  border-radius: 16px;
-  border-color: var(--operation-border, #e2e8f0);
-  background: rgba(255, 255, 255, 0.95);
-  animation: rise-in 280ms ease-out both;
-}
-@keyframes rise-in {
-  0% { transform: translateY(10px); opacity: 0; }
-  100% { transform: translateY(0); opacity: 1; }
+.action-page {
+  display: grid;
+  gap: 12px;
+  padding-bottom: 32px;
 }
 </style>

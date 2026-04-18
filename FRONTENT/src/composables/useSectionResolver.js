@@ -1,5 +1,6 @@
-import { computed, markRaw, reactive, watch } from 'vue'
+import { computed, reactive, watch } from 'vue'
 import { toPascalCase } from 'src/utils/appHelpers'
+import { resolveTieredComponent } from 'src/composables/_resolveTieredComponent'
 
 /**
  * Scans components/Masters/{Entity}/ for entity-level section overrides.
@@ -33,67 +34,35 @@ const operationsCustomSectionModules = import.meta.glob('../components/Operation
 /**
  * Resolves a single section component using 4-tier discovery:
  *   1. Tenant-custom (entity-specific): components/{Scope}/_custom/{CustomUIName}/{Entity}/{Section}.vue
- *   2. Tenant-custom (cross-entity): components/{Scope}/_custom/{CustomUIName}/{Section}.vue
- *   3. Entity-custom: components/{Scope}/{Entity}/{Section}.vue
- *   4. Default:       (passed in as defaultComponent)
+ *   2. Tenant-custom (cross-entity):    components/{Scope}/_custom/{CustomUIName}/{Section}.vue
+ *   3. Entity-custom:                   components/{Scope}/{Entity}/{Section}.vue
+ *   4. Default:                         (passed in as defaultComponent)
  */
 async function resolveSection(entityName, sectionName, defaultComponent, customUIName, scope = 'masters') {
-
-  const customSectionModules = scope === 'operations' ? operationsCustomSectionModules : mastersCustomSectionModules
-  const entitySectionModules = scope === 'operations' ? operationsEntitySectionModules : mastersEntitySectionModules
+  const customModules = scope === 'operations' ? operationsCustomSectionModules : mastersCustomSectionModules
+  const entityModules = scope === 'operations' ? operationsEntitySectionModules : mastersEntitySectionModules
   const folder = scope === 'operations' ? 'Operations' : 'Masters'
 
-  // Tier 1: Tenant-custom (entity-specific)
+  const tiers = []
   if (customUIName) {
-    const customEntitySpecificPath = `../components/${folder}/_custom/${customUIName}/${entityName}/${sectionName}.vue`
-    if (customSectionModules[customEntitySpecificPath]) {
-      try {
-        const mod = await customSectionModules[customEntitySpecificPath]()
-        return markRaw(mod.default || mod)
-      } catch (e) {
-        console.warn(`[SectionResolver] Failed to load custom entity-specific ${sectionName} for ${customUIName}/${entityName} in ${scope}`, e)
-      }
-    }
-
-    // Tier 2: Tenant-custom (cross-entity)
-    const customCrossEntityPath = `../components/${folder}/_custom/${customUIName}/${sectionName}.vue`
-    if (customSectionModules[customCrossEntityPath]) {
-      try {
-        const mod = await customSectionModules[customCrossEntityPath]()
-        return markRaw(mod.default || mod)
-      } catch (e) {
-        console.warn(`[SectionResolver] Failed to load custom cross-entity ${sectionName} for ${customUIName} in ${scope}`, e)
-      }
-    }
+    tiers.push({ modules: customModules, path: `../components/${folder}/_custom/${customUIName}/${entityName}/${sectionName}.vue` })
+    tiers.push({ modules: customModules, path: `../components/${folder}/_custom/${customUIName}/${sectionName}.vue` })
   }
+  tiers.push({ modules: entityModules, path: `../components/${folder}/${entityName}/${sectionName}.vue` })
 
-  // Tier 3: Entity-custom
-  const entityPath = `../components/${folder}/${entityName}/${sectionName}.vue`
-  if (entitySectionModules[entityPath]) {
-    try {
-      const mod = await entitySectionModules[entityPath]()
-      return markRaw(mod.default || mod)
-    } catch (e) {
-      console.warn(`[SectionResolver] Failed to load entity ${sectionName} for ${entityName} in ${scope}`, e)
-    }
-  }
-
-  // Tier 4: Default
-  return markRaw(defaultComponent)
+  return resolveTieredComponent(tiers, defaultComponent)
 }
 
 /**
  * Generic section resolver for any page action.
  *
  * @param {Object} options
- * @param {import('vue').Ref<string>} options.resourceSlug - Resource slug from route (e.g., 'products')
- * @param {import('vue').Ref<string>} options.customUIName - CustomUIName from resource config (e.g., 'A2930')
- * @param {Object} options.sectionDefs - Map of section names to their default components
- *   e.g., { ListHeader: MasterListHeader, ListReportBar: MasterListReportBar, ... }
- * @param {string} options.scope - Target scope ('masters' or 'operations'). Defaults to 'masters'.
+ * @param {import('vue').Ref<string>} options.resourceSlug
+ * @param {import('vue').Ref<string>} options.customUIName
+ * @param {Object} options.sectionDefs
+ * @param {string} options.scope - 'masters' | 'operations'
  *
  * @returns {{ sections: Object, sectionsReady: import('vue').ComputedRef<boolean> }}
- *   sections is a reactive object with shallowRef for each section key.
  */
 export function useSectionResolver({ resourceSlug, customUIName, sectionDefs, scope = 'masters' }) {
   const sectionNames = Object.keys(sectionDefs)

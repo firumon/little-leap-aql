@@ -92,7 +92,6 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import MasterViewActionBar from 'components/Masters/_common/MasterViewActionBar.vue'
 import MasterViewAudit from 'components/Masters/_common/MasterViewAudit.vue'
 import ReportInputDialog from 'src/components/Masters/ReportInputDialog.vue'
@@ -100,10 +99,11 @@ import { useProductVariants } from 'src/composables/useProductVariants'
 import { useResourceConfig } from 'src/composables/useResourceConfig'
 import { useResourceData } from 'src/composables/useResourceData'
 import { useReports } from 'src/composables/useReports'
+import { useResourceNav } from 'src/composables/useResourceNav'
 import { fetchResourceRecords } from 'src/services/resourceRecords'
 
-const router = useRouter()
-const { scope, resourceSlug, code, config, resourceName, permissions } = useResourceConfig()
+const nav = useResourceNav()
+const { code, config, resourceName, permissions } = useResourceConfig()
 const { items, loading: resourceLoading, reload } = useResourceData(resourceName)
 const {
   isGenerating, showReportDialog, activeReport, reportInputs,
@@ -182,11 +182,11 @@ async function loadView() {
 }
 
 function navigateToList() {
-  router.push(`/${scope.value}/${resourceSlug.value}`)
+  nav.goTo('list')
 }
 
 function navigateToEdit() {
-  router.push(`/${scope.value}/${resourceSlug.value}/${code.value}/edit`)
+  nav.goTo('edit')
 }
 
 watch(

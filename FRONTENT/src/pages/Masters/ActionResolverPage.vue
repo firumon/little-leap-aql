@@ -15,6 +15,7 @@
 import { watch, shallowRef, markRaw, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useResourceConfig } from 'src/composables/useResourceConfig'
+import { toPascalCase } from 'src/utils/appHelpers'
 
 const route = useRoute()
 const { config } = useResourceConfig()
@@ -34,14 +35,6 @@ const customPageModules = import.meta.glob([
   '!./_custom/**'
 ])
 const fallbackModules = import.meta.glob('./_common/**Page.vue')
-
-function toPascalCase(slug) {
-  if (!slug) return ''
-  return slug
-    .split('-')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join('')
-}
 
 function resolveActionName(routeMeta, routeParams) {
   if (routeMeta?.action) return routeMeta.action

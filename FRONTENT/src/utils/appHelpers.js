@@ -140,3 +140,36 @@ export function resolveChildTitle(childResourceConfig) {
   }
   return humanizeString(childResourceConfig.name || '')
 }
+
+/**
+ * Converts a hyphen-separated slug to a Title Case human-readable string.
+ * e.g. "purchase-requisition-items" → "Purchase Requisition Items"
+ *
+ * @param {string} slug
+ * @returns {string}
+ */
+export function humanizeSlug(slug) {
+  if (!slug) return ''
+  return slug
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+}
+
+/**
+ * Resolves the parent code field name for a child resource.
+ * Checks for 'ParentCode', then derives a candidate from the parent resource name.
+ *
+ * @param {Object} childResource - child resource config (must have .headers array)
+ * @param {Object} parentResource - parent resource config (must have .name string)
+ * @returns {string}
+ */
+export function findParentCodeField(childResource, parentResource) {
+  const headers = Array.isArray(childResource?.headers) ? childResource.headers : []
+  if (headers.includes('ParentCode')) return 'ParentCode'
+  const parentName = parentResource?.name || ''
+  const singularParent = parentName.replace(/s$/, '')
+  const candidate = `${singularParent}Code`
+  if (headers.includes(candidate)) return candidate
+  return 'ParentCode'
+}

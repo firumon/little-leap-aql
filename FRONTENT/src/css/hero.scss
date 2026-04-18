@@ -1,0 +1,558 @@
+// hero.scss — Shared hero-card layout system
+// ─────────────────────────────────────────────────────────────────────────────
+// All values derive from quasar.variables.scss — never hardcode brand colours.
+// Quasar auto-injects quasar.variables.scss so those variables are always in scope.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── SCSS helpers ─────────────────────────────────────────────────────────────
+$_hero-mid  : lighten($primary, 8%);
+$_hero-end  : lighten($primary, 14%);
+$_gold-fg   : lighten($secondary, 22%);   // cream-gold text on dark gold chips
+
+// ── CSS custom properties (bridge SCSS → inline template :style bindings) ────
+:root {
+  --hero-gold   : #{$secondary};
+  --hero-navy   : #{$primary};
+  --hero-ink-3  : #{$ink-muted};
+  --font-mono   : #{$font-mono};
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// HERO CARD
+// ══════════════════════════════════════════════════════════════════════════════
+
+.hero-card {
+  border-radius: 20px;
+  background: linear-gradient(160deg, $primary 0%, $_hero-mid 55%, $_hero-end 100%);
+  color: #fff;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 12px 28px -12px rgba($primary, 0.45);
+}
+
+.hero-card__gold-line {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, $secondary 0%, transparent 100%);
+}
+
+.hero-card__glow {
+  position: absolute;
+  top: -60px; right: -60px;
+  width: 200px; height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba($secondary, 0.22) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+// ── Top row ───────────────────────────────────────────────────────────────────
+.hero-card__toprow {
+  padding: 14px 16px 12px;
+  position: relative;
+}
+
+.hero-back-btn {
+  width: 36px; height: 36px;
+  border-radius: 12px;
+  background: rgba(white, 0.10);
+  border: 1px solid rgba(white, 0.18);
+  color: #fff;
+  display: grid; place-items: center;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  margin-right: 12px;
+  transition: background 120ms;
+
+  &:hover { background: rgba(white, 0.18); }
+}
+
+// PR code displayed in the top row
+.hero-code {
+  font-family: $font-mono;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.6px;
+  line-height: 1.15;
+}
+
+// Sub-line meta (PR Date, Requested By)
+.hero-meta {
+  font-size: 12px;
+  color: rgba(white, 0.65);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+// ── Status chip ───────────────────────────────────────────────────────────────
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+// ── Stat strip ────────────────────────────────────────────────────────────────
+.hero-stat-strip {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.4fr;
+  gap: 1px;
+  background: rgba(white, 0.08);
+  border-top: 1px solid rgba(white, 0.08);
+}
+
+.hero-stat-cell {
+  padding: 12px 14px;
+  background: rgba($primary, 0.35);
+}
+
+.hero-stat-label {
+  font-size: 10px;
+  color: rgba(white, 0.55);
+  letter-spacing: 0.6px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.hero-stat-value {
+  margin-top: 4px;
+  font-family: $font-mono;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: #fff;
+
+  &--gold { color: $secondary; }
+}
+
+// ── Pinned details strip ──────────────────────────────────────────────────────
+.hero-details-strip {
+  background: rgba(white, 0.06);
+  padding: 10px 12px;
+  border-top: 1px solid rgba(white, 0.08);
+  gap: 8px;
+}
+
+.hero-pin-row {
+  overflow-x: auto;
+  scrollbar-width: none;
+  gap: 6px;
+
+  &::-webkit-scrollbar { display: none; }
+}
+
+.pin-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border-radius: 8px;
+  background: rgba(white, 0.10);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  border: 1px solid rgba(white, 0.08);
+
+  &--warn {
+    background: rgba($negative, 0.20);
+    color: lighten($negative, 30%);
+  }
+}
+
+.pin-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.hero-edit-toggle {
+  flex-shrink: 0;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: rgba($secondary, 0.16);
+  color: $secondary;
+  border: 1px solid rgba($secondary, 0.35);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: background 120ms;
+
+  &:hover { background: rgba($secondary, 0.26); }
+}
+
+// ── Collapsible edit panel ────────────────────────────────────────────────────
+.hero-edit-panel {
+  background: rgba(black, 0.18);
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.edit-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.edit-group__label {
+  font-size: 10px;
+  color: rgba(white, 0.55);
+  letter-spacing: 0.7px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+// Full-width 4-column grid for Type / uniform pill grid for Priority+Warehouse
+.seg-grid {
+  display: grid;
+  gap: 6px;
+}
+
+.seg-grid--4 { grid-template-columns: repeat(4, 1fr); }
+
+// Segment selector buttons
+.seg-btn {
+  padding: 9px 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(white, 0.14);
+  background: rgba(white, 0.04);
+  color: rgba(white, 0.85);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex-direction: column;
+  width: 100%;
+  transition: border-color 120ms, background 120ms, color 120ms;
+
+  &--pill {
+    flex-direction: row;
+    padding: 8px 14px;
+    border-radius: 999px;
+    width: auto;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  &--active {
+    border-color: $secondary;
+    background: rgba($secondary, 0.20);
+    color: $_gold-fg;
+  }
+}
+
+.seg-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+// Date / reference field inside the edit panel
+.edit-field {
+  background: rgba(white, 0.08);
+  border: 1px solid rgba(white, 0.18);
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.edit-field__value {
+  flex: 1;
+  min-width: 0;
+}
+
+.edit-field__label {
+  font-size: 9px;
+  color: rgba(white, 0.50);
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.edit-field__text {
+  font-size: 14px;
+  color: #fff;
+}
+
+.edit-field__text--placeholder { color: rgba(white, 0.40); }
+
+// Plain text input inside edit panel (reference code field)
+.edit-text-input {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  min-width: 0;
+  width: 100%;
+
+  &::placeholder { color: rgba(white, 0.35); }
+}
+
+.overdue-badge {
+  font-size: 11px;
+  color: lighten($negative, 28%);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+// Revision box
+.revision-box {
+  background: rgba($negative, 0.12);
+  border: 1px solid rgba($negative, 0.30);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.revision-header {
+  font-size: 13px;
+  font-weight: 700;
+  color: lighten($negative, 30%);
+}
+
+.revision-text {
+  font-size: 12px;
+  color: rgba(lighten($negative, 30%), 0.85);
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ITEMS CARD
+// ══════════════════════════════════════════════════════════════════════════════
+
+.items-card {
+  border-radius: 18px !important;
+  border: 1px solid $border !important;
+  background: $surface !important;
+  overflow: hidden;
+}
+
+.items-icon-box {
+  width: 34px; height: 34px;
+  border-radius: 10px;
+  background: rgba($primary, 0.08);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.items-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: $ink;
+}
+
+.items-count {
+  color: $ink-muted;
+  font-weight: 500;
+}
+
+.items-hint {
+  font-size: 11px;
+  color: $ink-muted;
+}
+
+.add-item-btn {
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+  padding: 0 16px !important;
+  height: 36px !important;
+  font-size: 13px !important;
+  letter-spacing: 0.2px !important;
+}
+
+// ── Search bar ────────────────────────────────────────────────────────────────
+.search-wrap {
+  height: 38px;
+  background: $bg-page;
+  border: 1px solid $border;
+  border-radius: 10px;
+  padding: 0 10px;
+}
+
+.search-input {
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  color: $ink;
+  outline: none;
+  min-width: 0;
+  width: 100%;
+
+  &::placeholder { color: $ink-muted; }
+}
+
+// ── Item rows ─────────────────────────────────────────────────────────────────
+.item-row {
+  padding: 10px 14px;
+
+  &--border { border-bottom: 1px solid darken($surface, 4%); }
+}
+
+.item-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: $ink;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-sub {
+  font-size: 11px;
+  color: $ink-muted;
+}
+
+.sku-badge {
+  font-family: $font-mono;
+  font-size: 10px;
+  font-weight: 600;
+  background: rgba($primary, 0.08);
+  color: $primary;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.item-variants { color: $ink-muted; }
+
+.item-total {
+  font-family: $font-mono;
+  font-size: 14px;
+  font-weight: 700;
+  color: $primary;
+  text-align: right;
+  white-space: nowrap;
+}
+
+// ── NumberField ───────────────────────────────────────────────────────────────
+.num-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: darken($surface, 2%);
+  border: 1px solid $border;
+  border-radius: 10px;
+  padding: 6px 10px;
+  cursor: text;
+  transition: border-color 120ms, background 120ms;
+
+  &--focus {
+    background: $surface;
+    border-color: $primary;
+  }
+}
+
+.nf-label {
+  font-size: 9px;
+  color: $ink-muted;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+.nf-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-family: $font-mono;
+  font-size: 15px;
+  font-weight: 600;
+  color: $ink;
+  outline: none;
+  padding: 0;
+  margin-top: 2px;
+
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button { -webkit-appearance: none; }
+  &[type='number'] { -moz-appearance: textfield; }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ACTION BAR
+// ══════════════════════════════════════════════════════════════════════════════
+
+.action-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 50;
+  padding: 12px 16px 20px;
+  background: linear-gradient(to top, $surface 70%, rgba($surface, 0.5));
+  border-top: 1px solid $border;
+  backdrop-filter: blur(8px);
+}
+
+.action-bar__total-label {
+  font-size: 11px;
+  color: $ink-muted;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.action-bar__total-value {
+  font-family: $font-mono;
+  font-size: 18px;
+  font-weight: 800;
+  color: $primary;
+  letter-spacing: -0.3px;
+}
+
+.action-bar__total-ccy {
+  font-size: 11px;
+  font-weight: 600;
+  color: $ink-muted;
+  margin-left: 4px;
+}
+
+.submit-btn {
+  background: linear-gradient(135deg, $primary 0%, $_hero-mid 100%) !important;
+  color: #fff !important;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, $secondary, transparent);
+  }
+
+  &.disabled {
+    background: mix(white, $ink-muted, 40%) !important;
+    box-shadow: none !important;
+  }
+}

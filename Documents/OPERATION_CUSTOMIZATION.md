@@ -117,6 +117,242 @@ When creating custom components, you can import and reuse these helpers from `sr
 
 4.  **Restart the dev server**: The new file needs to be discovered by Vite's glob import. Restart your `npm run dev` process. The application will now automatically pick up your custom component for Purchase Requisitions where the tenant is `C456`.
 
+## Action Page Customization (5-Tier)
+
+Action pages (Approve, Reject, SendBack, etc.) are resolved separately by
+`useActionResolver.js`. Section filenames are prefixed with `Action`, and each
+section can be overridden either entity-wide or per-specific-action.
+
+### Tier Order
+
+Given `scope = 'operations'`, `{Entity}` = PascalCase of the resource slug,
+`{Section}` ∈ { `Loading`, `Empty`, `Header`, `Form`, `Actions` }, and
+`{Action}` = `toPascalCase(actionKey)`:
+
+1. `components/Operations/_custom/{ui}/{Entity}/Action{Section}{Action}.vue` — tenant + entity + per-action
+2. `components/Operations/_custom/{ui}/{Entity}/Action{Section}.vue` — tenant + entity
+3. `components/Operations/{Entity}/Action{Section}{Action}.vue` — entity + per-action
+4. `components/Operations/{Entity}/Action{Section}.vue` — entity-wide
+5. `components/Operations/_common/OperationAction{Section}.vue` — default
+
+Tiers 1–2 are skipped when `customUIName` is null. First existing file wins.
+
+### Action Section Reference
+
+| Section | Default | Props | Emits |
+|---|---|---|---|
+| `ActionLoading` | `_common/OperationActionLoading.vue` | none | none |
+| `ActionEmpty` | `_common/OperationActionEmpty.vue` | `icon, message, backLabel` | `back` |
+| `ActionHeader` | `_common/OperationActionHeader.vue` | `actionConfig, actionName, record` | none |
+| `ActionForm` | `_common/OperationActionForm.vue` | `isMultiOutcome, outcomeOptions, selectedOutcome, resolvedActionFields, actionForm` | `update:selected-outcome, update:action-field` |
+| `ActionActions` | `_common/OperationActionActions.vue` | `actionLabel, actionIcon, actionColor, submitting, submitDisabled` | `cancel, submit` |
+
+### Casing Gotcha
+
+`toPascalCase` lowercases the rest of each word. Action key `"SendBack"` becomes
+`"Sendback"` — so the override filename is `ActionFormSendback.vue`, **not**
+`ActionFormSendBack.vue`. Use a hyphen separator in the action key
+(`"send-back"`) if you want `SendBack` casing.
+
+### Action `kind` Discriminator
+
+`AdditionalActions` entries are normalized by `useResourceConfig.additionalActions`
+into one of two shapes:
+
+- `kind: 'mutate'` — the standard form-and-submit flow. Renders via `ActionPage`.
+- `kind: 'navigate'` — routes straight to a resource-page / record-page via
+  `useResourceNav.goTo(target, { pageSlug, resourceSlug?, scope? })`.
+  Never hits `ActionPage`.
+
+Legacy entries (no `kind` field) are treated as `mutate`. The GAS
+`AdditionalActions` JSON does not need to be migrated for existing flows to keep
+working.
+
+### Prop Shapes
+
+Complex props received by Action sections:
+
+```
+actionConfig: {
+  action: string,              // action key, e.g. 'Approve'
+  label: string,
+  icon: string,
+  color: string,
+  confirm: boolean,
+  kind: 'mutate' | 'navigate',
+  // mutate-kind only:
+  column?: string,             // e.g. 'Progress'
+  columnValue?: string,        // e.g. 'Approved'
+  columnValueOptions?: string[],
+  fields?: Array<{ name, type, label?, required? }>
+}
+
+record: Object                 // the full record row keyed by header, e.g. { Code, Name, Status, ... }
+
+resolvedActionFields: Array<{
+  header: string,              // derived sheet column name, e.g. 'ProgressApprovedComment'
+  name: string,                // short logical name, e.g. 'Comment'
+  label: string,
+  type: 'text' | 'textarea' | 'date' | 'number',
+  required: boolean
+}>
+
+actionForm: { [header: string]: any }   // reactive object keyed by resolvedActionFields[].header
+
+outcomeOptions: string[]       // raw values from columnValueOptions when multi-outcome
+```
+
+How fields are derived: `useActionFields` scans the resource headers for any
+column matching `{column}{columnValue}{fieldName}` (e.g.
+`ProgressApprovedComment`). Only fields whose derived header exists in the sheet
+show up in `resolvedActionFields`. If no explicit `fields` are configured, it
+auto-detects headers matching `{column}{columnValue}*` excluding `*At` / `*By`.
+
+### Emit Contract (who validates, who submits)
+
+Overrides only emit. The parent `ActionPage.vue` owns validation and submission.
+
+- `ActionForm` emits `update:selectedOutcome(value)` and `update:actionField(header, value)`.
+  Do **not** POST from inside the override.
+- `ActionActions` emits `cancel` and `submit`; `ActionPage` handles required-field
+  checks and calls the GAS `executeAction` endpoint.
+- `ActionHeader` emits nothing — it is pure presentation.
+- `ActionEmpty` emits `back` (handled by the page as "return to view").
+
+### Worked Example: Custom Approve Form for Purchase Requisitions (Tenant C456)
+
+**Goal**: Tenant `C456` wants the Approve form on Purchase Requisitions to show
+a tenant-branded banner above the comment field. Only the Approve action needs
+overriding; Reject / SendBack should keep the default form.
+
+1. Ensure `ui.customUIName = "C456"` on the `PurchaseRequisitions` resource.
+2. Action key in the sheet is `"Approve"` → `toPascalCase('Approve')` → `Approve`.
+3. Create the file at tier 1 (tenant + entity + per-action):
+
+   `src/components/Operations/_custom/C456/PurchaseRequisitions/ActionFormApprove.vue`
+
+4. Honor the `ActionForm` props/emits contract:
+
+```vue
+<template>
+  <q-card flat bordered class="approve-card">
+    <q-card-section>
+      <div class="banner q-mb-md">C456 · Approval</div>
+      <q-input
+        v-for="field in resolvedActionFields"
+        :key="field.header"
+        :model-value="actionForm[field.header]"
+        :label="field.label + (field.required ? ' *' : '')"
+        :type="field.type === 'textarea' ? 'textarea' : 'text'"
+        :autogrow="field.type === 'textarea'"
+        dense outlined
+        @update:model-value="$emit('update:actionField', field.header, $event)"
+      />
+    </q-card-section>
+  </q-card>
+</template>
+
+<script setup>
+defineProps({
+  isMultiOutcome: Boolean,
+  outcomeOptions: Array,
+  selectedOutcome: String,
+  resolvedActionFields: Array,
+  actionForm: Object
+})
+defineEmits(['update:selectedOutcome', 'update:actionField'])
+</script>
+
+<style scoped>
+.approve-card { border-radius: 16px; border-color: #00796b; }
+.banner { background: #00796b; color: #fff; padding: 6px 12px; border-radius: 6px; font-weight: 600; }
+</style>
+```
+
+5. Restart the Vite dev server (globs are discovered at startup).
+6. Verify: navigating to a Purchase Requisition's Approve action for tenant C456
+   now renders this form; Reject / SendBack still render the default.
+
+### AdditionalActions JSON Sample
+
+One `mutate` and one `navigate` entry, as they would appear in the
+`AdditionalActions` JSON stored on the resource row in GAS:
+
+```json
+[
+  {
+    "action": "Approve",
+    "label": "Approve",
+    "icon": "check_circle",
+    "color": "primary",
+    "confirm": false,
+    "kind": "mutate",
+    "column": "Progress",
+    "columnValue": "Approved",
+    "columnValueOptions": [],
+    "fields": [
+      { "name": "Comment", "type": "textarea", "label": "Comment", "required": false }
+    ],
+    "visibleWhen": { "column": "Progress", "op": "in", "value": ["Review", "Pending"] }
+  },
+  {
+    "action": "Review",
+    "label": "Review",
+    "icon": "rate_review",
+    "color": "info",
+    "confirm": false,
+    "kind": "navigate",
+    "navigate": {
+      "target": "record-page",
+      "pageSlug": "record-review-purchase-requisition",
+      "resourceSlug": null,
+      "scope": null
+    },
+    "visibleWhen": { "column": "Progress", "op": "eq", "value": "Draft" }
+  }
+]
+```
+
+`kind: 'mutate'` routes through `/operations/{resource}/{code}/_action/{action}`
+and renders `ActionPage`. `kind: 'navigate'` skips `ActionPage` entirely and
+calls `nav.goTo(target, { pageSlug, resourceSlug?, scope? })` directly — useful
+when the "action" is really a multi-step flow on a dedicated record-page.
+
+Legacy entries without `kind` are normalized to `kind: 'mutate'` at read time,
+so existing sheets keep working.
+
+### `visibleWhen` — Conditional Action Visibility
+
+Every action entry accepts an optional `visibleWhen` clause that hides the
+action unless the current record satisfies it. Evaluated in both the ViewPage
+action bar and in `ActionPage` (direct URL hits show an "not available" empty
+state if conditions fail).
+
+Shape — single object **or** an array of objects (AND-ed):
+
+```json
+"visibleWhen": { "column": "Progress", "op": "in", "value": ["Review","Pending"] }
+```
+
+```json
+"visibleWhen": [
+  { "column": "Progress", "op": "in", "value": ["Review","Pending"] },
+  { "column": "Type",     "op": "ne", "value": "Asset" }
+]
+```
+
+Operators: `eq`, `ne`, `in`, `nin`, `empty`, `notEmpty`.
+
+Rules:
+- Absent / `null` / empty array → always visible (backward compatible).
+- All conditions must pass (AND); no OR / nesting support.
+- `""`, `null`, `undefined` are treated as equivalent for `empty` / `notEmpty`
+  and for `eq` / `ne` comparisons (string-coerced).
+- Unknown `op` is ignored (treated as absent).
+
+Managed via `GAS/actionManager.html` → per-action **Visible When** block with
+column, operator, value rows (comma-separated values for `in` / `nin`).
+
 ## Rules and Gotchas
 
 - **Dev Server Restart**: You **must** restart the Vite dev server after adding a new custom component file. The file paths are discovered at startup.

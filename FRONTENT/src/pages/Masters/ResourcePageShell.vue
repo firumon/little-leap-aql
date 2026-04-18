@@ -1,6 +1,6 @@
 <template>
   <q-page class="resource-page">
-    <MasterBreadcrumb
+    <ResourceBreadcrumb
       :scope="scope"
       :resource-slug="resourceSlug"
       :resource-title="resourceTitle"
@@ -15,8 +15,9 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import MasterBreadcrumb from 'components/Masters/_common/MasterBreadcrumb.vue'
+import ResourceBreadcrumb from 'components/Masters/_common/ResourceBreadcrumb.vue'
 import { useResourceConfig } from 'src/composables/useResourceConfig'
+import { humanizeSlug } from 'src/utils/appHelpers'
 
 const route = useRoute()
 const { scope, resourceSlug, code, action, config, additionalActions } = useResourceConfig()
@@ -28,14 +29,6 @@ const resourceTitle = computed(() => {
   return matched?.pageTitle || menus[0]?.pageTitle || config.value?.name || resourceSlug.value
 })
 
-function humanize(slug) {
-  if (!slug) return ''
-  return slug
-    .split('-')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ')
-}
-
 const actionLabel = computed(() => {
   const a = action.value
   if (!a || a === 'list') return ''
@@ -43,13 +36,13 @@ const actionLabel = computed(() => {
   if (a === 'view') return ''
   if (a === 'edit') return 'Edit'
   if (a === 'resource-page' || a === 'record-page') {
-    return humanize(route.params.pageSlug)
+    return humanizeSlug(route.params.pageSlug)
   }
   if (a === 'action') {
     const actionConfig = additionalActions.value.find(
       (ac) => ac.action.toLowerCase() === route.params.action?.toLowerCase()
     )
-    return actionConfig?.label || humanize(route.params.action)
+    return actionConfig?.label || humanizeSlug(route.params.action)
   }
   // Additional actions — find label from config (legacy fallback)
   const actionConfig = additionalActions.value.find(

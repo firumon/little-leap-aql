@@ -5,6 +5,7 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Google Sans', Roboto, Arial, sans-serif; font-size: 13px; color: #202124; padding: 16px; }
   h2 { font-size: 16px; font-weight: 500; margin-bottom: 12px; }
+  h3 { font-size: 12px; font-weight: 600; color: #5f6368; margin: 10px 0 6px; text-transform: uppercase; letter-spacing: 0.04em; }
   .row { display: flex; gap: 8px; margin-bottom: 8px; }
   .row > * { flex: 1; }
   label { display: block; font-size: 11px; color: #5f6368; margin-bottom: 2px; font-weight: 500; }
@@ -21,10 +22,14 @@
   .action-card { border: 1px solid #dadce0; border-radius: 8px; padding: 12px; margin-bottom: 8px; background: #fafafa; }
   .action-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
   .action-title { font-weight: 600; font-size: 14px; }
-  .field-row { display: flex; gap: 6px; align-items: center; margin-top: 4px; }
-  .field-row input { flex: 1; }
+  .kind-badge { font-size: 10px; padding: 2px 6px; border-radius: 10px; margin-left: 6px; font-weight: 600; }
+  .kind-badge.mutate { background: #e8f0fe; color: #1a73e8; }
+  .kind-badge.navigate { background: #fef7e0; color: #b06000; }
+  .field-row, .cond-row { display: flex; gap: 6px; align-items: center; margin-top: 4px; }
+  .field-row input, .cond-row input { flex: 1; }
   .field-row select { width: 100px; }
-  .field-row .remove-field { cursor: pointer; color: #d93025; font-size: 16px; padding: 2px 6px; }
+  .cond-row select { width: 110px; }
+  .field-row .remove-field, .cond-row .remove-cond { cursor: pointer; color: #d93025; font-size: 16px; padding: 2px 6px; }
   .no-actions { color: #5f6368; text-align: center; padding: 24px; }
   .status-bar { padding: 8px; border-radius: 4px; margin-bottom: 12px; display: none; }
   .status-bar.error { display: block; background: #fce8e6; color: #d93025; }
@@ -32,6 +37,8 @@
   .actions-toolbar { display: flex; gap: 8px; margin-bottom: 12px; justify-content: space-between; }
   .checkbox-row { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
   .checkbox-row input[type=checkbox] { width: auto; }
+  .sub-section { background: #fff; border: 1px dashed #e0e0e0; border-radius: 6px; padding: 8px; margin-top: 8px; }
+  .hint { font-size: 11px; color: #888; margin-top: 2px; }
 </style>
 </head>
 <body>
@@ -62,6 +69,9 @@
 <script>
 var resourceData = [];
 var currentActions = [];
+var VALID_OPS = ['eq','ne','in','nin','empty','notEmpty'];
+var FIELD_TYPES = ['text','textarea','date','number'];
+var NAV_TARGETS = ['record-page','list','view','edit','add','action'];
 
 google.script.run.withSuccessHandler(function(data) {
   resourceData = data.resources || [];
@@ -83,31 +93,64 @@ function onResourceChange() {
   if (!name) { currentActions = []; renderActions(); return; }
 
   var res = resourceData.find(function(r) { return r.name === name; });
-  currentActions = JSON.parse(JSON.stringify(res ? res.additionalActions : []));
+  var raw = res ? (res.additionalActions || []) : [];
+  currentActions = JSON.parse(JSON.stringify(raw)).map(normalizeForEdit);
   renderActions();
+}
+
+function normalizeForEdit(a) {
+  a.kind = (a.kind === 'navigate') ? 'navigate' : 'mutate';
+  if (a.kind === 'mutate') {
+    a.column = a.column || 'Progress';
+    a.columnValue = a.columnValue || '';
+    if (!Array.isArray(a.columnValueOptions)) a.columnValueOptions = [];
+    if (!Array.isArray(a.fields)) a.fields = [];
+  } else {
+    a.navigate = a.navigate || {};
+    a.navigate.target = a.navigate.target || 'record-page';
+    a.navigate.pageSlug = a.navigate.pageSlug || '';
+    a.navigate.resourceSlug = a.navigate.resourceSlug || '';
+    a.navigate.scope = a.navigate.scope || '';
+  }
+  // Normalize visibleWhen into array form for the editor.
+  if (a.visibleWhen == null) {
+    a.visibleWhen = [];
+  } else if (!Array.isArray(a.visibleWhen)) {
+    a.visibleWhen = [a.visibleWhen];
+  }
+  return a;
 }
 
 function addAction() {
   currentActions.push({
     action: '', label: '', icon: '', color: 'primary',
+    kind: 'mutate',
     column: 'Progress', columnValue: '', columnValueOptions: [],
-    confirm: false, fields: []
+    confirm: false, fields: [],
+    visibleWhen: []
   });
   renderActions();
 }
+function removeAction(idx) { currentActions.splice(idx, 1); renderActions(); }
+function addField(i) { currentActions[i].fields.push({ name: '', type: 'text', label: '', required: false }); renderActions(); }
+function removeField(i, fi) { currentActions[i].fields.splice(fi, 1); renderActions(); }
+function addCondition(i) { currentActions[i].visibleWhen.push({ column: '', op: 'eq', value: '' }); renderActions(); }
+function removeCondition(i, ci) { currentActions[i].visibleWhen.splice(ci, 1); renderActions(); }
 
-function removeAction(idx) {
-  currentActions.splice(idx, 1);
+function onKindChange(i, val) {
+  currentActions[i].kind = val;
+  if (val === 'navigate' && !currentActions[i].navigate) {
+    currentActions[i].navigate = { target: 'record-page', pageSlug: '', resourceSlug: '', scope: '' };
+  }
   renderActions();
 }
 
-function addField(actionIdx) {
-  currentActions[actionIdx].fields.push({ name: '', type: 'text', label: '', required: false });
-  renderActions();
-}
-
-function removeField(actionIdx, fieldIdx) {
-  currentActions[actionIdx].fields.splice(fieldIdx, 1);
+function onOpChange(i, ci, op) {
+  currentActions[i].visibleWhen[ci].op = op;
+  // Switch value shape for in/nin vs empty/notEmpty vs eq/ne
+  if (op === 'empty' || op === 'notEmpty') {
+    currentActions[i].visibleWhen[ci].value = '';
+  }
   renderActions();
 }
 
@@ -121,9 +164,11 @@ function renderActions() {
   var html = '';
   currentActions.forEach(function(action, i) {
     html += '<div class="action-card">';
-    html += '<div class="action-header"><span class="action-title">' + (action.label || action.action || 'New Action') + '</span>';
+    html += '<div class="action-header"><span class="action-title">' + esc(action.label || action.action || 'New Action');
+    html += '<span class="kind-badge ' + action.kind + '">' + action.kind + '</span></span>';
     html += '<button class="btn-danger" onclick="removeAction(' + i + ')" style="padding:4px 8px;font-size:11px;">Remove</button></div>';
 
+    // Common fields
     html += '<div class="row">';
     html += '<div><label>Action Key</label><input value="' + esc(action.action) + '" onchange="currentActions[' + i + '].action=this.value" placeholder="Approve"></div>';
     html += '<div><label>Label</label><input value="' + esc(action.label) + '" onchange="currentActions[' + i + '].label=this.value" placeholder="Approve"></div>';
@@ -132,29 +177,22 @@ function renderActions() {
     html += '</div>';
 
     html += '<div class="row">';
-    html += '<div><label>Column</label><input value="' + esc(action.column || 'Progress') + '" onchange="currentActions[' + i + '].column=this.value" placeholder="Progress"></div>';
-    html += '<div><label>Column Value (fixed outcome)</label><input value="' + esc(action.columnValue || '') + '" onchange="currentActions[' + i + '].columnValue=this.value" placeholder="Approved"></div>';
-    html += '<div><label>Column Value Options (comma-separated, for multi-outcome)</label><input value="' + esc((action.columnValueOptions || []).join(',')) + '" onchange="currentActions[' + i + '].columnValueOptions=this.value?this.value.split(\',\').map(function(s){return s.trim()}).filter(Boolean):[]"></div>';
-    html += '</div>';
-
-    html += '<div class="checkbox-row"><input type="checkbox" ' + (action.confirm ? 'checked' : '') + ' onchange="currentActions[' + i + '].confirm=this.checked"> <label style="margin:0">Require confirmation</label></div>';
-
-    html += '<div style="margin-top:8px;"><label>Fields</label>';
-    (action.fields || []).forEach(function(field, fi) {
-      html += '<div class="field-row">';
-      html += '<input value="' + esc(field.name) + '" onchange="currentActions[' + i + '].fields[' + fi + '].name=this.value" placeholder="Name (e.g. Comment)">';
-      html += '<input value="' + esc(field.label || '') + '" onchange="currentActions[' + i + '].fields[' + fi + '].label=this.value" placeholder="Label (optional)">';
-      html += '<select onchange="currentActions[' + i + '].fields[' + fi + '].type=this.value">';
-      ['text','textarea','date','number'].forEach(function(t) {
-        html += '<option value="' + t + '"' + (field.type === t ? ' selected' : '') + '>' + t + '</option>';
-      });
-      html += '</select>';
-      html += '<input type="checkbox" ' + (field.required ? 'checked' : '') + ' onchange="currentActions[' + i + '].fields[' + fi + '].required=this.checked" title="Required"> <span style="font-size:11px">Req</span>';
-      html += '<span class="remove-field" onclick="removeField(' + i + ',' + fi + ')" title="Remove field">&times;</span>';
-      html += '</div>';
+    html += '<div><label>Kind</label><select onchange="onKindChange(' + i + ', this.value)">';
+    ['mutate','navigate'].forEach(function(k) {
+      html += '<option value="' + k + '"' + (action.kind === k ? ' selected' : '') + '>' + k + '</option>';
     });
-    html += '<button class="btn-secondary" onclick="addField(' + i + ')" style="margin-top:4px;padding:3px 10px;font-size:11px;">+ Add Field</button>';
+    html += '</select></div>';
+    html += '<div class="checkbox-row" style="align-self:end;margin-bottom:4px;"><input type="checkbox" ' + (action.confirm ? 'checked' : '') + ' onchange="currentActions[' + i + '].confirm=this.checked"> <label style="margin:0">Require confirmation</label></div>';
+    html += '<div></div><div></div>';
     html += '</div>';
+
+    if (action.kind === 'mutate') {
+      html += renderMutateBlock(action, i);
+    } else {
+      html += renderNavigateBlock(action, i);
+    }
+
+    html += renderVisibleWhenBlock(action, i);
 
     html += '</div>';
   });
@@ -162,12 +200,132 @@ function renderActions() {
   container.innerHTML = html;
 }
 
+function renderMutateBlock(action, i) {
+  var html = '<div class="sub-section"><h3>Mutate</h3>';
+  html += '<div class="row">';
+  html += '<div><label>Column</label><input value="' + esc(action.column || 'Progress') + '" onchange="currentActions[' + i + '].column=this.value" placeholder="Progress"></div>';
+  html += '<div><label>Column Value (fixed outcome)</label><input value="' + esc(action.columnValue || '') + '" onchange="currentActions[' + i + '].columnValue=this.value" placeholder="Approved"></div>';
+  html += '<div><label>Column Value Options (CSV, multi-outcome)</label><input value="' + esc((action.columnValueOptions || []).join(',')) + '" onchange="currentActions[' + i + '].columnValueOptions=this.value?this.value.split(\',\').map(function(s){return s.trim()}).filter(Boolean):[]"></div>';
+  html += '</div>';
+
+  html += '<div style="margin-top:8px;"><label>Fields</label>';
+  (action.fields || []).forEach(function(field, fi) {
+    html += '<div class="field-row">';
+    html += '<input value="' + esc(field.name) + '" onchange="currentActions[' + i + '].fields[' + fi + '].name=this.value" placeholder="Name (e.g. Comment)">';
+    html += '<input value="' + esc(field.label || '') + '" onchange="currentActions[' + i + '].fields[' + fi + '].label=this.value" placeholder="Label (optional)">';
+    html += '<select onchange="currentActions[' + i + '].fields[' + fi + '].type=this.value">';
+    FIELD_TYPES.forEach(function(t) {
+      html += '<option value="' + t + '"' + (field.type === t ? ' selected' : '') + '>' + t + '</option>';
+    });
+    html += '</select>';
+    html += '<input type="checkbox" ' + (field.required ? 'checked' : '') + ' onchange="currentActions[' + i + '].fields[' + fi + '].required=this.checked" title="Required"> <span style="font-size:11px">Req</span>';
+    html += '<span class="remove-field" onclick="removeField(' + i + ',' + fi + ')" title="Remove field">&times;</span>';
+    html += '</div>';
+  });
+  html += '<button class="btn-secondary" onclick="addField(' + i + ')" style="margin-top:4px;padding:3px 10px;font-size:11px;">+ Add Field</button>';
+  html += '</div></div>';
+  return html;
+}
+
+function renderNavigateBlock(action, i) {
+  var nav = action.navigate || {};
+  var html = '<div class="sub-section"><h3>Navigate</h3>';
+  html += '<div class="row">';
+  html += '<div><label>Target</label><select onchange="currentActions[' + i + '].navigate.target=this.value">';
+  NAV_TARGETS.forEach(function(t) {
+    html += '<option value="' + t + '"' + (nav.target === t ? ' selected' : '') + '>' + t + '</option>';
+  });
+  html += '</select></div>';
+  html += '<div><label>Page Slug</label><input value="' + esc(nav.pageSlug || '') + '" onchange="currentActions[' + i + '].navigate.pageSlug=this.value" placeholder="record-review"></div>';
+  html += '</div>';
+  html += '<div class="row">';
+  html += '<div><label>Resource Slug (optional)</label><input value="' + esc(nav.resourceSlug || '') + '" onchange="currentActions[' + i + '].navigate.resourceSlug=this.value" placeholder="purchase-requisitions"></div>';
+  html += '<div><label>Scope (optional)</label><input value="' + esc(nav.scope || '') + '" onchange="currentActions[' + i + '].navigate.scope=this.value" placeholder="operations"></div>';
+  html += '</div>';
+  html += '<div class="hint">Leave resourceSlug / scope empty to stay on the current resource.</div>';
+  html += '</div>';
+  return html;
+}
+
+function renderVisibleWhenBlock(action, i) {
+  var html = '<div class="sub-section"><h3>Visible When (AND)</h3>';
+  html += '<div class="hint">Absent / empty = always visible. Multiple conditions are ANDed. Use comma-separated values for <code>in</code>/<code>nin</code>.</div>';
+  (action.visibleWhen || []).forEach(function(c, ci) {
+    var isList = (c.op === 'in' || c.op === 'nin');
+    var isEmptyOp = (c.op === 'empty' || c.op === 'notEmpty');
+    var valDisplay = isList
+      ? (Array.isArray(c.value) ? c.value.join(',') : (c.value || ''))
+      : (c.value == null ? '' : String(c.value));
+    html += '<div class="cond-row">';
+    html += '<input value="' + esc(c.column || '') + '" onchange="currentActions[' + i + '].visibleWhen[' + ci + '].column=this.value" placeholder="Column (e.g. Progress)">';
+    html += '<select onchange="onOpChange(' + i + ',' + ci + ', this.value)">';
+    VALID_OPS.forEach(function(op) {
+      html += '<option value="' + op + '"' + (c.op === op ? ' selected' : '') + '>' + op + '</option>';
+    });
+    html += '</select>';
+    if (isEmptyOp) {
+      html += '<input disabled placeholder="(no value)">';
+    } else if (isList) {
+      html += '<input value="' + esc(valDisplay) + '" onchange="currentActions[' + i + '].visibleWhen[' + ci + '].value=this.value?this.value.split(\',\').map(function(s){return s.trim()}).filter(Boolean):[]" placeholder="Review,Pending">';
+    } else {
+      html += '<input value="' + esc(valDisplay) + '" onchange="currentActions[' + i + '].visibleWhen[' + ci + '].value=this.value" placeholder="Value">';
+    }
+    html += '<span class="remove-cond" onclick="removeCondition(' + i + ',' + ci + ')" title="Remove condition">&times;</span>';
+    html += '</div>';
+  });
+  html += '<button class="btn-secondary" onclick="addCondition(' + i + ')" style="margin-top:4px;padding:3px 10px;font-size:11px;">+ Add Condition</button>';
+  html += '</div>';
+  return html;
+}
+
+function serializeForSave(a) {
+  var out = {
+    action: a.action,
+    label: a.label || a.action,
+    icon: a.icon || '',
+    color: a.color || 'primary',
+    kind: a.kind === 'navigate' ? 'navigate' : 'mutate',
+    confirm: !!a.confirm
+  };
+  if (out.kind === 'mutate') {
+    out.column = a.column || 'Progress';
+    out.columnValue = a.columnValue || '';
+    out.columnValueOptions = Array.isArray(a.columnValueOptions) ? a.columnValueOptions : [];
+    out.fields = Array.isArray(a.fields) ? a.fields : [];
+  } else {
+    var n = a.navigate || {};
+    out.navigate = {
+      target: n.target || 'record-page',
+      pageSlug: n.pageSlug || ''
+    };
+    if (n.resourceSlug) out.navigate.resourceSlug = n.resourceSlug;
+    if (n.scope) out.navigate.scope = n.scope;
+  }
+  // visibleWhen: drop invalid rows; collapse single-element array to object
+  var conds = (a.visibleWhen || [])
+    .filter(function(c) {
+      if (!c || !c.column || !c.op) return false;
+      if (c.op === 'empty' || c.op === 'notEmpty') return true;
+      if (c.op === 'in' || c.op === 'nin') return Array.isArray(c.value) && c.value.length > 0;
+      return c.value != null && String(c.value) !== '';
+    })
+    .map(function(c) {
+      var o = { column: c.column, op: c.op };
+      if (c.op !== 'empty' && c.op !== 'notEmpty') o.value = c.value;
+      return o;
+    });
+  if (conds.length === 1) out.visibleWhen = conds[0];
+  else if (conds.length > 1) out.visibleWhen = conds;
+  return out;
+}
+
 function saveActions() {
   var resourceName = document.getElementById('resourceSelect').value;
   if (!resourceName) return;
 
-  // Clean up empty actions
-  var clean = currentActions.filter(function(a) { return a.action; });
+  var clean = currentActions
+    .filter(function(a) { return a.action; })
+    .map(serializeForSave);
   var json = JSON.stringify(clean);
 
   document.getElementById('saveBtn').disabled = true;
@@ -177,7 +335,6 @@ function saveActions() {
     showStatus('Actions saved successfully!', 'success');
     document.getElementById('saveBtn').disabled = false;
     document.getElementById('saveBtn').textContent = 'Save Actions';
-    // Update local data
     var res = resourceData.find(function(r) { return r.name === resourceName; });
     if (res) res.additionalActions = clean;
   }).withFailureHandler(function(err) {

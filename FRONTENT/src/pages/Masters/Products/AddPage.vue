@@ -174,15 +174,15 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useProductVariants, hasDuplicateVariantSet, validateSkuVariants } from 'src/composables/useProductVariants'
 import { useResourceConfig } from 'src/composables/useResourceConfig'
 import { useCompositeForm } from 'src/composables/useCompositeForm'
+import { useResourceNav } from 'src/composables/useResourceNav'
 
-const router = useRouter()
+const nav = useResourceNav()
 const $q = useQuasar()
-const { scope, resourceSlug, config } = useResourceConfig()
+const { config } = useResourceConfig()
 
 const {
   parentForm,
@@ -366,15 +366,15 @@ async function handleSave() {
   if (response.success) {
     const newCode = response.data?.code || response.data?.parentCode
     if (newCode) {
-      router.push(`/${scope.value}/${resourceSlug.value}/${newCode}`)
+      nav.goTo('view', { code: newCode })
     } else {
-      router.push(`/${scope.value}/${resourceSlug.value}`)
+      nav.goTo('list')
     }
   }
 }
 
 function navigateBack() {
-  router.push(`/${scope.value}/${resourceSlug.value}`)
+  nav.goTo('list')
 }
 
 onMounted(() => {

@@ -280,9 +280,9 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'OWNER_AND_UPLINE',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
-            {"action":"Approve","label":"Approve","icon":"","color":"primary","column":"Progress","columnValue":"Approved","columnValueOptions":[],"confirm":false,"fields":[]},
-            {"action":"Reject","label":"Reject","icon":"","color":"warning","column":"Progress","columnValue":"Rejected","columnValueOptions":[],"confirm":false,"fields":[{"name":"Comment","type":"textarea","label":"Comment","required":true}]},
-            {"action":"SendBack","label":"Send Back","icon":"","color":"info","column":"Progress","columnValue":"Revision Required","columnValueOptions":[],"confirm":false,"fields":[{"name":"Comment","type":"textarea","label":"Comment","required":true}]}
+            {"action":"Approve","kind":"mutate","label":"Approve","icon":"","color":"primary","column":"Progress","columnValue":"Approved","columnValueOptions":[],"confirm":false,"fields":[],"visibleWhen":{"column":"Progress","op":"in","value":["Review","Pending"]}},
+            {"action":"Reject","kind":"mutate","label":"Reject","icon":"","color":"warning","column":"Progress","columnValue":"Rejected","columnValueOptions":[],"confirm":false,"fields":[{"name":"Comment","type":"textarea","label":"Comment","required":true}],"visibleWhen":{"column":"Progress","op":"in","value":["Review","Pending"]}},
+            {"action":"SendBack","kind":"mutate","label":"Send Back","icon":"","color":"info","column":"Progress","columnValue":"Revision Required","columnValueOptions":[],"confirm":false,"fields":[{"name":"Comment","type":"textarea","label":"Comment","required":true}],"visibleWhen":{"column":"Progress","op":"in","value":["Review","Pending"]}}
         ]),
         Menu: JSON.stringify([
             {"group":["Procurement"],"order":1,"label":"Requisitions","icon":"request_quote","route":"/operations/purchase-requisitions","pageTitle":"Purchase Requisitions","pageDescription":"Internal requests for purchase","show":true},

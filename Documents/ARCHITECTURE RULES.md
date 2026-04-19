@@ -1,6 +1,8 @@
 ## ARCHITECTURE RULES (STRICT)
 
-1. SERVICES LAYER:
+---
+
+### 1. SERVICES LAYER:
 
 * ALL API requests MUST exist ONLY inside services
 
@@ -13,7 +15,7 @@
 * Services MUST implement data transformation (mapping) if needed
 
 * Services MUST return standardized response:
-  { success: boolean, data: any, error: any }
+  `{ success: boolean, data: any, error: any }`
 
 * All offline/online sync, queue handling, and persistence logic MUST be handled ONLY inside services
 
@@ -23,59 +25,102 @@
 
 * Logging must be implemented inside services for critical operations
 
-* Logging must be controlled via environment variable (e.g., process.env.ENABLE_LOGS)
+* Logging must be controlled via environment variable (e.g., `process.env.ENABLE_LOGS`)
 
     * Must support enabling/disabling logs without code changes
 
 ---
 
-2. STORES (Pinia):
+### 2. STORES (Pinia):
 
 * Stores can use services
 * Stores can use other stores
 * Stores are the SINGLE SOURCE OF TRUTH for application data
+
+#### DATA STORE RESPONSIBILITY (CRITICAL):
+
+* A central data store at stores/data.js (e.g., `useDataStore`) is allowed
+
+* It MUST:
+
+    * Call services for ALL API operations (GET, POST, UPDATE, BULK)
+    * Update in-memory state
+    * Persist and hydrate data via IDB (through services only)
+    * Maintain normalized structure (e.g., headers + rows)
+
+* It MUST NOT:
+
+    * Contain business logic
+    * Perform validation rules
+    * Implement workflows
+    * Contain UI logic
+
+* Store acts as:
+
+    * Data transport coordinator
+    * State manager
+    * Persistence handler
+
+#### GENERAL STORE RULES:
+
 * Stores manage:
 
     * State population from API
     * State hydration from IDB
+
 * No direct API/IDB logic outside services
 
 ---
 
-3. COMPOSABLES:
+### 3. COMPOSABLES:
 
 * Can use stores
+
 * Can use other composables
+
 * MUST NOT use services directly
+
 * MUST NOT perform API/IDB operations
-* ALL business logic must live here
+
+* ALL business logic MUST live here
+
+* Composables are responsible for:
+
+    * Validation
+    * Workflow handling
+    * Payload preparation before store calls
+
 * Logic must be split into SMALL reusable composables
+
 * Avoid large or monolithic composables
 
 ---
 
-4. COMPONENTS:
+### 4. COMPONENTS:
 
 * Can ONLY use composables
+
 * MUST NOT use:
 
     * services
     * stores directly
     * API calls
     * IDB operations
+
 * MUST NOT contain business logic
+
 * MUST be thin UI layers only
 
 ---
 
-5. SIDE EFFECT RULE:
+### 5. SIDE EFFECT RULE:
 
 * Only stores and composables may contain side effects
 * Components must remain side-effect free
 
 ---
 
-6. LOGIC DISTRIBUTION:
+### 6. LOGIC DISTRIBUTION:
 
 * ALL business logic MUST be in composables
 * Ensure no duplication of logic across composables/stores
@@ -83,22 +128,27 @@
 
 ---
 
-7. COMPONENT DESIGN:
+### 7. COMPONENT DESIGN:
 
 * Components must be minimal
+
 * Only responsible for:
 
     * UI rendering
     * connecting composables
+
 * No heavy logic inside components
 
 ---
 
-8. STYLING RULES:
+### 8. STYLING RULES:
 
 * Prefer Quasar utility classes
-* Shared styles → move to css/custom.scss
-* Ensure custom.scss is imported globally via app.scss
+
+* Shared styles → move to `css/custom.scss`
+
+* Ensure `custom.scss` is imported globally via `app.scss`
+
 * Component styles ONLY if:
 
     * strictly component-specific
@@ -106,25 +156,26 @@
 
 ---
 
-9. NAMING CONVENTIONS (ENFORCE):
+### 9. NAMING CONVENTIONS (ENFORCE):
 
-* Stores: useXStore
-* Composables: useX
-* Services: XService
+* Stores: `useXStore`
+* Composables: `useX`
+* Services: `XService`
 
-Refactor any violations.
+Refactor any violations
 
 ---
 
-10. FILE SIZE RULE:
+### 10. FILE SIZE RULE:
 
 * No file should exceed ~400 lines
 * If exceeded → must be split logically
 
 ---
 
-11. REFACTOR FREEDOM:
-    You are allowed to:
+### 11. REFACTOR FREEDOM:
+
+You are allowed to:
 
 * Move code across layers
 * Split files
@@ -144,7 +195,9 @@ Optimize for:
 ## REVIEW INSTRUCTIONS
 
 1. Analyze the FULL codebase (ALL files)
+
 2. Enforce ALL rules strictly
+
 3. Identify:
 
     * Architecture violations
@@ -157,8 +210,11 @@ Optimize for:
     * Naming violations
     * Large files needing split
     * Styling violations
+
 4. Be EXTREMELY STRICT
+
 5. Do NOT modify code
+
 6. Produce ONLY structured report
 
 ---
@@ -183,7 +239,7 @@ Optimize for:
 
 For EACH affected file:
 
-File: <full path>
+File: `<full path>`
 
 Current Issue:
 
@@ -199,7 +255,7 @@ Refactor Type:
 
 Target Location:
 
-* <where code should go>
+* <where code should go>  
 
 Priority:
 

@@ -76,11 +76,12 @@ import { useResourceConfig, isActionVisible } from 'src/composables/useResourceC
 import { useResourceData } from 'src/composables/useResourceData'
 import { useResourceRelations } from 'src/composables/useResourceRelations'
 import { useReports } from 'src/composables/useReports'
-import { fetchResourceRecords } from 'src/services/resourceRecords'
 import { useResourceNav } from 'src/composables/useResourceNav'
+import { useDataStore } from 'src/stores/data'
 import { findParentCodeField } from 'src/utils/appHelpers'
 
 const nav = useResourceNav()
+const dataStore = useDataStore()
 const {
   scope, resourceSlug, code, config, resourceName,
   resolvedFields, additionalActions, permissions, customUIName
@@ -143,13 +144,9 @@ async function loadChildRecords() {
   if (!code.value || !childResources.value.length) return
   for (const child of childResources.value) {
     try {
-      const response = await fetchResourceRecords(child.name, { includeInactive: true })
-      if (response.success && response.records) {
-        const parentCodeField = findParentCodeField(child, config.value)
-        childRecords.value[child.name] = response.records.filter((r) => {
-          return r[parentCodeField] === code.value
-        })
-      }
+      await dataStore.loadResource(child.name, { includeInactive: true })
+      const parentCodeField = findParentCodeField(child, config.value)
+      childRecords.value[child.name] = dataStore.getRecords(child.name).filter((r) => r[parentCodeField] === code.value)
     } catch {
       childRecords.value[child.name] = []
     }

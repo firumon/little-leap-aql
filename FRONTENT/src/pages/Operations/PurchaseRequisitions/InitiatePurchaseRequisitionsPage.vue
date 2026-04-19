@@ -284,8 +284,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { format } from 'date-fns'
 import { useStockMovements } from 'src/composables/useStockMovements'
-import { fetchResourceRecords } from 'src/services/resourceRecords'
-import { callGasApi } from 'src/services/gasApi'
+import { executeGasApi } from 'src/services/GasApiService'
+import { upsertResourceRows } from 'src/services/IndexedDbService'
 import { useResourceNav } from 'src/composables/useResourceNav'
 import { useAuthStore } from 'src/stores/auth'
 import { useResourceData } from 'src/composables/useResourceData'
@@ -295,6 +295,9 @@ const $q = useQuasar()
 const nav = useResourceNav()
 const { loadWarehouses } = useStockMovements()
 const auth = useAuthStore()
+const productsResource = useResourceData(ref('Products'))
+const skusResource = useResourceData(ref('SKUs'))
+const stockResource = useResourceData(ref('WarehouseStorages'))
 const prResource = useResourceData(ref('PurchaseRequisitions'))
 const itemResource = useResourceData(ref('PurchaseRequisitionItems'))
 
@@ -367,14 +370,14 @@ const saving = ref(false)
 const loadItemsAndStock = async () => {
   loadingItems.value = true
   try {
-    const [prodRes, skuRes, stockRes] = await Promise.all([
-      fetchResourceRecords('Products', { includeInactive: false }),
-      fetchResourceRecords('SKUs', { includeInactive: false }),
-      fetchResourceRecords('WarehouseStorages', { includeInactive: false })
+    await Promise.all([
+      productsResource.reload(),
+      skusResource.reload(),
+      stockResource.reload()
     ])
-    products.value = (prodRes?.records || []).filter(p => p.Status === 'Active' || !p.Status)
-    skus.value    = (skuRes?.records  || []).filter(s => s.Status === 'Active' || !s.Status).map(s => ({ ...s, requiredQuantity: 0 }))
-    stockData.value = stockRes?.records || []
+    products.value = (productsResource.items.value || []).filter(p => p.Status === 'Active' || !p.Status)
+    skus.value = (skusResource.items.value || []).filter(s => s.Status === 'Active' || !s.Status).map(s => ({ ...s, requiredQuantity: 0 }))
+    stockData.value = stockResource.items.value || []
 
     if (!products.value.length || !skus.value.length) {
       $q.notify({ type: 'warning', message: `Some catalog data is empty. Products: ${products.value.length}, SKUs: ${skus.value.length}` })
@@ -458,7 +461,7 @@ const savePR = async () => {
   try {
     const prDate = format(new Date(), 'yyyy-MM-dd')
 
-    const batchResponse = await callGasApi('batch', {
+    const batchResponse = await executeGasApi('batch', {
       requests: [
         {
           action: 'compositeSave',
@@ -485,10 +488,6 @@ const savePR = async () => {
         { action: 'get', resource: 'PurchaseRequisitions',     scope: 'operation', includeInactive: true },
         { action: 'get', resource: 'PurchaseRequisitionItems', scope: 'operation', includeInactive: true }
       ]
-    }, {
-      showLoading: true,
-      loadingMessage: 'Creating Purchase Requisition...',
-      successMessage: 'Purchase Requisition Created'
     })
 
     const saveResult = batchResponse?.data?.[0]
@@ -498,12 +497,12 @@ const savePR = async () => {
     if (saveResult?.success && saveResult?.data?.parentCode) {
       createdCode.value = saveResult.data.parentCode
 
-      const { upsertResourceRows } = await import('src/utils/db')
       const prHeaders   = prResource.lastHeaders.value || []
       const itemHeaders = itemResource.lastHeaders.value || []
       if (prResult?.rows?.length   && prHeaders.length)   await upsertResourceRows('PurchaseRequisitions', prHeaders, prResult.rows)
       if (itemResult?.rows?.length && itemHeaders.length) await upsertResourceRows('PurchaseRequisitionItems', itemHeaders, itemResult.rows)
 
+      $q.notify({ type: 'positive', message: 'Purchase Requisition Created' })
       currentStep.value = 3
     } else {
       $q.notify({ type: 'negative', message: saveResult?.message || 'Failed to create PR' })

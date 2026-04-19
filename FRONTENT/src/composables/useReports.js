@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { exportFile, useQuasar } from 'quasar'
-import { callGasApi } from 'src/services/gasApi'
+import { generateReport } from 'src/services/ReportService'
 
 /**
  * useReports composable
@@ -160,14 +160,11 @@ export function useReports(resourceNameRef) {
         : resourceNameRef?.value !== undefined ? resourceNameRef.value
         : (resourceNameRef || '')
 
-      const result = await callGasApi('generateReport', {
+      const result = await generateReport({
         resource: resName,
         reportName: report.label || report.name || '',
         templateSheet: report.templateSheet || '',
         cellData
-      }, {
-        showLoading: false,
-        showError: true
       })
 
       // Dismiss progress notification

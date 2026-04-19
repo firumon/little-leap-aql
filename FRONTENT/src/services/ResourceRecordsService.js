@@ -1,11 +1,17 @@
-import { callGasApi } from 'src/services/gasApi'
 import { useAuthStore } from 'src/stores/auth'
+import { executeGasApi } from 'src/services/GasApiService'
 import {
   getResourceMeta,
   getResourceRows,
   setResourceMeta,
   upsertResourceRows
-} from 'src/utils/db'
+} from 'src/services/IndexedDbService'
+import {
+  mapRowsToObjects,
+  normalizeCursorValue,
+  resolveSyncRows
+} from 'src/services/ResourceMapperService'
+import { createResourceSyncQueue } from 'src/services/ResourceSyncQueueService'
 
 const DB_TIMEOUT_MS = 1200
 const DEFAULT_SCOPE_SYNC_TTL_SEC = {
@@ -14,12 +20,6 @@ const DEFAULT_SCOPE_SYNC_TTL_SEC = {
   operations: 300
 }
 const DEFAULT_RESOURCE_SYNC_TTL_SEC = 300
-const MIN_QUEUE_WAIT_MS = 250
-
-const masterSyncQueue = new Map()
-const inFlightResourceNames = new Set()
-let queueTimerId = null
-let queueFlushPromise = null
 
 async function withTimeout(promise, fallbackValue) {
   try {
@@ -29,7 +29,7 @@ async function withTimeout(promise, fallbackValue) {
         setTimeout(() => resolve(fallbackValue), DB_TIMEOUT_MS)
       })
     ])
-  } catch (error) {
+  } catch {
     return fallbackValue
   }
 }
@@ -58,7 +58,7 @@ function getAuthorizedSyncableResources() {
   })
 }
 
-function resolveResourceScope(resourceName) {
+export function resolveResourceScope(resourceName) {
   const resource = getAuthorizedResourceFromStore(resourceName)
   return (resource?.scope || 'master').toString().trim().toLowerCase()
 }
@@ -91,94 +91,6 @@ function getResourceSyncTtlSec(resourceName) {
   return DEFAULT_RESOURCE_SYNC_TTL_SEC
 }
 
-function clearQueueTimer() {
-  if (queueTimerId) {
-    clearTimeout(queueTimerId)
-    queueTimerId = null
-  }
-}
-
-async function flushMasterSyncQueue(forceAll = false, syncOptions = {}) {
-  if (queueFlushPromise) {
-    const result = await queueFlushPromise
-    // Retry if new items were queued while we waited
-    if (masterSyncQueue.size > 0) {
-      return flushMasterSyncQueue(forceAll, syncOptions)
-    }
-    return result
-  }
-
-  queueFlushPromise = (async () => {
-    const now = Date.now()
-    const dueResourceNames = []
-
-    for (const [resourceName, queued] of masterSyncQueue.entries()) {
-      if (forceAll || (queued?.dueAt || 0) <= now) {
-        dueResourceNames.push(resourceName)
-      }
-    }
-
-    if (!dueResourceNames.length) {
-      scheduleMasterSyncQueueFlush()
-      return { success: true, data: {}, meta: { resources: [] } }
-    }
-
-    dueResourceNames.forEach((resourceName) => {
-      masterSyncQueue.delete(resourceName)
-      inFlightResourceNames.add(resourceName)
-    })
-
-    try {
-      const response = await syncMasterResourcesBatch(dueResourceNames, {
-        showError: syncOptions.showError === true,
-        showLoading: syncOptions.showLoading === true
-      })
-      scheduleMasterSyncQueueFlush()
-      return response
-    } finally {
-      dueResourceNames.forEach((name) => inFlightResourceNames.delete(name))
-    }
-  })().finally(() => {
-    queueFlushPromise = null
-  })
-
-  return queueFlushPromise
-}
-
-function scheduleMasterSyncQueueFlush() {
-  clearQueueTimer()
-  if (!masterSyncQueue.size) return
-
-  let nextDueAt = Number.POSITIVE_INFINITY
-  for (const queued of masterSyncQueue.values()) {
-    const dueAt = Number(queued?.dueAt || 0)
-    if (dueAt > 0 && dueAt < nextDueAt) {
-      nextDueAt = dueAt
-    }
-  }
-
-  const waitMs = Number.isFinite(nextDueAt)
-    ? Math.max(nextDueAt - Date.now(), MIN_QUEUE_WAIT_MS)
-    : MIN_QUEUE_WAIT_MS
-  queueTimerId = setTimeout(() => {
-    flushMasterSyncQueue(false, { showError: false, showLoading: false }).catch(() => {})
-  }, waitMs)
-}
-
-function queueMasterResourceSync(resourceName, dueAt, reason = '') {
-  if (!resourceName) return
-  if (inFlightResourceNames.has(resourceName)) return
-  const normalizedDueAt = Number.isFinite(Number(dueAt)) ? Number(dueAt) : Date.now()
-  const existing = masterSyncQueue.get(resourceName)
-  if (!existing || normalizedDueAt < existing.dueAt) {
-    masterSyncQueue.set(resourceName, {
-      dueAt: normalizedDueAt,
-      reason
-    })
-  }
-  scheduleMasterSyncQueueFlush()
-}
-
 export async function ensureHeaders(resourceName) {
   const meta = await withTimeout(getResourceMeta(resourceName), null)
   if (Array.isArray(meta?.headers) && meta.headers.length) {
@@ -193,7 +105,7 @@ export async function ensureHeaders(resourceName) {
     return storeResource.headers
   }
 
-  const response = await callGasApi('getAuthorizedResources', { includeHeaders: true })
+  const response = await executeGasApi('getAuthorizedResources', { includeHeaders: true })
   if (response.success && Array.isArray(response.resources)) {
     const found = response.resources.find((entry) => entry?.name === resourceName)
     if (Array.isArray(found?.headers) && found.headers.length) {
@@ -205,58 +117,11 @@ export async function ensureHeaders(resourceName) {
   return []
 }
 
-function getHeaderIndexMap(headers = []) {
-  const map = {}
-  headers.forEach((header, index) => {
-    map[header] = index
-  })
-  return map
-}
-
-function mapObjectsToRows(records = [], headers = []) {
-  return records.map((record) => headers.map((header) => record?.[header]))
-}
-
-function normalizeCursorValue(value) {
-  if (value === null || value === undefined || value === '') {
-    return null
-  }
-
-  const timestamp = Number(value)
-  if (Number.isFinite(timestamp) && timestamp > 0) {
-    return timestamp
-  }
-
-  const parsedTime = new Date(value).getTime()
-  return Number.isFinite(parsedTime) ? parsedTime : null
-}
-
-function resolveSyncRows(responseData, headers) {
-  if (Array.isArray(responseData?.rows)) {
-    return responseData.rows
-  }
-
-  if (Array.isArray(responseData?.records)) {
-    return mapObjectsToRows(responseData.records, headers)
-  }
-
-  if (Array.isArray(responseData?.data)) {
-    return Array.isArray(responseData.data[0])
-      ? responseData.data
-      : mapObjectsToRows(responseData.data, headers)
-  }
-
-  return []
-}
-
 async function syncMasterResourcesBatch(resourceNames = [], options = {}) {
   const uniqueNames = Array.from(new Set((Array.isArray(resourceNames) ? resourceNames : []).filter(Boolean)))
   if (!uniqueNames.length) {
     return { success: true, data: {}, meta: { resources: [] } }
   }
-
-  const showLoading = options.showLoading === true
-  const showError = options.showError === true
 
   const headersByResource = {}
   const cursorByResource = {}
@@ -268,14 +133,12 @@ async function syncMasterResourcesBatch(resourceNames = [], options = {}) {
     }
 
     const meta = await withTimeout(getResourceMeta(resourceName), null)
-    const rawCursor = meta?.lastSyncAt
-    const cursor = normalizeCursorValue(rawCursor)
+    const cursor = normalizeCursorValue(meta?.lastSyncAt)
     if (cursor) {
       cursorByResource[resourceName] = cursor
     }
   }
 
-  // Group resources by scope so each batch call uses the correct scope
   const byScope = {}
   for (const name of uniqueNames) {
     const scope = resolveResourceScope(name)
@@ -302,9 +165,9 @@ async function syncMasterResourcesBatch(resourceNames = [], options = {}) {
         : {})
     }
 
-    const response = await callGasApi('get', payload, {
-      showLoading,
-      showError
+    const response = await executeGasApi('get', payload, {
+      showLoading: options.showLoading === true,
+      showError: options.showError === true
     })
 
     if (!response.success) {
@@ -361,24 +224,11 @@ async function syncMasterResourcesBatch(resourceNames = [], options = {}) {
   }
 }
 
-export function mapRowsToObjects(rows = [], headers = []) {
-  if (!Array.isArray(rows) || rows.length === 0) {
-    return []
-  }
+const resourceSyncQueue = createResourceSyncQueue({ syncBatch: syncMasterResourcesBatch })
 
-  if (!Array.isArray(rows[0])) {
-    return rows.map((entry) => ({ ...entry }))
-  }
-
-  const idx = getHeaderIndexMap(headers)
-  return rows.map((row) => {
-    const obj = {}
-    headers.forEach((header) => {
-      obj[header] = row[idx[header]]
-    })
-    return obj
-  })
-}
+export const queueMasterResourceSync = resourceSyncQueue.queueMasterResourceSync
+export const flushMasterSyncQueue = resourceSyncQueue.flushMasterSyncQueue
+export { mapRowsToObjects }
 
 export async function fetchResourceRecords(resourceName, options = {}) {
   try {
@@ -391,8 +241,7 @@ export async function fetchResourceRecords(resourceName, options = {}) {
     }
 
     const meta = await withTimeout(getResourceMeta(resourceName), null)
-    let rawSyncCursor = meta?.lastSyncAt
-    let syncCursor = normalizeCursorValue(rawSyncCursor)
+    const syncCursor = normalizeCursorValue(meta?.lastSyncAt)
     const statusIndex = headers.indexOf('Status')
     const cachedRows = await withTimeout(getResourceRows(resourceName, {
       includeInactive,
@@ -401,10 +250,9 @@ export async function fetchResourceRecords(resourceName, options = {}) {
 
     let effectiveCursor = syncCursor ?? null
     if (!cachedRows.length && effectiveCursor) {
-      effectiveCursor = null  // IDB cold + stale cursor → force full sync
+      effectiveCursor = null
     }
 
-    // Default behavior: IDB-first and no server call when cache exists.
     if (!forceSync && !syncWhenCacheExists && cachedRows.length > 0) {
       return {
         success: true,
@@ -438,12 +286,8 @@ export async function fetchResourceRecords(resourceName, options = {}) {
       )
 
       if (shouldImmediateSync) {
-        // We ensure that if effectiveCursor is null due to cold IDB, cursorByResource logic in syncMasterResourcesBatch won't use it, triggering full sync
-        // Temporarily clear it in DB just in case? No, syncMasterResourcesBatch reads DB directly.
-        // Wait, syncMasterResourcesBatch reads getResourceMeta().lastSyncAt!
-        // So we need to ensure syncMasterResourcesBatch acts as full sync if cachedRows is empty.
         if (!cachedRows.length && syncCursor) {
-           await setResourceMeta(resourceName, { lastSyncAt: null })
+          await setResourceMeta(resourceName, { lastSyncAt: null })
         }
 
         const batchSyncResponse = await flushMasterSyncQueue(true, {
@@ -508,9 +352,6 @@ export async function syncAllMasterResources() {
       return { success: true, data: {}, meta: { resources: [], lastSyncAt: Date.now() } }
     }
 
-    // Group by scope so each scope flushes as a separate promise.
-    // This lets page-level fetches resolve as soon as their scope completes
-    // instead of waiting for all scopes.
     const byScope = {}
     for (const name of resourceNames) {
       const scope = resolveResourceScope(name)
@@ -518,8 +359,7 @@ export async function syncAllMasterResources() {
       byScope[scope].push(name)
     }
 
-    // Process master first, then remaining scopes
-    const scopeOrder = ['master', ...Object.keys(byScope).filter((s) => s !== 'master')]
+    const scopeOrder = ['master', ...Object.keys(byScope).filter((scope) => scope !== 'master')]
     const mergedData = {}
 
     for (const scope of scopeOrder) {
@@ -530,7 +370,9 @@ export async function syncAllMasterResources() {
       try {
         const result = await flushMasterSyncQueue(true, { showLoading: false, showError: false })
         if (result?.data) Object.assign(mergedData, result.data)
-      } catch (_) { /* continue with next scope */ }
+      } catch {
+        // continue with next scope
+      }
     }
 
     return { success: true, data: mergedData, meta: { resources: resourceNames, lastSyncAt: Date.now() } }
@@ -545,42 +387,38 @@ export async function syncAllMasterResources() {
 }
 
 export async function createMasterRecord(resourceName, record) {
-  return callGasApi('create', {
+  return executeGasApi('create', {
     scope: resolveResourceScope(resourceName),
     resource: resourceName,
     record
-  }, { showLoading: true, loadingMessage: 'Creating record...', successMessage: 'Record created successfully' })
+  })
 }
 
 export async function updateMasterRecord(resourceName, code, record) {
-  return callGasApi('update', {
+  return executeGasApi('update', {
     scope: resolveResourceScope(resourceName),
     resource: resourceName,
     code,
     record
-  }, { showLoading: true, loadingMessage: 'Updating record...', successMessage: 'Record updated successfully' })
+  })
 }
 
 export async function bulkMasterRecords(targetResourceName, records) {
-  return callGasApi('bulk', {
+  return executeGasApi('bulk', {
     scope: resolveResourceScope(targetResourceName),
     resource: 'BulkUploadMasters',
     callerResource: 'BulkUploadMasters',
     targetResource: targetResourceName,
     records
-  }, { showLoading: false, successMessage: null, showError: false })
-}
-
-export async function compositeSave(payload) {
-  return callGasApi('compositeSave', payload, {
-    showLoading: true,
-    loadingMessage: 'Saving...',
-    successMessage: 'Saved successfully'
   })
 }
 
+export async function compositeSave(payload) {
+  return executeGasApi('compositeSave', payload)
+}
+
 export async function executeAction(resourceName, code, actionConfig, fields = {}) {
-  return callGasApi('executeAction', {
+  return executeGasApi('executeAction', {
     scope: resolveResourceScope(resourceName),
     resource: resourceName,
     code,
@@ -588,9 +426,5 @@ export async function executeAction(resourceName, code, actionConfig, fields = {
     column: actionConfig.column,
     columnValue: actionConfig.columnValue,
     fields
-  }, {
-    showLoading: true,
-    loadingMessage: `Executing ${actionConfig.label || actionConfig.action}...`,
-    successMessage: `${actionConfig.label || actionConfig.action} completed successfully`
   })
 }

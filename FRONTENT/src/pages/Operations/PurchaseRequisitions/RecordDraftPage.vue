@@ -175,7 +175,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
-import { callGasApi } from 'src/services/gasApi'
+import { compositeSave } from 'src/services/ResourceRecordsService'
 import { useStockMovements } from 'src/composables/useStockMovements'
 import { useResourceNav } from 'src/composables/useResourceNav'
 import { useResourceData } from 'src/composables/useResourceData'
@@ -358,10 +358,7 @@ const saveDraft = async () => {
   saving.value = true
   try {
     const payload = buildPayload()
-    const response = await callGasApi('compositeSave', payload, {
-      showLoading: true,
-      loadingMessage: 'Saving Draft...'
-    })
+    const response = await compositeSave(payload)
 
     if (response.success) {
       $q.notify({ type: 'positive', message: 'Draft saved successfully' })
@@ -390,13 +387,10 @@ const submitPR = async () => {
     submitting.value = true
     try {
       const payload = buildPayload('New')
-      const response = await callGasApi('compositeSave', payload, {
-        showLoading: true,
-        loadingMessage: 'Submitting PR...',
-        successMessage: 'PR Submitted successfully'
-      })
+      const response = await compositeSave(payload)
 
       if (response.success) {
+        $q.notify({ type: 'positive', message: 'PR Submitted successfully' })
         nav.goTo('view')
       }
     } catch (error) {

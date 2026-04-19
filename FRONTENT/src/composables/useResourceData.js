@@ -1,8 +1,8 @@
 import { ref, computed, watch, unref } from 'vue'
 import { useQuasar } from 'quasar'
-import { fetchResourceRecords } from 'src/services/resourceRecords'
 import { useAuthStore } from 'src/stores/auth'
 import { useDataStore } from 'src/stores/data'
+import { upsertResourceRows } from 'src/services/IndexedDbService'
 
 /**
  * Manages data loading, search, and filtering for a resource.
@@ -61,7 +61,7 @@ export function useResourceData(resourceNameRef) {
     if (!resourceName || backgroundSyncing.value) return
     backgroundSyncing.value = true
     try {
-      await fetchResourceRecords(resourceName, {
+      await dataStore.syncResource(resourceName, {
         includeInactive: true,
         syncWhenCacheExists: true
       })
@@ -81,7 +81,7 @@ export function useResourceData(resourceNameRef) {
     if (!items.value.length) loading.value = true
 
     try {
-      const response = await fetchResourceRecords(resourceName, {
+      const response = await dataStore.loadResource(resourceName, {
         includeInactive: true,
         forceSync
       })
@@ -129,7 +129,6 @@ export function useResourceData(resourceNameRef) {
 
     // Also persist to IDB
     try {
-      const { upsertResourceRows } = await import('src/utils/db')
       await upsertResourceRows(resourceName, headers, [row])
     } catch (_) { /* non-critical */ }
   }

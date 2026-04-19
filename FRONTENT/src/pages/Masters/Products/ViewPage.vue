@@ -100,9 +100,10 @@ import { useResourceConfig } from 'src/composables/useResourceConfig'
 import { useResourceData } from 'src/composables/useResourceData'
 import { useReports } from 'src/composables/useReports'
 import { useResourceNav } from 'src/composables/useResourceNav'
-import { fetchResourceRecords } from 'src/services/resourceRecords'
+import { useDataStore } from 'src/stores/data'
 
 const nav = useResourceNav()
+const dataStore = useDataStore()
 const { code, config, resourceName, permissions } = useResourceConfig()
 const { items, loading: resourceLoading, reload } = useResourceData(resourceName)
 const {
@@ -142,7 +143,7 @@ function applySkuRows(records = []) {
 
 async function syncSkuRowsInBackground() {
   try {
-    const response = await fetchResourceRecords('SKUs', {
+    const response = await dataStore.syncResource('SKUs', {
       includeInactive: true,
       syncWhenCacheExists: true
     })
@@ -158,7 +159,7 @@ async function loadSkuRows() {
   if (!code.value) return
   skuLoading.value = true
   try {
-    const response = await fetchResourceRecords('SKUs', {
+    const response = await dataStore.loadResource('SKUs', {
       includeInactive: true
     })
     if (response.success && Array.isArray(response.records)) {

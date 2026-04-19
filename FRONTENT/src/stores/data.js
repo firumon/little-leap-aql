@@ -1,26 +1,47 @@
 import { defineStore } from 'pinia'
 import { reactive, watch } from 'vue'
-import { onRowsUpserted, getResourceRows } from '../utils/db'
 import { useAuthStore } from './auth'
+import { onRowsUpserted, getResourceRows } from 'src/services/IndexedDbService'
+import { fetchResourceRecords } from 'src/services/ResourceRecordsService'
+
+function rowsToObjects(headers = [], rows = []) {
+  return rows.map((row) => {
+    const obj = {}
+    headers.forEach((key, index) => {
+      obj[key] = row[index] ?? ''
+    })
+    return obj
+  })
+}
 
 export const useDataStore = defineStore('data', () => {
-  const headers = {}
+  const headers = reactive({})
   const rows = reactive({})
+  const loadingByResource = reactive({})
+  const backgroundSyncingByResource = reactive({})
 
-  function initResource(resourceName, headerArray) {
+  function ensureResourceState(resourceName) {
+    if (!resourceName) return
     if (!headers[resourceName]) {
-      headers[resourceName] = headerArray || []
+      headers[resourceName] = []
+    }
+    if (!rows[resourceName]) {
+      rows[resourceName] = []
+    }
+  }
+
+  function initResource(resourceName, headerArray = []) {
+    ensureResourceState(resourceName)
+    if (Array.isArray(headerArray) && headerArray.length) {
+      headers[resourceName] = headerArray
     }
   }
 
   function setRows(resourceName, newRows) {
-    if (!rows[resourceName]) {
-      rows[resourceName] = []
-    }
-
+    ensureResourceState(resourceName)
     if (!newRows || newRows.length === 0) return
 
-    const map = new Map(rows[resourceName].map(row => [row[0], row]))
+    const map = new Map((rows[resourceName] || []).map((row) => [row[0], row]))
     for (const row of newRows) {
       if (row && row.length > 0) {
         map.set(row[0], row)
@@ -30,35 +51,89 @@ export const useDataStore = defineStore('data', () => {
   }
 
   function replaceRows(resourceName, newRows) {
+    ensureResourceState(resourceName)
     rows[resourceName] = newRows || []
   }
 
-  function getRecords(resourceName) {
-    const h = headers[resourceName] || []
-    const r = rows[resourceName] || []
-    return r.map(row => {
-      const obj = {}
-      h.forEach((key, i) => { obj[key] = row[i] ?? '' })
-      return obj
-    })
+  function getRows(resourceName) {
+    ensureResourceState(resourceName)
+    return rows[resourceName] || []
   }
 
-  // Register the DB listener — fires on every upsertResourceRows call
+  function getRecords(resourceName) {
+    return rowsToObjects(headers[resourceName] || [], getRows(resourceName))
+  }
+
+  async function seedResourceFromCache(resourceName, options = {}) {
+    if (!resourceName) return []
+    ensureResourceState(resourceName)
+    const statusIndex = (headers[resourceName] || []).indexOf('Status')
+    const idbRows = await getResourceRows(resourceName, {
+      includeInactive: options.includeInactive !== false,
+      statusIndex
+    })
+    if (idbRows.length) {
+      replaceRows(resourceName, idbRows)
+    }
+    return idbRows
+  }
+
+  async function loadResource(resourceName, options = {}) {
+    if (!resourceName) {
+      return { success: false, headers: [], rows: [], records: [] }
+    }
+
+    ensureResourceState(resourceName)
+    loadingByResource[resourceName] = true
+    try {
+      const response = await fetchResourceRecords(resourceName, options)
+      if (Array.isArray(response?.headers) && response.headers.length) {
+        headers[resourceName] = response.headers
+      }
+      if (Array.isArray(response?.rows)) {
+        replaceRows(resourceName, response.rows)
+      }
+      return {
+        ...response,
+        records: Array.isArray(response?.rows)
+          ? rowsToObjects(headers[resourceName] || response.headers || [], response.rows)
+          : (response?.records || [])
+      }
+    } finally {
+      loadingByResource[resourceName] = false
+    }
+  }
+
+  async function syncResource(resourceName, options = {}) {
+    if (!resourceName) {
+      return { success: false, headers: [], rows: [], records: [] }
+    }
+
+    backgroundSyncingByResource[resourceName] = true
+    try {
+      return await loadResource(resourceName, {
+        includeInactive: true,
+        syncWhenCacheExists: true,
+        ...options
+      })
+    } finally {
+      backgroundSyncingByResource[resourceName] = false
+    }
+  }
+
   onRowsUpserted((resource, upsertedRows) => {
     setRows(resource, upsertedRows)
   })
 
-  // Seed store from IDB for all authorized resources
-  async function seedFromIDB(resources) {
-    for (const res of resources) {
-      if (!res?.name) continue
-      initResource(res.name, res.headers || [])
+  async function seedAuthorizedResources(resourcesList = []) {
+    for (const resource of resourcesList) {
+      if (!resource?.name) continue
+      initResource(resource.name, resource.headers || [])
       try {
-        const idbRows = await getResourceRows(res.name, { includeInactive: true })
-        if (idbRows.length) {
-          setRows(res.name, idbRows)
-        }
-      } catch (_) { /* non-critical — store stays empty, sync will fill it */ }
+        await seedResourceFromCache(resource.name, { includeInactive: true })
+      } catch {
+        // non-critical: sync will repopulate the store later
+      }
     }
   }
 
@@ -66,13 +141,12 @@ export const useDataStore = defineStore('data', () => {
 
   watch(
     () => authStore.resources,
-    (resources, prevResources) => {
-      if (!resources?.length) return
-      if (prevResources?.length) {
-        // Re-login — clear stale rows before re-seeding
-        Object.keys(rows).forEach(r => replaceRows(r, []))
+    (resourcesList, previousResources) => {
+      if (!resourcesList?.length) return
+      if (previousResources?.length) {
+        Object.keys(rows).forEach((resourceName) => replaceRows(resourceName, []))
       }
-      seedFromIDB(resources)
+      seedAuthorizedResources(resourcesList)
     },
     { immediate: true }
   )
@@ -80,9 +154,16 @@ export const useDataStore = defineStore('data', () => {
   return {
     headers,
     rows,
+    loadingByResource,
+    backgroundSyncingByResource,
     initResource,
     setRows,
     replaceRows,
-    getRecords
+    getRows,
+    getRecords,
+    seedResourceFromCache,
+    seedAuthorizedResources,
+    loadResource,
+    syncResource
   }
 })

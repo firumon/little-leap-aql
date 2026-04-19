@@ -17,8 +17,7 @@
  */
 
 import { useQuasar } from 'quasar'
-import { callGasApi } from 'src/services/gasApi'
-import { fetchResourceRecords } from 'src/services/resourceRecords'
+import { executeGasApi } from 'src/services/GasApiService'
 import { useDataStore } from 'src/stores/data'
 
 export function useStockMovements() {
@@ -27,7 +26,7 @@ export function useStockMovements() {
 
   async function loadWarehouses() {
     try {
-      await fetchResourceRecords('Warehouses', { includeInactive: false })
+      await dataStore.loadResource('Warehouses', { includeInactive: false })
       return dataStore.getRecords('Warehouses')
     } catch {
       return []
@@ -37,8 +36,8 @@ export function useStockMovements() {
   async function loadSkusWithProducts() {
     try {
       await Promise.all([
-        fetchResourceRecords('SKUs', { includeInactive: false }),
-        fetchResourceRecords('Products', { includeInactive: false })
+        dataStore.loadResource('SKUs', { includeInactive: false }),
+        dataStore.loadResource('Products', { includeInactive: false })
       ])
       const skus = dataStore.getRecords('SKUs')
       const prods = dataStore.getRecords('Products')
@@ -59,7 +58,7 @@ export function useStockMovements() {
   async function loadStoragesForWarehouse(warehouseCode, forceSync = false) {
     if (!warehouseCode) return []
     try {
-      await fetchResourceRecords('WarehouseStorages', { includeInactive: true, forceSync })
+      await dataStore.loadResource('WarehouseStorages', { includeInactive: true, forceSync })
       const records = dataStore.getRecords('WarehouseStorages')
       return records.filter(r => r.WarehouseCode === warehouseCode)
     } catch {
@@ -103,7 +102,7 @@ export function useStockMovements() {
     ]
 
     try {
-      const batchResult = await callGasApi('batch', { requests }, { showLoading: true, successMessage: null, showError: false })
+      const batchResult = await executeGasApi('batch', { requests })
 
       if (!batchResult.success) {
         throw new Error(batchResult.message || 'Batch operation failed')
@@ -146,7 +145,7 @@ export function useStockMovements() {
 
       // After a successful batch, force a sync of WarehouseStorages to get the latest state
       if(succeeded > 0) {
-        await fetchResourceRecords('WarehouseStorages', { forceSync: true })
+        await dataStore.loadResource('WarehouseStorages', { includeInactive: true, forceSync: true })
       }
 
       return { succeeded, failed, succeededRows }

@@ -1,7 +1,7 @@
 import { computed, ref, toRaw } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
-import { bulkMasterRecords } from 'src/services/resourceRecords'
+import { bulkMasterRecords } from 'src/services/ResourceRecordsService'
 import {
   deleteFunctionalDraft,
   getFunctionalDraft,
@@ -10,7 +10,7 @@ import {
   saveFunctionalDraft,
   setResourceMeta,
   upsertResourceRows
-} from 'src/utils/db'
+} from 'src/services/IndexedDbService'
 
 const AUDIT_HEADERS = ['CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy']
 
@@ -226,6 +226,11 @@ export function useBulkUpload() {
       const response = await bulkMasterRecords(selectedResourceName.value, records)
       if (!response.success) {
         $q.notify({ color: 'negative', message: response.message || 'Bulk upload failed', icon: 'error' })
+        return { success: false, response }
+      }
+
+      if (!response.data) {
+        $q.notify({ color: 'negative', message: 'Bulk upload returned no data', icon: 'error' })
         return { success: false, response }
       }
 

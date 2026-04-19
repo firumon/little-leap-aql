@@ -83,7 +83,7 @@ import { useActionResolver } from 'src/composables/useActionResolver'
 import { useResourceConfig, isActionVisible } from 'src/composables/useResourceConfig'
 import { useResourceData } from 'src/composables/useResourceData'
 import { useActionFields } from 'src/composables/useActionFields'
-import { callGasApi } from 'src/services/gasApi'
+import { executeGasApi } from 'src/services/GasApiService'
 import { useResourceNav } from 'src/composables/useResourceNav'
 
 const router = useRouter()
@@ -171,14 +171,16 @@ async function handleSubmit() {
       fields: { ...actionForm }
     }
 
-    const response = await callGasApi('executeAction', payload, {
-      showLoading: true,
-      loadingMessage: `Executing ${currentActionConfig.value?.label || actionName.value}...`,
-      successMessage: `${currentActionConfig.value?.label || actionName.value} completed successfully`
-    })
+    const response = await executeGasApi('executeAction', payload)
 
     if (response.success) {
+      $q.notify({
+        type: 'positive',
+        message: `${currentActionConfig.value?.label || actionName.value} completed successfully`
+      })
       nav.goTo('view')
+    } else {
+      $q.notify({ type: 'negative', message: response.message || 'Action failed', timeout: 3000 })
     }
   } catch (err) {
     $q.notify({ type: 'negative', message: `Action failed: ${err.message}`, timeout: 3000 })

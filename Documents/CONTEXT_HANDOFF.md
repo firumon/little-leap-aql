@@ -22,6 +22,7 @@ Read this file only when:
 - `Config` in APP stores deployment-specific settings such as file IDs.
 - GAS deployment is done with `clasp push`; manual Apps Script copy-paste is not part of the workflow.
 - **Frontend Architecture**: Pinia (`useDataStore`) is the unified, reactive in-memory layer for all record data. IDB is the persistence layer. `localStorage` no longer holds sync cursors; cursors live exclusively in IDB `resource-meta`. Components read only from Pinia, and any IDB writes automatically trigger Pinia updates via a listener pattern.
+- **Frontend Service Layer**: Legacy frontend service/db facades were removed. Canonical entry points are now `ApiClientService.js`, `GasApiService.js`, `IndexedDbService.js`, `ResourceRecordsService.js`, and `ReportService.js`.
 
 ## Current Important Constraints
 - Use `Documents/DOC_ROUTING.md` to decide which docs to read for the task.
@@ -40,6 +41,7 @@ Read this file only when:
 - PR frontend flow implemented (initiation, draft editing, and read-only views).
 - `procurement.gs` handler created for cross-resource progress sync (e.g., auto-creating Procurement on PR submission).
 - Operations 3-tier UI architecture implemented, mirroring Masters but customized for operations context (ViewParent instead of ViewAudit, filtered details).
+- Frontend refactor execution completed for the service/store/page migration plan: pages and composables now consume store actions or new service modules, and the legacy `src/services/apiClient.js`, `src/services/gasApi.js`, `src/services/resourceRecords.js`, and `src/utils/db.js` files were removed.
 
 ## Deep-Dive References
 - Role boundaries: `Documents/MULTI_AGENT_PROTOCOL.md`

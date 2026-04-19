@@ -58,11 +58,12 @@ import { useResourceConfig } from 'src/composables/useResourceConfig'
 import { useResourceData } from 'src/composables/useResourceData'
 import { useResourceRelations } from 'src/composables/useResourceRelations'
 import { useCompositeForm } from 'src/composables/useCompositeForm'
-import { fetchResourceRecords } from 'src/services/resourceRecords'
 import { useResourceNav } from 'src/composables/useResourceNav'
+import { useDataStore } from 'src/stores/data'
 import { findParentCodeField } from 'src/utils/appHelpers'
 
 const nav = useResourceNav()
+const dataStore = useDataStore()
 const { scope, resourceSlug, code, config, resourceName, resolvedFields } = useResourceConfig()
 const { items, loading, reload } = useResourceData(resourceName)
 const { childResources } = useResourceRelations(resourceName)
@@ -97,11 +98,9 @@ async function loadAndInitialize() {
   const childRecordsByResource = {}
   for (const child of childResources.value) {
     try {
-      const resp = await fetchResourceRecords(child.name, { includeInactive: true })
-      if (resp.success && resp.records) {
-        const parentCodeField = findParentCodeField(child, config.value)
-        childRecordsByResource[child.name] = resp.records.filter((r) => r[parentCodeField] === code.value)
-      }
+      await dataStore.loadResource(child.name, { includeInactive: true })
+      const parentCodeField = findParentCodeField(child, config.value)
+      childRecordsByResource[child.name] = dataStore.getRecords(child.name).filter((r) => r[parentCodeField] === code.value)
     } catch {
       childRecordsByResource[child.name] = []
     }

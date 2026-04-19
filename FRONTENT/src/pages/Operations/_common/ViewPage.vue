@@ -70,11 +70,12 @@ import { useSectionResolver } from 'src/composables/useSectionResolver'
 import { useResourceConfig, isActionVisible } from 'src/composables/useResourceConfig'
 import { useResourceData } from 'src/composables/useResourceData'
 import { useResourceRelations } from 'src/composables/useResourceRelations'
-import { fetchResourceRecords } from 'src/services/resourceRecords'
 import { useResourceNav } from 'src/composables/useResourceNav'
+import { useDataStore } from 'src/stores/data'
 import { findParentCodeField } from 'src/utils/appHelpers'
 
 const nav = useResourceNav()
+const dataStore = useDataStore()
 const { scope, resourceSlug, code, config, resourceName, resolvedFields, additionalActions, permissions, customUIName } = useResourceConfig()
 const { items, loading, reload } = useResourceData(resourceName)
 const { parentResource, childResources } = useResourceRelations(resourceName)
@@ -120,12 +121,8 @@ async function fetchParentRecord() {
   }
 
   try {
-    const response = await fetchResourceRecords(parentResource.value.name, { includeInactive: true })
-    if (response.success && response.records) {
-      parentRecord.value = response.records.find((r) => r.Code === pCode) || null
-    } else {
-      parentRecord.value = null
-    }
+    await dataStore.loadResource(parentResource.value.name, { includeInactive: true })
+    parentRecord.value = dataStore.getRecords(parentResource.value.name).find((r) => r.Code === pCode) || null
   } catch {
     parentRecord.value = null
   }
@@ -135,13 +132,9 @@ async function fetchChildren() {
   const newMap = {}
   for (const child of childResources.value) {
     try {
-      const response = await fetchResourceRecords(child.name, { includeInactive: true })
-      if (response.success && response.records) {
-        const parentCodeField = findParentCodeField(child, config.value)
-        newMap[child.name] = response.records.filter((r) => r[parentCodeField] === code.value)
-      } else {
-        newMap[child.name] = []
-      }
+      await dataStore.loadResource(child.name, { includeInactive: true })
+      const parentCodeField = findParentCodeField(child, config.value)
+      newMap[child.name] = dataStore.getRecords(child.name).filter((r) => r[parentCodeField] === code.value)
     } catch {
       newMap[child.name] = []
     }

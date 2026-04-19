@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { callGasApi } from 'src/services/gasApi'
-import { syncAllMasterResources } from 'src/services/resourceRecords'
-import { clearAllClientStorage, setAuthorizedResources, reinitializeDB } from 'src/utils/db'
+import { Notify, Loading } from 'quasar'
+import { executeGasApi } from 'src/services/GasApiService'
+import { syncAllMasterResources } from 'src/services/ResourceRecordsService'
+import { clearAllClientStorage, setAuthorizedResources, reinitializeDB } from 'src/services/IndexedDbService'
 
 export const useAuthStore = defineStore('auth', () => {
   const router = useRouter()
@@ -85,11 +86,34 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function callAuthApi(action, payload = {}, options = {}) {
-    return callGasApi(action, payload, {
-      ...options,
-      requireAuth: options.requireAuth !== false,
+    const {
+      requireAuth = true,
+      showLoading = false,
+      loadingMessage = 'Processing...',
+      successMessage = null,
+      showError = true
+    } = options
+
+    if (showLoading) {
+      Loading.show({ message: loadingMessage })
+    }
+
+    const response = await executeGasApi(action, payload, {
+      requireAuth,
       token: token.value
     })
+
+    if (showLoading) {
+      Loading.hide()
+    }
+
+    if (!response.success && showError) {
+      Notify.create({ type: 'negative', message: response.message || 'Action failed' })
+    } else if (response.success && successMessage) {
+      Notify.create({ type: 'positive', message: successMessage })
+    }
+
+    return response
   }
 
   async function login(email, password) {

@@ -1,6 +1,6 @@
 import { ref, computed, reactive } from 'vue'
 import { useQuasar } from 'quasar'
-import { callGasApi } from 'src/services/gasApi'
+import { compositeSave } from 'src/services/ResourceRecordsService'
 import { useResourceRelations } from './useResourceRelations'
 
 /**
@@ -215,11 +215,7 @@ export function useCompositeForm(configRef, options = {}) {
     saving.value = true
     try {
       const payload = buildPayload()
-      const response = await callGasApi('compositeSave', payload, {
-        showLoading: true,
-        loadingMessage: isEdit.value ? 'Updating record...' : 'Creating record...',
-        successMessage: isEdit.value ? 'Record updated successfully' : 'Record created successfully'
-      })
+      const response = await compositeSave(payload)
       return response
     } catch (err) {
       $q.notify({ type: 'negative', message: `Save failed: ${err.message}`, timeout: 3000 })

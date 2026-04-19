@@ -25,7 +25,7 @@
 </template>
 
 <script setup>
-import { useResourceNav } from 'src/composables/useResourceNav'
+import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
 const nav = useResourceNav()
 

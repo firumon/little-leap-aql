@@ -95,24 +95,21 @@ import { computed, ref, watch } from 'vue'
 import MasterViewActionBar from 'components/Masters/_common/MasterViewActionBar.vue'
 import MasterViewAudit from 'components/Masters/_common/MasterViewAudit.vue'
 import ReportInputDialog from 'src/components/Masters/ReportInputDialog.vue'
-import { useProductVariants } from 'src/composables/useProductVariants'
-import { useResourceConfig } from 'src/composables/useResourceConfig'
-import { useResourceData } from 'src/composables/useResourceData'
-import { useReports } from 'src/composables/useReports'
-import { useResourceNav } from 'src/composables/useResourceNav'
-import { useDataStore } from 'src/stores/data'
+import { useProductVariants } from 'src/composables/masters/products/useProductVariants'
+import { useProductSkuViewData } from 'src/composables/masters/products/useProductSkuViewData'
+import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
+import { useResourceData } from 'src/composables/resources/useResourceData'
+import { useReports } from 'src/composables/reports/useReports'
+import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
 const nav = useResourceNav()
-const dataStore = useDataStore()
 const { code, config, resourceName, permissions } = useResourceConfig()
 const { items, loading: resourceLoading, reload } = useResourceData(resourceName)
+const { skuRows, skuLoading, loadSkuRows } = useProductSkuViewData()
 const {
   isGenerating, showReportDialog, activeReport, reportInputs,
   initiateReport, confirmReportDialog, cancelReportDialog
 } = useReports(resourceName)
-
-const skuRows = ref([])
-const skuLoading = ref(false)
 
 const record = computed(() => {
   if (!code.value || !Array.isArray(items.value)) return null
@@ -137,49 +134,9 @@ const skuColumns = computed(() => {
 
 const loading = computed(() => resourceLoading.value)
 
-function applySkuRows(records = []) {
-  skuRows.value = records.filter((row) => row.ProductCode === code.value)
-}
-
-async function syncSkuRowsInBackground() {
-  try {
-    const response = await dataStore.syncResource('SKUs', {
-      includeInactive: true,
-      syncWhenCacheExists: true
-    })
-    if (response.success && Array.isArray(response.records)) {
-      applySkuRows(response.records)
-    }
-  } finally {
-    skuLoading.value = false
-  }
-}
-
-async function loadSkuRows() {
-  if (!code.value) return
-  skuLoading.value = true
-  try {
-    const response = await dataStore.loadResource('SKUs', {
-      includeInactive: true
-    })
-    if (response.success && Array.isArray(response.records)) {
-      applySkuRows(response.records)
-      if (response?.meta?.source === 'cache') {
-        syncSkuRowsInBackground()
-        return
-      }
-    } else {
-      skuRows.value = []
-    }
-  } finally {
-    if (!skuLoading.value) return
-    skuLoading.value = false
-  }
-}
-
 async function loadView() {
   await reload()
-  await loadSkuRows()
+  await loadSkuRows(code.value)
 }
 
 function navigateToList() {

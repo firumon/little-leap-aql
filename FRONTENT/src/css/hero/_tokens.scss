@@ -1,0 +1,67 @@
+// hero.scss — Shared hero-card layout system + global design system
+// ─────────────────────────────────────────────────────────────────────────────
+// All values derive from quasar.variables.scss — never hardcode brand colours.
+// Quasar auto-injects quasar.variables.scss so those variables are always in scope.
+// ─────────────────────────────────────────────────────────────────────────────
+@use 'sass:color';
+
+// ── SCSS helpers ─────────────────────────────────────────────────────────────
+$_hero-mid  : color.adjust($primary, $lightness: 8%);
+$_hero-end  : color.adjust($primary, $lightness: 14%);
+$_gold-fg   : color.adjust($secondary, $lightness: 22%);  // cream-gold text on dark gold chips
+$_surface-010: color.adjust($surface, $lightness: -1%);
+$_surface-020: color.adjust($surface, $lightness: -2%);
+$_surface-040: color.adjust($surface, $lightness: -4%);
+
+// ── CSS custom properties (design system tokens → inline :style bindings) ────
+:root {
+  // Brand
+  --primary     : #{$primary};
+  --primary-600 : #{$primary-600};
+  --primary-400 : #{$primary-400};
+  --primary-100 : #{$primary-100};
+  --primary-50  : #{$primary-50};
+
+  --secondary        : #{$secondary};
+  --secondary-light  : #{$accent};
+  --secondary-50     : #{$secondary-50};
+
+  // Semantic
+  --positive    : #{$positive};
+  --negative    : #{$negative};
+  --warning     : #{$warning};
+  --info        : #{$info};
+
+  // Ink
+  --ink         : #{$ink};
+  --ink-2       : #{$ink-2};
+  --ink-3       : #{$ink-muted};
+  --ink-4       : #{$ink-4};
+
+  // Surfaces
+  --bg          : #{$bg-page};
+  --surface     : #{$surface};
+  --border      : #{$border};
+  --border-strong: #{$border-strong};
+
+  // Border radii
+  --r-xs        : #{$r-xs};
+  --r-sm        : #{$r-sm};
+  --r-md        : #{$r-md};
+  --r-lg        : #{$r-lg};
+  --r-xl        : #{$r-xl};
+
+  // Elevation
+  --shadow-sm   : 0 1px 4px rgba(0, 0, 0, 0.08);
+  --shadow-md   : 0 4px 24px rgba(0, 0, 0, 0.10);
+  --shadow-lg   : 0 12px 28px -12px rgba(#{$primary}, 0.45);
+  --shadow-gold : 0 0 6px rgba(#{$secondary}, 0.60);
+
+  // Typography
+  --font-mono   : #{$font-mono};
+
+  // Legacy aliases kept for existing template :style bindings
+  --hero-secondary : #{$secondary};
+  --hero-navy      : #{$primary};
+  --hero-ink-3     : #{$ink-muted};
+}

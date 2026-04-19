@@ -34,7 +34,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { useSectionResolver } from 'src/composables/useSectionResolver'
+import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
 import OperationListRecordsLoading from './OperationListRecordsLoading.vue'
 import OperationListRecordsEmpty from './OperationListRecordsEmpty.vue'
 import OperationListRecordsRecord from './OperationListRecordsRecord.vue'

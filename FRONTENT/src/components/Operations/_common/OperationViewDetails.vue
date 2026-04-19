@@ -15,7 +15,7 @@
 <script setup>
 import { computed } from 'vue'
 import { deriveActionStampHeaders, filterDetailFields } from 'src/utils/appHelpers'
-import { useResourceConfig } from 'src/composables/useResourceConfig'
+import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 
 const props = defineProps({
   record: { type: Object, default: null },

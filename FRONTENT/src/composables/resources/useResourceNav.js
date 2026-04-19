@@ -1,5 +1,5 @@
 import { useRouter } from 'vue-router'
-import { useResourceConfig } from 'src/composables/useResourceConfig'
+import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 
 /**
  * Generic resource navigation composable.

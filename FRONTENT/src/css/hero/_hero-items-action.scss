@@ -1,0 +1,209 @@
+// ITEMS CARD
+// ══════════════════════════════════════════════════════════════════════════════
+
+.items-card {
+  border-radius: $r-lg !important;
+  border: 1px solid $border !important;
+  background: $surface !important;
+  overflow: hidden;
+}
+
+.items-icon-box {
+  width: 34px; height: 34px;
+  border-radius: $r-sm;
+  background: rgba($primary, 0.08);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.items-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: $ink;
+}
+
+.items-count {
+  color: $ink-muted;
+  font-weight: 500;
+}
+
+.items-hint {
+  font-size: 11px;
+  color: $ink-muted;
+}
+
+.add-item-btn {
+  border-radius: $r-sm !important;
+  font-weight: 600 !important;
+  padding: 0 16px !important;
+  height: 36px !important;
+  font-size: 13px !important;
+  letter-spacing: 0.2px !important;
+}
+
+// ── Search bar ────────────────────────────────────────────────────────────────
+.search-wrap {
+  height: 38px;
+  background: $bg-page;
+  border: 1px solid $border;
+  border-radius: $r-sm;
+  padding: 0 10px;
+}
+
+.search-input {
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  color: $ink;
+  outline: none;
+  min-width: 0;
+  width: 100%;
+
+  &::placeholder { color: $ink-muted; }
+}
+
+// ── Item rows ─────────────────────────────────────────────────────────────────
+.item-row {
+  padding: 10px 14px;
+
+  &--border { border-bottom: 1px solid $_surface-040; }
+}
+
+.item-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: $ink;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-sub {
+  font-size: 11px;
+  color: $ink-muted;
+}
+
+.sku-badge {
+  font-family: $font-mono;
+  font-size: 10px;
+  font-weight: 600;
+  background: rgba($primary, 0.08);
+  color: $primary;
+  padding: 1px 6px;
+  border-radius: $r-xs;
+}
+
+.item-variants { color: $ink-muted; }
+
+.item-total {
+  font-family: $font-mono;
+  font-size: 14px;
+  font-weight: 700;
+  color: $primary;
+  text-align: right;
+  white-space: nowrap;
+}
+
+// ── NumberField ───────────────────────────────────────────────────────────────
+.num-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: $_surface-020;
+  border: 1px solid $border;
+  border-radius: $r-sm;
+  padding: 6px 10px;
+  cursor: text;
+  transition: border-color 120ms, background 120ms;
+
+  &--focus {
+    background: $surface;
+    border-color: $primary;
+  }
+}
+
+.nf-label {
+  font-size: 9px;
+  color: $ink-muted;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+.nf-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-family: $font-mono;
+  font-size: 15px;
+  font-weight: 600;
+  color: $ink;
+  outline: none;
+  padding: 0;
+  margin-top: 2px;
+
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button { -webkit-appearance: none; }
+  &[type='number'] { -moz-appearance: textfield; }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ACTION BAR
+// ══════════════════════════════════════════════════════════════════════════════
+
+.action-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 50;
+  padding: 12px 16px 20px;
+  background: linear-gradient(to top, $surface 70%, rgba($surface, 0.5));
+  border-top: 1px solid $border;
+  backdrop-filter: blur(8px);
+}
+
+.action-bar__total-label {
+  font-size: 11px;
+  color: $ink-muted;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.action-bar__total-value {
+  font-family: $font-mono;
+  font-size: 18px;
+  font-weight: 800;
+  color: $primary;
+  letter-spacing: -0.3px;
+}
+
+.action-bar__total-ccy {
+  font-size: 11px;
+  font-weight: 600;
+  color: $ink-muted;
+  margin-left: 4px;
+}
+
+.submit-btn {
+  background: linear-gradient(135deg, $primary 0%, $_hero-mid 100%) !important;
+  color: #fff !important;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, $secondary, transparent);
+  }
+
+  &.disabled {
+    background: mix(white, $ink-muted, 40%) !important;
+    box-shadow: none !important;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════

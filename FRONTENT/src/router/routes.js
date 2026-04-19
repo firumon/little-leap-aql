@@ -38,7 +38,7 @@ const routes = [
     meta: { requiresAuth: true },
     children: [
       { path: '', name: 'dashboard', component: () => import('pages/Dashboard/DashboardIndex.vue') },
-      { path: '/profile', component: () => import('pages/ProfilePage/ProfilePage.vue') },
+      { path: '/profile', name: 'profile', component: () => import('pages/ProfilePage/ProfilePage.vue') },
       {
         path: '/masters/bulk-upload',
         component: () => import('pages/Masters/BulkUploadPage.vue'),

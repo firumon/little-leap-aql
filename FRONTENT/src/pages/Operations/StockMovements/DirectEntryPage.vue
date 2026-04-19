@@ -39,7 +39,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import StockEntryGrid from 'src/components/Operations/StockMovements/StockEntryGrid.vue'
-import { useStockMovements } from 'src/composables/useStockMovements'
+import { useStockMovements } from 'src/composables/operations/stock/useStockMovements'
 
 const { loadWarehouses } = useStockMovements()
 

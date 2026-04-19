@@ -1,0 +1,333 @@
+// ══════════════════════════════════════════════════════════════════════════════
+// HERO CARD
+// ══════════════════════════════════════════════════════════════════════════════
+@use 'sass:color';
+
+.hero-card {
+  border-radius: $r-xl;
+  background: linear-gradient(160deg, $primary 0%, $_hero-mid 55%, $_hero-end 100%);
+  color: #fff;
+  overflow: hidden;
+  position: relative;
+  box-shadow: var(--shadow-lg);
+}
+
+.hero-card__gold-line {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, $secondary 0%, transparent 100%);
+}
+
+.hero-card__glow {
+  position: absolute;
+  top: -60px; right: -60px;
+  width: 200px; height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba($secondary, 0.22) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+// ── Top row ───────────────────────────────────────────────────────────────────
+.hero-card__toprow {
+  padding: 14px 16px 12px;
+  position: relative;
+}
+
+.hero-back-btn {
+  width: 36px; height: 36px;
+  border-radius: $r-sm;
+  background: rgba(white, 0.10);
+  border: 1px solid rgba(white, 0.18);
+  color: #fff;
+  display: grid; place-items: center;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  margin-right: 12px;
+  transition: background 120ms;
+
+  &:hover { background: rgba(white, 0.18); }
+}
+
+// PR code displayed in the top row
+.hero-code {
+  font-family: $font-mono;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.6px;
+  line-height: 1.15;
+}
+
+// Sub-line meta (PR Date, Requested By)
+.hero-meta {
+  font-size: 12px;
+  color: rgba(white, 0.65);
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+// ── Status chip ───────────────────────────────────────────────────────────────
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+// ── Stat strip ────────────────────────────────────────────────────────────────
+.hero-stat-strip {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.4fr;
+  gap: 1px;
+  background: rgba(white, 0.08);
+  border-top: 1px solid rgba(white, 0.08);
+}
+
+.hero-stat-cell {
+  padding: 12px 14px;
+  background: rgba($primary, 0.35);
+}
+
+.hero-stat-label {
+  font-size: 10px;
+  color: rgba(white, 0.55);
+  letter-spacing: 0.6px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.hero-stat-value {
+  margin-top: 4px;
+  font-family: $font-mono;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: #fff;
+
+  &--gold { color: $secondary; }
+}
+
+// ── Pinned details strip ──────────────────────────────────────────────────────
+.hero-details-strip {
+  background: rgba(white, 0.06);
+  padding: 10px 12px;
+  border-top: 1px solid rgba(white, 0.08);
+  gap: 8px;
+}
+
+.hero-pin-row {
+  overflow-x: auto;
+  scrollbar-width: none;
+  gap: 6px;
+
+  &::-webkit-scrollbar { display: none; }
+}
+
+.pin-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border-radius: $r-sm;
+  background: rgba(white, 0.10);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  border: 1px solid rgba(white, 0.08);
+
+  &--warn {
+    background: rgba($negative, 0.20);
+    color: color.adjust($negative, $lightness: 30%);
+  }
+}
+
+.pin-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.hero-edit-toggle {
+  flex-shrink: 0;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: $r-sm;
+  background: rgba($secondary, 0.16);
+  color: $secondary;
+  border: 1px solid rgba($secondary, 0.35);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: background 120ms;
+
+  &:hover { background: rgba($secondary, 0.26); }
+}
+
+// ── Collapsible edit panel ────────────────────────────────────────────────────
+.hero-edit-panel {
+  background: rgba(black, 0.18);
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.edit-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.edit-group__label {
+  font-size: 10px;
+  color: rgba(white, 0.55);
+  letter-spacing: 0.7px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+// Full-width 4-column grid for Type / uniform pill grid for Priority+Warehouse
+.seg-grid {
+  display: grid;
+  gap: 6px;
+}
+
+.seg-grid--4 { grid-template-columns: repeat(4, 1fr); }
+
+// Segment selector buttons
+.seg-btn {
+  padding: 9px 6px;
+  border-radius: $r-sm;
+  border: 1px solid rgba(white, 0.14);
+  background: rgba(white, 0.04);
+  color: rgba(white, 0.85);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex-direction: column;
+  width: 100%;
+  transition: border-color 120ms, background 120ms, color 120ms;
+
+  &--pill {
+    flex-direction: row;
+    padding: 8px 14px;
+    border-radius: 999px;
+    width: auto;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  &--active {
+    border-color: $secondary;
+    background: rgba($secondary, 0.20);
+    color: $_gold-fg;
+  }
+}
+
+.seg-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+// Date / reference field inside the edit panel
+.edit-field {
+  background: rgba(white, 0.08);
+  border: 1px solid rgba(white, 0.18);
+  border-radius: $r-sm;
+  padding: 10px 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.edit-field__value {
+  flex: 1;
+  min-width: 0;
+}
+
+.edit-field__label {
+  font-size: 9px;
+  color: rgba(white, 0.50);
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.edit-field__text {
+  font-size: 14px;
+  color: #fff;
+}
+
+.edit-field__text--placeholder { color: rgba(white, 0.40); }
+
+// Plain text input inside edit panel (reference code field)
+.edit-text-input {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  min-width: 0;
+  width: 100%;
+
+  &::placeholder { color: rgba(white, 0.35); }
+}
+
+.overdue-badge {
+  font-size: 11px;
+  color: color.adjust($negative, $lightness: 28%);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+// Revision box
+.revision-box {
+  background: rgba($negative, 0.12);
+  border: 1px solid rgba($negative, 0.30);
+  border-radius: $r-sm;
+  padding: 12px;
+}
+
+.revision-header {
+  font-size: 13px;
+  font-weight: 700;
+  color: color.adjust($negative, $lightness: 30%);
+}
+
+.revision-text {
+  font-size: 12px;
+  color: rgba(color.adjust($negative, $lightness: 30%), 0.85);
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════

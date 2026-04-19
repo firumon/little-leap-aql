@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { exportFile, useQuasar } from 'quasar'
-import { generateReport } from 'src/services/ReportService'
+import { useWorkflowStore } from 'src/stores/workflow'
 
 /**
  * useReports composable
@@ -13,6 +13,7 @@ import { generateReport } from 'src/services/ReportService'
  */
 export function useReports(resourceNameRef) {
   const $q = useQuasar()
+  const workflowStore = useWorkflowStore()
 
   const isGenerating = ref(false)
   const showReportDialog = ref(false)
@@ -160,7 +161,7 @@ export function useReports(resourceNameRef) {
         : resourceNameRef?.value !== undefined ? resourceNameRef.value
         : (resourceNameRef || '')
 
-      const result = await generateReport({
+      const result = await workflowStore.generateReportFile({
         resource: resName,
         reportName: report.label || report.name || '',
         templateSheet: report.templateSheet || '',
@@ -175,14 +176,15 @@ export function useReports(resourceNameRef) {
       }
 
       // Convert Base64 to Blob and download
-      const binaryString = atob(result.base64)
+      const reportData = result.data || {}
+      const binaryString = atob(reportData.base64 || '')
       const bytes = new Uint8Array(binaryString.length)
       for (let i = 0; i < binaryString.length; i++) {
         bytes[i] = binaryString.charCodeAt(i)
       }
 
       const blob = new Blob([bytes], { type: 'application/pdf' })
-      const fileName = result.fileName || (report.label || report.name || 'report') + '.pdf'
+      const fileName = reportData.fileName || (report.label || report.name || 'report') + '.pdf'
 
       const exported = exportFile(fileName, blob, { mimeType: 'application/pdf' })
 

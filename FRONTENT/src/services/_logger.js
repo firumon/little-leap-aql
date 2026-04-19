@@ -4,34 +4,57 @@
  *        logger.debug('message') — only logs if VITE_ENABLE_LOGS=true
  */
 
-function shouldLog(level = 'debug') {
-  if (typeof import.meta.env === 'undefined') return false
-  const enableLogs = import.meta.env.VITE_ENABLE_LOGS === 'true' ||
-                     import.meta.env.VITE_ENABLE_LOGS === '1'
-  return enableLogs
+function resolveEnvFlag(value) {
+  return value === true || value === 'true' || value === '1'
+}
+
+function shouldLog() {
+  const processFlag = typeof process !== 'undefined'
+    ? process?.env?.ENABLE_LOGS
+    : undefined
+
+  const viteFlag = typeof import.meta !== 'undefined' && typeof import.meta.env !== 'undefined'
+    ? (import.meta.env.ENABLE_LOGS ?? import.meta.env.VITE_ENABLE_LOGS)
+    : undefined
+
+  return resolveEnvFlag(processFlag) || resolveEnvFlag(viteFlag)
+}
+
+function formatLogData(data) {
+  if (!data) return ''
+
+  try {
+    return ` | ${JSON.stringify(data)}`
+  } catch {
+    return ' | [unserializable-data]'
+  }
 }
 
 export function createLogger(serviceName) {
   return {
     debug: (msg, data) => {
-      if (shouldLog('debug')) {
-        const logData = data ? ` | ${JSON.stringify(data)}` : ''
+      if (shouldLog()) {
+        const logData = formatLogData(data)
         console.log(`[${serviceName}:DEBUG] ${msg}${logData}`)
       }
     },
     info: (msg, data) => {
-      if (shouldLog('info')) {
-        const logData = data ? ` | ${JSON.stringify(data)}` : ''
+      if (shouldLog()) {
+        const logData = formatLogData(data)
         console.log(`[${serviceName}:INFO] ${msg}${logData}`)
       }
     },
     warn: (msg, data) => {
-      const logData = data ? ` | ${JSON.stringify(data)}` : ''
-      console.warn(`[${serviceName}:WARN] ${msg}${logData}`)
+      if (shouldLog()) {
+        const logData = formatLogData(data)
+        console.warn(`[${serviceName}:WARN] ${msg}${logData}`)
+      }
     },
     error: (msg, data) => {
-      const logData = data ? ` | ${JSON.stringify(data)}` : ''
-      console.error(`[${serviceName}:ERROR] ${msg}${logData}`)
+      if (shouldLog()) {
+        const logData = formatLogData(data)
+        console.error(`[${serviceName}:ERROR] ${msg}${logData}`)
+      }
     }
   }
 }
@@ -47,6 +70,6 @@ export function standardizeResponse(success, data = null, error = null) {
 
 export const logger = {
   system: createLogger('AQL-System'),
-  isEnabled: () => shouldLog('debug')
+  isEnabled: () => shouldLog()
 }
 

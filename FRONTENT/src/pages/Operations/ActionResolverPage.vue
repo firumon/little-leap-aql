@@ -14,7 +14,7 @@
 <script setup>
 import { watch, shallowRef, markRaw, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { useResourceConfig } from 'src/composables/useResourceConfig'
+import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { toPascalCase } from 'src/utils/appHelpers'
 
 const route = useRoute()

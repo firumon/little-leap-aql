@@ -7,19 +7,14 @@
 
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from 'src/stores/auth'
-import { useDataStore } from 'src/stores/data'
-import {
-  queueMasterResourceSync,
-  flushMasterSyncQueue,
-  syncAllMasterResources
-} from 'src/services/ResourceRecordsService'
+import { useSyncStore } from 'src/stores/sync'
 import { createLogger } from 'src/services/_logger'
 
 const logger = createLogger('useResourceSync')
 
 export function useResourceSync() {
   const auth = useAuthStore()
-  const dataStore = useDataStore()
+  const syncStore = useSyncStore()
 
   const isSyncing = ref(false)
   const lastSyncTime = ref(null)
@@ -43,7 +38,7 @@ export function useResourceSync() {
     try {
       const now = Date.now()
       const dueAt = priority === 'force' ? now : (priority === 'immediate' ? now : now + 5000)
-      queueMasterResourceSync(resourceName, dueAt, priority)
+      syncStore.queueResource(resourceName, dueAt, priority)
       logger.debug('Queued sync', { resource: resourceName, priority })
       return { success: true }
     } catch (error) {
@@ -57,7 +52,7 @@ export function useResourceSync() {
     try {
       logger.info('Flushing sync queue', { forceAll })
       isSyncing.value = true
-      const result = await flushMasterSyncQueue(forceAll, {
+      const result = await syncStore.flushQueue(forceAll, {
         showError: true,
         showLoading: false
       })
@@ -84,14 +79,14 @@ export function useResourceSync() {
         isSyncing.value = true
       }
 
-      const result = await syncAllMasterResources()
+      const result = await syncStore.syncAll()
       lastSyncTime.value = Date.now()
 
       if (!result.success) {
         syncErrors.value.push(result.error || 'Global sync failed')
         logger.error('Global sync failed', { error: result.error })
       } else {
-        logger.info('Global sync completed', { resources: result.data?.meta?.resources?.length })
+        logger.info('Global sync completed', { resources: result.data?.resources?.length })
       }
 
       return result
@@ -116,11 +111,10 @@ export function useResourceSync() {
       const names = Array.isArray(resourceNames) ? resourceNames : []
 
       for (const name of names) {
-        queueMasterResourceSync(name, now, priority)
+        syncStore.queueResource(name, now, priority)
       }
 
-      const result = await flushQueue(true)
-      return result
+      return await flushQueue(true)
     } catch (error) {
       logger.error('Sync resources failed', { error: error.message })
       syncErrors.value.push(error.message)

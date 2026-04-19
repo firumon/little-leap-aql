@@ -38,10 +38,10 @@ import MasterAddHeader from 'components/Masters/_common/MasterAddHeader.vue'
 import MasterAddForm from 'components/Masters/_common/MasterAddForm.vue'
 import MasterAddChildren from 'components/Masters/_common/MasterAddChildren.vue'
 import MasterAddActions from 'components/Masters/_common/MasterAddActions.vue'
-import { useSectionResolver } from 'src/composables/useSectionResolver'
-import { useResourceConfig } from 'src/composables/useResourceConfig'
-import { useCompositeForm } from 'src/composables/useCompositeForm'
-import { useResourceNav } from 'src/composables/useResourceNav'
+import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
+import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
+import { useCompositeForm } from 'src/composables/resources/useCompositeForm'
+import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
 const nav = useResourceNav()
 const { scope, resourceSlug, config, resolvedFields, customUIName } = useResourceConfig()

@@ -1,34 +1,34 @@
 import { computed, reactive, watch } from 'vue'
 import { toPascalCase } from 'src/utils/appHelpers'
-import { resolveTieredComponent } from 'src/composables/_resolveTieredComponent'
+import { resolveTieredComponent } from 'src/composables/resources/_resolveTieredComponent'
 
 /**
  * Scans components/Masters/{Entity}/ for entity-level section overrides.
  * Excludes _custom/ and BulkUpload/ subdirectories.
  */
 const mastersEntitySectionModules = import.meta.glob([
-  '../components/Masters/*/*.vue',
-  '!../components/Masters/_custom/**',
-  '!../components/Masters/BulkUpload/**'
+  '../../components/Masters/*/*.vue',
+  '!../../components/Masters/_custom/**',
+  '!../../components/Masters/BulkUpload/**'
 ])
 
 /**
  * Scans components/Masters/_custom/{Code}/ for tenant-custom section overrides.
  */
-const mastersCustomSectionModules = import.meta.glob('../components/Masters/_custom/**/*.vue')
+const mastersCustomSectionModules = import.meta.glob('../../components/Masters/_custom/**/*.vue')
 
 /**
  * Scans components/Operations/{Entity}/ for entity-level section overrides.
  */
 const operationsEntitySectionModules = import.meta.glob([
-  '../components/Operations/*/*.vue',
-  '!../components/Operations/_custom/**'
+  '../../components/Operations/*/*.vue',
+  '!../../components/Operations/_custom/**'
 ])
 
 /**
  * Scans components/Operations/_custom/{Code}/ for tenant-custom section overrides.
  */
-const operationsCustomSectionModules = import.meta.glob('../components/Operations/_custom/**/*.vue')
+const operationsCustomSectionModules = import.meta.glob('../../components/Operations/_custom/**/*.vue')
 
 
 /**
@@ -45,10 +45,10 @@ async function resolveSection(entityName, sectionName, defaultComponent, customU
 
   const tiers = []
   if (customUIName) {
-    tiers.push({ modules: customModules, path: `../components/${folder}/_custom/${customUIName}/${entityName}/${sectionName}.vue` })
-    tiers.push({ modules: customModules, path: `../components/${folder}/_custom/${customUIName}/${sectionName}.vue` })
+    tiers.push({ modules: customModules, path: `../../components/${folder}/_custom/${customUIName}/${entityName}/${sectionName}.vue` })
+    tiers.push({ modules: customModules, path: `../../components/${folder}/_custom/${customUIName}/${sectionName}.vue` })
   }
-  tiers.push({ modules: entityModules, path: `../components/${folder}/${entityName}/${sectionName}.vue` })
+  tiers.push({ modules: entityModules, path: `../../components/${folder}/${entityName}/${sectionName}.vue` })
 
   return resolveTieredComponent(tiers, defaultComponent)
 }

@@ -79,7 +79,7 @@
       </q-card-section>
 
       <q-card-actions align="between" class="q-mt-md q-gutter-sm">
-        <q-btn flat color="grey-7" label="Go Back" @click="$router.back()" />
+        <q-btn flat color="grey-7" label="Go Back" @click="goBack" />
         <q-btn unelevated color="secondary" label="Update Password" @click="showPasswordDialog = true" />
       </q-card-actions>
     </q-card>
@@ -219,134 +219,32 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { useAuthStore } from 'src/stores/auth'
-import { useQuasar } from 'quasar'
+import { useProfilePage } from 'src/composables/layout/useProfilePage'
 
-const auth = useAuthStore()
-const $q = useQuasar()
-
-const profileData = computed(() => auth.userProfile || {
-  name: 'Loading...',
-  email: '...',
-  id: '...',
-  role: '...',
-  designation: null,
-  roles: [],
-  accessRegion: { code: '', isUniverse: true, accessibleCodes: [], accessibleRegions: [] },
-  avatar: ''
-})
-
-const showAvatarDialog = ref(false)
-const newAvatarUrl = ref('')
-const updatingAvatar = ref(false)
-
-const showNameDialog = ref(false)
-const newName = ref('')
-const updatingName = ref(false)
-
-const showEmailDialog = ref(false)
-const newEmail = ref('')
-const updatingEmail = ref(false)
-
-const showPasswordDialog = ref(false)
-const currentPassword = ref('')
-const newPassword = ref('')
-const confirmPassword = ref('')
-const updatingPassword = ref(false)
-
-// Notifications handled by gasApi
-
-async function updateAvatar() {
-  if (!newAvatarUrl.value) return
-
-  updatingAvatar.value = true
-  try {
-    const result = await auth.updateAvatar(newAvatarUrl.value)
-    if (result.success) {
-      showAvatarDialog.value = false
-      newAvatarUrl.value = ''
-    }
-  } finally {
-    updatingAvatar.value = false
-  }
-}
-
-function openNameDialog() {
-  newName.value = profileData.value.name || ''
-  showNameDialog.value = true
-}
-
-async function updateName() {
-  const name = (newName.value || '').trim()
-  if (!name) {
-    $q.notify({ type: 'negative', message: 'Please enter a valid name' })
-    return
-  }
-
-  updatingName.value = true
-  try {
-    const result = await auth.updateName(name)
-    if (result.success) {
-      showNameDialog.value = false
-    }
-  } finally {
-    updatingName.value = false
-  }
-}
-
-function openEmailDialog() {
-  newEmail.value = profileData.value.email || ''
-  showEmailDialog.value = true
-}
-
-async function updateEmail() {
-  const email = (newEmail.value || '').trim()
-  if (!email) {
-    $q.notify({ type: 'negative', message: 'Please enter an email address' })
-    return
-  }
-
-  updatingEmail.value = true
-  try {
-    const result = await auth.updateEmail(email)
-    if (result.success) {
-      showEmailDialog.value = false
-    }
-  } finally {
-    updatingEmail.value = false
-  }
-}
-
-async function updatePassword() {
-  if (!currentPassword.value || !newPassword.value || !confirmPassword.value) {
-    $q.notify({ type: 'negative', message: 'Please fill all password fields' })
-    return
-  }
-
-  if (newPassword.value !== confirmPassword.value) {
-    $q.notify({ type: 'negative', message: 'New password and confirmation do not match' })
-    return
-  }
-
-  if (newPassword.value.length < 6) {
-    $q.notify({ type: 'negative', message: 'New password must be at least 6 characters' })
-    return
-  }
-
-  updatingPassword.value = true
-  try {
-    const result = await auth.updatePassword(currentPassword.value, newPassword.value)
-    if (result.success) {
-      showPasswordDialog.value = false
-      currentPassword.value = ''
-      newPassword.value = ''
-      confirmPassword.value = ''
-    }
-  } finally {
-    updatingPassword.value = false
-  }
-}
+const {
+  profileData,
+  showAvatarDialog,
+  newAvatarUrl,
+  updatingAvatar,
+  showNameDialog,
+  newName,
+  updatingName,
+  showEmailDialog,
+  newEmail,
+  updatingEmail,
+  showPasswordDialog,
+  currentPassword,
+  newPassword,
+  confirmPassword,
+  updatingPassword,
+  goBack,
+  updateAvatar,
+  openNameDialog,
+  updateName,
+  openEmailDialog,
+  updateEmail,
+  updatePassword
+} = useProfilePage()
 </script>
 
 <style scoped>

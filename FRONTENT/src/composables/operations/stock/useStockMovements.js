@@ -17,12 +17,13 @@
  */
 
 import { useQuasar } from 'quasar'
-import { executeGasApi } from 'src/services/GasApiService'
 import { useDataStore } from 'src/stores/data'
+import { useWorkflowStore } from 'src/stores/workflow'
 
 export function useStockMovements() {
   const $q = useQuasar()
   const dataStore = useDataStore()
+  const workflowStore = useWorkflowStore()
 
   async function loadWarehouses() {
     try {
@@ -92,23 +93,14 @@ export function useStockMovements() {
       QtyChange:     row.qtyChange
     }))
 
-    const requests = [
-      {
-        action: 'create',
-        scope: 'operation',
-        resource: 'StockMovements',
-        records: movementRecords
-      }
-    ]
-
     try {
-      const batchResult = await executeGasApi('batch', { requests })
+      const batchResult = await workflowStore.submitStockMovementsBatch(movementRecords)
 
       if (!batchResult.success) {
-        throw new Error(batchResult.message || 'Batch operation failed')
+        throw new Error(batchResult.error || batchResult.message || 'Batch operation failed')
       }
 
-      const [createResponse] = batchResult.data
+      const [createResponse] = batchResult.data || []
 
       const created  = createResponse?.data?.created ?? 0
       const updated  = createResponse?.data?.updated ?? 0

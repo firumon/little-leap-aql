@@ -1,6 +1,6 @@
 <template>
   <q-card flat bordered class="action-bar-card q-mt-sm">
-    <q-card-section class="action-bar q-pa-sm">
+    <q-card-section class="master-view-action-bar q-pa-sm">
       <div class="row items-center q-gutter-xs">
         <q-btn
           v-if="permissions?.canUpdate"
@@ -72,7 +72,7 @@ const recordReports = computed(() => {
   background: rgba(255, 255, 255, 0.95);
   animation: rise-in 280ms ease-out both;
 }
-.action-bar { background: #f8fafc; }
+.master-view-action-bar { background: #f8fafc; }
 .action-btn { border-radius: 10px; font-weight: 600; font-size: 12px; letter-spacing: 0.02em; padding: 4px 14px; }
 @keyframes rise-in {
   0% { transform: translateY(10px); opacity: 0; }

@@ -148,7 +148,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useStockMovements } from 'src/composables/useStockMovements'
+import { useStockMovements } from 'src/composables/operations/stock/useStockMovements'
 
 const props = defineProps({
   warehouseCode: {

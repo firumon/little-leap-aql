@@ -128,7 +128,7 @@ export function useResourceData(resourceNameRef) {
 
     // Also persist to IDB
     try {
-      await upsertResourceRows(resourceName, headers, [row])
+      await dataStore.cacheResourceRows(resourceName, headers, [row])
     } catch (_) { /* non-critical */ }
   }
 

@@ -79,16 +79,17 @@ import OperationActionEmpty from 'components/Operations/_common/OperationActionE
 import OperationActionHeader from 'components/Operations/_common/OperationActionHeader.vue'
 import OperationActionForm from 'components/Operations/_common/OperationActionForm.vue'
 import OperationActionActions from 'components/Operations/_common/OperationActionActions.vue'
-import { useActionResolver } from 'src/composables/useActionResolver'
-import { useResourceConfig, isActionVisible } from 'src/composables/useResourceConfig'
-import { useResourceData } from 'src/composables/useResourceData'
-import { useActionFields } from 'src/composables/useActionFields'
-import { executeGasApi } from 'src/services/GasApiService'
-import { useResourceNav } from 'src/composables/useResourceNav'
+import { useOperationActions } from 'src/composables/useOperationActions'
+import { useActionResolver } from 'src/composables/resources/useActionResolver'
+import { useResourceConfig, isActionVisible } from 'src/composables/resources/useResourceConfig'
+import { useResourceData } from 'src/composables/resources/useResourceData'
+import { useActionFields } from 'src/composables/resources/useActionFields'
+import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
 const router = useRouter()
 const nav = useResourceNav()
 const $q = useQuasar()
+const { submitting, submitAction } = useOperationActions()
 
 const {
   resourceSlug, code, config, resourceName,
@@ -126,8 +127,6 @@ const currentActionConfig = computed(() => {
 
 const selectedOutcome = ref('')
 const actionForm = reactive({})
-const submitting = ref(false)
-
 const {
   column, isMultiOutcome, outcomeOptions, resolvedFields: resolvedActionFields
 } = useActionFields(resourceHeaders, currentActionConfig, () => selectedOutcome.value)
@@ -151,42 +150,19 @@ watch(resolvedActionFields, (fields) => {
 }, { immediate: true })
 
 async function handleSubmit() {
-  for (const field of resolvedActionFields.value) {
-    if (field.required && !(actionForm[field.header] || '').toString().trim()) {
-      $q.notify({ type: 'negative', message: `${field.label} is required`, timeout: 2200 })
-      return
-    }
-  }
-
-  submitting.value = true
-  try {
-    const payload = {
-      action: 'executeAction',
-      scope: config.value?.scope || 'operation',
-      resource: resourceName.value,
-      code: code.value,
-      actionName: actionName.value,
+  await submitAction({
+    resourceName: resourceName.value,
+    code: code.value,
+    actionConfig: {
+      ...currentActionConfig.value,
       column: column.value,
-      columnValue: selectedOutcome.value,
-      fields: { ...actionForm }
-    }
-
-    const response = await executeGasApi('executeAction', payload)
-
-    if (response.success) {
-      $q.notify({
-        type: 'positive',
-        message: `${currentActionConfig.value?.label || actionName.value} completed successfully`
-      })
-      nav.goTo('view')
-    } else {
-      $q.notify({ type: 'negative', message: response.message || 'Action failed', timeout: 3000 })
-    }
-  } catch (err) {
-    $q.notify({ type: 'negative', message: `Action failed: ${err.message}`, timeout: 3000 })
-  } finally {
-    submitting.value = false
-  }
+      columnValue: selectedOutcome.value
+    },
+    selectedOutcome: selectedOutcome.value,
+    fields: { ...actionForm },
+    resolvedFields: resolvedActionFields.value,
+    onSuccess: async () => nav.goTo('view')
+  })
 }
 
 function navigateToView() {

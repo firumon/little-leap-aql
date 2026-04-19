@@ -38,10 +38,10 @@ import OperationAddHeader from 'components/Operations/_common/OperationAddHeader
 import OperationAddForm from 'components/Operations/_common/OperationAddForm.vue'
 import OperationAddChildren from 'components/Operations/_common/OperationAddChildren.vue'
 import OperationAddActions from 'components/Operations/_common/OperationAddActions.vue'
-import { useSectionResolver } from 'src/composables/useSectionResolver'
-import { useResourceConfig } from 'src/composables/useResourceConfig'
-import { useCompositeForm } from 'src/composables/useCompositeForm'
-import { useResourceNav } from 'src/composables/useResourceNav'
+import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
+import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
+import { useCompositeForm } from 'src/composables/resources/useCompositeForm'
+import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
 const nav = useResourceNav()
 const { scope, resourceSlug, config, resolvedFields, customUIName } = useResourceConfig()

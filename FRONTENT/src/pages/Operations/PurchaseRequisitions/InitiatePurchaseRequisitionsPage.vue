@@ -245,7 +245,7 @@
           <div class="section-card column items-center text-center q-pa-xl q-gutter-y-xs">
             <q-icon name="check_circle" size="48px" color="positive" class="q-mb-xs" />
             <div class="text-weight-bolder" style="font-size: 20px;">PR Created!</div>
-            <div class="text-primary text-weight-bolder" style="font-family: var(--font-mono); font-size: 22px; letter-spacing: -0.4px;">{{ createdCode }}</div>
+            <div class="text-primary text-weight-bolder" style="font-family: var(--font-mono), monospace; font-size: 22px; letter-spacing: -0.4px;">{{ createdCode }}</div>
             <div class="text-grey-6" style="font-size: 12px;">Saved as Draft · {{ todayFormatted }}</div>
           </div>
         </div>
@@ -280,245 +280,39 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useQuasar } from 'quasar'
-import { format } from 'date-fns'
-import { useStockMovements } from 'src/composables/useStockMovements'
-import { executeGasApi } from 'src/services/GasApiService'
-import { upsertResourceRows } from 'src/services/IndexedDbService'
-import { useResourceNav } from 'src/composables/useResourceNav'
-import { useAuthStore } from 'src/stores/auth'
-import { useResourceData } from 'src/composables/useResourceData'
-import { formatSkuVariants, todayIsoSlash, todayLongLabel } from 'src/utils/appHelpers'
+import { usePurchaseRequisitionCreateFlow } from 'src/composables/operations/purchaseRequisitions/usePurchaseRequisitionCreateFlow'
+import { formatSkuVariants } from 'src/utils/appHelpers'
 
-const $q = useQuasar()
-const nav = useResourceNav()
-const { loadWarehouses } = useStockMovements()
-const auth = useAuthStore()
-const productsResource = useResourceData(ref('Products'))
-const skusResource = useResourceData(ref('SKUs'))
-const stockResource = useResourceData(ref('WarehouseStorages'))
-const prResource = useResourceData(ref('PurchaseRequisitions'))
-const itemResource = useResourceData(ref('PurchaseRequisitionItems'))
-
-const steps = [
-  { n: 1, key: 'setup', label: 'Setup' },
-  { n: 2, key: 'items', label: 'Items' },
-  { n: 3, key: 'done',  label: 'Done'  }
-]
-
-const TYPE_META = {
-  STOCK:   { icon: 'inventory_2',  color: '#0F2B4A', bg: '#EEF3F9', ring: '#D0DEF0' },
-  PROJECT: { icon: 'architecture', color: '#1A6FAD', bg: '#E8F2FB', ring: '#BDD9F0' },
-  SALES:   { icon: 'storefront',   color: '#1A7A4A', bg: '#E8F6EE', ring: '#B8E4CB' },
-  ASSET:   { icon: 'build_circle', color: '#C97B1A', bg: '#FDF3E3', ring: '#F5D9A0' }
-}
-const PRIORITY_META = {
-  Low:    { icon: 'arrow_downward', color: '#1A7A4A', bg: '#E8F6EE' },
-  Medium: { icon: 'remove',         color: '#C97B1A', bg: '#FDF3E3' },
-  High:   { icon: 'arrow_upward',   color: '#C0362C', bg: '#FBE9E8' },
-  Urgent: { icon: 'priority_high',  color: '#7B1FA2', bg: '#F5E5FB' }
-}
-
-const currentStep = ref(1)
-const loadingWarehouses = ref(false)
-const warehouses = ref([])
-
-const form = ref({
-  Type: 'STOCK',
-  Priority: 'Medium',
-  WarehouseCode: '',
-  RequiredDate: '',
-  TypeReferenceCode: ''
-})
-
-const types = computed(() =>
-  (auth.appOptionsMap['PurchaseRequisitionType'] || []).map(v => ({
-    value: v,
-    label: v.charAt(0) + v.slice(1).toLowerCase(),
-    ...TYPE_META[v]
-  }))
-)
-const priorities = computed(() =>
-  (auth.appOptionsMap['PurchaseRequisitionPriority'] || []).map(v => ({
-    value: v, label: v, ...PRIORITY_META[v]
-  }))
-)
-const selectedType = computed(() => types.value.find(t => t.value === form.value.Type) || types.value[0])
-const needsRefCode = computed(() => ['PROJECT', 'SALES'].includes(form.value.Type))
-const isStep1Valid = computed(() =>
-  !!form.value.Type && !!form.value.Priority && (!needsRefCode.value || !!form.value.TypeReferenceCode)
-)
-
-const goToStep2 = () => {
-  if (!isStep1Valid.value) return
-  showAllWh.value = !form.value.WarehouseCode
-  currentStep.value = 2
-  if (products.value.length === 0) loadItemsAndStock()
-}
-
-// Step 2
-const loadingItems = ref(false)
-const products = ref([])
-const skus = ref([])
-const stockData = ref([])
-const searchQuery = ref('')
-const itemSort = ref('product')
-const showAllWh = ref(true)
-const saving = ref(false)
-
-const loadItemsAndStock = async () => {
-  loadingItems.value = true
-  try {
-    await Promise.all([
-      productsResource.reload(),
-      skusResource.reload(),
-      stockResource.reload()
-    ])
-    products.value = (productsResource.items.value || []).filter(p => p.Status === 'Active' || !p.Status)
-    skus.value = (skusResource.items.value || []).filter(s => s.Status === 'Active' || !s.Status).map(s => ({ ...s, requiredQuantity: 0 }))
-    stockData.value = stockResource.items.value || []
-
-    if (!products.value.length || !skus.value.length) {
-      $q.notify({ type: 'warning', message: `Some catalog data is empty. Products: ${products.value.length}, SKUs: ${skus.value.length}` })
-    }
-  } catch (error) {
-    console.error('Error loading catalog:', error)
-    $q.notify({ type: 'negative', message: 'Failed to load catalog data: ' + error.message })
-  } finally {
-    loadingItems.value = false
-  }
-}
-
-const getSkuStock = (skuCode) => {
-  let rows = stockData.value.filter(s => s.SKU === skuCode)
-  if (!showAllWh.value && form.value.WarehouseCode) {
-    rows = rows.filter(s => s.WarehouseCode === form.value.WarehouseCode)
-  }
-  return rows.reduce((sum, item) => sum + (Number(item.Quantity) || 0), 0)
-}
-
-const stockClass = (skuCode) => {
-  const stock = getSkuStock(skuCode)
-  if (stock === 0) return 'text-negative'
-  if (stock < 5)   return 'text-warning'
-  return 'text-grey-6'
-}
-
-const sortedItems = computed(() => {
-  let filtered = skus.value
-  if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase()
-    filtered = filtered.filter(sku => {
-      const prod = products.value.find(p => p.Code === sku.ProductCode)
-      const prodName = prod ? prod.Name.toLowerCase() : ''
-      return sku.Code.toLowerCase().includes(q) ||
-             prodName.includes(q) ||
-             formatSkuVariants(sku).toLowerCase().includes(q)
-    })
-  }
-
-  const grouped = {}
-  filtered.forEach(sku => {
-    if (!grouped[sku.ProductCode]) {
-      const prod = products.value.find(p => p.Code === sku.ProductCode)
-      grouped[sku.ProductCode] = {
-        ProductCode: sku.ProductCode,
-        ProductName: prod ? prod.Name : 'Unknown Product',
-        skus: [],
-        totalStock: 0
-      }
-    }
-    grouped[sku.ProductCode].skus.push(sku)
-    grouped[sku.ProductCode].totalStock += getSkuStock(sku.Code)
-  })
-
-  return Object.values(grouped).sort((a, b) => {
-    if (itemSort.value === 'sku') {
-      const aMax = a.skus.reduce((m, s) => Math.max(m, getSkuStock(s.Code)), 0)
-      const bMax = b.skus.reduce((m, s) => Math.max(m, getSkuStock(s.Code)), 0)
-      return aMax - bMax
-    }
-    return (a.totalStock ?? 0) - (b.totalStock ?? 0)
-  })
-})
-
-const selectedSkusCount = computed(() => skus.value.filter(s => s.requiredQuantity > 0).length)
-const totalQty = computed(() => skus.value.reduce((sum, s) => sum + (s.requiredQuantity || 0), 0))
-const warehouseName = computed(() => warehouses.value.find(w => w.Code === form.value.WarehouseCode)?.Name || '')
-
-const today = todayIsoSlash()
-const todayFormatted = todayLongLabel()
-const createdCode = ref('PR26000009')
-
-const viewCreatedPR = () => nav.goTo('view', { code: createdCode.value })
-
-const savePR = async () => {
-  const itemsToSave = skus.value.filter(s => s.requiredQuantity > 0)
-  if (itemsToSave.length === 0) return
-
-  saving.value = true
-  try {
-    const prDate = format(new Date(), 'yyyy-MM-dd')
-
-    const batchResponse = await executeGasApi('batch', {
-      requests: [
-        {
-          action: 'compositeSave',
-          resource: 'PurchaseRequisitions',
-          scope: 'operation',
-          data: {
-            PRDate: prDate,
-            Type: form.value.Type,
-            Priority: form.value.Priority,
-            RequiredDate: form.value.RequiredDate,
-            WarehouseCode: form.value.WarehouseCode,
-            TypeReferenceCode: needsRefCode.value ? form.value.TypeReferenceCode : '',
-            Progress: 'Draft',
-            Status: 'Active'
-          },
-          children: [{
-            resource: 'PurchaseRequisitionItems',
-            records: itemsToSave.map(item => ({
-              _action: 'create',
-              data: { SKU: item.Code, UOM: item.UOM || '', Quantity: item.requiredQuantity, EstimatedRate: 0 }
-            }))
-          }]
-        },
-        { action: 'get', resource: 'PurchaseRequisitions',     scope: 'operation', includeInactive: true },
-        { action: 'get', resource: 'PurchaseRequisitionItems', scope: 'operation', includeInactive: true }
-      ]
-    })
-
-    const saveResult = batchResponse?.data?.[0]
-    const prResult   = batchResponse?.data?.[1]
-    const itemResult = batchResponse?.data?.[2]
-
-    if (saveResult?.success && saveResult?.data?.parentCode) {
-      createdCode.value = saveResult.data.parentCode
-
-      const prHeaders   = prResource.lastHeaders.value || []
-      const itemHeaders = itemResource.lastHeaders.value || []
-      if (prResult?.rows?.length   && prHeaders.length)   await upsertResourceRows('PurchaseRequisitions', prHeaders, prResult.rows)
-      if (itemResult?.rows?.length && itemHeaders.length) await upsertResourceRows('PurchaseRequisitionItems', itemHeaders, itemResult.rows)
-
-      $q.notify({ type: 'positive', message: 'Purchase Requisition Created' })
-      currentStep.value = 3
-    } else {
-      $q.notify({ type: 'negative', message: saveResult?.message || 'Failed to create PR' })
-    }
-  } catch (error) {
-    $q.notify({ type: 'negative', message: 'Failed to create PR: ' + error.message })
-  } finally {
-    saving.value = false
-  }
-}
-
-onMounted(async () => {
-  loadingWarehouses.value = true
-  warehouses.value = await loadWarehouses()
-  loadingWarehouses.value = false
-})
+const {
+  steps,
+  currentStep,
+  loadingWarehouses,
+  warehouses,
+  form,
+  types,
+  priorities,
+  selectedType,
+  needsRefCode,
+  isStep1Valid,
+  goToStep2,
+  loadingItems,
+  skus,
+  searchQuery,
+  itemSort,
+  showAllWh,
+  saving,
+  sortedItems,
+  selectedSkusCount,
+  totalQty,
+  warehouseName,
+  today,
+  todayFormatted,
+  createdCode,
+  getSkuStock,
+  stockClass,
+  viewCreatedPR,
+  savePR
+} = usePurchaseRequisitionCreateFlow()
 </script>
 
 <style scoped>
@@ -531,10 +325,5 @@ onMounted(async () => {
 .pr-init-body :deep(.section-card) {
   margin-left: 0;
   margin-right: 0;
-}
-.sort-btn {
-  padding: 6px 10px;
-  font-size: 11px;
-  white-space: nowrap;
 }
 </style>

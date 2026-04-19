@@ -16,7 +16,7 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import ResourceBreadcrumb from 'components/Masters/_common/ResourceBreadcrumb.vue'
-import { useResourceConfig } from 'src/composables/useResourceConfig'
+import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { humanizeSlug } from 'src/utils/appHelpers'
 
 const route = useRoute()

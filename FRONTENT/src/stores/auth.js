@@ -1,6 +1,25 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { Notify } from 'quasar'
+import { executeGasApi } from 'src/services/GasApiService'
+import { useClientCacheStore } from 'src/stores/clientCache'
+
+function normalizeResponse(response, fallbackData = null) {
+  if (response && typeof response === 'object' && 'success' in response) {
+    return {
+      success: response.success === true,
+      data: response.success ? (response.data ?? fallbackData) : null,
+      error: response.success ? null : (response.error || response.message || 'Request failed'),
+      message: response.message || ''
+    }
+  }
+
+  return {
+    success: false,
+    data: null,
+    error: 'Invalid response',
+    message: ''
+  }
+}
 
 export const useAuthStore = defineStore('auth', () => {
   // State
@@ -28,6 +47,16 @@ export const useAuthStore = defineStore('auth', () => {
     return user.value?.role || 'User'
   })
   const userDesignation = computed(() => user.value?.designation?.name || '')
+  const userRoles = computed(() => {
+    if (Array.isArray(user.value?.roles) && user.value.roles.length) {
+      return user.value.roles.map((entry) => entry?.name || '').filter(Boolean)
+    }
+
+    return (user.value?.role || '')
+      .split(',')
+      .map((entry) => entry.trim())
+      .filter(Boolean)
+  })
   const userAccessRegion = computed(() => user.value?.accessRegion || { code: '', isUniverse: true, accessibleCodes: [], accessibleRegions: [] })
   const authorizedResources = computed(() => resources.value)
   const appConfigMap = computed(() => appConfig.value || {})
@@ -45,56 +74,59 @@ export const useAuthStore = defineStore('auth', () => {
     }
   })
 
-  // Backward compatibility: delegate to useAuthLogic composable on-demand
-  async function login(email, password) {
-    loading.value = true
-    try {
-      const { useAuthLogic } = await import('src/composables/useAuthLogic')
-      const { login: loginFn } = useAuthLogic()
-      const result = await loginFn(email, password)
-      return result
-    } catch (error) {
-      Notify.create({ type: 'negative', message: 'Login failed: ' + error.message })
-      return { success: false, message: error.message }
-    } finally {
-      loading.value = false
+  function persistSession() {
+    localStorage.setItem('token', token.value || '')
+    localStorage.setItem('user', JSON.stringify(user.value))
+    localStorage.setItem('resources', JSON.stringify(resources.value || []))
+    localStorage.setItem('appConfig', JSON.stringify(appConfig.value || {}))
+    localStorage.setItem('appOptions', JSON.stringify(appOptions.value || {}))
+  }
+
+  function clearPersistedSession() {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    localStorage.removeItem('resources')
+    localStorage.removeItem('appConfig')
+    localStorage.removeItem('appOptions')
+  }
+
+  function applySessionData(sessionData = {}) {
+    token.value = sessionData?.token || null
+    user.value = sessionData?.user || null
+    resources.value = Array.isArray(sessionData?.resources) ? sessionData.resources : []
+    appConfig.value = sessionData?.appConfig && typeof sessionData.appConfig === 'object' ? sessionData.appConfig : {}
+    appOptions.value = sessionData?.appOptions && typeof sessionData.appOptions === 'object' ? sessionData.appOptions : {}
+    persistSession()
+    notifyServiceWorker(token.value)
+  }
+
+  function patchUserData(patch = {}) {
+    user.value = {
+      ...(user.value || {}),
+      ...patch
     }
+    localStorage.setItem('user', JSON.stringify(user.value))
   }
 
-  async function updateAvatar(avatarUrl) {
-    const { useAuthLogic } = await import('src/composables/useAuthLogic')
-    const { updateAvatar: updateFn } = useAuthLogic()
-    return updateFn(avatarUrl)
+  function clearSessionState() {
+    user.value = null
+    token.value = null
+    resources.value = []
+    appConfig.value = {}
+    appOptions.value = {}
+    loading.value = false
+    isGlobalSyncing.value = false
+    clearPersistedSession()
+    notifyServiceWorker(null)
   }
 
-  async function updateName(name) {
-    const { useAuthLogic } = await import('src/composables/useAuthLogic')
-    const { updateName: updateFn } = useAuthLogic()
-    return updateFn(name)
-  }
+  async function requestAuth(action, payload = {}, options = {}) {
+    const response = await executeGasApi(action, payload, {
+      requireAuth: options.requireAuth !== false,
+      token: options.token || token.value
+    })
 
-  async function updateEmail(email) {
-    const { useAuthLogic } = await import('src/composables/useAuthLogic')
-    const { updateEmail: updateFn } = useAuthLogic()
-    return updateFn(email)
-  }
-
-  async function updatePassword(currentPassword, newPassword) {
-    const { useAuthLogic } = await import('src/composables/useAuthLogic')
-    const { updatePassword: updateFn } = useAuthLogic()
-    return updateFn(currentPassword, newPassword)
-  }
-
-  async function logout() {
-    const { useAuthLogic } = await import('src/composables/useAuthLogic')
-    const { logout: logoutFn } = useAuthLogic()
-
-    // Call composable cleanup
-    await logoutFn()
-
-    // Navigate to login - use window.location for reliability
-    // (No Vue context needed, works from anywhere)
-    window.location.href = '/login'
+    return normalizeResponse(response)
   }
 
   function notifyServiceWorker(authToken) {
@@ -114,10 +146,40 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function initializeClientSession(resetCursors = true) {
+    const clientCache = useClientCacheStore()
+    await clientCache.initializeDb()
+    return clientCache.setAuthorizedResources(resources.value || [], resetCursors)
+  }
+
+  async function clearClientSession() {
+    const clientCache = useClientCacheStore()
+    closeDBInServiceWorker()
+    return clientCache.clearAllStorage()
+  }
+
+  async function loginRequest(identifier, password) {
+    return requestAuth('login', { email: identifier, password }, { requireAuth: false })
+  }
+
+  async function updateAvatarRequest(avatarUrl) {
+    return requestAuth('updateAvatar', { avatarUrl })
+  }
+
+  async function updateNameRequest(name) {
+    return requestAuth('updateName', { name })
+  }
+
+  async function updateEmailRequest(email) {
+    return requestAuth('updateEmail', { email })
+  }
+
+  async function updatePasswordRequest(currentPassword, newPassword) {
+    return requestAuth('updatePassword', { currentPassword, newPassword })
+  }
+
   async function callAuthApi(action, payload = {}, options = {}) {
-    const { useAuthLogic } = await import('src/composables/useAuthLogic')
-    const { callAuthApi: callFn } = useAuthLogic()
-    return callFn(action, payload, options)
+    return requestAuth(action, payload, options)
   }
 
   return {
@@ -135,6 +197,7 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     userProfile,
     userRole,
+    userRoles,
     userDesignation,
     userAccessRegion,
     authorizedResources,
@@ -143,12 +206,16 @@ export const useAuthStore = defineStore('auth', () => {
     scopeSyncConfig,
 
     // Actions
-    login,
-    updateAvatar,
-    updateName,
-    updateEmail,
-    updatePassword,
-    logout,
+    applySessionData,
+    patchUserData,
+    clearSessionState,
+    initializeClientSession,
+    clearClientSession,
+    loginRequest,
+    updateAvatarRequest,
+    updateNameRequest,
+    updateEmailRequest,
+    updatePasswordRequest,
     notifyServiceWorker,
     closeDBInServiceWorker,
     callAuthApi

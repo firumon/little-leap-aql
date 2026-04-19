@@ -53,20 +53,17 @@ import OperationEditHeader from 'components/Operations/_common/OperationEditHead
 import OperationEditForm from 'components/Operations/_common/OperationEditForm.vue'
 import OperationEditChildren from 'components/Operations/_common/OperationEditChildren.vue'
 import OperationEditActions from 'components/Operations/_common/OperationEditActions.vue'
-import { useSectionResolver } from 'src/composables/useSectionResolver'
-import { useResourceConfig } from 'src/composables/useResourceConfig'
-import { useResourceData } from 'src/composables/useResourceData'
-import { useResourceRelations } from 'src/composables/useResourceRelations'
-import { useCompositeForm } from 'src/composables/useCompositeForm'
-import { useResourceNav } from 'src/composables/useResourceNav'
-import { useDataStore } from 'src/stores/data'
-import { findParentCodeField } from 'src/utils/appHelpers'
+import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
+import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
+import { useResourceData } from 'src/composables/resources/useResourceData'
+import { useResourceRelationsData } from 'src/composables/resources/useResourceRelationsData'
+import { useCompositeForm } from 'src/composables/resources/useCompositeForm'
+import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
 const nav = useResourceNav()
-const dataStore = useDataStore()
 const { scope, resourceSlug, code, config, resourceName, resolvedFields, customUIName } = useResourceConfig()
 const { items, loading, reload } = useResourceData(resourceName)
-const { childResources } = useResourceRelations(resourceName)
+const { childResources, loadChildRecords } = useResourceRelationsData(resourceName)
 
 const { sections, sectionsReady } = useSectionResolver({
   resourceSlug,
@@ -95,17 +92,7 @@ async function loadAndInitialize() {
   await reload()
   if (!record.value) return
 
-  const childRecordsByResource = {}
-  for (const child of childResources.value) {
-    try {
-      await dataStore.loadResource(child.name, { includeInactive: true })
-      const parentCodeField = findParentCodeField(child, config.value)
-      childRecordsByResource[child.name] = dataStore.getRecords(child.name).filter((r) => r[parentCodeField] === code.value)
-    } catch {
-      childRecordsByResource[child.name] = []
-    }
-  }
-
+  const childRecordsByResource = await loadChildRecords(code.value, config.value, { includeInactive: true })
   initializeForEdit(record.value, childRecordsByResource)
 }
 

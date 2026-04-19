@@ -1,11 +1,13 @@
 import 'src/utils/idbCompat'
 import { openDB } from 'idb'
+import { createLogger } from './_logger'
 
 const DB_NAME = 'aql-db'
 const DB_VERSION = 3
 
 let dbPromise = null
 const rowListeners = []
+const logger = createLogger('IndexedDbService')
 
 export function onRowsUpserted(fn) {
   if (typeof fn === 'function') {
@@ -18,7 +20,7 @@ export function reinitializeDB() {
 
   dbPromise = openDB(DB_NAME, DB_VERSION, {
     upgrade(db) {
-      console.log('[DB] Upgrading to version', DB_VERSION)
+      logger.info('Upgrading IndexedDB', { version: DB_VERSION })
       if (!db.objectStoreNames.contains('api-cache')) {
         db.createObjectStore('api-cache', { keyPath: 'url' })
       }
@@ -41,10 +43,10 @@ export function reinitializeDB() {
       }
     },
     blocked() {
-      console.warn('[DB] Upgrade blocked by another connection')
+      logger.warn('IndexedDB upgrade blocked by another connection')
     },
     blocking() {
-      console.warn('[DB] version change requested elsewhere, closing current connection...')
+      logger.warn('IndexedDB version change requested elsewhere, closing current connection')
       if (dbPromise) {
         dbPromise.then((db) => db.close()).catch(() => {})
       }
@@ -204,7 +206,7 @@ export async function upsertResourceRows(resource, headers = [], rows = []) {
     try {
       fn(resource, rows)
     } catch (error) {
-      console.error('[DB] Error in row listener', error)
+      logger.error('Error in row listener', { error: error?.message || String(error) })
     }
   }
 

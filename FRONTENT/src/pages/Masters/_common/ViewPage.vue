@@ -62,7 +62,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { computed, watch } from 'vue'
 import ReportInputDialog from 'src/components/Masters/ReportInputDialog.vue'
 import MasterViewHeader from 'components/Masters/_common/MasterViewHeader.vue'
 import MasterViewActionBar from 'components/Masters/_common/MasterViewActionBar.vue'
@@ -71,24 +71,21 @@ import MasterViewAudit from 'components/Masters/_common/MasterViewAudit.vue'
 import MasterViewChildren from 'components/Masters/_common/MasterViewChildren.vue'
 import MasterViewLoading from 'components/Masters/_common/MasterViewLoading.vue'
 import MasterViewEmpty from 'components/Masters/_common/MasterViewEmpty.vue'
-import { useSectionResolver } from 'src/composables/useSectionResolver'
-import { useResourceConfig, isActionVisible } from 'src/composables/useResourceConfig'
-import { useResourceData } from 'src/composables/useResourceData'
-import { useResourceRelations } from 'src/composables/useResourceRelations'
-import { useReports } from 'src/composables/useReports'
-import { useResourceNav } from 'src/composables/useResourceNav'
-import { useDataStore } from 'src/stores/data'
-import { findParentCodeField } from 'src/utils/appHelpers'
+import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
+import { useResourceConfig, isActionVisible } from 'src/composables/resources/useResourceConfig'
+import { useResourceData } from 'src/composables/resources/useResourceData'
+import { useResourceRelationsData } from 'src/composables/resources/useResourceRelationsData'
+import { useReports } from 'src/composables/reports/useReports'
+import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
 const nav = useResourceNav()
-const dataStore = useDataStore()
 const {
   scope, resourceSlug, code, config, resourceName,
   resolvedFields, additionalActions, permissions, customUIName
 } = useResourceConfig()
 
 const { items, loading, reload } = useResourceData(resourceName)
-const { childResources } = useResourceRelations(resourceName)
+const { childResources, childRecordsByResource: childRecords, loadChildRecords: loadRelatedChildren } = useResourceRelationsData(resourceName)
 const {
   isGenerating, showReportDialog, activeReport, reportInputs,
   initiateReport, confirmReportDialog, cancelReportDialog
@@ -108,9 +105,6 @@ const { sections, sectionsReady } = useSectionResolver({
     ViewEmpty: MasterViewEmpty
   }
 })
-
-const childRecords = ref({})
-
 const record = computed(() => {
   if (!code.value || !items.value.length) return null
   return items.value.find((row) => row.Code === code.value) || null
@@ -141,16 +135,7 @@ function navigateToAction(action) {
 }
 
 async function loadChildRecords() {
-  if (!code.value || !childResources.value.length) return
-  for (const child of childResources.value) {
-    try {
-      await dataStore.loadResource(child.name, { includeInactive: true })
-      const parentCodeField = findParentCodeField(child, config.value)
-      childRecords.value[child.name] = dataStore.getRecords(child.name).filter((r) => r[parentCodeField] === code.value)
-    } catch {
-      childRecords.value[child.name] = []
-    }
-  }
+  await loadRelatedChildren(code.value, config.value, { includeInactive: true })
 }
 
 watch(() => resourceName.value, async (n) => { if (n) await reload() }, { immediate: true })

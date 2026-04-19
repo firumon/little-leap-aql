@@ -1,6 +1,6 @@
-import { ref, computed, reactive } from 'vue'
+import { ref } from 'vue'
 import { useQuasar } from 'quasar'
-import { useDataStore } from 'src/stores/data'
+import { useWorkflowStore } from 'src/stores/workflow'
 import { useResourceRelations } from './useResourceRelations'
 
 /**
@@ -10,10 +10,10 @@ import { useResourceRelations } from './useResourceRelations'
  * Usage:
  *   const { parentForm, childGroups, save, ... } = useCompositeForm(resourceConfig)
  */
-export function useCompositeForm(configRef, options = {}) {
+export function useCompositeForm(configRef) {
   const $q = useQuasar()
-  const dataStore = useDataStore()
-  const { childResources, getChildResources } = useResourceRelations(
+  const workflowStore = useWorkflowStore()
+  const { childResources } = useResourceRelations(
     () => (typeof configRef === 'function' ? configRef() : configRef?.value)?.name
   )
 
@@ -72,7 +72,6 @@ export function useCompositeForm(configRef, options = {}) {
   }
 
   function initializeForEdit(record, childRecordsByResource = {}) {
-    const config = getConfig()
     isEdit.value = true
     originalCode.value = record?.Code || ''
     parentForm.value = { ...record }
@@ -215,11 +214,8 @@ export function useCompositeForm(configRef, options = {}) {
 
      saving.value = true
      try {
-       // Import compositeSave locally to avoid module dependency issues at composition level
-       const { compositeSave } = await import('src/services/ResourceRecordsService')
        const payload = buildPayload()
-       const response = await compositeSave(payload)
-       return response
+       return await workflowStore.saveComposite(payload)
      } catch (err) {
        $q.notify({ type: 'negative', message: `Save failed: ${err.message}`, timeout: 3000 })
        return { success: false, message: err.message }
@@ -235,14 +231,11 @@ export function useCompositeForm(configRef, options = {}) {
     saving,
     originalCode,
     statusOptions,
-    getResolvedFields,
-    createEmptyForm,
     initializeForCreate,
     initializeForEdit,
     addChildRecord,
     removeChildRecord,
     updateChildField,
-    validateForm,
     save
   }
 }

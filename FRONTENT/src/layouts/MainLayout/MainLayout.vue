@@ -25,13 +25,13 @@
 
           <q-btn round flat>
             <q-avatar size="32px">
-              <img :src="userAvatar">
+              <img :src="userAvatar" alt="User avatar">
             </q-avatar>
             <q-menu>
               <q-list style="min-width: 150px">
                 <q-item-section class="q-pa-md text-grey-8 bg-grey-2">
-                  <div class="text-weight-bold">{{ auth.userProfile?.name }}</div>
-                  <div class="text-caption">{{ auth.userDesignation || auth.userRole }}</div>
+                  <div class="text-weight-bold">{{ userName }}</div>
+                  <div class="text-caption">{{ userRoleLabel }}</div>
                 </q-item-section>
                 <q-separator />
                 <q-item clickable v-close-popup to="/profile">
@@ -116,128 +116,18 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { useAuthStore } from 'src/stores/auth'
-import { useMenuAccess } from 'src/composables/useMenuAccess'
 import MenuTreeNode from 'src/components/MenuTreeNode.vue'
+import { useMainLayoutNavTree } from 'src/composables/layout/useMainLayoutNavTree'
 
-const auth = useAuthStore()
-const { evaluateMenuAccess } = useMenuAccess()
-const leftDrawerOpen = ref(false)
-
-const groupIconByName = {
-  masters: 'admin_panel_settings',
-  operations: 'swap_horiz',
-  procurement: 'shopping_cart',
-  accounts: 'account_balance',
-  logistics: 'local_shipping',
-  inventory: 'inventory',
-  'sales & orders': 'receipt_long',
-  reports: 'assessment',
-  system: 'settings'
-}
-
-function normalizeText(value) {
-  return (value || '').toString().trim().toLowerCase()
-}
-
-function resolveGroupIcon(groupLabel, resources) {
-  const byName = groupIconByName[normalizeText(groupLabel)]
-  if (byName) return byName
-
-  const withIcon = (resources || []).find((entry) => entry?.navIcon)
-  if (withIcon) return withIcon.navIcon
-
-  return 'menu_open'
-}
-
-function isValidRoute(routePath) {
-  return typeof routePath === 'string' && routePath.trim() !== ''
-}
-
-const userAvatar = computed(() => auth.userProfile?.avatar || 'https://cdn.quasar.dev/img/avatar.png')
-
-const visibleResourceMenuGroups = computed(() => {
-  const resources = Array.isArray(auth.resources) ? auth.resources : []
-  const root = []
-  const seenKeys = new Set()
-
-  resources.forEach((resource) => {
-    const menus = Array.isArray(resource?.ui?.menus) ? resource.ui.menus : []
-    menus.forEach((menu) => {
-      if (menu.show === false || !isValidRoute(menu.route)) return
-      if (!evaluateMenuAccess(resource, menu)) return
-
-      const navLabel = menu.label || resource.name
-      const groupSegments = Array.isArray(menu.group) && menu.group.length > 0
-        ? menu.group
-        : ['General']
-      const groupPath = groupSegments.join('/')
-      const dedupeKey = `${groupPath}::${navLabel}::${menu.route}`
-
-      if (seenKeys.has(dedupeKey)) return
-      seenKeys.add(dedupeKey)
-
-      // Walk / create group nodes along the path
-      let currentChildren = root
-      groupSegments.forEach((segment, idx) => {
-        const pathKey = groupSegments.slice(0, idx + 1).join('/')
-        let groupNode = currentChildren.find((n) => n.type === 'group' && n.key === pathKey)
-        if (!groupNode) {
-          groupNode = {
-            type: 'group',
-            key: pathKey,
-            label: segment,
-            icon: resolveGroupIcon(segment, []),
-            order: 9999,
-            children: []
-          }
-          currentChildren.push(groupNode)
-        }
-        currentChildren = groupNode.children
-      })
-
-      // Add leaf at the deepest level
-      currentChildren.push({
-        type: 'leaf',
-        key: `${resource.name}::${menu.route}`,
-        resource: resource.name,
-        routePath: menu.route,
-        navLabel,
-        navIcon: menu.icon || 'list_alt',
-        order: Number(menu.order || 9999)
-      })
-    })
-  })
-
-  // Sort each level: leaves and groups by order then label
-  function sortNodes(nodes) {
-    nodes.sort((a, b) => {
-      const ao = a.order !== undefined ? a.order : 9999
-      const bo = b.order !== undefined ? b.order : 9999
-      if (ao !== bo) return ao - bo
-      return (a.label || a.navLabel || '').localeCompare(b.label || b.navLabel || '')
-    })
-    nodes.forEach((n) => {
-      if (n.type === 'group') {
-        // Propagate min-order from children so group sorts correctly
-        n.order = n.children.reduce((min, c) => Math.min(min, c.order !== undefined ? c.order : 9999), 9999)
-        sortNodes(n.children)
-      }
-    })
-  }
-  sortNodes(root)
-
-  return root
-})
-
-function toggleLeftDrawer () {
-  leftDrawerOpen.value = !leftDrawerOpen.value
-}
-
-async function handleLogout() {
-  await auth.logout()
-}
+const {
+  leftDrawerOpen,
+  userAvatar,
+  userName,
+  userRoleLabel,
+  visibleResourceMenuGroups,
+  toggleLeftDrawer,
+  handleLogout
+} = useMainLayoutNavTree()
 </script>
 
 <style lang="scss">

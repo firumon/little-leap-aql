@@ -1,0 +1,224 @@
+// ── Empty state ───────────────────────────────────────────────────────────────
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.empty-state__icon {
+  font-size: 48px;
+  color: $border;
+  margin-bottom: 12px;
+}
+
+.empty-state__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: $ink;
+  margin-bottom: 4px;
+}
+
+.empty-state__sub {
+  font-size: 13px;
+  color: $ink-muted;
+  margin-bottom: 16px;
+}
+
+.empty-state__action {
+  display: inline-flex;
+  gap: 6px;
+}
+
+// ── Utility: Field label ───────────────────────────────────────────────────────
+.field-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: $ink-muted;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.field-label__required {
+  color: $negative;
+}
+
+// ── Step indicator ──────────────────────────────────────────────────────────
+.step-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 20px 24px 0;
+}
+
+.step-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.step-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  border: 2px solid rgba(white, 0.25);
+  color: rgba(white, 0.5);
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+
+  &.is-done {
+    background: rgba($secondary, 0.85);
+    border-color: $secondary;
+    color: $primary;
+  }
+
+  &.is-active {
+    background: $secondary;
+    border-color: $secondary;
+    color: $primary;
+  }
+}
+
+.step-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(white, 0.5);
+  white-space: nowrap;
+
+  .is-active ~ &,
+  .step-node.is-active & { color: $secondary; }
+  .step-node.is-done & { color: rgba(white, 0.75); }
+}
+
+.step-line {
+  flex: 1;
+  height: 2px;
+  background: rgba(white, 0.15);
+  margin: 0 8px;
+  margin-bottom: 18px; // visually align to circle centre
+
+  &.is-done { background: rgba($secondary, 0.6); }
+}
+
+// ── Light-surface selector grid ────────────────────────────────────────────
+.sel-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.sel-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 8px;
+  border-radius: $r-sm;
+  border: 1.5px solid $border;
+  background: $surface;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  color: $ink-2;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  user-select: none;
+
+  .sel-btn__icon {
+    font-size: 20px;
+    color: $ink-muted;
+    transition: color 0.15s;
+  }
+
+  &:hover {
+    border-color: $primary-100;
+    background: $primary-50;
+  }
+
+  &.is-active {
+    border-color: var(--sel-color, #{$primary});
+    background: var(--sel-bg, #{$primary-50});
+    color: var(--sel-color, #{$primary});
+    box-shadow: 0 0 0 3px var(--sel-ring, #{$primary-100});
+
+    .sel-btn__icon { color: var(--sel-color, #{$primary}); }
+  }
+}
+
+// Row-direction variant (e.g. priority buttons)
+.sel-btn--row {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+}
+
+// Common column-count modifiers
+.sel-grid--4 { grid-template-columns: repeat(4, 1fr); }
+
+// ── Action bar large buttons (used by wizard pages) ─────────────────────────
+.action-btn-lg {
+  height: 48px;
+  border-radius: 12px !important;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+  flex: 1;
+}
+
+// ── Light-surface warehouse / option chip ───────────────────────────────────
+.wh-chip {
+  display: inline-flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1.5px solid $border;
+  background: #FAFAF7;
+  cursor: pointer;
+  user-select: none;
+  font-family: inherit;
+  min-width: 80px;
+  transition: border-color 150ms, background 150ms;
+
+  &:active { transform: scale(0.96); }
+  &.is-active {
+    border-color: #0F766E;
+    background: #F0FDFA;
+    .wh-chip__name, .wh-chip__code { color: #0F766E; }
+  }
+
+  &__name { font-size: 12px; font-weight: 700; color: $ink; }
+  &__code { font-family: $font-mono; font-size: 10px; color: $ink-muted; margin-top: 1px; }
+}
+
+// ── Pickable list rows (sku/item selection) ─────────────────────────────────
+.pick-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 14px;
+  background: $primary-50;
+  border-bottom: 1px solid $primary-100;
+  font-size: 12px;
+  font-weight: 700;
+  color: $primary;
+}
+
+.pick-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #F2F2EE;
+  transition: background 120ms;
+
+  &.is-selected { background: #F0FDFA; }
+}

@@ -58,7 +58,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { computed, watch } from 'vue'
 import OperationViewHeader from 'components/Operations/_common/OperationViewHeader.vue'
 import OperationViewActionBar from 'components/Operations/_common/OperationViewActionBar.vue'
 import OperationViewDetails from 'components/Operations/_common/OperationViewDetails.vue'
@@ -66,19 +66,22 @@ import OperationViewParent from 'components/Operations/_common/OperationViewPare
 import OperationViewChildren from 'components/Operations/_common/OperationViewChildren.vue'
 import OperationViewLoading from 'components/Operations/_common/OperationViewLoading.vue'
 import OperationViewEmpty from 'components/Operations/_common/OperationViewEmpty.vue'
-import { useSectionResolver } from 'src/composables/useSectionResolver'
-import { useResourceConfig, isActionVisible } from 'src/composables/useResourceConfig'
-import { useResourceData } from 'src/composables/useResourceData'
-import { useResourceRelations } from 'src/composables/useResourceRelations'
-import { useResourceNav } from 'src/composables/useResourceNav'
-import { useDataStore } from 'src/stores/data'
-import { findParentCodeField } from 'src/utils/appHelpers'
+import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
+import { useResourceConfig, isActionVisible } from 'src/composables/resources/useResourceConfig'
+import { useResourceData } from 'src/composables/resources/useResourceData'
+import { useResourceRelationsData } from 'src/composables/resources/useResourceRelationsData'
+import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
 const nav = useResourceNav()
-const dataStore = useDataStore()
 const { scope, resourceSlug, code, config, resourceName, resolvedFields, additionalActions, permissions, customUIName } = useResourceConfig()
 const { items, loading, reload } = useResourceData(resourceName)
-const { parentResource, childResources } = useResourceRelations(resourceName)
+const {
+  parentResource,
+  childResources,
+  childRecordsByResource,
+  parentRecord,
+  loadRelations
+} = useResourceRelationsData(resourceName)
 
 const { sections, sectionsReady } = useSectionResolver({
   resourceSlug,
@@ -104,53 +107,12 @@ const visibleActions = computed(() =>
   additionalActions.value.filter((a) => isActionVisible(a, record.value))
 )
 
-const childRecordsByResource = ref({})
-const parentRecord = ref(null)
-
-async function fetchParentRecord() {
-  if (!parentResource.value || !record.value) {
-    parentRecord.value = null
-    return
-  }
-
-  const parentCodeField = findParentCodeField(config.value, parentResource.value)
-  const pCode = record.value[parentCodeField]
-  if (!pCode) {
-    parentRecord.value = null
-    return
-  }
-
-  try {
-    await dataStore.loadResource(parentResource.value.name, { includeInactive: true })
-    parentRecord.value = dataStore.getRecords(parentResource.value.name).find((r) => r.Code === pCode) || null
-  } catch {
-    parentRecord.value = null
-  }
-}
-
-async function fetchChildren() {
-  const newMap = {}
-  for (const child of childResources.value) {
-    try {
-      await dataStore.loadResource(child.name, { includeInactive: true })
-      const parentCodeField = findParentCodeField(child, config.value)
-      newMap[child.name] = dataStore.getRecords(child.name).filter((r) => r[parentCodeField] === code.value)
-    } catch {
-      newMap[child.name] = []
-    }
-  }
-  childRecordsByResource.value = newMap
-}
-
 watch(
   () => [resourceName.value, code.value],
   async ([nName, nCode]) => {
     if (nName && nCode) {
       await reload()
-      await Promise.all([
-        fetchParentRecord(),
-        fetchChildren()
-      ])
+      await loadRelations(record.value, config.value, { includeInactive: true })
     }
   },
   { immediate: true }

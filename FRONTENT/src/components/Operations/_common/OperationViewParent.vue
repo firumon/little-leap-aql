@@ -43,7 +43,7 @@
 
 <script setup>
 import { computed, ref, watch, markRaw } from 'vue'
-import { useResourceNav } from 'src/composables/useResourceNav'
+import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { humanizeString, toPascalCase, deriveActionStampHeaders, filterParentFields } from 'src/utils/appHelpers'
 
 const nav = useResourceNav()

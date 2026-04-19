@@ -172,236 +172,26 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
-import { useQuasar } from 'quasar'
-import { compositeSave } from 'src/services/ResourceRecordsService'
-import { useStockMovements } from 'src/composables/useStockMovements'
-import { useResourceNav } from 'src/composables/useResourceNav'
-import { useResourceData } from 'src/composables/useResourceData'
+import { usePurchaseRequisitionDraftFlow } from 'src/composables/operations/purchaseRequisitions/usePurchaseRequisitionDraftFlow'
 
-const route = useRoute()
-const nav = useResourceNav()
-const $q = useQuasar()
-const { loadWarehouses } = useStockMovements()
-
-const prCode = route.params.code
-const prForm = ref({})
-const items = ref([])
-const originalItems = ref([])
-const deletedItemCodes = ref([])
-
-const saving = ref(false)
-const submitting = ref(false)
-const loading = ref(true)
-
-const responseComment = ref('')
-
-const warehouses = ref([])
-const warehouseOptions = computed(() => warehouses.value.map(w => ({ label: `${w.Name} (${w.Code})`, value: w.Code })))
-
-const allSkus = ref([])
-const skuOptions = ref([])
-
-const showAddItemDialog = ref(false)
-const newItem = ref({ SKU: null, Quantity: 1, EstimatedRate: 0 })
-
-const itemColumns = [
-  { name: 'SKU', label: 'SKU', field: 'SKU', align: 'left' },
-  { name: 'UOM', label: 'UOM', field: 'UOM', align: 'left' },
-  { name: 'Quantity', label: 'Quantity', field: 'Quantity', align: 'left' },
-  { name: 'EstimatedRate', label: 'Estimated Rate', field: 'EstimatedRate', align: 'left' },
-  { name: 'Total', label: 'Total', field: row => (row.Quantity * row.EstimatedRate).toFixed(2), align: 'left' },
-  { name: 'Actions', label: 'Actions', align: 'right' }
-]
-
-const progressColor = (progress) => {
-  if (progress === 'Draft') return 'grey'
-  if (progress === 'Review') return 'warning'
-  return 'primary'
-}
-
-function goBack() {
-  nav.goTo('list')
-}
-
-const loadData = async () => {
-  loading.value = true
-  try {
-    const prResource = useResourceData(ref('PurchaseRequisitions'))
-    const itemsResource = useResourceData(ref('PurchaseRequisitionItems'))
-    const skusResource = useResourceData(ref('SKUs'))
-
-    await Promise.all([
-        prResource.reload(),
-        itemsResource.reload(),
-        skusResource.reload(),
-        loadWarehouses().then(w => { warehouses.value = w })
-    ])
-
-    const prRecord = prResource.getRecordByCode(prCode)
-
-    if (prRecord) {
-      prForm.value = prRecord
-      if (!['Draft', 'Review'].includes(prForm.value.Progress)) {
-        nav.goTo('view')
-      }
-    } else {
-      $q.notify({ type: 'negative', message: 'PR not found' })
-      nav.goTo('list')
-      return
-    }
-
-    items.value = itemsResource.items.value.filter(i => i.PurchaseRequisitionCode === prCode)
-    originalItems.value = JSON.parse(JSON.stringify(items.value))
-
-    allSkus.value = skusResource.items.value.filter(s => s.Status === 'Active')
-    skuOptions.value = allSkus.value.map(s => ({ label: s.Code, value: s.Code, ...s }))
-
-  } catch (error) {
-    $q.notify({ type: 'negative', message: 'Failed to load PR details' })
-  } finally {
-    loading.value = false
-  }
-}
-
-const filterSkus = (val, update) => {
-  update(() => {
-    const needle = val.toLowerCase()
-    skuOptions.value = allSkus.value.filter(s => s.Code.toLowerCase().includes(needle)).map(s => ({ label: s.Code, value: s.Code, ...s }))
-  })
-}
-
-const confirmAddItem = () => {
-  if (!newItem.value.SKU || newItem.value.Quantity <= 0) {
-    $q.notify({ type: 'warning', message: 'Please select a valid SKU and positive quantity' })
-    return
-  }
-
-  const existing = items.value.find(i => i.SKU === newItem.value.SKU.value)
-  if (existing) {
-    existing.Quantity += newItem.value.Quantity
-  } else {
-    items.value.push({
-      SKU: newItem.value.SKU.value,
-      UOM: newItem.value.SKU.UOM || '',
-      Quantity: newItem.value.Quantity,
-      EstimatedRate: newItem.value.EstimatedRate
-    })
-  }
-
-  showAddItemDialog.value = false
-  newItem.value = { SKU: null, Quantity: 1, EstimatedRate: 0 }
-}
-
-const removeItem = (index) => {
-  const item = items.value[index]
-  if (item.Code) {
-    deletedItemCodes.value.push(item.Code)
-  }
-  items.value.splice(index, 1)
-}
-
-const buildPayload = (targetProgress = prForm.value.Progress) => {
-  const updatedComment = prForm.value.Progress === 'Review' && responseComment.value
-    ? `${prForm.value.ProgressReviewComment || ''}\n[Response]: ${responseComment.value}`
-    : prForm.value.ProgressReviewComment
-
-  const payload = {
-    action: 'compositeSave',
-    resource: 'PurchaseRequisitions',
-    scope: 'operation',
-    code: prCode,
-    data: {
-      Type: prForm.value.Type.value || prForm.value.Type,
-      Priority: prForm.value.Priority.value || prForm.value.Priority,
-      WarehouseCode: prForm.value.WarehouseCode.value || prForm.value.WarehouseCode,
-      RequiredDate: prForm.value.RequiredDate,
-      TypeReferenceCode: prForm.value.TypeReferenceCode,
-      Progress: targetProgress,
-      ProgressReviewComment: updatedComment || ''
-    },
-    children: [
-      {
-        resource: 'PurchaseRequisitionItems',
-        records: []
-      }
-    ]
-  }
-
-  items.value.forEach(item => {
-    payload.children[0].records.push({
-      _action: item.Code ? 'update' : 'create',
-      _originalCode: item.Code || '',
-      data: {
-        SKU: item.SKU,
-        UOM: item.UOM,
-        Quantity: item.Quantity,
-        EstimatedRate: item.EstimatedRate,
-        Status: 'Active'
-      }
-    })
-  })
-
-  deletedItemCodes.value.forEach(code => {
-    payload.children[0].records.push({
-      _action: 'deactivate',
-      _originalCode: code,
-      data: { Status: 'Inactive' }
-    })
-  })
-
-  return payload
-}
-
-const saveDraft = async () => {
-  saving.value = true
-  try {
-    const payload = buildPayload()
-    const response = await compositeSave(payload)
-
-    if (response.success) {
-      $q.notify({ type: 'positive', message: 'Draft saved successfully' })
-      deletedItemCodes.value = []
-      await loadData()
-    }
-  } catch (error) {
-    $q.notify({ type: 'negative', message: 'Failed to save draft: ' + error.message })
-  } finally {
-    saving.value = false
-  }
-}
-
-const submitPR = async () => {
-  if (items.value.length === 0) {
-    $q.notify({ type: 'warning', message: 'Add at least one item before submitting' })
-    return
-  }
-
-  $q.dialog({
-    title: 'Confirm Submit',
-    message: 'Are you sure you want to submit this Purchase Requisition? It will move out of Draft status.',
-    cancel: true,
-    persistent: true
-  }).onOk(async () => {
-    submitting.value = true
-    try {
-      const payload = buildPayload('New')
-      const response = await compositeSave(payload)
-
-      if (response.success) {
-        $q.notify({ type: 'positive', message: 'PR Submitted successfully' })
-        nav.goTo('view')
-      }
-    } catch (error) {
-      $q.notify({ type: 'negative', message: 'Failed to submit PR: ' + error.message })
-    } finally {
-      submitting.value = false
-    }
-  })
-}
-
-onMounted(() => {
-  loadData()
-})
+const {
+  prCode,
+  prForm,
+  items,
+  saving,
+  submitting,
+  responseComment,
+  warehouseOptions,
+  skuOptions,
+  showAddItemDialog,
+  newItem,
+  itemColumns,
+  progressColor,
+  goBack,
+  filterSkus,
+  confirmAddItem,
+  removeItem,
+  saveDraft,
+  submitPR
+} = usePurchaseRequisitionDraftFlow()
 </script>

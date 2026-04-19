@@ -115,12 +115,12 @@ import MasterListReportBar from 'components/Masters/_common/MasterListReportBar.
 import MasterListToolbar from 'components/Masters/_common/MasterListToolbar.vue'
 import MasterListViewSwitcher from 'components/Masters/_common/MasterListViewSwitcher.vue'
 import ReportInputDialog from 'src/components/Masters/ReportInputDialog.vue'
-import { useResourceConfig } from 'src/composables/useResourceConfig'
-import { useResourceData } from 'src/composables/useResourceData'
-import { useReports } from 'src/composables/useReports'
+import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
+import { useResourceData } from 'src/composables/resources/useResourceData'
+import { useReports } from 'src/composables/reports/useReports'
 import { useListViews } from 'src/composables/useListViews'
-import { parseVariantTypes } from 'src/composables/useProductVariants'
-import { useResourceNav } from 'src/composables/useResourceNav.js'
+import { parseVariantTypes } from 'src/composables/masters/products/useProductVariants'
+import { useResourceNav } from 'src/composables/resources/useResourceNav.js'
 
 const nav = useResourceNav()
 

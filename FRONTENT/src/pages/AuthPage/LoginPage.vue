@@ -33,37 +33,9 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
-import { useQuasar } from 'quasar'
-import { useAuthStore } from 'src/stores/auth'
-import { useRouter } from 'vue-router'
+import { useLoginPage } from 'src/composables/layout/useLoginPage'
 
-const $q = useQuasar()
-const auth = useAuthStore()
-const router = useRouter()
-const loading = ref(false)
-
-const loginForm = reactive({
-  identifier: 'f@ll.c',
-  password: '111111'
-})
-
-async function handleLogin() {
-  loading.value = true
-  const result = await auth.login(loginForm.identifier, loginForm.password)
-  loading.value = false
-
-  if (result.success) {
-    $q.notify({
-      type: 'positive',
-      color: 'secondary',
-      message: 'Logged in successfully',
-      position: 'top',
-      timeout: 2000
-    })
-    router.push('/dashboard')
-  }
-}
+const { loginForm, loading, handleLogin } = useLoginPage()
 </script>
 
 <style scoped>

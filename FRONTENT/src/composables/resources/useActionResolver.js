@@ -1,22 +1,22 @@
 import { computed, reactive, watch } from 'vue'
 import { toPascalCase } from 'src/utils/appHelpers'
-import { resolveTieredComponent } from 'src/composables/_resolveTieredComponent'
+import { resolveTieredComponent } from 'src/composables/resources/_resolveTieredComponent'
 
 /**
  * Registries for action-context section overrides.
  * Mirror the ones in useSectionResolver (Vite requires literal glob patterns).
  */
 const mastersEntityModules = import.meta.glob([
-  '../components/Masters/*/*.vue',
-  '!../components/Masters/_custom/**',
-  '!../components/Masters/BulkUpload/**'
+  '../../components/Masters/*/*.vue',
+  '!../../components/Masters/_custom/**',
+  '!../../components/Masters/BulkUpload/**'
 ])
-const mastersCustomModules = import.meta.glob('../components/Masters/_custom/**/*.vue')
+const mastersCustomModules = import.meta.glob('../../components/Masters/_custom/**/*.vue')
 const operationsEntityModules = import.meta.glob([
-  '../components/Operations/*/*.vue',
-  '!../components/Operations/_custom/**'
+  '../../components/Operations/*/*.vue',
+  '!../../components/Operations/_custom/**'
 ])
-const operationsCustomModules = import.meta.glob('../components/Operations/_custom/**/*.vue')
+const operationsCustomModules = import.meta.glob('../../components/Operations/_custom/**/*.vue')
 
 /**
  * Resolves a single action-context section using 5-tier discovery:
@@ -35,14 +35,14 @@ async function resolveActionSection(entityName, sectionName, actionName, default
   const tiers = []
   if (customUIName) {
     if (actionPascal) {
-      tiers.push({ modules: customModules, path: `../components/${folder}/_custom/${customUIName}/${entityName}/Action${sectionName}${actionPascal}.vue` })
+      tiers.push({ modules: customModules, path: `../../components/${folder}/_custom/${customUIName}/${entityName}/Action${sectionName}${actionPascal}.vue` })
     }
-    tiers.push({ modules: customModules, path: `../components/${folder}/_custom/${customUIName}/${entityName}/Action${sectionName}.vue` })
+    tiers.push({ modules: customModules, path: `../../components/${folder}/_custom/${customUIName}/${entityName}/Action${sectionName}.vue` })
   }
   if (actionPascal) {
-    tiers.push({ modules: entityModules, path: `../components/${folder}/${entityName}/Action${sectionName}${actionPascal}.vue` })
+    tiers.push({ modules: entityModules, path: `../../components/${folder}/${entityName}/Action${sectionName}${actionPascal}.vue` })
   }
-  tiers.push({ modules: entityModules, path: `../components/${folder}/${entityName}/Action${sectionName}.vue` })
+  tiers.push({ modules: entityModules, path: `../../components/${folder}/${entityName}/Action${sectionName}.vue` })
 
   return resolveTieredComponent(tiers, defaultComponent)
 }

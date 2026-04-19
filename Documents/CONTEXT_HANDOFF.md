@@ -21,8 +21,9 @@ Read this file only when:
 - A single APP Apps Script project is preferred for runtime behavior.
 - `Config` in APP stores deployment-specific settings such as file IDs.
 - GAS deployment is done with `clasp push`; manual Apps Script copy-paste is not part of the workflow.
-- **Frontend Architecture**: Pinia (`useDataStore`) is the unified, reactive in-memory layer for all record data. IDB is the persistence layer. `localStorage` no longer holds sync cursors; cursors live exclusively in IDB `resource-meta`. Components read only from Pinia, and any IDB writes automatically trigger Pinia updates via a listener pattern.
-- **Frontend Service Layer**: Legacy frontend service/db facades were removed. Canonical entry points are now `ApiClientService.js`, `GasApiService.js`, `IndexedDbService.js`, `ResourceRecordsService.js`, and `ReportService.js`.
+- **Frontend Architecture**: Pinia remains the unified reactive state layer (record state via `useDataStore`, orchestration via dedicated workflow/cache/sync stores). IDB is the persistence layer, and sync cursors live in IDB `resource-meta` (not `localStorage`). Page shells are thin and consume composable view-models instead of importing stores/services directly.
+- **Frontend Service/Boundary Layer**: Frontend now enforces pages -> composables -> stores/services boundaries. Reusable boundaries include app/resource navigation helpers (`useAppNav`, `useResourceNav`), action/page orchestration composables, and sync orchestration (`useResourceSync`). Service contracts are standardized around `{ success, data, error }`, with env-controlled logging via `src/services/_logger.js`.
+- **Composable Structure (2026-04-20)**: `FRONTENT/src/composables/` is now purpose-grouped into `layout/`, `core/`, `resources/`, `operations/`, `masters/products/`, `reports/`, and `upload/`. Purchase Requisition flow composables remain separate entry points under `operations/purchaseRequisitions/`, with shared local helpers extracted for metadata, SKU option shaping, and payload construction.
 
 ## Current Important Constraints
 - Use `Documents/DOC_ROUTING.md` to decide which docs to read for the task.
@@ -42,6 +43,8 @@ Read this file only when:
 - `procurement.gs` handler created for cross-resource progress sync (e.g., auto-creating Procurement on PR submission).
 - Operations 3-tier UI architecture implemented, mirroring Masters but customized for operations context (ViewParent instead of ViewAudit, filtered details).
 - Frontend refactor execution completed for the service/store/page migration plan: pages and composables now consume store actions or new service modules, and the legacy `src/services/apiClient.js`, `src/services/gasApi.js`, `src/services/resourceRecords.js`, and `src/utils/db.js` files were removed.
+- Frontend architecture remediation completed on 2026-04-19: reviewed pages no longer import `src/stores/*` or `src/services/*`, direct page-level `router.push`/`$router.back` usage is removed, frontend source files are under 400 lines, and `npm run build` succeeds.
+- PR/composable reorg plan executed on 2026-04-20: the PR initiate page keeps a direct `formatSkuVariants` import, hero Sass `lighten()` usage has been removed from the targeted hero token/card files, and the current build output shows only separate `darken()` deprecation warnings in other hero partials outside that targeted migration.
 
 ## Deep-Dive References
 - Role boundaries: `Documents/MULTI_AGENT_PROTOCOL.md`

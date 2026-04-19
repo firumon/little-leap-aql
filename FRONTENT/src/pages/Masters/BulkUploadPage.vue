@@ -34,7 +34,7 @@
 
 <script setup>
 import { useQuasar } from 'quasar'
-import { useBulkUpload } from 'src/composables/useBulkUpload'
+import { useBulkUpload } from 'src/composables/upload/useBulkUpload'
 import BulkUploadControlsCard from 'src/components/Masters/BulkUpload/BulkUploadControlsCard.vue'
 import BulkUploadPreviewTable from 'src/components/Masters/BulkUpload/BulkUploadPreviewTable.vue'
 import BulkUploadEmptyState from 'src/components/Masters/BulkUpload/BulkUploadEmptyState.vue'

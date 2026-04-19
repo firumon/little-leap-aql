@@ -10,13 +10,16 @@ import {
   syncMasterResourcesBatch,
   resolveResourceScope,
   fetchResourceRecords as fetchFromService,
+  mapRowsToObjects
+} from 'src/services/ResourceFetchService'
+import {
   createMasterRecord as createFromService,
   updateMasterRecord as updateFromService,
   bulkMasterRecords as bulkFromService,
   compositeSave as compositeSaveFromService,
-  executeAction as executeFromService,
-  mapRowsToObjects
-} from 'src/services/ResourceFetchService'
+  executeAction as executeFromService
+} from 'src/services/ResourceCrudService'
+import { standardizeResponse } from './_logger'
 
 // Wrapper to inject store context into ResourceFetchService
 function getContextFromStore() {
@@ -68,15 +71,21 @@ export async function fetchResourceRecords(resourceName, options = {}) {
     options
   )
 
-  // Adapt response for backward compatibility
-  return {
-    success: response.success,
-    stale: !response.success,
-    message: response.error || '',
+  const normalized = standardizeResponse(response.success, {
     headers: response.data?.headers || [],
     rows: response.data?.rows || [],
     records: response.data?.records || [],
-    meta: response.data?.meta || {}
+    meta: response.data?.meta || {},
+    stale: !response.success
+  }, response.error || '')
+
+  return {
+    ...normalized,
+    stale: normalized.data?.stale || false,
+    headers: normalized.data?.headers || [],
+    rows: normalized.data?.rows || [],
+    records: normalized.data?.records || [],
+    meta: normalized.data?.meta || {}
   }
 }
 
@@ -89,12 +98,12 @@ export async function syncAllMasterResources() {
   })
 
   if (!syncableResources.length) {
-    return { success: true, data: {}, meta: { resources: [], lastSyncAt: Date.now() } }
+    return standardizeResponse(true, { resources: [], recordsByResource: {}, lastSyncAt: Date.now() })
   }
 
   const resourceNames = syncableResources.map((r) => r.name).filter(Boolean)
   if (!resourceNames.length) {
-    return { success: true, data: {}, meta: { resources: [], lastSyncAt: Date.now() } }
+    return standardizeResponse(true, { resources: [], recordsByResource: {}, lastSyncAt: Date.now() })
   }
 
   const byScope = {}
@@ -120,7 +129,11 @@ export async function syncAllMasterResources() {
     }
   }
 
-  return { success: true, data: mergedData, meta: { resources: resourceNames, lastSyncAt: Date.now() } }
+  return standardizeResponse(true, {
+    resources: resourceNames,
+    recordsByResource: mergedData,
+    lastSyncAt: Date.now()
+  })
 }
 
 export async function createMasterRecord(resourceName, record) {

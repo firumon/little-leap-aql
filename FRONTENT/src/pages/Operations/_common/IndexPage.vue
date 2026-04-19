@@ -79,13 +79,13 @@ import OperationListReportBar from 'components/Operations/_common/OperationListR
 import OperationListToolbar from 'components/Operations/_common/OperationListToolbar.vue'
 import OperationListRecords from 'components/Operations/_common/OperationListRecords.vue'
 import OperationListViewSwitcher from 'components/Operations/_common/OperationListViewSwitcher.vue'
-import { useSectionResolver } from 'src/composables/useSectionResolver'
-import { useResourceConfig } from 'src/composables/useResourceConfig'
-import { useResourceData } from 'src/composables/useResourceData'
-import { useResourceRelations } from 'src/composables/useResourceRelations'
-import { useReports } from 'src/composables/useReports'
+import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
+import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
+import { useResourceData } from 'src/composables/resources/useResourceData'
+import { useResourceRelations } from 'src/composables/resources/useResourceRelations'
+import { useReports } from 'src/composables/reports/useReports'
 import { useListViews } from 'src/composables/useListViews'
-import { useResourceNav } from 'src/composables/useResourceNav'
+import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
 const nav = useResourceNav()
 const { scope, resourceSlug, config, resourceName, resourceHeaders, resolvedFields, permissions, customUIName } = useResourceConfig()

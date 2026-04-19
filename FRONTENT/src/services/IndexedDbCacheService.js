@@ -20,7 +20,8 @@ import {
   getFunctionalDraft,
   deleteFunctionalDraft,
   clearAllClientStorage,
-  setAuthorizedResources
+  setAuthorizedResources,
+  reinitializeDB
 } from './IndexedDbService'
 
 const logger = createLogger('IndexedDbCacheService')
@@ -186,6 +187,17 @@ export async function authorizedResourcesSet(resources, resetCursors) {
     return standardizeResponse(true, { set: true })
   } catch (error) {
     logger.error('Authorized resources set failed', { error: error.message })
+    return standardizeResponse(false, null, error.message)
+  }
+}
+
+export async function dbInitialize() {
+  try {
+    logger.debug('Initializing IndexedDB')
+    await reinitializeDB()
+    return standardizeResponse(true, { initialized: true })
+  } catch (error) {
+    logger.error('IndexedDB initialization failed', { error: error.message })
     return standardizeResponse(false, null, error.message)
   }
 }

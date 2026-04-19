@@ -2,14 +2,8 @@ import { computed, ref, toRaw } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
 import { useDataStore } from 'src/stores/data'
-import { bulkMasterRecords } from 'src/services/ResourceRecordsService'
-import {
-  deleteFunctionalDraft,
-  getFunctionalDraft,
-  getResourceMeta,
-  getResourceRows,
-  saveFunctionalDraft
-} from 'src/services/IndexedDbService'
+import { useWorkflowStore } from 'src/stores/workflow'
+import { useClientCacheStore } from 'src/stores/clientCache'
 
 const AUDIT_HEADERS = ['CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy']
 
@@ -17,6 +11,8 @@ export function useBulkUpload() {
   const $q = useQuasar()
   const authStore = useAuthStore()
   const dataStore = useDataStore()
+  const workflowStore = useWorkflowStore()
+  const clientCacheStore = useClientCacheStore()
 
   const selectedResourceName = ref('')
   const rawContent = ref('')
@@ -95,11 +91,12 @@ export function useBulkUpload() {
     headersDisplay.value = selectedResourceHeaders.value.join(', ')
 
     try {
-      const meta = await getResourceMeta(value)
-      const headers = meta?.headers || selectedResourceHeaders.value
+      const metaResponse = await clientCacheStore.getResourceMeta(value)
+      const headers = metaResponse.data?.headers || selectedResourceHeaders.value
       const codeIndex = headers.indexOf('Code')
       if (codeIndex !== -1) {
-        const localRows = await getResourceRows(value)
+        const localRowsResponse = await clientCacheStore.getResourceRows(value)
+        const localRows = localRowsResponse.data || []
         existingCodes.value = new Set(
           localRows.map((row) => (row[codeIndex] || '').toString().trim()).filter(Boolean)
         )
@@ -109,7 +106,8 @@ export function useBulkUpload() {
     }
 
     try {
-      const draft = await getFunctionalDraft(`bulk-upload::${value}`)
+      const draftResponse = await clientCacheStore.getDraft(`bulk-upload::${value}`)
+      const draft = draftResponse.data || null
       if (draft?.data?.rows?.length) {
         rows.value = draft.data.rows
         rawContent.value = draft.data.rawContent || ''
@@ -194,7 +192,7 @@ export function useBulkUpload() {
     if (!draftKey.value) return
     try {
       const plainRows = JSON.parse(JSON.stringify(toRaw(rows.value)))
-      await saveFunctionalDraft(draftKey.value, {
+      await clientCacheStore.saveDraft(draftKey.value, {
         rows: plainRows,
         rawContent: rawContent.value,
         headersDisplay: headersDisplay.value
@@ -209,7 +207,7 @@ export function useBulkUpload() {
     rawContent.value = ''
     csvFile.value = null
     if (draftKey.value) {
-      await deleteFunctionalDraft(draftKey.value).catch(() => {})
+      await clientCacheStore.deleteDraft(draftKey.value).catch(() => {})
     }
   }
 
@@ -223,9 +221,9 @@ export function useBulkUpload() {
         return data
       })
 
-      const response = await bulkMasterRecords(selectedResourceName.value, records)
+      const response = await workflowStore.uploadBulkRecords(selectedResourceName.value, records)
       if (!response.success) {
-        $q.notify({ color: 'negative', message: response.message || 'Bulk upload failed', icon: 'error' })
+        $q.notify({ color: 'negative', message: response.error || response.message || 'Bulk upload failed', icon: 'error' })
         return { success: false, response }
       }
 
@@ -234,7 +232,7 @@ export function useBulkUpload() {
         return { success: false, response }
       }
 
-      const { created = 0, updated = 0, errors = [] } = response.data || {}
+       const { created = 0, updated = 0, errors = [] } = response.data || {}
       let message = `Done: ${created} created, ${updated} updated.`
       if (errors.length) message += ` ${errors.length} errors.`
 

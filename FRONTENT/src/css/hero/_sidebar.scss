@@ -1,0 +1,111 @@
+// ══════════════════════════════════════════════════════════════════════════════
+// NAVIGATION SIDEBAR
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Applied to q-drawer element — overrides Quasar's bg-white
+.nav-drawer {
+  background: $primary !important;
+
+  // Logo block at the top of the drawer
+  .nav-logo {
+    padding: 24px 20px 18px;
+    border-bottom: 1px solid rgba(white, 0.08);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .nav-logo__mark {
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, $secondary 0%, #B68A2D 100%);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+
+  .nav-logo__title {
+    font-size: 18px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.5px;
+    line-height: 1.2;
+  }
+
+  .nav-logo__subtitle {
+    font-size: 10px;
+    color: rgba(white, 0.45);
+    letter-spacing: 0.5px;
+  }
+
+  // Section group labels (Masters, Operations, etc.)
+  .q-item-label[header] {
+    font-size: 9px !important;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 700;
+    color: rgba(white, 0.35) !important;
+    padding: 16px 20px 6px;
+  }
+
+  // All nav items inside the drawer
+  .q-item {
+    border-radius: 0 $r-xl $r-xl 0;
+    margin-right: 12px;
+    color: rgba(white, 0.65);
+    font-size: 13px;
+    font-weight: 500;
+    min-height: 40px;
+    padding: 10px 20px;
+    transition: background 120ms, color 120ms;
+
+    .q-item__section--avatar {
+      min-width: 32px;
+      color: inherit;
+
+      .q-icon {
+        font-size: 18px;
+        color: inherit;
+        transition: text-shadow 120ms;
+      }
+    }
+
+    &:hover {
+      background: rgba(white, 0.07) !important;
+      color: #fff !important;
+    }
+
+    // Active / current route
+    &.q-router-link--active,
+    &.router-link-exact-active {
+      background: rgba($secondary, 0.18) !important;
+      color: $secondary !important;
+      font-weight: 600;
+      border-right: 2px solid $secondary;
+
+      .q-icon {
+        color: $secondary !important;
+        text-shadow: 0 0 6px rgba($secondary, 0.60);
+      }
+    }
+  }
+
+  // Expansion item (group header) inside dark drawer
+  .q-expansion-item {
+    .q-item {
+      color: rgba(white, 0.65);
+    }
+
+    &--expanded > .q-item {
+      color: #fff;
+    }
+  }
+
+  // Separator between nav sections
+  .q-separator {
+    background: rgba(white, 0.08) !important;
+  }
+}
+
+

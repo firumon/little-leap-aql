@@ -1,6 +1,6 @@
 import { ref, computed, reactive } from 'vue'
 import { useQuasar } from 'quasar'
-import { compositeSave } from 'src/services/ResourceRecordsService'
+import { useDataStore } from 'src/stores/data'
 import { useResourceRelations } from './useResourceRelations'
 
 /**
@@ -12,6 +12,7 @@ import { useResourceRelations } from './useResourceRelations'
  */
 export function useCompositeForm(configRef, options = {}) {
   const $q = useQuasar()
+  const dataStore = useDataStore()
   const { childResources, getChildResources } = useResourceRelations(
     () => (typeof configRef === 'function' ? configRef() : configRef?.value)?.name
   )
@@ -209,21 +210,23 @@ export function useCompositeForm(configRef, options = {}) {
       }))
   }
 
-  async function save() {
-    if (!validateForm()) return { success: false }
+   async function save() {
+     if (!validateForm()) return { success: false }
 
-    saving.value = true
-    try {
-      const payload = buildPayload()
-      const response = await compositeSave(payload)
-      return response
-    } catch (err) {
-      $q.notify({ type: 'negative', message: `Save failed: ${err.message}`, timeout: 3000 })
-      return { success: false, message: err.message }
-    } finally {
-      saving.value = false
-    }
-  }
+     saving.value = true
+     try {
+       // Import compositeSave locally to avoid module dependency issues at composition level
+       const { compositeSave } = await import('src/services/ResourceRecordsService')
+       const payload = buildPayload()
+       const response = await compositeSave(payload)
+       return response
+     } catch (err) {
+       $q.notify({ type: 'negative', message: `Save failed: ${err.message}`, timeout: 3000 })
+       return { success: false, message: err.message }
+     } finally {
+       saving.value = false
+     }
+   }
 
   return {
     parentForm,

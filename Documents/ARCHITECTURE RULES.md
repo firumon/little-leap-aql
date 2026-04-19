@@ -1,8 +1,8 @@
-## ARCHITECTURE RULES (STRICT)
+# AQL Frontend Architecture Rules (STRICT)
 
 ---
 
-### 1. SERVICES LAYER:
+## 1. SERVICES LAYER
 
 * ALL API requests MUST exist ONLY inside services
 
@@ -19,49 +19,108 @@
 
 * All offline/online sync, queue handling, and persistence logic MUST be handled ONLY inside services
 
-* Ensure NO duplication or conflicting sync logic
+* Ensure:
 
-* Ensure existing sync flow is preserved and improved (NOT broken)
+    * NO duplication of sync logic
+    * Existing sync flow is preserved (NOT broken)
 
-* Logging must be implemented inside services for critical operations
+### Logging
 
-* Logging must be controlled via environment variable (e.g., `process.env.ENABLE_LOGS`)
+* Logging MUST exist inside services for critical operations
 
-    * Must support enabling/disabling logs without code changes
+* Logging MUST be controlled via environment variable:
+  `process.env.ENABLE_LOGS`
+
+* Must support enabling/disabling logs without code changes
 
 ---
 
-### 2. STORES (Pinia):
+## 2. UTILITIES (appHelpers)
+
+* `src/utils/appHelpers.js` is the central place for all stateless reusable helper functions
+
+### Examples
+
+* `toPascalCase()`
+* `mapHeaderAndArray()`
+
+### Rules
+
+* Helpers MUST be:
+
+    * Stateless
+    * Pure functions
+    * Side-effect free
+
+* Helpers CAN be used in:
+
+    * services
+    * stores
+    * composables
+    * components
+
+* DO NOT duplicate helper logic
+
+* If reusable logic is found → MUST move to `appHelpers`
+
+### Restrictions
+
+Helpers MUST NOT:
+
+* Call APIs
+* Access IDB
+* Contain business workflows
+* Contain UI logic
+
+---
+
+## 3. STORES (Pinia)
 
 * Stores can use services
+
 * Stores can use other stores
-* Stores are the SINGLE SOURCE OF TRUTH for application data
 
-#### DATA STORE RESPONSIBILITY (CRITICAL):
+* Stores are the **SINGLE SOURCE OF TRUTH**
 
-* A central data store at stores/data.js (e.g., `useDataStore`) is allowed
+---
 
-* It MUST:
+### DATA STORE RESPONSIBILITY (CRITICAL)
 
-    * Call services for ALL API operations (GET, POST, UPDATE, BULK)
-    * Update in-memory state
-    * Persist and hydrate data via IDB (through services only)
-    * Maintain normalized structure (e.g., headers + rows)
+A central store, stores/data.js (e.g., `useDataStore`) is allowed.
 
-* It MUST NOT:
+#### MUST:
 
-    * Contain business logic
-    * Perform validation rules
-    * Implement workflows
-    * Contain UI logic
+* Call services for ALL API operations:
 
-* Store acts as:
+    * GET
+    * POST
+    * UPDATE
+    * BULK
 
-    * Data transport coordinator
-    * State manager
-    * Persistence handler
+* Update in-memory state
 
-#### GENERAL STORE RULES:
+* Persist + hydrate via IDB (through services only)
+
+* Maintain normalized structure (e.g., headers + rows)
+
+#### MUST NOT:
+
+* Contain business logic
+* Perform validations
+* Implement workflows
+* Contain UI logic
+
+#### ROLE:
+
+Store acts as:
+
+* Data transport coordinator
+* State manager
+* Persistence handler
+
+---
+
+### GENERAL STORE RULES
 
 * Stores manage:
 
@@ -72,7 +131,7 @@
 
 ---
 
-### 3. COMPOSABLES:
+## 4. COMPOSABLES
 
 * Can use stores
 
@@ -82,108 +141,169 @@
 
 * MUST NOT perform API/IDB operations
 
+---
+
+### RESPONSIBILITY
+
 * ALL business logic MUST live here
 
-* Composables are responsible for:
+Includes:
 
-    * Validation
-    * Workflow handling
-    * Payload preparation before store calls
-
-* Logic must be split into SMALL reusable composables
-
-* Avoid large or monolithic composables
+* Validation
+* Workflow handling
+* Payload preparation
 
 ---
 
-### 4. COMPONENTS:
+### STRUCTURE
+
+* Logic MUST be split into SMALL reusable composables
+* Avoid monolithic composables
+
+---
+
+### NAVIGATION RULE (CRITICAL)
+
+* ALL navigation MUST go through `useResourceNav`
+
+* Direct `router.push()` usage is NOT allowed
+
+* Navigation MUST respect:
+
+    * `useSectionResolver`
+    * `useActionResolver`
+
+* Ensures:
+
+    * Consistent routing
+    * Correct scope/resourceSlug/code handling
+    * Cross-resource navigation
+
+---
+
+## 5. COMPONENTS
 
 * Can ONLY use composables
 
-* MUST NOT use:
+---
 
-    * services
-    * stores directly
-    * API calls
-    * IDB operations
+### RESTRICTIONS
+
+Components MUST NOT use:
+
+* services
+* stores directly
+* API calls
+* IDB operations
+
+---
+
+### RESPONSIBILITY
+
+* UI rendering only
+
+* Connect composables
 
 * MUST NOT contain business logic
 
-* MUST be thin UI layers only
-
 ---
 
-### 5. SIDE EFFECT RULE:
+## 6. SIDE EFFECT RULE
 
 * Only stores and composables may contain side effects
-* Components must remain side-effect free
+* Components MUST remain side-effect free
 
 ---
 
-### 6. LOGIC DISTRIBUTION:
+## 7. LOGIC DISTRIBUTION
 
 * ALL business logic MUST be in composables
-* Ensure no duplication of logic across composables/stores
-* Ensure proper separation of concerns
+
+* Ensure:
+
+    * No duplication across layers
+    * Clear separation of concerns
 
 ---
 
-### 7. COMPONENT DESIGN:
+## 8. COMPONENT DESIGN
 
-* Components must be minimal
+* Components MUST be minimal
 
-* Only responsible for:
+* Responsible only for:
 
-    * UI rendering
-    * connecting composables
+    * UI
+    * invoking composables
 
-* No heavy logic inside components
+* No heavy logic allowed
 
 ---
 
-### 8. STYLING RULES:
+## 9. STYLING RULES
 
-* Prefer Quasar utility classes
+* Prefer Quasar utility classes first
 
-* Shared styles → move to `css/custom.scss`
+---
 
-* Ensure `custom.scss` is imported globally via `app.scss`
+### SHARED STYLE STRATEGY
+
+* Common styles MUST be defined in:
+  `src/css/custom.scss`
+
+* `custom.scss` MUST be globally imported via:
+  `app.scss`
+
+---
+
+### PRIORITY ORDER
+
+1. Quasar utility classes
+2. Shared styles (`custom.scss`)
+3. Component styles (last resort)
+
+---
+
+### RESTRICTIONS
+
+* DO NOT duplicate styles across components
 
 * Component styles ONLY if:
 
     * strictly component-specific
-    * not reusable anywhere else
+    * not reusable
 
 ---
 
-### 9. NAMING CONVENTIONS (ENFORCE):
+## 10. NAMING CONVENTIONS (STRICT)
 
-* Stores: `useXStore`
-* Composables: `useX`
-* Services: `XService`
-
-Refactor any violations
+* Stores → `useXStore`
+* Composables → `useX`
+* Services → `XService`
 
 ---
 
-### 10. FILE SIZE RULE:
+## 11. FILE SIZE RULE
 
 * No file should exceed ~400 lines
-* If exceeded → must be split logically
+
+* If exceeded:
+  → MUST be split logically
 
 ---
 
-### 11. REFACTOR FREEDOM:
+## 12. REFACTOR FREEDOM
 
 You are allowed to:
 
 * Move code across layers
 * Split files
 * Merge files
-* Create new files (services/composables/stores/components)
-* Delete unnecessary or redundant files
+* Create new files
+* Delete unnecessary files
 
-Optimize for:
+---
+
+### OPTIMIZE FOR:
 
 * clarity
 * maintainability
@@ -192,111 +312,91 @@ Optimize for:
 
 ---
 
-## REVIEW INSTRUCTIONS
+# REVIEW INSTRUCTIONS
 
-1. Analyze the FULL codebase (ALL files)
-
+1. Analyze FULL codebase
 2. Enforce ALL rules strictly
-
-3. Identify:
-
-    * Architecture violations
-    * Misplaced logic
-    * Direct API/IDB usage outside services
-    * Incorrect layer usage
-    * Sync/queue inconsistencies or duplication
-    * Missing logging or improper logging control
-    * Missing standardized service responses
-    * Naming violations
-    * Large files needing split
-    * Styling violations
-
-4. Be EXTREMELY STRICT
-
-5. Do NOT modify code
-
-6. Produce ONLY structured report
 
 ---
 
-## OUTPUT FORMAT (STRICT)
+### Identify:
 
-### 1. Overall Architecture Health
+* Architecture violations
+* Misplaced logic
+* Direct API/IDB usage outside services
+* Incorrect layer usage
+* Sync/queue duplication
+* Missing logging
+* Missing standardized responses
+* Naming violations
+* Oversized files
+* Styling violations
 
-* Rating: Excellent / Good / Moderate / Poor
-* Key Problems Summary
+---
+
+### RULES
+
+* Be EXTREMELY STRICT
+* Do NOT modify code
+* Produce structured report only
+
+---
+
+# OUTPUT FORMAT
+
+## 1. Overall Architecture Health
+
+* Rating
+* Key Problems
 * Risk Level
 
 ---
 
-### 2. Global Violations
-
-(List repeated issues across the codebase)
+## 2. Global Violations
 
 ---
 
-### 3. File-by-File Action Plan
+## 3. File-by-File Action Plan
 
-For EACH affected file:
+File: `<path>`
 
-File: `<full path>`
-
-Current Issue:
-
-* <exact violation>
-
-Required Action:
-
-* <clear actionable fix>
-
-Refactor Type:
-
-* Move / Split / Merge / Delete / Create
-
-Target Location:
-
-* <where code should go>  
-
-Priority:
-
-* High / Medium / Low
+* Issue
+* Action
+* Refactor Type
+* Target
+* Priority
 
 ---
 
-### 4. New Files to be Created
-
-(List required new services/composables/stores/components)
+## 4. New Files
 
 ---
 
-### 5. Files to be Removed or Merged
-
-(List unnecessary or redundant files)
+## 5. Files to Remove/Merge
 
 ---
 
-### 6. Step-by-Step Refactoring Plan
+## 6. Refactoring Plan
 
-Provide SAFE execution steps:
-
-1. Step 1
-2. Step 2
-3. Step 3
+Step-by-step execution plan
 
 ---
 
-## IMPORTANT RULES
+# IMPORTANT RULES
 
-* Mention EVERY affected file explicitly
-* Do NOT skip files
-* Do NOT give generic advice
-* Output must be directly executable by developers
-* Focus ONLY on actionable tasks
-* Preserve existing working flow while improving structure
-* DO NOT break current sync/data flow
+* Mention EVERY affected file
+* Do NOT skip
+* No generic advice
+* Output must be actionable
+* Preserve current working flow
+* DO NOT break sync/data flow
 
 ---
 
-## FINAL GOAL
+# FINAL GOAL
 
-Transform the codebase into a strictly layered, scalable, maintainable architecture with clean separation of concerns, consistent data flow, and zero ambiguity.
+A strictly layered, scalable, maintainable architecture with:
+
+* Clear separation of concerns
+* Consistent data flow
+* Zero ambiguity

@@ -2,7 +2,6 @@ import { ref, computed, watch, unref } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
 import { useDataStore } from 'src/stores/data'
-import { upsertResourceRows } from 'src/services/IndexedDbService'
 
 /**
  * Manages data loading, search, and filtering for a resource.

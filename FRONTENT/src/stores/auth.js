@@ -1,14 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { Notify, Loading } from 'quasar'
-import { executeGasApi } from 'src/services/GasApiService'
-import { syncAllMasterResources } from 'src/services/ResourceRecordsService'
-import { clearAllClientStorage, setAuthorizedResources, reinitializeDB } from 'src/services/IndexedDbService'
+import { Notify } from 'quasar'
 
 export const useAuthStore = defineStore('auth', () => {
-  const router = useRouter()
-
   // State
   const auth = ref({
     resources: JSON.parse(localStorage.getItem('resources')) || []
@@ -51,23 +45,58 @@ export const useAuthStore = defineStore('auth', () => {
     }
   })
 
-  function persistUser() {
-    localStorage.setItem('user', JSON.stringify(user.value))
+  // Backward compatibility: delegate to useAuthLogic composable on-demand
+  async function login(email, password) {
+    loading.value = true
+    try {
+      const { useAuthLogic } = await import('src/composables/useAuthLogic')
+      const { login: loginFn } = useAuthLogic()
+      const result = await loginFn(email, password)
+      return result
+    } catch (error) {
+      Notify.create({ type: 'negative', message: 'Login failed: ' + error.message })
+      return { success: false, message: error.message }
+    } finally {
+      loading.value = false
+    }
   }
 
-  function persistResources() {
-    localStorage.setItem('resources', JSON.stringify(resources.value))
+  async function updateAvatar(avatarUrl) {
+    const { useAuthLogic } = await import('src/composables/useAuthLogic')
+    const { updateAvatar: updateFn } = useAuthLogic()
+    return updateFn(avatarUrl)
   }
 
-  function persistAppConfig() {
-    localStorage.setItem('appConfig', JSON.stringify(appConfig.value || {}))
+  async function updateName(name) {
+    const { useAuthLogic } = await import('src/composables/useAuthLogic')
+    const { updateName: updateFn } = useAuthLogic()
+    return updateFn(name)
   }
 
-  function persistAppOptions() {
-    localStorage.setItem('appOptions', JSON.stringify(appOptions.value || {}))
+  async function updateEmail(email) {
+    const { useAuthLogic } = await import('src/composables/useAuthLogic')
+    const { updateEmail: updateFn } = useAuthLogic()
+    return updateFn(email)
   }
 
-  // Actions
+  async function updatePassword(currentPassword, newPassword) {
+    const { useAuthLogic } = await import('src/composables/useAuthLogic')
+    const { updatePassword: updateFn } = useAuthLogic()
+    return updateFn(currentPassword, newPassword)
+  }
+
+  async function logout() {
+    const { useAuthLogic } = await import('src/composables/useAuthLogic')
+    const { logout: logoutFn } = useAuthLogic()
+
+    // Call composable cleanup
+    await logoutFn()
+
+    // Navigate to login - use window.location for reliability
+    // (No Vue context needed, works from anywhere)
+    window.location.href = '/login'
+  }
+
   function notifyServiceWorker(authToken) {
     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
       navigator.serviceWorker.controller.postMessage({
@@ -86,174 +115,9 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function callAuthApi(action, payload = {}, options = {}) {
-    const {
-      requireAuth = true,
-      showLoading = false,
-      loadingMessage = 'Processing...',
-      successMessage = null,
-      showError = true
-    } = options
-
-    if (showLoading) {
-      Loading.show({ message: loadingMessage })
-    }
-
-    const response = await executeGasApi(action, payload, {
-      requireAuth,
-      token: token.value
-    })
-
-    if (showLoading) {
-      Loading.hide()
-    }
-
-    if (!response.success && showError) {
-      Notify.create({ type: 'negative', message: response.message || 'Action failed' })
-    } else if (response.success && successMessage) {
-      Notify.create({ type: 'positive', message: successMessage })
-    }
-
-    return response
-  }
-
-  async function login(email, password) {
-    loading.value = true
-    try {
-      const data = await callAuthApi('login', { email, password }, { requireAuth: false })
-
-      if (data.success) {
-        token.value = data.token
-        user.value = data.user
-        resources.value = Array.isArray(data.resources) ? data.resources : []
-        appConfig.value = data?.appConfig && typeof data.appConfig === 'object' ? data.appConfig : {}
-        appOptions.value = data?.appOptions && typeof data.appOptions === 'object' ? data.appOptions : {}
-
-        // Persist to local storage
-        localStorage.setItem('token', data.token)
-        persistUser()
-        persistResources()
-        persistAppConfig()
-        persistAppOptions()
-
-        // Sync token to HW if possible
-        notifyServiceWorker(data.token)
-
-        // Background tasks for IndexedDB
-        // We don't await these to prevent login from hanging if IDB is slow
-        setAuthorizedResources(resources.value, true).catch(err => console.warn('IDB sync error:', err))
-        reinitializeDB().catch(err => console.warn('DB init error:', err))
-
-        isGlobalSyncing.value = true
-        Promise.resolve(syncAllMasterResources())
-          .catch((err) => {
-            console.warn('Global master sync error:', err)
-          })
-          .finally(() => {
-            isGlobalSyncing.value = false
-          })
-
-        return { success: true }
-      }
-
-      return { success: false, message: data.message || 'Login failed' }
-    } catch (error) {
-      return { success: false, message: error?.message || 'Login failed' }
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function updateAvatar(avatarUrl) {
-    const data = await callAuthApi('updateAvatar', { avatarUrl }, {
-      showLoading: true,
-      loadingMessage: 'Updating avatar...',
-      successMessage: 'Avatar updated successfully'
-    })
-    if (!data.success) {
-      return { success: false, message: data.message || 'Failed to update avatar' }
-    }
-
-    if (user.value) {
-      user.value.avatar = data.avatarUrl || avatarUrl
-      persistUser()
-    }
-
-    return { success: true }
-  }
-
-  async function updateName(name) {
-    const data = await callAuthApi('updateName', { name }, {
-      showLoading: true,
-      loadingMessage: 'Updating name...',
-      successMessage: 'Name updated successfully'
-    })
-    if (!data.success) {
-      return { success: false, message: data.message || 'Failed to update name' }
-    }
-
-    if (user.value) {
-      user.value.name = data.name || name
-      persistUser()
-    }
-
-    return { success: true }
-  }
-
-  async function updateEmail(email) {
-    const data = await callAuthApi('updateEmail', { email }, {
-      showLoading: true,
-      loadingMessage: 'Updating email...',
-      successMessage: 'Email updated successfully'
-    })
-    if (!data.success) {
-      return { success: false, message: data.message || 'Failed to update email' }
-    }
-
-    if (user.value) {
-      user.value.email = data.email || email
-      persistUser()
-    }
-
-    return { success: true }
-  }
-
-  async function updatePassword(currentPassword, newPassword) {
-    const data = await callAuthApi('updatePassword', { currentPassword, newPassword }, {
-      showLoading: true,
-      loadingMessage: 'Updating password...',
-      successMessage: 'Password updated successfully'
-    })
-    if (!data.success) {
-      return { success: false, message: data.message || 'Failed to update password' }
-    }
-
-    return { success: true }
-  }
-
-  async function logout() {
-    // 1. Clear in-memory state first so UI reacts immediately
-    user.value = null
-    token.value = null
-    resources.value = []
-    appConfig.value = {}
-    appOptions.value = {}
-    isGlobalSyncing.value = false
-
-    // 2. Perform navigation as soon as possible
-    if (router) {
-      router.push('/login').catch(() => {})
-    } else {
-      window.location.hash = '/login'
-    }
-
-    // 3. Cleanup storage in background
-    try {
-      notifyServiceWorker(null)
-      closeDBInServiceWorker()
-      await clearAllClientStorage()
-    } catch (e) {
-      console.warn('Logout cleanup error:', e)
-    }
+    const { useAuthLogic } = await import('src/composables/useAuthLogic')
+    const { callAuthApi: callFn } = useAuthLogic()
+    return callFn(action, payload, options)
   }
 
   return {
@@ -286,6 +150,7 @@ export const useAuthStore = defineStore('auth', () => {
     updatePassword,
     logout,
     notifyServiceWorker,
+    closeDBInServiceWorker,
     callAuthApi
   }
 })

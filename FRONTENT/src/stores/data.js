@@ -3,6 +3,7 @@ import { reactive, watch } from 'vue'
 import { useAuthStore } from './auth'
 import { onRowsUpserted, getResourceRows } from 'src/services/IndexedDbService'
 import { fetchResourceRecords } from 'src/services/ResourceRecordsService'
+import { rowsUpsert, metaSet } from 'src/services/IndexedDbCacheService'
 
 function rowsToObjects(headers = [], rows = []) {
   return rows.map((row) => {
@@ -151,6 +152,43 @@ export const useDataStore = defineStore('data', () => {
     { immediate: true }
   )
 
+  // NEW: Store action to update rows from IDB sync (standardized response format)
+  async function updateRowsFromSync(resourceName, headers, rows) {
+    ensureResourceState(resourceName)
+    if (Array.isArray(rows) && rows.length) {
+      replaceRows(resourceName, rows)
+      if (Array.isArray(headers) && headers.length) {
+        headers[resourceName] = headers
+      }
+      return { success: true, updated: rows.length }
+    }
+    return { success: true, updated: 0 }
+  }
+
+  // NEW: Cache rows via new service (wrapping IDB persistence)
+  async function cacheResourceRows(resourceName, headerArray, newRows) {
+    try {
+      const response = await rowsUpsert(resourceName, headerArray, newRows)
+      if (response.success) {
+        setRows(resourceName, newRows)
+        return { success: true, affected: response.data?.affected }
+      }
+      return response
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  }
+
+  // NEW: Set resource metadata via new service
+  async function setResourceMetadata(resourceName, meta) {
+    try {
+      const response = await metaSet(resourceName, meta)
+      return response
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  }
+
   return {
     headers,
     rows,
@@ -164,6 +202,9 @@ export const useDataStore = defineStore('data', () => {
     seedResourceFromCache,
     seedAuthorizedResources,
     loadResource,
-    syncResource
+    syncResource,
+    updateRowsFromSync,
+    cacheResourceRows,
+    setResourceMetadata
   }
 })

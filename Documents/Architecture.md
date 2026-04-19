@@ -54,14 +54,18 @@ graph TD
 ## Frontend Boundaries
 - `stores/auth.js`
   - session, user, resource catalog, app config/options
+- `stores/data.js`
+  - canonical in-memory owner of resource headers/rows, hydration, and sync-facing updates
 - `layouts/MainLayout`
   - menu rendering from authorized resource metadata
 - `router`
   - route guards based on auth/resource access
-- `services/gasApi.js`
-  - single frontend entry point for backend requests
-- `services/masterRecords.js`
-  - cache-aware master data sync/read helpers
+- `services/GasApiService.js`
+  - side-effect-free transport layer for backend requests
+- `services/IndexedDbService.js`
+  - IndexedDB persistence and metadata storage
+- `services/ResourceRecordsService.js`
+  - cache-first resource reads, TTL-based sync orchestration, and grouped scope sync
 
 ## Key Interaction Flows
 
@@ -74,15 +78,16 @@ graph TD
 Detailed login contract: [LOGIN_RESPONSE.md](F:/LITTLE%20LEAP/AQL/Documents/LOGIN_RESPONSE.md)
 
 ### Generic Resource Read/Write
-1. Frontend calls `callGasApi(...)`.
+1. Frontend calls a service-layer action such as `executeGasApi(...)`, `fetchResourceRecords(...)`, or a store action backed by those services.
 2. `apiDispatcher.gs` validates auth and routes by action/scope.
 3. `resourceRegistry.gs` resolves resource metadata and target file/sheet.
 4. `masterApi.gs` applies permission, region, validation, and hook logic.
 
 ### Cache-First Master Experience
-1. Frontend reads cached rows from IndexedDB.
-2. If needed, frontend sends an incremental sync request using the stored cursor.
-3. Response rows are merged back into IndexedDB and UI state.
+1. `useDataStore` hydrates cached rows from IndexedDB first.
+2. `ResourceRecordsService` decides whether a sync is needed based on TTL, hydration state, and stored cursor metadata.
+3. Response rows are merged into IndexedDB.
+4. IndexedDB upsert listeners refresh Pinia state so components keep reading from the store only.
 
 ## Canonical Detail Owners
 - Login payload: [LOGIN_RESPONSE.md](F:/LITTLE%20LEAP/AQL/Documents/LOGIN_RESPONSE.md)

@@ -288,14 +288,15 @@ import { fetchResourceRecords } from 'src/services/resourceRecords'
 import { callGasApi } from 'src/services/gasApi'
 import { useResourceNav } from 'src/composables/useResourceNav'
 import { useAuthStore } from 'src/stores/auth'
-import { useDataStore } from 'src/stores/data'
+import { useResourceData } from 'src/composables/useResourceData'
 import { formatSkuVariants, todayIsoSlash, todayLongLabel } from 'src/utils/appHelpers'
 
 const $q = useQuasar()
 const nav = useResourceNav()
 const { loadWarehouses } = useStockMovements()
 const auth = useAuthStore()
-const dataStore = useDataStore()
+const prResource = useResourceData(ref('PurchaseRequisitions'))
+const itemResource = useResourceData(ref('PurchaseRequisitionItems'))
 
 const steps = [
   { n: 1, key: 'setup', label: 'Setup' },
@@ -498,8 +499,8 @@ const savePR = async () => {
       createdCode.value = saveResult.data.parentCode
 
       const { upsertResourceRows } = await import('src/utils/db')
-      const prHeaders   = dataStore.headers['PurchaseRequisitions'] || []
-      const itemHeaders = dataStore.headers['PurchaseRequisitionItems'] || []
+      const prHeaders   = prResource.lastHeaders.value || []
+      const itemHeaders = itemResource.lastHeaders.value || []
       if (prResult?.rows?.length   && prHeaders.length)   await upsertResourceRows('PurchaseRequisitions', prHeaders, prResult.rows)
       if (itemResult?.rows?.length && itemHeaders.length) await upsertResourceRows('PurchaseRequisitionItems', itemHeaders, itemResult.rows)
 

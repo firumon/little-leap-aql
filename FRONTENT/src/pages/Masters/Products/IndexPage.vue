@@ -121,13 +121,12 @@ import { useReports } from 'src/composables/useReports'
 import { useListViews } from 'src/composables/useListViews'
 import { parseVariantTypes } from 'src/composables/useProductVariants'
 import { useResourceNav } from 'src/composables/useResourceNav.js'
-import { useDataStore } from 'src/stores/data'
 
 const nav = useResourceNav()
-const dataStore = useDataStore()
 
 const { config, resourceName, resourceHeaders, permissions } = useResourceConfig()
 const { items, loading, backgroundSyncing, searchTerm, reload } = useResourceData(resourceName)
+const skusResource = useResourceData(ref('SKUs'))
 const { isGenerating, showReportDialog, activeReport, reportInputs, initiateReport, confirmReportDialog, cancelReportDialog } = useReports(resourceName)
 
 const configuredListViews = computed(() => config.value?.ui?.listViews || [])
@@ -141,7 +140,7 @@ const { effectiveViews, activeViewName, viewCounts, viewFilteredItems, setActive
   enableUrlSync: false
 })
 
-const skuRecords = computed(() => dataStore.getRecords('SKUs'))
+const skuRecords = skusResource.items
 
 const skuCountByProduct = computed(() => {
   const result = {}
@@ -186,7 +185,7 @@ async function reloadAll(forceSync = false) {
   // and for SKUs separately.
   await Promise.all([
     reload(forceSync),
-    useResourceData(ref('SKUs')).reload(forceSync)
+    skusResource.reload(forceSync)
   ])
 }
 

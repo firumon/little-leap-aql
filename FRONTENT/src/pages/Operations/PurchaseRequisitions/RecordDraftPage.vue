@@ -179,12 +179,10 @@ import { callGasApi } from 'src/services/gasApi'
 import { useStockMovements } from 'src/composables/useStockMovements'
 import { useResourceNav } from 'src/composables/useResourceNav'
 import { useResourceData } from 'src/composables/useResourceData'
-import { useDataStore } from 'src/stores/data'
 
 const route = useRoute()
 const nav = useResourceNav()
 const $q = useQuasar()
-const dataStore = useDataStore()
 const { loadWarehouses } = useStockMovements()
 
 const prCode = route.params.code

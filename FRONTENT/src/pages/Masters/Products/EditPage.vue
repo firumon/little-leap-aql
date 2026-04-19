@@ -179,12 +179,10 @@ import { useResourceConfig } from 'src/composables/useResourceConfig'
 import { useResourceData } from 'src/composables/useResourceData'
 import { useCompositeForm } from 'src/composables/useCompositeForm'
 import { useResourceNav } from 'src/composables/useResourceNav'
-import { useDataStore } from 'src/stores/data'
 
 const router = useRouter()
 const $q = useQuasar()
 const nav = useResourceNav()
-const dataStore = useDataStore()
 
 const { scope, resourceSlug, code, config, resourceName } = useResourceConfig()
 const { items, loading: resourceLoading, reload, updateLocalRecord } = useResourceData(resourceName)
@@ -382,7 +380,7 @@ async function loadAndInitialize(forceSync = false) {
     await skusResource.reload(forceSync)
     if (!record.value) return
 
-    const allSkus = dataStore.getRecords('SKUs')
+    const allSkus = skusResource.items.value
     const skuRows = allSkus.filter((row) => row.ProductCode === code.value)
 
     initializeForEdit(record.value, { SKUs: skuRows })

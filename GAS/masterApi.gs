@@ -17,14 +17,6 @@ function handleMasterGetRecords(auth, payload) {
     return buildMasterRowsResponse(auth, resourceName, resource, [], lastUpdatedAt, []);
   }
 
-  if (
-    lastUpdatedAt &&
-    resource.config.lastDataUpdatedAt &&
-    lastUpdatedAt.getTime() >= resource.config.lastDataUpdatedAt
-  ) {
-    return buildMasterRowsResponse(auth, resourceName, resource, [], lastUpdatedAt, headers);
-  }
-
   const values = resource.sheet.getDataRange().getValues();
   if (!values || values.length < 2) {
     return buildMasterRowsResponse(auth, resourceName, resource, [], lastUpdatedAt, headers);

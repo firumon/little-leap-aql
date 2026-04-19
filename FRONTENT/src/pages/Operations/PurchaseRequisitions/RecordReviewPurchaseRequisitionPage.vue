@@ -66,7 +66,7 @@
           <div class="hero-pin-row col row no-wrap">
             <div v-if="prForm.Type" class="pin-chip">
               <q-icon :name="typeIcon(prForm.Type)" size="12px" />
-              {{ TYPES.find(t => t.value === prForm.Type)?.label || prForm.Type }}
+              {{ types.find(t => t.value === prForm.Type)?.label || prForm.Type }}
             </div>
             <div v-if="prForm.Priority" class="pin-chip">
               <span class="pin-dot" :style="{ background: priorityHexColor(prForm.Priority) }" />
@@ -100,7 +100,7 @@
               <div class="edit-group__label">Type</div>
               <div class="seg-grid seg-grid--4">
                 <button
-                  v-for="t in TYPES" :key="t.value"
+                  v-for="t in types" :key="t.value"
                   class="seg-btn"
                   :class="{ 'seg-btn--active': prForm.Type === t.value }"
                   @click="prForm.Type = t.value"
@@ -116,7 +116,7 @@
               <div class="edit-group__label">Priority</div>
               <div class="row" style="gap:6px;flex-wrap:wrap">
                 <button
-                  v-for="p in PRIORITIES" :key="p.value"
+                  v-for="p in priorities" :key="p.value"
                   class="seg-btn seg-btn--pill"
                   :class="{ 'seg-btn--active': prForm.Priority === p.value }"
                   @click="prForm.Priority = p.value"
@@ -465,12 +465,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useResourceNav } from 'src/composables/useResourceNav'
 import { useResourceData } from 'src/composables/useResourceData'
 import { useStockMovements } from 'src/composables/useStockMovements'
+import { useAuthStore } from 'src/stores/auth'
 
 const emit = defineEmits(['save-draft', 'submit'])
 
@@ -478,6 +479,7 @@ const route = useRoute()
 const $q = useQuasar()
 const nav = useResourceNav()
 const { loadWarehouses } = useStockMovements()
+const auth = useAuthStore()
 
 const prCode = route.params.code
 
@@ -513,19 +515,35 @@ const headerExpanded = ref(false)
 const focusedField   = ref(null)
 
 // ── Static config ────────────────────────────────────────────────────────────
-const TYPES = [
-  { label: 'Stock',   value: 'STOCK',   icon: 'inventory_2'   },
-  { label: 'Project', value: 'PROJECT', icon: 'engineering'   },
-  { label: 'Sales',   value: 'SALES',   icon: 'point_of_sale' },
-  { label: 'Asset',   value: 'ASSET',   icon: 'category'      },
-]
-// Colors mirror $positive, $primary, $warning, $negative in quasar.variables.scss
-const PRIORITIES = [
-  { value: 'Low',    color: '#1A7A4A' },
-  { value: 'Medium', color: '#0F2B4A' },
-  { value: 'High',   color: '#C97B1A' },
-  { value: 'Urgent', color: '#C0362C' },
-]
+const TYPE_META = {
+  STOCK:   { icon: 'inventory_2',  color: '#0F2B4A', bg: '#EEF3F9', ring: '#D0DEF0' },
+  PROJECT: { icon: 'architecture',  color: '#1A6FAD', bg: '#E8F2FB', ring: '#BDD9F0' },
+  SALES:   { icon: 'storefront',    color: '#1A7A4A', bg: '#E8F6EE', ring: '#B8E4CB' },
+  ASSET:   { icon: 'build_circle',  color: '#C97B1A', bg: '#FDF3E3', ring: '#F5D9A0' },
+}
+
+const PRIORITY_META = {
+  Low:    { icon: 'arrow_downward', color: '#1A7A4A', bg: '#E8F6EE' },
+  Medium: { icon: 'remove',         color: '#C97B1A', bg: '#FDF3E3' },
+  High:   { icon: 'arrow_upward',   color: '#C0362C', bg: '#FBE9E8' },
+  Urgent: { icon: 'priority_high',  color: '#7B1FA2', bg: '#F5E5FB' },
+}
+
+const types = computed(() =>
+  (auth.appOptionsMap['PurchaseRequisitionType'] || []).map(v => ({
+    value: v,
+    label: v.charAt(0) + v.slice(1).toLowerCase(),
+    ...TYPE_META[v],
+  }))
+)
+
+const priorities = computed(() =>
+  (auth.appOptionsMap['PurchaseRequisitionPriority'] || []).map(v => ({
+    value: v,
+    label: v,
+    ...PRIORITY_META[v],
+  }))
+)
 
 // ── Computed ─────────────────────────────────────────────────────────────────
 const isRevision = computed(() =>
@@ -591,10 +609,10 @@ function statusDotColor(p) {
 
 // ── Pin chip helpers ─────────────────────────────────────────────────────────
 function typeIcon(v) {
-  return TYPES.find(t => t.value === v)?.icon || 'inventory_2'
+  return types.value.find(t => t.value === v)?.icon || 'inventory_2'
 }
 function priorityHexColor(v) {
-  return PRIORITIES.find(p => p.value === v)?.color || '#0F2B4A'
+  return priorities.value.find(p => p.value === v)?.color || '#0F2B4A'
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -775,8 +793,44 @@ function buildPayload(targetProgress) {
   }
 }
 
+// ── Background polling ───────────────────────────────────────────────────────
+const hasLocalEdits = ref(false)
+let loadDone = false
+
+watch([items, prForm], () => {
+  if (loadDone) hasLocalEdits.value = true
+}, { deep: true })
+
+async function silentRefresh() {
+  if (hasLocalEdits.value) return
+  try {
+    await Promise.all([
+      prResource.reload(),
+      itemsResource.reload(),
+    ])
+    const pr = prResource.items.value.find(r => r.Code === prCode)
+    if (!pr) return
+    prForm.value = { ...pr }
+    items.value = itemsResource.items.value
+      .filter(i => i.PurchaseRequisitionCode === prCode)
+      .map((i, index) => ({ ...i, _key: i.Code || `new-${index}` }))
+  } catch (_) { /* silent — do not disturb the user */ }
+}
+
+let pollTimer = null
+
 defineExpose({ buildPayload, prForm, items })
-onMounted(loadData)
+
+onMounted(async () => {
+  await loadData()
+  await nextTick()
+  loadDone = true
+  pollTimer = setInterval(silentRefresh, 30000)
+})
+
+onUnmounted(() => {
+  if (pollTimer) clearInterval(pollTimer)
+})
 </script>
 
 <style lang="scss" scoped>

@@ -1,245 +1,280 @@
 <template>
   <q-page padding>
-    <div class="q-mb-md">
-      <h1 class="text-h5 q-mt-none q-mb-sm">Initiate Purchase Requisition</h1>
-      <div class="text-caption text-grey-8">
-        Step {{ currentStep }} of 3
+
+
+    <!-- ── Hero ─────────────────────────────────────────────────────────── -->
+    <div class="hero-card">
+      <div class="hero-card__gold-line" />
+      <div class="hero-card__glow" />
+
+      <div class="hero-card__toprow row items-center no-wrap q-gutter-x-sm">
+        <button class="hero-back-btn" :disabled="currentStep === 1" @click="currentStep = Math.max(1, currentStep - 1)">
+          <q-icon name="arrow_back" size="20px" />
+        </button>
+        <div class="col">
+          <div class="hero-code">PR — New</div>
+          <div class="hero-meta">
+            <q-icon name="calendar_today" size="13px" />
+            {{ todayFormatted }}
+            <span class="row items-center q-ml-xs q-gutter-x-xs">
+              <q-icon :name="selectedType.icon" size="12px" />
+              {{ selectedType.label }}
+            </span>
+          </div>
+        </div>
+        <div class="status-chip" style="background: rgba(212,168,67,0.16); color: #F2D682; border: 1px solid rgba(255,255,255,0.08);">
+          <span class="status-dot" style="background: #D4A843;" />
+          New
+        </div>
+      </div>
+
+      <!-- Stepper -->
+      <div class="step-row">
+        <template v-for="(s, i) in steps" :key="s.key">
+          <div class="step-node" :class="{ 'is-active': currentStep === s.n, 'is-done': currentStep > s.n }">
+            <div class="step-circle" :class="{ 'is-active': currentStep === s.n, 'is-done': currentStep > s.n }">
+              <q-icon v-if="currentStep > s.n" name="check" size="14px" />
+              <span v-else>{{ s.n }}</span>
+            </div>
+            <span class="step-label">{{ s.label }}</span>
+          </div>
+          <div v-if="i < steps.length - 1" class="step-line" :class="{ 'is-done': currentStep > s.n }" />
+        </template>
+      </div>
+
+      <!-- Step 2 stats -->
+      <div v-if="currentStep === 2" class="hero-stat-strip">
+        <div class="hero-stat-cell">
+          <div class="hero-stat-label">SKUs Selected</div>
+          <div class="hero-stat-value">{{ selectedSkusCount }}</div>
+        </div>
+        <div class="hero-stat-cell">
+          <div class="hero-stat-label">Total Qty</div>
+          <div class="hero-stat-value">{{ totalQty }}</div>
+        </div>
+        <div class="hero-stat-cell">
+          <div class="hero-stat-label">Warehouse</div>
+          <div class="hero-stat-value" style="font-size: 12px; font-weight: 700;">{{ warehouseName || '—' }}</div>
+        </div>
       </div>
     </div>
 
-    <!-- Compact Stepper -->
-    <div class="stepper-compact q-mb-md">
-      <div class="step-item" :class="currentStep === 1 ? 'active' : ''">
-        <div class="step-circle">1</div>
-        <div class="step-label">Setup</div>
-      </div>
-      <div class="step-connector" :class="currentStep > 1 ? 'done' : ''"></div>
-      <div class="step-item" :class="currentStep === 2 ? 'active' : ''">
-        <div class="step-circle">2</div>
-        <div class="step-label">Items</div>
-      </div>
-      <div class="step-connector" :class="currentStep > 2 ? 'done' : ''"></div>
-      <div class="step-item" :class="currentStep === 3 ? 'active' : ''">
-        <div class="step-circle">3</div>
-        <div class="step-label">Done</div>
-      </div>
-    </div>
+    <!-- ── Body ────────────────────────────────────────────────────────── -->
+    <div class="pr-init-body">
 
-    <!-- Step 1: PR Setup -->
-    <div v-if="currentStep === 1">
-      <q-card class="q-mb-md">
-        <q-card-section>
-          <div class="text-h6 q-mb-md">Purchase Requisition Details</div>
+      <!-- STEP 1 -->
+      <transition name="step-fade" mode="out-in">
+        <div v-if="currentStep === 1" key="step1">
 
-          <!-- Type -->
-          <div class="row q-col-gutter-sm q-mb-md">
-            <div class="col-12 text-subtitle2 text-weight-bold">Type <span class="text-negative">*</span></div>
-            <div v-for="type in types" :key="type.value" class="col-3">
-              <q-card
-                class="cursor-pointer"
-                :class="form.Type === type.value ? 'bg-primary text-white' : ''"
-                v-ripple
-                @click="form.Type = type.value"
-              >
-                <q-card-section class="text-center q-pa-sm">
-                  <q-icon :name="type.icon" size="1.5em" class="q-mb-xs" />
-                  <div class="text-caption">{{ type.label }}</div>
-                </q-card-section>
-              </q-card>
+          <div class="section-card">
+            <div class="section-card__head">
+              <div class="section-card__icon"><q-icon name="tune" size="18px" /></div>
+              <span class="section-card__title">Requisition Details</span>
+            </div>
+            <div class="section-card__body">
+
+              <div class="field-label">Type <span class="field-label__required">*</span></div>
+              <div class="sel-grid sel-grid--4">
+                <button
+                  v-for="t in types" :key="t.value"
+                  class="sel-btn"
+                  :class="{ 'is-active': form.Type === t.value }"
+                  :style="{ '--sel-color': t.color, '--sel-bg': t.bg, '--sel-ring': t.ring }"
+                  @click="form.Type = t.value"
+                >
+                  <q-icon :name="t.icon" class="sel-btn__icon" />
+                  {{ t.label }}
+                </button>
+              </div>
+
+              <div class="field-label q-mt-md">Priority <span class="field-label__required">*</span></div>
+              <div class="sel-grid sel-grid--4">
+                <button
+                  v-for="p in priorities" :key="p.value"
+                  class="sel-btn"
+                  :class="{ 'is-active': form.Priority === p.value }"
+                  :style="{ '--sel-color': p.color, '--sel-bg': p.bg, '--sel-ring': p.bg }"
+                  @click="form.Priority = p.value"
+                >
+                  {{ p.label }}
+                </button>
+              </div>
+
+              <template v-if="needsRefCode">
+                <div class="field-label q-mt-md">Reference Code <span class="field-label__required">*</span></div>
+                <q-input
+                  v-model="form.TypeReferenceCode"
+                  outlined dense bg-color="white"
+                  placeholder="e.g. PROJ-001"
+                  class="q-mb-md"
+                  :rules="[v => !!v || 'Required for Project / Sales']"
+                  hide-bottom-space
+                />
+              </template>
             </div>
           </div>
 
-          <!-- Priority -->
-          <div class="row q-col-gutter-sm q-mb-md">
-            <div class="col-12 text-subtitle2 text-weight-bold">Priority <span class="text-negative">*</span></div>
-            <div v-for="priority in priorities" :key="priority.value" class="col-3">
-              <q-card
-                class="cursor-pointer"
-                :class="form.Priority === priority.value ? `bg-${priority.color} text-white` : ''"
-                v-ripple
-                @click="form.Priority = priority.value"
-              >
-                <q-card-section class="text-center q-pa-sm">
-                  <div class="text-caption">{{ priority.label }}</div>
-                </q-card-section>
-              </q-card>
+          <div class="section-card">
+            <div class="section-card__head">
+              <div class="section-card__icon"><q-icon name="warehouse" size="18px" /></div>
+              <span class="section-card__title">Location &amp; Schedule</span>
             </div>
-          </div>
+            <div class="section-card__body">
 
-          <!-- Warehouse (Optional) -->
-          <div class="q-mb-md">
-            <div class="text-subtitle2 text-weight-bold q-mb-sm">Warehouse (Optional)</div>
-            <div v-if="loadingWarehouses" class="flex flex-center q-pa-md">
-              <q-spinner color="primary" size="2em" />
-            </div>
-            <div v-else class="row q-col-gutter-sm">
-              <div v-for="wh in warehouses" :key="wh.Code" class="col-4">
-                <q-card
-                  class="cursor-pointer"
-                  :class="form.WarehouseCode === wh.Code ? 'bg-primary text-white' : ''"
-                  v-ripple
+              <div class="field-label">Warehouse <span class="text-grey-6 q-ml-xs">(Optional)</span></div>
+              <div v-if="loadingWarehouses" class="flex flex-center q-pa-md">
+                <q-spinner color="primary" size="2em" />
+              </div>
+              <div v-else class="row q-gutter-xs q-mb-md">
+                <button
+                  v-for="wh in warehouses" :key="wh.Code"
+                  class="wh-chip"
+                  :class="{ 'is-active': form.WarehouseCode === wh.Code }"
                   @click="form.WarehouseCode = form.WarehouseCode === wh.Code ? '' : wh.Code"
                 >
-                  <q-card-section class="q-pa-sm text-center relative-position">
-                    <div class="text-subtitle2 text-weight-bold">{{ wh.Name }}</div>
-                    <div class="text-caption" :class="form.WarehouseCode === wh.Code ? 'text-white' : 'text-grey-8'">{{ wh.Code }}</div>
-                    <q-icon
-                      v-if="form.WarehouseCode === wh.Code"
-                      name="check_circle"
-                      color="white"
-                      size="sm"
-                      class="absolute-top-right q-pa-xs"
-                    />
-                  </q-card-section>
-                </q-card>
+                  <span class="wh-chip__name">{{ wh.Name }}</span>
+                  <span class="wh-chip__code">{{ wh.Code }}</span>
+                </button>
+              </div>
+
+              <div class="field-label">Required Date <span class="text-grey-6 q-ml-xs">(Optional)</span></div>
+              <q-input :model-value="form.RequiredDate" readonly outlined dense label="Required Date">
+                <template #append>
+                  <q-icon name="event" class="cursor-pointer">
+                    <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                      <q-date v-model="form.RequiredDate" mask="YYYY-MM-DD" :options="d => d >= today">
+                        <div class="row items-center justify-end">
+                          <q-btn v-close-popup label="Close" color="primary" flat />
+                        </div>
+                      </q-date>
+                    </q-popup-proxy>
+                  </q-icon>
+                </template>
+              </q-input>
+            </div>
+          </div>
+        </div>
+      </transition>
+
+      <!-- STEP 2 -->
+      <transition name="step-fade" mode="out-in">
+        <div v-if="currentStep === 2" key="step2">
+
+          <q-input
+            v-model="searchQuery"
+            outlined dense clearable bg-color="white"
+            placeholder="Search products, SKUs, variants…"
+            class="q-mb-sm"
+          >
+            <template #prepend>
+              <q-icon name="search" color="grey-6" size="18px" />
+            </template>
+          </q-input>
+
+
+          <div class="row items-center justify-between no-wrap q-mb-sm">
+            <q-btn-toggle
+              v-model="itemSort"
+              :options="[{ label: 'By Product Qty', value: 'product' }, { label: 'By SKU Qty', value: 'sku' }]"
+              no-caps no-wrap
+              color="white" text-color="grey-7"
+              toggle-color="primary" toggle-text-color="white"
+              style="font-size: 11px;"
+            />
+            <q-toggle
+              v-model="showAllWh"
+              label="All Warehouses"
+              :disable="!!form.WarehouseCode"
+              color="primary" dense
+              class="q-ml-xs"
+            />
+          </div>
+
+          <div class="section-card" style="padding: 0; overflow: hidden;">
+            <div v-if="loadingItems" class="flex flex-center q-pa-xl">
+              <q-spinner color="primary" size="3em" />
+            </div>
+
+            <div v-else-if="sortedItems.length === 0" class="column items-center q-pa-xl text-center text-grey-6">
+              <q-icon name="search_off" size="32px" color="grey-4" />
+              <span class="q-mt-sm">No items match "{{ searchQuery }}"</span>
+            </div>
+
+            <div v-else>
+              <div v-for="group in sortedItems" :key="group.ProductCode">
+                <div class="pick-group-head">
+                  <span>{{ group.ProductName }}</span>
+                  <span class="row items-center q-gutter-x-xs text-grey-6" style="font-size: 11px; font-weight: 600;">
+                    <q-icon name="inventory_2" size="12px" />
+                    {{ group.totalStock ?? '—' }}
+                  </span>
+                </div>
+                <div
+                  v-for="sku in group.skus" :key="sku.Code"
+                  class="pick-row"
+                  :class="{ 'is-selected': sku.requiredQuantity > 0 }"
+                >
+                  <div class="col" style="min-width: 0;">
+                    <span class="sku-badge">{{ sku.Code }}</span>
+                    <div class="text-grey-6" style="font-size: 11px;">{{ formatSkuVariants(sku) }}</div>
+                    <div :class="stockClass(sku.Code)" style="font-size: 10px; margin-top: 1px;">
+                      Stock: {{ getSkuStock(sku.Code) }} {{ sku.UOM || 'PCS' }}
+                      <span v-if="getSkuStock(sku.Code) === 0"> · OUT</span>
+                      <span v-else-if="getSkuStock(sku.Code) < 5"> · LOW</span>
+                    </div>
+                  </div>
+                  <q-input
+                    v-model.number="sku.requiredQuantity"
+                    type="number" outlined dense bg-color="white"
+                    :label="'Qty (' + (sku.UOM || 'PCS') + ')'"
+                    min="0"
+                    hide-bottom-space
+                    style="width: 90px; flex-shrink: 0;"
+                    @update:model-value="val => { if (val < 0) sku.requiredQuantity = 0 }"
+                  />
+                </div>
               </div>
             </div>
           </div>
+        </div>
+      </transition>
 
-          <!-- Additional Info -->
-          <div class="row q-col-gutter-sm">
-            <div class="col-12 col-md-6">
-              <q-input
-                v-model="form.RequiredDate"
-                label="Required Date (Optional)"
-                outlined
-                type="date"
-                dense
-              />
-            </div>
-            <div class="col-12 col-md-6" v-if="['PROJECT', 'SALES'].includes(form.Type)">
-              <q-input
-                v-model="form.TypeReferenceCode"
-                label="Reference Code"
-                outlined
-                dense
-                :rules="[val => !!val || 'Reference Code is required for Project/Sales']"
-              />
-            </div>
+      <!-- STEP 3 -->
+      <transition name="step-fade" mode="out-in">
+        <div v-if="currentStep === 3" key="step3">
+          <div class="section-card column items-center text-center q-pa-xl q-gutter-y-xs">
+            <q-icon name="check_circle" size="48px" color="positive" class="q-mb-xs" />
+            <div class="text-weight-bolder" style="font-size: 20px;">PR Created!</div>
+            <div class="text-primary text-weight-bolder" style="font-family: var(--font-mono); font-size: 22px; letter-spacing: -0.4px;">{{ createdCode }}</div>
+            <div class="text-grey-6" style="font-size: 12px;">Saved as Draft · {{ todayFormatted }}</div>
           </div>
-        </q-card-section>
-      </q-card>
-
-      <div class="row justify-end q-mt-md">
-        <q-btn
-          @click="goToStep2"
-          color="primary"
-          label="Proceed to Items"
-          :disable="!isStep1Valid"
-          unelevated
-        />
-      </div>
+        </div>
+      </transition>
     </div>
 
-    <!-- Step 2: Item Selection -->
-    <div v-if="currentStep === 2">
-      <!-- Filter / Search Row (Page level) -->
+    <!-- ── Action Bar ──────────────────────────────────────────────────── -->
+    <div class="action-bar row q-gutter-x-sm">
 
-      <div class="row q-col-gutter-md items-center q-mb-md">
-        <div class="col-12 row items-center justify-between no-wrap q-gutter-x-md">
-          <q-btn-toggle
-            v-model="sortBy"
-            unelevated
-            toggle-color="primary"
-            color="white"
-            text-color="primary"
-            :options="[
-              {label: 'Sort by Product Stock', value: 'product'},
-              {label: 'Sort by SKU Stock', value: 'sku'}
-            ]"
-            class="border-primary"
-          />
-          <q-toggle
-            v-model="allWarehouses"
-            label="All Warehouses"
-            left-label
-            color="primary"
-          />
-        </div>
-        <div class="col-12">
-          <q-input v-model="searchQuery" outlined dense placeholder="Search Products/SKUs..." clearable bg-color="white">
-            <template v-slot:append>
-              <q-icon name="search" />
-            </template>
-          </q-input>
-        </div>
-      </div>
+      <q-btn v-if="currentStep === 1"
+        unelevated color="primary"
+        icon-right="arrow_forward"
+        label="Proceed to Items"
+        class="action-btn-lg"
+        :disable="!isStep1Valid"
+        @click="goToStep2"
+      />
 
-      <!-- Items Card -->
-      <q-card class="q-mb-md">
-        <q-card-section class="q-pa-none">
-          <div v-if="loadingItems" class="flex flex-center q-pa-xl">
-            <q-spinner color="primary" size="3em" />
-            <div class="q-ml-sm text-grey-8">Syncing catalog data...</div>
-          </div>
-          <div v-else-if="filteredAndSortedProducts.length === 0" class="text-center q-pa-lg text-grey-8">
-            No items found matching your criteria.
-          </div>
-          <div v-else>
-            <q-list bordered class="rounded-borders" separator>
-              <template v-for="productGroup in filteredAndSortedProducts" :key="productGroup.ProductCode">
+      <template v-if="currentStep === 2">
+        <q-btn outline color="primary" icon="arrow_back" label="Back" class="action-btn-lg" @click="currentStep = 1" />
+        <q-btn unelevated color="primary" icon-right="check" label="Create PR" class="action-btn-lg"
+          :disable="selectedSkusCount === 0 || saving" :loading="saving" @click="savePR" />
+      </template>
 
-                <q-item-label header class="bg-grey-2 text-weight-bold text-black text-subtitle2 q-py-md q-px-sm flex justify-between items-center no-wrap">
-                  <div class="wrap">{{ productGroup.ProductName }} ({{ productGroup.ProductCode }})</div>
-                  <div class="text-bold text-grey-8 q-mr-sm float-right">{{ productGroup.totalStock }}</div>
-                </q-item-label>
+      <template v-if="currentStep === 3">
+        <q-btn outline color="primary" icon="add" label="New PR" class="action-btn-lg" @click="currentStep = 1" />
+        <q-btn unelevated color="primary" icon-right="open_in_new" label="View PR" class="action-btn-lg" @click="viewCreatedPR" />
+      </template>
 
-                <q-item
-                  v-for="sku in productGroup.skus"
-                  :key="sku.Code"
-                  :class="sku.requiredQuantity > 0 ? 'bg-green-1' : ''"
-                  class="q-pa-sm"
-                >
-                  <q-item-section>
-                    <q-item-label class="text-subtitle2">{{ sku.Code }}</q-item-label>
-                    <q-item-label caption>{{ formatVariants(sku) }}</q-item-label>
-                    <q-item-label caption>Stock: {{ getSkuStock(sku.Code) }} {{ sku.UOM || 'units' }}</q-item-label>
-                  </q-item-section>
-                  <q-item-section side style="width: 120px">
-                    <q-input
-                      v-model.number="sku.requiredQuantity"
-                      type="number"
-                      dense
-                      outlined
-                      min="0"
-                      bg-color="white"
-                      label="Qty"
-                      @update:model-value="val => { if (val < 0) sku.requiredQuantity = 0 }"
-                    />
-                  </q-item-section>
-                </q-item>
-                <q-separator />
-              </template>
-            </q-list>
-          </div>
-        </q-card-section>
-      </q-card>
-
-      <!-- Action Row (Page level) -->
-      <div class="row items-center justify-between q-mt-lg">
-        <q-btn outline @click="currentStep = 1" color="primary" icon="arrow_back" label="Back" />
-        <div class="row items-center gap">
-          <div class="text-subtitle1 text-weight-bold text-primary q-mr-md">
-            {{ selectedSkusCount }} SKUs Selected
-          </div>
-          <q-btn
-            @click="savePR"
-            color="primary"
-            label="Create PR"
-            unelevated
-            size="lg"
-            :disable="selectedSkusCount === 0 || saving"
-            :loading="saving"
-          />
-        </div>
-      </div>
-    </div>
-
-    <!-- Step 3: Success -->
-    <div v-if="currentStep === 3" class="text-center q-pa-lg">
-      <q-icon name="check_circle" size="4em" color="positive" class="q-mb-md" />
-      <h2 class="text-h5 q-mt-none">Purchase Requisition Created!</h2>
-      <p class="text-body1 text-grey-8">Your purchase requisition has been successfully created.</p>
     </div>
   </q-page>
 </template>
@@ -247,33 +282,43 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
+import { format } from 'date-fns'
 import { useStockMovements } from 'src/composables/useStockMovements'
 import { fetchResourceRecords } from 'src/services/resourceRecords'
 import { callGasApi } from 'src/services/gasApi'
-import { format } from 'date-fns'
 import { useResourceNav } from 'src/composables/useResourceNav'
+import { useAuthStore } from 'src/stores/auth'
+import { useDataStore } from 'src/stores/data'
+import { formatSkuVariants, todayIsoSlash, todayLongLabel } from 'src/utils/appHelpers'
 
 const $q = useQuasar()
 const nav = useResourceNav()
 const { loadWarehouses } = useStockMovements()
+const auth = useAuthStore()
+const dataStore = useDataStore()
+
+const steps = [
+  { n: 1, key: 'setup', label: 'Setup' },
+  { n: 2, key: 'items', label: 'Items' },
+  { n: 3, key: 'done',  label: 'Done'  }
+]
+
+const TYPE_META = {
+  STOCK:   { icon: 'inventory_2',  color: '#0F2B4A', bg: '#EEF3F9', ring: '#D0DEF0' },
+  PROJECT: { icon: 'architecture', color: '#1A6FAD', bg: '#E8F2FB', ring: '#BDD9F0' },
+  SALES:   { icon: 'storefront',   color: '#1A7A4A', bg: '#E8F6EE', ring: '#B8E4CB' },
+  ASSET:   { icon: 'build_circle', color: '#C97B1A', bg: '#FDF3E3', ring: '#F5D9A0' }
+}
+const PRIORITY_META = {
+  Low:    { icon: 'arrow_downward', color: '#1A7A4A', bg: '#E8F6EE' },
+  Medium: { icon: 'remove',         color: '#C97B1A', bg: '#FDF3E3' },
+  High:   { icon: 'arrow_upward',   color: '#C0362C', bg: '#FBE9E8' },
+  Urgent: { icon: 'priority_high',  color: '#7B1FA2', bg: '#F5E5FB' }
+}
 
 const currentStep = ref(1)
 const loadingWarehouses = ref(false)
 const warehouses = ref([])
-
-const types = [
-  { label: 'Stock', value: 'STOCK', icon: 'inventory' },
-  { label: 'Project', value: 'PROJECT', icon: 'engineering' },
-  { label: 'Sales', value: 'SALES', icon: 'point_of_sale' },
-  { label: 'Asset', value: 'ASSET', icon: 'category' }
-]
-
-const priorities = [
-  { label: 'Low', value: 'Low', color: 'info' },
-  { label: 'Medium', value: 'Medium', color: 'primary' },
-  { label: 'High', value: 'High', color: 'orange' },
-  { label: 'Urgent', value: 'Urgent', color: 'negative' }
-]
 
 const form = ref({
   Type: 'STOCK',
@@ -283,58 +328,55 @@ const form = ref({
   TypeReferenceCode: ''
 })
 
-const isStep1Valid = computed(() => {
-  if (!form.value.Type || !form.value.Priority) return false
-  if (['PROJECT', 'SALES'].includes(form.value.Type) && !form.value.TypeReferenceCode) return false
-  return true
-})
+const types = computed(() =>
+  (auth.appOptionsMap['PurchaseRequisitionType'] || []).map(v => ({
+    value: v,
+    label: v.charAt(0) + v.slice(1).toLowerCase(),
+    ...TYPE_META[v]
+  }))
+)
+const priorities = computed(() =>
+  (auth.appOptionsMap['PurchaseRequisitionPriority'] || []).map(v => ({
+    value: v, label: v, ...PRIORITY_META[v]
+  }))
+)
+const selectedType = computed(() => types.value.find(t => t.value === form.value.Type) || types.value[0])
+const needsRefCode = computed(() => ['PROJECT', 'SALES'].includes(form.value.Type))
+const isStep1Valid = computed(() =>
+  !!form.value.Type && !!form.value.Priority && (!needsRefCode.value || !!form.value.TypeReferenceCode)
+)
 
 const goToStep2 = () => {
-  if (isStep1Valid.value) {
-    currentStep.value = 2
-    if (products.value.length === 0) {
-      loadItemsAndStock()
-    }
-  }
+  if (!isStep1Valid.value) return
+  showAllWh.value = !form.value.WarehouseCode
+  currentStep.value = 2
+  if (products.value.length === 0) loadItemsAndStock()
 }
 
-// Step 2 logic
+// Step 2
 const loadingItems = ref(false)
 const products = ref([])
 const skus = ref([])
 const stockData = ref([])
 const searchQuery = ref('')
-const sortBy = ref('product') // 'product' or 'sku'
-const allWarehouses = ref(false)
+const itemSort = ref('product')
+const showAllWh = ref(true)
 const saving = ref(false)
 
 const loadItemsAndStock = async () => {
   loadingItems.value = true
   try {
-    // Use fetchResourceRecords which interacts with the local store and syncs in background if configured
     const [prodRes, skuRes, stockRes] = await Promise.all([
       fetchResourceRecords('Products', { includeInactive: false }),
       fetchResourceRecords('SKUs', { includeInactive: false }),
       fetchResourceRecords('WarehouseStorages', { includeInactive: false })
     ])
+    products.value = (prodRes?.records || []).filter(p => p.Status === 'Active' || !p.Status)
+    skus.value    = (skuRes?.records  || []).filter(s => s.Status === 'Active' || !s.Status).map(s => ({ ...s, requiredQuantity: 0 }))
+    stockData.value = stockRes?.records || []
 
-    // Handle Products
-    if (prodRes?.records) {
-      products.value = prodRes.records.filter(p => p.Status === 'Active' || !p.Status)
-    }
-
-    // Handle SKUs
-    if (skuRes?.records) {
-      skus.value = skuRes.records.filter(s => s.Status === 'Active' || !s.Status).map(s => ({...s, requiredQuantity: 0}))
-    }
-
-    // Handle Stock Data
-    if (stockRes?.records) {
-      stockData.value = stockRes.records
-    }
-
-    if (products.value.length === 0 || skus.value.length === 0) {
-      $q.notify({ type: 'warning', message: 'Some catalog data is empty. Products: ' + products.value.length + ', SKUs: ' + skus.value.length })
+    if (!products.value.length || !skus.value.length) {
+      $q.notify({ type: 'warning', message: `Some catalog data is empty. Products: ${products.value.length}, SKUs: ${skus.value.length}` })
     }
   } catch (error) {
     console.error('Error loading catalog:', error)
@@ -345,35 +387,35 @@ const loadItemsAndStock = async () => {
 }
 
 const getSkuStock = (skuCode) => {
-  let relevantStock = stockData.value.filter(s => s.SKU === skuCode)
-  if (!allWarehouses.value && form.value.WarehouseCode) {
-    relevantStock = relevantStock.filter(s => s.WarehouseCode === form.value.WarehouseCode)
+  let rows = stockData.value.filter(s => s.SKU === skuCode)
+  if (!showAllWh.value && form.value.WarehouseCode) {
+    rows = rows.filter(s => s.WarehouseCode === form.value.WarehouseCode)
   }
-  return relevantStock.reduce((sum, item) => sum + (Number(item.Quantity) || 0), 0)
+  return rows.reduce((sum, item) => sum + (Number(item.Quantity) || 0), 0)
 }
 
-const formatVariants = (sku) => {
-  const vars = [sku.Variant1, sku.Variant2, sku.Variant3, sku.Variant4, sku.Variant5].filter(Boolean)
-  return vars.length > 0 ? vars.join(' | ') : 'No variants'
+const stockClass = (skuCode) => {
+  const stock = getSkuStock(skuCode)
+  if (stock === 0) return 'text-negative'
+  if (stock < 5)   return 'text-warning'
+  return 'text-grey-6'
 }
 
-const filteredAndSortedProducts = computed(() => {
-  let filteredSkus = skus.value
-
+const sortedItems = computed(() => {
+  let filtered = skus.value
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase()
-    filteredSkus = filteredSkus.filter(sku => {
+    filtered = filtered.filter(sku => {
       const prod = products.value.find(p => p.Code === sku.ProductCode)
       const prodName = prod ? prod.Name.toLowerCase() : ''
       return sku.Code.toLowerCase().includes(q) ||
              prodName.includes(q) ||
-             formatVariants(sku).toLowerCase().includes(q)
+             formatSkuVariants(sku).toLowerCase().includes(q)
     })
   }
 
-  // Group SKUs by Product
   const grouped = {}
-  filteredSkus.forEach(sku => {
+  filtered.forEach(sku => {
     if (!grouped[sku.ProductCode]) {
       const prod = products.value.find(p => p.Code === sku.ProductCode)
       grouped[sku.ProductCode] = {
@@ -387,25 +429,25 @@ const filteredAndSortedProducts = computed(() => {
     grouped[sku.ProductCode].totalStock += getSkuStock(sku.Code)
   })
 
-  let result = Object.values(grouped)
-
-  if (sortBy.value === 'product') {
-    result.sort((a, b) => a.totalStock - b.totalStock) // Ascending (lowest stock first)
-  } else {
-    // Sort products by their lowest SKU stock
-    result.forEach(group => {
-      group.skus.sort((a, b) => getSkuStock(a.Code) - getSkuStock(b.Code))
-      group.minSkuStock = group.skus.length > 0 ? getSkuStock(group.skus[0].Code) : 0
-    })
-    result.sort((a, b) => a.minSkuStock - b.minSkuStock)
-  }
-
-  return result
+  return Object.values(grouped).sort((a, b) => {
+    if (itemSort.value === 'sku') {
+      const aMax = a.skus.reduce((m, s) => Math.max(m, getSkuStock(s.Code)), 0)
+      const bMax = b.skus.reduce((m, s) => Math.max(m, getSkuStock(s.Code)), 0)
+      return aMax - bMax
+    }
+    return (a.totalStock ?? 0) - (b.totalStock ?? 0)
+  })
 })
 
-const selectedSkusCount = computed(() => {
-  return skus.value.filter(s => s.requiredQuantity > 0).length
-})
+const selectedSkusCount = computed(() => skus.value.filter(s => s.requiredQuantity > 0).length)
+const totalQty = computed(() => skus.value.reduce((sum, s) => sum + (s.requiredQuantity || 0), 0))
+const warehouseName = computed(() => warehouses.value.find(w => w.Code === form.value.WarehouseCode)?.Name || '')
+
+const today = todayIsoSlash()
+const todayFormatted = todayLongLabel()
+const createdCode = ref('PR26000009')
+
+const viewCreatedPR = () => nav.goTo('view', { code: createdCode.value })
 
 const savePR = async () => {
   const itemsToSave = skus.value.filter(s => s.requiredQuantity > 0)
@@ -414,43 +456,56 @@ const savePR = async () => {
   saving.value = true
   try {
     const prDate = format(new Date(), 'yyyy-MM-dd')
-    const payload = {
-      resource: 'PurchaseRequisitions',
-      data: {
-        PRDate: prDate,
-        Type: form.value.Type,
-        Priority: form.value.Priority,
-        RequiredDate: form.value.RequiredDate,
-        WarehouseCode: form.value.WarehouseCode,
-        TypeReferenceCode: ['PROJECT', 'SALES'].includes(form.value.Type) ? form.value.TypeReferenceCode : '',
-        Progress: 'Draft',
-        Status: 'Active'
-      },
-      children: [
-        {
-          resource: 'PurchaseRequisitionItems',
-          parentCodeField: 'PurchaseRequisitionCode',
-          records: itemsToSave.map(item => ({
-            _action: 'create',
-            data: {
-              SKU: item.Code,
-              UOM: item.UOM || '',
-              Quantity: item.requiredQuantity,
-              EstimatedRate: 0
-            }
-          }))
-        }
-      ]
-    }
 
-    const response = await callGasApi('compositeSave', payload, {
+    const batchResponse = await callGasApi('batch', {
+      requests: [
+        {
+          action: 'compositeSave',
+          resource: 'PurchaseRequisitions',
+          scope: 'operation',
+          data: {
+            PRDate: prDate,
+            Type: form.value.Type,
+            Priority: form.value.Priority,
+            RequiredDate: form.value.RequiredDate,
+            WarehouseCode: form.value.WarehouseCode,
+            TypeReferenceCode: needsRefCode.value ? form.value.TypeReferenceCode : '',
+            Progress: 'Draft',
+            Status: 'Active'
+          },
+          children: [{
+            resource: 'PurchaseRequisitionItems',
+            records: itemsToSave.map(item => ({
+              _action: 'create',
+              data: { SKU: item.Code, UOM: item.UOM || '', Quantity: item.requiredQuantity, EstimatedRate: 0 }
+            }))
+          }]
+        },
+        { action: 'get', resource: 'PurchaseRequisitions',     scope: 'operation', includeInactive: true },
+        { action: 'get', resource: 'PurchaseRequisitionItems', scope: 'operation', includeInactive: true }
+      ]
+    }, {
       showLoading: true,
       loadingMessage: 'Creating Purchase Requisition...',
       successMessage: 'Purchase Requisition Created'
     })
 
-    if (response.success && response.data?.parentCode) {
-      nav.goTo('record-page', { code: response.data.parentCode, pageSlug: 'draft' })
+    const saveResult = batchResponse?.data?.[0]
+    const prResult   = batchResponse?.data?.[1]
+    const itemResult = batchResponse?.data?.[2]
+
+    if (saveResult?.success && saveResult?.data?.parentCode) {
+      createdCode.value = saveResult.data.parentCode
+
+      const { upsertResourceRows } = await import('src/utils/db')
+      const prHeaders   = dataStore.headers['PurchaseRequisitions'] || []
+      const itemHeaders = dataStore.headers['PurchaseRequisitionItems'] || []
+      if (prResult?.rows?.length   && prHeaders.length)   await upsertResourceRows('PurchaseRequisitions', prHeaders, prResult.rows)
+      if (itemResult?.rows?.length && itemHeaders.length) await upsertResourceRows('PurchaseRequisitionItems', itemHeaders, itemResult.rows)
+
+      currentStep.value = 3
+    } else {
+      $q.notify({ type: 'negative', message: saveResult?.message || 'Failed to create PR' })
     }
   } catch (error) {
     $q.notify({ type: 'negative', message: 'Failed to create PR: ' + error.message })
@@ -467,79 +522,19 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* Compact Stepper */
-.stepper-compact {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 0;
-  padding: 12px 20px;
-  background: transparent;
-}
-
-.step-item {
+.pr-init-body {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 0 12px;
+  gap: 16px;
+  padding-top: 16px;
 }
-
-.step-circle {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #e0e0e0;
-  color: #666;
-  font-weight: bold;
-  font-size: 14px;
-  transition: all 0.3s ease;
+.pr-init-body :deep(.section-card) {
+  margin-left: 0;
+  margin-right: 0;
 }
-
-.step-item.active .step-circle {
-  background: var(--q-primary);
-  color: white;
-}
-
-.step-label {
-  font-size: 12px;
-  font-weight: 500;
-  text-align: center;
-  color: #666;
+.sort-btn {
+  padding: 6px 10px;
+  font-size: 11px;
   white-space: nowrap;
-}
-
-.step-item.active .step-label {
-  color: var(--q-primary);
-  font-weight: 600;
-}
-
-.step-connector {
-  width: 40px;
-  height: 2px;
-  background: #e0e0e0;
-  margin: 0 4px;
-  transition: background 0.3s ease;
-}
-
-.step-connector.done {
-  background: var(--q-primary);
-}
-
-/* Compact padding for cards */
-:deep(.q-card__section) {
-  padding: 16px;
-}
-
-/* Gap utility */
-.gap {
-  gap: 12px;
-}
-
-.border-primary {
-  border: 1px solid var(--q-primary);
 }
 </style>

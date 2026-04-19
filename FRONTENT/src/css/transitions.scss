@@ -1,0 +1,8 @@
+// transitions.scss — Vue <transition> animations used across pages
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Step fade-and-slide (used by multi-step wizards)
+.step-fade-enter-active,
+.step-fade-leave-active { transition: all 220ms ease; }
+.step-fade-enter-from   { opacity: 0; transform: translateX(18px); }
+.step-fade-leave-to     { opacity: 0; transform: translateX(-18px); }

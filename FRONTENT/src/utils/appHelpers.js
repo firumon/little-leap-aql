@@ -157,6 +157,32 @@ export function humanizeSlug(slug) {
 }
 
 /**
+ * Joins SKU variant fields (Variant1..Variant5) into a display string.
+ * @param {Object} sku
+ * @returns {string}
+ */
+export function formatSkuVariants(sku) {
+  if (!sku) return ''
+  const vars = [sku.Variant1, sku.Variant2, sku.Variant3, sku.Variant4, sku.Variant5].filter(Boolean)
+  return vars.length ? vars.join(' | ') : 'No variants'
+}
+
+/**
+ * Today as ISO date string (yyyy-MM-dd) using a slash separator (yyyy/MM/dd).
+ * Useful for q-date min-date comparisons.
+ */
+export function todayIsoSlash() {
+  return new Date().toISOString().slice(0, 10).replace(/-/g, '/')
+}
+
+/**
+ * Today formatted as "DD MMM YYYY" (e.g. "18 Apr 2026").
+ */
+export function todayLongLabel() {
+  return new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+/**
  * Resolves the parent code field name for a child resource.
  * Checks for 'ParentCode', then derives a candidate from the parent resource name.
  *

@@ -3,11 +3,12 @@
 // All values derive from quasar.variables.scss — never hardcode brand colours.
 // Quasar auto-injects quasar.variables.scss so those variables are always in scope.
 // ─────────────────────────────────────────────────────────────────────────────
+@use 'sass:color';
 
 // ── SCSS helpers ─────────────────────────────────────────────────────────────
-$_hero-mid  : lighten($primary, 8%);
-$_hero-end  : lighten($primary, 14%);
-$_gold-fg   : lighten($secondary, 22%);   // cream-gold text on dark gold chips
+$_hero-mid  : color.adjust($primary,   $lightness:  8%);
+$_hero-end  : color.adjust($primary,   $lightness: 14%);
+$_gold-fg   : color.adjust($secondary, $lightness: 22%);  // cream-gold text on dark gold chips
 
 // ── CSS custom properties (design system tokens → inline :style bindings) ────
 :root {
@@ -330,7 +331,7 @@ $_gold-fg   : lighten($secondary, 22%);   // cream-gold text on dark gold chips
 
   &--warn {
     background: rgba($negative, 0.20);
-    color: lighten($negative, 30%);
+    color: color.adjust($negative, $lightness: 30%);
   }
 }
 
@@ -479,7 +480,7 @@ $_gold-fg   : lighten($secondary, 22%);   // cream-gold text on dark gold chips
 
 .overdue-badge {
   font-size: 11px;
-  color: lighten($negative, 28%);
+  color: color.adjust($negative, $lightness: 28%);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -495,12 +496,12 @@ $_gold-fg   : lighten($secondary, 22%);   // cream-gold text on dark gold chips
 .revision-header {
   font-size: 13px;
   font-weight: 700;
-  color: lighten($negative, 30%);
+  color: color.adjust($negative, $lightness: 30%);
 }
 
 .revision-text {
   font-size: 12px;
-  color: rgba(lighten($negative, 30%), 0.85);
+  color: rgba(color.adjust($negative, $lightness: 30%), 0.85);
   white-space: pre-wrap;
   line-height: 1.5;
 }
@@ -712,4 +713,484 @@ $_gold-fg   : lighten($secondary, 22%);   // cream-gold text on dark gold chips
     background: mix(white, $ink-muted, 40%) !important;
     box-shadow: none !important;
   }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// INDEX PAGE HERO
+// ══════════════════════════════════════════════════════════════════════════════
+
+.index-hero {
+  margin: 16px;
+  border-radius: $r-xl;
+  background: linear-gradient(160deg, $primary 0%, $_hero-mid 55%, $_hero-end 100%);
+  color: #fff;
+  overflow: hidden;
+  position: relative;
+  box-shadow: var(--shadow-lg);
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50px; right: -50px;
+    width: 180px; height: 180px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba($secondary, 0.20) 0%, transparent 70%);
+    pointer-events: none;
+  }
+}
+
+.index-hero__header {
+  padding: 16px;
+  border-bottom: 1px solid rgba(white, 0.08);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.index-hero__title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  line-height: 1.2;
+}
+
+.index-hero__sub {
+  font-size: 13px;
+  color: rgba(white, 0.65);
+  margin-top: 4px;
+}
+
+.index-hero__actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.index-hero__icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: $r-sm;
+  background: rgba(white, 0.10);
+  border: 1px solid rgba(white, 0.18);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background 120ms;
+
+  &:hover {
+    background: rgba(white, 0.18);
+  }
+}
+
+.index-hero__stat-strip {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: rgba(white, 0.08);
+  border-top: 1px solid rgba(white, 0.08);
+}
+
+.index-hero__stat {
+  padding: 12px 14px;
+  background: rgba($primary, 0.35);
+
+  &:first-child { border-right: 1px solid rgba(white, 0.08); }
+}
+
+.index-hero__stat-label {
+  font-size: 10px;
+  color: rgba(white, 0.55);
+  letter-spacing: 0.6px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.index-hero__stat-value {
+  margin-top: 4px;
+  font-family: $font-mono;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: #fff;
+
+  &--gold { color: $secondary; }
+}
+
+// ── Light section card (for non-hero content) ────────────────────────────────
+.section-card {
+  margin: 12px 16px;
+  background: $surface;
+  border: 1px solid $border;
+  border-radius: $r-lg;
+  overflow: hidden;
+}
+
+.section-card__head {
+  padding: 13px 14px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid $border;
+}
+
+.section-card__icon {
+  width: 32px;
+  height: 32px;
+  border-radius: $r-sm;
+  background: rgba($primary, 0.08);
+  color: $primary;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.section-card__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: $ink;
+}
+
+.section-card__body {
+  padding: 14px;
+}
+
+// ── Group header styling ──────────────────────────────────────────────────────
+.group-header--styled {
+  border: 1px solid $border;
+  border-left: 4px solid;
+  border-radius: $r-sm;
+  background: $surface;
+  min-height: 36px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  user-select: none;
+  transition: background 120ms, box-shadow 120ms;
+
+  &:hover {
+    background: darken($surface, 2%);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+  }
+}
+
+.group-header__label {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+// ── Card grid layout ──────────────────────────────────────────────────────────
+.card-grid {
+  display: grid;
+  gap: 6px;
+}
+
+.card-item {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  border-radius: $r-sm;
+  border: 1px solid $border;
+  background: linear-gradient(175deg, $surface 0%, darken($surface, 1%) 100%);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.11);
+  }
+
+  &:active {
+    transform: scale(0.99);
+  }
+}
+
+.card-item__stripe {
+  width: 4px;
+  flex-shrink: 0;
+  border-radius: $r-sm 0 0 $r-sm;
+}
+
+.card-item__body {
+  flex: 1;
+  padding: 10px 12px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 6px;
+}
+
+.card-item__code {
+  font-size: 11px;
+  color: $ink-muted;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  font-family: $font-mono;
+}
+
+.card-item__chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.card-item__chip {
+  font-size: 10px;
+  height: 18px;
+  border-radius: $r-xs;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.card-item__meta {
+  font-size: 11px;
+  color: $ink-muted;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.card-item__meta-item {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+// ── Empty state ───────────────────────────────────────────────────────────────
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.empty-state__icon {
+  font-size: 48px;
+  color: $border;
+  margin-bottom: 12px;
+}
+
+.empty-state__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: $ink;
+  margin-bottom: 4px;
+}
+
+.empty-state__sub {
+  font-size: 13px;
+  color: $ink-muted;
+  margin-bottom: 16px;
+}
+
+.empty-state__action {
+  display: inline-flex;
+  gap: 6px;
+}
+
+// ── Utility: Field label ───────────────────────────────────────────────────────
+.field-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: $ink-muted;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.field-label__required {
+  color: $negative;
+}
+
+// ── Step indicator ──────────────────────────────────────────────────────────
+.step-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 20px 24px 0;
+}
+
+.step-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.step-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  border: 2px solid rgba(white, 0.25);
+  color: rgba(white, 0.5);
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+
+  &.is-done {
+    background: rgba($secondary, 0.85);
+    border-color: $secondary;
+    color: $primary;
+  }
+
+  &.is-active {
+    background: $secondary;
+    border-color: $secondary;
+    color: $primary;
+  }
+}
+
+.step-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(white, 0.5);
+  white-space: nowrap;
+
+  .is-active ~ &,
+  .step-node.is-active & { color: $secondary; }
+  .step-node.is-done & { color: rgba(white, 0.75); }
+}
+
+.step-line {
+  flex: 1;
+  height: 2px;
+  background: rgba(white, 0.15);
+  margin: 0 8px;
+  margin-bottom: 18px; // visually align to circle centre
+
+  &.is-done { background: rgba($secondary, 0.6); }
+}
+
+// ── Light-surface selector grid ────────────────────────────────────────────
+.sel-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.sel-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 8px;
+  border-radius: $r-sm;
+  border: 1.5px solid $border;
+  background: $surface;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  color: $ink-2;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  user-select: none;
+
+  .sel-btn__icon {
+    font-size: 20px;
+    color: $ink-muted;
+    transition: color 0.15s;
+  }
+
+  &:hover {
+    border-color: $primary-100;
+    background: $primary-50;
+  }
+
+  &.is-active {
+    border-color: var(--sel-color, #{$primary});
+    background: var(--sel-bg, #{$primary-50});
+    color: var(--sel-color, #{$primary});
+    box-shadow: 0 0 0 3px var(--sel-ring, #{$primary-100});
+
+    .sel-btn__icon { color: var(--sel-color, #{$primary}); }
+  }
+}
+
+// Row-direction variant (e.g. priority buttons)
+.sel-btn--row {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+}
+
+// Common column-count modifiers
+.sel-grid--4 { grid-template-columns: repeat(4, 1fr); }
+
+// ── Action bar large buttons (used by wizard pages) ─────────────────────────
+.action-btn-lg {
+  height: 48px;
+  border-radius: 12px !important;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+  flex: 1;
+}
+
+// ── Light-surface warehouse / option chip ───────────────────────────────────
+.wh-chip {
+  display: inline-flex;
+  flex-direction: column;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1.5px solid $border;
+  background: #FAFAF7;
+  cursor: pointer;
+  user-select: none;
+  font-family: inherit;
+  min-width: 80px;
+  transition: border-color 150ms, background 150ms;
+
+  &:active { transform: scale(0.96); }
+  &.is-active {
+    border-color: #0F766E;
+    background: #F0FDFA;
+    .wh-chip__name, .wh-chip__code { color: #0F766E; }
+  }
+
+  &__name { font-size: 12px; font-weight: 700; color: $ink; }
+  &__code { font-family: $font-mono; font-size: 10px; color: $ink-muted; margin-top: 1px; }
+}
+
+// ── Pickable list rows (sku/item selection) ─────────────────────────────────
+.pick-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 14px;
+  background: $primary-50;
+  border-bottom: 1px solid $primary-100;
+  font-size: 12px;
+  font-weight: 700;
+  color: $primary;
+}
+
+.pick-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #F2F2EE;
+  transition: background 120ms;
+
+  &.is-selected { background: #F0FDFA; }
 }

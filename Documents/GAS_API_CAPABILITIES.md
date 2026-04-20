@@ -28,22 +28,82 @@ Do not treat this as a universal startup read for every task.
 
 ---
 
+## Canonical Transport Envelope (v1)
+
+All requests and responses use one transport envelope.
+
+### Request
+```json
+{
+  "requestId": "uuid",
+  "action": "get",
+  "resource": ["Products", "Procurements"],
+  "token": "...",
+  "payload": {
+    "includeInactive": true,
+    "lastUpdatedAtByResource": {
+      "Products": 1713400000000
+    }
+  }
+}
+```
+
+Rules:
+- `scope` is not required in request payload.
+- `resource` supports string or array.
+- `requestId` is echoed in the response.
+
+### Response
+```json
+{
+  "success": true,
+  "requestId": "uuid",
+  "action": "get",
+  "error": null,
+  "message": "",
+  "data": {
+    "resources": {
+      "Products": {
+        "rows": [["..."], ["..."]],
+        "meta": { "resource": "Products", "lastSyncAt": 1713400000999 }
+      }
+    },
+    "result": {},
+    "artifacts": {}
+  },
+  "meta": {
+    "serverTime": 1713400000999,
+    "version": "v1"
+  }
+}
+```
+
+Rules:
+- Resource payloads are header-light by default.
+- Header refresh is explicit via authorized-resources fallback.
+
+---
+
 ## Action Reference
 
 ### `get` — Read records
 ```json
 {
+  "requestId": "uuid",
   "action": "get",
-  "resource": "PurchaseRequisitions",
-  "scope": "operation",
-  "includeInactive": false,
-  "lastUpdatedAt": 1713400000000
+  "resource": ["PurchaseRequisitions", "PurchaseRequisitionItems"],
+  "payload": {
+    "includeInactive": false,
+    "lastUpdatedAtByResource": {
+      "PurchaseRequisitions": 1713400000000,
+      "PurchaseRequisitionItems": 1713400000000
+    }
+  }
 }
 ```
-- `lastUpdatedAt` (Unix ms): delta cursor — only rows with `UpdatedAt > lastUpdatedAt` are returned. Omit for full fetch.
-- `scope` resolves the correct sheet; defaults to `"master"` when omitted.
-- Response: `{ success, rows: [[...]], meta: { resource, fileId, sheetName, hasDeltaFilter, lastSyncAt } }`
-- **Note:** `rows` are raw arrays parallel to `meta.headers` is NOT included in the response. The frontend uses its cached headers from the initial authorized-resources sync.
+- Resource can be single or multi-resource.
+- Delta cursor can be provided per-resource in `payload.lastUpdatedAtByResource`.
+- Response resource rows are emitted under `data.resources[resourceName].rows`.
 
 ### `create` — Create a single record
 ```json
@@ -130,12 +190,15 @@ Do not treat this as a universal startup read for every task.
 ### `batch` — Multiple actions in one round-trip
 ```json
 {
+  "requestId": "uuid",
   "action": "batch",
-  "requests": [
-    { "action": "compositeSave", "resource": "PurchaseRequisitions", ... },
-    { "action": "get",           "resource": "PurchaseRequisitions",     "scope": "operation", "includeInactive": true },
-    { "action": "get",           "resource": "PurchaseRequisitionItems", "scope": "operation", "includeInactive": true }
-  ]
+  "payload": {
+    "requests": [
+      { "requestId": "uuid-1", "action": "compositeSave", "resource": "PurchaseRequisitions", "payload": { ... } },
+      { "requestId": "uuid-2", "action": "get", "resource": ["PurchaseRequisitions"], "payload": { "includeInactive": true } },
+      { "requestId": "uuid-3", "action": "get", "resource": ["PurchaseRequisitionItems"], "payload": { "includeInactive": true } }
+    ]
+  }
 }
 ```
 - Requests execute **sequentially** in order. Later requests see writes made by earlier ones.
@@ -145,16 +208,21 @@ Do not treat this as a universal startup read for every task.
 ```json
 {
   "success": true,
-  "message": "Batch actions completed successfully",
-  "data": [
-    { "success": true, "data": { "parentCode": "PR26000001" } },
-    { "success": true, "rows": [[...]], "meta": { ... } },
-    { "success": true, "rows": [[...]], "meta": { ... } }
-  ]
+  "requestId": "uuid",
+  "action": "batch",
+  "data": {
+    "result": {
+      "results": [
+        { "success": true, "requestId": "uuid-1", "action": "compositeSave", "data": { "result": { "parentCode": "PR26000001" } } },
+        { "success": true, "requestId": "uuid-2", "action": "get", "data": { "resources": { "PurchaseRequisitions": { "rows": [[...]], "meta": { ... } } } } },
+        { "success": true, "requestId": "uuid-3", "action": "get", "data": { "resources": { "PurchaseRequisitionItems": { "rows": [[...]], "meta": { ... } } } } }
+      ]
+    }
+  }
 }
 ```
-- `success` at the top level is `false` if **any** sub-request failed.
-- Individual results are always present in `data[]` regardless of failure — inspect each `data[i].success`.
+- `success` at top level is `false` if any sub-request fails.
+- Individual results remain available under `data.result.results[]`.
 
 **Primary use case:** combine a write with an immediate read in one call so the frontend can update IDB without a second round-trip. Example: `compositeSave` + two `get` calls returns the created record and all affected children in one response.
 
@@ -191,3 +259,4 @@ Update this file when:
 - a backend capability is added, removed, or materially changed
 - a new generic backend pattern becomes officially supported
 - escalation guidance changes
+- canonical envelope fields or resource payload contract change

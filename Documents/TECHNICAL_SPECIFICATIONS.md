@@ -37,6 +37,13 @@ Canonical frontend guidance: [FRONTENT_README.md](F:/LITTLE%20LEAP/AQL/Documents
 ## Backend Contracts
 - Prefer generic CRUD, bulk-array writes, additional actions, composite save, and hook-based extensions before proposing new backend patterns.
 - Do not hardcode resource-specific runtime logic in generic core files when a metadata-driven pattern exists.
+- All GAS actions must use one canonical transport envelope with `requestId` correlation.
+- Requests must not require `scope`; resource selector supports string or array.
+- Responses must expose one canonical `data` contract:
+  - `data.resources` for resource row payloads
+  - `data.result` for action-specific return data
+  - `data.artifacts` for non-row outputs (e.g., report files)
+- Resource payloads are header-light by default; header refresh uses explicit fallback retrieval from authorized resource metadata.
 - Backend capability inventory and implementation patterns are owned by:
   - [GAS_API_CAPABILITIES.md](F:/LITTLE%20LEAP/AQL/Documents/GAS_API_CAPABILITIES.md)
   - [GAS_PATTERNS.md](F:/LITTLE%20LEAP/AQL/Documents/GAS_PATTERNS.md)

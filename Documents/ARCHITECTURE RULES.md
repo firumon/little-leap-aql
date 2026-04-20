@@ -82,6 +82,37 @@ Helpers MUST NOT:
 
 * Stores are the **SINGLE SOURCE OF TRUTH**
 
+### CORE REQUIRED PRIMITIVES (MUST-USE DEFAULTS)
+
+These are default contracts for all new frontend work. Do not bypass them unless the task explicitly introduces a new canonical replacement and updates docs in the same task.
+
+* `useDataStore` (`FRONTENT/src/stores/data.js`)
+  * MUST be the default in-memory resource-record state owner.
+  * Resource row state MUST flow through this store (directly or via IDB upsert callbacks).
+* `useWorkflowStore` (`FRONTENT/src/stores/workflow.js`)
+  * MUST be the default orchestration boundary for action/composite/report/batch execution.
+* `useSyncStore` (`FRONTENT/src/stores/sync.js`)
+  * MUST be the default queue/sync orchestration surface.
+* `useClientCacheStore` (`FRONTENT/src/stores/clientCache.js`)
+  * MUST be the default app-level access point to client cache services.
+* `useResourceNav` (`FRONTENT/src/composables/resources/useResourceNav.js`)
+  * MUST be used for resource navigation (no direct `router.push()` in feature flows).
+* `useSectionResolver` (`FRONTENT/src/composables/resources/useSectionResolver.js`)
+  * MUST be used for 3-tier section resolution.
+* `useActionResolver` (`FRONTENT/src/composables/resources/useActionResolver.js`)
+  * MUST be used for action-page section resolution.
+
+---
+
+### API TRANSPORT CONTRACT (FRONTEND + GAS)
+
+* All frontend-to-GAS requests MUST use one canonical request envelope with `requestId` correlation.
+* Request scope MUST NOT be required in frontend payloads.
+* Resource selector MUST support string or array.
+* All GAS responses MUST use one canonical envelope.
+* Any resource data in responses MUST be handled generically by frontend services and persisted via the approved IDB/data flow.
+* Resource responses MUST be header-light by default; header refresh MUST use an explicit fallback request.
+
 ---
 
 ### DATA STORE RESPONSIBILITY (CRITICAL)
@@ -309,6 +340,12 @@ You are allowed to:
 * maintainability
 * scalability
 * strict architecture compliance
+
+---
+
+## 13. MAINTENANCE ENFORCEMENT
+
+When any required primitive, transport contract, or layer ownership rule changes, this file MUST be updated in the same task before completion.
 
 ---
 

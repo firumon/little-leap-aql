@@ -15,11 +15,25 @@ This document is the authoritative reference for the payload returned by `handle
 ```json
 {
   "success": true,
-  "token": "string (uuid)",
-  "user": { },
-  "resources": [],
-  "appConfig": { },
-  "appOptions": { }
+  "requestId": "string (uuid)",
+  "action": "login",
+  "error": null,
+  "message": "",
+  "data": {
+    "resources": {},
+    "result": {
+      "token": "string (uuid)",
+      "user": { },
+      "resources": [],
+      "appConfig": { },
+      "appOptions": { }
+    },
+    "artifacts": {}
+  },
+  "meta": {
+    "serverTime": 0,
+    "version": "v1"
+  }
 }
 ```
 
@@ -30,11 +44,11 @@ This document is the authoritative reference for the payload returned by `handle
 | Field | Source | Generator (file:line) | Purpose | Frontend storage | Refresh trigger |
 |---|---|---|---|---|---|
 | `success` | Computed | `GAS/auth.gs:116` | Login success flag | Not persisted | Per request |
-| `token` | `APP.Users.ApiKey` | `GAS/auth.gs:111` — `Utilities.getUuid()` | Session identifier written to `Users.ApiKey` | `localStorage.token` + Pinia `authStore.token` | Re-login only |
-| `user` | `APP.Users` + `APP.Roles` + `APP.Designations` | `GAS/auth.gs:119` → `buildAuthUserPayload()` `GAS/auth.gs:205` | Authenticated user identity, roles, access region | `localStorage.user` + Pinia `authStore.user` | Re-login only |
-| `resources` | `APP.Resources` + `APP.RolePermissions` | `GAS/auth.gs:120` → `getLoginAuthorizedResources()` `GAS/auth.gs:196` → `safeGetRoleResourceAccess()` `GAS/auth.gs:236` → `buildAuthorizedResourceEntry()` `GAS/resourceRegistry.gs:482` | Menu items, permissions, UI config per resource the user can access | `localStorage.resources` + Pinia `authStore.resources` | Re-login or admin runs **AQL 🚀 > Resources > Clear Resource Config Cache** |
-| `appConfig` | `APP.Config` | `GAS/auth.gs:121` → `getLoginAppConfig()` `GAS/auth.gs:164` | Deployment-scoped settings (sync TTLs, file IDs, branding) | `localStorage.appConfig` + Pinia `authStore.appConfig` | Re-login |
-| `appOptions` | `APP.AppOptions` | `GAS/auth.gs:122` → `getAppOptions()` `GAS/appOptions.gs:15` | Flat map of option-group → array of selectable values | `localStorage.appOptions` + Pinia `authStore.appOptions` (exposed as `appOptionsMap` computed) | Re-login |
+| `data.result.token` | `APP.Users.ApiKey` | `GAS/auth.gs:111` — `Utilities.getUuid()` | Session identifier written to `Users.ApiKey` | `localStorage.token` + Pinia `authStore.token` | Re-login only |
+| `data.result.user` | `APP.Users` + `APP.Roles` + `APP.Designations` | `GAS/auth.gs:119` → `buildAuthUserPayload()` `GAS/auth.gs:205` | Authenticated user identity, roles, access region | `localStorage.user` + Pinia `authStore.user` | Re-login only |
+| `data.result.resources` | `APP.Resources` + `APP.RolePermissions` | `GAS/auth.gs:120` → `getLoginAuthorizedResources()` `GAS/auth.gs:196` → `safeGetRoleResourceAccess()` `GAS/auth.gs:236` → `buildAuthorizedResourceEntry()` `GAS/resourceRegistry.gs:482` | Menu items, permissions, UI config per resource the user can access | `localStorage.resources` + Pinia `authStore.resources` | Re-login or admin runs **AQL 🚀 > Resources > Clear Resource Config Cache** |
+| `data.result.appConfig` | `APP.Config` | `GAS/auth.gs:121` → `getLoginAppConfig()` `GAS/auth.gs:164` | Deployment-scoped settings (sync TTLs, file IDs, branding) | `localStorage.appConfig` + Pinia `authStore.appConfig` | Re-login |
+| `data.result.appOptions` | `APP.AppOptions` | `GAS/auth.gs:122` → `getAppOptions()` `GAS/appOptions.gs:15` | Flat map of option-group → array of selectable values | `localStorage.appOptions` + Pinia `authStore.appOptions` (exposed as `appOptionsMap` computed) | Re-login |
 
 ---
 

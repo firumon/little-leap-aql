@@ -42,11 +42,19 @@ Use when the task depends on current project state or recent unfinished work.
 Use when editing files under `FRONTENT/`.
 - Read:
   - `Documents/AI_COLLABORATION_PROTOCOL.md`
+  - `Documents/ARCHITECTURE RULES.md` (mandatory for all `FRONTENT/` edits)
 - If the task affects reusable building blocks, also read/update:
   - `FRONTENT/src/components/REGISTRY.md`
   - `FRONTENT/src/composables/REGISTRY.md`
 - If the task affects a documented module, also read only the relevant section of:
   - `Documents/MODULE_WORKFLOWS.md`
+
+### Frontend Architecture Review Or Planning
+Use when reviewing frontend architecture, planning frontend refactors, or defining frontend implementation steps (even before code edits).
+- Read:
+  - `Documents/ARCHITECTURE RULES.md`
+  - `Documents/AI_COLLABORATION_PROTOCOL.md`
+  - task-specific module docs only when directly relevant
 
 ### Operations Resource Customization
 Use when overriding or creating custom section or sub-components for an operations resource
@@ -105,3 +113,4 @@ Update this file when any of the following changes:
 - a new recurring task type is introduced
 - a canonical reference doc is added, removed, or renamed
 - routing guidance changes for planning, build, backend, frontend, auth, menu, or resume workflows
+- mandatory-read rules for specific task categories change

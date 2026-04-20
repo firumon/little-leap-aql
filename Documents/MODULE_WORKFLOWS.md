@@ -409,7 +409,7 @@ Resolves individual sections within a default page.
 
 | File | Role |
 |---|---|
-| `FRONTENT/src/composables/useSectionResolver.js` | Generic 3-tier section resolver composable |
+| `FRONTENT/src/composables/resources/useSectionResolver.js` | Generic 3-tier section resolver composable |
 | `FRONTENT/src/pages/Masters/ActionResolverPage.vue` | 3-tier page-level resolver with `CustomUIName` support |
 | `FRONTENT/src/pages/Masters/_common/IndexPage.vue` | Index (list) orchestrator — layout, composables, FAB, dialog |
 | `FRONTENT/src/pages/Masters/_common/ViewPage.vue` | View orchestrator — record details, children, actions, reports |
@@ -532,6 +532,12 @@ sectionsReady = true → template renders all <component :is="...">
 7. **Registries**: Tenant-custom overrides should be registered in the `_custom/REGISTRY.md` files. Default components are in `components/REGISTRY.md`.
 8. **Tiny custom files**: Custom components should be small layout glue over shared composables/components — not duplicated logic.
 
+### 2.11 Architecture Contract Link
+
+- All frontend implementation under this module must follow `Documents/ARCHITECTURE RULES.md`.
+- Core defaults are mandatory: `useDataStore`, `useWorkflowStore`, `useSyncStore`, `useClientCacheStore`, `useResourceNav`, `useSectionResolver`, `useActionResolver`.
+- API transport must use canonical request/response envelopes with request correlation; resource payload ingestion must be generic and header-light by default.
+
 ---
 
 ## 3. Operation Pages — 3-Tier Architecture
@@ -566,7 +572,12 @@ Route: /:scope(masters|operations)/:resourceSlug/(_add|:pageSlug|:code/(_view|_e
 | `FRONTENT/src/components/Operations/_common/Operation*.vue` | 22 default section components for Operations |
 | `FRONTENT/src/pages/Operations/_custom/REGISTRY.md` | Registry for tenant-custom full pages |
 | `FRONTENT/src/components/Operations/_custom/REGISTRY.md` | Registry for tenant-custom section components |
-| `FRONTENT/src/composables/useResourceNav.js` | Composable for route navigation logic across scopes. |
+| `FRONTENT/src/composables/resources/useResourceNav.js` | Composable for route navigation logic across scopes. |
+
+### 3.4 Architecture Contract Link
+
+- Operations frontend flows must comply with `Documents/ARCHITECTURE RULES.md` and the same core defaults listed in section 2.11.
+- Route transitions must continue to go through `useResourceNav`; section/action customization must continue through resolver composables.
 
 ---
 

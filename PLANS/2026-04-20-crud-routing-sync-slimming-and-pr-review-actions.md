@@ -1,5 +1,5 @@
 # PLAN: CRUD Routing, Sync Slimming, and PR Review Actions
-**Status**: IN_PROGRESS
+**Status**: COMPLETED
 **Created**: 2026-04-20
 **Created By**: Solo Agent (Codex)
 **Executed By**: Solo Agent (Codex)
@@ -10,56 +10,65 @@ Fix canonical CRUD dispatch failures (`action=get` and similar), harden future p
 ## Steps
 
 ### Step 1: Immediate CRUD routing fix + robust hardening
-- [ ] Replace scope-dependent CRUD detection with canonical action + resource selector validation.
-- [ ] Rename dispatcher helpers to generic names (`isGenericCrudAction`, `dispatchGenericCrudAction`).
-- [ ] Improve default error semantics for malformed canonical CRUD payloads.
+- [x] Replace scope-dependent CRUD detection with canonical action + resource selector validation.
+- [x] Rename dispatcher helpers to generic names (`isGenericCrudAction`, `dispatchGenericCrudAction`).
+- [x] Improve default error semantics for malformed canonical CRUD payloads.
 
 **Files**: `GAS/apiDispatcher.gs`
 
 ### Step 2: Naming alignment for cross-scope sync functions
-- [ ] Rename frontend sync APIs from master-specific names to generic names.
-- [ ] Keep internal behavior consistent and update all imports/callers.
+- [x] Rename frontend sync APIs from master-specific names to generic names.
+- [x] Keep internal behavior consistent and update all imports/callers.
 
 **Files**: `FRONTENT/src/services/ResourceFetchService.js`, `FRONTENT/src/services/ResourceSyncQueueService.js`, `FRONTENT/src/services/ResourceRecordsService.js`, `FRONTENT/src/stores/sync.js`
 
 ### Step 3: Login-time single-call slimming
-- [ ] Remove per-scope queue loop from global sync path.
-- [ ] Use one direct batched sync call over all readable non-functional resources.
-- [ ] Keep syncStore API behavior unchanged for callers.
+- [x] Remove per-scope queue loop from global sync path.
+- [x] Use one direct batched sync call over all readable non-functional resources.
+- [x] Keep syncStore API behavior unchanged for callers.
 
 **Files**: `FRONTENT/src/services/ResourceRecordsService.js`, `FRONTENT/src/stores/sync.js`, `FRONTENT/src/composables/core/useAuthLogic.js`
 
 ### Step 4: PR review page save/submit action fix
-- [ ] Implement actionable save/submit handlers in review composable.
-- [ ] Bind action bar to real handlers instead of re-emitting to no listener.
-- [ ] Remove obsolete scope field from PR payload builder.
+- [x] Implement actionable save/submit handlers in review composable.
+- [x] Bind action bar to real handlers instead of re-emitting to no listener.
+- [x] Remove obsolete scope field from PR payload builder.
 
 **Files**: `FRONTENT/src/composables/operations/purchaseRequisitions/usePurchaseRequisitionReviewFlow.js`, `FRONTENT/src/pages/Operations/PurchaseRequisitions/RecordReviewPurchaseRequisitionPage.vue`, `FRONTENT/src/composables/operations/purchaseRequisitions/purchaseRequisitionPayload.js`
 
 ### Step 5: Verification and completion
-- [ ] Run targeted errors check on changed files.
-- [ ] Run frontend build.
-- [ ] Update plan status and changed files list.
+- [x] Run targeted errors check on changed files.
+- [x] Run frontend build.
+- [x] Update plan status and changed files list.
 
 ## Acceptance Criteria
-- [ ] Canonical `get/create/update/bulk` works without `scope` when `resource` is provided.
-- [ ] Dispatcher error messages distinguish unsupported action vs malformed canonical payload.
-- [ ] Global sync executes as one direct call (not per-scope queue loop).
-- [ ] Review page save draft and submit trigger backend actions and user feedback.
-- [ ] No frontend build regressions.
+- [x] Canonical `get/create/update/bulk` works without `scope` when `resource` is provided.
+- [x] Dispatcher error messages distinguish unsupported action vs malformed canonical payload.
+- [x] Global sync executes as one direct call (not per-scope queue loop).
+- [x] Review page save draft and submit trigger backend actions and user feedback.
+- [x] No frontend build regressions.
 
 ## Post-Execution Notes
 ### Progress Log
-- [ ] Step 1 completed
-- [ ] Step 2 completed
-- [ ] Step 3 completed
-- [ ] Step 4 completed
-- [ ] Step 5 completed
+- [x] Step 1 completed
+- [x] Step 2 completed
+- [x] Step 3 completed
+- [x] Step 4 completed
+- [x] Step 5 completed
 
 ### Files Actually Changed
-- `TBD`
+- `GAS/apiDispatcher.gs`
+- `FRONTENT/src/services/ResourceFetchService.js`
+- `FRONTENT/src/services/ResourceSyncQueueService.js`
+- `FRONTENT/src/services/ResourceRecordsService.js`
+- `FRONTENT/src/stores/sync.js`
+- `FRONTENT/src/composables/operations/purchaseRequisitions/purchaseRequisitionPayload.js`
+- `FRONTENT/src/composables/operations/purchaseRequisitions/usePurchaseRequisitionReviewFlow.js`
+- `FRONTENT/src/pages/Operations/PurchaseRequisitions/RecordReviewPurchaseRequisitionPage.vue`
+- `PLANS/2026-04-20-crud-routing-sync-slimming-and-pr-review-actions.md`
 
 ### Validation Performed
-- [ ] Targeted error checks completed
-- [ ] Frontend build completed
+- [x] Targeted error checks completed
+- [x] Frontend build completed
+
 

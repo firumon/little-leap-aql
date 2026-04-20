@@ -336,10 +336,24 @@ function resolveMasterResourceNames(payload) {
     return [];
   }
 
-  const requestedScope = normalizeResourceScope((payload && payload.scope) ? payload.scope : 'master');
-  const supported = getResourcesByScope(requestedScope).map(function (config) {
-    return config.name;
-  });
+  const scopeProvided = !!(payload && payload.scope);
+  const requestedScope = scopeProvided
+    ? normalizeResourceScope(payload.scope)
+    : '';
+  let supported = [];
+  if (scopeProvided) {
+    supported = getResourcesByScope(requestedScope).map(function (config) {
+      return config.name;
+    });
+  } else {
+    const scopes = getConfiguredScopes();
+    scopes.forEach(function (scopeName) {
+      const names = getResourcesByScope(scopeName).map(function (config) {
+        return config.name;
+      });
+      supported = supported.concat(names);
+    });
+  }
   const canonicalMap = {};
   supported.forEach(function (name) {
     const variants = getResourceNameVariants(name);
@@ -352,7 +366,10 @@ function resolveMasterResourceNames(payload) {
     const key = normalizeResourceAlias(candidate);
     const match = canonicalMap[key];
     if (!match) {
-      throw new Error('Unsupported resource "' + candidate + '" for scope "' + requestedScope + '"');
+      if (scopeProvided) {
+        throw new Error('Unsupported resource "' + candidate + '" for scope "' + requestedScope + '"');
+      }
+      throw new Error('Unsupported resource "' + candidate + '"');
     }
     return match;
   });
@@ -498,7 +515,17 @@ function buildNormalizedValueMap(source) {
 }
 
 function normalizeFieldKey(value) {
-  return (value || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+  const source = (value || '').toString().toLowerCase();
+  let normalized = '';
+  for (let i = 0; i < source.length; i++) {
+    const ch = source.charAt(i);
+    const isAlpha = ch >= 'a' && ch <= 'z';
+    const isNum = ch >= '0' && ch <= '9';
+    if (isAlpha || isNum) {
+      normalized += ch;
+    }
+  }
+  return normalized;
 }
 
 function resolveCodeValue(payload) {
@@ -800,7 +827,12 @@ function extractRequestedResourceCandidates(payload) {
     });
   }
 
-  if (source.resource !== undefined && source.resource !== null && source.resource !== '') {
+  if (Array.isArray(source.resource)) {
+    source.resource.forEach(function (item) {
+      const value = extractResourceNameFromCandidate(item);
+      if (value) result.push(value);
+    });
+  } else if (source.resource !== undefined && source.resource !== null && source.resource !== '') {
     const value = source.resource.toString().trim();
     if (value) result.unshift(value);
   }
@@ -1365,7 +1397,6 @@ function handleBulkUpsertRecords(auth, payload) {
       skipped: results.skipped,
       errors: results.errors,
       rows: filtered,
-      headers: freshHeaders,
       meta: {
         resource: targetResourceName,
         lastSyncAt: Date.now()

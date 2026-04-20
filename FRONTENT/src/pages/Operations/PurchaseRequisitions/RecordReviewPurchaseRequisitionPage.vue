@@ -61,8 +61,8 @@
       :submitting="submitting"
       :items-count="items.length"
       :format-currency="formatCurrency"
-      @save-draft="emit('save-draft', buildPayload('Draft'))"
-      @submit="emit('submit', buildPayload('New'))"
+      @save-draft="saveDraft"
+      @submit="submit"
     />
 
     <PurchaseRequisitionAddItemDialog
@@ -82,8 +82,6 @@ import PurchaseRequisitionReviewActionBar from 'src/components/Operations/Purcha
 import PurchaseRequisitionReviewHero from 'src/components/Operations/PurchaseRequisitions/PurchaseRequisitionReviewHero.vue'
 import PurchaseRequisitionReviewItemsCard from 'src/components/Operations/PurchaseRequisitions/PurchaseRequisitionReviewItemsCard.vue'
 import { usePurchaseRequisitionReviewFlow } from 'src/composables/operations/purchaseRequisitions/usePurchaseRequisitionReviewFlow'
-
-const emit = defineEmits(['save-draft', 'submit'])
 
 const {
   nav,
@@ -120,6 +118,8 @@ const {
   filterSkus,
   confirmAddItem,
   removeItem,
+  saveDraft,
+  submit,
   buildPayload
 } = usePurchaseRequisitionReviewFlow()
 

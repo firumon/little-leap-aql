@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia'
 import {
-  flushMasterSyncQueue,
-  queueMasterResourceSync,
-  syncAllMasterResources
+  flushResourceSyncQueue,
+  queueResourceSync,
+  syncAllResources
 } from 'src/services/ResourceRecordsService'
 
 function normalizeResponse(response, fallbackData = null) {
@@ -25,17 +25,17 @@ function normalizeResponse(response, fallbackData = null) {
 
 export const useSyncStore = defineStore('sync', () => {
   function queueResource(resourceName, dueAt, reason = '') {
-    queueMasterResourceSync(resourceName, dueAt, reason)
+    queueResourceSync(resourceName, dueAt, reason)
     return { success: true, data: { resourceName, dueAt, reason }, error: null }
   }
 
   async function flushQueue(forceAll = false, options = {}) {
-    const response = await flushMasterSyncQueue(forceAll, options)
+    const response = await flushResourceSyncQueue(forceAll, options)
     return normalizeResponse(response, {})
   }
 
   async function syncAll() {
-    const response = await syncAllMasterResources()
+    const response = await syncAllResources()
     return normalizeResponse(response, {})
   }
 

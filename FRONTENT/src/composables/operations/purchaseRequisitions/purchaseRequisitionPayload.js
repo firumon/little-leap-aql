@@ -67,7 +67,6 @@ export function buildPurchaseRequisitionPayload({
   return {
     action: 'compositeSave',
     resource: 'PurchaseRequisitions',
-    scope: 'operation',
     code: prCode,
     data: buildPurchaseRequisitionFormData(form, {
       targetProgress,

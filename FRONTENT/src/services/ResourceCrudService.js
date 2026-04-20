@@ -1,15 +1,12 @@
 import { executeGasApi } from 'src/services/GasApiService'
 import { createLogger, standardizeResponse } from './_logger'
-import { resolveResourceScope } from './ResourceFetchService'
 
 const logger = createLogger('ResourceCrudService')
 
-export async function createMasterRecord(resourceName, record, authorizedResources = []) {
+export async function createMasterRecord(resourceName, record) {
   try {
     logger.debug('Creating master record', { resource: resourceName })
-    const scope = resolveResourceScope(resourceName, authorizedResources)
     const response = await executeGasApi('create', {
-      scope,
       resource: resourceName,
       record
     })
@@ -23,12 +20,10 @@ export async function createMasterRecord(resourceName, record, authorizedResourc
   }
 }
 
-export async function updateMasterRecord(resourceName, code, record, authorizedResources = []) {
+export async function updateMasterRecord(resourceName, code, record) {
   try {
     logger.debug('Updating master record', { resource: resourceName, code })
-    const scope = resolveResourceScope(resourceName, authorizedResources)
     const response = await executeGasApi('update', {
-      scope,
       resource: resourceName,
       code,
       record
@@ -43,12 +38,10 @@ export async function updateMasterRecord(resourceName, code, record, authorizedR
   }
 }
 
-export async function bulkMasterRecords(targetResourceName, records, authorizedResources = []) {
+export async function bulkMasterRecords(targetResourceName, records) {
   try {
     logger.debug('Bulk upload', { resource: targetResourceName, count: records?.length || 0 })
-    const scope = resolveResourceScope(targetResourceName, authorizedResources)
     const response = await executeGasApi('bulk', {
-      scope,
       resource: 'BulkUploadMasters',
       callerResource: 'BulkUploadMasters',
       targetResource: targetResourceName,
@@ -78,12 +71,10 @@ export async function compositeSave(payload) {
   }
 }
 
-export async function executeAction(resourceName, code, actionConfig, fields = {}, authorizedResources = []) {
+export async function executeAction(resourceName, code, actionConfig, fields = {}) {
   try {
     logger.debug('Executing action', { resource: resourceName, action: actionConfig.action, code })
-    const scope = resolveResourceScope(resourceName, authorizedResources)
     const response = await executeGasApi('executeAction', {
-      scope,
       resource: resourceName,
       code,
       action: actionConfig.action,

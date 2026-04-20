@@ -1,7 +1,6 @@
 import { computed, ref, toRaw } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
-import { useDataStore } from 'src/stores/data'
 import { useWorkflowStore } from 'src/stores/workflow'
 import { useClientCacheStore } from 'src/stores/clientCache'
 
@@ -10,7 +9,6 @@ const AUDIT_HEADERS = ['CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy']
 export function useBulkUpload() {
   const $q = useQuasar()
   const authStore = useAuthStore()
-  const dataStore = useDataStore()
   const workflowStore = useWorkflowStore()
   const clientCacheStore = useClientCacheStore()
 
@@ -243,22 +241,6 @@ export function useBulkUpload() {
         timeout: 5000
       })
 
-       // Cache the full snapshot returned by the server into IDB via store
-       const bulkRows = response.data?.rows
-       const bulkHeaders = response.data?.headers
-       const bulkSyncAt = response.data?.meta?.lastSyncAt
-       if (Array.isArray(bulkRows) && bulkRows.length && Array.isArray(bulkHeaders) && bulkHeaders.length) {
-         try {
-           // Use new store action to cache rows (which uses new service layer)
-           await dataStore.cacheResourceRows(selectedResourceName.value, bulkHeaders, bulkRows)
-           await dataStore.setResourceMetadata(selectedResourceName.value, {
-             headers: bulkHeaders,
-             lastSyncAt: bulkSyncAt || Date.now()
-           })
-         } catch (cacheError) {
-           console.warn('Failed to cache bulk upload rows in store:', cacheError)
-         }
-       }
 
       if (!errors.length) {
         await clearAll()

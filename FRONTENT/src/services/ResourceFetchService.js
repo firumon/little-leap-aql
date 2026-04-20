@@ -90,8 +90,8 @@ export async function ensureHeaders(resourceName, authorizedResources = []) {
     }
 
     const response = await executeGasApi('getAuthorizedResources', { includeHeaders: true })
-    if (response.success && Array.isArray(response.data?.resources)) {
-      const found = response.data.resources.find((entry) => entry?.name === resourceName)
+    if (response.success && Array.isArray(response.data?.result?.resources)) {
+      const found = response.data.result.resources.find((entry) => entry?.name === resourceName)
       if (Array.isArray(found?.headers) && found.headers.length) {
         logger.debug('Headers from API', { resource: resourceName })
         withTimeout(setResourceMeta(resourceName, { headers: found.headers }), null)
@@ -107,7 +107,7 @@ export async function ensureHeaders(resourceName, authorizedResources = []) {
   }
 }
 
-export async function syncMasterResourcesBatch(resourceNames = [], authorizedResources = [], appConfig = {}, options = {}) {
+export async function syncResourcesBatch(resourceNames = [], authorizedResources = [], appConfig = {}, options = {}) {
   try {
     const uniqueNames = Array.from(new Set((Array.isArray(resourceNames) ? resourceNames : []).filter(Boolean)))
     if (!uniqueNames.length) {
@@ -132,59 +132,35 @@ export async function syncMasterResourcesBatch(resourceNames = [], authorizedRes
       }
     }
 
-    const byScope = {}
-    for (const name of uniqueNames) {
-      const scope = resolveResourceScope(name, authorizedResources)
-      if (!byScope[scope]) byScope[scope] = []
-      byScope[scope].push(name)
-    }
-
     const mergedResponseData = {}
-    let anyFailed = false
-    let failMessage = ''
-
-    for (const [scope, scopeNames] of Object.entries(byScope)) {
-      const scopeCursors = {}
-      for (const name of scopeNames) {
-        if (cursorByResource[name]) scopeCursors[name] = cursorByResource[name]
-      }
-
-      const payload = {
-        scope,
-        resources: scopeNames,
-        includeInactive: true,
-        ...(Object.keys(scopeCursors).length
-          ? { lastUpdatedAtByResource: scopeCursors }
-          : {})
-      }
-
-      logger.debug('Fetching scope', { scope, count: scopeNames.length })
-      const response = await executeGasApi('get', payload, {
-        showLoading: options.showLoading === true,
-        showError: options.showError === true
-      })
-
-      if (!response.success) {
-        anyFailed = true
-        failMessage = response.message || `Failed to sync ${scope} resources`
-        logger.warn('Scope sync failed', { scope, error: failMessage })
-        continue
-      }
-
-      const scopeData = (response && typeof response.data === 'object' && response.data !== null)
-        ? response.data
-        : {}
-      Object.assign(mergedResponseData, scopeData)
+    const payload = {
+      resource: uniqueNames,
+      includeInactive: true,
+      ...(Object.keys(cursorByResource).length
+        ? { lastUpdatedAtByResource: cursorByResource }
+        : {})
     }
 
-    if (anyFailed && !Object.keys(mergedResponseData).length) {
-      logger.error('Batch sync failed completely', { resources: uniqueNames.length })
-      return standardizeResponse(false, {}, failMessage || 'Failed to sync resources')
+    logger.debug('Fetching resources', { count: uniqueNames.length })
+    const response = await executeGasApi('get', payload, {
+      showLoading: options.showLoading === true,
+      showError: options.showError === true
+    })
+
+    if (!response.success) {
+      const failMessage = response.message || 'Failed to sync resources'
+      logger.error('Sync failed', { error: failMessage })
+      return standardizeResponse(false, {}, failMessage)
     }
+
+    const scopeData = (response?.data?.resources && typeof response.data.resources === 'object')
+      ? response.data.resources
+      : {}
+    Object.assign(mergedResponseData, scopeData)
 
     for (const resourceName of uniqueNames) {
       const resourceResponse = mergedResponseData[resourceName]
-      if (!resourceResponse || resourceResponse.success === false) {
+      if (!resourceResponse) {
         continue
       }
 
@@ -217,6 +193,9 @@ export async function syncMasterResourcesBatch(resourceNames = [], authorizedRes
     return standardizeResponse(false, {}, error.message)
   }
 }
+
+// Transitional alias while callers migrate to generic naming.
+export const syncMasterResourcesBatch = syncResourcesBatch
 
 export async function fetchResourceRecords(resourceName, authorizedResources = [], appConfig = {}, options = {}) {
   try {

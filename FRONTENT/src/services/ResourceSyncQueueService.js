@@ -13,7 +13,7 @@ function clearQueueTimer() {
 }
 
 export function createResourceSyncQueue({ syncBatch }) {
-  function scheduleMasterSyncQueueFlush() {
+  function scheduleResourceSyncQueueFlush() {
     clearQueueTimer()
     if (!masterSyncQueue.size) return
 
@@ -29,11 +29,11 @@ export function createResourceSyncQueue({ syncBatch }) {
       ? Math.max(nextDueAt - Date.now(), MIN_QUEUE_WAIT_MS)
       : MIN_QUEUE_WAIT_MS
     queueTimerId = setTimeout(() => {
-      flushMasterSyncQueue(false, { showError: false, showLoading: false }).catch(() => {})
+      flushResourceSyncQueue(false, { showError: false, showLoading: false }).catch(() => {})
     }, waitMs)
   }
 
-  function queueMasterResourceSync(resourceName, dueAt, reason = '') {
+  function queueResourceSync(resourceName, dueAt, reason = '') {
     if (!resourceName) return
     if (inFlightResourceNames.has(resourceName)) return
     const normalizedDueAt = Number.isFinite(Number(dueAt)) ? Number(dueAt) : Date.now()
@@ -44,14 +44,14 @@ export function createResourceSyncQueue({ syncBatch }) {
         reason
       })
     }
-    scheduleMasterSyncQueueFlush()
+    scheduleResourceSyncQueueFlush()
   }
 
-  async function flushMasterSyncQueue(forceAll = false, syncOptions = {}) {
+  async function flushResourceSyncQueue(forceAll = false, syncOptions = {}) {
     if (queueFlushPromise) {
       const result = await queueFlushPromise
       if (masterSyncQueue.size > 0) {
-        return flushMasterSyncQueue(forceAll, syncOptions)
+        return flushResourceSyncQueue(forceAll, syncOptions)
       }
       return result
     }
@@ -67,7 +67,7 @@ export function createResourceSyncQueue({ syncBatch }) {
       }
 
       if (!dueResourceNames.length) {
-        scheduleMasterSyncQueueFlush()
+        scheduleResourceSyncQueueFlush()
         return { success: true, data: {}, meta: { resources: [] } }
       }
 
@@ -94,7 +94,10 @@ export function createResourceSyncQueue({ syncBatch }) {
   }
 
   return {
-    flushMasterSyncQueue,
-    queueMasterResourceSync
+    flushResourceSyncQueue,
+    queueResourceSync,
+    // Transitional aliases for older import names.
+    flushMasterSyncQueue: flushResourceSyncQueue,
+    queueMasterResourceSync: queueResourceSync
   }
 }

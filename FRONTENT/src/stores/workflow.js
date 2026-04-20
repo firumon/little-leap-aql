@@ -9,9 +9,22 @@ import { generateReport } from 'src/services/ReportService'
 
 function normalizeResponse(response, fallbackData = null) {
   if (response && typeof response === 'object' && 'success' in response) {
+    const resultPayload = response?.data?.result
+    const reportArtifact = response?.data?.artifacts?.report
+    let normalizedData = response.success
+      ? (resultPayload ?? response.data ?? fallbackData)
+      : null
+
+    if (response.success && reportArtifact && typeof reportArtifact === 'object') {
+      normalizedData = {
+        ...(normalizedData && typeof normalizedData === 'object' ? normalizedData : {}),
+        ...reportArtifact
+      }
+    }
+
     return {
       success: response.success === true,
-      data: response.success ? (response.data ?? fallbackData) : null,
+      data: normalizedData,
       error: response.success ? null : (response.error || response.message || 'Request failed'),
       message: response.message || ''
     }
@@ -48,7 +61,15 @@ export const useWorkflowStore = defineStore('workflow', () => {
 
   async function runBatchRequests(requests = []) {
     const response = await executeGasApi('batch', { requests })
-    return normalizeResponse(response, [])
+    const normalized = normalizeResponse(response, { results: [] })
+    if (!normalized.success) {
+      return normalized
+    }
+
+    return {
+      ...normalized,
+      data: Array.isArray(normalized.data?.results) ? normalized.data.results : []
+    }
   }
 
   async function submitStockMovementsBatch(movementRecords = []) {

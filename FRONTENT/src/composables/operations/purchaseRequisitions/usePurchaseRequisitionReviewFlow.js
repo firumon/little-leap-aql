@@ -5,6 +5,7 @@ import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useResourceData } from 'src/composables/resources/useResourceData'
 import { useStockMovements } from 'src/composables/operations/stock/useStockMovements'
 import { useAuthStore } from 'src/stores/auth'
+import { useWorkflowStore } from 'src/stores/workflow'
 import {
   mapPurchaseRequisitionPriorityOptions,
   mapPurchaseRequisitionTypeOptions
@@ -22,6 +23,7 @@ export function usePurchaseRequisitionReviewFlow() {
   const nav = useResourceNav()
   const { loadWarehouses } = useStockMovements()
   const auth = useAuthStore()
+  const workflowStore = useWorkflowStore()
 
   const prCode = route.params.code
   const prResource = useResourceData(ref('PurchaseRequisitions'))
@@ -225,6 +227,67 @@ export function usePurchaseRequisitionReviewFlow() {
     })
   }
 
+  async function saveDraft() {
+    saving.value = true
+    try {
+      const response = await workflowStore.saveComposite(buildPayload('Draft'))
+      if (!response.success) {
+        $q.notify({ type: 'negative', message: response.error || response.message || 'Failed to save draft' })
+        return { success: false, response }
+      }
+
+      $q.notify({ type: 'positive', message: 'Draft saved successfully' })
+      deletedItemCodes.value = []
+      hasLocalEdits.value = false
+      await loadData()
+      return { success: true, response }
+    } catch (error) {
+      $q.notify({ type: 'negative', message: `Failed to save draft: ${error.message}` })
+      return { success: false, response: { error: error.message } }
+    } finally {
+      saving.value = false
+    }
+  }
+
+  async function submit() {
+    if (!items.value.length) {
+      $q.notify({ type: 'warning', message: 'Add at least one item before submitting' })
+      return { success: false }
+    }
+
+    return new Promise((resolve) => {
+      $q.dialog({
+        title: 'Confirm Submit',
+        message: 'Are you sure you want to submit this Purchase Requisition?',
+        cancel: true,
+        persistent: true
+      }).onOk(async () => {
+        submitting.value = true
+        try {
+          const response = await workflowStore.saveComposite(buildPayload('New'))
+          if (!response.success) {
+            $q.notify({ type: 'negative', message: response.error || response.message || 'Failed to submit PR' })
+            resolve({ success: false, response })
+            return
+          }
+
+          $q.notify({ type: 'positive', message: 'Purchase Requisition submitted successfully' })
+          deletedItemCodes.value = []
+          hasLocalEdits.value = false
+          nav.goTo('view', { code: prCode })
+          resolve({ success: true, response })
+        } catch (error) {
+          $q.notify({ type: 'negative', message: `Failed to submit PR: ${error.message}` })
+          resolve({ success: false, response: { error: error.message } })
+        } finally {
+          submitting.value = false
+        }
+      }).onCancel(() => {
+        resolve({ success: false, cancelled: true })
+      })
+    })
+  }
+
   watch([items, prForm], () => {
     if (loadDone) hasLocalEdits.value = true
   }, { deep: true })
@@ -294,6 +357,8 @@ export function usePurchaseRequisitionReviewFlow() {
     filterSkus,
     confirmAddItem,
     removeItem,
+    saveDraft,
+    submit,
     buildPayload,
     loadData
   }

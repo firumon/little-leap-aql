@@ -5,7 +5,6 @@ import { useStockMovements } from 'src/composables/operations/stock/useStockMove
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useAuthStore } from 'src/stores/auth'
 import { useWorkflowStore } from 'src/stores/workflow'
-import { useDataStore } from 'src/stores/data'
 import { useResourceData } from 'src/composables/resources/useResourceData'
 import { formatSkuVariants, todayIsoSlash, todayLongLabel } from 'src/utils/appHelpers'
 import {
@@ -23,14 +22,11 @@ export function usePurchaseRequisitionCreateFlow() {
   const nav = useResourceNav()
   const auth = useAuthStore()
   const workflowStore = useWorkflowStore()
-  const dataStore = useDataStore()
   const { loadWarehouses } = useStockMovements()
 
   const productsResource = useResourceData(ref('Products'))
   const skusResource = useResourceData(ref('SKUs'))
   const stockResource = useResourceData(ref('WarehouseStorages'))
-  const prResource = useResourceData(ref('PurchaseRequisitions'))
-  const itemResource = useResourceData(ref('PurchaseRequisitionItems'))
 
   const steps = [
     { n: 1, key: 'setup', label: 'Setup' },
@@ -173,7 +169,6 @@ export function usePurchaseRequisitionCreateFlow() {
         {
           action: 'compositeSave',
           resource: 'PurchaseRequisitions',
-          scope: 'operation',
           data: {
             ...buildPurchaseRequisitionFormData({
               ...form.value,
@@ -187,25 +182,15 @@ export function usePurchaseRequisitionCreateFlow() {
             records: buildPurchaseRequisitionCreateItemRecords(itemsToSave)
           }]
         },
-        { action: 'get', resource: 'PurchaseRequisitions', scope: 'operation', includeInactive: true },
-        { action: 'get', resource: 'PurchaseRequisitionItems', scope: 'operation', includeInactive: true }
+        { action: 'get', resource: 'PurchaseRequisitions', includeInactive: true },
+        { action: 'get', resource: 'PurchaseRequisitionItems', includeInactive: true }
       ])
 
       const saveResult = batchResponse?.data?.[0]
-      const prResult = batchResponse?.data?.[1]
-      const itemResult = batchResponse?.data?.[2]
+      const createdParentCode = saveResult?.data?.result?.parentCode || ''
 
-      if (saveResult?.success && saveResult?.data?.parentCode) {
-        createdCode.value = saveResult.data.parentCode
-
-        const prHeaders = prResource.lastHeaders.value || []
-        const itemHeaders = itemResource.lastHeaders.value || []
-        if (prResult?.rows?.length && prHeaders.length) {
-          await dataStore.cacheResourceRows('PurchaseRequisitions', prHeaders, prResult.rows)
-        }
-        if (itemResult?.rows?.length && itemHeaders.length) {
-          await dataStore.cacheResourceRows('PurchaseRequisitionItems', itemHeaders, itemResult.rows)
-        }
+      if (saveResult?.success && createdParentCode) {
+        createdCode.value = createdParentCode
 
         $q.notify({ type: 'positive', message: 'Purchase Requisition Created' })
         currentStep.value = 3

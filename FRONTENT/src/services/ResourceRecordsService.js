@@ -7,7 +7,7 @@
 import { useAuthStore } from 'src/stores/auth'
 import { createResourceSyncQueue } from 'src/services/ResourceSyncQueueService'
 import {
-  syncMasterResourcesBatch,
+  syncResourcesBatch,
   resolveResourceScope,
   fetchResourceRecords as fetchFromService,
   mapRowsToObjects
@@ -35,7 +35,7 @@ function getContextFromStore() {
 // Queue setup — delegates to ResourceFetchService
 const syncBatchAdapter = async (resourceNames, options) => {
   const context = getContextFromStore()
-  const response = await syncMasterResourcesBatch(
+  const response = await syncResourcesBatch(
     resourceNames,
     context.authorizedResources,
     context.appConfig,
@@ -51,8 +51,11 @@ const syncBatchAdapter = async (resourceNames, options) => {
 
 const resourceSyncQueue = createResourceSyncQueue({ syncBatch: syncBatchAdapter })
 
-export const queueMasterResourceSync = resourceSyncQueue.queueMasterResourceSync
-export const flushMasterSyncQueue = resourceSyncQueue.flushMasterSyncQueue
+export const queueResourceSync = resourceSyncQueue.queueResourceSync
+export const flushResourceSyncQueue = resourceSyncQueue.flushResourceSyncQueue
+// Transitional aliases while callers migrate.
+export const queueMasterResourceSync = queueResourceSync
+export const flushMasterSyncQueue = flushResourceSyncQueue
 
 // Legacy exports for backward compatibility
 export function getLegacyResourceScope(resourceName) {
@@ -89,7 +92,7 @@ export async function fetchResourceRecords(resourceName, options = {}) {
   }
 }
 
-export async function syncAllMasterResources() {
+export async function syncAllResources() {
   const context = getContextFromStore()
   const syncableResources = (context.authorizedResources || []).filter((entry) => {
     const scope = (entry?.scope || '').toString().trim().toLowerCase()
@@ -106,35 +109,31 @@ export async function syncAllMasterResources() {
     return standardizeResponse(true, { resources: [], recordsByResource: {}, lastSyncAt: Date.now() })
   }
 
-  const byScope = {}
-  for (const name of resourceNames) {
-    const scope = resolveResourceScope(name, context.authorizedResources)
-    if (!byScope[scope]) byScope[scope] = []
-    byScope[scope].push(name)
-  }
+  const directSync = await syncResourcesBatch(
+    resourceNames,
+    context.authorizedResources,
+    context.appConfig,
+    { showLoading: false, showError: false }
+  )
 
-  const scopeOrder = ['master', ...Object.keys(byScope).filter((scope) => scope !== 'master')]
-  const mergedData = {}
-
-  for (const scope of scopeOrder) {
-    const names = byScope[scope]
-    if (!names?.length) continue
-    const now = Date.now()
-    names.forEach((name) => queueMasterResourceSync(name, now, 'global-sync'))
-    try {
-      const result = await flushMasterSyncQueue(true, { showLoading: false, showError: false })
-      if (result?.data) Object.assign(mergedData, result.data)
-    } catch {
-      // continue with next scope
-    }
+  if (!directSync.success) {
+    return standardizeResponse(false, {
+      resources: resourceNames,
+      recordsByResource: {},
+      lastSyncAt: Date.now()
+    }, directSync.error || directSync.message || 'Global sync failed')
   }
 
   return standardizeResponse(true, {
     resources: resourceNames,
-    recordsByResource: mergedData,
+    recordsByResource: {},
+    summary: directSync.data || {},
     lastSyncAt: Date.now()
   })
 }
+
+// Transitional alias while callers migrate.
+export const syncAllMasterResources = syncAllResources
 
 export async function createMasterRecord(resourceName, record) {
   const context = getContextFromStore()

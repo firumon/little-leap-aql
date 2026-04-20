@@ -5,9 +5,10 @@ import { useClientCacheStore } from 'src/stores/clientCache'
 
 function normalizeResponse(response, fallbackData = null) {
   if (response && typeof response === 'object' && 'success' in response) {
+    const resolvedData = response?.data?.result ?? response.data ?? fallbackData
     return {
       success: response.success === true,
-      data: response.success ? (response.data ?? fallbackData) : null,
+      data: response.success ? resolvedData : null,
       error: response.success ? null : (response.error || response.message || 'Request failed'),
       message: response.message || ''
     }

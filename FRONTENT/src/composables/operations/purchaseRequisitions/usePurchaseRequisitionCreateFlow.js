@@ -169,21 +169,31 @@ export function usePurchaseRequisitionCreateFlow() {
         {
           action: 'compositeSave',
           resource: 'PurchaseRequisitions',
-          data: {
-            ...buildPurchaseRequisitionFormData({
-              ...form.value,
-              TypeReferenceCode: needsRefCode.value ? form.value.TypeReferenceCode : ''
-            }, { targetProgress: 'Draft' }),
-            PRDate: prDate,
-            Status: 'Active'
-          },
-          children: [{
-            resource: 'PurchaseRequisitionItems',
-            records: buildPurchaseRequisitionCreateItemRecords(itemsToSave)
-          }]
+          payload: {
+            data: {
+              ...buildPurchaseRequisitionFormData({
+                ...form.value,
+                TypeReferenceCode: needsRefCode.value ? form.value.TypeReferenceCode : ''
+              }, { targetProgress: 'Draft' }),
+              PRDate: prDate,
+              Status: 'Active'
+            },
+            children: [{
+              resource: 'PurchaseRequisitionItems',
+              records: buildPurchaseRequisitionCreateItemRecords(itemsToSave)
+            }]
+          }
         },
-        { action: 'get', resource: 'PurchaseRequisitions', includeInactive: true },
-        { action: 'get', resource: 'PurchaseRequisitionItems', includeInactive: true }
+        {
+          action: 'get',
+          resource: 'PurchaseRequisitions',
+          payload: { includeInactive: true }
+        },
+        {
+          action: 'get',
+          resource: 'PurchaseRequisitionItems',
+          payload: { includeInactive: true }
+        }
       ])
 
       const saveResult = batchResponse?.data?.[0]

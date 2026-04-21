@@ -95,9 +95,6 @@ export function createResourceSyncQueue({ syncBatch }) {
 
   return {
     flushResourceSyncQueue,
-    queueResourceSync,
-    // Transitional aliases for older import names.
-    flushMasterSyncQueue: flushResourceSyncQueue,
-    queueMasterResourceSync: queueResourceSync
+    queueResourceSync
   }
 }

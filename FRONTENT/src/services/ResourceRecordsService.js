@@ -13,9 +13,9 @@ import {
   mapRowsToObjects
 } from 'src/services/ResourceFetchService'
 import {
-  createMasterRecord as createFromService,
-  updateMasterRecord as updateFromService,
-  bulkMasterRecords as bulkFromService,
+  createRecord as createFromService,
+  updateRecord as updateFromService,
+  bulkRecords as bulkFromService,
   compositeSave as compositeSaveFromService,
   executeAction as executeFromService
 } from 'src/services/ResourceCrudService'
@@ -53,9 +53,6 @@ const resourceSyncQueue = createResourceSyncQueue({ syncBatch: syncBatchAdapter 
 
 export const queueResourceSync = resourceSyncQueue.queueResourceSync
 export const flushResourceSyncQueue = resourceSyncQueue.flushResourceSyncQueue
-// Transitional aliases while callers migrate.
-export const queueMasterResourceSync = queueResourceSync
-export const flushMasterSyncQueue = flushResourceSyncQueue
 
 // Legacy exports for backward compatibility
 export function getLegacyResourceScope(resourceName) {
@@ -132,20 +129,17 @@ export async function syncAllResources() {
   })
 }
 
-// Transitional alias while callers migrate.
-export const syncAllMasterResources = syncAllResources
-
-export async function createMasterRecord(resourceName, record) {
+export async function createRecord(resourceName, record) {
   const context = getContextFromStore()
   return createFromService(resourceName, record, context.authorizedResources)
 }
 
-export async function updateMasterRecord(resourceName, code, record) {
+export async function updateRecord(resourceName, code, record) {
   const context = getContextFromStore()
   return updateFromService(resourceName, code, record, context.authorizedResources)
 }
 
-export async function bulkMasterRecords(targetResourceName, records) {
+export async function bulkRecords(targetResourceName, records) {
   const context = getContextFromStore()
   return bulkFromService(targetResourceName, records, context.authorizedResources)
 }

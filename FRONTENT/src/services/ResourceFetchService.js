@@ -194,9 +194,6 @@ export async function syncResourcesBatch(resourceNames = [], authorizedResources
   }
 }
 
-// Transitional alias while callers migrate to generic naming.
-export const syncMasterResourcesBatch = syncResourcesBatch
-
 export async function fetchResourceRecords(resourceName, authorizedResources = [], appConfig = {}, options = {}) {
   try {
     logger.debug('Fetching resource records', { resource: resourceName })
@@ -264,7 +261,7 @@ export async function fetchResourceRecords(resourceName, authorizedResources = [
         }
 
         // Direct sync call (don't use queue for fetch service)
-        const batchSyncResponse = await syncMasterResourcesBatch([resourceName], authorizedResources, appConfig, {
+        const batchSyncResponse = await syncResourcesBatch([resourceName], authorizedResources, appConfig, {
           showError: !syncWhenCacheExists || !cachedRows.length,
           showLoading: forceSync || (!syncWhenCacheExists && !cachedRows.length)
         })

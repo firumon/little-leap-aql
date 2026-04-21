@@ -1,14 +1,37 @@
 import { executeGasApi } from 'src/services/GasApiService'
+import { getResourceMeta } from 'src/services/IndexedDbService'
+import { normalizeCursorValue } from 'src/services/ResourceMapperService'
 import { createLogger, standardizeResponse } from './_logger'
 
 const logger = createLogger('ResourceCrudService')
 
-export async function createMasterRecord(resourceName, record) {
+async function buildLastUpdatedAtByResource(resourceNames = []) {
+  const uniqueNames = Array.from(new Set((Array.isArray(resourceNames) ? resourceNames : [])
+    .map((entry) => (entry || '').toString().trim())
+    .filter(Boolean)))
+
+  const cursorMap = {}
+  for (const resourceName of uniqueNames) {
+    try {
+      const meta = await getResourceMeta(resourceName)
+      const cursor = normalizeCursorValue(meta?.lastSyncAt)
+      cursorMap[resourceName] = cursor || null
+    } catch {
+      cursorMap[resourceName] = null
+    }
+  }
+
+  return cursorMap
+}
+
+export async function createRecord(resourceName, record) {
   try {
-    logger.debug('Creating master record', { resource: resourceName })
+    logger.debug('Creating record', { resource: resourceName })
+    const lastUpdatedAtByResource = await buildLastUpdatedAtByResource([resourceName])
     const response = await executeGasApi('create', {
       resource: resourceName,
-      record
+      record,
+      lastUpdatedAtByResource
     })
     if (response.success) {
       logger.info('Record created', { resource: resourceName })
@@ -20,13 +43,15 @@ export async function createMasterRecord(resourceName, record) {
   }
 }
 
-export async function updateMasterRecord(resourceName, code, record) {
+export async function updateRecord(resourceName, code, record) {
   try {
-    logger.debug('Updating master record', { resource: resourceName, code })
+    logger.debug('Updating record', { resource: resourceName, code })
+    const lastUpdatedAtByResource = await buildLastUpdatedAtByResource([resourceName])
     const response = await executeGasApi('update', {
       resource: resourceName,
       code,
-      record
+      record,
+      lastUpdatedAtByResource
     })
     if (response.success) {
       logger.info('Record updated', { resource: resourceName, code })
@@ -38,14 +63,15 @@ export async function updateMasterRecord(resourceName, code, record) {
   }
 }
 
-export async function bulkMasterRecords(targetResourceName, records) {
+export async function bulkRecords(targetResourceName, records) {
   try {
     logger.debug('Bulk upload', { resource: targetResourceName, count: records?.length || 0 })
+    const lastUpdatedAtByResource = await buildLastUpdatedAtByResource([targetResourceName])
     const response = await executeGasApi('bulk', {
-      resource: 'BulkUploadMasters',
-      callerResource: 'BulkUploadMasters',
+      resource: targetResourceName,
       targetResource: targetResourceName,
-      records
+      records,
+      lastUpdatedAtByResource
     })
     if (response.success) {
       logger.info('Bulk upload success', { resource: targetResourceName })
@@ -59,8 +85,16 @@ export async function bulkMasterRecords(targetResourceName, records) {
 
 export async function compositeSave(payload) {
   try {
-    logger.debug('Composite save', { resources: payload?.records?.length || 0 })
-    const response = await executeGasApi('compositeSave', payload)
+    const parentResource = (payload?.resource || '').toString().trim()
+    const childResources = Array.isArray(payload?.children)
+      ? payload.children.map((entry) => (entry?.resource || '').toString().trim()).filter(Boolean)
+      : []
+    const lastUpdatedAtByResource = await buildLastUpdatedAtByResource([parentResource, ...childResources])
+    logger.debug('Composite save', { resource: parentResource, childResources: childResources.length })
+    const response = await executeGasApi('compositeSave', {
+      ...payload,
+      lastUpdatedAtByResource
+    })
     if (response.success) {
       logger.info('Composite save success')
     }
@@ -74,13 +108,15 @@ export async function compositeSave(payload) {
 export async function executeAction(resourceName, code, actionConfig, fields = {}) {
   try {
     logger.debug('Executing action', { resource: resourceName, action: actionConfig.action, code })
+    const lastUpdatedAtByResource = await buildLastUpdatedAtByResource([resourceName])
     const response = await executeGasApi('executeAction', {
       resource: resourceName,
       code,
-      action: actionConfig.action,
+      actionName: actionConfig.action,
       column: actionConfig.column,
       columnValue: actionConfig.columnValue,
-      fields
+      fields,
+      lastUpdatedAtByResource
     })
     if (response.success) {
       logger.info('Action executed', { resource: resourceName, action: actionConfig.action })

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { executeGasApi } from 'src/services/GasApiService'
 import {
-  bulkMasterRecords,
+  bulkRecords,
   compositeSave,
   executeAction
 } from 'src/services/ResourceRecordsService'
@@ -50,7 +50,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
   }
 
   async function uploadBulkRecords(resourceName, records = []) {
-    const response = await bulkMasterRecords(resourceName, records)
+    const response = await bulkRecords(resourceName, records)
     return normalizeResponse(response)
   }
 
@@ -61,30 +61,15 @@ export const useWorkflowStore = defineStore('workflow', () => {
 
   async function runBatchRequests(requests = []) {
     const response = await executeGasApi('batch', { requests })
-    const normalized = normalizeResponse(response, { results: [] })
+    const normalized = normalizeResponse(response, { responses: [] })
     if (!normalized.success) {
       return normalized
     }
 
     return {
       ...normalized,
-      data: Array.isArray(normalized.data?.results) ? normalized.data.results : []
+      data: Array.isArray(normalized.data?.responses) ? normalized.data.responses : []
     }
-  }
-
-  async function submitStockMovementsBatch(movementRecords = []) {
-    const response = await executeGasApi('batch', {
-      requests: [
-        {
-          action: 'create',
-          scope: 'operation',
-          resource: 'StockMovements',
-          records: movementRecords
-        }
-      ]
-    })
-
-    return normalizeResponse(response, [])
   }
 
   return {
@@ -92,8 +77,6 @@ export const useWorkflowStore = defineStore('workflow', () => {
     saveComposite,
     uploadBulkRecords,
     generateReportFile,
-    runBatchRequests,
-    submitStockMovementsBatch
+    runBatchRequests
   }
 })
-

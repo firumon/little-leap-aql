@@ -45,6 +45,13 @@
         </div>
       </div>
     </q-card-section>
+    <q-linear-progress
+      v-if="loading || backgroundSyncing"
+      indeterminate
+      color="primary"
+      size="2px"
+      class="header-progress"
+    />
   </q-card>
 </template>
 

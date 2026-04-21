@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * AQL - Master API Handlers (Generic)
+ * AQL - Resource API Handlers (Generic)
  * ============================================================
  */
 
@@ -98,7 +98,14 @@ function handleResourceCreateRecord(auth, payload) {
   const values = sheet.getDataRange().getValues();
   const headers = values[0] || [];
   const idx = getHeaderIndexMap(headers);
-  const providedValues = extractProvidedHeaderValues(headers, payload);
+  const recordPayload = payload && typeof payload.record === 'object' && payload.record !== null
+    ? payload.record
+    : (payload && typeof payload.data === 'object' && payload.data !== null ? payload.data : null);
+  if (!recordPayload) {
+    return { success: false, message: 'Create requires payload.record or payload.data' };
+  }
+
+  const providedValues = extractProvidedHeaderValues(headers, { record: recordPayload });
 
   const codePrefix = (resource.config.codePrefix || '').toString().trim();
   if (!codePrefix) {
@@ -267,7 +274,14 @@ function handleResourceUpdateRecord(auth, payload) {
 
   const existingRow = sheet.getRange(rowNumber, 1, 1, headers.length).getValues()[0];
   enforceRecordLevelAccess(auth, resource.config, headers, existingRow);
-  const providedValues = extractProvidedHeaderValues(headers, payload);
+  const recordPayload = payload && typeof payload.record === 'object' && payload.record !== null
+    ? payload.record
+    : (payload && typeof payload.data === 'object' && payload.data !== null ? payload.data : null);
+  if (!recordPayload) {
+    return { success: false, message: 'Update requires payload.record or payload.data' };
+  }
+
+  const providedValues = extractProvidedHeaderValues(headers, { record: recordPayload });
   const mergedRow = mergeMasterRow(existingRow, idx, providedValues, schema);
   mergedRow[idx.Code] = code;
 
@@ -1040,7 +1054,10 @@ function handleCompositeSave(auth, payload) {
   }
 
   var isEdit = !!(payload.code && payload.code.toString().trim());
-  var parentData = payload.data || {};
+  var parentData = payload && typeof payload.data === 'object' && payload.data !== null ? payload.data : null;
+  if (!parentData) {
+    return { success: false, message: 'Composite save requires payload.data' };
+  }
   var childrenPayload = Array.isArray(payload.children) ? payload.children : [];
 
   // Phase 1: Validate everything
@@ -1461,4 +1478,6 @@ function handleResourceBulkUpsertRecords(auth, payload) {
     )
   };
 }
+
+
 

@@ -4,16 +4,16 @@
  * ============================================================
  * Side-effect hook functions for the StockMovements resource.
  * These are NOT write handlers — writing ledger rows is handled by the
- * generic handleBulkUpsertRecords / handleMasterCreateRecord machinery.
+ * generic handleResourceBulkUpsertRecords / handleResourceCreateRecord machinery.
  *
  * PostAction = 'handleStockMovementsBulkSave'
  *
  *   Bulk  (action=create, records: []):
- *     dispatchBulkCreateRecords → handleBulkUpsertRecords (writes rows)
+ *     dispatchBulkCreateRecords → handleResourceBulkUpsertRecords (writes rows)
  *     → dispatchAfterBulkHook  → handleStockMovementsBulkSave_afterBulk(records, auth)
  *
  *   Single create (action=create, record: {}):
- *     handleMasterCreateRecord (writes row)
+ *     handleResourceCreateRecord (writes row)
  *     → dispatchAfterCreateHook → handleStockMovementsBulkSave_afterCreate(record, auth)
  *
  * Both hooks only update WarehouseStorages — they never write to StockMovements.
@@ -27,7 +27,7 @@
 
 /**
  * Naming convention: {PostAction}_afterBulk(records, auth)
- * Called by dispatchAfterBulkHook in masterApi.gs after bulk StockMovements rows are written.
+ * Called by dispatchAfterBulkHook in resourceApi.gs after bulk StockMovements rows are written.
  * Responsibility: update WarehouseStorages totals for all affected locations.
  *
  * @param {Array}  records - The original records[] from the payload
@@ -62,7 +62,7 @@ function handleStockMovementsBulkSave_afterBulk(records, auth) {
 
 /**
  * Naming convention: {postAction}_afterCreate
- * Called by dispatchAfterCreateHook in masterApi.gs after a single StockMovements row is written.
+ * Called by dispatchAfterCreateHook in resourceApi.gs after a single StockMovements row is written.
  *
  * @param {Object} record - Plain row object (headers as keys)
  * @param {Object} auth   - Auth context

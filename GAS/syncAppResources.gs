@@ -937,7 +937,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'TRUE',
         PreAction: '',
-        PostAction: 'handleBulkUpsertRecords',
+        PostAction: 'handleResourceBulkUpsertRecords',
         Reports: '',
         CustomUIName: '',
         ListViews: ''

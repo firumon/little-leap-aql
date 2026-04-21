@@ -2,7 +2,7 @@
  * ============================================================
  * AQL - API Dispatcher
  * ============================================================
- * Owns doPost and action routing across auth/master scopes.
+ * Owns doPost and action routing across auth/resource scopes.
  */
 
 const JSON_MIME_TYPE = ContentService.MimeType.JSON;
@@ -53,7 +53,7 @@ function normalizeIncomingRequest(raw) {
   var requestId = (source.requestId || '').toString().trim() || Utilities.getUuid();
   var action = (source.action || '').toString().trim();
   var token = (source.token || '').toString().trim();
-  var mergedPayload = mergePayloadWithTopLevel(source);
+  var mergedPayload = mergePayloadWithTopLevel(source, action);
   var resource = normalizeResourceSelector(
     mergedPayload.resource !== undefined ? mergedPayload.resource : source.resource
   );
@@ -83,7 +83,8 @@ function normalizeIncomingRequest(raw) {
 
 function normalizeBatchSubRequest(raw) {
   var source = raw || {};
-  var mergedPayload = mergePayloadWithTopLevel(source);
+  var action = (source.action || '').toString().trim();
+  var mergedPayload = mergePayloadWithTopLevel(source, action);
   var resource = normalizeResourceSelector(
     mergedPayload.resource !== undefined ? mergedPayload.resource : source.resource
   );
@@ -99,14 +100,19 @@ function normalizeBatchSubRequest(raw) {
     normalized[key] = mergedPayload[key];
   });
   normalized.requestId = (source.requestId || '').toString().trim() || Utilities.getUuid();
-  normalized.action = (source.action || '').toString().trim();
+  normalized.action = action;
   if (resource !== '' && resource !== null && resource !== undefined) {
     normalized.resource = resource;
   }
   return normalized;
 }
 
-function mergePayloadWithTopLevel(source) {
+function mergePayloadWithTopLevel(source, action) {
+  if (requiresStrictNestedPayload(action)) {
+    validateStrictNestedPayload(source, action);
+    return clonePayloadObject(source.payload || {});
+  }
+
   var payload = {};
   if (source && source.payload && typeof source.payload === 'object' && !Array.isArray(source.payload)) {
     Object.keys(source.payload).forEach(function (key) {
@@ -127,6 +133,46 @@ function mergePayloadWithTopLevel(source) {
     }
   });
   return payload;
+}
+
+function requiresStrictNestedPayload(action) {
+  var normalized = (action || '').toString().trim().toLowerCase();
+  return normalized === 'create'
+    || normalized === 'update'
+    || normalized === 'bulk'
+    || normalized === 'compositesave'
+    || normalized === 'executeaction';
+}
+
+function validateStrictNestedPayload(source, action) {
+  if (!source || typeof source.payload !== 'object' || Array.isArray(source.payload)) {
+    throw new Error(action + ' requires a nested payload object');
+  }
+
+  var reservedTopLevel = {
+    requestId: true,
+    action: true,
+    token: true,
+    payload: true,
+    resource: true,
+    scope: true
+  };
+
+  var topLevelKeys = Object.keys(source || {});
+  for (var i = 0; i < topLevelKeys.length; i++) {
+    var key = topLevelKeys[i];
+    if (!reservedTopLevel[key]) {
+      throw new Error(action + ' does not allow top-level field "' + key + '"; use payload.' + key);
+    }
+  }
+}
+
+function clonePayloadObject(payload) {
+  var cloned = {};
+  Object.keys(payload || {}).forEach(function (key) {
+    cloned[key] = payload[key];
+  });
+  return cloned;
 }
 
 function normalizeResourceSelector(resource) {
@@ -193,7 +239,7 @@ function normalizeActionData(action, requestResource, requestPayload, rawResult)
   if (action === 'batch') {
     var requests = Array.isArray(requestPayload && requestPayload.requests) ? requestPayload.requests : [];
     var rawItems = Array.isArray(rawResult && rawResult.data) ? rawResult.data : [];
-    result.results = rawItems.map(function (entry, index) {
+    result.responses = rawItems.map(function (entry, index) {
       var subReq = requests[index] || {};
       var normalizedReq = {
         requestId: subReq.requestId || Utilities.getUuid(),
@@ -201,9 +247,11 @@ function normalizeActionData(action, requestResource, requestPayload, rawResult)
         resource: subReq.resource || '',
         payload: subReq
       };
-      return buildApiEnvelope(normalizedReq, entry || { success: false, message: 'Empty batch item result' });
+      var envelope = buildApiEnvelope(normalizedReq, entry || { success: false, message: 'Empty batch item result' });
+      mergeResourcePayloadMap(resources, envelope && envelope.data ? envelope.data.resources : {});
+      return envelope;
     });
-    return { resources: {}, result: result, artifacts: {} };
+    return { resources: resources, result: result, artifacts: {} };
   }
 
   extractResourcePayloads(resources, requestResource, rawResult, requestPayload);
@@ -240,6 +288,14 @@ function normalizeActionData(action, requestResource, requestPayload, rawResult)
     result: result,
     artifacts: artifacts
   };
+}
+
+function mergeResourcePayloadMap(target, source) {
+  var destination = target && typeof target === 'object' ? target : {};
+  var incoming = source && typeof source === 'object' ? source : {};
+  Object.keys(incoming).forEach(function (resourceName) {
+    destination[resourceName] = incoming[resourceName];
+  });
 }
 
 function extractResourcePayloads(target, requestResource, rawResult, requestPayload) {
@@ -322,7 +378,7 @@ function stripResourceFields(data) {
 
 function dispatchProtectedAction(action, auth, data) {
   if (isGenericCrudAction(action, data)) {
-    return dispatchGenericCrudAction(action, auth, data);
+    return dispatchResourceCrudAction(action, auth, data);
   }
 
   switch (action) {
@@ -344,9 +400,9 @@ function dispatchProtectedAction(action, auth, data) {
     case 'getAuthorizedResources':
       return handleGetAuthorizedResources(auth, data);
 
-    // Master scope
+    // Resource scope
     case 'master.health':
-      return handleMasterHealth(auth);
+      return handleResourceHealth(auth);
 
     // Composite save (parent + children atomic)
     case 'compositeSave':
@@ -459,10 +515,6 @@ function hasResourceSelector(payload) {
 function isGenericCrudAction(action, payload) {
   const normalizedAction = (action || '').toString().trim().toLowerCase();
 
-  if (normalizedAction === 'master.get' || normalizedAction === 'master.create' || normalizedAction === 'master.update' || normalizedAction === 'master.bulk') {
-    return true;
-  }
-
   if (!isCanonicalCrudVerb(normalizedAction)) {
     return false;
   }
@@ -470,175 +522,48 @@ function isGenericCrudAction(action, payload) {
   return hasResourceSelector(payload);
 }
 
-function dispatchGenericCrudAction(action, auth, payload) {
+function dispatchResourceCrudAction(action, auth, payload) {
   const normalizedAction = (action || '').toString().trim().toLowerCase();
 
   // Resolve resource config for view scope validation
-  const resourceName = resolveMasterResourceName(payload);
+  const resourceName = resolveResourceName(payload);
   const resource = openResourceSheet(resourceName);
   if (resource.config.scope === 'view' && normalizedAction !== 'get') {
     return { success: false, error: 'View-scope resources are read-only.' };
   }
 
-  if (normalizedAction === 'master.get' || normalizedAction === 'get') {
+  if (normalizedAction === 'get') {
     const hasMultiResourceRequest = payload && (
       (Array.isArray(payload.resources) && payload.resources.length > 0) ||
       (payload.resources !== undefined && payload.resources !== null && payload.resources !== '') ||
       (Array.isArray(payload.resource) && payload.resource.length > 1)
     );
     if (hasMultiResourceRequest) {
-      return handleMasterGetMultiRecords(auth, payload);
+      return handleResourceGetMultiRecords(auth, payload);
     }
-    return handleMasterGetRecords(auth, payload);
+    return handleResourceGetRecords(auth, payload);
   }
 
-  if (normalizedAction === 'master.create' || normalizedAction === 'create') {
+  if (normalizedAction === 'create') {
     // Array payload → bulk create/upsert via PostAction (or generic bulk fallback).
     // action=bulk is reserved exclusively for the Bulk Upload UI (BulkUploadMasters).
     if (Array.isArray(payload.records) && payload.records.length > 0) {
       return dispatchBulkCreateRecords(auth, payload);
     }
-    return handleMasterCreateRecord(auth, payload);
+    return handleResourceCreateRecord(auth, payload);
   }
 
-  if (normalizedAction === 'master.update' || normalizedAction === 'update') {
+  if (normalizedAction === 'update') {
     // Array payload → bulk update via PostAction (or generic bulk fallback).
     if (Array.isArray(payload.records) && payload.records.length > 0) {
       return dispatchBulkCreateRecords(auth, payload);
     }
-    return handleMasterUpdateRecord(auth, payload);
+    return handleResourceUpdateRecord(auth, payload);
   }
 
-  if (normalizedAction === 'master.bulk' || normalizedAction === 'bulk') {
-    // Reserved for Bulk Upload UI only (resource=BulkUploadMasters).
-    return dispatchBulkAction(auth, payload);
+  if (normalizedAction === 'bulk') {
+    return handleResourceBulkUpsertRecords(auth, payload);
   }
 
-  return { success: false, message: 'Unsupported master action' };
-}
-
-function isLegacyMasterAction(action) {
-  const normalizedAction = (action || '').toString().trim();
-  if (!normalizedAction) return false;
-
-  if (normalizedAction === 'master.getRecords' || normalizedAction === 'master.createRecord' || normalizedAction === 'master.updateRecord') {
-    return true;
-  }
-
-  if (!normalizedAction.startsWith('master.')) {
-    return false;
-  }
-
-  var verbs = ['get', 'create', 'update'];
-  for (var i = 0; i < verbs.length; i++) {
-    var prefix = 'master.' + verbs[i];
-    if (!normalizedAction.startsWith(prefix)) {
-      continue;
-    }
-
-    var suffix = normalizedAction.slice(prefix.length);
-    if (!suffix) {
-      return false;
-    }
-
-    var first = suffix.charAt(0);
-    return first >= 'A' && first <= 'Z';
-  }
-
-  return false;
-}
-
-function dispatchLegacyMasterAction(action, auth, payload) {
-  if (action === 'master.getRecords') {
-    return handleMasterGetRecords(auth, payload);
-  }
-  if (action === 'master.createRecord') {
-    return handleMasterCreateRecord(auth, payload);
-  }
-  if (action === 'master.updateRecord') {
-    return handleMasterUpdateRecord(auth, payload);
-  }
-
-  const normalized = (action || '').toString().trim();
-  const prefixes = ['master.get', 'master.create', 'master.update'];
-  let verb = '';
-  let rawResource = '';
-
-  for (let i = 0; i < prefixes.length; i++) {
-    const prefix = prefixes[i];
-    if (!normalized.startsWith(prefix)) {
-      continue;
-    }
-    rawResource = normalized.slice(prefix.length);
-    if (!rawResource) {
-      continue;
-    }
-    const first = rawResource.charAt(0);
-    if (first < 'A' || first > 'Z') {
-      continue;
-    }
-    verb = prefix.split('.')[1];
-    break;
-  }
-
-  if (!verb || !rawResource) {
-    return { success: false, message: 'Unsupported legacy master action' };
-  }
-
-  const resource = normalizeLegacyMasterResource(rawResource);
-  const mergedPayload = cloneWithMasterResource(payload, resource);
-
-  if (verb === 'get') return handleMasterGetRecords(auth, mergedPayload);
-  if (verb === 'create') return handleMasterCreateRecord(auth, mergedPayload);
-  if (verb === 'update') return handleMasterUpdateRecord(auth, mergedPayload);
-
-  return { success: false, message: 'Unsupported legacy master action verb' };
-}
-
-function normalizeLegacyMasterResource(value) {
-  const normalized = (value || '').toString().trim();
-  if (!normalized) return normalized;
-  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
-}
-
-function cloneWithMasterResource(payload, resourceName) {
-  const source = payload || {};
-  const cloned = {};
-  Object.keys(source).forEach(function (key) {
-    cloned[key] = source[key];
-  });
-  cloned.resource = resourceName;
-  return cloned;
-}
-
-function dispatchBulkAction(auth, payload) {
-  var callerResourceName = '';
-  try {
-    callerResourceName = (payload.callerResource || payload.resource || '').toString().trim();
-  } catch (e) {
-    callerResourceName = '';
-  }
-
-  if (!callerResourceName) {
-    return { success: false, message: 'Resource name is required for bulk action' };
-  }
-
-  var config;
-  try {
-    config = getResourceConfig(callerResourceName);
-  } catch (e) {
-    return { success: false, message: 'Resource not found: ' + callerResourceName };
-  }
-
-  var handlerName = (config.postAction || '').toString().trim();
-  if (!handlerName) {
-    return { success: false, message: 'No PostAction handler defined for resource: ' + callerResourceName };
-  }
-
-  var handler = this[handlerName];
-  if (typeof handler !== 'function') {
-    return { success: false, message: 'PostAction handler not found: ' + handlerName };
-  }
-
-  return handler(auth, payload);
+  return { success: false, message: 'Unsupported resource action' };
 }

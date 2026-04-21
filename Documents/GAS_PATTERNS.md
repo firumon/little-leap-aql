@@ -67,7 +67,7 @@ Use when a parent record and its children must be written or rejected together.
 - Child records use `_action`: `"create"` | `"update"` | `"deactivate"`.
 - `_originalCode` identifies existing child rows for update/deactivate.
 - Parent code is auto-injected into children (convention: `{SingularParentName}Code` or `ParentCode`).
-- Response returns only `{ parentCode }`. Pair with `batch` if you need fresh rows immediately.
+- Response returns `{ parentCode }` plus delta resource payloads for directly affected parent/child resources.
 
 ---
 
@@ -77,7 +77,7 @@ If a resource has `PostAction` set in its config, GAS calls `{postAction}_afterC
 
 - Hook failures are logged but never fail the write response.
 - Keep hook functions in the resource's dedicated hook file (e.g. `stockMovements.gs`).
-- Do not hardcode resource-specific logic into `masterApi.gs`.
+- Do not hardcode resource-specific logic into `resourceApi.gs`.
 
 ---
 
@@ -95,11 +95,11 @@ Use for progress/status changes that also need auto-fill fields (e.g. `ProgressA
 
 | Anti-pattern | Correct alternative |
 |---|---|
-| Hardcoding resource names in `masterApi.gs` | Use `PostAction` hook convention |
+| Hardcoding resource names in `resourceApi.gs` | Use `PostAction` hook convention |
 | Two HTTP calls (write then forceSync read) | Use `batch` envelope |
 | Custom action shape for work a bulk/composite covers | Use `bulk` or `compositeSave` |
 | New GAS file for every feature | Extend existing file unless structure is incompatible |
-| Returning only `parentCode` from compositeSave then re-fetching | Use `batch` to combine save + get |
+| Returning only `parentCode` from compositeSave then re-fetching | Return write-delta resources in the same response |
 
 ---
 

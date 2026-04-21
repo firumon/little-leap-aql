@@ -25,6 +25,8 @@ Do not treat this as a universal startup read for every task.
 - year-scoped code generation for operation-scope resources (e.g., PR26000001)
 - view scope read-only behavior (no CRUD operations, full dataset return without pagination)
 - delta sync via `lastUpdatedAt` cursor
+- strict nested write payloads (`payload.record` / `payload.data`)
+- delta-on-write for `create`, `update`, `bulk`, `executeAction`, and `compositeSave`
 
 ---
 
@@ -108,84 +110,118 @@ Rules:
 ### `create` — Create a single record
 ```json
 {
+  "requestId": "uuid",
   "action": "create",
   "resource": "Products",
-  "Name": "Widget",
-  "Status": "Active"
+  "payload": {
+    "record": {
+      "Name": "Widget",
+      "Status": "Active"
+    },
+    "lastUpdatedAtByResource": {
+      "Products": 1713400000000
+    }
+  }
 }
 ```
-- Fields are read from the top-level payload (or from a nested `record: {}` object).
+- Write fields must be nested under `payload.record`.
+- Top-level write fields are rejected.
 - Code is auto-generated from `codePrefix` + sequence.
-- Response: `{ success, data: { code: "PRD000001" } }`
+- Response includes scalar result + resource delta under canonical envelope `data.resources`.
 
 ### `update` — Update a single record
 ```json
 {
+  "requestId": "uuid",
   "action": "update",
   "resource": "Products",
-  "code": "PRD000001",
-  "Name": "Widget v2"
+  "payload": {
+    "code": "PRD000001",
+    "record": {
+      "Name": "Widget v2"
+    },
+    "lastUpdatedAtByResource": {
+      "Products": 1713400000000
+    }
+  }
 }
 ```
 - Only provided fields are merged; omitted fields keep existing values.
-- Response: `{ success, data: { code } }`
+- Response includes scalar result + resource delta under canonical envelope `data.resources`.
 
 ### `bulk` — Batch create/update via records array
 ```json
 {
+  "requestId": "uuid",
   "action": "bulk",
   "resource": "SKUs",
-  "records": [
-    { "Code": "SK001", "Name": "Red" },
-    { "Name": "Blue" }
-  ]
+  "payload": {
+    "targetResource": "SKUs",
+    "records": [
+      { "Code": "SK001", "Name": "Red" },
+      { "Name": "Blue" }
+    ],
+    "lastUpdatedAtByResource": {
+      "SKUs": 1713400000000
+    }
+  }
 }
 ```
 - Records with an existing `Code` are updated; records without `Code` are inserted.
 - Writes are batched: all inserts in one `setValues` call; updates are individual (scattered rows).
-- Response includes `rows` (full fresh snapshot), `headers`, `meta`, and a results summary `{ created, updated, skipped, errors[] }`.
+- Response includes write summary in `data.result` and delta rows in `data.resources` for directly affected resources.
 
 ### `compositeSave` — Atomic parent + children save
 ```json
 {
   "action": "compositeSave",
   "resource": "PurchaseRequisitions",
-  "scope": "operation",
-  "data": { "PRDate": "2026-04-18", "Type": "STOCK", "Priority": "Medium" },
-  "children": [
-    {
-      "resource": "PurchaseRequisitionItems",
-      "records": [
-        { "_action": "create",     "data": { "SKU": "CK2-G3", "Quantity": 5 } },
-        { "_action": "update",     "_originalCode": "PRI26000001", "data": { "Quantity": 10 } },
-        { "_action": "deactivate", "_originalCode": "PRI26000002", "data": {} }
-      ]
+  "payload": {
+    "data": { "PRDate": "2026-04-18", "Type": "STOCK", "Priority": "Medium" },
+    "children": [
+      {
+        "resource": "PurchaseRequisitionItems",
+        "records": [
+          { "_action": "create",     "data": { "SKU": "CK2-G3", "Quantity": 5 } },
+          { "_action": "update",     "_originalCode": "PRI26000001", "data": { "Quantity": 10 } },
+          { "_action": "deactivate", "_originalCode": "PRI26000002", "data": {} }
+        ]
+      }
+    ],
+    "lastUpdatedAtByResource": {
+      "PurchaseRequisitions": 1713400000000,
+      "PurchaseRequisitionItems": 1713400000000
     }
-  ]
+  }
 }
 ```
 - `code` present → edit; absent → create (auto-generates parent code).
 - Validates ALL records first; writes nothing if any validation fails (all-or-nothing).
 - Parent code is automatically injected into children via `resolveParentCodeField` convention (`PurchaseRequisitionCode`, `ParentCode`, etc.).
 - Child `_action`: `"create"` | `"update"` | `"deactivate"`.
-- Response: `{ success, data: { parentCode } }` — **does not return fresh rows**. Use `batch` if you need fresh data after save.
+- Response includes `{ parentCode }` in `data.result` and delta rows in `data.resources` for directly affected parent/child resources.
 
 ### `executeAction` — Workflow transition
 ```json
 {
   "action": "executeAction",
   "resource": "PurchaseRequisitions",
-  "code": "PR26000001",
-  "actionName": "Approve",
-  "column": "Progress",
-  "columnValue": "Approved",
-  "fields": { "ProgressApprovedComment": "Looks good" }
+  "payload": {
+    "code": "PR26000001",
+    "actionName": "Approve",
+    "column": "Progress",
+    "columnValue": "Approved",
+    "fields": { "ProgressApprovedComment": "Looks good" },
+    "lastUpdatedAtByResource": {
+      "PurchaseRequisitions": 1713400000000
+    }
+  }
 }
 ```
 - Sets `column = columnValue` on the record.
 - Auto-fills `{column}{value}At` (timestamp) and `{column}{value}By` (UserID) if those columns exist.
 - `fields`: any additional columns to set in the same write.
-- Response: `{ success, data: { code, column, columnValue } }`
+- Response includes action result in `data.result` and resource delta in `data.resources`.
 
 ### `batch` — Multiple actions in one round-trip
 ```json
@@ -212,17 +248,22 @@ Rules:
   "action": "batch",
   "data": {
     "result": {
-      "results": [
+      "responses": [
         { "success": true, "requestId": "uuid-1", "action": "compositeSave", "data": { "result": { "parentCode": "PR26000001" } } },
         { "success": true, "requestId": "uuid-2", "action": "get", "data": { "resources": { "PurchaseRequisitions": { "rows": [[...]], "meta": { ... } } } } },
         { "success": true, "requestId": "uuid-3", "action": "get", "data": { "resources": { "PurchaseRequisitionItems": { "rows": [[...]], "meta": { ... } } } } }
       ]
+    },
+    "resources": {
+      "PurchaseRequisitions": { "rows": [[...]], "meta": { "resource": "PurchaseRequisitions", "lastSyncAt": 1713400000999 } },
+      "PurchaseRequisitionItems": { "rows": [[...]], "meta": { "resource": "PurchaseRequisitionItems", "lastSyncAt": 1713400000999 } }
     }
   }
 }
 ```
 - `success` at top level is `false` if any sub-request fails.
-- Individual results remain available under `data.result.results[]`.
+- Individual results remain available under `data.result.responses[]` in the same request order.
+- `data.resources` is the aggregated final resource payload map across sub-responses.
 
 **Primary use case:** combine a write with an immediate read in one call so the frontend can update IDB without a second round-trip. Example: `compositeSave` + two `get` calls returns the created record and all affected children in one response.
 
@@ -242,7 +283,9 @@ All `get` calls support delta filtering:
 - Prefer existing capabilities before proposing new backend patterns.
 - Resource metadata belongs in `syncAppResources.gs`.
 - Operational multi-record saves should use the supported bulk-array path, not invent custom action shapes when an existing pattern fits.
-- Use `batch` when you need a write + immediate read in one call. Do not use two separate HTTP calls with `forceSync` as a workaround.
+- For write actions, use nested payload objects only (`payload.record` / `payload.data` / `payload.records`). Top-level write fields are invalid.
+- Write actions return deltas for directly affected resources, using `payload.lastUpdatedAtByResource` and `includeInactive=true` on server-side write-delta reads.
+- Use `batch` when you need packed sequential actions in one HTTP call; consume ordered per-request outputs from `data.result.responses`.
 
 ---
 

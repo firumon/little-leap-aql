@@ -19,7 +19,7 @@ graph TD
     subgraph "APP Spreadsheet + Apps Script"
         PWA -->|action payloads| GAS["doPost Dispatcher"]
         GAS --> AUTH["auth.gs"]
-        GAS --> MASTER["masterApi.gs"]
+        GAS --> RESOURCE_API["resourceApi.gs"]
         GAS --> REGISTRY["resourceRegistry.gs"]
         REGISTRY --> APPRES["APP.Resources"]
     end
@@ -46,7 +46,7 @@ graph TD
   - login, token validation, profile-related behavior
 - `resourceRegistry.gs`
   - resource config lookup, scope normalization, permission assembly
-- `masterApi.gs`
+- `resourceApi.gs`
   - generic CRUD and hook dispatching
 - `sheetHelpers.gs`
   - low-level helpers for file, sheet, header, and config access
@@ -81,7 +81,7 @@ Detailed login contract: [LOGIN_RESPONSE.md](F:/LITTLE%20LEAP/AQL/Documents/LOGI
 1. Frontend calls a service-layer action such as `executeGasApi(...)`, `fetchResourceRecords(...)`, or a store action backed by those services.
 2. `apiDispatcher.gs` validates auth and routes by action/scope.
 3. `resourceRegistry.gs` resolves resource metadata and target file/sheet.
-4. `masterApi.gs` applies permission, region, validation, and hook logic.
+4. `resourceApi.gs` applies permission, region, validation, and hook logic.
 
 ### Cache-First Master Experience
 1. `useDataStore` hydrates cached rows from IndexedDB first.

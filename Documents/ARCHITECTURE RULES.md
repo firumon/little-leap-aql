@@ -343,7 +343,18 @@ You are allowed to:
 
 ---
 
-## 13. MAINTENANCE ENFORCEMENT
+## 13. RESOURCE/SCOPE SPECIFICITY RULE (STRICT)
+
+* Stores and services MUST be fully generic.
+* No store function may reference a specific resource name (e.g., `StockMovements`, `PurchaseRequisitions`) or a specific scope name (e.g., `Master`, `Operations`).
+* No service function or export may carry a scope-qualified name (e.g., `createMasterRecord`, `bulkMasterRecords`, `syncMasterResourcesBatch`).
+* Resource-specific orchestration (e.g., building a StockMovements batch payload) MUST live in a dedicated composable.
+* Generic verbs MUST be used: `createRecord`, `updateRecord`, `bulkRecords`, `syncResourcesBatch`, etc.
+* If a transitional alias exists, it MUST be removed in the same task that introduces the canonical name.
+
+---
+
+## 14. MAINTENANCE ENFORCEMENT
 
 When any required primitive, transport contract, or layer ownership rule changes, this file MUST be updated in the same task before completion.
 

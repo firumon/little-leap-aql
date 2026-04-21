@@ -769,7 +769,7 @@ FRONTEND (Quasar)
 
 BACKEND (Google Apps Script)
   apiDispatcher.gs → action=create, scope=operation, resource=StockMovements
-  masterApi.gs → handleMasterCreateRecord()
+  resourceApi.gs → handleResourceCreateRecord()
     → writes ledger row to StockMovements sheet
     → dispatchAfterCreateHook() calls handleStockMovementsBulkSave_afterCreate()
     → applyStockMovementToWarehouseStorages() upserts WarehouseStorages
@@ -784,7 +784,7 @@ BACKEND (Google Apps Script)
 | `FRONTENT/src/composables/useStockMovements.js` | Loads warehouses, SKUs, and storages. Submits batches via API. |
 | `FRONTENT/src/router/routes.js` | Explicit route `/operations/stock-movements/direct-entry` |
 | `GAS/stockMovements.gs` | Hook logic to sync `WarehouseStorages` based on `StockMovements` |
-| `GAS/masterApi.gs` | Executes `dispatchAfterCreateHook()` during save |
+| `GAS/resourceApi.gs` | Executes `dispatchAfterCreateHook()` during save |
 
 ### 6.4 Key Behaviors
 1. **Delta Calculation**: The UI tracks `originalQty` and `currentQty`. On save, it only submits rows where `currentQty !== originalQty`. The submitted value is the difference (`QtyChange = currentQty - originalQty`).

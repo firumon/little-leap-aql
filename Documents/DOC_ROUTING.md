@@ -8,6 +8,14 @@ This document is the canonical task-to-doc router for AQL. Use it to decide what
 - For large docs, read only the relevant section instead of the whole file whenever possible.
 - Do not load `PLANS/`, `Documents/CONTEXT_HANDOFF.md`, or backend-heavy docs unless the task actually needs them.
 
+## Non-Negotiable Frontend Pre-Read
+**Before touching ANY file under `FRONTENT/` — regardless of scope, size, or perceived simplicity — you MUST read:**
+- `Documents/ARCHITECTURE RULES.md`
+
+This applies to: bug fixes, one-line patches, component tweaks, composable changes, store edits, service changes, style adjustments — everything.
+Small fixes are the most frequent source of layer violations (e.g. calling services directly in components, using `router.push()` instead of `useResourceNav`, placing business logic in pages).
+**Do not skip this step even for trivial-seeming changes.**
+
 ## Task Routing
 
 ### Discussion Only
@@ -41,8 +49,8 @@ Use when the task depends on current project state or recent unfinished work.
 ### Frontend Implementation
 Use when editing files under `FRONTENT/`.
 - Read:
+  - `Documents/ARCHITECTURE RULES.md` — **mandatory, see Non-Negotiable Frontend Pre-Read above**
   - `Documents/AI_COLLABORATION_PROTOCOL.md`
-  - `Documents/ARCHITECTURE RULES.md` (mandatory for all `FRONTENT/` edits)
 - If the task affects reusable building blocks, also read/update:
   - `FRONTENT/src/components/REGISTRY.md`
   - `FRONTENT/src/composables/REGISTRY.md`
@@ -114,3 +122,4 @@ Update this file when any of the following changes:
 - a canonical reference doc is added, removed, or renamed
 - routing guidance changes for planning, build, backend, frontend, auth, menu, or resume workflows
 - mandatory-read rules for specific task categories change
+- the Non-Negotiable Frontend Pre-Read list changes (e.g. a new always-read doc is added for frontend work)

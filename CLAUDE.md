@@ -32,6 +32,7 @@ This is the startup file for Claude sessions in this repo. Keep it lean and use 
 ## Implementation Expectations
 - Keep docs, code, and sheets aligned only when the task actually changes them.
 - For frontend edits, keep pages thin when the task materially affects page structure.
+- **Before touching any file under `FRONTENT/`, read `Documents/ARCHITECTURE RULES.md` without exception — including small fixes, one-liners, and style tweaks. Layer violations most often enter through minor edits.**
 - For backend edits, prefer existing GAS files and patterns first. Create a new GAS file only when the current structure cannot support the task cleanly.
 
 ## Verification

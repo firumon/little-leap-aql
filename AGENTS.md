@@ -33,6 +33,7 @@
 ## Implementation Notes
 - Keep docs, code, and sheets aligned only when the task modifies them.
 - For frontend edits, keep pages thin when the task materially changes page structure and update frontend registries only when reusable interfaces change.
+- **Before touching any file under `FRONTENT/`, read `Documents/ARCHITECTURE RULES.md` without exception — this includes small fixes, one-liners, and style tweaks. Layer violations most often enter through minor edits.**
 - For backend edits, prefer existing GAS files and patterns first. Create a new GAS file only when the current structure cannot support the task cleanly.
 - If GAS files change, run `npm run gas:push` from the repo root or `cd GAS && clasp push`.
 - Ask the user for Web App redeployment only when the API contract changed.

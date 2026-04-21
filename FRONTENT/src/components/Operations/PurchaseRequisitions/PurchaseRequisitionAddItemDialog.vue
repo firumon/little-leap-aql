@@ -15,7 +15,7 @@
           label="Select SKU *"
           outlined dense use-input input-debounce="200" clearable
           class="q-mb-sm"
-          @filter="$emit('filter-skus', ...arguments)"
+          @filter="(val, update, abort) => $emit('filter-skus', val, update, abort)"
         >
           <template #option="scope">
             <q-item v-bind="scope.itemProps">

@@ -252,6 +252,9 @@
       </transition>
     </div>
 
+    <!-- Spacer so fixed action bar doesn't obscure last content -->
+    <div style="height: 88px;" />
+
     <!-- ── Action Bar ──────────────────────────────────────────────────── -->
     <div class="action-bar row q-gutter-x-sm">
 

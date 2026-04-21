@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from 'src/stores/auth'
 import { useMenuAccess } from 'src/composables/layout/useMenuAccess'
 import { useAuthLogic } from 'src/composables/core/useAuthLogic'
@@ -35,6 +36,7 @@ function isValidRoute(routePath) {
 
 export function useMainLayoutNavTree() {
   const auth = useAuthStore()
+  const router = useRouter()
   const { evaluateMenuAccess } = useMenuAccess()
   const { logout } = useAuthLogic()
   const leftDrawerOpen = ref(false)
@@ -120,6 +122,7 @@ export function useMainLayoutNavTree() {
 
   async function handleLogout() {
     await logout()
+    await router.push('/login')
   }
 
   return {

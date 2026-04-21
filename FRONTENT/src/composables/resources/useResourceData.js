@@ -77,7 +77,9 @@ export function useResourceData(resourceNameRef) {
     if (!resourceName) return
 
     const requestId = ++loadRequestId.value
-    if (!items.value.length) loading.value = true
+    // Show loading indicator when there are no items yet, OR when the caller
+    // explicitly requests a force-sync (e.g. manual "Force Sync" button click).
+    if (!items.value.length || forceSync) loading.value = true
 
     try {
       const response = await dataStore.loadResource(resourceName, {

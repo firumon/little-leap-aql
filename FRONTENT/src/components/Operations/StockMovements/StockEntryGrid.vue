@@ -341,7 +341,8 @@ async function saveChanges() {
   )
 
   if (succeeded > 0) {
-    // IDB is already fresh from submitBatch's local upsert — rebuild from cache.
+    // IDB is fresh: WarehouseStorages was fetched in the same batch as the create.
+    // GasApiService auto-ingested the response, so reading from cache here is a no-op network-wise.
     await fetchData(false)
   }
 

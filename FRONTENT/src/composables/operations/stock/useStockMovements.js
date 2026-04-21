@@ -12,6 +12,8 @@
  *   resource = 'StockMovements'
  *   → GAS: dispatchBulkCreateRecords → handleStockMovementsBulkSave (PostAction)
  *   → N rows, 1 round-trip, 2 sheet opens total
+ *   Batch also includes action=get WarehouseStorages so the refresh is in-band (no second
+ *   round-trip). GasApiService auto-ingests the resource payload into IDB + Pinia.
  *
  * Note: action=bulk is reserved for the Bulk Upload UI (BulkUploadMasters) only.
  */
@@ -94,7 +96,19 @@ export function useStockMovements() {
     }))
 
     try {
-      const batchResult = await workflowStore.submitStockMovementsBatch(movementRecords)
+      const batchResult = await workflowStore.runBatchRequests([
+        {
+          action: 'create',
+          resource: 'StockMovements',
+          payload: { records: movementRecords }
+        },
+        {
+          action: 'get',
+          resource: 'WarehouseStorages',
+          includeInactive: true,
+          includeHeaders: true
+        }
+      ])
 
       if (!batchResult.success) {
         throw new Error(batchResult.error || batchResult.message || 'Batch operation failed')
@@ -102,10 +116,10 @@ export function useStockMovements() {
 
       const [createResponse] = batchResult.data || []
 
-      const created  = createResponse?.data?.created ?? 0
-      const updated  = createResponse?.data?.updated ?? 0
+      const created  = createResponse?.data?.result?.created ?? 0
+      const updated  = createResponse?.data?.result?.updated ?? 0
       const succeeded = created + updated
-      const errors   = createResponse?.data?.errors  ?? []
+      const errors   = createResponse?.data?.result?.errors ?? []
 
       const failedIndices = new Set(errors.map(e => e.index))
       const succeededRows = movementRecords
@@ -135,10 +149,9 @@ export function useStockMovements() {
         }
       }
 
-      // After a successful batch, force a sync of WarehouseStorages to get the latest state
-      if(succeeded > 0) {
-        await dataStore.loadResource('WarehouseStorages', { includeInactive: true, forceSync: true })
-      }
+      // After a successful batch, WarehouseStorages is already refreshed in-band via the
+      // second batch sub-request (ingested into IDB + Pinia by GasApiService automatically).
+      // No additional round-trip needed.
 
       return { succeeded, failed, succeededRows }
     } catch (e) {

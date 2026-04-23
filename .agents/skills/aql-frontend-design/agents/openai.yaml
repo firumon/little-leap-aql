@@ -1,0 +1,4 @@
+interface:
+  display_name: "AQL Frontend Design"
+  short_description: "Quasar-first AQL UI design and prototypes"
+  default_prompt: "Use $aql-frontend-design to design an AQL Quasar page or component prototype that aligns with the shared CSS and architecture rules."

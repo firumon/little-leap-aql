@@ -20,7 +20,7 @@ Read this file when you are changing GAS implementation, not for every task.
 | # | Pattern | When to use |
 |---|---------|-------------|
 | 1 | **Pure CRUD via resource metadata** | Standard create/read/update on a single resource |
-| 2 | **After-create hook** (`PostAction_afterCreate`) | Side-effects after a single record write (e.g. update a derived sheet) |
+| 2 | **PostAction hook** (`PostAction_after<Action>` or base fallback) | Non-blocking side-effects after supported write actions |
 | 3 | **Bulk array write** (`bulk` / `dispatchBulkCreateRecords`) | Multi-record create/update in one call; returns fresh snapshot |
 | 4 | **Additional actions** (`executeAction`) | Workflow transitions (Approve, Reject, Submit, etc.) |
 | 5 | **Composite save** (`compositeSave`) | Atomic parent + children write with all-or-nothing validation |
@@ -71,12 +71,58 @@ Use when a parent record and its children must be written or rejected together.
 
 ---
 
-## Pattern: After-create / after-bulk hooks
+## Pattern: PostAction hooks
 
-If a resource has `PostAction` set in its config, GAS calls `{postAction}_afterCreate(record, auth)` after a single create and `{postAction}_afterBulk(records, auth)` after a bulk write.
+If a resource has `PostAction` set in its config, GAS resolves hooks in this order for supported actions:
+1. `{postAction}_after<Action>`
+2. `{postAction}`
 
+Supported actions:
+- `create`
+- `update`
+- `bulk`
+- `executeAction`
+- `compositeSave`
+
+Explicit exclusions:
+- `get`
+- `batch`
+
+Canonical hook contract:
+```js
+function myPostAction(payload, result, auth, action, meta, resourceName) {
+  if (!result || result.success !== true) return result;
+  return result;
+}
+```
+
+Action-specific example:
+```js
+function handleStockMovementsBulkSave_afterBulk(payload, result, auth, action, meta, resourceName) {
+  var records = meta && Array.isArray(meta.savedRecords) ? meta.savedRecords : [];
+  if (!records.length) return result;
+  applyBatchStockMovementsToWarehouseStorages(records, auth);
+  return result;
+}
+```
+
+Base fallback example:
+```js
+function handlePurchaseRequisitionPostAction(payload, result, auth, action, meta, resourceName) {
+  var record = meta && meta.savedRecord ? meta.savedRecord : meta.parentRecord;
+  if (!record) return result;
+  if (action === 'executeAction' && record.Progress === 'Approved') {
+    syncLinkedProcurement(record, auth);
+  }
+  return result;
+}
+```
+
+Rules:
+- Keep hook functions in the resource's dedicated hook file (for example `stockMovements.gs`, `procurement.gs`).
+- Use the base hook name only in resource config; never store suffixes in `PostAction`.
+- Treat `meta` as helper context, not as the public API contract.
 - Hook failures are logged but never fail the write response.
-- Keep hook functions in the resource's dedicated hook file (e.g. `stockMovements.gs`).
 - Do not hardcode resource-specific logic into `resourceApi.gs`.
 
 ---

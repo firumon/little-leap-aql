@@ -128,12 +128,8 @@ function handleResourceCreateRecord(auth, payload) {
   sheet.getRange(targetRow, 1, 1, headers.length).setValues([rowData]);
   updateResourceSyncCursor(resourceName);
 
-  // Generic after-create hook: if the resource has PostAction configured,
-  // call {postAction}_afterCreate(record, auth). No new GAS files needed —
-  // just add the function to the relevant resource hook file.
-  dispatchAfterCreateHook(resource.config, rowArrayToObject(headers, rowData), auth);
-
-  return {
+  var savedRecord = rowArrayToObject(headers, rowData);
+  var result = {
     success: true,
     message: resourceName + ' record created successfully',
     data: mergeDeltaResourcesIntoResult(
@@ -141,36 +137,67 @@ function handleResourceCreateRecord(auth, payload) {
       collectWriteDeltaResources(auth, payload, [resourceName])
     )
   };
+  dispatchPostActionHook(resource.config, payload, result, auth, 'create', {
+    headers: headers,
+    savedRecord: savedRecord
+  }, resourceName);
+  return result;
 }
 
 /**
- * Generic after-create hook dispatcher.
+ * Resolves the strict postAction suffix for supported actions only.
  *
- * Convention: if a resource has PostAction = 'myHandler', then
- * a function named 'myHandler_afterCreate(record, auth)' is called
- * after each single-record create for that resource.
- *
- * This keeps all resource-specific logic in dedicated hook files
- * (e.g. stockMovements.gs) without hardcoding resource names here.
- *
- * @param {Object} config - Resource config from getResourceConfig()
- * @param {Object} record - Plain object (headers as keys)
- * @param {Object} auth
+ * @param {string} action
+ * @returns {string}
  */
-function dispatchAfterCreateHook(config, record, auth) {
+function getPostActionSuffix(action) {
+  switch ((action || '').toString().trim()) {
+    case 'create': return 'Create';
+    case 'update': return 'Update';
+    case 'bulk': return 'Bulk';
+    case 'executeAction': return 'ExecuteAction';
+    case 'compositeSave': return 'CompositeSave';
+    default: return '';
+  }
+}
+
+/**
+ * Centralized postAction dispatcher.
+ * Resolution order:
+ *   1. {postAction}_after<Action>
+ *   2. {postAction}
+ *
+ * Hook failures are logged and never fail the API response.
+ *
+ * @param {Object} config
+ * @param {Object} payload
+ * @param {Object} result
+ * @param {Object} auth
+ * @param {string} action
+ * @param {Object} meta
+ * @param {string} resourceName
+ */
+function dispatchPostActionHook(config, payload, result, auth, action, meta, resourceName) {
+  var normalizedAction = (action || '').toString().trim();
+  if (!normalizedAction || normalizedAction === 'get' || normalizedAction === 'batch') return;
+
+  var suffix = getPostActionSuffix(normalizedAction);
+  if (!suffix) return;
+
   var postAction = config && config.postAction ? config.postAction.toString().trim() : '';
   if (!postAction) return;
 
-  var hookName = postAction + '_afterCreate';
+  var candidates = [postAction + '_after' + suffix, postAction];
   try {
-    // In GAS V8, global functions are accessible via this[name] in global context
-    var fn = this[hookName];
-    if (typeof fn === 'function') {
-      fn(record, auth);
+    for (var i = 0; i < candidates.length; i++) {
+      var fn = this[candidates[i]];
+      if (typeof fn === 'function') {
+        fn(payload || {}, result || {}, auth || {}, normalizedAction, meta || {}, resourceName || '');
+        return;
+      }
     }
   } catch (e) {
-    // Log but never throw — ledger row is already committed
-    Logger.log('dispatchAfterCreateHook error for "' + hookName + '": ' + String(e));
+    Logger.log('dispatchPostActionHook error for "' + postAction + '" (' + normalizedAction + '): ' + String(e));
   }
 }
 
@@ -183,9 +210,7 @@ function dispatchAfterCreateHook(config, record, auth) {
  *
  * Flow:
  *   1. Always write rows via handleResourceBulkUpsertRecords (generic bulk upsert).
- *   2. After the write, fire dispatchAfterBulkHook as a side-effect:
- *      calls {postAction}_afterBulk(records, auth) if the resource has PostAction set.
- *      Hook failures are logged and never fail the write response.
+ *   2. The generic bulk handler dispatches postAction exactly once as a side-effect.
  *
  * PostAction is a SIDE-EFFECT hook here, not a primary write handler.
  *
@@ -202,13 +227,6 @@ function dispatchBulkCreateRecords(auth, payload) {
     return { success: false, message: 'Resource name is required' };
   }
 
-  var config;
-  try {
-    config = getResourceConfig(resourceName);
-  } catch (e) {
-    return { success: false, message: 'Resource not found: ' + resourceName };
-  }
-
   // Always use the generic bulk upsert for the actual row write
   var bulkPayload = {};
   var keys = Object.keys(payload || {});
@@ -217,42 +235,7 @@ function dispatchBulkCreateRecords(auth, payload) {
   }
   bulkPayload.targetResource = resourceName;
 
-  var result = handleResourceBulkUpsertRecords(auth, bulkPayload);
-
-  // Side-effect hook: {postAction}_afterBulk(records, auth) — never fails the response
-  dispatchAfterBulkHook(config, Array.isArray(payload.records) ? payload.records : [], auth);
-
-  return result;
-}
-
-/**
- * Generic after-bulk hook dispatcher.
- *
- * Convention: if a resource has PostAction = 'myHandler', then a function named
- * 'myHandler_afterBulk(records, auth)' is called after a bulk array write completes.
- * Bulk equivalent of dispatchAfterCreateHook.
- *
- * PostAction purpose: SIDE EFFECTS only — updating derived sheets, sending
- * notifications, calling external services. The write is always handled by
- * handleResourceBulkUpsertRecords above.
- *
- * @param {Object} config   - Resource config from getResourceConfig()
- * @param {Array}  records  - The original records[] from the payload
- * @param {Object} auth
- */
-function dispatchAfterBulkHook(config, records, auth) {
-  var postAction = config && config.postAction ? config.postAction.toString().trim() : '';
-  if (!postAction) return;
-
-  var hookName = postAction + '_afterBulk';
-  try {
-    var fn = this[hookName];
-    if (typeof fn === 'function') {
-      fn(records, auth);
-    }
-  } catch (e) {
-    Logger.log('dispatchAfterBulkHook error for "' + hookName + '": ' + String(e));
-  }
+  return handleResourceBulkUpsertRecords(auth, bulkPayload);
 }
 
 function handleResourceUpdateRecord(auth, payload) {
@@ -273,6 +256,7 @@ function handleResourceUpdateRecord(auth, payload) {
   }
 
   const existingRow = sheet.getRange(rowNumber, 1, 1, headers.length).getValues()[0];
+  const previousRecord = rowArrayToObject(headers, existingRow);
   enforceRecordLevelAccess(auth, resource.config, headers, existingRow);
   const recordPayload = payload && typeof payload.record === 'object' && payload.record !== null
     ? payload.record
@@ -292,7 +276,8 @@ function handleResourceUpdateRecord(auth, payload) {
   sheet.getRange(rowNumber, 1, 1, headers.length).setValues([mergedRow]);
   updateResourceSyncCursor(resourceName);
 
-  return {
+  var savedRecord = rowArrayToObject(headers, mergedRow);
+  var result = {
     success: true,
     message: resourceName + ' record updated successfully',
     data: mergeDeltaResourcesIntoResult(
@@ -300,6 +285,12 @@ function handleResourceUpdateRecord(auth, payload) {
       collectWriteDeltaResources(auth, payload, [resourceName])
     )
   };
+  dispatchPostActionHook(resource.config, payload, result, auth, 'update', {
+    headers: headers,
+    previousRecord: previousRecord,
+    savedRecord: savedRecord
+  }, resourceName);
+  return result;
 }
 
 function handleResourceGetProducts(auth, payload) {
@@ -1259,7 +1250,14 @@ function handleCompositeSave(auth, payload) {
     }
   }
 
-  return {
+  var childResourceResults = childWriteOps.map(function(ops) {
+    return {
+      resourceName: ops.resourceName,
+      createdRecords: ops.newRows.map(function(row) { return rowArrayToObject(ops.headers, row); }),
+      updatedRecords: ops.updateOps.map(function(op) { return rowArrayToObject(ops.headers, op.rowData); })
+    };
+  });
+  var result = {
     success: true,
     message: parentResourceName + ' saved successfully',
     data: mergeDeltaResourcesIntoResult(
@@ -1267,6 +1265,11 @@ function handleCompositeSave(auth, payload) {
       collectWriteDeltaResources(auth, payload, affectedResources)
     )
   };
+  dispatchPostActionHook(parentResource.config, payload, result, auth, 'compositeSave', {
+    parentRecord: rowArrayToObject(parentHeaders, parentRowData),
+    childResources: childResourceResults
+  }, parentResourceName);
+  return result;
 }
 
 /**
@@ -1340,6 +1343,7 @@ function handleExecuteAction(auth, payload) {
   }
 
   var existingRow = sheet.getRange(rowNumber, 1, 1, headers.length).getValues()[0];
+  var previousRecord = rowArrayToObject(headers, existingRow);
   enforceRecordLevelAccess(auth, resource.config, headers, existingRow);
 
   // Set the column value (e.g., Progress = 'Approved')
@@ -1367,7 +1371,8 @@ function handleExecuteAction(auth, payload) {
   sheet.getRange(rowNumber, 1, 1, headers.length).setValues([existingRow]);
   updateResourceSyncCursor(resourceName);
 
-  return {
+  var savedRecord = rowArrayToObject(headers, existingRow);
+  var result = {
     success: true,
     message: actionName + ' completed successfully',
     data: mergeDeltaResourcesIntoResult(
@@ -1375,6 +1380,13 @@ function handleExecuteAction(auth, payload) {
       collectWriteDeltaResources(auth, payload, [resourceName])
     )
   };
+  dispatchPostActionHook(resource.config, payload, result, auth, 'executeAction', {
+    headers: headers,
+    previousRecord: previousRecord,
+    savedRecord: savedRecord,
+    actionName: actionName
+  }, resourceName);
+  return result;
 }
 
 function handleResourceBulkUpsertRecords(auth, payload) {
@@ -1402,6 +1414,8 @@ function handleResourceBulkUpsertRecords(auth, payload) {
   var seqLength = resource.config.codeSequenceLength || 6;
 
   var results = { created: 0, updated: 0, skipped: 0, errors: [] };
+  var createdRecords = [];
+  var updatedRecords = [];
 
   // Local copy for uniqueness checks within the batch
   var currentValues = values.slice();
@@ -1431,6 +1445,7 @@ function handleResourceBulkUpsertRecords(auth, payload) {
 
         newRows.push(rowData);
         currentValues.push(rowData);
+        createdRecords.push(rowArrayToObject(headers, rowData));
         results.created++;
       } else {
         // --- UPDATE (collect for batch) ---
@@ -1444,6 +1459,7 @@ function handleResourceBulkUpsertRecords(auth, payload) {
 
         updateOps.push({ rowNumber: rowNumber, rowData: rowData });
         currentValues[rowNumber - 1] = rowData;
+        updatedRecords.push(rowArrayToObject(headers, rowData));
         results.updated++;
       }
     } catch (err) {
@@ -1463,8 +1479,7 @@ function handleResourceBulkUpsertRecords(auth, payload) {
   }
 
   updateResourceSyncCursor(targetResourceName);
-
-  return {
+  var result = {
     success: results.errors.length < records.length,
     message: 'Bulk processing completed',
     data: mergeDeltaResourcesIntoResult(
@@ -1477,6 +1492,20 @@ function handleResourceBulkUpsertRecords(auth, payload) {
       collectWriteDeltaResources(auth, payload, [targetResourceName])
     )
   };
+  dispatchPostActionHook(resource.config, payload, result, auth, 'bulk', {
+    headers: headers,
+    targetResource: targetResourceName,
+    createdRecords: createdRecords,
+    updatedRecords: updatedRecords,
+    savedRecords: createdRecords.concat(updatedRecords),
+    summary: {
+      created: results.created,
+      updated: results.updated,
+      skipped: results.skipped,
+      errors: results.errors
+    }
+  }, targetResourceName);
+  return result;
 }
 
 

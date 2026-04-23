@@ -17,7 +17,7 @@ Do not treat this as a universal startup read for every task.
 - generic CRUD by action/scope/resource
 - bulk create/update with `records: []`
 - bulk upload flow for the dedicated Bulk Upload UI
-- post-write hook support (e.g., PostAction-based cross-resource progress sync)
+- post-write hook support (strict PostAction dispatch for `create`, `update`, `bulk`, `executeAction`, `compositeSave`)
 - additional actions / workflow transitions
 - composite save for parent + children
 - report generation
@@ -266,6 +266,52 @@ Rules:
 - `data.resources` is the aggregated final resource payload map across sub-responses.
 
 **Primary use case:** combine a write with an immediate read in one call so the frontend can update IDB without a second round-trip. Example: `compositeSave` + two `get` calls returns the created record and all affected children in one response.
+
+---
+
+## PostAction Dispatch Contract
+
+Resources can set `PostAction` in `APP.Resources` to trigger non-blocking side effects after supported write actions.
+
+Supported trigger actions:
+- `create`
+- `update`
+- `bulk`
+- `executeAction`
+- `compositeSave`
+
+Explicit exclusions:
+- `get`
+- `batch`
+
+Resolution order for each supported action:
+1. `{postAction}_after<Action>`
+2. `{postAction}`
+
+Action suffix mapping:
+- `create` -> `_afterCreate`
+- `update` -> `_afterUpdate`
+- `bulk` -> `_afterBulk`
+- `executeAction` -> `_afterExecuteAction`
+- `compositeSave` -> `_afterCompositeSave`
+
+Hook signature is strict:
+```js
+function myPostAction(payload, result, auth, action, meta, resourceName) {}
+```
+
+Argument notes:
+- `payload`: original request payload for the completed action.
+- `result`: raw handler result that will be wrapped into the API envelope.
+- `auth`: authenticated user context.
+- `action`: one of the supported action names above.
+- `meta`: server-built helper context such as `savedRecord`, `savedRecords`, `previousRecord`, `parentRecord`, or child write summaries when available.
+- `resourceName`: canonical resource being processed.
+
+Behavior rules:
+- Missing hook functions are treated as a silent no-op.
+- Hook errors are logged and never fail the main API response.
+- Config stores only the base `PostAction` name; dispatch suffixing is resolved in GAS.
 
 ---
 

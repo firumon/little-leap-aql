@@ -49,6 +49,8 @@ Read this file only when:
 - Batch contract now returns ordered per-request envelopes in `data.result.responses` and an aggregated `data.resources` map for generic frontend ingestion.
 - Generic service naming enforced on 2026-04-21: `createMasterRecord→createRecord`, `updateMasterRecord→updateRecord`, `bulkMasterRecords→bulkRecords`; all `*Master*` transitional aliases removed. `submitStockMovementsBatch` removed from `workflow.js`; `useStockMovements.js` composable now owns full dispatch logic via `runBatchRequests`.
 
+- GAS postAction dispatch refactor executed on 2026-04-23: supported write actions now resolve hooks through one strict dispatcher with order `{PostAction}_after<Action>` then `{PostAction}`, using signature `payload, result, auth, action, meta, resourceName`. `get` and `batch` never dispatch hooks. `procurement.gs` now uses internal sheet-level helpers instead of removed legacy helpers, and `stockMovements.gs` consumes the unified hook contract.
+
 ## Deep-Dive References
 - Role boundaries: `Documents/MULTI_AGENT_PROTOCOL.md`
 - Task-based doc loading: `Documents/DOC_ROUTING.md`

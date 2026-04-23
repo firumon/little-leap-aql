@@ -1,122 +1,174 @@
 /**
  * ============================================================
- * AQL - Procurement Backend Handlers
+ * AQL - Procurement PostAction Hooks
  * ============================================================
- * Handles cross-resource operations and business logic for the
- * procurement module (Purchase Requisitions, RFQs, POs, etc.).
+ * PostAction handlers for PurchaseRequisitions and linked Procurements.
+ * Hooks follow the centralized dispatch contract:
+ *   payload, result, auth, action, meta, resourceName
+ * ============================================================
  */
+
+var PROCUREMENT_RESOURCE_NAME = 'Procurements';
+var PURCHASE_REQUISITIONS_RESOURCE_NAME = 'PurchaseRequisitions';
 
 /**
- * Helper to update linked Procurement progress.
- * @param {string} procurementCode - The Procurement code to update.
- * @param {string} newProgress - The target progress to set.
- * @param {Object} auth - The auth payload of the current user.
+ * PostAction fallback for PurchaseRequisitions.
+ * Runs after supported actions when the resource config sets:
+ *   PostAction = 'handlePurchaseRequisitionPostAction'
+ *
+ * Current responsibilities:
+ * - Create a linked Procurement the first time a PR reaches Progress = New.
+ * - Keep the linked Procurement progress aligned for key PR transitions.
+ *
+ * @param {Object} payload
+ * @param {Object} result
+ * @param {Object} auth
+ * @param {string} action
+ * @param {Object} meta
+ * @param {string} resourceName
  */
-function updateProcurementProgress(procurementCode, newProgress, auth) {
-    if (!procurementCode) return;
+function handlePurchaseRequisitionPostAction(payload, result, auth, action, meta, resourceName) {
+  try {
+    if (!result || result.success !== true) return result;
 
-    // Find the Procurement record
-    const response = handleGetRecords({
-        resourceName: CONFIG.OPERATION_SHEETS.PROCUREMENTS,
-        filters: JSON.stringify([{ field: 'Code', operator: 'eq', value: procurementCode }]),
-        limit: 1
-    }, auth);
+    var prRecord = resolvePurchaseRequisitionPostActionRecord(payload, meta);
+    if (!prRecord || !prRecord.Code) return result;
 
-    if (response.records && response.records.length > 0) {
-        const procurement = response.records[0];
+    var progress = (prRecord.Progress || '').toString().trim();
+    var procurementCode = (prRecord.ProcurementCode || '').toString().trim();
 
-        // Check if progress actually needs to change to avoid unnecessary updates
-        if (procurement.Progress !== newProgress) {
-            handleUpsertRecord({
-                resourceName: CONFIG.OPERATION_SHEETS.PROCUREMENTS,
-                data: JSON.stringify({ Code: procurementCode, Progress: newProgress })
-            }, auth);
-        }
+    if (progress === 'New' && !procurementCode) {
+      var procurementRecord = createLinkedProcurementForPurchaseRequisition(prRecord, auth);
+      if (procurementRecord && procurementRecord.Code) {
+        updateResourceRecordFieldsByCode(
+          PURCHASE_REQUISITIONS_RESOURCE_NAME,
+          prRecord.Code,
+          { ProcurementCode: procurementRecord.Code },
+          auth
+        );
+      }
+      return result;
     }
+
+    var targetProcurementProgress = mapPurchaseRequisitionProgressToProcurementProgress(progress);
+    if (targetProcurementProgress && procurementCode) {
+      updateResourceRecordFieldsByCode(
+        PROCUREMENT_RESOURCE_NAME,
+        procurementCode,
+        { Progress: targetProcurementProgress },
+        auth
+      );
+    }
+  } catch (e) {
+    Logger.log('handlePurchaseRequisitionPostAction ERROR: ' + String(e));
+  }
+
+  return result;
 }
 
-/**
- * PostAction handler for PurchaseRequisitions.
- * Called automatically after a PR record is created or updated.
- *
- * @param {Object} payload - The original request payload.
- * @param {Object} auth - The user's auth object.
- * @param {Object} result - The result of the upsert operation (contains saved record).
- */
-function handlePurchaseRequisitionPostAction(payload, auth, result) {
-    if (!result.success || !result.record) return result;
+function resolvePurchaseRequisitionPostActionRecord(payload, meta) {
+  if (meta && meta.savedRecord) return meta.savedRecord;
+  if (meta && meta.parentRecord) return meta.parentRecord;
 
-    const pr = result.record;
+  var code = payload && payload.code ? payload.code.toString().trim() : '';
+  if (!code && payload && payload.record && payload.record.Code) {
+    code = payload.record.Code.toString().trim();
+  }
+  if (!code && payload && payload.data && payload.data.Code) {
+    code = payload.data.Code.toString().trim();
+  }
+  if (!code) return null;
 
-    // Read previous state to detect transitions
-    let prevProgress = 'Draft'; // Default if new record
+  var context = getResourceRecordContextByCode(PURCHASE_REQUISITIONS_RESOURCE_NAME, code);
+  return context ? context.record : null;
+}
 
-    // If this is an update, we need the old progress to know the transition.
-    // If the client sent `oldData` in the payload (ideal), we use it.
-    // Otherwise, we might have to assume based on current state or just look at payload vs result.
-    // Standard AQL upsert doesn't pass oldData explicitly to PostAction yet unless customized.
-    // So we rely on what we know: the payload's Progress vs what is currently in DB is already saved.
-    // Wait, the DB already has the new Progress.
-    // The payload tells us what the user asked to change it to.
+function mapPurchaseRequisitionProgressToProcurementProgress(progress) {
+  switch ((progress || '').toString().trim()) {
+    case 'Revision Required': return 'PR_CREATED';
+    case 'Approved': return 'PR_APPROVED';
+    case 'Rejected': return 'CANCELLED';
+    default: return '';
+  }
+}
 
-    // To properly detect transitions, we should rely on the payload providing the "from" state
-    // but the safest way is if the frontend just passes `action` or `fromProgress` in payload.
-    // However, we can just look at the new Progress and ensure the procurement state matches.
-    // This is idempotent and safer.
+function createLinkedProcurementForPurchaseRequisition(prRecord, auth) {
+  var resource = openResourceSheet(PROCUREMENT_RESOURCE_NAME);
+  var schema = buildMasterSchemaFromResourceConfig(resource.config);
+  var sheet = resource.sheet;
+  var values = sheet.getDataRange().getValues();
+  var headers = values[0] || [];
+  var idx = getHeaderIndexMap(headers);
+  var codePrefix = (resource.config.codePrefix || '').toString().trim();
+  var seqLength = resource.config.codeSequenceLength || 6;
 
-    let targetProcurementProgress = null;
-    let needsProcurementUpdate = false;
-    let newProcurementCode = null;
+  if (!codePrefix) {
+    throw new Error('CodePrefix is missing for resource: ' + PROCUREMENT_RESOURCE_NAME);
+  }
 
-    if (pr.Progress === 'New') {
-        // Draft -> New (first Submit) OR Review -> New (re-confirm)
-        if (!pr.ProcurementCode) {
-            // First submit: Create new Procurement
-            const today = new Date();
-            const dateStr = Utilities.formatDate(today, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  var code = resource.config.scope === 'operation'
+    ? generateNextYearScopedCode(values, idx, codePrefix, seqLength)
+    : generateNextCode(values, idx, codePrefix, seqLength);
 
-            const newProcResult = handleUpsertRecord({
-                resourceName: CONFIG.OPERATION_SHEETS.PROCUREMENTS,
-                data: JSON.stringify({
-                    InitiatedDate: dateStr,
-                    CreatedUser: auth.name,
-                    CreatedRole: auth.role,
-                    Status: 'Active',
-                    Progress: 'INITIATED'
-                })
-            }, auth);
+  var today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  var rowData = buildNewMasterRow(headers, idx, {
+    InitiatedDate: today,
+    CreatedUser: auth && auth.user ? auth.user.name || '' : '',
+    CreatedRole: auth && auth.user ? auth.user.role || '' : ''
+  }, schema);
+  rowData[idx.Code] = code;
 
-            if (newProcResult.success && newProcResult.record) {
-                newProcurementCode = newProcResult.record.Code;
-                // Update the PR with the new ProcurementCode
-                handleUpsertRecord({
-                    resourceName: CONFIG.OPERATION_SHEETS.PURCHASE_REQUISITIONS,
-                    data: JSON.stringify({ Code: pr.Code, ProcurementCode: newProcurementCode })
-                }, auth);
-            }
-        }
-        // If ProcurementCode exists, it's Review -> New (re-confirm), no Procurement progress change needed
+  applyAccessRegionOnWrite(rowData, idx, auth);
+  applyAuditFields(rowData, idx, auth, resource.config, true);
+  validateRequiredFields(rowData, idx, schema.requiredHeaders, PROCUREMENT_RESOURCE_NAME);
+  validateMasterUniqueness(values, idx, rowData, schema, -1, PROCUREMENT_RESOURCE_NAME);
+
+  var targetRow = sheet.getLastRow() + 1;
+  sheet.getRange(targetRow, 1, 1, headers.length).setValues([rowData]);
+  updateResourceSyncCursor(PROCUREMENT_RESOURCE_NAME);
+
+  return rowArrayToObject(headers, rowData);
+}
+
+function updateResourceRecordFieldsByCode(resourceName, code, fields, auth) {
+  var context = getResourceRecordContextByCode(resourceName, code);
+  if (!context) return null;
+
+  var rowData = context.rowData.slice();
+  var fieldNames = Object.keys(fields || {});
+  for (var i = 0; i < fieldNames.length; i++) {
+    var fieldName = fieldNames[i];
+    if (context.idx[fieldName] !== undefined) {
+      rowData[context.idx[fieldName]] = fields[fieldName];
     }
-    else if (pr.Progress === 'Revision Required') {
-        // Pending Approval -> Revision Required
-        targetProcurementProgress = 'PR_CREATED';
-        needsProcurementUpdate = true;
-    }
-    else if (pr.Progress === 'Approved') {
-        // Pending Approval/Revision Required -> Approved
-        targetProcurementProgress = 'PR_APPROVED';
-        needsProcurementUpdate = true;
-    }
-    else if (pr.Progress === 'Rejected') {
-        // Pending Approval/Revision Required -> Rejected
-        targetProcurementProgress = 'CANCELLED';
-        needsProcurementUpdate = true;
-    }
+  }
 
-    // Apply Procurement updates if needed
-    if (needsProcurementUpdate && pr.ProcurementCode) {
-        updateProcurementProgress(pr.ProcurementCode, targetProcurementProgress, auth);
-    }
+  applyAuditFields(rowData, context.idx, auth, context.resource.config, false);
+  context.sheet.getRange(context.rowNumber, 1, 1, context.headers.length).setValues([rowData]);
+  updateResourceSyncCursor(resourceName);
+  return rowArrayToObject(context.headers, rowData);
+}
 
-    return result;
+function getResourceRecordContextByCode(resourceName, code) {
+  var normalizedCode = (code || '').toString().trim();
+  if (!normalizedCode) return null;
+
+  var resource = openResourceSheet(resourceName);
+  var sheet = resource.sheet;
+  var values = sheet.getDataRange().getValues();
+  var headers = values[0] || [];
+  var idx = getHeaderIndexMap(headers);
+  var rowNumber = findRowByValue(sheet, idx.Code, normalizedCode, 2, true);
+  if (rowNumber === -1) return null;
+
+  var rowData = sheet.getRange(rowNumber, 1, 1, headers.length).getValues()[0];
+  return {
+    resource: resource,
+    sheet: sheet,
+    headers: headers,
+    idx: idx,
+    rowNumber: rowNumber,
+    rowData: rowData,
+    record: rowArrayToObject(headers, rowData)
+  };
 }

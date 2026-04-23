@@ -10,11 +10,11 @@
  *
  *   Bulk  (action=create, records: []):
  *     dispatchBulkCreateRecords → handleResourceBulkUpsertRecords (writes rows)
- *     → dispatchAfterBulkHook  → handleStockMovementsBulkSave_afterBulk(records, auth)
+ *     → dispatchPostActionHook → handleStockMovementsBulkSave_afterBulk(payload, result, auth, action, meta, resourceName)
  *
  *   Single create (action=create, record: {}):
  *     handleResourceCreateRecord (writes row)
- *     → dispatchAfterCreateHook → handleStockMovementsBulkSave_afterCreate(record, auth)
+ *     → dispatchPostActionHook → handleStockMovementsBulkSave_afterCreate(payload, result, auth, action, meta, resourceName)
  *
  * Both hooks only update WarehouseStorages — they never write to StockMovements.
  * Rule: Functions here must NEVER throw to the caller.
@@ -22,20 +22,26 @@
  */
 
 // ---------------------------------------------------------------------------
-// BULK AFTER-HOOK — called by dispatchAfterBulkHook after bulk array write
+// BULK AFTER-HOOK — called by dispatchPostActionHook after bulk write
 // ---------------------------------------------------------------------------
 
 /**
- * Naming convention: {PostAction}_afterBulk(records, auth)
- * Called by dispatchAfterBulkHook in resourceApi.gs after bulk StockMovements rows are written.
+ * Naming convention: {PostAction}_afterBulk(payload, result, auth, action, meta, resourceName)
+ * Called by dispatchPostActionHook in resourceApi.gs after bulk StockMovements rows are written.
  * Responsibility: update WarehouseStorages totals for all affected locations.
  *
- * @param {Array}  records - The original records[] from the payload
- *   [{ WarehouseCode, StorageName, SKU, QtyChange, ... }]
+ * @param {Object} payload
+ * @param {Object} result
  * @param {Object} auth
+ * @param {string} action
+ * @param {Object} meta
+ * @param {string} resourceName
  */
-function handleStockMovementsBulkSave_afterBulk(records, auth) {
+function handleStockMovementsBulkSave_afterBulk(payload, result, auth, action, meta, resourceName) {
   try {
+    var records = meta && Array.isArray(meta.savedRecords)
+      ? meta.savedRecords
+      : (payload && Array.isArray(payload.records) ? payload.records : []);
     var storageRecords = [];
     for (var i = 0; i < records.length; i++) {
       var rec = records[i];
@@ -57,18 +63,24 @@ function handleStockMovementsBulkSave_afterBulk(records, auth) {
 }
 
 // ---------------------------------------------------------------------------
-// SINGLE-CREATE HOOK — called by dispatchAfterCreateHook after each single create
+// SINGLE-CREATE HOOK — called by dispatchPostActionHook after each single create
 // ---------------------------------------------------------------------------
 
 /**
- * Naming convention: {postAction}_afterCreate
- * Called by dispatchAfterCreateHook in resourceApi.gs after a single StockMovements row is written.
+ * Naming convention: {postAction}_afterCreate(payload, result, auth, action, meta, resourceName)
+ * Called by dispatchPostActionHook in resourceApi.gs after a single StockMovements row is written.
  *
- * @param {Object} record - Plain row object (headers as keys)
- * @param {Object} auth   - Auth context
+ * @param {Object} payload
+ * @param {Object} result
+ * @param {Object} auth
+ * @param {string} action
+ * @param {Object} meta
+ * @param {string} resourceName
  */
-function handleStockMovementsBulkSave_afterCreate(record, auth) {
+function handleStockMovementsBulkSave_afterCreate(payload, result, auth, action, meta, resourceName) {
   try {
+    var record = meta && meta.savedRecord ? meta.savedRecord : null;
+    if (!record) return;
     applyStockMovementToWarehouseStorages(record, auth);
   } catch (e) {
     Logger.log('handleStockMovementsBulkSave_afterCreate ERROR: ' + String(e));

@@ -29,7 +29,7 @@ This document is the canonical meaning reference for `APP.Resources` columns.
 ## Notable Column Dependencies
 - `SKUs` resource now requires `UOM` column.
 - `Procurements` resource now requires `CreatedUser` column.
-- `PurchaseRequisitions` resource tracks Review progress using `ProgressReviewAt`, `ProgressReviewBy`, and `ProgressReviewComment` columns.
+- `PurchaseRequisitions` workflow now uses `ProgressRevisionRequiredAt`, `ProgressRevisionRequiredBy`, `ProgressRevisionRequiredComment`, `ProgressApprovedAt`, `ProgressApprovedBy`, `ProgressApprovedComment`, `ProgressRejectedAt`, `ProgressRejectedBy`, and `ProgressRejectedComment` columns aligned with the PR status machine.
 
 ## Scope Characteristics
 - `master`: Standard CRUD with auto-generated codes, audit columns, full sync.

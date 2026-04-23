@@ -108,12 +108,11 @@ function handleStockMovementsBulkSave_afterBulk(payload, result, auth, action, m
 
 Base fallback example:
 ```js
-function handlePurchaseRequisitionPostAction(payload, result, auth, action, meta, resourceName) {
-  var record = meta && meta.savedRecord ? meta.savedRecord : meta.parentRecord;
-  if (!record) return result;
-  if (action === 'executeAction' && record.Progress === 'Approved') {
-    syncLinkedProcurement(record, auth);
-  }
+function linkProcurementCodeToPurchaseRequisition_afterCreate(payload, result, auth, action, meta, resourceName) {
+  var procurementCode = meta && meta.savedRecord ? meta.savedRecord.Code : '';
+  var prCode = payload && payload.linkedPurchaseRequisitionCode ? payload.linkedPurchaseRequisitionCode : '';
+  if (!procurementCode || !prCode) return result;
+  updateResourceRecordFieldsByCode('PurchaseRequisitions', prCode, { ProcurementCode: procurementCode }, auth);
   return result;
 }
 ```

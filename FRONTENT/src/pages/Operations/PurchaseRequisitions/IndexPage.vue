@@ -56,14 +56,14 @@
             class="q-mr-sm"
           >{{ group.records.length }}</q-badge>
           <q-icon
-            :name="collapsedGroups[group.key] ? 'expand_more' : 'expand_less'"
+            :name="isGroupExpanded(group.key) ? 'expand_less' : 'expand_more'"
             color="grey-6"
             size="18px"
           />
         </div>
 
         <transition name="group-collapse">
-          <div v-if="!collapsedGroups[group.key]" class="group-records">
+          <div v-if="isGroupExpanded(group.key)" class="group-records">
             <div
               v-for="row in group.records"
               :key="row.Code"
@@ -117,9 +117,9 @@
                     </span>
                   </div>
 
-                  <div v-if="row.ProgressReviewComment && group.key === 'revision'" class="pr-comment q-mt-xs">
+                  <div v-if="row.ProgressRevisionRequiredComment && group.key === 'revision'" class="pr-comment q-mt-xs">
                     <q-icon name="comment" size="13px" color="warning" class="q-mr-xs" />
-                    <span class="text-caption ellipsis-2-lines">{{ row.ProgressReviewComment }}</span>
+                    <span class="text-caption ellipsis-2-lines">{{ row.ProgressRevisionRequiredComment }}</span>
                   </div>
                 </div>
 
@@ -176,12 +176,12 @@ const {
   loading,
   reload,
   searchTerm,
-  collapsedGroups,
   visibleGroups,
   totalVisible,
   priorityColor,
   formatDate,
   isOverdue,
+  isGroupExpanded,
   toggleGroup,
   navigateTo,
   navigateToAdd

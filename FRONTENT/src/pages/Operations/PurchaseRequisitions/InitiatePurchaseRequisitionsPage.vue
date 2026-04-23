@@ -12,7 +12,7 @@
           <q-icon name="arrow_back" size="20px" />
         </button>
         <div class="col">
-          <div class="hero-code">PR — New</div>
+          <div class="hero-code">PR - Draft</div>
           <div class="hero-meta">
             <q-icon name="calendar_today" size="13px" />
             {{ todayFormatted }}
@@ -24,7 +24,7 @@
         </div>
         <div class="status-chip" style="background: rgba(212,168,67,0.16); color: #F2D682; border: 1px solid rgba(255,255,255,0.08);">
           <span class="status-dot" style="background: #D4A843;" />
-          New
+          Draft
         </div>
       </div>
 
@@ -330,3 +330,5 @@ const {
   margin-right: 0;
 }
 </style>
+
+

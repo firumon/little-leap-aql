@@ -7,13 +7,11 @@ const GROUP_DEFS = [
   {
     key: 'revision',
     label: 'Revision Required',
-    match: (progress) => progress === 'Review' || progress === 'Revision Required' || progress === 'Revision',
+    match: (progress) => progress === 'Revision Required',
     color: '#c2410c',
     icon: 'edit_note',
-    actionIcon: 'rate_review',
-    actionHint: 'Review',
-    navigateTo: 'record-page',
-    pageSlug: 'review-purchase-requisition'
+    actionIcon: 'edit',
+    actionHint: 'Open'
   },
   {
     key: 'draft',
@@ -22,19 +20,34 @@ const GROUP_DEFS = [
     color: '#6d28d9',
     icon: 'drafts',
     actionIcon: 'edit',
-    actionHint: 'Edit',
-    navigateTo: 'record-page',
-    pageSlug: 'review-purchase-requisition'
+    actionHint: 'Open'
   },
   {
     key: 'pending',
     label: 'Pending Approval',
-    match: (progress) => progress === 'Pending Approval' || progress === 'Pending' || progress === 'New' || progress === 'Submitted',
+    match: (progress) => progress === 'Pending Approval',
     color: '#0f766e',
-    icon: 'pending_actions',
+    icon: 'fact_check',
     actionIcon: 'visibility',
-    actionHint: 'View',
-    navigateTo: 'view'
+    actionHint: 'Review'
+  },
+  {
+    key: 'approved',
+    label: 'Approved',
+    match: (progress) => progress === 'Approved',
+    color: '#15803d',
+    icon: 'check_circle',
+    actionIcon: 'visibility',
+    actionHint: 'View'
+  },
+  {
+    key: 'rejected',
+    label: 'Rejected',
+    match: (progress) => progress === 'Rejected',
+    color: '#b91c1c',
+    icon: 'cancel',
+    actionIcon: 'visibility',
+    actionHint: 'View'
   },
   {
     key: 'others',
@@ -43,10 +56,17 @@ const GROUP_DEFS = [
     color: '#475569',
     icon: 'folder_open',
     actionIcon: 'open_in_new',
-    actionHint: 'Open',
-    navigateTo: 'view'
+    actionHint: 'Open'
   }
 ]
+
+function isWithinLastTenDays(value) {
+  if (!value) return false
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return false
+  const diff = Date.now() - date.getTime()
+  return diff >= 0 && diff <= 10 * 24 * 60 * 60 * 1000
+}
 
 export function usePurchaseRequisitionIndex() {
   const nav = useResourceNav()
@@ -54,7 +74,7 @@ export function usePurchaseRequisitionIndex() {
   const { items, loading, reload } = useResourceData(resourceName)
 
   const searchTerm = ref('')
-  const collapsedGroups = ref({})
+  const activeGroupKey = ref(null)
 
   const filteredItems = computed(() => {
     const keyword = (searchTerm.value || '').trim().toLowerCase()
@@ -96,6 +116,18 @@ export function usePurchaseRequisitionIndex() {
 
   const totalVisible = computed(() => filteredItems.value.length)
 
+  const initialExpandedGroupKey = computed(() => {
+    const revisionGroup = visibleGroups.value.find((group) => group.key === 'revision')
+    if (revisionGroup) return 'revision'
+
+    const rejectedGroup = visibleGroups.value.find((group) => group.key === 'rejected')
+    if (rejectedGroup && rejectedGroup.records.some((row) => isWithinLastTenDays(row.UpdatedAt))) {
+      return 'rejected'
+    }
+
+    return null
+  })
+
   function priorityColor(priority) {
     if (!priority) return 'grey-5'
     const map = { urgent: 'negative', high: 'deep-orange', medium: 'warning', low: 'positive' }
@@ -116,20 +148,15 @@ export function usePurchaseRequisitionIndex() {
     return new Date(value) < new Date()
   }
 
+  function isGroupExpanded(key) {
+    return activeGroupKey.value === key
+  }
+
   function toggleGroup(key) {
-    collapsedGroups.value = {
-      ...collapsedGroups.value,
-      [key]: !collapsedGroups.value[key]
-    }
+    activeGroupKey.value = activeGroupKey.value === key ? null : key
   }
 
   function navigateTo(row) {
-    const group = getGroup(row.Progress)
-    if (group.navigateTo === 'record-page') {
-      nav.goTo('record-page', { code: row.Code, pageSlug: group.pageSlug })
-      return
-    }
-
     nav.goTo('view', { code: row.Code })
   }
 
@@ -141,21 +168,28 @@ export function usePurchaseRequisitionIndex() {
     if (name) await reload()
   }, { immediate: true })
 
+  watch(visibleGroups, (groups) => {
+    const visibleKeys = groups.map((group) => group.key)
+    if (!visibleKeys.includes(activeGroupKey.value)) {
+      activeGroupKey.value = initialExpandedGroupKey.value
+    }
+  }, { immediate: true })
+
   return {
     permissions,
     items,
     loading,
     reload,
     searchTerm,
-    collapsedGroups,
+    activeGroupKey,
     visibleGroups,
     totalVisible,
     priorityColor,
     formatDate,
     isOverdue,
+    isGroupExpanded,
     toggleGroup,
     navigateTo,
     navigateToAdd
   }
 }
-

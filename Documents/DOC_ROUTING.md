@@ -57,12 +57,19 @@ Use when editing files under `FRONTENT/`.
 - If the task affects a documented module, also read only the relevant section of:
   - `Documents/MODULE_WORKFLOWS.md`
 
-### Frontend Architecture Review Or Planning
-Use when reviewing frontend architecture, planning frontend refactors, or defining frontend implementation steps (even before code edits).
+### Frontend Architecture Planning & Refactoring
+Use when defining architectural steps, planning refactors, or preparing frontend implementation tasks.
 - Read:
   - `Documents/ARCHITECTURE RULES.md`
   - `Documents/AI_COLLABORATION_PROTOCOL.md`
   - task-specific module docs only when directly relevant
+
+### Formal Frontend Architecture Review
+Use ONLY when explicitly asked to perform a comprehensive code review against architecture rules (e.g., "Review the whole frontend code against rules"). This task is for analysis and reporting only.
+- Read:
+  - `Documents/ARCHITECTURE RULES.md`
+  - `Documents/REVIEW AGAINST ARCHITECTURE RULE - INSTRUCTIONS.md`
+  - `Documents/AI_COLLABORATION_PROTOCOL.md`
 
 ### Operations Resource Customization
 Use when overriding or creating custom section or sub-components for an operations resource

@@ -2,9 +2,11 @@
  * ============================================================
  * AQL - Procurement PostAction Hooks
  * ============================================================
- * PostAction handlers for PurchaseRequisitions and linked Procurements.
- * Hooks follow the centralized dispatch contract:
- *   payload, result, auth, action, meta, resourceName
+ * Narrow procurement-specific postAction hooks.
+ * Current responsibility:
+ * - after Procurements create, write the new Procurement code back
+ *   to the linked Purchase Requisition when the create payload
+ *   includes `linkedPurchaseRequisitionCode`.
  * ============================================================
  */
 
@@ -12,122 +14,51 @@ var PROCUREMENT_RESOURCE_NAME = 'Procurements';
 var PURCHASE_REQUISITIONS_RESOURCE_NAME = 'PurchaseRequisitions';
 
 /**
- * PostAction fallback for PurchaseRequisitions.
- * Runs after supported actions when the resource config sets:
- *   PostAction = 'handlePurchaseRequisitionPostAction'
+ * PostAction hook for Procurements create.
  *
- * Current responsibilities:
- * - Create a linked Procurement the first time a PR reaches Progress = New.
- * - Keep the linked Procurement progress aligned for key PR transitions.
+ * Resource config:
+ *   Procurements.PostAction = 'linkProcurementCodeToPurchaseRequisition'
  *
- * @param {Object} payload
- * @param {Object} result
- * @param {Object} auth
- * @param {string} action
- * @param {Object} meta
- * @param {string} resourceName
+ * Expected payload shape:
+ * {
+ *   data: { ...procurement fields... },
+ *   linkedPurchaseRequisitionCode: 'PR26000001'
+ * }
  */
-function handlePurchaseRequisitionPostAction(payload, result, auth, action, meta, resourceName) {
+function linkProcurementCodeToPurchaseRequisition_afterCreate(payload, result, auth, action, meta, resourceName) {
   try {
     if (!result || result.success !== true) return result;
 
-    var prRecord = resolvePurchaseRequisitionPostActionRecord(payload, meta);
-    if (!prRecord || !prRecord.Code) return result;
+    var procurementCode = resolveCreatedProcurementCode(result, meta);
+    var linkedPrCode = payload && payload.linkedPurchaseRequisitionCode
+      ? payload.linkedPurchaseRequisitionCode.toString().trim()
+      : '';
 
-    var progress = (prRecord.Progress || '').toString().trim();
-    var procurementCode = (prRecord.ProcurementCode || '').toString().trim();
+    if (!procurementCode || !linkedPrCode) return result;
 
-    if (progress === 'New' && !procurementCode) {
-      var procurementRecord = createLinkedProcurementForPurchaseRequisition(prRecord, auth);
-      if (procurementRecord && procurementRecord.Code) {
-        updateResourceRecordFieldsByCode(
-          PURCHASE_REQUISITIONS_RESOURCE_NAME,
-          prRecord.Code,
-          { ProcurementCode: procurementRecord.Code },
-          auth
-        );
-      }
-      return result;
-    }
-
-    var targetProcurementProgress = mapPurchaseRequisitionProgressToProcurementProgress(progress);
-    if (targetProcurementProgress && procurementCode) {
-      updateResourceRecordFieldsByCode(
-        PROCUREMENT_RESOURCE_NAME,
-        procurementCode,
-        { Progress: targetProcurementProgress },
-        auth
-      );
-    }
+    updateResourceRecordFieldsByCode(
+      PURCHASE_REQUISITIONS_RESOURCE_NAME,
+      linkedPrCode,
+      { ProcurementCode: procurementCode },
+      auth
+    );
   } catch (e) {
-    Logger.log('handlePurchaseRequisitionPostAction ERROR: ' + String(e));
+    Logger.log('linkProcurementCodeToPurchaseRequisition_afterCreate ERROR: ' + String(e));
   }
 
   return result;
 }
 
-function resolvePurchaseRequisitionPostActionRecord(payload, meta) {
-  if (meta && meta.savedRecord) return meta.savedRecord;
-  if (meta && meta.parentRecord) return meta.parentRecord;
-
-  var code = payload && payload.code ? payload.code.toString().trim() : '';
-  if (!code && payload && payload.record && payload.record.Code) {
-    code = payload.record.Code.toString().trim();
-  }
-  if (!code && payload && payload.data && payload.data.Code) {
-    code = payload.data.Code.toString().trim();
-  }
-  if (!code) return null;
-
-  var context = getResourceRecordContextByCode(PURCHASE_REQUISITIONS_RESOURCE_NAME, code);
-  return context ? context.record : null;
-}
-
-function mapPurchaseRequisitionProgressToProcurementProgress(progress) {
-  switch ((progress || '').toString().trim()) {
-    case 'Revision Required': return 'PR_CREATED';
-    case 'Approved': return 'PR_APPROVED';
-    case 'Rejected': return 'CANCELLED';
-    default: return '';
-  }
-}
-
-function createLinkedProcurementForPurchaseRequisition(prRecord, auth) {
-  var resource = openResourceSheet(PROCUREMENT_RESOURCE_NAME);
-  var schema = buildMasterSchemaFromResourceConfig(resource.config);
-  var sheet = resource.sheet;
-  var values = sheet.getDataRange().getValues();
-  var headers = values[0] || [];
-  var idx = getHeaderIndexMap(headers);
-  var codePrefix = (resource.config.codePrefix || '').toString().trim();
-  var seqLength = resource.config.codeSequenceLength || 6;
-
-  if (!codePrefix) {
-    throw new Error('CodePrefix is missing for resource: ' + PROCUREMENT_RESOURCE_NAME);
+function resolveCreatedProcurementCode(result, meta) {
+  if (meta && meta.savedRecord && meta.savedRecord.Code) {
+    return meta.savedRecord.Code.toString().trim();
   }
 
-  var code = resource.config.scope === 'operation'
-    ? generateNextYearScopedCode(values, idx, codePrefix, seqLength)
-    : generateNextCode(values, idx, codePrefix, seqLength);
+  if (result && result.data && result.data.code) {
+    return result.data.code.toString().trim();
+  }
 
-  var today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
-  var rowData = buildNewMasterRow(headers, idx, {
-    InitiatedDate: today,
-    CreatedUser: auth && auth.user ? auth.user.name || '' : '',
-    CreatedRole: auth && auth.user ? auth.user.role || '' : ''
-  }, schema);
-  rowData[idx.Code] = code;
-
-  applyAccessRegionOnWrite(rowData, idx, auth);
-  applyAuditFields(rowData, idx, auth, resource.config, true);
-  validateRequiredFields(rowData, idx, schema.requiredHeaders, PROCUREMENT_RESOURCE_NAME);
-  validateMasterUniqueness(values, idx, rowData, schema, -1, PROCUREMENT_RESOURCE_NAME);
-
-  var targetRow = sheet.getLastRow() + 1;
-  sheet.getRange(targetRow, 1, 1, headers.length).setValues([rowData]);
-  updateResourceSyncCursor(PROCUREMENT_RESOURCE_NAME);
-
-  return rowArrayToObject(headers, rowData);
+  return '';
 }
 
 function updateResourceRecordFieldsByCode(resourceName, code, fields, auth) {
@@ -168,7 +99,6 @@ function getResourceRecordContextByCode(resourceName, code) {
     headers: headers,
     idx: idx,
     rowNumber: rowNumber,
-    rowData: rowData,
-    record: rowArrayToObject(headers, rowData)
+    rowData: rowData
   };
 }

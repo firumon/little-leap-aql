@@ -258,7 +258,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
         PreAction: '',
-        PostAction: '',
+        PostAction: 'linkProcurementCodeToPurchaseRequisition',
         Reports: '',
         CustomUIName: '',
         ListViews: ''
@@ -280,9 +280,9 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'OWNER_AND_UPLINE',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
-            {"action":"Approve","kind":"mutate","label":"Approve","icon":"","color":"primary","column":"Progress","columnValue":"Approved","columnValueOptions":[],"confirm":false,"fields":[],"visibleWhen":{"column":"Progress","op":"in","value":["Review","Pending"]}},
-            {"action":"Reject","kind":"mutate","label":"Reject","icon":"","color":"warning","column":"Progress","columnValue":"Rejected","columnValueOptions":[],"confirm":false,"fields":[{"name":"Comment","type":"textarea","label":"Comment","required":true}],"visibleWhen":{"column":"Progress","op":"in","value":["Review","Pending"]}},
-            {"action":"SendBack","kind":"mutate","label":"Send Back","icon":"","color":"info","column":"Progress","columnValue":"Revision Required","columnValueOptions":[],"confirm":false,"fields":[{"name":"Comment","type":"textarea","label":"Comment","required":true}],"visibleWhen":{"column":"Progress","op":"in","value":["Review","Pending"]}}
+            {"action":"Approve","label":"Approve","icon":"","color":"primary","kind":"mutate","confirm":false,"column":"Progress","columnValue":"Approved","columnValueOptions":[],"fields":[],"visibleWhen":{"column":"Progress","op":"eq","value":"Pending Approval"}},
+            {"action":"Reject","label":"Reject","icon":"","color":"warning","kind":"mutate","confirm":false,"column":"Progress","columnValue":"Rejected","columnValueOptions":[],"fields":[{"name":"Comment","label":"Comment","type":"textarea","required":true}],"visibleWhen":{"column":"Progress","op":"eq","value":"Pending Approval"}},
+            {"action":"SendBack","label":"Request Revision","icon":"","color":"info","kind":"mutate","confirm":false,"column":"Progress","columnValue":"Revision Required","columnValueOptions":[],"fields":[{"name":"Comment","label":"Comment","type":"textarea","required":true}],"visibleWhen":{"column":"Progress","op":"eq","value":"Pending Approval"}}
         ]),
         Menu: JSON.stringify([
             {"group":["Procurement"],"order":1,"label":"Requisitions","icon":"request_quote","route":"/operations/purchase-requisitions","pageTitle":"Purchase Requisitions","pageDescription":"Internal requests for purchase","show":true},
@@ -292,7 +292,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
         PreAction: '',
-        PostAction: 'handlePurchaseRequisitionPostAction',
+        PostAction: '',
         Reports: '',
         CustomUIName: '',
         ListViews: ''

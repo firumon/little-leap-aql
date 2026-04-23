@@ -5,12 +5,7 @@ function unwrapFieldValue(value) {
   return value || ''
 }
 
-export function buildPurchaseRequisitionFormData(form = {}, { targetProgress, responseComment = '', appendResponseComment = false } = {}) {
-  const baseComment = form.ProgressReviewComment || ''
-  const nextComment = appendResponseComment && responseComment
-    ? `${baseComment}\n[Response]: ${responseComment}`
-    : baseComment
-
+export function buildPurchaseRequisitionFormData(form = {}, { targetProgress, extraFields = {} } = {}) {
   return {
     Type: unwrapFieldValue(form.Type),
     Priority: unwrapFieldValue(form.Priority),
@@ -18,7 +13,9 @@ export function buildPurchaseRequisitionFormData(form = {}, { targetProgress, re
     RequiredDate: form.RequiredDate || '',
     TypeReferenceCode: form.TypeReferenceCode || '',
     Progress: targetProgress ?? unwrapFieldValue(form.Progress),
-    ProgressReviewComment: nextComment || ''
+    ProgressRevisionRequiredComment: form.ProgressRevisionRequiredComment || '',
+    ProgressRejectedComment: form.ProgressRejectedComment || '',
+    ...extraFields
   }
 }
 
@@ -61,8 +58,7 @@ export function buildPurchaseRequisitionPayload({
   targetProgress,
   items = [],
   deletedItemCodes = [],
-  responseComment = '',
-  appendResponseComment = false
+  extraFields = {}
 }) {
   return {
     action: 'compositeSave',
@@ -70,8 +66,7 @@ export function buildPurchaseRequisitionPayload({
     code: prCode,
     data: buildPurchaseRequisitionFormData(form, {
       targetProgress,
-      responseComment,
-      appendResponseComment
+      extraFields
     }),
     children: [{
       resource: 'PurchaseRequisitionItems',

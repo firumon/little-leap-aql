@@ -53,26 +53,24 @@ function setupOperationSheets() {
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.RFQS,
-            headers: ['Code', 'ProcurementCode', 'Deadline', 'Terms', 'Progress', 'Status', 'AccessRegion'].concat(commonAuditColumns),
+            headers: ['Code', 'ProcurementCode','PurchaseRequisitionCode','PurchaseRequisitionItemsCode','RFQDate','LeadTimeDays','LeadTimeType','ShippingTermMode','ShippingTerm','PaymentTermMode','PaymentTerm','PaymentTermDetail','QuotationValidityDays','QuotationValidityMode','DeliveryMode','AllowPartialDelivery','AllowSplitShipment','SubmissionDeadline','Progress','Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active',
             defaults: { Status: 'Active', Progress: 'DRAFT' },
-            progressValidation: ['DRAFT', 'PUBLISHED', 'CLOSED', 'CANCELLED'],
-            columnWidths: { Code: 150, ProcurementCode: 150, Deadline: 150, Terms: 250, Progress: 120, Status: 100 }
-        },
-        {
-            resourceName: CONFIG.OPERATION_SHEETS.RFQ_ITEMS,
-            headers: ['Code', 'RFQCode', 'SKU', 'Quantity', 'Status'].concat(commonAuditColumns),
-            statusDefault: 'Active',
-            defaults: { Status: 'Active', Quantity: 0 },
-            columnWidths: { Code: 150, RFQCode: 150, SKU: 150, Quantity: 100, Status: 100 }
+            progressValidation: ['DRAFT', 'SENT', 'CLOSED', 'CANCELLED'],
+            columnWidths: { Code: 150, ProcurementCode: 150, PurchaseRequisitionCode: 120,
+            PurchaseRequisitionItemsCode: 120, RFQDate: 120, LeadTimeDays: 120, LeadTimeType: 120,
+            ShippingTermMode: 120, ShippingTerm: 120, PaymentTermMode: 120, PaymentTerm: 120, PaymentTermDetail: 120,
+            QuotationValidityDays: 120, QuotationValidityMode: 120, DeliveryMode: 120, AllowPartialDelivery: 120,
+            AllowSplitShipment: 120, SubmissionDeadline: 120, Progress: 120, Status: 100, AccessRegion: 130 }
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.RFQ_SUPPLIERS,
-            headers: ['Code', 'ProcurementCode', 'RFQCode', 'SupplierCode', 'Progress', 'Status'].concat(commonAuditColumns),
+            headers: ['Code', 'ProcurementCode', 'RFQCode', 'SupplierCode', 'SentDate', 'Progress', 'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active',
             defaults: { Status: 'Active', Progress: 'SENT' },
-            progressValidation: ['SENT', 'QUOTATION_RECEIVED', 'REJECTED', 'APPROVED'],
-            columnWidths: { Code: 150, ProcurementCode: 150, RFQCode: 150, SupplierCode: 150, Progress: 150, Status: 100 }
+            progressValidation: ['SENT', 'QUOTATION_RECEIVED'],
+            columnWidths: { Code: 150, ProcurementCode: 150, RFQCode: 150, SupplierCode: 150, SentDate: 150,
+            Progress: 150, Status: 100, AccessRegion: 130 }
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.SUPPLIER_QUOTATIONS,

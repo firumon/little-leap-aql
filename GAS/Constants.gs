@@ -31,7 +31,6 @@ const CONFIG = {
     PURCHASE_REQUISITIONS: 'PurchaseRequisitions',
     PURCHASE_REQUISITION_ITEMS: 'PurchaseRequisitionItems',
     RFQS: 'RFQs',
-    RFQ_ITEMS: 'RFQItems',
     RFQ_SUPPLIERS: 'RFQSuppliers',
     SUPPLIER_QUOTATIONS: 'SupplierQuotations',
     SUPPLIER_QUOTATION_ITEMS: 'SupplierQuotationItems',
@@ -71,5 +70,13 @@ const APP_OPTIONS_SEED = {
   PurchaseRequisitionType: ['STOCK', 'PROJECT', 'SALES', 'ASSET'],
   PurchaseRequisitionPriority: ['Low', 'Medium', 'High', 'Urgent'],
   PurchaseRequisitionProgress: ['Draft', 'Pending Approval', 'Revision Required', 'Approved', 'Rejected', 'RFQ Processed'],
-  ProcurementProgress: ['INITIATED', 'PR_CREATED', 'PR_APPROVED', 'RFQ_GENERATED', 'QUOTATIONS_RECEIVED', 'PO_ISSUED', 'IN_TRANSIT', 'ARRIVED_AT_PORT', 'COMPLETED', 'CANCELLED']
+  ProcurementProgress: ['INITIATED', 'PR_CREATED', 'PR_APPROVED', 'RFQ_GENERATED', 'QUOTATIONS_RECEIVED', 'PO_ISSUED', 'IN_TRANSIT', 'ARRIVED_AT_PORT', 'COMPLETED', 'CANCELLED'],
+  RFQLeadTimeType: ['FLEXIBLE','STRICT','RANGE_10','RANGE_25'],
+  RFQShippingTermMode: ['ANY','FIXED'],
+  RFQShippingTerm: ['EXW','FOB','CIF','DDP'],
+  RFQPaymentTermMode: ['ANY','FIXED'],
+  RFQPaymentTerm: ['ADVANCE','PARTIAL','CAD','LC','CREDIT'],
+  RFQQuotationValidityMode: ['MIN_REQUIRED','MAX_ALLOWED','FLEXIBLE'],
+  RFQDeliveryMode: ['ANY','FIXED'],
+  RFQProgress: ['DRAFT','SENT','CLOSED','CANCELLED']
 };

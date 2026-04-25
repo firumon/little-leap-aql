@@ -170,6 +170,12 @@ Flat map read from `APP.AppOptions` sheet by `getAppOptions()` at `GAS/appOption
 Sheet layout: Column A = option group key; Columns B onwards = selectable values.
 Seed data defined in `GAS/Constants.gs:65` (`APP_OPTIONS_SEED`).
 
+Supplier Quotation additions:
+- `SupplierQuotationResponseType`: `['QUOTED', 'PARTIAL', 'DECLINED']`
+- `SupplierQuotationProgress`: `['RECEIVED', 'ACCEPTED', 'REJECTED']`
+- `SupplierQuotationExtraChargeType`: `['tax', 'freight', 'commission', 'handling', 'other']`
+- `Currency`: `['AED']`
+
 | Option Group | Values | Seeded at | Frontend consumer |
 |---|---|---|---|
 | `StockMovementReferenceType` | `['GRN', 'DirectEntry', 'StockAdjustment']` | `GAS/Constants.gs:66` + `GAS/setupOperationSheets.gs` (column dropdown validation) | `FRONTENT/src/components/Warehouse/ManageStockContextStep.vue` → type cards; `GAS/setupOperationSheets.gs` → ReferenceType dropdown |

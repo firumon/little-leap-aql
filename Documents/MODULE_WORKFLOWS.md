@@ -810,8 +810,29 @@ The RFQ supplier dispatch flow governs how suppliers are attached to a newly dra
 - **Custom Pages**: Both dispatch steps exist as custom full-page overrides (`RecordAssignSupplierPage` and `RecordMarkAsSentPage`) under the `Operations/Rfqs/` registry, while `ViewPage.vue` routes draft RFQs to the editable view and non-draft RFQs to the supplier overview.
 - **Backend Sync**: `workflowStore.runBatchRequests` is used for the assignment / dispatch batch, with `workflowStore.updateResourceRecord` still used elsewhere for direct parent saves; no custom GAS endpoints are required for this flow.
 
+## 8. Supplier Quotation Response Capture
+
+### 8.1 Overview
+Supplier Quotations capture normalized supplier responses received outside AQL after RFQs are sent. The module stores response headers in `SupplierQuotations` and quoted lines in `SupplierQuotationItems`.
+
+This module intentionally stops at response capture. It does not compare quotations, score suppliers, generate POs, support alternate SKUs, snapshot RFQs, or store calculated partial/quoted flags.
+
+### 8.2 Core Behaviors
+1. **Index**: `/operations/quotations` shows Supplier Quotations grouped by `RECEIVED`, `ACCEPTED`, `REJECTED`, then other states. Stale rejected rows and accepted rows tied to completed procurements are hidden after the configured 14-day window.
+2. **Create**: Staff select an RFQ with `Progress = SENT`, then choose one of its active `RFQSuppliers` rows. Duplicate supplier responses for the same RFQ warn but do not block.
+3. **Response Types**: `QUOTED` requires every RFQ purchase requisition item to be quoted; `PARTIAL` allows missing item rows; `DECLINED` requires `DeclineReason` and does not require items.
+4. **First Save Workflow**: First save writes the quotation header/items, marks the matching `RFQSuppliers` row `RESPONDED`, and advances `Procurements.Progress` from `RFQ_SENT_TO_SUPPLIERS` to `QUOTATIONS_RECEIVED` only when it is still at that exact stage.
+5. **Subsequent Edits**: Edits to an existing quotation update only the quotation header/items and do not re-run RFQSupplier or Procurement progress updates.
+6. **Reject**: `RECEIVED` quotations can be rejected through the `Reject` AdditionalAction, which sets `Progress = REJECTED` and records `ProgressRejectedComment`, `ProgressRejectedAt`, and `ProgressRejectedBy`.
+
+### 8.3 Architecture Details
+- **Pages**: The menu route remains `/operations/quotations`, so the operation page resolver loads entity pages from `FRONTENT/src/pages/Operations/Quotations/`.
+- **Composables**: Supplier Quotation workflow logic lives under `FRONTENT/src/composables/operations/supplierQuotations/`.
+- **Backend**: The feature uses existing generic `compositeSave`, `batch`, `update`, and `executeAction` capabilities. No custom GAS endpoint is introduced.
+- **Options**: Response type, quotation progress, extra charge keys, and currency are seeded through `APP.AppOptions` and delivered in the login payload.
+
 <!-- Future modules -- add sections as they are built:
-8. [Data Backup & Restore](#8-data-backup--restore)
-9. [Bulk Upload](#9-bulk-upload)
-10. [Dashboard Widgets](#10-dashboard-widgets)
+9. [Data Backup & Restore](#9-data-backup--restore)
+10. [Bulk Upload](#10-bulk-upload)
+11. [Dashboard Widgets](#11-dashboard-widgets)
 -->

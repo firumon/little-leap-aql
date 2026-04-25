@@ -219,7 +219,7 @@ Rules:
 }
 ```
 - Sets `column = columnValue` on the record.
-- Auto-fills `{column}{value}At` (timestamp) and `{column}{value}By` (UserID) if those columns exist.
+- Auto-fills `{column}{PascalCase(value)}At` (timestamp) and `{column}{PascalCase(value)}By` (UserID) if those columns exist, while storing the original `columnValue` unchanged.
 - `fields`: any additional columns to set in the same write.
 - Response includes action result in `data.result` and resource delta in `data.resources`.
 

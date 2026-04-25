@@ -131,7 +131,7 @@ Rules:
 Use for progress/status changes that also need auto-fill fields (e.g. `ProgressApprovedAt`, `ProgressApprovedBy`).
 
 - Sets `column = columnValue` on the record.
-- Auto-fills `{column}{value}At` and `{column}{value}By` if those columns exist on the sheet.
+- Auto-fills `{column}{PascalCase(value)}At` and `{column}{PascalCase(value)}By` if those columns exist on the sheet, while preserving the exact stored `columnValue`.
 - Accepts `fields: {}` for any additional columns to set in the same write.
 
 ---

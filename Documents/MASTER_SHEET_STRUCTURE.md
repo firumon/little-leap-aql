@@ -15,6 +15,7 @@ This document describes the current master-scope sheet families and their roles.
 ## Structural Expectations
 - each master sheet has a generated `Code`
 - resource-specific business columns vary by sheet
+- `Suppliers` includes `Name`, `Country`, `Province`, `City`, `CommunicationAddress`, `ContactPerson`, `Phone`, `Email`, `AccessRegion`, and `Status`
 - audit/access columns depend on current resource metadata and setup rules
 
 ## Notes

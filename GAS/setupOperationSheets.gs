@@ -21,7 +21,7 @@ function setupOperationSheets() {
             headers: ['Code', 'Progress', 'InitiatedDate', 'CreatedUser', 'CreatedRole', 'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active',
             defaults: { Status: 'Active', Progress: 'INITIATED' },
-            progressValidation: ['INITIATED', 'PR_CREATED', 'PR_APPROVED', 'RFQ_GENERATED', 'QUOTATIONS_RECEIVED', 'PO_ISSUED', 'IN_TRANSIT', 'ARRIVED_AT_PORT', 'COMPLETED', 'CANCELLED'],
+            progressValidation: ['INITIATED', 'PR_CREATED', 'PR_APPROVED', 'RFQ_GENERATED', 'RFQ_SENT_TO_SUPPLIERS', 'QUOTATIONS_RECEIVED', 'PO_ISSUED', 'IN_TRANSIT', 'ARRIVED_AT_PORT', 'COMPLETED', 'CANCELLED'],
             columnWidths: { Code: 150, Progress: 180, InitiatedDate: 150, CreatedUser: 150, CreatedRole: 150, Status: 100, AccessRegion: 130 }
         },
         {
@@ -67,8 +67,8 @@ function setupOperationSheets() {
             resourceName: CONFIG.OPERATION_SHEETS.RFQ_SUPPLIERS,
             headers: ['Code', 'ProcurementCode', 'RFQCode', 'SupplierCode', 'SentDate', 'Progress', 'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active',
-            defaults: { Status: 'Active', Progress: 'SENT' },
-            progressValidation: ['SENT', 'QUOTATION_RECEIVED'],
+            defaults: { Status: 'Active', Progress: 'ASSIGNED' },
+            progressValidation: ['ASSIGNED','SENT','RESPONDED','DECLINED','CANCELLED'],
             columnWidths: { Code: 150, ProcurementCode: 150, RFQCode: 150, SupplierCode: 150, SentDate: 150,
             Progress: 150, Status: 100, AccessRegion: 130 }
         },

@@ -35,11 +35,11 @@ function setupMasterSheets() {
     },
     {
       resourceName: CONFIG.MASTER_SHEETS.SUPPLIERS,
-      headers: ['Code', 'Name', 'Country', 'ContactPerson', 'Phone', 'Email', 'AccessRegion', 'Status'].concat(commonAuditColumns),
+      headers: ['Code', 'Name', 'Country', 'Province', 'City', 'CommunicationAddress', 'ContactPerson', 'Phone', 'Email', 'AccessRegion', 'Status'].concat(commonAuditColumns),
       statusDefault: 'Active',
       defaults: { Status: 'Active' },
       columnWidths: {
-        Code: 130, Name: 220, Country: 150, ContactPerson: 180, Phone: 140, Email: 220, AccessRegion: 130, Status: 100,
+        Code: 130, Name: 220, Country: 150, Province: 150, City: 150, CommunicationAddress: 260, ContactPerson: 180, Phone: 140, Email: 220, AccessRegion: 130, Status: 100,
         CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
       }
     },

@@ -30,6 +30,7 @@ This document is the canonical meaning reference for `APP.Resources` columns.
 - `SKUs` resource now requires `UOM` column.
 - `Procurements` resource now requires `CreatedUser` column.
 - `PurchaseRequisitions` workflow now uses `ProgressRevisionRequiredAt`, `ProgressRevisionRequiredBy`, `ProgressRevisionRequiredComment`, `ProgressApprovedAt`, `ProgressApprovedBy`, `ProgressApprovedComment`, `ProgressRejectedAt`, `ProgressRejectedBy`, and `ProgressRejectedComment` columns aligned with the PR status machine.
+- `RFQSuppliers` uses `Progress` (starts at `ASSIGNED`, moves to `SENT` and beyond) and `SentDate` (stamped when moving to `SENT`).
 
 ## Scope Characteristics
 - `master`: Standard CRUD with auto-generated codes, audit columns, full sync.

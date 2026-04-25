@@ -55,7 +55,7 @@ const CONFIG = {
     ENTRY_TEMPLATES: 'EntryTemplates'
   },
   VIEW_SHEETS: {
-    // Placeholder — view sheets will be added as they are designed
+    // Placeholder â€” view sheets will be added as they are designed
   }
 };
 
@@ -70,7 +70,7 @@ const APP_OPTIONS_SEED = {
   PurchaseRequisitionType: ['STOCK', 'PROJECT', 'SALES', 'ASSET'],
   PurchaseRequisitionPriority: ['Low', 'Medium', 'High', 'Urgent'],
   PurchaseRequisitionProgress: ['Draft', 'Pending Approval', 'Revision Required', 'Approved', 'Rejected', 'RFQ Processed'],
-  ProcurementProgress: ['INITIATED', 'PR_CREATED', 'PR_APPROVED', 'RFQ_GENERATED', 'QUOTATIONS_RECEIVED', 'PO_ISSUED', 'IN_TRANSIT', 'ARRIVED_AT_PORT', 'COMPLETED', 'CANCELLED'],
+  ProcurementProgress: ['INITIATED', 'PR_CREATED', 'PR_APPROVED', 'RFQ_GENERATED','RFQ_SENT_TO_SUPPLIERS','QUOTATIONS_RECEIVED', 'PO_ISSUED', 'IN_TRANSIT', 'ARRIVED_AT_PORT', 'COMPLETED', 'CANCELLED'],
   RFQLeadTimeType: ['FLEXIBLE','STRICT','RANGE_10','RANGE_25'],
   RFQShippingTermMode: ['ANY','FIXED'],
   RFQShippingTerm: ['EXW','FOB','CIF','DDP'],
@@ -78,5 +78,6 @@ const APP_OPTIONS_SEED = {
   RFQPaymentTerm: ['ADVANCE','PARTIAL','CAD','LC','CREDIT'],
   RFQQuotationValidityMode: ['MIN_REQUIRED','MAX_ALLOWED','FLEXIBLE'],
   RFQDeliveryMode: ['ANY','FIXED'],
-  RFQProgress: ['DRAFT','SENT','CLOSED','CANCELLED']
+  RFQProgress: ['DRAFT','SENT','CLOSED','CANCELLED'],
+  RFQSupplierProgress: ['ASSIGNED','SENT','RESPONDED','DECLINED','CANCELLED'],
 };

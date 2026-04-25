@@ -90,10 +90,13 @@ const APP_RESOURCES_CODE_CONFIG = [
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([]),
+        Menu: JSON.stringify([{"group":["Procurement"],"order":1,"label":"Suppliers","icon":"business","route":"/masters/suppliers","pageTitle":"Suppliers","pageDescription":"Manage supplier master records","show":true}]),
         UIFields: JSON.stringify([
             { header: 'Name', label: 'Name', type: 'text', required: true },
             { header: 'Country', label: 'Country', type: 'text' },
+            { header: 'Province', label: 'Province', type: 'text' },
+            { header: 'City', label: 'City', type: 'text' },
+            { header: 'CommunicationAddress', label: 'Communication Address', type: 'textarea' },
             { header: 'ContactPerson', label: 'Contact Person', type: 'text' },
             { header: 'Phone', label: 'Phone', type: 'text' },
             { header: 'Email', label: 'Email', type: 'text' },
@@ -285,8 +288,8 @@ const APP_RESOURCES_CODE_CONFIG = [
             {"action":"SendBack","label":"Request Revision","icon":"","color":"info","kind":"mutate","confirm":false,"column":"Progress","columnValue":"Revision Required","columnValueOptions":[],"fields":[{"name":"Comment","label":"Comment","type":"textarea","required":true}],"visibleWhen":{"column":"Progress","op":"eq","value":"Pending Approval"}}
         ]),
         Menu: JSON.stringify([
-            {"group":["Procurement"],"order":1,"label":"Requisitions","icon":"request_quote","route":"/operations/purchase-requisitions","pageTitle":"Purchase Requisitions","pageDescription":"Internal requests for purchase","show":true},
-            {"group":["Procurement"],"order":2,"label":"Initiate Purchase Requisitions","icon":"request_quote","route":"/operations/purchase-requisitions/initiate-purchase-requisitions","pageTitle":"Purchase Requisitions","pageDescription":"Initiate Purchase Requisition","show":true,"menuAccess":{"require":"canWrite"}}
+            {"group":["Procurement"],"order":2,"label":"Requisitions","icon":"request_quote","route":"/operations/purchase-requisitions","pageTitle":"Purchase Requisitions","pageDescription":"Internal requests for purchase","show":true},
+            {"group":["Procurement"],"order":3,"label":"Initiate Purchase Requisitions","icon":"request_quote","route":"/operations/purchase-requisitions/initiate-purchase-requisitions","pageTitle":"Purchase Requisitions","pageDescription":"Initiate Purchase Requisition","show":true,"menuAccess":{"require":"canWrite"}}
         ]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
@@ -340,9 +343,12 @@ const APP_RESOURCES_CODE_CONFIG = [
         DefaultValues: '{"Status":"Active","Progress":"DRAFT"}',
         RecordAccessPolicy: 'OWNER_AND_UPLINE',
         OwnerUserField: 'CreatedBy',
-        AdditionalActions: '',
+        AdditionalActions: JSON.stringify([
+            {"action":"AssignSupplier","label":"Assign Supplier","icon":"group_add","color":"primary","kind":"navigate","confirm":false,"navigate":{"target":"record-page","pageSlug":"assign-supplier"},"visibleWhen":{"column":"Progress","op":"nin","value":["CLOSED","CANCELLED"]}},
+            {"action":"MarkAsSent","label":"Mark As Sent","icon":"send","color":"secondary","kind":"navigate","confirm":false,"navigate":{"target":"record-page","pageSlug":"mark-as-sent"},"visibleWhen":{"column":"Progress","op":"nin","value":["CLOSED","CANCELLED"]}}
+        ]),
         Menu: JSON.stringify([
-            {"group":["Procurement"],"order":3,"label":"Request For Quotations","icon":"request_quote","route":"/operations/rfqs","pageTitle":"Request for Quotations","pageDescription":"Manage requests for quotation","show":true}
+            {"group":["Procurement"],"order":4,"label":"Request For Quotations","icon":"request_quote","route":"/operations/rfqs","pageTitle":"Request for Quotations","pageDescription":"Manage requests for quotation","show":true}
         ]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
@@ -366,7 +372,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RequiredHeaders: 'RFQCode,SupplierCode',
         UniqueHeaders: '',
         UniqueCompositeHeaders: 'RFQCode+SupplierCode',
-        DefaultValues: '{"Status":"Active","Progress":"SENT"}',
+        DefaultValues: '{"Status":"Active","Progress":"ASSIGNED"}',
         RecordAccessPolicy: 'OWNER_AND_UPLINE',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',

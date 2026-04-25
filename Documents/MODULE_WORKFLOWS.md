@@ -14,11 +14,12 @@ This document captures the **end-to-end workflow knowledge** for each major feat
 4. [Products Variant Management (Custom Pages)](#4-products-variant-management-custom-pages)
 5. [Menu Access Control](#5-menu-access-control)
 6. [Direct Stock Entry (Editable Register)](#6-direct-stock-entry-editable-register)
+7. [RFQ Supplier Dispatch Flow](#7-rfq-supplier-dispatch-flow)
 
 <!-- Future modules -- add sections as they are built:
-7. [Data Backup & Restore](#7-data-backup--restore)
-8. [Bulk Upload](#8-bulk-upload)
-9. [Dashboard Widgets](#9-dashboard-widgets)
+8. [Data Backup & Restore](#8-data-backup--restore)
+9. [Bulk Upload](#9-bulk-upload)
+10. [Dashboard Widgets](#10-dashboard-widgets)
 -->
 
 ---
@@ -795,8 +796,22 @@ BACKEND (Google Apps Script)
 6. **Post-Save Cache Refresh (2026-04-11)**: `submitBatch()` pairs the `create StockMovements` request with a `get WarehouseStorages` request in a single batch. On success, it upserts the returned rows into IndexedDB using headers resolved locally (IDB meta → auth store → `getAuthorizedResources` fallback). The `WarehouseStorages` sync cursor (`lastSyncAt`) is advanced **only** when the IDB upsert actually writes rows — if local headers cannot be resolved, the cursor is left untouched so the next normal sync path can recover. After a successful save, `StockEntryGrid.vue` rebuilds from the (now-fresh) cache via `fetchData(false)` — no extra network round-trip.
 7. **Draft Storage Dropdown (2026-04-11)**: The storage-location dropdown for new rows is a reactive union of fetched `WarehouseStorages` names plus any non-empty `StorageName` values currently typed in `newRows`. Typing a new location in row 1 immediately makes it selectable in row 2, before save. `q-select`'s `new-value-mode="add-unique"` still commits typed values to the row's model as before.
 
+## 7. RFQ Supplier Dispatch Flow
+
+### 7.1 Overview
+The RFQ supplier dispatch flow governs how suppliers are attached to a newly drafted RFQ, and how they are eventually marked as "sent". It operates through two distinct custom actions accessible from the RFQ record view.
+
+### 7.2 Core Transitions
+1. **Assign Supplier**: Allows the user to select one or more `Suppliers` master records and attach them to the RFQ. This creates new rows in the `RFQSuppliers` operation sheet with `Progress = ASSIGNED`. Once assigned, the parent RFQ becomes strictly read-only and its own `Progress` advances to `SENT` (meaning sent-to-dispatch-queue).
+2. **Mark As Sent**: The RFQ view now routes sent records to a dispatch overview that shows the RFQ primary details, assigned suppliers, and available suppliers. Available suppliers can be selected and saved from this overview, creating additional `RFQSuppliers` rows with `Progress = ASSIGNED` without changing the already-sent parent RFQ progress. Clicking an assigned supplier opens a supplier-dispatch page where the user can pick one assigned supplier, preview RFQ / WhatsApp / email text variants, and mark that supplier as dispatched. This advances that `RFQSuppliers` row to `SENT` and stamps the `SentDate` field with today. When all active attached suppliers are moved past `ASSIGNED`, the parent `Procurements` record formally advances to `RFQ_SENT_TO_SUPPLIERS`.
+
+### 7.3 Architecture Details
+- **Composables**: The shared `useRFQSupplierFlow` composable manages data fetching (RFQ header, PR metadata, Suppliers, RFQSuppliers) and orchestrates the batch assignment / dispatch updates through `workflowStore`.
+- **Custom Pages**: Both dispatch steps exist as custom full-page overrides (`RecordAssignSupplierPage` and `RecordMarkAsSentPage`) under the `Operations/Rfqs/` registry, while `ViewPage.vue` routes draft RFQs to the editable view and non-draft RFQs to the supplier overview.
+- **Backend Sync**: `workflowStore.runBatchRequests` is used for the assignment / dispatch batch, with `workflowStore.updateResourceRecord` still used elsewhere for direct parent saves; no custom GAS endpoints are required for this flow.
+
 <!-- Future modules -- add sections as they are built:
-7. [Data Backup & Restore](#7-data-backup--restore)
-8. [Bulk Upload](#8-bulk-upload)
-9. [Dashboard Widgets](#9-dashboard-widgets)
+8. [Data Backup & Restore](#8-data-backup--restore)
+9. [Bulk Upload](#9-bulk-upload)
+10. [Dashboard Widgets](#10-dashboard-widgets)
 -->

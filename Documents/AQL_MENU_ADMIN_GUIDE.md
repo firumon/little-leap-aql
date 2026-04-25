@@ -253,7 +253,9 @@ These groups appear in the **frontend application sidebar**, not in the Google S
 
 ### 9.3 Procurement Group
 
-- `Purchase Requisitions` -> `/operations/prs`
+- `Suppliers` -> `/masters/suppliers`
+- `Purchase Requisitions` -> `/operations/purchase-requisitions`
+- `Initiate Purchase Requisitions` -> `/operations/purchase-requisitions/initiate-purchase-requisitions`
 - `RFQs` -> `/operations/rfqs`
 - `Supplier Quotations` -> `/operations/quotations`
 - `Purchase Orders` -> `/operations/pos`

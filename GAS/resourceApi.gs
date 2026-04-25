@@ -1299,6 +1299,17 @@ function rowArrayToObject(headers, rowData) {
   return obj;
 }
 
+function toActionHeaderSuffix(value) {
+  return (value || '').toString()
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(function(part) { return part; })
+    .map(function(part) {
+      return part.charAt(0).toUpperCase() + part.slice(1);
+    })
+    .join('');
+}
+
 /**
  * Handles additional action execution (Approve, Reject, etc.)
  * Updates the record's column + auto-fill fields + user-provided fields.
@@ -1351,9 +1362,10 @@ function handleExecuteAction(auth, payload) {
     existingRow[idx[column]] = columnValue;
   }
 
-  // Set auto-fill fields: {column}{value}At and {column}{value}By
-  var atField = column + columnValue + 'At';
-  var byField = column + columnValue + 'By';
+  // Set auto-fill fields: {column}{PascalCase(value)}At and {column}{PascalCase(value)}By
+  var stampSuffix = toActionHeaderSuffix(columnValue);
+  var atField = column + stampSuffix + 'At';
+  var byField = column + stampSuffix + 'By';
   if (idx[atField] !== undefined) existingRow[idx[atField]] = Date.now();
   if (idx[byField] !== undefined) existingRow[idx[byField]] = auth.user.UserID;
 

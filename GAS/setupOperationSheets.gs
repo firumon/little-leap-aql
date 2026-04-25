@@ -74,17 +74,43 @@ function setupOperationSheets() {
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.SUPPLIER_QUOTATIONS,
-            headers: ['Code', 'ProcurementCode', 'SupplierCode', 'RFQCode', 'DocumentUrl', 'TotalAmount', 'Currency', 'ValidUntil', 'Status'].concat(commonAuditColumns),
+            headers: ['Code', 'ProcurementCode', 'RFQCode', 'SupplierCode', 'ResponseType', 'ResponseDate', 'DeclineReason',
+                'LeadTimeDays', 'LeadTimeType', 'DeliveryMode', 'AllowPartialDelivery', 'AllowSplitShipment',
+                'ShippingTerm', 'PaymentTerm', 'PaymentTermDetail', 'QuotationValidityDays', 'ValidUntilDate',
+                'Currency', 'TotalAmount', 'ExtraChargesBreakup', 'Remarks', 'Progress',
+                'ProgressRejectedComment', 'ProgressRejectedAt', 'ProgressRejectedBy',
+                'ResponseRecordedAt', 'ResponseRecordedBy', 'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active',
-            defaults: { Status: 'Active', TotalAmount: 0, Currency: 'AED' },
-            columnWidths: { Code: 150, ProcurementCode: 150, SupplierCode: 150, RFQCode: 150, DocumentUrl: 250, TotalAmount: 120, Currency: 100, ValidUntil: 150, Status: 100 }
+            defaults: { Status: 'Active', Progress: 'RECEIVED', TotalAmount: 0, Currency: 'AED', ExtraChargesBreakup: '{"tax":0,"freight":0,"commission":0,"handling":0,"other":0}' },
+            responseTypeValidation: APP_OPTIONS_SEED.SupplierQuotationResponseType,
+            progressValidation: APP_OPTIONS_SEED.SupplierQuotationProgress,
+            leadTimeTypeValidation: APP_OPTIONS_SEED.RFQLeadTimeType,
+            deliveryModeValidation: APP_OPTIONS_SEED.RFQDeliveryMode,
+            shippingTermValidation: APP_OPTIONS_SEED.RFQShippingTerm,
+            paymentTermValidation: APP_OPTIONS_SEED.RFQPaymentTerm,
+            currencyValidation: APP_OPTIONS_SEED.Currency,
+            columnWidths: {
+                Code: 150, ProcurementCode: 150, RFQCode: 150, SupplierCode: 150, ResponseType: 130,
+                ResponseDate: 130, DeclineReason: 220, LeadTimeDays: 120, LeadTimeType: 130,
+                DeliveryMode: 130, AllowPartialDelivery: 150, AllowSplitShipment: 150,
+                ShippingTerm: 120, PaymentTerm: 130, PaymentTermDetail: 220,
+                QuotationValidityDays: 160, ValidUntilDate: 130, Currency: 100, TotalAmount: 130,
+                ExtraChargesBreakup: 260, Remarks: 240, Progress: 130,
+                ProgressRejectedComment: 220, ProgressRejectedAt: 160, ProgressRejectedBy: 150,
+                ResponseRecordedAt: 160, ResponseRecordedBy: 150, Status: 100, AccessRegion: 130
+            }
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.SUPPLIER_QUOTATION_ITEMS,
-            headers: ['Code', 'QuotationCode', 'SKU', 'SupplierItemCode', 'Quantity', 'UnitPrice', 'Status'].concat(commonAuditColumns),
+            headers: ['Code', 'SupplierQuotationCode', 'PurchaseRequisitionItemCode', 'SKU', 'Description',
+                'Quantity', 'UnitPrice', 'TotalPrice', 'LeadTimeDays', 'DeliveryDate', 'Remarks', 'Status'].concat(commonAuditColumns),
             statusDefault: 'Active',
-            defaults: { Status: 'Active', Quantity: 0, UnitPrice: 0 },
-            columnWidths: { Code: 150, QuotationCode: 150, SKU: 150, SupplierItemCode: 150, Quantity: 100, UnitPrice: 100, Status: 100 }
+            defaults: { Status: 'Active', Quantity: 0, UnitPrice: 0, TotalPrice: 0 },
+            columnWidths: {
+                Code: 150, SupplierQuotationCode: 180, PurchaseRequisitionItemCode: 220, SKU: 150,
+                Description: 240, Quantity: 100, UnitPrice: 100, TotalPrice: 120,
+                LeadTimeDays: 120, DeliveryDate: 130, Remarks: 220, Status: 100
+            }
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.PURCHASE_ORDERS,
@@ -217,6 +243,24 @@ function setupOperationSheets() {
             }
             if (schema.priorityValidation && schema.headers.indexOf('Priority') !== -1) {
                 setup_applyListValidation(sheet, schema.headers, 'Priority', schema.priorityValidation);
+            }
+            if (schema.responseTypeValidation && schema.headers.indexOf('ResponseType') !== -1) {
+                setup_applyListValidation(sheet, schema.headers, 'ResponseType', schema.responseTypeValidation);
+            }
+            if (schema.leadTimeTypeValidation && schema.headers.indexOf('LeadTimeType') !== -1) {
+                setup_applyListValidation(sheet, schema.headers, 'LeadTimeType', schema.leadTimeTypeValidation);
+            }
+            if (schema.deliveryModeValidation && schema.headers.indexOf('DeliveryMode') !== -1) {
+                setup_applyListValidation(sheet, schema.headers, 'DeliveryMode', schema.deliveryModeValidation);
+            }
+            if (schema.shippingTermValidation && schema.headers.indexOf('ShippingTerm') !== -1) {
+                setup_applyListValidation(sheet, schema.headers, 'ShippingTerm', schema.shippingTermValidation);
+            }
+            if (schema.paymentTermValidation && schema.headers.indexOf('PaymentTerm') !== -1) {
+                setup_applyListValidation(sheet, schema.headers, 'PaymentTerm', schema.paymentTermValidation);
+            }
+            if (schema.currencyValidation && schema.headers.indexOf('Currency') !== -1) {
+                setup_applyListValidation(sheet, schema.headers, 'Currency', schema.currencyValidation);
             }
 
             if (schema.headers.indexOf('Status') !== -1) {

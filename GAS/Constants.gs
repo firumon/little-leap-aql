@@ -80,4 +80,8 @@ const APP_OPTIONS_SEED = {
   RFQDeliveryMode: ['ANY','FIXED'],
   RFQProgress: ['DRAFT','SENT','CLOSED','CANCELLED'],
   RFQSupplierProgress: ['ASSIGNED','SENT','RESPONDED','DECLINED','CANCELLED'],
+  SupplierQuotationResponseType: ['QUOTED','PARTIAL','DECLINED'],
+  SupplierQuotationProgress: ['RECEIVED','ACCEPTED','REJECTED'],
+  SupplierQuotationExtraChargeType: ['tax','freight','commission','handling','other'],
+  Currency: ['AED'],
 };

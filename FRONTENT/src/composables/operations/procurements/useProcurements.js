@@ -20,6 +20,7 @@ const FALLBACK_PROCUREMENT_PROGRESS = [
   'PR_CREATED',
   'PR_APPROVED',
   'RFQ_GENERATED',
+  'RFQ_SENT_TO_SUPPLIERS',
   'QUOTATIONS_RECEIVED',
   'PO_ISSUED',
   'IN_TRANSIT',
@@ -54,6 +55,8 @@ export function useProcurements() {
     initiated: procurementProgress.value.find((value) => value === 'INITIATED') || 'INITIATED',
     prCreated: procurementProgress.value.find((value) => value === 'PR_CREATED') || 'PR_CREATED',
     prApproved: procurementProgress.value.find((value) => value === 'PR_APPROVED') || 'PR_APPROVED',
+    rfqGenerated: procurementProgress.value.find((value) => value === 'RFQ_GENERATED') || 'RFQ_GENERATED',
+    rfqSentToSuppliers: procurementProgress.value.find((value) => value === 'RFQ_SENT_TO_SUPPLIERS') || 'RFQ_SENT_TO_SUPPLIERS',
     cancelled: procurementProgress.value.find((value) => value === 'CANCELLED') || 'CANCELLED'
   }))
 

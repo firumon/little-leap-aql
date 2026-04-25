@@ -97,7 +97,8 @@ export function useResourceConfig() {
           pageSlug: nav.pageSlug || '',
           resourceSlug: nav.resourceSlug || null,
           scope: nav.scope || null
-        }
+        },
+        visibleWhen: normalizeVisibleWhen(a.visibleWhen)
       }
     }
     // mutate — lift nested mutate{} or keep legacy flat fields

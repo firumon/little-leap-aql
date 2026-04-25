@@ -1,5 +1,21 @@
+import { unref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
+
+function routeParam(value) {
+  const resolved = unref(value)
+  if (resolved == null) return ''
+  return typeof resolved === 'string' ? resolved : String(resolved)
+}
+
+function routeQuery(query) {
+  if (!query || typeof query !== 'object') return undefined
+  return Object.fromEntries(
+    Object.entries(query)
+      .map(([key, value]) => [key, routeParam(value)])
+      .filter(([, value]) => value !== '')
+  )
+}
 
 /**
  * Generic resource navigation composable.
@@ -41,11 +57,16 @@ export function useResourceNav () {
    */
   const goTo = (target, params = {}) => {
     const resolved = {
-      scope: scope.value,
-      resourceSlug: resourceSlug.value,
-      code: code.value,
+      scope: routeParam(scope),
+      resourceSlug: routeParam(resourceSlug),
+      code: routeParam(code),
       ...params
     }
+    resolved.scope = routeParam(resolved.scope)
+    resolved.resourceSlug = routeParam(resolved.resourceSlug)
+    resolved.code = routeParam(resolved.code)
+    resolved.action = routeParam(resolved.action)
+    resolved.pageSlug = routeParam(resolved.pageSlug)
 
     // Build scopePrefix from resolved.scope (post-merge) so cross-resource
     // overrides correctly select the right named route set.
@@ -86,7 +107,7 @@ export function useResourceNav () {
       'record-page':   { ...withCode, pageSlug: resolved.pageSlug }
     }[target]
 
-    router.push({ name: routeName, params: routeParams })
+    router.push({ name: routeName, params: routeParams, query: routeQuery(params.query) })
   }
 
   return { goTo }

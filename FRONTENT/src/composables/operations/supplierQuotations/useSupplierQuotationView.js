@@ -7,6 +7,7 @@ import { useResourceData } from 'src/composables/resources/useResourceData'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { parsePrItemCodeCsv } from 'src/composables/operations/rfqs/rfqPayload'
 import { mapOptions, formatCurrency, formatDate } from './supplierQuotationMeta'
+import { useSupplierQuotationTotals } from './useSupplierQuotationTotals'
 import {
   buildHeaderRecord,
   buildItemRecord,
@@ -49,6 +50,13 @@ export function useSupplierQuotationView() {
   const form = ref(defaultHeaderForm())
   const items = ref([])
 
+  const {
+    itemSubtotal,
+    extraChargesTotal,
+    suggestedTotal,
+    syncAllItemTotals
+  } = useSupplierQuotationTotals({ form, items })
+
   const record = computed(() => quotations.items.value.find((row) => text(row.Code) === text(code.value)) || null)
   const progress = computed(() => text(record.value?.Progress || form.value.Progress).toUpperCase())
   const isEditable = computed(() => progress.value === 'RECEIVED')
@@ -62,10 +70,6 @@ export function useSupplierQuotationView() {
     const codeSet = new Set(rfqItemCodes.value)
     return prItems.items.value.filter((item) => codeSet.has(text(item.Code)))
   })
-
-  const itemSubtotal = computed(() =>
-    items.value.filter(isQuotedItem).reduce((sum, item) => sum + normalizeNumber(item.TotalPrice), 0)
-  )
 
   const optionSets = computed(() => ({
     responseTypes: mapOptions(auth.appOptionsMap.SupplierQuotationResponseType, 'responseTypes'),
@@ -127,6 +131,8 @@ export function useSupplierQuotationView() {
   }
 
   async function save() {
+    syncAllItemTotals()
+
     const validation = validateQuotation({
       form: form.value,
       items: items.value,
@@ -164,7 +170,6 @@ export function useSupplierQuotationView() {
         return
       }
       $q.notify({ type: 'positive', message: 'Supplier quotation saved' })
-      await loadData(true)
     } catch (error) {
       $q.notify({ type: 'negative', message: `Failed to save supplier quotation: ${error.message}` })
     } finally {
@@ -182,19 +187,29 @@ export function useSupplierQuotationView() {
 
     rejecting.value = true
     try {
-      const response = await workflowStore.executeResourceAction(
-        'SupplierQuotations',
-        record.value.Code,
-        rejectAction.value,
-        { ProgressRejectedComment: comment }
-      )
-      if (!response?.success) {
-        $q.notify({ type: 'negative', message: response?.error || response?.message || 'Failed to reject quotation' })
+      const response = await workflowStore.runBatchRequests([
+        {
+          action: 'executeAction',
+          resource: 'SupplierQuotations',
+          payload: {
+            code: record.value.Code,
+            action: rejectAction.value,
+            data: { ProgressRejectedComment: comment }
+          }
+        },
+        {
+          action: 'get',
+          resource: ['SupplierQuotations'],
+          payload: { includeInactive: true }
+        }
+      ])
+
+      if (responseFailed(response)) {
+        $q.notify({ type: 'negative', message: firstFailureMessage(response, 'Failed to reject quotation') })
         return
       }
       $q.notify({ type: 'positive', message: 'Supplier quotation rejected' })
       rejectComment.value = ''
-      await loadData(true)
     } finally {
       rejecting.value = false
     }
@@ -224,6 +239,8 @@ export function useSupplierQuotationView() {
     isReadonly,
     optionSets,
     itemSubtotal,
+    extraChargesTotal,
+    suggestedTotal,
     canSave,
     canReject,
     loadData,

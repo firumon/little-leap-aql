@@ -5,6 +5,7 @@ import { useWorkflowStore } from 'src/stores/workflow'
 import { useResourceData } from 'src/composables/resources/useResourceData'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { mapOptions, formatCurrency, formatDate } from './supplierQuotationMeta'
+import { useSupplierQuotationTotals } from './useSupplierQuotationTotals'
 import {
   buildHeaderRecord,
   buildItemRecord,
@@ -13,7 +14,8 @@ import {
   isQuotedItem,
   normalizeNumber,
   stringifyCharges,
-  validateQuotation
+  validateQuotation,
+  toDateInputValue
 } from './supplierQuotationPayload'
 
 function text(value) {
@@ -53,6 +55,13 @@ export function useSupplierQuotationCreateFlow() {
   const selectedSupplierCode = ref('')
   const form = ref(defaultHeaderForm())
   const items = ref([])
+
+  const {
+    itemSubtotal,
+    extraChargesTotal,
+    suggestedTotal,
+    syncAllItemTotals
+  } = useSupplierQuotationTotals({ form, items })
 
   const supplierByCode = computed(() => new Map(suppliers.items.value.map((row) => [text(row.Code), row])))
   const procurementByCode = computed(() => new Map(procurements.items.value.map((row) => [text(row.Code), row])))
@@ -115,16 +124,6 @@ export function useSupplierQuotationCreateFlow() {
     return prItems.items.value.filter((item) => codeSet.has(text(item.Code)))
   })
 
-  const itemSubtotal = computed(() =>
-    items.value.filter(isQuotedItem).reduce((sum, item) => sum + normalizeNumber(item.TotalPrice), 0)
-  )
-
-  const extraChargesTotal = computed(() =>
-    Object.values(form.value.ExtraChargesBreakup || {}).reduce((sum, value) => sum + normalizeNumber(value), 0)
-  )
-
-  const suggestedTotal = computed(() => itemSubtotal.value + extraChargesTotal.value)
-
   const canSave = computed(() => !saving.value && !!selectedRfq.value && !!selectedSupplierCode.value && !!form.value.ResponseType)
 
   function currentUserLabel() {
@@ -176,6 +175,8 @@ export function useSupplierQuotationCreateFlow() {
   }
 
   function buildSaveRequests() {
+    syncAllItemTotals()
+
     const now = Date.now()
     const header = buildHeaderRecord(form.value, {
       ResponseRecordedAt: now,
@@ -199,14 +200,30 @@ export function useSupplierQuotationCreateFlow() {
 
     const supplierRow = assignedSupplierRows.value.find((row) => text(row.SupplierCode) === selectedSupplierCode.value)
     if (supplierRow?.Code) {
-      requests.push({
-        action: 'update',
-        resource: 'RFQSuppliers',
-        payload: {
-          code: supplierRow.Code,
-          data: { Progress: 'RESPONDED' }
+      const supplierProgress = text(supplierRow.Progress).toUpperCase()
+      if (supplierProgress === 'ASSIGNED') {
+        const updateData = { Progress: 'RESPONDED' }
+        if (!supplierRow.SentDate) {
+          updateData.SentDate = toDateInputValue()
         }
-      })
+        requests.push({
+          action: 'update',
+          resource: 'RFQSuppliers',
+          payload: {
+            code: supplierRow.Code,
+            data: updateData
+          }
+        })
+      } else if (supplierProgress === 'SENT') {
+        requests.push({
+          action: 'update',
+          resource: 'RFQSuppliers',
+          payload: {
+            code: supplierRow.Code,
+            data: { Progress: 'RESPONDED' }
+          }
+        })
+      }
     }
 
     const procurement = procurementByCode.value.get(text(selectedRfq.value?.ProcurementCode))
@@ -274,10 +291,6 @@ export function useSupplierQuotationCreateFlow() {
         form.value.ValidUntilDate = `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, '0')}-${String(base.getDate()).padStart(2, '0')}`
       }
     }
-  })
-
-  watch([itemSubtotal, extraChargesTotal], () => {
-    if (form.value.ResponseType !== 'DECLINED') form.value.TotalAmount = suggestedTotal.value
   })
 
   loadData()

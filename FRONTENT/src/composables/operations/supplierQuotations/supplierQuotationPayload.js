@@ -23,6 +23,25 @@ export function normalizeNumber(value) {
   return Number.isFinite(next) ? next : 0
 }
 
+export function resolveSourceUnitPrice(sourceItem = {}) {
+  if (!sourceItem || typeof sourceItem !== 'object') return 0
+  const candidates = [
+    sourceItem.UnitPrice,
+    sourceItem.EstimatedUnitPrice,
+    sourceItem.EstimatedRate,
+    sourceItem.LastPurchasePrice,
+    sourceItem.TargetUnitPrice,
+    sourceItem.Price,
+    sourceItem.Cost,
+    sourceItem.Rate
+  ]
+  for (const val of candidates) {
+    const num = normalizeNumber(val)
+    if (num > 0) return num
+  }
+  return 0
+}
+
 export function normalizeFlag(value) {
   if (typeof value === 'boolean') return value
   return ['yes', 'true', '1'].includes((value || '').toString().trim().toLowerCase())
@@ -83,11 +102,16 @@ export function defaultHeaderForm(seed = {}) {
 }
 
 export function defaultItemForm(context = {}, seed = {}) {
-  const quantity = seed.Quantity === '' || seed.Quantity == null ? '' : normalizeNumber(seed.Quantity)
-  const unitPrice = seed.UnitPrice === '' || seed.UnitPrice == null ? '' : normalizeNumber(seed.UnitPrice)
-  const totalPrice = seed.TotalPrice === '' || seed.TotalPrice == null
-    ? normalizeNumber(quantity) * normalizeNumber(unitPrice)
-    : normalizeNumber(seed.TotalPrice)
+  const hasSavedQty = seed.Quantity !== '' && seed.Quantity != null
+  const hasSavedPrice = seed.UnitPrice !== '' && seed.UnitPrice != null
+
+  const quantity = hasSavedQty ? normalizeNumber(seed.Quantity) : normalizeNumber(context.Quantity)
+  const unitPrice = hasSavedPrice ? normalizeNumber(seed.UnitPrice) : resolveSourceUnitPrice(context)
+
+  const totalPrice = seed.TotalPrice !== '' && seed.TotalPrice != null
+    ? normalizeNumber(seed.TotalPrice)
+    : quantity * unitPrice
+
   return {
     Code: seed.Code || '',
     SupplierQuotationCode: seed.SupplierQuotationCode || '',
@@ -147,7 +171,7 @@ export function buildItemRecord(item = {}) {
     Description: item.Description || '',
     Quantity: quantity,
     UnitPrice: unitPrice,
-    TotalPrice: normalizeNumber(item.TotalPrice || quantity * unitPrice),
+    TotalPrice: quantity * unitPrice,
     LeadTimeDays: item.LeadTimeDays === '' || item.LeadTimeDays == null ? '' : normalizeNumber(item.LeadTimeDays),
     DeliveryDate: item.DeliveryDate || '',
     Remarks: item.Remarks || '',

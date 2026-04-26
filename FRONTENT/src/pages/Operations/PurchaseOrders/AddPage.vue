@@ -154,23 +154,36 @@
   </q-page>
 </template>
 
-<script>
-import { defineComponent, onMounted } from 'vue';
+<script setup>
+import { onMounted } from 'vue';
 import { usePurchaseOrderCreateFlow } from '../../../composables/operations/purchaseOrders/usePurchaseOrderCreateFlow.js';
 
-export default defineComponent({
-  name: 'PurchaseOrdersAddPage',
-  setup() {
-    const flow = usePurchaseOrderCreateFlow();
+defineOptions({
+  name: 'PurchaseOrdersAddPage'
+});
 
-    onMounted(() => {
-      flow.loadData();
-    });
+const flow = usePurchaseOrderCreateFlow();
+const {
+  selectedQuotationCode,
+  eligibleQuotations,
+  hasBlockingFullPo,
+  supplierName,
+  form,
+  allowPartial,
+  warehouseOptions,
+  items,
+  itemSubtotal,
+  extraChargesTotal,
+  suggestedTotal,
+  saving,
+  selectQuotation,
+  toggleItem,
+  cancel,
+  save
+} = flow;
 
-    return {
-      ...flow
-    };
-  }
+onMounted(() => {
+  flow.loadData();
 });
 </script>
 

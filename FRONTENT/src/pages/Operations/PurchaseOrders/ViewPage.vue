@@ -176,23 +176,39 @@
   </q-page>
 </template>
 
-<script>
-import { defineComponent, onMounted } from 'vue';
+<script setup>
+import { onMounted } from 'vue';
 import { usePurchaseOrderView } from '../../../composables/operations/purchaseOrders/usePurchaseOrderView.js';
 
-export default defineComponent({
-  name: 'PurchaseOrdersViewPage',
-  setup() {
-    const viewFlow = usePurchaseOrderView();
+defineOptions({
+  name: 'PurchaseOrdersViewPage'
+});
 
-    onMounted(() => {
-      viewFlow.loadData();
-    });
+const viewFlow = usePurchaseOrderView();
+const {
+  record,
+  progress,
+  loading,
+  supplier,
+  warehouse,
+  availableActions,
+  acting,
+  actionComment,
+  quotation,
+  items,
+  subtotalAmount,
+  extraCharges,
+  goToList,
+  formatDate,
+  runAction,
+  formatCurrency,
+  lineTotal,
+  normalizeNumber,
+  labelFor
+} = viewFlow;
 
-    return {
-      ...viewFlow
-    };
-  }
+onMounted(() => {
+  viewFlow.loadData();
 });
 </script>
 

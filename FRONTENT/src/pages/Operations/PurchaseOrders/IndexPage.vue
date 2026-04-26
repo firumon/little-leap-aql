@@ -78,22 +78,32 @@
   </q-page>
 </template>
 
-<script>
-import { defineComponent, onMounted } from 'vue';
+<script setup>
+import { onMounted } from 'vue';
 import { usePurchaseOrderIndex } from '../../../composables/operations/purchaseOrders/usePurchaseOrderIndex.js';
 
-export default defineComponent({
-  name: 'PurchaseOrdersIndexPage',
-  setup() {
-    const poIndex = usePurchaseOrderIndex();
+defineOptions({
+  name: 'PurchaseOrdersIndexPage'
+});
 
-    onMounted(() => {
-      poIndex.reload();
-    });
+const poIndex = usePurchaseOrderIndex();
+const {
+  items,
+  groups,
+  searchTerm,
+  loading,
+  permissions,
+  reload,
+  isGroupExpanded,
+  toggleGroup,
+  navigateTo,
+  navigateToAdd,
+  supplierName,
+  formatDate,
+  formatCurrency
+} = poIndex;
 
-    return {
-      ...poIndex
-    };
-  }
+onMounted(() => {
+  poIndex.reload();
 });
 </script>

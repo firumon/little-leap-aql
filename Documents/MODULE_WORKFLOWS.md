@@ -15,11 +15,12 @@ This document captures the **end-to-end workflow knowledge** for each major feat
 5. [Menu Access Control](#5-menu-access-control)
 6. [Direct Stock Entry (Editable Register)](#6-direct-stock-entry-editable-register)
 7. [RFQ Supplier Dispatch Flow](#7-rfq-supplier-dispatch-flow)
+8. [Supplier Quotation Response Capture](#8-supplier-quotation-response-capture)
 
 <!-- Future modules -- add sections as they are built:
-8. [Data Backup & Restore](#8-data-backup--restore)
-9. [Bulk Upload](#9-bulk-upload)
-10. [Dashboard Widgets](#10-dashboard-widgets)
+9. [Data Backup & Restore](#9-data-backup--restore)
+10. [Bulk Upload](#10-bulk-upload)
+11. [Dashboard Widgets](#11-dashboard-widgets)
 -->
 
 ---
@@ -821,8 +822,8 @@ This module intentionally stops at response capture. It does not compare quotati
 1. **Index**: `/operations/quotations` shows Supplier Quotations grouped by `RECEIVED`, `ACCEPTED`, `REJECTED`, then other states. Stale rejected rows and accepted rows tied to completed procurements are hidden after the configured 14-day window.
 2. **Create**: Staff select an RFQ with `Progress = SENT`, then choose one of its active `RFQSuppliers` rows. Duplicate supplier responses for the same RFQ warn but do not block.
 3. **Response Types**: `QUOTED` requires every RFQ purchase requisition item to be quoted; `PARTIAL` allows missing item rows; `DECLINED` requires `DeclineReason` and does not require items.
-4. **First Save Workflow**: First save writes the quotation header/items, marks the matching `RFQSuppliers` row `RESPONDED`, and advances `Procurements.Progress` from `RFQ_SENT_TO_SUPPLIERS` to `QUOTATIONS_RECEIVED` only when it is still at that exact stage.
-5. **Subsequent Edits**: Edits to an existing quotation update only the quotation header/items and do not re-run RFQSupplier or Procurement progress updates.
+4. **First Save Workflow**: First save writes the quotation header/items. If the matching `RFQSuppliers` row is still `ASSIGNED`, the save stamps blank `SentDate` and sets `Progress = RESPONDED`. If it is `SENT`, it sets `Progress = RESPONDED`. It advances `Procurements.Progress` from `RFQ_SENT_TO_SUPPLIERS` to `QUOTATIONS_RECEIVED` only when it is still at that exact stage.
+5. **Subsequent Edits**: Edits to an existing quotation update only the quotation header/items and do not re-run RFQSupplier or Procurement progress updates. Quotation item subtotal and confirmed total are runtime reactive calculations.
 6. **Reject**: `RECEIVED` quotations can be rejected through the `Reject` AdditionalAction, which sets `Progress = REJECTED` and records `ProgressRejectedComment`, `ProgressRejectedAt`, and `ProgressRejectedBy`.
 
 ### 8.3 Architecture Details

@@ -49,6 +49,7 @@
               <q-select v-model="form.ResponseType" :options="optionSets.responseTypes" emit-value map-options dense outlined label="Response Type" :readonly="isReadonly" />
             </div>
             <div class="col-12 col-sm-3"><q-input v-model="form.ResponseDate" dense outlined label="Response Date" :readonly="isReadonly" /></div>
+            <div class="col-12 col-sm-3"><q-input v-model="form.SupplierQuotationReference" dense outlined label="Supplier Quotation Reference" :readonly="isReadonly" /></div>
             <div v-if="form.ResponseType === 'DECLINED'" class="col-12"><q-input v-model="form.DeclineReason" dense outlined autogrow label="Decline Reason" :readonly="isReadonly" /></div>
             <template v-else>
               <div class="col-12 col-sm-3"><q-input v-model.number="form.LeadTimeDays" dense outlined type="number" min="0" label="Lead Days" :readonly="isReadonly" /></div>
@@ -59,6 +60,13 @@
               <div class="col-12 col-sm-3"><q-input v-model.number="form.QuotationValidityDays" dense outlined type="number" min="0" label="Validity Days" :readonly="isReadonly" /></div>
               <div class="col-12 col-sm-3"><q-input v-model="form.ValidUntilDate" dense outlined label="Valid Until" :readonly="isReadonly" /></div>
               <div class="col-12 col-sm-3"><q-select v-model="form.Currency" :options="optionSets.currencies" emit-value map-options dense outlined label="Currency" :readonly="isReadonly" /></div>
+              <div class="col-12 col-sm-3 row items-center">
+                <q-toggle
+                  v-model="form.AllowPartialPO"
+                  :label="form.AllowPartialPO ? 'Allow Partial PO: TRUE' : 'Allow Partial PO: FALSE'"
+                  :disable="isReadonly"
+                />
+              </div>
               <div class="col-12"><q-input v-model="form.PaymentTermDetail" dense outlined autogrow label="Payment Detail" :readonly="isReadonly" /></div>
             </template>
             <div class="col-12"><q-input v-model="form.Remarks" dense outlined autogrow label="Remarks" :readonly="isReadonly" /></div>

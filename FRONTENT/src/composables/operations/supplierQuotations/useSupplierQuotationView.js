@@ -187,22 +187,12 @@ export function useSupplierQuotationView() {
 
     rejecting.value = true
     try {
-      const response = await workflowStore.runBatchRequests([
-        {
-          action: 'executeAction',
-          resource: 'SupplierQuotations',
-          payload: {
-            code: record.value.Code,
-            action: rejectAction.value,
-            data: { ProgressRejectedComment: comment }
-          }
-        },
-        {
-          action: 'get',
-          resource: ['SupplierQuotations'],
-          payload: { includeInactive: true }
-        }
-      ])
+      const response = await workflowStore.executeResourceAction(
+        'SupplierQuotations',
+        record.value.Code,
+        rejectAction.value,
+        { ProgressRejectedComment: comment }
+      )
 
       if (responseFailed(response)) {
         $q.notify({ type: 'negative', message: firstFailureMessage(response, 'Failed to reject quotation') })

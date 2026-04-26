@@ -45,6 +45,19 @@ export const useWorkflowStore = defineStore('workflow', () => {
     return normalizeResponse(response)
   }
 
+  async function fetchResources(resourceNames = [], payload = {}) {
+    const resources = Array.isArray(resourceNames) ? resourceNames.filter(Boolean) : [resourceNames].filter(Boolean)
+    if (!resources.length) {
+      return normalizeResponse({ success: true, data: { result: { resources: [] } } })
+    }
+    const response = await executeGasApi('get', {
+      ...payload,
+      resource: resources,
+      includeInactive: payload.includeInactive !== false
+    })
+    return normalizeResponse(response)
+  }
+
   async function updateResourceRecord(resourceName, code, record) {
     const response = await updateRecord(resourceName, code, record)
     return normalizeResponse(response)
@@ -80,6 +93,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
 
   return {
     executeResourceAction,
+    fetchResources,
     updateResourceRecord,
     saveComposite,
     uploadBulkRecords,

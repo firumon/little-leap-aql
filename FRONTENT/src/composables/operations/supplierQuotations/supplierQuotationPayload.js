@@ -51,6 +51,10 @@ export function flagValue(value) {
   return value ? 'Yes' : 'No'
 }
 
+export function trueFalseValue(value) {
+  return value ? 'TRUE' : 'FALSE'
+}
+
 export function blankCharges() {
   return Object.fromEntries(EXTRA_CHARGE_KEYS.map((key) => [key, 0]))
 }
@@ -79,9 +83,13 @@ export function defaultHeaderForm(seed = {}) {
     ResponseType: seed.ResponseType || 'QUOTED',
     ResponseDate: responseDate,
     DeclineReason: seed.DeclineReason || '',
+    SupplierQuotationReference: seed.SupplierQuotationReference || '',
     LeadTimeDays: normalizeNumber(seed.LeadTimeDays),
     LeadTimeType: seed.LeadTimeType || 'FLEXIBLE',
     DeliveryMode: seed.DeliveryMode || 'ANY',
+    AllowPartialPO: seed.AllowPartialPO == null || seed.AllowPartialPO === ''
+      ? true
+      : normalizeFlag(seed.AllowPartialPO),
     AllowPartialDelivery: normalizeFlag(seed.AllowPartialDelivery),
     AllowSplitShipment: normalizeFlag(seed.AllowSplitShipment),
     ShippingTerm: seed.ShippingTerm || '',
@@ -142,9 +150,11 @@ export function buildHeaderRecord(form = {}, extras = {}) {
     ResponseType: form.ResponseType || '',
     ResponseDate: form.ResponseDate || toDateInputValue(),
     DeclineReason: form.ResponseType === 'DECLINED' ? (form.DeclineReason || '') : '',
+    SupplierQuotationReference: form.SupplierQuotationReference || '',
     LeadTimeDays: normalizeNumber(form.LeadTimeDays),
     LeadTimeType: form.LeadTimeType || '',
     DeliveryMode: form.DeliveryMode || '',
+    AllowPartialPO: trueFalseValue(form.AllowPartialPO),
     AllowPartialDelivery: flagValue(form.AllowPartialDelivery),
     AllowSplitShipment: flagValue(form.AllowSplitShipment),
     ShippingTerm: form.ShippingTerm || '',

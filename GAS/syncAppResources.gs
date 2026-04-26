@@ -345,7 +345,8 @@ const APP_RESOURCES_CODE_CONFIG = [
         OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
             {"action":"AssignSupplier","label":"Assign Supplier","icon":"group_add","color":"primary","kind":"navigate","confirm":false,"navigate":{"target":"record-page","pageSlug":"assign-supplier"},"visibleWhen":{"column":"Progress","op":"nin","value":["CLOSED","CANCELLED"]}},
-            {"action":"MarkAsSent","label":"Mark As Sent","icon":"send","color":"secondary","kind":"navigate","confirm":false,"navigate":{"target":"record-page","pageSlug":"mark-as-sent"},"visibleWhen":{"column":"Progress","op":"nin","value":["CLOSED","CANCELLED"]}}
+            {"action":"MarkAsSent","label":"Mark As Sent","icon":"send","color":"secondary","kind":"navigate","confirm":false,"navigate":{"target":"record-page","pageSlug":"mark-as-sent"},"visibleWhen":{"column":"Progress","op":"nin","value":["CLOSED","CANCELLED"]}},
+            {"action":"Close","label":"Close RFQ","icon":"lock","color":"negative","kind":"mutate","confirm":true,"column":"Progress","columnValue":"CLOSED","columnValueOptions":[],"fields":[],"visibleWhen":{"column":"Progress","op":"eq","value":"SENT"}}
         ]),
         Menu: JSON.stringify([
             {"group":["Procurement"],"order":4,"label":"Request For Quotations","icon":"request_quote","route":"/operations/rfqs","pageTitle":"Request for Quotations","pageDescription":"Manage requests for quotation","show":true}
@@ -399,7 +400,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         RequiredHeaders: 'RFQCode,SupplierCode',
         UniqueHeaders: '',
         UniqueCompositeHeaders: '',
-        DefaultValues: '{"Status":"Active","Progress":"RECEIVED","TotalAmount":0,"Currency":"AED","ExtraChargesBreakup":"{\\"tax\\":0,\\"freight\\":0,\\"commission\\":0,\\"handling\\":0,\\"other\\":0}"}',
+        DefaultValues: '{"Status":"Active","Progress":"RECEIVED","TotalAmount":0,"Currency":"AED","ExtraChargesBreakup":"{\\"tax\\":0,\\"freight\\":0,\\"commission\\":0,\\"handling\\":0,\\"other\\":0}","AllowPartialPO":"TRUE"}',
         RecordAccessPolicy: 'OWNER_AND_UPLINE',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
@@ -454,14 +455,21 @@ const APP_RESOURCES_CODE_CONFIG = [
         CodeSequenceLength: 5,
         LastDataUpdatedAt: 0,
         Audit: 'TRUE',
-        RequiredHeaders: 'ProcurementCode,SupplierCode',
+        RequiredHeaders: 'ProcurementCode,SupplierQuotationCode,SupplierCode,PODate,ShipToWarehouseCode',
         UniqueHeaders: '',
         UniqueCompositeHeaders: '',
-        DefaultValues: '{"Status":"Active","Progress":"DRAFT"}',
+        DefaultValues: '{"Status":"Active","Progress":"CREATED","Currency":"AED","SubtotalAmount":0,"TotalAmount":0,"ExtraChargesBreakup":"{\\"tax\\":0,\\"freight\\":0,\\"commission\\":0,\\"handling\\":0,\\"other\\":0}"}',
         RecordAccessPolicy: 'OWNER_AND_UPLINE',
         OwnerUserField: 'CreatedBy',
-        AdditionalActions: 'Approve,Send,Acknowledge,Accept',
-        Menu: JSON.stringify([]),
+        AdditionalActions: JSON.stringify([
+            {"action":"Send","label":"Send","icon":"send","color":"primary","kind":"mutate","confirm":false,"column":"Progress","columnValue":"SENT","columnValueOptions":[],"fields":[{"name":"Comment","label":"Comment","type":"textarea","required":false}],"visibleWhen":{"column":"Progress","op":"eq","value":"CREATED"}},
+            {"action":"Acknowledge","label":"Acknowledge","icon":"done","color":"info","kind":"mutate","confirm":false,"column":"Progress","columnValue":"ACKNOWLEDGED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Comment","type":"textarea","required":false}],"visibleWhen":{"column":"Progress","op":"eq","value":"SENT"}},
+            {"action":"Accept","label":"Accept","icon":"check_circle","color":"positive","kind":"mutate","confirm":false,"column":"Progress","columnValue":"ACCEPTED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Comment","type":"textarea","required":false}],"visibleWhen":{"column":"Progress","op":"eq","value":"ACKNOWLEDGED"}},
+            {"action":"Cancel","label":"Cancel","icon":"cancel","color":"negative","kind":"mutate","confirm":false,"column":"Progress","columnValue":"CANCELLED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Cancel Comment","type":"textarea","required":true}],"visibleWhen":{"column":"Progress","op":"in","value":["CREATED","SENT","ACKNOWLEDGED"]}}
+        ]),
+        Menu: JSON.stringify([
+            {"group":["Procurement"],"order":6,"label":"Purchase Orders","icon":"receipt_long","route":"/operations/purchase-orders","pageTitle":"Purchase Orders","pageDescription":"Manage purchase orders","show":true,"menuAccess":{"require":"canWrite"}}
+        ]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
@@ -481,9 +489,9 @@ const APP_RESOURCES_CODE_CONFIG = [
         CodeSequenceLength: 6,
         LastDataUpdatedAt: 0,
         Audit: 'TRUE',
-        RequiredHeaders: 'POCode,SKU',
+        RequiredHeaders: 'PurchaseOrderCode,SupplierQuotationItemCode,SKU,OrderedQuantity',
         UniqueHeaders: '',
-        UniqueCompositeHeaders: 'POCode+SKU',
+        UniqueCompositeHeaders: 'PurchaseOrderCode+SupplierQuotationItemCode',
         DefaultValues: '{"Status":"Active"}',
         RecordAccessPolicy: 'OWNER_AND_UPLINE',
         OwnerUserField: 'CreatedBy',

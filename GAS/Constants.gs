@@ -82,6 +82,7 @@ const APP_OPTIONS_SEED = {
   RFQSupplierProgress: ['ASSIGNED','SENT','RESPONDED','DECLINED','CANCELLED'],
   SupplierQuotationResponseType: ['QUOTED','PARTIAL','DECLINED'],
   SupplierQuotationProgress: ['RECEIVED','ACCEPTED','REJECTED'],
+  PurchaseOrderProgress: ['CREATED','SENT','ACKNOWLEDGED','ACCEPTED','CANCELLED','CLOSED'],
   SupplierQuotationExtraChargeType: ['tax','freight','commission','handling','other'],
   Currency: ['AED'],
 };

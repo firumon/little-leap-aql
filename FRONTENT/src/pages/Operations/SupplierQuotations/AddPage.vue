@@ -85,6 +85,14 @@
               </template>
             </q-input>
           </div>
+          <div class="col-12 col-sm-4">
+            <q-input
+              v-model="form.SupplierQuotationReference"
+              dense
+              outlined
+              label="Supplier Quotation Reference"
+            />
+          </div>
           <div class="col-12" v-if="form.ResponseType === 'DECLINED'">
             <q-input v-model="form.DeclineReason" dense outlined autogrow label="Decline Reason" />
           </div>
@@ -105,6 +113,12 @@
             <div class="col-12 col-sm-3"><q-select v-model="form.PaymentTerm" :options="optionSets.paymentTerms" emit-value map-options dense outlined label="Payment Term" /></div>
             <div class="col-12 col-sm-3"><q-input v-model.number="form.QuotationValidityDays" type="number" min="0" dense outlined label="Validity Days" /></div>
             <div class="col-12 col-sm-3"><q-input v-model="form.ValidUntilDate" dense outlined label="Valid Until" /></div>
+            <div class="col-12 col-sm-3 row items-center">
+              <q-toggle
+                v-model="form.AllowPartialPO"
+                :label="form.AllowPartialPO ? 'Allow Partial PO: TRUE' : 'Allow Partial PO: FALSE'"
+              />
+            </div>
             <div class="col-12 col-sm-6 row items-center q-gutter-md">
               <q-toggle v-model="form.AllowPartialDelivery" label="Partial Delivery" />
               <q-toggle v-model="form.AllowSplitShipment" label="Split Shipment" />

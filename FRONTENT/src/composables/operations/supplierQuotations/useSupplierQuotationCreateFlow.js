@@ -199,19 +199,41 @@ export function useSupplierQuotationCreateFlow() {
     }]
 
     const supplierRow = assignedSupplierRows.value.find((row) => text(row.SupplierCode) === selectedSupplierCode.value)
+    const procurement = procurementByCode.value.get(text(selectedRfq.value?.ProcurementCode))
+    let procurementProgress = text(procurement?.Progress).toUpperCase()
+
     if (supplierRow?.Code) {
       const supplierProgress = text(supplierRow.Progress).toUpperCase()
       if (supplierProgress === 'ASSIGNED') {
-        const updateData = { Progress: 'RESPONDED' }
+        const sentData = { Progress: 'SENT' }
         if (!supplierRow.SentDate) {
-          updateData.SentDate = toDateInputValue()
+          sentData.SentDate = toDateInputValue()
         }
         requests.push({
           action: 'update',
           resource: 'RFQSuppliers',
           payload: {
             code: supplierRow.Code,
-            data: updateData
+            data: sentData
+          }
+        })
+        if (procurement?.Code && procurementProgress === 'RFQ_GENERATED') {
+          requests.push({
+            action: 'update',
+            resource: 'Procurements',
+            payload: {
+              code: procurement.Code,
+              data: { Progress: 'RFQ_SENT_TO_SUPPLIERS' }
+            }
+          })
+          procurementProgress = 'RFQ_SENT_TO_SUPPLIERS'
+        }
+        requests.push({
+          action: 'update',
+          resource: 'RFQSuppliers',
+          payload: {
+            code: supplierRow.Code,
+            data: { Progress: 'RESPONDED' }
           }
         })
       } else if (supplierProgress === 'SENT') {
@@ -226,8 +248,7 @@ export function useSupplierQuotationCreateFlow() {
       }
     }
 
-    const procurement = procurementByCode.value.get(text(selectedRfq.value?.ProcurementCode))
-    if (procurement?.Code && procurement.Progress === 'RFQ_SENT_TO_SUPPLIERS') {
+    if (procurement?.Code && procurementProgress === 'RFQ_SENT_TO_SUPPLIERS') {
       requests.push({
         action: 'update',
         resource: 'Procurements',

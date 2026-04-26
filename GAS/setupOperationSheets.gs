@@ -53,7 +53,9 @@ function setupOperationSheets() {
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.RFQS,
-            headers: ['Code', 'ProcurementCode','PurchaseRequisitionCode','PurchaseRequisitionItemsCode','RFQDate','LeadTimeDays','LeadTimeType','ShippingTermMode','ShippingTerm','PaymentTermMode','PaymentTerm','PaymentTermDetail','QuotationValidityDays','QuotationValidityMode','DeliveryMode','AllowPartialDelivery','AllowSplitShipment','SubmissionDeadline','Progress','Status', 'AccessRegion'].concat(commonAuditColumns),
+            headers: ['Code', 'ProcurementCode','PurchaseRequisitionCode','PurchaseRequisitionItemsCode','RFQDate','LeadTimeDays','LeadTimeType','ShippingTermMode','ShippingTerm','PaymentTermMode','PaymentTerm','PaymentTermDetail','QuotationValidityDays','QuotationValidityMode','DeliveryMode','AllowPartialDelivery','AllowSplitShipment','SubmissionDeadline','Progress',
+                'ProgressClosedComment', 'ProgressClosedAt', 'ProgressClosedBy',
+                'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active',
             defaults: { Status: 'Active', Progress: 'DRAFT' },
             progressValidation: ['DRAFT', 'SENT', 'CLOSED', 'CANCELLED'],
@@ -61,7 +63,9 @@ function setupOperationSheets() {
             PurchaseRequisitionItemsCode: 120, RFQDate: 120, LeadTimeDays: 120, LeadTimeType: 120,
             ShippingTermMode: 120, ShippingTerm: 120, PaymentTermMode: 120, PaymentTerm: 120, PaymentTermDetail: 120,
             QuotationValidityDays: 120, QuotationValidityMode: 120, DeliveryMode: 120, AllowPartialDelivery: 120,
-            AllowSplitShipment: 120, SubmissionDeadline: 120, Progress: 120, Status: 100, AccessRegion: 130 }
+            AllowSplitShipment: 120, SubmissionDeadline: 120, Progress: 120,
+            ProgressClosedComment: 220, ProgressClosedAt: 160, ProgressClosedBy: 150,
+            Status: 100, AccessRegion: 130 }
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.RFQ_SUPPLIERS,
@@ -75,13 +79,14 @@ function setupOperationSheets() {
         {
             resourceName: CONFIG.OPERATION_SHEETS.SUPPLIER_QUOTATIONS,
             headers: ['Code', 'ProcurementCode', 'RFQCode', 'SupplierCode', 'ResponseType', 'ResponseDate', 'DeclineReason',
+                'AllowPartialPO', 'SupplierQuotationReference',
                 'LeadTimeDays', 'LeadTimeType', 'DeliveryMode', 'AllowPartialDelivery', 'AllowSplitShipment',
                 'ShippingTerm', 'PaymentTerm', 'PaymentTermDetail', 'QuotationValidityDays', 'ValidUntilDate',
                 'Currency', 'TotalAmount', 'ExtraChargesBreakup', 'Remarks', 'Progress',
                 'ProgressRejectedComment', 'ProgressRejectedAt', 'ProgressRejectedBy',
                 'ResponseRecordedAt', 'ResponseRecordedBy', 'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active',
-            defaults: { Status: 'Active', Progress: 'RECEIVED', TotalAmount: 0, Currency: 'AED', ExtraChargesBreakup: '{"tax":0,"freight":0,"commission":0,"handling":0,"other":0}' },
+            defaults: { Status: 'Active', Progress: 'RECEIVED', TotalAmount: 0, Currency: 'AED', ExtraChargesBreakup: '{"tax":0,"freight":0,"commission":0,"handling":0,"other":0}', AllowPartialPO: 'TRUE' },
             responseTypeValidation: APP_OPTIONS_SEED.SupplierQuotationResponseType,
             progressValidation: APP_OPTIONS_SEED.SupplierQuotationProgress,
             leadTimeTypeValidation: APP_OPTIONS_SEED.RFQLeadTimeType,
@@ -91,7 +96,7 @@ function setupOperationSheets() {
             currencyValidation: APP_OPTIONS_SEED.Currency,
             columnWidths: {
                 Code: 150, ProcurementCode: 150, RFQCode: 150, SupplierCode: 150, ResponseType: 130,
-                ResponseDate: 130, DeclineReason: 220, LeadTimeDays: 120, LeadTimeType: 130,
+                ResponseDate: 130, DeclineReason: 220, AllowPartialPO: 120, SupplierQuotationReference: 150, LeadTimeDays: 120, LeadTimeType: 130,
                 DeliveryMode: 130, AllowPartialDelivery: 150, AllowSplitShipment: 150,
                 ShippingTerm: 120, PaymentTerm: 130, PaymentTermDetail: 220,
                 QuotationValidityDays: 160, ValidUntilDate: 130, Currency: 100, TotalAmount: 130,
@@ -114,18 +119,29 @@ function setupOperationSheets() {
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.PURCHASE_ORDERS,
-            headers: ['Code', 'ProcurementCode', 'SupplierCode', 'RFQCode', 'QuotationCode', 'Progress', 'TotalAmount', 'Currency', 'Status', 'AccessRegion'].concat(commonAuditColumns),
+            headers: ['Code', 'ProcurementCode', 'SupplierQuotationCode', 'SupplierCode', 'PODate', 'ShipToWarehouseCode', 'Progress',
+                      'ProgressSentAt', 'ProgressSentBy', 'ProgressSentComment',
+                      'ProgressAcknowledgedAt', 'ProgressAcknowledgedBy', 'ProgressAcknowledgedComment',
+                      'ProgressAcceptedAt', 'ProgressAcceptedBy', 'ProgressAcceptedComment',
+                      'ProgressCancelledAt', 'ProgressCancelledBy', 'ProgressCancelledComment',
+                      'Currency', 'SubtotalAmount', 'ExtraChargesBreakup', 'TotalAmount', 'Remarks', 'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active',
-            defaults: { Status: 'Active', Progress: 'DRAFT', TotalAmount: 0, Currency: 'AED' },
-            progressValidation: ['DRAFT', 'APPROVED', 'SENT_TO_SUPPLIER', 'SUPPLIER_ACKNOWLEDGED', 'SUPPLIER_ACCEPTED', 'CANCELLED'],
-            columnWidths: { Code: 150, ProcurementCode: 150, SupplierCode: 150, RFQCode: 150, QuotationCode: 150, Progress: 180, TotalAmount: 120, Currency: 100, Status: 100 }
+            defaults: { Status: 'Active', Progress: 'CREATED', Currency: 'AED', SubtotalAmount: 0, TotalAmount: 0, ExtraChargesBreakup: '{"tax":0,"freight":0,"commission":0,"handling":0,"other":0}' },
+            progressValidation: APP_OPTIONS_SEED.PurchaseOrderProgress,
+            currencyValidation: APP_OPTIONS_SEED.Currency,
+            columnWidths: { Code: 150, ProcurementCode: 150, SupplierQuotationCode: 150, SupplierCode: 150, PODate: 130, ShipToWarehouseCode: 140, Progress: 180,
+                            ProgressSentAt: 160, ProgressSentBy: 150, ProgressSentComment: 200,
+                            ProgressAcknowledgedAt: 160, ProgressAcknowledgedBy: 150, ProgressAcknowledgedComment: 200,
+                            ProgressAcceptedAt: 160, ProgressAcceptedBy: 150, ProgressAcceptedComment: 200,
+                            ProgressCancelledAt: 160, ProgressCancelledBy: 150, ProgressCancelledComment: 200,
+                            Currency: 100, SubtotalAmount: 130, ExtraChargesBreakup: 260, TotalAmount: 130, Remarks: 240, Status: 100, AccessRegion: 130 }
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.PURCHASE_ORDER_ITEMS,
-            headers: ['Code', 'POCode', 'SKU', 'SupplierItemCode', 'Quantity', 'UnitPrice', 'TotalPrice', 'Status'].concat(commonAuditColumns),
+            headers: ['Code', 'PurchaseOrderCode', 'SupplierQuotationItemCode', 'SKU', 'Description', 'UOM', 'QuotedQuantity', 'OrderedQuantity', 'UnitPrice', 'SupplierItemCode', 'Remarks', 'Status'].concat(commonAuditColumns),
             statusDefault: 'Active',
-            defaults: { Status: 'Active', Quantity: 0, UnitPrice: 0, TotalPrice: 0 },
-            columnWidths: { Code: 150, POCode: 150, SKU: 150, SupplierItemCode: 150, Quantity: 100, UnitPrice: 100, TotalPrice: 100, Status: 100 }
+            defaults: { Status: 'Active', QuotedQuantity: 0, OrderedQuantity: 0, UnitPrice: 0 },
+            columnWidths: { Code: 150, PurchaseOrderCode: 150, SupplierQuotationItemCode: 150, SKU: 150, Description: 240, UOM: 100, QuotedQuantity: 100, OrderedQuantity: 100, UnitPrice: 100, SupplierItemCode: 150, Remarks: 220, Status: 100 }
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.PO_FULFILLMENTS,

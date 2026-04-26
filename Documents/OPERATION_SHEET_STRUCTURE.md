@@ -4,6 +4,16 @@
 This document describes the current operation-scope sheet families and their roles.
 
 ## Current Operation Resources
+- `Procurements`
+- `PurchaseRequisitions`
+- `PurchaseRequisitionItems`
+- `RFQs`
+- `RFQSuppliers`
+- `SupplierQuotations`
+- `SupplierQuotationItems`
+- `PurchaseOrders`
+- `PurchaseOrderItems`
+- `POFulfillments`
 - `Shipments`
 - `ShipmentItems`
 - `PortClearance`
@@ -11,8 +21,6 @@ This document describes the current operation-scope sheet families and their rol
 - `GoodsReceiptItems`
 - `StockMovements`
 - `WarehouseStorages`
-- `PurchaseRequisitions`
-- `PurchaseRequisitionItems`
 
 ## Structural Expectations
 - operational sheets hold dynamic transaction/process records

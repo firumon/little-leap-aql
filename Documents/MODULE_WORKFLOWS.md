@@ -16,11 +16,12 @@ This document captures the **end-to-end workflow knowledge** for each major feat
 6. [Direct Stock Entry (Editable Register)](#6-direct-stock-entry-editable-register)
 7. [RFQ Supplier Dispatch Flow](#7-rfq-supplier-dispatch-flow)
 8. [Supplier Quotation Response Capture](#8-supplier-quotation-response-capture)
+9. [Purchase Order Module](#9-purchase-order-module)
 
 <!-- Future modules -- add sections as they are built:
-9. [Data Backup & Restore](#9-data-backup--restore)
-10. [Bulk Upload](#10-bulk-upload)
-11. [Dashboard Widgets](#11-dashboard-widgets)
+10. [Data Backup & Restore](#10-data-backup--restore)
+11. [Bulk Upload](#11-bulk-upload)
+12. [Dashboard Widgets](#12-dashboard-widgets)
 -->
 
 ---
@@ -819,21 +820,40 @@ Supplier Quotations capture normalized supplier responses received outside AQL a
 This module intentionally stops at response capture. It does not compare quotations, score suppliers, generate POs, support alternate SKUs, snapshot RFQs, or store calculated partial/quoted flags.
 
 ### 8.2 Core Behaviors
-1. **Index**: `/operations/quotations` shows Supplier Quotations grouped by `RECEIVED`, `ACCEPTED`, `REJECTED`, then other states. Stale rejected rows and accepted rows tied to completed procurements are hidden after the configured 14-day window.
-2. **Create**: Staff select an RFQ with `Progress = SENT`, then choose one of its active `RFQSuppliers` rows. Duplicate supplier responses for the same RFQ warn but do not block.
+1. **Index**: `/operations/supplier-quotations` shows Supplier Quotations grouped by `RECEIVED`, `ACCEPTED`, `REJECTED`, then other states. Stale rejected rows and accepted rows tied to completed procurements are hidden after the configured 14-day window.
+2. **Create**: Staff select an RFQ with `Progress = SENT`, then choose one of its active `RFQSuppliers` rows. The create form captures `SupplierQuotationReference` and `AllowPartialPO` (`TRUE`/`FALSE`, default `TRUE`) on the quotation header. Duplicate supplier responses for the same RFQ warn but do not block.
 3. **Response Types**: `QUOTED` requires every RFQ purchase requisition item to be quoted; `PARTIAL` allows missing item rows; `DECLINED` requires `DeclineReason` and does not require items.
-4. **First Save Workflow**: First save writes the quotation header/items. If the matching `RFQSuppliers` row is still `ASSIGNED`, the save stamps blank `SentDate` and sets `Progress = RESPONDED`. If it is `SENT`, it sets `Progress = RESPONDED`. It advances `Procurements.Progress` from `RFQ_SENT_TO_SUPPLIERS` to `QUOTATIONS_RECEIVED` only when it is still at that exact stage.
-5. **Subsequent Edits**: Edits to an existing quotation update only the quotation header/items and do not re-run RFQSupplier or Procurement progress updates. Quotation item subtotal and confirmed total are runtime reactive calculations.
+4. **First Save Workflow**: First save writes the quotation header/items. If the matching `RFQSuppliers` row is still `ASSIGNED`, the save first stamps blank `SentDate`, moves it to `SENT`, and advances `Procurements.Progress` from `RFQ_GENERATED` to `RFQ_SENT_TO_SUPPLIERS` when still at that stage. The same save then marks the supplier row `RESPONDED`. If the supplier row is already `SENT`, it is marked `RESPONDED` directly. Finally, the linked procurement advances from `RFQ_SENT_TO_SUPPLIERS` to `QUOTATIONS_RECEIVED` only when it is still at that exact stage.
+5. **Subsequent Edits**: Edits to an existing quotation update only the quotation header/items, including editable `SupplierQuotationReference` and `AllowPartialPO`, and do not re-run RFQSupplier or Procurement progress updates. Quotation item subtotal and confirmed total are runtime reactive calculations.
 6. **Reject**: `RECEIVED` quotations can be rejected through the `Reject` AdditionalAction, which sets `Progress = REJECTED` and records `ProgressRejectedComment`, `ProgressRejectedAt`, and `ProgressRejectedBy`.
 
 ### 8.3 Architecture Details
-- **Pages**: The menu route remains `/operations/quotations`, so the operation page resolver loads entity pages from `FRONTENT/src/pages/Operations/Quotations/`.
+- **Pages**: The menu route remains `/operations/supplier-quotations`, so the operation page resolver loads entity pages from `FRONTENT/src/pages/Operations/SupplierQuotations/`.
 - **Composables**: Supplier Quotation workflow logic lives under `FRONTENT/src/composables/operations/supplierQuotations/`.
 - **Backend**: The feature uses existing generic `compositeSave`, `batch`, `update`, and `executeAction` capabilities. No custom GAS endpoint is introduced.
 - **Options**: Response type, quotation progress, extra charge keys, and currency are seeded through `APP.AppOptions` and delivered in the login payload.
 
+## 9. Purchase Order Module
+
+### 9.1 Overview
+The Purchase Order module converts an eligible `SupplierQuotations` response into an active `PurchaseOrders` parent record with `PurchaseOrderItems` children.
+
+### 9.2 Core Behaviors
+1. **Creation Eligibility**: POs can only be created from Supplier Quotations with `ResponseType != DECLINED`, `Progress != REJECTED`, and `Status = Active`.
+2. **Partial vs Full PO**: Governed by `SupplierQuotations.AllowPartialPO`. If false, the user must order all remaining quantities, quantities are readonly, and duplicates are blocked. If true, users can toggle items and reduce quantity down to the computed remaining quantity.
+3. **Remaining Quantity**: Calculated strictly in frontend only as `SupplierQuotationItems.Quantity - SUM(PurchaseOrderItems.OrderedQuantity)`. Cancelled POs and inactive POs do not consume quantity. Closed POs do.
+4. **RFQ Closing**: If the PO being created makes cumulative active PO item quantities exactly match every PR item quantity on the source RFQ, the user is warned that closing the RFQ prevents further supplier quotations. The RFQ closes only when the user confirms, and the close is executed through the RFQ `Close` AdditionalAction. The close payload records `ProgressClosedComment` as `<user_name>/system: "Complete purchase order created, hence closing RFQ"` and the backend action audit stamps `ProgressClosedBy` / `ProgressClosedAt`.
+5. **No Data Duplication**: Supplier quotation terms (LeadTime, ShippingTerm, etc.) and calculated line totals are not copied into the stored PO record; they are displayed dynamically by resolving the quotation parent.
+6. **Supplier Quotation Acceptance**: Creating a PO updates the source `SupplierQuotations.Progress` to `ACCEPTED` in the same save batch.
+7. **Actions**: Handled exclusively through configuration-driven `AdditionalActions` (Send, Acknowledge, Accept, Cancel). Progress states map to `APP_OPTIONS_SEED.PurchaseOrderProgress`. Cancelling a PO marks matching `RFQSuppliers` rows for the PO RFQ/supplier as `CANCELLED`; when the linked procurement is `PO_ISSUED` and no other active non-cancelled PO exists for that procurement, it rolls back to `QUOTATIONS_RECEIVED`. If the source RFQ was `CLOSED`, cancellation reopens it to `SENT` and clears `ProgressClosedComment`.
+
+### 9.3 Architecture Details
+- **Pages**: `/operations/purchase-orders` handles index, create, and view.
+- **Backend Sync**: Uses standard `workflowStore.runBatchRequests` for `compositeSave` and `executeAction` updates without new custom endpoints.
+- **Composables**: Logic lives entirely in `FRONTENT/src/composables/operations/purchaseOrders/` providing stateless payload mapping, reactive frontend totals, and route-isolated flows.
+
 <!-- Future modules -- add sections as they are built:
-9. [Data Backup & Restore](#9-data-backup--restore)
-10. [Bulk Upload](#10-bulk-upload)
-11. [Dashboard Widgets](#11-dashboard-widgets)
+10. [Data Backup & Restore](#10-data-backup--restore)
+11. [Bulk Upload](#11-bulk-upload)
+12. [Dashboard Widgets](#12-dashboard-widgets)
 -->

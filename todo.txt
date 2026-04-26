@@ -1,4 +1,7 @@
 access region - needed on all sheet ?
+access region logic - binary
 cost center
 cost calculator / price decession
 archive after days
+SupplierQuotations creating: Filter suppliers -> RFQ Supplier
+RESOURCE_COLUMNS_GUIDE.md -> only related to App.Resources columns and not worldwide columns..

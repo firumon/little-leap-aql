@@ -4,9 +4,11 @@ import {
   bulkRecords,
   compositeSave,
   executeAction,
+  fetchResources as fetchResourcesFromService,
   updateRecord
 } from 'src/services/ResourceRecordsService'
 import { generateReport } from 'src/services/ReportService'
+import { useDataStore } from './data'
 
 function normalizeResponse(response, fallbackData = null) {
   if (response && typeof response === 'object' && 'success' in response) {
@@ -50,12 +52,38 @@ export const useWorkflowStore = defineStore('workflow', () => {
     if (!resources.length) {
       return normalizeResponse({ success: true, data: { result: { resources: [] } } })
     }
-    const response = await executeGasApi('get', {
-      ...payload,
-      resource: resources,
-      includeInactive: payload.includeInactive !== false
+
+    const response = await fetchResourcesFromService(resources, {
+      includeInactive: payload.includeInactive !== false,
+      forceSync: payload.forceSync === true,
+      syncWhenCacheExists: payload.syncWhenCacheExists === true,
+      showLoading: payload.showLoading === true,
+      showError: payload.showError === true
     })
-    return normalizeResponse(response)
+
+    const dataStore = useDataStore()
+    const resourcePayload = response.resources || response.data?.resources || {}
+    Object.entries(resourcePayload).forEach(([resourceName, resourceData]) => {
+      if (Array.isArray(resourceData?.headers) && resourceData.headers.length) {
+        dataStore.initResource(resourceName, resourceData.headers)
+      }
+      if (Array.isArray(resourceData?.rows)) {
+        dataStore.replaceRows(resourceName, resourceData.rows)
+      }
+    })
+
+    return {
+      success: response.success === true,
+      data: {
+        resources: resourcePayload,
+        result: {
+          resources: resourcePayload,
+          synced: response.synced || response.data?.synced || []
+        }
+      },
+      error: response.success ? null : (response.error || response.message || 'Failed to fetch resources'),
+      message: response.message || ''
+    }
   }
 
   async function updateResourceRecord(resourceName, code, record) {
@@ -80,14 +108,14 @@ export const useWorkflowStore = defineStore('workflow', () => {
 
   async function runBatchRequests(requests = []) {
     const response = await executeGasApi('batch', { requests })
-    const normalized = normalizeResponse(response, { responses: [] })
-    if (!normalized.success) {
-      return normalized
-    }
-
+    const responses = Array.isArray(response?.data?.result?.responses)
+      ? response.data.result.responses
+      : []
     return {
-      ...normalized,
-      data: Array.isArray(normalized.data?.responses) ? normalized.data.responses : []
+      success: response?.success === true,
+      data: responses,
+      error: response?.success === true ? null : (response?.error || response?.message || 'Batch request failed'),
+      message: response?.message || ''
     }
   }
 

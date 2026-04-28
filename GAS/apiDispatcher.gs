@@ -263,6 +263,10 @@ function normalizeActionData(action, requestResource, requestPayload, rawResult)
     }
   });
 
+  if (rawResult && Array.isArray(rawResult.errors)) {
+    result.errors = rawResult.errors;
+  }
+
   var data = rawResult ? rawResult.data : null;
   if (data !== null && data !== undefined) {
     if (typeof data === 'object' && !Array.isArray(data)) {

@@ -125,10 +125,12 @@ const APP_RESOURCES_CODE_CONFIG = [
         DefaultValues: '{"Status":"Active","Country":"UAE","Type":"Main"}',
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
-        AdditionalActions: '',
+        AdditionalActions: JSON.stringify([
+            {"action":"ViewStock","label":"View Stock","icon":"inventory","color":"primary","kind":"navigate","confirm":false,"navigate":{"target":"record-page","pageSlug":"stock"}}
+        ]),
         Menu: JSON.stringify([
             {"group":["Warehouse"],"order":1,"label":"Manage","icon":"warehouse","route":"/masters/warehouses","pageTitle":"Warehouses","pageDescription":"Manage warehouse master records","show":true},
-            {"group":["Stock"],"order":2,"label":"Warehouse","icon":"warehouse","route":"/masters/warehouses/stock","pageTitle":"Warehouse Product Stocks","pageDescription":"Get the report of Stocks of a Warehouse","show":true}
+            {"group":["Warehouse"],"order":2,"label":"Stock List","icon":"inventory_2","route":"/masters/warehouses/stock-list","pageTitle":"Warehouse Stock List","pageDescription":"Select a warehouse and view current stock","show":true}
         ]),
         UIFields: JSON.stringify([
             { header: 'Name', label: 'Name', type: 'text', required: true },
@@ -507,6 +509,66 @@ const APP_RESOURCES_CODE_CONFIG = [
         ListViews: ''
     },
     {
+        Name: CONFIG.OPERATION_SHEETS.PO_RECEIVINGS,
+        Scope: 'operation',
+        ParentResource: CONFIG.OPERATION_SHEETS.PURCHASE_ORDERS,
+        IsActive: 'TRUE',
+        SheetName: CONFIG.OPERATION_SHEETS.PO_RECEIVINGS,
+        CodePrefix: 'POR',
+        CodeSequenceLength: 5,
+        LastDataUpdatedAt: 0,
+        Audit: 'TRUE',
+        RequiredHeaders: 'ProcurementCode,PurchaseOrderCode,InspectionDate,InspectedUserName,Progress,Status',
+        UniqueHeaders: '',
+        UniqueCompositeHeaders: '',
+        DefaultValues: '{"Status":"Active","Progress":"DRAFT"}',
+        RecordAccessPolicy: 'OWNER_AND_UPLINE',
+        OwnerUserField: 'CreatedBy',
+        AdditionalActions: JSON.stringify([
+            {"action":"Confirm","label":"Confirm","icon":"task_alt","color":"positive","kind":"mutate","confirm":false,"column":"Progress","columnValue":"CONFIRMED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Confirmation Comment","type":"textarea","required":false}],"visibleWhen":{"column":"Progress","op":"eq","value":"DRAFT"}},
+            {"action":"GenerateGRN","label":"Generate GRN","icon":"receipt_long","color":"primary","kind":"mutate","confirm":true,"column":"Progress","columnValue":"GRN_GENERATED","columnValueOptions":[],"fields":[{"name":"Comment","label":"GRN Generation Comment","type":"textarea","required":false}],"visibleWhen":{"column":"Progress","op":"eq","value":"CONFIRMED"}},
+            {"action":"Cancel","label":"Cancel","icon":"cancel","color":"negative","kind":"mutate","confirm":false,"column":"Progress","columnValue":"CANCELLED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Cancellation Comment","type":"textarea","required":true}],"visibleWhen":{"column":"Progress","op":"in","value":["DRAFT","CONFIRMED","GRN_GENERATED"]}}
+        ]),
+        Menu: JSON.stringify([
+            {"group":["Procurement"],"order":7,"label":"PO Receiving","icon":"inventory_2","route":"/operations/po-receivings","pageTitle":"PO Receiving","pageDescription":"Inspect received purchase order quantities before GRN finalization","show":true,"menuAccess":{"require":"canWrite"}}
+        ]),
+        UIFields: JSON.stringify([]),
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: '',
+        Reports: '',
+        CustomUIName: '',
+        ListViews: ''
+    },
+    {
+        Name: CONFIG.OPERATION_SHEETS.PO_RECEIVING_ITEMS,
+        Scope: 'operation',
+        ParentResource: CONFIG.OPERATION_SHEETS.PO_RECEIVINGS,
+        IsActive: 'TRUE',
+        SheetName: CONFIG.OPERATION_SHEETS.PO_RECEIVING_ITEMS,
+        CodePrefix: 'PORI',
+        CodeSequenceLength: 6,
+        LastDataUpdatedAt: 0,
+        Audit: 'TRUE',
+        RequiredHeaders: 'POReceivingCode,PurchaseOrderItemCode,SKU,Status',
+        UniqueHeaders: '',
+        UniqueCompositeHeaders: 'POReceivingCode+PurchaseOrderItemCode',
+        DefaultValues: '{"Status":"Active","ReceivedQty":0,"DamagedQty":0,"RejectedQty":0}',
+        RecordAccessPolicy: 'OWNER_AND_UPLINE',
+        OwnerUserField: 'CreatedBy',
+        AdditionalActions: '',
+        Menu: JSON.stringify([]),
+        UIFields: JSON.stringify([]),
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: '',
+        Reports: '',
+        CustomUIName: '',
+        ListViews: ''
+    },
+    {
         Name: CONFIG.OPERATION_SHEETS.PO_FULFILLMENTS,
         Scope: 'operation',
         ParentResource: CONFIG.OPERATION_SHEETS.PURCHASE_ORDERS,
@@ -615,20 +677,25 @@ const APP_RESOURCES_CODE_CONFIG = [
     {
         Name: CONFIG.OPERATION_SHEETS.GOODS_RECEIPTS,
         Scope: 'operation',
+        ParentResource: CONFIG.OPERATION_SHEETS.PO_RECEIVINGS,
         IsActive: 'TRUE',
         SheetName: CONFIG.OPERATION_SHEETS.GOODS_RECEIPTS,
         CodePrefix: 'GRN',
-        CodeSequenceLength: 6,
+        CodeSequenceLength: 5,
         LastDataUpdatedAt: 0,
         Audit: 'TRUE',
-        RequiredHeaders: 'ShipmentCode,WarehouseCode',
+        RequiredHeaders: 'ProcurementCode,PurchaseOrderCode,POReceivingCode,Date,Status',
         UniqueHeaders: '',
         UniqueCompositeHeaders: '',
-        DefaultValues: '{"Status":"Draft"}',
+        DefaultValues: '{"Status":"Active"}',
         RecordAccessPolicy: 'OWNER_AND_UPLINE',
         OwnerUserField: 'CreatedBy',
-        AdditionalActions: 'Verify,Accept',
-        Menu: JSON.stringify([]),
+        AdditionalActions: JSON.stringify([
+            {"action":"Invalidate","label":"Invalidate","icon":"block","color":"negative","kind":"mutate","confirm":true,"column":"Status","columnValue":"Inactive","columnValueOptions":[],"fields":[],"visibleWhen":{"column":"Status","op":"eq","value":"Active"}}
+        ]),
+        Menu: JSON.stringify([
+            {"group":["Procurement"],"order":8,"label":"Goods Receipts","icon":"fact_check","route":"/operations/goods-receipts","pageTitle":"Goods Receipts","pageDescription":"View finalized GRNs generated from PO Receiving","show":true}
+        ]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
@@ -648,9 +715,9 @@ const APP_RESOURCES_CODE_CONFIG = [
         CodeSequenceLength: 6,
         LastDataUpdatedAt: 0,
         Audit: 'TRUE',
-        RequiredHeaders: 'GRNCode,SKU',
+        RequiredHeaders: 'GoodsReceiptCode,POReceivingItemCode,SKU,Qty,Status',
         UniqueHeaders: '',
-        UniqueCompositeHeaders: 'GRNCode+SKU',
+        UniqueCompositeHeaders: 'GoodsReceiptCode+POReceivingItemCode',
         DefaultValues: '{"Status":"Active"}',
         RecordAccessPolicy: 'OWNER_AND_UPLINE',
         OwnerUserField: 'CreatedBy',
@@ -684,6 +751,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         Menu: JSON.stringify([
             {"group":["Warehouse"],"order":2,"label":"Stock Movements","icon":"inventory","route":"/operations/stock-movements","pageTitle":"Stock Movements","pageDescription":"View stock movement records","show":true},
             {"group":["Warehouse"],"order":3,"label":"Direct Stock Entry","icon":"edit_note","route":"/operations/stock-movements/direct-entry","pageTitle":"Direct Stock Entry","pageDescription":"Directly enter stock quantities","show":true,"menuAccess":{"require":"canWrite"}},
+            {"group":["Warehouse"],"order":4,"label":"GRN Stock Entry","icon":"receipt_long","route":"/operations/stock-movements/grn-entry","pageTitle":"GRN Stock Entry","pageDescription":"Post finalized GRN quantities into warehouse stock","show":true,"menuAccess":{"require":"canWrite"}},
             {"group":["Product"],"order":2,"label":"Movements - NI","icon":"inventory","route":"/masters/products","pageTitle":"Stock Movements","pageDescription":"View stock movement records","show":true}
         ]),
         UIFields: JSON.stringify([]),

@@ -318,6 +318,40 @@ function setPermanentMetadata(key, value) {
 }
 
 /**
+ * Clears permanent metadata rows from the APP Metadata sheet.
+ * Returns a summary so menu wrappers and manual script runs can verify the target.
+ */
+function clearPermanentMetadataCache() {
+  var ss = getAppSpreadsheet();
+  var metaSheet = ss.getSheetByName(CONFIG.SHEETS.METADATA);
+  var summary = {
+    spreadsheetId: ss.getId(),
+    spreadsheetName: ss.getName(),
+    sheetName: CONFIG.SHEETS.METADATA,
+    clearedRows: 0,
+    message: ''
+  };
+
+  if (!metaSheet) {
+    summary.message = 'Metadata sheet was not found.';
+    _metadata_cache = null;
+    return summary;
+  }
+
+  var lastRow = metaSheet.getLastRow();
+  var lastColumn = Math.max(metaSheet.getLastColumn(), 2);
+  if (lastRow > 1) {
+    metaSheet.getRange(2, 1, lastRow - 1, lastColumn).clearContent();
+    summary.clearedRows = lastRow - 1;
+  }
+
+  _metadata_cache = null;
+  SpreadsheetApp.flush();
+  summary.message = 'Permanent metadata cache cleared.';
+  return summary;
+}
+
+/**
  * Clears all in-memory and CacheService caches.
  * Call from setup/sync operations that modify APP sheets.
  */
@@ -327,14 +361,7 @@ function clearAllAppCaches() {
   _sheet_headers_cache = {};
   _metadata_cache = null;
 
-  // Clear Metadata sheet if exists (to force full rebuild)
-  try {
-    var ss = getAppSpreadsheet();
-    var metaSheet = ss.getSheetByName(CONFIG.SHEETS.METADATA);
-    if (metaSheet && metaSheet.getLastRow() > 1) {
-      metaSheet.deleteRows(2, metaSheet.getLastRow() - 1);
-    }
-  } catch (e) { /* non-fatal */ }
+  var metadataSummary = clearPermanentMetadataCache();
 
   // Delegate to module-specific cache clears
   if (typeof clearConfigCache === 'function') clearConfigCache();
@@ -343,4 +370,6 @@ function clearAllAppCaches() {
   if (typeof clearRolesCache === 'function') clearRolesCache();
   if (typeof clearAccessRegionCache === 'function') clearAccessRegionCache();
   if (typeof clearDesignationsCache === 'function') clearDesignationsCache();
+
+  return metadataSummary;
 }

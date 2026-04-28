@@ -30,7 +30,8 @@ function onOpen() {
       .addItem('Manage Lists', 'app_showListViewsManagerDialog')
       .addSeparator()
       .addItem('Sync APP.Resources from Code', 'syncAppResourcesFromCode')
-      .addItem('Clear Resource Config Cache', 'clearResourceConfigCacheAndNotify'))
+      .addItem('Clear Resource Config Cache', 'clearResourceConfigCacheAndNotify')
+      .addItem('Clear All App Caches', 'clearAllAppCachesAndNotify'))
     .addSeparator()
     .addSubMenu(ui.createMenu('⚙️ Setup & Refactor')
       .addItem('Refactor APP Sheets', 'setupAppSheets')
@@ -781,5 +782,19 @@ function clearResourceConfigCacheAndNotify() {
     SpreadsheetApp.getUi().alert('Resource config cache cleared. The next API call will rebuild it fresh from the sheet.');
   } catch (e) {
     SpreadsheetApp.getUi().alert('Error clearing cache: ' + e.message);
+  }
+}
+
+function clearAllAppCachesAndNotify() {
+  try {
+    var summary = clearAllAppCaches();
+    SpreadsheetApp.getUi().alert(
+      'All APP caches cleared.\n\n' +
+      'Spreadsheet: ' + (summary.spreadsheetName || summary.spreadsheetId || 'APP') + '\n' +
+      'Metadata rows cleared: ' + (summary.clearedRows || 0) + '\n\n' +
+      'Refresh or re-login to rebuild metadata from the current sheets.'
+    );
+  } catch (e) {
+    SpreadsheetApp.getUi().alert('Error clearing APP caches: ' + e.message);
   }
 }

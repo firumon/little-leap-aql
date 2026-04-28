@@ -1017,6 +1017,101 @@ function collectWriteDeltaResources(auth, payload, resourceNames) {
   return deltas;
 }
 
+function buildDirectWriteResourcePayload(resourceName, resourceConfig, headers, rows) {
+  return {
+    success: true,
+    rows: Array.isArray(rows) ? rows : [],
+    headers: Array.isArray(headers) ? headers : [],
+    meta: {
+      resource: resourceName,
+      fileId: resourceConfig && resourceConfig.fileId ? resourceConfig.fileId : '',
+      sheetName: resourceConfig && resourceConfig.sheetName ? resourceConfig.sheetName : '',
+      directWrite: true,
+      lastSyncAt: Date.now()
+    }
+  };
+}
+
+function mergeDirectWriteResourcePayloads(deltaResources, directResources) {
+  var merged = {};
+  var deltas = deltaResources && typeof deltaResources === 'object' ? deltaResources : {};
+  Object.keys(deltas).forEach(function (resourceName) {
+    merged[resourceName] = deltas[resourceName];
+  });
+
+  var direct = directResources && typeof directResources === 'object' ? directResources : {};
+  Object.keys(direct).forEach(function (resourceName) {
+    var directPayload = direct[resourceName];
+    var currentPayload = merged[resourceName];
+    if (!currentPayload || !Array.isArray(currentPayload.rows) || !currentPayload.rows.length) {
+      merged[resourceName] = directPayload;
+      return;
+    }
+
+    var headers = Array.isArray(currentPayload.headers) && currentPayload.headers.length
+      ? currentPayload.headers
+      : (Array.isArray(directPayload.headers) ? directPayload.headers : []);
+    var codeIdx = headers.indexOf('Code');
+    if (codeIdx === -1) {
+      return;
+    }
+
+    var seen = {};
+    currentPayload.rows.forEach(function (row) {
+      var code = Array.isArray(row) ? (row[codeIdx] || '').toString().trim() : '';
+      if (code) seen[code] = true;
+    });
+
+    var nextRows = currentPayload.rows.slice();
+    directPayload.rows.forEach(function (row) {
+      var code = Array.isArray(row) ? (row[codeIdx] || '').toString().trim() : '';
+      if (code && !seen[code]) {
+        seen[code] = true;
+        nextRows.push(row);
+      }
+    });
+
+    merged[resourceName] = Object.assign({}, currentPayload, {
+      rows: nextRows,
+      headers: headers
+    });
+  });
+
+  return merged;
+}
+
+function buildCompositeDirectWriteResources(parentResourceName, parentConfig, parentHeaders, parentRowData, childWriteOps) {
+  var resources = {};
+  resources[parentResourceName] = buildDirectWriteResourcePayload(
+    parentResourceName,
+    parentConfig,
+    parentHeaders,
+    [parentRowData]
+  );
+
+  (childWriteOps || []).forEach(function (ops) {
+    var rows = [];
+    if (Array.isArray(ops.newRows)) {
+      rows = rows.concat(ops.newRows);
+    }
+    if (Array.isArray(ops.updateOps)) {
+      ops.updateOps.forEach(function (op) {
+        if (op && Array.isArray(op.rowData)) {
+          rows.push(op.rowData);
+        }
+      });
+    }
+    resources[ops.resourceName] = buildDirectWriteResourcePayload(
+      ops.resourceName,
+      ops.config,
+      ops.headers,
+      rows
+    );
+  });
+
+  return resources;
+}
+
 /**
  * Handles bulk insert/update of master records.
  * Payload: { targetResource: 'Products', records: [{...}, {...}] }
@@ -1142,7 +1237,7 @@ function handleCompositeSave(auth, payload) {
     var childSeqLength = childResource.config.codeSequenceLength || 6;
     var childCurrentValues = childValues.slice();
 
-    var childOps = { resourceName: childResourceName, sheet: childSheet, headers: childHeaders, newRows: [], updateOps: [] };
+    var childOps = { resourceName: childResourceName, config: childResource.config, sheet: childSheet, headers: childHeaders, newRows: [], updateOps: [] };
 
     for (var r = 0; r < childRecords.length; r++) {
       var rec = childRecords[r];
@@ -1249,6 +1344,7 @@ function handleCompositeSave(auth, payload) {
       affectedResources.push(ops.resourceName);
     }
   }
+  SpreadsheetApp.flush();
 
   var childResourceResults = childWriteOps.map(function(ops) {
     return {
@@ -1262,7 +1358,10 @@ function handleCompositeSave(auth, payload) {
     message: parentResourceName + ' saved successfully',
     data: mergeDeltaResourcesIntoResult(
       { parentCode: parentCode },
-      collectWriteDeltaResources(auth, payload, affectedResources)
+      mergeDirectWriteResourcePayloads(
+        collectWriteDeltaResources(auth, payload, affectedResources),
+        buildCompositeDirectWriteResources(parentResourceName, parentResource.config, parentHeaders, parentRowData, childWriteOps)
+      )
     )
   };
   dispatchPostActionHook(parentResource.config, payload, result, auth, 'compositeSave', {

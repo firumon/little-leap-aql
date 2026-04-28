@@ -36,6 +36,8 @@ const CONFIG = {
     SUPPLIER_QUOTATION_ITEMS: 'SupplierQuotationItems',
     PURCHASE_ORDERS: 'PurchaseOrders',
     PURCHASE_ORDER_ITEMS: 'PurchaseOrderItems',
+    PO_RECEIVINGS: 'POReceivings',
+    PO_RECEIVING_ITEMS: 'POReceivingItems',
     PO_FULFILLMENTS: 'POFulfillments',
     SHIPMENTS: 'Shipments',
     SHIPMENT_ITEMS: 'ShipmentItems',
@@ -65,12 +67,13 @@ const CONFIG = {
  * Rule: When adding a new option group here, also add a matching
  *       dropdown validation in the relevant setup script.
  */
-const APP_OPTIONS_SEED = {
+const  APP_OPTIONS_SEED = {
   StockMovementReferenceType: ['GRN', 'DirectEntry', 'StockAdjustment'],
   PurchaseRequisitionType: ['STOCK', 'PROJECT', 'SALES', 'ASSET'],
   PurchaseRequisitionPriority: ['Low', 'Medium', 'High', 'Urgent'],
   PurchaseRequisitionProgress: ['Draft', 'Pending Approval', 'Revision Required', 'Approved', 'Rejected', 'RFQ Processed'],
-  ProcurementProgress: ['INITIATED', 'PR_CREATED', 'PR_APPROVED', 'RFQ_GENERATED','RFQ_SENT_TO_SUPPLIERS','QUOTATIONS_RECEIVED', 'PO_ISSUED', 'IN_TRANSIT', 'ARRIVED_AT_PORT', 'COMPLETED', 'CANCELLED'],
+  ProcurementProgress: ['INITIATED', 'PR_CREATED', 'PR_APPROVED', 'RFQ_GENERATED','RFQ_SENT_TO_SUPPLIERS','QUOTATIONS_RECEIVED', 'PO_ISSUED', 'GOODS_RECEIVING', 'GRN_GENERATED', 'IN_TRANSIT', 'ARRIVED_AT_PORT', 'COMPLETED', 'CANCELLED'],
+  POReceivingProgress: ['DRAFT', 'CONFIRMED', 'GRN_GENERATED', 'CANCELLED'],
   RFQLeadTimeType: ['FLEXIBLE','STRICT','RANGE_10','RANGE_25'],
   RFQShippingTermMode: ['ANY','FIXED'],
   RFQShippingTerm: ['EXW','FOB','CIF','DDP'],

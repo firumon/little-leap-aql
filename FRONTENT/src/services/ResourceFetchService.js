@@ -222,9 +222,30 @@ export async function fetchResourceRecords(resourceName, authorizedResources = [
       statusIndex
     }), [])
 
+    const hasHydratedOnce = meta?.hasHydratedOnce === true
     let effectiveCursor = syncCursor ?? null
-    if (!cachedRows.length && effectiveCursor) {
+    if (!cachedRows.length && effectiveCursor && !hasHydratedOnce) {
       effectiveCursor = null
+    }
+
+    const ttlSec = getResourceSyncTtl(resourceName, authorizedResources, appConfig)
+    const ttlMs = ttlSec * 1000
+    const emptyCacheThrottleMs = Math.max(0, ttlMs / 10)
+    const emptyCacheFreshEnough = !forceSync &&
+      !cachedRows.length &&
+      hasHydratedOnce &&
+      effectiveCursor &&
+      emptyCacheThrottleMs > 0 &&
+      Date.now() < effectiveCursor + emptyCacheThrottleMs
+
+    if (emptyCacheFreshEnough) {
+      logger.debug('Returning recently hydrated empty cache', { resource: resourceName })
+      return standardizeResponse(true, {
+        headers,
+        rows: [],
+        records: [],
+        meta: { resource: resourceName, source: 'cache-empty', lastSyncAt: effectiveCursor }
+      })
     }
 
     if (!forceSync && !syncWhenCacheExists && cachedRows.length > 0) {
@@ -242,14 +263,12 @@ export async function fetchResourceRecords(resourceName, authorizedResources = [
     let immediateSyncedRows = []
 
     if (forceSync || syncWhenCacheExists || !cachedRows.length) {
-      const hasHydratedOnce = meta?.hasHydratedOnce === true || !!effectiveCursor
-      const ttlSec = getResourceSyncTtl(resourceName, authorizedResources, appConfig)
-      const ttlMs = ttlSec * 1000
+      const hasUsableHydration = hasHydratedOnce || !!effectiveCursor
       const nextEligibleSyncAt = effectiveCursor ? effectiveCursor + ttlMs : 0
       const now = Date.now()
       const shouldImmediateSync = forceSync
         || !cachedRows.length
-        || !hasHydratedOnce
+        || !hasUsableHydration
         || !effectiveCursor
         || now >= nextEligibleSyncAt
 
@@ -301,6 +320,141 @@ export async function fetchResourceRecords(resourceName, authorizedResources = [
       rows: [],
       records: []
     }, error.message)
+  }
+}
+
+export async function fetchResourceRecordsBatch(resourceNames = [], authorizedResources = [], appConfig = {}, options = {}) {
+  try {
+    const uniqueNames = Array.from(new Set((Array.isArray(resourceNames) ? resourceNames : [resourceNames]).filter(Boolean)))
+    if (!uniqueNames.length) {
+      return standardizeResponse(true, { resources: {}, synced: [] }, 'No resources requested')
+    }
+
+    const includeInactive = options.includeInactive === true
+    const forceSync = options.forceSync === true
+    const syncWhenCacheExists = options.syncWhenCacheExists === true
+    const now = Date.now()
+    const stateByResource = {}
+    const syncNames = []
+    const resources = {}
+    const errors = []
+
+    for (const resourceName of uniqueNames) {
+      const headersResp = await ensureHeaders(resourceName, authorizedResources)
+      if (!headersResp.success || !headersResp.data.length) {
+        const message = `Headers unavailable for ${resourceName}`
+        errors.push(message)
+        resources[resourceName] = {
+          headers: [],
+          rows: [],
+          records: [],
+          meta: { resource: resourceName, source: 'unavailable', stale: true }
+        }
+        continue
+      }
+
+      const headers = headersResp.data
+      const meta = await withTimeout(getResourceMeta(resourceName), null)
+      const syncCursor = normalizeCursorValue(meta?.lastSyncAt)
+      const statusIndex = headers.indexOf('Status')
+      const cachedRows = await withTimeout(getResourceRows(resourceName, {
+        includeInactive,
+        statusIndex
+      }), [])
+
+      const hasHydratedOnce = meta?.hasHydratedOnce === true
+      let effectiveCursor = syncCursor ?? null
+      if (!cachedRows.length && effectiveCursor && !hasHydratedOnce) {
+        effectiveCursor = null
+      }
+
+      const ttlSec = getResourceSyncTtl(resourceName, authorizedResources, appConfig)
+      const ttlMs = ttlSec * 1000
+      const emptyCacheThrottleMs = Math.max(0, ttlMs / 10)
+      const emptyCacheFreshEnough = !forceSync &&
+        !cachedRows.length &&
+        hasHydratedOnce &&
+        effectiveCursor &&
+        emptyCacheThrottleMs > 0 &&
+        now < effectiveCursor + emptyCacheThrottleMs
+
+      let shouldSync = false
+      if (!emptyCacheFreshEnough && (forceSync || syncWhenCacheExists || !cachedRows.length)) {
+        const hasUsableHydration = hasHydratedOnce || !!effectiveCursor
+        const nextEligibleSyncAt = effectiveCursor ? effectiveCursor + ttlMs : 0
+        shouldSync = forceSync ||
+          !cachedRows.length ||
+          !hasUsableHydration ||
+          !effectiveCursor ||
+          now >= nextEligibleSyncAt
+      }
+
+      if (shouldSync) {
+        syncNames.push(resourceName)
+      }
+
+      stateByResource[resourceName] = {
+        headers,
+        cachedRows,
+        statusIndex,
+        syncCursor,
+        effectiveCursor,
+        hasHydratedOnce,
+        emptyCacheFreshEnough
+      }
+    }
+
+    if (syncNames.length) {
+      for (const resourceName of syncNames) {
+        const state = stateByResource[resourceName]
+        if (!state?.cachedRows?.length && state?.syncCursor && !state.hasHydratedOnce) {
+          await withTimeout(setResourceMeta(resourceName, { lastSyncAt: null }), null)
+        }
+      }
+
+      const syncResponse = await syncResourcesBatch(syncNames, authorizedResources, appConfig, {
+        showError: options.showError === true,
+        showLoading: options.showLoading === true
+      })
+
+      if (!syncResponse.success) {
+        errors.push(syncResponse.error || syncResponse.message || 'Failed to sync resources')
+      }
+    }
+
+    for (const resourceName of uniqueNames) {
+      const state = stateByResource[resourceName]
+      if (!state) continue
+
+      const meta = await withTimeout(getResourceMeta(resourceName), null)
+      const freshRows = await withTimeout(getResourceRows(resourceName, {
+        includeInactive,
+        statusIndex: state.statusIndex
+      }), [])
+      const rows = freshRows.length ? freshRows : state.cachedRows
+      const lastSyncAt = normalizeCursorValue(meta?.lastSyncAt) || state.effectiveCursor || null
+
+      resources[resourceName] = {
+        headers: state.headers,
+        rows,
+        records: mapRowsToObjects(rows, state.headers),
+        meta: {
+          resource: resourceName,
+          source: state.emptyCacheFreshEnough
+            ? 'cache-empty'
+            : (syncNames.includes(resourceName) ? 'sync' : 'cache'),
+          lastSyncAt
+        }
+      }
+    }
+
+    return standardizeResponse(errors.length === 0, {
+      resources,
+      synced: syncNames
+    }, errors.join('; '))
+  } catch (error) {
+    logger.error('Batch fetch failed', { error: error.message })
+    return standardizeResponse(false, { resources: {}, synced: [] }, error.message)
   }
 }
 

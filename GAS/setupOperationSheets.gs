@@ -21,7 +21,7 @@ function setupOperationSheets() {
             headers: ['Code', 'Progress', 'InitiatedDate', 'CreatedUser', 'CreatedRole', 'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active',
             defaults: { Status: 'Active', Progress: 'INITIATED' },
-            progressValidation: ['INITIATED', 'PR_CREATED', 'PR_APPROVED', 'RFQ_GENERATED', 'RFQ_SENT_TO_SUPPLIERS', 'QUOTATIONS_RECEIVED', 'PO_ISSUED', 'IN_TRANSIT', 'ARRIVED_AT_PORT', 'COMPLETED', 'CANCELLED'],
+            progressValidation: APP_OPTIONS_SEED.ProcurementProgress,
             columnWidths: { Code: 150, Progress: 180, InitiatedDate: 150, CreatedUser: 150, CreatedRole: 150, Status: 100, AccessRegion: 130 }
         },
         {
@@ -144,6 +144,29 @@ function setupOperationSheets() {
             columnWidths: { Code: 150, PurchaseOrderCode: 150, SupplierQuotationItemCode: 150, SKU: 150, Description: 240, UOM: 100, QuotedQuantity: 100, OrderedQuantity: 100, UnitPrice: 100, SupplierItemCode: 150, Remarks: 220, Status: 100 }
         },
         {
+            resourceName: CONFIG.OPERATION_SHEETS.PO_RECEIVINGS,
+            headers: ['Code', 'ProcurementCode', 'PurchaseOrderCode', 'InspectionDate', 'InspectedUserName', 'Progress',
+                      'ProgressConfirmedAt', 'ProgressConfirmedBy', 'ProgressConfirmedComment',
+                      'ProgressCancelledAt', 'ProgressCancelledBy', 'ProgressCancelledComment',
+                      'ProgressGRNGeneratedAt', 'ProgressGRNGeneratedBy', 'ProgressGRNGeneratedComment',
+                      'Remarks', 'Status', 'AccessRegion'].concat(commonAuditColumns),
+            statusDefault: 'Active',
+            defaults: { Status: 'Active', Progress: 'DRAFT' },
+            progressValidation: APP_OPTIONS_SEED.POReceivingProgress,
+            columnWidths: { Code: 150, ProcurementCode: 150, PurchaseOrderCode: 150, InspectionDate: 130, InspectedUserName: 180, Progress: 150,
+                            ProgressConfirmedAt: 160, ProgressConfirmedBy: 150, ProgressConfirmedComment: 220,
+                            ProgressCancelledAt: 160, ProgressCancelledBy: 150, ProgressCancelledComment: 220,
+                            ProgressGRNGeneratedAt: 170, ProgressGRNGeneratedBy: 160, ProgressGRNGeneratedComment: 230,
+                            Remarks: 240, Status: 100, AccessRegion: 130 }
+        },
+        {
+            resourceName: CONFIG.OPERATION_SHEETS.PO_RECEIVING_ITEMS,
+            headers: ['Code', 'POReceivingCode', 'PurchaseOrderItemCode', 'SKU', 'ExpectedQty', 'ReceivedQty', 'DamagedQty', 'RejectedQty', 'RejectedReason', 'Remarks', 'Status'].concat(commonAuditColumns),
+            statusDefault: 'Active',
+            defaults: { Status: 'Active', ReceivedQty: 0, DamagedQty: 0, RejectedQty: 0 },
+            columnWidths: { Code: 150, POReceivingCode: 150, PurchaseOrderItemCode: 180, SKU: 150, ExpectedQty: 120, ReceivedQty: 120, DamagedQty: 120, RejectedQty: 120, RejectedReason: 220, Remarks: 220, Status: 100 }
+        },
+        {
             resourceName: CONFIG.OPERATION_SHEETS.PO_FULFILLMENTS,
             headers: ['Code', 'ProcurementCode', 'POCode', 'DocumentName', 'Description', 'Purpose', 'DocumentUrl', 'Status'].concat(commonAuditColumns),
             statusDefault: 'Active',
@@ -177,19 +200,19 @@ function setupOperationSheets() {
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.GOODS_RECEIPTS,
-            headers: ['Code', 'ShipmentCode', 'ReceivedDate', 'WarehouseCode', 'Status', 'AccessRegion'].concat(commonAuditColumns),
-            statusDefault: 'Draft',
-            defaults: { Status: 'Draft' },
-            statusValidation: ['Draft', 'Verified', 'Accepted'],
-            columnWidths: { Code: 150, ShipmentCode: 150, ReceivedDate: 150, WarehouseCode: 150, Status: 120, AccessRegion: 130, CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140 }
+            headers: ['Code', 'ProcurementCode', 'PurchaseOrderCode', 'POReceivingCode', 'Date', 'Status', 'AccessRegion'].concat(commonAuditColumns),
+            statusDefault: 'Active',
+            defaults: { Status: 'Active' },
+            statusValidation: ['Active', 'Inactive'],
+            columnWidths: { Code: 150, ProcurementCode: 150, PurchaseOrderCode: 150, POReceivingCode: 150, Date: 130, Status: 100, AccessRegion: 130, CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140 }
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.GOODS_RECEIPT_ITEMS,
-            headers: ['Code', 'GRNCode', 'SKU', 'StorageName', 'ExpectedQty', 'ReceivedQty', 'DamagedQty', 'AcceptedQty', 'Status'].concat(commonAuditColumns),
+            headers: ['Code', 'GoodsReceiptCode', 'POReceivingItemCode', 'SKU', 'Qty', 'Status'].concat(commonAuditColumns),
             statusDefault: 'Active',
-            defaults: { Status: 'Active', ExpectedQty: 0, ReceivedQty: 0, DamagedQty: 0, AcceptedQty: 0 },
+            defaults: { Status: 'Active' },
             statusValidation: ['Active', 'Inactive'],
-            columnWidths: { Code: 150, GRNCode: 150, SKU: 150, StorageName: 150, ExpectedQty: 120, ReceivedQty: 120, DamagedQty: 120, AcceptedQty: 120, Status: 100, CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140 }
+            columnWidths: { Code: 150, GoodsReceiptCode: 160, POReceivingItemCode: 180, SKU: 150, Qty: 120, Status: 100, CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140 }
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.STOCK_MOVEMENTS,

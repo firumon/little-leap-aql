@@ -10,6 +10,7 @@ import {
   syncResourcesBatch,
   resolveResourceScope,
   fetchResourceRecords as fetchFromService,
+  fetchResourceRecordsBatch as fetchBatchFromService,
   mapRowsToObjects
 } from 'src/services/ResourceFetchService'
 import {
@@ -86,6 +87,23 @@ export async function fetchResourceRecords(resourceName, options = {}) {
     rows: normalized.data?.rows || [],
     records: normalized.data?.records || [],
     meta: normalized.data?.meta || {}
+  }
+}
+
+export async function fetchResources(resourceNames = [], options = {}) {
+  const context = getContextFromStore()
+  const response = await fetchBatchFromService(
+    resourceNames,
+    context.authorizedResources,
+    context.appConfig,
+    options
+  )
+
+  const resources = response.data?.resources || {}
+  return {
+    ...response,
+    resources,
+    synced: response.data?.synced || []
   }
 }
 

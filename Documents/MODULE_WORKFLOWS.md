@@ -14,15 +14,53 @@ This document captures the **end-to-end workflow knowledge** for each major feat
 4. [Products Variant Management (Custom Pages)](#4-products-variant-management-custom-pages)
 5. [Menu Access Control](#5-menu-access-control)
 6. [Direct Stock Entry (Editable Register)](#6-direct-stock-entry-editable-register)
+6A. [GRN Stock Entry](#6a-grn-stock-entry)
+6B. [Warehouse Stock List](#6b-warehouse-stock-list)
 7. [RFQ Supplier Dispatch Flow](#7-rfq-supplier-dispatch-flow)
 8. [Supplier Quotation Response Capture](#8-supplier-quotation-response-capture)
 9. [Purchase Order Module](#9-purchase-order-module)
+10. [PO Receiving And Goods Receipts](#10-po-receiving-and-goods-receipts)
 
 <!-- Future modules -- add sections as they are built:
-10. [Data Backup & Restore](#10-data-backup--restore)
-11. [Bulk Upload](#11-bulk-upload)
-12. [Dashboard Widgets](#12-dashboard-widgets)
+11. [Data Backup & Restore](#11-data-backup--restore)
+12. [Bulk Upload](#12-bulk-upload)
+13. [Dashboard Widgets](#13-dashboard-widgets)
 -->
+
+---
+
+## 10. PO Receiving And Goods Receipts
+
+### 10.1 Overview
+PO Receiving is the editable inspection layer between Purchase Orders and finalized Goods Receipt Notes. Users select a Purchase Order, save or resume a receiving draft, enter received/damaged/rejected quantities, confirm the receiving, then generate a GRN. Goods Receipts are read-only finalized GRNs except for invalidation.
+
+### 10.2 Data Ownership
+- `POReceivings` stores direct `ProcurementCode`, purchase order link, receiving header, and progress (`DRAFT`, `CONFIRMED`, `GRN_GENERATED`, `CANCELLED`).
+- `POReceivingItems` stores source PO item links and entered inspection quantities only.
+- Accepted, short, and excess quantities are derived in frontend composables and are not persisted in receiving sheets.
+- `GoodsReceipts` stores finalized GRN headers and uses `Status = Inactive` for invalidation.
+- `GoodsReceiptItems.Qty` stores accepted quantity only.
+
+### 10.3 Workflow
+1. Select a Purchase Order from `/operations/po-receivings/_add`.
+2. If an active draft exists for the PO, the page resumes it instead of creating a duplicate.
+3. Save draft writes `POReceivings` plus `POReceivingItems` through `compositeSave`; the GAS hook can move procurement from `PO_ISSUED` to `GOODS_RECEIVING`.
+4. Confirm runs the `Confirm` AdditionalAction and sets receiving progress to `CONFIRMED`.
+5. Generate GRN runs the `GenerateGRN` AdditionalAction; the GAS hook creates one active `GoodsReceipts` row and accepted-only `GoodsReceiptItems` rows, then updates procurement to `GRN_GENERATED`.
+6. Invalidate on Goods Receipts sets `Status = Inactive`; the GAS hook inactivates linked GRN items, rolls receiving back to `CONFIRMED`, and returns procurement to `GOODS_RECEIVING` unless completed.
+7. Cancelling a receiving with an active GRN invalidates the GRN first. Completed procurement blocks frontend cancellation.
+
+### 10.4 Routing And UI
+- PO Receiving custom pages live under `FRONTENT/src/pages/Operations/PoReceivings/` because the resolver maps `po-receivings` to `PoReceivings`.
+- Goods Receipts custom pages live under `FRONTENT/src/pages/Operations/GoodsReceipts/`.
+- No Goods Receipts add/edit page is implemented.
+- Report links for damage/reject/short/excess lists are disabled placeholders; no report template generation is implemented.
+
+### 10.5 Warehouse Stock Posting
+Finalized active GRNs are posted to warehouse stock from `/operations/stock-movements/grn-entry`. A GRN is eligible when no `StockMovements` ledger row exists with `ReferenceType = GRN` and `ReferenceCode = GoodsReceipts.Code`. Posting creates positive `StockMovements.QtyChange` rows and relies on the existing StockMovements post-write hook to update `WarehouseStorages`.
+
+### 10.6 Out Of Scope
+Stock reversal and report-template generation are intentionally not implemented in this phase.
 
 ---
 
@@ -230,7 +268,7 @@ Report configs are part of `APP.Resources` and cached via the 3-tier caching sys
 
 ```
 Tier 1: In-memory (_resource_config_map_cache)     ← per-execution
-Tier 2: CacheService ('AQL_RESOURCE_CONFIG_MAP_V1') ← 5-min TTL
+Tier 2: CacheService ('AQL_RESOURCE_CONFIG_MAP_V2') ← 5-min TTL
 Tier 3: APP.Metadata sheet (permanent fallback)     ← survives cold starts
 ```
 
@@ -238,6 +276,12 @@ Tier 3: APP.Metadata sheet (permanent fallback)     ← survives cold starts
 - Clears all 3 tiers (in-memory, CacheService, and Metadata row)
 - Called by: `handleAddResource()`, `handleEditResource()`, `app_saveResourceReports()`
 - The next `getResourceConfig()` call rebuilds from the `APP.Resources` sheet and re-populates all 3 tiers
+
+**Full APP cache invalidation** (via `clearAllAppCaches()` / menu item `AQL 🚀 > Resources > Clear All App Caches`):
+- Clears in-memory APP/header/resource caches.
+- Clears all permanent rows below the header in `APP.Metadata`.
+- Returns a summary with target spreadsheet and cleared-row count so wrong-spreadsheet or no-op cache clears are visible.
+- Use this after APP resource/header setup changes when stale permanent header metadata is suspected.
 
 **Critical:** The `pdfOptions` lookup in `generateReportPdf()` uses `getResourceConfig(resource)` which hits the cache — no extra sheet read overhead.
 
@@ -798,6 +842,38 @@ BACKEND (Google Apps Script)
 6. **Post-Save Cache Refresh (2026-04-11)**: `submitBatch()` pairs the `create StockMovements` request with a `get WarehouseStorages` request in a single batch. On success, it upserts the returned rows into IndexedDB using headers resolved locally (IDB meta → auth store → `getAuthorizedResources` fallback). The `WarehouseStorages` sync cursor (`lastSyncAt`) is advanced **only** when the IDB upsert actually writes rows — if local headers cannot be resolved, the cursor is left untouched so the next normal sync path can recover. After a successful save, `StockEntryGrid.vue` rebuilds from the (now-fresh) cache via `fetchData(false)` — no extra network round-trip.
 7. **Draft Storage Dropdown (2026-04-11)**: The storage-location dropdown for new rows is a reactive union of fetched `WarehouseStorages` names plus any non-empty `StorageName` values currently typed in `newRows`. Typing a new location in row 1 immediately makes it selectable in row 2, before save. `q-select`'s `new-value-mode="add-unique"` still commits typed values to the row's model as before.
 
+## 6A. GRN Stock Entry
+
+### 6A.1 Overview
+The GRN Stock Entry page (`/operations/stock-movements/grn-entry`) posts accepted finalized GRN quantities into warehouse stock. It reuses `useStockMovements().submitBatch()` and the existing `StockMovements` backend hook, so `WarehouseStorages` remains derived from ledger rows.
+
+### 6A.2 Flow
+1. Select a warehouse.
+2. Select an eligible active GRN for a purchase order whose `ShipToWarehouseCode` matches the warehouse.
+3. Allocate each `GoodsReceiptItems.Qty` across one or more storage rows.
+4. Submit creates one positive `StockMovements` row per allocation with `ReferenceType = GRN`, `ReferenceCode = GoodsReceipts.Code`, selected `WarehouseCode`, allocation `StorageName`, `SKU`, and `QtyChange`.
+5. Blank/default storage displays as `Default` in the UI and submits as `_default`.
+6. After a successful save, the page redirects to `/masters/warehouses/{WarehouseCode}/stock`.
+
+### 6A.3 Eligibility And Validation
+- A GRN is hidden after any `StockMovements` row exists with `ReferenceType = GRN` and matching `ReferenceCode`.
+- Each GRN item must be fully allocated before submit; reducing one allocation row immediately creates or updates a remainder row, while increasing one row reduces following rows without negative quantities.
+- Current stock is read from `WarehouseStorages` for the selected warehouse, storage, and SKU.
+
+## 6B. Warehouse Stock List
+
+### 6B.1 Overview
+Warehouse stock lookup is available from `Warehouse > Stock List`, from a Warehouse record's `View Stock` navigate action, and from GRN Stock Entry after posting. All entry points resolve to the same record-page stock view.
+
+### 6B.2 Routes
+- Resource page: `/masters/warehouses/stock-list` lists active warehouses as selection cards.
+- Record page: `/masters/warehouses/{WarehouseCode}/stock` shows current `WarehouseStorages` rows for the warehouse, enriched with SKU and Product labels.
+
+### 6B.3 Ownership
+- `GAS/syncAppResources.gs` configures the `Warehouses` menu row and `ViewStock` navigate AdditionalAction.
+- `FRONTENT/src/composables/masters/warehouses/useWarehouseStockList.js` owns loading, filtering, summary calculation, and navigation.
+- `FRONTENT/src/components/Masters/Warehouses/WarehouseStockRows.vue` is UI-only and renders the stock rows.
+
 ## 7. RFQ Supplier Dispatch Flow
 
 ### 7.1 Overview
@@ -852,8 +928,27 @@ The Purchase Order module converts an eligible `SupplierQuotations` response int
 - **Backend Sync**: Uses standard `workflowStore.runBatchRequests` for `compositeSave` and `executeAction` updates without new custom endpoints.
 - **Composables**: Logic lives entirely in `FRONTENT/src/composables/operations/purchaseOrders/` providing stateless payload mapping, reactive frontend totals, and route-isolated flows.
 
+## 10. PO Receiving + Goods Receipts
+
+PO Receiving is the frontend-owned inspection layer between Purchase Orders and finalized Goods Receipt Notes (GRNs).
+
+### 10.1 Workflow Rules
+- PO Receiving drafts are saved only with `Progress = DRAFT`; save never writes `CONFIRMED` or `GRN_GENERATED`.
+- Add/edit state follows the Purchase Requisition editable pattern: dirty draft state exposes Save only; clean saved draft state exposes Confirm only.
+- Confirming a draft requires an existing POR code, `DRAFT` progress, valid form/items, and no unsaved changes in the add/edit flow. Saved draft PORs can also be confirmed from the read-only view when validation passes.
+- GRN generation is blocked unless the POR is `CONFIRMED`, no active linked GRN exists, accepted item quantity is greater than zero, and linked procurement is not `COMPLETED`.
+- `GoodsReceiptItems.Qty` stores accepted quantity only: `max(ReceivedQty - DamagedQty - RejectedQty, 0)`. Rows with accepted quantity `0` are excluded.
+- GRN invalidation sets the GRN inactive, rolls active GRN items inactive, moves `POReceivings.Progress` from `GRN_GENERATED` back to `CONFIRMED`, and returns non-completed procurement to `GOODS_RECEIVING`.
+- Receiving cancellation/replacement invalidates an active linked GRN first, cancels the POR through `POReceivings.Cancel`, and returns non-completed procurement to `PO_ISSUED`.
+
+### 10.2 Architecture Details
+- **Pages**: `/operations/po-receivings` handles index, draft/resume, and read-only action view. `/operations/goods-receipts` handles finalized GRN index/view only.
+- **Backend Sync**: PO Receiving save, confirm, GRN creation, GRN invalidation, cancellation, and replacement are orchestrated through `workflowStore.runBatchRequests`. GRN creation uses `GoodsReceipts` + `GoodsReceiptItems` `compositeSave` in the first batch item, followed by configured `AdditionalActions`/updates and a grouped refresh `get`. `compositeSave` write responses include directly written parent/child rows so generated GRN headers are available to the frontend even when immediate sheet readback is sparse.
+- **PostAction Ownership**: `POReceivings` and `GoodsReceipts` do not rely on `PostAction` hooks for workflow side effects; no custom GAS endpoint is used.
+- **Composables**: Shared POR/GRN payload and batch request construction lives under `FRONTENT/src/composables/operations/poReceivings/`, keeping Vue pages UI-only.
+
 <!-- Future modules -- add sections as they are built:
-10. [Data Backup & Restore](#10-data-backup--restore)
-11. [Bulk Upload](#11-bulk-upload)
-12. [Dashboard Widgets](#12-dashboard-widgets)
+11. [Data Backup & Restore](#11-data-backup--restore)
+12. [Bulk Upload](#12-bulk-upload)
+13. [Dashboard Widgets](#13-dashboard-widgets)
 -->

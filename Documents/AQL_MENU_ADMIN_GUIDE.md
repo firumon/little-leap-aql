@@ -48,6 +48,11 @@ Use this document when an admin asks:
 | `⚙️ Setup & Refactor > Setup All Operations` | Create/refactor operation sheets. |
 | `⚙️ Setup & Refactor > Setup Base Accounts` | Create/refactor base account sheets. |
 
+Procurement sidebar order after PO receiving implementation:
+- `Purchase Orders` (`/operations/purchase-orders`, order `6`)
+- `PO Receiving` (`/operations/po-receivings`, order `7`)
+- `Goods Receipts` (`/operations/goods-receipts`, order `8`)
+
 ## 3. Users (`AQL 🚀 > 👥 Users`)
 
 ### 3.1 Create User
@@ -248,8 +253,10 @@ These groups appear in the **frontend application sidebar**, not in the Google S
 ### 9.2 Warehouse Group
 
 - `Manage Warehouses` -> `/masters/warehouses`
+- `Stock List` -> `/masters/warehouses/stock-list`
 - `Stock Movements` -> `/operations/stock-movements`
 - `Direct Stock Entry` -> `/operations/stock-movements/direct-entry`
+- `GRN Stock Entry` -> `/operations/stock-movements/grn-entry`
 
 ### 9.3 Procurement Group
 
@@ -285,6 +292,22 @@ These groups appear in the **frontend application sidebar**, not in the Google S
 - `GAS/stockMovements.gs` — the WarehouseStorages upsert hook
 - `Documents/MODULE_WORKFLOWS.md` — Direct Stock Entry workflow section
 - `Documents/LOGIN_RESPONSE.md` — `appOptions.StockMovementReferenceType`
+
+### 9.5 Warehouse Stock List
+
+**Menu route:** `/masters/warehouses/stock-list`
+
+**Record route:** `/masters/warehouses/{WarehouseCode}/stock`
+
+**What it does:**
+- Menu entry shows active warehouses as selection cards.
+- Selecting a warehouse navigates through `useResourceNav` to the warehouse stock record-page.
+- The normal Warehouse view page also exposes `View Stock` as a navigate-kind AdditionalAction.
+- The stock page reads `WarehouseStorages`, `SKUs`, and `Products` through the frontend resource data flow and displays current stock by SKU and storage.
+
+**Metadata source:**
+- `Warehouses.Menu` owns the `Warehouse > Stock List` menu row.
+- `Warehouses.AdditionalActions` owns the `ViewStock` navigate action.
 
 ## 11. Common Admin Mistakes
 

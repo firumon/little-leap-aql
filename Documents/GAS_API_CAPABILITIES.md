@@ -199,7 +199,7 @@ Rules:
 - Validates ALL records first; writes nothing if any validation fails (all-or-nothing).
 - Parent code is automatically injected into children via `resolveParentCodeField` convention (`PurchaseRequisitionCode`, `ParentCode`, etc.).
 - Child `_action`: `"create"` | `"update"` | `"deactivate"`.
-- Response includes `{ parentCode }` in `data.result` and delta rows in `data.resources` for directly affected parent/child resources.
+- Response includes `{ parentCode }` in `data.result` and resource payloads in `data.resources` for directly affected parent/child resources. Directly written parent/child rows are included even when the immediate post-write delta readback is empty.
 
 ### `executeAction` — Workflow transition
 ```json

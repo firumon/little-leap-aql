@@ -13,6 +13,10 @@ This document describes the procurement-related sheet families used for purchasi
 - `SupplierQuotationItems`
 - `PurchaseOrders`
 - `PurchaseOrderItems`
+- `POReceivings`
+- `POReceivingItems`
+- `GoodsReceipts`
+- `GoodsReceiptItems`
 - `POFulfillments`
 
 ## Structural Expectations
@@ -36,6 +40,13 @@ This document describes the procurement-related sheet families used for purchasi
 - **Header Sheet**: `PurchaseOrders` stores `Code`, `ProcurementCode`, `SupplierQuotationCode`, `SupplierCode`, `PODate`, `ShipToWarehouseCode`, `Progress`, progress tracking triplets for `Sent`, `Acknowledged`, `Accepted`, and `Cancelled`, then `Currency`, `SubtotalAmount`, `ExtraChargesBreakup`, `TotalAmount`, `Remarks`, `Status`, `AccessRegion`, audit columns.
 - **Item Sheet**: `PurchaseOrderItems` stores `Code`, `PurchaseOrderCode`, `SupplierQuotationItemCode`, `SKU`, `Description`, `UOM`, `QuotedQuantity`, `OrderedQuantity`, `UnitPrice`, `SupplierItemCode`, `Remarks`, `Status`, audit columns.
 - **Purchase Order Features**: `AllowPartialPO` decides if users can partially order. Remaining quantities compute in frontend from `SupplierQuotationItems.Quantity - SUM(PurchaseOrderItems.OrderedQuantity)`. Closed POs consume ordered quantity, Cancelled do not. Generates via standard generic APIs. Progress is tracked via `AdditionalActions`. Creating a PO updates the source quotation to `ACCEPTED` and can close the source RFQ through confirmation when RFQ quantities are fully covered. Confirmed RFQ close records `ProgressClosedComment` as `<user_name>/system: "Complete purchase order created, hence closing RFQ"` with action audit fields. Cancelling a PO marks matching `RFQSuppliers` as `CANCELLED`; if no other active non-cancelled PO exists for a `PO_ISSUED` procurement, the procurement returns to `QUOTATIONS_RECEIVED`. If the RFQ was `CLOSED`, it returns to `SENT` and clears `ProgressClosedComment`.
+
+## PO Receiving And Goods Receipts
+- **PO Receiving Header**: `POReceivings` stores `Code`, `ProcurementCode`, `PurchaseOrderCode`, inspection metadata, `Progress` (`DRAFT`, `CONFIRMED`, `GRN_GENERATED`, `CANCELLED`), action audit triplets for confirmation/cancellation/GRN generation, remarks, status, region, and audit columns.
+- **PO Receiving Items**: `POReceivingItems` stores `ExpectedQty`, `ReceivedQty`, `DamagedQty`, `RejectedQty`, and rejection notes. Accepted, short, and excess quantities are frontend-derived and not stored.
+- **Goods Receipts**: `GoodsReceipts` stores finalized GRN headers linked to `ProcurementCode`, `PurchaseOrderCode`, and `POReceivingCode`; invalidation is represented by `Status = Inactive`.
+- **Goods Receipt Items**: `GoodsReceiptItems.Qty` stores accepted quantity only, derived as `max(ReceivedQty - DamagedQty - RejectedQty, 0)` at GRN generation.
+- **Procurement Progress**: saving a PO receiving draft can move `PO_ISSUED` to `GOODS_RECEIVING`; generating GRN moves procurement to `GRN_GENERATED`; invalidating a GRN rolls the receiving back to `CONFIRMED` and procurement to `GOODS_RECEIVING` unless procurement is already `COMPLETED`.
 
 ## Canonical Detail Owners
 - Workflow detail: [GROUND_OPERATIONS_WORKFLOW.md](F:/LITTLE%20LEAP/AQL/Documents/GROUND_OPERATIONS_WORKFLOW.md)

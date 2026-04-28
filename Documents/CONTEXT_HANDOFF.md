@@ -45,6 +45,8 @@ Read this file only when:
 - **RFQ Supplier Flow (2026-04-25)**: Supplier dispatch is managed via two custom actions from the read-only RFQ view: `Assign Supplier` creates multi-select rows in `RFQSuppliers` as `ASSIGNED` and locks the parent RFQ, while `Mark As Sent` stamps selected rows with `SENT` / `SentDate` and advances the linked `Procurements` record to `RFQ_SENT_TO_SUPPLIERS` once all dispatch rows are out of `ASSIGNED` state.
 - **Supplier Quotation Flow (2026-04-25)**: `/operations/supplier-quotations` now resolves to custom pages under `FRONTENT/src/pages/Operations/SupplierQuotations/` and composables under `operations/supplierQuotations/`. First save captures `QUOTED`, `PARTIAL`, or `DECLINED` responses into `SupplierQuotations` / `SupplierQuotationItems`; if dispatch was forgotten it moves matching `RFQSuppliers` from `ASSIGNED` to `SENT`, advances `Procurements` from `RFQ_GENERATED` to `RFQ_SENT_TO_SUPPLIERS`, then marks the supplier `RESPONDED` and advances eligible procurements to `QUOTATIONS_RECEIVED`. The view page allows editing `AllowPartialPO` and `SupplierQuotationReference`.
 - **Purchase Order Flow (2026-04-26)**: `/operations/purchase-orders` handles PO creation from active non-declined quotations. Users can create a single Full PO (which consumes all items and blocks further full POs) or Partial POs (which allow toggling items and adjusting quantity down to frontend-computed remaining quantity). PO creation updates the source Supplier Quotation to `ACCEPTED`; when cumulative active PO quantities exactly match every RFQ item quantity, the create flow warns that closing blocks further SQs and executes the RFQ `Close` AdditionalAction only after user confirmation, with `ProgressClosedComment` set to `<user_name>/system: "Complete purchase order created, hence closing RFQ"`. PO actions use configured `AdditionalActions`; cancelling a PO marks matching `RFQSuppliers` as `CANCELLED`, rolls `PO_ISSUED` procurements back to `QUOTATIONS_RECEIVED` when no other active non-cancelled PO remains, and reopens a closed RFQ to `SENT` while clearing `ProgressClosedComment`.
+- **GRN Stock Entry (2026-04-28)**: `POReceivings` now carries direct `ProcurementCode` in setup/resource metadata and frontend POR drafts. `/operations/stock-movements/grn-entry` resolves to a Warehouse-side GRN posting page that lists active unposted GRNs by selected warehouse, allocates accepted `GoodsReceiptItems.Qty` across storage rows, and submits positive `StockMovements` rows with `ReferenceType = GRN`; `WarehouseStorages` continues to update only through the existing StockMovements hook.
+- **Warehouse Stock List (2026-04-28)**: `Warehouse > Stock List` opens `/masters/warehouses/stock-list` for warehouse-card selection. Warehouse records expose a navigate-kind `ViewStock` action to `/masters/warehouses/{Code}/stock`, and GRN Stock Entry redirects there after a successful stock post.
 - `procurement.gs` is now narrowed to one postAction responsibility: after Procurement create, copy the created Procurement code back to the linked Purchase Requisition when the create payload carries `linkedPurchaseRequisitionCode`.
 - Operations 3-tier UI architecture implemented, mirroring Masters but customized for operations context (ViewParent instead of ViewAudit, filtered details).
 - Frontend refactor execution completed for the service/store/page migration plan: pages and composables now consume store actions or new service modules, and the legacy `src/services/apiClient.js`, `src/services/gasApi.js`, `src/services/resourceRecords.js`, and `src/utils/db.js` files were removed.
@@ -70,3 +72,22 @@ Update this file when current-state assumptions materially change, for example:
 - a major module or platform capability changes enough that continuation context would be misleading
 
 Keep this file summarized and current. Replace outdated state instead of appending dated history.
+# Current Handoff — 2026-04-27 PO Receiving + Goods Receipts Frontend Batch Refactor
+
+Refactored PO Receiving and Goods Receipt workflow ownership so POR draft save, confirm, GRN creation, GRN invalidation, cancellation, and replacement are frontend-batch orchestrated instead of GAS postAction-driven.
+
+Changed surfaces:
+- `GAS/syncAppResources.gs` keeps `POReceivings` and `GoodsReceipts` `PostAction` blank while retaining generic `AdditionalActions`.
+- No runtime `GAS/poReceivingWorkflow.gs` file remains in the workspace.
+- PO Receiving add/edit flow now tracks a loaded snapshot, exposes `hasUnsavedChanges`, `canSaveDraft`, `canConfirm`, and saves drafts only as `DRAFT`.
+- GRN creation uses one `workflowStore.runBatchRequests` call with `GoodsReceipts` + `GoodsReceiptItems` `compositeSave`, POR `GenerateGRN`, procurement update, and refresh reads.
+- GRN invalidation, POR cancel, and replacement side effects are built in shared frontend batch helpers.
+- Frontend registries and canonical module/resource docs reflect frontend-owned workflow orchestration.
+
+Validation performed:
+- Pending for this refactor: targeted `rg`, `npm run gas:push`, `npm --prefix FRONTENT run build`, and final `git status --short`.
+
+Manual follow-up:
+- Run APP resource sync from the AQL sheet menu so blank `PostAction` metadata is applied to live `APP.Resources`.
+- Confirm `APP.AppOptions` contains `POReceivingProgress`, `GOODS_RECEIVING`, and `GRN_GENERATED`; append manually if the existing option rows are not updated by setup/sync.
+- No Web App redeployment is expected because no custom API contract was added.

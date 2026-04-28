@@ -35,6 +35,11 @@ This document is the canonical meaning reference for `APP.Resources` columns.
 - `RFQs` support `Progress` values `DRAFT`, `SENT`, `CLOSED`, and `CANCELLED`. The configured `Close` AdditionalAction sets `Progress = CLOSED` and uses `ProgressClosedComment`, `ProgressClosedAt`, and `ProgressClosedBy` when those columns are present.
 - `SupplierQuotationItems` links to its parent through `SupplierQuotationCode` and to source demand through `PurchaseRequisitionItemCode`; partial/full quote state is calculated at runtime and must not be stored as `IsQuoted` or similar flags.
 - `PurchaseOrders` progress mapped to `PurchaseOrderProgress` and child linked via `PurchaseOrderItems.PurchaseOrderCode`.
+- `POReceivings` requires direct `ProcurementCode` plus `PurchaseOrderCode`; progress maps to `POReceivingProgress` (`DRAFT`, `CONFIRMED`, `GRN_GENERATED`, `CANCELLED`) and uses action audit columns for Confirm, GenerateGRN, and Cancel. PO Receiving workflow side effects are frontend-batch orchestrated, not `PostAction`-owned.
+- `POReceivingItems` stores only inspection entry quantities (`ExpectedQty`, `ReceivedQty`, `DamagedQty`, `RejectedQty`); accepted/short/excess quantities are derived in frontend composables and not persisted.
+- `GoodsReceipts.Status = Inactive` means the GRN was invalidated. `GoodsReceiptItems.Qty` stores accepted quantity only. GRN creation/invalidation side effects are frontend-batch orchestrated.
+- `StockMovements.ReferenceType = GRN` and `ReferenceCode = GoodsReceipts.Code` marks a GRN as posted to stock. Those ledger rows update `WarehouseStorages` through the existing StockMovements post-write hook.
+- `ProcurementProgress` includes `GOODS_RECEIVING` and `GRN_GENERATED` to align PO receiving and GRN lifecycle state.
 
 ## Scope Characteristics
 - `master`: Standard CRUD with auto-generated codes, audit columns, full sync.

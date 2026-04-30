@@ -91,3 +91,43 @@ Manual follow-up:
 - Run APP resource sync from the AQL sheet menu so blank `PostAction` metadata is applied to live `APP.Resources`.
 - Confirm `APP.AppOptions` contains `POReceivingProgress`, `GOODS_RECEIVING`, and `GRN_GENERATED`; append manually if the existing option rows are not updated by setup/sync.
 - No Web App redeployment is expected because no custom API contract was added.
+2026-04-28 Outlet & Field Sales Operations implemented through the assigned Build Agent plan.
+
+Changed surfaces:
+- Added master resources `Outlets` and `OutletOperatingRules` in setup/resource metadata.
+- Added operation resources `OutletVisits`, `OutletRestocks`, `OutletRestockItems`, `OutletDeliveries`, `OutletConsumption`, `OutletConsumptionItems`, `OutletMovements`, and `OutletStorages`.
+- Added `GAS/outletMovements.gs` so `OutletMovements` post-write hooks update `OutletStorages` balances.
+- Added outlet frontend composables, shared UI components, and custom operation pages under the resolver folders.
+- Updated frontend registries and canonical sheet/resource/workflow docs.
+
+Validation performed:
+- `git status --short`
+- `npm run gas:push`
+- `npm --prefix FRONTENT run build`
+
+Manual follow-up:
+- Run APP resource sync from the AQL sheet menu so outlet metadata is applied to live `APP.Resources`.
+- Run master and operation setup from the Google Sheet menu to create/normalize outlet sheets.
+- Confirm `APP.AppOptions` contains outlet progress/reference groups.
+- No Web App redeployment is expected because no custom API contract was added.
+
+2026-04-30 Outlet & Field Sales Operations strict refinement executed from `PLANS/2026-04-30-outlet-field-operations-strict-refinement-plan.md`.
+
+Final refined state:
+- `OutletVisits` is reduced to `Code`, `OutletCode`, `Date`, `Status`, `StatusComment`, plus standard audit columns. Workflow status values are `PLANNED`, `COMPLETED`, `POSTPONED`, and `CANCELLED` on `Status`; visit comments use only `StatusComment`.
+- Visit completion and cancellation update the current row. Visit postponement updates the current row and creates a new planned row without previous/next link columns.
+- `OutletConsumption` is independent of visits; the operation setup, payload builder, and docs no longer use `OutletVisitCode` for consumption.
+- `OutletRestocks` now uses simplified request columns `Date`, `RequestedUser`, and `ApprovedUser`; `OutletRestockItems` stores `SKU`, `Quantity`, approver-owned `StorageAllocationJSON`, status, and audit.
+- `OutletDeliveries.DeliveredItemsJSON` stores lowercase event rows like `{ "sku": "SKU1", "qty": 3 }`; fulfillment is derived by aggregating delivery JSON against `OutletRestockItems.Quantity`, and delivery does not update restock item rows.
+- Over-engineered outlet frontend checks for SKU-level operating-rule stock value limits and duplicate open restock warnings were removed. Required quantity/stock validations remain.
+- `Outlets` and `OutletOperatingRules` implementation was intentionally not changed.
+
+Validation performed:
+- Pending for this refinement: targeted removed-field search, `npm run gas:push`, `npm --prefix FRONTENT run build`, and final diff review.
+
+Manual follow-up:
+- Run AQL resource sync from the Google Sheet menu.
+- Run operation sheet setup from the Google Sheet menu to normalize `OutletVisits` headers.
+- Confirm live `OutletVisits` headers match the refined schema.
+- Clear frontend/resource cache or re-login if old visit fields remain visible after sync.
+- No Web App redeployment is expected because the generic API contract was not changed.

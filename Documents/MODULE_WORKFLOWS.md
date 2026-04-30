@@ -947,8 +947,51 @@ PO Receiving is the frontend-owned inspection layer between Purchase Orders and 
 - **PostAction Ownership**: `POReceivings` and `GoodsReceipts` do not rely on `PostAction` hooks for workflow side effects; no custom GAS endpoint is used.
 - **Composables**: Shared POR/GRN payload and batch request construction lives under `FRONTENT/src/composables/operations/poReceivings/`, keeping Vue pages UI-only.
 
+## 11. Outlet & Field Sales Operations
+
+Outlet & Field Sales Operations manages consignment outlet visits, restock requests, confirmed deliveries, outlet consumption, and movement-derived outlet stock.
+
+### 11.1 Resource Model
+- **Master resources**: `Outlets` and `OutletOperatingRules`.
+- **Operation resources**: `OutletVisits`, `OutletRestocks`, `OutletRestockItems`, `OutletDeliveries`, `OutletConsumption`, `OutletConsumptionItems`, `OutletMovements`, and `OutletStorages`.
+- **Source of truth**: `OutletMovements` is the stock ledger. `OutletStorages` is the derived current outlet balance keyed by `OutletCode + StorageName + SKU`.
+- **Delivery truth**: `OutletDeliveries.DeliveredItemsJSON` stores lowercase delivery event rows and is aggregated against `OutletRestockItems.Quantity` to derive restock fulfillment.
+
+### 11.2 Visit Workflow
+1. Field users create planned visits with only `OutletCode`, `Date`, `Status = PLANNED`, and optional `StatusComment`.
+2. A planned visit can be completed, postponed, or cancelled only from `PLANNED`.
+3. Completion updates the same row to `Status = COMPLETED` and stores any completion note in `StatusComment`.
+4. Cancellation requires a comment and updates the same row to `Status = CANCELLED` with `StatusComment`.
+5. Postponement requires a reason and new date. The flow updates the original visit to `Status = POSTPONED` with `StatusComment`, then creates a new `PLANNED` visit for the same outlet/date without previous/next link columns.
+
+### 11.3 Restock Workflow
+1. Sales executives create restock drafts in `DRAFT` or revise the same document in `REVISION_REQUIRED`.
+2. Draft saves use `OutletRestocks` + `OutletRestockItems` composite save. Request quantities use `Quantity`, must be positive, and SKUs must not duplicate inside the same restock.
+3. Submitting a new request first saves the draft, reads the generated restock code from the composite response, and then executes the configured `Submit` action to set `Progress = PENDING_APPROVAL`. Resubmitting from `REVISION_REQUIRED` requires a creator comment.
+4. Approvers can approve, reject, or send back pending requests. Approval stamps `ApprovedUser` with the readable approver name and stores each line's warehouse storage allocation in `OutletRestockItems.StorageAllocationJSON`.
+5. `StorageAllocationJSON` is approver-owned and must total the requested `Quantity` for each SKU before approval. Approved item rows are read-only. Send-back uses the same parent/child rows for revision rather than creating a replacement restock; the creator can edit/update/add/deactivate child rows only in `REVISION_REQUIRED`.
+
+### 11.4 Delivery Workflow
+1. Deliveries can be created only for restocks with `Progress = APPROVED` or `PARTIALLY_DELIVERED`.
+2. The UI calculates remaining deliverable quantity per restock item as requested `Quantity` minus the aggregate delivered quantity from existing `OutletDeliveries.DeliveredItemsJSON` events, and delivery rows are split by approved `StorageAllocationJSON` storage names.
+3. Delivery save creates an `OutletDeliveries` event with `DeliveredItemsJSON` as lowercase `{ "sku", "qty" }` rows, then posts side effects: create positive `OutletMovements` with `ReferenceType = RestockDelivery` and update `OutletRestocks.Progress`.
+4. Progress moves to `PARTIALLY_DELIVERED` when cumulative delivered quantity is below requested quantity and to `DELIVERED` when cumulative delivered quantity reaches the requested total.
+5. Delivery matching uses restock items for requested `Quantity`; no delivery child item sheet exists and delivery does not update `OutletRestockItems`.
+
+### 11.5 Consumption Workflow
+1. Consumption can be recorded for an outlet with `Progress = CONFIRMED` independently of visits.
+2. The UI validates consumed quantities against current `OutletStorages` for the same outlet/storage/SKU.
+3. Save creates `OutletConsumption` + `OutletConsumptionItems`, then creates negative `OutletMovements` with `ReferenceType = Consumption`.
+4. Outlet stock balance changes only through the outlet movement post-write hook.
+
+### 11.6 Architecture Details
+- **Frontend**: Business rules, validation, batch orchestration, quantity calculations, and navigation live under `FRONTENT/src/composables/operations/outlets/`. Vue pages remain thin Quasar orchestration shells.
+- **Components**: Reusable outlet UI blocks live under `FRONTENT/src/components/Operations/Outlets/` and remain UI-only.
+- **Backend**: Uses generic resource APIs, configured `AdditionalActions`, composite save, bulk/update/create, and the outlet movement post-write hook. No custom endpoint is required.
+- **Lock rules**: Submitted/restock approval states are not directly edited; revisions use send-back and resubmission. `OutletStorages` is never directly edited by frontend operation pages.
+
 <!-- Future modules -- add sections as they are built:
-11. [Data Backup & Restore](#11-data-backup--restore)
-12. [Bulk Upload](#12-bulk-upload)
-13. [Dashboard Widgets](#13-dashboard-widgets)
+12. [Data Backup & Restore](#12-data-backup--restore)
+13. [Bulk Upload](#13-bulk-upload)
+14. [Dashboard Widgets](#14-dashboard-widgets)
 -->

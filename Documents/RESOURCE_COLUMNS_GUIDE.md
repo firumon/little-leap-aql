@@ -40,6 +40,15 @@ This document is the canonical meaning reference for `APP.Resources` columns.
 - `GoodsReceipts.Status = Inactive` means the GRN was invalidated. `GoodsReceiptItems.Qty` stores accepted quantity only. GRN creation/invalidation side effects are frontend-batch orchestrated.
 - `StockMovements.ReferenceType = GRN` and `ReferenceCode = GoodsReceipts.Code` marks a GRN as posted to stock. Those ledger rows update `WarehouseStorages` through the existing StockMovements post-write hook.
 - `ProcurementProgress` includes `GOODS_RECEIVING` and `GRN_GENERATED` to align PO receiving and GRN lifecycle state.
+- `Outlets` is a master resource for customer/retail locations. `OutletOperatingRules` is master rule data keyed by `OutletCode`.
+- `OutletVisits.Status` uses `PLANNED`, `COMPLETED`, `POSTPONED`, and `CANCELLED`; status transitions are performed through configured additional actions and stamp `Status<Status>At`, `Status<Status>By`, and `Status<Status>Comment` columns when present. Visit rows do not use sales-user/link/access fields.
+- `OutletRestocks.Progress` uses `DRAFT`, `PENDING_APPROVAL`, `REVISION_REQUIRED`, `APPROVED`, `PARTIALLY_DELIVERED`, `DELIVERED`, and `REJECTED`; these values must be present in `APP.AppOptions` as `OutletRestockProgress`. AdditionalActions must include Submit, Approve, Reject, and SendBack.
+- `OutletRestocks` rows are directly editable only before submission (`DRAFT`) or after send-back (`REVISION_REQUIRED`). Submitted/approved/delivered/rejected states are workflow-locked except configured action or delivery side-effect updates. `RequestedUser` and `ApprovedUser` are readable user-name fields, not user-code lookup fields.
+- `OutletDeliveries.DeliveredItemsJSON` stores lowercase event rows like `{ "sku": "SKU1", "qty": 3 }` and is aggregated to determine restock fulfillment against `OutletRestockItems.Quantity`.
+- `OutletConsumption` is independent of `OutletVisits`; no visit-link enforcement is allowed for consumption creation.
+- `OutletRestockItems` stores request-line `Quantity` plus approver-owned `StorageAllocationJSON`; creators leave storage allocation blank. `StorageAllocationJSON` stores lowercase JSON rows like `{ "storage_name": "Red box", "quantity": 3 }` and must total the requested `Quantity` before approval. Delivery does not update restock item rows. Delivery progress is derived by aggregating confirmed `OutletDeliveries.DeliveredItemsJSON` quantities against requested item quantities.
+- `OutletMovements.ReferenceType = RestockDelivery` marks positive stock from confirmed outlet delivery. `OutletMovements.ReferenceType = Consumption` marks negative stock from outlet consumption.
+- `OutletMovements` updates `OutletStorages` through `handleOutletMovementsBulkSave`; `OutletStorages` is keyed by `OutletCode + StorageName + SKU` and is read-only to frontend operation pages.
 
 ## Scope Characteristics
 - `master`: Standard CRUD with auto-generated codes, audit columns, full sync.

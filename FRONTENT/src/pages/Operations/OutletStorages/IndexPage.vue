@@ -1,0 +1,5 @@
+<template><q-page padding><div class="row items-center q-mb-md"><div><div class="text-h6">Outlet Stock</div><div class="text-caption text-grey-7">Total quantity: {{ totalQty }}</div></div><q-space/><q-select v-model="selectedOutletCode" :options="outletOptions" dense outlined clearable emit-value map-options label="Outlet" style="min-width:260px"/><q-input v-model="searchTerm" dense outlined placeholder="Search" class="q-ml-sm"/><q-btn icon="refresh" flat round :loading="loading" @click="reload(true)"/></div><OutletStockRows :rows="stockRows" :sku-label="skuLabel" :outlet-label="outletLabel" @select="row => navigateTo(row.Code)"/></q-page></template>
+<script setup>
+import { onMounted } from 'vue'; import { useOutletStock } from '../../../composables/operations/outlets/useOutletStock.js'; import OutletStockRows from '../../../components/Operations/Outlets/OutletStockRows.vue'
+defineOptions({ name: 'OutletStoragesIndexPage' }); const flow = useOutletStock(); const { loading, searchTerm, selectedOutletCode, stockRows, outletOptions, totalQty, reload, skuLabel, outletLabel, navigateTo } = flow; onMounted(() => reload())
+</script>

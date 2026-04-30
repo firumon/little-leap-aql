@@ -81,7 +81,7 @@ export function createResourceSyncQueue({ syncBatch }) {
           showError: syncOptions.showError === true,
           showLoading: syncOptions.showLoading === true
         })
-        scheduleMasterSyncQueueFlush()
+        scheduleResourceSyncQueueFlush()
         return response
       } finally {
         dueResourceNames.forEach((name) => inFlightResourceNames.delete(name))

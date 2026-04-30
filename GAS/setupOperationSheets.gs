@@ -228,6 +228,72 @@ function setupOperationSheets() {
             headers: ['Code', 'WarehouseCode', 'StorageName', 'SKU', 'Quantity'].concat(commonAuditColumns),
             defaults: { Quantity: 0 },
             columnWidths: { Code: 150, WarehouseCode: 150, StorageName: 200, SKU: 150, Quantity: 120, CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140 }
+        },
+        {
+            resourceName: CONFIG.OPERATION_SHEETS.OUTLET_VISITS,
+            headers: ['Code', 'OutletCode', 'Date', 'Status',
+                'StatusPlannedAt', 'StatusPlannedBy', 'StatusPlannedComment',
+                'StatusCompletedAt', 'StatusCompletedBy', 'StatusCompletedComment',
+                'StatusPostponedAt', 'StatusPostponedBy', 'StatusPostponedComment',
+                'StatusCancelledAt', 'StatusCancelledBy', 'StatusCancelledComment'].concat(commonAuditColumns),
+            statusDefault: 'PLANNED', defaults: { Status: 'PLANNED' }, statusValidation: APP_OPTIONS_SEED.OutletVisitStatus,
+            columnWidths: { Code: 150, OutletCode: 140, Date: 130, Status: 140,
+                StatusPlannedAt: 160, StatusPlannedBy: 150, StatusPlannedComment: 220,
+                StatusCompletedAt: 160, StatusCompletedBy: 150, StatusCompletedComment: 220,
+                StatusPostponedAt: 160, StatusPostponedBy: 150, StatusPostponedComment: 220,
+                StatusCancelledAt: 160, StatusCancelledBy: 150, StatusCancelledComment: 220 }
+        },
+        {
+            resourceName: CONFIG.OPERATION_SHEETS.OUTLET_RESTOCKS,
+            headers: ['Code', 'Date', 'OutletCode', 'RequestedUser', 'ApprovedUser', 'Progress',
+                'ProgressSubmittedAt', 'ProgressSubmittedBy', 'ProgressSubmittedComment',
+                'ProgressRevisionRequiredAt', 'ProgressRevisionRequiredBy', 'ProgressRevisionRequiredComment',
+                'ProgressApprovedAt', 'ProgressApprovedBy', 'ProgressApprovedComment',
+                'ProgressRejectedAt', 'ProgressRejectedBy', 'ProgressRejectedComment',
+                'Status', 'AccessRegion'].concat(commonAuditColumns),
+            statusDefault: 'Active', defaults: { Status: 'Active', Progress: 'DRAFT' }, progressValidation: APP_OPTIONS_SEED.OutletRestockProgress,
+            columnWidths: { Code: 150, Date: 130, OutletCode: 140, RequestedUser: 180, ApprovedUser: 180, Progress: 180,
+                ProgressSubmittedAt: 160, ProgressSubmittedBy: 150, ProgressSubmittedComment: 220,
+                ProgressRevisionRequiredAt: 170, ProgressRevisionRequiredBy: 170, ProgressRevisionRequiredComment: 240,
+                ProgressApprovedAt: 160, ProgressApprovedBy: 150, ProgressApprovedComment: 220,
+                ProgressRejectedAt: 160, ProgressRejectedBy: 150, ProgressRejectedComment: 220,
+                Status: 100, AccessRegion: 130 }
+        },
+        {
+            resourceName: CONFIG.OPERATION_SHEETS.OUTLET_RESTOCK_ITEMS,
+            headers: ['Code', 'OutletRestockCode', 'SKU', 'Quantity', 'StorageAllocationJSON', 'Status'].concat(commonAuditColumns),
+            statusDefault: 'Active', defaults: { Status: 'Active', Quantity: 0 },
+            columnWidths: { Code: 150, OutletRestockCode: 170, SKU: 150, Quantity: 130, StorageAllocationJSON: 320, Status: 100 }
+        },
+        {
+            resourceName: CONFIG.OPERATION_SHEETS.OUTLET_DELIVERIES,
+            headers: ['Code', 'OutletRestockCode', 'OutletCode', 'DeliveryDate', 'DeliveredByUserCode', 'DeliveredItemsJSON', 'Progress', 'ProgressConfirmedAt', 'ProgressConfirmedBy', 'ProgressConfirmedComment', 'Remarks', 'Status', 'AccessRegion'].concat(commonAuditColumns),
+            statusDefault: 'Active', defaults: { Status: 'Active', Progress: 'CONFIRMED' }, progressValidation: ['CONFIRMED'],
+            columnWidths: { Code: 150, OutletRestockCode: 170, OutletCode: 140, DeliveryDate: 130, DeliveredByUserCode: 170, DeliveredItemsJSON: 320, Progress: 140, Remarks: 220, Status: 100, AccessRegion: 130 }
+        },
+        {
+            resourceName: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION,
+            headers: ['Code', 'OutletCode', 'ConsumptionDate', 'RecordedByUserCode', 'Progress', 'Remarks', 'Status', 'AccessRegion'].concat(commonAuditColumns),
+            statusDefault: 'Active', defaults: { Status: 'Active', Progress: 'CONFIRMED' }, progressValidation: ['CONFIRMED'],
+            columnWidths: { Code: 150, OutletCode: 140, ConsumptionDate: 140, RecordedByUserCode: 170, Progress: 140, Remarks: 220, Status: 100, AccessRegion: 130 }
+        },
+        {
+            resourceName: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_ITEMS,
+            headers: ['Code', 'OutletConsumptionCode', 'SKU', 'ConsumedQty', 'Remarks', 'Status'].concat(commonAuditColumns),
+            statusDefault: 'Active', defaults: { Status: 'Active', ConsumedQty: 0 },
+            columnWidths: { Code: 150, OutletConsumptionCode: 190, SKU: 150, ConsumedQty: 130, Remarks: 220, Status: 100 }
+        },
+        {
+            resourceName: CONFIG.OPERATION_SHEETS.OUTLET_MOVEMENTS,
+            headers: ['Code', 'OutletCode', 'StorageName', 'SKU', 'QtyChange', 'ReferenceType', 'ReferenceCode', 'ReferenceItemCode', 'MovementDate', 'Status', 'AccessRegion'].concat(commonAuditColumns),
+            statusDefault: 'Active', defaults: { Status: 'Active', StorageName: '_default', QtyChange: 0 }, referenceTypeValidation: APP_OPTIONS_SEED.OutletMovementReferenceType,
+            columnWidths: { Code: 150, OutletCode: 140, StorageName: 150, SKU: 150, QtyChange: 120, ReferenceType: 150, ReferenceCode: 160, ReferenceItemCode: 170, MovementDate: 130, Status: 100, AccessRegion: 130 }
+        },
+        {
+            resourceName: CONFIG.OPERATION_SHEETS.OUTLET_STORAGES,
+            headers: ['Code', 'OutletCode', 'StorageName', 'SKU', 'Quantity'].concat(commonAuditColumns),
+            defaults: { StorageName: '_default', Quantity: 0 },
+            columnWidths: { Code: 150, OutletCode: 140, StorageName: 150, SKU: 150, Quantity: 120, CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140 }
         }
     ];
 

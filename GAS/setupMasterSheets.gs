@@ -34,6 +34,16 @@ function setupMasterSheets() {
       }
     },
     {
+      resourceName: CONFIG.MASTER_SHEETS.UOMS,
+      headers: ['Code', 'Name', 'BaseUOM', 'ConversionFactor', 'Status'].concat(commonAuditColumns),
+      statusDefault: 'Active',
+      defaults: { Status: 'Active' },
+      columnWidths: {
+        Code: 100, Name: 200, BaseUOM: 100, ConversionFactor: 150, Status: 100,
+        CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
+      }
+    },
+    {
       resourceName: CONFIG.MASTER_SHEETS.SUPPLIERS,
       headers: ['Code', 'Name', 'Country', 'Province', 'City', 'CommunicationAddress', 'ContactPerson', 'Phone', 'Email', 'AccessRegion', 'Status'].concat(commonAuditColumns),
       statusDefault: 'Active',
@@ -54,6 +64,27 @@ function setupMasterSheets() {
       }
     },
     {
+      resourceName: CONFIG.MASTER_SHEETS.OUTLETS,
+      headers: ['Code', 'Name', 'ContactPerson', 'Phone', 'Email', 'Country', 'Province', 'City', 'CommunicationAddress', 'AccessRegion', 'Status'].concat(commonAuditColumns),
+      statusDefault: 'Active',
+      defaults: { Status: 'Active', Country: 'UAE' },
+      columnWidths: {
+        Code: 130, Name: 240, ContactPerson: 180, Phone: 140, Email: 220,
+        Country: 120, Province: 150, City: 140, CommunicationAddress: 260,
+        AccessRegion: 130, Status: 100, CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
+      }
+    },
+    {
+      resourceName: CONFIG.MASTER_SHEETS.OUTLET_OPERATING_RULES,
+      headers: ['Code', 'OutletCode', 'MaxStockValueLimit', 'VisitFrequencyDays', 'CreditLimit', 'AccessRegion', 'Status'].concat(commonAuditColumns),
+      statusDefault: 'Active',
+      defaults: { Status: 'Active', MaxStockValueLimit: 0, VisitFrequencyDays: 14, CreditLimit: 0 },
+      columnWidths: {
+        Code: 130, OutletCode: 140, MaxStockValueLimit: 170, VisitFrequencyDays: 170, CreditLimit: 130,
+        AccessRegion: 130, Status: 100, CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
+      }
+    },
+    {
       resourceName: CONFIG.MASTER_SHEETS.PORTS,
       headers: ['Code', 'Name', 'Country', 'PortType', 'AccessRegion', 'Status'].concat(commonAuditColumns),
       statusDefault: 'Active',
@@ -70,16 +101,6 @@ function setupMasterSheets() {
       defaults: { Status: 'Active' },
       columnWidths: {
         Code: 130, Name: 220, Type: 120, Phone: 140, ContactPerson: 180, AccessRegion: 130, Status: 100,
-        CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
-      }
-    },
-    {
-      resourceName: CONFIG.MASTER_SHEETS.UOMS,
-      headers: ['Code', 'Name', 'BaseUOM', 'ConversionFactor', 'Status'].concat(commonAuditColumns),
-      statusDefault: 'Active',
-      defaults: { Status: 'Active' },
-      columnWidths: {
-        Code: 100, Name: 200, BaseUOM: 100, ConversionFactor: 150, Status: 100,
         CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
       }
     }

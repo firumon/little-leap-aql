@@ -2,7 +2,7 @@
     "name": "aql-workspace",
     "private": true,
     "scripts": {
-      "gas:push": "cd GAS && clasp push",
+      "gas:push": "cd GAS && clasp push --force",
       "gas:pull": "cd GAS && clasp pull",
       "gas:status": "cd GAS && clasp status",
       "gas:open": "cd GAS && clasp open",

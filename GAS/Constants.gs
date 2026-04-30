@@ -20,11 +20,13 @@ const CONFIG = {
   MASTER_SHEETS: {
     PRODUCTS: 'Products',
     SKUS: 'SKUs',
+    UOMS: 'UOMs',
     SUPPLIERS: 'Suppliers',
     WAREHOUSES: 'Warehouses',
+    OUTLETS: 'Outlets',
+    OUTLET_OPERATING_RULES: 'OutletOperatingRules',
     PORTS: 'Ports',
-    CARRIERS: 'Carriers',
-    UOMS: 'UOMs'
+    CARRIERS: 'Carriers'
   },
   OPERATION_SHEETS: {
     PROCUREMENTS: 'Procurements',
@@ -45,7 +47,15 @@ const CONFIG = {
     GOODS_RECEIPTS: 'GoodsReceipts',
     GOODS_RECEIPT_ITEMS: 'GoodsReceiptItems',
     STOCK_MOVEMENTS: 'StockMovements',
-    WAREHOUSE_STORAGES: 'WarehouseStorages'
+    WAREHOUSE_STORAGES: 'WarehouseStorages',
+    OUTLET_VISITS: 'OutletVisits',
+    OUTLET_RESTOCKS: 'OutletRestocks',
+    OUTLET_RESTOCK_ITEMS: 'OutletRestockItems',
+    OUTLET_DELIVERIES: 'OutletDeliveries',
+    OUTLET_CONSUMPTION: 'OutletConsumption',
+    OUTLET_CONSUMPTION_ITEMS: 'OutletConsumptionItems',
+    OUTLET_MOVEMENTS: 'OutletMovements',
+    OUTLET_STORAGES: 'OutletStorages'
   },
   ACCOUNTS_SHEETS: {
     ASSETS: 'Assets',
@@ -74,6 +84,9 @@ const  APP_OPTIONS_SEED = {
   PurchaseRequisitionProgress: ['Draft', 'Pending Approval', 'Revision Required', 'Approved', 'Rejected', 'RFQ Processed'],
   ProcurementProgress: ['INITIATED', 'PR_CREATED', 'PR_APPROVED', 'RFQ_GENERATED','RFQ_SENT_TO_SUPPLIERS','QUOTATIONS_RECEIVED', 'PO_ISSUED', 'GOODS_RECEIVING', 'GRN_GENERATED', 'IN_TRANSIT', 'ARRIVED_AT_PORT', 'COMPLETED', 'CANCELLED'],
   POReceivingProgress: ['DRAFT', 'CONFIRMED', 'GRN_GENERATED', 'CANCELLED'],
+  OutletVisitStatus: ['PLANNED', 'COMPLETED', 'POSTPONED', 'CANCELLED'],
+  OutletRestockProgress: ['DRAFT', 'PENDING_APPROVAL', 'REVISION_REQUIRED', 'APPROVED', 'PARTIALLY_DELIVERED', 'DELIVERED', 'REJECTED'],
+  OutletMovementReferenceType: ['RestockDelivery', 'Consumption', 'Adjustment'],
   RFQLeadTimeType: ['FLEXIBLE','STRICT','RANGE_10','RANGE_25'],
   RFQShippingTermMode: ['ANY','FIXED'],
   RFQShippingTerm: ['EXW','FOB','CIF','DDP'],

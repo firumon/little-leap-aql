@@ -589,7 +589,7 @@ function mergeMasterRow(existingRow, idx, providedValues, schema) {
     row[idx[header]] = normalizeValueByHeader(header, providedValues[header]);
   });
 
-  if (idx.Status !== undefined) {
+  if (idx.Status !== undefined && isGenericLifecycleStatus(row[idx.Status])) {
     if (!row[idx.Status]) {
       row[idx.Status] = schema.defaults && schema.defaults.Status ? schema.defaults.Status : 'Active';
     }
@@ -648,11 +648,11 @@ function isRegionHeader(header) {
 }
 
 function normalizeValueByHeader(header, value) {
-  if (header === 'Status') {
-    return sanitizeStatus(value);
-  }
   if (value === undefined || value === null) {
     return '';
+  }
+  if (header === 'Status') {
+    return isGenericLifecycleStatus(value) ? sanitizeStatus(value) : value.toString().trim();
   }
   return value;
 }
@@ -748,6 +748,11 @@ function sanitizeRequiredText(value, message) {
 function sanitizeStatus(value) {
   const normalized = (value || 'Active').toString().trim();
   return normalized === 'Inactive' ? 'Inactive' : 'Active';
+}
+
+function isGenericLifecycleStatus(value) {
+  const normalized = (value || '').toString().trim();
+  return normalized === 'Active' || normalized === 'Inactive';
 }
 
 function isAuditHeader(header) {
@@ -1590,9 +1595,13 @@ function handleResourceBulkUpsertRecords(auth, payload) {
   }
 
   updateResourceSyncCursor(targetResourceName);
+  var allFailed = results.errors.length >= records.length;
+  var hasErrors = results.errors.length > 0;
+  var bulkMessage = buildBulkUpsertResultMessage(targetResourceName, results, records.length);
   var result = {
-    success: results.errors.length < records.length,
-    message: 'Bulk processing completed',
+    success: !allFailed,
+    message: bulkMessage,
+    error: hasErrors ? bulkMessage : null,
     data: mergeDeltaResourcesIntoResult(
       {
         created: results.created,
@@ -1619,5 +1628,30 @@ function handleResourceBulkUpsertRecords(auth, payload) {
   return result;
 }
 
+function buildBulkUpsertResultMessage(resourceName, results, totalRecords) {
+  var created = Number(results && results.created) || 0;
+  var updated = Number(results && results.updated) || 0;
+  var skipped = Number(results && results.skipped) || 0;
+  var errors = results && Array.isArray(results.errors) ? results.errors : [];
+  var total = Number(totalRecords) || 0;
+
+  if (errors.length >= total && total > 0) {
+    return resourceName + ' bulk upload failed: 0 of ' + total + ' records processed. First error: ' + formatBulkErrorMessage(errors[0]);
+  }
+
+  if (errors.length > 0) {
+    return resourceName + ' bulk upload partially completed: ' + created + ' created, ' + updated + ' updated, ' + skipped + ' skipped, ' + errors.length + ' failed. First error: ' + formatBulkErrorMessage(errors[0]);
+  }
+
+  return resourceName + ' bulk upload completed: ' + created + ' created, ' + updated + ' updated, ' + skipped + ' skipped.';
+}
+
+function formatBulkErrorMessage(errorEntry) {
+  if (!errorEntry) return 'Unknown error';
+  var rowNumber = Number(errorEntry.index) + 1;
+  var message = (errorEntry.message || '').toString().trim() || 'Unknown error';
+  message = message.replace(/^Error:\s*/i, '');
+  return 'row ' + rowNumber + ': ' + message;
+}
 
 

@@ -3,6 +3,7 @@ import { executeGasApi } from 'src/services/GasApiService'
 import {
   bulkRecords,
   compositeSave,
+  createRecord,
   executeAction,
   fetchResources as fetchResourcesFromService,
   updateRecord
@@ -86,6 +87,11 @@ export const useWorkflowStore = defineStore('workflow', () => {
     }
   }
 
+  async function createResourceRecord(resourceName, record) {
+    const response = await createRecord(resourceName, record)
+    return normalizeResponse(response)
+  }
+
   async function updateResourceRecord(resourceName, code, record) {
     const response = await updateRecord(resourceName, code, record)
     return normalizeResponse(response)
@@ -95,7 +101,6 @@ export const useWorkflowStore = defineStore('workflow', () => {
     const response = await compositeSave(payload)
     return normalizeResponse(response)
   }
-
   async function uploadBulkRecords(resourceName, records = []) {
     const response = await bulkRecords(resourceName, records)
     return normalizeResponse(response)
@@ -122,6 +127,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
   return {
     executeResourceAction,
     fetchResources,
+    createResourceRecord,
     updateResourceRecord,
     saveComposite,
     uploadBulkRecords,

@@ -160,10 +160,6 @@ export async function syncResourcesBatch(resourceNames = [], authorizedResources
 
     for (const resourceName of uniqueNames) {
       const resourceResponse = mergedResponseData[resourceName]
-      if (!resourceResponse) {
-        continue
-      }
-
       const headers = headersByResource[resourceName] || (await ensureHeaders(resourceName, authorizedResources)).data
       if (!headers.length) {
         continue
@@ -382,11 +378,11 @@ export async function fetchResourceRecordsBatch(resourceNames = [], authorizedRe
       if (!emptyCacheFreshEnough && (forceSync || syncWhenCacheExists || !cachedRows.length)) {
         const hasUsableHydration = hasHydratedOnce || !!effectiveCursor
         const nextEligibleSyncAt = effectiveCursor ? effectiveCursor + ttlMs : 0
+        const nextEmptyEligibleSyncAt = effectiveCursor ? effectiveCursor + emptyCacheThrottleMs : 0
         shouldSync = forceSync ||
-          !cachedRows.length ||
           !hasUsableHydration ||
           !effectiveCursor ||
-          now >= nextEligibleSyncAt
+          (cachedRows.length ? now >= nextEligibleSyncAt : now >= nextEmptyEligibleSyncAt)
       }
 
       if (shouldSync) {

@@ -7,7 +7,7 @@ export function buildConsumptionCompositePayload(form = {}, rows = []) {
 }
 
 export function buildConsumptionMovementRequests(consumptionCode, outletCode, rows = [], form = {}) {
-  return resourceBulkRequest('OutletMovements', rows.filter(row => toNumber(row.ConsumedQty) > 0).map(row => ({ OutletCode: outletCode, StorageName: text(row.StorageName) || '_default', SKU: row.SKU, QtyChange: -Math.abs(toNumber(row.ConsumedQty)), ReferenceType: OUTLET_REFERENCE_TYPES.consumption, ReferenceCode: consumptionCode, ReferenceItemCode: row.Code || '', MovementDate: text(form.ConsumptionDate) || todayISO(), Status: 'Active', AccessRegion: text(form.AccessRegion) })))
+  return resourceBulkRequest('OutletMovements', rows.filter(row => toNumber(row.ConsumedQty) > 0).map(row => ({ OutletCode: outletCode, SKU: row.SKU, QtyChange: -Math.abs(toNumber(row.ConsumedQty)), ReferenceType: OUTLET_REFERENCE_TYPES.consumption, ReferenceCode: consumptionCode, ReferenceItemCode: row.Code || '', MovementDate: text(form.ConsumptionDate) || todayISO(), Status: 'Active', AccessRegion: text(form.AccessRegion) })), ['OutletStorages'])
 }
 
 export function consumptionSaveRequest(form, rows) { return compositeSaveRequest(buildConsumptionCompositePayload(form, rows)) }

@@ -4,11 +4,6 @@
  * Maintains OutletStorages from append-only OutletMovements ledger rows.
  */
 
-function normalizeOutletStorageName(value) {
-  var text = (value || '').toString().trim();
-  return text || '_default';
-}
-
 function handleOutletMovementsBulkSave_afterBulk(payload, result, auth, action, meta, resourceName) {
   try {
     if (!result || result.success === false) return result;
@@ -43,12 +38,11 @@ function applyBatchOutletMovementsToOutletStorages(records, auth) {
     records.forEach(function (rec) {
       if (!rec || (rec.Status && rec.Status !== 'Active')) return;
       var outletCode = (rec.OutletCode || '').toString().trim();
-      var storageName = normalizeOutletStorageName(rec.StorageName);
       var sku = (rec.SKU || '').toString().trim();
       var qtyChange = Number(rec.QtyChange);
       if (!outletCode || !sku || !Number.isFinite(qtyChange) || qtyChange === 0) return;
-      var key = outletCode + '|' + storageName + '|' + sku;
-      if (!aggregates[key]) aggregates[key] = { outletCode: outletCode, storageName: storageName, sku: sku, qtyChange: 0 };
+      var key = outletCode + '|' + sku;
+      if (!aggregates[key]) aggregates[key] = { outletCode: outletCode, sku: sku, qtyChange: 0 };
       aggregates[key].qtyChange += qtyChange;
     });
 
@@ -74,7 +68,6 @@ function applyBatchOutletMovementsToOutletStorages(records, auth) {
       for (var i = 1; i < currentValues.length; i++) {
         var row = updatedRows[i] || currentValues[i];
         if ((row[idx.OutletCode] || '').toString().trim() === entry.outletCode &&
-            normalizeOutletStorageName(row[idx.StorageName]) === entry.storageName &&
             (row[idx.SKU] || '').toString().trim() === entry.sku) {
           matchedIndex = i;
           break;
@@ -93,7 +86,6 @@ function applyBatchOutletMovementsToOutletStorages(records, auth) {
         var newRow = new Array(headers.length).fill('');
         if (idx.Code !== undefined) newRow[idx.Code] = generateNextCode(currentValues, idx, (config.codePrefix || 'OST').toString().trim(), config.codeSequenceLength || 7);
         if (idx.OutletCode !== undefined) newRow[idx.OutletCode] = entry.outletCode;
-        if (idx.StorageName !== undefined) newRow[idx.StorageName] = entry.storageName;
         if (idx.SKU !== undefined) newRow[idx.SKU] = entry.sku;
         if (idx.Quantity !== undefined) newRow[idx.Quantity] = entry.qtyChange;
         applyAuditFields(newRow, idx, auth, config, true);

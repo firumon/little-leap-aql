@@ -78,7 +78,7 @@ const CONFIG = {
  *       dropdown validation in the relevant setup script.
  */
 const  APP_OPTIONS_SEED = {
-  StockMovementReferenceType: ['GRN', 'DirectEntry', 'StockAdjustment'],
+  StockMovementReferenceType: ['GRN', 'DirectEntry', 'StockAdjustment', 'OutletRestock', 'OutletDeliveryCancel'],
   PurchaseRequisitionType: ['STOCK', 'PROJECT', 'SALES', 'ASSET'],
   PurchaseRequisitionPriority: ['Low', 'Medium', 'High', 'Urgent'],
   PurchaseRequisitionProgress: ['Draft', 'Pending Approval', 'Revision Required', 'Approved', 'Rejected', 'RFQ Processed'],
@@ -86,6 +86,7 @@ const  APP_OPTIONS_SEED = {
   POReceivingProgress: ['DRAFT', 'CONFIRMED', 'GRN_GENERATED', 'CANCELLED'],
   OutletVisitStatus: ['PLANNED', 'COMPLETED', 'POSTPONED', 'CANCELLED'],
   OutletRestockProgress: ['DRAFT', 'PENDING_APPROVAL', 'REVISION_REQUIRED', 'APPROVED', 'PARTIALLY_DELIVERED', 'DELIVERED', 'REJECTED'],
+  OutletDeliveryProgress: ['SCHEDULED', 'DELIVERED', 'CANCELLED'],
   OutletMovementReferenceType: ['RestockDelivery', 'Consumption', 'Adjustment'],
   RFQLeadTimeType: ['FLEXIBLE','STRICT','RANGE_10','RANGE_25'],
   RFQShippingTermMode: ['ANY','FIXED'],

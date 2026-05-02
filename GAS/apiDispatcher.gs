@@ -462,9 +462,10 @@ function handleBatchActions(auth, payload) {
 
   var results = [];
   var anyFailed = false;
+  var pendingReferenceCode = '';
 
   for (var i = 0; i < requests.length; i++) {
-    var req = requests[i];
+    var req = replacePendingReferencesInBatchRequest(requests[i], pendingReferenceCode);
     var action = (req.action || '').toString().trim();
     if (!action) {
       results.push({ success: false, message: 'Action is required' });
@@ -475,6 +476,7 @@ function handleBatchActions(auth, payload) {
     try {
       var res = dispatchProtectedAction(action, auth, req);
       results.push(res);
+      pendingReferenceCode = extractBatchResultCode(res) || pendingReferenceCode;
       if (!res.success) {
         anyFailed = true;
       }
@@ -489,6 +491,30 @@ function handleBatchActions(auth, payload) {
     message: anyFailed ? 'One or more batch actions failed' : 'Batch actions completed successfully',
     data: results
   };
+}
+
+function extractBatchResultCode(result) {
+  var data = result && result.data ? result.data : {};
+  return (data.parentCode || data.code || '').toString().trim();
+}
+
+function replacePendingReferencesInBatchRequest(request, referenceCode) {
+  if (!referenceCode || !request || typeof request !== 'object') return request;
+  return replacePendingReferencesDeep(request, referenceCode);
+}
+
+function replacePendingReferencesDeep(value, referenceCode) {
+  if (Array.isArray(value)) {
+    return value.map(function (item) { return replacePendingReferencesDeep(item, referenceCode); });
+  }
+  if (value && typeof value === 'object') {
+    var cloned = {};
+    Object.keys(value).forEach(function (key) {
+      cloned[key] = replacePendingReferencesDeep(value[key], referenceCode);
+    });
+    return cloned;
+  }
+  return value === '__PENDING__' ? referenceCode : value;
 }
 
 

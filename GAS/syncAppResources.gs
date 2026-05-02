@@ -795,7 +795,25 @@ const APP_RESOURCES_CODE_CONFIG = [
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_DELIVERIES,
         Scope: 'operation', IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_DELIVERIES,
-        CodePrefix: 'ODL', CodeSequenceLength: 6, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletRestockCode,OutletCode,DeliveryDate,DeliveredItemsJSON,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Progress":"CONFIRMED"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: '', Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 3, "label": "Outlet Deliveries", "icon": "local_shipping", "route": "/operations/outlet-deliveries", "pageTitle": "Outlet Deliveries", "pageDescription": "Post delivery events against approved restocks", "show": true }]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
+        CodePrefix: 'ODL', CodeSequenceLength: 6, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletRestockCode,OutletCode,WarehouseCode,ScheduledAt,ItemsJSON,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Progress":"SCHEDULED"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: JSON.stringify([
+            { "action": "Deliver", "label": "Deliver", "icon": "local_shipping", "color": "positive", "kind": "mutate", "confirm": true, "column": "Progress", "columnValue": "DELIVERED", "columnValueOptions": [], "fields": [], "visibleWhen": { "column": "Progress", "op": "eq", "value": "SCHEDULED" } },
+            { "action": "Cancel", "label": "Cancel", "icon": "cancel", "color": "negative", "kind": "mutate", "confirm": true, "column": "Progress", "columnValue": "CANCELLED", "columnValueOptions": [], "fields": [{ "name": "Comment", "label": "Cancellation Comment", "type": "textarea", "required": false }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "SCHEDULED" } }
+        ]), Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 3, "label": "Outlet Deliveries", "icon": "local_shipping", "route": "/operations/outlet-deliveries", "pageTitle": "Outlet Deliveries", "pageDescription": "Schedule, deliver, or cancel approved outlet restocks", "show": true }]), UIFields: JSON.stringify([
+            { header: 'ScheduledAt', label: 'Scheduled At', type: 'datetime' },
+            { header: 'DeliveredAt', label: 'Delivered At', type: 'datetime' },
+            { header: 'CancelledAt', label: 'Cancelled At', type: 'datetime' },
+            { header: 'ScheduledBy', label: 'Scheduled By', type: 'text' },
+            { header: 'DeliveredBy', label: 'Delivered By', type: 'text' },
+            { header: 'CancelledBy', label: 'Cancelled By', type: 'text' },
+            { header: 'ItemsJSON', label: 'Items JSON', type: 'textarea' },
+            { header: 'WarehouseCode', label: 'Warehouse Code', type: 'text', required: true },
+            { header: 'OutletRestockCode', label: 'Outlet Restock Code', type: 'text', required: true },
+            { header: 'OutletCode', label: 'Outlet Code', type: 'text', required: true },
+            { header: 'Progress', label: 'Progress', type: 'status', required: true },
+            { header: 'Status', label: 'Status', type: 'status', required: true },
+            { header: 'AccessRegion', label: 'Access Region', type: 'text' },
+            { header: 'Remarks', label: 'Remarks', type: 'textarea' }
+        ]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION,
@@ -815,7 +833,7 @@ const APP_RESOURCES_CODE_CONFIG = [
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_STORAGES,
         Scope: 'operation', IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_STORAGES,
-        CodePrefix: 'OST', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletCode,StorageName,SKU,Quantity', UniqueHeaders: '', UniqueCompositeHeaders: 'OutletCode+StorageName+SKU', DefaultValues: '{"StorageName":"_default","Quantity":0}', RecordAccessPolicy: 'ALL', OwnerUserField: 'UpdatedBy', AdditionalActions: '', Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 5, "label": "Outlet Stock", "icon": "store", "route": "/operations/outlet-storages", "pageTitle": "Outlet Stock", "pageDescription": "View movement-derived outlet stock balances", "show": true }]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
+        CodePrefix: 'OST', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'FALSE', RequiredHeaders: 'OutletCode,SKU,Quantity', UniqueHeaders: '', UniqueCompositeHeaders: 'OutletCode+SKU', DefaultValues: '{"Quantity":0}', RecordAccessPolicy: 'ALL', OwnerUserField: 'UpdatedBy', AdditionalActions: '', Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 5, "label": "Outlet Stock", "icon": "store", "route": "/operations/outlet-storages", "pageTitle": "Outlet Stock", "pageDescription": "View movement-derived outlet stock balances", "show": true }]), UIFields: JSON.stringify([{ header: 'OutletCode', label: 'Outlet Code', type: 'text', required: true }, { header: 'SKU', label: 'SKU', type: 'text', required: true }, { header: 'Quantity', label: 'Quantity', type: 'number', required: true }]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.PO_FULFILLMENTS,

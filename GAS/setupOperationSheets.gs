@@ -267,9 +267,20 @@ function setupOperationSheets() {
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.OUTLET_DELIVERIES,
-            headers: ['Code', 'OutletRestockCode', 'OutletCode', 'DeliveryDate', 'DeliveredByUserCode', 'DeliveredItemsJSON', 'Progress', 'ProgressConfirmedAt', 'ProgressConfirmedBy', 'ProgressConfirmedComment', 'Remarks', 'Status', 'AccessRegion'].concat(commonAuditColumns),
-            statusDefault: 'Active', defaults: { Status: 'Active', Progress: 'CONFIRMED' }, progressValidation: ['CONFIRMED'],
-            columnWidths: { Code: 150, OutletRestockCode: 170, OutletCode: 140, DeliveryDate: 130, DeliveredByUserCode: 170, DeliveredItemsJSON: 320, Progress: 140, Remarks: 220, Status: 100, AccessRegion: 130 }
+            headers: [
+                'Code', 'OutletRestockCode', 'OutletCode', 'WarehouseCode',
+                'ScheduledAt', 'DeliveredAt', 'CancelledAt',
+                'ScheduledBy', 'DeliveredBy', 'CancelledBy',
+                'ItemsJSON', 'Progress',
+                'ProgressDeliveredAt', 'ProgressDeliveredBy', 'ProgressDeliveredComment',
+                'ProgressCancelledAt', 'ProgressCancelledBy', 'ProgressCancelledComment',
+                'Remarks', 'Status', 'AccessRegion'
+            ].concat(commonAuditColumns),
+            statusDefault: 'Active', defaults: { Status: 'Active', Progress: 'SCHEDULED' }, progressValidation: APP_OPTIONS_SEED.OutletDeliveryProgress,
+            columnWidths: { Code: 150, OutletRestockCode: 170, OutletCode: 140, WarehouseCode: 150,
+                ScheduledAt: 170, DeliveredAt: 170, CancelledAt: 170, ScheduledBy: 170, DeliveredBy: 170, CancelledBy: 170,
+                ItemsJSON: 360, Progress: 140, ProgressDeliveredAt: 170, ProgressDeliveredBy: 170, ProgressDeliveredComment: 220,
+                ProgressCancelledAt: 170, ProgressCancelledBy: 170, ProgressCancelledComment: 220, Remarks: 220, Status: 100, AccessRegion: 130 }
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION,
@@ -291,9 +302,9 @@ function setupOperationSheets() {
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.OUTLET_STORAGES,
-            headers: ['Code', 'OutletCode', 'StorageName', 'SKU', 'Quantity'].concat(commonAuditColumns),
-            defaults: { StorageName: '_default', Quantity: 0 },
-            columnWidths: { Code: 150, OutletCode: 140, StorageName: 150, SKU: 150, Quantity: 120, CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140 }
+            headers: ['Code', 'OutletCode', 'SKU', 'Quantity'],
+            defaults: { Quantity: 0 },
+            columnWidths: { Code: 150, OutletCode: 140, SKU: 150, Quantity: 120 }
         }
     ];
 

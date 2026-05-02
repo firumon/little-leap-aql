@@ -1,6 +1,6 @@
-import { todayISO, text, OUTLET_REFERENCE_TYPES } from './outletOperationsMeta.js'
-import { deliverySummary, toNumber } from './outletStockLogic.js'
-import { compositeSaveRequest, resourceBulkRequest, resourceUpdateRequest, resourceCreateRequest } from './outletOperationsBatch.js'
+import { todayISO, text, OUTLET_REFERENCE_TYPES, STOCK_MOVEMENT_REFERENCE_TYPES } from './outletOperationsMeta.js'
+import { buildOutletMovementsFromItems, buildStockMovementsFromItems, parseItemsJSON, toNumber } from './outletStockLogic.js'
+import { compositeSaveRequest, executeActionRequest, OUTLET_ACTIONS, resourceBulkRequest, resourceUpdateRequest, resourceCreateRequest } from './outletOperationsBatch.js'
 
 export function buildRestockCompositePayload(form = {}, rows = [], code = form.Code) {
   return {
@@ -13,22 +13,32 @@ export function buildRestockCompositePayload(form = {}, rows = [], code = form.C
   }
 }
 
-export function buildDeliveryCreateRequest(restock = {}, form = {}, deliveryRows = []) {
-  const rows = deliveryRows.filter(row => toNumber(row.DeliveryQty) > 0)
-  const deliveryItems = rows.map(row => ({ sku: text(row.SKU), qty: toNumber(row.DeliveryQty) }))
-  const deliveryRecord = { OutletRestockCode: restock.Code, OutletCode: restock.OutletCode, DeliveryDate: text(form.DeliveryDate) || todayISO(), DeliveredByUserCode: text(form.DeliveredByUserCode), DeliveredItemsJSON: JSON.stringify(deliveryItems), Progress: 'CONFIRMED', Remarks: text(form.Remarks), Status: 'Active', AccessRegion: text(restock.AccessRegion) }
-  return resourceCreateRequest('OutletDeliveries', deliveryRecord)
+export function buildScheduleDeliveryBatchRequests(restock = {}, restockItems = [], warehouseCode = '', itemsJSON = [], actorName = '') {
+  const items = parseItemsJSON(itemsJSON)
+  const now = new Date().toISOString()
+  const record = { OutletRestockCode: restock.Code, OutletCode: restock.OutletCode, WarehouseCode: text(warehouseCode), ScheduledAt: now, ScheduledBy: text(actorName), ItemsJSON: JSON.stringify(items), Progress: 'SCHEDULED', Status: 'Active', AccessRegion: text(restock.AccessRegion) }
+  const movements = buildStockMovementsFromItems(warehouseCode, items, STOCK_MOVEMENT_REFERENCE_TYPES.outletRestock, restock.Code, -1).map(row => ({ ...row, AccessRegion: text(restock.AccessRegion) }))
+  return [resourceCreateRequest('OutletDeliveries', record), resourceBulkRequest('StockMovements', movements, ['WarehouseStorages'])]
 }
 
-export function buildDeliveryPostRequests(deliveryCode, restock = {}, restockItems = [], form = {}, deliveryRows = []) {
-  const rows = deliveryRows.filter(row => toNumber(row.DeliveryQty) > 0)
-  const summary = deliverySummary(restockItems, rows)
-  const movements = rows.map(row => ({ OutletCode: restock.OutletCode, StorageName: text(row.StorageName) || '_default', SKU: row.SKU, QtyChange: toNumber(row.DeliveryQty), ReferenceType: OUTLET_REFERENCE_TYPES.delivery, ReferenceCode: deliveryCode, ReferenceItemCode: text(row.OutletRestockItemCode) || text(row.Code).split(':')[0], MovementDate: text(form.DeliveryDate) || todayISO(), Status: 'Active', AccessRegion: text(restock.AccessRegion) }))
-  return [resourceBulkRequest('OutletMovements', movements), resourceUpdateRequest('OutletRestocks', restock.Code, { Progress: summary.progress })]
+export function buildDeliverDeliveryBatchRequests(odCode, od = {}, itemsJSON = [], actorName = '', restockProgress = 'DELIVERED') {
+  const now = new Date().toISOString()
+  const movements = buildOutletMovementsFromItems(od.OutletCode, itemsJSON, OUTLET_REFERENCE_TYPES.delivery, od.Code || odCode).map(row => ({ ...row, AccessRegion: text(od.AccessRegion) }))
+  const requests = [
+    executeActionRequest('OutletDeliveries', odCode, OUTLET_ACTIONS.deliverRestock, { DeliveredAt: now, DeliveredBy: text(actorName) }),
+    resourceBulkRequest('OutletMovements', movements, ['OutletStorages'])
+  ]
+  if (text(od.OutletRestockCode)) requests.push(resourceUpdateRequest('OutletRestocks', od.OutletRestockCode, { Progress: text(restockProgress) || 'DELIVERED' }))
+  return requests
 }
 
-export function buildDeliveryBatchRequests(restock = {}, restockItems = [], form = {}, deliveryRows = []) {
-  return [buildDeliveryCreateRequest(restock, form, deliveryRows), ...buildDeliveryPostRequests('__DELIVERY_CODE__', restock, restockItems, form, deliveryRows)]
+export function buildCancelDeliveryBatchRequests(odCode, od = {}, itemsJSON = [], actorName = '', comment = '') {
+  const now = new Date().toISOString()
+  const movements = buildStockMovementsFromItems(od.WarehouseCode, itemsJSON, STOCK_MOVEMENT_REFERENCE_TYPES.outletDeliveryCancel, od.Code || odCode, 1).map(row => ({ ...row, AccessRegion: text(od.AccessRegion) }))
+  return [
+    executeActionRequest('OutletDeliveries', odCode, OUTLET_ACTIONS.cancelDelivery, { CancelledAt: now, CancelledBy: text(actorName), Comment: text(comment), ProgressCancelledComment: text(comment) }),
+    resourceBulkRequest('StockMovements', movements, ['WarehouseStorages'])
+  ]
 }
 
 export function restockSaveRequest(form, rows) { return compositeSaveRequest(buildRestockCompositePayload(form, rows)) }

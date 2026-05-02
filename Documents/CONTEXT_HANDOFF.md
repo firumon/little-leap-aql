@@ -118,7 +118,8 @@ Final refined state:
 - Visit completion and cancellation update the current row. Visit postponement updates the current row and creates a new planned row without previous/next link columns.
 - `OutletConsumption` is independent of visits; the operation setup, payload builder, and docs no longer use `OutletVisitCode` for consumption.
 - `OutletRestocks` now uses simplified request columns `Date`, `RequestedUser`, and `ApprovedUser`; `OutletRestockItems` stores `SKU`, `Quantity`, approver-owned `StorageAllocationJSON`, status, and audit.
-- `OutletDeliveries.DeliveredItemsJSON` stores lowercase event rows like `{ "sku": "SKU1", "qty": 3 }`; fulfillment is derived by aggregating delivery JSON against `OutletRestockItems.Quantity`, and delivery does not update restock item rows.
+- `OutletDeliveries` now uses a schedule-then-deliver lifecycle: `SCHEDULED`, `DELIVERED`, or `CANCELLED`. `ItemsJSON` stores lowercase `{ sku, storage, qty }` rows; scheduling creates negative `StockMovements` with `OutletRestock`, delivery creates positive `OutletMovements` with `RestockDelivery`, and cancellation creates positive `StockMovements` with `OutletDeliveryCancel`.
+- `OutletStorages` is now keyed by `OutletCode + SKU` and has only `Code`, `OutletCode`, `SKU`, and `Quantity`; the outlet movement hook aggregates by that key.
 - Over-engineered outlet frontend checks for SKU-level operating-rule stock value limits and duplicate open restock warnings were removed. Required quantity/stock validations remain.
 - `Outlets` and `OutletOperatingRules` implementation was intentionally not changed.
 

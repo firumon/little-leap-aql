@@ -20,12 +20,42 @@ This document captures the **end-to-end workflow knowledge** for each major feat
 8. [Supplier Quotation Response Capture](#8-supplier-quotation-response-capture)
 9. [Purchase Order Module](#9-purchase-order-module)
 10. [PO Receiving And Goods Receipts](#10-po-receiving-and-goods-receipts)
+11. [Outlet Deliveries Schedule-Then-Deliver](#11-outlet-deliveries-schedule-then-deliver)
 
 <!-- Future modules -- add sections as they are built:
-11. [Data Backup & Restore](#11-data-backup--restore)
-12. [Bulk Upload](#12-bulk-upload)
-13. [Dashboard Widgets](#13-dashboard-widgets)
+12. [Data Backup & Restore](#12-data-backup--restore)
+13. [Bulk Upload](#13-bulk-upload)
+14. [Dashboard Widgets](#14-dashboard-widgets)
 -->
+
+---
+
+## 11. Outlet Deliveries Schedule-Then-Deliver
+
+### 11.1 Overview
+Outlet Deliveries are now schedule-first documents. Approved or partially delivered `OutletRestocks` are selected from cards on the OD add page, scheduled against a warehouse, and written with `Progress = SCHEDULED`. Scheduling immediately creates negative `StockMovements` rows with `ReferenceType = OutletRestock` to reserve/deduct warehouse stock.
+
+### 11.2 Data Ownership
+- `OutletDeliveries.ItemsJSON` stores lowercase rows `{ sku, storage, qty }` copied from approved restock storage allocations.
+- `OutletDeliveries.Progress` uses `SCHEDULED`, `DELIVERED`, and `CANCELLED` from `OutletDeliveryProgress`.
+- `StockMovements.ReferenceType = OutletRestock` reserves warehouse stock using `ReferenceCode = OutletRestocks.Code`.
+- `StockMovements.ReferenceType = OutletDeliveryCancel` reverses scheduled warehouse reservations using `ReferenceCode = OutletDeliveries.Code`.
+- `OutletMovements.ReferenceType = RestockDelivery` posts delivered stock into outlets using `ReferenceCode = OutletDeliveries.Code`.
+- `OutletStorages` is a derived SKU-only balance keyed by `OutletCode + SKU` with columns `Code`, `OutletCode`, `SKU`, and `Quantity` only.
+
+### 11.3 Workflow
+1. Add page loads approved and partially delivered `OutletRestocks`, existing `OutletDeliveries`, restock items, outlets, warehouses, SKUs, and products through the workflow store.
+2. User selects one eligible ORS card. ORS is ineligible if it already has an active `SCHEDULED` OD.
+3. Composable builds OD `ItemsJSON` from `OutletRestockItems.StorageAllocationJSON` and shows a read-only packing grid.
+4. Scheduling runs one batch: create `OutletDeliveries` + bulk negative `StockMovements`. The returned OD code is used directly for navigation; no same-resource `get` follows the write.
+5. Delivery runs one batch: `executeAction` Deliver + bulk positive `OutletMovements` aggregated by SKU + update ORS progress to `DELIVERED` or `PARTIALLY_DELIVERED`.
+6. Cancellation runs one batch: `executeAction` Cancel + bulk positive `StockMovements` with `OutletDeliveryCancel`.
+
+### 11.4 Batch And Sync Rules
+- Scheduling, delivery, and cancellation use `useWorkflowStore.runBatchRequests`.
+- Batch helpers attach `lastUpdatedAtByResource` cursors from IDB metadata before write actions, preserving delta-on-write behavior.
+- Write responses are consumed directly; no redundant `get` is issued after `create`, `update`, or `executeAction`.
+- General frontend reloads continue to use the cache/last-sync throttle logic in `ResourceFetchService`.
 
 ---
 
@@ -954,8 +984,8 @@ Outlet & Field Sales Operations manages consignment outlet visits, restock reque
 ### 11.1 Resource Model
 - **Master resources**: `Outlets` and `OutletOperatingRules`.
 - **Operation resources**: `OutletVisits`, `OutletRestocks`, `OutletRestockItems`, `OutletDeliveries`, `OutletConsumption`, `OutletConsumptionItems`, `OutletMovements`, and `OutletStorages`.
-- **Source of truth**: `OutletMovements` is the stock ledger. `OutletStorages` is the derived current outlet balance keyed by `OutletCode + StorageName + SKU`.
-- **Delivery truth**: `OutletDeliveries.DeliveredItemsJSON` stores lowercase delivery event rows and is aggregated against `OutletRestockItems.Quantity` to derive restock fulfillment.
+- **Source of truth**: `OutletMovements` is the stock ledger. `OutletStorages` is the derived current outlet balance keyed by `OutletCode + SKU`.
+- **Delivery truth**: `OutletDeliveries.ItemsJSON` stores lowercase scheduled/delivered rows and is aggregated against `OutletRestockItems.Quantity` to derive restock fulfillment.
 
 ### 11.2 Visit Workflow
 1. Field users create planned visits with only `OutletCode`, `Date`, `Status = PLANNED`, and optional `StatusComment`.
@@ -973,8 +1003,8 @@ Outlet & Field Sales Operations manages consignment outlet visits, restock reque
 
 ### 11.4 Delivery Workflow
 1. Deliveries can be created only for restocks with `Progress = APPROVED` or `PARTIALLY_DELIVERED`.
-2. The UI calculates remaining deliverable quantity per restock item as requested `Quantity` minus the aggregate delivered quantity from existing `OutletDeliveries.DeliveredItemsJSON` events, and delivery rows are split by approved `StorageAllocationJSON` storage names.
-3. Delivery save creates an `OutletDeliveries` event with `DeliveredItemsJSON` as lowercase `{ "sku", "qty" }` rows, then posts side effects: create positive `OutletMovements` with `ReferenceType = RestockDelivery` and update `OutletRestocks.Progress`.
+2. The UI schedules from approved `StorageAllocationJSON` storage rows into `OutletDeliveries.ItemsJSON` and prevents another active scheduled OD for the same ORS.
+3. Delivery action posts positive `OutletMovements` with `ReferenceType = RestockDelivery` and updates `OutletRestocks.Progress`.
 4. Progress moves to `PARTIALLY_DELIVERED` when cumulative delivered quantity is below requested quantity and to `DELIVERED` when cumulative delivered quantity reaches the requested total.
 5. Delivery matching uses restock items for requested `Quantity`; no delivery child item sheet exists and delivery does not update `OutletRestockItems`.
 

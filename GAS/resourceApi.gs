@@ -88,6 +88,130 @@ function handleResourceGetMultiRecords(auth, payload) {
   };
 }
 
+function handleResourceRecordFetch(auth, payload) {
+  var resourceRequests = payload && Array.isArray(payload.resources) ? payload.resources : null;
+  if (!resourceRequests || !resourceRequests.length) {
+    return { success: false, message: 'record requires payload.resources[]' };
+  }
+
+  var allowMissing = payload && payload.allowMissing === true;
+  var resourcePayloads = {};
+  var recordsByResource = {};
+  var byCodeByResource = {};
+  var codesByResource = {};
+  var missingByResource = {};
+  var errors = [];
+  var fatalErrors = [];
+
+  for (var r = 0; r < resourceRequests.length; r++) {
+    var entry = resourceRequests[r] || {};
+    var requestedResourceName = (entry.resource || '').toString().trim();
+    if (!requestedResourceName) {
+      fatalErrors.push({ index: r, message: 'resource is required' });
+      continue;
+    }
+    if (!Array.isArray(entry.codes)) {
+      fatalErrors.push({ resource: requestedResourceName, message: 'codes must be an array' });
+      continue;
+    }
+
+    var resourceName;
+    try {
+      resourceName = resolveResourceName({ resource: requestedResourceName });
+      enforceMasterPermission(auth, resourceName, 'canRead');
+    } catch (err) {
+      fatalErrors.push({ resource: requestedResourceName, message: err && err.message ? err.message : String(err) });
+      continue;
+    }
+
+    var codes = entry.codes.map(function (code) { return (code || '').toString().trim(); }).filter(Boolean);
+    codesByResource[resourceName] = codes;
+    recordsByResource[resourceName] = [];
+    byCodeByResource[resourceName] = {};
+    missingByResource[resourceName] = [];
+
+    var resource = openResourceSheet(resourceName);
+    var sheet = resource.sheet;
+    var values = sheet.getDataRange().getValues();
+    var headers = values[0] || [];
+    var idx = getHeaderIndexMap(headers);
+    var foundRows = [];
+
+    if (idx.Code === undefined) {
+      fatalErrors.push({ resource: resourceName, message: 'Code column is required' });
+      continue;
+    }
+
+    var rowByCode = {};
+    for (var i = 1; i < values.length; i++) {
+      var row = values[i];
+      var rowCode = (row[idx.Code] || '').toString().trim();
+      if (rowCode && rowByCode[rowCode] === undefined) {
+        rowByCode[rowCode] = row;
+      }
+    }
+
+    codes.forEach(function (code) {
+      var matchedRow = rowByCode[code];
+      if (!matchedRow) {
+        missingByResource[resourceName].push(code);
+        return;
+      }
+      try {
+        enforceRecordLevelAccess(auth, resource.config, headers, matchedRow);
+        var record = rowArrayToObject(headers, matchedRow);
+        foundRows.push(matchedRow);
+        recordsByResource[resourceName].push(record);
+        byCodeByResource[resourceName][code] = record;
+      } catch (accessErr) {
+        missingByResource[resourceName].push(code);
+        if (!allowMissing) {
+          errors.push({ resource: resourceName, code: code, message: accessErr && accessErr.message ? accessErr.message : String(accessErr) });
+        }
+      }
+    });
+
+    resourcePayloads[resourceName] = buildDirectWriteResourcePayload(resourceName, resource.config, headers, foundRows);
+  }
+
+  Object.keys(missingByResource).forEach(function (resourceName) {
+    var missing = missingByResource[resourceName] || [];
+    if (!allowMissing && missing.length) {
+      missing.forEach(function (code) {
+        errors.push({ resource: resourceName, code: code, message: 'Record not found or inaccessible' });
+      });
+    }
+  });
+
+  var responseErrors = fatalErrors.concat(errors);
+  if (fatalErrors.length || (errors.length && !allowMissing)) {
+    return {
+      success: false,
+      message: 'record fetch failed',
+      errors: responseErrors,
+      data: {
+        resources: resourcePayloads,
+        codes: codesByResource,
+        records: recordsByResource,
+        byCode: byCodeByResource,
+        missing: missingByResource
+      }
+    };
+  }
+
+  return {
+    success: true,
+    message: 'Records fetched successfully',
+    data: {
+      resources: resourcePayloads,
+      codes: codesByResource,
+      records: recordsByResource,
+      byCode: byCodeByResource,
+      missing: missingByResource
+    }
+  };
+}
+
 function handleResourceCreateRecord(auth, payload) {
   const resourceName = resolveResourceName(payload);
   const resource = openResourceSheet(resourceName);

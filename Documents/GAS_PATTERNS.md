@@ -24,14 +24,15 @@ Read this file when you are changing GAS implementation, not for every task.
 | 3 | **Bulk array write** (`bulk` / `dispatchBulkCreateRecords`) | Multi-record create/update in one call; returns fresh snapshot |
 | 4 | **Additional actions** (`executeAction`) | Workflow transitions (Approve, Reject, Submit, etc.) |
 | 5 | **Composite save** (`compositeSave`) | Atomic parent + children write with all-or-nothing validation |
-| 6 | **Batch envelope** (`batch`) | Multiple independent actions in one HTTP call |
-| 7 | **Propose a new generic pattern** | Only if none of the above fit |
+| 6 | **Record fetch** (`record`) | Exact multi-resource, multi-code record lookup with canonical resource hydration |
+| 7 | **Batch envelope** (`batch`) | Multiple sequential actions in one HTTP call, including explicit `$ref` dependencies |
+| 8 | **Propose a new generic pattern** | Only if none of the above fit |
 
 ---
 
 ## Pattern: `batch` — Write + Read in one round-trip
 
-Use `batch` when you need to write data and immediately get fresh rows back, without a second HTTP call.
+Use `batch` when you need to write data and immediately get fresh rows back, or when later sub-requests depend on earlier sub-request outputs, without a second HTTP call.
 
 **Shape:**
 ```json
@@ -40,11 +41,24 @@ Use `batch` when you need to write data and immediately get fresh rows back, wit
   "token": "...",
   "requests": [
     { "action": "compositeSave", "resource": "...", ... },
-    { "action": "get", "resource": "...", "scope": "operation", "includeInactive": true },
-    { "action": "get", "resource": "...", "scope": "operation", "includeInactive": true }
+    { "action": "record", "payload": { "resources": [{ "resource": "...", "codes": [{ "$ref": "Procurements.latest.code" }] }] } },
+    { "action": "bulk", "resource": "...", "payload": { "records": [{ "ReferenceCode": { "$ref": "Procurements.latest.code" } }] } }
   ]
 }
 ```
+
+**Batch dependency standard:**
+- GAS creates batch context entries automatically from every successful sub-response by resource name.
+- Frontend requests MUST NOT send custom `ref` names.
+- Use explicit `{ "$ref": "ResourceName.latest.code" }`, `{ "$ref": "ResourceName.latest.record.Code" }`, `{ "$ref": "ResourceName.byCode.CODE.Field" }`, or `{ "$ref": "ResourceName.records.0.Field" }` objects in payload values.
+- Frontend code MUST preserve `$ref` values as objects until GAS receives them. Do not pass `$ref` values through `String()`, template literals, concatenation, or generic text-normalization helpers.
+- Frontend batch builders that may receive either a normal code or a `$ref` MUST use the shared `FRONTENT/src/composables/batchRefs.js` helpers: `batchRef(path)` to create refs and `textOrRef(value)` to preserve refs while trimming normal text.
+- Use normal text helpers only for values that cannot be batch refs. Use `textOrRef(value)` for fields such as `code`, `ParentCode`, `ReferenceCode`, `SourceCode`, `TargetCode`, and same-batch foreign-key fields.
+- Do not embed `$ref` values inside comments or other sentence strings. Either omit the same-batch generated code from the comment, write the comment after the code is known, or add an explicit backend template feature before using refs inside strings.
+- `latest` means the latest successful output for that resource in the current batch.
+- `byCode` is deterministic access for loaded or written records.
+- Unresolved `$ref` paths fail the current sub-request. GAS does not infer missing fields.
+- Do not use `__PENDING__` placeholders.
 
 **Frontend flow after a batch create:**
 1. Call `callGasApi('batch', { requests: [...] })`.
@@ -56,6 +70,32 @@ Use `batch` when you need to write data and immediately get fresh rows back, wit
 5. Navigate — store is already hot; no second round-trip needed.
 
 **Do NOT use** two separate `callGasApi` calls + `forceSync: true` as a workaround. That is two round-trips and risks a race condition where the view page loads before the second call resolves.
+
+---
+
+## Pattern: `record` — Exact record fetch with canonical hydration
+
+Use `record` when a workflow needs exact records by `Code` across one or more resources and the frontend state must hydrate through the normal `data.resources` path.
+
+**Shape:**
+```json
+{
+  "action": "record",
+  "payload": {
+    "resources": [
+      { "resource": "Procurements", "codes": ["PR2600001"] },
+      { "resource": "GoodsReceipts", "codes": ["GRN2600001"] }
+    ],
+    "allowMissing": false
+  }
+}
+```
+
+Rules:
+- `payload.resources[]` is required; there is no single-resource or single-code shortcut.
+- `codes` must always be an array.
+- GAS enforces normal read permission and record-level access on each matched row.
+- Returned rows go to canonical `data.resources`; lookup maps and record objects go to `data.result`.
 
 ---
 
@@ -145,6 +185,8 @@ Use for progress/status changes that also need auto-fill fields (e.g. `ProgressA
 | Custom action shape for work a bulk/composite covers | Use `bulk` or `compositeSave` |
 | New GAS file for every feature | Extend existing file unless structure is incompatible |
 | Returning only `parentCode` from compositeSave then re-fetching | Return write-delta resources in the same response |
+| Frontend-side placeholder patching for same-batch generated codes | Use explicit batch `$ref` objects resolved by GAS |
+| Special-casing frontend state updates by request action | Return canonical `data.resources` and let generic ingestion update IDB/Pinia |
 
 ---
 

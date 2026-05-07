@@ -158,21 +158,6 @@ export const useWorkflowStore = defineStore('workflow', () => {
     const responses = Array.isArray(response?.data?.result?.responses)
       ? response.data.result.responses
       : []
-    responses.forEach((entry, index) => {
-      const createdCode = entry?.data?.result?.parentCode || entry?.data?.result?.code || entry?.data?.code || ''
-      if (!createdCode) return
-      responses.slice(index + 1).forEach((laterEntry) => {
-        const resultResources = laterEntry?.data?.resources || {}
-        Object.values(resultResources).forEach((resourceData) => {
-          if (!Array.isArray(resourceData?.headers) || !Array.isArray(resourceData?.rows)) return
-          const referenceIndexes = ['ReferenceCode', 'ParentCode'].map(field => resourceData.headers.indexOf(field)).filter(fieldIndex => fieldIndex >= 0)
-          if (!referenceIndexes.length) return
-          resourceData.rows.forEach((row) => {
-            referenceIndexes.forEach((fieldIndex) => { if (row[fieldIndex] === '__PENDING__') row[fieldIndex] = createdCode })
-          })
-        })
-      })
-    })
     const dataStore = useDataStore()
     const resourcePayload = response?.data?.resources && typeof response.data.resources === 'object'
       ? response.data.resources

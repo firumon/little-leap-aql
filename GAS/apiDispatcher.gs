@@ -140,6 +140,7 @@ function requiresStrictNestedPayload(action) {
   return normalized === 'create'
     || normalized === 'update'
     || normalized === 'bulk'
+    || normalized === 'record'
     || normalized === 'compositesave'
     || normalized === 'executeaction';
 }
@@ -324,6 +325,15 @@ function extractResourcePayloads(target, requestResource, rawResult, requestPayl
     }
   }
 
+  if (data.resources && typeof data.resources === 'object' && !Array.isArray(data.resources)) {
+    Object.keys(data.resources).forEach(function (resourceName) {
+      var resourcePayload = data.resources[resourceName];
+      if (resourcePayload && typeof resourcePayload === 'object' && Array.isArray(resourcePayload.rows)) {
+        target[resourceName] = buildResourcePayload(resourceName, resourcePayload.rows, resourcePayload.meta, resourcePayload.headers, requestPayload);
+      }
+    });
+  }
+
   Object.keys(data).forEach(function (key) {
     var value = data[key];
     if (!value || typeof value !== 'object' || Array.isArray(value)) return;
@@ -365,7 +375,7 @@ function buildResourcePayload(resourceName, rows, meta, headers, requestPayload)
 function stripResourceFields(data) {
   var result = {};
   Object.keys(data || {}).forEach(function (key) {
-    if (key === 'rows' || key === 'headers' || key === 'meta' || key === 'records') {
+    if (key === 'rows' || key === 'headers' || key === 'meta' || key === 'resources') {
       return;
     }
     var value = data[key];
@@ -411,6 +421,10 @@ function dispatchProtectedAction(action, auth, data) {
     // Composite save (parent + children atomic)
     case 'compositeSave':
       return handleCompositeSave(auth, data);
+
+    // Record-level multi-resource fetch
+    case 'record':
+      return handleResourceRecordFetch(auth, data);
 
     // Additional action execution (Approve, Reject, etc.)
     case 'executeAction':
@@ -462,26 +476,27 @@ function handleBatchActions(auth, payload) {
 
   var results = [];
   var anyFailed = false;
-  var pendingReferenceCode = '';
+  var batchContext = createBatchContext();
 
   for (var i = 0; i < requests.length; i++) {
-    var req = replacePendingReferencesInBatchRequest(requests[i], pendingReferenceCode);
-    var action = (req.action || '').toString().trim();
-    if (!action) {
-      results.push({ success: false, message: 'Action is required' });
-      anyFailed = true;
-      continue;
-    }
-
     try {
+      var req = resolveBatchReferencesDeep(requests[i], batchContext);
+      var action = (req.action || '').toString().trim();
+      if (!action) {
+        results.push({ success: false, message: 'Action is required' });
+        anyFailed = true;
+        continue;
+      }
+
       var res = dispatchProtectedAction(action, auth, req);
       results.push(res);
-      pendingReferenceCode = extractBatchResultCode(res) || pendingReferenceCode;
       if (!res.success) {
         anyFailed = true;
+      } else {
+        updateBatchContextFromResult(batchContext, req, res);
       }
     } catch (e) {
-      results.push({ success: false, message: e.toString() });
+      results.push({ success: false, message: e && e.message ? e.message : e.toString() });
       anyFailed = true;
     }
   }
@@ -493,28 +508,133 @@ function handleBatchActions(auth, payload) {
   };
 }
 
-function extractBatchResultCode(result) {
-  var data = result && result.data ? result.data : {};
-  return (data.parentCode || data.code || '').toString().trim();
+function createBatchContext() {
+  return { resources: {} };
 }
 
-function replacePendingReferencesInBatchRequest(request, referenceCode) {
-  if (!referenceCode || !request || typeof request !== 'object') return request;
-  return replacePendingReferencesDeep(request, referenceCode);
-}
-
-function replacePendingReferencesDeep(value, referenceCode) {
+function resolveBatchReferencesDeep(value, batchContext) {
   if (Array.isArray(value)) {
-    return value.map(function (item) { return replacePendingReferencesDeep(item, referenceCode); });
+    return value.map(function (item) { return resolveBatchReferencesDeep(item, batchContext); });
   }
   if (value && typeof value === 'object') {
+    var keys = Object.keys(value);
+    if (keys.length === 1 && value.$ref !== undefined) {
+      return resolveBatchReferencePath(batchContext, value.$ref);
+    }
     var cloned = {};
-    Object.keys(value).forEach(function (key) {
-      cloned[key] = replacePendingReferencesDeep(value[key], referenceCode);
+    keys.forEach(function (key) {
+      cloned[key] = resolveBatchReferencesDeep(value[key], batchContext);
     });
     return cloned;
   }
-  return value === '__PENDING__' ? referenceCode : value;
+  return value;
+}
+
+function resolveBatchReferencePath(batchContext, refPath) {
+  var path = (refPath || '').toString().trim();
+  if (!path) {
+    throw new Error('Batch $ref path is required');
+  }
+
+  var parts = path.split('.');
+  var resourceName = parts.shift();
+  var current = batchContext.resources[resourceName];
+  if (current === undefined) {
+    throw new Error('Unable to resolve batch $ref "' + path + '": resource not found in batch context');
+  }
+
+  for (var i = 0; i < parts.length; i++) {
+    var part = parts[i];
+    if (current === null || current === undefined || current[part] === undefined) {
+      throw new Error('Unable to resolve batch $ref "' + path + '" at "' + part + '"');
+    }
+    current = current[part];
+  }
+  return current;
+}
+
+function updateBatchContextFromResult(batchContext, request, rawResult) {
+  updateBatchContextFromRawResources(batchContext, rawResult);
+
+  var actionResourceName = request && request.resource
+    ? (Array.isArray(request.resource) ? request.resource[0] : request.resource)
+    : '';
+  var actionScalarCode = rawResult && rawResult.data && typeof rawResult.data === 'object' && !Array.isArray(rawResult.data)
+    ? (rawResult.data.parentCode || rawResult.data.code || '').toString().trim()
+    : '';
+  if (actionResourceName && actionScalarCode) {
+    ensureBatchContextResource(batchContext, actionResourceName).latest.code = actionScalarCode;
+  }
+
+  var normalizedReq = {
+    requestId: request && request.requestId ? request.requestId : Utilities.getUuid(),
+    action: request && request.action ? request.action : '',
+    resource: request && request.resource ? request.resource : '',
+    payload: request || {}
+  };
+  var envelope = buildApiEnvelope(normalizedReq, rawResult || {});
+  var resourcePayloads = envelope && envelope.data && envelope.data.resources ? envelope.data.resources : {};
+  Object.keys(resourcePayloads).forEach(function (resourceName) {
+    updateBatchContextResourceFromPayload(batchContext, resourceName, resourcePayloads[resourceName]);
+  });
+
+  var result = envelope && envelope.data && envelope.data.result ? envelope.data.result : {};
+  if (request && request.resource) {
+    var scalarCode = (result.parentCode || result.code || '').toString().trim();
+    if (scalarCode) {
+      var resourceName = Array.isArray(request.resource) ? request.resource[0] : request.resource;
+      ensureBatchContextResource(batchContext, resourceName).latest.code = scalarCode;
+    }
+  }
+}
+
+function updateBatchContextFromRawResources(batchContext, rawResult) {
+  var data = rawResult && rawResult.data && typeof rawResult.data === 'object' && !Array.isArray(rawResult.data)
+    ? rawResult.data
+    : {};
+  var resources = data.resources && typeof data.resources === 'object' && !Array.isArray(data.resources)
+    ? data.resources
+    : {};
+  Object.keys(resources).forEach(function (resourceName) {
+    updateBatchContextResourceFromPayload(batchContext, resourceName, resources[resourceName]);
+  });
+
+  Object.keys(data).forEach(function (key) {
+    if (key === 'resources') return;
+    var value = data[key];
+    if (value && typeof value === 'object' && !Array.isArray(value) && Array.isArray(value.rows)) {
+      updateBatchContextResourceFromPayload(batchContext, key, value);
+    }
+  });
+}
+
+function updateBatchContextResourceFromPayload(batchContext, resourceName, payload) {
+  var entry = ensureBatchContextResource(batchContext, resourceName);
+  var rows = payload && Array.isArray(payload.rows) ? payload.rows : [];
+  var headers = payload && Array.isArray(payload.headers) ? payload.headers : [];
+  var records = headers.length ? rows.map(function (row) { return rowArrayToObject(headers, row); }) : [];
+  entry.records = records;
+  records.forEach(function (record) {
+    var code = (record.Code || '').toString().trim();
+    if (code) {
+      entry.byCode[code] = record;
+    }
+  });
+  if (records.length) {
+    var latestRecord = records[records.length - 1];
+    entry.latest = {
+      record: latestRecord,
+      code: (latestRecord.Code || entry.latest.code || '').toString().trim()
+    };
+  }
+}
+
+function ensureBatchContextResource(batchContext, resourceName) {
+  var name = (resourceName || '').toString().trim();
+  if (!batchContext.resources[name]) {
+    batchContext.resources[name] = { latest: {}, records: [], byCode: {} };
+  }
+  return batchContext.resources[name];
 }
 
 

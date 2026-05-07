@@ -107,6 +107,27 @@ Rules:
 - Delta cursor can be provided per-resource in `payload.lastUpdatedAtByResource`.
 - Response resource rows are emitted under `data.resources[resourceName].rows`.
 
+### `record` — Fetch specific records by resource and code
+```json
+{
+  "requestId": "uuid",
+  "action": "record",
+  "payload": {
+    "resources": [
+      { "resource": "Procurements", "codes": ["PR2600001", "PR2600002"] },
+      { "resource": "GoodsReceipts", "codes": ["GRN2600001"] }
+    ],
+    "allowMissing": false
+  }
+}
+```
+- `payload.resources[]` is the only accepted request shape.
+- Each entry requires `resource` and `codes`; `codes` must always be an array, including single-code requests.
+- `allowMissing` defaults to `false`. When `false`, missing or inaccessible records fail the action with resource/code details. When `true`, found records are returned and missing codes are listed in `data.result.missing`.
+- Normal read permission and record-level access policy are enforced for every requested record.
+- Response resource rows are emitted under canonical `data.resources[resourceName].rows`, so frontend IDB and Pinia hydration stays generic.
+- Record-object lookup data is emitted under `data.result.records`, `data.result.byCode`, `data.result.codes`, and `data.result.missing`.
+
 ### `create` — Create a single record
 ```json
 {
@@ -240,6 +261,13 @@ Rules:
 - Requests execute **sequentially** in order. Later requests see writes made by earlier ones.
 - Each request can be any valid protected action (`get`, `create`, `update`, `bulk`, `compositeSave`, `executeAction`, etc.).
 - Each sub-request includes its own `action` field; the outer `token` covers all.
+- After every successful sub-request, GAS automatically stores returned resources in the current batch context by resource name. Frontend requests do not send custom reference names.
+- Later sub-requests may use explicit value references with `{ "$ref": "ResourceName.path" }`. Supported paths include `ResourceName.latest.code`, `ResourceName.latest.record.Code`, `ResourceName.byCode.CODE.Field`, and `ResourceName.records.0.Field`.
+- `$ref` resolution is explicit only. GAS does not infer missing fields and fails the current sub-request with a clear error when a path cannot be resolved.
+- `$ref` payload values must reach GAS as objects. Frontend code must not stringify `$ref` values with `String()`, template literals, concatenation, or normal text helpers.
+- Frontend batch payload builders should use `FRONTENT/src/composables/batchRefs.js`: `batchRef(path)` creates a `{ "$ref": "..." }` object, and `textOrRef(value)` preserves `$ref` objects while trimming normal string codes.
+- Use `textOrRef(value)` for any field that may contain a same-batch generated code, including `payload.code`, `ParentCode`, `ReferenceCode`, and resource-specific foreign-key code fields.
+- Current GAS `$ref` resolution replaces whole values only. It does not interpolate refs inside larger strings, so comments/messages must not include same-batch `$ref` codes unless a separate template feature is implemented.
 - Response:
 ```json
 {
@@ -264,6 +292,7 @@ Rules:
 - `success` at top level is `false` if any sub-request fails.
 - Individual results remain available under `data.result.responses[]` in the same request order.
 - `data.resources` is the aggregated final resource payload map across sub-responses.
+- `__PENDING__` placeholders are not supported; use explicit `$ref` objects instead.
 
 **Primary use case:** combine a write with an immediate read in one call so the frontend can update IDB without a second round-trip. Example: `compositeSave` + two `get` calls returns the created record and all affected children in one response.
 
@@ -331,7 +360,8 @@ All `get` calls support delta filtering:
 - Operational multi-record saves should use the supported bulk-array path, not invent custom action shapes when an existing pattern fits.
 - For write actions, use nested payload objects only (`payload.record` / `payload.data` / `payload.records`). Top-level write fields are invalid.
 - Write actions return deltas for directly affected resources, using `payload.lastUpdatedAtByResource` and `includeInactive=true` on server-side write-delta reads.
-- Use `batch` when you need packed sequential actions in one HTTP call; consume ordered per-request outputs from `data.result.responses`.
+- Use `record` for exact multi-resource, multi-code record fetches; do not overload `get` with record-level lookup semantics.
+- Use `batch` when you need packed sequential actions in one HTTP call; consume ordered per-request outputs from `data.result.responses` and use explicit `$ref` objects for same-batch dependencies.
 
 ---
 

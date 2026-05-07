@@ -5,7 +5,7 @@ import { useResourceData } from '../../resources/useResourceData.js'
 import { useResourceNav } from '../../resources/useResourceNav.js'
 import { useWorkflowStore } from '../../../stores/workflow.js'
 import { OUTLET_OPERATION_RESOURCES, DELIVERY_PROGRESS_ORDER, active, progressMeta, sortTime, text } from './outletOperationsMeta.js'
-import { aggregateItemsBySku, parseItemsJSON, parseStorageAllocations, validateDelivery, toNumber } from './outletStockLogic.js'
+import { aggregateItemsBySku, deliveredItemsForRestock, parseItemsJSON, parseStorageAllocations, validateDelivery, toNumber } from './outletStockLogic.js'
 import { buildCancelDeliveryBatchRequests, buildDeliverDeliveryBatchRequests, buildScheduleDeliveryBatchRequests } from './outletRestockPayload.js'
 import { batchResultCode, failureMessage, responseFailed } from './outletOperationsBatch.js'
 
@@ -96,9 +96,12 @@ export function useOutletDeliveries() {
   }
 
   function deliveryRestockProgress(od = {}) {
-    const requested = selectedOrLoadedRestockItems(od.OutletRestockCode).reduce((total, item) => total + toNumber(item.Quantity), 0)
-    const delivered = aggregateItemsBySku(od.ItemsJSON).reduce((total, item) => total + toNumber(item.qty), 0)
-    return delivered >= requested ? 'DELIVERED' : 'PARTIALLY_DELIVERED'
+    const restockCode = text(od.OutletRestockCode)
+    const requestedBySku = new Map()
+    selectedOrLoadedRestockItems(restockCode).forEach(item => requestedBySku.set(text(item.SKU), (requestedBySku.get(text(item.SKU)) || 0) + toNumber(item.Quantity)))
+    const deliveredBySku = new Map(deliveredItemsForRestock(deliveries.items.value, restockCode, od).map(item => [text(item.sku), toNumber(item.qty)]))
+    const complete = Array.from(requestedBySku.entries()).every(([sku, qty]) => (deliveredBySku.get(sku) || 0) >= qty)
+    return complete ? 'DELIVERED' : 'PARTIALLY_DELIVERED'
   }
   function selectedOrLoadedRestockItems(restockCode) { return restockItems.items.value.filter(row => text(row.OutletRestockCode) === text(restockCode)).filter(active) }
   function setExpandedGroup(key) { expandedGroup.value = expandedGroup.value === key ? '' : key }

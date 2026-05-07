@@ -1,4 +1,5 @@
 import { OUTLET_DEFAULT_STORAGE, active, text, OUTLET_REFERENCE_TYPES } from './outletOperationsMeta.js'
+import { textOrRef } from '../../batchRefs.js'
 
 export function toNumber(value) { const number = Number(value); return Number.isFinite(number) ? number : 0 }
 export function storageName(value) { return text(value) || OUTLET_DEFAULT_STORAGE }
@@ -6,8 +7,8 @@ export function parseStorageAllocations(value) { try { const rows = JSON.parse(t
 export function stringifyStorageAllocations(rows = []) { return JSON.stringify(rows.map(row => ({ storage_name: text(row.storage_name), quantity: toNumber(row.quantity) })).filter(row => row.storage_name || row.quantity > 0)) }
 export function parseItemsJSON(value) { try { const rows = Array.isArray(value) ? value : JSON.parse(text(value) || '[]'); return Array.isArray(rows) ? rows.map(row => ({ sku: text(row.sku || row.SKU), storage: storageName(row.storage || row.StorageName || row.storage_name), qty: toNumber(row.qty ?? row.quantity ?? row.QtyChange) })).filter(row => row.sku && row.qty > 0) : [] } catch (_) { return [] } }
 export function aggregateItemsBySku(itemsJSON = []) { const items = parseItemsJSON(itemsJSON); const map = new Map(); items.forEach(item => map.set(item.sku, (map.get(item.sku) || 0) + toNumber(item.qty))); return Array.from(map.entries()).map(([sku, qty]) => ({ sku, qty })) }
-export function buildStockMovementsFromItems(warehouseCode, itemsJSON, referenceType, referenceCode, sign = 1) { return parseItemsJSON(itemsJSON).map(item => ({ WarehouseCode: text(warehouseCode), StorageName: item.storage, SKU: item.sku, QtyChange: Math.abs(toNumber(item.qty)) * (sign < 0 ? -1 : 1), ReferenceType: text(referenceType), ReferenceCode: text(referenceCode), Status: 'Active' })) }
-export function buildOutletMovementsFromItems(outletCode, itemsJSON, referenceType = OUTLET_REFERENCE_TYPES.delivery, referenceCode = '') { const now = new Date().toISOString(); return aggregateItemsBySku(itemsJSON).map(item => ({ OutletCode: text(outletCode), SKU: item.sku, QtyChange: toNumber(item.qty), ReferenceType: text(referenceType), ReferenceCode: text(referenceCode), MovementDate: now, Status: 'Active' })) }
+export function buildStockMovementsFromItems(warehouseCode, itemsJSON, referenceType, referenceCode, sign = 1) { return parseItemsJSON(itemsJSON).map(item => ({ WarehouseCode: text(warehouseCode), StorageName: item.storage, SKU: item.sku, QtyChange: Math.abs(toNumber(item.qty)) * (sign < 0 ? -1 : 1), ReferenceType: text(referenceType), ReferenceCode: textOrRef(referenceCode), Status: 'Active' })) }
+export function buildOutletMovementsFromItems(outletCode, itemsJSON, referenceType = OUTLET_REFERENCE_TYPES.delivery, referenceCode = '') { const now = new Date().toISOString(); return aggregateItemsBySku(itemsJSON).map(item => ({ OutletCode: text(outletCode), SKU: item.sku, QtyChange: toNumber(item.qty), ReferenceType: text(referenceType), ReferenceCode: textOrRef(referenceCode), MovementDate: now, Status: 'Active' })) }
 export function deliveredQtyForSku(deliveries = [], restockCode, sku) {
   return deliveries.filter(active).filter(row => text(row.OutletRestockCode) === text(restockCode)).reduce((total, delivery) => {
     try {
@@ -16,6 +17,13 @@ export function deliveredQtyForSku(deliveries = [], restockCode, sku) {
       return total + items.filter(item => text(item.sku) === text(sku)).reduce((sum, item) => sum + toNumber(item.qty), 0)
     } catch (_) { return total }
   }, 0)
+}
+export function deliveredItemsForRestock(deliveries = [], restockCode, currentDelivery = null) {
+  const delivered = deliveries.filter(active).filter(row => text(row.OutletRestockCode) === text(restockCode) && text(row.Progress) === 'DELIVERED')
+  const rows = currentDelivery && text(currentDelivery.Code)
+    ? delivered.filter(row => text(row.Code) !== text(currentDelivery.Code)).concat([currentDelivery])
+    : delivered
+  return aggregateItemsBySku(rows.flatMap(row => parseItemsJSON(row.ItemsJSON)))
 }
 export function remainingDeliveryQty(item = {}, deliveries = [], restockCode = item.OutletRestockCode) { return Math.max(0, toNumber(item.Quantity) - deliveredQtyForSku(deliveries, restockCode, item.SKU)) }
 export function currentOutletStockQty(storages = [], outletCode, _store, sku) { const match = storages.find(row => active(row) && text(row.OutletCode) === text(outletCode) && text(row.SKU) === text(sku)); return toNumber(match?.Quantity) }
@@ -68,10 +76,12 @@ export function validateDelivery(restock = {}, restockItems = [], deliveryRows =
 export function validateConsumption(form = {}, rows = [], storages = []) {
   const errors = []
   if (!text(form.OutletCode)) errors.push('Outlet is required.')
-  const positives = rows.filter(row => toNumber(row.ConsumedQty) > 0)
-  if (!positives.length) errors.push('At least one positive consumption quantity is required.')
-  errors.push(...duplicateSkuErrors(rows, 'ConsumedQty'))
-  positives.forEach(row => { const available = currentOutletStockQty(storages, form.OutletCode, null, row.SKU); if (toNumber(row.ConsumedQty) > available) errors.push(`Consumption exceeds available stock for ${row.SKU}.`) })
+  if (!text(form.Date)) errors.push('Date is required.')
+  if (!text(form.Username)) errors.push('Username is required.')
+  const positives = rows.filter(row => toNumber(row.SoldQty ?? row.Qty) > 0)
+  if (!positives.length) errors.push('At least one positive sold quantity is required.')
+  errors.push(...duplicateSkuErrors(rows.map(row => ({ ...row, Quantity: toNumber(row.SoldQty ?? row.Qty) })), 'Quantity'))
+  positives.forEach(row => { const available = currentOutletStockQty(storages, form.OutletCode, null, row.SKU); if (toNumber(row.SoldQty ?? row.Qty) > available) errors.push(`Consumption exceeds available stock for ${row.SKU}.`) })
   return validationResult(errors, [])
 }
 

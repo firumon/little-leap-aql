@@ -983,13 +983,13 @@ Outlet & Field Sales Operations manages consignment outlet visits, restock reque
 
 ### 11.1 Resource Model
 - **Master resources**: `Outlets` and `OutletOperatingRules`.
-- **Operation resources**: `OutletVisits`, `OutletRestocks`, `OutletRestockItems`, `OutletDeliveries`, `OutletConsumption`, `OutletConsumptionItems`, `OutletMovements`, and `OutletStorages`.
+- **Operation resources**: `OutletVisits`, `OutletRestocks`, `OutletRestockItems`, `OutletDeliveries`, `OutletConsumptions`, `OutletConsumptionItems`, `OutletConsumptionInvoices`, `OutletMovements`, and `OutletStorages`.
 - **Source of truth**: `OutletMovements` is the stock ledger. `OutletStorages` is the derived current outlet balance keyed by `OutletCode + SKU`.
 - **Delivery truth**: `OutletDeliveries.ItemsJSON` stores lowercase scheduled/delivered rows and is aggregated against `OutletRestockItems.Quantity` to derive restock fulfillment.
 
 ### 11.2 Visit Workflow
-1. Field users create planned visits with only `OutletCode`, `Date`, `Status = PLANNED`, and optional `StatusComment`.
-2. A planned visit can be completed, postponed, or cancelled only from `PLANNED`.
+1. Field users create planned visits with `OutletCode`, `Date`, `Status = Active`, `Progress = PLANNED`, and optional progress comment.
+2. An active planned visit can be completed, postponed, or cancelled only from `Progress = PLANNED`.
 3. Completion updates the same row to `Status = COMPLETED` and stores any completion note in `StatusComment`.
 4. Cancellation requires a comment and updates the same row to `Status = CANCELLED` with `StatusComment`.
 5. Postponement requires a reason and new date. The flow updates the original visit to `Status = POSTPONED` with `StatusComment`, then creates a new `PLANNED` visit for the same outlet/date without previous/next link columns.
@@ -1009,10 +1009,21 @@ Outlet & Field Sales Operations manages consignment outlet visits, restock reque
 5. Delivery matching uses restock items for requested `Quantity`; no delivery child item sheet exists and delivery does not update `OutletRestockItems`.
 
 ### 11.5 Consumption Workflow
-1. Consumption can be recorded for an outlet with `Progress = CONFIRMED` independently of visits.
-2. The UI validates consumed quantities against current `OutletStorages` for the same outlet/storage/SKU.
-3. Save creates `OutletConsumption` + `OutletConsumptionItems`, then creates negative `OutletMovements` with `ReferenceType = Consumption`.
-4. Outlet stock balance changes only through the outlet movement post-write hook.
+1. Add flow is componentized into outlet context, mobile stock count, and summary/checklist steps. Date and username default internally and are not primary editable inputs.
+2. User selects outlet first; upcoming active planned visit is auto-selected when available (`Status = Active`, `Progress = PLANNED`, nearest `Date >= today`). Visit completion stays explicit through the checklist.
+3. Stock count uses `OutletStorages` by outlet/SKU. For each SKU, user enters counted current stock; sold quantity is derived as `max(systemQty - currentQty, 0)`. The stock-count UI is mobile-first and does not use a table layout.
+4. Summary shows sold rows (read-only for persistence) and editable restock rows (default-copied from sold rows, with add/remove support).
+5. Final checklist controls side effects in aligned rows: complete selected visit, schedule next visit, generate invoice, place restock request, submit restock immediately.
+6. Submit writes `OutletConsumptions` + `OutletConsumptionItems(Qty)` first, then side effects in follow-up batch phases:
+   - negative `OutletMovements` with `ReferenceType = Consumption`
+   - optional `OutletConsumptionInvoices`
+   - optional visit completion and next-visit scheduling
+   - optional restock create/submit
+7. Next planned visits created by consumption include a comment like `Auto planned after outlet consumption OC260001 by Firose Hussain on 29/10/2022`.
+8. `OutletConsumptions.Progress` is `INVOICE_GENERATED` when invoice is generated, otherwise `PENDING_INVOICE_GENERATION`; cancellation remains action-based.
+9. Pending invoice consumptions can generate an invoice from the view page. Generated invoices currently write blank `PriceListCode` and zero `Subtotal`, `Discount`, and `Tax` until pricing is designed.
+10. `OutletConsumptionInvoices` is exposed as list/view only; no add page exists.
+11. Outlet stock balance changes only through the outlet movement post-write hook. No direct `OutletStorages` edits are allowed.
 
 ### 11.6 Architecture Details
 - **Frontend**: Business rules, validation, batch orchestration, quantity calculations, and navigation live under `FRONTENT/src/composables/operations/outlets/`. Vue pages remain thin Quasar orchestration shells.

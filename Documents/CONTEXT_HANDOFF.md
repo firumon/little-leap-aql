@@ -132,3 +132,19 @@ Manual follow-up:
 - Confirm live `OutletVisits` headers match the refined schema.
 - Clear frontend/resource cache or re-login if old visit fields remain visible after sync.
 - No Web App redeployment is expected because the generic API contract was not changed.
+
+## 2026-05-07 Update - Outlet Consumptions Migration
+- Parent resource migrated to `OutletConsumptions` (plural), with optional `OutletVisitCode` and progress states `PENDING_INVOICE_GENERATION`, `INVOICE_GENERATED`, `CANCELLED`.
+- Added `OutletConsumptionInvoices` resource with progress states `PENDING_PAYMENT`, `PARTIALLY_PAID`, `PAID`, `CANCELLED`.
+- `OutletConsumptionItems` now persists final sold quantity in `Qty` (legacy `ConsumedQty` removed from new flow).
+- Frontend consumption flow rebuilt to: outlet selection -> stock count (`sold = max(system-current, 0)`) -> summary restock rows -> checklist-controlled side effects -> phased submit.
+- Side effects now support optional invoice creation, selected visit completion, next visit scheduling, restock creation, and immediate restock submission.
+
+## 2026-05-07 Update - Outlet Consumption UX and Invoice Follow-Up
+- Outlet consumption add flow is now componentized into context, mobile stock-count, and summary/checklist steps.
+- Stock count uses touch-friendly SKU cards instead of a table; `Same` and `0` quick actions are explicit buttons.
+- `OutletConsumptions` index groups by progress and shows outlet name/date as primary row text.
+- `OutletConsumptions` view acts as a progress gateway, including pending-invoice generation and generated-invoice display.
+- `OutletConsumptionInvoices` now has menu/list/view only; no add flow is exposed.
+- `OutletConsumptionInvoices.PriceListCode` is optional. Generated invoices use blank price list and zero subtotal/discount/tax until pricing is designed.
+- Next planned visits created from consumption include a human-readable `ProgressPlannedComment` with consumption code, user, and date.

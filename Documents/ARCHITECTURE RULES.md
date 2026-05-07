@@ -111,6 +111,10 @@ These are default contracts for all new frontend work. Do not bypass them unless
 * Resource selector MUST support string or array.
 * All GAS responses MUST use one canonical envelope.
 * Any resource data in responses MUST be handled generically by frontend services and persisted via the approved IDB/data flow.
+* `record` action responses MUST hydrate frontend state through canonical `data.resources`; frontend code MUST NOT special-case request actions for state updates.
+* Batch dependencies MUST use explicit `$ref` payload objects resolved by GAS; frontend code MUST NOT patch response placeholders such as legacy pending codes.
+* Frontend batch builders MUST preserve `$ref` objects with shared helpers from `FRONTENT/src/composables/batchRefs.js`; use `textOrRef()` for possible ref/code values and do not pass refs through `text()`, `String()`, template literals, or concatenation.
+* `$ref` values MUST NOT be embedded inside comments or sentence strings; omit the generated code from the comment or defer comment generation until the code is known unless an explicit backend template feature exists.
 * Resource responses MUST be header-light by default; header refresh MUST use an explicit fallback request.
 
 ---

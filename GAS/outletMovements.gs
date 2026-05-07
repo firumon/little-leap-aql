@@ -58,6 +58,7 @@ function applyBatchOutletMovementsToOutletStorages(records, auth) {
     var currentValues = values.slice();
     var updatedRows = {};
     var newRows = [];
+    var rowsToDelete = [];
     var now = Date.now();
     var userId = auth && auth.user ? (auth.user.UserID || '') : '';
 
@@ -80,9 +81,16 @@ function applyBatchOutletMovementsToOutletStorages(records, auth) {
         existing[idx.Quantity] = nextQty;
         if (idx.UpdatedAt !== undefined) existing[idx.UpdatedAt] = now;
         if (idx.UpdatedBy !== undefined) existing[idx.UpdatedBy] = userId;
-        updatedRows[matchedIndex] = existing;
+        if (nextQty <= 0) {
+          rowsToDelete.push(matchedIndex + 1);
+          currentValues[matchedIndex] = new Array(headers.length).fill('');
+          if (updatedRows[matchedIndex]) delete updatedRows[matchedIndex];
+        } else {
+          updatedRows[matchedIndex] = existing;
+        }
       } else {
         if (entry.qtyChange < 0) Logger.log('OutletStorages negative new balance warning: ' + key + ' -> ' + entry.qtyChange);
+        if (entry.qtyChange <= 0) return;
         var newRow = new Array(headers.length).fill('');
         if (idx.Code !== undefined) newRow[idx.Code] = generateNextCode(currentValues, idx, (config.codePrefix || 'OST').toString().trim(), config.codeSequenceLength || 7);
         if (idx.OutletCode !== undefined) newRow[idx.OutletCode] = entry.outletCode;
@@ -100,10 +108,35 @@ function applyBatchOutletMovementsToOutletStorages(records, auth) {
       sheet.getRange(rowIndex + 1, 1, 1, headers.length).setValues([updatedRows[rowIndex]]);
     });
     if (newRows.length) sheet.getRange(sheet.getLastRow() + 1, 1, newRows.length, headers.length).setValues(newRows);
-    updateResourceSyncCursor('OutletStorages');
+    if (rowsToDelete.length > 0) {
+      rowsToDelete.sort(function (a, b) { return b - a; });
+      var uniqueRowsToDelete = [];
+      for (var d = 0; d < rowsToDelete.length; d++) {
+        if (uniqueRowsToDelete.indexOf(rowsToDelete[d]) === -1) uniqueRowsToDelete.push(rowsToDelete[d]);
+      }
+      for (var k = 0; k < uniqueRowsToDelete.length; k++) sheet.deleteRow(uniqueRowsToDelete[k]);
+    }
+    if (Object.keys(updatedRows).length || newRows.length || rowsToDelete.length > 0) updateResourceSyncCursor('OutletStorages');
     return { success: true };
   } catch (e) {
     Logger.log('applyBatchOutletMovementsToOutletStorages ERROR: ' + String(e));
     return { success: false, error: String(e) };
   }
+}
+
+function cleanupZeroOutletStorages() {
+  var resource = openResourceSheet('OutletStorages');
+  var sheet = resource.sheet;
+  var values = sheet.getDataRange().getValues();
+  var headers = values[0] || [];
+  var idx = getHeaderIndexMap(headers);
+  if (idx.Quantity === undefined) return { success: false, error: 'Quantity column not found.' };
+  var rowsToDelete = [];
+  for (var i = 1; i < values.length; i++) {
+    if (Number(values[i][idx.Quantity] || 0) <= 0) rowsToDelete.push(i + 1);
+  }
+  rowsToDelete.sort(function (a, b) { return b - a; });
+  for (var d = 0; d < rowsToDelete.length; d++) sheet.deleteRow(rowsToDelete[d]);
+  if (rowsToDelete.length) updateResourceSyncCursor('OutletStorages');
+  return { success: true, deletedRows: rowsToDelete.length };
 }

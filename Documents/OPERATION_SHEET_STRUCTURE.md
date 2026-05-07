@@ -27,8 +27,9 @@ This document describes the current operation-scope sheet families and their rol
 - `OutletRestocks`
 - `OutletRestockItems`
 - `OutletDeliveries`
-- `OutletConsumption`
+- `OutletConsumptions`
 - `OutletConsumptionItems`
+- `OutletConsumptionInvoices`
 - `OutletMovements`
 - `OutletStorages`
 
@@ -47,22 +48,24 @@ This document describes the current operation-scope sheet families and their rol
 
 | Resource | Role | Required Columns | Defaults / Constraints |
 |---|---|---|---|
-| `OutletVisits` | Planned/completed/postponed/cancelled field visit records. | `OutletCode`, `Date`, `Status` | `Status = PLANNED`; valid transitions are `PLANNED -> COMPLETED`, `PLANNED -> POSTPONED`, and `PLANNED -> CANCELLED`. Transitions use additional actions and stamp `Status<Status>At`, `Status<Status>By`, and `Status<Status>Comment`; postponed visits create a new planned row without link columns. |
+| `OutletVisits` | Planned/completed/postponed/cancelled field visit records. | `OutletCode`, `Date`, `Progress`, `Status` | `Status = Active`, `Progress = PLANNED`; valid progress transitions are `PLANNED -> COMPLETED`, `PLANNED -> POSTPONED`, and `PLANNED -> CANCELLED`. Transitions use additional actions and stamp `Progress<Progress>At`, `Progress<Progress>By`, and `Progress<Progress>Comment`; postponed visits create a new planned row without link columns. |
 | `OutletRestocks` | Restock request parent document. | `Date`, `OutletCode`, `RequestedUser`, `Progress`, `Status` | `Progress = DRAFT`, `Status = Active`; editable only in `DRAFT` or `REVISION_REQUIRED`; `RequestedUser` and `ApprovedUser` store readable names because full user lookup is not loaded by the frontend. |
 | `OutletRestockItems` | Restock request child lines. | `OutletRestockCode`, `SKU`, `Quantity` | unique by `OutletRestockCode + SKU`; `Quantity` must be positive for active request lines; approver fills `StorageAllocationJSON` as lowercase JSON rows like `{ "storage_name": "Red box", "quantity": 3 }`; delivery does not change restock item rows. |
 | `OutletDeliveries` | Schedule-then-deliver document against an approved restock. | `OutletRestockCode`, `OutletCode`, `WarehouseCode`, `ScheduledAt`, `ItemsJSON`, `Progress`, `Status` | `Progress = SCHEDULED`, `Status = Active`; `ItemsJSON` contains scheduled `{ sku, storage, qty }` rows. Delivery moves to `DELIVERED`; cancellation moves to `CANCELLED`. |
-| `OutletConsumption` | Confirmed outlet consumption parent. | `OutletCode`, `ConsumptionDate`, `RecordedByUserCode`, `Progress`, `Status` | `Progress = CONFIRMED`, `Status = Active`; independent of visits and creates negative `OutletMovements`. |
-| `OutletConsumptionItems` | Consumption child lines. | `OutletConsumptionCode`, `SKU`, `ConsumedQty` | unique by `OutletConsumptionCode + SKU`; `ConsumedQty` defaults to `0`. |
+| `OutletConsumptions` | Outlet stock-count and sold-quantity parent. | `OutletCode`, `Date`, `Username`, `Progress`, `Status` | `Progress` uses `PENDING_INVOICE_GENERATION`, `INVOICE_GENERATED`, `CANCELLED`; optional `OutletVisitCode`; creates negative `OutletMovements`. |
+| `OutletConsumptionItems` | Consumption child lines storing final sold qty. | `OutletConsumptionCode`, `SKU`, `Qty` | unique by `OutletConsumptionCode + SKU`; `Qty` defaults to `0`. |
+| `OutletConsumptionInvoices` | Consumption invoice headers. | `OutletConsumptionCode`, `Date`, `OutletCode`, `Username`, `Progress`, `Status` | `PriceListCode` is optional until pricing is designed; `Progress` uses `PENDING_PAYMENT`, `PARTIALLY_PAID`, `PAID`, `CANCELLED`; amount fields are `Subtotal`, `Discount`, `Tax` and default to `0`. |
 | `OutletMovements` | Ledger for positive delivery and negative consumption stock events. | `OutletCode`, `SKU`, `QtyChange`, `ReferenceType`, `ReferenceCode` | `StorageName = _default`, `QtyChange = 0`, `Status = Active`; post-write hook updates SKU-only `OutletStorages`. |
 | `OutletStorages` | Derived current outlet stock by outlet/SKU. | `OutletCode`, `SKU`, `Quantity` | unique by `OutletCode + SKU`; `Quantity = 0`; no audit columns; frontend read-only. |
 
 ### Outlet Operation Columns
-- `OutletVisits`: `Code`, `OutletCode`, `Date`, `Status`, planned/completed/postponed/cancelled status stamp/comment columns, audit columns.
+- `OutletVisits`: `Code`, `OutletCode`, `Date`, `Progress`, planned/completed/postponed/cancelled progress stamp/comment columns, `Status`, `AccessRegion`, audit columns.
 - `OutletRestocks`: `Code`, `Date`, `OutletCode`, `RequestedUser`, `ApprovedUser`, `Progress`, submit/send-back/approve/reject action stamp/comment columns, `Status`, `AccessRegion`, audit columns.
 - `OutletRestockItems`: `Code`, `OutletRestockCode`, `SKU`, `Quantity`, `StorageAllocationJSON`, `Status`, audit columns.
 - `OutletDeliveries`: `Code`, `OutletRestockCode`, `OutletCode`, `WarehouseCode`, `ScheduledAt`, `DeliveredAt`, `CancelledAt`, `ScheduledBy`, `DeliveredBy`, `CancelledBy`, `ItemsJSON`, `Progress`, deliver/cancel action stamp columns, `Remarks`, `Status`, `AccessRegion`, audit columns.
-- `OutletConsumption`: `Code`, `OutletCode`, `ConsumptionDate`, `RecordedByUserCode`, `Progress`, `Remarks`, `Status`, `AccessRegion`, audit columns.
-- `OutletConsumptionItems`: `Code`, `OutletConsumptionCode`, `SKU`, `ConsumedQty`, `Remarks`, `Status`, audit columns.
+- `OutletConsumptions`: `Code`, `OutletCode`, `Date`, `Username`, optional `OutletVisitCode`, `Progress`, progress action audit triplets (`PendingInvoiceGeneration`, `InvoiceGenerated`, `Cancelled`), `Status`, `AccessRegion`, audit columns.
+- `OutletConsumptionItems`: `Code`, `OutletConsumptionCode`, `SKU`, `Qty`, `Status`, audit columns.
+- `OutletConsumptionInvoices`: `Code`, `OutletConsumptionCode`, `Date`, `OutletCode`, `Username`, `PriceListCode`, `Subtotal`, `Discount`, `Tax`, `Progress`, progress action audit triplets (`PendingPayment`, `PartiallyPaid`, `Paid`, `Cancelled`), `Status`, `AccessRegion`, audit columns.
 - `OutletMovements`: `Code`, `OutletCode`, `StorageName`, `SKU`, `QtyChange`, `ReferenceType`, `ReferenceCode`, `ReferenceItemCode`, `MovementDate`, `Status`, `AccessRegion`, audit columns.
 - `OutletStorages`: `Code`, `OutletCode`, `SKU`, `Quantity`.
 

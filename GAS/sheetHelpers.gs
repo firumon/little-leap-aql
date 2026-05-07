@@ -373,3 +373,74 @@ function clearAllAppCaches() {
 
   return metadataSummary;
 }
+
+/**
+ * Clears and immediately rebuilds the critical APP runtime caches.
+ * Intended for the Google Sheet admin menu when sheet-backed config changed.
+ */
+function regenerateAllAppCaches() {
+  var summary = clearAllAppCaches();
+  var rebuilt = [];
+  var skipped = [];
+
+  function warmCache(label, fnName) {
+    if (typeof this[fnName] !== 'function') {
+      skipped.push(label + ' (' + fnName + ' unavailable)');
+      return;
+    }
+    this[fnName]();
+    rebuilt.push(label);
+  }
+
+  warmCache('APP.Config', 'getConfigMap');
+  warmCache('APP.Resources', 'getResourceConfigMap');
+  warmCache('APP.RolePermissions', 'getRolePermissionsContext');
+  warmCache('APP.Roles', 'getRolesCache');
+  warmCache('APP.AccessRegions', 'getAccessRegionContext');
+  warmCache('APP.Designations', 'getDesignationsCache');
+
+  var headerSummary = warmResourceHeaderCaches();
+
+  summary.rebuiltCaches = rebuilt;
+  summary.skippedCaches = skipped;
+  summary.headerCachesRebuilt = headerSummary.rebuilt;
+  summary.headerCachesSkipped = headerSummary.skipped;
+  summary.headerCacheFailures = headerSummary.failures;
+  summary.message = 'APP caches cleared and regenerated.';
+  return summary;
+}
+
+/**
+ * Warms sheet header metadata for active sheet-backed resources so login does not
+ * need to perform the first expensive cross-file header reads.
+ */
+function warmResourceHeaderCaches() {
+  var result = { rebuilt: 0, skipped: 0, failures: [] };
+
+  if (typeof getResourceConfigMap !== 'function') {
+    result.failures.push('APP.Resources config map unavailable.');
+    return result;
+  }
+
+  var configMap = getResourceConfigMap() || {};
+  Object.keys(configMap).forEach(function(resourceName) {
+    var config = configMap[resourceName] || {};
+    if (config.functional || config.isActive === false || !config.fileId || !config.sheetName) {
+      result.skipped++;
+      return;
+    }
+
+    try {
+      var headers = getSheetHeadersByMeta(config.fileId, config.sheetName);
+      if (headers && headers.length) {
+        result.rebuilt++;
+      } else {
+        result.skipped++;
+      }
+    } catch (e) {
+      result.failures.push(resourceName + ': ' + e.message);
+    }
+  });
+
+  return result;
+}

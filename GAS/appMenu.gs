@@ -30,8 +30,7 @@ function onOpen() {
       .addItem('Manage Lists', 'app_showListViewsManagerDialog')
       .addSeparator()
       .addItem('Sync APP.Resources from Code', 'syncAppResourcesFromCode')
-      .addItem('Clear Resource Config Cache', 'clearResourceConfigCacheAndNotify')
-      .addItem('Clear All App Caches', 'clearAllAppCachesAndNotify'))
+      .addItem('Regenerate App Cache', 'regenerateAppCacheAndNotify'))
     .addSeparator()
     .addSubMenu(ui.createMenu('⚙️ Setup & Refactor')
       .addItem('Refactor APP Sheets', 'setupAppSheets')
@@ -776,25 +775,24 @@ function app_saveResourceListViews(resourceName, listViewsJson, listViewsMode) {
   }
 }
 
-function clearResourceConfigCacheAndNotify() {
+function regenerateAppCacheAndNotify() {
   try {
-    clearResourceConfigCache();
-    SpreadsheetApp.getUi().alert('Resource config cache cleared. The next API call will rebuild it fresh from the sheet.');
-  } catch (e) {
-    SpreadsheetApp.getUi().alert('Error clearing cache: ' + e.message);
-  }
-}
-
-function clearAllAppCachesAndNotify() {
-  try {
-    var summary = clearAllAppCaches();
+    var summary = regenerateAllAppCaches();
     SpreadsheetApp.getUi().alert(
-      'All APP caches cleared.\n\n' +
+      'APP caches regenerated.\n\n' +
       'Spreadsheet: ' + (summary.spreadsheetName || summary.spreadsheetId || 'APP') + '\n' +
-      'Metadata rows cleared: ' + (summary.clearedRows || 0) + '\n\n' +
-      'Refresh or re-login to rebuild metadata from the current sheets.'
+      'Metadata rows cleared: ' + (summary.clearedRows || 0) + '\n' +
+      'Caches rebuilt: ' + ((summary.rebuiltCaches || []).join(', ') || 'None') + '\n' +
+      'Header metadata caches rebuilt: ' + (summary.headerCachesRebuilt || 0) +
+      ((summary.headerCachesSkipped || 0) ? '\nHeader metadata caches skipped: ' + summary.headerCachesSkipped : '') +
+      ((summary.skippedCaches || []).length
+        ? '\nCaches skipped: ' + summary.skippedCaches.join(', ')
+        : '') +
+      ((summary.headerCacheFailures || []).length
+        ? '\nHeader cache failures: ' + summary.headerCacheFailures.join('; ')
+        : '')
     );
   } catch (e) {
-    SpreadsheetApp.getUi().alert('Error clearing APP caches: ' + e.message);
+    SpreadsheetApp.getUi().alert('Error regenerating APP caches: ' + e.message);
   }
 }

@@ -42,6 +42,7 @@ Use this document when an admin asks:
 | `📚 Resources > Manage Actions` | Configure `AdditionalActions` definitions per resource. |
 | `📚 Resources > Manage Lists` | Configure list view filters per resource (`ListViews`). |
 | `📚 Resources > Sync APP.Resources from Code` | Reconcile sheet schema/default rows with `syncAppResources.gs` source config. |
+| `📚 Resources > Regenerate App Cache` | Clear and immediately rebuild critical APP runtime caches, including resource config and metadata-backed caches. |
 | `⚙️ Setup & Refactor > Refactor APP Sheets` | Ensure APP sheet structure and config tabs are aligned with code. |
 | `⚙️ Setup & Refactor > Store APP File ID in Properties` | Save current APP file id to Script Properties for web app runtime fallback. |
 | `⚙️ Setup & Refactor > Refactor MASTER Sheets` | Create/refactor configured master sheets. |
@@ -218,6 +219,21 @@ Purpose:
 When to use:
 - After code changes touching `APP_RESOURCES_CODE_CONFIG`
 - During setup/refactor recovery
+
+### 7.6 Regenerate App Cache
+Purpose:
+- Clears all APP runtime caches and immediately rebuilds critical cache entries from the current sheets.
+- Includes resource config and metadata-backed APP caches.
+
+When to use:
+- After manual changes to `APP.Resources`, roles, role permissions, designations, access regions, or APP config.
+- When frontend/login behavior appears to use stale menu, permission, or resource metadata.
+
+Result:
+- Clears `APP.Metadata` cache rows.
+- Rebuilds configured APP cache entries from sheet data.
+- Warms sheet header metadata for active sheet-backed resources, reducing first-login delay after cache regeneration.
+- Shows a completion alert listing rebuilt caches, header metadata count, skipped entries, and any header warm-up failures.
 
 ## 8. Setup & Refactor (`AQL 🚀 > ⚙️ Setup & Refactor`)
 

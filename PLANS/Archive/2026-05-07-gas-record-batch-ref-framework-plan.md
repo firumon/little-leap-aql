@@ -63,14 +63,14 @@ Rules:
 - Remove `__PENDING__` completely from GAS and frontend.
 
 ## Pre-Conditions
-- [x] Required source docs were reviewed: [Documents/AI_COLLABORATION_PROTOCOL.md](../Documents/AI_COLLABORATION_PROTOCOL.md), [Documents/GAS_API_CAPABILITIES.md](../Documents/GAS_API_CAPABILITIES.md), [Documents/GAS_PATTERNS.md](../Documents/GAS_PATTERNS.md), [Documents/ARCHITECTURE RULES.md](../Documents/ARCHITECTURE%20RULES.md).
+- [x] Required source docs were reviewed: [Documents/AI_COLLABORATION_PROTOCOL.md](../../Documents/AI_COLLABORATION_PROTOCOL.md), [Documents/GAS_API_CAPABILITIES.md](../../Documents/GAS_API_CAPABILITIES.md), [Documents/GAS_PATTERNS.md](../../Documents/GAS_PATTERNS.md), [Documents/ARCHITECTURE RULES.md](../../Documents/ARCHITECTURE%20RULES.md).
 - [x] Build Agent understands this is an API contract change requiring GAS push and likely Web App redeployment.
 - [x] Build Agent confirms there is no client deployment needing legacy `__PENDING__` compatibility per plan rule "No backwards compatibility required for `__PENDING__`."
 
 ## Steps
 
 ### Step 1: Implement generic record-level fetch handler
-- [ ] Add a new handler in [GAS/resourceApi.gs](../GAS/resourceApi.gs) named `handleResourceRecordFetch` or equivalent.
+- [ ] Add a new handler in [GAS/resourceApi.gs](../../GAS/resourceApi.gs) named `handleResourceRecordFetch` or equivalent.
 - [ ] Accept only `payload.resources[]` with `{ resource, codes[] }` entries.
 - [ ] For each resource, open the resource sheet, load headers, enforce `canRead`, and locate rows by `Code`.
 - [ ] Enforce record-level access for each matched row using existing access enforcement patterns.
@@ -78,7 +78,7 @@ Rules:
 - [ ] Return per-resource data containing `codes`, `records`, `byCode`, and canonical resource row payload.
 - [ ] If `allowMissing` is false and any requested code is missing or inaccessible, return `success: false` with clear resource/code details.
 - [ ] If `allowMissing` is true, return found records and include missing codes in result metadata.
-**Files**: [GAS/resourceApi.gs](../GAS/resourceApi.gs)
+**Files**: [GAS/resourceApi.gs](../../GAS/resourceApi.gs)
 **Pattern**: Existing resource read and write-delta helpers in [GAS/resourceApi.gs](../GAS/resourceApi.gs:7), [GAS/resourceApi.gs](../GAS/resourceApi.gs:975), and [GAS/resourceApi.gs](../GAS/resourceApi.gs:1025)
 **Rule**: `record` is record-level fetch, not delta sync and not a list read.
 
@@ -86,15 +86,15 @@ Rules:
 - [ ] Add `case 'record'` to [GAS/apiDispatcher.gs](../GAS/apiDispatcher.gs:383).
 - [ ] Ensure canonical request normalization passes `payload.resources[]` unchanged.
 - [ ] Ensure `record` action is not treated as generic CRUD `get`.
-**Files**: [GAS/apiDispatcher.gs](../GAS/apiDispatcher.gs)
+**Files**: [GAS/apiDispatcher.gs](../../GAS/apiDispatcher.gs)
 **Pattern**: Existing `compositeSave` and `executeAction` dispatch in [GAS/apiDispatcher.gs](../GAS/apiDispatcher.gs:411)
 **Rule**: `record` is a protected action and must require auth.
 
 ### Step 3: Make record canonical response hydrate frontend state
 - [ ] Update canonical response normalization in [GAS/apiDispatcher.gs](../GAS/apiDispatcher.gs:234) if needed so `record` result resource payloads are merged into `data.resources`.
 - [ ] Ensure `record` response `data.result` contains record objects and lookup maps, while `data.resources` contains normal row arrays.
-- [ ] Confirm frontend generic ingestion in [FRONTENT/src/services/GasApiService.js](../FRONTENT/src/services/GasApiService.js) and [FRONTENT/src/stores/workflow.js](../FRONTENT/src/stores/workflow.js:176) needs no special request-dependent handling.
-**Files**: [GAS/apiDispatcher.gs](../GAS/apiDispatcher.gs), [FRONTENT/src/services/GasApiService.js](../FRONTENT/src/services/GasApiService.js), [FRONTENT/src/stores/workflow.js](../FRONTENT/src/stores/workflow.js)
+- [ ] Confirm frontend generic ingestion in [FRONTENT/src/services/GasApiService.js](../../FRONTENT/src/services/GasApiService.js) and [FRONTENT/src/stores/workflow.js](../FRONTENT/src/stores/workflow.js:176) needs no special request-dependent handling.
+**Files**: [GAS/apiDispatcher.gs](../../GAS/apiDispatcher.gs), [FRONTENT/src/services/GasApiService.js](../../FRONTENT/src/services/GasApiService.js), [FRONTENT/src/stores/workflow.js](../../FRONTENT/src/stores/workflow.js)
 **Pattern**: Canonical envelope contract in [Documents/GAS_API_CAPABILITIES.md](../Documents/GAS_API_CAPABILITIES.md:33)
 **Rule**: Every resource returned by `record` must update IDB and Pinia through the normal `data.resources` path.
 
@@ -106,7 +106,7 @@ Rules:
 - [ ] Store context entries as `latest`, `records`, `byCode`, and `latest.code` when a code is available.
 - [ ] Fail the current subrequest with a clear error if a `$ref` path cannot be resolved.
 - [ ] Preserve sequential execution and existing batch success aggregation.
-**Files**: [GAS/apiDispatcher.gs](../GAS/apiDispatcher.gs)
+**Files**: [GAS/apiDispatcher.gs](../../GAS/apiDispatcher.gs)
 **Pattern**: Existing sequential batch loop in [GAS/apiDispatcher.gs](../GAS/apiDispatcher.gs:467)
 **Rule**: Explicit `$ref` only; no automatic missing-field inference.
 
@@ -114,7 +114,7 @@ Rules:
 - [ ] Remove response-side `__PENDING__` patching from [FRONTENT/src/stores/workflow.js](../FRONTENT/src/stores/workflow.js:161).
 - [ ] Keep generic resource ingestion and row merging in [FRONTENT/src/stores/workflow.js](../FRONTENT/src/stores/workflow.js:176).
 - [ ] Search the repo for `__PENDING__` and remove remaining references.
-**Files**: [FRONTENT/src/stores/workflow.js](../FRONTENT/src/stores/workflow.js), [GAS/apiDispatcher.gs](../GAS/apiDispatcher.gs)
+**Files**: [FRONTENT/src/stores/workflow.js](../../FRONTENT/src/stores/workflow.js), [GAS/apiDispatcher.gs](../../GAS/apiDispatcher.gs)
 **Pattern**: Search results currently show only [FRONTENT/src/stores/workflow.js](../FRONTENT/src/stores/workflow.js:170) and [GAS/apiDispatcher.gs](../GAS/apiDispatcher.gs:517)
 **Rule**: No backwards compatibility required for `__PENDING__`.
 
@@ -122,15 +122,15 @@ Rules:
 - [ ] If outlet or other composables need helper builders, add generic batch `$ref` helper functions in an appropriate composable/helper file.
 - [ ] Keep services generic and do not place business logic in services.
 - [ ] Keep components free of store/service calls.
-**Files**: [FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js](../FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js), [FRONTENT/src/utils/appHelpers.js](../FRONTENT/src/utils/appHelpers.js)
+**Files**: [FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js](../../FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js), [FRONTENT/src/utils/appHelpers.js](../../FRONTENT/src/utils/appHelpers.js)
 **Pattern**: Current request builders in [FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js](../FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js:4)
 **Rule**: Business-specific payload construction belongs in composables.
 
 ## Documentation Updates Required
-- [ ] Update [Documents/GAS_API_CAPABILITIES.md](../Documents/GAS_API_CAPABILITIES.md) with the `record` action, one accepted request shape, response shape, automatic batch resource context, `$ref` syntax, and examples.
-- [ ] Update [Documents/GAS_PATTERNS.md](../Documents/GAS_PATTERNS.md) with the new standard batch dependency pattern and anti-patterns.
-- [ ] Update [Documents/ARCHITECTURE RULES.md](../Documents/ARCHITECTURE%20RULES.md) API transport section to state that `record` responses hydrate through canonical `data.resources`, and that frontend must not special-case request actions for state updates.
-- [ ] Update [Documents/AI_COLLABORATION_PROTOCOL.md](../Documents/AI_COLLABORATION_PROTOCOL.md) only if the Build Agent determines the API-contract documentation rule needs stronger wording.
+- [ ] Update [Documents/GAS_API_CAPABILITIES.md](../../Documents/GAS_API_CAPABILITIES.md) with the `record` action, one accepted request shape, response shape, automatic batch resource context, `$ref` syntax, and examples.
+- [ ] Update [Documents/GAS_PATTERNS.md](../../Documents/GAS_PATTERNS.md) with the new standard batch dependency pattern and anti-patterns.
+- [ ] Update [Documents/ARCHITECTURE RULES.md](../../Documents/ARCHITECTURE%20RULES.md) API transport section to state that `record` responses hydrate through canonical `data.resources`, and that frontend must not special-case request actions for state updates.
+- [ ] Update [Documents/AI_COLLABORATION_PROTOCOL.md](../../Documents/AI_COLLABORATION_PROTOCOL.md) only if the Build Agent determines the API-contract documentation rule needs stronger wording.
 
 ## Acceptance Criteria
 - [x] `action: record` accepts only `payload.resources[]` with `codes[]` arrays.
@@ -179,12 +179,12 @@ Rules:
 - [ ] `[!]` Issue/blocker:
 
 ### Files Actually Changed
-- [GAS/resourceApi.gs](../GAS/resourceApi.gs)
-- [GAS/apiDispatcher.gs](../GAS/apiDispatcher.gs)
-- [FRONTENT/src/stores/workflow.js](../FRONTENT/src/stores/workflow.js)
-- [Documents/GAS_API_CAPABILITIES.md](../Documents/GAS_API_CAPABILITIES.md)
-- [Documents/GAS_PATTERNS.md](../Documents/GAS_PATTERNS.md)
-- [Documents/ARCHITECTURE RULES.md](../Documents/ARCHITECTURE%20RULES.md)
+- [GAS/resourceApi.gs](../../GAS/resourceApi.gs)
+- [GAS/apiDispatcher.gs](../../GAS/apiDispatcher.gs)
+- [FRONTENT/src/stores/workflow.js](../../FRONTENT/src/stores/workflow.js)
+- [Documents/GAS_API_CAPABILITIES.md](../../Documents/GAS_API_CAPABILITIES.md)
+- [Documents/GAS_PATTERNS.md](../../Documents/GAS_PATTERNS.md)
+- [Documents/ARCHITECTURE RULES.md](../../Documents/ARCHITECTURE%20RULES.md)
 
 ### Validation Performed
 - [ ] Targeted live GAS API validation completed

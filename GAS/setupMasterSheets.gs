@@ -43,6 +43,36 @@ function setupMasterSheets() {
         CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
       }
     },
+      {
+        resourceName: CONFIG.MASTER_SHEETS.CURRENCIES,
+        headers: ['Code', 'Name', 'Symbol', 'Subunit', 'Decimals', 'BaseCurrency', 'ConversionFactor', 'AccessRegion', 'Status'].concat(commonAuditColumns),
+        statusDefault: 'Active',
+        defaults: { Status: 'Active', Decimals: 2, BaseCurrency: 'FALSE', ConversionFactor: 1 },
+        columnWidths: {
+          Code: 100, Name: 200, Symbol: 80, Subunit: 100, Decimals: 90, BaseCurrency: 120, ConversionFactor: 150, AccessRegion: 130, Status: 100,
+          CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
+        }
+      },
+      {
+        resourceName: CONFIG.MASTER_SHEETS.PRICE_LIST,
+        headers: ['Code', 'Name', 'Description', 'Currency', 'IsDefault', 'SKUPrices', 'AccessRegion', 'Status'].concat(commonAuditColumns),
+        statusDefault: 'Active',
+        defaults: { Status: 'Active', IsDefault: 'FALSE' },
+        columnWidths: {
+          Code: 130, Name: 260, Description: 300, Currency: 100, IsDefault: 100, SKUPrices: 400, AccessRegion: 130, Status: 100,
+          CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
+        }
+      },
+      {
+        resourceName: CONFIG.MASTER_SHEETS.PRICE_LIST_ITEMS,
+        headers: ['Code', 'PriceListCode', 'SKUCode', 'Price', 'Status'].concat(commonAuditColumns),
+        statusDefault: 'Active',
+        defaults: { Status: 'Active' },
+        columnWidths: {
+          Code: 140, PriceListCode: 140, SKUCode: 140, Price: 100, Status: 100,
+          CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
+        }
+      },
     {
       resourceName: CONFIG.MASTER_SHEETS.SUPPLIERS,
       headers: ['Code', 'Name', 'Country', 'Province', 'City', 'CommunicationAddress', 'ContactPerson', 'Phone', 'Email', 'AccessRegion', 'Status'].concat(commonAuditColumns),
@@ -76,11 +106,11 @@ function setupMasterSheets() {
     },
     {
       resourceName: CONFIG.MASTER_SHEETS.OUTLET_OPERATING_RULES,
-      headers: ['Code', 'OutletCode', 'MaxStockValueLimit', 'VisitFrequencyDays', 'CreditLimit', 'AccessRegion', 'Status'].concat(commonAuditColumns),
+      headers: ['Code', 'OutletCode', 'MaxStockValueLimit', 'VisitFrequencyDays', 'CreditLimit', 'PriceListCode', 'AccessRegion', 'Status'].concat(commonAuditColumns),
       statusDefault: 'Active',
-      defaults: { Status: 'Active', MaxStockValueLimit: 0, VisitFrequencyDays: 14, CreditLimit: 0 },
+      defaults: { Status: 'Active', MaxStockValueLimit: 0, VisitFrequencyDays: 14, CreditLimit: 0, PriceListCode: '' },
       columnWidths: {
-        Code: 130, OutletCode: 140, MaxStockValueLimit: 170, VisitFrequencyDays: 170, CreditLimit: 130,
+        Code: 130, OutletCode: 140, MaxStockValueLimit: 170, VisitFrequencyDays: 170, CreditLimit: 130, PriceListCode: 140,
         AccessRegion: 130, Status: 100, CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
       }
     },
@@ -94,17 +124,17 @@ function setupMasterSheets() {
         CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
       }
     },
-    {
-      resourceName: CONFIG.MASTER_SHEETS.CARRIERS,
-      headers: ['Code', 'Name', 'Type', 'Phone', 'ContactPerson', 'AccessRegion', 'Status'].concat(commonAuditColumns),
-      statusDefault: 'Active',
-      defaults: { Status: 'Active' },
-      columnWidths: {
-        Code: 130, Name: 220, Type: 120, Phone: 140, ContactPerson: 180, AccessRegion: 130, Status: 100,
-        CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
-      }
-    }
-  ];
+     {
+       resourceName: CONFIG.MASTER_SHEETS.CARRIERS,
+       headers: ['Code', 'Name', 'Type', 'Phone', 'ContactPerson', 'AccessRegion', 'Status'].concat(commonAuditColumns),
+       statusDefault: 'Active',
+       defaults: { Status: 'Active' },
+       columnWidths: {
+         Code: 130, Name: 220, Type: 120, Phone: 140, ContactPerson: 180, AccessRegion: 130, Status: 100,
+         CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
+       }
+     }
+   ];
 
   const fileSheetIndex = {};
   const results = [];

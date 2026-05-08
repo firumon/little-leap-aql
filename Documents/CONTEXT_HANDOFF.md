@@ -148,3 +148,8 @@ Manual follow-up:
 - `OutletConsumptionInvoices` now has menu/list/view only; no add flow is exposed.
 - `OutletConsumptionInvoices.PriceListCode` is optional. Generated invoices use blank price list and zero subtotal/discount/tax until pricing is designed.
 - Next planned visits created from consumption include a human-readable `ProgressPlannedComment` with consumption code, user, and date.
+
+## 2026-05-08 Update - Price Lists and Currencies
+- Added master resources `Currencies`, `PriceList`, and `PriceListItems` to GAS resource metadata and master sheet setup.
+- Added tenant-scoped `App.Config.PriceListLookup` to choose `INLINE` (`PriceList.SKUPrices` JSON) or `ITEMS` (`PriceListItems` child rows) mode.
+- Added `OutletOperatingRules.PriceListCode` for per-outlet price-list assignment; pricing resolution falls back to `PriceList.IsDefault = TRUE` when blank.

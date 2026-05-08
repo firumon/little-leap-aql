@@ -21,6 +21,9 @@ const CONFIG = {
     PRODUCTS: 'Products',
     SKUS: 'SKUs',
     UOMS: 'UOMs',
+    CURRENCIES: 'Currencies',
+    PRICE_LIST: 'PriceList',
+    PRICE_LIST_ITEMS: 'PriceListItems',
     SUPPLIERS: 'Suppliers',
     WAREHOUSES: 'Warehouses',
     OUTLETS: 'Outlets',
@@ -104,5 +107,5 @@ const  APP_OPTIONS_SEED = {
   SupplierQuotationProgress: ['RECEIVED','ACCEPTED','REJECTED'],
   PurchaseOrderProgress: ['CREATED','SENT','ACKNOWLEDGED','ACCEPTED','CANCELLED','CLOSED'],
   SupplierQuotationExtraChargeType: ['tax','freight','commission','handling','other'],
-  Currency: ['AED'],
+  Currency: ['AED', 'INR', 'USD', 'EUR', 'GBP'],
 };

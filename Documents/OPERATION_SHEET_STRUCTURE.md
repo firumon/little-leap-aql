@@ -54,7 +54,7 @@ This document describes the current operation-scope sheet families and their rol
 | `OutletDeliveries` | Schedule-then-deliver document against an approved restock. | `OutletRestockCode`, `OutletCode`, `WarehouseCode`, `ScheduledAt`, `ItemsJSON`, `Progress`, `Status` | `Progress = SCHEDULED`, `Status = Active`; `ItemsJSON` contains scheduled `{ sku, storage, qty }` rows. Delivery moves to `DELIVERED`; cancellation moves to `CANCELLED`. |
 | `OutletConsumptions` | Outlet stock-count and sold-quantity parent. | `OutletCode`, `Date`, `Username`, `Progress`, `Status` | `Progress` uses `PENDING_INVOICE_GENERATION`, `INVOICE_GENERATED`, `CANCELLED`; optional `OutletVisitCode`; creates negative `OutletMovements`. |
 | `OutletConsumptionItems` | Consumption child lines storing final sold qty. | `OutletConsumptionCode`, `SKU`, `Qty` | unique by `OutletConsumptionCode + SKU`; `Qty` defaults to `0`. |
-| `OutletConsumptionInvoices` | Consumption invoice headers. | `OutletConsumptionCode`, `Date`, `OutletCode`, `Username`, `Progress`, `Status` | `PriceListCode` is optional until pricing is designed; `Progress` uses `PENDING_PAYMENT`, `PARTIALLY_PAID`, `PAID`, `CANCELLED`; amount fields are `Subtotal`, `Discount`, `Tax` and default to `0`. |
+| `OutletConsumptionInvoices` | Consumption invoice headers. | `OutletConsumptionCode`, `Date`, `OutletCode`, `Username`, `Progress`, `Status` | `PriceListCode` is optional and can be resolved from outlet/default price-list assignment; `Progress` uses `PENDING_PAYMENT`, `PARTIALLY_PAID`, `PAID`, `CANCELLED`; amount fields are `Subtotal`, `Discount`, `Tax` and default to `0`. |
 | `OutletMovements` | Ledger for positive delivery and negative consumption stock events. | `OutletCode`, `SKU`, `QtyChange`, `ReferenceType`, `ReferenceCode` | `StorageName = _default`, `QtyChange = 0`, `Status = Active`; post-write hook updates SKU-only `OutletStorages`. |
 | `OutletStorages` | Derived current outlet stock by outlet/SKU. | `OutletCode`, `SKU`, `Quantity` | unique by `OutletCode + SKU`; `Quantity = 0`; no audit columns; frontend read-only. |
 
@@ -68,6 +68,9 @@ This document describes the current operation-scope sheet families and their rol
 - `OutletConsumptionInvoices`: `Code`, `OutletConsumptionCode`, `Date`, `OutletCode`, `Username`, `PriceListCode`, `Subtotal`, `Discount`, `Tax`, `Progress`, progress action audit triplets (`PendingPayment`, `PartiallyPaid`, `Paid`, `Cancelled`), `Status`, `AccessRegion`, audit columns.
 - `OutletMovements`: `Code`, `OutletCode`, `StorageName`, `SKU`, `QtyChange`, `ReferenceType`, `ReferenceCode`, `ReferenceItemCode`, `MovementDate`, `Status`, `AccessRegion`, audit columns.
 - `OutletStorages`: `Code`, `OutletCode`, `SKU`, `Quantity`.
+
+## Related Master Columns
+- `OutletOperatingRules`: `Code`, `OutletCode`, `MaxStockValueLimit`, `VisitFrequencyDays`, `CreditLimit`, `PriceListCode`, `AccessRegion`, `Status`, audit columns.
 
 ## Notes
 - Exact code prefixes and hook/update behavior are owned by runtime/config docs rather than this file.

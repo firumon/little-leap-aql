@@ -1021,7 +1021,7 @@ Outlet & Field Sales Operations manages consignment outlet visits, restock reque
    - optional restock create/submit
 7. Next planned visits created by consumption include a comment like `Auto planned after outlet consumption OC260001 by Firose Hussain on 29/10/2022`.
 8. `OutletConsumptions.Progress` is `INVOICE_GENERATED` when invoice is generated, otherwise `PENDING_INVOICE_GENERATION`; cancellation remains action-based.
-9. Pending invoice consumptions can generate an invoice from the view page. Generated invoices currently write blank `PriceListCode` and zero `Subtotal`, `Discount`, and `Tax` until pricing is designed.
+9. Pending invoice consumptions can generate an invoice from the view page. `PriceListCode` is optional and can be resolved from `OutletOperatingRules.PriceListCode` or the default `PriceList`; `PriceListLookup` determines whether SKU prices come from inline `SKUPrices` JSON or `PriceListItems` rows.
 10. `OutletConsumptionInvoices` is exposed as list/view only; no add page exists.
 11. Outlet stock balance changes only through the outlet movement post-write hook. No direct `OutletStorages` edits are allowed.
 

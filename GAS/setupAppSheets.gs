@@ -306,21 +306,22 @@ function setupAppSheets() {
   // Ensure Config sheet includes expected keys (append any missing keys).
   var configSheet = ss.getSheetByName(CONFIG.SHEETS.CONFIG);
   if (configSheet) {
-    var defaultKeys = [
-      ['CompanyName', ''],
-      ['CompanyLogo', ''],
-      ['ContactEmail', ''],
-      ['ContactPhone', ''],
-      ['ColorPrimary', ''],
-      ['ColorSecondary', ''],
-      ['MasterFileID', ''],
-      ['OperationFileID', ''],
-      ['ReportFileID', ''],
-      ['AccountsFileID', ''],
-      ['MasterSyncTTL', '900'],
-      ['AccountsSyncTTL', '60'],
-      ['OperationsSyncTTL', '300']
-    ];
+     var defaultKeys = [
+       ['CompanyName', ''],
+       ['CompanyLogo', ''],
+       ['ContactEmail', ''],
+       ['ContactPhone', ''],
+       ['ColorPrimary', ''],
+       ['ColorSecondary', ''],
+       ['MasterFileID', ''],
+       ['OperationFileID', ''],
+       ['ReportFileID', ''],
+       ['AccountsFileID', ''],
+       ['MasterSyncTTL', '900'],
+       ['AccountsSyncTTL', '60'],
+       ['OperationsSyncTTL', '300'],
+       ['PriceListLookup', 'INLINE']
+     ];
 
     var lastRow = configSheet.getLastRow();
     if (lastRow <= 1) {

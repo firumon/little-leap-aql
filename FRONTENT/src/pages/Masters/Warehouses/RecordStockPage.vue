@@ -34,7 +34,7 @@
       <template #prepend><q-icon name="search" /></template>
     </q-input>
 
-    <div v-if="loading" class="flex flex-center q-pa-xl">
+    <div v-if="loading && !filteredStockRows.length" class="flex flex-center q-pa-xl">
       <q-spinner color="primary" size="3em" />
     </div>
     <WarehouseStockRows v-else :rows="filteredStockRows" />

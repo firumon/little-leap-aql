@@ -28,7 +28,7 @@
     />
 
     <q-card flat bordered class="records-card q-mt-sm">
-      <q-card-section v-if="loading" class="q-py-xl text-center">
+      <q-card-section v-if="loading && !displayedItems.length" class="q-py-xl text-center">
         <q-spinner-dots color="primary" size="32px" />
       </q-card-section>
 

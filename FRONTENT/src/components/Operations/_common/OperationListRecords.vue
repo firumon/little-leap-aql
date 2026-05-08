@@ -4,7 +4,7 @@
       <div v-if="!sectionsReady" class="q-py-lg text-center">
         <q-spinner-dots color="primary" size="32px" />
       </div>
-      <component v-else-if="loading" :is="sections.ListRecordsLoading" />
+      <component v-else-if="loading && !items.length" :is="sections.ListRecordsLoading" />
       <component v-else-if="!items.length" :is="sections.ListRecordsEmpty" />
       <div v-else class="card-list q-gutter-sm">
         <div v-for="row in items" :key="row.Code" class="record-card-wrap">

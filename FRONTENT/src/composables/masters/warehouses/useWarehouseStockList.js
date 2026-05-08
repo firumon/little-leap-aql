@@ -29,9 +29,13 @@ export function useWarehouseStockList() {
 
   const loading = computed(() =>
     warehouses.loading.value ||
+    warehouses.backgroundSyncing.value ||
     storages.loading.value ||
+    storages.backgroundSyncing.value ||
     skus.loading.value ||
-    products.loading.value
+    skus.backgroundSyncing.value ||
+    products.loading.value ||
+    products.backgroundSyncing.value
   )
 
   const productByCode = computed(() => new Map(products.items.value.map((product) => [product.Code, product])))

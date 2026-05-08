@@ -45,6 +45,18 @@
 *(Status Update Discipline: Ensure you change `Status` to `IN_PROGRESS` or `COMPLETED` and update `Executed By` at the top of the file before finishing.)*
 *(Identity Discipline: Always replace `[AgentName]` with the concrete agent/runtime identity used in that session. Build Agent must remove `| pending` when execution completes.)*
 
+## Execution Self-Check Protocol
+
+The Build Agent MUST update this checklist after completing each numbered sub-task (e.g., after 1.1, after 2.4b). Mark `[x]` immediately after the task is done. This is the single source of execution progress.
+
+If execution is interrupted, the next agent reads this plan, finds the first unchecked `[ ]`, and resumes from that exact sub-task.
+
+### Format
+- `[ ]` = not started
+- `[-]` = in progress (ONLY ONE at a time)
+- `[x]` = completed
+- `[~]` = skipped (explain in Deviations)
+
 ### Progress Log
 - [ ] Step 1 completed
 - [ ] Step 2 completed

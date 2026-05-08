@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { useWorkflowStore } from 'src/stores/workflow'
 import { useResourceRelations } from './useResourceRelations'
+import { useApiErrorNotify } from 'src/composables/useApiErrorNotify'
 
 /**
  * Manages parent + child records form state for Add/Edit pages.
@@ -13,6 +14,7 @@ import { useResourceRelations } from './useResourceRelations'
 export function useCompositeForm(configRef) {
   const $q = useQuasar()
   const workflowStore = useWorkflowStore()
+  const { notifyApiError } = useApiErrorNotify()
   const { childResources } = useResourceRelations(
     () => (typeof configRef === 'function' ? configRef() : configRef?.value)?.name
   )
@@ -209,20 +211,22 @@ export function useCompositeForm(configRef) {
       }))
   }
 
-   async function save() {
-     if (!validateForm()) return { success: false }
+  async function save() {
+    if (!validateForm()) return { success: false }
 
-     saving.value = true
-     try {
-       const payload = buildPayload()
-       return await workflowStore.saveComposite(payload)
-     } catch (err) {
-       $q.notify({ type: 'negative', message: `Save failed: ${err.message}`, timeout: 3000 })
-       return { success: false, message: err.message }
-     } finally {
-       saving.value = false
-     }
-   }
+    saving.value = true
+    try {
+      const payload = buildPayload()
+      const response = await workflowStore.saveComposite(payload)
+      notifyApiError(response, { fallbackMessage: 'Save failed' })
+      return response
+    } catch (err) {
+      $q.notify({ type: 'negative', message: `Save failed: ${err.message}`, position: 'top', timeout: 3000 })
+      return { success: false, message: err.message }
+    } finally {
+      saving.value = false
+    }
+  }
 
   return {
     parentForm,

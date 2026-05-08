@@ -122,7 +122,7 @@ const APP_RESOURCES_CODE_CONFIG = [
       RecordAccessPolicy: 'ALL',
       OwnerUserField: 'CreatedBy',
       AdditionalActions: '',
-      Menu: JSON.stringify([{"group":["Product"],"order":4,"label":"Currencies","icon":"attach_money","route":"/masters/currencies","pageTitle":"Currencies","pageDescription":"Manage currency master records","show":true}]),
+      Menu: JSON.stringify([{"group":["Masters"],"order":1,"label":"Currencies","icon":"attach_money","route":"/masters/currencies","pageTitle":"Currencies","pageDescription":"Manage currency master records","show":true}]),
       UIFields: JSON.stringify([
           { header: 'Code', label: 'Code', type: 'text', required: true, hint: 'e.g. AED, INR, USD' },
           { header: 'Name', label: 'Name', type: 'text', required: true },

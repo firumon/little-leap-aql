@@ -230,16 +230,20 @@ function handleResourceCreateRecord(auth, payload) {
   }
 
   const providedValues = extractProvidedHeaderValues(headers, { record: recordPayload });
+  const providedCode = resolveCodeValue({ record: recordPayload });
 
-  const codePrefix = (resource.config.codePrefix || '').toString().trim();
-  if (!codePrefix) {
-    return { success: false, message: 'CodePrefix is missing for resource: ' + resourceName };
+  let code = providedCode;
+  if (!code) {
+    const codePrefix = (resource.config.codePrefix || '').toString().trim();
+    if (!codePrefix) {
+      return { success: false, message: 'CodePrefix is missing for resource: ' + resourceName };
+    }
+
+    const seqLength = resource.config.codeSequenceLength || 6;
+    code = resource.config.scope === 'operation'
+      ? generateNextYearScopedCode(values, idx, codePrefix, seqLength)
+      : generateNextCode(values, idx, codePrefix, seqLength);
   }
-
-  const seqLength = resource.config.codeSequenceLength || 6;
-  const code = resource.config.scope === 'operation'
-    ? generateNextYearScopedCode(values, idx, codePrefix, seqLength)
-    : generateNextCode(values, idx, codePrefix, seqLength);
   const rowData = buildNewMasterRow(headers, idx, providedValues, schema);
   rowData[idx.Code] = code;
 
@@ -1293,6 +1297,7 @@ function handleCompositeSave(auth, payload) {
   var parentIdx = getHeaderIndexMap(parentHeaders);
 
   // Build parent row
+  var providedParentCode = resolveCodeValue({ record: parentData });
   var parentProvidedValues = {};
   Object.keys(parentData).forEach(function(key) {
     if (key === 'Code' || isAuditHeader(key)) return;
@@ -1315,14 +1320,17 @@ function handleCompositeSave(auth, payload) {
     parentRowData[parentIdx.Code] = parentCode;
     applyAuditFields(parentRowData, parentIdx, auth, parentResource.config, false);
   } else {
-    var codePrefix = (parentResource.config.codePrefix || '').toString().trim();
-    if (!codePrefix) {
-      return { success: false, message: 'CodePrefix is missing for resource: ' + parentResourceName };
+    parentCode = providedParentCode;
+    if (!parentCode) {
+      var codePrefix = (parentResource.config.codePrefix || '').toString().trim();
+      if (!codePrefix) {
+        return { success: false, message: 'CodePrefix is missing for resource: ' + parentResourceName };
+      }
+      var seqLength = parentResource.config.codeSequenceLength || 6;
+      parentCode = parentResource.config.scope === 'operation'
+        ? generateNextYearScopedCode(parentValues, parentIdx, codePrefix, seqLength)
+        : generateNextCode(parentValues, parentIdx, codePrefix, seqLength);
     }
-    var seqLength = parentResource.config.codeSequenceLength || 6;
-    parentCode = parentResource.config.scope === 'operation'
-      ? generateNextYearScopedCode(parentValues, parentIdx, codePrefix, seqLength)
-      : generateNextCode(parentValues, parentIdx, codePrefix, seqLength);
     parentRowData = buildNewMasterRow(parentHeaders, parentIdx, parentProvidedValues, parentSchema);
     parentRowData[parentIdx.Code] = parentCode;
     applyAccessRegionOnWrite(parentRowData, parentIdx, auth);

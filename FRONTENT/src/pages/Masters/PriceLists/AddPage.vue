@@ -36,6 +36,19 @@
           <div class="col-12">
             <q-input v-model="form.Description" outlined dense type="textarea" autogrow label="Description" />
           </div>
+          <div class="col-12">
+            <q-select
+              :model-value="copyFromCode"
+              outlined
+              dense
+              clearable
+              emit-value
+              map-options
+              :options="copyFromOptions"
+              label="Copy prices from"
+              @update:model-value="copyPricesFromPriceList"
+            />
+          </div>
         </div>
       </q-card-section>
     </q-card>
@@ -79,18 +92,17 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
-import { useResourceData } from 'src/composables/resources/useResourceData'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { usePriceListCreateForm } from 'src/composables/masters/priceLists/usePriceListCreateForm'
+import { useWorkflowStore } from 'src/stores/workflow'
 
 const $q = useQuasar()
 const nav = useResourceNav()
 const { resourceName } = useResourceConfig()
-const productsResource = useResourceData(ref('Products'))
-const skusResource = useResourceData(ref('SKUs'))
+const workflowStore = useWorkflowStore()
 
 const statusOptions = [
   { label: 'Active', value: 'Active' },
@@ -105,21 +117,30 @@ const defaultOptions = [
 const {
   form,
   saving,
+  copyFromCode,
+  priceListLookupMode,
+  copyFromOptions,
   groupedSkus,
   updatePrice,
+  copyPricesFromPriceList,
   getPrice,
   handleSave,
   navigateBack
 } = usePriceListCreateForm()
 
 watch(
-  () => resourceName.value,
-  async (name) => {
+  () => [resourceName.value, priceListLookupMode.value],
+  async ([name]) => {
     if (!name) return
-    await Promise.all([
-      productsResource.reload(),
-      skusResource.reload()
-    ])
+    await workflowStore.fetchResources([
+      'Products',
+      'SKUs',
+      'PriceList',
+      ...(priceListLookupMode.value === 'ITEMS' ? ['PriceListItems'] : [])
+    ], {
+      includeInactive: true,
+      syncWhenCacheExists: true
+    })
   },
   { immediate: true }
 )

@@ -13,6 +13,7 @@ export function usePriceListCreateForm() {
 
   const form = reactive({ Name: '', Description: '', Currency: '', IsDefault: 'FALSE', Status: 'Active' })
   const saving = ref(false)
+  const copyFromCode = ref('')
   const prices = reactive({})
 
   const priceListLookupMode = computed(() => {
@@ -22,6 +23,17 @@ export function usePriceListCreateForm() {
 
   const productRows = computed(() => dataStore.getRecords('Products'))
   const skuRows = computed(() => dataStore.getRecords('SKUs'))
+  const priceListRows = computed(() => dataStore.getRecords('PriceList'))
+  const priceListItemsRows = computed(() => dataStore.getRecords('PriceListItems'))
+
+  const copyFromOptions = computed(() => {
+    return priceListRows.value
+      .filter((row) => (row.Status || 'Active') !== 'Inactive')
+      .map((row) => ({
+        label: `${row.Code} - ${row.Name || '(Unnamed)'}`,
+        value: row.Code
+      }))
+  })
 
   const productByCode = computed(() => {
     const map = {}
@@ -72,6 +84,51 @@ export function usePriceListCreateForm() {
     } else {
       prices[skuCode] = ''
     }
+  }
+
+  function resetPrices(nextPrices = {}) {
+    Object.keys(prices).forEach((key) => {
+      delete prices[key]
+    })
+    Object.entries(nextPrices).forEach(([skuCode, price]) => {
+      const num = parseFloat(price)
+      if (!skuCode || isNaN(num)) return
+      prices[skuCode] = num
+    })
+  }
+
+  function parseInlinePrices(value) {
+    if (!value) return {}
+    try {
+      const parsed = JSON.parse(value)
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
+    } catch {
+      return {}
+    }
+  }
+
+  function readSourcePriceMap(priceListCode) {
+    if (!priceListCode) return {}
+
+    if (priceListLookupMode.value === 'ITEMS') {
+      const map = {}
+      priceListItemsRows.value.forEach((row) => {
+        if (row.PriceListCode !== priceListCode) return
+        if ((row.Status || 'Active') === 'Inactive') return
+        if (!row.SKUCode) return
+        map[row.SKUCode] = row.Price
+      })
+      return map
+    }
+
+    const source = priceListRows.value.find((row) => row.Code === priceListCode)
+    return parseInlinePrices(source?.SKUPrices)
+  }
+
+  function copyPricesFromPriceList(priceListCode) {
+    copyFromCode.value = priceListCode || ''
+    if (!copyFromCode.value) return
+    resetPrices(readSourcePriceMap(copyFromCode.value))
   }
 
   function navigateBack() {
@@ -156,10 +213,13 @@ export function usePriceListCreateForm() {
   return {
     form,
     saving,
+    copyFromCode,
     prices,
     priceListLookupMode,
+    copyFromOptions,
     groupedSkus,
     updatePrice,
+    copyPricesFromPriceList,
     getPrice,
     handleSave,
     navigateBack

@@ -15,7 +15,7 @@
     />
 
     <q-card flat bordered class="records-card q-mt-sm">
-      <q-card-section v-if="loading" class="q-py-xl text-center">
+      <q-card-section v-if="loading && !displayedItems.length" class="q-py-xl text-center">
         <q-spinner-dots color="primary" size="32px" />
       </q-card-section>
 
@@ -34,11 +34,11 @@
             class="pl-card"
           >
             <q-expansion-item
-              :model-value="editor.isPriceListExpanded(row.Code)"
+              :model-value="isPriceListExpanded(row.Code)"
               class="pl-expansion"
               expand-icon="expand_more"
               expanded-icon="expand_less"
-              @update:model-value="editor.setPriceListExpanded(row.Code, $event)"
+              @update:model-value="setPriceListExpanded(row.Code, $event)"
             >
               <template #header>
                 <div class="row items-center no-wrap full-width">
@@ -57,43 +57,43 @@
               </template>
 
               <q-separator />
-              <q-card-section class="q-pa-sm q-pa-md">
+              <q-card-section v-if="editingHeader" class="q-pa-sm q-pa-md">
                 <div class="text-subtitle2 text-weight-medium q-mb-sm">Price List Details</div>
                 <div class="row q-col-gutter-sm q-mb-md">
                   <div class="col-12 col-md-6">
-                    <q-input v-model="editor.editingHeader.Name" outlined dense label="Name *" />
+                    <q-input v-model="editingHeader.Name" outlined dense label="Name *" />
                   </div>
                   <div class="col-12 col-md-6">
                     <q-select
-                      :model-value="editor.editingHeader.Status"
+                      :model-value="editingHeader.Status"
                       outlined dense emit-value map-options
                       :options="statusOptions"
                       label="Status"
-                      @update:model-value="editor.updateHeaderField('Status', $event)"
+                      @update:model-value="updateHeaderField('Status', $event)"
                     />
                   </div>
                   <div class="col-12 col-md-6">
-                    <q-input v-model="editor.editingHeader.Currency" outlined dense label="Currency *" />
+                    <q-input v-model="editingHeader.Currency" outlined dense label="Currency *" />
                   </div>
                   <div class="col-12 col-md-6">
                     <q-select
-                      :model-value="editor.editingHeader.IsDefault"
+                      :model-value="editingHeader.IsDefault"
                       outlined dense emit-value map-options
                       :options="defaultOptions"
                       label="Is Default"
-                      @update:model-value="editor.updateHeaderField('IsDefault', $event)"
+                      @update:model-value="updateHeaderField('IsDefault', $event)"
                     />
                   </div>
                   <div class="col-12">
                     <q-input
-                      v-model="editor.editingHeader.Description"
+                      v-model="editingHeader.Description"
                       outlined dense type="textarea" autogrow label="Description"
                     />
                   </div>
                 </div>
 
                 <div class="text-subtitle2 text-weight-medium q-mb-sm">SKU Prices</div>
-                <div v-for="group in editor.groupedSkus" :key="group.productCode" class="q-mb-md">
+                <div v-for="group in safeGroupedSkus" :key="group.productCode" class="q-mb-md">
                   <div class="text-weight-medium text-grey-8 q-mb-xs">{{ group.productName }}</div>
                   <div class="row q-col-gutter-sm">
                     <div
@@ -102,26 +102,26 @@
                       class="col-12 col-md-6 col-lg-4"
                     >
                       <q-input
-                        :model-value="editor.getPrice(sku.skuCode)"
+                        :model-value="getPrice(sku.skuCode)"
                         outlined dense
                         type="number"
                         step="0.01"
                         :label="sku.variantLabel"
-                        @update:model-value="editor.updatePriceField(sku.skuCode, $event)"
+                        @update:model-value="updatePriceField(sku.skuCode, $event)"
                       />
                     </div>
                   </div>
                 </div>
 
                 <div class="row justify-end q-mt-sm q-gutter-sm">
-                  <q-btn flat no-caps label="Cancel" @click="editor.collapsePriceList()" />
+                  <q-btn flat no-caps label="Cancel" @click="collapsePriceList()" />
                   <q-btn
                     color="primary"
                     unelevated
                     no-caps
                     label="Save"
-                    :loading="editor.saving"
-                    :disable="!(editor.headerChanged || editor.pricesChanged)"
+                    :loading="saving"
+                    :disable="!(headerChanged || pricesChanged)"
                     @click="handleSave"
                   />
                 </div>
@@ -156,14 +156,29 @@ import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useResourceData } from 'src/composables/resources/useResourceData'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { usePriceListEditor } from 'src/composables/masters/priceLists/usePriceListEditor'
+import { useWorkflowStore } from 'src/stores/workflow'
 
 const nav = useResourceNav()
 const { config, resourceName, permissions } = useResourceConfig()
-const { items, loading, backgroundSyncing, searchTerm, reload } = useResourceData(resourceName)
-const productsResource = useResourceData(ref('Products'))
-const skusResource = useResourceData(ref('SKUs'))
-const priceListItemsResource = useResourceData(ref('PriceListItems'))
-const editor = usePriceListEditor()
+const workflowStore = useWorkflowStore()
+const { items, searchTerm } = useResourceData(resourceName)
+const loading = ref(false)
+const backgroundSyncing = ref(false)
+const {
+  editingHeader,
+  headerChanged,
+  pricesChanged,
+  saving,
+  priceListLookupMode,
+  groupedSkus,
+  isPriceListExpanded,
+  setPriceListExpanded,
+  collapsePriceList,
+  updateHeaderField,
+  updatePriceField,
+  getPrice,
+  saveSection
+} = usePriceListEditor()
 
 const statusOptions = [
   { label: 'Active', value: 'Active' },
@@ -174,6 +189,11 @@ const defaultOptions = [
   { label: 'Yes', value: 'TRUE' },
   { label: 'No', value: 'FALSE' }
 ]
+
+const safeGroupedSkus = computed(() => {
+  const groups = groupedSkus.value || []
+  return Array.isArray(groups) ? groups.filter((group) => group && group.productCode) : []
+})
 
 const displayedItems = computed(() => {
   const keyword = (searchTerm.value || '').toString().trim().toLowerCase()
@@ -187,12 +207,25 @@ const displayedItems = computed(() => {
 })
 
 async function reloadAll(forceSync = false) {
-  await Promise.all([
-    reload(forceSync),
-    productsResource.reload(forceSync),
-    skusResource.reload(forceSync),
-    priceListItemsResource.reload(forceSync)
-  ])
+  const resources = [
+    resourceName.value || 'PriceList',
+    'Products',
+    'SKUs',
+    ...(priceListLookupMode.value === 'ITEMS' ? ['PriceListItems'] : [])
+  ]
+  const hasRowsToShow = items.value.length > 0
+  loading.value = !hasRowsToShow
+  backgroundSyncing.value = hasRowsToShow
+  try {
+    await workflowStore.fetchResources(resources, {
+      includeInactive: true,
+      forceSync,
+      syncWhenCacheExists: true
+    })
+  } finally {
+    loading.value = false
+    backgroundSyncing.value = false
+  }
 }
 
 function navigateToAdd() {
@@ -201,15 +234,15 @@ function navigateToAdd() {
 
 async function handleSave() {
   try {
-    await editor.saveSection()
+    await saveSection()
   } catch (err) {
     console.error(err)
   }
 }
 
 watch(
-  () => resourceName.value,
-  async (name) => {
+  () => [resourceName.value, priceListLookupMode.value],
+  async ([name]) => {
     if (!name) return
     await reloadAll()
   },

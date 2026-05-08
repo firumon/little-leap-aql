@@ -79,6 +79,8 @@ export function usePriceListEditor() {
   })
 
   const expandedSkus = computed(() => {
+    if (!expandedCode.value) return []
+
     const result = []
     const products = Object.values(productByCode.value)
     products.sort((a, b) => (a.Name || '').localeCompare(b.Name || ''))
@@ -109,13 +111,15 @@ export function usePriceListEditor() {
     const groups = []
     let cur = null
     for (const e of expandedSkus.value) {
+      if (!e || !e.productCode || !e.skuCode) continue
+
       if (!cur || cur.productCode !== e.productCode) {
         cur = { productCode: e.productCode, productName: e.productName, skus: [] }
         groups.push(cur)
       }
       cur.skus.push({ skuCode: e.skuCode, variantLabel: e.variantLabel, price: e.price })
     }
-    return groups
+    return groups.filter(Boolean)
   })
 
   const headerChanged = computed(() => {
@@ -141,18 +145,23 @@ export function usePriceListEditor() {
     return false
   })
 
+  function cloneEditableHeader(row = {}) {
+    return {
+      Name: row.Name || '',
+      Description: row.Description || '',
+      Currency: row.Currency || '',
+      IsDefault: row.IsDefault || 'FALSE',
+      Status: row.Status || 'Active'
+    }
+  }
+
   function expandPriceList(code) {
     const pl = priceListRecords.value.find((r) => r.Code === code)
     if (!pl) return
 
-    headerOriginal.value = {
-      Name: pl.Name || '',
-      Description: pl.Description || '',
-      Currency: pl.Currency || '',
-      IsDefault: pl.IsDefault || 'FALSE',
-      Status: pl.Status || 'Active'
-    }
-    editingHeader.value = pl
+    const editableHeader = cloneEditableHeader(pl)
+    headerOriginal.value = { ...editableHeader }
+    editingHeader.value = { ...editableHeader }
     expandedCode.value = code
     dirtyPrices.value = { ...priceMapBySkuCode.value }
     priceOriginal.value = { ...priceMapBySkuCode.value }
@@ -273,13 +282,7 @@ export function usePriceListEditor() {
       }
 
       if (editingHeader.value) {
-        headerOriginal.value = {
-          Name: editingHeader.value.Name || '',
-          Description: editingHeader.value.Description || '',
-          Currency: editingHeader.value.Currency || '',
-          IsDefault: editingHeader.value.IsDefault || 'FALSE',
-          Status: editingHeader.value.Status || 'Active'
-        }
+        headerOriginal.value = cloneEditableHeader(editingHeader.value)
       }
       priceOriginal.value = { ...dirtyPrices.value }
     } finally {

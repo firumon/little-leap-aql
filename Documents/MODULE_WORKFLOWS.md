@@ -983,7 +983,7 @@ Outlet & Field Sales Operations manages consignment outlet visits, restock reque
 
 ### 11.1 Resource Model
 - **Master resources**: `Outlets` and `OutletOperatingRules`.
-- **Operation resources**: `OutletVisits`, `OutletRestocks`, `OutletRestockItems`, `OutletDeliveries`, `OutletConsumptions`, `OutletConsumptionItems`, `OutletConsumptionInvoices`, `OutletMovements`, and `OutletStorages`.
+- **Operation resources**: `OutletVisits`, `OutletRestocks`, `OutletRestockItems`, `OutletDeliveries`, `OutletConsumptions`, `OutletConsumptionItems`, `OutletConsumptionInvoices`, `OutletConsumptionInvoiceItems`, `OutletMovements`, and `OutletStorages`.
 - **Source of truth**: `OutletMovements` is the stock ledger. `OutletStorages` is the derived current outlet balance keyed by `OutletCode + SKU`.
 - **Delivery truth**: `OutletDeliveries.ItemsJSON` stores lowercase scheduled/delivered rows and is aggregated against `OutletRestockItems.Quantity` to derive restock fulfillment.
 
@@ -1021,7 +1021,7 @@ Outlet & Field Sales Operations manages consignment outlet visits, restock reque
    - optional restock create/submit
 7. Next planned visits created by consumption include a comment like `Auto planned after outlet consumption OC260001 by Firose Hussain on 29/10/2022`.
 8. `OutletConsumptions.Progress` is `INVOICE_GENERATED` when invoice is generated, otherwise `PENDING_INVOICE_GENERATION`; cancellation remains action-based.
-9. Pending invoice consumptions can generate an invoice from the view page. `PriceListCode` is optional and can be resolved from `OutletOperatingRules.PriceListCode` or the default `PriceList`; `PriceListLookup` determines whether SKU prices come from inline `SKUPrices` JSON or `PriceListItems` rows.
+9. Pending invoice consumptions can generate an invoice from the view page. Invoice generation now resolves `PriceListCode` from `OutletOperatingRules.PriceListCode` or the default `PriceList`; `PriceListLookup` determines whether SKU prices come from inline `SKUPrices` JSON or `PriceListItems` rows. One active `OutletConsumptionInvoiceItems` row is created per active `OutletConsumptionItems` row with resolved price. Invoice `Subtotal` is computed as `sum(Qty * Price)` from generated item rows. Missing SKU prices block invoice generation with a user-facing error.
 10. `OutletConsumptionInvoices` is exposed as list/view only; no add page exists.
 11. Outlet stock balance changes only through the outlet movement post-write hook. No direct `OutletStorages` edits are allowed.
 

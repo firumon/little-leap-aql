@@ -154,3 +154,13 @@ Manual follow-up:
 - Added tenant-scoped `App.Config.PriceListLookup` to choose `INLINE` (`PriceList.SKUPrices` JSON) or `ITEMS` (`PriceListItems` child rows) mode.
 - Added `OutletOperatingRules.PriceListCode` for per-outlet price-list assignment; pricing resolution falls back to `PriceList.IsDefault = TRUE` when blank.
 - Price list custom entity pages now exist under `FRONTENT/src/pages/Masters/PriceLists/` with shared composables in `FRONTENT/src/composables/masters/priceLists/`. The index page expands inline-editable header fields plus grouped SKU prices, and the add page creates a new price list with grouped SKU pricing. Both honor `App.Config.PriceListLookup` through frontend workflow composables.
+
+## 2026-05-08 Update - Outlet Consumption Invoice Pricing
+- Added `OutletConsumptionInvoiceItems` operation resource with parent `OutletConsumptionInvoices`, composite uniqueness `OutletConsumptionInvoiceCode+SKU`, defaults `{Status:"Active", Qty:0, Price:0}`.
+- Invoice generation now resolves `PriceListCode` from active `OutletOperatingRules.PriceListCode` (checked for referenced price list activity) or the fallback `PriceList` where `IsDefault = TRUE`. Missing price list blocks invoice generation.
+- Frontend pricing resolver (`FRONTENT/src/composables/operations/outlets/outletConsumptionPricing.js`) resolves SKU prices from `PriceList.SKUPrices` JSON when `PriceListLookup = INLINE` or active `PriceListItems` rows when `PriceListLookup = ITEMS`. Missing SKU prices block invoice generation.
+- Both consumption submit (with generate-invoice checked) and later invoice generation now create priced `OutletConsumptionInvoiceItems` child rows. Invoice header `Subtotal = sum(Qty * Price)` from child rows.
+- Invoice view page (`ViewPage.vue`) now displays line items with SKU, Qty, Price, and line total.
+- Batch order during submit: composite consumption save -> movement bulk -> (optional) invoice header create -> invoice items bulk -> mark consumption `INVOICE_GENERATED`.
+- Consumption progress changes to `INVOICE_GENERATED` only after invoice header and items succeed in the same batch.
+- Frontend resources extended to include `PriceList`, `PriceListItems`, and `OutletConsumptionInvoiceItems`.

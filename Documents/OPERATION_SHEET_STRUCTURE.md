@@ -30,6 +30,7 @@ This document describes the current operation-scope sheet families and their rol
 - `OutletConsumptions`
 - `OutletConsumptionItems`
 - `OutletConsumptionInvoices`
+- `OutletConsumptionInvoiceItems`
 - `OutletMovements`
 - `OutletStorages`
 
@@ -55,6 +56,7 @@ This document describes the current operation-scope sheet families and their rol
 | `OutletConsumptions` | Outlet stock-count and sold-quantity parent. | `OutletCode`, `Date`, `Username`, `Progress`, `Status` | `Progress` uses `PENDING_INVOICE_GENERATION`, `INVOICE_GENERATED`, `CANCELLED`; optional `OutletVisitCode`; creates negative `OutletMovements`. |
 | `OutletConsumptionItems` | Consumption child lines storing final sold qty. | `OutletConsumptionCode`, `SKU`, `Qty` | unique by `OutletConsumptionCode + SKU`; `Qty` defaults to `0`. |
 | `OutletConsumptionInvoices` | Consumption invoice headers. | `OutletConsumptionCode`, `Date`, `OutletCode`, `Username`, `Progress`, `Status` | `PriceListCode` is optional and can be resolved from outlet/default price-list assignment; `Progress` uses `PENDING_PAYMENT`, `PARTIALLY_PAID`, `PAID`, `CANCELLED`; amount fields are `Subtotal`, `Discount`, `Tax` and default to `0`. |
+| `OutletConsumptionInvoiceItems` | Consumption invoice child line items. | `OutletConsumptionInvoiceCode`, `SKU`, `Qty`, `Price` | unique by `OutletConsumptionInvoiceCode+SKU`; `Qty` defaults to `0`; `Price` defaults to `0`; invoice header `Subtotal = sum(Qty * Price)`. |
 | `OutletMovements` | Ledger for positive delivery and negative consumption stock events. | `OutletCode`, `SKU`, `QtyChange`, `ReferenceType`, `ReferenceCode` | `StorageName = _default`, `QtyChange = 0`, `Status = Active`; post-write hook updates SKU-only `OutletStorages`. |
 | `OutletStorages` | Derived current outlet stock by outlet/SKU. | `OutletCode`, `SKU`, `Quantity` | unique by `OutletCode + SKU`; `Quantity = 0`; no audit columns; frontend read-only. |
 
@@ -66,6 +68,7 @@ This document describes the current operation-scope sheet families and their rol
 - `OutletConsumptions`: `Code`, `OutletCode`, `Date`, `Username`, optional `OutletVisitCode`, `Progress`, progress action audit triplets (`PendingInvoiceGeneration`, `InvoiceGenerated`, `Cancelled`), `Status`, `AccessRegion`, audit columns.
 - `OutletConsumptionItems`: `Code`, `OutletConsumptionCode`, `SKU`, `Qty`, `Status`, audit columns.
 - `OutletConsumptionInvoices`: `Code`, `OutletConsumptionCode`, `Date`, `OutletCode`, `Username`, `PriceListCode`, `Subtotal`, `Discount`, `Tax`, `Progress`, progress action audit triplets (`PendingPayment`, `PartiallyPaid`, `Paid`, `Cancelled`), `Status`, `AccessRegion`, audit columns.
+- `OutletConsumptionInvoiceItems`: `Code`, `OutletConsumptionInvoiceCode`, `SKU`, `Qty`, `Price`, `Status`, audit columns.
 - `OutletMovements`: `Code`, `OutletCode`, `StorageName`, `SKU`, `QtyChange`, `ReferenceType`, `ReferenceCode`, `ReferenceItemCode`, `MovementDate`, `Status`, `AccessRegion`, audit columns.
 - `OutletStorages`: `Code`, `OutletCode`, `SKU`, `Quantity`.
 

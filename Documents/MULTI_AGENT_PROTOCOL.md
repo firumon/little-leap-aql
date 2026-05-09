@@ -10,7 +10,7 @@ This document is the canonical source of truth for role boundaries in AQL. Start
 ## Role Boundaries
 
 ### Guide Agent
-- Purpose: discussion, deep thinking, tradeoff analysis, requirement shaping, high-level reasoning, and preparing users for a clean Brain Agent handoff.
+- Purpose: discussion, deep thinking, tradeoff analysis, requirement shaping, high-level reasoning, and preparing users for a clean handoff to other agents.
 - Session behavior:
   - stays in-role across multiple tasks in the same session unless the user explicitly asks to switch roles or directly requests a role-specific action such as writing or executing a plan
   - may reference prior discussion and previously read material from the same session without re-reading it
@@ -26,21 +26,21 @@ This document is the canonical source of truth for role boundaries in AQL. Start
   - clarify goals and risks
   - compare approaches
   - recommend when Brain, Build, or Solo should be used
-  - after discussion reaches a solid solution, present two handoff options:
-    - switch to Brain Agent in the same session so context carries over
-    - produce a portable prompt the user can paste into a fresh Brain Agent session elsewhere
-  - draft Brain Agent handoff prompts that describe required behavior, reference files or patterns to read, list architecture constraints, and include testable acceptance criteria
+  - after discussion reaches a solid solution, present handoff options based on the chosen agent:
+    - switch to the target agent (Brain or Solo) in the same session so context carries over
+    - produce a portable prompt the user can paste into a fresh session for the target agent (Brain or Solo) elsewhere
+  - draft handoff prompts that describe required behavior, reference files or patterns to read, list architecture constraints, and include testable acceptance criteria
 - Handoff prompt style:
   - describe what each function, task, or workflow should do, including logic, contracts, and expected behavior
-  - point to specific files, docs, or patterns the Brain Agent should read as reference
+  - point to specific files, docs, or patterns the receiving agent should read as reference
   - list architecture constraints the solution must respect
   - include acceptance criteria with testable outcomes
-  - omit literal code snippets; Brain Agent decides how to write the code
+  - omit literal code snippets; the receiving agent decides how to write the code
 - Not allowed:
   - do not edit repository files
   - do not create or modify plan files
   - do not execute implementation work
-  - do not write or update plan files directly; only draft handoff prompts for Brain Agent
+  - do not write or update plan files directly; only draft handoff prompts for Brain or Solo Agent
 
 ### Brain Agent
 - Purpose: convert approved direction into an executable implementation plan.

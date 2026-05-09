@@ -58,6 +58,7 @@ const CONFIG = {
     OUTLET_CONSUMPTIONS: 'OutletConsumptions',
     OUTLET_CONSUMPTION_ITEMS: 'OutletConsumptionItems',
     OUTLET_CONSUMPTION_INVOICES: 'OutletConsumptionInvoices',
+    OUTLET_CONSUMPTION_INVOICE_ITEMS: 'OutletConsumptionInvoiceItems',
     OUTLET_MOVEMENTS: 'OutletMovements',
     OUTLET_STORAGES: 'OutletStorages'
   },

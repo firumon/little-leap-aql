@@ -72,6 +72,17 @@ function getResourceSyncTtl(resourceName, authorizedResources = [], appConfig = 
   return DEFAULT_RESOURCE_SYNC_TTL_SEC
 }
 
+function getCacheRefreshedAt(meta = {}) {
+  return normalizeCursorValue(meta?.lastFetchAt)
+    || normalizeCursorValue(meta?.cacheRefreshedAt)
+    || normalizeCursorValue(meta?.syncedAt)
+    || null
+}
+
+function isWithinTtl(refreshedAt, ttlMs) {
+  return !!refreshedAt && ttlMs > 0 && Date.now() < refreshedAt + ttlMs
+}
+
 export async function ensureHeaders(resourceName, authorizedResources = []) {
   try {
     const meta = await withTimeout(getResourceMeta(resourceName), null)
@@ -175,6 +186,7 @@ export async function syncResourcesBatch(resourceNames = [], authorizedResources
       await withTimeout(setResourceMeta(resourceName, {
         headers,
         lastSyncAt: nextSyncCursor,
+        lastFetchAt: Date.now(),
         hasHydratedOnce: true
       }), null)
     }
@@ -212,6 +224,7 @@ export async function fetchResourceRecords(resourceName, authorizedResources = [
 
     const meta = await withTimeout(getResourceMeta(resourceName), null)
     const syncCursor = normalizeCursorValue(meta?.lastSyncAt)
+    const cacheRefreshedAt = getCacheRefreshedAt(meta)
     const statusIndex = headers.indexOf('Status')
     const cachedRows = await withTimeout(getResourceRows(resourceName, {
       includeInactive,
@@ -230,9 +243,9 @@ export async function fetchResourceRecords(resourceName, authorizedResources = [
     const emptyCacheFreshEnough = !forceSync &&
       !cachedRows.length &&
       hasHydratedOnce &&
-      effectiveCursor &&
+      cacheRefreshedAt &&
       emptyCacheThrottleMs > 0 &&
-      Date.now() < effectiveCursor + emptyCacheThrottleMs
+      isWithinTtl(cacheRefreshedAt, emptyCacheThrottleMs)
 
     if (emptyCacheFreshEnough) {
       logger.debug('Returning recently hydrated empty cache', { resource: resourceName })
@@ -240,17 +253,21 @@ export async function fetchResourceRecords(resourceName, authorizedResources = [
         headers,
         rows: [],
         records: [],
-        meta: { resource: resourceName, source: 'cache-empty', lastSyncAt: effectiveCursor }
+        meta: { resource: resourceName, source: 'cache-empty', lastSyncAt: effectiveCursor, lastFetchAt: cacheRefreshedAt }
       })
     }
 
-    if (!forceSync && !syncWhenCacheExists && cachedRows.length > 0) {
+    const populatedCacheFreshEnough = !forceSync &&
+      cachedRows.length > 0 &&
+      isWithinTtl(cacheRefreshedAt, ttlMs)
+
+    if (!forceSync && cachedRows.length > 0 && (!syncWhenCacheExists || populatedCacheFreshEnough)) {
       logger.debug('Returning cached rows', { resource: resourceName, count: cachedRows.length })
       return standardizeResponse(true, {
         headers,
         rows: cachedRows,
         records: mapRowsToObjects(cachedRows, headers),
-        meta: { resource: resourceName, source: 'cache', lastSyncAt: effectiveCursor || null }
+        meta: { resource: resourceName, source: 'cache', lastSyncAt: effectiveCursor || null, lastFetchAt: cacheRefreshedAt }
       })
     }
 
@@ -260,13 +277,12 @@ export async function fetchResourceRecords(resourceName, authorizedResources = [
 
     if (forceSync || syncWhenCacheExists || !cachedRows.length) {
       const hasUsableHydration = hasHydratedOnce || !!effectiveCursor
-      const nextEligibleSyncAt = effectiveCursor ? effectiveCursor + ttlMs : 0
-      const now = Date.now()
       const shouldImmediateSync = forceSync
-        || !cachedRows.length
         || !hasUsableHydration
-        || !effectiveCursor
-        || now >= nextEligibleSyncAt
+        || !cacheRefreshedAt
+        || (cachedRows.length
+          ? !isWithinTtl(cacheRefreshedAt, ttlMs)
+          : !isWithinTtl(cacheRefreshedAt, emptyCacheThrottleMs))
 
       logger.debug('Determining sync strategy', { resource: resourceName, shouldSync: shouldImmediateSync })
 
@@ -306,7 +322,8 @@ export async function fetchResourceRecords(resourceName, authorizedResources = [
       meta: {
         resource: resourceName,
         source: effectiveRows.length ? (freshRows.length ? 'cache+sync' : 'cache') : 'sync',
-        lastSyncAt: normalizeCursorValue((await withTimeout(getResourceMeta(resourceName), null))?.lastSyncAt) || effectiveCursor || null
+        lastSyncAt: normalizeCursorValue((await withTimeout(getResourceMeta(resourceName), null))?.lastSyncAt) || effectiveCursor || null,
+        lastFetchAt: getCacheRefreshedAt(await withTimeout(getResourceMeta(resourceName), null)) || cacheRefreshedAt
       }
     }, staleMessage)
   } catch (error) {
@@ -352,6 +369,7 @@ export async function fetchResourceRecordsBatch(resourceNames = [], authorizedRe
       const headers = headersResp.data
       const meta = await withTimeout(getResourceMeta(resourceName), null)
       const syncCursor = normalizeCursorValue(meta?.lastSyncAt)
+      const cacheRefreshedAt = getCacheRefreshedAt(meta)
       const statusIndex = headers.indexOf('Status')
       const cachedRows = await withTimeout(getResourceRows(resourceName, {
         includeInactive,
@@ -370,19 +388,21 @@ export async function fetchResourceRecordsBatch(resourceNames = [], authorizedRe
       const emptyCacheFreshEnough = !forceSync &&
         !cachedRows.length &&
         hasHydratedOnce &&
-        effectiveCursor &&
+        cacheRefreshedAt &&
         emptyCacheThrottleMs > 0 &&
-        now < effectiveCursor + emptyCacheThrottleMs
+        now < cacheRefreshedAt + emptyCacheThrottleMs
 
       let shouldSync = false
-      if (!emptyCacheFreshEnough && (forceSync || syncWhenCacheExists || !cachedRows.length)) {
+      const populatedCacheFreshEnough = cachedRows.length > 0 && isWithinTtl(cacheRefreshedAt, ttlMs)
+
+      if (!emptyCacheFreshEnough && (forceSync || syncWhenCacheExists || !cachedRows.length) && (!cachedRows.length || !populatedCacheFreshEnough)) {
         const hasUsableHydration = hasHydratedOnce || !!effectiveCursor
-        const nextEligibleSyncAt = effectiveCursor ? effectiveCursor + ttlMs : 0
-        const nextEmptyEligibleSyncAt = effectiveCursor ? effectiveCursor + emptyCacheThrottleMs : 0
         shouldSync = forceSync ||
           !hasUsableHydration ||
-          !effectiveCursor ||
-          (cachedRows.length ? now >= nextEligibleSyncAt : now >= nextEmptyEligibleSyncAt)
+          !cacheRefreshedAt ||
+          (cachedRows.length
+            ? now >= cacheRefreshedAt + ttlMs
+            : now >= cacheRefreshedAt + emptyCacheThrottleMs)
       }
 
       if (shouldSync) {
@@ -395,6 +415,7 @@ export async function fetchResourceRecordsBatch(resourceNames = [], authorizedRe
         statusIndex,
         syncCursor,
         effectiveCursor,
+        cacheRefreshedAt,
         hasHydratedOnce,
         emptyCacheFreshEnough
       }
@@ -429,6 +450,7 @@ export async function fetchResourceRecordsBatch(resourceNames = [], authorizedRe
       }), [])
       const rows = freshRows.length ? freshRows : state.cachedRows
       const lastSyncAt = normalizeCursorValue(meta?.lastSyncAt) || state.effectiveCursor || null
+      const lastFetchAt = getCacheRefreshedAt(meta) || state.cacheRefreshedAt || null
 
       resources[resourceName] = {
         headers: state.headers,
@@ -439,7 +461,8 @@ export async function fetchResourceRecordsBatch(resourceNames = [], authorizedRe
           source: state.emptyCacheFreshEnough
             ? 'cache-empty'
             : (syncNames.includes(resourceName) ? 'sync' : 'cache'),
-          lastSyncAt
+          lastSyncAt,
+          lastFetchAt
         }
       }
     }

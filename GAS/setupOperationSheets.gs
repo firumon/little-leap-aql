@@ -312,6 +312,12 @@ function setupOperationSheets() {
             columnWidths: { Code: 150, OutletConsumptionCode: 200, Date: 140, OutletCode: 140, Username: 170, PriceListCode: 170, Subtotal: 120, Discount: 120, Tax: 120, Progress: 170, ProgressPendingPaymentAt: 180, ProgressPendingPaymentBy: 180, ProgressPendingPaymentComment: 230, ProgressPartiallyPaidAt: 180, ProgressPartiallyPaidBy: 180, ProgressPartiallyPaidComment: 230, ProgressPaidAt: 160, ProgressPaidBy: 160, ProgressPaidComment: 210, ProgressCancelledAt: 170, ProgressCancelledBy: 170, ProgressCancelledComment: 220, Status: 100, AccessRegion: 130 }
         },
         {
+            resourceName: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICE_ITEMS,
+            headers: ['Code', 'OutletConsumptionInvoiceCode', 'SKU', 'Qty', 'Price', 'Status'].concat(commonAuditColumns),
+            statusDefault: 'Active', defaults: { Status: 'Active', Qty: 0, Price: 0 },
+            columnWidths: { Code: 150, OutletConsumptionInvoiceCode: 220, SKU: 150, Qty: 120, Price: 120, Status: 100 }
+        },
+        {
             resourceName: CONFIG.OPERATION_SHEETS.OUTLET_MOVEMENTS,
             headers: ['Code', 'OutletCode', 'StorageName', 'SKU', 'QtyChange', 'ReferenceType', 'ReferenceCode', 'ReferenceItemCode', 'MovementDate', 'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active', defaults: { Status: 'Active', StorageName: '_default', QtyChange: 0 }, referenceTypeValidation: APP_OPTIONS_SEED.OutletMovementReferenceType,

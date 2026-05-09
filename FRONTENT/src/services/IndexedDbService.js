@@ -151,7 +151,9 @@ export async function setAuthorizedResources(resources = [], resetCursors = fals
       sheetName: resource.sheetName || existing?.sheetName || '',
       codePrefix: resource.codePrefix || existing?.codePrefix || '',
       codeSequenceLength: resource.codeSequenceLength || existing?.codeSequenceLength || null,
-      lastSyncAt: resetCursors ? null : (existing?.lastSyncAt || null)
+      lastSyncAt: resetCursors ? null : (existing?.lastSyncAt || null),
+      lastFetchAt: resetCursors ? null : (existing?.lastFetchAt || null),
+      hasHydratedOnce: resetCursors ? false : existing?.hasHydratedOnce === true
     })
   }
   await tx.done

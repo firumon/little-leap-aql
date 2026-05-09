@@ -1,5 +1,5 @@
 export const OUTLET_RESOURCES = {
-  outlets: 'Outlets', rules: 'OutletOperatingRules', visits: 'OutletVisits', restocks: 'OutletRestocks', restockItems: 'OutletRestockItems', deliveries: 'OutletDeliveries', consumptions: 'OutletConsumptions', consumptionItems: 'OutletConsumptionItems', consumptionInvoices: 'OutletConsumptionInvoices', movements: 'OutletMovements', storages: 'OutletStorages', skus: 'SKUs', products: 'Products', warehouses: 'Warehouses', warehouseStorages: 'WarehouseStorages'
+  outlets: 'Outlets', rules: 'OutletOperatingRules', visits: 'OutletVisits', restocks: 'OutletRestocks', restockItems: 'OutletRestockItems', deliveries: 'OutletDeliveries', consumptions: 'OutletConsumptions', consumptionItems: 'OutletConsumptionItems', consumptionInvoices: 'OutletConsumptionInvoices', consumptionInvoiceItems: 'OutletConsumptionInvoiceItems', movements: 'OutletMovements', storages: 'OutletStorages', skus: 'SKUs', products: 'Products', priceLists: 'PriceList', priceListItems: 'PriceListItems', warehouses: 'Warehouses', warehouseStorages: 'WarehouseStorages'
 }
 
 export const OUTLET_OPERATION_RESOURCES = Object.values(OUTLET_RESOURCES)

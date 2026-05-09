@@ -77,9 +77,12 @@ export function useResourceData(resourceNameRef) {
     if (!resourceName) return
 
     const requestId = ++loadRequestId.value
-    // Show loading indicator when there are no items yet, OR when the caller
-    // explicitly requests a force-sync (e.g. manual "Force Sync" button click).
-    if (!items.value.length || forceSync) loading.value = true
+    const hasRowsToShow = items.value.length > 0
+    const blockingLoad = !hasRowsToShow
+    loading.value = blockingLoad
+    if (hasRowsToShow && forceSync) {
+      backgroundSyncing.value = true
+    }
 
     try {
       const response = await dataStore.loadResource(resourceName, {
@@ -96,7 +99,10 @@ export function useResourceData(resourceNameRef) {
         runBackgroundSync(resourceName, requestId)
       }
     } finally {
-      if (requestId === loadRequestId.value) loading.value = false
+      if (requestId === loadRequestId.value) {
+        loading.value = false
+        if (forceSync) backgroundSyncing.value = false
+      }
     }
   }
 

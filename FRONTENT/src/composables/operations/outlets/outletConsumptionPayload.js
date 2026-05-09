@@ -45,14 +45,14 @@ export function buildConsumptionMovementRequest(consumptionCode, outletCode, row
   })), ['OutletStorages'])
 }
 
-export function buildConsumptionInvoiceRequest(consumptionCode, form = {}) {
+export function buildConsumptionInvoiceRequest(consumptionCode, form = {}, { priceListCode = '', subtotal = 0 } = {}) {
   return resourceCreateRequest('OutletConsumptionInvoices', {
     OutletConsumptionCode: textOrRef(consumptionCode),
     Date: text(form.Date) || todayISO(),
     OutletCode: text(form.OutletCode),
     Username: text(form.Username),
-    PriceListCode: '',
-    Subtotal: 0,
+    PriceListCode: text(priceListCode),
+    Subtotal: toNumber(subtotal),
     Discount: 0,
     Tax: 0,
     Progress: 'PENDING_PAYMENT',
@@ -60,6 +60,16 @@ export function buildConsumptionInvoiceRequest(consumptionCode, form = {}) {
     Status: 'Active',
     AccessRegion: text(form.AccessRegion)
   })
+}
+
+export function buildConsumptionInvoiceItemsRequest(invoiceCodeOrRef, items = []) {
+  return resourceBulkRequest('OutletConsumptionInvoiceItems', items.map((row) => ({
+    OutletConsumptionInvoiceCode: textOrRef(invoiceCodeOrRef),
+    SKU: text(row.SKU),
+    Qty: toNumber(row.Qty),
+    Price: toNumber(row.Price),
+    Status: 'Active'
+  })))
 }
 
 export function buildInvoiceGeneratedRequest(consumptionCode, comment = 'Invoice generated from pending outlet consumption.') {

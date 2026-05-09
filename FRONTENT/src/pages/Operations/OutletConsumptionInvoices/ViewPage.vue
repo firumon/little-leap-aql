@@ -29,6 +29,23 @@
           <q-item><q-item-section><q-item-label>Tax</q-item-label></q-item-section><q-item-section side>{{ invoice.Tax || 0 }}</q-item-section></q-item>
         </q-list>
       </q-card>
+
+      <q-card flat bordered v-if="lineItems.length">
+        <q-card-section><div class="text-subtitle1 text-weight-medium">Line Items</div></q-card-section>
+        <q-markup-table flat>
+          <thead>
+            <tr><th class="text-left">SKU</th><th class="text-right">Qty</th><th class="text-right">Price</th><th class="text-right">Total</th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="(item, i) in lineItems" :key="i">
+              <td class="text-left">{{ item.SKU }}</td>
+              <td class="text-right">{{ item.Qty }}</td>
+              <td class="text-right">{{ item.Price }}</td>
+              <td class="text-right">{{ item.LineTotal }}</td>
+            </tr>
+          </tbody>
+        </q-markup-table>
+      </q-card>
     </div>
   </q-page>
 </template>
@@ -43,7 +60,8 @@ import OutletProgressChip from '../../../components/Operations/Outlets/OutletPro
 defineOptions({ name: 'OutletConsumptionInvoicesViewPage' })
 const route = useRoute()
 const flow = useOutletConsumption()
-const { loading, reload, getInvoice, outletName, formatDisplayDate, navigateToConsumption } = flow
+const { loading, reload, getInvoice, invoiceLineItems, outletName, formatDisplayDate, navigateToConsumption } = flow
 const invoice = computed(() => getInvoice(route.params.code))
+const lineItems = computed(() => invoice.value ? invoiceLineItems(invoice.value.Code) : [])
 onMounted(() => reload())
 </script>

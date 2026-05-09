@@ -156,6 +156,7 @@ async function ingestResourcePayloads(resourcesPayload, token) {
     await setResourceMeta(resourceName, {
       headers,
       lastSyncAt,
+      lastFetchAt: Date.now(),
       hasHydratedOnce: true
     })
   }
@@ -182,6 +183,7 @@ async function ingestResourcePayloads(resourcesPayload, token) {
     await setResourceMeta(resourceName, {
       headers,
       lastSyncAt,
+      lastFetchAt: Date.now(),
       hasHydratedOnce: true
     })
   }

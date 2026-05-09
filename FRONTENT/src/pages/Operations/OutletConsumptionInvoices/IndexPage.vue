@@ -34,6 +34,9 @@
         </q-list>
       </q-expansion-item>
     </q-list>
+    <div v-else-if="loading" class="text-center q-pa-xl">
+      <q-spinner color="primary" size="3em" />
+    </div>
     <div v-else class="text-center q-pa-xl text-grey">No consumption invoices found.</div>
   </q-page>
 </template>

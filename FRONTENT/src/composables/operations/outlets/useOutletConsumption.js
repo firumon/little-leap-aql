@@ -10,6 +10,7 @@ import { batchRef, batchResultCode, compositeSaveRequest, failureMessage, respon
 import {
   buildConsumptionCompositePayload,
   buildConsumptionInvoiceRequest,
+  buildConsumptionInvoiceItemsRequest,
   buildConsumptionMovementRequest,
   buildInvoiceGeneratedRequest,
   buildNextVisitRequest,
@@ -17,6 +18,7 @@ import {
   buildRestockSubmitRequest,
   buildVisitCompleteRequest
 } from './outletConsumptionPayload.js'
+import { resolveInvoicePricing } from './outletConsumptionPricing.js'
 
 const INVOICE_PROGRESS_ORDER = ['PENDING_PAYMENT', 'PARTIALLY_PAID', 'PAID', 'CANCELLED', 'OTHER']
 
@@ -27,6 +29,7 @@ export function useOutletConsumption() {
   const nav = useResourceNav()
   const consumptions = useResourceData(ref('OutletConsumptions'))
   const consumptionItems = useResourceData(ref('OutletConsumptionItems'))
+  const consumptionInvoiceItems = useResourceData(ref('OutletConsumptionInvoiceItems'))
   const invoices = useResourceData(ref('OutletConsumptionInvoices'))
   const storages = useResourceData(ref('OutletStorages'))
   const outlets = useResourceData(ref('Outlets'))
@@ -34,6 +37,8 @@ export function useOutletConsumption() {
   const rules = useResourceData(ref('OutletOperatingRules'))
   const skus = useResourceData(ref('SKUs'))
   const products = useResourceData(ref('Products'))
+  const priceLists = useResourceData(ref('PriceList'))
+  const priceListItems = useResourceData(ref('PriceListItems'))
 
   const loading = ref(false)
   const saving = ref(false)
@@ -149,11 +154,21 @@ export function useOutletConsumption() {
   function selectVisit(code) { form.value.OutletVisitCode = text(code); checklist.value.completeVisit = !!form.value.OutletVisitCode; syncChecklist() }
   function onOutletChange(outletCode) { form.value.OutletCode = outletCode; autoSelectVisit(); rebuildStockRows() }
   function childItems(code) { return consumptionItems.items.value.filter((row) => row.OutletConsumptionCode === code).filter(active) }
+  function childInvoiceItems(code) { return consumptionInvoiceItems.items.value.filter((row) => row.OutletConsumptionInvoiceCode === code).filter(active) }
   function childInvoice(code) { return invoices.items.value.find((row) => row.OutletConsumptionCode === code && active(row)) || null }
   function getConsumption(code) { return consumptions.items.value.find((row) => row.Code === code) || null }
   function getInvoice(code) { return invoices.items.value.find((row) => row.Code === code) || null }
   function consumedTotal(code) { return childItems(code).reduce((sum, row) => sum + toNumber(row.Qty), 0) }
   function consumptionItemRows(code) { return childItems(code).map((row) => ({ ...row, displayName: skuName(row.SKU), productName: productName(skus.items.value.find((sku) => sku.Code === row.SKU)?.ProductCode) })) }
+  function invoiceLineItems(invoiceCode) {
+    return childInvoiceItems(invoiceCode).map((row) => ({
+      ...row,
+      SKU: text(row.SKU),
+      Qty: toNumber(row.Qty),
+      Price: toNumber(row.Price),
+      LineTotal: toNumber(row.Qty) * toNumber(row.Price)
+    }))
+  }
   function getProgressMeta(progress) { return progressMeta(progress) }
   function formatDisplayDate(value) { return formatDate(value) || '-' }
 
@@ -180,11 +195,32 @@ export function useOutletConsumption() {
     saving.value = true
     let consumptionCode = ''
     try {
+      let pricing = null
+      if (checklist.value.generateInvoice) {
+        const sold = stockRows.value.filter((row) => toNumber(row.SoldQty) > 0).map((row) => ({ SKU: text(row.SKU), Qty: toNumber(row.SoldQty) }))
+        pricing = resolveInvoicePricing({
+          outletCode: form.value.OutletCode,
+          rules: rules.items.value,
+          priceLists: priceLists.items.value,
+          priceListItems: priceListItems.items.value,
+          appConfigMap: authStore.appConfigMap,
+          consumptionItemRows: sold
+        })
+        if (pricing.error) return $q.notify({ type: 'warning', message: `Cannot generate invoice: ${pricing.error}`, position: 'top' })
+      }
+
       const consumptionRef = batchRef('OutletConsumptions.latest.code')
       const restockRef = batchRef('OutletRestocks.latest.code')
       const requests = [compositeSaveRequest(buildConsumptionCompositePayload(form.value, stockRows.value, checklist.value))]
       requests.push(buildConsumptionMovementRequest(consumptionRef, form.value.OutletCode, stockRows.value, form.value))
-      if (checklist.value.generateInvoice) requests.push(buildConsumptionInvoiceRequest(consumptionRef, form.value), buildInvoiceGeneratedRequest(consumptionRef, 'Invoice generated during consumption submit.'))
+      if (checklist.value.generateInvoice && pricing) {
+        const invoiceRef = batchRef('OutletConsumptionInvoices.latest.code')
+        requests.push(
+          buildConsumptionInvoiceRequest(consumptionRef, form.value, { priceListCode: pricing.priceListCode, subtotal: pricing.subtotal }),
+          buildConsumptionInvoiceItemsRequest(invoiceRef, pricing.items),
+          buildInvoiceGeneratedRequest(consumptionRef, 'Invoice generated during consumption submit.')
+        )
+      }
       if (checklist.value.completeVisit && selectedVisit.value && visitProgress(selectedVisit.value) === 'PLANNED') requests.push(buildVisitCompleteRequest(form.value))
       if (checklist.value.scheduleNextVisit) {
         const rule = rules.items.value.find((row) => active(row) && text(row.OutletCode) === text(form.value.OutletCode))
@@ -209,11 +245,27 @@ export function useOutletConsumption() {
     if (!record?.Code) return false
     if (text(record.Progress) !== 'PENDING_INVOICE_GENERATION') return $q.notify({ type: 'warning', message: 'Only pending invoice consumptions can generate an invoice.', position: 'top' })
     if (childInvoice(record.Code)) return $q.notify({ type: 'warning', message: 'An active invoice already exists for this consumption.', position: 'top' })
+
+    const consumptionItems = childItems(record.Code).map((row) => ({ SKU: text(row.SKU), Qty: toNumber(row.Qty) }))
+    if (!consumptionItems.length) return $q.notify({ type: 'warning', message: 'No active consumption items found for this consumption.', position: 'top' })
+
+    const pricing = resolveInvoicePricing({
+      outletCode: record.OutletCode,
+      rules: rules.items.value,
+      priceLists: priceLists.items.value,
+      priceListItems: priceListItems.items.value,
+      appConfigMap: authStore.appConfigMap,
+      consumptionItemRows: consumptionItems
+    })
+    if (pricing.error) return $q.notify({ type: 'warning', message: `Cannot generate invoice: ${pricing.error}`, position: 'top' })
+
     acting.value = true
     try {
       const comment = 'Invoice generated from pending outlet consumption.'
+      const invoiceRef = batchRef('OutletConsumptionInvoices.latest.code')
       const result = await workflowStore.runBatchRequests([
-        buildConsumptionInvoiceRequest(record.Code, { ...record, InvoiceComment: comment }),
+        buildConsumptionInvoiceRequest(record.Code, { ...record, InvoiceComment: comment }, { priceListCode: pricing.priceListCode, subtotal: pricing.subtotal }),
+        buildConsumptionInvoiceItemsRequest(invoiceRef, pricing.items),
         buildInvoiceGeneratedRequest(record.Code, comment)
       ])
       if (responseFailed(result)) {
@@ -233,6 +285,6 @@ export function useOutletConsumption() {
   function cancel() { nav.goTo('list') }
 
   return {
-    loading, saving, acting, searchTerm, activeGroupKey, activeInvoiceGroupKey, form, checklist, stockRows, restockRows, groups, invoiceGroups, items, invoiceItems, outletOptions, visitOptions, plannedVisits, plannedVisitDiagnostics, skuOptions, selectedVisit, soldRows, varianceRows, reload, onOutletChange, selectVisit, updateCurrentQty, incrementCurrent, decrementCurrent, setCurrentToZero, setCurrentToSystem, updateRestockRow, addRestockRow, removeRestockRow, saveConsumption, generateInvoiceForConsumption, getConsumption, getInvoice, childItems, childInvoice, consumptionItemRows, consumedTotal, getProgressMeta, isGroupExpanded, toggleGroup, isInvoiceGroupExpanded, toggleInvoiceGroup, outletName, skuName, visitLabel, formatDisplayDate, navigateTo, navigateToAdd, navigateToInvoice, navigateToConsumption, cancel
+    loading, saving, acting, searchTerm, activeGroupKey, activeInvoiceGroupKey, form, checklist, stockRows, restockRows, groups, invoiceGroups, items, invoiceItems, outletOptions, visitOptions, plannedVisits, plannedVisitDiagnostics, skuOptions, selectedVisit, soldRows, varianceRows, reload, onOutletChange, selectVisit, updateCurrentQty, incrementCurrent, decrementCurrent, setCurrentToZero, setCurrentToSystem, updateRestockRow, addRestockRow, removeRestockRow, saveConsumption, generateInvoiceForConsumption, getConsumption, getInvoice, childItems, childInvoiceItems, childInvoice, consumptionItemRows, invoiceLineItems, consumedTotal, getProgressMeta, isGroupExpanded, toggleGroup, isInvoiceGroupExpanded, toggleInvoiceGroup, outletName, skuName, visitLabel, formatDisplayDate, navigateTo, navigateToAdd, navigateToInvoice, navigateToConsumption, cancel
   }
 }

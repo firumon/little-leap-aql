@@ -15,9 +15,10 @@
     <q-expansion-item
       :icon="node.icon"
       :label="node.label"
+      dark
       header-class="text-weight-medium"
     >
-      <q-list class="q-pl-lg">
+      <q-list class="q-pl-md">
         <MenuTreeNode
           v-for="child in node.children"
           :key="child.key"

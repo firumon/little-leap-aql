@@ -64,21 +64,24 @@
       v-model="leftDrawerOpen"
       show-if-above
       :width="260"
-      class="nav-drawer"
+      dark
+      style="background: #0B1622"
     >
       <q-scroll-area class="fit">
-        <!-- Logo block -->
-        <div class="nav-logo">
-          <div class="nav-logo__mark">
-            <q-icon name="auto_graph" size="18px" color="white" />
-          </div>
-          <div>
-            <div class="nav-logo__title">AQL</div>
-            <div class="nav-logo__subtitle">Operations</div>
-          </div>
-        </div>
+        <q-item dark class="q-pa-lg">
+          <q-item-section avatar>
+            <q-avatar rounded size="38px" style="background: linear-gradient(135deg, #D4A843 0%, #B68A2D 100%)">
+              <q-icon name="auto_graph" size="20px" color="white" />
+            </q-avatar>
+          </q-item-section>
+          <q-item-section>
+            <q-item-label style="font-size: 18px; font-weight: 800; letter-spacing: 0.5px; color: #fff; line-height: 1.2">AQL</q-item-label>
+            <q-item-label caption style="font-size: 11px; color: rgba(255,255,255,0.45); letter-spacing: 0.5px">Operations</q-item-label>
+          </q-item-section>
+        </q-item>
+        <q-separator dark spaced />
 
-        <q-list padding class="q-pt-sm">
+        <q-list class="q-pt-sm">
           <q-item to="/dashboard" exact clickable v-ripple>
             <q-item-section avatar>
               <q-icon name="dashboard" />
@@ -86,7 +89,7 @@
             <q-item-section>Dashboard</q-item-section>
           </q-item>
 
-          <q-separator class="q-my-sm" />
+          <q-separator dark spaced class="q-my-sm" />
 
           <MenuTreeNode
             v-for="node in visibleResourceMenuGroups"
@@ -97,7 +100,7 @@
             No resources assigned for this role.
           </q-item-label>
 
-          <q-separator class="q-my-sm" />
+          <q-separator dark spaced class="q-my-sm" />
 
           <q-item to="/settings" clickable v-ripple>
             <q-item-section avatar>
@@ -131,8 +134,20 @@ const {
 </script>
 
 <style lang="scss">
-// Nav drawer global overrides — selectors must be non-scoped to reach q-drawer portal
-.q-drawer--left .q-drawer__content {
-  background: $primary;
+.q-drawer {
+  .q-item {
+    &.q-router-link--active,
+    &.router-link-exact-active {
+      background: rgba($secondary, 0.14) !important;
+      color: $secondary !important;
+      font-weight: 600;
+      border-right: 2px solid $secondary;
+
+      .q-icon {
+        color: $secondary !important;
+      }
+    }
+  }
 }
 </style>
+

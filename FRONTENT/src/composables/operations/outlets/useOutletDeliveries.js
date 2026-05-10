@@ -5,7 +5,7 @@ import { useResourceData } from '../../resources/useResourceData.js'
 import { useResourceNav } from '../../resources/useResourceNav.js'
 import { useWorkflowStore } from '../../../stores/workflow.js'
 import { OUTLET_OPERATION_RESOURCES, DELIVERY_PROGRESS_ORDER, active, progressMeta, sortTime, text } from './outletOperationsMeta.js'
-import { aggregateItemsBySku, deliveredItemsForRestock, parseItemsJSON, parseStorageAllocations, validateDelivery, toNumber } from './outletStockLogic.js'
+import { aggregateItemsBySku, parseItemsJSON, parseStorageAllocations, validateDelivery, toNumber } from './outletStockLogic.js'
 import { buildCancelDeliveryBatchRequests, buildDeliverDeliveryBatchRequests, buildScheduleDeliveryBatchRequests } from './outletRestockPayload.js'
 import { batchResultCode, failureMessage, responseFailed } from './outletOperationsBatch.js'
 
@@ -100,7 +100,21 @@ export function useOutletDeliveries() {
     const restockCode = text(od.OutletRestockCode)
     const requestedBySku = new Map()
     selectedOrLoadedRestockItems(restockCode).forEach(item => requestedBySku.set(text(item.SKU), (requestedBySku.get(text(item.SKU)) || 0) + toNumber(item.Quantity)))
-    const deliveredBySku = new Map(deliveredItemsForRestock(deliveries.items.value, restockCode, od).map(item => [text(item.sku), toNumber(item.qty)]))
+
+    // Calculate delivered quantity per SKU across all DELIVERED ODs plus the current one
+    const deliveredBySku = new Map()
+    deliveries.items.value
+      .filter(active)
+      .filter(row => text(row.OutletRestockCode) === text(restockCode))
+      .filter(row => text(row.Progress) === 'DELIVERED' || text(row.Code) === text(od.Code))
+      .forEach(delivery => {
+        const items = parseItemsJSON(delivery.ItemsJSON)
+        items.forEach(item => {
+          const sku = text(item.sku)
+          deliveredBySku.set(sku, (deliveredBySku.get(sku) || 0) + toNumber(item.qty))
+        })
+      })
+
     const complete = Array.from(requestedBySku.entries()).every(([sku, qty]) => (deliveredBySku.get(sku) || 0) >= qty)
     return complete ? 'DELIVERED' : 'PARTIALLY_DELIVERED'
   }

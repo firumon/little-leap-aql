@@ -21,7 +21,7 @@ export function deliveredQtyForSku(deliveries = [], restockCode, sku) {
 export function deliveredItemsForRestock(deliveries = [], restockCode, currentDelivery = null) {
   const delivered = deliveries.filter(active).filter(row => text(row.OutletRestockCode) === text(restockCode) && text(row.Progress) === 'DELIVERED')
   const rows = currentDelivery && text(currentDelivery.Code)
-    ? delivered.filter(row => text(row.Code) !== text(currentDelivery.Code)).concat([currentDelivery])
+    ? delivered.concat([currentDelivery])
     : delivered
   return aggregateItemsBySku(rows.flatMap(row => parseItemsJSON(row.ItemsJSON)))
 }

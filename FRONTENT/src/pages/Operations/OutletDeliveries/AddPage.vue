@@ -2,34 +2,60 @@
   <q-page padding>
     <OutletHeaderPanel title="Schedule Outlet Delivery" subtitle="Select an approved restock and reserve warehouse stock" class="q-mb-md" />
 
+    <div v-if="preSelected" class="text-caption text-info q-mb-sm">
+      Outlet and items pre-filled from restock {{ selectedRestockCode }}.
+      Select a different restock to change.
+    </div>
+
+    <!-- Restock Selector -->
     <div class="row q-col-gutter-md q-mb-md">
-      <div v-for="restock in eligibleRestocks" :key="restock.Code" class="col-12 col-md-6 col-lg-4">
-        <q-card :class="selectedRestockCode === restock.Code ? 'bg-blue-1 text-primary' : ''" bordered clickable @click="selectRestock(restock.Code)">
-          <q-card-section>
-            <div class="row items-center no-wrap">
-              <div>
-                <div class="text-subtitle1 text-weight-medium">{{ outletName(restock.OutletCode) }}</div>
-                <div class="text-caption text-grey-7">{{ restock.Code }} · {{ restock.Date || restock.ProgressApprovedAt || 'Approved' }}</div>
-              </div>
-              <q-space />
-              <q-icon v-if="selectedRestockCode === restock.Code" name="check_circle" color="primary" />
-            </div>
-            <div class="text-caption q-mt-sm">{{ restockCardSummary(restock) }}</div>
-          </q-card-section>
-        </q-card>
+      <div class="col-12 col-md-6">
+        <q-select
+          v-model="selectedRestockModel"
+          :options="restockSelectOptions"
+          label="Select Approved Restock"
+          outlined
+          dense
+          emit-value
+          map-options
+          clearable
+        >
+          <template #option="{ opt, selected, toggleOption }">
+            <q-item clickable @click="toggleOption(opt)" :active="selected">
+              <q-item-section>
+                <q-item-label>{{ opt.outletLabel }}</q-item-label>
+                <q-item-label caption>{{ opt.date }}</q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <OutletProgressChip :progress="opt.progress" />
+              </q-item-section>
+            </q-item>
+          </template>
+        </q-select>
+      </div>
+
+      <div class="col-12 col-md-6" v-if="selectedRestockCode">
+        <q-select v-model="selectedWarehouseCode" :options="warehouseOptions" label="Warehouse" emit-value map-options outlined dense />
       </div>
     </div>
 
-    <q-card v-if="selectedRestockCode" class="q-mb-md">
-      <q-card-section class="row q-col-gutter-md">
-        <q-select class="col-12 col-md-6" v-model="selectedWarehouseCode" :options="warehouseOptions" label="Warehouse" emit-value map-options outlined />
-      </q-card-section>
-    </q-card>
-
-    <q-card v-if="rows.length">
+    <!-- Packing Reference -->
+    <q-card v-if="rows.length" class="q-mb-md">
       <q-card-section>
-        <div class="text-subtitle2 q-mb-sm">Packing Reference</div>
-        <OutletItemGrid :items="rows" show-storage :quantity-columns="[{ name: 'Qty', label: 'Scheduled Qty', readonly: true }]" />
+        <div class="text-subtitle2 q-mb-sm">Packing Reference ({{ rows.length }})</div>
+        <q-list bordered separator>
+          <q-item v-for="(row, idx) in rows" :key="idx" class="q-px-sm q-py-xs">
+            <q-item-section>
+              <q-item-label class="text-caption text-weight-medium">{{ row.ProductVariant || skuLabelLocal(row.SKU) }}</q-item-label>
+              <q-item-label caption class="text-caption">
+                {{ row.SKU }} · {{ row.StorageName }}
+              </q-item-label>
+            </q-item-section>
+            <q-item-section side>
+              <q-badge color="primary" :label="String(row.Qty || row.Quantity)" />
+            </q-item-section>
+          </q-item>
+        </q-list>
       </q-card-section>
     </q-card>
 
@@ -41,13 +67,54 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useOutletDeliveries } from '../../../composables/operations/outlets/useOutletDeliveries.js'
 import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
-import OutletItemGrid from '../../../components/Operations/Outlets/OutletItemGrid.vue'
+import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'
+import { text } from '../../../composables/operations/outlets/outletOperationsMeta.js'
 
 defineOptions({ name: 'OutletDeliveriesAddPage' })
+
+const route = useRoute()
 const flow = useOutletDeliveries()
-const { selectedRestockCode, selectedWarehouseCode, rows, saving, eligibleRestocks, warehouseOptions, reloadAdd, selectRestock, scheduleDelivery, cancel, outletName, restockCardSummary } = flow
-onMounted(() => reloadAdd())
+const {
+  selectedRestockCode, selectedWarehouseCode, rows, saving, eligibleRestocks, warehouseOptions,
+  reloadAdd, selectRestock, scheduleDelivery, cancel, outletName, restockCardSummary, skuLabel
+} = flow
+
+function skuLabelLocal(code) { return skuLabel(code) }
+
+const preSelected = ref(false)
+
+const restockSelectOptions = computed(() =>
+  eligibleRestocks.value.map(r => ({
+    label: `${outletName(r.OutletCode)} · ${r.Date || ''}`,
+    value: r.Code,
+    outletLabel: outletName(r.OutletCode),
+    progress: r.Progress,
+    date: r.Date
+  }))
+)
+
+const selectedRestockModel = computed({
+  get: () => selectedRestockCode.value || null,
+  set: (val) => {
+    if (val) {
+      preSelected.value = false
+      selectRestock(val)
+    } else {
+      selectedRestockCode.value = ''
+      rows.value = []
+    }
+  }
+})
+
+onMounted(async () => {
+  await reloadAdd()
+  if (route.query.outletRestockCode) {
+    preSelected.value = true
+    selectRestock(route.query.outletRestockCode)
+  }
+})
 </script>

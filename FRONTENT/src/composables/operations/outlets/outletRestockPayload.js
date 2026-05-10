@@ -21,11 +21,11 @@ export function buildScheduleDeliveryBatchRequests(restock = {}, restockItems = 
   return [resourceCreateRequest('OutletDeliveries', record), resourceBulkRequest('StockMovements', movements, ['WarehouseStorages'])]
 }
 
-export function buildDeliverDeliveryBatchRequests(odCode, od = {}, itemsJSON = [], actorName = '', restockProgress = 'DELIVERED') {
+export function buildDeliverDeliveryBatchRequests(odCode, od = {}, itemsJSON = [], actorName = '', restockProgress = 'DELIVERED', comment = '') {
   const now = new Date().toISOString()
   const movements = buildOutletMovementsFromItems(od.OutletCode, itemsJSON, OUTLET_REFERENCE_TYPES.delivery, od.Code || odCode).map(row => ({ ...row, AccessRegion: text(od.AccessRegion) }))
   const requests = [
-    executeActionRequest('OutletDeliveries', odCode, OUTLET_ACTIONS.deliverRestock, { DeliveredAt: now, DeliveredBy: text(actorName) }),
+    executeActionRequest('OutletDeliveries', odCode, OUTLET_ACTIONS.deliverRestock, { DeliveredAt: now, DeliveredBy: text(actorName), DeliveredComment: text(comment), ProgressDeliveredComment: text(comment) }),
     resourceBulkRequest('OutletMovements', movements, ['OutletStorages'])
   ]
   if (text(od.OutletRestockCode)) requests.push(resourceUpdateRequest('OutletRestocks', od.OutletRestockCode, { Progress: text(restockProgress) || 'DELIVERED' }))

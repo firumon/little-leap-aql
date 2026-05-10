@@ -40,6 +40,13 @@ export function useOutletConsumption() {
   const priceLists = useResourceData(ref('PriceList'))
   const priceListItems = useResourceData(ref('PriceListItems'))
 
+  const consumptionConfig = computed(() =>
+    (Array.isArray(authStore.resources) ? authStore.resources : [])
+      .find(r => r.name === 'OutletConsumptions') || null
+  )
+  const consumptionPermissions = computed(() => consumptionConfig.value?.permissions || {})
+  const canCreate = computed(() => !!consumptionPermissions.value.canWrite)
+
   const loading = ref(false)
   const saving = ref(false)
   const acting = ref(false)
@@ -103,6 +110,9 @@ export function useOutletConsumption() {
   const selectedVisit = computed(() => visits.items.value.find((row) => row.Code === form.value.OutletVisitCode) || null)
   const soldRows = computed(() => stockRows.value.filter((row) => toNumber(row.SoldQty) > 0))
   const varianceRows = computed(() => stockRows.value.filter((row) => toNumber(row.CurrentQty) > toNumber(row.SystemQty)))
+  const pendingInvoiceItems = computed(() => items.value.filter(row => text(row.Progress) === 'PENDING_INVOICE_GENERATION'))
+  const invoiceGeneratedItems = computed(() => items.value.filter(row => text(row.Progress) === 'INVOICE_GENERATED'))
+  const historyItems = computed(() => items.value.filter(row => text(row.Progress) === 'CANCELLED'))
 
   function groupKey(progress, order) { return order.includes(text(progress)) ? text(progress) : 'OTHER' }
   function matchesSearch(row) { return !searchTerm.value || JSON.stringify(row).toLowerCase().includes(searchTerm.value.toLowerCase()) || outletName(row.OutletCode).toLowerCase().includes(searchTerm.value.toLowerCase()) }
@@ -175,9 +185,8 @@ export function useOutletConsumption() {
   async function reload(forceSync = false) {
     loading.value = true
     try {
-      await workflowStore.fetchResources(OUTLET_OPERATION_RESOURCES, { includeInactive: true, forceSync })
+      await workflowStore.fetchResources(['OutletConsumptions', 'OutletConsumptionInvoices', 'Outlets'], { includeInactive: true, forceSync })
       if (!form.value.OutletCode && outletOptions.value[0]) form.value.OutletCode = outletOptions.value[0].value
-      if (form.value.OutletCode && stockRows.value.length === 0) onOutletChange(form.value.OutletCode)
       syncDefaultGroups()
     } finally { loading.value = false }
   }
@@ -279,12 +288,14 @@ export function useOutletConsumption() {
   }
 
   function navigateTo(code) { nav.goTo('view', { code }) }
-  function navigateToAdd() { nav.goTo('add') }
+  function navigateToAdd(outletCode = '') {
+    outletCode ? nav.goTo('add', { query: { outletCode } }) : nav.goTo('add')
+  }
   function navigateToInvoice(code) { nav.goTo('view', { scope: 'operations', resourceSlug: 'outlet-consumption-invoices', code }) }
   function navigateToConsumption(code) { nav.goTo('view', { scope: 'operations', resourceSlug: 'outlet-consumptions', code }) }
   function cancel() { nav.goTo('list') }
 
   return {
-    loading, saving, acting, searchTerm, activeGroupKey, activeInvoiceGroupKey, form, checklist, stockRows, restockRows, groups, invoiceGroups, items, invoiceItems, outletOptions, visitOptions, plannedVisits, plannedVisitDiagnostics, skuOptions, selectedVisit, soldRows, varianceRows, reload, onOutletChange, selectVisit, updateCurrentQty, incrementCurrent, decrementCurrent, setCurrentToZero, setCurrentToSystem, updateRestockRow, addRestockRow, removeRestockRow, saveConsumption, generateInvoiceForConsumption, getConsumption, getInvoice, childItems, childInvoiceItems, childInvoice, consumptionItemRows, invoiceLineItems, consumedTotal, getProgressMeta, isGroupExpanded, toggleGroup, isInvoiceGroupExpanded, toggleInvoiceGroup, outletName, skuName, visitLabel, formatDisplayDate, navigateTo, navigateToAdd, navigateToInvoice, navigateToConsumption, cancel
+    loading, saving, acting, searchTerm, activeGroupKey, activeInvoiceGroupKey, form, checklist, stockRows, restockRows, groups, invoiceGroups, items, invoiceItems, outletOptions, visitOptions, plannedVisits, plannedVisitDiagnostics, skuOptions, selectedVisit, soldRows, varianceRows, pendingInvoiceItems, invoiceGeneratedItems, historyItems, canCreate, reload, onOutletChange, selectVisit, updateCurrentQty, incrementCurrent, decrementCurrent, setCurrentToZero, setCurrentToSystem, updateRestockRow, addRestockRow, removeRestockRow, saveConsumption, generateInvoiceForConsumption, getConsumption, getInvoice, childItems, childInvoiceItems, childInvoice, consumptionItemRows, invoiceLineItems, consumedTotal, getProgressMeta, isGroupExpanded, toggleGroup, isInvoiceGroupExpanded, toggleInvoiceGroup, outletName, skuName, visitLabel, formatDisplayDate, navigateTo, navigateToAdd, navigateToInvoice, navigateToConsumption, cancel
   }
 }

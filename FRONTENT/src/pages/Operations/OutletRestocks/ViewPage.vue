@@ -1,5 +1,105 @@
-<template><q-page padding><OutletHeaderPanel :title="restock?.Code || 'Outlet Restock'" :subtitle="restock ? `${restock.OutletCode} · ${restock.Date} · ${restock.RequestedUser}` : ''" class="q-mb-md"><template #side><OutletProgressChip :progress="restock?.Progress"/></template></OutletHeaderPanel><q-banner v-if="primaryCommentHtml" class="bg-orange-1 text-dark q-mb-md" rounded><div v-html="primaryCommentHtml"></div></q-banner><q-card v-if="restock"><q-card-section class="row q-col-gutter-md" v-if="mode==='editable'"><q-input class="col-12 col-md-4" v-model="form.Date" type="date" label="Date" outlined/><q-input class="col-12 col-md-4" v-model="form.RequestedUser" label="Requested User" outlined/><q-input class="col-12 col-md-4" :model-value="form.Progress" label="Progress" readonly outlined/></q-card-section><q-card-section><div class="row items-center q-mb-sm"><div class="text-subtitle1">Items</div><q-space/><q-btn v-if="mode==='editable'" label="Add Item" icon="add" flat color="primary" @click="addRow"/></div><OutletItemGrid :items="rows" :editable="mode === 'editable'" :sku-options="skuOptions" :quantity-columns="[{name:'Quantity',label:'Quantity',readonly:mode!=='editable'}]" @update:item="updateRow" @remove:item="removeRow"/></q-card-section><q-card-section v-if="mode==='editable'"><q-input v-model="actionComment" type="textarea" :label="restock?.Progress === 'REVISION_REQUIRED' ? 'Resubmission Comment' : 'Submission Comment'" outlined autogrow/></q-card-section></q-card><q-card v-if="mode==='review'" class="q-mt-md"><q-card-section><div class="text-subtitle1 q-mb-sm">Warehouse allocation</div><div v-for="(row,rowIndex) in rows" :key="row.Code || rowIndex" class="q-pa-sm q-mb-sm rounded-borders bg-grey-1"><div class="row items-center q-mb-xs"><div class="col"><div class="text-weight-medium">{{ row.SKU }}</div><div class="text-caption">Requested {{ row.Quantity }} · Availability {{ allocationAvailableTotal(row) }} · Allocated {{ allocationTotal(row) }}</div></div><q-btn dense flat icon="add" label="Storage" color="primary" @click="addAllocation(rowIndex)"/></div><div class="text-caption text-grey-7 q-mb-xs">Available: <span v-for="option in allocationAvailability(row)" :key="option.value" class="q-mr-sm">{{ option.label }}</span></div><div v-for="(allocation,allocationIndex) in allocations(row)" :key="allocationIndex" class="row q-col-gutter-sm q-mb-xs"><q-select class="col-12 col-md-7" :model-value="allocation.storage_name" :options="allocationAvailability(row)" dense outlined emit-value map-options label="Storage" @update:model-value="value => updateAllocation(rowIndex, allocationIndex, { storage_name: value })"/><q-input class="col-8 col-md-3" :model-value="allocation.quantity" type="number" dense outlined label="Qty" @update:model-value="value => updateAllocation(rowIndex, allocationIndex, { quantity: Number(value) })"/><div class="col-4 col-md-2"><q-btn dense flat round icon="delete" color="negative" @click="removeAllocation(rowIndex, allocationIndex)"/></div></div></div><q-input class="col-12" v-model="actionComment" type="textarea" label="Action Comment" outlined autogrow/></q-card-section></q-card><div v-if="restock" class="row justify-end q-gutter-sm q-mt-md"><q-btn v-if="mode==='editable'" color="primary" label="Save" :loading="saving" @click="saveRestockDraft(false)"/><q-btn v-if="mode==='editable'" color="secondary" label="Send For Approval" :loading="saving" @click="handleSubmit"/><q-btn v-if="mode==='review'" color="positive" label="Approve" :loading="saving" @click="handleApprove"/><q-btn v-if="mode==='review'" color="warning" label="Send Back" :loading="saving" @click="handleSendBack"/><q-btn v-if="mode==='review'" color="negative" label="Reject" :loading="saving" @click="handleReject"/></div></q-page></template>
+<template>
+  <q-page padding>
+    <div v-if="!restock" class="text-center q-pa-xl">
+      <q-spinner v-if="loading" color="primary" size="3em" />
+      <div v-else class="text-grey">Restock not found.</div>
+    </div>
+
+    <RestockDraftView
+      v-else-if="mode === 'editable'"
+      :restock="restock"
+      :rows="rows"
+      :sku-options="skuOptions"
+      :outlet-name="outletLabel(restock.OutletCode)"
+      :saving="saving"
+      :format-workflow-comment-html="formatWorkflowCommentHtml"
+      :add-row="addRow"
+      :update-row="updateRow"
+      :remove-row="removeRow"
+      @save-draft="handleSaveDraft"
+      @submit="handleSubmit"
+    />
+
+    <RestockApprovalView
+      v-else-if="mode === 'review'"
+      :restock="restock"
+      :rows="rows"
+      :sku-options="skuOptions"
+      :outlet-name="outletLabel(restock.OutletCode)"
+      :approve-loading="approveLoading"
+      :send-back-loading="sendBackLoading"
+      :reject-loading="rejectLoading"
+      :format-workflow-comment-html="formatWorkflowCommentHtml"
+      :allocations="allocations"
+      :allocation-total="allocationTotal"
+      :allocation-availability="allocationAvailability"
+      :allocation-available-total="allocationAvailableTotal"
+      :update-allocation="updateAllocation"
+      :add-allocation="addAllocation"
+      :remove-allocation="removeAllocation"
+      @approve="handleApprove"
+      @send-back="handleSendBack"
+      @reject="handleReject"
+    />
+
+    <RestockReadonlyView
+      v-else
+      :restock="restock"
+      :rows="rows"
+      :sku-options="skuOptions"
+      :outlet-name="outletLabel(restock.OutletCode)"
+      :format-workflow-comment-html="formatWorkflowCommentHtml"
+      :allocations="allocations"
+    />
+  </q-page>
+</template>
+
 <script setup>
-import { computed, onMounted, ref } from 'vue'; import { useRoute } from 'vue-router'; import { useOutletRestocks } from '../../../composables/operations/outlets/useOutletRestocks.js'; import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'; import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'; import OutletItemGrid from '../../../components/Operations/Outlets/OutletItemGrid.vue'
-defineOptions({ name: 'OutletRestocksViewPage' }); const route = useRoute(); const actionComment = ref(''); const flow = useOutletRestocks(); const { form, rows, skuOptions, saving, reloadView, loadRestock, getRestock, saveRestockDraft, submitRestock, approveRestock, sendBackRestock, rejectRestock, resolveRestockViewMode, addRow, updateRow, removeRow, allocations, allocationTotal, allocationAvailability, allocationAvailableTotal, updateAllocation, addAllocation, removeAllocation, formatWorkflowCommentHtml } = flow; const restock = computed(() => getRestock(route.params.code)); const mode = computed(() => resolveRestockViewMode(restock.value?.Progress)); const primaryCommentHtml = computed(() => formatWorkflowCommentHtml(restock.value?.ProgressRevisionRequiredComment || restock.value?.ProgressRejectedComment || restock.value?.ProgressSubmittedComment || restock.value?.ProgressApprovedComment || '')); async function handleSubmit() { if (await submitRestock(restock.value, actionComment.value)) actionComment.value = '' } async function handleApprove() { if (await approveRestock(restock.value, rows.value, actionComment.value)) actionComment.value = '' } async function handleSendBack() { if (await sendBackRestock(restock.value, actionComment.value)) actionComment.value = '' } async function handleReject() { if (await rejectRestock(restock.value, actionComment.value)) actionComment.value = '' } onMounted(async () => { await reloadView(); loadRestock(route.params.code) })
+import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { useOutletRestocks } from '../../../composables/operations/outlets/useOutletRestocks.js'
+import RestockDraftView from '../../../components/Operations/Outlets/RestockDraftView.vue'
+import RestockApprovalView from '../../../components/Operations/Outlets/RestockApprovalView.vue'
+import RestockReadonlyView from '../../../components/Operations/Outlets/RestockReadonlyView.vue'
+
+defineOptions({ name: 'OutletRestocksViewPage' })
+
+const route = useRoute()
+const flow = useOutletRestocks()
+
+const {
+  form, rows, skuOptions, saving, loading,
+  reloadView, loadRestock, getRestock,
+  saveRestockDraft, submitRestock, approveRestock, sendBackRestock, rejectRestock,
+  resolveRestockViewMode,
+  addRow, updateRow, removeRow,
+  allocations, allocationTotal, allocationAvailability, allocationAvailableTotal,
+  updateAllocation, addAllocation, removeAllocation,
+  formatWorkflowCommentHtml
+} = flow
+
+const restock = computed(() => getRestock(route.params.code))
+const mode = computed(() => resolveRestockViewMode(restock.value?.Progress))
+
+const approveLoading = ref(false)
+const sendBackLoading = ref(false)
+const rejectLoading = ref(false)
+
+function outletLabel(code) {
+  const outlet = (flow.outletOptions?.value || []).find(o => o.value === code)
+  if (!outlet) return code
+  const parts = outlet.label.split(' · ')
+  return parts.length > 1 ? parts.slice(1).join(' · ') : outlet.label
+}
+
+async function handleSaveDraft() { await saveRestockDraft(false) }
+async function handleSubmit(comment = '') { await submitRestock(restock.value, comment) }
+async function handleApprove(comment = '') { approveLoading.value = true; try { await approveRestock(restock.value, rows.value, comment) } finally { approveLoading.value = false } }
+async function handleSendBack(comment = '') { sendBackLoading.value = true; try { await sendBackRestock(restock.value, comment) } finally { sendBackLoading.value = false } }
+async function handleReject(comment = '') { rejectLoading.value = true; try { await rejectRestock(restock.value, comment) } finally { rejectLoading.value = false } }
+
+onMounted(async () => {
+  await reloadView()
+  loadRestock(route.params.code)
+})
 </script>

@@ -55,6 +55,7 @@ const CONFIG = {
     OUTLET_RESTOCKS: 'OutletRestocks',
     OUTLET_RESTOCK_ITEMS: 'OutletRestockItems',
     OUTLET_DELIVERIES: 'OutletDeliveries',
+    OUTLET_DELIVERY_ITEMS: 'OutletDeliveryItems',
     OUTLET_CONSUMPTIONS: 'OutletConsumptions',
     OUTLET_CONSUMPTION_ITEMS: 'OutletConsumptionItems',
     OUTLET_CONSUMPTION_INVOICES: 'OutletConsumptionInvoices',
@@ -83,7 +84,7 @@ const CONFIG = {
  *       dropdown validation in the relevant setup script.
  */
 const  APP_OPTIONS_SEED = {
-  StockMovementReferenceType: ['GRN', 'DirectEntry', 'StockAdjustment', 'OutletRestock', 'OutletDeliveryCancel'],
+  StockMovementReferenceType: ['GRN', 'DirectEntry', 'StockAdjustment', 'OutletRestock'],
   PurchaseRequisitionType: ['STOCK', 'PROJECT', 'SALES', 'ASSET'],
   PurchaseRequisitionPriority: ['Low', 'Medium', 'High', 'Urgent'],
   PurchaseRequisitionProgress: ['Draft', 'Pending Approval', 'Revision Required', 'Approved', 'Rejected', 'RFQ Processed'],
@@ -91,7 +92,9 @@ const  APP_OPTIONS_SEED = {
   POReceivingProgress: ['DRAFT', 'CONFIRMED', 'GRN_GENERATED', 'CANCELLED'],
   OutletVisitProgress: ['PLANNED', 'COMPLETED', 'POSTPONED', 'CANCELLED'],
   OutletRestockProgress: ['DRAFT', 'PENDING_APPROVAL', 'REVISION_REQUIRED', 'APPROVED', 'PARTIALLY_DELIVERED', 'DELIVERED', 'REJECTED'],
-  OutletDeliveryProgress: ['SCHEDULED', 'DELIVERED', 'CANCELLED'],
+  OutletDeliveryProgress: ['DRAFT', 'IN_TRANSIT', 'COMPLETED', 'CANCELLED'],
+  OutletDeliveryItemProgress: ['IN_TRANSIT', 'DELIVERED'],
+  OutletRestockItemProgress: ['PENDING', 'ALLOCATED', 'DELIVERED', 'CANCELLED'],
   OutletMovementReferenceType: ['RestockDelivery', 'Consumption', 'Adjustment'],
   OutletConsumptionProgress: ['PENDING_INVOICE_GENERATION', 'INVOICE_GENERATED', 'CANCELLED'],
   OutletConsumptionInvoiceProgress: ['PENDING_PAYMENT', 'PARTIALLY_PAID', 'PAID', 'CANCELLED'],

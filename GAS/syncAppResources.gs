@@ -881,7 +881,6 @@ const APP_RESOURCES_CODE_CONFIG = [
         AdditionalActions: JSON.stringify([
             { "action": "Submit", "label": "Submit", "icon": "send", "color": "primary", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "PENDING_APPROVAL", "fields": [{ "name": "Comment", "label": "Submit Comment", "type": "textarea", "required": true }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "REVISION_REQUIRED" } },
             { "action": "Submit", "label": "Submit", "icon": "send", "color": "primary", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "PENDING_APPROVAL", "fields": [{ "name": "Comment", "label": "Submit Comment", "type": "textarea", "required": false }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "DRAFT" } },
-            { "action": "Approve", "label": "Approve", "icon": "task_alt", "color": "positive", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "APPROVED", "fields": [{ "name": "ApprovedUser", "label": "Approved User", "type": "text", "required": false }, { "name": "Comment", "label": "Approval Comment", "type": "textarea", "required": false }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "PENDING_APPROVAL" } },
             { "action": "Reject", "label": "Reject", "icon": "block", "color": "negative", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "REJECTED", "fields": [{ "name": "Comment", "label": "Rejection Comment", "type": "textarea", "required": true }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "PENDING_APPROVAL" } },
             { "action": "SendBack", "label": "Send Back", "icon": "undo", "color": "warning", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "REVISION_REQUIRED", "fields": [{ "name": "Comment", "label": "Revision Comment", "type": "textarea", "required": true }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "PENDING_APPROVAL" } }
         ]),
@@ -891,29 +890,40 @@ const APP_RESOURCES_CODE_CONFIG = [
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_RESTOCK_ITEMS,
         Scope: 'operation', ParentResource: CONFIG.OPERATION_SHEETS.OUTLET_RESTOCKS, IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_RESTOCK_ITEMS,
-        CodePrefix: 'ORSI', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletRestockCode,SKU,Quantity', UniqueHeaders: '', UniqueCompositeHeaders: 'OutletRestockCode+SKU', DefaultValues: '{"Status":"Active","Quantity":0}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: '', Menu: JSON.stringify([]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
+        CodePrefix: 'ORSI', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletRestockCode,SKU,Quantity', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Quantity":0,"Progress":"PENDING"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: JSON.stringify([{ "action": "Cancel", "label": "Cancel", "icon": "cancel", "color": "negative", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "CANCELLED", "fields": [{ "name": "Comment", "label": "Cancel Comment", "type": "textarea", "required": true }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "PENDING" } }]), Menu: JSON.stringify([]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_DELIVERIES,
         Scope: 'operation', IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_DELIVERIES,
-        CodePrefix: 'ODL', CodeSequenceLength: 6, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletRestockCode,OutletCode,WarehouseCode,ScheduledAt,ItemsJSON,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Progress":"SCHEDULED"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: JSON.stringify([
-            { "action": "Deliver", "label": "Deliver", "icon": "local_shipping", "color": "positive", "kind": "mutate", "confirm": true, "column": "Progress", "columnValue": "DELIVERED", "columnValueOptions": [], "fields": [], "visibleWhen": { "column": "Progress", "op": "eq", "value": "SCHEDULED" } },
-            { "action": "Cancel", "label": "Cancel", "icon": "cancel", "color": "negative", "kind": "mutate", "confirm": true, "column": "Progress", "columnValue": "CANCELLED", "columnValueOptions": [], "fields": [{ "name": "Comment", "label": "Cancellation Comment", "type": "textarea", "required": false }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "SCHEDULED" } }
-        ]), Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 3, "label": "Outlet Deliveries", "icon": "local_shipping", "route": "/operations/outlet-deliveries", "pageTitle": "Outlet Deliveries", "pageDescription": "Schedule, deliver, or cancel approved outlet restocks", "show": true }]), UIFields: JSON.stringify([
-            { header: 'ScheduledAt', label: 'Scheduled At', type: 'datetime' },
-            { header: 'DeliveredAt', label: 'Delivered At', type: 'datetime' },
-            { header: 'CancelledAt', label: 'Cancelled At', type: 'datetime' },
-            { header: 'ScheduledBy', label: 'Scheduled By', type: 'text' },
-            { header: 'DeliveredBy', label: 'Delivered By', type: 'text' },
-            { header: 'CancelledBy', label: 'Cancelled By', type: 'text' },
-            { header: 'ItemsJSON', label: 'Items JSON', type: 'textarea' },
-            { header: 'WarehouseCode', label: 'Warehouse Code', type: 'text', required: true },
-            { header: 'OutletRestockCode', label: 'Outlet Restock Code', type: 'text', required: true },
-            { header: 'OutletCode', label: 'Outlet Code', type: 'text', required: true },
+        CodePrefix: 'ODL', CodeSequenceLength: 6, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'Date,UserName,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Progress":"DRAFT"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: '', Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 3, "label": "Outlet Deliveries", "icon": "local_shipping", "route": "/operations/outlet-deliveries", "pageTitle": "Outlet Deliveries", "pageDescription": "Create, deliver, or cancel allocated outlet restock items", "show": true }]), UIFields: JSON.stringify([
+            { header: 'Date', label: 'Date', type: 'date', required: true },
+            { header: 'UserName', label: 'User Name', type: 'text', required: true },
             { header: 'Progress', label: 'Progress', type: 'status', required: true },
+            { header: 'ProgressInTransitAt', label: 'In Transit At', type: 'datetime' },
+            { header: 'ProgressInTransitBy', label: 'In Transit By', type: 'text' },
+            { header: 'ProgressInTransitComment', label: 'In Transit Comment', type: 'textarea' },
+            { header: 'ProgressCompletedAt', label: 'Completed At', type: 'datetime' },
+            { header: 'ProgressCompletedBy', label: 'Completed By', type: 'text' },
+            { header: 'ProgressCompletedComment', label: 'Completed Comment', type: 'textarea' },
+            { header: 'CancelledAt', label: 'Cancelled At', type: 'datetime' },
+            { header: 'CancelledBy', label: 'Cancelled By', type: 'text' },
+            { header: 'CancelledComment', label: 'Cancelled Comment', type: 'textarea' },
             { header: 'Status', label: 'Status', type: 'status', required: true },
-            { header: 'AccessRegion', label: 'Access Region', type: 'text' },
-            { header: 'Remarks', label: 'Remarks', type: 'textarea' }
+            { header: 'AccessRegion', label: 'Access Region', type: 'text' }
+        ]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
+    },
+    {
+        Name: CONFIG.OPERATION_SHEETS.OUTLET_DELIVERY_ITEMS,
+        Scope: 'operation', ParentResource: CONFIG.OPERATION_SHEETS.OUTLET_DELIVERIES, IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_DELIVERY_ITEMS,
+        CodePrefix: 'ODI', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletDeliveryCode,OutletRestockItemCode,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: 'OutletDeliveryCode+OutletRestockItemCode', DefaultValues: '{"Status":"Active","Progress":"IN_TRANSIT"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: '', Menu: JSON.stringify([]), UIFields: JSON.stringify([
+            { header: 'OutletDeliveryCode', label: 'Outlet Delivery Code', type: 'text', required: true },
+            { header: 'OutletRestockItemCode', label: 'Outlet Restock Item Code', type: 'text', required: true },
+            { header: 'Progress', label: 'Progress', type: 'status', required: true },
+            { header: 'ProgressDeliveredAt', label: 'Delivered At', type: 'datetime' },
+            { header: 'ProgressDeliveredBy', label: 'Delivered By', type: 'text' },
+            { header: 'ProgressDeliveredComment', label: 'Delivered Comment', type: 'textarea' },
+            { header: 'Status', label: 'Status', type: 'status', required: true },
+            { header: 'AccessRegion', label: 'Access Region', type: 'text' }
         ]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
     },
     {

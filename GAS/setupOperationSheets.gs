@@ -263,26 +263,43 @@ function setupOperationSheets() {
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.OUTLET_RESTOCK_ITEMS,
-            headers: ['Code', 'OutletRestockCode', 'SKU', 'Quantity', 'StorageAllocationJSON', 'Status'].concat(commonAuditColumns),
-            statusDefault: 'Active', defaults: { Status: 'Active', Quantity: 0 },
-            columnWidths: { Code: 150, OutletRestockCode: 170, SKU: 150, Quantity: 130, StorageAllocationJSON: 320, Status: 100 }
+            headers: ['Code', 'OutletRestockCode', 'WarehouseCode', 'SKU', 'StorageName', 'Quantity', 'Progress',
+                'ProgressAllocatedAt', 'ProgressAllocatedBy', 'ProgressAllocatedComment',
+                'ProgressDeliveredAt', 'ProgressDeliveredBy', 'ProgressDeliveredComment',
+                'ProgressCancelledAt', 'ProgressCancelledBy', 'ProgressCancelledComment',
+                'Status', 'AccessRegion'].concat(commonAuditColumns),
+            statusDefault: 'Active', defaults: { Status: 'Active', Quantity: 0, Progress: 'PENDING' },
+            progressValidation: APP_OPTIONS_SEED.OutletRestockItemProgress,
+            columnWidths: { Code: 150, OutletRestockCode: 170, WarehouseCode: 150, SKU: 150, StorageName: 170, Quantity: 130, Progress: 140,
+                ProgressAllocatedAt: 170, ProgressAllocatedBy: 170, ProgressAllocatedComment: 220,
+                ProgressDeliveredAt: 170, ProgressDeliveredBy: 170, ProgressDeliveredComment: 220,
+                ProgressCancelledAt: 170, ProgressCancelledBy: 170, ProgressCancelledComment: 220,
+                Status: 100, AccessRegion: 130 }
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.OUTLET_DELIVERIES,
             headers: [
-                'Code', 'OutletRestockCode', 'OutletCode', 'WarehouseCode',
-                'ScheduledAt', 'DeliveredAt', 'CancelledAt',
-                'ScheduledBy', 'DeliveredBy', 'CancelledBy',
-                'ItemsJSON', 'Progress',
-                'ProgressDeliveredAt', 'ProgressDeliveredBy', 'ProgressDeliveredComment',
-                'ProgressCancelledAt', 'ProgressCancelledBy', 'ProgressCancelledComment',
-                'Remarks', 'Status', 'AccessRegion'
+                'Code', 'Date', 'UserName', 'Progress',
+                'ProgressInTransitAt', 'ProgressInTransitBy', 'ProgressInTransitComment',
+                'ProgressCompletedAt', 'ProgressCompletedBy', 'ProgressCompletedComment',
+                'CancelledAt', 'CancelledBy', 'CancelledComment',
+                'Status', 'AccessRegion'
             ].concat(commonAuditColumns),
-            statusDefault: 'Active', defaults: { Status: 'Active', Progress: 'SCHEDULED' }, progressValidation: APP_OPTIONS_SEED.OutletDeliveryProgress,
-            columnWidths: { Code: 150, OutletRestockCode: 170, OutletCode: 140, WarehouseCode: 150,
-                ScheduledAt: 170, DeliveredAt: 170, CancelledAt: 170, ScheduledBy: 170, DeliveredBy: 170, CancelledBy: 170,
-                ItemsJSON: 360, Progress: 140, ProgressDeliveredAt: 170, ProgressDeliveredBy: 170, ProgressDeliveredComment: 220,
-                ProgressCancelledAt: 170, ProgressCancelledBy: 170, ProgressCancelledComment: 220, Remarks: 220, Status: 100, AccessRegion: 130 }
+            statusDefault: 'Active', defaults: { Status: 'Active', Progress: 'DRAFT' }, progressValidation: APP_OPTIONS_SEED.OutletDeliveryProgress,
+            columnWidths: { Code: 150, Date: 130, UserName: 180, Progress: 140,
+                ProgressInTransitAt: 170, ProgressInTransitBy: 170, ProgressInTransitComment: 240,
+                ProgressCompletedAt: 170, ProgressCompletedBy: 170, ProgressCompletedComment: 240,
+                CancelledAt: 170, CancelledBy: 170, CancelledComment: 240, Status: 100, AccessRegion: 130 }
+        },
+        {
+            resourceName: CONFIG.OPERATION_SHEETS.OUTLET_DELIVERY_ITEMS,
+            headers: ['Code', 'OutletDeliveryCode', 'OutletRestockItemCode', 'Progress',
+                'ProgressDeliveredAt', 'ProgressDeliveredBy', 'ProgressDeliveredComment',
+                'Status', 'AccessRegion'].concat(commonAuditColumns),
+            statusDefault: 'Active', defaults: { Status: 'Active', Progress: 'IN_TRANSIT' }, progressValidation: APP_OPTIONS_SEED.OutletDeliveryItemProgress,
+            columnWidths: { Code: 150, OutletDeliveryCode: 170, OutletRestockItemCode: 190, Progress: 140,
+                ProgressDeliveredAt: 170, ProgressDeliveredBy: 170, ProgressDeliveredComment: 240,
+                Status: 100, AccessRegion: 130 }
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTIONS,

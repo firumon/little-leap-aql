@@ -1115,6 +1115,41 @@ function mergeDeltaResourcesIntoResult(baseData, deltaByResource) {
   return merged;
 }
 
+function mergeWrittenRowsIntoResourcePayload(resourcePayload, resourceConfig, headers, writtenRows) {
+  var payload = resourcePayload && typeof resourcePayload === 'object' ? resourcePayload : {};
+  var rows = Array.isArray(payload.rows) ? payload.rows.slice() : [];
+  var outputHeaders = Array.isArray(payload.headers) && payload.headers.length ? payload.headers : headers;
+  var codeIdx = outputHeaders.indexOf('Code');
+  var seen = {};
+
+  if (codeIdx !== -1) {
+    rows.forEach(function (row) {
+      var code = Array.isArray(row) ? (row[codeIdx] || '').toString().trim() : '';
+      if (code) seen[code] = true;
+    });
+  }
+
+  (Array.isArray(writtenRows) ? writtenRows : []).forEach(function (row) {
+    if (!Array.isArray(row)) return;
+    var code = codeIdx !== -1 ? (row[codeIdx] || '').toString().trim() : '';
+    if (code && seen[code]) return;
+    if (code) seen[code] = true;
+    rows.push(row);
+  });
+
+  return {
+    success: payload.success !== false,
+    headers: outputHeaders,
+    rows: rows,
+    meta: Object.assign({}, payload.meta || {}, {
+      resource: payload.meta && payload.meta.resource ? payload.meta.resource : '',
+      fileId: payload.meta && payload.meta.fileId ? payload.meta.fileId : (resourceConfig && resourceConfig.fileId ? resourceConfig.fileId : ''),
+      sheetName: payload.meta && payload.meta.sheetName ? payload.meta.sheetName : (resourceConfig && resourceConfig.sheetName ? resourceConfig.sheetName : ''),
+      lastSyncAt: payload.meta && payload.meta.lastSyncAt ? payload.meta.lastSyncAt : Date.now()
+    })
+  };
+}
+
 function collectWriteDeltaResources(auth, payload, resourceNames) {
   var names = Array.isArray(resourceNames) ? resourceNames : [];
   if (!names.length) {
@@ -1617,15 +1652,21 @@ function handleExecuteAction(auth, payload) {
 
   // Write back
   sheet.getRange(rowNumber, 1, 1, headers.length).setValues([existingRow]);
+  SpreadsheetApp.flush();
   updateResourceSyncCursor(resourceName);
 
   var savedRecord = rowArrayToObject(headers, existingRow);
+  var directWriteResources = {};
+  directWriteResources[resourceName] = buildDirectWriteResourcePayload(resourceName, resource.config, headers, [existingRow]);
   var result = {
     success: true,
     message: actionName + ' completed successfully',
     data: mergeDeltaResourcesIntoResult(
       { code: code, column: column, columnValue: columnValue },
-      collectWriteDeltaResources(auth, payload, [resourceName])
+      mergeDirectWriteResourcePayloads(
+        collectWriteDeltaResources(auth, payload, [resourceName]),
+        directWriteResources
+      )
     )
   };
   dispatchPostActionHook(resource.config, payload, result, auth, 'executeAction', {
@@ -1671,19 +1712,29 @@ function handleResourceBulkUpsertRecords(auth, payload) {
   var newRows = [];       // Array of rowData arrays to append
   var updateOps = [];     // Array of {rowNumber, rowData} to write back
 
+  // Track Codes seen within this batch. When the same Code appears more than
+  // once (e.g., allocation split), subsequent occurrences force a new INSERT
+  // with an auto-generated Code instead of double-writing the same sheet row.
+  var seenCodesInBatch = {};
+
   records.forEach(function (recordData, index) {
     try {
       var code = resolveCodeValue({ record: recordData });
-      var rowNumber = code ? findRowByValue(sheet, idx.Code, code, 2, true) : -1;
+      var isDuplicateInBatch = code && !!seenCodesInBatch[code];
+      if (code) seenCodesInBatch[code] = true;
+
+      var rowNumber = (!isDuplicateInBatch && code) ? findRowByValue(sheet, idx.Code, code, 2, true) : -1;
 
       var providedValues = extractProvidedHeaderValues(headers, { record: recordData });
       var rowData;
 
       if (rowNumber === -1) {
         // --- INSERT (collect for batch) ---
-        var newCode = code || (resource.config.scope === 'operation'
-          ? generateNextYearScopedCode(currentValues, idx, codePrefix, seqLength)
-          : generateNextCode(currentValues, idx, codePrefix, seqLength));
+        var newCode = code && !isDuplicateInBatch
+          ? code
+          : (resource.config.scope === 'operation'
+            ? generateNextYearScopedCode(currentValues, idx, codePrefix, seqLength)
+            : generateNextCode(currentValues, idx, codePrefix, seqLength));
         rowData = buildNewMasterRow(headers, idx, providedValues, schema);
         rowData[idx.Code] = newCode;
         applyAccessRegionOnWrite(rowData, idx, auth);
@@ -1730,6 +1781,13 @@ function handleResourceBulkUpsertRecords(auth, payload) {
   var allFailed = results.errors.length >= records.length;
   var hasErrors = results.errors.length > 0;
   var bulkMessage = buildBulkUpsertResultMessage(targetResourceName, results, records.length);
+  var deltaResources = collectWriteDeltaResources(auth, payload, [targetResourceName]);
+  deltaResources[targetResourceName] = mergeWrittenRowsIntoResourcePayload(
+    deltaResources[targetResourceName],
+    resource.config,
+    headers,
+    newRows.concat(updateOps.map(function (op) { return op.rowData; }))
+  );
   var result = {
     success: !allFailed,
     message: bulkMessage,
@@ -1741,7 +1799,7 @@ function handleResourceBulkUpsertRecords(auth, payload) {
         skipped: results.skipped,
         errors: results.errors
       },
-      collectWriteDeltaResources(auth, payload, [targetResourceName])
+      deltaResources
     )
   };
   dispatchPostActionHook(resource.config, payload, result, auth, 'bulk', {

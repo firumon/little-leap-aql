@@ -117,8 +117,8 @@ Final refined state:
 - `OutletVisits` is reduced to `Code`, `OutletCode`, `Date`, `Status`, `StatusComment`, plus standard audit columns. Workflow status values are `PLANNED`, `COMPLETED`, `POSTPONED`, and `CANCELLED` on `Status`; visit comments use only `StatusComment`.
 - Visit completion and cancellation update the current row. Visit postponement updates the current row and creates a new planned row without previous/next link columns.
 - `OutletConsumption` is independent of visits; the operation setup, payload builder, and docs no longer use `OutletVisitCode` for consumption.
-- `OutletRestocks` now uses simplified request columns `Date`, `RequestedUser`, and `ApprovedUser`; `OutletRestockItems` stores `SKU`, `Quantity`, approver-owned `StorageAllocationJSON`, status, and audit.
-- `OutletDeliveries` now uses a schedule-then-deliver lifecycle: `SCHEDULED`, `DELIVERED`, or `CANCELLED`. `ItemsJSON` stores lowercase `{ sku, storage, qty }` rows; scheduling creates negative `StockMovements` with `OutletRestock`, delivery creates positive `OutletMovements` with `RestockDelivery`, and cancellation creates positive `StockMovements` with `OutletDeliveryCancel`.
+- Historical note superseded on 2026-05-11: outlet restock allocation moved off legacy JSON allocation fields and onto row-level ORSI allocation/progress fields.
+- Historical note superseded on 2026-05-11: outlet delivery now uses OD headers plus `OutletDeliveryItems`; old scheduled delivery item JSON semantics are no longer current.
 - `OutletStorages` is now keyed by `OutletCode + SKU` and has only `Code`, `OutletCode`, `SKU`, and `Quantity`; the outlet movement hook aggregates by that key.
 - Over-engineered outlet frontend checks for SKU-level operating-rule stock value limits and duplicate open restock warnings were removed. Required quantity/stock validations remain.
 - `Outlets` and `OutletOperatingRules` implementation was intentionally not changed.
@@ -164,3 +164,25 @@ Manual follow-up:
 - Batch order during submit: composite consumption save -> movement bulk -> (optional) invoice header create -> invoice items bulk -> mark consumption `INVOICE_GENERATED`.
 - Consumption progress changes to `INVOICE_GENERATED` only after invoice header and items succeed in the same batch.
 - Frontend resources extended to include `PriceList`, `PriceListItems`, and `OutletConsumptionInvoiceItems`.
+
+## 2026-05-11 Update - Outlet Restock/Delivery Breaking Change
+- Outlet restock allocation moved from legacy JSON allocation to row-level ORSI fields: `WarehouseCode`, `StorageName`, `Quantity`, and `Progress` (`PENDING`, `ALLOCATED`, `DELIVERED`).
+- `OutletDeliveries` is now a multi-outlet delivery header with `DRAFT`, `IN_TRANSIT`, `COMPLETED`, and `CANCELLED` progress. Outlet/restock/warehouse/item details live on linked ORSI and ODI rows.
+- Added `OutletDeliveryItems` as child rows linking one OD to one ORSI. ODI starts `IN_TRANSIT`; item delivery marks ODI and ORSI `DELIVERED`, creates positive `OutletMovements`, and derives OD/restock progress.
+- Warehouse stock now moves at ORSI allocation time through negative `StockMovements` with `ReferenceType = OutletRestock`. DRAFT OD cancellation reactivates allocation state and creates no warehouse stock movements.
+- This is a destructive schema break for existing outlet restock/delivery data. Live sheets must be reset only after explicit user confirmation: clear existing `OutletRestockItems`, `OutletDeliveries`, and legacy delivery-related rows, run APP resource sync, then run operation setup/reset so new ORSI/OD/ODI headers exist.
+- No generic API contract change is expected; Web App redeployment should only be needed if deployment policy requires a new version after `clasp push`.
+
+## 2026-05-12 Update - Outlet Restock & Delivery Finalization
+- ORSI `RequiredHeaders` reduced to `OutletRestockCode,SKU,Quantity` so creator saves are not blocked by allocation-required fields (WarehouseCode, StorageName, Progress, Status).
+- `Approve` AdditionalAction removed from `OutletRestocks`; frontend-batched approval now handles allocation, split, stock movement creation, and progress update atomically.
+- Frontend composable fixes: `buildRestockCompositePayload` preserves existing `WarehouseCode`/`StorageName` values on resubmission; `buildOdCancelBatchRequests` keeps OD `Status=Active` for history visibility; `canSplitRow` added to `outletStockLogic`.
+- OrsiAllocationRow split button only visible for PENDING rows with qty > 1.
+- "Pending Delivery" section removed from OutletRestocks IndexPage (delivery readiness is now in OD add/list via ALLOCATED ORSI rows).
+- `npm run gas:push` and `npm --prefix FRONTENT run build` both succeed.
+
+Manual follow-up after this execution:
+- Run APP resource sync from the AQL sheet menu so changed resource metadata (ORSI RequiredHeaders, removed Approve action) is applied to `APP.Resources`.
+- Run operation sheet setup from the AQL sheet menu to normalize headers.
+- Confirm destructive data reset scope with user before clearing live outlet restock/delivery data.
+- Clear frontend/resource cache or re-login if old metadata remains visible after sync.

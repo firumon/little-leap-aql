@@ -51,6 +51,7 @@ Use when editing files under `FRONTENT/`.
 - Read:
   - `Documents/ARCHITECTURE RULES.md` — **mandatory, see Non-Negotiable Frontend Pre-Read above**
   - `Documents/AI_COLLABORATION_PROTOCOL.md`
+- Frontend work MUST comply with the Vue Reactivity Contract in `Documents/ARCHITECTURE RULES.md`; manual synchronization that imitates Vue reactivity is a serious architecture violation.
 - If the task affects reusable building blocks, also read/update:
   - `FRONTENT/src/components/REGISTRY.md`
   - `FRONTENT/src/composables/REGISTRY.md`

@@ -13,6 +13,9 @@ var OPERATION_HEADER_COLOR = '#2E7D32';
 var OPERATION_ALT_ROW_COLOR = '#f0f7f1';
 
 function setupOperationSheets() {
+    resetLogSheet_();
+    logToSheet_('Starting Setup All Operations');
+
     const commonAuditColumns = ['CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy'];
 
     const schemaByResource = [
@@ -352,6 +355,7 @@ function setupOperationSheets() {
     const results = [];
 
     schemaByResource.forEach(function (schema) {
+        logToSheet_('Processing ' + schema.resourceName);
         try {
             const resource = getResourceConfig(schema.resourceName);
             if (resource.codeSequenceLength > 0) {
@@ -436,6 +440,8 @@ function setupOperationSheets() {
             results.push('Error for ' + schema.resourceName + ': ' + err.message);
         }
     });
+
+    logToSheet_('Setup All Operations completed');
 
     const summary = 'OPERATION setup (Resources driven) complete.\n\n' + results.join('\n');
     

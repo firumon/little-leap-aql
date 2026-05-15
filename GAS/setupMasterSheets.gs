@@ -10,6 +10,9 @@
  */
 
 function setupMasterSheets() {
+  resetLogSheet_();
+  logToSheet_('Starting Refactor MASTER Sheets');
+
   const commonAuditColumns = ['CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy'];
 
   const schemaByResource = [
@@ -140,6 +143,7 @@ function setupMasterSheets() {
   const results = [];
 
   schemaByResource.forEach(function (schema) {
+    logToSheet_('Processing ' + schema.resourceName);
     try {
       const resource = getResourceConfig(schema.resourceName);
       if (resource.codeSequenceLength > 0) {
@@ -183,6 +187,8 @@ function setupMasterSheets() {
       results.push('Error for ' + schema.resourceName + ': ' + err.message);
     }
   });
+
+  logToSheet_('Refactor MASTER Sheets completed');
 
   const summary = 'MASTER setup (Resources driven) complete.\n\n' + results.join('\n');
   

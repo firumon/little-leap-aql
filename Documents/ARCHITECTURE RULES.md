@@ -222,6 +222,35 @@ Includes:
 
 ---
 
+## 5A. VUE REACTIVITY CONTRACT (CRITICAL, NON-NEGOTIABLE)
+
+Vue reactivity is a core architecture primitive in this frontend. It MUST be used directly and correctly. Code that manually imitates Vue reactivity is an architecture violation, not an acceptable workaround.
+
+### SINGLE REACTIVE SOURCE OF TRUTH
+
+* Every UI state domain MUST have one canonical reactive source of truth.
+* Derived UI state MUST be expressed with Vue reactive primitives such as `computed()`, store state, composable state, props-derived computation, or direct template derivation.
+* Multiple UI sections that depend on the same domain state MUST derive from the same canonical reactive source.
+* A state transition MUST be applied to the canonical source. All dependent UI sections must update because their reactive dependencies changed.
+
+### STRICTLY FORBIDDEN
+
+* DO NOT maintain parallel arrays, mirror objects, duplicate caches, or local copies to manually keep the UI synchronized.
+* DO NOT patch one displayed section independently from another section that represents the same state domain.
+* DO NOT add watcher chains, event relays, timers, force-refresh flags, re-render keys, or manual synchronization code to mimic reactivity.
+* DO NOT fix stale UI by duplicating business state in a component.
+* DO NOT mutate response snapshots or derived lists as if they are the source of truth.
+
+### REQUIRED FIX WHEN UI DOES NOT REACT
+
+* Identify the broken reactive dependency chain.
+* Move the state transition to the canonical reactive source.
+* Rebuild every visible derivation from that source using `computed()` or an equivalent Vue reactive primitive.
+* If an optimistic update is needed, update only the canonical reactive source or the approved store/composable state that owns it.
+* Boundary synchronization is allowed only when integrating with an external non-reactive system, and the same change MUST document why it is a boundary bridge rather than an internal reactivity workaround.
+
+---
+
 ### RESTRICTIONS
 
 Components MUST NOT use:

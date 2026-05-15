@@ -30,29 +30,29 @@ This document captures the **end-to-end workflow knowledge** for each major feat
 
 ---
 
-## 11. Outlet Deliveries Schedule-Then-Deliver
+## 11. Outlet Deliveries Item-Level Delivery
 
 ### 11.1 Overview
-Outlet Deliveries are now schedule-first documents. Approved or partially delivered `OutletRestocks` are selected from cards on the OD add page, scheduled against a warehouse, and written with `Progress = SCHEDULED`. Scheduling immediately creates negative `StockMovements` rows with `ReferenceType = OutletRestock` to reserve/deduct warehouse stock.
+Outlet Deliveries are multi-outlet delivery headers. Allocated `OutletRestockItems` are selected on the OD add page and linked through `OutletDeliveryItems`. Warehouse stock is already reserved/deducted at ORSI allocation time through negative `StockMovements` with `ReferenceType = OutletRestock`.
 
 ### 11.2 Data Ownership
-- `OutletDeliveries.ItemsJSON` stores lowercase rows `{ sku, storage, qty }` copied from approved restock storage allocations.
-- `OutletDeliveries.Progress` uses `SCHEDULED`, `DELIVERED`, and `CANCELLED` from `OutletDeliveryProgress`.
-- `StockMovements.ReferenceType = OutletRestock` reserves warehouse stock using `ReferenceCode = OutletRestocks.Code`.
-- `StockMovements.ReferenceType = OutletDeliveryCancel` reverses scheduled warehouse reservations using `ReferenceCode = OutletDeliveries.Code`.
-- `OutletMovements.ReferenceType = RestockDelivery` posts delivered stock into outlets using `ReferenceCode = OutletDeliveries.Code`.
+- `OutletRestockItems` owns allocation state through `WarehouseCode`, `StorageName`, `Quantity`, and `Progress`.
+- `OutletDeliveries.Progress` uses `DRAFT`, `IN_TRANSIT`, `COMPLETED`, and `CANCELLED` from `OutletDeliveryProgress`.
+- `OutletDeliveryItems.Progress` uses `IN_TRANSIT` and `DELIVERED`.
+- `StockMovements.ReferenceType = OutletRestock` reserves warehouse stock at ORSI allocation time.
+- `OutletMovements.ReferenceType = RestockDelivery` posts delivered ODI stock into outlets using `ReferenceCode = OutletDeliveries.Code`.
 - `OutletStorages` is a derived SKU-only balance keyed by `OutletCode + SKU` with columns `Code`, `OutletCode`, `SKU`, and `Quantity` only.
 
 ### 11.3 Workflow
-1. Add page loads approved and partially delivered `OutletRestocks`, existing `OutletDeliveries`, restock items, outlets, warehouses, SKUs, and products through the workflow store.
-2. User selects one eligible ORS card. ORS is ineligible if it already has an active `SCHEDULED` OD.
-3. Composable builds OD `ItemsJSON` from `OutletRestockItems.StorageAllocationJSON` and shows a read-only packing grid.
-4. Scheduling runs one batch: create `OutletDeliveries` + bulk negative `StockMovements`. The returned OD code is used directly for navigation; no same-resource `get` follows the write.
-5. Delivery runs one batch: `executeAction` Deliver + bulk positive `OutletMovements` aggregated by SKU + update ORS progress to `DELIVERED` or `PARTIALLY_DELIVERED`.
-6. Cancellation runs one batch: `executeAction` Cancel + bulk positive `StockMovements` with `OutletDeliveryCancel`.
+1. Add page loads allocated ORSI rows, existing deliveries/delivery items, restocks, outlets, SKUs, and products through the workflow store.
+2. User selects one or more eligible ALLOCATED ORSI rows that are not already linked to active ODI rows.
+3. Creation runs one composite save: create OD `DRAFT` with ODI children set to `IN_TRANSIT`.
+4. Item delivery runs one batch: update ODI to `DELIVERED`, update ORSI to `DELIVERED`, create positive `OutletMovements`, derive OD progress, and derive restock progress.
+5. First delivered item moves OD to `IN_TRANSIT`; all delivered items move OD to `COMPLETED`.
+6. DRAFT cancellation deactivates ODIs and returns linked ORSIs to `ALLOCATED`; no stock movement is created.
 
 ### 11.4 Batch And Sync Rules
-- Scheduling, delivery, and cancellation use `useWorkflowStore.runBatchRequests`.
+- Delivery creation, item delivery, and cancellation use `useWorkflowStore.runBatchRequests`.
 - Batch helpers attach `lastUpdatedAtByResource` cursors from IDB metadata before write actions, preserving delta-on-write behavior.
 - Write responses are consumed directly; no redundant `get` is issued after `create`, `update`, or `executeAction`.
 - General frontend reloads continue to use the cache/last-sync throttle logic in `ResourceFetchService`.
@@ -983,9 +983,9 @@ Outlet & Field Sales Operations manages consignment outlet visits, restock reque
 
 ### 11.1 Resource Model
 - **Master resources**: `Outlets` and `OutletOperatingRules`.
-- **Operation resources**: `OutletVisits`, `OutletRestocks`, `OutletRestockItems`, `OutletDeliveries`, `OutletConsumptions`, `OutletConsumptionItems`, `OutletConsumptionInvoices`, `OutletConsumptionInvoiceItems`, `OutletMovements`, and `OutletStorages`.
+- **Operation resources**: `OutletVisits`, `OutletRestocks`, `OutletRestockItems`, `OutletDeliveries`, `OutletDeliveryItems`, `OutletConsumptions`, `OutletConsumptionItems`, `OutletConsumptionInvoices`, `OutletConsumptionInvoiceItems`, `OutletMovements`, and `OutletStorages`.
 - **Source of truth**: `OutletMovements` is the stock ledger. `OutletStorages` is the derived current outlet balance keyed by `OutletCode + SKU`.
-- **Delivery truth**: `OutletDeliveries.ItemsJSON` stores lowercase scheduled/delivered rows and is aggregated against `OutletRestockItems.Quantity` to derive restock fulfillment.
+- **Delivery truth**: `OutletDeliveryItems` links OD headers to atomic `OutletRestockItems`; delivery progress is derived from ODI/ORSI row progress.
 
 ### 11.2 Visit Workflow
 1. Field users create planned visits with `OutletCode`, `Date`, `Status = Active`, `Progress = PLANNED`, and optional progress comment.
@@ -998,15 +998,17 @@ Outlet & Field Sales Operations manages consignment outlet visits, restock reque
 1. Sales executives create restock drafts in `DRAFT` or revise the same document in `REVISION_REQUIRED`.
 2. Draft saves use `OutletRestocks` + `OutletRestockItems` composite save. Request quantities use `Quantity`, must be positive, and SKUs must not duplicate inside the same restock.
 3. Submitting a new request first saves the draft, reads the generated restock code from the composite response, and then executes the configured `Submit` action to set `Progress = PENDING_APPROVAL`. Resubmitting from `REVISION_REQUIRED` requires a creator comment.
-4. Approvers can approve, reject, or send back pending requests. Approval stamps `ApprovedUser` with the readable approver name and stores each line's warehouse storage allocation in `OutletRestockItems.StorageAllocationJSON`.
-5. `StorageAllocationJSON` is approver-owned and must total the requested `Quantity` for each SKU before approval. Approved item rows are read-only. Send-back uses the same parent/child rows for revision rather than creating a replacement restock; the creator can edit/update/add/deactivate child rows only in `REVISION_REQUIRED`.
+4. Approvers review pending ORSI rows grouped by warehouse availability: fully available, partially available, and not available. Recommendations prefer one storage that fully satisfies the row, then the best two-storage combination with least surplus, then smallest available storages first.
+5. Approval can allocate any positive quantity. Applying a recommendation creates one `ALLOCATED` ORSI row per warehouse/storage allocation; partial allocation also creates a `PENDING` remainder row for the unallocated quantity.
+6. Approval stamps `ApprovedUser`, row-level allocated fields, and creates negative `StockMovements` only for `ALLOCATED` ORSI rows. Not-available rows remain visible and cannot be allocated.
+7. Send-back uses the same parent/child rows for revision rather than creating a replacement restock; the creator can edit/update/add/deactivate child rows only in `REVISION_REQUIRED`.
 
 ### 11.4 Delivery Workflow
-1. Deliveries can be created only for restocks with `Progress = APPROVED` or `PARTIALLY_DELIVERED`.
-2. The UI schedules from approved `StorageAllocationJSON` storage rows into `OutletDeliveries.ItemsJSON` and prevents another active scheduled OD for the same ORS.
-3. Delivery action posts positive `OutletMovements` with `ReferenceType = RestockDelivery` and updates `OutletRestocks.Progress`.
-4. Progress moves to `PARTIALLY_DELIVERED` when cumulative delivered quantity is below requested quantity and to `DELIVERED` when cumulative delivered quantity reaches the requested total.
-5. Delivery matching uses restock items for requested `Quantity`; no delivery child item sheet exists and delivery does not update `OutletRestockItems`.
+1. Deliveries can be created only from ALLOCATED ORSI rows not already linked to an active ODI.
+2. OD creation writes one `OutletDeliveries` header and one `OutletDeliveryItems` row per selected ORSI.
+3. Delivering an ODI posts positive `OutletMovements` with `ReferenceType = RestockDelivery`, marks ODI and ORSI `DELIVERED`, and updates `OutletRestocks.Progress`.
+4. OD progress remains `DRAFT` until the first ODI is delivered, then becomes `IN_TRANSIT`; once all linked ODIs are delivered it becomes `COMPLETED`.
+5. DRAFT cancellation deactivates ODIs and returns linked ORSIs to `ALLOCATED`; delivered ODs cannot be cancelled.
 
 ### 11.5 Consumption Workflow
 1. Add flow is componentized into outlet context, mobile stock count, and summary/checklist steps. Date and username default internally and are not primary editable inputs.

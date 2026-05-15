@@ -1,38 +1,149 @@
-import { OUTLET_DEFAULT_STORAGE, active, text, OUTLET_REFERENCE_TYPES } from './outletOperationsMeta.js'
+import { OUTLET_DEFAULT_STORAGE, OUTLET_REFERENCE_TYPES, STOCK_MOVEMENT_REFERENCE_TYPES, active, text } from './outletOperationsMeta.js'
 import { textOrRef } from '../../batchRefs.js'
 
 export function toNumber(value) { const number = Number(value); return Number.isFinite(number) ? number : 0 }
 export function storageName(value) { return text(value) || OUTLET_DEFAULT_STORAGE }
-export function parseStorageAllocations(value) { try { const rows = JSON.parse(text(value) || '[]'); return Array.isArray(rows) ? rows.map(row => ({ storage_name: text(row.storage_name), quantity: toNumber(row.quantity) })).filter(row => row.storage_name || row.quantity > 0) : [] } catch (_) { return [] } }
-export function stringifyStorageAllocations(rows = []) { return JSON.stringify(rows.map(row => ({ storage_name: text(row.storage_name), quantity: toNumber(row.quantity) })).filter(row => row.storage_name || row.quantity > 0)) }
-export function parseItemsJSON(value) { try { const rows = Array.isArray(value) ? value : JSON.parse(text(value) || '[]'); return Array.isArray(rows) ? rows.map(row => ({ sku: text(row.sku || row.SKU), storage: storageName(row.storage || row.StorageName || row.storage_name), qty: toNumber(row.qty ?? row.quantity ?? row.QtyChange) })).filter(row => row.sku && row.qty > 0) : [] } catch (_) { return [] } }
-export function aggregateItemsBySku(itemsJSON = []) { const items = parseItemsJSON(itemsJSON); const map = new Map(); items.forEach(item => map.set(item.sku, (map.get(item.sku) || 0) + toNumber(item.qty))); return Array.from(map.entries()).map(([sku, qty]) => ({ sku, qty })) }
-export function buildStockMovementsFromItems(warehouseCode, itemsJSON, referenceType, referenceCode, sign = 1) { return parseItemsJSON(itemsJSON).map(item => ({ WarehouseCode: text(warehouseCode), StorageName: item.storage, SKU: item.sku, QtyChange: Math.abs(toNumber(item.qty)) * (sign < 0 ? -1 : 1), ReferenceType: text(referenceType), ReferenceCode: textOrRef(referenceCode), Status: 'Active' })) }
-export function buildOutletMovementsFromItems(outletCode, itemsJSON, referenceType = OUTLET_REFERENCE_TYPES.delivery, referenceCode = '') { const now = new Date().toISOString(); return aggregateItemsBySku(itemsJSON).map(item => ({ OutletCode: text(outletCode), SKU: item.sku, QtyChange: toNumber(item.qty), ReferenceType: text(referenceType), ReferenceCode: textOrRef(referenceCode), MovementDate: now, Status: 'Active' })) }
-export function deliveredQtyForSku(deliveries = [], restockCode, sku) {
-  return deliveries.filter(active).filter(row => text(row.OutletRestockCode) === text(restockCode)).reduce((total, delivery) => {
-    try {
-      if (text(delivery.Progress) && text(delivery.Progress) !== 'DELIVERED') return total
-      const items = parseItemsJSON(delivery.ItemsJSON)
-      return total + items.filter(item => text(item.sku) === text(sku)).reduce((sum, item) => sum + toNumber(item.qty), 0)
-    } catch (_) { return total }
-  }, 0)
-}
-export function deliveredItemsForRestock(deliveries = [], restockCode, currentDelivery = null) {
-  const delivered = deliveries.filter(active).filter(row => text(row.OutletRestockCode) === text(restockCode) && text(row.Progress) === 'DELIVERED')
-  const rows = currentDelivery && text(currentDelivery.Code)
-    ? delivered.concat([currentDelivery])
-    : delivered
-  return aggregateItemsBySku(rows.flatMap(row => parseItemsJSON(row.ItemsJSON)))
-}
-export function remainingDeliveryQty(item = {}, deliveries = [], restockCode = item.OutletRestockCode) { return Math.max(0, toNumber(item.Quantity) - deliveredQtyForSku(deliveries, restockCode, item.SKU)) }
-export function currentOutletStockQty(storages = [], outletCode, _store, sku) { const match = storages.find(row => active(row) && text(row.OutletCode) === text(outletCode) && text(row.SKU) === text(sku)); return toNumber(match?.Quantity) }
 export function sumBy(rows = [], field) { return rows.reduce((total, row) => total + toNumber(row[field]), 0) }
+export function approvalRequestedQty(rows = []) {
+  const explicitQty = Math.max(0, ...rows.map(row => toNumber(row._approvalRequestedQty)))
+  return explicitQty > 0 ? explicitQty : sumBy(rows, 'Quantity')
+}
+export function restockEditableProgress(progress) { return ['DRAFT', 'REVISION_REQUIRED'].includes(text(progress) || 'DRAFT') }
+export function allocatedRows(rows = []) { return rows.filter(active).filter(row => text(row.Progress) === 'ALLOCATED') }
+export function deliveredRows(rows = []) { return rows.filter(active).filter(row => text(row.Progress) === 'DELIVERED') }
+export function pendingRows(rows = []) { return rows.filter(active).filter(row => !text(row.Progress) || text(row.Progress) === 'PENDING') }
+export function canSplitRow(item) { return active(item) && text(item.Progress) === 'PENDING' && toNumber(item.Quantity) > 1 }
 
 function validationResult(errors = [], warnings = []) { return { valid: errors.length === 0, errors, warnings } }
-function duplicateSkuErrors(rows = [], qtyField = 'Quantity') { const seen = new Set(); const errors = []; rows.filter(active).filter(row => toNumber(row[qtyField]) > 0).forEach((row) => { const sku = text(row.SKU); if (!sku) errors.push('SKU is required.'); else if (seen.has(sku)) errors.push(`Duplicate SKU ${sku}.`); seen.add(sku) }); return errors }
+function duplicateSkuErrors(rows = [], qtyField = 'Quantity') {
+  const seen = new Set()
+  const errors = []
+  rows.filter(active).filter(row => toNumber(row[qtyField]) > 0).forEach((row) => {
+    const sku = text(row.SKU)
+    if (!sku) errors.push('SKU is required.')
+    else if (seen.has(sku)) errors.push(`Duplicate SKU ${sku}.`)
+    seen.add(sku)
+  })
+  return errors
+}
 
-export function restockEditableProgress(progress) { return ['DRAFT', 'REVISION_REQUIRED'].includes(text(progress) || 'DRAFT') }
+export function warehouseAvailableQty(storages = [], row = {}) {
+  const warehouse = text(row.WarehouseCode)
+  const storage = storageName(row.StorageName)
+  const sku = text(row.SKU)
+  const match = storages.find(item =>
+    active(item) &&
+    text(item.WarehouseCode) === warehouse &&
+    storageName(item.StorageName) === storage &&
+    text(item.SKU) === sku
+  )
+  return toNumber(match?.Quantity)
+}
+
+function storageSortKey(row = {}) { return `${text(row.warehouseCode)}\u0000${text(row.storageName)}` }
+function sortStorageCandidates(rows = []) {
+  return rows.slice().sort((a, b) => {
+    const availableDiff = toNumber(a.available) - toNumber(b.available)
+    if (availableDiff) return availableDiff
+    return storageSortKey(a).localeCompare(storageSortKey(b))
+  })
+}
+function allocationQuantityRows(candidates = [], requestedQty = 0) {
+  let remaining = toNumber(requestedQty)
+  const rows = []
+  sortStorageCandidates(candidates).forEach((candidate) => {
+    if (remaining <= 0) return
+    const quantity = Math.min(toNumber(candidate.available), remaining)
+    if (quantity > 0) {
+      rows.push({ WarehouseCode: candidate.warehouseCode, StorageName: candidate.storageName, Quantity: quantity })
+      remaining -= quantity
+    }
+  })
+  return rows
+}
+
+export function warehouseStorageCandidatesForSku(storages = [], skuCode = '') {
+  return sortStorageCandidates(storages
+    .filter(active)
+    .filter(row => text(row.SKU) === text(skuCode))
+    .map(row => ({
+      id: `${text(row.WarehouseCode)}|${storageName(row.StorageName)}`,
+      warehouseCode: text(row.WarehouseCode),
+      storageName: storageName(row.StorageName),
+      available: toNumber(row.Quantity)
+    }))
+    .filter(row => row.warehouseCode && row.storageName && row.available > 0))
+}
+
+export function recommendOrsiAllocation(row = {}, warehouseStorages = []) {
+  const requestedQty = toNumber(row.Quantity)
+  const candidates = warehouseStorageCandidatesForSku(warehouseStorages, row.SKU)
+  const availableQty = sumBy(candidates, 'available')
+  const availabilityGroup = requestedQty > 0
+    ? (availableQty >= requestedQty ? 'full' : (availableQty > 0 ? 'partial' : 'none'))
+    : 'none'
+  if (requestedQty <= 0) {
+    return { availabilityGroup, requestedQty, availableQty, recommendedAllocations: [], remainingQty: requestedQty, reason: 'Requested quantity must be greater than 0.' }
+  }
+  if (!candidates.length) {
+    return { availabilityGroup, requestedQty, availableQty, recommendedAllocations: [], remainingQty: requestedQty, reason: 'No active warehouse storage stock is available for this SKU.' }
+  }
+
+  const recommendedAllocations = allocationQuantityRows(candidates, requestedQty)
+  const allocatedQty = sumBy(recommendedAllocations, 'Quantity')
+  return {
+    availabilityGroup,
+    requestedQty,
+    availableQty,
+    recommendedAllocations,
+    remainingQty: Math.max(requestedQty - allocatedQty, 0),
+    reason: allocatedQty >= requestedQty ? 'Smallest available storages can fully satisfy the request.' : 'Only partial warehouse stock is available for this request.'
+  }
+}
+
+export function expandOrsiAllocationRows(row = {}, recommendation = recommendOrsiAllocation(row, [])) {
+  const allocations = Array.isArray(recommendation.recommendedAllocations) ? recommendation.recommendedAllocations.filter(item => toNumber(item.Quantity) > 0) : []
+  const remainingQty = toNumber(recommendation.remainingQty)
+  if (toNumber(row.Quantity) <= 0 || (!allocations.length && remainingQty <= 0)) return [{ ...row, Progress: text(row.Progress) || 'PENDING' }]
+  const base = {
+    SKU: text(row.SKU),
+    OutletRestockCode: text(row.OutletRestockCode),
+    Status: text(row.Status || 'Active'),
+    AccessRegion: text(row.AccessRegion)
+  }
+  const allocatedRows = allocations.map((allocation, index) => ({
+    ...base,
+    ...(index === 0 && text(row.Code) ? { Code: row.Code } : {}),
+    WarehouseCode: text(allocation.WarehouseCode),
+    StorageName: storageName(allocation.StorageName),
+    Quantity: toNumber(allocation.Quantity),
+    Progress: 'ALLOCATED'
+  }))
+  const pendingRemainder = remainingQty > 0
+    ? [{ ...base, Quantity: remainingQty, Progress: 'PENDING' }]
+    : []
+  return [...allocatedRows, ...pendingRemainder]
+}
+
+export function validateAllocation(row = {}, storages = []) {
+  const errors = []
+  if (!text(row.SKU)) errors.push('SKU is required.')
+  if (!text(row.WarehouseCode)) errors.push(`Warehouse is required for ${row.SKU || 'allocated item'}.`)
+  if (!text(row.StorageName)) errors.push(`Storage is required for ${row.SKU || 'allocated item'}.`)
+  if (toNumber(row.Quantity) <= 0) errors.push(`Allocated quantity must be greater than 0 for ${row.SKU || 'item'}.`)
+  const available = warehouseAvailableQty(storages, row)
+  if (toNumber(row.Quantity) > available) errors.push(`Allocation exceeds available warehouse stock for ${row.SKU} at ${row.StorageName}.`)
+  return validationResult(errors, [])
+}
+
+export function computeRestockProgressFromItems(items = []) {
+  const rows = items.filter(active)
+  if (!rows.length) return 'APPROVED'
+  if (rows.every(row => text(row.Progress) === 'DELIVERED')) return 'DELIVERED'
+  if (rows.some(row => text(row.Progress) === 'DELIVERED')) return 'PARTIALLY_DELIVERED'
+  if (rows.some(row => text(row.Progress) === 'ALLOCATED')) return 'APPROVED'
+  return 'PENDING_APPROVAL'
+}
 
 export function validateRestockDraft(form = {}, rows = []) {
   const activeRows = rows.filter(active).filter(row => toNumber(row.Quantity) > 0)
@@ -48,29 +159,71 @@ export function validateRestockDraft(form = {}, rows = []) {
   return validationResult(errors, warnings)
 }
 
-export function validateRestockApproval(restock = {}, rows = []) {
+export function validateRestockAllocationRows(rows = [], storages = []) {
   const errors = []
   const warnings = []
-  if (!text(restock?.Code)) errors.push('Restock code is required for approval.')
-  if (text(restock?.Progress) !== 'PENDING_APPROVAL') errors.push('Only pending approval restocks can be approved.')
-  if (!rows.filter(active).length) errors.push('At least one item is required for approval.')
-  rows.filter(active).forEach(row => { const allocated = sumBy(parseStorageAllocations(row.StorageAllocationJSON), 'quantity'); if (allocated !== toNumber(row.Quantity)) errors.push(`Storage allocation must equal requested quantity for ${row.SKU}.`) })
+  const allocated = allocatedRows(rows)
+  if (!allocated.length) errors.push('Allocate at least one item row before approving.')
+  allocated.forEach(row => errors.push(...validateAllocation(row, storages).errors))
+  const approvalGroups = new Map()
+  rows.filter(active).forEach((row, index) => {
+    const key = text(row._approvalSourceKey) || text(row.Code) || `${text(row.SKU)}|${index}`
+    if (!approvalGroups.has(key)) approvalGroups.set(key, [])
+    approvalGroups.get(key).push(row)
+  })
+  approvalGroups.forEach((groupRows) => {
+    const requestedQty = approvalRequestedQty(groupRows)
+    const allocatedQty = sumBy(groupRows.filter(row => text(row.Progress) === 'ALLOCATED'), 'Quantity')
+    if (allocatedQty > requestedQty) errors.push(`Allocated quantity exceeds requested quantity for ${groupRows[0]?.SKU || 'item'}.`)
+  })
+  const totals = new Map()
+  allocated.forEach((row) => {
+    const key = `${text(row.SKU)}|${text(row.WarehouseCode)}|${storageName(row.StorageName)}`
+    totals.set(key, { row, quantity: (totals.get(key)?.quantity || 0) + toNumber(row.Quantity) })
+  })
+  totals.forEach(({ row, quantity }) => {
+    const available = warehouseAvailableQty(storages, row)
+    if (quantity > available) errors.push(`Allocation exceeds available warehouse stock for ${row.SKU} at ${storageName(row.StorageName)}.`)
+  })
   return validationResult(errors, warnings)
 }
 
-export function validateDelivery(restock = {}, restockItems = [], deliveryRows = [], deliveries = []) {
+export function validateRestockApproval(restock = {}, rows = [], storages = []) {
+  const validation = validateRestockAllocationRows(rows, storages)
+  const errors = [...validation.errors]
+  if (!text(restock?.Code)) errors.push('Restock code is required for approval.')
+  if (text(restock?.Progress) !== 'PENDING_APPROVAL') errors.push('Only pending approval restocks can be approved.')
+  return validationResult(errors, validation.warnings)
+}
+
+export function validateDeliveryItems(rows = []) {
   const errors = []
-  if (!restock) errors.push('Restock is required.')
-  if (!['APPROVED', 'PARTIALLY_DELIVERED'].includes(text(restock?.Progress))) errors.push('Delivery requires an approved or partially delivered restock.')
-  if (arguments.length === 2) {
-    const scheduledItems = parseItemsJSON(restockItems)
-    if (!scheduledItems.length) errors.push('Scheduled delivery items are required.')
-    return validationResult(errors, [])
-  }
-  const positives = deliveryRows.filter(row => toNumber(row.DeliveryQty) > 0)
-  if (!positives.length) errors.push('At least one positive delivery quantity is required.')
-  positives.forEach(row => { const source = restockItems.find(item => text(item.Code) === text(row.OutletRestockItemCode || row.Code) || text(item.SKU) === text(row.SKU)); if (!source) errors.push(`Restock item not found for ${row.SKU}.`); else if (toNumber(row.DeliveryQty) > remainingDeliveryQty(source, deliveries, restock.Code)) errors.push(`Delivery exceeds remaining quantity for ${row.SKU}.`); else if (toNumber(row.DeliveryQty) > toNumber(row.AllocatedQty || row.Quantity)) errors.push(`Delivery exceeds allocated storage quantity for ${row.SKU} at ${row.StorageName}.`) })
+  const activeRows = rows.filter(active)
+  if (!activeRows.length) errors.push('Select at least one allocated item.')
+  activeRows.forEach(row => {
+    if (text(row.Progress) !== 'ALLOCATED') errors.push(`${row.Code || row.SKU} is not allocated.`)
+    if (!text(row.Code)) errors.push(`Allocated item ${row.SKU || ''} must be saved before delivery.`)
+  })
   return validationResult(errors, [])
+}
+
+export function warehouseDisplayName(warehouses = [], code = '') {
+  const match = warehouses.find(w => text(w.Code) === text(code))
+  return text(match?.Name) || text(code)
+}
+
+export function formatTimeOnly(date = new Date()) {
+  const hours = date.getHours()
+  const minutes = date.getMinutes()
+  const ampm = hours >= 12 ? 'PM' : 'AM'
+  const h = hours % 12 || 12
+  const m = String(minutes).padStart(2, '0')
+  return `${h}:${m} ${ampm}`
+}
+
+export function currentOutletStockQty(storages = [], outletCode, _store, sku) {
+  const match = storages.find(row => active(row) && text(row.OutletCode) === text(outletCode) && text(row.SKU) === text(sku))
+  return toNumber(match?.Quantity)
 }
 
 export function validateConsumption(form = {}, rows = [], storages = []) {
@@ -85,18 +238,28 @@ export function validateConsumption(form = {}, rows = [], storages = []) {
   return validationResult(errors, [])
 }
 
-export function deliveryRowsForItem(item = {}, deliveryRows = []) {
-  const itemCode = text(item.Code)
-  const keyedRows = deliveryRows.filter(row => itemCode && (text(row.Code).split(':')[0] === itemCode || text(row.OutletRestockItemCode) === itemCode))
-  if (keyedRows.length) return keyedRows
-  return deliveryRows.filter(row => !text(row.Code) && !text(row.OutletRestockItemCode) && text(row.SKU) === text(item.SKU))
+export function buildStockMovementForAllocation(row = {}, referenceCode = '', sign = -1, accessRegion = '') {
+  return {
+    WarehouseCode: text(row.WarehouseCode),
+    StorageName: storageName(row.StorageName),
+    SKU: text(row.SKU),
+    QtyChange: Math.abs(toNumber(row.Quantity)) * (sign < 0 ? -1 : 1),
+    ReferenceType: STOCK_MOVEMENT_REFERENCE_TYPES.outletRestock,
+    ReferenceCode: textOrRef(referenceCode || row.Code),
+    Status: 'Active',
+    AccessRegion: text(accessRegion || row.AccessRegion)
+  }
 }
 
-export function deliverySummary(items = [], deliveryRows = []) {
-  const activeItems = items.filter(active)
-  const deliveredNow = deliveryRows.reduce((total, row) => total + toNumber(row.DeliveryQty ?? row.qty ?? row.Qty ?? row.Quantity), 0)
-  const requested = sumBy(activeItems, 'Quantity')
-  const deliveredBefore = activeItems.reduce((total, item) => total + toNumber(item.DeliveredBefore), 0)
-  const deliveredAfter = deliveredBefore + deliveredNow
-  return { requested, deliveredNow, deliveredAfter, progress: deliveredAfter >= requested ? 'DELIVERED' : 'PARTIALLY_DELIVERED' }
+export function buildOutletMovementForDelivery(orsi = {}, restock = {}, referenceCode = '') {
+  return {
+    OutletCode: text(restock.OutletCode),
+    SKU: text(orsi.SKU),
+    QtyChange: Math.abs(toNumber(orsi.Quantity)),
+    ReferenceType: OUTLET_REFERENCE_TYPES.delivery,
+    ReferenceCode: textOrRef(referenceCode),
+    MovementDate: new Date().toISOString(),
+    Status: 'Active',
+    AccessRegion: text(restock.AccessRegion || orsi.AccessRegion)
+  }
 }

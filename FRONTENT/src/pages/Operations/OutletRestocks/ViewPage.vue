@@ -23,23 +23,38 @@
     <RestockApprovalView
       v-else-if="mode === 'review'"
       :restock="restock"
-      :rows="rows"
-      :sku-options="skuOptions"
+      :approval-groups="approvalAllocationGroups"
+      :has-allocated-rows="hasAllocatedApprovalRows"
       :outlet-name="outletLabel(restock.OutletCode)"
       :approve-loading="approveLoading"
       :send-back-loading="sendBackLoading"
       :reject-loading="rejectLoading"
       :format-workflow-comment-html="formatWorkflowCommentHtml"
-      :allocations="allocations"
-      :allocation-total="allocationTotal"
-      :allocation-availability="allocationAvailability"
-      :allocation-available-total="allocationAvailableTotal"
-      :update-allocation="updateAllocation"
-      :add-allocation="addAllocation"
-      :remove-allocation="removeAllocation"
+      @apply-recommendation="handleApplyRecommendation"
+      @update-allocation-line="handleUpdateCandidateLine"
+      @reset-allocation="handleResetAllocation"
       @approve="handleApprove"
       @send-back="handleSendBack"
       @reject="handleReject"
+    />
+
+    <RestockPendingAllocationView
+      v-else-if="mode === 'pending-allocation'"
+      :restock="restock"
+      :rows="rows"
+      :sku-options="skuOptions"
+      :pending-groups="pendingAllocationGroups"
+      :has-allocated-rows="hasNewAllocatedRows"
+      :outlet-name="outletLabel(restock.OutletCode)"
+      :allocate-loading="allocatePendingLoading"
+      :cancel-loading="cancelPendingLoading"
+      :format-workflow-comment-html="formatWorkflowCommentHtml"
+      @apply-recommendation="handleApplyRecommendation"
+      @update-allocation-line="handleUpdatePendingCandidateLine"
+      @reset-allocation="handleResetAllocation"
+      @toggle-cancel-item="handleToggleCancelItem"
+      @cancel-selected="handleCancelPending"
+      @allocate-selected="handleAllocatePending"
     />
 
     <RestockReadonlyView
@@ -49,7 +64,6 @@
       :sku-options="skuOptions"
       :outlet-name="outletLabel(restock.OutletCode)"
       :format-workflow-comment-html="formatWorkflowCommentHtml"
-      :allocations="allocations"
     />
   </q-page>
 </template>
@@ -60,6 +74,7 @@ import { useRoute } from 'vue-router'
 import { useOutletRestocks } from '../../../composables/operations/outlets/useOutletRestocks.js'
 import RestockDraftView from '../../../components/Operations/Outlets/RestockDraftView.vue'
 import RestockApprovalView from '../../../components/Operations/Outlets/RestockApprovalView.vue'
+import RestockPendingAllocationView from '../../../components/Operations/Outlets/RestockPendingAllocationView.vue'
 import RestockReadonlyView from '../../../components/Operations/Outlets/RestockReadonlyView.vue'
 
 defineOptions({ name: 'OutletRestocksViewPage' })
@@ -68,20 +83,26 @@ const route = useRoute()
 const flow = useOutletRestocks()
 
 const {
-  form, rows, skuOptions, saving, loading,
+  form, rows, skuOptions, approvalAllocationGroups, pendingAllocationGroups, pendingAllocationDraftRows, hasAllocatedApprovalRows, hasNewAllocatedRows, saving, loading,
   reloadView, loadRestock, getRestock,
-  saveRestockDraft, submitRestock, approveRestock, sendBackRestock, rejectRestock,
+  saveRestockDraft, submitRestock, approveRestock, allocatePendingRestockItems, cancelPendingRestockItems, sendBackRestock, rejectRestock,
   resolveRestockViewMode,
   addRow, updateRow, removeRow,
-  allocations, allocationTotal, allocationAvailability, allocationAvailableTotal,
-  updateAllocation, addAllocation, removeAllocation,
+  applyRecommendedAllocation, updateAllocationLine, updateCandidateLine, updatePendingCandidateLine, cancelPendingSelection, addAllocationSplit, removeAllocationLine, resetAllocation,
   formatWorkflowCommentHtml
 } = flow
 
 const restock = computed(() => getRestock(route.params.code))
-const mode = computed(() => resolveRestockViewMode(restock.value?.Progress))
+const hasPendingItems = computed(() => rows.value.some(row => row.Progress === 'PENDING'))
+const hasPendingAllocationDraft = computed(() => pendingAllocationDraftRows.value.length > 0)
+const mode = computed(() => {
+  const resolved = resolveRestockViewMode(restock.value?.Progress)
+  return resolved === 'readonly' && (hasPendingItems.value || hasPendingAllocationDraft.value) ? 'pending-allocation' : resolved
+})
 
 const approveLoading = ref(false)
+const allocatePendingLoading = ref(false)
+const cancelPendingLoading = ref(false)
 const sendBackLoading = ref(false)
 const rejectLoading = ref(false)
 
@@ -94,7 +115,14 @@ function outletLabel(code) {
 
 async function handleSaveDraft() { await saveRestockDraft(false) }
 async function handleSubmit(comment = '') { await submitRestock(restock.value, comment) }
+function handleApplyRecommendation(rowKey) { applyRecommendedAllocation(rowKey, mode.value === 'pending-allocation' ? flow.pendingAllocationSourceKey : undefined) }
+function handleUpdateCandidateLine(payload = {}) { updateCandidateLine(payload.rowKey, payload.warehouseCode, payload.storageName, payload.quantity) }
+function handleUpdatePendingCandidateLine(payload = {}) { updatePendingCandidateLine(payload.rowKey, payload.warehouseCode, payload.storageName, payload.quantity) }
+function handleToggleCancelItem(payload = {}) { cancelPendingSelection(payload.code, payload.selected) }
+function handleResetAllocation(rowKey) { resetAllocation(rowKey, mode.value === 'pending-allocation' ? flow.pendingAllocationSourceKey : undefined) }
 async function handleApprove(comment = '') { approveLoading.value = true; try { await approveRestock(restock.value, rows.value, comment) } finally { approveLoading.value = false } }
+async function handleAllocatePending() { allocatePendingLoading.value = true; try { await allocatePendingRestockItems(restock.value, rows.value) } finally { allocatePendingLoading.value = false } }
+async function handleCancelPending(comment = '') { cancelPendingLoading.value = true; try { await cancelPendingRestockItems(restock.value, comment) } finally { cancelPendingLoading.value = false } }
 async function handleSendBack(comment = '') { sendBackLoading.value = true; try { await sendBackRestock(restock.value, comment) } finally { sendBackLoading.value = false } }
 async function handleReject(comment = '') { rejectLoading.value = true; try { await rejectRestock(restock.value, comment) } finally { rejectLoading.value = false } }
 

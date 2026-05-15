@@ -108,7 +108,7 @@ export function buildRestockCompositeRequest(form = {}, rows = []) {
       Status: 'Active',
       AccessRegion: text(form.AccessRegion)
     },
-    children: [{ resource: 'OutletRestockItems', records: cleaned.map((row) => ({ _action: 'create', data: { SKU: row.SKU, Quantity: row.Quantity, Status: 'Active' } })) }]
+    children: [{ resource: 'OutletRestockItems', records: cleaned.map((row) => ({ _action: 'create', data: { SKU: row.SKU, Quantity: row.Quantity, WarehouseCode: '', StorageName: '', Progress: 'PENDING', Status: 'Active' } })) }]
   }
   return compositeSaveRequest(payload)
 }

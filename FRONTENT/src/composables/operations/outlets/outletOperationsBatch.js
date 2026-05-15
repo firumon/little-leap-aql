@@ -9,6 +9,7 @@ export function compositeSaveRequest(payload = {}) { const { resource, code, dat
 export function resourceBulkRequest(resource, records = [], cursorResources = []) { return { action: 'bulk', resource, payload: { targetResource: resource, records, ...(cursorResources.length ? { lastUpdatedAtResources: [resource, ...cursorResources] } : {}) } } }
 export function resourceUpdateRequest(resource, code, data = {}, cursorResources = []) { return { action: 'update', resource, payload: { code: textOrRef(code), record: data, ...(cursorResources.length ? { lastUpdatedAtResources: [resource, ...cursorResources] } : {}) } } }
 export function resourceCreateRequest(resource, record = {}, cursorResources = []) { return { action: 'create', resource, payload: { record, ...(cursorResources.length ? { lastUpdatedAtResources: [resource, ...cursorResources] } : {}) } } }
+export function resourceGetRequest(resources = [], payload = {}) { const names = Array.isArray(resources) ? resources.filter(Boolean) : [resources].filter(Boolean); return { action: 'get', resource: names, payload } }
 export function executeActionRequest(resource, code, actionConfig, fields = {}, cursorResources = []) { return { action: 'executeAction', resource, payload: { code: textOrRef(code), actionName: actionConfig.action, column: actionConfig.column, columnValue: actionConfig.columnValue, fields, ...(cursorResources.length ? { lastUpdatedAtResources: [resource, ...cursorResources] } : {}) } } }
 
 export const OUTLET_ACTIONS = {
@@ -19,8 +20,6 @@ export const OUTLET_ACTIONS = {
   approveRestock: { action: 'Approve', column: 'Progress', columnValue: 'APPROVED' },
   rejectRestock: { action: 'Reject', column: 'Progress', columnValue: 'REJECTED' },
   sendBackRestock: { action: 'SendBack', column: 'Progress', columnValue: 'REVISION_REQUIRED' },
-  scheduleDelivery: { action: 'Schedule', column: 'Progress', columnValue: 'SCHEDULED' },
-  deliverRestock: { action: 'Deliver', column: 'Progress', columnValue: 'DELIVERED' },
-  cancelDelivery: { action: 'Cancel', column: 'Progress', columnValue: 'CANCELLED' },
+  cancelRestockItem: { action: 'Cancel', column: 'Progress', columnValue: 'CANCELLED' },
   invoiceGenerated: { action: 'MarkInvoiceGenerated', column: 'Progress', columnValue: 'INVOICE_GENERATED' }
 }

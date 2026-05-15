@@ -5,16 +5,9 @@
         <q-icon name="hourglass_top" color="orange" size="sm" class="q-mr-sm" />
         <div class="col">
           <div class="text-subtitle1">{{ outletName }}</div>
-          <div class="text-caption text-grey-7">{{ restock.Date }} · {{ restock.RequestedUser }}</div>
+          <div class="text-caption text-grey-7">{{ restock.Date }} - {{ restock.RequestedUser }}</div>
         </div>
         <OutletProgressChip :progress="restock.Progress" />
-      </q-card-section>
-      <q-separator />
-      <q-card-section>
-        <div class="text-caption">
-          <div><span class="text-grey-7">Requested By:</span> {{ restock.RequestedUser }}</div>
-          <div><span class="text-grey-7">Approved By:</span> {{ restock.ApprovedUser || '—' }}</div>
-        </div>
       </q-card-section>
     </q-card>
 
@@ -22,49 +15,82 @@
       <div class="text-caption text-weight-medium q-mb-xs">Submission Comment</div>
       <div v-html="formatWorkflowCommentHtml(restock.ProgressSubmittedComment)" />
     </q-banner>
+
     <q-banner v-if="restock.ProgressRevisionRequiredComment" class="bg-orange-1 text-dark q-mb-md" rounded>
       <div class="text-caption text-weight-medium q-mb-xs">Revision Required</div>
       <div v-html="formatWorkflowCommentHtml(restock.ProgressRevisionRequiredComment)" />
     </q-banner>
 
+    <div v-for="group in approvalGroups" :key="group.key" class="q-mb-lg">
+      <div class="row items-center q-mb-sm">
+        <div class="text-subtitle2" :class="`text-${groupColor(group.key)}`">{{ group.title }}</div>
+      </div>
+
+      <q-banner v-if="!group.rows.length" dense class="bg-grey-1 text-grey-7" rounded>
+        No items in this group.
+      </q-banner>
+
+      <OrsiAllocationRow
+        v-for="rowView in group.rows"
+        :key="rowView.rowKey"
+        :row-view="rowView"
+        class="q-mb-sm"
+        @apply-recommendation="$emit('apply-recommendation', $event)"
+        @update-allocation-line="$emit('update-allocation-line', $event)"
+        @reset-allocation="$emit('reset-allocation', $event)"
+      />
+    </div>
+
+    <div class="text-subtitle2 q-mb-sm">Allocation Summary</div>
     <q-card flat bordered class="q-mb-md">
       <q-card-section>
-        <div class="text-subtitle2 q-mb-sm">Items</div>
-        <div v-for="(row, rowIndex) in rows" :key="row.Code || rowIndex" class="q-pa-sm q-mb-sm rounded-borders bg-grey-2"
-          :style="`border-left: 3px solid var(--q-${availIcon(row).color})`">
-          <div class="row items-center no-wrap q-mb-xs">
-            <div class="col text-caption text-weight-medium ellipsis">{{ skuProduct(row.SKU) }}</div>
-            <div class="text-caption text-grey-7 q-mx-sm ellipsis">{{ skuVariant(row.SKU) }}</div>
-            <div class="text-caption text-weight-bold text-right" style="white-space: nowrap;">
-              {{ allocationTotal(row) }}/{{ row.Quantity }}
-              <q-icon v-if="allocationTotal(row) === row.Quantity" name="check_circle" color="positive" size="xs" class="q-ml-xs" />
-              <q-icon v-else-if="allocationTotal(row) > row.Quantity" name="warning" color="warning" size="xs" class="q-ml-xs" />
-            </div>
-          </div>
-          <div v-for="s in storagesFor(row, rowIndex)" :key="s.storage"
-            class="row items-center q-ml-md q-mb-xs q-gutter-xs">
-            <q-checkbox
-              :model-value="s.selected"
-              dense size="xs"
-              @update:model-value="val => toggleStorage(rowIndex, s, val)"
-            />
-            <div class="col text-caption ellipsis">{{ s.label.split(" · ").slice(0,2).join(" · ") }}</div>
-            <div class="text-caption text-grey-6 text-bold" style="white-space: nowrap;">{{ s.available }}</div>
-            <q-input class="q-ml-md" input-class="text-center text-bold"
-              :disable="!s.selected"
-              :model-value="s.quantity"
-              type="number"
-              dense outlined
-              min="0"
-              :max="s.available"
-              style="max-width: 70px"
-              @update:model-value="val => updateStorageQty(rowIndex, s, Number(val))"
-            />
-          </div>
-        </div>
+        <q-list v-if="allocationSummary.length">
+          <template v-for="allocation in allocationSummary" :key="allocation.itemLabel">
+            <q-item class="q-px-none" dense>
+              <q-item-section>
+                <q-item-label header class="text-bold text-primary">{{ allocation.itemLabel }}</q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-chip size="md">{{ allocation.allocatedQty }}/{{ allocation.requestedQty }}</q-chip>
+              </q-item-section>
+            </q-item>
+            <q-item v-for="rowView in allocation.allocationSummaryRows" :key="rowView.skuCode + rowView.storageName">
+              <q-item-section top>
+                <q-item-label>{{ rowView.storageName }}</q-item-label>
+                <q-item-label caption>{{ rowView.warehouseName }} </q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-item-label>Allocated: {{ rowView.allocatedQty || 0 }}/{{ rowView.availableQty || 0 }}</q-item-label>
+              </q-item-section>
+            </q-item>
+          </template>
+          <q-item class="q-px-none" dense>
+            <q-item-section>
+              <q-item-label header class="text-bold text-secondary">Pending Items for Later Allocation</q-item-label>
+            </q-item-section>
+            <q-item-section side>
+              <q-chip size="md" color="secondary" text-color="white">{{ pendingSummaryQty }}</q-chip>
+            </q-item-section>
+          </q-item>
+          <q-item v-for="rowView in pendingSummary" :key="rowView.rowKey">
+            <q-item-section top>
+              <q-item-label>{{ rowView.itemLabel }}</q-item-label>
+            </q-item-section>
+            <q-item-section side top>
+              <q-item-label>Pending: {{ rowView.pendingQty || 0 }}</q-item-label>
+              <q-item-label caption>Requested: {{ rowView.requestedQty }}</q-item-label>
+            </q-item-section>
+          </q-item>
+          <q-item v-if="!pendingSummary.length" dense>
+            <q-item-section>
+              <q-item-label caption>No pending items.</q-item-label>
+            </q-item-section>
+          </q-item>
+        </q-list>
+        <div v-else class="text-caption text-grey-6">No allocations selected yet.</div>
       </q-card-section>
       <q-card-actions align="right" class="bg-grey-2">
-        <q-btn color="positive" label="Approve" :loading="approveLoading" :disable="!allAllocated" @click="$emit('approve', comment)" />
+        <q-btn color="positive" label="Allocate and Approve" :loading="approveLoading" :disable="!hasAllocatedRows" @click="$emit('approve', comment)" />
       </q-card-actions>
     </q-card>
 
@@ -73,107 +99,46 @@
         <q-input v-model="comment" type="textarea" label="Action Comment (required for Send Back / Reject)" outlined rows="4" />
       </q-card-section>
       <q-card-actions class="bg-grey-2">
-        <q-btn color="negative" label="Reject" :loading="rejectLoading" @click="$emit('reject', comment)" />
+        <q-btn color="negative" label="Reject" :loading="rejectLoading" :disable="!comment.trim()" @click="$emit('reject', comment)" />
         <q-space />
-        <q-btn color="warning" label="Send Back" :loading="sendBackLoading" @click="$emit('send-back', comment)" />
+        <q-btn color="warning" label="Send Back" :loading="sendBackLoading" :disable="!comment.trim()" @click="$emit('send-back', comment)" />
       </q-card-actions>
     </q-card>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 import OutletProgressChip from './OutletProgressChip.vue'
+import OrsiAllocationRow from './OrsiAllocationRow.vue'
 
 defineOptions({ name: 'RestockApprovalView' })
 
 const props = defineProps({
   restock: { type: Object, required: true },
-  rows: { type: Array, required: true },
-  skuOptions: { type: Array, required: true },
+  approvalGroups: { type: Array, required: true },
+  hasAllocatedRows: { type: Boolean, default: false },
   outletName: { type: String, default: '' },
   approveLoading: { type: Boolean, default: false },
   sendBackLoading: { type: Boolean, default: false },
   rejectLoading: { type: Boolean, default: false },
-  formatWorkflowCommentHtml: { type: Function, required: true },
-  allocations: { type: Function, required: true },
-  allocationTotal: { type: Function, required: true },
-  allocationAvailability: { type: Function, required: true },
-  allocationAvailableTotal: { type: Function, required: true },
-  updateAllocation: { type: Function, required: true },
-  addAllocation: { type: Function, required: true },
-  removeAllocation: { type: Function, required: true }
+  formatWorkflowCommentHtml: { type: Function, required: true }
 })
 
-defineEmits(['approve', 'send-back', 'reject'])
+defineEmits(['apply-recommendation', 'update-allocation-line', 'reset-allocation', 'approve', 'send-back', 'reject'])
 
 const comment = ref('')
+const summaryRows = computed(() => props.approvalGroups.flatMap(group => group.rows || []))
+const allocationSummary = computed(() => summaryRows.value.filter(row => row.allocatedQty > 0))
+const pendingSummary = computed(() => summaryRows.value.filter(row => row.pendingQty > 0))
+const pendingSummaryQty = computed(() => pendingSummary.value.reduce((total, row) => total + (Number(row.pendingQty) || 0), 0))
 
-const allAllocated = computed(() => {
-  return props.rows.every(row => {
-    const allocTotal = props.allocationTotal(row)
-    const req = Number(row.Quantity) || 0
-    return allocTotal >= req
-  })
-})
-
-function skuProduct(skuCode) {
-  const sku = props.skuOptions.find(s => s.value === skuCode)
-  if (!sku) return skuCode
-  const parts = sku.label.split(' · ')
-  return parts.length > 1 ? (parts[1] || skuCode) : skuCode
-}
-function skuVariant(skuCode) {
-  const sku = props.skuOptions.find(s => s.value === skuCode)
-  if (!sku) return ''
-  const parts = sku.label.split(' · ')
-  return parts.length > 2 ? parts.slice(2).join(' · ') : ''
+function groupColor(key) {
+  return key === 'full' ? 'positive' : key === 'partial' ? 'orange' : 'grey-6'
 }
 
-function availIcon(row) {
-  const avail = props.allocationAvailableTotal(row)
-  const req = Number(row.Quantity) || 0
-  if (avail >= req) return { icon: 'check_circle', color: 'positive' }
-  if (avail <= 0) return { icon: 'cancel', color: 'negative' }
-  return { icon: 'warning', color: 'warning' }
-}
-
-function storagesFor(row, rowIndex) {
-  const avail = props.allocationAvailability(row) || []
-  const allocs = props.allocations(row) || []
-  return avail.map(s => {
-    const match = allocs.find(a => a.storage_name === s.value)
-    return {
-      storage: s.value,
-      label: s.label,
-      available: s.available,
-      selected: !!match,
-      quantity: match ? match.quantity : 0,
-      allocIdx: match ? allocs.indexOf(match) : -1
-    }
-  })
-}
-
-function toggleStorage(rowIndex, s, checked) {
-  if (checked) {
-    props.addAllocation(rowIndex)
-    const allocs = props.allocations(props.rows[rowIndex])
-    const newIdx = allocs.length - 1
-    props.updateAllocation(rowIndex, newIdx, { storage_name: s.storage, quantity: Math.min(s.available, 1) })
-  } else if (s.allocIdx >= 0) {
-    props.removeAllocation(rowIndex, s.allocIdx)
-  }
-}
-
-function updateStorageQty(rowIndex, s, val) {
-  const qty = Number.isFinite(val) ? Math.max(0, Math.min(val, s.available)) : 0
-  if (s.allocIdx >= 0) {
-    props.updateAllocation(rowIndex, s.allocIdx, { quantity: qty })
-  } else {
-    props.addAllocation(rowIndex)
-    const allocs = props.allocations(props.rows[rowIndex])
-    const newIdx = allocs.length - 1
-    props.updateAllocation(rowIndex, newIdx, { storage_name: s.storage, quantity: qty })
-  }
+function shortWarehouseName(value = '') {
+  const label = String(value || '')
+  return label.length > 8 ? `${label.slice(0, 8)}..` : label
 }
 </script>

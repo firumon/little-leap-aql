@@ -36,7 +36,7 @@
       <div class="row q-col-gutter-sm">
         <div v-for="restock in searchedRestocks" :key="restock.Code" class="col-12 col-sm-6 col-md-4 col-lg-3">
           <div class="cursor-pointer" @click="navigateTo(restock.Code)">
-            <RestockCard :restock="restock" :outlet-label="outletLabel(restock.OutletCode)" />
+            <RestockCard :restock="restock" :outlet-label="outletLabel(restock.OutletCode)" :item-summary="itemProgressSummary(restock)" />
           </div>
         </div>
       </div>
@@ -56,7 +56,7 @@
         <div class="row q-col-gutter-xs">
           <div v-for="restock in myDrafts" :key="restock.Code" class="col-12 col-sm-6 col-md-4 col-lg-3">
             <div class="cursor-pointer" @click="navigateTo(restock.Code)">
-              <RestockCard :restock="restock" :outlet-label="outletLabel(restock.OutletCode)" />
+              <RestockCard :restock="restock" :outlet-label="outletLabel(restock.OutletCode)" :item-summary="itemProgressSummary(restock)" />
             </div>
           </div>
         </div>
@@ -71,7 +71,22 @@
         <div class="row q-col-gutter-xs">
           <div v-for="restock in pendingApprovalList" :key="restock.Code" class="col-12 col-sm-6 col-md-4 col-lg-3">
             <div class="cursor-pointer" @click="navigateTo(restock.Code)">
-              <RestockCard :restock="restock" :outlet-label="outletLabel(restock.OutletCode)" />
+              <RestockCard :restock="restock" :outlet-label="outletLabel(restock.OutletCode)" :item-summary="itemProgressSummary(restock)" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- canApprove: Restocks with pending items after approval -->
+      <div v-if="userCanApprove && pendingItemRestocks.length" class="q-mb-md">
+        <div class="text-subtitle1 text-weight-medium q-mb-sm">
+          <q-icon name="pending_actions" color="secondary" size="sm" class="q-mr-xs" />
+          Restocks with Pending Items ({{ pendingItemRestocks.length }})
+        </div>
+        <div class="row q-col-gutter-xs">
+          <div v-for="restock in pendingItemRestocks" :key="restock.Code" class="col-12 col-sm-6 col-md-4 col-lg-3">
+            <div class="cursor-pointer" @click="navigateTo(restock.Code)">
+              <RestockCard :restock="restock" :outlet-label="outletLabel(restock.OutletCode)" :item-summary="itemProgressSummary(restock)" />
             </div>
           </div>
         </div>
@@ -97,26 +112,7 @@
         </div>
       </div>
 
-      <!-- Pending Delivery (lower priority, shown to all with canRead) -->
-      <div v-if="resourcePerms.canRead && pendingDeliveryList.length" class="q-mb-md">
-        <q-expansion-item
-          v-model="pendingDeliveryExpanded"
-          header-class="text-subtitle1 text-weight-medium"
-          :label="`Pending Delivery (${pendingDeliveryList.length})`"
-        >
-          <q-card flat bordered class="restock-section-body">
-            <q-card-section class="q-pa-sm">
-              <div class="row q-col-gutter-sm">
-                <div v-for="restock in pendingDeliveryList" :key="restock.Code" class="col-12 col-sm-6 col-md-4 col-lg-3">
-                  <div class="cursor-pointer" @click="navigateTo(restock.Code)">
-                    <RestockCard :restock="restock" :outlet-label="outletLabel(restock.OutletCode)" />
-                  </div>
-                </div>
-              </div>
-            </q-card-section>
-          </q-card>
-        </q-expansion-item>
-      </div>
+
     </template>
 
     <!-- FAB -->
@@ -132,7 +128,6 @@
 import { ref, computed, reactive, onMounted } from 'vue'
 import { useOutletRestocks } from '../../../composables/operations/outlets/useOutletRestocks.js'
 import { useOutletVisits } from '../../../composables/operations/outlets/useOutletVisits.js'
-import { useAuthStore } from '../../../stores/auth.js'
 import RestockSummaryBar from '../../../components/Operations/Outlets/RestockSummaryBar.vue'
 import RestockCard from '../../../components/Operations/Outlets/RestockCard.vue'
 import { RESTOCK_PROGRESS_ORDER, active, text } from '../../../composables/operations/outlets/outletOperationsMeta.js'
@@ -142,16 +137,7 @@ defineOptions({ name: 'OutletRestocksIndexPage' })
 const flow = useOutletRestocks()
 const visitsFlow = useOutletVisits()
 const { todayVisits, thisWeekVisits } = visitsFlow
-const authStore = useAuthStore()
-
-const { loading, searchTerm, items, reloadIndex, navigateTo, navigateToAdd } = flow
-
-const restockResource = computed(() =>
-  (Array.isArray(authStore.resources) ? authStore.resources : []).find(r => r.name === 'OutletRestocks')
-)
-const resourcePerms = computed(() => restockResource.value?.permissions || {})
-const userCanCreate = computed(() => !!resourcePerms.value.canWrite)
-const userCanApprove = computed(() => !!resourcePerms.value.canUpdate)
+const { loading, searchTerm, items, reloadIndex, navigateTo, navigateToAdd, itemProgressSummary, resourcePerms, canCreate: userCanCreate, canApprove: userCanApprove } = flow
 
 const isInitialLoad = ref(true)
 
@@ -168,8 +154,16 @@ const searchedRestocks = computed(() => {
 const pendingApprovalList = computed(() =>
   items.value.filter(row => text(row.Progress) === 'PENDING_APPROVAL'))
 
-const pendingDeliveryList = computed(() =>
-  items.value.filter(row => ['APPROVED', 'PARTIALLY_DELIVERED'].includes(text(row.Progress))))
+const pendingItemRestocks = computed(() => {
+  const restockCodes = new Set(flow.restockItems.items.value
+    .filter(active)
+    .filter(row => text(row.Progress) === 'PENDING')
+    .map(row => text(row.OutletRestockCode))
+    .filter(Boolean))
+  return items.value.filter(row =>
+    text(row.Progress) === 'APPROVED' &&
+    restockCodes.has(text(row.Code)))
+})
 
 const myDrafts = computed(() =>
   items.value.filter(row => ['DRAFT', 'REVISION_REQUIRED'].includes(text(row.Progress))))
@@ -202,7 +196,6 @@ const summaryCounts = computed(() => {
 })
 
 const expandState = reactive({})
-const pendingDeliveryExpanded = ref(false)
 
 function onFilterClick(key) {
   expandState[key] = true

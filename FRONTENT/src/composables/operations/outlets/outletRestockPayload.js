@@ -1,44 +1,224 @@
-import { todayISO, text, OUTLET_REFERENCE_TYPES, STOCK_MOVEMENT_REFERENCE_TYPES } from './outletOperationsMeta.js'
-import { buildOutletMovementsFromItems, buildStockMovementsFromItems, parseItemsJSON, toNumber } from './outletStockLogic.js'
-import { compositeSaveRequest, executeActionRequest, OUTLET_ACTIONS, resourceBulkRequest, resourceUpdateRequest, resourceCreateRequest } from './outletOperationsBatch.js'
+import { todayISO, text } from './outletOperationsMeta.js'
+import { buildStockMovementForAllocation, formatTimeOnly, toNumber } from './outletStockLogic.js'
+import { compositeSaveRequest, executeActionRequest, OUTLET_ACTIONS, resourceBulkRequest, resourceUpdateRequest } from './outletOperationsBatch.js'
+
+function stampFields(prefix, actorName = '', comment = '') {
+  const now = new Date().toISOString()
+  return {
+    [`${prefix}At`]: now,
+    [`${prefix}By`]: text(actorName),
+    [`${prefix}Comment`]: text(comment)
+  }
+}
+
+function pendingSourceCode(row = {}) {
+  return text(row._pendingSourceCode || row._approvalSourceKey).replace(/^pending:/, '')
+}
+
+function allocationSourceCode(row = {}) {
+  return text(row._pendingSourceCode || row.Code || row._approvalSourceKey).replace(/^pending:/, '')
+}
 
 export function buildRestockCompositePayload(form = {}, rows = [], code = form.Code) {
   return {
     resource: 'OutletRestocks',
     code,
     data: {
-      Date: text(form.Date) || todayISO(), OutletCode: text(form.OutletCode), RequestedUser: text(form.RequestedUser), ApprovedUser: text(form.ApprovedUser), Progress: text(form.Progress) || 'DRAFT', ProgressSubmittedComment: text(form.ProgressSubmittedComment), ProgressRevisionRequiredComment: text(form.ProgressRevisionRequiredComment), ProgressApprovedComment: text(form.ProgressApprovedComment), ProgressRejectedComment: text(form.ProgressRejectedComment), Status: text(form.Status || 'Active'), AccessRegion: text(form.AccessRegion)
+      Date: text(form.Date) || todayISO(),
+      OutletCode: text(form.OutletCode),
+      RequestedUser: text(form.RequestedUser),
+      ApprovedUser: text(form.ApprovedUser),
+      Progress: text(form.Progress) || 'DRAFT',
+      ProgressSubmittedComment: text(form.ProgressSubmittedComment),
+      ProgressRevisionRequiredComment: text(form.ProgressRevisionRequiredComment),
+      ProgressApprovedComment: text(form.ProgressApprovedComment),
+      ProgressRejectedComment: text(form.ProgressRejectedComment),
+      Status: text(form.Status || 'Active'),
+      AccessRegion: text(form.AccessRegion)
     },
-    children: [{ resource: 'OutletRestockItems', records: rows.map(row => ({ _action: row._delete || row.Status === 'Inactive' ? 'deactivate' : (row.Code ? 'update' : 'create'), ...(row.Code ? { _originalCode: row.Code } : {}), data: { SKU: text(row.SKU), Quantity: toNumber(row.Quantity), StorageAllocationJSON: text(row.StorageAllocationJSON), Status: text(row.Status || 'Active') } })) }]
+    children: [{
+      resource: 'OutletRestockItems',
+      records: rows.map(row => ({
+        _action: row._delete || row.Status === 'Inactive' ? 'deactivate' : (row.Code ? 'update' : 'create'),
+        ...(row.Code ? { _originalCode: row.Code } : {}),
+        data: {
+          SKU: text(row.SKU),
+          WarehouseCode: text(row.WarehouseCode),
+          StorageName: text(row.StorageName),
+          Quantity: toNumber(row.Quantity),
+          Progress: text(row.Progress) || 'PENDING',
+          Status: text(row.Status || 'Active'),
+          AccessRegion: text(form.AccessRegion || row.AccessRegion)
+        }
+      }))
+    }]
   }
 }
 
-export function buildScheduleDeliveryBatchRequests(restock = {}, restockItems = [], warehouseCode = '', itemsJSON = [], actorName = '') {
-  const items = parseItemsJSON(itemsJSON)
-  const now = new Date().toISOString()
-  const record = { OutletRestockCode: restock.Code, OutletCode: restock.OutletCode, WarehouseCode: text(warehouseCode), ScheduledAt: now, ScheduledBy: text(actorName), ItemsJSON: JSON.stringify(items), Progress: 'SCHEDULED', Status: 'Active', AccessRegion: text(restock.AccessRegion) }
-  const movements = buildStockMovementsFromItems(warehouseCode, items, STOCK_MOVEMENT_REFERENCE_TYPES.outletRestock, restock.Code, -1).map(row => ({ ...row, AccessRegion: text(restock.AccessRegion) }))
-  return [resourceCreateRequest('OutletDeliveries', record), resourceBulkRequest('StockMovements', movements, ['WarehouseStorages'])]
-}
+export function buildRestockAllocationBatchRequests(restock = {}, rows = [], actorName = '', comment = '', options = {}) {
+  const activeRows = rows.filter(row => text(row.Status || 'Active') === 'Active')
+  const allocationComment = text(comment) || `Allocated by ${text(actorName) || 'Unknown'} on ${formatTimeOnly()}`
+  const itemRecords = activeRows.map(row => {
+    const progress = text(row.Progress || 'PENDING')
+    const code = text(row.Code) || (progress === 'PENDING' ? pendingSourceCode(row) : '')
+    return {
+      ...(code ? { Code: code } : {}),
+      OutletRestockCode: text(restock.Code),
+      SKU: text(row.SKU),
+      WarehouseCode: text(row.WarehouseCode),
+      StorageName: text(row.StorageName),
+      Quantity: toNumber(row.Quantity),
+      Progress: progress,
+      ...(progress === 'ALLOCATED' ? stampFields('ProgressAllocated', actorName, allocationComment) : {}),
+      Status: 'Active',
+      AccessRegion: text(restock.AccessRegion || row.AccessRegion)
+    }
+  })
+  // Deduplicate Codes: when the same Code appears on both
+  // ALLOCATED and non-ALLOCATED records, strip Code from ALLOCATED
+  // records so the backend auto-generates a new Code (CREATE)
+  // instead of double-writing the same row (UPDATE+UPDATE).
+  const codeCount = {}
+  itemRecords.forEach(r => { if (r.Code) codeCount[r.Code] = (codeCount[r.Code] || 0) + 1 })
+  const hasDupCodes = Object.values(codeCount).some(c => c > 1)
+  if (hasDupCodes) {
+    itemRecords = itemRecords.map(r => {
+      if (r.Code && codeCount[r.Code] > 1 && r.Progress === 'ALLOCATED') {
+        const { Code, ...rest } = r
+        return rest
+      }
+      return r
+    })
+  }
 
-export function buildDeliverDeliveryBatchRequests(odCode, od = {}, itemsJSON = [], actorName = '', restockProgress = 'DELIVERED', comment = '') {
-  const now = new Date().toISOString()
-  const movements = buildOutletMovementsFromItems(od.OutletCode, itemsJSON, OUTLET_REFERENCE_TYPES.delivery, od.Code || odCode).map(row => ({ ...row, AccessRegion: text(od.AccessRegion) }))
+  const allocated = itemRecords.filter(row => text(row.Progress) === 'ALLOCATED')
+  const movementRefs = Array.isArray(options.movementReferences) ? options.movementReferences : []
+  const movements = allocated.map((row, index) => buildStockMovementForAllocation(row, movementRefs[index] || row.Code || restock.Code, -1, restock.AccessRegion))
   const requests = [
-    executeActionRequest('OutletDeliveries', odCode, OUTLET_ACTIONS.deliverRestock, { DeliveredAt: now, DeliveredBy: text(actorName), DeliveredComment: text(comment), ProgressDeliveredComment: text(comment) }),
-    resourceBulkRequest('OutletMovements', movements, ['OutletStorages'])
+    resourceBulkRequest('OutletRestockItems', itemRecords, ['OutletRestockItems']),
+    resourceBulkRequest('StockMovements', movements, ['WarehouseStorages'])
   ]
-  if (text(od.OutletRestockCode)) requests.push(resourceUpdateRequest('OutletRestocks', od.OutletRestockCode, { Progress: text(restockProgress) || 'DELIVERED' }))
+  if (options.updateRestock !== false) {
+    requests.push(resourceUpdateRequest('OutletRestocks', restock.Code, {
+      Progress: 'APPROVED',
+      ApprovedUser: text(actorName),
+      ProgressApprovedComment: text(comment)
+    }, ['OutletRestocks']))
+  }
   return requests
 }
 
-export function buildCancelDeliveryBatchRequests(odCode, od = {}, itemsJSON = [], actorName = '', comment = '') {
-  const now = new Date().toISOString()
-  const movements = buildStockMovementsFromItems(od.WarehouseCode, itemsJSON, STOCK_MOVEMENT_REFERENCE_TYPES.outletDeliveryCancel, od.Code || odCode, 1).map(row => ({ ...row, AccessRegion: text(od.AccessRegion) }))
+export function buildPendingRestockAllocationBatchRequests(restock = {}, rows = [], actorName = '', comment = '') {
+  const activeRows = rows.filter(row => text(row.Status || 'Active') === 'Active')
+  const allocationComment = text(comment) || `Allocated by ${text(actorName) || 'Unknown'} on ${formatTimeOnly()}`
+  const sourceCodes = Array.from(new Set(activeRows.map(allocationSourceCode).filter(Boolean)))
+  const sourceRows = sourceCodes.map(code => activeRows.find(row => text(row.Code) === code || allocationSourceCode(row) === code)).filter(Boolean)
+  const itemRecords = []
+  const movements = []
+
+  sourceRows.forEach(source => {
+    const sourceCode = allocationSourceCode(source)
+    const sourceQty = toNumber(source._approvalRequestedQty || source.Quantity)
+    const allocatedRows = activeRows.filter(row => allocationSourceCode(row) === sourceCode && text(row.Progress) === 'ALLOCATED')
+    const allocatedQty = allocatedRows.reduce((total, row) => total + toNumber(row.Quantity), 0)
+    const remainingQty = Math.max(sourceQty - allocatedQty, 0)
+
+    if (remainingQty === 0 && allocatedRows.length === 1 && sourceCode) {
+      const row = allocatedRows[0]
+      const record = {
+        Code: sourceCode,
+        OutletRestockCode: text(restock.Code),
+        SKU: text(row.SKU),
+        WarehouseCode: text(row.WarehouseCode),
+        StorageName: text(row.StorageName),
+        Quantity: toNumber(row.Quantity),
+        Progress: 'ALLOCATED',
+        ...stampFields('ProgressAllocated', actorName, allocationComment),
+        Status: 'Active',
+        AccessRegion: text(restock.AccessRegion || row.AccessRegion)
+      }
+      itemRecords.push(record)
+      movements.push(buildStockMovementForAllocation(record, sourceCode, -1, restock.AccessRegion))
+      return
+    }
+
+    if (sourceCode && remainingQty > 0) {
+      itemRecords.push({
+        Code: sourceCode,
+        OutletRestockCode: text(restock.Code),
+        SKU: text(source.SKU),
+        WarehouseCode: '',
+        StorageName: '',
+        Quantity: remainingQty,
+        Progress: 'PENDING',
+        Status: 'Active',
+        AccessRegion: text(restock.AccessRegion || source.AccessRegion)
+      })
+    } else if (sourceCode) {
+      itemRecords.push({
+        Code: sourceCode,
+        Status: 'Inactive',
+        AccessRegion: text(restock.AccessRegion || source.AccessRegion)
+      })
+    }
+
+    allocatedRows.forEach(row => {
+      const record = {
+        OutletRestockCode: text(restock.Code),
+        SKU: text(row.SKU),
+        WarehouseCode: text(row.WarehouseCode),
+        StorageName: text(row.StorageName),
+        Quantity: toNumber(row.Quantity),
+        Progress: 'ALLOCATED',
+        ...stampFields('ProgressAllocated', actorName, allocationComment),
+        Status: 'Active',
+        AccessRegion: text(restock.AccessRegion || row.AccessRegion)
+      }
+      itemRecords.push(record)
+      movements.push(buildStockMovementForAllocation(record, sourceCode || restock.Code, -1, restock.AccessRegion))
+    })
+  })
+
   return [
-    executeActionRequest('OutletDeliveries', odCode, OUTLET_ACTIONS.cancelDelivery, { CancelledAt: now, CancelledBy: text(actorName), Comment: text(comment), ProgressCancelledComment: text(comment) }),
+    resourceBulkRequest('OutletRestockItems', itemRecords, ['OutletRestockItems']),
     resourceBulkRequest('StockMovements', movements, ['WarehouseStorages'])
   ]
+}
+
+export function buildRestockRejectBatchRequests(restock = {}, rows = [], actorName = '', comment = '') {
+  const activeRows = rows.filter(row => text(row.Status || 'Active') === 'Active')
+  const movements = activeRows
+    .filter(row => text(row.Progress) === 'ALLOCATED')
+    .map(row => buildStockMovementForAllocation(row, row.Code || restock.Code, 1, restock.AccessRegion))
+  const itemRecords = activeRows.map(row => ({
+    Code: row.Code,
+    Status: 'Inactive',
+    AccessRegion: text(row.AccessRegion || restock.AccessRegion)
+  })).filter(row => text(row.Code))
+  return [
+    resourceBulkRequest('StockMovements', movements, ['WarehouseStorages']),
+    resourceBulkRequest('OutletRestockItems', itemRecords, ['OutletRestockItems']),
+    resourceUpdateRequest('OutletRestocks', restock.Code, {
+      Progress: 'REJECTED',
+      ProgressRejectedComment: text(comment),
+      ProgressRejectedAt: new Date().toISOString(),
+      ProgressRejectedBy: text(actorName)
+    }, ['OutletRestocks'])
+  ]
+}
+
+export function buildRestockCancelItemsBatchRequests(restock = {}, rows = [], actorName = '', comment = '') {
+  const cancelComment = text(comment)
+  return rows
+    .filter(row => text(row.Code) && text(row.Progress) === 'PENDING')
+    .map(row => executeActionRequest('OutletRestockItems', row.Code, OUTLET_ACTIONS.cancelRestockItem, {
+      ...stampFields('ProgressCancelled', actorName, cancelComment),
+      AccessRegion: text(row.AccessRegion || restock.AccessRegion)
+    }, ['OutletRestockItems']))
+}
+
+export function buildRestockSendBackRequest(restock = {}, comment = '') {
+  return executeActionRequest('OutletRestocks', restock.Code, OUTLET_ACTIONS.sendBackRestock, { ProgressRevisionRequiredComment: text(comment) }, ['OutletRestocks'])
 }
 
 export function restockSaveRequest(form, rows) { return compositeSaveRequest(buildRestockCompositePayload(form, rows)) }

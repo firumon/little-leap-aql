@@ -11,6 +11,7 @@ import {
 import { generateReport } from 'src/services/ReportService'
 import { useDataStore } from './data'
 import { getResourceMeta } from 'src/services/IndexedDbService'
+import { rowsUpsert, metaSet } from 'src/services/IndexedDbCacheService'
 import { normalizeCursorValue } from 'src/services/ResourceMapperService'
 
 function normalizeResponse(response, fallbackData = null) {
@@ -135,6 +136,40 @@ export const useWorkflowStore = defineStore('workflow', () => {
     return Array.from(merged.values())
   }
 
+  async function persistBatchResourcePayload(resourceName, resourceData = {}) {
+    if (!resourceName || !Array.isArray(resourceData?.rows)) return
+
+    const dataStore = useDataStore()
+    const responseHeaders = Array.isArray(resourceData.headers) && resourceData.headers.length
+      ? resourceData.headers
+      : []
+    const knownHeaders = Array.isArray(dataStore.headers[resourceName]) && dataStore.headers[resourceName].length
+      ? dataStore.headers[resourceName]
+      : []
+    const headers = responseHeaders.length ? responseHeaders : knownHeaders
+
+    if (headers.length) {
+      dataStore.initResource(resourceName, headers)
+    }
+
+    if (resourceData.rows.length) {
+      if (headers.length) {
+        await rowsUpsert(resourceName, headers, resourceData.rows)
+      } else {
+        dataStore.replaceRows(resourceName, mergeRowsByCode(dataStore.getRows(resourceName), resourceData.rows))
+      }
+    }
+
+    if (resourceData.meta && typeof resourceData.meta === 'object') {
+      await metaSet(resourceName, {
+        ...(headers.length ? { headers } : {}),
+        lastSyncAt: normalizeCursorValue(resourceData.meta.lastSyncAt) || Date.now(),
+        lastFetchAt: Date.now(),
+        hasHydratedOnce: true
+      })
+    }
+  }
+
   async function runBatchRequests(requests = []) {
     const resourceNames = collectBatchCursorResources(requests)
     const lastUpdatedAtByResource = {}
@@ -162,14 +197,9 @@ export const useWorkflowStore = defineStore('workflow', () => {
     const resourcePayload = response?.data?.resources && typeof response.data.resources === 'object'
       ? response.data.resources
       : {}
-    Object.entries(resourcePayload).forEach(([resourceName, resourceData]) => {
-      if (Array.isArray(resourceData?.headers) && resourceData.headers.length) {
-        dataStore.initResource(resourceName, resourceData.headers)
-      }
-      if (Array.isArray(resourceData?.rows)) {
-        dataStore.replaceRows(resourceName, mergeRowsByCode(dataStore.getRows(resourceName), resourceData.rows))
-      }
-    })
+    for (const [resourceName, resourceData] of Object.entries(resourcePayload)) {
+      await persistBatchResourcePayload(resourceName, resourceData)
+    }
     return {
       success: response?.success === true,
       data: responses,

@@ -5,6 +5,7 @@
       <div class="col min-width-0">
         <div class="text-subtitle2 ellipsis restock-card__outlet">{{ outletLabel || restock.OutletCode }}</div>
         <div class="text-caption text-grey-7">{{ dateLine }}</div>
+        <div v-if="itemSummary" class="text-caption text-grey-8">{{ itemSummary }}</div>
       </div>
       <div class="restock-card__chip">
         <OutletProgressChip :progress="restock.Progress" />
@@ -22,7 +23,8 @@ defineOptions({ name: 'RestockCard' })
 
 const props = defineProps({
   restock: { type: Object, required: true },
-  outletLabel: { type: String, default: '' }
+  outletLabel: { type: String, default: '' },
+  itemSummary: { type: String, default: '' }
 })
 
 const progress = computed(() => props.restock?.Progress || '')

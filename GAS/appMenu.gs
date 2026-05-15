@@ -776,8 +776,12 @@ function app_saveResourceListViews(resourceName, listViewsJson, listViewsMode) {
 }
 
 function regenerateAppCacheAndNotify() {
+  resetLogSheet_();
+  logToSheet_('Starting Regenerate App Cache');
   try {
     var summary = regenerateAllAppCaches();
+    logToSheet_('Caches rebuilt: ' + ((summary.rebuiltCaches || []).join(', ') || 'None'));
+    logToSheet_('App Cache regeneration completed');
     SpreadsheetApp.getUi().alert(
       'APP caches regenerated.\n\n' +
       'Spreadsheet: ' + (summary.spreadsheetName || summary.spreadsheetId || 'APP') + '\n' +
@@ -795,4 +799,40 @@ function regenerateAppCacheAndNotify() {
   } catch (e) {
     SpreadsheetApp.getUi().alert('Error regenerating APP caches: ' + e.message);
   }
+}
+
+var logSheet = null;
+
+function resetLogSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('_LOGS_');
+  if (!sheet) {
+    sheet = ss.insertSheet('_LOGS_');
+    var mc = sheet.getMaxColumns();
+    if (mc > 2) sheet.deleteColumns(3, mc - 2);
+    sheet.getRange(1, 1, 1, 2).setValues([['Timestamp', 'Message']]);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, 2).setFontWeight('bold');
+    sheet.setColumnWidth(1, 100);
+    sheet.setColumnWidth(2, 600);
+  }
+  var lr = sheet.getLastRow();
+  if (lr > 1) sheet.deleteRows(2, lr - 1);
+  logSheet = sheet;
+}
+
+function logToSheet_(msg) {
+  try {
+    if(!logSheet){
+      var ss = SpreadsheetApp.getActiveSpreadsheet();
+      logSheet = ss.getSheetByName('_LOGS_');
+    }
+    if (logSheet) {
+      var now = new Date();
+      var time = ('0' + now.getHours()).slice(-2) + ':' +
+                  ('0' + now.getMinutes()).slice(-2) + ':' +
+                  ('0' + now.getSeconds()).slice(-2);
+      logSheet.appendRow([time, msg]);
+    }
+  } catch(e) {}
 }

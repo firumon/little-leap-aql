@@ -7,6 +7,9 @@
 // Shared constants are located in Constants.gs
 
 function setupAppSheets() {
+  resetLogSheet_();
+  logToSheet_('Starting Refactor APP Sheets');
+
   const ss = SpreadsheetApp.getActiveSpreadsheet();
 
   const sheetConfigs = [
@@ -303,6 +306,8 @@ function setupAppSheets() {
 
   });
 
+  logToSheet_('APP sheets processed: ' + results.length + ' sheets');
+
   // Ensure Config sheet includes expected keys (append any missing keys).
   var configSheet = ss.getSheetByName(CONFIG.SHEETS.CONFIG);
   if (configSheet) {
@@ -348,6 +353,8 @@ function setupAppSheets() {
       }
     }
   }
+
+  logToSheet_('Config keys seeded');
 
   // AppOptions sheet — horizontal layout, no header row, each row = [key, val1, val2, ...]
   var appOptionsSheet = ss.getSheetByName(CONFIG.SHEETS.APP_OPTIONS);
@@ -407,9 +414,12 @@ function setupAppSheets() {
     results.push('Removed empty default Sheet1');
   }
 
+  logToSheet_('AppOptions seeded');
+
   var summary = 'Setup complete.\n\n' + results.join('\n');
   Logger.log(summary);
 
+  logToSheet_('Syncing APP.Resources from code...');
   try {
     syncAppResourcesFromCode(true);
     summary += '\n\nAutomatically synced APP.Resources from code.';
@@ -424,10 +434,14 @@ function setupAppSheets() {
     summary += '\n(Note: Failed to store APP_FILE_ID in Script Properties: ' + e.message + ')';
   }
 
+  logToSheet_('APP File ID stored');
+
   // Clear caches after full setup
   if (typeof clearAllAppCaches === 'function') {
     clearAllAppCaches();
   }
+
+  logToSheet_('Caches cleared, Refactor APP Sheets completed');
 
   try {
     SpreadsheetApp.getUi().alert(summary);

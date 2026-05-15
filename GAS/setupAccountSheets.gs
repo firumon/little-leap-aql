@@ -12,6 +12,9 @@ var ACCOUNTS_HEADER_COLOR = '#5C6BC0';
 var ACCOUNTS_ALT_ROW_COLOR = '#f0f1fa';
 
 function setupAccountSheets() {
+    resetLogSheet_();
+    logToSheet_('Starting Setup Base Accounts');
+
     const commonAuditColumns = ['CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy'];
 
     const schemaByResource = [
@@ -71,6 +74,7 @@ function setupAccountSheets() {
     const results = [];
 
     schemaByResource.forEach(function (schema) {
+        logToSheet_('Processing ' + schema.resourceName);
         try {
             const resource = getResourceConfig(schema.resourceName);
             if (!resource.codePrefix) throw new Error('CodePrefix is missing');
@@ -118,6 +122,8 @@ function setupAccountSheets() {
             results.push('Error for ' + schema.resourceName + ': ' + err.message);
         }
     });
+
+    logToSheet_('Setup Base Accounts completed');
 
     const summary = 'Accounts sheets setup complete.\n\n' + results.join('\n');
     

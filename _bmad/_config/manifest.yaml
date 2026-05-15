@@ -1,0 +1,21 @@
+installation:
+  version: 6.6.0
+  installDate: 2026-05-14T16:33:25.843Z
+  lastUpdated: 2026-05-14T16:33:25.843Z
+modules:
+  - name: core
+    version: 6.6.0
+    installDate: 2026-05-14T16:33:25.339Z
+    lastUpdated: 2026-05-14T16:33:25.840Z
+    source: built-in
+    npmPackage: null
+    repoUrl: null
+  - name: bmm
+    version: 6.6.0
+    installDate: 2026-05-14T16:33:25.683Z
+    lastUpdated: 2026-05-14T16:33:25.843Z
+    source: built-in
+    npmPackage: null
+    repoUrl: null
+ides:
+  - codex

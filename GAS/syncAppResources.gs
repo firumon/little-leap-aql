@@ -350,69 +350,6 @@ const APP_RESOURCES_CODE_CONFIG = [
         ListViews: ''
     },
     {
-        Name: CONFIG.MASTER_SHEETS.PORTS,
-        Scope: 'master',
-        IsActive: 'TRUE',
-        SheetName: CONFIG.MASTER_SHEETS.PORTS,
-        CodePrefix: 'PORT',
-        CodeSequenceLength: 3,
-        LastDataUpdatedAt: 0,
-        Audit: 'TRUE',
-        RequiredHeaders: 'Name,Status',
-        UniqueHeaders: 'Name',
-        UniqueCompositeHeaders: '',
-        DefaultValues: '{"Status":"Active","Country":"UAE"}',
-        RecordAccessPolicy: 'ALL',
-        OwnerUserField: 'CreatedBy',
-        AdditionalActions: '',
-        Menu: JSON.stringify([]),
-        UIFields: JSON.stringify([
-            { header: 'Name', label: 'Name', type: 'text', required: true },
-            { header: 'Country', label: 'Country', type: 'text' },
-            { header: 'PortType', label: 'Port Type', type: 'text' },
-            { header: 'Status', label: 'Status', type: 'status', required: true }
-        ]),
-        IncludeInAuthorizationPayload: 'TRUE',
-        Functional: 'FALSE',
-        PreAction: '',
-        PostAction: '',
-        Reports: '',
-        CustomUIName: '',
-        ListViews: ''
-    },
-    {
-        Name: CONFIG.MASTER_SHEETS.CARRIERS,
-        Scope: 'master',
-        IsActive: 'TRUE',
-        SheetName: CONFIG.MASTER_SHEETS.CARRIERS,
-        CodePrefix: 'CARR',
-        CodeSequenceLength: 4,
-        LastDataUpdatedAt: 0,
-        Audit: 'TRUE',
-        RequiredHeaders: 'Name,Status',
-        UniqueHeaders: 'Name',
-        UniqueCompositeHeaders: '',
-        DefaultValues: '{"Status":"Active"}',
-        RecordAccessPolicy: 'ALL',
-        OwnerUserField: 'CreatedBy',
-        AdditionalActions: '',
-        Menu: JSON.stringify([]),
-        UIFields: JSON.stringify([
-            { header: 'Name', label: 'Name', type: 'text', required: true },
-            { header: 'Type', label: 'Type', type: 'text' },
-            { header: 'Phone', label: 'Phone', type: 'text' },
-            { header: 'ContactPerson', label: 'Contact Person', type: 'text' },
-            { header: 'Status', label: 'Status', type: 'status', required: true }
-        ]),
-        IncludeInAuthorizationPayload: 'TRUE',
-        Functional: 'FALSE',
-        PreAction: '',
-        PostAction: '',
-        Reports: '',
-        CustomUIName: '',
-        ListViews: ''
-    },
-    {
         Name: CONFIG.OPERATION_SHEETS.PROCUREMENTS,
         Scope: 'operation',
         IsActive: 'TRUE',
@@ -895,9 +832,10 @@ const APP_RESOURCES_CODE_CONFIG = [
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_DELIVERIES,
         Scope: 'operation', IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_DELIVERIES,
-        CodePrefix: 'ODL', CodeSequenceLength: 6, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'Date,UserName,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Progress":"DRAFT"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: '', Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 3, "label": "Outlet Deliveries", "icon": "local_shipping", "route": "/operations/outlet-deliveries", "pageTitle": "Outlet Deliveries", "pageDescription": "Create, deliver, or cancel allocated outlet restock items", "show": true }]), UIFields: JSON.stringify([
+        CodePrefix: 'ODL', CodeSequenceLength: 6, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'Date,UserName,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Progress":"DRAFT"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: '',         Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 3, "label": "Outlet Deliveries", "icon": "local_shipping", "route": "/operations/outlet-deliveries", "pageTitle": "Outlet Deliveries", "pageDescription": "Create, deliver, or cancel allocated outlet restock items", "show": true }]), UIFields: JSON.stringify([
             { header: 'Date', label: 'Date', type: 'date', required: true },
             { header: 'UserName', label: 'User Name', type: 'text', required: true },
+            { header: 'OutletRestockItemCodes', label: 'Restock Item Codes', type: 'textarea' },
             { header: 'Progress', label: 'Progress', type: 'status', required: true },
             { header: 'ProgressInTransitAt', label: 'In Transit At', type: 'datetime' },
             { header: 'ProgressInTransitBy', label: 'In Transit By', type: 'text' },
@@ -908,20 +846,6 @@ const APP_RESOURCES_CODE_CONFIG = [
             { header: 'CancelledAt', label: 'Cancelled At', type: 'datetime' },
             { header: 'CancelledBy', label: 'Cancelled By', type: 'text' },
             { header: 'CancelledComment', label: 'Cancelled Comment', type: 'textarea' },
-            { header: 'Status', label: 'Status', type: 'status', required: true },
-            { header: 'AccessRegion', label: 'Access Region', type: 'text' }
-        ]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
-    },
-    {
-        Name: CONFIG.OPERATION_SHEETS.OUTLET_DELIVERY_ITEMS,
-        Scope: 'operation', ParentResource: CONFIG.OPERATION_SHEETS.OUTLET_DELIVERIES, IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_DELIVERY_ITEMS,
-        CodePrefix: 'ODI', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletDeliveryCode,OutletRestockItemCode,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: 'OutletDeliveryCode+OutletRestockItemCode', DefaultValues: '{"Status":"Active","Progress":"IN_TRANSIT"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: '', Menu: JSON.stringify([]), UIFields: JSON.stringify([
-            { header: 'OutletDeliveryCode', label: 'Outlet Delivery Code', type: 'text', required: true },
-            { header: 'OutletRestockItemCode', label: 'Outlet Restock Item Code', type: 'text', required: true },
-            { header: 'Progress', label: 'Progress', type: 'status', required: true },
-            { header: 'ProgressDeliveredAt', label: 'Delivered At', type: 'datetime' },
-            { header: 'ProgressDeliveredBy', label: 'Delivered By', type: 'text' },
-            { header: 'ProgressDeliveredComment', label: 'Delivered Comment', type: 'textarea' },
             { header: 'Status', label: 'Status', type: 'status', required: true },
             { header: 'AccessRegion', label: 'Access Region', type: 'text' }
         ]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
@@ -966,112 +890,6 @@ const APP_RESOURCES_CODE_CONFIG = [
         Name: CONFIG.OPERATION_SHEETS.OUTLET_STORAGES,
         Scope: 'operation', IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_STORAGES,
         CodePrefix: 'OST', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'FALSE', RequiredHeaders: 'OutletCode,SKU,Quantity', UniqueHeaders: '', UniqueCompositeHeaders: 'OutletCode+SKU', DefaultValues: '{"Quantity":0}', RecordAccessPolicy: 'ALL', OwnerUserField: 'UpdatedBy', AdditionalActions: '', Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 5, "label": "Outlet Stock", "icon": "store", "route": "/operations/outlet-storages", "pageTitle": "Outlet Stock", "pageDescription": "View movement-derived outlet stock balances", "show": true }]), UIFields: JSON.stringify([{ header: 'OutletCode', label: 'Outlet Code', type: 'text', required: true }, { header: 'SKU', label: 'SKU', type: 'text', required: true }, { header: 'Quantity', label: 'Quantity', type: 'number', required: true }]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
-    },
-    {
-        Name: CONFIG.OPERATION_SHEETS.PO_FULFILLMENTS,
-        Scope: 'operation',
-        ParentResource: CONFIG.OPERATION_SHEETS.PURCHASE_ORDERS,
-        IsActive: 'TRUE',
-        SheetName: CONFIG.OPERATION_SHEETS.PO_FULFILLMENTS,
-        CodePrefix: 'POF',
-        CodeSequenceLength: 6,
-        LastDataUpdatedAt: 0,
-        Audit: 'TRUE',
-        RequiredHeaders: 'POCode',
-        UniqueHeaders: '',
-        UniqueCompositeHeaders: '',
-        DefaultValues: '{"Status":"Active"}',
-        RecordAccessPolicy: 'OWNER_AND_UPLINE',
-        OwnerUserField: 'CreatedBy',
-        AdditionalActions: '',
-        Menu: JSON.stringify([]),
-        UIFields: JSON.stringify([]),
-        IncludeInAuthorizationPayload: 'TRUE',
-        Functional: 'FALSE',
-        PreAction: '',
-        PostAction: '',
-        Reports: '',
-        CustomUIName: '',
-        ListViews: ''
-    },
-    {
-        Name: CONFIG.OPERATION_SHEETS.SHIPMENTS,
-        Scope: 'operation',
-        IsActive: 'TRUE',
-        SheetName: CONFIG.OPERATION_SHEETS.SHIPMENTS,
-        CodePrefix: 'SHP',
-        CodeSequenceLength: 6,
-        LastDataUpdatedAt: 0,
-        Audit: 'TRUE',
-        RequiredHeaders: 'SupplierCode',
-        UniqueHeaders: '',
-        UniqueCompositeHeaders: '',
-        DefaultValues: '{"Status":"Draft"}',
-        RecordAccessPolicy: 'OWNER_AND_UPLINE',
-        OwnerUserField: 'CreatedBy',
-        AdditionalActions: 'Submit,Dispatch,Arrive,Clear',
-        Menu: JSON.stringify([]),
-        UIFields: JSON.stringify([]),
-        IncludeInAuthorizationPayload: 'TRUE',
-        Functional: 'FALSE',
-        PreAction: '',
-        PostAction: '',
-        Reports: '',
-        CustomUIName: '',
-        ListViews: ''
-    },
-    {
-        Name: CONFIG.OPERATION_SHEETS.SHIPMENT_ITEMS,
-        Scope: 'operation',
-        ParentResource: CONFIG.OPERATION_SHEETS.SHIPMENTS,
-        IsActive: 'TRUE',
-        SheetName: CONFIG.OPERATION_SHEETS.SHIPMENT_ITEMS,
-        CodePrefix: 'SHPI',
-        CodeSequenceLength: 6,
-        LastDataUpdatedAt: 0,
-        Audit: 'TRUE',
-        RequiredHeaders: 'ShipmentCode,SKU',
-        UniqueHeaders: '',
-        UniqueCompositeHeaders: 'ShipmentCode+SKU',
-        DefaultValues: '{"Status":"Active"}',
-        RecordAccessPolicy: 'OWNER_AND_UPLINE',
-        OwnerUserField: 'CreatedBy',
-        AdditionalActions: '',
-        Menu: JSON.stringify([]),
-        UIFields: JSON.stringify([]),
-        IncludeInAuthorizationPayload: 'TRUE',
-        Functional: 'FALSE',
-        PreAction: '',
-        PostAction: '',
-        Reports: '',
-        CustomUIName: '',
-        ListViews: ''
-    },
-    {
-        Name: CONFIG.OPERATION_SHEETS.PORT_CLEARANCE,
-        Scope: 'operation',
-        IsActive: 'TRUE',
-        SheetName: CONFIG.OPERATION_SHEETS.PORT_CLEARANCE,
-        CodePrefix: 'CLR',
-        CodeSequenceLength: 5,
-        LastDataUpdatedAt: 0,
-        Audit: 'TRUE',
-        RequiredHeaders: 'ShipmentCode',
-        UniqueHeaders: 'ShipmentCode',
-        UniqueCompositeHeaders: '',
-        DefaultValues: '{"Status":"Active","CustomsStatus":"Pending"}',
-        RecordAccessPolicy: 'OWNER_AND_UPLINE',
-        OwnerUserField: 'CreatedBy',
-        AdditionalActions: 'Submit,Hold,Clear',
-        Menu: JSON.stringify([]),
-        UIFields: JSON.stringify([]),
-        IncludeInAuthorizationPayload: 'TRUE',
-        Functional: 'FALSE',
-        PreAction: '',
-        PostAction: '',
-        Reports: '',
-        CustomUIName: '',
-        ListViews: ''
     },
     {
         Name: CONFIG.ACCOUNTS_SHEETS.CHART_OF_ACCOUNTS,
@@ -1285,6 +1103,9 @@ const APP_RESOURCES_CODE_CONFIG = [
 ];
 
 function syncAppResourcesFromCode(silent) {
+    if (!silent) resetLogSheet_();
+    logToSheet_('Starting Sync APP.Resources from Code');
+
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(CONFIG.SHEETS.RESOURCES);
     if (!sheet) throw new Error('Resources sheet not found');
@@ -1317,6 +1138,8 @@ function syncAppResourcesFromCode(silent) {
             headersAdded++;
         }
     });
+
+    logToSheet_('Headers checked, columns added: ' + headersAdded);
 
     // Re-read headers if new ones were added
     if (headersAdded > 0) {
@@ -1379,6 +1202,9 @@ function syncAppResourcesFromCode(silent) {
             added++;
         }
     });
+
+    logToSheet_('Resources: ' + added + ' added, ' + updated + ' updated');
+    logToSheet_('APP.Resources sync completed');
 
     if (!silent) {
         try {

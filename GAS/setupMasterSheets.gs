@@ -116,27 +116,7 @@ function setupMasterSheets() {
         Code: 130, OutletCode: 140, MaxStockValueLimit: 170, VisitFrequencyDays: 170, CreditLimit: 130, PriceListCode: 140,
         AccessRegion: 130, Status: 100, CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
       }
-    },
-    {
-      resourceName: CONFIG.MASTER_SHEETS.PORTS,
-      headers: ['Code', 'Name', 'Country', 'PortType', 'AccessRegion', 'Status'].concat(commonAuditColumns),
-      statusDefault: 'Active',
-      defaults: { Status: 'Active', Country: 'UAE' },
-      columnWidths: {
-        Code: 130, Name: 220, Country: 130, PortType: 130, AccessRegion: 130, Status: 100,
-        CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
-      }
-    },
-     {
-       resourceName: CONFIG.MASTER_SHEETS.CARRIERS,
-       headers: ['Code', 'Name', 'Type', 'Phone', 'ContactPerson', 'AccessRegion', 'Status'].concat(commonAuditColumns),
-       statusDefault: 'Active',
-       defaults: { Status: 'Active' },
-       columnWidths: {
-         Code: 130, Name: 220, Type: 120, Phone: 140, ContactPerson: 180, AccessRegion: 130, Status: 100,
-         CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
-       }
-     }
+    }
    ];
 
   const fileSheetIndex = {};

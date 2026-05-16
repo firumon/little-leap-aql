@@ -170,38 +170,6 @@ function setupOperationSheets() {
             columnWidths: { Code: 150, POReceivingCode: 150, PurchaseOrderItemCode: 180, SKU: 150, ExpectedQty: 120, ReceivedQty: 120, DamagedQty: 120, RejectedQty: 120, RejectedReason: 220, Remarks: 220, Status: 100 }
         },
         {
-            resourceName: CONFIG.OPERATION_SHEETS.PO_FULFILLMENTS,
-            headers: ['Code', 'ProcurementCode', 'POCode', 'DocumentName', 'Description', 'Purpose', 'DocumentUrl', 'Status'].concat(commonAuditColumns),
-            statusDefault: 'Active',
-            defaults: { Status: 'Active' },
-            columnWidths: { Code: 150, ProcurementCode: 150, POCode: 150, DocumentName: 180, Description: 250, Purpose: 150, DocumentUrl: 250, Status: 100 }
-        },
-        {
-            resourceName: CONFIG.OPERATION_SHEETS.SHIPMENTS,
-            headers: ['Code', 'SupplierCode', 'ETD', 'ETA', 'Status', 'CarrierCode', 'PortCode', 'AccessRegion'].concat(commonAuditColumns),
-            statusDefault: 'Draft',
-            defaults: { Status: 'Draft' },
-            statusValidation: ['Draft', 'InTransit', 'Arrived', 'Cleared', 'Received'],
-            columnWidths: { Code: 150, SupplierCode: 140, ETD: 150, ETA: 150, Status: 120, CarrierCode: 140, PortCode: 140, AccessRegion: 130, CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140 }
-        },
-        {
-            resourceName: CONFIG.OPERATION_SHEETS.SHIPMENT_ITEMS,
-            headers: ['Code', 'ShipmentCode', 'SKU', 'ExpectedQty', 'Status'].concat(commonAuditColumns),
-            statusDefault: 'Active',
-            defaults: { Status: 'Active', ExpectedQty: 0 },
-            statusValidation: ['Active', 'Inactive'],
-            columnWidths: { Code: 150, ShipmentCode: 150, SKU: 150, ExpectedQty: 120, Status: 100, CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140 }
-        },
-        {
-            resourceName: CONFIG.OPERATION_SHEETS.PORT_CLEARANCE,
-            headers: ['Code', 'ShipmentCode', 'ClearanceDate', 'CustomsStatus', 'DutyAmount', 'AccessRegion', 'Status'].concat(commonAuditColumns),
-            statusDefault: 'Active',
-            defaults: { Status: 'Active', CustomsStatus: 'Pending', DutyAmount: 0 },
-            customsStatusValidation: ['Pending', 'InProgress', 'Cleared', 'Held'],
-            statusValidation: ['Active', 'Inactive'],
-            columnWidths: { Code: 150, ShipmentCode: 150, ClearanceDate: 150, CustomsStatus: 130, DutyAmount: 120, AccessRegion: 130, Status: 100, CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140 }
-        },
-        {
             resourceName: CONFIG.OPERATION_SHEETS.GOODS_RECEIPTS,
             headers: ['Code', 'ProcurementCode', 'PurchaseOrderCode', 'POReceivingCode', 'Date', 'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active',
@@ -282,27 +250,17 @@ function setupOperationSheets() {
         {
             resourceName: CONFIG.OPERATION_SHEETS.OUTLET_DELIVERIES,
             headers: [
-                'Code', 'Date', 'UserName', 'Progress',
+                'Code', 'Date', 'UserName', 'Progress', 'OutletRestockItemCodes',
                 'ProgressInTransitAt', 'ProgressInTransitBy', 'ProgressInTransitComment',
                 'ProgressCompletedAt', 'ProgressCompletedBy', 'ProgressCompletedComment',
                 'CancelledAt', 'CancelledBy', 'CancelledComment',
                 'Status', 'AccessRegion'
             ].concat(commonAuditColumns),
             statusDefault: 'Active', defaults: { Status: 'Active', Progress: 'DRAFT' }, progressValidation: APP_OPTIONS_SEED.OutletDeliveryProgress,
-            columnWidths: { Code: 150, Date: 130, UserName: 180, Progress: 140,
+            columnWidths: { Code: 150, Date: 130, UserName: 180, Progress: 140, OutletRestockItemCodes: 300,
                 ProgressInTransitAt: 170, ProgressInTransitBy: 170, ProgressInTransitComment: 240,
                 ProgressCompletedAt: 170, ProgressCompletedBy: 170, ProgressCompletedComment: 240,
                 CancelledAt: 170, CancelledBy: 170, CancelledComment: 240, Status: 100, AccessRegion: 130 }
-        },
-        {
-            resourceName: CONFIG.OPERATION_SHEETS.OUTLET_DELIVERY_ITEMS,
-            headers: ['Code', 'OutletDeliveryCode', 'OutletRestockItemCode', 'Progress',
-                'ProgressDeliveredAt', 'ProgressDeliveredBy', 'ProgressDeliveredComment',
-                'Status', 'AccessRegion'].concat(commonAuditColumns),
-            statusDefault: 'Active', defaults: { Status: 'Active', Progress: 'IN_TRANSIT' }, progressValidation: APP_OPTIONS_SEED.OutletDeliveryItemProgress,
-            columnWidths: { Code: 150, OutletDeliveryCode: 170, OutletRestockItemCode: 190, Progress: 140,
-                ProgressDeliveredAt: 170, ProgressDeliveredBy: 170, ProgressDeliveredComment: 240,
-                Status: 100, AccessRegion: 130 }
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTIONS,

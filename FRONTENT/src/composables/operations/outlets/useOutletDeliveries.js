@@ -9,30 +9,161 @@ import { toNumber, validateDeliveryItems } from './outletStockLogic.js'
 import { buildOdCancelBatchRequests, buildOdCreateBatchRequests, buildOdDeliverBatchRequests } from './outletDeliveryPayload.js'
 import { batchResultCode, failureMessage, responseFailed } from './outletOperationsBatch.js'
 
+const CRITERIA_MAP = {
+  Outlet:       { isTwoLevel: false, key: row => row.outletCode, label: row => row.outletName },
+  City:         { isTwoLevel: true, key: row => row.outletCity, label: row => row.outletCity || 'Unknown City', subKey: row => row.outletCode, subLabel: row => [row.outletName,row.outletCity].join(", ") },
+  Product:      { isTwoLevel: true, key: row => row.productCode, label: row => row.productName || 'Unknown Product', subKey: row => row.outletCode, subLabel: row => [row.outletName,row.outletCity].join(", ") },
+  Date:         { isTwoLevel: true, key: row => row.ORDate, label: row => row.ORDate || 'No Date', subKey: row => row.outletCode, subLabel: row => [row.outletName,row.outletCity].join(", ") },
+  Qty:          { isTwoLevel: false, key: row => row.outletCode, label: row => row.outletName },
+  RequestUser:  { isTwoLevel: true, key: row => row.requestUser, label: row => row.requestUser || 'Unknown', subKey: row => row.outletCode, subLabel: row => [row.outletName,row.outletCity].join(", ") },
+  ApprovedUser: { isTwoLevel: true, key: row => row.approvedUser, label: row => row.approvedUser || 'Unknown', subKey: row => row.outletCode, subLabel: row => [row.outletName,row.outletCity].join(", ") }
+}
+
 export function useOutletDeliveries() {
   const $q = useQuasar()
   const workflowStore = useWorkflowStore()
   const authStore = useAuthStore()
   const nav = useResourceNav()
   const deliveries = useResourceData(ref('OutletDeliveries'))
-  const deliveryItems = useResourceData(ref('OutletDeliveryItems'))
   const restocks = useResourceData(ref('OutletRestocks'))
   const restockItems = useResourceData(ref('OutletRestockItems'))
   const outlets = useResourceData(ref('Outlets'))
   const skus = useResourceData(ref('SKUs'))
   const products = useResourceData(ref('Products'))
+  const warehouses = useResourceData(ref('Warehouses'))
   const outletMovements = useResourceData(ref('OutletMovements'))
   const loading = ref(false)
+  const isInitialLoad = ref(true)
   const saving = ref(false)
   const searchTerm = ref('')
   const selectedItemCodes = ref([])
   const expandedGroup = ref('DRAFT')
+  const criteria = ref('Outlet')
+  const selectedWarehouseCode = ref('')
 
   const items = computed(() => deliveries.items.value.filter(active).filter(matchesSearch).sort((a, b) => sortTime(b) - sortTime(a)))
-  const groups = computed(() => DELIVERY_PROGRESS_ORDER.map(key => ({ key, meta: progressMeta(key), items: items.value.filter(row => (DELIVERY_PROGRESS_ORDER.includes(text(row.Progress)) ? text(row.Progress) : 'OTHER') === key) })).filter(group => group.items.length || group.key === 'DRAFT'))
-  const activeDeliveryItemCodes = computed(() => new Set(deliveryItems.items.value.filter(active).map(row => text(row.OutletRestockItemCode))))
-  const availableItems = computed(() => restockItems.items.value.filter(active).filter(row => text(row.Progress) === 'ALLOCATED' && !activeDeliveryItemCodes.value.has(text(row.Code))).filter(matchesItemSearch).map(enrichOrsi))
-  const selectedItems = computed(() => availableItems.value.filter(row => selectedItemCodes.value.includes(text(row.Code))))
+  const groups = computed(() => DELIVERY_PROGRESS_ORDER.map(key => ({ key, meta: progressMeta(key), items: items.value.filter(row => (DELIVERY_PROGRESS_ORDER.includes(text(row.Progress)) ? text(row.Progress) : 'OTHER') === key) })).filter(group => group.items.length))
+
+  const orioRows = computed(() => {
+    const result = []
+    for (const row of restockItems.items.value) {
+      if (!active(row)) continue
+      if (text(row.Progress) !== 'ALLOCATED') continue
+      const restock = restocks.items.value.find(r => text(r.Code) === text(row.OutletRestockCode))
+      if (!restock) continue
+      const outlet = outlets.items.value.find(o => text(o.Code) === text(restock.OutletCode))
+      const sku = skus.items.value.find(s => text(s.Code) === text(row.SKU))
+      const product = products.items.value.find(p => text(p.Code) === text(sku?.ProductCode))
+      const warehouse = warehouses.items.value.find(w => text(w.Code) === text(row.WarehouseCode))
+      const variants = [sku?.Variant1, sku?.Variant2, sku?.Variant3, sku?.Variant4, sku?.Variant5].map(text).filter(Boolean).join(' / ')
+      result.push({
+        skuCode: text(row.SKU),
+        skuLabel: `${product?.Name ? `${product.Name}` : ''}${variants ? ` - ${variants}` : ''}`,
+        variantsSlug: variants,
+        productCode: text(sku?.ProductCode),
+        productName: text(product?.Name),
+        qty: toNumber(row.Quantity),
+        storageName: text(row.StorageName),
+        warehouseCode: text(row.WarehouseCode),
+        warehouseName: text(warehouse?.Name),
+        requestUser: text(restock?.RequestedUser),
+        approvedUser: text(restock?.ApprovedUser),
+        ORDate: text(restock?.Date),
+        ORCode: text(restock?.Code),
+        ORICode: text(row.Code),
+        outletCity: text(outlet?.City),
+        outletName: text(outlet?.Name),
+        outletCode: text(outlet?.Code),
+        rawOrsi: row,
+        rawRestock: restock
+      })
+    }
+    return result
+  })
+
+  const warehouseOptions = computed(() => {
+    const names = new Map()
+    for (const row of orioRows.value) {
+      if (row.warehouseCode && row.warehouseName && !names.has(row.warehouseCode)) {
+        names.set(row.warehouseCode, row.warehouseName)
+      }
+    }
+    return [{ label: 'All', value: '' }, ...Array.from(names.entries()).map(([value, label]) => ({ label, value }))]
+  })
+
+  const filteredOrioRows = computed(() => {
+    if (!selectedWarehouseCode.value) return orioRows.value
+    return orioRows.value.filter(row => row.warehouseCode === selectedWarehouseCode.value)
+  })
+
+  const usedOrsiCodes = computed(() => {
+    const codes = new Set()
+    for (const od of deliveries.items.value) {
+      if (!active(od)) continue
+      if (text(od.Progress) === 'CANCELLED') continue
+      const csv = text(od.OutletRestockItemCodes)
+      if (csv) csv.split(',').filter(Boolean).forEach(c => codes.add(c.trim()))
+    }
+    return codes
+  })
+
+  const availableItems = computed(() => filteredOrioRows.value.filter(row => !usedOrsiCodes.value.has(row.ORICode)))
+
+  const selectedItems = computed(() => availableItems.value.filter(row => selectedItemCodes.value.includes(row.ORICode)))
+
+  const groupedSearchResults = computed(() => {
+    let rows = availableItems.value
+    const needle = text(searchTerm.value).toLowerCase()
+    if (needle) {
+      rows = rows.filter(row =>
+        [row.skuLabel, row.outletName, row.productName, row.ORCode, row.ORICode, row.warehouseName]
+          .some(v => text(v).toLowerCase().includes(needle))
+      )
+    }
+    const criterion = CRITERIA_MAP[criteria.value] || CRITERIA_MAP.Outlet
+
+    if (criterion.isTwoLevel) {
+      const topMap = new Map()
+      for (const row of rows) {
+        const key = criterion.key(row)
+        if (!topMap.has(key)) topMap.set(key, { key, label: criterion.label(row), items: [] })
+        topMap.get(key).items.push(row)
+      }
+      let topEntries = Array.from(topMap.values())
+      if (criteria.value === 'Date') topEntries.sort((a, b) => String(a.key).localeCompare(String(b.key)))
+      return topEntries.map(g => {
+        const childMap = new Map()
+        for (const row of g.items) {
+          const sk = criterion.subKey(row)
+          if (!childMap.has(sk)) childMap.set(sk, { key: sk, label: criterion.subLabel(row), items: [] })
+          childMap.get(sk).items.push(row)
+        }
+        return { key: g.key, label: g.label, count: g.items.length, children: Array.from(childMap.values()) }
+      })
+    }
+
+    if (criteria.value === 'Qty') {
+      const groups = new Map()
+      for (const row of rows) {
+        const key = criterion.key(row)
+        if (!groups.has(key)) groups.set(key, { key, label: criterion.label(row), items: [] })
+        groups.get(key).items.push(row)
+      }
+      return Array.from(groups.values()).sort((a, b) => {
+        const sumA = a.items.reduce((s, r) => s + r.qty, 0)
+        const sumB = b.items.reduce((s, r) => s + r.qty, 0)
+        return sumB - sumA
+      })
+    }
+
+    const groups = new Map()
+    for (const row of rows) {
+      const key = criterion.key(row)
+      if (!groups.has(key)) groups.set(key, { key, label: criterion.label(row), items: [] })
+      groups.get(key).items.push(row)
+    }
+    return Array.from(groups.values())
+  })
 
   const odConfig = computed(() => (Array.isArray(authStore.resources) ? authStore.resources : []).find(r => r.name === 'OutletDeliveries') || null)
   const odPermissions = computed(() => odConfig.value?.permissions || {})
@@ -44,49 +175,37 @@ export function useOutletDeliveries() {
     const user = authStore.user || {}
     return text(user.Name || user.name || user.UserName || user.Username || user.email || user.Email || user.UserID || user.Code)
   }
-  function outletName(code) { const outlet = outlets.items.value.find(row => text(row.Code) === text(code)); return outlet?.Name || code }
-  function restockForOrsi(orsi = {}) { return restocks.items.value.find(row => text(row.Code) === text(orsi.OutletRestockCode)) || null }
-  function outletForOrsi(orsi = {}) { return outletName(restockForOrsi(orsi)?.OutletCode) }
-  function skuLabel(code) {
-    const sku = skus.items.value.find(row => text(row.Code) === text(code))
-    const product = products.items.value.find(row => text(row.Code) === text(sku?.ProductCode))
-    const variants = [sku?.Variant1, sku?.Variant2, sku?.Variant3, sku?.Variant4, sku?.Variant5].map(text).filter(Boolean).join(' / ')
-    return `${code}${product?.Name ? ` - ${product.Name}` : ''}${variants ? ` - ${variants}` : ''}`
-  }
-  function enrichOrsi(row = {}) {
-    const restock = restockForOrsi(row)
-    return { ...row, OutletCode: restock?.OutletCode || '', OutletName: outletName(restock?.OutletCode), SKUName: skuLabel(row.SKU), RestockDate: restock?.Date || '' }
-  }
+
   function matchesSearch(row = {}) {
     const needle = searchTerm.value.toLowerCase()
     if (!needle) return true
     const summary = deliverySummary(row)
     return JSON.stringify(row).toLowerCase().includes(needle) || summary.outlets.join(' ').toLowerCase().includes(needle)
   }
-  function matchesItemSearch(row = {}) {
-    const needle = searchTerm.value.toLowerCase()
-    if (!needle) return true
-    const restock = restockForOrsi(row)
-    return [row.Code, row.SKU, skuLabel(row.SKU), outletName(restock?.OutletCode), restock?.Code].some(value => text(value).toLowerCase().includes(needle))
-  }
 
   async function reload(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(OUTLET_OPERATION_RESOURCES, { includeInactive: true, forceSync }) } finally { loading.value = false } }
-  async function reloadIndex(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(['OutletDeliveries', 'OutletDeliveryItems', 'OutletRestocks', 'OutletRestockItems', 'Outlets', 'SKUs', 'Products'], { includeInactive: true, forceSync }) } finally { loading.value = false } }
-  async function reloadAdd(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(['OutletDeliveries', 'OutletDeliveryItems', 'OutletRestocks', 'OutletRestockItems', 'Outlets', 'SKUs', 'Products'], { includeInactive: true, forceSync }) } finally { loading.value = false } }
-  async function reloadView(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(['OutletDeliveries', 'OutletDeliveryItems', 'OutletRestocks', 'OutletRestockItems', 'Outlets', 'SKUs', 'Products', 'OutletMovements'], { includeInactive: true, forceSync }) } finally { loading.value = false } }
+  async function reloadIndex(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(['OutletDeliveries', 'OutletRestocks', 'OutletRestockItems', 'Outlets', 'SKUs', 'Products'], { includeInactive: true, forceSync }) } finally { loading.value = false; isInitialLoad.value = false } }
+  async function reloadAdd(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(['OutletDeliveries', 'OutletRestocks', 'OutletRestockItems', 'Outlets', 'SKUs', 'Products', 'Warehouses'], { includeInactive: true, forceSync }) } finally { loading.value = false } }
+  async function reloadView(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(['OutletDeliveries', 'OutletRestocks', 'OutletRestockItems', 'Outlets', 'SKUs', 'Products', 'OutletMovements'], { includeInactive: true, forceSync }) } finally { loading.value = false } }
 
   function toggleItem(code) {
     const key = text(code)
     selectedItemCodes.value = selectedItemCodes.value.includes(key) ? selectedItemCodes.value.filter(item => item !== key) : selectedItemCodes.value.concat(key)
   }
-  function selectAllAvailable() { selectedItemCodes.value = availableItems.value.map(row => text(row.Code)) }
+  function selectAllAvailable() { selectedItemCodes.value = availableItems.value.map(row => row.ORICode) }
   function clearSelection() { selectedItemCodes.value = [] }
+  function selectNone() { clearSelection() }
+  function invertSelection() {
+    const available = new Set(availableItems.value.map(row => row.ORICode))
+    selectedItemCodes.value = availableItems.value.filter(row => !selectedItemCodes.value.includes(row.ORICode)).map(row => row.ORICode)
+  }
+
   async function createDraft() {
-    const validation = validateDeliveryItems(selectedItems.value)
+    const validation = validateDeliveryItems(selectedItems.value.map(row => row.rawOrsi))
     if (!validation.valid) return notifyWarning(validation.errors[0])
     saving.value = true
     try {
-      const result = await workflowStore.runBatchRequests(buildOdCreateBatchRequests({ Date: todayISO(), UserName: currentUserName(), AccessRegion: selectedItems.value[0]?.AccessRegion }, selectedItems.value))
+      const result = await workflowStore.runBatchRequests(buildOdCreateBatchRequests({ Date: todayISO(), UserName: currentUserName(), AccessRegion: selectedItems.value[0]?.accessRegion }, selectedItems.value.map(row => row.rawOrsi)))
       if (responseFailed(result)) return notifyError(failureMessage(result, 'Failed to create delivery.'))
       const code = batchResultCode(result, 0)
       $q.notify({ type: 'positive', message: 'Delivery draft created.', position: 'top' })
@@ -98,40 +217,117 @@ export function useOutletDeliveries() {
 
   function getDelivery(code) { return deliveries.items.value.find(row => text(row.Code) === text(code)) || null }
   function getRestock(code) { return restocks.items.value.find(row => text(row.Code) === text(code)) || null }
-  function childDeliveryItems(code) { return deliveryItems.items.value.filter(row => text(row.OutletDeliveryCode) === text(code)).filter(active) }
-  function deliveryOrsiRows(code) { return childDeliveryItems(code).map(odi => restockItems.items.value.find(row => text(row.Code) === text(odi.OutletRestockItemCode))).filter(Boolean) }
+
+  function deliveryOrsiCodes(code) {
+    const od = getDelivery(code)
+    if (!od) return []
+    return (text(od.OutletRestockItemCodes) || '').split(',').filter(Boolean).map(c => c.trim())
+  }
+
+  function deliveryOrsiRows(code) {
+    const codes = deliveryOrsiCodes(code)
+    return codes.map(c => restockItems.items.value.find(r => text(r.Code) === c)).filter(Boolean)
+  }
+
   function deliveryItemViewRows(code) {
-    return childDeliveryItems(code).map(odi => {
-      const orsi = restockItems.items.value.find(row => text(row.Code) === text(odi.OutletRestockItemCode)) || {}
-      const restock = restockForOrsi(orsi) || {}
-      return { ...odi, orsi, restock, OutletCode: restock.OutletCode, OutletName: outletName(restock.OutletCode), SKU: orsi.SKU, SKUName: skuLabel(orsi.SKU), Quantity: toNumber(orsi.Quantity), WarehouseCode: orsi.WarehouseCode, StorageName: orsi.StorageName }
+    return deliveryOrsiRows(code).map(orsi => {
+      const restock = restocks.items.value.find(r => text(r.Code) === text(orsi.OutletRestockCode)) || {}
+      const outlet = outlets.items.value.find(o => text(o.Code) === text(restock.OutletCode))
+      return {
+        Code: text(orsi.Code),
+        OutletDeliveryCode: code,
+        orsi, restock,
+        OutletCode: text(restock.OutletCode),
+        OutletName: text(outlet?.Name),
+        SKU: text(orsi.SKU),
+        SKUName: skuLabel(text(orsi.SKU)),
+        Quantity: toNumber(orsi.Quantity),
+        WarehouseCode: text(orsi.WarehouseCode),
+        StorageName: text(orsi.StorageName),
+        Progress: text(orsi.Progress) || 'ALLOCATED'
+      }
     })
   }
+
   function deliverySummary(od = {}) {
     const rows = deliveryItemViewRows(od.Code)
     const delivered = rows.filter(row => text(row.Progress) === 'DELIVERED').length
     const outlets = Array.from(new Set(rows.map(row => row.OutletName).filter(Boolean)))
     return { total: rows.length, delivered, outlets, quantity: rows.reduce((sum, row) => sum + toNumber(row.Quantity), 0) }
   }
+
   function groupedDeliveryItems(code) {
-    const groups = new Map()
-    deliveryItemViewRows(code).forEach(row => {
-      const key = row.OutletCode || 'unknown'
-      if (!groups.has(key)) groups.set(key, { key, outletName: row.OutletName || key, items: [] })
-      groups.get(key).items.push(row)
-    })
-    return Array.from(groups.values())
+    const rows = deliveryOrsiRows(code)
+    const outletMap = new Map()
+    for (const orsi of rows) {
+      const restock = restocks.items.value.find(r => text(r.Code) === text(orsi.OutletRestockCode)) || {}
+      const outlet = outlets.items.value.find(o => text(o.Code) === text(restock.OutletCode))
+      const sku = skus.items.value.find(s => text(s.Code) === text(orsi.SKU))
+      const product = products.items.value.find(p => text(p.Code) === text(sku?.ProductCode))
+      const variants = [sku?.Variant1, sku?.Variant2, sku?.Variant3, sku?.Variant4, sku?.Variant5].map(text).filter(Boolean).join(' / ')
+      const outletKey = text(outlet?.Code) || 'unknown'
+      const skuKey = text(orsi.SKU)
+      if (!outletMap.has(outletKey)) {
+        outletMap.set(outletKey, { key: outletKey, outletName: text(outlet?.Name) || outletKey, skuMap: new Map() })
+      }
+      const outletGroup = outletMap.get(outletKey)
+      if (!outletGroup.skuMap.has(skuKey)) {
+        outletGroup.skuMap.set(skuKey, {
+          key: skuKey,
+          skuCode: skuKey,
+          skuName: `${product?.Name ? product.Name : ''}${variants ? ` - ${variants}` : ''}`,
+          totalQty: 0,
+          orsiCodes: [],
+          allDelivered: true,
+          anyDelivered: false
+        })
+      }
+      const skuItem = outletGroup.skuMap.get(skuKey)
+      skuItem.totalQty += toNumber(orsi.Quantity)
+      skuItem.orsiCodes.push(text(orsi.Code))
+      if (text(orsi.Progress) !== 'DELIVERED') skuItem.allDelivered = false
+      if (text(orsi.Progress) === 'DELIVERED') skuItem.anyDelivered = true
+    }
+    return Array.from(outletMap.values()).map(g => ({
+      key: g.key,
+      outletName: g.outletName,
+      items: Array.from(g.skuMap.values()).map(item => ({
+        ...item,
+        progress: item.allDelivered ? 'DELIVERED' : 'IN_TRANSIT'
+      }))
+    }))
   }
 
-  async function markItemDelivered(odiRow, comment = '') {
-    const od = getDelivery(odiRow.OutletDeliveryCode)
-    const orsi = restockItems.items.value.find(row => text(row.Code) === text(odiRow.OutletRestockItemCode))
-    const restock = restockForOrsi(orsi)
+  function hasPendingDeliveryItems(code) {
+    return deliveryOrsiCodes(code).some(c => {
+      const orsi = restockItems.items.value.find(r => text(r.Code) === c)
+      return orsi && text(orsi.Progress) !== 'DELIVERED'
+    })
+  }
+
+  function hasDeliveredDeliveryItems(code) {
+    return deliveryOrsiCodes(code).some(c => {
+      const orsi = restockItems.items.value.find(r => text(r.Code) === c)
+      return orsi && text(orsi.Progress) === 'DELIVERED'
+    })
+  }
+
+  async function markItemDelivered(orsiCode, comment = '') {
+    const od = getDelivery(orsiCode.OutletDeliveryCode)
+    const orsi = restockItems.items.value.find(row => text(row.Code) === text(orsiCode.Code))
+    const restock = restocks.items.value.find(r => text(r.Code) === text(orsi?.OutletRestockCode))
     if (!od || !orsi || !restock) return notifyWarning('Delivery item source data is incomplete.')
-    if (text(odiRow.Progress) === 'DELIVERED') return notifyWarning('This item is already delivered.')
+    if (text(orsi.Progress) === 'DELIVERED') return notifyWarning('This item is already delivered.')
+    const odCodes = deliveryOrsiCodes(text(od.Code))
+    const restockCodes = new Set(odCodes.map(code => {
+      const r = restockItems.items.value.find(row => text(row.Code) === code)
+      return r ? text(r.OutletRestockCode) : null
+    }).filter(Boolean))
+    const allOrsis = restockItems.items.value.filter(r => restockCodes.has(text(r.OutletRestockCode))).filter(active)
+    const allRestocks = restocks.items.value.filter(r => restockCodes.has(text(r.Code)))
     saving.value = true
     try {
-      const result = await workflowStore.runBatchRequests(buildOdDeliverBatchRequests(odiRow, od, orsi, { odiRows: childDeliveryItems(od.Code), orsiRows: restockItems.items.value.filter(row => text(row.OutletRestockCode) === text(restock.Code)).filter(active), restock }, currentUserName(), comment))
+      const result = await workflowStore.runBatchRequests(buildOdDeliverBatchRequests(od, [text(orsi.Code)], { orsiRows: allOrsis, restocks: allRestocks }, currentUserName(), comment))
       if (responseFailed(result)) return notifyError(failureMessage(result, 'Failed to mark item delivered.'))
       $q.notify({ type: 'positive', message: 'Item delivered.', position: 'top' })
       await reloadView(true)
@@ -139,23 +335,49 @@ export function useOutletDeliveries() {
     } finally { saving.value = false }
   }
 
-  async function markAllDelivered(odCode, comment = '') {
-    const pending = childDeliveryItems(odCode).filter(row => text(row.Progress) !== 'DELIVERED')
-    for (const row of pending) {
-      const ok = await markItemDelivered(row, comment)
-      if (!ok) return false
+  async function markSelectedDelivered(odCode, selectedCodes, comment = '') {
+    const od = getDelivery(odCode)
+    if (!od) return notifyWarning('Delivery not found.')
+    const pendingCodes = selectedCodes.filter(code => {
+      const orsi = restockItems.items.value.find(r => text(r.Code) === code)
+      return orsi && text(orsi.Progress) !== 'DELIVERED'
+    })
+    if (!pendingCodes.length) return notifyWarning('No pending items to deliver.')
+    const restockCodes = new Set()
+    for (const code of deliveryOrsiCodes(odCode)) {
+      const orsi = restockItems.items.value.find(r => text(r.Code) === code)
+      if (orsi?.OutletRestockCode) restockCodes.add(text(orsi.OutletRestockCode))
     }
-    return true
+    const allOrsis = restockItems.items.value.filter(r => restockCodes.has(text(r.OutletRestockCode))).filter(active)
+    const allRestocks = restocks.items.value.filter(r => restockCodes.has(text(r.Code)))
+    saving.value = true
+    try {
+      const result = await workflowStore.runBatchRequests(buildOdDeliverBatchRequests(od, pendingCodes, { orsiRows: allOrsis, restocks: allRestocks }, currentUserName(), comment))
+      if (responseFailed(result)) return notifyError(failureMessage(result, 'Failed to mark selected items delivered.'))
+      $q.notify({ type: 'positive', message: `${pendingCodes.length} item(s) delivered.`, position: 'top' })
+      await reloadView(true)
+      return true
+    } finally { saving.value = false }
+  }
+
+  async function markAllDelivered(odCode, comment = '') {
+    const codes = deliveryOrsiCodes(odCode)
+    return markSelectedDelivered(odCode, codes, comment)
   }
 
   async function cancelDraft(odCode, comment = '') {
     const od = getDelivery(odCode)
-    const odis = childDeliveryItems(odCode)
     if (!od) return notifyWarning('Delivery not found.')
-    if (odis.some(row => text(row.Progress) === 'DELIVERED')) return notifyWarning('A delivery with delivered items cannot be cancelled.')
+    const codes = deliveryOrsiCodes(odCode)
+    const deliveredCodes = codes.filter(code => {
+      const orsi = restockItems.items.value.find(r => text(r.Code) === code)
+      return orsi && text(orsi.Progress) === 'DELIVERED'
+    })
+    if (deliveredCodes.length) return notifyWarning('A delivery with delivered items cannot be cancelled.')
+    const allOrsis = restockItems.items.value.filter(r => codes.includes(text(r.Code)))
     saving.value = true
     try {
-      const result = await workflowStore.runBatchRequests(buildOdCancelBatchRequests(od, odis, deliveryOrsiRows(odCode), currentUserName(), comment))
+      const result = await workflowStore.runBatchRequests(buildOdCancelBatchRequests(od, allOrsis, currentUserName(), comment))
       if (responseFailed(result)) return notifyError(failureMessage(result, 'Failed to cancel delivery.'))
       $q.notify({ type: 'positive', message: 'Delivery cancelled.', position: 'top' })
       await reloadView(true)
@@ -174,13 +396,20 @@ export function useOutletDeliveries() {
     if (isNaN(date.getTime())) return text(dateValue).slice(0, 10)
     return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
   }
+  function skuLabel(code) {
+    const sku = skus.items.value.find(row => text(row.Code) === text(code))
+    const product = products.items.value.find(row => text(row.Code) === text(sku?.ProductCode))
+    const variants = [sku?.Variant1, sku?.Variant2, sku?.Variant3, sku?.Variant4, sku?.Variant5].map(text).filter(Boolean).join(' / ')
+    return `${code}${product?.Name ? ` - ${product.Name}` : ''}${variants ? ` - ${variants}` : ''}`
+  }
   function notifyWarning(message) { $q.notify({ type: 'warning', message, position: 'top' }); return false }
   function notifyError(message) { $q.notify({ type: 'negative', message, position: 'top' }); return false }
 
   return {
-    loading, saving, searchTerm, selectedItemCodes, selectedItems, items, groups, expandedGroup, availableItems,
-    reload, reloadIndex, reloadAdd, reloadView, toggleItem, selectAllAvailable, clearSelection, createDraft, markItemDelivered, markAllDelivered, cancelDraft,
-    setExpandedGroup, getDelivery, getRestock, childDeliveryItems, deliveryItemViewRows, groupedDeliveryItems, deliverySummary,
-    outletName, outletForOrsi, skuLabel, movementsForDelivery, navigateTo, navigateToAdd, cancel, canCreate, canDeliver, canCancel, timeAgo
+    loading, isInitialLoad, saving, searchTerm, selectedItemCodes, selectedItems, items, groups, expandedGroup, availableItems,
+    orioRows, criteria, selectedWarehouseCode, warehouseOptions, groupedSearchResults,
+    reload, reloadIndex, reloadAdd, reloadView, toggleItem, selectAllAvailable, clearSelection, selectNone, invertSelection, createDraft, markItemDelivered, markSelectedDelivered, markAllDelivered, cancelDraft,
+    setExpandedGroup, getDelivery, getRestock, deliveryOrsiCodes, deliveryOrsiRows, deliveryItemViewRows, groupedDeliveryItems, hasPendingDeliveryItems, hasDeliveredDeliveryItems, deliverySummary,
+    skuLabel, movementsForDelivery, navigateTo, navigateToAdd, cancel, canCreate, canDeliver, canCancel, timeAgo, currentUserName, CRITERIA_MAP
   }
 }

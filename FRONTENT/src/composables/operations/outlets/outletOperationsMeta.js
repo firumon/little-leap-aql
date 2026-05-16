@@ -5,7 +5,6 @@ export const OUTLET_RESOURCES = {
   restocks: 'OutletRestocks',
   restockItems: 'OutletRestockItems',
   deliveries: 'OutletDeliveries',
-  deliveryItems: 'OutletDeliveryItems',
   consumptions: 'OutletConsumptions',
   consumptionItems: 'OutletConsumptionItems',
   consumptionInvoices: 'OutletConsumptionInvoices',
@@ -27,8 +26,7 @@ export const STOCK_MOVEMENT_REFERENCE_TYPES = { outletRestock: 'OutletRestock' }
 export const VISIT_PROGRESS_ORDER = ['PLANNED', 'COMPLETED', 'POSTPONED', 'CANCELLED', 'OTHER']
 export const RESTOCK_PROGRESS_ORDER = ['DRAFT', 'PENDING_APPROVAL', 'REVISION_REQUIRED', 'APPROVED', 'PARTIALLY_DELIVERED', 'DELIVERED', 'REJECTED', 'OTHER']
 export const RESTOCK_ITEM_PROGRESS_ORDER = ['PENDING', 'ALLOCATED', 'DELIVERED', 'CANCELLED', 'OTHER']
-export const DELIVERY_PROGRESS_ORDER = ['DRAFT', 'IN_TRANSIT', 'COMPLETED', 'CANCELLED', 'OTHER']
-export const DELIVERY_ITEM_PROGRESS_ORDER = ['IN_TRANSIT', 'DELIVERED', 'OTHER']
+export const DELIVERY_PROGRESS_ORDER = ['IN_TRANSIT', 'DRAFT', 'COMPLETED', 'CANCELLED', 'OTHER']
 export const CONSUMPTION_PROGRESS_ORDER = ['PENDING_INVOICE_GENERATION', 'INVOICE_GENERATED', 'CANCELLED', 'OTHER']
 
 const META = {

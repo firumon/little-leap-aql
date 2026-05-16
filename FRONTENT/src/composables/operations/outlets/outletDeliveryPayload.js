@@ -1,6 +1,6 @@
 import { todayISO, text } from './outletOperationsMeta.js'
 import { buildOutletMovementForDelivery, computeRestockProgressFromItems } from './outletStockLogic.js'
-import { batchRef, compositeSaveRequest, resourceBulkRequest, resourceUpdateRequest } from './outletOperationsBatch.js'
+import { resourceBulkRequest, resourceUpdateRequest, resourceCreateRequest } from './outletOperationsBatch.js'
 
 function deliveredStamp(actorName = '', comment = '') {
   const now = new Date().toISOString()
@@ -8,63 +8,82 @@ function deliveredStamp(actorName = '', comment = '') {
 }
 
 export function buildOdCreateBatchRequests(odRecord = {}, selectedOrsiRows = []) {
-  return [compositeSaveRequest({
-    resource: 'OutletDeliveries',
-    data: {
+  const codes = selectedOrsiRows.map(row => text(row.Code))
+  return [
+    resourceCreateRequest('OutletDeliveries', {
       Date: text(odRecord.Date) || todayISO(),
       UserName: text(odRecord.UserName),
       Progress: 'DRAFT',
       Status: 'Active',
+      OutletRestockItemCodes: codes.join(','),
       AccessRegion: text(odRecord.AccessRegion)
-    },
-    children: [{
-      resource: 'OutletDeliveryItems',
-      records: selectedOrsiRows.map(row => ({
-        _action: 'create',
-        data: {
-          OutletRestockItemCode: text(row.Code),
-          Progress: 'IN_TRANSIT',
-          Status: 'Active',
-          AccessRegion: text(row.AccessRegion || odRecord.AccessRegion)
-        }
-      }))
-    }]
-  })]
-}
-
-export function buildOdDeliverBatchRequests(odiRow = {}, odRow = {}, orsiRow = {}, context = {}, actorName = '', comment = '') {
-  const allOdis = context.odiRows || []
-  const allOrsis = context.orsiRows || []
-  const restock = context.restock || {}
-  const odCode = text(odRow.Code)
-  const now = new Date().toISOString()
-  const nextOdis = allOdis.map(row => text(row.Code) === text(odiRow.Code) ? { ...row, Progress: 'DELIVERED' } : row)
-  const nextOrsis = allOrsis.map(row => text(row.Code) === text(orsiRow.Code) ? { ...row, Progress: 'DELIVERED' } : row)
-  const allDelivered = nextOdis.filter(row => text(row.Status || 'Active') === 'Active').every(row => text(row.Progress) === 'DELIVERED')
-  const odProgress = allDelivered ? 'COMPLETED' : 'IN_TRANSIT'
-  const odComment = allDelivered ? `All items of this delivery got delivered at ${new Date(now).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })}.` : 'Some of items of this delivery got delivered.'
-  return [
-    resourceUpdateRequest('OutletDeliveryItems', odiRow.Code, { Progress: 'DELIVERED', ...deliveredStamp(actorName, comment) }, ['OutletDeliveryItems']),
-    resourceUpdateRequest('OutletRestockItems', orsiRow.Code, { Progress: 'DELIVERED', ...deliveredStamp(actorName, comment) }, ['OutletRestockItems']),
-    resourceBulkRequest('OutletMovements', [buildOutletMovementForDelivery(orsiRow, restock, odCode)], ['OutletStorages']),
-    resourceUpdateRequest('OutletDeliveries', odCode, {
-      Progress: odProgress,
-      ...(odProgress === 'IN_TRANSIT'
-        ? { ProgressInTransitAt: now, ProgressInTransitBy: text(actorName), ProgressInTransitComment: odComment }
-        : { ProgressCompletedAt: now, ProgressCompletedBy: text(actorName), ProgressCompletedComment: odComment })
-    }, ['OutletDeliveries']),
-    resourceUpdateRequest('OutletRestocks', restock.Code, { Progress: computeRestockProgressFromItems(nextOrsis) }, ['OutletRestocks'])
+    }, ['OutletDeliveries'])
   ]
 }
 
-export function buildOdCancelBatchRequests(odRow = {}, odiRows = [], orsiRows = [], actorName = '', comment = '') {
+export function buildOdDeliverBatchRequests(odRow = {}, deliveredOrsiCodes = [], context = {}, actorName = '', comment = '') {
+  const allOrsis = context.orsiRows || []
+  const allRestocks = context.restocks || [context.restock || {}]
+  const odCode = text(odRow.Code)
+  const deliveredSet = new Set(deliveredOrsiCodes.map(text))
   const now = new Date().toISOString()
-  const odiRecords = odiRows.map(row => ({ Code: row.Code, Status: 'Inactive' })).filter(row => text(row.Code))
-  const orsiRecords = orsiRows.map(row => ({ Code: row.Code, Progress: 'ALLOCATED' })).filter(row => text(row.Code))
+  const odCodes = (text(odRow.OutletRestockItemCodes) || '').split(',').filter(Boolean).map(c => c.trim())
+
+  const nextOrsis = allOrsis.map(row =>
+    deliveredSet.has(text(row.Code))
+      ? { ...row, Progress: 'DELIVERED' }
+      : row
+  )
+  const allDelivered = odCodes.every(code =>
+    nextOrsis.some(r => text(r.Code) === code && text(r.Progress) === 'DELIVERED')
+  )
+  const odProgress = allDelivered ? 'COMPLETED' : 'IN_TRANSIT'
+
+  const movements = deliveredOrsiCodes
+    .map(code => allOrsis.find(r => text(r.Code) === text(code)))
+    .filter(Boolean)
+    .map(orsi => {
+      const restock = allRestocks.find(r => text(r.Code) === text(orsi.OutletRestockCode)) || {}
+      return buildOutletMovementForDelivery(orsi, restock, odCode)
+    })
+
   return [
-    resourceBulkRequest('OutletDeliveryItems', odiRecords, ['OutletDeliveryItems']),
+    resourceBulkRequest('OutletRestockItems',
+      deliveredOrsiCodes.map(code => ({
+        Code: text(code),
+        Progress: 'DELIVERED',
+        ...deliveredStamp(actorName, comment)
+      })),
+      ['OutletRestockItems']
+    ),
+    ...(movements.length ? [resourceBulkRequest('OutletMovements', movements, ['OutletStorages'])] : []),
+    resourceUpdateRequest('OutletDeliveries', odCode, {
+      Progress: odProgress,
+      ...(odProgress === 'IN_TRANSIT'
+        ? { ProgressInTransitAt: now, ProgressInTransitBy: text(actorName), ProgressInTransitComment: `Delivered ${deliveredOrsiCodes.length} of ${odCodes.length} items` }
+        : { ProgressCompletedAt: now, ProgressCompletedBy: text(actorName), ProgressCompletedComment: `All ${odCodes.length} items delivered` })
+    }, ['OutletDeliveries']),
+    ...allRestocks.map(restock => {
+      const restockOrsis = nextOrsis.filter(r => text(r.OutletRestockCode) === text(restock.Code))
+      if (!restockOrsis.length) return null
+      return resourceUpdateRequest('OutletRestocks', text(restock.Code), {
+        Progress: computeRestockProgressFromItems(restockOrsis)
+      }, ['OutletRestocks'])
+    }).filter(Boolean)
+  ]
+}
+
+export function buildOdCancelBatchRequests(odRow = {}, allOrsis = [], actorName = '', comment = '') {
+  const now = new Date().toISOString()
+  const odCodes = (text(odRow.OutletRestockItemCodes) || '').split(',').filter(Boolean).map(c => c.trim())
+  const orsiRecords = odCodes.map(code => {
+    const orsi = allOrsis.find(r => text(r.Code) === code)
+    if (!orsi || text(orsi.Progress) === 'DELIVERED') return null
+    return { Code: code, Progress: 'ALLOCATED' }
+  }).filter(Boolean)
+  return [
     resourceBulkRequest('OutletRestockItems', orsiRecords, ['OutletRestockItems']),
-    resourceUpdateRequest('OutletDeliveries', odRow.Code, {
+    resourceUpdateRequest('OutletDeliveries', text(odRow.Code), {
       Progress: 'CANCELLED',
       CancelledAt: now,
       CancelledBy: text(actorName),
@@ -73,5 +92,3 @@ export function buildOdCancelBatchRequests(odRow = {}, odiRows = [], orsiRows = 
     }, ['OutletDeliveries'])
   ]
 }
-
-export function outletDeliveryCodeRef() { return batchRef('OutletDeliveries.latest.code') }

@@ -1,14 +1,14 @@
 <template>
-  <q-page padding class="delivery-page">
-    <div class="delivery-header q-mb-md">
+  <q-page padding class="q-pb-xl">
+    <div class="q-mb-md">
       <div class="row items-center no-wrap q-mb-xs">
-        <div class="delivery-header__title">
+        <div class="col">
           <div class="text-h6">Outlet Deliveries</div>
         </div>
         <q-btn icon="refresh" flat round dense :loading="loading" @click="reloadIndex(true)" />
       </div>
       <div class="text-caption text-grey-7 q-mb-sm">Delivery headers with item-level tracking</div>
-      <q-input v-model="searchTerm" dense outlined clearable placeholder="Search deliveries..." class="delivery-search">
+      <q-input v-model="searchTerm" dense outlined clearable placeholder="Search deliveries..." style="max-width: 480px">
         <template #prepend><q-icon name="search" /></template>
       </q-input>
     </div>
@@ -27,15 +27,6 @@
     </div>
 
     <template v-else>
-      <div v-if="canCreate && availableItems.length" class="q-mb-lg">
-        <div class="row items-center q-mb-sm">
-          <q-icon name="inventory_2" color="warning" size="sm" class="q-mr-sm" />
-          <span class="text-subtitle1 text-weight-medium">Allocated Items Ready</span>
-          <q-badge class="q-ml-sm" color="warning" :label="String(availableItems.length)" />
-          <q-space />
-          <q-btn dense color="primary" icon="add" label="Create" @click="navigateToAdd()" />
-        </div>
-      </div>
 
       <div v-for="group in groups" :key="group.key" class="q-mb-lg">
         <div class="row items-center q-mb-sm">
@@ -45,17 +36,34 @@
         </div>
         <div class="column q-gutter-sm">
           <q-card v-for="row in group.items" :key="row.Code" flat bordered class="cursor-pointer" @click="navigateTo(row.Code)">
-            <q-card-section class="q-pa-sm row items-center no-wrap">
-              <div class="col">
-                <div class="text-caption text-weight-medium">{{ row.Code }}</div>
-                <div class="text-caption text-grey-7">{{ deliverySummary(row).outlets.join(', ') || 'No linked items' }}</div>
-                <div class="text-caption">{{ deliverySummary(row).delivered }}/{{ deliverySummary(row).total }} delivered</div>
+            <q-card-section class="q-pa-sm">
+              <div class="row items-center no-wrap">
+                <div class="col">
+                  <div class="text-subtitle2 text-weight-medium">{{ row.UserName || 'Unknown' }}</div>
+                  <div class="text-caption text-grey-7">{{ timeAgo(row.Date || row.CreatedAt) }}</div>
+                </div>
+                <q-space />
+                <OutletProgressChip :progress="row.Progress" />
               </div>
-              <OutletProgressChip :progress="row.Progress" />
+              <q-separator class="q-my-xs" />
+              <div class="text-caption text-grey-7">{{ deliverySummary(row).delivered }}/{{ deliverySummary(row).total }} delivered</div>
             </q-card-section>
           </q-card>
         </div>
       </div>
+
+      <div v-if="canCreate && availableItems.length" class="q-mb-lg">
+        <div class="row items-center q-mb-sm">
+          <q-icon name="inventory_2" color="warning" size="sm" class="q-mr-sm" />
+          <span class="text-subtitle1 text-weight-medium">Allocated Items Ready</span>
+          <q-space />
+          <q-chip outline class="text-bold q-px-md" color="warning" :label="String(availableItems.length)" />
+          <div class="col-12 text-center q-py-sm">
+            <q-btn size="sm" color="primary" icon="add" label="Create" @click="navigateToAdd()" />
+          </div>
+        </div>
+      </div>
+
     </template>
 
     <q-page-sticky v-if="canCreate" position="bottom-right" :offset="[18, 18]">
@@ -67,24 +75,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { onMounted } from 'vue'
 import { useOutletDeliveries } from '../../../composables/operations/outlets/useOutletDeliveries.js'
 import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'
 
 defineOptions({ name: 'OutletDeliveriesIndexPage' })
 
 const flow = useOutletDeliveries()
-const { loading, searchTerm, items, groups, availableItems, reloadIndex, navigateTo, navigateToAdd, deliverySummary, canCreate } = flow
-const isInitialLoad = ref(true)
+const { loading, isInitialLoad, searchTerm, items, groups, availableItems, reloadIndex, navigateTo, navigateToAdd, deliverySummary, timeAgo, canCreate } = flow
 
 onMounted(async () => {
   await reloadIndex()
-  isInitialLoad.value = false
 })
 </script>
-
-<style scoped>
-.delivery-page { padding-bottom: 80px; }
-.delivery-search { max-width: 480px; }
-.delivery-header__title { flex: 1; min-width: 0; }
-</style>

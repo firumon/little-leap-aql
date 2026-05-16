@@ -167,8 +167,7 @@ Manual follow-up:
 
 ## 2026-05-11 Update - Outlet Restock/Delivery Breaking Change
 - Outlet restock allocation moved from legacy JSON allocation to row-level ORSI fields: `WarehouseCode`, `StorageName`, `Quantity`, and `Progress` (`PENDING`, `ALLOCATED`, `DELIVERED`).
-- `OutletDeliveries` is now a multi-outlet delivery header with `DRAFT`, `IN_TRANSIT`, `COMPLETED`, and `CANCELLED` progress. Outlet/restock/warehouse/item details live on linked ORSI and ODI rows.
-- Added `OutletDeliveryItems` as child rows linking one OD to one ORSI. ODI starts `IN_TRANSIT`; item delivery marks ODI and ORSI `DELIVERED`, creates positive `OutletMovements`, and derives OD/restock progress.
+- `OutletDeliveries` is now a multi-outlet delivery header with `DRAFT`, `IN_TRANSIT`, `COMPLETED`, and `CANCELLED` progress.
 - Warehouse stock now moves at ORSI allocation time through negative `StockMovements` with `ReferenceType = OutletRestock`. DRAFT OD cancellation reactivates allocation state and creates no warehouse stock movements.
 - This is a destructive schema break for existing outlet restock/delivery data. Live sheets must be reset only after explicit user confirmation: clear existing `OutletRestockItems`, `OutletDeliveries`, and legacy delivery-related rows, run APP resource sync, then run operation setup/reset so new ORSI/OD/ODI headers exist.
 - No generic API contract change is expected; Web App redeployment should only be needed if deployment policy requires a new version after `clasp push`.
@@ -186,3 +185,13 @@ Manual follow-up after this execution:
 - Run operation sheet setup from the AQL sheet menu to normalize headers.
 - Confirm destructive data reset scope with user before clearing live outlet restock/delivery data.
 - Clear frontend/resource cache or re-login if old metadata remains visible after sync.
+
+## 2026-05-15 Update - Outlet Deliveries CSV Refactor
+- `OutletDeliveryItems` child sheet removed from GAS config (`IsActive: 'FALSE'`) and schema setup. `OutletDeliveries` now stores a CSV of ORI codes in `OutletRestockItemCodes` column.
+- Frontend composable `useOutletDeliveries` uses a single reactive `orioRows` computed (ORIO — Outlet Restock Item Overview) joining restockItems + restocks + outlets + skus + products + warehouses.
+- AddPage redesigned with criteria-based grouping (Outlet, City, Product, Qty, Date, RequestUser, ApprovedUser) via `q-btn-toggle`, warehouse filter dropdown, and grouped `q-card` + `q-item` layout.
+- All delivery operations (create, deliver, cancel) read ORI codes from the CSV column instead of ODI child records.
+- `AvailableOrsiPanel.vue` component deleted (replaced by inline grouped list in AddPage).
+- `OutletDeliveryItemRow.vue` retained (still used by ViewPage; now receives ORSI-backed view rows with `OutletDeliveryCode` included).
+- `DELIVERY_ITEM_PROGRESS_ORDER` and `deliveryItems` resource binding removed from frontend.
+- Documentation updated: `OPERATION_SHEET_STRUCTURE.md`, `MODULE_WORKFLOWS.md`, `RESOURCE_COLUMNS_GUIDE.md`, composables/components REGISTRY.md, and this handoff.

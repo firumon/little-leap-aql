@@ -33,23 +33,23 @@ This document captures the **end-to-end workflow knowledge** for each major feat
 ## 11. Outlet Deliveries Item-Level Delivery
 
 ### 11.1 Overview
-Outlet Deliveries are multi-outlet delivery headers. Allocated `OutletRestockItems` are selected on the OD add page and linked through `OutletDeliveryItems`. Warehouse stock is already reserved/deducted at ORSI allocation time through negative `StockMovements` with `ReferenceType = OutletRestock`.
+Outlet Deliveries are multi-outlet delivery headers. Allocated `OutletRestockItems` are selected on the OD add page and their ORI codes are stored as a CSV in `OutletDeliveries.OutletRestockItemCodes`. Warehouse stock is already reserved/deducted at ORSI allocation time through negative `StockMovements` with `ReferenceType = OutletRestock`.
 
 ### 11.2 Data Ownership
 - `OutletRestockItems` owns allocation state through `WarehouseCode`, `StorageName`, `Quantity`, and `Progress`.
 - `OutletDeliveries.Progress` uses `DRAFT`, `IN_TRANSIT`, `COMPLETED`, and `CANCELLED` from `OutletDeliveryProgress`.
-- `OutletDeliveryItems.Progress` uses `IN_TRANSIT` and `DELIVERED`.
+- `OutletDeliveries.OutletRestockItemCodes` holds a CSV of ORI codes for the delivery.
 - `StockMovements.ReferenceType = OutletRestock` reserves warehouse stock at ORSI allocation time.
-- `OutletMovements.ReferenceType = RestockDelivery` posts delivered ODI stock into outlets using `ReferenceCode = OutletDeliveries.Code`.
+- `OutletMovements.ReferenceType = RestockDelivery` posts delivered ORSI stock into outlets using `ReferenceCode = OutletDeliveries.Code`.
 - `OutletStorages` is a derived SKU-only balance keyed by `OutletCode + SKU` with columns `Code`, `OutletCode`, `SKU`, and `Quantity` only.
 
 ### 11.3 Workflow
-1. Add page loads allocated ORSI rows, existing deliveries/delivery items, restocks, outlets, SKUs, and products through the workflow store.
-2. User selects one or more eligible ALLOCATED ORSI rows that are not already linked to active ODI rows.
-3. Creation runs one composite save: create OD `DRAFT` with ODI children set to `IN_TRANSIT`.
-4. Item delivery runs one batch: update ODI to `DELIVERED`, update ORSI to `DELIVERED`, create positive `OutletMovements`, derive OD progress, and derive restock progress.
+1. Add page loads allocated ORSI rows, existing deliveries, restocks, outlets, SKUs, products, and warehouses through the workflow store.
+2. User selects one or more eligible ALLOCATED ORSI rows that are not already linked to active deliveries.
+3. Creation writes one OD `DRAFT` record with `OutletRestockItemCodes` set to the CSV of selected ORI codes.
+4. Item delivery runs one batch: update ORSI to `DELIVERED`, create positive `OutletMovements`, derive OD progress from CSV-matched ORSI rows, and derive restock progress.
 5. First delivered item moves OD to `IN_TRANSIT`; all delivered items move OD to `COMPLETED`.
-6. DRAFT cancellation deactivates ODIs and returns linked ORSIs to `ALLOCATED`; no stock movement is created.
+6. DRAFT cancellation returns linked ORSIs to `ALLOCATED`; no stock movement is created.
 
 ### 11.4 Batch And Sync Rules
 - Delivery creation, item delivery, and cancellation use `useWorkflowStore.runBatchRequests`.
@@ -983,9 +983,9 @@ Outlet & Field Sales Operations manages consignment outlet visits, restock reque
 
 ### 11.1 Resource Model
 - **Master resources**: `Outlets` and `OutletOperatingRules`.
-- **Operation resources**: `OutletVisits`, `OutletRestocks`, `OutletRestockItems`, `OutletDeliveries`, `OutletDeliveryItems`, `OutletConsumptions`, `OutletConsumptionItems`, `OutletConsumptionInvoices`, `OutletConsumptionInvoiceItems`, `OutletMovements`, and `OutletStorages`.
+- **Operation resources**: `OutletVisits`, `OutletRestocks`, `OutletRestockItems`, `OutletDeliveries`, `OutletConsumptions`, `OutletConsumptionItems`, `OutletConsumptionInvoices`, `OutletConsumptionInvoiceItems`, `OutletMovements`, and `OutletStorages`.
 - **Source of truth**: `OutletMovements` is the stock ledger. `OutletStorages` is the derived current outlet balance keyed by `OutletCode + SKU`.
-- **Delivery truth**: `OutletDeliveryItems` links OD headers to atomic `OutletRestockItems`; delivery progress is derived from ODI/ORSI row progress.
+- **Delivery truth**: `OutletDeliveries.OutletRestockItemCodes` stores a CSV of ORI codes; delivery progress is derived from ORSI row progress matched against the CSV.
 
 ### 11.2 Visit Workflow
 1. Field users create planned visits with `OutletCode`, `Date`, `Status = Active`, `Progress = PLANNED`, and optional progress comment.
@@ -1004,11 +1004,11 @@ Outlet & Field Sales Operations manages consignment outlet visits, restock reque
 7. Send-back uses the same parent/child rows for revision rather than creating a replacement restock; the creator can edit/update/add/deactivate child rows only in `REVISION_REQUIRED`.
 
 ### 11.4 Delivery Workflow
-1. Deliveries can be created only from ALLOCATED ORSI rows not already linked to an active ODI.
-2. OD creation writes one `OutletDeliveries` header and one `OutletDeliveryItems` row per selected ORSI.
-3. Delivering an ODI posts positive `OutletMovements` with `ReferenceType = RestockDelivery`, marks ODI and ORSI `DELIVERED`, and updates `OutletRestocks.Progress`.
-4. OD progress remains `DRAFT` until the first ODI is delivered, then becomes `IN_TRANSIT`; once all linked ODIs are delivered it becomes `COMPLETED`.
-5. DRAFT cancellation deactivates ODIs and returns linked ORSIs to `ALLOCATED`; delivered ODs cannot be cancelled.
+1. Deliveries can be created only from ALLOCATED ORSI rows not already linked to an active delivery's `OutletRestockItemCodes` CSV.
+2. OD creation writes one `OutletDeliveries` header with `OutletRestockItemCodes` set to the CSV of selected ORI codes.
+3. Delivering an ORSI posts positive `OutletMovements` with `ReferenceType = RestockDelivery`, marks ORSI `DELIVERED`, and updates `OutletRestocks.Progress`.
+4. OD progress remains `DRAFT` until the first ORSI is delivered, then becomes `IN_TRANSIT`; once all linked ORSIs are delivered it becomes `COMPLETED`.
+5. DRAFT cancellation returns linked ORSIs to `ALLOCATED`; delivered ODs cannot be cancelled.
 
 ### 11.5 Consumption Workflow
 1. Add flow is componentized into outlet context, mobile stock count, and summary/checklist steps. Date and username default internally and are not primary editable inputs.

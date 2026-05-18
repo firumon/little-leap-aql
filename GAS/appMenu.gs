@@ -811,7 +811,6 @@ function resetLogSheet_() {
     var mc = sheet.getMaxColumns();
     if (mc > 2) sheet.deleteColumns(3, mc - 2);
     sheet.getRange(1, 1, 1, 2).setValues([['Timestamp', 'Message']]);
-    sheet.setFrozenRows(1);
     sheet.getRange(1, 1, 1, 2).setFontWeight('bold');
     sheet.setColumnWidth(1, 100);
     sheet.setColumnWidth(2, 600);

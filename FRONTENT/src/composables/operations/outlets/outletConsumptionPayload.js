@@ -96,13 +96,14 @@ export function buildNextVisitRequest(form = {}, frequencyDays = 14, consumption
   return resourceCreateRequest('OutletVisits', { OutletCode: text(form.OutletCode), Date: nextDate, Progress: 'PLANNED', ProgressPlannedComment: comment, Status: 'Active' })
 }
 
-export function buildRestockCompositeRequest(form = {}, rows = []) {
+export function buildRestockCompositeRequest(form = {}, rows = [], consumptionCode = '') {
   const cleaned = restockRows(rows)
   const payload = {
     resource: 'OutletRestocks',
     data: {
       Date: text(form.Date) || todayISO(),
       OutletCode: text(form.OutletCode),
+      OutletConsumptionCode: textOrRef(consumptionCode),
       RequestedUser: text(form.Username),
       Progress: 'DRAFT',
       Status: 'Active',

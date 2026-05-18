@@ -6,7 +6,7 @@ import { useResourceNav } from '../../resources/useResourceNav.js'
 import { useWorkflowStore } from '../../../stores/workflow.js'
 import { OUTLET_OPERATION_RESOURCES, CONSUMPTION_PROGRESS_ORDER, active, formatDate, progressMeta, sortTime, text, todayISO, visitProgress } from './outletOperationsMeta.js'
 import { toNumber, validateConsumption } from './outletStockLogic.js'
-import { batchRef, batchResultCode, compositeSaveRequest, failureMessage, responseFailed } from './outletOperationsBatch.js'
+import { batchRef, batchResultCode, compositeSaveRequest, executeActionRequest, failureMessage, OUTLET_ACTIONS, responseFailed } from './outletOperationsBatch.js'
 import {
   buildConsumptionCompositePayload,
   buildConsumptionInvoiceRequest,
@@ -39,6 +39,7 @@ export function useOutletConsumption() {
   const products = useResourceData(ref('Products'))
   const priceLists = useResourceData(ref('PriceList'))
   const priceListItems = useResourceData(ref('PriceListItems'))
+  const restocks = useResourceData(ref('OutletRestocks'))
 
   const consumptionConfig = computed(() =>
     (Array.isArray(authStore.resources) ? authStore.resources : [])
@@ -46,6 +47,20 @@ export function useOutletConsumption() {
   )
   const consumptionPermissions = computed(() => consumptionConfig.value?.permissions || {})
   const canCreate = computed(() => !!consumptionPermissions.value.canWrite)
+
+  const invoiceConfig = computed(() =>
+    (Array.isArray(authStore.resources) ? authStore.resources : [])
+      .find(r => r.name === 'OutletConsumptionInvoices') || null
+  )
+  const invoicePermissions = computed(() => invoiceConfig.value?.permissions || {})
+  const canReadInvoice = computed(() => !!invoicePermissions.value.canRead)
+
+  const restockConfig = computed(() =>
+    (Array.isArray(authStore.resources) ? authStore.resources : [])
+      .find(r => r.name === 'OutletRestocks') || null
+  )
+  const restockPermissions = computed(() => restockConfig.value?.permissions || {})
+  const canReadRestock = computed(() => !!restockPermissions.value.canRead)
 
   const loading = ref(false)
   const saving = ref(false)
@@ -84,6 +99,7 @@ export function useOutletConsumption() {
   const groups = computed(() => CONSUMPTION_PROGRESS_ORDER.map((key) => ({ key, meta: progressMeta(key), items: items.value.filter((row) => groupKey(row.Progress, CONSUMPTION_PROGRESS_ORDER) === key) })).filter((group) => group.items.length))
   const invoiceGroups = computed(() => INVOICE_PROGRESS_ORDER.map((key) => ({ key, meta: progressMeta(key), items: invoiceItems.value.filter((row) => groupKey(row.Progress, INVOICE_PROGRESS_ORDER) === key) })).filter((group) => group.items.length))
   const outletOptions = computed(() => outlets.items.value.filter(active).map((row) => ({ label: `${row.Code} - ${row.Name}`, value: row.Code })))
+  const allPlannedVisits = computed(() => visits.items.value.filter(active).filter((row) => visitProgress(row) === 'PLANNED').sort((a, b) => Date.parse(text(a.Date) || '') - Date.parse(text(b.Date) || '')))
   const plannedVisits = computed(() => visits.items.value.filter(active).filter((row) => visitProgress(row) === 'PLANNED' && text(row.OutletCode) === text(form.value.OutletCode)).sort((a, b) => Date.parse(text(a.Date) || '') - Date.parse(text(b.Date) || '')))
   const plannedVisitDiagnostics = computed(() => {
     const outletCode = text(form.value.OutletCode)
@@ -113,6 +129,9 @@ export function useOutletConsumption() {
   const pendingInvoiceItems = computed(() => items.value.filter(row => text(row.Progress) === 'PENDING_INVOICE_GENERATION'))
   const invoiceGeneratedItems = computed(() => items.value.filter(row => text(row.Progress) === 'INVOICE_GENERATED'))
   const historyItems = computed(() => items.value.filter(row => text(row.Progress) === 'CANCELLED'))
+
+  function childRestocks(consumptionCode) { return restocks.items.value.filter((row) => text(row.OutletConsumptionCode) === text(consumptionCode) && active(row)) }
+  function cancelableRestocks(consumptionCode) { return childRestocks(consumptionCode).filter((row) => !['APPROVED', 'DELIVERED', 'PARTIALLY_DELIVERED', 'REJECTED'].includes(text(row.Progress))) }
 
   function groupKey(progress, order) { return order.includes(text(progress)) ? text(progress) : 'OTHER' }
   function matchesSearch(row) { return !searchTerm.value || JSON.stringify(row).toLowerCase().includes(searchTerm.value.toLowerCase()) || outletName(row.OutletCode).toLowerCase().includes(searchTerm.value.toLowerCase()) }
@@ -185,7 +204,7 @@ export function useOutletConsumption() {
   async function reload(forceSync = false) {
     loading.value = true
     try {
-      await workflowStore.fetchResources(['OutletConsumptions', 'OutletConsumptionInvoices', 'Outlets'], { includeInactive: true, forceSync })
+      await workflowStore.fetchResources(['OutletConsumptions', 'OutletConsumptionInvoices', 'OutletRestocks', 'Outlets'], { includeInactive: true, forceSync })
       if (!form.value.OutletCode && outletOptions.value[0]) form.value.OutletCode = outletOptions.value[0].value
       syncDefaultGroups()
     } finally { loading.value = false }
@@ -236,7 +255,7 @@ export function useOutletConsumption() {
         requests.push(buildNextVisitRequest(form.value, toNumber(rule?.VisitFrequencyDays) || 14, consumptionRef))
       }
       if (checklist.value.placeRestock) {
-        requests.push(buildRestockCompositeRequest(form.value, restockRows.value))
+        requests.push(buildRestockCompositeRequest(form.value, restockRows.value, consumptionRef))
         if (checklist.value.submitRestock) requests.push(buildRestockSubmitRequest(restockRef))
       }
 
@@ -287,15 +306,57 @@ export function useOutletConsumption() {
     } finally { acting.value = false }
   }
 
+  async function cancelConsumption(record = {}, reason = '') {
+    if (!record?.Code) return false
+    if (text(record.Progress) === 'CANCELLED') return $q.notify({ type: 'warning', message: 'This consumption is already cancelled.', position: 'top' })
+    if (!reason) { $q.notify({ type: 'warning', message: 'Cancellation reason is required.', position: 'top' }); return false }
+
+    const now = new Date()
+    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+    const user = authStore.user || {}
+    const userName = text(user.Name || user.name || user.UserName || user.Username || user.email || user.Email || user.UserID || user.Code || 'Unknown')
+    const comment = `Dependent Outlet consumption ${record.Code} cancelled by ${userName} at ${timeStr}`
+
+    const requests = [
+      executeActionRequest('OutletConsumptions', record.Code, OUTLET_ACTIONS.cancelConsumption, { ProgressCancelledComment: reason })
+    ]
+
+    const invoice = childInvoice(record.Code)
+    if (invoice && text(invoice.Progress) !== 'CANCELLED' && text(invoice.Progress) !== 'PAID') {
+      requests.push(executeActionRequest('OutletConsumptionInvoices', invoice.Code, { action: 'Cancel', column: 'Progress', columnValue: 'CANCELLED' }, { ProgressCancelledComment: comment }))
+    }
+
+    const restocks = cancelableRestocks(record.Code)
+    for (const restock of restocks) {
+      requests.push(executeActionRequest('OutletRestocks', restock.Code, OUTLET_ACTIONS.rejectRestock, { ProgressRejectedComment: comment }))
+    }
+
+    acting.value = true
+    try {
+      const result = await workflowStore.runBatchRequests(requests)
+      if (responseFailed(result)) {
+        $q.notify({ type: 'negative', message: failureMessage(result, 'Failed to cancel consumption.'), position: 'top' })
+        return false
+      }
+      await reload(true)
+      $q.notify({ type: 'positive', message: `Consumption ${record.Code} cancelled.`, position: 'top' })
+      return true
+    } finally { acting.value = false }
+  }
+
   function navigateTo(code) { nav.goTo('view', { code }) }
-  function navigateToAdd(outletCode = '') {
-    outletCode ? nav.goTo('add', { query: { outletCode } }) : nav.goTo('add')
+  function navigateToAdd(outletCode = '', step = 1) {
+    const params = {}
+    if (outletCode) params.query = { outletCode }
+    if (step > 1) params.query = { ...(params.query || {}), step: String(step) }
+    nav.goTo('add', Object.keys(params).length ? params : undefined)
   }
   function navigateToInvoice(code) { nav.goTo('view', { scope: 'operations', resourceSlug: 'outlet-consumption-invoices', code }) }
+  function navigateToRestock(code) { nav.goTo('view', { scope: 'operations', resourceSlug: 'outlet-restocks', code }) }
   function navigateToConsumption(code) { nav.goTo('view', { scope: 'operations', resourceSlug: 'outlet-consumptions', code }) }
   function cancel() { nav.goTo('list') }
 
   return {
-    loading, saving, acting, searchTerm, activeGroupKey, activeInvoiceGroupKey, form, checklist, stockRows, restockRows, groups, invoiceGroups, items, invoiceItems, outletOptions, visitOptions, plannedVisits, plannedVisitDiagnostics, skuOptions, selectedVisit, soldRows, varianceRows, pendingInvoiceItems, invoiceGeneratedItems, historyItems, canCreate, reload, onOutletChange, selectVisit, updateCurrentQty, incrementCurrent, decrementCurrent, setCurrentToZero, setCurrentToSystem, updateRestockRow, addRestockRow, removeRestockRow, saveConsumption, generateInvoiceForConsumption, getConsumption, getInvoice, childItems, childInvoiceItems, childInvoice, consumptionItemRows, invoiceLineItems, consumedTotal, getProgressMeta, isGroupExpanded, toggleGroup, isInvoiceGroupExpanded, toggleInvoiceGroup, outletName, skuName, visitLabel, formatDisplayDate, navigateTo, navigateToAdd, navigateToInvoice, navigateToConsumption, cancel
+    loading, saving, acting, searchTerm, activeGroupKey, activeInvoiceGroupKey, form, checklist, stockRows, restockRows, groups, invoiceGroups, items, invoiceItems, outletOptions, visitOptions, allPlannedVisits, plannedVisits, plannedVisitDiagnostics, skuOptions, selectedVisit, soldRows, varianceRows, pendingInvoiceItems, invoiceGeneratedItems, historyItems, canCreate, consumptionPermissions, invoicePermissions, restockPermissions, canReadInvoice, canReadRestock, reload, onOutletChange, selectVisit, updateCurrentQty, incrementCurrent, decrementCurrent, setCurrentToZero, setCurrentToSystem, updateRestockRow, addRestockRow, removeRestockRow, saveConsumption, generateInvoiceForConsumption, cancelConsumption, getConsumption, getInvoice, childItems, childInvoiceItems, childInvoice, childRestocks, cancelableRestocks, consumptionItemRows, invoiceLineItems, consumedTotal, getProgressMeta, isGroupExpanded, toggleGroup, isInvoiceGroupExpanded, toggleInvoiceGroup, outletName, skuName, visitLabel, formatDisplayDate, navigateTo, navigateToAdd, navigateToInvoice, navigateToRestock, navigateToConsumption, cancel, text, todayISO, active
   }
 }

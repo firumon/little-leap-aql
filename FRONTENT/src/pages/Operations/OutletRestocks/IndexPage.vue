@@ -112,6 +112,69 @@
         </div>
       </div>
 
+      <!-- History section -->
+      <div class="row items-center q-mb-md">
+        <q-separator class="col" />
+        <span class="text-overline text-weight-bold text-grey-6 q-px-md">HISTORY</span>
+        <q-separator class="col" />
+      </div>
+
+      <q-expansion-item
+        v-model="historyExpanded"
+        id="section-history"
+        class="q-mb-md"
+        expand-icon-class="text-grey-6"
+      >
+        <template #header>
+          <q-item-section>
+            <span class="text-subtitle1">
+              <q-icon name="history" size="sm" class="q-mr-sm" />
+              Restock History
+              <q-badge class="q-ml-sm" color="grey" outline :label="String(historyRestocks.length)" />
+            </span>
+          </q-item-section>
+        </template>
+
+        <div class="q-pt-sm">
+          <q-btn-dropdown
+            color="primary"
+            outline
+            dense
+            no-caps
+            class="q-mb-sm history-filter-dropdown"
+            :label="currentFilterLabel"
+          >
+            <q-list dense>
+              <q-item v-for="opt in historyFilterOptions" :key="opt.value" clickable v-close-popup @click="historyStatusFilter = opt.value">
+                <q-item-section>{{ opt.label }}</q-item-section>
+              </q-item>
+            </q-list>
+          </q-btn-dropdown>
+          <div class="row items-center q-gutter-x-sm q-mb-md">
+            <q-input v-model="historyDateFrom" type="date" dense outlined label="From" class="col" />
+            <span class="text-grey-6 text-caption">—</span>
+            <q-input v-model="historyDateTo" type="date" dense outlined label="To" class="col" />
+          </div>
+
+          <div v-if="!filteredHistoryRestocks.length" class="text-grey text-center q-pa-md">
+            No restock history found.
+          </div>
+          <div v-else v-for="group in filteredHistoryByMonth" :key="group.month" class="q-mb-md">
+            <div class="row items-center q-mb-sm">
+              <q-separator class="col" />
+              <span class="text-overline text-weight-bold text-grey-6 q-px-sm">{{ group.label }}</span>
+              <q-separator class="col" />
+            </div>
+            <div class="row q-col-gutter-xs">
+              <div v-for="restock in group.items" :key="restock.Code" class="col-12 col-sm-6 col-md-4 col-lg-3">
+                <div class="cursor-pointer" @click="navigateTo(restock.Code)">
+                  <RestockCard :restock="restock" :outlet-label="outletLabel(restock.OutletCode)" :item-summary="itemProgressSummary(restock)" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </q-expansion-item>
 
     </template>
 
@@ -130,7 +193,7 @@ import { useOutletRestocks } from '../../../composables/operations/outlets/useOu
 import { useOutletVisits } from '../../../composables/operations/outlets/useOutletVisits.js'
 import RestockSummaryBar from '../../../components/Operations/Outlets/RestockSummaryBar.vue'
 import RestockCard from '../../../components/Operations/Outlets/RestockCard.vue'
-import { RESTOCK_PROGRESS_ORDER, active, text } from '../../../composables/operations/outlets/outletOperationsMeta.js'
+import { RESTOCK_PROGRESS_ORDER, active, text, sortTime } from '../../../composables/operations/outlets/outletOperationsMeta.js'
 
 defineOptions({ name: 'OutletRestocksIndexPage' })
 
@@ -140,6 +203,24 @@ const { todayVisits, thisWeekVisits } = visitsFlow
 const { loading, searchTerm, items, reloadIndex, navigateTo, navigateToAdd, itemProgressSummary, resourcePerms, canCreate: userCanCreate, canApprove: userCanApprove } = flow
 
 const isInitialLoad = ref(true)
+const historyExpanded = ref(false)
+
+const historyFilterOptions = [
+  { label: 'All', value: '' },
+  { label: 'Approved', value: 'APPROVED' },
+  { label: 'Partially Delivered', value: 'PARTIALLY_DELIVERED' },
+  { label: 'Delivered', value: 'DELIVERED' },
+  { label: 'Rejected', value: 'REJECTED' }
+]
+
+const historyStatusFilter = ref('')
+const historyDateFrom = ref('')
+const historyDateTo = ref('')
+
+const currentFilterLabel = computed(() => {
+  const opt = historyFilterOptions.find(o => o.value === historyStatusFilter.value)
+  return opt ? opt.label : 'All'
+})
 
 const searchedRestocks = computed(() => {
   if (!searchTerm.value) return []
@@ -149,6 +230,39 @@ const searchedRestocks = computed(() => {
     text(row.Code).toLowerCase().includes(term) ||
     text(row.RequestedUser).toLowerCase().includes(term)
   )
+})
+
+const historyRestocks = computed(() =>
+  items.value.filter(row => ['APPROVED', 'PARTIALLY_DELIVERED', 'DELIVERED', 'REJECTED'].includes(text(row.Progress)))
+    .sort((a, b) => sortTime(b) - sortTime(a)))
+
+const filteredHistoryRestocks = computed(() => {
+  let result = historyRestocks.value
+  if (historyStatusFilter.value) {
+    result = result.filter(row => text(row.Progress) === historyStatusFilter.value)
+  }
+  if (historyDateFrom.value) {
+    result = result.filter(row => row.Date && row.Date >= historyDateFrom.value)
+  }
+  if (historyDateTo.value) {
+    result = result.filter(row => row.Date && row.Date <= historyDateTo.value)
+  }
+  return result
+})
+
+const filteredHistoryByMonth = computed(() => {
+  const groups = new Map()
+  for (const restock of filteredHistoryRestocks.value) {
+    const label = restock.Date ? restock.Date.substring(0, 7) : 'Unknown'
+    const key = label
+    if (!groups.has(key)) {
+      const [year, month] = label.split('-')
+      const date = new Date(parseInt(year), parseInt(month) - 1)
+      groups.set(key, { month: key, label: date.toLocaleString('en-US', { month: 'long', year: 'numeric' }), items: [] })
+    }
+    groups.get(key).items.push(restock)
+  }
+  return Array.from(groups.values()).sort((a, b) => b.month.localeCompare(a.month))
 })
 
 const pendingApprovalList = computed(() =>
@@ -228,4 +342,5 @@ onMounted(() => doReload())
 .restock-section-body { border-top: none; border-radius: 0 0 8px 8px; }
 .priority-outlet-card { transition: box-shadow 0.15s ease; border-left: 3px solid var(--q-primary); }
 .priority-outlet-card:hover { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); }
+.history-filter-dropdown { width: 100%; }
 </style>

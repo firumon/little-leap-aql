@@ -97,7 +97,7 @@ const hasPendingItems = computed(() => rows.value.some(row => row.Progress === '
 const hasPendingAllocationDraft = computed(() => pendingAllocationDraftRows.value.length > 0)
 const mode = computed(() => {
   const resolved = resolveRestockViewMode(restock.value?.Progress)
-  return resolved === 'readonly' && (hasPendingItems.value || hasPendingAllocationDraft.value) ? 'pending-allocation' : resolved
+  return resolved === 'readonly' && restock.value?.Progress === 'APPROVED' && (hasPendingItems.value || hasPendingAllocationDraft.value) ? 'pending-allocation' : resolved
 })
 
 const approveLoading = ref(false)

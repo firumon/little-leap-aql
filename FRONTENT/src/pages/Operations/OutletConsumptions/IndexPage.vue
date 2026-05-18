@@ -1,13 +1,16 @@
 <template>
-  <q-page padding>
-    <div class="row items-center q-mb-md">
-      <div class="text-h6">Outlet Consumptions</div>
-      <div class="text-caption text-grey-7">Stock tracking · count, invoice, track</div>
-      <q-space />
-      <q-input v-model="searchTerm" dense outlined clearable placeholder="Search" class="q-mr-sm">
+  <q-page padding class="q-pb-xl">
+    <div class="q-mb-md">
+      <div class="row items-center no-wrap q-mb-xs">
+        <div class="col">
+          <div class="text-h6">Outlet Consumptions</div>
+        </div>
+        <q-btn icon="refresh" flat round dense :loading="loading" @click="reload(true)" />
+      </div>
+      <div class="text-caption text-grey-7 q-mb-sm">Stock tracking · count, invoice, track</div>
+      <q-input v-model="searchTerm" dense outlined clearable placeholder="Search consumptions..." style="max-width: 480px">
         <template #prepend><q-icon name="search" /></template>
       </q-input>
-      <q-btn icon="refresh" flat round :loading="loading" @click="reload(true)" />
     </div>
 
     <q-linear-progress v-if="loading && !isInitialLoad" color="primary" indeterminate class="q-mb-sm" />
@@ -16,95 +19,112 @@
       <q-spinner color="primary" size="3em" />
     </div>
 
-    <template v-else-if="searchTerm">
-      <div class="text-subtitle1 text-weight-medium q-mb-md">Search Results</div>
-      <div v-if="!searchedItems.length" class="text-grey text-center q-pa-xl">No matching consumptions found.</div>
-      <div v-else class="column q-gutter-md">
-        <q-card v-for="row in searchedItems" :key="row.Code" flat bordered clickable class="cursor-pointer" @click="navigateTo(row.Code)">
-          <q-card-section class="row items-center no-wrap">
-            <div class="col">
-              <div class="text-subtitle2">{{ outletName(row.OutletCode) }} · {{ formatDisplayDate(row.Date) }}</div>
-              <div class="text-caption text-grey">{{ row.Code }} · Qty {{ consumedTotal(row.Code) }}</div>
-            </div>
-            <q-space />
-            <OutletProgressChip :progress="row.Progress" />
-          </q-card-section>
-        </q-card>
-      </div>
-    </template>
+    <div v-else-if="!items.length && !pendingInvoiceItems.length && !invoiceGeneratedItems.length && !historyItems.length" class="text-center q-pa-xl">
+      <q-icon name="shopping_cart" size="4em" color="grey-5" class="q-mb-sm" />
+      <div class="text-h6 q-mt-md">No consumptions yet</div>
+      <div class="text-caption text-grey-7 q-mb-lg">Start by recording an outlet consumption.</div>
+      <q-btn v-if="canCreate" color="primary" icon="add" label="Record Consumption" @click="navigateToAdd()" />
+    </div>
 
     <template v-else>
-      <!-- PENDING INVOICE -->
+
+      <!-- Pending Invoice Generation (Highest Priority) -->
       <div v-if="pendingInvoiceItems.length" class="q-mb-lg">
-        <div class="row items-center q-mb-md">
-          <q-icon name="receipt" color="warning" size="sm" class="q-mr-sm" />
-          <span class="text-h6 text-weight-bold">PENDING INVOICE</span>
-          <q-badge class="q-ml-sm" color="warning" :label="String(pendingInvoiceItems.length)" />
+        <div class="row items-center q-mb-sm">
+          <q-icon name="receipt" :color="pendingMeta.color" size="sm" class="q-mr-sm" />
+          <span class="text-subtitle1 text-weight-medium">{{ pendingMeta.label }}</span>
+          <q-badge class="q-ml-sm" :color="pendingMeta.color" :label="String(pendingInvoiceItems.length)" />
         </div>
-        <div class="row q-col-gutter-sm">
-          <div v-for="row in pendingInvoiceItems" :key="row.Code" class="col-12 col-sm-6 col-md-4 col-lg-3">
-            <q-card flat bordered clickable class="cursor-pointer" @click="navigateTo(row.Code)">
-              <q-card-section class="q-pa-sm">
-                <div class="text-subtitle2 q-mb-xs">{{ outletName(row.OutletCode) }}</div>
-                <div class="text-caption text-grey-7">{{ row.Code }} · {{ formatDisplayDate(row.Date) }}</div>
-                <div class="text-caption q-mt-sm">Qty {{ consumedTotal(row.Code) }}</div>
-              </q-card-section>
-            </q-card>
-          </div>
+        <div class="column q-gutter-sm">
+          <q-card v-for="row in pendingInvoiceItems" :key="row.Code" flat bordered class="cursor-pointer" @click="navigateTo(row.Code)">
+            <q-card-section class="q-pa-sm">
+              <div class="row items-center no-wrap">
+                <div class="col">
+                  <div class="text-subtitle2 text-weight-medium">{{ outletName(row.OutletCode) }}</div>
+                  <div class="text-caption text-grey-7">{{ row.Username }} · {{ formatDisplayDate(row.Date) }}</div>
+                </div>
+                <q-space />
+                <OutletProgressChip :progress="row.Progress" />
+              </div>
+              <q-separator class="q-my-xs" />
+              <div class="text-caption text-grey-7">Qty {{ consumedTotal(row.Code) }}</div>
+            </q-card-section>
+          </q-card>
         </div>
       </div>
 
-      <!-- INVOICE GENERATED -->
+      <!-- Invoice Generated -->
       <div v-if="invoiceGeneratedItems.length" class="q-mb-lg">
-        <div class="row items-center q-mb-md">
-          <q-icon name="check_circle" color="positive" size="sm" class="q-mr-sm" />
-          <span class="text-h6 text-weight-bold">INVOICE GENERATED</span>
-          <q-badge class="q-ml-sm" color="positive" :label="String(invoiceGeneratedItems.length)" />
+        <div class="row items-center q-mb-sm">
+          <q-icon name="check_circle" :color="generatedMeta.color" size="sm" class="q-mr-sm" />
+          <span class="text-subtitle1 text-weight-medium">{{ generatedMeta.label }}</span>
+          <q-badge class="q-ml-sm" :color="generatedMeta.color" :label="String(invoiceGeneratedItems.length)" />
         </div>
-        <div class="row q-col-gutter-sm">
-          <div v-for="row in invoiceGeneratedItems" :key="row.Code" class="col-12 col-sm-6 col-md-4 col-lg-3">
-            <q-card flat bordered clickable class="cursor-pointer" @click="navigateTo(row.Code)">
-              <q-card-section class="q-pa-sm">
-                <div class="text-subtitle2 q-mb-xs">{{ outletName(row.OutletCode) }}</div>
-                <div class="text-caption text-grey-7">{{ row.Code }} · {{ formatDisplayDate(row.Date) }}</div>
-                <div class="text-caption q-mt-sm">Qty {{ consumedTotal(row.Code) }}</div>
-              </q-card-section>
-            </q-card>
-          </div>
+        <div class="column q-gutter-sm">
+          <q-card v-for="row in invoiceGeneratedItems" :key="row.Code" flat bordered class="cursor-pointer" @click="navigateTo(row.Code)">
+            <q-card-section class="q-pa-sm">
+              <div class="row items-center no-wrap">
+                <div class="col">
+                  <div class="text-subtitle2 text-weight-medium">{{ outletName(row.OutletCode) }}</div>
+                  <div class="text-caption text-grey-7">{{ row.Username }} · {{ formatDisplayDate(row.Date) }}</div>
+                </div>
+                <q-space />
+                <OutletProgressChip :progress="row.Progress" />
+              </div>
+              <q-separator class="q-my-xs" />
+              <div class="text-caption text-grey-7">Qty {{ consumedTotal(row.Code) }}</div>
+            </q-card-section>
+          </q-card>
         </div>
       </div>
 
-      <!-- HISTORY (CANCELLED) -->
-      <q-expansion-item v-if="historyItems.length" class="q-mb-md" header-class="text-grey-8" expand-icon-class="text-grey-6">
-        <template #header>
-          <q-item-section>
-            <span class="text-subtitle1">
-              <q-icon name="history" size="sm" class="q-mr-sm" />
-              Cancelled
-              <q-badge class="q-ml-sm" color="grey" outline :label="String(historyItems.length)" />
-            </span>
-          </q-item-section>
-        </template>
-        <div class="row q-col-gutter-sm q-pt-sm q-px-sm">
-          <div v-for="row in historyItems" :key="row.Code" class="col-12 col-sm-6 col-md-4 col-lg-3">
-            <q-card flat bordered clickable class="cursor-pointer" @click="navigateTo(row.Code)">
-              <q-card-section class="q-pa-sm">
-                <div class="text-subtitle2 q-mb-xs">{{ outletName(row.OutletCode) }}</div>
-                <div class="text-caption text-grey-7">{{ row.Code }} · {{ formatDisplayDate(row.Date) }}</div>
-                <div class="text-caption q-mt-sm">Qty {{ consumedTotal(row.Code) }}</div>
-              </q-card-section>
-            </q-card>
-          </div>
+      <!-- Today's Planned Visits -->
+      <div v-if="todayPlannedVisits.length" class="q-mb-lg">
+        <div class="row items-center q-mb-sm">
+          <q-icon name="event_available" color="info" size="sm" class="q-mr-sm" />
+          <span class="text-subtitle1 text-weight-medium">Today's Planned Visits</span>
+          <q-badge class="q-ml-sm" color="info" :label="String(todayPlannedVisits.length)" />
         </div>
-      </q-expansion-item>
-
-      <!-- Empty State -->
-      <div v-if="!pendingInvoiceItems.length && !invoiceGeneratedItems.length && !historyItems.length" class="text-center q-pa-xl">
-        <q-icon name="shopping_cart" size="4em" color="grey-5" class="q-mb-sm" />
-        <div class="text-h6 q-mt-md">No consumptions recorded</div>
-        <div class="text-caption text-grey-7 q-mb-lg">Start by recording an outlet consumption.</div>
-        <q-btn v-if="canCreate" color="primary" icon="add" label="Record Consumption" @click="navigateToAdd()" />
+        <div class="column q-gutter-sm">
+          <q-card v-for="visit in todayPlannedVisits" :key="visit.Code" flat bordered class="cursor-pointer" @click="navigateToAddFromVisit(visit)">
+            <q-card-section class="q-pa-sm">
+              <div class="row items-center no-wrap">
+                <div class="col">
+                  <div class="text-subtitle2 text-weight-medium">{{ outletName(visit.OutletCode) }}</div>
+                  <div class="text-caption text-grey-7">{{ formatDisplayDate(visit.Date) }}</div>
+                </div>
+                <q-icon name="arrow_forward" color="primary" size="sm" />
+              </div>
+            </q-card-section>
+          </q-card>
+        </div>
       </div>
+
+      <!-- History (Cancelled) -->
+      <div v-if="historyItems.length" class="q-mb-lg">
+        <div class="row items-center q-mb-sm">
+          <q-icon name="history" color="grey-7" size="sm" class="q-mr-sm" />
+          <span class="text-subtitle1 text-weight-medium">Cancelled</span>
+          <q-badge class="q-ml-sm" color="grey-7" :label="String(historyItems.length)" />
+        </div>
+        <div class="column q-gutter-sm">
+          <q-card v-for="row in historyItems" :key="row.Code" flat bordered class="cursor-pointer" @click="navigateTo(row.Code)">
+            <q-card-section class="q-pa-sm">
+              <div class="row items-center no-wrap">
+                <div class="col">
+                  <div class="text-subtitle2 text-weight-medium">{{ outletName(row.OutletCode) }}</div>
+                  <div class="text-caption text-grey-7">{{ row.Code }} · {{ formatDisplayDate(row.Date) }}</div>
+                </div>
+                <q-space />
+                <OutletProgressChip :progress="row.Progress" />
+              </div>
+              <q-separator class="q-my-xs" />
+              <div class="text-caption text-grey-7">Qty {{ consumedTotal(row.Code) }}</div>
+            </q-card-section>
+          </q-card>
+        </div>
+      </div>
+
     </template>
 
     <q-page-sticky v-if="canCreate" position="bottom-right" :offset="[18, 18]">
@@ -123,21 +143,21 @@ import OutletProgressChip from '../../../components/Operations/Outlets/OutletPro
 defineOptions({ name: 'OutletConsumptionIndexPage' })
 
 const flow = useOutletConsumption()
-const {
-  loading, searchTerm, canCreate, pendingInvoiceItems, invoiceGeneratedItems, historyItems,
-  reload, navigateTo, navigateToAdd, consumedTotal, outletName, formatDisplayDate
-} = flow
+const { loading, items, searchTerm, canCreate, pendingInvoiceItems, invoiceGeneratedItems, historyItems, allPlannedVisits, reload, navigateTo, navigateToAdd, consumedTotal, outletName, formatDisplayDate, text, todayISO } = flow
 
 const isInitialLoad = ref(true)
 
-const searchedItems = computed(() => {
-  if (!searchTerm.value) return []
-  const term = searchTerm.value.toLowerCase()
-  return flow.items.value.filter(row =>
-    JSON.stringify(row).toLowerCase().includes(term) ||
-    outletName(row.OutletCode).toLowerCase().includes(term)
-  )
+const pendingMeta = { label: 'Pending Invoice Generation', color: 'warning' }
+const generatedMeta = { label: 'Invoice Generated', color: 'positive' }
+
+const todayPlannedVisits = computed(() => {
+  const today = todayISO()
+  return allPlannedVisits.value.filter(v => text(v.Date) === today)
 })
+
+function navigateToAddFromVisit(visit) {
+  navigateToAdd(visit.OutletCode, 2)
+}
 
 onMounted(async () => {
   await reload()

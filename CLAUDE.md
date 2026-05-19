@@ -29,6 +29,13 @@ This is the startup file for Claude sessions in this repo. Keep it lean and use 
 - Use `Documents/AI_COLLABORATION_PROTOCOL.md` only for planning/building/change tasks.
 - Use `Documents/CONTEXT_HANDOFF.md` only for continuation or current-state tasks.
 
+## Repo-Local Skills
+- Skills are task adapters, not policy sources.
+- `aql-expert` remains relevant for AQL domain work across frontend, GAS, sheet metadata, resources, permissions, and workflows.
+- `aql-frontend-design` remains relevant for AQL-specific Quasar UI design, prototypes, and frontend visual refinement.
+- These skills must defer to this file, `Documents/MULTI_AGENT_PROTOCOL.md`, and `Documents/DOC_ROUTING.md` for role boundaries, required reads, and implementation rules.
+- If a skill conflicts with canonical docs, follow the canonical docs and update the skill.
+
 ## Implementation Expectations
 - Keep docs, code, and sheets aligned only when the task actually changes them.
 - For frontend edits, keep pages thin when the task materially affects page structure.
@@ -52,7 +59,7 @@ Update this file when startup behavior, default reading expectations, role invoc
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **little-leap-aql** (6435 symbols, 11729 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **little-leap-aql** (6519 symbols, 11820 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

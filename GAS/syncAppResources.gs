@@ -378,7 +378,7 @@ const APP_RESOURCES_CODE_CONFIG = [
     {
         Name: CONFIG.OPERATION_SHEETS.PURCHASE_REQUISITIONS,
         Scope: 'operation',
-        ParentResource: CONFIG.OPERATION_SHEETS.PROCUREMENTS,
+        ParentResource: '',
         IsActive: 'TRUE',
         SheetName: CONFIG.OPERATION_SHEETS.PURCHASE_REQUISITIONS,
         CodePrefix: 'PR',
@@ -439,7 +439,7 @@ const APP_RESOURCES_CODE_CONFIG = [
     {
         Name: CONFIG.OPERATION_SHEETS.RFQS,
         Scope: 'operation',
-        ParentResource: CONFIG.OPERATION_SHEETS.PROCUREMENTS,
+        ParentResource: '',
         IsActive: 'TRUE',
         SheetName: CONFIG.OPERATION_SHEETS.RFQS,
         CodePrefix: 'RFQ',
@@ -557,7 +557,7 @@ const APP_RESOURCES_CODE_CONFIG = [
     {
         Name: CONFIG.OPERATION_SHEETS.PURCHASE_ORDERS,
         Scope: 'operation',
-        ParentResource: CONFIG.OPERATION_SHEETS.PROCUREMENTS,
+        ParentResource: '',
         IsActive: 'TRUE',
         SheetName: CONFIG.OPERATION_SHEETS.PURCHASE_ORDERS,
         CodePrefix: 'PO',

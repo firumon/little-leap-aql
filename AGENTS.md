@@ -30,6 +30,13 @@
 - `Documents/AI_COLLABORATION_PROTOCOL.md` is optional and should be read only for planning/building/change tasks.
 - `Documents/CONTEXT_HANDOFF.md` should be read only for continuation or current-state work.
 
+## Repo-Local Skills
+- Skills are task adapters, not policy sources.
+- `aql-expert` remains relevant for AQL domain work across frontend, GAS, sheet metadata, resources, permissions, and workflows.
+- `aql-frontend-design` remains relevant for AQL-specific Quasar UI design, prototypes, and frontend visual refinement.
+- These skills must defer to this file, `Documents/MULTI_AGENT_PROTOCOL.md`, and `Documents/DOC_ROUTING.md` for role boundaries, required reads, and implementation rules.
+- If a skill conflicts with canonical docs, follow the canonical docs and update the skill.
+
 ## Implementation Notes
 - Keep docs, code, and sheets aligned only when the task modifies them.
 - For frontend edits, keep pages thin when the task materially changes page structure and update frontend registries only when reusable interfaces change.
@@ -56,7 +63,7 @@
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **little-leap-aql** (6435 symbols, 11729 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **little-leap-aql** (6519 symbols, 11820 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

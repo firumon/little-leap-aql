@@ -89,12 +89,14 @@ These are default contracts for all new frontend work. Do not bypass them unless
 * `useDataStore` (`FRONTENT/src/stores/data.js`)
   * MUST be the default in-memory resource-record state owner.
   * Resource row state MUST flow through this store (directly or via IDB upsert callbacks).
-* `useWorkflowStore` (`FRONTENT/src/stores/workflow.js`)
-  * MUST be the default orchestration boundary for action/composite/report/batch execution.
-* `useSyncStore` (`FRONTENT/src/stores/sync.js`)
-  * MUST be the default queue/sync orchestration surface.
-* `useClientCacheStore` (`FRONTENT/src/stores/clientCache.js`)
-  * MUST be the default app-level access point to client cache services.
+* `useResourceIoStore` (`FRONTENT/src/stores/resourceIo.js`)
+  * MUST be the only store command surface for resource API, fetch, sync, mutation, workflow action, composite, report, batch, queue, draft, and client-cache operations.
+  * Composables MUST call this store for API/fetch/sync/mutation/cache commands instead of service files or older split stores.
+  * This store may coordinate `useDataStore` and `useResourceStatusStore`, but resource-specific business orchestration MUST remain in composables.
+  * Resource row data returned from API/cache/sync MUST hydrate `useDataStore` so UI reads stay provider-independent and reactive.
+* `useResourceStatusStore` (`FRONTENT/src/stores/resourceStatus.js`)
+  * MUST be the default resource fetch/sync status registry.
+  * It tracks resource status only; it MUST NOT initiate resource API/sync commands.
 * `useResourceNav` (`FRONTENT/src/composables/resources/useResourceNav.js`)
   * MUST be used for resource navigation (no direct `router.push()` in feature flows).
 * `useSectionResolver` (`FRONTENT/src/composables/resources/useSectionResolver.js`)
@@ -125,16 +127,11 @@ A central store, stores/data.js (e.g., `useDataStore`) is allowed.
 
 #### MUST:
 
-* Call services for ALL API operations:
-
-    * GET
-    * POST
-    * UPDATE
-    * BULK
-
 * Update in-memory state
 
-* Persist + hydrate via IDB (through services only)
+* Hydrate resource rows returned by `useResourceIoStore` or IDB upsert callbacks
+
+* Persist through services only when an explicit local optimistic update is required
 
 * Maintain normalized structure (e.g., headers + rows)
 
@@ -149,9 +146,8 @@ A central store, stores/data.js (e.g., `useDataStore`) is allowed.
 
 Store acts as:
 
-* Data transport coordinator
 * State manager
-* Persistence handler
+* Provider-independent reactive resource-record cache
 
 ---
 
@@ -161,6 +157,7 @@ Store acts as:
 
     * State population from API
     * State hydration from IDB
+    * API command orchestration through `useResourceIoStore`
 
 * No direct API/IDB logic outside services
 

@@ -44,7 +44,7 @@ Outlet Deliveries are multi-outlet delivery headers. Allocated `OutletRestockIte
 - `OutletStorages` is a derived SKU-only balance keyed by `OutletCode + SKU` with columns `Code`, `OutletCode`, `SKU`, and `Quantity` only.
 
 ### 11.3 Workflow
-1. Add page loads allocated ORSI rows, existing deliveries, restocks, outlets, SKUs, products, and warehouses through the workflow store.
+1. Add page loads allocated ORSI rows, existing deliveries, restocks, outlets, SKUs, products, and warehouses through the resource IO store.
 2. User selects one or more eligible ALLOCATED ORSI rows that are not already linked to active deliveries.
 3. Creation writes one OD `DRAFT` record with `OutletRestockItemCodes` set to the CSV of selected ORI codes.
 4. Item delivery runs one batch: update ORSI to `DELIVERED`, create positive `OutletMovements`, derive OD progress from CSV-matched ORSI rows, and derive restock progress.
@@ -52,10 +52,10 @@ Outlet Deliveries are multi-outlet delivery headers. Allocated `OutletRestockIte
 6. DRAFT cancellation returns linked ORSIs to `ALLOCATED`; no stock movement is created.
 
 ### 11.4 Batch And Sync Rules
-- Delivery creation, item delivery, and cancellation use `useWorkflowStore.runBatchRequests`.
+- Delivery creation, item delivery, and cancellation use `useResourceIoStore.runBatchRequests`.
 - Batch helpers attach `lastUpdatedAtByResource` cursors from IDB metadata before write actions, preserving delta-on-write behavior.
 - Write responses are consumed directly; no redundant `get` is issued after `create`, `update`, or `executeAction`.
-- General frontend reloads continue to use the cache/last-sync throttle logic in `ResourceFetchService`.
+- General frontend reloads continue to use the cache/last-sync throttle logic in `ResourceIoService`.
 
 ---
 
@@ -612,7 +612,7 @@ sectionsReady = true → template renders all <component :is="...">
 ### 2.11 Architecture Contract Link
 
 - All frontend implementation under this module must follow `Documents/ARCHITECTURE RULES.md`.
-- Core defaults are mandatory: `useDataStore`, `useWorkflowStore`, `useSyncStore`, `useClientCacheStore`, `useResourceNav`, `useSectionResolver`, `useActionResolver`.
+- Core defaults are mandatory: `useDataStore`, `useResourceIoStore`, `useResourceStatusStore`, `useResourceNav`, `useSectionResolver`, `useActionResolver`.
 - API transport must use canonical request/response envelopes with request correlation; resource payload ingestion must be generic and header-light by default.
 
 ---

@@ -55,7 +55,11 @@ graph TD
 - `stores/auth.js`
   - session, user, resource catalog, app config/options
 - `stores/data.js`
-  - canonical in-memory owner of resource headers/rows, hydration, and sync-facing updates
+  - canonical in-memory owner of resource headers/rows
+- `stores/resourceIo.js`
+  - canonical resource API/fetch/sync/mutation/cache command surface
+- `stores/resourceStatus.js`
+  - resource fetch/sync status registry
 - `layouts/MainLayout`
   - menu rendering from authorized resource metadata
 - `router`
@@ -64,8 +68,8 @@ graph TD
   - side-effect-free transport layer for backend requests
 - `services/IndexedDbService.js`
   - IndexedDB persistence and metadata storage
-- `services/ResourceRecordsService.js`
-  - cache-first resource reads, TTL-based sync orchestration, and grouped scope sync
+- `services/ResourceIoService.js`
+  - cache-first resource reads, TTL-based sync orchestration, resource mutations, batch/report commands, and client-cache operations
 
 ## Key Interaction Flows
 
@@ -78,14 +82,14 @@ graph TD
 Detailed login contract: [LOGIN_RESPONSE.md](F:/LITTLE%20LEAP/AQL/Documents/LOGIN_RESPONSE.md)
 
 ### Generic Resource Read/Write
-1. Frontend calls a service-layer action such as `executeGasApi(...)`, `fetchResourceRecords(...)`, or a store action backed by those services.
+1. Frontend composables call `useResourceIoStore` for API/fetch/sync/mutation commands.
 2. `apiDispatcher.gs` validates auth and routes by action/scope.
 3. `resourceRegistry.gs` resolves resource metadata and target file/sheet.
 4. `resourceApi.gs` applies permission, region, validation, and hook logic.
 
 ### Cache-First Master Experience
-1. `useDataStore` hydrates cached rows from IndexedDB first.
-2. `ResourceRecordsService` decides whether a sync is needed based on TTL, hydration state, and stored cursor metadata.
+1. `useResourceIoStore` loads resource data through `ResourceIoService`.
+2. `ResourceIoService` decides whether a sync is needed based on TTL, hydration state, and stored cursor metadata.
 3. Response rows are merged into IndexedDB.
 4. IndexedDB upsert listeners refresh Pinia state so components keep reading from the store only.
 

@@ -5,7 +5,7 @@
         <div class="col">
           <div class="text-h6">Outlet Consumptions</div>
         </div>
-        <q-btn icon="refresh" flat round dense :loading="loading" @click="reload(true)" />
+        <ReloadButton />
       </div>
       <div class="text-caption text-grey-7 q-mb-sm">Stock tracking · count, invoice, track</div>
       <q-input v-model="searchTerm" dense outlined clearable placeholder="Search consumptions..." style="max-width: 480px">
@@ -13,9 +13,9 @@
       </q-input>
     </div>
 
-    <q-linear-progress v-if="loading && !isInitialLoad" color="primary" indeterminate class="q-mb-sm" />
+    <q-linear-progress v-if="loading && !shouldBlockUi" color="primary" indeterminate class="q-mb-sm" />
 
-    <div v-if="isInitialLoad && loading" class="text-center q-pa-xl">
+    <div v-if="shouldBlockUi" class="text-center q-pa-xl">
       <q-spinner color="primary" size="3em" />
     </div>
 
@@ -136,16 +136,19 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useOutletConsumption } from '../../../composables/operations/outlets/useOutletConsumption.js'
 import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'
+import ReloadButton from '../../../components/shared/ReloadButton.vue'
+import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
 
 defineOptions({ name: 'OutletConsumptionIndexPage' })
 
 const flow = useOutletConsumption()
+const { hasUninitiatedDependencies } = useResourceReload()
 const { loading, items, searchTerm, canCreate, pendingInvoiceItems, invoiceGeneratedItems, historyItems, allPlannedVisits, reload, navigateTo, navigateToAdd, consumedTotal, outletName, formatDisplayDate, text, todayISO } = flow
 
-const isInitialLoad = ref(true)
+const shouldBlockUi = computed(() => loading.value && hasUninitiatedDependencies.value)
 
 const pendingMeta = { label: 'Pending Invoice Generation', color: 'warning' }
 const generatedMeta = { label: 'Invoice Generated', color: 'positive' }
@@ -161,6 +164,5 @@ function navigateToAddFromVisit(visit) {
 
 onMounted(async () => {
   await reload()
-  isInitialLoad.value = false
 })
 </script>

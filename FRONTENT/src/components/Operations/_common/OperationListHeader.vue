@@ -7,19 +7,7 @@
           <div class="header-subtitle">{{ config?.ui?.menus?.[0]?.pageDescription || 'Manage records' }}</div>
         </div>
         <div class="row items-center q-gutter-xs">
-          <q-btn
-            v-if="!backgroundSyncing"
-            flat
-            round
-            icon="refresh"
-            color="primary"
-            size="sm"
-            :loading="loading"
-            :disable="loading || backgroundSyncing"
-            @click="$emit('reload')"
-          >
-            <q-tooltip>Force Sync from Server</q-tooltip>
-          </q-btn>
+          <ReloadButton v-if="!backgroundSyncing" />
           <q-icon
             v-if="backgroundSyncing"
             name="sync"
@@ -56,6 +44,8 @@
 </template>
 
 <script setup>
+import ReloadButton from 'src/components/shared/ReloadButton.vue'
+
 defineProps({
   config: {
     type: Object,

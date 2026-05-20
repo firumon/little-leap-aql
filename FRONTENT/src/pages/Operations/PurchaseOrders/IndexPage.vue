@@ -1,24 +1,26 @@
 <template>
   <q-page padding>
-    <div class="row items-center q-mb-md">
-      <div class="text-h6">Purchase Orders</div>
-      <q-space />
-      <q-input
-        v-model="searchTerm"
-        dense
-        outlined
-        placeholder="Search POs..."
-        class="q-mr-md"
-        style="max-width: 300px"
-      >
-        <template v-slot:append>
-          <q-icon name="search" />
-        </template>
-      </q-input>
-      <q-btn icon="refresh" flat round color="primary" @click="reload" :loading="loading" />
-    </div>
+<div class="row items-center q-mb-md">
+  <div class="text-h6">Purchase Orders</div>
+  <q-space />
+  <q-input
+    v-model="searchTerm"
+    dense
+    outlined
+    placeholder="Search POs..."
+    class="q-mr-md"
+    style="max-width: 300px"
+  >
+    <template v-slot:append>
+      <q-icon name="search" />
+    </template>
+  </q-input>
+  <ReloadButton />
+</div>
 
-    <div v-if="loading && items.length === 0" class="flex flex-center q-py-xl">
+    <q-linear-progress v-if="loading && !shouldBlockUi" color="primary" indeterminate class="q-mb-sm" />
+
+    <div v-if="shouldBlockUi" class="flex flex-center q-py-xl">
       <q-spinner color="primary" size="3em" />
     </div>
 
@@ -79,21 +81,23 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
+import { computed, onMounted } from 'vue';
 import { usePurchaseOrderIndex } from '../../../composables/operations/purchaseOrders/usePurchaseOrderIndex.js';
+import ReloadButton from '../../../components/shared/ReloadButton.vue';
+import { useResourceReload } from '../../../composables/resources/useResourceReload.js';
 
 defineOptions({
   name: 'PurchaseOrdersIndexPage'
 });
 
 const poIndex = usePurchaseOrderIndex();
+const { hasUninitiatedDependencies } = useResourceReload();
 const {
   items,
   groups,
   searchTerm,
   loading,
   permissions,
-  reload,
   isGroupExpanded,
   toggleGroup,
   navigateTo,
@@ -102,6 +106,8 @@ const {
   formatDate,
   formatCurrency
 } = poIndex;
+
+const shouldBlockUi = computed(() => loading.value && hasUninitiatedDependencies.value);
 
 onMounted(() => {
   poIndex.reload();

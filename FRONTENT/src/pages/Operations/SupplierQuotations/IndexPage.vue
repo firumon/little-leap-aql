@@ -7,9 +7,7 @@
             <div class="text-h6">Supplier Quotations</div>
             <div class="text-caption text-grey-6">{{ totalVisible }} visible · {{ items.length }} total</div>
           </div>
-          <q-btn flat round icon="refresh" color="primary" :loading="loading" @click="reload(true)">
-            <q-tooltip>Sync from server</q-tooltip>
-          </q-btn>
+          <ReloadButton />
         </div>
         <q-input v-model="searchTerm" dense outlined clearable placeholder="Search quotations" class="q-mt-sm">
           <template #prepend><q-icon name="search" /></template>
@@ -17,7 +15,9 @@
       </q-card-section>
     </q-card>
 
-    <div v-if="loading && !items.length" class="text-center q-py-xl">
+    <q-linear-progress v-if="loading && !shouldBlockUi" color="primary" indeterminate class="q-mb-sm" />
+
+    <div v-if="shouldBlockUi" class="text-center q-py-xl">
       <q-spinner-dots color="primary" size="36px" />
     </div>
 
@@ -77,8 +77,12 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { useSupplierQuotationIndex } from 'src/composables/operations/supplierQuotations/useSupplierQuotationIndex'
+import ReloadButton from '../../../components/shared/ReloadButton.vue'
+import { useResourceReload } from 'src/composables/resources/useResourceReload'
 
+const { hasUninitiatedDependencies } = useResourceReload()
 const {
   permissions,
   items,
@@ -86,7 +90,6 @@ const {
   searchTerm,
   groups,
   totalVisible,
-  reload,
   isGroupExpanded,
   toggleGroup,
   navigateTo,
@@ -95,6 +98,8 @@ const {
   formatDate,
   formatCurrency
 } = useSupplierQuotationIndex()
+
+const shouldBlockUi = computed(() => loading.value && hasUninitiatedDependencies.value)
 </script>
 
 <style scoped>

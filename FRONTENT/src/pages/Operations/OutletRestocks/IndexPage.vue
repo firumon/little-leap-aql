@@ -6,7 +6,7 @@
         <div>
           <div class="text-h6">Outlet Restocks</div>
         </div>
-        <q-btn icon="refresh" flat round dense :loading="loading" @click="reloadIndex(true)" />
+        <ReloadButton />
       </div>
       <div class="text-caption text-grey-7 q-mb-sm">Stock replenishment · request, approve, deliver</div>
       <q-input v-model="searchTerm" dense outlined clearable placeholder="Search outlets..." class="restock-search">
@@ -15,15 +15,15 @@
     </div>
 
     <!-- Background loading indicator -->
-    <q-linear-progress v-if="loading && !isInitialLoad" color="primary" indeterminate class="q-mb-sm" />
+    <q-linear-progress v-if="loading && !shouldBlockUi" color="primary" indeterminate class="q-mb-sm" />
 
     <!-- Initial load spinner -->
-    <div v-if="isInitialLoad && loading" class="text-center q-pa-xl">
+    <div v-if="shouldBlockUi" class="text-center q-pa-xl">
       <q-spinner color="primary" size="3em" />
     </div>
 
     <!-- Empty state -->
-    <div v-else-if="!items.length && !loading" class="text-center q-pa-xl">
+    <div v-else-if="!items.length" class="text-center q-pa-xl">
       <q-icon name="inventory_2" size="4em" color="grey-5" class="q-mb-sm" />
       <div class="text-h6 q-mt-md">No restock requests yet</div>
       <div class="text-caption text-grey-7 q-mb-lg">Start by creating a restock request.</div>
@@ -194,15 +194,18 @@ import { useOutletVisits } from '../../../composables/operations/outlets/useOutl
 import RestockSummaryBar from '../../../components/Operations/Outlets/RestockSummaryBar.vue'
 import RestockCard from '../../../components/Operations/Outlets/RestockCard.vue'
 import { RESTOCK_PROGRESS_ORDER, active, text, sortTime } from '../../../composables/operations/outlets/outletOperationsMeta.js'
+import ReloadButton from '../../../components/shared/ReloadButton.vue'
+import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
 
 defineOptions({ name: 'OutletRestocksIndexPage' })
 
 const flow = useOutletRestocks()
 const visitsFlow = useOutletVisits()
+const { hasUninitiatedDependencies } = useResourceReload()
 const { todayVisits, thisWeekVisits } = visitsFlow
 const { loading, searchTerm, items, reloadIndex, navigateTo, navigateToAdd, itemProgressSummary, resourcePerms, canCreate: userCanCreate, canApprove: userCanApprove } = flow
 
-const isInitialLoad = ref(true)
+const shouldBlockUi = computed(() => loading.value && hasUninitiatedDependencies.value)
 const historyExpanded = ref(false)
 
 const historyFilterOptions = [
@@ -331,7 +334,6 @@ async function doReload() {
     reloadIndex(true),
     visitsFlow.reloadIndex(true)
   ])
-  isInitialLoad.value = false
 }
 
 onMounted(() => doReload())

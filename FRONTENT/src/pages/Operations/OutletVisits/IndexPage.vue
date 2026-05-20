@@ -5,7 +5,7 @@
         <div class="visit-header__title">
           <div class="text-h6">Outlet Visits</div>
         </div>
-        <q-btn icon="refresh" flat round dense :loading="loading" @click="reloadIndex(true)" />
+        <ReloadButton />
       </div>
       <div class="text-caption text-grey-7 q-mb-sm">Sales field planner · plan, visit, track</div>
       <q-input v-model="searchTerm" dense outlined clearable placeholder="Search outlets..." class="visit-search">
@@ -13,9 +13,9 @@
       </q-input>
     </div>
 
-    <q-linear-progress v-if="loading && !isInitialLoad" color="primary" indeterminate class="q-mb-sm" />
+    <q-linear-progress v-if="loading && !shouldBlockUi" color="primary" indeterminate class="q-mb-sm" />
 
-    <div v-if="isInitialLoad && loading" class="text-center q-pa-xl">
+    <div v-if="shouldBlockUi" class="text-center q-pa-xl">
       <q-spinner color="primary" size="3em" />
     </div>
 
@@ -305,10 +305,13 @@ import { todayISO } from '../../../composables/operations/outlets/outletOperatio
 import { useOutletVisits } from '../../../composables/operations/outlets/useOutletVisits.js'
 import VisitCard from '../../../components/Operations/Outlets/VisitCard.vue'
 import VisitSummaryBar from '../../../components/Operations/Outlets/VisitSummaryBar.vue'
+import ReloadButton from '../../../components/shared/ReloadButton.vue'
+import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
 
 defineOptions({ name: 'OutletVisitsIndexPage' })
 
 const flow = useOutletVisits()
+const { hasUninitiatedDependencies } = useResourceReload()
 const {
   loading, saving, searchTerm,
   summaryStats, overdueVisits, todayVisits, thisWeekVisits, futureVisits,
@@ -320,7 +323,6 @@ const {
   historyStatusFilter, historyDateFrom, historyDateTo
 } = flow
 
-const isInitialLoad = ref(true)
 const thisWeekExpanded = ref(false)
 const futureExpanded = ref(false)
 const historyExpanded = ref(false)
@@ -335,6 +337,7 @@ const historyFilterOptions = [
 ]
 
 const isGloballyEmpty = computed(() => summaryStats.value.total === 0 && !historyVisits.value.length)
+const shouldBlockUi = computed(() => loading.value && hasUninitiatedDependencies.value)
 
 const postponeDialog = ref(false)
 const postponeTarget = ref(null)
@@ -440,7 +443,6 @@ watch(summaryStats, (stats) => {
 
 onMounted(async () => {
   await reloadIndex()
-  isInitialLoad.value = false
 })
 </script>
 

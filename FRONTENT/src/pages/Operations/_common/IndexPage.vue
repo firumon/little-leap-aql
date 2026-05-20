@@ -34,7 +34,7 @@
     <component
       :is="sections.ListRecords"
       :items="displayedItems"
-      :loading="loading"
+      :loading="shouldBlockUi"
       :resolved-fields="resolvedFields"
       :child-count-map="childCountMap"
       :resource-slug="resourceSlug"
@@ -86,11 +86,14 @@ import { useResourceRelations } from 'src/composables/resources/useResourceRelat
 import { useReports } from 'src/composables/reports/useReports'
 import { useListViews } from 'src/composables/useListViews'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
+import { useResourceReload } from 'src/composables/resources/useResourceReload'
 
 const nav = useResourceNav()
 const { scope, resourceSlug, config, resourceName, resourceHeaders, resolvedFields, permissions, customUIName } = useResourceConfig()
 const { items, loading, backgroundSyncing, searchTerm, reload } = useResourceData(resourceName)
 const { childResources } = useResourceRelations(resourceName)
+const { hasUninitiatedDependencies } = useResourceReload()
+const shouldBlockUi = computed(() => loading.value && hasUninitiatedDependencies.value)
 
 const configuredListViews = computed(() => config.value?.ui?.listViews || [])
 const configuredListViewsMode = computed(() => config.value?.ui?.listViewsMode || '')

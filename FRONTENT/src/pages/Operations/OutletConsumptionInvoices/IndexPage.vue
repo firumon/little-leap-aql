@@ -4,10 +4,16 @@
       <div class="text-h6">Consumption Invoices</div>
       <q-space />
       <q-input v-model="searchTerm" dense outlined placeholder="Search" class="q-mr-sm" />
-      <q-btn icon="refresh" flat round :loading="loading" @click="reload(true)" />
+      <ReloadButton />
     </div>
 
-    <q-list v-if="invoiceGroups.length" class="q-gutter-y-sm">
+    <q-linear-progress v-if="loading && !shouldBlockUi" color="primary" indeterminate class="q-mb-sm" />
+
+    <div v-if="shouldBlockUi" class="text-center q-pa-xl">
+      <q-spinner color="primary" size="3em" />
+    </div>
+
+    <q-list v-else-if="invoiceGroups.length" class="q-gutter-y-sm">
       <q-expansion-item
         v-for="group in invoiceGroups"
         :key="group.key"
@@ -34,20 +40,21 @@
         </q-list>
       </q-expansion-item>
     </q-list>
-    <div v-else-if="loading" class="text-center q-pa-xl">
-      <q-spinner color="primary" size="3em" />
-    </div>
     <div v-else class="text-center q-pa-xl text-grey">No consumption invoices found.</div>
   </q-page>
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useOutletConsumption } from '../../../composables/operations/outlets/useOutletConsumption.js'
 import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'
+import ReloadButton from '../../../components/shared/ReloadButton.vue'
+import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
 
 defineOptions({ name: 'OutletConsumptionInvoicesIndexPage' })
 const flow = useOutletConsumption()
+const { hasUninitiatedDependencies } = useResourceReload()
 const { loading, searchTerm, invoiceGroups, reload, navigateToInvoice, outletName, formatDisplayDate, isInvoiceGroupExpanded, toggleInvoiceGroup } = flow
+const shouldBlockUi = computed(() => loading.value && hasUninitiatedDependencies.value)
 onMounted(() => reload())
 </script>

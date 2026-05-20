@@ -7,9 +7,7 @@
             <div class="text-h6">Request for Quotations</div>
             <div class="text-caption text-grey-6">{{ totalVisible }} visible · {{ items.length }} total</div>
           </div>
-          <q-btn flat round icon="refresh" color="primary" :loading="loading" @click="reload(true)">
-            <q-tooltip>Sync from server</q-tooltip>
-          </q-btn>
+          <ReloadButton />
         </div>
         <q-input v-model="searchTerm" dense outlined clearable placeholder="Search RFQs" class="q-mt-sm">
           <template #prepend><q-icon name="search" /></template>
@@ -17,7 +15,9 @@
       </q-card-section>
     </q-card>
 
-    <div v-if="loading && !items.length" class="text-center q-py-xl">
+    <q-linear-progress v-if="loading && !shouldBlockUi" color="primary" indeterminate class="q-mb-sm" />
+
+    <div v-if="shouldBlockUi" class="text-center q-py-xl">
       <q-spinner-dots color="primary" size="36px" />
     </div>
     <template v-else>
@@ -75,13 +75,16 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { useRFQIndex } from 'src/composables/operations/rfqs/useRFQIndex'
+import ReloadButton from '../../../components/shared/ReloadButton.vue'
+import { useResourceReload } from 'src/composables/resources/useResourceReload'
 
+const { hasUninitiatedDependencies } = useResourceReload()
 const {
   permissions,
   items,
   loading,
-  reload,
   searchTerm,
   visibleGroups,
   totalVisible,
@@ -92,6 +95,8 @@ const {
   navigateTo,
   navigateToAdd
 } = useRFQIndex()
+
+const shouldBlockUi = computed(() => loading.value && hasUninitiatedDependencies.value)
 </script>
 
 <style scoped>

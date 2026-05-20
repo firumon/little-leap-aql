@@ -5,7 +5,7 @@
         <div class="col">
           <div class="text-h6">Outlet Deliveries</div>
         </div>
-        <q-btn icon="refresh" flat round dense :loading="loading" @click="reloadIndex(true)" />
+        <ReloadButton />
       </div>
       <div class="text-caption text-grey-7 q-mb-sm">Delivery headers with item-level tracking</div>
       <q-input v-model="searchTerm" dense outlined clearable placeholder="Search deliveries..." style="max-width: 480px">
@@ -13,9 +13,9 @@
       </q-input>
     </div>
 
-    <q-linear-progress v-if="loading && !isInitialLoad" color="primary" indeterminate class="q-mb-sm" />
+    <q-linear-progress v-if="loading && !shouldBlockUi" color="primary" indeterminate class="q-mb-sm" />
 
-    <div v-if="isInitialLoad && loading" class="text-center q-pa-xl">
+    <div v-if="shouldBlockUi" class="text-center q-pa-xl">
       <q-spinner color="primary" size="3em" />
     </div>
 
@@ -75,14 +75,18 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useOutletDeliveries } from '../../../composables/operations/outlets/useOutletDeliveries.js'
 import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'
+import ReloadButton from '../../../components/shared/ReloadButton.vue'
+import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
 
 defineOptions({ name: 'OutletDeliveriesIndexPage' })
 
 const flow = useOutletDeliveries()
-const { loading, isInitialLoad, searchTerm, items, groups, availableItems, reloadIndex, navigateTo, navigateToAdd, deliverySummary, timeAgo, canCreate } = flow
+const { hasUninitiatedDependencies } = useResourceReload()
+const { loading, searchTerm, items, groups, availableItems, reloadIndex, navigateTo, navigateToAdd, deliverySummary, timeAgo, canCreate } = flow
+const shouldBlockUi = computed(() => loading.value && hasUninitiatedDependencies.value)
 
 onMounted(async () => {
   await reloadIndex()

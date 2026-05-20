@@ -7,13 +7,7 @@
             <div class="pr-header-title">Purchase Requisitions</div>
             <div class="pr-header-sub">{{ totalVisible }} visible · {{ items.length }} total</div>
           </div>
-          <q-btn
-            flat round icon="refresh" color="primary" size="sm"
-            :loading="loading"
-            @click="reload(true)"
-          >
-            <q-tooltip>Sync from server</q-tooltip>
-          </q-btn>
+          <ReloadButton />
         </div>
 
         <q-input
@@ -30,7 +24,9 @@
       </q-card-section>
     </q-card>
 
-    <div v-if="!loading || items.length">
+    <q-linear-progress v-if="loading && !shouldBlockUi" color="primary" indeterminate class="q-mb-sm" />
+
+    <div v-if="!shouldBlockUi">
       <div
         v-for="group in visibleGroups"
         :key="group.key"
@@ -147,7 +143,7 @@
       <div class="text-caption text-grey-5 q-mt-sm">Loading requisitions…</div>
     </div>
 
-    <div v-if="!loading && totalVisible === 0 && items.length === 0" class="pr-empty column items-center justify-center q-py-xl">
+    <div v-if="!shouldBlockUi && totalVisible === 0 && items.length === 0" class="pr-empty column items-center justify-center q-py-xl">
       <q-icon name="description" size="48px" color="grey-4" />
       <div class="text-subtitle2 text-grey-5 q-mt-sm">No purchase requisitions yet</div>
       <q-btn color="primary" icon="add" label="Create First PR" class="q-mt-md" @click="navigateToAdd" />
@@ -168,13 +164,16 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { usePurchaseRequisitionIndex } from 'src/composables/operations/purchaseRequisitions/usePurchaseRequisitionIndex'
+import ReloadButton from '../../../components/shared/ReloadButton.vue'
+import { useResourceReload } from 'src/composables/resources/useResourceReload'
 
+const { hasUninitiatedDependencies } = useResourceReload()
 const {
   permissions,
   items,
   loading,
-  reload,
   searchTerm,
   visibleGroups,
   totalVisible,
@@ -186,6 +185,8 @@ const {
   navigateTo,
   navigateToAdd
 } = usePurchaseRequisitionIndex()
+
+const shouldBlockUi = computed(() => loading.value && hasUninitiatedDependencies.value)
 </script>
 
 <style scoped>

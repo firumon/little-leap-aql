@@ -1,11 +1,12 @@
 <template>
   <q-page padding>
-    <div class="row items-center q-mb-md">
-      <div class="text-h6">PO Receiving</div><q-space />
-      <q-input v-model="searchTerm" dense outlined placeholder="Search receiving..." class="q-mr-sm" />
-      <q-btn icon="refresh" flat round color="primary" :loading="loading" @click="reload(true)" />
-    </div>
-    <div v-if="loading && !items.length" class="flex flex-center q-pa-xl"><q-spinner color="primary" size="3em" /></div>
+<div class="row items-center q-mb-md">
+  <div class="text-h6">PO Receiving</div><q-space />
+  <q-input v-model="searchTerm" dense outlined placeholder="Search receiving..." class="q-mr-sm" />
+  <ReloadButton />
+</div>
+    <q-linear-progress v-if="loading && !shouldBlockUi" color="primary" indeterminate class="q-mb-sm" />
+    <div v-if="shouldBlockUi" class="flex flex-center q-pa-xl"><q-spinner color="primary" size="3em" /></div>
     <q-list v-else-if="groups.length" class="q-gutter-y-sm">
       <q-expansion-item v-for="group in groups" :key="group.key" :label="group.meta.label" :caption="`${group.items.length} records`" :default-opened="isGroupExpanded(group.key)" @update:model-value="toggleGroup(group.key)" header-class="bg-grey-2 text-weight-bold" class="shadow-1 rounded-borders overflow-hidden">
         <q-list separator>
@@ -25,11 +26,15 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { usePOReceivingIndex } from '../../../composables/operations/poReceivings/usePOReceivingIndex.js'
+import ReloadButton from '../../../components/shared/ReloadButton.vue'
+import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
 
 defineOptions({ name: 'PoReceivingsIndexPage' })
 const flow = usePOReceivingIndex()
-const { permissions, items, groups, loading, searchTerm, reload, isGroupExpanded, toggleGroup, navigateTo, navigateToAdd, purchaseOrderLabel, formatDate } = flow
+const { hasUninitiatedDependencies } = useResourceReload()
+const { permissions, items, groups, loading, searchTerm, isGroupExpanded, toggleGroup, navigateTo, navigateToAdd, purchaseOrderLabel, formatDate } = flow
+const shouldBlockUi = computed(() => loading.value && hasUninitiatedDependencies.value)
 onMounted(() => flow.reload())
 </script>

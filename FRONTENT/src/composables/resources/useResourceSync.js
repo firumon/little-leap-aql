@@ -1,20 +1,16 @@
 /**
  * useResourceSync — Resource sync orchestration composable
  * Manages sync queue, TTL logic, and background sync
- * Extracted from ResourceRecordsService
- * Uses ResourceSyncQueueService internally
+ * Uses resource IO store as the store boundary
  */
 
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from 'src/stores/auth'
-import { useSyncStore } from 'src/stores/sync'
-import { createLogger } from 'src/services/_logger'
-
-const logger = createLogger('useResourceSync')
+import { useResourceIoStore } from 'src/stores/resourceIo'
 
 export function useResourceSync() {
   const auth = useAuthStore()
-  const syncStore = useSyncStore()
+  const resourceIoStore = useResourceIoStore()
 
   const isSyncing = ref(false)
   const lastSyncTime = ref(null)
@@ -34,25 +30,21 @@ export function useResourceSync() {
   })
 
   // Queue a single resource for sync
-  function syncResource(resourceName, priority = 'normal') {
+  function syncResource(resourceName) {
     try {
       const now = Date.now()
-      const dueAt = priority === 'force' ? now : (priority === 'immediate' ? now : now + 5000)
-      syncStore.queueResource(resourceName, dueAt, priority)
-      logger.debug('Queued sync', { resource: resourceName, priority })
+      resourceIoStore.queueResource(resourceName, now, 'manual')
       return { success: true }
     } catch (error) {
-      logger.error('Queue sync failed', { resource: resourceName, error: error.message })
       return { success: false, error: error.message }
     }
   }
 
   // Flush all queued syncs
-  async function flushQueue(forceAll = false) {
+  async function flushQueue() {
     try {
-      logger.info('Flushing sync queue', { forceAll })
       isSyncing.value = true
-      const result = await syncStore.flushQueue(forceAll, {
+      const result = await resourceIoStore.flushQueue({
         showError: true,
         showLoading: false
       })
@@ -60,10 +52,8 @@ export function useResourceSync() {
       if (!result.success) {
         syncErrors.value.push(result.error || 'Flush failed')
       }
-      logger.info('Sync queue flushed', { success: result.success })
       return result
     } catch (error) {
-      logger.error('Flush queue failed', { error: error.message })
       syncErrors.value.push(error.message)
       return { success: false, error: error.message }
     } finally {
@@ -74,24 +64,22 @@ export function useResourceSync() {
   // Sync all authorized resources (full global sync)
   async function syncAllResources(showLoading = true) {
     try {
-      logger.info('Starting global resource sync')
       if (showLoading) {
         isSyncing.value = true
       }
 
-      const result = await syncStore.syncAll()
+      const result = await resourceIoStore.syncResources(
+        syncableResources.value.map((resource) => resource.name).filter(Boolean),
+        { showLoading }
+      )
       lastSyncTime.value = Date.now()
 
       if (!result.success) {
         syncErrors.value.push(result.error || 'Global sync failed')
-        logger.error('Global sync failed', { error: result.error })
-      } else {
-        logger.info('Global sync completed', { resources: result.data?.resources?.length })
       }
 
       return result
     } catch (error) {
-      logger.error('Global sync error', { error: error.message })
       syncErrors.value.push(error.message)
       return { success: false, error: error.message }
     } finally {
@@ -102,21 +90,19 @@ export function useResourceSync() {
   }
 
   // Sync specific resources
-  async function syncResources(resourceNames = [], priority = 'normal') {
+  async function syncResources(resourceNames = []) {
     try {
-      logger.info('Syncing resources', { count: resourceNames?.length || 0 })
       isSyncing.value = true
 
       const now = Date.now()
       const names = Array.isArray(resourceNames) ? resourceNames : []
 
       for (const name of names) {
-        syncStore.queueResource(name, now, priority)
+        resourceIoStore.queueResource(name, now, 'manual')
       }
 
-      return await flushQueue(true)
+      return await flushQueue()
     } catch (error) {
-      logger.error('Sync resources failed', { error: error.message })
       syncErrors.value.push(error.message)
       return { success: false, error: error.message }
     } finally {
@@ -135,7 +121,9 @@ export function useResourceSync() {
     const checkSync = setInterval(() => {
       if (!auth.isGlobalSyncing && lastSyncTime.value === null) {
         // Global sync not happening and we haven't synced yet, trigger it
-        syncAllResources(false).catch(err => logger.warn('Onmount sync failed', { error: err.message }))
+        syncAllResources(false).catch((err) => {
+          syncErrors.value.push(err?.message || 'Background sync failed')
+        })
         clearInterval(checkSync)
       }
     }, 1000)

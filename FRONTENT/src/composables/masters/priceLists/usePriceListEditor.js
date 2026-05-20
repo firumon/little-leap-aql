@@ -1,14 +1,14 @@
 import { ref, computed } from 'vue'
 import { useAuthStore } from 'src/stores/auth'
 import { useDataStore } from 'src/stores/data'
-import { useWorkflowStore } from 'src/stores/workflow'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 import { parseVariantTypes } from 'src/composables/masters/products/useProductVariants'
 import { useApiErrorNotify } from 'src/composables/useApiErrorNotify'
 
 export function usePriceListEditor() {
   const authStore = useAuthStore()
   const dataStore = useDataStore()
-  const workflowStore = useWorkflowStore()
+  const resourceIoStore = useResourceIoStore()
   const { notifyApiError } = useApiErrorNotify()
 
   const expandedCode = ref('')
@@ -238,7 +238,7 @@ export function usePriceListEditor() {
     }
 
     if (!records.length) return { success: true }
-    const response = await workflowStore.uploadBulkRecords('PriceListItems', records)
+    const response = await resourceIoStore.uploadBulkRecords('PriceListItems', records)
     notifyApiError(response, { fallbackMessage: 'Failed to save price list items' })
     return response
   }
@@ -251,7 +251,7 @@ export function usePriceListEditor() {
       if (!isNaN(num)) priceObj[skuCode] = num
     }
 
-    const response = await workflowStore.updateResourceRecord('PriceList', code, {
+    const response = await resourceIoStore.updateResourceRecord('PriceList', code, {
       SKUPrices: JSON.stringify(priceObj)
     })
     notifyApiError(response, { fallbackMessage: 'Failed to save price list prices' })
@@ -263,7 +263,7 @@ export function usePriceListEditor() {
     saving.value = true
     try {
       if (headerChanged.value && editingHeader.value) {
-        const headerResponse = await workflowStore.updateResourceRecord('PriceList', expandedCode.value, {
+        const headerResponse = await resourceIoStore.updateResourceRecord('PriceList', expandedCode.value, {
           Name: editingHeader.value.Name,
           Description: editingHeader.value.Description,
           Currency: editingHeader.value.Currency,

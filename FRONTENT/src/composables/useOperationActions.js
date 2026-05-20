@@ -1,10 +1,10 @@
 import { ref } from 'vue'
 import { useQuasar } from 'quasar'
-import { useWorkflowStore } from 'src/stores/workflow'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 
 export function useOperationActions() {
   const $q = useQuasar()
-  const workflowStore = useWorkflowStore()
+  const resourceIoStore = useResourceIoStore()
   const submitting = ref(false)
 
   async function submitAction({ resourceName, code, actionConfig, selectedOutcome, fields = {}, resolvedFields = [], onSuccess = null }) {
@@ -17,7 +17,7 @@ export function useOperationActions() {
 
     submitting.value = true
     try {
-      const response = await workflowStore.executeResourceAction(resourceName, code, {
+      const response = await resourceIoStore.executeResourceAction(resourceName, code, {
         ...actionConfig,
         columnValue: selectedOutcome || actionConfig?.columnValue || ''
       }, fields)

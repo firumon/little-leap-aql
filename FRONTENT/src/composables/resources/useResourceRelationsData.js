@@ -1,10 +1,12 @@
 import { ref, unref } from 'vue'
 import { useDataStore } from 'src/stores/data'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceRelations } from 'src/composables/resources/useResourceRelations'
 import { findParentCodeField } from 'src/utils/appHelpers'
 
 export function useResourceRelationsData(resourceNameRef) {
   const dataStore = useDataStore()
+  const resourceIoStore = useResourceIoStore()
   const { childResources, parentResource } = useResourceRelations(resourceNameRef)
   const childRecordsByResource = ref({})
   const parentRecord = ref(null)
@@ -19,7 +21,7 @@ export function useResourceRelationsData(resourceNameRef) {
     const nextMap = {}
     for (const child of childResources.value) {
       try {
-        await dataStore.loadResource(child.name, options)
+        await resourceIoStore.fetchResource(child.name, options)
         const parentCodeField = findParentCodeField(child, parentConfig)
         nextMap[child.name] = dataStore.getRecords(child.name).filter((row) => row[parentCodeField] === resolvedParentCode)
       } catch {
@@ -45,7 +47,7 @@ export function useResourceRelationsData(resourceNameRef) {
     }
 
     try {
-      await dataStore.loadResource(parentResource.value.name, options)
+      await resourceIoStore.fetchResource(parentResource.value.name, options)
       parentRecord.value = dataStore.getRecords(parentResource.value.name).find((row) => row.Code === parentCode) || null
     } catch {
       parentRecord.value = null

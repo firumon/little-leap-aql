@@ -20,16 +20,16 @@
 
 import { useQuasar } from 'quasar'
 import { useDataStore } from 'src/stores/data'
-import { useWorkflowStore } from 'src/stores/workflow'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 
 export function useStockMovements() {
   const $q = useQuasar()
   const dataStore = useDataStore()
-  const workflowStore = useWorkflowStore()
+  const resourceIoStore = useResourceIoStore()
 
   async function loadWarehouses() {
     try {
-      await dataStore.loadResource('Warehouses', {})
+      await resourceIoStore.fetchResource('Warehouses', {})
       return dataStore.getRecords('Warehouses')
     } catch {
       return []
@@ -39,8 +39,8 @@ export function useStockMovements() {
   async function loadSkusWithProducts() {
     try {
       await Promise.all([
-        dataStore.loadResource('SKUs', {}),
-        dataStore.loadResource('Products', {})
+        resourceIoStore.fetchResource('SKUs', {}),
+        resourceIoStore.fetchResource('Products', {})
       ])
       const skus = dataStore.getRecords('SKUs')
       const prods = dataStore.getRecords('Products')
@@ -61,7 +61,7 @@ export function useStockMovements() {
   async function loadStoragesForWarehouse(warehouseCode, forceSync = false) {
     if (!warehouseCode) return []
     try {
-      await dataStore.loadResource('WarehouseStorages', { forceSync })
+      await resourceIoStore.fetchResource('WarehouseStorages', { forceSync })
       const records = dataStore.getRecords('WarehouseStorages')
       return records.filter(r => r.WarehouseCode === warehouseCode)
     } catch {
@@ -96,7 +96,7 @@ export function useStockMovements() {
     }))
 
     try {
-      const batchResult = await workflowStore.runBatchRequests([
+      const batchResult = await resourceIoStore.runBatchRequests([
         {
           action: 'create',
           resource: 'StockMovements',

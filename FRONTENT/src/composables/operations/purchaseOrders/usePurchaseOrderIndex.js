@@ -2,7 +2,7 @@ import { ref, computed } from 'vue';
 import { useResourceData } from '../../resources/useResourceData.js';
 import { useResourceConfig } from '../../resources/useResourceConfig.js';
 import { useResourceNav } from '../../resources/useResourceNav.js';
-import { useWorkflowStore } from '../../../stores/workflow.js';
+import { useResourceIoStore } from 'src/stores/resourceIo';
 import { PROGRESS_ORDER, formatDate, formatCurrency } from './purchaseOrderMeta.js';
 
 function text(value) {
@@ -21,7 +21,7 @@ export function usePurchaseOrderIndex() {
     const { permissions } = useResourceConfig();
     const purchaseOrders = useResourceData(ref('PurchaseOrders'));
     const suppliersResource = useResourceData(ref('Suppliers'));
-    const workflowStore = useWorkflowStore();
+    const resourceIoStore = useResourceIoStore();
     const nav = useResourceNav();
 
     const loading = ref(false);
@@ -77,7 +77,7 @@ export function usePurchaseOrderIndex() {
     const reload = async (forceSync = false) => {
         loading.value = true;
         try {
-            await workflowStore.fetchResources(['PurchaseOrders', 'Suppliers', 'Warehouses'], { forceSync });
+            await resourceIoStore.fetchResources(['PurchaseOrders', 'Suppliers', 'Warehouses'], { forceSync });
         } finally {
             loading.value = false;
         }

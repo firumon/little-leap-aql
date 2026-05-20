@@ -1,7 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { executeGasApi } from 'src/services/GasApiService'
-import { useClientCacheStore } from 'src/stores/clientCache'
+import { useResourceStatusStore } from 'src/stores/resourceStatus'
+import {
+  clearAllStorage,
+  initializeDb,
+  setAuthorizedResources
+} from 'src/services/ResourceIoService'
 
 function normalizeResponse(response, fallbackData = null) {
   if (response && typeof response === 'object' && 'success' in response) {
@@ -62,18 +67,6 @@ export const useAuthStore = defineStore('auth', () => {
   const authorizedResources = computed(() => resources.value)
   const appConfigMap = computed(() => appConfig.value || {})
   const appOptionsMap = computed(() => appOptions.value || {})
-  const scopeSyncConfig = computed(() => {
-    const config = appConfig.value || {}
-    const pickNumber = (value, fallback) => {
-      const parsed = Number(value)
-      return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
-    }
-    return {
-      masterSyncTTL: pickNumber(config.MasterSyncTTL ?? config.masterSyncTTL ?? config.mastersyncttl, 900),
-      accountsSyncTTL: pickNumber(config.AccountsSyncTTL ?? config.accountsSyncTTL ?? config.accountssyncttl, 60),
-      operationsSyncTTL: pickNumber(config.OperationsSyncTTL ?? config.operationsSyncTTL ?? config.operationssyncttl, 300)
-    }
-  })
 
   function persistSession() {
     localStorage.setItem('token', token.value || '')
@@ -110,6 +103,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   function clearSessionState() {
+    const resourceStatus = useResourceStatusStore()
     user.value = null
     token.value = null
     resources.value = []
@@ -117,6 +111,7 @@ export const useAuthStore = defineStore('auth', () => {
     appOptions.value = {}
     loading.value = false
     isGlobalSyncing.value = false
+    resourceStatus.reset()
     clearPersistedSession()
     notifyServiceWorker(null)
   }
@@ -148,15 +143,16 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function initializeClientSession(resetCursors = true) {
-    const clientCache = useClientCacheStore()
-    await clientCache.initializeDb()
-    return clientCache.setAuthorizedResources(resources.value || [], resetCursors)
+    const resourceStatus = useResourceStatusStore()
+    await initializeDb()
+    const response = await setAuthorizedResources(resources.value || [], resetCursors)
+    await resourceStatus.initializeResources(resources.value || [], appConfig.value || {})
+    return response
   }
 
   async function clearClientSession() {
-    const clientCache = useClientCacheStore()
     closeDBInServiceWorker()
-    return clientCache.clearAllStorage()
+    return clearAllStorage()
   }
 
   async function loginRequest(identifier, password) {
@@ -204,7 +200,6 @@ export const useAuthStore = defineStore('auth', () => {
     authorizedResources,
     appConfigMap,
     appOptionsMap,
-    scopeSyncConfig,
 
     // Actions
     applySessionData,

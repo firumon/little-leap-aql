@@ -1,7 +1,7 @@
 import { computed, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
-import { useWorkflowStore } from 'src/stores/workflow'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceConfig, isActionVisible } from 'src/composables/resources/useResourceConfig'
 import { useResourceData } from 'src/composables/resources/useResourceData'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
@@ -34,7 +34,7 @@ function firstFailureMessage(response, fallback) {
 export function useSupplierQuotationView() {
   const $q = useQuasar()
   const auth = useAuthStore()
-  const workflowStore = useWorkflowStore()
+  const resourceIoStore = useResourceIoStore()
   const nav = useResourceNav()
   const { code, additionalActions } = useResourceConfig()
 
@@ -145,7 +145,7 @@ export function useSupplierQuotationView() {
 
     saving.value = true
     try {
-      const response = await workflowStore.runBatchRequests([
+      const response = await resourceIoStore.runBatchRequests([
         {
           action: 'compositeSave',
           resource: 'SupplierQuotations',
@@ -187,7 +187,7 @@ export function useSupplierQuotationView() {
 
     rejecting.value = true
     try {
-      const response = await workflowStore.executeResourceAction(
+      const response = await resourceIoStore.executeResourceAction(
         'SupplierQuotations',
         record.value.Code,
         rejectAction.value,

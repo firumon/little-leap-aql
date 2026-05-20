@@ -3,7 +3,7 @@ import { useQuasar } from 'quasar'
 import { buildPurchaseRequisitionSkuInfo } from '../purchaseRequisitions/purchaseRequisitionSkuOptions.js'
 import { useAuthStore } from '../../../stores/auth.js'
 import { useResourceData } from '../../resources/useResourceData.js'
-import { useWorkflowStore } from '../../../stores/workflow.js'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceNav } from '../../resources/useResourceNav.js'
 import {
   acceptedReceiptItemCount,
@@ -36,7 +36,7 @@ function userLabel(auth) { return auth.user?.name || auth.user?.Name || auth.use
 export function usePOReceivingAddFlow() {
   const $q = useQuasar()
   const auth = useAuthStore()
-  const workflowStore = useWorkflowStore()
+  const resourceIoStore = useResourceIoStore()
   const nav = useResourceNav()
   const purchaseOrders = useResourceData(ref('PurchaseOrders'))
   const poItems = useResourceData(ref('PurchaseOrderItems'))
@@ -134,7 +134,7 @@ export function usePOReceivingAddFlow() {
   async function loadData(forceSync = false) {
     loading.value = true
     try {
-      await workflowStore.fetchResources(PO_RECEIVING_RESOURCES, { forceSync })
+      await resourceIoStore.fetchResources(PO_RECEIVING_RESOURCES, { forceSync })
       if (selectedPurchaseOrderCode.value) hydrateReceiving(currentReceiving.value || latestReceivingForSelectedPo())
     } finally {
       loading.value = false
@@ -191,7 +191,7 @@ export function usePOReceivingAddFlow() {
         if (update) requests.push(update)
       }
       requests.push(refreshRequest())
-      const result = await workflowStore.runBatchRequests(requests)
+      const result = await resourceIoStore.runBatchRequests(requests)
       if (responseFailed(result)) return $q.notify({ type: 'negative', message: failureMessage(result, 'Failed to save receiving draft.'), position: 'top' })
       const parentCode = batchParentCode(result)
       if (parentCode) {
@@ -225,7 +225,7 @@ export function usePOReceivingAddFlow() {
         if (update) requests.push(update)
       }
       requests.push(refreshRequest())
-      const result = await workflowStore.runBatchRequests(requests)
+      const result = await resourceIoStore.runBatchRequests(requests)
       if (responseFailed(result)) return $q.notify({ type: 'negative', message: failureMessage(result, 'Failed to confirm receiving.'), position: 'top' })
       $q.notify({ type: 'positive', message: 'Receiving confirmed.', position: 'top' })
       nav.goTo('view', { code: form.value.Code })
@@ -242,7 +242,7 @@ export function usePOReceivingAddFlow() {
         ...buildGenerateGrnRequests(form.value, items.value, selectedPurchaseOrder.value, procurement.value),
         refreshRequest(['POReceivings', 'POReceivingItems', 'GoodsReceipts', 'GoodsReceiptItems', 'PurchaseOrders', 'Procurements'])
       ]
-      const result = await workflowStore.runBatchRequests(requests)
+      const result = await resourceIoStore.runBatchRequests(requests)
       if (responseFailed(result)) return $q.notify({ type: 'negative', message: failureMessage(result, 'Failed to generate GRN.'), position: 'top' })
       const grnCode = batchParentCode(result)
       $q.notify({ type: 'positive', message: 'GRN generated.', position: 'top' })
@@ -260,7 +260,7 @@ export function usePOReceivingAddFlow() {
         ...buildCancelReceivingRequests(currentReceiving.value, linkedGrn.value, goodsReceiptItems.items.value, procurement.value, SYSTEM_REPLACEMENT_REASON),
         refreshRequest()
       ]
-      const result = await workflowStore.runBatchRequests(requests)
+      const result = await resourceIoStore.runBatchRequests(requests)
       if (responseFailed(result)) return $q.notify({ type: 'negative', message: failureMessage(result, 'Failed to start replacement receiving.'), position: 'top' })
       await loadData(true)
       selectedReceivingCode.value = ''

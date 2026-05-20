@@ -5,7 +5,7 @@ import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useResourceData } from 'src/composables/resources/useResourceData'
 import { useStockMovements } from 'src/composables/operations/stock/useStockMovements'
 import { useAuthStore } from 'src/stores/auth'
-import { useWorkflowStore } from 'src/stores/workflow'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useProcurements } from 'src/composables/operations/procurements/useProcurements'
 import {
   mapPurchaseRequisitionPriorityOptions,
@@ -29,7 +29,7 @@ export function usePurchaseRequisitionEditableFlow() {
   const nav = useResourceNav()
   const { loadWarehouses } = useStockMovements()
   const auth = useAuthStore()
-  const workflowStore = useWorkflowStore()
+  const resourceIoStore = useResourceIoStore()
   const procurements = useProcurements()
 
   const prCode = route.params.code
@@ -307,7 +307,7 @@ export function usePurchaseRequisitionEditableFlow() {
 
     saving.value = true
     try {
-      const response = await workflowStore.saveComposite(buildPayload(prForm.value.Progress, extraFields))
+      const response = await resourceIoStore.saveComposite(buildPayload(prForm.value.Progress, extraFields))
       if (!response.success) {
         $q.notify({ type: 'negative', message: response.error || response.message || 'Failed to update PR' })
         return { success: false, response }
@@ -352,7 +352,7 @@ export function usePurchaseRequisitionEditableFlow() {
 
         submitting.value = true
         try {
-          const response = await workflowStore.runBatchRequests(requestResult.requests)
+          const response = await resourceIoStore.runBatchRequests(requestResult.requests)
           const failed = (response.data || []).find((entry) => entry?.success === false)
           if (!response.success || failed) {
             const message = failed?.error || failed?.message || response.error || 'Failed to submit PR'

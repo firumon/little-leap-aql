@@ -1,7 +1,7 @@
 import { computed, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
-import { useWorkflowStore } from 'src/stores/workflow'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceData } from 'src/composables/resources/useResourceData'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { mapOptions, formatCurrency, formatDate } from './supplierQuotationMeta'
@@ -38,7 +38,7 @@ function resultCode(entry) {
 export function useSupplierQuotationCreateFlow() {
   const $q = useQuasar()
   const auth = useAuthStore()
-  const workflowStore = useWorkflowStore()
+  const resourceIoStore = useResourceIoStore()
   const nav = useResourceNav()
 
   const rfqs = useResourceData(ref('RFQs'))
@@ -282,7 +282,7 @@ export function useSupplierQuotationCreateFlow() {
     saving.value = true
     try {
       form.value.ExtraChargesBreakup = JSON.parse(stringifyCharges(form.value.ExtraChargesBreakup))
-      const response = await workflowStore.runBatchRequests(buildSaveRequests())
+      const response = await resourceIoStore.runBatchRequests(buildSaveRequests())
       if (responseFailed(response)) {
         $q.notify({ type: 'negative', message: firstFailureMessage(response, 'Failed to save supplier quotation') })
         return

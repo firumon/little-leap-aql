@@ -1,6 +1,6 @@
 import { computed, ref, unref } from 'vue'
 import { useQuasar } from 'quasar'
-import { useWorkflowStore } from 'src/stores/workflow'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceConfig, isActionVisible } from 'src/composables/resources/useResourceConfig'
 import { useResourceData } from 'src/composables/resources/useResourceData'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
@@ -42,7 +42,7 @@ function buildSupplierLookup(rows = []) {
 
 export function useRFQSupplierFlow(rfqCodeRef) {
   const $q = useQuasar()
-  const workflowStore = useWorkflowStore()
+  const resourceIoStore = useResourceIoStore()
   const nav = useResourceNav()
   const { code: routeCode, additionalActions } = useResourceConfig()
 
@@ -204,7 +204,7 @@ export function useRFQSupplierFlow(rfqCodeRef) {
         }
       })
 
-      const response = await workflowStore.runBatchRequests(requests)
+      const response = await resourceIoStore.runBatchRequests(requests)
       if (!response?.success || (Array.isArray(response.data) && response.data.some((entry) => entry?.success === false))) {
         const failedEntry = Array.isArray(response?.data)
           ? response.data.find((entry) => entry?.success === false)
@@ -251,7 +251,7 @@ export function useRFQSupplierFlow(rfqCodeRef) {
         }
       }))
 
-      const response = await workflowStore.runBatchRequests(requests)
+      const response = await resourceIoStore.runBatchRequests(requests)
       if (!response?.success || (Array.isArray(response.data) && response.data.some((entry) => entry?.success === false))) {
         const failedEntry = Array.isArray(response?.data)
           ? response.data.find((entry) => entry?.success === false)
@@ -321,7 +321,7 @@ export function useRFQSupplierFlow(rfqCodeRef) {
         })
       }
 
-      const response = await workflowStore.runBatchRequests(requests)
+      const response = await resourceIoStore.runBatchRequests(requests)
       if (!response?.success || (Array.isArray(response.data) && response.data.some((entry) => entry?.success === false))) {
         const failedEntry = Array.isArray(response?.data)
           ? response.data.find((entry) => entry?.success === false)

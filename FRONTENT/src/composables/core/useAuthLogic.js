@@ -2,19 +2,16 @@
  * useAuthLogic — Auth workflow composable (extracted from auth store)
  * Handles login, logout, and profile update workflows
  * Uses auth store for state management
- * Orchestrates services and notifications
+ * Orchestrates stores and notifications
  */
 
 import { Notify, Loading } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
-import { useSyncStore } from 'src/stores/sync'
-import { createLogger } from 'src/services/_logger'
-
-const logger = createLogger('useAuthLogic')
+import { useInitialResourceSync } from 'src/composables/resources/useInitialResourceSync'
 
 export function useAuthLogic() {
   const auth = useAuthStore()
-  const syncStore = useSyncStore()
+  const initialResourceSync = useInitialResourceSync()
   // Note: Router is intentionally NOT used here (no Vue context in store)
   // Navigation is handled by the caller (component/page)
 
@@ -52,7 +49,6 @@ export function useAuthLogic() {
       if (showLoading) {
         Loading.hide()
       }
-      logger.error('Auth API call failed', { action, error: error.message })
       if (showError) {
         Notify.create({ type: 'negative', message: 'Action failed: ' + error.message })
       }
@@ -61,40 +57,32 @@ export function useAuthLogic() {
   }
 
   async function login(email, password) {
-    logger.info('Login attempt', { email })
     try {
       const data = await auth.loginRequest(email, password)
 
       if (data.success) {
         auth.applySessionData(data.data || {})
 
-        auth.initializeClientSession(true).catch((error) => {
-          logger.warn('IDB sync error', { error: error?.message || String(error) })
-        })
+        auth.initializeClientSession(true).catch(() => {})
 
         // Background global sync
         auth.isGlobalSyncing = true
-        Promise.resolve(syncStore.syncAll())
-          .catch((err) => {
-            logger.warn('Global master sync error', { error: err.message })
-          })
+        Promise.resolve(initialResourceSync.syncInitialResources())
+          .catch(() => {})
           .finally(() => {
             auth.isGlobalSyncing = false
           })
 
-        logger.info('Login successful')
         return { success: true }
       }
 
       return { success: false, message: data.error || data.message || 'Login failed' }
     } catch (error) {
-      logger.error('Login failed', { error: error.message })
       return { success: false, message: error?.message || 'Login failed' }
     }
   }
 
   async function updateAvatar(avatarUrl) {
-    logger.debug('Updating avatar')
     const data = await auth.updateAvatarRequest(avatarUrl)
     if (!data.success) {
       return { success: false, message: data.error || data.message || 'Failed to update avatar' }
@@ -107,7 +95,6 @@ export function useAuthLogic() {
   }
 
   async function updateName(name) {
-    logger.debug('Updating name')
     Loading.show({ message: 'Updating name...' })
     const data = await auth.updateNameRequest(name)
     Loading.hide()
@@ -122,7 +109,6 @@ export function useAuthLogic() {
   }
 
   async function updateEmail(email) {
-    logger.debug('Updating email')
     Loading.show({ message: 'Updating email...' })
     const data = await auth.updateEmailRequest(email)
     Loading.hide()
@@ -137,7 +123,6 @@ export function useAuthLogic() {
   }
 
   async function updatePassword(currentPassword, newPassword) {
-    logger.debug('Updating password')
     Loading.show({ message: 'Updating password...' })
     const data = await auth.updatePasswordRequest(currentPassword, newPassword)
     Loading.hide()
@@ -150,16 +135,11 @@ export function useAuthLogic() {
   }
 
   async function logout() {
-    logger.info('Logging out')
-
     auth.clearSessionState()
 
     try {
       await auth.clearClientSession()
-      logger.info('Logout completed')
-    } catch (e) {
-      logger.warn('Logout cleanup error', { error: e.message })
-    }
+    } catch (_) {}
 
     // Navigation is handled by the caller (component/page/store)
     // This composable is UI/routing-agnostic

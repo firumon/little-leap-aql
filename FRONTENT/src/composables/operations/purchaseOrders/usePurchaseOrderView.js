@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue';
 import { useResourceConfig, isActionVisible } from '../../resources/useResourceConfig.js';
 import { useResourceData } from '../../resources/useResourceData.js';
-import { useWorkflowStore } from '../../../stores/workflow.js';
+import { useResourceIoStore } from 'src/stores/resourceIo';
 import { useResourceNav } from '../../resources/useResourceNav.js';
 import { useQuasar } from 'quasar';
 import { progressMeta, labelFor, formatDate, formatCurrency } from './purchaseOrderMeta.js';
@@ -54,7 +54,7 @@ export function usePurchaseOrderView() {
     const rfqs = useResourceData(ref('RFQs'));
     const rfqSuppliers = useResourceData(ref('RFQSuppliers'));
     const procurements = useResourceData(ref('Procurements'));
-    const workflowStore = useWorkflowStore();
+    const resourceIoStore = useResourceIoStore();
     const nav = useResourceNav();
 
     const loading = ref(false);
@@ -213,7 +213,7 @@ export function usePurchaseOrderView() {
             });
         }
 
-        return workflowStore.runBatchRequests(requests);
+        return resourceIoStore.runBatchRequests(requests);
     }
 
     const runAction = async (actionConfig) => {
@@ -241,7 +241,7 @@ export function usePurchaseOrderView() {
 
             const result = actionTargetValue === 'CANCELLED'
                 ? await runCancelAction(actionConfig, payloadData)
-                : await workflowStore.executeResourceAction('PurchaseOrders', record.value.Code, actionConfig, payloadData);
+                : await resourceIoStore.executeResourceAction('PurchaseOrders', record.value.Code, actionConfig, payloadData);
 
             if (responseFailed(result)) {
                 $q.notify({ type: 'negative', message: firstFailureMessage(result, `Failed to execute ${actionConfig.label}`), position: 'top' });

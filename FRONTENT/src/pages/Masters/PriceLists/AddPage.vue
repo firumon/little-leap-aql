@@ -97,12 +97,12 @@ import { useQuasar } from 'quasar'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { usePriceListCreateForm } from 'src/composables/masters/priceLists/usePriceListCreateForm'
-import { useWorkflowStore } from 'src/stores/workflow'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 
 const $q = useQuasar()
 const nav = useResourceNav()
 const { resourceName } = useResourceConfig()
-const workflowStore = useWorkflowStore()
+const resourceIoStore = useResourceIoStore()
 
 const statusOptions = [
   { label: 'Active', value: 'Active' },
@@ -132,14 +132,12 @@ watch(
   () => [resourceName.value, priceListLookupMode.value],
   async ([name]) => {
     if (!name) return
-    await workflowStore.fetchResources([
+    await resourceIoStore.fetchResources([
       'Products',
       'SKUs',
       'PriceList',
       ...(priceListLookupMode.value === 'ITEMS' ? ['PriceListItems'] : [])
-    ], {
-      syncWhenCacheExists: true
-    })
+    ])
   },
   { immediate: true }
 )

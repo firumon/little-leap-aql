@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { useDataStore } from 'src/stores/data'
-import { useWorkflowStore } from 'src/stores/workflow'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useStockMovements } from './useStockMovements'
 
@@ -27,7 +27,7 @@ function storageUiValue(value) {
 export function useGrnStockEntry() {
   const $q = useQuasar()
   const dataStore = useDataStore()
-  const workflowStore = useWorkflowStore()
+  const resourceIoStore = useResourceIoStore()
   const nav = useResourceNav()
   const stockMovements = useStockMovements()
 
@@ -144,7 +144,7 @@ export function useGrnStockEntry() {
       const [warehouseRows, skuRows] = await Promise.all([
         stockMovements.loadWarehouses(),
         stockMovements.loadSkusWithProducts(),
-        workflowStore.fetchResources(['GoodsReceipts', 'GoodsReceiptItems', 'PurchaseOrders', 'StockMovements'], { forceSync })
+        resourceIoStore.fetchResources(['GoodsReceipts', 'GoodsReceiptItems', 'PurchaseOrders', 'StockMovements'], { forceSync })
       ])
       warehouses.value = warehouseRows
       skus.value = skuRows

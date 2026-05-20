@@ -1,8 +1,10 @@
 import { ref } from 'vue'
 import { useDataStore } from 'src/stores/data'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 
 export function useProductSkuViewData() {
   const dataStore = useDataStore()
+  const resourceIoStore = useResourceIoStore()
   const skuRows = ref([])
   const skuLoading = ref(false)
 
@@ -10,32 +12,14 @@ export function useProductSkuViewData() {
     skuRows.value = records.filter((row) => row.ProductCode === productCode)
   }
 
-  async function syncSkuRowsInBackground(productCode) {
-    try {
-      const response = await dataStore.syncResource('SKUs', {
-        syncWhenCacheExists: true
-      })
-
-      if (response.success && Array.isArray(response.records)) {
-        applySkuRows(productCode, response.records)
-      }
-    } finally {
-      skuLoading.value = false
-    }
-  }
-
   async function loadSkuRows(productCode) {
     if (!productCode) return
     skuLoading.value = true
 
     try {
-      const response = await dataStore.loadResource('SKUs', {})
+      const response = await resourceIoStore.fetchResource('SKUs')
       if (response.success && Array.isArray(response.records)) {
         applySkuRows(productCode, response.records)
-        if (response?.meta?.source === 'cache') {
-          await syncSkuRowsInBackground(productCode)
-          return
-        }
       } else {
         skuRows.value = []
       }

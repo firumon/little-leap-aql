@@ -156,11 +156,11 @@ import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useResourceData } from 'src/composables/resources/useResourceData'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { usePriceListEditor } from 'src/composables/masters/priceLists/usePriceListEditor'
-import { useWorkflowStore } from 'src/stores/workflow'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 
 const nav = useResourceNav()
 const { config, resourceName, permissions } = useResourceConfig()
-const workflowStore = useWorkflowStore()
+const resourceIoStore = useResourceIoStore()
 const { items, searchTerm } = useResourceData(resourceName)
 const loading = ref(false)
 const backgroundSyncing = ref(false)
@@ -206,7 +206,7 @@ const displayedItems = computed(() => {
   })
 })
 
-async function reloadAll(forceSync = false) {
+async function reloadAll() {
   const resources = [
     resourceName.value || 'PriceList',
     'Products',
@@ -217,10 +217,7 @@ async function reloadAll(forceSync = false) {
   loading.value = !hasRowsToShow
   backgroundSyncing.value = hasRowsToShow
   try {
-    await workflowStore.fetchResources(resources, {
-      forceSync,
-      syncWhenCacheExists: true
-    })
+    await resourceIoStore.fetchResources(resources)
   } finally {
     loading.value = false
     backgroundSyncing.value = false

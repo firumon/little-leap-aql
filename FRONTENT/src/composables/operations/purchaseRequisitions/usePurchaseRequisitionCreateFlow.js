@@ -4,7 +4,7 @@ import { format } from 'date-fns'
 import { useStockMovements } from 'src/composables/operations/stock/useStockMovements'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useAuthStore } from 'src/stores/auth'
-import { useWorkflowStore } from 'src/stores/workflow'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceData } from 'src/composables/resources/useResourceData'
 import { formatSkuVariants, todayIsoSlash, todayLongLabel } from 'src/utils/appHelpers'
 import {
@@ -21,7 +21,7 @@ export function usePurchaseRequisitionCreateFlow() {
   const $q = useQuasar()
   const nav = useResourceNav()
   const auth = useAuthStore()
-  const workflowStore = useWorkflowStore()
+  const resourceIoStore = useResourceIoStore()
   const { loadWarehouses } = useStockMovements()
 
   const productsResource = useResourceData(ref('Products'))
@@ -165,7 +165,7 @@ export function usePurchaseRequisitionCreateFlow() {
     saving.value = true
     try {
       const prDate = format(new Date(), 'yyyy-MM-dd')
-      const batchResponse = await workflowStore.runBatchRequests([
+      const batchResponse = await resourceIoStore.runBatchRequests([
         {
           action: 'compositeSave',
           resource: 'PurchaseRequisitions',

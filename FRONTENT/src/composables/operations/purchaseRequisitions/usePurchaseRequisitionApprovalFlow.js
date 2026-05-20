@@ -4,14 +4,14 @@ import { useQuasar } from 'quasar'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useResourceData } from 'src/composables/resources/useResourceData'
 import { useStockMovements } from 'src/composables/operations/stock/useStockMovements'
-import { useWorkflowStore } from 'src/stores/workflow'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useProcurements } from 'src/composables/operations/procurements/useProcurements'
 
 export function usePurchaseRequisitionApprovalFlow() {
   const route = useRoute()
   const $q = useQuasar()
   const nav = useResourceNav()
-  const workflowStore = useWorkflowStore()
+  const resourceIoStore = useResourceIoStore()
   const procurements = useProcurements()
   const { loadWarehouses } = useStockMovements()
 
@@ -115,7 +115,7 @@ export function usePurchaseRequisitionApprovalFlow() {
 
       acting.value = actionKey
       try {
-        const response = await workflowStore.runBatchRequests(requestResult.requests)
+        const response = await resourceIoStore.runBatchRequests(requestResult.requests)
         const failed = (response.data || []).find((entry) => entry?.success === false)
         if (!response.success || failed) {
           $q.notify({

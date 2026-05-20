@@ -2,7 +2,7 @@ import { ref, computed } from 'vue'
 import { useResourceData } from '../../resources/useResourceData.js'
 import { useResourceConfig } from '../../resources/useResourceConfig.js'
 import { useResourceNav } from '../../resources/useResourceNav.js'
-import { useWorkflowStore } from '../../../stores/workflow.js'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 import { PO_RECEIVING_PROGRESS_ORDER, progressMeta, formatDate } from './poReceivingMeta.js'
 
 function text(value) { return value == null ? '' : String(value) }
@@ -17,7 +17,7 @@ export function usePOReceivingIndex() {
   const { permissions } = useResourceConfig()
   const receivings = useResourceData(ref('POReceivings'))
   const purchaseOrders = useResourceData(ref('PurchaseOrders'))
-  const workflowStore = useWorkflowStore()
+  const resourceIoStore = useResourceIoStore()
   const nav = useResourceNav()
   const loading = ref(false)
   const searchTerm = ref('')
@@ -42,7 +42,7 @@ export function usePOReceivingIndex() {
   async function reload(forceSync = false) {
     loading.value = true
     try {
-      await workflowStore.fetchResources(['POReceivings', 'PurchaseOrders'], { forceSync })
+      await resourceIoStore.fetchResources(['POReceivings', 'PurchaseOrders'], { forceSync })
     } finally {
       loading.value = false
     }

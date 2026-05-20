@@ -3,7 +3,7 @@ import { useQuasar } from 'quasar'
 import { useAuthStore } from '../../../stores/auth.js'
 import { useResourceData } from '../../resources/useResourceData.js'
 import { useResourceNav } from '../../resources/useResourceNav.js'
-import { useWorkflowStore } from '../../../stores/workflow.js'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 import { OUTLET_OPERATION_RESOURCES, DELIVERY_PROGRESS_ORDER, active, progressMeta, sortTime, text, todayISO } from './outletOperationsMeta.js'
 import { toNumber, validateDeliveryItems } from './outletStockLogic.js'
 import { buildOdCancelBatchRequests, buildOdCreateBatchRequests, buildOdDeliverBatchRequests } from './outletDeliveryPayload.js'
@@ -21,7 +21,7 @@ const CRITERIA_MAP = {
 
 export function useOutletDeliveries() {
   const $q = useQuasar()
-  const workflowStore = useWorkflowStore()
+  const resourceIoStore = useResourceIoStore()
   const authStore = useAuthStore()
   const nav = useResourceNav()
   const deliveries = useResourceData(ref('OutletDeliveries'))
@@ -183,10 +183,10 @@ export function useOutletDeliveries() {
     return JSON.stringify(row).toLowerCase().includes(needle) || summary.outlets.join(' ').toLowerCase().includes(needle)
   }
 
-  async function reload(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(OUTLET_OPERATION_RESOURCES, { forceSync }) } finally { loading.value = false } }
-  async function reloadIndex(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(['OutletDeliveries', 'OutletRestocks', 'OutletRestockItems', 'Outlets', 'SKUs', 'Products'], { forceSync }) } finally { loading.value = false; isInitialLoad.value = false } }
-  async function reloadAdd(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(['OutletDeliveries', 'OutletRestocks', 'OutletRestockItems', 'Outlets', 'SKUs', 'Products', 'Warehouses'], { forceSync }) } finally { loading.value = false } }
-  async function reloadView(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(['OutletDeliveries', 'OutletRestocks', 'OutletRestockItems', 'Outlets', 'SKUs', 'Products', 'OutletMovements'], { forceSync }) } finally { loading.value = false } }
+  async function reload(forceSync = false) { loading.value = true; try { await resourceIoStore.fetchResources(OUTLET_OPERATION_RESOURCES, { forceSync }) } finally { loading.value = false } }
+  async function reloadIndex(forceSync = false) { loading.value = true; try { await resourceIoStore.fetchResources(['OutletDeliveries', 'OutletRestocks', 'OutletRestockItems', 'Outlets', 'SKUs', 'Products'], { forceSync }) } finally { loading.value = false; isInitialLoad.value = false } }
+  async function reloadAdd(forceSync = false) { loading.value = true; try { await resourceIoStore.fetchResources(['OutletDeliveries', 'OutletRestocks', 'OutletRestockItems', 'Outlets', 'SKUs', 'Products', 'Warehouses'], { forceSync }) } finally { loading.value = false } }
+  async function reloadView(forceSync = false) { loading.value = true; try { await resourceIoStore.fetchResources(['OutletDeliveries', 'OutletRestocks', 'OutletRestockItems', 'Outlets', 'SKUs', 'Products', 'OutletMovements'], { forceSync }) } finally { loading.value = false } }
 
   function toggleItem(code) {
     const key = text(code)
@@ -205,7 +205,7 @@ export function useOutletDeliveries() {
     if (!validation.valid) return notifyWarning(validation.errors[0])
     saving.value = true
     try {
-      const result = await workflowStore.runBatchRequests(buildOdCreateBatchRequests({ Date: todayISO(), UserName: currentUserName(), AccessRegion: selectedItems.value[0]?.accessRegion }, selectedItems.value.map(row => row.rawOrsi)))
+      const result = await resourceIoStore.runBatchRequests(buildOdCreateBatchRequests({ Date: todayISO(), UserName: currentUserName(), AccessRegion: selectedItems.value[0]?.accessRegion }, selectedItems.value.map(row => row.rawOrsi)))
       if (responseFailed(result)) return notifyError(failureMessage(result, 'Failed to create delivery.'))
       const code = batchResultCode(result, 0)
       $q.notify({ type: 'positive', message: 'Delivery draft created.', position: 'top' })
@@ -327,7 +327,7 @@ export function useOutletDeliveries() {
     const allRestocks = restocks.items.value.filter(r => restockCodes.has(text(r.Code)))
     saving.value = true
     try {
-      const result = await workflowStore.runBatchRequests(buildOdDeliverBatchRequests(od, [text(orsi.Code)], { orsiRows: allOrsis, restocks: allRestocks }, currentUserName(), comment))
+      const result = await resourceIoStore.runBatchRequests(buildOdDeliverBatchRequests(od, [text(orsi.Code)], { orsiRows: allOrsis, restocks: allRestocks }, currentUserName(), comment))
       if (responseFailed(result)) return notifyError(failureMessage(result, 'Failed to mark item delivered.'))
       $q.notify({ type: 'positive', message: 'Item delivered.', position: 'top' })
       await reloadView(true)
@@ -352,7 +352,7 @@ export function useOutletDeliveries() {
     const allRestocks = restocks.items.value.filter(r => restockCodes.has(text(r.Code)))
     saving.value = true
     try {
-      const result = await workflowStore.runBatchRequests(buildOdDeliverBatchRequests(od, pendingCodes, { orsiRows: allOrsis, restocks: allRestocks }, currentUserName(), comment))
+      const result = await resourceIoStore.runBatchRequests(buildOdDeliverBatchRequests(od, pendingCodes, { orsiRows: allOrsis, restocks: allRestocks }, currentUserName(), comment))
       if (responseFailed(result)) return notifyError(failureMessage(result, 'Failed to mark selected items delivered.'))
       $q.notify({ type: 'positive', message: `${pendingCodes.length} item(s) delivered.`, position: 'top' })
       await reloadView(true)
@@ -377,7 +377,7 @@ export function useOutletDeliveries() {
     const allOrsis = restockItems.items.value.filter(r => codes.includes(text(r.Code)))
     saving.value = true
     try {
-      const result = await workflowStore.runBatchRequests(buildOdCancelBatchRequests(od, allOrsis, currentUserName(), comment))
+      const result = await resourceIoStore.runBatchRequests(buildOdCancelBatchRequests(od, allOrsis, currentUserName(), comment))
       if (responseFailed(result)) return notifyError(failureMessage(result, 'Failed to cancel delivery.'))
       $q.notify({ type: 'positive', message: 'Delivery cancelled.', position: 'top' })
       await reloadView(true)

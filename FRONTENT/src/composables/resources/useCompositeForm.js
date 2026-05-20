@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { useQuasar } from 'quasar'
-import { useWorkflowStore } from 'src/stores/workflow'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceRelations } from './useResourceRelations'
 import { useApiErrorNotify } from 'src/composables/useApiErrorNotify'
 
@@ -13,7 +13,7 @@ import { useApiErrorNotify } from 'src/composables/useApiErrorNotify'
  */
 export function useCompositeForm(configRef) {
   const $q = useQuasar()
-  const workflowStore = useWorkflowStore()
+  const resourceIoStore = useResourceIoStore()
   const { notifyApiError } = useApiErrorNotify()
   const { childResources } = useResourceRelations(
     () => (typeof configRef === 'function' ? configRef() : configRef?.value)?.name
@@ -217,7 +217,7 @@ export function useCompositeForm(configRef) {
     saving.value = true
     try {
       const payload = buildPayload()
-      const response = await workflowStore.saveComposite(payload)
+      const response = await resourceIoStore.saveComposite(payload)
       notifyApiError(response, { fallbackMessage: 'Save failed' })
       return response
     } catch (err) {

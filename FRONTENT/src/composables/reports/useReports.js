@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { exportFile, useQuasar } from 'quasar'
-import { useWorkflowStore } from 'src/stores/workflow'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 
 /**
  * useReports composable
@@ -13,7 +13,7 @@ import { useWorkflowStore } from 'src/stores/workflow'
  */
 export function useReports(resourceNameRef) {
   const $q = useQuasar()
-  const workflowStore = useWorkflowStore()
+  const resourceIoStore = useResourceIoStore()
 
   const isGenerating = ref(false)
   const showReportDialog = ref(false)
@@ -161,7 +161,7 @@ export function useReports(resourceNameRef) {
         : resourceNameRef?.value !== undefined ? resourceNameRef.value
         : (resourceNameRef || '')
 
-      const result = await workflowStore.generateReportFile({
+      const result = await resourceIoStore.generateReportFile({
         resource: resName,
         reportName: report.label || report.name || '',
         templateSheet: report.templateSheet || '',

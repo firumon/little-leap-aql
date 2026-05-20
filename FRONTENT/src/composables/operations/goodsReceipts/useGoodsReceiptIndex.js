@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import { useResourceData } from '../../resources/useResourceData.js'
-import { useWorkflowStore } from '../../../stores/workflow.js'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceNav } from '../../resources/useResourceNav.js'
 import { formatDate } from '../poReceivings/poReceivingMeta.js'
 
@@ -8,7 +8,7 @@ function text(value) { return value == null ? '' : String(value) }
 
 export function useGoodsReceiptIndex() {
   const receipts = useResourceData(ref('GoodsReceipts'))
-  const workflowStore = useWorkflowStore()
+  const resourceIoStore = useResourceIoStore()
   const nav = useResourceNav()
   const loading = ref(false)
   const searchTerm = ref('')
@@ -23,7 +23,7 @@ export function useGoodsReceiptIndex() {
   async function reload(forceSync = false) {
     loading.value = true
     try {
-      await workflowStore.fetchResources(['GoodsReceipts', 'POReceivings', 'PurchaseOrders'], { forceSync })
+      await resourceIoStore.fetchResources(['GoodsReceipts', 'POReceivings', 'PurchaseOrders'], { forceSync })
     } finally {
       loading.value = false
     }

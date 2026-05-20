@@ -1,7 +1,7 @@
 import { computed, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
-import { useWorkflowStore } from 'src/stores/workflow'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceData } from 'src/composables/resources/useResourceData'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useProcurements } from 'src/composables/operations/procurements/useProcurements'
@@ -24,7 +24,7 @@ function resultCode(entry) {
 export function useRFQCreateFlow() {
   const $q = useQuasar()
   const auth = useAuthStore()
-  const workflowStore = useWorkflowStore()
+  const resourceIoStore = useResourceIoStore()
   const nav = useResourceNav()
   const procurements = useProcurements()
 
@@ -157,7 +157,7 @@ export function useRFQCreateFlow() {
   async function ensureProcurementCode() {
     if (selectedPr.value?.ProcurementCode) return selectedPr.value.ProcurementCode
 
-    const response = await workflowStore.runBatchRequests([
+    const response = await resourceIoStore.runBatchRequests([
       procurements.buildProcurementCreateRequest(selectedPr.value.Code),
       { action: 'get', resource: ['Procurements', 'PurchaseRequisitions'], payload: {} }
     ])
@@ -178,7 +178,7 @@ export function useRFQCreateFlow() {
     saving.value = true
     try {
       const procurementCode = await ensureProcurementCode()
-      const response = await workflowStore.runBatchRequests(buildCreateRequests(procurementCode))
+      const response = await resourceIoStore.runBatchRequests(buildCreateRequests(procurementCode))
       if (responseFailed(response)) {
         $q.notify({ type: 'negative', message: firstFailureMessage(response, 'Failed to create RFQ') })
         return

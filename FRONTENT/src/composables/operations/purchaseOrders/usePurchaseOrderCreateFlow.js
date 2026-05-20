@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue';
 import { useResourceData } from '../../resources/useResourceData.js';
-import { useWorkflowStore } from '../../../stores/workflow.js';
+import { useResourceIoStore } from 'src/stores/resourceIo';
 import { useResourceNav } from '../../resources/useResourceNav.js';
 import { useAuthStore } from '../../../stores/auth.js';
 import { useQuasar } from 'quasar';
@@ -57,7 +57,7 @@ export function usePurchaseOrderCreateFlow() {
     const purchaseRequisitionsResource = useResourceData(ref('PurchaseRequisitions'));
     const prItemsResource = useResourceData(ref('PurchaseRequisitionItems'));
     const procurementsResource = useResourceData(ref('Procurements'));
-    const workflowStore = useWorkflowStore();
+    const resourceIoStore = useResourceIoStore();
     const nav = useResourceNav();
 
     const loading = ref(false);
@@ -140,7 +140,7 @@ export function usePurchaseOrderCreateFlow() {
     const loadData = async (forceSync = false) => {
         loading.value = true;
         try {
-            await workflowStore.fetchResources([
+            await resourceIoStore.fetchResources([
                 'SupplierQuotations',
                 'SupplierQuotationItems',
                 'PurchaseOrders',
@@ -378,7 +378,7 @@ export function usePurchaseOrderCreateFlow() {
                 payload: {}
             });
 
-            const result = await workflowStore.runBatchRequests(batchPayload);
+            const result = await resourceIoStore.runBatchRequests(batchPayload);
 
             if (responseFailed(result)) {
                 $q.notify({ type: 'negative', message: firstFailureMessage(result, 'Failed to save Purchase Order'), position: 'top' });

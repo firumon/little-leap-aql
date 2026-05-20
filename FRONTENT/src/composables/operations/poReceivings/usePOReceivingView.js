@@ -2,7 +2,7 @@ import { ref, computed } from 'vue'
 import { useQuasar } from 'quasar'
 import { useResourceConfig, isActionVisible } from '../../resources/useResourceConfig.js'
 import { useResourceData } from '../../resources/useResourceData.js'
-import { useWorkflowStore } from '../../../stores/workflow.js'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceNav } from '../../resources/useResourceNav.js'
 import { progressMeta, PO_RECEIVING_REPORT_PLACEHOLDERS, formatDate } from './poReceivingMeta.js'
 import { acceptedReceiptItemCount, decorateItem, summarizeItems, validateReceiving } from './poReceivingPayload.js'
@@ -23,7 +23,7 @@ export function usePOReceivingView() {
   const $q = useQuasar()
   const { code, additionalActions } = useResourceConfig()
   const nav = useResourceNav()
-  const workflowStore = useWorkflowStore()
+  const resourceIoStore = useResourceIoStore()
   const receivings = useResourceData(ref('POReceivings'))
   const receivingItems = useResourceData(ref('POReceivingItems'))
   const goodsReceipts = useResourceData(ref('GoodsReceipts'))
@@ -50,7 +50,7 @@ export function usePOReceivingView() {
   async function loadData(forceSync = false) {
     loading.value = true
     try {
-      await workflowStore.fetchResources(['POReceivings', 'POReceivingItems', 'GoodsReceipts', 'GoodsReceiptItems', 'PurchaseOrders', 'Procurements'], { forceSync })
+      await resourceIoStore.fetchResources(['POReceivings', 'POReceivingItems', 'GoodsReceipts', 'GoodsReceiptItems', 'PurchaseOrders', 'Procurements'], { forceSync })
     } finally {
       loading.value = false
     }
@@ -60,7 +60,7 @@ export function usePOReceivingView() {
     if (!canGenerateGRN.value) return $q.notify({ type: 'warning', message: 'GRN can be generated only for a confirmed receiving with accepted quantities and no active GRN.', position: 'top' })
     acting.value = true
     try {
-      const result = await workflowStore.runBatchRequests([
+      const result = await resourceIoStore.runBatchRequests([
         ...buildGenerateGrnRequests(record.value, items.value, purchaseOrder.value, procurement.value),
         refreshRequest(['POReceivings', 'POReceivingItems', 'GoodsReceipts', 'GoodsReceiptItems', 'PurchaseOrders', 'Procurements'])
       ])
@@ -85,7 +85,7 @@ export function usePOReceivingView() {
         if (update) requests.push(update)
       }
       requests.push(refreshRequest(['POReceivings', 'POReceivingItems', 'GoodsReceipts', 'GoodsReceiptItems', 'PurchaseOrders', 'Procurements']))
-      const result = await workflowStore.runBatchRequests(requests)
+      const result = await resourceIoStore.runBatchRequests(requests)
       if (responseFailed(result)) return $q.notify({ type: 'negative', message: failureMessage(result, 'Failed to confirm receiving.'), position: 'top' })
       $q.notify({ type: 'positive', message: 'Receiving confirmed.', position: 'top' })
     } finally {
@@ -102,7 +102,7 @@ export function usePOReceivingView() {
     if (!comment) return $q.notify({ type: 'warning', message: 'Cancellation comment is required.', position: 'top' })
     acting.value = true
     try {
-      const result = await workflowStore.runBatchRequests([
+      const result = await resourceIoStore.runBatchRequests([
         ...buildCancelReceivingRequests(record.value, linkedGrn.value, goodsReceiptItems.items.value, procurement.value, comment),
         refreshRequest()
       ])

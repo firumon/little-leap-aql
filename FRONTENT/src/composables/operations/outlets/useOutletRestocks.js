@@ -3,7 +3,7 @@ import { useQuasar } from 'quasar'
 import { useAuthStore } from '../../../stores/auth.js'
 import { useResourceData } from '../../resources/useResourceData.js'
 import { useResourceNav } from '../../resources/useResourceNav.js'
-import { useWorkflowStore } from '../../../stores/workflow.js'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 import { OUTLET_OPERATION_RESOURCES, RESTOCK_PROGRESS_ORDER, active, progressMeta, sortTime, text, todayISO } from './outletOperationsMeta.js'
 import { allocatedRows, approvalRequestedQty, computeRestockProgressFromItems, expandOrsiAllocationRows, recommendOrsiAllocation, restockEditableProgress, storageName, sumBy, toNumber, validateRestockAllocationRows, validateRestockApproval, validateRestockDraft, warehouseAvailableQty, warehouseDisplayName, warehouseStorageCandidatesForSku } from './outletStockLogic.js'
 import { buildPendingRestockAllocationBatchRequests, buildRestockAllocationBatchRequests, buildRestockCancelItemsBatchRequests, buildRestockCompositePayload, buildRestockRejectBatchRequests, buildRestockSendBackRequest } from './outletRestockPayload.js'
@@ -17,7 +17,7 @@ export function resolveRestockViewMode(progress) {
 
 export function useOutletRestocks() {
   const $q = useQuasar()
-  const workflowStore = useWorkflowStore()
+  const resourceIoStore = useResourceIoStore()
   const authStore = useAuthStore()
   const nav = useResourceNav()
   const restocks = useResourceData(ref('OutletRestocks'))
@@ -234,10 +234,10 @@ export function useOutletRestocks() {
     return true
   }
 
-  async function reload(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(OUTLET_OPERATION_RESOURCES, { forceSync }) } finally { loading.value = false } }
-  async function reloadIndex(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(['OutletRestocks', 'OutletRestockItems', 'Outlets'], { forceSync }) } finally { loading.value = false } }
-  async function reloadAdd(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(['Outlets', 'SKUs', 'Products'], { forceSync }) } finally { loading.value = false } }
-  async function reloadView(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(['OutletRestocks', 'OutletRestockItems', 'WarehouseStorages', 'Outlets', 'SKUs', 'Products'], { forceSync }) } finally { loading.value = false } }
+  async function reload(forceSync = false) { loading.value = true; try { await resourceIoStore.fetchResources(OUTLET_OPERATION_RESOURCES, { forceSync }) } finally { loading.value = false } }
+  async function reloadIndex(forceSync = false) { loading.value = true; try { await resourceIoStore.fetchResources(['OutletRestocks', 'OutletRestockItems', 'Outlets'], { forceSync }) } finally { loading.value = false } }
+  async function reloadAdd(forceSync = false) { loading.value = true; try { await resourceIoStore.fetchResources(['Outlets', 'SKUs', 'Products'], { forceSync }) } finally { loading.value = false } }
+  async function reloadView(forceSync = false) { loading.value = true; try { await resourceIoStore.fetchResources(['OutletRestocks', 'OutletRestockItems', 'WarehouseStorages', 'Outlets', 'SKUs', 'Products'], { forceSync }) } finally { loading.value = false } }
 
   function loadRestockRows(code = form.value.Code) {
     const selectedCodes = new Set(rows.value.filter(row => row._cancelSelected).map(row => text(row.Code)).filter(Boolean))
@@ -285,7 +285,7 @@ export function useOutletRestocks() {
     saving.value = true
     try {
       const payloadForm = submit ? submissionSaveForm(form.value, comment) : form.value
-      const saveResult = await workflowStore.runBatchRequests([compositeSaveRequest(buildRestockCompositePayload(payloadForm, rows.value))])
+      const saveResult = await resourceIoStore.runBatchRequests([compositeSaveRequest(buildRestockCompositePayload(payloadForm, rows.value))])
       if (responseFailed(saveResult)) return notifyError(failureMessage(saveResult, submit ? 'Failed to submit restock.' : 'Failed to save restock.'))
       $q.notify({ type: 'positive', message: submit ? 'Restock submitted.' : 'Restock draft saved.', position: 'top' })
       nav.goTo('list')
@@ -305,7 +305,7 @@ export function useOutletRestocks() {
     if (!validation.valid) return notifyWarning(validation.errors[0])
     saving.value = true
     try {
-      const result = await workflowStore.runBatchRequests(buildRestockAllocationBatchRequests(restock, approvedRows, currentUserName(), comment))
+      const result = await resourceIoStore.runBatchRequests(buildRestockAllocationBatchRequests(restock, approvedRows, currentUserName(), comment))
       if (responseFailed(result)) return notifyError(failureMessage(result, 'Failed to approve restock.'))
       $q.notify({ type: 'positive', message: 'Restock approved.', position: 'top' })
       await reloadView(true)
@@ -325,7 +325,7 @@ export function useOutletRestocks() {
     try {
       const requests = buildPendingRestockAllocationBatchRequests(restock, rowsToPersist, currentUserName(), comment)
       requests.push(resourceGetRequest(['WarehouseStorages'], {}))
-      const result = await workflowStore.runBatchRequests(requests)
+      const result = await resourceIoStore.runBatchRequests(requests)
       if (responseFailed(result)) return notifyError(failureMessage(result, 'Failed to allocate pending items.'))
       $q.notify({ type: 'positive', message: 'Pending items allocated.', position: 'top' })
       await reloadView(true)
@@ -340,7 +340,7 @@ export function useOutletRestocks() {
     const cancelCodes = new Set(rowsToCancel.map(row => text(row.Code)).filter(Boolean))
     saving.value = true
     try {
-      const result = await workflowStore.runBatchRequests(buildRestockCancelItemsBatchRequests(restock, rowsToCancel, currentUserName(), comment))
+      const result = await resourceIoStore.runBatchRequests(buildRestockCancelItemsBatchRequests(restock, rowsToCancel, currentUserName(), comment))
       if (responseFailed(result)) return notifyError(failureMessage(result, 'Failed to cancel pending items.'))
       rows.value = rows.value.map(row =>
         cancelCodes.has(text(row.Code)) && text(row.Progress) === 'PENDING' && text(row.Code)
@@ -358,7 +358,7 @@ export function useOutletRestocks() {
     if (childRows.some(row => text(row.Progress) === 'DELIVERED')) return notifyWarning('Delivered restock items cannot be rejected.')
     saving.value = true
     try {
-      const result = await workflowStore.runBatchRequests(buildRestockRejectBatchRequests(restock, childRows, currentUserName(), comment))
+      const result = await resourceIoStore.runBatchRequests(buildRestockRejectBatchRequests(restock, childRows, currentUserName(), comment))
       if (responseFailed(result)) return notifyError(failureMessage(result, 'Failed to reject restock.'))
       $q.notify({ type: 'positive', message: 'Restock rejected.', position: 'top' })
       await reloadView(true)
@@ -370,7 +370,7 @@ export function useOutletRestocks() {
     if (!text(comment)) return notifyWarning('Comment is required.')
     saving.value = true
     try {
-      const result = await workflowStore.runBatchRequests([buildRestockSendBackRequest(restock, appendWorkflowComment(restock.ProgressRevisionRequiredComment, comment))])
+      const result = await resourceIoStore.runBatchRequests([buildRestockSendBackRequest(restock, appendWorkflowComment(restock.ProgressRevisionRequiredComment, comment))])
       if (responseFailed(result)) return notifyError(failureMessage(result, 'Failed to send restock back.'))
       $q.notify({ type: 'positive', message: 'Restock sent back.', position: 'top' })
       return true

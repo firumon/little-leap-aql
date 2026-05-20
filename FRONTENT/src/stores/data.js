@@ -1,19 +1,15 @@
 import { defineStore } from 'pinia'
 import { reactive, watch } from 'vue'
 import { useAuthStore } from './auth'
-import { onRowsUpserted, getResourceRows } from 'src/services/IndexedDbService'
-import { fetchResourceRecords } from 'src/services/ResourceRecordsService'
-import { rowsUpsert, metaSet } from 'src/services/IndexedDbCacheService'
-
-function rowsToObjects(headers = [], rows = []) {
-  return rows.map((row) => {
-    const obj = {}
-    headers.forEach((key, index) => {
-      obj[key] = row[index] ?? ''
-    })
-    return obj
-  })
-}
+import { useResourceStatusStore } from './resourceStatus'
+import { onRowsUpserted } from 'src/services/IndexedDbCacheService'
+import {
+  fetchResourceRecords,
+  getResourceRowsCached,
+  setResourceMetaCached,
+  upsertResourceRowsCached
+} from 'src/services/ResourceIoService'
+import { mapRowsToObjects } from 'src/utils/appHelpers'
 
 export const useDataStore = defineStore('data', () => {
   const headers = reactive({})
@@ -62,13 +58,14 @@ export const useDataStore = defineStore('data', () => {
   }
 
   function getRecords(resourceName) {
-    return rowsToObjects(headers[resourceName] || [], getRows(resourceName))
+    return mapRowsToObjects(getRows(resourceName), headers[resourceName] || [])
   }
 
   async function seedResourceFromCache(resourceName, options = {}) {
     if (!resourceName) return []
     ensureResourceState(resourceName)
-    const idbRows = await getResourceRows(resourceName)
+    const response = await getResourceRowsCached(resourceName)
+    const idbRows = Array.isArray(response?.data) ? response.data : []
     if (idbRows.length) {
       replaceRows(resourceName, idbRows)
     }
@@ -83,18 +80,34 @@ export const useDataStore = defineStore('data', () => {
     ensureResourceState(resourceName)
     loadingByResource[resourceName] = true
     try {
-      const response = await fetchResourceRecords(resourceName, options)
-      if (Array.isArray(response?.headers) && response.headers.length) {
-        headers[resourceName] = response.headers
+      const resourceStatus = useResourceStatusStore()
+      const response = await fetchResourceRecords(
+        resourceName,
+        authStore.authorizedResources || [],
+        authStore.appConfigMap || {},
+        {
+          ...options,
+          resourceStatus
+        }
+      )
+      const payload = response?.data || {}
+      const responseHeaders = Array.isArray(payload.headers) ? payload.headers : []
+      const responseRows = Array.isArray(payload.rows) ? payload.rows : []
+
+      if (responseHeaders.length) {
+        headers[resourceName] = responseHeaders
       }
-      if (Array.isArray(response?.rows)) {
-        replaceRows(resourceName, response.rows)
+      if (Array.isArray(payload.rows)) {
+        replaceRows(resourceName, responseRows)
       }
       return {
         ...response,
-        records: Array.isArray(response?.rows)
-          ? rowsToObjects(headers[resourceName] || response.headers || [], response.rows)
-          : (response?.records || [])
+        headers: responseHeaders,
+        rows: responseRows,
+        records: Array.isArray(payload.rows)
+          ? mapRowsToObjects(responseRows, headers[resourceName] || responseHeaders)
+          : (payload.records || []),
+        meta: payload.meta || {}
       }
     } finally {
       loadingByResource[resourceName] = false
@@ -108,10 +121,7 @@ export const useDataStore = defineStore('data', () => {
 
     backgroundSyncingByResource[resourceName] = true
     try {
-      return await loadResource(resourceName, {
-        syncWhenCacheExists: true,
-        ...options
-      })
+      return await loadResource(resourceName, options)
     } finally {
       backgroundSyncingByResource[resourceName] = false
     }
@@ -163,7 +173,7 @@ export const useDataStore = defineStore('data', () => {
   // NEW: Cache rows via new service (wrapping IDB persistence)
   async function cacheResourceRows(resourceName, headerArray, newRows) {
     try {
-      const response = await rowsUpsert(resourceName, headerArray, newRows)
+      const response = await upsertResourceRowsCached(resourceName, headerArray, newRows)
       if (response.success) {
         setRows(resourceName, newRows)
         return { success: true, affected: response.data?.affected }
@@ -177,7 +187,7 @@ export const useDataStore = defineStore('data', () => {
   // NEW: Set resource metadata via new service
   async function setResourceMetadata(resourceName, meta) {
     try {
-      const response = await metaSet(resourceName, meta)
+      const response = await setResourceMetaCached(resourceName, meta)
       return response
     } catch (error) {
       return { success: false, error: error.message }
@@ -189,6 +199,7 @@ export const useDataStore = defineStore('data', () => {
     rows,
     loadingByResource,
     backgroundSyncingByResource,
+    ensureResourceState,
     initResource,
     setRows,
     replaceRows,

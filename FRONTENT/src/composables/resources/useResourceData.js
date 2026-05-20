@@ -2,6 +2,7 @@ import { ref, computed, watch, unref } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
 import { useDataStore } from 'src/stores/data'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 
 /**
  * Manages data loading, search, and filtering for a resource.
@@ -11,6 +12,7 @@ export function useResourceData(resourceNameRef) {
   const $q = useQuasar()
   const authStore = useAuthStore()
   const dataStore = useDataStore()
+  const resourceIoStore = useResourceIoStore()
 
   const loading = ref(false)
   const backgroundSyncing = ref(false)
@@ -56,22 +58,7 @@ export function useResourceData(resourceNameRef) {
     $q.notify({ type, message, timeout: 2200 })
   }
 
-  async function runBackgroundSync(resourceName, requestId) {
-    if (!resourceName || backgroundSyncing.value) return
-    backgroundSyncing.value = true
-    try {
-      await dataStore.syncResource(resourceName, {
-        syncWhenCacheExists: true
-      })
-      // The fetch updates IDB, which fires onRowsUpserted listener,
-      // which sets rows in dataStore, which triggers items computed.
-      // So no manual assignment here.
-    } finally {
-      if (requestId === loadRequestId.value) backgroundSyncing.value = false
-    }
-  }
-
-  async function reload(forceSync = false) {
+  async function reload() {
     const resourceName = resolvedResourceName.value
     if (!resourceName) return
 
@@ -79,25 +66,19 @@ export function useResourceData(resourceNameRef) {
     const hasRowsToShow = items.value.length > 0
     const blockingLoad = !hasRowsToShow
     loading.value = blockingLoad
-    if (hasRowsToShow && forceSync) {
-      backgroundSyncing.value = true
-    }
+    backgroundSyncing.value = hasRowsToShow
 
     try {
-      const response = await dataStore.loadResource(resourceName, { forceSync })
+      await resourceIoStore.fetchResource(resourceName)
 
       // Again, data store is populated automatically via IDB callback.
       // fetchResourceRecords writes to IDB and that updates the store.
 
       if (requestId !== loadRequestId.value) return
-
-      if (!forceSync && response?.meta?.source === 'cache') {
-        runBackgroundSync(resourceName, requestId)
-      }
     } finally {
       if (requestId === loadRequestId.value) {
         loading.value = false
-        if (forceSync) backgroundSyncing.value = false
+        backgroundSyncing.value = false
       }
     }
   }

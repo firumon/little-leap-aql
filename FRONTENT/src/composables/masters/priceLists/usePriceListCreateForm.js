@@ -1,14 +1,14 @@
 import { ref, computed, reactive } from 'vue'
 import { useAuthStore } from 'src/stores/auth'
 import { useDataStore } from 'src/stores/data'
-import { useWorkflowStore } from 'src/stores/workflow'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 import { parseVariantTypes } from 'src/composables/masters/products/useProductVariants'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
 export function usePriceListCreateForm() {
   const authStore = useAuthStore()
   const dataStore = useDataStore()
-  const workflowStore = useWorkflowStore()
+  const resourceIoStore = useResourceIoStore()
   const nav = useResourceNav()
 
   const form = reactive({ Name: '', Description: '', Currency: '', IsDefault: 'FALSE', Status: 'Active' })
@@ -173,7 +173,7 @@ export function usePriceListCreateForm() {
       payload.children = [{ resource: 'PriceListItems', records: childRecords }]
     }
 
-    return await workflowStore.saveComposite(payload)
+    return await resourceIoStore.saveComposite(payload)
   }
 
   async function _saveAsInline() {
@@ -192,7 +192,7 @@ export function usePriceListCreateForm() {
       SKUPrices: JSON.stringify(priceObj)
     }
 
-    return await workflowStore.createResourceRecord('PriceList', record)
+    return await resourceIoStore.createResourceRecord('PriceList', record)
   }
 
   async function handleSave() {

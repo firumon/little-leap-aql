@@ -1,16 +1,14 @@
 import { computed, ref, toRaw } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
-import { useWorkflowStore } from 'src/stores/workflow'
-import { useClientCacheStore } from 'src/stores/clientCache'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 
 const AUDIT_HEADERS = ['CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy']
 
 export function useBulkUpload() {
   const $q = useQuasar()
   const authStore = useAuthStore()
-  const workflowStore = useWorkflowStore()
-  const clientCacheStore = useClientCacheStore()
+  const resourceIoStore = useResourceIoStore()
 
   const selectedResourceName = ref('')
   const rawContent = ref('')
@@ -89,11 +87,11 @@ export function useBulkUpload() {
     headersDisplay.value = selectedResourceHeaders.value.join(', ')
 
     try {
-      const metaResponse = await clientCacheStore.getResourceMeta(value)
+      const metaResponse = await resourceIoStore.getResourceMeta(value)
       const headers = metaResponse.data?.headers || selectedResourceHeaders.value
       const codeIndex = headers.indexOf('Code')
       if (codeIndex !== -1) {
-        const localRowsResponse = await clientCacheStore.getResourceRows(value)
+        const localRowsResponse = await resourceIoStore.getResourceRows(value)
         const localRows = localRowsResponse.data || []
         existingCodes.value = new Set(
           localRows.map((row) => (row[codeIndex] || '').toString().trim()).filter(Boolean)
@@ -104,7 +102,7 @@ export function useBulkUpload() {
     }
 
     try {
-      const draftResponse = await clientCacheStore.getDraft(`bulk-upload::${value}`)
+      const draftResponse = await resourceIoStore.getDraft(`bulk-upload::${value}`)
       const draft = draftResponse.data || null
       if (draft?.data?.rows?.length) {
         rows.value = draft.data.rows
@@ -190,7 +188,7 @@ export function useBulkUpload() {
     if (!draftKey.value) return
     try {
       const plainRows = JSON.parse(JSON.stringify(toRaw(rows.value)))
-      await clientCacheStore.saveDraft(draftKey.value, {
+      await resourceIoStore.saveDraft(draftKey.value, {
         rows: plainRows,
         rawContent: rawContent.value,
         headersDisplay: headersDisplay.value
@@ -205,7 +203,7 @@ export function useBulkUpload() {
     rawContent.value = ''
     csvFile.value = null
     if (draftKey.value) {
-      await clientCacheStore.deleteDraft(draftKey.value).catch(() => {})
+      await resourceIoStore.deleteDraft(draftKey.value).catch(() => {})
     }
   }
 
@@ -219,7 +217,7 @@ export function useBulkUpload() {
         return data
       })
 
-      const response = await workflowStore.uploadBulkRecords(selectedResourceName.value, records)
+      const response = await resourceIoStore.uploadBulkRecords(selectedResourceName.value, records)
       if (!response.success) {
         $q.notify({ color: 'negative', message: response.error || response.message || 'Bulk upload failed', icon: 'error' })
         return { success: false, response }

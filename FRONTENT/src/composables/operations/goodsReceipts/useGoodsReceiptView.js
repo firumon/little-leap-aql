@@ -2,7 +2,7 @@ import { ref, computed } from 'vue'
 import { useQuasar } from 'quasar'
 import { useResourceConfig } from '../../resources/useResourceConfig.js'
 import { useResourceData } from '../../resources/useResourceData.js'
-import { useWorkflowStore } from '../../../stores/workflow.js'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceNav } from '../../resources/useResourceNav.js'
 import { formatDate } from '../poReceivings/poReceivingMeta.js'
 import { buildInvalidateGrnRequests, failureMessage, refreshRequest, responseFailed } from '../poReceivings/poReceivingBatch.js'
@@ -13,7 +13,7 @@ export function useGoodsReceiptView() {
   const $q = useQuasar()
   const { code } = useResourceConfig()
   const nav = useResourceNav()
-  const workflowStore = useWorkflowStore()
+  const resourceIoStore = useResourceIoStore()
   const receipts = useResourceData(ref('GoodsReceipts'))
   const receiptItems = useResourceData(ref('GoodsReceiptItems'))
   const receivings = useResourceData(ref('POReceivings'))
@@ -32,7 +32,7 @@ export function useGoodsReceiptView() {
   async function loadData(forceSync = false) {
     loading.value = true
     try {
-      await workflowStore.fetchResources(['GoodsReceipts', 'GoodsReceiptItems', 'POReceivings', 'Procurements'], { forceSync })
+      await resourceIoStore.fetchResources(['GoodsReceipts', 'GoodsReceiptItems', 'POReceivings', 'Procurements'], { forceSync })
     } finally {
       loading.value = false
     }
@@ -42,7 +42,7 @@ export function useGoodsReceiptView() {
     if (!canInvalidate.value) return
     acting.value = true
     try {
-      const result = await workflowStore.runBatchRequests([
+      const result = await resourceIoStore.runBatchRequests([
         ...buildInvalidateGrnRequests(record.value, receiptItems.items.value, receiving.value, procurement.value),
         refreshRequest(['GoodsReceipts', 'GoodsReceiptItems', 'POReceivings', 'Procurements'])
       ])

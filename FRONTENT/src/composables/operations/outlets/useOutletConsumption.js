@@ -3,7 +3,7 @@ import { useQuasar } from 'quasar'
 import { useAuthStore } from '../../../stores/auth.js'
 import { useResourceData } from '../../resources/useResourceData.js'
 import { useResourceNav } from '../../resources/useResourceNav.js'
-import { useWorkflowStore } from '../../../stores/workflow.js'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 import { OUTLET_OPERATION_RESOURCES, CONSUMPTION_PROGRESS_ORDER, active, formatDate, progressMeta, sortTime, text, todayISO, visitProgress } from './outletOperationsMeta.js'
 import { toNumber, validateConsumption } from './outletStockLogic.js'
 import { batchRef, batchResultCode, compositeSaveRequest, executeActionRequest, failureMessage, OUTLET_ACTIONS, responseFailed } from './outletOperationsBatch.js'
@@ -24,7 +24,7 @@ const INVOICE_PROGRESS_ORDER = ['PENDING_PAYMENT', 'PARTIALLY_PAID', 'PAID', 'CA
 
 export function useOutletConsumption() {
   const $q = useQuasar()
-  const workflowStore = useWorkflowStore()
+  const resourceIoStore = useResourceIoStore()
   const authStore = useAuthStore()
   const nav = useResourceNav()
   const consumptions = useResourceData(ref('OutletConsumptions'))
@@ -204,7 +204,7 @@ export function useOutletConsumption() {
   async function reload(forceSync = false) {
     loading.value = true
     try {
-      await workflowStore.fetchResources(['OutletConsumptions', 'OutletConsumptionInvoices', 'OutletRestocks', 'Outlets'], { forceSync })
+      await resourceIoStore.fetchResources(['OutletConsumptions', 'OutletConsumptionInvoices', 'OutletRestocks', 'Outlets'], { forceSync })
       if (!form.value.OutletCode && outletOptions.value[0]) form.value.OutletCode = outletOptions.value[0].value
       syncDefaultGroups()
     } finally { loading.value = false }
@@ -259,7 +259,7 @@ export function useOutletConsumption() {
         if (checklist.value.submitRestock) requests.push(buildRestockSubmitRequest(restockRef))
       }
 
-      const phase1 = await workflowStore.runBatchRequests(requests)
+      const phase1 = await resourceIoStore.runBatchRequests(requests)
       if (responseFailed(phase1)) return $q.notify({ type: 'negative', message: failureMessage(phase1, 'Failed to save outlet consumption.'), position: 'top' })
       consumptionCode = batchResultCode(phase1, 0)
       if (!consumptionCode) return $q.notify({ type: 'negative', message: 'Consumption saved but code not returned.', position: 'top' })
@@ -291,7 +291,7 @@ export function useOutletConsumption() {
     try {
       const comment = 'Invoice generated from pending outlet consumption.'
       const invoiceRef = batchRef('OutletConsumptionInvoices.latest.code')
-      const result = await workflowStore.runBatchRequests([
+      const result = await resourceIoStore.runBatchRequests([
         buildConsumptionInvoiceRequest(record.Code, { ...record, InvoiceComment: comment }, { priceListCode: pricing.priceListCode, subtotal: pricing.subtotal }),
         buildConsumptionInvoiceItemsRequest(invoiceRef, pricing.items),
         buildInvoiceGeneratedRequest(record.Code, comment)
@@ -333,7 +333,7 @@ export function useOutletConsumption() {
 
     acting.value = true
     try {
-      const result = await workflowStore.runBatchRequests(requests)
+      const result = await resourceIoStore.runBatchRequests(requests)
       if (responseFailed(result)) {
         $q.notify({ type: 'negative', message: failureMessage(result, 'Failed to cancel consumption.'), position: 'top' })
         return false

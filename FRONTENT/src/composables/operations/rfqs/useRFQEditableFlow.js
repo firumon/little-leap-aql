@@ -1,7 +1,7 @@
 import { computed, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
-import { useWorkflowStore } from 'src/stores/workflow'
+import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceConfig, isActionVisible } from 'src/composables/resources/useResourceConfig'
 import { useResourceData } from 'src/composables/resources/useResourceData'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
@@ -43,7 +43,7 @@ function editableSnapshot(form) {
 export function useRFQEditableFlow() {
   const $q = useQuasar()
   const auth = useAuthStore()
-  const workflowStore = useWorkflowStore()
+  const resourceIoStore = useResourceIoStore()
   const nav = useResourceNav()
   const { code, resourceName, additionalActions } = useResourceConfig()
   const rfqResource = useResourceData(ref('RFQs'))
@@ -160,7 +160,7 @@ export function useRFQEditableFlow() {
 
     saving.value = true
     try {
-      const response = await workflowStore.updateResourceRecord('RFQs', form.value.Code, buildUpdateRecord())
+      const response = await resourceIoStore.updateResourceRecord('RFQs', form.value.Code, buildUpdateRecord())
 
       if (!response?.success) {
         $q.notify({ type: 'negative', message: response?.error || response?.message || 'Failed to save RFQ' })

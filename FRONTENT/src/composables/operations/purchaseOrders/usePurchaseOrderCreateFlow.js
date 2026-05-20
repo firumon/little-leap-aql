@@ -151,10 +151,7 @@ export function usePurchaseOrderCreateFlow() {
                 'PurchaseRequisitions',
                 'PurchaseRequisitionItems',
                 'Procurements'
-            ], {
-                includeInactive: true,
-                forceSync
-            });
+            ], { forceSync });
         } finally {
             loading.value = false;
         }
@@ -378,7 +375,7 @@ export function usePurchaseOrderCreateFlow() {
             batchPayload.push({
                 action: 'get',
                 resource: ['PurchaseOrders', 'PurchaseOrderItems', 'SupplierQuotations', 'RFQs', 'Procurements'],
-                payload: { includeInactive: true }
+                payload: {}
             });
 
             const result = await workflowStore.runBatchRequests(batchPayload);

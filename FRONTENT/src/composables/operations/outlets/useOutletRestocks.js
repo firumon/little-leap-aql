@@ -234,10 +234,10 @@ export function useOutletRestocks() {
     return true
   }
 
-  async function reload(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(OUTLET_OPERATION_RESOURCES, { includeInactive: true, forceSync }) } finally { loading.value = false } }
-  async function reloadIndex(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(['OutletRestocks', 'OutletRestockItems', 'Outlets'], { includeInactive: true, forceSync }) } finally { loading.value = false } }
-  async function reloadAdd(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(['Outlets', 'SKUs', 'Products'], { includeInactive: true, forceSync }) } finally { loading.value = false } }
-  async function reloadView(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(['OutletRestocks', 'OutletRestockItems', 'WarehouseStorages', 'Outlets', 'SKUs', 'Products'], { includeInactive: true, forceSync }) } finally { loading.value = false } }
+  async function reload(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(OUTLET_OPERATION_RESOURCES, { forceSync }) } finally { loading.value = false } }
+  async function reloadIndex(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(['OutletRestocks', 'OutletRestockItems', 'Outlets'], { forceSync }) } finally { loading.value = false } }
+  async function reloadAdd(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(['Outlets', 'SKUs', 'Products'], { forceSync }) } finally { loading.value = false } }
+  async function reloadView(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(['OutletRestocks', 'OutletRestockItems', 'WarehouseStorages', 'Outlets', 'SKUs', 'Products'], { forceSync }) } finally { loading.value = false } }
 
   function loadRestockRows(code = form.value.Code) {
     const selectedCodes = new Set(rows.value.filter(row => row._cancelSelected).map(row => text(row.Code)).filter(Boolean))
@@ -324,7 +324,7 @@ export function useOutletRestocks() {
     saving.value = true
     try {
       const requests = buildPendingRestockAllocationBatchRequests(restock, rowsToPersist, currentUserName(), comment)
-      requests.push(resourceGetRequest(['WarehouseStorages'], { includeInactive: true }))
+      requests.push(resourceGetRequest(['WarehouseStorages'], {}))
       const result = await workflowStore.runBatchRequests(requests)
       if (responseFailed(result)) return notifyError(failureMessage(result, 'Failed to allocate pending items.'))
       $q.notify({ type: 'positive', message: 'Pending items allocated.', position: 'top' })

@@ -92,7 +92,7 @@ async function loadAndInitialize() {
   await reload()
   if (!record.value) return
 
-  const childRecordsByResource = await loadChildRecords(code.value, config.value, { includeInactive: true })
+  const childRecordsByResource = await loadChildRecords(code.value, config.value, {})
   initializeForEdit(record.value, childRecordsByResource)
 }
 

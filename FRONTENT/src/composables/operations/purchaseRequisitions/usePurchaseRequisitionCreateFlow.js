@@ -187,12 +187,12 @@ export function usePurchaseRequisitionCreateFlow() {
         {
           action: 'get',
           resource: 'PurchaseRequisitions',
-          payload: { includeInactive: true }
+          payload: {}
         },
         {
           action: 'get',
           resource: 'PurchaseRequisitionItems',
-          payload: { includeInactive: true }
+          payload: {}
         }
       ])
 

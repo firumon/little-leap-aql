@@ -218,7 +218,6 @@ async function reloadAll(forceSync = false) {
   backgroundSyncing.value = hasRowsToShow
   try {
     await workflowStore.fetchResources(resources, {
-      includeInactive: true,
       forceSync,
       syncWhenCacheExists: true
     })

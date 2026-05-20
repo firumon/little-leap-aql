@@ -144,7 +144,7 @@ export function useGrnStockEntry() {
       const [warehouseRows, skuRows] = await Promise.all([
         stockMovements.loadWarehouses(),
         stockMovements.loadSkusWithProducts(),
-        workflowStore.fetchResources(['GoodsReceipts', 'GoodsReceiptItems', 'PurchaseOrders', 'StockMovements'], { includeInactive: true, forceSync })
+        workflowStore.fetchResources(['GoodsReceipts', 'GoodsReceiptItems', 'PurchaseOrders', 'StockMovements'], { forceSync })
       ])
       warehouses.value = warehouseRows
       skus.value = skuRows

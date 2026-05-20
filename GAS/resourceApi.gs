@@ -9,7 +9,6 @@ function handleResourceGetRecords(auth, payload) {
   const resource = openResourceSheet(resourceName);
   enforceMasterPermission(auth, resourceName, 'canRead');
 
-  const includeInactive = payload && payload.includeInactive === true;
   const lastUpdatedAt = payload && payload.lastUpdatedAt ? parseDateInput(payload.lastUpdatedAt) : null;
   const headers = getSheetHeaders(resource.sheet);
 
@@ -35,17 +34,11 @@ function handleResourceGetRecords(auth, payload) {
   }
 
   const idx = getHeaderIndexMap(headers);
-  const statusIdx = idx.Status;
   const updatedAtIdx = idx.UpdatedAt;
   const rows = [];
 
   for (let i = 1; i < values.length; i++) {
     const row = values[i];
-    const status = statusIdx === undefined ? 'Active' : ((row[statusIdx] || '').toString().trim() || 'Active');
-
-    if (!includeInactive && status !== 'Active') {
-      continue;
-    }
 
     if (lastUpdatedAt && updatedAtIdx !== undefined) {
       const updatedDate = parseDateInput(row[updatedAtIdx]);
@@ -1170,7 +1163,6 @@ function collectWriteDeltaResources(auth, payload, resourceNames) {
   var deltas = {};
   unique.forEach(function (resourceName) {
     var readPayload = cloneWithResource(payload, resourceName);
-    readPayload.includeInactive = true;
 
     var cursor = resolveMultiResourceCursor(payload, resourceName);
     if (cursor !== null && cursor !== undefined && cursor !== '') {

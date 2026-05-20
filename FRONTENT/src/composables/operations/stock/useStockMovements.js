@@ -29,7 +29,7 @@ export function useStockMovements() {
 
   async function loadWarehouses() {
     try {
-      await dataStore.loadResource('Warehouses', { includeInactive: false })
+      await dataStore.loadResource('Warehouses', {})
       return dataStore.getRecords('Warehouses')
     } catch {
       return []
@@ -39,8 +39,8 @@ export function useStockMovements() {
   async function loadSkusWithProducts() {
     try {
       await Promise.all([
-        dataStore.loadResource('SKUs', { includeInactive: false }),
-        dataStore.loadResource('Products', { includeInactive: false })
+        dataStore.loadResource('SKUs', {}),
+        dataStore.loadResource('Products', {})
       ])
       const skus = dataStore.getRecords('SKUs')
       const prods = dataStore.getRecords('Products')
@@ -61,7 +61,7 @@ export function useStockMovements() {
   async function loadStoragesForWarehouse(warehouseCode, forceSync = false) {
     if (!warehouseCode) return []
     try {
-      await dataStore.loadResource('WarehouseStorages', { includeInactive: true, forceSync })
+      await dataStore.loadResource('WarehouseStorages', { forceSync })
       const records = dataStore.getRecords('WarehouseStorages')
       return records.filter(r => r.WarehouseCode === warehouseCode)
     } catch {
@@ -105,7 +105,6 @@ export function useStockMovements() {
         {
           action: 'get',
           resource: 'WarehouseStorages',
-          includeInactive: true,
           includeHeaders: true
         }
       ])

@@ -50,7 +50,7 @@ export function usePOReceivingView() {
   async function loadData(forceSync = false) {
     loading.value = true
     try {
-      await workflowStore.fetchResources(['POReceivings', 'POReceivingItems', 'GoodsReceipts', 'GoodsReceiptItems', 'PurchaseOrders', 'Procurements'], { includeInactive: true, forceSync })
+      await workflowStore.fetchResources(['POReceivings', 'POReceivingItems', 'GoodsReceipts', 'GoodsReceiptItems', 'PurchaseOrders', 'Procurements'], { forceSync })
     } finally {
       loading.value = false
     }

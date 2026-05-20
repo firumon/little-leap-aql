@@ -135,7 +135,7 @@ function navigateToAction(action) {
 }
 
 async function loadChildRecords() {
-  await loadRelatedChildren(code.value, config.value, { includeInactive: true })
+  await loadRelatedChildren(code.value, config.value, {})
 }
 
 watch(() => resourceName.value, async (n) => { if (n) await reload() }, { immediate: true })

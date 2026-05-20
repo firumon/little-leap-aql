@@ -204,7 +204,7 @@ export function useOutletConsumption() {
   async function reload(forceSync = false) {
     loading.value = true
     try {
-      await workflowStore.fetchResources(['OutletConsumptions', 'OutletConsumptionInvoices', 'OutletRestocks', 'Outlets'], { includeInactive: true, forceSync })
+      await workflowStore.fetchResources(['OutletConsumptions', 'OutletConsumptionInvoices', 'OutletRestocks', 'Outlets'], { forceSync })
       if (!form.value.OutletCode && outletOptions.value[0]) form.value.OutletCode = outletOptions.value[0].value
       syncDefaultGroups()
     } finally { loading.value = false }

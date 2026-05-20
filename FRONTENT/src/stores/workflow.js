@@ -58,7 +58,6 @@ export const useWorkflowStore = defineStore('workflow', () => {
     }
 
     const response = await fetchResourcesFromService(resources, {
-      includeInactive: payload.includeInactive !== false,
       forceSync: payload.forceSync === true,
       syncWhenCacheExists: payload.syncWhenCacheExists !== false,
       showLoading: payload.showLoading === true,

@@ -61,7 +61,6 @@ export function useResourceData(resourceNameRef) {
     backgroundSyncing.value = true
     try {
       await dataStore.syncResource(resourceName, {
-        includeInactive: true,
         syncWhenCacheExists: true
       })
       // The fetch updates IDB, which fires onRowsUpserted listener,
@@ -85,10 +84,7 @@ export function useResourceData(resourceNameRef) {
     }
 
     try {
-      const response = await dataStore.loadResource(resourceName, {
-        includeInactive: true,
-        forceSync
-      })
+      const response = await dataStore.loadResource(resourceName, { forceSync })
 
       // Again, data store is populated automatically via IDB callback.
       // fetchResourceRecords writes to IDB and that updates the store.

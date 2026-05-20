@@ -68,11 +68,7 @@ export const useDataStore = defineStore('data', () => {
   async function seedResourceFromCache(resourceName, options = {}) {
     if (!resourceName) return []
     ensureResourceState(resourceName)
-    const statusIndex = (headers[resourceName] || []).indexOf('Status')
-    const idbRows = await getResourceRows(resourceName, {
-      includeInactive: options.includeInactive !== false,
-      statusIndex
-    })
+    const idbRows = await getResourceRows(resourceName)
     if (idbRows.length) {
       replaceRows(resourceName, idbRows)
     }
@@ -113,7 +109,6 @@ export const useDataStore = defineStore('data', () => {
     backgroundSyncingByResource[resourceName] = true
     try {
       return await loadResource(resourceName, {
-        includeInactive: true,
         syncWhenCacheExists: true,
         ...options
       })
@@ -131,7 +126,7 @@ export const useDataStore = defineStore('data', () => {
       if (!resource?.name) continue
       initResource(resource.name, resource.headers || [])
       try {
-        await seedResourceFromCache(resource.name, { includeInactive: true })
+        await seedResourceFromCache(resource.name)
       } catch {
         // non-critical: sync will repopulate the store later
       }

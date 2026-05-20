@@ -138,7 +138,6 @@ watch(
       'PriceList',
       ...(priceListLookupMode.value === 'ITEMS' ? ['PriceListItems'] : [])
     ], {
-      includeInactive: true,
       syncWhenCacheExists: true
     })
   },

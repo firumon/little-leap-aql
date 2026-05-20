@@ -13,7 +13,6 @@ export function useProductSkuViewData() {
   async function syncSkuRowsInBackground(productCode) {
     try {
       const response = await dataStore.syncResource('SKUs', {
-        includeInactive: true,
         syncWhenCacheExists: true
       })
 
@@ -30,7 +29,7 @@ export function useProductSkuViewData() {
     skuLoading.value = true
 
     try {
-      const response = await dataStore.loadResource('SKUs', { includeInactive: true })
+      const response = await dataStore.loadResource('SKUs', {})
       if (response.success && Array.isArray(response.records)) {
         applySkuRows(productCode, response.records)
         if (response?.meta?.source === 'cache') {

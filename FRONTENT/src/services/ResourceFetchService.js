@@ -146,7 +146,6 @@ export async function syncResourcesBatch(resourceNames = [], authorizedResources
     const mergedResponseData = {}
     const payload = {
       resource: uniqueNames,
-      includeInactive: true,
       ...(Object.keys(cursorByResource).length
         ? { lastUpdatedAtByResource: cursorByResource }
         : {})
@@ -206,7 +205,6 @@ export async function fetchResourceRecords(resourceName, authorizedResources = [
   try {
     logger.debug('Fetching resource records', { resource: resourceName })
 
-    const includeInactive = options.includeInactive === true
     const forceSync = options.forceSync === true
     const syncWhenCacheExists = options.syncWhenCacheExists === true
 
@@ -225,11 +223,7 @@ export async function fetchResourceRecords(resourceName, authorizedResources = [
     const meta = await withTimeout(getResourceMeta(resourceName), null)
     const syncCursor = normalizeCursorValue(meta?.lastSyncAt)
     const cacheRefreshedAt = getCacheRefreshedAt(meta)
-    const statusIndex = headers.indexOf('Status')
-    const cachedRows = await withTimeout(getResourceRows(resourceName, {
-      includeInactive,
-      statusIndex
-    }), [])
+    const cachedRows = await withTimeout(getResourceRows(resourceName), [])
 
     const hasHydratedOnce = meta?.hasHydratedOnce === true
     let effectiveCursor = syncCursor ?? null
@@ -304,10 +298,7 @@ export async function fetchResourceRecords(resourceName, authorizedResources = [
       }
     }
 
-    const freshRows = await withTimeout(getResourceRows(resourceName, {
-      includeInactive,
-      statusIndex
-    }), [])
+    const freshRows = await withTimeout(getResourceRows(resourceName), [])
 
     const effectiveRows = freshRows.length
       ? freshRows
@@ -343,7 +334,6 @@ export async function fetchResourceRecordsBatch(resourceNames = [], authorizedRe
       return standardizeResponse(true, { resources: {}, synced: [] }, 'No resources requested')
     }
 
-    const includeInactive = options.includeInactive === true
     const forceSync = options.forceSync === true
     const syncWhenCacheExists = options.syncWhenCacheExists === true
     const now = Date.now()
@@ -370,11 +360,7 @@ export async function fetchResourceRecordsBatch(resourceNames = [], authorizedRe
       const meta = await withTimeout(getResourceMeta(resourceName), null)
       const syncCursor = normalizeCursorValue(meta?.lastSyncAt)
       const cacheRefreshedAt = getCacheRefreshedAt(meta)
-      const statusIndex = headers.indexOf('Status')
-      const cachedRows = await withTimeout(getResourceRows(resourceName, {
-        includeInactive,
-        statusIndex
-      }), [])
+      const cachedRows = await withTimeout(getResourceRows(resourceName), [])
 
       const hasHydratedOnce = meta?.hasHydratedOnce === true
       let effectiveCursor = syncCursor ?? null
@@ -412,7 +398,6 @@ export async function fetchResourceRecordsBatch(resourceNames = [], authorizedRe
       stateByResource[resourceName] = {
         headers,
         cachedRows,
-        statusIndex,
         syncCursor,
         effectiveCursor,
         cacheRefreshedAt,
@@ -444,10 +429,7 @@ export async function fetchResourceRecordsBatch(resourceNames = [], authorizedRe
       if (!state) continue
 
       const meta = await withTimeout(getResourceMeta(resourceName), null)
-      const freshRows = await withTimeout(getResourceRows(resourceName, {
-        includeInactive,
-        statusIndex: state.statusIndex
-      }), [])
+      const freshRows = await withTimeout(getResourceRows(resourceName), [])
       const rows = freshRows.length ? freshRows : state.cachedRows
       const lastSyncAt = normalizeCursorValue(meta?.lastSyncAt) || state.effectiveCursor || null
       const lastFetchAt = getCacheRefreshedAt(meta) || state.cacheRefreshedAt || null

@@ -183,10 +183,10 @@ export function useOutletDeliveries() {
     return JSON.stringify(row).toLowerCase().includes(needle) || summary.outlets.join(' ').toLowerCase().includes(needle)
   }
 
-  async function reload(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(OUTLET_OPERATION_RESOURCES, { includeInactive: true, forceSync }) } finally { loading.value = false } }
-  async function reloadIndex(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(['OutletDeliveries', 'OutletRestocks', 'OutletRestockItems', 'Outlets', 'SKUs', 'Products'], { includeInactive: true, forceSync }) } finally { loading.value = false; isInitialLoad.value = false } }
-  async function reloadAdd(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(['OutletDeliveries', 'OutletRestocks', 'OutletRestockItems', 'Outlets', 'SKUs', 'Products', 'Warehouses'], { includeInactive: true, forceSync }) } finally { loading.value = false } }
-  async function reloadView(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(['OutletDeliveries', 'OutletRestocks', 'OutletRestockItems', 'Outlets', 'SKUs', 'Products', 'OutletMovements'], { includeInactive: true, forceSync }) } finally { loading.value = false } }
+  async function reload(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(OUTLET_OPERATION_RESOURCES, { forceSync }) } finally { loading.value = false } }
+  async function reloadIndex(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(['OutletDeliveries', 'OutletRestocks', 'OutletRestockItems', 'Outlets', 'SKUs', 'Products'], { forceSync }) } finally { loading.value = false; isInitialLoad.value = false } }
+  async function reloadAdd(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(['OutletDeliveries', 'OutletRestocks', 'OutletRestockItems', 'Outlets', 'SKUs', 'Products', 'Warehouses'], { forceSync }) } finally { loading.value = false } }
+  async function reloadView(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(['OutletDeliveries', 'OutletRestocks', 'OutletRestockItems', 'Outlets', 'SKUs', 'Products', 'OutletMovements'], { forceSync }) } finally { loading.value = false } }
 
   function toggleItem(code) {
     const key = text(code)

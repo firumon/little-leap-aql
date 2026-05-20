@@ -12,7 +12,7 @@ export function useOutletStock() {
   const outletOptions = computed(() => outlets.items.value.filter(active).map(row => ({ label: `${row.Code} · ${row.Name}`, value: row.Code })))
   const movementTimeline = computed(() => movements.items.value.filter(active).filter(row => !selectedOutletCode.value || row.OutletCode === selectedOutletCode.value).sort((a, b) => sortTime(b) - sortTime(a)))
   const totalQty = computed(() => stockRows.value.reduce((sum, row) => sum + toNumber(row.Quantity), 0))
-  async function reload(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(OUTLET_OPERATION_RESOURCES, { includeInactive: true, forceSync }) } finally { loading.value = false } }
+  async function reload(forceSync = false) { loading.value = true; try { await workflowStore.fetchResources(OUTLET_OPERATION_RESOURCES, { forceSync }) } finally { loading.value = false } }
   function skuLabel(code) { const sku = skus.items.value.find(row => row.Code === code); return sku ? `${sku.Code} · ${sku.Variant1 || sku.ProductCode || ''}` : code } function outletLabel(code) { const outlet = outlets.items.value.find(row => row.Code === code); return outlet ? `${outlet.Code} · ${outlet.Name}` : code } function getStorage(code) { return storages.items.value.find(row => row.Code === code) || null } function selectOutlet(code) { selectedOutletCode.value = code || '' } function navigateTo(code) { nav.goTo('view', { code }) }
   return { loading, searchTerm, selectedOutletCode, showZero, stockRows, outletOptions, movementTimeline, totalQty, reload, skuLabel, outletLabel, getStorage, selectOutlet, navigateTo }
 }

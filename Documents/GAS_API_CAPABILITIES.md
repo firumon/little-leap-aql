@@ -42,7 +42,6 @@ All requests and responses use one transport envelope.
   "resource": ["Products", "Procurements"],
   "token": "...",
   "payload": {
-    "includeInactive": true,
     "lastUpdatedAtByResource": {
       "Products": 1713400000000
     }
@@ -95,7 +94,6 @@ Rules:
   "action": "get",
   "resource": ["PurchaseRequisitions", "PurchaseRequisitionItems"],
   "payload": {
-    "includeInactive": false,
     "lastUpdatedAtByResource": {
       "PurchaseRequisitions": 1713400000000,
       "PurchaseRequisitionItems": 1713400000000
@@ -104,6 +102,7 @@ Rules:
 }
 ```
 - Resource can be single or multi-resource.
+- Reads return both active and inactive records by default; active-only filtering is a UI/view concern when needed.
 - Delta cursor can be provided per-resource in `payload.lastUpdatedAtByResource`.
 - Response resource rows are emitted under `data.resources[resourceName].rows`.
 
@@ -252,8 +251,8 @@ Rules:
   "payload": {
     "requests": [
       { "requestId": "uuid-1", "action": "compositeSave", "resource": "PurchaseRequisitions", "payload": { ... } },
-      { "requestId": "uuid-2", "action": "get", "resource": ["PurchaseRequisitions"], "payload": { "includeInactive": true } },
-      { "requestId": "uuid-3", "action": "get", "resource": ["PurchaseRequisitionItems"], "payload": { "includeInactive": true } }
+      { "requestId": "uuid-2", "action": "get", "resource": ["PurchaseRequisitions"], "payload": {} },
+      { "requestId": "uuid-3", "action": "get", "resource": ["PurchaseRequisitionItems"], "payload": {} }
     ]
   }
 }
@@ -359,7 +358,7 @@ All `get` calls support delta filtering:
 - Resource metadata belongs in `syncAppResources.gs`.
 - Operational multi-record saves should use the supported bulk-array path, not invent custom action shapes when an existing pattern fits.
 - For write actions, use nested payload objects only (`payload.record` / `payload.data` / `payload.records`). Top-level write fields are invalid.
-- Write actions return deltas for directly affected resources, using `payload.lastUpdatedAtByResource` and `includeInactive=true` on server-side write-delta reads.
+- Write actions return deltas for directly affected resources, using `payload.lastUpdatedAtByResource`; readbacks include active and inactive records by default.
 - Use `record` for exact multi-resource, multi-code record fetches; do not overload `get` with record-level lookup semantics.
 - Use `batch` when you need packed sequential actions in one HTTP call; consume ordered per-request outputs from `data.result.responses` and use explicit `$ref` objects for same-batch dependencies.
 

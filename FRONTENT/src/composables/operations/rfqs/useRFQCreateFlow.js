@@ -150,7 +150,7 @@ export function useRFQCreateFlow() {
         }
       },
       procurements.buildProcurementUpdateRequest(procurementCode, procurements.procurementStage.value.rfqGenerated),
-      { action: 'get', resource: ['RFQs', 'PurchaseRequisitions', 'Procurements'], payload: { includeInactive: true } }
+      { action: 'get', resource: ['RFQs', 'PurchaseRequisitions', 'Procurements'], payload: {} }
     ].filter(Boolean)
   }
 
@@ -159,7 +159,7 @@ export function useRFQCreateFlow() {
 
     const response = await workflowStore.runBatchRequests([
       procurements.buildProcurementCreateRequest(selectedPr.value.Code),
-      { action: 'get', resource: ['Procurements', 'PurchaseRequisitions'], payload: { includeInactive: true } }
+      { action: 'get', resource: ['Procurements', 'PurchaseRequisitions'], payload: {} }
     ])
     if (responseFailed(response)) {
       throw new Error(firstFailureMessage(response, 'Failed to create linked Procurement'))

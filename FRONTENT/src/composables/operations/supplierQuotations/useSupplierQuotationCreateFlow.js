@@ -262,7 +262,7 @@ export function useSupplierQuotationCreateFlow() {
     requests.push({
       action: 'get',
       resource: ['SupplierQuotations', 'SupplierQuotationItems', 'RFQSuppliers', 'Procurements'],
-      payload: { includeInactive: true }
+      payload: {}
     })
 
     return requests

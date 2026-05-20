@@ -23,7 +23,7 @@ export function useGoodsReceiptIndex() {
   async function reload(forceSync = false) {
     loading.value = true
     try {
-      await workflowStore.fetchResources(['GoodsReceipts', 'POReceivings', 'PurchaseOrders'], { includeInactive: true, forceSync })
+      await workflowStore.fetchResources(['GoodsReceipts', 'POReceivings', 'PurchaseOrders'], { forceSync })
     } finally {
       loading.value = false
     }

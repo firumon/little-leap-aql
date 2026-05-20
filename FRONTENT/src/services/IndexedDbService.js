@@ -215,21 +215,15 @@ export async function upsertResourceRows(resource, headers = [], rows = []) {
   return affected
 }
 
-export async function getResourceRows(resource, options = {}) {
+export async function getResourceRows(resource) {
   if (!resource) return []
-  const { includeInactive = true, statusIndex = -1 } = options
   const db = await ensureDB()
   const tx = db.transaction('resource-records', 'readonly')
   const index = tx.store.index('by-resource')
   const allRows = await index.getAll(resource)
   await tx.done
 
-  const filtered = allRows.filter((entry) => Array.isArray(entry.row)).map((entry) => entry.row)
-  if (includeInactive || statusIndex === -1) {
-    return filtered
-  }
-
-  return filtered.filter((row) => (row[statusIndex] || '').toString().trim() === 'Active')
+  return allRows.filter((entry) => Array.isArray(entry.row)).map((entry) => entry.row)
 }
 
 export async function deleteResourceRowByCode(resource, code) {

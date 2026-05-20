@@ -112,7 +112,7 @@ watch(
   async ([nName, nCode]) => {
     if (nName && nCode) {
       await reload()
-      await loadRelations(record.value, config.value, { includeInactive: true })
+      await loadRelations(record.value, config.value, {})
     }
   },
   { immediate: true }

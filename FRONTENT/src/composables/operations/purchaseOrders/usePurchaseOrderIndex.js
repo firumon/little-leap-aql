@@ -77,10 +77,7 @@ export function usePurchaseOrderIndex() {
     const reload = async (forceSync = false) => {
         loading.value = true;
         try {
-            await workflowStore.fetchResources(['PurchaseOrders', 'Suppliers', 'Warehouses'], {
-                includeInactive: true,
-                forceSync
-            });
+            await workflowStore.fetchResources(['PurchaseOrders', 'Suppliers', 'Warehouses'], { forceSync });
         } finally {
             loading.value = false;
         }

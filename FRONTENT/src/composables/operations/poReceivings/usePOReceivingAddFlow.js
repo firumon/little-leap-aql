@@ -134,7 +134,7 @@ export function usePOReceivingAddFlow() {
   async function loadData(forceSync = false) {
     loading.value = true
     try {
-      await workflowStore.fetchResources(PO_RECEIVING_RESOURCES, { includeInactive: true, forceSync })
+      await workflowStore.fetchResources(PO_RECEIVING_RESOURCES, { forceSync })
       if (selectedPurchaseOrderCode.value) hydrateReceiving(currentReceiving.value || latestReceivingForSelectedPo())
     } finally {
       loading.value = false

@@ -35,7 +35,7 @@ export function resultCode(entry = {}) {
 }
 
 export function refreshRequest(resources = PO_RECEIVING_RESOURCES) {
-  return { action: 'get', resource: resources, payload: { includeInactive: true } }
+  return { action: 'get', resource: resources, payload: {} }
 }
 
 export function procurementProgressUpdateRequest(procurement, progress) {

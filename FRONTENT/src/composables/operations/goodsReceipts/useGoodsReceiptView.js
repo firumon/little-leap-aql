@@ -32,7 +32,7 @@ export function useGoodsReceiptView() {
   async function loadData(forceSync = false) {
     loading.value = true
     try {
-      await workflowStore.fetchResources(['GoodsReceipts', 'GoodsReceiptItems', 'POReceivings', 'Procurements'], { includeInactive: true, forceSync })
+      await workflowStore.fetchResources(['GoodsReceipts', 'GoodsReceiptItems', 'POReceivings', 'Procurements'], { forceSync })
     } finally {
       loading.value = false
     }

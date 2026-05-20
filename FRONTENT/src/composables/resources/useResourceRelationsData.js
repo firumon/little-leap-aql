@@ -9,7 +9,7 @@ export function useResourceRelationsData(resourceNameRef) {
   const childRecordsByResource = ref({})
   const parentRecord = ref(null)
 
-  async function loadChildRecords(parentCode, parentConfig, options = { includeInactive: true }) {
+  async function loadChildRecords(parentCode, parentConfig, options = {}) {
     const resolvedParentCode = unref(parentCode)
     if (!resolvedParentCode) {
       childRecordsByResource.value = {}
@@ -31,7 +31,7 @@ export function useResourceRelationsData(resourceNameRef) {
     return nextMap
   }
 
-  async function loadParentRecord(record, parentConfig, options = { includeInactive: true }) {
+  async function loadParentRecord(record, parentConfig, options = {}) {
     if (!parentResource.value || !record) {
       parentRecord.value = null
       return null
@@ -54,7 +54,7 @@ export function useResourceRelationsData(resourceNameRef) {
     return parentRecord.value
   }
 
-  async function loadRelations(record, parentConfig, options = { includeInactive: true }) {
+  async function loadRelations(record, parentConfig, options = {}) {
     const tasks = [loadChildRecords(record?.Code, parentConfig, options)]
     if (record) {
       tasks.push(loadParentRecord(record, parentConfig, options))

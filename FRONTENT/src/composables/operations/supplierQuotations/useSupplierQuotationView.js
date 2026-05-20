@@ -161,7 +161,7 @@ export function useSupplierQuotationView() {
         {
           action: 'get',
           resource: ['SupplierQuotations', 'SupplierQuotationItems'],
-          payload: { includeInactive: true }
+          payload: {}
         }
       ])
 

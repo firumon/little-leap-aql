@@ -34,6 +34,20 @@ export function resolveSkuPrice(sku, priceList, priceListLookup, priceListItems 
   }
 }
 
+export function resolvePricesForPriceList({ priceListCode, priceLists = [], priceListItems = [], appConfigMap = {}, consumptionItemRows = [] }) {
+  const priceList = priceLists.find((row) => active(row) && text(row.Code) === text(priceListCode))
+  if (!priceList) return { items: [], subtotal: 0, error: 'Price list not found' }
+  const priceListLookup = resolvePriceListLookup(appConfigMap)
+  const items = consumptionItemRows.map(row => {
+    const sku = text(row.SKU)
+    const qty = toNumber(row.Qty)
+    const price = resolveSkuPrice(sku, priceList, priceListLookup, priceListItems)
+    return { SKU: sku, Qty: qty, Price: price !== null ? price : 0 }
+  }).filter(row => row.SKU && row.Qty > 0)
+  const subtotal = items.reduce((sum, item) => sum + toNumber(item.Qty) * toNumber(item.Price), 0)
+  return { priceListCode, items, subtotal, error: '' }
+}
+
 export function resolveInvoicePricing({ outletCode, rules = [], priceLists = [], priceListItems = [], appConfigMap = {}, consumptionItemRows = [] }) {
   const errors = []
 

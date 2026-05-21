@@ -6,7 +6,7 @@ import { useResourceNav } from '../../resources/useResourceNav.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { OUTLET_OPERATION_RESOURCES, CONSUMPTION_PROGRESS_ORDER, active, formatDate, progressMeta, sortTime, text, todayISO, visitProgress } from './outletOperationsMeta.js'
 import { toNumber, validateConsumption } from './outletStockLogic.js'
-import { batchRef, batchResultCode, compositeSaveRequest, executeActionRequest, failureMessage, OUTLET_ACTIONS, responseFailed } from './outletOperationsBatch.js'
+import { batchRef, batchResultCode, compositeSaveRequest, executeActionRequest, failureMessage, OUTLET_ACTIONS, resourceUpdateRequest, responseFailed } from './outletOperationsBatch.js'
 import {
   buildConsumptionCompositePayload,
   buildConsumptionInvoiceRequest,
@@ -18,7 +18,7 @@ import {
   buildRestockSubmitRequest,
   buildVisitCompleteRequest
 } from './outletConsumptionPayload.js'
-import { resolveInvoicePricing } from './outletConsumptionPricing.js'
+import { resolveInvoicePricing, resolvePriceListCode, resolvePricesForPriceList } from './outletConsumptionPricing.js'
 
 const INVOICE_PROGRESS_ORDER = ['PENDING_PAYMENT', 'PARTIALLY_PAID', 'PAID', 'CANCELLED', 'OTHER']
 
@@ -130,6 +130,17 @@ export function useOutletConsumption() {
   const invoiceGeneratedItems = computed(() => items.value.filter(row => text(row.Progress) === 'INVOICE_GENERATED'))
   const historyItems = computed(() => items.value.filter(row => text(row.Progress) === 'CANCELLED'))
 
+  const pendingPaymentInvoices = computed(() => invoiceItems.value.filter(row => text(row.Progress) === 'PENDING_PAYMENT'))
+  const partiallyPaidInvoices = computed(() => invoiceItems.value.filter(row => text(row.Progress) === 'PARTIALLY_PAID'))
+  const paidInvoices = computed(() => invoiceItems.value.filter(row => text(row.Progress) === 'PAID'))
+  const cancelledInvoices = computed(() => invoiceItems.value.filter(row => text(row.Progress) === 'CANCELLED'))
+
+  function productDisplayName(skuCode) {
+    const sku = skus.items.value.find((row) => row.Code === skuCode) || {}
+    const pName = sku.ProductCode ? productName(sku.ProductCode) : skuCode
+    return `${pName}${skuLabelSuffix(sku)}`
+  }
+
   function childRestocks(consumptionCode) { return restocks.items.value.filter((row) => text(row.OutletConsumptionCode) === text(consumptionCode) && active(row)) }
   function cancelableRestocks(consumptionCode) { return childRestocks(consumptionCode).filter((row) => !['APPROVED', 'DELIVERED', 'PARTIALLY_DELIVERED', 'REJECTED'].includes(text(row.Progress))) }
 
@@ -204,7 +215,7 @@ export function useOutletConsumption() {
   async function reload(forceSync = false) {
     loading.value = true
     try {
-      await resourceIoStore.fetchResources(['OutletConsumptions', 'OutletConsumptionInvoices', 'OutletRestocks', 'Outlets'], { forceSync })
+      await resourceIoStore.fetchResources(['OutletConsumptions', 'OutletConsumptionInvoices', 'OutletConsumptionInvoiceItems', 'OutletRestocks', 'Outlets'], { forceSync })
       if (!form.value.OutletCode && outletOptions.value[0]) form.value.OutletCode = outletOptions.value[0].value
       syncDefaultGroups()
     } finally { loading.value = false }
@@ -352,11 +363,68 @@ export function useOutletConsumption() {
     nav.goTo('add', Object.keys(params).length ? params : undefined)
   }
   function navigateToInvoice(code) { nav.goTo('view', { scope: 'operations', resourceSlug: 'outlet-consumption-invoices', code }) }
+  function navigateToInvoiceAdd(consumptionCode) { nav.goTo('add', { scope: 'operations', resourceSlug: 'outlet-consumption-invoices', query: { consumptionCode } }) }
   function navigateToRestock(code) { nav.goTo('view', { scope: 'operations', resourceSlug: 'outlet-restocks', code }) }
   function navigateToConsumption(code) { nav.goTo('view', { scope: 'operations', resourceSlug: 'outlet-consumptions', code }) }
+  async function saveInvoiceFromConsumption({ consumptionCode, consumptionRecord, items = [], discount = 0, tax = 0, priceListCode = '' }) {
+    if (!consumptionCode) return { error: 'Consumption code required' }
+    if (!items.length) return { error: 'No items to invoice' }
+    const subtotal = items.reduce((sum, item) => sum + (toNumber(item.Qty) * toNumber(item.Price)), 0)
+    saving.value = true
+    try {
+      const invoiceRef = batchRef('OutletConsumptionInvoices.latest.code')
+      const comment = 'Invoice generated from outlet consumption.'
+      const requests = [
+        buildConsumptionInvoiceRequest(consumptionCode, { ...consumptionRecord, InvoiceComment: comment }, { priceListCode, subtotal, discount, tax }),
+        buildConsumptionInvoiceItemsRequest(invoiceRef, items.map(item => ({ SKU: item.SKU, Qty: item.Qty, Price: item.Price }))),
+        buildInvoiceGeneratedRequest(consumptionCode, comment)
+      ]
+      const result = await resourceIoStore.runBatchRequests(requests)
+      if (responseFailed(result)) return { error: failureMessage(result, 'Failed to save invoice.') }
+      const invoiceCode = batchResultCode(result, 0)
+      await reload(true)
+      return { success: true, invoiceCode }
+    } finally { saving.value = false }
+  }
+
+  async function updateInvoice(invoiceCode, { PriceListCode, Discount, Tax, items = [] } = {}) {
+    if (!invoiceCode) return { error: 'Invoice code required' }
+    saving.value = true
+    try {
+      const requests = []
+      const updateData = {}
+      if (PriceListCode !== undefined) updateData.PriceListCode = PriceListCode
+      if (Discount !== undefined) updateData.Discount = toNumber(Discount)
+      if (Tax !== undefined) updateData.Tax = toNumber(Tax)
+      if (Object.keys(updateData).length) requests.push(resourceUpdateRequest('OutletConsumptionInvoices', invoiceCode, updateData))
+      for (const item of items) {
+        if (item.Code && item.Price !== undefined) requests.push(resourceUpdateRequest('OutletConsumptionInvoiceItems', item.Code, { Price: toNumber(item.Price) }))
+      }
+      if (!requests.length) return { success: true }
+      const result = await resourceIoStore.runBatchRequests(requests)
+      if (responseFailed(result)) return { error: failureMessage(result, 'Failed to update invoice.') }
+      await reload(true)
+      return { success: true }
+    } finally { saving.value = false }
+  }
+
+  function resolveDefaultPriceList(outletCode) {
+    return resolvePriceListCode(outletCode, rules.items.value, priceLists.items.value)
+  }
+
+  function resolvePriceListItems(priceListCode, consumptionItemRows = []) {
+    return resolvePricesForPriceList({
+      priceListCode,
+      priceLists: priceLists.items.value,
+      priceListItems: priceListItems.items.value,
+      appConfigMap: authStore.appConfigMap || {},
+      consumptionItemRows
+    })
+  }
+
   function cancel() { nav.goTo('list') }
 
   return {
-    loading, saving, acting, searchTerm, activeGroupKey, activeInvoiceGroupKey, form, checklist, stockRows, restockRows, groups, invoiceGroups, items, invoiceItems, outletOptions, visitOptions, allPlannedVisits, plannedVisits, plannedVisitDiagnostics, skuOptions, selectedVisit, soldRows, varianceRows, pendingInvoiceItems, invoiceGeneratedItems, historyItems, canCreate, consumptionPermissions, invoicePermissions, restockPermissions, canReadInvoice, canReadRestock, reload, onOutletChange, selectVisit, updateCurrentQty, incrementCurrent, decrementCurrent, setCurrentToZero, setCurrentToSystem, updateRestockRow, addRestockRow, removeRestockRow, saveConsumption, generateInvoiceForConsumption, cancelConsumption, getConsumption, getInvoice, childItems, childInvoiceItems, childInvoice, childRestocks, cancelableRestocks, consumptionItemRows, invoiceLineItems, consumedTotal, getProgressMeta, isGroupExpanded, toggleGroup, isInvoiceGroupExpanded, toggleInvoiceGroup, outletName, skuName, visitLabel, formatDisplayDate, navigateTo, navigateToAdd, navigateToInvoice, navigateToRestock, navigateToConsumption, cancel, text, todayISO, active
+    loading, saving, acting, searchTerm, activeGroupKey, activeInvoiceGroupKey, form, checklist, stockRows, restockRows, groups, invoiceGroups, items, invoiceItems, outletOptions, visitOptions, allPlannedVisits, plannedVisits, plannedVisitDiagnostics, skuOptions, selectedVisit, soldRows, varianceRows, pendingInvoiceItems, pendingPaymentInvoices, partiallyPaidInvoices, paidInvoices, cancelledInvoices, invoiceGeneratedItems, historyItems, canCreate, consumptionPermissions, invoicePermissions, restockPermissions, canReadInvoice, canReadRestock, reload, onOutletChange, selectVisit, updateCurrentQty, incrementCurrent, decrementCurrent, setCurrentToZero, setCurrentToSystem, updateRestockRow, addRestockRow, removeRestockRow, saveConsumption, generateInvoiceForConsumption, cancelConsumption, getConsumption, getInvoice, childItems, childInvoiceItems, childInvoice, childRestocks, cancelableRestocks, consumptionItemRows, invoiceLineItems, consumedTotal, getProgressMeta, isGroupExpanded, toggleGroup, isInvoiceGroupExpanded, toggleInvoiceGroup, outletName, skuName, productDisplayName, visitLabel, formatDisplayDate, navigateTo, navigateToAdd, navigateToInvoice, navigateToInvoiceAdd, navigateToRestock, navigateToConsumption, saveInvoiceFromConsumption, updateInvoice, resolveDefaultPriceList, resolvePriceListItems, cancel, text, todayISO, active, priceLists, rules
   }
 }

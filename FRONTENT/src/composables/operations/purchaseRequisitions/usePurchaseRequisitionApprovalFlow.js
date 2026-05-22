@@ -6,6 +6,7 @@ import { useResourceData } from 'src/composables/resources/useResourceData'
 import { useStockMovements } from 'src/composables/operations/stock/useStockMovements'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useProcurements } from 'src/composables/operations/procurements/useProcurements'
+import { useCurrency } from 'src/composables/useCurrency'
 
 export function usePurchaseRequisitionApprovalFlow() {
   const route = useRoute()
@@ -14,6 +15,7 @@ export function usePurchaseRequisitionApprovalFlow() {
   const resourceIoStore = useResourceIoStore()
   const procurements = useProcurements()
   const { loadWarehouses } = useStockMovements()
+  const { _C } = useCurrency()
 
   const prCode = route.params.code
   const prResource = useResourceData(ref('PurchaseRequisitions'))
@@ -42,8 +44,7 @@ export function usePurchaseRequisitionApprovalFlow() {
   }
 
   function formatCurrency(value) {
-    const amount = Number(value) || 0
-    return amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    return _C(value)
   }
 
   function statusChipStyle(progress) {
@@ -171,6 +172,7 @@ export function usePurchaseRequisitionApprovalFlow() {
     rejectedCommentHtml,
     formatDate,
     formatCurrency,
+    _C,
     statusChipStyle,
     loadData,
     loadLatestPurchaseRequisition,

@@ -1,4 +1,5 @@
 import { EXTRA_CHARGE_KEYS } from './purchaseOrderMeta.js';
+import { useCurrency } from 'src/composables/useCurrency';
 
 export function toDateInputValue(dateStr) {
     if (!dateStr) return '';
@@ -56,6 +57,16 @@ export function lineTotal(item) {
 }
 
 export function defaultHeaderForm({ quotation, seed }) {
+    let defaultCode = 'AED';
+    try {
+        const { defaultCurrencyCode } = useCurrency();
+        if (defaultCurrencyCode?.value) {
+            defaultCode = defaultCurrencyCode.value;
+        }
+    } catch (e) {
+        // Fallback
+    }
+
     const form = {
         ProcurementCode: '',
         RFQCode: '',
@@ -63,7 +74,7 @@ export function defaultHeaderForm({ quotation, seed }) {
         SupplierCode: '',
         PODate: new Date().toISOString().split('T')[0],
         ShipToWarehouseCode: '',
-        Currency: 'AED',
+        Currency: defaultCode,
         SubtotalAmount: 0,
         TotalAmount: 0,
         ExtraChargesBreakup: blankCharges(),
@@ -76,7 +87,7 @@ export function defaultHeaderForm({ quotation, seed }) {
         form.RFQCode = quotation.RFQCode;
         form.SupplierQuotationCode = quotation.Code;
         form.SupplierCode = quotation.SupplierCode;
-        form.Currency = quotation.Currency || 'AED';
+        form.Currency = quotation.Currency || defaultCode;
         form.ExtraChargesBreakup = parseCharges(quotation.ExtraChargesBreakup);
     }
 

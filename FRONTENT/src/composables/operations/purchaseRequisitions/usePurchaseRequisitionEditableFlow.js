@@ -7,6 +7,7 @@ import { useStockMovements } from 'src/composables/operations/stock/useStockMove
 import { useAuthStore } from 'src/stores/auth'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useProcurements } from 'src/composables/operations/procurements/useProcurements'
+import { useCurrency } from 'src/composables/useCurrency'
 import {
   mapPurchaseRequisitionPriorityOptions,
   mapPurchaseRequisitionTypeOptions,
@@ -31,6 +32,7 @@ export function usePurchaseRequisitionEditableFlow() {
   const auth = useAuthStore()
   const resourceIoStore = useResourceIoStore()
   const procurements = useProcurements()
+  const { _C } = useCurrency()
 
   const prCode = route.params.code
   const prResource = useResourceData(ref('PurchaseRequisitions'))
@@ -178,8 +180,7 @@ export function usePurchaseRequisitionEditableFlow() {
   }
 
   function formatCurrency(value) {
-    const amount = Number(value) || 0
-    return amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    return _C(value)
   }
 
   async function loadData() {
@@ -444,6 +445,7 @@ export function usePurchaseRequisitionEditableFlow() {
     statusChipStyle,
     formatDate,
     formatCurrency,
+    _C,
     openAddItemDialog,
     filterSkus,
     confirmAddItem,

@@ -42,11 +42,21 @@ export function formatDate(dateString) {
     return d.toLocaleDateString();
 }
 
-export function formatCurrency(amount, currency = 'AED') {
+import { useCurrency } from 'src/composables/useCurrency';
+
+export function formatCurrency(amount, currency) {
     const num = Number(amount);
     if (isNaN(num)) return '-';
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: currency || 'AED'
-    }).format(num);
+    try {
+        const { _C } = useCurrency();
+        if (currency) {
+            return _C(num, true, currency, currency);
+        }
+        return _C(num, true);
+    } catch (e) {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: currency || 'AED'
+        }).format(num);
+    }
 }

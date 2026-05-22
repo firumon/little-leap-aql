@@ -1,4 +1,5 @@
 import { EXTRA_CHARGE_KEYS } from './supplierQuotationMeta'
+import { useCurrency } from 'src/composables/useCurrency'
 
 function pad(value) {
   return value.toString().padStart(2, '0')
@@ -74,6 +75,15 @@ export function stringifyCharges(charges = {}) {
 }
 
 export function defaultHeaderForm(seed = {}) {
+  let defaultCode = 'AED'
+  try {
+    const { defaultCurrencyCode } = useCurrency()
+    if (defaultCurrencyCode?.value) {
+      defaultCode = defaultCurrencyCode.value
+    }
+  } catch (e) {
+    // Fallback
+  }
   const responseDate = seed.ResponseDate || toDateInputValue()
   return {
     Code: seed.Code || '',
@@ -97,7 +107,7 @@ export function defaultHeaderForm(seed = {}) {
     PaymentTermDetail: seed.PaymentTermDetail || '',
     QuotationValidityDays: normalizeNumber(seed.QuotationValidityDays || 7),
     ValidUntilDate: seed.ValidUntilDate || addDays(responseDate, normalizeNumber(seed.QuotationValidityDays || 7)),
-    Currency: seed.Currency || 'AED',
+    Currency: seed.Currency || defaultCode,
     TotalAmount: normalizeNumber(seed.TotalAmount),
     ExtraChargesBreakup: parseCharges(seed.ExtraChargesBreakup),
     Remarks: seed.Remarks || '',
@@ -143,6 +153,15 @@ export function isQuotedItem(item = {}) {
 }
 
 export function buildHeaderRecord(form = {}, extras = {}) {
+  let defaultCode = 'AED'
+  try {
+    const { defaultCurrencyCode } = useCurrency()
+    if (defaultCurrencyCode?.value) {
+      defaultCode = defaultCurrencyCode.value
+    }
+  } catch (e) {
+    // Fallback
+  }
   return {
     ProcurementCode: form.ProcurementCode || '',
     RFQCode: form.RFQCode || '',
@@ -162,7 +181,7 @@ export function buildHeaderRecord(form = {}, extras = {}) {
     PaymentTermDetail: form.PaymentTermDetail || '',
     QuotationValidityDays: normalizeNumber(form.QuotationValidityDays),
     ValidUntilDate: form.ValidUntilDate || '',
-    Currency: form.Currency || 'AED',
+    Currency: form.Currency || defaultCode,
     TotalAmount: normalizeNumber(form.TotalAmount),
     ExtraChargesBreakup: stringifyCharges(form.ExtraChargesBreakup),
     Remarks: form.Remarks || '',

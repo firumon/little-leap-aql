@@ -1,4 +1,5 @@
 export const EXTRA_CHARGE_KEYS = ['tax', 'freight', 'commission', 'handling', 'other']
+import { useCurrency } from 'src/composables/useCurrency'
 
 export const RESPONSE_TYPES = ['QUOTED', 'PARTIAL', 'DECLINED']
 export const PROGRESS_ORDER = ['RECEIVED', 'ACCEPTED', 'REJECTED']
@@ -57,7 +58,15 @@ export function formatDate(value) {
   return date.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-export function formatCurrency(amount, currency = 'AED') {
+export function formatCurrency(amount, currency) {
   const value = Number(amount) || 0
-  return `${currency || 'AED'} ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  try {
+    const { _C } = useCurrency()
+    if (currency) {
+      return _C(value, true, currency, currency)
+    }
+    return _C(value, true)
+  } catch (e) {
+    return `${currency || 'AED'} ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  }
 }

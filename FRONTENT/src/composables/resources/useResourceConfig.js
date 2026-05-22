@@ -2,6 +2,40 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from 'src/stores/auth'
 
+function findResourceConfig(auth, nameOrSlug) {
+  if (!nameOrSlug) return null
+  const resources = Array.isArray(auth.resources) ? auth.resources : []
+  const queryClean = String(nameOrSlug).toLowerCase().trim().replace(/s$/, '')
+  return resources.find((r) => {
+    const rNameClean = String(r.name || '').toLowerCase().trim().replace(/s$/, '')
+    return rNameClean === queryClean
+  }) || null
+}
+
+function checkSingleAction(resConfig, action) {
+  if (!resConfig) return false
+  const cleanAction = String(action || '').trim().replace(/^can/, '')
+  const actionLower = cleanAction.toLowerCase()
+
+  // Standard CRUD checks
+  if (actionLower === 'read') return !!resConfig.permissions?.canRead
+  if (actionLower === 'write' || actionLower === 'create') return !!resConfig.permissions?.canWrite
+  if (actionLower === 'update') return !!resConfig.permissions?.canUpdate
+  if (actionLower === 'delete') return !!resConfig.permissions?.canDelete
+
+  // Dynamic action checks (Requires master canUpdate AND presence in allowedActions)
+  if (!resConfig.permissions?.canUpdate) return false
+  const allowed = Array.isArray(resConfig.allowedActions) ? resConfig.allowedActions : []
+  const actionUpper = cleanAction.toUpperCase()
+  return allowed.some((a) => String(a).toUpperCase() === actionUpper)
+}
+
+function checkActionsList(resConfig, actions) {
+  if (!Array.isArray(actions)) return false
+  if (!actions.length) return true
+  return actions.every((act) => checkSingleAction(resConfig, act))
+}
+
 /**
  * Resolves the current resource configuration from route params + auth store.
  * Used by all resource pages (list, view, add, edit, action).
@@ -140,6 +174,34 @@ export function useResourceConfig() {
 
   const permissions = computed(() => config.value?.permissions || {})
 
+  const allowed = (query, targetResourceName) => {
+    if (!query) return false
+
+    // 1. Multi-Resource Map (Object Query)
+    if (typeof query === 'object' && !Array.isArray(query)) {
+      return Object.entries(query).every(([resName, actQuery]) => {
+        const resConfig = findResourceConfig(auth, resName)
+        if (!resConfig) return false
+        if (Array.isArray(actQuery)) {
+          return checkActionsList(resConfig, actQuery)
+        }
+        return checkSingleAction(resConfig, actQuery)
+      })
+    }
+
+    // Determine target resource config
+    const resConfig = targetResourceName ? findResourceConfig(auth, targetResourceName) : config.value
+    if (!resConfig) return false
+
+    // 2. Array of actions on a single resource
+    if (Array.isArray(query)) {
+      return checkActionsList(resConfig, query)
+    }
+
+    // 3. Single action on a single resource
+    return checkSingleAction(resConfig, query)
+  }
+
   return {
     route,
     scope,
@@ -153,7 +215,8 @@ export function useResourceConfig() {
     resourceHeaders,
     resolvedFields,
     additionalActions,
-    permissions
+    permissions,
+    allowed
   }
 }
 

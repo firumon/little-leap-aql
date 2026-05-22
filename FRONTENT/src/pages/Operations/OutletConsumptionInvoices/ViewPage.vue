@@ -94,9 +94,7 @@
         <q-btn v-if="editing" flat label="Cancel" color="primary" @click="cancelEdit" />
         <q-btn v-if="editing" unelevated color="primary" icon="save" label="Save Changes" :loading="saving" @click="saveEdit" />
 
-        <q-btn v-if="!editing && showPaymentButton" unelevated color="positive" icon="payments" label="Add Payment" @click="handlePayment">
-          <q-tooltip>Payment page coming soon</q-tooltip>
-        </q-btn>
+        <q-btn v-if="!editing && showPaymentButton" unelevated color="positive" icon="payments" label="Make Payment" @click="handlePayment" />
 
         <q-btn flat color="primary" icon="arrow_back" label="Back to List" @click="cancel" />
       </div>
@@ -109,12 +107,14 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useOutletConsumption } from '../../../composables/operations/outlets/useOutletConsumption.js'
+import { useResourceNav } from '../../../composables/resources/useResourceNav.js'
 import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
 import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'
 
 defineOptions({ name: 'OutletConsumptionInvoicesViewPage' })
 const $q = useQuasar()
 const route = useRoute()
+const nav = useResourceNav()
 const flow = useOutletConsumption()
 const { loading, saving, reload, getInvoice, childInvoiceItems, outletName, formatDisplayDate, navigateToConsumption, updateInvoice, productDisplayName, cancel, text, priceLists } = flow
 
@@ -192,11 +192,14 @@ async function saveEdit() {
 }
 
 function handlePayment() {
-  $q.dialog({
-    title: 'Add Payment',
-    message: 'Payment functionality will be available in a future update.',
-    persistent: true,
-    ok: { label: 'OK', color: 'primary' }
+  if (!invoice.value) return
+  nav.goTo('add', {
+    scope: 'operations',
+    resourceSlug: 'outlet-payments',
+    query: {
+      outletCode: invoice.value.OutletCode,
+      invoiceCode: invoice.value.Code
+    }
   })
 }
 

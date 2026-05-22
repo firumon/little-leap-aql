@@ -227,7 +227,6 @@ export function useOutletRestocks() {
       Quantity: remainderQty,
       Progress: 'PENDING',
       Status: 'Active',
-      AccessRegion: text(source.AccessRegion || form.value.AccessRegion),
       _approvalSourceKey: rowKey,
       _approvalRequestedQty: requestedQty
     })
@@ -387,7 +386,6 @@ export function useOutletRestocks() {
     const nextRows = expandOrsiAllocationRows({ ...source, Quantity: totalQty }, recommendation).map(row => ({
       ...row,
       OutletRestockCode: text(row.OutletRestockCode || source.OutletRestockCode || form.value.Code),
-      AccessRegion: text(row.AccessRegion || source.AccessRegion || form.value.AccessRegion),
       _pendingSourceCode: text(source.Code || source._pendingSourceCode),
       _approvalSourceKey: rowKey,
       _approvalRequestedQty: totalQty
@@ -497,7 +495,7 @@ export function useOutletRestocks() {
     const originalQty = toNumber(source?.Quantity)
     if (!source || qty <= 0 || qty >= originalQty) return false
     rows.value[index] = { ...source, Quantity: qty, Progress: 'ALLOCATED' }
-    rows.value.splice(index + 1, 0, { SKU: source.SKU, Quantity: originalQty - qty, Progress: 'PENDING', Status: 'Active', AccessRegion: source.AccessRegion })
+    rows.value.splice(index + 1, 0, { SKU: source.SKU, Quantity: originalQty - qty, Progress: 'PENDING', Status: 'Active' })
     return true
   }
   function addRow() { rows.value.push({ SKU: '', Quantity: 1, Progress: 'PENDING', Status: 'Active' }) }

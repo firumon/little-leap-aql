@@ -33,8 +33,7 @@ export function buildRestockCompositePayload(form = {}, rows = [], code = form.C
       ProgressRevisionRequiredComment: text(form.ProgressRevisionRequiredComment),
       ProgressApprovedComment: text(form.ProgressApprovedComment),
       ProgressRejectedComment: text(form.ProgressRejectedComment),
-      Status: text(form.Status || 'Active'),
-      AccessRegion: text(form.AccessRegion)
+      Status: text(form.Status || 'Active')
     },
     children: [{
       resource: 'OutletRestockItems',
@@ -47,8 +46,7 @@ export function buildRestockCompositePayload(form = {}, rows = [], code = form.C
           StorageName: text(row.StorageName),
           Quantity: toNumber(row.Quantity),
           Progress: text(row.Progress) || 'PENDING',
-          Status: text(row.Status || 'Active'),
-          AccessRegion: text(form.AccessRegion || row.AccessRegion)
+          Status: text(row.Status || 'Active')
         }
       }))
     }]
@@ -58,7 +56,7 @@ export function buildRestockCompositePayload(form = {}, rows = [], code = form.C
 export function buildRestockAllocationBatchRequests(restock = {}, rows = [], actorName = '', comment = '', options = {}) {
   const activeRows = rows.filter(row => text(row.Status || 'Active') === 'Active')
   const allocationComment = text(comment) || `Allocated by ${text(actorName) || 'Unknown'} on ${formatTimeOnly()}`
-  const itemRecords = activeRows.map(row => {
+  let itemRecords = activeRows.map(row => {
     const progress = text(row.Progress || 'PENDING')
     const code = text(row.Code) || (progress === 'PENDING' ? pendingSourceCode(row) : '')
     return {
@@ -70,8 +68,7 @@ export function buildRestockAllocationBatchRequests(restock = {}, rows = [], act
       Quantity: toNumber(row.Quantity),
       Progress: progress,
       ...(progress === 'ALLOCATED' ? stampFields('ProgressAllocated', actorName, allocationComment) : {}),
-      Status: 'Active',
-      AccessRegion: text(restock.AccessRegion || row.AccessRegion)
+      Status: 'Active'
     }
   })
   // Deduplicate Codes: when the same Code appears on both
@@ -93,7 +90,7 @@ export function buildRestockAllocationBatchRequests(restock = {}, rows = [], act
 
   const allocated = itemRecords.filter(row => text(row.Progress) === 'ALLOCATED')
   const movementRefs = Array.isArray(options.movementReferences) ? options.movementReferences : []
-  const movements = allocated.map((row, index) => buildStockMovementForAllocation(row, movementRefs[index] || row.Code || restock.Code, -1, restock.AccessRegion))
+  const movements = allocated.map((row, index) => buildStockMovementForAllocation(row, movementRefs[index] || row.Code || restock.Code, -1))
   const requests = [
     resourceBulkRequest('OutletRestockItems', itemRecords, ['OutletRestockItems']),
     resourceBulkRequest('StockMovements', movements, ['WarehouseStorages'])
@@ -134,11 +131,10 @@ export function buildPendingRestockAllocationBatchRequests(restock = {}, rows = 
         Quantity: toNumber(row.Quantity),
         Progress: 'ALLOCATED',
         ...stampFields('ProgressAllocated', actorName, allocationComment),
-        Status: 'Active',
-        AccessRegion: text(restock.AccessRegion || row.AccessRegion)
+        Status: 'Active'
       }
       itemRecords.push(record)
-      movements.push(buildStockMovementForAllocation(record, sourceCode, -1, restock.AccessRegion))
+      movements.push(buildStockMovementForAllocation(record, sourceCode, -1))
       return
     }
 
@@ -151,14 +147,12 @@ export function buildPendingRestockAllocationBatchRequests(restock = {}, rows = 
         StorageName: '',
         Quantity: remainingQty,
         Progress: 'PENDING',
-        Status: 'Active',
-        AccessRegion: text(restock.AccessRegion || source.AccessRegion)
+        Status: 'Active'
       })
     } else if (sourceCode) {
       itemRecords.push({
         Code: sourceCode,
-        Status: 'Inactive',
-        AccessRegion: text(restock.AccessRegion || source.AccessRegion)
+        Status: 'Inactive'
       })
     }
 
@@ -171,11 +165,10 @@ export function buildPendingRestockAllocationBatchRequests(restock = {}, rows = 
         Quantity: toNumber(row.Quantity),
         Progress: 'ALLOCATED',
         ...stampFields('ProgressAllocated', actorName, allocationComment),
-        Status: 'Active',
-        AccessRegion: text(restock.AccessRegion || row.AccessRegion)
+        Status: 'Active'
       }
       itemRecords.push(record)
-      movements.push(buildStockMovementForAllocation(record, sourceCode || restock.Code, -1, restock.AccessRegion))
+      movements.push(buildStockMovementForAllocation(record, sourceCode || restock.Code, -1))
     })
   })
 
@@ -189,11 +182,10 @@ export function buildRestockRejectBatchRequests(restock = {}, rows = [], actorNa
   const activeRows = rows.filter(row => text(row.Status || 'Active') === 'Active')
   const movements = activeRows
     .filter(row => text(row.Progress) === 'ALLOCATED')
-    .map(row => buildStockMovementForAllocation(row, row.Code || restock.Code, 1, restock.AccessRegion))
+    .map(row => buildStockMovementForAllocation(row, row.Code || restock.Code, 1))
   const itemRecords = activeRows.map(row => ({
     Code: row.Code,
-    Status: 'Inactive',
-    AccessRegion: text(row.AccessRegion || restock.AccessRegion)
+    Status: 'Inactive'
   })).filter(row => text(row.Code))
   return [
     resourceBulkRequest('StockMovements', movements, ['WarehouseStorages']),
@@ -212,8 +204,7 @@ export function buildRestockCancelItemsBatchRequests(restock = {}, rows = [], ac
   return rows
     .filter(row => text(row.Code) && text(row.Progress) === 'PENDING')
     .map(row => executeActionRequest('OutletRestockItems', row.Code, OUTLET_ACTIONS.cancelRestockItem, {
-      ...stampFields('ProgressCancelled', actorName, cancelComment),
-      AccessRegion: text(row.AccessRegion || restock.AccessRegion)
+      ...stampFields('ProgressCancelled', actorName, cancelComment)
     }, ['OutletRestockItems']))
 }
 

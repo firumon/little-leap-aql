@@ -22,8 +22,7 @@ export function buildConsumptionCompositePayload(form = {}, countRows = [], chec
       OutletVisitCode: text(form.OutletVisitCode),
       Progress: 'PENDING_INVOICE_GENERATION',
       ProgressPendingInvoiceGenerationComment: checklist.generateInvoice ? 'Consumption saved before invoice generation.' : 'Consumption saved without invoice generation.',
-      Status: 'Active',
-      AccessRegion: text(form.AccessRegion)
+      Status: 'Active'
     },
     children: [{
       resource: 'OutletConsumptionItems',
@@ -40,8 +39,7 @@ export function buildConsumptionMovementRequest(consumptionCode, outletCode, row
     ReferenceType: OUTLET_REFERENCE_TYPES.consumption,
     ReferenceCode: textOrRef(consumptionCode),
     MovementDate: text(form.Date) || todayISO(),
-    Status: 'Active',
-    AccessRegion: text(form.AccessRegion)
+    Status: 'Active'
   })), ['OutletStorages'])
 }
 
@@ -57,8 +55,7 @@ export function buildConsumptionInvoiceRequest(consumptionCode, form = {}, { pri
     Tax: toNumber(tax),
     Progress: 'PENDING_PAYMENT',
     ProgressPendingPaymentComment: text(form.InvoiceComment) || 'Invoice generated from outlet consumption.',
-    Status: 'Active',
-    AccessRegion: text(form.AccessRegion)
+    Status: 'Active'
   })
 }
 
@@ -106,8 +103,7 @@ export function buildRestockCompositeRequest(form = {}, rows = [], consumptionCo
       OutletConsumptionCode: textOrRef(consumptionCode),
       RequestedUser: text(form.Username),
       Progress: 'DRAFT',
-      Status: 'Active',
-      AccessRegion: text(form.AccessRegion)
+      Status: 'Active'
     },
     children: [{ resource: 'OutletRestockItems', records: cleaned.map((row) => ({ _action: 'create', data: { SKU: row.SKU, Quantity: row.Quantity, WarehouseCode: '', StorageName: '', Progress: 'PENDING', Status: 'Active' } })) }]
   }

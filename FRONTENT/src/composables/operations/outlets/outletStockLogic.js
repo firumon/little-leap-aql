@@ -108,8 +108,7 @@ export function expandOrsiAllocationRows(row = {}, recommendation = recommendOrs
   const base = {
     SKU: text(row.SKU),
     OutletRestockCode: text(row.OutletRestockCode),
-    Status: text(row.Status || 'Active'),
-    AccessRegion: text(row.AccessRegion)
+    Status: text(row.Status || 'Active')
   }
   const allocatedRows = allocations.map((allocation, index) => ({
     ...base,
@@ -238,7 +237,7 @@ export function validateConsumption(form = {}, rows = [], storages = []) {
   return validationResult(errors, [])
 }
 
-export function buildStockMovementForAllocation(row = {}, referenceCode = '', sign = -1, accessRegion = '') {
+export function buildStockMovementForAllocation(row = {}, referenceCode = '', sign = -1) {
   return {
     WarehouseCode: text(row.WarehouseCode),
     StorageName: storageName(row.StorageName),
@@ -246,8 +245,7 @@ export function buildStockMovementForAllocation(row = {}, referenceCode = '', si
     QtyChange: Math.abs(toNumber(row.Quantity)) * (sign < 0 ? -1 : 1),
     ReferenceType: STOCK_MOVEMENT_REFERENCE_TYPES.outletRestock,
     ReferenceCode: textOrRef(referenceCode || row.Code),
-    Status: 'Active',
-    AccessRegion: text(accessRegion || row.AccessRegion)
+    Status: 'Active'
   }
 }
 
@@ -259,7 +257,6 @@ export function buildOutletMovementForDelivery(orsi = {}, restock = {}, referenc
     ReferenceType: OUTLET_REFERENCE_TYPES.delivery,
     ReferenceCode: textOrRef(referenceCode),
     MovementDate: new Date().toISOString(),
-    Status: 'Active',
-    AccessRegion: text(restock.AccessRegion || orsi.AccessRegion)
+    Status: 'Active'
   }
 }

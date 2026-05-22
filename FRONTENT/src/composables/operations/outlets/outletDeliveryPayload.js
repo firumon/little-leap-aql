@@ -15,8 +15,7 @@ export function buildOdCreateBatchRequests(odRecord = {}, selectedOrsiRows = [])
       UserName: text(odRecord.UserName),
       Progress: 'DRAFT',
       Status: 'Active',
-      OutletRestockItemCodes: codes.join(','),
-      AccessRegion: text(odRecord.AccessRegion)
+      OutletRestockItemCodes: codes.join(',')
     }, ['OutletDeliveries'])
   ]
 }

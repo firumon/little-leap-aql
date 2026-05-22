@@ -205,7 +205,7 @@ export function useOutletDeliveries() {
     if (!validation.valid) return notifyWarning(validation.errors[0])
     saving.value = true
     try {
-      const result = await resourceIoStore.runBatchRequests(buildOdCreateBatchRequests({ Date: todayISO(), UserName: currentUserName(), AccessRegion: selectedItems.value[0]?.accessRegion }, selectedItems.value.map(row => row.rawOrsi)))
+      const result = await resourceIoStore.runBatchRequests(buildOdCreateBatchRequests({ Date: todayISO(), UserName: currentUserName() }, selectedItems.value.map(row => row.rawOrsi)))
       if (responseFailed(result)) return notifyError(failureMessage(result, 'Failed to create delivery.'))
       const code = batchResultCode(result, 0)
       $q.notify({ type: 'positive', message: 'Delivery draft created.', position: 'top' })

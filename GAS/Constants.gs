@@ -53,6 +53,7 @@ const CONFIG = {
     OUTLET_CONSUMPTION_ITEMS: 'OutletConsumptionItems',
     OUTLET_CONSUMPTION_INVOICES: 'OutletConsumptionInvoices',
     OUTLET_CONSUMPTION_INVOICE_ITEMS: 'OutletConsumptionInvoiceItems',
+    OUTLET_PAYMENTS: 'OutletPayments',
     OUTLET_MOVEMENTS: 'OutletMovements',
     OUTLET_STORAGES: 'OutletStorages'
   },
@@ -66,7 +67,7 @@ const CONFIG = {
     ENTRY_TEMPLATES: 'EntryTemplates'
   },
   VIEW_SHEETS: {
-    // Placeholder â€” view sheets will be added as they are designed
+    // Placeholder — view sheets will be added as they are designed
   }
 };
 
@@ -90,6 +91,8 @@ const  APP_OPTIONS_SEED = {
   OutletMovementReferenceType: ['RestockDelivery', 'Consumption', 'Adjustment'],
   OutletConsumptionProgress: ['PENDING_INVOICE_GENERATION', 'INVOICE_GENERATED', 'CANCELLED'],
   OutletConsumptionInvoiceProgress: ['PENDING_PAYMENT', 'PARTIALLY_PAID', 'PAID', 'CANCELLED'],
+  OutletPaymentProgress: ['SUBMITTED', 'CANCELLED'],
+  OutletPaymentMode: ['Cash', 'Cheque', 'Bank Transfer', 'Card', 'Other'],
   RFQLeadTimeType: ['FLEXIBLE','STRICT','RANGE_10','RANGE_25'],
   RFQShippingTermMode: ['ANY','FIXED'],
   RFQShippingTerm: ['EXW','FOB','CIF','DDP'],

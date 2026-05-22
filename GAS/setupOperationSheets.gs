@@ -296,6 +296,23 @@ function setupOperationSheets() {
             columnWidths: { Code: 150, OutletConsumptionInvoiceCode: 220, SKU: 150, Qty: 120, Price: 120, Status: 100 }
         },
         {
+            resourceName: CONFIG.OPERATION_SHEETS.OUTLET_PAYMENTS,
+            headers: ['Code', 'Date', 'OutletCode', 'OutletConsumptionInvoiceCode', 'Amount', 'Mode', 'Reference', 'Username', 'Progress',
+                      'ProgressSubmittedAt', 'ProgressSubmittedBy', 'ProgressSubmittedComment',
+                      'ProgressCancelledAt', 'ProgressCancelledBy', 'ProgressCancelledComment',
+                      'Status', 'AccessRegion'].concat(commonAuditColumns),
+            statusDefault: 'Active',
+            defaults: { Status: 'Active', Amount: 0, Progress: 'SUBMITTED' },
+            progressValidation: APP_OPTIONS_SEED.OutletPaymentProgress,
+            modeValidation: APP_OPTIONS_SEED.OutletPaymentMode,
+            columnWidths: {
+                Code: 150, Date: 130, OutletCode: 140, OutletConsumptionInvoiceCode: 220, Amount: 120, Mode: 130, Reference: 180, Username: 170, Progress: 140,
+                ProgressSubmittedAt: 160, ProgressSubmittedBy: 150, ProgressSubmittedComment: 200,
+                ProgressCancelledAt: 160, ProgressCancelledBy: 150, ProgressCancelledComment: 200,
+                Status: 100, AccessRegion: 130
+            }
+        },
+        {
             resourceName: CONFIG.OPERATION_SHEETS.OUTLET_MOVEMENTS,
             headers: ['Code', 'OutletCode', 'StorageName', 'SKU', 'QtyChange', 'ReferenceType', 'ReferenceCode', 'ReferenceItemCode', 'MovementDate', 'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active', defaults: { Status: 'Active', StorageName: '_default', QtyChange: 0 }, referenceTypeValidation: APP_OPTIONS_SEED.OutletMovementReferenceType,
@@ -380,6 +397,9 @@ function setupOperationSheets() {
             if (schema.currencyValidation && schema.headers.indexOf('Currency') !== -1) {
                 setup_applyListValidation(sheet, schema.headers, 'Currency', schema.currencyValidation);
             }
+            if (schema.modeValidation && schema.headers.indexOf('Mode') !== -1) {
+                setup_applyListValidation(sheet, schema.headers, 'Mode', schema.modeValidation);
+            }
 
             if (schema.headers.indexOf('Status') !== -1) {
                 setup_fillBlankColumn(sheet, schema.headers, 'Status', schema.statusDefault || 'Active');
@@ -402,7 +422,7 @@ function setupOperationSheets() {
     logToSheet_('Setup All Operations completed');
 
     const summary = 'OPERATION setup (Resources driven) complete.\n\n' + results.join('\n');
-    
+
     // Clear all caches after setup
     if (typeof clearAllAppCaches === 'function') clearAllAppCaches();
 

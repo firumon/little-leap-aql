@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ============================================================
  * AQL - Sync APP.Resources from Code
  * ============================================================
@@ -882,6 +882,68 @@ const APP_RESOURCES_CODE_CONFIG = [
         CodePrefix: 'OCII', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletConsumptionInvoiceCode,SKU,Qty,Price', UniqueHeaders: '', UniqueCompositeHeaders: 'OutletConsumptionInvoiceCode+SKU', DefaultValues: '{"Status":"Active","Qty":0,"Price":0}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: '', Menu: JSON.stringify([]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
     },
     {
+        Name: CONFIG.OPERATION_SHEETS.OUTLET_PAYMENTS,
+        Scope: 'operation',
+        IsActive: 'TRUE',
+        SheetName: CONFIG.OPERATION_SHEETS.OUTLET_PAYMENTS,
+        CodePrefix: 'OPAY',
+        CodeSequenceLength: 6,
+        LastDataUpdatedAt: 0,
+        Audit: 'TRUE',
+        RequiredHeaders: 'Date,OutletCode,Amount,Mode',
+        UniqueHeaders: '',
+        UniqueCompositeHeaders: '',
+        DefaultValues: '{"Status":"Active","Amount":0,"Progress":"SUBMITTED"}',
+        RecordAccessPolicy: 'OWNER_AND_UPLINE',
+        OwnerUserField: 'CreatedBy',
+        AdditionalActions: JSON.stringify([
+            {
+                "action": "Cancel",
+                "label": "Cancel",
+                "icon": "cancel",
+                "color": "negative",
+                "kind": "mutate",
+                "confirm": false,
+                "column": "Progress",
+                "columnValue": "CANCELLED",
+                "columnValueOptions": [],
+                "fields": [
+                    {
+                        "name": "ProgressCancelledComment",
+                        "label": "Cancellation Reason",
+                        "type": "textarea",
+                        "required": true
+                    }
+                ],
+                "visibleWhen": {
+                    "column": "Progress",
+                    "op": "eq",
+                    "value": "SUBMITTED"
+                }
+            }
+        ]),
+        Menu: JSON.stringify([
+            {
+                "group": ["Field Sales"],
+                "order": 7,
+                "label": "Outlet Payments",
+                "icon": "payments",
+                "route": "/operations/outlet-payments",
+                "pageTitle": "Outlet Payments",
+                "pageDescription": "View and record outlet payments",
+                "show": true
+            }
+        ]),
+        UIFields: JSON.stringify([]),
+        IncludeInAuthorizationPayload: 'TRUE',
+        Functional: 'FALSE',
+        PreAction: '',
+        PostAction: '',
+        Reports: '',
+        CustomUIName: '',
+        ListViews: ''
+    },
+    {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_MOVEMENTS,
         Scope: 'operation', IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_MOVEMENTS,
         CodePrefix: 'OMV', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletCode,SKU,QtyChange,ReferenceType,ReferenceCode', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","StorageName":"_default","QtyChange":0}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: '', Menu: JSON.stringify([]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: 'handleOutletMovementsBulkSave', Reports: '', CustomUIName: '', ListViews: ''
@@ -1213,7 +1275,7 @@ function syncAppResourcesFromCode(silent) {
             // Context without UI
         }
     }
-    
+
     // Clear the resource config cache after sync
     if (typeof clearAllAppCaches === 'function') {
         clearAllAppCaches();

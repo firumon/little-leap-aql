@@ -194,6 +194,41 @@ Includes:
 
 ---
 
+### DYNAMIC CURRENCY SYSTEM (`useCurrency` & `_C` HELPER)
+
+* **Purpose**: To handle all currency formatting, symbol resolution, and live conversion dynamically across the application without hardcoded Rupees (`₹`), Dirhams (`AED`), or region codes like `en-IN`.
+* **Dynamic Config**: Configured currency is defined dynamically via `APP.Config.Currency` on the sheets backend and loaded into memory on login.
+* **Master Records**: Master currency configurations (symbols, decimal rules, and exchange factors relative to base) are registered in the `Currencies` resource.
+
+#### Usage of the `_C` helper:
+The `useCurrency` composable exposes `_C` as a compact polyvalent currency helper:
+```javascript
+const { _C, defaultCurrency } = useCurrency()
+```
+
+* **Signature**:
+  `_C(value, showSymbolOrCode, targetCode, sourceCode)`
+
+* **Examples**:
+  1. **Format with Default Currency Decimals (No Symbol):**
+     `_C(100)` => `'100.00'`
+  2. **Format with Default Currency Symbol and Decimals:**
+     `_C(100, true)` => `'د.إ100.00'` (or `'₹ 100.00'` depending on default config)
+  3. **Convert from Default Currency to Target Currency (No Symbol):**
+     `_C(100, "INR")` => `'1000.00'` (if default is AED, 1 INR = 0.1 AED factor)
+  4. **Convert from Default Currency to Target Currency with Target Symbol:**
+     `_C(100, true, "INR")` => `'₹ 1000.00'`
+  5. **No-Conversion Format for a Specific Currency (e.g. PO is already in INR):**
+     `_C(100, true, "INR", "INR")` => `'₹ 100.00'`
+
+* **Guidelines**:
+  * ALWAYS use `_C` for formatting currencies. Do NOT hardcode currency symbols (e.g. `₹`, `AED`) in templates.
+  * For input prefixes, use `:prefix="defaultCurrency.Symbol"`.
+  * For interactive shortcut buttons, use dynamic attributes (e.g., `:label="\`+ \${defaultCurrency.Symbol}100\`"`).
+  * Do NOT manually invoke any dynamic loading of master records in pages; master currencies are pre-loaded at login.
+
+---
+
 ### NAVIGATION RULE (CRITICAL)
 
 * ALL navigation MUST go through `useResourceNav`

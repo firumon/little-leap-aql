@@ -248,6 +248,30 @@ Vue reactivity is a core architecture primitive in this frontend. It MUST be use
 
 ---
 
+## 5B. UI & WORKFLOW PERMISSION GATING CONTRACT (STRICT)
+
+All interactive UI elements (buttons, links, action menus, redirect targets, etc.) that trigger operations or navigate to state-changing pages, as well as the underlying workflow and business logic in composables, MUST be strictly permission-gated using the `allowed()` helper from `useResourceConfig`.
+
+### RULES:
+
+* **No Naked Actions or Workflows:** Never render an interactive element or execute a state-changing workflow in a composable without a reactive or programmatic permission check (using `allowed(...)`).
+* **Multi-Resource/Transactional Actions:** When a single UI action or composable workflow initiates operations touching or modifying multiple resources, the gating expression MUST verify permission for **all** involved resources and actions.
+  * *Example:* Adding an invoice payment creates a row in `outletPayment` and updates the progress of an `outletConsumptionInvoice` to "Paid" or "Partially Paid". Therefore, both the rendering of the button and the execution of the payment submission logic in the composable MUST only proceed if the user has permissions for **both** operations.
+  * *Code Pattern (Template):* 
+    ```html
+    <q-btn v-if="allowed({ outletPayment: 'create', outletConsumptionInvoice: 'update' })" ... />
+    ```
+  * *Code Pattern (Composable/Method):*
+    ```javascript
+    if (!allowed({ outletPayment: 'create', outletConsumptionInvoice: 'update' })) {
+      notifyError('You do not have permission to execute this transactional action.');
+      return;
+    }
+    ```
+* **Strict Fail-Safe (AND Logic):** For multiple actions or multi-resource checks, if even a single permission check fails, the gate MUST evaluate to `false`.
+
+---
+
 ### RESTRICTIONS
 
 Components MUST NOT use:

@@ -396,6 +396,3 @@ onMounted(async () => {
   await reload()
 })
 </script>
-
-<style scoped lang="scss">
-</style>

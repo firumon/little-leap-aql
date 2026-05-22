@@ -199,6 +199,3 @@ function formatDisplayDate(val) {
   }
 }
 </script>
-
-<style scoped lang="scss">
-</style>

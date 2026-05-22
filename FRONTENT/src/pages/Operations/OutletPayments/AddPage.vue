@@ -595,6 +595,3 @@ onMounted(async () => {
   handleQueryParameters(route.query)
 })
 </script>
-
-<style scoped lang="scss">
-</style>

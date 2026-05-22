@@ -325,7 +325,8 @@ function setupAppSheets() {
        ['MasterSyncTTL', '900'],
        ['AccountsSyncTTL', '60'],
        ['OperationsSyncTTL', '300'],
-       ['PriceListLookup', 'INLINE']
+       ['PriceListLookup', 'INLINE'],
+       ['Currency', 'AED']
      ];
 
     var lastRow = configSheet.getLastRow();

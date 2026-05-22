@@ -299,12 +299,14 @@ import { progressMeta } from '../../../composables/operations/outlets/outletOper
 import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
 import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'
 import { useResourceNav } from '../../../composables/resources/useResourceNav.js'
+import { useCurrency } from '../../../composables/useCurrency.js'
 
 defineOptions({ name: 'OutletPaymentsViewPage' })
 
 const route = useRoute()
 const nav = useResourceNav()
 const flow = useOutletPayments()
+const { _C } = useCurrency()
 
 const {
   loading,
@@ -371,7 +373,7 @@ function navigateToMakePayment() {
 
 // Currency Formatter Helper
 function formatMoney(val) {
-  return '₹' + Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return _C(val, true)
 }
 
 // Format display date

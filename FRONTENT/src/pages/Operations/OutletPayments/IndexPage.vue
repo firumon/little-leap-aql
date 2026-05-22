@@ -153,12 +153,14 @@
 import { onMounted } from 'vue'
 import { useOutletPayments } from '../../../composables/operations/outlets/useOutletPayments.js'
 import { useResourceNav } from '../../../composables/resources/useResourceNav.js'
+import { useCurrency } from '../../../composables/useCurrency.js'
 import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
 
 defineOptions({ name: 'OutletPaymentsIndexPage' })
 
 const nav = useResourceNav()
 const flow = useOutletPayments()
+const { _C } = useCurrency()
 
 const {
   loading,
@@ -185,7 +187,7 @@ function navigateToView(code) {
 }
 
 function formatMoney(val) {
-  return '₹' + Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return _C(val, true)
 }
 
 function formatDisplayDate(val) {

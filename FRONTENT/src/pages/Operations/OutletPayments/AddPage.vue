@@ -331,7 +331,7 @@
                         outlined
                         dense
                         type="number"
-                        prefix="₹"
+                        :prefix="defaultCurrency.Symbol"
                         step="0.01"
                         :rules="[
                           val => !!val || 'Amount is required',
@@ -344,13 +344,13 @@
                       <!-- Mobile-First "Tap Tap" Shortcuts Bar -->
                       <div class="row q-col-gutter-xs q-mb-sm">
                         <div class="col-4">
-                          <q-btn outline color="primary" dense size="sm" label="+ ₹100" @click="adjustAmount(100)" class="full-width text-weight-bold" style="border-radius: 8px;" />
+                          <q-btn outline color="primary" dense size="sm" :label="`+ ${defaultCurrency.Symbol}100`" @click="adjustAmount(100)" class="full-width text-weight-bold" style="border-radius: 8px;" />
                         </div>
                         <div class="col-4">
-                          <q-btn outline color="primary" dense size="sm" label="+ ₹500" @click="adjustAmount(500)" class="full-width text-weight-bold" style="border-radius: 8px;" />
+                          <q-btn outline color="primary" dense size="sm" :label="`+ ${defaultCurrency.Symbol}500`" @click="adjustAmount(500)" class="full-width text-weight-bold" style="border-radius: 8px;" />
                         </div>
                         <div class="col-4">
-                          <q-btn outline color="primary" dense size="sm" label="+ ₹1000" @click="adjustAmount(1000)" class="full-width text-weight-bold" style="border-radius: 8px;" />
+                          <q-btn outline color="primary" dense size="sm" :label="`+ ${defaultCurrency.Symbol}1000`" @click="adjustAmount(1000)" class="full-width text-weight-bold" style="border-radius: 8px;" />
                         </div>
                         <div class="col-4">
                           <q-btn outline color="primary" dense size="sm" label="50%" @click="applyPercentage(0.5)" class="full-width text-weight-bold" style="border-radius: 8px;" />
@@ -442,11 +442,13 @@ import { useRoute } from 'vue-router'
 import { useOutletPayments } from '../../../composables/operations/outlets/useOutletPayments.js'
 import { progressMeta } from '../../../composables/operations/outlets/outletOperationsMeta.js'
 import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
+import { useCurrency } from '../../../composables/useCurrency.js'
 
 defineOptions({ name: 'OutletPaymentsAddPage' })
 
 const route = useRoute()
 const flow = useOutletPayments()
+const { _C, defaultCurrency } = useCurrency()
 
 const {
   loading,
@@ -497,7 +499,7 @@ const outletOptionsList = computed(() => {
 
 // Currency Formatter Helper
 function formatMoney(val) {
-  return '₹' + Number(val || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return _C(val, true)
 }
 
 // Format display date

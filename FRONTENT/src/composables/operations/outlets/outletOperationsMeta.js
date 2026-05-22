@@ -48,7 +48,8 @@ const META = {
   INVOICE_GENERATED: ['Invoice Generated', 'positive'],
   PENDING_PAYMENT: ['Pending Payment', 'warning'],
   PARTIALLY_PAID: ['Partially Paid', 'info'],
-  PAID: ['Paid', 'positive']
+  PAID: ['Paid', 'positive'],
+  SUBMITTED: ['Submitted', 'primary']
 }
 
 export function text(value) { return value == null ? '' : String(value).trim() }

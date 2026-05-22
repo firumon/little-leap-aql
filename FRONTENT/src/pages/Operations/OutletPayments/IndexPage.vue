@@ -131,7 +131,7 @@
           <!-- Empty State for Recent Payments -->
           <q-item v-else class="empty-state-container q-py-xl text-center">
             <q-item-section>
-              <q-icon name="history" size="64px" color="grey-4" class="q-mb-md block mx-auto" />
+              <q-icon name="history" size="64px" color="grey-4" class="q-mb-md block q-mx-auto" />
               <q-item-label class="text-subtitle1 text-weight-bold text-grey-6">No Recent Payments</q-item-label>
               <q-item-label class="text-body2 text-grey-5">No payments have been recorded in the last 7 days.</q-item-label>
             </q-item-section>

@@ -679,7 +679,7 @@ function buildNewMasterRow(headers, idx, providedValues, schema) {
 
   headers.forEach(function (header) {
     const headerIndex = idx[header];
-    if (header === 'Code' || isAuditHeader(header)) {
+    if (header === 'Code' || isAuditHeader(header) || isRegionHeader(header)) {
       return;
     }
 
@@ -738,22 +738,12 @@ function applyAccessRegionOnWrite(row, idx, auth) {
   if (!regionHeader) return;
 
   const colIndex = idx[regionHeader];
-  const requestedCode = normalizeAccessRegionCode(row[colIndex]);
   const scope = buildAuthAccessRegionScope(auth);
-  let effectiveCode = requestedCode;
+  const effectiveCode = scope.assignedCode ? normalizeAccessRegionCode(scope.assignedCode) : '';
 
-  if (!scope.isUniverse) {
-    // Restricted users cannot write outside assigned subtree.
-    effectiveCode = requestedCode || scope.assignedCode;
-    if (!effectiveCode) {
-      throw new Error('AccessRegion is required for scoped users');
-    }
-    if (!canAuthAccessRegionCode(auth, effectiveCode)) {
-      throw new Error('Access denied for AccessRegion: ' + effectiveCode);
-    }
+  if (effectiveCode) {
+    validateAccessRegionCodeExists(effectiveCode);
   }
-
-  validateAccessRegionCodeExists(effectiveCode);
   row[colIndex] = effectiveCode;
 }
 

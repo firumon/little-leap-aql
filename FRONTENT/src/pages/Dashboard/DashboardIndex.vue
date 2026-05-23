@@ -84,10 +84,11 @@ import { useDashboard } from 'src/composables/_dashboard/useDashboard'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 
 // Import widgets directly to register in gateway assembler
-import MetricWidget from 'src/components/_dashboard/MetricWidget.vue'
-import BarChartWidget from 'src/components/_dashboard/BarChartWidget.vue'
-import DonutChartWidget from 'src/components/_dashboard/DonutChartWidget.vue'
-import TimelineWidget from 'src/components/_dashboard/TimelineWidget.vue'
+import MetricWidget from 'src/dashboard/_widgets/MetricWidget.vue'
+import BarChartWidget from 'src/dashboard/_widgets/BarChartWidget.vue'
+import DonutChartWidget from 'src/dashboard/_widgets/DonutChartWidget.vue'
+import TimelineWidget from 'src/dashboard/_widgets/TimelineWidget.vue'
+import StackedBarChartWidget from 'src/dashboard/_widgets/StackedBarChartWidget.vue'
 
 const { activeWidgets, widgetValues, loading } = useDashboard()
 const resourceIo = useResourceIoStore()
@@ -97,7 +98,8 @@ function getWidgetComponent(type) {
     MetricWidget,
     BarChartWidget,
     DonutChartWidget,
-    TimelineWidget
+    TimelineWidget,
+    StackedBarChartWidget
   }
   return components[type] || null
 }

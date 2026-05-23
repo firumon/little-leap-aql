@@ -187,6 +187,22 @@ Manual follow-up after this execution:
 - Clear frontend/resource cache or re-login if old metadata remains visible after sync.
 
 ## 2026-05-15 Update - Outlet Deliveries CSV Refactor
+
+## 2026-05-12 Update - Outlet Restock & Delivery Finalization
+- ORSI `RequiredHeaders` reduced to `OutletRestockCode,SKU,Quantity` so creator saves are not blocked by allocation-required fields (WarehouseCode, StorageName, Progress, Status).
+- `Approve` AdditionalAction removed from `OutletRestocks`; frontend-batched approval now handles allocation, split, stock movement creation, and progress update atomically.
+- Frontend composable fixes: `buildRestockCompositePayload` preserves existing `WarehouseCode`/`StorageName` values on resubmission; `buildOdCancelBatchRequests` keeps OD `Status=Active` for history visibility; `canSplitRow` added to `outletStockLogic`.
+- OrsiAllocationRow split button only visible for PENDING rows with qty > 1.
+- "Pending Delivery" section removed from OutletRestocks IndexPage (delivery readiness is now in OD add/list via ALLOCATED ORSI rows).
+- `npm run gas:push` and `npm --prefix FRONTENT run build` both succeed.
+
+Manual follow-up after this execution:
+- Run APP resource sync from the AQL sheet menu so changed resource metadata (ORSI RequiredHeaders, removed Approve action) is applied to `APP.Resources`.
+- Run operation sheet setup from the AQL sheet menu to normalize headers.
+- Confirm destructive data reset scope with user before clearing live outlet restock/delivery data.
+- Clear frontend/resource cache or re-login if old metadata remains visible after sync.
+
+## 2026-05-15 Update - Outlet Deliveries CSV Refactor
 - `OutletDeliveryItems` child sheet removed from GAS config (`IsActive: 'FALSE'`) and schema setup. `OutletDeliveries` now stores a CSV of ORI codes in `OutletRestockItemCodes` column.
 - Frontend composable `useOutletDeliveries` uses a single reactive `orioRows` computed (ORIO — Outlet Restock Item Overview) joining restockItems + restocks + outlets + skus + products + warehouses.
 - AddPage redesigned with criteria-based grouping (Outlet, City, Product, Qty, Date, RequestUser, ApprovedUser) via `q-btn-toggle`, warehouse filter dropdown, and grouped `q-card` + `q-item` layout.
@@ -195,3 +211,12 @@ Manual follow-up after this execution:
 - `OutletDeliveryItemRow.vue` retained (still used by ViewPage; now receives ORSI-backed view rows with `OutletDeliveryCode` included).
 - `DELIVERY_ITEM_PROGRESS_ORDER` and `deliveryItems` resource binding removed from frontend.
 - Documentation updated: `OPERATION_SHEET_STRUCTURE.md`, `MODULE_WORKFLOWS.md`, `RESOURCE_COLUMNS_GUIDE.md`, composables/components REGISTRY.md, and this handoff.
+
+## 2026-05-23 Update - Modular Config-Driven Dashboard Module
+- Implemented a fully modular, config-driven Dashboard system under `FRONTENT/src/pages/Dashboard/DashboardIndex.vue` and `FRONTENT/src/composables/_dashboard/useDashboard.js`.
+- Dashboard widgets are dynamically discovered from `FRONTENT/src/dashboard/<scope>/<resource>/<widgetname>.js` using Vite glob discovery and permission-gated using the `allowed` helper from `useResourceConfig`.
+- Discovered widgets are packed into a 12-column Quasar grid using a computed **Greedy 12-Column Grid-Packing Algorithm** that distributes widgets into discrete row wrappers to eliminate height-based CSS flex gaps.
+- Added central composable `useDashboard.js` that reactively memoizes custom filters and aggregations (count, sum, avg) keyed directly to `dataStore.rows[resourceName]` so evaluations only re-run when underlying sheet rows change, and batches load requests for dependencies using `useResourceIoStore.fetchResources` on mount.
+- Implemented visually premium, interactive common widgets inside `FRONTENT/src/components/_dashboard/` (`MetricWidget.vue`, `BarChartWidget.vue`, `DonutChartWidget.vue`, `TimelineWidget.vue`) using pure responsive SVG rendering, HSL color gradients, and CSS scale animations, with dynamic `<q-skeleton>` fallback loadings.
+- Out-of-the-box core JS widgets created: `pendingPRs.js`, `awaitingRFQs.js`, `purchaseOrderSummary.js`, and `pendingGRNs.js`.
+- Reference documentation created at `Documents/DASHBOARD_DEVELOPMENT_GUIDE.md` and registered under `Documents/DOC_ROUTING.md`.

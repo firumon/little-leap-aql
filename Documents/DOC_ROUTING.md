@@ -124,6 +124,11 @@ Use when changing `handleLogin()` response shape, field sources, or frontend sto
   - `Documents/AI_COLLABORATION_PROTOCOL.md`
   - `Documents/LOGIN_RESPONSE.md`
 
+### Dashboard Implementation
+Use when implementing or customizing dashboard modules, widgets, composables, or layout grids.
+- Read:
+  - `Documents/DASHBOARD_DEVELOPMENT_GUIDE.md`
+
 ## Maintenance Rule
 Update this file when any of the following changes:
 - a new recurring task type is introduced

@@ -55,6 +55,7 @@ Use when editing files under `FRONTENT/`.
 - If the task affects reusable building blocks, also read/update:
   - `FRONTENT/src/components/REGISTRY.md`
   - `FRONTENT/src/composables/REGISTRY.md`
+  - `FRONTENT/src/dashboard/REGISTRY.md` (if affecting dashboard widgets)
 - If the task affects a documented module, also read only the relevant section of:
   - `Documents/MODULE_WORKFLOWS.md`
 

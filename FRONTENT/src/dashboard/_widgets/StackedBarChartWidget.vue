@@ -1,15 +1,15 @@
 <template>
   <q-card class="dashboard-widget-card stacked-bar-chart-widget overflow-hidden relative-position">
     <q-card-section class="q-pa-md">
-      <div class="row items-center justify-between no-wrap q-mb-md">
-        <div class="row items-center q-gutter-sm">
-          <q-icon :name="widgetConfig.metadata.config.icon || 'bar_chart'" size="24px" :class="`text-${themeColor}`" />
-          <span class="text-subtitle1 text-weight-medium text-grey-9 ellipsis">{{ widgetConfig.metadata.config.title }}</span>
+      <div class="widget-header-container q-mb-md">
+        <div class="widget-title-area">
+          <q-icon :name="widgetConfig.metadata.config.icon || 'bar_chart'" size="24px" :class="`text-${themeColor} widget-icon`" />
+          <span class="text-subtitle1 text-weight-medium text-grey-9 widget-title">{{ widgetConfig.metadata.config.title }}</span>
         </div>
         
         <!-- Dynamic Legend from Config -->
-        <div class="row items-center q-gutter-sm">
-          <div v-for="s in chartConfig.series" :key="s.key" class="row items-center q-gutter-xs">
+        <div class="widget-legend-area">
+          <div v-for="s in chartConfig.series" :key="s.key" class="row items-center q-gutter-xs legend-item">
             <span class="legend-dot" :style="{ backgroundColor: s.gradientStart }"></span>
             <span class="text-caption text-grey-7 text-weight-medium">{{ s.label }}</span>
           </div>
@@ -265,12 +265,73 @@ const getSegmentsForDay = (item) => {
 </script>
 
 <style lang="scss" scoped>
+.widget-header-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  @media (max-width: 599px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+}
+
+.widget-title-area {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.widget-icon {
+  flex-shrink: 0;
+}
+
+.widget-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  @media (max-width: 599px) {
+    white-space: normal;
+    font-size: 15px;
+    line-height: 1.3;
+    font-weight: 600;
+  }
+}
+
+.widget-legend-area {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+
+  @media (max-width: 599px) {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 16px;
+    margin-top: 2px;
+  }
+}
+
 .dashboard-widget-card {
   border-radius: 16px;
   border: 1px solid rgba(0, 0, 0, 0.08);
   box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.05);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   height: 350px;
+
+  @media (max-width: 599px) {
+    height: auto;
+    
+    .q-card__section {
+      padding: 12px !important;
+    }
+  }
 
   &:hover {
     transform: translateY(-4px);
@@ -286,7 +347,9 @@ const getSegmentsForDay = (item) => {
 }
 
 .chart-container {
-  height: 250px;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 500 / 280; /* Perfectly matches SVG viewBox aspect ratio to eliminate vertical gaps */
 }
 
 .axis-text {

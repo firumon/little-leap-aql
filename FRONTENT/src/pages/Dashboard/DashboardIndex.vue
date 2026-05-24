@@ -34,7 +34,7 @@
           v-for="widget in row"
           :key="widget.metadata.id"
           :class="[
-            'col-12',
+            widget.metadata.config.layout?.xs ? `col-${widget.metadata.config.layout.xs}` : 'col-12',
             widget.metadata.config.layout?.sm ? `col-sm-${widget.metadata.config.layout.sm}` : '',
             widget.metadata.config.layout?.md ? `col-md-${widget.metadata.config.layout.md}` : 'col-md-4',
             widget.metadata.config.layout?.lg ? `col-lg-${widget.metadata.config.layout.lg}` : 'col-lg-3'
@@ -89,6 +89,8 @@ import BarChartWidget from 'src/dashboard/_widgets/BarChartWidget.vue'
 import DonutChartWidget from 'src/dashboard/_widgets/DonutChartWidget.vue'
 import TimelineWidget from 'src/dashboard/_widgets/TimelineWidget.vue'
 import StackedBarChartWidget from 'src/dashboard/_widgets/StackedBarChartWidget.vue'
+import ComparisonWidget from 'src/dashboard/_widgets/ComparisonWidget.vue'
+import ProgressBarWidget from 'src/dashboard/_widgets/ProgressBarWidget.vue'
 
 const { activeWidgets, widgetValues, loading } = useDashboard()
 const resourceIo = useResourceIoStore()
@@ -99,7 +101,9 @@ function getWidgetComponent(type) {
     BarChartWidget,
     DonutChartWidget,
     TimelineWidget,
-    StackedBarChartWidget
+    StackedBarChartWidget,
+    ComparisonWidget,
+    ProgressBarWidget
   }
   return components[type] || null
 }

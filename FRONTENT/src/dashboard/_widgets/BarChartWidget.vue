@@ -20,7 +20,7 @@
 
       <div v-else-if="chartData.length === 0" class="column items-center justify-center text-grey-5" style="height: 240px;">
         <q-icon name="trending_flat" size="3rem" class="q-mb-sm text-grey-4" />
-        <div class="text-subtitle2">No transaction data available</div>
+        <div class="text-subtitle2">{{ widgetConfig.metadata.config.chart?.emptyMessage || 'No transaction data available' }}</div>
       </div>
 
       <div v-else class="chart-container relative-position">

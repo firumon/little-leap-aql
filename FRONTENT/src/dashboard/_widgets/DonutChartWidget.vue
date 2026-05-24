@@ -20,7 +20,7 @@
 
       <div v-else-if="chartData.length === 0" class="column items-center justify-center text-grey-5" style="height: 240px;">
         <q-icon name="pie_chart_outline" size="3rem" class="q-mb-sm text-grey-4" />
-        <div class="text-subtitle2">No distribution data available</div>
+        <div class="text-subtitle2">{{ widgetConfig.metadata.config.chart?.emptyMessage || 'No distribution data available' }}</div>
       </div>
 
       <div v-else class="row items-center justify-between no-wrap q-col-gutter-md" style="height: 250px;">

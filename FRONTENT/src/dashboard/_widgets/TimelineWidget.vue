@@ -21,7 +21,7 @@
 
       <div v-else-if="timelineData.length === 0" class="column items-center justify-center text-grey-5" style="height: 240px;">
         <q-icon name="assignment_turned_in" size="3rem" class="q-mb-sm text-grey-4" />
-        <div class="text-subtitle2">No recent events tracked</div>
+        <div class="text-subtitle2">{{ widgetConfig.metadata.config.chart?.emptyMessage || 'No recent events tracked' }}</div>
       </div>
 
       <div v-else class="timeline-container scroll-container overflow-auto q-pr-sm" style="max-height: 250px;">

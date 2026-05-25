@@ -28,7 +28,7 @@
       <div
         v-for="(row, rowIndex) in packedRows"
         :key="rowIndex"
-        class="row q-col-gutter-md q-mb-md"
+        class="row q-col-gutter-xs q-mb-xs"
       >
         <div
           v-for="widget in row"

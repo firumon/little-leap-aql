@@ -2,11 +2,19 @@
   <q-card class="dashboard-widget-card bar-chart-widget overflow-hidden relative-position">
     <q-card-section class="q-pa-md">
       <div class="row items-center justify-between no-wrap q-mb-md">
-        <div class="row items-center q-gutter-sm">
-          <q-icon :name="widgetConfig.metadata.config.icon || 'bar_chart'" size="24px" :class="`text-${themeColor}`" />
-          <span class="text-subtitle1 text-weight-medium text-grey-9 ellipsis">{{ widgetConfig.metadata.config.title }}</span>
-        </div>
-        <q-badge :color="themeColor" outline>Top Categories</q-badge>
+        <q-item class="q-pa-none q-item-no-link no-wrap col" style="min-height: auto;">
+          <q-item-section avatar class="q-pr-sm min-width-auto" style="min-width: auto;">
+            <q-icon :name="widgetConfig.metadata.config.icon || 'bar_chart'" size="24px" :class="`text-${themeColor}`" />
+          </q-item-section>
+          <q-item-section>
+            <q-item-label class="text-subtitle1 text-weight-medium text-grey-9 ellipsis">
+              {{ widgetConfig.metadata.config.title }}
+            </q-item-label>
+          </q-item-section>
+        </q-item>
+        <q-badge v-if="widgetConfig.metadata.config.badge" :color="themeColor" outline class="q-ml-sm shrink-0">
+          {{ widgetConfig.metadata.config.badge }}
+        </q-badge>
       </div>
 
       <div v-if="loading" class="q-pa-md">

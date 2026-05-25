@@ -170,6 +170,7 @@ graph TD
     title: 'Purchase Orders by Vendor',
     icon: 'storefront',
     color: 'purple',
+    badge: 'Top Vendors',
     weight: 80,
     layout: { xs: 12, sm: 12, md: 8, lg: 8 },
     chart: {
@@ -193,6 +194,7 @@ graph TD
     title: 'Quotation Outcome Split',
     icon: 'pie_chart',
     color: 'primary',
+    badge: 'Distribution',
     weight: 90,
     layout: { xs: 12, sm: 12, md: 4, lg: 4 },
     chart: {
@@ -254,6 +256,7 @@ graph TD
     title: 'Recent Pending Goods Receipts',
     icon: 'receipt',
     color: 'teal',
+    badge: 'Timeline',
     weight: 70,
     layout: { xs: 12, sm: 12, md: 4, lg: 4 },
     chart: {

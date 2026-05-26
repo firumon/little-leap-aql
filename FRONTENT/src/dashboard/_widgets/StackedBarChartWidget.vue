@@ -323,7 +323,8 @@ const getSegmentsForDay = (item) => {
   border: 1px solid rgba(0, 0, 0, 0.08);
   box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.05);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
-  height: 350px;
+  min-height: 350px;
+  height: auto;
 
   @media (max-width: 599px) {
     height: auto;

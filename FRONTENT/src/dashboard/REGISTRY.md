@@ -70,6 +70,7 @@ graph TD
     title: 'Awaiting Approvals',
     icon: 'pending_actions',
     color: 'orange', // 'primary' | 'orange' | 'blue' | 'purple' | 'teal' | 'green'
+    caption: 'Active Record Queue',
     weight: 100,
     layout: { xs: 12, sm: 6, md: 4, lg: 3 }
   }

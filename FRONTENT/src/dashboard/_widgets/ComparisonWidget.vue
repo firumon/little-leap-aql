@@ -137,14 +137,14 @@ const explanationText = computed(() => {
     '{currentLabel} {current} {unit} {verb} which is {absDifference} {trend} than that of {previousLabel}\'s {previous}.'
 
   return template
-    .replace('{currentLabel}', currentLabel)
-    .replace('{previousLabel}', previousLabel)
-    .replace('{current}', currentVal.value.toLocaleString())
-    .replace('{previous}', previousVal.value.toLocaleString())
-    .replace('{unit}', unit)
-    .replace('{verb}', verb)
-    .replace('{absDifference}', Math.abs(differenceVal.value).toLocaleString())
-    .replace('{trend}', trendWord)
+    .replace(/\{currentLabel\}/g, currentLabel)
+    .replace(/\{previousLabel\}/g, previousLabel)
+    .replace(/\{current\}/g, currentVal.value.toLocaleString())
+    .replace(/\{previous\}/g, previousVal.value.toLocaleString())
+    .replace(/\{unit\}/g, unit)
+    .replace(/\{verb\}/g, verb)
+    .replace(/\{absDifference\}/g, Math.abs(differenceVal.value).toLocaleString())
+    .replace(/\{trend\}/g, trendWord)
 })
 </script>
 

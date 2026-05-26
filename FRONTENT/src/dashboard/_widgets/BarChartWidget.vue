@@ -229,7 +229,8 @@ const truncateLabel = (lbl) => {
   border: 1px solid rgba(0, 0, 0, 0.08);
   box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.05);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
-  height: 350px;
+  min-height: 350px;
+  height: auto;
 
   &:hover {
     transform: translateY(-4px);
@@ -238,7 +239,9 @@ const truncateLabel = (lbl) => {
 }
 
 .chart-container {
-  height: 250px;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 500 / 280;
 }
 
 .axis-text {

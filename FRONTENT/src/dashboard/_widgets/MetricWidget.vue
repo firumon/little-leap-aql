@@ -19,8 +19,8 @@
           <div class="metric-value text-h3 text-weight-bold text-white q-my-xs">
             {{ displayValue }}
           </div>
-          <div class="text-caption text-grey-4 ellipsis row items-center q-gutter-xs">
-            <span>Active Record Queue</span>
+          <div v-if="captionText" class="text-caption text-grey-4 ellipsis row items-center q-gutter-xs">
+            <span>{{ captionText }}</span>
           </div>
         </div>
       </div>
@@ -47,6 +47,7 @@ const props = defineProps({
 })
 
 const themeColor = computed(() => props.widgetConfig.metadata.config.color || 'primary')
+const captionText = computed(() => props.widgetConfig.metadata.config.caption || '')
 
 const displayValue = computed(() => {
   if (props.widgetValue === null || props.widgetValue === undefined) return '0'

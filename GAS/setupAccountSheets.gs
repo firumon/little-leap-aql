@@ -80,7 +80,7 @@ function setupAccountSheets() {
             if (!resource.codePrefix) throw new Error('CodePrefix is missing');
             if (!resource.fileId) throw new Error('FileId is missing or empty');
 
-            const file = SpreadsheetApp.openById(resource.fileId);
+            const file = openSpreadsheetById(resource.fileId);
             let sheet = file.getSheetByName(resource.sheetName);
             let isNewSheet = false;
 

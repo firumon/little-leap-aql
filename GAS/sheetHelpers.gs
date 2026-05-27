@@ -7,6 +7,26 @@
 
 var _appSpreadsheetCache = null;
 var _sheet_headers_cache = {};
+var _openedSpreadsheetsCache = {};
+
+/**
+ * Safely opens a spreadsheet by ID, caching the reference in memory
+ * for the duration of the execution context to avoid redundant openById calls.
+ */
+function openSpreadsheetById(fileId) {
+  if (!fileId) return null;
+  if (_openedSpreadsheetsCache[fileId]) return _openedSpreadsheetsCache[fileId];
+
+  // Reuse _appSpreadsheetCache if it matches to avoid extra round-trips
+  if (_appSpreadsheetCache && _appSpreadsheetCache.getId() === fileId) {
+    _openedSpreadsheetsCache[fileId] = _appSpreadsheetCache;
+    return _appSpreadsheetCache;
+  }
+
+  var ss = SpreadsheetApp.openById(fileId);
+  _openedSpreadsheetsCache[fileId] = ss;
+  return ss;
+}
 
 function getSheetHeaders(sheet) {
   if (!sheet) return [];
@@ -44,7 +64,7 @@ function getSheetHeadersByMeta(fileId, sheetName, sheetObject) {
   var sheet = sheetObject;
   if (!sheet) {
     try {
-      var ss = SpreadsheetApp.openById(fileId);
+      var ss = openSpreadsheetById(fileId);
       sheet = ss.getSheetByName(sheetName);
     } catch (e) { return []; }
   }
@@ -360,6 +380,7 @@ function clearAllAppCaches() {
   _appSpreadsheetCache = null;
   _sheet_headers_cache = {};
   _metadata_cache = null;
+  _openedSpreadsheetsCache = {};
 
   var metadataSummary = clearPermanentMetadataCache();
 

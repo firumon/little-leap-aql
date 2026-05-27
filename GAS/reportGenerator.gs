@@ -40,7 +40,7 @@ function generateReportPdf(auth, data) {
 
   var reportsFile;
   try {
-    reportsFile = SpreadsheetApp.openById(reportsFileId);
+    reportsFile = openSpreadsheetById(reportsFileId);
   } catch (err) {
     return { success: false, message: 'Cannot open REPORTS file: ' + err.toString() };
   }

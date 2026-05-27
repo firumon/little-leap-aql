@@ -559,7 +559,7 @@ function app_getReportManagerData() {
     // Fetch template sheets from REPORTS file
     var reportsFileId = resolveFileIdForScope('report', '');
     if (reportsFileId) {
-      const reportsSs = SpreadsheetApp.openById(reportsFileId);
+      const reportsSs = openSpreadsheetById(reportsFileId);
       reportsSs.getSheets().forEach(s => templateSheets.push(s.getName()));
     }
 
@@ -568,7 +568,7 @@ function app_getReportManagerData() {
       let headers = [];
       try {
         if (!res.functional && res.fileId && res.sheetName) {
-          const ss = SpreadsheetApp.openById(res.fileId);
+          const ss = openSpreadsheetById(res.fileId);
           const sheet = ss.getSheetByName(res.sheetName);
           if (sheet) {
             headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
@@ -705,7 +705,7 @@ function app_getListViewsManagerData() {
       var headers = [];
       try {
         if (!res.functional && res.fileId && res.sheetName) {
-          var ss = SpreadsheetApp.openById(res.fileId);
+          var ss = openSpreadsheetById(res.fileId);
           var sheet = ss.getSheetByName(res.sheetName);
           if (sheet) {
             headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];

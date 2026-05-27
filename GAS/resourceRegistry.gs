@@ -149,6 +149,7 @@ function getResourceConfigMap() {
 function clearResourceConfigCache() {
   _resource_config_map_cache = null;
   _resource_registry_context_cache = null;
+  _resource_sheet_cache = {};
   try {
     CacheService.getScriptCache().remove('AQL_RESOURCE_CONFIG_MAP_V2');
   } catch (e) { /* non-fatal */ }
@@ -188,12 +189,7 @@ function openResourceSheet(resourceName) {
     throw new Error('Resource sheetName is missing for: ' + resourceName + '. Set SheetName in APP.Resources.');
   }
 
-  const fileCacheKey = config.fileId;
-  var file = _resource_file_cache[fileCacheKey];
-  if (!file) {
-    file = SpreadsheetApp.openById(config.fileId);
-    _resource_file_cache[fileCacheKey] = file;
-  }
+  var file = openSpreadsheetById(config.fileId);
 
   const sheetCacheKey = config.fileId + '::' + config.sheetName;
   var sheet = _resource_sheet_cache[sheetCacheKey];

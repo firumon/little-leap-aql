@@ -372,30 +372,75 @@ function setupAppSheets() {
     appOptionsSheet.setColumnWidth(col, 160);
   }
 
-  // Seed missing option groups — never overwrites existing rows
-  var appOptionsData = appOptionsSheet.getLastRow() > 0
-    ? appOptionsSheet.getRange(1, 1, appOptionsSheet.getLastRow(), 1).getValues()
+  // Read all existing option groups and merge seed data
+  var lastRow = appOptionsSheet.getLastRow();
+  var appOptionsData = lastRow > 0
+    ? appOptionsSheet.getRange(1, 1, lastRow, appOptionsSheet.getMaxColumns()).getValues()
     : [];
-  var existingOptionKeys = appOptionsData.map(function (r) { return (r[0] || '').toString().trim(); }).filter(Boolean);
-  var seedKeys = Object.keys(APP_OPTIONS_SEED);
-  var optionRowsToAppend = [];
-  for (var s = 0; s < seedKeys.length; s++) {
-    var seedKey = seedKeys[s];
-    if (existingOptionKeys.indexOf(seedKey) === -1) {
-      optionRowsToAppend.push([seedKey].concat(APP_OPTIONS_SEED[seedKey]));
+  
+  var existingOptionMap = {};
+  for (var r = 0; r < appOptionsData.length; r++) {
+    var rowValues = appOptionsData[r];
+    var key = (rowValues[0] || '').toString().trim();
+    if (key) {
+      var options = [];
+      for (var c = 1; c < rowValues.length; c++) {
+        var val = (rowValues[c] || '').toString().trim();
+        if (val !== '') {
+          options.push(val);
+        }
+      }
+      existingOptionMap[key] = {
+        rowIndex: r + 1,
+        options: options
+      };
     }
   }
-  if (optionRowsToAppend.length > 0) {
-    var appendStartRow = appOptionsSheet.getLastRow() + 1;
-    var maxCols = optionRowsToAppend.reduce(function (max, r) { return Math.max(max, r.length); }, 1);
-    // Pad all rows to maxCols to match range dimensions
-    var paddedRows = optionRowsToAppend.map(function (r) {
-      while (r.length < maxCols) {
-        r.push('');
+
+  var seedKeys = Object.keys(APP_OPTIONS_SEED);
+  for (var s = 0; s < seedKeys.length; s++) {
+    var seedKey = seedKeys[s];
+    var seedOptions = APP_OPTIONS_SEED[seedKey];
+    
+    if (!existingOptionMap[seedKey]) {
+      // Key does not exist: append a new row
+      var newRow = [seedKey].concat(seedOptions);
+      var appendRowIdx = appOptionsSheet.getLastRow() + 1;
+      appOptionsSheet.getRange(appendRowIdx, 1, 1, newRow.length).setValues([newRow]);
+      existingOptionMap[seedKey] = {
+        rowIndex: appendRowIdx,
+        options: seedOptions
+      };
+      results.push('Added new option group: ' + seedKey);
+    } else {
+      // Key exists: check if any elements from APP_OPTIONS_SEED are missing in the sheet
+      var existingObj = existingOptionMap[seedKey];
+      var existingOptions = existingObj.options;
+      
+      var missingOptions = [];
+      for (var o = 0; o < seedOptions.length; o++) {
+        var opt = seedOptions[o];
+        if (existingOptions.indexOf(opt) === -1) {
+          missingOptions.push(opt);
+        }
       }
-      return r;
-    });
-    appOptionsSheet.getRange(appendStartRow, 1, paddedRows.length, maxCols).setValues(paddedRows);
+      
+      if (missingOptions.length > 0) {
+        // Append missing options while preserving existing ones (including any extra values)
+        var updatedOptions = existingOptions.concat(missingOptions);
+        var updatedRow = [seedKey].concat(updatedOptions);
+        var requiredCols = updatedRow.length;
+        
+        if (requiredCols > appOptionsSheet.getMaxColumns()) {
+          appOptionsSheet.insertColumnsAfter(appOptionsSheet.getMaxColumns(), requiredCols - appOptionsSheet.getMaxColumns());
+        }
+        
+        // Write the updated row back to the sheet
+        appOptionsSheet.getRange(existingObj.rowIndex, 1, 1, requiredCols).setValues([updatedRow]);
+        existingObj.options = updatedOptions;
+        results.push('Merged missing options for ' + seedKey + ': ' + JSON.stringify(missingOptions));
+      }
+    }
   }
 
   // Delete empty rows beyond the last row with data

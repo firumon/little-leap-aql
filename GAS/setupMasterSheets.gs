@@ -132,7 +132,7 @@ function setupMasterSheets() {
         }
       }
 
-      const file = SpreadsheetApp.openById(resource.fileId);
+      const file = openSpreadsheetById(resource.fileId);
       let sheet = file.getSheetByName(resource.sheetName);
       let isNewSheet = false;
 

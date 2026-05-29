@@ -359,38 +359,45 @@ Components MUST NOT use:
 
 ---
 
-## 9. STYLING RULES
+## 9. FRONTEND COMPONENT & STYLING CONTRACT (STRICT)
 
-* Prefer Quasar utility classes first
+All frontend layout, design, and styling MUST be achieved using Quasar's native ecosystem. Custom markup and CSS are considered architectural violations unless they strictly follow the exception hierarchy defined below.
+
+### 9.1 CORE PRINCIPLES
+
+* **Quasar-First Component Standard:** All frontend layouts and user interface structures MUST use Quasar's built-in components and layout elements.
+  * Hand-rolled grid layouts (e.g., custom `div.row` structures or custom CSS flex grids) are forbidden.
+  * Prefer native Quasar layout components over custom manual wrappers.
+* **Custom Markup Fallback:** Plain `div` elements styled with Quasar CSS utility classes are ONLY permitted when no native Quasar component exists or is capable of achieving the specific design/functional requirement.
+* **Custom CSS Restriction:** Custom CSS is strictly prohibited unless both built-in Quasar components and Quasar utility classes are incapable of achieving the required layout or design.
+* **Custom CSS Location:**
+  * When custom CSS is necessary, it MUST be structured for maximum generality and reusability, and added to the globally shared stylesheet: **[custom.scss](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/css/custom.scss)**.
+  * Component-specific `<style>` blocks are permitted ONLY as a last resort, and ONLY if the styles are strictly component-specific and have zero potential for reuse elsewhere.
 
 ---
 
-### SHARED STYLE STRATEGY
+### 9.2 LAYOUT & STYLING PRIORITY ORDER
 
-* Common styles MUST be defined in:
+Developers MUST adhere to the following sequence of preference when styling or building UI:
+
+1. **Quasar Built-in & Layout Components**
+   * *Primary choice for all page structures, cards, grids, forms, and widgets.*
+2. **Custom `div` with Quasar CSS Utility Classes**
+   * *Used only as a fallback when no native Quasar component can satisfy the layout requirement.*
+3. **Globally Shared Custom Styles (`custom.scss`)**
+   * *Used only when Quasar components and utility classes are insufficient. Must be written to be highly generic and reusable.*
+4. **Scoped/Local Component Styles**
+   * *An absolute last resort. Used only if the style is 100% component-specific and will never be reused.*
+
+---
+
+### 9.3 SHARED STYLE STRATEGY
+
+* Common, reusable custom styles MUST be defined in:
   `src/css/custom.scss`
-
 * `custom.scss` MUST be globally imported via:
   `app.scss`
-
----
-
-### PRIORITY ORDER
-
-1. Quasar utility classes
-2. Shared styles (`custom.scss`)
-3. Component styles (last resort)
-
----
-
-### RESTRICTIONS
-
-* DO NOT duplicate styles across components
-
-* Component styles ONLY if:
-
-    * strictly component-specific
-    * not reusable
+* DO NOT duplicate styles across different components.
 
 ---
 

@@ -6,7 +6,11 @@
  * be synced to the Google Sheet with one click.
  */
 
-const APP_RESOURCES_CODE_CONFIG = [
+var APP_RESOURCES_CODE_CONFIG = null;
+
+function initAppResourcesCodeConfig() {
+    if (APP_RESOURCES_CODE_CONFIG) return;
+    APP_RESOURCES_CODE_CONFIG = [
     // --- MASTER RESOURCES ---
     {
         Name: CONFIG.MASTER_SHEETS.PRODUCTS,
@@ -832,7 +836,9 @@ const APP_RESOURCES_CODE_CONFIG = [
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_DELIVERIES,
         Scope: 'operation', IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_DELIVERIES,
-        CodePrefix: 'ODL', CodeSequenceLength: 6, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'Date,UserName,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Progress":"DRAFT"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: '',         Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 3, "label": "Outlet Deliveries", "icon": "local_shipping", "route": "/operations/outlet-deliveries", "pageTitle": "Outlet Deliveries", "pageDescription": "Create, deliver, or cancel allocated outlet restock items", "show": true }]), UIFields: JSON.stringify([
+        CodePrefix: 'ODL', CodeSequenceLength: 6, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'Date,UserName,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Progress":"DRAFT"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: '',
+        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 3, "label": "Outlet Deliveries", "icon": "local_shipping", "route": "/operations/outlet-deliveries", "pageTitle": "Outlet Deliveries", "pageDescription": "Create, deliver, or cancel allocated outlet restock items", "show": true }]),
+        UIFields: JSON.stringify([
             { header: 'Date', label: 'Date', type: 'date', required: true },
             { header: 'UserName', label: 'User Name', type: 'text', required: true },
             { header: 'OutletRestockItemCodes', label: 'Restock Item Codes', type: 'textarea' },
@@ -851,6 +857,21 @@ const APP_RESOURCES_CODE_CONFIG = [
         ]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
     },
     {
+        Name: CONFIG.OPERATION_SHEETS.OUTLET_RETURNS,
+        Scope: 'operation', IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_RETURNS,
+        CodePrefix: 'OR', CodeSequenceLength: 6, LastDataUpdatedAt: 0, Audit: 'TRUE',
+        RequiredHeaders: 'OutletCode,Date,SKU,Qty', UniqueHeaders: '', UniqueCompositeHeaders: '',
+        DefaultValues: '{"Status":"Active","Qty":0,"Progress":"SUBMITTED","InvoiceAdjustmentRequired":false,"InvoiceAdjustmentDone":false,"WarehouseActionRequired":false,"WarehouseActionCompleted":false,"WarehouseAction":"","WarehouseActionDisposedReason":""}',
+        RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy',
+        AdditionalActions: JSON.stringify([
+            { "action": "Dispose", "label": "Dispose Stock", "icon": "delete_outline", "color": "negative", "kind": "mutate", "confirm": true, "column": "WarehouseAction", "columnValue": "Disposed", "columnValueOptions": [], "fields": [{ "name": "WarehouseActionDisposedReason", "label": "Disposal Reason", "type": "textarea", "required": true }], "visibleWhen": { "column": "WarehouseActionCompleted", "op": "eq", "value": "FALSE" } },
+            { "action": "Stock", "label": "Stock to Warehouse", "icon": "store", "color": "primary", "kind": "mutate", "confirm": true, "column": "WarehouseAction", "columnValue": "Stocked", "columnValueOptions": [], "fields": [], "visibleWhen": { "column": "WarehouseActionCompleted", "op": "eq", "value": "FALSE" } },
+            { "action": "Cancel", "label": "Cancel", "icon": "cancel", "color": "negative", "kind": "mutate", "confirm": true, "column": "Progress", "columnValue": "CANCELLED", "columnValueOptions": [], "fields": [{ "name": "ProgressCancelledComment", "label": "Cancellation Reason", "type": "textarea", "required": true }], "visibleWhen": { "column": "Progress", "op": "nin", "value": ["CANCELLED"] } }
+        ]),
+        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 4, "label": "Outlet Returns", "icon": "assignment_return", "route": "/operations/outlet-returns", "pageTitle": "Outlet Returns", "pageDescription": "Track sales returns and unsold inventory returns from outlets", "show": true }]),
+        UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
+    },
+    {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTIONS,
         Scope: 'operation', IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTIONS,
         CodePrefix: 'OC', CodeSequenceLength: 6, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletCode,Date,Username,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Progress":"PENDING_INVOICE_GENERATION"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy',
@@ -858,7 +879,7 @@ const APP_RESOURCES_CODE_CONFIG = [
             {"action":"MarkInvoiceGenerated","label":"Mark Invoice Generated","icon":"receipt_long","color":"positive","kind":"mutate","confirm":true,"column":"Progress","columnValue":"INVOICE_GENERATED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Comment","type":"textarea","required":false}],"visibleWhen":{"column":"Progress","op":"eq","value":"PENDING_INVOICE_GENERATION"}},
             {"action":"Cancel","label":"Cancel","icon":"cancel","color":"negative","kind":"mutate","confirm":true,"column":"Progress","columnValue":"CANCELLED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Cancellation Comment","type":"textarea","required":true}],"visibleWhen":{"column":"Progress","op":"nin","value":["CANCELLED"]}}
         ]),
-        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 4, "label": "Outlet Consumptions", "icon": "point_of_sale", "route": "/operations/outlet-consumptions", "pageTitle": "Outlet Consumptions", "pageDescription": "Record outlet stock consumption", "show": true }]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
+        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 5, "label": "Outlet Consumptions", "icon": "point_of_sale", "route": "/operations/outlet-consumptions", "pageTitle": "Outlet Consumptions", "pageDescription": "Record outlet stock consumption", "show": true }]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_ITEMS,
@@ -874,7 +895,7 @@ const APP_RESOURCES_CODE_CONFIG = [
             {"action":"MarkPaid","label":"Mark Paid","icon":"paid","color":"positive","kind":"mutate","confirm":true,"column":"Progress","columnValue":"PAID","columnValueOptions":[],"fields":[{"name":"Comment","label":"Comment","type":"textarea","required":false}],"visibleWhen":{"column":"Progress","op":"in","value":["PENDING_PAYMENT","PARTIALLY_PAID"]}},
             {"action":"Cancel","label":"Cancel","icon":"cancel","color":"negative","kind":"mutate","confirm":true,"column":"Progress","columnValue":"CANCELLED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Cancellation Comment","type":"textarea","required":true}],"visibleWhen":{"column":"Progress","op":"nin","value":["PAID","CANCELLED"]}}
         ]),
-        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 6, "label": "Consumption Invoices", "icon": "receipt_long", "route": "/operations/outlet-consumption-invoices", "pageTitle": "Consumption Invoices", "pageDescription": "View outlet consumption invoices", "show": true }]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
+        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 7, "label": "Consumption Invoices", "icon": "receipt_long", "route": "/operations/outlet-consumption-invoices", "pageTitle": "Consumption Invoices", "pageDescription": "View outlet consumption invoices", "show": true }]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICE_ITEMS,
@@ -925,7 +946,7 @@ const APP_RESOURCES_CODE_CONFIG = [
         Menu: JSON.stringify([
             {
                 "group": ["Field Sales"],
-                "order": 7,
+                "order": 8,
                 "label": "Outlet Payments",
                 "icon": "payments",
                 "route": "/operations/outlet-payments",
@@ -951,7 +972,8 @@ const APP_RESOURCES_CODE_CONFIG = [
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_STORAGES,
         Scope: 'operation', IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_STORAGES,
-        CodePrefix: 'OST', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'FALSE', RequiredHeaders: 'OutletCode,SKU,Quantity', UniqueHeaders: '', UniqueCompositeHeaders: 'OutletCode+SKU', DefaultValues: '{"Quantity":0}', RecordAccessPolicy: 'ALL', OwnerUserField: 'UpdatedBy', AdditionalActions: '', Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 5, "label": "Outlet Stock", "icon": "store", "route": "/operations/outlet-storages", "pageTitle": "Outlet Stock", "pageDescription": "View movement-derived outlet stock balances", "show": true }]), UIFields: JSON.stringify([{ header: 'OutletCode', label: 'Outlet Code', type: 'text', required: true }, { header: 'SKU', label: 'SKU', type: 'text', required: true }, { header: 'Quantity', label: 'Quantity', type: 'number', required: true }]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
+        CodePrefix: 'OST', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'FALSE', RequiredHeaders: 'OutletCode,SKU,Quantity', UniqueHeaders: '', UniqueCompositeHeaders: 'OutletCode+SKU', DefaultValues: '{"Quantity":0}', RecordAccessPolicy: 'ALL', OwnerUserField: 'UpdatedBy', AdditionalActions: '',
+        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 6, "label": "Outlet Stock", "icon": "store", "route": "/operations/outlet-storages", "pageTitle": "Outlet Stock", "pageDescription": "View movement-derived outlet stock balances", "show": true }]), UIFields: JSON.stringify([{ header: 'OutletCode', label: 'Outlet Code', type: 'text', required: true }, { header: 'SKU', label: 'SKU', type: 'text', required: true }, { header: 'Quantity', label: 'Quantity', type: 'number', required: true }]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
     },
     {
         Name: CONFIG.ACCOUNTS_SHEETS.CHART_OF_ACCOUNTS,
@@ -1163,8 +1185,10 @@ const APP_RESOURCES_CODE_CONFIG = [
         ListViews: ''
     }
 ];
+}
 
 function syncAppResourcesFromCode(silent) {
+    initAppResourcesCodeConfig();
     if (!silent) resetLogSheet_();
     logToSheet_('Starting Sync APP.Resources from Code');
 

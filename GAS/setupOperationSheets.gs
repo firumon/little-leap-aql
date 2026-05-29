@@ -263,6 +263,33 @@ function setupOperationSheets() {
                 CancelledAt: 170, CancelledBy: 170, CancelledComment: 240, Status: 100, AccessRegion: 130 }
         },
         {
+            resourceName: CONFIG.OPERATION_SHEETS.OUTLET_RETURNS,
+            headers: [
+                'Code', 'OutletCode', 'Date', 'Username', 'SKU', 'Qty', 'Reason', 'ReasonComment',
+                'InvoiceAdjustmentRequired', 'InvoiceAdjustmentDone', 'ConsumptionInvoiceCode',
+                'WarehouseActionRequired', 'WarehouseActionCompleted', 'WarehouseCode',
+                'WarehouseAction', 'WarehouseActionDisposedReason',
+                'WarehouseActionDisposedAt', 'WarehouseActionDisposedBy',
+                'WarehouseActionStockedAt', 'WarehouseActionStockedBy',
+                'Progress', 'Status', 'AccessRegion'
+            ].concat(commonAuditColumns),
+            statusDefault: 'Active',
+            defaults: { Status: 'Active', Qty: 0, Progress: 'SUBMITTED', InvoiceAdjustmentRequired: 'FALSE', InvoiceAdjustmentDone: 'FALSE', WarehouseActionRequired: 'FALSE', WarehouseActionCompleted: 'FALSE', WarehouseAction: '', WarehouseActionDisposedReason: '', ConsumptionInvoiceCode: '' },
+            progressValidation: APP_OPTIONS_SEED.OutletReturnProgress,
+            reasonValidation: APP_OPTIONS_SEED.OutletReturnReason,
+            warehouseActionValidation: APP_OPTIONS_SEED.OutletReturnWarehouseAction,
+            columnWidths: {
+                Code: 150, OutletCode: 140, Date: 130, Username: 170, SKU: 150, Qty: 100,
+                Reason: 140, ReasonComment: 200,
+                InvoiceAdjustmentRequired: 160, InvoiceAdjustmentDone: 150, ConsumptionInvoiceCode: 200,
+                WarehouseActionRequired: 160, WarehouseActionCompleted: 150,
+                WarehouseCode: 140, WarehouseAction: 150, WarehouseActionDisposedReason: 200,
+                WarehouseActionDisposedAt: 160, WarehouseActionDisposedBy: 150,
+                WarehouseActionStockedAt: 160, WarehouseActionStockedBy: 150,
+                Progress: 140, Status: 100, AccessRegion: 130
+            }
+        },
+        {
             resourceName: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTIONS,
             headers: ['Code', 'OutletCode', 'Date', 'Username', 'OutletVisitCode', 'Progress',
                 'ProgressPendingInvoiceGenerationAt', 'ProgressPendingInvoiceGenerationBy', 'ProgressPendingInvoiceGenerationComment',
@@ -280,14 +307,14 @@ function setupOperationSheets() {
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICES,
-            headers: ['Code', 'OutletConsumptionCode', 'Date', 'OutletCode', 'Username', 'PriceListCode', 'Subtotal', 'Discount', 'Tax', 'Progress',
+            headers: ['Code', 'OutletConsumptionCode', 'Date', 'OutletCode', 'Username', 'PriceListCode', 'Subtotal', 'Discount', 'Tax', 'OutletReturnCodes', 'Progress',
                 'ProgressPendingPaymentAt', 'ProgressPendingPaymentBy', 'ProgressPendingPaymentComment',
                 'ProgressPartiallyPaidAt', 'ProgressPartiallyPaidBy', 'ProgressPartiallyPaidComment',
                 'ProgressPaidAt', 'ProgressPaidBy', 'ProgressPaidComment',
                 'ProgressCancelledAt', 'ProgressCancelledBy', 'ProgressCancelledComment',
                 'Status', 'AccessRegion'].concat(commonAuditColumns),
-            statusDefault: 'Active', defaults: { Status: 'Active', Subtotal: 0, Discount: 0, Tax: 0, Progress: 'PENDING_PAYMENT' }, progressValidation: APP_OPTIONS_SEED.OutletConsumptionInvoiceProgress,
-            columnWidths: { Code: 150, OutletConsumptionCode: 200, Date: 140, OutletCode: 140, Username: 170, PriceListCode: 170, Subtotal: 120, Discount: 120, Tax: 120, Progress: 170, ProgressPendingPaymentAt: 180, ProgressPendingPaymentBy: 180, ProgressPendingPaymentComment: 230, ProgressPartiallyPaidAt: 180, ProgressPartiallyPaidBy: 180, ProgressPartiallyPaidComment: 230, ProgressPaidAt: 160, ProgressPaidBy: 160, ProgressPaidComment: 210, ProgressCancelledAt: 170, ProgressCancelledBy: 170, ProgressCancelledComment: 220, Status: 100, AccessRegion: 130 }
+            statusDefault: 'Active', defaults: { Status: 'Active', Subtotal: 0, Discount: 0, Tax: 0, OutletReturnCodes: '', Progress: 'PENDING_PAYMENT' }, progressValidation: APP_OPTIONS_SEED.OutletConsumptionInvoiceProgress,
+            columnWidths: { Code: 150, OutletConsumptionCode: 200, Date: 140, OutletCode: 140, Username: 170, PriceListCode: 170, Subtotal: 120, Discount: 120, Tax: 120, OutletReturnCodes: 180, Progress: 170, ProgressPendingPaymentAt: 180, ProgressPendingPaymentBy: 180, ProgressPendingPaymentComment: 230, ProgressPartiallyPaidAt: 180, ProgressPartiallyPaidBy: 180, ProgressPartiallyPaidComment: 230, ProgressPaidAt: 160, ProgressPaidBy: 160, ProgressPaidComment: 210, ProgressCancelledAt: 170, ProgressCancelledBy: 170, ProgressCancelledComment: 220, Status: 100, AccessRegion: 130 }
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICE_ITEMS,
@@ -339,7 +366,7 @@ function setupOperationSheets() {
                 }
             }
 
-            const file = SpreadsheetApp.openById(resource.fileId);
+            const file = openSpreadsheetById(resource.fileId);
             let sheet = file.getSheetByName(resource.sheetName);
             let isNewSheet = false;
 
@@ -399,6 +426,12 @@ function setupOperationSheets() {
             }
             if (schema.modeValidation && schema.headers.indexOf('Mode') !== -1) {
                 setup_applyListValidation(sheet, schema.headers, 'Mode', schema.modeValidation);
+            }
+            if (schema.reasonValidation && schema.headers.indexOf('Reason') !== -1) {
+                setup_applyListValidation(sheet, schema.headers, 'Reason', schema.reasonValidation);
+            }
+            if (schema.warehouseActionValidation && schema.headers.indexOf('WarehouseAction') !== -1) {
+                setup_applyListValidation(sheet, schema.headers, 'WarehouseAction', schema.warehouseActionValidation);
             }
 
             if (schema.headers.indexOf('Status') !== -1) {

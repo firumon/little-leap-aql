@@ -49,6 +49,7 @@ const CONFIG = {
     OUTLET_RESTOCKS: 'OutletRestocks',
     OUTLET_RESTOCK_ITEMS: 'OutletRestockItems',
     OUTLET_DELIVERIES: 'OutletDeliveries',
+    OUTLET_RETURNS: 'OutletReturns',
     OUTLET_CONSUMPTIONS: 'OutletConsumptions',
     OUTLET_CONSUMPTION_ITEMS: 'OutletConsumptionItems',
     OUTLET_CONSUMPTION_INVOICES: 'OutletConsumptionInvoices',
@@ -78,7 +79,7 @@ const CONFIG = {
  *       dropdown validation in the relevant setup script.
  */
 const  APP_OPTIONS_SEED = {
-  StockMovementReferenceType: ['GRN', 'DirectEntry', 'StockAdjustment', 'OutletRestock'],
+  StockMovementReferenceType: ['GRN', 'DirectEntry', 'StockAdjustment', 'OutletRestock', 'OutletReturn'],
   PurchaseRequisitionType: ['STOCK', 'PROJECT', 'SALES', 'ASSET'],
   PurchaseRequisitionPriority: ['Low', 'Medium', 'High', 'Urgent'],
   PurchaseRequisitionProgress: ['Draft', 'Pending Approval', 'Revision Required', 'Approved', 'Rejected', 'RFQ Processed'],
@@ -86,9 +87,12 @@ const  APP_OPTIONS_SEED = {
   POReceivingProgress: ['DRAFT', 'CONFIRMED', 'GRN_GENERATED', 'CANCELLED'],
   OutletVisitProgress: ['PLANNED', 'COMPLETED', 'POSTPONED', 'CANCELLED'],
   OutletRestockProgress: ['DRAFT', 'PENDING_APPROVAL', 'REVISION_REQUIRED', 'APPROVED', 'PARTIALLY_DELIVERED', 'DELIVERED', 'REJECTED'],
-  OutletDeliveryProgress: ['DRAFT', 'IN_TRANSIT', 'COMPLETED', 'CANCELLED'],
   OutletRestockItemProgress: ['PENDING', 'ALLOCATED', 'DELIVERED', 'CANCELLED'],
-  OutletMovementReferenceType: ['RestockDelivery', 'Consumption', 'Adjustment'],
+  OutletDeliveryProgress: ['DRAFT', 'IN_TRANSIT', 'COMPLETED', 'CANCELLED'],
+  OutletReturnReason: ['DAMAGE', 'EXPIRED', 'SLOW_MOVING', 'RECALL', 'OVERSTOCK', 'SPECIFICATION_MISMATCH', 'OTHER'],
+  OutletReturnProgress: ['SUBMITTED', 'AWAITING_INVOICE_ADJUSTMENT', 'AWAITING_WAREHOUSE_RECEIPT', 'COMPLETED', 'CANCELLED'],
+  OutletReturnWarehouseAction: ['Disposed', 'Stocked'],
+  OutletMovementReferenceType: ['RestockDelivery', 'Consumption', 'Adjustment', 'OutletReturn'],
   OutletConsumptionProgress: ['PENDING_INVOICE_GENERATION', 'INVOICE_GENERATED', 'CANCELLED'],
   OutletConsumptionInvoiceProgress: ['PENDING_PAYMENT', 'PARTIALLY_PAID', 'PAID', 'CANCELLED'],
   OutletPaymentProgress: ['SUBMITTED', 'CANCELLED'],

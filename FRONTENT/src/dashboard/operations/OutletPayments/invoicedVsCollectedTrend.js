@@ -1,3 +1,5 @@
+import { getInvoiceTotal } from 'src/composables/operations/outlets/outletConsumptionPricing'
+
 export default {
   metadata: {
     id: 'invoiced_vs_collected_7days',
@@ -78,10 +80,9 @@ export default {
               String(p.Progress || '').toUpperCase().trim() === 'SUBMITTED'
           })
 
-          // Sum billing volume (Subtotal - Discount + Tax)
+          // Sum billing volume using pricing helper
           const invoiced = dayInvoices.reduce((sum, inv) => {
-            const total = Number(inv.Subtotal || 0) - Number(inv.Discount || 0) + Number(inv.Tax || 0)
-            return sum + total
+            return sum + getInvoiceTotal(inv)
           }, 0)
 
           // Sum payment collections volume

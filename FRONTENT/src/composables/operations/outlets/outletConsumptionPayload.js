@@ -43,7 +43,7 @@ export function buildConsumptionMovementRequest(consumptionCode, outletCode, row
   })), ['OutletStorages'])
 }
 
-export function buildConsumptionInvoiceRequest(consumptionCode, form = {}, { priceListCode = '', subtotal = 0, discount = 0, tax = 0 } = {}) {
+export function buildConsumptionInvoiceRequest(consumptionCode, form = {}, { priceListCode = '', subtotal = 0, discount = 0, tax = 0, returnDeductionTotal = 0, outletReturnCodes = '' } = {}) {
   return resourceCreateRequest('OutletConsumptionInvoices', {
     OutletConsumptionCode: textOrRef(consumptionCode),
     Date: text(form.Date) || todayISO(),
@@ -53,6 +53,8 @@ export function buildConsumptionInvoiceRequest(consumptionCode, form = {}, { pri
     Subtotal: toNumber(subtotal),
     Discount: toNumber(discount),
     Tax: toNumber(tax),
+    ReturnDeductionTotal: toNumber(returnDeductionTotal),
+    OutletReturnCodes: text(outletReturnCodes),
     Progress: 'PENDING_PAYMENT',
     ProgressPendingPaymentComment: text(form.InvoiceComment) || 'Invoice generated from outlet consumption.',
     Status: 'Active'

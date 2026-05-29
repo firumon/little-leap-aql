@@ -58,9 +58,10 @@
       <q-card flat bordered class="q-mb-md bg-grey-1">
         <q-card-section class="q-pa-sm">
           <div class="row q-col-gutter-md text-body2">
-            <div class="col-4"><span class="text-grey-7">Subtotal</span><div class="text-weight-bold">{{ subtotal }}</div></div>
-            <div class="col-4"><span class="text-grey-7">Discount</span><div class="text-weight-bold">-{{ discount }}</div></div>
-            <div class="col-4"><span class="text-grey-7">Tax</span><div class="text-weight-bold">+{{ tax }}</div></div>
+            <div class="col-3"><span class="text-grey-7">Subtotal</span><div class="text-weight-bold">{{ subtotal }}</div></div>
+            <div class="col-3"><span class="text-grey-7">Discount</span><div class="text-weight-bold">-{{ discount }}</div></div>
+            <div class="col-3"><span class="text-grey-7">Tax</span><div class="text-weight-bold">+{{ tax }}</div></div>
+            <div class="col-3"><span class="text-grey-7">Returns</span><div class="text-weight-bold text-negative">-{{ returnDeductionTotal }}</div></div>
           </div>
           <q-separator class="q-my-xs" />
           <div class="text-subtitle1 text-weight-bold">Total: {{ total }}</div>
@@ -86,7 +87,7 @@ defineOptions({ name: 'OutletConsumptionInvoicesAddPage' })
 const $q = useQuasar()
 const route = useRoute()
 const flow = useOutletConsumption()
-const { loading, saving, reload, getConsumption, childItems, childInvoice, outletName, formatDisplayDate, navigateToInvoice, cancel, productDisplayName, saveInvoiceFromConsumption, text, priceLists, resolveDefaultPriceList, resolvePriceListItems } = flow
+const { loading, saving, reload, getConsumption, childItems, childInvoice, outletName, formatDisplayDate, navigateToInvoice, cancel, productDisplayName, saveInvoiceFromConsumption, text, priceLists, resolveDefaultPriceList, resolvePriceListItems, returns, active, getInvoiceTotal } = flow
 
 const discount = ref(0)
 const tax = ref(0)
@@ -99,7 +100,32 @@ const consumption = computed(() => consumptionCode.value ? getConsumption(consum
 const priceListOptions = computed(() => priceLists.items.value.map(p => ({ label: `${p.Code} - ${p.Name || ''}`, value: p.Code })))
 
 const subtotal = computed(() => editableItems.value.reduce((s, item) => s + (item.Qty * (item.Price || 0)), 0))
-const total = computed(() => subtotal.value - discount.value + tax.value)
+const returnDeductionTotal = computed(() => {
+  if (!consumption.value) return 0
+  const outletCode = text(consumption.value.OutletCode)
+  const appliedReturns = returns.items.value.filter(ret =>
+    active(ret) &&
+    text(ret.OutletCode) === outletCode &&
+    text(ret.InvoiceAdjustmentRequired) === 'TRUE' &&
+    text(ret.InvoiceAdjustmentDone) !== 'TRUE'
+  )
+
+  let totalDeduction = 0
+  const pListCode = selectedPriceList.value
+  if (pListCode && appliedReturns.length > 0) {
+    appliedReturns.forEach(ret => {
+      const sku = text(ret.SKU)
+      const qty = Number(ret.Qty || 0)
+      const pricing = resolvePriceListItems(pListCode, [{ SKU: sku, Qty: qty }])
+      const price = pricing.items[0]?.Price
+      if (price !== null && price > 0) {
+        totalDeduction += qty * price
+      }
+    })
+  }
+  return totalDeduction
+})
+const total = computed(() => getInvoiceTotal({ Subtotal: subtotal.value, Discount: discount.value, Tax: tax.value, ReturnDeductionTotal: returnDeductionTotal.value }))
 
 function loadItems(priceListCode) {
   if (!consumption.value) return

@@ -18,7 +18,7 @@ import {
   buildRestockSubmitRequest,
   buildVisitCompleteRequest
 } from './outletConsumptionPayload.js'
-import { resolveInvoicePricing, resolvePriceListCode, resolvePricesForPriceList } from './outletConsumptionPricing.js'
+import { resolveInvoicePricing, resolvePriceListCode, resolvePricesForPriceList, getInvoiceTotal, getInvoiceRemaining, resolvePriceListLookup, resolveSkuPrice } from './outletConsumptionPricing.js'
 
 const INVOICE_PROGRESS_ORDER = ['PENDING_PAYMENT', 'PARTIALLY_PAID', 'PAID', 'CANCELLED', 'OTHER']
 
@@ -40,6 +40,8 @@ export function useOutletConsumption() {
   const priceLists = useResourceData(ref('PriceList'))
   const priceListItems = useResourceData(ref('PriceListItems'))
   const restocks = useResourceData(ref('OutletRestocks'))
+  const returns = useResourceData(ref('OutletReturns'))
+  const warehouses = useResourceData(ref('Warehouses'))
 
   const consumptionConfig = computed(() =>
     (Array.isArray(authStore.resources) ? authStore.resources : [])
@@ -71,7 +73,74 @@ export function useOutletConsumption() {
   const form = ref({ Date: todayISO(), Username: currentUserName(), Progress: 'PENDING_INVOICE_GENERATION', Status: 'Active', OutletVisitCode: '' })
   const stockRows = ref([])
   const restockRows = ref([])
-  const checklist = ref({ completeVisit: false, scheduleNextVisit: true, generateInvoice: true, placeRestock: false, submitRestock: false })
+  const checklist = ref({ completeVisit: false, scheduleNextVisit: true, generateInvoice: true, placeRestock: false, submitRestock: false, applyReturnsToInvoice: true })
+
+  const returnMetadata = ref({})
+
+  const returnRows = computed(() => {
+    return stockRows.value
+      .filter((row) => toNumber(row.CurrentQty) > toNumber(row.SystemQty))
+      .map((row) => {
+        const qty = toNumber(row.CurrentQty) - toNumber(row.SystemQty)
+        if (!returnMetadata.value[row.SKU]) {
+          returnMetadata.value[row.SKU] = {
+            Reason: 'DAMAGE',
+            ReasonComment: '',
+            InvoiceAdjustmentRequired: true,
+            WarehouseActionRequired: false,
+            WarehouseCode: warehouseOptions.value[0]?.value || ''
+          }
+        }
+        return {
+          ...row,
+          Qty: qty
+        }
+      })
+  })
+
+  const warehouseOptions = computed(() =>
+    warehouses.items.value.filter(active).map((row) => ({ label: text(row.Name || row.Code), value: row.Code }))
+  )
+
+  const returnConfig = computed(() =>
+    (Array.isArray(authStore.resources) ? authStore.resources : [])
+      .find((r) => r.name === 'OutletReturns') || null
+  )
+  const returnPermissions = computed(() => returnConfig.value?.permissions || {})
+  const canCreateReturn = computed(() => !!returnPermissions.value.canWrite)
+
+  function addManualReturnSku(skuCode) {
+    const sku = skus.items.value.find((entry) => entry.Code === skuCode) || {}
+    stockRows.value.push({
+      SKU: skuCode,
+      ProductCode: sku.ProductCode || '',
+      ProductName: productName(sku.ProductCode),
+      SkuLabel: `${skuCode}${skuLabelSuffix(sku)}`,
+      SystemQty: 0,
+      CurrentQty: 1,
+      SoldQty: 0,
+      isManualReturn: true
+    })
+    syncChecklist()
+  }
+
+  function updateReturnMetadata(sku, patch = {}) {
+    if (!returnMetadata.value[sku]) {
+      returnMetadata.value[sku] = {
+        Reason: 'DAMAGE',
+        ReasonComment: '',
+        InvoiceAdjustmentRequired: true,
+        WarehouseActionRequired: false,
+        WarehouseCode: warehouseOptions.value[0]?.value || ''
+      }
+    }
+    returnMetadata.value[sku] = { ...returnMetadata.value[sku], ...patch }
+  }
+
+  function removeManualReturnRow(index) {
+    stockRows.value.splice(index, 1)
+    syncChecklist()
+  }
 
   function currentUserName() {
     const user = authStore.user || {}
@@ -98,7 +167,7 @@ export function useOutletConsumption() {
   const invoiceItems = computed(() => invoices.items.value.filter(active).filter(matchesSearch).sort((a, b) => sortTime(b) - sortTime(a)))
   const groups = computed(() => CONSUMPTION_PROGRESS_ORDER.map((key) => ({ key, meta: progressMeta(key), items: items.value.filter((row) => groupKey(row.Progress, CONSUMPTION_PROGRESS_ORDER) === key) })).filter((group) => group.items.length))
   const invoiceGroups = computed(() => INVOICE_PROGRESS_ORDER.map((key) => ({ key, meta: progressMeta(key), items: invoiceItems.value.filter((row) => groupKey(row.Progress, INVOICE_PROGRESS_ORDER) === key) })).filter((group) => group.items.length))
-  const outletOptions = computed(() => outlets.items.value.filter(active).map((row) => ({ label: `${row.Code} - ${row.Name}`, value: row.Code })))
+  const outletOptions = computed(() => outlets.items.value.filter(active).map((row) => ({ label: text(row.Name || row.Code), value: row.Code })))
   const allPlannedVisits = computed(() => visits.items.value.filter(active).filter((row) => visitProgress(row) === 'PLANNED').sort((a, b) => Date.parse(text(a.Date) || '') - Date.parse(text(b.Date) || '')))
   const plannedVisits = computed(() => visits.items.value.filter(active).filter((row) => visitProgress(row) === 'PLANNED' && text(row.OutletCode) === text(form.value.OutletCode)).sort((a, b) => Date.parse(text(a.Date) || '') - Date.parse(text(b.Date) || '')))
   const plannedVisitDiagnostics = computed(() => {
@@ -122,7 +191,16 @@ export function useOutletConsumption() {
     }
   })
   const visitOptions = computed(() => plannedVisits.value.map((row) => ({ label: `${row.Code} - ${formatDate(row.Date)}`, value: row.Code })))
-  const skuOptions = computed(() => skus.items.value.filter(active).map((sku) => ({ value: sku.Code, label: skuName(sku.Code) })))
+  const skuOptions = computed(() => skus.items.value.filter(active).map((sku) => {
+    const pName = sku.ProductCode ? productName(sku.ProductCode) : sku.Code
+    const variantStr = [sku.Variant1, sku.Variant2, sku.Variant3, sku.Variant4, sku.Variant5].map(text).filter(Boolean).join(' / ')
+    return {
+      value: sku.Code,
+      label: variantStr ? `${pName} (${variantStr})` : pName,
+      productName: pName,
+      variant: variantStr || sku.Code
+    }
+  }))
   const selectedVisit = computed(() => visits.items.value.find((row) => row.Code === form.value.OutletVisitCode) || null)
   const soldRows = computed(() => stockRows.value.filter((row) => toNumber(row.SoldQty) > 0))
   const varianceRows = computed(() => stockRows.value.filter((row) => toNumber(row.CurrentQty) > toNumber(row.SystemQty)))
@@ -215,7 +293,7 @@ export function useOutletConsumption() {
   async function reload(forceSync = false) {
     loading.value = true
     try {
-      await resourceIoStore.fetchResources(['OutletConsumptions', 'OutletConsumptionInvoices', 'OutletConsumptionInvoiceItems', 'OutletRestocks', 'Outlets'], { forceSync })
+      await resourceIoStore.fetchResources(['OutletConsumptions', 'OutletConsumptionInvoices', 'OutletConsumptionInvoiceItems', 'OutletRestocks', 'Outlets', 'SKUs', 'Products', 'OutletStorages', 'OutletOperatingRules', 'PriceList', 'PriceListItems', 'OutletVisits', 'OutletReturns', 'Warehouses'], { forceSync })
       if (!form.value.OutletCode && outletOptions.value[0]) form.value.OutletCode = outletOptions.value[0].value
       syncDefaultGroups()
     } finally { loading.value = false }
@@ -224,8 +302,87 @@ export function useOutletConsumption() {
   function validateBeforeSubmit() {
     const validation = validateConsumption(form.value, stockRows.value, storages.items.value)
     if (!validation.valid) return validation.errors[0]
-    if (varianceRows.value.length) return 'Some counted stock is greater than system stock. Please correct before submit.'
     return ''
+  }
+
+  function prepareInvoiceReturns(outletCode, newlyCreatedReturns = []) {
+    if (!checklist.value.applyReturnsToInvoice) {
+      return { appliedCodes: [], returnDeductionTotal: 0, updateRequests: [] }
+    }
+
+    // Pre-existing unadjusted returns
+    const appliedReturns = returns.items.value.filter(ret =>
+      active(ret) &&
+      text(ret.OutletCode) === outletCode &&
+      text(ret.InvoiceAdjustmentRequired) === 'TRUE' &&
+      text(ret.InvoiceAdjustmentDone) !== 'TRUE'
+    )
+
+    const appliedCodes = [
+      ...appliedReturns.map(r => r.Code),
+      ...newlyCreatedReturns.map(r => r.Code)
+    ]
+
+    let returnDeductionTotal = 0
+    const updateRequests = []
+
+    const pricingListCode = resolvePriceListCode(outletCode, rules.items.value, priceLists.items.value)
+    const priceList = priceLists.items.value.find(pl => active(pl) && text(pl.Code) === pricingListCode)
+    const priceListLookup = resolvePriceListLookup(authStore.appConfigMap)
+
+    // Gather pre-existing
+    appliedReturns.forEach(ret => {
+      const sku = text(ret.SKU)
+      const qty = toNumber(ret.Qty)
+      const price = resolveSkuPrice(sku, priceList, priceListLookup, priceListItems.items.value)
+      if (price !== null && price > 0) {
+        returnDeductionTotal += qty * price
+      }
+
+      const isTrue = (val) => val === true || String(val).toUpperCase() === 'TRUE'
+      const isWhCompleted = isTrue(ret.WarehouseActionCompleted) || !isTrue(ret.WarehouseActionRequired)
+      const nextProgress = isWhCompleted ? 'COMPLETED' : 'AWAITING_WAREHOUSE_RECEIPT'
+
+      updateRequests.push({
+        action: 'update',
+        resource: 'OutletReturns',
+        payload: {
+          code: ret.Code,
+          record: {
+            InvoiceAdjustmentDone: 'TRUE',
+            Progress: nextProgress
+          }
+        }
+      })
+    })
+
+    // Gather newly created
+    newlyCreatedReturns.forEach(ret => {
+      const sku = text(ret.SKU)
+      const qty = toNumber(ret.Qty)
+      const price = resolveSkuPrice(sku, priceList, priceListLookup, priceListItems.items.value)
+      if (price !== null && price > 0) {
+        returnDeductionTotal += qty * price
+      }
+
+      const isTrue = (val) => val === true || String(val).toUpperCase() === 'TRUE'
+      const isWhCompleted = isTrue(ret.WarehouseActionCompleted) || !isTrue(ret.WarehouseActionRequired)
+      const nextProgress = isWhCompleted ? 'COMPLETED' : 'AWAITING_WAREHOUSE_RECEIPT'
+
+      updateRequests.push({
+        action: 'update',
+        resource: 'OutletReturns',
+        payload: {
+          code: ret.Code,
+          record: {
+            InvoiceAdjustmentDone: 'TRUE',
+            Progress: nextProgress
+          }
+        }
+      })
+    })
+
+    return { appliedCodes, returnDeductionTotal, updateRequests }
   }
 
   async function saveConsumption() {
@@ -234,7 +391,95 @@ export function useOutletConsumption() {
     saving.value = true
     let consumptionCode = ''
     try {
+      // 1. Save returns first if present
+      let savedReturnsList = []
+      if (returnRows.value.length > 0) {
+        const createReturnRequests = []
+        returnRows.value.forEach((row, rIndex) => {
+          const meta = returnMetadata.value[row.SKU] || {}
+          const returnQty = toNumber(row.Qty)
+          
+          const preparedRecord = {
+            OutletCode: text(form.value.OutletCode),
+            Date: text(form.value.Date) || todayISO(),
+            Username: text(form.value.Username),
+            SKU: text(row.SKU),
+            Qty: returnQty,
+            Reason: text(meta.Reason || 'DAMAGE'),
+            ReasonComment: text(meta.ReasonComment || ''),
+            InvoiceAdjustmentRequired: meta.InvoiceAdjustmentRequired ? 'TRUE' : 'FALSE',
+            InvoiceAdjustmentDone: 'FALSE',
+            WarehouseActionRequired: meta.WarehouseActionRequired ? 'TRUE' : 'FALSE',
+            WarehouseActionCompleted: 'FALSE',
+            WarehouseCode: meta.WarehouseActionRequired ? text(meta.WarehouseCode) : '',
+            Progress: 'SUBMITTED',
+            Status: 'Active'
+          }
+
+          createReturnRequests.push({
+            action: 'create',
+            resource: 'OutletReturns',
+            payload: {
+              record: preparedRecord
+            }
+          })
+
+          let qtyChange = 0
+          if (meta.InvoiceAdjustmentRequired && !meta.WarehouseActionRequired) {
+            qtyChange = returnQty
+          } else if (!meta.InvoiceAdjustmentRequired && meta.WarehouseActionRequired) {
+            qtyChange = -returnQty
+          }
+
+          if (qtyChange !== 0) {
+            createReturnRequests.push({
+              action: 'create',
+              resource: 'OutletMovements',
+              payload: {
+                record: {
+                  OutletCode: text(form.value.OutletCode),
+                  StorageName: '_default',
+                  SKU: text(row.SKU),
+                  QtyChange: qtyChange,
+                  ReferenceType: 'OutletReturn',
+                  ReferenceCode: batchRef(`OutletReturns.records.${rIndex}.Code`),
+                  MovementDate: text(form.value.Date) || todayISO(),
+                  Status: 'Active'
+                }
+              }
+            })
+          }
+        })
+
+        const returnsResponse = await resourceIoStore.runBatchRequests(createReturnRequests)
+        if (responseFailed(returnsResponse)) {
+          $q.notify({ type: 'negative', message: failureMessage(returnsResponse, 'Failed to save outlet returns.'), position: 'top' })
+          return
+        }
+
+        if (returnsResponse?.data?.results) {
+          returnsResponse.data.results.forEach(res => {
+            if (res?.resource === 'OutletReturns' && res?.code) {
+              const matchingRow = returnRows.value.find(row => {
+                const matchIndex = createReturnRequests.findIndex(req => req.resource === 'OutletReturns' && req.payload.record.SKU === row.SKU)
+                return matchIndex !== -1
+              })
+              savedReturnsList.push({
+                Code: res.code,
+                SKU: matchingRow ? matchingRow.SKU : '',
+                Qty: matchingRow ? matchingRow.Qty : 0,
+                WarehouseActionRequired: matchingRow ? returnMetadata.value[matchingRow.SKU]?.WarehouseActionRequired : false,
+                WarehouseActionCompleted: false
+              })
+            }
+          })
+        }
+      }
+
+      // 2. Pricing and Invoice returns pre-computation
       let pricing = null
+      let returnsInfo = { appliedCodes: [], returnDeductionTotal: 0, updateRequests: [] }
+      
       if (checklist.value.generateInvoice) {
         const sold = stockRows.value.filter((row) => toNumber(row.SoldQty) > 0).map((row) => ({ SKU: text(row.SKU), Qty: toNumber(row.SoldQty) }))
         pricing = resolveInvoicePricing({
@@ -246,19 +491,32 @@ export function useOutletConsumption() {
           consumptionItemRows: sold
         })
         if (pricing.error) return $q.notify({ type: 'warning', message: `Cannot generate invoice: ${pricing.error}`, position: 'top' })
+
+        returnsInfo = prepareInvoiceReturns(form.value.OutletCode, savedReturnsList)
       }
 
+      // 3. Build requests
       const consumptionRef = batchRef('OutletConsumptions.latest.code')
       const restockRef = batchRef('OutletRestocks.latest.code')
       const requests = [compositeSaveRequest(buildConsumptionCompositePayload(form.value, stockRows.value, checklist.value))]
       requests.push(buildConsumptionMovementRequest(consumptionRef, form.value.OutletCode, stockRows.value, form.value))
+      
       if (checklist.value.generateInvoice && pricing) {
         const invoiceRef = batchRef('OutletConsumptionInvoices.latest.code')
         requests.push(
-          buildConsumptionInvoiceRequest(consumptionRef, form.value, { priceListCode: pricing.priceListCode, subtotal: pricing.subtotal }),
+          buildConsumptionInvoiceRequest(consumptionRef, form.value, { 
+            priceListCode: pricing.priceListCode, 
+            subtotal: pricing.subtotal,
+            returnDeductionTotal: returnsInfo.returnDeductionTotal,
+            outletReturnCodes: returnsInfo.appliedCodes.join(', ')
+          }),
           buildConsumptionInvoiceItemsRequest(invoiceRef, pricing.items),
           buildInvoiceGeneratedRequest(consumptionRef, 'Invoice generated during consumption submit.')
         )
+
+        if (returnsInfo.updateRequests.length > 0) {
+          requests.push(...returnsInfo.updateRequests)
+        }
       }
       if (checklist.value.completeVisit && selectedVisit.value && visitProgress(selectedVisit.value) === 'PLANNED') requests.push(buildVisitCompleteRequest(form.value))
       if (checklist.value.scheduleNextVisit) {
@@ -300,13 +558,26 @@ export function useOutletConsumption() {
 
     acting.value = true
     try {
+      const returnsInfo = prepareInvoiceReturns(record.OutletCode, [])
       const comment = 'Invoice generated from pending outlet consumption.'
       const invoiceRef = batchRef('OutletConsumptionInvoices.latest.code')
-      const result = await resourceIoStore.runBatchRequests([
-        buildConsumptionInvoiceRequest(record.Code, { ...record, InvoiceComment: comment }, { priceListCode: pricing.priceListCode, subtotal: pricing.subtotal }),
+      
+      const batchRequests = [
+        buildConsumptionInvoiceRequest(record.Code, { ...record, InvoiceComment: comment }, { 
+          priceListCode: pricing.priceListCode, 
+          subtotal: pricing.subtotal,
+          returnDeductionTotal: returnsInfo.returnDeductionTotal,
+          outletReturnCodes: returnsInfo.appliedCodes.join(', ')
+        }),
         buildConsumptionInvoiceItemsRequest(invoiceRef, pricing.items),
         buildInvoiceGeneratedRequest(record.Code, comment)
-      ])
+      ]
+
+      if (returnsInfo.updateRequests.length > 0) {
+        batchRequests.push(...returnsInfo.updateRequests)
+      }
+
+      const result = await resourceIoStore.runBatchRequests(batchRequests)
       if (responseFailed(result)) {
         $q.notify({ type: 'negative', message: failureMessage(result, 'Failed to generate invoice.'), position: 'top' })
         return false
@@ -366,19 +637,34 @@ export function useOutletConsumption() {
   function navigateToInvoiceAdd(consumptionCode) { nav.goTo('add', { scope: 'operations', resourceSlug: 'outlet-consumption-invoices', query: { consumptionCode } }) }
   function navigateToRestock(code) { nav.goTo('view', { scope: 'operations', resourceSlug: 'outlet-restocks', code }) }
   function navigateToConsumption(code) { nav.goTo('view', { scope: 'operations', resourceSlug: 'outlet-consumptions', code }) }
+  
   async function saveInvoiceFromConsumption({ consumptionCode, consumptionRecord, items = [], discount = 0, tax = 0, priceListCode = '' }) {
     if (!consumptionCode) return { error: 'Consumption code required' }
     if (!items.length) return { error: 'No items to invoice' }
     const subtotal = items.reduce((sum, item) => sum + (toNumber(item.Qty) * toNumber(item.Price)), 0)
     saving.value = true
     try {
+      const returnsInfo = prepareInvoiceReturns(consumptionRecord.OutletCode, [])
       const invoiceRef = batchRef('OutletConsumptionInvoices.latest.code')
       const comment = 'Invoice generated from outlet consumption.'
+      
       const requests = [
-        buildConsumptionInvoiceRequest(consumptionCode, { ...consumptionRecord, InvoiceComment: comment }, { priceListCode, subtotal, discount, tax }),
+        buildConsumptionInvoiceRequest(consumptionCode, { ...consumptionRecord, InvoiceComment: comment }, { 
+          priceListCode, 
+          subtotal, 
+          discount, 
+          tax,
+          returnDeductionTotal: returnsInfo.returnDeductionTotal,
+          outletReturnCodes: returnsInfo.appliedCodes.join(', ')
+        }),
         buildConsumptionInvoiceItemsRequest(invoiceRef, items.map(item => ({ SKU: item.SKU, Qty: item.Qty, Price: item.Price }))),
         buildInvoiceGeneratedRequest(consumptionCode, comment)
       ]
+
+      if (returnsInfo.updateRequests.length > 0) {
+        requests.push(...returnsInfo.updateRequests)
+      }
+
       const result = await resourceIoStore.runBatchRequests(requests)
       if (responseFailed(result)) return { error: failureMessage(result, 'Failed to save invoice.') }
       const invoiceCode = batchResultCode(result, 0)
@@ -425,6 +711,7 @@ export function useOutletConsumption() {
   function cancel() { nav.goTo('list') }
 
   return {
-    loading, saving, acting, searchTerm, activeGroupKey, activeInvoiceGroupKey, form, checklist, stockRows, restockRows, groups, invoiceGroups, items, invoiceItems, outletOptions, visitOptions, allPlannedVisits, plannedVisits, plannedVisitDiagnostics, skuOptions, selectedVisit, soldRows, varianceRows, pendingInvoiceItems, pendingPaymentInvoices, partiallyPaidInvoices, paidInvoices, cancelledInvoices, invoiceGeneratedItems, historyItems, canCreate, consumptionPermissions, invoicePermissions, restockPermissions, canReadInvoice, canReadRestock, reload, onOutletChange, selectVisit, updateCurrentQty, incrementCurrent, decrementCurrent, setCurrentToZero, setCurrentToSystem, updateRestockRow, addRestockRow, removeRestockRow, saveConsumption, generateInvoiceForConsumption, cancelConsumption, getConsumption, getInvoice, childItems, childInvoiceItems, childInvoice, childRestocks, cancelableRestocks, consumptionItemRows, invoiceLineItems, consumedTotal, getProgressMeta, isGroupExpanded, toggleGroup, isInvoiceGroupExpanded, toggleInvoiceGroup, outletName, skuName, productDisplayName, visitLabel, formatDisplayDate, navigateTo, navigateToAdd, navigateToInvoice, navigateToInvoiceAdd, navigateToRestock, navigateToConsumption, saveInvoiceFromConsumption, updateInvoice, resolveDefaultPriceList, resolvePriceListItems, cancel, text, todayISO, active, priceLists, rules
+    loading, saving, acting, searchTerm, activeGroupKey, activeInvoiceGroupKey, form, checklist, stockRows, restockRows, groups, invoiceGroups, items, invoiceItems, outletOptions, visitOptions, allPlannedVisits, plannedVisits, plannedVisitDiagnostics, skuOptions, selectedVisit, soldRows, varianceRows, pendingInvoiceItems, pendingPaymentInvoices, partiallyPaidInvoices, paidInvoices, cancelledInvoices, invoiceGeneratedItems, historyItems, canCreate, consumptionPermissions, invoicePermissions, restockPermissions, canReadInvoice, canReadRestock, reload, onOutletChange, selectVisit, updateCurrentQty, incrementCurrent, decrementCurrent, setCurrentToZero, setCurrentToSystem, updateRestockRow, addRestockRow, removeRestockRow, saveConsumption, generateInvoiceForConsumption, cancelConsumption, getConsumption, getInvoice, childItems, childInvoiceItems, childInvoice, childRestocks, cancelableRestocks, consumptionItemRows, invoiceLineItems, consumedTotal, getProgressMeta, isGroupExpanded, toggleGroup, isInvoiceGroupExpanded, toggleInvoiceGroup, outletName, skuName, productDisplayName, visitLabel, formatDisplayDate, navigateTo, navigateToAdd, navigateToInvoice, navigateToInvoiceAdd, navigateToRestock, navigateToConsumption, saveInvoiceFromConsumption, updateInvoice, resolveDefaultPriceList, resolvePriceListItems, cancel, text, todayISO, active, priceLists, rules,
+    returnRows, returnMetadata, warehouseOptions, canCreateReturn, addManualReturnSku, updateReturnMetadata, removeManualReturnRow, getInvoiceTotal, getInvoiceRemaining, returns
   }
 }

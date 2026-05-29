@@ -307,14 +307,14 @@ function setupOperationSheets() {
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICES,
-            headers: ['Code', 'OutletConsumptionCode', 'Date', 'OutletCode', 'Username', 'PriceListCode', 'Subtotal', 'Discount', 'Tax', 'OutletReturnCodes', 'Progress',
+            headers: ['Code', 'OutletConsumptionCode', 'Date', 'OutletCode', 'Username', 'PriceListCode', 'Subtotal', 'Discount', 'Tax', 'OutletReturnCodes', 'ReturnDeductionTotal', 'Progress',
                 'ProgressPendingPaymentAt', 'ProgressPendingPaymentBy', 'ProgressPendingPaymentComment',
                 'ProgressPartiallyPaidAt', 'ProgressPartiallyPaidBy', 'ProgressPartiallyPaidComment',
                 'ProgressPaidAt', 'ProgressPaidBy', 'ProgressPaidComment',
                 'ProgressCancelledAt', 'ProgressCancelledBy', 'ProgressCancelledComment',
                 'Status', 'AccessRegion'].concat(commonAuditColumns),
-            statusDefault: 'Active', defaults: { Status: 'Active', Subtotal: 0, Discount: 0, Tax: 0, OutletReturnCodes: '', Progress: 'PENDING_PAYMENT' }, progressValidation: APP_OPTIONS_SEED.OutletConsumptionInvoiceProgress,
-            columnWidths: { Code: 150, OutletConsumptionCode: 200, Date: 140, OutletCode: 140, Username: 170, PriceListCode: 170, Subtotal: 120, Discount: 120, Tax: 120, OutletReturnCodes: 180, Progress: 170, ProgressPendingPaymentAt: 180, ProgressPendingPaymentBy: 180, ProgressPendingPaymentComment: 230, ProgressPartiallyPaidAt: 180, ProgressPartiallyPaidBy: 180, ProgressPartiallyPaidComment: 230, ProgressPaidAt: 160, ProgressPaidBy: 160, ProgressPaidComment: 210, ProgressCancelledAt: 170, ProgressCancelledBy: 170, ProgressCancelledComment: 220, Status: 100, AccessRegion: 130 }
+            statusDefault: 'Active', defaults: { Status: 'Active', Subtotal: 0, Discount: 0, Tax: 0, OutletReturnCodes: '', ReturnDeductionTotal: 0, Progress: 'PENDING_PAYMENT' }, progressValidation: APP_OPTIONS_SEED.OutletConsumptionInvoiceProgress,
+            columnWidths: { Code: 150, OutletConsumptionCode: 200, Date: 140, OutletCode: 140, Username: 170, PriceListCode: 170, Subtotal: 120, Discount: 120, Tax: 120, OutletReturnCodes: 180, ReturnDeductionTotal: 150, Progress: 170, ProgressPendingPaymentAt: 180, ProgressPendingPaymentBy: 180, ProgressPendingPaymentComment: 230, ProgressPartiallyPaidAt: 180, ProgressPartiallyPaidBy: 180, ProgressPartiallyPaidComment: 230, ProgressPaidAt: 160, ProgressPaidBy: 160, ProgressPaidComment: 210, ProgressCancelledAt: 170, ProgressCancelledBy: 170, ProgressCancelledComment: 220, Status: 100, AccessRegion: 130 }
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICE_ITEMS,

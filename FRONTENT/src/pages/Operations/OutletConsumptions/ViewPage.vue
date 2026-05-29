@@ -53,8 +53,12 @@
                 <div class="text-weight-medium">{{ invoice.Tax || 0 }}</div>
               </div>
               <div class="col-4">
+                <div class="text-grey-6">Returns</div>
+                <div class="text-weight-medium text-negative">-{{ invoice.ReturnDeductionTotal || 0 }}</div>
+              </div>
+              <div class="col-4">
                 <div class="text-grey-6">Total</div>
-                <div class="text-weight-bold">{{ (invoice.Subtotal || 0) - (invoice.Discount || 0) + (invoice.Tax || 0) }}</div>
+                <div class="text-weight-bold text-primary">{{ getInvoiceTotal(invoice) }}</div>
               </div>
             </div>
             <q-linear-progress :value="invoiceProgressPercent(invoice.Progress)" color="primary" class="q-mt-sm" rounded />
@@ -140,7 +144,7 @@ import OutletProgressChip from '../../../components/Operations/Outlets/OutletPro
 defineOptions({ name: 'OutletConsumptionViewPage' })
 const route = useRoute()
 const flow = useOutletConsumption()
-const { loading, acting, reload, getConsumption, childInvoice, childRestocks, consumptionItemRows, generateInvoiceForConsumption, cancelConsumption, navigateToInvoice, navigateToRestock, outletName, visitLabel, formatDisplayDate, canReadInvoice, canReadRestock } = flow
+const { loading, acting, reload, getConsumption, childInvoice, childRestocks, consumptionItemRows, generateInvoiceForConsumption, cancelConsumption, navigateToInvoice, navigateToRestock, outletName, visitLabel, formatDisplayDate, canReadInvoice, canReadRestock, getInvoiceTotal } = flow
 
 const record = computed(() => getConsumption(route.params.code))
 const invoice = computed(() => record.value ? childInvoice(record.value.Code) : null)

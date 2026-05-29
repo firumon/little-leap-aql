@@ -88,3 +88,24 @@ export function resolveInvoicePricing({ outletCode, rules = [], priceLists = [],
 
   return { priceListCode, items, subtotal, error: '' }
 }
+
+/**
+ * Computes the net total for a consumption invoice.
+ * Net Total = Subtotal - Discount + Tax - ReturnDeductionTotal
+ */
+export function getInvoiceTotal(inv = {}) {
+  return toNumber(inv?.Subtotal) - toNumber(inv?.Discount) + toNumber(inv?.Tax) - toNumber(inv?.ReturnDeductionTotal)
+}
+
+/**
+ * Computes the remaining unpaid balance for a consumption invoice.
+ * Remaining = Net Total - Sum(Active Payments)
+ */
+export function getInvoiceRemaining(inv = {}, payments = []) {
+  const total = getInvoiceTotal(inv)
+  const paid = payments
+    .filter(p => active(p) && text(p.OutletConsumptionInvoiceCode) === text(inv?.Code) && text(p.Progress) !== 'CANCELLED')
+    .reduce((sum, p) => sum + toNumber(p.Amount), 0)
+  return Math.max(0, total - paid)
+}
+

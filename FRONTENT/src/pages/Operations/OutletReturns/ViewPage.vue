@@ -6,7 +6,7 @@
         <q-btn flat round dense icon="arrow_back" color="dark" @click="cancel" />
         <q-item-section>
           <q-item-label class="text-h6 text-weight-bold text-primary">{{ code }}</q-item-label>
-          <q-item-label caption>Logged by {{ record?.CreatedBy || 'system' }}</q-item-label>
+          <q-item-label caption>{{ record?.Username || 'system' }} at {{ record?.Date }}</q-item-label>
         </q-item-section>
         <q-item-section side>
           <q-badge

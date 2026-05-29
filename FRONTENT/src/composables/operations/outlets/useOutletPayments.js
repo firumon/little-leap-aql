@@ -6,6 +6,7 @@ import { useResourceNav } from '../../resources/useResourceNav.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { active, text, todayISO } from './outletOperationsMeta.js'
 import { resourceCreateRequest, executeActionRequest, responseFailed, failureMessage } from './outletOperationsBatch.js'
+import { getInvoiceTotal, getInvoiceRemaining } from './outletConsumptionPricing.js'
 
 export function useOutletPayments() {
   const $q = useQuasar()
@@ -54,11 +55,7 @@ export function useOutletPayments() {
         const o = outlets.items.value.find(row => row.Code === inv.OutletCode)
         const outletNameStr = o ? o.Name : text(inv.OutletCode)
 
-        const total = Number(inv.Subtotal || 0) - Number(inv.Discount || 0) + Number(inv.Tax || 0)
-        const paid = payments.items.value
-          .filter(p => text(p.OutletConsumptionInvoiceCode) === text(inv.Code) && active(p) && text(p.Progress) !== 'CANCELLED')
-          .reduce((sum, p) => sum + Number(p.Amount || 0), 0)
-        const balance = Math.max(0, total - paid)
+        const balance = getInvoiceRemaining(inv, payments.items.value)
 
         return {
           ...inv,
@@ -104,7 +101,7 @@ export function useOutletPayments() {
   // Calculations (Reactive computed properties)
   const totalAmount = computed(() => {
     if (!selectedInvoice.value) return 0
-    return Number(selectedInvoice.value.Subtotal || 0) - Number(selectedInvoice.value.Discount || 0) + Number(selectedInvoice.value.Tax || 0)
+    return getInvoiceTotal(selectedInvoice.value)
   })
 
   const totalPaidSoFar = computed(() => {
@@ -115,7 +112,8 @@ export function useOutletPayments() {
   })
 
   const remainingToPay = computed(() => {
-    return Math.max(0, totalAmount.value - totalPaidSoFar.value)
+    if (!selectedInvoice.value) return 0
+    return getInvoiceRemaining(selectedInvoice.value, payments.items.value)
   })
 
   // Computed step to resolve the active form view state reactively
@@ -276,7 +274,7 @@ export function useOutletPayments() {
       const invoiceCode = paymentRecord.OutletConsumptionInvoiceCode
       const inv = invoices.items.value.find(i => text(i.Code) === text(invoiceCode))
       if (inv) {
-        const total = Number(inv.Subtotal || 0) - Number(inv.Discount || 0) + Number(inv.Tax || 0)
+        const total = getInvoiceTotal(inv)
         // Sum up other active/submitted payments excluding this cancelled one
         const otherPaid = payments.items.value
           .filter(p => text(p.OutletConsumptionInvoiceCode) === text(invoiceCode) && active(p) && text(p.Progress) !== 'CANCELLED' && p.Code !== paymentCode)

@@ -443,6 +443,7 @@ import { useOutletPayments } from '../../../composables/operations/outlets/useOu
 import { progressMeta } from '../../../composables/operations/outlets/outletOperationsMeta.js'
 import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
 import { useCurrency } from '../../../composables/useCurrency.js'
+import { getInvoiceTotal, getInvoiceRemaining } from '../../../composables/operations/outlets/outletConsumptionPricing.js'
 
 defineOptions({ name: 'OutletPaymentsAddPage' })
 
@@ -514,19 +515,8 @@ function formatDisplayDate(val) {
   }
 }
 
-// Get invoice total
-function getInvoiceTotal(inv) {
-  return Number(inv.Subtotal || 0) - Number(inv.Discount || 0) + Number(inv.Tax || 0)
-}
-
-// Get invoice remaining balance
-function getInvoiceBalance(inv) {
-  const invTotal = getInvoiceTotal(inv)
-  const invPaid = payments.items.value
-    .filter(p => text(p.OutletConsumptionInvoiceCode) === text(inv.Code) && p.Status === 'Active' && p.Progress !== 'CANCELLED')
-    .reduce((sum, p) => sum + Number(p.Amount || 0), 0)
-  return Math.max(0, invTotal - invPaid)
-}
+// Get invoice remaining balance using financial helper
+const getInvoiceBalance = (inv) => getInvoiceRemaining(inv, payments.items.value)
 
 // Interactive Selection State Modifiers
 function selectGlobalInvoice(invoiceCode, outletCode) {

@@ -1,3 +1,5 @@
+import { getInvoiceRemaining } from 'src/composables/operations/outlets/outletConsumptionPricing'
+
 export default {
   metadata: {
     id: 'outstanding_receivables_metric',
@@ -31,19 +33,8 @@ export default {
           const progress = String(inv.Progress || '').toUpperCase().trim()
           if (progress === 'CANCELLED' || progress === 'PAID') return
 
-          // Invoice total amount formula: Subtotal - Discount + Tax
-          const total = Number(inv.Subtotal || 0) - Number(inv.Discount || 0) + Number(inv.Tax || 0)
-
-          // Sum up all active, submitted payments for this specific invoice
-          const paid = payments
-            .filter((p) => {
-              return String(p.OutletConsumptionInvoiceCode || '').toUpperCase().trim() === String(inv.Code || '').toUpperCase().trim() &&
-                String(p.Status || '').toUpperCase() === 'ACTIVE' &&
-                String(p.Progress || '').toUpperCase().trim() === 'SUBMITTED'
-            })
-            .reduce((sum, p) => sum + Number(p.Amount || 0), 0)
-
-          outstanding += Math.max(0, total - paid)
+          // Use financial helper to compute unpaid balance including ReturnDeductionTotal
+          outstanding += getInvoiceRemaining(inv, payments)
         })
 
         // Dynamically format using App.Config's default currency without hardcoding

@@ -300,6 +300,7 @@ import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHead
 import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'
 import { useResourceNav } from '../../../composables/resources/useResourceNav.js'
 import { useCurrency } from '../../../composables/useCurrency.js'
+import { getInvoiceTotal, getInvoiceRemaining } from '../../../composables/operations/outlets/outletConsumptionPricing.js'
 
 defineOptions({ name: 'OutletPaymentsViewPage' })
 
@@ -331,7 +332,7 @@ const invoice = computed(() => {
 
 const invoiceTotal = computed(() => {
   if (!invoice.value) return 0
-  return Number(invoice.value.Subtotal || 0) - Number(invoice.value.Discount || 0) + Number(invoice.value.Tax || 0)
+  return getInvoiceTotal(invoice.value)
 })
 
 const invoicePaidSoFar = computed(() => {
@@ -342,7 +343,8 @@ const invoicePaidSoFar = computed(() => {
 })
 
 const invoiceBalance = computed(() => {
-  return Math.max(0, invoiceTotal.value - invoicePaidSoFar.value)
+  if (!invoice.value) return 0
+  return getInvoiceRemaining(invoice.value, payments.items.value)
 })
 
 const canCancel = computed(() => {

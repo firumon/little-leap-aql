@@ -1,6 +1,7 @@
 <template>
   <q-page padding>
-    <OutletHeaderPanel :subtitle="formatDisplayDate(invoice?.Date) + (' · ') + (invoice?.Code || 'Consumption Invoice')" :title="invoice ? `${outletName(invoice.OutletCode)}` : ''" class="q-mb-md">
+    <!-- Header panel with action status -->
+    <OutletHeaderPanel :subtitle="formatDisplayDate(invoice?.Date) + ' · ' + (invoice?.Code || 'Consumption Invoice')" :title="invoice ? `${outletName(invoice.OutletCode)}` : ''" class="q-mb-md">
       <template #side>
         <div class="row items-center q-gutter-xs">
           <OutletProgressChip :progress="invoice?.Progress" />
@@ -8,94 +9,208 @@
       </template>
     </OutletHeaderPanel>
 
-    <div v-if="canEdit" class="row items-center justify-end q-gutter-xs q-mb-md">
+    <!-- Interactive toggle for View / Edit mode -->
+    <div v-if="canEdit" class="row items-center justify-end q-gutter-sm q-mb-md">
       <span class="text-caption" :class="!editing ? 'text-primary text-weight-bold' : 'text-grey-6'">View</span>
       <q-toggle :model-value="editing" @update:model-value="onEditToggle" color="primary" dense size="sm" />
       <span class="text-caption" :class="editing ? 'text-primary text-weight-bold' : 'text-grey-6'">Edit</span>
     </div>
 
-    <div v-if="loading && !invoice" class="flex flex-center q-pa-xl"><q-spinner color="primary" size="3em" /></div>
-    <q-banner v-else-if="!invoice" rounded class="bg-grey-2 text-grey-8">Invoice not found.</q-banner>
+    <div v-if="loading && !invoice" class="flex flex-center q-pa-xl">
+      <q-spinner color="primary" size="3em" />
+    </div>
+    <q-banner v-else-if="!invoice" rounded class="bg-grey-2 text-grey-8">
+      Invoice not found.
+    </q-banner>
 
-    <div v-else class="column">
-      <q-card flat bordered>
-        <q-card-section class="q-pa-sm">
+    <div v-else class="column q-gutter-y-md">
+      <!-- 1. Metadata Details Card -->
+      <q-card flat bordered class="rounded-borders shadow-1">
+        <q-card-section class="q-pa-md">
           <div class="row q-col-gutter-md">
-            <div class="col-12 col-md-3"><div class="text-caption text-grey-6">Outlet</div><div class="text-subtitle2">{{ outletName(invoice.OutletCode) }}</div></div>
-            <div class="col-12 col-md-3"><div class="text-caption text-grey-6">Date</div><div class="text-subtitle2">{{ formatDisplayDate(invoice.Date) }}</div></div>
-            <div class="col-12 col-md-3"><div class="text-caption text-grey-6">Username</div><div class="text-subtitle2">{{ invoice.Username }}</div></div>
-            <div class="col-12 col-md-3"><div class="text-caption text-grey-6">Consumption</div><q-btn flat dense color="primary" :label="invoice.OutletConsumptionCode" @click="navigateToConsumption(invoice.OutletConsumptionCode)" /></div>
-          </div>
-        </q-card-section>
-      </q-card>
-
-      <div class="text-subtitle1 text-weight-medium q-px-xs q-mt-md">Price List</div>
-      <q-card flat bordered>
-        <q-card-section class="q-pa-sm">
-          <div v-if="!editing" class="text-subtitle2">{{ plName }}</div>
-          <q-select v-else v-model="editForm.priceListCode" :options="priceListOptions" dense outlined emit-value map-options />
-        </q-card-section>
-      </q-card>
-
-      <div class="text-subtitle1 text-weight-medium q-px-xs q-mt-md">Line Items</div>
-      <q-card flat bordered>
-        <q-card-section v-if="!editing">
-          <div class="row text-caption text-grey-6 text-weight-bold q-mb-sm q-col-gutter-md">
-            <div class="col">Product</div>
-            <div class="col-1 text-right">Qty</div>
-            <div class="col-2 text-right">Price</div>
-            <div class="col-2 text-right">Total</div>
-          </div>
-          <div v-for="(item, i) in editLineItems" :key="item.SKU" class="row q-py-xs q-col-gutter-md items-center" :class="{ 'bg-grey-1': i % 2 }">
-            <div class="col text-body2">{{ item.displayLabel }}</div>
-            <div class="col-1 text-right text-body2">{{ item.Qty }}</div>
-            <div class="col-2 text-right text-body2">{{ item.Price }}</div>
-            <div class="col-2 text-right text-body2 text-weight-medium">{{ item.Qty * item.Price }}</div>
-          </div>
-        </q-card-section>
-        <q-list separator v-else>
-          <q-item v-for="(item, i) in editLineItems" :key="item.SKU" class="q-pa-sm">
-            <q-item-section>
-              <q-item-label class="text-weight-medium">{{ item.displayLabel }}</q-item-label>
-              <q-item-label caption>Qty: {{ item.Qty }}</q-item-label>
-            </q-item-section>
-            <q-item-section side>
-              <q-input v-model.number="item.Price" dense outlined type="number" label="Price" style="width: 130px" />
-            </q-item-section>
-          </q-item>
-        </q-list>
-      </q-card>
-
-      <div class="text-subtitle1 text-weight-medium q-px-xs q-mt-md">Amounts</div>
-      <q-card flat bordered>
-        <q-card-section class="q-pa-sm">
-          <div class="row q-col-gutter-md">
-            <div class="col-4"><div class="text-caption text-grey-6">Subtotal</div><div class="text-subtitle2">{{ invoice.Subtotal || 0 }}</div></div>
-            <div class="col-4">
-              <div class="text-caption text-grey-6">Discount</div>
-              <div v-if="!editing" class="text-subtitle2">-{{ invoice.Discount || 0 }}</div>
-              <q-input v-else v-model.number="editForm.discount" dense outlined type="number" label="Discount" class="q-mt-xs" />
+            <div class="col-12 col-sm-3">
+              <div class="row items-center q-gutter-xs text-grey-6">
+                <q-icon name="storefront" size="18px" />
+                <span class="text-caption">Outlet</span>
+              </div>
+              <div class="text-subtitle2 text-weight-bold q-mt-xs">{{ outletName(invoice.OutletCode) }}</div>
             </div>
-            <div class="col-4">
-              <div class="text-caption text-grey-6">Tax</div>
-              <div v-if="!editing" class="text-subtitle2">+{{ invoice.Tax || 0 }}</div>
-              <q-input v-else v-model.number="editForm.tax" dense outlined type="number" label="Tax" class="q-mt-xs" />
+            <div class="col-12 col-sm-3">
+              <div class="row items-center q-gutter-xs text-grey-6">
+                <q-icon name="event" size="18px" />
+                <span class="text-caption">Date</span>
+              </div>
+              <div class="text-subtitle2 text-weight-bold q-mt-xs">{{ formatDisplayDate(invoice.Date) }}</div>
+            </div>
+            <div class="col-12 col-sm-3">
+              <div class="row items-center q-gutter-xs text-grey-6">
+                <q-icon name="person" size="18px" />
+                <span class="text-caption">Logged By</span>
+              </div>
+              <div class="text-subtitle2 text-weight-bold q-mt-xs">{{ invoice.Username }}</div>
+            </div>
+            <div class="col-12 col-sm-3">
+              <div class="row items-center q-gutter-xs text-grey-6">
+                <q-icon name="description" size="18px" />
+                <span class="text-caption">Consumption Link</span>
+              </div>
+              <div class="q-mt-xs">
+                <q-btn flat dense color="primary" class="text-weight-bold" :label="invoice.OutletConsumptionCode" icon="launch" size="sm" @click="navigateToConsumption(invoice.OutletConsumptionCode)" />
+              </div>
             </div>
           </div>
-          <q-separator class="q-my-sm" />
-          <div class="row items-center justify-between">
-            <span class="text-subtitle1 text-weight-medium">Total</span>
-            <span class="text-h6 text-weight-bold text-primary">{{ total }}</span>
-          </div>
         </q-card-section>
       </q-card>
 
+      <!-- 2. Price List Mapping Selector -->
+      <div>
+        <div class="text-subtitle2 text-weight-bold text-grey-8 q-px-xs q-mb-sm row items-center">
+          <q-icon name="sell" class="q-mr-xs" size="18px" />
+          Price List Rules
+        </div>
+        <q-card flat bordered class="rounded-borders shadow-1">
+          <q-card-section class="q-pa-md">
+            <div v-if="!editing" class="text-subtitle2 text-weight-bold text-primary">{{ plName }}</div>
+            <q-select v-else v-model="editForm.priceListCode" :options="priceListOptions" dense outlined emit-value map-options label="Price List Selector" />
+          </q-card-section>
+        </q-card>
+      </div>
+
+      <!-- 3. Line Items Table -->
+      <div>
+        <div class="text-subtitle2 text-weight-bold text-grey-8 q-px-xs q-mb-sm row items-center">
+          <q-icon name="receipt_long" class="q-mr-xs" size="18px" />
+          Billed Items
+        </div>
+        <q-card flat bordered class="rounded-borders shadow-1">
+          <q-card-section v-if="!editing" class="q-pa-md">
+            <!-- Headers -->
+            <div class="row text-caption text-grey-6 text-weight-bold q-mb-sm q-col-gutter-md">
+              <div class="col">Product SKU</div>
+              <div class="col-2 text-right">Qty</div>
+              <div class="col-3 text-right">Unit Price</div>
+              <div class="col-3 text-right">Line Total</div>
+            </div>
+            
+            <!-- Rows -->
+            <div v-for="(item, i) in editLineItems" :key="item.SKU">
+              <q-separator v-if="i > 0" class="q-my-xs" />
+              <div class="row q-py-sm q-col-gutter-md items-center" :class="{ 'bg-grey-1': i % 2 }">
+                <div class="col">
+                  <div class="text-body2 text-weight-medium">{{ item.displayLabel }}</div>
+                  <div class="text-caption text-grey-6">{{ item.SKU }}</div>
+                </div>
+                <div class="col-2 text-right text-body2 text-weight-bold">{{ item.Qty }}</div>
+                <div class="col-3 text-right text-body2">{{ _C(item.Price, true) }}</div>
+                <div class="col-3 text-right text-body2 text-weight-bold text-primary">{{ _C(item.Qty * item.Price, true) }}</div>
+              </div>
+            </div>
+          </q-card-section>
+          
+          <q-list separator v-else class="q-pa-sm">
+            <q-item v-for="item in editLineItems" :key="item.SKU" class="q-py-md">
+              <q-item-section>
+                <q-item-label class="text-weight-bold">{{ item.displayLabel }}</q-item-label>
+                <q-item-label caption>SKU: {{ item.SKU }} · Counted: {{ item.Qty }}</q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-input v-model.number="item.Price" dense outlined type="number" :prefix="defaultCurrency.Symbol" label="Adjusted Price" style="width: 140px" />
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-card>
+      </div>
+
+      <!-- 4. Adjusted Return Items Section (If any exist) -->
+      <div v-if="invoiceReturns.length" class="column">
+        <div class="text-subtitle2 text-weight-bold text-negative q-px-xs q-mb-sm row items-center">
+          <q-icon name="assignment_return" class="q-mr-xs" size="18px" />
+          Adjusted Returns
+        </div>
+        <q-card flat bordered class="rounded-borders shadow-1">
+          <q-card-section class="q-pa-md">
+            <!-- Headers -->
+            <div class="row text-caption text-grey-6 text-weight-bold q-mb-sm q-col-gutter-md">
+              <div class="col">Product SKU</div>
+              <div class="col-2 text-center">Reason</div>
+              <div class="col-2 text-right">Qty</div>
+              <div class="col-3 text-right">Destination</div>
+            </div>
+            
+            <!-- Rows -->
+            <div v-for="(item, i) in invoiceReturns" :key="item.Code">
+              <q-separator v-if="i > 0" class="q-my-xs" />
+              <div class="row q-py-sm q-col-gutter-md items-center" :class="{ 'bg-grey-1': i % 2 }">
+                <div class="col">
+                  <div class="text-body2 text-weight-medium text-negative">{{ productDisplayName(item.SKU) }}</div>
+                  <div class="text-caption text-grey-6">{{ item.SKU }}</div>
+                </div>
+                <div class="col-2 text-center">
+                  <q-chip dense square outline color="negative" class="text-caption text-weight-bold">
+                    {{ item.Reason || 'DAMAGE' }}
+                  </q-chip>
+                </div>
+                <div class="col-2 text-right text-body2 text-weight-bold text-negative">
+                  {{ item.Qty }}
+                </div>
+                <div class="col-3 text-right">
+                  <q-badge v-if="item.WarehouseActionRequired === 'TRUE'" color="purple" dense class="q-pa-xs text-weight-bold">
+                    Warehouse: {{ item.WarehouseCode }}
+                  </q-badge>
+                  <q-badge v-else color="grey-6" dense class="q-pa-xs">
+                    Left at Outlet
+                  </q-badge>
+                </div>
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
+
+      <!-- 5. Financial Ledger / Summary -->
+      <div>
+        <div class="text-subtitle2 text-weight-bold text-grey-8 q-px-xs q-mb-sm row items-center">
+          <q-icon name="account_balance_wallet" class="q-mr-xs" size="18px" />
+          Billing Summary
+        </div>
+        <q-card flat bordered class="rounded-borders shadow-2">
+          <q-card-section class="q-pa-md">
+            <div class="row q-col-gutter-md items-center">
+              <div class="col-6 col-sm-3">
+                <div class="text-caption text-grey-6">Subtotal</div>
+                <div class="text-subtitle1 text-weight-bold text-grey-9 q-mt-xs">{{ _C(invoice.Subtotal || 0, true) }}</div>
+              </div>
+              <div class="col-6 col-sm-3">
+                <div class="text-caption text-grey-6">Discount</div>
+                <div v-if="!editing" class="text-subtitle1 text-weight-bold text-grey-7 q-mt-xs">-{{ _C(invoice.Discount || 0, true) }}</div>
+                <q-input v-else v-model.number="editForm.discount" dense outlined type="number" :prefix="defaultCurrency.Symbol" label="Discount" />
+              </div>
+              <div class="col-6 col-sm-3">
+                <div class="text-caption text-grey-6">Tax</div>
+                <div v-if="!editing" class="text-subtitle1 text-weight-bold text-grey-7 q-mt-xs">+{{ _C(invoice.Tax || 0, true) }}</div>
+                <q-input v-else v-model.number="editForm.tax" dense outlined type="number" :prefix="defaultCurrency.Symbol" label="Tax" />
+              </div>
+              <div class="col-6 col-sm-3">
+                <div class="text-caption text-grey-6 text-negative">Returns Deducted</div>
+                <div class="text-subtitle1 text-weight-bold text-negative q-mt-xs">-{{ _C(invoice.ReturnDeductionTotal || 0, true) }}</div>
+              </div>
+            </div>
+            
+            <q-separator class="q-my-md" />
+            
+            <div class="row items-center justify-between">
+              <span class="text-subtitle1 text-weight-bold text-grey-8">Net Invoice Value</span>
+              <span class="text-h5 text-weight-bold text-primary">{{ _C(total, true) }}</span>
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
+
+      <!-- Action Navigation Buttons -->
       <div class="row q-gutter-sm justify-end q-mt-md">
-        <q-btn v-if="editing" flat label="Cancel" color="primary" @click="cancelEdit" />
+        <q-btn v-if="editing" flat label="Cancel" color="grey-8" @click="cancelEdit" />
         <q-btn v-if="editing" unelevated color="primary" icon="save" label="Save Changes" :loading="saving" @click="saveEdit" />
-
         <q-btn v-if="!editing && showPaymentButton" unelevated color="positive" icon="payments" label="Make Payment" @click="handlePayment" />
-
         <q-btn flat color="primary" icon="arrow_back" label="Back to List" @click="cancel" />
       </div>
     </div>
@@ -108,15 +223,35 @@ import { useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useOutletConsumption } from '../../../composables/operations/outlets/useOutletConsumption.js'
 import { useResourceNav } from '../../../composables/resources/useResourceNav.js'
+import { useCurrency } from '../../../composables/useCurrency.js'
 import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
 import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'
 
 defineOptions({ name: 'OutletConsumptionInvoicesViewPage' })
+
 const $q = useQuasar()
 const route = useRoute()
 const nav = useResourceNav()
 const flow = useOutletConsumption()
-const { loading, saving, reload, getInvoice, childInvoiceItems, outletName, formatDisplayDate, navigateToConsumption, updateInvoice, productDisplayName, cancel, text, priceLists } = flow
+const { _C, defaultCurrency } = useCurrency()
+
+const {
+  loading,
+  saving,
+  reload,
+  getInvoice,
+  childInvoiceItems,
+  outletName,
+  formatDisplayDate,
+  navigateToConsumption,
+  updateInvoice,
+  productDisplayName,
+  cancel,
+  text,
+  priceLists,
+  getInvoiceTotal,
+  returns
+} = flow
 
 const invoice = computed(() => getInvoice(route.params.code))
 const editing = ref(false)
@@ -134,7 +269,7 @@ const plName = computed(() => {
 const total = computed(() => {
   const inv = invoice.value
   if (!inv) return 0
-  return (inv.Subtotal || 0) - (inv.Discount || 0) + (inv.Tax || 0)
+  return getInvoiceTotal(inv)
 })
 
 const canEdit = computed(() => {
@@ -145,6 +280,12 @@ const canEdit = computed(() => {
 const showPaymentButton = computed(() => {
   const p = text(invoice.value?.Progress)
   return p !== 'PAID' && p !== 'CANCELLED'
+})
+
+const invoiceReturns = computed(() => {
+  if (!invoice.value?.OutletReturnCodes) return []
+  const codes = invoice.value.OutletReturnCodes.split(',').map(c => c.trim()).filter(Boolean)
+  return returns.items.value.filter(r => text(r.OutletCode) === text(invoice.value.OutletCode) && codes.includes(r.Code))
 })
 
 function loadLineItems() {

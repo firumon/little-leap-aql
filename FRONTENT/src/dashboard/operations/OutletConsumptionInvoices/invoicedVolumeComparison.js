@@ -1,4 +1,5 @@
 import { useCurrency } from 'src/composables/useCurrency'
+import { getInvoiceTotal } from 'src/composables/operations/outlets/outletConsumptionPricing'
 
 export default {
   metadata: {
@@ -65,8 +66,8 @@ export default {
           const y = d.getFullYear()
           const m = d.getMonth()
 
-          // Invoice Total: Subtotal - Discount + Tax
-          const amount = Number(inv.Subtotal || 0) - Number(inv.Discount || 0) + Number(inv.Tax || 0)
+          // Invoice Total using pricing helper
+          const amount = getInvoiceTotal(inv)
 
           if (y === currentYear && m === currentMonth) {
             billedThisMonth += amount

@@ -34,9 +34,12 @@
       <OutletConsumptionStockCountStep
         v-if="step === 2"
         :rows="stockRows"
+        :sku-options="skuOptions"
         @update-current="updateCurrentQty"
         @increment="incrementCurrent"
         @decrement="decrementCurrent"
+        @add-manual-return="addManualReturnSku"
+        @remove-manual-return="removeManualReturnRow"
       />
       <OutletConsumptionSummaryStep
         v-if="step === 3"
@@ -45,10 +48,14 @@
         :sku-options="skuOptions"
         :checklist="checklist"
         :has-visit="!!form.OutletVisitCode"
+        :return-rows="returnRows"
+        :return-metadata="returnMetadata"
+        :warehouse-options="warehouseOptions"
         @update-restock="updateRestockRow"
         @add-restock="onAddRestock"
         @remove-restock="removeRestockRow"
         @update-checklist="updateChecklist"
+        @update-return-metadata="updateReturnMetadata"
       />
     </div>
 
@@ -86,7 +93,38 @@ const steps = [
 
 const step = ref(1)
 const flow = useOutletConsumption()
-const { form, checklist, stockRows, restockRows, soldRows, outletOptions, allPlannedVisits, plannedVisits, plannedVisitDiagnostics, skuOptions, saving, reload, onOutletChange, selectVisit, updateCurrentQty, incrementCurrent, decrementCurrent, updateRestockRow, addRestockRow, removeRestockRow, saveConsumption, cancel, skuName, text } = flow
+const {
+  form,
+  checklist,
+  stockRows,
+  restockRows,
+  soldRows,
+  outletOptions,
+  allPlannedVisits,
+  plannedVisits,
+  plannedVisitDiagnostics,
+  skuOptions,
+  saving,
+  reload,
+  onOutletChange,
+  selectVisit,
+  updateCurrentQty,
+  incrementCurrent,
+  decrementCurrent,
+  updateRestockRow,
+  addRestockRow,
+  removeRestockRow,
+  saveConsumption,
+  cancel,
+  skuName,
+  text,
+  returnRows,
+  returnMetadata,
+  warehouseOptions,
+  addManualReturnSku,
+  updateReturnMetadata,
+  removeManualReturnRow
+} = flow
 
 function updateChecklist(patch) { Object.assign(checklist.value, patch) }
 function onAddRestock(sku, qty) { restockRows.value.push({ SKU: sku, SkuLabel: skuName(sku), Quantity: qty || 0 }) }

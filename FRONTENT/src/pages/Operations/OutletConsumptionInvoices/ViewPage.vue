@@ -128,7 +128,7 @@
           Adjusted Returns
         </div>
         <q-card flat bordered class="rounded-borders shadow-1">
-          <q-card-section class="q-pa-md">
+          <q-card-section v-if="!editing" class="q-pa-md">
             <!-- Headers -->
             <div class="row text-caption text-grey-6 text-weight-bold q-mb-sm q-col-gutter-md">
               <div class="col">Product SKU</div>
@@ -164,6 +164,18 @@
               </div>
             </div>
           </q-card-section>
+          
+          <q-list separator v-else class="q-pa-sm">
+            <q-item v-for="item in editReturns" :key="item.Code" class="q-py-md">
+              <q-item-section>
+                <q-item-label class="text-weight-bold text-negative">{{ item.displayLabel }}</q-item-label>
+                <q-item-label caption>SKU: {{ item.SKU }} · Returned: {{ item.Qty }} · Reason: {{ item.Reason }}</q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-input v-model.number="item.Price" dense outlined type="number" :prefix="defaultCurrency.Symbol" label="Credit Price" style="width: 140px" />
+              </q-item-section>
+            </q-item>
+          </q-list>
         </q-card>
       </div>
 
@@ -178,21 +190,21 @@
             <div class="row q-col-gutter-md items-center">
               <div class="col-6 col-sm-3">
                 <div class="text-caption text-grey-6">Subtotal</div>
-                <div class="text-subtitle1 text-weight-bold text-grey-9 q-mt-xs">{{ _C(invoice.Subtotal || 0, true) }}</div>
+                <div class="text-subtitle1 text-weight-bold text-grey-9 q-mt-xs">{{ _C(realtimeSubtotal || 0, true) }}</div>
               </div>
               <div class="col-6 col-sm-3">
                 <div class="text-caption text-grey-6">Discount</div>
-                <div v-if="!editing" class="text-subtitle1 text-weight-bold text-grey-7 q-mt-xs">-{{ _C(invoice.Discount || 0, true) }}</div>
+                <div v-if="!editing" class="text-subtitle1 text-weight-bold text-grey-7 q-mt-xs">-{{ _C(realtimeDiscount || 0, true) }}</div>
                 <q-input v-else v-model.number="editForm.discount" dense outlined type="number" :prefix="defaultCurrency.Symbol" label="Discount" />
               </div>
               <div class="col-6 col-sm-3">
                 <div class="text-caption text-grey-6">Tax</div>
-                <div v-if="!editing" class="text-subtitle1 text-weight-bold text-grey-7 q-mt-xs">+{{ _C(invoice.Tax || 0, true) }}</div>
+                <div v-if="!editing" class="text-subtitle1 text-weight-bold text-grey-7 q-mt-xs">+{{ _C(realtimeTax || 0, true) }}</div>
                 <q-input v-else v-model.number="editForm.tax" dense outlined type="number" :prefix="defaultCurrency.Symbol" label="Tax" />
               </div>
               <div class="col-6 col-sm-3">
                 <div class="text-caption text-grey-6 text-negative">Returns Deducted</div>
-                <div class="text-subtitle1 text-weight-bold text-negative q-mt-xs">-{{ _C(invoice.ReturnDeductionTotal || 0, true) }}</div>
+                <div class="text-subtitle1 text-weight-bold text-negative q-mt-xs">-{{ _C(realtimeReturnDeductionTotal || 0, true) }}</div>
               </div>
             </div>
             
@@ -200,7 +212,7 @@
             
             <div class="row items-center justify-between">
               <span class="text-subtitle1 text-weight-bold text-grey-8">Net Invoice Value</span>
-              <span class="text-h5 text-weight-bold text-primary">{{ _C(total, true) }}</span>
+              <span class="text-h5 text-weight-bold text-primary">{{ _C(realtimeTotal, true) }}</span>
             </div>
           </q-card-section>
         </q-card>
@@ -218,7 +230,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useOutletConsumption } from '../../../composables/operations/outlets/useOutletConsumption.js'
@@ -250,13 +262,15 @@ const {
   text,
   priceLists,
   getInvoiceTotal,
-  returns
+  returns,
+  resolvePriceListItems
 } = flow
 
 const invoice = computed(() => getInvoice(route.params.code))
 const editing = ref(false)
 const editForm = ref({ priceListCode: '', discount: 0, tax: 0 })
 const editLineItems = ref([])
+const editReturns = ref([])
 
 const priceListOptions = computed(() => priceLists.items.value.map(p => ({ label: `${p.Code} - ${p.Name || ''}`, value: p.Code })))
 
@@ -266,10 +280,37 @@ const plName = computed(() => {
   return pl ? `${pl.Code} - ${pl.Name}` : invoice.value.PriceListCode
 })
 
-const total = computed(() => {
-  const inv = invoice.value
-  if (!inv) return 0
-  return getInvoiceTotal(inv)
+// Real-time calculations adhering to single source of truth reactivity
+const realtimeSubtotal = computed(() => {
+  if (!editing.value) {
+    return parseFloat(invoice.value?.Subtotal) || 0
+  }
+  return editLineItems.value.reduce((sum, item) => sum + (parseFloat(item.Qty || 0) * (parseFloat(item.Price) || 0)), 0)
+})
+
+const realtimeDiscount = computed(() => {
+  if (!editing.value) {
+    return parseFloat(invoice.value?.Discount) || 0
+  }
+  return parseFloat(editForm.value.discount) || 0
+})
+
+const realtimeTax = computed(() => {
+  if (!editing.value) {
+    return parseFloat(invoice.value?.Tax) || 0
+  }
+  return parseFloat(editForm.value.tax) || 0
+})
+
+const realtimeReturnDeductionTotal = computed(() => {
+  if (!editing.value) {
+    return parseFloat(invoice.value?.ReturnDeductionTotal) || 0
+  }
+  return editReturns.value.reduce((sum, item) => sum + (parseFloat(item.Qty || 0) * (parseFloat(item.Price) || 0)), 0)
+})
+
+const realtimeTotal = computed(() => {
+  return realtimeSubtotal.value - realtimeDiscount.value + realtimeTax.value - realtimeReturnDeductionTotal.value
 })
 
 const canEdit = computed(() => {
@@ -302,13 +343,48 @@ function loadLineItems() {
     Price: row.Price || 0,
     displayLabel: productDisplayName(row.SKU)
   }))
+
+  const retList = invoiceReturns.value.map(r => ({ SKU: r.SKU, Qty: r.Qty }))
+  const resolved = resolvePriceListItems(editForm.value.priceListCode, retList)
+  editReturns.value = invoiceReturns.value.map(r => {
+    const resolvedItem = resolved?.items?.find(item => item.SKU === r.SKU)
+    const price = resolvedItem ? resolvedItem.Price : 0
+    return {
+      Code: r.Code,
+      SKU: r.SKU,
+      Qty: r.Qty,
+      Reason: r.Reason || 'DAMAGE',
+      Price: price,
+      displayLabel: productDisplayName(r.SKU)
+    }
+  })
 }
+
+// Watch for price list selector changes in Edit Mode to automatically re-price all lines
+watch(() => editForm.value.priceListCode, (newPriceListCode) => {
+  if (!editing.value) return
+  
+  const billedRows = editLineItems.value.map(item => ({ SKU: item.SKU, Qty: item.Qty }))
+  const resolvedBilled = resolvePriceListItems(newPriceListCode, billedRows)
+  editLineItems.value.forEach(item => {
+    const resolvedItem = resolvedBilled?.items?.find(r => r.SKU === item.SKU)
+    item.Price = resolvedItem ? resolvedItem.Price : 0
+  })
+  
+  const returnRows = editReturns.value.map(item => ({ SKU: item.SKU, Qty: item.Qty }))
+  const resolvedReturns = resolvePriceListItems(newPriceListCode, returnRows)
+  editReturns.value.forEach(item => {
+    const resolvedItem = resolvedReturns?.items?.find(r => r.SKU === item.SKU)
+    item.Price = resolvedItem ? resolvedItem.Price : 0
+  })
+})
 
 function onEditToggle(val) {
   if (val) {
     editing.value = true
+    loadLineItems()
   } else {
-    editing.value = false
+    cancelEdit()
   }
 }
 
@@ -322,6 +398,7 @@ async function saveEdit() {
     PriceListCode: editForm.value.priceListCode,
     Discount: editForm.value.discount,
     Tax: editForm.value.tax,
+    ReturnDeductionTotal: realtimeReturnDeductionTotal.value,
     items: editLineItems.value
   })
   if (result.error) {

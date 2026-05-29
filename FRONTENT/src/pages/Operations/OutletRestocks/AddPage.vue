@@ -81,30 +81,44 @@
 
       <!-- Step 3: Review -->
       <q-step :name="3" title="Review" icon="checklist">
-        <div class="text-caption text-grey-7 q-mb-md">Review your request before sending</div>
+        <!-- Products title section -->
+        <div class="row items-center q-mb-md">
+          <q-icon name="shopping_cart_checkout" color="primary" size="sm" class="q-mr-sm" />
+          <div class="text-subtitle1 text-weight-bold text-grey-9">Products</div>
+        </div>
 
-        <q-card flat bordered class="q-mb-md">
-          <q-card-section>
-            <div class="text-subtitle2 q-mb-sm">Request Summary</div>
-            <div class="text-caption text-grey-7 q-mb-sm">{{ outletName }} · {{ addedItems.length }} items</div>
-          </q-card-section>
-          <q-separator />
-          <q-card-section class="q-pa-sm">
-            <q-list dense separator>
-              <template v-for="(group, gIdx) in groupedByProduct" :key="gIdx">
-                <q-item-label header class="text-caption text-weight-medium text-grey-8 q-px-sm q-py-xs">
-                  {{ group.productLabel }}
-                </q-item-label>
-                <q-item v-for="(item, iIdx) in group.items" :key="iIdx" class="q-px-sm q-py-xs">
-                  <q-item-section class="text-caption">{{ item.variantLabel }}</q-item-section>
-                  <q-item-section side>{{ item.Quantity }}</q-item-section>
+        <!-- Product Cards Stack with Gaps between Products -->
+        <div class="column q-gutter-y-sm q-mb-md">
+          <q-card v-for="(group, gIdx) in groupedByProduct" :key="gIdx" flat bordered class="product-review-card">
+            <q-item class="bg-grey-2 q-py-xs q-px-sm">
+              <q-item-section avatar style="min-width: auto;" class="q-pr-xs">
+                <q-icon name="inventory_2" color="primary" size="xs" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label class="text-caption text-weight-bold text-grey-9">{{ group.productLabel }}</q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-badge color="primary" outline :label="`${group.items.length} variant(s)`" />
+              </q-item-section>
+            </q-item>
+            <q-separator />
+            <q-card-section class="q-pa-none">
+              <q-list class="q-py-none">
+                <q-item v-for="(item, iIdx) in group.items" :key="iIdx" class="q-px-md q-py-sm">
+                  <q-item-section>
+                    <q-item-label class="text-caption text-weight-medium text-grey-9">{{ item.variantLabel }}</q-item-label>
+                    <q-item-label caption class="text-grey-6">SKU: {{ item.SKU }}</q-item-label>
+                  </q-item-section>
+                  <q-item-section side class="self-center text-center" style="min-width: 60px;">
+                    <q-badge color="primary" class="text-bold q-py-xs q-px-sm text-center" style="font-size: 0.85rem;" :label="item.Quantity" />
+                  </q-item-section>
                 </q-item>
-              </template>
-            </q-list>
-          </q-card-section>
-        </q-card>
+              </q-list>
+            </q-card-section>
+          </q-card>
+        </div>
 
-        <q-input v-model="submitComment" type="textarea" label="Comment (optional)" outlined class="q-mb-md" rows="3" />
+        <q-input v-model="submitComment" type="textarea" label="Comment (optional)" outlined class="q-mb-md" />
 
         <q-stepper-navigation class="flex">
           <q-btn flat label="Cancel" @click="cancel" size="sm" />

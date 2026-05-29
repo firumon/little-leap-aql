@@ -26,7 +26,7 @@ export function useOutletVisits() {
   ])
   const historyVisits = computed(() => searchedVisits.value.filter(row => ['COMPLETED', 'POSTPONED', 'CANCELLED'].includes(visitProgress(row))).sort(compareVisitDateDesc))
   const groups = computed(() => VISIT_PROGRESS_ORDER.map(key => ({ key, meta: progressMeta(key), items: items.value.filter(row => (VISIT_PROGRESS_ORDER.includes(visitProgress(row)) ? visitProgress(row) : 'OTHER') === key).sort((a, b) => sortTime(b) - sortTime(a)) })).filter(group => group.items.length))
-  const outletOptions = computed(() => outlets.items.value.filter(active).map(row => ({ label: `${row.Code} · ${row.Name}`, value: row.Code })))
+  const outletOptions = computed(() => outlets.items.value.filter(active).map(row => ({ label: text(row.Name || row.Code), value: row.Code })))
   function parseDateOnly(value) { const raw = text(value).slice(0, 10); const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/); if (!match) return null; const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])); return Number.isNaN(date.getTime()) ? null : date }
   function startOfToday() { const now = new Date(); return new Date(now.getFullYear(), now.getMonth(), now.getDate()) }
   function visitDate(row = {}) { return parseDateOnly(row.Date || row.ScheduledAt) }

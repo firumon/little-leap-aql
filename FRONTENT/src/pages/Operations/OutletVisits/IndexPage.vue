@@ -161,9 +161,9 @@
             :options="historyFilterOptions"
           />
           <div class="row items-center q-gutter-x-sm q-mb-md">
-            <q-input v-model="historyDateFrom" type="date" dense outlined label="From" class="col" />
+            <AppDate v-model="historyDateFrom" dense outlined label="From" class="col" hide-bottom-space />
             <span class="text-grey-6 text-caption">—</span>
-            <q-input v-model="historyDateTo" type="date" dense outlined label="To" class="col" />
+            <AppDate v-model="historyDateTo" dense outlined label="To" class="col" hide-bottom-space />
           </div>
 
           <div v-if="!filteredHistoryVisits.length" class="text-grey text-center q-pa-md">
@@ -231,9 +231,9 @@
     <q-dialog v-model="postponeDialog" persistent>
       <q-card style="min-width: 320px; max-width: 90vw;">
         <q-card-section class="text-h6">Postpone Visit</q-card-section>
-        <q-card-section class="q-gutter-y-xs">
-          <q-input v-model="postponeForm.date" type="date" label="New Date" outlined dense />
-          <q-input v-model="postponeForm.reason" type="textarea" label="Reason" outlined dense autogrow rows="2" />
+        <q-card-section class="q-gutter-y-sm">
+          <AppDate v-model="postponeForm.date" label="New Date" outlined dense hide-bottom-space />
+          <q-input v-model="postponeForm.reason" type="textarea" label="Reason" outlined autogrow rows="2" hide-bottom-space />
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat label="Cancel" v-close-popup />
@@ -247,9 +247,9 @@
     <q-dialog v-model="cancelDialog" persistent>
       <q-card style="min-width: 320px; max-width: 90vw;">
         <q-card-section class="text-h6">Cancel Visit</q-card-section>
-        <q-card-section class="q-gutter-y-xs">
-          <q-input v-model="cancelForm.reason" type="textarea" label="Reason" outlined dense autogrow rows="2" />
-          <q-input v-model="cancelForm.nextDate" type="date" label="Next Visit Date (optional)" outlined dense clearable />
+        <q-card-section class="q-gutter-y-sm">
+          <q-input v-model="cancelForm.reason" type="textarea" label="Reason" outlined autogrow rows="2" hide-bottom-space />
+          <AppDate v-model="cancelForm.nextDate" label="Next Visit Date (optional)" outlined dense clearable hide-bottom-space />
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat label="Back" v-close-popup />
@@ -263,8 +263,8 @@
     <q-dialog v-model="completeDialog" persistent>
       <q-card style="min-width: 320px; max-width: 90vw;">
         <q-card-section class="text-h6">Complete Visit</q-card-section>
-        <q-card-section>
-          <q-input v-model="completeForm.comment" type="textarea" label="Comment (optional)" outlined dense autogrow rows="2" />
+        <q-card-section class="q-gutter-y-sm">
+          <q-input v-model="completeForm.comment" type="textarea" label="Comment (optional)" outlined autogrow rows="2" hide-bottom-space />
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat label="Cancel" v-close-popup />
@@ -276,7 +276,7 @@
     <q-dialog v-model="planDialog" persistent>
       <q-card style="min-width: 340px; max-width: 90vw;">
         <q-card-section class="text-h6">Plan Visit</q-card-section>
-        <q-card-section class="q-gutter-y-xs">
+        <q-card-section class="q-gutter-y-sm">
           <q-select
             v-model="planForm.outletCode"
             :options="outletOptions"
@@ -284,9 +284,10 @@
             outlined
             :disable="!!planTarget"
             :rules="[val => !!val || 'Outlet is required']"
+            hide-bottom-space
           />
-          <q-input v-model="planForm.date" type="date" label="Visit Date" outlined :rules="[val => !!val || 'Date is required']" />
-          <q-input v-model="planForm.comment" type="textarea" label="Comment (optional)" outlined autogrow />
+          <AppDate v-model="planForm.date" label="Visit Date" outlined :rules="[val => !!val || 'Date is required']" hide-bottom-space />
+          <q-input v-model="planForm.comment" type="textarea" label="Comment (optional)" outlined hide-bottom-space />
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat label="Cancel" v-close-popup />
@@ -306,6 +307,7 @@ import { useOutletVisits } from '../../../composables/operations/outlets/useOutl
 import VisitCard from '../../../components/Operations/Outlets/VisitCard.vue'
 import VisitSummaryBar from '../../../components/Operations/Outlets/VisitSummaryBar.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
+import AppDate from '../../../components/shared/AppDate.vue'
 import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
 
 defineOptions({ name: 'OutletVisitsIndexPage' })
@@ -419,7 +421,7 @@ const planForm = ref({ outletCode: null, date: todayISO(), comment: '' })
 function openPlanDialog(outlet = null) {
   planTarget.value = outlet
   if (outlet) {
-    planForm.value = { outletCode: { label: `${outlet.Code} · ${outlet.Name || outlet.Code}`, value: outlet.Code }, date: todayISO(), comment: '' }
+    planForm.value = { outletCode: { label: outlet.Name || outlet.Code, value: outlet.Code }, date: todayISO(), comment: '' }
   } else {
     planForm.value = { outletCode: null, date: todayISO(), comment: '' }
   }

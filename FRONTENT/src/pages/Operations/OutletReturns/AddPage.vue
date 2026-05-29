@@ -169,7 +169,6 @@
               v-model="form.ReasonComment"
               outlined
               type="textarea"
-              rows="3"
               placeholder="Describe details, condition, batch code, or other reasons..."
               label="Reason Description / Notes"
             />

@@ -293,7 +293,7 @@ export function useOutletConsumption() {
   async function reload(forceSync = false) {
     loading.value = true
     try {
-      await resourceIoStore.fetchResources(['OutletConsumptions', 'OutletConsumptionInvoices', 'OutletConsumptionInvoiceItems', 'OutletRestocks', 'Outlets', 'SKUs', 'Products', 'OutletStorages', 'OutletOperatingRules', 'PriceList', 'PriceListItems', 'OutletVisits', 'OutletReturns', 'Warehouses'], { forceSync })
+      await resourceIoStore.fetchResources(['OutletConsumptions', 'OutletConsumptionItems', 'OutletConsumptionInvoices', 'OutletConsumptionInvoiceItems', 'OutletRestocks', 'Outlets', 'SKUs', 'Products', 'OutletStorages', 'OutletOperatingRules', 'PriceList', 'PriceListItems', 'OutletVisits', 'OutletReturns', 'Warehouses'], { forceSync })
       if (!form.value.OutletCode && outletOptions.value[0]) form.value.OutletCode = outletOptions.value[0].value
       syncDefaultGroups()
     } finally { loading.value = false }
@@ -673,7 +673,7 @@ export function useOutletConsumption() {
     } finally { saving.value = false }
   }
 
-  async function updateInvoice(invoiceCode, { PriceListCode, Discount, Tax, items = [] } = {}) {
+  async function updateInvoice(invoiceCode, { PriceListCode, Discount, Tax, ReturnDeductionTotal, items = [] } = {}) {
     if (!invoiceCode) return { error: 'Invoice code required' }
     saving.value = true
     try {
@@ -682,6 +682,7 @@ export function useOutletConsumption() {
       if (PriceListCode !== undefined) updateData.PriceListCode = PriceListCode
       if (Discount !== undefined) updateData.Discount = toNumber(Discount)
       if (Tax !== undefined) updateData.Tax = toNumber(Tax)
+      if (ReturnDeductionTotal !== undefined) updateData.ReturnDeductionTotal = toNumber(ReturnDeductionTotal)
       if (Object.keys(updateData).length) requests.push(resourceUpdateRequest('OutletConsumptionInvoices', invoiceCode, updateData))
       for (const item of items) {
         if (item.Code && item.Price !== undefined) requests.push(resourceUpdateRequest('OutletConsumptionInvoiceItems', item.Code, { Price: toNumber(item.Price) }))

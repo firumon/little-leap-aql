@@ -369,7 +369,7 @@ All frontend layout, design, and styling MUST be achieved using Quasar's native 
   * Hand-rolled grid layouts (e.g., custom `div.row` structures or custom CSS flex grids) are forbidden.
   * Prefer native Quasar layout components over custom manual wrappers.
 * **Custom Markup Fallback:** Plain `div` elements styled with Quasar CSS utility classes are ONLY permitted when no native Quasar component exists or is capable of achieving the specific design/functional requirement.
-* **Custom CSS Restriction:** Custom CSS is strictly prohibited unless both built-in Quasar components and Quasar utility classes are incapable of achieving the required layout or design.
+* **Custom CSS Restriction:** Custom CSS is strictly prohibited unless both built-in Quasar components and Quasar utility classes are incapable of achieving the required layout or design. Before adding any new custom CSS, you MUST check for existing CSS rules. A new custom CSS rule is only allowed if existing styles or utility classes are completely insufficient.
 * **Custom CSS Location:**
   * When custom CSS is necessary, it MUST be structured for maximum generality and reusability, and added to the globally shared stylesheet: **[custom.scss](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/css/custom.scss)**.
   * Component-specific `<style>` blocks are permitted ONLY as a last resort, and ONLY if the styles are strictly component-specific and have zero potential for reuse elsewhere.

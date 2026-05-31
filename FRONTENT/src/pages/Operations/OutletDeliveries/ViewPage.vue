@@ -86,6 +86,16 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <ActionCommentDialog
+      v-model="cancelDialog"
+      title="Cancel Delivery"
+      label="Cancellation comment (optional)"
+      submit-label="Cancel Draft"
+      submit-color="negative"
+      :saving="saving"
+      @confirm="handleCancelConfirm"
+    />
   </q-page>
 </template>
 
@@ -97,6 +107,7 @@ import { text } from '../../../composables/operations/outlets/outletOperationsMe
 import { useOutletDeliveries } from '../../../composables/operations/outlets/useOutletDeliveries.js'
 import OutletDeliverySummaryPanel from '../../../components/Operations/Outlets/OutletDeliverySummaryPanel.vue'
 import OutletDeliveryItemRow from '../../../components/Operations/Outlets/OutletDeliveryItemRow.vue'
+import ActionCommentDialog from '../../../components/shared/ActionCommentDialog.vue'
 
 defineOptions({ name: 'OutletDeliveriesViewPage' })
 
@@ -114,6 +125,7 @@ const isCancelled = computed(() => delivery.value && text(delivery.value.Progres
 
 const selectedCodes = ref(new Set())
 const deliverDialog = ref(false)
+const cancelDialog = ref(false)
 const deliverTarget = ref(null)
 const deliverComment = ref('')
 const deliverAll = ref(false)
@@ -229,13 +241,14 @@ async function handleDeliverConfirm() {
 }
 
 function confirmCancel() {
-  $q.dialog({
-    title: 'Cancel Delivery',
-    message: 'Cancel this draft delivery and return linked items to allocated?',
-    prompt: { model: '', type: 'textarea', label: 'Cancellation comment (optional)', outlined: true },
-    cancel: true,
-    persistent: true
-  }).onOk((comment) => cancelDraft(route.params.code, comment))
+  cancelDialog.value = true
+}
+
+async function handleCancelConfirm(comment) {
+  const ok = await cancelDraft(route.params.code, comment)
+  if (ok) {
+    cancelDialog.value = false
+  }
 }
 
 onMounted(() => reloadView())

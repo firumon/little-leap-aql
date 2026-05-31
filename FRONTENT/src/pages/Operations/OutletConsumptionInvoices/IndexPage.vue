@@ -1,15 +1,32 @@
 <template>
   <q-page padding class="q-pb-xl">
-    <div class="q-mb-md">
-      <div class="row items-center no-wrap q-mb-xs">
-        <div class="col">
-          <div class="text-h6">Consumption Invoices</div>
-        </div>
+    <!-- Page Branded Header with Reload Button -->
+    <div class="row items-center justify-between no-wrap q-mb-md">
+      <div class="col">
+        <OutletHeaderPanel
+          title="Consumption Invoices"
+          subtitle="Generate and manage consumption invoices"
+          :stats="[]"
+          class="brand-header-card"
+        />
+      </div>
+      <div class="q-ml-sm self-center">
         <ReloadButton />
       </div>
-      <div class="text-caption text-grey-7 q-mb-sm">Generate and manage consumption invoices</div>
-      <q-input v-model="searchTerm" dense outlined clearable placeholder="Search invoices..." style="max-width: 480px">
-        <template #prepend><q-icon name="search" /></template>
+    </div>
+
+    <!-- Search Input -->
+    <div class="q-mb-md">
+      <q-input
+        v-model="searchTerm"
+        dense
+        outlined
+        clearable
+        placeholder="Search invoices..."
+      >
+        <template #prepend>
+          <q-icon name="search" />
+        </template>
       </q-input>
     </div>
 
@@ -69,7 +86,7 @@
                 <OutletProgressChip :progress="row.Progress" />
               </div>
               <q-separator class="q-my-xs" />
-              <div class="text-caption text-grey-7">{{ row.Code }} · {{ row.Subtotal || 0 }}</div>
+              <div class="text-caption text-grey-7">{{ row.Code }} · {{ _C(row.Subtotal, true) }}</div>
             </q-card-section>
           </q-card>
           <q-card v-for="row in partiallyPaidInvoices" :key="row.Code" flat bordered class="cursor-pointer" @click="navigateToInvoice(row.Code)">
@@ -83,7 +100,7 @@
                 <OutletProgressChip :progress="row.Progress" />
               </div>
               <q-separator class="q-my-xs" />
-              <div class="text-caption text-grey-7">{{ row.Code }} · {{ row.Subtotal || 0 }}</div>
+              <div class="text-caption text-grey-7">{{ row.Code }} · {{ _C(row.Subtotal, true) }}</div>
             </q-card-section>
           </q-card>
         </div>
@@ -117,12 +134,15 @@
 <script setup>
 import { computed, onMounted } from 'vue'
 import { useOutletConsumption } from '../../../composables/operations/outlets/useOutletConsumption.js'
+import { useCurrency } from '../../../composables/useCurrency.js'
 import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'
+import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
 import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
 
 defineOptions({ name: 'OutletConsumptionInvoicesIndexPage' })
 const flow = useOutletConsumption()
+const { _C } = useCurrency()
 const { hasUninitiatedDependencies } = useResourceReload()
 const { loading, searchTerm, pendingInvoiceItems, pendingPaymentInvoices, partiallyPaidInvoices, paidInvoices, cancelledInvoices, reload, navigateToInvoice, navigateToInvoiceAdd, outletName, formatDisplayDate, consumedTotal } = flow
 const shouldBlockUi = computed(() => loading.value && hasUninitiatedDependencies.value)

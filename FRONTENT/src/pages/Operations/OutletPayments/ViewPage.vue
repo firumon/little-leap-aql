@@ -1,11 +1,11 @@
 <template>
-  <q-page padding class="outlet-payments-page">
+  <q-page padding class="aql-page-container">
     <!-- Page Branded Header -->
     <OutletHeaderPanel
       title="Payment Collection Receipt"
       :subtitle="record ? `Receipt Code: ${record.Code}` : ''"
       :stats="[]"
-      class="q-mb-lg payment-header-card"
+      class="q-mb-lg brand-header-card"
     >
       <template #side v-if="record">
         <div class="row items-center q-gutter-xs">
@@ -28,7 +28,7 @@
       <div class="row q-col-gutter-lg">
         <!-- Left Column: Payment Details Card -->
         <div class="col-12 col-md-6">
-          <q-card flat bordered class="payment-step-card shadow-1 q-mb-md">
+          <q-card flat bordered class="aql-premium-card shadow-1 q-mb-md">
             <q-card-section class="q-pa-lg">
               <q-item class="q-px-none q-mb-md">
                 <q-item-section avatar>
@@ -118,7 +118,7 @@
 
         <!-- Right Column: Associated Invoice Ledger Card -->
         <div class="col-12 col-md-6">
-          <q-card flat bordered class="payment-step-card shadow-1 q-mb-md">
+          <q-card flat bordered class="aql-premium-card shadow-1 q-mb-md">
             <q-card-section class="q-pa-lg">
               <q-item class="q-px-none q-mb-md">
                 <q-item-section avatar>

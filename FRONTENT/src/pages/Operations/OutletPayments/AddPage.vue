@@ -1,12 +1,12 @@
 <template>
-  <q-page padding class="outlet-payments-page">
+  <q-page padding class="aql-page-container">
     <!-- Page Branded Header -->
     <OutletHeaderPanel
-      title="Record Outlet Payment"
-      subtitle="Receive and log outstanding outlet consumption payments"
-      :stats="[]"
-      class="q-mb-lg payment-header-card"
-    />
+       title="Record Outlet Payment"
+       subtitle="Receive and log outstanding outlet consumption payments"
+       :stats="[]"
+       class="q-mb-lg brand-header-card"
+     />
 
     <!-- Global Loading Spinner -->
     <q-card v-if="loading" flat class="flex flex-center q-pa-xl spinner-container">
@@ -17,7 +17,7 @@
     <template v-else>
       <!-- STEP 1: Select Outlet -->
       <transition name="fade-slide" mode="out-in">
-        <q-card v-if="currentStep === 1" flat bordered class="payment-step-card shadow-1 animate-fade-slide">
+        <q-card v-if="currentStep === 1" flat bordered class="aql-premium-card shadow-1 animate-fade-slide">
           <q-card-section class="q-pa-lg">
             <q-item class="q-px-none q-mb-md">
               <q-item-section avatar>
@@ -58,7 +58,7 @@
                   clickable
                   v-ripple
                   @click="selectGlobalInvoice(inv.Code, inv.OutletCode)"
-                  class="invoice-mobile-card q-py-sm"
+                  class="interactive-list-card q-py-sm"
                 >
                   <q-item-section side>
                     <q-avatar color="orange-1" text-color="orange-9" icon="receipt_long" size="sm" />
@@ -107,7 +107,7 @@
 
       <!-- STEP 2: Select Invoice -->
       <transition name="fade-slide" mode="out-in">
-        <q-card v-if="currentStep === 2" flat bordered class="payment-step-card shadow-1 animate-fade-slide">
+        <q-card v-if="currentStep === 2" flat bordered class="aql-premium-card shadow-1 animate-fade-slide">
           <!-- Active Selection Summary Block (Mobile-First Compact) -->
           <q-card-section class="bg-primary-light q-px-none border-bottom-dashed">
             <q-list dense>
@@ -158,7 +158,7 @@
                 clickable
                 v-ripple
                 @click="selectInvoice(inv.Code)"
-                class="invoice-mobile-card q-pa-md q-mb-sm shadow-sm relative-position"
+                class="interactive-list-card q-pa-md q-mb-sm shadow-sm relative-position"
               >
                 <!-- Left: Avatar / Icon representing an Invoice -->
                 <q-item-section avatar class="self-center">
@@ -214,7 +214,7 @@
           <div class="row q-col-gutter-lg">
             <!-- Left Column: Summary Card -->
             <div class="col-12 col-md-5">
-              <q-card flat bordered class="payment-step-card shadow-1 q-mb-md">
+              <q-card flat bordered class="aql-premium-card shadow-1 q-mb-md">
                 <!-- Step 3 Active Selection Summary Block (Mobile-First Compact) -->
                 <q-card-section class="bg-primary-light q-px-none border-bottom-dashed">
                   <q-list dense>
@@ -308,7 +308,7 @@
 
             <!-- Right Column: Amount & Mode Entry Form -->
             <div class="col-12 col-md-7">
-              <q-card flat bordered class="payment-step-card shadow-1">
+              <q-card flat bordered class="aql-premium-card shadow-1">
                 <q-card-section class="q-pa-lg">
                   <q-item class="q-px-none q-mb-md">
                     <q-item-section avatar>
@@ -372,7 +372,7 @@
                           <q-card
                             flat
                             bordered
-                            class="q-pa-xs text-center clickable transition-all shadow-none mode-card"
+                            class="q-pa-xs text-center clickable transition-all shadow-none clickable-scale"
                             :style="mode === opt ? 'border-color: var(--q-primary, #0284c7); background-color: #f0f9ff; border-width: 1.5px;' : 'border-color: #e2e8f0;'"
                             style="border-radius: 8px;"
                             @click="mode = opt"

@@ -257,6 +257,17 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <ActionCommentDialog
+      v-model="cancelDialog"
+      title="Cancel Return Record"
+      label="Reason for cancellation (required)"
+      comment-required
+      submit-label="Cancel Return"
+      submit-color="negative"
+      :saving="acting"
+      @confirm="handleCancelConfirm"
+    />
   </q-page>
 </template>
 
@@ -265,6 +276,7 @@ import { onMounted, computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useOutletReturns } from '../../../composables/operations/outlets/useOutletReturns.js'
+import ActionCommentDialog from '../../../components/shared/ActionCommentDialog.vue'
 
 defineOptions({ name: 'OutletReturnsViewPage' })
 
@@ -273,6 +285,7 @@ const $q = useQuasar()
 const code = computed(() => route.params.code)
 
 const flow = useOutletReturns()
+const cancelDialog = ref(false)
 const {
   loading,
   acting,
@@ -368,19 +381,14 @@ async function submitWarehouseAction() {
 }
 
 function onCancelReturn() {
-  $q.dialog({
-    title: 'Cancel Return Record',
-    message: 'Please provide a cancellation reason:',
-    prompt: {
-      model: '',
-      type: 'text',
-      isValid: val => val.trim().length > 3
-    },
-    cancel: true,
-    persistent: true
-  }).onOk(async (reason) => {
-    await cancelReturn(record.value, reason)
-  })
+  cancelDialog.value = true
+}
+
+async function handleCancelConfirm(reason) {
+  const ok = await cancelReturn(record.value, reason)
+  if (ok) {
+    cancelDialog.value = false
+  }
 }
 
 onMounted(() => {

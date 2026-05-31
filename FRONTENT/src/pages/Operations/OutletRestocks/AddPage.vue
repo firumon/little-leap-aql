@@ -10,7 +10,7 @@
           <div v-for="outlet in outletOptions" :key="outlet.value" class="col-12 col-sm-6 col-md-4 col-lg-3">
             <q-card
               flat bordered
-              class="outlet-select-card cursor-pointer"
+              class="outlet-select-card cursor-pointer clickable-scale"
               :class="{ 'outlet-select-card--active': form.OutletCode === outlet.value }"
               @click="selectOutlet(outlet)"
             >

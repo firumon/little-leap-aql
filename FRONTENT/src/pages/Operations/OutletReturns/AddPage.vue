@@ -1,7 +1,7 @@
 <template>
   <q-page padding class="q-pb-xl">
     <!-- Header panel -->
-    <div class="bg-white q-pa-md shadow-1 border-bottom q-mb-md">
+    <div class="bg-white q-pa-md shadow-1 q-mb-md">
       <div class="row items-center q-gutter-x-sm">
         <q-btn flat round icon="arrow_back" color="dark" @click="cancel" />
         <div>
@@ -9,6 +9,7 @@
           <div class="text-caption text-grey-7">Observe stock changes and log returns.</div>
         </div>
       </div>
+      <q-separator class="q-mt-sm" />
     </div>
 
     <!-- Scrollable Form Content -->
@@ -82,7 +83,7 @@
 
           <div class="q-gutter-y-md">
             <!-- Invoice Adjustment Toggle -->
-            <q-card flat bordered class="bg-blue-5 bg-opacity-5 q-pa-sm border-blue">
+            <q-card flat bordered class="bg-blue-1 q-pa-sm">
               <div class="row items-center justify-between no-wrap">
                 <div class="column q-mr-sm">
                   <span class="text-subtitle2 text-weight-bold text-primary row items-center">
@@ -104,7 +105,7 @@
             </q-card>
 
             <!-- Warehouse Action Toggle -->
-            <q-card flat bordered class="bg-purple-5 bg-opacity-5 q-pa-sm border-purple">
+            <q-card flat bordered class="bg-purple-1 q-pa-sm">
               <div class="row items-center justify-between no-wrap">
                 <div class="column q-mr-sm">
                   <span class="text-subtitle2 text-weight-bold text-purple row items-center">
@@ -178,7 +179,8 @@
     </q-card>
 
     <!-- Bottom Submit Actions -->
-    <div class="row items-center justify-between q-mt-lg q-pa-md bg-white border-top shadow-up-1">
+    <q-separator />
+    <div class="row items-center justify-between q-mt-lg q-pa-md bg-white shadow-up-1">
       <q-btn flat color="grey-7" label="Cancel" @click="cancel" />
       <q-btn
         unelevated
@@ -216,20 +218,4 @@ onMounted(() => {
 })
 </script>
 
-<style lang="scss" scoped>
-.border-bottom {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
-}
-.border-top {
-  border-top: 1px solid rgba(0, 0, 0, 0.12);
-}
-.border-blue {
-  border: 1.5px solid rgba(21, 101, 192, 0.2);
-}
-.border-purple {
-  border: 1.5px solid rgba(123, 31, 162, 0.2);
-}
-.bg-opacity-5 {
-  background-color: rgba(33, 150, 243, 0.03) !important;
-}
-</style>
+

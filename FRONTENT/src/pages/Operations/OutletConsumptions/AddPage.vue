@@ -60,7 +60,8 @@
     </div>
 
     <!-- Fixed Bottom Navigation -->
-    <div class="row items-center justify-between q-pa-md bg-white border-top">
+    <q-separator />
+    <div class="row items-center justify-between q-pa-md bg-white">
 <!--      <q-btn flat round icon="close" @click="cancel" />-->
       <div>&nbsp;</div>
       <div class="row q-gutter-sm">
@@ -143,8 +144,3 @@ onMounted(async () => {
 })
 </script>
 
-<style scoped>
-.border-top {
-  border-top: 1px solid rgba(0, 0, 0, 0.12);
-}
-</style>

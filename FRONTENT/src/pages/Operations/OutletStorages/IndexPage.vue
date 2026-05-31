@@ -1,24 +1,49 @@
 <template>
   <q-page padding>
-    <div class="row items-center q-mb-md">
-      <div>
-        <div class="text-h6">Outlet Stock</div>
-        <div class="text-caption text-grey-7">Total quantity: {{ totalQty }}</div>
+    <!-- Page Branded Header with Reload Button -->
+    <div class="row items-center justify-between no-wrap q-mb-md">
+      <div class="col">
+        <OutletHeaderPanel
+          title="Outlet Stock"
+          :subtitle="'Total quantity: ' + totalQty"
+          :stats="[]"
+          class="brand-header-card"
+        />
       </div>
-      <q-space />
-      <q-select
-        v-model="selectedOutletCode"
-        :options="outletOptions"
-        dense
-        outlined
-        clearable
-        emit-value
-        map-options
-        label="Outlet"
-        style="min-width:260px"
-      />
-      <q-input v-model="searchTerm" dense outlined placeholder="Search" class="q-ml-sm" />
-      <ReloadButton />
+      <div class="q-ml-sm self-center">
+        <ReloadButton />
+      </div>
+    </div>
+
+    <!-- Filters & Search Combo (Below Header Card) -->
+    <div class="row items-center q-col-gutter-sm q-mb-md">
+      <div class="col-12 col-sm-6">
+        <q-select
+          v-model="selectedOutletCode"
+          :options="outletOptions"
+          dense
+          outlined
+          clearable
+          emit-value
+          map-options
+          label="Outlet"
+          hide-bottom-space
+        />
+      </div>
+      <div class="col-12 col-sm-6">
+        <q-input
+          v-model="searchTerm"
+          dense
+          outlined
+          clearable
+          placeholder="Search SKU..."
+          hide-bottom-space
+        >
+          <template #prepend>
+            <q-icon name="search" />
+          </template>
+        </q-input>
+      </div>
     </div>
 
     <q-linear-progress v-if="loading && !shouldBlockUi" color="primary" indeterminate class="q-mb-sm" />
@@ -39,6 +64,7 @@
 import { computed, onMounted } from 'vue'
 import { useOutletStock } from '../../../composables/operations/outlets/useOutletStock.js'
 import OutletStockRows from '../../../components/Operations/Outlets/OutletStockRows.vue'
+import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
 import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
 

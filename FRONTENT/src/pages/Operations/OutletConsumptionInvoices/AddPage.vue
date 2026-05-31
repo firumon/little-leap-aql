@@ -58,13 +58,13 @@
       <q-card flat bordered class="q-mb-md bg-grey-1">
         <q-card-section class="q-pa-sm">
           <div class="row q-col-gutter-md text-body2">
-            <div class="col-3"><span class="text-grey-7">Subtotal</span><div class="text-weight-bold">{{ subtotal }}</div></div>
-            <div class="col-3"><span class="text-grey-7">Discount</span><div class="text-weight-bold">-{{ discount }}</div></div>
-            <div class="col-3"><span class="text-grey-7">Tax</span><div class="text-weight-bold">+{{ tax }}</div></div>
-            <div class="col-3"><span class="text-grey-7">Returns</span><div class="text-weight-bold text-negative">-{{ returnDeductionTotal }}</div></div>
+            <div class="col-3"><span class="text-grey-7">Subtotal</span><div class="text-weight-bold">{{ _C(subtotal, true) }}</div></div>
+            <div class="col-3"><span class="text-grey-7">Discount</span><div class="text-weight-bold">-{{ _C(discount, true) }}</div></div>
+            <div class="col-3"><span class="text-grey-7">Tax</span><div class="text-weight-bold">+{{ _C(tax, true) }}</div></div>
+            <div class="col-3"><span class="text-grey-7">Returns</span><div class="text-weight-bold text-negative">-{{ _C(returnDeductionTotal, true) }}</div></div>
           </div>
           <q-separator class="q-my-xs" />
-          <div class="text-subtitle1 text-weight-bold">Total: {{ total }}</div>
+          <div class="text-subtitle1 text-weight-bold">Total: {{ _C(total, true) }}</div>
         </q-card-section>
       </q-card>
 
@@ -81,12 +81,14 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useOutletConsumption } from '../../../composables/operations/outlets/useOutletConsumption.js'
+import { useCurrency } from '../../../composables/useCurrency.js'
 import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
 
 defineOptions({ name: 'OutletConsumptionInvoicesAddPage' })
 const $q = useQuasar()
 const route = useRoute()
 const flow = useOutletConsumption()
+const { _C } = useCurrency()
 const { loading, saving, reload, getConsumption, childItems, childInvoice, outletName, formatDisplayDate, navigateToInvoice, cancel, productDisplayName, saveInvoiceFromConsumption, text, priceLists, resolveDefaultPriceList, resolvePriceListItems, returns, active, getInvoiceTotal } = flow
 
 const discount = ref(0)

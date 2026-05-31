@@ -1,28 +1,34 @@
 <template>
   <q-page padding class="q-pb-xl">
-    <!-- Header -->
-    <div class="q-mb-md">
-      <div class="row items-center justify-between no-wrap q-mb-xs">
-        <div class="col">
-          <div class="text-h6">Outlet Returns</div>
-        </div>
+    <!-- Page Branded Header with Reload Button -->
+    <div class="row items-center justify-between no-wrap q-mb-md">
+      <div class="col">
+        <OutletHeaderPanel
+          title="Outlet Returns"
+          subtitle="Track sales returns and unsold inventory returns from outlets"
+          :stats="[]"
+          class="brand-header-card"
+        />
+      </div>
+      <div class="q-ml-sm self-center">
         <ReloadButton />
       </div>
-      <div class="text-caption text-grey-7 q-mb-sm">Track sales returns and unsold inventory returns from outlets</div>
-      <!-- Search input -->
-      <div class="col-12 col-sm-6">
-        <q-input
-          v-model="searchTerm"
-          dense
-          outlined
-          clearable
-          placeholder="Search by outlet, SKU, or code..."
-        >
-          <template #prepend>
-            <q-icon name="search" />
-          </template>
-        </q-input>
-      </div>
+    </div>
+
+    <!-- Search Input -->
+    <div class="q-mb-md">
+      <q-input
+        v-model="searchTerm"
+        dense
+        outlined
+        clearable
+        placeholder="Search by outlet, SKU, or code..."
+      >
+        <template #prepend>
+          <q-icon name="search" />
+        </template>
+      </q-input>
+    </div>
 
       <!-- Tabs -->
       <div class="row justify-center q-mt-sm">
@@ -39,7 +45,6 @@
           <q-tab name="completed" label="Completed & Cancelled" />
         </q-tabs>
       </div>
-    </div>
 
     <!-- Background loading indicator -->
     <q-linear-progress v-if="loading && !shouldBlockUi" color="primary" indeterminate class="q-mb-sm" />
@@ -67,7 +72,7 @@
         <q-card
           flat
           bordered
-          class="cursor-pointer hover-shadow"
+          class="cursor-pointer interactive-list-card"
           @click="navigateTo(row.Code)"
         >
           <q-card-section class="q-pa-md">
@@ -92,7 +97,7 @@
               <span class="text-grey-8 ellipsis col">{{ skuName(row.SKU) }}</span>
             </div>
 
-            <q-separator class="q-my-sm opacity-50" />
+            <q-separator class="q-my-sm" style="opacity: 0.5;" />
 
             <div class="row items-center justify-between q-mt-sm">
               <div class="row items-center q-gutter-x-md text-caption text-grey-7">
@@ -127,24 +132,16 @@
       </div>
     </div>
 
-    <!-- Floating Action Button to Add -->
-    <q-page-sticky v-if="canCreate" position="bottom-right" :offset="[18, 18]">
-      <q-btn
-        fab
-        icon="add"
-        color="primary"
-        @click="navigateToAdd()"
-      >
-        <q-tooltip anchor="top middle" self="bottom middle">Log New Return</q-tooltip>
-      </q-btn>
-    </q-page-sticky>
+    <DataAddFAB tooltip="Log New Return" />
   </q-page>
 </template>
 
 <script setup>
 import { onMounted, computed } from 'vue'
 import { useOutletReturns } from '../../../composables/operations/outlets/useOutletReturns.js'
+import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
+import DataAddFAB from '../../../components/shared/DataAddFAB.vue'
 import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
 
 defineOptions({ name: 'OutletReturnsIndexPage' })
@@ -178,15 +175,3 @@ onMounted(async () => {
   await reload()
 })
 </script>
-
-<style lang="scss" scoped>
-.opacity-50 {
-  opacity: 0.5;
-}
-.hover-shadow {
-  transition: box-shadow 0.15s ease-in-out;
-  &:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  }
-}
-</style>

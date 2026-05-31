@@ -1,15 +1,32 @@
 <template>
   <q-page padding class="q-pb-xl">
-    <div class="q-mb-md">
-      <div class="row items-center no-wrap q-mb-xs">
-        <div class="col">
-          <div class="text-h6">Outlet Consumptions</div>
-        </div>
+    <!-- Page Branded Header with Reload Button -->
+    <div class="row items-center justify-between no-wrap q-mb-md">
+      <div class="col">
+        <OutletHeaderPanel
+          title="Outlet Consumptions"
+          subtitle="Stock tracking · count, invoice, track"
+          :stats="[]"
+          class="brand-header-card"
+        />
+      </div>
+      <div class="q-ml-sm self-center">
         <ReloadButton />
       </div>
-      <div class="text-caption text-grey-7 q-mb-sm">Stock tracking · count, invoice, track</div>
-      <q-input v-model="searchTerm" dense outlined clearable placeholder="Search consumptions..." style="max-width: 480px">
-        <template #prepend><q-icon name="search" /></template>
+    </div>
+
+    <!-- Search Input -->
+    <div class="q-mb-md">
+      <q-input
+        v-model="searchTerm"
+        dense
+        outlined
+        clearable
+        placeholder="Search consumptions..."
+      >
+        <template #prepend>
+          <q-icon name="search" />
+        </template>
       </q-input>
     </div>
 
@@ -127,11 +144,7 @@
 
     </template>
 
-    <q-page-sticky v-if="canCreate" position="bottom-right" :offset="[18, 18]">
-      <q-btn fab icon="add" color="primary" @click="navigateToAdd()">
-        <q-tooltip anchor="top middle" self="bottom middle">Record Consumption</q-tooltip>
-      </q-btn>
-    </q-page-sticky>
+    <DataAddFAB tooltip="Record Consumption" />
   </q-page>
 </template>
 
@@ -139,7 +152,9 @@
 import { computed, onMounted } from 'vue'
 import { useOutletConsumption } from '../../../composables/operations/outlets/useOutletConsumption.js'
 import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'
+import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
+import DataAddFAB from '../../../components/shared/DataAddFAB.vue'
 import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
 
 defineOptions({ name: 'OutletConsumptionIndexPage' })

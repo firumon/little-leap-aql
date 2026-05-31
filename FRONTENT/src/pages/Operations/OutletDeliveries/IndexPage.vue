@@ -1,15 +1,32 @@
 <template>
   <q-page padding class="q-pb-xl">
-    <div class="q-mb-md">
-      <div class="row items-center no-wrap q-mb-xs">
-        <div class="col">
-          <div class="text-h6">Outlet Deliveries</div>
-        </div>
+    <!-- Page Branded Header with Reload Button -->
+    <div class="row items-center justify-between no-wrap q-mb-md">
+      <div class="col">
+        <OutletHeaderPanel
+          title="Outlet Deliveries"
+          subtitle="Delivery headers with item-level tracking"
+          :stats="[]"
+          class="brand-header-card"
+        />
+      </div>
+      <div class="q-ml-sm self-center">
         <ReloadButton />
       </div>
-      <div class="text-caption text-grey-7 q-mb-sm">Delivery headers with item-level tracking</div>
-      <q-input v-model="searchTerm" dense outlined clearable placeholder="Search deliveries..." style="max-width: 480px">
-        <template #prepend><q-icon name="search" /></template>
+    </div>
+
+    <!-- Search Input -->
+    <div class="q-mb-md">
+      <q-input
+        v-model="searchTerm"
+        dense
+        outlined
+        clearable
+        placeholder="Search deliveries..."
+      >
+        <template #prepend>
+          <q-icon name="search" />
+        </template>
       </q-input>
     </div>
 
@@ -66,11 +83,7 @@
 
     </template>
 
-    <q-page-sticky v-if="canCreate" position="bottom-right" :offset="[18, 18]">
-      <q-btn fab icon="add" color="primary" @click="navigateToAdd()">
-        <q-tooltip anchor="top middle" self="bottom middle">Create Delivery</q-tooltip>
-      </q-btn>
-    </q-page-sticky>
+    <DataAddFAB tooltip="Create Delivery" />
   </q-page>
 </template>
 
@@ -78,7 +91,9 @@
 import { computed, onMounted } from 'vue'
 import { useOutletDeliveries } from '../../../composables/operations/outlets/useOutletDeliveries.js'
 import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'
+import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
+import DataAddFAB from '../../../components/shared/DataAddFAB.vue'
 import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
 
 defineOptions({ name: 'OutletDeliveriesIndexPage' })

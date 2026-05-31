@@ -221,8 +221,26 @@
       <!-- Action Navigation Buttons -->
       <div class="row q-gutter-sm justify-end q-mt-md">
         <q-btn v-if="editing" flat label="Cancel" color="grey-8" @click="cancelEdit" />
-        <q-btn v-if="editing" unelevated color="primary" icon="save" label="Save Changes" :loading="saving" @click="saveEdit" />
-        <q-btn v-if="!editing && showPaymentButton" unelevated color="positive" icon="payments" label="Make Payment" @click="handlePayment" />
+        <ResourceActionButton
+          v-if="editing"
+          unelevated
+          color="primary"
+          icon="save"
+          label="Save Changes"
+          :loading="saving"
+          action="update"
+          @click="saveEdit"
+        />
+        <ResourceActionButton
+          v-if="!editing && showPaymentButton"
+          unelevated
+          color="positive"
+          icon="payments"
+          label="Make Payment"
+          :action="{ outletPayment: 'create', outletConsumptionInvoice: 'update' }"
+          :hide-if-unauthorized="false"
+          @click="handlePayment"
+        />
         <q-btn flat color="primary" icon="arrow_back" label="Back to List" @click="cancel" />
       </div>
     </div>
@@ -238,6 +256,7 @@ import { useResourceNav } from '../../../composables/resources/useResourceNav.js
 import { useCurrency } from '../../../composables/useCurrency.js'
 import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
 import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'
+import ResourceActionButton from '../../../components/shared/ResourceActionButton.vue'
 
 defineOptions({ name: 'OutletConsumptionInvoicesViewPage' })
 

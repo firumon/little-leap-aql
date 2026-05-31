@@ -1,15 +1,32 @@
 <template>
-  <q-page padding class="visit-page">
-    <div class="visit-header q-mb-md">
-      <div class="row items-center no-wrap q-mb-xs">
-        <div class="visit-header__title">
-          <div class="text-h6">Outlet Visits</div>
-        </div>
+  <q-page padding class="aql-page-container">
+    <!-- Page Branded Header with Reload Button -->
+    <div class="row items-center justify-between no-wrap q-mb-md">
+      <div class="col">
+        <OutletHeaderPanel
+          title="Outlet Visits"
+          subtitle="Sales field planner · plan, visit, track"
+          :stats="[]"
+          class="brand-header-card"
+        />
+      </div>
+      <div class="q-ml-sm self-center">
         <ReloadButton />
       </div>
-      <div class="text-caption text-grey-7 q-mb-sm">Sales field planner · plan, visit, track</div>
-      <q-input v-model="searchTerm" dense outlined clearable placeholder="Search outlets..." class="visit-search">
-        <template #prepend><q-icon name="search" /></template>
+    </div>
+
+    <!-- Search Input -->
+    <div class="q-mb-md">
+      <q-input
+        v-model="searchTerm"
+        dense
+        outlined
+        clearable
+        placeholder="Search outlets..."
+      >
+        <template #prepend>
+          <q-icon name="search" />
+        </template>
       </q-input>
     </div>
 
@@ -23,7 +40,7 @@
       <q-icon name="event_busy" size="4em" color="grey-5" />
       <div class="text-h6 q-mt-md">No visits yet</div>
       <div class="text-caption text-grey-7 q-mb-lg">Start by planning your first outlet visit.</div>
-      <q-btn color="primary" icon="add" label="Plan First Visit" @click="openPlanDialog()" />
+      <q-btn v-if="allowed('create')" color="primary" icon="add" label="Plan First Visit" @click="openPlanDialog()" />
     </div>
 
     <template v-else-if="searchTerm">
@@ -32,7 +49,7 @@
       <div v-else class="column q-gutter-md">
         <VisitCard
           v-for="visit in searchedVisits" :key="visit.Code" :visit="visit"
-          :show-actions="visitProgress(visit) === 'PLANNED'"
+          :show-actions="visitProgress(visit) === 'PLANNED' && allowed('update')"
           @complete="onComplete" @postpone="onPostpone" @cancel="onCancel"
         />
       </div>
@@ -57,7 +74,7 @@
           <q-icon name="check_circle" size="xs" /> No overdue visits — great job!
         </div>
         <div v-else class="column q-gutter-md">
-          <VisitCard v-for="visit in overdueVisits" :key="visit.Code" :visit="visit" :show-actions="true"
+          <VisitCard v-for="visit in overdueVisits" :key="visit.Code" :visit="visit" :show-actions="allowed('update')"
             @complete="onComplete" @postpone="onPostpone" @cancel="onCancel" />
         </div>
       </div>
@@ -72,7 +89,7 @@
           Nothing scheduled for today. Check upcoming or plan a visit.
         </div>
         <div v-else class="column q-gutter-y-xs">
-          <VisitCard v-for="visit in todayVisits" :key="visit.Code" :visit="visit" :show-actions="true"
+          <VisitCard v-for="visit in todayVisits" :key="visit.Code" :visit="visit" :show-actions="allowed('update')"
             @complete="onComplete" @postpone="onPostpone" @cancel="onCancel" />
         </div>
       </div>
@@ -100,7 +117,7 @@
           </q-item-section>
         </template>
         <div v-if="thisWeekVisits.length" class="column q-gutter-y-xs q-pt-sm">
-          <VisitCard v-for="visit in thisWeekVisits" :key="visit.Code" :visit="visit" :show-actions="true"
+          <VisitCard v-for="visit in thisWeekVisits" :key="visit.Code" :visit="visit" :show-actions="allowed('update')"
             @complete="onComplete" @postpone="onPostpone" @cancel="onCancel" />
         </div>
         <div v-else class="text-grey text-caption q-pa-sm">No visits this week.</div>
@@ -123,7 +140,7 @@
           </q-item-section>
         </template>
         <div v-if="futureVisits.length" class="column q-gutter-y-xs q-pt-sm">
-          <VisitCard v-for="visit in futureVisits" :key="visit.Code" :visit="visit" :show-actions="true"
+          <VisitCard v-for="visit in futureVisits" :key="visit.Code" :visit="visit" :show-actions="allowed('update')"
             @complete="onComplete" @postpone="onPostpone" @cancel="onCancel" />
         </div>
         <div v-else class="text-grey text-caption q-pa-sm">No upcoming visits.</div>
@@ -214,7 +231,7 @@
                 <span class="text-caption">{{ outlet.Name || outlet.Code }}</span>
                 <span class="text-caption text-grey-6">{{ outlet.Code }}</span>
               </q-item-section>
-              <q-item-section side>
+              <q-item-section side v-if="allowed('create')">
                 <q-btn outline dense color="primary" icon="add" label="Plan Visit" @click="openPlanDialog(outlet)" />
               </q-item-section>
             </q-item>
@@ -223,80 +240,72 @@
       </q-expansion-item>
     </template>
 
-    <div class="visit-page__fab-spacer" />
-    <q-page-sticky position="bottom-right" :offset="[18, 18]">
-      <q-btn fab icon="add" color="primary" @click="openPlanDialog()" />
-    </q-page-sticky>
+    <DataAddFAB tooltip="Plan Visit" custom-click @click="openPlanDialog()" />
 
-    <q-dialog v-model="postponeDialog" persistent>
-      <q-card style="min-width: 320px; max-width: 90vw;">
-        <q-card-section class="text-h6">Postpone Visit</q-card-section>
-        <q-card-section class="q-gutter-y-sm">
-          <AppDate v-model="postponeForm.date" label="New Date" outlined dense hide-bottom-space />
-          <q-input v-model="postponeForm.reason" type="textarea" label="Reason" outlined autogrow rows="2" hide-bottom-space />
-        </q-card-section>
-        <q-card-actions align="right">
-          <q-btn flat label="Cancel" v-close-popup />
-          <q-btn flat color="primary" label="Postpone" :loading="saving"
-            :disable="!postponeForm.date || !postponeForm.reason"
-            @click="handlePostponeConfirm" />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
+    <ActionCommentDialog
+      v-model="postponeDialog"
+      title="Postpone Visit"
+      label="Reason"
+      comment-required
+      submit-label="Postpone"
+      submit-color="primary"
+      :saving="saving"
+      :disable-submit="!postponeForm.date"
+      @confirm="handlePostponeConfirm"
+    >
+      <template #fields>
+        <AppDate v-model="postponeForm.date" label="New Date" outlined dense hide-bottom-space />
+      </template>
+    </ActionCommentDialog>
 
-    <q-dialog v-model="cancelDialog" persistent>
-      <q-card style="min-width: 320px; max-width: 90vw;">
-        <q-card-section class="text-h6">Cancel Visit</q-card-section>
-        <q-card-section class="q-gutter-y-sm">
-          <q-input v-model="cancelForm.reason" type="textarea" label="Reason" outlined autogrow rows="2" hide-bottom-space />
-          <AppDate v-model="cancelForm.nextDate" label="Next Visit Date (optional)" outlined dense clearable hide-bottom-space />
-        </q-card-section>
-        <q-card-actions align="right">
-          <q-btn flat label="Back" v-close-popup />
-          <q-btn flat color="negative" label="Cancel Visit" :loading="saving"
-            :disable="!cancelForm.reason"
-            @click="handleCancelConfirm" />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
+    <ActionCommentDialog
+      v-model="cancelDialog"
+      title="Cancel Visit"
+      label="Reason"
+      comment-required
+      submit-label="Cancel Visit"
+      submit-color="negative"
+      :saving="saving"
+      @confirm="handleCancelConfirm"
+    >
+      <template #fields>
+        <AppDate v-model="cancelForm.nextDate" label="Next Visit Date (optional)" outlined dense clearable hide-bottom-space />
+      </template>
+    </ActionCommentDialog>
 
-    <q-dialog v-model="completeDialog" persistent>
-      <q-card style="min-width: 320px; max-width: 90vw;">
-        <q-card-section class="text-h6">Complete Visit</q-card-section>
-        <q-card-section class="q-gutter-y-sm">
-          <q-input v-model="completeForm.comment" type="textarea" label="Comment (optional)" outlined autogrow rows="2" hide-bottom-space />
-        </q-card-section>
-        <q-card-actions align="right">
-          <q-btn flat label="Cancel" v-close-popup />
-          <q-btn flat color="positive" label="Complete Visit" :loading="saving" @click="handleCompleteConfirm" />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
+    <ActionCommentDialog
+      v-model="completeDialog"
+      title="Complete Visit"
+      label="Comment (optional)"
+      submit-label="Complete Visit"
+      submit-color="positive"
+      :saving="saving"
+      @confirm="handleCompleteConfirm"
+    />
 
-    <q-dialog v-model="planDialog" persistent>
-      <q-card style="min-width: 340px; max-width: 90vw;">
-        <q-card-section class="text-h6">Plan Visit</q-card-section>
-        <q-card-section class="q-gutter-y-sm">
-          <q-select
-            v-model="planForm.outletCode"
-            :options="outletOptions"
-            label="Outlet"
-            outlined
-            :disable="!!planTarget"
-            :rules="[val => !!val || 'Outlet is required']"
-            hide-bottom-space
-          />
-          <AppDate v-model="planForm.date" label="Visit Date" outlined :rules="[val => !!val || 'Date is required']" hide-bottom-space />
-          <q-input v-model="planForm.comment" type="textarea" label="Comment (optional)" outlined hide-bottom-space />
-        </q-card-section>
-        <q-card-actions align="right">
-          <q-btn flat label="Cancel" v-close-popup />
-          <q-btn color="primary" label="Plan Visit" :loading="saving"
-            :disable="!planForm.outletCode || !planForm.date"
-            @click="handlePlanConfirm" />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
+    <ActionCommentDialog
+      v-model="planDialog"
+      title="Plan Visit"
+      label="Comment (optional)"
+      submit-label="Plan Visit"
+      submit-color="primary"
+      :saving="saving"
+      :disable-submit="!planForm.outletCode || !planForm.date"
+      @confirm="handlePlanConfirm"
+    >
+      <template #fields>
+        <q-select
+          v-model="planForm.outletCode"
+          :options="outletOptions"
+          label="Outlet"
+          outlined
+          :disable="!!planTarget"
+          :rules="[val => !!val || 'Outlet is required']"
+          hide-bottom-space
+        />
+        <AppDate v-model="planForm.date" label="Visit Date" outlined :rules="[val => !!val || 'Date is required']" hide-bottom-space />
+      </template>
+    </ActionCommentDialog>
   </q-page>
 </template>
 
@@ -307,12 +316,17 @@ import { useOutletVisits } from '../../../composables/operations/outlets/useOutl
 import VisitCard from '../../../components/Operations/Outlets/VisitCard.vue'
 import VisitSummaryBar from '../../../components/Operations/Outlets/VisitSummaryBar.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
+import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
+import DataAddFAB from '../../../components/shared/DataAddFAB.vue'
 import AppDate from '../../../components/shared/AppDate.vue'
+import ActionCommentDialog from '../../../components/shared/ActionCommentDialog.vue'
+import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
 
 defineOptions({ name: 'OutletVisitsIndexPage' })
 
 const flow = useOutletVisits()
+const { allowed } = useResourceConfig()
 const { hasUninitiatedDependencies } = useResourceReload()
 const {
   loading, saving, searchTerm,
@@ -362,17 +376,15 @@ function scrollToSection(key) {
 
 const completeDialog = ref(false)
 const completeTarget = ref(null)
-const completeForm = ref({ comment: '' })
 
 async function onComplete(visit) {
   completeTarget.value = visit
-  completeForm.value = { comment: '' }
   completeDialog.value = true
 }
 
-async function handleCompleteConfirm() {
+async function handleCompleteConfirm(comment) {
   const result = await completeVisit(completeTarget.value, {
-    ProgressCompletedComment: completeForm.value.comment
+    ProgressCompletedComment: comment
   })
   if (result) {
     completeDialog.value = false
@@ -386,10 +398,10 @@ function onPostpone(visit) {
   postponeDialog.value = true
 }
 
-async function handlePostponeConfirm() {
+async function handlePostponeConfirm(reason) {
   const result = await postponeVisit(postponeTarget.value, {
     Date: postponeForm.value.date,
-    ProgressPostponedComment: postponeForm.value.reason
+    ProgressPostponedComment: reason
   })
   if (result) {
     postponeDialog.value = false
@@ -403,9 +415,9 @@ function onCancel(visit) {
   cancelDialog.value = true
 }
 
-async function handleCancelConfirm() {
+async function handleCancelConfirm(reason) {
   const result = await cancelVisit(cancelTarget.value, {
-    ProgressCancelledComment: cancelForm.value.reason,
+    ProgressCancelledComment: reason,
     Date: cancelForm.value.nextDate || undefined
   })
   if (result) {
@@ -428,9 +440,9 @@ function openPlanDialog(outlet = null) {
   planDialog.value = true
 }
 
-async function handlePlanConfirm() {
+async function handlePlanConfirm(comment) {
   const code = typeof planForm.value.outletCode === 'object' ? planForm.value.outletCode?.value : planForm.value.outletCode
-  const result = await planVisit(code, planForm.value.date, planForm.value.comment)
+  const result = await planVisit(code, planForm.value.date, comment)
   if (result) {
     planDialog.value = false
     await reloadIndex()
@@ -448,17 +460,3 @@ onMounted(async () => {
 })
 </script>
 
-<style scoped>
-.visit-page {
-  padding-bottom: 80px;
-}
-
-.visit-page__fab-spacer {
-  height: 80px;
-}
-
-.visit-header__title {
-  flex: 1;
-  min-width: 0;
-}
-</style>

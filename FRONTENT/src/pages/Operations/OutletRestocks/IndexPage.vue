@@ -1,16 +1,32 @@
 <template>
   <q-page padding>
-    <!-- Header -->
-    <div class="restock-header q-mb-md">
-      <div class="row items-center justify-between no-wrap q-mb-xs">
-        <div>
-          <div class="text-h6">Outlet Restocks</div>
-        </div>
+    <!-- Page Branded Header with Reload Button -->
+    <div class="row items-center justify-between no-wrap q-mb-md">
+      <div class="col">
+        <OutletHeaderPanel
+          title="Outlet Restocks"
+          subtitle="Stock replenishment · request, approve, deliver"
+          :stats="[]"
+          class="brand-header-card"
+        />
+      </div>
+      <div class="q-ml-sm self-center">
         <ReloadButton />
       </div>
-      <div class="text-caption text-grey-7 q-mb-sm">Stock replenishment · request, approve, deliver</div>
-      <q-input v-model="searchTerm" dense outlined clearable placeholder="Search outlets..." class="restock-search">
-        <template #prepend><q-icon name="search" /></template>
+    </div>
+
+    <!-- Search Input -->
+    <div class="q-mb-md">
+      <q-input
+        v-model="searchTerm"
+        dense
+        outlined
+        clearable
+        placeholder="Search outlets..."
+      >
+        <template #prepend>
+          <q-icon name="search" />
+        </template>
       </q-input>
     </div>
 
@@ -141,7 +157,7 @@
             outline
             dense
             no-caps
-            class="q-mb-sm history-filter-dropdown"
+            class="q-mb-sm full-width"
             :label="currentFilterLabel"
           >
             <q-list dense>
@@ -151,9 +167,9 @@
             </q-list>
           </q-btn-dropdown>
           <div class="row items-center q-gutter-x-sm q-mb-md">
-            <q-input v-model="historyDateFrom" type="date" dense outlined label="From" class="col" />
+            <AppDate v-model="historyDateFrom" label="From" outlined dense hide-bottom-space class="col" />
             <span class="text-grey-6 text-caption">—</span>
-            <q-input v-model="historyDateTo" type="date" dense outlined label="To" class="col" />
+            <AppDate v-model="historyDateTo" label="To" outlined dense hide-bottom-space class="col" />
           </div>
 
           <div v-if="!filteredHistoryRestocks.length" class="text-grey text-center q-pa-md">
@@ -179,11 +195,7 @@
     </template>
 
     <!-- FAB -->
-    <q-page-sticky v-if="userCanCreate" position="bottom-right" :offset="[18, 18]">
-      <q-btn fab icon="add" color="primary" @click="navigateToAdd()">
-        <q-tooltip anchor="top middle" self="bottom middle">New Restock Request</q-tooltip>
-      </q-btn>
-    </q-page-sticky>
+    <DataAddFAB tooltip="New Restock Request" />
   </q-page>
 </template>
 
@@ -193,8 +205,11 @@ import { useOutletRestocks } from '../../../composables/operations/outlets/useOu
 import { useOutletVisits } from '../../../composables/operations/outlets/useOutletVisits.js'
 import RestockSummaryBar from '../../../components/Operations/Outlets/RestockSummaryBar.vue'
 import RestockCard from '../../../components/Operations/Outlets/RestockCard.vue'
+import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
 import { RESTOCK_PROGRESS_ORDER, active, text, sortTime } from '../../../composables/operations/outlets/outletOperationsMeta.js'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
+import AppDate from '../../../components/shared/AppDate.vue'
+import DataAddFAB from '../../../components/shared/DataAddFAB.vue'
 import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
 
 defineOptions({ name: 'OutletRestocksIndexPage' })
@@ -340,9 +355,7 @@ onMounted(() => doReload())
 </script>
 
 <style scoped>
-.restock-search { max-width: 480px; }
 .restock-section-body { border-top: none; border-radius: 0 0 8px 8px; }
 .priority-outlet-card { transition: box-shadow 0.15s ease; border-left: 3px solid var(--q-primary); }
 .priority-outlet-card:hover { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); }
-.history-filter-dropdown { width: 100%; }
 </style>

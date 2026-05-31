@@ -3,6 +3,7 @@ import { useQuasar } from 'quasar'
 import { useAuthStore } from '../../../stores/auth.js'
 import { useResourceData } from '../../resources/useResourceData.js'
 import { useResourceNav } from '../../resources/useResourceNav.js'
+import { useResourceConfig } from '../../resources/useResourceConfig.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { OUTLET_OPERATION_RESOURCES, RESTOCK_PROGRESS_ORDER, active, progressMeta, sortTime, text, todayISO } from './outletOperationsMeta.js'
 import { allocatedRows, approvalRequestedQty, computeRestockProgressFromItems, expandOrsiAllocationRows, recommendOrsiAllocation, restockEditableProgress, storageName, sumBy, toNumber, validateRestockAllocationRows, validateRestockApproval, validateRestockDraft, warehouseAvailableQty, warehouseDisplayName, warehouseStorageCandidatesForSku } from './outletStockLogic.js'
@@ -20,6 +21,7 @@ export function useOutletRestocks() {
   const resourceIoStore = useResourceIoStore()
   const authStore = useAuthStore()
   const nav = useResourceNav()
+  const { allowed } = useResourceConfig()
   const restocks = useResourceData(ref('OutletRestocks'))
   const restockItems = useResourceData(ref('OutletRestockItems'))
   const outlets = useResourceData(ref('Outlets'))
@@ -276,6 +278,10 @@ export function useOutletRestocks() {
   }
 
   async function saveRestockDraft(submit = false, comment = '') {
+    const requiredAction = form.value.Code ? 'update' : 'create'
+    if (!allowed(requiredAction)) {
+      return notifyError(`You do not have permission to ${requiredAction} this restock.`)
+    }
     if (form.value.Code && !restockEditableProgress(form.value.Progress)) return notifyWarning(`Restock ${form.value.Code} cannot be edited while progress is ${text(form.value.Progress) || 'blank'}.`)
     if (submit && text(form.value.Progress) === 'REVISION_REQUIRED' && !text(comment)) return notifyWarning('Resubmit comment is required.')
     const validation = validateRestockDraft(form.value, rows.value)
@@ -293,6 +299,10 @@ export function useOutletRestocks() {
   }
 
   async function submitRestock(restock = form.value, comment = '') {
+    const requiredAction = restock.Code ? 'update' : 'create'
+    if (!allowed(requiredAction)) {
+      return notifyError(`You do not have permission to submit this restock.`)
+    }
     if (!restockEditableProgress(restock.Progress)) return notifyWarning(`Restock ${restock.Code} cannot be submitted while progress is ${text(restock.Progress) || 'blank'}.`)
     if (text(restock.Progress) === 'REVISION_REQUIRED' && !text(comment)) return notifyWarning('Resubmit comment is required.')
     form.value = { ...form.value, ...restock }
@@ -300,6 +310,9 @@ export function useOutletRestocks() {
   }
 
   async function approveRestock(restock, approvedRows = rows.value, comment = '') {
+    if (!allowed({ outletRestock: 'update', outletRestockItem: 'create', stockMovement: 'create' })) {
+      return notifyError('You do not have permission to approve restocks.')
+    }
     const validation = validateRestockApproval(restock, approvedRows, warehouseStorages.items.value)
     if (!validation.valid) return notifyWarning(validation.errors[0])
     saving.value = true
@@ -313,6 +326,9 @@ export function useOutletRestocks() {
   }
 
   async function allocatePendingRestockItems(restock, allocatedPendingRows = rows.value, comment = '') {
+    if (!allowed({ outletRestock: 'update', stockMovement: 'create' })) {
+      return notifyError('You do not have permission to allocate pending restock items.')
+    }
     const rowsToAllocate = allocatedPendingRows.filter(row => text(row.Progress) === 'ALLOCATED' && (!text(row.Code) || text(row._pendingSourceCode)))
     if (!rowsToAllocate.length) return notifyWarning('Select at least one pending allocation.')
     const sourceKeys = Array.from(new Set(rowsToAllocate.map(row => text(row._pendingSourceCode || row._approvalSourceKey || row.Code).replace(/^pending:/, '')).filter(Boolean)))
@@ -333,6 +349,9 @@ export function useOutletRestocks() {
   }
 
   async function cancelPendingRestockItems(restock, comment = '') {
+    if (!allowed('update')) {
+      return notifyError('You do not have permission to cancel pending restock items.')
+    }
     if (!text(comment)) return notifyWarning('Cancel comment is required.')
     const rowsToCancel = rows.value.filter(row => row._cancelSelected && text(row.Progress) === 'PENDING' && text(row.Code))
     if (!rowsToCancel.length) return notifyWarning('Select at least one pending item to cancel.')
@@ -352,6 +371,9 @@ export function useOutletRestocks() {
   }
 
   async function rejectRestock(restock, comment) {
+    if (!allowed('update')) {
+      return notifyError('You do not have permission to reject this restock.')
+    }
     if (!text(comment)) return notifyWarning('Comment is required.')
     const childRows = childItems(restock.Code)
     if (childRows.some(row => text(row.Progress) === 'DELIVERED')) return notifyWarning('Delivered restock items cannot be rejected.')
@@ -366,6 +388,9 @@ export function useOutletRestocks() {
   }
 
   async function sendBackRestock(restock, comment) {
+    if (!allowed('update')) {
+      return notifyError('You do not have permission to send back this restock.')
+    }
     if (!text(comment)) return notifyWarning('Comment is required.')
     saving.value = true
     try {

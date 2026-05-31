@@ -3,6 +3,7 @@ import { useQuasar } from 'quasar'
 import { useAuthStore } from '../../../stores/auth.js'
 import { useResourceData } from '../../resources/useResourceData.js'
 import { useResourceNav } from '../../resources/useResourceNav.js'
+import { useResourceConfig } from '../../resources/useResourceConfig.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { OUTLET_OPERATION_RESOURCES, CONSUMPTION_PROGRESS_ORDER, active, formatDate, progressMeta, sortTime, text, todayISO, visitProgress } from './outletOperationsMeta.js'
 import { toNumber, validateConsumption } from './outletStockLogic.js'
@@ -27,6 +28,7 @@ export function useOutletConsumption() {
   const resourceIoStore = useResourceIoStore()
   const authStore = useAuthStore()
   const nav = useResourceNav()
+  const { allowed } = useResourceConfig()
   const consumptions = useResourceData(ref('OutletConsumptions'))
   const consumptionItems = useResourceData(ref('OutletConsumptionItems'))
   const consumptionInvoiceItems = useResourceData(ref('OutletConsumptionInvoiceItems'))
@@ -388,6 +390,26 @@ export function useOutletConsumption() {
   async function saveConsumption() {
     const error = validateBeforeSubmit()
     if (error) return $q.notify({ type: 'warning', message: error, position: 'top' })
+    const requiredPerms = { outletConsumption: 'create' }
+    if (returnRows.value.length > 0) {
+      requiredPerms.outletReturn = 'create'
+    }
+    if (checklist.value.generateInvoice) {
+      requiredPerms.outletConsumptionInvoice = 'create'
+      if (checklist.value.applyReturnsToInvoice && (returns.items.value.some(ret => active(ret) && text(ret.OutletCode) === form.value.OutletCode && text(ret.InvoiceAdjustmentRequired) === 'TRUE' && text(ret.InvoiceAdjustmentDone) !== 'TRUE') || returnRows.value.length > 0)) {
+        requiredPerms.outletReturn = 'update'
+      }
+    }
+    if (checklist.value.completeVisit && selectedVisit.value && visitProgress(selectedVisit.value) === 'PLANNED') {
+      requiredPerms.outletVisit = 'update'
+    }
+    if (checklist.value.placeRestock) {
+      requiredPerms.outletRestock = 'create'
+    }
+    if (!allowed(requiredPerms)) {
+      $q.notify({ type: 'negative', message: 'You do not have permission to execute this consumption workflow.', position: 'top' })
+      return
+    }
     saving.value = true
     let consumptionCode = ''
     try {
@@ -539,6 +561,10 @@ export function useOutletConsumption() {
   }
 
   async function generateInvoiceForConsumption(record = {}) {
+    if (!allowed({ outletConsumptionInvoice: 'create', outletConsumption: 'update' })) {
+      $q.notify({ type: 'negative', message: 'You do not have permission to generate invoice.', position: 'top' })
+      return false
+    }
     if (!record?.Code) return false
     if (text(record.Progress) !== 'PENDING_INVOICE_GENERATION') return $q.notify({ type: 'warning', message: 'Only pending invoice consumptions can generate an invoice.', position: 'top' })
     if (childInvoice(record.Code)) return $q.notify({ type: 'warning', message: 'An active invoice already exists for this consumption.', position: 'top' })
@@ -592,6 +618,19 @@ export function useOutletConsumption() {
     if (!record?.Code) return false
     if (text(record.Progress) === 'CANCELLED') return $q.notify({ type: 'warning', message: 'This consumption is already cancelled.', position: 'top' })
     if (!reason) { $q.notify({ type: 'warning', message: 'Cancellation reason is required.', position: 'top' }); return false }
+    const requiredPerms = { outletConsumption: 'update' }
+    const invoice = childInvoice(record.Code)
+    if (invoice && text(invoice.Progress) !== 'CANCELLED' && text(invoice.Progress) !== 'PAID') {
+      requiredPerms.outletConsumptionInvoice = 'update'
+    }
+    const restocksToCancel = cancelableRestocks(record.Code)
+    if (restocksToCancel.length > 0) {
+      requiredPerms.outletRestock = 'update'
+    }
+    if (!allowed(requiredPerms)) {
+      $q.notify({ type: 'negative', message: 'You do not have permission to cancel this consumption workflow.', position: 'top' })
+      return false
+    }
 
     const now = new Date()
     const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
@@ -603,13 +642,11 @@ export function useOutletConsumption() {
       executeActionRequest('OutletConsumptions', record.Code, OUTLET_ACTIONS.cancelConsumption, { ProgressCancelledComment: reason })
     ]
 
-    const invoice = childInvoice(record.Code)
     if (invoice && text(invoice.Progress) !== 'CANCELLED' && text(invoice.Progress) !== 'PAID') {
       requests.push(executeActionRequest('OutletConsumptionInvoices', invoice.Code, { action: 'Cancel', column: 'Progress', columnValue: 'CANCELLED' }, { ProgressCancelledComment: comment }))
     }
 
-    const restocks = cancelableRestocks(record.Code)
-    for (const restock of restocks) {
+    for (const restock of restocksToCancel) {
       requests.push(executeActionRequest('OutletRestocks', restock.Code, OUTLET_ACTIONS.rejectRestock, { ProgressRejectedComment: comment }))
     }
 
@@ -639,6 +676,10 @@ export function useOutletConsumption() {
   function navigateToConsumption(code) { nav.goTo('view', { scope: 'operations', resourceSlug: 'outlet-consumptions', code }) }
   
   async function saveInvoiceFromConsumption({ consumptionCode, consumptionRecord, items = [], discount = 0, tax = 0, priceListCode = '' }) {
+    if (!allowed({ outletConsumptionInvoice: 'create', outletConsumption: 'update' })) {
+      $q.notify({ type: 'negative', message: 'You do not have permission to save invoice.', position: 'top' })
+      return { error: 'Unauthorized' }
+    }
     if (!consumptionCode) return { error: 'Consumption code required' }
     if (!items.length) return { error: 'No items to invoice' }
     const subtotal = items.reduce((sum, item) => sum + (toNumber(item.Qty) * toNumber(item.Price)), 0)
@@ -674,6 +715,10 @@ export function useOutletConsumption() {
   }
 
   async function updateInvoice(invoiceCode, { PriceListCode, Discount, Tax, ReturnDeductionTotal, items = [] } = {}) {
+    if (!allowed({ outletConsumptionInvoice: 'update' })) {
+      $q.notify({ type: 'negative', message: 'You do not have permission to update this invoice.', position: 'top' })
+      return { error: 'Unauthorized' }
+    }
     if (!invoiceCode) return { error: 'Invoice code required' }
     saving.value = true
     try {

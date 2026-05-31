@@ -3,6 +3,7 @@ import { useQuasar } from 'quasar'
 import { useAuthStore } from '../../../stores/auth.js'
 import { useResourceData } from '../../resources/useResourceData.js'
 import { useResourceNav } from '../../resources/useResourceNav.js'
+import { useResourceConfig } from '../../resources/useResourceConfig.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { active, text, todayISO } from './outletOperationsMeta.js'
 import { resourceCreateRequest, executeActionRequest, responseFailed, failureMessage } from './outletOperationsBatch.js'
@@ -13,6 +14,7 @@ export function useOutletPayments() {
   const resourceIoStore = useResourceIoStore()
   const authStore = useAuthStore()
   const nav = useResourceNav()
+  const { allowed } = useResourceConfig()
 
   // Resource data bindings
   const outlets = useResourceData(ref('Outlets'))
@@ -171,6 +173,10 @@ export function useOutletPayments() {
   }
 
   async function submitPayment() {
+    if (!allowed({ outletPayment: 'create', outletConsumptionInvoice: 'update' })) {
+      $q.notify({ type: 'negative', message: 'You do not have permission to submit a payment.', position: 'top' })
+      return false
+    }
     if (!selectedOutletCode.value) {
       $q.notify({ type: 'warning', message: 'Outlet is required.', position: 'top' })
       return false
@@ -247,6 +253,10 @@ export function useOutletPayments() {
   }
 
   async function cancelPaymentRecord(paymentCode, comment) {
+    if (!allowed({ outletPayment: 'update', outletConsumptionInvoice: 'update' })) {
+      $q.notify({ type: 'negative', message: 'You do not have permission to cancel this payment.', position: 'top' })
+      return false
+    }
     if (!paymentCode) return false
     if (!comment || !comment.trim()) {
       $q.notify({ type: 'warning', message: 'Comment is required for cancellation.', position: 'top' })

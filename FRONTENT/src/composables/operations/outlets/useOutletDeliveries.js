@@ -3,6 +3,7 @@ import { useQuasar } from 'quasar'
 import { useAuthStore } from '../../../stores/auth.js'
 import { useResourceData } from '../../resources/useResourceData.js'
 import { useResourceNav } from '../../resources/useResourceNav.js'
+import { useResourceConfig } from '../../resources/useResourceConfig.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { OUTLET_OPERATION_RESOURCES, DELIVERY_PROGRESS_ORDER, active, progressMeta, sortTime, text, todayISO } from './outletOperationsMeta.js'
 import { toNumber, validateDeliveryItems } from './outletStockLogic.js'
@@ -24,6 +25,7 @@ export function useOutletDeliveries() {
   const resourceIoStore = useResourceIoStore()
   const authStore = useAuthStore()
   const nav = useResourceNav()
+  const { allowed } = useResourceConfig()
   const deliveries = useResourceData(ref('OutletDeliveries'))
   const restocks = useResourceData(ref('OutletRestocks'))
   const restockItems = useResourceData(ref('OutletRestockItems'))
@@ -201,6 +203,9 @@ export function useOutletDeliveries() {
   }
 
   async function createDraft() {
+    if (!allowed({ outletDelivery: 'create', outletRestock: 'update' })) {
+      return notifyError('You do not have permission to create a delivery draft.')
+    }
     const validation = validateDeliveryItems(selectedItems.value.map(row => row.rawOrsi))
     if (!validation.valid) return notifyWarning(validation.errors[0])
     saving.value = true
@@ -313,6 +318,9 @@ export function useOutletDeliveries() {
   }
 
   async function markItemDelivered(orsiCode, comment = '') {
+    if (!allowed({ outletDelivery: 'update', outletRestock: 'update', outletMovement: 'create' })) {
+      return notifyError('You do not have permission to mark items delivered.')
+    }
     const od = getDelivery(orsiCode.OutletDeliveryCode)
     const orsi = restockItems.items.value.find(row => text(row.Code) === text(orsiCode.Code))
     const restock = restocks.items.value.find(r => text(r.Code) === text(orsi?.OutletRestockCode))
@@ -336,6 +344,9 @@ export function useOutletDeliveries() {
   }
 
   async function markSelectedDelivered(odCode, selectedCodes, comment = '') {
+    if (!allowed({ outletDelivery: 'update', outletRestock: 'update', outletMovement: 'create' })) {
+      return notifyError('You do not have permission to mark items delivered.')
+    }
     const od = getDelivery(odCode)
     if (!od) return notifyWarning('Delivery not found.')
     const pendingCodes = selectedCodes.filter(code => {
@@ -366,6 +377,9 @@ export function useOutletDeliveries() {
   }
 
   async function cancelDraft(odCode, comment = '') {
+    if (!allowed({ outletDelivery: 'update', outletRestock: 'update' })) {
+      return notifyError('You do not have permission to cancel this delivery draft.')
+    }
     const od = getDelivery(odCode)
     if (!od) return notifyWarning('Delivery not found.')
     const codes = deliveryOrsiCodes(odCode)

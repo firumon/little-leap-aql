@@ -3,6 +3,7 @@ import { useQuasar } from 'quasar'
 import { useAuthStore } from '../../../stores/auth.js'
 import { useResourceData } from '../../resources/useResourceData.js'
 import { useResourceNav } from '../../resources/useResourceNav.js'
+import { useResourceConfig } from '../../resources/useResourceConfig.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { active, formatDate, progressMeta, sortTime, text, todayISO } from './outletOperationsMeta.js'
 import { toNumber } from './outletStockLogic.js'
@@ -16,6 +17,7 @@ export function useOutletReturns() {
   const resourceIoStore = useResourceIoStore()
   const authStore = useAuthStore()
   const nav = useResourceNav()
+  const { allowed } = useResourceConfig()
 
   const returnsConfig = computed(() =>
     (Array.isArray(authStore.resources) ? authStore.resources : [])
@@ -169,6 +171,10 @@ export function useOutletReturns() {
   }
 
   async function saveReturn() {
+    if (!canCreate.value || !allowed('create')) {
+      $q.notify({ type: 'negative', message: 'You do not have permission to create returns.', position: 'top' })
+      return
+    }
     const error = validateBeforeSubmit()
     if (error) {
       $q.notify({ type: 'warning', message: error, position: 'top' })
@@ -253,6 +259,10 @@ export function useOutletReturns() {
   }
 
   async function cancelReturn(record, reason) {
+    if (!allowed('update')) {
+      $q.notify({ type: 'negative', message: 'You do not have permission to cancel returns.', position: 'top' })
+      return false
+    }
     if (!record?.Code) return false
     if (text(record.Progress) === 'CANCELLED') {
       $q.notify({ type: 'warning', message: 'Return is already cancelled.', position: 'top' })
@@ -317,6 +327,10 @@ export function useOutletReturns() {
   }
 
   async function markInvoiceAdjusted(record, comment) {
+    if (!allowed('update')) {
+      $q.notify({ type: 'negative', message: 'You do not have permission to update returns.', position: 'top' })
+      return false
+    }
     if (!record?.Code) return false
     acting.value = true
     try {
@@ -353,9 +367,17 @@ export function useOutletReturns() {
 
   async function markWarehouseActionCompleted(record, actionType, storageName, comment) {
     if (!record?.Code) return false
+    const isDisposed = actionType === 'Disposed'
+    const requiredPerms = { outletReturn: 'update' }
+    if (!isDisposed && record.WarehouseCode) {
+      requiredPerms.stockMovement = 'create'
+    }
+    if (!allowed(requiredPerms)) {
+      $q.notify({ type: 'negative', message: 'You do not have permission to complete warehouse action.', position: 'top' })
+      return false
+    }
     acting.value = true
     try {
-      const isDisposed = actionType === 'Disposed'
       const updatePayload = {
         WarehouseActionCompleted: 'TRUE',
         WarehouseAction: isDisposed ? 'Disposed' : 'Stocked'

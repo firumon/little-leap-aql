@@ -1,4 +1,4 @@
-# AQL Frontend Enhancement & Refactoring Guidelines (Outlet Module)
+# AQL Frontend Enhancement & Refactoring Guidelines
 
 This document serves as the master reference for the upcoming frontend enhancements, design consistency alignment, and refactoring work inside the AQL codebase. It consolidates all requirements, design decisions, and architectural rules discussed for the Solo Agent.
 

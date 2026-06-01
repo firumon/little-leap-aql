@@ -91,7 +91,7 @@
 </template>
 
 <script setup>
-import { computed, useSlots, useAttrs, h, defineComponent } from 'vue'
+import { computed, useSlots, h, defineComponent, getCurrentInstance } from 'vue'
 import { QItemLabel, QChip, colors } from 'quasar'
 
 defineOptions({ name: 'AqlList' })
@@ -191,13 +191,18 @@ const props = defineProps({
 
 const emit = defineEmits(['click'])
 const slots = useSlots()
-const attrs = useAttrs()
+const instance = getCurrentInstance()
+
+const hasClick = computed(() => {
+  const props = instance?.vnode?.props
+  return !!(props && (props.onClick || props['on-click'] || props.onClickOnce))
+})
 
 const isItemClickable = computed(() => {
   if (props.clickable !== null) {
     return props.clickable && !props.btn && !slots.btn
   }
-  return !!attrs.onClick && !props.btn && !slots.btn
+  return hasClick.value && !props.btn && !slots.btn
 })
 
 const contentArray = computed(() => {

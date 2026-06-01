@@ -63,7 +63,7 @@
                 <component
                   v-if="metaProp !== false"
                   :is="getMetaComponentType(metaIndex)"
-                  :color="metaColor(item)"
+                  :color="colorMetaChip(metaIndex, item)"
                 >
                   <template #default>
                     {{ resolveProp(metaProp, item) }}
@@ -92,7 +92,7 @@
 
 <script setup>
 import { computed, useSlots, h, defineComponent } from 'vue'
-import { QItemLabel, colors } from 'quasar'
+import { QItemLabel, QChip, colors } from 'quasar'
 
 defineOptions({ name: 'AqlList' })
 
@@ -142,6 +142,23 @@ const MetaCaption = defineComponent({
   }
 })
 
+const MetaChip = defineComponent({
+  name: 'MetaChip',
+  props: { color: { type: String, default: 'primary' } },
+  setup(props, { slots }) {
+    return () => h(
+      QChip,
+      {
+        color: props.color,
+        textColor: 'white',
+        class: 'text-weight-bold',
+        style: 'font-size: 0.75rem'
+      },
+      { default: () => slots.default ? slots.default() : null }
+    )
+  }
+})
+
 const props = defineProps({
   items: { type: Array, default: () => [] },
   itemKey: { type: [String, Function], default: 'Code' },
@@ -163,10 +180,12 @@ const props = defineProps({
   btn: { type: [String, Function], default: null },
   btnColor: { type: [String, Function], default: null },
   meta: { type: Array, default: null },
-  metaLayout: { type: Array, default: () => ['caption', 'label'] },
+  metaLayout: { type: Array, default: () => ['chip', 'caption', 'label'] },
   metaColor: { type: [String, Function], default: null },
   metaLabel: { type: [String, Function], default: null },
   metaCaption: { type: [String, Function], default: null },
+  chip: { type: [String, Function], default: null },
+  chipColor: { type: [String, Function], default: null },
   clickable: { type: Boolean, default: false },
 })
 
@@ -261,6 +280,7 @@ const metaArray = computed(() => {
     return props.meta
   }
   return props.metaLayout.map(rowType => {
+    if (rowType === 'chip') return props.chip || false
     if (rowType === 'label') return props.metaLabel || false
     if (rowType === 'caption') return props.metaCaption || false
     return false
@@ -268,7 +288,18 @@ const metaArray = computed(() => {
 })
 
 const metaColor = computed(() => (item) => {
-  return resolveProp(props.metaColor, item) || 'grey-9'
+  return resolveProp(props.metaColor || props.color, item) || 'grey-9'
+})
+
+const chipColor = computed(() => (item) => {
+  return resolveProp(props.chipColor || props.metaColor || props.color, item) || 'primary'
+})
+
+const colorMetaChip = computed(() => (metaIndex,item) => {
+  const rowType = props.metaLayout[metaIndex]
+  if (rowType === 'chip') return chipColor.value(item)
+  return metaColor.value(item)
+
 })
 
 function hasMeta(item) {
@@ -279,6 +310,7 @@ function getMetaComponentType(metaIndex) {
   const rowType = props.metaLayout[metaIndex]
   if (rowType === 'label') return MetaLabel
   if (rowType === 'caption') return MetaCaption
+  if (rowType === 'chip') return MetaChip
   return null
 }
 </script>

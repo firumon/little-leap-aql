@@ -99,6 +99,10 @@
               <q-item-label class="text-body2 text-grey-6">There are currently no unpaid consumption invoices.</q-item-label>
             </q-item-section>
           </q-item>
+
+          <div class="q-my-md" />
+
+          <AqlList :items="filteredUnpaidInvoices" :metaLayout="['caption','label']" :meta="['Outstanding',(inv) => formatMoney(inv.balance)]" metaColor="negative" :layout="['caption','label','caption']" :content="['Progress','outletName',(item) => [item.Username,item.Date].join(' • ')]" />
         </q-card-section>
       </q-card>
 
@@ -179,6 +183,7 @@ import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHead
 import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
 import DataAddFAB from '../../../components/shared/DataAddFAB.vue'
+import AqlList from "components/shared/AqlList.vue";
 
 defineOptions({ name: 'OutletPaymentsIndexPage' })
 

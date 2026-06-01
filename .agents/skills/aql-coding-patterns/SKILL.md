@@ -50,7 +50,8 @@ Always organize `.vue` files in the following exact order:
 ### Attribute Alignment & Wrapping
 - **Single-Line Priority**: If all attributes for an element fit within one line (within the `130-150` character limit), keep them all on a single line.
 - **Multi-Line Attribute Grouping**: When attributes exceed the line limit, wrap them logically by category rather than placing every single attribute on its own line:
-  - **Group 1 (Same line as opening tag)**: Attributes without values (e.g., `disabled`, `readonly`, `clickable`).
+  - **Same-Line Tag Start (MUST follow)**: The first attribute of the element (regardless of which group it belongs to) MUST start on the same line as the opening tag itself, rather than starting on the next line.
+  - **Group 1**: Attributes without values (e.g., `disabled`, `readonly`, `clickable`).
   - **Group 2**: Static attributes with static string values (e.g., `class="text-bold"`, `label="Submit"`).
   - **Group 3**: Dynamic attributes/props with variables (e.g., `:items="items"`, `:to="routePath"`).
   - **Group 4**: Event listeners (e.g., `@click="save"`, `@input="handleInput"`).

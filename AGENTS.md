@@ -34,6 +34,7 @@
 - Skills are task adapters, not policy sources.
 - `aql-expert` remains relevant for AQL domain work across frontend, GAS, sheet metadata, resources, permissions, and workflows.
 - `aql-frontend-design` remains relevant for AQL-specific Quasar UI design, prototypes, and frontend visual refinement.
+- `aql-coding-patterns` remains relevant for maintaining strict and consistent code formatting, syntax (ES6+ in JS, hybrid in GAS/Vue), HTML/Vue template attribute groups, and layout styling across the codebase.
 - These skills must defer to this file, `Documents/MULTI_AGENT_PROTOCOL.md`, and `Documents/DOC_ROUTING.md` for role boundaries, required reads, and implementation rules.
 - If a skill conflicts with canonical docs, follow the canonical docs and update the skill.
 

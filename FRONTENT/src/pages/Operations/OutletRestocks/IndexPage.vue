@@ -49,13 +49,18 @@
     <!-- Search results -->
     <template v-else-if="searchTerm">
       <div class="text-subtitle1 text-weight-medium q-mb-md">Search Results</div>
-      <div class="row q-col-gutter-sm">
-        <div v-for="restock in searchedRestocks" :key="restock.Code" class="col-12 col-sm-6 col-md-4 col-lg-3">
-          <div class="cursor-pointer" @click="navigateTo(restock.Code)">
-            <RestockCard :restock="restock" :outlet-label="outletLabel(restock.OutletCode)" :item-summary="itemProgressSummary(restock)" />
-          </div>
-        </div>
-      </div>
+      <AqlList clickable highlight
+        item-key="Code" :icon="(row) => getProgressIcon(row.Progress)" :color="(row) => progressMeta(row.Progress).color"
+        :items="searchedRestocks" :layout="['label', 'caption', 'caption']"
+        :content="[
+          (row) => outletLabel(row.OutletCode),
+          (row) => [formatDate(row.Date), text(row.RequestedUser)].filter(Boolean).join(' • '),
+          (row) => itemProgressSummary(row)
+        ]"
+        :chip="(row) => progressMeta(row.Progress).label"
+        @click="(row) => navigateTo(row.Code)"
+        empty-text="No matching restocks found."
+      />
     </template>
 
     <!-- Main content: role-based sections -->
@@ -69,13 +74,15 @@
           <q-icon name="edit_note" color="grey-7" size="sm" class="q-mr-xs" />
           Drafts ({{ myDrafts.length }})
         </div>
-        <div class="row q-col-gutter-xs">
-          <div v-for="restock in myDrafts" :key="restock.Code" class="col-12 col-sm-6 col-md-4 col-lg-3">
-            <div class="cursor-pointer" @click="navigateTo(restock.Code)">
-              <RestockCard :restock="restock" :outlet-label="outletLabel(restock.OutletCode)" :item-summary="itemProgressSummary(restock)" />
-            </div>
-          </div>
-        </div>
+        <AqlList clickable highlight item-key="Code" icon="edit_note" color="grey-7"
+          :items="myDrafts" :layout="['label', 'caption', 'caption']"
+          :content="[
+            (row) => outletLabel(row.OutletCode),
+            (row) => [formatDate(row.Date), text(row.RequestedUser)].filter(Boolean).join(' • '),
+            (row) => itemProgressSummary(row)
+          ]"
+          @click="(row) => navigateTo(row.Code)"
+        />
       </div>
 
       <!-- canApprove: Pending Approval section -->
@@ -84,13 +91,15 @@
           <q-icon name="hourglass_top" color="orange" size="sm" class="q-mr-xs" />
           Pending Approval ({{ pendingApprovalList.length }})
         </div>
-        <div class="row q-col-gutter-xs">
-          <div v-for="restock in pendingApprovalList" :key="restock.Code" class="col-12 col-sm-6 col-md-4 col-lg-3">
-            <div class="cursor-pointer" @click="navigateTo(restock.Code)">
-              <RestockCard :restock="restock" :outlet-label="outletLabel(restock.OutletCode)" :item-summary="itemProgressSummary(restock)" />
-            </div>
-          </div>
-        </div>
+        <AqlList clickable highlight item-key="Code" icon="hourglass_top" color="orange"
+          :items="pendingApprovalList" :layout="['label', 'caption', 'caption']"
+          :content="[
+            (row) => outletLabel(row.OutletCode),
+            (row) => [formatDate(row.Date), text(row.RequestedUser)].filter(Boolean).join(' • '),
+            (row) => itemProgressSummary(row)
+          ]"
+          @click="(row) => navigateTo(row.Code)"
+        />
       </div>
 
       <!-- canApprove: Restocks with pending items after approval -->
@@ -99,13 +108,15 @@
           <q-icon name="pending_actions" color="secondary" size="sm" class="q-mr-xs" />
           Restocks with Pending Items ({{ pendingItemRestocks.length }})
         </div>
-        <div class="row q-col-gutter-xs">
-          <div v-for="restock in pendingItemRestocks" :key="restock.Code" class="col-12 col-sm-6 col-md-4 col-lg-3">
-            <div class="cursor-pointer" @click="navigateTo(restock.Code)">
-              <RestockCard :restock="restock" :outlet-label="outletLabel(restock.OutletCode)" :item-summary="itemProgressSummary(restock)" />
-            </div>
-          </div>
-        </div>
+        <AqlList clickable highlight item-key="Code" icon="pending_actions" color="secondary"
+          :items="pendingItemRestocks" :layout="['label', 'caption', 'caption']"
+          :content="[
+            (row) => outletLabel(row.OutletCode),
+            (row) => [formatDate(row.Date), text(row.RequestedUser)].filter(Boolean).join(' • '),
+            (row) => itemProgressSummary(row)
+          ]"
+          @click="(row) => navigateTo(row.Code)"
+        />
       </div>
 
       <!-- canCreate: Outlets with planned visits (today & this week) -->
@@ -114,18 +125,10 @@
           <q-icon name="store" color="primary" size="sm" class="q-mr-xs" />
           Outlets with Planned Visits ({{ todayOutlets.length }})
         </div>
-        <div class="row q-col-gutter-xs">
-          <div v-for="outlet in todayOutlets" :key="outlet.Code" class="col-12 col-sm-6 col-md-4 col-lg-3">
-            <q-card flat bordered class="priority-outlet-card cursor-pointer" @click="navigateToAddOutlet(outlet.Code)">
-              <q-card-section class="q-pa-sm">
-                <div class="row items-center no-wrap">
-                  <q-icon name="store" color="primary" size="xs" class="q-mr-xs" />
-                  <div class="text-caption text-weight-medium ellipsis">{{ outlet.Name || outlet.Code }}</div>
-                </div>
-              </q-card-section>
-            </q-card>
-          </div>
-        </div>
+        <AqlList highlight dense item-key="Code"
+          :items="todayOutlets" label="Name"
+          @click="(outlet) => navigateToAddOutlet(outlet.Code)"
+        />
       </div>
 
       <!-- History section -->
@@ -181,13 +184,17 @@
               <span class="text-overline text-weight-bold text-grey-6 q-px-sm">{{ group.label }}</span>
               <q-separator class="col" />
             </div>
-            <div class="row q-col-gutter-xs">
-              <div v-for="restock in group.items" :key="restock.Code" class="col-12 col-sm-6 col-md-4 col-lg-3">
-                <div class="cursor-pointer" @click="navigateTo(restock.Code)">
-                  <RestockCard :restock="restock" :outlet-label="outletLabel(restock.OutletCode)" :item-summary="itemProgressSummary(restock)" />
-                </div>
-              </div>
-            </div>
+            <AqlList clickable highlight
+              item-key="Code" :icon="(row) => getProgressIcon(row.Progress)" :color="(row) => progressMeta(row.Progress).color"
+              :items="group.items" :layout="['label', 'caption', 'caption']"
+              :content="[
+                (row) => outletLabel(row.OutletCode),
+                (row) => [formatDate(row.Date), text(row.RequestedUser)].filter(Boolean).join(' • '),
+                (row) => itemProgressSummary(row)
+              ]"
+              :chip="(row) => progressMeta(row.Progress).label"
+              @click="(row) => navigateTo(row.Code)"
+            />
           </div>
         </div>
       </q-expansion-item>
@@ -204,15 +211,28 @@ import { ref, computed, reactive, onMounted } from 'vue'
 import { useOutletRestocks } from '../../../composables/operations/outlets/useOutletRestocks.js'
 import { useOutletVisits } from '../../../composables/operations/outlets/useOutletVisits.js'
 import RestockSummaryBar from '../../../components/Operations/Outlets/RestockSummaryBar.vue'
-import RestockCard from '../../../components/Operations/Outlets/RestockCard.vue'
 import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
-import { RESTOCK_PROGRESS_ORDER, active, text, sortTime } from '../../../composables/operations/outlets/outletOperationsMeta.js'
+import { RESTOCK_PROGRESS_ORDER, active, text, sortTime, formatDate, progressMeta } from '../../../composables/operations/outlets/outletOperationsMeta.js'
+import AqlList from 'components/shared/AqlList.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
 import AppDate from '../../../components/shared/AppDate.vue'
 import DataAddFAB from '../../../components/shared/DataAddFAB.vue'
 import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
 
 defineOptions({ name: 'OutletRestocksIndexPage' })
+
+function getProgressIcon(progress) {
+  const map = {
+    DRAFT: 'edit_note',
+    PENDING_APPROVAL: 'hourglass_top',
+    REVISION_REQUIRED: 'feedback',
+    APPROVED: 'check_circle',
+    PARTIALLY_DELIVERED: 'local_shipping',
+    DELIVERED: 'done_all',
+    REJECTED: 'cancel'
+  }
+  return map[text(progress)] || 'inventory_2'
+}
 
 const flow = useOutletRestocks()
 const visitsFlow = useOutletVisits()

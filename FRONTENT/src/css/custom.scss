@@ -55,16 +55,10 @@
 
 // Interactive mobile-first cards & containers
 .interactive-list-card {
-  border-radius: 12px;
+  border-radius: 4px;
   border: 1px solid #e2e8f0;
   background: #ffffff;
   transition: all 0.2s ease;
-
-  &:hover, &:active {
-    background-color: #f0f9ff !important;
-    border-color: var(--q-primary);
-    transform: translateY(-2px);
-  }
 }
 
 .clickable-scale {

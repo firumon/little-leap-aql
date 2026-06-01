@@ -18,10 +18,13 @@
     <!-- Items List -->
     <template v-else>
       <q-item
-        class="interactive-list-card"
+        class="interactive-list-card q-px-md"
         v-for="(item, index) in items"
         :key="resolveKey(item, index)"
-        :class="{ 'border': isHighlighted, 'q-pa-sm':dense, 'q-py-md q-px-md':!dense }"
+        :clickable="isItemClickable"
+        v-ripple="isItemClickable"
+        @click="isItemClickable && emit('click', item)"
+        :class="{ 'border': isHighlighted, 'q-py-sm':dense, 'q-py-md q-px-md':!dense }"
         :style="isHighlighted ? { '--border-color': highlightColor(item) } : {}"
       >
         <!-- Dynamic Row Content slot -->
@@ -43,7 +46,7 @@
           <q-item-section>
             <!-- We loop over the contentArray sequence -->
             <template v-for="(contentProp, contentIndex) in contentArray" :key="contentIndex">
-              <component :is="getComponentType(contentIndex)">
+              <component v-if="contentProp !== false" :is="getComponentType(contentIndex)">
                 <template #default>
                   <slot :name="'content' + contentIndex" :item="item">
                     {{ resolveProp(contentProp, item) }}
@@ -161,18 +164,23 @@ const props = defineProps({
   meta: { type: Array, default: null },
   metaLayout: { type: Array, default: () => ['caption', 'label'] },
   metaColor: { type: [String, Function], default: null },
+  clickable: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['click'])
 const slots = useSlots()
+
+const isItemClickable = computed(() => {
+  return props.clickable && !props.btn && !slots.btn
+})
 
 const contentArray = computed(() => {
   if (props.content && Array.isArray(props.content)) {
     return props.content
   }
   return props.layout.map(rowType => {
-    if (rowType === 'label') return props.label
-    if (rowType === 'caption') return props.caption
+    if (rowType === 'label') return props.label || false
+    if (rowType === 'caption') return props.caption || false
     return null
   })
 })

@@ -91,7 +91,7 @@
 </template>
 
 <script setup>
-import { computed, useSlots, h, defineComponent } from 'vue'
+import { computed, useSlots, useAttrs, h, defineComponent } from 'vue'
 import { QItemLabel, QChip, colors } from 'quasar'
 
 defineOptions({ name: 'AqlList' })
@@ -186,14 +186,18 @@ const props = defineProps({
   metaCaption: { type: [String, Function], default: null },
   chip: { type: [String, Function], default: null },
   chipColor: { type: [String, Function], default: null },
-  clickable: { type: Boolean, default: false },
+  clickable: { type: Boolean, default: null },
 })
 
 const emit = defineEmits(['click'])
 const slots = useSlots()
+const attrs = useAttrs()
 
 const isItemClickable = computed(() => {
-  return props.clickable && !props.btn && !slots.btn
+  if (props.clickable !== null) {
+    return props.clickable && !props.btn && !slots.btn
+  }
+  return !!attrs.onClick && !props.btn && !slots.btn
 })
 
 const contentArray = computed(() => {

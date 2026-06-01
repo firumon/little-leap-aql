@@ -47,12 +47,9 @@
       <div class="text-subtitle1 text-weight-medium q-mb-md">Search Results</div>
       <div v-if="!searchedVisits.length" class="text-grey text-center q-pa-xl">No matching visits found.</div>
       <div v-else>
-        <AqlList dense separator item-key="Code" :highlight="true" :highlight-color="getHighlightColor" :clickable="allowed('update')" @click="onVisitClick" :layout="['label', 'caption', 'caption']" :content="[(v) => outletLabel(v.OutletCode), (v) => getVisitDateLine(v), (v) => v.ProgressPlannedComment]" :items="searchedVisits" :meta="[() => '']">
+        <AqlList dense separator item-key="Code" :highlight="true" :highlight-color="getHighlightColor" :clickable="allowed('update')" @click="onVisitClick" :layout="['label', 'caption', 'caption']" :content="[(v) => outletLabel(v.OutletCode), (v) => getVisitDateLine(v), (v) => v.ProgressPlannedComment]" :items="searchedVisits" :chip="getVisitChipLabel" :chip-color="getVisitChipColor">
           <template #content2="{ item: visit }">
             <div v-if="visit.ProgressPlannedComment" class="text-italic text-grey-6">{{ visit.ProgressPlannedComment }}</div>
-          </template>
-          <template #meta0="{ item: visit }">
-            <OutletProgressChip :progress="visitProgress(visit)" />
           </template>
         </AqlList>
       </div>
@@ -208,12 +205,9 @@
               <q-separator class="col" />
             </div>
             <div>
-              <AqlList dense separator item-key="Code" :highlight="true" :highlight-color="getHighlightColor" :clickable="false" :layout="['label', 'caption', 'caption']" :content="[(v) => outletLabel(v.OutletCode), (v) => getVisitDateLine(v), (v) => getHistoryComment(v)]" :items="group.items" :meta="[() => '']">
+              <AqlList dense separator item-key="Code" highlight :color="getVisitChipColor" :layout="['label', 'caption', 'caption']" :content="[(v) => outletLabel(v.OutletCode), (v) => getVisitDateLine(v), (v) => getHistoryComment(v)]" :items="group.items" :chip="getVisitChipLabel">
                 <template #content2="{ item: visit }">
                   <div v-if="getHistoryComment(visit)" class="text-caption text-italic text-grey-6 q-mt-xs">{{ getHistoryComment(visit) }}</div>
-                </template>
-                <template #meta0="{ item: visit }">
-                  <OutletProgressChip :progress="visitProgress(visit)" />
                 </template>
               </AqlList>
             </div>
@@ -412,7 +406,6 @@ import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHead
 import DataAddFAB from '../../../components/shared/DataAddFAB.vue'
 import AppDate from '../../../components/shared/AppDate.vue'
 import ActionCommentDialog from '../../../components/shared/ActionCommentDialog.vue'
-import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
 import AqlList from 'components/shared/AqlList.vue'
@@ -427,7 +420,7 @@ const {
   summaryStats, overdueVisits, todayVisits, thisWeekVisits, futureVisits,
   searchedVisits, historyVisits, filteredHistoryVisits, filteredHistoryByMonth,
   outletsWithoutVisits,
-  visitProgress, outletLabel, visitUrgency, visitDateDisplay,
+  visitProgress, outletLabel, visitUrgency, visitDateDisplay, progressMeta,
   reloadIndex, navigateToAdd, outletOptions,
   completeVisit, postponeVisit, cancelVisit, planVisit,
   historyStatusFilter, historyDateFrom, historyDateTo
@@ -466,6 +459,16 @@ function getVisitDateLine(visit) {
   if (d.relative && d.absolute) return `${d.relative} · ${d.absolute}`
   if (d.absolute) return d.absolute
   return 'No date'
+}
+
+function getVisitChipLabel(visit) {
+  const p = visitProgress(visit)
+  return progressMeta(p).label
+}
+
+function getVisitChipColor(visit) {
+  const p = visitProgress(visit)
+  return progressMeta(p).color
 }
 
 function getHistoryComment(visit) {

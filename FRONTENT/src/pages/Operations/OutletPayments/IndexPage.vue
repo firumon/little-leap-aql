@@ -60,49 +60,30 @@
           <q-separator class="q-mb-md" />
 
           <!-- Pending Invoices List -->
-          <q-list v-if="filteredUnpaidInvoices.length > 0" class="q-gutter-y-sm">
-            <q-item
-              v-for="inv in filteredUnpaidInvoices"
-              :key="inv.Code"
-              clickable
-              v-ripple
-              @click="navigateToAddWithInvoice(inv.Code, inv.OutletCode)"
-              class="interactive-list-card q-pa-md shadow-sm"
-            >
-              <q-item-section avatar class="self-center">
-                <q-avatar color="orange-1" text-color="orange-9" icon="receipt_long" size="36px" class="shadow-xs" />
-              </q-item-section>
+          <AqlList
+            :items="filteredUnpaidInvoices"
+            item-key="Code"
+            icon="receipt_long"
+            icon-color="orange-9"
+            label="outletName"
+            :caption="(inv) => `${inv.Code} • ${formatDisplayDate(inv.Date)}`"
+            :meta="[() => 'Outstanding', (inv) => formatMoney(inv.balance)]"
+            meta-color="negative"
+            clickable
+            @click="(inv) => navigateToAddWithInvoice(inv.Code, inv.OutletCode)"
+          >
+            <!-- Custom Empty State slot -->
+            <template #empty>
+              <q-item class="empty-state-container q-py-xl text-center">
+                <q-item-section>
+                  <q-icon name="check_circle" size="64px" color="positive" class="q-mb-md block mx-auto" />
+                  <q-item-label class="text-h6 text-weight-bold text-grey-8">All Settled!</q-item-label>
+                  <q-item-label class="text-body2 text-grey-6">There are currently no unpaid consumption invoices.</q-item-label>
+                </q-item-section>
+              </q-item>
+            </template>
+          </AqlList>
 
-              <q-item-section>
-                <q-item-label class="text-weight-bold text-subtitle2 text-grey-9">
-                  {{ inv.outletName }}
-                </q-item-label>
-                <q-item-label caption class="text-grey-6" style="font-size: 0.75rem;">
-                  {{ inv.Code }} • {{ formatDisplayDate(inv.Date) }}
-                </q-item-label>
-              </q-item-section>
-
-              <q-item-section side class="self-center text-right">
-                <q-item-label caption class="text-weight-medium text-grey-6">Outstanding</q-item-label>
-                <q-item-label class="text-subtitle2 text-weight-bold text-negative">
-                  {{ formatMoney(inv.balance) }}
-                </q-item-label>
-              </q-item-section>
-            </q-item>
-          </q-list>
-
-          <!-- Empty State for Pending Invoices -->
-          <q-item v-else class="empty-state-container q-py-xl text-center">
-            <q-item-section>
-              <q-icon name="check_circle" size="64px" color="positive" class="q-mb-md block mx-auto" />
-              <q-item-label class="text-h6 text-weight-bold text-grey-8">All Settled!</q-item-label>
-              <q-item-label class="text-body2 text-grey-6">There are currently no unpaid consumption invoices.</q-item-label>
-            </q-item-section>
-          </q-item>
-
-          <div class="q-my-md" />
-
-          <AqlList :items="filteredUnpaidInvoices" :metaLayout="['caption','label']" :meta="['Outstanding',(inv) => formatMoney(inv.balance)]" metaColor="negative" :layout="['caption','label','caption']" :content="['Progress','outletName',(item) => [item.Username,item.Date].join(' • ')]" />
         </q-card-section>
       </q-card>
 
@@ -126,45 +107,29 @@
           <q-separator class="q-mb-md" />
 
           <!-- Recent Payments List -->
-          <q-list v-if="filteredRecentPayments.length > 0" class="q-gutter-y-sm">
-            <q-item
-              v-for="p in filteredRecentPayments"
-              :key="p.Code"
-              clickable
-              v-ripple
-              @click="navigateToView(p.Code)"
-              class="interactive-list-card q-pa-md shadow-sm"
-            >
-              <q-item-section avatar class="self-center">
-                <q-avatar color="teal-1" text-color="teal-9" icon="payments" size="36px" class="shadow-xs" />
-              </q-item-section>
-
-              <q-item-section>
-                <q-item-label class="text-weight-bold text-subtitle2 text-grey-9">
-                  {{ p.outletName }}
-                </q-item-label>
-                <q-item-label caption class="text-grey-6" style="font-size: 0.75rem;">
-                  Ref: {{ p.Code }} • By {{ p.Username }} • {{ p.Mode }}
-                </q-item-label>
-              </q-item-section>
-
-              <q-item-section side class="self-center text-right">
-                <q-item-label caption class="text-weight-medium text-grey-6">{{ formatDisplayDate(p.Date) }}</q-item-label>
-                <q-item-label class="text-subtitle2 text-weight-bold text-positive">
-                  {{ formatMoney(p.Amount) }}
-                </q-item-label>
-              </q-item-section>
-            </q-item>
-          </q-list>
-
-          <!-- Empty State for Recent Payments -->
-          <q-item v-else class="empty-state-container q-py-xl text-center">
-            <q-item-section>
-              <q-icon name="history" size="64px" color="grey-4" class="q-mb-md block q-mx-auto" />
-              <q-item-label class="text-subtitle1 text-weight-bold text-grey-6">No Recent Payments</q-item-label>
-              <q-item-label class="text-body2 text-grey-5">No payments have been recorded in the last 7 days.</q-item-label>
-            </q-item-section>
-          </q-item>
+          <AqlList
+            :items="filteredRecentPayments"
+            item-key="Code"
+            icon="payments"
+            icon-color="teal-9"
+            label="outletName"
+            :caption="(p) => `Ref: ${p.Code} • By ${p.Username} • ${p.Mode}`"
+            :meta="[(p) => formatDisplayDate(p.Date), (p) => formatMoney(p.Amount)]"
+            meta-color="positive"
+            clickable
+            @click="(p) => navigateToView(p.Code)"
+          >
+            <!-- Custom Empty State slot -->
+            <template #empty>
+              <q-item class="empty-state-container q-py-xl text-center">
+                <q-item-section>
+                  <q-icon name="history" size="64px" color="grey-4" class="q-mb-md block q-mx-auto" />
+                  <q-item-label class="text-subtitle1 text-weight-bold text-grey-6">No Recent Payments</q-item-label>
+                  <q-item-label class="text-body2 text-grey-5">No payments have been recorded in the last 7 days.</q-item-label>
+                </q-item-section>
+              </q-item>
+            </template>
+          </AqlList>
         </q-card-section>
       </q-card>
     </template>

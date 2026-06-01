@@ -46,12 +46,15 @@
     <template v-else-if="searchTerm">
       <div class="text-subtitle1 text-weight-medium q-mb-md">Search Results</div>
       <div v-if="!searchedVisits.length" class="text-grey text-center q-pa-xl">No matching visits found.</div>
-      <div v-else class="column q-gutter-md">
-        <VisitCard
-          v-for="visit in searchedVisits" :key="visit.Code" :visit="visit"
-          :show-actions="visitProgress(visit) === 'PLANNED' && allowed('update')"
-          @complete="onComplete" @postpone="onPostpone" @cancel="onCancel"
-        />
+      <div v-else>
+        <AqlList dense separator item-key="Code" :highlight="true" :highlight-color="getHighlightColor" :clickable="allowed('update')" @click="onVisitClick" :layout="['label', 'caption', 'caption']" :content="[(v) => outletLabel(v.OutletCode), (v) => getVisitDateLine(v), (v) => v.ProgressPlannedComment]" :items="searchedVisits" :meta="[() => '']">
+          <template #content2="{ item: visit }">
+            <div v-if="visit.ProgressPlannedComment" class="text-italic text-grey-6">{{ visit.ProgressPlannedComment }}</div>
+          </template>
+          <template #meta0="{ item: visit }">
+            <OutletProgressChip :progress="visitProgress(visit)" />
+          </template>
+        </AqlList>
       </div>
     </template>
 
@@ -73,9 +76,12 @@
         <div v-if="!overdueVisits.length" class="text-positive text-caption q-pa-sm">
           <q-icon name="check_circle" size="xs" /> No overdue visits — great job!
         </div>
-        <div v-else class="column q-gutter-md">
-          <VisitCard v-for="visit in overdueVisits" :key="visit.Code" :visit="visit" :show-actions="allowed('update')"
-            @complete="onComplete" @postpone="onPostpone" @cancel="onCancel" />
+        <div v-else>
+          <AqlList dense separator item-key="Code" :highlight="true" :highlight-color="getHighlightColor" :clickable="allowed('update')" @click="onVisitClick" :layout="['label', 'caption', 'caption']" :content="[(v) => outletLabel(v.OutletCode), (v) => getVisitDateLine(v), (v) => v.ProgressPlannedComment]" :items="overdueVisits">
+            <template #content2="{ item: visit }">
+              <q-item-label caption v-if="visit.ProgressPlannedComment" class="text-italic">{{ visit.ProgressPlannedComment }}</q-item-label>
+            </template>
+          </AqlList>
         </div>
       </div>
 
@@ -88,9 +94,12 @@
         <div v-if="!todayVisits.length" class="text-grey text-caption q-pa-sm">
           Nothing scheduled for today. Check upcoming or plan a visit.
         </div>
-        <div v-else class="column q-gutter-y-xs">
-          <VisitCard v-for="visit in todayVisits" :key="visit.Code" :visit="visit" :show-actions="allowed('update')"
-            @complete="onComplete" @postpone="onPostpone" @cancel="onCancel" />
+        <div v-else>
+          <AqlList dense separator item-key="Code" :highlight="true" :highlight-color="getHighlightColor" :clickable="allowed('update')" @click="onVisitClick" :layout="['label', 'caption', 'caption']" :content="[(v) => outletLabel(v.OutletCode), (v) => getVisitDateLine(v), (v) => v.ProgressPlannedComment]" :items="todayVisits">
+            <template #content2="{ item: visit }">
+              <div v-if="visit.ProgressPlannedComment" class="text-caption text-italic text-grey-6 q-mt-xs">{{ visit.ProgressPlannedComment }}</div>
+            </template>
+          </AqlList>
         </div>
       </div>
 
@@ -116,9 +125,12 @@
             </span>
           </q-item-section>
         </template>
-        <div v-if="thisWeekVisits.length" class="column q-gutter-y-xs q-pt-sm">
-          <VisitCard v-for="visit in thisWeekVisits" :key="visit.Code" :visit="visit" :show-actions="allowed('update')"
-            @complete="onComplete" @postpone="onPostpone" @cancel="onCancel" />
+        <div v-if="thisWeekVisits.length" class="q-pt-sm">
+          <AqlList dense separator item-key="Code" :highlight="true" :highlight-color="getHighlightColor" :clickable="allowed('update')" @click="onVisitClick" :layout="['label', 'caption', 'caption']" :content="[(v) => outletLabel(v.OutletCode), (v) => getVisitDateLine(v), (v) => v.ProgressPlannedComment]" :items="thisWeekVisits">
+            <template #content2="{ item: visit }">
+              <div v-if="visit.ProgressPlannedComment" class="text-caption text-italic text-grey-6 q-mt-xs">{{ visit.ProgressPlannedComment }}</div>
+            </template>
+          </AqlList>
         </div>
         <div v-else class="text-grey text-caption q-pa-sm">No visits this week.</div>
       </q-expansion-item>
@@ -139,9 +151,12 @@
             </span>
           </q-item-section>
         </template>
-        <div v-if="futureVisits.length" class="column q-gutter-y-xs q-pt-sm">
-          <VisitCard v-for="visit in futureVisits" :key="visit.Code" :visit="visit" :show-actions="allowed('update')"
-            @complete="onComplete" @postpone="onPostpone" @cancel="onCancel" />
+        <div v-if="futureVisits.length" class="q-pt-sm">
+          <AqlList dense separator item-key="Code" :highlight="true" :highlight-color="getHighlightColor" :clickable="allowed('update')" @click="onVisitClick" :layout="['label', 'caption', 'caption']" :content="[(v) => outletLabel(v.OutletCode), (v) => getVisitDateLine(v), (v) => v.ProgressPlannedComment]" :items="futureVisits">
+            <template #content2="{ item: visit }">
+              <div v-if="visit.ProgressPlannedComment" class="text-caption text-italic text-grey-6 q-mt-xs">{{ visit.ProgressPlannedComment }}</div>
+            </template>
+          </AqlList>
         </div>
         <div v-else class="text-grey text-caption q-pa-sm">No upcoming visits.</div>
       </q-expansion-item>
@@ -192,8 +207,15 @@
               <span class="text-overline text-weight-bold text-grey-6 q-px-sm">{{ group.label }}</span>
               <q-separator class="col" />
             </div>
-            <div class="column q-gutter-y-xs">
-              <VisitCard v-for="visit in group.items" :key="visit.Code" :visit="visit" />
+            <div>
+              <AqlList dense separator item-key="Code" :highlight="true" :highlight-color="getHighlightColor" :clickable="false" :layout="['label', 'caption', 'caption']" :content="[(v) => outletLabel(v.OutletCode), (v) => getVisitDateLine(v), (v) => getHistoryComment(v)]" :items="group.items" :meta="[() => '']">
+                <template #content2="{ item: visit }">
+                  <div v-if="getHistoryComment(visit)" class="text-caption text-italic text-grey-6 q-mt-xs">{{ getHistoryComment(visit) }}</div>
+                </template>
+                <template #meta0="{ item: visit }">
+                  <OutletProgressChip :progress="visitProgress(visit)" />
+                </template>
+              </AqlList>
             </div>
           </div>
         </div>
@@ -222,66 +244,137 @@
         </template>
 
         <div class="q-pt-sm">
-          <div v-if="!outletsWithoutVisits.length" class="text-positive text-caption q-pa-sm">
-            <q-icon name="check_circle" size="xs" /> All outlets have planned visits.
-          </div>
-          <q-list v-else dense separator>
-            <q-item v-for="outlet in outletsWithoutVisits" :key="outlet.Code">
-              <q-item-section>
-                <span class="text-caption">{{ outlet.Name || outlet.Code }}</span>
-                <span class="text-caption text-grey-6">{{ outlet.Code }}</span>
-              </q-item-section>
-              <q-item-section side v-if="allowed('create')">
-                <q-btn outline dense color="primary" icon="add" label="Plan Visit" @click="openPlanDialog(outlet)" />
-              </q-item-section>
-            </q-item>
-          </q-list>
+          <AqlList dense separator item-key="Code" btn-color="primary" @click="openPlanDialog" :label="(outlet) => outlet.Name || outlet.Code" :items="outletsWithoutVisits" :btn="allowed('create') ? 'add' : null">
+            <!-- Custom Empty State slot -->
+            <template #empty>
+              <div class="text-positive text-caption q-pa-sm">
+                <q-icon name="check_circle" size="xs" /> All outlets have planned visits.
+              </div>
+            </template>
+          </AqlList>
         </div>
       </q-expansion-item>
     </template>
 
     <DataAddFAB tooltip="Plan Visit" custom-click @click="openPlanDialog()" />
 
-    <ActionCommentDialog
-      v-model="postponeDialog"
-      title="Postpone Visit"
-      label="Reason"
-      comment-required
-      submit-label="Postpone"
-      submit-color="primary"
-      :saving="saving"
-      :disable-submit="!postponeForm.date"
-      @confirm="handlePostponeConfirm"
-    >
-      <template #fields>
-        <AppDate v-model="postponeForm.date" label="New Date" outlined dense hide-bottom-space />
-      </template>
-    </ActionCommentDialog>
+    <q-dialog v-model="actionSelectionDialog" position="bottom">
+      <q-card class="q-pa-md" style="border-radius: 16px 16px 0 0; max-width: 500px; margin: 0 auto; width: 100%;">
+        <q-card-section class="q-pb-none row items-center justify-between no-wrap">
+          <div class="text-subtitle1 text-weight-bold text-grey-9">{{ selectedVisit ? outletLabel(selectedVisit.OutletCode) : '' }}</div>
+          <div><q-btn flat round dense icon="close" v-close-popup /></div>
+        </q-card-section>
 
-    <ActionCommentDialog
-      v-model="cancelDialog"
-      title="Cancel Visit"
-      label="Reason"
-      comment-required
-      submit-label="Cancel Visit"
-      submit-color="negative"
-      :saving="saving"
-      @confirm="handleCancelConfirm"
-    >
-      <template #fields>
-        <AppDate v-model="cancelForm.nextDate" label="Next Visit Date (optional)" outlined dense clearable hide-bottom-space />
-      </template>
-    </ActionCommentDialog>
+        <q-card-section class="q-py-md column q-gutter-y-sm">
+          <div class="text-caption text-grey-6">Select action:</div>
 
-    <ActionCommentDialog
-      v-model="completeDialog"
-      title="Complete Visit"
-      label="Comment (optional)"
-      submit-label="Complete Visit"
-      submit-color="positive"
-      :saving="saving"
-      @confirm="handleCompleteConfirm"
-    />
+          <div class="column q-gutter-y-sm q-mb-md">
+            <!-- Complete Option -->
+            <q-item
+              clickable
+              v-ripple
+              @click="chosenAction = 'complete'"
+              :class="{ 'bg-green-1 text-green-9': chosenAction === 'complete' }"
+              :style="{
+                border: '1px solid',
+                borderColor: chosenAction === 'complete' ? '#21ba45' : '#e2e8f0',
+                borderRadius: '8px',
+                transition: 'all 0.2s ease'
+              }"
+              class="q-pa-sm"
+            >
+              <q-item-section avatar>
+                <q-icon name="check_circle" :color="chosenAction === 'complete' ? 'positive' : 'grey-6'" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label class="text-weight-bold text-subtitle2">Complete Visit</q-item-label>
+                <q-item-label caption :class="{ 'text-green-8': chosenAction === 'complete' }">
+                  Mark this planned visit as completed
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <!-- Postpone Option -->
+            <q-item
+              clickable
+              v-ripple
+              @click="chosenAction = 'postpone'"
+              :class="{ 'bg-orange-1 text-orange-9': chosenAction === 'postpone' }"
+              :style="{
+                border: '1px solid',
+                borderColor: chosenAction === 'postpone' ? '#f2c037' : '#e2e8f0',
+                borderRadius: '8px',
+                transition: 'all 0.2s ease'
+              }"
+              class="q-pa-sm"
+            >
+              <q-item-section avatar>
+                <q-icon name="schedule" :color="chosenAction === 'postpone' ? 'warning' : 'grey-6'" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label class="text-weight-bold text-subtitle2">Postpone / Reschedule</q-item-label>
+                <q-item-label caption :class="{ 'text-orange-8': chosenAction === 'postpone' }">
+                  Reschedule planned visit to another day
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+
+            <!-- Cancel Option -->
+            <q-item
+              clickable
+              v-ripple
+              @click="chosenAction = 'cancel'"
+              :class="{ 'bg-red-1 text-red-9': chosenAction === 'cancel' }"
+              :style="{
+                border: '1px solid',
+                borderColor: chosenAction === 'cancel' ? '#c10015' : '#e2e8f0',
+                borderRadius: '8px',
+                transition: 'all 0.2s ease'
+              }"
+              class="q-pa-sm"
+            >
+              <q-item-section avatar>
+                <q-icon name="cancel" :color="chosenAction === 'cancel' ? 'negative' : 'grey-6'" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label class="text-weight-bold text-subtitle2">Cancel Visit</q-item-label>
+                <q-item-label caption :class="{ 'text-red-8': chosenAction === 'cancel' }">
+                  Cancel this planned visit entirely
+                </q-item-label>
+              </q-item-section>
+            </q-item>
+          </div>
+
+          <div v-if="chosenAction === 'complete'" class="column q-gutter-y-sm">
+            <q-input v-model="actionForm.comment" label="Comment (optional)" outlined type="textarea" />
+          </div>
+
+          <div v-else-if="chosenAction === 'postpone'" class="column q-gutter-y-sm">
+            <AppDate v-model="actionForm.date" label="New Date" outlined dense hide-bottom-space />
+            <q-input v-model="actionForm.reason" label="Reason (mandatory)" outlined type="textarea" />
+          </div>
+
+          <div v-else-if="chosenAction === 'cancel'" class="column q-gutter-y-sm">
+            <AppDate v-model="actionForm.nextDate" label="Next Visit Date (optional)" outlined dense clearable hide-bottom-space />
+            <q-input v-model="actionForm.reason" label="Reason (mandatory)" outlined type="textarea" />
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right" class="q-px-md">
+          <q-btn flat label="Cancel" color="grey-7" v-close-popup />
+          <q-btn
+            :label="chosenAction === 'complete' ? 'Complete Visit' : chosenAction === 'postpone' ? 'Postpone' : 'Cancel Visit'"
+            :color="chosenAction === 'complete' ? 'positive' : chosenAction === 'postpone' ? 'warning' : 'negative'"
+            :loading="saving"
+            :disable="
+              (chosenAction === 'postpone' && (!actionForm.date || !actionForm.reason)) ||
+              (chosenAction === 'cancel' && !actionForm.reason)
+            "
+            @click="handleActionConfirm"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
 
     <ActionCommentDialog
       v-model="planDialog"
@@ -313,15 +406,16 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { todayISO } from '../../../composables/operations/outlets/outletOperationsMeta.js'
 import { useOutletVisits } from '../../../composables/operations/outlets/useOutletVisits.js'
-import VisitCard from '../../../components/Operations/Outlets/VisitCard.vue'
 import VisitSummaryBar from '../../../components/Operations/Outlets/VisitSummaryBar.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
 import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
 import DataAddFAB from '../../../components/shared/DataAddFAB.vue'
 import AppDate from '../../../components/shared/AppDate.vue'
 import ActionCommentDialog from '../../../components/shared/ActionCommentDialog.vue'
+import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
+import AqlList from 'components/shared/AqlList.vue'
 
 defineOptions({ name: 'OutletVisitsIndexPage' })
 
@@ -333,7 +427,7 @@ const {
   summaryStats, overdueVisits, todayVisits, thisWeekVisits, futureVisits,
   searchedVisits, historyVisits, filteredHistoryVisits, filteredHistoryByMonth,
   outletsWithoutVisits,
-  visitProgress,
+  visitProgress, outletLabel, visitUrgency, visitDateDisplay,
   reloadIndex, navigateToAdd, outletOptions,
   completeVisit, postponeVisit, cancelVisit, planVisit,
   historyStatusFilter, historyDateFrom, historyDateTo
@@ -355,13 +449,76 @@ const historyFilterOptions = [
 const isGloballyEmpty = computed(() => summaryStats.value.total === 0 && !historyVisits.value.length)
 const shouldBlockUi = computed(() => loading.value && hasUninitiatedDependencies.value)
 
-const postponeDialog = ref(false)
-const postponeTarget = ref(null)
-const postponeForm = ref({ date: todayISO(), reason: '' })
+const actionSelectionDialog = ref(false)
+const selectedVisit = ref(null)
+const chosenAction = ref('complete')
+const actionForm = ref({ date: todayISO(), reason: '', nextDate: '', comment: '' })
 
-const cancelDialog = ref(false)
-const cancelTarget = ref(null)
-const cancelForm = ref({ reason: '', nextDate: '' })
+function getHighlightColor(visit) {
+  const urgency = visitUrgency(visit)
+  if (urgency === 'overdue') return 'negative'
+  if (urgency === 'today') return 'primary'
+  return 'grey-5'
+}
+
+function getVisitDateLine(visit) {
+  const d = visitDateDisplay(visit)
+  if (d.relative && d.absolute) return `${d.relative} · ${d.absolute}`
+  if (d.absolute) return d.absolute
+  return 'No date'
+}
+
+function getHistoryComment(visit) {
+  const progress = visitProgress(visit)
+  if (progress === 'COMPLETED') return visit.ProgressCompletedComment
+  if (progress === 'POSTPONED') return visit.ProgressPostponedComment
+  if (progress === 'CANCELLED') return visit.ProgressCancelledComment
+  return ''
+}
+
+function onVisitClick(visit) {
+  if (visitProgress(visit) !== 'PLANNED' || !allowed('update')) return
+  selectedVisit.value = visit
+  actionForm.value = { date: todayISO(), reason: '', nextDate: '', comment: '' }
+  chosenAction.value = 'complete'
+  actionSelectionDialog.value = true
+}
+
+async function handleActionConfirm() {
+  if (!selectedVisit.value) return
+  saving.value = true
+  try {
+    if (chosenAction.value === 'complete') {
+      const result = await completeVisit(selectedVisit.value, {
+        ProgressCompletedComment: actionForm.value.comment
+      })
+      if (result) {
+        actionSelectionDialog.value = false
+        await reloadIndex()
+      }
+    } else if (chosenAction.value === 'postpone') {
+      const result = await postponeVisit(selectedVisit.value, {
+        Date: actionForm.value.date,
+        ProgressPostponedComment: actionForm.value.reason
+      })
+      if (result) {
+        actionSelectionDialog.value = false
+        await reloadIndex()
+      }
+    } else if (chosenAction.value === 'cancel') {
+      const result = await cancelVisit(selectedVisit.value, {
+        ProgressCancelledComment: actionForm.value.reason,
+        Date: actionForm.value.nextDate || undefined
+      })
+      if (result) {
+        actionSelectionDialog.value = false
+        await reloadIndex()
+      }
+    }
+  } finally {
+    saving.value = false
+  }
+}
 
 function scrollToSection(key) {
   const el = document.getElementById(`section-${key}`)
@@ -374,57 +531,7 @@ function scrollToSection(key) {
   }
 }
 
-const completeDialog = ref(false)
-const completeTarget = ref(null)
-
-async function onComplete(visit) {
-  completeTarget.value = visit
-  completeDialog.value = true
-}
-
-async function handleCompleteConfirm(comment) {
-  const result = await completeVisit(completeTarget.value, {
-    ProgressCompletedComment: comment
-  })
-  if (result) {
-    completeDialog.value = false
-    await reloadIndex()
-  }
-}
-
-function onPostpone(visit) {
-  postponeTarget.value = visit
-  postponeForm.value = { date: todayISO(), reason: '' }
-  postponeDialog.value = true
-}
-
-async function handlePostponeConfirm(reason) {
-  const result = await postponeVisit(postponeTarget.value, {
-    Date: postponeForm.value.date,
-    ProgressPostponedComment: reason
-  })
-  if (result) {
-    postponeDialog.value = false
-    await reloadIndex()
-  }
-}
-
-function onCancel(visit) {
-  cancelTarget.value = visit
-  cancelForm.value = { reason: '', nextDate: '' }
-  cancelDialog.value = true
-}
-
-async function handleCancelConfirm(reason) {
-  const result = await cancelVisit(cancelTarget.value, {
-    ProgressCancelledComment: reason,
-    Date: cancelForm.value.nextDate || undefined
-  })
-  if (result) {
-    cancelDialog.value = false
-    await reloadIndex()
-  }
-}
+// Old methods removed - unified action dialog handles all operations
 
 const planDialog = ref(false)
 const planTarget = ref(null)

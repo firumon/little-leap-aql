@@ -184,7 +184,7 @@ const contentArray = computed(() => {
   return props.layout.map(rowType => {
     if (rowType === 'label') return props.label || false
     if (rowType === 'caption') return props.caption || false
-    return null
+    return false
   })
 })
 
@@ -261,9 +261,9 @@ const metaArray = computed(() => {
     return props.meta
   }
   return props.metaLayout.map(rowType => {
-    if (rowType === 'label') return props.metaLabel
-    if (rowType === 'caption') return props.metaCaption
-    return null
+    if (rowType === 'label') return props.metaLabel || false
+    if (rowType === 'caption') return props.metaCaption || false
+    return false
   })
 })
 

@@ -46,29 +46,30 @@
           <q-item-section>
             <!-- We loop over the contentArray sequence -->
             <template v-for="(contentProp, contentIndex) in contentArray" :key="contentIndex">
-              <component v-if="contentProp !== false" :is="getComponentType(contentIndex)">
-                <template #default>
-                  <slot :name="'content' + contentIndex" :item="item">
+              <slot :name="'content' + contentIndex" :item="item">
+                <component v-if="contentProp !== false" :is="getComponentType(contentIndex)">
+                  <template #default>
                     {{ resolveProp(contentProp, item) }}
-                  </slot>
-                </template>
-              </component>
+                  </template>
+                </component>
+              </slot>
             </template>
           </q-item-section>
 
           <!-- Meta Section -->
           <q-item-section v-if="hasMeta(item)" side>
             <template v-for="(metaProp, metaIndex) in metaArray" :key="metaIndex">
-              <component
-                :is="getMetaComponentType(metaIndex)"
-                :color="metaColor(item)"
-              >
-                <template #default>
-                  <slot :name="'meta' + metaIndex" :item="item">
+              <slot :name="'meta' + metaIndex" :item="item">
+                <component
+                  v-if="metaProp !== false"
+                  :is="getMetaComponentType(metaIndex)"
+                  :color="metaColor(item)"
+                >
+                  <template #default>
                     {{ resolveProp(metaProp, item) }}
-                  </slot>
-                </template>
-              </component>
+                  </template>
+                </component>
+              </slot>
             </template>
           </q-item-section>
 
@@ -164,6 +165,8 @@ const props = defineProps({
   meta: { type: Array, default: null },
   metaLayout: { type: Array, default: () => ['caption', 'label'] },
   metaColor: { type: [String, Function], default: null },
+  metaLabel: { type: [String, Function], default: null },
+  metaCaption: { type: [String, Function], default: null },
   clickable: { type: Boolean, default: false },
 })
 
@@ -257,7 +260,11 @@ const metaArray = computed(() => {
   if (props.meta && Array.isArray(props.meta)) {
     return props.meta
   }
-  return []
+  return props.metaLayout.map(rowType => {
+    if (rowType === 'label') return props.metaLabel
+    if (rowType === 'caption') return props.metaCaption
+    return null
+  })
 })
 
 const metaColor = computed(() => (item) => {
@@ -265,7 +272,7 @@ const metaColor = computed(() => (item) => {
 })
 
 function hasMeta(item) {
-  return metaArray.value.length > 0
+  return metaArray.value.some(prop => !!resolveProp(prop, item))
 }
 
 function getMetaComponentType(metaIndex) {

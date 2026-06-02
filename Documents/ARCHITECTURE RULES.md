@@ -1,9 +1,5 @@
 # AQL Frontend Architecture Rules (STRICT)
 
-> [!IMPORTANT]
-> **Quasar Framework AI Knowledge Base:**
-> For comprehensive component-specific constraints, mobile-first design decisions, form lifecycles, virtual scrolls, overlays, and styling utilities, all AI coding agents MUST consult and follow the [Quasar Framework AI Knowledge Base Index](file:///f:/LITTLE%20LEAP/AQL/References/Quasar/QUASAR_INDEX.md) prior to writing or modifying any frontend component code.
-
 ---
 
 ## 1. SERVICES LAYER
@@ -254,6 +250,9 @@ const { _C, defaultCurrency } = useCurrency()
 
 ## 5. COMPONENTS
 
+> [!IMPORTANT]
+> **Components are the primary Quasar surface.** Before choosing, writing, or modifying any component, you MUST consult the [Quasar Framework AI Knowledge Base Index](file:///f:/LITTLE%20LEAP/AQL/References/Quasar/QUASAR_INDEX.md) and follow the relevant topic-specific file. The top-of-file callout is the global contract; this is the inline reminder at the layer where it is applied.
+
 * Can ONLY use composables
 
 ---
@@ -364,6 +363,9 @@ Components MUST NOT use:
 ---
 
 ## 9. FRONTEND COMPONENT & STYLING CONTRACT (STRICT)
+
+> [!IMPORTANT]
+> **This section is the Quasar-first enforcement layer.** Every layout, component, utility class, and styling decision MUST be cross-checked against the [Quasar Framework AI Knowledge Base Index](file:///f:/LITTLE%20LEAP/AQL/References/Quasar/QUASAR_INDEX.md) — especially [10_QUASAR_LAYOUTS.md](file:///f:/LITTLE%20LEAP/AQL/References/Quasar/10_QUASAR_LAYOUTS.md), [11_QUASAR_STYLING.md](file:///f:/LITTLE%20LEAP/AQL/References/Quasar/11_QUASAR_STYLING.md), and [90_QUASAR_ANTI_PATTERNS.md](file:///f:/LITTLE%20LEAP/AQL/References/Quasar/90_QUASAR_ANTI_PATTERNS.md). No custom CSS, custom markup, or non-native grid structure may be introduced without first proving no Quasar-native option exists.
 
 All frontend layout, design, and styling MUST be achieved using Quasar's native ecosystem. Custom markup and CSS are considered architectural violations unless they strictly follow the exception hierarchy defined below.
 

@@ -51,33 +51,16 @@
               <q-item-label class="text-subtitle2 text-weight-bold text-grey-7 q-mb-sm">
                 Direct Select Pending Invoice (Tap to Pay)
               </q-item-label>
-              <q-list bordered class="rounded-borders scroll" style="max-height: 220px; border-color: #f1f5f9; background-color: #fafafa;">
-                <q-item
-                  v-for="inv in allUnpaidInvoices"
-                  :key="inv.Code"
-                  clickable
-                  v-ripple
-                  @click="selectGlobalInvoice(inv.Code, inv.OutletCode)"
-                  class="interactive-list-card q-py-sm"
-                >
-                  <q-item-section side>
-                    <q-avatar color="orange-1" text-color="orange-9" icon="receipt_long" size="sm" />
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label class="text-subtitle2 text-weight-bold text-grey-9">
-                      {{ inv.outletName }}
-                    </q-item-label>
-                    <q-item-label caption class="text-grey-6" style="font-size: 0.7rem;">
-                      {{ formatDisplayDate(inv.Date) }}
-                    </q-item-label>
-                  </q-item-section>
-                  <q-item-section side class="self-center">
-                    <q-item-label class="text-subtitle2 text-weight-bold text-negative">
-                      {{ formatMoney(inv.balance) }}
-                    </q-item-label>
-                  </q-item-section>
-                </q-item>
-              </q-list>
+              <div class="scroll" style="max-height: 220px;">
+                <AqlList :items="allUnpaidInvoices"
+                  :caption="inv => formatDisplayDate(inv.Date)"
+                  :meta="[inv => formatMoney(inv.balance)]"
+                  :meta-layout="['label']"
+                  item-key="Code" icon="receipt_long" icon-color="orange-9" label="outletName"
+                  meta-color="negative" clickable
+                  @click="inv => selectGlobalInvoice(inv.Code, inv.OutletCode)"
+                />
+              </div>
             </div>
 
             <div class="q-gutter-y-md">
@@ -150,60 +133,35 @@
             </q-item>
             <q-separator class="q-mb-lg" />
 
-            <!-- Invoice List (Mobile-First Cards using q-list / q-item) -->
-            <q-list v-if="unpaidInvoices.length > 0" class="q-gutter-y-sm" style="background: transparent;">
-              <q-item
-                v-for="inv in unpaidInvoices"
-                :key="inv.Code"
-                clickable
-                v-ripple
-                @click="selectInvoice(inv.Code)"
-                class="interactive-list-card q-pa-md q-mb-sm shadow-sm relative-position"
-              >
-                <!-- Left: Avatar / Icon representing an Invoice -->
-                <q-item-section avatar class="self-center">
-                  <q-avatar color="primary-light" text-color="primary" icon="receipt_long" size="36px" class="shadow-xs" style="flex-shrink: 0;" />
-                </q-item-section>
-
-                <!-- Center: Invoice code, date, and price list -->
-                <q-item-section>
-                  <q-item-label class="text-weight-bold text-subtitle2 text-primary">
-                    {{ invoiceLabel(inv.Code) }}
-                  </q-item-label>
-                  <q-item-label caption class="text-grey-6" style="font-size: 0.75rem;">
-                    {{ inv.PriceListCode ? `Price List: ${inv.PriceListCode}` : 'No Price List' }}
-                  </q-item-label>
-                  <q-item-label>
-                    <q-chip
-                      dense
-                      :color="inv.Progress === 'PARTIALLY_PAID' ? 'orange-1' : (inv.Progress === 'PAID' ? 'green-1' : 'blue-1')"
-                      :text-color="inv.Progress === 'PARTIALLY_PAID' ? 'orange-9' : (inv.Progress === 'PAID' ? 'green-9' : 'blue-9')"
-                      :label="progressMeta(inv.Progress).label"
-                      class="text-weight-bold text-overline"
-                      style="margin: 0; font-size: 0.65rem;"
-                    />
-                  </q-item-label>
-                </q-item-section>
-
-                <!-- Right: Status badge and money details -->
-                <q-item-section side>
-                  <q-item-label caption class="text-weight-medium text-grey-9">Total: {{ formatMoney(getInvoiceTotal(inv)) }}</q-item-label>
-                  <q-item-label class="text-subtitle2 text-weight-bold text-negative">Bal: {{ formatMoney(getInvoiceBalance(inv)) }}</q-item-label>
-                </q-item-section>
-              </q-item>
-            </q-list>
-
-            <!-- Empty State -->
-            <q-item v-else class="empty-state-container q-py-xl text-center">
-              <q-item-section>
-                <q-icon name="check_circle" size="64px" color="positive" class="q-mb-md block mx-auto" />
-                <q-item-label class="text-h6 text-weight-bold text-grey-8">All Settled!</q-item-label>
-                <q-item-label class="text-body2 text-grey-6 q-mb-md">No unpaid or partially paid invoices found for this outlet.</q-item-label>
-                <div class="row justify-center q-mt-md">
-                  <q-btn outline color="primary" label="Back to Outlets" icon="arrow_back" @click="resetOutlet" />
-                </div>
-              </q-item-section>
-            </q-item>
+            <AqlList :items="unpaidInvoices"
+              :layout="['label', 'caption', 'caption']"
+              :content="[
+                inv => invoiceLabel(inv.Code),
+                inv => inv.PriceListCode ? `Price List: ${inv.PriceListCode}` : 'No Price List',
+                inv => progressMeta(inv.Progress).label
+              ]"
+              :meta="[
+                inv => `Total: ${formatMoney(getInvoiceTotal(inv))}`,
+                inv => `Bal: ${formatMoney(getInvoiceBalance(inv))}`
+              ]"
+              :meta-layout="['caption', 'label']"
+              item-key="Code" icon="receipt_long" icon-color="primary" meta-color="negative"
+              clickable
+              @click="inv => selectInvoice(inv.Code)"
+            >
+              <template #empty>
+                <q-item class="empty-state-container q-py-xl text-center">
+                  <q-item-section>
+                    <q-icon name="check_circle" size="64px" color="positive" class="q-mb-md block mx-auto" />
+                    <q-item-label class="text-h6 text-weight-bold text-grey-8">All Settled!</q-item-label>
+                    <q-item-label class="text-body2 text-grey-6 q-mb-md">No unpaid or partially paid invoices found for this outlet.</q-item-label>
+                    <div class="row justify-center q-mt-md">
+                      <q-btn outline color="primary" label="Back to Outlets" icon="arrow_back" @click="resetOutlet" />
+                    </div>
+                  </q-item-section>
+                </q-item>
+              </template>
+            </AqlList>
           </q-card-section>
         </q-card>
       </transition>
@@ -441,6 +399,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useOutletPayments } from '../../../composables/operations/outlets/useOutletPayments.js'
 import { progressMeta } from '../../../composables/operations/outlets/outletOperationsMeta.js'
+import AqlList from '../../../components/shared/AqlList.vue'
 import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
 import { useCurrency } from '../../../composables/useCurrency.js'
 import { getInvoiceTotal, getInvoiceRemaining } from '../../../composables/operations/outlets/outletConsumptionPricing.js'

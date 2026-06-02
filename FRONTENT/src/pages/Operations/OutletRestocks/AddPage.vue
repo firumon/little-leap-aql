@@ -56,20 +56,17 @@
         <!-- Added Items List -->
         <div v-if="addedItems.length" class="q-mb-md">
           <div class="text-subtitle2 q-mb-sm">Added Items ({{ addedItems.length }})</div>
-          <q-list bordered separator class="rounded-borders">
-            <q-item v-for="(item, idx) in addedItems" :key="idx" class="q-px-sm q-py-xs">
-              <q-item-section>
-                <q-item-label class="text-caption text-weight-medium">{{ item.productLabel }}</q-item-label>
-                <q-item-label caption>{{ item.variantLabel }}</q-item-label>
-              </q-item-section>
-              <q-item-section side>
-                <q-badge color="primary" :label="item.Quantity" class="q-pa-sm" />
-              </q-item-section>
-              <q-item-section side>
-                <q-btn flat round icon="delete" size="sm" color="negative" @click="removeAddedItem(item.SKU)" />
-              </q-item-section>
-            </q-item>
-          </q-list>
+          <AqlList :items="addedItems"
+            :layout="['label', 'caption']"
+            :content="[
+              item => item.productLabel,
+              item => item.variantLabel
+            ]"
+            :meta="['Quantity']"
+            :meta-layout="['chip']"
+            item-key="SKU" bordered chip-color="primary" btn="delete" btn-color="negative"
+            @click="item => removeAddedItem(item.SKU)"
+          />
         </div>
 
         <q-stepper-navigation class="row">
@@ -165,6 +162,7 @@ import { ref, computed, reactive, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useOutletRestocks } from '../../../composables/operations/outlets/useOutletRestocks.js'
+import AqlList from '../../../components/shared/AqlList.vue'
 import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
 import { text } from '../../../composables/operations/outlets/outletOperationsMeta.js'
 

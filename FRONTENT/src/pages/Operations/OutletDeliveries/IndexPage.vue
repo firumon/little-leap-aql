@@ -51,22 +51,15 @@
           <span class="text-subtitle1 text-weight-medium">{{ group.meta.label }}</span>
           <q-badge class="q-ml-sm" :color="group.meta.color" :label="String(group.items.length)" />
         </div>
-        <div class="column q-gutter-sm">
-          <q-card v-for="row in group.items" :key="row.Code" flat bordered class="cursor-pointer" @click="navigateTo(row.Code)">
-            <q-card-section class="q-pa-sm">
-              <div class="row items-center no-wrap">
-                <div class="col">
-                  <div class="text-subtitle2 text-weight-medium">{{ row.UserName || 'Unknown' }}</div>
-                  <div class="text-caption text-grey-7">{{ timeAgo(row.Date || row.CreatedAt) }}</div>
-                </div>
-                <q-space />
-                <OutletProgressChip :progress="row.Progress" />
-              </div>
-              <q-separator class="q-my-xs" />
-              <div class="text-caption text-grey-7">{{ deliverySummary(row).delivered }}/{{ deliverySummary(row).total }} delivered</div>
-            </q-card-section>
-          </q-card>
-        </div>
+        <AqlList item-key="Code" dense :items="group.items" :layout="['label', 'caption', 'caption']" :meta-layout="['chip']"
+          :content="[
+            item => item.UserName || 'Unknown',
+            item => timeAgo(item.Date || item.CreatedAt),
+            item => `${deliverySummary(item).delivered}/${deliverySummary(item).total} delivered`
+          ]"
+          :meta="[item => progressMeta(item.Progress).label]" :chip-color="item => progressMeta(item.Progress).color"
+          @click="row => navigateTo(row.Code)"
+        />
       </div>
 
       <div v-if="canCreate && availableItems.length" class="q-mb-lg">
@@ -90,7 +83,8 @@
 <script setup>
 import { computed, onMounted } from 'vue'
 import { useOutletDeliveries } from '../../../composables/operations/outlets/useOutletDeliveries.js'
-import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'
+import AqlList from '../../../components/shared/AqlList.vue'
+import { progressMeta } from '../../../composables/operations/outlets/outletOperationsMeta.js'
 import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
 import DataAddFAB from '../../../components/shared/DataAddFAB.vue'

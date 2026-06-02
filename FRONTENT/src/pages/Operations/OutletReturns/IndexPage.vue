@@ -62,75 +62,28 @@
       <q-btn v-if="canCreate" color="primary" icon="add" label="Log New Return" class="q-mt-md" @click="navigateToAdd()" />
     </div>
 
-    <!-- Card list -->
-    <div v-else class="row q-col-gutter-sm">
-      <div
-        v-for="row in filteredItems"
-        :key="row.Code"
-        class="col-12 col-sm-6 col-md-4 col-lg-3"
-      >
-        <q-card
-          flat
-          bordered
-          class="cursor-pointer interactive-list-card"
-          @click="navigateTo(row.Code)"
-        >
-          <q-card-section class="q-pa-md">
-            <div class="row items-center justify-between q-mb-sm no-wrap">
-              <span class="text-subtitle1 text-weight-bold text-primary">{{ row.Code }}</span>
-              <q-badge
-                :color="getProgressMeta(row.Progress).color"
-                text-color="white"
-                class="q-py-xs q-px-sm text-weight-bold"
-              >
-                {{ getProgressMeta(row.Progress).label }}
-              </q-badge>
-            </div>
-
-            <div class="row items-center q-mb-xs no-wrap">
-              <q-icon name="storefront" size="16px" color="grey-6" class="q-mr-xs" />
-              <span class="text-weight-medium text-dark ellipsis col">{{ outletName(row.OutletCode) }}</span>
-            </div>
-
-            <div class="row items-center q-mb-md no-wrap">
-              <q-icon name="inventory_2" size="16px" color="grey-6" class="q-mr-xs" />
-              <span class="text-grey-8 ellipsis col">{{ skuName(row.SKU) }}</span>
-            </div>
-
-            <q-separator class="q-my-sm" style="opacity: 0.5;" />
-
-            <div class="row items-center justify-between q-mt-sm">
-              <div class="row items-center q-gutter-x-md text-caption text-grey-7">
-                <span>Qty: <strong class="text-weight-bold text-dark">{{ row.Qty }}</strong></span>
-                <span class="row items-center">
-                  <q-icon name="schedule" size="12px" class="q-mr-xs" />
-                  {{ formatDisplayDate(row.Date) }}
-                </span>
-              </div>
-
-              <div class="row q-gutter-x-xs">
-                <q-icon
-                  v-if="row.InvoiceAdjustmentRequired"
-                  name="receipt_long"
-                  :color="row.InvoiceAdjustmentDone ? 'positive' : 'warning'"
-                  size="18px"
-                >
-                  <q-tooltip>{{ row.InvoiceAdjustmentDone ? 'Invoice credited' : 'Awaiting invoice credit' }}</q-tooltip>
-                </q-icon>
-                <q-icon
-                  v-if="row.WarehouseActionRequired"
-                  name="local_shipping"
-                  :color="row.WarehouseActionCompleted ? 'positive' : 'warning'"
-                  size="18px"
-                >
-                  <q-tooltip>{{ row.WarehouseActionCompleted ? 'Stock received at WH' : 'Awaiting warehouse receipt' }}</q-tooltip>
-                </q-icon>
-              </div>
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
-    </div>
+    <template v-else>
+      <AqlList v-if="activeTab === 'active'" item-key="Code" :items="activeItems" :layout="['label', 'label', 'caption', 'caption']"
+        :highlight-color="item => getProgressMeta(item.Progress).color"
+        :content="[
+          item => outletName(item.OutletCode),
+          item => skuName(item.SKU),
+          item => `Qty: ${item.Qty} | ${formatDisplayDate(item.Date)}`,
+          item => getProgressMeta(item.Progress).label
+        ]"
+        @click="row => navigateTo(row.Code)"
+      />
+      <AqlList v-else item-key="Code" :items="completedItems" :layout="['label', 'label', 'caption']" :meta-layout="['chip']"
+        :highlight-color="item => getProgressMeta(item.Progress).color"
+        :content="[
+          item => outletName(item.OutletCode),
+          item => skuName(item.SKU),
+          item => `Qty: ${item.Qty} | ${formatDisplayDate(item.Date)}`
+        ]"
+        :meta="[item => getProgressMeta(item.Progress).label]" :chip-color="item => getProgressMeta(item.Progress).color"
+        @click="row => navigateTo(row.Code)"
+      />
+    </template>
 
     <DataAddFAB tooltip="Log New Return" />
   </q-page>
@@ -139,6 +92,7 @@
 <script setup>
 import { onMounted, computed } from 'vue'
 import { useOutletReturns } from '../../../composables/operations/outlets/useOutletReturns.js'
+import AqlList from '../../../components/shared/AqlList.vue'
 import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
 import DataAddFAB from '../../../components/shared/DataAddFAB.vue'

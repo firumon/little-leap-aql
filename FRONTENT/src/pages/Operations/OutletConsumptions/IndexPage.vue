@@ -52,22 +52,16 @@
           <span class="text-subtitle1 text-weight-medium">{{ pendingMeta.label }}</span>
           <q-badge class="q-ml-sm" :color="pendingMeta.color" :label="String(pendingInvoiceItems.length)" />
         </div>
-        <div class="column q-gutter-sm">
-          <q-card v-for="row in pendingInvoiceItems" :key="row.Code" flat bordered class="cursor-pointer" @click="navigateTo(row.Code)">
-            <q-card-section class="q-pa-sm">
-              <div class="row items-center no-wrap">
-                <div class="col">
-                  <div class="text-subtitle2 text-weight-medium">{{ outletName(row.OutletCode) }}</div>
-                  <div class="text-caption text-grey-7">{{ row.Username }} · {{ formatDisplayDate(row.Date) }}</div>
-                </div>
-                <q-space />
-                <OutletProgressChip :progress="row.Progress" />
-              </div>
-              <q-separator class="q-my-xs" />
-              <div class="text-caption text-grey-7">Qty {{ consumedTotal(row.Code) }}</div>
-            </q-card-section>
-          </q-card>
-        </div>
+        <AqlList :items="pendingInvoiceItems" item-key="Code" :layout="['label', 'caption', 'caption']"
+          :highlight-color="item => getProgressMeta(item.Progress).color"
+          :content="[
+            item => outletName(item.OutletCode),
+            item => `${item.Username} · ${formatDisplayDate(item.Date)}`,
+            item => `Qty ${consumedTotal(item.Code)}`
+          ]"
+          :meta="[item => getProgressMeta(item.Progress).label]" :meta-layout="['chip']" :chip-color="item => getProgressMeta(item.Progress).color"
+          @click="row => navigateTo(row.Code)"
+        />
       </div>
 
       <!-- Invoice Generated -->
@@ -77,22 +71,16 @@
           <span class="text-subtitle1 text-weight-medium">{{ generatedMeta.label }}</span>
           <q-badge class="q-ml-sm" :color="generatedMeta.color" :label="String(invoiceGeneratedItems.length)" />
         </div>
-        <div class="column q-gutter-sm">
-          <q-card v-for="row in invoiceGeneratedItems" :key="row.Code" flat bordered class="cursor-pointer" @click="navigateTo(row.Code)">
-            <q-card-section class="q-pa-sm">
-              <div class="row items-center no-wrap">
-                <div class="col">
-                  <div class="text-subtitle2 text-weight-medium">{{ outletName(row.OutletCode) }}</div>
-                  <div class="text-caption text-grey-7">{{ row.Username }} · {{ formatDisplayDate(row.Date) }}</div>
-                </div>
-                <q-space />
-                <OutletProgressChip :progress="row.Progress" />
-              </div>
-              <q-separator class="q-my-xs" />
-              <div class="text-caption text-grey-7">Qty {{ consumedTotal(row.Code) }}</div>
-            </q-card-section>
-          </q-card>
-        </div>
+        <AqlList :items="invoiceGeneratedItems" item-key="Code" :layout="['label', 'caption', 'caption']"
+          :highlight-color="item => getProgressMeta(item.Progress).color"
+          :content="[
+            item => outletName(item.OutletCode),
+            item => `${item.Username} · ${formatDisplayDate(item.Date)}`,
+            item => `Qty ${consumedTotal(item.Code)}`
+          ]"
+          :meta="[item => getProgressMeta(item.Progress).label]" :meta-layout="['chip']" :chip-color="item => getProgressMeta(item.Progress).color"
+          @click="row => navigateTo(row.Code)"
+        />
       </div>
 
       <!-- Today's Planned Visits -->
@@ -102,19 +90,14 @@
           <span class="text-subtitle1 text-weight-medium">Today's Planned Visits</span>
           <q-badge class="q-ml-sm" color="info" :label="String(todayPlannedVisits.length)" />
         </div>
-        <div class="column q-gutter-sm">
-          <q-card v-for="visit in todayPlannedVisits" :key="visit.Code" flat bordered class="cursor-pointer" @click="navigateToAddFromVisit(visit)">
-            <q-card-section class="q-pa-sm">
-              <div class="row items-center no-wrap">
-                <div class="col">
-                  <div class="text-subtitle2 text-weight-medium">{{ outletName(visit.OutletCode) }}</div>
-                  <div class="text-caption text-grey-7">{{ formatDisplayDate(visit.Date) }}</div>
-                </div>
-                <q-icon name="arrow_forward" color="primary" size="sm" />
-              </div>
-            </q-card-section>
-          </q-card>
-        </div>
+        <AqlList :items="todayPlannedVisits" item-key="Code" :layout="['label', 'caption']"
+          highlight-color="info"
+          :content="[
+            item => outletName(item.OutletCode),
+            item => formatDisplayDate(item.Date)
+          ]"
+          @click="visit => navigateToAddFromVisit(visit)"
+        />
       </div>
 
       <!-- History (Cancelled) -->
@@ -124,22 +107,16 @@
           <span class="text-subtitle1 text-weight-medium">Cancelled</span>
           <q-badge class="q-ml-sm" color="grey-7" :label="String(historyItems.length)" />
         </div>
-        <div class="column q-gutter-sm">
-          <q-card v-for="row in historyItems" :key="row.Code" flat bordered class="cursor-pointer" @click="navigateTo(row.Code)">
-            <q-card-section class="q-pa-sm">
-              <div class="row items-center no-wrap">
-                <div class="col">
-                  <div class="text-subtitle2 text-weight-medium">{{ outletName(row.OutletCode) }}</div>
-                  <div class="text-caption text-grey-7">{{ row.Code }} · {{ formatDisplayDate(row.Date) }}</div>
-                </div>
-                <q-space />
-                <OutletProgressChip :progress="row.Progress" />
-              </div>
-              <q-separator class="q-my-xs" />
-              <div class="text-caption text-grey-7">Qty {{ consumedTotal(row.Code) }}</div>
-            </q-card-section>
-          </q-card>
-        </div>
+        <AqlList :items="historyItems" item-key="Code" :layout="['label', 'caption', 'caption']"
+          :highlight-color="item => getProgressMeta(item.Progress).color"
+          :content="[
+            item => outletName(item.OutletCode),
+            item => `${item.Code} · ${formatDisplayDate(item.Date)}`,
+            item => `Qty ${consumedTotal(item.Code)}`
+          ]"
+          :meta="[item => getProgressMeta(item.Progress).label]" :meta-layout="['chip']" :chip-color="item => getProgressMeta(item.Progress).color"
+          @click="row => navigateTo(row.Code)"
+        />
       </div>
 
     </template>
@@ -151,7 +128,7 @@
 <script setup>
 import { computed, onMounted } from 'vue'
 import { useOutletConsumption } from '../../../composables/operations/outlets/useOutletConsumption.js'
-import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'
+import AqlList from '../../../components/shared/AqlList.vue'
 import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
 import DataAddFAB from '../../../components/shared/DataAddFAB.vue'
@@ -161,7 +138,7 @@ defineOptions({ name: 'OutletConsumptionIndexPage' })
 
 const flow = useOutletConsumption()
 const { hasUninitiatedDependencies } = useResourceReload()
-const { loading, items, searchTerm, canCreate, pendingInvoiceItems, invoiceGeneratedItems, historyItems, allPlannedVisits, reload, navigateTo, navigateToAdd, consumedTotal, outletName, formatDisplayDate, text, todayISO } = flow
+const { loading, items, searchTerm, canCreate, pendingInvoiceItems, invoiceGeneratedItems, historyItems, allPlannedVisits, reload, navigateTo, navigateToAdd, consumedTotal, outletName, formatDisplayDate, getProgressMeta, text, todayISO } = flow
 
 const shouldBlockUi = computed(() => loading.value && hasUninitiatedDependencies.value)
 

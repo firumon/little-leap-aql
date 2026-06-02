@@ -1,5 +1,9 @@
 # AQL Frontend Architecture Rules (STRICT)
 
+> [!IMPORTANT]
+> **Quasar Framework AI Knowledge Base:**
+> For comprehensive component-specific constraints, mobile-first design decisions, form lifecycles, virtual scrolls, overlays, and styling utilities, all AI coding agents MUST consult and follow the [Quasar Framework AI Knowledge Base Index](file:///f:/LITTLE%20LEAP/AQL/References/Quasar/QUASAR_INDEX.md) prior to writing or modifying any frontend component code.
+
 ---
 
 ## 1. SERVICES LAYER

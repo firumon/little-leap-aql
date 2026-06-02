@@ -68,6 +68,7 @@
             label="outletName"
             :caption="(inv) => `${inv.Code} • ${formatDisplayDate(inv.Date)}`"
             :meta="[() => 'Outstanding', (inv) => formatMoney(inv.balance)]"
+            :meta-layout="['caption','label']"
             meta-color="negative"
             clickable
             @click="(inv) => navigateToAddWithInvoice(inv.Code, inv.OutletCode)"
@@ -115,6 +116,7 @@
             label="outletName"
             :caption="(p) => `Ref: ${p.Code} • By ${p.Username} • ${p.Mode}`"
             :meta="[(p) => formatDisplayDate(p.Date), (p) => formatMoney(p.Amount)]"
+            :meta-layout="['caption','label']"
             meta-color="positive"
             clickable
             @click="(p) => navigateToView(p.Code)"

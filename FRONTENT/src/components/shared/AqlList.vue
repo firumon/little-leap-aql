@@ -24,7 +24,7 @@
         :clickable="isItemClickable"
         v-ripple="isItemClickable"
         @click="isItemClickable && emit('click', item)"
-        :class="{ 'border': isHighlighted, 'q-py-sm':dense, 'q-py-md q-px-md':!dense }"
+        :class="{ 'border': isHighlighted, 'q-py-sm':dense, 'q-py-md q-px-md':!dense, 'item-bordered':itemBordered }"
         :style="isHighlighted ? { '--border-color': highlightColor(item) } : {}"
       >
         <!-- Dynamic Row Content slot -->
@@ -165,6 +165,7 @@ const props = defineProps({
   loading: { type: Boolean, default: false },
   emptyText: { type: String, default: 'No items found.' },
   bordered: { type: Boolean, default: false },
+  itemBordered: { type: Boolean, default: true },
   separator: { type: Boolean, default: false },
   dense: { type: Boolean, default: false },
   color: { type: [String, Function], default: 'primary' },
@@ -325,9 +326,6 @@ function getMetaComponentType(metaIndex) {
 </script>
 
 <style scoped>
-.empty-state-container {
-  padding: 4rem 1.5rem;
-}
 .border {
   border-left: 3px solid var(--border-color) !important;
 }

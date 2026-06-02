@@ -72,3 +72,17 @@ function processPayment(paymentId) {
 - **Compact style**: Write single-statement functions, arrow returns, or conditional guard clauses on a single line if they are short (e.g., `if (!data) return;` or `const getVal = () => state.val;`).
 - Expand them to multi-line blocks with curly braces only if the line exceeds character limits or the statement is too complex.
 - Use early returns to minimize indentation nesting.
+
+### Object Destructuring Alignment & Grouping
+- **Single-Line Priority**: If all destructured keys fit on a single line within the 130-150 character limit, write them on one line.
+- **Grouped Wrapping**: If the destructuring statement exceeds the line limit, do NOT format with one property per line. Instead, wrap properties logically onto separate lines, grouping properties of similar purpose together (e.g., states/variables, options/dropdown data, methods/actions/navigation):
+  ```javascript
+  const {
+    saving, form,                     // Group 1: State / reactive references
+    outletOptions, skuOptions,        // Group 2: Option lists / dropdown data arrays
+    warehouseOptions, reasonOptions,  
+    reload, saveReturn, cancel,       // Group 3: Methods / actions / navigation
+    applyOutletQueryParam
+  } = flow
+  ```
+

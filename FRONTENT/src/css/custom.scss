@@ -56,9 +56,11 @@
 // Interactive mobile-first cards & containers
 .interactive-list-card {
   border-radius: 4px;
-  border: 1px solid #e2e8f0;
   background: #ffffff;
   transition: all 0.2s ease;
+}
+.interactive-list-card.item-bordered {
+  border: 1px solid #e2e8f0;
 }
 
 .clickable-scale {
@@ -69,7 +71,7 @@
 }
 
 .empty-state-container {
-  padding: 4rem 1.5rem;
+  padding: 2rem 1.5rem;
 }
 
 .shortcut-chip {

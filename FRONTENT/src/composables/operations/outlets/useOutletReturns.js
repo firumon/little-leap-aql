@@ -462,6 +462,15 @@ export function useOutletReturns() {
     return formatDate(value) || '-'
   }
 
+  function applyOutletQueryParam(outletCode) {
+    const code = text(outletCode)
+    if (!code) return false
+    const known = outletOptions.value.some((opt) => opt.value === code)
+    if (!known) return false
+    form.value.OutletCode = code
+    return true
+  }
+
   function cancel() {
     nav.goTo('list')
   }
@@ -500,6 +509,7 @@ export function useOutletReturns() {
     skuName,
     outletName,
     warehouseName,
+    applyOutletQueryParam,
     cancel,
     navigateTo,
     navigateToAdd,

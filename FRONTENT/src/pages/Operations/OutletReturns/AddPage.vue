@@ -29,8 +29,14 @@
                 emit-value
                 map-options
                 outlined
+                :disable="outletLocked"
+                :readonly="outletLocked"
                 label="Select Outlet *"
               />
+              <q-banner v-if="outletLocked" dense rounded class="bg-blue-1 text-blue-10 q-mt-xs">
+                <template #avatar><q-icon name="lock" color="primary" /></template>
+                Pre-selected from Outlet Hub. Change outlet by navigating back to the hub.
+              </q-banner>
             </div>
           </div>
         </div>
@@ -195,26 +201,34 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { useOutletReturns } from '../../../composables/operations/outlets/useOutletReturns.js'
 
 defineOptions({ name: 'OutletReturnsAddPage' })
 
+const route = useRoute()
 const flow = useOutletReturns()
 const {
-  saving,
-  form,
-  outletOptions,
-  skuOptions,
-  warehouseOptions,
-  reasonOptions,
-  reload,
-  saveReturn,
-  cancel
+  saving, form,
+  outletOptions, skuOptions, warehouseOptions, reasonOptions,
+  reload, saveReturn, cancel, applyOutletQueryParam
 } = flow
 
-onMounted(() => {
-  reload()
+const outletLocked = ref(false)
+
+const preselectedOutletCode = computed(() => {
+  const raw = route.query.outletCode || route.query.outletcode
+  return raw ? String(raw).trim() : ''
+})
+
+onMounted(async () => {
+  await reload()
+  const preset = preselectedOutletCode.value
+  if (preset) {
+    applyOutletQueryParam(preset)
+    outletLocked.value = true
+  }
 })
 </script>
 

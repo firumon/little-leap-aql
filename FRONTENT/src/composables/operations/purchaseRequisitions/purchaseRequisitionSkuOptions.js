@@ -1,3 +1,5 @@
+import { useProductSkuResolver } from 'src/composables/masters/products/useProductSkuResolver'
+
 function buildVariantsCsv(sku) {
   return [sku?.Variant1, sku?.Variant2, sku?.Variant3, sku?.Variant4, sku?.Variant5]
     .filter((variant) => variant != null && String(variant).trim() !== '')
@@ -18,14 +20,15 @@ export function filterCodeOnlySkuOptions(allSkus = [], keyword = '') {
 }
 
 export function buildPurchaseRequisitionSkuInfo(allSkus = [], allProducts = []) {
-  const productByCode = Object.fromEntries((allProducts || []).map((product) => [product.Code, product]))
+  const { skuInfo } = useProductSkuResolver()
   const info = {}
 
   allSkus.forEach((sku) => {
+    const details = skuInfo(sku.Code) || {}
     info[sku.Code] = {
-      productName: productByCode[sku.ProductCode]?.Name || sku.ProductCode || sku.Code,
-      variantsCsv: buildVariantsCsv(sku),
-      uom: sku.UOM || ''
+      productName: details.productName || sku.Code,
+      variantsCsv: details.variantValues?.filter(Boolean).join(', ') || '',
+      uom: details.uom || sku.UOM || ''
     }
   })
 

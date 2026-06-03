@@ -18,6 +18,8 @@ function storageLabel(value) {
   return raw === '_default' || !raw ? 'Default' : raw
 }
 
+import { useProductSkuResolver } from 'src/composables/masters/products/useProductSkuResolver'
+
 export function useWarehouseStockList() {
   const nav = useResourceNav()
   const { code } = useResourceConfig()
@@ -26,6 +28,7 @@ export function useWarehouseStockList() {
   const skus = useResourceData(ref('SKUs'))
   const products = useResourceData(ref('Products'))
   const searchTerm = ref('')
+  const { skuInfo } = useProductSkuResolver()
 
   const loading = computed(() =>
     warehouses.loading.value ||
@@ -37,9 +40,6 @@ export function useWarehouseStockList() {
     products.loading.value ||
     products.backgroundSyncing.value
   )
-
-  const productByCode = computed(() => new Map(products.items.value.map((product) => [product.Code, product])))
-  const skuByCode = computed(() => new Map(skus.items.value.map((sku) => [sku.Code, sku])))
 
   const activeWarehouses = computed(() =>
     warehouses.items.value.filter((warehouse) => text(warehouse.Status || 'Active') === 'Active')
@@ -58,20 +58,20 @@ export function useWarehouseStockList() {
     return storages.items.value
       .filter((row) => text(row.WarehouseCode) === warehouseCode)
       .map((row) => {
-        const sku = skuByCode.value.get(row.SKU) || {}
-        const product = productByCode.value.get(sku.ProductCode) || {}
+        const info = skuInfo(row.SKU) || {}
+        const variants = info.variantValues?.filter(Boolean).join(' / ') || ''
         return {
           ...row,
           StorageLabel: storageLabel(row.StorageName),
           QuantityValue: number(row.Quantity),
-          ProductName: product.Name || row.ProductName || sku.ProductName || 'Unknown Product',
-          VariantCaption: formatSkuVariants(sku),
+          ProductName: info.productName || row.ProductName || 'Unknown Product',
+          VariantCaption: variants,
           SearchText: [
             row.Code,
             row.SKU,
             storageLabel(row.StorageName),
-            product.Name,
-            formatSkuVariants(sku)
+            info.productName || '',
+            variants
           ].map(text).join(' ').toLowerCase()
         }
       })

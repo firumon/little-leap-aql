@@ -12,6 +12,20 @@
  *   resource = 'StockMovements'
  *   → GAS: dispatchBulkCreateRecords → handleStockMovementsBulkSave (PostAction)
  *   → N rows, 1 round-trip, 2 sheet opens total
+/**
+ * useStockMovements
+ *
+ * Encapsulates:
+ *   - Loading active Warehouses
+ *   - Loading SKUs with Products
+ *   - Loading WarehouseStorages rows for a given warehouse
+ *   - Submitting a batch of StockMovements in ONE GAS call
+ *
+ * API contract:
+ *   action   = 'create'   (records[] array triggers dispatchBulkCreateRecords)
+ *   resource = 'StockMovements'
+ *   → GAS: dispatchBulkCreateRecords → handleStockMovementsBulkSave (PostAction)
+ *   → N rows, 1 round-trip, 2 sheet opens total
  *   Batch also includes action=get WarehouseStorages so the refresh is in-band (no second
  *   round-trip). GasApiService auto-ingests the resource payload into IDB + Pinia.
  *
@@ -21,11 +35,13 @@
 import { useQuasar } from 'quasar'
 import { useDataStore } from 'src/stores/data'
 import { useResourceIoStore } from 'src/stores/resourceIo'
+import { useProductSkuResolver } from 'src/composables/masters/products/useProductSkuResolver'
 
 export function useStockMovements() {
   const $q = useQuasar()
   const dataStore = useDataStore()
   const resourceIoStore = useResourceIoStore()
+  const { skuInfo } = useProductSkuResolver()
 
   async function loadWarehouses() {
     try {
@@ -40,19 +56,20 @@ export function useStockMovements() {
     try {
       await Promise.all([
         resourceIoStore.fetchResource('SKUs', {}),
-        resourceIoStore.fetchResource('Products', {})
+        resourceIoStore.fetchResource('Products', {}),
+        resourceIoStore.fetchResource('UOMs', {})
       ])
-      const skus = dataStore.getRecords('SKUs')
-      const prods = dataStore.getRecords('Products')
+      const skus = dataStore.getRecords('SKUs') || []
 
-      const prodMap = new Map(prods.map(p => [p.Code, p.Name]))
-
-      return skus.map(s => ({
-        ...s,
-        SKU: s.Code, // Alias Code as SKU for compatibility with StockEntryGrid
-        ProductName: prodMap.get(s.ProductCode) || 'Unknown Product',
-        label: `${s.Code} - ${prodMap.get(s.ProductCode) || 'Unknown'}`
-      }))
+      return skus.map(s => {
+        const info = skuInfo(s.Code) || {}
+        return {
+          ...s,
+          SKU: s.Code, // Alias Code as SKU for compatibility with StockEntryGrid
+          ProductName: info.productName || 'Unknown Product',
+          label: `${s.Code} - ${info.productName || 'Unknown'}`
+        }
+      })
     } catch {
       return []
     }

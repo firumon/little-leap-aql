@@ -56,15 +56,12 @@
         <!-- Added Items List -->
         <div v-if="addedItems.length" class="q-mb-md">
           <div class="text-subtitle2 q-mb-sm">Added Items ({{ addedItems.length }})</div>
-          <AqlList :items="addedItems"
-            :layout="['label', 'caption']"
-            :content="[
+          <AqlList chip="Quantity"  item-key="SKU" chip-color="primary" btn="delete" btn-color="negative" dense
+           :items="addedItems"
+           :content="[
               item => item.productLabel,
               item => item.variantLabel
             ]"
-            :meta="['Quantity']"
-            :meta-layout="['chip']"
-            item-key="SKU" bordered chip-color="primary" btn="delete" btn-color="negative"
             @click="item => removeAddedItem(item.SKU)"
           />
         </div>

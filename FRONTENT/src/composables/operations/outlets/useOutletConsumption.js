@@ -5,6 +5,7 @@ import { useResourceData } from '../../resources/useResourceData.js'
 import { useResourceNav } from '../../resources/useResourceNav.js'
 import { useResourceConfig } from '../../resources/useResourceConfig.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
+import { useProductSkuResolver } from 'src/composables/masters/products/useProductSkuResolver'
 import { OUTLET_OPERATION_RESOURCES, CONSUMPTION_PROGRESS_ORDER, active, formatDate, progressMeta, sortTime, text, todayISO, visitProgress } from './outletOperationsMeta.js'
 import { toNumber, validateConsumption } from './outletStockLogic.js'
 import { batchRef, batchResultCode, compositeSaveRequest, executeActionRequest, failureMessage, OUTLET_ACTIONS, resourceUpdateRequest, responseFailed } from './outletOperationsBatch.js'
@@ -40,6 +41,7 @@ export function useOutletConsumption() {
   const skus = useResourceData(ref('SKUs'))
   const products = useResourceData(ref('Products'))
   const priceLists = useResourceData(ref('PriceList'))
+  const { skuInfo } = useProductSkuResolver()
   const priceListItems = useResourceData(ref('PriceListItems'))
   const restocks = useResourceData(ref('OutletRestocks'))
   const returns = useResourceData(ref('OutletReturns'))
@@ -112,12 +114,13 @@ export function useOutletConsumption() {
   const canCreateReturn = computed(() => !!returnPermissions.value.canWrite)
 
   function addManualReturnSku(skuCode) {
-    const sku = skus.items.value.find((entry) => entry.Code === skuCode) || {}
+    const info = skuInfo(skuCode) || {}
+    const variants = info.variantValues?.filter(Boolean).join(' / ') || ''
     stockRows.value.push({
       SKU: skuCode,
-      ProductCode: sku.ProductCode || '',
-      ProductName: productName(sku.ProductCode),
-      SkuLabel: `${skuCode}${skuLabelSuffix(sku)}`,
+      ProductCode: info.productCode || '',
+      ProductName: info.productName || 'Product',
+      SkuLabel: `${skuCode}${variants ? ` / ${variants}` : ''}`,
       SystemQty: 0,
       CurrentQty: 1,
       SoldQty: 0,
@@ -150,15 +153,17 @@ export function useOutletConsumption() {
   }
 
   function skuLabelSuffix(sku = {}) {
-    const variants = [sku.Variant1, sku.Variant2, sku.Variant3, sku.Variant4, sku.Variant5].map(text).filter(Boolean).join(' / ')
+    const info = skuInfo(sku.Code) || {}
+    const variants = info.variantValues?.filter(Boolean).join(' / ') || ''
     return variants ? ` / ${variants}` : ''
   }
 
   function productName(productCode) { return products.items.value.find((row) => row.Code === productCode)?.Name || productCode || 'Product' }
   function outletName(outletCode) { return outlets.items.value.find((row) => row.Code === outletCode)?.Name || outletCode || 'Outlet' }
   function skuName(skuCode) {
-    const sku = skus.items.value.find((row) => row.Code === skuCode) || {}
-    return `${skuCode}${sku.ProductCode ? ` - ${productName(sku.ProductCode)}` : ''}${skuLabelSuffix(sku)}`
+    const info = skuInfo(skuCode) || {}
+    const variants = info.variantValues?.filter(Boolean).join(' / ') || ''
+    return `${skuCode}${info.productName ? ` - ${info.productName}` : ''}${variants ? ` / ${variants}` : ''}`
   }
   function visitLabel(visitCode) {
     const visit = visits.items.value.find((row) => row.Code === visitCode)
@@ -194,8 +199,9 @@ export function useOutletConsumption() {
   })
   const visitOptions = computed(() => plannedVisits.value.map((row) => ({ label: `${row.Code} - ${formatDate(row.Date)}`, value: row.Code })))
   const skuOptions = computed(() => skus.items.value.filter(active).map((sku) => {
-    const pName = sku.ProductCode ? productName(sku.ProductCode) : sku.Code
-    const variantStr = [sku.Variant1, sku.Variant2, sku.Variant3, sku.Variant4, sku.Variant5].map(text).filter(Boolean).join(' / ')
+    const info = skuInfo(sku.Code) || {}
+    const pName = info.productName || sku.Code
+    const variantStr = info.variantValues?.filter(Boolean).join(' / ') || ''
     return {
       value: sku.Code,
       label: variantStr ? `${pName} (${variantStr})` : pName,
@@ -216,9 +222,10 @@ export function useOutletConsumption() {
   const cancelledInvoices = computed(() => invoiceItems.value.filter(row => text(row.Progress) === 'CANCELLED'))
 
   function productDisplayName(skuCode) {
-    const sku = skus.items.value.find((row) => row.Code === skuCode) || {}
-    const pName = sku.ProductCode ? productName(sku.ProductCode) : skuCode
-    return `${pName}${skuLabelSuffix(sku)}`
+    const info = skuInfo(skuCode) || {}
+    const pName = info.productName || skuCode
+    const variants = info.variantValues?.filter(Boolean).join(' / ') || ''
+    return `${pName}${variants ? ` / ${variants}` : ''}`
   }
 
   function childRestocks(consumptionCode) { return restocks.items.value.filter((row) => text(row.OutletConsumptionCode) === text(consumptionCode) && active(row)) }
@@ -238,9 +245,18 @@ export function useOutletConsumption() {
 
   function rebuildStockRows() {
     stockRows.value = storages.items.value.filter(active).filter((row) => text(row.OutletCode) === text(form.value.OutletCode)).map((row) => {
-      const sku = skus.items.value.find((entry) => entry.Code === row.SKU) || {}
+      const info = skuInfo(row.SKU) || {}
       const systemQty = toNumber(row.Quantity)
-      return { SKU: row.SKU, ProductCode: sku.ProductCode || '', ProductName: productName(sku.ProductCode), SkuLabel: `${row.SKU}${skuLabelSuffix(sku)}`, SystemQty: systemQty, CurrentQty: systemQty, SoldQty: 0 }
+      const variants = info.variantValues?.filter(Boolean).join(' / ') || ''
+      return {
+        SKU: row.SKU,
+        ProductCode: info.productCode || '',
+        ProductName: info.productName || 'Product',
+        SkuLabel: `${row.SKU}${variants ? ` / ${variants}` : ''}`,
+        SystemQty: systemQty,
+        CurrentQty: systemQty,
+        SoldQty: 0
+      }
     })
     restockRows.value = []
     syncChecklist()
@@ -279,7 +295,16 @@ export function useOutletConsumption() {
   function getConsumption(code) { return consumptions.items.value.find((row) => row.Code === code) || null }
   function getInvoice(code) { return invoices.items.value.find((row) => row.Code === code) || null }
   function consumedTotal(code) { return childItems(code).reduce((sum, row) => sum + toNumber(row.Qty), 0) }
-  function consumptionItemRows(code) { return childItems(code).map((row) => ({ ...row, displayName: skuName(row.SKU), productName: productName(skus.items.value.find((sku) => sku.Code === row.SKU)?.ProductCode) })) }
+  function consumptionItemRows(code) {
+    return childItems(code).map((row) => {
+      const info = skuInfo(row.SKU) || {}
+      return {
+        ...row, ...info,
+        displayName: skuName(row.SKU),
+        productName: info.productName || 'Product'
+      }
+    })
+  }
   function invoiceLineItems(invoiceCode) {
     return childInvoiceItems(invoiceCode).map((row) => ({
       ...row,
@@ -420,7 +445,7 @@ export function useOutletConsumption() {
         returnRows.value.forEach((row, rIndex) => {
           const meta = returnMetadata.value[row.SKU] || {}
           const returnQty = toNumber(row.Qty)
-          
+
           const preparedRecord = {
             OutletCode: text(form.value.OutletCode),
             Date: text(form.value.Date) || todayISO(),
@@ -501,7 +526,7 @@ export function useOutletConsumption() {
       // 2. Pricing and Invoice returns pre-computation
       let pricing = null
       let returnsInfo = { appliedCodes: [], returnDeductionTotal: 0, updateRequests: [] }
-      
+
       if (checklist.value.generateInvoice) {
         const sold = stockRows.value.filter((row) => toNumber(row.SoldQty) > 0).map((row) => ({ SKU: text(row.SKU), Qty: toNumber(row.SoldQty) }))
         pricing = resolveInvoicePricing({
@@ -522,12 +547,12 @@ export function useOutletConsumption() {
       const restockRef = batchRef('OutletRestocks.latest.code')
       const requests = [compositeSaveRequest(buildConsumptionCompositePayload(form.value, stockRows.value, checklist.value))]
       requests.push(buildConsumptionMovementRequest(consumptionRef, form.value.OutletCode, stockRows.value, form.value))
-      
+
       if (checklist.value.generateInvoice && pricing) {
         const invoiceRef = batchRef('OutletConsumptionInvoices.latest.code')
         requests.push(
-          buildConsumptionInvoiceRequest(consumptionRef, form.value, { 
-            priceListCode: pricing.priceListCode, 
+          buildConsumptionInvoiceRequest(consumptionRef, form.value, {
+            priceListCode: pricing.priceListCode,
             subtotal: pricing.subtotal,
             returnDeductionTotal: returnsInfo.returnDeductionTotal,
             outletReturnCodes: returnsInfo.appliedCodes.join(', ')
@@ -587,10 +612,10 @@ export function useOutletConsumption() {
       const returnsInfo = prepareInvoiceReturns(record.OutletCode, [])
       const comment = 'Invoice generated from pending outlet consumption.'
       const invoiceRef = batchRef('OutletConsumptionInvoices.latest.code')
-      
+
       const batchRequests = [
-        buildConsumptionInvoiceRequest(record.Code, { ...record, InvoiceComment: comment }, { 
-          priceListCode: pricing.priceListCode, 
+        buildConsumptionInvoiceRequest(record.Code, { ...record, InvoiceComment: comment }, {
+          priceListCode: pricing.priceListCode,
           subtotal: pricing.subtotal,
           returnDeductionTotal: returnsInfo.returnDeductionTotal,
           outletReturnCodes: returnsInfo.appliedCodes.join(', ')
@@ -674,7 +699,7 @@ export function useOutletConsumption() {
   function navigateToInvoiceAdd(consumptionCode) { nav.goTo('add', { scope: 'operations', resourceSlug: 'outlet-consumption-invoices', query: { consumptionCode } }) }
   function navigateToRestock(code) { nav.goTo('view', { scope: 'operations', resourceSlug: 'outlet-restocks', code }) }
   function navigateToConsumption(code) { nav.goTo('view', { scope: 'operations', resourceSlug: 'outlet-consumptions', code }) }
-  
+
   async function saveInvoiceFromConsumption({ consumptionCode, consumptionRecord, items = [], discount = 0, tax = 0, priceListCode = '' }) {
     if (!allowed({ outletConsumptionInvoice: 'create', outletConsumption: 'update' })) {
       $q.notify({ type: 'negative', message: 'You do not have permission to save invoice.', position: 'top' })
@@ -688,12 +713,12 @@ export function useOutletConsumption() {
       const returnsInfo = prepareInvoiceReturns(consumptionRecord.OutletCode, [])
       const invoiceRef = batchRef('OutletConsumptionInvoices.latest.code')
       const comment = 'Invoice generated from outlet consumption.'
-      
+
       const requests = [
-        buildConsumptionInvoiceRequest(consumptionCode, { ...consumptionRecord, InvoiceComment: comment }, { 
-          priceListCode, 
-          subtotal, 
-          discount, 
+        buildConsumptionInvoiceRequest(consumptionCode, { ...consumptionRecord, InvoiceComment: comment }, {
+          priceListCode,
+          subtotal,
+          discount,
           tax,
           returnDeductionTotal: returnsInfo.returnDeductionTotal,
           outletReturnCodes: returnsInfo.appliedCodes.join(', ')

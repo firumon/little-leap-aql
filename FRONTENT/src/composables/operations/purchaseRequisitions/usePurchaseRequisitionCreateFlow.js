@@ -7,6 +7,7 @@ import { useAuthStore } from 'src/stores/auth'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceData } from 'src/composables/resources/useResourceData'
 import { formatSkuVariants, todayIsoSlash, todayLongLabel } from 'src/utils/appHelpers'
+import { useProductSkuResolver } from 'src/composables/masters/products/useProductSkuResolver'
 import {
   mapPurchaseRequisitionPriorityOptions,
   mapPurchaseRequisitionTypeOptions,
@@ -23,6 +24,7 @@ export function usePurchaseRequisitionCreateFlow() {
   const auth = useAuthStore()
   const resourceIoStore = useResourceIoStore()
   const { loadWarehouses } = useStockMovements()
+  const { skuInfo } = useProductSkuResolver()
 
   const productsResource = useResourceData(ref('Products'))
   const skusResource = useResourceData(ref('SKUs'))
@@ -121,27 +123,29 @@ export function usePurchaseRequisitionCreateFlow() {
     if (searchQuery.value) {
       const query = searchQuery.value.toLowerCase()
       filtered = filtered.filter((sku) => {
-        const product = products.value.find((entry) => entry.Code === sku.ProductCode)
-        const productName = product ? product.Name.toLowerCase() : ''
+        const info = skuInfo(sku.Code) || {}
+        const productName = info.productName?.toLowerCase() || ''
+        const variantStr = info.variantValues?.filter(Boolean).join(' / ').toLowerCase() || ''
         return sku.Code.toLowerCase().includes(query)
           || productName.includes(query)
-          || formatSkuVariants(sku).toLowerCase().includes(query)
+          || variantStr.includes(query)
       })
     }
 
     const grouped = {}
     filtered.forEach((sku) => {
-      if (!grouped[sku.ProductCode]) {
-        const product = products.value.find((entry) => entry.Code === sku.ProductCode)
-        grouped[sku.ProductCode] = {
-          ProductCode: sku.ProductCode,
-          ProductName: product ? product.Name : 'Unknown Product',
+      const info = skuInfo(sku.Code) || {}
+      const prodCode = info.productCode || sku.ProductCode
+      if (!grouped[prodCode]) {
+        grouped[prodCode] = {
+          ProductCode: prodCode,
+          ProductName: info.productName || 'Unknown Product',
           skus: [],
           totalStock: 0
         }
       }
-      grouped[sku.ProductCode].skus.push(sku)
-      grouped[sku.ProductCode].totalStock += getSkuStock(sku.Code)
+      grouped[prodCode].skus.push(sku)
+      grouped[prodCode].totalStock += getSkuStock(sku.Code)
     })
 
     return Object.values(grouped).sort((left, right) => {

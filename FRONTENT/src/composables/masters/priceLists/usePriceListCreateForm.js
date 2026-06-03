@@ -2,14 +2,15 @@ import { ref, computed, reactive } from 'vue'
 import { useAuthStore } from 'src/stores/auth'
 import { useDataStore } from 'src/stores/data'
 import { useResourceIoStore } from 'src/stores/resourceIo'
-import { parseVariantTypes } from 'src/composables/masters/products/useProductVariants'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
+import { useProductSkuResolver } from 'src/composables/masters/products/useProductSkuResolver'
 
 export function usePriceListCreateForm() {
   const authStore = useAuthStore()
   const dataStore = useDataStore()
   const resourceIoStore = useResourceIoStore()
   const nav = useResourceNav()
+  const { skuInfo } = useProductSkuResolver()
 
   const form = reactive({ Name: '', Description: '', Currency: '', IsDefault: 'FALSE', Status: 'Active' })
   const saving = ref(false)
@@ -63,12 +64,9 @@ export function usePriceListCreateForm() {
     for (const product of products) {
       const skus = skusByProductCode.value[product.Code] || []
       if (!skus.length) continue
-      const variants = parseVariantTypes(product.VariantTypes || '')
       const skuEntries = skus.map((sku) => {
-        const variantParts = variants
-          .map((v) => (sku[v.key] || '').toString().trim())
-          .filter(Boolean)
-        const variantLabel = variantParts.length ? variantParts.join(', ') : sku.Code
+        const info = skuInfo(sku.Code) || {}
+        const variantLabel = info.variantValues?.filter(Boolean).join(', ') || sku.Code
         return { skuCode: sku.Code, variantLabel, price: prices[sku.Code] ?? '' }
       })
       groups.push({ productCode: product.Code, productName: product.Name || '(Unnamed)', skus: skuEntries })

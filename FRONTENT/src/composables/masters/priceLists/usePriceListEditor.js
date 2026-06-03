@@ -2,7 +2,7 @@ import { ref, computed } from 'vue'
 import { useAuthStore } from 'src/stores/auth'
 import { useDataStore } from 'src/stores/data'
 import { useResourceIoStore } from 'src/stores/resourceIo'
-import { parseVariantTypes } from 'src/composables/masters/products/useProductVariants'
+import { useProductSkuResolver } from 'src/composables/masters/products/useProductSkuResolver'
 import { useApiErrorNotify } from 'src/composables/useApiErrorNotify'
 
 export function usePriceListEditor() {
@@ -10,6 +10,7 @@ export function usePriceListEditor() {
   const dataStore = useDataStore()
   const resourceIoStore = useResourceIoStore()
   const { notifyApiError } = useApiErrorNotify()
+  const { skuInfo } = useProductSkuResolver()
 
   const expandedCode = ref('')
   const editingHeader = ref(null)
@@ -87,13 +88,10 @@ export function usePriceListEditor() {
 
     for (const product of products) {
       const skus = skusByProductCode.value[product.Code] || []
-      const variants = parseVariantTypes(product.VariantTypes || '')
 
       for (const sku of skus) {
-        const variantParts = variants
-          .map((v) => (sku[v.key] || '').toString().trim())
-          .filter(Boolean)
-        const variantLabel = variantParts.length ? variantParts.join(', ') : sku.Code
+        const info = skuInfo(sku.Code) || {}
+        const variantLabel = info.variantValues?.filter(Boolean).join(', ') || sku.Code
 
         result.push({
           productCode: product.Code,

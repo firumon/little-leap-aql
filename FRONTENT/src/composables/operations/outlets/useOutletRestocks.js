@@ -7,6 +7,7 @@ import { useResourceConfig } from '../../resources/useResourceConfig.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { OUTLET_OPERATION_RESOURCES, RESTOCK_PROGRESS_ORDER, active, progressMeta, sortTime, text, todayISO } from './outletOperationsMeta.js'
 import { allocatedRows, approvalRequestedQty, computeRestockProgressFromItems, expandOrsiAllocationRows, recommendOrsiAllocation, restockEditableProgress, storageName, sumBy, toNumber, validateRestockAllocationRows, validateRestockApproval, validateRestockDraft, warehouseAvailableQty, warehouseDisplayName, warehouseStorageCandidatesForSku } from './outletStockLogic.js'
+import { useProductSkuResolver } from 'src/composables/masters/products/useProductSkuResolver'
 import { buildPendingRestockAllocationBatchRequests, buildRestockAllocationBatchRequests, buildRestockCancelItemsBatchRequests, buildRestockCompositePayload, buildRestockRejectBatchRequests, buildRestockSendBackRequest } from './outletRestockPayload.js'
 import { compositeSaveRequest, failureMessage, resourceGetRequest, responseFailed } from './outletOperationsBatch.js'
 
@@ -29,6 +30,7 @@ export function useOutletRestocks() {
   const products = useResourceData(ref('Products'))
   const warehouseStorages = useResourceData(ref('WarehouseStorages'))
   const warehouses = useResourceData(ref('Warehouses'))
+  const { skuInfo } = useProductSkuResolver()
   const loading = ref(false)
   const saving = ref(false)
   const searchTerm = ref('')
@@ -39,9 +41,9 @@ export function useOutletRestocks() {
   const groups = computed(() => RESTOCK_PROGRESS_ORDER.map(key => ({ key, meta: progressMeta(key), items: items.value.filter(row => (RESTOCK_PROGRESS_ORDER.includes(row.Progress) ? row.Progress : 'OTHER') === key).sort((a, b) => sortTime(b) - sortTime(a)) })).filter(group => group.items.length))
   const outletOptions = computed(() => outlets.items.value.filter(active).map(row => ({ label: `${row.Code} · ${row.Name}`, value: row.Code })))
   const skuOptions = computed(() => skus.items.value.filter(active).map((sku) => {
-    const product = products.items.value.find(row => row.Code === sku.ProductCode)
-    const variants = [sku.Variant1, sku.Variant2, sku.Variant3, sku.Variant4, sku.Variant5].map(text).filter(Boolean).join(' / ')
-    return { label: `${sku.Code} · ${product?.Name || sku.ProductCode || 'Product'}${variants ? ` · ${variants}` : ''}`, value: sku.Code }
+    const info = skuInfo(sku.Code) || {}
+    const variants = info.variantValues?.filter(Boolean).join(' / ') || ''
+    return { label: `${sku.Code} · ${info.productName || 'Product'}${variants ? ` · ${variants}` : ''}`, value: sku.Code }
   }))
 
   const approvalAllocationGroups = computed(() => buildApprovalAllocationGroups())
@@ -72,11 +74,10 @@ export function useOutletRestocks() {
   function submissionSaveForm(restock = {}, comment = '') { return { ...form.value, Progress: 'PENDING_APPROVAL', ...submitCommentFields(restock, comment) } }
 
   function skuDisplay(skuCode = '') {
-    const sku = skus.items.value.find(row => text(row.Code) === text(skuCode)) || {}
-    const product = products.items.value.find(row => text(row.Code) === text(sku.ProductCode)) || {}
-    const variants = [sku.Variant1, sku.Variant2, sku.Variant3, sku.Variant4, sku.Variant5].map(text).filter(Boolean)
+    const info = skuInfo(skuCode) || {}
+    const variants = info.variantValues?.filter(Boolean) || []
     return {
-      primary: `${text(product.Name || sku.ProductCode || skuCode || 'Item')}${variants.length ? ` - ${variants.join(' / ')}` : ''}`,
+      primary: `${text(info.productName || skuCode || 'Item')}${variants.length ? ` - ${variants.join(' / ')}` : ''}`,
       secondary: text(skuCode) ? `SKU ${text(skuCode)}` : ''
     }
   }

@@ -88,17 +88,10 @@
         <q-card flat bordered class="q-mb-md">
           <q-card-section class="q-pa-md">
             <div class="text-subtitle1 text-weight-bold q-mb-sm">Consumed Items</div>
-            <q-list separator>
-              <q-item v-for="item in consumptionItemRows(record.Code)" :key="item.Code" class="q-pa-sm">
-                <q-item-section>
-                  <q-item-label class="text-weight-medium">{{ item.displayName }}</q-item-label>
-                  <q-item-label caption>{{ item.productName }}</q-item-label>
-                </q-item-section>
-                <q-item-section side>
-                  <q-chip dense square color="primary" text-color="white">Qty: {{ item.Qty }}</q-chip>
-                </q-item-section>
-              </q-item>
-            </q-list>
+            <AqlList dense :items="consumptionItemRows(record.Code)"
+              :content="['productName',item => item.variantValues.join(' / ') || item.skuCode]"
+              :chip="item => item.Qty"
+            />
           </q-card-section>
         </q-card>
 
@@ -140,6 +133,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useOutletConsumption } from '../../../composables/operations/outlets/useOutletConsumption.js'
 import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'
+import AqlList from "components/shared/AqlList.vue";
 
 defineOptions({ name: 'OutletConsumptionViewPage' })
 const route = useRoute()

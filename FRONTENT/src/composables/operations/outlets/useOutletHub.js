@@ -6,6 +6,7 @@ import { useResourceIoStore } from 'src/stores/resourceIo'
 import { active, formatDate, sortTime, text, visitProgress } from './outletOperationsMeta.js'
 import { toNumber } from './outletStockLogic.js'
 import { getInvoiceRemaining } from './outletConsumptionPricing.js'
+import { useProductSkuResolver } from '../../masters/products/useProductSkuResolver.js'
 
 const RECENT_WINDOW_DAYS = 14
 const RECENT_RECORD_LIMIT = 4
@@ -28,6 +29,7 @@ export function useOutletHub() {
   const resourceIoStore = useResourceIoStore()
   const nav = useResourceNav()
   const { allowed } = useResourceConfig()
+  const { skuInfo } = useProductSkuResolver()
 
   const outlets = useResourceData(ref('Outlets'))
   const visits = useResourceData(ref('OutletVisits'))
@@ -35,6 +37,7 @@ export function useOutletHub() {
   const returns = useResourceData(ref('OutletReturns'))
   const invoices = useResourceData(ref('OutletConsumptionInvoices'))
   const payments = useResourceData(ref('OutletPayments'))
+  const storages = useResourceData(ref('OutletStorages'))
 
   const loading = ref(false)
   const selectedOutletCode = ref('')
@@ -110,6 +113,19 @@ export function useOutletHub() {
     return pool.slice(0, RECENT_RECORD_LIMIT)
   })
 
+  const outletStock = computed(() =>
+    storages.items.value
+      .filter(active)
+      .filter(matchesOutlet)
+      .filter((row) => toNumber(row.Quantity) !== 0)
+      .sort((a, b) => text(a.SKU).localeCompare(text(b.SKU)))
+      .map((row) => {
+        const info = skuInfo(row.SKU)
+        if (!info) return { ...row, skuCode: row.SKU, productName: row.SKU, variantValues: [] }
+        return { ...row, ...info }
+      })
+  )
+
   const unpaidInvoices = computed(() =>
     outletInvoices.value
       .filter((row) => UNPAID_INVOICE_PROGRESS.includes(text(row.Progress).toUpperCase()))
@@ -130,7 +146,7 @@ export function useOutletHub() {
     loading.value = true
     return resourceIoStore
       .fetchResources(
-        ['Outlets', 'OutletVisits', 'OutletRestocks', 'OutletReturns', 'OutletConsumptionInvoices', 'OutletPayments'],
+        ['Outlets', 'OutletVisits', 'OutletRestocks', 'OutletReturns', 'OutletConsumptionInvoices', 'OutletPayments', 'OutletStorages', 'SKUs', 'Products', 'UOMs'],
         { forceSync }
       )
       .finally(() => {
@@ -229,6 +245,7 @@ export function useOutletHub() {
     canCreateReturn,
     canCreateConsumption,
     canCreatePayment,
+    outletStock,
     outlets,
     visits,
     restocks,

@@ -4,7 +4,7 @@
       <div class="col">
         <OutletHeaderPanel
           title="Outlet Hub"
-          :subtitle="selectedOutlet ? selectedOutletLabel : 'Select an outlet to view planned visits, pending restocks, returns, invoices, and payments.'"
+          :subtitle="selectedOutlet ? selectedOutletLabel : 'Select an outlet to view stock, planned visits, pending restocks, returns, invoices, and payments.'"
           class="brand-header-card"
         />
       </div>
@@ -123,6 +123,29 @@
         <q-card-section class="text-center q-py-xs" v-if="pendingReturns.length">
           <q-btn v-if="canCreateReturn" color="primary" label="Add More Returns" size="sm" flat @click="goToNewReturn" />
         </q-card-section>
+      </q-card>
+
+      <SectionDividerLabel label="STOCK" />
+
+      <q-card flat class="q-mb-md bg-transparent">
+        <AqlList item-key="Code" icon="warehouse" dense
+          :items="outletStock"
+          :content="[
+            r => r.productName,
+            r => [r.skuCode,(r.variantValues || []).filter(Boolean).join(' / ')].filter(Boolean).join(': ')
+          ]"
+          :chip="r => Number(r.Quantity).toLocaleString()"
+        >
+          <template #empty>
+            <q-item class="empty-state-container text-center bg-white">
+              <q-item-section>
+                <q-icon name="inventory_2" size="36px" color="grey-5" class="q-mb-xs block q-mx-auto" />
+                <q-item-label class="text-subtitle2 text-weight-bold text-grey-7">No stock records</q-item-label>
+                <q-item-label class="text-caption text-grey-6 q-mt-xs">No stock found for this outlet.</q-item-label>
+              </q-item-section>
+            </q-item>
+          </template>
+        </AqlList>
       </q-card>
 
       <SectionDividerLabel label="INVOICES" />
@@ -266,7 +289,7 @@ const { _C } = useCurrency()
 
 const {
   selectedOutletCode, selectedOutlet, outletOptions,
-  plannedVisits, pendingRestocks, pendingReturns, recentInvoices, recentPayments, unpaidInvoices, totalOutstanding,
+  plannedVisits, pendingRestocks, pendingReturns, outletStock, recentInvoices, recentPayments, unpaidInvoices, totalOutstanding,
   canCreateVisit, canCreateRestock, canCreateReturn, canCreateConsumption, canCreatePayment,
   payments, reload, outletName, outletInvoices,
   goToNewRestock, navigateToRestock, goToNewReturn, navigateToReturn,

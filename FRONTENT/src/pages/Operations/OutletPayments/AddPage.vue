@@ -128,27 +128,60 @@
                     {{ unpaidInvoices.length }} Pending
                   </q-badge>
                 </q-item-label>
-                <q-item-label caption class="text-grey-7">Select an unpaid invoice to apply payment</q-item-label>
+                <q-item-label caption class="text-grey-7">Select one or more unpaid invoices to apply payment</q-item-label>
               </q-item-section>
             </q-item>
-            <q-separator class="q-mb-lg" />
+            <q-separator class="q-mb-md" />
 
-            <AqlList :items="unpaidInvoices"
-              :layout="['label', 'caption', 'caption']"
-              :content="[
-                inv => invoiceLabel(inv.Code),
-                inv => inv.PriceListCode ? `Price List: ${inv.PriceListCode}` : 'No Price List',
-                inv => progressMeta(inv.Progress).label
-              ]"
-              :meta="[
-                inv => `Total: ${formatMoney(getInvoiceTotal(inv))}`,
-                inv => `Bal: ${formatMoney(getInvoiceBalance(inv))}`
-              ]"
-              :meta-layout="['caption', 'label']"
-              item-key="Code" icon="receipt_long" icon-color="primary" meta-color="negative"
-              clickable
-              @click="inv => selectInvoice(inv.Code)"
-            >
+            <div v-if="unpaidInvoices.length > 0" class="row justify-between items-center q-mb-sm">
+              <q-item-label caption class="text-grey-6 text-weight-medium">Check invoices to pay</q-item-label>
+              <q-btn
+                flat
+                dense
+                size="sm"
+                color="primary"
+                :label="isAllSelected ? 'Deselect All' : 'Select All'"
+                @click="toggleSelectAll"
+                class="text-weight-bold"
+              />
+            </div>
+
+            <AqlList :items="unpaidInvoices" item-key="Code" :clickable="false">
+              <template #item="{ item: inv }">
+                <q-item-section side>
+                  <q-checkbox
+                    :model-value="selectedInvoiceCodes.includes(inv.Code)"
+                    @update:model-value="toggleInvoiceSelection(inv.Code)"
+                  />
+                </q-item-section>
+                <q-item-section class="cursor-pointer" @click="toggleInvoiceSelection(inv.Code)">
+                  <q-item-label class="text-weight-bold text-subtitle2 text-grey-9">
+                    {{ invoiceLabel(inv.Code) }}
+                  </q-item-label>
+                  <q-item-label caption class="text-grey-6">
+                    {{ inv.PriceListCode ? `Price List: ${inv.PriceListCode}` : 'No Price List' }}
+                  </q-item-label>
+                  <q-item-label caption class="q-mt-xs">
+                    <q-chip
+                      dense
+                      :color="progressMeta(inv.Progress).color"
+                      text-color="white"
+                      class="text-weight-bold"
+                      style="font-size: 0.65rem; margin: 0; padding: 2px 6px;"
+                    >
+                      {{ progressMeta(inv.Progress).label }}
+                    </q-chip>
+                  </q-item-label>
+                </q-item-section>
+                <q-item-section side class="cursor-pointer text-right" @click="toggleInvoiceSelection(inv.Code)">
+                  <q-item-label caption class="text-grey-6">
+                    Total: {{ formatMoney(getInvoiceTotal(inv)) }}
+                  </q-item-label>
+                  <q-item-label class="text-subtitle2 text-weight-bold text-negative">
+                    Bal: {{ formatMoney(getInvoiceBalance(inv)) }}
+                  </q-item-label>
+                </q-item-section>
+              </template>
               <template #empty>
                 <q-item class="empty-state-container q-py-xl text-center">
                   <q-item-section>
@@ -162,6 +195,18 @@
                 </q-item>
               </template>
             </AqlList>
+
+            <!-- Step 2 Navigation Action -->
+            <div v-if="selectedInvoiceCodes.length > 0" class="row justify-end q-mt-lg">
+              <q-btn
+                unelevated
+                color="primary"
+                label="Next: Enter Payment"
+                icon-right="arrow_forward"
+                @click="currentStep = 3"
+                class="premium-btn text-weight-bold"
+              />
+            </div>
           </q-card-section>
         </q-card>
       </transition>
@@ -203,14 +248,25 @@
 
                     <q-separator style="opacity: 0.15;" class="q-my-xs" />
 
-                    <!-- Selected Invoice Row -->
+                    <!-- Selected Invoices Row -->
                     <q-item>
                       <q-item-section avatar>
                         <q-avatar color="white" text-color="grey-8" icon="receipt_long" size="32px" class="q-mr-sm shadow-xs" style="flex-shrink: 0;" />
                       </q-item-section>
                       <q-item-section>
-                        <q-item-label caption>Selected Invoice</q-item-label>
-                        <q-item-label class="text-subtitle2 text-weight-bold text-grey-9">{{ invoiceLabel(selectedInvoiceCode) }}</q-item-label>
+                        <q-item-label caption>Selected Invoices ({{ selectedInvoiceCodes.length }})</q-item-label>
+                        <div class="row q-gutter-xs q-mt-xs">
+                          <q-badge
+                            v-for="code in selectedInvoiceCodes"
+                            :key="code"
+                            color="grey-3"
+                            text-color="grey-9"
+                            class="text-weight-bold"
+                            style="border: 1px solid #cbd5e1; font-size: 0.7rem; border-radius: 6px;"
+                          >
+                            {{ code }}
+                          </q-badge>
+                        </div>
                       </q-item-section>
                       <q-item-section side>
                         <q-btn
@@ -223,7 +279,7 @@
                           class="bg-white shadow-xs"
                           style="border: 1px solid #cbd5e1; width: 32px; height: 32px;"
                         >
-                          <q-tooltip>Change Invoice</q-tooltip>
+                          <q-tooltip>Change Invoices</q-tooltip>
                         </q-btn>
                       </q-item-section>
                     </q-item>
@@ -232,11 +288,11 @@
 
                 <!-- Calculations Summary Box -->
                 <q-card-section class="q-pa-lg">
-                  <q-item-label class="text-subtitle2 text-weight-bold text-grey-7 q-mb-md uppercase tracking-wider">Invoice Balance Ledger</q-item-label>
+                  <q-item-label class="text-subtitle2 text-weight-bold text-grey-7 q-mb-md uppercase tracking-wider">Invoices Balance Ledger</q-item-label>
                   <q-list class="q-gutter-y-sm">
                     <q-item dense class="q-px-none">
                       <q-item-section>
-                        <q-item-label class="text-grey-7">Total Invoice Amount</q-item-label>
+                        <q-item-label class="text-grey-7">Total Invoices Amount</q-item-label>
                       </q-item-section>
                       <q-item-section side>
                         <q-item-label class="text-weight-bold text-grey-9 text-subtitle2">{{ formatMoney(totalAmount) }}</q-item-label>
@@ -253,7 +309,7 @@
                     <q-separator class="q-my-xs" />
                     <q-item class="bg-red-50 q-pa-md rounded-borders">
                       <q-item-section>
-                        <q-item-label class="text-weight-bold text-negative">Remaining Outstanding</q-item-label>
+                        <q-item-label class="text-weight-bold text-negative">Total Outstanding</q-item-label>
                       </q-item-section>
                       <q-item-section side>
                         <q-item-label class="text-weight-black text-negative text-h6">{{ formatMoney(remainingToPay) }}</q-item-label>
@@ -285,7 +341,8 @@
                     <div>
                       <q-item-label class="text-subtitle2 text-weight-bold text-grey-8 q-mb-xs">Payment Amount Collected *</q-item-label>
                       <q-input
-                        v-model.number="amount"
+                        :model-value="amount"
+                        @update:model-value="onTotalAmountInput"
                         outlined
                         dense
                         type="number"
@@ -294,7 +351,8 @@
                         :rules="[
                           val => !!val || 'Amount is required',
                           val => val > 0 || 'Amount must be greater than zero',
-                          val => val <= remainingToPay + 0.01 || `Amount exceeds outstanding balance of ${formatMoney(remainingToPay)}`
+                          val => val <= remainingToPay + 0.01 || `Amount exceeds outstanding balance of ${formatMoney(remainingToPay)}`,
+                          val => allocationDiff === 0 || 'Total amount must match sum of allocations'
                         ]"
                         class="premium-input text-h6 text-weight-bold q-mb-sm"
                       />
@@ -322,7 +380,63 @@
                       </div>
                     </div>
 
-                    <!-- Payment Mode (Mobile-First Tap Cards instead of Dropdowns) -->
+                    <!-- Interactive Allocation List -->
+                    <div class="q-mt-lg">
+                      <div class="text-subtitle2 text-weight-bold text-grey-8 q-mb-sm row items-center justify-between">
+                        <span>Invoice Payment Allocation</span>
+                        <q-btn
+                          flat
+                          dense
+                          size="xs"
+                          color="primary"
+                          label="Auto-Distribute"
+                          @click="autoDistribute(amount)"
+                          icon="auto_awesome"
+                        />
+                      </div>
+                      <q-card flat bordered class="bg-grey-1" style="border-radius: 8px;">
+                        <q-list separator dens>
+                          <q-item v-for="inv in selectedInvoices" :key="inv.Code" class="q-py-md">
+                            <q-item-section>
+                              <q-item-label class="text-weight-bold text-grey-9">{{ inv.Code }}</q-item-label>
+                              <q-item-label caption class="text-grey-6">Date: {{ formatDisplayDate(inv.Date) }}</q-item-label>
+                              <q-item-label caption class="text-negative text-weight-bold">
+                                Outstanding: {{ formatMoney(getInvoiceBalance(inv)) }}
+                              </q-item-label>
+                            </q-item-section>
+                            <q-item-section side>
+                              <q-input
+                                :model-value="allocations[inv.Code]"
+                                @update:model-value="val => onAllocationInput(inv.Code, val)"
+                                outlined
+                                hide-bottom-space
+                                dense
+                                type="number"
+                                :prefix="defaultCurrency.Symbol"
+                                step="0.01"
+                                class="bg-white"
+                                style="width: 140px;"
+                                :rules="[
+                                  val => val >= 0 || 'Cannot be negative',
+                                  val => val <= getInvoiceBalance(inv) + 0.01 || 'Exceeds balance'
+                                ]"
+                              />
+                            </q-item-section>
+                          </q-item>
+                        </q-list>
+                      </q-card>
+
+                      <!-- Warning alert for allocation differences -->
+                      <div v-if="allocationDiff !== 0" class="q-mt-sm text-caption text-weight-bold text-orange-9 row items-center">
+                        <q-icon name="warning" class="q-mr-xs" size="16px" />
+                        Allocated ({{ formatMoney(totalAllocated) }}) does not match collected ({{ formatMoney(amount) }}).
+                        <span class="q-ml-xs text-primary cursor-pointer underline text-weight-bold" @click="syncTotalToAllocations">
+                          Reconcile total
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- Payment Mode -->
                     <div class="q-mt-md">
                       <q-item-label class="text-subtitle2 text-weight-bold text-grey-8 q-mb-xs">Payment Mode *</q-item-label>
                       <div class="row q-col-gutter-xs">
@@ -414,7 +528,8 @@ const {
   loading,
   saving,
   selectedOutletCode,
-  selectedInvoiceCode,
+  selectedInvoiceCodes,
+  allocations,
   amount,
   mode,
   reference,
@@ -425,7 +540,7 @@ const {
   outletOptions,
   unpaidInvoices,
   allUnpaidInvoices,
-  selectedInvoice,
+  selectedInvoices,
   totalAmount,
   totalPaidSoFar,
   remainingToPay,
@@ -434,7 +549,8 @@ const {
   handleQueryParameters,
   submitPayment,
   cancel,
-  text
+  text,
+  autoDistribute
 } = flow
 
 // Search filter for Outlets
@@ -475,42 +591,93 @@ function formatDisplayDate(val) {
 }
 
 // Get invoice remaining balance using financial helper
-const getInvoiceBalance = (inv) => getInvoiceRemaining(inv, payments.items.value)
-
-// Interactive Selection State Modifiers
-function selectGlobalInvoice(invoiceCode, outletCode) {
-  selectedOutletCode.value = outletCode
-  selectedInvoiceCode.value = invoiceCode
+function getInvoiceBalance(inv) {
+  return getInvoiceRemaining(inv, payments.items.value)
 }
 
-function selectInvoice(code) {
-  selectedInvoiceCode.value = code
+// Selection helpers
+function toggleInvoiceSelection(code) {
+  const idx = selectedInvoiceCodes.value.indexOf(code)
+  if (idx > -1) {
+    selectedInvoiceCodes.value.splice(idx, 1)
+  } else {
+    selectedInvoiceCodes.value.push(code)
+  }
+}
+
+const isAllSelected = computed(() => {
+  return unpaidInvoices.value.length > 0 && selectedInvoiceCodes.value.length === unpaidInvoices.value.length
+})
+
+function toggleSelectAll() {
+  if (isAllSelected.value) {
+    selectedInvoiceCodes.value = []
+  } else {
+    selectedInvoiceCodes.value = unpaidInvoices.value.map(inv => inv.Code)
+  }
+}
+
+function selectGlobalInvoice(invoiceCode, outletCode) {
+  selectedOutletCode.value = outletCode
+  selectedInvoiceCodes.value = [invoiceCode]
+  currentStep.value = 3
 }
 
 function resetInvoice() {
-  selectedInvoiceCode.value = ''
+  selectedInvoiceCodes.value = []
+  allocations.value = {}
+  currentStep.value = 2
 }
 
 function resetOutlet() {
   selectedOutletCode.value = ''
-  selectedInvoiceCode.value = ''
+  selectedInvoiceCodes.value = []
+  allocations.value = {}
+  currentStep.value = 1
 }
 
 function applyFullBalance() {
   amount.value = Number(remainingToPay.value.toFixed(2))
+  autoDistribute(amount.value)
 }
 
 function adjustAmount(val) {
   const nextVal = Number((Number(amount.value || 0) + val).toFixed(2))
   amount.value = Math.min(nextVal, Number(remainingToPay.value.toFixed(2)))
+  autoDistribute(amount.value)
 }
 
 function applyPercentage(pct) {
   amount.value = Number((remainingToPay.value * pct).toFixed(2))
+  autoDistribute(amount.value)
 }
 
 function clearAmount() {
   amount.value = 0
+  autoDistribute(0)
+}
+
+// Allocation input handlers
+const totalAllocated = computed(() => {
+  return Object.values(allocations.value).reduce((sum, val) => sum + (Number(val) || 0), 0)
+})
+
+const allocationDiff = computed(() => {
+  return Number((amount.value - totalAllocated.value).toFixed(2))
+})
+
+function syncTotalToAllocations() {
+  amount.value = Number(totalAllocated.value.toFixed(2))
+  autoDistribute(amount.value)
+}
+
+function onTotalAmountInput(val) {
+  amount.value = Number(val) || 0
+  autoDistribute(amount.value)
+}
+
+function onAllocationInput(code, val) {
+  allocations.value[code] = Number(val) || 0
 }
 
 // Get Icon based on Mode choice
@@ -523,8 +690,6 @@ function getModeIcon(payMode) {
     default: return 'help_outline'
   }
 }
-
-// progressMeta and formatting helpers resolved locally
 
 // Outlet display name (Human-readable, name only)
 function outletName(code) {

@@ -25,10 +25,12 @@ export function useOutletPayments() {
   const loading = ref(false)
   const saving = ref(false)
   const selectedOutletCode = ref('')
-  const selectedInvoiceCode = ref('')
+  const selectedInvoiceCodes = ref([])
+  const allocations = ref({})
   const amount = ref(0)
   const mode = ref('Cash')
   const reference = ref('')
+  const currentStep = ref(1)
 
   // Modes options
   const modeOptions = ['Cash', 'Cheque', 'Bank Transfer', 'Card', 'Other']
@@ -56,7 +58,6 @@ export function useOutletPayments() {
       .map(inv => {
         const o = outlets.items.value.find(row => row.Code === inv.OutletCode)
         const outletNameStr = o ? o.Name : text(inv.OutletCode)
-
         const balance = getInvoiceRemaining(inv, payments.items.value)
 
         return {
@@ -72,7 +73,7 @@ export function useOutletPayments() {
   const recentPayments = computed(() => {
     const sevenDaysAgo = new Date()
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-    sevenDaysAgo.setHours(0, 0, 0, 0) // Normalize to midnight
+    sevenDaysAgo.setHours(0, 0, 0, 0)
 
     return payments.items.value
       .filter(p => {
@@ -95,44 +96,80 @@ export function useOutletPayments() {
       .sort((a, b) => new Date(b.Date || 0) - new Date(a.Date || 0))
   })
 
-  const selectedInvoice = computed(() => {
-    if (!selectedInvoiceCode.value) return null
-    return invoices.items.value.find(inv => text(inv.Code) === text(selectedInvoiceCode.value) && active(inv)) || null
+  const selectedInvoices = computed(() => {
+    if (selectedInvoiceCodes.value.length === 0) return []
+    return invoices.items.value.filter(inv =>
+      selectedInvoiceCodes.value.includes(text(inv.Code)) && active(inv)
+    )
   })
 
-  // Calculations (Reactive computed properties)
+  // Calculations
   const totalAmount = computed(() => {
-    if (!selectedInvoice.value) return 0
-    return getInvoiceTotal(selectedInvoice.value)
+    return selectedInvoices.value.reduce((sum, inv) => sum + getInvoiceTotal(inv), 0)
   })
 
   const totalPaidSoFar = computed(() => {
-    if (!selectedInvoiceCode.value) return 0
+    if (selectedInvoiceCodes.value.length === 0) return 0
     return payments.items.value
-      .filter(p => text(p.OutletConsumptionInvoiceCode) === text(selectedInvoiceCode.value) && active(p) && text(p.Progress) !== 'CANCELLED')
+      .filter(p => selectedInvoiceCodes.value.includes(text(p.OutletConsumptionInvoiceCode)) && active(p) && text(p.Progress) !== 'CANCELLED')
       .reduce((sum, p) => sum + Number(p.Amount || 0), 0)
   })
 
   const remainingToPay = computed(() => {
-    if (!selectedInvoice.value) return 0
-    return getInvoiceRemaining(selectedInvoice.value, payments.items.value)
+    return selectedInvoices.value.reduce((sum, inv) => sum + getInvoiceRemaining(inv, payments.items.value), 0)
   })
 
-  // Computed step to resolve the active form view state reactively
-  const currentStep = computed(() => {
-    if (!selectedOutletCode.value) return 1
-    if (!selectedInvoiceCode.value) return 2
-    return 3
-  })
+  // Auto-distribute total amount sequentially to selected invoices (oldest first)
+  function autoDistribute(totalVal) {
+    const sortedInvoices = [...selectedInvoices.value].sort((a, b) => new Date(a.Date || 0) - new Date(b.Date || 0))
+    const newAllocations = {}
+    let remainingAlloc = Number(totalVal) || 0
 
-  // Watch selected invoice to prefill remaining amount
-  watch(selectedInvoiceCode, (newCode) => {
-    if (newCode) {
-      amount.value = Number(remainingToPay.value.toFixed(2))
+    for (const inv of sortedInvoices) {
+      const invBal = getInvoiceRemaining(inv, payments.items.value)
+      if (remainingAlloc >= invBal) {
+        newAllocations[inv.Code] = Number(invBal.toFixed(2))
+        remainingAlloc -= invBal
+      } else if (remainingAlloc > 0) {
+        newAllocations[inv.Code] = Number(remainingAlloc.toFixed(2))
+        remainingAlloc = 0
+      } else {
+        newAllocations[inv.Code] = 0
+      }
+    }
+
+    // Ensure all selected invoices have a mapped value
+    for (const inv of selectedInvoices.value) {
+      if (!(inv.Code in newAllocations)) {
+        newAllocations[inv.Code] = 0
+      }
+    }
+    allocations.value = newAllocations
+  }
+
+  // Watch outlet code to transition to Step 2
+  watch(selectedOutletCode, (newVal) => {
+    if (newVal) {
+      currentStep.value = 2
     } else {
-      amount.value = 0
+      currentStep.value = 1
     }
   })
+
+  // Watch selected invoices to recalculate default amount and allocations
+  watch(selectedInvoiceCodes, (newCodes) => {
+    if (newCodes && newCodes.length > 0) {
+      const totalOutstanding = newCodes.reduce((sum, code) => {
+        const inv = invoices.items.value.find(i => text(i.Code) === text(code))
+        return sum + (inv ? getInvoiceRemaining(inv, payments.items.value) : 0)
+      }, 0)
+      amount.value = Number(totalOutstanding.toFixed(2))
+      autoDistribute(amount.value)
+    } else {
+      amount.value = 0
+      allocations.value = {}
+    }
+  }, { deep: true })
 
   function currentUserName() {
     const user = authStore.user || {}
@@ -145,21 +182,21 @@ export function useOutletPayments() {
     const outletParam = query.outletCode || query.outletcode
     const invoiceParam = query.invoiceCode || query.invoicecode
 
-    // If invoiceCode/invoicecode is supplied, try to look up the invoice to set the outlet automatically
     if (invoiceParam) {
       const inv = invoices.items.value.find(i => text(i.Code) === text(invoiceParam))
       if (inv) {
         selectedOutletCode.value = text(inv.OutletCode)
-        selectedInvoiceCode.value = text(inv.Code)
+        selectedInvoiceCodes.value = [text(inv.Code)]
       } else {
-        // Fallback: if invoice is not found in local cache but outletCode is supplied
         if (outletParam) {
           selectedOutletCode.value = text(outletParam)
         }
-        selectedInvoiceCode.value = text(invoiceParam)
+        selectedInvoiceCodes.value = [text(invoiceParam)]
       }
+      currentStep.value = 3
     } else if (outletParam) {
       selectedOutletCode.value = text(outletParam)
+      currentStep.value = 2
     }
   }
 
@@ -181,8 +218,8 @@ export function useOutletPayments() {
       $q.notify({ type: 'warning', message: 'Outlet is required.', position: 'top' })
       return false
     }
-    if (!selectedInvoiceCode.value) {
-      $q.notify({ type: 'warning', message: 'Invoice is required.', position: 'top' })
+    if (selectedInvoiceCodes.value.length === 0) {
+      $q.notify({ type: 'warning', message: 'At least one invoice must be selected.', position: 'top' })
       return false
     }
     if (!amount.value || amount.value <= 0) {
@@ -194,31 +231,39 @@ export function useOutletPayments() {
       return false
     }
 
+    const hasValidAllocation = Object.values(allocations.value).some(val => val > 0)
+    if (!hasValidAllocation) {
+      $q.notify({ type: 'warning', message: 'Please allocate payment amount to at least one invoice.', position: 'top' })
+      return false
+    }
+
     saving.value = true
     try {
       const requests = []
 
-      // 1. Create the Outlet Payment record
-      requests.push(resourceCreateRequest('OutletPayments', {
-        Date: todayISO(),
-        OutletCode: selectedOutletCode.value,
-        OutletConsumptionInvoiceCode: selectedInvoiceCode.value,
-        Amount: Number(amount.value),
-        Mode: mode.value,
-        Reference: reference.value || '',
-        Username: currentUserName(),
-        Progress: 'SUBMITTED',
-        Status: 'Active'
-      }))
+      for (const inv of selectedInvoices.value) {
+        const allocatedAmount = Number(allocations.value[inv.Code] || 0)
+        if (allocatedAmount <= 0) continue
 
-      // 2. Determine and apply progress transition for the Consumption Invoice
-      const inv = selectedInvoice.value
-      if (inv) {
-        const remaining = remainingToPay.value - Number(amount.value)
-        const comment = `Payment of ${amount.value} submitted via ${mode.value} by ${currentUserName()}`
+        // 1. Create the Outlet Payment record for this invoice
+        requests.push(resourceCreateRequest('OutletPayments', {
+          Date: todayISO(),
+          OutletCode: selectedOutletCode.value,
+          OutletConsumptionInvoiceCode: inv.Code,
+          Amount: allocatedAmount,
+          Mode: mode.value,
+          Reference: reference.value || '',
+          Username: currentUserName(),
+          Progress: 'SUBMITTED',
+          Status: 'Active'
+        }))
+
+        // 2. Transition outstanding balance status
+        const invBal = getInvoiceRemaining(inv, payments.items.value)
+        const remaining = invBal - allocatedAmount
+        const comment = `Payment of ${allocatedAmount} allocated (Total payment: ${amount.value} via ${mode.value}) by ${currentUserName()}`
 
         if (remaining <= 0.01) {
-          // Fully Paid
           if (text(inv.Progress) === 'PENDING_PAYMENT' || text(inv.Progress) === 'PARTIALLY_PAID') {
             requests.push(executeActionRequest('OutletConsumptionInvoices', inv.Code, {
               action: 'MarkPaid',
@@ -227,7 +272,6 @@ export function useOutletPayments() {
             }, { Comment: comment }))
           }
         } else {
-          // Partially Paid
           if (text(inv.Progress) === 'PENDING_PAYMENT') {
             requests.push(executeActionRequest('OutletConsumptionInvoices', inv.Code, {
               action: 'MarkPartiallyPaid',
@@ -273,19 +317,16 @@ export function useOutletPayments() {
     try {
       const requests = []
 
-      // 1. Cancel the payment record itself
       requests.push(executeActionRequest('OutletPayments', paymentCode, {
         action: 'Cancel',
         column: 'Progress',
         columnValue: 'CANCELLED'
       }, { ProgressCancelledComment: comment.trim() }))
 
-      // 2. Resolve invoice and transition progress
       const invoiceCode = paymentRecord.OutletConsumptionInvoiceCode
       const inv = invoices.items.value.find(i => text(i.Code) === text(invoiceCode))
       if (inv) {
         const total = getInvoiceTotal(inv)
-        // Sum up other active/submitted payments excluding this cancelled one
         const otherPaid = payments.items.value
           .filter(p => text(p.OutletConsumptionInvoiceCode) === text(invoiceCode) && active(p) && text(p.Progress) !== 'CANCELLED' && p.Code !== paymentCode)
           .reduce((sum, p) => sum + Number(p.Amount || 0), 0)
@@ -334,7 +375,8 @@ export function useOutletPayments() {
     loading,
     saving,
     selectedOutletCode,
-    selectedInvoiceCode,
+    selectedInvoiceCodes,
+    allocations,
     amount,
     mode,
     reference,
@@ -346,7 +388,7 @@ export function useOutletPayments() {
     unpaidInvoices,
     allUnpaidInvoices,
     recentPayments,
-    selectedInvoice,
+    selectedInvoices,
     totalAmount,
     totalPaidSoFar,
     remainingToPay,
@@ -357,6 +399,7 @@ export function useOutletPayments() {
     cancelPaymentRecord,
     cancel,
     text,
-    todayISO
+    todayISO,
+    autoDistribute
   }
 }

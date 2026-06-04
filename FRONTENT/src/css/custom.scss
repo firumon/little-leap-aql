@@ -53,6 +53,21 @@
   border-bottom: 1px dashed #cbd5e1;
 }
 
+// ── Border color utilities ───────────────────────────────────────────────────
+.border-primary   { border-color: var(--q-primary) !important; }
+.border-secondary { border-color: var(--q-secondary) !important; }
+.border-negative  { border-color: var(--q-negative) !important; }
+.border-positive  { border-color: var(--q-positive) !important; }
+.border-info      { border-color: var(--q-info) !important; }
+.border-warning   { border-color: var(--q-warning) !important; }
+
+// ── Border width utilities ───────────────────────────────────────────────────
+.border-none { border: none !important; }
+.border-xs   { border-width: 1px; }
+.border-sm   { border-width: 2px; }
+.border-md   { border-width: 3px; }
+.border-lg   { border-width: 4px; }
+
 // Interactive mobile-first cards & containers
 .interactive-list-card {
   border-radius: 4px;

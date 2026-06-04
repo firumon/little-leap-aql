@@ -18,13 +18,12 @@
     <!-- Items List -->
     <template v-else>
       <q-item
-        class="interactive-list-card q-px-md"
         v-for="(item, index) in items"
         :key="resolveKey(item, index)"
         :clickable="isItemClickable"
         v-ripple="isItemClickable"
         @click="isItemClickable && emit('click', item)"
-        :class="{ 'border': isHighlighted, 'q-py-sm':dense, 'q-py-md q-px-md':!dense, 'item-bordered':itemBordered }"
+        :class="['interactive-list-card q-px-md', itemClass, { 'border': isHighlighted, 'q-py-sm':dense, 'q-py-md q-px-md':!dense, 'item-bordered':itemBordered }]"
         :style="isHighlighted ? { '--border-color': highlightColor(item) } : {}"
       >
         <!-- Dynamic Row Content slot -->
@@ -33,12 +32,13 @@
           <!-- Left Side Icon / Avatar -->
           <q-item-section v-if="hasIcon(item) || slots.avatar" :top="align === 'top'" side>
             <slot name="avatar" :item="item">
-              <q-avatar
-                size="md"
-                :icon="resolveProp(icon,item)"
-                :text-color="iconColor(item)"
-                :style="{ backgroundColor: iconBgColor(item) }"
-              />
+              <q-avatar v-if="resolveProp(avatar, item)" :size="avatarSize">
+                <img :src="resolveProp(avatar, item)" alt="" />
+              </q-avatar>
+              <q-avatar v-else-if="resolveProp(avatarLabel, item)" :size="avatarSize" :color="resolveProp(avatarColor, item)" text-color="white">
+                {{ resolveProp(avatarLabel, item) }}
+              </q-avatar>
+              <q-avatar v-else :size="avatarSize" :icon="resolveProp(icon, item)" :text-color="iconColor(item)" :style="{ backgroundColor: iconBgColor(item) }" />
             </slot>
           </q-item-section>
 
@@ -47,7 +47,7 @@
             <!-- We loop over the contentArray sequence -->
             <template v-for="(contentProp, contentIndex) in contentArray" :key="contentIndex">
               <slot :name="'content' + contentIndex" :item="item">
-                <component v-if="contentProp !== false" :is="getComponentType(contentIndex)">
+                <component v-if="contentProp !== false" :is="getComponentType(contentIndex)" :class="getContentClass(contentIndex)">
                   <template #default>
                     {{ resolveProp(contentProp, item) }}
                   </template>
@@ -64,6 +64,8 @@
                   v-if="metaProp !== false"
                   :is="getMetaComponentType(metaIndex)"
                   :color="colorMetaChip(metaIndex, item)"
+                  :outline="getMetaOutline(metaIndex)"
+                  :text-color="getMetaTextColor(metaIndex, item)"
                 >
                   <template #default>
                     {{ resolveProp(metaProp, item) }}
@@ -92,7 +94,7 @@
 
 <script setup>
 import { computed, useSlots, h, defineComponent, getCurrentInstance } from 'vue'
-import { QItemLabel, QChip, colors } from 'quasar'
+import { QItemLabel, QChip, QBadge, colors } from 'quasar'
 
 defineOptions({ name: 'AqlList' })
 
@@ -144,17 +146,42 @@ const MetaCaption = defineComponent({
 
 const MetaChip = defineComponent({
   name: 'MetaChip',
-  props: { color: { type: String, default: 'primary' } },
+  props: {
+    color: { type: String, default: 'primary' },
+    outline: { type: Boolean, default: false },
+    textColor: { type: String, default: 'white' }
+  },
   setup(props, { slots }) {
     return () => h(
       QChip,
       {
         color: props.color,
-        textColor: 'white',
+        textColor: props.textColor,
+        outline: props.outline,
         class: 'text-weight-bold',
         style: 'font-size: 0.75rem'
       },
       { default: () => slots.default ? slots.default() : null }
+    )
+  }
+})
+
+const MetaBadge = defineComponent({
+  name: 'MetaBadge',
+  props: {
+    color: { type: String, default: 'primary' },
+    outline: { type: Boolean, default: false },
+    textColor: { type: String, default: 'white' }
+  },
+  setup(props, { slots }) {
+    return () => h(
+      QBadge,
+      {
+        color: props.color,
+        textColor: props.textColor,
+        outline: props.outline,
+        label: slots.default ? slots.default() : ''
+      }
     )
   }
 })
@@ -169,17 +196,23 @@ const props = defineProps({
   separator: { type: Boolean, default: false },
   dense: { type: Boolean, default: false },
   color: { type: [String, Function], default: 'primary' },
-  icon: { type: [String, Function], default: null },
-  iconColor: { type: [String, Function], default: null },
   highlight: { type: [Boolean, String], default: false },
   highlightColor: { type: [String, Function], default: null },
+  clickable: { type: Boolean, default: null },
+  itemClass: { type: [String, Array, Object], default: null },
+  icon: { type: [String, Function], default: null },
+  iconColor: { type: [String, Function], default: null },
   align: { type: String, default: 'center', validator: v => ['center', 'top'].includes(v) },
-  label: { type: [String, Function], default: 'Code' },
-  caption: { type: [String, Function], default: null },
+  avatar: { type: [String, Function], default: null },
+  avatarLabel: { type: [String, Function], default: null },
+  avatarColor: { type: [String, Function], default: 'primary' },
+  avatarSize: { type: String, default: 'md' },
   layout: { type: Array, default: () => ['label', 'caption'] },
   content: { type: Array, default: null },
-  btn: { type: [String, Function], default: null },
-  btnColor: { type: [String, Function], default: null },
+  label: { type: [String, Function], default: 'Code' },
+  labelClass: { type: [String, Array, Object], default: null },
+  caption: { type: [String, Function], default: null },
+  captionClass: { type: [String, Array, Object], default: null },
   meta: { type: Array, default: null },
   metaLayout: { type: Array, default: () => ['chip', 'caption', 'label'] },
   metaColor: { type: [String, Function], default: null },
@@ -187,7 +220,14 @@ const props = defineProps({
   metaCaption: { type: [String, Function], default: null },
   chip: { type: [String, Function], default: null },
   chipColor: { type: [String, Function], default: null },
-  clickable: { type: Boolean, default: null },
+  chipOutline: { type: Boolean, default: false },
+  chipTextColor: { type: [String, Function], default: null },
+  badge: { type: [String, Function], default: null },
+  badgeColor: { type: [String, Function], default: null },
+  badgeTextColor: { type: [String, Function], default: 'white' },
+  badgeOutline: { type: Boolean, default: false },
+  btn: { type: [String, Function], default: null },
+  btnColor: { type: [String, Function], default: null },
 })
 
 const emit = defineEmits(['click'])
@@ -235,7 +275,18 @@ function resolveKey(item, index) {
 }
 
 function hasIcon(item) {
-  return !!resolveProp(props.icon, item)
+  return !!(
+    resolveProp(props.avatar, item) ||
+    resolveProp(props.avatarLabel, item) ||
+    resolveProp(props.icon, item)
+  )
+}
+
+function getContentClass(contentIndex) {
+  const rowType = props.layout[contentIndex]
+  if (rowType === 'label') return props.labelClass || ''
+  if (rowType === 'caption') return props.captionClass || ''
+  return ''
 }
 
 function lighten(color) {
@@ -291,6 +342,7 @@ const metaArray = computed(() => {
   }
   return props.metaLayout.map(rowType => {
     if (rowType === 'chip') return props.chip || false
+    if (rowType === 'badge') return props.badge || false
     if (rowType === 'label') return props.metaLabel || false
     if (rowType === 'caption') return props.metaCaption || false
     return false
@@ -305,12 +357,34 @@ const chipColor = computed(() => (item) => {
   return resolveProp(props.chipColor || props.metaColor || props.color, item) || 'primary'
 })
 
-const colorMetaChip = computed(() => (metaIndex,item) => {
+const chipTextColor = computed(() => (item) => {
+  return resolveProp(props.chipTextColor, item) || 'white'
+})
+
+const badgeColor = computed(() => (item) => {
+  return resolveProp(props.badgeColor || props.metaColor || props.color, item) || 'primary'
+})
+
+const colorMetaChip = computed(() => (metaIndex, item) => {
   const rowType = props.metaLayout[metaIndex]
   if (rowType === 'chip') return chipColor.value(item)
+  if (rowType === 'badge') return badgeColor.value(item)
   return metaColor.value(item)
-
 })
+
+function getMetaOutline(metaIndex) {
+  const rowType = props.metaLayout[metaIndex]
+  if (rowType === 'chip') return props.chipOutline
+  if (rowType === 'badge') return props.badgeOutline
+  return false
+}
+
+function getMetaTextColor(metaIndex, item) {
+  const rowType = props.metaLayout[metaIndex]
+  if (rowType === 'chip') return chipTextColor.value(item)
+  if (rowType === 'badge') return resolveProp(props.badgeTextColor, item, 'white')
+  return undefined
+}
 
 function hasMeta(item) {
   return metaArray.value.some(prop => !!resolveProp(prop, item))
@@ -321,6 +395,7 @@ function getMetaComponentType(metaIndex) {
   if (rowType === 'label') return MetaLabel
   if (rowType === 'caption') return MetaCaption
   if (rowType === 'chip') return MetaChip
+  if (rowType === 'badge') return MetaBadge
   return null
 }
 </script>

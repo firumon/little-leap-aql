@@ -81,36 +81,17 @@
           <div class="text-subtitle1 text-weight-bold text-grey-9">Products</div>
         </div>
 
-        <!-- Product Cards Stack with Gaps between Products -->
-        <div class="column q-gutter-y-sm q-mb-md">
-          <q-card v-for="(group, gIdx) in groupedByProduct" :key="gIdx" flat bordered class="product-review-card">
-            <q-item class="bg-grey-2 q-py-xs q-px-sm">
-              <q-item-section avatar style="min-width: auto;" class="q-pr-xs">
-                <q-icon name="inventory_2" color="primary" size="xs" />
-              </q-item-section>
-              <q-item-section>
-                <q-item-label class="text-caption text-weight-bold text-grey-9">{{ group.productLabel }}</q-item-label>
-              </q-item-section>
-              <q-item-section side>
-                <q-badge color="primary" outline :label="`${group.items.length} variant(s)`" />
-              </q-item-section>
-            </q-item>
-            <q-separator />
-            <q-card-section class="q-pa-none">
-              <q-list class="q-py-none">
-                <q-item v-for="(item, iIdx) in group.items" :key="iIdx" class="q-px-md q-py-sm">
-                  <q-item-section>
-                    <q-item-label class="text-caption text-weight-medium text-grey-9">{{ item.variantLabel }}</q-item-label>
-                    <q-item-label caption class="text-grey-6">SKU: {{ item.SKU }}</q-item-label>
-                  </q-item-section>
-                  <q-item-section side class="self-center text-center" style="min-width: 60px;">
-                    <q-badge color="primary" class="text-bold q-py-xs q-px-sm text-center" style="font-size: 0.85rem;" :label="item.Quantity" />
-                  </q-item-section>
-                </q-item>
-              </q-list>
-            </q-card-section>
-          </q-card>
-        </div>
+        <AqlGroupedList
+          group-key="productLabel"
+          header-label="productLabel"
+          header-icon="inventory_2"
+          item-key="SKU"
+          label="variantLabel"
+          chip="Quantity"
+          :items="addedItems"
+          :header-badge="reviewGroupBadge"
+          :caption="reviewItemCaption"
+        />
 
         <q-input v-model="submitComment" type="textarea" label="Comment (optional)" outlined class="q-mb-md" />
 
@@ -159,6 +140,7 @@ import { ref, computed, reactive, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useOutletRestocks } from '../../../composables/operations/outlets/useOutletRestocks.js'
+import AqlGroupedList from '../../../components/shared/AqlGroupedList.vue'
 import AqlList from '../../../components/shared/AqlList.vue'
 import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
 import { text } from '../../../composables/operations/outlets/outletOperationsMeta.js'
@@ -240,19 +222,17 @@ const addedItems = computed(() => {
     })
 })
 
-const groupedByProduct = computed(() => {
-  const groups = new Map()
-  addedItems.value.forEach(item => {
-    const key = item.productLabel
-    if (!groups.has(key)) groups.set(key, { productLabel: key, items: [] })
-    groups.get(key).items.push(item)
-  })
-  return Array.from(groups.values())
-})
-
 function removeAddedItem(sku) {
   const actualIdx = rows.value.findIndex(r => text(r.SKU) === text(sku))
   if (actualIdx >= 0) removeRow(actualIdx)
+}
+
+function reviewGroupBadge(group) {
+  return `${group.items.length} variant(s)`
+}
+
+function reviewItemCaption(item) {
+  return `SKU: ${item.SKU}`
 }
 
 function adjustSkuQty(skuValue, delta) {

@@ -202,9 +202,10 @@
     </template>
 
     <!-- FAB -->
-    <DataAddFAB tooltip="New Restock Request" />
+    <RestockAddFAB />
   </q-page>
 </template>
+
 
 <script setup>
 import { ref, computed, reactive, onMounted } from 'vue'
@@ -216,8 +217,9 @@ import { RESTOCK_PROGRESS_ORDER, active, text, sortTime, formatDate, progressMet
 import AqlList from 'components/shared/AqlList.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
 import AppDate from '../../../components/shared/AppDate.vue'
-import DataAddFAB from '../../../components/shared/DataAddFAB.vue'
+import RestockAddFAB from '../../../components/Operations/Outlets/RestockAddFAB.vue'
 import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
+
 
 defineOptions({ name: 'OutletRestocksIndexPage' })
 

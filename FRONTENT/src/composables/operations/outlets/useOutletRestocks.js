@@ -9,7 +9,8 @@ import { OUTLET_OPERATION_RESOURCES, RESTOCK_PROGRESS_ORDER, active, progressMet
 import { allocatedRows, approvalRequestedQty, computeRestockProgressFromItems, expandOrsiAllocationRows, recommendOrsiAllocation, restockEditableProgress, storageName, sumBy, toNumber, validateRestockAllocationRows, validateRestockApproval, validateRestockDraft, warehouseAvailableQty, warehouseDisplayName, warehouseStorageCandidatesForSku } from './outletStockLogic.js'
 import { useProductSkuResolver } from 'src/composables/masters/products/useProductSkuResolver'
 import { buildPendingRestockAllocationBatchRequests, buildRestockAllocationBatchRequests, buildRestockCancelItemsBatchRequests, buildRestockCompositePayload, buildRestockRejectBatchRequests, buildRestockSendBackRequest } from './outletRestockPayload.js'
-import { compositeSaveRequest, failureMessage, resourceGetRequest, responseFailed } from './outletOperationsBatch.js'
+import { compositeSaveRequest, failureMessage, resourceGetRequest, responseFailed, resourceBulkRequest, resourceUpdateRequest } from './outletOperationsBatch.js'
+
 
 export function resolveRestockViewMode(progress) {
   if (['DRAFT', 'REVISION_REQUIRED'].includes(text(progress))) return 'editable'
@@ -543,15 +544,75 @@ export function useOutletRestocks() {
   function navigateTo(code) { nav.goTo('view', { code }) }
   function navigateToAdd(outletCode) { nav.goTo('add', outletCode ? { query: { outletCode } } : {}) }
   function cancel() { nav.goTo('list') }
+  async function deliverDirectRestock(restock, itemsToDeliver = [], comment = '') {
+    if (!allowed({ outletRestock: 'update', outletRestockItem: 'update', outletMovement: 'create' })) {
+      return notifyError('You do not have permission to mark items delivered.')
+    }
+    const allocatedRows = itemsToDeliver.filter(row => text(row.Progress) === 'ALLOCATED')
+    if (!allocatedRows.length) return notifyWarning('Select at least one allocated item to deliver.')
+
+    saving.value = true
+    try {
+      const now = new Date().toISOString()
+      const actorName = currentUserName()
+      const requests = []
+
+      // 1. Bulk update restock items to DELIVERED
+      const itemUpdates = allocatedRows.map(row => ({
+        Code: text(row.Code),
+        Progress: 'DELIVERED',
+        ProgressDeliveredAt: now,
+        ProgressDeliveredBy: actorName,
+        ProgressDeliveredComment: text(comment)
+      }))
+      requests.push(resourceBulkRequest('OutletRestockItems', itemUpdates, ['OutletRestockItems']))
+
+      // 2. Create positive OutletMovements for target outlet stock increase
+      const movements = allocatedRows.map(row => ({
+        OutletCode: text(restock.OutletCode),
+        SKU: text(row.SKU),
+        QtyChange: Math.abs(toNumber(row.Quantity)),
+        ReferenceType: 'RestockDelivery',
+        ReferenceCode: text(restock.Code),
+        MovementDate: todayISO(),
+        Status: 'Active'
+      }))
+      requests.push(resourceBulkRequest('OutletMovements', movements, ['OutletStorages']))
+
+      // 3. Compute next parent restock progress
+      const allItems = childItems(restock.Code)
+      const nextItems = allItems.map(row => {
+        const deliveredRow = allocatedRows.find(d => text(d.Code) === text(row.Code))
+        if (deliveredRow) return { ...row, Progress: 'DELIVERED' }
+        return row
+      })
+      
+      const nextProgress = computeRestockProgressFromItems(nextItems)
+      requests.push(resourceUpdateRequest('OutletRestocks', restock.Code, {
+        Progress: nextProgress
+      }, ['OutletRestocks']))
+
+      const result = await resourceIoStore.runBatchRequests(requests)
+      if (responseFailed(result)) return notifyError(failureMessage(result, 'Failed to deliver restock items.'))
+
+      $q.notify({ type: 'positive', message: 'Restock items delivered.', position: 'top' })
+      await reloadView(true)
+      return true
+    } finally {
+      saving.value = false
+    }
+  }
+
   function notifyWarning(message) { $q.notify({ type: 'warning', message, position: 'top' }); return false }
   function notifyError(message) { $q.notify({ type: 'negative', message, position: 'top' }); return false }
 
   return {
     loading, saving, searchTerm, form, rows, items, groups, outletOptions, skuOptions, restockItems, approvalAllocationGroups, pendingAllocationGroups, pendingAllocationDraftRows, hasAllocatedApprovalRows, hasNewAllocatedRows, resourcePerms, canCreate, canApprove,
-    reload, reloadIndex, reloadAdd, reloadView, loadRestock, saveRestockDraft, submitRestock, approveRestock, allocatePendingRestockItems, cancelPendingRestockItems, rejectRestock, sendBackRestock,
+    reload, reloadIndex, reloadAdd, reloadView, loadRestock, saveRestockDraft, submitRestock, approveRestock, allocatePendingRestockItems, cancelPendingRestockItems, rejectRestock, sendBackRestock, deliverDirectRestock,
     resolveRestockViewMode, addRow, updateRow, removeRow, getRestock, childItems, progressMeta, storageOptionsForSku, allocationAvailable,
     approvalSourceKey, pendingAllocationSourceKey, applyRecommendedAllocation, updateAllocationRow, updateAllocationLine, updateCandidateLine, updatePendingCandidateLine, cancelPendingSelection, addAllocationSplit, removeAllocationLine, resetAllocation,
     updateAllocation, splitAllocation, allocatedRows, itemProgressSummary, restockProgressFromRows, appendWorkflowComment, formatWorkflowCommentHtml,
     navigateTo, navigateToAdd, cancel
   }
 }
+

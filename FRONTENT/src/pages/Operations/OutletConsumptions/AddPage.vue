@@ -3,19 +3,7 @@
     <OutletHeaderPanel title="Record Outlet Consumption" subtitle="Count stock and submit outlet side effects." class="q-pa-md" />
 
     <!-- Step Progress Indicator -->
-    <div class="row items-center justify-around q-px-lg q-pb-md q-mt-md">
-      <div v-for="s in steps" :key="s.name" class="column items-center" style="min-width: 72px">
-        <q-avatar
-          :size="step >= s.name ? '36px' : '32px'"
-          :color="step >= s.name ? 'primary' : 'grey-4'"
-          :text-color="step >= s.name ? 'white' : 'grey-7'"
-          :class="step === s.name ? 'shadow-3' : ''"
-        >
-          <q-icon :name="step > s.name ? 'check' : s.icon" size="18px" />
-        </q-avatar>
-        <div class="text-caption q-mt-xs" :class="step >= s.name ? 'text-weight-bold text-primary' : 'text-grey-7'">{{ s.label }}</div>
-      </div>
-    </div>
+    <StepProgressIndicator v-model="step" :steps="steps" />
 
     <!-- Step Content (scrollable) -->
     <div class="col scroll q-px-md">
@@ -77,6 +65,7 @@
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useOutletConsumption } from '../../../composables/operations/outlets/useOutletConsumption.js'
+import StepProgressIndicator from '../../../components/shared/StepProgressIndicator.vue'
 import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
 import OutletConsumptionContextStep from '../../../components/Operations/Outlets/OutletConsumptionContextStep.vue'
 import OutletConsumptionStockCountStep from '../../../components/Operations/Outlets/OutletConsumptionStockCountStep.vue'

@@ -128,8 +128,9 @@
       <SectionDividerLabel label="STOCK" />
 
       <q-card flat class="q-mb-md bg-transparent">
-        <AqlList item-key="Code" icon="warehouse" dense
-          :items="outletStock"
+        <AqlGroupedList
+          item-key="Code" :items="outletStock" group-key="productCode" header-label="productName"
+          :header-badge="group => 'Total: ' + group.items.map(item => Number(item.Quantity)).reduce((a,b) => a+b,0).toLocaleString()"
           :content="[
             r => r.productName,
             r => [r.skuCode,(r.variantValues || []).filter(Boolean).join(' / ')].filter(Boolean).join(': ')
@@ -145,7 +146,7 @@
               </q-item-section>
             </q-item>
           </template>
-        </AqlList>
+        </AqlGroupedList>
       </q-card>
 
       <SectionDividerLabel label="INVOICES" />
@@ -279,6 +280,7 @@ import ActionCommentDialog from '../../../components/shared/ActionCommentDialog.
 import AppDate from '../../../components/shared/AppDate.vue'
 import AqlList from '../../../components/shared/AqlList.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
+import AqlGroupedList from "components/shared/AqlGroupedList.vue";
 
 defineOptions({ name: 'OutletsOperationsHubPage' })
 

@@ -891,7 +891,7 @@ function initAppResourcesCodeConfig() {
     },
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICES,
-        Scope: 'operation', ParentResource: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTIONS, IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICES,
+        Scope: 'operation', ParentResource: '', IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICES,
         CodePrefix: 'OCINV', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletConsumptionCode,Date,OutletCode,Username,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Subtotal":0,"Discount":0,"Tax":0,"Progress":"PENDING_PAYMENT"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
             {"action":"MarkPartiallyPaid","label":"Mark Partially Paid","icon":"payments","color":"info","kind":"mutate","confirm":true,"column":"Progress","columnValue":"PARTIALLY_PAID","columnValueOptions":[],"fields":[{"name":"Comment","label":"Comment","type":"textarea","required":false}],"visibleWhen":{"column":"Progress","op":"eq","value":"PENDING_PAYMENT"}},

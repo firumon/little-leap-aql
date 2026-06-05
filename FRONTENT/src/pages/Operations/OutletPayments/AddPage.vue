@@ -4,8 +4,7 @@
     <OutletHeaderPanel
        title="Record Outlet Payment"
        subtitle="Receive and log outstanding outlet consumption payments"
-       :stats="[]"
-       class="q-mb-lg brand-header-card"
+       class="q-mb-lg"
      />
 
     <!-- Global Loading Spinner -->

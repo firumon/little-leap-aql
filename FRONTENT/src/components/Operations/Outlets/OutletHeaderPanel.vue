@@ -1,5 +1,5 @@
 <template>
-  <q-card flat bordered class="rounded-borders shadow-1 bg-white">
+  <q-card flat bordered class="brand-header-card">
     <q-card-section>
       <div class="row items-start q-col-gutter-md">
         <div class="col">

@@ -3,7 +3,7 @@
     <OutletHeaderPanel
       title="Direct Restock"
       subtitle="Stock replenishment · Instant delivery and auto-approval"
-      class="brand-header-card q-mb-md"
+      class="q-mb-md"
     />
 
     <!-- Step Progress Indicator -->

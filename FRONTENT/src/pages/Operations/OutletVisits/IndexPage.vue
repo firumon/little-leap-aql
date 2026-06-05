@@ -6,8 +6,6 @@
         <OutletHeaderPanel
           title="Outlet Visits"
           subtitle="Sales field planner · plan, visit, track"
-          :stats="[]"
-          class="brand-header-card"
         />
       </div>
       <div class="q-ml-sm self-center">

@@ -6,8 +6,6 @@
         <OutletHeaderPanel
           title="Outlet Consumptions"
           subtitle="Stock tracking · count, invoice, track"
-          :stats="[]"
-          class="brand-header-card"
         />
       </div>
       <div class="q-ml-sm self-center">

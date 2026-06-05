@@ -6,8 +6,6 @@
         <OutletHeaderPanel
           title="Outlet Stock"
           :subtitle="'Total quantity: ' + totalQty"
-          :stats="[]"
-          class="brand-header-card"
         />
       </div>
       <div class="q-ml-sm self-center">

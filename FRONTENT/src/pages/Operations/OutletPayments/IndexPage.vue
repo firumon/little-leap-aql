@@ -6,8 +6,6 @@
         <OutletHeaderPanel
           title="Outlet Payments Ledger"
           subtitle="Track, view, and record pending consumption invoice collections"
-          :stats="[]"
-          class="brand-header-card"
         />
       </div>
       <div class="q-ml-sm self-center">

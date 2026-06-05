@@ -5,7 +5,6 @@
         <OutletHeaderPanel
           title="Outlet Hub"
           :subtitle="selectedOutlet ? selectedOutletLabel : 'Select an outlet to view stock, planned visits, pending restocks, returns, invoices, and payments.'"
-          class="brand-header-card"
         />
       </div>
       <div class="q-ml-sm self-center">

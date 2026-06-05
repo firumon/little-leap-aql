@@ -25,6 +25,15 @@ $primary-50  : #EEF3F9;
 // ── Secondary shades ────────────────────────────────────────────────────────
 $secondary-50 : #FBF5E5;
 
+// ── Light shade variants (for --q-*-light CSS custom properties) ───────────
+$primary-light   : $primary-50;
+$secondary-light : $secondary-50;
+$accent-light    : #FCF1D0;
+$positive-light  : #E6F4EA;
+$negative-light  : #FCE8E6;
+$info-light      : #E3F0FA;
+$warning-light   : #FEF7E0;
+
 // ── Ink hierarchy (for light-background surfaces) ──────────────────────────
 // On dark hero backgrounds, use rgba(white, 0.55–0.65) instead — opacity-
 // reduced white is the correct semantic choice there, not these ink vars.

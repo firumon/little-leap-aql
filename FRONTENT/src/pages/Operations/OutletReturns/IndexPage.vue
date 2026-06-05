@@ -6,8 +6,6 @@
         <OutletHeaderPanel
           title="Outlet Returns"
           subtitle="Track sales returns and unsold inventory returns from outlets"
-          :stats="[]"
-          class="brand-header-card"
         />
       </div>
       <div class="q-ml-sm self-center">

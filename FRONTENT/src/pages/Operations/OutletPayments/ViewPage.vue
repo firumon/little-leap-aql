@@ -4,8 +4,7 @@
     <OutletHeaderPanel
       title="Payment Collection Receipt"
       :subtitle="record ? `Receipt Code: ${record.Code}` : ''"
-      :stats="[]"
-      class="q-mb-lg brand-header-card"
+      class="q-mb-lg"
     >
       <template #side v-if="record">
         <div class="row items-center q-gutter-xs">

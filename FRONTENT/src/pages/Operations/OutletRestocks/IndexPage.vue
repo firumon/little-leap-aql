@@ -6,8 +6,6 @@
         <OutletHeaderPanel
           title="Outlet Restocks"
           subtitle="Stock replenishment · request, approve, deliver"
-          :stats="[]"
-          class="brand-header-card"
         />
       </div>
       <div class="q-ml-sm self-center">

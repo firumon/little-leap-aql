@@ -6,8 +6,6 @@
         <OutletHeaderPanel
           title="Consumption Invoices"
           subtitle="Generate and manage consumption invoices"
-          :stats="[]"
-          class="brand-header-card"
         />
       </div>
       <div class="q-ml-sm self-center">

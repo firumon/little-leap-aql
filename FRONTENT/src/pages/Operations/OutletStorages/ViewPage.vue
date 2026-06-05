@@ -25,7 +25,7 @@
 import { computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useOutletStock } from '../../../composables/operations/outlets/useOutletStock.js'
-import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
+import OutletHeaderPanel from '../../../components/shared/OutletHeaderPanel.vue'
 import OutletMovementTimeline from '../../../components/Operations/Outlets/OutletMovementTimeline.vue'
 
 defineOptions({ name: 'OutletStoragesViewPage' })

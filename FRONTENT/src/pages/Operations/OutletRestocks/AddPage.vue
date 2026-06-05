@@ -142,7 +142,7 @@ import { useQuasar } from 'quasar'
 import { useOutletRestocks } from '../../../composables/operations/outlets/useOutletRestocks.js'
 import AqlGroupedList from '../../../components/shared/AqlGroupedList.vue'
 import AqlList from '../../../components/shared/AqlList.vue'
-import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
+import OutletHeaderPanel from '../../../components/shared/OutletHeaderPanel.vue'
 import { text } from '../../../composables/operations/outlets/outletOperationsMeta.js'
 
 defineOptions({ name: 'OutletRestocksAddPage' })

@@ -90,7 +90,7 @@
 <script setup>
 import { onMounted, computed } from 'vue'
 import { useOutletDeliveries } from '../../../composables/operations/outlets/useOutletDeliveries.js'
-import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
+import OutletHeaderPanel from '../../../components/shared/OutletHeaderPanel.vue'
 
 defineOptions({ name: 'OutletDeliveriesAddPage' })
 

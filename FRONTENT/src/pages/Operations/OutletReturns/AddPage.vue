@@ -194,7 +194,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useOutletReturns } from '../../../composables/operations/outlets/useOutletReturns.js'
-import OutletHeaderPanel from "components/Operations/Outlets/OutletHeaderPanel.vue";
+import OutletHeaderPanel from "components/shared/OutletHeaderPanel.vue";
 
 defineOptions({ name: 'OutletReturnsAddPage' })
 

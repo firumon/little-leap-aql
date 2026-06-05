@@ -1,14 +1,14 @@
 import { ref, computed, watch } from 'vue'
 import { useQuasar } from 'quasar'
-import { useAuthStore } from '../../../stores/auth.js'
-import { useResourceData } from '../../resources/useResourceData.js'
-import { useResourceNav } from '../../resources/useResourceNav.js'
-import { useResourceConfig } from '../../resources/useResourceConfig.js'
+import { useAuthStore } from '../../../../stores/auth.js'
+import { useResourceData } from '../../../resources/useResourceData.js'
+import { useResourceNav } from '../../../resources/useResourceNav.js'
+import { useResourceConfig } from '../../../resources/useResourceConfig.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useProductSkuResolver } from 'src/composables/masters/products/useProductSkuResolver'
-import { todayISO, text, active } from './outletOperationsMeta.js'
-import { compositeSaveRequest, resourceBulkRequest, executeActionRequest, batchRef, responseFailed, failureMessage, batchResultCode } from './outletOperationsBatch.js'
-import { toNumber } from './outletStockLogic.js'
+import { todayISO, text, active } from '../outletOperationsMeta.js'
+import { compositeSaveRequest, resourceBulkRequest, executeActionRequest, batchRef, responseFailed, failureMessage, batchResultCode } from '../outletOperationsBatch.js'
+import { toNumber } from '../outletStockLogic.js'
 
 export function useDirectRestock() {
   const $q = useQuasar()

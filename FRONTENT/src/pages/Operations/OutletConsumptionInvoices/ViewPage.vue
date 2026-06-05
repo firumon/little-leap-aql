@@ -254,7 +254,7 @@ import { useQuasar } from 'quasar'
 import { useOutletConsumption } from '../../../composables/operations/outlets/useOutletConsumption.js'
 import { useResourceNav } from '../../../composables/resources/useResourceNav.js'
 import { useCurrency } from '../../../composables/useCurrency.js'
-import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
+import OutletHeaderPanel from '../../../components/shared/OutletHeaderPanel.vue'
 import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'
 import ResourceActionButton from '../../../components/shared/ResourceActionButton.vue'
 

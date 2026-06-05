@@ -269,7 +269,7 @@ import { useOutletVisits } from '../../../composables/operations/outlets/useOutl
 import { getInvoiceRemaining } from '../../../composables/operations/outlets/outletConsumptionPricing.js'
 import { progressMeta } from '../../../composables/operations/outlets/outletOperationsMeta.js'
 import { useCurrency } from '../../../composables/useCurrency.js'
-import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
+import OutletHeaderPanel from '../../../components/shared/OutletHeaderPanel.vue'
 import OutletHubSummaryStats from '../../../components/Operations/Outlets/OutletHub/OutletHubSummaryStats.vue'
 import OutletHubSimpleListSection from '../../../components/Operations/Outlets/OutletHub/OutletHubSimpleListSection.vue'
 import OutletHubPaymentSection from '../../../components/Operations/Outlets/OutletHub/OutletHubPaymentSection.vue'

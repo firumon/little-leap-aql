@@ -41,7 +41,7 @@
 </template>
 
 <script setup>
-import AqlList from '../../shared/AqlList.vue'
+import AqlList from '../../../shared/AqlList.vue'
 
 defineOptions({ name: 'DirectRestockSetupStep' })
 

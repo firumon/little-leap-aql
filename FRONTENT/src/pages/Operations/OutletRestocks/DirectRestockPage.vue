@@ -65,12 +65,12 @@
 
 <script setup>
 import { computed, onMounted } from 'vue'
-import { useDirectRestock } from '../../../composables/operations/outlets/useDirectRestock.js'
+import { useDirectRestock } from '../../../composables/operations/outlets/DirectRestock/useDirectRestock.js'
 import StepProgressIndicator from '../../../components/shared/StepProgressIndicator.vue'
-import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
-import DirectRestockSetupStep from '../../../components/Operations/Outlets/DirectRestockSetupStep.vue'
-import DirectRestockStockMatchStep from '../../../components/Operations/Outlets/DirectRestockStockMatchStep.vue'
-import DirectRestockSummaryStep from '../../../components/Operations/Outlets/DirectRestockSummaryStep.vue'
+import OutletHeaderPanel from '../../../components/shared/OutletHeaderPanel.vue'
+import DirectRestockSetupStep from '../../../components/Operations/Outlets/DirectRestock/DirectRestockSetupStep.vue'
+import DirectRestockStockMatchStep from '../../../components/Operations/Outlets/DirectRestock/DirectRestockStockMatchStep.vue'
+import DirectRestockSummaryStep from '../../../components/Operations/Outlets/DirectRestock/DirectRestockSummaryStep.vue'
 
 defineOptions({ name: 'DirectRestockPage' })
 

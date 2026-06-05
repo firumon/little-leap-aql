@@ -62,7 +62,7 @@
 import { computed, onMounted } from 'vue'
 import { useOutletStock } from '../../../composables/operations/outlets/useOutletStock.js'
 import OutletStockRows from '../../../components/Operations/Outlets/OutletStockRows.vue'
-import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
+import OutletHeaderPanel from '../../../components/shared/OutletHeaderPanel.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
 import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
 

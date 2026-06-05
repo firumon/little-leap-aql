@@ -82,7 +82,7 @@ import { useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useOutletConsumption } from '../../../composables/operations/outlets/useOutletConsumption.js'
 import { useCurrency } from '../../../composables/useCurrency.js'
-import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
+import OutletHeaderPanel from '../../../components/shared/OutletHeaderPanel.vue'
 
 defineOptions({ name: 'OutletConsumptionInvoicesAddPage' })
 const $q = useQuasar()

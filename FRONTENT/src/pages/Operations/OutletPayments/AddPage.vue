@@ -513,7 +513,7 @@ import { useRoute } from 'vue-router'
 import { useOutletPayments } from '../../../composables/operations/outlets/useOutletPayments.js'
 import { progressMeta } from '../../../composables/operations/outlets/outletOperationsMeta.js'
 import AqlList from '../../../components/shared/AqlList.vue'
-import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
+import OutletHeaderPanel from '../../../components/shared/OutletHeaderPanel.vue'
 import { useCurrency } from '../../../composables/useCurrency.js'
 import { getInvoiceTotal, getInvoiceRemaining } from '../../../composables/operations/outlets/outletConsumptionPricing.js'
 

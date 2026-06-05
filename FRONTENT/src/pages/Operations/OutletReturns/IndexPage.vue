@@ -91,7 +91,7 @@
 import { onMounted, computed } from 'vue'
 import { useOutletReturns } from '../../../composables/operations/outlets/useOutletReturns.js'
 import AqlList from '../../../components/shared/AqlList.vue'
-import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
+import OutletHeaderPanel from '../../../components/shared/OutletHeaderPanel.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
 import DataAddFAB from '../../../components/shared/DataAddFAB.vue'
 import { useResourceReload } from '../../../composables/resources/useResourceReload.js'

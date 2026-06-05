@@ -106,7 +106,7 @@ import { computed, onMounted } from 'vue'
 import { useOutletConsumption } from '../../../composables/operations/outlets/useOutletConsumption.js'
 import { useCurrency } from '../../../composables/useCurrency.js'
 import AqlList from '../../../components/shared/AqlList.vue'
-import OutletHeaderPanel from '../../../components/Operations/Outlets/OutletHeaderPanel.vue'
+import OutletHeaderPanel from '../../../components/shared/OutletHeaderPanel.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
 import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
 

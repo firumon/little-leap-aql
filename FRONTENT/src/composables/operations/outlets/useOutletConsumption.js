@@ -8,7 +8,7 @@ import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useProductSkuResolver } from 'src/composables/masters/products/useProductSkuResolver'
 import { OUTLET_OPERATION_RESOURCES, CONSUMPTION_PROGRESS_ORDER, active, formatDate, progressMeta, sortTime, text, todayISO, visitProgress } from './outletOperationsMeta.js'
 import { toNumber, validateConsumption } from './outletStockLogic.js'
-import { batchRef, batchResultCode, compositeSaveRequest, executeActionRequest, failureMessage, OUTLET_ACTIONS, resourceUpdateRequest, responseFailed } from './outletOperationsBatch.js'
+import { batchRef, batchResultCode, compositeSaveRequest, executeActionRequest, failureMessage, OUTLET_ACTIONS, resourceUpdateRequest, responseFailed, resourceBulkRequest } from './outletOperationsBatch.js'
 import {
   buildConsumptionCompositePayload,
   buildConsumptionInvoiceRequest,
@@ -67,6 +67,7 @@ export function useOutletConsumption() {
   )
   const restockPermissions = computed(() => restockConfig.value?.permissions || {})
   const canReadRestock = computed(() => !!restockPermissions.value.canRead)
+  const canDirectRestock = computed(() => allowed({ outletRestock: 'create', stockMovement: 'create' }))
 
   const loading = ref(false)
   const saving = ref(false)
@@ -77,7 +78,7 @@ export function useOutletConsumption() {
   const form = ref({ Date: todayISO(), Username: currentUserName(), Progress: 'PENDING_INVOICE_GENERATION', Status: 'Active', OutletVisitCode: '' })
   const stockRows = ref([])
   const restockRows = ref([])
-  const checklist = ref({ completeVisit: false, scheduleNextVisit: true, generateInvoice: true, placeRestock: false, submitRestock: false, applyReturnsToInvoice: true })
+  const checklist = ref({ completeVisit: false, scheduleNextVisit: true, generateInvoice: true, placeRestock: false, submitRestock: false, applyReturnsToInvoice: true, restockSubmissionMode: 'PENDING_APPROVAL', restockWarehouseCode: localStorage.getItem('last_direct_restock_warehouse_code') || '' })
 
   const returnMetadata = ref({})
 
@@ -266,6 +267,9 @@ export function useOutletConsumption() {
     checklist.value.completeVisit = !!form.value.OutletVisitCode && checklist.value.completeVisit !== false
     checklist.value.placeRestock = restockRows.value.some((row) => toNumber(row.Quantity) > 0)
     checklist.value.submitRestock = checklist.value.placeRestock && checklist.value.submitRestock !== false
+    if (!checklist.value.placeRestock) {
+      checklist.value.restockSubmissionMode = 'PENDING_APPROVAL'
+    }
   }
 
   function recomputeSold(row) { row.SoldQty = Math.max(toNumber(row.SystemQty) - toNumber(row.CurrentQty), 0) }
@@ -415,6 +419,9 @@ export function useOutletConsumption() {
   async function saveConsumption() {
     const error = validateBeforeSubmit()
     if (error) return $q.notify({ type: 'warning', message: error, position: 'top' })
+    if (checklist.value.placeRestock && checklist.value.restockSubmissionMode === 'APPROVED' && !checklist.value.restockWarehouseCode) {
+      return $q.notify({ type: 'warning', message: 'Please select a source warehouse for instant restock.', position: 'top' })
+    }
     const requiredPerms = { outletConsumption: 'create' }
     if (returnRows.value.length > 0) {
       requiredPerms.outletReturn = 'create'
@@ -430,6 +437,9 @@ export function useOutletConsumption() {
     }
     if (checklist.value.placeRestock) {
       requiredPerms.outletRestock = 'create'
+      if (checklist.value.restockSubmissionMode === 'APPROVED') {
+        requiredPerms.stockMovement = 'create'
+      }
     }
     if (!allowed(requiredPerms)) {
       $q.notify({ type: 'negative', message: 'You do not have permission to execute this consumption workflow.', position: 'top' })
@@ -571,8 +581,24 @@ export function useOutletConsumption() {
         requests.push(buildNextVisitRequest(form.value, toNumber(rule?.VisitFrequencyDays) || 14, consumptionRef))
       }
       if (checklist.value.placeRestock) {
-        requests.push(buildRestockCompositeRequest(form.value, restockRows.value, consumptionRef))
-        if (checklist.value.submitRestock) requests.push(buildRestockSubmitRequest(restockRef))
+        const isDirect = checklist.value.restockSubmissionMode === 'APPROVED'
+        const progress = checklist.value.restockSubmissionMode || 'DRAFT'
+        requests.push(buildRestockCompositeRequest(form.value, restockRows.value, consumptionRef, progress, isDirect ? checklist.value.restockWarehouseCode : ''))
+        if (progress === 'PENDING_APPROVAL') {
+          requests.push(buildRestockSubmitRequest(restockRef))
+        }
+        if (isDirect) {
+          const movements = restockRows.value.filter(r => toNumber(r.Quantity) > 0).map(row => ({
+            WarehouseCode: checklist.value.restockWarehouseCode,
+            StorageName: '_default',
+            SKU: row.SKU,
+            QtyChange: -Math.abs(row.Quantity),
+            ReferenceType: 'OutletRestock',
+            ReferenceCode: restockRef,
+            Status: 'Active'
+          }))
+          requests.push(resourceBulkRequest('StockMovements', movements, ['WarehouseStorages']))
+        }
       }
 
       const phase1 = await resourceIoStore.runBatchRequests(requests)
@@ -783,6 +809,6 @@ export function useOutletConsumption() {
 
   return {
     loading, saving, acting, searchTerm, activeGroupKey, activeInvoiceGroupKey, form, checklist, stockRows, restockRows, groups, invoiceGroups, items, invoiceItems, outletOptions, visitOptions, allPlannedVisits, plannedVisits, plannedVisitDiagnostics, skuOptions, selectedVisit, soldRows, varianceRows, pendingInvoiceItems, pendingPaymentInvoices, partiallyPaidInvoices, paidInvoices, cancelledInvoices, invoiceGeneratedItems, historyItems, canCreate, consumptionPermissions, invoicePermissions, restockPermissions, canReadInvoice, canReadRestock, reload, onOutletChange, selectVisit, updateCurrentQty, incrementCurrent, decrementCurrent, setCurrentToZero, setCurrentToSystem, updateRestockRow, addRestockRow, removeRestockRow, saveConsumption, generateInvoiceForConsumption, cancelConsumption, getConsumption, getInvoice, childItems, childInvoiceItems, childInvoice, childRestocks, cancelableRestocks, consumptionItemRows, invoiceLineItems, consumedTotal, getProgressMeta, isGroupExpanded, toggleGroup, isInvoiceGroupExpanded, toggleInvoiceGroup, outletName, skuName, productDisplayName, visitLabel, formatDisplayDate, navigateTo, navigateToAdd, navigateToInvoice, navigateToInvoiceAdd, navigateToRestock, navigateToConsumption, saveInvoiceFromConsumption, updateInvoice, resolveDefaultPriceList, resolvePriceListItems, cancel, text, todayISO, active, priceLists, rules,
-    returnRows, returnMetadata, warehouseOptions, canCreateReturn, addManualReturnSku, updateReturnMetadata, removeManualReturnRow, getInvoiceTotal, getInvoiceRemaining, returns
+    returnRows, returnMetadata, warehouseOptions, canCreateReturn, addManualReturnSku, updateReturnMetadata, removeManualReturnRow, getInvoiceTotal, getInvoiceRemaining, returns, canDirectRestock, allowed
   }
 }

@@ -100,6 +100,54 @@
       </q-item>
     </q-list>
 
+    <!-- Restock Options Panel (Conditional on placeRestock toggle) -->
+    <q-card v-if="checklist.placeRestock && canDirectRestock" flat bordered class="q-pa-md q-mb-md bg-grey-1 rounded-borders">
+      <div class="text-subtitle2 q-mb-sm text-weight-bold text-primary">Restock Options</div>
+      
+      <div class="column q-gutter-y-sm">
+        <div>
+          <div class="text-caption text-grey-7 q-mb-xs">Submission Mode</div>
+          <q-select
+            :model-value="checklist.restockSubmissionMode || 'PENDING_APPROVAL'"
+            :options="restockModeOptions"
+            emit-value
+            map-options
+            outlined
+            dense
+            options-dense
+            class="bg-white"
+            @update:model-value="$emit('update-checklist', { restockSubmissionMode: $event })"
+          >
+            <template #prepend>
+              <q-icon :name="restockModeIcon" :color="restockModeColor" />
+            </template>
+          </q-select>
+        </div>
+
+        <!-- Target Warehouse (only if APPROVED) -->
+        <div v-if="checklist.restockSubmissionMode === 'APPROVED'">
+          <div class="text-caption text-grey-7 q-mb-xs">Source Central Warehouse *</div>
+          <q-select
+            :model-value="checklist.restockWarehouseCode"
+            :options="warehouseOptions"
+            emit-value
+            map-options
+            outlined
+            dense
+            options-dense
+            class="bg-white"
+            placeholder="Select source warehouse..."
+            :rules="[val => !!val || 'Warehouse is required for instant restock']"
+            @update:model-value="$emit('update-checklist', { restockWarehouseCode: $event })"
+          />
+          <div class="row items-center q-pa-xs text-green-9 text-caption text-weight-medium">
+            <q-icon name="info" size="xs" class="q-mr-xs" />
+            <span>Warehouse stock will be deducted instantly.</span>
+          </div>
+        </div>
+      </div>
+    </q-card>
+
     <!-- Add Restock Dialog -->
     <q-dialog v-model="addDialogOpen" persistent>
       <q-card style="min-width: 320px">
@@ -242,7 +290,8 @@ const props = defineProps({
   hasVisit: { type: Boolean, default: false },
   returnRows: { type: Array, default: () => [] },
   returnMetadata: { type: Object, default: () => ({}) },
-  warehouseOptions: { type: Array, default: () => [] }
+  warehouseOptions: { type: Array, default: () => [] },
+  canDirectRestock: { type: Boolean, default: false }
 })
 const emit = defineEmits(['update-restock', 'add-restock', 'remove-restock', 'update-checklist', 'update-return-metadata'])
 
@@ -267,14 +316,44 @@ function displayName(row) {
   return row.SKU
 }
 
-const checklistRows = computed(() => [
-  { key: 'completeVisit', label: 'Complete selected visit', caption: props.hasVisit ? 'Marks the selected planned visit completed.' : 'No selected visit.', disable: !props.hasVisit },
-  { key: 'scheduleNextVisit', label: 'Schedule next visit', caption: 'Creates the next planned visit from the outlet visit frequency.', disable: false },
-  { key: 'generateInvoice', label: 'Generate invoice', caption: 'Creates an invoice based on price rules.', disable: false },
-  { key: 'applyReturnsToInvoice', label: 'Apply return deductions', caption: props.returnRows.length ? 'Credits all unadjusted returns (and new returns) against the invoice.' : 'No unadjusted returns found.', disable: !props.returnRows.length && !props.checklist.generateInvoice },
-  { key: 'placeRestock', label: 'Place restock request', caption: 'Creates a restock draft from restock rows.', disable: !props.restockRows.length },
-  { key: 'submitRestock', label: 'Submit restock immediately', caption: 'Moves created restock to pending approval.', disable: !props.checklist.placeRestock }
-])
+const checklistRows = computed(() => {
+  const rows = [
+    { key: 'completeVisit', label: 'Complete selected visit', caption: props.hasVisit ? 'Marks the selected planned visit completed.' : 'No selected visit.', disable: !props.hasVisit },
+    { key: 'scheduleNextVisit', label: 'Schedule next visit', caption: 'Creates the next planned visit from the outlet visit frequency.', disable: false },
+    { key: 'generateInvoice', label: 'Generate invoice', caption: 'Creates an invoice based on price rules.', disable: false },
+    { key: 'applyReturnsToInvoice', label: 'Apply return deductions', caption: props.returnRows.length ? 'Credits all unadjusted returns (and new returns) against the invoice.' : 'No unadjusted returns found.', disable: !props.returnRows.length && !props.checklist.generateInvoice },
+    { key: 'placeRestock', label: 'Place restock request', caption: 'Creates a restock draft from restock rows.', disable: !props.restockRows.length }
+  ]
+  if (!props.canDirectRestock) {
+    rows.push({ key: 'submitRestock', label: 'Submit restock immediately', caption: 'Moves created restock to pending approval.', disable: !props.checklist.placeRestock })
+  }
+  return rows
+})
+
+const restockModeOptions = computed(() => {
+  const options = [
+    { label: 'Draft (Save to edit later)', value: 'DRAFT' },
+    { label: 'Standard Submit (Requires approval)', value: 'PENDING_APPROVAL' }
+  ]
+  if (props.canDirectRestock) {
+    options.push({ label: 'Instant Delivery (Auto-approved restock)', value: 'APPROVED' })
+  }
+  return options
+})
+
+const restockModeIcon = computed(() => {
+  const mode = props.checklist.restockSubmissionMode || 'PENDING_APPROVAL'
+  if (mode === 'APPROVED') return 'check_circle'
+  if (mode === 'PENDING_APPROVAL') return 'hourglass_top'
+  return 'drafts'
+})
+
+const restockModeColor = computed(() => {
+  const mode = props.checklist.restockSubmissionMode || 'PENDING_APPROVAL'
+  if (mode === 'APPROVED') return 'positive'
+  if (mode === 'PENDING_APPROVAL') return 'orange'
+  return 'grey-6'
+})
 
 const addDialogOpen = ref(false)
 const newItem = ref({ sku: '', qty: 1 })

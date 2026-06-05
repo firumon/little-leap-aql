@@ -39,6 +39,7 @@
         :return-rows="returnRows"
         :return-metadata="returnMetadata"
         :warehouse-options="warehouseOptions"
+        :can-direct-restock="canDirectRestock"
         @update-restock="updateRestockRow"
         @add-restock="onAddRestock"
         @remove-restock="removeRestockRow"
@@ -113,10 +114,20 @@ const {
   warehouseOptions,
   addManualReturnSku,
   updateReturnMetadata,
-  removeManualReturnRow
+  removeManualReturnRow,
+  canDirectRestock,
+  allowed
 } = flow
 
-function updateChecklist(patch) { Object.assign(checklist.value, patch) }
+function updateChecklist(patch) {
+  Object.assign(checklist.value, patch)
+  if (patch.restockSubmissionMode) {
+    checklist.value.submitRestock = patch.restockSubmissionMode !== 'DRAFT'
+  }
+  if (patch.restockWarehouseCode) {
+    localStorage.setItem('last_direct_restock_warehouse_code', patch.restockWarehouseCode)
+  }
+}
 function onAddRestock(sku, qty) { restockRows.value.push({ SKU: sku, SkuLabel: skuName(sku), Quantity: qty || 0 }) }
 
 onMounted(async () => {

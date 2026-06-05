@@ -95,8 +95,9 @@ export function buildNextVisitRequest(form = {}, frequencyDays = 14, consumption
   return resourceCreateRequest('OutletVisits', { OutletCode: text(form.OutletCode), Date: nextDate, Progress: 'PLANNED', ProgressPlannedComment: comment, Status: 'Active' })
 }
 
-export function buildRestockCompositeRequest(form = {}, rows = [], consumptionCode = '') {
+export function buildRestockCompositeRequest(form = {}, rows = [], consumptionCode = '', progress = 'DRAFT', warehouseCode = '') {
   const cleaned = restockRows(rows)
+  const isDirect = progress === 'APPROVED'
   const payload = {
     resource: 'OutletRestocks',
     data: {
@@ -104,10 +105,23 @@ export function buildRestockCompositeRequest(form = {}, rows = [], consumptionCo
       OutletCode: text(form.OutletCode),
       OutletConsumptionCode: textOrRef(consumptionCode),
       RequestedUser: text(form.Username),
-      Progress: 'DRAFT',
+      Progress: progress,
       Status: 'Active'
     },
-    children: [{ resource: 'OutletRestockItems', records: cleaned.map((row) => ({ _action: 'create', data: { SKU: row.SKU, Quantity: row.Quantity, WarehouseCode: '', StorageName: '', Progress: 'PENDING', Status: 'Active' } })) }]
+    children: [{
+      resource: 'OutletRestockItems',
+      records: cleaned.map((row) => ({
+        _action: 'create',
+        data: {
+          SKU: row.SKU,
+          Quantity: row.Quantity,
+          WarehouseCode: isDirect ? text(warehouseCode) : '',
+          StorageName: isDirect ? '_default' : '',
+          Progress: isDirect ? 'ALLOCATED' : 'PENDING',
+          Status: 'Active'
+        }
+      }))
+    }]
   }
   return compositeSaveRequest(payload)
 }

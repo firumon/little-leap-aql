@@ -1,37 +1,36 @@
-# 64_QUASAR_AVATARS.md - User Profiles & Profile Initials
+# Quasar Avatars (QAvatar) Reference Guide
 
-This document defines how to implement and configure user profiles and item initial markers using Quasar's avatar component (`QAvatar`).
-
----
-
-## 1. Purpose
-
-The purpose of this guide is to explain avatar sizes scale variables, detail user initial fallback systems, and standardize visual spacing metrics.
+This reference guide describes the implementation and configuration of user profile images, placeholders, and initials markers using Quasar's avatar component (`QAvatar`).
 
 ---
 
-## 2. Core Philosophy
+## 1. Component Overview
 
-AQL avatars are **Initials-First, Size-Standardized, and High-Contrast**:
-*   **Initials Fallback:** We avoid raw placeholder graphics. When user profile images are absent, avatars must display the user's name initials.
-*   **Sizing Standards:** To maintain list layout harmony, avatar dimensions must map to standard sizes (`32px` for lists, `38px` for cards, `48px` for profile header pages).
-*   **Contrasting Colors:** Avatar background elements must use vibrant primary colors or secondary accents to distinguish placeholders visually.
+The `QAvatar` component is a container used to display circular images, initials, or icons representing users or entities. Key roles include:
 
----
-
-## 3. Golden Rules
-
-1.  **Always Set Initials Fallback:** Avatars must resolve to two-letter name initials when image links are undefined.
-2.  **No Arbitrary Sizing Heights:** Set explicit sizing scales using the size attribute: `<q-avatar size="32px">`. Avoid custom CSS dimensions.
-3.  **Ensure Direct Ripple Cues:** If tapping the avatar executes profile page routing, wrap the avatar inside a `<q-btn flat round>` layout.
-4.  **Confirm Flat Outlines:** Avatars inside dense lists must maintain flat background designs to fit list borders.
+*   **User Profiles**: Displays user photos or fallbacks in headers, cards, and profile screens.
+*   **List Identifiers**: Renders small visual indicators (such as letters or icons) inside lists to represent categories or entities.
+*   **System Action Icons**: Renders a circular background around an icon to signal system states or notifications.
 
 ---
 
-## 4. QAvatar Configuration & Layout Setup
+## 2. Key Attributes & Visual Properties
+
+*   **`size`**: Configures the width and height of the avatar (e.g., `size="32px"`, `size="48px"`).
+*   **`color`**: Sets the background color using Quasar color classes.
+*   **`text-color`**: Sets the color of the text or icon inside the avatar.
+*   **`square`**: Removes the default circular shape and renders the avatar with square corners.
+*   **`font-size`**: Adjusts the size of the text/icon inside the avatar relative to the component size.
+
+---
+
+## 3. Code Examples
+
+### Profile Avatar with Initials Fallback
+
+The following component demonstrates rendering a user profile image with a reactive fallback to the user's name initials if the image is missing or fails to load:
 
 ```html
-<!-- FRONTENT/src/components/Navigation/OutletProfileAvatar.vue -->
 <template>
   <div class="row items-center q-gutter-x-sm">
     <!-- Primary Profile Avatar with initials fallback -->
@@ -64,7 +63,7 @@ const props = defineProps({
   showLabels: { type: Boolean, default: false }
 })
 
-// Extract name initials (e.g. "John Doe" -> "JD")
+// Extract name initials (e.g., "John Doe" -> "JD")
 const userInitials = computed(() => {
   if (!props.name) return 'U'
   const parts = props.name.trim().split(' ')
@@ -74,35 +73,17 @@ const userInitials = computed(() => {
 </script>
 
 <style scoped>
-/* Clear button margins */
 .leading-tight {
   line-height: 1.2;
 }
 </style>
 ```
 
----
+### Layout Profile Header
 
-## 5. Best Practices
-
-*   **Vibrant Backgrounds:** Leverage semantic variables for background colors (`color="primary"`, `color="secondary"`) to keep aesthetics harmonized.
-*   **Icon Fallbacks:** If initials are unavailable, display standard placeholders (`icon="person"`).
-
----
-
-## 6. Mobile First Rules
-
-*   **Align List Offsets:** Use `QItemSection` side alignment layouts to prevent avatars from skewing line heights inside dense items lists.
-*   **Touch Action Wrapper:** Ensure clickable avatars are wrapped inside standard buttons to expand touch target areas to at least `44px`.
-
----
-
-## 7. Common Patterns
-
-### Responsive Header Profile Pattern
+An example of displaying a larger entity avatar in a header banner:
 
 ```html
-<!-- FRONTENT/src/components/Navigation/OutletHeaderProfile.vue -->
 <template>
   <div class="profile-header bg-grey-1 q-pa-md rounded-borders">
     <div class="row items-center no-wrap">
@@ -118,66 +99,16 @@ const userInitials = computed(() => {
     </div>
   </div>
 </template>
-
-<script setup>
-// Profile header wrapper
-</script>
 ```
 
 ---
 
-## 8. Reusable Component Suggestions
+## 4. Technical Considerations
 
-*   `AqlAvatar`: Base profile avatar wrapping user name initial resolvers, icon structures, and dynamic profile linkings.
-
----
-
-## 9. Accessibility Notes
-
-*   Verify all image-based avatars contain proper `alt` text labels.
-*   Initial overlays must have descriptive title labels.
-
----
-
-## 10. Dark Mode Notes
-
-*   Ensure background colors maintain strong visual contrast ratios when dark themes are active.
-
----
-
-## 11. Performance Notes
-
-*   **Avoid Raw Image Redundant Loading:** For list items loops, prefer initials displays over loading hundreds of image URLs.
-
----
-
-## 12. Anti-Patterns
-
-*   **Anti-Pattern:** Writing custom CSS circular borders (`border-radius: 50%`) around raw HTML `img` elements.
-    *   *Correction:* Always leverage Quasar's `<q-avatar>` wrapper.
-*   **Anti-Pattern:** Omitting initial values or icons when image loading fails, leaving empty grey circles.
-    *   *Correction:* Define fallback parameters inside avatars.
-
----
-
-## 13. AI Agent Rules
-
-1.  **Validate Fallback Scripts:** Ensure avatar components implement initials calculations.
-2.  **Confirm Sizing Specs:** Confirm that custom CSS size calculations are bypassed in favor of native properties.
-
----
-
-## 14. Decision Matrix
-
-| Avatar Usage | Visual Context | Sizing Value | Default Filler |
-| :--- | :--- | :--- | :--- |
-| **Row List Item** | Dense Feed list | `32px` | Two-character initials |
-| **Record details Card**| Info Detail card | `38px` | Two-character initials |
-| **Layout Profile page**| Main Account view | `48px` | User image or initials |
-| **Status Warning tag** | Action alert | `24px` (dense) | Status alert icon |
-
----
-
-## 15. Final Rule
-
-All user profile representations must implement text initials fallback structures, scale dimensions using standard sizes, apply vibrant background colors, and wrap action targets inside button controls.
+*   **Sizing Patterns**:
+    *   `32px` is standard for list items (`QItemSection avatar`).
+    *   `38px` is standard for card layouts or inline profile widgets.
+    *   `48px` or larger is standard for dedicated profile headers or user detail views.
+*   **Fallback Strategies**: Providing initials or a generic fallback icon (e.g., `icon="person"`) ensures the avatar remains readable if an image URL is broken or not provided.
+*   **Accessibility**: If an avatar contains a profile photo, ensure the `img` tag specifies an `alt` attribute describing the image. If the avatar displays initials or icons, specify an `aria-label` on the `QAvatar` wrapper to make it accessible to screen readers.
+*   **Interactive Targets**: When utilizing clickable avatars, wrapping the avatar inside a flat, round button (`<q-btn flat round>`) expands the touch target size to meet mobile accessibility standards.

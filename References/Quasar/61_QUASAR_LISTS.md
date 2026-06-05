@@ -1,37 +1,36 @@
-# 61_QUASAR_LISTS.md - List Feeds & Structural Options
+# Quasar Lists (QList) Reference Guide
 
-This document defines how to implement and configure data listings using Quasar's list components (`QList`, `QItem`, `QItemSection`) to support high-density mobile list feeds.
-
----
-
-## 1. Purpose
-
-The purpose of this guide is to explain list structural design, ensure list rows maintain touch clearances, and standardize text alignments.
+This reference guide describes the implementation and configuration of list feeds and settings interfaces using Quasar's list components (`QList`, `QItem`, `QItemSection`, `QItemLabel`).
 
 ---
 
-## 2. Core Philosophy
+## 1. Component Overview
 
-AQL lists are **High-Density, Segmented, and Action-Safe**:
-*   **High-Density Feeds:** To display transaction logs or settings lists efficiently, we use compact list structures (`dense` attributes).
-*   **Logical Section Wrapping:** List rows divide content areas clearly. Icons or avatars map to leading blocks, titles map to center blocks, and status values or edit buttons map to trailing blocks.
-*   **Rippled Touch Targets:** Every clickable list item must supply immediate feedback using `v-ripple` and enforce comfortable touch target heights.
+Quasar provides a set of layout-friendly list components designed to display rows of information, navigation paths, or options:
 
----
-
-## 3. Golden Rules
-
-1.  **Always Set Click Ripples:** Every interactive list row element must declare the `v-ripple` directive: `<q-item clickable v-ripple>`.
-2.  **Separate Items Natively:** Enable borders between items using Quasar list separator attributes: `<q-list separator>`.
-3.  **Isolate Side Actions Explicitly:** Place tags, status chips, or secondary buttons strictly inside a trailing container: `<q-item-section side>`.
-4.  **Use Semantic Labels Scaling:** Format list item text hierarchies using standard labels scale elements (`QItemLabel`).
+*   **`QList`**: The main container for lists. Supports visual attributes like `bordered`, `separator`, and `dense`.
+*   **`QItem`**: Represents a single row item in a list. When interactive, it supports the `clickable` and `v-ripple` attributes.
+*   **`QItemSection`**: Divides the layout of a single row (`QItem`) into logical horizontal blocks. Sub-components can use qualifiers like `avatar`, `thumbnail`, or `side`.
+*   **`QItemLabel`**: The standard component for text blocks inside lists. It supports attributes like `header` (for grouping), `caption` (for secondary details), and custom classes for text wrapping.
 
 ---
 
-## 4. QList Configuration & Layout Setup
+## 2. Typical Layout Configuration
+
+Lists are commonly configured using a structured alignment pattern:
+1.  **Leading Block (`q-item-section avatar` or `thumbnail`)**: Used for visual identifiers such as icons, user initials, or image thumbnails.
+2.  **Center Block (`q-item-section`)**: Contains the primary text (`QItemLabel`) and secondary captions (`QItemLabel caption`).
+3.  **Trailing Block (`q-item-section side`)**: Reserved for actions, secondary data, status tags, toggle inputs, or chevron navigation helpers.
+
+---
+
+## 3. Code Examples
+
+### Standard Clickable User List
+
+The following example demonstrates a user directory list utilizing avatar initials, titles, status chips, and chevron indicators:
 
 ```html
-<!-- FRONTENT/src/components/Operations/OutletUserList.vue -->
 <template>
   <q-card flat bordered>
     <!-- List container with separator lines enabled -->
@@ -89,28 +88,11 @@ const getInitials = (name) => {
 </script>
 ```
 
----
+### Settings Navigation List
 
-## 5. Best Practices
-
-*   **Header Dividers:** Use list headers (`QItemLabel` with `header` attribute) to group list categories cleanly (e.g. "Operations", "Masters").
-*   **Side Icon Alignments:** Align side icons to the center of list items to keep items visually balanced.
-
----
-
-## 6. Mobile First Rules
-
-*   **Ensure Min Target Clearance:** Clickable list items must maintain a target height of at least `44px` (Quasar's `QItem` handles this natively when using standard paddings).
-*   **Prevent Multi-Line Wrap Clipping:** Truncate long sub-labels inside center sections using the `ellipsis` class: `<q-item-label caption class="ellipsis">`.
-
----
-
-## 7. Common Patterns
-
-### Settings Navigation List Pattern
+Below is a configuration displaying grouped configurations separated by visual divider lines:
 
 ```html
-<!-- FRONTENT/src/components/Navigation/OutletSettingsList.vue -->
 <template>
   <q-list bordered class="bg-white rounded-borders">
     <!-- Group header -->
@@ -150,57 +132,9 @@ const navigate = (target) => {
 
 ---
 
-## 8. Reusable Component Suggestions
+## 4. Technical Considerations
 
-*   `AqlList`: Reusable list feed container integrating dynamic filters, status chip indicators, and lazy loaders.
-
----
-
-## 9. Accessibility Notes
-
-*   Verify interactive items specify standard navigation roles (`role="link"` or `role="button"`).
-*   Ensure focus transitions flow correctly.
-
----
-
-## 10. Dark Mode Notes
-
-*   Ensure list backgrounds change automatically to `bg-dark` or `bg-surface` when dark mode triggers.
-
----
-
-## 11. Performance Notes
-
-*   Do not nest complex watcher operations inside list items body slots.
-
----
-
-## 12. Anti-Patterns
-
-*   **Anti-Pattern:** Nesting custom flex rows directly inside raw `QList` tags without wrapping them in `QItem` containers.
-    *   *Correction:* Always organize list structures using standard `QItem` and `QItemSection` elements.
-*   **Anti-Pattern:** Omitting standard border separator indicators on large lists.
-    *   *Correction:* Enable `<q-list separator>`.
-
----
-
-## 13. AI Agent Rules
-
-1.  **Validate List Hierarchies:** Ensure list layout templates structure cells strictly via `QItemSection` containers.
-2.  **Confirm Rippled Items:** Reject interactive row components lacking `v-ripple` directives.
-
----
-
-## 14. Decision Matrix
-
-| Dataset Row Volume | Item Interaction Goal | Output Component | Side Section Layout |
-| :--- | :--- | :--- | :--- |
-| **< 15 items** | Main navigation route | Standard `QList` | Chevron navigation arrow |
-| **15 to 50 items** | View record details | `QVirtualScroll` | Status Badge details |
-| **Checklist options** | Select properties | `QList` with option values | Toggle control element |
-
----
-
-## 15. Final Rule
-
-All visual list feeds must utilize standard list item wrappers, enable border separators, structure row segments using item sections, and define ripple feedback cues on all touch zones.
+*   **Touch Targets on Mobile**: The default padding of `QItem` provides touch clearance values of 48px or more, aligning with web accessibility best practices.
+*   **Text Overflow**: Long text blocks inside `QItemLabel` can be constrained using CSS helpers like `ellipsis` to prevent wrapping from disrupting the layout.
+*   **Accessibility**: Interactive items can define standard ARIA roles (such as `role="button"` or `role="link"`) and enable appropriate keyboard navigation behaviors.
+*   **Item Separators**: Enabling the `separator` prop on `QList` or including `<q-separator />` elements helps structure large collections of text-heavy elements.

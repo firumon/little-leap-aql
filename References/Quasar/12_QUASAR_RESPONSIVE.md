@@ -1,67 +1,49 @@
-# 12_QUASAR_RESPONSIVE.md - Responsive Design & Adaptive Layouts
+# Quasar Responsive Design & Adaptive Layouts Reference
 
-This document defines how to implement responsive layouts using Quasar's breakpoint grid system, visibility classes, and the programmatic Screen plugin.
+This document describes how to implement responsive layouts using Quasar's breakpoint grid system, CSS visibility classes, and the programmatic `Screen` plugin.
 
----
+## 1. Breakpoint Grid System
 
-## 1. Purpose
+Quasar utilizes standard screen size thresholds to apply responsive styles and column grids. These thresholds are defined as:
 
-The purpose of this guide is to ensure components adapt smoothly across all viewport widths, maintaining focus on mobile ergonomics (95% usage) while scaling to desktop layouts (5% usage) without code redundancy.
+| Breakpoint | Screen Width Range | Target Category |
+| :--- | :--- | :--- |
+| **xs** (extra small) | 0px to 599px | Mobile handsets |
+| **sm** (small) | 600px to 1019px | Tablets |
+| **md** (medium) | 1020px to 1439px | Laptops / smaller desktops |
+| **lg** (large) | 1440px to 1919px | Desktop monitors |
+| **xl** (extra large) | 1920px+ | Large displays |
 
----
-
-## 2. Core Philosophy
-
-AQL responsive design is **Mobile-First and Fluid**:
-*   **Mobile-First Scaling:** All grid templates start with full-width classes (`col-12`). Desktop column limits (e.g. `col-md-3`) are layered as secondary overrides.
-*   **Programmatic Adaptability:** Slices of the DOM that are complex (like tables vs cards) should be conditionally rendered using the Quasar `Screen` plugin in JS setups rather than just hidden with CSS. This reduces DOM footprints on low-spec phones.
-*   **Logical Breakpoints:** Use Quasar's default media thresholds:
-    *   `xs` (< 600px) - Handsets (95% target)
-    *   `sm` (600px - 1019px) - Tablets
-    *   `md` (1020px - 1439px) - Laptop/Desktop (5% target)
-
----
-
-## 3. Golden Rules
-
-1.  **Grid Base is `col-12`:** Never write a layout grid element without declaring a base class mapping (usually `col-12`).
-2.  **Toggle with Visibility Classes:** For quick, lightweight display adjustments (e.g. hiding an icon on small screens), use Quasar CSS classes (`gt-xs`, `lt-md`, `gt-sm`).
-3.  **Split Trees for Complex Views:** If the mobile view structure is fundamentally different from desktop, run dynamic template switches using `$q.screen.lt.sm` rather than complex CSS overrides.
-4.  **No Custom Media Breakpoints:** Never declare custom pixel thresholds in media queries inside CSS blocks. Use Quasar layout variable maps.
+### Responsive Column Grid
+Quasar's flex grid classes can be combined to define layout structures that adapt dynamically to viewport changes:
+*   **Mobile-First Columns:** Setting `col-12` as the base class ensures the column spans full width on mobile screens. Overrides for larger screens (e.g., `col-sm-6` or `col-md-4`) can be appended to adjust spacing on wider viewports.
+*   **Column Summation:** To prevent accidental horizontal scrollbars or columns wrapping unexpectedly, grid items within a `row` container typically sum to exactly 12 columns for a given viewport target.
 
 ---
 
-## 4. CSS Grid & JS Breakpoint Setup
+## 2. Programmatic Adaptation with the Screen Plugin
 
-### Default Breakpoints (Quasar Engine)
-*   **Extra Small (xs):** 0px to 599px
-*   **Small (sm):** 600px to 1019px
-*   **Medium (md):** 1020px to 1439px
-*   **Large (lg):** 1440px to 1919px
-*   **Extra Large (xl):** 1920px+
+For complex UI components that require different structures on mobile versus desktop (such as data tables versus card lists), the programmatic Quasar `Screen` plugin is used.
 
----
-
-## 5. Best Practices
-
-*   **Avoid CSS Hidden Bloat:** While CSS visibility classes (`gt-xs`, etc.) are efficient, rendering massive tables and then hiding them on mobile via `class="gt-sm"` forces the mobile browser to parse and load elements it will never show.
-*   **Coordinate Margins Dynamically:** Use `$q.screen.lt.sm` to adjust spacing properties. On mobile, set spacing to `q-pa-sm`; on desktop, scale it up to `q-pa-lg` dynamically.
+*   **Conditional Rendering:** Using `v-if="$q.screen.lt.sm"` allows components to render only when the screen size matches the target viewport, rather than rendering both and hiding one using CSS `display: none` (e.g. `class="gt-xs"`). This optimizes DOM node usage and memory footprints on mobile devices.
+*   **Dynamic Attributes:** Button labels, icon selections, or spacing parameters can adapt using screen variables (e.g., binding `:round="$q.screen.lt.sm"` or dynamically choosing button text).
+*   **Resize Performance:** Referencing boolean flags (like `$q.screen.lt.sm` or `$q.screen.gt.xs`) is preferred over binding heavy calculations to `$q.screen.width` to avoid continuous event firing during browser resize events.
 
 ---
 
-## 6. Mobile First Rules
+## 3. CSS Visibility Classes
 
-*   **Scrollbars Isolation:** Verify that layouts on mobile do not trigger horizontal scrolls. Set column sizing limits to sum to exactly 12 inside every `row`.
-*   **Action Drawer collapsing:** Side menus must collapse completely under mobile viewports and toggled via hamburger button click overlays.
+Quasar offers utility classes to hide or show elements based on active breakpoints:
+*   `gt-*` (greater than): Displays elements only when the viewport is larger than the specified breakpoint (e.g., `gt-xs` shows the element on screen widths of `sm` and above).
+*   `lt-*` (less than): Displays elements only when the viewport is smaller than the specified breakpoint (e.g., `lt-md` shows the element on screen widths of `sm` and below).
 
 ---
 
-## 7. Common Patterns
+## 4. Code Example: Adaptive Grid and List Toggle
 
-### Responsive Adaptive List View
+Below is a component showing how to alternate between a mobile-friendly virtual scroll card view and a desktop data table using `$q.screen` properties, alongside permission checks.
 
 ```html
-<!-- FRONTENT/src/components/Operations/OutletResponsiveFeed.vue -->
 <template>
   <q-page class="q-pa-md" style="min-height: inherit;">
     <!-- Section Title Block -->
@@ -78,7 +60,7 @@ AQL responsive design is **Mobile-First and Fluid**:
       />
     </div>
 
-    <!-- Conditional rendering split: Cards list (mobile) vs Data Grid (desktop) -->
+    <!-- Conditional rendering: Cards list (mobile) vs Data Table (desktop) -->
     <template v-if="$q.screen.lt.sm">
       <q-virtual-scroll :items="orders" item-size="80" class="col scroll">
         <template v-slot="{ item }">
@@ -128,59 +110,11 @@ const orderIcon = computed(() => {
 
 ---
 
-## 8. Reusable Component Suggestions
+## 5. Summary Adaptive Selection Matrix
 
-*   `AqlResponsiveGrid`: Grid layout wrapper that automatically calculates children width partitions based on screen properties.
-*   `AqlResponsiveAction`: Action button wrapper that switches dynamically between a round FAB button (on mobile) and a text button (on desktop).
-
----
-
-## 9. Accessibility Notes
-
-*   Never hide essential navigation links on mobile viewports. If they are removed from screen view, they must exist in the navigation drawer panel.
-*   Keep tab orders logical when elements wrap inside column blocks.
-
----
-
-## 10. Dark Mode Notes
-
-*   Ensure that adaptive components use standard theme colors so they shift cleanly.
-
----
-
-## 11. Performance Notes
-
-*   Do not bind heavy watchers to `$q.screen.width` as it fires continuously on browser resize actions. Bind calculations to boolean flags like `$q.screen.lt.sm`.
-
----
-
-## 12. Anti-Patterns
-
-*   **Anti-Pattern:** Using absolute pixel media selectors inside components: `@media(max-width: 599px)`.
-    *   *Correction:* Bind to Quasar breakpoints (`$q.screen.lt.sm` or SASS media mixins: `@media (max-width: $breakpoint-xs-max)`).
-*   **Anti-Pattern:** Running heavy table scripts on mobile when only hidden by `class="gt-xs"`.
-    *   *Correction:* Control execution using `v-if="$q.screen.gt.xs"`.
-
----
-
-## 13. AI Agent Rules
-
-1.  **Validate Grid Columns:** Ensure that column structures summing to 12 always specify mobile margins first (`col-12`).
-2.  **Enforce Dynamic Render Trees:** Reject any code block that hides massive data grids using CSS utility classes (`class="hidden"`) on mobile screens without a `v-if` directive.
-
----
-
-## 14. Decision Matrix
-
-| User View Requirement | Device Category | DOM Component Design | Render Strategy |
+| Content/UI Scenario | Device/Screen Target | Recommended Layout Technique | Rendering Approach |
 | :--- | :--- | :--- | :--- |
-| **Simple details badge** | Handset (<600px) | CSS visible badge tag | `class="gt-xs"` visibility |
-| **Invoice layout** | Handset (<600px) | Custom Card list | `v-if="$q.screen.lt.sm"` |
-| **Audit Log Table** | Desktop (>1024px) | Full Table element | `v-if="$q.screen.gt.xs"` |
-| **Supplier select** | All viewports | Select field overlay | Dynamic dropdown modal |
-
----
-
-## 15. Final Rule
-
-All layouts must default to mobile-first widths (`col-12`) and use `v-if` with Quasar's `Screen` properties to partition heavy components between mobile and desktop devices.
+| **Secondary status badge** | Handset (<600px) | CSS visibility class | `class="gt-xs"` (Hide on mobile) |
+| **Core transaction list** | Handset (<600px) | `QVirtualScroll` + `QCard` | `v-if="$q.screen.lt.sm"` (Mobile layout) |
+| **Detailed audit logs** | Desktop (>1024px) | `QTable` | `v-if="$q.screen.gt.xs"` (Desktop layout) |
+| **Supplier select option** | All screen sizes | `QSelect` or search overlay | Programmatic adaptive popup size |

@@ -1,37 +1,34 @@
 # 52_QUASAR_TOOLBAR.md - Header Toolbars & Action Bars
 
-This document defines how to implement and configure headers using Quasar's toolbar component (`QToolbar`) to support clean action placement.
+This document is an educational reference guide covering the layout, elements, and usage of Quasar's Toolbar component (`QToolbar`).
 
 ---
 
-## 1. Purpose
+## 1. Component Overview
 
-The purpose of this guide is to explain layout spacing rules inside toolbars, ensure action icons have sufficient spacing, and detail status indicator configurations.
+`QToolbar` is a container component typically used in headers, footers, or sub-headers to align titles, navigation triggers, and context actions. It utilizes CSS Flexbox layout internally to distribute elements across the bar.
 
----
-
-## 2. Core Philosophy
-
-AQL toolbars are **Action-Light, Spacing-Consistent, and Highly Visible**:
-*   **Minimal Actions:** Mobile toolbars must not exceed 2 primary actions (such as Search or Add) plus the side navigation drawer toggle button. Secondary options are grouped inside dropdown context menus.
-*   **Logical Flex Separations:** Toolbar elements must align dynamically using `<q-space />` blocks rather than absolute text positioning rules.
-*   **Standard Sizing:** Toolbars rely on native height profiles (`dense` setups inside child modules) to preserve vertical space.
+### Key Sub-Components
+*   **`QToolbarTitle`**: Wraps the text title of the current view, applying appropriate font-weight, padding, and text overflow settings.
+*   **`QSpace`**: A spacer element that fills available space, pushing adjacent components to the left or right edges of the toolbar container.
 
 ---
 
-## 3. Golden Rules
+## 2. Key Configurations
 
-1.  **Restrict Active Icons Count:** Limit visible actions on the toolbar to a maximum of three on mobile views.
-2.  **Ensure Explicit Focus Labels:** Every toolbar button icon must declare an `aria-label` or `title` key.
-3.  **Prohibit Custom Height Styles:** Never force absolute heights on `QToolbar` containers.
-4.  **Incorporate Spacing Helpers:** Segment titles from settings and icons using standard spaces (`<q-space />`).
+*   **Action Spacing**: Spacing button elements with attributes like `flat`, `round`, and `dense` helps fit action items cleanly into the toolbar height constraints.
+*   **Truncation Helpers**: Applying classes like `text-truncate` or `ellipsis` to `QToolbarTitle` prevents long headers from pushing action buttons off-screen on narrow viewports.
+*   **Height Constraints**: Rather than overriding container heights with absolute pixel styling, relying on Quasar's default toolbar spacing or the `dense` property ensures alignment with other components.
 
 ---
 
-## 4. QToolbar Configuration & Layout Setup
+## 3. Usage Examples
+
+### Standard Header Toolbar
+
+This layout includes a side drawer trigger, a page title, an activity status indicator, and context menu actions.
 
 ```html
-<!-- FRONTENT/src/components/Navigation/OutletHeaderToolbar.vue -->
 <template>
   <q-toolbar class="bg-primary text-white shadow-2">
     <!-- Menu Drawer Toggler -->
@@ -44,15 +41,15 @@ AQL toolbars are **Action-Light, Spacing-Consistent, and Highly Visible**:
       @click="emit('toggle-drawer')"
     />
 
-    <!-- Header Title -->
+    <!-- Header Title with truncation helper -->
     <q-toolbar-title class="text-subtitle1 text-weight-bold text-truncate">
       {{ title }}
     </q-toolbar-title>
 
-    <!-- Flex pusher -->
+    <!-- Pushes subsequent items to the right -->
     <q-space />
 
-    <!-- Synchronizing Indicator Badge -->
+    <!-- Status Indicator -->
     <q-icon
       v-if="isSyncing"
       name="sync"
@@ -60,7 +57,7 @@ AQL toolbars are **Action-Light, Spacing-Consistent, and Highly Visible**:
       size="xs"
     />
 
-    <!-- Primary Action Icon -->
+    <!-- Action Icon -->
     <q-btn
       flat
       round
@@ -99,7 +96,6 @@ const emit = defineEmits(['toggle-drawer', 'search', 'settings'])
 </script>
 
 <style scoped>
-/* Keyframe spin animation for synchronizing state */
 .animate-spin {
   animation: q-spin 2s linear infinite;
 }
@@ -110,33 +106,14 @@ const emit = defineEmits(['toggle-drawer', 'search', 'settings'])
 </style>
 ```
 
----
+### Sub-Page Header Toolbar with Back Navigation
 
-## 5. Best Practices
-
-*   **Truncated Title Strings:** Add typography truncations (`text-truncate` or `ellipsis`) to header titles to prevent overflow wraps on narrow phone displays.
-*   **Visual Contrasts:** Ensure toolbars maintain rich background alignments (like `bg-primary` or `bg-dark`) so layouts separate clearly from page contents.
-
----
-
-## 6. Mobile First Rules
-
-*   **Round Button Comfort:** Use round, dense action button properties (`round`, `dense`) to keep the button boundaries comfortably within mobile layouts.
-*   **Limit Text Lengths:** Avoid putting secondary description sentences inside toolbar areas.
-
----
-
-## 7. Common Patterns
-
-### Adaptive Breadcrumb Toolbar Pattern
-
-For nested layouts, replace side drawer toggles with dynamic back routing triggers:
+For detail pages or nested layouts, replacing the side menu toggle with a back-navigation button allows users to return to parent pages. This example uses the AQL architectural `useResourceNav` wrapper to manage routes.
 
 ```html
-<!-- FRONTENT/src/components/Navigation/OutletBackToolbar.vue -->
 <template>
   <q-toolbar class="bg-white text-dark border-grey-3">
-    <!-- Back arrow trigger -->
+    <!-- Back Navigation Action -->
     <q-btn
       flat
       round
@@ -161,7 +138,6 @@ defineProps({
 const { navigate } = useResourceNav()
 
 const goBack = () => {
-  // Return to list view
   navigate({ action: 'list' })
 }
 </script>
@@ -169,56 +145,8 @@ const goBack = () => {
 
 ---
 
-## 8. Reusable Component Suggestions
+## 4. Accessibility and Usability Guidelines
 
-*   `AqlToolbar`: Custom toolbar component wrapping drawer controllers, synchronizing tags, and permissions-checked search parameters.
-
----
-
-## 9. Accessibility Notes
-
-*   Verify all button controls describe their targets via labels (e.g. `aria-label="Search order logs"`).
-
----
-
-## 10. Dark Mode Notes
-
-*   Verify that toolbars apply slate configurations (`bg-dark`, `text-white`) under dark mode themes.
-
----
-
-## 11. Performance Notes
-
-*   Do not bind heavy data calculations to icons rendering loops.
-
----
-
-## 12. Anti-Patterns
-
-*   **Anti-Pattern:** Putting wide search text boxes inside mobile headers next to 3 action icons, causing layout crowding.
-    *   *Correction:* Replace search bars with a single search trigger button that toggles an input overlay.
-*   **Anti-Pattern:** Setting raw height values like `style="height: 80px;"` on toolbar wraps.
-    *   *Correction:* Rely on default CSS properties.
-
----
-
-## 13. AI Agent Rules
-
-1.  **Reject Custom Heights:** Ensure all toolbar templates rely on standard styling properties.
-2.  **Confirm Label Attributes:** Reject code blocks generating button icons lacking explicit `aria-label` settings.
-
----
-
-## 14. Decision Matrix
-
-| Layout Placement | Context Sizing | Primary Action | Target Configuration |
-| :--- | :--- | :--- | :--- |
-| **Main App Shell Header**| Standard size | Drawer toggle | Left side button, elevated |
-| **Nested Sub-Page Header**| Dense size | Route back trigger | Back arrow icon |
-| **Card Footer Action Bar**| Dense size | Submit button | Right aligned options |
-
----
-
-## 15. Final Rule
-
-All header toolbars must enforce action-light limits, apply flexible spacing helpers, include label attributes for icons, and back arrow routing controls.
+*   **Descriptive Buttons**: Interactive icons without text labels are best paired with `aria-label` or `title` attributes so screen readers can describe the button's action.
+*   **Controlling Visual Clutter**: If a design calls for more than a few toolbar buttons on narrow screens, grouping secondary operations into a `QMenu` dropdown keeps the header organized and prevents buttons from overlapping.
+*   **Search Input Alternatives**: On small screens, embedding a full-width search input directly inside the toolbar can crowd titles. An alternative is using a search icon button that displays a full-width search overlay or dropdown input field when tapped.

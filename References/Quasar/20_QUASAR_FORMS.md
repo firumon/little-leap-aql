@@ -1,67 +1,80 @@
-# 20_QUASAR_FORMS.md - Form Lifecycles & Submission Patterns
+# Quasar Forms: Lifecycles & Submission Patterns
 
-This document defines how to implement data entry forms using Quasar's Form components (`QForm`), form submission lifecycles, fields container management, and mobile keyboard configurations.
-
----
-
-## 1. Purpose
-
-The purpose of this guide is to ensure forms provide clear UX feedback during submission, handle field focusing properly, reduce network retries on double-clicks, and keep touch-device validation flows natural.
+This reference document describes how to implement and manage data entry forms using Quasar's `QForm` component, covering submission lifecycles, child input coordination, and touch device interactions.
 
 ---
 
-## 2. Core Philosophy
+## 1. Overview of QForm
 
-AQL form design is **Atomic, Transactional, and Safe**:
-*   **Atomic Forms:** All input elements must be grouped inside a single `<q-form>` tag. This integrates internal validation rules and keyboard submit handlers.
-*   **Safe Submissions:** A button click must lock the form's entire input area immediately. The submit control must display a loading spinner (`loading` prop) to block double-taps.
-*   **Adaptive Keyboards:** Every input field must declare attributes that configure the mobile device's virtual keyboard (e.g. numeric pad for inventory, text for description).
+The `QForm` component acts as a wrapper for grouping multiple input fields (such as `QInput` and `QSelect`). It listens to submission events, coordinates child validation rules, and manages focus states.
 
----
-
-## 3. Golden Rules
-
-1.  **Always Use QForm:** Never group inputs inside a bare `div` or raw HTML form. Always wrap with `<q-form @submit="handleSubmit">`.
-2.  **Lock State During Submissions:** Bind form input fields and selection components to a central reactivity flag: `:disable="isSubmitting"`.
-3.  **Prevent Default Submits:** Ensure forms prevent standard browser window reloading. Let Quasar handle inputs using `q-form @submit.prevent`.
-4.  **Enforce Validation Before Actions:** All submit triggers must complete form validation checks before sending payloads to composables.
+### Key Capabilities
+* **Dynamic Validation:** `QForm` automatically scans child inputs that expose validation rules and runs their checks synchronously or asynchronously when the form is submitted.
+* **Unified Event Handling:** Triggers custom events like `@submit` and `@reset` while allowing modifiers such as `@submit.prevent` to prevent native browser reloads.
+* **Focus Management:** By default, if validation fails, the form attempts to scroll and focus the first invalid input field to guide the user.
 
 ---
 
-## 4. QForm Layout & Event Setup
+## 2. Core Properties & Events
+
+### Props
+* `autofocus`: Automatically focuses the first child input on mount.
+* `no-error-focus`: Disables the automatic focusing behavior on validation failure.
+* `no-reset-focus`: Prevents focusing the first child field after resetting the form.
+
+### Events
+* `@submit`: Fired when the form is submitted, typically after validation succeeds.
+* `@reset`: Fired when the form is reset.
+
+### Methods (Accessible via template ref)
+* `validate()`: Triggers validation on all registered child components. Returns a Promise resolving to `true` (valid) or `false` (invalid).
+* `resetValidation()`: Clears validation errors from all registered child components.
+* `focus()`: Sets focus to the first child component in the form.
+
+---
+
+## 3. Implementation Example
+
+The following is an example demonstrating `QForm` integration with state locking, child validation rules, and action layout sections. In AQL architectures, form action submissions are typically gated via permission checks using the custom `useResourceConfig` composable.
 
 ```html
-<!-- FRONTENT/src/components/Operations/OutletOrderForm.vue -->
 <template>
   <q-form @submit.prevent="onSubmit" @reset="onReset" class="q-gutter-y-md">
     <q-card flat bordered>
       <q-card-section class="q-pa-md column q-gutter-y-sm">
-        <!-- Text Input with keyboard layout optimization -->
+        <!-- Input with name validation -->
         <q-input
           v-model="formData.name"
           outlined
           dense
-          label="Customer Name *"
+          label="Customer Name"
           :disable="isSubmitting"
           :rules="[ val => val && val.length > 0 || 'Name is required' ]"
         />
 
-        <!-- Number input with numeric keyboard layout -->
+        <!-- Number input configured with appropriate mobile input mode -->
         <q-input
           v-model.number="formData.qty"
           outlined
           dense
           type="number"
           inputmode="numeric"
-          label="Quantity *"
+          label="Quantity"
           :disable="isSubmitting"
           :rules="[ val => val > 0 || 'Quantity must be positive' ]"
         />
       </q-card-section>
 
-      <!-- Gated actions block -->
       <q-card-actions align="right" class="q-pa-md bg-grey-1">
-        <q-btn label="Reset" type="reset" color="grey" flat :disable="isSubmitting" v-ripple />
+        <q-btn 
+          label="Reset" 
+          type="reset" 
+          color="grey" 
+          flat 
+          :disable="isSubmitting" 
+          v-ripple 
+        />
+        <!-- Submit button gated using custom project-wide permissions -->
         <q-btn
           v-ripple
           v-if="allowed({ orders: 'create' })"
@@ -90,7 +103,6 @@ const formData = ref({
 
 const onSubmit = async () => {
   isSubmitting.value = true
-  // Mock API transaction delay
   try {
     emit('submit', formData.value)
   } finally {
@@ -107,26 +119,21 @@ const onReset = () => {
 
 ---
 
-## 5. Best Practices
+## 4. Submission & State Control Patterns
 
-*   **Scroll on Error:** If a form has scrollable content, ensure that validation failures scroll the viewport automatically to the first invalid field.
-*   **Keep Input Dense:** Mobile viewports have minimal vertical spacing when virtual keyboards show. Enforce the `dense` prop on all input children.
+During network operations, form states are commonly managed programmatically to prevent redundant submissions:
 
----
-
-## 6. Mobile First Rules
-
-*   **Auto-Focus Limits:** Avoid using `autofocus` on mobile route loading. Mounting keyboard overlays automatically obscures list configurations and breaks the layout.
-*   **Virtual Key Optimization:** Provide `inputmode` values to select numeric or phone layouts rather than standard text keyboards.
+* **State Disabling:** Binding the `:disable` property of inputs to a submission state (e.g., `isSubmitting`) prevents users from editing input data while transaction payloads are pending.
+* **Loading Feedbacks:** Applying the `:loading` prop to submit buttons lets the user know the operation is in progress.
+* **Virtual Keyboard Optimization:** Declaring properties such as `inputmode` (e.g., `numeric` or `tel`) on `QInput` controls standardizes the virtual keyboard display on touch devices.
 
 ---
 
-## 7. Common Patterns
+## 5. Shared Submission Utilities
 
-### Transactional Submission Wrapper
+Common composable patterns help coordinate transactional logic and visual notifications:
 
 ```javascript
-// Composable Level: FRONTENT/src/composables/useFormHandler.js
 import { ref } from 'vue'
 import { Notify } from 'quasar'
 
@@ -155,62 +162,3 @@ export function useFormHandler(submitCallback) {
   }
 }
 ```
-
----
-
-## 8. Reusable Component Suggestions
-
-*   `AqlForm`: Base custom layout wrapping page headings, form rules validation hooks, and permission-gated submit overlays.
-*   `AqlSubmitBtn`: Standard submit button configuration that includes permissions validation checks and loading states.
-
----
-
-## 9. Accessibility Notes
-
-*   Never wrap text input tags without assigning proper `label` attributes or helper labels to ensure screen readers match inputs correctly.
-*   All error text generated dynamically must announce to ARIA containers.
-
----
-
-## 10. Dark Mode Notes
-
-*   Verify that error labels on form validation have high contrast values (like `text-negative` red) that stand out against dark card backdrops.
-
----
-
-## 11. Performance Notes
-
-*   Use `debounce` on search inputs to limit validation updates.
-*   Avoid nesting massive responsive watcher events inside form fields.
-
----
-
-## 12. Anti-Patterns
-
-*   **Anti-Pattern:** Submitting form data by listening to key presses on individual input tags rather than utilizing `q-form @submit`.
-    *   *Correction:* Bind submit actions directly to the `<q-form>` wrapper.
-*   **Anti-Pattern:** Leaving forms unlocked (`disable` flag missing) while transactions are outstanding.
-    *   *Correction:* Bind inputs to the reactive `isSubmitting` state.
-
----
-
-## 13. AI Agent Rules
-
-1.  **Verify Submit Events:** Ensure all form templates bind submission actions via `@submit.prevent` on a `<q-form>` tag.
-2.  **Validate Loading Spinners:** Confirm that the primary submit button exposes the `:loading` prop bound to a reactive boolean.
-
----
-
-## 14. Decision Matrix
-
-| Input Set Count | Workflow State | Target Container | Submission Logic |
-| :--- | :--- | :--- | :--- |
-| **< 4 inputs** | Simple inline edit | `QCard` inside parent page | Direct inline composable call |
-| **4 to 8 inputs** | Transaction overlay | Centered `QDialog` | Popover submit handler |
-| **> 8 inputs** | Heavy ERP record | Route dedicated Page | Multi-step wizard composable |
-
----
-
-## 15. Final Rule
-
-All user input blocks must wrap in a single `<q-form>` container, use dense outlined controls, automatically lock inputs, and render loading spinners on the submit button during API calls.

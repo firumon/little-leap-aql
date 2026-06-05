@@ -1,37 +1,35 @@
-# 82_QUASAR_SECURITY.md - Frontend Security & Input Sanitization
+# Quasar Security & Input Sanitization Reference Guide
 
-This document defines how to secure user input forms, prevent Cross-Site Scripting (XSS) injections, sanitize raw HTML rendering, and handle sensitive credential fields using Quasar configurations.
-
----
-
-## 1. Purpose
-
-The purpose of this guide is to explain XSS injection preventions, standard password mask controls, and establish rules for using native Vue templates rendering directives safely.
+This reference guide describes the principles of securing web inputs, preventing Cross-Site Scripting (XSS) injections, sanitizing dynamic values, and managing credential fields securely within Quasar applications.
 
 ---
 
-## 2. Core Philosophy
+## 1. Core Principles of Frontend Security
 
-AQL security is **Zero-Trust, Sanitized-First, and Mask-Control**:
-*   **Prohibit Raw HTML Directives:** Tapping raw HTML output vectors using Vue's `v-html` directive is banned. All text displays must use default interpolation (`{{ }}`) to sanitize inputs.
-*   **Input Script Escaping:** All user-supplied input strings must strip visual HTML tags and code blocks dynamically before executing API updates.
-*   **Encrypted Display Masks:** Sensitive user properties (tokens, credentials, warehouse codes) must mask content by default, exposing visibility options only behind explicit click actions.
+Securing client-side web interfaces involves defending against browser-level vulnerabilities and protecting sensitive data:
 
----
-
-## 3. Golden Rules
-
-1.  **Ban v-html Directive:** Never write `<div v-html="userInput">`. Use plain text mustache brackets: `{{ userInput }}`.
-2.  **Toggle Password Visibilities:** Input components handling credentials must mask characters by default and toggle visibilities using a click accessory icon: `type="password"`.
-3.  **Sanitize String Variables:** User inputs carrying potential code tags must run through utility sanitize filters before payload compilations.
-4.  **Confirm HTTPS Protocol Transport:** All Axios calls and sync queries must target secure HTTPS endpoint links exclusively.
+*   **Mitigating Cross-Site Scripting (XSS)**: XSS occurs when untrusted user inputs are executed as executable code by the browser. Standard Vue text interpolation (`{{ }}`) automatically escapes HTML tags and prevents script execution.
+*   **HTML Sanitization**: When rendering rich text content is necessary, input strings should be cleaned of potentially harmful tags (e.g., `<script>`, `<iframe>`, `onload` attributes) before insertion into the DOM.
+*   **Credential Handling**: Inputs representing passwords, API keys, or pin codes should mask characters to prevent visual scanning ("shoulder surfing") and should not be stored in unencrypted browser storage locations.
+*   **Transport Security**: Ensuring all network requests utilize secure protocols (HTTPS) prevents intercept attacks on data in transit.
 
 ---
 
-## 4. QInput Security & Password Toggle Setup
+## 2. Key Quasar & Vue Security Features
+
+*   **Standard Interpolation (`{{ }}`)**: Vue's default template interpolation converts text elements into safe strings, neutralizing HTML tags and script elements.
+*   **Password Masking (`QInput type="password"`)**: `QInput` supports switching between `text` and `password` input modes to display or obscure credentials.
+*   **Input Validation Filters**: Programmatic validation rules (`rules` prop) can verify that inputs do not contain malicious characters prior to form submission.
+
+---
+
+## 3. Code Examples
+
+### Credential Input with Toggle & Safe Text Output
+
+The following example demonstrates a form that manages credential masking, visibility toggles, and safe text interpolation:
 
 ```html
-<!-- FRONTENT/src/components/Operations/OutletSecurityFields.vue -->
 <template>
   <div class="column q-gutter-y-sm">
     <!-- Secure password visibility toggle input -->
@@ -78,33 +76,15 @@ const togglePasswordVisibility = () => {
 </script>
 ```
 
----
+### Input Escape Sanitizer Utility
 
-## 5. Best Practices
-
-*   **Prevent Auto-Autocomplete on Passwords:** Set inputs autocomplete keys to `autocomplete="new-password"` or `autocomplete="current-password"` to avoid web browsers caching sensitive fields.
-*   **Strip Raw Regex Inputs:** Sanitize input strings using regex filter checks: `val.replace(/<[^>]*>?/gm, '')` to strip tags.
-
----
-
-## 6. Mobile First Rules
-
-*   **Secure Mobile Keyboards:** Ensure fields capturing pins or verification codes define appropriate masking types (`type="password" inputmode="numeric" pattern="[0-9]*"`) to support security.
-*   **Hide Input Echoes:** Turn off auto-correct on authentication codes.
-
----
-
-## 7. Common Patterns
-
-### Input Escape Sanitizer Pattern
-
-Filter form variables programmatically prior to generating API save models:
+For programmatic sanitization or stripping tags prior to packaging payloads for API submission:
 
 ```javascript
-// FRONTENT/src/utils/securitySanitizer.js
+// utils/securitySanitizer.js
 
 /**
- * Escapes HTML tag characters in a string to prevent XSS injection.
+ * Escapes HTML characters in a string to prevent injection issues.
  */
 export function sanitizeString(rawString) {
   if (typeof rawString !== 'string') return rawString
@@ -126,7 +106,7 @@ export function stripHtmlTags(rawString) {
 }
 ```
 
-Usage inside composables:
+Usage inside setup scripts or composables:
 ```javascript
 import { sanitizeString } from 'src/utils/securitySanitizer'
 
@@ -138,57 +118,9 @@ const submitPayload = {
 
 ---
 
-## 8. Reusable Component Suggestions
+## 4. Technical Considerations
 
-*   `AqlPasswordInput`: Reusable password text field incorporating visibility controls, autocomplete masks, and validation rules.
-
----
-
-## 9. Accessibility Notes
-
-*   Verify toggle visibility icons include descriptive ARIA labels so screen reader users understand action consequences.
-
----
-
-## 10. Dark Mode Notes
-
-*   Ensure validation indicators (error texts, warning banners) preserve WCAG AA contrast rules in dark templates.
-
----
-
-## 11. Performance Notes
-
-*   Avoid executing complex HTML tag strip regexes inside live template functions loops. Run filters during save executions.
-
----
-
-## 12. Anti-Patterns
-
-*   **Anti-Pattern:** Rendering user-entered comment strings inside raw `v-html` layout zones.
-    *   *Correction:* Always interpolate content using standard mustache syntax (`{{ }}`).
-*   **Anti-Pattern:** Storing plain text password strings inside standard cache values (`LocalStorage`).
-    *   *Correction:* Credentials must reside exclusively in secure memory zones.
-
----
-
-## 13. AI Agent Rules
-
-1.  **Ban v-html:** Reject any template files writing the `v-html` key.
-2.  **Validate Password Inputs:** Verify fields representing passwords declare visibility toggles.
-
----
-
-## 14. Decision Matrix
-
-| Data Classification | Display Goal | Recommended Directive | Keyboard Type |
-| :--- | :--- | :--- | :--- |
-| **Standard text input** | Read/write | `{{ }}` interpolation | `type="text"` |
-| **User description html**| Render bold notes | Safe sanitization helper| `type="textarea"` |
-| **User password** | Hidden characters | Password toggle button| `type="password"` |
-| **Verification pin** | Hidden digits | Password toggle | `type="password" inputmode="numeric"` |
-
----
-
-## 15. Final Rule
-
-All visual layouts must prohibit raw HTML rendering directives, escape user inputs before compiling payloads, hide password strings by default behind toggle controllers, and transmit API models via HTTPS.
+*   **Autofill Safety**: Setting password elements' autocomplete attributes (e.g., `autocomplete="new-password"` or `autocomplete="current-password"`) helps control how browsers cache and autofill credentials.
+*   **Virtual Keyboards on Mobile**: Restricting inputs that collect codes, numbers, or pins to appropriate types (e.g., `type="password" inputmode="numeric" pattern="[0-9]*"`) enforces secure mobile keyboards and disables browser dictionary caching.
+*   **Rendering HTML Safely**: Relying on Vue's `v-html` directive creates potential security holes if the bound content is not sanitized. To render rich text (such as custom markdown comments), use established sanitization libraries (e.g., DOMPurify) to cleanse inputs.
+*   **Performance of Sanitizers**: Executing heavy regular expressions or parsing logic within template execution scopes can slow down rendering. Running sanitization routines during lifecycle submit actions is more performant than running them continuously on active keypresses.

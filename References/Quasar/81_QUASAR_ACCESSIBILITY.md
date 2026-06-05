@@ -1,37 +1,38 @@
-# 81_QUASAR_ACCESSIBILITY.md - Accessibility (a11y) Compliance
+# Quasar Accessibility (a11y) Reference Guide
 
-This document defines how to implement, configure, and maintain accessibility (a11y) standards inside the AQL application using Quasar's native semantic parameters and ARIA utilities.
-
----
-
-## 1. Purpose
-
-The purpose of this guide is to ensure all pages comply with WCAG 2.1 AA requirements, support screen readers, maintain clear keyboard focus navigation routes, and standardize tap targets.
+This reference guide describes the implementation and maintenance of accessibility (a11y) standards in Quasar applications, focusing on WCAG 2.1 AA compliance, screen readers, keyboard navigation, and touch bounds.
 
 ---
 
-## 2. Core Philosophy
+## 1. Core Principles
 
-AQL accessibility is **Semantic, Keyboard-Navigable, and Contrast-Compliant**:
-*   **Semantic Landmarks:** Avoid using generic `div` elements for primary layout boundaries. Use HTML5 structural tags (`header`, `main`, `footer`, `nav`, `section`).
-*   **Keyboard Focus Focus Loop:** Users must be able to complete tasks (such as filling forms or approving orders) using keyboard tab paths. Focus markers must stay visible.
-*   **Explicit Action Labels:** Buttons displaying only icons must declare explicit string descriptors (`aria-label`) for screen readers.
+Designing accessible web interfaces involves ensuring that all users can perceive, operate, and understand the application:
 
----
-
-## 3. Golden Rules
-
-1.  **Label All Icon Buttons:** Every button lacking explicit text labels must define a clear descriptive label: `<q-btn icon="edit" aria-label="Edit Supplier record" />`.
-2.  **Ensure Semantic Document Hierarchy:** Layout headers, page contents, and footers must wrap in semantic tags: `<q-header role="banner">`.
-3.  **Contrast AA Compliance:** Text and action colors must satisfy WCAG AA contrast ratios (4.5:1 for standard body text, 3:1 for large text headings).
-4.  **No Focus Trap Bypasses:** Popups and dialogs must contain focus loop systems that automatically route focus back to trigger buttons when dismissed.
+*   **Semantic Structures**: Using HTML5 landmark elements (such as `header`, `main`, `footer`, `nav`, `section`) rather than generic `div` containers helps assistive technologies (like screen readers) parse the structure of the document.
+*   **Keyboard Navigation**: Interactive components (including inputs, tabs, and buttons) should support tab-focus paths, arrow-key navigation, and standard keyboard triggers (such as `Enter` and `Space`).
+*   **Visual Contrast**: Text elements and controls should meet WCAG AA contrast ratio guidelines (e.g., at least 4.5:1 for standard body text, and 3:1 for large headings) against their background surfaces.
+*   **Clear Labeling**: Components lacking visual text labels (like icon-only buttons) require textual descriptions via ARIA attributes so that screen readers can convey their purpose.
 
 ---
 
-## 4. Accessibility Configuration & Layout Setup
+## 2. Key Quasar a11y Features
+
+Quasar components have built-in accessibility supports that developers can configure:
+
+*   **`aria-label` / `aria-labelledby`**: Provides textual descriptions for visual components.
+*   **`tabindex`**: Manages the keyboard focus order of custom HTML components.
+*   **Built-in Dialog Focus Trap**: Quasar's `QDialog` automatically captures focus when opened, preventing users from tabbing to behind-the-scenes content, and restores focus to the triggering element upon closure.
+*   **Visual Focus Outline**: Dynamic focus ring classes highlight active elements when tabbed using a keyboard.
+
+---
+
+## 3. Code Examples
+
+### Accessible Form Component
+
+The following example shows an input form that utilizes landmark wrapping, explicit label associations, aria requirements, and descriptive labels on icon-only buttons:
 
 ```html
-<!-- FRONTENT/src/components/Operations/OutletA11yForm.vue -->
 <template>
   <!-- Main structural element wrapper with semantic landmark -->
   <main class="q-pa-md" role="main">
@@ -96,30 +97,11 @@ const onFormSubmit = () => {
 </script>
 ```
 
----
+### Screen Reader Live Announcements
 
-## 5. Best Practices
-
-*   **Keyboard Shortcuts:** Allow keyboard shortcuts (such as Esc key dismissals on popups) to align with standard web paradigms.
-*   **Explicit Text Focus Borders:** Do not suppress default CSS outline selectors on keyboard focuses unless custom high-contrast focus rings are defined.
-
----
-
-## 6. Mobile First Rules
-
-*   **Standard Tap Size Clearances:** Keep all interactive options buttons separated using minimum tap sizes limits (`44px` heights).
-*   **Virtual Screen Reader Announcements:** Use toast notifications mapping `role="status"` properties to announce transactions completions dynamically on mobile devices.
-
----
-
-## 7. Common Patterns
-
-### Screen Reader Live Alerts Pattern
-
-Broadcast alerts programmatically to assistive screens using inline live announcers:
+To announce system updates or alerts (such as a successful operation) to screen readers dynamically:
 
 ```html
-<!-- FRONTENT/src/components/Navigation/OutletLiveAnnouncer.vue -->
 <template>
   <!-- Hidden announcer block that captures dynamic system alerts -->
   <div
@@ -139,7 +121,7 @@ defineProps({
 </script>
 
 <style scoped>
-/* Keep selector invisible on screen but readable by accessibility tags */
+/* Hidden visually, but read by assistive technologies */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -155,57 +137,10 @@ defineProps({
 
 ---
 
-## 8. Reusable Component Suggestions
+## 4. Technical Considerations
 
-*   Verify all form controls utilize AqlValidatedInput to coordinate ARIA tags.
-
----
-
-## 9. Accessibility Notes
-
-*   Verify that nested tables define table headers mappings.
-
----
-
-## 10. Dark Mode Notes
-
-*   Ensure color tokens pass standard contrast formulas in dark mode.
-
----
-
-## 11. Performance Notes
-
-*   Avoid executing continuous DOM updates inside screen announcer elements.
-
----
-
-## 12. Anti-Patterns
-
-*   **Anti-Pattern:** Using standard HTML `div` blocks with click handlers as buttons without keyboard focus indicators.
-    *   *Correction:* Always use `<q-btn>` or assign `tabindex="0"` and `role="button"`.
-*   **Anti-Pattern:** Hiding critical visual text inside hover-only tooltips.
-    *   *Correction:* Render information text inline.
-
----
-
-## 13. AI Agent Rules
-
-1.  **Reject Bare Icons:** Reject button layouts lacking explicit `aria-label` settings.
-2.  **Confirm Landmark Tags:** Check that page containers implement semantic HTML tags.
-
----
-
-## 14. Decision Matrix
-
-| User Interaction Need | Primary Device | Recommended Component | Target Accessibility Attributes |
-| :--- | :--- | :--- | :--- |
-| **Verify input detail** | Screen Reader | `QInput` with rules | `aria-required="true"`, error label link |
-| **Close layout dialog** | Touch / Keyboard | `QBtn` (icon-only) | `aria-label="Close dialog"`, close-popup |
-| **Read transaction grid**| Keyboard / Reader | `QTable` semantic | `thead`, `tbody`, row scoped headers |
-| **Sync completion toast**| Touch / Reader | Dynamic toast alert | `role="status"`, `aria-live="polite"` |
-
----
-
-## 15. Final Rule
-
-All visual components and routing pages must implement semantic HTML layout tags, declare explicit label descriptors on all icon-only buttons, pass WCAG AA contrast rules, and support keyboard navigation loops.
+*   **Keyboard Focus Indicator**: Suppressing the browser's default focus outline without providing a high-contrast alternative prevents keyboard-only users from identifying their location on the screen.
+*   **Interactive Target Sizing**: On mobile screens, keeping interactive targets at a minimum height and width of `48px` (or utilizing Quasar's default element sizing and padding spacing controls) reduces accidental triggers and supports touch accessibility.
+*   **Dynamic Visual Tools**: Placing critical information solely in hover-only tooltips makes it inaccessible to touch screen devices and keyboard-only navigators. Text can instead be rendered inline or inside toggled popups.
+*   **Dynamic Announcements**: When updating content dynamically via inline live announcers (`aria-live`), restrict modifications to concise, state-based feedback string updates.
+*   **Contrast Ratios under Themes**: Verifying that color combinations meet WCAG criteria in both light and dark mode configurations ensures visibility across different themes.

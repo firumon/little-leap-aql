@@ -1,37 +1,28 @@
-# 72_QUASAR_DIRECTIVES.md - Touch Gestures & Tactile Ripples
+# Quasar Directives Reference Guide
 
-This document defines how to implement and configure touch interactions and click feedback triggers using Quasar's directive systems (`v-ripple`, `v-close-popup`, `v-touch-swipe`, `v-touch-pan`, `v-touch-hold`).
-
----
-
-## 1. Purpose
-
-The purpose of this guide is to ensure all click actions provide tactile response on mobile displays, handle gesture swipe shortcuts, and detail dismiss keys.
+This reference guide describes the configuration and usage of Quasar's native directives (such as `v-ripple`, `v-close-popup`, `v-touch-swipe`, `v-touch-pan`, and `v-touch-hold`) to manage touch gestures, click feedback, and popup overlays.
 
 ---
 
-## 2. Core Philosophy
+## 1. Overview of Quasar Directives
 
-AQL touch elements are **Responsive, Feedback-Instant, and Gesture-Rich**:
-*   **Immediate Feedback:** Taps on mobile screens require immediate visual response. We enforce `v-ripple` on all clickable components to eliminate double-tap mistakes.
-*   **Swipe-to-Trigger Shortcuts:** High-density mobile lists use touch swipe actions (e.g. swiping left to delete, right to edit) to simplify operations.
-*   **Instant Dismissals:** Close dialogs, bottom sheets, or menus instantly by mapping click controls directly to popup closure hooks (`v-close-popup`).
+Quasar directives are reusable utility hooks applied directly to HTML elements or Vue components to attach specialized behaviors and event listeners:
 
----
-
-## 3. Golden Rules
-
-1.  **Strict Ripple Enforcements:** Every clickable button, list item, card row, or toggle grid must declare the `v-ripple` directive.
-2.  **Use Close-Popup on Dismiss Buttons:** Any close button or list menu option inside overlays must define the `v-close-popup` tag.
-3.  **Prohibit Raw Touch Event Watchers:** Do not write custom `touchstart` or `touchend` event handlers in component scripts. Use Quasar's touch directives instead.
-4.  **Confirm Distinct Gestures Mapping:** Do not combine horizontal swipe controls (`v-touch-swipe.horizontal`) with vertical panning gestures on the same layout page.
+*   **`v-ripple`**: Appends an animated material design ripple effect to an element upon user contact, providing visual confirmation of interaction.
+*   **`v-close-popup`**: Closes the closest parent popup overlay (such as a `QDialog`, `QMenu`, or `QPopupProxy`) when the host element is clicked.
+*   **`v-touch-swipe`**: Detects swiping gestures in horizontal or vertical directions.
+*   **`v-touch-pan`**: Tracks dragging/panning gestures, sending continuous coordinates during the interaction.
+*   **`v-touch-hold`**: Triggers a callback when an element is pressed and held for a specified duration.
 
 ---
 
-## 4. QDirectives Configuration & Layout Setup
+## 2. Code Examples
+
+### Standard Tap, Hold, and Swipe Interaction
+
+The following component shows how to bind click feedback, popup closures, swiping, and hold-to-trigger events:
 
 ```html
-<!-- FRONTENT/src/components/Operations/OutletGestureControls.vue -->
 <template>
   <div class="column q-gutter-y-md">
     <!-- Click button using ripple and close popup directive -->
@@ -99,30 +90,11 @@ const onLongPress = () => {
 </script>
 ```
 
----
+### Drag/Pan Sensor Area for Mobile Drawer Actions
 
-## 5. Best Practices
-
-*   **Specify Swipe Directions:** Declare swipe directions explicitly to prevent layout scrolling interference: `v-touch-swipe.horizontal`.
-*   **Hold Timers tuning:** When using `v-touch-hold`, set duration parameters to `600ms` (`v-touch-hold:600`) to differentiate hold gestures from normal tap interactions.
-
----
-
-## 6. Mobile First Rules
-
-*   **Responsive Ripple Overrides:** Ensure ripple effects match parent color variables to keep contrast levels readable.
-*   **Prevent Scroll Interferences:** Panning gestures (`v-touch-pan`) must block default page scrolls only on the active element.
-
----
-
-## 7. Common Patterns
-
-### Drawer Touch Pan Drawer Trigger Pattern
-
-Create simple custom touch drawer toggles using touch panning details:
+To implement swipe-to-reveal navigation drawers, panning directives can capture drag distances:
 
 ```html
-<!-- FRONTENT/src/components/Navigation/OutletPanDrawer.vue -->
 <template>
   <div
     v-touch-pan.horizontal.prevent.mouse="onPan"
@@ -137,7 +109,6 @@ Create simple custom touch drawer toggles using touch panning details:
 const emit = defineEmits(['open-drawer'])
 
 const onPan = ({ direction, distance }) => {
-  // Check if pan gesture is moving right
   if (direction === 'right' && distance.x > 30) {
     emit('open-drawer')
   }
@@ -147,57 +118,10 @@ const onPan = ({ direction, distance }) => {
 
 ---
 
-## 8. Reusable Component Suggestions
+## 3. Technical Considerations
 
-*   Verify all modal panels align close buttons to standard close-popup triggers.
-
----
-
-## 9. Accessibility Notes
-
-*   Verify touch hold shortcuts also support standard click triggers so screen readers can trigger actions.
-
----
-
-## 10. Dark Mode Notes
-
-*   Verify ripple colors adjust contrast dynamically.
-
----
-
-## 11. Performance Notes
-
-*   **Limit Heavy Logic inside Pan Loops:** Panning fires continuous updates. Avoid executing database queries or UI redraw loops inside active pan callbacks.
-
----
-
-## 12. Anti-Patterns
-
-*   **Anti-Pattern:** Using raw `window.addEventListener('touchstart')` inside layout blocks, which causes memory leaks when components unmount.
-    *   *Correction:* Use Quasar directives (`v-touch-swipe`).
-*   **Anti-Pattern:** Omitting `v-close-popup` on dismiss buttons inside custom dialog templates, forcing manual logic scripts.
-    *   *Correction:* Declare `v-close-popup` directly on the button.
-
----
-
-## 13. AI Agent Rules
-
-1.  **Validate Ripples:** Ensure all button templates declare `v-ripple`.
-2.  **Confirm Close Directives:** Confirm all dialog layouts use `v-close-popup` on close controls.
-
----
-
-## 14. Decision Matrix
-
-| Touch Goal | Required Action | Target Directive | Layout Configuration |
-| :--- | :--- | :--- | :--- |
-| **Instant button click**| Tactile Feedback | `v-ripple` | Default on button tag |
-| **Dismiss overlay popup**| Close container | `v-close-popup` | Default on close buttons |
-| **Swipe row item** | Edit/Delete shortcut | `v-touch-swipe.horizontal` | Set key direction constraints |
-| **Long press element** | Show details menu | `v-touch-hold:600` | Declare hold duration threshold |
-
----
-
-## 15. Final Rule
-
-All visual layouts must implement ripple feedback triggers on click targets, bind close actions directly using the close popup directive, and utilize native touch swipe modifiers for screen gesture shortcuts.
+*   **Restricting Gesture Axes**: Specifying orientation modifiers (e.g., `v-touch-swipe.horizontal` or `v-touch-swipe.vertical`) avoids conflicts with native browser page scrolling.
+*   **Hold Event Duration**: Adding a duration argument (e.g., `v-touch-hold:600` for 600ms) prevents quick taps from accidentally triggering hold events.
+*   **Overlay Closure Integration**: Utilizing `v-close-popup` directly on cancel or confirmation buttons removes the need for manual toggle state variables in the Vue component script.
+*   **Performance in Panning Loops**: Panning callbacks fire repeatedly on every frame of movement. To maintain a smooth framerate, avoid writing expensive computations, state changes, or API calls inside `v-touch-pan` callbacks.
+*   **Accessibility Fallbacks**: Gestures (like swipe or hold) are not easily reproducible by keyboard users or screen readers. Providing standard, clickable buttons or keyboard event listeners (`@keyup.enter`) as secondary pathways ensures equivalent access.

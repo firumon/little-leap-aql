@@ -1,43 +1,42 @@
-# 31_QUASAR_VIRTUAL_SCROLL.md - Infinite Scrolling & DOM Recycling
+# Quasar Virtual Scroll: Infinite Scrolling & DOM Recycling
 
-This document defines how to implement and configure high-performance lists using Quasar's virtual scrolling components (`QVirtualScroll`) and infinite scrolling utilities.
-
----
-
-## 1. Purpose
-
-The purpose of this guide is to prevent DOM bloating, memory leakage, and mobile browser crashes when rendering large ERP lists (such as ledger histories, inventory stocks, or transaction records).
+This reference document describes how to implement high-performance lists in Quasar using virtual scrolling (`QVirtualScroll`) and infinite scroll utilities (`QInfiniteScroll`) to manage large datasets efficiently.
 
 ---
 
-## 2. Core Philosophy
+## 1. Overview of Rendering Optimization
 
-AQL virtual lists are **Recycled and Memory-Efficient**:
-*   **DOM Node Recycling:** Instead of rendering thousands of cards in the DOM, we render only the tiny fraction visible in the viewport. Quasar recycles these DOM elements during scrolls.
-*   **Explicit Row Heights:** The scrolling container must know the exact height of its child card items to calculate scroll bar tracking ratios without continuous layout recalculations.
-*   **Shallow Reactivity:** Large arrays returned from API sync actions are stored using shallow references (`shallowRef`) to avoid deep Vue reactive tracking overhead on nested attributes.
-
----
-
-## 3. Golden Rules
-
-1.  **Mandatory Item Height:** Always specify the average item height using the `item-size` attribute (e.g., `:item-size="90"`).
-2.  **Explicit Container Height:** Virtual scroll blocks must lock to a height container, either using viewport styling (`class="col scroll"` inside flex) or declaring an inline height parameter.
-3.  **Prohibit Nested Virtual Scrolls:** Never nest scroll components. Keep list layers flat and clean.
-4.  **Use Dynamic Slices Size:** Scale virtual scroll buffers (`virtual-scroll-slices-size`) down to mobile settings (typically 20-30 items) to conserve memory.
+When lists contain hundreds or thousands of records, rendering them all as standard DOM nodes can lead to sluggish performance, particularly on mobile devices. Quasar offers two main components to address this issue:
+* **QVirtualScroll:** Employs DOM recycling. It renders only a tiny fraction of items that are currently visible within the scroll container's viewport, dynamically swapping item data as the user scrolls.
+* **QInfiniteScroll:** Automatically fetches and appends pages of data as the user scrolls down, allowing for progressive loading.
 
 ---
 
-## 4. QVirtualScroll Configuration & Layout Setup
+## 2. Key Properties & Options
+
+### QVirtualScroll Configuration
+* `items`: The source array of data objects.
+* `item-size`: The estimated or exact size (height) of a single list item in pixels. Providing this helps stabilize scrollbar tracking and performance.
+* `virtual-scroll-slices-size`: The number of items to keep rendered in the DOM slice buffer. A smaller buffer (e.g., 20–30) uses less memory, which is beneficial for mobile devices.
+
+### QInfiniteScroll Configuration
+* `offset`: The distance in pixels from the bottom of the container that triggers the loading of the next batch of data.
+* `@load`: Event callback invoked when the offset threshold is reached. It passes `(index, done)` arguments where `done()` must be called to signal the loading state is complete. Passing `done(true)` stops further load attempts.
+
+---
+
+## 3. Implementation Examples
+
+### QVirtualScroll Example
+
+Below is a implementation using `QVirtualScroll` with explicit item heights and AQL's currency formatter helper `_C`:
 
 ```html
-<!-- FRONTENT/src/components/Operations/OutletVirtualOrderFeed.vue -->
 <template>
   <div class="virtual-feed-container column no-wrap" style="height: 400px;">
-    <!-- Headings section -->
     <div class="text-subtitle1 text-weight-bold q-pb-sm">Transaction Logs</div>
 
-    <!-- Virtual scroll container locking heights -->
+    <!-- Virtual scroll element with item height constraints -->
     <q-virtual-scroll
       class="col scroll bg-white border-grey-3 rounded-borders"
       :items="transactionLogs"
@@ -59,6 +58,7 @@ AQL virtual lists are **Recycled and Memory-Efficient**:
           </q-item-label>
         </q-item-section>
 
+        <!-- AQL Project Architecture Rule: Formatted output via _C currency helper -->
         <q-item-section side>
           <span class="text-weight-bold text-primary">
             {{ _C(item.amount, true) }}
@@ -70,11 +70,10 @@ AQL virtual lists are **Recycled and Memory-Efficient**:
 </template>
 
 <script setup>
-import { shallowRef } from 'vue'
 import { useCurrency } from 'src/composables/useCurrency'
 
-const props = defineProps({
-  transactionLogs: { type: Array, required: true } // Managed as shallowRef in parent
+defineProps({
+  transactionLogs: { type: Array, required: true }
 })
 
 const { _C } = useCurrency()
@@ -83,27 +82,11 @@ const { _C } = useCurrency()
 
 ---
 
-## 5. Best Practices
+### QInfiniteScroll Example
 
-*   **Shallow State Management:** Declare massive list arrays in Pinia or composables as `shallowRef`. This blocks Vue from recursively iterating over nested JSON nodes, saving initialization time:
-    `const transactions = shallowRef([])`
-*   **Recycling Key Safety:** Never bind the `:key` attribute to array indices. Always bind to unique row identifiers (`item.id`).
-
----
-
-## 6. Mobile First Rules
-
-*   **Virtual Slice Thresholds:** Set small slice buffer ranges. A buffer size of `30` matches typical mobile rendering windows, providing smooth scrolls without lag.
-*   **Touch Friction Tuning:** Ensure list card content lacks heavy visual filters (like CSS blur effects) that slow GPU paint operations during rapid scrolling.
-
----
-
-## 7. Common Patterns
-
-### Infinite Scroll Loader Pattern
+The example below shows progressive lazy-loading using the `QInfiniteScroll` component:
 
 ```html
-<!-- FRONTENT/src/components/Operations/OutletInfiniteLoader.vue -->
 <template>
   <q-page class="column no-wrap" style="min-height: inherit;">
     <div class="col scroll">
@@ -152,59 +135,8 @@ const onLoadMore = async (index, done) => {
 
 ---
 
-## 8. Reusable Component Suggestions
+## 4. Performance Guidelines
 
-*   `AqlInfiniteScroll`: Standardized scrolling wrapper that integrates page loader loops, tracks network failures, and exposes clean retry options.
-
----
-
-## 9. Accessibility Notes
-
-*   Verify screen readers announce active scroll updates when infinite loader loops mount.
-*   Ensure scroll actions are keyboard-accessible.
-
----
-
-## 10. Dark Mode Notes
-
-*   Ensure list scroll gutters use variable backgrounds so theme boundaries stay consistent.
-
----
-
-## 11. Performance Notes
-
-*   **Limit Child DOM Complexity:** Keep item card structures light. Heavy templates inside scroll nodes degrade rendering speeds.
-*   **Reuse Image Avatars:** Do not dynamically scale avatars inside list loops.
-
----
-
-## 12. Anti-Patterns
-
-*   **Anti-Pattern:** Mounting a 500-item card loop via `v-for` inside a scroll page on mobile viewports.
-    *   *Correction:* Replace with `QVirtualScroll` or paginated `QInfiniteScroll` layouts.
-*   **Anti-Pattern:** Omitting the `item-size` property on virtual scroll views.
-    *   *Correction:* Always define item dimensions to stabilize scroll positioning.
-
----
-
-## 13. AI Agent Rules
-
-1.  **Enforce Virtual Scrolling:** Reject any list layout representing database entities that loops records without paging limits or virtual scrolls.
-2.  **Confirm Shallow Refs:** Confirm that large array payloads inside composables are declared using `shallowRef`.
-
----
-
-## 14. Decision Matrix
-
-| Dataset Row Volume | Data Fetch Method | Recommended Component | Optimizations |
-| :--- | :--- | :--- | :--- |
-| **< 15 items** | Loaded upfront | Standard `QList` card loop | Default `v-for` keys |
-| **15 to 100 items** | Local memory cache | `QVirtualScroll` | Define `:item-size` |
-| **100+ items** | Paginated API | `QInfiniteScroll` | Debounced loader actions |
-| **Complex grids** | Dynamic reports | `QVirtualScroll` (Table) | ShallowRef row arrays |
-
----
-
-## 15. Final Rule
-
-All long records lists must implement element recycling using `QVirtualScroll` or infinite loaders, define fixed layout item heights, utilize shallow reactive arrays, and constrain outer wrapper heights.
+* **Shallow Reactivity:** For huge data arrays, utilizing Vue's `shallowRef` instead of `ref` reduces CPU initialization overhead because Vue avoids recursively wrapping nested object properties with reactive proxies.
+* **Stable Keys:** Using unique IDs (e.g., `item.id`) rather than array indices for Vue `:key` attributes ensures that components are correctly remapped during DOM recycling.
+* **Component Complexity:** Keeping child templates inside virtual loops simple minimizes rendering workloads during fast scrolling.

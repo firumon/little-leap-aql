@@ -1,52 +1,55 @@
-# 22_QUASAR_INPUTS.md - Text Fields & Inputs
+# Quasar Inputs: Text Fields & Input Configuration
 
-This document defines how to implement and configure text input fields using Quasar's input component (`QInput`) to align with mobile ergonomics and transactional efficiency.
-
----
-
-## 1. Purpose
-
-The purpose of this guide is to ensure all input fields are configured with correct touch heights, show immediate clear options, map to appropriate keyboard types, and display units or icons correctly using suffixes/prefixes.
+This reference document describes how to implement and configure text input fields using Quasar's `QInput` component, covering touch interactions, masks, suffixes/prefixes, and dynamic data integration.
 
 ---
 
-## 2. Core Philosophy
+## 1. Overview of QInput
 
-AQL inputs are **Efficient, Assisted, and Explicit**:
-*   **Assisted Entry:** Users must not type formatting characters (like dates or phone formats). We enforce this by using Quasar field masks (`mask` prop).
-*   **Explicit Context:** Every input must clearly declare its requirements. Numbers show suffixes (e.g. `pcs`, `kg`) and values show currency symbols as prefixes.
-*   **Outlined and Dense:** Form controls must use standard outlined card aesthetics and remain compact to preserve mobile screen spaces.
+The `QInput` component is a wrapper around standard HTML input elements. It integrates with Vue's reactivity system (`v-model`), supports validation rules, and offers customization options for layouts, formatting masks, and action buttons.
 
----
-
-## 3. Golden Rules
-
-1.  **Strict Styling Uniformity:** All `QInput` elements must use the `outlined` and `dense` attributes by default. Do not mix borderless, filled, or stand-alone designs.
-2.  **Add Clear Actions:** Any field that is editable by the user must specify the `clearable` property to support instant correction.
-3.  **Prefix Dynamic Symbols:** Always prefix price fields with the dynamic currency helper variable: `:prefix="defaultCurrency.Symbol"`. Never hardcode symbols like `₹`.
-4.  **No Naked Input Types:** Number fields must use the correct mapping configurations: `type="number" inputmode="numeric"`.
+### Styling Variants
+Quasar provides several styling modes for text fields, including:
+* `outlined`: Adds a complete border outline around the component.
+* `dense`: Trims vertical padding to make inputs more compact, which is common in layout-dense or mobile-focused interfaces.
+* `filled` / `standout` / `borderless`: Alternative styles suited to differing interface aesthetics.
 
 ---
 
-## 4. QInput Properties & Layout Setup
+## 2. Key Properties & Options
+
+### Inputs & Keyboard Optimization
+* `type`: Specifies the type of input control (e.g., `text`, `password`, `email`, `number`, `tel`).
+* `inputmode`: Dictates which virtual keyboard to display on touch devices (e.g., `numeric` for integers, `decimal` for prices, `email` for email addresses, `tel` for telephone pads).
+* `mask`: Applies an input formatting structure (e.g., `mask="####/##/##"` for dates or `mask="###-###-###"` for phone numbers), assisting users with input formats.
+* `clearable`: Appends an icon that resets the model to `null` or an empty string when clicked.
+
+### Text Adornments
+* `prefix`: Prepends static or dynamic text to the left side of the input (often used for currency symbols).
+* `suffix`: Appends static or dynamic text to the right side of the input (often used for unit measurements like `pcs` or `kg`).
+
+---
+
+## 3. Implementation Example
+
+The example below shows a configuration of inputs showcasing outlines, masks, clearable buttons, and currency prefixes. In AQL, currency values are dynamically prefixed using the `useCurrency` composable:
 
 ```html
-<!-- FRONTENT/src/components/Operations/OutletInventoryFields.vue -->
 <template>
   <div class="row q-col-gutter-sm">
-    <!-- Basic Outlined Clearable Field -->
+    <!-- Outlined field with clearable action -->
     <div class="col-12">
       <q-input
         v-model="fields.title"
         outlined
         dense
         clearable
-        label="Item Title *"
-        placeholder="Enter SKU name"
+        label="Item Title"
+        placeholder="Enter item name"
       />
     </div>
 
-    <!-- Currency Prefix Field with Dynamic Symbol -->
+    <!-- Currency Field using a dynamic currency helper prefix -->
     <div class="col-6">
       <q-input
         v-model.number="fields.price"
@@ -55,12 +58,12 @@ AQL inputs are **Efficient, Assisted, and Explicit**:
         clearable
         type="number"
         inputmode="decimal"
-        label="Unit Price *"
+        label="Unit Price"
         :prefix="defaultCurrency.Symbol"
       />
     </div>
 
-    <!-- Number Suffix Field with Touch Keyboard -->
+    <!-- Field with unit suffix and touch keyboard settings -->
     <div class="col-6">
       <q-input
         v-model.number="fields.qty"
@@ -69,19 +72,19 @@ AQL inputs are **Efficient, Assisted, and Explicit**:
         clearable
         type="number"
         inputmode="numeric"
-        label="Stock Quantity *"
+        label="Stock Quantity"
         suffix="pcs"
       />
     </div>
 
-    <!-- Masked Field (e.g., Dates) -->
+    <!-- Masked Date Field with calendar popover -->
     <div class="col-12">
       <q-input
         v-model="fields.expiryDate"
         outlined
         dense
         clearable
-        label="Expiry Date (YYYY/MM/DD) *"
+        label="Expiry Date (YYYY/MM/DD)"
         mask="####/##/##"
       >
         <template v-slot:append>
@@ -117,26 +120,12 @@ const fields = ref({
 
 ---
 
-## 5. Best Practices
+## 4. Common Input Patterns
 
-*   **Autofill Settings:** Configure correct autocomplete scopes for address, email, or telephone fields (`autocomplete="email"`).
-*   **Clear Suffix Margins:** Ensure suffixes contain clear spacing so input values do not run into the suffix text.
-
----
-
-## 6. Mobile First Rules
-
-*   **Prevent Keyboard Zoom:** iOS devices automatically zoom in on views if input font sizes are under `16px`. Ensure input texts default to Quasar's `text-body1` sizes.
-*   **Capitalization Management:** Turn off auto-capitalization on SKU, email, or passcode fields using `autocapitalize="off"` and `autocorrect="off"`.
-
----
-
-## 7. Common Patterns
-
-### Debounced Search Input Pattern
+### Debounced Query Inputs
+For search fields querying high-frequency APIs or performing local filter calculations, debouncing prevents executing updates on every single keystroke. Quasar's `debounce` helper utility can wrap search update methods:
 
 ```html
-<!-- FRONTENT/src/components/Operations/OutletSearchInput.vue -->
 <template>
   <q-input
     v-model="searchText"
@@ -157,72 +146,11 @@ import { ref } from 'vue'
 import { debounce } from 'quasar'
 
 const emit = defineEmits(['search'])
-
 const searchText = ref('')
 
-// Debounce keyboard inputs by 300ms before emitting
+// Debounces model updates by 300ms before emitting the search event
 const onQueryUpdate = debounce((val) => {
   emit('search', val)
 }, 300)
 </script>
 ```
-
----
-
-## 8. Reusable Component Suggestions
-
-*   `AqlCurrencyInput`: Customized `QInput` pre-mapped to dynamic currency stores and validating decimals automatically.
-*   `AqlMaskedDateInput`: Simple date text field component that packages the calendar popup toggle natively.
-
----
-
-## 9. Accessibility Notes
-
-*   Always supply clear placeholder attributes or labels. If labels are hidden, bind input tags via `aria-label`.
-*   Ensure clear buttons are keyboard-tabbable.
-
----
-
-## 10. Dark Mode Notes
-
-*   Verify that custom field backgrounds (if explicitly styled in `.scss`) use CSS variable references like `var(--q-dark)` to support seamless inversion.
-
----
-
-## 11. Performance Notes
-
-*   Do not attach dynamic style handlers that trigger browser layout passes on inputs during keyboard typings.
-
----
-
-## 12. Anti-Patterns
-
-*   **Anti-Pattern:** Implementing text formatting (like adding slashes to date keys) inside a custom keyboard listener.
-    *   *Correction:* Apply Quasar's `mask` property to format inputs.
-*   **Anti-Pattern:** Hardcoding money icons/labels (like `₹` or `Rs.`) inside input label or prefix strings.
-    *   *Correction:* Bind prefix values to dynamic currency symbols.
-
----
-
-## 13. AI Agent Rules
-
-1.  **Validate Outlined Standard:** Ensure all generated inputs declare `outlined` and `dense` props.
-2.  **Verify Keyboard Mode Bindings:** Reject phone, number, or money fields that fail to define correct type/inputmode keys.
-
----
-
-## 14. Decision Matrix
-
-| Input Context | Type Parameter | Inputmode | Suffix/Prefix Bindings |
-| :--- | :--- | :--- | :--- |
-| **SKU Code** | `type="text"` | `text` | None |
-| **Price Amount** | `type="number"` | `decimal` | Prefix: `defaultCurrency.Symbol` |
-| **Stock Count** | `type="number"` | `numeric` | Suffix: unit code (e.g. `pcs`) |
-| **Email Address** | `type="email"` | `email` | None |
-| **Date String** | `type="text"` | `numeric` | Mask: `####/##/##` |
-
----
-
-## 15. Final Rule
-
-All inputs must utilize outlined, dense text designs, apply clear helper masks, map keyboard attributes explicitly, prefix dynamic currencies dynamically, and expose clear actions.

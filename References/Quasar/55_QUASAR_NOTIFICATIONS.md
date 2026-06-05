@@ -1,42 +1,42 @@
 # 55_QUASAR_NOTIFICATIONS.md - Notifications, Alerts & Progress States
 
-This document defines how to implement user alerts, toast notifications, loading blocks, and progress indicators using Quasar's feedback plugins (`Notify`, `Dialog`, `Loading`).
+This document is an educational reference guide covering feedback systems, status notifications, and progress indicators in Quasar using the programmatic `Notify`, `Loading`, and `Dialog` plugins.
 
 ---
 
-## 1. Purpose
+## 1. Component Overview
 
-The purpose of this guide is to ensure all operations display clean, non-intrusive status alerts, prevent screen freezing bugs during API latency, and standardize toast alert colors.
-
----
-
-## 2. Core Philosophy
-
-AQL notification workflows are **Non-Obtrusive, Safe, and Instant**:
-*   **Toast feedback Priority:** Operations like success checks or light errors must slide as temporary, self-dismissing toast notifications (`Notify` plugin) that do not block visual workflows.
-*   **Full-Screen Blockers:** Critical network mutations (like bulk syncing or transaction approval writes) must toggle temporary overlays (`Loading` plugin) to prevent click interference.
-*   **Decoupled Triggers:** Popups must trigger programmatically via JS plugins rather than mounting DOM overlay code inside local views templates.
+Quasar provides three primary programmatic plugins to give feedback to the user:
+1.  **`Notify` (Toast Notifications)**: Used for displaying temporary, self-dismissing status alerts (such as success confirmation or error warnings) without blocking the user's interaction flow.
+2.  **`Loading` (Full-Screen Overlays)**: Used to block user clicks during crucial or long-running database transactions (e.g. bulk catalog synchronizations).
+3.  **`Dialog` (Programmatic Confirmation)**: Replaces browser alerts with customizable modal confirmation dialogs to double-check destructive actions.
 
 ---
 
-## 3. Golden Rules
+## 2. Programmatic Plugin Configurations
 
-1.  **Strict Color Mapping:** Toast overlays must map to standard statuses: Success uses Green (`positive`), Failures use Red (`negative`), Alerts use Gold (`warning`).
-2.  **Declare Loaders for All API Actions:** Any network save event must toggle loading spinners, either on the specific button or full screen.
-3.  **Support Safe Dismissal Options:** Toast notifications must define close buttons for touch users, even if auto-dismiss timers are configured.
-4.  **No Naked Alert Modals:** Reject standard browser confirmation prompts. Use Quasar's programmatic `Dialog` plugin.
+*   **`Notify.create(...)`**: Spawns toast notifications. Key options include:
+    *   `type`: Preset themes representing status types (`positive` for success, `negative` for failure, `warning` for alert, `info` for details).
+    *   `timeout`: Time in milliseconds before the toast auto-dismisses (e.g., `2500` ms).
+    *   `position`: Controls viewport placement (e.g., `'bottom-right'` on desktop or `'bottom'` on mobile).
+    *   `actions`: Adds interactive buttons to dismiss or trigger events.
+*   **`Loading.show(...)`**: Activates a full-screen loading spinner overlay. You can customize the message text, background class, and spinner color.
+*   **`Dialog.create(...)`**: Spawns confirm/prompt modals programmatically with `.onOk` and `.onCancel` event handlers.
 
 ---
 
-## 4. Notify, Loading & Dialog Plugin Setup
+## 3. Usage Examples
+
+### Unified Feedback Composable
+
+This composable wraps Quasar's programmatic feedback APIs to expose clean functions for success, error, loading, and confirmation feedback.
 
 ```javascript
-// FRONTENT/src/composables/useFeedback.js
 import { Notify, Loading, Dialog } from 'quasar'
 
 export function useFeedback() {
   
-  // 1. Trigger toast notifications
+  // Trigger toast notifications
   const notifySuccess = (messageText) => {
     Notify.create({
       type: 'positive',
@@ -57,7 +57,7 @@ export function useFeedback() {
     })
   }
 
-  // 2. Trigger Full screen blocking spinner
+  // Trigger full screen blocking spinner
   const toggleLoadingState = (isActive, messageText = 'Processing transaction...') => {
     if (isActive) {
       Loading.show({
@@ -70,7 +70,7 @@ export function useFeedback() {
     }
   }
 
-  // 3. Confirm dialog helper
+  // Confirm dialog helper
   const confirmAction = (titleText, messageText, onOkCallback) => {
     Dialog.create({
       title: titleText,
@@ -90,28 +90,11 @@ export function useFeedback() {
 }
 ```
 
----
+### Network Action with Feedback
 
-## 5. Best Practices
-
-*   **Progressive Loading Badges:** When uploading bulk Excel templates, display linear loading trackers (`QLinearProgress`) inside page headers rather than blocking the user's entire screen view.
-*   **Clear Error Explanations:** Display actionable errors in failure alerts (e.g. "Missing required field: Quantity", not "Transaction failed").
-
----
-
-## 6. Mobile First Rules
-
-*   **Ergonomic Toast Placement:** On small mobile screens, display error notifications near the bottom edge (`position="bottom"`) to align with comfort touch boundaries.
-*   **Brief Toast Lengths:** Toast text must not exceed two sentences to prevent blocking primary navigation menus.
-
----
-
-## 7. Common Patterns
-
-### Network Operation Feedback Pattern
+This example shows how to orchestrate feedback within an asynchronous operation, ensuring the loader closes even if the request throws an error.
 
 ```javascript
-// FRONTENT/src/composables/operations/useOutletSync.js
 import { useFeedback } from 'src/composables/useFeedback'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 
@@ -120,7 +103,7 @@ export function useOutletSync() {
   const ioStore = useResourceIoStore()
 
   const syncOutletCatalog = async (outletId) => {
-    // 1. Show full screen spinner
+    // Show full screen spinner
     toggleLoadingState(true, 'Downloading inventory details...')
     try {
       const response = await ioStore.createRecord('outletSync', { id: outletId })
@@ -132,7 +115,7 @@ export function useOutletSync() {
     } catch (e) {
       notifyError('Network timeout. Check your connection.')
     } finally {
-      // 2. Hide spinner
+      // Ensure spinner is hidden in finally block
       toggleLoadingState(false)
     }
   }
@@ -143,57 +126,9 @@ export function useOutletSync() {
 
 ---
 
-## 8. Reusable Component Suggestions
+## 4. Behavior and Usability Guidelines
 
-*   `AqlOfflineBanner`: Reusable inline banner linked to network status listeners, warning when connections fail.
-
----
-
-## 9. Accessibility Notes
-
-*   Toasts triggered via `Notify` announce dynamically using `aria-live="polite"` tags to ensure screen readers read alerts.
-
----
-
-## 10. Dark Mode Notes
-
-*   Verify spinner box panels automatically use dark modes token colors (`bg-grey-9`, `text-white`) when themes toggle.
-
----
-
-## 11. Performance Notes
-
-*   Avoid spawning multiple notifications simultaneously. Let toast messages queue logically.
-
----
-
-## 12. Anti-Patterns
-
-*   **Anti-Pattern:** Implementing raw alert popups (`alert('Failed')`) inside code workflows.
-    *   *Correction:* Replace with the `Notify` plugin.
-*   **Anti-Pattern:** Leaving full-screen blockers active on API errors.
-    *   *Correction:* Force loader cleanup inside a `finally` block.
-
----
-
-## 13. AI Agent Rules
-
-1.  **Ensure Programmatic Notifications:** Reject any template files writing custom modal toast alert layouts when `Notify` exists.
-2.  **Validate Spinners Cleanup:** Confirm all async loaders hide inside `finally` blocks.
-
----
-
-## 14. Decision Matrix
-
-| Operation Danger | User Interruption | Recommended Action | Feedback Component |
-| :--- | :--- | :--- | :--- |
-| **Successful save** | Low (Informational) | Self-dismiss toast | `Notify` (type: positive) |
-| **API query delay** | Medium (Wait check) | Simple element spin | `:loading` button property |
-| **Dangerous edit** | High (Destructive) | Modal Confirmation | Programmatic `Dialog` |
-| **System Sync** | High (Critical block) | Full screen blocker | `Loading.show()` plugin |
-
----
-
-## 15. Final Rule
-
-All user alerts and notifications must compile programmatically via Quasar plugins, apply standard semantic color presets, include touch dismiss options, and lock layouts during saves.
+*   **Handling Asynchronous Failures**: Managing loading overlay states within a `finally` block ensures that loading overlays are dismissed in the event of an error, preventing the interface from locking up permanently.
+*   **Error Message Clarity**: Success and error messages are more helpful when they provide clear, action-oriented explanations rather than generic system terms.
+*   **Toasts Placement and Reachability**: On mobile layouts, displaying alerts near the bottom edge of the viewport aligns with natural touch targets and keeps the user's hand from obstructing the view of the screen.
+*   **Accessibility**: Programmatic notifications spawned via `Notify` automatically inject `aria-live="polite"` tags to ensure screen readers announce updates dynamically.

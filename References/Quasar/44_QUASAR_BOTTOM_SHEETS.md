@@ -1,38 +1,28 @@
 # 44_QUASAR_BOTTOM_SHEETS.md - Bottom Sheets & Touch Action Sheets
 
-This document defines how to implement and configure bottom-sliding action panels using Quasar's Bottom Sheet plugin and custom dialog templates to optimize touch ergonomics.
+This document is an educational reference guide covering the implementation, configuration, and usage of bottom sheets in Quasar.
 
 ---
 
-## 1. Purpose
+## 1. Component Overview
 
-The purpose of this guide is to explain the priority of bottom sheets over standard floating menu dropdowns on mobile interfaces, define option structures, and explain permission gating rules for actions.
+Bottom sheets slide up from the bottom of the screen to present a list of choices or actions. They are commonly used in mobile or touch-focused applications as an alternative to floating dropdown menus, as they position controls within easy reach of the user's thumb.
 
----
-
-## 2. Core Philosophy
-
-AQL action sheets are **Thumb-Accessible, Highly Ergonomic, and Simple**:
-*   **Thumb Sweep Sweep Comfort:** Controls placed near the bottom of mobile screens are easier to reach. Bottom sheets slide items directly into this primary touch zone.
-*   **Explicit Action Lists:** Actions display in clear, full-width list rows containing vector icons, providing high clarity compared to tiny nested text dropdown menus.
-*   **Instant Cancellation:** Users can swipe down or tap the backdrop overlay to dismiss options instantly.
+In Quasar, bottom sheets can be created in two main ways:
+1.  **Programmatically**: Using the `BottomSheet` plugin (`$q.bottomSheet`) for quick, standard option lists.
+2.  **Custom Templates**: Using the `QDialog` component with `position="bottom"` for custom layouts, styling, or custom lists.
 
 ---
 
-## 3. Golden Rules
+## 2. Programmatic Bottom Sheet Setup
 
-1.  **Prefer Bottom Sheets on Mobile:** Contextual card menu selections on screens under `sm` must map to bottom sheets rather than floating menus.
-2.  **Lock Sheet Heights:** Ensure bottom sheets do not exceed `50%` of viewport heights. If option counts are high, wrap items in scroll containers.
-3.  **Gate Actions Programmatically:** Filter the option configurations array using permission checks (`allowed()`) before passing data parameters to sheets.
-4.  **Incorporate Ripple Feedback:** Every action line button inside custom bottom sheets must define the `v-ripple` directive.
+The `BottomSheet` plugin allows developers to trigger action menus by passing a list of configurations.
 
----
+### Dynamic Option Gating Example
 
-## 4. QBottomSheet Plugin & Custom Layout Setup
+In enterprise applications, action lists can be filtered dynamically based on user permissions before the bottom sheet is generated.
 
-### Programmatic Bottom Sheet Trigger
 ```javascript
-// Composition API Call Pattern inside a Composable
 import { useQuasar } from 'quasar'
 import { useResourceConfig } from 'src/composables/useResourceConfig'
 
@@ -41,9 +31,9 @@ export function useOutletActions() {
   const { allowed } = useResourceConfig()
 
   const showActionsSheet = (outletId, onSelected) => {
-    // 1. Build actions array applying permission gates
     const actions = []
     
+    // Permission checks gate individual actions
     if (allowed({ outlet: 'update' })) {
       actions.push({ label: 'Edit Details', value: 'edit', icon: 'edit' })
     }
@@ -51,7 +41,6 @@ export function useOutletActions() {
       actions.push({ label: 'Archive Outlet', value: 'archive', icon: 'delete', classes: 'text-negative' })
     }
 
-    // 2. Spawn Bottom Sheet
     $q.bottomSheet({
       title: 'Outlet Management',
       actions: actions
@@ -66,28 +55,11 @@ export function useOutletActions() {
 
 ---
 
-## 5. Best Practices
+## 3. Custom Template Bottom Sheet Setup
 
-*   **Standard List Formatting:** Display options inside a vertical list. Avoid grid structures (multiple icon grid columns) unless configuring direct file sharing workflows.
-*   **Contrast Styling:** Ensure delete or warning actions apply explicit red styling colors (`classes: 'text-negative'`).
-
----
-
-## 6. Mobile First Rules
-
-*   **Keyboard Exclusions:** Never render text input components inside a bottom action sheet. Toggling text cursors pushes sheets out of the screen.
-*   **Header Titles:** Include descriptive header labels to remind the user what record they are modifying.
-
----
-
-## 7. Common Patterns
-
-### Custom Layout Bottom Sheet Card
-
-When programmatic defaults are insufficient, implement bottom sheets using `QDialog` with `position="bottom"`:
+For advanced markup, layout controls, or custom scroll behaviors, using a template-based `QDialog` with the `position="bottom"` property provides a robust alternative.
 
 ```html
-<!-- FRONTENT/src/components/Operations/OutletCustomActionSheet.vue -->
 <template>
   <q-dialog v-model="isOpen" position="bottom" class="custom-action-sheet">
     <q-card class="rounded-borders-top bg-white text-dark">
@@ -133,7 +105,6 @@ const selectAction = (action) => {
 </script>
 
 <style scoped>
-/* Ensure top borders are rounded for bottom sheet appearance */
 .rounded-borders-top {
   border-top-left-radius: 12px;
   border-top-right-radius: 12px;
@@ -143,58 +114,9 @@ const selectAction = (action) => {
 
 ---
 
-## 8. Reusable Component Suggestions
+## 4. Behavior and Usability Guidelines
 
-*   `AqlActionSheet`: Custom component wrapper pre-loaded with permission filters, status labels, and item lists.
-
----
-
-## 9. Accessibility Notes
-
-*   Verify screen readers announce option lists dynamically when bottom sheets slide up.
-*   Support esc key dismissals.
-
----
-
-## 10. Dark Mode Notes
-
-*   Ensure that top borders and icons use slate styling parameters (`bg-surface`, `text-white`) under dark mode themes.
-
----
-
-## 11. Performance Notes
-
-*   Do not bundle heavy calculations inside action list options. Compile values prior to sheets triggers.
-
----
-
-## 12. Anti-Patterns
-
-*   **Anti-Pattern:** Using standard desktop dropdown menus on mobile viewports for crucial actions.
-    *   *Correction:* Replace with the `BottomSheet` plugin helper.
-*   **Anti-Pattern:** Putting heavy text inputs inside bottom action sheet models.
-    *   *Correction:* Open centered Dialog pages instead.
-
----
-
-## 13. AI Agent Rules
-
-1.  **Validate Ergonomics:** Ensure that contextual lists containing more than 3 options default to bottom sheets on mobile.
-2.  **Confirm Permissions Filter:** Confirm action configurations verify permission flags prior to generating options lists.
-
----
-
-## 14. Decision Matrix
-
-| Viewport Category | Option Count | Action Intent | Recommended Component Selection |
-| :--- | :--- | :--- | :--- |
-| **Mobile (<600px)** | > 3 options | Record workflow actions | Programmatic `BottomSheet` plugin |
-| **Mobile (<600px)** | 2 options | Direct status switches | Double action buttons card footer |
-| **Desktop (>1024px)**| > 3 options | Record workflow actions | Floating drop-down Menu (`QMenu`) |
-| **All Screens** | Multi-level inputs | Record edits | dedicated Route page / maximized dialog |
-
----
-
-## 15. Final Rule
-
-All mobile record action panels must implement bottom sheets, compile options lists dynamically using programmatic permission gates, use standard list formats, and apply direct ripple tap feedback.
+*   **Responsive Adaptation**: While dropdown menus (`QMenu`) work well on desktop screens, swapping them for bottom sheets on mobile devices provides larger tap targets and improves ergonomics.
+*   **Viewport Height Limits**: Scrollable containers can be used within custom bottom sheets to prevent them from growing beyond the screen height when displaying long option lists.
+*   **Avoiding Input Focus Issues**: Text input elements inside bottom sheets can be problematic because triggering the virtual keyboard on mobile devices can overlap, resize, or push the sheet out of view. Using dedicated centered dialogs or full-screen routes works better for text inputs.
+*   **Accessibility**: Quasar bottom sheets support closing on backdrop click or pressing the Escape key. Including clear labels, header text, and list-level ARIA landmarks supports screen readers.

@@ -1,42 +1,45 @@
-# 24_QUASAR_OPTIONS.md - Option Selections, Toggles & Checkboxes
+# Quasar Options: Toggles, Checkboxes & Option Groups
 
-This document defines how to implement toggles, checkboxes, radio selections, and option groups using Quasar components to support clean, high-performance interactions on mobile interfaces.
-
----
-
-## 1. Purpose
-
-The purpose of this guide is to ensure all choice selectors are built using touch-friendly surfaces, prevent drop-down selection fatigue, define when to choose toggles over checkboxes, and detail option groupings.
+This reference document describes how to implement choice selection controls using Quasar components, covering `QToggle`, `QCheckbox`, `QRadio`, and `QOptionGroup` configurations.
 
 ---
 
-## 2. Core Philosophy
+## 1. Overview of Option Components
 
-AQL option components are **Visual, Touch-Sized, and Direct**:
-*   **Toggles for Actions:** Standard yes/no actions must use `QToggle` rather than a standard checkbox because toggles represent immediate state adjustments and provide comfortable touch targets.
-*   **Inline Choice Rows:** When choosing from short lists (<5 options), avoid select fields. Render the list inline using `QOptionGroup` with `inline` configurations.
-*   **Direct Touch Bounds:** Interaction sweeps must respond to clicking the option label text, not just the small square check mark.
+Quasar provides several components for gathering binary or multi-choice selections. These components standardise target areas, icons, and keyboard focus states.
 
----
-
-## 3. Golden Rules
-
-1.  **Toggle for Binary Choice:** Use `QToggle` for active/inactive configurations. Save `QCheckbox` for table rows selection or form checklist groupings.
-2.  **Ensure Inline Groups:** For short list groups, use `QOptionGroup` with the `inline` property to prevent vertical stack heights on small mobile views.
-3.  **Prohibit Plain Checkbox Loops:** Never loop basic HTML inputs. Always map selections to reactive arrays using Quasar options.
-4.  **Confirm Distinct Labels:** Every option input must define readable labels to preserve touch accuracy.
+### Component Comparison
+* **QToggle:** Best suited for binary states (e.g., enable/disable, true/false) where the state change represents an active decision or instant preference adjustment.
+* **QCheckbox:** Typically used for multiple selections (e.g., lists of filters or checking rows in a table) where multiple options can be chosen simultaneously.
+* **QRadio:** Used for mutually exclusive single selections from a short list.
+* **QOptionGroup:** A convenience wrapper that groups multiple checkboxes or radio buttons into a single component bound to a single model.
 
 ---
 
-## 4. QOptionGroup & QToggle Setup
+## 2. Key Properties & Options
+
+### QOptionGroup Props
+* `type`: Specifies the selection element type (either `radio` or `checkbox`).
+* `inline`: Aligns the child elements horizontally inside a row container rather than vertically.
+* `options`: An array of objects defining choices, structured with `label` and `value` fields.
+
+### QToggle Props
+* `icon`: Appends a helper icon inside the sliding button.
+* `checked-icon` / `unchecked-icon`: Customizes the indicator icon based on active state.
+* `color`: Assigns a theme color to the active toggle track or icon.
+
+---
+
+## 3. Implementation Example
+
+The example below shows a column arrangement showcasing `QOptionGroup` (configured as radio buttons and checkbox lists) and a `QToggle` control:
 
 ```html
-<!-- FRONTENT/src/components/Operations/OutletOptionFields.vue -->
 <template>
   <div class="column q-gutter-y-md">
-    <!-- Inline Radio Option Group for short lists -->
+    <!-- Radio Option Group for mutually exclusive choices -->
     <div class="option-container bg-grey-1 q-pa-sm rounded-borders">
-      <div class="text-caption text-grey-7 q-mb-xs">Order Priority *</div>
+      <div class="text-caption text-grey-7 q-mb-xs">Order Priority</div>
       <q-option-group
         v-model="fields.priority"
         :options="priorityOptions"
@@ -46,11 +49,11 @@ AQL option components are **Visual, Touch-Sized, and Direct**:
       />
     </div>
 
-    <!-- Toggle Selector for binary active state -->
+    <!-- Toggle Switch for binary states -->
     <div class="row items-center justify-between bg-white q-pa-md border-grey-3 rounded-borders">
       <div class="column">
         <span class="text-subtitle2 text-weight-bold">Enable Notifications</span>
-        <span class="text-caption text-grey-6">Send updates when status changes</span>
+        <span class="text-caption text-grey-6">Receive updates on state updates</span>
       </div>
       <q-toggle
         v-model="fields.notify"
@@ -59,9 +62,9 @@ AQL option components are **Visual, Touch-Sized, and Direct**:
       />
     </div>
 
-    <!-- Multiple Checkbox Group -->
+    <!-- Checkbox Option Group for multiple choices -->
     <div class="option-container bg-grey-1 q-pa-sm rounded-borders">
-      <div class="text-caption text-grey-7 q-mb-xs">Delivery Areas *</div>
+      <div class="text-caption text-grey-7 q-mb-xs">Delivery Zones</div>
       <q-option-group
         v-model="fields.areas"
         :options="areaOptions"
@@ -88,38 +91,23 @@ const priorityOptions = [
 ]
 
 const areaOptions = [
-  { label: 'Zone A (North)', value: 'north' },
-  { label: 'Zone B (South)', value: 'south' },
-  { label: 'Zone C (West)', value: 'west' }
+  { label: 'Zone A', value: 'north' },
+  { label: 'Zone B', value: 'south' },
+  { label: 'Zone C', value: 'west' }
 ]
 </script>
 ```
 
 ---
 
-## 5. Best Practices
+## 4. State Update Handling
 
-*   **Color Accents:** Apply consistent accents using theme variables (`color="primary"`, `color="accent"`) to coordinate with status changes.
-*   **Dynamic Descriptions:** Provide detail captions below toggles to ensure the action is clear to users before they tap.
-
----
-
-## 6. Mobile First Rules
-
-*   **Tap Targets Size:** Always use Quasar's default options configurations. They apply a minimum touch footprint exceeding `44px` on label text wraps.
-*   **Avoid Text Wrappings:** Short inline group labels must fit cleanly within mobile screen widths (320px) without wrapping.
-
----
-
-## 7. Common Patterns
-
-### Status Check Toggle Pattern
+Toggles are frequently used to trigger direct asynchronous requests on model updates. The `@update:model-value` event transmits the latest checked status:
 
 ```html
-<!-- FRONTENT/src/components/Operations/OutletStatusToggle.vue -->
 <template>
   <div class="row items-center justify-between q-py-sm">
-    <span class="text-body2 text-weight-medium text-grey-8">
+    <span class="text-body2 text-weight-medium">
       Item Status: {{ fields.isActive ? 'Active' : 'Archived' }}
     </span>
     <q-toggle
@@ -136,70 +124,10 @@ const areaOptions = [
 import { ref } from 'vue'
 
 const emit = defineEmits(['status-change'])
-
-const fields = ref({
-  isActive: true
-})
+const fields = ref({ isActive: true })
 
 const onStatusChanged = (val) => {
   emit('status-change', val)
 }
 </script>
 ```
-
----
-
-## 8. Reusable Component Suggestions
-
-*   `AqlToggleRow`: Custom component wrapping a label, description, and toggle in a clean row, complete with user permission verification checks.
-
----
-
-## 9. Accessibility Notes
-
-*   Ensure that multiple checkbox configurations announce group contexts by wrapping options inside a fieldset or using appropriate labels.
-
----
-
-## 10. Dark Mode Notes
-
-*   Verify options elements do not apply harsh white background boxes in dark mode grids.
-
----
-
-## 11. Performance Notes
-
-*   Avoid listening to dynamic reactive shifts on checkbox arrays inside rapid animation loops.
-
----
-
-## 12. Anti-Patterns
-
-*   **Anti-Pattern:** Implementing multiple custom `div` boxes with click handlers to build radio buttons.
-    *   *Correction:* Always use `QOptionGroup` or `QRadio` controls to leverage native accessibility profiles.
-*   **Anti-Pattern:** Using standard checkboxes for immediate server-sync switches.
-    *   *Correction:* Use `QToggle` to signal instant action changes.
-
----
-
-## 13. AI Agent Rules
-
-1.  **Validate Native Grouping:** Confirm that multiple radio or checkbox sets utilize `QOptionGroup` elements.
-2.  **Confirm Binary Toggles:** Reject layouts that implement simple checkboxes for immediate feature activation controls.
-
----
-
-## 14. Decision Matrix
-
-| Input Requirement | Option Count | Recommended Component | Layout Alignment |
-| :--- | :--- | :--- | :--- |
-| **Active/Inactive toggle**| 2 choices (binary) | `QToggle` | Row inline |
-| **Exclusive single choice**| 3 to 5 options | `QOptionGroup` (type: radio) | Inline column row |
-| **Exclusive single choice**| > 8 options | `QSelect` (dense) | Outlined popup |
-| **Multiple options check** | < 4 options | `QOptionGroup` (type: checkbox)| Vertical list |
-
----
-
-## 15. Final Rule
-
-All binary choices must use toggles, while multiple selections under 5 options must use inline option groups rather than dropdown selects.

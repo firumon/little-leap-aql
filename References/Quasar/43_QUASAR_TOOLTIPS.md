@@ -1,40 +1,33 @@
 # 43_QUASAR_TOOLTIPS.md - Tooltips & Informational Cues
 
-This document defines how to implement and configure informational tooltips using Quasar's tooltip component (`QTooltip`) while respecting mobile accessibility limits.
+This document is an educational reference guide covering the implementation, properties, and responsive behaviors of Quasar's Tooltip component (`QTooltip`).
 
 ---
 
-## 1. Purpose
+## 1. Component Overview
 
-The purpose of this guide is to outline tooltips positioning, explain hover triggers, and establish rules for mobile viewports where hover states do not exist.
-
----
-
-## 2. Core Philosophy
-
-AQL tooltips are **Desktop-Targeted and Non-Essential**:
-*   **Desktop-Only Assist:** Hover tooltips are restricted to desktop viewports (5% usage). They must not hide critical transaction steps or details.
-*   **Touch Exclusions:** Since mobile viewports lack a mouse cursor hover state, tooltips must not render on touch targets. If text descriptions are required on mobile, use click-triggered help popovers or inline captions.
-*   **Short Descriptions:** Tooltip contents must be kept concise, typically containing under 5 words.
+`QTooltip` is used to provide small, hover-triggered text hints that describe the purpose or action associated with an element (e.g., an icon button or a status label). Because tooltips rely primarily on hover states, they are typically optimized for pointer-based (desktop) interfaces rather than touch-based (mobile) interfaces.
 
 ---
 
-## 3. Golden Rules
+## 2. Key Properties & Configurations
 
-1.  **Restrict Tooltips to Desktop:** Tooltips must be wrapped with visibility classes or conditional checks: `<q-tooltip v-if="$q.screen.gt.xs">`.
-2.  **No Critical Info in Tooltips:** Crucial data (like inventory codes, invoice totals, or status codes) must never live inside a tooltip. They must render directly on the primary card.
-3.  **Use Default Transitions:** Keep tooltips lightweight and use standard slide or fade transitions.
-4.  **Confirm Correct Offsets:** Position tooltips relative to icons with clear alignments (`anchor="top middle" self="bottom middle"`).
+*   **`anchor`**: Specifies the alignment point on the target element (e.g., `top middle`, `bottom right`).
+*   **`self`**: Specifies the alignment point on the tooltip itself relative to the anchor (e.g., `bottom middle`, `top right`).
+*   **`offset`**: An array specifying horizontal and vertical offsets in pixels (e.g., `[0, 4]`).
+*   **`v-if` / screen size gating**: Gating tooltips with screen checks (e.g., `v-if="$q.screen.gt.xs"`) prevents tooltips from rendering on touch devices where hover interactions are simulated and can result in sticky overlays.
 
 ---
 
-## 4. QTooltip Configuration & Layout Setup
+## 3. Usage Examples
+
+### Standard Desktop Tooltip
+
+In this example, the tooltip is attached to an icon button and gated so it only loads on viewports larger than mobile sizes.
 
 ```html
-<!-- FRONTENT/src/components/Admin/SupplierActionIcons.vue -->
 <template>
   <div class="inline-actions-container">
-    <!-- Action Button (Desktop Optimized) -->
     <q-btn
       v-ripple
       flat
@@ -44,7 +37,7 @@ AQL tooltips are **Desktop-Targeted and Non-Essential**:
       icon="archive"
       @click="emit('archive')"
     >
-      <!-- Tooltip restricted to desktop screens -->
+      <!-- Tooltip restricted to screen sizes larger than extra small (mobile) -->
       <q-tooltip
         v-if="$q.screen.gt.xs"
         anchor="top middle"
@@ -62,32 +55,14 @@ const emit = defineEmits(['archive'])
 </script>
 ```
 
----
+### Responsive Inline Information Strategy
 
-## 5. Best Practices
-
-*   **Compact Styling:** Use standard dark styling variables for tooltip panels.
-*   **Brief Strings:** Ensure tooltip text is descriptive yet brief (e.g. "Create invoice", not "Click here to initialize the invoice creation workflow").
-
----
-
-## 6. Mobile First Rules
-
-*   **Prohibit Touch Hover Blocks:** Mobile users tapping on elements that trigger hover tooltips will cause the tooltip to render and stay stuck on-screen until another area is tapped. Force `v-if="$q.screen.gt.xs"` to prevent this behavior.
-
----
-
-## 7. Common Patterns
-
-### Responsive Legend Helper Pattern
-
-For mobile layouts, present info details directly inline instead of utilizing hidden tooltips:
+On desktop screens, helper information can be tucked away into a hover tooltip. On mobile screens, rendering the details directly inline provides a more accessible user experience.
 
 ```html
-<!-- FRONTENT/src/components/Operations/OutletLegendHelper.vue -->
 <template>
   <div class="legend-container">
-    <!-- Desktop View: Display clean tooltip details -->
+    <!-- Desktop: Hover-based helper -->
     <div v-if="$q.screen.gt.xs" class="row items-center cursor-pointer">
       <span class="text-subtitle2">Priority</span>
       <q-icon name="help" size="xs" class="q-ml-xs" />
@@ -96,75 +71,22 @@ For mobile layouts, present info details directly inline instead of utilizing hi
       </q-tooltip>
     </div>
 
-    <!-- Mobile View: Display inline text helpers directly -->
+    <!-- Mobile: Inline helper details -->
     <div v-else class="column bg-blue-1 q-pa-sm rounded-borders text-blue-9">
-      <div class="text-caption text-weight-bold">Order Priority Warning:</div>
+      <div class="text-caption text-weight-bold">Order Priority:</div>
       <div class="text-caption">
         High priority orders process within 2 hours.
       </div>
     </div>
   </div>
 </template>
-
-<script setup>
-// Legend component wrapper
-</script>
 ```
 
 ---
 
-## 8. Reusable Component Suggestions
+## 4. Behavior and Usability Guidelines
 
-*   `AqlInfoIcon`: Desktop icon displaying tooltip summaries and mobile details via dynamic bottom sheet options.
-
----
-
-## 9. Accessibility Notes
-
-*   Quasar tooltips automatically inject `role="tooltip"` attributes and link to triggers via dynamic ID maps.
-*   Keep text labels screen-reader accessible.
-
----
-
-## 10. Dark Mode Notes
-
-*   Tooltip colors must retain high contrast dark values to ensure visibility.
-
----
-
-## 11. Performance Notes
-
-*   Avoid declaring complex components inside tooltips as they incur high compilation costs.
-
----
-
-## 12. Anti-Patterns
-
-*   **Anti-Pattern:** Putting primary navigation elements or click links inside a hover-triggered `QTooltip`.
-    *   *Correction:* Replace with click-triggered `QMenu` popovers.
-*   **Anti-Pattern:** Omitting viewport visibility limits on tooltips, causing them to render on mobile screens.
-    *   *Correction:* Apply `v-if="$q.screen.gt.xs"` to tooltips.
-
----
-
-## 13. AI Agent Rules
-
-1.  **Enforce Viewport Gates:** Ensure all tooltip instances are gated with desktop visibility flags.
-2.  **Confirm Label Briefs:** Reject tooltips wrapping long explanation paragraphs.
-
----
-
-## 14. Decision Matrix
-
-| User Viewport | Essential Information? | Target Component | Trigger Action |
-| :--- | :--- | :--- | :--- |
-| **Desktop (>1024px)**| No (Nice to have) | `QTooltip` | Hover trigger |
-| **Desktop (>1024px)**| Yes (Critical) | Card label text | Persistent layout display |
-| **Mobile (<600px)** | No (Nice to have) | Hidden on mobile | None |
-| **Mobile (<600px)** | Yes (Critical) | Inline banner / panel | Tap to open help sheet |
-
----
-
-## 15. Final Rule
-
-All tooltips must be restricted to desktop viewports using screen size conditionals, contain brief information, and map alignments cleanly without nested interactive markup.
+*   **Touch Device Simulation**: Tapping elements with hover-triggered tooltips on mobile devices often triggers the tooltip. Because there is no cursor move away event, the tooltip may remain visible until the user taps elsewhere. Gating the component with `v-if` helps avoid this behavior.
+*   **Information Priority**: Critical information is best placed in the primary page flow. Relying on tooltips for essential transaction steps may hide necessary details from users who do not hover over or tab to those elements.
+*   **Keep Text Concise**: Tooltips are designed for brief descriptions or labels. When detailed explanations or clickable links are required, interactive popovers (`QMenu`) or modal dialogs (`QDialog`) are more suitable.
+*   **Accessibility**: Quasar tooltips automatically apply `role="tooltip"` and link to their triggers via generated ID structures, supporting screen reader access.

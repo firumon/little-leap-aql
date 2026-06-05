@@ -1,41 +1,40 @@
-# 21_QUASAR_VALIDATION.md - Input & Form Validation Rules
+# Quasar Validation: Input & Form Rules
 
-This document defines how to implement validation rules on Quasar inputs using native validation arrays, dynamic lazy-validation properties, and decoupled logic composables.
-
----
-
-## 1. Purpose
-
-The purpose of this guide is to ensure input validation is clean, performance-optimized on mobile devices, and avoids triggering premature error messages before a user completes their input.
+This reference document describes how to implement and coordinate validation rules on Quasar input fields using native validation arrays, dynamic validation settings, and composable-based schemas.
 
 ---
 
-## 2. Core Philosophy
+## 1. Overview of Validation Features
 
-AQL validation is **Decoupled and Declarative**:
-*   **Decoupled Schema:** Simple rules (like checking for empty strings) can reside in reusable utility collections. Complex, cross-field validation rules (like comparing invoice date against order date) must live in composables.
-*   **Lazy Verification:** Validation checks must not fire on field initialization. We use dynamic rules checking (`lazy-rules`) to defer validation evaluations until the field loses focus or the form submits.
-*   **Pure Functions:** All validation rules are stateless, pure JavaScript functions that return either `true` (success) or a `String` representing the failure error message.
+Quasar input components (like `QInput` and `QSelect`) offer built-in validation support via the `:rules` prop. This allows developers to pass arrays of validation functions that execute in order.
 
----
-
-## 3. Golden Rules
-
-1.  **Always Set Lazy Rules:** All input components requiring rules must specify `lazy-rules="ondirty"` to prevent validation from firing while typing.
-2.  **No Anonymous Functions in Templates:** Never declare validation logic directly inline inside template attributes (e.g. `:rules="[val => !val]"` is forbidden). Define rules in the script block.
-3.  **Clear Validation on Reset:** Always call the form's native `resetValidation()` function during form cancellation or reset.
-4.  **No Direct DOM Manipulation for Errors:** Never query DOM elements or change style properties manually to display errors. Bind validation states strictly to the input controls.
+### Key Capabilities
+* **Stateless Validation Functions:** Rules are typically defined as functions that receive the current field value and return either `true` (if the input is valid) or a `String` (containing the error message if invalid).
+* **Lazy Evaluation:** Using `lazy-rules` defers execution so validation is not run prematurely (e.g., when the form is initially loaded).
+* **Programmatic Form Integration:** `QForm` aggregates these individual input states, offering a single `.validate()` method to verify the overall form state before final submission.
 
 ---
 
-## 4. QInput Rules & Lazy Validation Setup
+## 2. Key Properties & Dynamic Rules Configuration
+
+### Props
+* `rules`: An array of functions. Each function receives the model value and returns a boolean or an error message.
+* `lazy-rules`: Configures when validation starts:
+  * `true` / `ondirty`: Validation is skipped on mount. It runs once the user starts interacting with the field or when the parent `QForm` validation is triggered programmatically.
+  * `always`: Validation runs on initial rendering and with every value change.
+* `bottom-slots`: Reserves space below the input for displaying validation errors, preventing layout shifts when messages appear.
+
+---
+
+## 3. Implementation Example
+
+Below is an example of validation rules applied to form fields, featuring local validation methods and asynchronous checks:
 
 ```html
-<!-- FRONTENT/src/components/Operations/OutletInventoryForm.vue -->
 <template>
   <q-form ref="formRef" @submit.prevent="onFormSubmit">
     <q-card flat bordered class="q-pa-md">
-      <!-- Input using imported reusable validation functions -->
+      <!-- Input applying validation rules from a shared rules helper -->
       <q-input
         v-model="formData.email"
         outlined
@@ -45,7 +44,7 @@ AQL validation is **Decoupled and Declarative**:
         :rules="[rules.required, rules.email]"
       />
 
-      <!-- Input using programmatic async composable rules -->
+      <!-- Input utilizing programmatic asynchronous validation -->
       <q-input
         v-model="formData.sku"
         outlined
@@ -77,10 +76,10 @@ const formData = ref({
   sku: ''
 })
 
-// Reusable validation rules
+// Validation rules retrieved from a shared helper
 const { rules } = useValidationRules()
 
-// Programmatic async validation from composable
+// Asynchronous validation handlers from a composable
 const { isValidatingSku, checkSkuAvailability } = useSkuValidation()
 
 const validateSku = async (val) => {
@@ -96,7 +95,9 @@ const onFormSubmit = async () => {
 }
 
 const onCancel = () => {
-  formRef.value.resetValidation()
+  if (formRef.value) {
+    formRef.value.resetValidation()
+  }
   emit('cancel')
 }
 </script>
@@ -104,26 +105,12 @@ const onCancel = () => {
 
 ---
 
-## 5. Best Practices
+## 4. Shared Validation Rules Patterns
 
-*   **Rule Composition:** Chain multiple validation rules inside the array in order of execution. Put lightweight checks (e.g. `required`) first to skip heavy regex parsing or async checks on empty values.
-*   **Error Message Clarity:** Provide precise error messages that tell the user exactly what to correct (e.g., "Quantity must be greater than zero", not "Invalid input").
-
----
-
-## 6. Mobile First Rules
-
-*   **Keyboard Dismissal on Submit:** Ensure that validation failures keep focus on the first invalid field, but don't force-open the keyboard on mobile unless the user taps the field.
-*   **Touch Friendly Error Margins:** Keep the spacing helper height (`bottom-slots` property or default layout offsets) constant. This prevents input boxes from jumping or shifting the layout vertically when validation error messages render.
-
----
-
-## 7. Common Patterns
-
-### Decoupled Validation Composables
+Validation logic can be decoupled into dedicated composables or helper functions to support reusability:
 
 ```javascript
-// FRONTENT/src/composables/useValidationRules.js
+// Example: src/composables/useValidationRules.js
 export function useValidationRules() {
   const rules = {
     required: (val) => (val !== null && val !== undefined && val !== '') || 'Field is required',
@@ -141,58 +128,7 @@ export function useValidationRules() {
 
 ---
 
-## 8. Reusable Component Suggestions
+## 5. Asynchronous Validation Concerns
 
-*   `AqlValidatedInput`: Standard wrapper around `QInput` preloaded with AQL lazy validation triggers, error templates, and touch keyboard selectors.
-
----
-
-## 9. Accessibility Notes
-
-*   Quasar inputs automatically map validation state changes to ARIA attributes (`aria-invalid="true"`). Make sure custom form fields match these behaviors.
-*   Set focus to the first failed field on programmatic validation triggers.
-
----
-
-## 10. Dark Mode Notes
-
-*   Ensure validation error colors use CSS color variables (`var(--q-negative)`) rather than fixed hex overrides so the error text is readable on dark background themes.
-
----
-
-## 11. Performance Notes
-
-*   **Debounce Async Rule Checks:** When checking uniqueness via network queries, wrap the API check in a debounce helper to prevent calling the server on every keystroke.
-
----
-
-## 12. Anti-Patterns
-
-*   **Anti-Pattern:** Writing validation loops inside the submit action callback instead of utilizing the form's `validate()` promise.
-    *   *Correction:* Check form validity using `const success = await formRef.value.validate()`.
-*   **Anti-Pattern:** Failing to define the `lazy-rules` parameter, causing errors to display as soon as the user opens the page.
-    *   *Correction:* Use `lazy-rules="ondirty"`.
-
----
-
-## 13. AI Agent Rules
-
-1.  **Enforce Schema Separation:** Verify that all validation rules are defined inside helper script blocks or separate composables rather than inline template code.
-2.  **Ensure Form Resets:** Confirm that all form cancel actions call `resetValidation()` on the layout reference object.
-
----
-
-## 14. Decision Matrix
-
-| Validation Complexity | Trigger Requirement | Validation Strategy | Implementation Area |
-| :--- | :--- | :--- | :--- |
-| **Simple text formatting** | Lost focus / Blur | Rules array with `lazy-rules` | Local script rules helper |
-| **Cross-field comparisons**| Blur / Form submit | Programmatic script function | Composable state comparison |
-| **Backend query (uniqueness)**| Keystroke with pause | Debounced async function | Composable API query |
-| **Multi-step forms** | Wizard step click | Programmatic layout step checks | Wizard store validation hooks |
-
----
-
-## 15. Final Rule
-
-All validation checks must use dynamic lazy rule arrays, decouple complex rules into stateful composables, check form validity programmatically using the form reference, and call clear validation loops on resets.
+* **Debouncing:** When validation relies on network requests (such as querying a database to verify uniqueness), wrapping the validation callback in a debouncing utility helps reduce server loads by limiting request frequency.
+* **Loading States:** Binding the input's `:loading` state to a boolean flag provides visual feedback that a background check is currently active.

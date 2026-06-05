@@ -1,37 +1,44 @@
-# 23_QUASAR_SELECTS.md - Dropdown Selects & Autocomplete Options
+# Quasar Selects: Dropdowns & Autocomplete Options
 
-This document defines how to implement and configure select dropdown inputs using Quasar's selection component (`QSelect`) to support easy option navigation on touch screens.
-
----
-
-## 1. Purpose
-
-The purpose of this guide is to optimize dropdown lists, prevent UI overlaps from floating menus on small viewports, handle large selection datasets without memory lag, and configure search filtering options.
+This reference document describes how to implement and configure select dropdown inputs using Quasar's `QSelect` component, covering search filtering, viewport behaviors, and model mapping attributes.
 
 ---
 
-## 2. Core Philosophy
+## 1. Overview of QSelect
 
-AQL selection inputs are **Filterable, Paginated, and Adaptable**:
-*   **Search by Default:** If a select container is expected to hold more than 10 options, it must support search autocomplete.
-*   **Touch Friendly Menus:** On mobile screens, select dropdown lists should open in modal dialog sheets (`behavior="dialog"`) rather than floating menus.
-*   **Standardized Payload:** Option arrays must maintain uniform structures, typically objects containing `label` and `value` properties.
+The `QSelect` component is a form control designed for selecting single or multiple options from a dataset. It supports standard dropdown layouts, search filtering, remote async option loading, and adaptive list containers.
 
----
-
-## 3. Golden Rules
-
-1.  **Strict Styling Uniformity:** All `QSelect` elements must use the `outlined` and `dense` attributes by default.
-2.  **Enforce Mobile Dialog List:** Always set the layout attribute `:behavior="$q.screen.lt.sm ? 'dialog' : 'menu'"` to ensure comfortable touch selection areas.
-3.  **Mandatory Search Autocomplete:** When options exceed 10 records, configure `use-input`, `input-debounce="300"`, and map an `@filter` handler to narrow down lists.
-4.  **Emit Option Values Directly:** Use `emit-value` and `map-options` attributes to store only the target ID/value property inside the models, rather than complex objects.
+### Key Capabilities
+* **Model Property Mapping:** Using target props, `QSelect` can map arrays of complex objects into simple IDs or values stored inside the target variables.
+* **Search Autocomplete:** Activating text inputs allows users to search and filter option lists.
+* **Viewport Adaptability:** The selection popup can automatically display as a floating dropdown menu or a centered modal dialog window.
 
 ---
 
-## 4. QSelect Layout & Filtering Setup
+## 2. Key Properties & Options
+
+### Mapping Options
+* `options`: An array of values, strings, or objects representing selectable options.
+* `option-value`: Defines which property of the option object acts as the value of the option (e.g. `value` or `id`).
+* `option-label`: Defines which property of the option object acts as the text label displayed to users (e.g. `label` or `name`).
+* `emit-value`: Directs Quasar to update the model value with the chosen option's value property rather than the entire option object.
+* `map-options`: Maps the current model value back to the options array to display the correct label when `emit-value` is active.
+
+### Interaction & Style Settings
+* `use-input`: Enables an inner text input, allowing users to type and filter the option list.
+* `input-debounce`: Adds a millisecond delay to keyboard inputs before firing filter callbacks.
+* `behavior`: Sets the selection list display method:
+  * `menu`: Renders a floating popover list.
+  * `dialog`: Renders a centered modal dialog wrapper.
+  * `default`: Dynamically shifts behavior based on platform thresholds (e.g., using dialog mode on smaller screens).
+
+---
+
+## 3. Implementation Example
+
+The example below demonstrates a filterable `QSelect` component configured with options mapping and a custom clear action:
 
 ```html
-<!-- FRONTENT/src/components/Operations/OutletSupplierSelect.vue -->
 <template>
   <q-select
     v-model="selectedSupplierId"
@@ -44,13 +51,13 @@ AQL selection inputs are **Filterable, Paginated, and Adaptable**:
     map-options
     option-label="label"
     option-value="value"
-    label="Supplier *"
+    label="Supplier"
     placeholder="Search suppliers..."
     :options="filteredOptions"
     :behavior="$q.screen.lt.sm ? 'dialog' : 'menu'"
     @filter="onFilterSuppliers"
   >
-    <!-- Template for when option list is empty -->
+    <!-- Slot displayed when search query yields no matches -->
     <template v-slot:no-option>
       <q-item>
         <q-item-section class="text-grey">
@@ -59,9 +66,13 @@ AQL selection inputs are **Filterable, Paginated, and Adaptable**:
       </q-item>
     </template>
 
-    <!-- Clear button accessory -->
+    <!-- Custom append button for clearing selection -->
     <template v-slot:append v-if="selectedSupplierId">
-      <q-icon name="close" @click.stop.prevent="selectedSupplierId = null" class="cursor-pointer" />
+      <q-icon 
+        name="close" 
+        @click.stop.prevent="selectedSupplierId = null" 
+        class="cursor-pointer" 
+      />
     </template>
   </q-select>
 </template>
@@ -70,13 +81,13 @@ AQL selection inputs are **Filterable, Paginated, and Adaptable**:
 import { ref } from 'vue'
 
 const props = defineProps({
-  suppliers: { type: Array, required: true } // Array of { label: '...', value: 123 }
+  suppliers: { type: Array, required: true } // Array structure: [{ label: 'Supplier A', value: 123 }]
 })
 
 const selectedSupplierId = ref(null)
 const filteredOptions = ref([])
 
-// Filtering method with input debounce validation
+// Filtering method with input validation
 const onFilterSuppliers = (val, update) => {
   if (val === '') {
     update(() => {
@@ -97,26 +108,12 @@ const onFilterSuppliers = (val, update) => {
 
 ---
 
-## 5. Best Practices
+## 4. Options Loading & Asynchronous Integration
 
-*   **Option Item Slices:** If option lists contain thousands of items, paginate options locally inside the filtering method to prevent long lists from bogging down the DOM.
-*   **Clear Option Triggers:** Always append a close icon suffix to let users reset values instantly without opening the select menu container.
-
----
-
-## 6. Mobile First Rules
-
-*   **Keyboard Management:** Autocomplete selects on mobile viewports must open virtual keyboards with focus flags configured correctly to prevent keyboard overlays from jumping.
-*   **Max Selection Comfort:** Dialog mode selectors (`behavior="dialog"`) on mobile automatically render native backdrop overlays, which fits mobile ergonomic sweeps.
-
----
-
-## 7. Common Patterns
-
-### Async Remote Option Loader
+For remote datasets, options can be retrieved dynamically from external APIs and mapped into standard select structures using stores or composables:
 
 ```javascript
-// Composable Level: FRONTENT/src/composables/operations/useSupplierLoader.js
+// Example: src/composables/useSupplierLoader.js
 import { ref } from 'vue'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 
@@ -147,60 +144,3 @@ export function useSupplierLoader() {
   }
 }
 ```
-
----
-
-## 8. Reusable Component Suggestions
-
-*   `AqlSupplierSelect`: Pre-packaged supplier lookup select field linked to resources fetch helpers, integrating search queries.
-
----
-
-## 9. Accessibility Notes
-
-*   Ensure screen readers announce selected option text. Use `emit-value` with `map-options` to let Quasar lookup labels.
-
----
-
-## 10. Dark Mode Notes
-
-*   Verify that dialog selection headers default to theme colors (`bg-dark` or `bg-surface`) inside selection menus.
-
----
-
-## 11. Performance Notes
-
-*   Use `virtual-scroll-slices` on selects with large option lists.
-*   Do not query APIs inside `@filter` handlers without debounces.
-
----
-
-## 12. Anti-Patterns
-
-*   **Anti-Pattern:** Standard floating select list menus overflow mobile screen boundaries because they lack `:behavior` declarations.
-    *   *Correction:* Always define behavior adaptive thresholds (`dialog` on mobile).
-*   **Anti-Pattern:** Manually mapping option values via computed maps instead of utilizing `map-options` and `emit-value`.
-    *   *Correction:* Add standard mapping parameters.
-
----
-
-## 13. AI Agent Rules
-
-1.  **Verify Select Dialog Fallback:** Confirm that all generated `QSelect` components integrate the `:behavior` screen responsive check attribute.
-2.  **Ensure Map Options:** Reject any option dropdown component that does not define `emit-value` and `map-options` when handling ID values.
-
----
-
-## 14. Decision Matrix
-
-| Item Option Count | Search Required? | Target Behavior | Selection Method |
-| :--- | :--- | :--- | :--- |
-| **< 5 items** | No | Inline menu | Simple select list |
-| **5 to 15 items** | Optional | Adaptive (`dialog` / `menu`) | Autocomplete select |
-| **> 15 items** | Mandatory | Mobile `dialog` modal | Filtered debounced search |
-
----
-
-## 15. Final Rule
-
-All dropdown select components must be dense and outlined, use maps to output values directly, enable filtering inputs when options exceed 10 records, and switch to dialog layouts on mobile.

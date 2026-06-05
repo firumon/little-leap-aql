@@ -1,37 +1,37 @@
-# 91_QUASAR_MOBILE_FIRST.md - Mobile Ergonomics & Touch UX Checklist
+# Quasar Mobile-First Design & Ergonomics Reference Guide
 
-This document defines the strict mobile visual design requirements and ergonomic checklists for the AQL mobile application.
-
----
-
-## 1. Purpose
-
-The purpose of this guide is to compile all touch ergonomics, spacing standards, virtual keyboard parameters, and scroll locks into a single verification checklist.
+This reference guide describes the design and configuration strategies for optimizing layouts, touch zones, input modes, and form usability on mobile viewports.
 
 ---
 
-## 2. Core Philosophy
+## 1. Ergonomic Layout Principles
 
-AQL mobile designs are **Thumb-Comfortable, Keyboard-Aware, and Visually Dense**:
-*   **Thumb Zone Layouts:** Place high-frequency inputs and action buttons in comfortable reach regions (bottom half of viewport).
-*   **Keyboard Layout Tuning:** Inputs must map directly to their data fields (numeric pads for numeric inputs, emails for email addresses) to prevent typing friction.
-*   **Zero Horizontal Scrolls:** Visual components must match screen boundaries exactly. Horizontal scrolls are prohibited outside custom lists rows.
+Designing for mobile screens involves accommodating physical interactions (such as thumb reaches) and device-specific behaviors:
 
----
-
-## 3. Golden Rules
-
-1.  **Enforce Minimum Touch Sizing:** Any element responsive to touch taps (cards, lists, buttons) must cover an area of at least `44px` by `44px`.
-2.  **Lock Dynamic Viewports:** Main scrolling areas must fit within the window height to prevent header bars from sliding off-screen.
-3.  **Default Options to Bottom Sheets:** Group contextual actions (>3 choices) inside bottom action sheets on screens under `sm`.
-4.  **Confirm Dense Form Aesthetics:** Apply the `dense` attribute to form inputs (`QInput`, `QSelect`) to optimize mobile view spaces.
+*   **Thumb Zone Reach**: Placing high-frequency action buttons and primary inputs in the lower half of the screen makes them easier to tap when using a device one-handed.
+*   **Viewport Constraints**: Fixing primary containers (like headers or footers) while scrolling content blocks prevents important tools and titles from sliding out of view.
+*   **Preventing Horizontal Overflows**: Sizing cards, tables, and buttons to scale fluidly with the viewport width helps prevent horizontal scrolling, which can disrupt the user experience.
 
 ---
 
-## 4. Mobile Ergonomics Configuration Setup
+## 2. Input & Keyboard Adaptability
+
+Mapping form fields to their correct input mode activates the most efficient browser-native keyboard on mobile devices, minimizing typing mistakes:
+
+*   **Numeric Fields**: Utilizing `type="number" inputmode="numeric" pattern="[0-9]*"` displays a standard phone-style numeric pad.
+*   **Decimal/Financial Fields**: Using `inputmode="decimal"` triggers a numeric keyboard containing a decimal point.
+*   **Contact Fields**: Using `type="tel" inputmode="tel"` displays the telephone entry keyboard.
+*   **Text Size Zooming**: Setting the base font-size of inputs to at least `16px` on mobile viewports prevents mobile browsers (especially iOS Safari) from automatically zooming in and shifting the layout when an input receives focus.
+
+---
+
+## 3. Code Examples
+
+### Mobile-Optimized Stock Confirmation Page
+
+The following layout demonstrates a sticky page configuration with a scrollable form, keyboard optimizations, and a bottom actions container:
 
 ```html
-<!-- FRONTENT/src/components/Operations/OutletMobileChecklist.vue -->
 <template>
   <q-page class="column no-wrap bg-grey-1" style="min-height: inherit;">
     <!-- Sticky page header -->
@@ -58,10 +58,9 @@ AQL mobile designs are **Thumb-Comfortable, Keyboard-Aware, and Visually Dense**
     </div>
 
     <!-- Sticky bottom button panel within thumb zone -->
-    <div class="bg-white q-pa-md border-top-1px row justify-end">
+    <div class="bg-white q-pa-md border-top-1px row justify-end" v-if="allowed({ inventory: 'update' })">
       <q-btn
         v-ripple
-        v-if="allowed({ inventory: 'update' })"
         label="Approve Count"
         color="primary"
         class="full-width"
@@ -89,34 +88,15 @@ const submitCount = () => {
 </script>
 
 <style scoped>
-/* Top border separation helper */
 .border-top-1px {
   border-top: 1px solid #e0e0e0;
 }
 </style>
 ```
 
----
+### Mobile Input Configurations
 
-## 5. Best Practices
-
-*   **Avoid Text Truncations in Forms:** Ensure input labels are short (1-2 words) so they are fully readable on small screens.
-*   **Adaptive Button Scaling:** On mobile screen sizes, use full-width primary buttons (`class="full-width"`) to increase tap comfort.
-
----
-
-## 6. Mobile First Rules
-
-*   **Prevent Browser Pinch Zooming:** Standard mobile fields must preserve font sizes of at least `16px` to prevent iOS zoom behaviors on focus events.
-*   **Soft Keyboard Clearances:** Add spacing offsets below the last inputs inside scroll trees to allow keyboard margins.
-
----
-
-## 7. Common Patterns
-
-### Responsive Keyboard Configuration Matrix
-
-Select inputs configurations strictly mapping appropriate touch keyboard properties:
+Different field types can be customized to display tailored keyboards:
 
 ```html
 <!-- Text Input -->
@@ -134,57 +114,8 @@ Select inputs configurations strictly mapping appropriate touch keyboard propert
 
 ---
 
-## 8. Reusable Component Suggestions
+## 4. Technical Considerations
 
-*   Enforce usage of `AqlPage` to wrap layouts scroll bars and margins.
-
----
-
-## 9. Accessibility Notes
-
-*   Verify all touch targets define label descriptors.
-
----
-
-## 10. Dark Mode Notes
-
-*   Ensure deep dark themes use slate shades to map boundaries cleanly.
-
----
-
-## 11. Performance Notes
-
-*   Do not trigger dynamic styling updates on panning scroll hooks.
-
----
-
-## 12. Anti-Patterns
-
-*   **Anti-Pattern:** Putting heavy text layouts next to button arrays inside card footers, causing horizontal line wrapping.
-    *   *Correction:* Place button groups in their own row inside `QCardActions`.
-*   **Anti-Pattern:** Centering tiny dialog panels with narrow text on mobile viewports.
-    *   *Correction:* Maximize dialog elements on screens under `sm`.
-
----
-
-## 13. AI Agent Rules
-
-1.  **Validate Touch Bounds:** Reject button layouts lacking spacing helpers.
-2.  **Confirm Keyboard Bindings:** Ensure text fields map matching keyboard types.
-
----
-
-## 14. Decision Matrix
-
-| Mobile UX Constraint | Target Alignment | Component Setup | Recommended Spacing |
-| :--- | :--- | :--- | :--- |
-| **Grid Sizing** | Full width cards | `col-12` grid | `q-mb-md` margin |
-| **Touch targets** | Button overlays | Dense outlined | `44px` min clearance |
-| **Modal action** | Select options | Bottom sheet | Swipe dismiss backdrop |
-| **Keyboard** | Number entry | Numeric type | `inputmode="numeric"` |
-
----
-
-## 15. Final Rule
-
-All user interfaces must default to full-width card structures, implement explicit input keyboard attributes, align main action buttons to bottom thumb zones, and swap menus for bottom sheets.
+*   **Action Sheets vs. Menus**: For select fields or context menus containing more than three options, replacing standard dropdown menus with bottom action sheets (`QBottomSheet` or dialog panels) on smaller screens provides a larger, touch-friendly interface.
+*   **Touch Clearances**: Maintaining spacing boundaries (e.g., minimum dimensions of 44px) on clickable targets ensures elements remain easily selectable without user frustration.
+*   **Viewport Spacing**: Adding padding offsets (like `q-pb-xl` or dynamic margins) below scrollable lists prevents mobile keyboards from completely obscuring the last input fields or buttons in the form.

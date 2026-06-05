@@ -1,40 +1,43 @@
-# 70_QUASAR_COMPOSABLES.md - Composable Functions & Separation of Logic
+# Quasar Composables Reference Guide
 
-This document defines how to implement, import, and configure composition functions using Quasar's native composables (`useQuasar`, `useMeta`) and custom AQL business helpers.
-
----
-
-## 1. Purpose
-
-The purpose of this guide is to explain the architectural role of composables in the AQL frontend, ensure components remain logic-free view templates, and details cleanup routines.
+This reference guide describes how to implement and integrate composable functions inside AQL Vue components, utilizing Quasar's native composables (`useQuasar`, `useMeta`) and custom hooks.
 
 ---
 
-## 2. Core Philosophy
+## 1. Architectural Role of Composables
 
-AQL composables are the **Single Source of Business Logic**:
-*   **Separation of Concerns:** Components must only render layouts and trigger events. All validation rules, URL builders, and Axios payload compilation must live inside composables.
-*   **Decoupled Plugin Calls:** Dialog confirmation triggers, loader spinner operations, and toast alerts must run inside composables using `useQuasar()` properties.
-*   **Resource Independence:** Composables must remain generic and process resource names dynamically via props or parameters.
+In the AQL architecture, composables act as the primary interface for encapsulating reusable business logic, state management, and device integration. 
 
----
-
-## 3. Golden Rules
-
-1.  **Strict Business Logic Exclusion:** Prohibit writing calculation loops, database mutations, or validation logic directly inside component files.
-2.  **Rely on useQuasar inside Script:** Access layout status flags and dynamic plugins programmatically via `const $q = useQuasar()` inside composables.
-3.  **Ensure Explicit Listener Cleanups:** If composables set up event listeners, always detach hooks inside `onUnmounted` blocks.
-4.  **Enforce Standard Naming:** All custom composables must follow camelCase naming prefixes with "use" (e.g. `useOutletSync`).
+*   **Layer Separation**: Vue SFC files focus primarily on layout structure, styling, and rendering templates. Calculations, validator configurations, event listeners, and API integrations are decoupled into modular composable functions.
+*   **Encapsulation of Side Effects**: Event listeners, timers, and hardware connections are managed within composables, ensuring clean setup and teardown lifecycles.
+*   **Dynamic Context Integration**: Vue composition context functions (like accessing the router, pinia store, or Quasar's root instance) are accessed within the Vue script execution context using setup hooks.
 
 ---
 
-## 4. useQuasar & useMeta Configuration
+## 2. Key Quasar Composables
+
+### `useQuasar`
+Provides programmatic access to Quasar plugins and utilities directly inside Vue setup scripts, including:
+*   **`$q.dialog`**: Creating custom or standard confirmation dialogs.
+*   **`$q.notify`**: Spawning system notifications.
+*   **`$q.dark.isActive`**: Checking dark mode status.
+*   **`$q.screen`**: Reading viewport details dynamically.
+
+### `useMeta`
+Allows components to dynamically set SEO tags, metadata, page titles, and script dependencies.
+
+---
+
+## 3. Code Examples
+
+### Business Manager Composable
+
+The following example illustrates a composable managing page metadata, state indicators, custom form actions, and window resize events:
 
 ```javascript
-// FRONTENT/src/composables/operations/useRequisitionManager.js
+// composables/operations/useRequisitionManager.js
 import { ref, computed, onUnmounted } from 'vue'
-import { useQuasar } from 'quasar'
-import { useMeta } from 'quasar'
+import { useQuasar, useMeta } from 'quasar'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 
 export function useRequisitionManager(requisitionId = null) {
@@ -44,14 +47,14 @@ export function useRequisitionManager(requisitionId = null) {
   const isSaving = ref(false)
   const record = ref({ title: '', amount: 0 })
 
-  // 1. Configure SEO Page Title metadata dynamically
+  // 1. Configure page metadata
   const metaData = {
     title: 'Purchase Requisition Detail',
     titleTemplate: (title) => `${title} - AQL Portal`
   }
   useMeta(metaData)
 
-  // 2. Trigger programmatic dialog inputs
+  // 2. Trigger programmatic dialog input
   const confirmRequisitionSave = async (payload) => {
     $q.dialog({
       title: 'Confirm Save',
@@ -71,9 +74,9 @@ export function useRequisitionManager(requisitionId = null) {
     })
   }
 
-  // 3. Listener setup and teardown callbacks
+  // 3. Setup and teardown of event listeners
   const handleWindowResize = () => {
-    // Dynamic resizing rules calculations
+    // Resize calculations
   }
   window.addEventListener('resize', handleWindowResize)
   
@@ -89,30 +92,12 @@ export function useRequisitionManager(requisitionId = null) {
 }
 ```
 
----
+### Online/Offline Connection Status Listener
 
-## 5. Best Practices
-
-*   **Avoid Monolithic Composables:** Design narrow, single-purpose composables (e.g. `useBarcodeScanner` for cameras, `useFormValidator` for validation inputs).
-*   **Standardized Return Shapes:** Return reactive states (`ref`, `computed`) and execution functions wrapped inside standard JavaScript objects.
-
----
-
-## 6. Mobile First Rules
-
-*   **Hardware Event Locks:** Wrap hardware access hooks (like camera scopes or GPS locator parameters) inside custom lifecycle guards to prevent mobile freezes.
-*   **Virtual Keyboard blur hooks:** Expose functions blurring inputs programmatically upon selecting results.
-
----
-
-## 7. Common Patterns
-
-### Online/Offline Status Listener Composable
-
-Keep track of user connection status dynamically across views:
+This composable monitors browser online states and notifies users when status modifications occur:
 
 ```javascript
-// FRONTENT/src/composables/useNetworkStatus.js
+// composables/useNetworkStatus.js
 import { ref, onMounted, onUnmounted } from 'vue'
 import { Notify } from 'quasar'
 
@@ -144,57 +129,9 @@ export function useNetworkStatus() {
 
 ---
 
-## 8. Reusable Component Suggestions
+## 4. Technical Considerations
 
-*   Verify all business pages mount state handlers inside matching composables.
-
----
-
-## 9. Accessibility Notes
-
-*   Verify that SEO title changes are parsed correctly by screen readers.
-
----
-
-## 10. Dark Mode Notes
-
-*   Rely on `useQuasar().dark.isActive` to return boolean state values inside calculations programmatically if styling triggers require.
-
----
-
-## 11. Performance Notes
-
-*   Do not bundle heavy computed watchers inside frequently unmounted list page composables.
-
----
-
-## 12. Anti-Patterns
-
-*   **Anti-Pattern:** Importing Axio services directly inside component vue files.
-    *   *Correction:* Manage all data transport gates inside services, orchestrate inside stores, and call them inside composables.
-*   **Anti-Pattern:** Instantiating window event listeners inside composables without removing hooks on unmounts.
-    *   *Correction:* Always remove listeners inside `onUnmounted`.
-
----
-
-## 13. AI Agent Rules
-
-1.  **Reject Component Mutations:** If code edits contain Axios calls in `.vue` files, refactor them immediately into a custom composable.
-2.  **Verify Unmounted Hooks:** Confirm all event listeners declare cleanup wrappers.
-
----
-
-## 14. Decision Matrix
-
-| Coding Target | State Requirement | Target Area | Tool Selection |
-| :--- | :--- | :--- | :--- |
-| **Simple details presentation**| None (Stateless tag) | Vue View template | CSS classes only |
-| **Validate and Save form** | Stateful (isSubmitting) | Custom Composable | `useFormHandler.js` |
-| **Trigger confirmations** | Programmatic modal | Composable function | `$q.dialog` preset |
-| **Manage SEO Headings** | SEO tags metadata | Page route root | `useMeta` plugin helper |
-
----
-
-## 15. Final Rule
-
-All business logic, input validation calculations, page redirection states, and programmatic alerts must live inside custom composable wrappers, decoupling Vue templates entirely from data mutations.
+*   **Lifecycle Awareness**: Event listeners, socket connections, or timers initialized inside a composable are cleaned up using Vue's lifecycle hooks (`onUnmounted` or `onBeforeUnmount`) to prevent memory leaks.
+*   **Naming Conventions**: Custom composables are typically named using camelCase starting with the prefix `use` (e.g., `useNetworkStatus`, `useRequisitionManager`).
+*   **Return Shapes**: Standard practices suggest returning reactive variables (`ref` or `computed`) and functions inside a flat, plain JavaScript object. This enables developers to destructure properties as needed.
+*   **Hardware and Mobile Events**: When interfacing with device components (like camera overlays or geolocation trackers), wrap calls in lifecycle hooks (`onMounted`) to ensure the DOM and Cordova/Capacitor plugins are ready.

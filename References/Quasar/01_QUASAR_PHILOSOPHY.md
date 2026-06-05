@@ -1,75 +1,67 @@
-# 01_QUASAR_PHILOSOPHY.md - Core Mindset & Design Philosophy
+# Quasar Component Philosophy & Architecture
 
-This document defines the core architecture and UX philosophy of using Quasar in the AQL ecosystem. It establishes how AI agents must approach building, layout structuring, styling, and data rendering for a mobile-first ERP, procurement, and inventory application.
+This document describes the design philosophy, layout paradigms, and architecture patterns of using Quasar within the AQL ecosystem. It focuses on mobile-first design considerations, standard component selections, and structural best practices for ERP, procurement, and inventory interfaces.
 
----
+## 1. Core Principles
 
-## 1. Purpose
+The AQL application is designed to be mobile-responsive. Layout decisions, touch interactions, and utility styles are structured to ensure consistency across different screen sizes.
 
-The purpose of this philosophy document is to shift the AI agent's thinking from generic Vue desktop layouts (complex grids, wide tables, hover-based drop-downs) to high-performance, touch-friendly, mobile-first mobile Web App patterns (scroll-lists, cards, bottom sheets, tap triggers) using native Quasar layout blocks.
-
----
-
-## 2. Core Philosophy
-
-The AQL application type is a **Mobile-First ERP** (95% mobile usage, 5% desktop). Thus, design decisions must treat mobile as the primary environment:
-*   **Mobile-First Grid Design:** Never layout page grids starting from desktop widths (e.g., `col-md-3`). Always build layouts starting with `col-12` (full-width mobile cards) and layer responsive columns (e.g., `col-sm-6 col-md-4`) as secondary adaptations.
-*   **Touch UX over Mouse UX:** Touch-friendly interfaces cannot rely on hover effects (e.g., Tooltips or context menus triggered by mouse movement). Every interaction must be an explicit tap action with distinct visual feedback (e.g., `v-ripple`).
-*   **Quasar-First Design System:** Quasar includes a mature utility design system (spacing, typography, color palettes, shadow levels, grid cells). Raw HTML tags (`div`, `p`, `span`) should only be styled with Quasar CSS utility classes (e.g., `q-pa-md`, `text-subtitle2`, `bg-grey-2`). Hand-rolled custom CSS styles or utility framework integrations (like Tailwind) are strictly prohibited.
+### Responsive Design Approach
+*   **Mobile-First Layouts:** Grids start at the mobile scale (using `col-12` for full-width components) and progressively scale up to wider viewports using responsive column classes (such as `col-sm-6` and `col-md-4`).
+*   **Touch-Friendly Interactions:** Controls are designed for touch input, employing visible ripple feedback (`v-ripple`) and touch target recommendations (e.g., target height of 44px).
+*   **Quasar Utility Class System:** Styling utilizes Quasar's built-in CSS utility classes (such as spacing, typography, colors, and shadows) to promote style consistency across the codebase.
 
 ---
 
-## 3. Golden Rules
+## 2. Architecture & Layer Separation
 
-1.  **Mobile Priority Index:** If a feature looks perfect on desktop but overflows, has small text, or requires double-tapping on mobile, the feature is a failure. Optimize for mobile screen sizes (320px - 480px width) first.
-2.  **No Naked Click Handlers:** Any button, list item, or card section that triggers an action must have the `v-ripple` directive and have a target height of at least `44px`.
-3.  **Strict Layer Separation:** Vue templates and `<script setup>` code are presentation layers. They MUST NOT contain business rules, validation builders, or service gateways. They communicate exclusively through small, single-purpose composables.
-4.  **Enforce Permission Gating:** Every interactive control that routes pages, opens dialogs, or mutates data must reactively bind to `v-if="allowed({ resource: 'action' })"` using the AQL resource config helper.
+AQL maintains a separation between the presentation layer and business logic.
 
----
-
-## 4. Component Usage Guidelines
-
-When choosing how to display lists, metrics, and actions, prioritize components using this sequence:
-
-```mermaid
-graph TD
-    A[Data List Source] --> B{Is row count > 20?}
-    B -- Yes --> C[use QVirtualScroll + QCard]
-    B -- No --> D{Is it a simple choice list?}
-    D -- Yes --> E[use QList + QItem + v-ripple]
-    D -- No --> F[use QCard Grid with col-12]
-```
-
-*   **QCard:** The main structural container for inventory, CRM records, and detail views. Set `flat` and `bordered` for clean mobile layouts.
-*   **QList & QItem:** Used for navigation menus, activity histories, and configuration choices.
-*   **QVirtualScroll:** Mandatory for high-volume transactions, ledger items, or stock status views to prevent DOM lag on mobile browsers.
-*   **QDialog:** Standard wrapper for actions, forms, or confirmations. Must render inside pages or slide as a bottom sheet rather than centered modal panels.
+*   **Presentation Layer:** Vue templates and `<script setup>` tags handle UI layout and state representation. Genuinely useful architectural rules include:
+    *   **Layer Separation:** Templates and script blocks delegate business logic, validation rules, and service/API calls to dedicated composables.
+    *   **Permission Gating:** UI elements, action controls, and routes are protected using permission checks (e.g., via the `allowed` function from resource composables).
+    *   **Navigation:** Routing and resource navigation are handled using centralized navigation patterns or dedicated composables (such as `useResourceNav`).
 
 ---
 
-## 5. Best Practices
+## 3. Component Selection Guide
 
-*   **Utility-Driven Layouts:** Always use Quasar's layout classes (`row`, `col-12`, `q-col-gutter-sm`, `q-gutter-y-md`) to align elements.
-*   **Text Constraints:** Ensure text on cards uses text truncation helper classes (`ellipsis`, `ellipsis-2-lines`) to prevent line wrapping from breaking layouts on small screens.
-*   **Color Token Usage:** Use semantic text/bg classes (e.g., `text-primary`, `bg-surface`, `text-grey-7`, `bg-negative`) instead of specific color hex values to ensure automated contrast adjustment.
+Choosing the appropriate Quasar component depends on data structure, volume, and display requirements:
+
+*   **QCard:** Often used as the structural container for record details, form sections, and dashboard blocks. It supports utility props like `flat` and `bordered` for flat layouts.
+*   **QList & QItem:** Typically used for navigation links, lists, settings, and dynamic options.
+*   **QVirtualScroll:** Recommended for lists with high-volume rows to preserve performance and memory on mobile browsers.
+*   **QDialog:** Renders modal dialogs, configuration dialogs, or bottom sheets.
+
+### Data Display Decision Flow
+For displaying lists, metrics, or choices, components can be selected based on the number of items and complexity:
+*   **Under 20 items (Simple List):** `QList` with `QItem`.
+*   **Under 20 items (Complex Records):** Stacked grid of `QCard` elements.
+*   **Over 20 items:** `QVirtualScroll` wrapping card or list items.
 
 ---
 
-## 6. Mobile First Rules
+## 4. Layout and Styling Practices
 
-*   **Keyboard Management:** Always match input types with appropriate virtual keyboards (`type="number"`, `inputmode="numeric"`, `type="email"`, `type="tel"`).
-*   **Scroll Boundaries:** Never nest scrollable blocks. Use Quasar's `QScrollArea` inside high-level layouts, and configure sub-containers to fit fully within viewport bounds.
-*   **Target Padding:** Ensure touch surfaces have padding `q-py-md` or `q-pa-md` to provide comfortable margins of error for tap gestures.
+*   **Spacing and Gutters:** Aligning controls with Quasar classes like `row`, `col-12`, `q-col-gutter-sm`, and `q-gutter-y-md`.
+*   **Text Handling:** Helper classes like `ellipsis` and `ellipsis-2-lines` manage text overflow on smaller screens.
+*   **Semantic Color Classes:** Utilizing built-in tokens like `text-primary`, `bg-surface`, and `text-grey-7` for standard coloring.
 
 ---
 
-## 7. Common Patterns
+## 5. Mobile Considerations
 
-### Mobile Record Card Pattern
+*   **Input Types:** Configuring inputs with appropriate types (e.g., `type="number"`, `inputmode="numeric"`, `type="email"`) triggers corresponding virtual keyboards on mobile devices.
+*   **Scroll Boundaries:** Configuring containers and scroll areas (e.g., using `QScrollArea`) to prevent nested scroll bar clipping.
+*   **Comfortable Tap Padding:** Utilizing padding classes (such as `q-py-md` or `q-pa-md`) to ensure tap targets are easily interactable.
+
+---
+
+## 6. Example: Mobile Record Card Pattern
+
+Below is an example of a list item component showing standard styling, permission checks, and layout classes.
 
 ```html
-<!-- FRONTENT/src/components/Operations/OutletItemCard.vue -->
 <template>
   <q-card class="my-record-card q-mb-sm" flat bordered>
     <q-card-section class="q-pa-md">
@@ -122,62 +114,11 @@ const statusColor = computed(() => {
 
 ---
 
-## 8. Reusable Component Suggestions
+## 7. Component Reference Overview
 
-*   `AqlMobileHeader`: Custom sticky toolbar with inline navigation, search icon, dynamic back arrow, and permissions check.
-*   `AqlStatusBadge`: Custom chip wrapper implementing standard semantic color maps for inventory/procurement workflows.
-
----
-
-## 9. Accessibility Notes
-
-*   **Dynamic Font Sizes:** Use CSS units like `em` or `rem` (Quasar's default classes use these scale tokens) to adjust when user system text size overrides are present.
-*   **Icon Identifiers:** Always supply `aria-label` or nested `sr-only` details when rendering action-only buttons (like single-icon close/edit/delete buttons).
-
----
-
-## 10. Dark Mode Notes
-
-*   Avoid setting solid hardcoded white backgrounds (`bg-white`) on cards. Use Quasar's `bg-surface` or `card` classes which automatically shift to custom slate values in Dark Mode.
-*   Use `text-grey-7` for secondary titles or labels rather than `#666` to preserve contrast.
-
----
-
-## 11. Performance Notes
-
-*   **Avoid Over-rendering:** Use `v-if` rather than `v-show` to strip hidden configurations out of the DOM on weak mobile CPUs.
-*   **Virtual Scroll Height:** Always provide a fixed `item-size` in `QVirtualScroll` layouts to allow pre-calculations.
-
----
-
-## 12. Anti-Patterns
-
-*   **Anti-Pattern:** Using `QTable` inside mobile views without responsive card fallbacks, forcing horizontal scrolls.
-    *   *Correction:* Always implement list rows as individual `QCard` elements stacked vertically on mobile viewports.
-*   **Anti-Pattern:** Implementing raw inline CSS height/width calculations inside components.
-    *   *Correction:* Use Quasar's layout helpers and breakpoints (`q-mx-auto`, `col-12`).
-
----
-
-## 13. AI Agent Rules
-
-1.  **Enforce JavaScript Composition:** Write logic using `<script setup>` with JS ES6+ standard. Reject TypeScript configurations unless explicitly instructed.
-2.  **No Service Imports in Components:** Never import API services (`*Service.js`) or stores (`data.js`) inside Vue view templates. Access service states only via composables.
-3.  **Audit Padding Sizes:** Inspect generated elements to confirm padding values on touch targets are not under `8px` (`q-pa-xs` or `q-pa-none` are prohibited on tap components).
-
----
-
-## 14. Decision Matrix
-
-| Screen Size | Data Volume | Recommended Component Selection | UX Interaction Pattern |
-| :--- | :--- | :--- | :--- |
-| **Mobile (<600px)** | < 15 records | `QCard` items list | Stacked vertical scroll with floating tap actions |
-| **Mobile (<600px)** | > 20 records | `QVirtualScroll` wrapping custom card items | Page scroll with lazy-rendering list elements |
-| **Mobile (<600px)** | Options list | `QBottomSheet` or `QDialog` slide | Overlay panel with standard `QItem` row buttons |
-| **Desktop (>1024px)**| > 20 records | `QTable` with pagination | Horizontal grid view with inline actions |
-
----
-
-## 15. Final Rule
-
-Every layout built in this repository must begin as a mobile-first `col-12` card layout, using raw HTML styled strictly with Quasar CSS class tokens, and business workflow actions routed via permission-gated composables.
+| Context | Recommended Components | Typical Interaction Pattern |
+| :--- | :--- | :--- |
+| **Small Lists / Low Volume** | `QCard`, `QList` / `QItem` | Stacked list with layout spacing |
+| **High Volume Lists** | `QVirtualScroll` wrapping cards | Scroll container with virtual rendering |
+| **Selection Options** | `QDialog` or `QBottomSheet` | Slide-up or overlay menu list |
+| **Desktop High Volume** | `QTable` / `QVirtualScroll` | Wide grid layout with pagination |

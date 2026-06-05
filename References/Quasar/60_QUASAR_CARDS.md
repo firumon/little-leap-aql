@@ -1,40 +1,49 @@
-# 60_QUASAR_CARDS.md - Record Cards & Dashboard Layouts
+# Quasar Cards (QCard) Reference Guide
 
-This document defines how to implement and configure cards using Quasar's card component (`QCard`) to replace standard tables and display high-density transaction data on mobile screens.
-
----
-
-## 1. Purpose
-
-The purpose of this guide is to explain card layout design, define visual sections partition thresholds, and establish rules for card action button placements.
+This reference guide describes the implementation and configuration of cards using Quasar's card component (`QCard`) to display record details, metrics, and structured datasets.
 
 ---
 
-## 2. Core Philosophy
+## 1. Component Overview
 
-AQL cards are **Flat, Segmented, and Action-Isolated**:
-*   **Flat Aesthetics:** We avoid elevated, heavy shadows. Cards must define `flat` and `bordered` properties to maintain clean interfaces.
-*   **Structured Sections:** Card details are divided into logical blocks using separator lines (`QSeparator`) and card sections (`QCardSection`).
-*   **Clean Action Rows:** Call-to-action buttons (like Approve or Edit) are isolated inside card actions (`QCardActions`) pinned to the card footer.
+The `QCard` component is a versatile container used to group related information. It is designed to adapt to various screen sizes and works in tandem with several helper sub-components:
 
----
-
-## 3. Golden Rules
-
-1.  **Always Set Flat and Bordered:** Cards must use attributes `:flat="true"` and `:bordered="true"`. Elevated cards with shadows are prohibited.
-2.  **No Naked Click Triggers:** If clicking the entire card body routes pages, add the `v-ripple` directive and ensure hover/active class overrides are clear.
-3.  **Separate Sections with Separators:** Insert a `<q-separator />` between titles blocks, details lists, and card actions.
-4.  **Keep Action Layout Dense:** Buttons inside card footers must declare `dense` and `flat` properties.
+*   **`QCardSection`**: Defines content blocks (headers, body text, or detailed fields) within the card. Multiple sections can be used to separate content.
+*   **`QCardActions`**: A specialized container for grouping action buttons, typically aligned to the bottom or side of the card.
+*   **`QSeparator`**: A thin line component used to visually divide card sections.
 
 ---
 
-## 4. QCard Configuration & Layout Setup
+## 2. Key Attributes & Visual Properties
+
+`QCard` supports several props to configure its appearance:
+
+*   **`flat`**: Removes the default card shadow, making it flush with the background.
+*   **`bordered`**: Adds a thin outline border around the card edges.
+*   **`square`**: Removes border-radius from the card corners.
+*   **`dark`**: Adapts the component colors for dark themes.
+
+---
+
+## 3. Architectural Integration in AQL
+
+When rendering cards in the AQL application, integrate the following project-wide architectural utilities:
+
+*   **Currency Formatting**: Use the currency formatting helper `_C` from `useCurrency()` for displaying monetary amounts to ensure consistent formatting across the application.
+*   **Permission Gating**: Restrict card actions or sensitive information sections using the `allowed` utility from `useResourceConfig()`.
+
+---
+
+## 4. Code Examples
+
+### Basic Record Card
+
+Below is an example of a record card component displaying transaction details with permission-gated footer actions and currency formatting.
 
 ```html
-<!-- FRONTENT/src/components/Operations/OutletRecordCard.vue -->
 <template>
   <q-card class="record-card q-mb-sm" flat bordered>
-    <!-- Card header block -->
+    <!-- Header Section -->
     <q-card-section class="row items-center justify-between q-py-sm bg-grey-1">
       <div class="column">
         <span class="text-caption text-grey-7 uppercase text-weight-medium">PO Number</span>
@@ -47,7 +56,7 @@ AQL cards are **Flat, Segmented, and Action-Isolated**:
 
     <q-separator />
 
-    <!-- Card details content block -->
+    <!-- Details Section -->
     <q-card-section class="q-pa-md column q-gutter-y-xs">
       <div class="row justify-between text-body2">
         <span class="text-grey-7">Supplier:</span>
@@ -57,13 +66,13 @@ AQL cards are **Flat, Segmented, and Action-Isolated**:
       </div>
       <div class="row justify-between text-body2">
         <span class="text-grey-7">Total Amount:</span>
-        <span class="text-weight-bold">{{ _C(requisquisitionTotal, true) }}</span>
+        <span class="text-weight-bold">{{ _C(requisitionTotal, true) }}</span>
       </div>
     </q-card-section>
 
     <q-separator />
 
-    <!-- Card actions block (Gated with permissions) -->
+    <!-- Action Section (Permission Gated) -->
     <q-card-actions align="right" class="q-py-xs q-px-md" v-if="allowed({ purchaseRequisitions: 'update' })">
       <q-btn
         v-ripple
@@ -115,33 +124,14 @@ const statusColor = computed(() => {
 </script>
 ```
 
----
-
-## 5. Best Practices
-
-*   **Row-as-Card Mobile Pattern:** Replace long data grid lists on mobile viewports with vertically stacked cards. This allows the layout to remain fluid on all screens.
-*   **Typography Hierarchy:** Restrict titles to `text-subtitle2` and descriptions to `text-body2` classes.
-
----
-
-## 6. Mobile First Rules
-
-*   **Avoid Action Buttons Clutters:** Limit card buttons to a maximum of two inline. If there are more options, replace them with a dropdown trigger button.
-*   **Responsive Widths:** Cards must occupy the full layout width (`class="full-width q-mb-md"`) on mobile viewports.
-
----
-
-## 7. Common Patterns
-
 ### Swipe-to-Action Card Pattern
 
-Support mobile swipe gestures (such as swiping left to delete) by using Quasar touch directives:
+To facilitate mobile interaction, cards can be wrapped in swipe gesture handlers using Quasar's touch directives (`v-touch-swipe`).
 
 ```html
-<!-- FRONTENT/src/components/Operations/OutletSwipeCard.vue -->
 <template>
   <div class="relative-position overflow-hidden rounded-borders">
-    <!-- Background swipe action button -->
+    <!-- Behind-the-card swipe action container -->
     <div class="absolute-right bg-negative text-white flex flex-center q-px-md" style="height: 100%; width: 80px;">
       <q-btn flat round icon="delete" color="white" @click="emit('delete')" />
     </div>
@@ -168,7 +158,7 @@ import { ref, computed } from 'vue'
 const emit = defineEmits(['delete'])
 const swipeOffset = ref(0)
 
-const onSwipe = ({ direction, offset }) => {
+const onSwipe = ({ direction }) => {
   if (direction === 'left') {
     swipeOffset.value = -80
   } else if (direction === 'right') {
@@ -192,56 +182,8 @@ const swipeStyle = computed(() => {
 
 ---
 
-## 8. Reusable Component Suggestions
+## 5. Technical Considerations
 
-*   `AqlCard`: Standard card container pre-loaded with title grids, status badges, and permission-gated action buttons.
-
----
-
-## 9. Accessibility Notes
-
-*   Verify card headers use clear title configurations (`aria-labelledby`) so screen readers announce sections correctly.
-
----
-
-## 10. Dark Mode Notes
-
-*   Avoid setting hardcoded light background colors (e.g. `bg-white` class overrides) on cards. Rely on default `bg-surface` styles.
-
----
-
-## 11. Performance Notes
-
-*   Keep card item structures light. Avoid compiling nested conditional layout blocks inside high-density lists.
-
----
-
-## 12. Anti-Patterns
-
-*   **Anti-Pattern:** Using elevated cards (`class="q-card shadow-15"`) with heavy shadows.
-    *   *Correction:* Always define `flat` and `bordered` cards.
-*   **Anti-Pattern:** Putting heavy text layouts next to button arrays inside card footers, causing horizontal line wrapping.
-    *   *Correction:* Place button groups in their own row inside `QCardActions`.
-
----
-
-## 13. AI Agent Rules
-
-1.  **Validate Flat Styles:** Confirm all generated `QCard` components define `flat` and `bordered` props.
-2.  **Confirm Separator Spacings:** Ensure separators are declared between card sections and card footer actions.
-
----
-
-## 14. Decision Matrix
-
-| Data Volume | Layout Density | Recommended Container | Footer Actions |
-| :--- | :--- | :--- | :--- |
-| **Single record details**| High density | Dedicated Page layout | Sticky bottom toolbar |
-| **Grid item row** | Medium density | `QCard` flat & bordered | Dense inline card actions |
-| **Ledger transaction** | Very high density | `QList` + compact items | Tap dialog details |
-
----
-
-## 15. Final Rule
-
-All cards must use flat and bordered styling, partition data via card sections separated by lines, group footer buttons in card actions, and support swipe actions on mobile viewports.
+*   **Typography Hierarchy**: Using classes like `text-subtitle2` for headings and `text-body2` or `text-caption` for descriptive items helps build a clear text hierarchy.
+*   **Accessibility**: Utilizing appropriate semantic tags or `aria` labels on card sections allows assistive technologies to convey the card structure more effectively.
+*   **Performance**: Minimizing deep layout nesting inside repeating card lists prevents rendering bottlenecks. Using lightweight child components or flat list structures can optimize layout rendering.

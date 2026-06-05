@@ -1,5 +1,8 @@
 # QUASAR Framework AI Knowledge Base Index (QUASAR_INDEX.md)
 
+> [!IMPORTANT]
+> The files in this directory describe Quasar component capabilities — what each component offers, its props, slots, sub-components, and typical behavior. They are educational references, NOT project rulebooks. Project-wide architecture rules live in Documents/ARCHITECTURE RULES.md. If a component doc conflicts with ARCHITECTURE RULES.md, the latter wins.
+
 This is the primary index and routing directory for the Quasar Framework AI Knowledge Base within the AQL project. This document serves as the entry point for all AI coding agents (Gemini, Claude, ChatGPT, Cursor, Roo Code, Aider, etc.) to navigate Quasar guidelines, implementation patterns, and Mobile-First constraints.
 
 ---

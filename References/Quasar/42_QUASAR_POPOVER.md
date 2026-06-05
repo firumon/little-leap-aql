@@ -1,37 +1,35 @@
 # 42_QUASAR_POPOVER.md - Lightweight Popover Panels
 
-This document defines how to implement lightweight popover containers using Quasar's positioning layers to present interactive highlights and options.
+This document is an educational reference guide covering the implementation, configuration, and behaviors of lightweight, interactive popover panels in Quasar.
 
 ---
 
-## 1. Purpose
+## 1. Concept Overview
 
-The purpose of this guide is to explain popover placement configurations, ensure interactive actions dismiss cleanly on tap-outs, and define boundary layouts.
+Popovers are lightweight overlays used to display contextual information, supplementary details, or small interactive controls directly adjacent to a trigger element (such as an info icon, button, or label). 
 
----
-
-## 2. Core Philosophy
-
-AQL popovers are **Lightweight, Non-Intrusive, and Instant**:
-*   **Actionable Highlights:** Popovers display quick contextual highlights (like currency conversion details or short SKU descriptions) right next to the trigger element.
-*   **Instant Dismissal:** Any click/tap outside the popover region must instantly close the panel, avoiding sticky screen overlays.
-*   **Minimal DOM Footprint:** We keep interactive elements inside popovers to a minimum. Avoid placing complex inputs or heavy image layouts inside popovers.
+In Quasar, these are commonly implemented using the `QMenu` component configured for click-based or tap-based activation. Unlike tooltips (which are typically hover-only and non-interactive), popovers can contain clickable links, buttons, and formatted text.
 
 ---
 
-## 3. Golden Rules
+## 2. Positioning & Properties
 
-1.  **Strict Size Boundaries:** Popover panels must not exceed `280px` in width on mobile screens to prevent layout clipping.
-2.  **No Text-Select Traps:** Popover triggers must respond to a click or tap gesture, never mouse hovers or text selection highlights.
-3.  **Position with Context Offset:** Ensure all popovers define explicit target anchors (e.g. `anchor="center right" self="center left"`).
-4.  **Incorporate Close Keys:** When popovers present multiple links or buttons, include a tiny close icon for quick touch dismissal.
+When configuring popovers with `QMenu`, the following properties help align the panel relative to its trigger:
+
+*   **`anchor`**: Defines the point on the trigger element to which the popover aligns (e.g., `top middle`, `bottom right`).
+*   **`self`**: Defines the point on the popover container that aligns to the anchor point (e.g., `bottom middle`, `top right`).
+*   **`offset`**: An array defining horizontal and vertical offsets in pixels (e.g., `[0, 8]`).
+*   **`max-width` / `width`**: Styling constraints applied to the popover to ensure readable text wrapping and avoid overflow on narrow screens.
 
 ---
 
-## 4. QMenu Popover Configuration & Layout Setup
+## 3. Usage Examples
+
+### Contextual Info Popover
+
+This example displays a help popover containing styled text and a clickable action button.
 
 ```html
-<!-- FRONTENT/src/components/Operations/OutletInfoPopover.vue -->
 <template>
   <div class="inline-popover-trigger">
     <!-- Question icon trigger -->
@@ -72,28 +70,11 @@ const emit = defineEmits(['learn-more'])
 </script>
 ```
 
----
+### Simple Text Highlight Popover
 
-## 5. Best Practices
-
-*   **Dark Popover Styling:** Use dark background themes (`class="bg-grey-9 text-white"`) for information popovers. This distinguishes popovers from the primary card surfaces.
-*   **Simple Action Triggers:** Keep clickable elements inside the popover limited to secondary utility transitions.
-
----
-
-## 6. Mobile First Rules
-
-*   **Avoid Keyboard Trapping:** Never mount text inputs inside lightweight popovers. Virtual keyboards force the entire popover position off-screen.
-*   **Wide Tap Clearances:** Triggers must have surrounding margins to prevent overlapping adjacent buttons on mobile screens.
-
----
-
-## 7. Common Patterns
-
-### Contextual Help Popover Pattern
+This component encapsulates a simple text popover that opens on click.
 
 ```html
-<!-- FRONTENT/src/components/Operations/OutletHelpTrigger.vue -->
 <template>
   <span class="row items-center cursor-pointer text-primary">
     {{ label }}
@@ -114,58 +95,9 @@ defineProps({
 
 ---
 
-## 8. Reusable Component Suggestions
+## 4. Design & Usability Guidelines
 
-*   `AqlPopover`: Simple custom icon wrapper displaying dark popover details, matching help descriptions.
-
----
-
-## 9. Accessibility Notes
-
-*   Verify popup containers announce details using screen reader tags.
-*   Keep triggers keyboard tabbable.
-
----
-
-## 10. Dark Mode Notes
-
-*   Dark popovers (`bg-grey-9`) look clean in both light and dark themes. Ensure that text remains high contrast.
-
----
-
-## 11. Performance Notes
-
-*   Ensure popovers do not run complex watchers or listeners while closed.
-
----
-
-## 12. Anti-Patterns
-
-*   **Anti-Pattern:** Using tooltips (`QTooltip`) for complex interactive options lists that require tapping links.
-    *   *Correction:* Replace with click-triggered `QMenu` popovers.
-*   **Anti-Pattern:** Putting heavy text layouts inside popovers, causing horizontal clipping.
-    *   *Correction:* Keep popover text under three lines.
-
----
-
-## 13. AI Agent Rules
-
-1.  **Reject Hover Triggers:** Ensure all interactive informational popovers utilize click/tap triggers.
-2.  **Verify Sizing Widths:** Confirm that popover custom widths remain under `280px`.
-
----
-
-## 14. Decision Matrix
-
-| Information Goal | Context Interaction | Output Selection | Placement Configuration |
-| :--- | :--- | :--- | :--- |
-| **Simple text hint** | Info detail | `QTooltip` (desktop only)| `top middle` / `bottom middle` |
-| **Explanation with link**| Click info icon | `QMenu` popover | `top middle` / `bottom middle` |
-| **Interactive options**| Click edit btn | Context Menu | `bottom right` / `top right` |
-| **ERP Configuration** | Click settings | Dynamic Dialog sheet | Maximized card |
-
----
-
-## 15. Final Rule
-
-All popovers must utilize lightweight click-triggered panel containers, fit within a width limit of 280px, lock offsets, and close immediately upon tapping outside.
+*   **Click vs. Hover**: Popovers containing interactive elements (like links or buttons) require click or tap activation, as hover-based popovers can close before the user can move their pointer onto the content.
+*   **Dimensions on Small Screens**: Limiting the width of the popover card (e.g., standardizing to `250px` or `280px`) prevents horizontal clipping and layout overflow on mobile screens.
+*   **Controlling Content Density**: Popovers work best for short, direct messages. If the layout requires complex forms, multi-step actions, or high-density data tables, modal dialogs or dedicated route views are typically preferred.
+*   **Accessibility**: Keep trigger icons keyboard-tabbable and ensure the popover text remains accessible to assistive screen reader technologies.

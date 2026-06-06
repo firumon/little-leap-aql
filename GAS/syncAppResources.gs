@@ -270,9 +270,12 @@ function initAppResourcesCodeConfig() {
         ]),
         UIFields: JSON.stringify([
             { header: 'Name', label: 'Name', type: 'text', required: true },
-            { header: 'City', label: 'City', type: 'text' },
             { header: 'Country', label: 'Country', type: 'text' },
+            { header: 'Province', label: 'Province', type: 'text' },
+            { header: 'City', label: 'City', type: 'text' },
+            { header: 'Area', label: 'Area', type: 'text' },
             { header: 'Type', label: 'Type', type: 'text' },
+            { header: 'Licence', label: 'Licence', type: 'file' },
             { header: 'Status', label: 'Status', type: 'status', required: true }
         ]),
         IncludeInAuthorizationPayload: 'TRUE',
@@ -310,8 +313,14 @@ function initAppResourcesCodeConfig() {
             { header: 'Email', label: 'Email', type: 'text' },
             { header: 'Country', label: 'Country', type: 'text' },
             { header: 'Province', label: 'Province', type: 'text' },
+            { header: 'Area', label: 'Area', type: 'text' },
             { header: 'City', label: 'City', type: 'text' },
             { header: 'CommunicationAddress', label: 'Communication Address', type: 'textarea' },
+            { header: 'MapLocationLink', label: 'Map Location Link', type: 'text' },
+            { header: 'Picture', label: 'Picture', type: 'file', accept: 'image/*' },
+            { header: 'Picture2', label: 'Picture 2', type: 'file', accept: 'image/*' },
+            { header: 'Picture3', label: 'Picture 3', type: 'file', accept: 'image/*' },
+            { header: 'Licence', label: 'Licence', type: 'file' },
             { header: 'Status', label: 'Status', type: 'status', required: true }
         ]),
         IncludeInAuthorizationPayload: 'TRUE',

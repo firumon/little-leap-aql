@@ -3,6 +3,7 @@ import { useQuasar } from 'quasar'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceRelations } from './useResourceRelations'
 import { useApiErrorNotify } from 'src/composables/useApiErrorNotify'
+import { useStorageStore } from 'src/stores/storage'
 
 /**
  * Manages parent + child records form state for Add/Edit pages.
@@ -66,6 +67,9 @@ export function useCompositeForm(configRef) {
   }
 
   function initializeForCreate() {
+    const storageStore = useStorageStore()
+    storageStore.clearPendingConfirms()
+
     const config = getConfig()
     isEdit.value = false
     originalCode.value = ''
@@ -74,6 +78,9 @@ export function useCompositeForm(configRef) {
   }
 
   function initializeForEdit(record, childRecordsByResource = {}) {
+    const storageStore = useStorageStore()
+    storageStore.clearPendingConfirms()
+
     isEdit.value = true
     originalCode.value = record?.Code || ''
     parentForm.value = { ...record }
@@ -216,6 +223,37 @@ export function useCompositeForm(configRef) {
 
     saving.value = true
     try {
+      // 1. Trigger confirm requests for any file fields in the background concurrently
+      const storageStore = useStorageStore()
+      const parentConfig = getConfig()
+      const parentFields = getResolvedFields(parentConfig)
+
+      // Confirm parent file fields if they are pending confirm in the store
+      for (const field of parentFields) {
+        if (field.type === 'file') {
+          const val = parentForm.value[field.header]
+          if (val && storageStore.isPendingConfirm(val)) {
+            storageStore.confirmUpload(val, parentConfig.name, field.header)
+          }
+        }
+      }
+
+      // Confirm child file fields if they are pending confirm in the store
+      for (const group of childGroups.value) {
+        for (const record of group.records) {
+          if (record._action === 'deactivate') continue
+          for (const field of group.resolvedFields) {
+            if (field.type === 'file') {
+              const val = record.data[field.header]
+              if (val && storageStore.isPendingConfirm(val)) {
+                storageStore.confirmUpload(val, group.resource.name, field.header)
+              }
+            }
+          }
+        }
+      }
+
+      // 2. Save composite payload to GAS
       const payload = buildPayload()
       const response = await resourceIoStore.saveComposite(payload)
       notifyApiError(response, { fallbackMessage: 'Save failed' })

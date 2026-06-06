@@ -159,6 +159,7 @@ Key-value map read from `APP.Config` sheet by `getLoginAppConfig()` at `GAS/auth
 | `MasterFileID` | FileID for MASTER spreadsheet (fallback if not set in Resources.FileID) | `GAS/sheetHelpers.gs` → `resolveFileIdForScope('master')` |
 | `OperationsFileID` | FileID for OPERATIONS spreadsheet | `GAS/sheetHelpers.gs` → `resolveFileIdForScope('operation')` |
 | `AccountsFileID` | FileID for ACCOUNTS spreadsheet | `GAS/sheetHelpers.gs` → `resolveFileIdForScope('accounts')` |
+| `File` | File upload storage provider and credential configuration JSON string | `FRONTENT/src/services/StorageService.js` → `getStorageConfig()` |
 
 > Note: Keep this table in sync as new Config keys are added to the system.
 

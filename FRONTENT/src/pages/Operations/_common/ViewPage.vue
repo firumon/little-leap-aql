@@ -28,6 +28,7 @@
         :is="sections.ViewDetails"
         :record="record"
         :resolved-fields="resolvedFields"
+        :resource-name="config?.name"
       />
 
       <component

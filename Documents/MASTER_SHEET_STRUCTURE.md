@@ -22,6 +22,18 @@ This document describes the current master-scope sheet families and their roles.
 - `OutletOperatingRules` stores outlet-level operating limits and visit/credit defaults
 - audit/access columns depend on current resource metadata and setup rules
 
+## Warehouse Master Resources
+
+### `Warehouses`
+- **Scope**: `master`.
+- **Code**: generated with prefix `WH` and sequence length `3`.
+- **Primary key**: `Code`.
+- **Required columns**: `Name`, `Status`.
+- **Unique columns**: `Name`.
+- **Default values**: `Status = Active`, `Country = UAE`, `Type = Main`.
+- **Columns**: `Code`, `Name`, `Province`, `Area`, `City`, `Country`, `Type`, `Licence`, `AccessRegion`, `Status`, `CreatedAt`, `UpdatedAt`, `CreatedBy`, `UpdatedBy`.
+- **Relationships**: holds warehouse stock records in `WarehouseStorages` and stock transactions in `StockMovements`.
+
 ## Outlet Master Resources
 
 ### `Outlets`
@@ -31,7 +43,7 @@ This document describes the current master-scope sheet families and their roles.
 - **Required columns**: `Name`.
 - **Unique columns**: `Name`.
 - **Default values**: `Status = Active`, `Country = UAE`.
-- **Columns**: `Code`, `Name`, `ContactPerson`, `Phone`, `Email`, `Country`, `Province`, `City`, `CommunicationAddress`, `AccessRegion`, `Status`, `CreatedAt`, `UpdatedAt`, `CreatedBy`, `UpdatedBy`.
+- **Columns**: `Code`, `Name`, `ContactPerson`, `Phone`, `Email`, `Country`, `Province`, `Area`, `City`, `CommunicationAddress`, `MapLocationLink`, `Picture`, `Picture2`, `Picture3`, `Licence`, `AccessRegion`, `Status`, `CreatedAt`, `UpdatedAt`, `CreatedBy`, `UpdatedBy`.
 - **Relationships**: referenced by outlet operation resources through `OutletCode`.
 
 ### `OutletOperatingRules`

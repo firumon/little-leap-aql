@@ -326,7 +326,8 @@ function setupAppSheets() {
        ['AccountsSyncTTL', '60'],
        ['OperationsSyncTTL', '300'],
        ['PriceListLookup', 'INLINE'],
-       ['Currency', 'AED']
+       ['Currency', 'AED'],
+       ['File', '{"provider":"php","url":"","bucketName":"","region":"","token":"","apiKey":"","params":{}}']
      ];
 
     var lastRow = configSheet.getLastRow();

@@ -57,6 +57,31 @@ This document is the canonical meaning reference for `APP.Resources` columns.
 - `OutletMovements.ReferenceType = RestockDelivery` marks positive outlet stock from delivered ORSI rows, using `ReferenceCode = OutletDeliveries.Code`. `OutletMovements.ReferenceType = Consumption` marks negative stock from outlet consumption.
 - `OutletMovements` updates `OutletStorages` through `handleOutletMovementsBulkSave`; `OutletStorages` is keyed by `OutletCode + SKU`, contains only `Code`, `OutletCode`, `SKU`, and `Quantity`, has no audit columns, and is read-only to frontend operation pages.
 
+## File Type Columns (Field Type: "file")
+
+When a resource requires file uploading and download capabilities (e.g., licences, certificates, invoices), the field should be configured as a `"file"` type.
+
+### 1. Database & Schema Configuration
+- **Sheet Column**: Add a standard text column in the resource's Google Sheet (e.g., `license`). This column stores only the generated `UUID` string (or remains blank).
+- **APP.Resources `UIFields`**: Define the field inside the `UIFields` JSON array with `"type": "file"`. You can also optionally configure validation parameters:
+  - `"accept"`: Comma-separated list of allowed extensions/MIME types (e.g. `".pdf,.jpg,.png"`, defaults to `*`).
+  - `"maxSize"`: Maximum allowed file size in MB (defaults to `10`).
+  ```json
+  {
+    "name": "license",
+    "label": "Warehouse License",
+    "type": "file",
+    "required": true,
+    "accept": ".pdf,.png,.jpg",
+    "maxSize": 5
+  }
+  ```
+
+### 2. Frontend Lifecycle & Components
+- **Form Edit/Add**: The form builders automatically render the `AqlFileUpload` component. Selecting a file initiates an immediate background upload to the storage server's `_temp/` directory.
+- **Form Save Pipeline**: On form submission, the composite form composable (`useCompositeForm.js`) submits the resource data (with the file's `UUID`) to Google Apps Script. Upon success, the frontend calls the storage service to confirm and move the file folder from `_temp/` to permanent storage (`uploads/`).
+- **Details/Views**: View details grids automatically render `AqlFilePreviewCard` for `"file"` fields. This component reads the local IndexedDB cache (`aql_uploaded_files`), fallback fetching the storage server metadata endpoint if needed, and renders an image preview (with lightbox support) or download button with appropriate file-type icons.
+
 ## Scope Characteristics
 - `master`: Standard CRUD with auto-generated codes, audit columns, full sync.
 - `operation`: Transactional records with auto-generated year-scoped codes (e.g., PR26000001), audit columns, full sync.

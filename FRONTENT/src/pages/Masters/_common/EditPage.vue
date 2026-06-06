@@ -24,6 +24,7 @@
         :resolved-fields="resolvedFields"
         :parent-form="parentForm"
         :status-options="statusOptions"
+        :resource-name="config?.name"
         @update:field="(header, val) => { parentForm[header] = val }"
       />
 

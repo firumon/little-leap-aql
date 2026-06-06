@@ -10,6 +10,17 @@
           dense outlined emit-value map-options
           @update:model-value="$emit('update:field', field.header, $event)"
         />
+        <AqlFileUpload
+          v-else-if="field.type === 'file'"
+          :model-value="parentForm[field.header]"
+          :label="field.label"
+          :required="field.required"
+          :accept="field.accept || '*'"
+          :max-size="field.maxSize || 10"
+          :resource-name="resourceName"
+          :column-name="field.header"
+          @update:model-value="$emit('update:field', field.header, $event)"
+        />
         <q-input
           v-else
           :model-value="parentForm[field.header]"
@@ -24,10 +35,13 @@
 </template>
 
 <script setup>
+import AqlFileUpload from 'components/shared/AqlFileUpload.vue'
+
 defineProps({
   resolvedFields: { type: Array, default: () => [] },
   parentForm: { type: Object, default: () => ({}) },
-  statusOptions: { type: Array, default: () => [] }
+  statusOptions: { type: Array, default: () => [] },
+  resourceName: { type: String, required: true }
 })
 
 defineEmits(['update:field'])

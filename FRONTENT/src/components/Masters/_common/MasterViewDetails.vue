@@ -3,9 +3,22 @@
     <q-card-section>
       <div class="section-title">Details</div>
       <div class="detail-grid">
-        <div v-for="field in detailFields" :key="field.header" class="detail-line">
+        <div v-for="field in detailFields" :key="field.header" class="detail-line items-center">
           <span class="detail-key">{{ field.label }}</span>
-          <span class="detail-val">{{ record?.[field.header] || '-' }}</span>
+          <span class="detail-val col overflow-hidden flex justify-end">
+            <template v-if="field.type === 'file' && record?.[field.header]">
+              <AqlFilePreviewCard
+                class="full-width"
+                style="max-width: 280px"
+                :uuid="record[field.header]"
+                :resource-name="resourceName"
+                :column-name="field.header"
+              />
+            </template>
+            <template v-else>
+              {{ record?.[field.header] || '-' }}
+            </template>
+          </span>
         </div>
       </div>
     </q-card-section>
@@ -14,10 +27,12 @@
 
 <script setup>
 import { computed } from 'vue'
+import AqlFilePreviewCard from 'components/shared/AqlFilePreviewCard.vue'
 
 const props = defineProps({
   record: { type: Object, default: null },
-  resolvedFields: { type: Array, default: () => [] }
+  resolvedFields: { type: Array, default: () => [] },
+  resourceName: { type: String, required: true }
 })
 
 const detailFields = computed(() => props.resolvedFields.filter((f) => f.header !== 'Code'))

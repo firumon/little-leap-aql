@@ -88,22 +88,23 @@ function setupMasterSheets() {
     },
     {
       resourceName: CONFIG.MASTER_SHEETS.WAREHOUSES,
-      headers: ['Code', 'Name', 'City', 'Country', 'Type', 'AccessRegion', 'Status'].concat(commonAuditColumns),
+      headers: ['Code', 'Name', 'Area', 'City', 'Province' ,'Country', 'Type', 'Licence', 'AccessRegion', 'Status'].concat(commonAuditColumns),
       statusDefault: 'Active',
       defaults: { Status: 'Active', Country: 'UAE', Type: 'Main' },
       columnWidths: {
-        Code: 130, Name: 220, City: 150, Country: 130, Type: 120, AccessRegion: 130, Status: 100,
+        Code: 130, Name: 220, Province: 150, Area: 150, City: 150, Country: 130, Type: 120, Licence: 150, AccessRegion: 130, Status: 100,
         CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
       }
     },
     {
       resourceName: CONFIG.MASTER_SHEETS.OUTLETS,
-      headers: ['Code', 'Name', 'ContactPerson', 'Phone', 'Email', 'Country', 'Province', 'City', 'CommunicationAddress', 'AccessRegion', 'Status'].concat(commonAuditColumns),
+      headers: ['Code', 'Name', 'ContactPerson', 'Phone', 'Email', 'Country', 'Province', 'City', 'Area', 'CommunicationAddress', 'MapLocationLink', 'Picture', 'Picture2', 'Picture3', 'Licence', 'AccessRegion', 'Status'].concat(commonAuditColumns),
       statusDefault: 'Active',
       defaults: { Status: 'Active', Country: 'UAE' },
       columnWidths: {
         Code: 130, Name: 240, ContactPerson: 180, Phone: 140, Email: 220,
-        Country: 120, Province: 150, City: 140, CommunicationAddress: 260,
+        Country: 120, Province: 150, Area: 150, City: 140, CommunicationAddress: 260,
+        MapLocationLink: 180, Picture: 150, Picture2: 150, Picture3: 150, Licence: 150,
         AccessRegion: 130, Status: 100, CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
       }
     },
@@ -171,7 +172,7 @@ function setupMasterSheets() {
   logToSheet_('Refactor MASTER Sheets completed');
 
   const summary = 'MASTER setup (Resources driven) complete.\n\n' + results.join('\n');
-  
+
   // Clear all caches after setup
   if (typeof clearAllAppCaches === 'function') clearAllAppCaches();
 

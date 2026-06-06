@@ -99,13 +99,45 @@ function moveDirectory($src, $dst) {
     }
 }
 
+// Helper: Explicitly remove a UUID from the temp registry file
+function removeUuidFromRegistry($uuidToSearch) {
+    if (!file_exists(REGISTRY_FILE)) return;
+
+    $lines = file(REGISTRY_FILE, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    $newLines = [];
+    $changed = false;
+
+    foreach ($lines as $line) {
+        $parts = explode("\t", $line);
+        if (count($parts) < 2) continue;
+        $uuid = $parts[1];
+
+        if ($uuid === $uuidToSearch) {
+            $changed = true;
+            continue;
+        }
+        $newLines[] = $line;
+    }
+
+    if ($changed) {
+        if (empty($newLines)) {
+            if (file_exists(REGISTRY_FILE)) {
+                unlink(REGISTRY_FILE);
+            }
+        } else {
+            file_put_contents(REGISTRY_FILE, implode("\n", $newLines) . "\n", LOCK_EX);
+        }
+    }
+}
+
 // Helper: Perform cleanup of temp registry records older than 1 hour
-function cleanUpTempRegistry($currentConfirmUuid = null) {
+function cleanUpExpiredTempFiles() {
     if (!file_exists(REGISTRY_FILE)) return;
 
     $lines = file(REGISTRY_FILE, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     $newLines = [];
     $now = time();
+    $changed = false;
 
     foreach ($lines as $line) {
         $parts = explode("\t", $line);
@@ -113,11 +145,6 @@ function cleanUpTempRegistry($currentConfirmUuid = null) {
         list($timestamp, $uuid, $resource, $column) = $parts;
 
         $timestamp = (int)$timestamp;
-        
-        if ($uuid === $currentConfirmUuid) {
-            // Found the one currently being confirmed; remove it from registry
-            continue;
-        }
 
         // If older than 1 hour (3600 seconds), delete the temp directory
         if ($now - $timestamp > 3600) {
@@ -126,17 +153,20 @@ function cleanUpTempRegistry($currentConfirmUuid = null) {
             $uuid = sanitize($uuid);
             $tempFolder = TEMP_DIR . $resource . '/' . $column . '/' . $uuid;
             deleteDirectory($tempFolder);
+            $changed = true;
         } else {
             $newLines[] = $line;
         }
     }
 
-    if (empty($newLines)) {
-        if (file_exists(REGISTRY_FILE)) {
-            unlink(REGISTRY_FILE);
+    if ($changed) {
+        if (empty($newLines)) {
+            if (file_exists(REGISTRY_FILE)) {
+                unlink(REGISTRY_FILE);
+            }
+        } else {
+            file_put_contents(REGISTRY_FILE, implode("\n", $newLines) . "\n", LOCK_EX);
         }
-    } else {
-        file_put_contents(REGISTRY_FILE, implode("\n", $newLines) . "\n", LOCK_EX);
     }
 }
 
@@ -287,13 +317,15 @@ if ($method === 'POST' && $action === 'confirm') {
         moveDirectory($srcFolder, $dstFolder);
 
         // Update temp registry and trigger cleanup on-demand
-        cleanUpTempRegistry($uuid);
+        removeUuidFromRegistry($uuid);
+        cleanUpExpiredTempFiles();
 
         echo json_encode(["success" => true]);
         exit;
     } else {
         // If it's already in the destination folder, treat it as confirmed
         if (file_exists($dstFolder) && is_dir($dstFolder)) {
+            removeUuidFromRegistry($uuid);
             echo json_encode(["success" => true, "message" => "Already confirmed"]);
             exit;
         }
@@ -331,14 +363,12 @@ if ($method === 'POST' && $action === 'delete') {
         $deleted = true;
     }
 
-    if ($deleted) {
-        echo json_encode(["success" => true]);
-        exit;
-    } else {
-        http_response_code(404);
-        echo json_encode(["success" => false, "error" => "File folder not found"]);
-        exit;
-    }
+    // Always clean up registry on delete request
+    removeUuidFromRegistry($uuid);
+    cleanUpExpiredTempFiles();
+
+    echo json_encode(["success" => true, "message" => $deleted ? "Deleted" : "Already deleted"]);
+    exit;
 }
 
 // D. GET METADATA

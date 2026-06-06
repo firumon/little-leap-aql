@@ -35,3 +35,9 @@ temp/
 # clasp - Script ID is deployment-specific, should not be committed
 GAS/.clasp.json
 GAS/clasp-configs/
+
+# PHP backend
+PHP/*
+!PHP/.htaccess
+!PHP/index.php
+

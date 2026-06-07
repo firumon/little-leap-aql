@@ -483,7 +483,18 @@ function getRoleResourceAccess(roleId, options) {
   }
 
   return Object.keys(resourceMap).map(function(resourceName) {
-    return resourceMap[resourceName];
+    const entry = resourceMap[resourceName];
+    if (includeUiConfig && entry.actions && entry.actions.length) {
+      const allowed = entry.allowedActions || [];
+      entry.actions.forEach(function(actionName) {
+        const isAllowed = allowed.some(function(allowedAct) {
+          return String(allowedAct).toUpperCase() === String(actionName).toUpperCase();
+        });
+        const pascalName = actionName.charAt(0).toUpperCase() + actionName.slice(1);
+        entry.permissions['can' + pascalName] = isAllowed;
+      });
+    }
+    return entry;
   });
 }
 

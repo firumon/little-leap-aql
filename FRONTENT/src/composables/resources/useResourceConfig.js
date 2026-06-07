@@ -23,8 +23,7 @@ function checkSingleAction(resConfig, action) {
   if (actionLower === 'update') return !!resConfig.permissions?.canUpdate
   if (actionLower === 'delete') return !!resConfig.permissions?.canDelete
 
-  // Dynamic action checks (Requires master canUpdate AND presence in allowedActions)
-  if (!resConfig.permissions?.canUpdate) return false
+  // Dynamic action checks (presence in allowedActions)
   const allowed = Array.isArray(resConfig.allowedActions) ? resConfig.allowedActions : []
   const actionUpper = cleanAction.toUpperCase()
   return allowed.some((a) => String(a).toUpperCase() === actionUpper)

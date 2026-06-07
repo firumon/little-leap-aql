@@ -138,7 +138,7 @@ import AqlList from "components/shared/AqlList.vue";
 defineOptions({ name: 'OutletConsumptionViewPage' })
 const route = useRoute()
 const flow = useOutletConsumption()
-const { loading, acting, reload, getConsumption, childInvoice, childRestocks, consumptionItemRows, generateInvoiceForConsumption, cancelConsumption, navigateToInvoice, navigateToRestock, outletName, visitLabel, formatDisplayDate, canReadInvoice, canReadRestock, getInvoiceTotal } = flow
+const { loading, acting, reload, getConsumption, childInvoice, childRestocks, consumptionItemRows, generateInvoiceForConsumption, cancelConsumption, navigateToInvoice, navigateToRestock, outletName, visitLabel, formatDisplayDate, canReadInvoice, canReadRestock, getInvoiceTotal, allowed } = flow
 
 const record = computed(() => getConsumption(route.params.code))
 const invoice = computed(() => record.value ? childInvoice(record.value.Code) : null)
@@ -146,8 +146,7 @@ const dependentRestocks = computed(() => record.value ? childRestocks(record.val
 
 const canCancel = computed(() => {
   if (!record.value) return false
-  const permissions = flow.consumptionPermissions
-  if (!permissions?.value?.canWrite && !permissions?.value?.canUpdate) return false
+  if (!allowed('CANCEL')) return false
   if (record.value.Progress === 'CANCELLED') return false
   if (invoice.value && invoice.value.Progress === 'PAID') return false
   if (dependentRestocks.value.some(r => ['APPROVED', 'DELIVERED', 'PARTIALLY_DELIVERED'].includes(r.Progress))) return false

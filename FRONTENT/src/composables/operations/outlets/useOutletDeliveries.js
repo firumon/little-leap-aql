@@ -169,9 +169,9 @@ export function useOutletDeliveries() {
 
   const odConfig = computed(() => (Array.isArray(authStore.resources) ? authStore.resources : []).find(r => r.name === 'OutletDeliveries') || null)
   const odPermissions = computed(() => odConfig.value?.permissions || {})
-  const canCreate = computed(() => !!odPermissions.value.canWrite)
-  const canDeliver = computed(() => !!odPermissions.value.canUpdate)
-  const canCancel = computed(() => !!odPermissions.value.canUpdate)
+  const canCreate = computed(() => allowed('CREATE'))
+  const canDeliver = computed(() => allowed('create') || allowed('update'))
+  const canCancel = computed(() => allowed('create') || allowed('update'))
 
   function currentUserName() {
     const user = authStore.user || {}
@@ -203,7 +203,7 @@ export function useOutletDeliveries() {
   }
 
   async function createDraft() {
-    if (!allowed({ outletDelivery: 'create', outletRestock: 'update' })) {
+    if (!allowed({ outletDelivery: 'create' })) {
       return notifyError('You do not have permission to create a delivery draft.')
     }
     const validation = validateDeliveryItems(selectedItems.value.map(row => row.rawOrsi))
@@ -318,7 +318,9 @@ export function useOutletDeliveries() {
   }
 
   async function markItemDelivered(orsiCode, comment = '') {
-    if (!allowed({ outletDelivery: 'update', outletRestock: 'update', outletMovement: 'create' })) {
+    const canDeliver = allowed('create', 'outletDelivery') || allowed('update', 'outletDelivery')
+    const canRestock = allowed('create', 'outletRestock') || allowed('update', 'outletRestock')
+    if (!canDeliver || !canRestock || !allowed('create', 'outletMovement')) {
       return notifyError('You do not have permission to mark items delivered.')
     }
     const od = getDelivery(orsiCode.OutletDeliveryCode)
@@ -344,7 +346,9 @@ export function useOutletDeliveries() {
   }
 
   async function markSelectedDelivered(odCode, selectedCodes, comment = '') {
-    if (!allowed({ outletDelivery: 'update', outletRestock: 'update', outletMovement: 'create' })) {
+    const canDeliver = allowed('create', 'outletDelivery') || allowed('update', 'outletDelivery')
+    const canRestock = allowed('create', 'outletRestock') || allowed('update', 'outletRestock')
+    if (!canDeliver || !canRestock || !allowed('create', 'outletMovement')) {
       return notifyError('You do not have permission to mark items delivered.')
     }
     const od = getDelivery(odCode)
@@ -377,7 +381,9 @@ export function useOutletDeliveries() {
   }
 
   async function cancelDraft(odCode, comment = '') {
-    if (!allowed({ outletDelivery: 'update', outletRestock: 'update' })) {
+    const canDeliver = allowed('create', 'outletDelivery') || allowed('update', 'outletDelivery')
+    const canRestock = allowed('create', 'outletRestock') || allowed('update', 'outletRestock')
+    if (!canDeliver || !canRestock) {
       return notifyError('You do not have permission to cancel this delivery draft.')
     }
     const od = getDelivery(odCode)

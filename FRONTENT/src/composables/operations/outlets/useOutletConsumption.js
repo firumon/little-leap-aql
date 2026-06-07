@@ -612,7 +612,7 @@ export function useOutletConsumption() {
   }
 
   async function generateInvoiceForConsumption(record = {}) {
-    if (!allowed({ outletConsumptionInvoice: 'create', outletConsumption: 'update' })) {
+    if (!allowed({ outletConsumptionInvoice: 'create', outletConsumption: 'MARKINVOICEGENERATED' })) {
       $q.notify({ type: 'negative', message: 'You do not have permission to generate invoice.', position: 'top' })
       return false
     }
@@ -669,14 +669,14 @@ export function useOutletConsumption() {
     if (!record?.Code) return false
     if (text(record.Progress) === 'CANCELLED') return $q.notify({ type: 'warning', message: 'This consumption is already cancelled.', position: 'top' })
     if (!reason) { $q.notify({ type: 'warning', message: 'Cancellation reason is required.', position: 'top' }); return false }
-    const requiredPerms = { outletConsumption: 'update' }
+    const requiredPerms = { outletConsumption: 'CANCEL' }
     const invoice = childInvoice(record.Code)
     if (invoice && text(invoice.Progress) !== 'CANCELLED' && text(invoice.Progress) !== 'PAID') {
-      requiredPerms.outletConsumptionInvoice = 'update'
+      requiredPerms.outletConsumptionInvoice = 'CANCEL'
     }
     const restocksToCancel = cancelableRestocks(record.Code)
     if (restocksToCancel.length > 0) {
-      requiredPerms.outletRestock = 'update'
+      requiredPerms.outletRestock = 'REJECT'
     }
     if (!allowed(requiredPerms)) {
       $q.notify({ type: 'negative', message: 'You do not have permission to cancel this consumption workflow.', position: 'top' })
@@ -727,7 +727,7 @@ export function useOutletConsumption() {
   function navigateToConsumption(code) { nav.goTo('view', { scope: 'operations', resourceSlug: 'outlet-consumptions', code }) }
 
   async function saveInvoiceFromConsumption({ consumptionCode, consumptionRecord, items = [], discount = 0, tax = 0, priceListCode = '' }) {
-    if (!allowed({ outletConsumptionInvoice: 'create', outletConsumption: 'update' })) {
+    if (!allowed({ outletConsumptionInvoice: 'create', outletConsumption: 'MARKINVOICEGENERATED' })) {
       $q.notify({ type: 'negative', message: 'You do not have permission to save invoice.', position: 'top' })
       return { error: 'Unauthorized' }
     }

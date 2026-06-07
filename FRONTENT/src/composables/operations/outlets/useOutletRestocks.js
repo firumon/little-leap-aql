@@ -55,8 +55,8 @@ export function useOutletRestocks() {
 
   const restockResource = computed(() => (Array.isArray(authStore.resources) ? authStore.resources : []).find(r => r.name === 'OutletRestocks') || {})
   const resourcePerms = computed(() => restockResource.value.permissions || {})
-  const canCreate = computed(() => !!resourcePerms.value.canWrite)
-  const canApprove = computed(() => !!resourcePerms.value.canUpdate)
+  const canCreate = computed(() => allowed('CREATE'))
+  const canApprove = computed(() => allowed('APPROVE'))
 
   function currentUserName() {
     const user = authStore.user || {}
@@ -312,7 +312,7 @@ export function useOutletRestocks() {
   }
 
   async function approveRestock(restock, approvedRows = rows.value, comment = '') {
-    if (!allowed({ outletRestock: 'update', outletRestockItem: 'create', stockMovement: 'create' })) {
+    if (!allowed({ outletRestock: 'APPROVE', outletRestockItem: 'create', stockMovement: 'create' })) {
       return notifyError('You do not have permission to approve restocks.')
     }
     const validation = validateRestockApproval(restock, approvedRows, warehouseStorages.items.value)
@@ -328,7 +328,7 @@ export function useOutletRestocks() {
   }
 
   async function allocatePendingRestockItems(restock, allocatedPendingRows = rows.value, comment = '') {
-    if (!allowed({ outletRestock: 'update', stockMovement: 'create' })) {
+    if (!allowed({ outletRestock: 'SUBMIT', stockMovement: 'create' })) {
       return notifyError('You do not have permission to allocate pending restock items.')
     }
     const rowsToAllocate = allocatedPendingRows.filter(row => text(row.Progress) === 'ALLOCATED' && (!text(row.Code) || text(row._pendingSourceCode)))
@@ -351,7 +351,7 @@ export function useOutletRestocks() {
   }
 
   async function cancelPendingRestockItems(restock, comment = '') {
-    if (!allowed('update')) {
+    if (!allowed('CANCEL', 'OutletRestockItems')) {
       return notifyError('You do not have permission to cancel pending restock items.')
     }
     if (!text(comment)) return notifyWarning('Cancel comment is required.')
@@ -373,7 +373,7 @@ export function useOutletRestocks() {
   }
 
   async function rejectRestock(restock, comment) {
-    if (!allowed('update')) {
+    if (!allowed('REJECT')) {
       return notifyError('You do not have permission to reject this restock.')
     }
     if (!text(comment)) return notifyWarning('Comment is required.')
@@ -390,7 +390,7 @@ export function useOutletRestocks() {
   }
 
   async function sendBackRestock(restock, comment) {
-    if (!allowed('update')) {
+    if (!allowed('SENDBACK')) {
       return notifyError('You do not have permission to send back this restock.')
     }
     if (!text(comment)) return notifyWarning('Comment is required.')
@@ -545,7 +545,7 @@ export function useOutletRestocks() {
   function navigateToAdd(outletCode) { nav.goTo('add', outletCode ? { query: { outletCode } } : {}) }
   function cancel() { nav.goTo('list') }
   async function deliverDirectRestock(restock, itemsToDeliver = [], comment = '') {
-    if (!allowed({ outletRestock: 'update', outletRestockItem: 'update', outletMovement: 'create' })) {
+    if (!allowed({ outletRestock: 'create', outletMovement: 'create' })) {
       return notifyError('You do not have permission to mark items delivered.')
     }
     const allocatedRows = itemsToDeliver.filter(row => text(row.Progress) === 'ALLOCATED')

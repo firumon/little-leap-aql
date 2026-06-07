@@ -23,8 +23,11 @@ const props = defineProps({
 
 defineEmits(['filter'])
 
-const canCreate = computed(() => !!props.permissions.canWrite)
-const canApprove = computed(() => !!props.permissions.canUpdate)
+import { useResourceConfig } from '../../../composables/resources/useResourceConfig.js'
+
+const { allowed } = useResourceConfig()
+const canCreate = computed(() => allowed('CREATE'))
+const canApprove = computed(() => allowed('APPROVE'))
 
 const allStats = [
   { key: 'DRAFT', label: 'Drafts', count: 0, bgClass: 'bg-grey-2', textClass: 'text-grey-8' },

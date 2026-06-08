@@ -96,10 +96,12 @@ Array of resource entries built by `buildAuthorizedResourceEntry()` at `GAS/reso
   "codeSequenceLength": 5,
   "functional":         false,
   "permissions": {
-    "canRead":   true,
-    "canWrite":  true,
-    "canUpdate": true,
-    "canDelete": false
+    "canRead":    true,
+    "canWrite":   true,
+    "canUpdate":  true,
+    "canDelete":  false,
+    "canApprove": true,
+    "canReject":  false
   },
   "headers": ["Code", "Name", "VariantTypes", "Status", "..."],
   "ui": {
@@ -120,8 +122,6 @@ Array of resource entries built by `buildAuthorizedResourceEntry()` at `GAS/reso
     "listViewsMode":  "auto"
   },
   "additionalActions": [],
-  "actions":           [],
-  "allowedActions":    [],
   "reports":           []
 }
 ```
@@ -135,7 +135,7 @@ Array of resource entries built by `buildAuthorizedResourceEntry()` at `GAS/reso
 | `codePrefix` | Prefix for auto-generated codes (e.g., `PRD`) |
 | `codeSequenceLength` | Zero-padded numeric suffix length |
 | `functional` | `true` = no sheet data (e.g., BulkUploadMasters); sheet I/O must not be attempted |
-| `permissions` | CRUD flags derived from `APP.RolePermissions` for the user's role(s) |
+| `permissions` | CRUD and custom workflow action flags (e.g. `canApprove`) derived from `APP.RolePermissions` for the user's role(s) |
 | `headers` | Sheet column headers; empty array for functional resources |
 | `ui.menus` | Sidebar menu configuration array including `menuAccess` rules |
 | `ui.fields` | UIFields config for custom form rendering |

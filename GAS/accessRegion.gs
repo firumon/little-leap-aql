@@ -96,7 +96,7 @@ function isValidAccessRegionCodeFormat(code) {
 
 function resolveUserAccessRegionCode(userRow) {
   if (!userRow || typeof userRow !== 'object') return '';
-  return normalizeAccessRegionCode(userRow.AccessRegion || userRow.ServiceRegion || '');
+  return normalizeAccessRegionCode(userRow.AccessRegion || '');
 }
 
 function buildUserAccessRegionScope(userRow) {
@@ -107,7 +107,8 @@ function buildUserAccessRegionScope(userRow) {
       assignedCode: '',
       isUniverse: true,
       accessibleCodes: [],
-      accessibleRegions: []
+      accessibleRegions: [],
+      ancestorCodes: []
     };
   }
 
@@ -131,11 +132,14 @@ function buildUserAccessRegionScope(userRow) {
     };
   });
 
+  const ancestorCodes = getAncestorRegionCodes(assignedCode, context);
+
   return {
     assignedCode: assignedCode,
     isUniverse: false,
     accessibleCodes: deduped,
-    accessibleRegions: accessibleRegions
+    accessibleRegions: accessibleRegions,
+    ancestorCodes: ancestorCodes
   };
 }
 
@@ -211,4 +215,25 @@ function buildUserAccessRegionPayload(userRow) {
     accessibleCodes: scope.accessibleCodes,
     accessibleRegions: scope.accessibleRegions
   };
+}
+
+function getAncestorRegionCodes(regionCode, contextInput) {
+  const context = contextInput || getAccessRegionContext();
+  const out = [];
+  let current = normalizeAccessRegionCode(regionCode);
+  if (!current) return out;
+
+  let safetyCounter = 0;
+  while (current && safetyCounter < 100) {
+    out.push(current);
+    const node = context.byCode[current];
+    if (node && node.parent) {
+      current = normalizeAccessRegionCode(node.parent);
+    } else {
+      break;
+    }
+    safetyCounter++;
+  }
+
+  return out;
 }

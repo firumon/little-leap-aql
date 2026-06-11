@@ -237,7 +237,7 @@ function handleResourceCreateRecord(auth, payload) {
       ? generateNextYearScopedCode(values, idx, codePrefix, seqLength)
       : generateNextCode(values, idx, codePrefix, seqLength);
   }
-  const rowData = buildNewMasterRow(headers, idx, providedValues, schema);
+  const rowData = buildNewResourceRow(headers, idx, providedValues, schema);
   rowData[idx.Code] = code;
 
   applyAccessRegionOnWrite(rowData, idx, auth);
@@ -563,7 +563,7 @@ function canAccessRowByPolicy(auth, resourceConfig, rowValues, idx) {
     return true;
   }
 
-  if (regionCheckRequired && !canAccessRowByAccessRegion(auth, rowValues, idx)) {
+  if (regionCheckRequired && !canAccessRowByAccessRegion(auth, rowValues, idx, resourceConfig)) {
     return false;
   }
 
@@ -674,7 +674,7 @@ function resolveCodeValue(payload) {
   return '';
 }
 
-function buildNewMasterRow(headers, idx, providedValues, schema) {
+function buildNewResourceRow(headers, idx, providedValues, schema) {
   const row = new Array(headers.length).fill('');
 
   headers.forEach(function (header) {
@@ -720,7 +720,7 @@ function mergeMasterRow(existingRow, idx, providedValues, schema) {
   return row;
 }
 
-function canAccessRowByAccessRegion(auth, rowValues, idx) {
+function canAccessRowByAccessRegion(auth, rowValues, idx, resourceConfig) {
   const regionHeader = resolveAccessRegionHeader(idx);
   if (!regionHeader) return true;
 
@@ -730,7 +730,18 @@ function canAccessRowByAccessRegion(auth, rowValues, idx) {
     return true;
   }
 
-  return canAuthAccessRegionCode(auth, regionCode);
+  const scope = buildAuthAccessRegionScope(auth);
+  if (scope.isUniverse) return true;
+
+  const isMaster = resourceConfig && resourceConfig.scope === 'master';
+  const accessibleCodes = scope.accessibleCodes || [];
+
+  if (isMaster) {
+    const ancestorCodes = scope.ancestorCodes || [];
+    return ancestorCodes.indexOf(regionCode) !== -1 || accessibleCodes.indexOf(regionCode) !== -1;
+  } else {
+    return accessibleCodes.indexOf(regionCode) !== -1;
+  }
 }
 
 function applyAccessRegionOnWrite(row, idx, auth) {
@@ -750,12 +761,11 @@ function applyAccessRegionOnWrite(row, idx, auth) {
 function resolveAccessRegionHeader(idx) {
   if (!idx || typeof idx !== 'object') return '';
   if (idx.AccessRegion !== undefined) return 'AccessRegion';
-  if (idx.ServiceRegion !== undefined) return 'ServiceRegion';
   return '';
 }
 
 function isRegionHeader(header) {
-  return header === 'AccessRegion' || header === 'ServiceRegion';
+  return header === 'AccessRegion';
 }
 
 function normalizeValueByHeader(header, value) {
@@ -1348,7 +1358,7 @@ function handleCompositeSave(auth, payload) {
         ? generateNextYearScopedCode(parentValues, parentIdx, codePrefix, seqLength)
         : generateNextCode(parentValues, parentIdx, codePrefix, seqLength);
     }
-    parentRowData = buildNewMasterRow(parentHeaders, parentIdx, parentProvidedValues, parentSchema);
+    parentRowData = buildNewResourceRow(parentHeaders, parentIdx, parentProvidedValues, parentSchema);
     parentRowData[parentIdx.Code] = parentCode;
     applyAccessRegionOnWrite(parentRowData, parentIdx, auth);
     applyAuditFields(parentRowData, parentIdx, auth, parentResource.config, true);
@@ -1441,7 +1451,7 @@ function handleCompositeSave(auth, payload) {
           var newChildCode = nextCode || (childResource.config.scope === 'operation'
             ? generateNextYearScopedCode(childCurrentValues, childIdx, childCodePrefix, childSeqLength)
             : generateNextCode(childCurrentValues, childIdx, childCodePrefix, childSeqLength));
-          var newChildRow = buildNewMasterRow(childHeaders, childIdx, childProvidedValues, childSchema);
+          var newChildRow = buildNewResourceRow(childHeaders, childIdx, childProvidedValues, childSchema);
           newChildRow[childIdx.Code] = newChildCode;
           applyAccessRegionOnWrite(newChildRow, childIdx, auth);
           applyAuditFields(newChildRow, childIdx, auth, childResource.config, true);
@@ -1717,7 +1727,7 @@ function handleResourceBulkUpsertRecords(auth, payload) {
           : (resource.config.scope === 'operation'
             ? generateNextYearScopedCode(currentValues, idx, codePrefix, seqLength)
             : generateNextCode(currentValues, idx, codePrefix, seqLength));
-        rowData = buildNewMasterRow(headers, idx, providedValues, schema);
+        rowData = buildNewResourceRow(headers, idx, providedValues, schema);
         rowData[idx.Code] = newCode;
         applyAccessRegionOnWrite(rowData, idx, auth);
         applyAuditFields(rowData, idx, auth, resource.config, true);

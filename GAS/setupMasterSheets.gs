@@ -28,11 +28,11 @@ function setupMasterSheets() {
     },
     {
       resourceName: CONFIG.MASTER_SHEETS.SKUS,
-      headers: ['Code', 'ProductCode', 'Variant1', 'Variant2', 'Variant3', 'Variant4', 'Variant5', 'UOM', 'Status'].concat(commonAuditColumns),
+      headers: ['Code', 'ProductCode', 'Variant1', 'Variant2', 'Variant3', 'Variant4', 'Variant5', 'UOM', 'TaxCode', 'Status'].concat(commonAuditColumns),
       statusDefault: 'Active',
       defaults: { Status: 'Active' },
       columnWidths: {
-        Code: 140, ProductCode: 140, Variant1: 150, Variant2: 150, Variant3: 150, Variant4: 150, Variant5: 150, UOM: 100, Status: 100,
+        Code: 140, ProductCode: 140, Variant1: 150, Variant2: 150, Variant3: 150, Variant4: 150, Variant5: 150, UOM: 100, TaxCode: 130, Status: 100,
         CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
       }
     },
@@ -58,21 +58,21 @@ function setupMasterSheets() {
       },
       {
         resourceName: CONFIG.MASTER_SHEETS.PRICE_LIST,
-        headers: ['Code', 'Name', 'Description', 'Currency', 'IsDefault', 'SKUPrices', 'AccessRegion', 'Status'].concat(commonAuditColumns),
+        headers: ['Code', 'Name', 'Description', 'Currency', 'IsDefault', 'SKUPrices', 'TaxInclusive', 'DiscountTaxPolicy', 'AccessRegion', 'Status'].concat(commonAuditColumns),
         statusDefault: 'Active',
-        defaults: { Status: 'Active', IsDefault: 'FALSE' },
+        defaults: { Status: 'Active', IsDefault: 'FALSE', TaxInclusive: 'FALSE', DiscountTaxPolicy: 'PRE_TAX' },
         columnWidths: {
-          Code: 130, Name: 260, Description: 300, Currency: 100, IsDefault: 100, SKUPrices: 400, AccessRegion: 130, Status: 100,
+          Code: 130, Name: 260, Description: 300, Currency: 100, IsDefault: 100, SKUPrices: 400, TaxInclusive: 120, DiscountTaxPolicy: 150, AccessRegion: 130, Status: 100,
           CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
         }
       },
       {
         resourceName: CONFIG.MASTER_SHEETS.PRICE_LIST_ITEMS,
-        headers: ['Code', 'PriceListCode', 'SKUCode', 'Price', 'Status'].concat(commonAuditColumns),
+        headers: ['Code', 'PriceListCode', 'SKUCode', 'Price', 'RSP', 'Status'].concat(commonAuditColumns),
         statusDefault: 'Active',
-        defaults: { Status: 'Active' },
+        defaults: { Status: 'Active', Price: 0, RSP: 0 },
         columnWidths: {
-          Code: 140, PriceListCode: 140, SKUCode: 140, Price: 100, Status: 100,
+          Code: 140, PriceListCode: 140, SKUCode: 140, Price: 100, RSP: 100, Status: 100,
           CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
         }
       },
@@ -117,6 +117,16 @@ function setupMasterSheets() {
         Code: 130, OutletCode: 140, MaxStockValueLimit: 170, VisitFrequencyDays: 170, CreditLimit: 130, PriceListCode: 140,
         AccessRegion: 130, Status: 100, CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
       }
+    },
+    {
+      resourceName: CONFIG.MASTER_SHEETS.TAXES,
+      headers: ['Code', 'Name', 'ParentCode', 'PercentageTransaction', 'FlatUnit', 'CalculationOrder', 'CompoundOn', 'Description', 'AccessRegion', 'Status'].concat(commonAuditColumns),
+      statusDefault: 'Active',
+      defaults: { Status: 'Active', PercentageTransaction: 0, FlatUnit: 0, CalculationOrder: 1, ParentCode: '', CompoundOn: '' },
+      columnWidths: {
+        Code: 130, Name: 200, ParentCode: 130, PercentageTransaction: 160, FlatUnit: 120, CalculationOrder: 130, CompoundOn: 130, Description: 300, AccessRegion: 130, Status: 100,
+        CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
+      }
     }
    ];
 
@@ -154,6 +164,12 @@ function setupMasterSheets() {
       setup_applyColumnDefaults(sheet, schema.headers, schema.defaults || {});
       setup_clearDataValidations(sheet, schema.headers.length);
       setup_applyListValidation(sheet, schema.headers, 'Status', ['Active', 'Inactive']);
+      if (schema.headers.indexOf('DiscountTaxPolicy') !== -1) {
+        setup_applyListValidation(sheet, schema.headers, 'DiscountTaxPolicy', ['PRE_TAX', 'POST_TAX']);
+      }
+      if (schema.headers.indexOf('TaxInclusive') !== -1) {
+        setup_applyListValidation(sheet, schema.headers, 'TaxInclusive', ['TRUE', 'FALSE']);
+      }
       setup_fillBlankColumn(sheet, schema.headers, 'Status', schema.statusDefault || 'Active');
       setup_protectHeaderRow(sheet, schema.headers.length);
       setup_applyBanding(sheet, schema.headers.length);

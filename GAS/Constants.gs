@@ -28,6 +28,7 @@ const CONFIG = {
     WAREHOUSES: 'Warehouses',
     OUTLETS: 'Outlets',
     OUTLET_OPERATING_RULES: 'OutletOperatingRules',
+    TAXES: 'Taxes',
   },
   OPERATION_SHEETS: {
     PROCUREMENTS: 'Procurements',
@@ -65,7 +66,8 @@ const CONFIG = {
     REVENUE: 'Revenue',
     EXPENSES: 'Expenses',
     CHART_OF_ACCOUNTS: 'ChartOfAccounts',
-    ENTRY_TEMPLATES: 'EntryTemplates'
+    ENTRY_TEMPLATES: 'EntryTemplates',
+    TAX_TRANSACTIONS: 'TaxTransactions',
   },
   VIEW_SHEETS: {
     // Placeholder — view sheets will be added as they are designed

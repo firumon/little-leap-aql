@@ -67,6 +67,13 @@ function setupAccountSheets() {
             statusDefault: 'Active',
             defaults: { Status: 'Active', Amount: 0 },
             columnWidths: { Code: 150, ReferenceCode: 150, COACode: 150, OperationDate: 150, Amount: 120, Description: 300, Status: 100 }
+        },
+        {
+            resourceName: CONFIG.ACCOUNTS_SHEETS.TAX_TRANSACTIONS,
+            headers: ['Code', 'Date', 'Resource', 'ResourceCode', 'CounterPartyType', 'CounterPartyCode', 'TaxCode', 'TaxableAmount', 'TaxAmount', 'AccessRegion', 'Status'].concat(commonAuditColumns),
+            statusDefault: 'Active',
+            defaults: { Status: 'Active', TaxableAmount: 0, TaxAmount: 0 },
+            columnWidths: { Code: 140, Date: 120, Resource: 200, ResourceCode: 150, CounterPartyType: 150, CounterPartyCode: 150, TaxCode: 130, TaxableAmount: 130, TaxAmount: 130, AccessRegion: 130, Status: 100 }
         }
     ];
 

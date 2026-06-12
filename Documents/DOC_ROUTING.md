@@ -130,6 +130,24 @@ Use when implementing or customizing dashboard modules, widgets, composables, or
 - Read:
   - `Documents/DASHBOARD_DEVELOPMENT_GUIDE.md`
 
+### Tax System Design & Configuration
+Use when customizing tax columns, calculating wholesale values, or modifying compound tax logic.
+- Read:
+  - `Documents/TAX_SYSTEM_DESIGN.md`
+
+### Sheet Views Formulation
+Use when inspecting, designing, or changing Google Sheets View aggregation formulas.
+- Read:
+  - `Sheet Formulas/Views/INDEX.md`
+  - and the specific view file under `Sheet Formulas/Views/`
+
+### Sheet Reports Formulation
+Use when inspecting, designing, or changing Google Sheets printable report templates or cell-specific formulas.
+- Read:
+  - `Sheet Formulas/Reports/INDEX.md`
+  - and the specific report file under `Sheet Formulas/Reports/`
+  - only the relevant section of `Documents/MODULE_WORKFLOWS.md` (specifically Section 1)
+
 ## Maintenance Rule
 Update this file when any of the following changes:
 - a new recurring task type is introduced

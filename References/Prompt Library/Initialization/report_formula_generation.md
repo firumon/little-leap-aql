@@ -1,93 +1,134 @@
-# AQL Report Formula Generation Prompt
+# AQL Report Formula Generation & Maintenance
 
-Use this document to initialize an AI agent session when building, refactoring, or extending Google Sheets reporting formulas for the AQL system.
+Use this document to initialize an AI agent session when building, refactoring, or extending Google Sheets reporting formulas, template configurations, or report action bindings in the AQL system.
 
 ---
 
-## 1. System Overview & Context
+## 1. System Architecture & Coordination
 
-AQL utilizes a hybrid architecture where the web frontend displays data and triggers actions, but the underlying database and reporting templates live in Google Sheets. Reports are generated dynamically by cloning a pre-designed spreadsheet template, injecting context or inputs into target cells, and exporting the results.
+AQL utilizes a hybrid architecture where the web frontend displays data and triggers actions, while Google Sheets hosts report templates, runs formulas, and exports PDF files.
 
-For the full technical details of the AQL PDF export engine, template registry, and backend/frontend coordination, refer to the [AQL Module Workflows Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/MODULE_WORKFLOWS.md#1-report-generation-pdf).
+### A. The End-to-End Workflow
+1. **Frontend Trigger**: A user clicks a report action in Quasar (e.g., in a toolbar or record detail dialog). The Quasar page calls a composable that dispatches the `generateReport` action to the backend.
+2. **Metadata Registry**: Report definitions are configured in `APP.Resources` in the `Reports` JSON column. The registry records the report name, destination sheet name, template name, parameter injection cell (e.g. `$AB$6`), and PDF settings (margins, orientation).
+3. **Apps Script Execution**: The backend (`GAS/reportGenerator.gs`) clones the specified template sheet in the REPORTS spreadsheet, injects parameters (e.g., a specific Order ID) into the target cell, recalculates formulas using `SpreadsheetApp.flush()`, exports the sheet as a PDF blob, deletes the temporary sheet, and returns a Base64 string to the frontend.
+4. **Sheet Menu Connection**: Admin actions under the Google Sheet `AQL 🚀` menu (e.g. `Sync APP.Resources from Code`) load the report configs from code to sheet, and `Regenerate App Cache` warms up metadata.
 
-### The Primary Objective
-Your main aim as the AI agent is to **construct a single-cell Google Sheets formula** placed in the designated start cell (typically `A10` or `A15`) that dynamically generates the entire structured dataset (including headers, metrics, listings, and spacer rows) based on the user's requirements and input cells.
-
-*Note: If requirements are unclear or layout coordinates are ambiguous, you are encouraged to ask clarifying questions in the chat to align on a perfect design.*
+**Key File Locations**:
+- Backend Code: [reportGenerator.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/reportGenerator.gs)
+- Report Workflows: [MODULE_WORKFLOWS.md — Section 1](file:///f:/LITTLE%20LEAP/AQL/Documents/MODULE_WORKFLOWS.md#L97)
+- Sheet Formulas Index: [Sheet Formulas/Reports/INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Reports/INDEX.md)
+- Resource Config Guide: [RESOURCE_COLUMNS_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_COLUMNS_GUIDE.md)
 
 ---
 
 ## 2. Sheet Layout & Grid Sizing Constraints
 
-To maintain visual alignment across pdf exports, every reporting sheet follows strict design bounds:
-* **Grid Sizing:** Every cell in the report sheet is configured to a width and height of exactly 20 pixels.
-* **Row 1 to 8:** Reserved for a pre-designed corporate report header (containing logo, titles, metadata).
-* **Borders & Margins:**
-  * **Column A (index 1)** and **Column AM (index 39)** are left entirely empty to serve as the outer border.
-  * **Columns B and C (indexes 2 and 3)** are left empty to serve as the left margin.
-  * **Columns AK and AL (indexes 37 and 38)** are left empty to serve as the right margin.
-* **Data Zone:** The actual space available for displaying data is **Columns D through AJ (indexes 4 through 36)**. All generated headers, tables, and details must stay within these bounds.
+To maintain a consistent, high-premium printable visual structure, every reporting sheet template must follow these layout rules:
+* **Grid Sizing**: Every cell is configured to a width and height of exactly 20 pixels.
+* **Row 1 to 8**: Pre-designed corporate header containing logos, document title, and meta information.
+* **Marginal Boundaries**:
+  * **Outer Border**: Column A (1) and Column AM (39) are left empty.
+  * **Left Margin**: Column B (2) and Column C (3) are left empty.
+  * **Right Margin**: Column AK (37) and Column AL (38) are left empty.
+* **Data Zone**: Data rows (tables, titles, details) must occupy exactly **Columns D through AJ (index 4 to 36)**.
 
 ---
 
-## 3. Coding Patterns & Shape-Safety Rules
+## 3. Shape-Safety & Coding Patterns
 
-To ensure formulas evaluate cleanly without dimension mismatches, `#REF!`, or calculation crashes, strictly enforce the following rules:
+Google Sheets formula calculations will fail with `#REF!` or dimension mismatches unless these rules are strictly enforced:
 
 ### A. Dynamic 39-column Row Generator (`RowFn`)
-Define a helper function named `RowFn` using `LAMBDA` at the beginning of the `LET` block. This function maps index-value pairs over a `SEQUENCE(1, 39)` to construct exactly 39 columns per row. This is the only way rows should be generated:
+Define and use a `RowFn` helper via `LAMBDA` at the beginning of the `LET` block to generate exactly 39 columns per row. Do not generate rows in any other way:
 ```excel
 RowFn, LAMBDA(idx_val_pairs, MAP(SEQUENCE(1, 39), LAMBDA(col_idx, IFERROR(VLOOKUP(col_idx, idx_val_pairs, 2, FALSE), "")))),
 ```
-*Example usage:*
-* Spacer row: `RowFn({0, ""})`
-* Data row: `RowFn({4, "Outlet Name"; 20, "Address"; 36, "Comments"})`
+- Spacer row: `RowFn({0, ""})`
+- Data row: `RowFn({4, "Field 1"; 20, "Field 2"; 36, "Field 3"})`
 
-### B. Shape-Safe Virtual Arrays
-* **No `INDEX(array, 0, col)`:** When extracting column vectors from in-memory arrays (like those returned by `FILTER` or `MAP`), never use `INDEX` with a `0` or blank row parameter. Always use `CHOOSECOLS(array, col)` instead.
-* **No `INDEX(array, 1, 0)`:** When extracting rows from virtual arrays, always use `CHOOSEROWS(array, row)`.
-* **Flatten vectors:** Always wrap extracted columns in `TOCOL()` (e.g. `TOCOL(CHOOSECOLS(array, 1))`) before passing them to matching functions like `MAP` to prevent size-mismatch errors.
-* **Avoid Cell Reference Name Collisions:** Do not name variables inside `LET` blocks using words that can resolve to cell coordinates (e.g., `Row1`, `Row2`, `R1`, `C1`). Instead, use names with underscores (e.g., `Row_1`, `Row_2`) which are invalid cell references.
+### B. Virtual Array Manipulation
+- **CHOOSECOLS/CHOOSEROWS**: Never use `INDEX(array, 0, col)` or `INDEX(array, row, 0)` on in-memory/virtual arrays (which returns `#REF!`). Always use `CHOOSECOLS(array, col)` or `CHOOSEROWS(array, row)`.
+- **TOCOL**: Wrap extracted column vectors in `TOCOL()` (e.g. `TOCOL(CHOOSECOLS(array, 1))`) before passing them to matching functions like `MAP` to prevent size-mismatch errors.
+- **Variable Collisions**: Do not name variables inside `LET` blocks using words that can resolve to cell coordinates (e.g., `Row1`, `R1`, `C1`). Use names with underscores (e.g., `Row_1`, `Row_2`).
 
-### C. No `SUMIF` / `SUMIFS` / `COUNTIF` / `COUNTIFS` on Memory Arrays
-These functions only accept physical cell ranges (like `A2:A`) and will crash on in-memory/virtual arrays. 
-* To sum or count virtual arrays based on criteria, always use a combination of `SUM` and `FILTER` wrapped in `IFERROR`:
-  * Summing: `SUM(IFERROR(FILTER(qtys, (codes = target_code)), 0))`
-  * Counting: `SUM(IFERROR(FILTER(OnesVector, (codes = target_code)), 0))`
+### C. Aggregating Memory Arrays
+`SUMIF`, `SUMIFS`, `COUNTIF`, and `COUNTIFS` only work on physical spreadsheet ranges. They fail on virtual arrays.
+- To sum or count virtual arrays, always use `SUM` / `FILTER` wrapped in `IFERROR`:
+  - Summing: `SUM(IFERROR(FILTER(qtys, (codes = target_code)), 0))`
+  - Counting: `SUM(IFERROR(FILTER(OnesVector, (codes = target_code)), 0))`
 
-### D. Dynamic Config Sheet Lookups
-Retrieve external spreadsheet IDs dynamically from a local sheet named `Config` (columns Key, Value):
+### D. External spreadsheet ID Lookups
+Retrieve external spreadsheet IDs dynamically from the local `Config` sheet (columns Key, Value):
 `VLOOKUP("TargetFileID", Config!A:B, 2, 0)`
 
 ---
 
-## 4. Hierarchical Data Assembly Pattern
+## 4. Documenting Report Formulas
 
-To stack headers, section dividers, and list records, assemble the report dynamically using `VSTACK` and loops (`REDUCE` or `MAP`). Here is the standard structural framework to follow:
+When creating or modifying any reporting formula, you must document it in a markdown file under `Sheet Formulas/Reports/` using this template:
+
+```markdown
+# [Report Name] Report
+
+Short description of the report's purpose and contents.
+
+---
+
+## Cell Destination & Input Details
+
+- **Output Destination Cell**: Cell where formula is written (e.g. `A10`)
+- **User Input Dependency**: Injection parameter target (e.g. `$AB$6`)
+
+---
+
+## Google Sheet Formula
 
 ```excel
 =LET(
-  MasterFileID, VLOOKUP("MasterFileID", Config!A:B, 2, 0),
-  DataFileID, VLOOKUP("DataFileID", Config!A:B, 2, 0),
-
-  RawData, IMPORTRANGE(DataFileID, "SheetName!A2:J"),
-  Filtered, IFERROR(FILTER(RawData, ...), {"", "", "", ..., 0}),
-
-  RowFn, LAMBDA(idx_val_pairs, MAP(SEQUENCE(1, 39), LAMBDA(col_idx, IFERROR(VLOOKUP(col_idx, idx_val_pairs, 2, FALSE), "")))),
-
-  // [Process and group data here...]
-
-  ReportData,
-  VSTACK(
-    RowFn({4, "Section Header"}),
-    RowFn({4, "Field 1"; 20, "Field 2"; 36, "Field 3"}),
-    RowFn({0, ""}), // Spacer
-    
-    // [Dynamically generated rows or fallback rows...]
-  ),
-
-  ReportData
+  ...
 )
 ```
 
-Please let me know once you are ready..
+---
+
+## Source Sheets & Column Dependencies
+
+List all source sheets and column indexes referenced by the formula:
+1. **Sheet Name** (FileID from Config):
+   - Column 1 (A): [Field Name]
+   - Column 2 (B): [Field Name]
+
+---
+
+## Detailed Logic Breakdown
+
+Explain the phases of the formula (Order Search, Timeline, Item Loops, Stacking).
+```
+
+Always update the registry index [INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Reports/INDEX.md) to record the new template and its dependencies.
+
+---
+
+## 5. Guardrails (DOs and DO NOTs)
+
+- **DO NOT** use physical column ranges directly (e.g., `IMPORTRANGE(..., "Sheet!A:A")`) inside complex MAP loops; extract columns to variables first.
+- **DO** verify target input cell locations (e.g., parameter injection target like `$AB$6`) and start destinations before writing formulas.
+- **DO** verify that the final stacked array equals exactly 39 columns wide.
+
+---
+
+## 6. Targeted Verification Plan
+
+### A. Formula Integrity
+1. After writing or modifying a formula, use `SpreadsheetApp.flush()` to force recalculation.
+2. Verify that the output array is exactly **39 columns wide** — any mismatch will cause `#REF!` errors.
+3. Check for `#REF!`, `#VALUE!`, or `#N/A` errors in the output range.
+
+### B. Documentation
+1. Verify that the formula documentation file exists in `Sheet Formulas/Reports/`.
+2. Verify that [INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Reports/INDEX.md) has been updated with the new or modified report entry.
+
+### C. Code Deployment (If Backend Changes Were Made)
+1. Push GAS changes: `npm run gas:push` (or `cd GAS && clasp push`).
+2. Instruct the user to run `AQL 🚀 > 🔄 Sync & Cache > Sync APP.Resources from Code` if report config metadata was modified.

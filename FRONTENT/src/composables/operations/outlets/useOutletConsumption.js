@@ -21,6 +21,9 @@ import {
   buildVisitCompleteRequest
 } from './outletConsumptionPayload.js'
 import { resolveInvoicePricing, resolvePriceListCode, resolvePricesForPriceList, getInvoiceTotal, getInvoiceRemaining, resolvePriceListLookup, resolveSkuPrice } from './outletConsumptionPricing.js'
+import { useTaxCalculator } from '../../useTaxCalculator.js'
+import { useCurrency } from '../../useCurrency.js'
+import { useDataStore } from '../../../stores/data.js'
 
 const INVOICE_PROGRESS_ORDER = ['PENDING_PAYMENT', 'PARTIALLY_PAID', 'PAID', 'CANCELLED', 'OTHER']
 
@@ -28,6 +31,104 @@ export function useOutletConsumption() {
   const $q = useQuasar()
   const resourceIoStore = useResourceIoStore()
   const authStore = useAuthStore()
+
+  function computeInvoiceTaxBreakdown(itemsList, priceListCode, headerDiscount, outletCode) {
+    const { roundToDecimals, defaultCurrencyCode } = useCurrency()
+    const skus = useDataStore().getRecords('SKUs') || []
+    const priceLists = useDataStore().getRecords('PriceList') || []
+    const plRecord = priceLists.find(p => p.Code === priceListCode && p.Status === 'Active')
+    const policy = plRecord ? (plRecord.DiscountTaxPolicy || 'PRE_TAX') : 'PRE_TAX'
+    const currencyCode = plRecord ? plRecord.Currency : defaultCurrencyCode.value
+
+    const subtotal = itemsList.reduce((sum, item) => sum + (toNumber(item.Qty) * toNumber(item.Price)), 0)
+    const disc = toNumber(headerDiscount)
+
+    let totalTaxableAmount = 0
+    let totalTaxAmount = 0
+    const detailsMap = {}
+
+    const { calculateLineTax } = useTaxCalculator()
+
+    const processedItems = itemsList.map(item => {
+      const skuRecord = skus.find(s => s.Code === item.SKU && s.Status === 'Active')
+      const taxCode = skuRecord ? skuRecord.TaxCode : ''
+      const itemSubtotal = toNumber(item.Qty) * toNumber(item.Price)
+      
+      // If PRE_TAX, distribute the discount to line items. If POST_TAX, line discount is 0.
+      const itemDiscount = policy === 'PRE_TAX' && subtotal > 0 ? (itemSubtotal / subtotal) * disc : 0
+
+      const lineTax = calculateLineTax({
+        price: toNumber(item.Price),
+        quantity: toNumber(item.Qty),
+        discount: itemDiscount,
+        taxCode: taxCode,
+        taxInclusive: plRecord ? (plRecord.TaxInclusive === 'TRUE' || plRecord.TaxInclusive === true) : false,
+        discountTaxPolicy: policy
+      })
+
+      // Round individual fields to standard decimals (not interval)
+      const roundedTaxable = roundToDecimals(lineTax.taxableAmount, currencyCode)
+      const roundedTaxAmount = roundToDecimals(lineTax.taxAmount, currencyCode)
+      const roundedDiscount = roundToDecimals(lineTax.discountAmount, currencyCode)
+      const roundedTotal = roundToDecimals(lineTax.grossAmount, currencyCode)
+
+      totalTaxableAmount += roundedTaxable
+      totalTaxAmount += roundedTaxAmount
+
+      if (taxCode) {
+        if (!detailsMap[taxCode]) {
+          detailsMap[taxCode] = { TaxCode: taxCode, TaxableAmount: 0, TaxAmount: 0 }
+        }
+        detailsMap[taxCode].TaxableAmount += roundedTaxable
+        detailsMap[taxCode].TaxAmount += roundedTaxAmount
+      }
+
+      return {
+        SKU: item.SKU,
+        Qty: item.Qty,
+        Price: item.Price,
+        Total: roundedTotal,
+        Discount: roundedDiscount,
+        TaxableAmount: roundedTaxable,
+        TaxAmount: roundedTaxAmount,
+        TaxCode: taxCode
+      }
+    })
+
+    // Round the detailsMap entries
+    Object.keys(detailsMap).forEach(key => {
+      detailsMap[key].TaxableAmount = roundToDecimals(detailsMap[key].TaxableAmount, currencyCode)
+      detailsMap[key].TaxAmount = roundToDecimals(detailsMap[key].TaxAmount, currencyCode)
+    })
+
+    const taxDetails = JSON.stringify(Object.values(detailsMap))
+
+    return {
+      processedItems,
+      totalTaxableAmount: roundToDecimals(totalTaxableAmount, currencyCode),
+      totalTaxAmount: roundToDecimals(totalTaxAmount, currencyCode),
+      taxDetails,
+      headerDiscount: policy === 'PRE_TAX' ? 0 : roundToDecimals(disc, currencyCode)
+    }
+  }
+
+  function getInvoiceTotalRounded(inv = {}) {
+    const rawTotal = toNumber(inv?.Subtotal) - toNumber(inv?.Discount) - toNumber(inv?.ReturnDeductionTotal)
+    const plCode = inv?.PriceListCode || (inv?.OutletCode ? resolvePriceListCode(inv.OutletCode, rules.items.value, priceLists.items.value) : '')
+    const plRecord = priceLists.items.value.find(p => p.Code === plCode && p.Status === 'Active')
+    const { roundToInterval, defaultCurrencyCode } = useCurrency()
+    const currencyCode = plRecord ? plRecord.Currency : defaultCurrencyCode.value
+    return roundToInterval(rawTotal, currencyCode)
+  }
+
+  function getInvoiceRemainingRounded(inv = {}, paymentsList = []) {
+    const total = getInvoiceTotalRounded(inv)
+    const paid = paymentsList
+      .filter(p => active(p) && text(p.OutletConsumptionInvoiceCode) === text(inv?.Code) && text(p.Progress) !== 'CANCELLED')
+      .reduce((sum, p) => sum + toNumber(p.Amount), 0)
+    return Math.max(0, total - paid)
+  }
+
   const nav = useResourceNav()
   const { allowed } = useResourceConfig()
   const consumptions = useResourceData(ref('OutletConsumptions'))
@@ -78,7 +179,18 @@ export function useOutletConsumption() {
   const form = ref({ Date: todayISO(), Username: currentUserName(), Progress: 'PENDING_INVOICE_GENERATION', Status: 'Active', OutletVisitCode: '' })
   const stockRows = ref([])
   const restockRows = ref([])
-  const checklist = ref({ completeVisit: false, scheduleNextVisit: true, generateInvoice: true, placeRestock: false, submitRestock: false, applyReturnsToInvoice: true, restockSubmissionMode: 'PENDING_APPROVAL', restockWarehouseCode: localStorage.getItem('last_direct_restock_warehouse_code') || '' })
+  const checklist = ref({
+    completeVisit: false,
+    scheduleNextVisit: true,
+    generateInvoice: true,
+    placeRestock: false,
+    submitRestock: false,
+    applyReturnsToInvoice: true,
+    restockSubmissionMode: 'PENDING_APPROVAL',
+    restockWarehouseCode: localStorage.getItem('last_direct_restock_warehouse_code') || '',
+    discountType: 'FLAT',
+    discountValue: 0
+  })
 
   const returnMetadata = ref({})
 
@@ -365,10 +477,8 @@ export function useOutletConsumption() {
     appliedReturns.forEach(ret => {
       const sku = text(ret.SKU)
       const qty = toNumber(ret.Qty)
-      const price = resolveSkuPrice(sku, priceList, priceListLookup, priceListItems.items.value)
-      if (price !== null && price > 0) {
-        returnDeductionTotal += qty * price
-      }
+      const price = toNumber(ret.Price) || resolveSkuPrice(sku, priceList, priceListLookup, priceListItems.items.value) || 0
+      returnDeductionTotal += qty * price
 
       const isTrue = (val) => val === true || String(val).toUpperCase() === 'TRUE'
       const isWhCompleted = isTrue(ret.WarehouseActionCompleted) || !isTrue(ret.WarehouseActionRequired)
@@ -391,10 +501,8 @@ export function useOutletConsumption() {
     newlyCreatedReturns.forEach(ret => {
       const sku = text(ret.SKU)
       const qty = toNumber(ret.Qty)
-      const price = resolveSkuPrice(sku, priceList, priceListLookup, priceListItems.items.value)
-      if (price !== null && price > 0) {
-        returnDeductionTotal += qty * price
-      }
+      const price = toNumber(ret.Price) || resolveSkuPrice(sku, priceList, priceListLookup, priceListItems.items.value) || 0
+      returnDeductionTotal += qty * price
 
       const isTrue = (val) => val === true || String(val).toUpperCase() === 'TRUE'
       const isWhCompleted = isTrue(ret.WarehouseActionCompleted) || !isTrue(ret.WarehouseActionRequired)
@@ -456,12 +564,18 @@ export function useOutletConsumption() {
           const meta = returnMetadata.value[row.SKU] || {}
           const returnQty = toNumber(row.Qty)
 
+          const pricingListCode = resolvePriceListCode(form.value.OutletCode, rules.items.value, priceLists.items.value)
+          const priceList = priceLists.items.value.find(pl => active(pl) && text(pl.Code) === pricingListCode)
+          const priceListLookup = resolvePriceListLookup(authStore.appConfigMap)
+          const resolvedReturnPrice = resolveSkuPrice(row.SKU, priceList, priceListLookup, priceListItems.items.value) || 0
+
           const preparedRecord = {
             OutletCode: text(form.value.OutletCode),
             Date: text(form.value.Date) || todayISO(),
             Username: text(form.value.Username),
             SKU: text(row.SKU),
             Qty: returnQty,
+            Price: resolvedReturnPrice,
             Reason: text(meta.Reason || 'DAMAGE'),
             ReasonComment: text(meta.ReasonComment || ''),
             InvoiceAdjustmentRequired: meta.InvoiceAdjustmentRequired ? 'TRUE' : 'FALSE',
@@ -559,15 +673,30 @@ export function useOutletConsumption() {
       requests.push(buildConsumptionMovementRequest(consumptionRef, form.value.OutletCode, stockRows.value, form.value))
 
       if (checklist.value.generateInvoice && pricing) {
+        let discountVal = toNumber(checklist.value.discountValue)
+        let discountAmount = 0
+        if (checklist.value.discountType === 'PERCENT') {
+          discountAmount = pricing.subtotal * (discountVal / 100)
+        } else {
+          discountAmount = discountVal
+        }
+        discountAmount = Math.min(discountAmount, pricing.subtotal)
+
+        const taxBreakdown = computeInvoiceTaxBreakdown(pricing.items, pricing.priceListCode, discountAmount, form.value.OutletCode)
+        const invoiceSubtotal = taxBreakdown.processedItems.reduce((sum, item) => sum + toNumber(item.Total), 0)
         const invoiceRef = batchRef('OutletConsumptionInvoices.latest.code')
         requests.push(
           buildConsumptionInvoiceRequest(consumptionRef, form.value, {
             priceListCode: pricing.priceListCode,
-            subtotal: pricing.subtotal,
+            subtotal: invoiceSubtotal,
+            discount: taxBreakdown.headerDiscount,
+            totalTaxableAmount: taxBreakdown.totalTaxableAmount,
+            totalTaxAmount: taxBreakdown.totalTaxAmount,
+            taxDetails: taxBreakdown.taxDetails,
             returnDeductionTotal: returnsInfo.returnDeductionTotal,
             outletReturnCodes: returnsInfo.appliedCodes.join(', ')
           }),
-          buildConsumptionInvoiceItemsRequest(invoiceRef, pricing.items),
+          buildConsumptionInvoiceItemsRequest(invoiceRef, taxBreakdown.processedItems),
           buildInvoiceGeneratedRequest(consumptionRef, 'Invoice generated during consumption submit.')
         )
 
@@ -639,14 +768,20 @@ export function useOutletConsumption() {
       const comment = 'Invoice generated from pending outlet consumption.'
       const invoiceRef = batchRef('OutletConsumptionInvoices.latest.code')
 
+      const taxBreakdown = computeInvoiceTaxBreakdown(pricing.items, pricing.priceListCode, 0, record.OutletCode)
+      const invoiceSubtotal = taxBreakdown.processedItems.reduce((sum, item) => sum + toNumber(item.Total), 0)
       const batchRequests = [
         buildConsumptionInvoiceRequest(record.Code, { ...record, InvoiceComment: comment }, {
           priceListCode: pricing.priceListCode,
-          subtotal: pricing.subtotal,
+          subtotal: invoiceSubtotal,
+          discount: taxBreakdown.headerDiscount,
+          totalTaxableAmount: taxBreakdown.totalTaxableAmount,
+          totalTaxAmount: taxBreakdown.totalTaxAmount,
+          taxDetails: taxBreakdown.taxDetails,
           returnDeductionTotal: returnsInfo.returnDeductionTotal,
           outletReturnCodes: returnsInfo.appliedCodes.join(', ')
         }),
-        buildConsumptionInvoiceItemsRequest(invoiceRef, pricing.items),
+        buildConsumptionInvoiceItemsRequest(invoiceRef, taxBreakdown.processedItems),
         buildInvoiceGeneratedRequest(record.Code, comment)
       ]
 
@@ -733,23 +868,27 @@ export function useOutletConsumption() {
     }
     if (!consumptionCode) return { error: 'Consumption code required' }
     if (!items.length) return { error: 'No items to invoice' }
-    const subtotal = items.reduce((sum, item) => sum + (toNumber(item.Qty) * toNumber(item.Price)), 0)
+    
     saving.value = true
     try {
       const returnsInfo = prepareInvoiceReturns(consumptionRecord.OutletCode, [])
+      const taxBreakdown = computeInvoiceTaxBreakdown(items, priceListCode, discount, consumptionRecord.OutletCode)
+      const invoiceSubtotal = taxBreakdown.processedItems.reduce((sum, item) => sum + toNumber(item.Total), 0)
       const invoiceRef = batchRef('OutletConsumptionInvoices.latest.code')
       const comment = 'Invoice generated from outlet consumption.'
 
       const requests = [
         buildConsumptionInvoiceRequest(consumptionCode, { ...consumptionRecord, InvoiceComment: comment }, {
           priceListCode,
-          subtotal,
-          discount,
-          tax,
+          subtotal: invoiceSubtotal,
+          discount: taxBreakdown.headerDiscount,
+          totalTaxableAmount: taxBreakdown.totalTaxableAmount,
+          totalTaxAmount: taxBreakdown.totalTaxAmount,
+          taxDetails: taxBreakdown.taxDetails,
           returnDeductionTotal: returnsInfo.returnDeductionTotal,
           outletReturnCodes: returnsInfo.appliedCodes.join(', ')
         }),
-        buildConsumptionInvoiceItemsRequest(invoiceRef, items.map(item => ({ SKU: item.SKU, Qty: item.Qty, Price: item.Price }))),
+        buildConsumptionInvoiceItemsRequest(invoiceRef, taxBreakdown.processedItems),
         buildInvoiceGeneratedRequest(consumptionCode, comment)
       ]
 
@@ -771,18 +910,48 @@ export function useOutletConsumption() {
       return { error: 'Unauthorized' }
     }
     if (!invoiceCode) return { error: 'Invoice code required' }
+    
+    const invoiceRecord = invoices.items.value.find(inv => inv.Code === invoiceCode)
+    if (!invoiceRecord) return { error: 'Invoice not found in store' }
+
     saving.value = true
     try {
       const requests = []
+      const plCode = PriceListCode !== undefined ? PriceListCode : invoiceRecord.PriceListCode
+      const disc = Discount !== undefined ? toNumber(Discount) : toNumber(invoiceRecord.Discount)
+      
+      const taxBreakdown = computeInvoiceTaxBreakdown(items, plCode, disc, invoiceRecord.OutletCode)
+
       const updateData = {}
       if (PriceListCode !== undefined) updateData.PriceListCode = PriceListCode
-      if (Discount !== undefined) updateData.Discount = toNumber(Discount)
-      if (Tax !== undefined) updateData.Tax = toNumber(Tax)
+      if (Discount !== undefined) updateData.Discount = taxBreakdown.headerDiscount
       if (ReturnDeductionTotal !== undefined) updateData.ReturnDeductionTotal = toNumber(ReturnDeductionTotal)
-      if (Object.keys(updateData).length) requests.push(resourceUpdateRequest('OutletConsumptionInvoices', invoiceCode, updateData))
-      for (const item of items) {
-        if (item.Code && item.Price !== undefined) requests.push(resourceUpdateRequest('OutletConsumptionInvoiceItems', item.Code, { Price: toNumber(item.Price) }))
+      
+      updateData.Subtotal = taxBreakdown.processedItems.reduce((sum, item) => sum + toNumber(item.Total), 0)
+      updateData.TotalTaxableAmount = taxBreakdown.totalTaxableAmount
+      updateData.TotalTaxAmount = taxBreakdown.totalTaxAmount
+      updateData.TaxDetails = taxBreakdown.taxDetails
+
+      if (Object.keys(updateData).length) {
+        requests.push(resourceUpdateRequest('OutletConsumptionInvoices', invoiceCode, updateData))
       }
+
+      for (const item of taxBreakdown.processedItems) {
+        const existingItem = consumptionInvoiceItems.items.value.find(row => row.OutletConsumptionInvoiceCode === invoiceCode && row.SKU === item.SKU && active(row))
+        const itemCode = item.Code || existingItem?.Code
+        if (itemCode) {
+          requests.push(resourceUpdateRequest('OutletConsumptionInvoiceItems', itemCode, {
+            Price: toNumber(item.Price),
+            Qty: toNumber(item.Qty),
+            Total: toNumber(item.Total),
+            Discount: toNumber(item.Discount),
+            TaxableAmount: toNumber(item.TaxableAmount),
+            TaxAmount: toNumber(item.TaxAmount),
+            TaxCode: item.TaxCode
+          }))
+        }
+      }
+
       if (!requests.length) return { success: true }
       const result = await resourceIoStore.runBatchRequests(requests)
       if (responseFailed(result)) return { error: failureMessage(result, 'Failed to update invoice.') }
@@ -809,6 +978,6 @@ export function useOutletConsumption() {
 
   return {
     loading, saving, acting, searchTerm, activeGroupKey, activeInvoiceGroupKey, form, checklist, stockRows, restockRows, groups, invoiceGroups, items, invoiceItems, outletOptions, visitOptions, allPlannedVisits, plannedVisits, plannedVisitDiagnostics, skuOptions, selectedVisit, soldRows, varianceRows, pendingInvoiceItems, pendingPaymentInvoices, partiallyPaidInvoices, paidInvoices, cancelledInvoices, invoiceGeneratedItems, historyItems, canCreate, consumptionPermissions, invoicePermissions, restockPermissions, canReadInvoice, canReadRestock, reload, onOutletChange, selectVisit, updateCurrentQty, incrementCurrent, decrementCurrent, setCurrentToZero, setCurrentToSystem, updateRestockRow, addRestockRow, removeRestockRow, saveConsumption, generateInvoiceForConsumption, cancelConsumption, getConsumption, getInvoice, childItems, childInvoiceItems, childInvoice, childRestocks, cancelableRestocks, consumptionItemRows, invoiceLineItems, consumedTotal, getProgressMeta, isGroupExpanded, toggleGroup, isInvoiceGroupExpanded, toggleInvoiceGroup, outletName, skuName, productDisplayName, visitLabel, formatDisplayDate, navigateTo, navigateToAdd, navigateToInvoice, navigateToInvoiceAdd, navigateToRestock, navigateToConsumption, saveInvoiceFromConsumption, updateInvoice, resolveDefaultPriceList, resolvePriceListItems, cancel, text, todayISO, active, priceLists, rules,
-    returnRows, returnMetadata, warehouseOptions, canCreateReturn, addManualReturnSku, updateReturnMetadata, removeManualReturnRow, getInvoiceTotal, getInvoiceRemaining, returns, canDirectRestock, allowed
+    returnRows, returnMetadata, warehouseOptions, canCreateReturn, addManualReturnSku, updateReturnMetadata, removeManualReturnRow, getInvoiceTotal: getInvoiceTotalRounded, getInvoiceRemaining: getInvoiceRemainingRounded, returns, canDirectRestock, allowed
   }
 }

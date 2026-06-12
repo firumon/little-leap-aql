@@ -9,6 +9,7 @@ import { active, formatDate, progressMeta, sortTime, text, todayISO } from './ou
 import { toNumber } from './outletStockLogic.js'
 import { batchRef } from '../../batchRefs.js'
 import { executeActionRequest, responseFailed, failureMessage } from './outletOperationsBatch.js'
+import { resolvePriceListCode, resolvePriceListLookup, resolveSkuPrice } from './outletConsumptionPricing.js'
 
 const isTrue = (val) => val === true || String(val).toUpperCase() === 'TRUE'
 
@@ -32,6 +33,9 @@ export function useOutletReturns() {
   const products = useResourceData(ref('Products'))
   const warehouses = useResourceData(ref('Warehouses'))
   const warehouseStorages = useResourceData(ref('WarehouseStorages'))
+  const priceLists = useResourceData(ref('PriceList'))
+  const priceListItems = useResourceData(ref('PriceListItems'))
+  const rules = useResourceData(ref('OutletOperatingRules'))
 
   const loading = ref(false)
   const saving = ref(false)
@@ -145,7 +149,7 @@ export function useOutletReturns() {
   async function reload(forceSync = false) {
     loading.value = true
     try {
-      await resourceIoStore.fetchResources(['OutletReturns', 'Outlets', 'SKUs', 'Products', 'Warehouses', 'WarehouseStorages'], { forceSync })
+      await resourceIoStore.fetchResources(['OutletReturns', 'Outlets', 'SKUs', 'Products', 'Warehouses', 'WarehouseStorages', 'PriceList', 'PriceListItems', 'OutletOperatingRules'], { forceSync })
       if (!form.value.OutletCode && outletOptions.value[0]) {
         form.value.OutletCode = outletOptions.value[0].value
       }
@@ -191,9 +195,16 @@ export function useOutletReturns() {
         form.value.Progress = 'SUBMITTED'
       }
 
+      // Resolve unit price from current price list
+      const pricingListCode = resolvePriceListCode(form.value.OutletCode, rules.items.value, priceLists.items.value)
+      const priceList = priceLists.items.value.find(pl => active(pl) && text(pl.Code) === pricingListCode)
+      const priceListLookup = resolvePriceListLookup(authStore.appConfigMap)
+      const resolvedPrice = resolveSkuPrice(form.value.SKU, priceList, priceListLookup, priceListItems.items.value) || 0
+
       // Prepare record with capital TRUE/FALSE strings for backend
       const preparedRecord = {
         ...form.value,
+        Price: resolvedPrice,
         InvoiceAdjustmentRequired: form.value.InvoiceAdjustmentRequired ? 'TRUE' : 'FALSE',
         InvoiceAdjustmentDone: form.value.InvoiceAdjustmentDone ? 'TRUE' : 'FALSE',
         WarehouseActionRequired: form.value.WarehouseActionRequired ? 'TRUE' : 'FALSE',

@@ -100,6 +100,42 @@
       </q-item>
     </q-list>
 
+    <!-- Discount Options (Conditional on generateInvoice) -->
+    <q-card v-if="checklist.generateInvoice" flat bordered class="q-pa-md q-mb-md bg-grey-1 rounded-borders">
+      <div class="text-subtitle2 q-mb-sm text-weight-bold text-primary">Invoice Discount</div>
+      <div class="row q-col-gutter-sm items-center">
+        <div class="col-6">
+          <q-select
+            :model-value="checklist.discountType || 'FLAT'"
+            :options="[
+              { label: 'Flat Amount', value: 'FLAT' },
+              { label: 'Percentage (%)', value: 'PERCENT' }
+            ]"
+            emit-value
+            map-options
+            outlined
+            dense
+            options-dense
+            class="bg-white"
+            label="Discount Type"
+            @update:model-value="$emit('update-checklist', { discountType: $event })"
+          />
+        </div>
+        <div class="col-6">
+          <q-input
+            :model-value="checklist.discountValue"
+            type="number"
+            outlined
+            dense
+            label="Discount Value"
+            class="bg-white"
+            :min="0"
+            @update:model-value="$emit('update-checklist', { discountValue: Number($event || 0) })"
+          />
+        </div>
+      </div>
+    </q-card>
+
     <!-- Restock Options Panel (Conditional on placeRestock toggle) -->
     <q-card v-if="checklist.placeRestock && canDirectRestock" flat bordered class="q-pa-md q-mb-md bg-grey-1 rounded-borders">
       <div class="text-subtitle2 q-mb-sm text-weight-bold text-primary">Restock Options</div>

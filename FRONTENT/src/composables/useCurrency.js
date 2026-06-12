@@ -35,6 +35,7 @@ export function useCurrency() {
       Code: code,
       Symbol: code,
       Decimals: 2,
+      RoundingInterval: 0.01,
       ConversionFactor: 1
     }
   })
@@ -44,6 +45,31 @@ export function useCurrency() {
     return !!dataStore.loadingByResource.Currencies
   })
 
+  // Rounds a numeric value to the currency's standard decimals
+  function roundToDecimals(value, currencyCode) {
+    const code = String(currencyCode || defaultCurrencyCode.value).trim()
+    const cur = currencies.value.find(c => String(c.Code).trim().toUpperCase() === code.toUpperCase())
+    const decimals = cur && cur.Decimals !== undefined ? Number(cur.Decimals) : 2
+    const val = Number(value) || 0
+    return parseFloat(val.toFixed(decimals))
+  }
+
+  // Rounds a numeric value to the currency's RoundingInterval
+  function roundToInterval(value, currencyCode) {
+    const code = String(currencyCode || defaultCurrencyCode.value).trim()
+    const cur = currencies.value.find(c => String(c.Code).trim().toUpperCase() === code.toUpperCase())
+    const decimals = cur && cur.Decimals !== undefined ? Number(cur.Decimals) : 2
+    let interval = cur && cur.RoundingInterval !== undefined && Number(cur.RoundingInterval) > 0 ? Number(cur.RoundingInterval) : null
+    
+    if (interval === null || interval <= 0) {
+      interval = 1 / Math.pow(10, decimals)
+    }
+
+    const val = Number(value) || 0
+    const rounded = Math.round(val / interval) * interval
+    return parseFloat(rounded.toFixed(decimals + 2))
+  }
+
   // Format currency dynamically based on Code definitions
   function formatCurrency(amount, currencyCode) {
     const code = String(currencyCode || defaultCurrencyCode.value).trim()
@@ -51,9 +77,9 @@ export function useCurrency() {
     
     const symbol = cur?.Symbol || code
     const decimals = cur && cur.Decimals !== undefined ? Number(cur.Decimals) : 2
-    const val = Number(amount) || 0
+    const roundedValue = roundToDecimals(amount, code)
 
-    return `${symbol} ${val.toLocaleString(undefined, {
+    return `${symbol} ${Number(roundedValue).toLocaleString(undefined, {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals
     })}`
@@ -97,12 +123,15 @@ export function useCurrency() {
     // Perform conversion only if source differs from target
     const convertedValue = convertCurrency(value, src, code)
 
+    // Round the value based on target currency's standard decimals
+    const roundedValue = roundToDecimals(convertedValue, code)
+
     // Format output
     const cur = currencies.value.find(c => String(c.Code).trim().toUpperCase() === code.toUpperCase())
     const symbol = cur?.Symbol || code
     const decimals = cur && cur.Decimals !== undefined ? Number(cur.Decimals) : 2
 
-    const formatted = Number(convertedValue).toLocaleString(undefined, {
+    const formatted = Number(roundedValue).toLocaleString(undefined, {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals
     })
@@ -122,6 +151,8 @@ export function useCurrency() {
     loading,
     formatCurrency,
     convertCurrency,
+    roundToInterval,
+    roundToDecimals,
     _C
   }
 }

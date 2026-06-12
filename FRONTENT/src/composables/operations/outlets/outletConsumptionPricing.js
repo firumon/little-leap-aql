@@ -94,7 +94,7 @@ export function resolveInvoicePricing({ outletCode, rules = [], priceLists = [],
  * Net Total = Subtotal - Discount + Tax - ReturnDeductionTotal
  */
 export function getInvoiceTotal(inv = {}) {
-  return toNumber(inv?.Subtotal) - toNumber(inv?.Discount) + toNumber(inv?.Tax) - toNumber(inv?.ReturnDeductionTotal)
+  return toNumber(inv?.Subtotal) - toNumber(inv?.Discount) - toNumber(inv?.ReturnDeductionTotal)
 }
 
 /**

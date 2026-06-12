@@ -93,28 +93,58 @@
             </div>
             
             <!-- Rows -->
-            <div v-for="(item, i) in editLineItems" :key="item.SKU">
+            <div v-for="(item, i) in realtimeLineItems" :key="item.SKU">
               <q-separator v-if="i > 0" class="q-my-xs" />
               <div class="row q-py-sm q-col-gutter-md items-center" :class="{ 'bg-grey-1': i % 2 }">
                 <div class="col">
                   <div class="text-body2 text-weight-medium">{{ item.displayLabel }}</div>
-                  <div class="text-caption text-grey-6">{{ item.SKU }}</div>
+                  <div class="text-caption text-grey-6">
+                    SKU: {{ item.SKU }}
+                    <span v-if="item.TaxCode"> · Tax Code: {{ item.TaxCode }}</span>
+                  </div>
+                  <div class="text-caption text-grey-7 row items-center q-gutter-x-sm q-mt-xs">
+                    <span>Taxable: <span class="text-weight-bold">{{ _C(item.TaxableAmount, true) }}</span></span>
+                    <span>·</span>
+                    <span>Tax: <span class="text-weight-bold">{{ _C(item.TaxAmount, true) }}</span></span>
+                    <span v-if="item.Discount > 0">·</span>
+                    <span v-if="item.Discount > 0">Disc: <span class="text-weight-bold text-negative">-{{ _C(item.Discount, true) }}</span></span>
+                  </div>
                 </div>
                 <div class="col-2 text-right text-body2 text-weight-bold">{{ item.Qty }}</div>
                 <div class="col-3 text-right text-body2">{{ _C(item.Price, true) }}</div>
-                <div class="col-3 text-right text-body2 text-weight-bold text-primary">{{ _C(item.Qty * item.Price, true) }}</div>
+                <div class="col-3 text-right text-body2 text-weight-bold text-primary">{{ _C(item.Total, true) }}</div>
               </div>
             </div>
           </q-card-section>
           
           <q-list separator v-else class="q-pa-sm">
-            <q-item v-for="item in editLineItems" :key="item.SKU" class="q-py-md">
+            <q-item v-for="item in realtimeLineItems" :key="item.SKU" class="q-py-md">
               <q-item-section>
                 <q-item-label class="text-weight-bold">{{ item.displayLabel }}</q-item-label>
-                <q-item-label caption>SKU: {{ item.SKU }} · Counted: {{ item.Qty }}</q-item-label>
+                <q-item-label caption>
+                  SKU: {{ item.SKU }} · Counted: {{ item.Qty }}
+                  <span v-if="item.TaxCode"> · Tax Code: {{ item.TaxCode }}</span>
+                </q-item-label>
+                <div class="text-caption text-grey-7 row items-center q-gutter-x-sm q-mt-xs">
+                  <span>Taxable: <span class="text-weight-bold">{{ _C(item.TaxableAmount, true) }}</span></span>
+                  <span>·</span>
+                  <span>Tax: <span class="text-weight-bold">{{ _C(item.TaxAmount, true) }}</span></span>
+                  <span v-if="item.Discount > 0">·</span>
+                  <span v-if="item.Discount > 0">Disc: <span class="text-weight-bold text-negative">-{{ _C(item.Discount, true) }}</span></span>
+                  <span>·</span>
+                  <span class="text-primary text-weight-bold">Total: {{ _C(item.Total, true) }}</span>
+                </div>
               </q-item-section>
               <q-item-section side>
-                <q-input v-model.number="item.Price" dense outlined type="number" :prefix="defaultCurrency.Symbol" label="Adjusted Price" style="width: 140px" />
+                <q-input
+                  v-model.number="editLineItems.find(el => el.SKU === item.SKU).Price"
+                  dense
+                  outlined
+                  type="number"
+                  :prefix="defaultCurrency.Symbol"
+                  label="Adjusted Price"
+                  style="width: 140px"
+                />
               </q-item-section>
             </q-item>
           </q-list>
@@ -188,23 +218,62 @@
         <q-card flat bordered class="rounded-borders shadow-2">
           <q-card-section class="q-pa-md">
             <div class="row q-col-gutter-md items-center">
-              <div class="col-6 col-sm-3">
+              <div class="col-6 col-sm-2">
                 <div class="text-caption text-grey-6">Subtotal</div>
                 <div class="text-subtitle1 text-weight-bold text-grey-9 q-mt-xs">{{ _C(realtimeSubtotal || 0, true) }}</div>
               </div>
-              <div class="col-6 col-sm-3">
+              <div class="col-6 col-sm-2">
+                <div class="text-caption text-grey-6">Total Taxable Amount</div>
+                <div class="text-subtitle1 text-weight-bold text-grey-7 q-mt-xs">{{ _C(realtimeTaxDetailsComputed.totalTaxableAmount || 0, true) }}</div>
+              </div>
+              <div class="col-12 col-sm-4" v-if="editing">
+                <div class="text-caption text-grey-6 q-mb-xs">Discount Options</div>
+                <div class="row q-col-gutter-xs">
+                  <div class="col-6">
+                    <q-select
+                      v-model="editForm.discountType"
+                      :options="[
+                        { label: 'Flat Amount', value: 'FLAT' },
+                        { label: 'Percentage (%)', value: 'PERCENT' }
+                      ]"
+                      emit-value
+                      map-options
+                      dense
+                      outlined
+                    />
+                  </div>
+                  <div class="col-6">
+                    <q-input
+                      v-model.number="editForm.discountValue"
+                      dense
+                      outlined
+                      type="number"
+                      label="Value"
+                      :min="0"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div class="col-6 col-sm-2" v-else>
                 <div class="text-caption text-grey-6">Discount</div>
-                <div v-if="!editing" class="text-subtitle1 text-weight-bold text-grey-7 q-mt-xs">-{{ _C(realtimeDiscount || 0, true) }}</div>
-                <q-input v-else v-model.number="editForm.discount" dense outlined type="number" :prefix="defaultCurrency.Symbol" label="Discount" />
+                <div class="text-subtitle1 text-weight-bold text-grey-7 q-mt-xs">-{{ _C(realtimeHeaderDiscount || 0, true) }}</div>
               </div>
-              <div class="col-6 col-sm-3">
-                <div class="text-caption text-grey-6">Tax</div>
-                <div v-if="!editing" class="text-subtitle1 text-weight-bold text-grey-7 q-mt-xs">+{{ _C(realtimeTax || 0, true) }}</div>
-                <q-input v-else v-model.number="editForm.tax" dense outlined type="number" :prefix="defaultCurrency.Symbol" label="Tax" />
+              <div class="col-6 col-sm-2">
+                <div class="text-caption text-grey-6">Tax (Computed)</div>
+                <div class="text-subtitle1 text-weight-bold text-grey-7 q-mt-xs">+{{ _C(realtimeTax || 0, true) }}</div>
               </div>
-              <div class="col-6 col-sm-3">
+              <div class="col-6 col-sm-2">
                 <div class="text-caption text-grey-6 text-negative">Returns Deducted</div>
                 <div class="text-subtitle1 text-weight-bold text-negative q-mt-xs">-{{ _C(realtimeReturnDeductionTotal || 0, true) }}</div>
+              </div>
+            </div>
+            
+            <q-separator v-if="realtimeTaxDetailsComputed.taxDetails && realtimeTaxDetailsComputed.taxDetails.length" class="q-my-sm" />
+            <div v-if="realtimeTaxDetailsComputed.taxDetails && realtimeTaxDetailsComputed.taxDetails.length" class="q-py-xs">
+              <div class="text-caption text-grey-5 text-weight-bold q-mb-xs">Tax Details Breakdown</div>
+              <div v-for="td in realtimeTaxDetailsComputed.taxDetails" :key="td.TaxCode" class="row justify-between text-caption text-grey-7 q-py-xs">
+                <span>Tax Code: <span class="text-weight-bold text-grey-8">{{ td.TaxCode }}</span></span>
+                <span>Taxable: {{ _C(td.TaxableAmount, true) }} | Tax Amount: {{ _C(td.TaxAmount, true) }}</span>
               </div>
             </div>
             
@@ -257,14 +326,18 @@ import { useCurrency } from '../../../composables/useCurrency.js'
 import OutletHeaderPanel from '../../../components/shared/OutletHeaderPanel.vue'
 import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'
 import ResourceActionButton from '../../../components/shared/ResourceActionButton.vue'
+import { useDataStore } from '../../../stores/data.js'
+import { useTaxCalculator } from '../../../composables/useTaxCalculator.js'
 
 defineOptions({ name: 'OutletConsumptionInvoicesViewPage' })
+const dataStore = useDataStore()
+const { calculateLineTax } = useTaxCalculator()
 
 const $q = useQuasar()
 const route = useRoute()
 const nav = useResourceNav()
 const flow = useOutletConsumption()
-const { _C, defaultCurrency } = useCurrency()
+const { _C, defaultCurrency, roundToInterval, roundToDecimals, defaultCurrencyCode } = useCurrency()
 
 const {
   loading,
@@ -287,7 +360,7 @@ const {
 
 const invoice = computed(() => getInvoice(route.params.code))
 const editing = ref(false)
-const editForm = ref({ priceListCode: '', discount: 0, tax: 0 })
+const editForm = ref({ priceListCode: '', discountType: 'FLAT', discountValue: 0, tax: 0 })
 const editLineItems = ref([])
 const editReturns = ref([])
 
@@ -300,36 +373,167 @@ const plName = computed(() => {
 })
 
 // Real-time calculations adhering to single source of truth reactivity
-const realtimeSubtotal = computed(() => {
-  if (!editing.value) {
-    return parseFloat(invoice.value?.Subtotal) || 0
-  }
-  return editLineItems.value.reduce((sum, item) => sum + (parseFloat(item.Qty || 0) * (parseFloat(item.Price) || 0)), 0)
+const realtimeRawSubtotal = computed(() => {
+  return editLineItems.value.reduce((sum, item) => sum + (parseFloat(item.Qty || 0) * (parseFloat(item.Price || 0))), 0)
 })
 
 const realtimeDiscount = computed(() => {
   if (!editing.value) {
     return parseFloat(invoice.value?.Discount) || 0
   }
-  return parseFloat(editForm.value.discount) || 0
+  const discVal = parseFloat(editForm.value.discountValue) || 0
+  if (editForm.value.discountType === 'PERCENT') {
+    return realtimeRawSubtotal.value * (discVal / 100)
+  }
+  return discVal
 })
 
-const realtimeTax = computed(() => {
+const realtimeTaxDetailsComputed = computed(() => {
   if (!editing.value) {
-    return parseFloat(invoice.value?.Tax) || 0
+    return {
+      totalTaxableAmount: parseFloat(invoice.value?.TotalTaxableAmount) || 0,
+      totalTaxAmount: parseFloat(invoice.value?.TotalTaxAmount) || 0,
+      taxDetails: invoice.value?.TaxDetails ? JSON.parse(invoice.value.TaxDetails) : []
+    }
   }
-  return parseFloat(editForm.value.tax) || 0
+
+  const plCode = editForm.value.priceListCode
+  const plRecord = priceLists.items.value.find(p => p.Code === plCode && p.Status === 'Active')
+  const skus = dataStore.getRecords('SKUs') || []
+  
+  const sub = realtimeRawSubtotal.value
+  const disc = realtimeDiscount.value
+  const currencyCode = plRecord ? plRecord.Currency : defaultCurrencyCode.value
+
+  let totalTaxableAmount = 0
+  let totalTaxAmount = 0
+  const detailsMap = {}
+
+  editLineItems.value.forEach(item => {
+    const skuRecord = skus.find(s => s.Code === item.SKU && s.Status === 'Active')
+    const taxCode = skuRecord ? skuRecord.TaxCode : ''
+    const itemSubtotal = parseFloat(item.Qty || 0) * (parseFloat(item.Price) || 0)
+    const itemDiscount = plRecord && plRecord.DiscountTaxPolicy === 'PRE_TAX' && sub > 0 ? (itemSubtotal / sub) * disc : 0
+
+    const lineTax = calculateLineTax({
+      price: parseFloat(item.Price) || 0,
+      quantity: parseFloat(item.Qty) || 0,
+      discount: itemDiscount,
+      taxCode: taxCode,
+      taxInclusive: plRecord ? (plRecord.TaxInclusive === 'TRUE' || plRecord.TaxInclusive === true) : false,
+      discountTaxPolicy: plRecord ? (plRecord.DiscountTaxPolicy || 'PRE_TAX') : 'PRE_TAX'
+    })
+
+    const roundedTaxable = roundToDecimals(lineTax.taxableAmount, currencyCode)
+    const roundedTaxAmount = roundToDecimals(lineTax.taxAmount, currencyCode)
+
+    totalTaxableAmount += roundedTaxable
+    totalTaxAmount += roundedTaxAmount
+
+    if (taxCode) {
+      if (!detailsMap[taxCode]) {
+        detailsMap[taxCode] = { TaxCode: taxCode, TaxableAmount: 0, TaxAmount: 0 }
+      }
+      detailsMap[taxCode].TaxableAmount += roundedTaxable
+      detailsMap[taxCode].TaxAmount += roundedTaxAmount
+    }
+  })
+
+  // Round the detailsMap entries
+  Object.keys(detailsMap).forEach(key => {
+    detailsMap[key].TaxableAmount = roundToDecimals(detailsMap[key].TaxableAmount, currencyCode)
+    detailsMap[key].TaxAmount = roundToDecimals(detailsMap[key].TaxAmount, currencyCode)
+  })
+
+  return {
+    totalTaxableAmount: roundToDecimals(totalTaxableAmount, currencyCode),
+    totalTaxAmount: roundToDecimals(totalTaxAmount, currencyCode),
+    taxDetails: Object.values(detailsMap)
+  }
 })
+
+const realtimeTax = computed(() => realtimeTaxDetailsComputed.value.totalTaxAmount)
 
 const realtimeReturnDeductionTotal = computed(() => {
   if (!editing.value) {
     return parseFloat(invoice.value?.ReturnDeductionTotal) || 0
   }
-  return editReturns.value.reduce((sum, item) => sum + (parseFloat(item.Qty || 0) * (parseFloat(item.Price) || 0)), 0)
+  return editReturns.value.reduce((sum, item) => sum + (parseFloat(item.Qty || 0) * (parseFloat(item.Price || 0))), 0)
+})
+
+const realtimeLineItems = computed(() => {
+  if (!editing.value) {
+    return editLineItems.value.map(item => {
+      const dbRecord = childInvoiceItems(invoice.value?.Code).find(row => row.Code === item.Code)
+      return {
+        ...item,
+        Total: dbRecord?.Total || (item.Qty * item.Price),
+        Discount: dbRecord?.Discount || 0,
+        TaxableAmount: dbRecord?.TaxableAmount || (item.Qty * item.Price),
+        TaxAmount: dbRecord?.TaxAmount || 0,
+        TaxCode: dbRecord?.TaxCode || ''
+      }
+    })
+  }
+
+  const plCode = editForm.value.priceListCode
+  const plRecord = priceLists.items.value.find(p => p.Code === plCode && p.Status === 'Active')
+  const skus = dataStore.getRecords('SKUs') || []
+  
+  const sub = realtimeRawSubtotal.value
+  const disc = realtimeDiscount.value
+  const currencyCode = plRecord ? plRecord.Currency : defaultCurrencyCode.value
+
+  return editLineItems.value.map(item => {
+    const skuRecord = skus.find(s => s.Code === item.SKU && s.Status === 'Active')
+    const taxCode = skuRecord ? skuRecord.TaxCode : ''
+    const itemSubtotal = parseFloat(item.Qty || 0) * (parseFloat(item.Price) || 0)
+    const itemDiscount = plRecord && plRecord.DiscountTaxPolicy === 'PRE_TAX' && sub > 0 ? (itemSubtotal / sub) * disc : 0
+
+    const lineTax = calculateLineTax({
+      price: parseFloat(item.Price) || 0,
+      quantity: parseFloat(item.Qty) || 0,
+      discount: itemDiscount,
+      taxCode: taxCode,
+      taxInclusive: plRecord ? (plRecord.TaxInclusive === 'TRUE' || plRecord.TaxInclusive === true) : false,
+      discountTaxPolicy: plRecord ? (plRecord.DiscountTaxPolicy || 'PRE_TAX') : 'PRE_TAX'
+    })
+
+    return {
+      ...item,
+      Total: roundToDecimals(lineTax.grossAmount, currencyCode),
+      Discount: roundToDecimals(lineTax.discountAmount, currencyCode),
+      TaxableAmount: roundToDecimals(lineTax.taxableAmount, currencyCode),
+      TaxAmount: roundToDecimals(lineTax.taxAmount, currencyCode),
+      TaxCode: taxCode
+    }
+  })
+})
+
+const realtimeSubtotal = computed(() => {
+  if (!editing.value) {
+    return parseFloat(invoice.value?.Subtotal) || 0
+  }
+  return realtimeLineItems.value.reduce((sum, item) => sum + (parseFloat(item.Total) || 0), 0)
+})
+
+const realtimeHeaderDiscount = computed(() => {
+  if (!editing.value) {
+    return parseFloat(invoice.value?.Discount) || 0
+  }
+  const plCode = editForm.value.priceListCode
+  const plRecord = priceLists.items.value.find(p => p.Code === plCode && p.Status === 'Active')
+  const policy = plRecord ? (plRecord.DiscountTaxPolicy || 'PRE_TAX') : 'PRE_TAX'
+  const currencyCode = plRecord ? plRecord.Currency : defaultCurrencyCode.value
+  return policy === 'PRE_TAX' ? 0 : roundToDecimals(realtimeDiscount.value, currencyCode)
 })
 
 const realtimeTotal = computed(() => {
-  return realtimeSubtotal.value - realtimeDiscount.value + realtimeTax.value - realtimeReturnDeductionTotal.value
+  return getInvoiceTotal({
+    Subtotal: realtimeSubtotal.value,
+    Discount: realtimeHeaderDiscount.value,
+    ReturnDeductionTotal: realtimeReturnDeductionTotal.value
+  })
 })
 
 const canEdit = computed(() => {
@@ -352,8 +556,9 @@ function loadLineItems() {
   if (!invoice.value) return
   editForm.value = {
     priceListCode: invoice.value.PriceListCode || '',
-    discount: invoice.value.Discount || 0,
-    tax: invoice.value.Tax || 0
+    discountType: 'FLAT',
+    discountValue: invoice.value.Discount || 0,
+    tax: invoice.value.TotalTaxAmount || 0
   }
   editLineItems.value = childInvoiceItems(invoice.value.Code).map(row => ({
     Code: row.Code,
@@ -415,7 +620,7 @@ function cancelEdit() {
 async function saveEdit() {
   const result = await updateInvoice(invoice.value.Code, {
     PriceListCode: editForm.value.priceListCode,
-    Discount: editForm.value.discount,
+    Discount: realtimeDiscount.value,
     Tax: editForm.value.tax,
     ReturnDeductionTotal: realtimeReturnDeductionTotal.value,
     items: editLineItems.value

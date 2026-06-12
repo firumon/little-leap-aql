@@ -43,7 +43,7 @@ export function buildConsumptionMovementRequest(consumptionCode, outletCode, row
   })), ['OutletStorages'])
 }
 
-export function buildConsumptionInvoiceRequest(consumptionCode, form = {}, { priceListCode = '', subtotal = 0, discount = 0, tax = 0, returnDeductionTotal = 0, outletReturnCodes = '' } = {}) {
+export function buildConsumptionInvoiceRequest(consumptionCode, form = {}, { priceListCode = '', subtotal = 0, discount = 0, totalTaxableAmount = 0, totalTaxAmount = 0, taxDetails = '[]', returnDeductionTotal = 0, outletReturnCodes = '' } = {}) {
   return resourceCreateRequest('OutletConsumptionInvoices', {
     OutletConsumptionCode: textOrRef(consumptionCode),
     Date: text(form.Date) || todayISO(),
@@ -52,7 +52,9 @@ export function buildConsumptionInvoiceRequest(consumptionCode, form = {}, { pri
     PriceListCode: text(priceListCode),
     Subtotal: toNumber(subtotal),
     Discount: toNumber(discount),
-    Tax: toNumber(tax),
+    TotalTaxableAmount: toNumber(totalTaxableAmount),
+    TotalTaxAmount: toNumber(totalTaxAmount),
+    TaxDetails: text(taxDetails),
     ReturnDeductionTotal: toNumber(returnDeductionTotal),
     OutletReturnCodes: text(outletReturnCodes),
     Progress: 'PENDING_PAYMENT',
@@ -67,6 +69,11 @@ export function buildConsumptionInvoiceItemsRequest(invoiceCodeOrRef, items = []
     SKU: text(row.SKU),
     Qty: toNumber(row.Qty),
     Price: toNumber(row.Price),
+    Total: toNumber(row.Total),
+    Discount: toNumber(row.Discount),
+    TaxableAmount: toNumber(row.TaxableAmount),
+    TaxAmount: toNumber(row.TaxAmount),
+    TaxCode: text(row.TaxCode),
     Status: 'Active'
   })))
 }

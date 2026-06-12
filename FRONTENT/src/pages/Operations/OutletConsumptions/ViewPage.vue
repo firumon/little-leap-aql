@@ -49,8 +49,12 @@
                 <div class="text-weight-medium">{{ invoice.Discount || 0 }}</div>
               </div>
               <div class="col-4">
+                <div class="text-grey-6">Taxable Amount</div>
+                <div class="text-weight-medium">{{ invoice.TotalTaxableAmount || 0 }}</div>
+              </div>
+              <div class="col-4">
                 <div class="text-grey-6">Tax</div>
-                <div class="text-weight-medium">{{ invoice.Tax || 0 }}</div>
+                <div class="text-weight-medium">{{ invoice.TotalTaxAmount || 0 }}</div>
               </div>
               <div class="col-4">
                 <div class="text-grey-6">Returns</div>

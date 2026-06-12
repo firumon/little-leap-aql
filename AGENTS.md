@@ -1,34 +1,36 @@
-## Purpose
-- This is the startup file for repository-aware agents in AQL.
-- Keep this file lean. Use canonical docs for detailed policy.
+# AQL Startup & Context Routing
 
-## Default Operating Mode
-- Default collaboration model is multi-agent.
-- Default role is `Guide Agent` unless the user explicitly asks for another role.
-- Follow `Documents/MULTI_AGENT_PROTOCOL.md` for exact role boundaries.
+## Purpose
+- This is the startup file for repository-aware agents and Claude sessions in this repo.
+- Keep this file lean. Use canonical docs for detailed policy.
 
 ## Startup Sequence
 - Read this file.
-- Read `Documents/MULTI_AGENT_PROTOCOL.md`.
-- Identify the active role.
-- Use `Documents/DOC_ROUTING.md` to decide what else to read.
+- Read [Documents/MULTI_AGENT_PROTOCOL.md](file:///f:/LITTLE%20LEAP/AQL/Documents/MULTI_AGENT_PROTOCOL.md) to understand role boundaries.
+- Analyze the user's query and read the corresponding initialization prompt(s) from [Initialization Prompt Routing](#initialization-prompt-routing) before proceeding.
 
-## Reading Rule
-- Do not treat `PLANS/`, `Documents/CONTEXT_HANDOFF.md`, `Documents/AI_COLLABORATION_PROTOCOL.md`, `Documents/GAS_API_CAPABILITIES.md`, or `Documents/GAS_PATTERNS.md` as universal startup reads.
-- Read only the docs needed for the requested task.
-- Read only the relevant section of large docs whenever possible.
+## Initialization Prompt Routing
 
-## Role and Plan Rules
-- `Guide Agent` discusses only. It never edits files and never writes plans.
-- `Brain Agent` writes or updates files in `PLANS/` only.
-- `Build Agent` reads the assigned plan and executes it.
-- `Solo Agent` edits directly by default and creates a plan only when explicitly requested.
-- Do not read all files in `PLANS/`. Read only the named or clearly relevant plan.
+Before starting any implementation, research, or query task, analyze the nature of the user's request and read the appropriate initialization document(s) from [References/Prompt Library/Initialization/](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/) to align your behavior and guardrails:
+* **Database Schema Alteration**: Read [database_schema_alteration.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/database_schema_alteration.md) (covers sheet setups, metadata config, view/report scans, and clasp sync instructions).
+* **Frontend Modification**: Read [frontend_modification.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/frontend_modification.md) (covers Quasar/Vue 3 boundaries, store wrappers, reactivity limits, and local testing).
+* **Sidebar Menu & Access Control**: Read [frontend_sidebar_menu.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/frontend_sidebar_menu.md) (covers menu config, tree mapping, permissions gating, and cache updates).
+* **Report Template & Aggregations**: Read [report_formula_generation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/report_formula_generation.md) (covers printable headers, LAMBDA row functions, and virtual array calculations).
+* **Writing/Editing Plans**: Read [plan_writing.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/plan_writing.md).
+* **Git Actions (Commit, Push)**: Read [git_operations.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/git_operations.md).
+* **General Investigatory Query**: Read [general_query.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/general_query.md).
+* **AQL-Specific Codebase Investigation**: Read [codebase_investigation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/codebase_investigation.md) (covers systematic discovery, domain-to-doc mapping, data flow tracing, and response standards).
+* **Dashboard Implementation**: Read [dashboard_implementation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/dashboard_implementation.md) (covers widget config contracts, declarative pipelines, SVG widget creation, and dashboard registries).
+* **Backend GAS Implementation**: Read [backend_gas_implementation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/backend_gas_implementation.md) (covers generic CRUD, post-write hooks, batch operations, and Apps Script patterns).
+* **Tax / Currency System Changes**: Read [tax_currency_system.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/tax_currency_system.md) (covers compound tax logic, currency helpers, tax-inclusive/exclusive pricing, and tax transaction storage).
+* **Sheet Views / Reports Formulation**: Read [sheet_views_formulation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/sheet_views_formulation.md) for View formulas, or [report_formula_generation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/report_formula_generation.md) for Report template formulas.
+* **Prompt & Instruction Creation**: Read [create_prompt_instruction.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/create_prompt_instruction.md) (covers exhaustive codebase discovery and output structure for generating new initialization prompts).
 
-## Task Routing
-- `Documents/DOC_ROUTING.md` is the canonical task-to-doc router.
-- `Documents/AI_COLLABORATION_PROTOCOL.md` is optional and should be read only for planning/building/change tasks.
-- `Documents/CONTEXT_HANDOFF.md` should be read only for continuation or current-state work.
+> [!IMPORTANT]
+> If the user's request touches multiple scopes (e.g., database schema alteration + frontend modification + menu updates), you MUST load and combine the guidelines from all corresponding initialization prompts.
+
+> [!NOTE]
+> If the user's request doesn't cleanly match any category above, consult [DOC_ROUTING.md](file:///f:/LITTLE%20LEAP/AQL/Documents/DOC_ROUTING.md) to identify the correct canonical documents for the task.
 
 ## Repo-Local Skills
 - Skills are task adapters, not policy sources.
@@ -44,22 +46,14 @@
 - **Before touching any file under `FRONTENT/`, read `Documents/ARCHITECTURE RULES.md` without exception — this includes small fixes, one-liners, and style tweaks. Layer violations most often enter through minor edits.**
 - For backend edits, prefer existing GAS files and patterns first. Create a new GAS file only when the current structure cannot support the task cleanly.
 - If GAS files change, run `npm run gas:push` from the repo root or `cd GAS && clasp push`.
-- Ask the user for Web App redeployment only when the API contract changed.
 
 ## Verification
 - Do not run broad verification by default.
 - Prefer targeted checks.
 - Run `npm run build` for frontend only when the change is major or cross-cutting, typically around 10 or more touched files or equivalent risk.
 
-## Key References
-- `Documents/MULTI_AGENT_PROTOCOL.md`
-- `Documents/DOC_ROUTING.md`
-- `Documents/AI_COLLABORATION_PROTOCOL.md`
-- `Documents/CONTEXT_HANDOFF.md`
-- `PLANS/_TEMPLATE.md`
-
 ## Maintenance Rule
-- Update this file when startup behavior, role invocation, plan-reading expectations, deployment expectations, or canonical startup references change.
+- Update this file when startup behavior, default reading expectations, role invocation, deployment expectations, or canonical startup references change.
 
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
@@ -71,7 +65,6 @@ This project is indexed by GitNexus as **little-leap-aql**. Use the GitNexus MCP
 ## Always Do
 
 - **MUST run impact analysis before editing any symbol.** Before modifying a function, class, or method, run `gitnexus_impact({target: "symbolName", direction: "upstream"})` and report the blast radius (direct callers, affected processes, risk level) to the user.
-- **MUST run `gitnexus_detect_changes()` before committing** to verify your changes only affect expected symbols and execution flows.
 - **MUST warn the user** if impact analysis returns HIGH or CRITICAL risk before proceeding with edits.
 - When exploring unfamiliar code, use `gitnexus_query({query: "concept"})` to find execution flows instead of grepping. It returns process-grouped results ranked by relevance.
 - When you need full context on a specific symbol — callers, callees, which execution flows it participates in — use `gitnexus_context({name: "symbolName"})`.
@@ -81,7 +74,6 @@ This project is indexed by GitNexus as **little-leap-aql**. Use the GitNexus MCP
 - NEVER edit a function, class, or method without first running `gitnexus_impact` on it.
 - NEVER ignore HIGH or CRITICAL risk warnings from impact analysis.
 - NEVER rename symbols with find-and-replace — use `gitnexus_rename` which understands the call graph.
-- NEVER commit changes without running `gitnexus_detect_changes()` to check affected scope.
 
 ## Resources
 

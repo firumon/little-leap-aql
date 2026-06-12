@@ -265,7 +265,7 @@ function setupOperationSheets() {
         {
             resourceName: CONFIG.OPERATION_SHEETS.OUTLET_RETURNS,
             headers: [
-                'Code', 'OutletCode', 'Date', 'Username', 'SKU', 'Qty', 'Reason', 'ReasonComment',
+                'Code', 'OutletCode', 'Date', 'Username', 'SKU', 'Qty', 'Price', 'Reason', 'ReasonComment',
                 'InvoiceAdjustmentRequired', 'InvoiceAdjustmentDone', 'ConsumptionInvoiceCode',
                 'WarehouseActionRequired', 'WarehouseActionCompleted', 'WarehouseCode',
                 'WarehouseAction', 'WarehouseActionDisposedReason',
@@ -274,12 +274,12 @@ function setupOperationSheets() {
                 'Progress', 'Status', 'AccessRegion'
             ].concat(commonAuditColumns),
             statusDefault: 'Active',
-            defaults: { Status: 'Active', Qty: 0, Progress: 'SUBMITTED', InvoiceAdjustmentRequired: 'FALSE', InvoiceAdjustmentDone: 'FALSE', WarehouseActionRequired: 'FALSE', WarehouseActionCompleted: 'FALSE', WarehouseAction: '', WarehouseActionDisposedReason: '', ConsumptionInvoiceCode: '' },
+            defaults: { Status: 'Active', Qty: 0, Price: 0, Progress: 'SUBMITTED', InvoiceAdjustmentRequired: 'FALSE', InvoiceAdjustmentDone: 'FALSE', WarehouseActionRequired: 'FALSE', WarehouseActionCompleted: 'FALSE', WarehouseAction: '', WarehouseActionDisposedReason: '', ConsumptionInvoiceCode: '' },
             progressValidation: APP_OPTIONS_SEED.OutletReturnProgress,
             reasonValidation: APP_OPTIONS_SEED.OutletReturnReason,
             warehouseActionValidation: APP_OPTIONS_SEED.OutletReturnWarehouseAction,
             columnWidths: {
-                Code: 150, OutletCode: 140, Date: 130, Username: 170, SKU: 150, Qty: 100,
+                Code: 150, OutletCode: 140, Date: 130, Username: 170, SKU: 150, Qty: 100, Price: 120,
                 Reason: 140, ReasonComment: 200,
                 InvoiceAdjustmentRequired: 160, InvoiceAdjustmentDone: 150, ConsumptionInvoiceCode: 200,
                 WarehouseActionRequired: 160, WarehouseActionCompleted: 150,
@@ -307,20 +307,20 @@ function setupOperationSheets() {
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICES,
-            headers: ['Code', 'OutletConsumptionCode', 'Date', 'OutletCode', 'Username', 'PriceListCode', 'Subtotal', 'Discount', 'Tax', 'OutletReturnCodes', 'ReturnDeductionTotal', 'Progress',
+            headers: ['Code', 'OutletConsumptionCode', 'Date', 'OutletCode', 'Username', 'PriceListCode', 'Subtotal', 'Discount', 'TotalTaxableAmount', 'TotalTaxAmount', 'TaxDetails', 'OutletReturnCodes', 'ReturnDeductionTotal', 'Progress',
                 'ProgressPendingPaymentAt', 'ProgressPendingPaymentBy', 'ProgressPendingPaymentComment',
                 'ProgressPartiallyPaidAt', 'ProgressPartiallyPaidBy', 'ProgressPartiallyPaidComment',
                 'ProgressPaidAt', 'ProgressPaidBy', 'ProgressPaidComment',
                 'ProgressCancelledAt', 'ProgressCancelledBy', 'ProgressCancelledComment',
                 'Status', 'AccessRegion'].concat(commonAuditColumns),
-            statusDefault: 'Active', defaults: { Status: 'Active', Subtotal: 0, Discount: 0, Tax: 0, OutletReturnCodes: '', ReturnDeductionTotal: 0, Progress: 'PENDING_PAYMENT' }, progressValidation: APP_OPTIONS_SEED.OutletConsumptionInvoiceProgress,
-            columnWidths: { Code: 150, OutletConsumptionCode: 200, Date: 140, OutletCode: 140, Username: 170, PriceListCode: 170, Subtotal: 120, Discount: 120, Tax: 120, OutletReturnCodes: 180, ReturnDeductionTotal: 150, Progress: 170, ProgressPendingPaymentAt: 180, ProgressPendingPaymentBy: 180, ProgressPendingPaymentComment: 230, ProgressPartiallyPaidAt: 180, ProgressPartiallyPaidBy: 180, ProgressPartiallyPaidComment: 230, ProgressPaidAt: 160, ProgressPaidBy: 160, ProgressPaidComment: 210, ProgressCancelledAt: 170, ProgressCancelledBy: 170, ProgressCancelledComment: 220, Status: 100, AccessRegion: 130 }
+            statusDefault: 'Active', defaults: { Status: 'Active', Subtotal: 0, Discount: 0, TotalTaxableAmount: 0, TotalTaxAmount: 0, TaxDetails: '[]', OutletReturnCodes: '', ReturnDeductionTotal: 0, Progress: 'PENDING_PAYMENT' }, progressValidation: APP_OPTIONS_SEED.OutletConsumptionInvoiceProgress,
+            columnWidths: { Code: 150, OutletConsumptionCode: 200, Date: 140, OutletCode: 140, Username: 170, PriceListCode: 170, Subtotal: 120, Discount: 120, TotalTaxableAmount: 150, TotalTaxAmount: 120, TaxDetails: 250, OutletReturnCodes: 180, ReturnDeductionTotal: 150, Progress: 170, ProgressPendingPaymentAt: 180, ProgressPendingPaymentBy: 180, ProgressPendingPaymentComment: 230, ProgressPartiallyPaidAt: 180, ProgressPartiallyPaidBy: 180, ProgressPartiallyPaidComment: 230, ProgressPaidAt: 160, ProgressPaidBy: 160, ProgressPaidComment: 210, ProgressCancelledAt: 170, ProgressCancelledBy: 170, ProgressCancelledComment: 220, Status: 100, AccessRegion: 130 }
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICE_ITEMS,
-            headers: ['Code', 'OutletConsumptionInvoiceCode', 'SKU', 'Qty', 'Price', 'Status'].concat(commonAuditColumns),
-            statusDefault: 'Active', defaults: { Status: 'Active', Qty: 0, Price: 0 },
-            columnWidths: { Code: 150, OutletConsumptionInvoiceCode: 220, SKU: 150, Qty: 120, Price: 120, Status: 100 }
+            headers: ['Code', 'OutletConsumptionInvoiceCode', 'SKU', 'Qty', 'Price', 'Total', 'Discount', 'TaxableAmount', 'TaxAmount', 'TaxCode', 'Status'].concat(commonAuditColumns),
+            statusDefault: 'Active', defaults: { Status: 'Active', Qty: 0, Price: 0, Total: 0, Discount: 0, TaxableAmount: 0, TaxAmount: 0, TaxCode: '' },
+            columnWidths: { Code: 150, OutletConsumptionInvoiceCode: 220, SKU: 150, Qty: 120, Price: 120, Total: 120, Discount: 120, TaxableAmount: 140, TaxAmount: 120, TaxCode: 130, Status: 100 }
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.OUTLET_PAYMENTS,

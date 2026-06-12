@@ -28,11 +28,11 @@ function setupMasterSheets() {
     },
     {
       resourceName: CONFIG.MASTER_SHEETS.SKUS,
-      headers: ['Code', 'ProductCode', 'Variant1', 'Variant2', 'Variant3', 'Variant4', 'Variant5', 'UOM', 'TaxCode', 'Status'].concat(commonAuditColumns),
+      headers: ['Code', 'ProductCode', 'Variant1', 'Variant2', 'Variant3', 'Variant4', 'Variant5', 'UOM', 'TaxCode', 'Barcode', 'Status'].concat(commonAuditColumns),
       statusDefault: 'Active',
-      defaults: { Status: 'Active' },
+      defaults: { Status: 'Active', Barcode: '' },
       columnWidths: {
-        Code: 140, ProductCode: 140, Variant1: 150, Variant2: 150, Variant3: 150, Variant4: 150, Variant5: 150, UOM: 100, TaxCode: 130, Status: 100,
+        Code: 140, ProductCode: 140, Variant1: 150, Variant2: 150, Variant3: 150, Variant4: 150, Variant5: 150, UOM: 100, TaxCode: 130, Barcode: 140, Status: 100,
         CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
       }
     },
@@ -48,11 +48,11 @@ function setupMasterSheets() {
     },
       {
         resourceName: CONFIG.MASTER_SHEETS.CURRENCIES,
-        headers: ['Code', 'Name', 'Symbol', 'Subunit', 'Decimals', 'BaseCurrency', 'ConversionFactor', 'AccessRegion', 'Status'].concat(commonAuditColumns),
+        headers: ['Code', 'Name', 'Symbol', 'Subunit', 'Decimals', 'RoundingInterval', 'BaseCurrency', 'ConversionFactor', 'AccessRegion', 'Status'].concat(commonAuditColumns),
         statusDefault: 'Active',
-        defaults: { Status: 'Active', Decimals: 2, BaseCurrency: 'FALSE', ConversionFactor: 1 },
+        defaults: { Status: 'Active', Decimals: 2, RoundingInterval: 0.01, BaseCurrency: 'FALSE', ConversionFactor: 1 },
         columnWidths: {
-          Code: 100, Name: 200, Symbol: 80, Subunit: 100, Decimals: 90, BaseCurrency: 120, ConversionFactor: 150, AccessRegion: 130, Status: 100,
+          Code: 100, Name: 200, Symbol: 80, Subunit: 100, Decimals: 90, RoundingInterval: 120, BaseCurrency: 120, ConversionFactor: 150, AccessRegion: 130, Status: 100,
           CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
         }
       },
@@ -78,33 +78,34 @@ function setupMasterSheets() {
       },
     {
       resourceName: CONFIG.MASTER_SHEETS.SUPPLIERS,
-      headers: ['Code', 'Name', 'Country', 'Province', 'City', 'CommunicationAddress', 'ContactPerson', 'Phone', 'Email', 'AccessRegion', 'Status'].concat(commonAuditColumns),
+      headers: ['Code', 'Name', 'Country', 'Province', 'City', 'CommunicationAddress', 'ContactPerson', 'Phone', 'Email', 'TaxRegistrationNumber', 'TaxRegistrationName', 'AccessRegion', 'Status'].concat(commonAuditColumns),
       statusDefault: 'Active',
-      defaults: { Status: 'Active' },
+      defaults: { Status: 'Active', TaxRegistrationNumber: '', TaxRegistrationName: '' },
       columnWidths: {
-        Code: 130, Name: 220, Country: 150, Province: 150, City: 150, CommunicationAddress: 260, ContactPerson: 180, Phone: 140, Email: 220, AccessRegion: 130, Status: 100,
+        Code: 130, Name: 220, Country: 150, Province: 150, City: 150, CommunicationAddress: 260, ContactPerson: 180, Phone: 140, Email: 220, TaxRegistrationNumber: 180, TaxRegistrationName: 200, AccessRegion: 130, Status: 100,
         CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
       }
     },
     {
       resourceName: CONFIG.MASTER_SHEETS.WAREHOUSES,
-      headers: ['Code', 'Name', 'Area', 'City', 'Province' ,'Country', 'Type', 'Licence', 'AccessRegion', 'Status'].concat(commonAuditColumns),
+      headers: ['Code', 'Name', 'Area', 'City', 'Province' ,'Country', 'Type', 'Licence', 'TaxRegistrationNumber', 'TaxRegistrationName', 'AccessRegion', 'Status'].concat(commonAuditColumns),
       statusDefault: 'Active',
-      defaults: { Status: 'Active', Country: 'UAE', Type: 'Main' },
+      defaults: { Status: 'Active', Country: 'UAE', Type: 'Main', TaxRegistrationNumber: '', TaxRegistrationName: '' },
       columnWidths: {
-        Code: 130, Name: 220, Province: 150, Area: 150, City: 150, Country: 130, Type: 120, Licence: 150, AccessRegion: 130, Status: 100,
+        Code: 130, Name: 220, Province: 150, Area: 150, City: 150, Country: 130, Type: 120, Licence: 150, TaxRegistrationNumber: 180, TaxRegistrationName: 200, AccessRegion: 130, Status: 100,
         CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
       }
     },
     {
       resourceName: CONFIG.MASTER_SHEETS.OUTLETS,
-      headers: ['Code', 'Name', 'ContactPerson', 'Phone', 'Email', 'Country', 'Province', 'City', 'Area', 'CommunicationAddress', 'MapLocationLink', 'Picture', 'Picture2', 'Picture3', 'Licence', 'AccessRegion', 'Status'].concat(commonAuditColumns),
+      headers: ['Code', 'Name', 'ContactPerson', 'Phone', 'Email', 'Country', 'Province', 'City', 'Area', 'CommunicationAddress', 'MapLocationLink', 'Picture', 'Picture2', 'Picture3', 'Licence', 'TaxRegistrationNumber', 'TaxRegistrationName', 'AccessRegion', 'Status'].concat(commonAuditColumns),
       statusDefault: 'Active',
-      defaults: { Status: 'Active', Country: 'UAE' },
+      defaults: { Status: 'Active', Country: 'UAE', TaxRegistrationNumber: '', TaxRegistrationName: '' },
       columnWidths: {
         Code: 130, Name: 240, ContactPerson: 180, Phone: 140, Email: 220,
         Country: 120, Province: 150, Area: 150, City: 140, CommunicationAddress: 260,
         MapLocationLink: 180, Picture: 150, Picture2: 150, Picture3: 150, Licence: 150,
+        TaxRegistrationNumber: 180, TaxRegistrationName: 200,
         AccessRegion: 130, Status: 100, CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
       }
     },

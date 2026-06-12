@@ -55,7 +55,7 @@ function initAppResourcesCodeConfig() {
         RequiredHeaders: 'ProductCode,UOM,Status',
         UniqueHeaders: 'Code',
         UniqueCompositeHeaders: '',
-        DefaultValues: '{"Status":"Active"}',
+        DefaultValues: '{"Status":"Active","Barcode":""}',
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
@@ -69,6 +69,7 @@ function initAppResourcesCodeConfig() {
             { header: 'Variant5', label: 'Variant 5', type: 'text' },
             { header: 'UOM', label: 'Unit of Measure', type: 'text', required: true },
             { header: 'TaxCode', label: 'Tax Code', type: 'text' },
+            { header: 'Barcode', label: 'Barcode', type: 'text' },
             { header: 'Status', label: 'Status', type: 'status', required: true }
         ]),
         IncludeInAuthorizationPayload: 'TRUE',
@@ -123,7 +124,7 @@ function initAppResourcesCodeConfig() {
       RequiredHeaders: 'Code,Name,Symbol',
       UniqueHeaders: 'Code',
       UniqueCompositeHeaders: '',
-      DefaultValues: '{"Status":"Active","Decimals":2,"BaseCurrency":"FALSE","ConversionFactor":1}',
+      DefaultValues: '{"Status":"Active","Decimals":2,"RoundingInterval":0.01,"BaseCurrency":"FALSE","ConversionFactor":1}',
       RecordAccessPolicy: 'ALL',
       OwnerUserField: 'CreatedBy',
       AdditionalActions: '',
@@ -134,6 +135,7 @@ function initAppResourcesCodeConfig() {
           { header: 'Symbol', label: 'Symbol', type: 'text', required: true },
           { header: 'Subunit', label: 'Subunit', type: 'text', hint: 'e.g. Fils, Paise, Cent' },
           { header: 'Decimals', label: 'Decimals', type: 'number' },
+          { header: 'RoundingInterval', label: 'Rounding Interval', type: 'number', hint: 'e.g. 0.01, 0.25, 0.50, 1.00' },
           { header: 'BaseCurrency', label: 'Base Currency', type: 'dropdown', options: ['TRUE', 'FALSE'] },
           { header: 'ConversionFactor', label: 'Conversion Factor', type: 'number' },
           { header: 'Status', label: 'Status', type: 'status', required: true }
@@ -226,7 +228,7 @@ function initAppResourcesCodeConfig() {
         RequiredHeaders: 'Name,Status',
         UniqueHeaders: 'Name',
         UniqueCompositeHeaders: '',
-        DefaultValues: '{"Status":"Active"}',
+        DefaultValues: '{"Status":"Active","TaxRegistrationNumber":"","TaxRegistrationName":""}',
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
@@ -240,6 +242,8 @@ function initAppResourcesCodeConfig() {
             { header: 'ContactPerson', label: 'Contact Person', type: 'text' },
             { header: 'Phone', label: 'Phone', type: 'text' },
             { header: 'Email', label: 'Email', type: 'text' },
+            { header: 'TaxRegistrationNumber', label: 'Tax Registration Number', type: 'text' },
+            { header: 'TaxRegistrationName', label: 'Tax Registration Name', type: 'text' },
             { header: 'Status', label: 'Status', type: 'status', required: true }
         ]),
         IncludeInAuthorizationPayload: 'TRUE',
@@ -262,7 +266,7 @@ function initAppResourcesCodeConfig() {
         RequiredHeaders: 'Name,Status',
         UniqueHeaders: 'Name',
         UniqueCompositeHeaders: '',
-        DefaultValues: '{"Status":"Active","Country":"UAE","Type":"Main"}',
+        DefaultValues: '{"Status":"Active","Country":"UAE","Type":"Main","TaxRegistrationNumber":"","TaxRegistrationName":""}',
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
@@ -280,6 +284,8 @@ function initAppResourcesCodeConfig() {
             { header: 'Area', label: 'Area', type: 'text' },
             { header: 'Type', label: 'Type', type: 'text' },
             { header: 'Licence', label: 'Licence', type: 'file' },
+            { header: 'TaxRegistrationNumber', label: 'Tax Registration Number', type: 'text' },
+            { header: 'TaxRegistrationName', label: 'Tax Registration Name', type: 'text' },
             { header: 'Status', label: 'Status', type: 'status', required: true }
         ]),
         IncludeInAuthorizationPayload: 'TRUE',
@@ -302,7 +308,7 @@ function initAppResourcesCodeConfig() {
         RequiredHeaders: 'Name',
         UniqueHeaders: 'Name',
         UniqueCompositeHeaders: '',
-        DefaultValues: '{"Status":"Active","Country":"UAE"}',
+        DefaultValues: '{"Status":"Active","Country":"UAE","TaxRegistrationNumber":"","TaxRegistrationName":""}',
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
@@ -325,6 +331,8 @@ function initAppResourcesCodeConfig() {
             { header: 'Picture2', label: 'Picture 2', type: 'file', accept: 'image/*' },
             { header: 'Picture3', label: 'Picture 3', type: 'file', accept: 'image/*' },
             { header: 'Licence', label: 'Licence', type: 'file' },
+            { header: 'TaxRegistrationNumber', label: 'Tax Registration Number', type: 'text' },
+            { header: 'TaxRegistrationName', label: 'Tax Registration Name', type: 'text' },
             { header: 'Status', label: 'Status', type: 'status', required: true }
         ]),
         IncludeInAuthorizationPayload: 'TRUE',
@@ -913,7 +921,7 @@ function initAppResourcesCodeConfig() {
         Scope: 'operation', IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_RETURNS,
         CodePrefix: 'OR', CodeSequenceLength: 6, LastDataUpdatedAt: 0, Audit: 'TRUE',
         RequiredHeaders: 'OutletCode,Date,SKU,Qty', UniqueHeaders: '', UniqueCompositeHeaders: '',
-        DefaultValues: '{"Status":"Active","Qty":0,"Progress":"SUBMITTED","InvoiceAdjustmentRequired":false,"InvoiceAdjustmentDone":false,"WarehouseActionRequired":false,"WarehouseActionCompleted":false,"WarehouseAction":"","WarehouseActionDisposedReason":""}',
+        DefaultValues: '{"Status":"Active","Qty":0,"Price":0,"Progress":"SUBMITTED","InvoiceAdjustmentRequired":false,"InvoiceAdjustmentDone":false,"WarehouseActionRequired":false,"WarehouseActionCompleted":false,"WarehouseAction":"","WarehouseActionDisposedReason":""}',
         RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
             { "action": "Dispose", "label": "Dispose Stock", "icon": "delete_outline", "color": "negative", "kind": "mutate", "confirm": true, "column": "WarehouseAction", "columnValue": "Disposed", "columnValueOptions": [], "fields": [{ "name": "WarehouseActionDisposedReason", "label": "Disposal Reason", "type": "textarea", "required": true }], "visibleWhen": { "column": "WarehouseActionCompleted", "op": "eq", "value": "FALSE" } },
@@ -941,7 +949,7 @@ function initAppResourcesCodeConfig() {
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICES,
         Scope: 'operation', ParentResource: '', IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICES,
-        CodePrefix: 'OCINV', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletConsumptionCode,Date,OutletCode,Username,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Subtotal":0,"Discount":0,"Tax":0,"Progress":"PENDING_PAYMENT"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy',
+        CodePrefix: 'OCINV', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletConsumptionCode,Date,OutletCode,Username,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Subtotal":0,"Discount":0,"TotalTaxableAmount":0,"TotalTaxAmount":0,"TaxDetails":"[]","Progress":"PENDING_PAYMENT"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
             {"action":"MarkPartiallyPaid","label":"Mark Partially Paid","icon":"payments","color":"info","kind":"mutate","confirm":true,"column":"Progress","columnValue":"PARTIALLY_PAID","columnValueOptions":[],"fields":[{"name":"Comment","label":"Comment","type":"textarea","required":false}],"visibleWhen":{"column":"Progress","op":"eq","value":"PENDING_PAYMENT"}},
             {"action":"MarkPaid","label":"Mark Paid","icon":"paid","color":"positive","kind":"mutate","confirm":true,"column":"Progress","columnValue":"PAID","columnValueOptions":[],"fields":[{"name":"Comment","label":"Comment","type":"textarea","required":false}],"visibleWhen":{"column":"Progress","op":"in","value":["PENDING_PAYMENT","PARTIALLY_PAID"]}},
@@ -952,7 +960,7 @@ function initAppResourcesCodeConfig() {
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICE_ITEMS,
         Scope: 'operation', ParentResource: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICES, IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICE_ITEMS,
-        CodePrefix: 'OCII', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletConsumptionInvoiceCode,SKU,Qty,Price', UniqueHeaders: '', UniqueCompositeHeaders: 'OutletConsumptionInvoiceCode+SKU', DefaultValues: '{"Status":"Active","Qty":0,"Price":0}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: '', Menu: JSON.stringify([]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
+        CodePrefix: 'OCII', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletConsumptionInvoiceCode,SKU,Qty,Price', UniqueHeaders: '', UniqueCompositeHeaders: 'OutletConsumptionInvoiceCode+SKU', DefaultValues: '{"Status":"Active","Qty":0,"Price":0,"Total":0,"Discount":0,"TaxableAmount":0,"TaxAmount":0,"TaxCode":""}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: '', Menu: JSON.stringify([]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_PAYMENTS,

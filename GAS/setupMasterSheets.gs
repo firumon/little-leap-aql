@@ -60,7 +60,7 @@ function setupMasterSheets() {
         resourceName: CONFIG.MASTER_SHEETS.PRICE_LIST,
         headers: ['Code', 'Name', 'Description', 'Currency', 'IsDefault', 'SKUPrices', 'TaxInclusive', 'DiscountTaxPolicy', 'AccessRegion', 'Status'].concat(commonAuditColumns),
         statusDefault: 'Active',
-        defaults: { Status: 'Active', IsDefault: 'FALSE', TaxInclusive: 'FALSE', DiscountTaxPolicy: 'PRE_TAX' },
+        defaults: { Status: 'Active', IsDefault: 'FALSE', TaxInclusive: 'FALSE', DiscountTaxPolicy: 'POST_TAX' },
         columnWidths: {
           Code: 130, Name: 260, Description: 300, Currency: 100, IsDefault: 100, SKUPrices: 400, TaxInclusive: 120, DiscountTaxPolicy: 150, AccessRegion: 130, Status: 100,
           CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140

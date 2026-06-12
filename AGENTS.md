@@ -6,7 +6,6 @@
 
 ## Startup Sequence
 - Read this file.
-- Read [Documents/MULTI_AGENT_PROTOCOL.md](file:///f:/LITTLE%20LEAP/AQL/Documents/MULTI_AGENT_PROTOCOL.md) to understand role boundaries.
 - Analyze the user's query and read the corresponding initialization prompt(s) from [Initialization Prompt Routing](#initialization-prompt-routing) before proceeding.
 
 ## Initialization Prompt Routing
@@ -16,7 +15,7 @@ Before starting any implementation, research, or query task, analyze the nature 
 * **Frontend Modification**: Read [frontend_modification.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/frontend_modification.md) (covers Quasar/Vue 3 boundaries, store wrappers, reactivity limits, and local testing).
 * **Sidebar Menu & Access Control**: Read [frontend_sidebar_menu.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/frontend_sidebar_menu.md) (covers menu config, tree mapping, permissions gating, and cache updates).
 * **Report Template & Aggregations**: Read [report_formula_generation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/report_formula_generation.md) (covers printable headers, LAMBDA row functions, and virtual array calculations).
-* **Writing/Editing Plans**: Read [plan_writing.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/plan_writing.md).
+* **Writing/Editing Plans**: Read [plan_writing.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/plan_writing.md) (only if the user explicitly asks to write, edit, or create an implementation plan).
 * **Git Actions (Commit, Push)**: Read [git_operations.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/git_operations.md).
 * **General Investigatory Query**: Read [general_query.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/general_query.md).
 * **AQL-Specific Codebase Investigation**: Read [codebase_investigation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/codebase_investigation.md) (covers systematic discovery, domain-to-doc mapping, data flow tracing, and response standards).

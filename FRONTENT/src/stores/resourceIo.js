@@ -152,6 +152,7 @@ export const useResourceIoStore = defineStore('resourceIo', () => {
     const response = await fetchResourceRecordsBatch(resources, authorizedResources, appConfig, {
       showLoading: payload.showLoading === true,
       showError: payload.showError === true,
+      forceSync: payload.forceSync === true,
       resourceStatus
     })
 
@@ -188,6 +189,7 @@ export const useResourceIoStore = defineStore('resourceIo', () => {
     const response = await syncResourcesBatch(resources, authorizedResources, appConfig, {
       showLoading: options.showLoading === true,
       showError: options.showError === true,
+      forceSync: options.forceSync === true,
       resourceStatus
     })
 

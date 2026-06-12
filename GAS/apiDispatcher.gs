@@ -430,6 +430,10 @@ function dispatchProtectedAction(action, auth, data) {
     case 'executeAction':
       return handleExecuteAction(auth, data);
 
+    // Polling action for resource updates
+    case 'poll':
+      return handlePollAction(auth, data);
+
     // Report scope
     case 'generateReport':
       return generateReportPdf(auth, data);
@@ -716,4 +720,38 @@ function dispatchResourceCrudAction(action, auth, payload) {
   }
 
   return { success: false, message: 'Unsupported resource action' };
+}
+
+function handlePollAction(auth, payload) {
+  const cursors = payload && payload.cursors ? payload.cursors : {};
+  const updatedResources = [];
+  const configMap = getResourceConfigMap() || {};
+
+  Object.keys(cursors).forEach(function (resourceName) {
+    try {
+      const clientCursor = Number(cursors[resourceName]) || 0;
+      const config = configMap[resourceName];
+      if (!config) return;
+
+      // Check if user has read permission
+      enforceMasterPermission(auth, resourceName, 'canRead');
+
+      // Compare client cursor with server's LastDataUpdatedAt
+      const serverLastUpdated = config.lastDataUpdatedAt || 0;
+      if (serverLastUpdated > clientCursor) {
+        updatedResources.push(resourceName);
+      }
+    } catch (e) {
+      // Log individual resource permission or fetch errors, but do not block other resources
+      console.warn('Error polling resource ' + resourceName + ': ' + e.message);
+    }
+  });
+
+  return {
+    success: true,
+    data: {
+      updatedResources: updatedResources,
+      serverTime: Date.now()
+    }
+  };
 }

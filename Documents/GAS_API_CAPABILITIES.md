@@ -25,6 +25,7 @@ Do not treat this as a universal startup read for every task.
 - year-scoped code generation for operation-scope resources (e.g., PR26000001)
 - view scope read-only behavior (no CRUD operations, full dataset return without pagination)
 - delta sync via `lastUpdatedAt` cursor
+- lightweight resource update polling via `poll` action (metadata only, no row payloads)
 - strict nested write payloads (`payload.record` / `payload.data`)
 - delta-on-write for `create`, `update`, `bulk`, `executeAction`, and `compositeSave`
 
@@ -242,6 +243,43 @@ Rules:
 - Auto-fills `{column}{PascalCase(value)}At` (timestamp) and `{column}{PascalCase(value)}By` (UserID) if those columns exist, while storing the original `columnValue` unchanged.
 - `fields`: any additional columns to set in the same write.
 - Response includes action result in `data.result` and resource delta in `data.resources`.
+
+### `poll` — Check for resource updates (no row payloads)
+```json
+{
+  "requestId": "uuid",
+  "action": "poll",
+  "payload": {
+    "cursors": {
+      "Products": 1713400000000,
+      "Procurements": 1713400000000
+    }
+  }
+}
+```
+- `payload.cursors` maps each resource name to the client's last-known `lastSyncAt` timestamp.
+- GAS compares each cursor against the resource's `lastDataUpdatedAt` in the config map.
+- Read permission (`canRead`) is enforced per resource; permission errors are logged and skipped without blocking other resources.
+- Response contains **no row data**. Only metadata about which resources have server-side updates:
+```json
+{
+  "success": true,
+  "requestId": "uuid",
+  "action": "poll",
+  "data": {
+    "resources": {},
+    "result": {
+      "updatedResources": ["Products"],
+      "serverTime": 1713400000999
+    },
+    "artifacts": {}
+  }
+}
+```
+- `data.result.updatedResources`: array of resource names whose server `lastDataUpdatedAt` exceeds the client cursor.
+- `data.result.serverTime`: server timestamp used to advance local sync cursors for up-to-date resources.
+- Client behavior: for resources **not** in `updatedResources`, advance the local cursor to `serverTime`; for resources **in** `updatedResources`, trigger a standard `get` sync (`syncResources` with `forceSync: true`) to pull delta rows.
+- Poll requests do not reset the client's polling interval tier; other API mutations do.
 
 ### `batch` — Multiple actions in one round-trip
 ```json

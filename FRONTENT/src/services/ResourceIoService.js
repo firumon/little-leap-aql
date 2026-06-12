@@ -405,11 +405,8 @@ export async function fetchResourceRecords(resourceName, authorizedResources = [
     let staleMessage = ''
 
     const hasUsableHydration = hasHydratedOnce || !!effectiveCursor
-    const shouldImmediateSync = !hasUsableHydration
-      || !cacheRefreshedAt
-      || (cachedRows.length
-        ? !isWithinTtl(cacheRefreshedAt, ttlMs)
-        : !isWithinTtl(cacheRefreshedAt, emptyCacheThrottleMs))
+    const isManualReload = options.forceSync === true
+    const shouldImmediateSync = !hasUsableHydration || isManualReload
 
     logger.debug('Determining sync strategy', { resource: resourceName, shouldSync: shouldImmediateSync })
 
@@ -421,6 +418,7 @@ export async function fetchResourceRecords(resourceName, authorizedResources = [
       const batchSyncResponse = await syncResourcesBatch([resourceName], authorizedResources, appConfig, {
         showError: !cachedRows.length,
         showLoading: !cachedRows.length,
+        forceSync: isManualReload,
         resourceStatus
       })
 
@@ -518,17 +516,9 @@ export async function fetchResourceRecordsBatch(resourceNames = [], authorizedRe
         emptyCacheThrottleMs > 0 &&
         now < cacheRefreshedAt + emptyCacheThrottleMs
 
-      let shouldSync = false
-      const populatedCacheFreshEnough = cachedRows.length > 0 && isWithinTtl(cacheRefreshedAt, ttlMs)
-
-      if (!emptyCacheFreshEnough && (!cachedRows.length || !populatedCacheFreshEnough)) {
-        const hasUsableHydration = hasHydratedOnce || !!effectiveCursor
-        shouldSync = !hasUsableHydration ||
-          !cacheRefreshedAt ||
-          (cachedRows.length
-            ? now >= cacheRefreshedAt + ttlMs
-            : now >= cacheRefreshedAt + emptyCacheThrottleMs)
-      }
+      const hasUsableHydration = hasHydratedOnce || !!effectiveCursor
+      const isManualReload = options.forceSync === true
+      const shouldSync = !hasUsableHydration || isManualReload
 
       if (shouldSync) {
         syncNames.push(resourceName)
@@ -556,6 +546,7 @@ export async function fetchResourceRecordsBatch(resourceNames = [], authorizedRe
       const syncResponse = await syncResourcesBatch(syncNames, authorizedResources, appConfig, {
         showError: options.showError === true,
         showLoading: options.showLoading === true,
+        forceSync: options.forceSync === true,
         resourceStatus
       })
 

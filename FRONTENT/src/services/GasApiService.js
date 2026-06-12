@@ -10,6 +10,12 @@ const logger = createLogger('GasApiService')
 
 const API_VERSION = 'v1'
 
+let onApiRequestCallback = null
+
+export function registerApiRequestListener(callback) {
+  onApiRequestCallback = callback
+}
+
 function createRequestId() {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID()
@@ -216,6 +222,14 @@ export async function executeGasApi(action, payload = {}, options = {}) {
   }
 
   const requestBody = buildCanonicalRequest(action, payload, authToken, requireAuth)
+
+  if (action !== 'poll' && typeof onApiRequestCallback === 'function') {
+    try {
+      onApiRequestCallback(action)
+    } catch (e) {
+      // Safe boundary check
+    }
+  }
 
   try {
     logger.debug('Calling GAS API', { action, requestId: requestBody.requestId })

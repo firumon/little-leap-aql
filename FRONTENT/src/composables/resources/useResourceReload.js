@@ -103,7 +103,8 @@ export function useResourceReload() {
     if (!resources.length) return { success: true, data: {}, error: null }
     return resourceIo.syncResources(resources, {
       showLoading: options.showLoading === true,
-      showError: options.showError !== false
+      showError: options.showError !== false,
+      forceSync: true
     })
   }
 

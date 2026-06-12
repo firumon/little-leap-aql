@@ -8,6 +8,7 @@
 import { Notify, Loading } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
 import { useInitialResourceSync } from 'src/composables/resources/useInitialResourceSync'
+import { usePollingStore } from 'src/stores/polling'
 
 export function useAuthLogic() {
   const auth = useAuthStore()
@@ -73,6 +74,9 @@ export function useAuthLogic() {
             auth.isGlobalSyncing = false
           })
 
+        const polling = usePollingStore()
+        polling.start()
+
         return { success: true }
       }
 
@@ -135,6 +139,8 @@ export function useAuthLogic() {
   }
 
   async function logout() {
+    const polling = usePollingStore()
+    polling.stop()
     auth.clearSessionState()
 
     try {

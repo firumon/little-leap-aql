@@ -17,7 +17,7 @@ function getAccessRegionContext() {
 
   // Try CacheService first
   var scriptCache = CacheService.getScriptCache();
-  var cachedJson = scriptCache.get('AQL_ACCESS_REGIONS_V1');
+  var cachedJson = scriptCache.get('AQL_ACCESS_REGIONS_V1_' + getAppSpreadsheet().getId());
   if (cachedJson) {
     try {
       __accessRegionContextCache = JSON.parse(cachedJson);
@@ -72,7 +72,7 @@ function getAccessRegionContext() {
   try {
     var json = JSON.stringify(__accessRegionContextCache);
     if (json.length < 100000) {
-      scriptCache.put('AQL_ACCESS_REGIONS_V1', json, 300);
+      scriptCache.put('AQL_ACCESS_REGIONS_V1_' + getAppSpreadsheet().getId(), json, 300);
     }
   } catch (e) { /* non-fatal */ }
 
@@ -82,7 +82,7 @@ function getAccessRegionContext() {
 function clearAccessRegionCache() {
   __accessRegionContextCache = null;
   try {
-    CacheService.getScriptCache().remove('AQL_ACCESS_REGIONS_V1');
+    CacheService.getScriptCache().remove('AQL_ACCESS_REGIONS_V1_' + getAppSpreadsheet().getId());
   } catch (e) { /* non-fatal */ }
 }
 

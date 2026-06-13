@@ -7,7 +7,9 @@
 // Shared constants are located in Constants.gs
 
 function setupAppSheets() {
+  if (typeof clearAllAppCaches === 'function') clearAllAppCaches();
   resetLogSheet_();
+
   logToSheet_('Starting Refactor APP Sheets');
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();

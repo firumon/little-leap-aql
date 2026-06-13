@@ -10,7 +10,9 @@
  */
 
 function setupMasterSheets() {
+  if (typeof clearAllAppCaches === 'function') clearAllAppCaches();
   resetLogSheet_();
+
   logToSheet_('Starting Refactor MASTER Sheets');
 
   const commonAuditColumns = ['CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy'];
@@ -138,6 +140,7 @@ function setupMasterSheets() {
     logToSheet_('Processing ' + schema.resourceName);
     try {
       const resource = getResourceConfig(schema.resourceName);
+      logToSheet_('Resolved resource config for ' + schema.resourceName + ': fileId=' + resource.fileId + ', scope=' + resource.scope + ', sheetName=' + resource.sheetName);
       if (resource.codeSequenceLength > 0) {
         if (!resource.codePrefix) {
           throw new Error('CodePrefix is missing in Resources for ' + schema.resourceName);

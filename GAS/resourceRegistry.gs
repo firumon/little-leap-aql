@@ -41,7 +41,7 @@ function getResourceConfigMap() {
   // Try CacheService for cross-execution persistence
   var scriptCache = CacheService.getScriptCache();
   var cacheKey = 'AQL_RESOURCE_CONFIG_MAP_V2';
-  var cachedJson = scriptCache.get(cacheKey);
+  var cachedJson = scriptCache.get(cacheKey + '_' + getAppSpreadsheet().getId());
   if (!cachedJson) {
     // Try Permanent Metadata fallback
     cachedJson = getPermanentMetadata(cacheKey);
@@ -134,7 +134,7 @@ function getResourceConfigMap() {
   try {
     var json = JSON.stringify(map);
     if (json.length < 100000) {
-      scriptCache.put(cacheKey, json, 300);
+      scriptCache.put(cacheKey + '_' + getAppSpreadsheet().getId(), json, 300);
     }
     setPermanentMetadata(cacheKey, json);
   } catch (e) { /* non-fatal */ }
@@ -151,7 +151,7 @@ function clearResourceConfigCache() {
   _resource_registry_context_cache = null;
   _resource_sheet_cache = {};
   try {
-    CacheService.getScriptCache().remove('AQL_RESOURCE_CONFIG_MAP_V2');
+    CacheService.getScriptCache().remove('AQL_RESOURCE_CONFIG_MAP_V2_' + getAppSpreadsheet().getId());
   } catch (e) { /* non-fatal */ }
   // Clear Permanent Metadata fallback so stale data is not served on cold start
   try {
@@ -378,7 +378,7 @@ function getRolePermissionsContext() {
 
   // Try CacheService
   var scriptCache = CacheService.getScriptCache();
-  var cachedJson = scriptCache.get('AQL_ROLE_PERMS_CONTEXT_V1');
+  var cachedJson = scriptCache.get('AQL_ROLE_PERMS_CONTEXT_V1_' + getAppSpreadsheet().getId());
   if (cachedJson) {
     try {
       var parsed = JSON.parse(cachedJson);
@@ -409,7 +409,7 @@ function getRolePermissionsContext() {
   try {
     var json = JSON.stringify({ values: values, headers: headers, idx: idx });
     if (json.length < 100000) {
-      scriptCache.put('AQL_ROLE_PERMS_CONTEXT_V1', json, 300);
+      scriptCache.put('AQL_ROLE_PERMS_CONTEXT_V1_' + getAppSpreadsheet().getId(), json, 300);
     }
   } catch (e) { /* non-fatal */ }
 
@@ -423,7 +423,7 @@ function getRolePermissionsContext() {
 function clearRolePermissionsCache() {
   _role_permissions_context_cache = null;
   try {
-    CacheService.getScriptCache().remove('AQL_ROLE_PERMS_CONTEXT_V1');
+    CacheService.getScriptCache().remove('AQL_ROLE_PERMS_CONTEXT_V1_' + getAppSpreadsheet().getId());
   } catch (e) { /* non-fatal */ }
 }
 

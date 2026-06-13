@@ -171,13 +171,14 @@ function setAppFileId() {
  * Uses CacheService (6-hour TTL) since config rarely changes.
  */
 function getConfigMap() {
+  var ss = getAppSpreadsheet();
+  var cacheKey = 'APP_CONFIG_MAP_V2_' + ss.getId();
   var cache = CacheService.getScriptCache();
-  var cached = cache.get('APP_CONFIG_MAP_V2');
+  var cached = cache.get(cacheKey);
   if (cached) {
     try { return JSON.parse(cached); } catch (e) { /* fall through */ }
   }
 
-  var ss = getAppSpreadsheet();
   var sheet = ss.getSheetByName(CONFIG.SHEETS.CONFIG);
   if (!sheet) return {};
 
@@ -189,7 +190,7 @@ function getConfigMap() {
     if (key) map[key] = value;
   }
 
-  cache.put('APP_CONFIG_MAP_V2', JSON.stringify(map), 300); // 5 minutes
+  cache.put(cacheKey, JSON.stringify(map), 300); // 5 minutes
   return map;
 }
 
@@ -199,7 +200,7 @@ function getConfigMap() {
  */
 function clearConfigCache() {
   var cache = CacheService.getScriptCache();
-  cache.remove('APP_CONFIG_MAP_V2');
+  cache.remove('APP_CONFIG_MAP_V2_' + getAppSpreadsheet().getId());
 }
 
 /**

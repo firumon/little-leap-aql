@@ -334,7 +334,7 @@ function getRolesCache() {
 
   // Try CacheService
   var scriptCache = CacheService.getScriptCache();
-  var cachedJson = scriptCache.get('AQL_ROLES_CACHE_V1');
+  var cachedJson = scriptCache.get('AQL_ROLES_CACHE_V1_' + getAppSpreadsheet().getId());
   if (cachedJson) {
     try {
       _roles_cache = JSON.parse(cachedJson);
@@ -369,7 +369,7 @@ function getRolesCache() {
   try {
     var json = JSON.stringify(_roles_cache);
     if (json.length < 100000) {
-      scriptCache.put('AQL_ROLES_CACHE_V1', json, 300);
+      scriptCache.put('AQL_ROLES_CACHE_V1_' + getAppSpreadsheet().getId(), json, 300);
     }
   } catch (e) { /* non-fatal */ }
 
@@ -383,7 +383,7 @@ function getRolesCache() {
 function clearRolesCache() {
   _roles_cache = null;
   try {
-    CacheService.getScriptCache().remove('AQL_ROLES_CACHE_V1');
+    CacheService.getScriptCache().remove('AQL_ROLES_CACHE_V1_' + getAppSpreadsheet().getId());
   } catch (e) { /* non-fatal */ }
 }
 
@@ -399,7 +399,7 @@ function getDesignationsCache() {
 
   // Try CacheService
   var scriptCache = CacheService.getScriptCache();
-  var cachedJson = scriptCache.get('AQL_DESIGNATIONS_CACHE_V1');
+  var cachedJson = scriptCache.get('AQL_DESIGNATIONS_CACHE_V1_' + getAppSpreadsheet().getId());
   if (cachedJson) {
     try {
       _designations_cache = JSON.parse(cachedJson);
@@ -437,7 +437,7 @@ function getDesignationsCache() {
   try {
     var json = JSON.stringify(_designations_cache);
     if (json.length < 100000) {
-      scriptCache.put('AQL_DESIGNATIONS_CACHE_V1', json, 300);
+      scriptCache.put('AQL_DESIGNATIONS_CACHE_V1_' + getAppSpreadsheet().getId(), json, 300);
     }
   } catch (e) { /* non-fatal */ }
 
@@ -447,7 +447,7 @@ function getDesignationsCache() {
 function clearDesignationsCache() {
   _designations_cache = null;
   try {
-    CacheService.getScriptCache().remove('AQL_DESIGNATIONS_CACHE_V1');
+    CacheService.getScriptCache().remove('AQL_DESIGNATIONS_CACHE_V1_' + getAppSpreadsheet().getId());
   } catch (e) { /* non-fatal */ }
 }
 

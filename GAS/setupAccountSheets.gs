@@ -12,7 +12,9 @@ var ACCOUNTS_HEADER_COLOR = '#5C6BC0';
 var ACCOUNTS_ALT_ROW_COLOR = '#f0f1fa';
 
 function setupAccountSheets() {
+    if (typeof clearAllAppCaches === 'function') clearAllAppCaches();
     resetLogSheet_();
+
     logToSheet_('Starting Setup Base Accounts');
 
     const commonAuditColumns = ['CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy'];

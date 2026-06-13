@@ -13,7 +13,9 @@ var OPERATION_HEADER_COLOR = '#2E7D32';
 var OPERATION_ALT_ROW_COLOR = '#f0f7f1';
 
 function setupOperationSheets() {
+    if (typeof clearAllAppCaches === 'function') clearAllAppCaches();
     resetLogSheet_();
+
     logToSheet_('Starting Setup All Operations');
 
     const commonAuditColumns = ['CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy'];

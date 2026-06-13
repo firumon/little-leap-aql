@@ -1,0 +1,19 @@
+{
+  "timeZone": "Asia/Dubai",
+  "dependencies": {
+    "libraries": [
+      {
+        "userSymbol": "AqlCore",
+        "libraryId": "1gWyoy-tvOBR61iopJEo2FPpKIme1B8tw-P9IemDTAbCRG9YfbP1-KXxz",
+        "version": "96",
+        "developmentMode": true
+      }
+    ]
+  },
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8",
+  "webapp": {
+    "executeAs": "USER_DEPLOYING",
+    "access": "ANYONE"
+  }
+}

@@ -199,3 +199,4 @@ Update this file when:
 - a supported GAS implementation pattern changes
 - a new backend extension pattern is approved
 - the repo policy on reusing existing files versus creating new files changes
+- changes are made to spreadsheet triggers, custom menu callbacks, or HTML dialog callbacks that require updating the multi-tenant template wrapper [tenant.gs](file:///f:/LITTLE%20LEAP/AQL/TENANTS/tenant.gs)

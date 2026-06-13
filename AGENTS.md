@@ -38,7 +38,7 @@ After classifying the query, read the appropriate initialization document(s) fro
 * **Sheet Views / Reports Formulation**: Read [sheet_views_formulation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/sheet_views_formulation.md) for View formulas, or [report_formula_generation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/report_formula_generation.md) for Report template formulas.
 * **Prompt & Instruction Creation**: Read [create_prompt_instruction.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/create_prompt_instruction.md) (covers exhaustive codebase discovery and output structure for generating new initialization prompts).
 * **API Related Query**: Read [api_related_query.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/api_related_query.md) (covers backend request routing in GAS, request/response envelopes, batching, composite saves, and post-write hooks).
-* **Multi-Tenant System & Routing**: Read [multi_tenant_system.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/multi_tenant_system.md) (covers central TENANTS spreadsheet, Master Apps Script router project, SelectTenantPage onboarding flow, and browser cache/cleansing mechanics).
+* **Multi-Tenant System, Routing & New Client Setup**: Read [multi_tenant_system.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/multi_tenant_system.md) (covers folder setup, automated client generation, central TENANTS spreadsheet, Master Apps Script router project, SelectTenantPage onboarding flow, and browser cache/cleansing mechanics).
 
 
 > [!IMPORTANT]

@@ -81,6 +81,7 @@ Rules:
 ### Step 3: Documentation
 1. Update [GAS_PATTERNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/GAS_PATTERNS.md) if a new pattern was introduced.
 2. Update [GAS_API_CAPABILITIES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/GAS_API_CAPABILITIES.md) if a new capability was added.
+3. **Multi-Tenant Wrapper Sync**: If changes involve spreadsheet triggers, custom menu callbacks, or HTML dialog callbacks, update the forwarding functions in [tenant.gs](file:///f:/LITTLE%20LEAP/AQL/TENANTS/tenant.gs).
 
 ---
 

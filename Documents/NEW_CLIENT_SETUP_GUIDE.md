@@ -1,65 +1,99 @@
-# New Client Setup Guide
+# New Client Setup Guide (Tenant Generation)
 
-## Purpose
-This guide covers the current recommended process for setting up a new AQL client instance.
+This guide covers the process for setting up and configuring spreadsheet files for a new tenant (client instance) using the automated generation menu.
 
-## Prerequisites
-- Google account/workspace for the client
-- Local access to this repository
-- `clasp` configured for GAS deployment
+---
 
-## Setup Flow
+## Step 1: Create Drive Folder
+1. Create a new folder in Google Drive.
+2. Name it with the company name (e.g., `Company Name`).
+   > [!TIP]
+   > Prefix the folder name with `AQL ` (e.g., `AQL Company Name`) if you are planning to transfer ownership of the folder later.
+3. Open the folder and copy its **Folder ID** from the browser URL.
 
-### Step 1: Create Spreadsheet Files
-Create the required spreadsheets:
-- `APP`
-- `MASTERS`
-- `OPERATIONS`
-- `REPORTS`
-- optional separate `ACCOUNTS`
+---
 
-Collect their file IDs for config setup.
+## Step 2: Generate Tenant Spreadsheets
+1. Open the main Master/Admin generator spreadsheet (File ID: `1POS4HDCdwHtyaIWF_qGqn51V_pL9DeTRnBva_cLk4i0`).
+2. Go to the menu **`AQL 🚀` > `GENERATE SPREADSHEET FOR NEW TENANT`**.
+3. When prompted, paste the **Google Drive Folder ID** copied in Step 1 and click **OK**.
+4. The script will automatically copy the `App` template and template files for `Views` and `Reports` (configuring their `Config` sheets with the appropriate `IMPORTRANGE` formula), and create new empty spreadsheets for `Master`, `Operations`, and `Accounts` in the target folder.
 
-### Step 2: Connect the APP Script Project
-1. Open the `APP` spreadsheet and create/open its Apps Script project.
-2. Copy the Script ID.
-3. Create a client-specific `GAS/clasp-configs/{client-name}.clasp.json`.
-4. Point `GAS/.clasp.json` to that client config.
-5. Run `cd GAS && clasp push`.
+---
 
-This is the preferred setup path. Manual copy-paste is not the standard deployment workflow.
+## Step 3: Authorize and Initialize the App Script
+1. Open the newly copied **`App`** spreadsheet in the target folder.
+2. Go to **Extensions > Apps Script** from the top menu.
+3. In the Apps Script Editor, select **`onOpen`** from the function dropdown in the top toolbar and click **Run**.
+4. When the "Authorization Required" dialog appears, click **Review Permissions**, select your Google account, click **Advanced** > **Go to App (unsafe)**, and grant the required permissions.
+5. Once the script execution completes, **reload/refresh** the `App` spreadsheet browser tab. The **`AQL 🚀`** custom menu should now appear in the menu bar.
 
-### Step 3: Initialize APP Structure
-From the APP spreadsheet, run the setup/refactor menu actions needed to create APP control sheets and sync resource metadata.
+---
 
-### Step 4: Configure APP Settings
-Populate the `Config` sheet with:
-- company branding/contact values
-- file IDs for MASTER / OPERATION / REPORT / ACCOUNTS scopes
-- sync TTL settings
+## Step 4: Refactor App Control Sheets
+1. In the `App` spreadsheet, click the menu **`AQL 🚀` > `⚙️ Setup & Refactor` > `Refactor APP Sheets`**.
+2. This creates the required APP control sheets (such as `Config`, `Resources`, `Metadata`, etc.) and automatically syncs resource metadata from code.
 
-### Step 5: Validate Resolution
-Validate that resource/file resolution works correctly after config is filled.
+---
 
-### Step 6: Generate Target Sheets
-Run the relevant setup/refactor actions to create or refactor master, operation, and accounts sheets.
+## Step 5: Configure Spreadsheet File IDs & Settings
+1. Open the **`Config`** sheet in the `App` spreadsheet.
+2. Update the values with the correct file IDs and client details:
+   - **`MasterFileID`**: Paste the ID of the generated `Master` spreadsheet.
+   - **`OperationFileID`**: Paste the ID of the generated `Operations` spreadsheet.
+   - **`AccountsFileID`**: Paste the ID of the generated `Accounts` spreadsheet.
+   - Other branding settings (e.g., `CompanyName`, `CompanyLogo`, `Currency`, etc.).
+   
+3. **Advanced Resource Routing**:
+   - If any specific resource (e.g., a particular sheet or tab) needs to reside in a separate spreadsheet file instead of the default scoped file:
+     1. Create that spreadsheet file or copy an existing one.
+     2. Copy its File ID.
+     3. Paste the File ID into the **`FileID`** column of the corresponding row in the **`Resources`** sheet.
+     4. If this file ID is also required to be imported into `Views` or `Reports`, add it as a new config entry in the `Config` sheet (e.g., `OutletFileID` => `<FileID>`).
+   - *Note:* If the **`FileID`** column in the `Resources` sheet is left empty, the resource will automatically fall back to the scope's default file ID (e.g. `MasterFileID`) defined in the `Config` sheet.
 
-### Step 7: Seed Security and Access
-Create or inject initial roles and ensure an admin user exists with the right access.
+---
 
-### Step 8: Deploy API
-Create a Web App deployment for the APP Apps Script project and capture the Web App URL.
+## Step 6: Generate Scoped Sheets
+In the `App` spreadsheet menu, execute the following setup actions in order:
+1. **`AQL 🚀` > `⚙️ Setup & Refactor` > `Refactor MASTER Sheets`**
+2. **`AQL 🚀` > `⚙️ Setup & Refactor` > `Setup All Operations`**
+3. **`AQL 🚀` > `⚙️ Setup & Refactor` > `Setup Base Accounts`**
 
-### Step 9: Wire Frontend
-Set the frontend environment to the deployed GAS Web App URL and build/deploy the frontend as needed.
+This will automatically create all the normalized sheets and apply formatting, schemas, data validations, and protections in the respective target spreadsheets.
 
-## Canonical Detail Owners
-- APP structure: [APP_SHEET_STRUCTURE.md](F:/LITTLE%20LEAP/AQL/Documents/APP_SHEET_STRUCTURE.md)
-- Resource/runtime config: [RESOURCE_REGISTRY_ARCHITECTURE.md](F:/LITTLE%20LEAP/AQL/Documents/RESOURCE_REGISTRY_ARCHITECTURE.md)
-- Schema refactor flow: [SCHEMA_REFACTORING_GUIDE.md](F:/LITTLE%20LEAP/AQL/Documents/SCHEMA_REFACTORING_GUIDE.md)
+---
 
-## Maintenance Rule
-Update this file when:
-- the preferred setup/deployment flow changes
-- required setup steps or prerequisites change
-- config keys or deployment expectations change materially
+## Step 7: Populate Data and Add Users
+1. Populate the master data sheets (such as `Products`, `SKUs`, etc.) in the `Master` spreadsheet.
+2. Add initial system users by going to **`AQL 🚀` > `👥 Users` > `Create User`** from the `App` spreadsheet menu to register designations and access roles.
+
+---
+
+## Step 8: Deploy Apps Script as Web App & Register Tenant URL
+Once all target sheets are successfully created and configured:
+1. In the **`App`** spreadsheet, open **Extensions > Apps Script**.
+2. Click **Deploy > New deployment** in the top-right corner.
+3. Click the gear icon next to "Select type" and select **Web app**.
+4. Set the configurations:
+   - **Description**: E.g., `Production Deploy`
+   - **Execute as**: `Me (your admin email)`
+   - **Who has access**: `Anyone`
+5. Click **Deploy**. Copy the generated **Web App URL**.
+6. Open the central **`TENANTS`** Master spreadsheet.
+7. Go to the **`URL`** tab and add a new row containing:
+   - **`Code`**: The tenant code (e.g., `NEWCO`).
+   - **`URL`**: The copied Web App URL.
+   - **`Details`**: E.g., Company name or details.
+
+---
+
+## Maintenance & Library Upgrades (Existing Tenants)
+Whenever a new version of the master script library is deployed:
+1. **Automated Manifest Update & Deployment**: Running `npm run tenant:push` (or `node scripts/deploy-tenant.js`) will:
+   - Query the latest version of the `AqlCore` library from Google.
+   - Automatically update the `"version"` field in `TENANTS/appsscript.json`.
+   - Push and deploy the new wrapper to the specified tenant(s).
+2. **Update Access Permissions (CRITICAL)**: Because Apps Script resets web app access settings on command-line deployment, you MUST open the tenant's online script editor (using `clasp open` or Extensions > Apps Script) and change **Who has access** to **Anyone**.
+3. **Existing Tenants Update**: For already existing tenants where the library is included, sheet administrators should open their online Apps Script editor, click **Libraries > AqlCore**, change the version to the latest available version, and click **Save**. If the new version does not show up in the dropdown list, remove the `AqlCore` library entirely, re-paste the ID, and add it again to refresh the version list cache.
+

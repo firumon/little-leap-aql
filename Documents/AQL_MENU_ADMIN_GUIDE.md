@@ -48,6 +48,7 @@ Use this document when an admin asks:
 | `⚙️ Setup & Refactor > Refactor MASTER Sheets` | Create/refactor configured master sheets. |
 | `⚙️ Setup & Refactor > Setup All Operations` | Create/refactor operation sheets. |
 | `⚙️ Setup & Refactor > Setup Base Accounts` | Create/refactor base account sheets. |
+| `GENERATE SPREADSHEET FOR NEW TENANT` | Copy App template spreadsheet and create associated Master, Operations, Accounts, Views, and Reports files. |
 
 Procurement sidebar order after PO receiving implementation:
 - `Purchase Orders` (`/operations/purchase-orders`, order `6`)
@@ -324,6 +325,18 @@ These groups appear in the **frontend application sidebar**, not in the Google S
 **Metadata source:**
 - `Warehouses.Menu` owns the `Warehouse > Stock List` menu row.
 - `Warehouses.AdditionalActions` owns the `ViewStock` navigate action.
+
+## 10. Generate Tenant Spreadsheets
+
+### 10.1 Generate Spreadsheet for New Tenant
+**What it does:**
+- Prompts for a target Google Drive Folder ID.
+- Copies the master Apps Script template spreadsheet (ID: `1kHbeO-OZWjYCElNQUBfWe446_uNEH2IoKiHCiRjK-K4`) to the target folder and renames it to `App`.
+- Creates five other spreadsheets in the folder: `Master`, `Operations`, `Accounts`, `Views`, and `Reports`.
+- For `Views` and `Reports` spreadsheets, creates a sheet named `Config` and sets cell `A1` with an `IMPORTRANGE` formula referencing the newly copied `App` spreadsheet ID's Config sheet.
+
+**Tenant Safety Notice:**
+- This menu option is a no-op function in tenant container scripts (`tenant.gs`). It will perform no actions if clicked by tenant users.
 
 ## 11. Common Admin Mistakes
 

@@ -9,6 +9,7 @@
         "gas:deploy": "node scripts/deploy-gas.js",
         "master:push": "cd MASTER && clasp push --force",
         "master:deploy": "node scripts/deploy-master-gas.js",
-        "master:open": "cd MASTER && clasp open-script"
+        "master:open": "cd MASTER && clasp open-script",
+        "tenant:push": "node scripts/deploy-tenant.js"
     }
 }

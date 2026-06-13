@@ -6,11 +6,24 @@
 
 ## Startup Sequence
 - Read this file.
-- Analyze the user's query and read the corresponding initialization prompt(s) from [Initialization Prompt Routing](#initialization-prompt-routing) before proceeding.
+- Run **Query Classification** (below) to classify the request.
+- Load only the matching initialization prompt(s) from [Initialization Prompt Routing](#initialization-prompt-routing).
+
+## Query Classification (Run Before Loading Prompts)
+
+Classify the user's request into one of these three categories:
+
+| Category | Rule | Action |
+|----------|------|--------|
+| **Single-category match** | The query maps cleanly to exactly ONE routing category below | Load ONLY that one init prompt. Do NOT load related prompts speculatively — the prompt itself tells you what codebase files to read. |
+| **Multi-category match** | The query explicitly spans multiple distinct domains (e.g., "add a database column AND update the frontend form AND add a menu entry") | Load ONLY the prompts that match the explicit scope. Do NOT load transitive dependencies (e.g., don't load schema + frontend + backend if only schema + frontend are needed). |
+| **Unclear** | The query doesn't fit any category or you're unsure | Load [general_query.md] and use DOC_ROUTING.md to identify the correct canonical docs. |
+
+When in doubt, prefer single-prompt loading. Each init prompt has a **Scope Boundary** header that defines its domain — respect it.
 
 ## Initialization Prompt Routing
 
-Before starting any implementation, research, or query task, analyze the nature of the user's request and read the appropriate initialization document(s) from [References/Prompt Library/Initialization/](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/) to align your behavior and guardrails:
+After classifying the query, read the appropriate initialization document(s) from [References/Prompt Library/Initialization/](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/) based on your classification above:
 * **Database Schema Alteration**: Read [database_schema_alteration.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/database_schema_alteration.md) (covers sheet setups, metadata config, view/report scans, and clasp sync instructions).
 * **Frontend Modification**: Read [frontend_modification.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/frontend_modification.md) (covers Quasar/Vue 3 boundaries, store wrappers, reactivity limits, and local testing).
 * **Sidebar Menu & Access Control**: Read [frontend_sidebar_menu.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/frontend_sidebar_menu.md) (covers menu config, tree mapping, permissions gating, and cache updates).
@@ -28,7 +41,9 @@ Before starting any implementation, research, or query task, analyze the nature 
 
 
 > [!IMPORTANT]
-> If the user's request touches multiple scopes (e.g., database schema alteration + frontend modification + menu updates), you MUST load and combine the guidelines from all corresponding initialization prompts.
+> **Single-category rule**: If the query maps cleanly to exactly ONE routing category above, load ONLY that one initialization prompt. Do NOT load related prompts speculatively — the prompt itself tells you what codebase files to read.
+>
+> **Multi-category rule**: Only when the query explicitly spans multiple domains (e.g., database schema alteration + frontend modification + menu updates) should you load multiple prompts. Load only the matching prompts — do NOT load transitive dependencies.
 
 > [!NOTE]
 > If the user's request doesn't cleanly match any category above, consult [DOC_ROUTING.md](file:///f:/LITTLE%20LEAP/AQL/Documents/DOC_ROUTING.md) to identify the correct canonical documents for the task.

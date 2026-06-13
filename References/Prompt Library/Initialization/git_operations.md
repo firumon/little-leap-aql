@@ -1,5 +1,7 @@
 # Initialization: Git Commit & Push Operations
 
+> **Scope boundary**: This document covers git operations only (commit, push, branch management). It does not require loading any other init prompt. Self-contained.
+
 Use this instruction when the user asks to commit changes, push commits, or manage branches.
 
 ---

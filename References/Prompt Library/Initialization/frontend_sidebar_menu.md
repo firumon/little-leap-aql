@@ -1,5 +1,7 @@
 # AQL Frontend Sidebar Menu & Access Control
 
+> **Scope boundary**: This document covers sidebar menu configuration and access control only — Menu JSON in APP.Resources, permission gating, nav tree rendering. Its pre-reads reference backend and frontend files — read them directly by path. Do NOT load backend_gas_implementation.md or frontend_modification.md unless the task explicitly requires modifying that code.
+
 Use this document to initialize an AI agent session when the task involves modifying, adding, deleting, ordering, or changing permission gates for the web application's sidebar menu.
 
 ---

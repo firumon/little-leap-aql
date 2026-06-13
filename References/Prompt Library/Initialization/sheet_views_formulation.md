@@ -1,5 +1,7 @@
 # AQL Sheet Views Formulation
 
+> **Scope boundary**: This document covers Google Sheets View formulas only — denormalized data views, IMPORTRANGE, VLOOKUP, Config sheet patterns. Its pre-reads reference sheet structure docs — read them by path. Do NOT load other init prompts.
+
 Use this document to initialize an AI agent session when the task involves creating, modifying, debugging, or documenting Google Sheets View formulas in the AQL system.
 
 ---

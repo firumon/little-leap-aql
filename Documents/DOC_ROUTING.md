@@ -7,6 +7,7 @@ This document is the canonical task-to-doc router for AQL. Use it to decide what
 - Read only the docs required for the current task.
 - For large docs, read only the relevant section instead of the whole file whenever possible.
 - Do not load `PLANS/`, `Documents/CONTEXT_HANDOFF.md`, or backend-heavy docs unless the task actually needs them.
+- **Init prompt routing is owned by AGENTS.md** — use its Query Classification table to decide which init prompt (if any) to load. This file covers canonical docs only, not init prompts.
 
 ## Non-Negotiable Frontend Pre-Read
 **Before touching ANY file under `FRONTENT/` — regardless of scope, size, or perceived simplicity — you MUST read:**
@@ -113,11 +114,20 @@ Use when changing `APP.Resources`, resource columns, sheet structure, or setup/s
   - `Documents/RESOURCE_COLUMNS_GUIDE.md`
 - Also read the relevant structure doc section if needed.
 
-### Menu Action Changes
-Use when adding, removing, renaming, or behavior-changing `AQL` menu actions.
+### Menu Action Changes (Sheet Menu)
+Use when adding, removing, renaming, or behavior-changing `AQL 🚀` sheet menu actions (the Google Sheets toolbar menu).
 - Read:
   - `Documents/AI_COLLABORATION_PROTOCOL.md`
   - `Documents/AQL_MENU_ADMIN_GUIDE.md`
+
+### Sidebar Menu Configuration (Frontend)
+Use when adding, removing, reordering, or changing permission gates for the web application's sidebar menu (Menu JSON in `APP.Resources`).
+- Read:
+  - `Documents/AI_COLLABORATION_PROTOCOL.md`
+  - `Documents/AQL_MENU_ADMIN_GUIDE.md` (Section 9: Sidebar Menu Taxonomy)
+  - `GAS/syncAppResources.gs` — target resource's Menu config in `initAppResourcesCodeConfig()`
+  - `FRONTENT/src/composables/layout/useMainLayoutNavTree.js` — nav tree packing logic
+  - `FRONTENT/src/composables/layout/useMenuAccess.js` — permission evaluation algorithms
 
 ### Login Payload Or Auth Response Changes
 Use when changing `handleLogin()` response shape, field sources, or frontend storage of login data.
@@ -152,6 +162,7 @@ Use when inspecting, designing, or changing Google Sheets printable report templ
 Update this file when any of the following changes:
 - a new recurring task type is introduced
 - a canonical reference doc is added, removed, or renamed
-- routing guidance changes for planning, build, backend, frontend, auth, menu, or resume workflows
+- routing guidance changes for planning, build, backend, frontend, auth, menu, sidebar, or resume workflows
 - mandatory-read rules for specific task categories change
 - the Non-Negotiable Frontend Pre-Read list changes (e.g. a new always-read doc is added for frontend work)
+- sidebar menu routing or permission-evaluation rules change materially

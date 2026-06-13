@@ -1,5 +1,7 @@
 # AQL Dashboard Implementation
 
+> **Scope boundary**: This document covers dashboard widget implementation only — widget config contracts, declarative pipelines, SVG widget creation, dashboard registries. Its pre-reads reference FRONTENT files and canonical docs — read them by path. Do NOT load frontend_modification.md unless the task explicitly requires modifying non-dashboard frontend code.
+
 Use this document to initialize an AI agent session when the task involves creating, modifying, extending, or debugging dashboard widgets, layouts, or the dashboard composable.
 
 ---

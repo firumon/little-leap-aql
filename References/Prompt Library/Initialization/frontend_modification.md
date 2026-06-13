@@ -1,5 +1,7 @@
 # AQL Frontend Modification & Coding Workflow
 
+> **Scope boundary**: This document covers FRONTENT/ changes only — Vue pages, composables, components, stores, services. Its blast-radius steps reference GAS backend files and sync config — read those files directly by path. Do NOT load backend_gas_implementation.md or database_schema_alteration.md unless the task explicitly requires modifying that code.
+
 Use this document to initialize an AI agent session when the task involves modifying, refactoring, adding, or deleting frontend pages, components, composables, or styling under the `FRONTENT/` directory.
 
 ---

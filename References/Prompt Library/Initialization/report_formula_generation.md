@@ -1,5 +1,7 @@
 # AQL Report Formula Generation & Maintenance
 
+> **Scope boundary**: This document covers Google Sheets report formulas and template configuration only — printable headers, LAMBDA row functions, virtual array calculations. Its references to frontend composables and backend GAS files are read-only — read them by path. Do NOT load frontend_modification.md or backend_gas_implementation.md unless the task explicitly requires modifying that code.
+
 Use this document to initialize an AI agent session when building, refactoring, or extending Google Sheets reporting formulas, template configurations, or report action bindings in the AQL system.
 
 ---

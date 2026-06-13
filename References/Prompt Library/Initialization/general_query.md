@@ -1,5 +1,7 @@
 # Initialization: General Query
 
+> **Scope boundary**: This document covers general/universal queries only. It instructs you when and how to transition to AQL-aware mode using DOC_ROUTING.md. Self-contained — no other init prompt is needed.
+
 Use this instruction when the user's query is:
 1. A general conceptual question (e.g., JS syntax, DB theories, standard accounting) with no initial reference to AQL.
 2. A request that starts generally but will transition into alignment with AQL.

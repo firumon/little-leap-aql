@@ -1,5 +1,7 @@
 # Initialization: Implementation Plan Writing
 
+> **Scope boundary**: This document covers writing implementation plans only. Its codebase discovery steps tell you to read source files directly — do NOT load other init prompts for context. Reference ARCHITECTURE RULES.md, GAS_PATTERNS.md, and other canonical docs by path.
+
 Use this instruction when the user requests to create or update an implementation plan.
 
 ---

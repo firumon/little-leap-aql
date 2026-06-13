@@ -1,5 +1,7 @@
 # AQL Backend GAS Implementation
 
+> **Scope boundary**: This document covers GAS backend changes only — hooks, API handlers, batch operations, resource config. Its blast-radius steps tell you to SEARCH frontend files and sheet structures — do NOT load frontend_modification.md or database_schema_alteration.md unless the task explicitly requires modifying that code. Read referenced files directly by path.
+
 Use this document to initialize an AI agent session when the task involves creating, modifying, or debugging Google Apps Script (GAS) backend logic — hooks, API handlers, batch operations, or resource configuration.
 
 ---

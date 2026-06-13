@@ -1,5 +1,7 @@
 # AQL Codebase Investigation
 
+> **Scope boundary**: This document covers codebase investigation only — tracing data flow, understanding architecture, finding implementations. It tells you which canonical docs to READ by path for each domain — do NOT load other init prompts for investigation context.
+
 Use this document to initialize an AI agent session when the user asks an investigatory question about the AQL system — how a feature works, where something is implemented, tracing data flow, or understanding architecture.
 
 ---

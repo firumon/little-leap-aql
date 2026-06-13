@@ -1,5 +1,7 @@
 # Initialization: API Related Queries & Custom Integrations
 
+> **Scope boundary**: This document covers the API request/response layer only — routing, envelopes, batching, composite saves, post-write hooks. Its pre-reads and blast-radius steps reference frontend and backend files that you must READ directly by path. Do NOT load another initialization prompt (e.g., frontend_modification.md, backend_gas_implementation.md) unless the task explicitly requires modifying that layer.
+
 Use this document to initialize an AI agent session when the user asks an investigatory, architectural, or implementation question about the AQL API framework. This includes backend request routing in GAS, request/response envelopes, batching requests, composite saves, workflow action execution, and backend post-write hooks.
 
 ---

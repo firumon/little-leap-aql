@@ -1,5 +1,7 @@
 # AQL Tax & Currency System
 
+> **Scope boundary**: This document covers tax and currency logic only — compound tax calculations, currency helpers, tax-inclusive/exclusive pricing, tax transaction storage. Its pre-reads reference canonical docs and frontend composables — read them by path. Do NOT load frontend_modification.md or backend_gas_implementation.md unless the task explicitly requires modifying that code.
+
 Use this document to initialize an AI agent session when the task involves modifying, extending, or debugging the tax calculation engine, currency formatting, tax master configuration, or tax transaction storage.
 
 ---

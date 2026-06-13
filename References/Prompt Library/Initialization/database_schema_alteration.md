@@ -1,5 +1,7 @@
 # AQL Database Schema Alteration & Sync Workflow
 
+> **Scope boundary**: This document covers database schema changes only — sheet setups, metadata config, view/report scans, and clasp sync. Its blast-radius steps tell you to SEARCH frontend and backend files for column references — do NOT load the frontend_modification.md or backend_gas_implementation.md init prompts unless the task explicitly requires modifying that code. Read referenced files directly by path.
+
 Use this document to initialize an AI agent session when the task requires modifying, adding, deleting, or altering the database schema (Google Sheets sheets, columns, constraints, or metadata definitions) in the AQL system.
 
 ---

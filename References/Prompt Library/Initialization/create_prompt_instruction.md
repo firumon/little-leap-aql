@@ -1,5 +1,7 @@
 # Initialization: Prompt & Instruction Creation
 
+> **Scope boundary**: This document covers creating new initialization prompts only. Its discovery steps require exhaustive codebase reading — read source files directly by path. Do NOT load other init prompts for context; you are creating one.
+
 Use this instruction when the user asks to create an initialization prompt, workflow instruction, or checklist for a specific task or feature area in AQL.
 
 ---

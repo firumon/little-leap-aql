@@ -145,6 +145,11 @@ Use when customizing tax columns, calculating wholesale values, or modifying com
 - Read:
   - `Documents/TAX_SYSTEM_DESIGN.md`
 
+### Multi-Tenant System & Onboarding
+Use when working with tenant routing, Master Apps Script configurations, or select tenant forms.
+- Read:
+  - `Documents/MULTI_TENANT_SYSTEM.md`
+
 ### Sheet Views Formulation
 Use when inspecting, designing, or changing Google Sheets View aggregation formulas.
 - Read:

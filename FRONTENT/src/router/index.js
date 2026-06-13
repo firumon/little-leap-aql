@@ -80,6 +80,15 @@ export default defineRouter(function (/* { store, ssrContext } */) {
       return next()
     }
 
+    const activeUrl = localStorage.getItem('aql_tenant_url')
+    if (!activeUrl && to.name !== 'select-tenant') {
+      return next({ name: 'select-tenant' })
+    }
+
+    if (activeUrl && to.name === 'select-tenant') {
+      return next('/')
+    }
+
     const token = localStorage.getItem('token')
     const isAuthenticated = !!token
     const resources = JSON.parse(localStorage.getItem('resources') || '[]')

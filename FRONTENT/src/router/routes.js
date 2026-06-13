@@ -28,6 +28,11 @@ const routes = [
         path: 'login',
         name: 'login',
         component: () => import('pages/AuthPage/LoginPage.vue')
+      },
+      {
+        path: 'select-tenant',
+        name: 'select-tenant',
+        component: () => import('pages/AuthPage/SelectTenantPage.vue')
       }
     ]
   },

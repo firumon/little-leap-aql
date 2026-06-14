@@ -2,10 +2,7 @@
     "name": "aql-workspace",
     "private": true,
     "scripts": {
-        "gas:push": "cd GAS && clasp push --force",
-        "gas:pull": "cd GAS && clasp pull",
-        "gas:status": "cd GAS && clasp status",
-        "gas:open": "cd GAS && clasp open-script",
+        "gas:push": "node scripts/push-gas.js",
         "gas:deploy": "node scripts/deploy-gas.js",
         "master:push": "cd MASTER && clasp push --force",
         "master:deploy": "node scripts/deploy-master-gas.js",

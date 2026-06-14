@@ -23,8 +23,22 @@ try {
 
 // 1. Get latest library version of AqlCore from GAS project
 function getLatestLibraryVersion() {
+  const gasClaspPath = path.join(__dirname, '../GAS/.clasp.json');
+  let originalGasClasp = null;
+  if (fs.existsSync(gasClaspPath)) {
+    originalGasClasp = fs.readFileSync(gasClaspPath, 'utf8');
+  }
+
   try {
-    console.log('Querying latest library versions from GAS...');
+    console.log('Querying latest library versions from GAS (pointing to AqlCore)...');
+    
+    // Temporarily point GAS clasp to AqlCore standalone library ID to fetch its versions
+    const tempClasp = {
+      scriptId: '1qTNMNpdGwfF3zr-53KqWtM5ibM2bblHiHBIIwB3aJtX3k-82jMLmIiPg',
+      rootDir: '.'
+    };
+    fs.writeFileSync(gasClaspPath, JSON.stringify(tempClasp, null, 2) + '\n', 'utf8');
+
     const output = execSync('npx clasp versions', {
       cwd: path.join(__dirname, '../GAS'),
       encoding: 'utf8',
@@ -45,6 +59,13 @@ function getLatestLibraryVersion() {
   } catch (e) {
     console.error('Warning: Failed to get latest library version from clasp:', e.message);
     return null;
+  } finally {
+    // Restore original GAS clasp config
+    if (originalGasClasp !== null) {
+      fs.writeFileSync(gasClaspPath, originalGasClasp, 'utf8');
+    } else if (fs.existsSync(gasClaspPath)) {
+      fs.unlinkSync(gasClaspPath);
+    }
   }
 }
 
@@ -57,10 +78,21 @@ if (latestVersion) {
       let updated = false;
       if (manifest.dependencies && manifest.dependencies.libraries) {
         manifest.dependencies.libraries.forEach(lib => {
-          if (lib.userSymbol === 'AqlCore' || lib.libraryId === '1gWyoy-tvOBR61iopJEo2FPpKIme1B8tw-P9IemDTAbCRG9YfbP1-KXxz') {
+          if (lib.userSymbol === 'AqlCore' || lib.libraryId === '1qTNMNpdGwfF3zr-53KqWtM5ibM2bblHiHBIIwB3aJtX3k-82jMLmIiPg' || lib.libraryId === '1gWyoy-tvOBR61iopJEo2FPpKIme1B8tw-P9IemDTAbCRG9YfbP1-KXxz') {
+            const newLibId = '1qTNMNpdGwfF3zr-53KqWtM5ibM2bblHiHBIIwB3aJtX3k-82jMLmIiPg';
+            if (lib.libraryId !== newLibId) {
+              console.log(`Updating AqlCore library ID in manifest from ${lib.libraryId} to ${newLibId}`);
+              lib.libraryId = newLibId;
+              updated = true;
+            }
             if (lib.version !== String(latestVersion)) {
               console.log(`Updating AqlCore library version in manifest from ${lib.version} to ${latestVersion}`);
               lib.version = String(latestVersion);
+              updated = true;
+            }
+            if (lib.developmentMode !== false) {
+              console.log(`Setting AqlCore library developmentMode in manifest to false`);
+              lib.developmentMode = false;
               updated = true;
             }
           }
@@ -70,14 +102,14 @@ if (latestVersion) {
         fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n', 'utf8');
         console.log('Successfully updated TENANTS/appsscript.json manifest.');
       } else {
-        console.log('Manifest library version is already up-to-date.');
+        console.log('Manifest library version and ID are already up-to-date.');
       }
     } catch (e) {
       console.error('Error updating appsscript.json manifest:', e.message);
     }
   }
 } else {
-  console.log('Could not retrieve latest library version. Skipping manifest version update.');
+  console.log('Could not retrieve latest library version. Skipping manifest update.');
 }
 
 // Determine targets to push to

@@ -61,11 +61,6 @@ function setAppFileId() { CORE_LIB.setAppFileId(); }
 function setupMasterSheets() { CORE_LIB.setupMasterSheets(); }
 function setupOperationSheets() { CORE_LIB.setupOperationSheets(); }
 function setupAccountSheets() { CORE_LIB.setupAccountSheets(); }
-function generateSpreadsheetForNewTenant() {
-  // No-op: Tenant sheets do not support tenant generation.
-}
-
-
 // ============================================================
 // 4. HTML Dialog Callbacks (google.script.run targets)
 // ============================================================

@@ -4,20 +4,25 @@ This guide covers the process for setting up and configuring spreadsheet files f
 
 ---
 
-## Step 1: Create Drive Folder
-1. Create a new folder in Google Drive.
-2. Name it with the company name (e.g., `Company Name`).
-   > [!TIP]
-   > Prefix the folder name with `AQL ` (e.g., `AQL Company Name`) if you are planning to transfer ownership of the folder later.
-3. Open the folder and copy its **Folder ID** from the browser URL.
+## Step 1: Open Master Spreadsheet
+1. Open the central **`TENANTS`** Master spreadsheet.
 
 ---
 
-## Step 2: Generate Tenant Spreadsheets
-1. Open the main Master/Admin generator spreadsheet (File ID: `1POS4HDCdwHtyaIWF_qGqn51V_pL9DeTRnBva_cLk4i0`).
-2. Go to the menu **`AQL 🚀` > `GENERATE SPREADSHEET FOR NEW TENANT`**.
-3. When prompted, paste the **Google Drive Folder ID** copied in Step 1 and click **OK**.
-4. The script will automatically copy the `App` template and template files for `Views` and `Reports` (configuring their `Config` sheets with the appropriate `IMPORTRANGE` formula), and create new empty spreadsheets for `Master`, `Operations`, and `Accounts` in the target folder.
+## Step 2: Create New Tenant
+1. Go to the menu **`New ➕` > `Create Tenant`**.
+2. In the popup dialog, fill in:
+   - **Tenant Name**: The full name of the company (e.g. `Acme Corp`).
+   - **Tenant Code**: The unique code representing the tenant (e.g. `ACM`).
+   - **Directory Name**: Auto-filled from the Tenant Name (e.g. `Acme Corp`), but customizable if needed. This will be the name of the folder created under the main AQL folder.
+3. Click **Create Tenant**.
+4. The popup dialog will show real-time progress as it:
+   - Registers the tenant in the `Tenants` sheet (and a placeholder in `URL` sheet).
+   - Creates the Google Drive folder under the main AQL folder (`1e8RvfsBT6XS9JDL5HY4TgM-vuZOWH4Gi`).
+   - Copies the template files for `App`, `Views`, and `Reports` into the folder.
+   - Generates the empty spreadsheets for `Master`, `Operations`, and `Accounts` in the folder.
+   - Configures the `Config` sheets in Views/Reports with the appropriate `IMPORTRANGE` formula referencing the new `App` file ID.
+5. Once complete, copy the generated spreadsheet file IDs displayed in the success panel.
 
 ---
 

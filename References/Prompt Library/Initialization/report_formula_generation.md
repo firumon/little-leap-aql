@@ -71,6 +71,14 @@ Before importing raw source sheets and building complex joins, always check if a
 - **Why**: Views connect, flatten, and denormalize dependent records (e.g., combining SKU, product, and variant fields into a single `SKU` view). Refer to [Sheet Formulas/Views/INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Views/INDEX.md) for existing views (e.g., `SKU`, `Outlet`, `WarehouseStock`, `OutletStock`).
 - **Priority**: Always use a view as your primary data source if one is available.
 
+### E. Resolving User Input Cell Dependencies
+If a report depends on user inputs (e.g., filters, specific IDs, dates, or progress states):
+1. **Identify Parameter Locations**: User input parameters are injected into specific cells (either in the header portion like `$AB$6` or further down in the sheet).
+2. **Clarify Cell Mapping**: If cell locations or the types of inputs are not explicitly specified in the request, ask the user:
+   - What input data fields are required (e.g., Order ID, Date, Progress status).
+   - Which specific cells (e.g., `$AB$6`, `$J$11`, `$J$12`) these parameters will be injected into.
+3. **Handle Multiple Dependencies**: A report may depend on multiple input cells simultaneously (e.g., filtering a worklist by both Date in cell `$J$11` and Progress in cell `$J$12`). Always design the `LET` formula to read from all defined input cells and apply corresponding conditions (e.g. using `*` multiplication for AND filters in `FILTER`).
+
 ---
 
 ## 4. Shape-Safety & Coding Patterns

@@ -60,12 +60,13 @@ When editing functions inside the core `GAS/` codebase, you MUST update [tenant.
 ## 4. Tenant Onboarding & Library Upgrades
 
 * **Adding a New Tenant**: 
-  1. Add their tenant code and Apps Script ID to **[tenant_registry.json](file:///f:/LITTLE%20LEAP/AQL/TENANTS/tenant_registry.json)**.
-  2. Push the wrapper template specifically to them: `node scripts/deploy-tenant.js <TENANT_CODE>` (or `npm run tenant:push <TENANT_CODE>`).
-  3. In the Apps Script web editor, add library `AqlCore` (ID: `1qTNMNpdGwfF3zr-53KqWtM5ibM2bblHiHBIIwB3aJtX3k-82jMLmIiPg`), select the latest version, and ensure **Development mode** is toggled **OFF**.
-  4. Select `onOpen` function and click **Run** to authorize the script permissions. Refresh the Google Sheet browser tab to display the menu.
-  5. In Apps Script settings, add a Script Property named `APP_FILE_ID` with the value set to the spreadsheet ID of the tenant's new `App` file.
-  6. *Cache Refresh Tip:* If a newly published version does not appear, remove the `AqlCore` library entirely, re-paste the ID, and add it again to refresh Google's version list cache.
+  1. **Folder & Generation**: Follow the [New Client Setup Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/NEW_CLIENT_SETUP_GUIDE.md) to copy the template spreadsheet (`__tenant_app__`) and generate scoped sheets. The template spreadsheet already has the up-to-date wrapper script bound and configured to reference `AqlCore` library.
+  2. **Authorize permissions**: Select the `onOpen` function in the new tenant's online Apps Script editor and click **Run** to authorize the script. Refresh the Google Sheet to display the menu.
+  3. **Set Script Property**: In the Apps Script settings, add a Script Property named `APP_FILE_ID` with the value set to the spreadsheet ID of the tenant's new `App` file.
+  4. **Deploy Web App**: Deploy the project as a Web App (Execute as: `Me`, Who has access: `Anyone`) and copy the Web App URL.
+  5. **Register in TENANTS Master Sheet**: Add the tenant `Code`, Web App `URL`, and details to the `URL` tab of the central `TENANTS` Master spreadsheet.
+  6. **Add to local Registry**: Copy the Apps Script **Script ID** (from Project Settings) and add it under the `tenants` object in **[tenant_registry.json](file:///f:/LITTLE%20LEAP/AQL/TENANTS/tenant_registry.json)** so that future library updates can be pushed automatically.
+  7. *Cache Refresh Tip:* If a newly published version does not appear, remove the `AqlCore` library entirely, re-paste the ID (`1qTNMNpdGwfF3zr-53KqWtM5ibM2bblHiHBIIwB3aJtX3k-82jMLmIiPg`), and add it again to refresh Google's version list cache.
 * **Upgrading AqlCore Library Version**:
   1. Push local changes to `AqlCore` and `AQL` using `npm run gas:push` (which runs `push-gas.js`). Publish a new version in `AqlCore`.
   2. Update `"version": "NEW_VERSION"` inside **[appsscript.json](file:///f:/LITTLE%20LEAP/AQL/TENANTS/appsscript.json)** (setting `developmentMode` to `false`).

@@ -89,34 +89,32 @@ Due to security constraints in the Google Apps Script API, deploying code using 
 *If you accidentally deploy via CLI using `npm run master:deploy`, you must immediately open the editor (`npm run master:open`) and manually toggle the access level of the deployment back to "Anyone".*
 
 ### 👥 Tenant Onboarding Workflow
-Whenever a new tenant is added, follow these steps to connect and configure their Apps Script project:
+Whenever a new tenant is added, follow these steps to connect and configure their Apps Script project. Note that the template spreadsheet (`__tenant_app__`) already contains the pre-bound wrapper script and the correct library configuration, so pushing the wrapper or adding the tenant to the local registry is not required during the initial setup phase.
 
-1. **Register the Script ID**: 
-   - Open the new tenant's spreadsheet and click **Extensions > Apps Script** to open its container project.
-   - Copy the project's **Script ID** (found in Project Settings / Gear icon).
-   - Open **[TENANTS/tenant_registry.json](file:///f:/LITTLE%20LEAP/AQL/TENANTS/tenant_registry.json)** and add their tenant code and Script ID under the `tenants` object.
-2. **Push the Wrapper**: 
-   - Run the deployment script to clasp push [tenant.gs](file:///f:/LITTLE%20LEAP/AQL/TENANTS/tenant.gs) and the manifest into the new tenant project:
-     ```bash
-     npm run tenant:push <TENANT_CODE>
-     ```
-3. **Configure the Library Link**:
-   - In the tenant's online Apps Script editor, click the **"+"** button next to **Libraries** in the left sidebar.
-   - Paste the standalone **AqlCore** Apps Script ID: `1qTNMNpdGwfF3zr-53KqWtM5ibM2bblHiHBIIwB3aJtX3k-82jMLmIiPg`.
-   - Set the title exactly as **`AqlCore`**.
-   - Select the latest available version from the dropdown, and ensure **Development mode** is set to **OFF** (false).
-   - *Tip:* If a newly created library version is missing from the list, **remove the AqlCore library entirely, re-paste the ID, and add it again** to force Google to clear its version list cache.
-4. **Authorize the Script**:
+1. **Authorize the Script**:
+   - Open the newly copied tenant `App` spreadsheet.
+   - Click **Extensions > Apps Script** to open its container project.
    - In the editor's top toolbar, select the **`onOpen`** function from the dropdown list and click **Run**.
    - Accept Google's **Authorization Required** prompt to grant the script read/write permissions to the sheet.
    - Once execution completes, **refresh/reload** the Google Sheets browser tab to display the custom **AQL 🚀** menu.
-5. **Set the `APP_FILE_ID` Script Property**:
+2. **Set the `APP_FILE_ID` Script Property**:
    - In the Apps Script editor, click **Project Settings** (gear icon on the left sidebar).
    - Under the **Script Properties** section, click **Add script property**.
    - Add property `APP_FILE_ID` with the value set to the spreadsheet ID of the tenant's new `App` file itself.
-6. **Deploy Web App & Register in TENANTS Master Sheet**:
-   - Click **Deploy > New deployment**, select type **Web app**, configure it to execute as **Me** and set who has access to **Anyone**, then click **Deploy**.
-   - Copy the Web App URL, open the master **`TENANTS`** spreadsheet, and in the **`URL`** tab add a new row with the tenant `Code`, Web App `URL`, and `Details`.
+3. **Initialize Sheets & Config**:
+   - In the `App` spreadsheet, click the menu **`AQL 🚀` > `⚙️ Setup & Refactor` > `Refactor APP Sheets`**.
+   - Open the **`Config`** sheet and paste the generated File IDs (`MasterFileID`, `OperationFileID`, `AccountsFileID`).
+   - Run the setup menus: **`Refactor MASTER Sheets`**, **`Setup All Operations`**, and **`Setup Base Accounts`** to format the database files.
+4. **Deploy Web App**:
+   - In the Apps Script editor, click **Deploy > New deployment**, select type **Web app**.
+   - Configure it to execute as **Me (your admin email)** and set who has access to **Anyone**, then click **Deploy**.
+   - Copy the generated Web App URL.
+5. **Register in TENANTS Master Sheet**:
+   - Open the master **`TENANTS`** spreadsheet.
+   - In the **`URL`** tab, add a new row with the tenant `Code`, Web App `URL`, and `Details`.
+6. **Register in Local tenant_registry.json**:
+   - Copy the project's **Script ID** (found in Project Settings / Gear icon of the tenant's Apps Script editor).
+   - Open **[TENANTS/tenant_registry.json](file:///f:/LITTLE%20LEAP/AQL/TENANTS/tenant_registry.json)** and add their tenant code and Script ID under the `tenants` object. This registers the tenant locally so that future wrapper script upgrades (`npm run tenant:push`) will be applied to this tenant.
 
 ---
 

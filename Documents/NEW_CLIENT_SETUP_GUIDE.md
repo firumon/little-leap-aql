@@ -96,6 +96,9 @@ This will automatically create all the normalized sheets and apply formatting, s
    - **`Code`**: The tenant code (e.g., `NEWCO`).
    - **`URL`**: The copied Web App URL.
    - **`Details`**: E.g., Company name or details.
+8. Register the tenant in the local repository registry:
+   - Copy the Apps Script **Script ID** (found in Project Settings / Gear icon of the tenant's Apps Script editor).
+   - Open **[tenant_registry.json](file:///f:/LITTLE%20LEAP/AQL/TENANTS/tenant_registry.json)** in your codebase and add your tenant code and Script ID under the `tenants` object. This ensures that the tenant receives future script upgrades when running `npm run tenant:push`.
 
 ---
 

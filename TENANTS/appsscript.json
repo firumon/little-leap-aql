@@ -5,7 +5,7 @@
       {
         "userSymbol": "AqlCore",
         "libraryId": "1gWyoy-tvOBR61iopJEo2FPpKIme1B8tw-P9IemDTAbCRG9YfbP1-KXxz",
-        "version": "96",
+        "version": "98",
         "developmentMode": true
       }
     ]
@@ -15,5 +15,11 @@
   "webapp": {
     "executeAs": "USER_DEPLOYING",
     "access": "ANYONE"
-  }
+  },
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/script.container.ui",
+    "https://www.googleapis.com/auth/script.external_request"
+  ]
 }

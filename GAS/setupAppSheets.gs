@@ -324,6 +324,8 @@ function setupAppSheets() {
        ['OperationFileID', ''],
        ['ReportFileID', ''],
        ['AccountsFileID', ''],
+       ['ViewsFileID', ''],
+       ['ReportsFileID', ''],
        ['MasterSyncTTL', '900'],
        ['AccountsSyncTTL', '60'],
        ['OperationsSyncTTL', '300'],
@@ -380,7 +382,7 @@ function setupAppSheets() {
   var appOptionsData = lastRow > 0
     ? appOptionsSheet.getRange(1, 1, lastRow, appOptionsSheet.getMaxColumns()).getValues()
     : [];
-  
+
   var existingOptionMap = {};
   for (var r = 0; r < appOptionsData.length; r++) {
     var rowValues = appOptionsData[r];
@@ -404,7 +406,7 @@ function setupAppSheets() {
   for (var s = 0; s < seedKeys.length; s++) {
     var seedKey = seedKeys[s];
     var seedOptions = APP_OPTIONS_SEED[seedKey];
-    
+
     if (!existingOptionMap[seedKey]) {
       // Key does not exist: append a new row
       var newRow = [seedKey].concat(seedOptions);
@@ -419,7 +421,7 @@ function setupAppSheets() {
       // Key exists: check if any elements from APP_OPTIONS_SEED are missing in the sheet
       var existingObj = existingOptionMap[seedKey];
       var existingOptions = existingObj.options;
-      
+
       var missingOptions = [];
       for (var o = 0; o < seedOptions.length; o++) {
         var opt = seedOptions[o];
@@ -427,17 +429,17 @@ function setupAppSheets() {
           missingOptions.push(opt);
         }
       }
-      
+
       if (missingOptions.length > 0) {
         // Append missing options while preserving existing ones (including any extra values)
         var updatedOptions = existingOptions.concat(missingOptions);
         var updatedRow = [seedKey].concat(updatedOptions);
         var requiredCols = updatedRow.length;
-        
+
         if (requiredCols > appOptionsSheet.getMaxColumns()) {
           appOptionsSheet.insertColumnsAfter(appOptionsSheet.getMaxColumns(), requiredCols - appOptionsSheet.getMaxColumns());
         }
-        
+
         // Write the updated row back to the sheet
         appOptionsSheet.getRange(existingObj.rowIndex, 1, 1, requiredCols).setValues([updatedRow]);
         existingObj.options = updatedOptions;

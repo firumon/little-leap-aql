@@ -62,15 +62,17 @@ When editing functions inside the core `GAS/` codebase, you MUST update [tenant.
 * **Adding a New Tenant**: 
   1. Add their tenant code and Apps Script ID to **[tenant_registry.json](file:///f:/LITTLE%20LEAP/AQL/TENANTS/tenant_registry.json)**.
   2. Push the wrapper template specifically to them: `node scripts/deploy-tenant.js <TENANT_CODE>` (or `npm run tenant:push <TENANT_CODE>`).
-  3. In the Apps Script web editor, add library `AqlCore` (ID: `1gWyoy-tvOBR61iopJEo2FPpKIme1B8tw-P9IemDTAbCRG9YfbP1-KXxz`) and select the latest version.
+  3. In the Apps Script web editor, add library `AqlCore` (ID: `1qTNMNpdGwfF3zr-53KqWtM5ibM2bblHiHBIIwB3aJtX3k-82jMLmIiPg`), select the latest version, and ensure **Development mode** is toggled **OFF**.
   4. Select `onOpen` function and click **Run** to authorize the script permissions. Refresh the Google Sheet browser tab to display the menu.
-  5. *Cache Refresh Tip:* If a newly published Master library version does not appear, remove the `AqlCore` library entirely, re-paste the ID, and add it again to refresh Google's version list cache.
-* **Upgrading Master Library Version**:
-  1. Update `"version": "NEW_VERSION"` inside **[appsscript.json](file:///f:/LITTLE%20LEAP/AQL/TENANTS/appsscript.json)**.
-  2. Push wrapper changes to all tenants: `npm run tenant:push`.
-  3. Instruct sheet administrators to select the latest library version within their Apps Script editors (under Libraries > AqlCore) for their live sheets to execute the latest code.
-  4. *Tip:* If the latest version does not show, instruct them to remove and re-add the library.
-  5. **Step-by-Step Spreadsheet Setup**: For full instructions on folder creation, generating spreadsheets using the menu, setting up configuration/file IDs, routing custom resources, and running refactoring scripts, see the [New Client Setup Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/NEW_CLIENT_SETUP_GUIDE.md).
+  5. In Apps Script settings, add a Script Property named `APP_FILE_ID` with the value set to the spreadsheet ID of the tenant's new `App` file.
+  6. *Cache Refresh Tip:* If a newly published version does not appear, remove the `AqlCore` library entirely, re-paste the ID, and add it again to refresh Google's version list cache.
+* **Upgrading AqlCore Library Version**:
+  1. Push local changes to `AqlCore` and `AQL` using `npm run gas:push` (which runs `push-gas.js`). Publish a new version in `AqlCore`.
+  2. Update `"version": "NEW_VERSION"` inside **[appsscript.json](file:///f:/LITTLE%20LEAP/AQL/TENANTS/appsscript.json)** (setting `developmentMode` to `false`).
+  3. Push wrapper changes to all tenants: `npm run tenant:push`.
+  4. Instruct sheet administrators to select the latest library version within their Apps Script editors (under Libraries > AqlCore), ensure Development mode is set to OFF, and click Save.
+  5. *Tip:* If the latest version does not show, instruct them to remove and re-add the library.
+  6. **Step-by-Step Spreadsheet Setup**: For full instructions on folder creation, generating spreadsheets using the menu, setting up configuration/file IDs, routing custom resources, and running refactoring scripts, see the [New Client Setup Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/NEW_CLIENT_SETUP_GUIDE.md).
 
 ---
 

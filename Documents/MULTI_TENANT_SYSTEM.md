@@ -21,7 +21,7 @@ The AQL Multi-Tenant System decouples the frontend Single Page Application (SPA)
 * **Structure**: A Google Sheet named `TENANTS` containing two tabs:
   * **`Tenants`**: Maps tenant details (`Code`, `Name`).
   * **`URL`**: Maps tenant codes to their active deployed Google Apps Script Web App URLs (`Code`, `URL`, `Details`).
-* **Onboarding Rule**: Adding a new tenant simply requires duplicating the template Google Sheet, deploying its script as a web app, and writing its code and URL to this master sheet. **No frontend code changes or redeployments are required.**
+* **Onboarding Rule**: Adding a new tenant simply requires duplicating the template Google Sheet (`__tenant_app__`), deploying its script as a web app, and writing its code and URL to this master sheet. **No frontend code changes or redeployments are required.**
 
 ### B. The Master Router API (`MASTER/`)
 A container-bound Apps Script project attached to the `TENANTS` spreadsheet. It serves as the public bootstrap resolver.
@@ -32,10 +32,17 @@ A container-bound Apps Script project attached to the `TENANTS` spreadsheet. It 
   * [MASTER/appsscript.json](file:///f:/LITTLE%20LEAP/AQL/MASTER/appsscript.json): Manifest containing PWA configurations.
   * [MASTER/api.gs](file:///f:/LITTLE%20LEAP/AQL/MASTER/api.gs): Implements the `doPost(e)` function. It parses `{ action: "getTenantUrl", tenantCode: "CODE" }` and returns the raw text string containing the tenant's spreadsheet URL.
 
-### C. The Tenant Wrapper Script Template (`TENANTS/`)
+### C. The Standalone Shared Library (`AqlCore`)
+A standalone Apps Script project containing the core codebase, database models, sheet layouts, triggers, and menu definitions. All tenant spreadsheets import this project as a library under the namespace `AqlCore`.
+* **Script ID**: `1qTNMNpdGwfF3zr-53KqWtM5ibM2bblHiHBIIwB3aJtX3k-82jMLmIiPg`
+
+### D. The Development Script (`AQL`)
+A container-bound Apps Script project attached to the development `App` spreadsheet. Used for quick iteration and verification during development.
+* **Script ID**: `1sTCRkDJ--z23c0QrF3WuPr94EfktHYdohs_E0zVHpDAfwCW7N0vTL42n`
+
+### E. The Tenant Wrapper Script Template (`TENANTS/` / `__tenant_app__`)
 * **Location**: [TENANTS/tenant.gs](file:///f:/LITTLE%20LEAP/AQL/TENANTS/tenant.gs)
-* **Purpose**: Serves as a ready-to-copy boilerplate script containing thin forwarder wrappers for all triggers (`onOpen`), API endpoints (`doPost`), toolbar menus, and `google.script.run` backend calls made by the HTML dialog files (like `actionManager`, `listViewsManager`, and `reportManager`).
-* **Usage**: Onboard a new tenant, copy this exact script into their Apps Script Code.gs, and add `AqlCore` library dependency.
+* **Purpose**: Serves as a ready-to-copy boilerplate script containing thin forwarder wrappers for all triggers (`onOpen`), API endpoints (`doPost`), toolbar menus, and `google.script.run` backend calls. The template spreadsheet (`__tenant_app__`) has this script pre-bound and configured to reference `AqlCore` as a library with `developmentMode: false`.
 * **Registry & Deployment Automation**:
   * **[tenant_registry.json](file:///f:/LITTLE%20LEAP/AQL/TENANTS/tenant_registry.json)**: Stores maps of tenant keys to their container-bound Apps Script IDs.
   * **Deploy/Push Command**: To clasp push the wrapper code directly to any registered tenant:
@@ -95,28 +102,32 @@ Whenever a new tenant is added, follow these steps to connect and configure thei
      ```
 3. **Configure the Library Link**:
    - In the tenant's online Apps Script editor, click the **"+"** button next to **Libraries** in the left sidebar.
-   - Paste the Master Apps Script ID: `1gWyoy-tvOBR61iopJEo2FPpKIme1B8tw-P9IemDTAbCRG9YfbP1-KXxz`.
+   - Paste the standalone **AqlCore** Apps Script ID: `1qTNMNpdGwfF3zr-53KqWtM5ibM2bblHiHBIIwB3aJtX3k-82jMLmIiPg`.
    - Set the title exactly as **`AqlCore`**.
-   - Select the latest available version from the dropdown. 
-   - *Tip:* If a newly created Master version is missing from the list, **remove the AqlCore library entirely, re-paste the ID, and add it again** to force Google to clear its version list cache.
+   - Select the latest available version from the dropdown, and ensure **Development mode** is set to **OFF** (false).
+   - *Tip:* If a newly created library version is missing from the list, **remove the AqlCore library entirely, re-paste the ID, and add it again** to force Google to clear its version list cache.
 4. **Authorize the Script**:
    - In the editor's top toolbar, select the **`onOpen`** function from the dropdown list and click **Run**.
    - Accept Google's **Authorization Required** prompt to grant the script read/write permissions to the sheet.
    - Once execution completes, **refresh/reload** the Google Sheets browser tab to display the custom **AQL 🚀** menu.
-5. **Deploy Web App & Register in TENANTS Master Sheet**:
+5. **Set the `APP_FILE_ID` Script Property**:
+   - In the Apps Script editor, click **Project Settings** (gear icon on the left sidebar).
+   - Under the **Script Properties** section, click **Add script property**.
+   - Add property `APP_FILE_ID` with the value set to the spreadsheet ID of the tenant's new `App` file itself.
+6. **Deploy Web App & Register in TENANTS Master Sheet**:
    - Click **Deploy > New deployment**, select type **Web app**, configure it to execute as **Me** and set who has access to **Anyone**, then click **Deploy**.
    - Copy the Web App URL, open the master **`TENANTS`** spreadsheet, and in the **`URL`** tab add a new row with the tenant `Code`, Web App `URL`, and `Details`.
 
 ---
 
-### 📦 Master Library Version Upgrades
-Whenever a new version of the Master Apps Script Library (`AqlCore`) is deployed:
-1. **Automated version query & deployment**: Running `npm run tenant:push` (or `node scripts/deploy-tenant.js`) will:
-   - Run `npx clasp versions` on the `GAS/` project to query the latest deployed library version.
-   - Automatically update the `"version"` field in `TENANTS/appsscript.json`.
+### 📦 AqlCore Library Version Upgrades
+Whenever you update code in the local workspace:
+1. **Dual Pushing**: Run `npm run gas:push` (which runs `scripts/push-gas.js`). This automatically pushes workspace code to **both** `AQL` (development app) and `AqlCore` (standalone library).
+2. **Publish New Library Version**: After pushing to `AqlCore`, you must publish a new version of the library. You can do this by running `clasp version "Version Description"` inside a temporary clasp setup targeting `AqlCore` or via the Google Apps Script Web Editor for `AqlCore` (Project settings > Deployments > Manage deployments > Deploy > New version).
+3. **Automated version query & deployment**: Running `npm run tenant:push` (or `node scripts/deploy-tenant.js`) will:
+   - Temporarily point clasp to the `AqlCore` library ID to query `clasp versions` for the latest version number.
+   - Automatically update the `"version"` and `"libraryId"` fields in `TENANTS/appsscript.json` (setting `developmentMode` to `false`).
    - Push the code wrapper and manifest to the registered tenant(s).
    - Automatically run `npx clasp deploy` to update the tenant's webapp deployment.
-2. **Access Reset (CRITICAL)**: Command-line deployment resets the web app access permissions. You MUST open the Apps Script online editor for the deployed tenant, click **Deploy > Manage deployments**, edit the active webapp deployment, and change **Who has access** to **Anyone**, then deploy.
-3. **Existing Tenants Update**: For already existing tenants where the library is included, sheet administrators should open their online Apps Script editor, click **Libraries > AqlCore**, change the version to the latest available version, and click **Save**. If the new version does not show up in the dropdown list, remove the `AqlCore` library entirely, re-paste the ID, and add it again to refresh the version list cache.
-
-
+4. **Access Reset (CRITICAL)**: Command-line deployment resets the web app access permissions. You MUST open the Apps Script online editor for the deployed tenant, click **Deploy > Manage deployments**, edit the active webapp deployment, and change **Who has access** to **Anyone**, then deploy.
+5. **Existing Tenants Update**: For already existing tenants where the library is included, sheet administrators should open their online Apps Script editor, click **Libraries > AqlCore**, change the version to the latest available version, ensure **Development mode** is set to **OFF** (false), and click **Save**. If the new version does not show up in the dropdown list, remove the `AqlCore` library entirely, re-paste the ID, and add it again to refresh the version list cache.

@@ -26,7 +26,10 @@ This guide covers the process for setting up and configuring spreadsheet files f
 2. Go to **Extensions > Apps Script** from the top menu.
 3. In the Apps Script Editor, select **`onOpen`** from the function dropdown in the top toolbar and click **Run**.
 4. When the "Authorization Required" dialog appears, click **Review Permissions**, select your Google account, click **Advanced** > **Go to App (unsafe)**, and grant the required permissions.
-5. Once the script execution completes, **reload/refresh** the `App` spreadsheet browser tab. The **`AQL 🚀`** custom menu should now appear in the menu bar.
+5. In the Apps Script editor, click the **Project Settings** (gear icon on the left sidebar). Under the **Script Properties** section, click **Add script property** and add:
+   - **Property**: `APP_FILE_ID`
+   - **Value**: The file ID of this newly copied `App` spreadsheet itself (you can copy it from the spreadsheet URL or from the success dialog shown in Step 2).
+6. Once the script execution completes, **reload/refresh** the `App` spreadsheet browser tab. The **`AQL 🚀`** custom menu should now appear in the menu bar.
 
 ---
 
@@ -71,7 +74,15 @@ This will automatically create all the normalized sheets and apply formatting, s
 ---
 
 ## Step 8: Deploy Apps Script as Web App & Register Tenant URL
-Once all target sheets are successfully created and configured:
+
+> [!IMPORTANT]
+> **Pre-deployment Checklist**:
+> Before executing the deployment, ensure:
+> 1. All target spreadsheets (Master, Operations, Accounts, Views, Reports) are fully initialized and formatted (Step 6).
+> 2. The `APP_FILE_ID` Script Property has been set inside Apps Script Project Settings (Step 3).
+> 3. The `Config` sheet values are correct, and initial system designations and users have been registered (Step 5 & Step 7).
+>
+> Once all target sheets are successfully created, populated, and configured:
 1. In the **`App`** spreadsheet, open **Extensions > Apps Script**.
 2. Click **Deploy > New deployment** in the top-right corner.
 3. Click the gear icon next to "Select type" and select **Web app**.
@@ -89,11 +100,12 @@ Once all target sheets are successfully created and configured:
 ---
 
 ## Maintenance & Library Upgrades (Existing Tenants)
-Whenever a new version of the master script library is deployed:
-1. **Automated Manifest Update & Deployment**: Running `npm run tenant:push` (or `node scripts/deploy-tenant.js`) will:
-   - Query the latest version of the `AqlCore` library from Google.
-   - Automatically update the `"version"` field in `TENANTS/appsscript.json`.
+Whenever a new version of the standalone `AqlCore` script library is deployed:
+1. **Pushing Code Updates**: Run `npm run gas:push` to deploy local workspace changes to both `AQL` (dev sheet) and `AqlCore` (standalone library). Once pushed to `AqlCore`, publish a new version of the library.
+2. **Automated Manifest Update & Deployment**: Running `npm run tenant:push` (or `node scripts/deploy-tenant.js`) will:
+   - Query the latest version of the `AqlCore` library (Script ID: `1qTNMNpdGwfF3zr-53KqWtM5ibM2bblHiHBIIwB3aJtX3k-82jMLmIiPg`).
+   - Automatically update both `"version"` and `"libraryId"` fields in `TENANTS/appsscript.json` (setting `developmentMode` to `false`).
    - Push and deploy the new wrapper to the specified tenant(s).
-2. **Update Access Permissions (CRITICAL)**: Because Apps Script resets web app access settings on command-line deployment, you MUST open the tenant's online script editor (using `clasp open` or Extensions > Apps Script) and change **Who has access** to **Anyone**.
-3. **Existing Tenants Update**: For already existing tenants where the library is included, sheet administrators should open their online Apps Script editor, click **Libraries > AqlCore**, change the version to the latest available version, and click **Save**. If the new version does not show up in the dropdown list, remove the `AqlCore` library entirely, re-paste the ID, and add it again to refresh the version list cache.
+3. **Update Access Permissions (CRITICAL)**: Because Apps Script resets web app access settings on command-line deployment, you MUST open the tenant's online script editor (using `clasp open` or Extensions > Apps Script) and change **Who has access** to **Anyone**.
+4. **Existing Tenants Update**: For already existing tenants where the library is included, sheet administrators should open their online Apps Script editor, click **Libraries > AqlCore**, change the version to the latest available version, ensure **Development mode** is set to **OFF** (false), and click **Save**. If the new version does not show up in the dropdown list, remove the `AqlCore` library entirely, re-paste the ID (`1qTNMNpdGwfF3zr-53KqWtM5ibM2bblHiHBIIwB3aJtX3k-82jMLmIiPg`), and add it again to refresh the version list cache.
 

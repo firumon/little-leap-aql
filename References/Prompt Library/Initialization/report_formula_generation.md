@@ -37,7 +37,43 @@ To maintain a consistent, high-premium printable visual structure, every reporti
 
 ---
 
-## 3. Shape-Safety & Coding Patterns
+## 3. Resolving Scopes, Columns, File IDs, and Views
+
+If the user did not explicitly provide the resource name, scope, or column layout, resolve the target resource details, sheet layouts, and spreadsheet file IDs using this sequence:
+
+### A. Resource and Scope Mapping
+If only a report name is provided, map it to its resource constant and scope in [GAS/Constants.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/Constants.gs):
+- **Master Scope**: `CONFIG.MASTER_SHEETS` (e.g., `Products`, `SKUs`, `Warehouses`).
+- **Operation Scope**: `CONFIG.OPERATION_SHEETS` (e.g., `Procurements`, `PurchaseRequisitions`, `OutletRestocks`).
+- **Accounts Scope**: `CONFIG.ACCOUNTS_SHEETS` (e.g., `ChartOfAccounts`, `TaxTransactions`).
+- **Core Scope**: `CONFIG.SHEETS` (e.g., `Users`, `Roles`).
+
+### B. Resolving Sheet Columns
+Find the sheet columns/headers by reading the corresponding setup file for that scope under [GAS/](file:///f:/LITTLE%20LEAP/AQL/GAS/):
+- **Master Scope**: Refer to [setupMasterSheets.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/setupMasterSheets.gs).
+- **Operation Scope**: Refer to [setupOperationSheets.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/setupOperationSheets.gs).
+- **Accounts Scope**: Refer to [setupAccountSheets.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/setupAccountSheets.gs).
+- **Core Scope**: Refer to [setupAppSheets.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/setupAppSheets.gs).
+
+Inside the setup file, locate the resource's schema definition (e.g., `headers` array) to see exact field indexes and order.
+
+### C. File ID Lookup via VLOOKUP
+Spreadsheets for each scope are mapped in the `Config` sheet (which is imported in the report file using `IMPORTRANGE` as set up in [setupAppSheets.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/setupAppSheets.gs#L313-L335)). Use `VLOOKUP` to fetch their file IDs dynamically:
+- `VLOOKUP("MasterFileID", Config!A:B, 2, 0)` -> Master Spreadsheet File ID
+- `VLOOKUP("OperationFileID", Config!A:B, 2, 0)` -> Operation Spreadsheet File ID
+- `VLOOKUP("ViewsFileID", Config!A:B, 2, 0)` -> Views Spreadsheet File ID
+- `VLOOKUP("OutletFileID", Config!A:B, 2, 0)` -> Tenant-specific Outlet Spreadsheet File ID
+
+Pass these resolved IDs into `IMPORTRANGE` calls inside the report's `LET` formula.
+
+### D. Prioritizing Views for Data Aggregation
+Before importing raw source sheets and building complex joins, always check if a pre-existing view matches the data requirements.
+- **Why**: Views connect, flatten, and denormalize dependent records (e.g., combining SKU, product, and variant fields into a single `SKU` view). Refer to [Sheet Formulas/Views/INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Views/INDEX.md) for existing views (e.g., `SKU`, `Outlet`, `WarehouseStock`, `OutletStock`).
+- **Priority**: Always use a view as your primary data source if one is available.
+
+---
+
+## 4. Shape-Safety & Coding Patterns
 
 Google Sheets formula calculations will fail with `#REF!` or dimension mismatches unless these rules are strictly enforced:
 
@@ -66,7 +102,7 @@ Retrieve external spreadsheet IDs dynamically from the local `Config` sheet (col
 
 ---
 
-## 4. Documenting Report Formulas
+## 5. Documenting Report Formulas
 
 When creating or modifying any reporting formula, you must document it in a markdown file under `Sheet Formulas/Reports/` using this template:
 
@@ -112,7 +148,7 @@ Always update the registry index [INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%2
 
 ---
 
-## 5. Guardrails (DOs and DO NOTs)
+## 6. Guardrails (DOs and DO NOTs)
 
 - **DO NOT** use physical column ranges directly (e.g., `IMPORTRANGE(..., "Sheet!A:A")`) inside complex MAP loops; extract columns to variables first.
 - **DO** verify target input cell locations (e.g., parameter injection target like `$AB$6`) and start destinations before writing formulas.
@@ -120,7 +156,7 @@ Always update the registry index [INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%2
 
 ---
 
-## 6. Targeted Verification Plan
+## 7. Targeted Verification Plan
 
 ### A. Formula Integrity
 1. After writing or modifying a formula, use `SpreadsheetApp.flush()` to force recalculation.

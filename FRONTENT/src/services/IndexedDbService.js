@@ -280,8 +280,14 @@ export async function clearAllClientStorage() {
   dbPromise = null
 
   try {
+    const activeUrl = localStorage.getItem('aql_tenant_url')
+    const activeTenant = localStorage.getItem('aql_tenant_code')
+
     localStorage.clear()
     sessionStorage.clear()
+
+    if (activeUrl) localStorage.setItem('aql_tenant_url', activeUrl)
+    if (activeTenant) localStorage.setItem('aql_tenant_code', activeTenant)
   } catch {
     // no-op
   }

@@ -1,6 +1,8 @@
 # AQL Report Formula Generation & Maintenance
 
-> **Scope boundary**: This document covers Google Sheets report formulas and template configuration only — printable headers, LAMBDA row functions, virtual array calculations. Its references to frontend composables and backend GAS files are read-only — read them by path. Do NOT load frontend_modification.md or backend_gas_implementation.md unless the task explicitly requires modifying that code.
+> **Scope boundary**: This document covers Google Sheets report formulas and template configuration only — printable headers, LAMBDA row functions, virtual array calculations. Its references to frontend composables and backend GAS files are read-only.
+> 
+> **CRITICAL RULE**: When performing report formula generation, you must **ONLY** deal with formula generation and its documentation (e.g. under `Sheet Formulas/Reports/`). **NEVER** modify or update frontend, backend, or any other code files. Implement the formula purely based on existing code, schemas, and configurations.
 
 Use this document to initialize an AI agent session when building, refactoring, or extending Google Sheets reporting formulas, template configurations, or report action bindings in the AQL system.
 
@@ -108,9 +110,17 @@ RowFn, LAMBDA(idx_val_pairs, MAP(SEQUENCE(1, 39), LAMBDA(col_idx, IFERROR(VLOOKU
 Retrieve external spreadsheet IDs dynamically from the local `Config` sheet (columns Key, Value):
 `VLOOKUP("TargetFileID", Config!A:B, 2, 0)`
 
+## 5. Column Intent & Conditional Formatting Anchors
+
+Report layouts are formatted into visual tables, sections, and cards using conditional formatting. Because the number of rows and dynamic contents cannot be hardcoded, formatting rules rely on a consistent **column intent**:
+* **Anchor Columns**: Place key labels, section headers, or type identifiers in dedicated columns (e.g. Column D / index 4) to act as formatting anchors.
+* **Heading Anchors**: Place section headings in Column D (index 4) and leave other columns in that row blank. A conditional formatting rule such as `=($D10<>"")` can then automatically apply bold styles and background colors to the entire row range (e.g. `$B10:$AL`).
+* **Specific Patterns**: Prefix or suffix text in anchor columns with identifiable values (e.g. starting with `"Date:"`) to trigger formatting rules like `=LEFT($D10,5)="Date:"` for italicizing details.
+* **Consistency**: Design stacked report data to align similar fields (e.g. dates, quantities, actions) under the same column coordinates so conditional formatting ranges apply uniformly across all dynamic rows.
+
 ---
 
-## 5. Documenting Report Formulas
+## 6. Documenting Report Formulas
 
 When creating or modifying any reporting formula, you must document it in a markdown file under `Sheet Formulas/Reports/` using this template:
 
@@ -156,7 +166,7 @@ Always update the registry index [INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%2
 
 ---
 
-## 6. Guardrails (DOs and DO NOTs)
+## 7. Guardrails (DOs and DO NOTs)
 
 - **DO NOT** use physical column ranges directly (e.g., `IMPORTRANGE(..., "Sheet!A:A")`) inside complex MAP loops; extract columns to variables first.
 - **DO** verify target input cell locations (e.g., parameter injection target like `$AB$6`) and start destinations before writing formulas.
@@ -164,7 +174,7 @@ Always update the registry index [INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%2
 
 ---
 
-## 7. Targeted Verification Plan
+## 8. Targeted Verification Plan
 
 ### A. Formula Integrity
 1. After writing or modifying a formula, use `SpreadsheetApp.flush()` to force recalculation.

@@ -88,11 +88,8 @@ The **ProductReturnHistory Report** formats and displays a historical log of the
     OutletName, IFERROR(XLOOKUP(OutletCode, OutletCodes, OutletNames, OutletCode), OutletCode),
 
     SKU_Row, XLOOKUP(SKUCode, SKU_Codes, RawSKUs, MAKEARRAY(1, 7, LAMBDA(r, c, ""))),
-    ProdName, CHOOSEROWS(CHOOSECOLS(SKU_Row, 4), 1),
-    SKU_Code_Val, CHOOSEROWS(CHOOSECOLS(SKU_Row, 2), 1),
     VarValues, CHOOSEROWS(CHOOSECOLS(SKU_Row, 6), 1),
-    ItemNameSuffix, IF(VarValues <> "", VarValues, SKU_Code_Val),
-    ItemDisplayName, ProdName & IF(AND(ItemNameSuffix <> "", ItemNameSuffix <> SKUCode), " - " & ItemNameSuffix, "") & " (" & SKUCode & ")",
+    ItemDisplayName, SKUCode & IF(VarValues <> "", " / " & VarValues, ""),
 
     WarehouseName, IF(WhCode <> "", IFERROR(XLOOKUP(WhCode, WarehouseCodes, WarehouseNames, WhCode), WhCode), "N/A"),
 
@@ -112,7 +109,8 @@ The **ProductReturnHistory Report** formats and displays a historical log of the
 
     VSTACK(
       acc,
-      RowFn({4, FormattedDate & " / " & ReturnCode & " / " & OutletName & " / " & Username; 30, OrderProgress; 37, " "}),
+      RowFn({4, FormattedDate & " / " & ReturnCode & " / " & Username; 30, OrderProgress; 37, " "}),
+      RowFn({4, OutletName}),
       RowFn({5, Qty & "x"; 6, ItemDisplayName; 30, "Price: " & Price & ", Total: " & TotalValue}),
       RowFn({6, "Reason: " & Reason & IF(ReasonComment <> "", " / " & ReasonComment, "")}),
       Filtered_Cond_Rows,
@@ -186,9 +184,10 @@ The formula queries data from four spreadsheet files (`OutletFileID`, `ViewFileI
    - Row 10 (Metadata Header): Displays the resolved Product Name in Column D (index 4) and the Document Generation Date in Column AD (index 30).
 5. **Multi-line Record Layout (Column Intent)**:
    - For each matching return, a details card is stacked:
-     - **Line 1 (Heading Anchor)**: Date, Code, Outlet Name, and Username string in Column D (index 4) to act as a formatting anchor. Column AD (index 30) contains the return Progress, and Column AK (index 37) has a single space `" "` to clip text.
-     - **Line 2 (Product Row)**: Displays the Qty in Column E (index 5), SKU Name/variants in Column F (index 6), and price details in Column AD (index 30).
-     - **Line 3 (Reason Row)**: Displays Reason and Comment in Column F (index 6).
-     - **Lines 4 & 5 (Conditional Rows)**:
+     - **Line 1 (Heading Anchor)**: Date, Code, and Username string in Column D (index 4). Column AD (index 30) contains the return Progress, and Column AK (index 37) has a single space `" "` to clip text.
+     - **Line 2 (Outlet Name)**: Displays the name of the returning Outlet starting in Column D (index 4).
+     - **Line 3 (Product Line)**: Displays the Qty in Column E (index 5), formatted SKU code with variant values (e.g. `SKUCode / VarValues`) in Column F (index 6), and price details in Column AD (index 30).
+     - **Line 4 (Reason Row)**: Displays Reason and Comment in Column F (index 6).
+     - **Lines 5 & 6 (Conditional Rows)**:
        - **Financial Adjustment Row**: Rendered if adjustment is required.
        - **Warehouse Action Row**: Rendered if warehouse action is required.

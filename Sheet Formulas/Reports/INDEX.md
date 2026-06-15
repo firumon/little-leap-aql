@@ -57,7 +57,9 @@ Click the links below to view the detailed cell mapping, column dependencies, an
 | **Return** | `A10` | `$AB$6` (Outlet Return Code) | Outlet `OutletReturns!A2:AB` (Cols 1-22), Master `Outlets!A2:B` (Cols 1,2), `Warehouses!A2:B` (Cols 1,2), View `SKU!A2:G` (Cols 1,2,4,6) | [Return.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Reports/Return.md) |
 | **ReturnRecords** | `A15` | `$J$11` (User), `$J$12` (Date), `$J$13` (Reason) | Outlet `OutletReturns!A2:AB` (Cols 1-16,22,23), Master `Outlets!A2:B` (Cols 1,2), Views `SKU!A2:G` (Cols 1,2,4,6), Master `Warehouses!A2:B` (Cols 1,2) | [ReturnRecords.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Reports/ReturnRecords.md) |
 | **OutletReturnHistory** | `A10` | `$AB$6` (Outlet Code) | Outlet `OutletReturns!A2:AB` (Cols 1-23), Master `Outlets!A2:B` (Cols 1,2), `Warehouses!A2:B` (Cols 1,2), View `SKU!A2:G` (Cols 1,2,4,6) | [OutletReturnHistory.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Reports/OutletReturnHistory.md) |
+| **OutletStockDetail** | `A10` | `$AB$6` (Outlet Code) | View `OutletStock!A2:J` (Cols 1,2,5,9,10), Master `Outlets!A2:B` (Cols 1,2) | [OutletStockDetail.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Reports/OutletStockDetail.md) |
 | **ProductReturnHistory** | `A10` | `$AB$6` (Product Code) | Outlet `OutletReturns!A2:AB` (Cols 1-23), Master `Outlets!A2:B` (Cols 1,2), `Warehouses!A2:B` (Cols 1,2), View `SKU!A2:G` (Cols 1,2,3,4,6) | [ProductReturnHistory.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Reports/ProductReturnHistory.md) |
+| **ProductStockDetail** | `A10` | `$AB$6` (Product Code) | View `WarehouseStock!A2:K` (Cols 3-5,8,10,11), View `OutletStock!A2:J` (Cols 1,2,5,9,10), Master `Products!A2:B` (Cols 1,2) | [ProductStockDetail.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Reports/ProductStockDetail.md) |
 
 ---
 

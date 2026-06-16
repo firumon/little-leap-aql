@@ -11,6 +11,8 @@
       </q-card-section>
     </q-card>
 
+    <ResourceReports class="q-mb-md" />
+
     <q-card v-if="restock.ProgressRevisionRequiredComment || restock.ProgressRejectedComment" flat bordered class="q-mb-md bg-grey-1">
       <q-card-section>
         <div class="text-subtitle2 q-mb-xs">Previous Comments</div>
@@ -108,6 +110,7 @@
 import { ref, computed } from 'vue'
 import OutletProgressChip from './OutletProgressChip.vue'
 import { text } from '../../../composables/operations/outlets/outletOperationsMeta.js'
+import ResourceReports from "../../Reports/ResourceReports.vue";
 
 defineOptions({ name: 'RestockDraftView' })
 

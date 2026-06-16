@@ -11,6 +11,8 @@
       </q-card-section>
     </q-card>
 
+    <ResourceReports class="q-mb-md" />
+
     <div class="text-subtitle2 q-mb-sm q-mt-md">Activity</div>
     <q-card flat bordered class="q-mb-md">
       <q-card-section>
@@ -75,6 +77,7 @@
 import { computed } from 'vue'
 import OutletProgressChip from './OutletProgressChip.vue'
 import { text } from '../../../composables/operations/outlets/outletOperationsMeta.js'
+import ResourceReports from "../../Reports/ResourceReports.vue";
 
 defineOptions({ name: 'RestockReadonlyView' })
 

@@ -28,6 +28,8 @@
       </q-input>
     </div>
 
+    <ResourceReports class="q-mb-md" />
+
     <!-- Background loading indicator -->
     <q-linear-progress v-if="loading && !shouldBlockUi" color="primary" indeterminate class="q-mb-sm" />
 
@@ -217,7 +219,7 @@ import ReloadButton from '../../../components/shared/ReloadButton.vue'
 import AppDate from '../../../components/shared/AppDate.vue'
 import RestockAddFAB from '../../../components/Operations/Outlets/RestockAddFAB.vue'
 import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
-
+import ResourceReports from 'components/Reports/ResourceReports.vue'
 
 defineOptions({ name: 'OutletRestocksIndexPage' })
 

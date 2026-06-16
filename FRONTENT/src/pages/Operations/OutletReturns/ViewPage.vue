@@ -33,6 +33,8 @@
     </div>
 
     <div v-else class="q-gutter-y-md">
+      <ResourceReports />
+
       <!-- 1. Core Summary Card -->
       <q-card flat bordered class="bg-white">
         <q-card-section>
@@ -277,6 +279,7 @@ import { useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useOutletReturns } from '../../../composables/operations/outlets/useOutletReturns.js'
 import ActionCommentDialog from '../../../components/shared/ActionCommentDialog.vue'
+import ResourceReports from 'components/Reports/ResourceReports.vue'
 
 defineOptions({ name: 'OutletReturnsViewPage' })
 

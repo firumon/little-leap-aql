@@ -11,6 +11,8 @@
       </q-card-section>
     </q-card>
 
+    <ResourceReports class="q-mb-md" />
+
     <q-banner v-if="restock.ProgressSubmittedComment" class="bg-orange-1 text-dark q-mb-md" rounded>
       <div class="text-caption text-weight-medium q-mb-xs">Submission Comment</div>
       <div v-html="formatWorkflowCommentHtml(restock.ProgressSubmittedComment)" />
@@ -111,6 +113,7 @@
 import { computed, ref } from 'vue'
 import OutletProgressChip from './OutletProgressChip.vue'
 import OrsiAllocationRow from './OrsiAllocationRow.vue'
+import ResourceReports from "../../Reports/ResourceReports.vue";
 
 defineOptions({ name: 'RestockApprovalView' })
 

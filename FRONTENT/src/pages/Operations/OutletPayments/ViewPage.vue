@@ -24,6 +24,8 @@
     </q-banner>
 
     <template v-else>
+      <ResourceReports class="q-mb-md" />
+
       <div class="row q-col-gutter-lg">
         <!-- Left Column: Payment Details Card -->
         <div class="col-12 col-md-6">
@@ -300,6 +302,7 @@ import OutletProgressChip from '../../../components/Operations/Outlets/OutletPro
 import { useResourceNav } from '../../../composables/resources/useResourceNav.js'
 import { useCurrency } from '../../../composables/useCurrency.js'
 import { getInvoiceTotal, getInvoiceRemaining } from '../../../composables/operations/outlets/outletConsumptionPricing.js'
+import ResourceReports from 'components/Reports/ResourceReports.vue'
 
 defineOptions({ name: 'OutletPaymentsViewPage' })
 

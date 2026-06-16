@@ -8,6 +8,8 @@
     <template v-else>
       <OutletDeliverySummaryPanel :delivery="delivery" :summary="summary" class="q-mb-md" />
 
+      <ResourceReports class="q-mb-md" />
+
       <q-card class="q-mb-md">
         <q-card-section>
           <div class="text-subtitle2 q-mb-md">Timeline</div>
@@ -108,6 +110,7 @@ import { useOutletDeliveries } from '../../../composables/operations/outlets/use
 import OutletDeliverySummaryPanel from '../../../components/Operations/Outlets/OutletDeliverySummaryPanel.vue'
 import OutletDeliveryItemRow from '../../../components/Operations/Outlets/OutletDeliveryItemRow.vue'
 import ActionCommentDialog from '../../../components/shared/ActionCommentDialog.vue'
+import ResourceReports from 'components/Reports/ResourceReports.vue'
 
 defineOptions({ name: 'OutletDeliveriesViewPage' })
 

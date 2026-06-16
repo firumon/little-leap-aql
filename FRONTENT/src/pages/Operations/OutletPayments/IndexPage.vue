@@ -13,6 +13,8 @@
       </div>
     </div>
 
+    <ResourceReports class="q-mb-md" />
+
     <!-- Search Input -->
     <div class="q-mb-md">
       <q-input
@@ -149,6 +151,7 @@ import OutletProgressChip from '../../../components/Operations/Outlets/OutletPro
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
 import DataAddFAB from '../../../components/shared/DataAddFAB.vue'
 import AqlList from "components/shared/AqlList.vue";
+import ResourceReports from 'components/Reports/ResourceReports.vue'
 
 defineOptions({ name: 'OutletPaymentsIndexPage' })
 

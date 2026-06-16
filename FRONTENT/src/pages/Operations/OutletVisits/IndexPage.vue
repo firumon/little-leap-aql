@@ -28,6 +28,8 @@
       </q-input>
     </div>
 
+    <ResourceReports />
+
     <q-linear-progress v-if="loading && !shouldBlockUi" color="primary" indeterminate class="q-mb-sm" />
 
     <div v-if="shouldBlockUi" class="text-center q-pa-xl">
@@ -284,6 +286,7 @@ import SectionDividerLabel from '../../../components/shared/SectionDividerLabel.
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
 import AqlList from 'components/shared/AqlList.vue'
+import ResourceReports from 'components/Reports/ResourceReports.vue'
 
 defineOptions({ name: 'OutletVisitsIndexPage' })
 

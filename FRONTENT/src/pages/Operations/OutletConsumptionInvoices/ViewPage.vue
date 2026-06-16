@@ -24,6 +24,8 @@
     </q-banner>
 
     <div v-else class="column q-gutter-y-md">
+      <ResourceReports />
+
       <!-- 1. Metadata Details Card -->
       <q-card flat bordered class="rounded-borders shadow-1">
         <q-card-section class="q-pa-md">
@@ -328,6 +330,7 @@ import OutletProgressChip from '../../../components/Operations/Outlets/OutletPro
 import ResourceActionButton from '../../../components/shared/ResourceActionButton.vue'
 import { useDataStore } from '../../../stores/data.js'
 import { useTaxCalculator } from '../../../composables/useTaxCalculator.js'
+import ResourceReports from 'components/Reports/ResourceReports.vue'
 
 defineOptions({ name: 'OutletConsumptionInvoicesViewPage' })
 const dataStore = useDataStore()

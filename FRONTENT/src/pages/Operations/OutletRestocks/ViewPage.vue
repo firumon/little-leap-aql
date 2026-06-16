@@ -88,6 +88,7 @@ import RestockApprovalView from '../../../components/Operations/Outlets/RestockA
 import RestockPendingAllocationView from '../../../components/Operations/Outlets/RestockPendingAllocationView.vue'
 import RestockReadonlyView from '../../../components/Operations/Outlets/RestockReadonlyView.vue'
 import DirectDeliveryPanel from '../../../components/Operations/Outlets/DirectDeliveryPanel.vue'
+import ResourceReports from 'components/Reports/ResourceReports.vue'
 
 defineOptions({ name: 'OutletRestocksViewPage' })
 

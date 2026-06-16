@@ -938,6 +938,7 @@ function initAppResourcesCodeConfig() {
             { header: 'Status', label: 'Status', type: 'status', required: true },
             { header: 'AccessRegion', label: 'Access Region', type: 'text' }
         ]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: JSON.stringify([
+            {"id":"rep_1777000000001","name":"delivery-worklist","label":"Delivery Worklist","templateSheet":"RestockDeliveriesWorklist","isRecordLevel":false,"inputs":[{"label":"Warehouse","type":"select","targetCell":"AB6","source":{"resource":"Warehouses","field":"Code"},"required":true}],"pdfOptions":{}},
             {"id":"rep_1776000000017","name":"delivery-receipt","label":"Delivery Receipt","templateSheet":"Delivery","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
             {"id":"rep_1776000000018","name":"delivery-log","label":"Delivery Log","templateSheet":"DeliveryRecords","isRecordLevel":false,"inputs":[{"label":"Driver/User","type":"select","targetCell":"J11","source":{"resource":"OutletDeliveries","field":"UserName"},"default":"Any User","required":false},{"label":"Date","type":"date","targetCell":"J12","required":false}],"pdfOptions":{}}
         ]), CustomUIName: '', ListViews: ''

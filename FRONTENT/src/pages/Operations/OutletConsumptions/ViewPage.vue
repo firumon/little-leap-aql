@@ -18,6 +18,8 @@
     <q-banner v-else-if="!record" rounded class="bg-grey-2 text-grey-8 q-mx-md q-mt-md">Consumption not found.</q-banner>
 
     <template v-else>
+      <ResourceReports class="q-px-md" />
+
       <div class="col scroll q-px-md q-pb-md">
         <!-- Dependent Invoice Section -->
         <q-card v-if="record.Progress === 'INVOICE_GENERATED' && invoice" flat bordered class="q-mt-md q-mb-md">
@@ -138,6 +140,7 @@ import { useRoute } from 'vue-router'
 import { useOutletConsumption } from '../../../composables/operations/outlets/useOutletConsumption.js'
 import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'
 import AqlList from "components/shared/AqlList.vue";
+import ResourceReports from 'components/Reports/ResourceReports.vue'
 
 defineOptions({ name: 'OutletConsumptionViewPage' })
 const route = useRoute()

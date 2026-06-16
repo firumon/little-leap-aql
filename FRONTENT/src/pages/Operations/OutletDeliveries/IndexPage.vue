@@ -13,6 +13,8 @@
       </div>
     </div>
 
+    <ResourceReports class="q-mb-md" />
+
     <!-- Search Input -->
     <div class="q-mb-md">
       <q-input
@@ -87,6 +89,7 @@ import OutletHeaderPanel from '../../../components/shared/OutletHeaderPanel.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
 import DataAddFAB from '../../../components/shared/DataAddFAB.vue'
 import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
+import ResourceReports from 'components/Reports/ResourceReports.vue'
 
 defineOptions({ name: 'OutletDeliveriesIndexPage' })
 

@@ -220,3 +220,12 @@ Manual follow-up after this execution:
 - Implemented visually premium, interactive common widgets inside `FRONTENT/src/components/_dashboard/` (`MetricWidget.vue`, `BarChartWidget.vue`, `DonutChartWidget.vue`, `TimelineWidget.vue`) using pure responsive SVG rendering, HSL color gradients, and CSS scale animations, with dynamic `<q-skeleton>` fallback loadings.
 - Out-of-the-box core JS widgets created: `pendingPRs.js`, `awaitingRFQs.js`, `purchaseOrderSummary.js`, and `pendingGRNs.js`.
 - Reference documentation created at `Documents/DASHBOARD_DEVELOPMENT_GUIDE.md` and registered under `Documents/DOC_ROUTING.md`.
+
+## 2026-06-16 Update - Out-of-the-Box Reports Registration, Select Dropdowns, and ResourceReports Refactoring
+- Registered all 28 out-of-the-box system reports in `GAS/syncAppResources.gs` for automatic deployment.
+- Replaced the old `WarehouseStockReport` with the new storage-wise warehouse stock report template: `WarehouseStockReportStorageWise`.
+- Extended the `Reports` JSON schema to support select dropdowns (both static `options` and dynamic `source` mapping of unique column values from resource records under `useDataStore`).
+- Updated `ReportInputDialog.vue` with a `<q-select>` component and `getSelectOptions` helper, and updated `useReports.js` to preload dynamic option resources on dialog trigger.
+- Implemented a self-contained, context-aware `<ResourceReports />` component in `FRONTENT/src/components/Reports/ResourceReports.vue` that auto-derives route config, active record, and handles both dialog execution and button lists.
+- Cleaned up boilerplate across 5 list and view pages (common index/view pages and product-specific pages), removing obsolete hooks, local dialog templates, and imports.
+- Updated documentation in `Documents/MODULE_WORKFLOWS.md` and `FRONTENT/src/components/REGISTRY.md`.

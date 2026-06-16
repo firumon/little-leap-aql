@@ -20,20 +20,7 @@
           @click="$emit('action-clicked', action)"
         />
         <q-space />
-        <q-btn
-          v-for="report in recordReports"
-          :key="report.name"
-          unelevated no-caps dense
-          :icon="report.icon || 'picture_as_pdf'"
-          :label="report.label || report.name"
-          color="deep-orange-7"
-          class="action-btn"
-          :loading="isGenerating"
-          :disable="isGenerating"
-          @click="$emit('generate-report', report)"
-        >
-          <q-tooltip>{{ report.label || report.name }}</q-tooltip>
-        </q-btn>
+        <ResourceReports />
       </div>
     </q-card-section>
   </q-card>
@@ -41,15 +28,14 @@
 
 <script setup>
 import { computed } from 'vue'
+import ResourceReports from 'components/Reports/ResourceReports.vue'
 
 const props = defineProps({
   permissions: { type: Object, default: null },
-  additionalActions: { type: Array, default: () => [] },
-  reports: { type: Array, default: () => [] },
-  isGenerating: { type: Boolean, default: false }
+  additionalActions: { type: Array, default: () => [] }
 })
 
-defineEmits(['edit', 'action-clicked', 'generate-report'])
+defineEmits(['edit', 'action-clicked'])
 
 const visibleActions = computed(() => {
   return props.additionalActions.filter((action) => {
@@ -58,10 +44,6 @@ const visibleActions = computed(() => {
     const actionKey = `can${action.action}`
     return perm[actionKey] !== false
   })
-})
-
-const recordReports = computed(() => {
-  return (props.reports || []).filter((r) => r.isRecordLevel)
 })
 </script>
 

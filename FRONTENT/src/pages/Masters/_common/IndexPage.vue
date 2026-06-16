@@ -10,12 +10,7 @@
       @reload="reload(true)"
     />
 
-    <component
-      :is="sections.ListReportBar"
-      :reports="config?.reports || []"
-      :is-generating="isGenerating"
-      @generate-report="(report) => initiateReport(report)"
-    />
+    <ResourceReports />
 
     <component
       :is="sections.ListToolbar"
@@ -56,15 +51,6 @@
       </q-btn>
     </q-page-sticky>
 
-    <ReportInputDialog
-      v-model="showReportDialog"
-      :report="activeReport"
-      :form-values="reportInputs"
-      :is-generating="isGenerating"
-      @update:form-values="reportInputs = $event"
-      @confirm="confirmReportDialog"
-      @cancel="cancelReportDialog"
-    />
   </div>
   <div v-else class="index-page-loading">
     <q-spinner-dots color="primary" size="32px" />
@@ -73,9 +59,8 @@
 
 <script setup>
 import { watch, ref, computed } from 'vue'
-import ReportInputDialog from 'src/components/Masters/ReportInputDialog.vue'
+import ResourceReports from 'components/Reports/ResourceReports.vue'
 import MasterListHeader from 'components/Masters/_common/MasterListHeader.vue'
-import MasterListReportBar from 'components/Masters/_common/MasterListReportBar.vue'
 import MasterListToolbar from 'components/Masters/_common/MasterListToolbar.vue'
 import MasterListRecords from 'components/Masters/_common/MasterListRecords.vue'
 import MasterListViewSwitcher from 'components/Masters/_common/MasterListViewSwitcher.vue'
@@ -83,7 +68,6 @@ import { useSectionResolver } from 'src/composables/resources/useSectionResolver
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useResourceData } from 'src/composables/resources/useResourceData'
 import { useResourceRelations } from 'src/composables/resources/useResourceRelations'
-import { useReports } from 'src/composables/reports/useReports'
 import { useListViews } from 'src/composables/useListViews'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
@@ -122,17 +106,13 @@ const { sections, sectionsReady } = useSectionResolver({
   scope: 'masters',
   sectionDefs: {
     ListHeader: MasterListHeader,
-    ListReportBar: MasterListReportBar,
     ListToolbar: MasterListToolbar,
     ListViewSwitcher: MasterListViewSwitcher,
     ListRecords: MasterListRecords
   }
 })
 
-const {
-  isGenerating, showReportDialog, activeReport, reportInputs,
-  initiateReport, confirmReportDialog, cancelReportDialog
-} = useReports(resourceName)
+
 
 const childCountMap = ref({})
 

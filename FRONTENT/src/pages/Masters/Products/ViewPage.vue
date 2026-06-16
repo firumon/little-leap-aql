@@ -44,10 +44,7 @@
       <MasterViewActionBar
         :permissions="permissions"
         :additional-actions="[]"
-        :reports="config?.reports || []"
-        :is-generating="isGenerating"
         @edit="navigateToEdit"
-        @generate-report="(report) => initiateReport(report, record)"
       />
 
       <q-card flat bordered class="page-card q-mt-sm">
@@ -78,15 +75,6 @@
       <MasterViewAudit :record="record" class="q-mt-sm" />
     </template>
 
-    <ReportInputDialog
-      v-model="showReportDialog"
-      :report="activeReport"
-      :form-values="reportInputs"
-      :is-generating="isGenerating"
-      @update:form-values="reportInputs = $event"
-      @confirm="confirmReportDialog"
-      @cancel="cancelReportDialog"
-    />
   </div>
 </template>
 
@@ -94,23 +82,16 @@
 import { computed, ref, watch } from 'vue'
 import MasterViewActionBar from 'components/Masters/_common/MasterViewActionBar.vue'
 import MasterViewAudit from 'components/Masters/_common/MasterViewAudit.vue'
-import ReportInputDialog from 'src/components/Masters/ReportInputDialog.vue'
 import { useProductVariants } from 'src/composables/masters/products/useProductVariants'
 import { useProductSkuViewData } from 'src/composables/masters/products/useProductSkuViewData'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useResourceData } from 'src/composables/resources/useResourceData'
-import { useReports } from 'src/composables/reports/useReports'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
 const nav = useResourceNav()
 const { code, config, resourceName, permissions } = useResourceConfig()
 const { items, loading: resourceLoading, reload } = useResourceData(resourceName)
 const { skuRows, skuLoading, loadSkuRows } = useProductSkuViewData()
-const {
-  isGenerating, showReportDialog, activeReport, reportInputs,
-  initiateReport, confirmReportDialog, cancelReportDialog
-} = useReports(resourceName)
-
 const record = computed(() => {
   if (!code.value || !Array.isArray(items.value)) return null
   return items.value.find((row) => row.Code === code.value) || null

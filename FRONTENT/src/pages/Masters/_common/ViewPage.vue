@@ -19,11 +19,8 @@
         :is="sections.ViewActionBar"
         :permissions="permissions"
         :additional-actions="visibleActions"
-        :reports="config?.reports || []"
-        :is-generating="isGenerating"
         @edit="navigateToEdit"
         @action-clicked="navigateToAction"
-        @generate-report="(report) => initiateReport(report, record)"
       />
 
       <component
@@ -50,21 +47,11 @@
       />
     </template>
 
-    <ReportInputDialog
-      v-model="showReportDialog"
-      :report="activeReport"
-      :form-values="reportInputs"
-      :is-generating="isGenerating"
-      @update:form-values="reportInputs = $event"
-      @confirm="confirmReportDialog"
-      @cancel="cancelReportDialog"
-    />
   </div>
 </template>
 
 <script setup>
 import { computed, watch } from 'vue'
-import ReportInputDialog from 'src/components/Masters/ReportInputDialog.vue'
 import MasterViewHeader from 'components/Masters/_common/MasterViewHeader.vue'
 import MasterViewActionBar from 'components/Masters/_common/MasterViewActionBar.vue'
 import MasterViewDetails from 'components/Masters/_common/MasterViewDetails.vue'
@@ -76,7 +63,6 @@ import { useSectionResolver } from 'src/composables/resources/useSectionResolver
 import { useResourceConfig, isActionVisible } from 'src/composables/resources/useResourceConfig'
 import { useResourceData } from 'src/composables/resources/useResourceData'
 import { useResourceRelationsData } from 'src/composables/resources/useResourceRelationsData'
-import { useReports } from 'src/composables/reports/useReports'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
 const nav = useResourceNav()
@@ -87,10 +73,7 @@ const {
 
 const { items, loading, reload } = useResourceData(resourceName)
 const { childResources, childRecordsByResource: childRecords, loadChildRecords: loadRelatedChildren } = useResourceRelationsData(resourceName)
-const {
-  isGenerating, showReportDialog, activeReport, reportInputs,
-  initiateReport, confirmReportDialog, cancelReportDialog
-} = useReports(resourceName)
+
 
 const { sections, sectionsReady } = useSectionResolver({
   resourceSlug,

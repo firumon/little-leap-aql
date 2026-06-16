@@ -9,11 +9,7 @@
       @reload="reloadAll(true)"
     />
 
-    <MasterListReportBar
-      :reports="config?.reports || []"
-      :is-generating="isGenerating"
-      @generate-report="(report) => initiateReport(report)"
-    />
+    <ResourceReports />
 
     <MasterListToolbar
       :search-term="searchTerm"
@@ -96,28 +92,17 @@
       </q-btn>
     </q-page-sticky>
 
-    <ReportInputDialog
-      v-model="showReportDialog"
-      :report="activeReport"
-      :form-values="reportInputs"
-      :is-generating="isGenerating"
-      @update:form-values="reportInputs = $event"
-      @confirm="confirmReportDialog"
-      @cancel="cancelReportDialog"
-    />
   </div>
 </template>
 
 <script setup>
 import { computed, ref, watch } from 'vue'
+import ResourceReports from 'components/Reports/ResourceReports.vue'
 import MasterListHeader from 'components/Masters/_common/MasterListHeader.vue'
-import MasterListReportBar from 'components/Masters/_common/MasterListReportBar.vue'
 import MasterListToolbar from 'components/Masters/_common/MasterListToolbar.vue'
 import MasterListViewSwitcher from 'components/Masters/_common/MasterListViewSwitcher.vue'
-import ReportInputDialog from 'src/components/Masters/ReportInputDialog.vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useResourceData } from 'src/composables/resources/useResourceData'
-import { useReports } from 'src/composables/reports/useReports'
 import { useListViews } from 'src/composables/useListViews'
 import { parseVariantTypes } from 'src/composables/masters/products/useProductVariants'
 import { useResourceNav } from 'src/composables/resources/useResourceNav.js'
@@ -127,7 +112,6 @@ const nav = useResourceNav()
 const { config, resourceName, resourceHeaders, permissions } = useResourceConfig()
 const { items, loading, backgroundSyncing, searchTerm, reload } = useResourceData(resourceName)
 const skusResource = useResourceData(ref('SKUs'))
-const { isGenerating, showReportDialog, activeReport, reportInputs, initiateReport, confirmReportDialog, cancelReportDialog } = useReports(resourceName)
 
 const configuredListViews = computed(() => config.value?.ui?.listViews || [])
 const configuredListViewsMode = computed(() => config.value?.ui?.listViewsMode || '')

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { reactive, watch } from 'vue'
+import { reactive, watch, computed } from 'vue'
 import { useAuthStore } from './auth'
 import { useResourceStatusStore } from './resourceStatus'
 import { onRowsUpserted } from 'src/services/IndexedDbCacheService'
@@ -194,6 +194,140 @@ export const useDataStore = defineStore('data', () => {
     }
   }
 
+  const _enrichedCache = /* @__PURE__ */ new Map()
+
+  function _codeCandidates(header) {
+    const name = (header || '').toString().trim()
+    if (!name || name === 'Code' || !name.endsWith('Code')) return []
+    const stem = name.slice(0, -4)
+    return [stem, `${stem}s`, stem.endsWith('y') ? `${stem.slice(0, -1)}ies` : ''].filter(Boolean)
+  }
+
+  function _resolveCodeRef(header, resources) {
+    if (!header || !header.endsWith('Code')) return null
+    for (const c of _codeCandidates(header)) {
+      const match = resources.find(r => r.name.toLowerCase() === c.toLowerCase())
+      if (match) return match.name
+    }
+    return null
+  }
+
+  function _buildRelationMeta(resourceName, resources) {
+    const self = resources.find(r => r.name === resourceName)
+    if (!self) return { parentChain: [], children: [], linkRefs: {} }
+
+    const parentChain = []
+    const visited = new Set()
+    let current = self
+    while (current.parentResource && !visited.has(current.parentResource)) {
+      visited.add(current.parentResource)
+      const parent = resources.find(r => r.name === current.parentResource)
+      if (!parent) break
+      const hdrs = headers[current.name] || current.headers || []
+      const singular = parent.name.replace(/s$/, '')
+      parentChain.push({
+        resourceName: parent.name,
+        codeField: hdrs.includes('ParentCode') ? 'ParentCode' : `${singular}Code`,
+        singular
+      })
+      current = parent
+    }
+
+    const children = resources
+      .filter(r => r.parentResource === resourceName)
+      .map(r => {
+        const childHeaders = headers[r.name] || r.headers || []
+        const singular = resourceName.replace(/s$/, '')
+        return {
+          name: r.name,
+          codeField: childHeaders.includes('ParentCode') ? 'ParentCode' : `${singular}Code`,
+          singular: r.name.replace(/s$/, '')
+        }
+      })
+
+    const usedCodeFields = new Set(['Code', ...parentChain.map(p => p.codeField), ...children.map(c => c.codeField)])
+    const linkRefs = {}
+    const hdrs = headers[resourceName] || self.headers || []
+    for (const h of hdrs) {
+      if (usedCodeFields.has(h)) continue
+      const match = _resolveCodeRef(h, resources)
+      if (match) linkRefs[h] = match
+    }
+
+    return { parentChain, children, linkRefs }
+  }
+
+  function _getEnrichedRecord(resourceName, code, resources) {
+    if (!resourceName || !code) return null
+    const cacheKey = `${resourceName}::${code}`
+    if (_enrichedCache.has(cacheKey)) return _enrichedCache.get(cacheKey)
+
+    const selfConfig = resources.find(r => r.name === resourceName)
+    if (!selfConfig) return null
+
+    const meta = _buildRelationMeta(resourceName, resources)
+    const enriched = reactive({ _relation: meta })
+
+    const live = computed(() => {
+      const hdrs = headers[resourceName] || selfConfig.headers || []
+      return mapRowsToObjects(rows[resourceName] || [], hdrs).find(r => r.Code === code) || null
+    })
+
+    const allHeaders = headers[resourceName] || selfConfig.headers || []
+    for (const h of allHeaders) {
+      Object.defineProperty(enriched, h, {
+        get() { return live.value?.[h] },
+        enumerable: true, configurable: true
+      })
+    }
+
+    for (const p of meta.parentChain) {
+      Object.defineProperty(enriched, `$${p.singular}`, {
+        get() {
+          const r = live.value
+          if (!r?.[p.codeField]) return null
+          return _getEnrichedRecord(p.resourceName, r[p.codeField], resources)
+        },
+        enumerable: true, configurable: true
+      })
+    }
+
+    for (const c of meta.children) {
+      Object.defineProperty(enriched, `$${c.name}`, {
+        get() {
+          const r = live.value
+          if (!r?.Code) return []
+          const childHdrs = headers[c.name] || []
+          return mapRowsToObjects(rows[c.name] || [], childHdrs)
+            .filter(child => child[c.codeField] === r.Code)
+            .map(child => _getEnrichedRecord(c.name, child.Code, resources))
+        },
+        enumerable: true, configurable: true
+      })
+    }
+
+    for (const [header, refResource] of Object.entries(meta.linkRefs)) {
+      const singular = refResource.replace(/s$/, '')
+      Object.defineProperty(enriched, `$${singular}`, {
+        get() {
+          const r = live.value
+          if (!r?.[header]) return null
+          return _getEnrichedRecord(refResource, r[header], resources)
+        },
+        enumerable: true, configurable: true
+      })
+    }
+
+    _enrichedCache.set(cacheKey, enriched)
+    return enriched
+  }
+
+  function getResolvedRecord(resourceName, code) {
+    const authStore = useAuthStore()
+    const resources = Array.isArray(authStore.resources) ? authStore.resources : []
+    return _getEnrichedRecord(resourceName, code, resources)
+  }
+
   return {
     headers,
     rows,
@@ -211,6 +345,7 @@ export const useDataStore = defineStore('data', () => {
     syncResource,
     updateRowsFromSync,
     cacheResourceRows,
-    setResourceMetadata
+    setResourceMetadata,
+    getResolvedRecord
   }
 })

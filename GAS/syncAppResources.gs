@@ -38,7 +38,11 @@ function initAppResourcesCodeConfig() {
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: JSON.stringify([{"id":"rep_1774663957785","name":"product-list","label":"Product List","templateSheet":"ProductList","isRecordLevel":false,"inputs":[],"pdfOptions":{}}]),
+        Reports: JSON.stringify([
+            {"id":"rep_1774663957785","name":"product-list","label":"Product List","templateSheet":"ProductList","isRecordLevel":false,"inputs":[],"pdfOptions":{}},
+            {"id":"rep_1776000000001","name":"product-return-history","label":"Product Return History","templateSheet":"ProductReturnHistory","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
+            {"id":"rep_1776000000002","name":"product-stock-detail","label":"Product Stock Detail","templateSheet":"ProductStockDetail","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}}
+        ]),
         CustomUIName: '',
         ListViews: ''
     },
@@ -292,7 +296,11 @@ function initAppResourcesCodeConfig() {
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: JSON.stringify([{"id":"rep_1775978359788","name":"stock-report","label":"Stock Report","templateSheet":"WarehouseStockReport","isRecordLevel":true,"inputs":[{"targetCell":"AD10","field":"Code"}]}]),
+        Reports: JSON.stringify([
+            {"id":"rep_1775978359788","name":"warehouse-stock-report-storage-wise","label":"Stock Report (Storage Wise)","templateSheet":"WarehouseStockReportStorageWise","isRecordLevel":true,"inputs":[{"targetCell":"AD10","field":"Code"}],"pdfOptions":{}},
+            {"id":"rep_1776000000003","name":"warehouse-stock-report-product-wise","label":"Stock Report (Product Wise)","templateSheet":"WarehouseStockReportProductWise","isRecordLevel":true,"inputs":[{"targetCell":"AD10","field":"Code"}],"pdfOptions":{}},
+            {"id":"rep_1776000000004","name":"restock-deliveries-worklist","label":"Delivery Worklist","templateSheet":"RestockDeliveriesWorklist","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}}
+        ]),
         CustomUIName: '',
         ListViews: ''
     },
@@ -339,7 +347,15 @@ function initAppResourcesCodeConfig() {
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: '',
+        Reports: JSON.stringify([
+            {"id":"rep_1776000000005","name":"outlet-visit-history","label":"Visit History","templateSheet":"OutletVisitHistory","isRecordLevel":true,"inputs":[{"targetCell":"H11","field":"Code"}],"pdfOptions":{}},
+            {"id":"rep_1776000000006","name":"outlet-restock-history","label":"Restock History","templateSheet":"OutletRestockHistory","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
+            {"id":"rep_1776000000007","name":"outlet-consumption-history","label":"Consumption History","templateSheet":"OutletConsumptionHistory","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
+            {"id":"rep_1776000000008","name":"outlet-invoice-history","label":"Invoice History","templateSheet":"OutletInvoiceHistory","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
+            {"id":"rep_1776000000009","name":"outlet-payment-history","label":"Payment History","templateSheet":"OutletPaymentHistory","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
+            {"id":"rep_1776000000010","name":"outlet-return-history","label":"Return History","templateSheet":"OutletReturnHistory","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
+            {"id":"rep_1776000000011","name":"outlet-stock-detail","label":"Stock Detail","templateSheet":"OutletStockDetail","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}}
+        ]),
         CustomUIName: '',
         ListViews: ''
     },
@@ -871,7 +887,11 @@ function initAppResourcesCodeConfig() {
             { "action": "Cancel", "label": "Cancel", "icon": "cancel", "color": "negative", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "CANCELLED", "columnValueOptions": [], "fields": [{ "name": "ProgressCancelledComment", "label": "Cancellation Reason", "type": "textarea", "required": true }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "PLANNED" } }
         ]),
         Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 2, "label": "Outlet Visits", "icon": "event_available", "route": "/operations/outlet-visits", "pageTitle": "Outlet Visits", "pageDescription": "Plan and track field sales outlet visits", "show": true }]),
-        UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
+        UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: JSON.stringify([
+            {"id":"rep_1776000000012","name":"outlet-visits-today","label":"Visits Today","templateSheet":"OutletVisitsToday","isRecordLevel":false,"inputs":[],"pdfOptions":{}},
+            {"id":"rep_1776000000013","name":"outlet-visits-tomorrow-upcoming","label":"Visits Tomorrow & Upcoming","templateSheet":"OutletVisitsTomorrowAndUpcomig","isRecordLevel":false,"inputs":[],"pdfOptions":{}},
+            {"id":"rep_1776000000014","name":"outlet-visits-overdue","label":"Visits Overdue","templateSheet":"OutletVisitsOverdue","isRecordLevel":false,"inputs":[],"pdfOptions":{}}
+        ]), CustomUIName: '', ListViews: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_RESTOCKS,
@@ -886,7 +906,10 @@ function initAppResourcesCodeConfig() {
             { "action": "SendBack", "label": "Send Back", "icon": "undo", "color": "warning", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "REVISION_REQUIRED", "fields": [{ "name": "Comment", "label": "Revision Comment", "type": "textarea", "required": true }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "PENDING_APPROVAL" } }
         ]),
         Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 3, "label": "Outlet Restocks", "icon": "inventory", "route": "/operations/outlet-restocks", "pageTitle": "Outlet Restocks", "pageDescription": "Request, approve, and fulfill outlet restocks", "show": true }]),
-        UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
+        UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: JSON.stringify([
+            {"id":"rep_1776000000015","name":"restock-order","label":"Restock Order","templateSheet":"Restock","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
+            {"id":"rep_1776000000016","name":"restock-log","label":"Restock Log","templateSheet":"RestockRecords","isRecordLevel":false,"inputs":[{"label":"User","type":"select","targetCell":"J11","source":{"resource":"OutletRestocks","field":"RequestedUser"},"default":"Any User","required":false},{"label":"Date","type":"date","targetCell":"J12","required":false},{"label":"Progress","type":"select","targetCell":"J13","source":{"resource":"OutletRestocks","field":"Progress"},"default":"All Progress","required":false}],"pdfOptions":{}}
+        ]), CustomUIName: '', ListViews: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_RESTOCK_ITEMS,
@@ -914,7 +937,10 @@ function initAppResourcesCodeConfig() {
             { header: 'CancelledComment', label: 'Cancelled Comment', type: 'textarea' },
             { header: 'Status', label: 'Status', type: 'status', required: true },
             { header: 'AccessRegion', label: 'Access Region', type: 'text' }
-        ]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
+        ]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: JSON.stringify([
+            {"id":"rep_1776000000017","name":"delivery-receipt","label":"Delivery Receipt","templateSheet":"Delivery","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
+            {"id":"rep_1776000000018","name":"delivery-log","label":"Delivery Log","templateSheet":"DeliveryRecords","isRecordLevel":false,"inputs":[{"label":"Driver/User","type":"select","targetCell":"J11","source":{"resource":"OutletDeliveries","field":"UserName"},"default":"Any User","required":false},{"label":"Date","type":"date","targetCell":"J12","required":false}],"pdfOptions":{}}
+        ]), CustomUIName: '', ListViews: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_RETURNS,
@@ -929,7 +955,10 @@ function initAppResourcesCodeConfig() {
             { "action": "Cancel", "label": "Cancel", "icon": "cancel", "color": "negative", "kind": "mutate", "confirm": true, "column": "Progress", "columnValue": "CANCELLED", "columnValueOptions": [], "fields": [{ "name": "ProgressCancelledComment", "label": "Cancellation Reason", "type": "textarea", "required": true }], "visibleWhen": { "column": "Progress", "op": "nin", "value": ["CANCELLED"] } }
         ]),
         Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 5, "label": "Outlet Returns", "icon": "assignment_return", "route": "/operations/outlet-returns", "pageTitle": "Outlet Returns", "pageDescription": "Track sales returns and unsold inventory returns from outlets", "show": true }]),
-        UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
+        UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: JSON.stringify([
+            {"id":"rep_1776000000019","name":"return-receipt","label":"Return Receipt","templateSheet":"Return","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
+            {"id":"rep_1776000000020","name":"returns-log","label":"Returns Log","templateSheet":"ReturnRecords","isRecordLevel":false,"inputs":[{"label":"Username","type":"select","targetCell":"J11","source":{"resource":"OutletReturns","field":"Username"},"default":"Any User","required":false},{"label":"Date","type":"date","targetCell":"J12","required":false},{"label":"Return Reason","type":"select","targetCell":"J13","source":{"resource":"OutletReturns","field":"Reason"},"default":"Any Reason","required":false}],"pdfOptions":{}}
+        ]), CustomUIName: '', ListViews: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTIONS,
@@ -939,7 +968,10 @@ function initAppResourcesCodeConfig() {
             {"action":"MarkInvoiceGenerated","label":"Mark Invoice Generated","icon":"receipt_long","color":"positive","kind":"mutate","confirm":true,"column":"Progress","columnValue":"INVOICE_GENERATED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Comment","type":"textarea","required":false}],"visibleWhen":{"column":"Progress","op":"eq","value":"PENDING_INVOICE_GENERATION"}},
             {"action":"Cancel","label":"Cancel","icon":"cancel","color":"negative","kind":"mutate","confirm":true,"column":"Progress","columnValue":"CANCELLED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Cancellation Comment","type":"textarea","required":true}],"visibleWhen":{"column":"Progress","op":"nin","value":["CANCELLED"]}}
         ]),
-        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 6, "label": "Outlet Consumptions", "icon": "point_of_sale", "route": "/operations/outlet-consumptions", "pageTitle": "Outlet Consumptions", "pageDescription": "Record outlet stock consumption", "show": true }]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
+        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 6, "label": "Outlet Consumptions", "icon": "point_of_sale", "route": "/operations/outlet-consumptions", "pageTitle": "Outlet Consumptions", "pageDescription": "Record outlet stock consumption", "show": true }]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: JSON.stringify([
+            {"id":"rep_1776000000021","name":"consumption-receipt","label":"Consumption Receipt","templateSheet":"Consumption","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
+            {"id":"rep_1776000000022","name":"consumption-records-log","label":"Consumption Log","templateSheet":"ConsumptionRecords","isRecordLevel":false,"inputs":[{"label":"Username","type":"select","targetCell":"J11","source":{"resource":"OutletConsumptions","field":"Username"},"default":"Any User","required":false},{"label":"Date","type":"date","targetCell":"J12","required":false}],"pdfOptions":{}}
+        ]), CustomUIName: '', ListViews: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_ITEMS,
@@ -955,7 +987,10 @@ function initAppResourcesCodeConfig() {
             {"action":"MarkPaid","label":"Mark Paid","icon":"paid","color":"positive","kind":"mutate","confirm":true,"column":"Progress","columnValue":"PAID","columnValueOptions":[],"fields":[{"name":"Comment","label":"Comment","type":"textarea","required":false}],"visibleWhen":{"column":"Progress","op":"in","value":["PENDING_PAYMENT","PARTIALLY_PAID"]}},
             {"action":"Cancel","label":"Cancel","icon":"cancel","color":"negative","kind":"mutate","confirm":true,"column":"Progress","columnValue":"CANCELLED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Cancellation Comment","type":"textarea","required":true}],"visibleWhen":{"column":"Progress","op":"nin","value":["PAID","CANCELLED"]}}
         ]),
-        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 7, "label": "Consumption Invoices", "icon": "receipt_long", "route": "/operations/outlet-consumption-invoices", "pageTitle": "Consumption Invoices", "pageDescription": "View outlet consumption invoices", "show": true }]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
+        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 7, "label": "Consumption Invoices", "icon": "receipt_long", "route": "/operations/outlet-consumption-invoices", "pageTitle": "Consumption Invoices", "pageDescription": "View outlet consumption invoices", "show": true }]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: JSON.stringify([
+            {"id":"rep_1776000000023","name":"consumption-invoice","label":"Consumption Invoice","templateSheet":"ConsumptionInvoice","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
+            {"id":"rep_1776000000024","name":"invoice-log","label":"Invoice Log","templateSheet":"InvoiceRecords","isRecordLevel":false,"inputs":[{"label":"Date","type":"date","targetCell":"J11","required":false},{"label":"Username","type":"select","targetCell":"J12","source":{"resource":"OutletConsumptionInvoices","field":"Username"},"default":"Any User","required":false},{"label":"Progress","type":"select","targetCell":"J13","source":{"resource":"OutletConsumptionInvoices","field":"Progress"},"default":"All Progress","required":false}],"pdfOptions":{}}
+        ]), CustomUIName: '', ListViews: ''
     },
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICE_ITEMS,
@@ -1020,7 +1055,10 @@ function initAppResourcesCodeConfig() {
         Functional: 'FALSE',
         PreAction: '',
         PostAction: '',
-        Reports: '',
+        Reports: JSON.stringify([
+            {"id":"rep_1776000000025","name":"payment-receipt","label":"Payment Receipt","templateSheet":"Payment","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
+            {"id":"rep_1776000000026","name":"payment-log","label":"Payment Log","templateSheet":"PaymentRecords","isRecordLevel":false,"inputs":[{"label":"Date","type":"date","targetCell":"J11","required":false},{"label":"Username","type":"select","targetCell":"J12","source":{"resource":"OutletPayments","field":"Username"},"default":"Any User","required":false},{"label":"Payment Mode","type":"select","targetCell":"J13","source":{"resource":"OutletPayments","field":"Mode"},"default":"Every Mode","required":false}],"pdfOptions":{}}
+        ]),
         CustomUIName: '',
         ListViews: ''
     },

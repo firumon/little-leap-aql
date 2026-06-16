@@ -230,11 +230,20 @@ Each entry in `inputs` maps a value to a target cell in the template:
 
 | Pattern | Fields | Description |
 |---|---|---|
-| **Context (Record)** | `field`, `targetCell` | Value sourced from the current record's field |
+| **Context (Record)** | `field`, `targetCell` | Value sourced from the current record's field (e.g. active record Code) |
 | **User Input** | `label`, `type`, `targetCell`, `required?`, `default?` | Prompts user via dialog before generation |
+| **User Input (Select)** | `label`, `type`, `targetCell`, `options?`, `source?`, `default?`, `required?` | Prompts user with select dropdown |
 | **Static** | `default`, `targetCell` | Fixed value injected without user interaction |
 
-`type` values: `text`, `number`, `date`, `boolean`, `static`
+`type` values: `text`, `number`, `date`, `boolean`, `select`, `static`
+
+#### Select Input Configuration
+For `type: "select"`, options can be static or dynamic:
+1. **Static Option List**: Provide a hardcoded array of strings via the `options` key:
+   `{ "label": "Payment Mode", "type": "select", "options": ["Every Mode", "Cash", "Card"], "default": "Every Mode", "targetCell": "J13" }`
+2. **Dynamic Option List**: Source unique values from a registered resource column via the `source` object (containing `resource` and `field` attributes):
+   `{ "label": "User", "type": "select", "source": { "resource": "OutletRestocks", "field": "RequestedUser" }, "default": "Any User", "targetCell": "J11" }`
+   The frontend automatically invokes `loadResource` to seed and synchronize the dynamic values under `useDataStore`.
 
 #### pdfOptions Fields
 

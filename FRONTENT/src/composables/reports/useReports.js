@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { exportFile, useQuasar } from 'quasar'
 import { useResourceIoStore } from 'src/stores/resourceIo'
+import { useDataStore } from 'src/stores/data'
 
 /**
  * useReports composable
@@ -14,6 +15,7 @@ import { useResourceIoStore } from 'src/stores/resourceIo'
 export function useReports(resourceNameRef) {
   const $q = useQuasar()
   const resourceIoStore = useResourceIoStore()
+  const dataStore = useDataStore()
 
   const isGenerating = ref(false)
   const showReportDialog = ref(false)
@@ -70,6 +72,10 @@ export function useReports(resourceNameRef) {
         .filter((input) => !input.field && input.type && input.label)
         .forEach((input) => {
           formInit[input.label] = input.default || ''
+          if (input.type === 'select' && input.source && input.source.resource) {
+            dataStore.loadResource(input.source.resource, { cacheOnly: true }).catch(() => {})
+            dataStore.loadResource(input.source.resource).catch(() => {})
+          }
         })
       reportInputs.value = formInit
       showReportDialog.value = true

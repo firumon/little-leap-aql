@@ -16,9 +16,23 @@
         </div>
 
         <template v-for="input in formFields" :key="input.label">
+          <!-- Select dropdown -->
+          <q-select
+            v-if="input.type === 'select'"
+            :model-value="formValues[input.label] || input.default || ''"
+            :label="input.label"
+            :options="getSelectOptions(input)"
+            outlined
+            dense
+            emit-value
+            map-options
+            class="report-input"
+            @update:model-value="updateField(input.label, $event)"
+          />
+
           <!-- Text input -->
           <q-input
-            v-if="input.type === 'text'"
+            v-else-if="input.type === 'text'"
             :model-value="formValues[input.label] || ''"
             :label="input.label"
             outlined
@@ -106,6 +120,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useDataStore } from 'src/stores/data'
 
 const props = defineProps({
   modelValue: {
@@ -133,6 +148,27 @@ const formFields = computed(() => {
   // Any input without a 'field' key and having a 'type' is considered a User Input
   return props.report.inputs.filter(inp => !inp.field && inp.type && inp.label);
 });
+
+const dataStore = useDataStore()
+
+function getSelectOptions(input) {
+  if (input.options && Array.isArray(input.options)) {
+    return input.options
+  }
+  if (input.source && input.source.resource && input.source.field) {
+    const resourceName = input.source.resource
+    const fieldName = input.source.field
+    const records = dataStore.getRecords(resourceName) || []
+    const uniqueValues = [...new Set(records.map(rec => rec[fieldName]))]
+      .filter(val => val !== undefined && val !== null && val !== '')
+      .sort()
+    if (input.default && !uniqueValues.includes(input.default)) {
+      return [input.default, ...uniqueValues]
+    }
+    return uniqueValues
+  }
+  return []
+}
 
 function updateField(name, value) {
   emit('update:formValues', { ...props.formValues, [name]: value })

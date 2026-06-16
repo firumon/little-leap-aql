@@ -104,7 +104,7 @@ Use when editing GAS code.
 ### Module-Specific Work
 Use when a documented module such as Reports or Bulk Upload is involved.
 - Read:
-  - only the relevant section of `Documents/MODULE_WORKFLOWS.md`
+  - only the relevant section of `Documents/MODULE_WORKFLOWS.md` (Note: Reports has its own dedicated guide at [REPORTS_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/REPORTS_SYSTEM.md))
 - Also read task-specific docs from this router as needed.
 
 ### Resource Metadata Or Sheet Schema Changes
@@ -162,7 +162,7 @@ Use when inspecting, designing, or changing Google Sheets printable report templ
 - Read:
   - `Sheet Formulas/Reports/INDEX.md`
   - and the specific report file under `Sheet Formulas/Reports/`
-  - only the relevant section of `Documents/MODULE_WORKFLOWS.md` (specifically Section 1)
+  - [REPORTS_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/REPORTS_SYSTEM.md) (specifically Section 2 and 3)
 
 ## Maintenance Rule
 Update this file when any of the following changes:

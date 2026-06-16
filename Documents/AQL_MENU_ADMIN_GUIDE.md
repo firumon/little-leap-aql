@@ -183,7 +183,7 @@ Admin input needed:
 - PDF options (if needed)
 
 Reference:
-- `Documents/MODULE_WORKFLOWS.md` section 1 (Report Generation)
+- [REPORTS_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/REPORTS_SYSTEM.md)
 
 ### 7.3 Manage Actions
 Purpose:

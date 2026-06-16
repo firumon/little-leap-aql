@@ -13,6 +13,8 @@
       </div>
     </div>
 
+    <ResourceReports class="q-mb-md" />
+
     <!-- Search Input -->
     <div class="q-mb-md">
       <q-input
@@ -27,8 +29,6 @@
         </template>
       </q-input>
     </div>
-
-    <ResourceReports class="q-mb-md" />
 
     <!-- Background loading indicator -->
     <q-linear-progress v-if="loading && !shouldBlockUi" color="primary" indeterminate class="q-mb-sm" />

@@ -150,12 +150,11 @@ export function useReports(resourceNameRef) {
 
     isGenerating.value = true
 
-    $q.notify({
+    const dismissProgress = $q.notify({
       type: 'info',
       message: 'Generating report... This may take a moment.',
       icon: 'hourglass_top',
       timeout: 0,
-      group: 'report-progress',
       spinner: true
     })
 
@@ -175,7 +174,7 @@ export function useReports(resourceNameRef) {
       })
 
       // Dismiss progress notification
-      $q.notify({ group: 'report-progress' })
+      dismissProgress()
 
       if (!result.success) {
         return
@@ -211,7 +210,7 @@ export function useReports(resourceNameRef) {
         })
       }
     } catch (err) {
-      $q.notify({ group: 'report-progress' })
+      dismissProgress()
       $q.notify({
         type: 'negative',
         message: 'Report generation failed: ' + (err.message || 'Unknown error'),

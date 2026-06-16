@@ -123,11 +123,8 @@ Use when adding, removing, renaming, or behavior-changing `AQL 🚀` sheet menu 
 ### Sidebar Menu Configuration (Frontend)
 Use when adding, removing, reordering, or changing permission gates for the web application's sidebar menu (Menu JSON in `APP.Resources`).
 - Read:
+  - `Documents/AQL_FRONTEND_MENU_SYSTEM.md` — **single canonical doc** covering schema, data flow, permission gating, tree building, route guard, and admin operations
   - `Documents/AI_COLLABORATION_PROTOCOL.md`
-  - `Documents/AQL_MENU_ADMIN_GUIDE.md` (Section 9: Sidebar Menu Taxonomy)
-  - `GAS/syncAppResources.gs` — target resource's Menu config in `initAppResourcesCodeConfig()`
-  - `FRONTENT/src/composables/layout/useMainLayoutNavTree.js` — nav tree packing logic
-  - `FRONTENT/src/composables/layout/useMenuAccess.js` — permission evaluation algorithms
 
 ### Login Payload Or Auth Response Changes
 Use when changing `handleLogin()` response shape, field sources, or frontend storage of login data.

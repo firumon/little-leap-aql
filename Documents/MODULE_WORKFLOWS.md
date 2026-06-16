@@ -443,6 +443,8 @@ Products now use entity-custom pages under `FRONTENT/src/pages/Masters/Products/
 
 ## 5. Menu Access Control
 
+> **Full documentation of the frontend menu system**: See [AQL_FRONTEND_MENU_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_MENU_SYSTEM.md) — covers JSON schema, data flow, permission gating algorithms, tree building, route guard, and admin operations.
+
 ### 5.1 Overview
 
 Menu Access Control enables fine-grained permission-based visibility of resources in the sidebar and route protection using a flexible `menuAccess` rule inside the `Menu` JSON column of `APP.Resources`. Rules support single-resource permission checks and cross-resource AND/OR logic.

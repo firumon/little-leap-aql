@@ -137,7 +137,7 @@ Array of resource entries built by `buildAuthorizedResourceEntry()` at `GAS/reso
 | `functional` | `true` = no sheet data (e.g., BulkUploadMasters); sheet I/O must not be attempted |
 | `permissions` | CRUD and custom workflow action flags (e.g. `canApprove`) derived from `APP.RolePermissions` for the user's role(s) |
 | `headers` | Sheet column headers; empty array for functional resources |
-| `ui.menus` | Sidebar menu configuration array including `menuAccess` rules |
+| `ui.menus` | Sidebar menu configuration array including `menuAccess` rules. See [AQL_FRONTEND_MENU_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_MENU_SYSTEM.md) for full schema and evaluation logic. |
 | `ui.fields` | UIFields config for custom form rendering |
 | `ui.customUIName` | Drives per-tenant 3-tier component resolution in frontend |
 | `ui.listViews` / `ui.listViewsMode` | List view filter configurations |

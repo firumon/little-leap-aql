@@ -261,6 +261,8 @@ Use when:
 
 These groups appear in the **frontend application sidebar**, not in the Google Sheet `AQL` menu. They are controlled by `APP.Resources.Menu` JSON arrays (code source: `GAS/syncAppResources.gs`) and are now grouped by business relevance instead of strict scope names.
 
+> **Full documentation of the frontend menu system**: See [AQL_FRONTEND_MENU_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_MENU_SYSTEM.md) — covers JSON schema, data flow, permission gating, tree building, route guard, and admin operations.
+
 ### 9.1 Product Group
 
 - `Manage Products` -> `/masters/products`

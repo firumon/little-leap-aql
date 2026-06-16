@@ -98,6 +98,21 @@ Router.beforeEach                     ← Route guard (double-check)
 | ALL (AND) | `{ "all": [{ "resource":"X","require":"canRead" }, ...] }` |
 | ANY (OR) | `{ "any": [{ "resource":"X","require":"canWrite" }, ...] }` |
 
+### Role-Aware Presentation Fields (Since June 2026)
+
+`group`, `order`, `label`, `icon`, `pageTitle`, `pageDescription` accept either a static value or an object keyed by role ID:
+
+```json
+"group": {
+  "default": ["Masters", "Product"],
+  "R001":    "",
+  "R002":    "Product",
+  "R003":    ["Master", "Manage"]
+}
+```
+
+Resolution priority: `userId` > `role.id` (first match) > `"default"`. Empty `group` → root-level link (no folder).
+
 ---
 
 ## 5. Implementation Checklist

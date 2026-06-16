@@ -108,7 +108,53 @@ Each entry inside the `Menu` JSON array:
 | `resource` | `string` | No | Own resource name | Target resource to check permissions against |
 | `require` | `string` \| `string[]` | **Yes** | — | Permission key(s) to check (e.g. `"canRead"`, `["canWrite","canDelete"]`) |
 
-### 2.3 Valid Permission Keys
+### 2.3 Role-Aware Customization (Overrides per Role)
+
+Since June 2026, every presentation field (`group`, `order`, `label`, `icon`, `pageTitle`, `pageDescription`) can accept either a **static value** (backward compatible) or an **object keyed by role ID** with a `"default"` fallback.
+
+#### Shape
+
+```json
+{
+  "group": {
+    "default": ["Masters", "Product"],
+    "R001":    "",                     // empty → renders at root level for this role
+    "R002":    "Product",              // single string (still valid, wraps to ["Product"])
+    "R003":    ["Master", "Manage"]    // full override for this role
+  },
+  "label": {
+    "default": "Products",
+    "R001": "Manage Products",
+    "R002": "Product Catalog"
+  },
+  "icon": {
+    "default": "inventory_2",
+    "R001": "admin_panel_settings",
+    "R002": "catalog"
+  },
+  "order": {
+    "default": 1,
+    "R001": 10
+  }
+}
+```
+
+#### Resolution Priority
+
+At frontend tree-build time, the `resolveRoleAwareField()` function in `useMainLayoutNavTree.js` resolves in this order:
+
+1. **User ID match** — if key matches `auth.user.id`, use that value (reserved for future user-specific overrides)
+2. **Role ID match** — iterate `auth.user.roles[]` in order, first matching `role.id` wins
+3. **`"default"`** — fallback when no role/user matches
+4. **Value itself** — if none of the above exist, the object itself is returned (rare edge case)
+
+If the resolved value is `""` or `[]` for `group`, the entry renders **at the sidebar root level** (no expansion-item wrapper).
+
+#### Backend Handling
+
+The parser in `GAS/resourceRegistry.gs:94-116` detects role-aware objects (plain objects that aren't arrays) and passes them through **without normalization**. All other values follow the existing normalization path. This ensures backward compatibility — existing `Menu` JSON with simple values continues to work unchanged.
+
+
 
 Derived from `APP.RolePermissions` action columns:
 - `canRead`, `canWrite`, `canUpdate`, `canDelete` (standard CRUD)
@@ -445,8 +491,17 @@ The frontend is tenant-agnostic — it receives whatever `resources[].ui.menus` 
 - **DON'T** omit `menuAccess` on sensitive entries — it defaults to `canRead`, which may be too permissive
 - **DON'T** edit the `Menu` JSON array in the sheet with invalid JSON — the parser will return an empty array
 - **DON'T** rename resources casually — `menuAccess` cross-resource rules reference resources by name
+- **DON'T** nest role-aware objects inside `menuAccess` rules — `menuAccess` evaluates permissions, not presentation
 
-### 9.3 Troubleshooting
+### 9.3 Role-Aware Gotchas
+
+- **Role IDs must match `APP.Roles` RoleID column** — the resolver looks up `auth.user.roles[].id`. If the sheet uses role names instead of IDs, the override won't match.
+- **First role match wins** — if a user has multiple roles, the **first** matching role's value in the user's `roles` array order takes precedence. Order your `menuAccess` gating accordingly.
+- **Empty group = root level** — setting `"R001": ""` or `"R001": []` for `group` renders the entry as a root-level link (no expansion item). Use this for single-role users to avoid a lonely one-item folder.
+- **Backend caches raw objects** — `resourceRegistry.gs` passes role-aware objects through without normalization. The frontend resolves them at render time using the current user's session data. No backend changes needed when adding new role override keys.
+- **Can't override `route` or `show`** — these remain static per entry. Route changes per role would break router consistency. Use `menuAccess` for role-based show/hide.
+
+### 9.4 Troubleshooting
 
 | Symptom | Likely Cause | Fix |
 |---------|-------------|-----|

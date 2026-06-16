@@ -34,6 +34,28 @@ function isValidRoute(routePath) {
   return typeof routePath === 'string' && routePath.trim() !== ''
 }
 
+/**
+ * Resolve a role-aware field value.
+ * Accepts either a primitive (backward compatible) or an object keyed by roleId / userId
+ * with "default" as fallback. Priority: userId > role order > "default".
+ */
+function resolveRoleAwareField(value, userRoles, userId) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return value
+  }
+
+  if (userId && value[userId] !== undefined) return value[userId]
+
+  if (Array.isArray(userRoles) && userRoles.length) {
+    for (const role of userRoles) {
+      const roleId = role?.id
+      if (roleId && value[roleId] !== undefined) return value[roleId]
+    }
+  }
+
+  return value.default !== undefined ? value.default : value
+}
+
 export function useMainLayoutNavTree() {
   const auth = useAuthStore()
   const router = useRouter()
@@ -47,6 +69,8 @@ export function useMainLayoutNavTree() {
 
   const visibleResourceMenuGroups = computed(() => {
     const resources = Array.isArray(auth.resources) ? auth.resources : []
+    const userRoles = auth.user?.roles || []
+    const userId = auth.user?.id || ''
     const root = []
     const seenKeys = new Set()
 
@@ -56,11 +80,21 @@ export function useMainLayoutNavTree() {
         if (menu.show === false || !isValidRoute(menu.route)) return
         if (!evaluateMenuAccess(resource, menu)) return
 
-        const navLabel = menu.label || resource.name
-        const groupSegments = Array.isArray(menu.group) && menu.group.length > 0
-          ? menu.group
-          : ['General']
-        const groupPath = groupSegments.join('/')
+        const resolvedGroup = resolveRoleAwareField(menu.group, userRoles, userId)
+        const resolvedLabel = resolveRoleAwareField(menu.label, userRoles, userId)
+        const resolvedIcon = resolveRoleAwareField(menu.icon, userRoles, userId)
+        const resolvedOrder = resolveRoleAwareField(menu.order, userRoles, userId)
+
+        const navLabel = resolvedLabel || resource.name
+        const groupSegments = []
+        if (Array.isArray(resolvedGroup)) {
+          groupSegments.push(...resolvedGroup.filter(Boolean))
+        } else if (resolvedGroup && typeof resolvedGroup === 'string') {
+          groupSegments.push(resolvedGroup)
+        }
+        // empty groupSegments → leaf renders at root level
+
+        const groupPath = groupSegments.length > 0 ? groupSegments.join('/') : '__root__'
         const dedupeKey = `${groupPath}::${navLabel}::${menu.route}`
 
         if (seenKeys.has(dedupeKey)) return
@@ -90,8 +124,8 @@ export function useMainLayoutNavTree() {
           resource: resource.name,
           routePath: menu.route,
           navLabel,
-          navIcon: menu.icon || 'list_alt',
-          order: Number(menu.order || 9999)
+          navIcon: resolvedIcon || 'list_alt',
+          order: Number(resolvedOrder || 9999)
         })
       })
     })

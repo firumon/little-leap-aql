@@ -95,21 +95,35 @@ function getResourceConfigMap() {
         // Canonical outbound key is `group`; tolerate legacy sheet/menu shapes on read.
         var rawGroup = m.group;
         if (!rawGroup && m.groupPath) rawGroup = m.groupPath;
-        var group = [];
-        if (Array.isArray(rawGroup)) {
-          group = rawGroup.map(function(part) { return (part || '').toString().trim(); }).filter(Boolean);
-        } else if (rawGroup !== null && rawGroup !== undefined && rawGroup !== '') {
-          group = [(rawGroup || '').toString().trim()].filter(Boolean);
+
+        // Role-aware objects (keys are role IDs or "default") pass through as-is
+        function isCustomizable(thing) {
+          if (thing === null || thing === undefined) return false;
+          if (Array.isArray(thing)) return false;
+          return typeof thing === 'object';
         }
-        if (!group.length) group = ['General'];
+
+        var group;
+        if (isCustomizable(rawGroup)) {
+          group = rawGroup;
+        } else {
+          group = [];
+          if (Array.isArray(rawGroup)) {
+            group = rawGroup.map(function(part) { return (part || '').toString().trim(); }).filter(Boolean);
+          } else if (rawGroup !== null && rawGroup !== undefined && rawGroup !== '') {
+            group = [(rawGroup || '').toString().trim()].filter(Boolean);
+          }
+          if (!group.length) group = ['General'];
+        }
+
         return {
           group: group,
-          order: Number(m.order) || 9999,
-          label: m.label || name,
-          icon: m.icon || 'list_alt',
+          order: isCustomizable(m.order) ? m.order : (Number(m.order) || 9999),
+          label: isCustomizable(m.label) ? m.label : (m.label || name),
+          icon: isCustomizable(m.icon) ? m.icon : (m.icon || 'list_alt'),
           route: m.route || '',
-          pageTitle: m.pageTitle || name,
-          pageDescription: m.pageDescription || '',
+          pageTitle: isCustomizable(m.pageTitle) ? m.pageTitle : (m.pageTitle || name),
+          pageDescription: isCustomizable(m.pageDescription) ? m.pageDescription : (m.pageDescription || ''),
           show: m.show !== undefined ? toBooleanCell(m.show) : true,
           menuAccess: m.menuAccess || null
         };

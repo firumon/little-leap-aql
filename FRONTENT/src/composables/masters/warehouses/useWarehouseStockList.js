@@ -61,7 +61,7 @@ export function useWarehouseStockList() {
         const info = skuInfo(row.SKU) || {}
         const variants = info.variantValues?.filter(Boolean).join(' / ') || ''
         return {
-          ...row,
+          ...row, ...info,
           StorageLabel: storageLabel(row.StorageName),
           QuantityValue: number(row.Quantity),
           ProductName: info.productName || row.ProductName || 'Unknown Product',

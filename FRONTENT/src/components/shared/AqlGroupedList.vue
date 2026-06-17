@@ -71,7 +71,7 @@ const props = defineProps({
   cardClass: { type: [String, Array, Object], default: 'q-mb-sm' },
 
   headerClass: { type: [String, Array, Object], default: 'bg-grey-2 q-py-xs q-px-sm' },
-  headerLabel: { type: [String, Function], required: true },
+  headerLabel: { type: [String, Function], required: false },
   headerLabelClass: { type: [String, Array, Object], default: 'text-caption text-weight-bold text-grey-9' },
   headerCaption: { type: [String, Function], default: null },
   headerCaptionClass: { type: [String, Array, Object], default: 'text-grey-6' },

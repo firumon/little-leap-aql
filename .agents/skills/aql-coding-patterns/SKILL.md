@@ -80,7 +80,7 @@ function processPayment(paymentId) {
   const {
     saving, form,                     // Group 1: State / reactive references
     outletOptions, skuOptions,        // Group 2: Option lists / dropdown data arrays
-    warehouseOptions, reasonOptions,  
+    warehouseOptions, reasonOptions,
     reload, saveReturn, cancel,       // Group 3: Methods / actions / navigation
     applyOutletQueryParam
   } = flow

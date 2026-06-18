@@ -1,6 +1,6 @@
 <template>
   <q-page padding class="q-pb-xl">
-    <OutletHeaderPanel title="Log Outlet Return" subtitle="Observe stock changes and log returns." class="q-mb-sm" />
+    <HeaderPanel title="Log Outlet Return" subtitle="Observe stock changes and log returns." class="q-mb-sm" />
 
     <!-- Scrollable Form Content -->
     <q-card flat bordered class="bg-white q-pa-md shadow-sm">
@@ -194,7 +194,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useOutletReturns } from '../../../composables/operations/outlets/useOutletReturns.js'
-import OutletHeaderPanel from "components/shared/OutletHeaderPanel.vue";
+import HeaderPanel from "components/shared/HeaderPanel.vue";
 
 defineOptions({ name: 'OutletReturnsAddPage' })
 

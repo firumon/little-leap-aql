@@ -3,7 +3,7 @@
     <!-- Page Branded Header with Reload Button -->
     <div class="row items-center justify-between no-wrap q-mb-md">
       <div class="col">
-        <OutletHeaderPanel
+        <HeaderPanel
           title="Outlet Restocks"
           subtitle="Stock replenishment · request, approve, deliver"
         />
@@ -212,7 +212,7 @@ import { ref, computed, reactive, onMounted } from 'vue'
 import { useOutletRestocks } from '../../../composables/operations/outlets/useOutletRestocks.js'
 import { useOutletVisits } from '../../../composables/operations/outlets/useOutletVisits.js'
 import RestockSummaryBar from '../../../components/Operations/Outlets/RestockSummaryBar.vue'
-import OutletHeaderPanel from '../../../components/shared/OutletHeaderPanel.vue'
+import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
 import { RESTOCK_PROGRESS_ORDER, active, text, sortTime, formatDate, progressMeta } from '../../../composables/operations/outlets/outletOperationsMeta.js'
 import AqlList from 'components/shared/AqlList.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'

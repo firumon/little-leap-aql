@@ -3,7 +3,7 @@
     <!-- Page Branded Header with Reload Button -->
     <div class="row items-center justify-between no-wrap q-mb-md">
       <div class="col">
-        <OutletHeaderPanel
+        <HeaderPanel
           title="Outlet Returns"
           subtitle="Track sales returns and unsold inventory returns from outlets"
         />
@@ -93,7 +93,7 @@
 import { onMounted, computed } from 'vue'
 import { useOutletReturns } from '../../../composables/operations/outlets/useOutletReturns.js'
 import AqlList from '../../../components/shared/AqlList.vue'
-import OutletHeaderPanel from '../../../components/shared/OutletHeaderPanel.vue'
+import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
 import DataAddFAB from '../../../components/shared/DataAddFAB.vue'
 import { useResourceReload } from '../../../composables/resources/useResourceReload.js'

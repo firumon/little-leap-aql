@@ -1,13 +1,13 @@
 <template>
   <q-page padding>
     <!-- Header panel with action status -->
-    <OutletHeaderPanel :subtitle="formatDisplayDate(invoice?.Date) + ' · ' + (invoice?.Code || 'Consumption Invoice')" :title="invoice ? `${outletName(invoice.OutletCode)}` : ''" class="q-mb-md">
+    <HeaderPanel :subtitle="formatDisplayDate(invoice?.Date) + ' · ' + (invoice?.Code || 'Consumption Invoice')" :title="invoice ? `${outletName(invoice.OutletCode)}` : ''" class="q-mb-md">
       <template #side>
         <div class="row items-center q-gutter-xs">
           <OutletProgressChip :progress="invoice?.Progress" />
         </div>
       </template>
-    </OutletHeaderPanel>
+    </HeaderPanel>
 
     <!-- Interactive toggle for View / Edit mode -->
     <div v-if="canEdit" class="row items-center justify-end q-gutter-sm q-mb-md">
@@ -325,7 +325,7 @@ import { useQuasar } from 'quasar'
 import { useOutletConsumption } from '../../../composables/operations/outlets/useOutletConsumption.js'
 import { useResourceNav } from '../../../composables/resources/useResourceNav.js'
 import { useCurrency } from '../../../composables/useCurrency.js'
-import OutletHeaderPanel from '../../../components/shared/OutletHeaderPanel.vue'
+import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
 import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'
 import ResourceActionButton from '../../../components/shared/ResourceActionButton.vue'
 import { useDataStore } from '../../../stores/data.js'

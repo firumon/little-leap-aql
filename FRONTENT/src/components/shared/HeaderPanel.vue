@@ -20,7 +20,7 @@
 </template>
 
 <script setup>
-defineOptions({ name: 'OutletHeaderPanel' })
+defineOptions({ name: 'HeaderPanel' })
 
 defineProps({
   title: {

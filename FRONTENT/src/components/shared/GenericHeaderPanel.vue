@@ -2,7 +2,7 @@
   <div class="row items-center no-wrap">
     <div class="q-mr-sm self-center" v-if="hasBack"><q-btn flat dense :icon="backIcon" color="primary" @click="$emit('click')" /></div>
     <div class="col">
-      <OutletHeaderPanel :title="label" :subtitle="caption" :icon="icon">
+      <HeaderPanel :title="label" :subtitle="caption" :icon="icon">
         <template #side>
           <slot name="chip">
             <div v-if="chip" class="col-auto self-center">
@@ -10,7 +10,7 @@
             </div>
           </slot>
         </template>
-      </OutletHeaderPanel>
+      </HeaderPanel>
     </div>
     <div class="q-ml-sm self-center" v-if="hasReload"><ReloadButton /></div>
   </div>
@@ -18,7 +18,7 @@
 
 <script setup>
 import ReloadButton from "components/shared/ReloadButton.vue";
-import OutletHeaderPanel from "components/shared/OutletHeaderPanel.vue";
+import HeaderPanel from "components/shared/HeaderPanel.vue";
 import {computed} from "vue";
 
 defineOptions({ name: 'GenericHeaderPanel' })

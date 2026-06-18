@@ -1,6 +1,6 @@
 <template>
   <q-page padding>
-    <OutletHeaderPanel
+    <HeaderPanel
       title="Direct Restock"
       subtitle="Stock replenishment · Instant delivery and auto-approval"
       class="q-mb-md"
@@ -67,7 +67,7 @@
 import { computed, onMounted } from 'vue'
 import { useDirectRestock } from '../../../composables/operations/outlets/DirectRestock/useDirectRestock.js'
 import StepProgressIndicator from '../../../components/shared/StepProgressIndicator.vue'
-import OutletHeaderPanel from '../../../components/shared/OutletHeaderPanel.vue'
+import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
 import DirectRestockSetupStep from '../../../components/Operations/Outlets/DirectRestock/DirectRestockSetupStep.vue'
 import DirectRestockStockMatchStep from '../../../components/Operations/Outlets/DirectRestock/DirectRestockStockMatchStep.vue'
 import DirectRestockSummaryStep from '../../../components/Operations/Outlets/DirectRestock/DirectRestockSummaryStep.vue'

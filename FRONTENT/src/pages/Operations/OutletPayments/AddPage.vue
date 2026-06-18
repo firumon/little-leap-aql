@@ -1,7 +1,7 @@
 <template>
   <q-page padding class="aql-page-container">
     <!-- Page Branded Header -->
-    <OutletHeaderPanel
+    <HeaderPanel
        title="Record Outlet Payment"
        subtitle="Receive and log outstanding outlet consumption payments"
        class="q-mb-lg"
@@ -513,7 +513,7 @@ import { useRoute } from 'vue-router'
 import { useOutletPayments } from '../../../composables/operations/outlets/useOutletPayments.js'
 import { progressMeta } from '../../../composables/operations/outlets/outletOperationsMeta.js'
 import AqlList from '../../../components/shared/AqlList.vue'
-import OutletHeaderPanel from '../../../components/shared/OutletHeaderPanel.vue'
+import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
 import { useCurrency } from '../../../composables/useCurrency.js'
 import { getInvoiceTotal, getInvoiceRemaining } from '../../../composables/operations/outlets/outletConsumptionPricing.js'
 

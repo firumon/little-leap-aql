@@ -1,6 +1,6 @@
 <template>
   <q-page padding>
-    <OutletHeaderPanel
+    <HeaderPanel
       :title="consumption ? `Generate Invoice — ${outletName(consumption.OutletCode)}` : 'Generate Invoice'"
       subtitle="Review consumption items, set prices, discount & tax"
       class="q-mb-md"
@@ -108,7 +108,7 @@ import { useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useOutletConsumption } from '../../../composables/operations/outlets/useOutletConsumption.js'
 import { useCurrency } from '../../../composables/useCurrency.js'
-import OutletHeaderPanel from '../../../components/shared/OutletHeaderPanel.vue'
+import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
 import { useDataStore } from '../../../stores/data.js'
 import { useTaxCalculator } from '../../../composables/useTaxCalculator.js'
 

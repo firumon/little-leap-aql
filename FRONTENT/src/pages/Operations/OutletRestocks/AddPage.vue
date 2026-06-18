@@ -1,6 +1,6 @@
 <template>
   <q-page padding>
-    <OutletHeaderPanel title="New Restock Request" subtitle="Request outlet consignment stock" class="q-mb-md" />
+    <HeaderPanel title="New Restock Request" subtitle="Request outlet consignment stock" class="q-mb-md" />
 
     <q-stepper v-model="step" flat bordered header-nav ref="stepperRef" color="primary" class="q-mb-md">
       <!-- Step 1: Outlet -->
@@ -142,7 +142,7 @@ import { useQuasar } from 'quasar'
 import { useOutletRestocks } from '../../../composables/operations/outlets/useOutletRestocks.js'
 import AqlGroupedList from '../../../components/shared/AqlGroupedList.vue'
 import AqlList from '../../../components/shared/AqlList.vue'
-import OutletHeaderPanel from '../../../components/shared/OutletHeaderPanel.vue'
+import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
 import { text } from '../../../composables/operations/outlets/outletOperationsMeta.js'
 
 defineOptions({ name: 'OutletRestocksAddPage' })

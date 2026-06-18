@@ -1,6 +1,6 @@
 <template>
   <q-page class="column no-scroll">
-    <OutletHeaderPanel title="Record Outlet Consumption" subtitle="Count stock and submit outlet side effects." class="q-pa-md" />
+    <HeaderPanel title="Record Outlet Consumption" subtitle="Count stock and submit outlet side effects." class="q-pa-md" />
 
     <!-- Step Progress Indicator -->
     <StepProgressIndicator v-model="step" :steps="steps" />
@@ -67,7 +67,7 @@ import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useOutletConsumption } from '../../../composables/operations/outlets/useOutletConsumption.js'
 import StepProgressIndicator from '../../../components/shared/StepProgressIndicator.vue'
-import OutletHeaderPanel from '../../../components/shared/OutletHeaderPanel.vue'
+import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
 import OutletConsumptionContextStep from '../../../components/Operations/Outlets/OutletConsumption/OutletConsumptionContextStep.vue'
 import OutletConsumptionStockCountStep from '../../../components/Operations/Outlets/OutletConsumption/OutletConsumptionStockCountStep.vue'
 import OutletConsumptionSummaryStep from '../../../components/Operations/Outlets/OutletConsumption/OutletConsumptionSummaryStep.vue'

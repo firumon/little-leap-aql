@@ -2,7 +2,7 @@
   <q-page padding>
     <div class="row items-center justify-between no-wrap q-mb-md">
       <div class="col">
-        <OutletHeaderPanel
+        <HeaderPanel
           title="Outlet Hub"
           :subtitle="selectedOutlet ? selectedOutletLabel : 'Select an outlet to view stock, planned visits, pending restocks, returns, invoices, and payments.'"
         />
@@ -269,7 +269,7 @@ import { useOutletVisits } from '../../../composables/operations/outlets/useOutl
 import { getInvoiceRemaining } from '../../../composables/operations/outlets/outletConsumptionPricing.js'
 import { progressMeta } from '../../../composables/operations/outlets/outletOperationsMeta.js'
 import { useCurrency } from '../../../composables/useCurrency.js'
-import OutletHeaderPanel from '../../../components/shared/OutletHeaderPanel.vue'
+import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
 import OutletHubSummaryStats from '../../../components/Operations/Outlets/OutletHub/OutletHubSummaryStats.vue'
 import OutletHubSimpleListSection from '../../../components/Operations/Outlets/OutletHub/OutletHubSimpleListSection.vue'
 import OutletHubPaymentSection from '../../../components/Operations/Outlets/OutletHub/OutletHubPaymentSection.vue'

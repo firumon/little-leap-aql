@@ -1,6 +1,6 @@
 <template>
   <q-page padding>
-    <OutletHeaderPanel
+    <HeaderPanel
       :title="storage?.Code || 'Outlet Stock'"
       :subtitle="storage ? `${outletLabel(storage.OutletCode)} · ${skuLabel(storage.SKU)}` : ''"
       :stats="storage ? [
@@ -25,7 +25,7 @@
 import { computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useOutletStock } from '../../../composables/operations/outlets/useOutletStock.js'
-import OutletHeaderPanel from '../../../components/shared/OutletHeaderPanel.vue'
+import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
 import OutletMovementTimeline from '../../../components/Operations/Outlets/OutletMovementTimeline.vue'
 
 defineOptions({ name: 'OutletStoragesViewPage' })

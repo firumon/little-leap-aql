@@ -1,17 +1,7 @@
 <template>
   <q-page padding class="aql-page-container">
     <!-- Page Branded Header with Reload Button -->
-    <div class="row items-center justify-between no-wrap q-mb-md">
-      <div class="col">
-        <OutletHeaderPanel
-          title="Outlet Visits"
-          subtitle="Sales field planner · plan, visit, track"
-        />
-      </div>
-      <div class="q-ml-sm self-center">
-        <ReloadButton />
-      </div>
-    </div>
+    <HeaderPanelWithReload title="Outlet Visits" subtitle="Sales field planner · plan, visit, track" />
 
     <ResourceReports class="q-mb-md" />
 
@@ -277,7 +267,7 @@ import { todayISO } from '../../../composables/operations/outlets/outletOperatio
 import { useOutletVisits } from '../../../composables/operations/outlets/useOutletVisits.js'
 import VisitSummaryBar from '../../../components/Operations/Outlets/VisitSummaryBar.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
-import OutletHeaderPanel from '../../../components/shared/OutletHeaderPanel.vue'
+import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
 import DataAddFAB from '../../../components/shared/DataAddFAB.vue'
 import AppDate from '../../../components/shared/AppDate.vue'
 import ActionCommentDialog from '../../../components/shared/ActionCommentDialog.vue'
@@ -287,6 +277,7 @@ import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
 import AqlList from 'components/shared/AqlList.vue'
 import ResourceReports from 'components/Reports/ResourceReports.vue'
+import HeaderPanelWithReload from "components/shared/HeaderPanelWithReload.vue";
 
 defineOptions({ name: 'OutletVisitsIndexPage' })
 

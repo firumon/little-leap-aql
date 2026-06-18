@@ -1,6 +1,6 @@
 <template>
   <q-page padding>
-    <OutletHeaderPanel title="Create Outlet Delivery" subtitle="Select allocated restock items" class="q-mb-md" />
+    <HeaderPanel title="Create Outlet Delivery" subtitle="Select allocated restock items" class="q-mb-md" />
 
     <div class="row q-col-gutter-xs">
       <div class="col-8">
@@ -90,7 +90,7 @@
 <script setup>
 import { onMounted, computed } from 'vue'
 import { useOutletDeliveries } from '../../../composables/operations/outlets/useOutletDeliveries.js'
-import OutletHeaderPanel from '../../../components/shared/OutletHeaderPanel.vue'
+import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
 
 defineOptions({ name: 'OutletDeliveriesAddPage' })
 

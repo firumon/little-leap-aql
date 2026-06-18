@@ -3,7 +3,7 @@
     <!-- Page Branded Header with Reload Button -->
     <div class="row items-center justify-between no-wrap q-mb-md">
       <div class="col">
-        <OutletHeaderPanel
+        <HeaderPanel
           title="Outlet Payments Ledger"
           subtitle="Track, view, and record pending consumption invoice collections"
         />
@@ -146,7 +146,7 @@ import { onMounted, ref, computed } from 'vue'
 import { useOutletPayments } from '../../../composables/operations/outlets/useOutletPayments.js'
 import { useResourceNav } from '../../../composables/resources/useResourceNav.js'
 import { useCurrency } from '../../../composables/useCurrency.js'
-import OutletHeaderPanel from '../../../components/shared/OutletHeaderPanel.vue'
+import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
 import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
 import DataAddFAB from '../../../components/shared/DataAddFAB.vue'

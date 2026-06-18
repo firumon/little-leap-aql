@@ -1,7 +1,7 @@
 <template>
   <q-page padding class="aql-page-container">
     <!-- Page Branded Header -->
-    <OutletHeaderPanel
+    <HeaderPanel
       title="Payment Collection Receipt"
       :subtitle="record ? `Receipt Code: ${record.Code}` : ''"
       class="q-mb-lg"
@@ -11,7 +11,7 @@
           <OutletProgressChip :progress="record.Progress" />
         </div>
       </template>
-    </OutletHeaderPanel>
+    </HeaderPanel>
 
     <!-- Global Loading Spinner -->
     <q-card v-if="loading && !record" flat class="flex flex-center q-pa-xl spinner-container">
@@ -297,7 +297,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useOutletPayments } from '../../../composables/operations/outlets/useOutletPayments.js'
 import { progressMeta } from '../../../composables/operations/outlets/outletOperationsMeta.js'
-import OutletHeaderPanel from '../../../components/shared/OutletHeaderPanel.vue'
+import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
 import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'
 import { useResourceNav } from '../../../composables/resources/useResourceNav.js'
 import { useCurrency } from '../../../composables/useCurrency.js'

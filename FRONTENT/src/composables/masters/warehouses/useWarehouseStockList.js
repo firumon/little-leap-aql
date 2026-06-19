@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, ref, unref } from 'vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useResourceData } from 'src/composables/resources/useResourceData'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
@@ -20,7 +20,7 @@ function storageLabel(value) {
 
 import { useProductSkuResolver } from 'src/composables/masters/products/useProductSkuResolver'
 
-export function useWarehouseStockList() {
+export function useWarehouseStockList(warehouseCodeRef = null) {
   const nav = useResourceNav()
   const { code } = useResourceConfig()
   const warehouses = useResourceData(ref('Warehouses'))
@@ -29,6 +29,10 @@ export function useWarehouseStockList() {
   const products = useResourceData(ref('Products'))
   const searchTerm = ref('')
   const { skuInfo } = useProductSkuResolver()
+
+  const selectedWarehouseCode = computed(() =>
+    text(unref(warehouseCodeRef)) || text(code.value)
+  )
 
   const loading = computed(() =>
     warehouses.loading.value ||
@@ -46,13 +50,13 @@ export function useWarehouseStockList() {
   )
 
   const currentWarehouse = computed(() =>
-    activeWarehouses.value.find((warehouse) => warehouse.Code === code.value) ||
-    warehouses.items.value.find((warehouse) => warehouse.Code === code.value) ||
+    activeWarehouses.value.find((warehouse) => warehouse.Code === selectedWarehouseCode.value) ||
+    warehouses.items.value.find((warehouse) => warehouse.Code === selectedWarehouseCode.value) ||
     null
   )
 
   const stockRows = computed(() => {
-    const warehouseCode = code.value
+    const warehouseCode = selectedWarehouseCode.value
     if (!warehouseCode) return []
 
     return storages.items.value
@@ -62,6 +66,8 @@ export function useWarehouseStockList() {
         const variants = info.variantValues?.filter(Boolean).join(' / ') || ''
         return {
           ...row, ...info,
+          SKUCode: info.skuCode || row.SKU || '',
+          VariantValues: info.variantValues || [],
           StorageLabel: storageLabel(row.StorageName),
           QuantityValue: number(row.Quantity),
           ProductName: info.productName || row.ProductName || 'Unknown Product',

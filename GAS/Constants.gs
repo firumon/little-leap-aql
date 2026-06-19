@@ -46,6 +46,8 @@ const CONFIG = {
     GOODS_RECEIPT_ITEMS: 'GoodsReceiptItems',
     STOCK_MOVEMENTS: 'StockMovements',
     WAREHOUSE_STORAGES: 'WarehouseStorages',
+    WAREHOUSE_TRANSFERS: 'WarehouseTransfers',
+    WAREHOUSE_TRANSFER_ITEMS: 'WarehouseTransferItems',
     OUTLET_VISITS: 'OutletVisits',
     OUTLET_RESTOCKS: 'OutletRestocks',
     OUTLET_RESTOCK_ITEMS: 'OutletRestockItems',
@@ -81,7 +83,9 @@ const CONFIG = {
  *       dropdown validation in the relevant setup script.
  */
 const  APP_OPTIONS_SEED = {
-  StockMovementReferenceType: ['GRN', 'DirectEntry', 'StockAdjustment', 'OutletRestock', 'OutletReturn'],
+  StockMovementReferenceType: ['GRN', 'DirectEntry', 'StockAdjustment', 'OutletRestock', 'OutletReturn', 'WarehouseTransfer'],
+  WarehouseTransferProgress: ['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'COMPLETED', 'REJECTED'],
+  WarehouseTransferItemProgress: ['PENDING', 'TRANSFERRED', 'CANCELLED'],
   PurchaseRequisitionType: ['STOCK', 'PROJECT', 'SALES', 'ASSET'],
   PurchaseRequisitionPriority: ['Low', 'Medium', 'High', 'Urgent'],
   PurchaseRequisitionProgress: ['Draft', 'Pending Approval', 'Revision Required', 'Approved', 'Rejected', 'RFQ Processed'],

@@ -352,6 +352,44 @@ function setupOperationSheets() {
             headers: ['Code', 'OutletCode', 'SKU', 'Quantity'],
             defaults: { Quantity: 0 },
             columnWidths: { Code: 150, OutletCode: 140, SKU: 150, Quantity: 120 }
+        },
+        {
+            resourceName: CONFIG.OPERATION_SHEETS.WAREHOUSE_TRANSFERS,
+            headers: ['Code', 'SourceWarehouseCode', 'DestinationWarehouseCode', 'Date', 'Username', 'Reference', 'IsInstant', 'Progress',
+                      'ProgressPendingApprovalAt', 'ProgressPendingApprovalBy', 'ProgressPendingApprovalComment',
+                      'ProgressApprovedAt', 'ProgressApprovedBy', 'ProgressApprovedComment',
+                      'ProgressCompletedAt', 'ProgressCompletedBy', 'ProgressCompletedComment',
+                      'ProgressRejectedAt', 'ProgressRejectedBy', 'ProgressRejectedComment',
+                      'Status', 'AccessRegion'].concat(commonAuditColumns),
+            statusDefault: 'Active',
+            defaults: { Status: 'Active', Progress: 'DRAFT', IsInstant: 'FALSE' },
+            statusValidation: ['Active', 'Inactive'],
+            progressValidation: APP_OPTIONS_SEED.WarehouseTransferProgress,
+            columnWidths: {
+                Code: 150, SourceWarehouseCode: 150, DestinationWarehouseCode: 180, Date: 130, Username: 150, Reference: 150, IsInstant: 100, Progress: 150,
+                ProgressPendingApprovalAt: 170, ProgressPendingApprovalBy: 160, ProgressPendingApprovalComment: 200,
+                ProgressApprovedAt: 160, ProgressApprovedBy: 150, ProgressApprovedComment: 200,
+                ProgressCompletedAt: 170, ProgressCompletedBy: 160, ProgressCompletedComment: 200,
+                ProgressRejectedAt: 160, ProgressRejectedBy: 150, ProgressRejectedComment: 200,
+                Status: 100, AccessRegion: 130
+            }
+        },
+        {
+            resourceName: CONFIG.OPERATION_SHEETS.WAREHOUSE_TRANSFER_ITEMS,
+            headers: ['Code', 'WarehouseTransferCode', 'SKUCode', 'Quantity', 'SourceStorageName', 'DestinationStorageName', 'Progress',
+                      'ProgressTransferredAt', 'ProgressTransferredBy', 'ProgressTransferredComment',
+                      'ProgressCancelledAt', 'ProgressCancelledBy', 'ProgressCancelledComment',
+                      'Status'].concat(commonAuditColumns),
+            statusDefault: 'Active',
+            defaults: { Status: 'Active', Quantity: 0, Progress: 'PENDING', SourceStorageName: '_default', DestinationStorageName: '_default' },
+            statusValidation: ['Active', 'Inactive'],
+            progressValidation: APP_OPTIONS_SEED.WarehouseTransferItemProgress,
+            columnWidths: {
+                Code: 150, WarehouseTransferCode: 180, SKUCode: 150, Quantity: 100, SourceStorageName: 160, DestinationStorageName: 200, Progress: 130,
+                ProgressTransferredAt: 170, ProgressTransferredBy: 160, ProgressTransferredComment: 200,
+                ProgressCancelledAt: 160, ProgressCancelledBy: 150, ProgressCancelledComment: 200,
+                Status: 100
+            }
         }
     ];
 

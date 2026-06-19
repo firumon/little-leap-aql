@@ -37,6 +37,7 @@ const customPageModules = import.meta.glob([
 const fallbackModules = import.meta.glob('./_common/**Page.vue')
 
 function resolveActionName(routeMeta, routeParams) {
+  if (routeMeta?.action === 'action' && routeParams?.action) return routeParams.action
   if (routeMeta?.action) return routeMeta.action
   if (routeParams?.action) return routeParams.action
   return 'index'

@@ -8,6 +8,7 @@
         "master:deploy": "node scripts/deploy-master-gas.js",
         "master:open": "cd MASTER && clasp open-script",
         "tenant:push": "node scripts/deploy-tenant.js",
+        "tenant:update-libs": "node scripts/update-tenant-libraries.js",
         "aql:deploy": "firebase deploy --only hosting:aqlpwa",
         "aql:bd": "npm --prefix FRONTENT run build && npm --prefix FRONTENT run deploy"
     },

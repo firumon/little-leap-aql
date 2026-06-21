@@ -832,8 +832,7 @@ function initAppResourcesCodeConfig() {
         Menu: JSON.stringify([
             {"group":["Warehouse"],"order":2,"label":"Stock Movements","icon":"inventory","route":"/operations/stock-movements","pageTitle":"Stock Movements","pageDescription":"View stock movement records","show":true},
             {"group":["Warehouse"],"order":3,"label":"Direct Stock Entry","icon":"edit_note","route":"/operations/stock-movements/direct-entry","pageTitle":"Direct Stock Entry","pageDescription":"Directly enter stock quantities","show":true,"menuAccess":{"require":"canWrite"}},
-            {"group":["Warehouse"],"order":4,"label":"GRN Stock Entry","icon":"receipt_long","route":"/operations/stock-movements/grn-entry","pageTitle":"GRN Stock Entry","pageDescription":"Post finalized GRN quantities into warehouse stock","show":true,"menuAccess":{"require":"canWrite"}},
-            {"group":["Product"],"order":2,"label":"Movements - NI","icon":"inventory","route":"/masters/products","pageTitle":"Stock Movements","pageDescription":"View stock movement records","show":true}
+            {"group":["Warehouse"],"order":4,"label":"GRN Stock Entry","icon":"receipt_long","route":"/operations/stock-movements/grn-entry","pageTitle":"GRN Stock Entry","pageDescription":"Post finalized GRN quantities into warehouse stock","show":true,"menuAccess":{"require":"canWrite"}}
         ]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
@@ -1095,7 +1094,7 @@ function initAppResourcesCodeConfig() {
             { "action": "Complete", "label": "Complete", "icon": "task_alt", "color": "positive", "kind": "mutate", "confirm": true, "column": "Progress", "columnValue": "COMPLETED", "fields": [{ "name": "ProgressCompletedComment", "label": "Completion Comment", "type": "textarea", "required": false }], "visibleWhen": [{ "column": "Progress", "op": "eq", "value": "APPROVED" }, { "column": "DestinationWarehouseCode", "op": "notEmpty" }] },
             { "action": "ClaimAndComplete", "label": "Claim & Complete", "icon": "local_shipping", "color": "primary", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "COMPLETED", "fields": [{ "name": "DestinationWarehouseCode", "label": "Destination Warehouse", "type": "select", "source": { "resource": "Warehouses", "field": "Code" }, "required": true }, { "name": "ProgressCompletedComment", "label": "Completion Comment", "type": "textarea", "required": false }], "visibleWhen": [{ "column": "Progress", "op": "eq", "value": "APPROVED" }, { "column": "DestinationWarehouseCode", "op": "empty" }] }
         ]),
-        Menu: JSON.stringify([{ "group": ["Operations"], "order": 5, "label": "Warehouse Transfers", "icon": "swap_horiz", "route": "/operations/warehouse-transfers", "pageTitle": "Warehouse Transfers", "pageDescription": "Transfer inventory between warehouses", "show": true }]),
+        Menu: JSON.stringify([{ "group": ["Warehouse"], "order": 5, "label": "Transfers", "icon": "swap_horiz", "route": "/operations/warehouse-transfers", "pageTitle": "Warehouse Transfers", "pageDescription": "Transfer inventory between warehouses", "show": true }]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',

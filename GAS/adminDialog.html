@@ -78,6 +78,26 @@ textarea {
   border-left: 4px solid #F58841;
 }
 
+.btn-invert {
+  width: auto !important;
+  padding: 2px 8px !important;
+  background: #f1f5f9 !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 4px !important;
+  color: #334155 !important;
+  font-weight: 500 !important;
+  font-size: 11px !important;
+  margin-top: 0 !important;
+  box-shadow: none !important;
+  display: inline-block !important;
+  height: auto !important;
+  cursor: pointer;
+}
+.btn-invert:hover {
+  background: #e2e8f0 !important;
+  transform: none !important;
+}
+
 button { 
   width: 100%; 
   padding: 11px; 
@@ -281,7 +301,7 @@ function fillForm(d, t) {
     });
     
     if (!hasPermissions) {
-      initializeDefaultMasterReadPermissions();
+      initializeDefaultMasterAssignments();
     } else {
       Object.keys(map).forEach(function(res) {
         var resSafe = res.replace(/[^a-zA-Z0-9]/g, "_");
@@ -306,16 +326,12 @@ function fillForm(d, t) {
   }
 }
 
-function initializeDefaultMasterReadPermissions() {
+function initializeDefaultMasterAssignments() {
   var groups = document.querySelectorAll(".checks[data-scope='master']");
   groups.forEach(function(group) {
-    var readCb = group.querySelector("input[data-action='Read']");
-    if (readCb) {
-      readCb.checked = true;
-      var resSafe = group.getAttribute("data-resource-group");
-      var assignCb = document.querySelector("input[name='assign__" + resSafe + "']");
-      if (assignCb) assignCb.checked = true;
-    }
+    var resSafe = group.getAttribute("data-resource-group");
+    var assignCb = document.querySelector("input[name='assign__" + resSafe + "']");
+    if (assignCb) assignCb.checked = true;
   });
 }
 
@@ -324,7 +340,7 @@ window.onload = function() {
   if (form) {
     var isCreateRole = form.getAttribute("onsubmit") && form.getAttribute("onsubmit").indexOf("handleCreateRole") !== -1;
     if (isCreateRole) {
-      initializeDefaultMasterReadPermissions();
+      initializeDefaultMasterAssignments();
     }
     var isManageRole = form.getAttribute("onsubmit") && form.getAttribute("onsubmit").indexOf("submitManageRoleForm") !== -1;
     if (isManageRole) {
@@ -340,7 +356,7 @@ function onManageRoleChange(roleId) {
     document.getElementById("roleDescInput").value = "";
     document.querySelectorAll("input[data-perm='1']").forEach(function(cb) { cb.checked = false; });
     document.querySelectorAll(".resource-assigned").forEach(function(cb) { cb.checked = false; });
-    initializeDefaultMasterReadPermissions();
+    initializeDefaultMasterAssignments();
     if (btn) btn.innerText = "Create Role";
   } else {
     loadDetails('Role', roleId);

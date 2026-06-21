@@ -42,8 +42,7 @@ function showCreateAccessRegionDialog() { CORE_LIB.showCreateAccessRegionDialog(
 function showUpdateAccessRegionDialog() { CORE_LIB.showUpdateAccessRegionDialog(); }
 
 // --- Roles Submenu ---
-function showCreateRoleDialog() { CORE_LIB.showCreateRoleDialog(); }
-function showUpdateRoleDialog() { CORE_LIB.showUpdateRoleDialog(); }
+function showManageRoleDialog() { CORE_LIB.showManageRoleDialog(); }
 function setupDefaultRoles() { CORE_LIB.setupDefaultRoles(); }
 
 // --- Resources Submenu ---
@@ -100,3 +99,7 @@ function app_saveResourceListViews(resourceName, json, listViewsMode) {
 // --- Report Manager Dialog ---
 function app_getReportManagerData() { return CORE_LIB.app_getReportManagerData(); }
 function app_saveResourceReports(resourceName, json) { return CORE_LIB.app_saveResourceReports(resourceName, json); }
+
+// --- Roles Setup Progress Dialog ---
+function app_getRolesSetupSteps() { return CORE_LIB.app_getRolesSetupSteps(); }
+function app_executeRolesSetupStep(stepId) { return CORE_LIB.app_executeRolesSetupStep(stepId); }

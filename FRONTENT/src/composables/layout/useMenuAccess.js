@@ -36,6 +36,13 @@ export function useMenuAccess() {
     return keys.every((key) => perms[key] === true)
   }
 
+  function hasAnyResourcePermission(resourceName) {
+    const entry = getResourceEntry(resourceName)
+    if (!entry) return false
+    const perms = entry.permissions || {}
+    return Object.values(perms).some((val) => val === true)
+  }
+
   /**
    * Evaluate a menuAccess rule object.
    * Supports: absent (fallback canRead), { require }, { all }, { any }
@@ -50,9 +57,9 @@ export function useMenuAccess() {
     const resourceName = resource.name
     const menuAccess = menuItem?.menuAccess ?? null
 
-    // Case 1: No menuAccess defined → fallback to canRead on own resource
+    // Case 1: No menuAccess defined → fallback to ANY permission on own resource
     if (!menuAccess || typeof menuAccess !== 'object') {
-      return checkPermissions(resourceName, 'canRead')
+      return hasAnyResourcePermission(resourceName)
     }
 
     // Case 2 & 3: { require: 'canWrite' } or { require: ['canWrite', 'canDelete'] }

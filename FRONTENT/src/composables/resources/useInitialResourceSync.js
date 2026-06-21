@@ -8,7 +8,7 @@ function normalizeResourceField(value) {
 function isInitialSyncResource(resource = {}) {
   const scope = normalizeResourceField(resource?.scope).toLowerCase()
   const parentResource = normalizeResourceField(resource?.parentResource ?? resource?.ParentResource)
-  const readable = resource?.permissions?.canRead !== false && resource?.name && resource?.functional !== true
+  const readable = resource?.name && resource?.functional !== true
   if (!readable) return false
   if (scope === 'master') return true
   return scope === 'operation' && !parentResource

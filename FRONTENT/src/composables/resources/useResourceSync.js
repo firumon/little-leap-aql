@@ -25,7 +25,7 @@ export function useResourceSync() {
     return resources.filter((entry) => {
       const scope = (entry?.scope || '').toString().trim().toLowerCase()
       return ['master', 'operation', 'accounts'].includes(scope) &&
-        entry?.permissions?.canRead !== false && entry?.name && entry?.functional !== true
+        entry?.name && entry?.functional !== true
     })
   })
 

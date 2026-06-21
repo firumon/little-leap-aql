@@ -37,8 +37,15 @@ function evaluateMenuAccessInline(resource, allResources, routePath) {
     return keys.every((k) => perms[k] === true)
   }
 
+  function hasAnyPerms(resName) {
+    const entry = allResources.find((r) => r?.name === resName)
+    if (!entry) return false
+    const perms = entry.permissions || {}
+    return Object.values(perms).some((val) => val === true)
+  }
+
   if (!menuAccess || typeof menuAccess !== 'object') {
-    return checkPerms(resourceName, 'canRead')
+    return hasAnyPerms(resourceName)
   }
 
   if (menuAccess.require !== undefined) {

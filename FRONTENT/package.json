@@ -1,7 +1,7 @@
 {
   "name": "aql",
-  "version": "0.0.1",
-  "description": "A Quasar Project",
+  "version": "0.1.2",
+  "description": "AQL Progressive Web Application (PWA)",
   "productName": "AQL",
   "author": "Firose Hussain <github@firumon.com>",
   "type": "module",
@@ -9,8 +9,9 @@
   "scripts": {
     "test": "echo \"No test specified\" && exit 0",
     "dev": "quasar dev -m pwa",
-    "build": "quasar build -m pwa",
-    "postinstall": "quasar prepare"
+    "build": "npm version patch --no-git-tag-version && quasar build -m pwa",
+    "postinstall": "quasar prepare",
+    "deploy": "firebase deploy --only hosting:aqlpwa"
   },
   "dependencies": {
     "@quasar/extras": "^1.16.4",

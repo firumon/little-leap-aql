@@ -7,6 +7,11 @@
         "master:push": "cd MASTER && clasp push --force",
         "master:deploy": "node scripts/deploy-master-gas.js",
         "master:open": "cd MASTER && clasp open-script",
-        "tenant:push": "node scripts/deploy-tenant.js"
+        "tenant:push": "node scripts/deploy-tenant.js",
+        "aql:deploy": "firebase deploy --only hosting:aqlpwa",
+        "aql:bd": "npm --prefix FRONTENT run build && npm --prefix FRONTENT run deploy"
+    },
+    "dependencies": {
+        "firebase": "^12.15.0"
     }
 }

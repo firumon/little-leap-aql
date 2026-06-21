@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 20px;
+      background-color: #F1F1F3;
+      color: #1e293b;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #cbd5e1;
+    }
+    h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #000077;
+    }
+    .subtitle {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 4px;
+    }
+    .progress-container {
+      background-color: #fff;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+    }
+    .progress-bar-bg {
+      background-color: #e2e8f0;
+      border-radius: 6px;
+      height: 10px;
+      width: 100%;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    .progress-bar {
+      background-color: #F58841;
+      height: 100%;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    .progress-text {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+      color: #475569;
+    }
+    .steps-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 380px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .step-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px 14px;
+      transition: all 0.2s ease;
+    }
+    .step-item.todo {
+      border-left: 4px solid #94a3b8;
+    }
+    .step-item.doing {
+      border-left: 4px solid #F58841;
+      background-color: #fffaf0;
+      box-shadow: 0 0 0 1px #ffedd5;
+      animation: pulse 1.5s infinite alternate;
+    }
+    .step-item.done {
+      border-left: 4px solid #10b981;
+      background-color: #f0fdf4;
+    }
+    .step-item.skipped {
+      border-left: 4px solid #3b82f6;
+      background-color: #eff6ff;
+    }
+    .step-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .step-title {
+      font-weight: 500;
+      color: #0f172a;
+    }
+    .step-desc {
+      font-size: 11px;
+      color: #64748b;
+      margin-top: 1px;
+    }
+    .status-badge {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 12px;
+      letter-spacing: 0.02em;
+    }
+    .status-badge.todo {
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+    }
+    .status-badge.doing {
+      background: #ffedd5;
+      color: #c2410c;
+      border: 1px solid #fed7aa;
+    }
+    .status-badge.done {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+    }
+    .status-badge.skipped {
+      background: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #bfdbfe;
+    }
+    .footer {
+      margin-top: 20px;
+      text-align: right;
+    }
+    .btn {
+      padding: 9px 16px;
+      border: 0;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-primary {
+      background: #000077;
+      color: #fff;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 119, 0.2);
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: #000055;
+      transform: translateY(-1px);
+    }
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    
+    @keyframes pulse {
+      0% { opacity: 0.9; }
+      100% { opacity: 1; transform: scale(1.005); }
+    }
+    
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h2>Injecting Default Roles</h2>
+    <div class="subtitle">Assigning roles and setting up core system permissions</div>
+  </div>
+
+  <div class="progress-container">
+    <div class="progress-bar-bg">
+      <div id="progressBar" class="progress-bar"></div>
+    </div>
+    <div class="progress-text">
+      <span id="progressPercent">0% Complete</span>
+      <span id="progressCount">0 / 0 Steps</span>
+    </div>
+  </div>
+
+  <div id="stepsList" class="steps-list">
+    <!-- Steps populated dynamically -->
+  </div>
+
+  <div class="footer">
+    <button id="closeBtn" class="btn btn-primary" disabled onclick="google.script.host.close()">
+      Processing...
+    </button>
+  </div>
+
+  <script>
+    let steps = [];
+    let currentStepIndex = 0;
+
+    window.onload = function() {
+      // Fetch the step list from the backend
+      google.script.run
+        .withSuccessHandler(function(stepsList) {
+          steps = stepsList;
+          renderSteps();
+          runNextStep();
+        })
+        .withFailureHandler(function(err) {
+          alert("Failed to initialize roles setup steps: " + err.message);
+        })
+        .app_getRolesSetupSteps();
+    };
+
+    function renderSteps() {
+      const container = document.getElementById("stepsList");
+      container.innerHTML = "";
+      steps.forEach(function(step) {
+        const item = document.createElement("div");
+        item.id = "step_" + step.id;
+        item.className = "step-item todo";
+        
+        item.innerHTML = `
+          <div class="step-info">
+            <div>
+              <div class="step-title">${step.title}</div>
+              <div class="step-desc">${step.desc}</div>
+            </div>
+          </div>
+          <span class="status-badge todo">To Do</span>
+        `;
+        container.appendChild(item);
+      });
+      updateProgressBar();
+    }
+
+    function updateProgressBar() {
+      if (steps.length === 0) return;
+      const pct = Math.round((currentStepIndex / steps.length) * 100);
+      document.getElementById("progressBar").style.width = pct + "%";
+      document.getElementById("progressPercent").innerText = pct + "% Complete";
+      document.getElementById("progressCount").innerText = currentStepIndex + " / " + steps.length + " Steps";
+    }
+
+    function runNextStep() {
+      if (currentStepIndex >= steps.length) {
+        // Complete!
+        const closeBtn = document.getElementById("closeBtn");
+        closeBtn.disabled = false;
+        closeBtn.innerText = "Close & Refresh";
+        return;
+      }
+
+      const step = steps[currentStepIndex];
+      const element = document.getElementById("step_" + step.id);
+      
+      // Update UI to "Doing"
+      element.className = "step-item doing";
+      element.querySelector(".status-badge").className = "status-badge doing";
+      element.querySelector(".status-badge").innerText = "Doing";
+      element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          // Update UI based on response
+          const badgeClass = res.status.toLowerCase();
+          const badgeText = res.status === "SKIPPED" ? "Skipped" : "Done";
+          element.className = "step-item " + badgeClass;
+          
+          const badge = element.querySelector(".status-badge");
+          badge.className = "status-badge " + badgeClass;
+          badge.innerText = badgeText;
+          
+          if (res.message) {
+            element.querySelector(".step-desc").innerText = res.message;
+          }
+
+          currentStepIndex++;
+          updateProgressBar();
+          setTimeout(runNextStep, 200); // Small pause for smooth visual effect
+        })
+        .withFailureHandler(function(err) {
+          element.className = "step-item todo";
+          const badge = element.querySelector(".status-badge");
+          badge.className = "status-badge todo";
+          badge.innerText = "Error";
+          element.querySelector(".step-desc").innerText = err.message;
+          
+          const closeBtn = document.getElementById("closeBtn");
+          closeBtn.disabled = false;
+          closeBtn.innerText = "Close";
+        })
+        .app_executeRolesSetupStep(step.id);
+    }
+  </script>
+</body>
+</html>

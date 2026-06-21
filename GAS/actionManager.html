@@ -1,44 +1,149 @@
 <!DOCTYPE html>
 <html>
 <head>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Google Sans', Roboto, Arial, sans-serif; font-size: 13px; color: #202124; padding: 16px; }
-  h2 { font-size: 16px; font-weight: 500; margin-bottom: 12px; }
-  h3 { font-size: 12px; font-weight: 600; color: #5f6368; margin: 10px 0 6px; text-transform: uppercase; letter-spacing: 0.04em; }
-  .row { display: flex; gap: 8px; margin-bottom: 8px; }
+  body { 
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+    font-size: 13px; 
+    color: #1e293b; 
+    padding: 20px; 
+    background-color: #F1F1F3;
+    line-height: 1.5;
+  }
+  h2 { 
+    font-size: 18px; 
+    font-weight: 700; 
+    margin-bottom: 16px; 
+    color: #000077;
+    border-bottom: 2px solid #cbd5e1;
+    padding-bottom: 8px;
+  }
+  h3 { 
+    font-size: 11px; 
+    font-weight: 700; 
+    color: #475569; 
+    margin: 12px 0 6px; 
+    text-transform: uppercase; 
+    letter-spacing: 0.05em; 
+  }
+  .row { display: flex; gap: 12px; margin-bottom: 12px; }
   .row > * { flex: 1; }
-  label { display: block; font-size: 11px; color: #5f6368; margin-bottom: 2px; font-weight: 500; }
-  select, input, textarea { width: 100%; padding: 6px 8px; border: 1px solid #dadce0; border-radius: 4px; font-size: 13px; }
-  select:focus, input:focus, textarea:focus { outline: none; border-color: #1a73e8; }
-  textarea { min-height: 60px; resize: vertical; }
-  button { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; }
-  .btn-primary { background: #1a73e8; color: #fff; }
-  .btn-primary:hover { background: #1557b0; }
-  .btn-danger { background: #d93025; color: #fff; }
-  .btn-danger:hover { background: #b3261e; }
-  .btn-secondary { background: #f1f3f4; color: #202124; }
-  .btn-secondary:hover { background: #e8eaed; }
-  .action-card { border: 1px solid #dadce0; border-radius: 8px; padding: 12px; margin-bottom: 8px; background: #fafafa; }
-  .action-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-  .action-title { font-weight: 600; font-size: 14px; }
-  .kind-badge { font-size: 10px; padding: 2px 6px; border-radius: 10px; margin-left: 6px; font-weight: 600; }
-  .kind-badge.mutate { background: #e8f0fe; color: #1a73e8; }
-  .kind-badge.navigate { background: #fef7e0; color: #b06000; }
-  .field-row, .cond-row { display: flex; gap: 6px; align-items: center; margin-top: 4px; }
+  label { 
+    display: block; 
+    font-size: 11px; 
+    font-weight: 600; 
+    color: #475569; 
+    margin-bottom: 6px; 
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  select, input, textarea { 
+    width: 100%; 
+    padding: 8px 12px; 
+    border: 1px solid #cbd5e1; 
+    border-radius: 8px; 
+    font-size: 13px; 
+    font-family: inherit;
+    background: #fff;
+    color: #0f172a;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+  select:focus, input:focus, textarea:focus { 
+    outline: none; 
+    border-color: #000077; 
+    box-shadow: 0 0 0 3px rgba(0, 0, 119, 0.15);
+  }
+  textarea { min-height: 65px; resize: vertical; }
+  button { 
+    padding: 9px 16px; 
+    border: none; 
+    border-radius: 8px; 
+    cursor: pointer; 
+    font-size: 13px; 
+    font-weight: 600; 
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+  button:hover {
+    transform: translateY(-1px);
+  }
+  button:active {
+    transform: translateY(0);
+  }
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+  .btn-primary { 
+    background: #000077; 
+    color: #fff; 
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 119, 0.2);
+  }
+  .btn-primary:hover { background: #000055; }
+  .btn-danger { 
+    background: #fee2e2; 
+    color: #991b1b; 
+    border: 1px solid #fca5a5;
+  }
+  .btn-danger:hover { background: #fecaca; }
+  .btn-secondary { 
+    background: #fff; 
+    color: #475569; 
+    border: 1px solid #cbd5e1;
+  }
+  .btn-secondary:hover { background: #f8fafc; }
+  .action-card { 
+    border: 1px solid #cbd5e1; 
+    border-radius: 10px; 
+    padding: 16px; 
+    margin-bottom: 12px; 
+    background: #fff; 
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  }
+  .action-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
+  .action-title { font-weight: 700; font-size: 14px; color: #0f172a; }
+  .kind-badge { font-size: 10px; padding: 3px 8px; border-radius: 12px; margin-left: 8px; font-weight: 600; text-transform: uppercase; }
+  .kind-badge.mutate { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+  .kind-badge.navigate { background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5; }
+  .field-row, .cond-row { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
   .field-row input, .cond-row input { flex: 1; }
-  .field-row select { width: 100px; }
-  .cond-row select { width: 110px; }
-  .field-row .remove-field, .cond-row .remove-cond { cursor: pointer; color: #d93025; font-size: 16px; padding: 2px 6px; }
-  .no-actions { color: #5f6368; text-align: center; padding: 24px; }
-  .status-bar { padding: 8px; border-radius: 4px; margin-bottom: 12px; display: none; }
-  .status-bar.error { display: block; background: #fce8e6; color: #d93025; }
-  .status-bar.success { display: block; background: #e6f4ea; color: #137333; }
-  .actions-toolbar { display: flex; gap: 8px; margin-bottom: 12px; justify-content: space-between; }
-  .checkbox-row { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
-  .checkbox-row input[type=checkbox] { width: auto; }
-  .sub-section { background: #fff; border: 1px dashed #e0e0e0; border-radius: 6px; padding: 8px; margin-top: 8px; }
-  .hint { font-size: 11px; color: #888; margin-top: 2px; }
+  .field-row select { width: 120px; }
+  .cond-row select { width: 130px; }
+  .field-row .remove-field, .cond-row .remove-cond { cursor: pointer; color: #ef4444; font-size: 18px; padding: 2px 6px; font-weight: bold; transition: color 0.2s; }
+  .field-row .remove-field:hover, .cond-row .remove-cond:hover { color: #b91c1c; }
+  .no-actions { color: #64748b; text-align: center; padding: 32px; font-size: 14px; background: #fff; border-radius: 8px; border: 1px solid #cbd5e1; }
+  .status-bar { padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; display: none; font-weight: 500; font-size: 12px; border: 1px solid transparent; }
+  .status-bar.error { display: block; background: #fef2f2; color: #991b1b; border-color: #fca5a5; }
+  .status-bar.success { display: block; background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+  .actions-toolbar { display: flex; gap: 8px; margin-bottom: 16px; justify-content: space-between; align-items: center; }
+  .checkbox-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; cursor: pointer; font-size: 13px; }
+  .checkbox-row input[type=checkbox] { width: auto; box-shadow: none; cursor: pointer; }
+  .sub-section { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 12px; margin-top: 12px; }
+  .hint { font-size: 11px; color: #64748b; margin-top: 4px; }
+
+  /* Custom scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
 </style>
 </head>
 <body>

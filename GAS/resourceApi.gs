@@ -519,6 +519,13 @@ function attachResourceName(payload, resourceName) {
 
 function enforceMasterPermission(auth, resourceName, permissionName) {
   const roleIds = auth && Array.isArray(auth.roleIds) ? auth.roleIds : [];
+  
+  if (permissionName === 'canRead') {
+    const assignedResources = getRoleResourceAccess(roleIds, { includeUiConfig: false });
+    const isAssigned = assignedResources.some(function(r) { return r.name === resourceName; });
+    if (isAssigned) return;
+  }
+
   const allowed = hasRolePermission(roleIds, resourceName, permissionName);
   if (!allowed) {
     throw new Error('Access denied for ' + resourceName + ' (' + permissionName + ')');

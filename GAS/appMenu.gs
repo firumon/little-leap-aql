@@ -17,8 +17,7 @@ function onOpen() {
       .addItem('Create Access Region', 'showCreateAccessRegionDialog')
       .addItem('Update Access Region', 'showUpdateAccessRegionDialog'))
     .addSubMenu(ui.createMenu('🛡️ Roles')
-      .addItem('Create Role', 'showCreateRoleDialog')
-      .addItem('Update Role', 'showUpdateRoleDialog')
+      .addItem('Manage Roles', 'showManageRoleDialog')
       .addSeparator()
       .addItem('Inject Default Roles', 'setupDefaultRoles'))
     .addSubMenu(ui.createMenu('📚 Resources')
@@ -64,11 +63,8 @@ function showCreateAccessRegionDialog() {
 function showUpdateAccessRegionDialog() {
   showDialog('updateAccessRegion', 'Update Access Region', 520, 540, baseDialogData());
 }
-function showCreateRoleDialog() {
-  showDialog('createRole', 'Create Role', 900, 760, baseDialogData());
-}
-function showUpdateRoleDialog() {
-  showDialog('updateRole', 'Update Role', 900, 800, baseDialogData());
+function showManageRoleDialog() {
+  showDialog('manageRole', 'Manage Roles', 900, 800, baseDialogData());
 }
 function showAddResourceDialog() {
   showDialog('addResource', 'Add Resource', 780, 920, baseDialogData());
@@ -272,17 +268,21 @@ function saveRolePermissionMatrix(roleId, form) {
   }
 
   const matrix = getRoleActionMatrix();
-  matrix.resources.forEach(function (resource) {
-    const selected = [];
-    matrix.actionsByResource[resource].forEach(function (action) {
-      const key = permKey(resource, action);
-      if (form[key] === true || String(form[key]).toLowerCase() === 'true') selected.push(action);
-    });
-    if (selected.length) {
+  matrix.resources.forEach(function (resObj) {
+    const resource = resObj.name;
+    const resourceSafe = resource.replace(/[^a-zA-Z0-9]/g, '_');
+    const isAssigned = form['assign__' + resourceSafe] === true || String(form['assign__' + resourceSafe]).toLowerCase() === 'true';
+    if (isAssigned) {
+      const selected = [];
+      matrix.actionsByResource[resource].forEach(function (action) {
+        const key = permKey(resource, action);
+        if (form[key] === true || String(form[key]).toLowerCase() === 'true') selected.push(action);
+      });
+      const allSelected = selected.length > 0 && selected.length === matrix.actionsByResource[resource].length;
       ctx.sheet.appendRow(toRow(ctx.headers, {
         RoleID: roleId,
         Resource: resource,
-        Actions: selected.join(',')
+        Actions: allSelected ? '*' : selected.join(',')
       }));
     }
   });
@@ -367,19 +367,49 @@ function getUsersList() { return listRows(CONFIG.SHEETS.USERS, 'UserID', 'Name',
 function getRolesList() { return listRows(CONFIG.SHEETS.ROLES, 'RoleID', 'Name'); }
 function getDesignationsList() { return listRows(CONFIG.SHEETS.DESIGNATIONS, 'DesignationID', 'Name').map(function (d) { return { id: d.id, name: d.name }; }); }
 function getAccessRegionsList() { return listRows(CONFIG.SHEETS.ACCESS_REGIONS, 'Code', 'Name').map(function (r) { return { code: r.id, name: r.name }; }); }
-function getResourcesList() { return listRows(CONFIG.SHEETS.RESOURCES, 'Name', 'Name').map(function (r) { return { name: r.name }; }); }
+function getResourcesList() {
+  try {
+    const ctx = ctxOf(CONFIG.SHEETS.RESOURCES);
+    const values = ctx.sheet.getDataRange().getValues();
+    const out = [];
+    for (let i = 1; i < values.length; i++) {
+      const name = (values[i][ctx.idx.Name] || '').toString().trim();
+      if (!name) continue;
+      const scope = (values[i][ctx.idx.Scope] || 'master').toString().trim().toLowerCase();
+      out.push({ name: name, scope: scope });
+    }
+    return out;
+  } catch (e) {
+    return [];
+  }
+}
 
 function getRoleActionMatrix() {
   try {
-    const resources = getResourcesList().map(function (r) { return r.name; });
+    const resources = getResourcesList();
     const ctx = ctxOf(CONFIG.SHEETS.RESOURCES);
     const matrix = { resources: resources, actionsByResource: {} };
-    resources.forEach(function (resourceName) {
+    resources.forEach(function (resObj) {
+      const resourceName = resObj.name;
       const row = findRow(ctx.sheet, ctx.idx.Name, resourceName, 2, true);
-      let extra = '';
-      if (row !== -1 && ctx.idx.AdditionalActions !== undefined) extra = (get(ctx.sheet, row, ctx.idx.AdditionalActions) || '').toString();
+      let extra = [];
+      if (row !== -1 && ctx.idx.AdditionalActions !== undefined) {
+        const raw = (get(ctx.sheet, row, ctx.idx.AdditionalActions) || '').toString().trim();
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              extra = parsed.map(function(act) {
+                return typeof act === 'object' && act ? (act.action || act.name || '') : String(act);
+              }).filter(Boolean);
+            }
+          } catch(e) {
+            extra = raw.split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+          }
+        }
+      }
       const base = ['Read', 'Write', 'Update', 'Delete'];
-      const merged = base.concat(extra.split(',').map(function (x) { return x.trim(); }).filter(Boolean));
+      const merged = base.concat(extra);
       matrix.actionsByResource[resourceName] = uniqueKeepOrder(merged);
     });
     return matrix;
@@ -514,29 +544,47 @@ function buildDialogBody(action, data) {
     return '<div class="box"><div class="small">Select Roles</div><div class="checks">' + roles.map(function (r) { return '<label><input type="checkbox" name="roles" value="' + esc(r.id) + '"> ' + esc(r.name) + '</label>'; }).join('') + '</div></div>';
   }
   function roleMatrix() {
-    return '<div class="box">' + matrix.resources.map(function (resource) {
+    return '<div class="box">' + matrix.resources.map(function (resObj) {
+      var resource = resObj.name;
+      var scope = resObj.scope || 'master';
       var actions = matrix.actionsByResource[resource] || [];
-      return '<div class="g"><div><b>' + esc(resource) + '</b></div><div class="checks">' + actions.map(function (action) {
-        var k = permKey(resource, action);
-        return '<label><input data-perm="1" type="checkbox" name="' + esc(k) + '" value="true"> ' + esc(action) + '</label>';
-      }).join('') + '</div></div>';
+      var resourceSafe = resource.replace(/[^a-zA-Z0-9]/g, '_');
+      return '<div class="g" style="margin-bottom: 14px;">' +
+             '<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; border-bottom: 1px solid #f1f5f9; padding-bottom: 2px;">' +
+             '<div style="display: flex; align-items: center; gap: 8px;">' +
+             '<input type="checkbox" class="resource-assigned" name="assign__' + esc(resourceSafe) + '" data-resource="' + esc(resourceSafe) + '" style="width: auto; margin: 0;" onchange="onResourceAssignedChange(this)">' +
+             '<b style="font-size: 13px; color: #000077;">' + esc(scope) + '/' + esc(resource) + '</b></div>' +
+             '<button type="button" class="btn-invert" onclick="invertResourceActions(\'' + esc(resourceSafe) + '\')" style="font-size: 11px; padding: 2px 6px; cursor: pointer; border: 1px solid #ccc; border-radius: 3px; background: #fff;">Invert</button></div>' +
+             '<div class="checks" data-resource-group="' + esc(resourceSafe) + '" data-resource-name="' + esc(resource) + '" data-scope="' + esc(scope) + '">' + actions.map(function (action) {
+               var k = permKey(resource, action);
+               return '<label><input data-perm="1" data-action="' + esc(action) + '" type="checkbox" name="' + esc(k) + '" value="true" onchange="onPermissionChange(\'' + esc(resourceSafe) + '\')"> ' + esc(action) + '</label>';
+             }).join('') + '</div></div>';
     }).join('') + '</div>';
   }
 
   var body = '';
-  if (action === 'createUser') body = '<h2>Create User</h2><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleCreateUser\')"><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Email</label><input name="email" type="email" required></div><div class="g"><label>Password</label><input name="password" type="password" required></div><div class="g"><label>Designation</label><select name="designationId"><option value="">-- Select --</option>' + doo + '</select></div><div class="g"><label>Access Region</label><select name="accessRegion">' + aro + '</select></div>' + roleChecks() + '<button id="submitBtn">Create User</button></form>';
-  else if (action === 'updateUser') body = '<h2>Update User</h2><p class="note">Select user to auto-fill all fields and role checks.</p><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleUpdateUser\')"><div class="g"><label>User</label><select name="userId" onchange="loadDetails(\'User\',this.value)" required><option value="">-- Select --</option>' + uo + '</select></div><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Email</label><input name="email" type="email" required></div><div class="g"><label>Designation</label><select name="designationId"><option value="">-- Select --</option>' + doo + '</select></div><div class="g"><label>Access Region</label><select name="accessRegion">' + aro + '</select></div>' + roleChecks() + '<div class="g"><label>New Password (optional)</label><input name="password" type="password"></div><button id="submitBtn">Update User</button></form>';
-  else if (action === 'toggleUser') body = '<h2>Toggle User Status</h2><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleToggleUserStatus\')"><div class="g"><label>User</label><select name="userId" required><option value="">-- Select --</option>' + uo + '</select></div><button id="submitBtn">Toggle</button></form>';
-  else if (action === 'createDesignation') body = '<h2>Create Designation</h2><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleCreateDesignation\')"><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>HierarchyLevel</label><input name="hierarchyLevel" type="number"></div><div class="g"><label>Status</label><select name="status"><option>Active</option><option>Inactive</option></select></div><div class="g"><label>Description</label><textarea name="description"></textarea></div><button id="submitBtn">Create</button></form>';
-  else if (action === 'updateDesignation') body = '<h2>Update Designation</h2><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleUpdateDesignation\')"><div class="g"><label>Designation</label><select name="designationId" onchange="loadDetails(\'Designation\',this.value)" required><option value="">-- Select --</option>' + doo + '</select></div><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>HierarchyLevel</label><input name="hierarchyLevel" type="number"></div><div class="g"><label>Status</label><select name="status"><option>Active</option><option>Inactive</option></select></div><div class="g"><label>Description</label><textarea name="description"></textarea></div><button id="submitBtn">Update</button></form>';
-  else if (action === 'createAccessRegion') body = '<h2>Create Access Region</h2><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleCreateAccessRegion\')"><div class="g"><label>Code</label><input name="code" placeholder="UAE001" required></div><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Parent</label><select name="parent">' + apro + '</select></div><div class="small">Code format: AAA999 (example: UAE001, QTR002).</div><button id="submitBtn">Create</button></form>';
-  else if (action === 'updateAccessRegion') body = '<h2>Update Access Region</h2><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleUpdateAccessRegion\')"><div class="g"><label>Access Region</label><select name="lookupCode" onchange="loadDetails(\'AccessRegion\',this.value)" required><option value="">-- Select --</option>' + acro + '</select></div><input type="hidden" name="originalCode"><div class="g"><label>Code</label><input name="code" placeholder="UAE001" required></div><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Parent</label><select name="parent">' + apro + '</select></div><button id="submitBtn">Update</button></form>';
-  else if (action === 'createRole') body = '<h2>Create Role</h2><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleCreateRole\')"><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Description</label><textarea name="description"></textarea></div><div class="small">Select actions per resource</div>' + roleMatrix() + '<button id="submitBtn">Create Role</button></form>';
-  else if (action === 'updateRole') body = '<h2>Update Role</h2><p class="note">Select role to auto-check assigned resource actions.</p><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleUpdateRole\')"><div class="g"><label>Role</label><select name="roleId" onchange="loadDetails(\'Role\',this.value)" required><option value="">-- Select --</option>' + ro + '</select></div><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Description</label><textarea name="description"></textarea></div><div class="small">Select actions per resource</div>' + roleMatrix() + '<button id="submitBtn">Update Role</button></form>';
+  if (action === 'createUser') body = '<form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleCreateUser\')"><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Email</label><input name="email" type="email" required></div><div class="g"><label>Password</label><input name="password" type="password" required></div><div class="g"><label>Designation</label><select name="designationId"><option value="">-- Select --</option>' + doo + '</select></div><div class="g"><label>Access Region</label><select name="accessRegion">' + aro + '</select></div>' + roleChecks() + '<button id="submitBtn">Create User</button></form>';
+  else if (action === 'updateUser') body = '<p class="note">Select user to auto-fill all fields and role checks.</p><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleUpdateUser\')"><div class="g"><label>User</label><select name="userId" onchange="loadDetails(\'User\',this.value)" required><option value="">-- Select --</option>' + uo + '</select></div><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Email</label><input name="email" type="email" required></div><div class="g"><label>Designation</label><select name="designationId"><option value="">-- Select --</option>' + doo + '</select></div><div class="g"><label>Access Region</label><select name="accessRegion">' + aro + '</select></div>' + roleChecks() + '<div class="g"><label>New Password (optional)</label><input name="password" type="password"></div><button id="submitBtn">Update User</button></form>';
+  else if (action === 'toggleUser') body = '<form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleToggleUserStatus\')"><div class="g"><label>User</label><select name="userId" required><option value="">-- Select --</option>' + uo + '</select></div><button id="submitBtn">Toggle</button></form>';
+  else if (action === 'createDesignation') body = '<form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleCreateDesignation\')"><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>HierarchyLevel</label><input name="hierarchyLevel" type="number"></div><div class="g"><label>Status</label><select name="status"><option>Active</option><option>Inactive</option></select></div><div class="g"><label>Description</label><textarea name="description"></textarea></div><button id="submitBtn">Create</button></form>';
+  else if (action === 'updateDesignation') body = '<form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleUpdateDesignation\')"><div class="g"><label>Designation</label><select name="designationId" onchange="loadDetails(\'Designation\',this.value)" required><option value="">-- Select --</option>' + doo + '</select></div><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>HierarchyLevel</label><input name="hierarchyLevel" type="number"></div><div class="g"><label>Status</label><select name="status"><option>Active</option><option>Inactive</option></select></div><div class="g"><label>Description</label><textarea name="description"></textarea></div><button id="submitBtn">Update</button></form>';
+  else if (action === 'createAccessRegion') body = '<form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleCreateAccessRegion\')"><div class="g"><label>Code</label><input name="code" placeholder="UAE001" required></div><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Parent</label><select name="parent">' + apro + '</select></div><div class="small">Code format: AAA999 (example: UAE001, QTR002).</div><button id="submitBtn">Create</button></form>';
+  else if (action === 'updateAccessRegion') body = '<form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleUpdateAccessRegion\')"><div class="g"><label>Access Region</label><select name="lookupCode" onchange="loadDetails(\'AccessRegion\',this.value)" required><option value="">-- Select --</option>' + acro + '</select></div><input type="hidden" name="originalCode"><div class="g"><label>Code</label><input name="code" placeholder="UAE001" required></div><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Parent</label><select name="parent">' + apro + '</select></div><button id="submitBtn">Update</button></form>';
+  else if (action === 'manageRole') {
+    body = '<form id="mainForm" onsubmit="event.preventDefault();submitManageRoleForm()">' +
+           '<div class="g"><label>Role</label>' +
+           '<select name="roleId" onchange="onManageRoleChange(this.value)">' +
+           '<option value="">-- Create New Role --</option>' + ro + '</select></div>' +
+           '<div class="g"><label>Role Name</label><input name="name" id="roleNameInput" required></div>' +
+           '<div class="g"><label>Description</label><textarea name="description" id="roleDescInput"></textarea></div>' +
+           '<div class="small" style="margin-bottom: 8px; font-weight: 600; text-transform: uppercase;">Permissions Matrix</div>' + 
+           roleMatrix() + 
+           '<button id="submitBtn">Create Role</button></form>';
+  }
   else if (action === 'addResource' || action === 'editResource') {
     var ed = action === 'editResource';
-    body = '<h2>' + (ed ? 'Edit' : 'Add') + ' Resource</h2><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'' + (ed ? 'handleEditResource' : 'handleAddResource') + '\')">' + (ed ? '<div class="g"><label>Resource</label><select name="resourceId" onchange="loadDetails(\'Resource\',this.value)" required><option value="">-- Select --</option>' + rso + '</select></div><input type="hidden" name="originalName">' : '') + '<div class="row"><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Scope</label><input name="scope" value="master"></div></div><div class="row"><div class="g"><label>FileID</label><input name="fileId" placeholder="Leave blank for config-driven"></div><div class="g"><label>SheetName</label><input name="sheetName"></div></div><div class="row"><div class="g"><label>CodePrefix</label><input name="codePrefix"></div><div class="g"><label>CodeSequenceLength</label><input name="codeSequenceLength" type="number"></div></div><div class="g"><label>RecordAccessPolicy</label><select name="recordAccessPolicy"><option>ALL</option><option>OWNER</option><option>OWNER_GROUP</option><option>OWNER_AND_UPLINE</option></select></div><div class="g"><label>RequiredHeaders</label><input name="requiredHeaders"></div><div class="g"><label>UniqueHeaders</label><input name="uniqueHeaders"></div><div class="g"><label>UniqueCompositeHeaders</label><input name="uniqueCompositeHeaders"></div><div class="g"><label>DefaultValues (JSON)</label><textarea name="defaultValues"></textarea></div><div class="g"><label>OwnerUserField</label><input name="ownerUserField" value="CreatedBy"></div><div class="g"><label>AdditionalActions</label><input name="additionalActions"></div><div class="row"><div class="g"><label>Menu Path (CSV)</label><input name="menuGroup" placeholder="e.g. Masters,Product"></div><div class="g"><label>MenuOrder</label><input name="menuOrder" type="number"></div></div><div class="row"><div class="g"><label>MenuLabel</label><input name="menuLabel"></div><div class="g"><label>MenuIcon</label><input name="menuIcon"></div></div><div class="g"><label>RoutePath</label><input name="routePath"></div><div class="g"><label>PageTitle</label><input name="pageTitle"></div><div class="g"><label>PageDescription</label><textarea name="pageDescription"></textarea></div><div class="g"><label>UIFields</label><textarea name="uiFields"></textarea></div><div class="checks"><label><input type="checkbox" name="isActive" value="true" checked> IsActive</label><label><input type="checkbox" name="audit" value="true"> Audit</label><label><input type="checkbox" name="showInMenu" value="true" checked> ShowInMenu</label><label><input type="checkbox" name="includeInAuthorizationPayload" value="true" checked> IncludeInAuthorizationPayload</label></div><button id="submitBtn">' + (ed ? 'Update' : 'Add') + ' Resource</button></form>';
-  } else body = '<h2>Unsupported</h2>';
+    body = '<form id="mainForm" onsubmit="event.preventDefault();submitForm(\'' + (ed ? 'handleEditResource' : 'handleAddResource') + '\')">' + (ed ? '<div class="g"><label>Resource</label><select name="resourceId" onchange="loadDetails(\'Resource\',this.value)" required><option value="">-- Select --</option>' + rso + '</select></div><input type="hidden" name="originalName">' : '') + '<div class="row"><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Scope</label><input name="scope" value="master"></div></div><div class="row"><div class="g"><label>FileID</label><input name="fileId" placeholder="Leave blank for config-driven"></div><div class="g"><label>SheetName</label><input name="sheetName"></div></div><div class="row"><div class="g"><label>CodePrefix</label><input name="codePrefix"></div><div class="g"><label>CodeSequenceLength</label><input name="codeSequenceLength" type="number"></div></div><div class="g"><label>RecordAccessPolicy</label><select name="recordAccessPolicy"><option>ALL</option><option>OWNER</option><option>OWNER_GROUP</option><option>OWNER_AND_UPLINE</option></select></div><div class="g"><label>RequiredHeaders</label><input name="requiredHeaders"></div><div class="g"><label>UniqueHeaders</label><input name="uniqueHeaders"></div><div class="g"><label>UniqueCompositeHeaders</label><input name="uniqueCompositeHeaders"></div><div class="g"><label>DefaultValues (JSON)</label><textarea name="defaultValues"></textarea></div><div class="g"><label>OwnerUserField</label><input name="ownerUserField" value="CreatedBy"></div><div class="g"><label>AdditionalActions</label><input name="additionalActions"></div><div class="row"><div class="g"><label>Menu Path (CSV)</label><input name="menuGroup" placeholder="e.g. Masters,Product"></div><div class="g"><label>MenuOrder</label><input name="menuOrder" type="number"></div></div><div class="row"><div class="g"><label>MenuLabel</label><input name="menuLabel"></div><div class="g"><label>MenuIcon</label><input name="menuIcon"></div></div><div class="g"><label>RoutePath</label><input name="routePath"></div><div class="g"><label>PageTitle</label><input name="pageTitle"></div><div class="g"><label>PageDescription</label><textarea name="pageDescription"></textarea></div><div class="g"><label>UIFields</label><textarea name="uiFields"></textarea></div><div class="checks"><label><input type="checkbox" name="isActive" value="true" checked> IsActive</label><label><input type="checkbox" name="audit" value="true"> Audit</label><label><input type="checkbox" name="showInMenu" value="true" checked> ShowInMenu</label><label><input type="checkbox" name="includeInAuthorizationPayload" value="true" checked> IncludeInAuthorizationPayload</label></div><button id="submitBtn">' + (ed ? 'Update' : 'Add') + ' Resource</button></form>';
+  } else body = '<p>Unsupported</p>';
 
   return body;
 }

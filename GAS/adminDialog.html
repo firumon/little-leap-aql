@@ -2,27 +2,205 @@
 <html>
 <head>
 <base target="_top">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-body { font-family: Segoe UI, Arial, sans-serif; padding: 14px; }
-.row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.g { margin: 8px 0; }
-label { display: block; font-size: 12px; font-weight: 600; }
-input, select, textarea { width: 100%; padding: 7px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 6px; }
-textarea { min-height: 60px; }
-.note { font-size: 12px; color: #666; }
-button { width: 100%; padding: 9px; background: #2563eb; border: 0; border-radius: 7px; color: #fff; font-weight: 600; margin-top: 8px; }
-.msg { display: none; margin-top: 8px; padding: 8px; border-radius: 6px; font-size: 12px; }
-.ok { background: #ecfdf5; color: #065f46; }
-.er { background: #fef2f2; color: #991b1b; }
-.box { border: 1px solid #ddd; border-radius: 8px; padding: 8px; margin-top: 8px; }
-.small { font-size: 11px; color: #666; }
-.checks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-.checks label { font-weight: 400; font-size: 12px; display: flex; gap: 6px; align-items: center; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { 
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+  padding: 20px; 
+  background-color: #F1F1F3; 
+  color: #1e293b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #000077;
+  margin-bottom: 16px;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 8px;
+}
+
+.row { 
+  display: grid; 
+  grid-template-columns: 1fr 1fr; 
+  gap: 12px; 
+  margin-bottom: 12px;
+}
+
+.g { 
+  margin-bottom: 12px; 
+}
+
+label { 
+  display: block; 
+  font-size: 11px; 
+  font-weight: 600; 
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #475569; 
+  margin-bottom: 6px;
+}
+
+input, select, textarea { 
+  width: 100%; 
+  padding: 9px 12px; 
+  border: 1px solid #cbd5e1; 
+  border-radius: 8px; 
+  font-family: inherit;
+  font-size: 13px; 
+  color: #0f172a;
+  background-color: #fff;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: #000077;
+  box-shadow: 0 0 0 3px rgba(0, 0, 119, 0.15);
+}
+
+textarea { 
+  min-height: 70px; 
+  resize: vertical;
+}
+
+.note { 
+  font-size: 12px; 
+  color: #64748b; 
+  background-color: #e2e8f0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  border-left: 4px solid #F58841;
+}
+
+button { 
+  width: 100%; 
+  padding: 11px; 
+  background: #000077; 
+  border: 0; 
+  border-radius: 8px; 
+  color: #fff; 
+  font-weight: 600; 
+  font-size: 14px;
+  margin-top: 16px; 
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 119, 0.2);
+}
+
+button:hover {
+  background: #000055;
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+button:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.msg { 
+  display: none; 
+  margin-top: 12px; 
+  padding: 10px 14px; 
+  border-radius: 8px; 
+  font-size: 12px; 
+  font-weight: 500;
+  border: 1px solid transparent;
+}
+
+.ok { 
+  background: #ecfdf5; 
+  color: #065f46; 
+  border-color: #a7f3d0;
+}
+
+.er { 
+  background: #fef2f2; 
+  color: #991b1b; 
+  border-color: #fca5a5;
+}
+
+.box { 
+  border: 1px solid #cbd5e1; 
+  border-radius: 8px; 
+  padding: 12px; 
+  margin-top: 12px; 
+  background: #fff;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.box .small { 
+  font-size: 11px; 
+  font-weight: 600; 
+  color: #475569;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 4px;
+}
+
+.small {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.checks { 
+  display: flex; 
+  flex-wrap: wrap;
+  gap: 12px; 
+}
+
+.checks label { 
+  font-weight: 500; 
+  font-size: 12px; 
+  text-transform: none;
+  letter-spacing: normal;
+  display: flex; 
+  gap: 8px; 
+  align-items: center; 
+  cursor: pointer;
+  color: #334155;
+  margin-bottom: 0;
+}
+
+.checks input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+/* Custom Scrollbar for list selection */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
 </style>
 </head>
 <body>
 
-<?= bodyHtml ?>
+<?!= bodyHtml ?>
 
 <div id="msg" class="msg"></div>
 
@@ -56,7 +234,7 @@ function submitForm(h) {
       m.style.display = "block";
       m.className = "msg " + (r.success ? "ok" : "er");
       m.innerText = r.message || "Done";
-      if (r.success) setTimeout(function() { google.script.host.close(); }, 800);
+      // Auto-close removed; users close manually when finished.
     })
     .withFailureHandler(function(e) {
       b.disabled = false;
@@ -93,15 +271,122 @@ function fillForm(d, t) {
     });
   }
   if (t === "Role") {
-    document.querySelectorAll("input[data-perm=1]").forEach(function(cb) { cb.checked = false; });
+    document.querySelectorAll("input[data-perm='1']").forEach(function(cb) { cb.checked = false; });
+    document.querySelectorAll(".resource-assigned").forEach(function(cb) { cb.checked = false; });
     var map = d.roleActions || {};
+    
+    var hasPermissions = false;
     Object.keys(map).forEach(function(res) {
-      (map[res] || []).forEach(function(act) {
-        var k = "perm__" + res.replace(/[^a-zA-Z0-9]/g, "_") + "__" + act.replace(/[^a-zA-Z0-9]/g, "_");
-        var cb = document.querySelector("input[name='" + k + "']");
-        if (cb) cb.checked = true;
-      });
+      hasPermissions = true;
     });
+    
+    if (!hasPermissions) {
+      initializeDefaultMasterReadPermissions();
+    } else {
+      Object.keys(map).forEach(function(res) {
+        var resSafe = res.replace(/[^a-zA-Z0-9]/g, "_");
+        var assignCb = document.querySelector("input[name='assign__" + resSafe + "']");
+        if (assignCb) assignCb.checked = true;
+
+        var actions = map[res] || [];
+        if (actions.indexOf('*') !== -1) {
+          var container = document.querySelector("[data-resource-group='" + resSafe + "']");
+          if (container) {
+            container.querySelectorAll("input[data-perm='1']").forEach(function(cb) { cb.checked = true; });
+          }
+        } else {
+          actions.forEach(function(act) {
+            var k = "perm__" + resSafe + "__" + act.replace(/[^a-zA-Z0-9]/g, "_");
+            var cb = document.querySelector("input[name='" + k + "']");
+            if (cb) cb.checked = true;
+          });
+        }
+      });
+    }
+  }
+}
+
+function initializeDefaultMasterReadPermissions() {
+  var groups = document.querySelectorAll(".checks[data-scope='master']");
+  groups.forEach(function(group) {
+    var readCb = group.querySelector("input[data-action='Read']");
+    if (readCb) {
+      readCb.checked = true;
+      var resSafe = group.getAttribute("data-resource-group");
+      var assignCb = document.querySelector("input[name='assign__" + resSafe + "']");
+      if (assignCb) assignCb.checked = true;
+    }
+  });
+}
+
+window.onload = function() {
+  var form = document.getElementById("mainForm");
+  if (form) {
+    var isCreateRole = form.getAttribute("onsubmit") && form.getAttribute("onsubmit").indexOf("handleCreateRole") !== -1;
+    if (isCreateRole) {
+      initializeDefaultMasterReadPermissions();
+    }
+    var isManageRole = form.getAttribute("onsubmit") && form.getAttribute("onsubmit").indexOf("submitManageRoleForm") !== -1;
+    if (isManageRole) {
+      onManageRoleChange("");
+    }
+  }
+};
+
+function onManageRoleChange(roleId) {
+  var btn = document.getElementById("submitBtn");
+  if (!roleId) {
+    document.getElementById("roleNameInput").value = "";
+    document.getElementById("roleDescInput").value = "";
+    document.querySelectorAll("input[data-perm='1']").forEach(function(cb) { cb.checked = false; });
+    document.querySelectorAll(".resource-assigned").forEach(function(cb) { cb.checked = false; });
+    initializeDefaultMasterReadPermissions();
+    if (btn) btn.innerText = "Create Role";
+  } else {
+    loadDetails('Role', roleId);
+    if (btn) btn.innerText = "Update Role";
+  }
+}
+
+function submitManageRoleForm() {
+  var roleIdSelect = document.querySelector("[name='roleId']");
+  var handler = (roleIdSelect && roleIdSelect.value) ? 'handleUpdateRole' : 'handleCreateRole';
+  submitForm(handler);
+}
+
+function onResourceAssignedChange(cb) {
+  var res = cb.getAttribute("data-resource");
+  var container = document.querySelector("[data-resource-group='" + res + "']");
+  if (!container) return;
+  if (!cb.checked) {
+    container.querySelectorAll("input[type='checkbox']").forEach(function(acb) {
+      acb.checked = false;
+    });
+  }
+}
+
+function invertResourceActions(res) {
+  var container = document.querySelector("[data-resource-group='" + res + "']");
+  if (!container) return;
+  var checkboxes = container.querySelectorAll("input[type='checkbox']");
+  var anyChecked = false;
+  checkboxes.forEach(function(acb) {
+    acb.checked = !acb.checked;
+    if (acb.checked) anyChecked = true;
+  });
+  var assignCb = document.querySelector("input[name='assign__" + res + "']");
+  if (assignCb && anyChecked) {
+    assignCb.checked = true;
+  }
+}
+
+function onPermissionChange(res) {
+  var container = document.querySelector("[data-resource-group='" + res + "']");
+  if (!container) return;
+  var anyChecked = Array.from(container.querySelectorAll("input[type='checkbox']")).some(function(cb) { return cb.checked; });
+  var assignCb = document.querySelector("input[name='assign__" + res + "']");
+  if (assignCb && anyChecked) {
+    assignCb.checked = true;
   }
 }
 </script>

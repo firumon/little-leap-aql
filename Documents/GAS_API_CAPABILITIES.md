@@ -259,7 +259,7 @@ Rules:
 ```
 - `payload.cursors` maps each resource name to the client's last-known `lastSyncAt` timestamp.
 - GAS compares each cursor against the resource's `lastDataUpdatedAt` in the config map.
-- Read permission (`canRead`) is enforced per resource; permission errors are logged and skipped without blocking other resources.
+- Read authorization (requiring the resource to be assigned in `RolePermissions`) is enforced per resource; permission errors are logged and skipped without blocking other resources.
 - Response contains **no row data**. Only metadata about which resources have server-side updates:
 ```json
 {

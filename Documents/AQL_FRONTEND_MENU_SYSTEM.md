@@ -61,14 +61,14 @@ Each entry inside the `Menu` JSON array:
 | `pageTitle` | `string` | No | Resource `Name` | Page title metadata (used in admin dialogs, not rendered in sidebar). |
 | `pageDescription` | `string` | No | `""` | Page description metadata (used in admin dialogs). |
 | `show` | `boolean` | No | `true` | Master visibility toggle. Set to `false` to hide an entry without deleting it from config. |
-| `menuAccess` | `object` | No | `null` | Permission gate (see §2.2 below). Absent → falls back to `canRead` on the owning resource. |
+| `menuAccess` | `object` | No | `null` | Permission gate (see §2.2 below). Absent → falls back to checking if the user has ANY permission/action on the owning resource. |
 
 ### 2.2 `menuAccess` Rule Formats
 
 #### Format A — Absent (default)
 ```json
 // No menuAccess field at all
-// → evaluates canRead on the owning resource
+// → evaluates if user has ANY permission on the owning resource
 ```
 
 #### Format B — Single permission on own resource
@@ -312,9 +312,9 @@ function evaluateMenuAccess(resource, menuItem = null) {
 
   const menuAccess = menuItem?.menuAccess ?? null
 
-  // No rule → fallback to canRead on own resource
+  // No rule → fallback to ANY permission on own resource
   if (!menuAccess || typeof menuAccess !== 'object')
-    return checkPermissions(resource.name, 'canRead')
+    return hasAnyResourcePermission(resource.name)
 
   // { require: "canWrite" } or { require: ["canWrite", "canDelete"] }
   if (menuAccess.require !== undefined)
@@ -405,7 +405,7 @@ The `beforeEach` guard uses an inline version of `evaluateMenuAccess` (no Vue co
 
 | Scenario | `menuAccess` value | Behavior |
 |----------|-------------------|----------|
-| No permission gate | `null` / absent | Checks `canRead` on the owning resource |
+| No permission gate | `null` / absent | Checks if user has ANY permission/action on the owning resource |
 | Elevated permission | `{ "require": "canWrite" }` | Entry visible only if user has `canWrite` on owning resource |
 | Multi-permission (AND) | `{ "require": ["canWrite","canApprove"] }` | User must have ALL listed permissions |
 | Cross-resource (AND) | `{ "all": [{ "resource":"X", "require":"canRead" }, { "resource":"Y", "require":"canWrite" }] }` | All specified rules must pass |
@@ -417,7 +417,7 @@ The `beforeEach` guard uses an inline version of `evaluateMenuAccess` (no Vue co
 
 ```
 menuAccess defined?
-  ├── No  → checkPermissions(ownResource, 'canRead')
+  ├── No  → hasAnyResourcePermission(ownResource)
   ├── Yes → has 'require'?  → checkPermissions(ownResource, require)
   ├── Yes → has 'all'?      → every rule passes? → allow : deny
   ├── Yes → has 'any'?      → some rule passes?  → allow : deny
@@ -488,7 +488,7 @@ The frontend is tenant-agnostic — it receives whatever `resources[].ui.menus` 
 ### 9.2 DON'Ts
 - **DON'T** hardcode sidebar paths, labels, or icons in Vue templates — always use the data-driven `Menu` JSON
 - **DON'T** bypass `useMenuAccess` — both sidebar rendering AND route guard must evaluate permissions
-- **DON'T** omit `menuAccess` on sensitive entries — it defaults to `canRead`, which may be too permissive
+- **DON'T** omit `menuAccess` on sensitive entries — it defaults to checking for any permission, which may be too permissive
 - **DON'T** edit the `Menu` JSON array in the sheet with invalid JSON — the parser will return an empty array
 - **DON'T** rename resources casually — `menuAccess` cross-resource rules reference resources by name
 - **DON'T** nest role-aware objects inside `menuAccess` rules — `menuAccess` evaluates permissions, not presentation

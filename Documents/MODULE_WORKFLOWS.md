@@ -456,17 +456,17 @@ Menu Access Control enables fine-grained permission-based visibility of resource
 - `GAS/resourceRegistry.gs` — Parses the `Menu` array, normalizes each entry, and exposes it in the auth payload as `entry.ui.menus` so the frontend can evaluate visibility per menu item.
 
 **Frontend:**
-- `FRONTENT/src/composables/useMenuAccess.js` — Reusable composable that accepts `resource` plus an optional `menuItem` (the matched entry from `ui.menus`) to evaluate permission rules, defaulting to `canRead` when no rule exists.
+- `FRONTENT/src/composables/useMenuAccess.js` — Reusable composable that accepts `resource` plus an optional `menuItem` (the matched entry from `ui.menus`) to evaluate permission rules, defaulting to checking if the user has any permission on the resource when no rule exists.
 - `FRONTENT/src/layouts/MainLayout/MainLayout.vue` — Iterates over every `menu` entry in `resource.ui.menus`, calling `evaluateMenuAccess(resource, menu)` and rendering one sidebar row per visible entry.
 - `FRONTENT/src/router/index.js` — Matches `to.path` against all `ui.menus` entries and passes the matched entry to `evaluateMenuAccessInline()` before allowing navigation.
 
 ### 5.3 `menuAccess` Rule Formats
 
-All rules evaluate against the current logged-in user's permissions (from auth store). If `menuAccess` is absent, the fallback is `canRead` on the resource itself.
+All rules evaluate against the current logged-in user's permissions (from auth store). If `menuAccess` is absent, the fallback is checking if the user has any active action permission on the resource itself.
 
 **Format 1: No rule (absent)**
 ```json
-// No menuAccess field → fallback to canRead
+// No menuAccess field → fallback to checking for any active action permission
 ```
 
 **Format 2: Single permission on own resource**

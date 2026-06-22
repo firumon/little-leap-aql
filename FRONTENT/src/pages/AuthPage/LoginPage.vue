@@ -28,14 +28,20 @@
       <div class="text-center q-mt-md">
         <q-btn flat dense color="grey-7" size="sm" label="Forgot Password?" />
       </div>
+
+      <div class="text-center text-caption text-grey-5 q-mt-lg" style="font-size: 0.75rem; opacity: 0.5;">
+        v{{ version }}
+      </div>
     </q-form>
   </div>
 </template>
 
 <script setup>
 import { useLoginPage } from 'src/composables/layout/useLoginPage'
+import pkg from '../../../package.json'
 
 const { loginForm, loading, handleLogin } = useLoginPage()
+const version = pkg.version
 </script>
 
 <style scoped>

@@ -77,7 +77,9 @@ export function useMainLayoutNavTree() {
     resources.forEach((resource) => {
       const menus = Array.isArray(resource?.ui?.menus) ? resource.ui.menus : []
       menus.forEach((menu) => {
-        if (menu.show === false || !isValidRoute(menu.route)) return
+        const resolvedShow = resolveRoleAwareField(menu.show, userRoles, userId)
+        const isShowFalse = resolvedShow === false || resolvedShow === 'false'
+        if (isShowFalse || !isValidRoute(menu.route)) return
         if (!evaluateMenuAccess(resource, menu)) return
 
         const resolvedGroup = resolveRoleAwareField(menu.group, userRoles, userId)

@@ -124,7 +124,7 @@ function getResourceConfigMap() {
           route: m.route || '',
           pageTitle: isCustomizable(m.pageTitle) ? m.pageTitle : (m.pageTitle || name),
           pageDescription: isCustomizable(m.pageDescription) ? m.pageDescription : (m.pageDescription || ''),
-          show: m.show !== undefined ? toBooleanCell(m.show) : true,
+          show: m.show !== undefined ? (isCustomizable(m.show) ? m.show : toBooleanCell(m.show)) : true,
           menuAccess: m.menuAccess || null
         };
       }),

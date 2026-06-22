@@ -828,11 +828,18 @@ function initAppResourcesCodeConfig() {
         DefaultValues: '{"Status":"Active","QtyChange":0}',
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
-        AdditionalActions: '',
+        AdditionalActions: JSON.stringify([
+            { "action": "grn", "label": "GRN Posting", "kind": "mutate", "confirm": false, "column": "ReferenceType", "columnValue": "GRN" },
+            { "action": "directEntry", "label": "Direct Entry", "kind": "mutate", "confirm": false, "column": "ReferenceType", "columnValue": "DirectEntry" },
+            { "action": "stockAdjustment", "label": "Stock Adjustment", "kind": "mutate", "confirm": false, "column": "ReferenceType", "columnValue": "StockAdjustment" },
+            { "action": "outletRestock", "label": "Outlet Restock", "kind": "mutate", "confirm": false, "column": "ReferenceType", "columnValue": "OutletRestock" },
+            { "action": "outletReturn", "label": "Outlet Return", "kind": "mutate", "confirm": false, "column": "ReferenceType", "columnValue": "OutletReturn" },
+            { "action": "warehouseTransfer", "label": "Warehouse Transfer", "kind": "mutate", "confirm": false, "column": "ReferenceType", "columnValue": "WarehouseTransfer" }
+        ]),
         Menu: JSON.stringify([
-            {"group":["Warehouse"],"order":2,"label":"Stock Movements","icon":"inventory","route":"/operations/stock-movements","pageTitle":"Stock Movements","pageDescription":"View stock movement records","show":true},
-            {"group":["Warehouse"],"order":3,"label":"Direct Stock Entry","icon":"edit_note","route":"/operations/stock-movements/direct-entry","pageTitle":"Direct Stock Entry","pageDescription":"Directly enter stock quantities","show":true,"menuAccess":{"require":"canWrite"}},
-            {"group":["Warehouse"],"order":4,"label":"GRN Stock Entry","icon":"receipt_long","route":"/operations/stock-movements/grn-entry","pageTitle":"GRN Stock Entry","pageDescription":"Post finalized GRN quantities into warehouse stock","show":true,"menuAccess":{"require":"canWrite"}}
+            {"group":["Warehouse"],"order":2,"label":"Stock Movements","icon":"inventory","route":"/operations/stock-movements","pageTitle":"Stock Movements","pageDescription":"View stock movement records","show":true,"menuAccess":{"require":"canRead"}},
+            {"group":["Warehouse"],"order":3,"label":"Direct Stock Entry","icon":"edit_note","route":"/operations/stock-movements/direct-entry","pageTitle":"Direct Stock Entry","pageDescription":"Directly enter stock quantities","show":true,"menuAccess":{"require":"canDirectEntry"}},
+            {"group":["Warehouse"],"order":4,"label":"GRN Stock Entry","icon":"receipt_long","route":"/operations/stock-movements/grn-entry","pageTitle":"GRN Stock Entry","pageDescription":"Post finalized GRN quantities into warehouse stock","show":true,"menuAccess":{"require":"canGrn"}}
         ]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',

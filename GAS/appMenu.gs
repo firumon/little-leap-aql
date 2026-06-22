@@ -6,16 +6,9 @@
 function onOpen() {
   const ui = SpreadsheetApp.getUi();
   const menu = ui.createMenu('AQL 🚀')
-    .addSubMenu(ui.createMenu('👥 Users')
-      .addItem('Create User', 'showCreateUserDialog')
-      .addItem('Update User', 'showUpdateUserDialog')
-      .addItem('Toggle User Status', 'showToggleUserStatusDialog'))
-    .addSubMenu(ui.createMenu('💼 Designations')
-      .addItem('Create Designation', 'showCreateDesignationDialog')
-      .addItem('Update Designation', 'showUpdateDesignationDialog'))
-    .addSubMenu(ui.createMenu('🌍 Access Regions')
-      .addItem('Create Access Region', 'showCreateAccessRegionDialog')
-      .addItem('Update Access Region', 'showUpdateAccessRegionDialog'))
+    .addItem('👥 Manage Users', 'showManageUsersDialog')
+    .addItem('💼 Manage Designations', 'showManageDesignationsDialog')
+    .addItem('🌍 Manage Access Regions', 'showManageAccessRegionsDialog')
     .addSubMenu(ui.createMenu('🛡️ Roles')
       .addItem('Manage Roles', 'showManageRoleDialog')
       .addSeparator()
@@ -42,26 +35,14 @@ function onOpen() {
   menu.addToUi();
 }
 
-function showCreateUserDialog() {
-  showDialog('createUser', 'Create User', 620, 760, baseDialogData());
+function showManageUsersDialog() {
+  showDialog('manageUsers', 'Manage Users', 620, 800, baseDialogData());
 }
-function showUpdateUserDialog() {
-  showDialog('updateUser', 'Update User', 620, 780, baseDialogData());
+function showManageDesignationsDialog() {
+  showDialog('manageDesignations', 'Manage Designations', 500, 520, baseDialogData());
 }
-function showToggleUserStatusDialog() {
-  showDialog('toggleUser', 'Toggle User Status', 460, 360, baseDialogData());
-}
-function showCreateDesignationDialog() {
-  showDialog('createDesignation', 'Create Designation', 480, 450, baseDialogData());
-}
-function showUpdateDesignationDialog() {
-  showDialog('updateDesignation', 'Update Designation', 500, 520, baseDialogData());
-}
-function showCreateAccessRegionDialog() {
-  showDialog('createAccessRegion', 'Create Access Region', 520, 500, baseDialogData());
-}
-function showUpdateAccessRegionDialog() {
-  showDialog('updateAccessRegion', 'Update Access Region', 520, 540, baseDialogData());
+function showManageAccessRegionsDialog() {
+  showDialog('manageAccessRegions', 'Manage Access Regions', 520, 500, baseDialogData());
 }
 function showManageRoleDialog() {
   showDialog('manageRole', 'Manage Roles', 900, 800, baseDialogData());
@@ -106,9 +87,9 @@ function handleCreateUser(form) {
       Email: email,
       PasswordHash: hashPasswordMenu(password),
       DesignationID: txt(form.designationId),
-      Roles: rolesInputToCsv(form.roles),
+      Roles: rolesInputToCsv(form.mainRole, form.additionalRoles),
       AccessRegion: normalizeAccessRegionCode(form.accessRegion),
-      Status: 'Active',
+      Status: txt(form.status || 'Active'),
       Avatar: '',
       ApiKey: ''
     }));
@@ -131,8 +112,9 @@ function handleUpdateUser(form) {
     put(ctx.sheet, row, ctx.idx.Name, name);
     put(ctx.sheet, row, ctx.idx.Email, email);
     put(ctx.sheet, row, ctx.idx.DesignationID, txt(form.designationId));
-    put(ctx.sheet, row, ctx.idx.Roles, rolesInputToCsv(form.roles));
+    put(ctx.sheet, row, ctx.idx.Roles, rolesInputToCsv(form.mainRole, form.additionalRoles));
     put(ctx.sheet, row, ctx.idx.AccessRegion, normalizeAccessRegionCode(form.accessRegion));
+    put(ctx.sheet, row, ctx.idx.Status, txt(form.status || 'Active'));
     if (txt(form.password)) put(ctx.sheet, row, ctx.idx.PasswordHash, hashPasswordMenu(form.password));
     return ok('User updated.');
   } catch (e) { return fail(e); }
@@ -147,6 +129,30 @@ function handleToggleUserStatus(form) {
     put(ctx.sheet, row, ctx.idx.Status, cur === 'Active' ? 'Inactive' : 'Active');
     return ok('Status updated.');
   } catch (e) { return fail(e); }
+}
+
+function handleManageUser(form) {
+  if (form && form.userId) {
+    return handleUpdateUser(form);
+  } else {
+    return handleCreateUser(form);
+  }
+}
+
+function handleManageDesignation(form) {
+  if (form && form.designationId) {
+    return handleUpdateDesignation(form);
+  } else {
+    return handleCreateDesignation(form);
+  }
+}
+
+function handleManageAccessRegion(form) {
+  if (form && form.lookupCode) {
+    return handleUpdateAccessRegion(form);
+  } else {
+    return handleCreateAccessRegion(form);
+  }
 }
 
 function handleCreateDesignation(form) {
@@ -496,7 +502,12 @@ function get(sheet, row, idx) { return idx === undefined ? '' : sheet.getRange(r
 function txt(v) { return (v || '').toString().trim(); }
 function numOrBlank(v) { const n = Number(v); return Number.isFinite(n) && n > 0 ? n : ''; }
 function boolText(v, fallback) { if (v === true || String(v).toUpperCase() === 'TRUE') return 'TRUE'; if (v === false || String(v).toUpperCase() === 'FALSE') return 'FALSE'; return fallback ? 'TRUE' : 'FALSE'; }
-function rolesInputToCsv(value) { return csv(Array.isArray(value) ? value.join(',') : value); }
+function rolesInputToCsv(mainRole, additionalRoles) {
+  const main = txt(mainRole);
+  const add = Array.isArray(additionalRoles) ? additionalRoles.join(',') : txt(additionalRoles);
+  const combined = main + (main && add ? ',' : '') + add;
+  return csv(combined);
+}
 function csv(v) { const seen = {}; return (v || '').toString().split(',').map(function (x) { return x.trim(); }).filter(function (x) { if (!x) return false; if (seen[x]) return false; seen[x] = 1; return true; }).join(','); }
 function hashPasswordMenu(password) { return hashPassword(password || ''); }
 function findRow(sheet, colIndex, value, startRow, matchCase) {
@@ -540,8 +551,12 @@ function buildDialogBody(action, data) {
   var acro = accessRegions.map(function (x) { return '<option value="' + esc(x.code) + '">' + esc(x.name) + ' (' + esc(x.code) + ')</option>'; }).join('');
   var apro = '<option value="">-- None --</option>' + acro;
 
-  function roleChecks() {
-    return '<div class="box"><div class="small">Select Roles</div><div class="checks">' + roles.map(function (r) { return '<label><input type="checkbox" name="roles" value="' + esc(r.id) + '"> ' + esc(r.name) + '</label>'; }).join('') + '</div></div>';
+  function userRoleSelection() {
+    var mainRoleSelect = '<div class="g"><label>Main Role</label><select name="mainRole" onchange="onMainRoleChange(this.value)" required><option value="">-- Select Main Role --</option>' + ro + '</select></div>';
+    var additionalChecks = '<div class="box"><div class="small">Additional Roles</div><div class="checks">' + roles.map(function (r) {
+      return '<label class="additional-role-label" data-role-id="' + esc(r.id) + '"><input type="checkbox" name="additionalRoles" value="' + esc(r.id) + '"> ' + esc(r.name) + '</label>';
+    }).join('') + '</div></div>';
+    return mainRoleSelect + additionalChecks;
   }
   function roleMatrix() {
     return '<div class="box">' + matrix.resources.map(function (resObj) {
@@ -563,13 +578,37 @@ function buildDialogBody(action, data) {
   }
 
   var body = '';
-  if (action === 'createUser') body = '<form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleCreateUser\')"><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Email</label><input name="email" type="email" required></div><div class="g"><label>Password</label><input name="password" type="password" required></div><div class="g"><label>Designation</label><select name="designationId"><option value="">-- Select --</option>' + doo + '</select></div><div class="g"><label>Access Region</label><select name="accessRegion">' + aro + '</select></div>' + roleChecks() + '<button id="submitBtn">Create User</button></form>';
-  else if (action === 'updateUser') body = '<p class="note">Select user to auto-fill all fields and role checks.</p><form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleUpdateUser\')"><div class="g"><label>User</label><select name="userId" onchange="loadDetails(\'User\',this.value)" required><option value="">-- Select --</option>' + uo + '</select></div><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Email</label><input name="email" type="email" required></div><div class="g"><label>Designation</label><select name="designationId"><option value="">-- Select --</option>' + doo + '</select></div><div class="g"><label>Access Region</label><select name="accessRegion">' + aro + '</select></div>' + roleChecks() + '<div class="g"><label>New Password (optional)</label><input name="password" type="password"></div><button id="submitBtn">Update User</button></form>';
-  else if (action === 'toggleUser') body = '<form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleToggleUserStatus\')"><div class="g"><label>User</label><select name="userId" required><option value="">-- Select --</option>' + uo + '</select></div><button id="submitBtn">Toggle</button></form>';
-  else if (action === 'createDesignation') body = '<form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleCreateDesignation\')"><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>HierarchyLevel</label><input name="hierarchyLevel" type="number"></div><div class="g"><label>Status</label><select name="status"><option>Active</option><option>Inactive</option></select></div><div class="g"><label>Description</label><textarea name="description"></textarea></div><button id="submitBtn">Create</button></form>';
-  else if (action === 'updateDesignation') body = '<form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleUpdateDesignation\')"><div class="g"><label>Designation</label><select name="designationId" onchange="loadDetails(\'Designation\',this.value)" required><option value="">-- Select --</option>' + doo + '</select></div><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>HierarchyLevel</label><input name="hierarchyLevel" type="number"></div><div class="g"><label>Status</label><select name="status"><option>Active</option><option>Inactive</option></select></div><div class="g"><label>Description</label><textarea name="description"></textarea></div><button id="submitBtn">Update</button></form>';
-  else if (action === 'createAccessRegion') body = '<form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleCreateAccessRegion\')"><div class="g"><label>Code</label><input name="code" placeholder="UAE001" required></div><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Parent</label><select name="parent">' + apro + '</select></div><div class="small">Code format: AAA999 (example: UAE001, QTR002).</div><button id="submitBtn">Create</button></form>';
-  else if (action === 'updateAccessRegion') body = '<form id="mainForm" onsubmit="event.preventDefault();submitForm(\'handleUpdateAccessRegion\')"><div class="g"><label>Access Region</label><select name="lookupCode" onchange="loadDetails(\'AccessRegion\',this.value)" required><option value="">-- Select --</option>' + acro + '</select></div><input type="hidden" name="originalCode"><div class="g"><label>Code</label><input name="code" placeholder="UAE001" required></div><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Parent</label><select name="parent">' + apro + '</select></div><button id="submitBtn">Update</button></form>';
+  if (action === 'manageUsers') {
+    body = '<form id="mainForm" onsubmit="event.preventDefault();submitManageUsersForm()">' +
+           '<div class="g"><label>User</label><select name="userId" onchange="onManageUsersChange(this.value)"><option value="">-- Create New User --</option>' + uo + '</select></div>' +
+           '<div class="g"><label>Name</label><input name="name" required></div>' +
+           '<div class="g"><label>Email</label><input name="email" type="email" required></div>' +
+           '<div class="g"><label>Password</label><input name="password" id="userPasswordInput" type="password"></div>' +
+           '<div class="row"><div class="g"><label>Designation</label><select name="designationId"><option value="">-- Select --</option>' + doo + '</select></div>' +
+           '<div class="g"><label>Access Region</label><select name="accessRegion">' + aro + '</select></div></div>' +
+           userRoleSelection() +
+           '<div class="g"><label>Status</label><select name="status"><option>Active</option><option>Inactive</option></select></div>' +
+           '<button id="submitBtn">Create User</button></form>';
+  }
+  else if (action === 'manageDesignations') {
+    body = '<form id="mainForm" onsubmit="event.preventDefault();submitManageDesignationsForm()">' +
+           '<div class="g"><label>Designation</label><select name="designationId" onchange="onManageDesignationsChange(this.value)"><option value="">-- Create New Designation --</option>' + doo + '</select></div>' +
+           '<div class="g"><label>Name</label><input name="name" required></div>' +
+           '<div class="g"><label>HierarchyLevel</label><input name="hierarchyLevel" type="number"></div>' +
+           '<div class="g"><label>Status</label><select name="status"><option>Active</option><option>Inactive</option></select></div>' +
+           '<div class="g"><label>Description</label><textarea name="description"></textarea></div>' +
+           '<button id="submitBtn">Create Designation</button></form>';
+  }
+  else if (action === 'manageAccessRegions') {
+    body = '<form id="mainForm" onsubmit="event.preventDefault();submitManageAccessRegionsForm()">' +
+           '<div class="g"><label>Access Region</label><select name="lookupCode" onchange="onManageAccessRegionsChange(this.value)"><option value="">-- Create New Access Region --</option>' + acro + '</select></div>' +
+           '<input type="hidden" name="originalCode">' +
+           '<div class="g"><label>Code</label><input name="code" placeholder="UAE001" required></div>' +
+           '<div class="g"><label>Name</label><input name="name" required></div>' +
+           '<div class="g"><label>Parent</label><select name="parent">' + apro + '</select></div>' +
+           '<div class="small" id="codeFormatNote">Code format: AAA999 (example: UAE001, QTR002).</div>' +
+           '<button id="submitBtn">Create Access Region</button></form>';
+  }
   else if (action === 'manageRole') {
     body = '<form id="mainForm" onsubmit="event.preventDefault();submitManageRoleForm()">' +
            '<div class="g"><label>Role</label>' +

@@ -233,9 +233,10 @@ function submitForm(h) {
   Array.from(f.elements).forEach(function(el) {
     if (!el.name) return;
     if (el.type === "checkbox") {
-      if (el.name === "roles") {
-        if (!p.roles) p.roles = [];
-        if (el.checked) p.roles.push(el.value);
+      if (el.name === "roles" || el.name === "additionalRoles") {
+        var key = el.name;
+        if (!p[key]) p[key] = [];
+        if (el.checked) p[key].push(el.value);
       } else {
         p[el.name] = el.checked;
       }
@@ -286,8 +287,15 @@ function fillForm(d, t) {
   });
   if (t === "User") {
     var roles = (d.roles || "").toString().split(",").map(function(x) { return x.trim(); });
-    document.querySelectorAll("input[name=roles]").forEach(function(cb) {
-      cb.checked = roles.indexOf(cb.value) !== -1;
+    var mainRole = roles.length > 0 ? roles[0] : "";
+    var additionalRoles = roles.slice(1);
+    var mainRoleEl = document.querySelector("[name='mainRole']");
+    if (mainRoleEl) {
+      mainRoleEl.value = mainRole;
+    }
+    onMainRoleChange(mainRole);
+    document.querySelectorAll("input[name=additionalRoles]").forEach(function(cb) {
+      cb.checked = additionalRoles.indexOf(cb.value) !== -1;
     });
   }
   if (t === "Role") {
@@ -346,8 +354,125 @@ window.onload = function() {
     if (isManageRole) {
       onManageRoleChange("");
     }
+    var isManageUsers = form.getAttribute("onsubmit") && form.getAttribute("onsubmit").indexOf("submitManageUsersForm") !== -1;
+    if (isManageUsers) {
+      onManageUsersChange("");
+    }
+    var isManageDesignations = form.getAttribute("onsubmit") && form.getAttribute("onsubmit").indexOf("submitManageDesignationsForm") !== -1;
+    if (isManageDesignations) {
+      onManageDesignationsChange("");
+    }
+    var isManageAccessRegions = form.getAttribute("onsubmit") && form.getAttribute("onsubmit").indexOf("submitManageAccessRegionsForm") !== -1;
+    if (isManageAccessRegions) {
+      onManageAccessRegionsChange("");
+    }
   }
 };
+
+function onMainRoleChange(val) {
+  document.querySelectorAll("input[name=additionalRoles]").forEach(function(cb) {
+    if (cb.value === val) {
+      cb.checked = false;
+      cb.disabled = true;
+      cb.parentElement.style.opacity = "0.5";
+    } else {
+      cb.disabled = false;
+      cb.parentElement.style.opacity = "1";
+    }
+  });
+}
+
+function onManageUsersChange(userId) {
+  var btn = document.getElementById("submitBtn");
+  if (!userId) {
+    var nameInput = document.querySelector("[name='name']");
+    if (nameInput) nameInput.value = "";
+    var emailInput = document.querySelector("[name='email']");
+    if (emailInput) emailInput.value = "";
+    var pwdInput = document.getElementById("userPasswordInput");
+    if (pwdInput) {
+      pwdInput.value = "";
+      pwdInput.required = true;
+    }
+    var desInput = document.querySelector("[name='designationId']");
+    if (desInput) desInput.value = "";
+    var regInput = document.querySelector("[name='accessRegion']");
+    if (regInput) regInput.value = "";
+    var statInput = document.querySelector("[name='status']");
+    if (statInput) statInput.value = "Active";
+    var mainRoleInput = document.querySelector("[name='mainRole']");
+    if (mainRoleInput) mainRoleInput.value = "";
+    onMainRoleChange("");
+    document.querySelectorAll("input[name=additionalRoles]").forEach(function(cb) {
+      cb.checked = false;
+    });
+    if (btn) btn.innerText = "Create User";
+  } else {
+    var pwdInput = document.getElementById("userPasswordInput");
+    if (pwdInput) pwdInput.required = false;
+    loadDetails('User', userId);
+    if (btn) btn.innerText = "Update User";
+  }
+}
+
+function submitManageUsersForm() {
+  submitForm('handleManageUser');
+}
+
+function onManageDesignationsChange(designationId) {
+  var btn = document.getElementById("submitBtn");
+  if (!designationId) {
+    var nameInput = document.querySelector("[name='name']");
+    if (nameInput) nameInput.value = "";
+    var hlInput = document.querySelector("[name='hierarchyLevel']");
+    if (hlInput) hlInput.value = "";
+    var statInput = document.querySelector("[name='status']");
+    if (statInput) statInput.value = "Active";
+    var descInput = document.querySelector("[name='description']");
+    if (descInput) descInput.value = "";
+    if (btn) btn.innerText = "Create Designation";
+  } else {
+    loadDetails('Designation', designationId);
+    if (btn) btn.innerText = "Update Designation";
+  }
+}
+
+function submitManageDesignationsForm() {
+  submitForm('handleManageDesignation');
+}
+
+function onManageAccessRegionsChange(lookupCode) {
+  var btn = document.getElementById("submitBtn");
+  if (!lookupCode) {
+    var origCodeInput = document.querySelector("[name='originalCode']");
+    if (origCodeInput) origCodeInput.value = "";
+    var codeInput = document.querySelector("[name='code']");
+    if (codeInput) {
+      codeInput.value = "";
+      codeInput.disabled = false;
+    }
+    var nameInput = document.querySelector("[name='name']");
+    if (nameInput) nameInput.value = "";
+    var parentInput = document.querySelector("[name='parent']");
+    if (parentInput) parentInput.value = "";
+    var formatNote = document.getElementById("codeFormatNote");
+    if (formatNote) formatNote.style.display = "block";
+    if (btn) btn.innerText = "Create Access Region";
+  } else {
+    var codeInput = document.querySelector("[name='code']");
+    if (codeInput) {
+      codeInput.disabled = false;
+    }
+    var formatNote = document.getElementById("codeFormatNote");
+    if (formatNote) formatNote.style.display = "none";
+    loadDetails('AccessRegion', lookupCode);
+    if (btn) btn.innerText = "Update Access Region";
+  }
+}
+
+function submitManageAccessRegionsForm() {
+  submitForm('handleManageAccessRegion');
+}
 
 function onManageRoleChange(roleId) {
   var btn = document.getElementById("submitBtn");

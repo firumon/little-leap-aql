@@ -28,18 +28,10 @@ function onOpen(e) { CORE_LIB.onOpen(e); }
 // 3. Toolbar Menu Actions Forwarders
 // ============================================================
 
-// --- Users Submenu ---
-function showCreateUserDialog() { CORE_LIB.showCreateUserDialog(); }
-function showUpdateUserDialog() { CORE_LIB.showUpdateUserDialog(); }
-function showToggleUserStatusDialog() { CORE_LIB.showToggleUserStatusDialog(); }
-
-// --- Designations Submenu ---
-function showCreateDesignationDialog() { CORE_LIB.showCreateDesignationDialog(); }
-function showUpdateDesignationDialog() { CORE_LIB.showUpdateDesignationDialog(); }
-
-// --- Access Regions Submenu ---
-function showCreateAccessRegionDialog() { CORE_LIB.showCreateAccessRegionDialog(); }
-function showUpdateAccessRegionDialog() { CORE_LIB.showUpdateAccessRegionDialog(); }
+// --- Consolidated Manage Menu Items ---
+function showManageUsersDialog() { CORE_LIB.showManageUsersDialog(); }
+function showManageDesignationsDialog() { CORE_LIB.showManageDesignationsDialog(); }
+function showManageAccessRegionsDialog() { CORE_LIB.showManageAccessRegionsDialog(); }
 
 // --- Roles Submenu ---
 function showManageRoleDialog() { CORE_LIB.showManageRoleDialog(); }
@@ -72,6 +64,9 @@ function handleCreateDesignation(form) { return CORE_LIB.handleCreateDesignation
 function handleUpdateDesignation(form) { return CORE_LIB.handleUpdateDesignation(form); }
 function handleCreateAccessRegion(form) { return CORE_LIB.handleCreateAccessRegion(form); }
 function handleUpdateAccessRegion(form) { return CORE_LIB.handleUpdateAccessRegion(form); }
+function handleManageUser(form) { return CORE_LIB.handleManageUser(form); }
+function handleManageDesignation(form) { return CORE_LIB.handleManageDesignation(form); }
+function handleManageAccessRegion(form) { return CORE_LIB.handleManageAccessRegion(form); }
 
 // --- Detail Loaders for Admin Forms ---
 function getUserDetails(userId) { return CORE_LIB.getUserDetails(userId); }

@@ -10,8 +10,8 @@ export function useLoginPage() {
   const loading = ref(false)
 
   const loginForm = reactive({
-    identifier: 'f@ll.c',
-    password: '111111'
+    identifier: '',
+    password: ''
   })
 
   async function handleLogin() {

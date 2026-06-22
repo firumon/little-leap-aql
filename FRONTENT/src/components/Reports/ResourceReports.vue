@@ -1,44 +1,79 @@
 <template>
-  <div v-if="displayedReports.length">
-    <!-- Non-inline mode: wrapped in a nice flat bordered card -->
-    <q-card v-if="!isInline" flat bordered class="report-bar-card q-mt-sm">
-      <q-card-section :class="[innerClass, 'q-pa-sm']">
-        <div class="row items-center q-gutter-xs">
-          <q-btn
-            v-for="report in displayedReports"
-            :key="report.name"
-            unelevated no-caps dense
-            :icon="report.icon || 'picture_as_pdf'"
-            :label="report.label || report.name"
-            color="deep-orange-7"
-            class="report-btn"
-            :loading="isGenerating"
-            :disable="isGenerating"
-            @click="initiateReport(report, activeRecord)"
-          >
-            <q-tooltip>{{ report.label || report.name }}</q-tooltip>
-          </q-btn>
-        </div>
-      </q-card-section>
-    </q-card>
-
-    <!-- Inline mode: just buttons rendered directly in a row -->
-    <div v-else class="row items-center q-gutter-xs">
+  <div v-if="shouldRender">
+    <!-- Toolbar Dropdown Mode -->
+    <template v-if="mode === 'toolbar'">
       <q-btn
-        v-for="report in displayedReports"
-        :key="report.name"
-        unelevated no-caps dense
-        :icon="report.icon || 'picture_as_pdf'"
-        :label="report.label || report.name"
-        color="deep-orange-7"
-        class="report-btn"
+        flat
+        round
+        dense
         :loading="isGenerating"
         :disable="isGenerating"
-        @click="initiateReport(report, activeRecord)"
       >
-        <q-tooltip>{{ report.label || report.name }}</q-tooltip>
+        <q-avatar size="32px">
+          <img src="/icons/report_download.png" alt="Reports">
+        </q-avatar>
+        <q-tooltip>Reports</q-tooltip>
+        <q-menu auto-close>
+          <q-list style="min-width: 180px" separator>
+            <q-item
+              v-for="report in displayedReports"
+              :key="report.name"
+              clickable
+              v-ripple
+              @click="initiateReport(report, activeRecord)"
+            >
+              <q-item-section side><q-icon :name="report.icon || 'picture_as_pdf'" color="primary" /></q-item-section>
+              <q-item-section>
+                <q-item-label class="text-weight-medium">{{ report.label || report.name }}</q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-menu>
       </q-btn>
-    </div>
+    </template>
+
+    <!-- Standard Inline / Card Mode -->
+    <template v-else>
+      <!-- Non-inline mode: wrapped in a nice flat bordered card -->
+      <q-card v-if="!isInline" flat bordered class="report-bar-card q-mt-sm">
+        <q-card-section :class="[innerClass, 'q-pa-sm']">
+          <div class="row items-center q-gutter-xs">
+            <q-btn
+              v-for="report in displayedReports"
+              :key="report.name"
+              unelevated no-caps dense
+              :icon="report.icon || 'picture_as_pdf'"
+              :label="report.label || report.name"
+              color="deep-orange-7"
+              class="report-btn"
+              :loading="isGenerating"
+              :disable="isGenerating"
+              @click="initiateReport(report, activeRecord)"
+            >
+              <q-tooltip>{{ report.label || report.name }}</q-tooltip>
+            </q-btn>
+          </div>
+        </q-card-section>
+      </q-card>
+
+      <!-- Inline mode: just buttons rendered directly in a row -->
+      <div v-else class="row items-center q-gutter-xs">
+        <q-btn
+          v-for="report in displayedReports"
+          :key="report.name"
+          unelevated no-caps dense
+          :icon="report.icon || 'picture_as_pdf'"
+          :label="report.label || report.name"
+          color="deep-orange-7"
+          class="report-btn"
+          :loading="isGenerating"
+          :disable="isGenerating"
+          @click="initiateReport(report, activeRecord)"
+        >
+          <q-tooltip>{{ report.label || report.name }}</q-tooltip>
+        </q-btn>
+      </div>
+    </template>
 
     <ReportInputDialog
       v-model="showReportDialog"
@@ -69,6 +104,10 @@ const props = defineProps({
   inline: {
     type: Boolean,
     default: null
+  },
+  mode: {
+    type: String,
+    default: ''
   }
 })
 
@@ -108,6 +147,15 @@ const displayedReports = computed(() => {
   } else {
     return getToolbarReports(config.value)
   }
+})
+
+const shouldRender = computed(() => {
+  if (props.mode === 'toolbar') {
+    return displayedReports.value.length > 0
+  }
+  // For page-embedded usage, only render if a record is explicitly provided.
+  // This avoids double-rendering page-level reports since they are now in the global header.
+  return props.record !== null && displayedReports.value.length > 0
 })
 </script>
 

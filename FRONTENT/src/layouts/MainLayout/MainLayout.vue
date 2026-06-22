@@ -12,16 +12,18 @@
         />
 
         <q-toolbar-title class="text-weight-bold row no-wrap items-center">
-          <q-icon name="auto_graph" size="28px" class="q-mr-sm" />
+<!--          <q-icon name="auto_graph" size="28px" class="q-mr-sm" />-->
           <span>AQL</span>
         </q-toolbar-title>
 
         <q-space />
 
         <div class="q-gutter-sm row items-center no-wrap">
-          <q-btn round flat icon="notifications">
+          <ResourceReports mode="toolbar" />
+
+<!--          <q-btn round flat icon="notifications">
             <q-badge floating color="red" rounded />
-          </q-btn>
+          </q-btn>-->
 
           <q-btn round flat>
             <q-avatar size="32px">
@@ -120,6 +122,7 @@
 
 <script setup>
 import MenuTreeNode from 'src/components/MenuTreeNode.vue'
+import ResourceReports from 'src/components/Reports/ResourceReports.vue'
 import { useMainLayoutNavTree } from 'src/composables/layout/useMainLayoutNavTree'
 
 const {

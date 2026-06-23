@@ -52,15 +52,13 @@
 import { computed, watch } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
-import { useResourceData } from 'src/composables/resources/useResourceData'
-import { useResourceRelationsData } from 'src/composables/resources/useResourceRelationsData'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { useCompositeForm } from 'src/composables/resources/useCompositeForm'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
 const nav = useResourceNav()
 const { scope, resourceSlug, code, config, resourceName, resolvedFields } = useResourceConfig()
-const { items, loading, reload } = useResourceData(resourceName)
-const { childResources, loadChildRecords } = useResourceRelationsData(resourceName)
+const { records, record, childRecordsByResource, loading, reload, childResources, loadRelations } = useRecord()
 
 const customUIName = computed(() => config.value?.ui?.customUIName || '')
 
@@ -82,17 +80,12 @@ const {
   updateChildField, save
 } = useCompositeForm(config)
 
-const record = computed(() => {
-  if (!code.value || !items.value.length) return null
-  return items.value.find((r) => r.Code === code.value) || null
-})
-
 async function loadAndInitialize() {
   await reload()
   if (!record.value) return
 
-  const childRecordsByResource = await loadChildRecords(code.value, config.value, {})
-  initializeForEdit(record.value, childRecordsByResource)
+  await loadRelations()
+  initializeForEdit(record.value, childRecordsByResource.value)
 }
 
 watch(() => resourceName.value, (n) => { if (n) loadAndInitialize() }, { immediate: true })

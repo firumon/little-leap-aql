@@ -69,15 +69,13 @@ import { watch, ref, computed } from 'vue'
 import ResourceReports from 'components/Reports/ResourceReports.vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
-import { useResourceData } from 'src/composables/resources/useResourceData'
-import { useResourceRelations } from 'src/composables/resources/useResourceRelations'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { useListViews } from 'src/composables/useListViews'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
 const nav = useResourceNav()
 const { scope, resourceSlug, config, resourceName, resourceHeaders, resolvedFields, permissions, customUIName } = useResourceConfig()
-const { items, loading, backgroundSyncing, searchTerm, reload } = useResourceData(resourceName)
-const { childResources } = useResourceRelations(resourceName)
+const { records: items, loading, backgroundSyncing, searchTerm, reload, childResources } = useRecord()
 
 const { sections, sectionsReady } = useSectionResolver({
   resourceSlug,

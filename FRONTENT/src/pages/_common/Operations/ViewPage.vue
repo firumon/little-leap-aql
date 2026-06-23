@@ -62,21 +62,22 @@
 <script setup>
 import { computed, watch } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
-import { useResourceConfig, isActionVisible } from 'src/composables/resources/useResourceConfig'
-import { useResourceData } from 'src/composables/resources/useResourceData'
-import { useResourceRelationsData } from 'src/composables/resources/useResourceRelationsData'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
 const nav = useResourceNav()
 const { scope, resourceSlug, code, config, resourceName, resolvedFields, additionalActions, permissions, customUIName } = useResourceConfig()
-const { items, loading, reload } = useResourceData(resourceName)
 const {
-  parentResource,
-  childResources,
-  childRecordsByResource,
-  parentRecord,
+  records: items, record, loading, reload,
+  parentResource, childResources, childRecordsByResource,
   loadRelations
-} = useResourceRelationsData(resourceName)
+} = useRecord()
+
+const parentRecord = computed(() => {
+  const pKeys = record.value?._Parents || []
+  if (pKeys.length) return record.value?.[pKeys[0]] || null
+  return null
+})
 
 const { sections, sectionsReady } = useSectionResolver({
   resourceSlug,
@@ -93,11 +94,6 @@ const { sections, sectionsReady } = useSectionResolver({
   }
 })
 
-const record = computed(() => {
-  if (!code.value || !items.value.length) return null
-  return items.value.find((r) => r.Code === code.value) || null
-})
-
 const visibleActions = computed(() =>
   additionalActions.value.filter((a) => isActionVisible(a, record.value))
 )
@@ -107,7 +103,7 @@ watch(
   async ([nName, nCode]) => {
     if (nName && nCode) {
       await reload()
-      await loadRelations(record.value, config.value, {})
+      await loadRelations()
     }
   },
   { immediate: true }

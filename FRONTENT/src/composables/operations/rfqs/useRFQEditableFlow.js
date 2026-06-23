@@ -3,7 +3,7 @@ import { useQuasar } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceConfig, isActionVisible } from 'src/composables/resources/useResourceConfig'
-import { useResourceData } from 'src/composables/resources/useResourceData'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { mapRFQOptions } from './rfqMeta'
 import { parsePrItemCodeCsv } from './rfqPayload'
@@ -46,7 +46,7 @@ export function useRFQEditableFlow() {
   const resourceIoStore = useResourceIoStore()
   const nav = useResourceNav()
   const { code, resourceName, additionalActions } = useResourceConfig()
-  const rfqResource = useResourceData(ref('RFQs'))
+  const rfqResource = useRecord(ref('RFQs'))
 
   const saving = ref(false)
   const loadedSnapshot = ref('')

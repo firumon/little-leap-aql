@@ -1,7 +1,7 @@
 import { ref, computed, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from '../../../../stores/auth.js'
-import { useResourceData } from '../../../resources/useResourceData.js'
+import { useRecord } from '../../../resources/useRecord.js'
 import { useResourceNav } from '../../../resources/useResourceNav.js'
 import { useResourceConfig } from '../../../resources/useResourceConfig.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
@@ -19,13 +19,13 @@ export function useDirectRestock() {
   const { skuInfo } = useProductSkuResolver()
 
   // Resource caches
-  const warehouses = useResourceData(ref('Warehouses'))
-  const warehouseStorages = useResourceData(ref('WarehouseStorages'))
-  const outlets = useResourceData(ref('Outlets'))
-  const outletStorages = useResourceData(ref('OutletStorages'))
-  const skus = useResourceData(ref('SKUs'))
-  const products = useResourceData(ref('Products'))
-  const visits = useResourceData(ref('OutletVisits'))
+  const warehouses = useRecord(ref('Warehouses'))
+  const warehouseStorages = useRecord(ref('WarehouseStorages'))
+  const outlets = useRecord(ref('Outlets'))
+  const outletStorages = useRecord(ref('OutletStorages'))
+  const skus = useRecord(ref('SKUs'))
+  const products = useRecord(ref('Products'))
+  const visits = useRecord(ref('OutletVisits'))
 
   // Wizard state
   const loading = ref(false)

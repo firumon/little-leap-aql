@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue';
 import { useResourceConfig, isActionVisible } from '../../resources/useResourceConfig.js';
-import { useResourceData } from '../../resources/useResourceData.js';
+import { useRecord } from '../../resources/useRecord.js';
 import { useResourceIoStore } from 'src/stores/resourceIo';
 import { useResourceNav } from '../../resources/useResourceNav.js';
 import { useQuasar } from 'quasar';
@@ -45,15 +45,15 @@ function extractResourceDeltaRecord(resourceDelta, headers = []) {
 export function usePurchaseOrderView() {
     const $q = useQuasar();
     const { code, additionalActions } = useResourceConfig();
-    const purchaseOrders = useResourceData(ref('PurchaseOrders'));
-    const purchaseOrderItems = useResourceData(ref('PurchaseOrderItems'));
-    const supplierQuotations = useResourceData(ref('SupplierQuotations'));
-    const quotationItems = useResourceData(ref('SupplierQuotationItems'));
-    const suppliers = useResourceData(ref('Suppliers'));
-    const warehouses = useResourceData(ref('Warehouses'));
-    const rfqs = useResourceData(ref('RFQs'));
-    const rfqSuppliers = useResourceData(ref('RFQSuppliers'));
-    const procurements = useResourceData(ref('Procurements'));
+    const purchaseOrders = useRecord(ref('PurchaseOrders'));
+    const purchaseOrderItems = useRecord(ref('PurchaseOrderItems'));
+    const supplierQuotations = useRecord(ref('SupplierQuotations'));
+    const quotationItems = useRecord(ref('SupplierQuotationItems'));
+    const suppliers = useRecord(ref('Suppliers'));
+    const warehouses = useRecord(ref('Warehouses'));
+    const rfqs = useRecord(ref('RFQs'));
+    const rfqSuppliers = useRecord(ref('RFQSuppliers'));
+    const procurements = useRecord(ref('Procurements'));
     const resourceIoStore = useResourceIoStore();
     const nav = useResourceNav();
 

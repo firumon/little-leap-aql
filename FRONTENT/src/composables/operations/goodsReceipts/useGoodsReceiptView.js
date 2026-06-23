@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue'
 import { useQuasar } from 'quasar'
 import { useResourceConfig } from '../../resources/useResourceConfig.js'
-import { useResourceData } from '../../resources/useResourceData.js'
+import { useRecord } from '../../resources/useRecord.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceNav } from '../../resources/useResourceNav.js'
 import { formatDate } from '../poReceivings/poReceivingMeta.js'
@@ -14,10 +14,10 @@ export function useGoodsReceiptView() {
   const { code } = useResourceConfig()
   const nav = useResourceNav()
   const resourceIoStore = useResourceIoStore()
-  const receipts = useResourceData(ref('GoodsReceipts'))
-  const receiptItems = useResourceData(ref('GoodsReceiptItems'))
-  const receivings = useResourceData(ref('POReceivings'))
-  const procurements = useResourceData(ref('Procurements'))
+  const receipts = useRecord(ref('GoodsReceipts'))
+  const receiptItems = useRecord(ref('GoodsReceiptItems'))
+  const receivings = useRecord(ref('POReceivings'))
+  const procurements = useRecord(ref('Procurements'))
   const loading = ref(false)
   const acting = ref(false)
 

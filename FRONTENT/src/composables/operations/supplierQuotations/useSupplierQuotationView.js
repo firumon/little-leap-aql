@@ -3,7 +3,7 @@ import { useQuasar } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceConfig, isActionVisible } from 'src/composables/resources/useResourceConfig'
-import { useResourceData } from 'src/composables/resources/useResourceData'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { parsePrItemCodeCsv } from 'src/composables/operations/rfqs/rfqPayload'
 import { mapOptions, formatCurrency, formatDate } from './supplierQuotationMeta'
@@ -38,11 +38,11 @@ export function useSupplierQuotationView() {
   const nav = useResourceNav()
   const { code, additionalActions } = useResourceConfig()
 
-  const quotations = useResourceData(ref('SupplierQuotations'))
-  const quotationItems = useResourceData(ref('SupplierQuotationItems'))
-  const rfqs = useResourceData(ref('RFQs'))
-  const suppliers = useResourceData(ref('Suppliers'))
-  const prItems = useResourceData(ref('PurchaseRequisitionItems'))
+  const quotations = useRecord(ref('SupplierQuotations'))
+  const quotationItems = useRecord(ref('SupplierQuotationItems'))
+  const rfqs = useRecord(ref('RFQs'))
+  const suppliers = useRecord(ref('Suppliers'))
+  const prItems = useRecord(ref('PurchaseRequisitionItems'))
 
   const saving = ref(false)
   const rejecting = ref(false)

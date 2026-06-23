@@ -57,8 +57,7 @@
 import { computed, watch } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
 import { useResourceConfig, isActionVisible } from 'src/composables/resources/useResourceConfig'
-import { useResourceData } from 'src/composables/resources/useResourceData'
-import { useResourceRelationsData } from 'src/composables/resources/useResourceRelationsData'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
 const nav = useResourceNav()
@@ -67,8 +66,10 @@ const {
   resolvedFields, additionalActions, permissions, customUIName
 } = useResourceConfig()
 
-const { items, loading, reload } = useResourceData(resourceName)
-const { childResources, childRecordsByResource: childRecords, loadChildRecords: loadRelatedChildren } = useResourceRelationsData(resourceName)
+const {
+  records: items, record, loading, reload,
+  childResources, childRecordsByResource: childRecords, loadRelations: loadRelatedChildren
+} = useRecord()
 
 const { sections, sectionsReady } = useSectionResolver({
   resourceSlug,
@@ -83,11 +84,6 @@ const { sections, sectionsReady } = useSectionResolver({
     Loading: 'Loading',
     Empty: 'Empty'
   }
-})
-
-const record = computed(() => {
-  if (!code.value || !items.value.length) return null
-  return items.value.find((row) => row.Code === code.value) || null
 })
 
 const visibleActions = computed(() =>
@@ -115,7 +111,7 @@ function navigateToAction(action) {
 }
 
 async function loadChildRecords() {
-  await loadRelatedChildren(code.value, config.value, {})
+  await loadRelatedChildren()
 }
 
 watch(() => resourceName.value, async (n) => { if (n) await reload() }, { immediate: true })

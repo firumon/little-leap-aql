@@ -1,6 +1,6 @@
 import { computed, ref, watch } from 'vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
-import { useResourceData } from 'src/composables/resources/useResourceData'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { formatCurrency, formatDate, progressMeta, PROGRESS_ORDER } from './supplierQuotationMeta'
 
@@ -25,9 +25,9 @@ function timestamp(row = {}, keys = []) {
 export function useSupplierQuotationIndex() {
   const nav = useResourceNav()
   const { resourceName, permissions } = useResourceConfig()
-  const quotations = useResourceData(resourceName)
-  const suppliers = useResourceData(ref('Suppliers'))
-  const procurements = useResourceData(ref('Procurements'))
+  const quotations = useRecord(resourceName)
+  const suppliers = useRecord(ref('Suppliers'))
+  const procurements = useRecord(ref('Procurements'))
   const searchTerm = ref('')
   const activeGroupKey = ref(null)
 

@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { useResourceIoStore } from 'src/stores/resourceIo'
-import { useResourceRelations } from './useResourceRelations'
+import { useRecord } from './useRecord'
 import { useApiErrorNotify } from 'src/composables/useApiErrorNotify'
 import { useStorageStore } from 'src/stores/storage'
 
@@ -16,7 +16,7 @@ export function useCompositeForm(configRef) {
   const $q = useQuasar()
   const resourceIoStore = useResourceIoStore()
   const { notifyApiError } = useApiErrorNotify()
-  const { childResources } = useResourceRelations(
+  const { childResources } = useRecord(
     () => (typeof configRef === 'function' ? configRef() : configRef?.value)?.name
   )
 

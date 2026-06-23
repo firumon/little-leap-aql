@@ -1,12 +1,12 @@
 import { ref, computed } from 'vue'
-import { useResourceData } from '../../resources/useResourceData.js'
+import { useRecord } from '../../resources/useRecord.js'
 import { useResourceNav } from '../../resources/useResourceNav.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { OUTLET_OPERATION_RESOURCES, active, sortTime, text } from './outletOperationsMeta.js'
 import { toNumber } from './outletStockLogic.js'
 
 export function useOutletStock() {
-  const resourceIoStore = useResourceIoStore(); const nav = useResourceNav(); const storages = useResourceData(ref('OutletStorages')); const movements = useResourceData(ref('OutletMovements')); const outlets = useResourceData(ref('Outlets')); const skus = useResourceData(ref('SKUs'))
+  const resourceIoStore = useResourceIoStore(); const nav = useResourceNav(); const storages = useRecord(ref('OutletStorages')); const movements = useRecord(ref('OutletMovements')); const outlets = useRecord(ref('Outlets')); const skus = useRecord(ref('SKUs'))
   const loading = ref(false); const searchTerm = ref(''); const selectedOutletCode = ref(''); const showZero = ref(false)
   const stockRows = computed(() => storages.items.value.filter(row => (!selectedOutletCode.value || row.OutletCode === selectedOutletCode.value) && (showZero.value || toNumber(row.Quantity) !== 0)).filter(row => !searchTerm.value || JSON.stringify(row).toLowerCase().includes(searchTerm.value.toLowerCase())).sort((a, b) => text(a.OutletCode).localeCompare(text(b.OutletCode)) || text(a.SKU).localeCompare(text(b.SKU))))
   const outletOptions = computed(() => outlets.items.value.filter(active).map(row => ({ label: `${row.Code} · ${row.Name}`, value: row.Code })))

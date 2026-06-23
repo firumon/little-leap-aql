@@ -1,7 +1,7 @@
 import { ref, computed, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from '../../../stores/auth.js'
-import { useResourceData } from '../../resources/useResourceData.js'
+import { useRecord } from '../../resources/useRecord.js'
 import { useResourceNav } from '../../resources/useResourceNav.js'
 import { useResourceConfig } from '../../resources/useResourceConfig.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
@@ -17,9 +17,9 @@ export function useOutletPayments() {
   const { allowed } = useResourceConfig()
 
   // Resource data bindings
-  const outlets = useResourceData(ref('Outlets'))
-  const invoices = useResourceData(ref('OutletConsumptionInvoices'))
-  const payments = useResourceData(ref('OutletPayments'))
+  const outlets = useRecord(ref('Outlets'))
+  const invoices = useRecord(ref('OutletConsumptionInvoices'))
+  const payments = useRecord(ref('OutletPayments'))
 
   // State
   const loading = ref(false)

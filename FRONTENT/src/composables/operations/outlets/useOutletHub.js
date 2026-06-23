@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue'
-import { useResourceData } from '../../resources/useResourceData.js'
+import { useRecord } from '../../resources/useRecord.js'
 import { useResourceNav } from '../../resources/useResourceNav.js'
 import { useResourceConfig } from '../../resources/useResourceConfig.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
@@ -31,13 +31,13 @@ export function useOutletHub() {
   const { allowed } = useResourceConfig()
   const { skuInfo } = useProductSkuResolver()
 
-  const outlets = useResourceData(ref('Outlets'))
-  const visits = useResourceData(ref('OutletVisits'))
-  const restocks = useResourceData(ref('OutletRestocks'))
-  const returns = useResourceData(ref('OutletReturns'))
-  const invoices = useResourceData(ref('OutletConsumptionInvoices'))
-  const payments = useResourceData(ref('OutletPayments'))
-  const storages = useResourceData(ref('OutletStorages'))
+  const outlets = useRecord(ref('Outlets'))
+  const visits = useRecord(ref('OutletVisits'))
+  const restocks = useRecord(ref('OutletRestocks'))
+  const returns = useRecord(ref('OutletReturns'))
+  const invoices = useRecord(ref('OutletConsumptionInvoices'))
+  const payments = useRecord(ref('OutletPayments'))
+  const storages = useRecord(ref('OutletStorages'))
 
   const loading = ref(false)
   const selectedOutletCode = ref('')

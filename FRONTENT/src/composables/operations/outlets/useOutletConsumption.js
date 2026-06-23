@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from '../../../stores/auth.js'
-import { useResourceData } from '../../resources/useResourceData.js'
+import { useRecord } from '../../resources/useRecord.js'
 import { useResourceNav } from '../../resources/useResourceNav.js'
 import { useResourceConfig } from '../../resources/useResourceConfig.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
@@ -131,22 +131,22 @@ export function useOutletConsumption() {
 
   const nav = useResourceNav()
   const { allowed } = useResourceConfig()
-  const consumptions = useResourceData(ref('OutletConsumptions'))
-  const consumptionItems = useResourceData(ref('OutletConsumptionItems'))
-  const consumptionInvoiceItems = useResourceData(ref('OutletConsumptionInvoiceItems'))
-  const invoices = useResourceData(ref('OutletConsumptionInvoices'))
-  const storages = useResourceData(ref('OutletStorages'))
-  const outlets = useResourceData(ref('Outlets'))
-  const visits = useResourceData(ref('OutletVisits'))
-  const rules = useResourceData(ref('OutletOperatingRules'))
-  const skus = useResourceData(ref('SKUs'))
-  const products = useResourceData(ref('Products'))
-  const priceLists = useResourceData(ref('PriceList'))
+  const consumptions = useRecord(ref('OutletConsumptions'))
+  const consumptionItems = useRecord(ref('OutletConsumptionItems'))
+  const consumptionInvoiceItems = useRecord(ref('OutletConsumptionInvoiceItems'))
+  const invoices = useRecord(ref('OutletConsumptionInvoices'))
+  const storages = useRecord(ref('OutletStorages'))
+  const outlets = useRecord(ref('Outlets'))
+  const visits = useRecord(ref('OutletVisits'))
+  const rules = useRecord(ref('OutletOperatingRules'))
+  const skus = useRecord(ref('SKUs'))
+  const products = useRecord(ref('Products'))
+  const priceLists = useRecord(ref('PriceList'))
   const { skuInfo } = useProductSkuResolver()
-  const priceListItems = useResourceData(ref('PriceListItems'))
-  const restocks = useResourceData(ref('OutletRestocks'))
-  const returns = useResourceData(ref('OutletReturns'))
-  const warehouses = useResourceData(ref('Warehouses'))
+  const priceListItems = useRecord(ref('PriceListItems'))
+  const restocks = useRecord(ref('OutletRestocks'))
+  const returns = useRecord(ref('OutletReturns'))
+  const warehouses = useRecord(ref('Warehouses'))
 
   const consumptionConfig = computed(() =>
     (Array.isArray(authStore.resources) ? authStore.resources : [])

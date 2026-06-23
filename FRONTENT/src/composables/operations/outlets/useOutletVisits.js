@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import { useQuasar } from 'quasar'
-import { useResourceData } from '../../resources/useResourceData.js'
+import { useRecord } from '../../resources/useRecord.js'
 import { useResourceNav } from '../../resources/useResourceNav.js'
 import { useResourceConfig } from '../../resources/useResourceConfig.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
@@ -9,7 +9,7 @@ import { OUTLET_ACTIONS, executeActionRequest, failureMessage, resourceCreateReq
 
 export function useOutletVisits() {
   const $q = useQuasar(); const resourceIoStore = useResourceIoStore(); const nav = useResourceNav(); const { allowed } = useResourceConfig()
-  const visits = useResourceData(ref('OutletVisits')); const outlets = useResourceData(ref('Outlets')); const rules = useResourceData(ref('OutletOperatingRules'))
+  const visits = useRecord(ref('OutletVisits')); const outlets = useRecord(ref('Outlets')); const rules = useRecord(ref('OutletOperatingRules'))
   const loading = ref(false); const saving = ref(false); const searchTerm = ref(''); const form = ref({ Progress: 'PLANNED', ProgressPlannedComment: '', Status: 'Active', Date: todayISO() })
   const matchesSearch = row => !searchTerm.value || outletLabel(row.OutletCode).toLowerCase().includes(searchTerm.value.toLowerCase())
   const items = computed(() => visits.items.value.filter(active).filter(row => VISIT_PROGRESS_ORDER.includes(visitProgress(row))).filter(matchesSearch))

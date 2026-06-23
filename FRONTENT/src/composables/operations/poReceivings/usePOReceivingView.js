@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue'
 import { useQuasar } from 'quasar'
 import { useResourceConfig, isActionVisible } from '../../resources/useResourceConfig.js'
-import { useResourceData } from '../../resources/useResourceData.js'
+import { useRecord } from '../../resources/useRecord.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceNav } from '../../resources/useResourceNav.js'
 import { progressMeta, PO_RECEIVING_REPORT_PLACEHOLDERS, formatDate } from './poReceivingMeta.js'
@@ -24,12 +24,12 @@ export function usePOReceivingView() {
   const { code, additionalActions } = useResourceConfig()
   const nav = useResourceNav()
   const resourceIoStore = useResourceIoStore()
-  const receivings = useResourceData(ref('POReceivings'))
-  const receivingItems = useResourceData(ref('POReceivingItems'))
-  const goodsReceipts = useResourceData(ref('GoodsReceipts'))
-  const goodsReceiptItems = useResourceData(ref('GoodsReceiptItems'))
-  const procurements = useResourceData(ref('Procurements'))
-  const purchaseOrders = useResourceData(ref('PurchaseOrders'))
+  const receivings = useRecord(ref('POReceivings'))
+  const receivingItems = useRecord(ref('POReceivingItems'))
+  const goodsReceipts = useRecord(ref('GoodsReceipts'))
+  const goodsReceiptItems = useRecord(ref('GoodsReceiptItems'))
+  const procurements = useRecord(ref('Procurements'))
+  const purchaseOrders = useRecord(ref('PurchaseOrders'))
   const loading = ref(false)
   const acting = ref(false)
   const cancelComment = ref('')

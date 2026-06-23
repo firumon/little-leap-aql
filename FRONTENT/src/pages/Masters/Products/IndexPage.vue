@@ -102,7 +102,7 @@ import MasterListHeader from 'components/_common/Header.vue'
 import MasterListToolbar from 'components/_common/Toolbar.vue'
 import MasterListViewSwitcher from 'components/_common/ViewSwitcher.vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
-import { useResourceData } from 'src/composables/resources/useResourceData'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { useListViews } from 'src/composables/useListViews'
 import { parseVariantTypes } from 'src/composables/masters/products/useProductVariants'
 import { useResourceNav } from 'src/composables/resources/useResourceNav.js'
@@ -110,8 +110,8 @@ import { useResourceNav } from 'src/composables/resources/useResourceNav.js'
 const nav = useResourceNav()
 
 const { config, resourceName, resourceHeaders, permissions } = useResourceConfig()
-const { items, loading, backgroundSyncing, searchTerm, reload } = useResourceData(resourceName)
-const skusResource = useResourceData(ref('SKUs'))
+const { records: items, loading, backgroundSyncing, searchTerm, reload } = useRecord()
+const skusResource = useRecord('SKUs')
 
 const configuredListViews = computed(() => config.value?.ui?.listViews || [])
 const configuredListViewsMode = computed(() => config.value?.ui?.listViewsMode || '')
@@ -124,7 +124,7 @@ const { effectiveViews, activeViewName, viewCounts, viewFilteredItems, setActive
   enableUrlSync: false
 })
 
-const skuRecords = skusResource.items
+const skuRecords = skusResource.records
 
 const skuCountByProduct = computed(() => {
   const result = {}
@@ -165,7 +165,7 @@ const displayedItems = computed(() => {
 })
 
 async function reloadAll(forceSync = false) {
-  // useResourceData's reload will trigger fetchResourceRecords for Products
+  // useRecord's reload will trigger fetchResourceRecords for Products
   // and for SKUs separately.
   await Promise.all([
     reload(forceSync),

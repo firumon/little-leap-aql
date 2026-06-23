@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue'
-import { useResourceData } from '../../resources/useResourceData.js'
+import { useRecord } from '../../resources/useRecord.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceNav } from '../../resources/useResourceNav.js'
 import { formatDate } from '../poReceivings/poReceivingMeta.js'
@@ -7,7 +7,7 @@ import { formatDate } from '../poReceivings/poReceivingMeta.js'
 function text(value) { return value == null ? '' : String(value) }
 
 export function useGoodsReceiptIndex() {
-  const receipts = useResourceData(ref('GoodsReceipts'))
+  const receipts = useRecord(ref('GoodsReceipts'))
   const resourceIoStore = useResourceIoStore()
   const nav = useResourceNav()
   const loading = ref(false)

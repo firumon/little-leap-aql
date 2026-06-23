@@ -131,7 +131,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
-import { useResourceData } from 'src/composables/resources/useResourceData'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useProcurements } from 'src/composables/operations/procurements/useProcurements'
 import PurchaseRequisitionEditablePage from './PurchaseRequisitionEditablePage.vue'
@@ -140,12 +140,11 @@ import PurchaseRequisitionReviewPage from './PurchaseRequisitionReviewPage.vue'
 const nav = useResourceNav()
 const procurements = useProcurements()
 const { resourceName, code } = useResourceConfig()
-const { items, loading: recordLoading, reload: reloadParent } = useResourceData(resourceName)
-const childResource = useResourceData(ref('PurchaseRequisitionItems'))
+const { records: items, record, loading: recordLoading, reload: reloadParent } = useRecord()
+const childResource = useRecord('PurchaseRequisitionItems')
 
 const loading = computed(() => recordLoading.value || childResource.loading.value)
-const record = computed(() => items.value.find((row) => row.Code === code.value) || null)
-const childItems = computed(() => childResource.items.value.filter((item) => item.PurchaseRequisitionCode === code.value))
+const childItems = computed(() => childResource.records.value.filter((item) => item.PurchaseRequisitionCode === code.value))
 const viewMode = computed(() => procurements.resolveViewMode(record.value?.Progress || ''))
 const revisionThreadHtml = computed(() => procurements.formatWorkflowCommentHtml(record.value?.ProgressRevisionRequiredComment || ''))
 const rejectedCommentHtml = computed(() => procurements.formatWorkflowCommentHtml(record.value?.ProgressRejectedComment || ''))

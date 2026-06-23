@@ -1,6 +1,6 @@
 import { computed, ref, watch } from 'vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
-import { useResourceData } from 'src/composables/resources/useResourceData'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
 const GROUPS = [
@@ -14,7 +14,7 @@ const GROUPS = [
 export function useRFQIndex() {
   const nav = useResourceNav()
   const { resourceName, permissions } = useResourceConfig()
-  const { items, loading, reload } = useResourceData(resourceName)
+  const { items, loading, reload } = useRecord(resourceName)
   const searchTerm = ref('')
   const activeGroupKey = ref(null)
 

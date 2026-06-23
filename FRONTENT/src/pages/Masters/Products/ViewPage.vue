@@ -85,17 +85,13 @@ import MasterViewAudit from 'components/_common/Audit.vue'
 import { useProductVariants } from 'src/composables/masters/products/useProductVariants'
 import { useProductSkuViewData } from 'src/composables/masters/products/useProductSkuViewData'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
-import { useResourceData } from 'src/composables/resources/useResourceData'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
 const nav = useResourceNav()
 const { code, config, resourceName, permissions } = useResourceConfig()
-const { items, loading: resourceLoading, reload } = useResourceData(resourceName)
+const { records: items, record, loading: resourceLoading, reload } = useRecord()
 const { skuRows, skuLoading, loadSkuRows } = useProductSkuViewData()
-const record = computed(() => {
-  if (!code.value || !Array.isArray(items.value)) return null
-  return items.value.find((row) => row.Code === code.value) || null
-})
 
 const { variantColumns } = useProductVariants(record)
 

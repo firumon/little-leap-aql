@@ -2,7 +2,7 @@ import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { useResourceData } from 'src/composables/resources/useResourceData'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { useStockMovements } from 'src/composables/operations/stock/useStockMovements'
 import { useAuthStore } from 'src/stores/auth'
 import { useResourceIoStore } from 'src/stores/resourceIo'
@@ -35,10 +35,10 @@ export function usePurchaseRequisitionEditableFlow() {
   const { _C } = useCurrency()
 
   const prCode = route.params.code
-  const prResource = useResourceData(ref('PurchaseRequisitions'))
-  const itemsResource = useResourceData(ref('PurchaseRequisitionItems'))
-  const skusResource = useResourceData(ref('SKUs'))
-  const productsResource = useResourceData(ref('Products'))
+  const prResource = useRecord(ref('PurchaseRequisitions'))
+  const itemsResource = useRecord(ref('PurchaseRequisitionItems'))
+  const skusResource = useRecord(ref('SKUs'))
+  const productsResource = useRecord(ref('Products'))
 
   const loading = ref(true)
   const saving = ref(false)

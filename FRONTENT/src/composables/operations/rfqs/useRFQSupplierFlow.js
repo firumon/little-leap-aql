@@ -2,7 +2,7 @@ import { computed, ref, unref } from 'vue'
 import { useQuasar } from 'quasar'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceConfig, isActionVisible } from 'src/composables/resources/useResourceConfig'
-import { useResourceData } from 'src/composables/resources/useResourceData'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { buildPrimaryMeta } from './rfqMeta'
 import { parsePrItemCodeCsv, toDateInputValue } from './rfqPayload'
@@ -46,10 +46,10 @@ export function useRFQSupplierFlow(rfqCodeRef) {
   const nav = useResourceNav()
   const { code: routeCode, additionalActions } = useResourceConfig()
 
-  const rfqResource = useResourceData(ref('RFQs'))
-  const prResource = useResourceData(ref('PurchaseRequisitions'))
-  const suppliersResource = useResourceData(ref('Suppliers'))
-  const rfqSuppliersResource = useResourceData(ref('RFQSuppliers'))
+  const rfqResource = useRecord(ref('RFQs'))
+  const prResource = useRecord(ref('PurchaseRequisitions'))
+  const suppliersResource = useRecord(ref('Suppliers'))
+  const rfqSuppliersResource = useRecord(ref('RFQSuppliers'))
 
   const isHeaderLoading = ref(true)
   const isSuppliersLoading = ref(true)

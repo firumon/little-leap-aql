@@ -2,7 +2,7 @@ import { computed, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useProductVariants, hasDuplicateVariantSet, validateSkuVariants } from 'src/composables/masters/products/useProductVariants'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
-import { useResourceData } from 'src/composables/resources/useResourceData'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { useCompositeForm } from 'src/composables/resources/useCompositeForm'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
@@ -10,8 +10,8 @@ export function useProductEditForm() {
   const $q = useQuasar()
   const nav = useResourceNav()
   const { code, config, resourceName } = useResourceConfig()
-  const { items, loading: resourceLoading, reload, updateLocalRecord } = useResourceData(resourceName)
-  const skusResource = useResourceData(ref('SKUs'))
+  const { items, loading: resourceLoading, reload, updateLocalRecord } = useRecord(resourceName)
+  const skusResource = useRecord(ref('SKUs'))
   const {
     parentForm,
     childGroups,

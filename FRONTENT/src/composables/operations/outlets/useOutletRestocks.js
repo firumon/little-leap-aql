@@ -1,7 +1,7 @@
 import { ref, computed, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from '../../../stores/auth.js'
-import { useResourceData } from '../../resources/useResourceData.js'
+import { useRecord } from '../../resources/useRecord.js'
 import { useResourceNav } from '../../resources/useResourceNav.js'
 import { useResourceConfig } from '../../resources/useResourceConfig.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
@@ -24,13 +24,13 @@ export function useOutletRestocks() {
   const authStore = useAuthStore()
   const nav = useResourceNav()
   const { allowed } = useResourceConfig()
-  const restocks = useResourceData(ref('OutletRestocks'))
-  const restockItems = useResourceData(ref('OutletRestockItems'))
-  const outlets = useResourceData(ref('Outlets'))
-  const skus = useResourceData(ref('SKUs'))
-  const products = useResourceData(ref('Products'))
-  const warehouseStorages = useResourceData(ref('WarehouseStorages'))
-  const warehouses = useResourceData(ref('Warehouses'))
+  const restocks = useRecord(ref('OutletRestocks'))
+  const restockItems = useRecord(ref('OutletRestockItems'))
+  const outlets = useRecord(ref('Outlets'))
+  const skus = useRecord(ref('SKUs'))
+  const products = useRecord(ref('Products'))
+  const warehouseStorages = useRecord(ref('WarehouseStorages'))
+  const warehouses = useRecord(ref('Warehouses'))
   const { skuInfo } = useProductSkuResolver()
   const loading = ref(false)
   const saving = ref(false)

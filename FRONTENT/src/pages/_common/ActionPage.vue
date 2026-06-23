@@ -78,7 +78,7 @@ import { useMasterActions } from 'src/composables/useMasterActions'
 import { useOperationActions } from 'src/composables/useOperationActions'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
 import { useResourceConfig, isActionVisible } from 'src/composables/resources/useResourceConfig'
-import { useResourceData } from 'src/composables/resources/useResourceData'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { useActionFields } from 'src/composables/resources/useActionFields'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
@@ -98,7 +98,7 @@ const operationActions = useOperationActions()
 const actionsStore = computed(() => isOps.value ? operationActions : masterActions)
 const submitting = computed(() => actionsStore.value.submitting.value)
 
-const { items, loading, reload } = useResourceData(resourceName)
+const { records: items, record, loading, reload } = useRecord()
 
 const actionName = computed(() => {
   const route = router.currentRoute.value
@@ -137,10 +137,7 @@ const {
   column, isMultiOutcome: isMockMultiOutcome, outcomeOptions, resolvedFields: resolvedActionFields
 } = useActionFields(resourceHeaders, currentActionConfig, () => selectedOutcome.value)
 
-const record = computed(() => {
-  if (!code.value || !items.value.length) return null
-  return items.value.find((r) => r.Code === code.value) || null
-})
+// record resolved from useRecord
 
 const actionAllowedForRecord = computed(() =>
   !currentActionConfig.value || isActionVisible(currentActionConfig.value, record.value)

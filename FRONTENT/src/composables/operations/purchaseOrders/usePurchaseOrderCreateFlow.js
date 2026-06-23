@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue';
-import { useResourceData } from '../../resources/useResourceData.js';
+import { useRecord } from '../../resources/useRecord.js';
 import { useResourceIoStore } from 'src/stores/resourceIo';
 import { useResourceNav } from '../../resources/useResourceNav.js';
 import { useAuthStore } from '../../../stores/auth.js';
@@ -47,16 +47,16 @@ function closeComment(userLabel) {
 export function usePurchaseOrderCreateFlow() {
     const $q = useQuasar();
     const auth = useAuthStore();
-    const supplierQuotationsResource = useResourceData(ref('SupplierQuotations'));
-    const quotationItemsResource = useResourceData(ref('SupplierQuotationItems'));
-    const purchaseOrdersResource = useResourceData(ref('PurchaseOrders'));
-    const purchaseOrderItemsResource = useResourceData(ref('PurchaseOrderItems'));
-    const suppliersResource = useResourceData(ref('Suppliers'));
-    const warehousesResource = useResourceData(ref('Warehouses'));
-    const rfqsResource = useResourceData(ref('RFQs'));
-    const purchaseRequisitionsResource = useResourceData(ref('PurchaseRequisitions'));
-    const prItemsResource = useResourceData(ref('PurchaseRequisitionItems'));
-    const procurementsResource = useResourceData(ref('Procurements'));
+    const supplierQuotationsResource = useRecord(ref('SupplierQuotations'));
+    const quotationItemsResource = useRecord(ref('SupplierQuotationItems'));
+    const purchaseOrdersResource = useRecord(ref('PurchaseOrders'));
+    const purchaseOrderItemsResource = useRecord(ref('PurchaseOrderItems'));
+    const suppliersResource = useRecord(ref('Suppliers'));
+    const warehousesResource = useRecord(ref('Warehouses'));
+    const rfqsResource = useRecord(ref('RFQs'));
+    const purchaseRequisitionsResource = useRecord(ref('PurchaseRequisitions'));
+    const prItemsResource = useRecord(ref('PurchaseRequisitionItems'));
+    const procurementsResource = useRecord(ref('Procurements'));
     const resourceIoStore = useResourceIoStore();
     const nav = useResourceNav();
 

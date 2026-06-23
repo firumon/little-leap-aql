@@ -2,7 +2,7 @@ import { computed, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
 import { useResourceIoStore } from 'src/stores/resourceIo'
-import { useResourceData } from 'src/composables/resources/useResourceData'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useProcurements } from 'src/composables/operations/procurements/useProcurements'
 import { mapRFQOptions } from './rfqMeta'
@@ -28,9 +28,9 @@ export function useRFQCreateFlow() {
   const nav = useResourceNav()
   const procurements = useProcurements()
 
-  const prResource = useResourceData(ref('PurchaseRequisitions'))
-  const itemResource = useResourceData(ref('PurchaseRequisitionItems'))
-  const rfqResource = useResourceData(ref('RFQs'))
+  const prResource = useRecord(ref('PurchaseRequisitions'))
+  const itemResource = useRecord(ref('PurchaseRequisitionItems'))
+  const rfqResource = useRecord(ref('RFQs'))
 
   const steps = [
     { n: 1, label: 'PR' },

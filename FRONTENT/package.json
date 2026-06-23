@@ -14,21 +14,21 @@
     "deploy": "firebase deploy --only hosting:aqlpwa"
   },
   "dependencies": {
-    "@quasar/extras": "^1.16.4",
-    "axios": "1.15.0",
+    "@quasar/extras": "^2.0.1",
+    "axios": "1.18.1",
     "date-fns": "^2.30.0",
     "idb": "^8.0.3",
     "pinia": "^3.0.4",
-    "quasar": "^2.16.0",
+    "quasar": "^2.20.1",
     "register-service-worker": "^1.7.2",
-    "vue": "^3.5.22",
-    "vue-router": "^5.0.0",
+    "vue": "^3.5.38",
+    "vue-router": "^5.1.0",
     "workbox-background-sync": "^7.4.0"
   },
   "devDependencies": {
     "@quasar/app-vite": "^2.1.0",
     "autoprefixer": "^10.4.2",
-    "postcss": "^8.4.14",
+    "postcss": "8.5.10",
     "sass-embedded": "^1.97.3",
     "workbox-build": "^7.4.0",
     "workbox-cacheable-response": "^7.4.0",

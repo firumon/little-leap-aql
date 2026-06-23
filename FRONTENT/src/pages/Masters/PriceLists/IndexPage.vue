@@ -150,8 +150,8 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import MasterListHeader from 'components/_common/List/Header.vue'
-import MasterListToolbar from 'components/_common/List/Toolbar.vue'
+import MasterListHeader from 'components/_common/Header.vue'
+import MasterListToolbar from 'components/_common/Toolbar.vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useResourceData } from 'src/composables/resources/useResourceData'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'

@@ -39,7 +39,9 @@ const props = defineProps({
 
 const { additionalActions } = useResourceConfig()
 
-const actionStampHeaders = computed(() => deriveActionStampHeaders(additionalActions.value))
+const actionStampHeaders = computed(() => {
+  return deriveActionStampHeaders(additionalActions.value || [])
+})
 
 const detailFields = computed(() => {
   return filterDetailFields(props.resolvedFields, actionStampHeaders.value)

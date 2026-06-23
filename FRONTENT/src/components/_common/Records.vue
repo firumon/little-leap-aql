@@ -35,6 +35,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
+import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 
 const props = defineProps({
   items: { type: Array, default: () => [] },
@@ -47,14 +48,16 @@ const props = defineProps({
 
 defineEmits(['navigate-to-view'])
 
+const { scope } = useResourceConfig()
+
 const { sections, sectionsReady } = useSectionResolver({
-  scope: 'masters',
+  scope,
   resourceSlug: computed(() => props.resourceSlug),
   customUIName: computed(() => props.customUIName),
   page: 'List',
   sectionDefs: {
-    Loading: 'RecordsLoading',
-    Empty: 'RecordsEmpty',
+    Loading: 'Loading',
+    Empty: 'Empty',
     Record: 'RecordsRecord',
   }
 })

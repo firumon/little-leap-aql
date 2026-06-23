@@ -98,9 +98,9 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import ResourceReports from 'components/Reports/ResourceReports.vue'
-import MasterListHeader from 'components/_common/List/Header.vue'
-import MasterListToolbar from 'components/_common/List/Toolbar.vue'
-import MasterListViewSwitcher from 'components/_common/List/ViewSwitcher.vue'
+import MasterListHeader from 'components/_common/Header.vue'
+import MasterListToolbar from 'components/_common/Toolbar.vue'
+import MasterListViewSwitcher from 'components/_common/ViewSwitcher.vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useResourceData } from 'src/composables/resources/useResourceData'
 import { useListViews } from 'src/composables/useListViews'

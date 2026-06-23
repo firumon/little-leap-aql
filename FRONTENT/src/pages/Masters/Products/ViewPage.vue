@@ -80,8 +80,8 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import MasterViewActionBar from 'components/_common/Masters/View/ActionBar.vue'
-import MasterViewAudit from 'components/_common/View/Audit.vue'
+import MasterViewActionBar from 'components/_common/ActionBar.vue'
+import MasterViewAudit from 'components/_common/Audit.vue'
 import { useProductVariants } from 'src/composables/masters/products/useProductVariants'
 import { useProductSkuViewData } from 'src/composables/masters/products/useProductSkuViewData'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'

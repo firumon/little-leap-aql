@@ -19,7 +19,8 @@
 import { ref, watch, markRaw, computed } from 'vue'
 import { toPascalCase } from 'src/utils/appHelpers'
 import { registry } from 'src/composables/resources/useSectionResolver'
-import OperationViewChild from 'components/_common/View/Child.vue'
+import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
+import DefaultChild from 'components/_common/Child.vue'
 
 const props = defineProps({
   childResources: { type: Array, default: () => [] },
@@ -36,19 +37,21 @@ defineEmits(['view-child'])
 const childResolvers = ref([])
 const resolversReady = ref(false)
 
+const { scope } = useResourceConfig()
+
 async function resolveChildComponents() {
   resolversReady.value = false
   const resolvers = []
   const entityName = props.entityName || toPascalCase(props.resourceSlug)
   const customUIName = props.customUIName
-  const scopeFolder = 'Operations'
+  const scopeFolder = toPascalCase(scope.value || 'masters')
 
   for (const childRes of props.childResources) {
     const pascalChildName = toPascalCase(childRes.name)
     const candidates = []
 
     function addPaths(dir) {
-      const legacyPrefix = 'OperationViewChild'
+      const legacyPrefix = scopeFolder === 'Operations' ? 'OperationViewChild' : 'MasterViewChild'
       if (pascalChildName) {
         candidates.push(`${dir}/Child${pascalChildName}.vue`)
         candidates.push(`${dir}/${legacyPrefix}${pascalChildName}.vue`)
@@ -88,7 +91,7 @@ async function resolveChildComponents() {
 
     resolvers.push({
       name: childRes.name,
-      component: resolvedComponent || markRaw(OperationViewChild)
+      component: resolvedComponent || markRaw(DefaultChild)
     })
   }
 
@@ -97,7 +100,7 @@ async function resolveChildComponents() {
 }
 
 watch(
-  () => [props.childResources, props.entityName, props.customUIName],
+  () => [props.childResources, props.entityName, props.customUIName, scope.value],
   () => { resolveChildComponents() },
   { immediate: true, deep: true }
 )

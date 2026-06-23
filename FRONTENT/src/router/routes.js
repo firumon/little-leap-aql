@@ -8,15 +8,14 @@ const routes = [
       {
         path: '',
         name: 'home',
-        beforeEnter: (to, from, next) => {
+        beforeEnter: (to, from) => {
           const isProdNonStandalone = !process.env.DEV && !isStandalone()
           if (isProdNonStandalone) {
-            next({ name: 'landing' })
-            return
+            return { name: 'landing' }
           }
 
           const isAuthenticated = !!localStorage.getItem('token')
-          next({ name: isAuthenticated ? 'dashboard' : 'login' })
+          return { name: isAuthenticated ? 'dashboard' : 'login' }
         }
       },
       {

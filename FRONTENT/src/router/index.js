@@ -78,22 +78,22 @@ export default defineRouter(function (/* { store, ssrContext } */) {
     history: createHistory(process.env.VUE_ROUTER_BASE)
   })
 
-  Router.beforeEach((to, from, next) => {
+  Router.beforeEach((to, from) => {
     const isProdNonStandalone = !process.env.DEV && !isStandalone()
     if (isProdNonStandalone) {
       if (to.name !== 'landing') {
-        return next({ name: 'landing' })
+        return { name: 'landing' }
       }
-      return next()
+      return true
     }
 
     const activeUrl = localStorage.getItem('aql_tenant_url')
     if (!activeUrl && to.name !== 'select-tenant') {
-      return next({ name: 'select-tenant' })
+      return { name: 'select-tenant' }
     }
 
     if (activeUrl && to.name === 'select-tenant') {
-      return next('/')
+      return '/'
     }
 
     const token = localStorage.getItem('token')
@@ -109,12 +109,12 @@ export default defineRouter(function (/* { store, ssrContext } */) {
     // Public pages (always accessible)
     // Redirect to dashboard if logged in and trying to access public auth pages
     if (isAuthenticated && (to.name === 'login' || to.name === 'landing')) {
-      return next('/dashboard')
+      return '/dashboard'
     }
 
     // Redirect to login if auth is required and not logged in
     if (requiresAuth && !isAuthenticated) {
-      return next('/login')
+      return '/login'
     }
 
     // Find an authorized resource entry whose menus array contains a route matching the navigation target.
@@ -142,12 +142,12 @@ export default defineRouter(function (/* { store, ssrContext } */) {
       const allowed = targetEntry ? evaluateMenuAccessInline(targetEntry, resources, to.path) : false
 
       if (!allowed) {
-        return next('/dashboard')
+        return '/dashboard'
       }
     }
 
     // Default: allow navigation
-    next()
+    return true
   })
 
   return Router

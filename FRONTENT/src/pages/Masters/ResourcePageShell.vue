@@ -15,7 +15,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import ResourceBreadcrumb from 'components/Masters/_common/ResourceBreadcrumb.vue'
+import ResourceBreadcrumb from 'components/_common/ResourceBreadcrumb.vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { humanizeSlug } from 'src/utils/appHelpers'
 
@@ -61,15 +61,12 @@ const routeKey = computed(() => `${route.path}`)
   --master-font: 'Sora', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   --master-bg-1: #f8fafc;
   --master-bg-2: #eef2f7;
-  --master-ink: #0f172a;
+  --aql-ink: #0f172a;
   --master-soft-ink: #51607a;
-  --master-primary: #0f766e;
-  --master-primary-700: #0b5d56;
   --master-surface: #ffffff;
-  --master-border: #dbe3ed;
 
   font-family: var(--master-font);
-  color: var(--master-ink);
+  color: var(--aql-ink);
   background:
     radial-gradient(1000px 520px at 12% -10%, #dfe8f6 0%, transparent 58%),
     radial-gradient(900px 420px at 100% -5%, #d9ece7 0%, transparent 52%),

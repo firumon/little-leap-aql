@@ -206,7 +206,7 @@ const {
 
 .page-card {
   border-radius: 16px;
-  border-color: var(--master-border);
+  border-color: var(--aql-border);
   background: rgba(255, 255, 255, 0.95);
 }
 

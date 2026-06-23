@@ -387,7 +387,7 @@ const shouldBlockUi = computed(() => loading.value && hasUninitiatedDependencies
   height: 3.625rem;
   background: linear-gradient(145deg, #0f766e, #0b5d56);
   color: white;
-  box-shadow: 0 12px 24px rgba(15, 118, 110, 0.35);
+  box-shadow: 0 12px 24px rgba(15, 43, 74, 0.35);
 }
 
 @keyframes rise-in {

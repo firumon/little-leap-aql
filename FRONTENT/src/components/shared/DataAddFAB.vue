@@ -87,14 +87,14 @@ function navigateToAdd(event) {
 .fab-btn {
   width: 58px;
   height: 58px;
-  box-shadow: 0 12px 24px rgba(15, 118, 110, 0.35);
-  background: linear-gradient(145deg, var(--master-primary, #0f766e), var(--master-primary-700, #0f766e));
+  box-shadow: 0 12px 24px rgba(15, 43, 74, 0.35);
+  background: linear-gradient(145deg, var(--q-primary), var(--q-primary-dark));
   transition: transform 180ms ease, box-shadow 180ms ease;
 }
 
 .fab-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 16px 28px rgba(15, 118, 110, 0.45);
+  box-shadow: 0 16px 28px rgba(15, 43, 74, 0.45);
 }
 
 .fab-sticky {

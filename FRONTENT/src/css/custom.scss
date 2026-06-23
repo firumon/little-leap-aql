@@ -10,6 +10,10 @@
   --q-negative-light  : #{$negative-light};
   --q-info-light      : #{$info-light};
   --q-warning-light   : #{$warning-light};
+
+  --aql-border        : #{$primary-100}; /* subtle slate-blue derived from #0F2B4A ($primary-100: #D0DEF0) */
+  --q-primary-dark    : #{$primary-600}; /* brand primary dark shade matching #163C66 */
+  --aql-ink           : #0f172a;
 }
 
 // Fade slide animation & page fade

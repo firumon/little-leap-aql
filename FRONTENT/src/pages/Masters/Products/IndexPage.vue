@@ -98,9 +98,9 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import ResourceReports from 'components/Reports/ResourceReports.vue'
-import MasterListHeader from 'components/Masters/_common/MasterListHeader.vue'
-import MasterListToolbar from 'components/Masters/_common/MasterListToolbar.vue'
-import MasterListViewSwitcher from 'components/Masters/_common/MasterListViewSwitcher.vue'
+import MasterListHeader from 'components/_common/List/Header.vue'
+import MasterListToolbar from 'components/_common/List/Toolbar.vue'
+import MasterListViewSwitcher from 'components/_common/List/ViewSwitcher.vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useResourceData } from 'src/composables/resources/useResourceData'
 import { useListViews } from 'src/composables/useListViews'
@@ -195,7 +195,7 @@ watch(
 
 .records-card {
   border-radius: 16px;
-  border-color: var(--master-border);
+  border-color: var(--aql-border);
   background: rgba(255, 255, 255, 0.92);
 }
 
@@ -208,14 +208,14 @@ watch(
 
 .product-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 18px rgba(15, 118, 110, 0.14);
+  box-shadow: 0 8px 18px rgba(15, 43, 74, 0.14);
 }
 
 .fab-btn {
   width: 58px;
   height: 58px;
-  box-shadow: 0 12px 24px rgba(15, 118, 110, 0.35);
-  background: linear-gradient(145deg, var(--master-primary), var(--master-primary-700));
+  box-shadow: 0 12px 24px rgba(15, 43, 74, 0.35);
+  background: linear-gradient(145deg, var(--q-primary), var(--q-primary-dark));
 }
 
 .fab-sticky {

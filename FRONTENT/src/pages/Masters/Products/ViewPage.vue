@@ -80,8 +80,8 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import MasterViewActionBar from 'components/Masters/_common/MasterViewActionBar.vue'
-import MasterViewAudit from 'components/Masters/_common/MasterViewAudit.vue'
+import MasterViewActionBar from 'components/_common/Masters/View/ActionBar.vue'
+import MasterViewAudit from 'components/_common/View/Audit.vue'
 import { useProductVariants } from 'src/composables/masters/products/useProductVariants'
 import { useProductSkuViewData } from 'src/composables/masters/products/useProductSkuViewData'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
@@ -146,7 +146,7 @@ watch(
 
 .page-card {
   border-radius: 16px;
-  border-color: var(--master-border);
+  border-color: var(--aql-border);
   background: rgba(255, 255, 255, 0.95);
 }
 </style>

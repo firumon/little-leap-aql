@@ -118,14 +118,14 @@ const visibleRecords = computed(() => {
 <style scoped>
 .child-table-card {
   border-radius: 14px;
-  border-color: var(--master-border, #dbe3ed);
+  border-color: var(--aql-border);
   background: rgba(255, 255, 255, 0.95);
 }
 
 .child-title {
   font-size: 14px;
   font-weight: 700;
-  color: var(--master-ink, #0f172a);
+  color: var(--aql-ink, #0f172a);
 }
 
 .child-subtitle {

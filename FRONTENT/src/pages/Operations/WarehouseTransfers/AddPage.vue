@@ -301,7 +301,7 @@ onMounted(async () => {
 
 .wt-card {
   border-radius: 12px;
-  border-color: var(--operation-border, #e2e8f0);
+  border-color: var(--aql-border, #e2e8f0);
   background: rgba(255, 255, 255, 0.98);
 }
 </style>

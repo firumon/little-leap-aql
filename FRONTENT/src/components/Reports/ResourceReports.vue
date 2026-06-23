@@ -162,7 +162,7 @@ const shouldRender = computed(() => {
 <style scoped>
 .report-bar-card {
   border-radius: 16px;
-  border-color: var(--master-border, #e2e8f0);
+  border-color: var(--aql-border, #e2e8f0);
   background: rgba(255, 255, 255, 0.92);
   animation: rise-in 280ms ease-out both;
 }

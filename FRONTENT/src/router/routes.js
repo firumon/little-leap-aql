@@ -35,169 +35,198 @@ const routes = [
       }
     ]
   },
-
   {
     path: '/dashboard',
     component: () => import('layouts/MainLayout/MainLayout.vue'),
     meta: { requiresAuth: true },
     children: [
-      { path: '', name: 'dashboard', component: () => import('pages/Dashboard/DashboardIndex.vue') },
-      { path: '/profile', name: 'profile', component: () => import('pages/ProfilePage/ProfilePage.vue') },
+      { path: '', name: 'dashboard', component: () => import('pages/Dashboard/DashboardIndex.vue') }
+    ]
+  },
+  {
+    path: '/profile',
+    component: () => import('layouts/MainLayout/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      { path: '', name: 'profile', component: () => import('pages/ProfilePage/ProfilePage.vue') }
+    ]
+  },
+  {
+    path: '/masters',
+    component: () => import('layouts/MainLayout/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      { path: 'bulk-upload', component: () => import('pages/Masters/BulkUploadPage.vue'), meta: { scope: 'master' } }
+    ]
+  },
+  {
+    path: '/:scope(operations)/:resourceSlug',
+    component: () => import('layouts/MainLayout/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
       {
-        path: '/masters/bulk-upload',
-        component: () => import('pages/Masters/BulkUploadPage.vue'),
-        meta: { scope: 'master' }
-      },
-      {
-        path: '/:scope(operations)/:resourceSlug',
+        path: '',
         component: () => import('pages/Operations/ResourcePageShell.vue'),
         props: true,
         children: [
           {
             path: '',
             name: 'operations-list',
-            component: () => import('pages/Operations/ActionResolverPage.vue'),
+            component: () => import('pages/PageResolver.vue'),
             meta: { action: 'index', level: 'resource' }
           },
           {
             path: '_add',
             name: 'operations-add',
-            component: () => import('pages/Operations/ActionResolverPage.vue'),
+            component: () => import('pages/PageResolver.vue'),
             meta: { action: 'add', level: 'resource' }
           },
           {
             path: ':pageSlug',
             name: 'operations-resource-page',
-            component: () => import('pages/Operations/ActionResolverPage.vue'),
+            component: () => import('pages/PageResolver.vue'),
             meta: { action: 'resource-page', level: 'resource' }
           },
           {
             path: ':code/_view',
             name: 'operations-view',
-            component: () => import('pages/Operations/ActionResolverPage.vue'),
+            component: () => import('pages/PageResolver.vue'),
             meta: { action: 'view', level: 'record' }
           },
           {
             path: ':code/_edit',
             name: 'operations-edit',
-            component: () => import('pages/Operations/ActionResolverPage.vue'),
+            component: () => import('pages/PageResolver.vue'),
             meta: { action: 'edit', level: 'record' }
           },
           {
             path: ':code/_action/:action',
             name: 'operations-action',
-            component: () => import('pages/Operations/ActionResolverPage.vue'),
+            component: () => import('pages/PageResolver.vue'),
             meta: { action: 'action', level: 'record' }
           },
           {
             path: ':code/:pageSlug',
             name: 'operations-record-page',
-            component: () => import('pages/Operations/ActionResolverPage.vue'),
-            meta: { action: 'record-page', level: 'record' }
-          }
-        ]
-      },
-      {
-        path: '/:scope(masters)/:resourceSlug',
-        component: () => import('pages/Masters/ResourcePageShell.vue'),
-        props: true,
-        children: [
-          {
-            path: '',
-            name: 'resource-list',
-            component: () => import('pages/Masters/ActionResolverPage.vue'),
-            meta: { action: 'index', level: 'resource' }
-          },
-          {
-            path: '_add',
-            name: 'resource-add',
-            component: () => import('pages/Masters/ActionResolverPage.vue'),
-            meta: { action: 'add', level: 'resource' }
-          },
-          {
-            path: ':pageSlug',
-            name: 'resource-resource-page',
-            component: () => import('pages/Masters/ActionResolverPage.vue'),
-            meta: { action: 'resource-page', level: 'resource' }
-          },
-          {
-            path: ':code/_view',
-            name: 'resource-view',
-            component: () => import('pages/Masters/ActionResolverPage.vue'),
-            meta: { action: 'view', level: 'record' }
-          },
-          {
-            path: ':code/_edit',
-            name: 'resource-edit',
-            component: () => import('pages/Masters/ActionResolverPage.vue'),
-            meta: { action: 'edit', level: 'record' }
-          },
-          {
-            path: ':code/_action/:action',
-            name: 'resource-action',
-            component: () => import('pages/Masters/ActionResolverPage.vue'),
-            meta: { action: 'action', level: 'record' }
-          },
-          {
-            path: ':code/:pageSlug',
-            name: 'resource-record-page',
-            component: () => import('pages/Masters/ActionResolverPage.vue'),
-            meta: { action: 'record-page', level: 'record' }
-          }
-        ]
-      },
-      {
-        path: '/:scope(accounts)/:resourceSlug',
-        component: () => import('pages/Masters/ResourcePageShell.vue'),
-        props: true,
-        children: [
-          {
-            path: '',
-            name: 'accounts-list',
-            component: () => import('pages/Masters/ActionResolverPage.vue'),
-            meta: { action: 'index', level: 'resource' }
-          },
-          {
-            path: '_add',
-            name: 'accounts-add',
-            component: () => import('pages/Masters/ActionResolverPage.vue'),
-            meta: { action: 'add', level: 'resource' }
-          },
-          {
-            path: ':pageSlug',
-            name: 'accounts-resource-page',
-            component: () => import('pages/Masters/ActionResolverPage.vue'),
-            meta: { action: 'resource-page', level: 'resource' }
-          },
-          {
-            path: ':code/_view',
-            name: 'accounts-view',
-            component: () => import('pages/Masters/ActionResolverPage.vue'),
-            meta: { action: 'view', level: 'record' }
-          },
-          {
-            path: ':code/_edit',
-            name: 'accounts-edit',
-            component: () => import('pages/Masters/ActionResolverPage.vue'),
-            meta: { action: 'edit', level: 'record' }
-          },
-          {
-            path: ':code/_action/:action',
-            name: 'accounts-action',
-            component: () => import('pages/Masters/ActionResolverPage.vue'),
-            meta: { action: 'action', level: 'record' }
-          },
-          {
-            path: ':code/:pageSlug',
-            name: 'accounts-record-page',
-            component: () => import('pages/Masters/ActionResolverPage.vue'),
+            component: () => import('pages/PageResolver.vue'),
             meta: { action: 'record-page', level: 'record' }
           }
         ]
       }
     ]
   },
-
+  {
+    path: '/:scope(masters)/:resourceSlug',
+    component: () => import('layouts/MainLayout/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        component: () => import('pages/Masters/ResourcePageShell.vue'),
+        props: true,
+        children: [
+          {
+            path: '',
+            name: 'resource-list',
+            component: () => import('pages/PageResolver.vue'),
+            meta: { action: 'index', level: 'resource' }
+          },
+          {
+            path: '_add',
+            name: 'resource-add',
+            component: () => import('pages/PageResolver.vue'),
+            meta: { action: 'add', level: 'resource' }
+          },
+          {
+            path: ':pageSlug',
+            name: 'resource-resource-page',
+            component: () => import('pages/PageResolver.vue'),
+            meta: { action: 'resource-page', level: 'resource' }
+          },
+          {
+            path: ':code/_view',
+            name: 'resource-view',
+            component: () => import('pages/PageResolver.vue'),
+            meta: { action: 'view', level: 'record' }
+          },
+          {
+            path: ':code/_edit',
+            name: 'resource-edit',
+            component: () => import('pages/PageResolver.vue'),
+            meta: { action: 'edit', level: 'record' }
+          },
+          {
+            path: ':code/_action/:action',
+            name: 'resource-action',
+            component: () => import('pages/PageResolver.vue'),
+            meta: { action: 'action', level: 'record' }
+          },
+          {
+            path: ':code/:pageSlug',
+            name: 'resource-record-page',
+            component: () => import('pages/PageResolver.vue'),
+            meta: { action: 'record-page', level: 'record' }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    path: '/:scope(accounts)/:resourceSlug',
+    component: () => import('layouts/MainLayout/MainLayout.vue'),
+    meta: { requiresAuth: true },
+    children: [
+      {
+        path: '',
+        component: () => import('pages/Masters/ResourcePageShell.vue'),
+        props: true,
+        children: [
+          {
+            path: '',
+            name: 'accounts-list',
+            component: () => import('pages/PageResolver.vue'),
+            meta: { action: 'index', level: 'resource' }
+          },
+          {
+            path: '_add',
+            name: 'accounts-add',
+            component: () => import('pages/PageResolver.vue'),
+            meta: { action: 'add', level: 'resource' }
+          },
+          {
+            path: ':pageSlug',
+            name: 'accounts-resource-page',
+            component: () => import('pages/PageResolver.vue'),
+            meta: { action: 'resource-page', level: 'resource' }
+          },
+          {
+            path: ':code/_view',
+            name: 'accounts-view',
+            component: () => import('pages/PageResolver.vue'),
+            meta: { action: 'view', level: 'record' }
+          },
+          {
+            path: ':code/_edit',
+            name: 'accounts-edit',
+            component: () => import('pages/PageResolver.vue'),
+            meta: { action: 'edit', level: 'record' }
+          },
+          {
+            path: ':code/_action/:action',
+            name: 'accounts-action',
+            component: () => import('pages/PageResolver.vue'),
+            meta: { action: 'action', level: 'record' }
+          },
+          {
+            path: ':code/:pageSlug',
+            name: 'accounts-record-page',
+            component: () => import('pages/PageResolver.vue'),
+            meta: { action: 'record-page', level: 'record' }
+          }
+        ]
+      }
+    ]
+  },
   {
     path: '/:catchAll(.*)*',
     redirect: '/dashboard'

@@ -31,7 +31,7 @@
 ## 4. COMPOSABLES
 * **Role**: Contains all business logic, validation, workflow handling, and payload preparation.
 * **Rules**: Can use stores and other composables. Must NOT use services directly, perform API/IDB operations, or exceed ~400 lines.
-* **Navigation**: Must use `useResourceNav` for routing. Direct `router.push()` is forbidden. Respect `useSectionResolver` and `useActionResolver`.
+* **Navigation**: Must use `useResourceNav` for routing. Direct `router.push()` is forbidden. Respect `useSectionResolver` and `usePageResolver`.
 * **Dynamic Currency**: Always use the `useCurrency` `_C(value, showSymbol, target, source)` helper. Do not hardcode currency symbols (e.g. `₹`, `AED`).
 
 ---

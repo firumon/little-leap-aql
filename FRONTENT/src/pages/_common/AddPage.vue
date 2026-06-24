@@ -1,57 +1,75 @@
 <template>
-  <div class="add-page" v-if="sectionsReady">
-    <component :is="sections.Header" :config="config" />
-
+  <q-page class="q-gutter-y-sm" v-if="sectionsReady">
+    <!-- 1. Header Section -->
     <component
-      :is="sections.Form"
-      :resolved-fields="resolvedFields"
-      :parent-form="parentForm"
-      :status-options="statusOptions"
-      :resource-name="config?.name"
-      @update:field="(header, val) => { parentForm[header] = val }"
+      :is="sections.Header"
+      :config="config"
     />
 
+    <!-- 2. ToolBar Section (Usually empty for Add) -->
     <component
-      :is="sections.Children"
-      :child-groups="childGroups"
-      :status-options="statusOptions"
-      @add-child="addChildRecord"
-      @remove-child="removeChildRecord"
-      @update-child-field="updateChildField"
+      :is="sections.ToolBar"
+      v-if="sections.ToolBar"
+      :config="config"
     />
 
+    <!-- 3. Content Section (Contains the Form sub-section) -->
+    <AqlContentWrapper
+      :loading="false"
+      :empty="false"
+    >
+      <component
+        :is="sections.Content"
+        :config="config"
+        :resolved-fields="resolvedFields"
+        :parent-form="parentForm"
+        :child-groups="childGroups"
+        :status-options="statusOptions"
+        @update:field="(header, val) => { parentForm[header] = val }"
+        @add-child="addChildRecord"
+        @remove-child="removeChildRecord"
+        @update-child-field="updateChildField"
+      />
+    </AqlContentWrapper>
+
+    <!-- 4. Action Section (Submit/Cancel footer) -->
     <component
-      :is="sections.Actions"
+      :is="sections.Action"
+      v-if="sections.Action"
       submit-label="Create"
       :saving="saving"
       @cancel="navigateBack"
       @submit="handleSave"
     />
-  </div>
-  <div v-else class="q-py-xl text-center">
+  </q-page>
+  <div v-else class="flex flex-center q-py-xl">
     <q-spinner-dots color="primary" size="32px" />
   </div>
 </template>
 
 <script setup>
 import { onMounted } from 'vue'
+import AqlContentWrapper from 'components/shared/AqlContentWrapper.vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useCompositeForm } from 'src/composables/resources/useCompositeForm'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
-const nav = useResourceNav()
-const { scope, resourceSlug, config, resolvedFields, customUIName } = useResourceConfig()
+defineOptions({ name: 'AddPage' })
 
+const nav = useResourceNav()
+const { scope, resourceSlug, config, resolvedFields } = useResourceConfig()
+
+// Resolve the four top-level sections for the Add page
 const { sections, sectionsReady } = useSectionResolver({
   resourceSlug,
-  customUIName,
   scope,
+  page: 'Add',
   sectionDefs: {
-    Header: 'Header',
-    Form: 'Form',
-    Children: 'Children',
-    Actions: 'Actions'
+    Header: { section: 'Header', default: 'src/components/_common/Add/Header.vue' },
+    ToolBar: 'Toolbar',
+    Content: 'Content',
+    Action: 'Actions'
   }
 })
 

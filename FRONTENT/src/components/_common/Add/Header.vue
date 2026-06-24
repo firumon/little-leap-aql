@@ -1,8 +1,8 @@
 <template>
   <GenericHeaderPanel
-    :label="config?.name || 'Record'"
-    :caption="code || record?.Code || 'Details'"
-    :icon="config?.ui?.icon || 'article'"
+    :label="'Create New ' + (config?.name || '')"
+    :caption="'Fill out the form below to add a new record'"
+    :icon="config?.ui?.icon || 'add_box'"
     :reload="false"
     :back="true"
     @click="navigateBack"
@@ -13,14 +13,12 @@
 import GenericHeaderPanel from 'components/shared/GenericHeaderPanel.vue'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
-defineOptions({ name: 'CommonHeaderFallback' })
+defineOptions({ name: 'AddHeader' })
 
 const nav = useResourceNav()
 
 defineProps({
-  config: Object,
-  record: Object,
-  code: String
+  config: Object
 })
 
 function navigateBack() {

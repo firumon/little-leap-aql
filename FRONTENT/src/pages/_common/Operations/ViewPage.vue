@@ -1,148 +1,89 @@
 <template>
-  <div class="view-page">
-    <div v-if="!sectionsReady" class="q-py-xl text-center">
-      <q-spinner-dots color="primary" size="32px" />
-    </div>
-    <component v-else-if="loading" :is="sections.Loading" />
-    <component v-else-if="!record" :is="sections.Empty" @back="navigateToList" />
+  <q-page class="q-gutter-y-sm" v-if="sectionsReady">
+    <!-- 1. Header Section -->
+    <component
+      :is="sections.Header"
+      :config="config"
+      :record="record"
+      :code="code"
+      @reload="reload"
+    />
 
-    <!-- View Content -->
-    <template v-else>
+    <!-- 2. ToolBar Section (Context actions, ActionBar) -->
+    <component
+      :is="sections.ToolBar"
+      v-if="sections.ToolBar"
+      :config="config"
+      :record="record"
+    />
+
+    <!-- 3. Content Section (Details, Child grids, Parent links) -->
+    <AqlContentWrapper
+      :loading="loading"
+      :empty="false"
+      requires-record
+      :record-exists="!!record"
+    >
       <component
-        :is="sections.Header"
+        :is="sections.Content"
         :config="config"
         :record="record"
-        :code="code"
-        :resolved-fields="resolvedFields"
-        @edit="navigateToEdit"
       />
+    </AqlContentWrapper>
 
-      <component
-        :is="sections.ActionBar"
-        :additional-actions="visibleActions"
-        :permissions="permissions"
-        @edit="navigateToEdit"
-        @action-clicked="navigateToAction"
-      />
-
-      <component
-        :is="sections.Details"
-        :record="record"
-        :resolved-fields="resolvedFields"
-        :resource-name="config?.name"
-      />
-
-      <component
-        :is="sections.Parent"
-        :parent-resource="parentResource"
-        :parent-record="parentRecord"
-        :additional-actions="visibleActions"
-        :scope="scope"
-        :resource-slug="resourceSlug"
-        :custom-u-i-name="customUIName"
-        :entity-name="resourceName"
-      />
-
-      <component
-        :is="sections.Children"
-        v-if="childResources.length"
-        :child-resources="childResources"
-        :child-records-map="childRecordsByResource"
-        :parent-code="code"
-        :resource-slug="resourceSlug"
-        :custom-u-i-name="customUIName"
-        :entity-name="resourceName"
-        :additional-actions="visibleActions"
-        @view-child="navigateToChildView"
-      />
-    </template>
+    <!-- 4. Action Section -->
+    <component
+      :is="sections.Action"
+      v-if="sections.Action"
+      :config="config"
+      :record="record"
+    />
+  </q-page>
+  <div v-else class="flex flex-center q-py-xl">
+    <q-spinner-dots color="primary" size="32px" />
   </div>
 </template>
 
 <script setup>
-import { computed, watch } from 'vue'
+import { watch } from 'vue'
+import AqlContentWrapper from 'components/shared/AqlContentWrapper.vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
-import { useResourceConfig, isActionVisible } from 'src/composables/resources/useResourceConfig'
+import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useRecord } from 'src/composables/resources/useRecord'
-import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
-const nav = useResourceNav()
-const { scope, resourceSlug, code, config, resourceName, resolvedFields, additionalActions, permissions, customUIName } = useResourceConfig()
-const {
-  records: items, record, loading, reload,
-  parentResource, childResources, childRecordsByResource,
-  loadRelations
-} = useRecord()
+defineOptions({ name: 'OperationsViewPage' })
 
-const parentRecord = computed(() => {
-  const pKeys = record.value?._Parents || []
-  if (pKeys.length) return record.value?.[pKeys[0]] || null
-  return null
-})
+const { scope, resourceSlug, code, config, resourceName } = useResourceConfig()
+const { record, loading, reload, loadRelations } = useRecord()
 
+// Resolve the four top-level sections for the View page
 const { sections, sectionsReady } = useSectionResolver({
   resourceSlug,
-  customUIName,
   scope,
+  page: 'View',
   sectionDefs: {
-    Header: 'Header',
-    ActionBar: 'ActionBar',
-    Details: 'Details',
-    Parent: 'Parent',
-    Children: 'Children',
-    Loading: 'Loading',
-    Empty: 'Empty'
+    Header: { section: 'Header', default: 'src/components/_common/View/Header.vue' },
+    ToolBar: 'Toolbar',
+    Content: 'Content',
+    Action: 'Actions'
   }
 })
 
-const visibleActions = computed(() =>
-  additionalActions.value.filter((a) => isActionVisible(a, record.value))
-)
+async function loadDataAndRelations() {
+  await reload()
+  if (record.value) {
+    await loadRelations()
+  }
+}
 
+// Reactively fetch record and relations when resource/code change
 watch(
   () => [resourceName.value, code.value],
-  async ([nName, nCode]) => {
-    if (nName && nCode) {
-      await reload()
-      await loadRelations()
+  async ([newName, newCode]) => {
+    if (newName && newCode) {
+      await loadDataAndRelations()
     }
   },
   { immediate: true }
 )
-
-function navigateToList() {
-  nav.goTo('list')
-}
-
-function navigateToEdit() {
-  nav.goTo('edit')
-}
-
-function navigateToAction(action) {
-  if (action?.kind === 'navigate') {
-    const n = action.navigate || {}
-    const params = { pageSlug: n.pageSlug }
-    if (n.resourceSlug) params.resourceSlug = n.resourceSlug
-    if (n.scope) params.scope = n.scope
-    nav.goTo(n.target || 'record-page', params)
-    return
-  }
-  nav.goTo('action', { action: action.action })
-}
-
-function navigateToChildView(childResource, childRecordCode) {
-  nav.goTo('view', {
-    scope: childResource.scope || 'operations',
-    resourceSlug: childResource.slug,
-    code: childRecordCode
-  })
-}
 </script>
-
-<style scoped>
-.view-page {
-  display: grid;
-  gap: 12px;
-  padding-bottom: 32px;
-}
-</style>

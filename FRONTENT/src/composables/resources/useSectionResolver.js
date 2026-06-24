@@ -109,7 +109,7 @@ export function useSectionResolver({ resourceSlug, customUIName, scope, page, ac
   const derivedPage = computed(() => {
     if (page) return page
     const act = route.meta?.action || route.params.action || 'list'
-    if (act === 'index') return 'List'
+    if (act === 'index') return 'Index'
     if (act === 'add') return 'Add'
     if (act === 'edit') return 'Edit'
     if (act === 'view') return 'View'

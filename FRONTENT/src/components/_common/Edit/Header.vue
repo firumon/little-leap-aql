@@ -1,8 +1,8 @@
 <template>
   <GenericHeaderPanel
-    :label="config?.name || 'Record'"
-    :caption="code || record?.Code || 'Details'"
-    :icon="config?.ui?.icon || 'article'"
+    :label="'Edit ' + (config?.name || '')"
+    :caption="'Modifying record: ' + (code || '')"
+    :icon="config?.ui?.icon || 'edit_note'"
     :reload="false"
     :back="true"
     @click="navigateBack"
@@ -13,17 +13,16 @@
 import GenericHeaderPanel from 'components/shared/GenericHeaderPanel.vue'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
-defineOptions({ name: 'CommonHeaderFallback' })
+defineOptions({ name: 'EditHeader' })
 
 const nav = useResourceNav()
 
 defineProps({
   config: Object,
-  record: Object,
   code: String
 })
 
 function navigateBack() {
-  nav.goTo('list')
+  nav.goTo('view')
 }
 </script>

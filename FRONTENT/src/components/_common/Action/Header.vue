@@ -1,8 +1,8 @@
 <template>
   <GenericHeaderPanel
-    :label="config?.name || 'Record'"
-    :caption="code || record?.Code || 'Details'"
-    :icon="config?.ui?.icon || 'article'"
+    :label="actionConfig?.label || actionName"
+    :caption="'Run workflow action on: ' + (record?.Code || '')"
+    :icon="actionConfig?.icon || 'check'"
     :reload="false"
     :back="true"
     @click="navigateBack"
@@ -13,17 +13,17 @@
 import GenericHeaderPanel from 'components/shared/GenericHeaderPanel.vue'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
-defineOptions({ name: 'CommonHeaderFallback' })
+defineOptions({ name: 'ActionHeader' })
 
 const nav = useResourceNav()
 
 defineProps({
-  config: Object,
-  record: Object,
-  code: String
+  actionConfig: Object,
+  actionName: String,
+  record: Object
 })
 
 function navigateBack() {
-  nav.goTo('list')
+  nav.goTo('view')
 }
 </script>

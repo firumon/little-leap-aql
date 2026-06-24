@@ -1,52 +1,46 @@
 <template>
-  <div class="action-page">
-    <!-- Wait for section resolution -->
-    <component v-if="!sectionsReady" :is="fallbackLoading" />
-
-    <!-- Loading record -->
-    <component v-else-if="loading" :is="sections.Loading" />
-
-    <!-- Record not found -->
+  <q-page class="q-gutter-y-sm" v-if="sectionsReady">
+    <!-- 1. Header Section -->
     <component
-      v-else-if="!record"
-      :is="sections.Empty"
-      icon="search_off"
-      message="Record not found"
-      back-label="Back to List"
-      @back="navigateToList"
+      :is="sections.Header"
+      :action-config="currentActionConfig"
+      :action-name="actionName"
+      :record="record"
     />
 
-    <!-- Action not configured -->
+    <!-- 2. ToolBar Section (Usually empty for Actions) -->
     <component
-      v-else-if="!currentActionConfig"
-      :is="sections.Empty"
-      icon="block"
-      :message="`Action &quot;${actionName}&quot; is not configured`"
-      back-label="Back"
-      @back="navigateToView"
+      :is="sections.ToolBar"
+      v-if="sections.ToolBar"
+      :config="config"
     />
 
-    <!-- Action not available for this record (visibleWhen failed) -->
-    <component
-      v-else-if="!actionAllowedForRecord"
-      :is="sections.Empty"
-      icon="block"
-      :message="`Action &quot;${currentActionConfig.label || actionName}&quot; is not available for this record in its current state`"
-      back-label="Back"
-      @back="navigateToView"
-    />
+    <!-- 3. Content Section (Action Outcome & Form fields) -->
+    <AqlContentWrapper
+      :loading="loading"
+      :empty="false"
+      requires-record
+      :record-exists="!!record"
+      empty-icon="block"
+      empty-title="Action Unavailable"
+      :empty-message="`Action &quot;${actionName}&quot; is not available or not configured for this record.`"
+    >
+      <!-- Action not configured or action not allowed in current state -->
+      <q-card v-if="!currentActionConfig || !actionAllowedForRecord" flat bordered class="q-ma-md text-center q-py-xl">
+        <q-card-section>
+          <q-icon name="block" size="56px" color="grey-5" />
+          <div class="text-h6 text-grey-7 q-mt-md">Action not available</div>
+          <div class="text-caption text-grey-5 q-mt-sm">
+            This action is either not configured or cannot be executed on the record in its current state.
+          </div>
+          <q-btn flat color="primary" label="Back" icon="arrow_back" class="q-mt-md" @click="navigateToView" />
+        </q-card-section>
+      </q-card>
 
-    <!-- Action form -->
-    <template v-else>
+      <!-- Main action input form -->
       <component
-        :is="sections.Header"
-        :action-config="currentActionConfig"
-        :action-name="actionName"
-        :record="record"
-      />
-
-      <component
-        :is="sections.Form"
+        v-else
+        :is="sections.Content"
         :is-multi-outcome="isMockMultiOutcome"
         :outcome-options="outcomeOptions"
         :selected-outcome="selectedOutcome"
@@ -55,25 +49,30 @@
         @update:selected-outcome="selectedOutcome = $event"
         @update:action-field="(header, val) => { actionForm[header] = val }"
       />
+    </AqlContentWrapper>
 
-      <component
-        :is="sections.Actions"
-        :action-label="currentActionConfig.label || actionName"
-        :action-icon="currentActionConfig.icon || 'check'"
-        :action-color="currentActionConfig.color || 'primary'"
-        :submitting="submitting"
-        :submit-disabled="isMockMultiOutcome && !selectedOutcome"
-        @cancel="navigateToView"
-        @submit="handleSubmit"
-      />
-    </template>
+    <!-- 4. Action Section (Submit/Cancel footer) -->
+    <component
+      v-if="currentActionConfig && actionAllowedForRecord"
+      :is="sections.Action"
+      :action-label="currentActionConfig.label || actionName"
+      :action-icon="currentActionConfig.icon || 'check'"
+      :action-color="currentActionConfig.color || 'primary'"
+      :submitting="submitting"
+      :submit-disabled="isMockMultiOutcome && !selectedOutcome"
+      @cancel="navigateToView"
+      @submit="handleSubmit"
+    />
+  </q-page>
+  <div v-else class="flex flex-center q-py-xl">
+    <q-spinner-dots color="primary" size="32px" />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, reactive, h } from 'vue'
+import { ref, computed, watch, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { useQuasar } from 'quasar'
+import AqlContentWrapper from 'components/shared/AqlContentWrapper.vue'
 import { useMasterActions } from 'src/composables/useMasterActions'
 import { useOperationActions } from 'src/composables/useOperationActions'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
@@ -82,13 +81,14 @@ import { useRecord } from 'src/composables/resources/useRecord'
 import { useActionFields } from 'src/composables/resources/useActionFields'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
+defineOptions({ name: 'ActionPage' })
+
 const router = useRouter()
 const nav = useResourceNav()
-const $q = useQuasar()
 
 const {
   scope, resourceSlug, code, config, resourceName,
-  resourceHeaders, additionalActions, customUIName
+  resourceHeaders, additionalActions
 } = useResourceConfig()
 
 const isOps = computed(() => scope.value?.toLowerCase() === 'operations')
@@ -98,32 +98,26 @@ const operationActions = useOperationActions()
 const actionsStore = computed(() => isOps.value ? operationActions : masterActions)
 const submitting = computed(() => actionsStore.value.submitting.value)
 
-const { records: items, record, loading, reload } = useRecord()
+const { record, loading, reload } = useRecord()
 
 const actionName = computed(() => {
   const route = router.currentRoute.value
   return route.params.action || route.meta?.action || ''
 })
 
+// Resolve the four top-level sections for the Action page
 const { sections, sectionsReady } = useSectionResolver({
   resourceSlug,
-  customUIName,
   scope,
+  page: 'Action',
   actionKey: actionName,
   sectionDefs: {
-    Header: 'Header',
-    Form: 'Form',
-    Actions: 'Actions',
-    Loading: 'Loading',
-    Empty: 'Empty'
+    Header: { section: 'Header', default: 'src/components/_common/Action/Header.vue' },
+    ToolBar: 'Toolbar',
+    Content: 'Content',
+    Action: 'Actions'
   }
 })
-
-const fallbackLoading = {
-  setup() {
-    return () => h(sections.Loading || 'div', { class: 'q-py-xl text-center' })
-  }
-}
 
 const currentActionConfig = computed(() => {
   return additionalActions.value.find(
@@ -136,8 +130,6 @@ const actionForm = reactive({})
 const {
   column, isMultiOutcome: isMockMultiOutcome, outcomeOptions, resolvedFields: resolvedActionFields
 } = useActionFields(resourceHeaders, currentActionConfig, () => selectedOutcome.value)
-
-// record resolved from useRecord
 
 const actionAllowedForRecord = computed(() =>
   !currentActionConfig.value || isActionVisible(currentActionConfig.value, record.value)
@@ -172,17 +164,5 @@ function navigateToView() {
   nav.goTo('view')
 }
 
-function navigateToList() {
-  nav.goTo('list')
-}
-
 watch(() => resourceName.value, (n) => { if (n) reload() }, { immediate: true })
 </script>
-
-<style scoped>
-.action-page {
-  display: grid;
-  gap: 12px;
-  padding-bottom: 32px;
-}
-</style>

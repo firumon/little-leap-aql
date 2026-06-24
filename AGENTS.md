@@ -17,7 +17,7 @@ Classify the user's request into one of these three categories:
 |----------|------|--------|
 | **Single-category match** | The query maps cleanly to exactly ONE routing category below | Load ONLY that one init prompt. Do NOT load related prompts speculatively — the prompt itself tells you what codebase files to read. |
 | **Multi-category match** | The query explicitly spans multiple distinct domains (e.g., "add a database column AND update the frontend form AND add a menu entry") | Load ONLY the prompts that match the explicit scope. Do NOT load transitive dependencies (e.g., don't load schema + frontend + backend if only schema + frontend are needed). |
-| **Unclear** | The query doesn't fit any category or you're unsure | Load [general_query.md] and use DOC_ROUTING.md to identify the correct canonical docs. |
+| **Unclear / Concept Search** | The query doesn't fit any category, is a general investigation, or you need to locate a specific codebase feature/layout/file | Load [general_query.md] and FIRST read [CODEBASE_INDEX.md](file:///f:/LITTLE%20LEAP/AQL/References/CODEBASE_INDEX.md) to locate the relevant files/docs before reading other codebase files. |
 
 When in doubt, prefer single-prompt loading. Each init prompt has a **Scope Boundary** header that defines its domain — respect it.
 

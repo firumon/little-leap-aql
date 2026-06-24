@@ -74,17 +74,11 @@ Use ONLY when explicitly asked to perform a comprehensive code review against ar
   - `Documents/REVIEW AGAINST ARCHITECTURE RULE - INSTRUCTIONS.md`
   - `Documents/AI_COLLABORATION_PROTOCOL.md`
 
-### Operations Resource Customization
-Use when overriding or creating custom section or sub-components for an operations resource
-(e.g. custom record card, custom parent display, custom child layout, custom loading/empty states).
+### Frontend Resource Customization
+Use when overriding or creating custom section or sub-components for any resource scope (Masters, Operations, or Accounts)
+(e.g., custom record card, custom details view, custom form, custom child layout, custom loading/empty states).
 - Read:
-  - `Documents/OPERATION_CUSTOMIZATION.md`
-
-### Masters Resource Customization
-Use when overriding or creating custom section or sub-components for a masters resource
-(e.g. custom record card, custom child layout, custom loading/empty states).
-- Read:
-  - `Documents/MASTER_CUSTOMIZATION.md`
+  - `Documents/CUSTOM_PAGE_AND_PAGE_SECTIONS_CUSTOMIZATIONS.md`
 
 ### Backend Design
 Use when designing new backend behavior, evaluating options, or checking whether existing GAS capabilities already support the request.

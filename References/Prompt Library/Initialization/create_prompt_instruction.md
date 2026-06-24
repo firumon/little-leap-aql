@@ -14,7 +14,7 @@ Before writing any instruction or checklist, you must perform a comprehensive in
 1. Read `Documents/README.md` and `Documents/DOC_ROUTING.md` to identify related documentation.
 2. Read the full text of all documents that mention the target task or feature area.
 3. If the task touches:
-   - **Masters or Operations UI**: Read `Documents/MASTER_CUSTOMIZATION.md` or `Documents/OPERATION_CUSTOMIZATION.md`.
+   - **Masters or Operations UI**: Read `Documents/CUSTOM_PAGE_AND_PAGE_SECTIONS_CUSTOMIZATIONS.md`.
    - **Workflows**: Read the relevant workflow section in `Documents/MODULE_WORKFLOWS.md`.
    - **Sheet Schemas**: Read the relevant structure file (e.g., `Documents/OPERATION_SHEET_STRUCTURE.md`) and `Documents/RESOURCE_COLUMNS_GUIDE.md`.
    - **Tax/Currency**: Read `Documents/TAX_SYSTEM_DESIGN.md` and check `FRONTENT/src/composables/useCurrency.js`.

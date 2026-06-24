@@ -62,6 +62,7 @@
 <script setup>
 import { computed, watch } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
+import { useResourceConfig, isActionVisible } from 'src/composables/resources/useResourceConfig'
 import { useRecord } from 'src/composables/resources/useRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 

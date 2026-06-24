@@ -46,12 +46,12 @@ export function useWarehouseStockList(warehouseCodeRef = null) {
   )
 
   const activeWarehouses = computed(() =>
-    warehouses.items.value.filter((warehouse) => text(warehouse.Status || 'Active') === 'Active')
+    warehouses.items.value.filter((warehouse) => warehouse && text(warehouse.Status || 'Active') === 'Active')
   )
 
   const currentWarehouse = computed(() =>
-    activeWarehouses.value.find((warehouse) => warehouse.Code === selectedWarehouseCode.value) ||
-    warehouses.items.value.find((warehouse) => warehouse.Code === selectedWarehouseCode.value) ||
+    activeWarehouses.value.find((warehouse) => warehouse && warehouse.Code === selectedWarehouseCode.value) ||
+    warehouses.items.value.find((warehouse) => warehouse && warehouse.Code === selectedWarehouseCode.value) ||
     null
   )
 
@@ -60,7 +60,7 @@ export function useWarehouseStockList(warehouseCodeRef = null) {
     if (!warehouseCode) return []
 
     return storages.items.value
-      .filter((row) => text(row.WarehouseCode) === warehouseCode)
+      .filter((row) => row && text(row.WarehouseCode) === warehouseCode)
       .map((row) => {
         const info = skuInfo(row.SKU) || {}
         const variants = info.variantValues?.filter(Boolean).join(' / ') || ''
@@ -93,6 +93,7 @@ export function useWarehouseStockList(warehouseCodeRef = null) {
   const warehouseCards = computed(() => {
     const stockByWarehouse = new Map()
     storages.items.value.forEach((row) => {
+      if (!row) return
       const warehouseCode = text(row.WarehouseCode)
       if (!warehouseCode) return
       if (!stockByWarehouse.has(warehouseCode)) {
@@ -108,19 +109,21 @@ export function useWarehouseStockList(warehouseCodeRef = null) {
       summary.quantity += number(row.Quantity)
     })
 
-    return activeWarehouses.value.map((warehouse) => {
-      const summary = stockByWarehouse.get(warehouse.Code) || {
-        skuSet: new Set(),
-        storageSet: new Set(),
-        quantity: 0
-      }
-      return {
-        ...warehouse,
-        stockSkuCount: summary.skuSet.size,
-        stockStorageCount: summary.storageSet.size,
-        stockQuantity: summary.quantity
-      }
-    })
+    return activeWarehouses.value
+      .filter(Boolean)
+      .map((warehouse) => {
+        const summary = stockByWarehouse.get(warehouse.Code) || {
+          skuSet: new Set(),
+          storageSet: new Set(),
+          quantity: 0
+        }
+        return {
+          ...warehouse,
+          stockSkuCount: summary.skuSet.size,
+          stockStorageCount: summary.storageSet.size,
+          stockQuantity: summary.quantity
+        }
+      })
   })
 
   const stockSummary = computed(() => ({

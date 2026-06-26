@@ -40,7 +40,7 @@
 </template>
 
 <script setup>
-import { computed, watch } from 'vue'
+import { computed, watch, provide } from 'vue'
 import AqlContentWrapper from 'components/shared/AqlContentWrapper.vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
@@ -48,8 +48,14 @@ import { useRecord } from 'src/composables/resources/useRecord'
 
 defineOptions({ name: 'IndexPage' })
 
-const { scope, resourceSlug, config, resourceName } = useResourceConfig()
-const { records: items, loading, reload } = useRecord()
+const resourceConfig = useResourceConfig()
+const resourceRecord = useRecord()
+
+provide('resourceConfig', resourceConfig)
+provide('resourceRecord', resourceRecord)
+
+const { scope, resourceSlug, config, resourceName } = resourceConfig
+const { records: items, loading, reload } = resourceRecord
 
 const isEmpty = computed(() => !loading.value && items.value.length === 0)
 

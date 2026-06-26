@@ -14,10 +14,8 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, inject } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
-import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
-import { useRecord } from 'src/composables/resources/useRecord'
 import { useListViews } from 'src/composables/useListViews'
 
 defineOptions({ name: 'IndexContent' })
@@ -26,8 +24,8 @@ const props = defineProps({
   config: Object
 })
 
-const { resourceSlug, scope, resourceHeaders, resolvedFields, customUIName } = useResourceConfig()
-const { records: items, searchTerm } = useRecord()
+const { resourceSlug, scope, resourceHeaders, resolvedFields, customUIName } = inject('resourceConfig')
+const { records: items, searchTerm } = inject('resourceRecord')
 
 // Resolve Content sub-sections recursively
 const { sections, sectionsReady } = useSectionResolver({

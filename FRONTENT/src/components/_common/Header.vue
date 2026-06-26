@@ -26,9 +26,8 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, inject } from 'vue'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { registry } from 'src/composables/resources/useSectionResolver'
 import GenericHeaderPanel from 'components/shared/GenericHeaderPanel.vue'
 import { toPascalCase } from 'src/utils/appHelpers'
@@ -46,7 +45,7 @@ const props = defineProps({
 const emit = defineEmits(['reload'])
 
 const nav = useResourceNav()
-const { config: resolvedConfig, action, scope, resourceSlug } = useResourceConfig()
+const { config: resolvedConfig, action, scope, resourceSlug } = inject('resourceConfig')
 
 const activeConfig = computed(() => props.config || resolvedConfig.value)
 const currentAction = computed(() => {

@@ -48,17 +48,24 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, provide } from 'vue'
 import AqlContentWrapper from 'components/shared/AqlContentWrapper.vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { useCompositeForm } from 'src/composables/resources/useCompositeForm'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
 defineOptions({ name: 'AddPage' })
 
 const nav = useResourceNav()
-const { scope, resourceSlug, config, resolvedFields } = useResourceConfig()
+const resourceConfig = useResourceConfig()
+const resourceRecord = useRecord()
+
+provide('resourceConfig', resourceConfig)
+provide('resourceRecord', resourceRecord)
+
+const { scope, resourceSlug, config, resolvedFields } = resourceConfig
 
 // Resolve the four top-level sections for the Add page
 const { sections, sectionsReady } = useSectionResolver({

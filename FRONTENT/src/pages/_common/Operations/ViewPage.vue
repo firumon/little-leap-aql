@@ -45,7 +45,7 @@
 </template>
 
 <script setup>
-import { watch } from 'vue'
+import { watch, provide } from 'vue'
 import AqlContentWrapper from 'components/shared/AqlContentWrapper.vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
@@ -53,8 +53,14 @@ import { useRecord } from 'src/composables/resources/useRecord'
 
 defineOptions({ name: 'OperationsViewPage' })
 
-const { scope, resourceSlug, code, config, resourceName } = useResourceConfig()
-const { record, loading, reload, loadRelations } = useRecord()
+const resourceConfig = useResourceConfig()
+const resourceRecord = useRecord()
+
+provide('resourceConfig', resourceConfig)
+provide('resourceRecord', resourceRecord)
+
+const { scope, resourceSlug, code, config, resourceName } = resourceConfig
+const { record, loading, reload, loadRelations } = resourceRecord
 
 // Resolve the four top-level sections for the View page
 const { sections, sectionsReady } = useSectionResolver({

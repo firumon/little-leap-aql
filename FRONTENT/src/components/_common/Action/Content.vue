@@ -17,8 +17,8 @@
 </template>
 
 <script setup>
+import { inject } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
-import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 
 defineOptions({ name: 'ActionContent' })
 
@@ -35,7 +35,7 @@ defineEmits([
   'update:action-field'
 ])
 
-const { resourceSlug, scope } = useResourceConfig()
+const { resourceSlug, scope } = inject('resourceConfig')
 
 // Resolve Content ActionFields sub-section recursively
 const { sections, sectionsReady } = useSectionResolver({

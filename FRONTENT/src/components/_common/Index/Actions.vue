@@ -15,12 +15,12 @@
 </template>
 
 <script setup>
+import { inject } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
-import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 
 defineOptions({ name: 'IndexActions' })
 
-const { resourceSlug, scope, permissions } = useResourceConfig()
+const { resourceSlug, scope, permissions } = inject('resourceConfig')
 
 // Resolve Index page action sub-sections recursively
 const { sections, sectionsReady } = useSectionResolver({

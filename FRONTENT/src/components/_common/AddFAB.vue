@@ -17,14 +17,14 @@
 </template>
 
 <script setup>
+import { inject } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
-import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
 defineOptions({ name: 'AddFAB' })
 
 const nav = useResourceNav()
-const { resourceSlug, scope } = useResourceConfig()
+const { resourceSlug, scope } = inject('resourceConfig')
 
 // Resolve AddFAB sub-sections recursively
 const { sections, sectionsReady } = useSectionResolver({

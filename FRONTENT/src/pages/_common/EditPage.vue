@@ -52,7 +52,7 @@
 </template>
 
 <script setup>
-import { watch } from 'vue'
+import { watch, provide } from 'vue'
 import AqlContentWrapper from 'components/shared/AqlContentWrapper.vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
@@ -63,8 +63,14 @@ import { useResourceNav } from 'src/composables/resources/useResourceNav'
 defineOptions({ name: 'EditPage' })
 
 const nav = useResourceNav()
-const { scope, resourceSlug, code, config, resourceName, resolvedFields } = useResourceConfig()
-const { record, childRecordsByResource, loading, reload, loadRelations } = useRecord()
+const resourceConfig = useResourceConfig()
+const resourceRecord = useRecord()
+
+provide('resourceConfig', resourceConfig)
+provide('resourceRecord', resourceRecord)
+
+const { scope, resourceSlug, code, config, resourceName, resolvedFields } = resourceConfig
+const { record, childRecordsByResource, loading, reload, loadRelations } = resourceRecord
 
 // Resolve the four top-level sections for the Edit page
 const { sections, sectionsReady } = useSectionResolver({

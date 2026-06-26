@@ -70,7 +70,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, reactive } from 'vue'
+import { ref, computed, watch, reactive, provide } from 'vue'
 import { useRouter } from 'vue-router'
 import AqlContentWrapper from 'components/shared/AqlContentWrapper.vue'
 import { useMasterActions } from 'src/composables/useMasterActions'
@@ -86,10 +86,16 @@ defineOptions({ name: 'ActionPage' })
 const router = useRouter()
 const nav = useResourceNav()
 
+const resourceConfig = useResourceConfig()
+const resourceRecord = useRecord()
+
+provide('resourceConfig', resourceConfig)
+provide('resourceRecord', resourceRecord)
+
 const {
   scope, resourceSlug, code, config, resourceName,
   resourceHeaders, additionalActions
-} = useResourceConfig()
+} = resourceConfig
 
 const isOps = computed(() => scope.value?.toLowerCase() === 'operations')
 const masterActions = useMasterActions()
@@ -98,7 +104,7 @@ const operationActions = useOperationActions()
 const actionsStore = computed(() => isOps.value ? operationActions : masterActions)
 const submitting = computed(() => actionsStore.value.submitting.value)
 
-const { record, loading, reload } = useRecord()
+const { record, loading, reload } = resourceRecord
 
 const actionName = computed(() => {
   const route = router.currentRoute.value

@@ -22,10 +22,8 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, inject } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
-import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
-import { useRecord } from 'src/composables/resources/useRecord'
 import { useListViews } from 'src/composables/useListViews'
 
 defineOptions({ name: 'IndexToolbar' })
@@ -34,8 +32,8 @@ const props = defineProps({
   config: Object
 })
 
-const { resourceSlug, scope, resourceHeaders } = useResourceConfig()
-const { records: items, searchTerm } = useRecord()
+const { resourceSlug, scope, resourceHeaders } = inject('resourceConfig')
+const { records: items, searchTerm } = inject('resourceRecord')
 
 // Resolve Toolbar sub-sections recursively
 const { sections, sectionsReady } = useSectionResolver({

@@ -33,9 +33,8 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, inject } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
-import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 
 const props = defineProps({
   items: { type: Array, default: () => [] },
@@ -48,7 +47,7 @@ const props = defineProps({
 
 defineEmits(['navigate-to-view'])
 
-const { scope } = useResourceConfig()
+const { scope } = inject('resourceConfig')
 
 const { sections, sectionsReady } = useSectionResolver({
   scope,

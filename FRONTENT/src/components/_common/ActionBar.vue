@@ -27,9 +27,8 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, inject } from 'vue'
 import ResourceReports from 'components/Reports/ResourceReports.vue'
-import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 
 const props = defineProps({
   permissions: { type: Object, default: null },
@@ -38,7 +37,7 @@ const props = defineProps({
 
 defineEmits(['edit', 'action-clicked'])
 
-const { config } = useResourceConfig()
+const { config } = inject('resourceConfig')
 
 const visibleActions = computed(() => {
   return props.additionalActions.filter((action) => {

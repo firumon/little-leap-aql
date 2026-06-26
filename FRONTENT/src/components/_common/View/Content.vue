@@ -41,9 +41,8 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, inject } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
-import { useRecord } from 'src/composables/resources/useRecord'
 
 defineOptions({ name: 'ViewContent' })
 
@@ -54,7 +53,7 @@ const props = defineProps({
 
 const {
   parentResource, childResources, childRecordsByResource
-} = useRecord()
+} = inject('resourceRecord')
 
 const isMasters = computed(() => props.config?.scope?.toLowerCase() === 'masters')
 const isOperations = computed(() => props.config?.scope?.toLowerCase() === 'operations')

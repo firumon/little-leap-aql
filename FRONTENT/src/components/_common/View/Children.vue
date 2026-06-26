@@ -16,10 +16,9 @@
 </template>
 
 <script setup>
-import { ref, watch, markRaw, computed } from 'vue'
+import { ref, watch, markRaw, computed, inject } from 'vue'
 import { toPascalCase } from 'src/utils/appHelpers'
 import { registry } from 'src/composables/resources/useSectionResolver'
-import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import DefaultChild from 'components/_common/Child.vue'
 
 const props = defineProps({
@@ -37,7 +36,7 @@ defineEmits(['view-child'])
 const childResolvers = ref([])
 const resolversReady = ref(false)
 
-const { scope } = useResourceConfig()
+const { scope } = inject('resourceConfig')
 
 async function resolveChildComponents() {
   resolversReady.value = false

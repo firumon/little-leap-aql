@@ -26,10 +26,9 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, inject } from 'vue'
 import AqlFilePreviewCard from 'components/shared/AqlFilePreviewCard.vue'
 import { deriveActionStampHeaders, filterDetailFields } from 'src/utils/appHelpers'
-import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 
 const props = defineProps({
   record: { type: Object, default: null },
@@ -37,7 +36,7 @@ const props = defineProps({
   resourceName: { type: String, required: true }
 })
 
-const { additionalActions } = useResourceConfig()
+const { additionalActions } = inject('resourceConfig')
 
 const actionStampHeaders = computed(() => {
   return deriveActionStampHeaders(additionalActions.value || [])

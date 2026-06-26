@@ -15,7 +15,7 @@ Object.keys(sectionModules).forEach((rawPath) => {
 /**
  * Resolves a single section component using 12-tier discovery.
  */
-async function resolveSection(entityName, sectionFilename, defaultComponent, customUIName, scope, page, actionKey) {
+async function resolveSection(entityName, sectionFilename, defaultComponent, customUIName, scope, page, actionKey, allowScriptOnly) {
   const scopeFolder = toPascalCase(scope)
   const actionPascal = actionKey ? toPascalCase(actionKey) : ''
   const candidates = []
@@ -64,7 +64,25 @@ async function resolveSection(entityName, sectionFilename, defaultComponent, cus
     if (registry[path]) {
       try {
         const module = await registry[path]()
-        return module.default || module
+        const comp = module.default || module
+
+        // By default, skip components that have no template (script-only) to prevent empty renders in UI layouts
+        if (!allowScriptOnly) {
+          const hasTemplate = !!(comp && (comp.render || comp.ssrRender || typeof comp === 'function'))
+          if (!hasTemplate) {
+            continue
+          }
+        }
+
+        // Attach any named exports to the default export to preserve metadata (e.g. header)
+        if (comp && typeof comp === 'object') {
+          Object.keys(module).forEach((key) => {
+            if (key !== 'default' && comp[key] === undefined) {
+              comp[key] = module[key]
+            }
+          })
+        }
+        return comp
       } catch (err) {
         console.error(`Failed to load component section at ${path}:`, err)
       }
@@ -87,7 +105,7 @@ async function resolveSection(entityName, sectionFilename, defaultComponent, cus
  *
  * @returns {{ sections: Object, sectionsReady: import('vue').ComputedRef<boolean> }}
  */
-export function useSectionResolver({ resourceSlug, customUIName, scope, page, actionKey, sectionDefs }) {
+export function useSectionResolver({ resourceSlug, customUIName, scope, page, actionKey, sectionDefs, allowScriptOnly = false }) {
   const route = useRoute()
   const sectionNames = Object.keys(sectionDefs)
   const sections = reactive(
@@ -139,7 +157,8 @@ export function useSectionResolver({ resourceSlug, customUIName, scope, page, ac
         uiName,
         scopeVal,
         pageVal,
-        actionKeyVal
+        actionKeyVal,
+        allowScriptOnly
       )
       sections[sectionName] = resolvedComp ? markRaw(resolvedComp) : null
     }

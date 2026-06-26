@@ -1,12 +1,10 @@
 <template>
   <div class="index-page">
-    <MasterListHeader
-      :config="config"
-      :filtered-count="displayedItems.length"
-      :total-count="items.length"
-      :loading="loading"
-      :background-syncing="backgroundSyncing"
-      @reload="reloadAll(true)"
+    <GenericHeaderPanel
+      :label="config?.name || 'Price Lists'"
+      :caption="config?.description || 'Manage pricing and currency rules'"
+      :icon="config?.ui?.header?.icon || 'sell'"
+      :reload="true"
     />
 
     <MasterListToolbar
@@ -150,7 +148,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue'
-import MasterListHeader from 'components/_common/Header.vue'
+import GenericHeaderPanel from 'components/shared/GenericHeaderPanel.vue'
 import MasterListToolbar from 'components/_common/Toolbar.vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useRecord } from 'src/composables/resources/useRecord'

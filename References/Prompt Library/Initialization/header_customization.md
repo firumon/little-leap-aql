@@ -13,7 +13,7 @@ The header uses a **two-tier architecture** that separates orchestration (file s
 1. **Orchestrator Shell**: [Header.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_common/Header.vue)
    - The central entry point loaded by all page controllers.
    - Injects the page-level provided `resourceConfig` context rather than instantiating its own.
-   - Dynamically scans the Vite glob registry for local overrides at `src/components/[Scope]/[Resource]/[Page]/Header.vue` (page-specific) or `src/components/[Scope]/[Resource]/Header.vue` (resource-generic).
+   - Dynamically scans the Vite glob registry via the central section resolver for local overrides at `src/components/[Scope]/[Resource]/[Page]/Header.vue` (page-specific) or `src/components/[Scope]/[Resource]/Header.vue` (resource-generic).
    - If a local header has a template, it mounts it directly. Otherwise, it merges script configurations and renders the presentation layer.
 2. **Presentation Foundation**: [GenericHeaderPanel.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/shared/GenericHeaderPanel.vue)
    - Houses the Quasar flex layout, styling, and standard slots.
@@ -25,9 +25,9 @@ The header uses a **two-tier architecture** that separates orchestration (file s
 
 ## 2. Dynamic Property Resolution Matrix
 
-The orchestrator resolves properties in this priority order, evaluating functions with the active `record` context if provided.
+The orchestrator resolves properties in this priority order, evaluating functions with both the active `record` context and the resource `config` if provided.
 
-| Property | Local `headerConfig` Source | High-Priority Metadata Source | Fallback (Index Page) | Fallback (Add Page) | Fallback (Edit Page) | Fallback (View Page) |
+| Property | Local `header` Source | High-Priority Metadata Source | Fallback (Index Page) | Fallback (Add Page) | Fallback (Edit Page) | Fallback (View Page) |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **`title`** | `localConfig.title` | `config.ui.header.title` | `config.name` | `"New [Resource]"` | `"Edit [Resource]"` | `config.name` |
 | **`subtitle`**| `localConfig.subtitle` | `config.ui.header.subtitle` | `config.description` | `"Create a new entry"` | `"[Code] - Modify"` | `"[Code] - Details"` |
@@ -39,7 +39,7 @@ The orchestrator resolves properties in this priority order, evaluating function
 
 ## 3. Back Button and Action Resolution Logic
 
-The `back` property in `headerConfig` is highly overloaded to consolidate visibility, icon overrides, and custom navigation:
+The `back` property in the `header` configuration is highly overloaded to consolidate visibility, icon overrides, and custom navigation:
 
 * **`back: false` or `'false'`**: Completely disables and hides the back button.
 * **`back: Function`**: Renders the back button (default `'arrow_back'` icon) and executes the function on click.
@@ -54,18 +54,18 @@ The `back` property in `headerConfig` is highly overloaded to consolidate visibi
 ## 4. Local Customization Patterns
 
 ### Pattern 1: Script-Only Customization (No Template)
-Create a local header file and export a `headerConfig` object. Variables can be plain values or functions reading the active `record`.
+Create a local header file and export a `header` object. Variables can be plain values or functions reading both the active `record` and the resource `config`.
 
 > [!NOTE]
-> When exporting `headerConfig` from a component using `<script setup>`, you must use a secondary, standard `<script>` block to expose the export to the module registry.
+> When exporting `header` from a component using `<script setup>`, you must use a secondary, standard `<script>` block to expose the export to the module registry.
 
 ```html
 <!-- src/components/Masters/Products/Index/Header.vue -->
 <script>
-export const headerConfig = {
-  // Title and subtitle as functions reading active record
-  title: (record) => record ? `Product: ${record.Name}` : 'Product Catalog',
-  subtitle: (record) => record ? `SKU: ${record.SkuCode}` : 'Manage catalog',
+export const header = {
+  // Title and subtitle as functions reading both active record and resource config
+  title: (record, config) => record ? `Product: ${record.Name}` : (config?.name || 'Product Catalog'),
+  subtitle: (record, config) => record ? `SKU: ${record.SkuCode}` : (config?.description || 'Manage catalog'),
   
   // Custom left icon (hidden if not defined)
   icon: 'inventory_2',
@@ -77,8 +77,8 @@ export const headerConfig = {
   reload: 'sync',
   
   // Status chip badge customization (accepts string or function)
-  chip: (record) => record?.Status || 'Draft',
-  chipColor: (record) => record?.Status === 'Active' ? 'positive' : 'warning',
+  chip: (record, config) => record?.Status || 'Draft',
+  chipColor: (record, config) => record?.Status === 'Active' ? 'positive' : 'warning',
   chipTextColor: 'white'
 }
 </script>

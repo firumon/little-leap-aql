@@ -26,11 +26,10 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, inject, useAttrs } from 'vue'
+import { ref, computed, inject, useAttrs } from 'vue'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { registry } from 'src/composables/resources/useSectionResolver'
+import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
 import GenericHeaderPanel from 'components/shared/GenericHeaderPanel.vue'
-import { toPascalCase } from 'src/utils/appHelpers'
 
 defineOptions({ name: 'CommonHeader', inheritAttrs: false })
 
@@ -39,7 +38,7 @@ const attrs = useAttrs()
 const emit = defineEmits(['reload'])
 
 const nav = useResourceNav()
-const { config: resolvedConfig, action, scope, resourceSlug, code: resolvedCode, additionalActions } = inject('resourceConfig')
+const { config: resolvedConfig, action, scope, resourceSlug, code: resolvedCode, additionalActions, customUIName } = inject('resourceConfig')
 const { record: resolvedRecord } = inject('resourceRecord', { record: ref(null) })
 
 const activeConfig = computed(() => attrs.config || resolvedConfig.value)
@@ -61,60 +60,51 @@ const activeActionConfig = computed(() => {
   ) || null
 })
 
-const localComponent = ref(null)
-const hasLocalTemplate = ref(false)
-const localConfig = ref({})
-
-// Dynamically scan Vite glob registry for local overrides
-watch(
-  () => [activeConfig.value, resourceSlug.value, scope.value, currentAction.value],
-  async ([newVal, slugVal, scopeVal, actionVal]) => {
-    if (!newVal) {
-      localComponent.value = null
-      hasLocalTemplate.value = false
-      localConfig.value = {}
-      return
-    }
-
-    const scopeFolder = toPascalCase(newVal.scope || scopeVal || 'masters')
-    const entityName = toPascalCase(slugVal || newVal.slug || newVal.name || '')
-    const pageFolder = toPascalCase(actionVal)
-
-    const candidates = [
-      `components/${scopeFolder}/${entityName}/${pageFolder}/Header.vue`,
-      `components/${scopeFolder}/${entityName}/Header.vue`
-    ]
-
-    localComponent.value = null
-    hasLocalTemplate.value = false
-    localConfig.value = {}
-
-    for (const path of candidates) {
-      if (registry[path]) {
-        try {
-          const module = await registry[path]()
-          const comp = module.default || module
-
-          localComponent.value = comp
-          hasLocalTemplate.value = !!(comp.render || comp.ssrRender || typeof comp === 'function')
-          localConfig.value = module.headerConfig || comp.headerConfig || {}
-          break
-        } catch (err) {
-          console.error(`Failed to load local header at ${path}:`, err)
-        }
-      }
-    }
+// Resolve the local header component using the central 12-tier resolver
+const { sections } = useSectionResolver({
+  resourceSlug,
+  customUIName,
+  scope,
+  actionKey: action,
+  sectionDefs: {
+    Header: 'Header'
   },
-  { immediate: true }
-)
+  allowScriptOnly: true
+})
+
+const localComponent = computed(() => {
+  const comp = sections.Header
+  if (!comp) return null
+  // Prevent infinite loop recursion if it resolves to the orchestrator itself
+  if (comp.name === 'CommonHeader') {
+    return null
+  }
+  return comp
+})
+
+const hasLocalTemplate = computed(() => {
+  const comp = localComponent.value
+  return !!(comp && (comp.render || comp.ssrRender || typeof comp === 'function'))
+})
+
+const localConfig = computed(() => {
+  const comp = localComponent.value
+  return comp?.header || {}
+})
+
+// Helper to evaluate static values or dynamic functions with active record and resource config
+function evaluate(val) {
+  if (typeof val === 'function') {
+    return val(recordVal.value, activeConfig.value)
+  }
+  return val
+}
 
 // 1. Title Resolution
 const resolvedHeaderTitle = computed(() => {
   const val = localConfig.value.title !== undefined ? localConfig.value.title : activeConfig.value?.ui?.header?.title
-  if (typeof val === 'function') {
-    return val(recordVal.value)
-  }
-  if (val) return val
+  const evaluated = evaluate(val)
+  if (evaluated) return evaluated
 
   if (isIndexPage.value) {
     return activeConfig.value?.name || ''
@@ -136,10 +126,8 @@ const resolvedHeaderTitle = computed(() => {
 // 2. Subtitle Resolution
 const resolvedHeaderSubtitle = computed(() => {
   const val = localConfig.value.subtitle !== undefined ? localConfig.value.subtitle : activeConfig.value?.ui?.header?.subtitle
-  if (typeof val === 'function') {
-    return val(recordVal.value)
-  }
-  if (val) return val
+  const evaluated = evaluate(val)
+  if (evaluated) return evaluated
 
   if (isIndexPage.value) {
     return activeConfig.value?.description || ''
@@ -163,10 +151,7 @@ const resolvedHeaderSubtitle = computed(() => {
 // 3. Left Icon Resolution
 const resolvedHeaderIcon = computed(() => {
   const val = localConfig.value.icon !== undefined ? localConfig.value.icon : activeConfig.value?.ui?.header?.icon
-  if (typeof val === 'function') {
-    return val(recordVal.value)
-  }
-  return val || null // hidden if not specified
+  return evaluate(val) || null // hidden if not specified
 })
 
 // 4. Overloaded Back Button Configuration
@@ -232,25 +217,16 @@ const resolvedReloadIcon = computed(() => {
 // 6. Status Chip Resolution
 const resolvedChip = computed(() => {
   const val = localConfig.value.chip !== undefined ? localConfig.value.chip : activeConfig.value?.ui?.header?.chip
-  if (typeof val === 'function') {
-    return val(recordVal.value)
-  }
-  return val || ''
+  return evaluate(val) || ''
 })
 
 const resolvedChipColor = computed(() => {
   const val = localConfig.value.chipColor !== undefined ? localConfig.value.chipColor : activeConfig.value?.ui?.header?.chipColor
-  if (typeof val === 'function') {
-    return val(recordVal.value)
-  }
-  return val || 'primary'
+  return evaluate(val) || 'primary'
 })
 
 const resolvedChipTextColor = computed(() => {
   const val = localConfig.value.chipTextColor !== undefined ? localConfig.value.chipTextColor : activeConfig.value?.ui?.header?.chipTextColor
-  if (typeof val === 'function') {
-    return val(recordVal.value)
-  }
-  return val || 'white'
+  return evaluate(val) || 'white'
 })
 </script>

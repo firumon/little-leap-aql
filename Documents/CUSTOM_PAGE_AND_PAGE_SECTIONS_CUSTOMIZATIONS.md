@@ -34,25 +34,23 @@ Every page target in AQL (Index, View, Add, Edit, and Action) orchestrates exact
 The following Mermaid diagrams illustrate the exact component nesting structure from the top-level section down to the leaf sub-sections, showing their file locations under `src/components/_common/`.
 
 ### 4.1 Header Section Hierarchy
-The Header represents page branding and synchronization. Every page resolves its own page-scoped `Header.vue` component, which imports and wraps the shared `GenericHeaderPanel.vue`.
+The Header represents page branding and synchronization. AQL uses a **two-tier orchestrator-presentation architecture** for headers:
+
+1. **Orchestrator Shell (`src/components/_common/Header.vue`)**: 
+   - This is the central header component loaded by all page controllers. Because page controllers call the section resolver without the `allowScriptOnly` option, the resolver automatically skips any script-only overrides (which lack templates) and resolves to this central orchestrator.
+   - The orchestrator reactively scans the Vite glob registry for local overrides using `useSectionResolver` with `allowScriptOnly: true`.
+   - **Case 1 (Template-Based Overrides)**: If a local header component has its own template, the orchestrator renders it directly.
+   - **Case 2 (Script-Only Overrides / Fallback)**: If a local header is script-only (has no template) and exports a named `header` object, or if no override exists, the orchestrator extracts the metadata and mounts the shared `GenericHeaderPanel.vue`.
+   - Custom dynamic functions in the `header` object are evaluated with both the active `record` and the resource `config` context: `(record, config)`.
 
 ```mermaid
 graph TD
-    Header[Header Section]
+    PageController[Page Controller] -->|useSectionResolver| Orchestrator[src/components/_common/Header.vue]
     
-    %% Page Scoped Headers
-    Header --> IndexHeader[src/components/_common/Index/Header.vue]
-    Header --> ViewHeader[src/components/_common/View/Header.vue]
-    Header --> AddHeader[src/components/_common/Add/Header.vue]
-    Header --> EditHeader[src/components/_common/Edit/Header.vue]
-    Header --> ActionHeader[src/components/_common/Action/Header.vue]
+    Orchestrator -->|allowScriptOnly: true| LocalHeader[Local Override: Header.vue]
     
-    %% Wrapper Integration
-    IndexHeader --> GenericHeaderPanel[src/components/shared/GenericHeaderPanel.vue]
-    ViewHeader --> GenericHeaderPanel
-    AddHeader --> GenericHeaderPanel
-    EditHeader --> GenericHeaderPanel
-    ActionHeader --> GenericHeaderPanel
+    LocalHeader -->|Case 1: Has Template| RenderDirect[Render Override Directly]
+    LocalHeader -->|Case 2: Script-Only / Fallback| GenericHeaderPanel[src/components/shared/GenericHeaderPanel.vue]
     
     GenericHeaderPanel --> HeaderPanel[src/components/shared/HeaderPanel.vue]
     GenericHeaderPanel --> ReloadButton[src/components/shared/ReloadButton.vue]

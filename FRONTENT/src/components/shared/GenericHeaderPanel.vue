@@ -5,14 +5,28 @@
       <HeaderPanel :title="label" :subtitle="caption" :icon="icon">
         <template #side>
           <slot name="chip">
-            <div v-if="chip" class="col-auto self-center">
-              <q-chip :label="chip" :color="chipColor" :text-color="chipTextColor" />
+            <div v-if="chip || chipComponent" class="col-auto self-center">
+              <component
+                :is="chipComponent"
+                v-if="chipComponent"
+                :chip="chip"
+                :chip-color="chipColor"
+                :text-color="chipTextColor"
+              />
+              <q-chip
+                v-else
+                :label="chip"
+                :color="chipColor"
+                :text-color="chipTextColor"
+              />
             </div>
           </slot>
         </template>
       </HeaderPanel>
     </div>
-    <div class="q-ml-sm self-center" v-if="hasReload"><ReloadButton /></div>
+    <div class="q-ml-sm self-center" v-if="hasReload">
+      <component :is="reloadComponent || ReloadButton" :icon="reloadIcon" />
+    </div>
   </div>
 </template>
 
@@ -31,10 +45,14 @@ const props = defineProps({
   chip: { type: String, default: '' },
   chipColor: { type: String, default: 'primary' },
   chipTextColor: { type: String, default: 'white' },
+  chipComponent: { type: Object, default: null },
 
   back: { type: [String,Boolean], default: false },
   backIcon: { type: String, default: 'arrow_back' },
   reload: { type: [String,Boolean], default: false },
+
+  reloadComponent: { type: Object, default: null },
+  reloadIcon: { type: String, default: 'refresh' },
 
   leftIconColor: { type: String, default: 'primary' },
 
@@ -42,6 +60,9 @@ const props = defineProps({
   iconColor: { type: String, default: 'primary' },
 })
 
-let hasBack = computed(() => (typeof props.back === 'string' && props.back.trim().toLowerCase() !== 'false') || props.back)
+let hasBack = computed(() => {
+  if (props.backIcon === 'none') return false
+  return (typeof props.back === 'string' && props.back.trim().toLowerCase() !== 'false') || props.back
+})
 let hasReload = computed(() => (typeof props.reload === 'string' && props.reload.trim().toLowerCase() !== 'false') || props.reload)
 </script>

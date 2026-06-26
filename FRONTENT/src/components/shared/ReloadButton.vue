@@ -1,6 +1,6 @@
 <template>
   <q-btn
-    icon="refresh"
+    :icon="icon"
     flat
     round
     dense
@@ -11,6 +11,10 @@
 
 <script setup>
 import { useResourceReload } from '../../composables/resources/useResourceReload.js'
+
+defineProps({
+  icon: { type: String, default: 'refresh' }
+})
 
 const { isAnyDependencySyncing, reloadDependencies } = useResourceReload()
 </script>

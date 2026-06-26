@@ -42,21 +42,24 @@
 </template>
 
 <script setup>
-import { computed, ref, watch, markRaw } from 'vue'
+import { computed, ref, watch, markRaw, inject } from 'vue'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { humanizeString, toPascalCase, deriveActionStampHeaders, filterParentFields } from 'src/utils/appHelpers'
 
+defineOptions({ name: 'CommonParent' })
+
 const nav = useResourceNav()
 
-const props = defineProps({
-  parentResource: { type: Object, default: null },
-  parentRecord: { type: Object, default: null },
-  additionalActions: { type: Array, default: () => [] },
-  scope: { type: String, default: 'masters' },
-  resourceSlug: { type: String, default: '' },
-  customUIName: { type: String, default: '' },
-  entityName: { type: String, default: '' }
+const { additionalActions, scope, resourceSlug, customUIName, resourceName } = inject('resourceConfig')
+const { parentResource, record } = inject('resourceRecord')
+
+const parentRecord = computed(() => {
+  const pKeys = record.value?._Parents || []
+  if (pKeys.length) return record.value?.[pKeys[0]] || null
+  return null
 })
+
+const entityName = computed(() => toPascalCase(resourceSlug.value))
 
 // 6-tier resolution
 const resolvedParentDisplay = ref(null)
@@ -64,25 +67,25 @@ const customModules = import.meta.glob('../_custom/**/*.vue')
 const entityModules = import.meta.glob('../*/*.vue')
 
 async function resolveComponent() {
-  if (!props.parentResource) {
+  if (!parentResource.value) {
     resolvedParentDisplay.value = null
     return
   }
 
-  const pascalParentName = toPascalCase(props.parentResource.name || '')
-  const entityName = props.entityName || toPascalCase(props.resourceSlug)
-  const customUIName = props.customUIName
+  const pascalParentName = toPascalCase(parentResource.value.name || '')
+  const entName = entityName.value
+  const customUI = customUIName.value
 
   const pathsToTry = []
 
-  if (customUIName) {
-    pathsToTry.push(`../_custom/${customUIName}/${entityName}/MasterViewParent${pascalParentName}.vue`)
-    pathsToTry.push(`../_custom/${customUIName}/${entityName}/MasterViewParent.vue`)
-    pathsToTry.push(`../_custom/${customUIName}/MasterViewParent.vue`)
+  if (customUI) {
+    pathsToTry.push(`../_custom/${customUI}/${entName}/MasterViewParent${pascalParentName}.vue`)
+    pathsToTry.push(`../_custom/${customUI}/${entName}/MasterViewParent.vue`)
+    pathsToTry.push(`../_custom/${customUI}/MasterViewParent.vue`)
   }
 
-  pathsToTry.push(`../${entityName}/MasterViewParent${pascalParentName}.vue`)
-  pathsToTry.push(`../${entityName}/MasterViewParent.vue`)
+  pathsToTry.push(`../${entName}/MasterViewParent${pascalParentName}.vue`)
+  pathsToTry.push(`../${entName}/MasterViewParent.vue`)
 
   for (const path of pathsToTry) {
     const modules = path.includes('_custom') ? customModules : entityModules
@@ -101,31 +104,31 @@ async function resolveComponent() {
 }
 
 watch(
-  () => [props.parentResource, props.entityName, props.customUIName],
+  () => [parentResource.value, entityName.value, customUIName.value],
   () => { resolveComponent() },
   { immediate: true }
 )
 
-const actionStampHeaders = computed(() => deriveActionStampHeaders(props.additionalActions))
+const actionStampHeaders = computed(() => deriveActionStampHeaders(additionalActions.value || []))
 
 const humanizedParentName = computed(() => {
-  return humanizeString(props.parentResource?.name || '')
+  return humanizeString(parentResource.value?.name || '')
 })
 
 const hasName = computed(() => {
-  return props.parentRecord && !!props.parentRecord.Name
+  return parentRecord.value && !!parentRecord.value.Name
 })
 
 const filteredParentFields = computed(() => {
-  return filterParentFields(props.parentRecord, actionStampHeaders.value)
+  return filterParentFields(parentRecord.value, actionStampHeaders.value)
 })
 
 function navigateToParent() {
-  if (props.parentResource && props.parentRecord?.Code) {
+  if (parentResource.value && parentRecord.value?.Code) {
     nav.goTo('view', {
-      scope: props.parentResource.scope || props.scope,
-      resourceSlug: props.parentResource.slug,
-      code: props.parentRecord.Code
+      scope: parentResource.value.scope || scope.value,
+      resourceSlug: parentResource.value.slug,
+      code: parentRecord.value.Code
     })
   }
 }

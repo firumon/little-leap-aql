@@ -1,38 +1,18 @@
 <template>
   <q-page class="q-gutter-y-sm" v-if="sectionsReady">
     <!-- 1. Header Section -->
-    <component
-      :is="sections.Header"
-      :config="config"
-      @reload="reload(true)"
-    />
+    <component :is="sections.Header"/>
 
     <!-- 2. ToolBar Section -->
-    <component
-      :is="sections.ToolBar"
-      v-if="sections.ToolBar"
-      :config="config"
-    />
+    <component :is="sections.ToolBar" v-if="sections.ToolBar"/>
 
     <!-- 3. Content Section (with built-in loading/empty wrappers) -->
-    <AqlContentWrapper
-      :loading="loading"
-      :empty="isEmpty"
-      :has-data="items.length > 0"
-    >
-      <component
-        :is="sections.Content"
-        :config="config"
-        :items="items"
-      />
+    <AqlContentWrapper :loading="loading" :empty="isEmpty" :has-data="items.length > 0">
+      <component :is="sections.Content"/>
     </AqlContentWrapper>
 
     <!-- 4. Action Section -->
-    <component
-      :is="sections.Action"
-      v-if="sections.Action"
-      :config="config"
-    />
+    <component :is="sections.Action" v-if="sections.Action"/>
   </q-page>
   <div v-else class="flex flex-center q-py-xl">
     <q-spinner-dots color="primary" size="32px" />

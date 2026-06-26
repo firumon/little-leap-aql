@@ -30,20 +30,17 @@ import { computed, inject } from 'vue'
 import AqlFilePreviewCard from 'components/shared/AqlFilePreviewCard.vue'
 import { deriveActionStampHeaders, filterDetailFields } from 'src/utils/appHelpers'
 
-const props = defineProps({
-  record: { type: Object, default: null },
-  resolvedFields: { type: Array, default: () => [] },
-  resourceName: { type: String, required: true }
-})
+defineOptions({ name: 'CommonDetails' })
 
-const { additionalActions } = inject('resourceConfig')
+const { additionalActions, resolvedFields, resourceName } = inject('resourceConfig')
+const { record } = inject('resourceRecord')
 
 const actionStampHeaders = computed(() => {
   return deriveActionStampHeaders(additionalActions.value || [])
 })
 
 const detailFields = computed(() => {
-  return filterDetailFields(props.resolvedFields, actionStampHeaders.value)
+  return filterDetailFields(resolvedFields.value, actionStampHeaders.value)
 })
 </script>
 

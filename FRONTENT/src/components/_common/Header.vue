@@ -3,7 +3,7 @@
   <component
     :is="localComponent"
     v-if="localComponent && hasLocalTemplate"
-    v-bind="$props"
+    v-bind="$attrs"
   />
 
   <!-- Case 2: Standard fallback using the shared GenericHeaderPanel -->
@@ -26,33 +26,40 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, inject } from 'vue'
+import { ref, computed, watch, inject, useAttrs } from 'vue'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { registry } from 'src/composables/resources/useSectionResolver'
 import GenericHeaderPanel from 'components/shared/GenericHeaderPanel.vue'
 import { toPascalCase } from 'src/utils/appHelpers'
 
-defineOptions({ name: 'CommonHeader' })
+defineOptions({ name: 'CommonHeader', inheritAttrs: false })
 
-const props = defineProps({
-  config: Object,
-  record: Object,
-  code: String,
-  actionConfig: Object,
-  actionName: String
-})
+const attrs = useAttrs()
 
 const emit = defineEmits(['reload'])
 
 const nav = useResourceNav()
-const { config: resolvedConfig, action, scope, resourceSlug } = inject('resourceConfig')
+const { config: resolvedConfig, action, scope, resourceSlug, code: resolvedCode, additionalActions } = inject('resourceConfig')
+const { record: resolvedRecord } = inject('resourceRecord', { record: ref(null) })
 
-const activeConfig = computed(() => props.config || resolvedConfig.value)
+const activeConfig = computed(() => attrs.config || resolvedConfig.value)
 const currentAction = computed(() => {
-  if (props.actionName) return 'action'
+  if (attrs.actionName) return 'action'
   return action.value?.toLowerCase() || 'view'
 })
 const isIndexPage = computed(() => currentAction.value === 'index')
+
+const recordVal = computed(() => attrs.record || resolvedRecord.value)
+const recordCode = computed(() => attrs.code || recordVal.value?.Code || resolvedCode.value)
+
+const activeActionConfig = computed(() => {
+  if (attrs.actionConfig) return attrs.actionConfig
+  const actName = attrs.actionName || action.value
+  if (!actName) return null
+  return additionalActions.value?.find(
+    (a) => a.action.toLowerCase() === actName.toLowerCase() && a.kind !== 'navigate'
+  ) || null
+})
 
 const localComponent = ref(null)
 const hasLocalTemplate = ref(false)
@@ -105,7 +112,7 @@ watch(
 const resolvedHeaderTitle = computed(() => {
   const val = localConfig.value.title !== undefined ? localConfig.value.title : activeConfig.value?.ui?.header?.title
   if (typeof val === 'function') {
-    return val(props.record)
+    return val(recordVal.value)
   }
   if (val) return val
 
@@ -121,7 +128,7 @@ const resolvedHeaderTitle = computed(() => {
     return activeConfig.value?.name ? `Edit ${activeConfig.value.name}` : 'Edit Record'
   }
   if (act === 'action') {
-    return props.actionConfig?.label || props.actionName || 'Action'
+    return activeActionConfig.value?.label || props.actionName || 'Action'
   }
   return activeConfig.value?.name || 'Record'
 })
@@ -130,7 +137,7 @@ const resolvedHeaderTitle = computed(() => {
 const resolvedHeaderSubtitle = computed(() => {
   const val = localConfig.value.subtitle !== undefined ? localConfig.value.subtitle : activeConfig.value?.ui?.header?.subtitle
   if (typeof val === 'function') {
-    return val(props.record)
+    return val(recordVal.value)
   }
   if (val) return val
 
@@ -143,21 +150,21 @@ const resolvedHeaderSubtitle = computed(() => {
     return 'Create a new entry'
   }
 
-  const recordCode = props.code || props.record?.Code
+  const rCode = recordCode.value
   if (act === 'edit') {
-    return recordCode ? `${recordCode} - Modify` : 'Modify details'
+    return rCode ? `${rCode} - Modify` : 'Modify details'
   }
   if (act === 'action') {
-    return recordCode ? `${recordCode} - Action` : 'Run workflow action'
+    return rCode ? `${rCode} - Action` : 'Run workflow action'
   }
-  return recordCode ? `${recordCode} - Details` : 'Details'
+  return rCode ? `${rCode} - Details` : 'Details'
 })
 
 // 3. Left Icon Resolution
 const resolvedHeaderIcon = computed(() => {
   const val = localConfig.value.icon !== undefined ? localConfig.value.icon : activeConfig.value?.ui?.header?.icon
   if (typeof val === 'function') {
-    return val(props.record)
+    return val(recordVal.value)
   }
   return val || null // hidden if not specified
 })
@@ -226,7 +233,7 @@ const resolvedReloadIcon = computed(() => {
 const resolvedChip = computed(() => {
   const val = localConfig.value.chip !== undefined ? localConfig.value.chip : activeConfig.value?.ui?.header?.chip
   if (typeof val === 'function') {
-    return val(props.record)
+    return val(recordVal.value)
   }
   return val || ''
 })
@@ -234,7 +241,7 @@ const resolvedChip = computed(() => {
 const resolvedChipColor = computed(() => {
   const val = localConfig.value.chipColor !== undefined ? localConfig.value.chipColor : activeConfig.value?.ui?.header?.chipColor
   if (typeof val === 'function') {
-    return val(props.record)
+    return val(recordVal.value)
   }
   return val || 'primary'
 })
@@ -242,7 +249,7 @@ const resolvedChipColor = computed(() => {
 const resolvedChipTextColor = computed(() => {
   const val = localConfig.value.chipTextColor !== undefined ? localConfig.value.chipTextColor : activeConfig.value?.ui?.header?.chipTextColor
   if (typeof val === 'function') {
-    return val(props.record)
+    return val(recordVal.value)
   }
   return val || 'white'
 })

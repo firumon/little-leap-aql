@@ -28,11 +28,7 @@ import { useListViews } from 'src/composables/useListViews'
 
 defineOptions({ name: 'IndexToolbar' })
 
-const props = defineProps({
-  config: Object
-})
-
-const { resourceSlug, scope, resourceHeaders } = inject('resourceConfig')
+const { resourceSlug, scope, resourceHeaders, config } = inject('resourceConfig')
 const { records: items, searchTerm } = inject('resourceRecord')
 
 // Resolve Toolbar sub-sections recursively
@@ -46,8 +42,8 @@ const { sections, sectionsReady } = useSectionResolver({
   }
 })
 
-const configuredListViews = computed(() => props.config?.ui?.listViews || [])
-const configuredListViewsMode = computed(() => props.config?.ui?.listViewsMode || '')
+const configuredListViews = computed(() => config.value?.ui?.listViews || [])
+const configuredListViewsMode = computed(() => config.value?.ui?.listViewsMode || '')
 
 const { effectiveViews, activeViewName, viewCounts, setActiveView } = useListViews({
   items,

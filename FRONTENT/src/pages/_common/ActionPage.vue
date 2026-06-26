@@ -1,19 +1,10 @@
 <template>
   <q-page class="q-gutter-y-sm" v-if="sectionsReady">
     <!-- 1. Header Section -->
-    <component
-      :is="sections.Header"
-      :action-config="currentActionConfig"
-      :action-name="actionName"
-      :record="record"
-    />
+    <component :is="sections.Header"/>
 
     <!-- 2. ToolBar Section (Usually empty for Actions) -->
-    <component
-      :is="sections.ToolBar"
-      v-if="sections.ToolBar"
-      :config="config"
-    />
+    <component :is="sections.ToolBar" v-if="sections.ToolBar"/>
 
     <!-- 3. Content Section (Action Outcome & Form fields) -->
     <AqlContentWrapper

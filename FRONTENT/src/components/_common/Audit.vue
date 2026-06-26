@@ -17,9 +17,11 @@
 </template>
 
 <script setup>
-defineProps({
-  record: { type: Object, default: null }
-})
+import { inject } from 'vue'
+
+defineOptions({ name: 'CommonAudit' })
+
+const { record } = inject('resourceRecord')
 
 function formatDate(value) {
   if (!value) return '-'

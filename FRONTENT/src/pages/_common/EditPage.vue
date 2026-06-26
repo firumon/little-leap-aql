@@ -1,31 +1,15 @@
 <template>
   <q-page class="q-gutter-y-sm" v-if="sectionsReady">
     <!-- 1. Header Section -->
-    <component
-      :is="sections.Header"
-      :config="config"
-      :code="code"
-    />
+    <component :is="sections.Header"/>
 
     <!-- 2. ToolBar Section (Usually empty for Edit) -->
-    <component
-      :is="sections.ToolBar"
-      v-if="sections.ToolBar"
-      :config="config"
-    />
+    <component :is="sections.ToolBar" v-if="sections.ToolBar"/>
 
     <!-- 3. Content Section (Prepopulated Form sub-section) -->
-    <AqlContentWrapper
-      :loading="loading"
-      :empty="false"
-      requires-record
-      :record-exists="!!record"
-    >
+    <AqlContentWrapper :loading="loading" :empty="false" requires-record :record-exists="!!record">
       <component
         :is="sections.Content"
-        :config="config"
-        :code="code"
-        :resolved-fields="resolvedFields"
         :parent-form="parentForm"
         :child-groups="childGroups"
         :status-options="statusOptions"

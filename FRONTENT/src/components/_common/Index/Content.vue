@@ -20,11 +20,7 @@ import { useListViews } from 'src/composables/useListViews'
 
 defineOptions({ name: 'IndexContent' })
 
-const props = defineProps({
-  config: Object
-})
-
-const { resourceSlug, scope, resourceHeaders, resolvedFields, customUIName } = inject('resourceConfig')
+const { resourceSlug, scope, resourceHeaders, resolvedFields, customUIName, config } = inject('resourceConfig')
 const { records: items, searchTerm } = inject('resourceRecord')
 
 // Resolve Content sub-sections recursively
@@ -37,8 +33,8 @@ const { sections, sectionsReady } = useSectionResolver({
   }
 })
 
-const configuredListViews = computed(() => props.config?.ui?.listViews || [])
-const configuredListViewsMode = computed(() => props.config?.ui?.listViewsMode || '')
+const configuredListViews = computed(() => config.value?.ui?.listViews || [])
+const configuredListViewsMode = computed(() => config.value?.ui?.listViewsMode || '')
 
 const { viewFilteredItems } = useListViews({
   items,

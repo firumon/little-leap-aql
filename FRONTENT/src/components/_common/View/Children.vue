@@ -8,9 +8,9 @@
       :key="childResources[index].name"
       :is="resolver.component"
       :child-resource="childResources[index]"
-      :child-records="childRecordsMap[childResources[index].name] || []"
+      :child-records="childRecordsByResource[childResources[index].name] || []"
       :additional-actions="additionalActions"
-      @view-child="(childRes, code) => $emit('view-child', childRes, code)"
+      @view-child="handleViewChild"
     />
   </template>
 </template>
@@ -19,33 +19,27 @@
 import { ref, watch, markRaw, computed, inject } from 'vue'
 import { toPascalCase } from 'src/utils/appHelpers'
 import { registry } from 'src/composables/resources/useSectionResolver'
+import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import DefaultChild from 'components/_common/Child.vue'
 
-const props = defineProps({
-  childResources: { type: Array, default: () => [] },
-  childRecordsMap: { type: Object, default: () => ({}) },
-  parentCode: { type: String, default: '' },
-  resourceSlug: { type: String, default: '' },
-  customUIName: { type: String, default: '' },
-  entityName: { type: String, default: '' },
-  additionalActions: { type: Array, default: () => [] }
-})
+defineOptions({ name: 'ViewChildren' })
 
-defineEmits(['view-child'])
+const nav = useResourceNav()
+
+const { scope, resourceSlug, customUIName, resourceName, additionalActions } = inject('resourceConfig')
+const { childResources, childRecordsByResource } = inject('resourceRecord')
 
 const childResolvers = ref([])
 const resolversReady = ref(false)
 
-const { scope } = inject('resourceConfig')
-
 async function resolveChildComponents() {
   resolversReady.value = false
   const resolvers = []
-  const entityName = props.entityName || toPascalCase(props.resourceSlug)
-  const customUIName = props.customUIName
+  const entityName = toPascalCase(resourceSlug.value)
+  const customUI = customUIName.value
   const scopeFolder = toPascalCase(scope.value || 'masters')
 
-  for (const childRes of props.childResources) {
+  for (const childRes of childResources.value) {
     const pascalChildName = toPascalCase(childRes.name)
     const candidates = []
 
@@ -59,13 +53,13 @@ async function resolveChildComponents() {
       candidates.push(`${dir}/${legacyPrefix}.vue`)
     }
 
-    if (customUIName) {
-      addPaths(`components/_custom/${customUIName}/${scopeFolder}/${entityName}/View`)
-      addPaths(`components/_custom/${customUIName}/${scopeFolder}/${entityName}`)
-      addPaths(`components/_custom/${customUIName}/${scopeFolder}/View`)
-      addPaths(`components/_custom/${customUIName}/View`)
-      addPaths(`components/_custom/${customUIName}/${scopeFolder}`)
-      addPaths(`components/_custom/${customUIName}`)
+    if (customUI) {
+      addPaths(`components/_custom/${customUI}/${scopeFolder}/${entityName}/View`)
+      addPaths(`components/_custom/${customUI}/${scopeFolder}/${entityName}`)
+      addPaths(`components/_custom/${customUI}/${scopeFolder}/View`)
+      addPaths(`components/_custom/${customUI}/View`)
+      addPaths(`components/_custom/${customUI}/${scopeFolder}`)
+      addPaths(`components/_custom/${customUI}`)
     }
 
     addPaths(`components/${scopeFolder}/${entityName}/View`)
@@ -98,8 +92,16 @@ async function resolveChildComponents() {
   resolversReady.value = true
 }
 
+function handleViewChild(childResource, childCode) {
+  nav.goTo('view', {
+    scope: childResource.scope || scope.value,
+    resourceSlug: childResource.slug,
+    code: childCode
+  })
+}
+
 watch(
-  () => [props.childResources, props.entityName, props.customUIName, scope.value],
+  () => [childResources.value, resourceSlug.value, customUIName.value, scope.value],
   () => { resolveChildComponents() },
   { immediate: true, deep: true }
 )

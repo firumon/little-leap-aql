@@ -20,14 +20,12 @@
 </template>
 
 <script setup>
+import { inject } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
 
 defineOptions({ name: 'EditContent' })
 
 const props = defineProps({
-  config: Object,
-  code: String,
-  resolvedFields: Array,
   parentForm: Object,
   childGroups: Object,
   statusOptions: Array
@@ -40,10 +38,12 @@ defineEmits([
   'update-child-field'
 ])
 
+const { config, code, resolvedFields } = inject('resourceConfig')
+
 // Resolve Content Form sub-section recursively
 const { sections, sectionsReady } = useSectionResolver({
-  resourceSlug: props.config?.slug,
-  scope: props.config?.scope,
+  resourceSlug: config.value?.slug,
+  scope: config.value?.scope,
   page: 'Edit/Content',
   sectionDefs: {
     Form: { section: 'Form', default: 'src/components/_common/Form.vue' }

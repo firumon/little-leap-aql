@@ -1,27 +1,15 @@
 <template>
   <q-page class="q-gutter-y-sm" v-if="sectionsReady">
     <!-- 1. Header Section -->
-    <component
-      :is="sections.Header"
-      :config="config"
-    />
+    <component :is="sections.Header"/>
 
     <!-- 2. ToolBar Section (Usually empty for Add) -->
-    <component
-      :is="sections.ToolBar"
-      v-if="sections.ToolBar"
-      :config="config"
-    />
+    <component :is="sections.ToolBar" v-if="sections.ToolBar"/>
 
     <!-- 3. Content Section (Contains the Form sub-section) -->
-    <AqlContentWrapper
-      :loading="false"
-      :empty="false"
-    >
+    <AqlContentWrapper :loading="false" :empty="false">
       <component
         :is="sections.Content"
-        :config="config"
-        :resolved-fields="resolvedFields"
         :parent-form="parentForm"
         :child-groups="childGroups"
         :status-options="statusOptions"

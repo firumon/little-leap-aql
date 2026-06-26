@@ -112,7 +112,7 @@ const { sections, sectionsReady } = useSectionResolver({
   page: 'Action',
   actionKey: actionName,
   sectionDefs: {
-    Header: { section: 'Header', default: 'src/components/_common/Action/Header.vue' },
+    Header: 'Header',
     ToolBar: 'Toolbar',
     Content: 'Content',
     Action: 'Actions'

@@ -72,7 +72,7 @@ const { sections, sectionsReady } = useSectionResolver({
   scope,
   page: 'Edit',
   sectionDefs: {
-    Header: { section: 'Header', default: 'src/components/_common/Edit/Header.vue' },
+    Header: 'Header',
     ToolBar: 'Toolbar',
     Content: 'Content',
     Action: 'Actions'

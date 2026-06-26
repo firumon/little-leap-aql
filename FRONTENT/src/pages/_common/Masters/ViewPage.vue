@@ -62,7 +62,7 @@ const { sections, sectionsReady } = useSectionResolver({
   scope,
   page: 'View',
   sectionDefs: {
-    Header: { section: 'Header', default: 'src/components/_common/View/Header.vue' },
+    Header: 'Header',
     ToolBar: 'Toolbar',
     Content: 'Content',
     Action: 'Actions'

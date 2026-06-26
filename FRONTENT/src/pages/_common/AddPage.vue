@@ -66,7 +66,7 @@ const { sections, sectionsReady } = useSectionResolver({
   scope,
   page: 'Add',
   sectionDefs: {
-    Header: { section: 'Header', default: 'src/components/_common/Add/Header.vue' },
+    Header: 'Header',
     ToolBar: 'Toolbar',
     Content: 'Content',
     Action: 'Actions'
@@ -90,12 +90,12 @@ async function handleSave() {
     if (newCode) {
       nav.goTo('view', { code: newCode })
     } else {
-      nav.goTo('list')
+      nav.goTo('index')
     }
   }
 }
 
 function navigateBack() {
-  nav.goTo('list')
+  nav.goTo('index')
 }
 </script>

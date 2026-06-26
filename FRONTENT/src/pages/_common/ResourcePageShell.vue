@@ -1,5 +1,5 @@
 <template>
-  <q-page class="resource-page">
+  <q-page>
     <ResourceBreadcrumb
       :scope="scope"
       :resource-slug="resourceSlug"
@@ -31,7 +31,7 @@ const resourceTitle = computed(() => {
 
 const actionLabel = computed(() => {
   const a = action.value
-  if (!a || a === 'list') return ''
+  if (!a || a === 'index') return ''
   if (a === 'add') return 'Add'
   if (a === 'view') return ''
   if (a === 'edit') return 'Edit'
@@ -55,29 +55,3 @@ const actionLabel = computed(() => {
 // so switching list views does not remount the whole page.
 const routeKey = computed(() => `${route.path}`)
 </script>
-
-<style scoped>
-.resource-page {
-  --master-font: 'Sora', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  --master-bg-1: #f8fafc;
-  --master-bg-2: #eef2f7;
-  --aql-ink: #0f172a;
-  --master-soft-ink: #51607a;
-  --master-surface: #ffffff;
-
-  font-family: var(--master-font);
-  color: var(--aql-ink);
-  background:
-    radial-gradient(1000px 520px at 12% -10%, #dfe8f6 0%, transparent 58%),
-    radial-gradient(900px 420px at 100% -5%, #d9ece7 0%, transparent 52%),
-    linear-gradient(160deg, var(--master-bg-1) 0%, var(--master-bg-2) 100%);
-  min-height: 100%;
-  padding: 8px;
-}
-
-@media (min-width: 600px) {
-  .resource-page {
-    padding: 12px 16px;
-  }
-}
-</style>

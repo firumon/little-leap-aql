@@ -50,6 +50,7 @@ If backend metadata configuration, synced resources, or API options are required
   * Master/Config resources read cache-first from IndexedDB via the Pinia `useDataStore` store.
   * Writes (`create`, `update`, `bulk`, `executeAction`, `compositeSave`) send payloads containing update-delta checks and return updated structures to keep IndexedDB and state stores in sync.
 * **Reactivity Composition**: Combine related store vectors (e.g., Products, SKUs) using `computed()` properties inside a shared composable. All filters, sort criteria, and data grids derive from this unified aggregate object.
+* **Page-Level Context Sharing**: Page orchestrators (`IndexPage.vue`, `ViewPage.vue`, etc.) instantiate and `provide` their `resourceConfig` and `resourceRecord` contexts. Descendant components `inject` these instances, ensuring sibling components (e.g. search inputs and list views) share the exact same reactive state without redundant local instantiations.
 
 ---
 
@@ -80,6 +81,7 @@ Before modifying code:
 
 * **DO NOT** use `QTable` for record lists. Use vertical fluid scroll lists with `q-card` or `AqlList` / `AqlGroupedList` for mobile compatibility.
 * **DO NOT** import Pinia stores, services, or Axios wrappers directly into Vue page components.
+* **DO NOT** instantiate `useResourceConfig()` or `useRecord()` inside common child components. Always inject the page-level provided `resourceConfig` and `resourceRecord` instances to preserve unified page state.
 * **DO NOT** write manual watcher chains, mirror states, or parallel arrays to keep data in sync. Keep a single reactive source.
 * **DO NOT** call raw `router.push()` or `$router.back()` directly on elements. Always route using the generic helper `useResourceNav`.
 * **DO NOT** hardcode currency symbols.

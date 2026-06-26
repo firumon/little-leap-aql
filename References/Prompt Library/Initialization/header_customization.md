@@ -12,6 +12,7 @@ The header uses a **two-tier architecture** that separates orchestration (file s
 
 1. **Orchestrator Shell**: [Header.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_common/Header.vue)
    - The central entry point loaded by all page controllers.
+   - Injects the page-level provided `resourceConfig` context rather than instantiating its own.
    - Dynamically scans the Vite glob registry for local overrides at `src/components/[Scope]/[Resource]/[Page]/Header.vue` (page-specific) or `src/components/[Scope]/[Resource]/Header.vue` (resource-generic).
    - If a local header has a template, it mounts it directly. Otherwise, it merges script configurations and renders the presentation layer.
 2. **Presentation Foundation**: [GenericHeaderPanel.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/shared/GenericHeaderPanel.vue)

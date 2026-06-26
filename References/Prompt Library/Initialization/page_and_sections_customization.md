@@ -123,6 +123,28 @@ To keep the codebase discoverable and documented, you must update the indexes wh
 1. **Component Registry**: Whenever you add or significantly modify a shared component, you must record its signature and prop contract in [components/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md).
 2. **Composable Registry**: Whenever you add or modify a business logic composable, you must record its interface and usage in [composables/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/REGISTRY.md).
 
+### 5.6 Page-Level Context Sharing (Provide/Inject) (STRICT)
+
+To eliminate redundant instantiations and synchronize state across sibling components (e.g. sharing `searchTerm` between a `Toolbar` and a `Content` list view), AQL utilizes Vue 3's `provide` and `inject` mechanisms at the **Page level**:
+
+1. **Page-Level Providers**:
+   The common page orchestrators (`IndexPage.vue`, `AddPage.vue`, `EditPage.vue`, `ActionPage.vue`, and `ViewPage.vue`) instantiate the composables once and `provide` them to all descendant components:
+   ```javascript
+   const resourceConfig = useResourceConfig()
+   const resourceRecord = useRecord()
+
+   provide('resourceConfig', resourceConfig)
+   provide('resourceRecord', resourceRecord)
+   ```
+2. **Component-Level Injections**:
+   Descendant components (like `Header.vue`, `Toolbar.vue`, `Content.vue`, `ActionBar.vue`, `AddFAB.vue`, `Details.vue`, `Records.vue`, `SearchInput.vue`, `Children.vue`) must **inject** these instances instead of calling `useResourceConfig()` or `useRecord()` locally:
+   ```javascript
+   const { scope, resourceSlug, config } = inject('resourceConfig')
+   const { record, loading, searchTerm } = inject('resourceRecord')
+   ```
+3. **Strict No-Local-Instantiation Rule**:
+   Common sub-components directly under `src/components/_common/` must NOT import or instantiate `useResourceConfig` or `useRecord` locally. They must rely exclusively on the injected parent contexts to maintain a clean, thin, and unified state tree.
+
 ---
 
 ## 6. Concrete Implementation Examples

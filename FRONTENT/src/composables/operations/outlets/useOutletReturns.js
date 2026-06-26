@@ -261,7 +261,7 @@ export function useOutletReturns() {
 
       const returnCode = response && Array.isArray(response.data?.results) ? response.data.results[0]?.code : ''
       $q.notify({ type: 'positive', message: `Return ${returnCode || ''} submitted successfully.`, position: 'top' })
-      nav.goTo('list')
+      nav.goTo('index')
     } catch (err) {
       $q.notify({ type: 'negative', message: 'An error occurred during submission.', position: 'top' })
     } finally {
@@ -483,7 +483,7 @@ export function useOutletReturns() {
   }
 
   function cancel() {
-    nav.goTo('list')
+    nav.goTo('index')
   }
 
   function navigateTo(code) {

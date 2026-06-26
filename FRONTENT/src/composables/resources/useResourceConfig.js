@@ -36,7 +36,7 @@ function checkActionsList(resConfig, actions) {
 
 /**
  * Resolves the current resource configuration from route params + auth store.
- * Used by all resource pages (list, view, add, edit, action).
+ * Used by all resource pages (index, view, add, edit, action).
  */
 export function useResourceConfig() {
   const route = useRoute()
@@ -45,7 +45,7 @@ export function useResourceConfig() {
   const resourceSlug = computed(() => route.params.resourceSlug || '')
   const scope = computed(() => route.params.scope || 'masters')
   const code = computed(() => route.params.code || '')
-  const action = computed(() => route.meta?.action || route.params.action || 'list')
+  const action = computed(() => route.meta?.action || route.params.action || 'index')
   const level = computed(() => route.meta?.level || 'resource')
 
   const config = computed(() => {

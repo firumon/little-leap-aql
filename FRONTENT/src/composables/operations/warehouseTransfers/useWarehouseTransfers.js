@@ -331,7 +331,7 @@ export function useWarehouseTransfers() {
     }
     $q.notify({ type: 'positive', message: 'Warehouse Transfer draft saved.', position: 'top' })
     resetForm()
-    nav.goTo('list')
+    nav.goTo('index')
     return true
   }
 
@@ -439,7 +439,7 @@ export function useWarehouseTransfers() {
 
     $q.notify({ type: 'positive', message: 'Warehouse Transfer submitted successfully.', position: 'top' })
     resetForm()
-    nav.goTo('list')
+    nav.goTo('index')
     return true
   }
 

@@ -390,7 +390,7 @@ export function usePurchaseOrderCreateFlow() {
             if (code) {
                 nav.goTo('view', { code });
             } else {
-                nav.goTo('list');
+                nav.goTo('index');
             }
         } finally {
             saving.value = false;
@@ -398,7 +398,7 @@ export function usePurchaseOrderCreateFlow() {
     };
 
     const cancel = () => {
-        nav.goTo('list');
+        nav.goTo('index');
     };
 
     return {

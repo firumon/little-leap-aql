@@ -291,7 +291,7 @@ export function useSupplierQuotationCreateFlow() {
       const code = resultCode(response.data?.[0])
       $q.notify({ type: 'positive', message: 'Supplier quotation saved' })
       if (code) nav.goTo('view', { code })
-      else nav.goTo('list')
+      else nav.goTo('index')
     } catch (error) {
       $q.notify({ type: 'negative', message: `Failed to save supplier quotation: ${error.message}` })
     } finally {
@@ -300,7 +300,7 @@ export function useSupplierQuotationCreateFlow() {
   }
 
   function cancel() {
-    nav.goTo('list')
+    nav.goTo('index')
   }
 
   watch(itemContext, syncItemsFromContext, { immediate: true })

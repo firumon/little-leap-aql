@@ -9,7 +9,7 @@
       <div v-else-if="!prForm.Code" class="page-state column items-center justify-center">
         <q-icon name="search_off" size="48px" color="grey-4" />
         <div class="text-subtitle2 text-grey-5 q-mt-sm">Requisition not found</div>
-        <q-btn flat color="primary" icon="arrow_back" label="Back to list" class="q-mt-md" @click="nav.goTo('list')" />
+        <q-btn flat color="primary" icon="arrow_back" label="Back to list" class="q-mt-md" @click="nav.goTo('index')" />
       </div>
 
       <template v-else>
@@ -17,7 +17,7 @@
           <q-card-section class="row items-start q-col-gutter-md">
             <div class="col">
               <div class="row items-center q-gutter-sm">
-                <q-btn flat round dense icon="arrow_back" color="primary" @click="nav.goTo('list')" />
+                <q-btn flat round dense icon="arrow_back" color="primary" @click="nav.goTo('index')" />
                 <div>
                   <div class="text-overline text-primary">Purchase Requisition</div>
                   <div class="text-h5 text-weight-bold">{{ prForm.Code }}</div>

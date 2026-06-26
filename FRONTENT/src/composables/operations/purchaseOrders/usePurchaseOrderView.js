@@ -262,7 +262,7 @@ export function usePurchaseOrderView() {
     };
 
     const goToList = () => {
-        nav.goTo('list');
+        nav.goTo('index');
     };
 
     return {

@@ -409,7 +409,7 @@ export function useOutletDeliveries() {
   function setExpandedGroup(key) { expandedGroup.value = expandedGroup.value === key ? '' : key }
   function navigateTo(code) { nav.goTo('view', { code }) }
   function navigateToAdd() { nav.goTo('add') }
-  function cancel() { nav.goTo('list') }
+  function cancel() { nav.goTo('index') }
   function timeAgo(dateValue) {
     if (!dateValue) return ''
     const date = new Date(text(dateValue))

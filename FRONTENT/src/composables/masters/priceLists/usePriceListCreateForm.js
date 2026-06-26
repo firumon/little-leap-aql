@@ -130,7 +130,7 @@ export function usePriceListCreateForm() {
   }
 
   function navigateBack() {
-    nav.goTo('list')
+    nav.goTo('index')
   }
 
   function getPrice(skuCode) {

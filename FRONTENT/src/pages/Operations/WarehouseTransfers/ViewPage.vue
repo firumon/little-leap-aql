@@ -5,7 +5,7 @@
     <div v-if="!loading && !record" class="text-center q-pa-xl">
       <q-icon name="search_off" size="4em" color="grey-5" />
       <div class="text-h6 q-mt-md text-grey-7">Transfer not found</div>
-      <q-btn flat color="primary" label="Back to List" icon="arrow_back" class="q-mt-md" @click="nav.goTo('list')" />
+      <q-btn flat color="primary" label="Back to List" icon="arrow_back" class="q-mt-md" @click="nav.goTo('index')" />
     </div>
 
     <template v-else-if="record">
@@ -16,7 +16,7 @@
         :chip="record.Progress"
         :chip-color="progressChipColor"
         class="q-mb-md"
-        @click="nav.goTo('list')"
+        @click="nav.goTo('index')"
       />
 
 

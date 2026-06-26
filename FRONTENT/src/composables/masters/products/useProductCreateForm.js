@@ -146,13 +146,13 @@ export function useProductCreateForm() {
       if (newCode) {
         nav.goTo('view', { code: newCode })
       } else {
-        nav.goTo('list')
+        nav.goTo('index')
       }
     }
   }
 
   function navigateBack() {
-    nav.goTo('list')
+    nav.goTo('index')
   }
 
   onMounted(() => {

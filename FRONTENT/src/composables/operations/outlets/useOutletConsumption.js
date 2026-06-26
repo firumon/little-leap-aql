@@ -974,7 +974,7 @@ export function useOutletConsumption() {
     })
   }
 
-  function cancel() { nav.goTo('list') }
+  function cancel() { nav.goTo('index') }
 
   return {
     loading, saving, acting, searchTerm, activeGroupKey, activeInvoiceGroupKey, form, checklist, stockRows, restockRows, groups, invoiceGroups, items, invoiceItems, outletOptions, visitOptions, allPlannedVisits, plannedVisits, plannedVisitDiagnostics, skuOptions, selectedVisit, soldRows, varianceRows, pendingInvoiceItems, pendingPaymentInvoices, partiallyPaidInvoices, paidInvoices, cancelledInvoices, invoiceGeneratedItems, historyItems, canCreate, consumptionPermissions, invoicePermissions, restockPermissions, canReadInvoice, canReadRestock, reload, onOutletChange, selectVisit, updateCurrentQty, incrementCurrent, decrementCurrent, setCurrentToZero, setCurrentToSystem, updateRestockRow, addRestockRow, removeRestockRow, saveConsumption, generateInvoiceForConsumption, cancelConsumption, getConsumption, getInvoice, childItems, childInvoiceItems, childInvoice, childRestocks, cancelableRestocks, consumptionItemRows, invoiceLineItems, consumedTotal, getProgressMeta, isGroupExpanded, toggleGroup, isInvoiceGroupExpanded, toggleInvoiceGroup, outletName, skuName, productDisplayName, visitLabel, formatDisplayDate, navigateTo, navigateToAdd, navigateToInvoice, navigateToInvoiceAdd, navigateToRestock, navigateToConsumption, saveInvoiceFromConsumption, updateInvoice, resolveDefaultPriceList, resolvePriceListItems, cancel, text, todayISO, active, priceLists, rules,

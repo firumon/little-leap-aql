@@ -195,7 +195,7 @@ export function useRFQEditableFlow() {
   }
 
   function goToList() {
-    nav.goTo('list')
+    nav.goTo('index')
   }
 
   function formatDate(value) {

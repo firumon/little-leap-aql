@@ -78,7 +78,7 @@ const props = defineProps({
 })
 
 function navigateToList() {
-  nav.goTo('list')
+  nav.goTo('index')
 }
 </script>
 

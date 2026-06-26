@@ -114,7 +114,7 @@ export function usePOReceivingView() {
     }
   }
 
-  function goToList() { nav.goTo('list') }
+  function goToList() { nav.goTo('index') }
   function goToGrn() { if (linkedGrn.value?.Code) nav.goTo('view', { scope: 'operations', resourceSlug: 'goods-receipts', code: linkedGrn.value.Code }) }
 
   return { loading, acting, record, items, summary, progress, linkedGrn, purchaseOrder, procurement, isCompletedProcurement, canConfirm, canGenerateGRN, availableActions, cancelComment, reportPlaceholders: PO_RECEIVING_REPORT_PLACEHOLDERS, loadData, confirmReceiving, generateGRN, cancelReceiving, goToList, goToGrn, formatDate }

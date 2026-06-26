@@ -289,7 +289,7 @@ export function useOutletPayments() {
       }
 
       $q.notify({ type: 'positive', message: 'Payment submitted successfully.', position: 'top' })
-      nav.goTo('list')
+      nav.goTo('index')
       return true
     } finally {
       saving.value = false
@@ -360,7 +360,7 @@ export function useOutletPayments() {
       }
 
       $q.notify({ type: 'positive', message: 'Payment cancelled successfully.', position: 'top' })
-      nav.goTo('list')
+      nav.goTo('index')
       return true
     } finally {
       saving.value = false
@@ -368,7 +368,7 @@ export function useOutletPayments() {
   }
 
   function cancel() {
-    nav.goTo('list')
+    nav.goTo('index')
   }
 
   return {

@@ -52,7 +52,7 @@ export function useResourceNav () {
   /**
    * Navigate to a target page within the current (or overridden) resource.
    *
-   * @param {string} target - One of: 'list', 'add', 'view', 'edit', 'action', 'resource-page', 'record-page'
+   * @param {string} target - One of: 'index', 'add', 'view', 'edit', 'action', 'resource-page', 'record-page'
    * @param {Object} [params] - Optional overrides. Shallow-merged over resolved scope/resourceSlug/code.
    */
   const goTo = (target, params = {}) => {
@@ -68,22 +68,14 @@ export function useResourceNav () {
     resolved.action = routeParam(resolved.action)
     resolved.pageSlug = routeParam(resolved.pageSlug)
 
-    // Build scopePrefix from resolved.scope (post-merge) so cross-resource
-    // overrides correctly select the right named route set.
-    const scopePrefix = resolved.scope === 'operations'
-      ? 'operations'
-      : resolved.scope === 'accounts'
-        ? 'accounts'
-        : 'resource'
-
     const routeMappings = {
-      list:            `${scopePrefix}-list`,
-      add:             `${scopePrefix}-add`,
-      view:            `${scopePrefix}-view`,
-      edit:            `${scopePrefix}-edit`,
-      action:          `${scopePrefix}-action`,
-      'resource-page': `${scopePrefix}-resource-page`,
-      'record-page':   `${scopePrefix}-record-page`
+      index:           'index',
+      add:             'add',
+      view:            'view',
+      edit:            'edit',
+      action:          'action',
+      'resource-page': 'resource-page',
+      'record-page':   'record-page'
     }
 
     const routeName = routeMappings[target]
@@ -98,7 +90,7 @@ export function useResourceNav () {
     const withCode = { ...base, code: resolved.code }
 
     const routeParams = {
-      list:            base,
+      index:           base,
       add:             base,
       view:            withCode,
       edit:            withCode,

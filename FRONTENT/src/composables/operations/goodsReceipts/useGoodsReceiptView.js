@@ -53,7 +53,7 @@ export function useGoodsReceiptView() {
     }
   }
 
-  function goToList() { nav.goTo('list') }
+  function goToList() { nav.goTo('index') }
   function goToReceiving() { if (receiving.value?.Code) nav.goTo('view', { scope: 'operations', resourceSlug: 'po-receivings', code: receiving.value.Code }) }
 
   return { loading, acting, record, items, receiving, procurement, isCompletedProcurement, totalQty, canInvalidate, loadData, invalidateGoodsReceipt, goToList, goToReceiving, formatDate }

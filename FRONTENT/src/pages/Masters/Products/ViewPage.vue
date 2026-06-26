@@ -117,7 +117,7 @@ async function loadView() {
 }
 
 function navigateToList() {
-  nav.goTo('list')
+  nav.goTo('index')
 }
 
 function navigateToEdit() {

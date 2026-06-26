@@ -1,6 +1,6 @@
 <template>
   <nav class="breadcrumb-bar" aria-label="Breadcrumb">
-    <span class="crumb crumb-link" @click="nav.goTo('list')">
+    <span class="crumb crumb-link" @click="nav.goTo('index')">
       <q-icon name="home" size="16px" class="crumb-icon" />
       <span>{{ resourceTitle }}</span>
     </span>
@@ -34,7 +34,7 @@ defineProps({
   resourceSlug: { type: String, default: '' },
   resourceTitle: { type: String, default: '' },
   code: { type: String, default: '' },
-  action: { type: String, default: 'list' },
+  action: { type: String, default: 'index' },
   actionLabel: { type: String, default: '' }
 })
 </script>

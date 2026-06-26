@@ -206,7 +206,7 @@ export function useSupplierQuotationView() {
   }
 
   function goToList() {
-    nav.goTo('list')
+    nav.goTo('index')
   }
 
   watch([record, childRows, itemContext], hydrate, { immediate: true })

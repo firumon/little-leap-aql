@@ -273,7 +273,7 @@ export function usePOReceivingAddFlow() {
     }
   }
 
-  function cancel() { nav.goTo('list') }
+  function cancel() { nav.goTo('index') }
 
   return {
     loading,

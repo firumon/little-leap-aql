@@ -211,7 +211,7 @@ export function useProductEditForm() {
   }
 
   function navigateToList() {
-    nav.goTo('list')
+    nav.goTo('index')
   }
 
   watch(() => [resourceName.value, code.value], async ([name, currentCode]) => {

@@ -20,7 +20,7 @@ export function useRFQView() {
   }
 
   function goToList() {
-    nav.goTo('list')
+    nav.goTo('index')
   }
 
   watch(code, async () => {

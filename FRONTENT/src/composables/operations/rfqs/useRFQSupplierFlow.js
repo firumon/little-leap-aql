@@ -343,7 +343,7 @@ export function useRFQSupplierFlow(rfqCodeRef) {
   }
 
   function goToList() {
-    nav.goTo('list')
+    nav.goTo('index')
   }
 
   function assignSupplier() {

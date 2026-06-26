@@ -302,7 +302,7 @@ export function useDirectRestock() {
   }
 
   function cancel() {
-    nav.goTo('list')
+    nav.goTo('index')
   }
 
   return {

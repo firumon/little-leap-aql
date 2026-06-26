@@ -295,7 +295,7 @@ export function useOutletRestocks() {
       const saveResult = await resourceIoStore.runBatchRequests([compositeSaveRequest(buildRestockCompositePayload(payloadForm, rows.value))])
       if (responseFailed(saveResult)) return notifyError(failureMessage(saveResult, submit ? 'Failed to submit restock.' : 'Failed to save restock.'))
       $q.notify({ type: 'positive', message: submit ? 'Restock submitted.' : 'Restock draft saved.', position: 'top' })
-      nav.goTo('list')
+      nav.goTo('index')
       return true
     } finally { saving.value = false }
   }
@@ -543,7 +543,7 @@ export function useOutletRestocks() {
   function restockProgressFromRows(itemRows = rows.value) { return computeRestockProgressFromItems(itemRows) }
   function navigateTo(code) { nav.goTo('view', { code }) }
   function navigateToAdd(outletCode) { nav.goTo('add', outletCode ? { query: { outletCode } } : {}) }
-  function cancel() { nav.goTo('list') }
+  function cancel() { nav.goTo('index') }
   async function deliverDirectRestock(restock, itemsToDeliver = [], comment = '') {
     if (!allowed({ outletRestock: 'create', outletMovement: 'create' })) {
       return notifyError('You do not have permission to mark items delivered.')

@@ -39,24 +39,29 @@ Every page orchestrates exactly four top-level layout sections in this strict se
 
 ## 3. Directory Structure & Naming Rules (src/components/_common/)
 
-AQL organizes dynamic components under `src/components/_common/` using three simple rules:
+AQL organizes fallback components under `src/components/_common/` into Page folders and Root Section folders:
 
-### 3.1 Page-Level Scoping for All Top-Level Sections
-We use page-scoped directories (`Index/`, `View/`, `Add/`, `Edit/`, `Action/`) to house the four top-level section components. Every page folder contains exactly these four section files:
-- **`Header.vue`** (Imports and wraps the shared `GenericHeaderPanel.vue` as a thin page-specific wrapper)
-- **`Toolbar.vue`** (Orchestrates search/switcher controls or action bars)
-- **`Content.vue`** (Orchestrates the main body layout, wrapped in `AqlContentWrapper`)
-- **`Actions.vue`** (Orchestrates the bottom page-level actions/FABs)
+### 3.1 Page Orchestrators
+We use page-scoped directories (`Index/`, `View/`, `Add/`, `Edit/`, `Action/`) to house page-level orchestrators. Every page folder contains exactly these four orchestrators:
+- **`Header.vue`**: Orchestrates local overrides or script-only panels for the header.
+- **`Toolbar.vue`**: Orchestrates search/switcher controls (Index) or Action bars (View/Action).
+- **`Content.vue`**: Orchestrates the main content structure (wrapped in `AqlContentWrapper`).
+- **`Actions.vue`**: Orchestrates bottom page-level action triggers and buttons.
 
-### 3.2 Flattened Scoping for Globally Unique Sections
-All other unique components (e.g., `SearchInput.vue`, `Records.vue`, `Details.vue`, `Form.vue`, etc.) are globally unique and reside **directly under the root of `src/components/_common/`**.
+### 3.2 Root Section Fallback Folders
+All fallback components and leaf sub-sections are grouped by their root section:
+- **`Header/`**: Holds generic `Header.vue` panel and `ResourceBreadcrumb.vue`.
+- **`Toolbar/`**: Holds generic `Toolbar.vue` fallback, `SearchInput.vue`, `ViewSwitcher.vue`, `ActionBar.vue`.
+- **`Content/`**: Holds list fallbacks (`Records.vue`, `RecordsRecord.vue`), details (`Details.vue`, `Parent.vue`, `Children.vue`), form layouts (`Form.vue`, `Child.vue`), audit logs (`Audit.vue`), and states (`Loading.vue`, `Empty.vue`).
+- **`Action/`**: Holds global action fallbacks (`ActionsFallback.vue`), submit/cancel buttons (`FormSubmit.vue`, `FormCancel.vue`, `ActionSubmit.vue`, `ActionCancel.vue`), and FAB/Reports triggers (`AddFAB.vue`, `ResourceReports.vue`, `ReportBar.vue`).
 
 ### 3.3 Parent-Child Directory Pattern for Nested Sub-sections
-If a component recursively resolves its own sub-sections (e.g., `SearchInput.vue` resolving its own icons and clear triggers), the sub-components are placed inside a subdirectory named after it:
-- *Example*: `src/components/_common/SearchInput/SearchInputIcon.vue`
-- *Example*: `src/components/_common/Records/RecordsListItem.vue`
+If a component recursively resolves its own sub-sections, its sub-components reside in a subdirectory named after it inside the same root section folder:
+- *Example*: `src/components/_common/Toolbar/SearchInput.vue` (Parent component)
+- *Example*: `src/components/_common/Toolbar/SearchInput/SearchInputIcon.vue` (Sub-component)
+- *Example*: `src/components/_common/Toolbar/SearchInput/SearchInputClear.vue` (Sub-component)
 
-To resolve them, call `useSectionResolver` and pass the relative sub-path in the `page` parameter (e.g., `page: 'SearchInput'`).
+To resolve them, call `useSectionResolver` and pass the active Page Name in the `page` parameter (e.g., `page: props.page`). The `page` parameter MUST always be one of the standard Page Names (`Index`, `Add`, `Edit`, `Action`, `View`) to ensure that resource-level overrides are correctly looked up under the standard Page folders.
 
 ---
 
@@ -75,9 +80,9 @@ A component can only be placed at one of two target override locations:
    - *Example*: `src/components/Masters/Products/Index/Header.vue` (overriding just the Index page header)
 
 ### Recursive Sub-component Overrides
-For recursively resolved sub-components (like `SearchInputIcon.vue` resolved under `page: 'SearchInput'`), they can be placed at:
+For recursively resolved sub-components (like `SearchInputIcon.vue` resolved on the `Index` page), they can be placed at:
 - `src/components/[Scope]/[ResourceName]/SearchInputIcon.vue` (generic)
-- `src/components/[Scope]/[ResourceName]/SearchInput/SearchInputIcon.vue` (hierarchical)
+- `src/components/[Scope]/[ResourceName]/Index/SearchInputIcon.vue` (page-specific under the standard Page folder)
 
 ---
 
@@ -263,3 +268,89 @@ const props = defineProps({
 const { form, errors, loading, submit } = useProductForm(props.code)
 </script>
 ```
+
+### 5.7 Static Fallback Components in Page Shells (STRICT)
+
+To prevent runtime errors, dynamic component creation failures (`InvalidCharacterError` due to raw filepath string evaluation in `createElement`), page-scoped controllers MUST statically import the standard fallback components (e.g., `Header`, `Toolbar`, and `Actions`) and pass them as defaults inside the `sectionDefs` contract of `useSectionResolver`:
+
+```javascript
+import Header from 'components/_common/Header/Header.vue'
+import Toolbar from 'components/_common/Toolbar/Toolbar.vue'
+import Actions from 'components/_common/Action/ActionsFallback.vue'
+
+const { sections, sectionsReady } = useSectionResolver({
+  resourceSlug,
+  scope,
+  page: 'Index',
+  sectionDefs: {
+    Header: { section: 'Header', default: Header },
+    ToolBar: { section: 'Toolbar', default: Toolbar },
+    Content: 'Content',
+    Action: { section: 'Actions', default: Actions }
+  }
+})
+```
+
+### 5.8 Recursive Dynamic Resolution of Leaf Sub-sections
+
+For sub-sections that reside deep inside root sections (such as `SearchInput.vue` rendering inside a `Toolbar` orchestrator), they must:
+1. Receive page context dynamically from their parents via props (e.g., `<component :is="sections.SearchInput" :page="page" />`).
+2. Pass their local static imports as default fallbacks inside `useSectionResolver` to ensure they render immediately if no override is provided:
+
+```javascript
+import SearchInputIcon from 'components/_common/Toolbar/SearchInput/SearchInputIcon.vue'
+import SearchInputClear from 'components/_common/Toolbar/SearchInput/SearchInputClear.vue'
+
+const props = defineProps({
+  page: { type: String, default: 'Index' }
+})
+
+const { sections, sectionsReady } = useSectionResolver({
+  resourceSlug,
+  scope,
+  page: props.page, // Dynamically maps resolution scope to active page context
+  sectionDefs: {
+    SearchInputIcon: { section: 'SearchInputIcon', default: SearchInputIcon },
+    SearchInputClear: { section: 'SearchInputClear', default: SearchInputClear },
+    SearchInputPlaceholder: { section: 'SearchInputPlaceholder', default: EmptyComponent }
+  }
+})
+```
+
+### 5.9 Extraction of Template Content (Placeholder/Label Pattern)
+
+When overriding static text values (such as search placeholders) using custom Vue components (which are template-only files), we extract their contents programmatically by rendering them inside a hidden container:
+
+```html
+<template>
+  <q-input
+    v-model="searchTerm"
+    :placeholder="placeholderText"
+    dense
+    outlined
+  >
+    <!-- Programmatically extract content from custom template-only component -->
+    <div style="display: none;">
+      <component
+        :is="sections.SearchInputPlaceholder"
+        ref="placeholderRef"
+      />
+    </div>
+  </q-input>
+</template>
+
+<script setup>
+import { ref, computed } from 'vue'
+
+const placeholderRef = ref(null)
+
+const placeholderText = computed(() => {
+  if (!sections.SearchInputPlaceholder || sections.SearchInputPlaceholder === EmptyComponent) {
+    return 'Search...' // Default fallback search placeholder
+  }
+  // Programmatically extract text content from custom component DOM node
+  return placeholderRef.value?.$el?.textContent?.trim() || 'Search...'
+})
+</script>
+```
+This pattern allows developers to create custom static texts (e.g. `SearchInputPlaceholder.vue` containing `<template>Search items...</template>`) and have them resolved cleanly without complex Javascript props.

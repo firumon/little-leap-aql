@@ -12,8 +12,8 @@ This document serves as the master reference for developers to understand the ne
 
 To maintain absolute architectural consistency, AQL enforces a **Directory-Matching-Parent** pattern for nested components:
 
-1. **Parent Component Placement**: A parent component resides directly in its page flow directory or root (e.g., `src/components/_common/Index/Toolbar.vue` or `src/components/_common/SearchInput.vue`).
-2. **Sub-component Subdirectory**: All sub-sections resolved *exclusively* by that parent component reside inside a subdirectory named exactly after the parent component (e.g., `src/components/_common/SearchInput/SearchInputIcon.vue` and `src/components/_common/SearchInput/SearchInputClear.vue`).
+1. **Parent Component Placement**: A parent component resides directly in its page flow directory or root section folder (e.g., `src/components/_common/Index/Toolbar.vue` or `src/components/_common/Toolbar/SearchInput.vue`).
+2. **Sub-component Subdirectory**: All sub-sections resolved *exclusively* by that parent component reside inside a subdirectory named exactly after the parent component (e.g., `src/components/_common/Toolbar/SearchInput/SearchInputIcon.vue` and `src/components/_common/Toolbar/SearchInput/SearchInputClear.vue`).
 3. **No File-Name Page Prefixes**: File names do not use top-level page name prefixes (like `Index`, `View`, `Add`, `Edit`, `Action`) on files. Page context is established by the directory path (e.g., `_common/Index/Content.vue` instead of `IndexContent.vue`).
 
 ---
@@ -36,7 +36,7 @@ The following Mermaid diagrams illustrate the exact component nesting structure 
 ### 4.1 Header Section Hierarchy
 The Header represents page branding and synchronization. AQL uses a **two-tier orchestrator-presentation architecture** for headers:
 
-1. **Orchestrator Shell (`src/components/_common/Header.vue`)**: 
+1. **Orchestrator Shell (`src/components/_common/Header/Header.vue`)**: 
    - This is the central header component loaded by all page controllers. Because page controllers call the section resolver without the `allowScriptOnly` option, the resolver automatically skips any script-only overrides (which lack templates) and resolves to this central orchestrator.
    - The orchestrator reactively scans the Vite glob registry for local overrides using `useSectionResolver` with `allowScriptOnly: true`.
    - **Case 1 (Template-Based Overrides)**: If a local header component has its own template, the orchestrator renders it directly.
@@ -45,7 +45,7 @@ The Header represents page branding and synchronization. AQL uses a **two-tier o
 
 ```mermaid
 graph TD
-    PageController[Page Controller] -->|useSectionResolver| Orchestrator[src/components/_common/Header.vue]
+    PageController[Page Controller] -->|useSectionResolver| Orchestrator[src/components/_common/Header/Header.vue]
     
     Orchestrator -->|allowScriptOnly: true| LocalHeader[Local Override: Header.vue]
     
@@ -67,21 +67,21 @@ graph TD
     
     %% Index Page Toolbar
     ToolBar --> IndexToolbar[src/components/_common/Index/Toolbar.vue]
-    IndexToolbar --> SearchInput[src/components/_common/SearchInput.vue]
-    SearchInput --> SearchInputIcon[src/components/_common/SearchInput/SearchInputIcon.vue]
-    SearchInput --> SearchInputClear[src/components/_common/SearchInput/SearchInputClear.vue]
-    IndexToolbar --> ViewSwitcher[src/components/_common/ViewSwitcher.vue]
-    ViewSwitcher --> ViewSwitcherTab[src/components/_common/ViewSwitcher/ViewSwitcherTab.vue]
-    ViewSwitcherTab --> ViewSwitcherTabCount[src/components/_common/ViewSwitcher/ViewSwitcherTab/ViewSwitcherTabCount.vue]
+    IndexToolbar --> SearchInput[src/components/_common/Toolbar/SearchInput.vue]
+    SearchInput --> SearchInputIcon[src/components/_common/Toolbar/SearchInput/SearchInputIcon.vue]
+    SearchInput --> SearchInputClear[src/components/_common/Toolbar/SearchInput/SearchInputClear.vue]
+    IndexToolbar --> ViewSwitcher[src/components/_common/Toolbar/ViewSwitcher.vue]
+    ViewSwitcher --> ViewSwitcherTab[src/components/_common/Toolbar/ViewSwitcher/ViewSwitcherTab.vue]
+    ViewSwitcherTab --> ViewSwitcherTabCount[src/components/_common/Toolbar/ViewSwitcher/ViewSwitcherTab/ViewSwitcherTabCount.vue]
     
     %% View Page Toolbar
     ToolBar --> ViewToolbar[src/components/_common/View/Toolbar.vue]
-    ViewToolbar --> ActionBar[src/components/_common/ActionBar.vue]
-    ActionBar --> ActionBarEdit[src/components/_common/ActionBar/ActionBarEdit.vue]
-    ActionBar --> ActionBarDelete[src/components/_common/ActionBar/ActionBarDelete.vue]
-    ActionBar --> ActionBarCustom[src/components/_common/ActionBar/ActionBarCustom.vue]
-    ActionBarCustom --> ActionBarCustomButton[src/components/_common/ActionBar/ActionBarCustom/ActionBarCustomButton.vue]
-    ActionBarCustom --> AdditionalActions[src/components/_common/ActionBar/ActionBarCustom/AdditionalActions.vue]
+    ViewToolbar --> ActionBar[src/components/_common/Toolbar/ActionBar.vue]
+    ActionBar --> ActionBarEdit[src/components/_common/Toolbar/ActionBar/ActionBarEdit.vue]
+    ActionBar --> ActionBarDelete[src/components/_common/Toolbar/ActionBar/ActionBarDelete.vue]
+    ActionBar --> ActionBarCustom[src/components/_common/Toolbar/ActionBar/ActionBarCustom.vue]
+    ActionBarCustom --> ActionBarCustomButton[src/components/_common/Toolbar/ActionBar/ActionBarCustom/ActionBarCustomButton.vue]
+    ActionBarCustom --> AdditionalActions[src/components/_common/Toolbar/ActionBar/ActionBarCustom/AdditionalActions.vue]
 ```
 
 ---
@@ -95,62 +95,62 @@ graph TD
     
     %% Index Page Content
     Content --> IndexContent[src/components/_common/Index/Content.vue]
-    IndexContent --> Records[src/components/_common/Records.vue]
-    Records --> RecordsListItem[src/components/_common/Records/RecordsListItem.vue]
-    RecordsListItem --> RecordsListItemHeader[src/components/_common/Records/RecordsListItem/RecordsListItemHeader.vue]
-    RecordsListItemHeader --> RecordsListItemTitle[src/components/_common/Records/RecordsListItem/RecordsListItemHeader/RecordsListItemTitle.vue]
-    RecordsListItemHeader --> RecordsListItemStatus[src/components/_common/Records/RecordsListItem/RecordsListItemHeader/RecordsListItemStatus.vue]
-    RecordsListItem --> RecordsListItemBody[src/components/_common/Records/RecordsListItem/RecordsListItemBody.vue]
-    RecordsListItemBody --> RecordsListItemField[src/components/_common/Records/RecordsListItem/RecordsListItemBody/RecordsListItemField.vue]
-    RecordsListItem --> RecordsListItemFooter[src/components/_common/Records/RecordsListItem/RecordsListItemFooter.vue]
+    IndexContent --> Records[src/components/_common/Content/Records.vue]
+    Records --> RecordsListItem[src/components/_common/Content/Records/RecordsListItem.vue]
+    RecordsListItem --> RecordsListItemHeader[src/components/_common/Content/Records/RecordsListItem/RecordsListItemHeader.vue]
+    RecordsListItemHeader --> RecordsListItemTitle[src/components/_common/Content/Records/RecordsListItem/RecordsListItemHeader/RecordsListItemTitle.vue]
+    RecordsListItemHeader --> RecordsListItemStatus[src/components/_common/Content/Records/RecordsListItem/RecordsListItemHeader/RecordsListItemStatus.vue]
+    RecordsListItem --> RecordsListItemBody[src/components/_common/Content/Records/RecordsListItem/RecordsListItemBody.vue]
+    RecordsListItemBody --> RecordsListItemField[src/components/_common/Content/Records/RecordsListItem/RecordsListItemBody/RecordsListItemField.vue]
+    RecordsListItem --> RecordsListItemFooter[src/components/_common/Content/Records/RecordsListItem/RecordsListItemFooter.vue]
     
     %% View Page Content
     Content --> ViewContent[src/components/_common/View/Content.vue]
-    ViewContent --> Details[src/components/_common/Details.vue]
-    Details --> DetailsGroup[src/components/_common/Details/DetailsGroup.vue]
-    DetailsGroup --> DetailItem[src/components/_common/Details/DetailsGroup/DetailItem.vue]
-    DetailItem --> DetailItemLabel[src/components/_common/Details/DetailsGroup/DetailItem/DetailItemLabel.vue]
-    DetailItem --> DetailItemValue[src/components/_common/Details/DetailsGroup/DetailItem/DetailItemValue.vue]
-    ViewContent --> Parent[src/components/_common/Parent.vue]
-    Parent --> ParentHeader[src/components/_common/Parent/ParentHeader.vue]
-    Parent --> ParentBody[src/components/_common/Parent/ParentBody.vue]
-    Parent --> ParentLink[src/components/_common/Parent/ParentLink.vue]
-    ViewContent --> Children[src/components/_common/Children.vue]
-    Children --> ChildGroup[src/components/_common/Children/ChildGroup.vue]
-    ChildGroup --> ChildGroupHeader[src/components/_common/Children/ChildGroup/ChildGroupHeader.vue]
-    ChildGroup --> ChildGroupList[src/components/_common/Children/ChildGroup/ChildGroupList.vue]
-    ChildGroupList --> ChildItem[src/components/_common/Children/ChildGroup/ChildGroupList/ChildItem.vue]
-    ChildItem --> ChildItemField[src/components/_common/Children/ChildGroup/ChildGroupList/ChildItem/ChildItemField.vue]
-    ViewContent --> Audit[src/components/_common/Audit.vue]
-    Audit --> AuditGroup[src/components/_common/Audit/AuditGroup.vue]
-    AuditGroup --> AuditItem[src/components/_common/Audit/AuditGroup/AuditItem.vue]
+    ViewContent --> Details[src/components/_common/Content/Details.vue]
+    Details --> DetailsGroup[src/components/_common/Content/Details/DetailsGroup.vue]
+    DetailsGroup --> DetailItem[src/components/_common/Content/Details/DetailsGroup/DetailItem.vue]
+    DetailItem --> DetailItemLabel[src/components/_common/Content/Details/DetailsGroup/DetailItem/DetailItemLabel.vue]
+    DetailItem --> DetailItemValue[src/components/_common/Content/Details/DetailsGroup/DetailItem/DetailItemValue.vue]
+    ViewContent --> Parent[src/components/_common/Content/Parent.vue]
+    Parent --> ParentHeader[src/components/_common/Content/Parent/ParentHeader.vue]
+    Parent --> ParentBody[src/components/_common/Content/Parent/ParentBody.vue]
+    Parent --> ParentLink[src/components/_common/Content/Parent/ParentLink.vue]
+    ViewContent --> Children[src/components/_common/Content/Children.vue]
+    Children --> ChildGroup[src/components/_common/Content/Children/ChildGroup.vue]
+    ChildGroup --> ChildGroupHeader[src/components/_common/Content/Children/ChildGroup/ChildGroupHeader.vue]
+    ChildGroup --> ChildGroupList[src/components/_common/Content/Children/ChildGroup/ChildGroupList.vue]
+    ChildGroupList --> ChildItem[src/components/_common/Content/Children/ChildGroup/ChildGroupList/ChildItem.vue]
+    ChildItem --> ChildItemField[src/components/_common/Content/Children/ChildGroup/ChildGroupList/ChildItem/ChildItemField.vue]
+    ViewContent --> Audit[src/components/_common/Content/Audit.vue]
+    Audit --> AuditGroup[src/components/_common/Content/Audit/AuditGroup.vue]
+    AuditGroup --> AuditItem[src/components/_common/Content/Audit/AuditGroup/AuditItem.vue]
 
     %% Add Page Content
     Content --> AddContent[src/components/_common/Add/Content.vue]
-    AddContent --> Form[src/components/_common/Form.vue]
+    AddContent --> Form[src/components/_common/Content/Form.vue]
     
     %% Edit Page Content
     Content --> EditContent[src/components/_common/Edit/Content.vue]
     EditContent --> Form
     
     %% Form Sub-section Details
-    Form --> FormFields[src/components/_common/Form/FormFields.vue]
-    FormFields --> FormFieldsGroup[src/components/_common/Form/FormFields/FormFieldsGroup.vue]
-    FormFieldsGroup --> FormField[src/components/_common/Form/FormFields/FormFieldsGroup/FormField.vue]
-    FormField --> FormFieldLabel[src/components/_common/Form/FormFields/FormFieldsGroup/FormField/FormFieldLabel.vue]
-    FormField --> FormFieldControl[src/components/_common/Form/FormFields/FormFieldsGroup/FormField/FormFieldControl.vue]
-    FormField --> FormFieldError[src/components/_common/Form/FormFields/FormFieldsGroup/FormField/FormFieldError.vue]
-    Form --> FormChildren[src/components/_common/Form/FormChildren.vue]
-    FormChildren --> FormChildrenGroup[src/components/_common/Form/FormChildren/FormChildrenGroup.vue]
-    FormChildrenGroup --> FormChildrenHeader[src/components/_common/Form/FormChildren/FormChildrenGroup/FormChildrenHeader.vue]
-    FormChildrenGroup --> FormChildrenList[src/components/_common/Form/FormChildren/FormChildrenGroup/FormChildrenList.vue]
-    FormChildrenList --> FormChildrenItem[src/components/_common/Form/FormChildren/FormChildrenGroup/FormChildrenList/FormChildrenItem.vue]
-    FormChildrenItem --> FormChildrenItemField[src/components/_common/Form/FormChildren/FormChildrenGroup/FormChildrenList/FormChildrenItem/FormChildrenItemField.vue]
-    FormChildrenItem --> FormChildrenItemDelete[src/components/_common/Form/FormChildren/FormChildrenGroup/FormChildrenList/FormChildrenItem/FormChildrenItemDelete.vue]
+    Form --> FormFields[src/components/_common/Content/Form/FormFields.vue]
+    FormFields --> FormFieldsGroup[src/components/_common/Content/Form/FormFields/FormFieldsGroup.vue]
+    FormFieldsGroup --> FormField[src/components/_common/Content/Form/FormFields/FormFieldsGroup/FormField.vue]
+    FormField --> FormFieldLabel[src/components/_common/Content/Form/FormFields/FormFieldsGroup/FormField/FormFieldLabel.vue]
+    FormField --> FormFieldControl[src/components/_common/Content/Form/FormFields/FormFieldsGroup/FormField/FormFieldControl.vue]
+    FormField --> FormFieldError[src/components/_common/Content/Form/FormFields/FormFieldsGroup/FormField/FormFieldError.vue]
+    Form --> FormChildren[src/components/_common/Content/Form/FormChildren.vue]
+    FormChildren --> FormChildrenGroup[src/components/_common/Content/Form/FormChildren/FormChildrenGroup.vue]
+    FormChildrenGroup --> FormChildrenHeader[src/components/_common/Content/Form/FormChildren/FormChildrenGroup/FormChildrenHeader.vue]
+    FormChildrenGroup --> FormChildrenList[src/components/_common/Content/Form/FormChildren/FormChildrenGroup/FormChildrenList.vue]
+    FormChildrenList --> FormChildrenItem[src/components/_common/Content/Form/FormChildren/FormChildrenGroup/FormChildrenList/FormChildrenItem.vue]
+    FormChildrenItem --> FormChildrenItemField[src/components/_common/Content/Form/FormChildren/FormChildrenGroup/FormChildrenList/FormChildrenItem/FormChildrenItemField.vue]
+    FormChildrenItem --> FormChildrenItemDelete[src/components/_common/Content/Form/FormChildren/FormChildrenGroup/FormChildrenList/FormChildrenItem/FormChildrenItemDelete.vue]
 
     %% Action Page Content
     Content --> ActionContent[src/components/_common/Action/Content.vue]
-    ActionContent --> ActionFields[src/components/_common/ActionFields.vue]
+    ActionContent --> ActionFields[src/components/_common/Action/ActionFields.vue]
     ActionFields --> ActionOutcomeSelect[src/components/_common/ActionFields/ActionOutcomeSelect.vue]
     ActionFields --> ActionFormField[src/components/_common/ActionFields/ActionFormField.vue]
 ```
@@ -166,16 +166,16 @@ graph TD
     
     %% Index Page Action
     Action --> IndexActions[src/components/_common/Index/Actions.vue]
-    IndexActions --> AddFAB[src/components/_common/AddFAB.vue]
-    AddFAB --> AddFABIcon[src/components/_common/AddFAB/AddFABIcon.vue]
-    AddFAB --> AddFABTooltip[src/components/_common/AddFAB/AddFABTooltip.vue]
-    IndexActions --> ResourceReports[src/components/_common/ResourceReports.vue]
+    IndexActions --> AddFAB[src/components/_common/Action/AddFAB.vue]
+    AddFAB --> AddFABIcon[src/components/_common/Action/AddFAB/AddFABIcon.vue]
+    AddFAB --> AddFABTooltip[src/components/_common/Action/AddFAB/AddFABTooltip.vue]
+    IndexActions --> ResourceReports[src/components/_common/Action/ResourceReports.vue]
     
     %% Add Page Action
     Action --> AddActions[src/components/_common/Add/Actions.vue]
-    AddActions --> FormSubmit[src/components/_common/FormSubmit.vue]
-    AddActions --> FormCancel[src/components/_common/FormCancel.vue]
-    AddActions --> ClearButton[src/components/_common/ClearButton.vue]
+    AddActions --> FormSubmit[src/components/_common/Action/FormSubmit.vue]
+    AddActions --> FormCancel[src/components/_common/Action/FormCancel.vue]
+    AddActions --> ClearButton[src/components/_common/Action/ClearButton.vue]
     
     %% Edit Page Action
     Action --> EditActions[src/components/_common/Edit/Actions.vue]
@@ -185,8 +185,8 @@ graph TD
 
     %% Action Page Action
     Action --> ActionActions[src/components/_common/Action/Actions.vue]
-    ActionActions --> ActionSubmit[src/components/_common/ActionSubmit.vue]
-    ActionActions --> ActionCancel[src/components/_common/ActionCancel.vue]
+    ActionActions --> ActionSubmit[src/components/_common/Action/ActionSubmit.vue]
+    ActionActions --> ActionCancel[src/components/_common/Action/ActionCancel.vue]
 ```
 
 ---

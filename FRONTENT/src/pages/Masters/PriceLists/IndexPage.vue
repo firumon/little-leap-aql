@@ -149,7 +149,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import GenericHeaderPanel from 'components/shared/GenericHeaderPanel.vue'
-import MasterListToolbar from 'components/_common/Toolbar.vue'
+import MasterListToolbar from 'components/_common/Toolbar/Toolbar.vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useRecord } from 'src/composables/resources/useRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'

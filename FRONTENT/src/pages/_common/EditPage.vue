@@ -43,6 +43,9 @@ import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useRecord } from 'src/composables/resources/useRecord'
 import { useCompositeForm } from 'src/composables/resources/useCompositeForm'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
+import Header from 'components/_common/Header/Header.vue'
+import Toolbar from 'components/_common/Toolbar/Toolbar.vue'
+import Actions from 'components/_common/Action/ActionsFallback.vue'
 
 defineOptions({ name: 'EditPage' })
 
@@ -62,10 +65,10 @@ const { sections, sectionsReady } = useSectionResolver({
   scope,
   page: 'Edit',
   sectionDefs: {
-    Header: 'Header',
-    ToolBar: 'Toolbar',
+    Header: { section: 'Header', default: Header },
+    ToolBar: { section: 'Toolbar', default: Toolbar },
     Content: 'Content',
-    Action: 'Actions'
+    Action: { section: 'Actions', default: Actions }
   }
 })
 

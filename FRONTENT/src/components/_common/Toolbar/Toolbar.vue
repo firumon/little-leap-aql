@@ -1,5 +1,5 @@
 <template>
-  <div class="aql-add-toolbar hidden" />
+  <div class="aql-common-toolbar hidden" />
 </template>
 
 <script setup>

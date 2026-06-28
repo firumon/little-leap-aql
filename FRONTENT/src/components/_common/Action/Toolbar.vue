@@ -1,11 +1,6 @@
 <template>
-  <!-- Standard Toolbar block for the Action page. Typically empty, but available for stepper controls or page tabs. -->
-  <div class="action-toolbar" />
+  <div class="aql-action-toolbar hidden" />
 </template>
 
 <script setup>
-defineOptions({ name: 'ActionToolbar' })
-defineProps({
-  config: Object
-})
 </script>

@@ -24,6 +24,8 @@
 
 <script setup>
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
+import ActionSubmit from 'components/_common/Action/ActionSubmit.vue'
+import ActionCancel from 'components/_common/Action/ActionCancel.vue'
 
 defineOptions({ name: 'ActionActions' })
 
@@ -41,8 +43,8 @@ defineEmits(['cancel', 'submit'])
 const { sections, sectionsReady } = useSectionResolver({
   page: 'Action/Action',
   sectionDefs: {
-    ActionSubmit: { section: 'ActionSubmit', default: 'src/components/_common/ActionSubmit.vue' },
-    ActionCancel: { section: 'ActionCancel', default: 'src/components/_common/ActionCancel.vue' }
+    ActionSubmit: { section: 'ActionSubmit', default: ActionSubmit },
+    ActionCancel: { section: 'ActionCancel', default: ActionCancel }
   }
 })
 </script>

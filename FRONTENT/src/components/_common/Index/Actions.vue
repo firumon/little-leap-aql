@@ -17,6 +17,8 @@
 <script setup>
 import { inject } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
+import AddFAB from 'components/_common/Action/AddFAB.vue'
+import ResourceReports from 'components/_common/Action/ResourceReports.vue'
 
 defineOptions({ name: 'IndexActions' })
 
@@ -28,8 +30,8 @@ const { sections, sectionsReady } = useSectionResolver({
   scope,
   page: 'Index/Action',
   sectionDefs: {
-    AddFAB: { section: 'AddFAB', default: 'src/components/_common/AddFAB.vue' },
-    ResourceReports: { section: 'ResourceReports', default: 'src/components/_common/ResourceReports.vue' }
+    AddFAB: { section: 'AddFAB', default: AddFAB },
+    ResourceReports: { section: 'ResourceReports', default: ResourceReports }
   }
 })
 </script>

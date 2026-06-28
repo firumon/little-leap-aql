@@ -31,6 +31,10 @@
 <script setup>
 import { computed, inject } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
+import Details from 'components/_common/Content/Details.vue'
+import Parent from 'components/_common/Content/Parent.vue'
+import Children from 'components/_common/Content/Children.vue'
+import Audit from 'components/_common/Content/Audit.vue'
 
 defineOptions({ name: 'ViewContent' })
 
@@ -54,10 +58,10 @@ const { sections, sectionsReady } = useSectionResolver({
   scope: config.value?.scope,
   page: 'View/Content',
   sectionDefs: {
-    Details: { section: 'Details', default: 'src/components/_common/Details.vue' },
-    Parent: { section: 'Parent', default: 'src/components/_common/Parent.vue' },
-    Children: { section: 'Children', default: 'src/components/_common/Children.vue' },
-    Audit: { section: 'Audit', default: 'src/components/_common/Audit.vue' }
+    Details: { section: 'Details', default: Details },
+    Parent: { section: 'Parent', default: Parent },
+    Children: { section: 'Children', default: Children },
+    Audit: { section: 'Audit', default: Audit }
   }
 })
 </script>

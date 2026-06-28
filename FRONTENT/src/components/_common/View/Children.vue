@@ -20,7 +20,7 @@ import { ref, watch, markRaw, computed, inject } from 'vue'
 import { toPascalCase } from 'src/utils/appHelpers'
 import { registry } from 'src/composables/resources/useSectionResolver'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import DefaultChild from 'components/_common/Child.vue'
+import DefaultChild from 'components/_common/Content/Child.vue'
 
 defineOptions({ name: 'ViewChildren' })
 
@@ -67,7 +67,7 @@ async function resolveChildComponents() {
     addPaths(`components/_common/${scopeFolder}/View`)
     addPaths(`components/_common/${scopeFolder}`)
     addPaths(`components/_common/View`)
-    addPaths(`components/_common`)
+    addPaths(`components/_common/Content`)
 
     let resolvedComponent = null
     for (const path of candidates) {

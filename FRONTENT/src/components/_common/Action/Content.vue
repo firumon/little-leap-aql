@@ -37,13 +37,15 @@ defineEmits([
 
 const { resourceSlug, scope } = inject('resourceConfig')
 
+const EmptyComponent = { name: 'ActionFieldsEmpty', render() { return null } }
+
 // Resolve Content ActionFields sub-section recursively
 const { sections, sectionsReady } = useSectionResolver({
   resourceSlug,
   scope,
   page: 'Action/Content',
   sectionDefs: {
-    ActionFields: { section: 'ActionFields', default: 'src/components/_common/ActionFields.vue' }
+    ActionFields: { section: 'ActionFields', default: EmptyComponent }
   }
 })
 </script>

@@ -1,15 +1,11 @@
 <template>
   <div class="index-toolbar q-gutter-y-sm" v-if="sectionsReady">
-    <!-- Search Input Control -->
-    <component
-      :is="sections.SearchInput"
-      :search-term="searchTerm"
-      @update:search-term="updateSearch"
-    />
+    <!-- Search Input Control (resolved at Index level, self-binding via inject) -->
+    <component :is="searchSections.SearchInput" page="Index" />
 
     <!-- View Switcher Tabs Control -->
     <component
-      :is="sections.ViewSwitcher"
+      :is="toolbarSections.ViewSwitcher"
       :views="effectiveViews"
       :active-view-name="activeViewName"
       :counts="viewCounts"
@@ -25,22 +21,35 @@
 import { computed, inject } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
 import { useListViews } from 'src/composables/useListViews'
+import SearchInput from 'components/_common/Toolbar/SearchInput.vue'
+import ViewSwitcher from 'components/_common/Toolbar/ViewSwitcher.vue'
 
 defineOptions({ name: 'IndexToolbar' })
 
 const { resourceSlug, scope, resourceHeaders, config } = inject('resourceConfig')
-const { records: items, searchTerm } = inject('resourceRecord')
+const { records: items } = inject('resourceRecord')
 
-// Resolve Toolbar sub-sections recursively
-const { sections, sectionsReady } = useSectionResolver({
+// Resolve ViewSwitcher at Index page level
+const { sections: toolbarSections, sectionsReady: toolbarReady } = useSectionResolver({
   resourceSlug,
   scope,
-  page: 'Index/Toolbar',
+  page: 'Index',
   sectionDefs: {
-    SearchInput: { section: 'SearchInput', default: 'src/components/_common/SearchInput.vue' },
-    ViewSwitcher: { section: 'ViewSwitcher', default: 'src/components/_common/ViewSwitcher.vue' }
+    ViewSwitcher: { section: 'ViewSwitcher', default: ViewSwitcher }
   }
 })
+
+// Resolve SearchInput at Index level to allow components/[Scope]/[ResourceName]/Index/SearchInput.vue
+const { sections: searchSections, sectionsReady: searchReady } = useSectionResolver({
+  resourceSlug,
+  scope,
+  page: 'Index',
+  sectionDefs: {
+    SearchInput: { section: 'SearchInput', default: SearchInput }
+  }
+})
+
+const sectionsReady = computed(() => toolbarReady.value && searchReady.value)
 
 const configuredListViews = computed(() => config.value?.ui?.listViews || [])
 const configuredListViewsMode = computed(() => config.value?.ui?.listViewsMode || '')
@@ -52,8 +61,4 @@ const { effectiveViews, activeViewName, viewCounts, setActiveView } = useListVie
   configuredListViewsMode,
   enableUrlSync: false
 })
-
-function updateSearch(val) {
-  searchTerm.value = val
-}
 </script>

@@ -20,6 +20,8 @@
 import { inject } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
+import AddFABIcon from 'components/_common/Action/AddFAB/AddFABIcon.vue'
+import AddFABTooltip from 'components/_common/Action/AddFAB/AddFABTooltip.vue'
 
 defineOptions({ name: 'AddFAB' })
 
@@ -32,8 +34,8 @@ const { sections, sectionsReady } = useSectionResolver({
   scope,
   page: 'AddFAB',
   sectionDefs: {
-    AddFABIcon: { section: 'AddFABIcon', default: 'src/components/_common/AddFAB/AddFABIcon.vue' },
-    AddFABTooltip: { section: 'AddFABTooltip', default: 'src/components/_common/AddFAB/AddFABTooltip.vue' }
+    AddFABIcon: { section: 'AddFABIcon', default: AddFABIcon },
+    AddFABTooltip: { section: 'AddFABTooltip', default: AddFABTooltip }
   }
 })
 

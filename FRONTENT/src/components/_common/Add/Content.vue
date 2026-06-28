@@ -21,6 +21,7 @@
 <script setup>
 import { inject } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
+import Form from 'components/_common/Content/Form.vue'
 
 defineOptions({ name: 'AddContent' })
 
@@ -45,7 +46,7 @@ const { sections, sectionsReady } = useSectionResolver({
   scope: config.value?.scope,
   page: 'Add/Content',
   sectionDefs: {
-    Form: { section: 'Form', default: 'src/components/_common/Form.vue' }
+    Form: { section: 'Form', default: Form }
   }
 })
 </script>

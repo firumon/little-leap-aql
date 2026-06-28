@@ -17,6 +17,7 @@
 import { computed, inject } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
 import { useListViews } from 'src/composables/useListViews'
+import Records from 'components/_common/Content/Records.vue'
 
 defineOptions({ name: 'IndexContent' })
 
@@ -29,7 +30,7 @@ const { sections, sectionsReady } = useSectionResolver({
   scope,
   page: 'Index/Content',
   sectionDefs: {
-    Records: { section: 'Records', default: 'src/components/_common/Records.vue' }
+    Records: { section: 'Records', default: Records }
   }
 })
 

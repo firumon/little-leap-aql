@@ -21,6 +21,8 @@
 
 <script setup>
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
+import FormSubmit from 'components/_common/Action/FormSubmit.vue'
+import FormCancel from 'components/_common/Action/FormCancel.vue'
 
 defineOptions({ name: 'EditActions' })
 
@@ -35,8 +37,8 @@ defineEmits(['cancel', 'submit'])
 const { sections, sectionsReady } = useSectionResolver({
   page: 'Edit/Action',
   sectionDefs: {
-    FormSubmit: { section: 'FormSubmit', default: 'src/components/_common/FormSubmit.vue' },
-    FormCancel: { section: 'FormCancel', default: 'src/components/_common/FormCancel.vue' }
+    FormSubmit: { section: 'FormSubmit', default: FormSubmit },
+    FormCancel: { section: 'FormCancel', default: FormCancel }
   }
 })
 </script>

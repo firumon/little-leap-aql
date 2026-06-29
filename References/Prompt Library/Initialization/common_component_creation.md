@@ -98,6 +98,24 @@ When extracting template-only content (like customized search placeholders or fi
 
 Refer to the implementation in [SearchInput.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_common/Toolbar/SearchInput.vue#L24-L31) for details.
 
+### 5.2 Script-Only Resolution & The Presentation/Config Dual Model
+When resolving child sections that can be either full template overrides OR script-only configurations (e.g., `Header` or `ViewSwitcher`), use the dual-model resolution pattern:
+
+1. Call `useSectionResolver` with `allowScriptOnly: true`.
+2. Compute the component and config dynamically inside the parent wrapper:
+   ```javascript
+   const resolvedComponent = computed(() => {
+     const comp = sections.TargetSection
+     if (!comp) return { component: null, config: null }
+     const hasTemplate = !!(comp.render || comp.ssrRender || typeof comp === 'function')
+     if (hasTemplate) {
+       return { component: comp, config: null } // Template override
+     }
+     return { component: DefaultFallbackComponent, config: comp.config || {} } // Script-only config
+   })
+   ```
+3. Pass the resolved `config` to the default fallback component as a prop to customize its output (e.g. dynamic labels or icons evaluated using state from context).
+
 ---
 
 ## 6. Maintenance & Development Rule

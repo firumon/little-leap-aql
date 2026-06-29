@@ -148,12 +148,11 @@ If no page is found, it renders a developer fallback page: `pages/_common/Page.v
 ### 2.4 Action Pages & Their Bare Section Keys
 
 #### Index/List Page (`_common/IndexPage.vue`)
-- `Header`: Dynamic list header (`components/_common/List/Header.vue` fallback).
-- `Toolbar`: Dynamic search toolbar (`components/_common/List/Toolbar.vue` fallback).
-- `ViewSwitcher`: Dynamic list view chips (`components/_common/List/ViewSwitcher.vue` fallback).
-- `Records`: Card-list records container (`components/_common/Masters/List/Records.vue` fallback).
-- `Loading`: Page-level loading spinner (`components/_common/List/Loading.vue` fallback).
-- `Empty`: Page-level empty state (`components/_common/List/Empty.vue` fallback).
+- `Header`: Dynamic list header (`components/_common/Header/Header.vue` fallback).
+- `Toolbar`: Dynamic search/views toolbar (`components/_common/Index/Toolbar.vue` fallback).
+- `ViewSwitcher`: Dynamic list view tabs (`components/_common/Toolbar/ViewSwitcher.vue` fallback).
+- `Records`: Card-list records container (`components/_common/Content/Records.vue` fallback).
+- `AqlContentWrapper`: Handles loading/empty state wrapper (`components/shared/AqlContentWrapper.vue`).
 
 #### View Page (`_common/{Scope}/ViewPage.vue`)
 - `Header`: Dynamic view header (`components/_common/View/Header.vue` fallback).

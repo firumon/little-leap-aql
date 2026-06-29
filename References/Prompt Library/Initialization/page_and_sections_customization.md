@@ -177,6 +177,32 @@ const { form, errors, loading, submit } = useProductForm(props.code)
 </script>
 ```
 
+### 6.3 Script-Only Override: ViewSwitcher.vue
+You can customize the layout, icons, labels, and behavior of the list view switcher on the Index page using a script-only Vue component (no `<template>` tag, only `<script>` or `<script setup>`).
+
+Create a file named `ViewSwitcher.vue` under your resource's Index override folder (e.g., `src/components/Masters/Products/Index/ViewSwitcher.vue`):
+
+```vue
+<script>
+export const config = {
+  // Label: string or fn(viewItem, items, resourceConfig)
+  label: (view, items) => `${view.name} (${items.filter(r => r.Status === view.name).length})`,
+
+  // Icon: string or fn(viewItem, items, resourceConfig)
+  icon: (view) => view.name === 'Active' ? 'check_circle' : 'cancel',
+
+  // Layout: icon above label (true) or side-by-side (false). Default: true
+  stacked: false,
+
+  // Overflow arrows: show horizontal navigation arrows if tabs overflow. Default: true
+  outsideArrows: true,
+
+  // Custom icon size (e.g., '16px', 'sm')
+  iconSize: '16px'
+}
+</script>
+```
+
 ---
 
 ## 7. Registry Maintenance & Pre-Reads

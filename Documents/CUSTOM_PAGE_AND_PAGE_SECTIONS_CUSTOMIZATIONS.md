@@ -71,8 +71,6 @@ graph TD
     SearchInput --> SearchInputIcon[src/components/_common/Toolbar/SearchInput/SearchInputIcon.vue]
     SearchInput --> SearchInputClear[src/components/_common/Toolbar/SearchInput/SearchInputClear.vue]
     IndexToolbar --> ViewSwitcher[src/components/_common/Toolbar/ViewSwitcher.vue]
-    ViewSwitcher --> ViewSwitcherTab[src/components/_common/Toolbar/ViewSwitcher/ViewSwitcherTab.vue]
-    ViewSwitcherTab --> ViewSwitcherTabCount[src/components/_common/Toolbar/ViewSwitcher/ViewSwitcherTab/ViewSwitcherTabCount.vue]
     
     %% View Page Toolbar
     ToolBar --> ViewToolbar[src/components/_common/View/Toolbar.vue]

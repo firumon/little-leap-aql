@@ -73,6 +73,7 @@ import { useActionFields } from 'src/composables/resources/useActionFields'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import Header from 'components/_common/Header/Header.vue'
 import Toolbar from 'components/_common/Toolbar/Toolbar.vue'
+import Content from 'components/_common/Action/Content.vue'
 import Actions from 'components/_common/Action/ActionsFallback.vue'
 
 defineOptions({ name: 'ActionPage' })
@@ -114,7 +115,7 @@ const { sections, sectionsReady } = useSectionResolver({
   sectionDefs: {
     Header: { section: 'Header', default: Header },
     ToolBar: { section: 'Toolbar', default: Toolbar },
-    Content: 'Content',
+    Content: { section: 'Content', default: Content },
     Action: { section: 'Actions', default: Actions }
   }
 })

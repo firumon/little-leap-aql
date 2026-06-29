@@ -38,12 +38,12 @@ defineEmits([
   'update-child-field'
 ])
 
-const { config, resolvedFields } = inject('resourceConfig')
+const { resourceSlug, scope, config, resolvedFields } = inject('resourceConfig')
 
 // Resolve Content Form sub-section recursively
 const { sections, sectionsReady } = useSectionResolver({
-  resourceSlug: config.value?.slug,
-  scope: config.value?.scope,
+  resourceSlug,
+  scope,
   page: 'Add/Content',
   sectionDefs: {
     Form: { section: 'Form', default: Form }

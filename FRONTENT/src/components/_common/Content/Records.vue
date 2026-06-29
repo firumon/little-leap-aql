@@ -36,6 +36,10 @@
 import { computed, inject } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
 
+import Loading from 'components/_common/Content/Loading.vue'
+import Empty from 'components/_common/Content/Empty.vue'
+import Record from 'components/_common/Content/RecordsRecord.vue'
+
 const props = defineProps({
   items: { type: Array, default: () => [] },
   loading: { type: Boolean, default: false },
@@ -55,9 +59,9 @@ const { sections, sectionsReady } = useSectionResolver({
   customUIName: computed(() => props.customUIName),
   page: 'List',
   sectionDefs: {
-    Loading: 'Loading',
-    Empty: 'Empty',
-    Record: 'RecordsRecord',
+    Loading: { section: 'Loading', default: Loading },
+    Empty: { section: 'Empty', default: Empty },
+    Record: { section: 'Record', default: Record }
   }
 })
 

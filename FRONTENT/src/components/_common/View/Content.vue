@@ -38,7 +38,7 @@ import Audit from 'components/_common/Content/Audit.vue'
 
 defineOptions({ name: 'ViewContent' })
 
-const { config, scope } = inject('resourceConfig')
+const { resourceSlug, scope } = inject('resourceConfig')
 const {
   record, parentResource, childResources, childRecordsByResource
 } = inject('resourceRecord')
@@ -54,8 +54,8 @@ const parentRecord = computed(() => {
 
 // Resolve View page content sub-sections recursively
 const { sections, sectionsReady } = useSectionResolver({
-  resourceSlug: config.value?.slug,
-  scope: config.value?.scope,
+  resourceSlug,
+  scope,
   page: 'View/Content',
   sectionDefs: {
     Details: { section: 'Details', default: Details },

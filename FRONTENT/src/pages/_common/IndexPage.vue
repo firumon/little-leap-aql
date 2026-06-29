@@ -27,6 +27,7 @@ import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useRecord } from 'src/composables/resources/useRecord'
 import Header from 'components/_common/Header/Header.vue'
 import Toolbar from 'components/_common/Toolbar/Toolbar.vue'
+import Content from 'components/_common/Index/Content.vue'
 import Actions from 'components/_common/Action/ActionsFallback.vue'
 
 defineOptions({ name: 'IndexPage' })
@@ -50,7 +51,7 @@ const { sections, sectionsReady } = useSectionResolver({
   sectionDefs: {
     Header: { section: 'Header', default: Header },
     ToolBar: { section: 'Toolbar', default: Toolbar },
-    Content: 'Content',
+    Content: { section: 'Content', default: Content },
     Action: { section: 'Actions', default: Actions }
   }
 })

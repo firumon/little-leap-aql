@@ -17,7 +17,8 @@
     <MasterListViewSwitcher
       :views="effectiveViews"
       :active-view-name="activeViewName"
-      :counts="viewCounts"
+      :items="items"
+      :resource-config="config"
       @update:active-view-name="setActiveView"
     />
 
@@ -101,26 +102,24 @@ import MasterListToolbar from 'components/_common/Toolbar/Toolbar.vue'
 import MasterListViewSwitcher from 'components/_common/Toolbar/ViewSwitcher.vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useRecord } from 'src/composables/resources/useRecord'
-import { useListViews } from 'src/composables/useListViews'
 import { parseVariantTypes } from 'src/composables/masters/products/useProductVariants'
 import { useResourceNav } from 'src/composables/resources/useResourceNav.js'
 
 const nav = useResourceNav()
 
 const { config, resourceName, resourceHeaders, permissions } = useResourceConfig()
-const { records: items, loading, backgroundSyncing, searchTerm, reload } = useRecord()
+const {
+  records: items,
+  loading,
+  backgroundSyncing,
+  searchTerm,
+  reload,
+  effectiveViews,
+  activeViewName,
+  setActiveView,
+  filteredItems
+} = useRecord()
 const skusResource = useRecord('SKUs')
-
-const configuredListViews = computed(() => config.value?.ui?.listViews || [])
-const configuredListViewsMode = computed(() => config.value?.ui?.listViewsMode || '')
-
-const { effectiveViews, activeViewName, viewCounts, viewFilteredItems, setActiveView } = useListViews({
-  items,
-  resourceHeaders,
-  configuredListViews,
-  configuredListViewsMode,
-  enableUrlSync: false
-})
 
 const skuRecords = skusResource.records
 
@@ -137,7 +136,7 @@ const skuCountByProduct = computed(() => {
 
 // Final displayed items: view filter -> SKU-aware search
 const displayedItems = computed(() => {
-  const list = viewFilteredItems.value
+  const list = filteredItems.value
   const keyword = (searchTerm.value || '').toString().trim().toLowerCase()
   if (!keyword) return list
 

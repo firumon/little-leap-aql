@@ -7,7 +7,7 @@ const TOKEN_RESOLVERS = {
   $now: () => Date.now()
 }
 
-function normalizeListViewsMode(mode) {
+export function normalizeListViewsMode(mode) {
   const m = (mode || '').toString().trim().toLowerCase()
   if (m === 'off' || m === 'custom' || m === 'auto') return m
   return ''
@@ -83,7 +83,7 @@ function evaluateCondition(condition, row) {
 /**
  * Recursively evaluates a filter tree (group or condition) against a row.
  */
-function evaluateFilter(filter, row) {
+export function evaluateFilter(filter, row) {
   if (!filter) return true
   if (filter.type === 'condition') return evaluateCondition(filter, row)
   if (filter.type === 'group') {

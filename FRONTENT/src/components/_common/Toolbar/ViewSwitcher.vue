@@ -1,35 +1,30 @@
 <template>
-  <q-card v-if="views.length" flat bordered class="view-switcher-card">
-    <q-card-section class="q-pa-sm q-pa-md-sm">
-      <div class="view-chips">
-        <q-chip
-          v-for="view in views"
-          :key="view.name"
-          clickable
-          :outline="activeViewName !== view.name"
-          :color="chipColor(view)"
-          :text-color="activeViewName === view.name ? 'white' : chipColor(view)"
-          class="view-chip"
-          @click="$emit('update:activeViewName', view.name)"
-        >
-          {{ view.name }}
-          <q-badge
-            :color="activeViewName === view.name ? 'white' : chipColor(view)"
-            :text-color="activeViewName === view.name ? chipColor(view) : 'white'"
-            floating
-            rounded
-            class="count-badge"
-          >
-            {{ counts[view.name] ?? 0 }}
-          </q-badge>
-        </q-chip>
-      </div>
-    </q-card-section>
-  </q-card>
+  <q-tabs
+    v-if="views.length"
+    :model-value="activeViewName"
+    :outside-arrows="resolvedConfig.outsideArrows !== false"
+    no-caps
+    class="aql-view-tabs"
+    @update:model-value="$emit('update:activeViewName', $event)"
+    :inline-label="resolvedConfig.stacked === false"
+  >
+    <q-tab
+      v-for="view in views"
+      :key="view.name"
+      :name="view.name"
+      :icon="resolvedIcon(view)"
+      :label="resolvedLabel(view)"
+      :no-caps="true"
+      :class="tabClasses(view)"
+      :style="resolvedConfig.iconSize ? { '--aql-tab-icon-size': resolvedConfig.iconSize } : {}"
+    />
+  </q-tabs>
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue'
+
+const props = defineProps({
   views: {
     type: Array,
     default: () => []
@@ -38,51 +33,63 @@ defineProps({
     type: String,
     default: ''
   },
-  counts: {
+  items: {
+    type: Array,
+    default: () => []
+  },
+  resourceConfig: {
     type: Object,
     default: () => ({})
+  },
+  viewSwitcherConfig: {
+    type: Object,
+    default: null
   }
 })
 
 defineEmits(['update:activeViewName'])
 
-function chipColor(view) {
-  return view.color || 'grey-7'
+// Default configuration options
+const defaultConfig = {
+  label: null,
+  icon: null,
+  stacked: true,
+  outsideArrows: true,
+  iconSize: undefined
+}
+
+const resolvedConfig = computed(() => {
+  return {
+    ...defaultConfig,
+    ...(props.viewSwitcherConfig || {})
+  }
+})
+
+function evaluate(val, view) {
+  if (typeof val === 'function') {
+    return val(view, props.items, props.resourceConfig)
+  }
+  return val
+}
+
+function resolvedLabel(view) {
+  const labelVal = resolvedConfig.value.label !== null ? resolvedConfig.value.label : null
+  const evaluated = evaluate(labelVal, view)
+  return evaluated !== null ? evaluated : view.name
+}
+
+function resolvedIcon(view) {
+  const iconVal = resolvedConfig.value.icon !== null ? resolvedConfig.value.icon : null
+  const evaluated = evaluate(iconVal, view)
+  return evaluated !== null ? evaluated : (view.icon || undefined)
+}
+
+function tabClasses(view) {
+  const activeColor = view.color || 'primary'
+  const isActive = props.activeViewName === view.name
+  return {
+    [`aql-tab--active-${activeColor}`]: isActive,
+    'aql-tab--inactive': !isActive
+  }
 }
 </script>
-
-<style scoped>
-.view-switcher-card {
-  border-radius: 16px;
-  border-color: var(--aql-border);
-  background: rgba(255, 255, 255, 0.92);
-}
-
-.view-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.view-chip {
-  font-weight: 600;
-  font-size: 13px;
-  cursor: pointer;
-  transition: transform 120ms ease, box-shadow 120ms ease;
-  position: relative;
-  padding-right: 28px;
-}
-
-.view-chip:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.count-badge {
-  font-size: 10px;
-  min-width: 18px;
-  height: 18px;
-  top: -6px;
-  right: -6px;
-}
-</style>

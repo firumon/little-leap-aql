@@ -169,3 +169,48 @@
   text-transform: none;
   font-weight: 500;
 }
+
+// ── View Switcher Tabs ─────────────────────────────────────────────────────
+.aql-view-tabs {
+  background: transparent;
+
+  .q-tabs__content {
+    gap: 4px;
+  }
+
+  .q-tab {
+    border-radius: $r-sm;
+    font-weight: 500;
+    font-size: 13px;
+    text-transform: none;
+    transition: all 0.2s ease;
+    color: $ink-muted;
+    padding: 8px 16px;
+    min-height: unset;
+
+    &:hover {
+      background: rgba($primary, 0.04);
+    }
+
+    // Support dynamic custom icon size variable
+    .q-tab__icon {
+      font-size: var(--aql-tab-icon-size, inherit);
+    }
+  }
+
+  // Hide Quasar's default bottom indicator line
+  .q-tab__indicator {
+    display: none;
+  }
+}
+
+// Active tab light-shade backgrounds — each brand color variant
+.aql-tab--active-primary   { background: var(--q-primary-light);   color: var(--q-primary) !important; font-weight: 600 !important; }
+.aql-tab--active-secondary { background: var(--q-secondary-light); color: var(--q-secondary) !important; font-weight: 600 !important; }
+.aql-tab--active-positive  { background: var(--q-positive-light);  color: var(--q-positive) !important; font-weight: 600 !important; }
+.aql-tab--active-negative  { background: var(--q-negative-light);  color: var(--q-negative) !important; font-weight: 600 !important; }
+.aql-tab--active-info      { background: var(--q-info-light);      color: var(--q-info) !important; font-weight: 600 !important; }
+.aql-tab--active-warning   { background: var(--q-warning-light);   color: var(--q-warning) !important; font-weight: 600 !important; }
+.aql-tab--active-accent    { background: var(--q-accent-light);    color: var(--q-accent) !important; font-weight: 600 !important; }
+.aql-tab--active-grey      { background: #f1f5f9;                  color: #64748b !important; font-weight: 600 !important; }
+

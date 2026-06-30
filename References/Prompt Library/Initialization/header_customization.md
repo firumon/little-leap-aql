@@ -2,7 +2,7 @@
 
 Use this document to initialize an AI agent session when the task involves customizing, overriding, or debugging the resource header across any page (Index, Add, Edit, View, Action) in the AQL repository.
 
-> **Scope Boundary**: This document covers both script-only and template-based local header customizations, dynamic properties resolution, and back/reload button behaviors. Refer to [ARCHITECTURE RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md) for general frontend rules.
+> **Scope Boundary**: This document covers both JS logic modifiers and template-based local header customizations, dynamic properties resolution, and back/reload button behaviors. Refer to [ARCHITECTURE RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md) for general frontend rules.
 
 ---
 
@@ -10,16 +10,14 @@ Use this document to initialize an AI agent session when the task involves custo
 
 The header uses a **two-tier architecture** that separates orchestration (file scanning and fallback logic) from presentation (rendering and slots):
 
-1. **Orchestrator Shell**: [Header.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_common/Header.vue)
-   - The central entry point loaded by all page controllers.
-   - Injects the page-level provided `resourceConfig` context rather than instantiating its own.
-   - Dynamically scans the Vite glob registry via the central section resolver for local overrides at `src/components/[Scope]/[Resource]/[Page]/Header.vue` (page-specific) or `src/components/[Scope]/[Resource]/Header.vue` (resource-generic).
-   - If a local header has a template, it mounts it directly. Otherwise, it merges script configurations and renders the presentation layer.
+1. **Orchestrator Shell**: [Header.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_common/Header/Header.vue)
+   - The central entry point loaded by `Page.vue`.
+   - Injects the page-level provided `resourceConfig` context.
+   - Calls `useSectionResolver({ sectionName: 'Header', page })` to look for a custom header template (`Header.vue`) or JS logic modifier (`Header.js`).
+   - If a custom template is found, mounts it. If a JS modifier is found, merges configurations and renders the presentation layer.
 2. **Presentation Foundation**: [GenericHeaderPanel.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/shared/GenericHeaderPanel.vue)
    - Houses the Quasar flex layout, styling, and standard slots.
    - Renders titles, subtitles, status chips, and back/reload button setups.
-3. **Reload Presentation**: [ReloadButton.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/shared/ReloadButton.vue)
-   - Renders the refresh button and handles IndexedDB dependency syncing.
 
 ---
 
@@ -53,46 +51,39 @@ The `back` property in the `header` configuration is highly overloaded to consol
 
 ## 4. Local Customization Patterns
 
-### Pattern 1: Script-Only Customization (No Template)
-Create a local header file and export a `header` object. Variables can be plain values or functions reading both the active `record` and the resource `config`.
+### Pattern 1: JS Logic Modifier (Tiers 7 & 8 only)
+Create a `.js` file to modify the header props. You can return static config settings or functions reading the record and resource config:
 
-> [!NOTE]
-> When exporting `header` from a component using `<script setup>`, you must use a secondary, standard `<script>` block to expose the export to the module registry.
-
-```html
-<!-- src/components/Masters/Products/Index/Header.vue -->
-<script>
-export const header = {
-  // Title and subtitle as functions reading both active record and resource config
-  title: (record, config) => record ? `Product: ${record.Name}` : (config?.name || 'Product Catalog'),
-  subtitle: (record, config) => record ? `SKU: ${record.SkuCode}` : (config?.description || 'Manage catalog'),
-  
-  // Custom left icon (hidden if not defined)
-  icon: 'inventory_2',
-  
-  // Custom back button (string = custom icon, function = custom click action)
-  back: 'close',
-  
-  // Reload button: false to disable, string for custom icon name (default: 'refresh')
-  reload: 'sync',
-  
-  // Status chip badge customization (accepts string or function)
-  chip: (record, config) => record?.Status || 'Draft',
-  chipColor: (record, config) => record?.Status === 'Active' ? 'positive' : 'warning',
-  chipTextColor: 'white'
+#### `src/components/Masters/Products/Index/Header.js`
+```javascript
+export default function (props) {
+  return {
+    ...props,
+    headerConfig: {
+      // Title and subtitle as functions reading both active record and resource config
+      title: (record, config) => record ? `Product: ${record.Name}` : (config?.name || 'Product Catalog'),
+      subtitle: (record, config) => record ? `SKU: ${record.SkuCode}` : (config?.description || 'Manage catalog'),
+      
+      // Custom left icon
+      icon: 'inventory_2',
+      
+      // Custom back button
+      back: 'close',
+      
+      // Status chip badge customization
+      chip: (record) => record?.Status || 'Draft',
+      chipColor: (record) => record?.Status === 'Active' ? 'positive' : 'warning',
+      chipTextColor: 'white'
+    }
+  }
 }
-</script>
-
-<script setup>
-// Normal component setup logic can reside here
-</script>
 ```
 
-### Pattern 2: Custom Template Wrapping `GenericHeaderPanel`
-To customize the template structure or slots while preserving the standard layout, wrap the shared presentation panel:
+### Pattern 2: Custom Template Wrapping `GenericHeaderPanel` (Tiers 1-8)
+To customize the template structure or slots while preserving the standard layout, wrap the shared presentation panel in a `.vue` file:
 
+#### `src/components/Masters/Products/Index/Header.vue`
 ```html
-<!-- src/components/Masters/Products/Index/Header.vue -->
 <template>
   <GenericHeaderPanel
     v-bind="$attrs"
@@ -112,11 +103,11 @@ import GenericHeaderPanel from 'components/shared/GenericHeaderPanel.vue'
 </script>
 ```
 
-### Pattern 3: Complete Custom Override
-To completely bypass the standard layout and write a completely custom header, simply write standard HTML and Quasar markup in the template:
+### Pattern 3: Complete Custom Override (Tiers 1-8)
+To completely bypass the standard layout, write a standard Vue template:
 
+#### `src/components/Masters/Products/Index/Header.vue`
 ```html
-<!-- src/components/Masters/Products/Index/Header.vue -->
 <template>
   <q-banner class="bg-primary text-white q-pa-md rounded-borders">
     <div class="row items-center justify-between">

@@ -79,6 +79,7 @@ Use when overriding or creating custom section or sub-components for any resourc
 (e.g., custom record card, custom details view, custom form, custom child layout, custom loading/empty states).
 - Read:
   - `Documents/CUSTOM_PAGE_AND_PAGE_SECTIONS_CUSTOMIZATIONS.md`
+  - `Documents/AQL_CONTENT_CUSTOMIZATION_SYSTEM.md`
 
 ### Backend Design
 Use when designing new backend behavior, evaluating options, or checking whether existing GAS capabilities already support the request.

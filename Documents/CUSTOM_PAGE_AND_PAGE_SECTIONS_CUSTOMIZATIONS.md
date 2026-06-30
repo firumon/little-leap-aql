@@ -2,7 +2,10 @@
 
 ## 1. Overview
 
-AQL's frontend architecture is designed for deep, tiered customization of pages and layout sections. This is achieved through a unified, multi-tiered component resolution system powered by `useSectionResolver.js` (for layout sections) and `usePageResolver.js` (for top-level pages).
+AQL's frontend architecture is designed for deep, tiered customization of pages and layout sections. This is achieved through a decentralized layout system:
+1. **Top-Level Orchestrators**: Standard page wrapper definitions (like [IndexPage.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/IndexPage.vue) and [ViewPage.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/Masters/ViewPage.vue)) delegate rendering to a unified [Page.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/Page.vue) component.
+2. **Static Layout Fallbacks**: The unified `Page.vue` statically imports and mounts the core layout section components (`Header`, `Toolbar`, `Content`, `Action`).
+3. **Decentralized Overriding**: Each layout component (and their child sub-sections) uses [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js) to resolve their own overrides independently.
 
 This document serves as the master reference for developers to understand the nested directory structure, page flows, dynamic sub-sections, and override boundaries in the AQL codebase.
 
@@ -23,7 +26,7 @@ To maintain absolute architectural consistency, AQL enforces a **Directory-Match
 Every page target in AQL (Index, View, Add, Edit, and Action) orchestrates exactly four top-level sections, executed in this strict sequence:
 
 1. **`Header`**: Placed first, at the top. Handles page branding, context, back actions, and synchronization states. Leverages the shared [GenericHeaderPanel.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/shared/GenericHeaderPanel.vue).
-2. **`ToolBar`**: Placed second. Handles search, view switcher tabs, or record action controls.
+2. **`Toolbar`**: Placed second. Handles search, view switcher tabs, or record action controls.
 3. **`Content`**: Placed third. Handles the main body payload of the page (wrapped in `<AqlContentWrapper>`). For `Add` and `Edit` pages, **Form** is a sub-section of `Content`.
 4. **`Action`**: Placed fourth. Handles bottom form actions, footers, or floating action buttons (FABs).
 
@@ -31,194 +34,124 @@ Every page target in AQL (Index, View, Add, Edit, and Action) orchestrates exact
 
 ## 4. Visual Layout Hierarchies
 
-The following Mermaid diagrams illustrate the exact component nesting structure from the top-level section down to the leaf sub-sections, showing their file locations under `src/components/_common/`.
+The following diagrams illustrate the exact component nesting structure from the top-level section down to the leaf sub-sections, showing their file locations under `src/components/_common/`.
 
 ### 4.1 Header Section Hierarchy
-The Header represents page branding and synchronization. AQL uses a **two-tier orchestrator-presentation architecture** for headers:
-
-1. **Orchestrator Shell (`src/components/_common/Header/Header.vue`)**: 
-   - This is the central header component loaded by all page controllers. Because page controllers call the section resolver without the `allowScriptOnly` option, the resolver automatically skips any script-only overrides (which lack templates) and resolves to this central orchestrator.
-   - The orchestrator reactively scans the Vite glob registry for local overrides using `useSectionResolver` with `allowScriptOnly: true`.
-   - **Case 1 (Template-Based Overrides)**: If a local header component has its own template, the orchestrator renders it directly.
-   - **Case 2 (Script-Only Overrides / Fallback)**: If a local header is script-only (has no template) and exports a named `header` object, or if no override exists, the orchestrator extracts the metadata and mounts the shared `GenericHeaderPanel.vue`.
-   - Custom dynamic functions in the `header` object are evaluated with both the active `record` and the resource `config` context: `(record, config)`.
+The Header represents page branding and synchronization.
+1. **Header Fallback (`src/components/_common/Header/Header.vue`)**:
+   - Central entry point loaded by `Page.vue`.
+   - Calls `useSectionResolver` to look for a custom header template (`Header.vue`) or JS logic modifier (`Header.js`).
+   - If a custom template is found, renders it. If a JS modifier is found, uses it to adapt the props. Otherwise, falls back to `GenericHeaderPanel.vue`.
 
 ```mermaid
 graph TD
-    PageController[Page Controller] -->|useSectionResolver| Orchestrator[src/components/_common/Header/Header.vue]
-    
-    Orchestrator -->|allowScriptOnly: true| LocalHeader[Local Override: Header.vue]
-    
-    LocalHeader -->|Case 1: Has Template| RenderDirect[Render Override Directly]
-    LocalHeader -->|Case 2: Script-Only / Fallback| GenericHeaderPanel[src/components/shared/GenericHeaderPanel.vue]
-    
-    GenericHeaderPanel --> HeaderPanel[src/components/shared/HeaderPanel.vue]
-    GenericHeaderPanel --> ReloadButton[src/components/shared/ReloadButton.vue]
+    PageVue[src/pages/_common/Page.vue] --> HeaderFallback[src/components/_common/Header/Header.vue]
+    HeaderFallback -->|useSectionResolver| CustomOverride{Override Found?}
+    CustomOverride -->|Vue Template| RenderVue[Render Override Directly]
+    CustomOverride -->|JS Modifier| RenderGenericWithJS[Render GenericHeaderPanel with Mod Props]
+    CustomOverride -->|None| RenderGeneric[Render GenericHeaderPanel.vue]
 ```
 
 ---
 
-### 4.2 ToolBar Section Hierarchy
-The ToolBar coordinates search, view switchers, and record controls (like the ActionBar).
+### 4.2 Toolbar Section Hierarchy
+The Toolbar coordinates search, view switchers, and record controls.
 
 ```mermaid
 graph TD
-    ToolBar[ToolBar Section]
+    PageVue[src/pages/_common/Page.vue] --> ToolbarFallback[Toolbar Section]
     
     %% Index Page Toolbar
-    ToolBar --> IndexToolbar[src/components/_common/Index/Toolbar.vue]
+    ToolbarFallback --> IndexToolbar[src/components/_common/Index/Toolbar.vue]
     IndexToolbar --> SearchInput[src/components/_common/Toolbar/SearchInput.vue]
     SearchInput --> SearchInputIcon[src/components/_common/Toolbar/SearchInput/SearchInputIcon.vue]
     SearchInput --> SearchInputClear[src/components/_common/Toolbar/SearchInput/SearchInputClear.vue]
+    SearchInput --> SearchInputPlaceholder[src/components/_common/Toolbar/SearchInput/SearchInputPlaceholder.vue]
+    SearchInput --> SearchInputLabel[src/components/_common/Toolbar/SearchInput/SearchInputLabel.vue]
     IndexToolbar --> ViewSwitcher[src/components/_common/Toolbar/ViewSwitcher.vue]
     
     %% View Page Toolbar
-    ToolBar --> ViewToolbar[src/components/_common/View/Toolbar.vue]
+    ToolbarFallback --> ViewToolbar[src/components/_common/View/Toolbar.vue]
     ViewToolbar --> ActionBar[src/components/_common/Toolbar/ActionBar.vue]
-    ActionBar --> ActionBarEdit[src/components/_common/Toolbar/ActionBar/ActionBarEdit.vue]
-    ActionBar --> ActionBarDelete[src/components/_common/Toolbar/ActionBar/ActionBarDelete.vue]
-    ActionBar --> ActionBarCustom[src/components/_common/Toolbar/ActionBar/ActionBarCustom.vue]
-    ActionBarCustom --> ActionBarCustomButton[src/components/_common/Toolbar/ActionBar/ActionBarCustom/ActionBarCustomButton.vue]
-    ActionBarCustom --> AdditionalActions[src/components/_common/Toolbar/ActionBar/ActionBarCustom/AdditionalActions.vue]
 ```
 
 ---
 
 ### 4.3 Content Section Hierarchy
-The Content section renders the main body of the page. For Add/Edit pages, **Form** is a sub-section of Content.
+The Content section renders the main body of the page.
 
 ```mermaid
 graph TD
-    Content[Content Section]
+    PageVue[src/pages/_common/Page.vue] --> ContentFallback[Content Section]
     
     %% Index Page Content
-    Content --> IndexContent[src/components/_common/Index/Content.vue]
+    ContentFallback --> IndexContent[src/components/_common/Index/Content.vue]
     IndexContent --> Records[src/components/_common/Content/Records.vue]
-    Records --> RecordsListItem[src/components/_common/Content/Records/RecordsListItem.vue]
-    RecordsListItem --> RecordsListItemHeader[src/components/_common/Content/Records/RecordsListItem/RecordsListItemHeader.vue]
-    RecordsListItemHeader --> RecordsListItemTitle[src/components/_common/Content/Records/RecordsListItem/RecordsListItemHeader/RecordsListItemTitle.vue]
-    RecordsListItemHeader --> RecordsListItemStatus[src/components/_common/Content/Records/RecordsListItem/RecordsListItemHeader/RecordsListItemStatus.vue]
-    RecordsListItem --> RecordsListItemBody[src/components/_common/Content/Records/RecordsListItem/RecordsListItemBody.vue]
-    RecordsListItemBody --> RecordsListItemField[src/components/_common/Content/Records/RecordsListItem/RecordsListItemBody/RecordsListItemField.vue]
-    RecordsListItem --> RecordsListItemFooter[src/components/_common/Content/Records/RecordsListItem/RecordsListItemFooter.vue]
     
     %% View Page Content
-    Content --> ViewContent[src/components/_common/View/Content.vue]
+    ContentFallback --> ViewContent[src/components/_common/View/Content.vue]
     ViewContent --> Details[src/components/_common/Content/Details.vue]
-    Details --> DetailsGroup[src/components/_common/Content/Details/DetailsGroup.vue]
-    DetailsGroup --> DetailItem[src/components/_common/Content/Details/DetailsGroup/DetailItem.vue]
-    DetailItem --> DetailItemLabel[src/components/_common/Content/Details/DetailsGroup/DetailItem/DetailItemLabel.vue]
-    DetailItem --> DetailItemValue[src/components/_common/Content/Details/DetailsGroup/DetailItem/DetailItemValue.vue]
     ViewContent --> Parent[src/components/_common/Content/Parent.vue]
-    Parent --> ParentHeader[src/components/_common/Content/Parent/ParentHeader.vue]
-    Parent --> ParentBody[src/components/_common/Content/Parent/ParentBody.vue]
-    Parent --> ParentLink[src/components/_common/Content/Parent/ParentLink.vue]
-    ViewContent --> Children[src/components/_common/Content/Children.vue]
-    Children --> ChildGroup[src/components/_common/Content/Children/ChildGroup.vue]
-    ChildGroup --> ChildGroupHeader[src/components/_common/Content/Children/ChildGroup/ChildGroupHeader.vue]
-    ChildGroup --> ChildGroupList[src/components/_common/Content/Children/ChildGroup/ChildGroupList.vue]
-    ChildGroupList --> ChildItem[src/components/_common/Content/Children/ChildGroup/ChildGroupList/ChildItem.vue]
-    ChildItem --> ChildItemField[src/components/_common/Content/Children/ChildGroup/ChildGroupList/ChildItem/ChildItemField.vue]
+    ViewContent --> Children[src/components/_common/View/Children.vue]
     ViewContent --> Audit[src/components/_common/Content/Audit.vue]
-    Audit --> AuditGroup[src/components/_common/Content/Audit/AuditGroup.vue]
-    AuditGroup --> AuditItem[src/components/_common/Content/Audit/AuditGroup/AuditItem.vue]
 
-    %% Add Page Content
-    Content --> AddContent[src/components/_common/Add/Content.vue]
+    %% Add/Edit Content
+    ContentFallback --> AddContent[src/components/_common/Add/Content.vue]
+    ContentFallback --> EditContent[src/components/_common/Edit/Content.vue]
     AddContent --> Form[src/components/_common/Content/Form.vue]
-    
-    %% Edit Page Content
-    Content --> EditContent[src/components/_common/Edit/Content.vue]
     EditContent --> Form
-    
-    %% Form Sub-section Details
-    Form --> FormFields[src/components/_common/Content/Form/FormFields.vue]
-    FormFields --> FormFieldsGroup[src/components/_common/Content/Form/FormFields/FormFieldsGroup.vue]
-    FormFieldsGroup --> FormField[src/components/_common/Content/Form/FormFields/FormFieldsGroup/FormField.vue]
-    FormField --> FormFieldLabel[src/components/_common/Content/Form/FormFields/FormFieldsGroup/FormField/FormFieldLabel.vue]
-    FormField --> FormFieldControl[src/components/_common/Content/Form/FormFields/FormFieldsGroup/FormField/FormFieldControl.vue]
-    FormField --> FormFieldError[src/components/_common/Content/Form/FormFields/FormFieldsGroup/FormField/FormFieldError.vue]
-    Form --> FormChildren[src/components/_common/Content/Form/FormChildren.vue]
-    FormChildren --> FormChildrenGroup[src/components/_common/Content/Form/FormChildren/FormChildrenGroup.vue]
-    FormChildrenGroup --> FormChildrenHeader[src/components/_common/Content/Form/FormChildren/FormChildrenGroup/FormChildrenHeader.vue]
-    FormChildrenGroup --> FormChildrenList[src/components/_common/Content/Form/FormChildren/FormChildrenGroup/FormChildrenList.vue]
-    FormChildrenList --> FormChildrenItem[src/components/_common/Content/Form/FormChildren/FormChildrenGroup/FormChildrenList/FormChildrenItem.vue]
-    FormChildrenItem --> FormChildrenItemField[src/components/_common/Content/Form/FormChildren/FormChildrenGroup/FormChildrenList/FormChildrenItem/FormChildrenItemField.vue]
-    FormChildrenItem --> FormChildrenItemDelete[src/components/_common/Content/Form/FormChildren/FormChildrenGroup/FormChildrenList/FormChildrenItem/FormChildrenItemDelete.vue]
-
-    %% Action Page Content
-    Content --> ActionContent[src/components/_common/Action/Content.vue]
-    ActionContent --> ActionFields[src/components/_common/Action/ActionFields.vue]
-    ActionFields --> ActionOutcomeSelect[src/components/_common/ActionFields/ActionOutcomeSelect.vue]
-    ActionFields --> ActionFormField[src/components/_common/ActionFields/ActionFormField.vue]
 ```
 
 ---
 
 ### 4.4 Action Section Hierarchy
-The Action section handles page-level creation triggers, report panels, and form cancel/submit footer buttons.
+The Action section handles footers and floating action buttons (FABs).
 
 ```mermaid
 graph TD
-    Action[Action Section]
+    PageVue[src/pages/_common/Page.vue] --> ActionFallback[Action Section]
     
     %% Index Page Action
-    Action --> IndexActions[src/components/_common/Index/Actions.vue]
+    ActionFallback --> IndexActions[src/components/_common/Index/Actions.vue]
     IndexActions --> AddFAB[src/components/_common/Action/AddFAB.vue]
     AddFAB --> AddFABIcon[src/components/_common/Action/AddFAB/AddFABIcon.vue]
     AddFAB --> AddFABTooltip[src/components/_common/Action/AddFAB/AddFABTooltip.vue]
     IndexActions --> ResourceReports[src/components/_common/Action/ResourceReports.vue]
     
-    %% Add Page Action
-    Action --> AddActions[src/components/_common/Add/Actions.vue]
+    %% Add/Edit Page Action
+    ActionFallback --> AddActions[src/components/_common/Add/Actions.vue]
+    ActionFallback --> EditActions[src/components/_common/Edit/Actions.vue]
     AddActions --> FormSubmit[src/components/_common/Action/FormSubmit.vue]
     AddActions --> FormCancel[src/components/_common/Action/FormCancel.vue]
-    AddActions --> ClearButton[src/components/_common/Action/ClearButton.vue]
-    
-    %% Edit Page Action
-    Action --> EditActions[src/components/_common/Edit/Actions.vue]
     EditActions --> FormSubmit
     EditActions --> FormCancel
-    EditActions --> ClearButton
-
-    %% Action Page Action
-    Action --> ActionActions[src/components/_common/Action/Actions.vue]
-    ActionActions --> ActionSubmit[src/components/_common/Action/ActionSubmit.vue]
-    ActionActions --> ActionCancel[src/components/_common/Action/ActionCancel.vue]
 ```
 
 ---
 
-## 5. Customization Layers & Standard Override Paths
+## 5. Customization Layers & Standard Override Tiers
 
-AQL's customization hierarchy is divided into two active development layers and one future multi-tenant layer:
+AQL enforces a strict lookup hierarchy in [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js):
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│ 1. Tenant-Custom Layer (components/_custom/)                 │ ◄── FUTURE USE ONLY (Tenant-specific)
-├─────────────────────────────────────────────────────────────┤
-│ 2. Entity-Custom Layer (components/{Scope}/{ResourceName}/) │ ◄── STANDARD DEVELOPMENT (Resource-specific)
-├─────────────────────────────────────────────────────────────┤
-│ 3. Framework Layer (components/_common/)                    │ ◄── SYSTEM FALLBACKS (Global templates)
-└─────────────────────────────────────────────────────────────┘
-```
+### 5.1 The 8 Lookup Tiers
+When a component calls `useSectionResolver({ sectionName, page })`, the system checks:
 
-### 5.1 How to Write Standard Resource Overrides
-When you need to customize a specific resource in the codebase (e.g., adding custom rendering for an `Outlet` list row, or placing a customized signature picker inside a `WarehouseTransfer` form field), create the custom component at the matching **Entity-Custom** path.
+* **Tiers 1-6 (Tenant-Custom - `components/_custom/` - VUE ONLY)**:
+  1. `components/_custom/${customUIName}/${scopeFolder}/${entityName}/${page}/${sectionName}.vue`
+  2. `components/_custom/${customUIName}/${scopeFolder}/${entityName}/${sectionName}.vue`
+  3. `components/_custom/${customUIName}/${scopeFolder}/${page}/${sectionName}.vue`
+  4. `components/_custom/${customUIName}/${page}/${sectionName}.vue`
+  5. `components/_custom/${customUIName}/${scopeFolder}/${sectionName}.vue`
+  6. `components/_custom/${customUIName}/${sectionName}.vue`
 
-The 12-tier resolver naturally intercepts the call, loading your custom component while keeping everything else common.
+* **Tiers 7-8 (Entity-Custom - `components/{Scope}/{Entity}/` - VUE AND JS)**:
+  7. `components/${scopeFolder}/${entityName}/${page}/${sectionName}.vue` and/or `.js`
+  8. `components/${scopeFolder}/${entityName}/${sectionName}.vue` and/or `.js`
 
-### Common Override File Map
-
-For standard overrides, AQL enforces a strict, flat structure with **no other custom folders** (such as `Records/`, `Forms/`, etc.) allowed. You must place your overrides in one of the following two styles:
-
-1. **Page-Generic Override**:
-   `src/components/[Scope]/[ResourceName]/[Section].vue`
-   - *Example*: `src/components/Masters/Products/RecordsListItem.vue`
-2. **Page-Specific Override**:
-   `src/components/[Scope]/[ResourceName]/[Page]/[Section].vue`
-   - *Where `[Page]` is one of: `Index`, `View`, `Add`, `Edit`, `Action`*
-   - *Example*: `src/components/Masters/Products/Index/Header.vue` (overriding just the Index page header)
+### 5.2 Vue Templates vs. JS Logic Modifiers
+Overrides are divided into two types:
+1. **Vue templates (`.vue` files)**: Standard Vue files containing a `<template>` block. These act as complete layout overrides. Components without templates are **strictly forbidden**.
+2. **JS logic modifiers (`.js` files)**: Functions of the form `(props) => modifiedProps` that intercept and adjust the properties fed to the fallback template. JS modifiers are allowed **only** under local entity-custom directories (Tiers 7 & 8).
 
 ---
 

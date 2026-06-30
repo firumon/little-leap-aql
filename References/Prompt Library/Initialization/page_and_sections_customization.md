@@ -202,7 +202,6 @@ export const config = {
 }
 </script>
 ```
-
 ---
 
 ## 7. Registry Maintenance & Pre-Reads
@@ -212,3 +211,4 @@ export const config = {
    - Reusable Business Logic: [composables/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/REGISTRY.md)
 2. **Update Registries**: If a custom component or composable is developed that could be shared, document it inside the registries above.
 3. **Core Rules Compliance**: Every custom override file must strictly respect [ARCHITECTURE RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md).
+

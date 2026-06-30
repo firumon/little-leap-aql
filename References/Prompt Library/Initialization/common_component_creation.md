@@ -116,9 +116,60 @@ When resolving child sections that can be either full template overrides OR scri
    ```
 3. Pass the resolved `config` to the default fallback component as a prop to customize its output (e.g. dynamic labels or icons evaluated using state from context).
 
+
+
 ---
 
-## 6. Maintenance & Development Rule
+## 6. Content Components Signatures & Resolution Contracts
+
+Each page content orchestrator resolves sub-sections recursively. When creating or modifying these shells, ensure props and emits are correctly passed.
+
+### 6.1 Index Page Content Orchestrator (`Index/Content.vue`)
+- **Resolves**: `Records` (default: `Content/Records.vue`)
+- **Props Passed to Records**:
+  - `items`: `filteredItems` array
+  - `resolved-fields`: `resolvedFields` array
+  - `resource-slug`: `resourceSlug` string
+  - `customUIName`: `customUIName` string
+  - `records-config`: resolved configuration object (merged from page `Content` and `Records` configurations)
+
+### 6.2 View Page Content Orchestrator (`View/Content.vue`)
+- **Resolves**:
+  - `Details` (default: `Content/Details.vue`)
+  - `Parent` (default: `Content/Parent.vue`)
+  - `Children` (default: `View/Children.vue`)
+  - `Audit` (default: `Content/Audit.vue`)
+- **Resolved Props Passed**:
+  - `Details`: `details-config` object
+  - `Parent`: `parent-config` object
+  - `Children`: `children-config` object
+  - `Audit`: `audit-config` object
+
+### 6.3 Add & Edit Content Orchestrators (`Add/Content.vue`, `Edit/Content.vue`)
+- **Resolves**: `Form` (default: `Content/Form.vue`)
+- **Props Passed to Form**:
+  - `config`: resource config object
+  - `resolved-fields`: resolved fields list
+  - `parent-form`: parent form state object
+  - `child-groups`: related children groups array
+  - `status-options`: options for status dropdown
+  - `form-config`: resolved configuration object
+
+### 6.4 Action Content Orchestrator (`Action/Content.vue`)
+- **Resolves**: `ActionFields` (default: `Content/Form.vue`)
+- **Props Passed to ActionFields**:
+  - `is-multi-outcome`: boolean flag
+  - `outcome-options`: outcomes list array
+  - `selected-outcome`: active selected outcome string
+  - `resolved-action-fields`: outcome fields list
+  - `action-form`: action inputs state object
+  - `form-config`: resolved configuration object
+
+---
+
+## 7. Maintenance & Development Rule
 
 > [!IMPORTANT]
 > **Maintenance Rule**: Whenever a new common fallback component is created, modified, or a new layout resolution pattern is introduced in `src/components/_common/`, the developer or agent MUST update this document to document the new component signature, resolve rules, and layout logic.
+
+

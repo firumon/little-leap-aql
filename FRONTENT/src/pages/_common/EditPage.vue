@@ -1,5 +1,5 @@
-﻿<template>
-  <Page page="Edit" :sections="['Header', 'ToolBar', 'Content', 'Action']" />
+<template>
+  <Page page="Edit" :sections="['Header', 'Toolbar', 'Content', 'Action']" />
 </template>
 
 <script setup>

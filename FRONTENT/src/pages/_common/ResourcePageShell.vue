@@ -15,7 +15,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import ResourceBreadcrumb from 'components/_common/Header/ResourceBreadcrumb.vue'
+import ResourceBreadcrumb from '../../components/_common/ResourceBreadcrumb.vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { humanizeSlug } from 'src/utils/appHelpers'
 

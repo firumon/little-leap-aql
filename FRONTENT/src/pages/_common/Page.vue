@@ -4,8 +4,8 @@
       <!-- 1. Header Section -->
       <component :is="getSectionComponent(sec, page)" v-if="sec === 'Header'" :page="page" />
 
-      <!-- 2. ToolBar Section -->
-      <component :is="getSectionComponent(sec, page)" v-if="sec === 'ToolBar'" :page="page" />
+      <!-- 2. Toolbar Section -->
+      <component :is="getSectionComponent(sec, page)" v-if="sec === 'Toolbar'" :page="page" />
 
       <!-- 3. Content Section -->
       <template v-if="sec === 'Content'">
@@ -143,7 +143,11 @@ import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
 // Static Imports of All Fallback Sections
 import Header from 'components/_common/Header/Header.vue'
-import Toolbar from 'components/_common/Toolbar/Toolbar.vue'
+import IndexToolbar from 'components/_common/Index/Toolbar.vue'
+import ViewToolbar from 'components/_common/View/Toolbar.vue'
+import AddToolbar from 'components/_common/Add/Toolbar.vue'
+import EditToolbar from 'components/_common/Edit/Toolbar.vue'
+import ActionToolbar from 'components/_common/Action/Toolbar.vue'
 
 // Contents
 import IndexContent from 'components/_common/Index/Content.vue'
@@ -184,7 +188,13 @@ const pageReady = ref(true)
 // Helper mapping function to resolve which components to load statically
 function getSectionComponent(secName, pageName) {
   if (secName === 'Header') return Header
-  if (secName === 'ToolBar') return Toolbar
+  if (secName === 'Toolbar') {
+    if (pageName === 'Index') return IndexToolbar
+    if (pageName === 'View') return ViewToolbar
+    if (pageName === 'Add') return AddToolbar
+    if (pageName === 'Edit') return EditToolbar
+    if (pageName === 'Action') return ActionToolbar
+  }
   if (secName === 'Content') {
     if (pageName === 'Index') return IndexContent
     if (pageName === 'View') return ViewContent

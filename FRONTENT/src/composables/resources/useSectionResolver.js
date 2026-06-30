@@ -1,4 +1,4 @@
-﻿import { computed, ref, shallowRef, watch, markRaw, inject } from 'vue'
+import { computed, ref, shallowRef, watch, markRaw, inject } from 'vue'
 import { toPascalCase } from 'src/utils/appHelpers'
 
 // Vite statically discovers all component Vue and JS files under src/components
@@ -12,72 +12,72 @@ Object.keys(sectionModules).forEach((rawPath) => {
 })
 
 /**
- * Resolves local custom Vue (template-only) and JS (logic modifier) section files using Tiers 1-8 lookup.
+ * Resolves local custom Vue templates (Tiers 1-8) and local JS logic modifiers (Tiers 7-8 only).
  */
 async function resolveSectionOverride(entityName, sectionName, customUIName, scope, page) {
   const scopeFolder = toPascalCase(scope)
-  const candidates = []
-
-  function addPaths(dir) {
-    candidates.push(`${dir}/${sectionName}`)
-  }
-
-  // Tiers 1-8 Resolution checklist (custom/local overrides only, no common fallbacks):
-  if (customUIName) {
-    // Tier 1: Tenant-custom, Entity-specific, Page-specific
-    addPaths(`components/_custom/${customUIName}/${scopeFolder}/${entityName}/${page}`)
-    // Tier 2: Tenant-custom, Entity-specific, Page-generic
-    addPaths(`components/_custom/${customUIName}/${scopeFolder}/${entityName}`)
-    // Tier 3: Tenant-custom, Scope-common, Page-specific
-    addPaths(`components/_custom/${customUIName}/${scopeFolder}/${page}`)
-    // Tier 4: Tenant-custom, Global Page-specific (Scope-generic)
-    addPaths(`components/_custom/${customUIName}/${page}`)
-    // Tier 5: Tenant-custom, Scope-common, Page-generic
-    addPaths(`components/_custom/${customUIName}/${scopeFolder}`)
-    // Tier 6: Tenant-custom, Tenant-global
-    addPaths(`components/_custom/${customUIName}`)
-  }
-
-  // Tier 7: Entity-custom, Page-specific
-  addPaths(`components/${scopeFolder}/${entityName}/${page}`)
-  // Tier 8: Entity-custom, Page-generic
-  addPaths(`components/${scopeFolder}/${entityName}`)
-
   let resolvedVue = null
   let resolvedJs = null
 
-  // Check the checklist in order
-  for (const basePath of candidates) {
-    const vuePath = `${basePath}.vue`
-    const jsPath = `${basePath}.js`
+  // 1. Build customUI (Tenant-custom Tiers 1-6) candidates - VUE ONLY
+  const customUiPaths = []
+  if (customUIName) {
+    customUiPaths.push(`components/_custom/${customUIName}/${scopeFolder}/${entityName}/${page}/${sectionName}.vue`)
+    customUiPaths.push(`components/_custom/${customUIName}/${scopeFolder}/${entityName}/${sectionName}.vue`)
+    customUiPaths.push(`components/_custom/${customUIName}/${scopeFolder}/${page}/${sectionName}.vue`)
+    customUiPaths.push(`components/_custom/${customUIName}/${page}/${sectionName}.vue`)
+    customUiPaths.push(`components/_custom/${customUIName}/${scopeFolder}/${sectionName}.vue`)
+    customUiPaths.push(`components/_custom/${customUIName}/${sectionName}.vue`)
+  }
 
-    // Look for Vue template
-    if (registry[vuePath] && !resolvedVue) {
+  // 2. Build local/entity candidates (Tiers 7 & 8)
+  const localVuePaths = [
+    `components/${scopeFolder}/${entityName}/${page}/${sectionName}.vue`,
+    `components/${scopeFolder}/${entityName}/${sectionName}.vue`
+  ]
+  const localJsPaths = [
+    `components/${scopeFolder}/${entityName}/${page}/${sectionName}.js`,
+    `components/${scopeFolder}/${entityName}/${sectionName}.js`
+  ]
+
+  // Scan customUI first (highest priority) for Vue template override
+  for (const path of customUiPaths) {
+    if (registry[path]) {
       try {
-        const module = await registry[vuePath]()
-        const comp = module.default || module
-        const hasTemplate = !!(comp && (comp.render || comp.ssrRender || typeof comp === 'function'))
-        if (hasTemplate) {
-          resolvedVue = comp
+        const module = await registry[path]()
+        resolvedVue = module.default || module
+        break
+      } catch (err) {
+        console.error(`Failed to load custom UI Vue override at ${path}:`, err)
+      }
+    }
+  }
+
+  // Scan Tiers 7 & 8 (local) for Vue template if not found in customUI
+  if (!resolvedVue) {
+    for (const path of localVuePaths) {
+      if (registry[path]) {
+        try {
+          const module = await registry[path]()
+          resolvedVue = module.default || module
+          break
+        } catch (err) {
+          console.error(`Failed to load local Vue override at ${path}:`, err)
         }
-      } catch (err) {
-        console.error(`Failed to load Vue override at ${vuePath}:`, err)
       }
     }
+  }
 
-    // Look for JS logic modifier
-    if (registry[jsPath] && !resolvedJs) {
+  // Scan Tiers 7 & 8 (local) for JS logic modifier
+  for (const path of localJsPaths) {
+    if (registry[path]) {
       try {
-        const module = await registry[jsPath]()
+        const module = await registry[path]()
         resolvedJs = module.default || module
+        break
       } catch (err) {
-        console.error(`Failed to load JS override at ${jsPath}:`, err)
+        console.error(`Failed to load local JS modifier at ${path}:`, err)
       }
-    }
-
-    // Stop searching once we have resolved both components
-    if (resolvedVue && resolvedJs) {
-      break
     }
   }
 
@@ -85,7 +85,7 @@ async function resolveSectionOverride(entityName, sectionName, customUIName, sco
 }
 
 /**
- * Resolves custom Vue and JS overrides for a single section.
+ * Resolves custom Vue template overrides and local JS modifiers for a single section.
  */
 export function useSectionResolver({ sectionName, page }) {
   const resourceConfig = inject('resourceConfig', null)

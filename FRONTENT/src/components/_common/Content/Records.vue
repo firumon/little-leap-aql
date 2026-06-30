@@ -1,33 +1,49 @@
 <template>
-  <q-card flat bordered class="records-card q-mt-sm">
-    <q-card-section class="q-pa-sm q-pa-md">
+  <q-card
+    :flat="activeConfig.flat !== false"
+    :bordered="activeConfig.bordered !== false"
+    :class="['records-card q-mt-sm', activeConfig.class]"
+  >
+    <q-card-section class="q-pa-none">
       <div v-if="!sectionsReady" class="q-py-lg text-center">
         <q-spinner-dots color="primary" size="32px" />
       </div>
-      <component v-else-if="loading && !items.length" :is="sections.Loading" />
-      <component v-else-if="!items.length" :is="sections.Empty" />
-      <div v-else class="card-list q-gutter-sm">
-        <div v-for="row in items" :key="row.Code" class="record-card-wrap">
-          <component
-            :is="sections.Record"
-            :row="row"
-            :resolve-primary-text="resolvePrimaryText"
-            :resolve-secondary-text="resolveSecondaryText"
-            @open-detail="$emit('navigate-to-view', $event)"
-          />
-          <div v-if="childCountMap[row.Code]" class="record-children">
-            <q-badge
-              v-for="(count, childName) in childCountMap[row.Code]"
-              :key="childName"
-              outline
-              color="primary"
-              class="q-mr-xs"
-            >
-              {{ count }} {{ childName }}
-            </q-badge>
+      <component v-else-if="loading && !items.length" :is="resolvedLoading.component" />
+      <component v-else-if="!items.length" :is="resolvedEmpty.component" :message="activeConfig.emptyMessage" />
+      <AqlList
+        v-else
+        :items="items"
+        :bordered="false"
+        :item-bordered="false"
+        :clickable="false"
+        item-class="q-pa-none"
+        :class="['card-list', { 'q-gutter-sm': activeConfig.layout !== 'grid' }]"
+        :style="listStyle"
+      >
+        <template #item="{ item: row }">
+          <div class="record-card-wrap full-width">
+            <component
+              :is="resolvedRecord.component"
+              :row="row"
+              :resolve-primary-text="resolvePrimaryText"
+              :resolve-secondary-text="resolveSecondaryText"
+              :record-config="resolvedRecord.config"
+              @open-detail="$emit('navigate-to-view', $event)"
+            />
+            <div v-if="childCountMap[row.Code] && !activeConfig.noChildCounts" class="record-children">
+              <q-badge
+                v-for="(count, childName) in childCountMap[row.Code]"
+                :key="childName"
+                outline
+                color="primary"
+                class="q-mr-xs"
+              >
+                {{ count }} {{ childName }}
+              </q-badge>
+            </div>
           </div>
-        </div>
-      </div>
+        </template>
+      </AqlList>
     </q-card-section>
   </q-card>
 </template>
@@ -39,6 +55,7 @@ import { useSectionResolver } from 'src/composables/resources/useSectionResolver
 import Loading from 'components/_common/Content/Loading.vue'
 import Empty from 'components/_common/Content/Empty.vue'
 import Record from 'components/_common/Content/RecordsRecord.vue'
+import AqlList from 'components/shared/AqlList.vue'
 
 const props = defineProps({
   items: { type: Array, default: () => [] },
@@ -46,12 +63,42 @@ const props = defineProps({
   resolvedFields: { type: Array, default: () => [] },
   childCountMap: { type: Object, default: () => ({}) },
   resourceSlug: { type: String, required: true },
-  customUIName: { type: String, required: true }
+  customUIName: { type: String, required: true },
+  recordsConfig: { type: Object, default: () => ({}) }
 })
 
 defineEmits(['navigate-to-view'])
 
 const { scope } = inject('resourceConfig')
+
+const defaultConfig = {
+  layout: 'list',
+  gridCols: 2,
+  bordered: true,
+  flat: true,
+  class: '',
+  noChildCounts: false,
+  emptyMessage: undefined
+}
+
+const activeConfig = computed(() => {
+  return {
+    ...defaultConfig,
+    ...(props.recordsConfig || {})
+  }
+})
+
+const listStyle = computed(() => {
+  if (activeConfig.value.layout === 'grid') {
+    const cols = activeConfig.value.gridCols || 2
+    return {
+      display: 'grid',
+      gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+      gap: '8px'
+    }
+  }
+  return {}
+})
 
 const { sections, sectionsReady } = useSectionResolver({
   scope,
@@ -62,7 +109,36 @@ const { sections, sectionsReady } = useSectionResolver({
     Loading: { section: 'Loading', default: Loading },
     Empty: { section: 'Empty', default: Empty },
     Record: { section: 'Record', default: Record }
+  },
+  allowScriptOnly: true
+})
+
+const resolvedLoading = computed(() => {
+  const comp = sections.Loading
+  const hasTemplate = !!(comp && (comp.render || comp.ssrRender || typeof comp === 'function'))
+  if (hasTemplate) return { component: comp, config: null }
+  return { component: Loading, config: comp?.config || {} }
+})
+
+const resolvedEmpty = computed(() => {
+  const comp = sections.Empty
+  const hasTemplate = !!(comp && (comp.render || comp.ssrRender || typeof comp === 'function'))
+  if (hasTemplate) return { component: comp, config: null }
+  return { component: Empty, config: comp?.config || {} }
+})
+
+const resolvedRecord = computed(() => {
+  const comp = sections.Record
+  if (!comp) return { component: null, config: null }
+  const hasTemplate = !!(comp.render || comp.ssrRender || typeof comp === 'function')
+  if (hasTemplate) {
+    return { component: comp, config: null }
   }
+  const recordLevelConfig = {
+    ...(activeConfig.value.record || {}),
+    ...(comp.config || comp.record || {})
+  }
+  return { component: Record, config: recordLevelConfig }
 })
 
 function resolvePrimaryText(row) {
@@ -91,7 +167,8 @@ function resolveSecondaryText(row) {
 .records-card {
   border-radius: 16px;
   border-color: var(--aql-border);
-  background: rgba(255, 255, 255, 0.92);
+  background: transparent;
+  box-shadow: none;
   animation: rise-in 280ms ease-out both;
 }
 
@@ -101,7 +178,7 @@ function resolveSecondaryText(row) {
 }
 
 @media (min-width: 600px) {
-  .card-list {
+  .card-list:not([style*="display: grid"]) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -121,3 +198,5 @@ function resolveSecondaryText(row) {
   100% { transform: translateY(0); opacity: 1; }
 }
 </style>
+
+

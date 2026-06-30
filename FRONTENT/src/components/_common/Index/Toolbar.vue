@@ -1,22 +1,24 @@
 <template>
-  <div class="index-toolbar q-gutter-y-sm" v-if="sectionsReady">
-    <!-- Search Input Control (resolved at Index level, self-binding via inject) -->
-    <component :is="searchSections.SearchInput" page="Index" />
+  <!-- Render custom template if resolved -->
+  <component
+    :is="resolvedComponent"
+    v-if="resolvedComponent"
+    v-bind="finalProps"
+  />
 
-    <!-- View Switcher Tabs Control -->
-    <component
-      :is="resolvedViewSwitcher.component"
-      v-if="effectiveViews && effectiveViews.length"
-      :views="effectiveViews"
-      :active-view-name="activeViewName"
-      :items="items"
-      :resource-config="config"
-      :view-switcher-config="resolvedViewSwitcher.config"
+  <div v-else class="index-toolbar q-gutter-y-sm">
+    <!-- Search Input Control (statically imported, handles self-binding and self-override) -->
+    <SearchInput page="Index" />
+
+    <!-- View Switcher Tabs Control (statically imported, handles self-override) -->
+    <ViewSwitcher
+      v-if="finalProps.views && finalProps.views.length"
+      :views="finalProps.views"
+      :active-view-name="finalProps.activeViewName"
+      :items="finalProps.items"
+      :resource-config="finalProps.resourceConfig"
       @update:active-view-name="setActiveView"
     />
-  </div>
-  <div v-else class="flex flex-center q-py-md">
-    <q-spinner-dots color="primary" size="24px" />
   </div>
 </template>
 
@@ -28,6 +30,10 @@ import ViewSwitcher from 'components/_common/Toolbar/ViewSwitcher.vue'
 
 defineOptions({ name: 'IndexToolbar' })
 
+const props = defineProps({
+  page: { type: String, default: 'Index' }
+})
+
 const { resourceSlug, customUIName, scope, config } = inject('resourceConfig')
 const {
   records: items,
@@ -36,39 +42,19 @@ const {
   setActiveView
 } = inject('resourceRecord')
 
-// Resolve ViewSwitcher at Index page level (with script-only override support)
-const { sections: toolbarSections, sectionsReady: toolbarReady } = useSectionResolver({
-  resourceSlug,
-  customUIName,
-  scope,
-  page: 'Index',
-  sectionDefs: {
-    ViewSwitcher: { section: 'ViewSwitcher', default: ViewSwitcher }
-  },
-  allowScriptOnly: true
+// Resolve own local override
+const { resolvedComponent, propModifier } = useSectionResolver({
+  sectionName: 'Toolbar',
+  page: props.page
 })
 
-// Resolve SearchInput at Index level to allow components/[Scope]/[ResourceName]/Index/SearchInput.vue
-const { sections: searchSections, sectionsReady: searchReady } = useSectionResolver({
-  resourceSlug,
-  customUIName,
-  scope,
-  page: 'Index',
-  sectionDefs: {
-    SearchInput: { section: 'SearchInput', default: SearchInput }
-  }
-})
+// Prepare default data/props
+const preparedProps = computed(() => ({
+  views: effectiveViews.value,
+  activeViewName: activeViewName.value,
+  items: items.value,
+  resourceConfig: config.value
+}))
 
-const sectionsReady = computed(() => toolbarReady.value && searchReady.value)
-
-// Determine if ViewSwitcher component is a template override or script-only config override
-const resolvedViewSwitcher = computed(() => {
-  const comp = toolbarSections.ViewSwitcher
-  if (!comp) return { component: null, config: null }
-  const hasTemplate = !!(comp.render || comp.ssrRender || typeof comp === 'function')
-  if (hasTemplate) {
-    return { component: comp, config: null }
-  }
-  return { component: ViewSwitcher, config: comp.config || {} }
-})
+const finalProps = computed(() => propModifier.value(preparedProps.value))
 </script>

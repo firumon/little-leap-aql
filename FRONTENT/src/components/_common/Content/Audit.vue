@@ -1,15 +1,20 @@
 <template>
-  <q-card v-if="record?.CreatedAt || record?.UpdatedAt" flat bordered class="page-card q-mt-sm">
+  <component
+    :is="resolvedComponent"
+    v-if="resolvedComponent"
+    v-bind="finalProps"
+  />
+  <q-card v-else-if="finalProps.record?.CreatedAt || finalProps.record?.UpdatedAt" flat bordered class="page-card q-mt-sm">
     <q-card-section>
       <div class="section-title">Audit</div>
       <div class="detail-grid">
-        <div v-if="record.CreatedAt" class="detail-line">
+        <div v-if="finalProps.record.CreatedAt" class="detail-line">
           <span class="detail-key">Created</span>
-          <span class="detail-val">{{ formatDate(record.CreatedAt) }}</span>
+          <span class="detail-val">{{ formatDate(finalProps.record.CreatedAt) }}</span>
         </div>
-        <div v-if="record.UpdatedAt" class="detail-line">
+        <div v-if="finalProps.record.UpdatedAt" class="detail-line">
           <span class="detail-key">Updated</span>
-          <span class="detail-val">{{ formatDate(record.UpdatedAt) }}</span>
+          <span class="detail-val">{{ formatDate(finalProps.record.UpdatedAt) }}</span>
         </div>
       </div>
     </q-card-section>
@@ -17,11 +22,27 @@
 </template>
 
 <script setup>
-import { inject } from 'vue'
+import { computed, inject } from 'vue'
+import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
 
 defineOptions({ name: 'CommonAudit' })
 
+const props = defineProps({
+  page: { type: String, default: 'View' }
+})
+
 const { record } = inject('resourceRecord')
+
+const { resolvedComponent, propModifier } = useSectionResolver({
+  sectionName: 'Audit',
+  page: props.page
+})
+
+const preparedProps = computed(() => ({
+  record: record.value
+}))
+
+const finalProps = computed(() => propModifier.value(preparedProps.value))
 
 function formatDate(value) {
   if (!value) return '-'

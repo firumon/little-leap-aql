@@ -1,41 +1,49 @@
 <template>
-  <div class="search-input-container" v-if="sectionsReady">
+  <!-- Render custom template if resolved -->
+  <component
+    :is="resolvedComponent"
+    v-slot="{ value }"
+    v-if="resolvedComponent"
+    v-bind="finalProps"
+    v-model="searchTerm"
+  />
+
+  <div v-else class="search-input-container">
     <q-input
       v-model="searchTerm"
       outlined
       debounce="180"
       :placeholder="placeholderText"
-      :label="sections.SearchInputLabel !== EmptyComponent ? ' ' : undefined"
       class="search-input"
     >
-      <template #prepend v-if="sections.SearchInputIcon">
-        <component :is="sections.SearchInputIcon" />
+      <template #prepend>
+        <SearchInputIcon :page="page" />
       </template>
 
-      <template #append v-if="searchTerm && sections.SearchInputClear">
-        <component :is="sections.SearchInputClear" @clear="searchTerm = ''" />
+      <template #append v-if="searchTerm">
+        <SearchInputClear :page="page" @clear="searchTerm = ''" />
       </template>
 
-      <template #label v-if="sections.SearchInputLabel && sections.SearchInputLabel !== EmptyComponent">
-        <component :is="sections.SearchInputLabel" />
+      <template #label>
+        <SearchInputLabel :page="page" />
       </template>
     </q-input>
 
     <!-- Hidden element to extract text content for placeholder from template -->
     <div ref="hiddenPlaceholderRef" class="hidden">
-      <component
-        :is="sections.SearchInputPlaceholder"
-        v-if="sections.SearchInputPlaceholder && sections.SearchInputPlaceholder !== EmptyComponent"
-      />
+      <SearchInputPlaceholder :page="page" />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch, nextTick, inject } from 'vue'
+import { ref, watch, nextTick, inject, computed } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
+
 import SearchInputIcon from 'components/_common/Toolbar/SearchInput/SearchInputIcon.vue'
 import SearchInputClear from 'components/_common/Toolbar/SearchInput/SearchInputClear.vue'
+import SearchInputPlaceholder from 'components/_common/Toolbar/SearchInput/SearchInputPlaceholder.vue'
+import SearchInputLabel from 'components/_common/Toolbar/SearchInput/SearchInputLabel.vue'
 
 defineOptions({ name: 'SearchInput' })
 
@@ -46,36 +54,28 @@ const props = defineProps({
 const { resourceSlug, scope } = inject('resourceConfig')
 const { searchTerm } = inject('resourceRecord', { searchTerm: ref('') })
 
-const EmptyComponent = { name: 'SearchInputEmpty', render() { return null } }
-
-// Resolve SearchInput sub-sections at the specified page level
-const { sections, sectionsReady } = useSectionResolver({
-  resourceSlug,
-  scope,
-  page: props.page,
-  sectionDefs: {
-    SearchInputIcon: { section: 'SearchInputIcon', default: SearchInputIcon },
-    SearchInputClear: { section: 'SearchInputClear', default: SearchInputClear },
-    SearchInputPlaceholder: { section: 'SearchInputPlaceholder', default: EmptyComponent },
-    SearchInputLabel: { section: 'SearchInputLabel', default: EmptyComponent }
-  }
+// Resolve own local override
+const { resolvedComponent, propModifier } = useSectionResolver({
+  sectionName: 'SearchInput',
+  page: props.page
 })
 
+const preparedProps = computed(() => ({
+  searchTerm: searchTerm.value
+}))
+
+const finalProps = computed(() => propModifier.value(preparedProps.value))
+
 const hiddenPlaceholderRef = ref(null)
-const placeholderText = ref('')
+const placeholderText = ref('Search code, name, or any field...')
 
+// Check placeholder text reactively
 watch(
-  () => [sectionsReady.value, sections.SearchInputPlaceholder],
-  ([ready, newComp]) => {
-    if (!ready) return
-
-    if (!newComp || newComp === EmptyComponent) {
-      placeholderText.value = 'Search code, name, or any field...'
-      return
-    }
+  () => [searchTerm.value, resolvedComponent.value],
+  () => {
     nextTick(() => {
       if (hiddenPlaceholderRef.value) {
-        placeholderText.value = hiddenPlaceholderRef.value.textContent?.trim() || 'Search...'
+        placeholderText.value = hiddenPlaceholderRef.value.textContent?.trim() || 'Search code, name, or any field...'
       }
     })
   },

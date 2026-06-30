@@ -1,7 +1,15 @@
 <template>
+  <!-- Render custom template if resolved -->
+  <component
+    :is="resolvedComponent"
+    v-if="resolvedComponent"
+    v-bind="finalProps"
+    @update:active-view-name="$emit('update:activeViewName', $event)"
+  />
+
   <q-tabs
-    v-if="views.length"
-    :model-value="activeViewName"
+    v-else-if="finalProps.views && finalProps.views.length"
+    :model-value="finalProps.activeViewName"
     :outside-arrows="resolvedConfig.outsideArrows !== false"
     no-caps
     class="aql-view-tabs"
@@ -9,7 +17,7 @@
     :inline-label="resolvedConfig.stacked === false"
   >
     <q-tab
-      v-for="view in views"
+      v-for="view in finalProps.views"
       :key="view.name"
       :name="view.name"
       :icon="resolvedIcon(view)"
@@ -23,6 +31,9 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
+
+defineOptions({ name: 'ViewSwitcher' })
 
 const props = defineProps({
   views: {
@@ -44,10 +55,31 @@ const props = defineProps({
   viewSwitcherConfig: {
     type: Object,
     default: null
+  },
+  page: {
+    type: String,
+    default: 'Index'
   }
 })
 
 defineEmits(['update:activeViewName'])
+
+// Resolve own local override
+const { resolvedComponent, propModifier } = useSectionResolver({
+  sectionName: 'ViewSwitcher',
+  page: props.page
+})
+
+// Prepare default data/props
+const preparedProps = computed(() => ({
+  views: props.views,
+  activeViewName: props.activeViewName,
+  items: props.items,
+  resourceConfig: props.resourceConfig,
+  viewSwitcherConfig: props.viewSwitcherConfig
+}))
+
+const finalProps = computed(() => propModifier.value(preparedProps.value))
 
 // Default configuration options
 const defaultConfig = {
@@ -61,13 +93,13 @@ const defaultConfig = {
 const resolvedConfig = computed(() => {
   return {
     ...defaultConfig,
-    ...(props.viewSwitcherConfig || {})
+    ...(finalProps.value.viewSwitcherConfig || {})
   }
 })
 
 function evaluate(val, view) {
   if (typeof val === 'function') {
-    return val(view, props.items, props.resourceConfig)
+    return val(view, finalProps.value.items, finalProps.value.resourceConfig)
   }
   return val
 }
@@ -86,7 +118,7 @@ function resolvedIcon(view) {
 
 function tabClasses(view) {
   const activeColor = view.color || 'primary'
-  const isActive = props.activeViewName === view.name
+  const isActive = finalProps.value.activeViewName === view.name
   return {
     [`aql-tab--active-${activeColor}`]: isActive,
     'aql-tab--inactive': !isActive

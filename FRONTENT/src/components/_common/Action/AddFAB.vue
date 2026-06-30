@@ -1,5 +1,12 @@
 <template>
-  <q-page-sticky position="bottom-right" :offset="[16, 22]" class="fab-sticky" v-if="sectionsReady">
+  <!-- Render custom template if resolved -->
+  <component
+    :is="resolvedComponent"
+    v-if="resolvedComponent"
+    v-bind="finalProps"
+  />
+
+  <q-page-sticky v-else position="bottom-right" :offset="[16, 22]" class="fab-sticky">
     <q-btn
       round
       unelevated
@@ -7,17 +14,15 @@
       class="fab-btn"
       @click="navigateToAdd"
     >
-      <!-- Resolve FAB Icon recursively -->
-      <component :is="sections.AddFABIcon" />
-      
-      <!-- Resolve FAB Tooltip recursively -->
-      <component :is="sections.AddFABTooltip" />
+      <!-- Statically imported sub-sections which resolve themselves -->
+      <AddFABIcon :page="page" />
+      <AddFABTooltip :page="page" />
     </q-btn>
   </q-page-sticky>
 </template>
 
 <script setup>
-import { inject } from 'vue'
+import { computed, inject } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import AddFABIcon from 'components/_common/Action/AddFAB/AddFABIcon.vue'
@@ -25,19 +30,20 @@ import AddFABTooltip from 'components/_common/Action/AddFAB/AddFABTooltip.vue'
 
 defineOptions({ name: 'AddFAB' })
 
-const nav = useResourceNav()
-const { resourceSlug, scope } = inject('resourceConfig')
-
-// Resolve AddFAB sub-sections recursively
-const { sections, sectionsReady } = useSectionResolver({
-  resourceSlug,
-  scope,
-  page: 'AddFAB',
-  sectionDefs: {
-    AddFABIcon: { section: 'AddFABIcon', default: AddFABIcon },
-    AddFABTooltip: { section: 'AddFABTooltip', default: AddFABTooltip }
-  }
+const props = defineProps({
+  page: { type: String, default: 'Index' }
 })
+
+const nav = useResourceNav()
+
+// Resolve own local override
+const { resolvedComponent, propModifier } = useSectionResolver({
+  sectionName: 'AddFAB',
+  page: props.page
+})
+
+const preparedProps = computed(() => ({}))
+const finalProps = computed(() => propModifier.value(preparedProps.value))
 
 function navigateToAdd() {
   nav.goTo('add')

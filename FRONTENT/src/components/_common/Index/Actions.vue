@@ -1,37 +1,40 @@
 <template>
-  <div class="index-actions" v-if="sectionsReady">
-    <!-- Reports Panel -->
-    <component
-      :is="sections.ResourceReports"
-      v-if="sections.ResourceReports"
-    />
+  <!-- Render custom template if resolved -->
+  <component
+    :is="resolvedComponent"
+    v-if="resolvedComponent"
+    v-bind="finalProps"
+  />
 
-    <!-- Add FAB (Floating Action Button) -->
-    <component
-      :is="sections.AddFAB"
-      v-if="permissions.canWrite"
-    />
+  <div v-else class="index-actions">
+    <!-- Reports Panel (statically imported, handles self-override) -->
+    <ResourceReports :page="page" />
+
+    <!-- Add FAB (statically imported, handles self-override) -->
+    <AddFAB v-if="permissions.canWrite" :page="page" />
   </div>
 </template>
 
 <script setup>
-import { inject } from 'vue'
+import { computed, inject } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
 import AddFAB from 'components/_common/Action/AddFAB.vue'
 import ResourceReports from 'components/_common/Action/ResourceReports.vue'
 
 defineOptions({ name: 'IndexActions' })
 
-const { resourceSlug, scope, permissions } = inject('resourceConfig')
-
-// Resolve Index page action sub-sections recursively
-const { sections, sectionsReady } = useSectionResolver({
-  resourceSlug,
-  scope,
-  page: 'Index/Action',
-  sectionDefs: {
-    AddFAB: { section: 'AddFAB', default: AddFAB },
-    ResourceReports: { section: 'ResourceReports', default: ResourceReports }
-  }
+const props = defineProps({
+  page: { type: String, default: 'Index' }
 })
+
+const { permissions } = inject('resourceConfig')
+
+// Resolve own local override
+const { resolvedComponent, propModifier } = useSectionResolver({
+  sectionName: 'Actions',
+  page: props.page
+})
+
+const preparedProps = computed(() => ({}))
+const finalProps = computed(() => propModifier.value(preparedProps.value))
 </script>

@@ -1,25 +1,36 @@
 <template>
-  <div class="add-content" v-if="sectionsReady">
-    <component
-      :is="sections.Form"
+  <!-- Render custom template if resolved -->
+  <component
+    :is="resolvedComponent"
+    v-if="resolvedComponent"
+    v-bind="finalProps"
+    @update:field="(header, val) => $emit('update:field', header, val)"
+    @add-child="(slug) => $emit('add-child', slug)"
+    @remove-child="(slug, idx) => $emit('remove-child', slug, idx)"
+    @update-child-field="(slug, idx, header, val) => $emit('update-child-field', slug, idx, header, val)"
+  />
+
+  <!-- Fallback template -->
+  <div v-else class="add-content">
+    <!-- Form is statically imported, handles self-override internally -->
+    <Form
       :config="config"
       :resolved-fields="resolvedFields"
-      :parent-form="parentForm"
-      :child-groups="childGroups"
-      :status-options="statusOptions"
+      :parent-form="finalProps.parentForm"
+      :child-groups="finalProps.childGroups"
+      :status-options="finalProps.statusOptions"
+      :form-config="finalProps.formConfig"
+      :page="page"
       @update:field="(header, val) => $emit('update:field', header, val)"
       @add-child="(slug) => $emit('add-child', slug)"
       @remove-child="(slug, idx) => $emit('remove-child', slug, idx)"
       @update-child-field="(slug, idx, header, val) => $emit('update-child-field', slug, idx, header, val)"
     />
   </div>
-  <div v-else class="flex flex-center q-py-md">
-    <q-spinner-dots color="primary" size="24px" />
-  </div>
 </template>
 
 <script setup>
-import { inject } from 'vue'
+import { computed, inject } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
 import Form from 'components/_common/Content/Form.vue'
 
@@ -28,7 +39,8 @@ defineOptions({ name: 'AddContent' })
 const props = defineProps({
   parentForm: Object,
   childGroups: Object,
-  statusOptions: Array
+  statusOptions: Array,
+  page: { type: String, default: 'Add' }
 })
 
 defineEmits([
@@ -38,15 +50,20 @@ defineEmits([
   'update-child-field'
 ])
 
-const { resourceSlug, scope, config, resolvedFields } = inject('resourceConfig')
+const { resourceSlug, scope, config, resolvedFields, customUIName } = inject('resourceConfig')
 
-// Resolve Content Form sub-section recursively
-const { sections, sectionsReady } = useSectionResolver({
-  resourceSlug,
-  scope,
-  page: 'Add/Content',
-  sectionDefs: {
-    Form: { section: 'Form', default: Form }
-  }
+// Resolve own local override
+const { resolvedComponent, propModifier } = useSectionResolver({
+  sectionName: 'Content',
+  page: props.page
 })
+
+const preparedProps = computed(() => ({
+  parentForm: props.parentForm,
+  childGroups: props.childGroups,
+  statusOptions: props.statusOptions,
+  formConfig: {}
+}))
+
+const finalProps = computed(() => propModifier.value(preparedProps.value))
 </script>

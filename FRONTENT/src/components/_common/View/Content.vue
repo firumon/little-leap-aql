@@ -1,30 +1,43 @@
 <template>
-  <div class="view-content q-gutter-y-md" v-if="sectionsReady">
-    <!-- 1. Record Details Grid -->
-    <component
-      :is="sections.Details"
-    />
+  <!-- Render custom template if resolved -->
+  <component
+    :is="resolvedComponent"
+    v-if="resolvedComponent"
+    v-bind="finalProps"
+  />
 
-    <!-- 2. Parent Link Card (if in Operations scope or if parent exists) -->
-    <component
-      v-if="isOperations && parentRecord"
-      :is="sections.Parent"
-    />
+  <!-- Fallback template -->
+  <div v-else class="view-content q-gutter-y-md">
+    <template v-for="secName in activeSectionsOrder" :key="secName">
+      <!-- 1. Record Details Grid -->
+      <Details
+        v-if="secName === 'Details' && isSectionVisible('Details')"
+        :details-config="finalProps.detailsConfig"
+        :page="page"
+      />
 
-    <!-- 3. Child Resources Grids/Tables -->
-    <component
-      v-if="childResources.length"
-      :is="sections.Children"
-    />
+      <!-- 2. Parent Link Card (if in Operations scope or if parent exists) -->
+      <Parent
+        v-else-if="secName === 'Parent' && isSectionVisible('Parent') && parentRecord"
+        :parent-config="finalProps.parentConfig"
+        :page="page"
+      />
 
-    <!-- 4. Audit Trail Metadata (if in Masters scope) -->
-    <component
-      v-if="isMasters"
-      :is="sections.Audit"
-    />
-  </div>
-  <div v-else class="flex flex-center q-py-md">
-    <q-spinner-dots color="primary" size="24px" />
+      <!-- 3. Child Resources Grids/Tables -->
+      <Children
+        v-else-if="secName === 'Children' && isSectionVisible('Children') && childResources.length"
+        :child-resources="childResources"
+        :child-records-by-resource="childRecordsByResource"
+        :additional-actions="additionalActions"
+        :page="page"
+      />
+
+      <!-- 4. Audit Trail Metadata (if in Masters scope) -->
+      <Audit
+        v-else-if="secName === 'Audit' && isSectionVisible('Audit')"
+        :page="page"
+      />
+    </template>
   </div>
 </template>
 
@@ -33,12 +46,16 @@ import { computed, inject } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
 import Details from 'components/_common/Content/Details.vue'
 import Parent from 'components/_common/Content/Parent.vue'
-import Children from 'components/_common/Content/Children.vue'
+import Children from 'components/_common/View/Children.vue'
 import Audit from 'components/_common/Content/Audit.vue'
 
 defineOptions({ name: 'ViewContent' })
 
-const { resourceSlug, scope } = inject('resourceConfig')
+const props = defineProps({
+  page: { type: String, default: 'View' }
+})
+
+const { resourceSlug, scope, customUIName, config, additionalActions } = inject('resourceConfig')
 const {
   record, parentResource, childResources, childRecordsByResource
 } = inject('resourceRecord')
@@ -52,16 +69,39 @@ const parentRecord = computed(() => {
   return null
 })
 
-// Resolve View page content sub-sections recursively
-const { sections, sectionsReady } = useSectionResolver({
-  resourceSlug,
-  scope,
-  page: 'View/Content',
-  sectionDefs: {
-    Details: { section: 'Details', default: Details },
-    Parent: { section: 'Parent', default: Parent },
-    Children: { section: 'Children', default: Children },
-    Audit: { section: 'Audit', default: Audit }
-  }
+// Resolve own local override
+const { resolvedComponent, propModifier } = useSectionResolver({
+  sectionName: 'Content',
+  page: props.page
 })
+
+const preparedProps = computed(() => ({
+  detailsConfig: {},
+  parentConfig: {},
+  childrenConfig: {},
+  auditConfig: {},
+  order: ['Details', 'Parent', 'Children', 'Audit'],
+  hide: []
+}))
+
+const finalProps = computed(() => propModifier.value(preparedProps.value))
+
+const activeSectionsOrder = computed(() => {
+  return finalProps.value.order || ['Details', 'Parent', 'Children', 'Audit']
+})
+
+function isSectionVisible(secName) {
+  if (finalProps.value.hide?.includes(secName)) return false
+
+  if (secName === 'Parent') {
+    return isOperations.value && !!parentRecord.value
+  }
+  if (secName === 'Children') {
+    return !!childResources.value?.length
+  }
+  if (secName === 'Audit') {
+    return isMasters.value
+  }
+  return true
+}
 </script>

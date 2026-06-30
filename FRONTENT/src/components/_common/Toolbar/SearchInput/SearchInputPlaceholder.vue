@@ -4,21 +4,21 @@
     v-if="resolvedComponent"
     v-bind="finalProps"
   />
-  <q-icon v-else name="add" size="24px" />
+  <span v-else>Search code, name, or any field...</span>
 </template>
 
 <script setup>
 import { computed } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
 
-defineOptions({ name: 'AddFABIcon' })
+defineOptions({ name: 'SearchInputPlaceholder' })
 
 const props = defineProps({
   page: { type: String, default: 'Index' }
 })
 
 const { resolvedComponent, propModifier } = useSectionResolver({
-  sectionName: 'AddFABIcon',
+  sectionName: 'SearchInputPlaceholder',
   page: props.page
 })
 

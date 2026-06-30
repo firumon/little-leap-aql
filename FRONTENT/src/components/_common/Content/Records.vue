@@ -1,36 +1,46 @@
-<template>
+﻿<template>
+  <!-- Render custom template if resolved -->
+  <component
+    :is="resolvedComponent"
+    v-if="resolvedComponent"
+    v-bind="finalProps"
+  />
+
+  <!-- Fallback card layout -->
   <q-card
-    :flat="activeConfig.flat !== false"
-    :bordered="activeConfig.bordered !== false"
-    :class="['records-card q-mt-sm', activeConfig.class]"
+    v-else
+    :flat="finalProps.flat !== false"
+    :bordered="finalProps.bordered !== false"
+    :class="['records-card q-mt-sm', finalProps.class]"
   >
     <q-card-section class="q-pa-none">
-      <div v-if="!sectionsReady" class="q-py-lg text-center">
+      <div v-if="loading && !items.length" class="q-py-lg text-center">
         <q-spinner-dots color="primary" size="32px" />
       </div>
-      <component v-else-if="loading && !items.length" :is="resolvedLoading.component" />
-      <component v-else-if="!items.length" :is="resolvedEmpty.component" :message="activeConfig.emptyMessage" />
+      <div v-else-if="!items.length" class="q-py-lg text-center text-grey-6">
+        {{ finalProps.emptyMessage || 'No records found' }}
+      </div>
       <AqlList
         v-else
-        :items="items"
+        :items="finalProps.items"
         :bordered="false"
         :item-bordered="false"
         :clickable="false"
         item-class="q-pa-none"
-        :class="['card-list', { 'q-gutter-sm': activeConfig.layout !== 'grid' }]"
-        :style="listStyle"
+        :class="['card-list', { 'q-gutter-sm': finalProps.layout !== 'grid' }]"
+        :style="finalProps.listStyle"
       >
         <template #item="{ item: row }">
           <div class="record-card-wrap full-width">
             <component
               :is="resolvedRecord.component"
               :row="row"
-              :resolve-primary-text="resolvePrimaryText"
-              :resolve-secondary-text="resolveSecondaryText"
+              :resolve-primary-text="finalProps.resolvePrimaryText"
+              :resolve-secondary-text="finalProps.resolveSecondaryText"
               :record-config="resolvedRecord.config"
               @open-detail="$emit('navigate-to-view', $event)"
             />
-            <div v-if="childCountMap[row.Code] && !activeConfig.noChildCounts" class="record-children">
+            <div v-if="childCountMap[row.Code] && !finalProps.noChildCounts" class="record-children">
               <q-badge
                 v-for="(count, childName) in childCountMap[row.Code]"
                 :key="childName"
@@ -54,7 +64,7 @@ import { useSectionResolver } from 'src/composables/resources/useSectionResolver
 
 import Loading from 'components/_common/Content/Loading.vue'
 import Empty from 'components/_common/Content/Empty.vue'
-import Record from 'components/_common/Content/RecordsRecord.vue'
+import RecordComponent from 'components/_common/Content/RecordsRecord.vue'
 import AqlList from 'components/shared/AqlList.vue'
 
 const props = defineProps({
@@ -64,7 +74,8 @@ const props = defineProps({
   childCountMap: { type: Object, default: () => ({}) },
   resourceSlug: { type: String, required: true },
   customUIName: { type: String, required: true },
-  recordsConfig: { type: Object, default: () => ({}) }
+  recordsConfig: { type: Object, default: () => ({}) },
+  page: { type: String, default: 'List' }
 })
 
 defineEmits(['navigate-to-view'])
@@ -81,12 +92,10 @@ const defaultConfig = {
   emptyMessage: undefined
 }
 
-const activeConfig = computed(() => {
-  return {
-    ...defaultConfig,
-    ...(props.recordsConfig || {})
-  }
-})
+const activeConfig = computed(() => ({
+  ...defaultConfig,
+  ...(props.recordsConfig || {})
+}))
 
 const listStyle = computed(() => {
   if (activeConfig.value.layout === 'grid') {
@@ -100,45 +109,12 @@ const listStyle = computed(() => {
   return {}
 })
 
-const { sections, sectionsReady } = useSectionResolver({
-  scope,
-  resourceSlug: computed(() => props.resourceSlug),
-  customUIName: computed(() => props.customUIName),
-  page: 'List',
-  sectionDefs: {
-    Loading: { section: 'Loading', default: Loading },
-    Empty: { section: 'Empty', default: Empty },
-    Record: { section: 'Record', default: Record }
-  },
-  allowScriptOnly: true
-})
-
-const resolvedLoading = computed(() => {
-  const comp = sections.Loading
-  const hasTemplate = !!(comp && (comp.render || comp.ssrRender || typeof comp === 'function'))
-  if (hasTemplate) return { component: comp, config: null }
-  return { component: Loading, config: comp?.config || {} }
-})
-
-const resolvedEmpty = computed(() => {
-  const comp = sections.Empty
-  const hasTemplate = !!(comp && (comp.render || comp.ssrRender || typeof comp === 'function'))
-  if (hasTemplate) return { component: comp, config: null }
-  return { component: Empty, config: comp?.config || {} }
-})
+// Check for local overrides using new useSectionResolver
+const { resolvedComponent, propModifier, sectionsReady } = useSectionResolver({ sectionName: 'Records', page: props.page })
 
 const resolvedRecord = computed(() => {
-  const comp = sections.Record
-  if (!comp) return { component: null, config: null }
-  const hasTemplate = !!(comp.render || comp.ssrRender || typeof comp === 'function')
-  if (hasTemplate) {
-    return { component: comp, config: null }
-  }
-  const recordLevelConfig = {
-    ...(activeConfig.value.record || {}),
-    ...(comp.config || comp.record || {})
-  }
-  return { component: Record, config: recordLevelConfig }
+  // For record-level overrides we still default to RecordComponent
+  return { component: RecordComponent, config: activeConfig.value.record || {} }
 })
 
 function resolvePrimaryText(row) {
@@ -161,9 +137,31 @@ function resolveSecondaryText(row) {
   })
   return field ? row[field.header] : ''
 }
+
+const preparedProps = computed(() => ({
+  items: props.items,
+  loading: props.loading,
+  resolvedFields: props.resolvedFields,
+  childCountMap: props.childCountMap,
+  resourceSlug: props.resourceSlug,
+  customUIName: props.customUIName,
+  recordsConfig: props.recordsConfig,
+  flat: activeConfig.value.flat,
+  bordered: activeConfig.value.bordered,
+  class: activeConfig.value.class,
+  emptyMessage: activeConfig.value.emptyMessage,
+  layout: activeConfig.value.layout,
+  listStyle: listStyle.value,
+  noChildCounts: activeConfig.value.noChildCounts,
+  resolvePrimaryText,
+  resolveSecondaryText
+}))
+
+const finalProps = computed(() => propModifier.value(preparedProps.value))
 </script>
 
 <style scoped>
+/* existing styles retained */
 .records-card {
   border-radius: 16px;
   border-color: var(--aql-border);
@@ -198,5 +196,3 @@ function resolveSecondaryText(row) {
   100% { transform: translateY(0); opacity: 1; }
 }
 </style>
-
-

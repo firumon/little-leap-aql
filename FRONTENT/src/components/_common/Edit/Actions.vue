@@ -1,44 +1,53 @@
 <template>
-  <div class="edit-actions flex justify-end q-gutter-x-sm q-py-md q-px-sm" v-if="sectionsReady">
+  <!-- Render custom template if resolved -->
+  <component
+    :is="resolvedComponent"
+    v-if="resolvedComponent"
+    v-bind="finalProps"
+    @cancel="$emit('cancel')"
+    @submit="$emit('submit')"
+  />
+
+  <div v-else class="edit-actions flex justify-end q-gutter-x-sm q-py-md q-px-sm">
     <!-- Cancel button -->
-    <component
-      :is="sections.FormCancel"
-      @cancel="$emit('cancel')"
-    />
+    <FormCancel :page="page" @cancel="$emit('cancel')" />
 
     <!-- Submit button -->
-    <component
-      :is="sections.FormSubmit"
-      :label="submitLabel"
-      :saving="saving"
+    <FormSubmit
+      :page="page"
+      :label="finalProps.submitLabel"
+      :saving="finalProps.saving"
       @submit="$emit('submit')"
     />
-  </div>
-  <div v-else class="flex justify-end q-py-md">
-    <q-spinner-dots color="primary" size="20px" />
   </div>
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
 import FormSubmit from 'components/_common/Action/FormSubmit.vue'
 import FormCancel from 'components/_common/Action/FormCancel.vue'
 
 defineOptions({ name: 'EditActions' })
 
-defineProps({
+const props = defineProps({
   submitLabel: { type: String, default: 'Update' },
-  saving: { type: Boolean, default: false }
+  saving: { type: Boolean, default: false },
+  page: { type: String, default: 'Edit' }
 })
 
 defineEmits(['cancel', 'submit'])
 
-// Resolve Edit Actions sub-sections recursively
-const { sections, sectionsReady } = useSectionResolver({
-  page: 'Edit/Action',
-  sectionDefs: {
-    FormSubmit: { section: 'FormSubmit', default: FormSubmit },
-    FormCancel: { section: 'FormCancel', default: FormCancel }
-  }
+// Resolve own local override
+const { resolvedComponent, propModifier } = useSectionResolver({
+  sectionName: 'Actions',
+  page: props.page
 })
+
+const preparedProps = computed(() => ({
+  submitLabel: props.submitLabel,
+  saving: props.saving
+}))
+
+const finalProps = computed(() => propModifier.value(preparedProps.value))
 </script>

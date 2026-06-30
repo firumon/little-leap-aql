@@ -1,7 +1,7 @@
 <template>
   <component
-    v-if="resolvedParentDisplay && parentResource && parentRecord"
     :is="resolvedParentDisplay"
+    v-if="resolvedParentDisplay && parentResource && parentRecord"
     :parent-resource="parentResource"
     :parent-record="parentRecord"
     :additional-actions="additionalActions"
@@ -9,13 +9,14 @@
     :resource-slug="resourceSlug"
     :custom-u-i-name="customUIName"
     :entity-name="entityName"
+    :parent-config="parentConfig"
   />
   <q-card v-else-if="parentResource && parentRecord" flat bordered class="page-card q-mt-sm">
     <q-card-section>
-      <div class="section-title">{{ hasName ? 'Parent' : humanizedParentName }}</div>
+      <div class="section-title">{{ resolvedTitle }}</div>
 
-      <!-- Case A: hasName = true -->
-      <div v-if="hasName" class="detail-grid">
+      <!-- Case A: hasName = true and no custom fields requested -->
+      <div v-if="hasName && !activeConfig.fields" class="detail-grid">
         <div class="detail-line">
           <span class="detail-key">{{ humanizedParentName }}</span>
           <span
@@ -27,14 +28,14 @@
         </div>
       </div>
 
-      <!-- Case B: hasName = false -->
+      <!-- Case B: hasName = false or custom fields explicitly requested -->
       <div v-else class="detail-grid">
-        <div v-for="(val, key) in filteredParentFields" :key="key" class="detail-line">
+        <div v-for="(val, key) in displayedFields" :key="key" class="detail-line">
           <span class="detail-key">{{ humanizeString(key) }}</span>
           <span class="detail-val">{{ val || '-' }}</span>
         </div>
         <div class="q-mt-md flex justify-end">
-          <q-btn flat color="primary" :label="`View ${humanizedParentName}`" icon-right="arrow_forward" @click="navigateToParent" />
+          <q-btn flat color="primary" :label="resolvedActionLabel" icon-right="arrow_forward" @click="navigateToParent" />
         </div>
       </div>
     </q-card-section>
@@ -47,6 +48,13 @@ import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { humanizeString, toPascalCase, deriveActionStampHeaders, filterParentFields } from 'src/utils/appHelpers'
 
 defineOptions({ name: 'CommonParent' })
+
+const props = defineProps({
+  parentConfig: {
+    type: Object,
+    default: () => ({})
+  }
+})
 
 const nav = useResourceNav()
 
@@ -123,6 +131,37 @@ const filteredParentFields = computed(() => {
   return filterParentFields(parentRecord.value, actionStampHeaders.value)
 })
 
+const activeConfig = computed(() => {
+  return {
+    title: undefined,
+    fields: null,
+    actionLabel: undefined,
+    ...(props.parentConfig || {})
+  }
+})
+
+const resolvedTitle = computed(() => {
+  if (activeConfig.value.title !== undefined) return activeConfig.value.title
+  return hasName.value ? 'Parent' : humanizedParentName.value
+})
+
+const resolvedActionLabel = computed(() => {
+  if (activeConfig.value.actionLabel !== undefined) return activeConfig.value.actionLabel
+  return `View ${humanizedParentName.value}`
+})
+
+const displayedFields = computed(() => {
+  const baseFields = filteredParentFields.value || {}
+  if (activeConfig.value.fields) {
+    const res = {}
+    activeConfig.value.fields.forEach((k) => {
+      res[k] = parentRecord.value?.[k]
+    })
+    return res
+  }
+  return baseFields
+})
+
 function navigateToParent() {
   if (parentResource.value && parentRecord.value?.Code) {
     nav.goTo('view', {
@@ -155,3 +194,4 @@ function navigateToParent() {
   100% { transform: translateY(0); opacity: 1; }
 }
 </style>
+

@@ -1,26 +1,26 @@
-<template>
-  <!-- Case 1: Local header component exists and has a template -> Render it directly -->
+﻿<template>
+  <!-- Case 1: Local header template exists -> Render it directly with modified props -->
   <component
-    :is="localComponent"
-    v-if="localComponent && hasLocalTemplate"
-    v-bind="$attrs"
+    :is="resolvedComponent"
+    v-if="resolvedComponent"
+    v-bind="finalProps"
   />
 
   <!-- Case 2: Standard fallback using the shared GenericHeaderPanel -->
   <GenericHeaderPanel
     v-else
-    :label="resolvedHeaderTitle"
-    :caption="resolvedHeaderSubtitle"
-    :icon="resolvedHeaderIcon"
-    :back="resolvedBackConfig.showBack"
-    :back-icon="resolvedBackConfig.icon"
-    :reload="hasReload"
-    :reload-component="localConfig.reloadComponent"
-    :reload-icon="resolvedReloadIcon"
-    :chip="resolvedChip"
-    :chip-color="resolvedChipColor"
-    :chip-text-color="resolvedChipTextColor"
-    :chip-component="localConfig.chipComponent"
+    :label="finalProps.label"
+    :caption="finalProps.caption"
+    :icon="finalProps.icon"
+    :back="finalProps.back"
+    :back-icon="finalProps.backIcon"
+    :reload="finalProps.reload"
+    :reload-component="finalProps.reloadComponent"
+    :reload-icon="finalProps.reloadIcon"
+    :chip="finalProps.chip"
+    :chip-color="finalProps.chipColor"
+    :chip-text-color="finalProps.chipTextColor"
+    :chip-component="finalProps.chipComponent"
     @click="navigateBack"
   />
 </template>
@@ -60,39 +60,7 @@ const activeActionConfig = computed(() => {
   ) || null
 })
 
-// Resolve the local header component using the central 12-tier resolver
-const { sections } = useSectionResolver({
-  resourceSlug,
-  customUIName,
-  scope,
-  actionKey: action,
-  sectionDefs: {
-    Header: 'Header'
-  },
-  allowScriptOnly: true
-})
-
-const localComponent = computed(() => {
-  const comp = sections.Header
-  if (!comp) return null
-  // Prevent infinite loop recursion if it resolves to the orchestrator itself
-  if (comp.name === 'CommonHeader') {
-    return null
-  }
-  return comp
-})
-
-const hasLocalTemplate = computed(() => {
-  const comp = localComponent.value
-  return !!(comp && (comp.render || comp.ssrRender || typeof comp === 'function'))
-})
-
-const localConfig = computed(() => {
-  const comp = localComponent.value
-  return comp?.header || {}
-})
-
-// Helper to evaluate static values or dynamic functions with active record and resource config
+// Keep existing resolved title/subtitle/icon/back/reload/chip computations
 function evaluate(val) {
   if (typeof val === 'function') {
     return val(recordVal.value, activeConfig.value)
@@ -100,9 +68,8 @@ function evaluate(val) {
   return val
 }
 
-// 1. Title Resolution
 const resolvedHeaderTitle = computed(() => {
-  const val = localConfig.value.title !== undefined ? localConfig.value.title : activeConfig.value?.ui?.header?.title
+  const val = activeConfig.value?.ui?.header?.title
   const evaluated = evaluate(val)
   if (evaluated) return evaluated
 
@@ -118,14 +85,13 @@ const resolvedHeaderTitle = computed(() => {
     return activeConfig.value?.name ? `Edit ${activeConfig.value.name}` : 'Edit Record'
   }
   if (act === 'action') {
-    return activeActionConfig.value?.label || props.actionName || 'Action'
+    return activeActionConfig.value?.label || attrs.actionName || 'Action'
   }
   return activeConfig.value?.name || 'Record'
 })
 
-// 2. Subtitle Resolution
 const resolvedHeaderSubtitle = computed(() => {
-  const val = localConfig.value.subtitle !== undefined ? localConfig.value.subtitle : activeConfig.value?.ui?.header?.subtitle
+  const val = activeConfig.value?.ui?.header?.subtitle
   const evaluated = evaluate(val)
   if (evaluated) return evaluated
 
@@ -148,15 +114,13 @@ const resolvedHeaderSubtitle = computed(() => {
   return rCode ? `${rCode} - Details` : 'Details'
 })
 
-// 3. Left Icon Resolution
 const resolvedHeaderIcon = computed(() => {
-  const val = localConfig.value.icon !== undefined ? localConfig.value.icon : activeConfig.value?.ui?.header?.icon
-  return evaluate(val) || null // hidden if not specified
+  const val = activeConfig.value?.ui?.header?.icon
+  return evaluate(val) || null
 })
 
-// 4. Overloaded Back Button Configuration
 const resolvedBackConfig = computed(() => {
-  const val = localConfig.value.back !== undefined ? localConfig.value.back : activeConfig.value?.ui?.header?.back
+  const val = activeConfig.value?.ui?.header?.back
 
   let showBack = false
   let icon = 'arrow_back'
@@ -171,7 +135,6 @@ const resolvedBackConfig = computed(() => {
     showBack = true
     icon = val
   } else {
-    // val is true, 'true', or undefined
     const hasHistory = !!window.history.state?.back
     if (hasHistory || currentAction.value !== 'index') {
       showBack = true
@@ -198,35 +161,54 @@ function navigateBack() {
   }
 }
 
-// 5. Reload Configuration
 const hasReload = computed(() => {
-  const val = localConfig.value.reload !== undefined ? localConfig.value.reload : activeConfig.value?.ui?.header?.reload
+  const val = activeConfig.value?.ui?.header?.reload
   if (val === false || val === 'false') return false
   if (val) return true
-  return isIndexPage.value // default to index page
+  return isIndexPage.value
 })
 
 const resolvedReloadIcon = computed(() => {
-  const val = localConfig.value.reload !== undefined ? localConfig.value.reload : activeConfig.value?.ui?.header?.reload
+  const val = activeConfig.value?.ui?.header?.reload
   if (typeof val === 'string' && val !== 'true' && val !== 'false') {
     return val
   }
   return 'refresh'
 })
 
-// 6. Status Chip Resolution
 const resolvedChip = computed(() => {
-  const val = localConfig.value.chip !== undefined ? localConfig.value.chip : activeConfig.value?.ui?.header?.chip
+  const val = activeConfig.value?.ui?.header?.chip
   return evaluate(val) || ''
 })
 
 const resolvedChipColor = computed(() => {
-  const val = localConfig.value.chipColor !== undefined ? localConfig.value.chipColor : activeConfig.value?.ui?.header?.chipColor
+  const val = activeConfig.value?.ui?.header?.chipColor
   return evaluate(val) || 'primary'
 })
 
 const resolvedChipTextColor = computed(() => {
-  const val = localConfig.value.chipTextColor !== undefined ? localConfig.value.chipTextColor : activeConfig.value?.ui?.header?.chipTextColor
+  const val = activeConfig.value?.ui?.header?.chipTextColor
   return evaluate(val) || 'white'
 })
+
+// New: resolve section-level overrides using new useSectionResolver contract
+const props = defineProps({ page: { type: String, default: 'View' } })
+const { resolvedComponent, propModifier, sectionsReady } = useSectionResolver({ sectionName: 'Header', page: props.page })
+
+const preparedProps = computed(() => ({
+  label: resolvedHeaderTitle.value,
+  caption: resolvedHeaderSubtitle.value,
+  icon: resolvedHeaderIcon.value,
+  back: resolvedBackConfig.value.showBack,
+  backIcon: resolvedBackConfig.value.icon,
+  reload: hasReload.value,
+  reloadComponent: null,
+  reloadIcon: resolvedReloadIcon.value,
+  chip: resolvedChip.value,
+  chipColor: resolvedChipColor.value,
+  chipTextColor: resolvedChipTextColor.value,
+  chipComponent: null
+}))
+
+const finalProps = computed(() => propModifier.value(preparedProps.value))
 </script>

@@ -1,3 +1,57 @@
+# PLAN: Refactor Common Page Orchestration and Section Override System
+**Status**: DRAFT
+**Created**: 2026-06-30
+**Created By**: Brain Agent (Antigravity)
+**Executed By**: Build Agent (Antigravity | pending)
+
+## Objective
+Update the AQL framework component customization pattern. Currently, page-level orchestrators dynamically resolve sub-sections, bypassing common fallbacks entirely when a local override exists. Under this new design:
+1. Common page components (Index, Add, Edit, View, Action) become lightweight configuration shells.
+2. A unified `Page.vue` orchestrator handles all state, reactivity, and context providers, statically rendering the layout sections.
+3. Common section components (Header, Toolbar, Records, Details, etc.) are always executed. They prepare data and call `useSectionResolver` to check for local `.vue` templates (Tiers 1-8 custom template overrides) or `.js` composables (Tiers 1-8 prop modifiers).
+4. If a local JS file exists, its exported function modifies the prepared props before they are fed into either the local template or the default common layout.
+
+---
+
+## Pre-Conditions
+- [ ] Codebase index and rules were reviewed.
+- [ ] No ongoing lock or merge conflict in `useSectionResolver.js`.
+
+---
+
+## Steps
+
+### Step 1: Rename the Fallback Page
+- [x] Rename [Page.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/Page.vue) to [PageFallback.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/PageFallback.vue).
+- [x] Replace name and option strings in the renamed file from `Page` to `PageFallback`. (No internal 'Page' option strings found — file content preserved.)
+
+**Files**: 
+* [PageFallback.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/PageFallback.vue) (Renamed target)
+
+---
+
+### Step 2: Update `usePageResolver.js`
+- [x] Modify [usePageResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/usePageResolver.js) at line 111 to reference `PageFallback.vue` instead of `Page.vue`.
+
+**Files**:
+* [usePageResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/usePageResolver.js)
+
+#### Exact replacement at line 111:
+```javascript
+      // If no page resolved, fall back to global checklist/fallback page
+      const fallbackPath = 'pages/_common/PageFallback.vue'
+```
+
+---
+
+### Step 3: Create the New Unified `Page.vue`
+- [x] Create the new dynamic orchestrator [Page.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/Page.vue) that handles data fetching, composables, provide/inject, and renders the statically mapped layout components according to the requested page action.
+
+**Files**:
+* [Page.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/Page.vue) [NEW]
+
+#### Content for [Page.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/Page.vue):
+```html
 <template>
   <q-page class="q-gutter-y-sm" v-if="pageReady">
     <template v-for="sec in sections" :key="sec">

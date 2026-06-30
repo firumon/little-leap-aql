@@ -108,7 +108,7 @@ export function usePageResolver() {
       }
 
       // If no page resolved, fall back to global checklist/fallback page
-      const fallbackPath = 'pages/_common/Page.vue'
+      const fallbackPath = 'pages/_common/PageFallback.vue'
       const fallbackExists = !!registry[fallbackPath]
       checkedPaths.value.push({ path: fallbackPath, found: fallbackExists })
 

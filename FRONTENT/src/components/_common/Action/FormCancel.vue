@@ -16,8 +16,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
+import { useCommonSection } from 'src/composables/resources/useCommonSection'
 
 defineOptions({ name: 'FormCancel' })
 
@@ -27,11 +26,8 @@ const props = defineProps({
 
 defineEmits(['cancel'])
 
-const { resolvedComponent, propModifier } = useSectionResolver({
+const { resolvedComponent, finalProps } = useCommonSection({
   sectionName: 'FormCancel',
   page: props.page
 })
-
-const preparedProps = computed(() => ({}))
-const finalProps = computed(() => propModifier.value(preparedProps.value))
 </script>

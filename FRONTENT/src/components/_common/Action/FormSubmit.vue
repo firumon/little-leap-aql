@@ -20,7 +20,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
+import { useCommonSection } from 'src/composables/resources/useCommonSection'
 
 defineOptions({ name: 'FormSubmit' })
 
@@ -32,15 +32,14 @@ const props = defineProps({
 
 defineEmits(['submit'])
 
-const { resolvedComponent, propModifier } = useSectionResolver({
-  sectionName: 'FormSubmit',
-  page: props.page
-})
-
 const preparedProps = computed(() => ({
   label: props.label,
   saving: props.saving
 }))
 
-const finalProps = computed(() => propModifier.value(preparedProps.value))
+const { resolvedComponent, finalProps } = useCommonSection({
+  sectionName: 'FormSubmit',
+  page: props.page,
+  preparedProps
+})
 </script>

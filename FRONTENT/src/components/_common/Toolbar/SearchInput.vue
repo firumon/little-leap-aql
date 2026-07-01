@@ -2,7 +2,6 @@
   <!-- Render custom template if resolved -->
   <component
     :is="resolvedComponent"
-    v-slot="{ value }"
     v-if="resolvedComponent"
     v-bind="finalProps"
     v-model="searchTerm"
@@ -11,74 +10,66 @@
   <div v-else class="search-input-container">
     <q-input
       v-model="searchTerm"
-      outlined
-      debounce="180"
-      :placeholder="placeholderText"
+      v-bind="$attrs"
+      :outlined="finalProps.outlined"
+      :debounce="finalProps.debounce"
+      :placeholder="finalProps.placeholder"
+      :label="finalProps.label || undefined"
       class="search-input"
     >
-      <template #prepend>
-        <SearchInputIcon :page="page" />
+      <template #prepend v-if="finalProps.icon">
+        <q-icon :name="finalProps.icon" :color="finalProps.iconColor" />
       </template>
 
-      <template #append v-if="searchTerm">
-        <SearchInputClear :page="page" @clear="searchTerm = ''" />
-      </template>
-
-      <template #label>
-        <SearchInputLabel :page="page" />
+      <template #append v-if="finalProps.clearable && searchTerm">
+        <q-icon
+          :name="finalProps.clearIcon"
+          :color="finalProps.clearIconColor"
+          class="cursor-pointer"
+          @click="searchTerm = ''"
+        />
       </template>
     </q-input>
-
-    <!-- Hidden element to extract text content for placeholder from template -->
-    <div ref="hiddenPlaceholderRef" class="hidden">
-      <SearchInputPlaceholder :page="page" />
-    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch, nextTick, inject, computed } from 'vue'
-import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
+import { computed, inject, ref } from 'vue'
+import { useCommonSection } from 'src/composables/resources/useCommonSection'
 
-import SearchInputIcon from 'components/_common/Toolbar/SearchInput/SearchInputIcon.vue'
-import SearchInputClear from 'components/_common/Toolbar/SearchInput/SearchInputClear.vue'
-import SearchInputPlaceholder from 'components/_common/Toolbar/SearchInput/SearchInputPlaceholder.vue'
-import SearchInputLabel from 'components/_common/Toolbar/SearchInput/SearchInputLabel.vue'
-
-defineOptions({ name: 'SearchInput' })
+defineOptions({ name: 'SearchInput', inheritAttrs: false })
 
 const props = defineProps({
-  page: { type: String, default: 'Index' }
+  page: { type: String, default: 'Index' },
+  outlined: { type: Boolean, default: true },
+  debounce: { type: [Number, String], default: 180 },
+  placeholder: { type: String, default: 'Search code, name, or any field...' },
+  icon: { type: String, default: 'search' },
+  iconColor: { type: String, default: 'grey-6' },
+  clearable: { type: Boolean, default: true },
+  clearIcon: { type: String, default: 'cancel' },
+  clearIconColor: { type: String, default: 'grey-5' },
+  label: { type: String, default: '' }
 })
 
-const { resourceSlug, scope } = inject('resourceConfig')
 const { searchTerm } = inject('resourceRecord', { searchTerm: ref('') })
 
-// Resolve own local override
-const { resolvedComponent, propModifier } = useSectionResolver({
-  sectionName: 'SearchInput',
-  page: props.page
-})
-
 const preparedProps = computed(() => ({
-  searchTerm: searchTerm.value
+  searchTerm: searchTerm.value,
+  outlined: props.outlined,
+  debounce: props.debounce,
+  placeholder: props.placeholder,
+  icon: props.icon,
+  iconColor: props.iconColor,
+  clearable: props.clearable,
+  clearIcon: props.clearIcon,
+  clearIconColor: props.clearIconColor,
+  label: props.label
 }))
 
-const finalProps = computed(() => propModifier.value(preparedProps.value))
-
-const hiddenPlaceholderRef = ref(null)
-const placeholderText = ref('Search code, name, or any field...')
-
-// Check placeholder text reactively
-watch(
-  () => [searchTerm.value, resolvedComponent.value],
-  () => {
-    nextTick(() => {
-      if (hiddenPlaceholderRef.value) {
-        placeholderText.value = hiddenPlaceholderRef.value.textContent?.trim() || 'Search code, name, or any field...'
-      }
-    })
-  },
-  { immediate: true }
-)
+const { resolvedComponent, finalProps } = useCommonSection({
+  sectionName: 'SearchInput',
+  page: props.page,
+  preparedProps
+})
 </script>

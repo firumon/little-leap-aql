@@ -51,36 +51,36 @@ The `back` property in the `header` configuration is highly overloaded to consol
 
 ## 4. Local Customization Patterns
 
-### Pattern 1: JS Logic Modifier (Tiers 7 & 8 only)
-Create a `.js` file to modify the header props. You can return static config settings or functions reading the record and resource config:
+### Pattern 1: JS Logic Modifier (Tiers 7 & 8 only — Preferred for prop changes)
+Create a `.js` file to modify the header props. You only need to return the properties you want to override; [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js) automatically merges the rest.
 
 #### `src/components/Masters/Products/Index/Header.js`
 ```javascript
 export default function (props) {
   return {
-    ...props,
-    headerConfig: {
-      // Title and subtitle as functions reading both active record and resource config
-      title: (record, config) => record ? `Product: ${record.Name}` : (config?.name || 'Product Catalog'),
-      subtitle: (record, config) => record ? `SKU: ${record.SkuCode}` : (config?.description || 'Manage catalog'),
-      
-      // Custom left icon
-      icon: 'inventory_2',
-      
-      // Custom back button
-      back: 'close',
-      
-      // Status chip badge customization
-      chip: (record) => record?.Status || 'Draft',
-      chipColor: (record) => record?.Status === 'Active' ? 'positive' : 'warning',
-      chipTextColor: 'white'
-    }
+    // Override title/label and subtitle/caption
+    label: (record, config) => record ? `Product: ${record.Name}` : (config?.name || 'Product Catalog'),
+    caption: (record, config) => record ? `SKU: ${record.SkuCode}` : (config?.description || 'Manage catalog'),
+    
+    // Custom left icon
+    icon: 'inventory_2',
+    
+    // Custom back button
+    back: 'close',
+    
+    // Status chip badge customization
+    chip: (record) => record?.Status || 'Draft',
+    chipColor: (record) => record?.Status === 'Active' ? 'positive' : 'warning',
+    chipTextColor: 'white'
   }
 }
 ```
 
-### Pattern 2: Custom Template Wrapping `GenericHeaderPanel` (Tiers 1-8)
-To customize the template structure or slots while preserving the standard layout, wrap the shared presentation panel in a `.vue` file:
+### Pattern 2: Custom Template Wrapping `GenericHeaderPanel` (Tiers 1-8 — Required for slot customization)
+To customize the template structure or slots while preserving the standard layout, wrap the shared presentation panel in a `.vue` file. 
+
+> [!IMPORTANT]
+> **To prevent parent orchestrator attributes from overriding your local properties, you MUST use `defineOptions({ inheritAttrs: false })` and bind `$attrs` BEFORE specifying your overrides.**
 
 #### `src/components/Masters/Products/Index/Header.vue`
 ```html
@@ -100,8 +100,14 @@ To customize the template structure or slots while preserving the standard layou
 
 <script setup>
 import GenericHeaderPanel from 'components/shared/GenericHeaderPanel.vue'
+
+// Disable automatic attribute fallthrough so parent attributes don't overwrite local values
+defineOptions({ inheritAttrs: false })
 </script>
 ```
+
+> [!WARNING]
+> **Do not use a `<div>` wrapper** (e.g. `<div><GenericHeaderPanel ... /></div>`) to bypass overrides unless you intentionally want to isolate the child component. Wrapping in a `<div>` blocks the parent attributes completely, causing the panel to lose dynamic behaviors like the back button, reload actions, and status badges. Always prefer `inheritAttrs: false` instead.
 
 ### Pattern 3: Complete Custom Override (Tiers 1-8)
 To completely bypass the standard layout, write a standard Vue template:

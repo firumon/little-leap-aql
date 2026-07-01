@@ -135,3 +135,37 @@ export default function (props) {
    - Reusable Business Logic: [composables/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/REGISTRY.md)
 2. **Update Registries**: If a custom component or composable is developed that could be shared, document it inside the registries above.
 3. **Core Rules Compliance**: Every custom override file must strictly respect [ARCHITECTURE RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md).
+
+---
+
+## 8. Attribute Overrides & Merging Workarounds (STRICT)
+
+When overriding properties on same-component overlays (e.g. wrapper component using the standard fallback internally), parent fallthrough attributes will overwrite the local component's root-node attributes. Use these strict rules to handle merging:
+
+### 8.1 Preferred: JS Logic Modifiers for Property Changes
+If you only need to change props (like `label`, `caption`, `reload`), use a `.js` modifier instead of a `.vue` template. [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js) automatically merges:
+```javascript
+// Return only the overrides; common defaults are preserved automatically
+export default {
+  label: 'Than podo'
+}
+```
+
+### 8.2 Template Overrides: inheritAttrs: false + Explicit v-bind
+If you must write a `.vue` template (e.g. when slots are required), prevent default attribute overrides by disabling inheritance and manually binding `$attrs` **before** the local properties:
+```html
+<template>
+  <GenericHeaderPanel v-bind="$attrs" label="Than podo" />
+</template>
+
+<script setup>
+import GenericHeaderPanel from 'components/shared/GenericHeaderPanel.vue'
+defineOptions({ inheritAttrs: false })
+</script>
+```
+
+### 8.3 The Div-Wrapping Workaround Warning
+Wrapping the panel inside a wrapper element (like `<div><GenericHeaderPanel label="..." /></div>`) stops parent attributes from overriding the local panel. 
+
+> [!CAUTION]
+> **Do not use this unless you deliberately want to break connection with the parent orchestrator**. The dynamic back buttons, reload commands, status badges, and other parent-computed attributes will be captured by the outer `<div>` and lost to the inner panel. Prefer **inheritAttrs: false** for template wrapping instead.

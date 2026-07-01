@@ -161,3 +161,42 @@ Overrides are divided into two types:
 2. **Dynamic Section Gating**: All interactive elements in form actions, action bars, or detail grids must verify user permissions using `allowed()` from `useResourceConfig`.
 3. **No Direct Routing**: Transitions between pages or child views must use the `goTo` helper from the `useResourceNav` composable. Direct usage of `router.push()` in components is prohibited.
 4. **Style Restraint**: Styling must utilize standard Quasar utility classes or variables defined in `custom.scss`. Custom `<style>` blocks in custom component files are not permitted.
+
+---
+
+## 7. Attribute Fallthrough, Overlapping Props & JS Modifiers
+
+When customizing sections, you must handle parent-to-child attribute fallthrough carefully to avoid property collisions:
+
+### 7.1 Same Component Wrapper Conflict
+When a local template overrides a section but still renders the standard presentation element (e.g., `GenericHeaderPanel`), Vue 3's attribute fallthrough will automatically apply the parent orchestrator's attributes (like `label`, `caption`, `reload`) onto the root child node, overriding the static values defined in your custom template.
+
+To solve this, use one of the two patterns:
+
+#### Pattern A: JS Logic Modifier (Preferred for property-only overrides)
+If you only need to change properties, use a `.js` modifier instead of a `.vue` template. Thanks to the automatic property merging in [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js), you only return the fields you want to change:
+```javascript
+// src/components/Masters/Currencies/Index/Header.js
+export default {
+  label: 'Than podo'
+}
+```
+
+#### Pattern B: inheritAttrs: false + Explicit v-bind (Preferred when custom slots are needed)
+If you must use a `.vue` template (e.g., to override slots), you must disable Vue's automatic attribute fallthrough and explicitly bind `$attrs` **before** your overrides:
+```html
+<template>
+  <GenericHeaderPanel v-bind="$attrs" label="Than podo" />
+</template>
+
+<script setup>
+import GenericHeaderPanel from "../../../shared/GenericHeaderPanel.vue";
+defineOptions({ inheritAttrs: false })
+</script>
+```
+
+### 7.2 The Div-Wrapping Workaround (Side Effects Warning)
+Wrapping the child component in a `<div>` (e.g., `<div><GenericHeaderPanel label="Than podo" /></div>`) stops the parent's properties from overriding the local template properties because the `<div>` intercepts them.
+
+> [!WARNING]
+> While this preserves the custom label, **all other common page-level features (such as dynamic back/reload actions, permission-gated controls, or status badges) are swallowed by the `<div>` and never reach the panel**. Avoid this unless you intentionally want to isolate the child component from all orchestrator-computed attributes.

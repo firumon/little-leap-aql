@@ -118,7 +118,12 @@ export function useSectionResolver({ sectionName, page }) {
     )
 
     resolvedComponent.value = resolvedVue ? markRaw(resolvedVue) : null
-    propModifier.value = resolvedJs || ((props) => props)
+    propModifier.value = resolvedJs
+      ? (props) => {
+          const result = typeof resolvedJs === 'function' ? resolvedJs(props) : resolvedJs
+          return { ...props, ...result }
+        }
+      : ((props) => props)
     sectionsReady.value = true
   }
 

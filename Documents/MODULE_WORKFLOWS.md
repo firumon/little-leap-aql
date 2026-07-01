@@ -107,7 +107,7 @@ Stock reversal and report-template generation are intentionally not implemented 
 All master, operation, and accounts pages (List/Index, View, Add, Edit, Action, and custom pages) use a **dynamic resolver architecture**. Instead of static imports, the system uses a centralized routing interceptor and section loader.
 
 - **Page-Level Resolution**: Managed by [PageResolver.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/PageResolver.vue) and [usePageResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/usePageResolver.js) (6-tier lookup sequence for standard actions, 2-tier for custom pages).
-- **Section-Level Resolution**: Managed by [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js), which dynamically resolves individual layout sections (like `Header`, `Toolbar`, `Records`, `Details`) using a **12-tier lookup priority checklist**.
+- **Section-Level Resolution**: Managed by [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js) (wrapped by [useCommonSection.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useCommonSection.js) in layout-level orchestrator components), which dynamically resolves individual layout sections (like `Header`, `Toolbar`, `Records`, `Details`) using a **12-tier lookup priority checklist**.
 - **Bare Section Keys**: Resolvers use simple bare keys (like `Header` instead of `ListHeader`, or `Record` instead of `ListRecordsRecord`) to localize namespaces and reduce template complexity.
 - **Action Suffix Checks**: Action pages or outcome sections search for `{actionKey}{Section}.vue` first before falling back to `{Section}.vue` at each tier checked.
 
@@ -128,7 +128,7 @@ PageResolver.vue  ← Centralized Page resolution (usePageResolver.js)
          │
          ▼
 _common/{Action}Page.vue  ← Thin page orchestrator
-  Uses: useSectionResolver({ resourceSlug, customUIName, scope })
+  Uses: useCommonSection({ sectionName, page })
          │
          ▼
 Resolves sections dynamically via 12-tier lookup priority (uses global `registry` map):
@@ -177,7 +177,7 @@ If no page is found, it renders a developer fallback page: `pages/_common/Page.v
 
 ### 2.5 Architecture Contract Link
 - All frontend implementation under this module must follow `Documents/ARCHITECTURE RULES.md`.
-- Core defaults are mandatory: `useDataStore`, `useResourceIoStore`, `useResourceStatusStore`, `useResourceNav`, `useSectionResolver`, `usePageResolver`.
+- Core defaults are mandatory: `useDataStore`, `useResourceIoStore`, `useResourceStatusStore`, `useResourceNav`, `useSectionResolver`, `useCommonSection`, `usePageResolver`.
 - API transport must use canonical request/response envelopes.
 - Components returned by resolvers must be wrapped in Vue's `markRaw` to avoid reactivity performance warnings.
 
@@ -187,13 +187,13 @@ If no page is found, it renders a developer fallback page: `pages/_common/Page.v
 
 ### 3.1 Overview
 
-Operations pages use the identical centralized page resolver (`PageResolver.vue` / `usePageResolver.js`) and section resolver (`useSectionResolver.js`) as Masters, but with a different default section set — particularly for the `ViewPage`. 
+Operations pages use the identical centralized page resolver (`PageResolver.vue` / `usePageResolver.js`), section resolver (`useSectionResolver.js`), and common section wrapper (`useCommonSection.js`) as Masters, but with a different default section set — particularly for the `ViewPage`. 
 
 Operations data generally flows top-down (e.g. Purchase Requisitions → Purchase Orders → Goods Receipts) and tracks complex lifecycles via `additionalActions`. Operations views exclude the generic `ViewAudit` section and substitute a `ViewParent` section.
 
 ### 3.2 Key Differences vs Masters
 
-- **Section Resolver Scope**: `useSectionResolver` takes `scope: 'operations'`, which sets `{ScopeFolder}` to `Operations` in candidates paths checking.
+- **Section Resolver Scope**: `useSectionResolver` (and by extension `useCommonSection`) takes `scope: 'operations'`, which sets `{ScopeFolder}` to `Operations` in candidates paths checking.
 - **ViewPage Orchestrator**: The default operations `ViewPage.vue` orchestrator includes `Parent` section and excludes `Audit` section.
 - **ViewDetails Filtering**: The default `OperationViewDetails` dynamically filters out both audit columns (`CreatedAt`, `UpdatedAt`, `CreatedBy`, `UpdatedBy`) and any action stamp columns dynamically generated from the resource's `additionalActions` configuration (e.g. `ApprovedBy`, `ApprovedAt`).
 - **ViewParent Handling**: `OperationViewParent` automatically fetches the parent record (based on the `{ParentName}Code` header resolution logic). 
@@ -207,6 +207,7 @@ Operations data generally flows top-down (e.g. Purchase Requisitions → Purchas
 | `FRONTENT/src/pages/PageResolver.vue` | Centralized page resolver page component |
 | `FRONTENT/src/composables/resources/usePageResolver.js` | 6-tier page resolver logic |
 | `FRONTENT/src/composables/resources/useSectionResolver.js` | 12-tier section resolver logic |
+| `FRONTENT/src/composables/resources/useCommonSection.js` | Common orchestrator section wrapper & evaluation logic |
 | `FRONTENT/src/pages/_common/IndexPage.vue` | Centralized List page orchestrator |
 | `FRONTENT/src/pages/_common/AddPage.vue` | Centralized Add page orchestrator |
 | `FRONTENT/src/pages/_common/EditPage.vue` | Centralized Edit page orchestrator |

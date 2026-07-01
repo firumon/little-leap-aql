@@ -13,8 +13,8 @@ The header uses a **two-tier architecture** that separates orchestration (file s
 1. **Orchestrator Shell**: [Header.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_common/Header/Header.vue)
    - The central entry point loaded by `Page.vue`.
    - Injects the page-level provided `resourceConfig` context.
-   - Calls `useSectionResolver({ sectionName: 'Header', page })` to look for a custom header template (`Header.vue`) or JS logic modifier (`Header.js`).
-   - If a custom template is found, mounts it. If a JS modifier is found, merges configurations and renders the presentation layer.
+   - Calls the [useCommonSection.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useCommonSection.js) wrapper (which encapsulates resolving, context injection, and function evaluation) to look for a custom header template (`Header.vue`) or JS logic modifier (`Header.js`).
+   - If a custom template is found, mounts it. If a JS modifier is found, merges configurations, evaluates function props, and renders the presentation layer.
 2. **Presentation Foundation**: [GenericHeaderPanel.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/shared/GenericHeaderPanel.vue)
    - Houses the Quasar flex layout, styling, and standard slots.
    - Renders titles, subtitles, status chips, and back/reload button setups.
@@ -23,21 +23,21 @@ The header uses a **two-tier architecture** that separates orchestration (file s
 
 ## 2. Dynamic Property Resolution Matrix
 
-The orchestrator resolves properties in this priority order, evaluating functions with both the active `record` context and the resource `config` if provided.
+The orchestrator resolves properties in this priority order, evaluating function properties with both the active `record` context and the resource `config` if provided.
 
-| Property | Local `header` Source | High-Priority Metadata Source | Fallback (Index Page) | Fallback (Add Page) | Fallback (Edit Page) | Fallback (View Page) |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`title`** | `localConfig.title` | `config.ui.header.title` | `config.name` | `"New [Resource]"` | `"Edit [Resource]"` | `config.name` |
-| **`subtitle`**| `localConfig.subtitle` | `config.ui.header.subtitle` | `config.description` | `"Create a new entry"` | `"[Code] - Modify"` | `"[Code] - Details"` |
-| **`icon`** | `localConfig.icon` | `config.ui.header.icon` | `null` (hidden) | `null` (hidden) | `null` (hidden) | `null` (hidden) |
-| **`back`** | `localConfig.back` | `config.ui.header.back` | `false` (hidden) | `true` (shown) | `true` (shown) | `true` (shown) |
-| **`reload`** | `localConfig.reload` | `config.ui.header.reload` | `true` (shown) | `false` (hidden) | `false` (hidden) | `false` (hidden) |
+| Property | Local JS Modifier (`Header.js`) | Default Fallback (Index Page) | Default Fallback (Add Page) | Default Fallback (Edit Page) | Default Fallback (View/Action Pages) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`label`** | `localConfig.label` (or function) | `config.name` | `"New [Resource]"` | `"Edit [Resource]"` | `config.name` / action label |
+| **`caption`** | `localConfig.caption` (or function) | `config.description` | `"Create a new entry"` | `"[Code] - Modify"` | `"[Code] - Details"` / action suffix |
+| **`icon`** | `localConfig.icon` | `null` (hidden) | `null` (hidden) | `null` (hidden) | `null` (hidden) |
+| **`back`** | `localConfig.back` (Boolean/String/Function) | `false` (hidden) | `true` (shown) | `true` (shown) | `true` (shown) |
+| **`reload`** | `localConfig.reload` | `true` (shown) | `false` (hidden) | `false` (hidden) | `false` (hidden) |
 
 ---
 
 ## 3. Back Button and Action Resolution Logic
 
-The `back` property in the `header` configuration is highly overloaded to consolidate visibility, icon overrides, and custom navigation:
+The `back` property defined in a local JS modifier override (`Header.js`) is highly overloaded to consolidate visibility, icon overrides, and custom navigation:
 
 * **`back: false` or `'false'`**: Completely disables and hides the back button.
 * **`back: Function`**: Renders the back button (default `'arrow_back'` icon) and executes the function on click.
@@ -52,27 +52,25 @@ The `back` property in the `header` configuration is highly overloaded to consol
 ## 4. Local Customization Patterns
 
 ### Pattern 1: JS Logic Modifier (Tiers 7 & 8 only — Preferred for prop changes)
-Create a `.js` file to modify the header props. You only need to return the properties you want to override; [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js) automatically merges the rest.
+Create a `.js` file to modify the header props. You only need to return the properties you want to override; [useCommonSection.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useCommonSection.js) automatically merges and evaluates them, passing `(resourceRecord, resourceConfig)` context as the first two arguments to any function values.
 
 #### `src/components/Masters/Products/Index/Header.js`
 ```javascript
-export default function (props) {
-  return {
-    // Override title/label and subtitle/caption
-    label: (record, config) => record ? `Product: ${record.Name}` : (config?.name || 'Product Catalog'),
-    caption: (record, config) => record ? `SKU: ${record.SkuCode}` : (config?.description || 'Manage catalog'),
-    
-    // Custom left icon
-    icon: 'inventory_2',
-    
-    // Custom back button
-    back: 'close',
-    
-    // Status chip badge customization
-    chip: (record) => record?.Status || 'Draft',
-    chipColor: (record) => record?.Status === 'Active' ? 'positive' : 'warning',
-    chipTextColor: 'white'
-  }
+export default {
+  // Override title/label and subtitle/caption (using resourceRecord and resourceConfig)
+  label: (r, c) => r.record.value ? `Product: ${r.record.value.Name}` : (c?.config?.value?.name || 'Product Catalog'),
+  caption: (r, c) => r.record.value ? `SKU: ${r.record.value.SkuCode}` : (c?.config?.value?.description || 'Manage catalog'),
+  
+  // Custom left icon
+  icon: 'inventory_2',
+  
+  // Custom back button
+  back: 'close',
+  
+  // Status chip badge customization
+  chip: (r) => r.record.value?.Status || 'Draft',
+  chipColor: (r) => r.record.value?.Status === 'Active' ? 'positive' : 'warning',
+  chipTextColor: 'white'
 }
 ```
 

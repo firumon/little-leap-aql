@@ -143,7 +143,7 @@ export default function (props) {
 When overriding properties on same-component overlays (e.g. wrapper component using the standard fallback internally), parent fallthrough attributes will overwrite the local component's root-node attributes. Use these strict rules to handle merging:
 
 ### 8.1 Preferred: JS Logic Modifiers for Property Changes
-If you only need to change props (like `label`, `caption`, `reload`), use a `.js` modifier instead of a `.vue` template. [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js) automatically merges:
+If you only need to change props (like `label`, `caption`, `reload`), use a `.js` modifier instead of a `.vue` template. The [useCommonSection.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useCommonSection.js) wrapper (built on top of [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js)) automatically merges and evaluates them dynamically:
 ```javascript
 // Return only the overrides; common defaults are preserved automatically
 export default {

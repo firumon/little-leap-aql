@@ -5,7 +5,7 @@
 AQL's frontend architecture is designed for deep, tiered customization of pages and layout sections. This is achieved through a decentralized layout system:
 1. **Top-Level Orchestrators**: Standard page wrapper definitions (like [IndexPage.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/IndexPage.vue) and [ViewPage.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/Masters/ViewPage.vue)) delegate rendering to a unified [Page.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/Page.vue) component.
 2. **Static Layout Fallbacks**: The unified `Page.vue` statically imports and mounts the core layout section components (`Header`, `Toolbar`, `Content`, `Action`).
-3. **Decentralized Overriding**: Each layout component (and their child sub-sections) uses [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js) to resolve their own overrides independently.
+3. **Decentralized Overriding**: Each layout component (and their child sub-sections) uses [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js) (or the [useCommonSection.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useCommonSection.js) wrapper composable) to resolve their own overrides independently.
 
 This document serves as the master reference for developers to understand the nested directory structure, page flows, dynamic sub-sections, and override boundaries in the AQL codebase.
 
@@ -40,13 +40,13 @@ The following diagrams illustrate the exact component nesting structure from the
 The Header represents page branding and synchronization.
 1. **Header Fallback (`src/components/_common/Header/Header.vue`)**:
    - Central entry point loaded by `Page.vue`.
-   - Calls `useSectionResolver` to look for a custom header template (`Header.vue`) or JS logic modifier (`Header.js`).
+   - Calls the [useCommonSection.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useCommonSection.js) wrapper (which resolves the section, injects context, and evaluates functions) to check for a custom header template (`Header.vue`) or JS logic modifier (`Header.js`).
    - If a custom template is found, renders it. If a JS modifier is found, uses it to adapt the props. Otherwise, falls back to `GenericHeaderPanel.vue`.
 
 ```mermaid
 graph TD
     PageVue[src/pages/_common/Page.vue] --> HeaderFallback[src/components/_common/Header/Header.vue]
-    HeaderFallback -->|useSectionResolver| CustomOverride{Override Found?}
+    HeaderFallback -->|useCommonSection| CustomOverride{Override Found?}
     CustomOverride -->|Vue Template| RenderVue[Render Override Directly]
     CustomOverride -->|JS Modifier| RenderGenericWithJS[Render GenericHeaderPanel with Mod Props]
     CustomOverride -->|None| RenderGeneric[Render GenericHeaderPanel.vue]
@@ -131,10 +131,10 @@ graph TD
 
 ## 5. Customization Layers & Standard Override Tiers
 
-AQL enforces a strict lookup hierarchy in [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js):
+AQL enforces a strict lookup hierarchy in [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js) (which is wrapped by [useCommonSection.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useCommonSection.js) in common/orchestrator components to handle context injection and dynamic function evaluation):
 
 ### 5.1 The 8 Lookup Tiers
-When a component calls `useSectionResolver({ sectionName, page })`, the system checks:
+When a component calls `useSectionResolver` (or resolves via `useCommonSection`), the system checks:
 
 * **Tiers 1-6 (Tenant-Custom - `components/_custom/` - VUE ONLY)**:
   1. `components/_custom/${customUIName}/${scopeFolder}/${entityName}/${page}/${sectionName}.vue`
@@ -174,7 +174,7 @@ When a local template overrides a section but still renders the standard present
 To solve this, use one of the two patterns:
 
 #### Pattern A: JS Logic Modifier (Preferred for property-only overrides)
-If you only need to change properties, use a `.js` modifier instead of a `.vue` template. Thanks to the automatic property merging in [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js), you only return the fields you want to change:
+If you only need to change properties, use a `.js` modifier instead of a `.vue` template. Thanks to the automatic property merging and evaluation in [useCommonSection.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useCommonSection.js) (which wraps [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js)), you only return the fields you want to change:
 ```javascript
 // src/components/Masters/Currencies/Index/Header.js
 export default {

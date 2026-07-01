@@ -13,7 +13,7 @@ AQL pages resolve their inner contents using page orchestrator shells:
 - **Edit Page**: Resolves [Edit/Content.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_common/Edit/Content.vue)
 - **Action Page**: Resolves [Action/Content.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_common/Action/Content.vue)
 
-These orchestrator shells dynamically look for custom folder overrides at `src/components/[Scope]/[ResourceName]/` using [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js).
+These orchestrator shells dynamically look for custom folder overrides at `src/components/[Scope]/[ResourceName]/` using [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js). Common components can wrapper this with [useCommonSection.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useCommonSection.js) to automate context injection (record/config), property modifications, and dynamic evaluations.
 
 ### Custom Templates vs. JS Logic Modifiers
 When resolving a section (like `Content`, `Records`, `Details`, `Form`), the resolver checks for:

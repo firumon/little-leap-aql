@@ -36,7 +36,7 @@ If a common component renders sub-sections, they must reside in a subdirectory n
 1. **Static Composition**: Parent fallback components must **statically import** and render their children sub-sections. Dynamic resolver pipelines using the old `sectionDefs` key map are **strictly prohibited**.
 2. **Template SFC Rule**: Every layout section and fallback component MUST be written as a standard Vue Single File Component (SFC) containing a `<template>` block. Vue components without a template block are **never allowed**.
 3. **Decentralized Overrides**: Every fallback component resolves its own custom override locally.
-   - Example: `Header.vue` calls `useSectionResolver({ sectionName: 'Header', page: props.page })`. If a custom template is resolved (`resolvedComponent`), it mounts it. If a JS logic modifier is resolved, it applies it to `preparedProps` before rendering `GenericHeaderPanel.vue`.
+   - Example: `Header.vue` calls `useCommonSection({ sectionName: 'Header', page: props.page, preparedProps, evaluateKeys: [...] })`. If a custom template is resolved (`resolvedComponent`), it mounts it. If a JS logic modifier is resolved, it automatically merges, evaluates function-based overrides, and passes them via `finalProps` before rendering `GenericHeaderPanel.vue`.
 
 ---
 
@@ -58,7 +58,7 @@ const { record, loading, searchTerm } = inject('resourceRecord', { record: ref(n
 
 For common components that support overrides:
 
-1. **Resolve locally**: Call `useSectionResolver({ sectionName, page })` inside the setup block.
+1. **Resolve locally**: Call `useCommonSection({ sectionName, page, preparedProps })` inside the setup block.
 2. **Propagate Page Context**: Pass the active page context dynamically from parents to children via props (e.g. `page="Index"`), enabling correct override lookups.
 
 ### Reference Code: `SearchInput.vue` Resolution Contract
@@ -86,7 +86,7 @@ Check how [SearchInput.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components
 
 <script setup>
 import { computed, inject } from 'vue'
-import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
+import { useCommonSection } from 'src/composables/resources/useCommonSection'
 import SearchInputIcon from 'components/_common/Toolbar/SearchInput/SearchInputIcon.vue'
 import SearchInputClear from 'components/_common/Toolbar/SearchInput/SearchInputClear.vue'
 
@@ -94,15 +94,15 @@ const props = defineProps({
   page: { type: String, default: 'Index' }
 })
 
-// Resolve own local override
-const { resolvedComponent, propModifier } = useSectionResolver({
-  sectionName: 'SearchInput',
-  page: props.page
-})
-
 const { searchTerm } = inject('resourceRecord')
 const preparedProps = computed(() => ({ searchTerm: searchTerm.value }))
-const finalProps = computed(() => propModifier.value(preparedProps.value))
+
+// Resolve own local override via useCommonSection wrapper
+const { resolvedComponent, finalProps } = useCommonSection({
+  sectionName: 'SearchInput',
+  page: props.page,
+  preparedProps
+})
 </script>
 ```
 

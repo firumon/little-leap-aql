@@ -167,7 +167,7 @@ defineOptions({ name: 'PageLayoutContainer' })
 
 const props = defineProps({
   page: { type: String, required: true },
-  sections: { type: Array, required: true }
+  sections: { type: Array, default: () => ['Header', 'Toolbar', 'Content', 'Action'] }
 })
 
 const router = useRouter()

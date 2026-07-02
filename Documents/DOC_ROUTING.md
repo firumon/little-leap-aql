@@ -81,6 +81,11 @@ Use when overriding or creating custom section or sub-components for any resourc
   - `Documents/CUSTOM_PAGE_AND_PAGE_SECTIONS_CUSTOMIZATIONS.md`
   - `Documents/AQL_CONTENT_CUSTOMIZATION_SYSTEM.md`
 
+### Action & FAB Customization
+Use when overriding or creating custom action components, floating action buttons (FABs), workflow buttons, cancel/submit forms, or workflow dialogs.
+- Read:
+  - `Documents/AQL_ACTION_CUSTOMIZATION_SYSTEM.md`
+
 ### Backend Design
 Use when designing new backend behavior, evaluating options, or checking whether existing GAS capabilities already support the request.
 - Read:

@@ -72,7 +72,6 @@ graph TD
     
     %% View Page Toolbar
     ToolbarFallback --> ViewToolbar[src/components/_common/View/Toolbar.vue]
-    ViewToolbar --> ActionBar[src/components/_common/Toolbar/ActionBar.vue]
 ```
 
 ---
@@ -111,20 +110,27 @@ The Action section handles footers and floating action buttons (FABs).
 graph TD
     PageVue[src/pages/_common/Page.vue] --> ActionFallback[Action Section]
     
-    %% Index Page Action
+    %% Index Page Actions
     ActionFallback --> IndexActions[src/components/_common/Index/Actions.vue]
-    IndexActions --> AddFAB[src/components/_common/Action/AddFAB.vue]
-    AddFAB --> AddFABIcon[src/components/_common/Action/AddFAB/AddFABIcon.vue]
-    AddFAB --> AddFABTooltip[src/components/_common/Action/AddFAB/AddFABTooltip.vue]
-    IndexActions --> ResourceReports[src/components/_common/Action/ResourceReports.vue]
+    IndexActions --> Downloads[src/components/_common/Action/Downloads.vue]
+    IndexActions --> CrudActionsIndex[src/components/_common/Action/CrudActions.vue]
     
-    %% Add/Edit Page Action
+    %% View Page Actions
+    ActionFallback --> ViewActions[src/components/_common/View/Actions.vue]
+    ViewActions --> Downloads
+    ViewActions --> CrudActionsView[src/components/_common/Action/CrudActions.vue]
+    ViewActions --> AdditionalActionSingle[src/components/_common/Action/AdditionalActionSingle.vue]
+    ViewActions --> AdditionalActionMultiple[src/components/_common/Action/AdditionalActionMultiple.vue]
+    ViewActions --> ActionDialog[src/components/_common/Action/ActionDialog.vue]
+    
+    %% Add/Edit Page Actions
     ActionFallback --> AddActions[src/components/_common/Add/Actions.vue]
     ActionFallback --> EditActions[src/components/_common/Edit/Actions.vue]
-    AddActions --> FormSubmit[src/components/_common/Action/FormSubmit.vue]
-    AddActions --> FormCancel[src/components/_common/Action/FormCancel.vue]
-    EditActions --> FormSubmit
-    EditActions --> FormCancel
+    AddActions --> FormActions[src/components/_common/Action/FormActions.vue]
+    EditActions --> FormActions
+    EditActions --> CrudActionsEdit[src/components/_common/Action/CrudActions.vue]
+    FormActions --> FormSubmit[src/components/_common/Action/FormSubmit.vue]
+    FormActions --> FormCancel[src/components/_common/Action/FormCancel.vue]
 ```
 
 ---

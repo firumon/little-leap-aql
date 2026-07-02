@@ -18,16 +18,19 @@ Each page directory (`Index/`, `View/`, `Add/`, `Edit/`, `Action/`) houses the p
 * **`Actions.vue`**: Orchestrates bottom page-level action triggers and buttons.
 
 ### 1.2 Root Section Fallback Folders
-Fallback elements and leaf sub-sections are grouped by their parent section:
+Fallback elements and reusable sub-sections are grouped by their parent section type inside the `src/components/_common/sections/` directory:
 * **`Header/`**: Holds generic `Header.vue` fallback panel and breadcrumbs.
-* **`Toolbar/`**: Holds fallback toolbar, `SearchInput.vue`, `ViewSwitcher.vue`, `ActionBar.vue`.
+* **`Toolbar/`**: Holds fallback toolbar, `SearchInput.vue`, `ViewSwitcher.vue`.
 * **`Content/`**: Holds list fallbacks (`Records.vue`), detail layout (`Details.vue`), form layout (`Form.vue`), audit logs (`Audit.vue`), etc.
-* **`Action/`**: Holds submit/cancel buttons (`FormSubmit.vue`, `FormCancel.vue`), FAB triggers (`AddFAB.vue`), reports (`ResourceReports.vue`).
+* **`Action/`**: Holds FAB triggers (`Downloads.vue`, `CrudActions.vue`), workflow actions (`AdditionalActionSingle.vue`, `AdditionalActionMultiple.vue`), forms (`FormActions.vue`), and executes (`ActionDialog.vue`).
 
 ### 1.3 Parent-Child Directory Pattern for Nested Sub-sections
-If a common component renders sub-sections, they must reside in a subdirectory named exactly after it inside that root section folder:
-* *Example*: [SearchInput.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_common/Toolbar/SearchInput.vue) (Parent component)
-* *Example*: `SearchInputIcon.vue` under [SearchInput/](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_common/Toolbar/SearchInput) (Sub-component)
+If a common component inside `sections/` renders sub-sections, they must reside in a subdirectory named exactly after it inside that root section folder:
+* *Example*: `SearchInput.vue` (Parent component) $\rightarrow$ `SearchInput/` subdirectory.
+* *Example*: `CrudActions.vue` (Parent component) $\rightarrow$ `CrudActions/` subdirectory.
+* *Example*: `Downloads.vue` (Parent component) $\rightarrow$ `Downloads/` subdirectory.
+* *Example*: `AdditionalActionSingle` / `Multiple` (Parent component) $\rightarrow$ `AdditionalActions/` subdirectory.
+* *Example*: `FormActions.vue` (Parent component) $\rightarrow$ `FormActions/` subdirectory.
 
 ---
 
@@ -118,7 +121,49 @@ Refer to the implementation in [SearchInput.vue](file:///f:/LITTLE%20LEAP/AQL/FR
 
 ---
 
-## 6. Content Components Signatures & Resolution Contracts
+## 6. Advanced Customization & Sub-section Development Patterns
+
+To ensure maximum extensibility for all future components, developers and AI agents must follow these three architectural patterns:
+
+### 6.1 Consistent Sub-component Naming Conventions
+Sub-components of a parent section must use unified prefixing so they are easily discoverable and mapped.
+* *Standard*: If a parent resolves sub-components, group them with descriptive, consistent suffixes (e.g. `CrudActionsFabBtnAdd`, `CrudActionsFabBtnEdit` rather than `CrudActionsFabAddBtn`, `CrudActionsFabEditBtn`). This aligns child components with their respective slot-items (e.g. `CrudActionsFabItemAdd`, `CrudActionsFabItemEdit`).
+
+### 6.2 Evaluated Function Type Properties
+Any visual property (like `color`, `icon`, `label`, `flat`, `unelevated`) inside generic sub-components (such as lists, FABs, or form actions) must accept function callbacks in addition to standard types:
+```javascript
+const props = defineProps({
+  color: { type: [String, Function], default: 'primary' },
+  label: { type: [String, Function], default: '' }
+})
+```
+Within the setup block, compute the resolved attributes dynamically, passing the current record and component props context:
+```javascript
+const resolvedColor = computed(() => {
+  const c = finalProps.value.color
+  return typeof c === 'function' ? c(resourceRecord?.value, props) : c
+})
+```
+This enables local JS logic overrides to dynamically style elements based on real-time data states.
+
+### 6.3 Standard Slot-Scope Propagation
+If a parent common component resolves a custom override template via `<component :is="...">`, ensure you bind all slot variables on the element:
+```html
+<component
+  :is="resolvedComponent"
+  v-slot="{ color, icon, label }"
+  v-slot:default="{ color, icon, label }"
+  v-if="resolvedComponent"
+  v-bind="finalProps"
+>
+  <slot />
+</component>
+```
+This ensures a custom Vue template can receive and forward slot scope properties safely down.
+
+---
+
+## 7. Content Components Signatures & Resolution Contracts
 
 Each page content orchestrator resolves its own override. If no override is found, it renders its default fallback, passing the prepared props down:
 

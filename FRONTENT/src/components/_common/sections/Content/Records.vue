@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <!-- Render custom template if resolved -->
   <component
     :is="resolvedComponent"
@@ -62,9 +62,9 @@
 import { computed, inject } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
 
-import Loading from 'components/_common/Content/Loading.vue'
-import Empty from 'components/_common/Content/Empty.vue'
-import RecordComponent from 'components/_common/Content/RecordsRecord.vue'
+import Loading from 'components/_common/sections/Content/Loading.vue'
+import Empty from 'components/_common/sections/Content/Empty.vue'
+import RecordComponent from 'components/_common/sections/Content/RecordsRecord.vue'
 import AqlList from 'components/shared/AqlList.vue'
 
 const props = defineProps({

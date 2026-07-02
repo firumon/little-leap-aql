@@ -7,19 +7,19 @@
   />
 
   <div v-else class="index-actions">
-    <!-- Reports Panel (statically imported, handles self-override) -->
-    <ResourceReports :page="page" />
+    <!-- Reports FAB on bottom-left -->
+    <Downloads :page="page" />
 
-    <!-- Add FAB (statically imported, handles self-override) -->
-    <AddFAB v-if="permissions.canWrite" :page="page" />
+    <!-- CRUD Actions FAB on bottom-right -->
+    <CrudActions :page="page" />
   </div>
 </template>
 
 <script setup>
 import { computed, inject } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
-import AddFAB from 'components/_common/Action/AddFAB.vue'
-import ResourceReports from 'components/_common/Action/ResourceReports.vue'
+import Downloads from 'components/_common/sections/Action/Downloads.vue'
+import CrudActions from 'components/_common/sections/Action/CrudActions.vue'
 
 defineOptions({ name: 'IndexActions' })
 

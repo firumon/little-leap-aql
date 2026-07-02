@@ -44,10 +44,10 @@
 <script setup>
 import { computed, inject } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
-import Details from 'components/_common/Content/Details.vue'
-import Parent from 'components/_common/Content/Parent.vue'
+import Details from 'components/_common/sections/Content/Details.vue'
+import Parent from 'components/_common/sections/Content/Parent.vue'
 import Children from 'components/_common/View/Children.vue'
-import Audit from 'components/_common/Content/Audit.vue'
+import Audit from 'components/_common/sections/Content/Audit.vue'
 
 defineOptions({ name: 'ViewContent' })
 

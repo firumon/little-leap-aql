@@ -32,6 +32,33 @@
       </q-btn>
     </template>
 
+    <!-- FAB Mode -->
+    <template v-else-if="mode === 'fab'">
+      <q-fab
+        color="deep-orange-7"
+        icon="picture_as_pdf"
+        active-icon="close"
+        direction="up"
+        vertical-actions-align="left"
+        class="report-fab"
+        :loading="isGenerating"
+        :disable="isGenerating"
+      >
+        <q-tooltip anchor="center right" self="center left" :offset="[10, 0]">Download Reports</q-tooltip>
+        <q-fab-action
+          v-for="report in displayedReports"
+          :key="report.name"
+          color="deep-orange-6"
+          :icon="report.icon || 'picture_as_pdf'"
+          :label="report.label || report.name"
+          label-position="right"
+          external-label
+          label-class="text-weight-bold bg-white text-grey-9 q-px-sm q-py-xs shadow-1 rounded-borders"
+          @click="initiateReport(report, activeRecord)"
+        />
+      </q-fab>
+    </template>
+
     <!-- Standard Inline / Card Mode -->
     <template v-else>
       <!-- Non-inline mode: wrapped in a nice flat bordered card -->
@@ -150,7 +177,7 @@ const displayedReports = computed(() => {
 })
 
 const shouldRender = computed(() => {
-  if (props.mode === 'toolbar') {
+  if (props.mode === 'toolbar' || props.mode === 'fab') {
     return displayedReports.value.length > 0
   }
   // For page-embedded usage, only render if a record is explicitly provided.
@@ -189,5 +216,14 @@ const shouldRender = computed(() => {
     transform: translateY(0);
     opacity: 1;
   }
+}
+
+.report-fab {
+  box-shadow: 0 8px 24px rgba(221, 44, 0, 0.3);
+  transition: transform 180ms ease;
+}
+
+.report-fab:active {
+  transform: scale(0.95);
 }
 </style>

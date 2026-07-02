@@ -142,7 +142,7 @@ import { useActionFields } from 'src/composables/resources/useActionFields'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
 // Static Imports of All Fallback Sections
-import Header from 'components/_common/Header/Header.vue'
+import Header from 'components/_common/sections/Header/Header.vue'
 import IndexToolbar from 'components/_common/Index/Toolbar.vue'
 import ViewToolbar from 'components/_common/View/Toolbar.vue'
 import AddToolbar from 'components/_common/Add/Toolbar.vue'

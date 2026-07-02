@@ -8,28 +8,21 @@
     @submit="$emit('submit')"
   />
 
-  <div v-else class="action-actions flex justify-end q-gutter-x-sm q-py-md q-px-sm">
-    <!-- Cancel button -->
-    <ActionCancel :page="page" @cancel="$emit('cancel')" />
-
-    <!-- Submit Action button -->
-    <ActionSubmit
-      :page="page"
-      :label="finalProps.actionLabel"
-      :icon="finalProps.actionIcon"
-      :color="finalProps.actionColor"
-      :submitting="finalProps.submitting"
-      :disabled="finalProps.submitDisabled"
-      @submit="$emit('submit')"
-    />
-  </div>
+  <FormActions
+    v-else
+    :page="page"
+    :submit-label="finalProps.actionLabel"
+    :saving="finalProps.submitting"
+    :disabled="finalProps.submitDisabled"
+    @cancel="$emit('cancel')"
+    @submit="$emit('submit')"
+  />
 </template>
 
 <script setup>
 import { computed } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
-import ActionSubmit from 'components/_common/Action/ActionSubmit.vue'
-import ActionCancel from 'components/_common/Action/ActionCancel.vue'
+import FormActions from 'components/_common/sections/Action/FormActions.vue'
 
 defineOptions({ name: 'ActionActions' })
 

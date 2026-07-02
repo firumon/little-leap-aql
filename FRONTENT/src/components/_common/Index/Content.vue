@@ -23,7 +23,7 @@
 <script setup>
 import { computed, inject } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
-import Records from 'components/_common/Content/Records.vue'
+import Records from 'components/_common/sections/Content/Records.vue'
 
 defineOptions({ name: 'IndexContent' })
 

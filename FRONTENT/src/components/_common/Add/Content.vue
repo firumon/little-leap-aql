@@ -32,7 +32,7 @@
 <script setup>
 import { computed, inject } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
-import Form from 'components/_common/Content/Form.vue'
+import Form from 'components/_common/sections/Content/Form.vue'
 
 defineOptions({ name: 'AddContent' })
 

@@ -57,7 +57,7 @@ const props = defineProps({
 })
 
 const nav = useResourceNav()
-const { permissions, additionalActions } = inject('resourceConfig')
+const { scope, resourceSlug, code, permissions, additionalActions } = inject('resourceConfig')
 const { record } = inject('resourceRecord')
 
 const showActionDialog = ref(false)
@@ -99,15 +99,15 @@ function handleActionClicked(action) {
 
     if (target === 'record-page') {
       nav.goTo('record-page', {
-        scope: action.navigate?.scope || nav.scope.value,
-        resourceSlug: action.navigate?.resourceSlug || nav.resourceSlug.value,
-        code: action.navigate?.code || nav.code.value,
+        scope: action.navigate?.scope || scope.value,
+        resourceSlug: action.navigate?.resourceSlug || resourceSlug.value,
+        code: action.navigate?.code || code.value,
         pageSlug: pageSlug
       })
     } else if (target === 'resource-page') {
       nav.goTo('resource-page', {
-        scope: action.navigate?.scope || nav.scope.value,
-        resourceSlug: action.navigate?.resourceSlug || nav.resourceSlug.value,
+        scope: action.navigate?.scope || scope.value,
+        resourceSlug: action.navigate?.resourceSlug || resourceSlug.value,
         pageSlug: pageSlug
       })
     }

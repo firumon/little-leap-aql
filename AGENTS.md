@@ -1,4 +1,4 @@
-# AQL Startup & Context Routing
+﻿# AQL Startup & Context Routing
 
 ## Purpose
 - This is the startup file for repository-aware agents and Claude sessions in this repo.
@@ -28,7 +28,7 @@ After classifying the query, read the appropriate initialization document(s) fro
 * **Frontend Modification**: Read [frontend_modification.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/frontend_modification.md) (covers Quasar/Vue 3 boundaries, store wrappers, reactivity limits, and local testing).
 * **Frontend Page & Component Customization**: Read [page_and_sections_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/page_and_sections_customization.md) (covers resource-level customization layers, page-specific/generic overrides, last-layer customization priority, style restraint, and local context injection).
 * **Common Component Development & Framework Layout**: Read [common_component_creation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/common_component_creation.md) (covers creating global fallbacks, common folder structures, dynamic section resolution under _common/, provide/inject contracts, single-file templates, and developer learning logs).
-* **Sidebar Menu & Access Control**: Read [frontend_menu_system.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/frontend_menu_system.md) (single init prompt covering Menu JSON schema, data flow, permission gating, tree building, route guard, and admin operations — backed by canonical doc at [AQL_FRONTEND_MENU_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_MENU_SYSTEM.md)).
+* **Sidebar Menu & Access Control**: Read [frontend_menu_system.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/frontend_menu_system.md) (single init prompt covering Menu JSON schema, data flow, permission gating, tree building, route guard, and admin operation — backed by canonical doc at [AQL_FRONTEND_MENU_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_MENU_SYSTEM.md)).
 * **Report Template & Aggregations**: Read [report_formula_generation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/report_formula_generation.md) (covers printable headers, LAMBDA row functions, and virtual array calculations).
 * **Report UI & Feature Development**: Read [report_ui_development.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/report_ui_development.md) (covers frontend ResourceReports component, useReports composable, ReportInputDialog, and Apps Script Manage Reports menu dialogue).
 * **Writing/Editing Plans**: Read [plan_writing.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/plan_writing.md) (only if the user explicitly asks to write, edit, or create an implementation plan).
@@ -36,7 +36,7 @@ After classifying the query, read the appropriate initialization document(s) fro
 * **General Investigatory Query**: Read [general_query.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/general_query.md). Use this for any general investigatory queries that do not contain project-specific or repository-specific phrasing.
 * **AQL-Specific Codebase Investigation**: Read [codebase_investigation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/codebase_investigation.md) (covers systematic discovery, domain-to-doc mapping, data flow tracing, and response standards). Use this if the query contains repository/project-specific references or phrases (e.g., "in AQL", "in this project", "in this app", "our app", "our project", or "this AQL").
 * **Dashboard Implementation**: Read [dashboard_implementation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/dashboard_implementation.md) (covers widget config contracts, declarative pipelines, SVG widget creation, and dashboard registries).
-* **Backend GAS Implementation**: Read [backend_gas_implementation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/backend_gas_implementation.md) (covers generic CRUD, post-write hooks, batch operations, and Apps Script patterns).
+* **Backend GAS Implementation**: Read [backend_gas_implementation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/backend_gas_implementation.md) (covers generic CRUD, post-write hooks, batch operation, and Apps Script patterns).
 * **Tax / Currency System Changes**: Read [tax_currency_system.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/tax_currency_system.md) (covers compound tax logic, currency helpers, tax-inclusive/exclusive pricing, and tax transaction storage).
 * **Sheet Views / Reports Formulation**: Read [sheet_views_formulation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/sheet_views_formulation.md) for View formulas, or [report_formula_generation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/report_formula_generation.md) for Report template formulas.
 * **Prompt & Instruction Creation**: Read [create_prompt_instruction.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/create_prompt_instruction.md) (covers exhaustive codebase discovery and output structure for generating new initialization prompts).
@@ -122,3 +122,4 @@ This project is indexed by GitNexus as **little-leap-aql** (10145 symbols, 16661
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
 
 <!-- gitnexus:end -->
+

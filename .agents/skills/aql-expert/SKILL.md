@@ -1,4 +1,4 @@
----
+﻿---
 name: aql-expert
 description: Work on the AQL system across Quasar frontend, Google Apps Script backend, Google Sheets metadata, APP.Resources, setup/sync scripts, module workflows, or cross-surface architecture alignment. Use when Codex is asked to implement, inspect, debug, review, or plan AQL-specific behavior that spans frontend, GAS, sheet structure, resource metadata, permissions, workflows, or deployment expectations.
 ---
@@ -22,7 +22,7 @@ If this skill conflicts with canonical docs, follow the docs and note the mismat
 
 - Frontend: Quasar Framework, Vue 3, Vite, Pinia, IndexedDB-backed local resource hydration, and PWA/offline boundaries.
 - Backend: one Google Apps Script project attached to the APP spreadsheet, with `doPost` in `GAS/apiDispatcher.gs`.
-- Database/control plane: Google Sheets across APP, MASTERS, TRANSACTIONS, REPORTS, and related files.
+- Database/control plane: Google Sheets across APP, master, TRANSACTIONS, REPORTS, and related files.
 - Resource registry: `APP.Resources` is the runtime control plane for backend routing, frontend routing/menu behavior, authorization payloads, metadata, sheet targets, record access, defaults, actions, hooks, and list/view metadata.
 
 ## Required First Moves
@@ -58,3 +58,4 @@ For implementation tasks, summarize:
 - verification performed
 - GAS push or deployment status when relevant
 - manual sheet/menu/Web App actions that cannot be done locally
+

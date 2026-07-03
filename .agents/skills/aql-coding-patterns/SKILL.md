@@ -1,4 +1,4 @@
----
+﻿---
 name: aql-coding-patterns
 description: Enforce consistent coding styles and formatting patterns across JS, Vue, and GS (Google Apps Script) files in the AQL repository. Use whenever creating or editing JS, Vue, or GS files to strictly align with the user's styling rules.
 ---
@@ -37,7 +37,7 @@ Always adhere strictly to the `.editorconfig` specifications when reading, writi
 
 ### GAS (`.gs`) & Vue (`.vue`) Files
 - **No `var`**: Always use `const` and `let` for variable declarations to ensure proper block scoping.
-- **Traditional/Regular Functions**: Use regular function declarations (`function myFunc(args) { ... }`) instead of assigning anonymous arrow functions to constants for top-level/main operations.
+- **Traditional/Regular Functions**: Use regular function declarations (`function myFunc(args) { ... }`) instead of assigning anonymous arrow functions to constants for top-level/main operation.
 
 ## 5. Vue 3 Single File Component (SFC) Guidelines
 
@@ -85,4 +85,5 @@ function processPayment(paymentId) {
     applyOutletQueryParam
   } = flow
   ```
+
 

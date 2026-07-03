@@ -167,27 +167,69 @@ This ensures a custom Vue template can receive and forward slot scope properties
 
 Each page content orchestrator resolves its own override. If no override is found, it renders its default fallback, passing the prepared props down:
 
-### 6.1 Index Page Content Orchestrator (`Index/Content.vue`)
-- **Statically Imports**: `Records.vue`
-- **Props Passed to Records**:
-  - `items`: `filteredItems` array
-  - `resolved-fields`: `resolvedFields` array
-  - `resource-slug`: `resourceSlug` string
-  - `customUIName`: `customUIName` string
-  - `records-config`: resolved configuration object
+### 7.1 Common Content Orchestrator (`_common/sections/Content/Content.vue`)
+**Main unified orchestrator component** that houses list, form, and detail sub-sections. Automatically handles Index, View, Add, Edit, and Action modes. Fully customizable and overridable.
 
-### 6.2 View Page Content Orchestrator (`View/Content.vue`)
-- **Statically Imports**: `Details.vue`, `Parent.vue`, `Children.vue`, `Audit.vue`
+- **Statically Imports**: `List.vue`, `Form.vue`, `Details.vue`, `Parent.vue`, `Children.vue`, `Audit.vue`
+- **Props**:
+  - `page`: String - current page context (Index, Add, Edit, View, Action)
+  - `listProps`: Object - passed to List sub-section
+  - `detailsConfig`: Object - passed to Details sub-section
+  - `parentConfig`: Object - passed to Parent sub-section
+  - `parentForm`: Object - passed to Form sub-section
+  - `childGroups`: Array - passed to Form sub-section
+  - `statusOptions`: Array - passed to Form sub-section
+  - `formConfig`: Object - passed to Form sub-section
+  - `formFieldRender`: Function - passed to Form sub-section
+  - Action-specific props (`isMultiOutcome`, `outcomeOptions`, `selectedOutcome`, `resolvedActionFields`, `actionForm`)
+- **Resolution**: Resolves its own custom override via `useCommonSection`
 
-### 6.3 Add & Edit Content Orchestrators (`Add/Content.vue`, `Edit/Content.vue`)
-- **Statically Imports**: `Form.vue`
+### 7.2 List Subsection (`sections/Content/List.vue`)
+Renders `AqlList` directly. Resolves list columns automatically based on spreadsheet headers via `useDefaultListProps.js`.
 
-### 6.4 Action Content Orchestrator (`Action/Content.vue`)
-- **Statically Imports**: `Form.vue`
+- **Props**:
+  - `items`: Array - records to display
+  - `resolvedFields`: Array - field definitions
+  - `page`: String - page context
+- **Emits**: `navigate-to-view` - emitted when item clicked
+- **Features**:
+  - Clickable rows navigate to view page using `useResourceNav`
+  - Eliminates custom list/grid layout wrappers
+  - All properties of `AqlList` are customizable
+
+### 7.3 Form Subsection (`sections/Content/Form.vue`)
+Renders form fields with dense, attractive styling. Supports custom field rendering via function props.
+
+- **Props**:
+  - `code`: String - record code
+  - `resolvedFields`: Array - field definitions
+  - `parentForm`: Object - form data for records
+  - `childGroups`: Array - child record groups
+  - `statusOptions`: Array - status dropdown options
+  - `resourceName`: String - resource name
+  - `formConfig`: Object - configuration
+  - `formFieldRender`: Function - custom field renderer
+- **Emits**: `update:field`, `update:actionField`, `add-child`, `remove-child`, `update-child-field`
+- **Features**:
+  - Date fields render using `AppDate.vue` instead of native picker
+  - Dense field spacing (4px gaps)
+  - Multi-column grid support
+  - Collapsible sections
+
+### 7.4 Details Subsection (`sections/Content/Details.vue`)
+Renders read-only detail view. Supports custom details item rendering.
+
+- **Props**:
+  - `detailsConfig`: Object - configuration
+  - `page`: String - page context
+- **Features**:
+  - Grid-based multi-column fields layout
+  - Section title with accent bar
+  - File preview card support
 
 ---
 
-## 7. Maintenance & Development Rule
+## 8. Maintenance & Development Rule
 
 > [!IMPORTANT]
 > **Maintenance Rule**: Whenever a new common fallback component is created, modified, or a new layout resolution pattern is introduced in `src/components/_common/`, the developer or agent MUST update this document to document the new component signature, resolve rules, and layout logic.

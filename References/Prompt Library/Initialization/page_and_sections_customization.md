@@ -13,7 +13,7 @@ When customizing layouts for a specific resource, **direct your changes to the d
 * **High-Level Orchestrators**: Never duplicate or customize top-level page controllers (`IndexPage.vue`, `ViewPage.vue`, etc.) or generic section wrappers.
 * **Last-Layer Customization**: Focus overrides on the final rendering leaf nodes that bind and display the records:
   - For **Index listing**: Customize/override `Records.vue` or `RecordsRecord.vue`.
-  - For **View details**: Customize/override `Details.vue` or `Parent.vue`.
+  - For **View details**: Customize/override `Details.vue`.
   - For **Add/Edit forms**: Customize/override `Form.vue`.
 
 ---

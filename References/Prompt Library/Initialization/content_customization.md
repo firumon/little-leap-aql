@@ -28,7 +28,7 @@ To custom-tailor the content layouts:
 ## 2. Implementation Rules
 
 ### 2.1 Writing JS Logic Modifiers (Tiers 7 & 8 only)
-- Create the target component (e.g., `Index/Records.js` or `Add/Form.js`) exporting a default function.
+- Create the target component (e.g., `Index/List.js` or `Add/Form.js`) exporting a default function.
 - The function receives the component's `preparedProps` object, modifies it, and returns the updated props:
   ```javascript
   export default function (props) {

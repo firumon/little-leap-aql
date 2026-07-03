@@ -6,68 +6,55 @@ This document is the complete reference guide for the AQL Content Customization 
 
 ## 1. System Architecture
 
-AQL pages resolve their inner contents using page orchestrator shells:
-- **Index Page**: Resolves [Index/Content.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_common/Index/Content.vue)
-- **View Page**: Resolves [View/Content.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_common/View/Content.vue)
-- **Add Page**: Resolves [Add/Content.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_common/Add/Content.vue)
-- **Edit Page**: Resolves [Edit/Content.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_common/Edit/Content.vue)
-- **Action Page**: Resolves [Action/Content.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_common/Action/Content.vue)
+AQL pages resolve their inner contents using a single unified page orchestrator shell:
+- **Unified Content Orchestrator**: Resolves [Content.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_common/sections/Content/Content.vue). It dynamically determines the page mode and renders the correct sub-section fallback.
 
-These orchestrator shells dynamically look for custom folder overrides at `src/components/[Scope]/[ResourceName]/` using [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js). Common components can wrapper this with [useCommonSection.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useCommonSection.js) to automate context injection (record/config), property modifications, and dynamic evaluations.
+This orchestrator dynamically looks for custom folder overrides at `src/components/[Scope]/[ResourceName]/` using [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js). Common components wrap this with [useCommonSection.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useCommonSection.js) to automate context injection (record/config), property modifications, and dynamic evaluations.
 
 ### Custom Templates vs. JS Logic Modifiers
-When resolving a section (like `Content`, `Records`, `Details`, `Form`), the resolver checks for:
+When resolving a section (like `Content`, `List`, `Details`, `Form`), the resolver checks for:
 1. **Vue Template Override (`.vue` file)**: Checked across all Tiers 1-8. It must contain a `<template>` block. If found, it completely takes over layout rendering. Vue components without a template are **strictly forbidden**.
-2. **JS Logic Modifier (`.js` file)**: Checked **only** at Tiers 7 & 8 (entity-local). It exports a default function `(props) => modifiedProps` that intercepts and adjusts the properties fed to the fallback template component (`Records.vue`, `Details.vue`, `Parent.vue`, `Form.vue`).
+2. **JS Logic Modifier (`.js` file)**: Checked **only** at Tiers 7 & 8 (entity-local). It exports a default function `(props) => modifiedProps` that intercepts and adjusts the properties fed to the fallback template component (`List.vue`, `Details.vue`, `Form.vue`).
 
 ---
 
 ## 2. Page Configuration Schemas (via JS Modifiers)
 
-### 2.1 Index Page: Records Listing (`Records.js` / `Records.vue`)
-Custom JS logic modifier created at `src/components/[Scope]/[Resource]/Index/Records.js` or `src/components/[Scope]/[Resource]/Records.js`.
+### 2.1 Index Page: List View (`List.js` / `List.vue`)
+Custom JS logic modifier created at `src/components/[Scope]/[Resource]/Index/List.js` or `src/components/[Scope]/[Resource]/List.js`.
 
-#### Config Schema (`Records.vue` Props)
-| Parameter | Type | Default | Description |
-|---|---|---|---|
-| `layout` | `'list' \| 'grid'` | `'list'` | Layout format of the records list. |
-| `gridCols` | `number` | `2` | Number of columns when `layout` is `'grid'`. |
-| `bordered` | `boolean` | `true` | Show card border wrapper. |
-| `flat` | `boolean` | `true` | Render card flat (no shadow). |
-| `class` | `string` | `''` | Additional styling classes applied to the list wrapper. |
-| `noChildCounts` | `boolean` | `false` | Hide badge showing counts of child items. |
-| `emptyMessage` | `string` | `'No records found'` | Message shown when list is empty. |
-
-#### record Card Detail properties (in Props)
-* `resolvePrimaryText(row)`: Function returning the main bold label.
-* `resolveSecondaryText(row)`: Function returning secondary text details.
+#### Default Props Generation
+By default, the List component maps resource columns to [AqlList.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/shared/AqlList.vue) props via [useDefaultListProps.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useDefaultListProps.js):
+- **Code & Name exists**: Layout -> `['caption', 'label']`, content -> `['Code', 'Name']`
+- **Code only**: Layout -> `['label']`, content -> `['Code']`
+- **Date field exists**: Date appended as caption
+- **Progress field exists**: Progress shown as chip in meta section (colored positive/warning/negative based on percentage)
+- **Active/Inactive Status**: Status badges are excluded by default (handled by viewSwitcher)
+- **Click Actions**: Clicking a row navigates to the View details page using `useResourceNav`.
 
 #### Example JS Logic Modifier for Listing
+Any `AqlList` prop (e.g. `layout`, `content`, `metaLayout`, `meta`, `chipColor`) can be overridden.
 ```javascript
-// src/components/Masters/Products/Index/Records.js
+// src/components/Masters/Products/Index/List.js
 export default function (props) {
   return {
     ...props,
-    layout: 'grid',
-    flat: false,
-    bordered: true,
-    class: 'product-grid-shaded',
-    emptyMessage: 'No products in catalog.',
-    resolvePrimaryText: (row) => row.Name,
-    resolveSecondaryText: (row) => `SKU: ${row.SkuCode} | Price: $${row.Price}`
+    clickable: true,
+    layout: ['label', 'caption'],
+    content: ['Name', 'SkuCode']
   }
 }
 ```
 
 ---
 
-## 2.2 View Page: Details & Parent Cards (`Details.js` & `Parent.js`)
-Custom JS logic modifier files created at `src/components/[Scope]/[Resource]/View/Details.js` or `Parent.js`.
+## 2.2 View Page: Details Card (`Details.js`)
+Custom JS logic modifier file created at `src/components/[Scope]/[Resource]/View/Details.js`.
 
 #### Details Card Schema (`Details.vue` Props)
 | Parameter | Type | Default | Description |
-|---|---|---|---|
-| `detailsConfig` | `object` | `{}` | Inner configuration for details card: `title`, `columns`, `fields`, `fieldLabels`. |
+...
+* `detailsConfig` | `object` | `{}` | Inner configuration for details card: `title`, `columns`, `fields`, `fieldLabels`. |
 
 ##### `detailsConfig` Configuration Object:
 * `title` (string, default: `'Details'`): Header text.
@@ -109,6 +96,9 @@ Custom JS logic modifier file created at `src/components/[Scope]/[Resource]/Add/
 * `hideFields` (string[]): Fields to hide.
 * `sections` (object[]): Fields grouped in Collapsible or static sections.
 * `fieldConfigs` (object): Specific field definitions.
+
+##### Date Fields
+Form inputs of type `'date'` render using [AppDate.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/shared/AppDate.vue) for masked typing and a custom calendar pop-up.
 
 #### Example Form Modifier
 ```javascript

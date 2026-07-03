@@ -375,7 +375,7 @@ function scrollToSection(key) {
   }
 }
 
-// Old methods removed - unified action dialog handles all operations
+// Old methods removed - unified action dialog handles all operation
 
 const planDialog = ref(false)
 const planTarget = ref(null)

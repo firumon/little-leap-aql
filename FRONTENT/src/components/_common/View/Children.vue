@@ -44,7 +44,7 @@ async function resolveChildComponents() {
     const candidates = []
 
     function addPaths(dir) {
-      const legacyPrefix = scopeFolder === 'Operations' ? 'OperationViewChild' : 'MasterViewChild'
+      const legacyPrefix = scopeFolder === 'Operation' ? 'OperationViewChild' : 'MasterViewChild'
       if (pascalChildName) {
         candidates.push(`${dir}/Child${pascalChildName}.vue`)
         candidates.push(`${dir}/${legacyPrefix}${pascalChildName}.vue`)

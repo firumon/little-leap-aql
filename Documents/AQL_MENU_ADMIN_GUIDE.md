@@ -1,4 +1,4 @@
-# AQL Menu Admin Guide
+﻿# AQL Menu Admin Guide
 
 This is the **single admin-facing guide** for all actions available in the Google Sheet menu:
 
@@ -17,7 +17,7 @@ Use this document when an admin asks:
 
 ## 1. Before You Start
 
-1. Open the **APP** spreadsheet (not MASTERS/OPERATIONS/REPORTS).
+1. Open the **APP** spreadsheet (not MASTERS/operation/REPORTS).
 2. Refresh the sheet to ensure `AQL 🚀` menu is visible.
 3. Ensure you have edit access to APP spreadsheet.
 4. Keep `Documents/RESOURCE_COLUMNS_GUIDE.md` nearby when editing resources.
@@ -50,9 +50,9 @@ Use this document when an admin asks:
 | `⚙️ Setup & Refactor > Setup Base Accounts` | Create/refactor base account sheets. |
 
 Procurement sidebar order after PO receiving implementation:
-- `Purchase Orders` (`/operations/purchase-orders`, order `6`)
-- `PO Receiving` (`/operations/po-receivings`, order `7`)
-- `Goods Receipts` (`/operations/goods-receipts`, order `8`)
+- `Purchase Orders` (`/operation/purchase-orders`, order `6`)
+- `PO Receiving` (`/operation/po-receivings`, order `7`)
+- `Goods Receipts` (`/operation/goods-receipts`, order `8`)
 
 ## 3. Users (`AQL 🚀 > 👥 Users`)
 
@@ -265,30 +265,30 @@ These groups appear in the **frontend application sidebar**, not in the Google S
 
 ### 9.1 Product Group
 
-- `Manage Products` -> `/masters/products`
-- `SKUs` -> `/masters/skus`
+- `Manage Products` -> `/master/products`
+- `SKUs` -> `/master/skus`
 
 ### 9.2 Warehouse Group
 
-- `Manage Warehouses` -> `/masters/warehouses`
-- `Stock List` -> `/masters/warehouses/stock-list`
-- `Stock Movements` -> `/operations/stock-movements`
-- `Direct Stock Entry` -> `/operations/stock-movements/direct-entry`
-- `GRN Stock Entry` -> `/operations/stock-movements/grn-entry`
+- `Manage Warehouses` -> `/master/warehouses`
+- `Stock List` -> `/master/warehouses/stock-list`
+- `Stock Movements` -> `/operation/stock-movements`
+- `Direct Stock Entry` -> `/operation/stock-movements/direct-entry`
+- `GRN Stock Entry` -> `/operation/stock-movements/grn-entry`
 
 ### 9.3 Procurement Group
 
-- `Suppliers` -> `/masters/suppliers`
-- `Purchase Requisitions` -> `/operations/purchase-requisitions`
-- `Initiate Purchase Requisitions` -> `/operations/purchase-requisitions/initiate-purchase-requisitions`
-- `RFQs` -> `/operations/rfqs`
-- `Supplier Quotations` -> `/operations/quotations`
-- `Purchase Orders` -> `/operations/pos`
-- `Shipments` -> `/operations/shipments`
+- `Suppliers` -> `/master/suppliers`
+- `Purchase Requisitions` -> `/operation/purchase-requisitions`
+- `Initiate Purchase Requisitions` -> `/operation/purchase-requisitions/initiate-purchase-requisitions`
+- `RFQs` -> `/operation/rfqs`
+- `Supplier Quotations` -> `/operation/quotations`
+- `Purchase Orders` -> `/operation/pos`
+- `Shipments` -> `/operation/shipments`
 
 ### 9.4 Direct Stock Entry
 
-**Route:** `/operations/stock-movements/direct-entry`
+**Route:** `/operation/stock-movements/direct-entry`
 
 **Required permission:** `canWrite` on `StockMovements` resource (controlled via `APP.RolePermissions`).
 
@@ -313,9 +313,9 @@ These groups appear in the **frontend application sidebar**, not in the Google S
 
 ### 9.5 Warehouse Stock List
 
-**Menu route:** `/masters/warehouses/stock-list`
+**Menu route:** `/master/warehouses/stock-list`
 
-**Record route:** `/masters/warehouses/{WarehouseCode}/stock`
+**Record route:** `/master/warehouses/{WarehouseCode}/stock`
 
 **What it does:**
 - Menu entry shows active warehouses as selection cards.
@@ -356,3 +356,4 @@ When any `AQL 🚀` menu item is **added, removed, renamed, or behavior-changed*
 3. Update `Documents/CONTEXT_HANDOFF.md` if runtime behavior changed.
 
 Do not close the task until these docs are aligned.
+

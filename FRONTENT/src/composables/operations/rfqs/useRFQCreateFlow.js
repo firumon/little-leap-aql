@@ -1,10 +1,10 @@
-import { computed, ref, watch } from 'vue'
+﻿import { computed, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useRecord } from 'src/composables/resources/useRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { useProcurements } from 'src/composables/operations/procurements/useProcurements'
+import { useProcurements } from 'src/composables/operation/procurements/useProcurements'
 import { mapRFQOptions } from './rfqMeta'
 import { addDays, buildRFQRecord, daysUntil, toDateInputValue } from './rfqPayload'
 
@@ -225,4 +225,5 @@ export function useRFQCreateFlow() {
     confirmCreate
   }
 }
+
 

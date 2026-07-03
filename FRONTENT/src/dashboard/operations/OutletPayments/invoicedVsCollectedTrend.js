@@ -1,4 +1,4 @@
-import { getInvoiceTotal } from 'src/composables/operations/outlets/outletConsumptionPricing'
+﻿import { getInvoiceTotal } from 'src/composables/operation/outlets/outletConsumptionPricing'
 
 export default {
   metadata: {
@@ -101,3 +101,4 @@ export default {
     }
   }
 }
+

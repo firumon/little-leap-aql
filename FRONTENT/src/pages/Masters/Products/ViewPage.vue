@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="view-page">
     <div v-if="loading" class="q-py-xl text-center">
       <q-spinner-dots color="primary" size="32px" />
@@ -79,8 +79,8 @@ import { computed, ref, watch } from 'vue'
 import { provide } from 'vue'
 import ViewActions from 'components/_common/View/Actions.vue'
 import MasterViewAudit from 'components/_common/sections/Content/Audit.vue'
-import { useProductVariants } from 'src/composables/masters/products/useProductVariants'
-import { useProductSkuViewData } from 'src/composables/masters/products/useProductSkuViewData'
+import { useProductVariants } from 'src/composables/master/products/useProductVariants'
+import { useProductSkuViewData } from 'src/composables/master/products/useProductSkuViewData'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useRecord } from 'src/composables/resources/useRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
@@ -143,3 +143,4 @@ watch(
   gap: 8px;
 }
 </style>
+

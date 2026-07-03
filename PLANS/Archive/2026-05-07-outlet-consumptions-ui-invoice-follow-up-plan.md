@@ -1,4 +1,4 @@
-# PLAN: Outlet Consumptions UI, Invoice Views, and Visit Comment Follow-Up
+﻿# PLAN: Outlet Consumptions UI, Invoice Views, and Visit Comment Follow-Up
 **Status**: COMPLETED
 **Created**: 2026-05-07
 **Created By**: Brain Agent (Codex GPT-5)
@@ -80,7 +80,7 @@ Known issues to correct:
 - [ ] Inspect existing custom index/view gateway patterns, especially PR and PO Receiving progress-driven pages.
 - [ ] Confirm live code paths use `useResourceNav`, not direct `router.push`.
 
-**Files**: `FRONTENT/src/router/`, `FRONTENT/src/pages/Operations/`, `FRONTENT/src/composables/operations/outlets/`
+**Files**: `FRONTENT/src/router/`, `FRONTENT/src/pages/operation/`, `FRONTENT/src/composables/operation/outlets/`
 **Pattern**: Existing progress-gateway pages such as Purchase Requisitions.
 **Rule**: Do not rename route folders unless resolver behavior requires it.
 
@@ -119,14 +119,14 @@ Known issues to correct:
   - payment progress
   - link/navigation back to consumption where feasible.
 
-**Files**: `GAS/syncAppResources.gs`, optional `FRONTENT/src/pages/Operations/OutletConsumptionInvoices/`
+**Files**: `GAS/syncAppResources.gs`, optional `FRONTENT/src/pages/operation/OutletConsumptionInvoices/`
 **Pattern**: Existing custom operation page folders.
 **Rule**: No invoice add flow in this plan.
 
 ### Step 4: Create Componentized Add Flow
 
-- [ ] Keep `FRONTENT/src/pages/Operations/OutletConsumption/AddPage.vue` as a thin orchestration shell.
-- [ ] Split UI into components under `FRONTENT/src/components/Operations/Outlets/`:
+- [ ] Keep `FRONTENT/src/pages/operation/OutletConsumption/AddPage.vue` as a thin orchestration shell.
+- [ ] Split UI into components under `FRONTENT/src/components/operation/Outlets/`:
   - `OutletConsumptionContextStep.vue`
   - `OutletConsumptionStockCountStep.vue`
   - `OutletConsumptionSummaryStep.vue`
@@ -136,7 +136,7 @@ Known issues to correct:
 - [ ] Components receive props and emit events only.
 - [ ] Update `FRONTENT/src/components/REGISTRY.md` for new reusable components.
 
-**Files**: `FRONTENT/src/pages/Operations/OutletConsumption/AddPage.vue`, `FRONTENT/src/components/Operations/Outlets/*.vue`
+**Files**: `FRONTENT/src/pages/operation/OutletConsumption/AddPage.vue`, `FRONTENT/src/components/operation/Outlets/*.vue`
 **Pattern**: Quasar components, prop/event-driven UI, page consumes `useOutletConsumption`.
 **Rule**: Components must not import stores, services, or call API/store methods.
 
@@ -221,7 +221,7 @@ Known issues to correct:
 - [ ] Actor should use the same current user display name used for `Username`.
 - [ ] Do not add new `OutletVisits` columns.
 
-**Files**: `FRONTENT/src/composables/operations/outlets/outletConsumptionPayload.js`, `FRONTENT/src/composables/operations/outlets/useOutletConsumption.js`
+**Files**: `FRONTENT/src/composables/operation/outlets/outletConsumptionPayload.js`, `FRONTENT/src/composables/operation/outlets/useOutletConsumption.js`
 **Pattern**: Existing frontend batch side-effect request builders.
 **Rule**: The comment needs the real returned consumption code, so it must be built after Phase 1 parent save.
 
@@ -243,14 +243,14 @@ Known issues to correct:
   - invoice indicator if generated/found.
 - [ ] Keep list tappable and navigates through `useResourceNav`.
 
-**Files**: `FRONTENT/src/pages/Operations/OutletConsumption/IndexPage.vue`, `useOutletConsumption.js`
+**Files**: `FRONTENT/src/pages/operation/OutletConsumption/IndexPage.vue`, `useOutletConsumption.js`
 **Pattern**: Existing grouped operation indexes such as restocks/visits/PO Receiving.
 **Rule**: Do not make code the primary label when outlet/date are available.
 
 ### Step 10: Refactor `OutletConsumptions` View Into Progress Gateway
 
 - [ ] Keep `ViewPage.vue` as a thin gateway.
-- [ ] Create progress-specific components under `FRONTENT/src/components/Operations/Outlets/` or page-local components if resolver conventions require:
+- [ ] Create progress-specific components under `FRONTENT/src/components/operation/Outlets/` or page-local components if resolver conventions require:
   - `OutletConsumptionPendingInvoiceView.vue`
   - `OutletConsumptionInvoiceGeneratedView.vue`
   - optional `OutletConsumptionCancelledView.vue`
@@ -265,7 +265,7 @@ Known issues to correct:
 - [ ] Generated invoice view shows invoice card and link/navigation to invoice view.
 - [ ] Cancelled/other view should be read-only unless existing configured actions allow more.
 
-**Files**: `FRONTENT/src/pages/Operations/OutletConsumption/ViewPage.vue`, `FRONTENT/src/components/Operations/Outlets/*.vue`, `useOutletConsumption.js`
+**Files**: `FRONTENT/src/pages/operation/OutletConsumption/ViewPage.vue`, `FRONTENT/src/components/operation/Outlets/*.vue`, `useOutletConsumption.js`
 **Pattern**: PR view gateway and outlet component UI-only conventions.
 **Rule**: Progress-specific actions must stay in composable methods.
 
@@ -421,19 +421,19 @@ Known issues to correct:
 
 - `GAS/syncAppResources.gs`
 - `GAS/setupOperationSheets.gs`
-- `FRONTENT/src/composables/operations/outlets/outletConsumptionPayload.js`
-- `FRONTENT/src/composables/operations/outlets/useOutletConsumption.js`
-- `FRONTENT/src/pages/Operations/OutletConsumption/AddPage.vue`
-- `FRONTENT/src/pages/Operations/OutletConsumption/IndexPage.vue`
-- `FRONTENT/src/pages/Operations/OutletConsumption/ViewPage.vue`
-- `FRONTENT/src/pages/Operations/OutletConsumptionInvoices/IndexPage.vue`
-- `FRONTENT/src/pages/Operations/OutletConsumptionInvoices/ViewPage.vue`
-- `FRONTENT/src/components/Operations/Outlets/OutletConsumptionContextStep.vue`
-- `FRONTENT/src/components/Operations/Outlets/OutletConsumptionStockCountStep.vue`
-- `FRONTENT/src/components/Operations/Outlets/OutletConsumptionSummaryStep.vue`
-- `FRONTENT/src/components/Operations/Outlets/OutletConsumptionPendingInvoiceView.vue`
-- `FRONTENT/src/components/Operations/Outlets/OutletConsumptionInvoiceGeneratedView.vue`
-- `FRONTENT/src/components/Operations/Outlets/OutletConsumptionReadonlyView.vue`
+- `FRONTENT/src/composables/operation/outlets/outletConsumptionPayload.js`
+- `FRONTENT/src/composables/operation/outlets/useOutletConsumption.js`
+- `FRONTENT/src/pages/operation/OutletConsumption/AddPage.vue`
+- `FRONTENT/src/pages/operation/OutletConsumption/IndexPage.vue`
+- `FRONTENT/src/pages/operation/OutletConsumption/ViewPage.vue`
+- `FRONTENT/src/pages/operation/OutletConsumptionInvoices/IndexPage.vue`
+- `FRONTENT/src/pages/operation/OutletConsumptionInvoices/ViewPage.vue`
+- `FRONTENT/src/components/operation/Outlets/OutletConsumptionContextStep.vue`
+- `FRONTENT/src/components/operation/Outlets/OutletConsumptionStockCountStep.vue`
+- `FRONTENT/src/components/operation/Outlets/OutletConsumptionSummaryStep.vue`
+- `FRONTENT/src/components/operation/Outlets/OutletConsumptionPendingInvoiceView.vue`
+- `FRONTENT/src/components/operation/Outlets/OutletConsumptionInvoiceGeneratedView.vue`
+- `FRONTENT/src/components/operation/Outlets/OutletConsumptionReadonlyView.vue`
 - `FRONTENT/src/components/REGISTRY.md`
 - `FRONTENT/src/composables/REGISTRY.md`
 - `Documents/OPERATION_SHEET_STRUCTURE.md`
@@ -445,7 +445,7 @@ Known issues to correct:
 
 - [x] `git status --short` reviewed before edits and after final verification.
 - [x] Targeted searches completed:
-  - `rg -n "RequiredHeaders: 'OutletConsumptionCode,Date,OutletCode,Username,PriceListCode|q-table" FRONTENT/src/pages/Operations/OutletConsumption FRONTENT/src/components/Operations/Outlets GAS/syncAppResources.gs` returned no matches.
+  - `rg -n "RequiredHeaders: 'OutletConsumptionCode,Date,OutletCode,Username,PriceListCode|q-table" FRONTENT/src/pages/operation/OutletConsumption FRONTENT/src/components/operation/Outlets GAS/syncAppResources.gs` returned no matches.
   - `rg -n "outlet-consumption-invoices|Consumption Invoices|Auto planned after outlet consumption|formatCommentDate|buildInvoiceGeneratedRequest" GAS FRONTENT/src Documents` returned expected implementation and documentation matches.
 - [x] `npm run gas:push` completed; `clasp push --force` pushed 26 GAS files.
 - [x] `npm --prefix FRONTENT run build` completed successfully.
@@ -456,3 +456,4 @@ Known issues to correct:
 - [ ] Run AQL resource sync from the Google Sheet menu so the invoice menu and required-header metadata reach live sheets.
 - [ ] Re-login or clear frontend/resource cache if menu/resource metadata remains stale.
 - [ ] No Web App redeployment required; no generic API contract changed.
+

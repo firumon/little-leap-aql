@@ -1,4 +1,4 @@
-# AQL Report UI & Feature Development
+﻿# AQL Report UI & Feature Development
 
 > **Scope boundary**: This document covers the frontend user interface, composables, components, and Google Apps Script menu/dialog orchestration for the reports system. It includes `ResourceReports.vue`, `ReportInputDialog.vue`, `useReports.js` composable, `reportManager.html` Dialog, and `appMenu.gs` functions.
 > 
@@ -17,11 +17,11 @@ The AQL report UI system coordinates data from `APP.Resources.Reports` configs t
 *   **Web Frontend**:
     *   [ResourceReports.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/Reports/ResourceReports.vue) (Auto-detects active resource context, displays record-level or toolbar-level report buttons).
     *   [useReports.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/reports/useReports.js) (Filters reports, preloads dynamic sources, parses inputs into cells, and triggers generation).
-    *   [ReportInputDialog.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/Masters/ReportInputDialog.vue) (Prompts for user inputs, handles select dropdown lists, date picking, toggles).
+    *   [ReportInputDialog.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/master/ReportInputDialog.vue) (Prompts for user inputs, handles select dropdown lists, date picking, toggles).
 
 **Key File Coordinates**:
 *   Detailed Guide: [REPORTS_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/REPORTS_SYSTEM.md)
-*   Frontend Components: [ResourceReports.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/Reports/ResourceReports.vue) and [ReportInputDialog.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/Masters/ReportInputDialog.vue)
+*   Frontend Components: [ResourceReports.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/Reports/ResourceReports.vue) and [ReportInputDialog.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/master/ReportInputDialog.vue)
 *   Frontend Composable: [useReports.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/reports/useReports.js)
 *   GAS Dialog & Save: [reportManager.html](file:///f:/LITTLE%20LEAP/AQL/GAS/reportManager.html) and [appMenu.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/appMenu.gs)
 
@@ -78,3 +78,4 @@ When modifying the Sheet Menu Report Manager:
 1.  Open the Sheet Menu Report Manager dialog and verify all resource definitions load.
 2.  Add/Edit a report mapping, save, and verify the changes write correctly to the `APP.Resources` registry.
 3.  Confirm that modifying a report configuration immediately busts the cache, making the new button/field visible on the frontend after a page reload.
+

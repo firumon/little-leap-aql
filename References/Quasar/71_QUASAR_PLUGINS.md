@@ -1,4 +1,4 @@
-# Quasar Plugins Reference Guide
+﻿# Quasar Plugins Reference Guide
 
 This reference guide describes the configuration and usage of Quasar's native programmatic service plugins (such as `Notify`, `Dialog`, `Loading`, `LocalStorage`, `AddressbarColor`, and `AppVisibility`) to handle core application services.
 
@@ -67,7 +67,7 @@ export function useAppSetup() {
 To conserve device battery and reduce server load, applications can monitor visibility states to pause background polling loops:
 
 ```javascript
-// composables/operations/useAppSyncManager.js
+// composables/operation/useAppSyncManager.js
 import { watch } from 'vue'
 import { AppVisibility } from 'quasar'
 
@@ -95,3 +95,4 @@ export function useAppSyncManager(syncCallback) {
 *   **Theme Synchronization**: Coordinating browser header colors (`AddressbarColor`) with dark mode state updates helps create a unified theme transition.
 *   **Background Data Controls**: Utilizing `AppVisibility.now` to pause active polling intervals prevents unnecessary API requests when the user minimizes the tab or switches apps.
 *   **Data Footprint**: Keeping stored objects compact by saving only user preferences or IDs (rather than heavy cached database datasets) optimizes storage efficiency and read/write times.
+

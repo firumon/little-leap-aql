@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <ChildRecordsTable
     v-for="group in childGroups"
     :key="group.resource.name"
@@ -14,7 +14,7 @@
 </template>
 
 <script setup>
-import ChildRecordsTable from 'components/Masters/ChildRecordsTable.vue'
+import ChildRecordsTable from 'components/master/ChildRecordsTable.vue'
 
 defineProps({
   childGroups: { type: Array, default: () => [] },
@@ -23,3 +23,4 @@ defineProps({
 
 defineEmits(['add-child', 'remove-child', 'update-child-field'])
 </script>
+

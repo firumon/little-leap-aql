@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding class="q-gutter-md">
     <div class="row items-center q-gutter-sm">
       <q-btn icon="arrow_back" flat round @click="goToList" />
@@ -195,7 +195,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
-import { useRFQSupplierFlow } from 'src/composables/operations/rfqs/useRFQSupplierFlow'
+import { useRFQSupplierFlow } from 'src/composables/operation/rfqs/useRFQSupplierFlow'
 
 const props = defineProps({
   mode: {
@@ -283,3 +283,4 @@ async function markSelectedAsSent() {
   selectedAssignedRows.value = []
 }
 </script>
+

@@ -1,4 +1,4 @@
-import { computed, ref, unref } from 'vue'
+﻿import { computed, ref, unref } from 'vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useRecord } from 'src/composables/resources/useRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
@@ -18,7 +18,7 @@ function storageLabel(value) {
   return raw === '_default' || !raw ? 'Default' : raw
 }
 
-import { useProductSkuResolver } from 'src/composables/masters/products/useProductSkuResolver'
+import { useProductSkuResolver } from 'src/composables/master/products/useProductSkuResolver'
 
 export function useWarehouseStockList(warehouseCodeRef = null) {
   const nav = useResourceNav()
@@ -173,3 +173,4 @@ export function useWarehouseStockList(warehouseCodeRef = null) {
     goToStockList
   }
 }
+

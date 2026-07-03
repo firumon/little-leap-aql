@@ -1,4 +1,4 @@
-# PLAN: Fix IndexedDB Operations and Implement Optimistic UI Updates
+﻿# PLAN: Fix IndexedDB Operations and Implement Optimistic UI Updates
 **Status**: COMPLETED
 **Created**: 2026-03-12
 **Created By**: Brain Agent
@@ -38,7 +38,7 @@ Total user wait: <500ms, data visible immediately
 ## Pre-Conditions
 - [x] `FRONTENT/src/utils/db.js` exists and uses `idb` library
 - [x] `FRONTENT/src/services/masterRecords.js` handles master record CRUD
-- [x] `FRONTENT/src/pages/Masters/MasterEntityPage.vue` is the UI component
+- [x] `FRONTENT/src/pages/master/MasterEntityPage.vue` is the UI component
 - [x] `FRONTENT/src/stores/auth.js` handles login/logout and calls `clearAllClientStorage()`
 
 ## Steps
@@ -67,7 +67,7 @@ Total user wait: <500ms, data visible immediately
 - [x] Create new `function optimisticallyUpdateRecord(code, updatedRecord)` that immediately updates matching item in `items.value`
 - [x] Both functions should construct proper row format using current `resolvedFields` and `lastHeaders`
 - [x] Add `function generateTempCode()` that creates temporary codes like `TEMP-${Date.now()}` for optimistic creates
-**Files**: `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+**Files**: `FRONTENT/src/pages/master/MasterEntityPage.vue`
 **Pattern**: Optimistic UI updates - immediately reflect user action in UI, reconcile with server response later
 **Rule**: Never block UI for server responses when optimistic local updates are possible. Always show immediate feedback.
 
@@ -80,7 +80,7 @@ Total user wait: <500ms, data visible immediately
 - [x] After API response, if failed, revert optimistic change and show error notification
 - [x] Remove `await reload()` from save function
 - [x] Set `saving.value = false` immediately after optimistic update (before API call)
-**Files**: `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+**Files**: `FRONTENT/src/pages/master/MasterEntityPage.vue`
 **Pattern**: See line 294-312 `runBackgroundSync()` - silent background data fetching without blocking UI
 **Rule**: User interactions should complete in <500ms. Server sync happens in background. Only show errors if sync fails.
 
@@ -90,7 +90,7 @@ Total user wait: <500ms, data visible immediately
 - [x] Set `loading.value = false` immediately after cache render
 - [x] Then trigger `runBackgroundSync()` to update from server in background
 - [x] If no cache, keep existing loading behavior
-**Files**: `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+**Files**: `FRONTENT/src/pages/master/MasterEntityPage.vue`
 **Pattern**: See lines 343-366 existing reload, and lines 294-312 `runBackgroundSync()` pattern
 **Rule**: Cache-first rendering: show cached data instantly (<100ms), sync in background. Only show loading spinner when cache is empty.
 
@@ -99,7 +99,7 @@ Total user wait: <500ms, data visible immediately
 - [x] In `runBackgroundSync()`, set `syncIndicator.value = true` at start, `false` at end
 - [x] In template, add small pulsing sync icon next to refresh button when `syncIndicator === true`
 - [x] Icon should be subtle (small, semi-transparent) and not block any UI
-**Files**: `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+**Files**: `FRONTENT/src/pages/master/MasterEntityPage.vue`
 **Pattern**: Non-blocking progress indicators - see existing `backgroundSyncing` ref at line 217
 **Rule**: Background operations should have visual feedback but never block user interaction. Use subtle, non-modal indicators.
 
@@ -108,7 +108,7 @@ Total user wait: <500ms, data visible immediately
 - [x] Create `function revertOptimisticUpdate(code, originalRecord)` that restores original record in `items.value`
 - [x] In background API promise handlers, if response fails, call appropriate revert function
 - [x] Show error notification with server error message when reverting
-**Files**: `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+**Files**: `FRONTENT/src/pages/master/MasterEntityPage.vue`
 **Pattern**: Optimistic UI with rollback capability - common pattern in real-time collaborative apps
 **Rule**: If server rejects optimistic change, revert UI to previous state and notify user. Don't leave UI in inconsistent state.
 
@@ -157,7 +157,7 @@ Total user wait: <500ms, data visible immediately
 ### Files Actually Changed
 - `FRONTENT/src/utils/db.js`
 - `FRONTENT/src/stores/auth.js`
-- `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+- `FRONTENT/src/pages/master/MasterEntityPage.vue`
 - `Documents/CONTEXT_HANDOFF.md`
 
 ### Validation Performed
@@ -172,3 +172,4 @@ Total user wait: <500ms, data visible immediately
 - [x] Test full login/logout/login cycle
 - [x] Verify UI responsiveness improvements
 - [x] Check network tab for background requests
+

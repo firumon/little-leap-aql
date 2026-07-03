@@ -1,4 +1,4 @@
-# PLAN: Remove Resource-Specific Store Functions and Fix Scope-Named Service Exports
+﻿# PLAN: Remove Resource-Specific Store Functions and Fix Scope-Named Service Exports
 **Status**: COMPLETED
 **Created**: 2026-04-21
 **Created By**: Solo Agent (Codex)
@@ -92,7 +92,7 @@ None.
 - `Documents/ARCHITECTURE RULES.md`
 - `Documents/CONTEXT_HANDOFF.md`
 - `FRONTENT/src/stores/workflow.js`
-- `FRONTENT/src/composables/operations/stock/useStockMovements.js`
+- `FRONTENT/src/composables/operation/stock/useStockMovements.js`
 - `FRONTENT/src/services/ResourceCrudService.js`
 - `FRONTENT/src/services/ResourceRecordsService.js`
 - `FRONTENT/src/services/ResourceFetchService.js`
@@ -104,3 +104,4 @@ None.
 
 ### Manual Actions Required
 - No GAS changes; no Web App redeployment needed.
+

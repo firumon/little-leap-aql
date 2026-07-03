@@ -1,11 +1,11 @@
-import { ref, computed, onMounted } from 'vue'
+﻿import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useRecord } from 'src/composables/resources/useRecord'
-import { useStockMovements } from 'src/composables/operations/stock/useStockMovements'
+import { useStockMovements } from 'src/composables/operation/stock/useStockMovements'
 import { useResourceIoStore } from 'src/stores/resourceIo'
-import { useProcurements } from 'src/composables/operations/procurements/useProcurements'
+import { useProcurements } from 'src/composables/operation/procurements/useProcurements'
 import { useCurrency } from 'src/composables/useCurrency'
 
 export function usePurchaseRequisitionApprovalFlow() {
@@ -181,3 +181,4 @@ export function usePurchaseRequisitionApprovalFlow() {
     sendBack
   }
 }
+

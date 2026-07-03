@@ -1,4 +1,4 @@
-# PLAN: Purchase Requisition Procurement Workflow
+﻿# PLAN: Purchase Requisition Procurement Workflow
 **Status**: COMPLETED
 **Created**: 2026-04-23
 **Created By**: Solo Agent (Codex)
@@ -12,7 +12,7 @@ Implement the agreed Purchase Requisition to Procurement workflow end-to-end so 
 - Canonical Procurement progress values come from login `appOptionsMap.ProcurementProgress`.
 - Old PR aliases like `New`, `Submitted`, `Review`, and `Revision` should not drive the new logic.
 - Current PR workflow logic is spread across multiple purchase requisition composables.
-- The entity-level Operations page resolver supports `FRONTENT/src/pages/Operations/PurchaseRequisitions/ViewPage.vue` as the custom view override.
+- The entity-level Operations page resolver supports `FRONTENT/src/pages/operation/PurchaseRequisitions/ViewPage.vue` as the custom view override.
 - A GAS procurement hook already exists, but it currently contains broader workflow mapping that should move to frontend.
 
 ## Pre-Conditions
@@ -27,25 +27,25 @@ Implement the agreed Purchase Requisition to Procurement workflow end-to-end so 
 - [x] Centralize helpers for first submit, revision resubmit, review send-back, approve, and reject.
 - [x] Ensure first submit builds a two-step batch flow: PR update plus Procurement create when `ProcurementCode` is missing.
 - [x] Ensure revision resubmit updates PR to `Pending Approval` and existing Procurement to `PR_CREATED` without creating a new Procurement.
-**Files**: `FRONTENT/src/composables/operations/procurements/useProcurements.js`
-**Pattern**: Existing operation composables under `FRONTENT/src/composables/operations/`
+**Files**: `FRONTENT/src/composables/operation/procurements/useProcurements.js`
+**Pattern**: Existing operation composables under `FRONTENT/src/composables/operation/`
 **Rule**: Workflow decisions live in composables, not services or components.
 
 ### Step 2: Refactor Purchase Requisition composables around the workflow layer
 - [x] Update PR create/edit/review/index composables to consume `useProcurements` instead of hardcoding status names and transition rules.
 - [x] Rename the draft edit page/composable surface to the editable PR flow and keep it valid for both `Draft` and `Revision Required`.
 - [x] Replace `ProgressReviewComment` usage with `ProgressRevisionRequiredComment` and add `ProgressRejectedComment` handling.
-**Files**: `FRONTENT/src/composables/operations/purchaseRequisitions/*`
+**Files**: `FRONTENT/src/composables/operation/purchaseRequisitions/*`
 **Pattern**: Existing cache-first `useResourceData` plus workflow-store save actions
 **Rule**: PR-specific form/item concerns stay in purchase requisition files; workflow meaning moves to procurements.
 
 ### Step 3: Add the progress-aware entity view flow
-- [x] Create `FRONTENT/src/pages/Operations/PurchaseRequisitions/ViewPage.vue` as the entity-level custom view entry point.
+- [x] Create `FRONTENT/src/pages/operation/PurchaseRequisitions/ViewPage.vue` as the entity-level custom view entry point.
 - [x] Create `PurchaseRequisitionEditablePage.vue` for `Draft` and `Revision Required`.
 - [x] Create `PurchaseRequisitionReviewPage.vue` for `Pending Approval` with Approve/Reject/Send Back actions.
 - [x] Reuse the generic read-only view rendering for `Approved`, `Rejected`, and `RFQ Processed`.
 - [x] Keep the UI Quasar-first, lightweight, and visually improved without overcomplicating the layout.
-**Files**: `FRONTENT/src/pages/Operations/PurchaseRequisitions/ViewPage.vue`, `FRONTENT/src/components/Operations/PurchaseRequisitions/*`
+**Files**: `FRONTENT/src/pages/operation/PurchaseRequisitions/ViewPage.vue`, `FRONTENT/src/components/operation/PurchaseRequisitions/*`
 **Pattern**: Thin page shells with composable-driven logic; existing PR hero/items/action-bar components where useful
 **Rule**: View routing stays stable on `view`; rendered surface changes by progress.
 
@@ -94,24 +94,24 @@ Implement the agreed Purchase Requisition to Procurement workflow end-to-end so 
 
 ### Files Actually Changed
 - `PLANS/2026-04-23-pr-procurement-workflow.md`
-- `FRONTENT/src/composables/operations/procurements/useProcurements.js`
-- `FRONTENT/src/composables/operations/purchaseRequisitions/purchaseRequisitionPayload.js`
-- `FRONTENT/src/composables/operations/purchaseRequisitions/usePurchaseRequisitionEditableFlow.js`
-- `FRONTENT/src/composables/operations/purchaseRequisitions/usePurchaseRequisitionApprovalFlow.js`
-- `FRONTENT/src/composables/operations/purchaseRequisitions/usePurchaseRequisitionDraftFlow.js`
-- `FRONTENT/src/composables/operations/purchaseRequisitions/usePurchaseRequisitionReviewFlow.js`
-- `FRONTENT/src/composables/operations/purchaseRequisitions/usePurchaseRequisitionIndex.js`
+- `FRONTENT/src/composables/operation/procurements/useProcurements.js`
+- `FRONTENT/src/composables/operation/purchaseRequisitions/purchaseRequisitionPayload.js`
+- `FRONTENT/src/composables/operation/purchaseRequisitions/usePurchaseRequisitionEditableFlow.js`
+- `FRONTENT/src/composables/operation/purchaseRequisitions/usePurchaseRequisitionApprovalFlow.js`
+- `FRONTENT/src/composables/operation/purchaseRequisitions/usePurchaseRequisitionDraftFlow.js`
+- `FRONTENT/src/composables/operation/purchaseRequisitions/usePurchaseRequisitionReviewFlow.js`
+- `FRONTENT/src/composables/operation/purchaseRequisitions/usePurchaseRequisitionIndex.js`
 - `FRONTENT/src/composables/REGISTRY.md`
-- `FRONTENT/src/components/Operations/PurchaseRequisitions/PurchaseRequisitionReviewHero.vue`
-- `FRONTENT/src/components/Operations/PurchaseRequisitions/PurchaseRequisitionReviewActionBar.vue`
+- `FRONTENT/src/components/operation/PurchaseRequisitions/PurchaseRequisitionReviewHero.vue`
+- `FRONTENT/src/components/operation/PurchaseRequisitions/PurchaseRequisitionReviewActionBar.vue`
 - `FRONTENT/src/components/REGISTRY.md`
-- `FRONTENT/src/pages/Operations/PurchaseRequisitions/ViewPage.vue`
-- `FRONTENT/src/pages/Operations/PurchaseRequisitions/PurchaseRequisitionEditablePage.vue`
-- `FRONTENT/src/pages/Operations/PurchaseRequisitions/PurchaseRequisitionReviewPage.vue`
-- `FRONTENT/src/pages/Operations/PurchaseRequisitions/RecordDraftPage.vue`
-- `FRONTENT/src/pages/Operations/PurchaseRequisitions/RecordReviewPurchaseRequisitionPage.vue`
-- `FRONTENT/src/pages/Operations/PurchaseRequisitions/IndexPage.vue`
-- `FRONTENT/src/pages/Operations/PurchaseRequisitions/InitiatePurchaseRequisitionsPage.vue`
+- `FRONTENT/src/pages/operation/PurchaseRequisitions/ViewPage.vue`
+- `FRONTENT/src/pages/operation/PurchaseRequisitions/PurchaseRequisitionEditablePage.vue`
+- `FRONTENT/src/pages/operation/PurchaseRequisitions/PurchaseRequisitionReviewPage.vue`
+- `FRONTENT/src/pages/operation/PurchaseRequisitions/RecordDraftPage.vue`
+- `FRONTENT/src/pages/operation/PurchaseRequisitions/RecordReviewPurchaseRequisitionPage.vue`
+- `FRONTENT/src/pages/operation/PurchaseRequisitions/IndexPage.vue`
+- `FRONTENT/src/pages/operation/PurchaseRequisitions/InitiatePurchaseRequisitionsPage.vue`
 - `GAS/procurement.gs`
 - `GAS/syncAppResources.gs`
 - `Documents/RESOURCE_COLUMNS_GUIDE.md`
@@ -126,3 +126,4 @@ Implement the agreed Purchase Requisition to Procurement workflow end-to-end so 
 
 ### Manual Actions Required
 - [x] Refresh `APP.Resources` from code if the sheet registry still contains the old PR `PostAction` metadata and has not yet been synced from `GAS/syncAppResources.gs`.
+

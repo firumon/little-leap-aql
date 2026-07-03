@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding>
     <div class="row items-start justify-between q-col-gutter-sm q-mb-md">
       <div class="col-12 col-sm">
@@ -50,7 +50,7 @@
 
 <script setup>
 import { onMounted } from 'vue'
-import { useWarehouseStockList } from 'src/composables/masters/warehouses/useWarehouseStockList'
+import { useWarehouseStockList } from 'src/composables/master/warehouses/useWarehouseStockList'
 
 const {
   loading,
@@ -61,3 +61,4 @@ const {
 
 onMounted(() => loadData())
 </script>
+

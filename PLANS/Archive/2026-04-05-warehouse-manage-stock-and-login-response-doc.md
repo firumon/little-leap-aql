@@ -1,4 +1,4 @@
-# PLAN: Warehouse > Manage Stock (type-agnostic) + Login Response Documentation
+﻿# PLAN: Warehouse > Manage Stock (type-agnostic) + Login Response Documentation
 **Status**: COMPLETED
 **Created**: 2026-04-05
 **Created By**: Brain Agent (Claude Opus 4.6)
@@ -27,9 +27,9 @@ The Manage Stock feature consumes `appOptions.StockMovementReferenceType` from t
 | 2 | Sidebar placement | **Menu group** `Warehouse` via `menu.group` field (no new nesting code) | User explicit. Matches existing MainLayout grouping mechanism (`FRONTENT/src/layouts/MainLayout/MainLayout.vue:183-233`), which groups by `menu.group` and resolves group icon from the first item. |
 | 3 | GRN `ReferenceCode` capture | **Free-text field**, single value for the whole batch | User explicit. |
 | 4 | Batch write | **Loop single creates** (one `callGasApi('create', …)` per row). No new bulk handler. | User explicit. |
-| 5 | URL path | `/operations/manage-stock` (scope=operation) | Avoids touching the router's dynamic-route scope regex (currently `masters\|operations\|accounts`). Menu group label is "Warehouse" — which is what the user sees — independent of URL. |
+| 5 | URL path | `/operation/manage-stock` (scope=operation) | Avoids touching the router's dynamic-route scope regex (currently `masters\|operations\|accounts`). Menu group label is "Warehouse" — which is what the user sees — independent of URL. |
 | 6 | Resource registration | **Functional resource** (`Functional: 'TRUE'`, no sheet data), scope=`operation` | Matches the `BulkUploadMasters` functional-resource pattern at `GAS/syncAppResources.gs:~888`. |
-| 7 | Frontend route wiring | **Explicit route** in `routes.js`, mirroring `/masters/bulk-upload` at `FRONTENT/src/router/routes.js:42-46` | The dynamic `/:scope/:resourceSlug` route assumes sheet-backed resources; bulk-upload proves functional pages get explicit routes. |
+| 7 | Frontend route wiring | **Explicit route** in `routes.js`, mirroring `/master/bulk-upload` at `FRONTENT/src/router/routes.js:42-46` | The dynamic `/:scope/:resourceSlug` route assumes sheet-backed resources; bulk-upload proves functional pages get explicit routes. |
 
 ### Existing infrastructure (already in place — do NOT recreate)
 | Piece | Location |
@@ -43,7 +43,7 @@ The Manage Stock feature consumes `appOptions.StockMovementReferenceType` from t
 | Frontend create wrapper | `createMasterRecord(resourceName, record)` at `FRONTENT/src/services/masterRecords.js:527-533` — already resolves scope via `resolveResourceScope`, usable for operation resources. |
 | Menu group rendering | `FRONTENT/src/layouts/MainLayout/MainLayout.vue:183-233` — fully data-driven: reads `menu.group` and group icon from first item's `menu.icon`. No hardcoded group list. |
 | Products store (for SKU lookup) | `FRONTENT/src/stores/products.js` — `useProductsStore()`, cache-first IDB+Pinia. |
-| Functional resource precedent | `BulkUploadMasters` in `GAS/syncAppResources.gs` (search for `Functional: 'TRUE'`). Route: `/masters/bulk-upload` (explicit in routes.js). |
+| Functional resource precedent | `BulkUploadMasters` in `GAS/syncAppResources.gs` (search for `Functional: 'TRUE'`). Route: `/master/bulk-upload` (explicit in routes.js). |
 
 ### Critical gap discovered during planning
 `WarehouseStorages` is documented as "automatically managed by stock movements" (`Documents/OPERATION_SHEET_STRUCTURE.md:107`), but **`grep -r "WarehouseStorages" GAS/` finds only setup/role references — there is no code path that updates the summary when a `StockMovements` row is created.** This plan closes that gap with a server-side post-insert hook, which then applies to this feature *and* any future caller (including the existing GRN flow when it eventually wires its completion step).
@@ -192,7 +192,7 @@ Steps are ordered to let the Build Agent verify **incrementally** — backend fi
           order: 1,
           label: 'Manage Stock',
           icon: 'inventory',
-          route: '/operations/manage-stock',
+          route: '/operation/manage-stock',
           pageTitle: 'Manage Stock',
           pageDescription: 'Add, adjust, or directly enter stock movements',
           show: true
@@ -242,10 +242,10 @@ Steps are ordered to let the Build Agent verify **incrementally** — backend fi
 
 **Files**: `FRONTENT/src/router/routes.js`
 
-- [ ] In the `/dashboard` children array, **immediately after** the `/masters/bulk-upload` entry at line 42-46, add:
+- [ ] In the `/dashboard` children array, **immediately after** the `/master/bulk-upload` entry at line 42-46, add:
   ```js
   {
-    path: '/operations/manage-stock',
+    path: '/operation/manage-stock',
     component: () => import('pages/Warehouse/ManageStockPage.vue'),
     meta: { scope: 'operation', requiresAuth: true }
   },
@@ -553,7 +553,7 @@ Steps are ordered to let the Build Agent verify **incrementally** — backend fi
 
 ### Frontend
 - [ ] After re-login, the sidebar shows a new **Warehouse** group containing **Manage Stock**.
-- [ ] Navigating to `/operations/manage-stock` renders `ManageStockPage.vue` (Step 1 UI).
+- [ ] Navigating to `/operation/manage-stock` renders `ManageStockPage.vue` (Step 1 UI).
 - [ ] Step 1 card UI shows Warehouse cards, Type cards from `appOptionsMap['StockMovementReferenceType']`, Storage dropdown, Reference Code input, and a **Proceed** button disabled until Warehouse + Storage + Type are selected.
 - [ ] Adding a hypothetical `'Dispatch'` value to `APP.AppOptions` row for `StockMovementReferenceType` and re-logging in makes a new "Dispatch" card appear **with zero frontend code changes**. It falls back to a generic label/icon.
 - [ ] In Step 2, adding an SKU shows its current qty from `WarehouseStorages` (or 0 if absent).
@@ -638,3 +638,4 @@ Steps are ordered to let the Build Agent verify **incrementally** — backend fi
 - [ ] Grant role permission for `ManageStock` in the APP `Roles` sheet (Step 4)
 - [ ] Log out and log back in to pick up the new resource in the login response (Step 16)
 - [ ] (If API envelope contract were changed — currently it is NOT) create a new Web App deployment version. Default: **not required** for this plan.
+

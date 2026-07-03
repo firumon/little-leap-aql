@@ -1,11 +1,11 @@
-import { ref, computed } from 'vue'
+﻿import { ref, computed } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from '../../../stores/auth.js'
 import { useRecord } from '../../resources/useRecord.js'
 import { useResourceNav } from '../../resources/useResourceNav.js'
 import { useResourceConfig } from '../../resources/useResourceConfig.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
-import { useProductSkuResolver } from 'src/composables/masters/products/useProductSkuResolver'
+import { useProductSkuResolver } from 'src/composables/master/products/useProductSkuResolver'
 import { OUTLET_OPERATION_RESOURCES, CONSUMPTION_PROGRESS_ORDER, active, formatDate, progressMeta, sortTime, text, todayISO, visitProgress } from './outletOperationsMeta.js'
 import { toNumber, validateConsumption } from './outletStockLogic.js'
 import { batchRef, batchResultCode, compositeSaveRequest, executeActionRequest, failureMessage, OUTLET_ACTIONS, resourceUpdateRequest, responseFailed, resourceBulkRequest } from './outletOperationsBatch.js'
@@ -981,3 +981,4 @@ export function useOutletConsumption() {
     returnRows, returnMetadata, warehouseOptions, canCreateReturn, addManualReturnSku, updateReturnMetadata, removeManualReturnRow, getInvoiceTotal: getInvoiceTotalRounded, getInvoiceRemaining: getInvoiceRemainingRounded, returns, canDirectRestock, allowed
   }
 }
+

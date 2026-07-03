@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding>
     <div class="row q-col-gutter-md">
       <div class="col-12 col-md-4">
@@ -35,9 +35,9 @@
 <script setup>
 import { useQuasar } from 'quasar'
 import { useBulkUpload } from 'src/composables/upload/useBulkUpload'
-import BulkUploadControlsCard from 'src/components/Masters/BulkUpload/BulkUploadControlsCard.vue'
-import BulkUploadPreviewTable from 'src/components/Masters/BulkUpload/BulkUploadPreviewTable.vue'
-import BulkUploadEmptyState from 'src/components/Masters/BulkUpload/BulkUploadEmptyState.vue'
+import BulkUploadControlsCard from 'src/components/master/BulkUpload/BulkUploadControlsCard.vue'
+import BulkUploadPreviewTable from 'src/components/master/BulkUpload/BulkUploadPreviewTable.vue'
+import BulkUploadEmptyState from 'src/components/master/BulkUpload/BulkUploadEmptyState.vue'
 
 const $q = useQuasar()
 
@@ -85,3 +85,4 @@ function confirmUpload() {
   })
 }
 </script>
+

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding>
     <div class="row items-center justify-between no-wrap q-mb-md">
       <div class="col">
@@ -264,16 +264,16 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { useOutletHub } from '../../../composables/operations/outlets/useOutletHub.js'
-import { useOutletVisits } from '../../../composables/operations/outlets/useOutletVisits.js'
-import { getInvoiceRemaining } from '../../../composables/operations/outlets/outletConsumptionPricing.js'
-import { progressMeta } from '../../../composables/operations/outlets/outletOperationsMeta.js'
+import { useOutletHub } from '../../../composables/operation/outlets/useOutletHub.js'
+import { useOutletVisits } from '../../../composables/operation/outlets/useOutletVisits.js'
+import { getInvoiceRemaining } from '../../../composables/operation/outlets/outletConsumptionPricing.js'
+import { progressMeta } from '../../../composables/operation/outlets/outletOperationsMeta.js'
 import { useCurrency } from '../../../composables/useCurrency.js'
 import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
-import OutletHubSummaryStats from '../../../components/Operations/Outlets/OutletHub/OutletHubSummaryStats.vue'
-import OutletHubSimpleListSection from '../../../components/Operations/Outlets/OutletHub/OutletHubSimpleListSection.vue'
-import OutletHubPaymentSection from '../../../components/Operations/Outlets/OutletHub/OutletHubPaymentSection.vue'
-import OutletVisitActionDialog from '../../../components/Operations/Outlets/OutletVisitActionDialog.vue'
+import OutletHubSummaryStats from '../../../components/operation/Outlets/OutletHub/OutletHubSummaryStats.vue'
+import OutletHubSimpleListSection from '../../../components/operation/Outlets/OutletHub/OutletHubSimpleListSection.vue'
+import OutletHubPaymentSection from '../../../components/operation/Outlets/OutletHub/OutletHubPaymentSection.vue'
+import OutletVisitActionDialog from '../../../components/operation/Outlets/OutletVisitActionDialog.vue'
 import SectionDividerLabel from '../../../components/shared/SectionDividerLabel.vue'
 import ActionCommentDialog from '../../../components/shared/ActionCommentDialog.vue'
 import AppDate from '../../../components/shared/AppDate.vue'
@@ -436,3 +436,4 @@ onMounted(async () => {
   if (preset) selectedOutletCode.value = preset
 })
 </script>
+

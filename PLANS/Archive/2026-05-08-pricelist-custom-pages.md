@@ -1,4 +1,4 @@
-# PLAN: PriceList Custom Index & Add Pages
+﻿# PLAN: PriceList Custom Index & Add Pages
 **Status**: COMPLETED
 **Created**: 2026-05-08
 **Created By**: Brain Agent (claude)
@@ -10,12 +10,12 @@ Create two entity-level custom pages for the PriceList master resource, plus two
 
 ## Context
 
-- PriceList resource is already defined in `GAS/syncAppResources.gs:144-176`. Route `/masters/price-lists`, scope `master`, menu group `Product`.
+- PriceList resource is already defined in `GAS/syncAppResources.gs:144-176`. Route `/master/price-lists`, scope `master`, menu group `Product`.
 - PriceListItems child resource (ParentResource: PriceList) at `GAS/syncAppResources.gs:177-208`. Composite unique on `PriceListCode + SKUCode`.
 - `App.Config.PriceListLookup` key (`INLINE` or `ITEMS`) is present in `APP.Config` sheet and arrives in login response `data.result.appConfig`.
 - Frontend reads config via `authStore.appConfigMap`.
 - All master data is loaded into `dataStore` (Pinia) reactively. Composables read from store, never call APIs directly.
-- Products IndexPage (`FRONTENT/src/pages/Masters/Products/IndexPage.vue`) is the closest reference pattern — it loads Products + SKUs, computes SKU counts, and has a FAB for add navigation.
+- Products IndexPage (`FRONTENT/src/pages/master/Products/IndexPage.vue`) is the closest reference pattern — it loads Products + SKUs, computes SKU counts, and has a FAB for add navigation.
 - `ActionResolverPage.vue` auto-discovers entity-level pages via `import.meta.glob('./*/\*\*Page.vue')`. A new `PriceLists/IndexPage.vue` and `PriceLists/AddPage.vue` will be auto-resolved at tier 2 (entity-custom).
 - **workflowStore** canonical mutation methods (verified from `FRONTENT/src/stores/workflow.js:92-108`):
   - `createResourceRecord(resourceName, record)` — create a single record
@@ -35,7 +35,7 @@ Create two entity-level custom pages for the PriceList master resource, plus two
 
 ### Step 1: Create Composable `usePriceListEditor.js`
 
-**File**: `FRONTENT/src/composables/masters/priceLists/usePriceListEditor.js`
+**File**: `FRONTENT/src/composables/master/priceLists/usePriceListEditor.js`
 
 #### 1.1 Imports
 
@@ -46,7 +46,7 @@ import { ref, computed } from 'vue'
 import { useAuthStore } from 'src/stores/auth'
 import { useDataStore } from 'src/stores/data'
 import { useWorkflowStore } from 'src/stores/workflow'
-import { parseVariantTypes } from 'src/composables/masters/products/useProductVariants'
+import { parseVariantTypes } from 'src/composables/master/products/useProductVariants'
 ```
 
 **Rule**: Composables MUST NOT import services directly. All API/IDB operations flow through stores.
@@ -414,7 +414,7 @@ return {
 
 ### Step 2: Create Composable `usePriceListCreateForm.js`
 
-**File**: `FRONTENT/src/composables/masters/priceLists/usePriceListCreateForm.js`
+**File**: `FRONTENT/src/composables/master/priceLists/usePriceListCreateForm.js`
 
 #### 2.1 Imports
 
@@ -423,7 +423,7 @@ import { ref, computed, reactive } from 'vue'
 import { useAuthStore } from 'src/stores/auth'
 import { useDataStore } from 'src/stores/data'
 import { useWorkflowStore } from 'src/stores/workflow'
-import { parseVariantTypes } from 'src/composables/masters/products/useProductVariants'
+import { parseVariantTypes } from 'src/composables/master/products/useProductVariants'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 ```
 
@@ -635,7 +635,7 @@ return {
 
 ### Step 3: Create Page `PriceLists/IndexPage.vue`
 
-**File**: `FRONTENT/src/pages/Masters/PriceLists/IndexPage.vue`
+**File**: `FRONTENT/src/pages/master/PriceLists/IndexPage.vue`
 
 #### 3.1 Template structure (THIN — no business logic)
 
@@ -804,12 +804,12 @@ return {
 <script setup>
 import { computed, watch, ref } from 'vue'
 import { useQuasar } from 'quasar'
-import MasterListHeader from 'components/Masters/_common/MasterListHeader.vue'
-import MasterListToolbar from 'components/Masters/_common/MasterListToolbar.vue'
+import MasterListHeader from 'components/master/_common/MasterListHeader.vue'
+import MasterListToolbar from 'components/master/_common/MasterListToolbar.vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useResourceData } from 'src/composables/resources/useResourceData'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { usePriceListEditor } from 'src/composables/masters/priceLists/usePriceListEditor'
+import { usePriceListEditor } from 'src/composables/master/priceLists/usePriceListEditor'
 
 const $q = useQuasar()
 const nav = useResourceNav()
@@ -910,7 +910,7 @@ async function handleSave() {
 
 ### Step 4: Create Page `PriceLists/AddPage.vue`
 
-**File**: `FRONTENT/src/pages/Masters/PriceLists/AddPage.vue`
+**File**: `FRONTENT/src/pages/master/PriceLists/AddPage.vue`
 
 #### 4.1 Template
 
@@ -1006,7 +1006,7 @@ import { useQuasar } from 'quasar'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useResourceData } from 'src/composables/resources/useResourceData'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { usePriceListCreateForm } from 'src/composables/masters/priceLists/usePriceListCreateForm'
+import { usePriceListCreateForm } from 'src/composables/master/priceLists/usePriceListCreateForm'
 
 const $q = useQuasar()
 const nav = useResourceNav()
@@ -1068,10 +1068,10 @@ async function handleCreate() {
 
 | File | Type | Purpose |
 |---|---|---|
-| `FRONTENT/src/composables/masters/priceLists/usePriceListEditor.js` | Composable | Index page: data resolution, dirty tracking, mode-aware save |
-| `FRONTENT/src/composables/masters/priceLists/usePriceListCreateForm.js` | Composable | Add page: form state, mode-aware create |
-| `FRONTENT/src/pages/Masters/PriceLists/IndexPage.vue` | Page | Expandable PriceList cards with inline editing |
-| `FRONTENT/src/pages/Masters/PriceLists/AddPage.vue` | Page | Create form with full product/SKU listing |
+| `FRONTENT/src/composables/master/priceLists/usePriceListEditor.js` | Composable | Index page: data resolution, dirty tracking, mode-aware save |
+| `FRONTENT/src/composables/master/priceLists/usePriceListCreateForm.js` | Composable | Add page: form state, mode-aware create |
+| `FRONTENT/src/pages/master/PriceLists/IndexPage.vue` | Page | Expandable PriceList cards with inline editing |
+| `FRONTENT/src/pages/master/PriceLists/AddPage.vue` | Page | Create form with full product/SKU listing |
 
 **No changes needed** to: stores, services, router, menu config, GAS code, or `syncAppResources.gs`.
 
@@ -1082,7 +1082,7 @@ async function handleCreate() {
 
 ## Acceptance Criteria
 
-- [ ] Navigating to `/masters/price-lists` renders the custom IndexPage with all PriceLists listed.
+- [ ] Navigating to `/master/price-lists` renders the custom IndexPage with all PriceLists listed.
 - [ ] Clicking a PriceList expands it, showing editable header fields (Name, Currency, IsDefault, Description, Status) and all active products grouped with their active SKUs and price inputs.
 - [ ] "Save" button per expanded section persists header changes + price changes without collapsing.
 - [ ] When `PriceListLookup = INLINE`, prices are saved to `PriceList.SKUPrices` JSON; when `ITEMS`, prices are saved as `PriceListItems` rows.
@@ -1104,10 +1104,10 @@ async function handleCreate() {
 - [ ] `[!]` Issue/blocker:
 
 ### Files Actually Changed
-- `FRONTENT/src/composables/masters/priceLists/usePriceListEditor.js`
-- `FRONTENT/src/composables/masters/priceLists/usePriceListCreateForm.js`
-- `FRONTENT/src/pages/Masters/PriceLists/IndexPage.vue`
-- `FRONTENT/src/pages/Masters/PriceLists/AddPage.vue`
+- `FRONTENT/src/composables/master/priceLists/usePriceListEditor.js`
+- `FRONTENT/src/composables/master/priceLists/usePriceListCreateForm.js`
+- `FRONTENT/src/pages/master/PriceLists/IndexPage.vue`
+- `FRONTENT/src/pages/master/PriceLists/AddPage.vue`
 
 ### Validation Performed
 - [x] Manual review of all 4 files for architecture compliance
@@ -1122,5 +1122,6 @@ async function handleCreate() {
 ## Post-Execution Notes
 - Deviation: save gating on the edit page now includes `pricesChanged` so price-only edits are not blocked.
 - Validation: frontend build completed successfully with the new pages and composables in place.
+
 
 

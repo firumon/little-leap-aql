@@ -1,4 +1,4 @@
-# PLAN: Remove ManageStock Resource & Add "Manage Stock" Menu to StockMovements
+﻿# PLAN: Remove ManageStock Resource & Add "Manage Stock" Menu to StockMovements
 **Status**: IN_PROGRESS
 **Created**: 2026-04-06
 **Created By**: Brain Agent (Claude Sonnet 4.6)
@@ -54,19 +54,19 @@ This plan relies on **Plan 1** (`2026-04-06-menu-column-object-to-array.md`) bei
 - [ ] In the same file, find the `StockMovements` resource entry (currently around lines 632-657, but may have shifted).
 - [ ] Its `Menu` field (after Plan 1) should look like:
   ```javascript
-  Menu: JSON.stringify([{ group: 'Operations', order: 6, label: 'Stock Movements', icon: 'swap_horiz', route: '/operations/stock-movements', pageTitle: 'Stock Movements', pageDescription: 'Global ledger of inventory flows', show: true }]),
+  Menu: JSON.stringify([{ group: 'Operations', order: 6, label: 'Stock Movements', icon: 'swap_horiz', route: '/operation/stock-movements', pageTitle: 'Stock Movements', pageDescription: 'Global ledger of inventory flows', show: true }]),
   ```
 - [ ] Add a second menu item object to the array:
   ```javascript
   Menu: JSON.stringify([
-      { group: 'Operations', order: 6, label: 'Stock Movements', icon: 'swap_horiz', route: '/operations/stock-movements', pageTitle: 'Stock Movements', pageDescription: 'Global ledger of inventory flows', show: true },
-      { group: 'Warehouse', order: 1, label: 'Manage Stock', icon: 'inventory', route: '/operations/manage-stock', pageTitle: 'Manage Stock', pageDescription: 'Add, adjust, or directly enter stock movements', show: true }
+      { group: 'Operations', order: 6, label: 'Stock Movements', icon: 'swap_horiz', route: '/operation/stock-movements', pageTitle: 'Stock Movements', pageDescription: 'Global ledger of inventory flows', show: true },
+      { group: 'Warehouse', order: 1, label: 'Manage Stock', icon: 'inventory', route: '/operation/manage-stock', pageTitle: 'Manage Stock', pageDescription: 'Add, adjust, or directly enter stock movements', show: true }
   ]),
   ```
 - [ ] Do NOT change any other field of the StockMovements entry.
 
 **Files**: `GAS/syncAppResources.gs`
-**Rule**: The second menu item must have `group: 'Warehouse'` and `order: 1` so it appears at the top of the Warehouse group. The `route` must be `/operations/manage-stock` (matching the existing frontend route).
+**Rule**: The second menu item must have `group: 'Warehouse'` and `order: 1` so it appears at the top of the Warehouse group. The `route` must be `/operation/manage-stock` (matching the existing frontend route).
 
 ---
 
@@ -75,16 +75,16 @@ This plan relies on **Plan 1** (`2026-04-06-menu-column-object-to-array.md`) bei
 - [ ] Find the manage-stock route (currently around lines 48-51):
   ```javascript
   {
-    path: '/operations/manage-stock',
+    path: '/operation/manage-stock',
     component: () => import('pages/Warehouse/ManageStockPage.vue'),
     meta: { scope: 'operation', requiresAuth: true }
   },
   ```
-- [ ] This route is still valid and should **stay as-is**. The route guard in `router/index.js` will now find `StockMovements` resource (because its `menus` array includes a menu item with `route: '/operations/manage-stock'`), and access will be evaluated against `StockMovements` permissions.
+- [ ] This route is still valid and should **stay as-is**. The route guard in `router/index.js` will now find `StockMovements` resource (because its `menus` array includes a menu item with `route: '/operation/manage-stock'`), and access will be evaluated against `StockMovements` permissions.
 - [ ] **No code change needed in this step.** This is a verification step — confirm the route exists and is correct.
 
 **Files**: `FRONTENT/src/router/routes.js` (verify only)
-**Rule**: The route path `/operations/manage-stock` must match the menu item's `route` value exactly.
+**Rule**: The route path `/operation/manage-stock` must match the menu item's `route` value exactly.
 
 ---
 
@@ -278,3 +278,4 @@ This plan relies on **Plan 1** (`2026-04-06-menu-column-object-to-array.md`) bei
 - [ ] User: Check and clean `APP.RolePermissions` for ManageStock entries
 - [ ] User: Re-login and verify sidebar shows both StockMovements menu items
 - [ ] User: Test the Manage Stock wizard end-to-end
+

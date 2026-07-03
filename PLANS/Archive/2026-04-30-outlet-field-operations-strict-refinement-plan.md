@@ -1,4 +1,4 @@
-# PLAN: Outlet & Field Sales Operations Strict Refinement
+﻿# PLAN: Outlet & Field Sales Operations Strict Refinement
 **Status**: COMPLETED
 **Created**: 2026-04-30
 **Created By**: Brain Agent (Kilo Code)
@@ -62,7 +62,7 @@ Hard constraints from the refinement file:
 - [ ] Search for expanded visit-field references: `SalesUserCode`, `VisitDate`, `PlannedStartTime`, `PlannedEndTime`, `ActualStartTime`, `ActualEndTime`, `ProgressCompleted`, `ProgressPostponed`, `ProgressCancelled`, `PostponedFromVisitCode`, `NextVisitCode`, and `OutletVisitCode`.
 - [ ] Classify each hit as either: must remove for `OutletVisits`, allowed existing restock field, allowed non-visit resource field, or documentation that needs correction.
 - [ ] Do not edit `Outlets` or `OutletOperatingRules` implementation while doing this audit.
-**Files**: `GAS/setupOperationSheets.gs`, `GAS/syncAppResources.gs`, `FRONTENT/src/composables/operations/outlets/`, `FRONTENT/src/pages/Operations/OutletVisits/`, `Documents/OPERATION_SHEET_STRUCTURE.md`, `Documents/MODULE_WORKFLOWS.md`, `Documents/RESOURCE_COLUMNS_GUIDE.md`
+**Files**: `GAS/setupOperationSheets.gs`, `GAS/syncAppResources.gs`, `FRONTENT/src/composables/operation/outlets/`, `FRONTENT/src/pages/operation/OutletVisits/`, `Documents/OPERATION_SHEET_STRUCTURE.md`, `Documents/MODULE_WORKFLOWS.md`, `Documents/RESOURCE_COLUMNS_GUIDE.md`
 **Pattern**: Use targeted search/read before editing; do not broaden scope.
 **Rule**: Correction mode only; preserve compliant implementation.
 
@@ -85,7 +85,7 @@ Hard constraints from the refinement file:
 - [ ] Implement postpone visit as: validate reason/comment and new date, set current row `Status=POSTPONED` with `StatusComment`, create a new row with the same `OutletCode`, new `Date`, `Status=PLANNED`, and blank/new `StatusComment`; do not write any link columns.
 - [ ] Implement cancel visit with the simplified status/comment model. If the existing UI currently cancels only the current row, keep that unless the refinement discussion explicitly requires creating a replacement planned row; do not add link columns.
 - [ ] Keep pages thin: pages bind fields and call composable methods only; composables own validation, status decisions, and payload construction.
-**Files**: `FRONTENT/src/composables/operations/outlets/outletOperationsMeta.js`, `FRONTENT/src/composables/operations/outlets/useOutletVisits.js`, `FRONTENT/src/pages/Operations/OutletVisits/IndexPage.vue`, `FRONTENT/src/pages/Operations/OutletVisits/AddPage.vue`, `FRONTENT/src/pages/Operations/OutletVisits/ViewPage.vue`, outlet UI components only if labels/props currently say `Progress`.
+**Files**: `FRONTENT/src/composables/operation/outlets/outletOperationsMeta.js`, `FRONTENT/src/composables/operation/outlets/useOutletVisits.js`, `FRONTENT/src/pages/operation/OutletVisits/IndexPage.vue`, `FRONTENT/src/pages/operation/OutletVisits/AddPage.vue`, `FRONTENT/src/pages/operation/OutletVisits/ViewPage.vue`, outlet UI components only if labels/props currently say `Progress`.
 **Pattern**: Existing outlet composable + `useWorkflowStore` batch/update requests; `useResourceNav` for navigation.
 **Rule**: Components remain UI-only and no frontend layer bypasses services/stores.
 
@@ -95,7 +95,7 @@ Hard constraints from the refinement file:
 - [ ] For `OutletRestocks`, keep the existing parent/child structure and same-document revision behavior. Do not introduce new restock fields.
 - [ ] If restock UI currently requires selecting a visit, remove that requirement; an optional existing `OutletVisitCode` may remain blank unless Build Agent decides strict schema cleanup is safe.
 - [ ] Remove any new validation that depends on visits for restock/consumption eligibility.
-**Files**: `GAS/setupOperationSheets.gs`, `GAS/syncAppResources.gs`, `FRONTENT/src/composables/operations/outlets/outletRestockPayload.js`, `FRONTENT/src/composables/operations/outlets/useOutletRestocks.js`, `FRONTENT/src/composables/operations/outlets/outletConsumptionPayload.js`, `FRONTENT/src/composables/operations/outlets/useOutletConsumption.js`, related outlet restock/consumption pages.
+**Files**: `GAS/setupOperationSheets.gs`, `GAS/syncAppResources.gs`, `FRONTENT/src/composables/operation/outlets/outletRestockPayload.js`, `FRONTENT/src/composables/operation/outlets/useOutletRestocks.js`, `FRONTENT/src/composables/operation/outlets/outletConsumptionPayload.js`, `FRONTENT/src/composables/operation/outlets/useOutletConsumption.js`, related outlet restock/consumption pages.
 **Pattern**: Existing composite save payload builders; optional reference fields are not workflow gates.
 **Rule**: `OutletConsumption` is independent of visits and can be created anytime.
 
@@ -107,7 +107,7 @@ Hard constraints from the refinement file:
 - [ ] Keep `OutletDeliveries.DeliveredItemsJSON` as one JSON array of objects with lowercase keys exactly like `[ { "sku": "SKU1", "qty": 3 } ]`; update payload builder if it currently uses uppercase `SKU`/`Qty` keys or includes non-required keys in the stored JSON.
 - [ ] Do not create any delivery item child sheet.
 - [ ] Preserve `OutletMovements` and `OutletStorages` source-of-truth logic.
-**Files**: `FRONTENT/src/composables/operations/outlets/outletStockLogic.js`, `FRONTENT/src/composables/operations/outlets/outletRestockPayload.js`, `FRONTENT/src/composables/operations/outlets/useOutletRestocks.js`, `FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js`, `Documents/RESOURCE_COLUMNS_GUIDE.md`, `Documents/MODULE_WORKFLOWS.md`
+**Files**: `FRONTENT/src/composables/operation/outlets/outletStockLogic.js`, `FRONTENT/src/composables/operation/outlets/outletRestockPayload.js`, `FRONTENT/src/composables/operation/outlets/useOutletRestocks.js`, `FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js`, `Documents/RESOURCE_COLUMNS_GUIDE.md`, `Documents/MODULE_WORKFLOWS.md`
 **Pattern**: Delivery JSON is event snapshot; cumulative delivered truth is `OutletRestockItems.DeliveredQty`.
 **Rule**: No over-engineering, no schema drift, no added complexity.
 
@@ -206,10 +206,10 @@ Guarantee statement to include:
 - `GAS/setupOperationSheets.gs`
 - `GAS/syncAppResources.gs`
 - `GAS/Constants.gs`
-- `FRONTENT/src/composables/operations/outlets/`
-- `FRONTENT/src/pages/Operations/OutletVisits/`
-- `FRONTENT/src/pages/Operations/OutletConsumption/`
-- `FRONTENT/src/pages/Operations/OutletRestocks/`
+- `FRONTENT/src/composables/operation/outlets/`
+- `FRONTENT/src/pages/operation/OutletVisits/`
+- `FRONTENT/src/pages/operation/OutletConsumption/`
+- `FRONTENT/src/pages/operation/OutletRestocks/`
 - `Documents/OPERATION_SHEET_STRUCTURE.md`
 - `Documents/RESOURCE_COLUMNS_GUIDE.md`
 - `Documents/MODULE_WORKFLOWS.md`
@@ -254,3 +254,4 @@ Guarantee:
 - No added complexity.
 - No new sheets/resources/endpoints.
 - Fully aligned with the strict refinement rules and AQL architecture.
+

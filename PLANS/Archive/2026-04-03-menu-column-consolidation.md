@@ -1,4 +1,4 @@
-# PLAN: Consolidate Menu Columns into Single JSON Column
+﻿# PLAN: Consolidate Menu Columns into Single JSON Column
 **Status**: COMPLETED
 **Created**: 2026-04-03
 **Created By**: Solo Agent (Claude Code)
@@ -19,7 +19,7 @@ Replace 8 separate menu-related columns in APP.Resources (`MenuGroup`, `MenuOrde
   "order": 1,
   "label": "Products",
   "icon": "inventory_2",
-  "route": "/masters/products",
+  "route": "/master/products",
   "pageTitle": "Products",
   "pageDescription": "Manage product master records",
   "show": true
@@ -87,3 +87,4 @@ Replace 8 separate menu-related columns in APP.Resources (`MenuGroup`, `MenuOrde
 - [ ] Run `AQL > Setup & Refactor > Sync APP.Resources from Code` in the APP spreadsheet to apply new column schema
 - [ ] Run `AQL > Setup & Refactor > Setup APP Sheets` to rebuild column structure
 - [ ] Create new Web App deployment (API response shape unchanged, but GAS code changed)
+

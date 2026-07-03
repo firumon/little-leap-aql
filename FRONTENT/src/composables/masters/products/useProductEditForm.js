@@ -1,6 +1,6 @@
-import { computed, ref, watch } from 'vue'
+﻿import { computed, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
-import { useProductVariants, hasDuplicateVariantSet, validateSkuVariants } from 'src/composables/masters/products/useProductVariants'
+import { useProductVariants, hasDuplicateVariantSet, validateSkuVariants } from 'src/composables/master/products/useProductVariants'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useRecord } from 'src/composables/resources/useRecord'
 import { useCompositeForm } from 'src/composables/resources/useCompositeForm'
@@ -244,4 +244,5 @@ export function useProductEditForm() {
     navigateToList
   }
 }
+
 

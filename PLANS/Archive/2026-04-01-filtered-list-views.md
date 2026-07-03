@@ -42,14 +42,14 @@ This plan covers both:
   - `GAS/appMenu.gs`
   - `GAS/listViewsManager.html` (new)
 - Frontend index orchestration and reusable UI:
-  - `FRONTENT/src/pages/Masters/_common/IndexPage.vue`
-  - `FRONTENT/src/components/Masters/MasterListToolbar.vue` (unchanged purpose)
-  - `FRONTENT/src/components/Masters/MasterListViewSwitcher.vue` (new)
-  - `FRONTENT/src/components/Masters/MasterRecordCard.vue` (remove status badge)
+  - `FRONTENT/src/pages/master/_common/IndexPage.vue`
+  - `FRONTENT/src/components/master/MasterListToolbar.vue` (unchanged purpose)
+  - `FRONTENT/src/components/master/MasterListViewSwitcher.vue` (new)
+  - `FRONTENT/src/components/master/MasterRecordCard.vue` (remove status badge)
 - Frontend shared state logic:
   - `FRONTENT/src/composables/useListViews.js` (new)
   - `FRONTENT/src/composables/useResourceData.js` (minimal/no contract break)
-  - `FRONTENT/src/pages/Masters/Products/IndexPage.vue` (adopt shared list-view flow)
+  - `FRONTENT/src/pages/master/Products/IndexPage.vue` (adopt shared list-view flow)
 
 ## Pre-Conditions
 - [x] `Documents/MULTI_AGENT_PROTOCOL.md` reviewed.
@@ -184,7 +184,7 @@ This plan covers both:
 **Rule**: URL sync must preserve other query params.
 
 ### Step 6: Add Reusable View Switcher Section Component
-- [ ] Create `FRONTENT/src/components/Masters/MasterListViewSwitcher.vue`.
+- [ ] Create `FRONTENT/src/components/master/MasterListViewSwitcher.vue`.
 - [ ] Props:
   - `views` (array)
   - `activeViewName` (string)
@@ -197,12 +197,12 @@ This plan covers both:
   - show count per chip always
 - [ ] Hide component when `views.length === 0`.
 
-**Files**: `FRONTENT/src/components/Masters/MasterListViewSwitcher.vue` (new)
+**Files**: `FRONTENT/src/components/master/MasterListViewSwitcher.vue` (new)
 **Pattern**: Section card style aligned with existing Master list section cards.
 **Rule**: This section is independent of toolbar (to avoid custom-toolbar overhead).
 
 ### Step 7: Integrate View Switcher into Default Index Flow
-- [ ] Update `FRONTENT/src/pages/Masters/_common/IndexPage.vue`:
+- [ ] Update `FRONTENT/src/pages/master/_common/IndexPage.vue`:
   - keep toolbar search as-is
   - add ListViewSwitcher section between toolbar and records
   - wire `useListViews` with `items`, `resourceHeaders`, `config.ui.listViews`, `route/router`
@@ -211,26 +211,26 @@ This plan covers both:
 - [ ] Update section resolver defs to include new section key (`ListViewSwitcher`) and default component.
 - [ ] Ensure custom section overrides still work with 3-tier resolver.
 
-**Files**: `FRONTENT/src/pages/Masters/_common/IndexPage.vue`, `FRONTENT/src/composables/useSectionResolver.js` (if section-def behavior needs adjustment)
+**Files**: `FRONTENT/src/pages/master/_common/IndexPage.vue`, `FRONTENT/src/composables/useSectionResolver.js` (if section-def behavior needs adjustment)
 **Pattern**: Same orchestration pattern already used for existing index sections.
 **Rule**: Do not move list view chips into `MasterListToolbar.vue`.
 
 ### Step 8: Integrate with Products Custom Index (No Duplicate Logic)
-- [ ] Update `FRONTENT/src/pages/Masters/Products/IndexPage.vue` to use `useListViews` as shared source for view filtering.
+- [ ] Update `FRONTENT/src/pages/master/Products/IndexPage.vue` to use `useListViews` as shared source for view filtering.
 - [ ] Keep SKU-aware search behavior (product fields + SKU variants), but apply it on top of `viewFilteredItems`.
 - [ ] Remove old `showInactive`-based filtering from this page.
 - [ ] Add the same `MasterListViewSwitcher` section UI in this custom page.
 
-**Files**: `FRONTENT/src/pages/Masters/Products/IndexPage.vue`
+**Files**: `FRONTENT/src/pages/master/Products/IndexPage.vue`
 **Pattern**: Reuse shared composable, page-specific search logic remains only where needed.
 **Rule**: Custom pages must not re-implement filter-tree engine.
 
 ### Step 9: Remove Record-Level Status Chips from List Cards
-- [ ] Update `FRONTENT/src/components/Masters/MasterRecordCard.vue` to remove status badge.
-- [ ] Update `FRONTENT/src/pages/Masters/Products/IndexPage.vue` card layout to remove status badge there as well.
+- [ ] Update `FRONTENT/src/components/master/MasterRecordCard.vue` to remove status badge.
+- [ ] Update `FRONTENT/src/pages/master/Products/IndexPage.vue` card layout to remove status badge there as well.
 - [ ] Keep other meaningful badges (e.g., SKU count) where relevant.
 
-**Files**: `FRONTENT/src/components/Masters/MasterRecordCard.vue`, `FRONTENT/src/pages/Masters/Products/IndexPage.vue`
+**Files**: `FRONTENT/src/components/master/MasterRecordCard.vue`, `FRONTENT/src/pages/master/Products/IndexPage.vue`
 **Rule**: No status/progress chip on list item cards.
 
 ### Step 10: Documentation + Registry Updates (Mandatory)
@@ -323,10 +323,10 @@ This plan covers both:
 - `GAS/appMenu.gs`
 - `GAS/listViewsManager.html` (new)
 - `FRONTENT/src/composables/useListViews.js` (new)
-- `FRONTENT/src/components/Masters/MasterListViewSwitcher.vue` (new)
-- `FRONTENT/src/pages/Masters/_common/IndexPage.vue`
-- `FRONTENT/src/pages/Masters/Products/IndexPage.vue`
-- `FRONTENT/src/components/Masters/MasterRecordCard.vue`
+- `FRONTENT/src/components/master/MasterListViewSwitcher.vue` (new)
+- `FRONTENT/src/pages/master/_common/IndexPage.vue`
+- `FRONTENT/src/pages/master/Products/IndexPage.vue`
+- `FRONTENT/src/components/master/MasterRecordCard.vue`
 - `FRONTENT/src/components/REGISTRY.md`
 - `FRONTENT/src/composables/REGISTRY.md`
 - `Documents/RESOURCE_COLUMNS_GUIDE.md`
@@ -346,4 +346,5 @@ This plan covers both:
 
 ---
 Build Agent, read PLANS/2026-04-01-filtered-list-views.md and execute it end-to-end.
+
 

@@ -1,4 +1,4 @@
-# FIX: Menu, Error Alerts, CodePrefix Skip, Pricelist Expand
+﻿# FIX: Menu, Error Alerts, CodePrefix Skip, Pricelist Expand
 **Status**: COMPLETED
 **Created**: 2026-05-08
 **Created By**: Brain Agent (Kilo Code)
@@ -26,12 +26,12 @@ Source code reviewed:
 - `GAS/resourceRegistry.gs` `CodePrefix` registry read behavior
 - `FRONTENT/src/stores/workflow.js` response normalization
 - `FRONTENT/src/services/GasApiService.js` canonical GAS API error shape
-- `FRONTENT/src/pages/Masters/PriceLists/IndexPage.vue` current manual slide expansion UI
-- `FRONTENT/src/pages/Masters/_common/IndexPage.vue` generic list page
-- `FRONTENT/src/pages/Masters/_common/AddPage.vue` generic add page
+- `FRONTENT/src/pages/master/PriceLists/IndexPage.vue` current manual slide expansion UI
+- `FRONTENT/src/pages/master/_common/IndexPage.vue` generic list page
+- `FRONTENT/src/pages/master/_common/AddPage.vue` generic add page
 - `FRONTENT/src/composables/resources/useCompositeForm.js` current generic create/composite-save flow. Note: requested `FRONTENT/src/composables/resources/useResourceCrud.js` does not exist in this workspace; `useCompositeForm.js` is the current generic add/edit save composable used by common pages.
 - `FRONTENT/src/services/ResourceCrudService.js` current create/composite service calls
-- `FRONTENT/src/components/Masters/_common/MasterAddForm.vue` confirms generic add form sends all configured UIFields, including `Code` for Currencies and UOMs.
+- `FRONTENT/src/components/master/_common/MasterAddForm.vue` confirms generic add form sends all configured UIFields, including `Code` for Currencies and UOMs.
 
 ## Pre-Conditions
 - [ ] Build Agent is operating as Build Agent and may edit production code.
@@ -51,7 +51,7 @@ Source code reviewed:
 FROM:
 ```js
       AdditionalActions: '',
-      Menu: JSON.stringify([{"group":["Product"],"order":4,"label":"Currencies","icon":"attach_money","route":"/masters/currencies","pageTitle":"Currencies","pageDescription":"Manage currency master records","show":true}]),
+      Menu: JSON.stringify([{"group":["Product"],"order":4,"label":"Currencies","icon":"attach_money","route":"/master/currencies","pageTitle":"Currencies","pageDescription":"Manage currency master records","show":true}]),
       UIFields: JSON.stringify([
           { header: 'Code', label: 'Code', type: 'text', required: true, hint: 'e.g. AED, INR, USD' },
           { header: 'Name', label: 'Name', type: 'text', required: true },
@@ -60,7 +60,7 @@ FROM:
 TO:
 ```js
       AdditionalActions: '',
-      Menu: JSON.stringify([{"group":["Masters"],"order":1,"label":"Currencies","icon":"attach_money","route":"/masters/currencies","pageTitle":"Currencies","pageDescription":"Manage currency master records","show":true}]),
+      Menu: JSON.stringify([{"group":["Masters"],"order":1,"label":"Currencies","icon":"attach_money","route":"/master/currencies","pageTitle":"Currencies","pageDescription":"Manage currency master records","show":true}]),
       UIFields: JSON.stringify([
           { header: 'Code', label: 'Code', type: 'text', required: true, hint: 'e.g. AED, INR, USD' },
           { header: 'Name', label: 'Name', type: 'text', required: true },
@@ -86,7 +86,7 @@ npm run gas:push
 **Files**:
 - `FRONTENT/src/composables/useApiErrorNotify.js` (new)
 - `FRONTENT/src/composables/resources/useCompositeForm.js`
-- `FRONTENT/src/composables/masters/priceLists/usePriceListEditor.js`
+- `FRONTENT/src/composables/master/priceLists/usePriceListEditor.js`
 
 **Pattern**: Business/UI side effects belong in composables. Services remain raw data providers. Stores continue normalizing state and responses, but do not import Quasar UI. Components remain UI-only and do not call services/stores directly.
 
@@ -256,7 +256,7 @@ Rationale:
 
 - [ ] 2.3 Adopt fallback in Price List editor saves for header, inline price, and item price writes.
 
-File: `FRONTENT/src/composables/masters/priceLists/usePriceListEditor.js`
+File: `FRONTENT/src/composables/master/priceLists/usePriceListEditor.js`
 
 FROM:
 ```js
@@ -264,7 +264,7 @@ import { ref, computed } from 'vue'
 import { useAuthStore } from 'src/stores/auth'
 import { useDataStore } from 'src/stores/data'
 import { useWorkflowStore } from 'src/stores/workflow'
-import { parseVariantTypes } from 'src/composables/masters/products/useProductVariants'
+import { parseVariantTypes } from 'src/composables/master/products/useProductVariants'
 ```
 
 TO:
@@ -273,7 +273,7 @@ import { ref, computed } from 'vue'
 import { useAuthStore } from 'src/stores/auth'
 import { useDataStore } from 'src/stores/data'
 import { useWorkflowStore } from 'src/stores/workflow'
-import { parseVariantTypes } from 'src/composables/masters/products/useProductVariants'
+import { parseVariantTypes } from 'src/composables/master/products/useProductVariants'
 import { useApiErrorNotify } from 'src/composables/useApiErrorNotify'
 ```
 
@@ -379,7 +379,7 @@ Rationale:
 ### Step 3: Skip CodePrefix generation when payload supplies Code
 **Files**:
 - `GAS/resourceApi.gs`
-- `FRONTENT/src/components/Masters/_common/MasterAddForm.vue` (read-only verification; no edit required)
+- `FRONTENT/src/components/master/_common/MasterAddForm.vue` (read-only verification; no edit required)
 - `FRONTENT/src/composables/resources/useCompositeForm.js` (read-only verification from Step 2; no additional payload edit required)
 
 **Pattern**: Existing code already uses `resolveCodeValue({ record })` in bulk upsert and `extractProvidedHeaderValues(...)` for header-driven writes. Keep those helpers and only branch around code generation.
@@ -536,8 +536,8 @@ npm run gas:push
 
 ### Step 4: Make Price List cards expand/collapse reliably
 **Files**:
-- `FRONTENT/src/pages/Masters/PriceLists/IndexPage.vue`
-- `FRONTENT/src/composables/masters/priceLists/usePriceListEditor.js`
+- `FRONTENT/src/pages/master/PriceLists/IndexPage.vue`
+- `FRONTENT/src/composables/master/priceLists/usePriceListEditor.js`
 
 **Pattern**: Keep business/edit state in the Price List editor composable. The page renders UI and binds expansion state via composable functions. Use a per-record boolean binding derived from the row Code.
 
@@ -549,7 +549,7 @@ npm run gas:push
 
 - [ ] 4.1 Add composable helpers for unique per-record expansion state.
 
-File: `FRONTENT/src/composables/masters/priceLists/usePriceListEditor.js`
+File: `FRONTENT/src/composables/master/priceLists/usePriceListEditor.js`
 
 FROM:
 ```js
@@ -605,7 +605,7 @@ Rationale:
 
 - [ ] 4.2 Replace the manual `q-card-section` + `q-slide-transition` expansion block with `q-expansion-item` bound to the row code.
 
-File: `FRONTENT/src/pages/Masters/PriceLists/IndexPage.vue`
+File: `FRONTENT/src/pages/master/PriceLists/IndexPage.vue`
 
 FROM:
 ```vue
@@ -713,7 +713,7 @@ Rationale:
 
 - [ ] 4.3 Add a small style hook for expansion header spacing if needed.
 
-File: `FRONTENT/src/pages/Masters/PriceLists/IndexPage.vue`
+File: `FRONTENT/src/pages/master/PriceLists/IndexPage.vue`
 
 FROM:
 ```vue
@@ -803,7 +803,7 @@ If execution is interrupted, the next agent reads this plan, finds the first unc
 - [~] Step 1.5 refreshed/re-logged frontend session for new sidebar metadata (handed off to user)
 - [x] Step 2.1 created `FRONTENT/src/composables/useApiErrorNotify.js`
 - [x] Step 2.2 adopted fallback in `FRONTENT/src/composables/resources/useCompositeForm.js`
-- [x] Step 2.3 adopted fallback in `FRONTENT/src/composables/masters/priceLists/usePriceListEditor.js`
+- [x] Step 2.3 adopted fallback in `FRONTENT/src/composables/master/priceLists/usePriceListEditor.js`
 - [x] Step 3.1 updated `handleResourceCreateRecord()` in `GAS/resourceApi.gs`
 - [x] Step 3.2 updated `compositeSave` parent create branch in `GAS/resourceApi.gs`
 - [x] Step 3.3 confirmed no bulk upsert codePrefix guard change is needed
@@ -823,8 +823,8 @@ If execution is interrupted, the next agent reads this plan, finds the first unc
 - `GAS/resourceApi.gs`
 - `FRONTENT/src/composables/useApiErrorNotify.js`
 - `FRONTENT/src/composables/resources/useCompositeForm.js`
-- `FRONTENT/src/composables/masters/priceLists/usePriceListEditor.js`
-- `FRONTENT/src/pages/Masters/PriceLists/IndexPage.vue`
+- `FRONTENT/src/composables/master/priceLists/usePriceListEditor.js`
+- `FRONTENT/src/pages/master/PriceLists/IndexPage.vue`
 - `FRONTENT/src/composables/REGISTRY.md`
 
 ### Validation Performed
@@ -842,3 +842,4 @@ If execution is interrupted, the next agent reads this plan, finds the first unc
 - [ ] APP spreadsheet: `AQL 🚀 > 📚 Resources > Regenerate App Cache`
 - [ ] Frontend user: re-login/refresh session after cache regeneration
 - [ ] Web App redeployment is NOT required because the API contract did not change; only backend behavior changed inside existing handlers.
+

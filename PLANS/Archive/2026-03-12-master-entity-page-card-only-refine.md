@@ -1,4 +1,4 @@
-# PLAN: Master Entity Page Card-Only Refinement
+﻿# PLAN: Master Entity Page Card-Only Refinement
 **Status**: COMPLETED
 **Created**: 2026-03-12
 **Created By**: Brain Agent
@@ -25,21 +25,21 @@ Refine `MasterEntityPage.vue` to a card-only list experience (no table), with a 
 ### Step 1: Convert list view to card-only
 - [x] Remove desktop table rendering and keep single responsive card list for all screen sizes.
 - [x] Preserve filtering/search/list behavior.
-**Files**: `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+**Files**: `FRONTENT/src/pages/master/MasterEntityPage.vue`
 **Pattern**: Existing generic master fetch + form dialogs.
 **Rule**: No data flow or API contract regression.
 
 ### Step 2: Add detail popup and simplify card content
 - [x] Show only key summary text in card list (Code + primary text + status).
 - [x] Add detail dialog opening on card click with full field view and Edit CTA.
-**Files**: `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+**Files**: `FRONTENT/src/pages/master/MasterEntityPage.vue`
 **Pattern**: Existing dialog-driven UX.
 **Rule**: Edit flow remains through existing update dialog logic.
 
 ### Step 3: Tone down top area and harmonize styling
 - [x] Replace oversized hero with compact header.
 - [x] Use softer neutral palette aligned with overall layout.
-**Files**: `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+**Files**: `FRONTENT/src/pages/master/MasterEntityPage.vue`
 **Pattern**: Quasar-first components + scoped CSS.
 **Rule**: Keep UI attractive but less visually heavy.
 
@@ -65,7 +65,7 @@ Refine `MasterEntityPage.vue` to a card-only list experience (no table), with a 
 - [x] `[!]` Issue/blocker: None.
 
 ### Files Actually Changed
-- `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+- `FRONTENT/src/pages/master/MasterEntityPage.vue`
 - `PLANS/2026-03-12-master-entity-page-card-only-refine.md`
 
 ### Validation Performed
@@ -73,4 +73,5 @@ Refine `MasterEntityPage.vue` to a card-only list experience (no table), with a 
 - [x] Acceptance criteria verified.
 
 ### Manual Actions Required
-- [ ] Reload frontend and verify `/masters/products` and `/masters/warehouses` list/add/edit/detail interactions.
+- [ ] Reload frontend and verify `/master/products` and `/master/warehouses` list/add/edit/detail interactions.
+

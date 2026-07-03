@@ -1,4 +1,4 @@
-# Initialization: AQL Sheet Menu Actions & Setup Scripts
+﻿# Initialization: AQL Sheet Menu Actions & Setup Scripts
 
 > **Scope boundary**: This document covers modifying, configuring, and adding items to the Google Sheets AQL custom menu (`AQL 🚀`), managing admin dialogs, handling menu-triggered GAS callbacks, and running the setup/refactoring scripts that initialize sheet schemas. **DO NOT** load any frontend codebase files under `FRONTENT/` or frontend-only docs/specs when the task is restricted to sheet menu/setup scripts, to keep memory footprint and token consumption minimal.
 
@@ -43,7 +43,7 @@ The custom AQL menu actions primarily create, read, update, or toggle records in
 When creating forms or dialogs editing the `Resources` sheet, you must handle the following columns which accept JSON arrays/objects:
 - **`Menu`**: JSON array of objects representing frontend sidebar entries. For example:
   ```json
-  [{"group":["Masters"],"order":1,"label":"SKUs","icon":"grid_on","route":"/masters/skus","pageTitle":"SKUs","pageDescription":"Manage SKUs","show":true}]
+  [{"group":["Masters"],"order":1,"label":"SKUs","icon":"grid_on","route":"/master/skus","pageTitle":"SKUs","pageDescription":"Manage SKUs","show":true}]
   ```
   *Rule*: The dialog edit form typically updates the first array item and preserves the rest of the array via a hidden field `_menuArrayFull` (see [appMenu.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/appMenu.gs#L357-L375) mapping).
 - **`UIFields`**: JSON array of fields defining form properties.
@@ -95,3 +95,4 @@ When creating or modifying admin dialogs rendered inside Google Sheets:
    - Input sample values and verify that loading states appear during submit.
    - Verify that data is correctly written to the sheet and validation errors are handled gracefully in the dialog.
 3. **Setup and Sync Run**: Run `Sync APP.Resources from Code` or `Refactor APP Sheets` to confirm configuration consistency and zero metadata drifts.
+

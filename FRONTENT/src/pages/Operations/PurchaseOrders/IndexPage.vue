@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding>
 <div class="row items-center q-mb-md">
   <div class="text-h6">Purchase Orders</div>
@@ -82,7 +82,7 @@
 
 <script setup>
 import { computed, onMounted } from 'vue';
-import { usePurchaseOrderIndex } from '../../../composables/operations/purchaseOrders/usePurchaseOrderIndex.js';
+import { usePurchaseOrderIndex } from '../../../composables/operation/purchaseOrders/usePurchaseOrderIndex.js';
 import ReloadButton from '../../../components/shared/ReloadButton.vue';
 import { useResourceReload } from '../../../composables/resources/useResourceReload.js';
 
@@ -113,3 +113,4 @@ onMounted(() => {
   poIndex.reload();
 });
 </script>
+

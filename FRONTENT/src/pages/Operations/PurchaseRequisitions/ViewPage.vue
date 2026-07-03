@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="pr-view-page">
     <div v-if="loading" class="page-state column items-center justify-center">
       <q-spinner-dots color="primary" size="40px" />
@@ -133,7 +133,7 @@ import { ref, computed, watch } from 'vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useRecord } from 'src/composables/resources/useRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { useProcurements } from 'src/composables/operations/procurements/useProcurements'
+import { useProcurements } from 'src/composables/operation/procurements/useProcurements'
 import PurchaseRequisitionEditablePage from './PurchaseRequisitionEditablePage.vue'
 import PurchaseRequisitionReviewPage from './PurchaseRequisitionReviewPage.vue'
 
@@ -213,3 +213,4 @@ watch(() => [resourceName.value, code.value], async ([name, prCode]) => {
   color: #334155;
 }
 </style>
+

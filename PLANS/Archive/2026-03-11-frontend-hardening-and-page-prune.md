@@ -1,4 +1,4 @@
-# PLAN: Frontend Hardening And Page Prune
+﻿# PLAN: Frontend Hardening And Page Prune
 **Status**: COMPLETED
 **Created**: 2026-03-11
 **Created By**: Brain Agent
@@ -11,7 +11,7 @@ Remove duplicate API toasts, protect loading flags, and simplify the frontend to
 - User confirmed only these pages are needed now:
   - `FRONTENT/src/pages/AuthPage/LoginPage.vue`
   - `FRONTENT/src/pages/ProfilePage/ProfilePage.vue`
-  - `FRONTENT/src/pages/Masters/ProductsPage.vue`
+  - `FRONTENT/src/pages/master/ProductsPage.vue`
 - Other pages were test pages and must be removed.
 - Review identified duplicate toast risk because `callGasApi` now emits centralized notifications while some pages still emit local error/success notifications for the same API result.
 - Review also flagged loading-state hardening gaps where async flows are not protected with `try/finally`.
@@ -30,14 +30,14 @@ Remove duplicate API toasts, protect loading flags, and simplify the frontend to
   - Prevent duplicate page-level error toasts for the same API failure in active pages.
 - [x] Refactor `LoginPage.vue`, `ProfilePage.vue`, and `ProductsPage.vue` so each API failure/success emits exactly one user-visible message.
 - [x] Keep local validation toasts (form validation before API call) if needed; only remove duplicated server-response toasts.
-**Files**: `FRONTENT/src/services/gasApi.js`, `FRONTENT/src/pages/AuthPage/LoginPage.vue`, `FRONTENT/src/pages/ProfilePage/ProfilePage.vue`, `FRONTENT/src/pages/Masters/ProductsPage.vue`
+**Files**: `FRONTENT/src/services/gasApi.js`, `FRONTENT/src/pages/AuthPage/LoginPage.vue`, `FRONTENT/src/pages/ProfilePage/ProfilePage.vue`, `FRONTENT/src/pages/master/ProductsPage.vue`
 **Pattern**: Centralized API lifecycle through `callGasApi` and component-level validation feedback.
 **Rule**: No duplicate notifications for a single backend outcome.
 
 ### Step 2: Add loading-flag protection in active pages
 - [x] Ensure async actions in active pages always reset loading flags via `try/finally` (or equivalent robust guard).
 - [x] Verify all user-visible loaders in the 3 retained pages cannot remain stuck on unexpected runtime exceptions.
-**Files**: `FRONTENT/src/pages/AuthPage/LoginPage.vue`, `FRONTENT/src/pages/ProfilePage/ProfilePage.vue`, `FRONTENT/src/pages/Masters/ProductsPage.vue`
+**Files**: `FRONTENT/src/pages/AuthPage/LoginPage.vue`, `FRONTENT/src/pages/ProfilePage/ProfilePage.vue`, `FRONTENT/src/pages/master/ProductsPage.vue`
 **Pattern**: Existing `finally` usage in login and master save/reload flows.
 **Rule**: Loading state must be fail-safe.
 
@@ -120,3 +120,4 @@ Remove duplicate API toasts, protect loading flags, and simplify the frontend to
 
 ### Manual Actions Required
 - [x] Wait for browser Hot Module Reload or restart Node server manually to refresh route dependencies.
+

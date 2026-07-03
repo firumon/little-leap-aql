@@ -208,11 +208,13 @@ export const useDataStore = defineStore('data', () => {
         headerToParent[expectedHdr] = parentStr
       }
       ;(r.headers || []).forEach(h => {
-        if (h === 'Code' || h === 'ParentCode' || !h.endsWith('Code')) return
+        if (h === 'Code' || !h.endsWith('Code')) return
         const stem = h.slice(0, -4)
         const plural = pluralize(stem)
         if (resourceNames.includes(plural)) {
           headerToParent[h] = plural
+        } else if (plural === 'Parents') {
+          headerToParent[h] = r.name
         }
       })
       resourceParents[r.name] = Array.from(new Set(Object.values(headerToParent)))

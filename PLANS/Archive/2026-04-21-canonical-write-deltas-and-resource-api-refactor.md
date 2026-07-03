@@ -1,4 +1,4 @@
-# PLAN: Canonical Write Deltas and Resource API Refactor
+﻿# PLAN: Canonical Write Deltas and Resource API Refactor
 **Status**: COMPLETED
 **Created**: 2026-04-21
 **Created By**: Solo Agent (Codex)
@@ -48,7 +48,7 @@ Align AQL API contracts so all write actions use nested payloads and return delt
 - [x] Build `lastUpdatedAtByResource` on write requests from IDB metadata.
 - [x] Send only canonical nested payload shapes for writes.
 - [x] Switch batch result consumption to `data.result.responses` while relying on generic `data.resources` ingestion.
-**Files**: `FRONTENT/src/services/ResourceCrudService.js`, `FRONTENT/src/stores/workflow.js`, `FRONTENT/src/composables/operations/stock/useStockMovements.js`, `FRONTENT/src/composables/operations/purchaseRequisitions/usePurchaseRequisitionCreateFlow.js`
+**Files**: `FRONTENT/src/services/ResourceCrudService.js`, `FRONTENT/src/stores/workflow.js`, `FRONTENT/src/composables/operation/stock/useStockMovements.js`, `FRONTENT/src/composables/operation/purchaseRequisitions/usePurchaseRequisitionCreateFlow.js`
 **Pattern**: `ResourceFetchService` cursor collection and `GasApiService` resource ingestion flow
 **Rule**: No action-specific response parser; JSON structure-driven handling
 
@@ -96,8 +96,8 @@ Align AQL API contracts so all write actions use nested payloads and return delt
 - `GAS/stockMovements.gs`
 - `FRONTENT/src/services/ResourceCrudService.js`
 - `FRONTENT/src/stores/workflow.js`
-- `FRONTENT/src/composables/operations/stock/useStockMovements.js`
-- `FRONTENT/src/composables/operations/purchaseRequisitions/usePurchaseRequisitionCreateFlow.js`
+- `FRONTENT/src/composables/operation/stock/useStockMovements.js`
+- `FRONTENT/src/composables/operation/purchaseRequisitions/usePurchaseRequisitionCreateFlow.js`
 - `Documents/GAS_API_CAPABILITIES.md`
 - `Documents/ARCHITECTURE.md`
 - `Documents/GAS_PATTERNS.md`
@@ -111,3 +111,4 @@ Align AQL API contracts so all write actions use nested payloads and return delt
 
 ### Manual Actions Required
 - [x] Create a new Apps Script Web App deployment version because API contract behavior changed.
+

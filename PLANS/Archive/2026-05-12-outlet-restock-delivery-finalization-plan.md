@@ -1,4 +1,4 @@
-# PLAN: Outlet Restock & Delivery Finalization
+﻿# PLAN: Outlet Restock & Delivery Finalization
 **Status**: COMPLETED
 **Created**: 2026-05-12
 **Created By**: Brain Agent (Codex)
@@ -23,10 +23,10 @@ Required pre-reads completed for this plan:
 - `Documents/ARCHITECTURE RULES.md`
 - `Documents/RESOURCE_COLUMNS_GUIDE.md`
 - `Documents/OPERATION_CUSTOMIZATION.md`
-- all files under `FRONTENT/src/composables/operations/outlets/`
-- all files under `FRONTENT/src/pages/Operations/OutletRestocks/`
-- all files under `FRONTENT/src/pages/Operations/OutletDeliveries/`
-- all files under `FRONTENT/src/components/Operations/Outlets/`
+- all files under `FRONTENT/src/composables/operation/outlets/`
+- all files under `FRONTENT/src/pages/operation/OutletRestocks/`
+- all files under `FRONTENT/src/pages/operation/OutletDeliveries/`
+- all files under `FRONTENT/src/components/operation/Outlets/`
 - required GAS snippets/files: `GAS/syncAppResources.gs`, `GAS/setupOperationSheets.gs`, `GAS/Constants.gs`, `GAS/stockMovements.gs`, `GAS/outletMovements.gs`
 
 Current worktree observation:
@@ -92,10 +92,10 @@ Important implementation decision:
 - [ ] In `outletDeliveryPayload.js`, verify OD create uses a batch/composite pattern that correctly links child `OutletDeliveryItems` to the newly created `OutletDeliveries` parent. If `compositeSaveRequest` children auto-link parent codes, keep it. If not, use explicit `$ref` helpers and `textOrRef()` correctly.
 - [ ] In `outletDeliveryPayload.js`, verify OD cancel sets OD `Progress=CANCELLED`. Decide whether `Status` should stay `Active` for history visibility or become `Inactive`; prefer `Active` unless the product explicitly wants cancelled deliveries hidden from active lists.
 - [ ] In `outletDeliveryPayload.js`, verify `buildOdDeliverBatchRequests` derives OD progress from all active ODIs after the target ODI is delivered and derives restock progress from all active ORSI rows for that restock.
-**Files**: `FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js`, `outletStockLogic.js`, `outletRestockPayload.js`, `useOutletRestocks.js`, `useOutletDeliveries.js`, `outletDeliveryPayload.js`
+**Files**: `FRONTENT/src/composables/operation/outlets/outletOperationsBatch.js`, `outletStockLogic.js`, `outletRestockPayload.js`, `useOutletRestocks.js`, `useOutletDeliveries.js`, `outletDeliveryPayload.js`
 **Pattern**: Business logic and payload construction stay in composables/helpers; no stores/services imported into pages/components.
 **Rule**: Batch refs must use `batchRef`/`textOrRef`; do not stringify `$ref` values.
-**Verification**: `rg -n "StorageAllocationJSON|ItemsJSON|scheduleDelivery|deliverRestock|cancelDelivery|router\\.push" FRONTENT/src/composables/operations/outlets FRONTENT/src/pages/Operations/OutletDeliveries FRONTENT/src/pages/Operations/OutletRestocks`
+**Verification**: `rg -n "StorageAllocationJSON|ItemsJSON|scheduleDelivery|deliverRestock|cancelDelivery|router\\.push" FRONTENT/src/composables/operation/outlets FRONTENT/src/pages/operation/OutletDeliveries FRONTENT/src/pages/operation/OutletRestocks`
 
 ### Step 3: Phase 2 - Finish Frontend Components
 - [ ] Verify `OutletProgressChip.vue` works through `progressMeta` for `PENDING`, `ALLOCATED`, `DRAFT`, `IN_TRANSIT`, `COMPLETED`, and `DELIVERED`.
@@ -110,10 +110,10 @@ Important implementation decision:
 - [ ] In `AvailableOrsiPanel.vue`, ensure it supports the expected searchable/filterable list through the parent `searchTerm` and displays outlet, SKU/product, quantity, warehouse, and storage.
 - [ ] In `OutletDeliveryItemRow.vue`, require optional delivery comment from the parent dialog only; component should just emit the row.
 - [ ] In `OutletDeliverySummaryPanel.vue`, verify header summary uses OD header plus derived ODI/ORSI summary.
-**Files**: `FRONTENT/src/components/Operations/Outlets/OutletProgressChip.vue`, `RestockApprovalView.vue`, `OrsiAllocationRow.vue`, `RestockReadonlyView.vue`, `RestockDraftView.vue`, `RestockCard.vue`, `AvailableOrsiPanel.vue`, `OutletDeliveryItemRow.vue`, `OutletDeliverySummaryPanel.vue`
+**Files**: `FRONTENT/src/components/operation/Outlets/OutletProgressChip.vue`, `RestockApprovalView.vue`, `OrsiAllocationRow.vue`, `RestockReadonlyView.vue`, `RestockDraftView.vue`, `RestockCard.vue`, `AvailableOrsiPanel.vue`, `OutletDeliveryItemRow.vue`, `OutletDeliverySummaryPanel.vue`
 **Pattern**: Components are presentation-only and emit events to pages/composables.
 **Rule**: Components must not import stores/services or perform API work.
-**Verification**: `rg -n "from '../../../stores|from '../../../services|StorageAllocationJSON|allocations|allocationTotal" FRONTENT/src/components/Operations/Outlets`
+**Verification**: `rg -n "from '../../../stores|from '../../../services|StorageAllocationJSON|allocations|allocationTotal" FRONTENT/src/components/operation/Outlets`
 
 ### Step 4: Phase 3 - Finish Frontend Pages
 - [ ] In `OutletRestocks/IndexPage.vue`, remove or rework the old "Pending Delivery" section. The plan preference is to remove it because OD is no longer tied to one restock; delivery readiness now belongs in the OD add/list flow via ALLOCATED ORSI rows.
@@ -123,10 +123,10 @@ Important implementation decision:
 - [ ] In `OutletDeliveries/AddPage.vue`, verify selected ORSI rows create an OD draft and navigate to view.
 - [ ] In `OutletDeliveries/ViewPage.vue`, verify item delivery, deliver-all, and draft cancellation actions call the composable and reload/refresh correctly after success.
 - [ ] In all touched pages, keep navigation through `useResourceNav` via composables. Do not introduce direct `router.push()`.
-**Files**: `FRONTENT/src/pages/Operations/OutletRestocks/AddPage.vue`, `IndexPage.vue`, `ViewPage.vue`, `FRONTENT/src/pages/Operations/OutletDeliveries/AddPage.vue`, `IndexPage.vue`, `ViewPage.vue`
+**Files**: `FRONTENT/src/pages/operation/OutletRestocks/AddPage.vue`, `IndexPage.vue`, `ViewPage.vue`, `FRONTENT/src/pages/operation/OutletDeliveries/AddPage.vue`, `IndexPage.vue`, `ViewPage.vue`
 **Pattern**: Pages are thin orchestration shells.
 **Rule**: Business logic stays in `useOutletRestocks` and `useOutletDeliveries`.
-**Verification**: `rg -n "router\\.push|StorageAllocationJSON|ItemsJSON|OutletRestockCode|WarehouseCode.*OutletDeliveries" FRONTENT/src/pages/Operations/OutletRestocks FRONTENT/src/pages/Operations/OutletDeliveries`
+**Verification**: `rg -n "router\\.push|StorageAllocationJSON|ItemsJSON|OutletRestockCode|WarehouseCode.*OutletDeliveries" FRONTENT/src/pages/operation/OutletRestocks FRONTENT/src/pages/operation/OutletDeliveries`
 
 ### Step 5: Phase 4 - Deploy, Setup, and Data Reset
 - [ ] Run `npm run gas:push` after GAS changes.
@@ -217,27 +217,27 @@ If execution is interrupted, the next agent reads this plan, finds the first unc
 - `GAS/Constants.gs`
 - `GAS/syncAppResources.gs`
 - `GAS/setupOperationSheets.gs`
-- `FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js`
-- `FRONTENT/src/composables/operations/outlets/outletStockLogic.js`
-- `FRONTENT/src/composables/operations/outlets/outletRestockPayload.js`
-- `FRONTENT/src/composables/operations/outlets/outletDeliveryPayload.js`
-- `FRONTENT/src/composables/operations/outlets/useOutletRestocks.js`
-- `FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js`
-- `FRONTENT/src/components/Operations/Outlets/OutletProgressChip.vue`
-- `FRONTENT/src/components/Operations/Outlets/RestockApprovalView.vue`
-- `FRONTENT/src/components/Operations/Outlets/OrsiAllocationRow.vue`
-- `FRONTENT/src/components/Operations/Outlets/RestockReadonlyView.vue`
-- `FRONTENT/src/components/Operations/Outlets/RestockDraftView.vue`
-- `FRONTENT/src/components/Operations/Outlets/RestockCard.vue`
-- `FRONTENT/src/components/Operations/Outlets/AvailableOrsiPanel.vue`
-- `FRONTENT/src/components/Operations/Outlets/OutletDeliveryItemRow.vue`
-- `FRONTENT/src/components/Operations/Outlets/OutletDeliverySummaryPanel.vue`
-- `FRONTENT/src/pages/Operations/OutletRestocks/AddPage.vue`
-- `FRONTENT/src/pages/Operations/OutletRestocks/IndexPage.vue`
-- `FRONTENT/src/pages/Operations/OutletRestocks/ViewPage.vue`
-- `FRONTENT/src/pages/Operations/OutletDeliveries/AddPage.vue`
-- `FRONTENT/src/pages/Operations/OutletDeliveries/IndexPage.vue`
-- `FRONTENT/src/pages/Operations/OutletDeliveries/ViewPage.vue`
+- `FRONTENT/src/composables/operation/outlets/outletOperationsBatch.js`
+- `FRONTENT/src/composables/operation/outlets/outletStockLogic.js`
+- `FRONTENT/src/composables/operation/outlets/outletRestockPayload.js`
+- `FRONTENT/src/composables/operation/outlets/outletDeliveryPayload.js`
+- `FRONTENT/src/composables/operation/outlets/useOutletRestocks.js`
+- `FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js`
+- `FRONTENT/src/components/operation/Outlets/OutletProgressChip.vue`
+- `FRONTENT/src/components/operation/Outlets/RestockApprovalView.vue`
+- `FRONTENT/src/components/operation/Outlets/OrsiAllocationRow.vue`
+- `FRONTENT/src/components/operation/Outlets/RestockReadonlyView.vue`
+- `FRONTENT/src/components/operation/Outlets/RestockDraftView.vue`
+- `FRONTENT/src/components/operation/Outlets/RestockCard.vue`
+- `FRONTENT/src/components/operation/Outlets/AvailableOrsiPanel.vue`
+- `FRONTENT/src/components/operation/Outlets/OutletDeliveryItemRow.vue`
+- `FRONTENT/src/components/operation/Outlets/OutletDeliverySummaryPanel.vue`
+- `FRONTENT/src/pages/operation/OutletRestocks/AddPage.vue`
+- `FRONTENT/src/pages/operation/OutletRestocks/IndexPage.vue`
+- `FRONTENT/src/pages/operation/OutletRestocks/ViewPage.vue`
+- `FRONTENT/src/pages/operation/OutletDeliveries/AddPage.vue`
+- `FRONTENT/src/pages/operation/OutletDeliveries/IndexPage.vue`
+- `FRONTENT/src/pages/operation/OutletDeliveries/ViewPage.vue`
 - `Documents/RESOURCE_COLUMNS_GUIDE.md`
 - `Documents/OPERATION_SHEET_STRUCTURE.md`
 - `Documents/MODULE_WORKFLOWS.md`
@@ -262,3 +262,4 @@ If execution is interrupted, the next agent reads this plan, finds the first unc
 
 ## Build Handoff
 Build Agent, read `PLANS/2026-05-12-outlet-restock-delivery-finalization-plan.md` and execute it end-to-end.
+

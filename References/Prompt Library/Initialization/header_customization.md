@@ -1,4 +1,4 @@
-# AQL Unified Header Customization Guide (Initialization)
+﻿# AQL Unified Header Customization Guide (Initialization)
 
 Use this document to initialize an AI agent session when the task involves customizing, overriding, or debugging the resource header across any page (Index, Add, Edit, View, Action) in the AQL repository.
 
@@ -54,7 +54,7 @@ The `back` property defined in a local JS modifier override (`Header.js`) is hig
 ### Pattern 1: JS Logic Modifier (Tiers 7 & 8 only — Preferred for prop changes)
 Create a `.js` file to modify the header props. You only need to return the properties you want to override; [useCommonSection.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useCommonSection.js) automatically merges and evaluates them, passing `(resourceRecord, resourceConfig)` context as the first two arguments to any function values.
 
-#### `src/components/Masters/Products/Index/Header.js`
+#### `src/components/master/Products/Index/Header.js`
 ```javascript
 export default {
   // Override title/label and subtitle/caption (using resourceRecord and resourceConfig)
@@ -80,7 +80,7 @@ To customize the template structure or slots while preserving the standard layou
 > [!IMPORTANT]
 > **To prevent parent orchestrator attributes from overriding your local properties, you MUST use `defineOptions({ inheritAttrs: false })` and bind `$attrs` BEFORE specifying your overrides.**
 
-#### `src/components/Masters/Products/Index/Header.vue`
+#### `src/components/master/Products/Index/Header.vue`
 ```html
 <template>
   <GenericHeaderPanel
@@ -110,7 +110,7 @@ defineOptions({ inheritAttrs: false })
 ### Pattern 3: Complete Custom Override (Tiers 1-8)
 To completely bypass the standard layout, write a standard Vue template:
 
-#### `src/components/Masters/Products/Index/Header.vue`
+#### `src/components/master/Products/Index/Header.vue`
 ```html
 <template>
   <q-banner class="bg-primary text-white q-pa-md rounded-borders">
@@ -121,3 +121,4 @@ To completely bypass the standard layout, write a standard Vue template:
   </q-banner>
 </template>
 ```
+

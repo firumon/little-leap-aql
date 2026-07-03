@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding>
     <div class="row items-center q-mb-md"><div class="text-h6">Goods Receipts</div><q-space /><q-input v-model="searchTerm" dense outlined placeholder="Search GRNs..." class="q-mr-sm" /><ReloadButton /></div>
     <q-linear-progress v-if="loading && !shouldBlockUi" color="primary" indeterminate class="q-mb-sm" />
@@ -12,7 +12,7 @@
 
 <script setup>
 import { computed, onMounted } from 'vue'
-import { useGoodsReceiptIndex } from '../../../composables/operations/goodsReceipts/useGoodsReceiptIndex.js'
+import { useGoodsReceiptIndex } from '../../../composables/operation/goodsReceipts/useGoodsReceiptIndex.js'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
 import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
 
@@ -23,3 +23,4 @@ const { items, activeItems, inactiveItems, loading, searchTerm, reload, navigate
 const shouldBlockUi = computed(() => loading.value && hasUninitiatedDependencies.value)
 onMounted(() => reload())
 </script>
+

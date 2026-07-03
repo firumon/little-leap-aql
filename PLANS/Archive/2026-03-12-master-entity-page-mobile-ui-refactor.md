@@ -1,4 +1,4 @@
-# PLAN: Master Entity Page Mobile UI Refactor
+﻿# PLAN: Master Entity Page Mobile UI Refactor
 **Status**: COMPLETED
 **Created**: 2026-03-12
 **Created By**: Brain Agent
@@ -22,21 +22,21 @@ Refactor `MasterEntityPage.vue` to deliver a stunning, attractive, and easy-to-u
 ### Step 1: Redesign layout for mobile-first usability
 - [x] Add a hero/header section with stronger visual hierarchy and summary context.
 - [x] Add quick actions optimized for touch (new/create, refresh, inactive toggle, search).
-**Files**: `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+**Files**: `FRONTENT/src/pages/master/MasterEntityPage.vue`
 **Pattern**: Quasar-first components; preserve existing route/resource resolution.
 **Rule**: Mobile-first UX while retaining desktop usability.
 
 ### Step 2: Improve record presentation and interaction
 - [x] Add mobile card list rendering for records with fast edit action.
 - [x] Keep desktop table rendering but improve readability and spacing.
-**Files**: `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+**Files**: `FRONTENT/src/pages/master/MasterEntityPage.vue`
 **Pattern**: Existing CRUD/form logic remains unchanged.
 **Rule**: No regression in create/update/list behavior.
 
 ### Step 3: Add polished styling and motion
 - [x] Introduce purposeful color direction, gradients, and subtle entry animations.
 - [x] Apply consistent component styling tokens to keep UI modern and cohesive.
-**Files**: `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+**Files**: `FRONTENT/src/pages/master/MasterEntityPage.vue`
 **Pattern**: Scoped CSS with design tokens.
 **Rule**: Attractive visual upgrade with practical performance and clarity.
 
@@ -62,7 +62,7 @@ Refactor `MasterEntityPage.vue` to deliver a stunning, attractive, and easy-to-u
 - [x] `[!]` Issue/blocker: None.
 
 ### Files Actually Changed
-- `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+- `FRONTENT/src/pages/master/MasterEntityPage.vue`
 - `PLANS/2026-03-12-master-entity-page-mobile-ui-refactor.md`
 
 ### Validation Performed
@@ -70,4 +70,5 @@ Refactor `MasterEntityPage.vue` to deliver a stunning, attractive, and easy-to-u
 - [x] Acceptance criteria verified.
 
 ### Manual Actions Required
-- [ ] Reload frontend and validate `/masters/products` and `/masters/warehouses` on mobile viewport.
+- [ ] Reload frontend and validate `/master/products` and `/master/warehouses` on mobile viewport.
+

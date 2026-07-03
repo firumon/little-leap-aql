@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding class="aql-page-container">
     <!-- Header + Reload -->
     <div class="row items-center justify-between no-wrap q-mb-md">
@@ -158,7 +158,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useWarehouseTransfers } from '../../../composables/operations/warehouseTransfers/useWarehouseTransfers.js'
+import { useWarehouseTransfers } from '../../../composables/operation/warehouseTransfers/useWarehouseTransfers.js'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
 import HeaderPanel from 'components/shared/HeaderPanel.vue'
@@ -243,3 +243,4 @@ function onTransferClick(transfer) {
 
 onMounted(() => reload())
 </script>
+

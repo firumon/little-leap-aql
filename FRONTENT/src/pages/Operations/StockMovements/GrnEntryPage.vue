@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding>
     <div class="q-mb-md">
       <h1 class="text-h5 q-mt-none q-mb-sm">GRN Stock Entry</h1>
@@ -83,8 +83,8 @@
 
 <script setup>
 import { computed, onMounted } from 'vue'
-import GrnStockEntryGrid from 'src/components/Operations/StockMovements/GrnStockEntryGrid.vue'
-import { useGrnStockEntry } from 'src/composables/operations/stock/useGrnStockEntry'
+import GrnStockEntryGrid from 'src/components/operation/StockMovements/GrnStockEntryGrid.vue'
+import { useGrnStockEntry } from 'src/composables/operation/stock/useGrnStockEntry'
 
 const {
   loading,
@@ -117,3 +117,4 @@ const pageCaption = computed(() => {
 
 onMounted(() => loadInitialData())
 </script>
+

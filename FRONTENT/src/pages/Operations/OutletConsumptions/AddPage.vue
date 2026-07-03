@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page class="column no-scroll">
     <HeaderPanel title="Record Outlet Consumption" subtitle="Count stock and submit outlet side effects." class="q-pa-md" />
 
@@ -65,12 +65,12 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { useOutletConsumption } from '../../../composables/operations/outlets/useOutletConsumption.js'
+import { useOutletConsumption } from '../../../composables/operation/outlets/useOutletConsumption.js'
 import StepProgressIndicator from '../../../components/shared/StepProgressIndicator.vue'
 import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
-import OutletConsumptionContextStep from '../../../components/Operations/Outlets/OutletConsumption/OutletConsumptionContextStep.vue'
-import OutletConsumptionStockCountStep from '../../../components/Operations/Outlets/OutletConsumption/OutletConsumptionStockCountStep.vue'
-import OutletConsumptionSummaryStep from '../../../components/Operations/Outlets/OutletConsumption/OutletConsumptionSummaryStep.vue'
+import OutletConsumptionContextStep from '../../../components/operation/Outlets/OutletConsumption/OutletConsumptionContextStep.vue'
+import OutletConsumptionStockCountStep from '../../../components/operation/Outlets/OutletConsumption/OutletConsumptionStockCountStep.vue'
+import OutletConsumptionSummaryStep from '../../../components/operation/Outlets/OutletConsumption/OutletConsumptionSummaryStep.vue'
 
 defineOptions({ name: 'OutletConsumptionAddPage' })
 
@@ -143,4 +143,5 @@ onMounted(async () => {
   }
 })
 </script>
+
 

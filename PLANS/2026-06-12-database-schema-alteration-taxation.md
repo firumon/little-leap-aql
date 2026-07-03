@@ -1,4 +1,4 @@
-# PLAN: Database Schema Alteration, Invoicing Taxation, and Return Prices
+﻿# PLAN: Database Schema Alteration, Invoicing Taxation, and Return Prices
 **Status**: COMPLETED
 **Created**: 2026-06-12
 **Created By**: Brain Agent (Antigravity)
@@ -151,7 +151,7 @@ Find lines 58-73 (CONFIG.MASTER_SHEETS.SKUS UIFields / defaults) and replace wit
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{"group":["Product"],"order":2,"label":"SKUs","icon":"style","route":"/masters/skus","pageTitle":"SKUs","pageDescription":"Manage sellable SKUs (child variants of a product)","show":true}]),
+        Menu: JSON.stringify([{"group":["Product"],"order":2,"label":"SKUs","icon":"style","route":"/master/skus","pageTitle":"SKUs","pageDescription":"Manage sellable SKUs (child variants of a product)","show":true}]),
         UIFields: JSON.stringify([
             { header: 'ProductCode', label: 'Product Code', type: 'text', required: true },
             { header: 'Variant1', label: 'Variant 1', type: 'text' },
@@ -172,7 +172,7 @@ Find lines 229-244 (CONFIG.MASTER_SHEETS.SUPPLIERS UIFields / defaults) and repl
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{"group":["Procurement"],"order":1,"label":"Suppliers","icon":"business","route":"/masters/suppliers","pageTitle":"Suppliers","pageDescription":"Manage supplier master records","show":true}]),
+        Menu: JSON.stringify([{"group":["Procurement"],"order":1,"label":"Suppliers","icon":"business","route":"/master/suppliers","pageTitle":"Suppliers","pageDescription":"Manage supplier master records","show":true}]),
         UIFields: JSON.stringify([
             { header: 'Name', label: 'Name', type: 'text', required: true },
             { header: 'Country', label: 'Country', type: 'text' },
@@ -197,8 +197,8 @@ Find lines 265-284 (CONFIG.MASTER_SHEETS.WAREHOUSES UIFields / defaults) and rep
             {"action":"ViewStock","label":"View Stock","icon":"inventory","color":"primary","kind":"navigate","confirm":false,"navigate":{"target":"record-page","pageSlug":"stock"}}
         ]),
         Menu: JSON.stringify([
-            {"group":["Warehouse"],"order":1,"label":"Manage","icon":"warehouse","route":"/masters/warehouses","pageTitle":"Warehouses","pageDescription":"Manage warehouse master records","show":true},
-            {"group":["Warehouse"],"order":2,"label":"Stock List","icon":"inventory_2","route":"/masters/warehouses/stock-list","pageTitle":"Warehouse Stock List","pageDescription":"Select a warehouse and view current stock","show":true}
+            {"group":["Warehouse"],"order":1,"label":"Manage","icon":"warehouse","route":"/master/warehouses","pageTitle":"Warehouses","pageDescription":"Manage warehouse master records","show":true},
+            {"group":["Warehouse"],"order":2,"label":"Stock List","icon":"inventory_2","route":"/master/warehouses/stock-list","pageTitle":"Warehouse Stock List","pageDescription":"Select a warehouse and view current stock","show":true}
         ]),
         UIFields: JSON.stringify([
             { header: 'Name', label: 'Name', type: 'text', required: true },
@@ -221,8 +221,8 @@ Find lines 305-329 (CONFIG.MASTER_SHEETS.OUTLETS UIFields / defaults) and replac
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
         Menu: JSON.stringify([
-            {"group":["Outlet Operations"],"order":1,"label":"Outlets","icon":"storefront","route":"/masters/outlets","pageTitle":"Outlets","pageDescription":"Manage outlet master records","show":true},
-            {"group":["Field Sales"],"order":1,"label":"Outlet Hub","icon":"hub","route":"/masters/outlets/operations-hub","pageTitle":"Outlet Hub","pageDescription":"Outlet-centric view of visits, restocks, returns, invoices, and payments","show":true}
+            {"group":["Outlet Operations"],"order":1,"label":"Outlets","icon":"storefront","route":"/master/outlets","pageTitle":"Outlets","pageDescription":"Manage outlet master records","show":true},
+            {"group":["Field Sales"],"order":1,"label":"Outlet Hub","icon":"hub","route":"/master/outlets/operation-hub","pageTitle":"Outlet Hub","pageDescription":"Outlet-centric view of visits, restocks, returns, invoices, and payments","show":true}
         ]),
         UIFields: JSON.stringify([
             { header: 'Name', label: 'Name', type: 'text', required: true },
@@ -265,7 +265,7 @@ Find line 955 (CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICE_ITEMS DefaultV
 ### Step 3: Frontend Invoices and Returns Payload Helpers (Payload JS)
 Update the save request builders in the frontend to compile all calculated item taxation and invoice-level fields properly.
 
-#### [MODIFY] [outletConsumptionPayload.js](file:///F:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/operations/outlets/outletConsumptionPayload.js)
+#### [MODIFY] [outletConsumptionPayload.js](file:///F:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/operation/outlets/outletConsumptionPayload.js)
 Replace lines 46-72 with the following snippet:
 ```javascript
 export function buildConsumptionInvoiceRequest(consumptionCode, form = {}, { priceListCode = '', subtotal = 0, discount = 0, totalTaxableAmount = 0, totalTaxAmount = 0, taxDetails = '[]', returnDeductionTotal = 0, outletReturnCodes = '' } = {}) {
@@ -309,7 +309,7 @@ export function buildConsumptionInvoiceItemsRequest(invoiceCodeOrRef, items = []
 ### Step 4: Frontend Invoices Pricing Logic
 Update the net total invoice computation.
 
-#### [MODIFY] [outletConsumptionPricing.js](file:///F:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/operations/outlets/outletConsumptionPricing.js)
+#### [MODIFY] [outletConsumptionPricing.js](file:///F:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/operation/outlets/outletConsumptionPricing.js)
 Replace lines 96-98 with:
 ```javascript
 export function getInvoiceTotal(inv = {}) {
@@ -322,7 +322,7 @@ export function getInvoiceTotal(inv = {}) {
 ### Step 5: Frontend Returns Logic (useOutletReturns JS)
 Ensure `Price` is resolved and saved when creating a return. We need to fetch `PriceList`, `PriceListItems`, and `OutletOperatingRules` first.
 
-#### [MODIFY] [useOutletReturns.js](file:///F:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/operations/outlets/useOutletReturns.js)
+#### [MODIFY] [useOutletReturns.js](file:///F:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/operation/outlets/useOutletReturns.js)
 Add imports at the top of the file (after line 11):
 ```javascript
 import { resolvePriceListCode, resolvePriceListLookup, resolveSkuPrice } from './outletConsumptionPricing.js'
@@ -392,7 +392,7 @@ Replace lines 193-214 with the following snippet to resolve and attach return un
 ### Step 6: Frontend Consumption Workflow Logic (useOutletConsumption JS)
 Implement tax pre-computation, proportional discount allocation, and JSON tax summary breakdown generation when generating or updating an invoice.
 
-#### [MODIFY] [useOutletConsumption.js](file:///F:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/operations/outlets/useOutletConsumption.js)
+#### [MODIFY] [useOutletConsumption.js](file:///F:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/operation/outlets/useOutletConsumption.js)
 Add imports at the top of the file (after line 23):
 ```javascript
 import { useTaxCalculator } from '../../../useTaxCalculator.js'
@@ -705,7 +705,7 @@ Replace `updateInvoice` function body (lines 768-792) to support re-calculating 
 ### Step 7: Frontend Consumption Invoices Add Page
 Modify `AddPage.vue` to compute line-level and grouped taxation dynamically using `useTaxCalculator` and lock manual editing of the `Tax` field.
 
-#### [MODIFY] [AddPage.vue](file:///F:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/Operations/OutletConsumptionInvoices/AddPage.vue)
+#### [MODIFY] [AddPage.vue](file:///F:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/operation/OutletConsumptionInvoices/AddPage.vue)
 Add imports at the top of the script tag (around line 86):
 ```javascript
 import { useDataStore } from '../../../stores/data.js'
@@ -836,7 +836,7 @@ Replace lines 170-179 in `saveInvoice` function to send the updated calculated i
 ### Step 8: Frontend Consumption Invoices View Page
 Modify `ViewPage.vue` to compute taxation breakdown dynamically on edit, disable manual editing of tax, and show the JSON `TaxDetails` breakdown under the summary list.
 
-#### [MODIFY] [ViewPage.vue](file:///F:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/Operations/OutletConsumptionInvoices/ViewPage.vue)
+#### [MODIFY] [ViewPage.vue](file:///F:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/operation/OutletConsumptionInvoices/ViewPage.vue)
 Add imports at the top of the script tag (around line 280):
 ```javascript
 import { useDataStore } from '../../../stores/data.js'
@@ -973,12 +973,12 @@ async function saveEdit() {
 - `GAS/setupMasterSheets.gs`
 - `GAS/setupOperationSheets.gs`
 - `GAS/syncAppResources.gs`
-- `FRONTENT/src/composables/operations/outlets/outletConsumptionPayload.js`
-- `FRONTENT/src/composables/operations/outlets/outletConsumptionPricing.js`
-- `FRONTENT/src/composables/operations/outlets/useOutletReturns.js`
-- `FRONTENT/src/composables/operations/outlets/useOutletConsumption.js`
-- `FRONTENT/src/pages/Operations/OutletConsumptionInvoices/AddPage.vue`
-- `FRONTENT/src/pages/Operations/OutletConsumptionInvoices/ViewPage.vue`
+- `FRONTENT/src/composables/operation/outlets/outletConsumptionPayload.js`
+- `FRONTENT/src/composables/operation/outlets/outletConsumptionPricing.js`
+- `FRONTENT/src/composables/operation/outlets/useOutletReturns.js`
+- `FRONTENT/src/composables/operation/outlets/useOutletConsumption.js`
+- `FRONTENT/src/pages/operation/OutletConsumptionInvoices/AddPage.vue`
+- `FRONTENT/src/pages/operation/OutletConsumptionInvoices/ViewPage.vue`
 
 ### Validation Performed
 - [ ] Build compiled successfully using: `npm --prefix FRONTENT run build`
@@ -989,3 +989,4 @@ async function saveEdit() {
 - [ ] Run `AQL 🚀 > 🛠️ Setup & Maintenance > Refactor MASTER Sheets`
 - [ ] Run `AQL 🚀 > 🛠️ Setup & Maintenance > Refactor Operation Sheets`
 - [ ] Run `AQL 🚀 > 🔄 Sync & Cache > Regenerate App Cache`
+

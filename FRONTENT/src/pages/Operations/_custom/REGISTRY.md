@@ -1,17 +1,17 @@
-# Custom Page Registry
+﻿# Custom Page Registry
 
-Purpose: track tenant-specific full-page overrides under `pages/Operations/_custom/`.
+Purpose: track tenant-specific full-page overrides under `pages/operation/_custom/`.
 
 ## How It Works
 
 When `APP.Resources.CustomUIName` is set for a resource (e.g. `A2930`), the `ActionResolverPage` checks for a custom page at:
 
 ```
-pages/Operations/_custom/{CustomUIName}/{Entity}.vue          → Index page
-pages/Operations/_custom/{CustomUIName}/{Entity}{Action}.vue  → View/Add/Edit/Action pages
+pages/operation/_custom/{CustomUIName}/{Entity}.vue          → Index page
+pages/operation/_custom/{CustomUIName}/{Entity}{Action}.vue  → View/Add/Edit/Action pages
 ```
 
-If no custom page is found, resolution falls through to entity-custom (`pages/Operations/{Entity}/`) then to the default (`pages/Operations/_common/`).
+If no custom page is found, resolution falls through to entity-custom (`pages/operation/{Entity}/`) then to the default (`pages/operation/_common/`).
 
 Full architecture reference: `Documents/MODULE_WORKFLOWS.md` Section 3.
 
@@ -38,8 +38,8 @@ Examples:
 
 | Scenario | Use |
 |----------|-----|
-| Page layout/structure itself needs to change (e.g. different section order, extra panels) | Full page override here (`pages/Operations/_custom/`) |
-| Only 1-2 sections need changes (e.g. different header layout) | Section override in `components/Operations/_custom/` instead |
+| Page layout/structure itself needs to change (e.g. different section order, extra panels) | Full page override here (`pages/operation/_custom/`) |
+| Only 1-2 sections need changes (e.g. different header layout) | Section override in `components/operation/_custom/` instead |
 | Both page and sections are custom | Full page only (it controls its own sections) |
 
 ## Guidelines
@@ -56,3 +56,4 @@ Examples:
 | CustomUIName | Entity | Action | Description | Path |
 |---|---|---|---|---|
 | _(none yet)_ | | | | |
+

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="sq-index">
     <q-card flat bordered>
       <q-card-section class="q-pa-sm">
@@ -78,7 +78,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { useSupplierQuotationIndex } from 'src/composables/operations/supplierQuotations/useSupplierQuotationIndex'
+import { useSupplierQuotationIndex } from 'src/composables/operation/supplierQuotations/useSupplierQuotationIndex'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
 import { useResourceReload } from 'src/composables/resources/useResourceReload'
 
@@ -119,3 +119,4 @@ const shouldBlockUi = computed(() => loading.value && hasUninitiatedDependencies
   height: 58px;
 }
 </style>
+

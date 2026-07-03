@@ -1,4 +1,4 @@
-# PLAN: Restore Core Pages And Routes
+﻿# PLAN: Restore Core Pages And Routes
 **Status**: COMPLETED
 **Created**: 2026-03-11
 **Created By**: Brain Agent
@@ -11,7 +11,7 @@ Correct only the mistaken deletion scope by restoring required pages and route a
 - User correction after execution:
   - Must preserve `FRONTENT/src/pages/AuthPage/LandingPage.vue`
   - Must preserve `FRONTENT/src/pages/Dashboard/DashboardIndex.vue`
-  - Must preserve `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+  - Must preserve `FRONTENT/src/pages/master/MasterEntityPage.vue`
   - Must preserve `FRONTENT/src/pages/AuthPage/LoginPage.vue`
   - Must preserve their related routes.
 - Route behavior requirement:
@@ -20,7 +20,7 @@ Correct only the mistaken deletion scope by restoring required pages and route a
 - Current state after latest execution:
   - These files are deleted.
   - Router currently maps `/` directly to login and `/dashboard` directly to `ProductsPage`.
-  - Generic dynamic master route `/masters/:resourceSlug` was replaced by static products route.
+  - Generic dynamic master route `/master/:resourceSlug` was replaced by static products route.
 - User expectation: clean codebase without messy/unreferenced leftovers.
 
 ## Pre-Conditions
@@ -34,7 +34,7 @@ Correct only the mistaken deletion scope by restoring required pages and route a
 - [x] Restore `LandingPage.vue`, `DashboardIndex.vue`, and `MasterEntityPage.vue` from repository history (same functional version as before deletion).
 - [x] Restore only necessary dependencies for these pages if they were removed, avoiding reintroducing unrelated test-only pages.
 - [x] Validate restored pages compile and keep Quasar-first component usage.
-**Files**: `FRONTENT/src/pages/AuthPage/LandingPage.vue`, `FRONTENT/src/pages/Dashboard/DashboardIndex.vue`, `FRONTENT/src/pages/Masters/MasterEntityPage.vue`, plus any required dependencies if missing
+**Files**: `FRONTENT/src/pages/AuthPage/LandingPage.vue`, `FRONTENT/src/pages/Dashboard/DashboardIndex.vue`, `FRONTENT/src/pages/master/MasterEntityPage.vue`, plus any required dependencies if missing
 **Pattern**: Existing pre-deletion route/page architecture.
 **Rule**: Restore only user-requested core pages; do not bring back unrelated test pages unless technically required.
 
@@ -44,7 +44,7 @@ Correct only the mistaken deletion scope by restoring required pages and route a
   - `process.env.DEV === true`: if authenticated then redirect to `/dashboard`, else redirect to `/login`.
   - `process.env.DEV !== true`: redirect to `/landing`.
 - [x] Restore dashboard default route to `DashboardIndex.vue` under `/dashboard`.
-- [x] Restore generic master route `/masters/:resourceSlug` to use `MasterEntityPage.vue`.
+- [x] Restore generic master route `/master/:resourceSlug` to use `MasterEntityPage.vue`.
 - [x] Keep `/profile` route active.
 - [x] Remove redundant conflicting product-only route if generic master route covers products.
 - [x] Ensure wildcard route behavior remains valid and does not reference deleted pages.
@@ -56,7 +56,7 @@ Correct only the mistaken deletion scope by restoring required pages and route a
 - [x] Do not roll back `gasApi`/auth/products/profile hardening done in previous plan unless strictly required for compile/runtime fix.
 - [x] Ensure restoring `MasterEntityPage` integrates with current shared API behavior without reintroducing duplicate toasts.
 - [x] Keep current `LoginPage.vue` implementation unless a route coupling fix is mandatory.
-**Files**: `FRONTENT/src/services/gasApi.js`, `FRONTENT/src/pages/AuthPage/LoginPage.vue`, `FRONTENT/src/pages/ProfilePage/ProfilePage.vue`, `FRONTENT/src/pages/Masters/ProductsPage.vue`, `FRONTENT/src/pages/Masters/MasterEntityPage.vue`, `FRONTENT/src/services/masterRecords.js`, `FRONTENT/src/stores/auth.js`
+**Files**: `FRONTENT/src/services/gasApi.js`, `FRONTENT/src/pages/AuthPage/LoginPage.vue`, `FRONTENT/src/pages/ProfilePage/ProfilePage.vue`, `FRONTENT/src/pages/master/ProductsPage.vue`, `FRONTENT/src/pages/master/MasterEntityPage.vue`, `FRONTENT/src/services/masterRecords.js`, `FRONTENT/src/stores/auth.js`
 **Pattern**: Centralized API lifecycle + page-level validation-only notifications.
 **Rule**: Scope-limited correction only; no unnecessary rollback.
 
@@ -97,7 +97,7 @@ Correct only the mistaken deletion scope by restoring required pages and route a
 ## Post-Execution Notes (Build Agent fills this)
 ### Progress Log
 - [x] Step 1 completed: Checked out `LandingPage`, `DashboardIndex` and `MasterEntityPage`. Also supplied 5 stubbed `Dashboard/widgets/*` to satisfy the defined `DashboardIndex.vue` dynamic `import` definitions.
-- [x] Step 2 completed: Rewrote `routes.js` exactly matching dev vs prod routing environment conditionals, assigning index accurately, adding the generic `/masters/:resourceSlug` master list path.
+- [x] Step 2 completed: Rewrote `routes.js` exactly matching dev vs prod routing environment conditionals, assigning index accurately, adding the generic `/master/:resourceSlug` master list path.
 - [x] Step 3 completed: Removed duplicate error notifications manually emitted from `MasterEntityPage.vue`'s CRUD functions because they are correctly handled at the global `callGasApi` utility.
 - [x] Step 4 completed: Verified and compiled utilizing Vite / Quasar CLI (`npm run build -m pwa`). 
 - [x] Step 5 completed: Updated `CONTEXT_HANDOFF.md` and `FRONTENT_README.md` to indicate the newly returned / dashboard and landing state routing.
@@ -124,3 +124,4 @@ Correct only the mistaken deletion scope by restoring required pages and route a
 
 ### Manual Actions Required
 - [x] Next time you restart `npm run dev` you will have `/landing`, `/dashboard` and dynamic routes back online.
+

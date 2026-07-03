@@ -5,7 +5,7 @@
 **Executed By**: Solo Agent (Codex | COMPLETED)
 
 ## Objective
-Implement the full card-based Manage Stock UX for `/operations/manage-stock` so stock entry/editing is compact, non-blocking, and aligned with operator workflow.
+Implement the full card-based Manage Stock UX for `/operation/manage-stock` so stock entry/editing is compact, non-blocking, and aligned with operator workflow.
 
 ## Context
 - Current Step 2 uses a wide table with horizontal scrolling and blocking submit overlay.
@@ -82,3 +82,4 @@ Implement the full card-based Manage Stock UX for `/operations/manage-stock` so 
 
 ### Manual Actions Required
 - [ ] Re-login and validate Manage Stock UX in browser on desktop + mobile widths.
+

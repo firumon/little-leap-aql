@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+﻿import { ref, computed } from 'vue'
 import { useRecord } from '../../resources/useRecord.js'
 import { useResourceNav } from '../../resources/useResourceNav.js'
 import { useResourceConfig } from '../../resources/useResourceConfig.js'
@@ -6,7 +6,7 @@ import { useResourceIoStore } from 'src/stores/resourceIo'
 import { active, formatDate, sortTime, text, visitProgress } from './outletOperationsMeta.js'
 import { toNumber } from './outletStockLogic.js'
 import { getInvoiceRemaining } from './outletConsumptionPricing.js'
-import { useProductSkuResolver } from '../../masters/products/useProductSkuResolver.js'
+import { useProductSkuResolver } from '../../master/products/useProductSkuResolver.js'
 
 const RECENT_WINDOW_DAYS = 14
 const RECENT_RECORD_LIMIT = 4
@@ -274,3 +274,4 @@ export function useOutletHub() {
     RECENT_RECORD_LIMIT
   }
 }
+

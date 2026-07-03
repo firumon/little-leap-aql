@@ -1,4 +1,4 @@
-# PLAN: Purchase Order Runtime Contract Fixes
+﻿# PLAN: Purchase Order Runtime Contract Fixes
 **Status**: COMPLETED
 **Created**: 2026-04-26
 **Created By**: Brain Agent (Codex GPT-5)
@@ -35,9 +35,9 @@ Relevant implementation references:
 - `FRONTENT/src/composables/resources/useResourceConfig.js`
 - `FRONTENT/src/stores/workflow.js`
 - `FRONTENT/src/services/ResourceCrudService.js`
-- `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationCreateFlow.js`
-- `FRONTENT/src/composables/operations/rfqs/useRFQCreateFlow.js`
-- `FRONTENT/src/composables/operations/purchaseRequisitions/purchaseRequisitionPayload.js`
+- `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationCreateFlow.js`
+- `FRONTENT/src/composables/operation/rfqs/useRFQCreateFlow.js`
+- `FRONTENT/src/composables/operation/purchaseRequisitions/purchaseRequisitionPayload.js`
 
 Source of truth:
 - `useResourceData` must be instantiated per resource, for example `const purchaseOrders = useResourceData(ref('PurchaseOrders'))`.
@@ -71,25 +71,25 @@ Out of scope:
 
 ## File Plan
 
-### `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderIndex.js`
+### `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderIndex.js`
 - Action: modify.
 - Purpose: align index flow with current resource/nav composables.
 - Related functions: `usePurchaseOrderIndex`, `reload`, `navigateTo`, `navigateToAdd`.
 - Dependencies: `useResourceData`, `useResourceConfig`, `useResourceNav`, `purchaseOrderMeta.js`.
 
-### `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderCreateFlow.js`
+### `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderCreateFlow.js`
 - Action: modify.
 - Purpose: align create flow with current resource/nav/batch/composite contracts.
 - Related functions: `usePurchaseOrderCreateFlow`, `loadData`, `selectQuotation`, `save`, `cancel`.
 - Dependencies: `useResourceData`, `useWorkflowStore`, `useResourceNav`, PO payload/quantity/totals helpers.
 
-### `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderView.js`
+### `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderView.js`
 - Action: modify.
 - Purpose: align view flow with current route/resource/nav/action contracts.
 - Related functions: `usePurchaseOrderView`, `loadData`, `runAction`, `goToList`.
 - Dependencies: `useResourceConfig`, `isActionVisible`, `useResourceData`, `useWorkflowStore`, `useResourceNav`, PO metadata/payload helpers.
 
-### `FRONTENT/src/composables/operations/purchaseOrders/purchaseOrderPayload.js`
+### `FRONTENT/src/composables/operation/purchaseOrders/purchaseOrderPayload.js`
 - Action: modify only if needed.
 - Purpose: support object-valued `ExtraChargesBreakup` in `parseCharges` if totals/action fixes expose stale total behavior.
 - Related functions: `parseCharges`, `stringifyCharges`.
@@ -104,7 +104,7 @@ Out of scope:
 ## Function-by-Function Plan
 
 ### `usePurchaseOrderIndex`
-- File: `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderIndex.js`
+- File: `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderIndex.js`
 - Purpose: provide PO index state using current resource API.
 - Inputs: none.
 - Outputs: keep the existing return names expected by `IndexPage.vue`: `permissions`, `items`, `loading`, `searchTerm`, `groups`, `totalVisible`, `reload`, `isGroupExpanded`, `toggleGroup`, `navigateTo`, `navigateToAdd`, `supplierName`, `formatDate`, `formatCurrency`.
@@ -115,7 +115,7 @@ Out of scope:
 - Connections: `IndexPage.vue` consumes this directly.
 
 ### `reload`
-- File: `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderIndex.js`
+- File: `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderIndex.js`
 - Purpose: refresh PO index dependencies.
 - Inputs: optional `forceSync = false`.
 - Outputs: promise.
@@ -126,7 +126,7 @@ Out of scope:
 - Connections: refresh button in `IndexPage.vue`.
 
 ### `navigateTo`
-- File: `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderIndex.js`
+- File: `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderIndex.js`
 - Purpose: navigate to PO view.
 - Inputs: PO row.
 - Outputs: none.
@@ -137,7 +137,7 @@ Out of scope:
 - Connections: PO cards/table rows.
 
 ### `navigateToAdd`
-- File: `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderIndex.js`
+- File: `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderIndex.js`
 - Purpose: navigate to PO add page.
 - Inputs: none.
 - Outputs: none.
@@ -148,7 +148,7 @@ Out of scope:
 - Connections: index FAB.
 
 ### `usePurchaseOrderCreateFlow`
-- File: `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderCreateFlow.js`
+- File: `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderCreateFlow.js`
 - Purpose: provide PO creation workflow using current resource and batch contracts.
 - Inputs: none.
 - Outputs: preserve existing return names consumed by `AddPage.vue`.
@@ -159,7 +159,7 @@ Out of scope:
 - Connections: `AddPage.vue`, PO payload/quantity/totals helpers.
 
 ### `loadData`
-- File: `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderCreateFlow.js`
+- File: `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderCreateFlow.js`
 - Purpose: load all resources needed to create a PO.
 - Inputs: optional `forceSync = false`.
 - Outputs: promise.
@@ -170,7 +170,7 @@ Out of scope:
 - Connections: page `onMounted`.
 
 ### `selectQuotation`
-- File: `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderCreateFlow.js`
+- File: `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderCreateFlow.js`
 - Purpose: hydrate PO form/items from selected SupplierQuotation.
 - Inputs: selected quotation code.
 - Outputs: mutates `selectedQuotationCode`, `form`, `items`.
@@ -181,7 +181,7 @@ Out of scope:
 - Connections: Add page quotation select.
 
 ### `responseFailed`
-- File: `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderCreateFlow.js` and optionally duplicated in `usePurchaseOrderView.js`.
+- File: `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderCreateFlow.js` and optionally duplicated in `usePurchaseOrderView.js`.
 - Purpose: detect failed top-level or sub-response batch results.
 - Inputs: normalized workflow response.
 - Outputs: boolean.
@@ -192,7 +192,7 @@ Out of scope:
 - Connections: `save`, `runAction` if batch remains in view.
 
 ### `firstFailureMessage`
-- File: `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderCreateFlow.js` and optionally `usePurchaseOrderView.js`.
+- File: `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderCreateFlow.js` and optionally `usePurchaseOrderView.js`.
 - Purpose: produce user-facing failure message.
 - Inputs: response and fallback string.
 - Outputs: string.
@@ -203,7 +203,7 @@ Out of scope:
 - Connections: notifications.
 
 ### `resultCode`
-- File: `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderCreateFlow.js`.
+- File: `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderCreateFlow.js`.
 - Purpose: extract created PO code from the first batch response.
 - Inputs: first batch entry, normally `response.data?.[0]`.
 - Outputs: code string.
@@ -214,7 +214,7 @@ Out of scope:
 - Connections: post-create navigation.
 
 ### `save`
-- File: `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderCreateFlow.js`
+- File: `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderCreateFlow.js`
 - Purpose: save PO parent and children through current batch/composite contract.
 - Inputs: none.
 - Outputs: none.
@@ -225,7 +225,7 @@ Out of scope:
 - Connections: Add page save button.
 
 ### `cancel`
-- File: `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderCreateFlow.js`
+- File: `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderCreateFlow.js`
 - Purpose: return to PO list.
 - Inputs: none.
 - Outputs: none.
@@ -236,7 +236,7 @@ Out of scope:
 - Connections: Add page cancel/back buttons.
 
 ### `usePurchaseOrderView`
-- File: `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderView.js`
+- File: `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderView.js`
 - Purpose: show PO and execute configured actions using current route/action contracts.
 - Inputs: route context from `useResourceConfig`.
 - Outputs: preserve return names consumed by `ViewPage.vue`.
@@ -247,7 +247,7 @@ Out of scope:
 - Connections: `ViewPage.vue`.
 
 ### `loadData`
-- File: `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderView.js`
+- File: `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderView.js`
 - Purpose: load view dependencies.
 - Inputs: optional `forceSync = false`.
 - Outputs: promise.
@@ -258,7 +258,7 @@ Out of scope:
 - Connections: page `onMounted` and action refresh.
 
 ### `runAction`
-- File: `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderView.js`
+- File: `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderView.js`
 - Purpose: execute Send/Acknowledge/Accept/Cancel.
 - Inputs: normalized action config from `additionalActions`.
 - Outputs: none.
@@ -269,7 +269,7 @@ Out of scope:
 - Connections: View page action buttons.
 
 ### `goToList`
-- File: `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderView.js`
+- File: `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderView.js`
 - Purpose: return to PO list.
 - Inputs: none.
 - Outputs: none.
@@ -280,7 +280,7 @@ Out of scope:
 - Connections: View page back button.
 
 ### `parseCharges`
-- File: `FRONTENT/src/composables/operations/purchaseOrders/purchaseOrderPayload.js`
+- File: `FRONTENT/src/composables/operation/purchaseOrders/purchaseOrderPayload.js`
 - Purpose: normalize charge data from either JSON string or already-parsed object.
 - Inputs: string, object, null, undefined.
 - Outputs: charge object containing all `EXTRA_CHARGE_KEYS`.
@@ -301,7 +301,7 @@ Out of scope:
 **Rule**: This plan fixes runtime contracts only.
 
 ### Step 2: Fix PO index resource/nav usage
-- [ ] Open `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderIndex.js`.
+- [ ] Open `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderIndex.js`.
 - [ ] Add `ref` import usage if needed; the file already imports `ref`.
 - [ ] Replace `const { resourceName, permissions } = useResourceConfig('PurchaseOrders')` with the current no-argument `useResourceConfig()` call and keep only `permissions` unless `resourceName` is genuinely used.
 - [ ] Replace `const { fetchResource, getRecords } = useResourceData()` with three resource instances: `purchaseOrders = useResourceData(ref('PurchaseOrders'))`, `suppliersResource = useResourceData(ref('Suppliers'))`, and `warehousesResource = useResourceData(ref('Warehouses'))`.
@@ -314,12 +314,12 @@ Out of scope:
 - [ ] Update `reload(forceSync = false)` so it calls `purchaseOrders.reload(forceSync)`, `suppliersResource.reload(forceSync)`, and `warehousesResource.reload(forceSync)`.
 - [ ] Return `loading: purchaseOrders.loading` if local loading is removed, or keep local loading only as a combined reload indicator.
 - [ ] Do not edit `IndexPage.vue` unless its template requires changed return names.
-**Files**: `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderIndex.js`
-**Pattern**: `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationIndex.js`
+**Files**: `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderIndex.js`
+**Pattern**: `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationIndex.js`
 **Rule**: Composable owns resource-specific orchestration; generic composables are not modified.
 
 ### Step 3: Fix PO create resource setup
-- [ ] Open `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderCreateFlow.js`.
+- [ ] Open `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderCreateFlow.js`.
 - [ ] Remove the unused `useAuthStore` import and `authStore` variable unless Build Agent finds a real use.
 - [ ] Replace `const { fetchResource, getRecords } = useResourceData()` with one resource instance per required resource: `supplierQuotations`, `supplierQuotationItems`, `purchaseOrders`, `purchaseOrderItems`, `suppliersResource`, `warehousesResource`, `rfqs`, `prItems`, and `procurements`.
 - [ ] Each instance must call `useResourceData(ref('<ResourceName>'))`.
@@ -328,8 +328,8 @@ Out of scope:
 - [ ] Replace `const { navigateTo } = useResourceNav()` with `const nav = useResourceNav()`.
 - [ ] Update `loadData(forceSync = false)` to call `.reload(forceSync)` on each resource instance instead of `fetchResource`.
 - [ ] Do not import stores/services directly into page files.
-**Files**: `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderCreateFlow.js`
-**Pattern**: `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationCreateFlow.js`
+**Files**: `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderCreateFlow.js`
+**Pattern**: `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationCreateFlow.js`
 **Rule**: No direct API/IDB calls in composables; resource loading goes through `useResourceData`.
 
 ### Step 4: Fix PO create batch payload
@@ -345,12 +345,12 @@ Out of scope:
 - [ ] Extract created PO code from `resultCode(response.data?.[0])`.
 - [ ] Navigate with `nav.goTo('view', { code })` when a code exists; otherwise use `nav.goTo('list')`.
 - [ ] In `cancel`, replace navigation with `nav.goTo('list')`.
-**Files**: `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderCreateFlow.js`
-**Pattern**: `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationCreateFlow.js`, `FRONTENT/src/composables/operations/purchaseRequisitions/purchaseRequisitionPayload.js`, `FRONTENT/src/stores/workflow.js`
+**Files**: `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderCreateFlow.js`
+**Pattern**: `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationCreateFlow.js`, `FRONTENT/src/composables/operation/purchaseRequisitions/purchaseRequisitionPayload.js`, `FRONTENT/src/stores/workflow.js`
 **Rule**: Do not invent batch/composite payload shapes.
 
 ### Step 5: Fix PO view resource/action setup
-- [ ] Open `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderView.js`.
+- [ ] Open `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderView.js`.
 - [ ] Change `import { isActionVisible } from '../../resources/useActionResolver.js'` to import `isActionVisible` from `../../resources/useResourceConfig.js`.
 - [ ] Replace `const { resourceName, routeCode, additionalActions } = useResourceConfig('PurchaseOrders')` with current no-argument `useResourceConfig()` and destructure `code` and `additionalActions`.
 - [ ] Replace all `routeCode.value` reads with `code.value`.
@@ -360,8 +360,8 @@ Out of scope:
 - [ ] Update `loadData(forceSync = false)` to call each resource instance `.reload(forceSync)`.
 - [ ] In `goToList`, use `nav.goTo('list')`.
 - [ ] Do not edit `ViewPage.vue` unless the composable return names change.
-**Files**: `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderView.js`
-**Pattern**: `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationView.js`, `FRONTENT/src/composables/resources/useResourceConfig.js`
+**Files**: `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderView.js`
+**Pattern**: `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationView.js`, `FRONTENT/src/composables/resources/useResourceConfig.js`
 **Rule**: Use current route config and action visibility helpers.
 
 ### Step 6: Fix PO action execution contract
@@ -373,18 +373,18 @@ Out of scope:
 - [ ] After a successful action, clear `actionComment.value` and run `purchaseOrders.reload(true)`.
 - [ ] Remove the extra raw grouped `get` action from `runAction`; `executeResourceAction` already returns a write response and reload handles local refresh.
 - [ ] Notify success/failure with existing `$q.notify` style.
-**Files**: `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderView.js`
+**Files**: `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderView.js`
 **Pattern**: `FRONTENT/src/stores/workflow.js`, `FRONTENT/src/services/ResourceCrudService.js`
 **Rule**: Do not call `executeAction` with raw unsupported `id/actionConfig/data` payloads.
 
 ### Step 7: Fix object charge parsing if needed
-- [ ] Open `FRONTENT/src/composables/operations/purchaseOrders/purchaseOrderPayload.js`.
+- [ ] Open `FRONTENT/src/composables/operation/purchaseOrders/purchaseOrderPayload.js`.
 - [ ] Update `parseCharges` only if object-valued `ExtraChargesBreakup` currently returns blank charges.
 - [ ] If modifying, make `parseCharges(value)` return merged blank charges for object input before attempting `JSON.parse`.
 - [ ] Keep invalid JSON fallback as `blankCharges()`.
 - [ ] Do not change payload field names or stored JSON format.
-**Files**: `FRONTENT/src/composables/operations/purchaseOrders/purchaseOrderPayload.js`
-**Pattern**: `FRONTENT/src/composables/operations/supplierQuotations/supplierQuotationPayload.js`
+**Files**: `FRONTENT/src/composables/operation/purchaseOrders/purchaseOrderPayload.js`
+**Pattern**: `FRONTENT/src/composables/operation/supplierQuotations/supplierQuotationPayload.js`
 **Rule**: Stored PO charges remain JSON strings; form-state charges may be objects.
 
 ### Step 8: Registry check
@@ -411,7 +411,7 @@ Commands:
 - `npm --prefix FRONTENT run build`
 
 Manual checks:
-- Open `/operations/purchase-orders`; the index loads without `fetchResource is not a function`, `getRecords is not a function`, `navigateTo is not a function`, or `navigateToAdd is not a function`.
+- Open `/operation/purchase-orders`; the index loads without `fetchResource is not a function`, `getRecords is not a function`, `navigateTo is not a function`, or `navigateToAdd is not a function`.
 - Click PO index refresh; PO/supplier/warehouse resources reload.
 - Click PO add FAB; route goes to the add page through `useResourceNav`.
 - Select an eligible SupplierQuotation; items populate from `SupplierQuotationItems`.
@@ -426,7 +426,7 @@ Expected outputs:
 - Build passes.
 - No GAS files changed.
 - No changes to `useResourceData`, `useResourceNav`, `workflow.js`, or generic services.
-- No raw `fetchResource` or `getRecords` references remain in `FRONTENT/src/composables/operations/purchaseOrders/`, and no PO composable destructures `navigateTo` or `navigateToAdd` from `useResourceNav`.
+- No raw `fetchResource` or `getRecords` references remain in `FRONTENT/src/composables/operation/purchaseOrders/`, and no PO composable destructures `navigateTo` or `navigateToAdd` from `useResourceNav`.
 - No `payload.id` remains in PO create/update/action requests.
 - No PO action request sends raw `actionConfig` or `data` inside a batch `executeAction` payload.
 
@@ -483,10 +483,10 @@ Failure signs:
 - [ ] `[!]` Issue/blocker:
 
 ### Files Actually Changed
-- `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderIndex.js`
-- `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderCreateFlow.js`
-- `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderView.js`
-- `FRONTENT/src/composables/operations/purchaseOrders/purchaseOrderPayload.js`
+- `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderIndex.js`
+- `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderCreateFlow.js`
+- `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderView.js`
+- `FRONTENT/src/composables/operation/purchaseOrders/purchaseOrderPayload.js`
 - `PLANS/purchase-order-runtime-contract-fixes.md`
 
 ### Validation Performed
@@ -498,3 +498,4 @@ Failure signs:
 
 ### Manual Actions Required
 - [ ] None expected.
+

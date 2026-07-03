@@ -1,4 +1,4 @@
-# PLAN: Outlet Consumptions Workflow and Frontend Fixes
+﻿# PLAN: Outlet Consumptions Workflow and Frontend Fixes
 **Status**: COMPLETED
 **Created**: 2026-05-07
 **Created By**: Brain Agent (Kilo Code)
@@ -9,13 +9,13 @@ Fix Outlet Consumptions and related outlet operation workflows after the GAS bat
 
 ## Context
 - This plan depends on [PLANS/2026-05-07-gas-record-batch-ref-framework-plan.md](2026-05-07-gas-record-batch-ref-framework-plan.md) for the new `record` action and `$ref` batch resolver.
-- Outlet consumption pages currently live in singular [FRONTENT/src/pages/Operations/OutletConsumption](../FRONTENT/src/pages/Operations/OutletConsumption).
+- Outlet consumption pages currently live in singular [FRONTENT/src/pages/operation/OutletConsumption](../FRONTENT/src/pages/operation/OutletConsumption).
 - The backend resource and constants use plural `OutletConsumptions` in [GAS/Constants.gs](../GAS/Constants.gs:55).
 - The current menu route is singular in [GAS/syncAppResources.gs](../GAS/syncAppResources.gs:826).
-- Planned visit filtering is in [FRONTENT/src/composables/operations/outlets/useOutletConsumption.js](../FRONTENT/src/composables/operations/outlets/useOutletConsumption.js:76).
-- Consumption submit currently runs sequential phases in [FRONTENT/src/composables/operations/outlets/useOutletConsumption.js](../FRONTENT/src/composables/operations/outlets/useOutletConsumption.js:158).
+- Planned visit filtering is in [FRONTENT/src/composables/operation/outlets/useOutletConsumption.js](../FRONTENT/src/composables/operation/outlets/useOutletConsumption.js:76).
+- Consumption submit currently runs sequential phases in [FRONTENT/src/composables/operation/outlets/useOutletConsumption.js](../FRONTENT/src/composables/operation/outlets/useOutletConsumption.js:158).
 - Outlet storage maintenance is handled by [GAS/outletMovements.gs](../GAS/outletMovements.gs:34), which currently leaves zero rows.
-- Restock delivery progress is calculated in [FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js](../FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js:98), but it uses only current delivery quantity.
+- Restock delivery progress is calculated in [FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js](../FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js:98), but it uses only current delivery quantity.
 
 ## Pre-Conditions
 - [ ] [PLANS/2026-05-07-gas-record-batch-ref-framework-plan.md](2026-05-07-gas-record-batch-ref-framework-plan.md) is implemented and verified.
@@ -25,40 +25,40 @@ Fix Outlet Consumptions and related outlet operation workflows after the GAS bat
 ## Steps
 
 ### Step 1: Pluralize Outlet Consumptions route and page folder
-- [ ] Rename [FRONTENT/src/pages/Operations/OutletConsumption](../FRONTENT/src/pages/Operations/OutletConsumption) to `FRONTENT/src/pages/Operations/OutletConsumptions`.
-- [ ] Update the menu route in [GAS/syncAppResources.gs](../GAS/syncAppResources.gs:826) from `/operations/outlet-consumption` to `/operations/outlet-consumptions`.
-- [ ] Update navigation calls in [FRONTENT/src/composables/operations/outlets/useOutletConsumption.js](../FRONTENT/src/composables/operations/outlets/useOutletConsumption.js:221) and [FRONTENT/src/composables/operations/outlets/useOutletConsumption.js](../FRONTENT/src/composables/operations/outlets/useOutletConsumption.js:222) to use `outlet-consumptions`.
+- [ ] Rename [FRONTENT/src/pages/operation/OutletConsumption](../FRONTENT/src/pages/operation/OutletConsumption) to `FRONTENT/src/pages/operation/OutletConsumptions`.
+- [ ] Update the menu route in [GAS/syncAppResources.gs](../GAS/syncAppResources.gs:826) from `/operation/outlet-consumption` to `/operation/outlet-consumptions`.
+- [ ] Update navigation calls in [FRONTENT/src/composables/operation/outlets/useOutletConsumption.js](../FRONTENT/src/composables/operation/outlets/useOutletConsumption.js:221) and [FRONTENT/src/composables/operation/outlets/useOutletConsumption.js](../FRONTENT/src/composables/operation/outlets/useOutletConsumption.js:222) to use `outlet-consumptions`.
 - [ ] Search for remaining `outlet-consumption` route slug references and update route slugs only.
 - [ ] Keep resource names `OutletConsumptions`, `OutletConsumptionItems`, and `OutletConsumptionInvoices` unchanged.
-**Files**: [FRONTENT/src/pages/Operations/OutletConsumption](../FRONTENT/src/pages/Operations/OutletConsumption), [GAS/syncAppResources.gs](../../GAS/syncAppResources.gs), [FRONTENT/src/composables/operations/outlets/useOutletConsumption.js](../../FRONTENT/src/composables/operations/outlets/useOutletConsumption.js)
-**Pattern**: Resolver uses slug-to-folder conversion through [FRONTENT/src/pages/Operations/ActionResolverPage.vue](../FRONTENT/src/pages/Operations/ActionResolverPage.vue:45) and [FRONTENT/src/utils/appHelpers.js](../FRONTENT/src/utils/appHelpers.js:19)
+**Files**: [FRONTENT/src/pages/operation/OutletConsumption](../FRONTENT/src/pages/operation/OutletConsumption), [GAS/syncAppResources.gs](../../GAS/syncAppResources.gs), [FRONTENT/src/composables/operation/outlets/useOutletConsumption.js](../../FRONTENT/src/composables/operation/outlets/useOutletConsumption.js)
+**Pattern**: Resolver uses slug-to-folder conversion through [FRONTENT/src/pages/operation/ActionResolverPage.vue](../FRONTENT/src/pages/operation/ActionResolverPage.vue:45) and [FRONTENT/src/utils/appHelpers.js](../FRONTENT/src/utils/appHelpers.js:19)
 **Rule**: Route slug folder must match plural resource naming convention.
 
 ### Step 2: Add planned-visit diagnostics to Outlet Consumption Add page
-- [ ] Extend [useOutletConsumption()](../FRONTENT/src/composables/operations/outlets/useOutletConsumption.js:24) with computed diagnostics:
+- [ ] Extend [useOutletConsumption()](../FRONTENT/src/composables/operation/outlets/useOutletConsumption.js:24) with computed diagnostics:
   - total loaded OutletVisits count.
   - visits matching selected `OutletCode` regardless of status.
   - active planned visits matching selected `OutletCode`.
   - optional status distribution for selected outlet.
 - [ ] Keep `plannedVisits` filtering strict but normalized with `text(row.Status).toUpperCase() === 'PLANNED'` and `text(row.OutletCode) === text(form.value.OutletCode)`.
-- [ ] Pass diagnostics from [FRONTENT/src/pages/Operations/OutletConsumptions/AddPage.vue](../../FRONTENT/src/pages/Operations/OutletConsumptions/AddPage.vue) to [OutletConsumptionContextStep.vue](../../FRONTENT/src/components/Operations/Outlets/OutletConsumptionContextStep.vue).
-- [ ] Update empty state in [OutletConsumptionContextStep.vue](../FRONTENT/src/components/Operations/Outlets/OutletConsumptionContextStep.vue:18) to show useful diagnostics only when no planned visits are visible.
+- [ ] Pass diagnostics from [FRONTENT/src/pages/operation/OutletConsumptions/AddPage.vue](../../FRONTENT/src/pages/operation/OutletConsumptions/AddPage.vue) to [OutletConsumptionContextStep.vue](../../FRONTENT/src/components/operation/Outlets/OutletConsumptionContextStep.vue).
+- [ ] Update empty state in [OutletConsumptionContextStep.vue](../FRONTENT/src/components/operation/Outlets/OutletConsumptionContextStep.vue:18) to show useful diagnostics only when no planned visits are visible.
 - [ ] Do not call stores or services directly from the component.
-**Files**: [FRONTENT/src/composables/operations/outlets/useOutletConsumption.js](../../FRONTENT/src/composables/operations/outlets/useOutletConsumption.js), [FRONTENT/src/pages/Operations/OutletConsumptions/AddPage.vue](../../FRONTENT/src/pages/Operations/OutletConsumptions/AddPage.vue), [FRONTENT/src/components/Operations/Outlets/OutletConsumptionContextStep.vue](../../FRONTENT/src/components/Operations/Outlets/OutletConsumptionContextStep.vue)
-**Pattern**: Component receives props and emits events only, like [OutletConsumptionContextStep.vue](../FRONTENT/src/components/Operations/Outlets/OutletConsumptionContextStep.vue:39)
+**Files**: [FRONTENT/src/composables/operation/outlets/useOutletConsumption.js](../../FRONTENT/src/composables/operation/outlets/useOutletConsumption.js), [FRONTENT/src/pages/operation/OutletConsumptions/AddPage.vue](../../FRONTENT/src/pages/operation/OutletConsumptions/AddPage.vue), [FRONTENT/src/components/operation/Outlets/OutletConsumptionContextStep.vue](../../FRONTENT/src/components/operation/Outlets/OutletConsumptionContextStep.vue)
+**Pattern**: Component receives props and emits events only, like [OutletConsumptionContextStep.vue](../FRONTENT/src/components/operation/Outlets/OutletConsumptionContextStep.vue:39)
 **Rule**: Diagnostics reveal whether issue is loading/authorization, outlet-code mismatch, or status mismatch.
 
 ### Step 3: Convert consumption submit to one batch using standard `$ref`
-- [ ] Replace the three-phase submit in [saveConsumption()](../FRONTENT/src/composables/operations/outlets/useOutletConsumption.js:158) with one `workflowStore.runBatchRequests()` call.
+- [ ] Replace the three-phase submit in [saveConsumption()](../FRONTENT/src/composables/operation/outlets/useOutletConsumption.js:158) with one `workflowStore.runBatchRequests()` call.
 - [ ] Build one request array using the new standard from [PLANS/2026-05-07-gas-record-batch-ref-framework-plan.md](2026-05-07-gas-record-batch-ref-framework-plan.md).
 - [ ] First request creates `OutletConsumptions` with child `OutletConsumptionItems` through `compositeSave`.
 - [ ] Subsequent side-effect requests reference `{ "$ref": "OutletConsumptions.latest.code" }` for `OutletConsumptionCode`, `ReferenceCode`, and consumption action `code`.
 - [ ] If placing and submitting restock, create `OutletRestocks` through `compositeSave`, then submit it with `{ "$ref": "OutletRestocks.latest.code" }`.
-- [ ] Remove fallback request [buildConsumptionProgressFallbackRequest()](../FRONTENT/src/composables/operations/outlets/outletConsumptionPayload.js:110) if the new one-batch flow makes it unnecessary.
-- [ ] Keep payload-construction helpers in [outletConsumptionPayload.js](../../FRONTENT/src/composables/operations/outlets/outletConsumptionPayload.js), not in page/components.
+- [ ] Remove fallback request [buildConsumptionProgressFallbackRequest()](../FRONTENT/src/composables/operation/outlets/outletConsumptionPayload.js:110) if the new one-batch flow makes it unnecessary.
+- [ ] Keep payload-construction helpers in [outletConsumptionPayload.js](../../FRONTENT/src/composables/operation/outlets/outletConsumptionPayload.js), not in page/components.
 - [ ] Ensure response handling reads created codes from batch result if needed only for notification/navigation, while state updates remain generic.
-**Files**: [FRONTENT/src/composables/operations/outlets/useOutletConsumption.js](../../FRONTENT/src/composables/operations/outlets/useOutletConsumption.js), [FRONTENT/src/composables/operations/outlets/outletConsumptionPayload.js](../../FRONTENT/src/composables/operations/outlets/outletConsumptionPayload.js), [FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js](../../FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js)
-**Pattern**: Existing request-builder separation in [outletConsumptionPayload.js](../FRONTENT/src/composables/operations/outlets/outletConsumptionPayload.js:13)
+**Files**: [FRONTENT/src/composables/operation/outlets/useOutletConsumption.js](../../FRONTENT/src/composables/operation/outlets/useOutletConsumption.js), [FRONTENT/src/composables/operation/outlets/outletConsumptionPayload.js](../../FRONTENT/src/composables/operation/outlets/outletConsumptionPayload.js), [FRONTENT/src/composables/operation/outlets/outletOperationsBatch.js](../../FRONTENT/src/composables/operation/outlets/outletOperationsBatch.js)
+**Pattern**: Existing request-builder separation in [outletConsumptionPayload.js](../FRONTENT/src/composables/operation/outlets/outletConsumptionPayload.js:13)
 **Rule**: One consumption submit equals one HTTP batch request.
 
 ### Step 4: Delete zero OutletStorages rows on movement application
@@ -72,14 +72,14 @@ Fix Outlet Consumptions and related outlet operation workflows after the GAS bat
 **Rule**: OutletStorages should store only positive stock balances.
 
 ### Step 5: Fix cumulative Outlet Restock delivery progress
-- [ ] Update [deliveryRestockProgress()](../FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js:98) to include previously delivered deliveries for the same `OutletRestockCode`.
+- [ ] Update [deliveryRestockProgress()](../FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js:98) to include previously delivered deliveries for the same `OutletRestockCode`.
 - [ ] Sum active deliveries with `Progress === 'DELIVERED'` plus current scheduled delivery `ItemsJSON`.
 - [ ] Compare cumulative delivered total against requested restock item total.
 - [ ] Return `DELIVERED` only when cumulative total reaches requested total; otherwise return `PARTIALLY_DELIVERED`.
-- [ ] Use or extend existing helpers in [outletStockLogic.js](../../FRONTENT/src/composables/operations/outlets/outletStockLogic.js), such as [deliveredQtyForSku()](../FRONTENT/src/composables/operations/outlets/outletStockLogic.js:11) and [deliverySummary()](../FRONTENT/src/composables/operations/outlets/outletStockLogic.js:87).
-- [ ] Ensure [eligibleRestocks](../FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js:34) still allows partially delivered restocks when no scheduled delivery exists.
-**Files**: [FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js](../../FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js), [FRONTENT/src/composables/operations/outlets/outletStockLogic.js](../../FRONTENT/src/composables/operations/outlets/outletStockLogic.js)
-**Pattern**: Existing delivery parsing helpers in [outletStockLogic.js](../FRONTENT/src/composables/operations/outlets/outletStockLogic.js:7)
+- [ ] Use or extend existing helpers in [outletStockLogic.js](../../FRONTENT/src/composables/operation/outlets/outletStockLogic.js), such as [deliveredQtyForSku()](../FRONTENT/src/composables/operation/outlets/outletStockLogic.js:11) and [deliverySummary()](../FRONTENT/src/composables/operation/outlets/outletStockLogic.js:87).
+- [ ] Ensure [eligibleRestocks](../FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js:34) still allows partially delivered restocks when no scheduled delivery exists.
+**Files**: [FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js](../../FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js), [FRONTENT/src/composables/operation/outlets/outletStockLogic.js](../../FRONTENT/src/composables/operation/outlets/outletStockLogic.js)
+**Pattern**: Existing delivery parsing helpers in [outletStockLogic.js](../FRONTENT/src/composables/operation/outlets/outletStockLogic.js:7)
 **Rule**: Restock progress is based on cumulative delivered quantity, not only current delivery quantity.
 
 ### Step 6: Align related resource metadata and generated resources
@@ -99,7 +99,7 @@ Fix Outlet Consumptions and related outlet operation workflows after the GAS bat
 - [ ] Update frontend component registries only if reusable component props/interfaces are materially changed beyond local outlet usage.
 
 ## Acceptance Criteria
-- [ ] Outlet Consumptions page resolves from plural route `/operations/outlet-consumptions` and folder `OutletConsumptions`.
+- [ ] Outlet Consumptions page resolves from plural route `/operation/outlet-consumptions` and folder `OutletConsumptions`.
 - [ ] Old singular route slug references are removed except historical docs if intentionally retained.
 - [ ] Empty planned-visit UI shows diagnostics that distinguish no visits loaded, no visits for outlet, and no planned visits for outlet.
 - [ ] Consumption submit uses one batch request for parent, items, movements, invoice, visit completion, next visit, optional restock creation, and optional restock submit.
@@ -128,8 +128,8 @@ Fix Outlet Consumptions and related outlet operation workflows after the GAS bat
 - [x] 2026-05-07T12:28:29Z — Required implementation docs reviewed: `Documents/ARCHITECTURE RULES.md`, `Documents/AI_COLLABORATION_PROTOCOL.md`, `Documents/GAS_API_CAPABILITIES.md`, and `Documents/GAS_PATTERNS.md`; dependency plan is `COMPLETED`.
 - [x] 2026-05-07T12:28:38Z — Plan marked `IN_PROGRESS` for Build Agent execution.
 - [x] 2026-05-07T12:31:13Z — Inspected outlet consumption/delivery composables, payload builders, context/add page, outlet movement hook, stock zero-delete pattern, menu route metadata, and current singular route search results.
-- [x] 2026-05-07T12:31:25Z — Renamed frontend page folder from `FRONTENT/src/pages/Operations/OutletConsumption` to `FRONTENT/src/pages/Operations/OutletConsumptions`.
-- [x] 2026-05-07T12:31:41Z — Updated Outlet Consumptions menu route and composable navigation slug to `/operations/outlet-consumptions` / `outlet-consumptions`.
+- [x] 2026-05-07T12:31:25Z — Renamed frontend page folder from `FRONTENT/src/pages/operation/OutletConsumption` to `FRONTENT/src/pages/operation/OutletConsumptions`.
+- [x] 2026-05-07T12:31:41Z — Updated Outlet Consumptions menu route and composable navigation slug to `/operation/outlet-consumptions` / `outlet-consumptions`.
 - [x] 2026-05-07T12:32:28Z — Added planned visit diagnostics, normalized planned visit filtering, added `batchRef()` helper, and converted consumption submit from three sequential batches to one `$ref`-based batch request.
 - [x] 2026-05-07T12:32:50Z — Passed planned-visit diagnostics into the Outlet Consumptions add page context step and expanded empty-state UI with loaded/matching/status diagnostics without service/store calls in the component.
 - [x] 2026-05-07T12:33:08Z — Updated outlet movement storage application to delete existing `OutletStorages` rows when `Quantity <= 0`, skip non-positive new rows, cursor-update only on mutations, and added `cleanupZeroOutletStorages()` admin utility.
@@ -149,15 +149,15 @@ Fix Outlet Consumptions and related outlet operation workflows after the GAS bat
 - [x] No issue/blocker encountered during execution.
 
 ### Files Actually Changed
-- [FRONTENT/src/pages/Operations/OutletConsumptions/AddPage.vue](../../FRONTENT/src/pages/Operations/OutletConsumptions/AddPage.vue)
-- [FRONTENT/src/pages/Operations/OutletConsumptions/IndexPage.vue](../../FRONTENT/src/pages/Operations/OutletConsumptions/IndexPage.vue)
-- [FRONTENT/src/pages/Operations/OutletConsumptions/ViewPage.vue](../../FRONTENT/src/pages/Operations/OutletConsumptions/ViewPage.vue)
-- [FRONTENT/src/composables/operations/outlets/useOutletConsumption.js](../../FRONTENT/src/composables/operations/outlets/useOutletConsumption.js)
-- [FRONTENT/src/composables/operations/outlets/outletConsumptionPayload.js](../../FRONTENT/src/composables/operations/outlets/outletConsumptionPayload.js)
-- [FRONTENT/src/components/Operations/Outlets/OutletConsumptionContextStep.vue](../../FRONTENT/src/components/Operations/Outlets/OutletConsumptionContextStep.vue)
-- [FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js](../../FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js)
-- [FRONTENT/src/composables/operations/outlets/outletStockLogic.js](../../FRONTENT/src/composables/operations/outlets/outletStockLogic.js)
-- [FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js](../../FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js)
+- [FRONTENT/src/pages/operation/OutletConsumptions/AddPage.vue](../../FRONTENT/src/pages/operation/OutletConsumptions/AddPage.vue)
+- [FRONTENT/src/pages/operation/OutletConsumptions/IndexPage.vue](../../FRONTENT/src/pages/operation/OutletConsumptions/IndexPage.vue)
+- [FRONTENT/src/pages/operation/OutletConsumptions/ViewPage.vue](../../FRONTENT/src/pages/operation/OutletConsumptions/ViewPage.vue)
+- [FRONTENT/src/composables/operation/outlets/useOutletConsumption.js](../../FRONTENT/src/composables/operation/outlets/useOutletConsumption.js)
+- [FRONTENT/src/composables/operation/outlets/outletConsumptionPayload.js](../../FRONTENT/src/composables/operation/outlets/outletConsumptionPayload.js)
+- [FRONTENT/src/components/operation/Outlets/OutletConsumptionContextStep.vue](../../FRONTENT/src/components/operation/Outlets/OutletConsumptionContextStep.vue)
+- [FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js](../../FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js)
+- [FRONTENT/src/composables/operation/outlets/outletStockLogic.js](../../FRONTENT/src/composables/operation/outlets/outletStockLogic.js)
+- [FRONTENT/src/composables/operation/outlets/outletOperationsBatch.js](../../FRONTENT/src/composables/operation/outlets/outletOperationsBatch.js)
 - [GAS/outletMovements.gs](../../GAS/outletMovements.gs)
 - [GAS/syncAppResources.gs](../../GAS/syncAppResources.gs)
 
@@ -172,3 +172,4 @@ Fix Outlet Consumptions and related outlet operation workflows after the GAS bat
 - [ ] Run resource sync / update APP.Resources if menu route changes are not automatically synced by deployment.
 - [ ] Web App redeployment is required because this plan depends on and follows the completed GAS batch reference framework API-contract plan.
 - [ ] Optionally run `cleanupZeroOutletStorages()` once from Apps Script admin context to remove existing non-positive `OutletStorages` rows.
+

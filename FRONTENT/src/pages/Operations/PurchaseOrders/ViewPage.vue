@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding>
     <div class="row items-center q-mb-md">
       <q-btn icon="arrow_back" flat round @click="goToList" class="q-mr-sm" />
@@ -178,7 +178,7 @@
 
 <script setup>
 import { onMounted } from 'vue';
-import { usePurchaseOrderView } from '../../../composables/operations/purchaseOrders/usePurchaseOrderView.js';
+import { usePurchaseOrderView } from '../../../composables/operation/purchaseOrders/usePurchaseOrderView.js';
 
 defineOptions({
   name: 'PurchaseOrdersViewPage'
@@ -226,3 +226,4 @@ onMounted(() => {
   background: rgba(0, 0, 0, 0.02);
 }
 </style>
+

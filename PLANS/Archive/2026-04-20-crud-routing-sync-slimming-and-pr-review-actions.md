@@ -1,4 +1,4 @@
-# PLAN: CRUD Routing, Sync Slimming, and PR Review Actions
+﻿# PLAN: CRUD Routing, Sync Slimming, and PR Review Actions
 **Status**: COMPLETED
 **Created**: 2026-04-20
 **Created By**: Solo Agent (Codex)
@@ -34,7 +34,7 @@ Fix canonical CRUD dispatch failures (`action=get` and similar), harden future p
 - [x] Bind action bar to real handlers instead of re-emitting to no listener.
 - [x] Remove obsolete scope field from PR payload builder.
 
-**Files**: `FRONTENT/src/composables/operations/purchaseRequisitions/usePurchaseRequisitionReviewFlow.js`, `FRONTENT/src/pages/Operations/PurchaseRequisitions/RecordReviewPurchaseRequisitionPage.vue`, `FRONTENT/src/composables/operations/purchaseRequisitions/purchaseRequisitionPayload.js`
+**Files**: `FRONTENT/src/composables/operation/purchaseRequisitions/usePurchaseRequisitionReviewFlow.js`, `FRONTENT/src/pages/operation/PurchaseRequisitions/RecordReviewPurchaseRequisitionPage.vue`, `FRONTENT/src/composables/operation/purchaseRequisitions/purchaseRequisitionPayload.js`
 
 ### Step 5: Verification and completion
 - [x] Run targeted errors check on changed files.
@@ -62,13 +62,14 @@ Fix canonical CRUD dispatch failures (`action=get` and similar), harden future p
 - `FRONTENT/src/services/ResourceSyncQueueService.js`
 - `FRONTENT/src/services/ResourceRecordsService.js`
 - `FRONTENT/src/stores/sync.js`
-- `FRONTENT/src/composables/operations/purchaseRequisitions/purchaseRequisitionPayload.js`
-- `FRONTENT/src/composables/operations/purchaseRequisitions/usePurchaseRequisitionReviewFlow.js`
-- `FRONTENT/src/pages/Operations/PurchaseRequisitions/RecordReviewPurchaseRequisitionPage.vue`
+- `FRONTENT/src/composables/operation/purchaseRequisitions/purchaseRequisitionPayload.js`
+- `FRONTENT/src/composables/operation/purchaseRequisitions/usePurchaseRequisitionReviewFlow.js`
+- `FRONTENT/src/pages/operation/PurchaseRequisitions/RecordReviewPurchaseRequisitionPage.vue`
 - `PLANS/2026-04-20-crud-routing-sync-slimming-and-pr-review-actions.md`
 
 ### Validation Performed
 - [x] Targeted error checks completed
 - [x] Frontend build completed
+
 
 

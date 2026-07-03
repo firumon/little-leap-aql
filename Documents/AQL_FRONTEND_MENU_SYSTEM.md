@@ -1,4 +1,4 @@
-# AQL Frontend Menu System — App.Resources.Menu
+﻿# AQL Frontend Menu System — App.Resources.Menu
 
 > **Scope:** This document covers **only** the frontend web app sidebar menu driven by the `Menu` JSON column in `APP.Resources`. It does **not** cover the `AQL 🚀` Google Sheets toolbar menu — see `Documents/AQL_MENU_ADMIN_GUIDE.md` for that.
 
@@ -41,7 +41,7 @@ Each entry inside the `Menu` JSON array:
   "order":           1,
   "label":           "Products",
   "icon":            "inventory_2",
-  "route":           "/masters/products",
+  "route":           "/master/products",
   "pageTitle":       "Products",
   "pageDescription": "Manage product master records",
   "show":            true,
@@ -57,7 +57,7 @@ Each entry inside the `Menu` JSON array:
 | `order` | `number` | No | `9999` | Sort priority within a group. Lower numbers appear higher. Groups inherit the minimum `order` of their children for inter-group sorting. |
 | `label` | `string` | No | Resource `Name` | Visible text rendered on the sidebar link. |
 | `icon` | `string` | No | `"list_alt"` | Material Design icon name shown next to the label. |
-| `route` | `string` | **Yes** | — | Vue Router path (e.g. `/masters/products`). Must match a defined route in `FRONTENT/src/router/routes.js`. Empty or missing causes the entry to be **skipped entirely**. |
+| `route` | `string` | **Yes** | — | Vue Router path (e.g. `/master/products`). Must match a defined route in `FRONTENT/src/router/routes.js`. Empty or missing causes the entry to be **skipped entirely**. |
 | `pageTitle` | `string` | No | Resource `Name` | Page title metadata (used in admin dialogs, not rendered in sidebar). |
 | `pageDescription` | `string` | No | `""` | Page description metadata (used in admin dialogs). |
 | `show` | `boolean` | No | `true` | Master visibility toggle. Set to `false` to hide an entry without deleting it from config. |
@@ -378,9 +378,9 @@ The `beforeEach` guard uses an inline version of `evaluateMenuAccess` (no Vue co
 ```js
 {
   type: 'leaf',           // discriminator
-  key: 'Products::/masters/products',
+  key: 'Products::/master/products',
   resource: 'Products',   // owning resource name
-  routePath: '/masters/products',
+  routePath: '/master/products',
   navLabel: 'Products',
   navIcon: 'inventory_2',
   order: 1
@@ -451,9 +451,9 @@ The `Menu` cell stores a **JSON array**, so a resource can have multiple entries
 
 ```json
 [
-  { "group": ["Warehouse"], "order": 1, "label": "Manage Warehouses", "icon": "warehouse", "route": "/masters/warehouses" },
-  { "group": ["Warehouse"], "order": 2, "label": "Stock List", "icon": "inventory_2", "route": "/masters/warehouses/stock-list" },
-  { "group": ["Warehouse"], "order": 3, "label": "Stock Movements", "icon": "inventory", "route": "/operations/stock-movements", "menuAccess": { "require": "canWrite" } }
+  { "group": ["Warehouse"], "order": 1, "label": "Manage Warehouses", "icon": "warehouse", "route": "/master/warehouses" },
+  { "group": ["Warehouse"], "order": 2, "label": "Stock List", "icon": "inventory_2", "route": "/master/warehouses/stock-list" },
+  { "group": ["Warehouse"], "order": 3, "label": "Stock Movements", "icon": "inventory", "route": "/operation/stock-movements", "menuAccess": { "require": "canWrite" } }
 ]
 ```
 
@@ -546,3 +546,4 @@ When any of the following changes:
 - The backend parsing/normalization of `Menu` JSON changes
 
 ...update this document AND the init prompt at `References/Prompt Library/Initialization/frontend_menu_system.md` in the same task. Do not close the task until both are aligned.
+

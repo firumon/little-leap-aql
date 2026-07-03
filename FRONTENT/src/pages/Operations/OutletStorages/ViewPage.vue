@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding>
     <HeaderPanel
       :title="storage?.Code || 'Outlet Stock'"
@@ -24,9 +24,9 @@
 <script setup>
 import { computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { useOutletStock } from '../../../composables/operations/outlets/useOutletStock.js'
+import { useOutletStock } from '../../../composables/operation/outlets/useOutletStock.js'
 import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
-import OutletMovementTimeline from '../../../components/Operations/Outlets/OutletMovementTimeline.vue'
+import OutletMovementTimeline from '../../../components/operation/Outlets/OutletMovementTimeline.vue'
 
 defineOptions({ name: 'OutletStoragesViewPage' })
 
@@ -41,4 +41,5 @@ onMounted(() => {
   reload()
 })
 </script>
+
 

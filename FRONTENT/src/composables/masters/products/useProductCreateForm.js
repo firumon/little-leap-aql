@@ -1,6 +1,6 @@
-import { computed, onMounted, ref, watch } from 'vue'
+﻿import { computed, onMounted, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
-import { useProductVariants, hasDuplicateVariantSet, validateSkuVariants } from 'src/composables/masters/products/useProductVariants'
+import { useProductVariants, hasDuplicateVariantSet, validateSkuVariants } from 'src/composables/master/products/useProductVariants'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useCompositeForm } from 'src/composables/resources/useCompositeForm'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
@@ -188,4 +188,5 @@ export function useProductCreateForm() {
     navigateBack
   }
 }
+
 

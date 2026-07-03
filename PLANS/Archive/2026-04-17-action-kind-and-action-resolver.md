@@ -1,4 +1,4 @@
-# PLAN: Action Kind discriminator + useActionResolver (5-tier ActionPage)
+﻿# PLAN: Action Kind discriminator + useActionResolver (5-tier ActionPage)
 
 **Status**: COMPLETED
 **Created**: 2026-04-17
@@ -38,8 +38,8 @@ Legacy rows (no `kind`) → `kind: 'mutate'`, leave `column/columnValue/...` fla
 This preserves `appHelpers.deriveActionStampHeaders` / `useActionFields` behavior.
 
 ### Step 4: Branch ActionBar clicks
-In both `pages/Operations/_common/ViewPage.vue` and
-`pages/Masters/_common/ViewPage.vue`, `navigateToAction(action)` branches:
+In both `pages/operation/_common/ViewPage.vue` and
+`pages/master/_common/ViewPage.vue`, `navigateToAction(action)` branches:
 - `kind === 'navigate'` → `nav.goTo(navigate.target, { pageSlug, resourceSlug?, scope? })`
 - else → existing `nav.goTo('action', { action: action.action })`
 
@@ -68,9 +68,9 @@ Add two new default components: `OperationActionLoading.vue`, `OperationActionEm
 ## Acceptance Criteria
 - Existing Approve/Reject/SendBack on Purchase Requisitions still works unchanged.
 - A navigate-kind action (once added to sheet) routes without hitting ActionPage.
-- Entity-specific override `components/Operations/PurchaseRequisitions/ActionForm.vue`
+- Entity-specific override `components/operation/PurchaseRequisitions/ActionForm.vue`
   auto-resolves without page code changes.
-- Per-action override `components/Operations/PurchaseRequisitions/ActionFormApprove.vue`
+- Per-action override `components/operation/PurchaseRequisitions/ActionFormApprove.vue`
   resolves only for the Approve action.
 - Build succeeds.
 
@@ -79,14 +79,14 @@ Add two new default components: `OperationActionLoading.vue`, `OperationActionEm
 - `FRONTENT/src/composables/useSectionResolver.js`
 - `FRONTENT/src/composables/useActionResolver.js` (new)
 - `FRONTENT/src/composables/useResourceConfig.js`
-- `FRONTENT/src/pages/Operations/_common/ViewPage.vue`
-- `FRONTENT/src/pages/Masters/_common/ViewPage.vue`
-- `FRONTENT/src/pages/Operations/_common/ActionPage.vue`
-- `FRONTENT/src/pages/Masters/_common/ActionPage.vue`
-- `FRONTENT/src/components/Operations/_common/OperationActionLoading.vue` (new)
-- `FRONTENT/src/components/Operations/_common/OperationActionEmpty.vue` (new)
-- `FRONTENT/src/components/Masters/_common/MasterActionLoading.vue` (new)
-- `FRONTENT/src/components/Masters/_common/MasterActionEmpty.vue` (new)
+- `FRONTENT/src/pages/operation/_common/ViewPage.vue`
+- `FRONTENT/src/pages/master/_common/ViewPage.vue`
+- `FRONTENT/src/pages/operation/_common/ActionPage.vue`
+- `FRONTENT/src/pages/master/_common/ActionPage.vue`
+- `FRONTENT/src/components/operation/_common/OperationActionLoading.vue` (new)
+- `FRONTENT/src/components/operation/_common/OperationActionEmpty.vue` (new)
+- `FRONTENT/src/components/master/_common/MasterActionLoading.vue` (new)
+- `FRONTENT/src/components/master/_common/MasterActionEmpty.vue` (new)
 
 ## Post-Execution Notes
 
@@ -94,10 +94,10 @@ Add two new default components: `OperationActionLoading.vue`, `OperationActionEm
 `quasar build` succeeded after stubbing four pre-existing empty `.vue` files that
 blocked the build (unrelated to this plan's scope — just orphans picked up by the
 entity-scan globs):
-- `components/Masters/Warehouse/ManageStockEditGrid.vue`
-- `components/Masters/Warehouse/ManageStockContextStep.vue`
-- `components/Masters/Warehouse/StockMovementRow.vue`
-- `components/Operations/_common/OperationRecordCard.vue`
+- `components/master/Warehouse/ManageStockEditGrid.vue`
+- `components/master/Warehouse/ManageStockContextStep.vue`
+- `components/master/Warehouse/StockMovementRow.vue`
+- `components/operation/_common/OperationRecordCard.vue`
 Each replaced with a minimal `<template><div/></template><script setup></script>`
 stub. Follow-up: confirm whether these were intended to exist and either remove
 them or implement the real content.
@@ -113,3 +113,4 @@ them or implement the real content.
 - None. GAS `syncAppResources.gs` and `actionManager.html` are untouched; legacy
   action rows continue to work because the frontend normalizer treats missing
   `kind` as `'mutate'`.
+

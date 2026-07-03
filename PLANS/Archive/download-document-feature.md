@@ -1,4 +1,4 @@
-# PLAN: Download Document Feature
+﻿# PLAN: Download Document Feature
 **Status**: COMPLETED
 **Created**: 2026-03-17
 **Created By**: Brain Agent (Antigravity)
@@ -60,10 +60,10 @@ This approach avoids creating new configuration sheets in the App spreadsheet, m
 **Rule**: Maintain the Single API UX Contract (`src/services/gasApi.js`).
 
 ### Step 4: Frontend UI Components for Reports
-- [x] Create `FRONTENT/src/components/Masters/ReportInputDialog.vue` (Dynamic form for user inputs).
-- [x] Update `FRONTENT/src/components/Masters/MasterHeader.vue` (or `MasterToolbar.vue`) to loop over `config.Reports.filter(r => !r.isRecordLevel)` and display dynamic report buttons.
-- [x] Update `FRONTENT/src/components/Masters/MasterRecordCard.vue` (and `MasterDetailDialog.vue`) to show an action button/dropdown for the reports where `config.Reports.filter(r => r.isRecordLevel)` is true.
-- [x] Modify `FRONTENT/src/pages/Masters/MasterEntityPage.vue` (and `useMasterPage`) to instantiate and wire up the `useReports` UI and functions.
+- [x] Create `FRONTENT/src/components/master/ReportInputDialog.vue` (Dynamic form for user inputs).
+- [x] Update `FRONTENT/src/components/master/MasterHeader.vue` (or `MasterToolbar.vue`) to loop over `config.Reports.filter(r => !r.isRecordLevel)` and display dynamic report buttons.
+- [x] Update `FRONTENT/src/components/master/MasterRecordCard.vue` (and `MasterDetailDialog.vue`) to show an action button/dropdown for the reports where `config.Reports.filter(r => r.isRecordLevel)` is true.
+- [x] Modify `FRONTENT/src/pages/master/MasterEntityPage.vue` (and `useMasterPage`) to instantiate and wire up the `useReports` UI and functions.
 - [x] Update `FRONTENT/src/components/REGISTRY.md` with `ReportInputDialog`.
 
 **Rule**: Emphasize aesthetics, Quasar-first components, and smooth loading states during the 10+ second PDF generation phase.
@@ -102,10 +102,10 @@ This approach avoids creating new configuration sheets in the App spreadsheet, m
 - `GAS/apiDispatcher.gs` — Added `generateReport` route
 - `GAS/reportGenerator.gs` — New file: complete PDF generation module
 - `FRONTENT/src/composables/useReports.js` — New file: report generation composable
-- `FRONTENT/src/components/Masters/ReportInputDialog.vue` — New file: dynamic input dialog
-- `FRONTENT/src/components/Masters/MasterToolbar.vue` — Added toolbar report buttons
-- `FRONTENT/src/components/Masters/MasterDetailDialog.vue` — Added record-level report buttons
-- `FRONTENT/src/pages/Masters/MasterEntityPage.vue` — Wired up useReports + ReportInputDialog
+- `FRONTENT/src/components/master/ReportInputDialog.vue` — New file: dynamic input dialog
+- `FRONTENT/src/components/master/MasterToolbar.vue` — Added toolbar report buttons
+- `FRONTENT/src/components/master/MasterDetailDialog.vue` — Added record-level report buttons
+- `FRONTENT/src/pages/master/MasterEntityPage.vue` — Wired up useReports + ReportInputDialog
 - `FRONTENT/src/composables/REGISTRY.md` — Added useReports entry
 - `FRONTENT/src/components/REGISTRY.md` — Added ReportInputDialog entry
 - `Documents/APP_SHEET_STRUCTURE.md` — Added Reports column and JSON schema docs
@@ -122,3 +122,4 @@ This approach avoids creating new configuration sheets in the App spreadsheet, m
 - [ ] Redeploy the Web App with a new version.
 - [ ] Create template sheets in the REPORTS spreadsheet.
 - [ ] Configure the `Reports` JSON array for specific resources in `APP.Resources`.
+

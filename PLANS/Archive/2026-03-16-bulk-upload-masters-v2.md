@@ -1,4 +1,4 @@
-# PLAN: Bulk Upload Masters (Functional Resource + Action Hooks)
+﻿# PLAN: Bulk Upload Masters (Functional Resource + Action Hooks)
 **Status**: COMPLETED
 **Created**: 2026-03-16
 **Created By**: Brain Agent
@@ -37,7 +37,7 @@ Introduce a **Functional Resource** pattern in `APP.Resources` and build a **Bul
   MenuOrder: 99
   MenuLabel: 'Bulk Upload'
   MenuIcon: 'cloud_upload'
-  RoutePath: '/masters/bulk-upload'
+  RoutePath: '/master/bulk-upload'
   ShowInMenu: 'TRUE'
   IncludeInAuthorizationPayload: 'TRUE'
   ```
@@ -114,9 +114,9 @@ Introduce a **Functional Resource** pattern in `APP.Resources` and build a **Bul
 ### Step 7: Frontend — Route for Bulk Upload Page
 - [x] Add route under the `/dashboard` layout children:
   ```js
-  { path: '/masters/bulk-upload', component: () => import('pages/Masters/BulkUploadPage.vue'), meta: { scope: 'master', requiresAuth: true } }
+  { path: '/master/bulk-upload', component: () => import('pages/master/BulkUploadPage.vue'), meta: { scope: 'master', requiresAuth: true } }
   ```
-- [x] Place it **before** the `/masters/:resourceSlug` catch-all so it matches first.
+- [x] Place it **before** the `/master/:resourceSlug` catch-all so it matches first.
 
 **Files**: `FRONTENT/src/router/routes.js`
 
@@ -140,7 +140,7 @@ Introduce a **Functional Resource** pattern in `APP.Resources` and build a **Bul
 - [x] **Draft Persistence**: On any change to `rows`, auto-save to IDB `functional-drafts` store with key `bulk-upload::{resourceName}`. On page load, if a draft exists for the selected resource, restore it.
 - [x] **Upload All Button**: Confirms via dialog, then calls `bulkMasterRecords(targetResourceName, records)`. Shows results summary (created/updated/errors). On full success, clears the table and draft.
 
-**Files**: `FRONTENT/src/pages/Masters/BulkUploadPage.vue`
+**Files**: `FRONTENT/src/pages/master/BulkUploadPage.vue`
 **Pattern**: Reference `MasterEntityPage.vue` for table patterns and Quasar component usage.
 
 ---
@@ -172,7 +172,7 @@ Introduce a **Functional Resource** pattern in `APP.Resources` and build a **Bul
 - [x] Step 4 completed — `db.js` v3 with `functional-drafts` store + helpers
 - [x] Step 5 completed — `masterRecords.js` has `bulkMasterRecords()` service function
 - [x] Step 6 completed — `syncAllMasterResources` skips functional resources
-- [x] Step 7 completed — Route `/masters/bulk-upload` added before `:resourceSlug` wildcard
+- [x] Step 7 completed — Route `/master/bulk-upload` added before `:resourceSlug` wildcard
 - [x] Step 8 completed — `BulkUploadPage.vue` created with all features
 
 ### Deviations / Decisions
@@ -187,14 +187,15 @@ Introduce a **Functional Resource** pattern in `APP.Resources` and build a **Bul
 - `FRONTENT/src/utils/db.js`
 - `FRONTENT/src/services/masterRecords.js`
 - `FRONTENT/src/router/routes.js`
-- `FRONTENT/src/pages/Masters/BulkUploadPage.vue` (NEW)
+- `FRONTENT/src/pages/master/BulkUploadPage.vue` (NEW)
 - `Documents/RESOURCE_COLUMNS_GUIDE.md`
 
 ### Validation Performed
 - [x] Dev server builds without errors
-- [x] Browser verification — page loads at `/masters/bulk-upload` with all UI elements visible
+- [x] Browser verification — page loads at `/master/bulk-upload` with all UI elements visible
 
 ### Manual Actions Required
 - [ ] Run `syncAppResourcesFromCode()` from GAS editor to push new columns/resource to the sheet.
 - [ ] Assign `BulkUploadMasters` resource with `canRead` + `canWrite` permission to the relevant role(s) in `APP > RolePermissions`.
 - [ ] Re-login to get updated authorization payload.
+

@@ -1,4 +1,4 @@
-# AQL — Module Workflows
+﻿# AQL — Module Workflows
 
 This document captures the **end-to-end workflow knowledge** for each major feature/module in the AQL system. It documents the complete data flow, responsible files, configuration surfaces, and known behaviors so that any AI agent (Claude, Codex, Gemini, etc.) can work on these features without re-discovering the architecture from scratch.
 
@@ -72,7 +72,7 @@ PO Receiving is the editable inspection layer between Purchase Orders and finali
 - `GoodsReceiptItems.Qty` stores accepted quantity only.
 
 ### 10.3 Workflow
-1. Select a Purchase Order from `/operations/po-receivings/_add`.
+1. Select a Purchase Order from `/operation/po-receivings/_add`.
 2. If an active draft exists for the PO, the page resumes it instead of creating a duplicate.
 3. Save draft writes `POReceivings` plus `POReceivingItems` through `compositeSave`; the GAS hook can move procurement from `PO_ISSUED` to `GOODS_RECEIVING`.
 4. Confirm runs the `Confirm` AdditionalAction and sets receiving progress to `CONFIRMED`.
@@ -81,13 +81,13 @@ PO Receiving is the editable inspection layer between Purchase Orders and finali
 7. Cancelling a receiving with an active GRN invalidates the GRN first. Completed procurement blocks frontend cancellation.
 
 ### 10.4 Routing And UI
-- PO Receiving custom pages live under `FRONTENT/src/pages/Operations/PoReceivings/` because the resolver maps `po-receivings` to `PoReceivings`.
-- Goods Receipts custom pages live under `FRONTENT/src/pages/Operations/GoodsReceipts/`.
+- PO Receiving custom pages live under `FRONTENT/src/pages/operation/PoReceivings/` because the resolver maps `po-receivings` to `PoReceivings`.
+- Goods Receipts custom pages live under `FRONTENT/src/pages/operation/GoodsReceipts/`.
 - No Goods Receipts add/edit page is implemented.
 - Report links for damage/reject/short/excess lists are disabled placeholders; no report template generation is implemented.
 
 ### 10.5 Warehouse Stock Posting
-Finalized active GRNs are posted to warehouse stock from `/operations/stock-movements/grn-entry`. A GRN is eligible when no `StockMovements` ledger row exists with `ReferenceType = GRN` and `ReferenceCode = GoodsReceipts.Code`. Posting creates positive `StockMovements.QtyChange` rows and relies on the existing StockMovements post-write hook to update `WarehouseStorages`.
+Finalized active GRNs are posted to warehouse stock from `/operation/stock-movements/grn-entry`. A GRN is eligible when no `StockMovements` ledger row exists with `ReferenceType = GRN` and `ReferenceCode = GoodsReceipts.Code`. Posting creates positive `StockMovements.QtyChange` rows and relies on the existing StockMovements post-write hook to update `WarehouseStorages`.
 
 ### 10.6 Out Of Scope
 Stock reversal and report-template generation are intentionally not implemented in this phase.
@@ -156,23 +156,23 @@ If no page is found, it renders a developer fallback page: `pages/_common/Page.v
 
 #### View Page (`_common/{Scope}/ViewPage.vue`)
 - `Header`: Dynamic view header (`components/_common/View/Header.vue` fallback).
-- `ActionBar`: Dynamic action triggers (`components/_common/Masters/View/ActionBar.vue` fallback).
-- `Details`: Record details values grid (`components/_common/Masters/View/Details.vue` fallback).
+- `ActionBar`: Dynamic action triggers (`components/_common/master/View/ActionBar.vue` fallback).
+- `Details`: Record details values grid (`components/_common/master/View/Details.vue` fallback).
 - `Audit`: Creation/modification metadata (`components/_common/View/Audit.vue` fallback - Masters only).
 - `Parent`: Displays parent record card (`components/_common/View/Parent.vue` fallback - Operations only).
-- `Children`: Dynamic child resources loops (`components/_common/Masters/View/Children.vue` fallback).
+- `Children`: Dynamic child resources loops (`components/_common/master/View/Children.vue` fallback).
 - `Loading`: Page-level loading spinner (`components/_common/View/Loading.vue` fallback).
 - `Empty`: Record not found card (`components/_common/View/Empty.vue` fallback).
 
 #### Add / Edit Pages (`_common/AddPage.vue` & `_common/EditPage.vue`)
 - `Header`: Header title (`components/_common/Add/Header.vue` or `components/_common/Edit/Header.vue` fallback).
-- `Form`: Composite data fields (`components/_common/Masters/Add/Form.vue` or `components/_common/Masters/Edit/Form.vue` fallback).
-- `Children`: Nested child rows (`components/_common/Masters/Add/Children.vue` or `components/_common/Masters/Edit/Children.vue` fallback).
+- `Form`: Composite data fields (`components/_common/master/Add/Form.vue` or `components/_common/master/Edit/Form.vue` fallback).
+- `Children`: Nested child rows (`components/_common/master/Add/Children.vue` or `components/_common/master/Edit/Children.vue` fallback).
 - `Actions`: Cancel and Submit buttons (`components/_common/Add/Actions.vue` or `components/_common/Edit/Actions.vue` fallback).
 
 #### Action Page (`_common/ActionPage.vue`)
 - `Header`: Dynamic action header (`components/_common/Action/Header.vue` fallback).
-- `Form`: Outcome selector and input fields (`components/_common/Masters/Action/Form.vue` fallback).
+- `Form`: Outcome selector and input fields (`components/_common/master/Action/Form.vue` fallback).
 - `Actions`: Cancel and Submit outcomes (`components/_common/Action/Actions.vue` fallback).
 
 ### 2.5 Architecture Contract Link
@@ -212,9 +212,9 @@ Operations data generally flows top-down (e.g. Purchase Requisitions → Purchas
 | `FRONTENT/src/pages/_common/AddPage.vue` | Centralized Add page orchestrator |
 | `FRONTENT/src/pages/_common/EditPage.vue` | Centralized Edit page orchestrator |
 | `FRONTENT/src/pages/_common/ActionPage.vue` | Centralized Action page orchestrator |
-| `FRONTENT/src/pages/_common/Operations/ViewPage.vue` | View orchestrator for Operations (custom section set) |
+| `FRONTENT/src/pages/_common/operation/ViewPage.vue` | View orchestrator for Operations (custom section set) |
 | `FRONTENT/src/components/_common/` | Consolidated global-common page section components |
-| `FRONTENT/src/components/_common/Operations/` | Consolidated operations-common page section components |
+| `FRONTENT/src/components/_common/operation/` | Consolidated operations-common page section components |
 | `FRONTENT/src/composables/resources/useResourceNav.js` | Composable for route navigation logic across scopes. |
 
 ### 3.4 Architecture Contract Link
@@ -227,7 +227,7 @@ Operations data generally flows top-down (e.g. Purchase Requisitions → Purchas
 
 ### 4.1 Overview
 
-Products now use entity-custom pages under `FRONTENT/src/pages/Masters/Products/` for variant-aware UX across index, view, add, and edit actions.
+Products now use entity-custom pages under `FRONTENT/src/pages/master/Products/` for variant-aware UX across index, view, add, and edit actions.
 
 - Parent resource: `Products`
 - Child resource: `SKUs` (joined by `SKUs.ProductCode = Products.Code`)
@@ -239,10 +239,10 @@ Products now use entity-custom pages under `FRONTENT/src/pages/Masters/Products/
 | File | Role |
 |---|---|
 | `FRONTENT/src/composables/useProductVariants.js` | Shared helper for parsing `VariantTypes`, building dynamic columns, SKU variant validation, and duplicate variant-set detection |
-| `FRONTENT/src/pages/Masters/Products/IndexPage.vue` | Custom list page with combined search (product fields + SKU variant values) and SKU counts |
-| `FRONTENT/src/pages/Masters/Products/ViewPage.vue` | Custom detail page with dynamic SKU table columns labeled from `VariantTypes` |
-| `FRONTENT/src/pages/Masters/Products/AddPage.vue` | Composite create page for Product + SKU rows with dynamic variant inputs |
-| `FRONTENT/src/pages/Masters/Products/EditPage.vue` | Composite edit page with variant type impact handling and SKU row lifecycle controls |
+| `FRONTENT/src/pages/master/Products/IndexPage.vue` | Custom list page with combined search (product fields + SKU variant values) and SKU counts |
+| `FRONTENT/src/pages/master/Products/ViewPage.vue` | Custom detail page with dynamic SKU table columns labeled from `VariantTypes` |
+| `FRONTENT/src/pages/master/Products/AddPage.vue` | Composite create page for Product + SKU rows with dynamic variant inputs |
+| `FRONTENT/src/pages/master/Products/EditPage.vue` | Composite edit page with variant type impact handling and SKU row lifecycle controls |
 
 ### 4.3 Runtime Flow
 
@@ -353,7 +353,7 @@ Valid permission keys depend on role configuration. Common keys:
      order: 1,
      label: 'Products',
      icon: 'inventory_2',
-     route: '/masters/products',
+     route: '/master/products',
      pageTitle: 'Products',
      pageDescription: '...',
      show: true,
@@ -391,7 +391,7 @@ Valid permission keys depend on role configuration. Common keys:
 
 ### 6.1 Overview
 
-The Direct Stock Entry page (`/operations/stock-movements/direct-entry`) provides a fast, mobile-first editable register for adding or adjusting stock quantities. It operates strictly as a `DirectEntry` movement type, writing to the `StockMovements` ledger which in turn auto-updates the `WarehouseStorages` summary via a backend hook.
+The Direct Stock Entry page (`/operation/stock-movements/direct-entry`) provides a fast, mobile-first editable register for adding or adjusting stock quantities. It operates strictly as a `DirectEntry` movement type, writing to the `StockMovements` ledger which in turn auto-updates the `WarehouseStorages` summary via a backend hook.
 
 ### 6.2 Architecture Diagram
 
@@ -426,7 +426,7 @@ BACKEND (Google Apps Script)
 | `FRONTENT/src/pages/Warehouse/ManageStockPage.vue` | Thin page orchestrator — two-step wizard state |
 | `FRONTENT/src/components/Warehouse/StockEntryGrid.vue` | Core grid UI — editable rows, new rows, delta tracking, save logic |
 | `FRONTENT/src/composables/useStockMovements.js` | Loads warehouses, SKUs, and storages. Submits batches via API. |
-| `FRONTENT/src/router/routes.js` | Explicit route `/operations/stock-movements/direct-entry` |
+| `FRONTENT/src/router/routes.js` | Explicit route `/operation/stock-movements/direct-entry` |
 | `GAS/stockMovements.gs` | Hook logic to sync `WarehouseStorages` based on `StockMovements` |
 | `GAS/resourceApi.gs` | Executes `dispatchAfterCreateHook()` during save |
 
@@ -442,7 +442,7 @@ BACKEND (Google Apps Script)
 ## 6A. GRN Stock Entry
 
 ### 6A.1 Overview
-The GRN Stock Entry page (`/operations/stock-movements/grn-entry`) posts accepted finalized GRN quantities into warehouse stock. It reuses `useStockMovements().submitBatch()` and the existing `StockMovements` backend hook, so `WarehouseStorages` remains derived from ledger rows.
+The GRN Stock Entry page (`/operation/stock-movements/grn-entry`) posts accepted finalized GRN quantities into warehouse stock. It reuses `useStockMovements().submitBatch()` and the existing `StockMovements` backend hook, so `WarehouseStorages` remains derived from ledger rows.
 
 ### 6A.2 Flow
 1. Select a warehouse.
@@ -450,7 +450,7 @@ The GRN Stock Entry page (`/operations/stock-movements/grn-entry`) posts accepte
 3. Allocate each `GoodsReceiptItems.Qty` across one or more storage rows.
 4. Submit creates one positive `StockMovements` row per allocation with `ReferenceType = GRN`, `ReferenceCode = GoodsReceipts.Code`, selected `WarehouseCode`, allocation `StorageName`, `SKU`, and `QtyChange`.
 5. Blank/default storage displays as `Default` in the UI and submits as `_default`.
-6. After a successful save, the page redirects to `/masters/warehouses/{WarehouseCode}/stock`.
+6. After a successful save, the page redirects to `/master/warehouses/{WarehouseCode}/stock`.
 
 ### 6A.3 Eligibility And Validation
 - A GRN is hidden after any `StockMovements` row exists with `ReferenceType = GRN` and matching `ReferenceCode`.
@@ -463,13 +463,13 @@ The GRN Stock Entry page (`/operations/stock-movements/grn-entry`) posts accepte
 Warehouse stock lookup is available from `Warehouse > Stock List`, from a Warehouse record's `View Stock` navigate action, and from GRN Stock Entry after posting. All entry points resolve to the same record-page stock view.
 
 ### 6B.2 Routes
-- Resource page: `/masters/warehouses/stock-list` lists active warehouses as selection cards.
-- Record page: `/masters/warehouses/{WarehouseCode}/stock` shows current `WarehouseStorages` rows for the warehouse, enriched with SKU and Product labels.
+- Resource page: `/master/warehouses/stock-list` lists active warehouses as selection cards.
+- Record page: `/master/warehouses/{WarehouseCode}/stock` shows current `WarehouseStorages` rows for the warehouse, enriched with SKU and Product labels.
 
 ### 6B.3 Ownership
 - `GAS/syncAppResources.gs` configures the `Warehouses` menu row and `ViewStock` navigate AdditionalAction.
-- `FRONTENT/src/composables/masters/warehouses/useWarehouseStockList.js` owns loading, filtering, summary calculation, and navigation.
-- `FRONTENT/src/components/Masters/Warehouses/WarehouseStockRows.vue` is UI-only and renders the stock rows.
+- `FRONTENT/src/composables/master/warehouses/useWarehouseStockList.js` owns loading, filtering, summary calculation, and navigation.
+- `FRONTENT/src/components/master/Warehouses/WarehouseStockRows.vue` is UI-only and renders the stock rows.
 
 ## 7. RFQ Supplier Dispatch Flow
 
@@ -493,7 +493,7 @@ Supplier Quotations capture normalized supplier responses received outside AQL a
 This module intentionally stops at response capture. It does not compare quotations, score suppliers, generate POs, support alternate SKUs, snapshot RFQs, or store calculated partial/quoted flags.
 
 ### 8.2 Core Behaviors
-1. **Index**: `/operations/supplier-quotations` shows Supplier Quotations grouped by `RECEIVED`, `ACCEPTED`, `REJECTED`, then other states. Stale rejected rows and accepted rows tied to completed procurements are hidden after the configured 14-day window.
+1. **Index**: `/operation/supplier-quotations` shows Supplier Quotations grouped by `RECEIVED`, `ACCEPTED`, `REJECTED`, then other states. Stale rejected rows and accepted rows tied to completed procurements are hidden after the configured 14-day window.
 2. **Create**: Staff select an RFQ with `Progress = SENT`, then choose one of its active `RFQSuppliers` rows. The create form captures `SupplierQuotationReference` and `AllowPartialPO` (`TRUE`/`FALSE`, default `TRUE`) on the quotation header. Duplicate supplier responses for the same RFQ warn but do not block.
 3. **Response Types**: `QUOTED` requires every RFQ purchase requisition item to be quoted; `PARTIAL` allows missing item rows; `DECLINED` requires `DeclineReason` and does not require items.
 4. **First Save Workflow**: First save writes the quotation header/items. If the matching `RFQSuppliers` row is still `ASSIGNED`, the save first stamps blank `SentDate`, moves it to `SENT`, and advances `Procurements.Progress` from `RFQ_GENERATED` to `RFQ_SENT_TO_SUPPLIERS` when still at that stage. The same save then marks the supplier row `RESPONDED`. If the supplier row is already `SENT`, it is marked `RESPONDED` directly. Finally, the linked procurement advances from `RFQ_SENT_TO_SUPPLIERS` to `QUOTATIONS_RECEIVED` only when it is still at that exact stage.
@@ -501,8 +501,8 @@ This module intentionally stops at response capture. It does not compare quotati
 6. **Reject**: `RECEIVED` quotations can be rejected through the `Reject` AdditionalAction, which sets `Progress = REJECTED` and records `ProgressRejectedComment`, `ProgressRejectedAt`, and `ProgressRejectedBy`.
 
 ### 8.3 Architecture Details
-- **Pages**: The menu route remains `/operations/supplier-quotations`, so the operation page resolver loads entity pages from `FRONTENT/src/pages/Operations/SupplierQuotations/`.
-- **Composables**: Supplier Quotation workflow logic lives under `FRONTENT/src/composables/operations/supplierQuotations/`.
+- **Pages**: The menu route remains `/operation/supplier-quotations`, so the operation page resolver loads entity pages from `FRONTENT/src/pages/operation/SupplierQuotations/`.
+- **Composables**: Supplier Quotation workflow logic lives under `FRONTENT/src/composables/operation/supplierQuotations/`.
 - **Backend**: The feature uses existing generic `compositeSave`, `batch`, `update`, and `executeAction` capabilities. No custom GAS endpoint is introduced.
 - **Options**: Response type, quotation progress, extra charge keys, and currency are seeded through `APP.AppOptions` and delivered in the login payload.
 
@@ -521,9 +521,9 @@ The Purchase Order module converts an eligible `SupplierQuotations` response int
 7. **Actions**: Handled exclusively through configuration-driven `AdditionalActions` (Send, Acknowledge, Accept, Cancel). Progress states map to `APP_OPTIONS_SEED.PurchaseOrderProgress`. Cancelling a PO marks matching `RFQSuppliers` rows for the PO RFQ/supplier as `CANCELLED`; when the linked procurement is `PO_ISSUED` and no other active non-cancelled PO exists for that procurement, it rolls back to `QUOTATIONS_RECEIVED`. If the source RFQ was `CLOSED`, cancellation reopens it to `SENT` and clears `ProgressClosedComment`.
 
 ### 9.3 Architecture Details
-- **Pages**: `/operations/purchase-orders` handles index, create, and view.
+- **Pages**: `/operation/purchase-orders` handles index, create, and view.
 - **Backend Sync**: Uses standard `workflowStore.runBatchRequests` for `compositeSave` and `executeAction` updates without new custom endpoints.
-- **Composables**: Logic lives entirely in `FRONTENT/src/composables/operations/purchaseOrders/` providing stateless payload mapping, reactive frontend totals, and route-isolated flows.
+- **Composables**: Logic lives entirely in `FRONTENT/src/composables/operation/purchaseOrders/` providing stateless payload mapping, reactive frontend totals, and route-isolated flows.
 
 ## 10. PO Receiving + Goods Receipts
 
@@ -539,10 +539,10 @@ PO Receiving is the frontend-owned inspection layer between Purchase Orders and 
 - Receiving cancellation/replacement invalidates an active linked GRN first, cancels the POR through `POReceivings.Cancel`, and returns non-completed procurement to `PO_ISSUED`.
 
 ### 10.2 Architecture Details
-- **Pages**: `/operations/po-receivings` handles index, draft/resume, and read-only action view. `/operations/goods-receipts` handles finalized GRN index/view only.
+- **Pages**: `/operation/po-receivings` handles index, draft/resume, and read-only action view. `/operation/goods-receipts` handles finalized GRN index/view only.
 - **Backend Sync**: PO Receiving save, confirm, GRN creation, GRN invalidation, cancellation, and replacement are orchestrated through `workflowStore.runBatchRequests`. GRN creation uses `GoodsReceipts` + `GoodsReceiptItems` `compositeSave` in the first batch item, followed by configured `AdditionalActions`/updates and a grouped refresh `get`. `compositeSave` write responses include directly written parent/child rows so generated GRN headers are available to the frontend even when immediate sheet readback is sparse.
 - **PostAction Ownership**: `POReceivings` and `GoodsReceipts` do not rely on `PostAction` hooks for workflow side effects; no custom GAS endpoint is used.
-- **Composables**: Shared POR/GRN payload and batch request construction lives under `FRONTENT/src/composables/operations/poReceivings/`, keeping Vue pages UI-only.
+- **Composables**: Shared POR/GRN payload and batch request construction lives under `FRONTENT/src/composables/operation/poReceivings/`, keeping Vue pages UI-only.
 
 ## 11. Outlet & Field Sales Operations
 
@@ -595,8 +595,8 @@ Outlet & Field Sales Operations manages consignment outlet visits, restock reque
 11. Outlet stock balance changes only through the outlet movement post-write hook. No direct `OutletStorages` edits are allowed.
 
 ### 11.6 Architecture Details
-- **Frontend**: Business rules, validation, batch orchestration, quantity calculations, and navigation live under `FRONTENT/src/composables/operations/outlets/`. Vue pages remain thin Quasar orchestration shells.
-- **Components**: Reusable outlet UI blocks live under `FRONTENT/src/components/Operations/Outlets/` and remain UI-only.
+- **Frontend**: Business rules, validation, batch orchestration, quantity calculations, and navigation live under `FRONTENT/src/composables/operation/outlets/`. Vue pages remain thin Quasar orchestration shells.
+- **Components**: Reusable outlet UI blocks live under `FRONTENT/src/components/operation/Outlets/` and remain UI-only.
 - **Backend**: Uses generic resource APIs, configured `AdditionalActions`, composite save, bulk/update/create, and the outlet movement post-write hook. No custom endpoint is required.
 - **Lock rules**: Submitted/restock approval states are not directly edited; revisions use send-back and resubmission. `OutletStorages` is never directly edited by frontend operation pages.
 
@@ -605,3 +605,4 @@ Outlet & Field Sales Operations manages consignment outlet visits, restock reque
 13. [Bulk Upload](#13-bulk-upload)
 14. [Dashboard Widgets](#14-dashboard-widgets)
 -->
+

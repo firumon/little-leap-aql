@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="rfq-index">
     <q-card flat bordered>
       <q-card-section class="q-pa-sm">
@@ -76,7 +76,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { useRFQIndex } from 'src/composables/operations/rfqs/useRFQIndex'
+import { useRFQIndex } from 'src/composables/operation/rfqs/useRFQIndex'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
 import { useResourceReload } from 'src/composables/resources/useResourceReload'
 
@@ -116,3 +116,4 @@ const shouldBlockUi = computed(() => loading.value && hasUninitiatedDependencies
   height: 58px;
 }
 </style>
+

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding>
 
 
@@ -283,7 +283,7 @@
 </template>
 
 <script setup>
-import { usePurchaseRequisitionCreateFlow } from 'src/composables/operations/purchaseRequisitions/usePurchaseRequisitionCreateFlow'
+import { usePurchaseRequisitionCreateFlow } from 'src/composables/operation/purchaseRequisitions/usePurchaseRequisitionCreateFlow'
 import { formatSkuVariants } from 'src/utils/appHelpers'
 
 const {
@@ -330,5 +330,6 @@ const {
   margin-right: 0;
 }
 </style>
+
 
 

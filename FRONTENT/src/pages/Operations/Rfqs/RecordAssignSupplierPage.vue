@@ -1,7 +1,8 @@
-<template>
+﻿<template>
   <RfqSupplierFlowPage mode="assign" />
 </template>
 
 <script setup>
-import RfqSupplierFlowPage from 'src/components/Operations/Rfqs/RfqSupplierFlowPage.vue'
+import RfqSupplierFlowPage from 'src/components/operation/Rfqs/RfqSupplierFlowPage.vue'
 </script>
+

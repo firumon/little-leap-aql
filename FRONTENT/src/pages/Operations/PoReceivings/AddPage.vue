@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding>
     <div class="row items-center q-mb-md"><q-btn icon="arrow_back" flat round @click="cancel" class="q-mr-sm" /><div class="text-h6">PO Receiving Draft</div></div>
     <q-card class="q-mb-md"><q-card-section>
@@ -31,13 +31,14 @@
 
 <script setup>
 import { onMounted } from 'vue'
-import { usePOReceivingAddFlow } from '../../../composables/operations/poReceivings/usePOReceivingAddFlow.js'
-import POReceivingSummaryCards from '../../../components/Operations/PoReceivings/POReceivingSummaryCards.vue'
-import POReceivingItemGrid from '../../../components/Operations/PoReceivings/POReceivingItemGrid.vue'
-import POReceivingBulkToolbar from '../../../components/Operations/PoReceivings/POReceivingBulkToolbar.vue'
+import { usePOReceivingAddFlow } from '../../../composables/operation/poReceivings/usePOReceivingAddFlow.js'
+import POReceivingSummaryCards from '../../../components/operation/PoReceivings/POReceivingSummaryCards.vue'
+import POReceivingItemGrid from '../../../components/operation/PoReceivings/POReceivingItemGrid.vue'
+import POReceivingBulkToolbar from '../../../components/operation/PoReceivings/POReceivingBulkToolbar.vue'
 
 defineOptions({ name: 'PoReceivingsAddPage' })
 const flow = usePOReceivingAddFlow()
 const { saving, selectedPurchaseOrderCode, purchaseOrderOptions, currentReceiving, form, items, summary, isDraft, isCompletedProcurement, canSaveDraft, canConfirm, canGenerateGRN, loadData, selectPurchaseOrder, updateItem, setAllReceivedToExpected, clearQuantities, saveDraft, confirmReceiving, generateGRN, startReplacement, cancel } = flow
 onMounted(() => loadData())
 </script>
+

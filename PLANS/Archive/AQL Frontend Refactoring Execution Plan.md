@@ -1,4 +1,4 @@
-# PLAN: AQL Frontend Refactoring Execution
+﻿# PLAN: AQL Frontend Refactoring Execution
 **Status**: COMPLETED
 **Created**: 2026-04-19
 **Created By**: Brain Agent (Codex)
@@ -157,8 +157,8 @@ Execute in layers, not by sweeping file renames:
 ### Step 6: Thin Pages and Remove Direct Service Calls From Views
 - [ ] Refactor pages that still call `callGasApi()` or `fetchResourceRecords()` directly so they delegate to composables or store actions.
 - [ ] Prioritize high-risk pages first:
-  - generic masters pages under `pages/Masters/_common/`
-  - generic operations pages under `pages/Operations/_common/`
+  - generic masters pages under `pages/master/_common/`
+  - generic operations pages under `pages/operation/_common/`
   - purchase requisition pages
   - product pages
 - [ ] Introduce new page-specific composables only where they reduce duplication and clarify ownership:
@@ -269,15 +269,15 @@ Execute in layers, not by sweeping file renames:
 - `FRONTENT/src/composables/useReports.js`
 - `FRONTENT/src/composables/useResourceData.js`
 - `FRONTENT/src/composables/useStockMovements.js`
-- `FRONTENT/src/pages/Masters/_common/ActionPage.vue`
-- `FRONTENT/src/pages/Masters/_common/EditPage.vue`
-- `FRONTENT/src/pages/Masters/_common/ViewPage.vue`
-- `FRONTENT/src/pages/Masters/Products/ViewPage.vue`
-- `FRONTENT/src/pages/Operations/_common/ActionPage.vue`
-- `FRONTENT/src/pages/Operations/_common/EditPage.vue`
-- `FRONTENT/src/pages/Operations/_common/ViewPage.vue`
-- `FRONTENT/src/pages/Operations/PurchaseRequisitions/InitiatePurchaseRequisitionsPage.vue`
-- `FRONTENT/src/pages/Operations/PurchaseRequisitions/RecordDraftPage.vue`
+- `FRONTENT/src/pages/master/_common/ActionPage.vue`
+- `FRONTENT/src/pages/master/_common/EditPage.vue`
+- `FRONTENT/src/pages/master/_common/ViewPage.vue`
+- `FRONTENT/src/pages/master/Products/ViewPage.vue`
+- `FRONTENT/src/pages/operation/_common/ActionPage.vue`
+- `FRONTENT/src/pages/operation/_common/EditPage.vue`
+- `FRONTENT/src/pages/operation/_common/ViewPage.vue`
+- `FRONTENT/src/pages/operation/PurchaseRequisitions/InitiatePurchaseRequisitionsPage.vue`
+- `FRONTENT/src/pages/operation/PurchaseRequisitions/RecordDraftPage.vue`
 - `FRONTENT/src/services/apiClient.js` (removed)
 - `FRONTENT/src/services/gasApi.js` (removed)
 - `FRONTENT/src/services/resourceRecords.js` (removed)
@@ -290,3 +290,4 @@ Execute in layers, not by sweeping file renames:
 
 ### Manual Actions Required
 - [ ] None
+

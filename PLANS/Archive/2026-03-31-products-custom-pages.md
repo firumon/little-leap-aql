@@ -1,4 +1,4 @@
-# PLAN: Products Entity — Custom Index, View, Edit & Add Pages
+﻿# PLAN: Products Entity — Custom Index, View, Edit & Add Pages
 **Status**: COMPLETED
 **Created**: 2026-03-31
 **Created By**: Brain Agent (Claude Code)
@@ -67,7 +67,7 @@ function parseVariantTypes(variantTypesCSV) {
 **Rule**: Max 5 variants. Empty `VariantTypes` = no variant columns shown.
 
 ### Step 2: Custom `ListRecords` section for Products
-- [ ] Create `FRONTENT/src/components/Masters/Products/ListRecords.vue`
+- [ ] Create `FRONTENT/src/components/master/Products/ListRecords.vue`
 - [ ] Accept same props as `MasterListRecords`: `{ items, loading, resolvedFields, childCountMap }`
 - [ ] Emit same events: `navigate-to-view`
 - [ ] Each product card shows: **Code**, **Name**, **VariantTypes** (as chips/badges), **SKU count**
@@ -85,14 +85,14 @@ function parseVariantTypes(variantTypesCSV) {
   - **User requirement was clear**: "searching allows in variant values". So we need to handle this.
   - **Best architecture**: Create a custom `Products/IndexPage.vue` (full page) instead of just a section override. This gives us full control over the search pipeline. Load both Products and SKUs, merge them for search, then render the custom list.
 
-**REVISED DECISION**: Make Index a **full custom page** too (`pages/Masters/Products/IndexPage.vue`). This gives full control over the search pipeline to include SKU variant values. The page will:
+**REVISED DECISION**: Make Index a **full custom page** too (`pages/master/Products/IndexPage.vue`). This gives full control over the search pipeline to include SKU variant values. The page will:
 1. Load Products via `useResourceData`
 2. Load SKUs from IDB via `fetchMasterRecords('SKUs')`
 3. Implement combined search: match on Product.Code, Product.Name, Product.VariantTypes, AND any SKU.Variant1–5 values for that product
 4. Render a custom card list with Code, Name, VariantTypes chips, SKU count
 5. Reuse default `ListHeader`, `ListReportBar` sections (no need to customize those)
 
-- [ ] Create `FRONTENT/src/pages/Masters/Products/IndexPage.vue`
+- [ ] Create `FRONTENT/src/pages/master/Products/IndexPage.vue`
 - [ ] Import and use `useResourceConfig`, `useResourceData`, `useReports`
 - [ ] Load SKUs alongside Products from IDB
 - [ ] Build `skusByProduct` map (keyed by `ProductCode`)
@@ -101,12 +101,12 @@ function parseVariantTypes(variantTypesCSV) {
 - [ ] Include default ListHeader (import directly), ListReportBar, FAB, ReportInputDialog
 - [ ] ListToolbar: use default search input (or inline q-input) — the search just feeds the combined filter
 
-**Files**: `FRONTENT/src/pages/Masters/Products/IndexPage.vue`
+**Files**: `FRONTENT/src/pages/master/Products/IndexPage.vue`
 **Pattern**: Based on `_common/IndexPage.vue` but with custom search + card rendering
 **Rule**: Search must match across product fields AND child SKU variant values
 
 ### Step 3: Custom View Page for Products
-- [ ] Create `FRONTENT/src/pages/Masters/Products/ViewPage.vue`
+- [ ] Create `FRONTENT/src/pages/master/Products/ViewPage.vue`
 - [ ] Load product record from `useResourceData` (same as default ViewPage)
 - [ ] Load child SKU records (same `fetchMasterRecords` + filter by `ProductCode`)
 - [ ] Parse `VariantTypes` using `useProductVariants`
@@ -119,12 +119,12 @@ function parseVariantTypes(variantTypesCSV) {
 - [ ] **Audit section**: CreatedAt/UpdatedAt timestamps (reuse MasterViewAudit or inline)
 - [ ] Include ReportInputDialog for report generation
 
-**Files**: `FRONTENT/src/pages/Masters/Products/ViewPage.vue`
+**Files**: `FRONTENT/src/pages/master/Products/ViewPage.vue`
 **Pattern**: Based on `_common/ViewPage.vue` structure (loading/not-found/detail states)
 **Rule**: SKU table columns are dynamic based on product's VariantTypes. No inline editing on View.
 
 ### Step 4: Custom Add Page for Products
-- [ ] Create `FRONTENT/src/pages/Masters/Products/AddPage.vue`
+- [ ] Create `FRONTENT/src/pages/master/Products/AddPage.vue`
 - [ ] Use `useCompositeForm(config)` for form state + composite save
 - [ ] **Product Form section**:
   - Name input (required)
@@ -145,12 +145,12 @@ function parseVariantTypes(variantTypesCSV) {
 - [ ] **Save**: Uses `useCompositeForm.save()` — composite save with Product as parent, SKUs as children
 - [ ] On success: navigate to View page for the new product
 
-**Files**: `FRONTENT/src/pages/Masters/Products/AddPage.vue`
+**Files**: `FRONTENT/src/pages/master/Products/AddPage.vue`
 **Pattern**: Based on `_common/AddPage.vue` + `useCompositeForm`
 **Rule**: Composite save. No empty variant values. No duplicate SKU variant sets. VariantTypes changes update SKU columns dynamically.
 
 ### Step 5: Custom Edit Page for Products
-- [ ] Create `FRONTENT/src/pages/Masters/Products/EditPage.vue`
+- [ ] Create `FRONTENT/src/pages/master/Products/EditPage.vue`
 - [ ] Use `useCompositeForm(config)` initialized with existing record + child SKUs
 - [ ] Load product record + SKU records on mount (same pattern as default EditPage)
 - [ ] **Product Form section**:
@@ -171,7 +171,7 @@ function parseVariantTypes(variantTypesCSV) {
 - [ ] **Save**: `useCompositeForm.save()` — composite save
 - [ ] On success: navigate to View page
 
-**Files**: `FRONTENT/src/pages/Masters/Products/EditPage.vue`
+**Files**: `FRONTENT/src/pages/master/Products/EditPage.vue`
 **Pattern**: Based on `_common/EditPage.vue` + `useCompositeForm`
 **Rule**: VariantTypes changes must warn user about impact. Deleted SKUs = deactivated. Composite save.
 
@@ -203,10 +203,10 @@ function parseVariantTypes(variantTypesCSV) {
 | File | Type | Purpose |
 |------|------|---------|
 | `FRONTENT/src/composables/useProductVariants.js` | NEW | Shared variant parsing, validation, duplicate detection |
-| `FRONTENT/src/pages/Masters/Products/IndexPage.vue` | NEW | Custom index with variant-aware search + SKU count cards |
-| `FRONTENT/src/pages/Masters/Products/ViewPage.vue` | NEW | Custom view with dynamic variant-column SKU table |
-| `FRONTENT/src/pages/Masters/Products/AddPage.vue` | NEW | Custom add with variant type input + SKU row management |
-| `FRONTENT/src/pages/Masters/Products/EditPage.vue` | NEW | Custom edit with variant change impact + SKU management |
+| `FRONTENT/src/pages/master/Products/IndexPage.vue` | NEW | Custom index with variant-aware search + SKU count cards |
+| `FRONTENT/src/pages/master/Products/ViewPage.vue` | NEW | Custom view with dynamic variant-column SKU table |
+| `FRONTENT/src/pages/master/Products/AddPage.vue` | NEW | Custom add with variant type input + SKU row management |
+| `FRONTENT/src/pages/master/Products/EditPage.vue` | NEW | Custom edit with variant change impact + SKU management |
 
 ## Documentation Updates Required
 - [ ] Update `FRONTENT/src/composables/REGISTRY.md` with `useProductVariants`
@@ -245,10 +245,10 @@ function parseVariantTypes(variantTypesCSV) {
 
 ### Files Actually Changed
 - `FRONTENT/src/composables/useProductVariants.js`
-- `FRONTENT/src/pages/Masters/Products/IndexPage.vue`
-- `FRONTENT/src/pages/Masters/Products/ViewPage.vue`
-- `FRONTENT/src/pages/Masters/Products/AddPage.vue`
-- `FRONTENT/src/pages/Masters/Products/EditPage.vue`
+- `FRONTENT/src/pages/master/Products/IndexPage.vue`
+- `FRONTENT/src/pages/master/Products/ViewPage.vue`
+- `FRONTENT/src/pages/master/Products/AddPage.vue`
+- `FRONTENT/src/pages/master/Products/EditPage.vue`
 - `FRONTENT/src/composables/REGISTRY.md`
 - `Documents/MODULE_WORKFLOWS.md`
 - `Documents/CONTEXT_HANDOFF.md`
@@ -261,3 +261,4 @@ function parseVariantTypes(variantTypesCSV) {
 ### Manual Actions Required
 - [ ] Test all 4 pages manually in the browser
 - [ ] Verify composite save works end-to-end (check Google Sheet for created/updated rows)
+

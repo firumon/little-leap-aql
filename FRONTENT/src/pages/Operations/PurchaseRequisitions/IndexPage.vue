@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="pr-index">
     <q-card flat bordered class="pr-header-card q-mb-sm">
       <q-card-section class="q-pa-sm">
@@ -165,7 +165,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { usePurchaseRequisitionIndex } from 'src/composables/operations/purchaseRequisitions/usePurchaseRequisitionIndex'
+import { usePurchaseRequisitionIndex } from 'src/composables/operation/purchaseRequisitions/usePurchaseRequisitionIndex'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
 import { useResourceReload } from 'src/composables/resources/useResourceReload'
 
@@ -395,3 +395,4 @@ const shouldBlockUi = computed(() => loading.value && hasUninitiatedDependencies
   to   { transform: translateY(0);    opacity: 1; }
 }
 </style>
+

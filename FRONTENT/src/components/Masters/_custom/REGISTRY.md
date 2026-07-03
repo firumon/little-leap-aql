@@ -1,16 +1,16 @@
-# Custom Section Component Registry
+﻿# Custom Section Component Registry
 
-Purpose: track tenant-specific section overrides under `components/Masters/_custom/`.
+Purpose: track tenant-specific section overrides under `components/master/_custom/`.
 
 ## How It Works
 
 When `APP.Resources.CustomUIName` is set for a resource (e.g. `A2930`), the `useSectionResolver` composable checks for a custom section at:
 
 ```
-components/Masters/_custom/{CustomUIName}/{Entity}{Section}.vue
+components/master/_custom/{CustomUIName}/{Entity}{Section}.vue
 ```
 
-If no custom section is found, resolution falls through to entity-custom (`components/Masters/{Entity}/{Section}.vue`) then to the default (`components/Masters/Master{Action}{Section}.vue`).
+If no custom section is found, resolution falls through to entity-custom (`components/master/{Entity}/{Section}.vue`) then to the default (`components/master/Master{Action}{Section}.vue`).
 
 Full architecture reference: `Documents/MODULE_WORKFLOWS.md` Section 2.
 
@@ -44,8 +44,8 @@ Examples:
 
 | Scenario | Use |
 |----------|-----|
-| Only 1-2 sections need changes (e.g. different header layout) | Section override here (`components/Masters/_custom/`) |
-| Most/all sections need changes or the page layout itself changes | Full page override in `pages/Masters/_custom/` |
+| Only 1-2 sections need changes (e.g. different header layout) | Section override here (`components/master/_custom/`) |
+| Most/all sections need changes or the page layout itself changes | Full page override in `pages/master/_custom/` |
 | Custom page exists for a tenant+entity | No need for section overrides (the custom page controls its own sections) |
 
 ## Guidelines
@@ -61,3 +61,4 @@ Examples:
 | CustomUIName | Entity | Section | Description | Path |
 |---|---|---|---|---|
 | _(none yet)_ | | | | |
+

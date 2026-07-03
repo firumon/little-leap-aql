@@ -1,4 +1,4 @@
-# PLAN: RFQ Create Flow And Index
+﻿# PLAN: RFQ Create Flow And Index
 **Status**: COMPLETED
 **Created**: 2026-04-24
 **Created By**: Brain Agent (Codex)
@@ -11,11 +11,11 @@ Create the first custom RFQ frontend flow for AQL: an RFQ index that prioritizes
 - Active role for this plan: `Brain Agent`.
 - Required docs reviewed: `AGENTS.md`, `Documents/MULTI_AGENT_PROTOCOL.md`, `Documents/DOC_ROUTING.md`, `Documents/AI_COLLABORATION_PROTOCOL.md`, `Documents/ARCHITECTURE RULES.md`, `Documents/FRONTENT_README.md`, `Documents/GAS_API_CAPABILITIES.md`, `Documents/CONTEXT_HANDOFF.md`, and `PLANS/_TEMPLATE.md`.
 - Existing patterns reviewed:
-  - `FRONTENT/src/pages/Operations/PurchaseRequisitions/IndexPage.vue`
-  - `FRONTENT/src/composables/operations/purchaseRequisitions/usePurchaseRequisitionIndex.js`
-  - `FRONTENT/src/composables/operations/purchaseRequisitions/usePurchaseRequisitionCreateFlow.js`
-  - `FRONTENT/src/composables/operations/purchaseRequisitions/usePurchaseRequisitionEditableFlow.js`
-  - `FRONTENT/src/composables/operations/procurements/useProcurements.js`
+  - `FRONTENT/src/pages/operation/PurchaseRequisitions/IndexPage.vue`
+  - `FRONTENT/src/composables/operation/purchaseRequisitions/usePurchaseRequisitionIndex.js`
+  - `FRONTENT/src/composables/operation/purchaseRequisitions/usePurchaseRequisitionCreateFlow.js`
+  - `FRONTENT/src/composables/operation/purchaseRequisitions/usePurchaseRequisitionEditableFlow.js`
+  - `FRONTENT/src/composables/operation/procurements/useProcurements.js`
   - `FRONTENT/src/stores/workflow.js`
 - User has manually updated app options for RFQ/RFQ supplier progress.
 - Canonical values for this work:
@@ -42,7 +42,7 @@ Create the first custom RFQ frontend flow for AQL: an RFQ index that prioritizes
   - `rfqSentToSuppliers`
 - [x] Keep existing PR workflow exports stable.
 - [x] Do not move RFQ-specific form logic into `useProcurements.js`; only shared procurement stage helpers belong here.
-**Files**: `FRONTENT/src/composables/operations/procurements/useProcurements.js`
+**Files**: `FRONTENT/src/composables/operation/procurements/useProcurements.js`
 **Pattern**: Existing `prCreated` / `prApproved` stage lookup.
 **Rule**: Procurement stage names must resolve from `auth.appOptionsMap.ProcurementProgress` with fallback constants.
 
@@ -61,7 +61,7 @@ Create the first custom RFQ frontend flow for AQL: an RFQ index that prioritizes
   - Quotation validity modes: `MIN_REQUIRED`, `MAX_ALLOWED`, `FLEXIBLE`
   - Delivery modes: `ANY`, `FIXED`
 - [x] Ensure terms copy is concise and business-friendly, based on the user-provided `C:\Users\firum\Desktop\Terms.txt`.
-**Files**: `FRONTENT/src/composables/operations/rfqs/rfqMeta.js`, `FRONTENT/src/composables/operations/rfqs/rfqPayload.js`
+**Files**: `FRONTENT/src/composables/operation/rfqs/rfqMeta.js`, `FRONTENT/src/composables/operation/rfqs/rfqPayload.js`
 **Pattern**: `purchaseRequisitionMeta.js`, `purchaseRequisitionPayload.js`
 **Rule**: `PurchaseRequisitionItemsCode` is CSV, not JSON.
 
@@ -102,12 +102,12 @@ Create the first custom RFQ frontend flow for AQL: an RFQ index that prioritizes
   - create Procurement and read returned code
   - create RFQ + update PR + update Procurement in a second batch
 - [x] Navigate to RFQ view after successful create using `useResourceNav().goTo('view', { code })`.
-**Files**: `FRONTENT/src/composables/operations/rfqs/useRFQCreateFlow.js`
+**Files**: `FRONTENT/src/composables/operation/rfqs/useRFQCreateFlow.js`
 **Pattern**: `usePurchaseRequisitionCreateFlow.js`, `usePurchaseRequisitionEditableFlow.js`, `useProcurements.js`
 **Rule**: Components/pages must not call services or stores directly; this composable may use stores and resource composables.
 
 ### Step 4: Create Custom RFQ Add Page
-- [x] Create `FRONTENT/src/pages/Operations/RFQs/AddPage.vue`.
+- [x] Create `FRONTENT/src/pages/operation/RFQs/AddPage.vue`.
 - [x] Keep the page thin; it should only render the wizard and bind to `useRFQCreateFlow()`.
 - [x] Use Quasar-first UI:
   - `q-stepper` or equivalent step navigation
@@ -120,12 +120,12 @@ Create the first custom RFQ frontend flow for AQL: an RFQ index that prioritizes
 - [x] Design for low keyboard usage: clicks, chips, toggles, date picker for deadline, numeric stepper/input for days.
 - [x] Do not make `RFQDate` editable in the UI.
 - [x] Keep the file near or below the 400-line rule; if it grows, split UI sections into local RFQ components.
-**Files**: `FRONTENT/src/pages/Operations/RFQs/AddPage.vue`
-**Pattern**: `FRONTENT/src/pages/Operations/PurchaseRequisitions/AddPage.vue`, `InitiatePurchaseRequisitionsPage.vue`
+**Files**: `FRONTENT/src/pages/operation/RFQs/AddPage.vue`
+**Pattern**: `FRONTENT/src/pages/operation/PurchaseRequisitions/AddPage.vue`, `InitiatePurchaseRequisitionsPage.vue`
 **Rule**: Add page is custom for RFQs and must stay frontend-layer compliant.
 
 ### Step 5: Create Custom RFQ Index Page
-- [x] Create `FRONTENT/src/pages/Operations/RFQs/IndexPage.vue`.
+- [x] Create `FRONTENT/src/pages/operation/RFQs/IndexPage.vue`.
 - [x] Create `useRFQIndex()` for grouping/filtering/search/navigation.
 - [x] Group RFQs by progress:
   - `DRAFT`
@@ -145,12 +145,12 @@ Create the first custom RFQ frontend flow for AQL: an RFQ index that prioritizes
   - partial/split shipment indicators
 - [x] Add refresh and search controls.
 - [x] Add `+` create button when `permissions.canWrite`, navigating to AddPage through `useResourceNav`.
-**Files**: `FRONTENT/src/pages/Operations/RFQs/IndexPage.vue`, `FRONTENT/src/composables/operations/rfqs/useRFQIndex.js`
-**Pattern**: `FRONTENT/src/pages/Operations/PurchaseRequisitions/IndexPage.vue`, `usePurchaseRequisitionIndex.js`
+**Files**: `FRONTENT/src/pages/operation/RFQs/IndexPage.vue`, `FRONTENT/src/composables/operation/rfqs/useRFQIndex.js`
+**Pattern**: `FRONTENT/src/pages/operation/PurchaseRequisitions/IndexPage.vue`, `usePurchaseRequisitionIndex.js`
 **Rule**: DRAFT RFQs are high-priority actionable records.
 
 ### Step 6: Create Small RFQ View Page
-- [x] Create `FRONTENT/src/pages/Operations/RFQs/ViewPage.vue`.
+- [x] Create `FRONTENT/src/pages/operation/RFQs/ViewPage.vue`.
 - [x] Load selected RFQ by route code through `useResourceData(ref('RFQs'))`.
 - [x] Resolve CSV item codes with `parsePrItemCodeCsv()`.
 - [x] Display a light read-only summary:
@@ -165,13 +165,13 @@ Create the first custom RFQ frontend flow for AQL: an RFQ index that prioritizes
   - shipping/payment/delivery summary
 - [x] Include a back/index navigation action through `useResourceNav` if consistent with nearby pages.
 - [x] Defer supplier assignment UI to a later plan.
-**Files**: `FRONTENT/src/pages/Operations/RFQs/ViewPage.vue`
+**Files**: `FRONTENT/src/pages/operation/RFQs/ViewPage.vue`
 **Pattern**: Read-only portions of `PurchaseRequisitions/ViewPage.vue`
 **Rule**: This is intentionally a minimal first view.
 
 ### Step 7: Update Frontend Registries If Required
 - [x] Add new reusable composables to `FRONTENT/src/composables/REGISTRY.md`.
-- [x] If Build creates reusable RFQ components under `FRONTENT/src/components/Operations/RFQs/`, add them to `FRONTENT/src/components/REGISTRY.md`.
+- [x] If Build creates reusable RFQ components under `FRONTENT/src/components/operation/RFQs/`, add them to `FRONTENT/src/components/REGISTRY.md`.
 - [x] Do not register page-private helpers that are not meant for reuse.
 **Files**: `FRONTENT/src/composables/REGISTRY.md`, optionally `FRONTENT/src/components/REGISTRY.md`
 **Pattern**: Existing purchase requisition registry entries.
@@ -192,7 +192,7 @@ Create the first custom RFQ frontend flow for AQL: an RFQ index that prioritizes
 - [x] If GAS files are changed, update the relevant GAS/resource docs and run `npm run gas:push` from repo root or `cd GAS && clasp push`.
 
 ## Acceptance Criteria
-- [x] `/operations/rfqs` uses the custom RFQ index and auto-expands/highlights `DRAFT` RFQs.
+- [x] `/operation/rfqs` uses the custom RFQ index and auto-expands/highlights `DRAFT` RFQs.
 - [x] RFQ index create button navigates to the custom RFQ AddPage for users with write permission.
 - [x] AddPage lists only active approved PRs.
 - [x] Selecting a PR shows all PR items in compact read-only analysis mode.
@@ -238,18 +238,18 @@ Create the first custom RFQ frontend flow for AQL: an RFQ index that prioritizes
 
 ### Deviations / Decisions
 - [x] `[?]` Decision needed: none.
-- [x] `[!]` Issue/blocker: Entity custom pages were created under `FRONTENT/src/pages/Operations/Rfqs/` instead of `RFQs/` because the existing auto-discovery resolver maps `/operations/rfqs` to `Rfqs`.
+- [x] `[!]` Issue/blocker: Entity custom pages were created under `FRONTENT/src/pages/operation/Rfqs/` instead of `RFQs/` because the existing auto-discovery resolver maps `/operation/rfqs` to `Rfqs`.
 
 ### Files Actually Changed
-- `FRONTENT/src/composables/operations/procurements/useProcurements.js`
-- `FRONTENT/src/composables/operations/rfqs/rfqMeta.js`
-- `FRONTENT/src/composables/operations/rfqs/rfqPayload.js`
-- `FRONTENT/src/composables/operations/rfqs/useRFQCreateFlow.js`
-- `FRONTENT/src/composables/operations/rfqs/useRFQIndex.js`
-- `FRONTENT/src/composables/operations/rfqs/useRFQView.js`
-- `FRONTENT/src/pages/Operations/Rfqs/AddPage.vue`
-- `FRONTENT/src/pages/Operations/Rfqs/IndexPage.vue`
-- `FRONTENT/src/pages/Operations/Rfqs/ViewPage.vue`
+- `FRONTENT/src/composables/operation/procurements/useProcurements.js`
+- `FRONTENT/src/composables/operation/rfqs/rfqMeta.js`
+- `FRONTENT/src/composables/operation/rfqs/rfqPayload.js`
+- `FRONTENT/src/composables/operation/rfqs/useRFQCreateFlow.js`
+- `FRONTENT/src/composables/operation/rfqs/useRFQIndex.js`
+- `FRONTENT/src/composables/operation/rfqs/useRFQView.js`
+- `FRONTENT/src/pages/operation/Rfqs/AddPage.vue`
+- `FRONTENT/src/pages/operation/Rfqs/IndexPage.vue`
+- `FRONTENT/src/pages/operation/Rfqs/ViewPage.vue`
 - `FRONTENT/src/composables/REGISTRY.md`
 - `Documents/CONTEXT_HANDOFF.md`
 - `PLANS/2026-04-24-rfq-create-flow.md`
@@ -260,3 +260,4 @@ Create the first custom RFQ frontend flow for AQL: an RFQ index that prioritizes
 
 ### Manual Actions Required
 - [x] None known beyond the user's already-completed app option updates. No GAS files changed.
+

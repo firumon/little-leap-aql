@@ -1,4 +1,4 @@
-# PLAN: Manage Stock Batch Sync & Cleanup Fixes
+﻿# PLAN: Manage Stock Batch Sync & Cleanup Fixes
 
 **Status**: DONE
 **Created**: 2026-04-10
@@ -36,8 +36,8 @@ Address three issues discovered during the Manage Stock batch sync implementatio
 
 ### 3. Backend: URL Cleanup
 - Modify `GAS/syncAppResources.gs` -> `APP_RESOURCES_CODE_CONFIG` -> `StockMovements` entry.
-- Change: `route: '/operations/manage-stock?referenceType=DirectEntry'`
-- To: `route: '/operations/manage-stock'`
+- Change: `route: '/operation/manage-stock?referenceType=DirectEntry'`
+- To: `route: '/operation/manage-stock'`
 
 ## Pre-Conditions
 - All files are accessible.
@@ -72,3 +72,4 @@ Address three issues discovered during the Manage Stock batch sync implementatio
 - `GAS/syncAppResources.gs`
 - `FRONTENT/src/composables/useStockMovements.js`
 - `PLANS/2026-04-10-manage-stock-fixes.md`
+

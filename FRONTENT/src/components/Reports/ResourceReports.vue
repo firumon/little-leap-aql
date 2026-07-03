@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div v-if="shouldRender">
     <!-- Toolbar Dropdown Mode -->
     <template v-if="mode === 'toolbar'">
@@ -116,7 +116,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import ReportInputDialog from 'src/components/Masters/ReportInputDialog.vue'
+import ReportInputDialog from 'src/components/master/ReportInputDialog.vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useDataStore } from 'src/stores/data'
 import { useReports } from 'src/composables/reports/useReports'
@@ -227,3 +227,4 @@ const shouldRender = computed(() => {
   transform: scale(0.95);
 }
 </style>
+

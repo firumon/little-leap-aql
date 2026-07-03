@@ -1,4 +1,4 @@
-# Quasar Badges (QBadge) Reference Guide
+﻿# Quasar Badges (QBadge) Reference Guide
 
 This reference guide describes the implementation and configuration of notification counters, status markers, and inline flags using Quasar's badge component (`QBadge`).
 
@@ -76,7 +76,7 @@ Floating badges can be nested inside navigation components like tabs:
 
 ```html
 <template>
-  <q-route-tab to="/operations" label="Orders">
+  <q-route-tab to="/operation" label="Orders">
     <!-- Floating badge nested inside route tab -->
     <q-badge
       v-if="ordersCount > 0"
@@ -103,3 +103,4 @@ defineProps({
 *   **Handling Large Numbers**: Truncating high numeric values (e.g., converting values greater than 99 to `'99+'`) helps keep the badge container from expanding excessively and overlapping adjacent content.
 *   **Aria Labels**: Screen readers may skip floating badges or read them out of context. Applying an `aria-label` or `aria-describedby` attribute to the parent component describing the badge count ensures proper accessibility mapping.
 *   **Background High Contrast**: Selecting colors that stand out from both light and dark backgrounds ensures legibility under varying theme configurations.
+

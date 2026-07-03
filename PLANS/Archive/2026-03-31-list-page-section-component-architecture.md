@@ -1,4 +1,4 @@
-# PLAN: List Page Section-Level Component Architecture
+﻿# PLAN: List Page Section-Level Component Architecture
 **Status**: COMPLETED
 **Created**: 2026-03-31
 **Created By**: Brain Agent (Claude Code)
@@ -15,14 +15,14 @@ This enables resource-specific UI customization (e.g., Products showing Active/I
 - `_common/ListPage.vue` is the single list page for all resources, rendered via `ActionResolverPage.vue`'s two-level auto-discovery (custom entity page → `_common` fallback).
 - The page uses three existing components inline: `MasterHeader.vue`, `MasterToolbar.vue`, and an inline card grid (duplicating `MasterList.vue`).
 - `MasterHeader.vue` combines two concerns: header info (title, counts, refresh) AND report buttons.
-- `MasterList.vue` and `MasterRecordCard.vue` exist in `components/Masters/` but `ListPage.vue` duplicates the card grid inline instead of using `MasterList.vue`.
-- No custom entity list pages exist yet (`pages/Masters/` has only `_common/`).
+- `MasterList.vue` and `MasterRecordCard.vue` exist in `components/master/` but `ListPage.vue` duplicates the card grid inline instead of using `MasterList.vue`.
+- No custom entity list pages exist yet (`pages/master/` has only `_common/`).
 
 ### Target State
 - `_common/ListPage.vue` becomes a thin orchestrator that discovers and renders 4 section components.
 - Each section can be overridden per-resource via file convention.
-- Default components live in `components/Masters/` (reusable).
-- Custom components live in `pages/Masters/{EntityName}/` (resource-specific).
+- Default components live in `components/master/` (reusable).
+- Custom components live in `pages/master/{EntityName}/` (resource-specific).
 
 ### Architecture Diagram
 ```
@@ -55,12 +55,12 @@ Create a new composable that resolves section components for the list page using
 
 - [ ] Create file `FRONTENT/src/composables/useListSectionResolver.js`.
 - [ ] The composable accepts `resourceSlug` (Ref<String>) as argument.
-- [ ] Use `import.meta.glob` to discover custom section components from `pages/Masters/*/List*.vue` (excluding `_common/`).
+- [ ] Use `import.meta.glob` to discover custom section components from `pages/master/*/List*.vue` (excluding `_common/`).
 - [ ] Import the 4 default components statically as fallbacks.
 - [ ] Export a function `resolveListSections(resourceSlug)` that returns reactive refs for each section component.
 - [ ] Resolution logic per section:
   1. Convert `resourceSlug` to PascalCase (reuse the same logic as `ActionResolverPage.vue` — e.g., `products` → `Products`, `warehouse-storages` → `WarehouseStorages`).
-  2. Check if custom glob has a match at path `../pages/Masters/{EntityName}/List{Section}.vue` (e.g., `../pages/Masters/Products/ListHeader.vue`).
+  2. Check if custom glob has a match at path `../pages/master/{EntityName}/List{Section}.vue` (e.g., `../pages/master/Products/ListHeader.vue`).
   3. If match found → async import and return the component.
   4. If no match → return the default component.
 - [ ] The composable must watch `resourceSlug` and re-resolve when it changes (user navigates between resources).
@@ -76,28 +76,28 @@ Create a new composable that resolves section components for the list page using
   ```
 
 **Files**: `FRONTENT/src/composables/useListSectionResolver.js` (new)
-**Pattern**: Follow the `import.meta.glob` + `markRaw` pattern from `FRONTENT/src/pages/Masters/ActionResolverPage.vue` lines 20-24, 40-79.
-**Rule**: Custom globs must only scan `pages/Masters/*/List*.vue` (not `_common/`). Default components are always statically imported — never glob-resolved — to guarantee they exist.
+**Pattern**: Follow the `import.meta.glob` + `markRaw` pattern from `FRONTENT/src/pages/master/ActionResolverPage.vue` lines 20-24, 40-79.
+**Rule**: Custom globs must only scan `pages/master/*/List*.vue` (not `_common/`). Default components are always statically imported — never glob-resolved — to guarantee they exist.
 
 #### Implementation Detail: Glob Paths
 
 The composable file lives at `FRONTENT/src/composables/useListSectionResolver.js`. The glob paths must be **relative to this file's location**:
 
 ```js
-// Custom section overrides — scans pages/Masters/{Entity}/List{Section}.vue
+// Custom section overrides — scans pages/master/{Entity}/List{Section}.vue
 const customSectionModules = import.meta.glob(
-  '../pages/Masters/*/List*.vue',
+  '../pages/master/*/List*.vue',
   { eager: false }  // lazy — only load when needed
 )
 ```
 
 This will match files like:
-- `../pages/Masters/Products/ListHeader.vue`
-- `../pages/Masters/Products/ListReportBar.vue`
-- `../pages/Masters/Suppliers/ListRecords.vue`
+- `../pages/master/Products/ListHeader.vue`
+- `../pages/master/Products/ListReportBar.vue`
+- `../pages/master/Suppliers/ListRecords.vue`
 
 But will NOT match:
-- `../pages/Masters/_common/ListPage.vue` (starts with `_`, and `ListPage` is the orchestrator not a section)
+- `../pages/master/_common/ListPage.vue` (starts with `_`, and `ListPage` is the orchestrator not a section)
 
 #### Implementation Detail: Section Name Mapping
 
@@ -113,7 +113,7 @@ The 4 section file suffixes and their mapping:
 Resolution function (pseudocode):
 ```js
 async function resolveSection(entityName, sectionName, defaultComponent) {
-  const customPath = `../pages/Masters/${entityName}/List${sectionName}.vue`
+  const customPath = `../pages/master/${entityName}/List${sectionName}.vue`
   if (customSectionModules[customPath]) {
     try {
       const mod = await customSectionModules[customPath]()
@@ -132,7 +132,7 @@ async function resolveSection(entityName, sectionName, defaultComponent) {
 
 Extract the report action bar from `MasterHeader.vue` into its own component.
 
-- [ ] Create file `FRONTENT/src/components/Masters/MasterListReportBar.vue`.
+- [ ] Create file `FRONTENT/src/components/master/MasterListReportBar.vue`.
 - [ ] Move the report bar template from `MasterHeader.vue` (lines 49-72: the `<template v-if="toolbarReports.length">` block including the `<q-separator>` and `<q-card-section class="action-bar">`) into the new component.
 - [ ] The new component renders as a standalone `<q-card>` (not a card-section, since it's no longer nested inside MasterHeader's card). Use the same styling approach as other section cards (flat, bordered, rounded, with the `action-bar` background).
 - [ ] Props interface:
@@ -147,7 +147,7 @@ Extract the report action bar from `MasterHeader.vue` into its own component.
 - [ ] The entire component should render nothing (empty template / `v-if="toolbarReports.length"`) when there are no toolbar-level reports. This keeps the section cleanly absent rather than showing an empty card.
 - [ ] Move relevant styles (`.action-bar`, `.report-btn`) from `MasterHeader.vue` to this component.
 
-**Files**: `FRONTENT/src/components/Masters/MasterListReportBar.vue` (new)
+**Files**: `FRONTENT/src/components/master/MasterListReportBar.vue` (new)
 **Pattern**: Follow the card styling pattern from existing `MasterToolbar.vue` (flat bordered, 16px border-radius, `--master-border` color, `rise-in` animation).
 
 ---
@@ -156,7 +156,7 @@ Extract the report action bar from `MasterHeader.vue` into its own component.
 
 Rename the existing header component and remove the report bar section from it.
 
-- [ ] Rename file: `FRONTENT/src/components/Masters/MasterHeader.vue` → `FRONTENT/src/components/Masters/MasterListHeader.vue`.
+- [ ] Rename file: `FRONTENT/src/components/master/MasterHeader.vue` → `FRONTENT/src/components/master/MasterListHeader.vue`.
 - [ ] Remove the report bar template block (the `<template v-if="toolbarReports.length">` section, lines 49-72).
 - [ ] Remove the `reports` and `isGenerating` props (no longer needed — reports are in their own section).
 - [ ] Remove the `generate-report` emit.
@@ -175,14 +175,14 @@ Rename the existing header component and remove the report bar section from it.
 - [ ] Keep all existing header styles (`.header-card`, `.header-title`, `.header-subtitle`, `.header-stats`, `.mini-stat`, `.mini-label`, `.mini-value`, `.sync-indicator`, animations).
 - [ ] Remove the now-unused `.action-bar` and `.report-btn` styles.
 
-**Files**: `FRONTENT/src/components/Masters/MasterListHeader.vue` (renamed from `MasterHeader.vue`)
+**Files**: `FRONTENT/src/components/master/MasterListHeader.vue` (renamed from `MasterHeader.vue`)
 **Rule**: Delete the old `MasterHeader.vue` file. Do NOT keep it as a re-export wrapper.
 
 ---
 
 ### Step 4: Rename `MasterToolbar.vue` → `MasterListToolbar.vue`
 
-- [ ] Rename file: `FRONTENT/src/components/Masters/MasterToolbar.vue` → `FRONTENT/src/components/Masters/MasterListToolbar.vue`.
+- [ ] Rename file: `FRONTENT/src/components/master/MasterToolbar.vue` → `FRONTENT/src/components/master/MasterListToolbar.vue`.
 - [ ] No internal changes needed — the component's props/events/template remain the same.
 - [ ] Props interface (unchanged):
   ```js
@@ -192,7 +192,7 @@ Rename the existing header component and remove the report bar section from it.
   ```
 - [ ] Emit (unchanged): `update:searchTerm(value)`.
 
-**Files**: `FRONTENT/src/components/Masters/MasterListToolbar.vue` (renamed from `MasterToolbar.vue`)
+**Files**: `FRONTENT/src/components/master/MasterListToolbar.vue` (renamed from `MasterToolbar.vue`)
 **Rule**: Delete the old `MasterToolbar.vue` file. Do NOT keep it as a re-export wrapper.
 
 ---
@@ -201,7 +201,7 @@ Rename the existing header component and remove the report bar section from it.
 
 Extract the record list section from `_common/ListPage.vue` into a dedicated default component.
 
-- [ ] Create file `FRONTENT/src/components/Masters/MasterListRecords.vue`.
+- [ ] Create file `FRONTENT/src/components/master/MasterListRecords.vue`.
 - [ ] Move the card grid template from `_common/ListPage.vue` (lines 20-63: the `<q-card flat bordered class="records-card">` block) into this new component.
 - [ ] This component should use the existing `MasterRecordCard.vue` for individual cards (just like the existing `MasterList.vue` does).
 - [ ] Props interface:
@@ -218,12 +218,12 @@ Extract the record list section from `_common/ListPage.vue` into a dedicated def
 - [ ] Include the child count badges (`childCountMap`) rendering per card (lines 41-51 from current `ListPage.vue`). This means `MasterListRecords.vue` renders `MasterRecordCard` plus child badges, or alternatively extends `MasterRecordCard` to accept `childCounts` prop. **Recommended approach**: Pass `childCountMap` as a prop to `MasterListRecords.vue`, and render child badges as part of this component's template (wrapping each `MasterRecordCard` with an additional badge row). Do NOT modify `MasterRecordCard.vue` — keep it simple.
 - [ ] Move relevant styles (`.records-card`, `.empty-state`, `.card-list`, `.record-card`, `.record-code`, `.record-name`, `.record-secondary`, `.record-children`, `.status-badge`, media queries, `rise-in` animation) from `ListPage.vue` to this component.
 
-**Files**: `FRONTENT/src/components/Masters/MasterListRecords.vue` (new)
+**Files**: `FRONTENT/src/components/master/MasterListRecords.vue` (new)
 **Pattern**: This replaces the inline card grid in `ListPage.vue`. The existing `MasterList.vue` component does similar work but lacks `childCountMap` support and `resolvedFields`-based text resolution. See decision note below.
 
 #### Decision: What to do with existing `MasterList.vue`
 
-The existing `MasterList.vue` component (`components/Masters/MasterList.vue`) overlaps with the new `MasterListRecords.vue`. Key differences:
+The existing `MasterList.vue` component (`components/master/MasterList.vue`) overlaps with the new `MasterListRecords.vue`. Key differences:
 - `MasterList.vue` accepts `resolvePrimaryText` and `resolveSecondaryText` as **function props**.
 - `MasterListRecords.vue` accepts `resolvedFields` and computes text internally.
 - `MasterListRecords.vue` supports `childCountMap`.
@@ -318,7 +318,7 @@ This is the core refactoring step. Transform `ListPage.vue` from rendering secti
 - [ ] Keep the `watch` on `resourceName` that triggers `reload()` and `computeChildCounts()`.
 - [ ] Remove styles that were moved to section components (`.records-card`, `.empty-state`, `.card-list`, `.record-card`, etc.). Keep only `ListPage`-level styles (`.list-page`, `.fab-btn`, `.fab-sticky`).
 
-**Files**: `FRONTENT/src/pages/Masters/_common/ListPage.vue` (modify)
+**Files**: `FRONTENT/src/pages/master/_common/ListPage.vue` (modify)
 **Pattern**: The template now uses Vue's `<component :is="">` pattern, same as `ActionResolverPage.vue`.
 **Rule**: `ListPage.vue` remains the single orchestrator. It owns layout, composable wiring, navigation, FAB, and dialog. It does NOT own section rendering logic.
 
@@ -335,9 +335,9 @@ After renaming `MasterHeader.vue` → `MasterListHeader.vue` and `MasterToolbar.
 - [ ] If `MasterHeader` or `MasterToolbar` are imported in `ViewPage.vue`, `AddPage.vue`, or `EditPage.vue`, update those imports to use the new names. However, based on the current architecture, these components are only used in `ListPage.vue`, so this step may be a no-op beyond Step 6.
 - [ ] Search for string references to `MasterHeader` and `MasterToolbar` in any JS/Vue files (template refs, component names in devtools, etc.) and update them.
 - [ ] Delete the old files if not already done in Steps 3-4:
-  - Delete `FRONTENT/src/components/Masters/MasterHeader.vue`
-  - Delete `FRONTENT/src/components/Masters/MasterToolbar.vue`
-  - Delete `FRONTENT/src/components/Masters/MasterList.vue` (if confirmed unused in Step 5)
+  - Delete `FRONTENT/src/components/master/MasterHeader.vue`
+  - Delete `FRONTENT/src/components/master/MasterToolbar.vue`
+  - Delete `FRONTENT/src/components/master/MasterList.vue` (if confirmed unused in Step 5)
 
 **Files**: Multiple files across `FRONTENT/src/`
 **Rule**: After this step, zero references to the old component names should exist in the codebase. Run a grep to confirm.
@@ -374,7 +374,7 @@ Update the registry files to reflect all changes.
 - [ ] Update `Documents/CONTEXT_HANDOFF.md` — in the "Frontend master module" section (around line 126-139), update to reflect:
   - Master page architecture is now section-level componentized.
   - List page sections: `MasterListHeader`, `MasterListReportBar`, `MasterListToolbar`, `MasterListRecords`.
-  - **Section-level Discovery Pattern**: Custom section components at `pages/Masters/{EntityName}/List{Section}.vue` override defaults automatically.
+  - **Section-level Discovery Pattern**: Custom section components at `pages/master/{EntityName}/List{Section}.vue` override defaults automatically.
   - Composable: `useListSectionResolver` handles section resolution.
   - Old component names (`MasterHeader`, `MasterToolbar`, `MasterList`) are removed.
 
@@ -389,7 +389,7 @@ This step is for validation after implementation.
 - [ ] Run `npm run lint` (or the project's lint command) from `FRONTENT/` to check for import errors and unused references.
 - [ ] Run `npm run build` from `FRONTENT/` to verify the production build succeeds (Vite will fail on broken imports).
 - [ ] Manually verify (or describe for the reviewer):
-  - Navigate to any master resource (e.g., `/masters/products`) — all 4 sections render correctly with default components.
+  - Navigate to any master resource (e.g., `/master/products`) — all 4 sections render correctly with default components.
   - Navigate between resources (e.g., products → suppliers) — sections re-resolve without errors.
   - Report bar only appears for resources that have toolbar-level reports configured.
   - Search filtering still works.
@@ -421,7 +421,7 @@ This step is for validation after implementation.
 
 To override a section for a specific resource, create a `.vue` file at:
 ```
-FRONTENT/src/pages/Masters/{EntityName}/List{Section}.vue
+FRONTENT/src/pages/master/{EntityName}/List{Section}.vue
 ```
 
 Where:
@@ -431,8 +431,8 @@ Where:
 The custom component must accept the same props as its default counterpart (see table above). It may ignore props it doesn't need.
 
 Examples:
-- `FRONTENT/src/pages/Masters/Products/ListHeader.vue` — custom header for Products
-- `FRONTENT/src/pages/Masters/Suppliers/ListRecords.vue` — custom record list for Suppliers
+- `FRONTENT/src/pages/master/Products/ListHeader.vue` — custom header for Products
+- `FRONTENT/src/pages/master/Suppliers/ListRecords.vue` — custom record list for Suppliers
 
 ## Documentation Updates Required
 - [x] Update `FRONTENT/src/components/REGISTRY.md` (Step 8).
@@ -451,7 +451,7 @@ Examples:
 - [ ] No regressions in list page behavior: search, navigation, reports, FAB all work.
 - [x] Component and composable registries are updated.
 - [x] `CONTEXT_HANDOFF.md` reflects the new architecture.
-- [x] Creating a file at `pages/Masters/Products/ListHeader.vue` would be picked up automatically by the resolver (verified by the glob pattern).
+- [x] Creating a file at `pages/master/Products/ListHeader.vue` would be picked up automatically by the resolver (verified by the glob pattern).
 
 ## Post-Execution Notes (Build Agent fills this)
 *(Status Update Discipline: Ensure you change `Status` to `IN_PROGRESS` or `COMPLETED` and update `Executed By` at the top of the file before finishing.)*
@@ -475,14 +475,14 @@ Examples:
 
 ### Files Actually Changed
 - `FRONTENT/src/composables/useListSectionResolver.js` (new)
-- `FRONTENT/src/components/Masters/MasterListReportBar.vue` (new)
-- `FRONTENT/src/components/Masters/MasterListHeader.vue` (renamed + modified from MasterHeader.vue)
-- `FRONTENT/src/components/Masters/MasterListToolbar.vue` (renamed from MasterToolbar.vue)
-- `FRONTENT/src/components/Masters/MasterListRecords.vue` (new)
-- `FRONTENT/src/components/Masters/MasterHeader.vue` (deleted)
-- `FRONTENT/src/components/Masters/MasterToolbar.vue` (deleted)
-- `FRONTENT/src/components/Masters/MasterList.vue` (deleted)
-- `FRONTENT/src/pages/Masters/_common/ListPage.vue` (modified)
+- `FRONTENT/src/components/master/MasterListReportBar.vue` (new)
+- `FRONTENT/src/components/master/MasterListHeader.vue` (renamed + modified from MasterHeader.vue)
+- `FRONTENT/src/components/master/MasterListToolbar.vue` (renamed from MasterToolbar.vue)
+- `FRONTENT/src/components/master/MasterListRecords.vue` (new)
+- `FRONTENT/src/components/master/MasterHeader.vue` (deleted)
+- `FRONTENT/src/components/master/MasterToolbar.vue` (deleted)
+- `FRONTENT/src/components/master/MasterList.vue` (deleted)
+- `FRONTENT/src/pages/master/_common/ListPage.vue` (modified)
 - `FRONTENT/src/components/REGISTRY.md` (updated)
 - `FRONTENT/src/composables/REGISTRY.md` (updated)
 - `Documents/CONTEXT_HANDOFF.md` (updated)
@@ -495,5 +495,6 @@ Examples:
 
 ### Manual Actions Required
 - [x] None — this is a frontend-only refactoring with no GAS or sheet changes.
+
 
 

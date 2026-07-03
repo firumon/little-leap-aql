@@ -1,4 +1,4 @@
-## Implementation Plan (Brain-Agent Draft)
+﻿## Implementation Plan (Brain-Agent Draft)
 
 **Suggested plan file name:** `PLANS/2026-04-20-pr-fix-composable-reorg-and-sass-color-adjust.md`  
 **Created By:** Brain Agent  
@@ -26,7 +26,7 @@ Stabilize the PR initiation page runtime, remove Sass color-function deprecation
 ### 4) Work Breakdown
 
 #### A. Runtime crash fix (highest priority)
-- File: `FRONTENT/src/pages/Operations/PurchaseRequisitions/InitiatePurchaseRequisitionsPage.vue`
+- File: `FRONTENT/src/pages/operation/PurchaseRequisitions/InitiatePurchaseRequisitionsPage.vue`
 - Add direct import:
   - `import { formatSkuVariants } from 'src/utils/appHelpers'`
 - Keep composable return untouched for this helper.
@@ -84,13 +84,13 @@ Target structure (post-merge/extract):
   - `useCompositeForm.js`
   - `_resolveTieredComponent.js`
 
-- `FRONTENT/src/composables/operations/purchaseRequisitions/`
+- `FRONTENT/src/composables/operation/purchaseRequisitions/`
   - PR flow files + extracted shared PR internals
 
-- `FRONTENT/src/composables/operations/stock/`
+- `FRONTENT/src/composables/operation/stock/`
   - `useStockMovements.js`
 
-- `FRONTENT/src/composables/masters/products/`
+- `FRONTENT/src/composables/master/products/`
   - product-specific composables
 
 - `FRONTENT/src/composables/reports/`
@@ -186,3 +186,4 @@ Also update all affected import paths across pages/composables.
 - Persistence service for offline/cache-first local database operations (IndexedDB).
 - Purpose: durable client cache for resource records/meta, fast first paint, and background sync patterns.
 - Usually acts below stores/composables; stores consume this service rather than implementing IDB details directly.
+

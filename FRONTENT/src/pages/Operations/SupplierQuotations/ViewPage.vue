@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="sq-view">
     <q-card flat bordered>
       <q-card-section v-if="loading && !record" class="text-center q-py-xl">
@@ -125,7 +125,7 @@
 
 <script setup>
 import { h } from 'vue'
-import { useSupplierQuotationView } from 'src/composables/operations/supplierQuotations/useSupplierQuotationView'
+import { useSupplierQuotationView } from 'src/composables/operation/supplierQuotations/useSupplierQuotationView'
 
 const InfoCell = (props) => h('div', { class: 'col-12 col-sm-6 col-md-3' }, [
   h('div', { class: 'text-caption text-grey-6' }, props.label),
@@ -159,3 +159,4 @@ const {
 <style scoped>
 .sq-view { display: grid; gap: 8px; }
 </style>
+

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding>
     <div class="row items-center q-mb-md"><q-btn icon="arrow_back" flat round @click="goToList" class="q-mr-sm" /><div class="text-h6">Goods Receipt {{ record?.Code }}</div><q-space /><q-chip :color="record?.Status === 'Active' ? 'positive' : 'grey'" text-color="white">{{ record?.Status }}</q-chip></div>
     <div v-if="loading && !record" class="flex flex-center q-pa-xl"><q-spinner color="primary" size="3em" /></div>
@@ -13,11 +13,12 @@
 
 <script setup>
 import { onMounted } from 'vue'
-import { useGoodsReceiptView } from '../../../composables/operations/goodsReceipts/useGoodsReceiptView.js'
-import GoodsReceiptItemsTable from '../../../components/Operations/GoodsReceipts/GoodsReceiptItemsTable.vue'
+import { useGoodsReceiptView } from '../../../composables/operation/goodsReceipts/useGoodsReceiptView.js'
+import GoodsReceiptItemsTable from '../../../components/operation/GoodsReceipts/GoodsReceiptItemsTable.vue'
 
 defineOptions({ name: 'GoodsReceiptsViewPage' })
 const flow = useGoodsReceiptView()
 const { loading, acting, record, items, isCompletedProcurement, totalQty, canInvalidate, loadData, invalidateGoodsReceipt, goToList, goToReceiving, formatDate } = flow
 onMounted(() => loadData())
 </script>
+

@@ -1,4 +1,4 @@
-# PLAN: Outlet Consumption Invoice Pricing And Invoice Items
+﻿# PLAN: Outlet Consumption Invoice Pricing And Invoice Items
 **Status**: COMPLETED
 **Created**: 2026-05-08
 **Created By**: Brain Agent (Kilo Code)
@@ -94,12 +94,12 @@ Required behavior:
 - [x] Extend outlet resource metadata to include `OutletConsumptionInvoiceItems`, `PriceList`, `PriceListItems`, and any app config resource needed to read `PriceListLookup` if not already available in app state.
 - [x] Keep `OUTLET_OPERATION_RESOURCES` aligned so `useOutletConsumption().reload()` fetches the data needed for both create-time and later invoice generation.
 - [x] If `App.Config` is already loaded in a store/composable globally, use that existing source rather than adding a redundant fetch. If not, add the least invasive generic resource fetch that fits current frontend resource patterns.
-**Files**: `FRONTENT/src/composables/operations/outlets/outletOperationsMeta.js`, `FRONTENT/src/composables/operations/outlets/useOutletConsumption.js`
+**Files**: `FRONTENT/src/composables/operation/outlets/outletOperationsMeta.js`, `FRONTENT/src/composables/operation/outlets/useOutletConsumption.js`
 **Pattern**: Existing outlet resource list in `OUTLET_RESOURCES` and `workflowStore.fetchResources(OUTLET_OPERATION_RESOURCES, ...)`.
 **Rule**: Frontend business logic belongs in composables; do not call services directly from composables or pages.
 
 ### Step 5: Design and implement frontend pricing resolver
-- [x] Add a small, testable pricing helper in the outlet consumption composable layer. Prefer a dedicated file such as `FRONTENT/src/composables/operations/outlets/outletConsumptionPricing.js` if the logic is non-trivial.
+- [x] Add a small, testable pricing helper in the outlet consumption composable layer. Prefer a dedicated file such as `FRONTENT/src/composables/operation/outlets/outletConsumptionPricing.js` if the logic is non-trivial.
 - [x] Inputs should include: outlet code, active outlet rules, price lists, price list items, app config or resolved `PriceListLookup`, and consumption item rows.
 - [x] Resolve `PriceListCode`:
   1. Find an active `OutletOperatingRules` row where `OutletCode` equals the consumption/invoice outlet.
@@ -114,7 +114,7 @@ Required behavior:
 - [x] Treat missing SKU prices as an error by default so the system does not silently create zero-priced invoices. If business preference requires zero fallback, document that as an explicit deviation in this plan during execution.
 - [x] Compute `subtotal = sum(Qty * Price)` using numeric conversion consistent with `toNumber()`.
 - [x] Keep `Discount` and `Tax` at `0` for now.
-**Files**: `FRONTENT/src/composables/operations/outlets/outletConsumptionPricing.js` (new, if used), `FRONTENT/src/composables/operations/outlets/outletConsumptionPayload.js`, `FRONTENT/src/composables/operations/outlets/useOutletConsumption.js`
+**Files**: `FRONTENT/src/composables/operation/outlets/outletConsumptionPricing.js` (new, if used), `FRONTENT/src/composables/operation/outlets/outletConsumptionPayload.js`, `FRONTENT/src/composables/operation/outlets/useOutletConsumption.js`
 **Pattern**: Existing pure payload helpers in `outletConsumptionPayload.js` and numeric conversion in `outletStockLogic.js`.
 **Rule**: Do not embed `$ref` values in strings; helper outputs must preserve possible `$ref` objects for same-batch foreign keys.
 
@@ -129,7 +129,7 @@ Required behavior:
 - [x] Add a bulk request builder for `OutletConsumptionInvoiceItems` rows. Each row must set `OutletConsumptionInvoiceCode` using `textOrRef(invoiceCodeOrRef)` so it can receive `{ "$ref": "OutletConsumptionInvoices.latest.code" }`.
 - [x] Ensure the item bulk request uses `resourceBulkRequest('OutletConsumptionInvoiceItems', records)` and includes cursor resources only if needed by existing delta-on-write conventions.
 - [x] Do not concatenate or stringify `consumptionCode` or invoice `$ref` values.
-**Files**: `FRONTENT/src/composables/operations/outlets/outletConsumptionPayload.js`, `FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js` if a reusable helper is needed.
+**Files**: `FRONTENT/src/composables/operation/outlets/outletConsumptionPayload.js`, `FRONTENT/src/composables/operation/outlets/outletOperationsBatch.js` if a reusable helper is needed.
 **Pattern**: Existing `buildConsumptionMovementRequest()` uses `textOrRef(consumptionCode)` for `ReferenceCode`.
 **Rule**: `OutletConsumptionInvoiceCode` in child rows must be `{ "$ref": "OutletConsumptionInvoices.latest.code" }` in same-batch invoice generation.
 
@@ -143,7 +143,7 @@ Required behavior:
 - [x] Ensure `Progress` remains `PENDING_INVOICE_GENERATION` if invoice generation is not requested.
 - [x] If pricing resolution fails, stop before `workflowStore.runBatchRequests(...)` and notify the user; do not save a partially priced invoice. Decide whether the consumption itself should still be saved without invoice only if this matches current UX. Preferred: block submit when the checklist says generate invoice and pricing cannot be resolved.
 - [x] Preserve existing side effects: negative `OutletMovements`, optional visit completion, next visit scheduling, restock creation, and optional restock submit.
-**Files**: `FRONTENT/src/composables/operations/outlets/useOutletConsumption.js`
+**Files**: `FRONTENT/src/composables/operation/outlets/useOutletConsumption.js`
 **Pattern**: Existing request array assembly in `saveConsumption()`.
 **Rule**: Consumption progress changes to `INVOICE_GENERATED` only after the invoice header and item bulk requests are before it in the same successful batch.
 
@@ -156,7 +156,7 @@ Required behavior:
   3. `executeAction` on `OutletConsumptions` using literal `record.Code` to mark `INVOICE_GENERATED`.
 - [x] Keep existing guards: only pending consumptions can generate invoices and active duplicate invoices are blocked.
 - [x] Continue to reload or hydrate state according to existing workflow behavior; avoid broad or redundant calls unless the generic batch response does not hydrate the new child resource.
-**Files**: `FRONTENT/src/composables/operations/outlets/useOutletConsumption.js`
+**Files**: `FRONTENT/src/composables/operation/outlets/useOutletConsumption.js`
 **Pattern**: Existing `generateInvoiceForConsumption(record)` batch.
 **Rule**: The same pricing and item generation helper must serve both create-time and later invoice generation.
 
@@ -165,7 +165,7 @@ Required behavior:
 - [x] Add a compact line-items card/table with `SKU`, `Qty`, `Price`, and line total (`Qty * Price`).
 - [x] Keep the page thin: compute display rows through `useOutletConsumption()` or a focused composable helper, not heavy page-local business logic.
 - [x] Keep existing Amounts card and ensure displayed subtotal matches invoice header.
-**Files**: `FRONTENT/src/pages/Operations/OutletConsumptionInvoices/ViewPage.vue`, `FRONTENT/src/composables/operations/outlets/useOutletConsumption.js`
+**Files**: `FRONTENT/src/pages/operation/OutletConsumptionInvoices/ViewPage.vue`, `FRONTENT/src/composables/operation/outlets/useOutletConsumption.js`
 **Pattern**: Current invoice view is a thin page using `useOutletConsumption()`.
 **Rule**: Pages should remain UI-only orchestration shells.
 
@@ -223,7 +223,7 @@ Required behavior:
   - pending consumption remains pending
 - [x] Verify invoice view displays line items and amounts correctly.
 - [x] Run targeted lint/build only if touched frontend scope warrants it. Full `npm run build` is optional unless Build Agent judges risk as major/cross-cutting.
-**Files**: `FRONTENT/src/composables/operations/outlets/*`, `FRONTENT/src/pages/Operations/OutletConsumptionInvoices/ViewPage.vue`, relevant GAS setup/sync files.
+**Files**: `FRONTENT/src/composables/operation/outlets/*`, `FRONTENT/src/pages/operation/OutletConsumptionInvoices/ViewPage.vue`, relevant GAS setup/sync files.
 **Pattern**: Targeted verification policy in `Documents/AI_COLLABORATION_PROTOCOL.md`.
 **Rule**: Prefer targeted checks; do not run broad verification by default unless risk warrants it.
 
@@ -288,11 +288,11 @@ If execution is interrupted, the next agent reads this plan, finds the first unc
 - `GAS/Constants.gs`
 - `GAS/setupOperationSheets.gs`
 - `GAS/syncAppResources.gs`
-- `FRONTENT/src/composables/operations/outlets/outletOperationsMeta.js`
-- `FRONTENT/src/composables/operations/outlets/outletConsumptionPayload.js`
-- `FRONTENT/src/composables/operations/outlets/outletConsumptionPricing.js` (NEW)
-- `FRONTENT/src/composables/operations/outlets/useOutletConsumption.js`
-- `FRONTENT/src/pages/Operations/OutletConsumptionInvoices/ViewPage.vue`
+- `FRONTENT/src/composables/operation/outlets/outletOperationsMeta.js`
+- `FRONTENT/src/composables/operation/outlets/outletConsumptionPayload.js`
+- `FRONTENT/src/composables/operation/outlets/outletConsumptionPricing.js` (NEW)
+- `FRONTENT/src/composables/operation/outlets/useOutletConsumption.js`
+- `FRONTENT/src/pages/operation/OutletConsumptionInvoices/ViewPage.vue`
 - `Documents/RESOURCE_COLUMNS_GUIDE.md`
 - `Documents/OPERATION_SHEET_STRUCTURE.md`
 - `Documents/MODULE_WORKFLOWS.md`
@@ -314,4 +314,5 @@ If execution is interrupted, the next agent reads this plan, finds the first unc
 - [x] Confirm no Web App redeployment was required because no generic API contract changed.
 
 Build Agent, read PLANS/2026-05-08-outlet-consumption-invoice-pricing.md and execute it end-to-end
+
 

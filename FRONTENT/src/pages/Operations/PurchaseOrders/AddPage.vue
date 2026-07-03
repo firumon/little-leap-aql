@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding>
     <div class="row items-center q-mb-md">
       <q-btn icon="arrow_back" flat round @click="cancel" class="q-mr-sm" />
@@ -156,7 +156,7 @@
 
 <script setup>
 import { onMounted } from 'vue';
-import { usePurchaseOrderCreateFlow } from '../../../composables/operations/purchaseOrders/usePurchaseOrderCreateFlow.js';
+import { usePurchaseOrderCreateFlow } from '../../../composables/operation/purchaseOrders/usePurchaseOrderCreateFlow.js';
 
 defineOptions({
   name: 'PurchaseOrdersAddPage'
@@ -201,3 +201,4 @@ onMounted(() => {
   background: rgba(0, 0, 0, 0.02);
 }
 </style>
+

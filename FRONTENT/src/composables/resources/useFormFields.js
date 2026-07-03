@@ -30,14 +30,11 @@ export function isToggleField(field) {
 export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions = {} } = {}) {
   const baseProps = {
     label: field.label || field.header,
-    hint: field.hint || '',
-    dense: false,
+    hint: field.hint || undefined,
     outlined: true,
     required: !!field.required,
     readonly: !!field.readonly,
-    placeholder: field.placeholder || '',
-    'hide-bottom-space': true,
-    'hide-hint': !field.hint
+    placeholder: field.placeholder || undefined,
   }
 
   if (field.type === 'file') {

@@ -1,4 +1,4 @@
-# AQL Frontend Menu System — Agent Initialization
+﻿# AQL Frontend Menu System — Agent Initialization
 
 > **Scope boundary**: This document covers **only** the frontend web app sidebar menu driven by the `Menu` JSON column in `APP.Resources`. It does **not** cover the `AQL 🚀` Google Sheets toolbar menu — see `References/Prompt Library/Initialization/sheet_menu_actions.md` for that.
 
@@ -81,7 +81,7 @@ Router.beforeEach                     ← Route guard (double-check)
   "order":           1,
   "label":           "Products",
   "icon":            "inventory_2",
-  "route":           "/masters/products",
+  "route":           "/master/products",
   "pageTitle":       "Products",
   "pageDescription": "Manage product master records",
   "show":            true,
@@ -169,3 +169,4 @@ Resolution priority: `userId` > `role.id` (first match) > `"default"`. Empty `gr
 | `database_schema_alteration.md` | If the task involves adding a new resource/sheet |
 | `backend_gas_implementation.md` | If the task involves new backend API actions for the page |
 | `sheet_menu_actions.md` | If the task also involves modifying the `AQL 🚀` Google Sheets toolbar menu (completely separate system) |
+

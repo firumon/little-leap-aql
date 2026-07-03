@@ -1,4 +1,4 @@
-# PLAN: Outlet Consumptions Module — Stock Count, Invoice, Restock, and Visit Actions
+﻿# PLAN: Outlet Consumptions Module — Stock Count, Invoice, Restock, and Visit Actions
 **Status**: COMPLETED
 **Created**: 2026-05-07
 **Created By**: Brain Agent (Kilo Code GPT-5.5)
@@ -61,7 +61,7 @@ Existing placeholder/current implementation uses:
 - `Documents/OPERATION_SHEET_STRUCTURE.md` documents singular `OutletConsumption` and `ConsumedQty`.
 - `Documents/RESOURCE_COLUMNS_GUIDE.md` says `OutletConsumption` is independent of `OutletVisits` and currently does not include optional visit-link behavior.
 - `Documents/MODULE_WORKFLOWS.md` has a short consumption workflow based on direct consumption quantity entry.
-- Frontend currently has `FRONTENT/src/pages/Operations/OutletConsumption/` pages and `useOutletConsumption.js` composable using singular `OutletConsumption`, `ConsumptionDate`, `RecordedByUserCode`, `ConsumedQty`, and `Progress = CONFIRMED`.
+- Frontend currently has `FRONTENT/src/pages/operation/OutletConsumption/` pages and `useOutletConsumption.js` composable using singular `OutletConsumption`, `ConsumptionDate`, `RecordedByUserCode`, `ConsumedQty`, and `Progress = CONFIRMED`.
 - Current add page is a simple manual consumed-item entry screen, not stock-count/summary/checklist flow.
 - Existing outlet composables already use generic workflow store and resource data patterns.
 
@@ -613,7 +613,7 @@ Checklist behavior:
 - [ ] Keep `CONFIRMED` only if other existing code still uses it; new consumption flow must not use it.
 - [ ] Confirm no component/store directly hardcodes singular `OutletConsumption` except route folder naming if routes require it.
 
-**Files**: `FRONTENT/src/composables/operations/outlets/outletOperationsMeta.js`
+**Files**: `FRONTENT/src/composables/operation/outlets/outletOperationsMeta.js`
 **Pattern**: Existing outlet resource constants and progress meta.
 **Rule**: Frontend resource names must match `APP.Resources` names.
 
@@ -665,7 +665,7 @@ Checklist behavior:
 - [ ] Add builders for optional restock create/composite and submit action only if not already reusable in `outletRestockPayload.js`.
 - [ ] Avoid duplicate logic; reuse existing restock payload builder where possible.
 
-**Files**: `FRONTENT/src/composables/operations/outlets/outletConsumptionPayload.js`, possibly `outletRestockPayload.js`
+**Files**: `FRONTENT/src/composables/operation/outlets/outletConsumptionPayload.js`, possibly `outletRestockPayload.js`
 **Pattern**: Existing payload-builder files keep data shaping outside components.
 **Rule**: Payload builders are pure helpers; workflow orchestration belongs in composables.
 
@@ -742,7 +742,7 @@ Required state and behavior:
   - `Submit restock immediately` requires `Place restock request`
 - [ ] Implement submit flow with progress indicators and user notifications.
 
-**Files**: `FRONTENT/src/composables/operations/outlets/useOutletConsumption.js`, optional new files in `FRONTENT/src/composables/operations/outlets/`
+**Files**: `FRONTENT/src/composables/operation/outlets/useOutletConsumption.js`, optional new files in `FRONTENT/src/composables/operation/outlets/`
 **Pattern**: Existing outlet composables using `useWorkflowStore`, `useResourceData`, and `useResourceNav`.
 **Rule**: Composables own business logic; components remain UI-only.
 
@@ -800,7 +800,7 @@ Failure policy:
 
 ### Step 9: Build Tap-Friendly UI Components
 
-Create or refactor components under `FRONTENT/src/components/Operations/Outlets/`. Components must be UI-only and receive props/events from composables/pages.
+Create or refactor components under `FRONTENT/src/components/operation/Outlets/`. Components must be UI-only and receive props/events from composables/pages.
 
 Recommended components:
 
@@ -841,13 +841,13 @@ UI details:
 - Disable submit while saving.
 - Show clear warnings for variance rows and unchecked side effects.
 
-**Files**: `FRONTENT/src/components/Operations/Outlets/*.vue`
+**Files**: `FRONTENT/src/components/operation/Outlets/*.vue`
 **Pattern**: Existing outlet UI components are simple and prop/event-driven.
 **Rule**: Components must not import stores or services directly.
 
 ### Step 10: Refactor Outlet Consumption Pages
 
-Current pages are in singular route folder `FRONTENT/src/pages/Operations/OutletConsumption/`. Build Agent must inspect route generation before renaming folders.
+Current pages are in singular route folder `FRONTENT/src/pages/operation/OutletConsumption/`. Build Agent must inspect route generation before renaming folders.
 
 Recommended approach:
 
@@ -891,14 +891,14 @@ Navigation:
 - Use `useResourceNav` only.
 - Do not use direct `router.push()`.
 
-**Files**: `FRONTENT/src/pages/Operations/OutletConsumption/` or new resolver-compatible plural folder; route/resource resolver files if required.
+**Files**: `FRONTENT/src/pages/operation/OutletConsumption/` or new resolver-compatible plural folder; route/resource resolver files if required.
 **Pattern**: Existing operation page folder conventions.
 **Rule**: Pages stay thin and call composable methods only.
 
 ### Step 11: Update Frontend Registries If Reusable Interfaces Change
 
-- [ ] If adding reusable components under `FRONTENT/src/components/Operations/Outlets/`, update `FRONTENT/src/components/REGISTRY.md` if this project tracks all reusable components there.
-- [ ] If adding custom operation section overrides under `_custom`, update `FRONTENT/src/components/Operations/_custom/REGISTRY.md`. Prefer normal outlet components/pages unless custom override mechanism is required.
+- [ ] If adding reusable components under `FRONTENT/src/components/operation/Outlets/`, update `FRONTENT/src/components/REGISTRY.md` if this project tracks all reusable components there.
+- [ ] If adding custom operation section overrides under `_custom`, update `FRONTENT/src/components/operation/_custom/REGISTRY.md`. Prefer normal outlet components/pages unless custom override mechanism is required.
 - [ ] If adding new composables, update a composable registry only if one exists and this project uses it. Search before editing.
 
 **Files**: `FRONTENT/src/components/REGISTRY.md`, optional registry docs.
@@ -1076,14 +1076,14 @@ Required checks:
 - `GAS/Constants.gs`
 - `GAS/setupOperationSheets.gs`
 - `GAS/syncAppResources.gs`
-- `FRONTENT/src/composables/operations/outlets/outletOperationsMeta.js`
-- `FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js`
-- `FRONTENT/src/composables/operations/outlets/outletStockLogic.js`
-- `FRONTENT/src/composables/operations/outlets/outletConsumptionPayload.js`
-- `FRONTENT/src/composables/operations/outlets/useOutletConsumption.js`
-- `FRONTENT/src/pages/Operations/OutletConsumption/AddPage.vue`
-- `FRONTENT/src/pages/Operations/OutletConsumption/IndexPage.vue`
-- `FRONTENT/src/pages/Operations/OutletConsumption/ViewPage.vue`
+- `FRONTENT/src/composables/operation/outlets/outletOperationsMeta.js`
+- `FRONTENT/src/composables/operation/outlets/outletOperationsBatch.js`
+- `FRONTENT/src/composables/operation/outlets/outletStockLogic.js`
+- `FRONTENT/src/composables/operation/outlets/outletConsumptionPayload.js`
+- `FRONTENT/src/composables/operation/outlets/useOutletConsumption.js`
+- `FRONTENT/src/pages/operation/OutletConsumption/AddPage.vue`
+- `FRONTENT/src/pages/operation/OutletConsumption/IndexPage.vue`
+- `FRONTENT/src/pages/operation/OutletConsumption/ViewPage.vue`
 - `FRONTENT/src/composables/REGISTRY.md`
 - `Documents/OPERATION_SHEET_STRUCTURE.md`
 - `Documents/RESOURCE_COLUMNS_GUIDE.md`
@@ -1109,3 +1109,4 @@ Required checks:
   - `OutletConsumptionInvoices`
 - [ ] Clear frontend/resource cache or re-login if old `OutletConsumption` metadata remains visible.
 - [ ] Web App redeployment only if Build Agent changed the generic API contract; otherwise not required.
+

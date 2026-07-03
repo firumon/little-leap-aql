@@ -1,4 +1,4 @@
-import { useProductSkuResolver } from 'src/composables/masters/products/useProductSkuResolver'
+﻿import { useProductSkuResolver } from 'src/composables/master/products/useProductSkuResolver'
 
 function buildVariantsCsv(sku) {
   return [sku?.Variant1, sku?.Variant2, sku?.Variant3, sku?.Variant4, sku?.Variant5]
@@ -59,4 +59,5 @@ export function filterRichSkuOptions(allSkus = [], skuInfoByCode = {}, keyword =
     skuInfoByCode
   )
 }
+
 

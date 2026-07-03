@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="edit-page">
     <div v-if="loading" class="q-py-xl text-center">
       <q-spinner-dots color="primary" size="32px" />
@@ -171,7 +171,7 @@
 </template>
 
 <script setup>
-import { useProductEditForm } from 'src/composables/masters/products/useProductEditForm'
+import { useProductEditForm } from 'src/composables/master/products/useProductEditForm'
 
 const {
   code,
@@ -207,3 +207,4 @@ const {
   opacity: 0.6;
 }
 </style>
+

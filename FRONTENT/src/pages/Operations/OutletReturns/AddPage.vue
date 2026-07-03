@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding class="q-pb-xl">
     <HeaderPanel title="Log Outlet Return" subtitle="Observe stock changes and log returns." class="q-mb-sm" />
 
@@ -193,7 +193,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { useOutletReturns } from '../../../composables/operations/outlets/useOutletReturns.js'
+import { useOutletReturns } from '../../../composables/operation/outlets/useOutletReturns.js'
 import HeaderPanel from "components/shared/HeaderPanel.vue";
 
 defineOptions({ name: 'OutletReturnsAddPage' })
@@ -222,5 +222,6 @@ onMounted(async () => {
   }
 })
 </script>
+
 
 

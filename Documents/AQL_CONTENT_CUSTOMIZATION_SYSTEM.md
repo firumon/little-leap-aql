@@ -1,4 +1,4 @@
-# AQL Content Layout & Customization System
+﻿# AQL Content Layout & Customization System
 
 This document is the complete reference guide for the AQL Content Customization System. It explains the decentralized custom template and logic modifier architecture, fallback components, page orchestrators, and all available configuration parameters used to customize resource screens (Index, View, Add, Edit, Action) without rewriting full HTML/Vue templates.
 
@@ -35,7 +35,7 @@ By default, the List component maps resource columns to [AqlList.vue](file:///f:
 #### Example JS Logic Modifier for Listing
 Any `AqlList` prop (e.g. `layout`, `content`, `metaLayout`, `meta`, `chipColor`) can be overridden.
 ```javascript
-// src/components/Masters/Products/Index/List.js
+// src/components/master/Products/Index/List.js
 export default function (props) {
   return {
     ...props,
@@ -64,7 +64,7 @@ Custom JS logic modifier file created at `src/components/[Scope]/[Resource]/View
 
 #### Example Details Modifier
 ```javascript
-// src/components/Masters/Products/View/Details.js
+// src/components/master/Products/View/Details.js
 export default function (props) {
   return {
     ...props,
@@ -102,7 +102,7 @@ Form inputs of type `'date'` render using [AppDate.vue](file:///f:/LITTLE%20LEAP
 
 #### Example Form Modifier
 ```javascript
-// src/components/Masters/Products/Add/Form.js
+// src/components/master/Products/Add/Form.js
 export default function (props) {
   return {
     ...props,
@@ -144,7 +144,7 @@ At the page content orchestrator level (`View/Content.js`), a resource custom JS
 
 #### Example Content Modifier
 ```javascript
-// src/components/Operations/OutletConsumptions/View/Content.js
+// src/components/operation/OutletConsumptions/View/Content.js
 export default function (props) {
   return {
     ...props,
@@ -153,3 +153,4 @@ export default function (props) {
   }
 }
 ```
+

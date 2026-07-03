@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding>
     <HeaderPanel
       :title="consumption ? `Generate Invoice — ${outletName(consumption.OutletCode)}` : 'Generate Invoice'"
@@ -106,7 +106,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
-import { useOutletConsumption } from '../../../composables/operations/outlets/useOutletConsumption.js'
+import { useOutletConsumption } from '../../../composables/operation/outlets/useOutletConsumption.js'
 import { useCurrency } from '../../../composables/useCurrency.js'
 import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
 import { useDataStore } from '../../../stores/data.js'
@@ -314,3 +314,4 @@ onMounted(async () => {
   }
 })
 </script>
+

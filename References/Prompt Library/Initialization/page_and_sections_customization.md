@@ -1,4 +1,4 @@
-# AQL Resource-Level Page & Section Customization Guide (Initialization)
+﻿# AQL Resource-Level Page & Section Customization Guide (Initialization)
 
 This initialization prompt guides the implementation, customization, and override of frontend pages and components for specific database resources in the AQL repository. It ensures that modular customization is achieved without cluttering or modifying the shared framework-level fallback components.
 
@@ -26,11 +26,11 @@ A custom override component must be placed at one of two target locations:
 
 1. **Page-Generic Override** (Applies across all pages of the resource):
    `src/components/[Scope]/[ResourceName]/[Section].[vue|js]`
-   - *Example*: `src/components/Masters/Products/Records.vue`
+   - *Example*: `src/components/master/Products/Records.vue`
 2. **Page-Specific Override** (Applies ONLY on a specific page: `Index`, `View`, `Add`, `Edit`, `Action`):
    `src/components/[Scope]/[ResourceName]/[Page]/[Section].[vue|js]`
    - *Where `[Page]` is one of: `Index`, `View`, `Add`, `Edit`, `Action`*
-   - *Example*: `src/components/Masters/Products/Index/Header.vue` (overriding header ONLY on the Products Index page)
+   - *Example*: `src/components/master/Products/Index/Header.vue` (overriding header ONLY on the Products Index page)
 
 ---
 
@@ -67,7 +67,7 @@ All SFC files must remain thin and presentation-focused:
 ### 6.1 Template Override: Records.vue
 To replace the default list rendering layout with a completely custom Vue template:
 
-#### `src/components/Masters/Products/Records.vue`
+#### `src/components/master/Products/Records.vue`
 ```html
 <template>
   <q-card flat bordered class="q-mt-sm rounded-borders">
@@ -102,7 +102,7 @@ defineEmits(['navigate-to-view'])
 ### 6.2 JS Logic Modifier: ViewSwitcher.js
 To customize property structures, icons, labels, or configurations programmatically without replacing the HTML layout template, create a `.js` modifier file under Tiers 7 & 8:
 
-#### `src/components/Masters/Products/Index/ViewSwitcher.js`
+#### `src/components/master/Products/Index/ViewSwitcher.js`
 ```javascript
 /**
  * Intercepts and adjusts the props fed to the ViewSwitcher fallback component.
@@ -169,3 +169,4 @@ Wrapping the panel inside a wrapper element (like `<div><GenericHeaderPanel labe
 
 > [!CAUTION]
 > **Do not use this unless you deliberately want to break connection with the parent orchestrator**. The dynamic back buttons, reload commands, status badges, and other parent-computed attributes will be captured by the outer `<div>` and lost to the inner panel. Prefer **inheritAttrs: false** for template wrapping instead.
+

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <component
     :is="resolvedComponent"
     v-slot="{ record, page }"
@@ -41,7 +41,7 @@ import { useCommonSection } from 'src/composables/resources/useCommonSection'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useDataStore } from 'src/stores/data'
 import { useReports } from 'src/composables/reports/useReports'
-import ReportInputDialog from 'src/components/Masters/ReportInputDialog.vue'
+import ReportInputDialog from 'src/components/master/ReportInputDialog.vue'
 
 import PageSticky from 'components/_common/sections/Action/Downloads/PageSticky.vue'
 import ReportFab from 'components/_common/sections/Action/Downloads/ReportFab.vue'
@@ -96,3 +96,4 @@ const { resolvedComponent, finalProps } = useCommonSection({
   preparedProps
 })
 </script>
+

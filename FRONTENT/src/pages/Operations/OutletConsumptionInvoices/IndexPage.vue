@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding class="q-pb-xl">
     <!-- Page Branded Header with Reload Button -->
     <div class="row items-center justify-between no-wrap q-mb-md">
@@ -105,7 +105,7 @@
 
 <script setup>
 import { computed, onMounted } from 'vue'
-import { useOutletConsumption } from '../../../composables/operations/outlets/useOutletConsumption.js'
+import { useOutletConsumption } from '../../../composables/operation/outlets/useOutletConsumption.js'
 import { useCurrency } from '../../../composables/useCurrency.js'
 import AqlList from '../../../components/shared/AqlList.vue'
 import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
@@ -121,3 +121,4 @@ const { loading, searchTerm, pendingInvoiceItems, pendingPaymentInvoices, partia
 const shouldBlockUi = computed(() => loading.value && hasUninitiatedDependencies.value)
 onMounted(() => reload())
 </script>
+

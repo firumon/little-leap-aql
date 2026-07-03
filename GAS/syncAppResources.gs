@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ============================================================
  * AQL - Sync APP.Resources from Code
  * ============================================================
@@ -28,7 +28,7 @@ function initAppResourcesCodeConfig() {
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{"group":["Product"],"order":1,"label":"Manage","icon":"inventory_2","route":"/masters/products","pageTitle":"Products","pageDescription":"Manage product master records (parent models)","show":true,"menuAccess":{"require":"canWrite"}}]),
+        Menu: JSON.stringify([{"group":["Product"],"order":1,"label":"Manage","icon":"inventory_2","route":"/master/products","pageTitle":"Products","pageDescription":"Manage product master records (parent models)","show":true,"menuAccess":{"require":"canWrite"}}]),
         UIFields: JSON.stringify([
             { header: 'Name', label: 'Name', type: 'text', required: true },
             { header: 'VariantTypes', label: 'Variant Types', type: 'text', hint: 'CSV e.g. Size,Color,Material' },
@@ -63,7 +63,7 @@ function initAppResourcesCodeConfig() {
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{"group":["Product"],"order":2,"label":"SKUs","icon":"style","route":"/masters/skus","pageTitle":"SKUs","pageDescription":"Manage sellable SKUs (child variants of a product)","show":true}]),
+        Menu: JSON.stringify([{"group":["Product"],"order":2,"label":"SKUs","icon":"style","route":"/master/skus","pageTitle":"SKUs","pageDescription":"Manage sellable SKUs (child variants of a product)","show":true}]),
         UIFields: JSON.stringify([
             { header: 'ProductCode', label: 'Product Code', type: 'text', required: true },
             { header: 'Variant1', label: 'Variant 1', type: 'text' },
@@ -100,7 +100,7 @@ function initAppResourcesCodeConfig() {
              RecordAccessPolicy: 'ALL',
              OwnerUserField: 'CreatedBy',
              AdditionalActions: '',
-             Menu: JSON.stringify([{"group":["Product"],"order":3,"label":"UOMs","icon":"straighten","route":"/masters/uoms","pageTitle":"Units of Measure","pageDescription":"Manage units of measure","show":true}]),
+             Menu: JSON.stringify([{"group":["Product"],"order":3,"label":"UOMs","icon":"straighten","route":"/master/uoms","pageTitle":"Units of Measure","pageDescription":"Manage units of measure","show":true}]),
              UIFields: JSON.stringify([
                  { header: 'Code', label: 'Code', type: 'text', required: true },
                  { header: 'Name', label: 'Name', type: 'text', required: true },
@@ -132,7 +132,7 @@ function initAppResourcesCodeConfig() {
       RecordAccessPolicy: 'ALL',
       OwnerUserField: 'CreatedBy',
       AdditionalActions: '',
-      Menu: JSON.stringify([{"group":["Masters"],"order":1,"label":"Currencies","icon":"attach_money","route":"/masters/currencies","pageTitle":"Currencies","pageDescription":"Manage currency master records","show":true}]),
+      Menu: JSON.stringify([{"group":["Masters"],"order":1,"label":"Currencies","icon":"attach_money","route":"/master/currencies","pageTitle":"Currencies","pageDescription":"Manage currency master records","show":true}]),
       UIFields: JSON.stringify([
           { header: 'Code', label: 'Code', type: 'text', required: true, hint: 'e.g. AED, INR, USD' },
           { header: 'Name', label: 'Name', type: 'text', required: true },
@@ -168,7 +168,7 @@ function initAppResourcesCodeConfig() {
       RecordAccessPolicy: 'ALL',
       OwnerUserField: 'CreatedBy',
       AdditionalActions: '',
-      Menu: JSON.stringify([{"group":["Product"],"order":5,"label":"Price Lists","icon":"sell","route":"/masters/price-lists","pageTitle":"Price Lists","pageDescription":"Manage product price lists","show":true}]),
+      Menu: JSON.stringify([{"group":["Product"],"order":5,"label":"Price Lists","icon":"sell","route":"/master/price-lists","pageTitle":"Price Lists","pageDescription":"Manage product price lists","show":true}]),
       UIFields: JSON.stringify([
           { header: 'Name', label: 'Name', type: 'text', required: true },
           { header: 'Description', label: 'Description', type: 'textarea' },
@@ -236,7 +236,7 @@ function initAppResourcesCodeConfig() {
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{"group":["Procurement"],"order":1,"label":"Suppliers","icon":"business","route":"/masters/suppliers","pageTitle":"Suppliers","pageDescription":"Manage supplier master records","show":true}]),
+        Menu: JSON.stringify([{"group":["Procurement"],"order":1,"label":"Suppliers","icon":"business","route":"/master/suppliers","pageTitle":"Suppliers","pageDescription":"Manage supplier master records","show":true}]),
         UIFields: JSON.stringify([
             { header: 'Name', label: 'Name', type: 'text', required: true },
             { header: 'Country', label: 'Country', type: 'text' },
@@ -277,8 +277,8 @@ function initAppResourcesCodeConfig() {
             {"action":"ViewStock","label":"View Stock","icon":"inventory","color":"primary","kind":"navigate","confirm":false,"navigate":{"target":"record-page","pageSlug":"stock"}}
         ]),
         Menu: JSON.stringify([
-            {"group":["Warehouse"],"order":1,"label":"Manage","icon":"warehouse","route":"/masters/warehouses","pageTitle":"Warehouses","pageDescription":"Manage warehouse master records","show":true},
-            {"group":["Warehouse"],"order":2,"label":"Stock List","icon":"inventory_2","route":"/masters/warehouses/stock-list","pageTitle":"Warehouse Stock List","pageDescription":"Select a warehouse and view current stock","show":true}
+            {"group":["Warehouse"],"order":1,"label":"Manage","icon":"warehouse","route":"/master/warehouses","pageTitle":"Warehouses","pageDescription":"Manage warehouse master records","show":true},
+            {"group":["Warehouse"],"order":2,"label":"Stock List","icon":"inventory_2","route":"/master/warehouses/stock-list","pageTitle":"Warehouse Stock List","pageDescription":"Select a warehouse and view current stock","show":true}
         ]),
         UIFields: JSON.stringify([
             { header: 'Name', label: 'Name', type: 'text', required: true },
@@ -321,8 +321,8 @@ function initAppResourcesCodeConfig() {
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
         Menu: JSON.stringify([
-            {"group":["Outlet Operations"],"order":1,"label":"Outlets","icon":"storefront","route":"/masters/outlets","pageTitle":"Outlets","pageDescription":"Manage outlet master records","show":true},
-            {"group":["Field Sales"],"order":1,"label":"Outlet Hub","icon":"hub","route":"/masters/outlets/operations-hub","pageTitle":"Outlet Hub","pageDescription":"Outlet-centric view of visits, restocks, returns, invoices, and payments","show":true}
+            {"group":["Outlet Operations"],"order":1,"label":"Outlets","icon":"storefront","route":"/master/outlets","pageTitle":"Outlets","pageDescription":"Manage outlet master records","show":true},
+            {"group":["Field Sales"],"order":1,"label":"Outlet Hub","icon":"hub","route":"/master/outlets/operation-hub","pageTitle":"Outlet Hub","pageDescription":"Outlet-centric view of visits, restocks, returns, invoices, and payments","show":true}
         ]),
         UIFields: JSON.stringify([
             { header: 'Name', label: 'Name', type: 'text', required: true },
@@ -376,7 +376,7 @@ function initAppResourcesCodeConfig() {
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{"group":["Outlet Operations"],"order":2,"label":"Operating Rules","icon":"rule","route":"/masters/outlet-operating-rules","pageTitle":"Outlet Operating Rules","pageDescription":"Manage outlet operating rules","show":true}]),
+        Menu: JSON.stringify([{"group":["Outlet Operations"],"order":2,"label":"Operating Rules","icon":"rule","route":"/master/outlet-operating-rules","pageTitle":"Outlet Operating Rules","pageDescription":"Manage outlet operating rules","show":true}]),
         UIFields: JSON.stringify([
             { header: 'OutletCode', label: 'Outlet Code', type: 'text', required: true },
             { header: 'PriceListCode', label: 'Price List Code', type: 'text', hint: 'Optional. Falls back to IsDefault price list.' },
@@ -409,7 +409,7 @@ function initAppResourcesCodeConfig() {
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{"group":["Masters"],"order":2,"label":"Taxes","icon":"percent","route":"/masters/taxes","pageTitle":"Taxes","pageDescription":"Manage master tax categories and child sub-taxes","show":true}]),
+        Menu: JSON.stringify([{"group":["Masters"],"order":2,"label":"Taxes","icon":"percent","route":"/master/taxes","pageTitle":"Taxes","pageDescription":"Manage master tax categories and child sub-taxes","show":true}]),
         UIFields: JSON.stringify([
             { header: 'Code', label: 'Code', type: 'text', required: true },
             { header: 'Name', label: 'Name', type: 'text', required: true },
@@ -445,7 +445,7 @@ function initAppResourcesCodeConfig() {
         RecordAccessPolicy: 'OWNER_AND_UPLINE',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{"group":["Procurement"],"order":0,"label":"Procurements","icon":"shopping_cart","route":"/operations/procurements","pageTitle":"Procurements","pageDescription":"Central tracked procurement request","show":false}]),
+        Menu: JSON.stringify([{"group":["Procurement"],"order":0,"label":"Procurements","icon":"shopping_cart","route":"/operation/procurements","pageTitle":"Procurements","pageDescription":"Central tracked procurement request","show":false}]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
@@ -477,8 +477,8 @@ function initAppResourcesCodeConfig() {
             {"action":"SendBack","label":"Request Revision","icon":"","color":"info","kind":"mutate","confirm":false,"column":"Progress","columnValue":"Revision Required","columnValueOptions":[],"fields":[{"name":"Comment","label":"Comment","type":"textarea","required":true}],"visibleWhen":{"column":"Progress","op":"eq","value":"Pending Approval"}}
         ]),
         Menu: JSON.stringify([
-            {"group":["Procurement"],"order":2,"label":"Requisitions","icon":"request_quote","route":"/operations/purchase-requisitions","pageTitle":"Purchase Requisitions","pageDescription":"Internal requests for purchase","show":true},
-            {"group":["Procurement"],"order":3,"label":"Initiate Purchase Requisitions","icon":"request_quote","route":"/operations/purchase-requisitions/initiate-purchase-requisitions","pageTitle":"Purchase Requisitions","pageDescription":"Initiate Purchase Requisition","show":true,"menuAccess":{"require":"canWrite"}}
+            {"group":["Procurement"],"order":2,"label":"Requisitions","icon":"request_quote","route":"/operation/purchase-requisitions","pageTitle":"Purchase Requisitions","pageDescription":"Internal requests for purchase","show":true},
+            {"group":["Procurement"],"order":3,"label":"Initiate Purchase Requisitions","icon":"request_quote","route":"/operation/purchase-requisitions/initiate-purchase-requisitions","pageTitle":"Purchase Requisitions","pageDescription":"Initiate Purchase Requisition","show":true,"menuAccess":{"require":"canWrite"}}
         ]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
@@ -538,7 +538,7 @@ function initAppResourcesCodeConfig() {
             {"action":"Close","label":"Close RFQ","icon":"lock","color":"negative","kind":"mutate","confirm":true,"column":"Progress","columnValue":"CLOSED","columnValueOptions":[],"fields":[],"visibleWhen":{"column":"Progress","op":"eq","value":"SENT"}}
         ]),
         Menu: JSON.stringify([
-            {"group":["Procurement"],"order":4,"label":"Request For Quotations","icon":"request_quote","route":"/operations/rfqs","pageTitle":"Request for Quotations","pageDescription":"Manage requests for quotation","show":true}
+            {"group":["Procurement"],"order":4,"label":"Request For Quotations","icon":"request_quote","route":"/operation/rfqs","pageTitle":"Request for Quotations","pageDescription":"Manage requests for quotation","show":true}
         ]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
@@ -596,7 +596,7 @@ function initAppResourcesCodeConfig() {
             {"action":"Reject","label":"Reject","icon":"block","color":"negative","kind":"mutate","confirm":false,"column":"Progress","columnValue":"REJECTED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Rejection Comment","type":"textarea","required":true}],"visibleWhen":{"column":"Progress","op":"eq","value":"RECEIVED"}}
         ]),
         Menu: JSON.stringify([
-            {"group":["Procurement"],"order":5,"label":"Supplier Quotations","icon":"request_quote","route":"/operations/supplier-quotations","pageTitle":"Supplier Quotations","pageDescription":"Record and manage supplier quotation responses","show":true}
+            {"group":["Procurement"],"order":5,"label":"Supplier Quotations","icon":"request_quote","route":"/operation/supplier-quotations","pageTitle":"Supplier Quotations","pageDescription":"Record and manage supplier quotation responses","show":true}
         ]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
@@ -657,7 +657,7 @@ function initAppResourcesCodeConfig() {
             {"action":"Cancel","label":"Cancel","icon":"cancel","color":"negative","kind":"mutate","confirm":false,"column":"Progress","columnValue":"CANCELLED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Cancel Comment","type":"textarea","required":true}],"visibleWhen":{"column":"Progress","op":"in","value":["CREATED","SENT","ACKNOWLEDGED"]}}
         ]),
         Menu: JSON.stringify([
-            {"group":["Procurement"],"order":6,"label":"Purchase Orders","icon":"receipt_long","route":"/operations/purchase-orders","pageTitle":"Purchase Orders","pageDescription":"Manage purchase orders","show":true,"menuAccess":{"require":"canWrite"}}
+            {"group":["Procurement"],"order":6,"label":"Purchase Orders","icon":"receipt_long","route":"/operation/purchase-orders","pageTitle":"Purchase Orders","pageDescription":"Manage purchase orders","show":true,"menuAccess":{"require":"canWrite"}}
         ]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
@@ -717,7 +717,7 @@ function initAppResourcesCodeConfig() {
             {"action":"Cancel","label":"Cancel","icon":"cancel","color":"negative","kind":"mutate","confirm":false,"column":"Progress","columnValue":"CANCELLED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Cancellation Comment","type":"textarea","required":true}],"visibleWhen":{"column":"Progress","op":"in","value":["DRAFT","CONFIRMED","GRN_GENERATED"]}}
         ]),
         Menu: JSON.stringify([
-            {"group":["Procurement"],"order":7,"label":"PO Receiving","icon":"inventory_2","route":"/operations/po-receivings","pageTitle":"PO Receiving","pageDescription":"Inspect received purchase order quantities before GRN finalization","show":true,"menuAccess":{"require":"canWrite"}}
+            {"group":["Procurement"],"order":7,"label":"PO Receiving","icon":"inventory_2","route":"/operation/po-receivings","pageTitle":"PO Receiving","pageDescription":"Inspect received purchase order quantities before GRN finalization","show":true,"menuAccess":{"require":"canWrite"}}
         ]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
@@ -775,7 +775,7 @@ function initAppResourcesCodeConfig() {
             {"action":"Invalidate","label":"Invalidate","icon":"block","color":"negative","kind":"mutate","confirm":true,"column":"Status","columnValue":"Inactive","columnValueOptions":[],"fields":[],"visibleWhen":{"column":"Status","op":"eq","value":"Active"}}
         ]),
         Menu: JSON.stringify([
-            {"group":["Procurement"],"order":8,"label":"Goods Receipts","icon":"fact_check","route":"/operations/goods-receipts","pageTitle":"Goods Receipts","pageDescription":"View finalized GRNs generated from PO Receiving","show":true}
+            {"group":["Procurement"],"order":8,"label":"Goods Receipts","icon":"fact_check","route":"/operation/goods-receipts","pageTitle":"Goods Receipts","pageDescription":"View finalized GRNs generated from PO Receiving","show":true}
         ]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
@@ -837,9 +837,9 @@ function initAppResourcesCodeConfig() {
             { "action": "warehouseTransfer", "label": "Warehouse Transfer", "kind": "mutate", "confirm": false, "column": "ReferenceType", "columnValue": "WarehouseTransfer" }
         ]),
         Menu: JSON.stringify([
-            {"group":["Warehouse"],"order":2,"label":"Stock Movements","icon":"inventory","route":"/operations/stock-movements","pageTitle":"Stock Movements","pageDescription":"View stock movement records","show":true,"menuAccess":{"require":"canRead"}},
-            {"group":["Warehouse"],"order":3,"label":"Direct Stock Entry","icon":"edit_note","route":"/operations/stock-movements/direct-entry","pageTitle":"Direct Stock Entry","pageDescription":"Directly enter stock quantities","show":true,"menuAccess":{"require":"canDirectEntry"}},
-            {"group":["Warehouse"],"order":4,"label":"GRN Stock Entry","icon":"receipt_long","route":"/operations/stock-movements/grn-entry","pageTitle":"GRN Stock Entry","pageDescription":"Post finalized GRN quantities into warehouse stock","show":true,"menuAccess":{"require":"canGrn"}}
+            {"group":["Warehouse"],"order":2,"label":"Stock Movements","icon":"inventory","route":"/operation/stock-movements","pageTitle":"Stock Movements","pageDescription":"View stock movement records","show":true,"menuAccess":{"require":"canRead"}},
+            {"group":["Warehouse"],"order":3,"label":"Direct Stock Entry","icon":"edit_note","route":"/operation/stock-movements/direct-entry","pageTitle":"Direct Stock Entry","pageDescription":"Directly enter stock quantities","show":true,"menuAccess":{"require":"canDirectEntry"}},
+            {"group":["Warehouse"],"order":4,"label":"GRN Stock Entry","icon":"receipt_long","route":"/operation/stock-movements/grn-entry","pageTitle":"GRN Stock Entry","pageDescription":"Post finalized GRN quantities into warehouse stock","show":true,"menuAccess":{"require":"canGrn"}}
         ]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
@@ -892,7 +892,7 @@ function initAppResourcesCodeConfig() {
             { "action": "Postpone", "label": "Postpone", "icon": "event_repeat", "color": "warning", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "POSTPONED", "columnValueOptions": [], "fields": [{ "name": "ProgressPostponedComment", "label": "Postpone Reason", "type": "textarea", "required": true }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "PLANNED" } },
             { "action": "Cancel", "label": "Cancel", "icon": "cancel", "color": "negative", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "CANCELLED", "columnValueOptions": [], "fields": [{ "name": "ProgressCancelledComment", "label": "Cancellation Reason", "type": "textarea", "required": true }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "PLANNED" } }
         ]),
-        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 2, "label": "Outlet Visits", "icon": "event_available", "route": "/operations/outlet-visits", "pageTitle": "Outlet Visits", "pageDescription": "Plan and track field sales outlet visits", "show": true }]),
+        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 2, "label": "Outlet Visits", "icon": "event_available", "route": "/operation/outlet-visits", "pageTitle": "Outlet Visits", "pageDescription": "Plan and track field sales outlet visits", "show": true }]),
         UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: JSON.stringify([
             {"id":"rep_1776000000012","name":"outlet-visits-today","label":"Visits Today","templateSheet":"OutletVisitsToday","isRecordLevel":false,"inputs":[],"pdfOptions":{}},
             {"id":"rep_1776000000013","name":"outlet-visits-tomorrow-upcoming","label":"Visits Tomorrow & Upcoming","templateSheet":"OutletVisitsTomorrowAndUpcomig","isRecordLevel":false,"inputs":[],"pdfOptions":{}},
@@ -911,7 +911,7 @@ function initAppResourcesCodeConfig() {
             { "action": "Reject", "label": "Reject", "icon": "block", "color": "negative", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "REJECTED", "fields": [{ "name": "Comment", "label": "Rejection Comment", "type": "textarea", "required": true }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "PENDING_APPROVAL" } },
             { "action": "SendBack", "label": "Send Back", "icon": "undo", "color": "warning", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "REVISION_REQUIRED", "fields": [{ "name": "Comment", "label": "Revision Comment", "type": "textarea", "required": true }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "PENDING_APPROVAL" } }
         ]),
-        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 3, "label": "Outlet Restocks", "icon": "inventory", "route": "/operations/outlet-restocks", "pageTitle": "Outlet Restocks", "pageDescription": "Request, approve, and fulfill outlet restocks", "show": true }]),
+        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 3, "label": "Outlet Restocks", "icon": "inventory", "route": "/operation/outlet-restocks", "pageTitle": "Outlet Restocks", "pageDescription": "Request, approve, and fulfill outlet restocks", "show": true }]),
         UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: JSON.stringify([
             {"id":"rep_1776000000015","name":"restock-order","label":"Restock Order","templateSheet":"Restock","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
             {"id":"rep_1776000000016","name":"restock-log","label":"Restock Log","templateSheet":"RestockRecords","isRecordLevel":false,"inputs":[{"label":"User","type":"select","targetCell":"J11","source":{"resource":"OutletRestocks","field":"RequestedUser"},"default":"Any User","required":false},{"label":"Date","type":"select","targetCell":"J12","source":{"resource":"OutletRestocks","field":"Date"},"default":"Any Date","required":false},{"label":"Progress","type":"select","targetCell":"J13","source":{"resource":"OutletRestocks","field":"Progress"},"default":"All Progress","required":false}],"pdfOptions":{}}
@@ -926,7 +926,7 @@ function initAppResourcesCodeConfig() {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_DELIVERIES,
         Scope: 'operation', IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_DELIVERIES,
         CodePrefix: 'ODL', CodeSequenceLength: 6, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'Date,UserName,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Progress":"DRAFT"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: '',
-        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 4, "label": "Outlet Deliveries", "icon": "local_shipping", "route": "/operations/outlet-deliveries", "pageTitle": "Outlet Deliveries", "pageDescription": "Create, deliver, or cancel allocated outlet restock items", "show": true }]),
+        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 4, "label": "Outlet Deliveries", "icon": "local_shipping", "route": "/operation/outlet-deliveries", "pageTitle": "Outlet Deliveries", "pageDescription": "Create, deliver, or cancel allocated outlet restock items", "show": true }]),
         UIFields: JSON.stringify([
             { header: 'Date', label: 'Date', type: 'date', required: true },
             { header: 'UserName', label: 'User Name', type: 'text', required: true },
@@ -961,7 +961,7 @@ function initAppResourcesCodeConfig() {
             { "action": "Stock", "label": "Stock to Warehouse", "icon": "store", "color": "primary", "kind": "mutate", "confirm": true, "column": "WarehouseAction", "columnValue": "Stocked", "columnValueOptions": [], "fields": [], "visibleWhen": { "column": "WarehouseActionCompleted", "op": "eq", "value": "FALSE" } },
             { "action": "Cancel", "label": "Cancel", "icon": "cancel", "color": "negative", "kind": "mutate", "confirm": true, "column": "Progress", "columnValue": "CANCELLED", "columnValueOptions": [], "fields": [{ "name": "ProgressCancelledComment", "label": "Cancellation Reason", "type": "textarea", "required": true }], "visibleWhen": { "column": "Progress", "op": "nin", "value": ["CANCELLED"] } }
         ]),
-        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 5, "label": "Outlet Returns", "icon": "assignment_return", "route": "/operations/outlet-returns", "pageTitle": "Outlet Returns", "pageDescription": "Track sales returns and unsold inventory returns from outlets", "show": true }]),
+        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 5, "label": "Outlet Returns", "icon": "assignment_return", "route": "/operation/outlet-returns", "pageTitle": "Outlet Returns", "pageDescription": "Track sales returns and unsold inventory returns from outlets", "show": true }]),
         UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: JSON.stringify([
             {"id":"rep_1776000000019","name":"return-receipt","label":"Return Receipt","templateSheet":"Return","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
             {"id":"rep_1776000000020","name":"returns-log","label":"Returns Log","templateSheet":"ReturnRecords","isRecordLevel":false,"inputs":[{"label":"Username","type":"select","targetCell":"J11","source":{"resource":"OutletReturns","field":"Username"},"default":"Any User","required":false},{"label":"Date","type":"select","targetCell":"J12","source":{"resource":"OutletReturns","field":"Date"},"default":"All Date","required":false},{"label":"Return Reason","type":"select","targetCell":"J13","source":{"resource":"OutletReturns","field":"Reason"},"default":"Any Reason","required":false}],"pdfOptions":{}}
@@ -975,7 +975,7 @@ function initAppResourcesCodeConfig() {
             {"action":"MarkInvoiceGenerated","label":"Mark Invoice Generated","icon":"receipt_long","color":"positive","kind":"mutate","confirm":true,"column":"Progress","columnValue":"INVOICE_GENERATED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Comment","type":"textarea","required":false}],"visibleWhen":{"column":"Progress","op":"eq","value":"PENDING_INVOICE_GENERATION"}},
             {"action":"Cancel","label":"Cancel","icon":"cancel","color":"negative","kind":"mutate","confirm":true,"column":"Progress","columnValue":"CANCELLED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Cancellation Comment","type":"textarea","required":true}],"visibleWhen":{"column":"Progress","op":"nin","value":["CANCELLED"]}}
         ]),
-        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 6, "label": "Outlet Consumptions", "icon": "point_of_sale", "route": "/operations/outlet-consumptions", "pageTitle": "Outlet Consumptions", "pageDescription": "Record outlet stock consumption", "show": true }]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: JSON.stringify([
+        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 6, "label": "Outlet Consumptions", "icon": "point_of_sale", "route": "/operation/outlet-consumptions", "pageTitle": "Outlet Consumptions", "pageDescription": "Record outlet stock consumption", "show": true }]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: JSON.stringify([
             {"id":"rep_1776000000021","name":"consumption-receipt","label":"Consumption Receipt","templateSheet":"Consumption","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
             {"id":"rep_1776000000022","name":"consumption-records-log","label":"Consumption Log","templateSheet":"ConsumptionRecords","isRecordLevel":false,"inputs":[{"label":"Username","type":"select","targetCell":"J11","source":{"resource":"OutletConsumptions","field":"Username"},"default":"Any User","required":false},{"label":"Date","type":"select","targetCell":"J12","source":{"resource":"OutletConsumptions","field":"Date"},"default":"All Date","required":false}],"pdfOptions":{}}
         ]), CustomUIName: '', ListViews: ''
@@ -994,7 +994,7 @@ function initAppResourcesCodeConfig() {
             {"action":"MarkPaid","label":"Mark Paid","icon":"paid","color":"positive","kind":"mutate","confirm":true,"column":"Progress","columnValue":"PAID","columnValueOptions":[],"fields":[{"name":"Comment","label":"Comment","type":"textarea","required":false}],"visibleWhen":{"column":"Progress","op":"in","value":["PENDING_PAYMENT","PARTIALLY_PAID"]}},
             {"action":"Cancel","label":"Cancel","icon":"cancel","color":"negative","kind":"mutate","confirm":true,"column":"Progress","columnValue":"CANCELLED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Cancellation Comment","type":"textarea","required":true}],"visibleWhen":{"column":"Progress","op":"nin","value":["PAID","CANCELLED"]}}
         ]),
-        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 7, "label": "Consumption Invoices", "icon": "receipt_long", "route": "/operations/outlet-consumption-invoices", "pageTitle": "Consumption Invoices", "pageDescription": "View outlet consumption invoices", "show": true }]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: JSON.stringify([
+        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 7, "label": "Consumption Invoices", "icon": "receipt_long", "route": "/operation/outlet-consumption-invoices", "pageTitle": "Consumption Invoices", "pageDescription": "View outlet consumption invoices", "show": true }]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: JSON.stringify([
             {"id":"rep_1776000000023","name":"consumption-invoice","label":"Consumption Invoice","templateSheet":"ConsumptionInvoice","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
             {"id":"rep_1776000000024","name":"invoice-log","label":"Invoice Log","templateSheet":"InvoiceRecords","isRecordLevel":false,"inputs":[{"label":"Date","type":"select","targetCell":"J11","source":{"resource":"OutletConsumptionInvoices","field":"Date"},"default":"All Date","required":false},{"label":"Username","type":"select","targetCell":"J12","source":{"resource":"OutletConsumptionInvoices","field":"Username"},"default":"Any User","required":false},{"label":"Progress","type":"select","targetCell":"J13","source":{"resource":"OutletConsumptionInvoices","field":"Progress"},"default":"All Progress","required":false}],"pdfOptions":{}}
         ]), CustomUIName: '', ListViews: ''
@@ -1051,7 +1051,7 @@ function initAppResourcesCodeConfig() {
                 "order": 8,
                 "label": "Outlet Payments",
                 "icon": "payments",
-                "route": "/operations/outlet-payments",
+                "route": "/operation/outlet-payments",
                 "pageTitle": "Outlet Payments",
                 "pageDescription": "View and record outlet payments",
                 "show": true
@@ -1101,7 +1101,7 @@ function initAppResourcesCodeConfig() {
             { "action": "Complete", "label": "Complete", "icon": "task_alt", "color": "positive", "kind": "mutate", "confirm": true, "column": "Progress", "columnValue": "COMPLETED", "fields": [{ "name": "ProgressCompletedComment", "label": "Completion Comment", "type": "textarea", "required": false }], "visibleWhen": [{ "column": "Progress", "op": "eq", "value": "APPROVED" }, { "column": "DestinationWarehouseCode", "op": "notEmpty" }] },
             { "action": "ClaimAndComplete", "label": "Claim & Complete", "icon": "local_shipping", "color": "primary", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "COMPLETED", "fields": [{ "name": "DestinationWarehouseCode", "label": "Destination Warehouse", "type": "select", "source": { "resource": "Warehouses", "field": "Code" }, "required": true }, { "name": "ProgressCompletedComment", "label": "Completion Comment", "type": "textarea", "required": false }], "visibleWhen": [{ "column": "Progress", "op": "eq", "value": "APPROVED" }, { "column": "DestinationWarehouseCode", "op": "empty" }] }
         ]),
-        Menu: JSON.stringify([{ "group": ["Warehouse"], "order": 5, "label": "Transfers", "icon": "swap_horiz", "route": "/operations/warehouse-transfers", "pageTitle": "Warehouse Transfers", "pageDescription": "Transfer inventory between warehouses", "show": true }]),
+        Menu: JSON.stringify([{ "group": ["Warehouse"], "order": 5, "label": "Transfers", "icon": "swap_horiz", "route": "/operation/warehouse-transfers", "pageTitle": "Warehouse Transfers", "pageDescription": "Transfer inventory between warehouses", "show": true }]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'FALSE',
@@ -1363,7 +1363,7 @@ function initAppResourcesCodeConfig() {
         RecordAccessPolicy: 'ALL',
         OwnerUserField: '',
         AdditionalActions: '',
-        Menu: JSON.stringify([{"group":["Masters"],"order":99,"label":"Bulk Upload","icon":"cloud_upload","route":"/masters/bulk-upload","pageTitle":"Bulk Upload Masters","pageDescription":"Upload bulk data to any master resource","show":true}]),
+        Menu: JSON.stringify([{"group":["Masters"],"order":99,"label":"Bulk Upload","icon":"cloud_upload","route":"/master/bulk-upload","pageTitle":"Bulk Upload Masters","pageDescription":"Upload bulk data to any master resource","show":true}]),
         UIFields: JSON.stringify([]),
         IncludeInAuthorizationPayload: 'TRUE',
         Functional: 'TRUE',
@@ -1494,3 +1494,4 @@ function syncAppResourcesFromCode(silent) {
         clearAllAppCaches();
     }
 }
+

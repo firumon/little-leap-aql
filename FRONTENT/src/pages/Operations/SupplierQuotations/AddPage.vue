@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="sq-add">
     <q-card flat bordered>
       <q-card-section class="row items-center no-wrap q-pa-sm">
@@ -175,7 +175,7 @@
 </template>
 
 <script setup>
-import { useSupplierQuotationCreateFlow } from 'src/composables/operations/supplierQuotations/useSupplierQuotationCreateFlow'
+import { useSupplierQuotationCreateFlow } from 'src/composables/operation/supplierQuotations/useSupplierQuotationCreateFlow'
 
 const {
   loading,
@@ -214,3 +214,4 @@ const {
   box-shadow: 0 0 0 1px var(--q-primary);
 }
 </style>
+

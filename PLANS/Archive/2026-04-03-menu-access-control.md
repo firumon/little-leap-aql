@@ -1,4 +1,4 @@
-# PLAN: Menu Access Control via `menuAccess` Rules
+﻿# PLAN: Menu Access Control via `menuAccess` Rules
 **Status**: COMPLETED
 **Created**: 2026-04-03
 **Created By**: Brain Agent (Claude Sonnet 4.6)
@@ -363,7 +363,7 @@ Menu: JSON.stringify({
   order: 1,
   label: 'Products',
   icon: 'inventory_2',
-  route: '/masters/products',
+  route: '/master/products',
   pageTitle: 'Products',
   pageDescription: 'Manage product master records (parent models)',
   show: true,
@@ -405,8 +405,8 @@ Confirm output shows all `.gs` files pushed without errors.
 
 - [ ] A user with only `canRead` on Products does NOT see Products in the sidebar when `menuAccess: { require: 'canWrite' }` is set on Products.
 - [ ] A user with `canWrite` on Products DOES see Products in the sidebar.
-- [ ] If a read-only user types `/masters/products` directly in the browser URL, the route guard redirects them to `/dashboard`.
-- [ ] A user with `canWrite` navigating to `/masters/products` via URL is allowed through.
+- [ ] If a read-only user types `/master/products` directly in the browser URL, the route guard redirects them to `/dashboard`.
+- [ ] A user with `canWrite` navigating to `/master/products` via URL is allowed through.
 - [ ] Resources with NO `menuAccess` field continue to show for any user with `canRead` (no regression).
 - [ ] `all` rule: user must satisfy every listed rule to see the item.
 - [ ] `any` rule: user satisfying at least one listed rule sees the item.
@@ -449,3 +449,4 @@ Confirm output shows all `.gs` files pushed without errors.
 - [ ] Run **AQL 🚀 > Resources > Sync APP.Resources from Code** (to push `menuAccess` from code to sheet)
 - [ ] Run **AQL 🚀 > Resources > Clear Resource Config Cache** (to purge stale server cache)
 - [ ] Create a **new Web App deployment** in Apps Script IDE (Deploy > New deployment) so the live URL serves the updated auth payload with `menuAccess` inside `ui.menu`
+

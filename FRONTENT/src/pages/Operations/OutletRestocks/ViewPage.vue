@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding>
     <div v-if="!restock" class="text-center q-pa-xl">
       <q-spinner v-if="loading" color="primary" size="3em" />
@@ -82,12 +82,12 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { useOutletRestocks } from '../../../composables/operations/outlets/useOutletRestocks.js'
-import RestockDraftView from '../../../components/Operations/Outlets/RestockDraftView.vue'
-import RestockApprovalView from '../../../components/Operations/Outlets/RestockApprovalView.vue'
-import RestockPendingAllocationView from '../../../components/Operations/Outlets/RestockPendingAllocationView.vue'
-import RestockReadonlyView from '../../../components/Operations/Outlets/RestockReadonlyView.vue'
-import DirectDeliveryPanel from '../../../components/Operations/Outlets/DirectDeliveryPanel.vue'
+import { useOutletRestocks } from '../../../composables/operation/outlets/useOutletRestocks.js'
+import RestockDraftView from '../../../components/operation/Outlets/RestockDraftView.vue'
+import RestockApprovalView from '../../../components/operation/Outlets/RestockApprovalView.vue'
+import RestockPendingAllocationView from '../../../components/operation/Outlets/RestockPendingAllocationView.vue'
+import RestockReadonlyView from '../../../components/operation/Outlets/RestockReadonlyView.vue'
+import DirectDeliveryPanel from '../../../components/operation/Outlets/DirectDeliveryPanel.vue'
 import ResourceReports from 'components/Reports/ResourceReports.vue'
 
 defineOptions({ name: 'OutletRestocksViewPage' })
@@ -168,3 +168,4 @@ onMounted(async () => {
   loadRestock(route.params.code)
 })
 </script>
+

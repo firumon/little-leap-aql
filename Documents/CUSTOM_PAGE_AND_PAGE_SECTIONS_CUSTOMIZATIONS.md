@@ -1,9 +1,9 @@
-# Custom Page and Page Sections Customizations
+﻿# Custom Page and Page Sections Customizations
 
 ## 1. Overview
 
 AQL's frontend architecture is designed for deep, tiered customization of pages and layout sections. This is achieved through a decentralized layout system:
-1. **Top-Level Orchestrators**: Standard page wrapper definitions (like [IndexPage.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/IndexPage.vue) and [ViewPage.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/Masters/ViewPage.vue)) delegate rendering to a unified [Page.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/Page.vue) component.
+1. **Top-Level Orchestrators**: Standard page wrapper definitions (like [IndexPage.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/IndexPage.vue) and [ViewPage.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/master/ViewPage.vue)) delegate rendering to a unified [Page.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/Page.vue) component.
 2. **Static Layout Fallbacks**: The unified `Page.vue` statically imports and mounts the core layout section components (`Header`, `Toolbar`, `Content`, `Action`).
 3. **Decentralized Overriding**: Each layout component (and their child sub-sections) uses [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js) (or the [useCommonSection.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useCommonSection.js) wrapper composable) to resolve their own overrides independently.
 
@@ -182,7 +182,7 @@ To solve this, use one of the two patterns:
 #### Pattern A: JS Logic Modifier (Preferred for property-only overrides)
 If you only need to change properties, use a `.js` modifier instead of a `.vue` template. Thanks to the automatic property merging and evaluation in [useCommonSection.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useCommonSection.js) (which wraps [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js)), you only return the fields you want to change:
 ```javascript
-// src/components/Masters/Currencies/Index/Header.js
+// src/components/master/Currencies/Index/Header.js
 export default {
   label: 'Than podo'
 }
@@ -206,3 +206,4 @@ Wrapping the child component in a `<div>` (e.g., `<div><GenericHeaderPanel label
 
 > [!WARNING]
 > While this preserves the custom label, **all other common page-level features (such as dynamic back/reload actions, permission-gated controls, or status badges) are swallowed by the `<div>` and never reach the panel**. Avoid this unless you intentionally want to isolate the child component from all orchestrator-computed attributes.
+

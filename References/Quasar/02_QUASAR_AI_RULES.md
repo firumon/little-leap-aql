@@ -1,4 +1,4 @@
-# Quasar Coding Patterns & Architectural Boundaries
+﻿# Quasar Coding Patterns & Architectural Boundaries
 
 This document describes the coding standards, layer boundaries, and structural patterns for Vue and Quasar development in the AQL repository. It outlines the responsibilities of components, composables, stores, and services.
 
@@ -62,7 +62,7 @@ The following example shows the interaction between a Vue component and a busine
 <script setup>
 import { useCurrency } from 'src/composables/useCurrency'
 import { useResourceConfig } from 'src/composables/useResourceConfig'
-import { useOutletInvoice } from 'src/composables/operations/useOutletInvoice'
+import { useOutletInvoice } from 'src/composables/operation/useOutletInvoice'
 
 const props = defineProps({
   invoiceData: { type: Object, required: true }
@@ -127,3 +127,4 @@ export function useOutletInvoice(invoiceData) {
 | **Verify Permission** | Check scopes using `allowed({ res: 'action' })`. |
 | **Perform Calculations** | Compute values via `computed()` inside the composable layer. |
 | **Redirect Route** | Invoke routing via the `useResourceNav` composable. |
+

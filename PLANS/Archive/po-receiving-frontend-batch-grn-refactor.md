@@ -1,4 +1,4 @@
-# PLAN: PO Receiving Frontend Batch GRN Refactor
+﻿# PLAN: PO Receiving Frontend Batch GRN Refactor
 **Status**: COMPLETED
 **Created**: 2026-04-27
 **Created By**: Brain Agent (Codex)
@@ -35,8 +35,8 @@ Required docs and current surfaces reviewed by Brain Agent:
 
 Relevant current implementation:
 - `FRONTENT/src/stores/workflow.js` already exposes `runBatchRequests`, `saveComposite`, `executeResourceAction`, and `updateResourceRecord`.
-- `FRONTENT/src/composables/operations/purchaseRequisitions/usePurchaseRequisitionEditableFlow.js` has the required clean/dirty pattern using a loaded snapshot, `hasUnsavedChanges`, `canUpdate`, and `canSubmit`.
-- `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderCreateFlow.js` already uses `runBatchRequests` with `compositeSave`, updates, actions, and a final `get` in one frontend-triggered GAS call.
+- `FRONTENT/src/composables/operation/purchaseRequisitions/usePurchaseRequisitionEditableFlow.js` has the required clean/dirty pattern using a loaded snapshot, `hasUnsavedChanges`, `canUpdate`, and `canSubmit`.
+- `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderCreateFlow.js` already uses `runBatchRequests` with `compositeSave`, updates, actions, and a final `get` in one frontend-triggered GAS call.
 - Current PO Receiving composables call `executeResourceAction('POReceivings', ..., GenerateGRN)` and rely on the GAS postAction to create GRN rows. This must change.
 
 ## Pre-Conditions
@@ -84,7 +84,7 @@ Relevant current implementation:
   - validation passes,
   - and `hasUnsavedChanges` is false.
 - [ ] `confirmReceiving()` must not call `saveDraft()` first. If dirty, it must notify that the draft must be saved before confirmation.
-**Files**: `FRONTENT/src/composables/operations/poReceivings/usePOReceivingAddFlow.js`, `FRONTENT/src/composables/operations/poReceivings/poReceivingPayload.js`
+**Files**: `FRONTENT/src/composables/operation/poReceivings/usePOReceivingAddFlow.js`, `FRONTENT/src/composables/operation/poReceivings/poReceivingPayload.js`
 **Pattern**: `usePurchaseRequisitionEditableFlow.js` snapshot/dirty/can-submit model.
 **Rule**: Dirty POR shows Save only; clean draft POR shows Confirm only.
 
@@ -96,7 +96,7 @@ Relevant current implementation:
   3. Final `get` for `PurchaseOrders`, `PurchaseOrderItems`, `POReceivings`, `POReceivingItems`, `GoodsReceipts`, `GoodsReceiptItems`, and `Procurements` with inactive rows included as needed.
 - [ ] Extract parent code from the first batch response and update `form.Code` / `selectedReceivingCode`.
 - [ ] Reset the loaded snapshot after successful save and refreshed data ingestion.
-**Files**: `FRONTENT/src/composables/operations/poReceivings/usePOReceivingAddFlow.js`
+**Files**: `FRONTENT/src/composables/operation/poReceivings/usePOReceivingAddFlow.js`
 **Pattern**: `usePurchaseOrderCreateFlow.js` one-call `runBatchRequests` sequence with final `get`.
 **Rule**: Draft save must be one frontend-triggered GAS call and must not rely on GAS postAction.
 
@@ -109,7 +109,7 @@ Relevant current implementation:
   3. Final `get` for affected resources.
 - [ ] Preserve action audit behavior by using the configured `Confirm` AdditionalAction rather than plain update where possible.
 - [ ] Navigate to POR view after successful batch.
-**Files**: `FRONTENT/src/composables/operations/poReceivings/usePOReceivingAddFlow.js`
+**Files**: `FRONTENT/src/composables/operation/poReceivings/usePOReceivingAddFlow.js`
 **Pattern**: Existing PR submit uses batch requests instead of isolated calls.
 **Rule**: Confirmation must not save dirty data implicitly.
 
@@ -130,7 +130,7 @@ Relevant current implementation:
   4. Final `get` for `POReceivings`, `POReceivingItems`, `GoodsReceipts`, `GoodsReceiptItems`, `PurchaseOrders`, and `Procurements`.
 - [ ] Read the created GRN code from the first batch response and navigate to the GRN view after success.
 - [ ] Implement this shared GRN creation path for both add flow and view flow; avoid duplicate logic between `usePOReceivingAddFlow.js` and `usePOReceivingView.js`.
-**Files**: `FRONTENT/src/composables/operations/poReceivings/poReceivingPayload.js`, `FRONTENT/src/composables/operations/poReceivings/usePOReceivingAddFlow.js`, `FRONTENT/src/composables/operations/poReceivings/usePOReceivingView.js`
+**Files**: `FRONTENT/src/composables/operation/poReceivings/poReceivingPayload.js`, `FRONTENT/src/composables/operation/poReceivings/usePOReceivingAddFlow.js`, `FRONTENT/src/composables/operation/poReceivings/usePOReceivingView.js`
 **Pattern**: `PurchaseOrders` create flow uses `compositeSave` plus follow-up updates/actions in one `runBatchRequests` call.
 **Rule**: GRN creation must be frontend-owned and must not depend on `PostAction`.
 
@@ -149,7 +149,7 @@ Relevant current implementation:
   5. Final `get` for affected resources.
 - [ ] Update `usePOReceivingAddFlow.js` replacement flow to use the same batch construction used by cancel/invalidation, then hydrate a new draft after success.
 - [ ] Keep the frontend block for `COMPLETED` procurement; do not rely on backend postAction repair.
-**Files**: `FRONTENT/src/composables/operations/goodsReceipts/useGoodsReceiptView.js`, `FRONTENT/src/composables/operations/poReceivings/usePOReceivingView.js`, `FRONTENT/src/composables/operations/poReceivings/usePOReceivingAddFlow.js`
+**Files**: `FRONTENT/src/composables/operation/goodsReceipts/useGoodsReceiptView.js`, `FRONTENT/src/composables/operation/poReceivings/usePOReceivingView.js`, `FRONTENT/src/composables/operation/poReceivings/usePOReceivingAddFlow.js`
 **Pattern**: Frontend-owned operation workflows perform related writes in one batch and refresh affected resources in-band.
 **Rule**: No GRN invalidation or cancel side effect may depend on `GAS/poReceivingWorkflow.gs`.
 
@@ -161,7 +161,7 @@ Relevant current implementation:
   - Button labels and disabled states reflect the PR editable-page pattern.
 - [ ] If `PoReceivings/ViewPage.vue` exposes Generate GRN or Cancel, ensure actions call the frontend batch orchestration from Step 6/7.
 - [ ] Keep pages thin; do not move payload-building or batch-building logic into page files.
-**Files**: `FRONTENT/src/pages/Operations/PoReceivings/AddPage.vue`, `FRONTENT/src/pages/Operations/PoReceivings/ViewPage.vue`
+**Files**: `FRONTENT/src/pages/operation/PoReceivings/AddPage.vue`, `FRONTENT/src/pages/operation/PoReceivings/ViewPage.vue`
 **Pattern**: `PurchaseRequisitionEditablePage.vue` displays update vs submit based on clean/dirty state.
 **Rule**: UI must not offer Confirm for dirty POR.
 
@@ -178,7 +178,7 @@ Relevant current implementation:
 ### Step 10: Verification And Deployment
 - [ ] Run targeted search checks:
   - `rg -n "handlePOReceivingWorkflow|poReceivingWorkflow" GAS FRONTENT/src Documents PLANS`
-  - `rg -n "PostAction: 'handlePOReceivingWorkflow'|GenerateGRN" GAS/syncAppResources.gs FRONTENT/src/composables/operations/poReceivings`
+  - `rg -n "PostAction: 'handlePOReceivingWorkflow'|GenerateGRN" GAS/syncAppResources.gs FRONTENT/src/composables/operation/poReceivings`
 - [ ] Run `npm run gas:push` because GAS metadata/file changes are part of the refactor.
 - [ ] Run `npm --prefix FRONTENT run build` because this touches shared operation composables, custom pages, GAS metadata, and docs.
 - [ ] Check `git status --short` after verification.
@@ -224,18 +224,18 @@ Build Agent must update `Status`, `Executed By`, progress log, changed files, va
 
 ### Deviations / Decisions
 - [x] `[?]` Decision: `GAS/poReceivingWorkflow.gs` was already absent from the workspace before this execution; no delete operation was required.
-- [x] `[?]` Decision: Added shared `FRONTENT/src/composables/operations/poReceivings/poReceivingBatch.js` as a small reusable batch helper to avoid duplicating GRN/cancel/invalidation request construction between add/view flows.
+- [x] `[?]` Decision: Added shared `FRONTENT/src/composables/operation/poReceivings/poReceivingBatch.js` as a small reusable batch helper to avoid duplicating GRN/cancel/invalidation request construction between add/view flows.
 - [ ] `[!]` Issue/blocker:
 
 ### Files Actually Changed
 - `GAS/syncAppResources.gs`
-- `FRONTENT/src/composables/operations/poReceivings/usePOReceivingAddFlow.js`
-- `FRONTENT/src/composables/operations/poReceivings/usePOReceivingView.js`
-- `FRONTENT/src/composables/operations/poReceivings/poReceivingPayload.js`
-- `FRONTENT/src/composables/operations/poReceivings/poReceivingBatch.js`
-- `FRONTENT/src/composables/operations/goodsReceipts/useGoodsReceiptView.js`
-- `FRONTENT/src/pages/Operations/PoReceivings/AddPage.vue`
-- `FRONTENT/src/pages/Operations/PoReceivings/ViewPage.vue`
+- `FRONTENT/src/composables/operation/poReceivings/usePOReceivingAddFlow.js`
+- `FRONTENT/src/composables/operation/poReceivings/usePOReceivingView.js`
+- `FRONTENT/src/composables/operation/poReceivings/poReceivingPayload.js`
+- `FRONTENT/src/composables/operation/poReceivings/poReceivingBatch.js`
+- `FRONTENT/src/composables/operation/goodsReceipts/useGoodsReceiptView.js`
+- `FRONTENT/src/pages/operation/PoReceivings/AddPage.vue`
+- `FRONTENT/src/pages/operation/PoReceivings/ViewPage.vue`
 - `FRONTENT/src/composables/REGISTRY.md`
 - `Documents/MODULE_WORKFLOWS.md`
 - `Documents/RESOURCE_COLUMNS_GUIDE.md`
@@ -243,7 +243,7 @@ Build Agent must update `Status`, `Executed By`, progress log, changed files, va
 
 ### Validation Performed
 - [x] `rg -n "handlePOReceivingWorkflow|poReceivingWorkflow" GAS FRONTENT/src Documents PLANS` completed; remaining hits are documentation/plan history only, with no runtime `GAS` or `FRONTENT/src` hook references.
-- [x] `rg -n "PostAction: 'handlePOReceivingWorkflow'|GenerateGRN" GAS/syncAppResources.gs FRONTENT/src/composables/operations/poReceivings` completed; no `PostAction: 'handlePOReceivingWorkflow'` remains, and `GenerateGRN` remains only as the generic configured action/frontend batch action.
+- [x] `rg -n "PostAction: 'handlePOReceivingWorkflow'|GenerateGRN" GAS/syncAppResources.gs FRONTENT/src/composables/operation/poReceivings` completed; no `PostAction: 'handlePOReceivingWorkflow'` remains, and `GenerateGRN` remains only as the generic configured action/frontend batch action.
 - [x] `npm run gas:push`
 - [x] `npm --prefix FRONTENT run build`
 - [ ] Manual POR save/confirm/GRN/invalidate/cancel/replacement checks completed (not available in local CLI verification)
@@ -251,3 +251,4 @@ Build Agent must update `Status`, `Executed By`, progress log, changed files, va
 ### Manual Actions Required
 - [x] Run APP resource sync from the AQL sheet menu so removed PostAction metadata is applied to live `APP.Resources`.
 - [x] No Web App redeployment expected unless Build Agent changes the API contract.
+

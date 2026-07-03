@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding class="q-pb-xl">
     <!-- Page Branded Header with Reload Button -->
     <div class="row items-center justify-between no-wrap q-mb-md">
@@ -127,7 +127,7 @@
 
 <script setup>
 import { computed, onMounted } from 'vue'
-import { useOutletConsumption } from '../../../composables/operations/outlets/useOutletConsumption.js'
+import { useOutletConsumption } from '../../../composables/operation/outlets/useOutletConsumption.js'
 import AqlList from '../../../components/shared/AqlList.vue'
 import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
@@ -159,3 +159,4 @@ onMounted(async () => {
   await reload()
 })
 </script>
+

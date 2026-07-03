@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page class="column no-scroll">
     <q-card flat bordered class="q-ma-md q-mb-none">
       <q-card-section class="q-pa-md">
@@ -137,8 +137,8 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { useOutletConsumption } from '../../../composables/operations/outlets/useOutletConsumption.js'
-import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'
+import { useOutletConsumption } from '../../../composables/operation/outlets/useOutletConsumption.js'
+import OutletProgressChip from '../../../components/operation/Outlets/OutletProgressChip.vue'
 import AqlList from "components/shared/AqlList.vue";
 import ResourceReports from 'components/Reports/ResourceReports.vue'
 
@@ -196,3 +196,4 @@ function restockProgressPercent(progress) {
 
 onMounted(() => reload())
 </script>
+

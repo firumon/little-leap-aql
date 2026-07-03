@@ -1,4 +1,4 @@
-# PLAN: Frontend Strict Architecture Remediation
+﻿# PLAN: Frontend Strict Architecture Remediation
 **Status**: COMPLETED
 **Created**: 2026-04-19
 **Created By**: Brain Agent (GitHub Copilot)
@@ -38,7 +38,7 @@ The highest-risk functional chain to preserve is:
 - [x] Refactor action pages to call action composables instead of `executeGasApi` directly.
 - [x] Refactor PR initiate and draft pages to use PR domain composables and wrapper methods for persistence.
 - [x] Ensure payload composition and notifications still match current behavior.
-**Files**: `FRONTENT/src/pages/Masters/_common/ActionPage.vue`, `FRONTENT/src/pages/Operations/_common/ActionPage.vue`, `FRONTENT/src/pages/Operations/PurchaseRequisitions/InitiatePurchaseRequisitionsPage.vue`, `FRONTENT/src/pages/Operations/PurchaseRequisitions/RecordDraftPage.vue`
+**Files**: `FRONTENT/src/pages/master/_common/ActionPage.vue`, `FRONTENT/src/pages/operation/_common/ActionPage.vue`, `FRONTENT/src/pages/operation/PurchaseRequisitions/InitiatePurchaseRequisitionsPage.vue`, `FRONTENT/src/pages/operation/PurchaseRequisitions/RecordDraftPage.vue`
 **Pattern**: Move IO calls behind composable APIs returning standardized result objects
 **Rule**: No API/IDB operations in components/pages
 
@@ -46,7 +46,7 @@ The highest-risk functional chain to preserve is:
 - [x] Replace `useAuthStore` and `useDataStore` usage in pages/layouts with dedicated composables.
 - [x] Consolidate shared parent/child loading behavior into reusable composables.
 - [x] Keep navigation behavior and rendered UI unchanged.
-**Files**: `FRONTENT/src/pages/AuthPage/LoginPage.vue`, `FRONTENT/src/pages/ProfilePage/ProfilePage.vue`, `FRONTENT/src/pages/Dashboard/DashboardIndex.vue`, `FRONTENT/src/layouts/MainLayout/MainLayout.vue`, `FRONTENT/src/pages/Masters/_common/ViewPage.vue`, `FRONTENT/src/pages/Masters/_common/EditPage.vue`, `FRONTENT/src/pages/Masters/Products/ViewPage.vue`, `FRONTENT/src/pages/Operations/_common/ViewPage.vue`, `FRONTENT/src/pages/Operations/_common/EditPage.vue`, `FRONTENT/src/pages/Operations/PurchaseRequisitions/RecordReviewPurchaseRequisitionPage.vue`, `FRONTENT/src/pages/Operations/PurchaseRequisitions/InitiatePurchaseRequisitionsPage.vue`
+**Files**: `FRONTENT/src/pages/AuthPage/LoginPage.vue`, `FRONTENT/src/pages/ProfilePage/ProfilePage.vue`, `FRONTENT/src/pages/Dashboard/DashboardIndex.vue`, `FRONTENT/src/layouts/MainLayout/MainLayout.vue`, `FRONTENT/src/pages/master/_common/ViewPage.vue`, `FRONTENT/src/pages/master/_common/EditPage.vue`, `FRONTENT/src/pages/master/Products/ViewPage.vue`, `FRONTENT/src/pages/operation/_common/ViewPage.vue`, `FRONTENT/src/pages/operation/_common/EditPage.vue`, `FRONTENT/src/pages/operation/PurchaseRequisitions/RecordReviewPurchaseRequisitionPage.vue`, `FRONTENT/src/pages/operation/PurchaseRequisitions/InitiatePurchaseRequisitionsPage.vue`
 **Pattern**: Page shell + domain composable view-model pattern
 **Rule**: Components must not use stores directly
 
@@ -70,7 +70,7 @@ The highest-risk functional chain to preserve is:
 - [x] Decompose oversized pages/services into focused composables/components/partials under 400 lines.
 - [x] Split `hero.scss` into partials and move reusable shared styles to `custom.scss`.
 - [x] Import `custom.scss` in `app.scss`.
-**Files**: `FRONTENT/src/css/hero.scss`, `FRONTENT/src/services/ResourceFetchService.js`, `FRONTENT/src/pages/Masters/Products/AddPage.vue`, `FRONTENT/src/pages/Masters/Products/EditPage.vue`, `FRONTENT/src/pages/Operations/PurchaseRequisitions/IndexPage.vue`, `FRONTENT/src/pages/Operations/PurchaseRequisitions/InitiatePurchaseRequisitionsPage.vue`, `FRONTENT/src/pages/Operations/PurchaseRequisitions/RecordDraftPage.vue`, `FRONTENT/src/pages/Operations/PurchaseRequisitions/RecordReviewPurchaseRequisitionPage.vue`, `FRONTENT/src/css/custom.scss`, `FRONTENT/src/css/app.scss`
+**Files**: `FRONTENT/src/css/hero.scss`, `FRONTENT/src/services/ResourceFetchService.js`, `FRONTENT/src/pages/master/Products/AddPage.vue`, `FRONTENT/src/pages/master/Products/EditPage.vue`, `FRONTENT/src/pages/operation/PurchaseRequisitions/IndexPage.vue`, `FRONTENT/src/pages/operation/PurchaseRequisitions/InitiatePurchaseRequisitionsPage.vue`, `FRONTENT/src/pages/operation/PurchaseRequisitions/RecordDraftPage.vue`, `FRONTENT/src/pages/operation/PurchaseRequisitions/RecordReviewPurchaseRequisitionPage.vue`, `FRONTENT/src/css/custom.scss`, `FRONTENT/src/css/app.scss`
 **Pattern**: thin page shell + shared style entrypoint
 **Rule**: file size rule and styling rule compliance
 
@@ -140,23 +140,23 @@ The highest-risk functional chain to preserve is:
 - `FRONTENT/src/pages/AuthPage/LoginPage.vue`
 - `FRONTENT/src/pages/ProfilePage/ProfilePage.vue`
 - `FRONTENT/src/pages/Dashboard/DashboardIndex.vue`
-- `FRONTENT/src/pages/Masters/_common/ActionPage.vue`
-- `FRONTENT/src/pages/Masters/_common/ViewPage.vue`
-- `FRONTENT/src/pages/Masters/_common/EditPage.vue`
-- `FRONTENT/src/pages/Masters/Products/ViewPage.vue`
-- `FRONTENT/src/pages/Masters/Products/AddPage.vue`
-- `FRONTENT/src/pages/Masters/Products/EditPage.vue`
-- `FRONTENT/src/pages/Operations/_common/ActionPage.vue`
-- `FRONTENT/src/pages/Operations/_common/ViewPage.vue`
-- `FRONTENT/src/pages/Operations/_common/EditPage.vue`
-- `FRONTENT/src/pages/Operations/PurchaseRequisitions/IndexPage.vue`
-- `FRONTENT/src/pages/Operations/PurchaseRequisitions/InitiatePurchaseRequisitionsPage.vue`
-- `FRONTENT/src/pages/Operations/PurchaseRequisitions/RecordDraftPage.vue`
-- `FRONTENT/src/pages/Operations/PurchaseRequisitions/RecordReviewPurchaseRequisitionPage.vue`
-- `FRONTENT/src/components/Operations/PurchaseRequisitions/PurchaseRequisitionReviewHero.vue`
-- `FRONTENT/src/components/Operations/PurchaseRequisitions/PurchaseRequisitionReviewItemsCard.vue`
-- `FRONTENT/src/components/Operations/PurchaseRequisitions/PurchaseRequisitionReviewActionBar.vue`
-- `FRONTENT/src/components/Operations/PurchaseRequisitions/PurchaseRequisitionAddItemDialog.vue`
+- `FRONTENT/src/pages/master/_common/ActionPage.vue`
+- `FRONTENT/src/pages/master/_common/ViewPage.vue`
+- `FRONTENT/src/pages/master/_common/EditPage.vue`
+- `FRONTENT/src/pages/master/Products/ViewPage.vue`
+- `FRONTENT/src/pages/master/Products/AddPage.vue`
+- `FRONTENT/src/pages/master/Products/EditPage.vue`
+- `FRONTENT/src/pages/operation/_common/ActionPage.vue`
+- `FRONTENT/src/pages/operation/_common/ViewPage.vue`
+- `FRONTENT/src/pages/operation/_common/EditPage.vue`
+- `FRONTENT/src/pages/operation/PurchaseRequisitions/IndexPage.vue`
+- `FRONTENT/src/pages/operation/PurchaseRequisitions/InitiatePurchaseRequisitionsPage.vue`
+- `FRONTENT/src/pages/operation/PurchaseRequisitions/RecordDraftPage.vue`
+- `FRONTENT/src/pages/operation/PurchaseRequisitions/RecordReviewPurchaseRequisitionPage.vue`
+- `FRONTENT/src/components/operation/PurchaseRequisitions/PurchaseRequisitionReviewHero.vue`
+- `FRONTENT/src/components/operation/PurchaseRequisitions/PurchaseRequisitionReviewItemsCard.vue`
+- `FRONTENT/src/components/operation/PurchaseRequisitions/PurchaseRequisitionReviewActionBar.vue`
+- `FRONTENT/src/components/operation/PurchaseRequisitions/PurchaseRequisitionAddItemDialog.vue`
 
 ### Validation Performed
 - [x] Unit/manual validation completed
@@ -170,4 +170,5 @@ The highest-risk functional chain to preserve is:
 
 ### Manual Actions Required
 - [x] None.
+
 

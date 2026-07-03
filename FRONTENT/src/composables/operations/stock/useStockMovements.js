@@ -1,4 +1,4 @@
-/**
+﻿/**
  * useStockMovements
  *
  * Encapsulates:
@@ -35,7 +35,7 @@
 import { useQuasar } from 'quasar'
 import { useDataStore } from 'src/stores/data'
 import { useResourceIoStore } from 'src/stores/resourceIo'
-import { useProductSkuResolver } from 'src/composables/masters/products/useProductSkuResolver'
+import { useProductSkuResolver } from 'src/composables/master/products/useProductSkuResolver'
 
 export function useStockMovements() {
   const $q = useQuasar()
@@ -187,3 +187,4 @@ export function useStockMovements() {
     submitBatch
   }
 }
+

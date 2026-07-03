@@ -1,4 +1,4 @@
-# PLAN: Procurement Receiving Alignment And GRN Stock Entry
+﻿# PLAN: Procurement Receiving Alignment And GRN Stock Entry
 **Status**: COMPLETED
 **Created**: 2026-04-28
 **Created By**: Brain Agent (Codex)
@@ -23,9 +23,9 @@ That derivation works, but it is inconsistent with the rest of the procurement w
 
 The existing Direct Stock Entry workflow already owns the stock movement write path:
 
-- `FRONTENT/src/pages/Operations/StockMovements/DirectEntryPage.vue`
-- `FRONTENT/src/components/Operations/StockMovements/StockEntryGrid.vue`
-- `FRONTENT/src/composables/operations/stock/useStockMovements.js`
+- `FRONTENT/src/pages/operation/StockMovements/DirectEntryPage.vue`
+- `FRONTENT/src/components/operation/StockMovements/StockEntryGrid.vue`
+- `FRONTENT/src/composables/operation/stock/useStockMovements.js`
 - `GAS/syncAppResources.gs` menu/resource config for `StockMovements`
 - `GAS/stockMovements.gs` post-create hook updates `WarehouseStorages`
 
@@ -65,7 +65,7 @@ GRN Stock Entry should reuse that path instead of creating a separate backend st
 - [ ] Include `ProcurementCode` in `canonicalReceivingSnapshot()` so dirty-state checks remain correct.
 - [ ] Keep the existing GRN payload fallback, but expect `receiving.ProcurementCode` to be populated after this change.
 
-**Files**: `FRONTENT/src/composables/operations/poReceivings/poReceivingPayload.js`, `FRONTENT/src/composables/operations/poReceivings/usePOReceivingAddFlow.js`
+**Files**: `FRONTENT/src/composables/operation/poReceivings/poReceivingPayload.js`, `FRONTENT/src/composables/operation/poReceivings/usePOReceivingAddFlow.js`
 **Pattern**: Existing PO create/RFQ/SQ payload propagation of `ProcurementCode`.
 **Rule**: POR draft save must persist procurement context without relying on a frontend join at read time.
 
@@ -91,7 +91,7 @@ GRN Stock Entry should reuse that path instead of creating a separate backend st
 
 ### Step 6: Add GRN Stock Entry Resource Menu Entry
 - [ ] Add a Warehouse menu item immediately after Direct Stock Entry.
-- [ ] Use route `/operations/stock-movements/grn-entry`.
+- [ ] Use route `/operation/stock-movements/grn-entry`.
 - [ ] Use label `GRN Stock Entry`.
 - [ ] Require write access because the page creates `StockMovements`.
 
@@ -106,7 +106,7 @@ GRN Stock Entry should reuse that path instead of creating a separate backend st
 - [ ] Second step selects eligible GRN for the selected warehouse.
 - [ ] Third step displays item allocations and submit action.
 
-**Files**: `FRONTENT/src/pages/Operations/StockMovements/GrnEntryPage.vue`
+**Files**: `FRONTENT/src/pages/operation/StockMovements/GrnEntryPage.vue`
 **Pattern**: `DirectEntryPage.vue`
 **Rule**: Use Quasar components and avoid page-level business logic.
 
@@ -116,7 +116,7 @@ GRN Stock Entry should reuse that path instead of creating a separate backend st
 - [ ] Filter eligible GRNs by excluding any GRN whose `Code` already appears in `StockMovements` with `ReferenceType='GRN'` and matching `ReferenceCode`.
 - [ ] Prefer cache-aware resource loading through the canonical store/data path.
 
-**Files**: `FRONTENT/src/composables/operations/stock/useGrnStockEntry.js`
+**Files**: `FRONTENT/src/composables/operation/stock/useGrnStockEntry.js`
 **Pattern**: `useStockMovements.js` plus POR/GRN composable structure.
 **Rule**: Do not call GAS directly from the page or component.
 
@@ -128,7 +128,7 @@ GRN Stock Entry should reuse that path instead of creating a separate backend st
 - [ ] Show current stock for the selected warehouse + storage + SKU when storage is selected.
 - [ ] Keep mobile layout compact and avoid bloated table-only UX.
 
-**Files**: `FRONTENT/src/components/Operations/StockMovements/GrnStockEntryGrid.vue`
+**Files**: `FRONTENT/src/components/operation/StockMovements/GrnStockEntryGrid.vue`
 **Pattern**: `StockEntryGrid.vue`
 **Rule**: Storage selection should reuse the same behavior users already see in Direct Stock Entry.
 
@@ -140,7 +140,7 @@ GRN Stock Entry should reuse that path instead of creating a separate backend st
 - [ ] Convert blank storage to `_default` only at submit time.
 - [ ] Display `_default` as a friendly blank/default label in the UI.
 
-**Files**: `FRONTENT/src/composables/operations/stock/useGrnStockEntry.js`, `FRONTENT/src/components/Operations/StockMovements/GrnStockEntryGrid.vue`
+**Files**: `FRONTENT/src/composables/operation/stock/useGrnStockEntry.js`, `FRONTENT/src/components/operation/StockMovements/GrnStockEntryGrid.vue`
 **Pattern**: POR item quantity derivation and Direct Stock Entry storage UX.
 **Rule**: No GRN quantity may be dropped or left unposted.
 
@@ -153,7 +153,7 @@ GRN Stock Entry should reuse that path instead of creating a separate backend st
 - [ ] Submit through `useStockMovements().submitBatch()`.
 - [ ] After success, refresh `StockMovements`, `WarehouseStorages`, `GoodsReceipts`, and `GoodsReceiptItems` through write-refresh/force-refresh flow.
 
-**Files**: `FRONTENT/src/composables/operations/stock/useGrnStockEntry.js`
+**Files**: `FRONTENT/src/composables/operation/stock/useGrnStockEntry.js`
 **Pattern**: Direct Stock Entry `submitBatch()`.
 **Rule**: Existing stock movement backend hook remains the only stock summary mutation path.
 
@@ -218,10 +218,10 @@ GRN Stock Entry should reuse that path instead of creating a separate backend st
 ### Files Actually Changed
 - `GAS/setupOperationSheets.gs`
 - `GAS/syncAppResources.gs`
-- `FRONTENT/src/composables/operations/poReceivings/poReceivingPayload.js`
-- `FRONTENT/src/composables/operations/stock/useGrnStockEntry.js`
-- `FRONTENT/src/components/Operations/StockMovements/GrnStockEntryGrid.vue`
-- `FRONTENT/src/pages/Operations/StockMovements/GrnEntryPage.vue`
+- `FRONTENT/src/composables/operation/poReceivings/poReceivingPayload.js`
+- `FRONTENT/src/composables/operation/stock/useGrnStockEntry.js`
+- `FRONTENT/src/components/operation/StockMovements/GrnStockEntryGrid.vue`
+- `FRONTENT/src/pages/operation/StockMovements/GrnEntryPage.vue`
 - `FRONTENT/src/components/REGISTRY.md`
 - `FRONTENT/src/composables/REGISTRY.md`
 - `Documents/OPERATION_SHEET_STRUCTURE.md`
@@ -232,8 +232,8 @@ GRN Stock Entry should reuse that path instead of creating a separate backend st
 - `PLANS/2026-04-28-procurement-receiving-and-grn-stock-entry.md`
 
 ### Validation Performed
-- [x] `node --check FRONTENT/src/composables/operations/stock/useGrnStockEntry.js`
-- [x] `node --check FRONTENT/src/composables/operations/poReceivings/poReceivingPayload.js`
+- [x] `node --check FRONTENT/src/composables/operation/stock/useGrnStockEntry.js`
+- [x] `node --check FRONTENT/src/composables/operation/poReceivings/poReceivingPayload.js`
 - [x] Targeted `rg` checks for GRN route/component/composable/schema wiring
 - [x] `git diff --check` on changed files; only CRLF normalization warnings were reported
 
@@ -241,3 +241,4 @@ GRN Stock Entry should reuse that path instead of creating a separate backend st
 - [ ] Run APP resource sync/cache clear if resource metadata or menu config changes are deployed.
 - [ ] Run operation setup/backfill after the `POReceivings.ProcurementCode` schema change is deployed.
 - [ ] Run `backfillPOReceivingProcurementCodes()` after `setupOperationSheets()` adds the new column.
+

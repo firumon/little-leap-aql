@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding>
     <HeaderPanel
       :title="isEditMode ? 'Edit Warehouse Transfer' : 'New Warehouse Transfer'"
@@ -204,7 +204,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { useWarehouseTransfers } from '../../../composables/operations/warehouseTransfers/useWarehouseTransfers.js'
+import { useWarehouseTransfers } from '../../../composables/operation/warehouseTransfers/useWarehouseTransfers.js'
 import HeaderPanel from 'components/shared/HeaderPanel.vue'
 import StepProgressIndicator from 'components/shared/StepProgressIndicator.vue'
 import AqlGroupedList from 'components/shared/AqlGroupedList.vue'
@@ -305,3 +305,4 @@ onMounted(async () => {
   background: rgba(255, 255, 255, 0.98);
 }
 </style>
+

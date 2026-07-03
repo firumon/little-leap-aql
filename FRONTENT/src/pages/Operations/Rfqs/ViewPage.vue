@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-card flat bordered>
     <q-card-section v-if="loading && !record" class="text-center q-py-xl">
       <q-spinner-dots color="primary" size="36px" />
@@ -252,8 +252,8 @@
 import { computed, h, ref, watch } from 'vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { useRFQSupplierFlow } from 'src/composables/operations/rfqs/useRFQSupplierFlow'
-import { useRFQEditableFlow } from 'src/composables/operations/rfqs/useRFQEditableFlow'
+import { useRFQSupplierFlow } from 'src/composables/operation/rfqs/useRFQSupplierFlow'
+import { useRFQEditableFlow } from 'src/composables/operation/rfqs/useRFQEditableFlow'
 
 const InfoCell = (props) => h('div', { class: 'col-12 col-sm-6 col-md-4' }, [
   h('div', { class: 'text-caption text-grey-6' }, props.label),
@@ -326,3 +326,4 @@ async function saveAvailableSuppliers() {
   selectedSupplierRows.value = []
 }
 </script>
+

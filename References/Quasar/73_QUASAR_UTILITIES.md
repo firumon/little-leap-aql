@@ -1,4 +1,4 @@
-# Quasar Utilities Reference Guide
+﻿# Quasar Utilities Reference Guide
 
 This reference guide describes the configuration and usage of Quasar's native utility libraries (such as `date`, `format`, `dom`, and `patterns`) to format values, validate inputs, and perform DOM queries.
 
@@ -64,7 +64,7 @@ export function useAppUtilities() {
 The `date` utility can calculate the difference between dates to validate input ranges:
 
 ```javascript
-// composables/operations/useDateRange.js
+// composables/operation/useDateRange.js
 import { ref } from 'vue'
 import { date } from 'quasar'
 
@@ -98,3 +98,4 @@ export function useDateRange() {
 *   **Timezone and Offset Safety**: Using methods like `date.addToDate` or `date.subtractFromDate` prevents common timezone offsets and day-transition bugs that often occur when manually manipulating standard JavaScript `Date` objects.
 *   **Input Validation Integration**: Quasar input rules (`rules` prop on `QInput`) can directly execute methods like `patterns.testPattern.email` to display errors dynamically.
 *   **Cross-Browser DOM Inquiries**: The `dom` utility abstracts away differences in how browsers report element client heights, paddings, and scroll offsets, ensuring consistent calculations across mobile and desktop browsers.
+

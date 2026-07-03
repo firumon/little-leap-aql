@@ -1,4 +1,4 @@
-# Login Response — Canonical Specification
+﻿# Login Response — Canonical Specification
 
 This document is the authoritative reference for the payload returned by `handleLogin()` in `GAS/auth.gs`.
 
@@ -110,7 +110,7 @@ Array of resource entries built by `buildAuthorizedResourceEntry()` at `GAS/reso
       "order":           1,
       "label":           "Products",
       "icon":            "inventory_2",
-      "route":           "/masters/products",
+      "route":           "/master/products",
       "pageTitle":       "Products",
       "pageDescription": "...",
       "show":            true,
@@ -208,3 +208,4 @@ auth.scopeSyncConfig     // { masterSyncTTL, accountsSyncTTL, operationsSyncTTL 
 // Example: get StockMovement reference types
 const types = auth.appOptionsMap['StockMovementReferenceType'] // ['GRN', 'DirectEntry', ...]
 ```
+

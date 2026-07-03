@@ -1,4 +1,4 @@
-# PLAN: Outlet Deliveries Enhancement — Schedule-Then-Deliver Workflow
+﻿# PLAN: Outlet Deliveries Enhancement — Schedule-Then-Deliver Workflow
 
 **Status**: COMPLETED
 **Created**: 2026-04-30
@@ -171,7 +171,7 @@ Update `GAS/setupOperationSheets.gs` — `OUTLET_MOVEMENTS` schema:
 
 ### Step 7: Frontend Meta and Constants Updates
 
-Update `FRONTENT/src/composables/operations/outlets/outletOperationsMeta.js`:
+Update `FRONTENT/src/composables/operation/outlets/outletOperationsMeta.js`:
 
 - [ ] Add `OutletDeliveryProgress` order array:
   ```javascript
@@ -192,11 +192,11 @@ Update `FRONTENT/src/composables/operations/outlets/outletOperationsMeta.js`:
   ```
 - [ ] Update `sortTime` to handle `ScheduledAt` and `DeliveredAt` fields.
 
-**Files**: `FRONTENT/src/composables/operations/outlets/outletOperationsMeta.js`
+**Files**: `FRONTENT/src/composables/operation/outlets/outletOperationsMeta.js`
 
 ### Step 8: Frontend Batch Request Updates
 
-Update `FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js`:
+Update `FRONTENT/src/composables/operation/outlets/outletOperationsBatch.js`:
 
 - [ ] Add new action configs:
   ```javascript
@@ -208,11 +208,11 @@ Update `FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js`:
   }
   ```
 
-**Files**: `FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js`
+**Files**: `FRONTENT/src/composables/operation/outlets/outletOperationsBatch.js`
 
 ### Step 9: Frontend Payload Composable — Scheduling
 
-Create new scheduling payload builder in `FRONTENT/src/composables/operations/outlets/outletRestockPayload.js`:
+Create new scheduling payload builder in `FRONTENT/src/composables/operation/outlets/outletRestockPayload.js`:
 
 - [ ] Create `buildScheduleDeliveryBatchRequests(restock, restockItems, warehouseCode, itemsJSON)`:
   - Creates OD record with:
@@ -264,11 +264,11 @@ Create new scheduling payload builder in `FRONTENT/src/composables/operations/ou
   - Returns batch array: `[executeActionRequest, bulkMovementsRequest]`.
   - Do not `get` OD after cancellation — use returned deltas.
 
-**Files**: `FRONTENT/src/composables/operations/outlets/outletRestockPayload.js`
+**Files**: `FRONTENT/src/composables/operation/outlets/outletRestockPayload.js`
 
 ### Step 10: Frontend Stock Logic Updates
 
-Update `FRONTENT/src/composables/operations/outlets/outletStockLogic.js`:
+Update `FRONTENT/src/composables/operation/outlets/outletStockLogic.js`:
 
 - [ ] Update `currentOutletStockQty` to work without `StorageName` — match by `OutletCode + SKU` only.
 - [ ] Add `parseItemsJSON(value)` helper to parse `ItemsJSON` from OD records.
@@ -277,11 +277,11 @@ Update `FRONTENT/src/composables/operations/outlets/outletStockLogic.js`:
 - [ ] Add `buildOutletMovementsFromItems(outletCode, itemsJSON, referenceType, referenceCode)` helper to generate aggregated outlet movement records.
 - [ ] Keep existing `validateDelivery` but adapt it for the new scheduling flow — validation now checks that ORS is `APPROVED` or `PARTIALLY_DELIVERED` and that ItemsJSON is valid.
 
-**Files**: `FRONTENT/src/composables/operations/outlets/outletStockLogic.js`
+**Files**: `FRONTENT/src/composables/operation/outlets/outletStockLogic.js`
 
 ### Step 11: Frontend Composable — useOutletDeliveries Rewrite
 
-Rewrite `FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js`:
+Rewrite `FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js`:
 
 - [ ] Replace current dropdown-based restock selection with card-based selection.
 - [ ] `eligibleRestocks` computed: filter `APPROVED` and `PARTIALLY_DELIVERED` ORS records that do not already have a `SCHEDULED` OD (check existing ODs by `OutletRestockCode`).
@@ -304,11 +304,11 @@ Rewrite `FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js`:
   - Do not `get` OD after cancellation.
 - [ ] Remove old `saveDelivery`, `selectRestock` (dropdown version), `buildDeliveryCreateRequest`, `buildDeliveryPostRequests` usage.
 
-**Files**: `FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js`
+**Files**: `FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js`
 
 ### Step 12: Frontend Add Page — Card Selection UI
 
-Rewrite `FRONTENT/src/pages/Operations/OutletDeliveries/AddPage.vue`:
+Rewrite `FRONTENT/src/pages/operation/OutletDeliveries/AddPage.vue`:
 
 - [ ] Replace `q-select` dropdown with card-based ORS selection:
   - Use `q-card` with `q-card-section` for each eligible restock.
@@ -323,11 +323,11 @@ Rewrite `FRONTENT/src/pages/Operations/OutletDeliveries/AddPage.vue`:
 - [ ] Submit button triggers `scheduleDelivery()`.
 - [ ] Keep page thin — all logic in composable.
 
-**Files**: `FRONTENT/src/pages/Operations/OutletDeliveries/AddPage.vue`
+**Files**: `FRONTENT/src/pages/operation/OutletDeliveries/AddPage.vue`
 
 ### Step 13: Frontend Index Page — Grouped by Progress
 
-Rewrite `FRONTENT/src/pages/Operations/OutletDeliveries/IndexPage.vue`:
+Rewrite `FRONTENT/src/pages/operation/OutletDeliveries/IndexPage.vue`:
 
 - [ ] Group ODs by `Progress` value: `SCHEDULED`, `DELIVERED`, `CANCELLED`.
 - [ ] `SCHEDULED` group has highest priority — listed first.
@@ -339,11 +339,11 @@ Rewrite `FRONTENT/src/pages/Operations/OutletDeliveries/IndexPage.vue`:
 - [ ] Search filters across all groups.
 - [ ] Keep page thin.
 
-**Files**: `FRONTENT/src/pages/Operations/OutletDeliveries/IndexPage.vue`
+**Files**: `FRONTENT/src/pages/operation/OutletDeliveries/IndexPage.vue`
 
 ### Step 14: Frontend View Page — Actions and Details
 
-Rewrite `FRONTENT/src/pages/Operations/OutletDeliveries/ViewPage.vue`:
+Rewrite `FRONTENT/src/pages/operation/OutletDeliveries/ViewPage.vue`:
 
 - [ ] Show OD header with: code, outlet name, ORS code, warehouse, progress chip.
 - [ ] Show date fields: `ScheduledAt`, `DeliveredAt`, `CancelledAt` (only show filled ones).
@@ -359,7 +359,7 @@ Rewrite `FRONTENT/src/pages/Operations/OutletDeliveries/ViewPage.vue`:
 - [ ] Cancel button opens confirmation dialog, then calls `cancelDelivery(code)`.
 - [ ] Keep page thin.
 
-**Files**: `FRONTENT/src/pages/Operations/OutletDeliveries/ViewPage.vue`
+**Files**: `FRONTENT/src/pages/operation/OutletDeliveries/ViewPage.vue`
 
 ### Step 15: OutletMovements Post-Write Hook Update
 
@@ -472,16 +472,16 @@ Update the outlet movements post-write hook (wherever `handleOutletMovementsBulk
 - `GAS/setupOperationSheets.gs`
 - `GAS/syncAppResources.gs`
 - `GAS/outletMovements.gs`
-- `FRONTENT/src/composables/operations/outlets/outletOperationsMeta.js`
-- `FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js`
-- `FRONTENT/src/composables/operations/outlets/outletRestockPayload.js`
-- `FRONTENT/src/composables/operations/outlets/outletStockLogic.js`
-- `FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js`
-- `FRONTENT/src/composables/operations/outlets/useOutletConsumption.js`
-- `FRONTENT/src/composables/operations/outlets/outletConsumptionPayload.js`
-- `FRONTENT/src/pages/Operations/OutletDeliveries/AddPage.vue`
-- `FRONTENT/src/pages/Operations/OutletDeliveries/IndexPage.vue`
-- `FRONTENT/src/pages/Operations/OutletDeliveries/ViewPage.vue`
+- `FRONTENT/src/composables/operation/outlets/outletOperationsMeta.js`
+- `FRONTENT/src/composables/operation/outlets/outletOperationsBatch.js`
+- `FRONTENT/src/composables/operation/outlets/outletRestockPayload.js`
+- `FRONTENT/src/composables/operation/outlets/outletStockLogic.js`
+- `FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js`
+- `FRONTENT/src/composables/operation/outlets/useOutletConsumption.js`
+- `FRONTENT/src/composables/operation/outlets/outletConsumptionPayload.js`
+- `FRONTENT/src/pages/operation/OutletDeliveries/AddPage.vue`
+- `FRONTENT/src/pages/operation/OutletDeliveries/IndexPage.vue`
+- `FRONTENT/src/pages/operation/OutletDeliveries/ViewPage.vue`
 - `FRONTENT/src/stores/workflow.js`
 - `Documents/RESOURCE_COLUMNS_GUIDE.md`
 - `Documents/OPERATION_SHEET_STRUCTURE.md`
@@ -504,3 +504,4 @@ Update the outlet movements post-write hook (wherever `handleOutletMovementsBulk
 - [ ] Run `cd GAS && clasp push` or `npm run gas:push` to deploy GAS changes. *(User requested manual execution; Build Agent did not run this.)*
 - [ ] If existing `OutletStorages` data has `StorageName` values, decide whether to migrate or reset the sheet.
 - [ ] Web App redeployment may be needed if API contract changed (new reference types, new action configs, same-batch `__PENDING__` placeholder support).
+

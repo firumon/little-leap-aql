@@ -1,4 +1,4 @@
-# Quasar Performance & Memory Management Reference Guide
+﻿# Quasar Performance & Memory Management Reference Guide
 
 This reference guide describes the principles and practices for optimizing rendering performance, managing application state efficiently, and preventing memory leaks in mobile web viewports.
 
@@ -34,7 +34,7 @@ Using Quasar's `debounce` or `throttle` utilities on search fields or event list
 The following example demonstrates how to implement `shallowRef` for large lists, apply debouncing to inputs, and clean up event listeners to prevent memory leaks:
 
 ```javascript
-// composables/operations/useHeavyDataLoader.js
+// composables/operation/useHeavyDataLoader.js
 import { shallowRef, ref, onUnmounted } from 'vue'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { debounce } from 'quasar'
@@ -107,3 +107,4 @@ const updateSingleRow = (updatedRow) => {
 *   **Lazy Loading Modals**: Using the `lazy` attribute on `QDialog` components ensures that overlays are compiled and inserted into the DOM only when opened, reducing initial layout render time.
 *   **Reactivity Watchers**: Restricting the use of `deep: true` in watchers unless absolutely necessary prevents Vue from walking down large object trees continuously.
 *   **CSS Performance**: Heavy graphic filters (e.g., `backdrop-filter`, `box-shadow`) inside frequently scrolled components or cards can cause layout reflow and paint issues on lower-end mobile devices.
+

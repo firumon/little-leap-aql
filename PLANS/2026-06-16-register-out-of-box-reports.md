@@ -1,4 +1,4 @@
-# PLAN: Register Out-of-the-Box Reports in App Resources
+﻿# PLAN: Register Out-of-the-Box Reports in App Resources
 **Status**: DRAFT
 **Created**: 2026-06-16
 **Created By**: Brain Agent (Antigravity)
@@ -177,11 +177,11 @@ Open the file `GAS/syncAppResources.gs` and apply replacement blocks to each tar
 - **Action**: Update empty `Reports` column with `Consumption` and `ConsumptionRecords`.
 - **Target Content**:
 ```javascript
-        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 6, "label": "Outlet Consumptions", "icon": "point_of_sale", "route": "/operations/outlet-consumptions", "pageTitle": "Outlet Consumptions", "pageDescription": "Record outlet stock consumption", "show": true }]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
+        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 6, "label": "Outlet Consumptions", "icon": "point_of_sale", "route": "/operation/outlet-consumptions", "pageTitle": "Outlet Consumptions", "pageDescription": "Record outlet stock consumption", "show": true }]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
 ```
 - **Replacement Content**:
 ```javascript
-        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 6, "label": "Outlet Consumptions", "icon": "point_of_sale", "route": "/operations/outlet-consumptions", "pageTitle": "Outlet Consumptions", "pageDescription": "Record outlet stock consumption", "show": true }]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: JSON.stringify([
+        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 6, "label": "Outlet Consumptions", "icon": "point_of_sale", "route": "/operation/outlet-consumptions", "pageTitle": "Outlet Consumptions", "pageDescription": "Record outlet stock consumption", "show": true }]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: JSON.stringify([
             {"id":"rep_1776000000021","name":"consumption-receipt","label":"Consumption Receipt","templateSheet":"Consumption","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
             {"id":"rep_1776000000022","name":"consumption-records-log","label":"Consumption Log","templateSheet":"ConsumptionRecords","isRecordLevel":false,"inputs":[{"label":"Username","type":"select","targetCell":"J11","source":{"resource":"OutletConsumptions","field":"Username"},"default":"Any User","required":false},{"label":"Date","type":"date","targetCell":"J12","required":false}],"pdfOptions":{}}
         ]), CustomUIName: '', ListViews: ''
@@ -192,11 +192,11 @@ Open the file `GAS/syncAppResources.gs` and apply replacement blocks to each tar
 - **Action**: Update empty `Reports` column with `ConsumptionInvoice` and `InvoiceRecords`.
 - **Target Content**:
 ```javascript
-        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 7, "label": "Consumption Invoices", "icon": "receipt_long", "route": "/operations/outlet-consumption-invoices", "pageTitle": "Consumption Invoices", "pageDescription": "View outlet consumption invoices", "show": true }]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
+        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 7, "label": "Consumption Invoices", "icon": "receipt_long", "route": "/operation/outlet-consumption-invoices", "pageTitle": "Consumption Invoices", "pageDescription": "View outlet consumption invoices", "show": true }]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
 ```
 - **Replacement Content**:
 ```javascript
-        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 7, "label": "Consumption Invoices", "icon": "receipt_long", "route": "/operations/outlet-consumption-invoices", "pageTitle": "Consumption Invoices", "pageDescription": "View outlet consumption invoices", "show": true }]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: JSON.stringify([
+        Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 7, "label": "Consumption Invoices", "icon": "receipt_long", "route": "/operation/outlet-consumption-invoices", "pageTitle": "Consumption Invoices", "pageDescription": "View outlet consumption invoices", "show": true }]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: JSON.stringify([
             {"id":"rep_1776000000023","name":"consumption-invoice","label":"Consumption Invoice","templateSheet":"ConsumptionInvoice","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
             {"id":"rep_1776000000024","name":"invoice-log","label":"Invoice Log","templateSheet":"InvoiceRecords","isRecordLevel":false,"inputs":[{"label":"Date","type":"date","targetCell":"J11","required":false},{"label":"Username","type":"select","targetCell":"J12","source":{"resource":"OutletConsumptionInvoices","field":"Username"},"default":"Any User","required":false},{"label":"Progress","type":"select","targetCell":"J13","source":{"resource":"OutletConsumptionInvoices","field":"Progress"},"default":"All Progress","required":false}],"pdfOptions":{}}
         ]), CustomUIName: '', ListViews: ''
@@ -220,9 +220,9 @@ Open the file `GAS/syncAppResources.gs` and apply replacement blocks to each tar
 ---
 
 ### Step 2: Implement Select Input logic in `ReportInputDialog.vue`
-Modify the component `FRONTENT/src/components/Masters/ReportInputDialog.vue` to render `<q-select>` components for select fields, fetching options from the dataStore.
+Modify the component `FRONTENT/src/components/master/ReportInputDialog.vue` to render `<q-select>` components for select fields, fetching options from the dataStore.
 
-- **Line Target**: Line 18 in [ReportInputDialog.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/Masters/ReportInputDialog.vue#L18)
+- **Line Target**: Line 18 in [ReportInputDialog.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/master/ReportInputDialog.vue#L18)
 - **Action**: Insert the `<q-select>` template block before the text input block.
 - **Target Content**:
 ```vue
@@ -253,7 +253,7 @@ Modify the component `FRONTENT/src/components/Masters/ReportInputDialog.vue` to 
             v-else-if="input.type === 'text'"
 ```
 
-- **Line Target**: Line 108 in [ReportInputDialog.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/Masters/ReportInputDialog.vue#L108)
+- **Line Target**: Line 108 in [ReportInputDialog.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/master/ReportInputDialog.vue#L108)
 - **Action**: Import `useDataStore` and define `getSelectOptions` in setup script.
 - **Target Content**:
 ```javascript
@@ -268,7 +268,7 @@ import { useDataStore } from 'src/stores/data'
 
 const props = defineProps({
 ```
-- **Line Target**: Line 137 in [ReportInputDialog.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/Masters/ReportInputDialog.vue#L137)
+- **Line Target**: Line 137 in [ReportInputDialog.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/master/ReportInputDialog.vue#L137)
 - **Action**: Define `dataStore` and `getSelectOptions(input)` helper.
 - **Target Content**:
 ```javascript
@@ -393,3 +393,4 @@ import { useDataStore } from 'src/stores/data'
 - [ ] Step 3 completed
 - [ ] Documentation updates completed
 - [ ] Validation completed
+

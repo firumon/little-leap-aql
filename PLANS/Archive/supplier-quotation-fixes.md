@@ -1,4 +1,4 @@
-# PLAN: Supplier Quotation Fixes
+﻿# PLAN: Supplier Quotation Fixes
 **Status**: COMPLETED
 **Created**: 2026-04-26
 **Created By**: Brain Agent (Codex GPT-5)
@@ -54,28 +54,28 @@ Out of scope:
 
 ## File Plan
 
-### `FRONTENT/src/composables/operations/supplierQuotations/supplierQuotationPayload.js`
+### `FRONTENT/src/composables/operation/supplierQuotations/supplierQuotationPayload.js`
 - Action: modify.
 - Purpose: central Supplier Quotation stateless helpers.
 - Related functions: `normalizeNumber`, `defaultItemForm`, `buildItemRecord`, `validateQuotation`.
 - Dependencies: imports `EXTRA_CHARGE_KEYS` from `supplierQuotationMeta.js`.
 - Required changes: add source-unit-price helper and make item defaults/submission totals deterministic from quantity and unit price.
 
-### `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationTotals.js`
+### `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationTotals.js`
 - Action: create.
 - Purpose: shared reactive business logic for quotation item subtotals, extra charge totals, confirmed total syncing, and per-row `TotalPrice` syncing.
 - Related functions: `useSupplierQuotationTotals`.
 - Dependencies: Vue `computed`, `watch`; `normalizeNumber` and `isQuotedItem` from `supplierQuotationPayload.js`.
 - Required changes: new reusable composable; update `FRONTENT/src/composables/REGISTRY.md`.
 
-### `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationCreateFlow.js`
+### `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationCreateFlow.js`
 - Action: modify.
 - Purpose: Add-page view model for first Supplier Quotation save.
 - Related functions: `syncItemsFromContext`, `buildSaveRequests`, `save`, `loadData`, existing watchers.
 - Dependencies: `useResourceData`, `useWorkflowStore`, `useResourceNav`, payload helpers, new `useSupplierQuotationTotals`.
 - Required changes: use shared totals, fix RFQ supplier update data, keep grouped refresh, avoid duplicate local reload after save.
 
-### `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationView.js`
+### `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationView.js`
 - Action: modify.
 - Purpose: View/Edit-page view model for existing Supplier Quotations.
 - Related functions: `hydrate`, `loadData`, `buildChildRecords`, `save`, `reject`, watchers.
@@ -151,7 +151,7 @@ Out of scope:
 ## Function-by-Function Plan
 
 ### `resolveSourceUnitPrice`
-- File: `FRONTENT/src/composables/operations/supplierQuotations/supplierQuotationPayload.js`
+- File: `FRONTENT/src/composables/operation/supplierQuotations/supplierQuotationPayload.js`
 - Action: create exported pure helper.
 - Purpose: choose a safe default unit price from a source item.
 - Inputs: one source item object.
@@ -163,7 +163,7 @@ Out of scope:
 - Connects to: `defaultItemForm`.
 
 ### `defaultItemForm`
-- File: `FRONTENT/src/composables/operations/supplierQuotations/supplierQuotationPayload.js`
+- File: `FRONTENT/src/composables/operation/supplierQuotations/supplierQuotationPayload.js`
 - Action: modify.
 - Purpose: build item rows with source defaults and saved-value preservation.
 - Inputs: `context`, `seed`.
@@ -175,7 +175,7 @@ Out of scope:
 - Connects to: create `syncItemsFromContext`, view `hydrate`.
 
 ### `buildItemRecord`
-- File: `FRONTENT/src/composables/operations/supplierQuotations/supplierQuotationPayload.js`
+- File: `FRONTENT/src/composables/operation/supplierQuotations/supplierQuotationPayload.js`
 - Action: modify.
 - Purpose: serialize item data with authoritative calculated subtotal.
 - Inputs: item form object.
@@ -187,7 +187,7 @@ Out of scope:
 - Connects to: create `buildSaveRequests`, view `buildChildRecords`.
 
 ### `useSupplierQuotationTotals`
-- File: `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationTotals.js`
+- File: `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationTotals.js`
 - Action: create exported function.
 - Purpose: shared reactive totals for Add and View/Edit.
 - Inputs: object containing `form` ref and `items` ref.
@@ -199,7 +199,7 @@ Out of scope:
 - Connects to: both flow composables.
 
 ### `syncItemsFromContext`
-- File: `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationCreateFlow.js`
+- File: `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationCreateFlow.js`
 - Action: modify.
 - Purpose: populate create rows from RFQ-linked PR items while preserving user edits.
 - Inputs: none; reads `items.value` and `itemContext.value`.
@@ -211,7 +211,7 @@ Out of scope:
 - Connects to: `watch(itemContext, syncItemsFromContext, { immediate: true })`.
 
 ### `buildSaveRequests`
-- File: `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationCreateFlow.js`
+- File: `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationCreateFlow.js`
 - Action: modify.
 - Purpose: build first-save batch with correct RFQ supplier fallback and one grouped refresh.
 - Inputs: none; reads selected form, items, RFQ supplier row, procurement row.
@@ -223,7 +223,7 @@ Out of scope:
 - Connects to: `save`.
 
 ### `save`
-- File: `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationCreateFlow.js`
+- File: `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationCreateFlow.js`
 - Action: modify lightly.
 - Purpose: save first quotation and navigate.
 - Inputs: none.
@@ -235,7 +235,7 @@ Out of scope:
 - Connects to: `workflowStore.runBatchRequests`.
 
 ### `hydrate`
-- File: `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationView.js`
+- File: `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationView.js`
 - Action: modify.
 - Purpose: hydrate existing quotation and item forms with saved values over source context.
 - Inputs: none; reads `record`, `childRows`, `itemContext`.
@@ -247,7 +247,7 @@ Out of scope:
 - Connects to: `watch([record, childRows, itemContext], hydrate, { immediate: true })`.
 
 ### `loadData`
-- File: `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationView.js`
+- File: `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationView.js`
 - Action: modify only if needed.
 - Purpose: initial cache-backed page data load.
 - Inputs: `forceSync = false`.
@@ -259,7 +259,7 @@ Out of scope:
 - Connects to: `watch(code, ...)`, `save`, `reject`.
 
 ### `save`
-- File: `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationView.js`
+- File: `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationView.js`
 - Action: modify.
 - Purpose: save existing quotation edits without duplicated post-save reloads.
 - Inputs: none.
@@ -271,7 +271,7 @@ Out of scope:
 - Connects to: `workflowStore.runBatchRequests`, `GasApiService` response ingestion.
 
 ### `reject`
-- File: `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationView.js`
+- File: `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationView.js`
 - Action: modify only if request chatter remains.
 - Purpose: reject quotation through AdditionalAction.
 - Inputs: none.
@@ -305,19 +305,19 @@ Out of scope:
 **Rule**: Build Agent may edit implementation files; Brain Agent plan remains source of task order.
 
 ### Step 2: Add payload defaults and calculated serialization
-- [x] Open `FRONTENT/src/composables/operations/supplierQuotations/supplierQuotationPayload.js`.
+- [x] Open `FRONTENT/src/composables/operation/supplierQuotations/supplierQuotationPayload.js`.
 - [x] Add exported helper `resolveSourceUnitPrice` after `normalizeNumber`.
 - [x] In `defaultItemForm`, change missing `Quantity` behavior to use `context.Quantity`; change missing `UnitPrice` behavior to use `resolveSourceUnitPrice(context)`; keep saved seed values when present.
 - [x] In `defaultItemForm`, calculate `TotalPrice` from the final normalized `Quantity` and `UnitPrice` unless a saved seed total exists for an existing row.
 - [x] In `buildItemRecord`, always calculate `TotalPrice` from normalized `Quantity * UnitPrice`.
 - [x] Do not change validation messages or header serialization.
 - [x] Run `npm --prefix FRONTENT run lint -- --quiet` if that script exists; if it does not exist, run `npm --prefix FRONTENT run build` later in validation only.
-**Files**: `FRONTENT/src/composables/operations/supplierQuotations/supplierQuotationPayload.js`
+**Files**: `FRONTENT/src/composables/operation/supplierQuotations/supplierQuotationPayload.js`
 **Pattern**: pure helper functions in payload file.
 **Rule**: Source defaults are only defaults; saved/user-edited values win.
 
 ### Step 3: Create shared reactive totals composable
-- [x] Create `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationTotals.js`.
+- [x] Create `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationTotals.js`.
 - [x] Export function `useSupplierQuotationTotals({ form, items })`.
 - [x] Inside it, define computed `itemSubtotal`, `extraChargesTotal`, and `suggestedTotal`.
 - [x] Add a function `syncItemTotal(item)` that mutates only that item's `TotalPrice` to `normalizeNumber(item.Quantity) * normalizeNumber(item.UnitPrice)`.
@@ -326,12 +326,12 @@ Out of scope:
 - [x] Add a watcher on `suggestedTotal` and `form.value.ResponseType` that keeps `form.value.TotalAmount` synced; for `DECLINED`, set `TotalAmount` to `0`.
 - [x] Return `itemSubtotal`, `extraChargesTotal`, `suggestedTotal`, `syncItemTotal`, and `syncAllItemTotals`.
 - [x] Do not import stores or services.
-**Files**: `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationTotals.js`
+**Files**: `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationTotals.js`
 **Pattern**: business logic in composables, pure numeric helpers from payload file.
 **Rule**: No API, IDB, or service usage in this composable.
 
 ### Step 4: Wire create flow to shared totals and assigned fallback
-- [x] Open `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationCreateFlow.js`.
+- [x] Open `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationCreateFlow.js`.
 - [x] Add `toDateInputValue` to payload imports if not already imported.
 - [x] Import `useSupplierQuotationTotals` from `./useSupplierQuotationTotals`.
 - [x] Remove local computed definitions of `itemSubtotal`, `extraChargesTotal`, and `suggestedTotal`.
@@ -342,12 +342,12 @@ Out of scope:
 - [x] Keep procurement progress update exactly limited to current `RFQ_SENT_TO_SUPPLIERS`.
 - [x] Keep the final grouped `get` request for `['SupplierQuotations', 'SupplierQuotationItems', 'RFQSuppliers', 'Procurements']`.
 - [x] Do not add page-component service calls.
-**Files**: `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationCreateFlow.js`
+**Files**: `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationCreateFlow.js`
 **Pattern**: workflow batch construction stays in composable.
 **Rule**: First save ends with RFQ supplier `RESPONDED`, not `SENT`.
 
 ### Step 5: Wire view/edit flow to shared totals and remove duplicate refresh
-- [x] Open `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationView.js`.
+- [x] Open `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationView.js`.
 - [x] Import `useSupplierQuotationTotals`.
 - [x] Remove the local `itemSubtotal` computed.
 - [x] After `form` and `items` refs are declared, call `useSupplierQuotationTotals({ form, items })` and destructure `itemSubtotal`, `extraChargesTotal`, `suggestedTotal`, and `syncAllItemTotals`.
@@ -357,7 +357,7 @@ Out of scope:
 - [x] Remove `await loadData(true)` after successful save unless grouped response ingestion is proven insufficient.
 - [x] For `reject`, either leave behavior unchanged or replace the post-action `await loadData(true)` with one grouped refresh path; do not add multiple single-resource reloads.
 - [x] Return `extraChargesTotal` and `suggestedTotal` only if page components already consume or need them; otherwise keep return surface minimal.
-**Files**: `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationView.js`
+**Files**: `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationView.js`
 **Pattern**: View/Edit saves only quotation header/items.
 **Rule**: Existing saved values always override source defaults.
 
@@ -486,10 +486,10 @@ Failure signs:
 - [ ] `[!]` Issue/blocker:
 
 ### Files Actually Changed
-- `FRONTENT/src/composables/operations/supplierQuotations/supplierQuotationPayload.js`
-- `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationTotals.js`
-- `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationCreateFlow.js`
-- `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationView.js`
+- `FRONTENT/src/composables/operation/supplierQuotations/supplierQuotationPayload.js`
+- `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationTotals.js`
+- `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationCreateFlow.js`
+- `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationView.js`
 - `FRONTENT/src/composables/REGISTRY.md`
 - `Documents/MODULE_WORKFLOWS.md`
 - `Documents/PROCUREMENT_SHEET_STRUCTURE.md`

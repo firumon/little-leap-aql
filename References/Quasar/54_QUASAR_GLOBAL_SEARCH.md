@@ -1,4 +1,4 @@
-# 54_QUASAR_GLOBAL_SEARCH.md - Instant Search & Filter Overlays
+﻿# 54_QUASAR_GLOBAL_SEARCH.md - Instant Search & Filter Overlays
 
 This document is an educational reference guide covering the design, configuration, and optimization of search and query filtering components in Quasar.
 
@@ -78,7 +78,7 @@ This component handles text input, debounces search requests by 300ms, renders a
 import { ref } from 'vue'
 import { debounce } from 'quasar'
 import { useCurrency } from 'src/composables/useCurrency'
-import { useSkuSearch } from 'src/composables/operations/useSkuSearch'
+import { useSkuSearch } from 'src/composables/operation/useSkuSearch'
 
 const searchQuery = ref('')
 const { _C } = useCurrency()
@@ -139,3 +139,4 @@ export function useSkuSearch() {
 *   **Local Filtering vs. Remote Querying**: For smaller datasets (typically under 100 items), filtering in-memory arrays (e.g. from Pinia stores) locally is faster and avoids network latency. Larger catalog queries are generally routed to remote endpoints with pagination.
 *   **Finally Block State Cleanup**: Wrapping active search states in a `finally` block ensures that loading indicators disappear even if a network request fails or times out.
 *   **Virtual Scrolling**: For high-volume search results, using `QVirtualScroll` or virtual listing structures keeps the DOM count low, which maintains rendering responsiveness.
+

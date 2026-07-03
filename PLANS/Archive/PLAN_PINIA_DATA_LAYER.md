@@ -1,4 +1,4 @@
-# PLAN: Pinia Data Layer + Single Cursor Source of Truth
+﻿# PLAN: Pinia Data Layer + Single Cursor Source of Truth
 **Status**: COMPLETED
 **Created**: 2026-04-15
 **Created By**: Brain Agent (claude-sonnet-4-6)
@@ -153,7 +153,7 @@ Source doc reviewed: `DATA_HANDLING_ARCHITECTURE` (provided in session context).
 ### Step 6: Remove direct `fetchResourceRecords` imports from page components
 
 The scan found 8 page components directly importing `fetchResourceRecords`. These are:
-- `src/pages/Operations/_common/ViewPage.vue` (`fetchChildren`)
+- `src/pages/operation/_common/ViewPage.vue` (`fetchChildren`)
 - Others identified in scan (Products, PurchaseRequisitions views)
 
 For each:
@@ -168,7 +168,7 @@ For each:
 ### Step 7: Remove direct `upsertResourceRows` imports from non-db files
 
 Two files directly import `upsertResourceRows`:
-- `src/pages/Masters/Products/EditPage.vue` (line 182)
+- `src/pages/master/Products/EditPage.vue` (line 182)
 - `src/composables/useStockMovements.js` (line 22)
 
 For each:
@@ -176,7 +176,7 @@ For each:
 - [x] If `EditPage.vue` is writing to IDB and then manually refreshing a local ref, remove the manual refresh — the store listener handles it.
 - [x] `useStockMovements.js` — same audit: if it writes then reads into a local ref, remove the manual read; store will update via callback.
 
-**Files**: `FRONTENT/src/pages/Masters/Products/EditPage.vue`, `FRONTENT/src/composables/useStockMovements.js`
+**Files**: `FRONTENT/src/pages/master/Products/EditPage.vue`, `FRONTENT/src/composables/useStockMovements.js`
 
 ---
 
@@ -199,7 +199,7 @@ Scan found `items.value =` at line 250 of `RecordDraftPage.vue`.
 - [x] If it is a local ref used for rendering: refactor to use `useResourceData` or `useDataStore().getRecords()` as appropriate.
 - [x] Remove the direct assignment.
 
-**Files**: `FRONTENT/src/pages/Operations/.../RecordDraftPage.vue`
+**Files**: `FRONTENT/src/pages/operation/.../RecordDraftPage.vue`
 
 ---
 
@@ -260,11 +260,11 @@ Scan found `items.value =` at line 250 of `RecordDraftPage.vue`.
 - `FRONTENT/src/stores/auth.js`
 - `FRONTENT/src/services/resourceRecords.js`
 - `FRONTENT/src/composables/useResourceData.js`
-- `FRONTENT/src/pages/Masters/Products/EditPage.vue`
-- `FRONTENT/src/pages/Masters/Products/IndexPage.vue`
+- `FRONTENT/src/pages/master/Products/EditPage.vue`
+- `FRONTENT/src/pages/master/Products/IndexPage.vue`
 - `FRONTENT/src/composables/useStockMovements.js`
 - `FRONTENT/src/stores/products.js` (emptied)
-- `FRONTENT/src/pages/Operations/PurchaseRequisitions/RecordDraftPage.vue`
+- `FRONTENT/src/pages/operation/PurchaseRequisitions/RecordDraftPage.vue`
 - `FRONTENT/src/composables/REGISTRY.md`
 - `Documents/CONTEXT_HANDOFF.md`
 
@@ -277,3 +277,4 @@ Scan found `items.value =` at line 250 of `RecordDraftPage.vue`.
 ### Manual Actions Required
 - Please manually delete `FRONTENT/src/stores/products.js` as the agent was unable to execute the git rm command.
 - Please update your external `DATA_HANDLING_ARCHITECTURE` context document to reflect the new architecture.
+

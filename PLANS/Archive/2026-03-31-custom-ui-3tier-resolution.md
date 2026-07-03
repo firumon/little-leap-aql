@@ -1,4 +1,4 @@
-# PLAN: CustomUIName — 3-Tier Page & Section Resolution
+﻿# PLAN: CustomUIName — 3-Tier Page & Section Resolution
 **Status**: COMPLETED
 **Created**: 2026-03-31
 **Created By**: Brain Agent (Claude Code)
@@ -13,17 +13,17 @@ Also: rename `ListPage` → `IndexPage`, move entity-level section overrides fro
 
 ### Page-level (ActionResolverPage)
 ```
-1st: pages/Masters/_custom/{Code}/{Entity}.vue              ← tenant custom (index)
-     pages/Masters/_custom/{Code}/{Entity}{Action}.vue       ← tenant custom (other actions)
-2nd: pages/Masters/{Entity}/{Action}Page.vue                 ← entity custom
-3rd: pages/Masters/_common/{Action}Page.vue                  ← default
+1st: pages/master/_custom/{Code}/{Entity}.vue              ← tenant custom (index)
+     pages/master/_custom/{Code}/{Entity}{Action}.vue       ← tenant custom (other actions)
+2nd: pages/master/{Entity}/{Action}Page.vue                 ← entity custom
+3rd: pages/master/_common/{Action}Page.vue                  ← default
 ```
 
 ### Section-level (useSectionResolver inside _common pages)
 ```
-1st: components/Masters/_custom/{Code}/{Entity}{Action}{Section}.vue  ← tenant custom
-2nd: components/Masters/{Entity}/{Action}{Section}.vue                 ← entity custom
-3rd: components/Masters/Master{Action}{Section}.vue                    ← default
+1st: components/master/_custom/{Code}/{Entity}{Action}{Section}.vue  ← tenant custom
+2nd: components/master/{Entity}/{Action}{Section}.vue                 ← entity custom
+3rd: components/master/Master{Action}{Section}.vue                    ← default
 ```
 
 ## Section Definitions Per Action
@@ -50,7 +50,7 @@ Also: rename `ListPage` → `IndexPage`, move entity-level section overrides fro
 
 ### Step 3: Create generic useSectionResolver composable
 - Replace useListSectionResolver.js with useSectionResolver.js
-- Glob patterns for components/Masters/ (entity + custom)
+- Glob patterns for components/master/ (entity + custom)
 - 3-tier resolution: custom → entity → default
 - Accepts: actionName, resourceSlug, customUIName, sectionDefs
 
@@ -78,3 +78,4 @@ Each page gets refactored into thin orchestrator + section components.
 - [ ] npm run build succeeds
 - [ ] Zero stale references to old names
 - [ ] Docs updated (MODULE_WORKFLOWS, CONTEXT_HANDOFF, registries)
+

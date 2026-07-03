@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding>
     <div class="row items-center q-mb-md"><q-btn icon="arrow_back" flat round @click="goToList" class="q-mr-sm" /><div class="text-h6">PO Receiving {{ record?.Code }}</div><q-space /><q-chip :color="progress.color" text-color="white" :icon="progress.icon">{{ progress.label }}</q-chip></div>
     <div v-if="loading && !record" class="flex flex-center q-pa-xl"><q-spinner color="primary" size="3em" /></div>
@@ -22,13 +22,14 @@
 
 <script setup>
 import { onMounted } from 'vue'
-import { usePOReceivingView } from '../../../composables/operations/poReceivings/usePOReceivingView.js'
-import POReceivingSummaryCards from '../../../components/Operations/PoReceivings/POReceivingSummaryCards.vue'
-import POReceivingItemGrid from '../../../components/Operations/PoReceivings/POReceivingItemGrid.vue'
-import POReceivingReportLinks from '../../../components/Operations/PoReceivings/POReceivingReportLinks.vue'
+import { usePOReceivingView } from '../../../composables/operation/poReceivings/usePOReceivingView.js'
+import POReceivingSummaryCards from '../../../components/operation/PoReceivings/POReceivingSummaryCards.vue'
+import POReceivingItemGrid from '../../../components/operation/PoReceivings/POReceivingItemGrid.vue'
+import POReceivingReportLinks from '../../../components/operation/PoReceivings/POReceivingReportLinks.vue'
 
 defineOptions({ name: 'PoReceivingsViewPage' })
 const flow = usePOReceivingView()
 const { loading, acting, record, items, summary, progress, linkedGrn, isCompletedProcurement, canConfirm, canGenerateGRN, cancelComment, reportPlaceholders, loadData, confirmReceiving, generateGRN, cancelReceiving, goToList, goToGrn, formatDate } = flow
 onMounted(() => loadData())
 </script>
+

@@ -1,4 +1,4 @@
-# PLAN: Outlet Restock Approval Allocation Redesign
+﻿# PLAN: Outlet Restock Approval Allocation Redesign
 **Status**: COMPLETED
 **Created**: 2026-05-12
 **Created By**: Brain Agent (Codex)
@@ -20,12 +20,12 @@ Required pre-reads completed for this plan:
 - Restock workflow section in `Documents/MODULE_WORKFLOWS.md`
 - `PLANS/_TEMPLATE.md`
 - Existing related completed plan: `PLANS/2026-05-12-outlet-restock-delivery-finalization-plan.md`
-- `FRONTENT/src/pages/Operations/OutletRestocks/ViewPage.vue`
-- `FRONTENT/src/components/Operations/Outlets/RestockApprovalView.vue`
-- `FRONTENT/src/components/Operations/Outlets/OrsiAllocationRow.vue`
-- `FRONTENT/src/composables/operations/outlets/useOutletRestocks.js`
-- `FRONTENT/src/composables/operations/outlets/outletStockLogic.js`
-- `FRONTENT/src/composables/operations/outlets/outletRestockPayload.js`
+- `FRONTENT/src/pages/operation/OutletRestocks/ViewPage.vue`
+- `FRONTENT/src/components/operation/Outlets/RestockApprovalView.vue`
+- `FRONTENT/src/components/operation/Outlets/OrsiAllocationRow.vue`
+- `FRONTENT/src/composables/operation/outlets/useOutletRestocks.js`
+- `FRONTENT/src/composables/operation/outlets/outletStockLogic.js`
+- `FRONTENT/src/composables/operation/outlets/outletRestockPayload.js`
 
 Current implementation observations:
 - `RestockApprovalView.vue` currently renders a flat list of rows and derives `allocatedCount` inside the component.
@@ -76,7 +76,7 @@ Workflow rules to preserve:
   - create split rows without `Code`.
   - preserve `SKU`, `OutletRestockCode`, `Status`, and `AccessRegion`.
 - [ ] Add unit-testable validation behavior in helpers, even if this repo does not currently have a unit test harness: reject zero/negative requested quantities and ignore inactive/zero stock storage rows.
-**Files**: `FRONTENT/src/composables/operations/outlets/outletStockLogic.js`
+**Files**: `FRONTENT/src/composables/operation/outlets/outletStockLogic.js`
 **Pattern**: Pure, stateless business helpers live outside components; no store/service imports.
 **Rule**: Components must not calculate availability groups or recommendation splits.
 
@@ -94,7 +94,7 @@ Workflow rules to preserve:
 - [ ] Ensure rows with no available stock remain non-allocatable but still visible in the not-available group.
 - [ ] Ensure already `ALLOCATED` rows in the in-memory approval draft are displayed in the appropriate current group or an explicit allocated sub-state without being hidden from review.
 - [ ] Keep `approveRestock`, `sendBackRestock`, and `rejectRestock` as the only methods that run workflow/batch requests.
-**Files**: `FRONTENT/src/composables/operations/outlets/useOutletRestocks.js`
+**Files**: `FRONTENT/src/composables/operation/outlets/useOutletRestocks.js`
 **Pattern**: Components consume composable view models and emit actions; composable owns workflow behavior.
 **Rule**: No direct store/service imports in components; keep current `workflowStore.runBatchRequests` usage in composable only.
 
@@ -109,7 +109,7 @@ Workflow rules to preserve:
 - [ ] Keep parent `OutletRestocks` update to `Progress: 'APPROVED'` only after validation confirms at least one allocated row exists.
 - [ ] Preserve existing `ApprovedUser` and `ProgressApprovedComment` behavior on the parent.
 - [ ] Do not change GAS files unless a concrete frontend payload contract issue is discovered.
-**Files**: `FRONTENT/src/composables/operations/outlets/outletRestockPayload.js`
+**Files**: `FRONTENT/src/composables/operation/outlets/outletRestockPayload.js`
 **Pattern**: Payload builders prepare batch request bodies; components never prepare API payloads.
 **Rule**: Allocated quantity reserves stock immediately through negative `StockMovements`.
 
@@ -130,7 +130,7 @@ Workflow rules to preserve:
 - [ ] Keep a single approval action for `Approve Allocated`; disable it until at least one in-memory ORSI row is `ALLOCATED`.
 - [ ] Keep Send Back and Reject actions and keep their comment requirement visible in the UI. Validation remains in the composable, but the buttons may be disabled locally when the comment is blank.
 - [ ] Do not import stores, services, or business helpers in this component.
-**Files**: `FRONTENT/src/components/Operations/Outlets/RestockApprovalView.vue`
+**Files**: `FRONTENT/src/components/operation/Outlets/RestockApprovalView.vue`
 **Pattern**: Presentation-only component with props and emits.
 **Rule**: UI grouping is rendered from composable-provided data; component does not compute stock availability.
 
@@ -143,7 +143,7 @@ Workflow rules to preserve:
 - [ ] Show status chip from prepared progress only.
 - [ ] For partial allocation, show the pending remainder quantity as a clear read-only remainder line.
 - [ ] Avoid SKU/code as the main label; use product name plus variants from the view model.
-**Files**: `FRONTENT/src/components/Operations/Outlets/OrsiAllocationRow.vue`
+**Files**: `FRONTENT/src/components/operation/Outlets/OrsiAllocationRow.vue`
 **Pattern**: Components emit user intent; composable updates row state.
 **Rule**: No allocation recommendation or split math inside the component.
 
@@ -152,7 +152,7 @@ Workflow rules to preserve:
 - [ ] Keep page responsibilities thin: route lookup, loading flags, and handing events to composable methods.
 - [ ] Do not introduce direct `router.push()`, direct stores, or services in the page.
 - [ ] Confirm editable and readonly modes still receive the same props they need.
-**Files**: `FRONTENT/src/pages/Operations/OutletRestocks/ViewPage.vue`
+**Files**: `FRONTENT/src/pages/operation/OutletRestocks/ViewPage.vue`
 **Pattern**: Page is a thin orchestration shell.
 **Rule**: Navigation stays through existing composable/resource-nav flow.
 
@@ -167,9 +167,9 @@ Workflow rules to preserve:
 
 ### Step 8: Targeted Verification
 - [ ] Run targeted static checks:
-  - `rg -n "from '../../../stores|from '../../../services|useWorkflowStore|useDataStore|callGasApi" FRONTENT/src/components/Operations/Outlets/RestockApprovalView.vue FRONTENT/src/components/Operations/Outlets/OrsiAllocationRow.vue`
-  - `rg -n "router\\.push" FRONTENT/src/pages/Operations/OutletRestocks FRONTENT/src/composables/operations/outlets`
-  - `rg -n "skuLabel\\(|SKU.*label|Code.*·|WarehouseStorages" FRONTENT/src/components/Operations/Outlets/RestockApprovalView.vue FRONTENT/src/components/Operations/Outlets/OrsiAllocationRow.vue FRONTENT/src/composables/operations/outlets/useOutletRestocks.js`
+  - `rg -n "from '../../../stores|from '../../../services|useWorkflowStore|useDataStore|callGasApi" FRONTENT/src/components/operation/Outlets/RestockApprovalView.vue FRONTENT/src/components/operation/Outlets/OrsiAllocationRow.vue`
+  - `rg -n "router\\.push" FRONTENT/src/pages/operation/OutletRestocks FRONTENT/src/composables/operation/outlets`
+  - `rg -n "skuLabel\\(|SKU.*label|Code.*·|WarehouseStorages" FRONTENT/src/components/operation/Outlets/RestockApprovalView.vue FRONTENT/src/components/operation/Outlets/OrsiAllocationRow.vue FRONTENT/src/composables/operation/outlets/useOutletRestocks.js`
 - [ ] Run a focused frontend syntax/build check appropriate to the touched files. If no smaller project script exists, run `npm --prefix FRONTENT run build` because this changes a core workflow surface.
 - [ ] Manual scenario: one ORSI where one storage can fully satisfy quantity should appear under Fully Available and prefill one allocation line.
 - [ ] Manual scenario: one ORSI where two storages together can satisfy quantity should appear under Fully Available and prefill two allocation lines.
@@ -236,12 +236,12 @@ If execution is interrupted, the next agent reads this plan, finds the first unc
 - [x] `[!]` Issue/blocker: No blocker. Live browser/API approval was not executed; recommendation scenarios were verified through pure helper checks and the frontend production build.
 
 ### Files Actually Changed
-- `FRONTENT/src/composables/operations/outlets/outletStockLogic.js`
-- `FRONTENT/src/composables/operations/outlets/useOutletRestocks.js`
-- `FRONTENT/src/composables/operations/outlets/outletRestockPayload.js`
-- `FRONTENT/src/components/Operations/Outlets/RestockApprovalView.vue`
-- `FRONTENT/src/components/Operations/Outlets/OrsiAllocationRow.vue`
-- `FRONTENT/src/pages/Operations/OutletRestocks/ViewPage.vue`
+- `FRONTENT/src/composables/operation/outlets/outletStockLogic.js`
+- `FRONTENT/src/composables/operation/outlets/useOutletRestocks.js`
+- `FRONTENT/src/composables/operation/outlets/outletRestockPayload.js`
+- `FRONTENT/src/components/operation/Outlets/RestockApprovalView.vue`
+- `FRONTENT/src/components/operation/Outlets/OrsiAllocationRow.vue`
+- `FRONTENT/src/pages/operation/OutletRestocks/ViewPage.vue`
 - `FRONTENT/src/components/REGISTRY.md`
 - `FRONTENT/src/composables/REGISTRY.md`
 - `Documents/MODULE_WORKFLOWS.md`
@@ -259,3 +259,4 @@ If execution is interrupted, the next agent reads this plan, finds the first unc
 
 ## Build Handoff
 Build Agent, read `PLANS/2026-05-12-outlet-restock-approval-allocation-redesign-plan.md` and execute it end-to-end.
+

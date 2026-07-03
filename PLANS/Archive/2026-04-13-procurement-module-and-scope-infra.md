@@ -1,4 +1,4 @@
-# PLAN: Procurement Module Schema + View Scope + Scope Infrastructure
+﻿# PLAN: Procurement Module Schema + View Scope + Scope Infrastructure
 **Status**: IN_PROGRESS
 **Created**: 2026-04-13
 **Created By**: Brain Agent (Claude Opus 4.6)
@@ -176,7 +176,7 @@ const APP_OPTIONS_SEED = {
     RecordAccessPolicy: 'OWNER_AND_UPLINE',
     OwnerUserField: 'CreatedBy',
     AdditionalActions: 'Submit,Approve,Reject',
-    Menu: JSON.stringify([{ group: ['Operations', 'Procurement'], order: 1, label: 'Purchase Requisitions', icon: 'request_quote', route: '/operations/prs', pageTitle: 'Purchase Requisitions', pageDescription: 'Internal requests for purchase', show: true }]),
+    Menu: JSON.stringify([{ group: ['Operations', 'Procurement'], order: 1, label: 'Purchase Requisitions', icon: 'request_quote', route: '/operation/prs', pageTitle: 'Purchase Requisitions', pageDescription: 'Internal requests for purchase', show: true }]),
     UIFields: JSON.stringify([]),
     IncludeInAuthorizationPayload: 'TRUE',
     Functional: 'FALSE',
@@ -264,7 +264,7 @@ const APP_OPTIONS_SEED = {
     RecordAccessPolicy: 'ALL',
     OwnerUserField: 'CreatedBy',
     AdditionalActions: '',
-    Menu: JSON.stringify([{ group: ['Masters', 'Product'], order: 3, label: 'UOMs', icon: 'straighten', route: '/masters/uoms', pageTitle: 'Units of Measure', pageDescription: 'Manage units of measure', show: true }]),
+    Menu: JSON.stringify([{ group: ['Masters', 'Product'], order: 3, label: 'UOMs', icon: 'straighten', route: '/master/uoms', pageTitle: 'Units of Measure', pageDescription: 'Manage units of measure', show: true }]),
     UIFields: JSON.stringify([
         { header: 'Code', label: 'Code', type: 'text', required: true },
         { header: 'Name', label: 'Name', type: 'text', required: true },
@@ -574,3 +574,4 @@ These are actions the **user** must perform manually in the Google Sheet (cannot
 - [ ] Run `setupOperationSheets` from AQL menu
 - [ ] Run `setupAppSheets` from AQL menu to seed AppOptions
 - [ ] Deploy new Web App version (API contract changed — new scope, new code format)
+

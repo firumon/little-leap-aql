@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding>
     <HeaderPanel
       title="Direct Restock"
@@ -65,12 +65,12 @@
 
 <script setup>
 import { computed, onMounted } from 'vue'
-import { useDirectRestock } from '../../../composables/operations/outlets/DirectRestock/useDirectRestock.js'
+import { useDirectRestock } from '../../../composables/operation/outlets/DirectRestock/useDirectRestock.js'
 import StepProgressIndicator from '../../../components/shared/StepProgressIndicator.vue'
 import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
-import DirectRestockSetupStep from '../../../components/Operations/Outlets/DirectRestock/DirectRestockSetupStep.vue'
-import DirectRestockStockMatchStep from '../../../components/Operations/Outlets/DirectRestock/DirectRestockStockMatchStep.vue'
-import DirectRestockSummaryStep from '../../../components/Operations/Outlets/DirectRestock/DirectRestockSummaryStep.vue'
+import DirectRestockSetupStep from '../../../components/operation/Outlets/DirectRestock/DirectRestockSetupStep.vue'
+import DirectRestockStockMatchStep from '../../../components/operation/Outlets/DirectRestock/DirectRestockStockMatchStep.vue'
+import DirectRestockSummaryStep from '../../../components/operation/Outlets/DirectRestock/DirectRestockSummaryStep.vue'
 
 defineOptions({ name: 'DirectRestockPage' })
 
@@ -149,3 +149,4 @@ onMounted(async () => {
   to { opacity: 1; transform: scale(1); }
 }
 </style>
+

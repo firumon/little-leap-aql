@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding>
     <!-- Header panel with action status -->
     <HeaderPanel :subtitle="formatDisplayDate(invoice?.Date) + ' · ' + (invoice?.Code || 'Consumption Invoice')" :title="invoice ? `${outletName(invoice.OutletCode)}` : ''" class="q-mb-md">
@@ -322,11 +322,11 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
-import { useOutletConsumption } from '../../../composables/operations/outlets/useOutletConsumption.js'
+import { useOutletConsumption } from '../../../composables/operation/outlets/useOutletConsumption.js'
 import { useResourceNav } from '../../../composables/resources/useResourceNav.js'
 import { useCurrency } from '../../../composables/useCurrency.js'
 import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
-import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'
+import OutletProgressChip from '../../../components/operation/Outlets/OutletProgressChip.vue'
 import ResourceActionButton from '../../../components/shared/ResourceActionButton.vue'
 import { useDataStore } from '../../../stores/data.js'
 import { useTaxCalculator } from '../../../composables/useTaxCalculator.js'
@@ -653,3 +653,4 @@ onMounted(async () => {
   loadLineItems()
 })
 </script>
+

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding class="q-pb-xl">
     <!-- Page Branded Header with Reload Button -->
     <div class="row items-center justify-between no-wrap q-mb-md">
@@ -82,9 +82,9 @@
 
 <script setup>
 import { computed, onMounted } from 'vue'
-import { useOutletDeliveries } from '../../../composables/operations/outlets/useOutletDeliveries.js'
+import { useOutletDeliveries } from '../../../composables/operation/outlets/useOutletDeliveries.js'
 import AqlList from '../../../components/shared/AqlList.vue'
-import { progressMeta } from '../../../composables/operations/outlets/outletOperationsMeta.js'
+import { progressMeta } from '../../../composables/operation/outlets/outletOperationsMeta.js'
 import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
 import DataAddFAB from '../../../components/shared/DataAddFAB.vue'
@@ -102,3 +102,4 @@ onMounted(async () => {
   await reloadIndex()
 })
 </script>
+

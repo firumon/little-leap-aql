@@ -1,4 +1,4 @@
-# PLAN: Warehouse Preflight Standards Alignment
+﻿# PLAN: Warehouse Preflight Standards Alignment
 **Status**: DRAFT
 **Created**: 2026-03-11
 **Created By**: Brain Agent
@@ -34,7 +34,7 @@ Align and formalize mandatory engineering standards before implementing Warehous
 - [x] Define and document a single request lifecycle contract for all API calls: request dispatch, loading handling, normalized error mapping, success/error notifications.
 - [x] Implement or update shared frontend utilities so screens/stores do not hand-roll request UX behavior independently.
 - [x] Refactor at least current Warehouse-related and master/operation pages to consume the shared contract.
-**Files**: `FRONTENT/src/services/gasApi.js`, `FRONTENT/src/services/apiClient.js`, `FRONTENT/src/pages/Masters/MasterEntityPage.vue`, `FRONTENT/src/pages/Operations/ShipmentsPage.vue`, `FRONTENT/src/pages/Operations/GoodsReceiptsPage.vue`, `Documents/FRONTENT_README.md`, `Documents/TECHNICAL_SPECIFICATIONS.md`
+**Files**: `FRONTENT/src/services/gasApi.js`, `FRONTENT/src/services/apiClient.js`, `FRONTENT/src/pages/master/MasterEntityPage.vue`, `FRONTENT/src/pages/operation/ShipmentsPage.vue`, `FRONTENT/src/pages/operation/GoodsReceiptsPage.vue`, `Documents/FRONTENT_README.md`, `Documents/TECHNICAL_SPECIFICATIONS.md`
 **Pattern**: Existing centralized transport (`callGasApi`) + per-page `$q.notify` usage.
 **Rule**: No direct ad-hoc API post flow or inconsistent notification/loading patterns in page components.
 
@@ -97,3 +97,4 @@ Align and formalize mandatory engineering standards before implementing Warehous
 
 ### Manual Actions Required
 - [x] [Any user-required action: deploy/copy-paste/setup]: No Google Apps Script backend changes were made. You only need to reload frontend to test the new `$q.notify` wrappers in action.
+

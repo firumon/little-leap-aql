@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-chip
     dense
     class="q-pa-sm text-weight-bold"
@@ -11,7 +11,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { progressMeta } from '../../../composables/operations/outlets/outletOperationsMeta.js'
+import { progressMeta } from '../../../composables/operation/outlets/outletOperationsMeta.js'
 
 defineOptions({ name: 'OutletProgressChip' })
 
@@ -24,4 +24,5 @@ const props = defineProps({
 
 const meta = computed(() => progressMeta(props.progress))
 </script>
+
 

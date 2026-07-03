@@ -1,4 +1,4 @@
-# PLAN: Operations Scope 3-Tier UI System
+﻿# PLAN: Operations Scope 3-Tier UI System
 **Status**: COMPLETED
 **Created**: 2026-04-14
 **Created By**: Brain Agent (Claude Sonnet 4.6)
@@ -10,9 +10,9 @@ Operations ViewPage has additional behaviour vs Masters: Parent section, filtere
 
 ## Context
 - Masters system is fully documented in `Documents/MODULE_WORKFLOWS.md` Section 2.
-- `useSectionResolver.js` is hardcoded to `components/Masters/` glob paths — must be extended for Operations.
-- Router at `routes.js:68` uses a shared `/:scope(masters|operations|accounts)/` pattern — all three scopes already hit `ActionResolverPage.vue` under `pages/Masters/`.
-- `ActionResolverPage.vue` glob paths are relative to `pages/Masters/` — they only discover files in that directory tree.
+- `useSectionResolver.js` is hardcoded to `components/master/` glob paths — must be extended for Operations.
+- Router at `routes.js:68` uses a shared `/:scope(masters|operations|accounts)/` pattern — all three scopes already hit `ActionResolverPage.vue` under `pages/master/`.
+- `ActionResolverPage.vue` glob paths are relative to `pages/master/` — they only discover files in that directory tree.
 - `useResourceRelations` already exposes `parentResource`, `childResources` — no changes needed there.
 - `additionalActions` is already available from `useResourceConfig` — used for action-stamp filtering.
 
@@ -26,22 +26,22 @@ Operations ViewPage has additional behaviour vs Masters: Parent section, filtere
 ## Steps
 
 ### Step 1: Extend `useSectionResolver` to support Operations scope
-Currently `useSectionResolver.js` has two hardcoded `import.meta.glob` calls pointing only at `components/Masters/`.
-Add equivalent glob calls for `components/Operations/` and accept a `scope` parameter to select the right glob set.
+Currently `useSectionResolver.js` has two hardcoded `import.meta.glob` calls pointing only at `components/master/`.
+Add equivalent glob calls for `components/operation/` and accept a `scope` parameter to select the right glob set.
 
 - [x] Add `scope` param to `useSectionResolver({ resourceSlug, customUIName, sectionDefs, scope })`. Default `'masters'` to keep Masters callers unchanged.
 - [x] Add two new glob maps inside the composable:
   ```js
   const operationsEntitySectionModules = import.meta.glob([
-    '../components/Operations/*/*.vue',
-    '!../components/Operations/_custom/**'
+    '../components/operation/*/*.vue',
+    '!../components/operation/_custom/**'
   ])
-  const operationsCustomSectionModules = import.meta.glob('../components/Operations/_custom/**/*.vue')
+  const operationsCustomSectionModules = import.meta.glob('../components/operation/_custom/**/*.vue')
   ```
 - [x] In `resolveSection`, branch on `scope`: use the Operations glob maps when `scope === 'operations'`, Masters maps otherwise.
 - [x] Tier paths for Operations:
-  - Tier 1 (tenant-custom): `../components/Operations/_custom/{CustomUIName}/{Entity}{Section}.vue`
-  - Tier 2 (entity-custom): `../components/Operations/{Entity}/{Section}.vue`
+  - Tier 1 (tenant-custom): `../components/operation/_custom/{CustomUIName}/{Entity}{Section}.vue`
+  - Tier 2 (entity-custom): `../components/operation/{Entity}/{Section}.vue`
   - Tier 3 (default): passed-in `defaultComponent` (an `OperationView*` component)
 
 **Files**: `FRONTENT/src/composables/useSectionResolver.js`
@@ -50,26 +50,26 @@ Add equivalent glob calls for `components/Operations/` and accept a `scope` para
 ---
 
 ### Step 2: Create Operations `ActionResolverPage`
-The existing `pages/Masters/ActionResolverPage.vue` uses `import.meta.glob` paths relative to `pages/Masters/`. It cannot discover `pages/Operations/` files.
+The existing `pages/master/ActionResolverPage.vue` uses `import.meta.glob` paths relative to `pages/master/`. It cannot discover `pages/operation/` files.
 
-- [x] Create `FRONTENT/src/pages/Operations/ActionResolverPage.vue` — a copy of the Masters version with glob paths changed to discover `pages/Operations/` subdirectories.
+- [x] Create `FRONTENT/src/pages/operation/ActionResolverPage.vue` — a copy of the Masters version with glob paths changed to discover `pages/operation/` subdirectories.
   - `customTenantModules`: `./_custom/**/*.vue`
   - `customPageModules`: `./*/**Page.vue` excluding `_common` and `_custom`
   - `fallbackModules`: `./_common/**Page.vue`
 - [x] Logic is identical to Masters version — only the glob paths differ.
 
-**Files**: `FRONTENT/src/pages/Operations/ActionResolverPage.vue`
-**Pattern**: Mirror `pages/Masters/ActionResolverPage.vue` exactly; change only glob paths and comments.
+**Files**: `FRONTENT/src/pages/operation/ActionResolverPage.vue`
+**Pattern**: Mirror `pages/master/ActionResolverPage.vue` exactly; change only glob paths and comments.
 
 ---
 
 ### Step 3: Update router to use Operations `ActionResolverPage` for `operations` scope
-Currently all three scopes (`masters`, `operations`, `accounts`) share a single route block pointing at `pages/Masters/ActionResolverPage.vue`.
+Currently all three scopes (`masters`, `operations`, `accounts`) share a single route block pointing at `pages/master/ActionResolverPage.vue`.
 Split the route so `operations` uses its own resolver.
 
 - [x] In `routes.js`, replace the single combined scope route with two separate blocks:
-  - `/:scope(masters|accounts)/...` → `pages/Masters/ActionResolverPage.vue` (unchanged)
-  - `/operations/:resourceSlug/...` → `pages/Operations/ActionResolverPage.vue`
+  - `/:scope(masters|accounts)/...` → `pages/master/ActionResolverPage.vue` (unchanged)
+  - `/operation/:resourceSlug/...` → `pages/operation/ActionResolverPage.vue`
 - [x] Both blocks must have identical child route shapes (index, add, `:code`, `:code/edit`, `:code/:action`).
 - [x] Preserve existing named routes. Add new named routes for operations (e.g. `operations-list`, `operations-add`, `operations-view`, `operations-edit`, `operations-action`) to avoid collision.
 - [x] Keep `ResourcePageShell.vue` as the parent layout component for both blocks — no shell changes needed.
@@ -81,24 +81,24 @@ Split the route so `operations` uses its own resolver.
 
 ### Step 4: Create Operations `_common` page orchestrators (Index, Add, Edit, Action)
 These are near-identical to their Masters counterparts. The only differences are:
-- Import defaults from `components/Operations/_common/Operation*.vue` instead of `components/Masters/_common/Master*.vue`
+- Import defaults from `components/operation/_common/Operation*.vue` instead of `components/master/_common/Master*.vue`
 - Pass `scope: 'operations'` to `useSectionResolver`
 - Use `operations` CSS variable prefix where relevant (e.g. `--operation-border`)
 
-- [x] Create `FRONTENT/src/pages/Operations/_common/IndexPage.vue`
+- [x] Create `FRONTENT/src/pages/operation/_common/IndexPage.vue`
   - Copy Masters `IndexPage.vue`; swap component imports and `useSectionResolver` scope param
   - Section defs: `ListHeader`, `ListReportBar`, `ListToolbar`, `ListViewSwitcher`, `ListRecords`
-- [x] Create `FRONTENT/src/pages/Operations/_common/AddPage.vue`
+- [x] Create `FRONTENT/src/pages/operation/_common/AddPage.vue`
   - Copy Masters `AddPage.vue`; swap imports and scope param
   - Section defs: `AddHeader`, `AddForm`, `AddChildren`, `AddActions`
-- [x] Create `FRONTENT/src/pages/Operations/_common/EditPage.vue`
+- [x] Create `FRONTENT/src/pages/operation/_common/EditPage.vue`
   - Copy Masters `EditPage.vue`; swap imports and scope param
   - Section defs: `EditHeader`, `EditForm`, `EditChildren`, `EditActions`
-- [x] Create `FRONTENT/src/pages/Operations/_common/ActionPage.vue`
+- [x] Create `FRONTENT/src/pages/operation/_common/ActionPage.vue`
   - Copy Masters `ActionPage.vue`; swap imports and scope param
   - Section defs: `ActionHeader`, `ActionForm`, `ActionActions`
 
-**Files**: `FRONTENT/src/pages/Operations/_common/` (4 files)
+**Files**: `FRONTENT/src/pages/operation/_common/` (4 files)
 **Rule**: Pages must remain thin orchestrators — no business logic beyond what already exists in Masters pages.
 
 ---
@@ -106,7 +106,7 @@ These are near-identical to their Masters counterparts. The only differences are
 ### Step 5: Create Operations `_common` ViewPage orchestrator (Operations-specific)
 This is NOT a copy of Masters ViewPage. It has a different section set.
 
-- [x] Create `FRONTENT/src/pages/Operations/_common/ViewPage.vue` with these sections:
+- [x] Create `FRONTENT/src/pages/operation/_common/ViewPage.vue` with these sections:
   ```
   ViewHeader, ViewActionBar, ViewDetails, ViewParent, ViewChildren
   ```
@@ -117,7 +117,7 @@ This is NOT a copy of Masters ViewPage. It has a different section set.
 - [x] Child records loading: identical to Masters ViewPage — fetch per child resource, filter by parent code field.
 - [x] Navigation for parent: `router.push(/${parentResource.scope}/${parentResource.slug}/${parentCode})` — back via `router.back()`.
 
-**Files**: `FRONTENT/src/pages/Operations/_common/ViewPage.vue`
+**Files**: `FRONTENT/src/pages/operation/_common/ViewPage.vue`
 **Rule**: Parent record fetch is best-effort — if fetch fails, pass `null`; section handles gracefully.
 
 ---
@@ -144,7 +144,7 @@ These are identical in behaviour to Masters equivalents — only naming and CSS 
 - [x] `OperationActionForm.vue` — copy `MasterActionForm.vue`
 - [x] `OperationActionActions.vue` — copy `MasterActionActions.vue`
 
-**Files**: `FRONTENT/src/components/Operations/_common/` (17 files)
+**Files**: `FRONTENT/src/components/operation/_common/` (17 files)
 **Rule**: Copy structure and logic faithfully. Only rename class prefixes and CSS variable names.
 
 ---
@@ -182,13 +182,13 @@ Props: `parentResource`, `parentRecord`, `additionalActions`, `scope`
 - [x] Copy `MasterViewChildren.vue` — logic is identical (direct children only, one card per child resource).
 - [x] Rename CSS classes/variables only.
 
-**Files**: `FRONTENT/src/components/Operations/_common/` (5 View files)
+**Files**: `FRONTENT/src/components/operation/_common/` (5 View files)
 
 ---
 
 ### Step 8: Create scaffold registries and `_custom` placeholder dirs
-- [x] Create `FRONTENT/src/pages/Operations/_custom/REGISTRY.md` — copy from Masters version, update scope references to Operations.
-- [x] Create `FRONTENT/src/components/Operations/_custom/REGISTRY.md` — copy from Masters version, update scope references.
+- [x] Create `FRONTENT/src/pages/operation/_custom/REGISTRY.md` — copy from Masters version, update scope references to Operations.
+- [x] Create `FRONTENT/src/components/operation/_custom/REGISTRY.md` — copy from Masters version, update scope references.
 
 **Files**: 2 REGISTRY.md files
 
@@ -206,7 +206,7 @@ Props: `parentResource`, `parentRecord`, `additionalActions`, `scope`
 ---
 
 ## Acceptance Criteria
-- [x] Navigating to `/operations/:resourceSlug` loads the Operations `ActionResolverPage` (not Masters).
+- [x] Navigating to `/operation/:resourceSlug` loads the Operations `ActionResolverPage` (not Masters).
 - [x] Index, Add, Edit, Action pages resolve and render for any operations resource using `_common` defaults.
 - [x] ViewPage for an operations resource with no parent shows only ViewHeader, ViewActionBar, ViewDetails, ViewChildren — no audit section.
 - [x] ViewDetails excludes `CreatedAt`, `UpdatedAt`, `CreatedBy`, `UpdatedBy` and action-stamp `{Action}By`/`{Action}At` fields.
@@ -214,7 +214,7 @@ Props: `parentResource`, `parentRecord`, `additionalActions`, `scope`
 - [x] ViewParent (Case A): shows `Name (Code)` as a single line when parent has a `Name` field; clicking navigates to parent view.
 - [x] ViewParent (Case B): shows a full parent data card when parent has no `Name`; View Parent link navigates; back returns to child.
 - [x] ViewChildren shows one card per direct child resource with their records.
-- [x] 3-tier resolution works: entity-custom and tenant-custom components under `components/Operations/` override defaults correctly.
+- [x] 3-tier resolution works: entity-custom and tenant-custom components under `components/operation/` override defaults correctly.
 - [x] Masters scope pages are completely unaffected.
 - [x] Full frontend build passes with no errors (cross-cutting change: router, composable, ~25 new files).
 
@@ -246,37 +246,37 @@ Props: `parentResource`, `parentRecord`, `additionalActions`, `scope`
 
 ### Files Actually Changed
 - `FRONTENT/src/composables/useSectionResolver.js`
-- `FRONTENT/src/pages/Operations/ActionResolverPage.vue`
+- `FRONTENT/src/pages/operation/ActionResolverPage.vue`
 - `FRONTENT/src/router/routes.js`
-- `FRONTENT/src/pages/Operations/_common/IndexPage.vue`
-- `FRONTENT/src/pages/Operations/_common/AddPage.vue`
-- `FRONTENT/src/pages/Operations/_common/EditPage.vue`
-- `FRONTENT/src/pages/Operations/_common/ActionPage.vue`
-- `FRONTENT/src/pages/Operations/_common/ViewPage.vue`
-- `FRONTENT/src/components/Operations/_common/OperationListHeader.vue`
-- `FRONTENT/src/components/Operations/_common/OperationListReportBar.vue`
-- `FRONTENT/src/components/Operations/_common/OperationListToolbar.vue`
-- `FRONTENT/src/components/Operations/_common/OperationListViewSwitcher.vue`
-- `FRONTENT/src/components/Operations/_common/OperationListRecords.vue`
-- `FRONTENT/src/components/Operations/_common/OperationRecordCard.vue`
-- `FRONTENT/src/components/Operations/_common/OperationAddHeader.vue`
-- `FRONTENT/src/components/Operations/_common/OperationAddForm.vue`
-- `FRONTENT/src/components/Operations/_common/OperationAddChildren.vue`
-- `FRONTENT/src/components/Operations/_common/OperationAddActions.vue`
-- `FRONTENT/src/components/Operations/_common/OperationEditHeader.vue`
-- `FRONTENT/src/components/Operations/_common/OperationEditForm.vue`
-- `FRONTENT/src/components/Operations/_common/OperationEditChildren.vue`
-- `FRONTENT/src/components/Operations/_common/OperationEditActions.vue`
-- `FRONTENT/src/components/Operations/_common/OperationActionHeader.vue`
-- `FRONTENT/src/components/Operations/_common/OperationActionForm.vue`
-- `FRONTENT/src/components/Operations/_common/OperationActionActions.vue`
-- `FRONTENT/src/components/Operations/_common/OperationViewHeader.vue`
-- `FRONTENT/src/components/Operations/_common/OperationViewActionBar.vue`
-- `FRONTENT/src/components/Operations/_common/OperationViewDetails.vue`
-- `FRONTENT/src/components/Operations/_common/OperationViewParent.vue`
-- `FRONTENT/src/components/Operations/_common/OperationViewChildren.vue`
-- `FRONTENT/src/pages/Operations/_custom/REGISTRY.md`
-- `FRONTENT/src/components/Operations/_custom/REGISTRY.md`
+- `FRONTENT/src/pages/operation/_common/IndexPage.vue`
+- `FRONTENT/src/pages/operation/_common/AddPage.vue`
+- `FRONTENT/src/pages/operation/_common/EditPage.vue`
+- `FRONTENT/src/pages/operation/_common/ActionPage.vue`
+- `FRONTENT/src/pages/operation/_common/ViewPage.vue`
+- `FRONTENT/src/components/operation/_common/OperationListHeader.vue`
+- `FRONTENT/src/components/operation/_common/OperationListReportBar.vue`
+- `FRONTENT/src/components/operation/_common/OperationListToolbar.vue`
+- `FRONTENT/src/components/operation/_common/OperationListViewSwitcher.vue`
+- `FRONTENT/src/components/operation/_common/OperationListRecords.vue`
+- `FRONTENT/src/components/operation/_common/OperationRecordCard.vue`
+- `FRONTENT/src/components/operation/_common/OperationAddHeader.vue`
+- `FRONTENT/src/components/operation/_common/OperationAddForm.vue`
+- `FRONTENT/src/components/operation/_common/OperationAddChildren.vue`
+- `FRONTENT/src/components/operation/_common/OperationAddActions.vue`
+- `FRONTENT/src/components/operation/_common/OperationEditHeader.vue`
+- `FRONTENT/src/components/operation/_common/OperationEditForm.vue`
+- `FRONTENT/src/components/operation/_common/OperationEditChildren.vue`
+- `FRONTENT/src/components/operation/_common/OperationEditActions.vue`
+- `FRONTENT/src/components/operation/_common/OperationActionHeader.vue`
+- `FRONTENT/src/components/operation/_common/OperationActionForm.vue`
+- `FRONTENT/src/components/operation/_common/OperationActionActions.vue`
+- `FRONTENT/src/components/operation/_common/OperationViewHeader.vue`
+- `FRONTENT/src/components/operation/_common/OperationViewActionBar.vue`
+- `FRONTENT/src/components/operation/_common/OperationViewDetails.vue`
+- `FRONTENT/src/components/operation/_common/OperationViewParent.vue`
+- `FRONTENT/src/components/operation/_common/OperationViewChildren.vue`
+- `FRONTENT/src/pages/operation/_custom/REGISTRY.md`
+- `FRONTENT/src/components/operation/_custom/REGISTRY.md`
 - `Documents/MODULE_WORKFLOWS.md`
 - `FRONTENT/src/composables/REGISTRY.md`
 - `Documents/CONTEXT_HANDOFF.md`
@@ -287,3 +287,4 @@ Props: `parentResource`, `parentRecord`, `additionalActions`, `scope`
 
 ### Manual Actions Required
 - [x] None anticipated — no GAS changes, no sheet changes, no Web App redeployment.
+

@@ -1,8 +1,8 @@
-import { ref, computed } from 'vue'
+﻿import { ref, computed } from 'vue'
 import { useAuthStore } from 'src/stores/auth'
 import { useDataStore } from 'src/stores/data'
 import { useResourceIoStore } from 'src/stores/resourceIo'
-import { useProductSkuResolver } from 'src/composables/masters/products/useProductSkuResolver'
+import { useProductSkuResolver } from 'src/composables/master/products/useProductSkuResolver'
 import { useApiErrorNotify } from 'src/composables/useApiErrorNotify'
 
 export function usePriceListEditor() {
@@ -308,3 +308,4 @@ export function usePriceListEditor() {
     saveSection
   }
 }
+

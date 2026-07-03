@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding>
 <div class="row items-center q-mb-md">
   <div class="text-h6">PO Receiving</div><q-space />
@@ -27,7 +27,7 @@
 
 <script setup>
 import { computed, onMounted } from 'vue'
-import { usePOReceivingIndex } from '../../../composables/operations/poReceivings/usePOReceivingIndex.js'
+import { usePOReceivingIndex } from '../../../composables/operation/poReceivings/usePOReceivingIndex.js'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
 import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
 
@@ -38,3 +38,4 @@ const { permissions, items, groups, loading, searchTerm, isGroupExpanded, toggle
 const shouldBlockUi = computed(() => loading.value && hasUninitiatedDependencies.value)
 onMounted(() => flow.reload())
 </script>
+

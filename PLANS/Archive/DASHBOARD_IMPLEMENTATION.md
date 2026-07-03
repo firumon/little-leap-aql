@@ -1,4 +1,4 @@
-# PLAN: Config-Driven Dashboard Module
+﻿# PLAN: Config-Driven Dashboard Module
 **Status**: COMPLETED
 **Created**: 2026-05-23
 **Created By**: Brain Agent (Antigravity)
@@ -147,23 +147,23 @@ Create a highly modular, config-driven Dashboard system for AQL that supports de
 **Rule**: Grid packing must prevent horizontal wrapping irregularities and vertical height gaps by strictly utilizing explicit Quasar row separation wrappers per packed row.
 
 ### Step 5: Construct Out-of-the-Box Core Declarative JS Widgets
-- [x] Create `FRONTENT/src/dashboard/operations/purchaseRequisitions/pendingPRs.js` (MetricWidget):
+- [x] Create `FRONTENT/src/dashboard/operation/purchaseRequisitions/pendingPRs.js` (MetricWidget):
   - Configuration: MetricWidget, title: "Pending PRs", icon: "shopping_cart", color: "orange", weight: 100, layout: `{ xs: 12, sm: 6, md: 4 }`.
   - Data Source: Single-resource `purchaseRequisitions`, filter `Status == "Pending"`, aggregate: `count`.
-- [x] Create `FRONTENT/src/dashboard/operations/rfqs/awaitingRFQs.js` (MetricWidget):
+- [x] Create `FRONTENT/src/dashboard/operation/rfqs/awaitingRFQs.js` (MetricWidget):
   - Configuration: MetricWidget, title: "Awaiting RFQs", icon: "request_quote", color: "blue", weight: 90, layout: `{ xs: 12, sm: 6, md: 4 }`.
   - Data Source: Single-resource `rfqs`, filter `Status == "Awaiting Quotations"`, aggregate: `count`.
-- [x] Create `FRONTENT/src/dashboard/operations/purchaseOrders/purchaseOrderSummary.js` (BarChartWidget):
+- [x] Create `FRONTENT/src/dashboard/operation/purchaseOrders/purchaseOrderSummary.js` (BarChartWidget):
   - Configuration: BarChartWidget, title: "Purchase Orders by Vendor", icon: "storefront", color: "purple", weight: 80, layout: `{ xs: 12, sm: 12, md: 8 }`.
   - Data Source: Single-resource `purchaseOrders`, custom procedural mapper `evaluate` that groups purchase order amounts by vendor and returns sorted top 5 values for display.
-- [x] Create `FRONTENT/src/dashboard/operations/goodsReceipts/pendingGRNs.js` (TimelineWidget):
+- [x] Create `FRONTENT/src/dashboard/operation/goodsReceipts/pendingGRNs.js` (TimelineWidget):
   - Configuration: TimelineWidget, title: "Recent Pending GRNs", icon: "receipt", color: "teal", weight: 70, layout: `{ xs: 12, sm: 12, md: 4 }`.
   - Data Source: Single-resource `goodsReceipts`, filter `Status == "Pending Receipt"`, custom evaluate function that extracts title, subtitle (Vendor, Date), status code, and orders by descending creation date up to 5 records.
 **Files**:
-- `FRONTENT/src/dashboard/operations/purchaseRequisitions/pendingPRs.js`
-- `FRONTENT/src/dashboard/operations/rfqs/awaitingRFQs.js`
-- `FRONTENT/src/dashboard/operations/purchaseOrders/purchaseOrderSummary.js`
-- `FRONTENT/src/dashboard/operations/goodsReceipts/pendingGRNs.js`
+- `FRONTENT/src/dashboard/operation/purchaseRequisitions/pendingPRs.js`
+- `FRONTENT/src/dashboard/operation/rfqs/awaitingRFQs.js`
+- `FRONTENT/src/dashboard/operation/purchaseOrders/purchaseOrderSummary.js`
+- `FRONTENT/src/dashboard/operation/goodsReceipts/pendingGRNs.js`
 **Pattern**: Modular widget export structures matching the metadata contract.
 **Rule**: Respect permissions (`{ purchaseRequisitions: 'read' }`, `{ rfqs: 'read' }`, `{ purchaseOrders: 'read' }`, `{ goodsReceipts: 'read' }`).
 
@@ -210,10 +210,10 @@ The Build Agent MUST update this checklist after completing each numbered sub-ta
 - `FRONTENT/src/components/_dashboard/TimelineWidget.vue`
 - `FRONTENT/src/composables/_dashboard/useDashboard.js`
 - `FRONTENT/src/pages/Dashboard/DashboardIndex.vue`
-- `FRONTENT/src/dashboard/operations/purchaseRequisitions/pendingPRs.js`
-- `FRONTENT/src/dashboard/operations/rfqs/awaitingRFQs.js`
-- `FRONTENT/src/dashboard/operations/purchaseOrders/purchaseOrderSummary.js`
-- `FRONTENT/src/dashboard/operations/goodsReceipts/pendingGRNs.js`
+- `FRONTENT/src/dashboard/operation/purchaseRequisitions/pendingPRs.js`
+- `FRONTENT/src/dashboard/operation/rfqs/awaitingRFQs.js`
+- `FRONTENT/src/dashboard/operation/purchaseOrders/purchaseOrderSummary.js`
+- `FRONTENT/src/dashboard/operation/goodsReceipts/pendingGRNs.js`
 
 ### Validation Performed
 - [x] Confirm code builds successfully using `npm run build` or dev compilation checking.
@@ -223,3 +223,4 @@ The Build Agent MUST update this checklist after completing each numbered sub-ta
 
 ### Manual Actions Required
 - [x] Ensure user has configured roles/permissions in Sheets backend to test full permission-gating and resource-loading behaviors.
+

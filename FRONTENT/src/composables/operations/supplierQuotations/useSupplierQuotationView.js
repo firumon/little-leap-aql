@@ -1,11 +1,11 @@
-import { computed, ref, watch } from 'vue'
+﻿import { computed, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceConfig, isActionVisible } from 'src/composables/resources/useResourceConfig'
 import { useRecord } from 'src/composables/resources/useRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { parsePrItemCodeCsv } from 'src/composables/operations/rfqs/rfqPayload'
+import { parsePrItemCodeCsv } from 'src/composables/operation/rfqs/rfqPayload'
 import { mapOptions, formatCurrency, formatDate } from './supplierQuotationMeta'
 import { useSupplierQuotationTotals } from './useSupplierQuotationTotals'
 import {
@@ -241,3 +241,4 @@ export function useSupplierQuotationView() {
     formatCurrency
   }
 }
+

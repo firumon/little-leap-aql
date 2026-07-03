@@ -1,4 +1,4 @@
-# PLAN: Operation & Master Component Enhancements — Sub-component 3-Tier, Skip Columns, Child/Parent Customization
+﻿# PLAN: Operation & Master Component Enhancements — Sub-component 3-Tier, Skip Columns, Child/Parent Customization
 **Status**: COMPLETED
 **Created**: 2026-04-16
 **Created By**: Brain Agent (Claude Sonnet 4.6)
@@ -24,8 +24,8 @@ Enhance the Operations and Masters page architecture with:
 
 ## Context
 
-- Operations components live at `FRONTENT/src/components/Operations/_common/`
-- Masters components live at `FRONTENT/src/components/Masters/_common/`
+- Operations components live at `FRONTENT/src/components/operation/_common/`
+- Masters components live at `FRONTENT/src/components/master/_common/`
 - `useSectionResolver.js` handles 3-tier resolution at: `_custom/{CustomUIName}/{Entity}{Section}.vue` → `{Entity}/{Section}.vue` → default
 - Current `_custom/` layout is **flat** (entity name is a filename prefix). New layout uses **`{Entity}/` as a subdirectory** and adds a cross-entity tier
 - No existing files currently live under `_custom/` for either scope — safe to restructure
@@ -36,7 +36,7 @@ Enhance the Operations and Masters page architecture with:
 ---
 
 ## Pre-Conditions
-- [ ] No files currently exist under `components/Operations/_custom/` or `components/Masters/_custom/` (confirmed)
+- [ ] No files currently exist under `components/operation/_custom/` or `components/master/_custom/` (confirmed)
 - [ ] `PLANS/_TEMPLATE.md` reviewed
 - [ ] No other plan depends on `useSectionResolver` or the affected components
 
@@ -139,16 +139,16 @@ In `FRONTENT/src/composables/useResourceConfig.js`:
 - Add `customUIName` to the return object
 
 Then in each of the 5 `_common` page files (Operations and Masters), remove the local `customUIName` computed and import it from `useResourceConfig()` instead:
-- `FRONTENT/src/pages/Operations/_common/IndexPage.vue`
-- `FRONTENT/src/pages/Operations/_common/ViewPage.vue`
-- `FRONTENT/src/pages/Operations/_common/AddPage.vue`
-- `FRONTENT/src/pages/Operations/_common/EditPage.vue`
-- `FRONTENT/src/pages/Operations/_common/ActionPage.vue`
-- `FRONTENT/src/pages/Masters/_common/IndexPage.vue`
-- `FRONTENT/src/pages/Masters/_common/ViewPage.vue`
-- `FRONTENT/src/pages/Masters/_common/AddPage.vue`
-- `FRONTENT/src/pages/Masters/_common/EditPage.vue`
-- `FRONTENT/src/pages/Masters/_common/ActionPage.vue`
+- `FRONTENT/src/pages/operation/_common/IndexPage.vue`
+- `FRONTENT/src/pages/operation/_common/ViewPage.vue`
+- `FRONTENT/src/pages/operation/_common/AddPage.vue`
+- `FRONTENT/src/pages/operation/_common/EditPage.vue`
+- `FRONTENT/src/pages/operation/_common/ActionPage.vue`
+- `FRONTENT/src/pages/master/_common/IndexPage.vue`
+- `FRONTENT/src/pages/master/_common/ViewPage.vue`
+- `FRONTENT/src/pages/master/_common/AddPage.vue`
+- `FRONTENT/src/pages/master/_common/EditPage.vue`
+- `FRONTENT/src/pages/master/_common/ActionPage.vue`
 
 **Files**: `useResourceConfig.js`, 10 page files
 
@@ -156,12 +156,12 @@ Then in each of the 5 `_common` page files (Operations and Masters), remove the 
 
 ### Step 3: Fix action stamp skip logic
 
-In `FRONTENT/src/components/Operations/_common/OperationViewDetails.vue`:
+In `FRONTENT/src/components/operation/_common/OperationViewDetails.vue`:
 - Remove the `action.action`-based stamp derivation
 - Replace with a call to `deriveActionStampHeaders(props.additionalActions)` from `appHelpers.js`
 - Use `filterDetailFields(props.resolvedFields, actionStampHeaders)` from `appHelpers.js`
 
-In `FRONTENT/src/components/Operations/_common/OperationViewParent.vue`:
+In `FRONTENT/src/components/operation/_common/OperationViewParent.vue`:
 - Same replacement — remove `action.action` logic, use `deriveActionStampHeaders` + `filterParentFields` from `appHelpers.js`
 
 **Files**: `OperationViewDetails.vue`, `OperationViewParent.vue`
@@ -203,7 +203,7 @@ Update the glob patterns. The existing `_custom/**/*.vue` glob already captures 
 
 #### 5a. Create new default sub-components
 
-Create the following three files in `FRONTENT/src/components/Operations/_common/`:
+Create the following three files in `FRONTENT/src/components/operation/_common/`:
 
 **`OperationListRecordsLoading.vue`**
 - Extracts the `v-if="loading"` block from `OperationListRecords`
@@ -240,7 +240,7 @@ Create the following three files in `FRONTENT/src/components/Operations/_common/
 
 #### 5c. Update `OperationListRecords` orchestrator call sites
 
-In `FRONTENT/src/pages/Operations/_common/IndexPage.vue`:
+In `FRONTENT/src/pages/operation/_common/IndexPage.vue`:
 - Pass `:resource-slug="resourceSlug"` and `:custom-u-i-name="customUIName"` to the `ListRecords` section component
 
 **Files**:
@@ -257,7 +257,7 @@ In `FRONTENT/src/pages/Operations/_common/IndexPage.vue`:
 
 Mirror of Step 5 for Masters scope.
 
-#### 6a. Create in `FRONTENT/src/components/Masters/_common/`:
+#### 6a. Create in `FRONTENT/src/components/master/_common/`:
 
 - **`MasterListRecordsLoading.vue`** — extracts loading spinner block
 - **`MasterListRecordsEmpty.vue`** — extracts empty state block
@@ -285,9 +285,9 @@ Pass `:resource-slug` and `:custom-u-i-name` down to the `ListRecords` section.
 
 ### Step 7: Extract `OperationViewLoading` and `OperationViewEmpty` from `ViewPage`
 
-In `FRONTENT/src/pages/Operations/_common/ViewPage.vue`, the loading and not-found states are inline `v-if`/`v-else-if` blocks.
+In `FRONTENT/src/pages/operation/_common/ViewPage.vue`, the loading and not-found states are inline `v-if`/`v-else-if` blocks.
 
-#### 7a. Create in `FRONTENT/src/components/Operations/_common/`:
+#### 7a. Create in `FRONTENT/src/components/operation/_common/`:
 
 **`OperationViewLoading.vue`**
 - Extracts the `v-if="loading"` spinner block
@@ -328,9 +328,9 @@ Replace inline blocks with:
 
 ### Step 8: Extract `MasterViewLoading` and `MasterViewEmpty` from Masters `ViewPage`
 
-Mirror of Step 7 for Masters scope. Read `FRONTENT/src/pages/Masters/_common/ViewPage.vue` first to confirm inline block structure, then:
+Mirror of Step 7 for Masters scope. Read `FRONTENT/src/pages/master/_common/ViewPage.vue` first to confirm inline block structure, then:
 
-- Create `MasterViewLoading.vue` and `MasterViewEmpty.vue` in `FRONTENT/src/components/Masters/_common/`
+- Create `MasterViewLoading.vue` and `MasterViewEmpty.vue` in `FRONTENT/src/components/master/_common/`
 - Update Masters `ViewPage.vue` `sectionDefs` and template in same pattern
 
 **Files**:
@@ -388,7 +388,7 @@ When a custom sub-component is resolved, `OperationViewParent` renders it via `<
 
 #### 10a. Create `OperationViewChild.vue`
 
-New file: `FRONTENT/src/components/Operations/_common/OperationViewChild.vue`
+New file: `FRONTENT/src/components/operation/_common/OperationViewChild.vue`
 
 This is the **default single-child display component**. Extracts the per-child card logic currently inline in `OperationViewChildren`:
 - Card wrapper with section title
@@ -454,7 +454,7 @@ Each resolved component is rendered with:
 
 Masters has no `ViewParent`. Mirror Step 10 for Masters, but only the child loop:
 
-- Create `FRONTENT/src/components/Masters/_common/MasterViewChild.vue` — same contract as `OperationViewChild`
+- Create `FRONTENT/src/components/master/_common/MasterViewChild.vue` — same contract as `OperationViewChild`
 - Update `MasterViewChildren.vue` to loop using 6-tier resolution
 - Update Masters `ViewPage.vue` to pass `resourceSlug`, `customUIName`, `entityName`, `additionalActions` to `ViewChildren`
 
@@ -491,7 +491,7 @@ Update the following registries to reflect renames and new components:
 - Add `MasterListRecordsRecord`, `MasterListRecordsLoading`, `MasterListRecordsEmpty`
 - Add `MasterViewChild`, `MasterViewLoading`, `MasterViewEmpty`
 
-**`FRONTENT/src/components/Operations/_common/`** — no separate registry; the Operations components are listed in the main REGISTRY if documented there, or in a local `_common/REGISTRY.md` if it exists. Check and update appropriately.
+**`FRONTENT/src/components/operation/_common/`** — no separate registry; the Operations components are listed in the main REGISTRY if documented there, or in a local `_common/REGISTRY.md` if it exists. Check and update appropriately.
 
 Check if there are `_custom/REGISTRY.md` files for both Masters and Operations and update if they exist.
 
@@ -511,9 +511,9 @@ The document must cover:
 
 2. **Directory structure** — where to place custom components:
    ```
-   Tenant + entity specific:   components/Operations/_custom/{CustomUIName}/{Entity}/{ComponentName}.vue
-   Tenant-wide (any entity):   components/Operations/_custom/{CustomUIName}/{ComponentName}.vue
-   Entity-specific (all):      components/Operations/{Entity}/{ComponentName}.vue
+   Tenant + entity specific:   components/operation/_custom/{CustomUIName}/{Entity}/{ComponentName}.vue
+   Tenant-wide (any entity):   components/operation/_custom/{CustomUIName}/{ComponentName}.vue
+   Entity-specific (all):      components/operation/{Entity}/{ComponentName}.vue
    ```
 
 3. **Naming conventions** — PascalCase rules, slug-to-PascalCase, no spaces, capitalise first character only
@@ -622,41 +622,41 @@ Use when overriding or creating custom section or sub-components for a masters r
 ### Deviations / Decisions
 - Gemini stopped after Step 16 output without updating the plan file; Claude Sonnet 4.6 resumed for verification and close.
 - DOC_ROUTING.md was already updated by Gemini (Steps 51–61 present); Step 16 marked complete after verification.
-- MasterRecordCard.vue was in `_common/` (not `Masters/` root) — deleted from `FRONTENT/src/components/Masters/_common/`.
+- MasterRecordCard.vue was in `_common/` (not `Masters/` root) — deleted from `FRONTENT/src/components/master/_common/`.
 
 ### Files Actually Changed
 - `FRONTENT/src/utils/appHelpers.js` (new)
 - `FRONTENT/src/composables/useResourceConfig.js`
 - `FRONTENT/src/composables/useSectionResolver.js`
-- `FRONTENT/src/components/Operations/_common/OperationViewDetails.vue`
-- `FRONTENT/src/components/Operations/_common/OperationViewParent.vue`
-- `FRONTENT/src/components/Operations/_common/OperationViewChildren.vue`
-- `FRONTENT/src/components/Operations/_common/OperationViewChild.vue` (new)
-- `FRONTENT/src/components/Operations/_common/OperationViewLoading.vue` (new)
-- `FRONTENT/src/components/Operations/_common/OperationViewEmpty.vue` (new)
-- `FRONTENT/src/components/Operations/_common/OperationListRecords.vue`
-- `FRONTENT/src/components/Operations/_common/OperationListRecordsRecord.vue` (new, replaces OperationRecordCard)
-- `FRONTENT/src/components/Operations/_common/OperationListRecordsLoading.vue` (new)
-- `FRONTENT/src/components/Operations/_common/OperationListRecordsEmpty.vue` (new)
-- `FRONTENT/src/components/Masters/_common/MasterViewChildren.vue`
-- `FRONTENT/src/components/Masters/_common/MasterViewChild.vue` (new)
-- `FRONTENT/src/components/Masters/_common/MasterViewLoading.vue` (new)
-- `FRONTENT/src/components/Masters/_common/MasterViewEmpty.vue` (new)
-- `FRONTENT/src/components/Masters/_common/MasterListRecords.vue`
-- `FRONTENT/src/components/Masters/_common/MasterListRecordsRecord.vue` (new, replaces MasterRecordCard)
-- `FRONTENT/src/components/Masters/_common/MasterListRecordsLoading.vue` (new)
-- `FRONTENT/src/components/Masters/_common/MasterListRecordsEmpty.vue` (new)
-- `FRONTENT/src/components/Masters/_common/MasterRecordCard.vue` (deleted)
-- `FRONTENT/src/pages/Operations/_common/IndexPage.vue`
-- `FRONTENT/src/pages/Operations/_common/ViewPage.vue`
-- `FRONTENT/src/pages/Operations/_common/AddPage.vue`
-- `FRONTENT/src/pages/Operations/_common/EditPage.vue`
-- `FRONTENT/src/pages/Operations/_common/ActionPage.vue`
-- `FRONTENT/src/pages/Masters/_common/IndexPage.vue`
-- `FRONTENT/src/pages/Masters/_common/ViewPage.vue`
-- `FRONTENT/src/pages/Masters/_common/AddPage.vue`
-- `FRONTENT/src/pages/Masters/_common/EditPage.vue`
-- `FRONTENT/src/pages/Masters/_common/ActionPage.vue`
+- `FRONTENT/src/components/operation/_common/OperationViewDetails.vue`
+- `FRONTENT/src/components/operation/_common/OperationViewParent.vue`
+- `FRONTENT/src/components/operation/_common/OperationViewChildren.vue`
+- `FRONTENT/src/components/operation/_common/OperationViewChild.vue` (new)
+- `FRONTENT/src/components/operation/_common/OperationViewLoading.vue` (new)
+- `FRONTENT/src/components/operation/_common/OperationViewEmpty.vue` (new)
+- `FRONTENT/src/components/operation/_common/OperationListRecords.vue`
+- `FRONTENT/src/components/operation/_common/OperationListRecordsRecord.vue` (new, replaces OperationRecordCard)
+- `FRONTENT/src/components/operation/_common/OperationListRecordsLoading.vue` (new)
+- `FRONTENT/src/components/operation/_common/OperationListRecordsEmpty.vue` (new)
+- `FRONTENT/src/components/master/_common/MasterViewChildren.vue`
+- `FRONTENT/src/components/master/_common/MasterViewChild.vue` (new)
+- `FRONTENT/src/components/master/_common/MasterViewLoading.vue` (new)
+- `FRONTENT/src/components/master/_common/MasterViewEmpty.vue` (new)
+- `FRONTENT/src/components/master/_common/MasterListRecords.vue`
+- `FRONTENT/src/components/master/_common/MasterListRecordsRecord.vue` (new, replaces MasterRecordCard)
+- `FRONTENT/src/components/master/_common/MasterListRecordsLoading.vue` (new)
+- `FRONTENT/src/components/master/_common/MasterListRecordsEmpty.vue` (new)
+- `FRONTENT/src/components/master/_common/MasterRecordCard.vue` (deleted)
+- `FRONTENT/src/pages/operation/_common/IndexPage.vue`
+- `FRONTENT/src/pages/operation/_common/ViewPage.vue`
+- `FRONTENT/src/pages/operation/_common/AddPage.vue`
+- `FRONTENT/src/pages/operation/_common/EditPage.vue`
+- `FRONTENT/src/pages/operation/_common/ActionPage.vue`
+- `FRONTENT/src/pages/master/_common/IndexPage.vue`
+- `FRONTENT/src/pages/master/_common/ViewPage.vue`
+- `FRONTENT/src/pages/master/_common/AddPage.vue`
+- `FRONTENT/src/pages/master/_common/EditPage.vue`
+- `FRONTENT/src/pages/master/_common/ActionPage.vue`
 - `FRONTENT/src/components/REGISTRY.md`
 - `Documents/OPERATION_CUSTOMIZATION.md` (new)
 - `Documents/MASTER_CUSTOMIZATION.md` (new)
@@ -674,3 +674,4 @@ Use when overriding or creating custom section or sub-components for a masters r
 
 ### Manual Actions Required
 - [ ] Restart Vite dev server after creating new component files (glob re-scan required)
+

@@ -1,11 +1,11 @@
-import { ref, computed, watch } from 'vue'
+﻿import { ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { useWarehouseStockList } from 'src/composables/masters/warehouses/useWarehouseStockList'
-import { useProductSkuResolver } from 'src/composables/masters/products/useProductSkuResolver'
+import { useWarehouseStockList } from 'src/composables/master/warehouses/useWarehouseStockList'
+import { useProductSkuResolver } from 'src/composables/master/products/useProductSkuResolver'
 import { batchRef } from 'src/composables/batchRefs'
 import { useRecord } from '../../resources/useRecord.js'
 
@@ -704,3 +704,4 @@ export function useWarehouseTransfers() {
     reload, addTransferItem, removeTransferItem, saveTransfer, executeAction, completeItem, completeWarehouseTransfer
   }
 }
+

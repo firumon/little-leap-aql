@@ -1,4 +1,4 @@
-# PLAN: Remove Compatibility Overheads (Menu + Scope Canonicalization)
+﻿# PLAN: Remove Compatibility Overheads (Menu + Scope Canonicalization)
 **Status**: COMPLETED
 **Created**: 2026-04-06
 **Created By**: Brain Agent (Codex)
@@ -13,7 +13,7 @@ Simplify architecture by removing unnecessary backward-compatibility logic intro
 ## Context
 Current code (verified) includes compatibility layers:
 - Menu schema supports both `group` and `groupPath` with fallback behavior (`resourceRegistry.gs`, `MainLayout.vue`).
-- Scope normalization accepts singular/plural aliases (`master/masters`, `operation/operations`, etc.).
+- Scope normalization accepts singular/plural aliases (`master/master`, `operation/operation`, etc.).
 - User requirement: no compatibility overhead because there are no deployed clients yet; use a single pure contract owned by our codebase.
 
 ## Pre-Conditions
@@ -140,3 +140,4 @@ Current code (verified) includes compatibility layers:
 - [ ] Run `AQL ?? > Resources > Sync APP.Resources from Code`.
 - [ ] Re-login frontend to refresh resources payload.
 - [ ] If payload contract changes require it, create new Web App deployment version.
+

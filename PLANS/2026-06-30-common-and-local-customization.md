@@ -1,4 +1,4 @@
-# PLAN: Refactor Common Page Orchestration and Section Override System
+﻿# PLAN: Refactor Common Page Orchestration and Section Override System
 **Status**: DRAFT
 **Created**: 2026-06-30
 **Created By**: Brain Agent (Antigravity)
@@ -542,8 +542,8 @@ export function useSectionResolver({ sectionName, page }) {
 * [AddPage.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/AddPage.vue)
 * [EditPage.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/EditPage.vue)
 * [ActionPage.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/ActionPage.vue)
-* [ViewPage.vue (Masters)](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/Masters/ViewPage.vue)
-* [ViewPage.vue (Operations)](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/Operations/ViewPage.vue)
+* [ViewPage.vue (Masters)](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/master/ViewPage.vue)
+* [ViewPage.vue (Operations)](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/operation/ViewPage.vue)
 
 #### 5.1 [IndexPage.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/IndexPage.vue) code:
 ```html
@@ -593,7 +593,7 @@ defineOptions({ name: 'CommonActionPage' })
 </script>
 ```
 
-#### 5.5 [ViewPage.vue (Masters)](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/Masters/ViewPage.vue) code:
+#### 5.5 [ViewPage.vue (Masters)](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/master/ViewPage.vue) code:
 ```html
 <template>
   <Page page="View" :sections="['Header', 'ToolBar', 'Content', 'Action']" />
@@ -605,7 +605,7 @@ defineOptions({ name: 'MastersViewPage' })
 </script>
 ```
 
-#### 5.6 [ViewPage.vue (Operations)](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/Operations/ViewPage.vue) code:
+#### 5.6 [ViewPage.vue (Operations)](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/operation/ViewPage.vue) code:
 ```html
 <template>
   <Page page="View" :sections="['Header', 'ToolBar', 'Content', 'Action']" />
@@ -882,6 +882,7 @@ const finalProps = computed(() => propModifier.value(preparedProps.value))
 
 ### Manual Verification
 1. Open the Master Product index page (should render using the default Records and Toolbar setup).
-2. Create a test JS modifier under `src/components/Masters/Products/Index/Toolbar.js` that changes standard labels. Ensure it loads and changes the labels.
-3. Create a test template-only component under `src/components/Masters/Products/Index/Toolbar.vue` with a simple placeholder template. Verify it overrides the toolbar template completely.
+2. Create a test JS modifier under `src/components/master/Products/Index/Toolbar.js` that changes standard labels. Ensure it loads and changes the labels.
+3. Create a test template-only component under `src/components/master/Products/Index/Toolbar.vue` with a simple placeholder template. Verify it overrides the toolbar template completely.
 4. Verify navigation flows (index -> add -> save, edit -> save) to ensure all route and event emits from Page.vue function as expected.
+

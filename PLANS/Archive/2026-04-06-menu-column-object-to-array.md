@@ -1,4 +1,4 @@
-# PLAN: Convert APP.Resources.Menu Column from JSON Object to JSON Array
+﻿# PLAN: Convert APP.Resources.Menu Column from JSON Object to JSON Array
 **Status**: COMPLETED
 **Created**: 2026-04-06
 **Created By**: Brain Agent (Claude Sonnet 4.6)
@@ -365,7 +365,7 @@ Every backend parser, admin dialog, auth payload builder, auth sorter, and every
 ---
 
 ### Step 12: Update Frontend — `ResourcePageShell.vue`
-- [ ] Open `FRONTENT/src/pages/Masters/ResourcePageShell.vue`.
+- [ ] Open `FRONTENT/src/pages/master/ResourcePageShell.vue`.
 - [ ] At line 24, change:
   ```javascript
   // BEFORE
@@ -380,14 +380,14 @@ Every backend parser, admin dialog, auth payload builder, auth sorter, and every
   ```
   This finds the menu item matching the current route to get the right page title.
 
-**Files**: `FRONTENT/src/pages/Masters/ResourcePageShell.vue` (line 24)
+**Files**: `FRONTENT/src/pages/master/ResourcePageShell.vue` (line 24)
 
 ---
 
 ### Step 13: Update Frontend — Master Components (pageTitle / pageDescription references)
 The following files reference `config?.ui?.menu?.pageTitle` or `config?.ui?.menu?.pageDescription` or `resource.ui?.menu?.pageTitle`. Each must be updated to read from the `menus` array (typically the first item, since these are CRUD views that correspond to the primary menu item):
 
-- [ ] `FRONTENT/src/components/Masters/MasterListHeader.vue` (lines 6-7):
+- [ ] `FRONTENT/src/components/master/MasterListHeader.vue` (lines 6-7):
   ```javascript
   // BEFORE
   config?.ui?.menu?.pageTitle
@@ -397,7 +397,7 @@ The following files reference `config?.ui?.menu?.pageTitle` or `config?.ui?.menu
   config?.ui?.menus?.[0]?.pageDescription || 'Manage records'
   ```
 
-- [ ] `FRONTENT/src/components/Masters/MasterAddHeader.vue` (line 6):
+- [ ] `FRONTENT/src/components/master/MasterAddHeader.vue` (line 6):
   ```javascript
   // BEFORE
   config?.ui?.menu?.pageTitle
@@ -405,7 +405,7 @@ The following files reference `config?.ui?.menu?.pageTitle` or `config?.ui?.menu
   config?.ui?.menus?.[0]?.pageTitle || config?.name
   ```
 
-- [ ] `FRONTENT/src/components/Masters/MasterEditHeader.vue` (line 6):
+- [ ] `FRONTENT/src/components/master/MasterEditHeader.vue` (line 6):
   ```javascript
   // BEFORE
   config?.ui?.menu?.pageTitle
@@ -413,7 +413,7 @@ The following files reference `config?.ui?.menu?.pageTitle` or `config?.ui?.menu
   config?.ui?.menus?.[0]?.pageTitle || config?.name
   ```
 
-- [ ] `FRONTENT/src/components/Masters/MasterViewChildren.vue` (lines 5, 7):
+- [ ] `FRONTENT/src/components/master/MasterViewChildren.vue` (lines 5, 7):
   ```javascript
   // BEFORE
   childRes.ui?.menu?.pageTitle
@@ -421,7 +421,7 @@ The following files reference `config?.ui?.menu?.pageTitle` or `config?.ui?.menu
   childRes.ui?.menus?.[0]?.pageTitle || childRes.name
   ```
 
-- [ ] `FRONTENT/src/components/Masters/MasterAddChildren.vue` (line 5):
+- [ ] `FRONTENT/src/components/master/MasterAddChildren.vue` (line 5):
   ```javascript
   // BEFORE
   group.resource.ui?.menu?.pageTitle
@@ -429,7 +429,7 @@ The following files reference `config?.ui?.menu?.pageTitle` or `config?.ui?.menu
   group.resource.ui?.menus?.[0]?.pageTitle || group.resource.name
   ```
 
-- [ ] `FRONTENT/src/components/Masters/MasterEditChildren.vue` (line 5):
+- [ ] `FRONTENT/src/components/master/MasterEditChildren.vue` (line 5):
   ```javascript
   // BEFORE
   group.resource.ui?.menu?.pageTitle
@@ -532,13 +532,13 @@ The following files reference `config?.ui?.menu?.pageTitle` or `config?.ui?.menu
 - `FRONTENT/src/composables/useMenuAccess.js`
 - `FRONTENT/src/router/index.js`
 - `FRONTENT/src/composables/useResourceConfig.js`
-- `FRONTENT/src/pages/Masters/ResourcePageShell.vue`
-- `FRONTENT/src/components/Masters/MasterListHeader.vue`
-- `FRONTENT/src/components/Masters/MasterAddHeader.vue`
-- `FRONTENT/src/components/Masters/MasterEditHeader.vue`
-- `FRONTENT/src/components/Masters/MasterViewChildren.vue`
-- `FRONTENT/src/components/Masters/MasterAddChildren.vue`
-- `FRONTENT/src/components/Masters/MasterEditChildren.vue`
+- `FRONTENT/src/pages/master/ResourcePageShell.vue`
+- `FRONTENT/src/components/master/MasterListHeader.vue`
+- `FRONTENT/src/components/master/MasterAddHeader.vue`
+- `FRONTENT/src/components/master/MasterEditHeader.vue`
+- `FRONTENT/src/components/master/MasterViewChildren.vue`
+- `FRONTENT/src/components/master/MasterAddChildren.vue`
+- `FRONTENT/src/components/master/MasterEditChildren.vue`
 - `FRONTENT/src/composables/useCompositeForm.js`
 - `Documents/LOGIN_RESPONSE.md`
 - `Documents/RESOURCE_COLUMNS_GUIDE.md`
@@ -560,3 +560,4 @@ The following files reference `config?.ui?.menu?.pageTitle` or `config?.ui?.menu
 - [ ] User: Run `AQL > Setup & Refactor > Sync APP.Resources from Code` in APP spreadsheet
 - [ ] User: Reload frontend app and verify sidebar
 - [ ] User: Test admin "Edit Resource" dialog on any resource
+

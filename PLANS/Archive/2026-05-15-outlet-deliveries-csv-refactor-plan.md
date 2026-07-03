@@ -1,4 +1,4 @@
-# PLAN: Phase 1 — Outlet Deliveries CSV Refactor (Remove OutletDeliveryItems, Add Criteria Grouping)
+﻿# PLAN: Phase 1 — Outlet Deliveries CSV Refactor (Remove OutletDeliveryItems, Add Criteria Grouping)
 **Status**: COMPLETED
 **Created**: 2026-05-15
 **Created By**: Brain Agent (Console)
@@ -12,9 +12,9 @@ Remove the `OutletDeliveryItems` child sheet and replace it with a CSV-stored `O
 ### Current State
 - [`OutletDeliveries`](Documents/OPERATION_SHEET_STRUCTURE.md:55) is a multi-outlet delivery header (`Date`, `UserName`, `Progress`, `Status`, progress stamps, cancel audit fields).
 - [`OutletDeliveryItems`](Documents/OPERATION_SHEET_STRUCTURE.md:56) is a child sheet linking one OD to one ORSI row through `OutletDeliveryCode` + `OutletRestockItemCode`.
-- [`FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js`](FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js) loads `OutletDeliveryItems` as a resource, uses `childDeliveryItems()` to look up ODI rows, and builds summaries/view rows by joining ODI → ORSI → Restock → Outlet.
-- [`FRONTENT/src/composables/operations/outlets/outletDeliveryPayload.js`](FRONTENT/src/composables/operations/outlets/outletDeliveryPayload.js) creates OD via `compositeSaveRequest` with ODI children, delivers via `resourceUpdateRequest` on ODI, cancels via `resourceBulkRequest` on ODI.
-- [`FRONTENT/src/pages/Operations/OutletDeliveries/AddPage.vue`](FRONTENT/src/pages/Operations/OutletDeliveries/AddPage.vue) renders a flat `AvailableOrsiPanel` with search — no criteria-based grouping.
+- [`FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js`](FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js) loads `OutletDeliveryItems` as a resource, uses `childDeliveryItems()` to look up ODI rows, and builds summaries/view rows by joining ODI → ORSI → Restock → Outlet.
+- [`FRONTENT/src/composables/operation/outlets/outletDeliveryPayload.js`](FRONTENT/src/composables/operation/outlets/outletDeliveryPayload.js) creates OD via `compositeSaveRequest` with ODI children, delivers via `resourceUpdateRequest` on ODI, cancels via `resourceBulkRequest` on ODI.
+- [`FRONTENT/src/pages/operation/OutletDeliveries/AddPage.vue`](FRONTENT/src/pages/operation/OutletDeliveries/AddPage.vue) renders a flat `AvailableOrsiPanel` with search — no criteria-based grouping.
 
 ### Target State
 - `OutletDeliveries` gains an `OutletRestockItemCodes` column holding CSV of ORI codes.
@@ -34,14 +34,14 @@ Remove the `OutletDeliveryItems` child sheet and replace it with a CSV-stored `O
 - [`Documents/MODULE_WORKFLOWS.md`](Documents/MODULE_WORKFLOWS.md:35-44,985-1009) — Outlet delivery workflow description.
 
 ### Source Code Reviewed
-- [`FRONTENT/src/pages/Operations/OutletDeliveries/AddPage.vue`](FRONTENT/src/pages/Operations/OutletDeliveries/AddPage.vue)
-- [`FRONTENT/src/pages/Operations/OutletDeliveries/IndexPage.vue`](FRONTENT/src/pages/Operations/OutletDeliveries/IndexPage.vue)
-- [`FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js`](FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js)
-- [`FRONTENT/src/composables/operations/outlets/outletDeliveryPayload.js`](FRONTENT/src/composables/operations/outlets/outletDeliveryPayload.js)
-- [`FRONTENT/src/composables/operations/outlets/outletStockLogic.js`](FRONTENT/src/composables/operations/outlets/outletStockLogic.js)
-- [`FRONTENT/src/composables/operations/outlets/outletOperationsMeta.js`](FRONTENT/src/composables/operations/outlets/outletOperationsMeta.js)
-- [`FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js`](FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js)
-- [`FRONTENT/src/components/Operations/Outlets/AvailableOrsiPanel.vue`](FRONTENT/src/components/Operations/Outlets/AvailableOrsiPanel.vue)
+- [`FRONTENT/src/pages/operation/OutletDeliveries/AddPage.vue`](FRONTENT/src/pages/operation/OutletDeliveries/AddPage.vue)
+- [`FRONTENT/src/pages/operation/OutletDeliveries/IndexPage.vue`](FRONTENT/src/pages/operation/OutletDeliveries/IndexPage.vue)
+- [`FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js`](FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js)
+- [`FRONTENT/src/composables/operation/outlets/outletDeliveryPayload.js`](FRONTENT/src/composables/operation/outlets/outletDeliveryPayload.js)
+- [`FRONTENT/src/composables/operation/outlets/outletStockLogic.js`](FRONTENT/src/composables/operation/outlets/outletStockLogic.js)
+- [`FRONTENT/src/composables/operation/outlets/outletOperationsMeta.js`](FRONTENT/src/composables/operation/outlets/outletOperationsMeta.js)
+- [`FRONTENT/src/composables/operation/outlets/outletOperationsBatch.js`](FRONTENT/src/composables/operation/outlets/outletOperationsBatch.js)
+- [`FRONTENT/src/components/operation/Outlets/AvailableOrsiPanel.vue`](FRONTENT/src/components/operation/Outlets/AvailableOrsiPanel.vue)
 - [`GAS/syncAppResources.gs`](GAS/syncAppResources.gs:895-928) — OutletDeliveries + OutletDeliveryItems resource config
 - [`GAS/setupOperationSheets.gs`](GAS/setupOperationSheets.gs:280-302) — Sheet schema definitions
 - [`GAS/Constants.gs`](GAS/Constants.gs:57-58) — Sheet name constants
@@ -82,7 +82,7 @@ Remove the `OutletDeliveryItems` child sheet and replace it with a CSV-stored `O
 **Pattern**: Resource deprecation by setting `IsActive: 'FALSE'` or removing entry.
 
 ### Step 3: Frontend — Create ORIO reactive source in composable
-- [ ] In [`FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js`](FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js), add a new `computed` named `orioRows` (Outlet Restock Item Overview).
+- [ ] In [`FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js`](FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js), add a new `computed` named `orioRows` (Outlet Restock Item Overview).
 - [ ] Remove the `deliveryItems` resource binding (line 18: `const deliveryItems = useResourceData(ref('OutletDeliveryItems'))`).
 - [ ] Remove `activeDeliveryItemCodes` computed (line 33) — no longer needed since there are no ODI rows to exclude.
 - [ ] `orioRows` must JOIN: `restockItems` + `restocks` + `outlets` + `skus` + `products` into enriched rows.
@@ -112,12 +112,12 @@ Remove the `OutletDeliveryItems` child sheet and replace it with a CSV-stored `O
     - `accessRegion`: `text(row.AccessRegion)` (passed through for OD creation)
 - [ ] This must be a SINGLE `computed` using `useDataStore` (through `restockItems.items.value`, etc.) — no watchers, no manual arrays. This satisfies Architecture Rules §5A (Vue Reactivity Contract).
 - [ ] Import `warehouses` resource: add `const warehouses = useResourceData(ref('Warehouses'))` and add `'Warehouses'` to all `reload*` fetch resource arrays.
-**Files**: `FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js`
+**Files**: `FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js`
 **Pattern**: Existing `enrichOrsi()` function pattern (line 56-59) but expanded to full row enrichment.
 **Rule**: Architecture Rules §5A — single reactive source, no parallel arrays.
 
 ### Step 4: Frontend — Implement criteria-based grouping in composable
-- [ ] In [`FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js`](FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js), define a `CRITERIA_MAP` constant (can be inside the function or as a module-level const) mapping 7 criteria to grouping functions:
+- [ ] In [`FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js`](FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js), define a `CRITERIA_MAP` constant (can be inside the function or as a module-level const) mapping 7 criteria to grouping functions:
 
 ```js
 const CRITERIA_MAP = {
@@ -148,12 +148,12 @@ const CRITERIA_MAP = {
 - [ ] Keep `selectedItemCodes` ref and `selectedItems`, `toggleItem`, `selectAllAvailable`, `clearSelection` as-is (they already work with ORI codes).
 - [ ] Add `invertSelection` function: toggle all currently unselected items.
 - [ ] Add `selectNone` function: alias for `clearSelection` (for symmetry with Select All/None/Invert).
-**Files**: `FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js`
+**Files**: `FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js`
 **Pattern**: Existing `availableItems` computed pattern extended.
 **Rule**: Architecture Rules §5A — all derived from single reactive source.
 
 ### Step 5: Frontend — Rewrite payload builders for CSV storage
-- [ ] In [`FRONTENT/src/composables/operations/outlets/outletDeliveryPayload.js`](FRONTENT/src/composables/operations/outlets/outletDeliveryPayload.js), rewrite `buildOdCreateBatchRequests()`:
+- [ ] In [`FRONTENT/src/composables/operation/outlets/outletDeliveryPayload.js`](FRONTENT/src/composables/operation/outlets/outletDeliveryPayload.js), rewrite `buildOdCreateBatchRequests()`:
   - Instead of `compositeSaveRequest` with children, use a `resourceCreateRequest` (for new OD) or `resourceUpdateRequest` (not needed for create) pattern.
   - Actually: use `resourceCreateRequest('OutletDeliveries', { ... })` pattern with `OutletRestockItemCodes: codes.join(',')` in the record data.
   - Since `resourceCreateRequest` returns an `{ action: 'create', ... }` request, and it returns the created code via `lastUpdatedAtResources`, we need to keep the existing pattern.
@@ -294,12 +294,12 @@ export function buildOdCancelBatchRequests(odRow = {}, allOrsis = [], actorName 
 - [ ] Export: keep all three builder functions with updated signatures.
 - [ ] Import `deliveredStamp` from within the file (define it locally or keep as is).
 - [ ] Remove `outletDeliveryCodeRef()` export if not used elsewhere (it was for batch refs from compositeSave).
-**Files**: `FRONTENT/src/composables/operations/outlets/outletDeliveryPayload.js`
+**Files**: `FRONTENT/src/composables/operation/outlets/outletDeliveryPayload.js`
 **Pattern**: Existing `resourceCreateRequest`, `resourceBulkRequest`, `resourceUpdateRequest` patterns from `outletOperationsBatch.js`.
 **Rule**: Architecture Rules §4 — payload building is business logic, belongs in composable.
 
 ### Step 6: Frontend — Rewrite composable delivery operations to use CSV
-- [ ] In [`FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js`](FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js):
+- [ ] In [`FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js`](FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js):
 - [ ] **Remove** `deliveryItems` resource binding.
 - [ ] **Remove** `activeDeliveryItemCodes` computed.
 - [ ] **Rewrite** `childDeliveryItems(code)` → `deliveryOrsiCodes(code)`:
@@ -425,15 +425,15 @@ export function buildOdCancelBatchRequests(odRow = {}, allOrsis = [], actorName 
   }
   ```
 - [ ] **Update** `reloadIndex`, `reloadAdd`, `reloadView` to remove `'OutletDeliveryItems'` from their resource fetch arrays. Add `'Warehouses'` to the list.
-- [ ] **Update** `OUTLET_OPERATION_RESOURCES` in [`outletOperationsMeta.js`](FRONTENT/src/composables/operations/outlets/outletOperationsMeta.js:23) — ensure `DeliveryItems` is removed from `OUTLET_RESOURCES`.
+- [ ] **Update** `OUTLET_OPERATION_RESOURCES` in [`outletOperationsMeta.js`](FRONTENT/src/composables/operation/outlets/outletOperationsMeta.js:23) — ensure `DeliveryItems` is removed from `OUTLET_RESOURCES`.
 - [ ] **Remove** `DELIVERY_ITEM_PROGRESS_ORDER` from `outletOperationsMeta.js` if not used elsewhere.
 - [ ] **Update** the return statement to expose new/changed functions: `orioRows`, `criteria`, `selectedWarehouseCode`, `warehouseOptions`, `groupedSearchResults`, `deliveryOrsiCodes`, `invertSelection`, `selectNone`.
-**Files**: `FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js`, `FRONTENT/src/composables/operations/outlets/outletOperationsMeta.js`
+**Files**: `FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js`, `FRONTENT/src/composables/operation/outlets/outletOperationsMeta.js`
 **Pattern**: Keep function signatures stable where possible; update internals only.
 **Rule**: Architecture Rules §4 + §5A.
 
 ### Step 7: Frontend — Redesign AddPage with criteria grouping
-- [ ] Rewrite [`FRONTENT/src/pages/Operations/OutletDeliveries/AddPage.vue`](FRONTENT/src/pages/Operations/OutletDeliveries/AddPage.vue) template:
+- [ ] Rewrite [`FRONTENT/src/pages/operation/OutletDeliveries/AddPage.vue`](FRONTENT/src/pages/operation/OutletDeliveries/AddPage.vue) template:
   - Keep `OutletHeaderPanel` at top.
   - Add a row with:
     - `q-btn-toggle` for criteria selection (Outlet, City, Product, Qty, Date, RequestUser, ApprovedUser) — use `flat`, `no-caps`, dense buttons.
@@ -460,12 +460,12 @@ export function buildOdCancelBatchRequests(odRow = {}, allOrsis = [], actorName 
 - [ ] Wire up new exports from `useOutletDeliveries`.
 - [ ] **No custom CSS** — use only Quasar utility classes: `q-pa-sm`, `q-mb-sm`, `q-gutter-sm`, `text-caption`, `text-weight-medium`, `row items-center`, etc.
 - [ ] **No `q-list` for the items directly** — use `q-card` per group container, `q-item` inside each card. The task says "use `q-card` per group with `q-item` rows inside".
-**Files**: `FRONTENT/src/pages/Operations/OutletDeliveries/AddPage.vue`
+**Files**: `FRONTENT/src/pages/operation/OutletDeliveries/AddPage.vue`
 **Pattern**: Existing Quasar component usage in the project (e.g., IndexPage groups use `q-card` with `q-card-section`).
 **Rule**: Architecture Rules §5 — components only use composables, no business logic.
 
 ### Step 8: Frontend — Update IndexPage to use CSV-based summaries
-- [ ] In [`FRONTENT/src/pages/Operations/OutletDeliveries/IndexPage.vue`](FRONTENT/src/pages/Operations/OutletDeliveries/IndexPage.vue):
+- [ ] In [`FRONTENT/src/pages/operation/OutletDeliveries/IndexPage.vue`](FRONTENT/src/pages/operation/OutletDeliveries/IndexPage.vue):
 - [ ] The template already uses `deliverySummary(row)` which now reads from CSV — no template changes needed.
 - [ ] The script section already destructures what it needs — ensure `deliverySummary` is still in the return from the composable.
 - [ ] The `availableItems` banner section (lines 30-38) should still work — it shows allocated items not yet in any delivery. With the new `orioRows` + exclusion logic, this should still function.
@@ -473,12 +473,12 @@ export function buildOdCancelBatchRequests(odRow = {}, allOrsis = [], actorName 
 - [ ] Update `deliverySummary` display to show proper outlet names and counts — the CSV backing ensures this works.
 - [ ] Remove the `<style scoped>` block with `.delivery-page`, `.delivery-search`, `.delivery-header__title` — replace with Quasar utility classes instead. Add `class="q-pb-xl"` to the `q-page`.
 - [ ] Consider adding collapsible groups if not already present (the `expandedGroup` mechanism exists but template uses flat `v-for`). Update to use `q-expansion-item` for progress-based groups if desired, but only if it doesn't conflict with data model.
-**Files**: `FRONTENT/src/pages/Operations/OutletDeliveries/IndexPage.vue`
+**Files**: `FRONTENT/src/pages/operation/OutletDeliveries/IndexPage.vue`
 **Pattern**: Keep template thin, rely on composable for all business logic.
 **Rule**: Architecture Rules §5 + §9 — no custom CSS.
 
 ### Step 9: Cleanup stale references
-- [ ] Remove [`AvailableOrsiPanel.vue`](FRONTENT/src/components/Operations/Outlets/AvailableOrsiPanel.vue) if no longer used by any page (not just OutletDeliveries — check if any other page imports it).
+- [ ] Remove [`AvailableOrsiPanel.vue`](FRONTENT/src/components/operation/Outlets/AvailableOrsiPanel.vue) if no longer used by any page (not just OutletDeliveries — check if any other page imports it).
 - [ ] Search for any remaining references to `OutletDeliveryItems` or `deliveryItems` in frontend code:
   ```
   rg -n "OutletDeliveryItems|deliveryItems|DELIVERY_ITEM_PROGRESS" FRONTENT/src
@@ -487,7 +487,7 @@ export function buildOdCancelBatchRequests(odRow = {}, allOrsis = [], actorName 
   ```
   rg -n "OutletDeliveryItems|OUTLET_DELIVERY_ITEMS" GAS
   ```
-- [ ] Remove `DELIVERY_ITEM_PROGRESS_ORDER` from [`outletOperationsMeta.js`](FRONTENT/src/composables/operations/outlets/outletOperationsMeta.js:31) if not used.
+- [ ] Remove `DELIVERY_ITEM_PROGRESS_ORDER` from [`outletOperationsMeta.js`](FRONTENT/src/composables/operation/outlets/outletOperationsMeta.js:31) if not used.
 - [ ] Update [`FRONTENT/src/composables/REGISTRY.md`](FRONTENT/src/composables/REGISTRY.md) — add `orioRows`, `criteria`, `selectedWarehouseCode`, `warehouseOptions`, `groupedSearchResults` to the `useOutletDeliveries` entry. Remove `deliveryItems` from `OUTLET_RESOURCES` description.
 - [ ] Update [`FRONTENT/src/components/REGISTRY.md`](FRONTENT/src/components/REGISTRY.md) — remove `AvailableOrsiPanel` if deleted, or update its description.
 - [ ] Update [`Documents/CONTEXT_HANDOFF.md`](Documents/CONTEXT_HANDOFF.md) with the CSV refactor state.
@@ -559,12 +559,12 @@ The Build Agent MUST update this checklist after completing each numbered sub-ta
 - `GAS/setupOperationSheets.gs`
 - `GAS/syncAppResources.gs`
 - `GAS/Constants.gs`
-- `FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js`
-- `FRONTENT/src/composables/operations/outlets/outletDeliveryPayload.js`
-- `FRONTENT/src/composables/operations/outlets/outletOperationsMeta.js`
-- `FRONTENT/src/pages/Operations/OutletDeliveries/AddPage.vue`
-- `FRONTENT/src/pages/Operations/OutletDeliveries/IndexPage.vue`
-- `FRONTENT/src/components/Operations/Outlets/AvailableOrsiPanel.vue` (if deleted)
+- `FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js`
+- `FRONTENT/src/composables/operation/outlets/outletDeliveryPayload.js`
+- `FRONTENT/src/composables/operation/outlets/outletOperationsMeta.js`
+- `FRONTENT/src/pages/operation/OutletDeliveries/AddPage.vue`
+- `FRONTENT/src/pages/operation/OutletDeliveries/IndexPage.vue`
+- `FRONTENT/src/components/operation/Outlets/AvailableOrsiPanel.vue` (if deleted)
 - `Documents/OPERATION_SHEET_STRUCTURE.md`
 - `Documents/MODULE_WORKFLOWS.md`
 - `Documents/RESOURCE_COLUMNS_GUIDE.md`
@@ -580,3 +580,4 @@ The Build Agent MUST update this checklist after completing each numbered sub-ta
 - [ ] User runs "Sync APP.Resources from Code" from AQL menu
 - [ ] (Optional) User confirms destructive sheet data deletion for `OutletDeliveryItems` if full removal chosen
 - [ ] User tests: create delivery, index view, deliver item, cancel draft
+

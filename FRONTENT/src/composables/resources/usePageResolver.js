@@ -1,4 +1,4 @@
-import { ref, watch, computed, shallowRef, markRaw } from 'vue'
+﻿import { ref, watch, computed, shallowRef, markRaw } from 'vue'
 import { useRoute } from 'vue-router'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { toPascalCase } from 'src/utils/appHelpers'
@@ -6,7 +6,7 @@ import { toPascalCase } from 'src/utils/appHelpers'
 // Vite statically discovers all page Vue files under src/pages
 const pageModules = import.meta.glob('../../pages/**/*.vue')
 
-// Build normalized registry (e.g., "pages/Masters/Products/ViewPage.vue")
+// Build normalized registry (e.g., "pages/master/Products/ViewPage.vue")
 const registry = {}
 Object.keys(pageModules).forEach((rawPath) => {
   const normalizedKey = rawPath.replace(/^\.\.\/\.\.\/pages\//, 'pages/')
@@ -141,3 +141,4 @@ export function usePageResolver() {
     }))
   }
 }
+

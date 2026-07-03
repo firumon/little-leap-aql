@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="stock-entry-grid">
     <div class="row q-mb-md">
       <q-input
@@ -148,7 +148,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useStockMovements } from 'src/composables/operations/stock/useStockMovements'
+import { useStockMovements } from 'src/composables/operation/stock/useStockMovements'
 
 const props = defineProps({
   warehouseCode: {
@@ -362,3 +362,4 @@ async function saveChanges() {
   border: 1px dashed #ccc;
 }
 </style>
+

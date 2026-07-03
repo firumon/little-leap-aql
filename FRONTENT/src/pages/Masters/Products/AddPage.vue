@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="add-page">
     <q-card flat bordered class="page-card">
       <q-card-section class="q-pa-sm q-pa-md">
@@ -173,7 +173,7 @@
 </template>
 
 <script setup>
-import { useProductCreateForm } from 'src/composables/masters/products/useProductCreateForm'
+import { useProductCreateForm } from 'src/composables/master/products/useProductCreateForm'
 
 const {
   parentForm,
@@ -207,3 +207,4 @@ const {
   opacity: 0.6;
 }
 </style>
+

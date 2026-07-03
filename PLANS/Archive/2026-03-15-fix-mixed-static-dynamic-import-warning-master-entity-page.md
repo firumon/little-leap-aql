@@ -1,4 +1,4 @@
-# PLAN: Fix Mixed Static+Dynamic Import Warning for MasterEntityPage
+﻿# PLAN: Fix Mixed Static+Dynamic Import Warning for MasterEntityPage
 **Status**: COMPLETED
 **Created**: 2026-03-15
 **Created By**: Brain Agent
@@ -21,7 +21,7 @@ Eliminate Vite warning about `MasterEntityPage.vue` being both statically and dy
 ### Step 1: Unify module loading approach in MasterIndexPage
 - [x] Replace static fallback import with lazy loader for `MasterEntityPage.vue`.
 - [x] Reuse loader for all fallback branches while keeping behavior unchanged.
-**Files**: `FRONTENT/src/pages/Masters/MasterIndexPage.vue`
+**Files**: `FRONTENT/src/pages/master/MasterIndexPage.vue`
 **Pattern**: Existing `import.meta.glob`-based dynamic discovery.
 **Rule**: Avoid mixing static and dynamic imports of the same module.
 
@@ -52,7 +52,7 @@ Eliminate Vite warning about `MasterEntityPage.vue` being both statically and dy
 - [ ] `[!]` Issue/blocker:
 
 ### Files Actually Changed
-- `FRONTENT/src/pages/Masters/MasterIndexPage.vue`
+- `FRONTENT/src/pages/master/MasterIndexPage.vue`
 - `PLANS/2026-03-15-fix-mixed-static-dynamic-import-warning-master-entity-page.md`
 
 ### Validation Performed
@@ -61,3 +61,4 @@ Eliminate Vite warning about `MasterEntityPage.vue` being both statically and dy
 
 ### Manual Actions Required
 - [ ] Restart Vite dev server and verify warning is absent.
+

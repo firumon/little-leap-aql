@@ -1,4 +1,4 @@
-# AQL Frontend Architecture Rules (STRICT)
+﻿# AQL Frontend Architecture Rules (STRICT)
 
 ---
 
@@ -64,8 +64,8 @@
 ## 8. COMPONENT/COMPOSABLE SCOPING & REGISTRY
 To support thin page design, organize components/composables strictly by scope:
 * **Global Shared (`src/components/shared/` & `src/composables/shared/`)**: Stateless, universally reusable blocks. Log in [components/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md).
-* **Module Shared (`src/components/Operations/` / `src/composables/operations/`)**: Shared across the module. Log in local module registry.
-* **Feature Shared (`src/components/Operations/Outlets/` / `src/composables/operations/outlets/`)**: Shared across the feature. Log in feature registry.
+* **Module Shared (`src/components/operation/` / `src/composables/operation/`)**: Shared across the module. Log in local module registry.
+* **Feature Shared (`src/components/operation/Outlets/` / `src/composables/operation/outlets/`)**: Shared across the feature. Log in feature registry.
 * **Page-Private (nested subfolders)**: Unique to a page. Do NOT log in any registry.
 * **Registry Check & Reuse**: Before implementing any UI requirement, always check registries and existing shared components/composables first — for example, use `AqlList.vue` for lists rather than raw `div` nesting. If no shared component fits and the need is trivial, use only Quasar components with Quasar helper classes (no raw HTML elements, no custom CSS). If neither approach works and a new component/composable must be created, design it to be reusable for future similar requirements and expose customization via props or arguments.
 
@@ -75,3 +75,4 @@ To support thin page design, organize components/composables strictly by scope:
 * **Naming**: Stores → `useXStore`, Composables → `useX`, Services → `XService`.
 * **File Size**: Max ~400 lines per file; split logically if exceeded.
 * **Refactor Freedom**: Feel free to move, split, merge, or delete files to optimize for clarity, maintainability, and architectural compliance.
+

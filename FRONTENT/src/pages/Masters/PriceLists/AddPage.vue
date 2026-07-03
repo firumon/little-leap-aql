@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="add-page">
     <q-card flat bordered class="page-card">
       <q-card-section class="q-pa-sm q-pa-md">
@@ -96,7 +96,7 @@ import { watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { usePriceListCreateForm } from 'src/composables/masters/priceLists/usePriceListCreateForm'
+import { usePriceListCreateForm } from 'src/composables/master/priceLists/usePriceListCreateForm'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 
 const $q = useQuasar()
@@ -164,3 +164,4 @@ async function handleCreate() {
   gap: 8px;
 }
 </style>
+

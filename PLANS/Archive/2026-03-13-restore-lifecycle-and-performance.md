@@ -1,4 +1,4 @@
-# PLAN: Restore Environment and Fix UI/UX Lifecycle Issues
+﻿# PLAN: Restore Environment and Fix UI/UX Lifecycle Issues
 **Status**: IN_PROGRESS
 **Created**: 2026-03-13
 **Created By**: Brain Agent
@@ -18,7 +18,7 @@ Restore the `idb` library to its official state, fix the hanging login redirecti
 - **Fix**: 
     1. Ensure `MasterEntityPage.vue` retrieves cached items immediately when the slug changes.
     2. Background sync should only trigger if cache is stale or missing.
-**Files**: `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+**Files**: `FRONTENT/src/pages/master/MasterEntityPage.vue`
 
 ## Step 3: Fix Logout across Master/Warehouse Pages
 - **Issue**: Logout button fails on specific pages.
@@ -38,3 +38,4 @@ Restore the `idb` library to its official state, fix the hanging login redirecti
 - Verify IDB persistence across page switches.
 - Verify Logout from Products page works.
 - Verify Login redirects instantly to Dashboard.
+

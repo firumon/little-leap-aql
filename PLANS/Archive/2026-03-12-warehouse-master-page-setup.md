@@ -1,4 +1,4 @@
-# PLAN: Warehouse Master Page Setup
+﻿# PLAN: Warehouse Master Page Setup
 **Status**: COMPLETED
 **Created**: 2026-03-12
 **Created By**: Brain Agent
@@ -9,7 +9,7 @@ Ensure Warehouse page is set up as a Master entity using the same resource-drive
 
 ## Context
 - User requested: "setup a Warehouse page" and "follow same as Product".
-- Current architecture uses generic master routing (`/masters/:resourceSlug`) and APP.Resources-driven UI/runtime metadata.
+- Current architecture uses generic master routing (`/master/:resourceSlug`) and APP.Resources-driven UI/runtime metadata.
 - Warehouse should be configured through resource metadata, not custom hardcoded page logic.
 
 ## Pre-Conditions
@@ -22,7 +22,7 @@ Ensure Warehouse page is set up as a Master entity using the same resource-drive
 ### Step 1: Verify Frontend Master Routing/Rendering
 - [x] Confirm Warehouse route path and master UI metadata are available for dynamic page rendering.
 - [x] Confirm master page form/table generation follows the same generic path used by Product.
-**Files**: `FRONTENT/src/pages/Masters/MasterEntityPage.vue`, `FRONTENT/src/router/routes.js`, `FRONTENT/src/config/masters.js`
+**Files**: `FRONTENT/src/pages/master/MasterEntityPage.vue`, `FRONTENT/src/router/routes.js`, `FRONTENT/src/config/master.js`
 **Pattern**: Product and all masters use `MasterEntityPage.vue` + resource metadata.
 **Rule**: No hardcoded per-entity page required for master CRUD unless explicitly requested.
 
@@ -45,7 +45,7 @@ Ensure Warehouse page is set up as a Master entity using the same resource-drive
 - [x] `Documents/CONTEXT_HANDOFF.md` update not required (no architecture/process change introduced).
 
 ## Acceptance Criteria
-- [x] Warehouse is configured as master resource with route `/masters/warehouses`.
+- [x] Warehouse is configured as master resource with route `/master/warehouses`.
 - [x] Warehouse CRUD uses the same generic master API/page flow as Product.
 - [x] No regression in existing master entity architecture.
 
@@ -71,3 +71,4 @@ Ensure Warehouse page is set up as a Master entity using the same resource-drive
 - [x] In APP Apps Script, run `syncAppResourcesFromCode(true)` (or menu: `AQL > Setup & Refactor > Sync APP.Resources from Code`).
 - [x] Run `setupMasterSheets()` (or menu: `AQL > Setup & Refactor > Refactor MASTER Sheets`).
 - [x] Ensure target user role has `Warehouses` read/write permissions in `RolePermissions`.
+

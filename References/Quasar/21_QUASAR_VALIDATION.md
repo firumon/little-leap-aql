@@ -1,4 +1,4 @@
-# Quasar Validation: Input & Form Rules
+﻿# Quasar Validation: Input & Form Rules
 
 This reference document describes how to implement and coordinate validation rules on Quasar input fields using native validation arrays, dynamic validation settings, and composable-based schemas.
 
@@ -66,7 +66,7 @@ Below is an example of validation rules applied to form fields, featuring local 
 <script setup>
 import { ref } from 'vue'
 import { useValidationRules } from 'src/composables/useValidationRules'
-import { useSkuValidation } from 'src/composables/operations/useSkuValidation'
+import { useSkuValidation } from 'src/composables/operation/useSkuValidation'
 
 const emit = defineEmits(['save', 'cancel'])
 
@@ -132,3 +132,4 @@ export function useValidationRules() {
 
 * **Debouncing:** When validation relies on network requests (such as querying a database to verify uniqueness), wrapping the validation callback in a debouncing utility helps reduce server loads by limiting request frequency.
 * **Loading States:** Binding the input's `:loading` state to a boolean flag provides visual feedback that a background check is currently active.
+

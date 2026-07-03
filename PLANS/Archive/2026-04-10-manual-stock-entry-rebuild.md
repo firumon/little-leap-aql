@@ -1,4 +1,4 @@
-# PLAN: Manual Stock Entry — Mobile-First Editable Stock Register
+﻿# PLAN: Manual Stock Entry — Mobile-First Editable Stock Register
 **Status**: DONE
 **Created**: 2026-04-10
 **Created By**: Brain Agent (Claude Code)
@@ -13,7 +13,7 @@ Rebuild the Manual Stock Entry page as a mobile-first editable spreadsheet that 
   - `action=create, resource=StockMovements, records: [{WarehouseCode, StorageName, ReferenceType: 'DirectEntry', SKU, QtyChange}]`
   - GAS `dispatchBulkCreateRecords` → writes ledger rows → PostAction `handleStockMovementsBulkSave_afterBulk` → upserts `WarehouseStorages`
 - Existing composable `useStockMovements.js` has `loadStoragesForWarehouse()` and `submitBatch()` that can be reused/adapted.
-- Menu item already exists in `syncAppResources.gs` routing to `/operations/manage-stock?referenceType=DirectEntry`.
+- Menu item already exists in `syncAppResources.gs` routing to `/operation/manage-stock?referenceType=DirectEntry`.
 
 ## Design Spec (Confirmed)
 
@@ -53,7 +53,7 @@ Since this is mobile-first, each "row" should be a compact card/row optimized fo
 ## Pre-Conditions
 - [x] Backend `StockMovements` + `handleStockMovementsBulkSave` already works
 - [x] `useStockMovements.js` composable exists with `loadStoragesForWarehouse()` and `submitBatch()`
-- [x] Route `/operations/manage-stock` exists in `routes.js`
+- [x] Route `/operation/manage-stock` exists in `routes.js`
 - [x] Menu item exists in `syncAppResources.gs`
 
 ## Steps
@@ -110,8 +110,8 @@ This is the core of the feature — the mobile-first editable stock register.
 **Files**: Both REGISTRY.md files
 
 ### Step 6: Verify Route & Menu
-- [x] Confirm `/operations/manage-stock` route in `routes.js` still points to the new `ManageStockPage.vue` (same path, same file name — should work without changes)
-- [x] Confirm menu item in `syncAppResources.gs` routes to `/operations/manage-stock?referenceType=DirectEntry` — no changes needed
+- [x] Confirm `/operation/manage-stock` route in `routes.js` still points to the new `ManageStockPage.vue` (same path, same file name — should work without changes)
+- [x] Confirm menu item in `syncAppResources.gs` routes to `/operation/manage-stock?referenceType=DirectEntry` — no changes needed
 **Files**: `FRONTENT/src/router/routes.js`, `GAS/syncAppResources.gs`
 **Rule**: No route or backend changes
 
@@ -163,3 +163,4 @@ This is the core of the feature — the mobile-first editable stock register.
 
 ### Manual Actions Required
 - [x] None — no GAS changes, no sheet changes
+

@@ -1,4 +1,4 @@
-# AQL Unified Action Customization & Overriding System
+﻿# AQL Unified Action Customization & Overriding System
 
 This document outlines the architecture, configuration, and overriding protocol for page-level actions (floating buttons, sticky form bars, workflow executions, dialogs) within the AQL Quasar/Vue 3 frontend.
 
@@ -174,7 +174,7 @@ You can override actions at the **logic modifier level (JS)** or **template leve
 ### 5.1 Local JS Logic Modifiers (Properties Customization)
 Create a `.js` file to modify properties without altering the visual structure. `useCommonSection` automatically merges and evaluates these.
 
-#### Example: `src/components/Masters/Products/Index/FormSubmit.js`
+#### Example: `src/components/master/Products/Index/FormSubmit.js`
 ```javascript
 export default {
   // Override label based on page state
@@ -193,7 +193,7 @@ To change slots or visual output, wrap the default component in a `.vue` file.
 > [!IMPORTANT]
 > **Always use `defineOptions({ inheritAttrs: false })` and bind `$attrs` FIRST to prevent parent attributes from overwriting your local properties.**
 
-#### Example: `src/components/Masters/Products/Index/FormCancel.vue`
+#### Example: `src/components/master/Products/Index/FormCancel.vue`
 ```html
 <template>
   <!-- inheritAttrs: false ensures props from FormActions merge safely -->
@@ -214,7 +214,7 @@ defineEmits(['cancel'])
 ```
 
 ### 5.3 Overriding Parents and Rendering Children
-If you write a full override for a parent orchestrator (e.g. `src/components/Masters/Products/View/Actions.vue`), you are responsible for rendering any children or sub-sections needed.
+If you write a full override for a parent orchestrator (e.g. `src/components/master/Products/View/Actions.vue`), you are responsible for rendering any children or sub-sections needed.
 
 #### Example: Custom `View/Actions.vue` Rendering Custom + Default Sub-sections:
 ```html
@@ -276,3 +276,4 @@ Some parent components explicitly expose their configuration context as scoped s
   </q-fab>
 </template>
 ```
+

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page class="q-pa-md">
     <div class="review-wrap">
       <div v-if="loading" class="page-state column items-center justify-center">
@@ -182,7 +182,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { usePurchaseRequisitionApprovalFlow } from 'src/composables/operations/purchaseRequisitions/usePurchaseRequisitionApprovalFlow'
+import { usePurchaseRequisitionApprovalFlow } from 'src/composables/operation/purchaseRequisitions/usePurchaseRequisitionApprovalFlow'
 
 const {
   nav,
@@ -228,3 +228,4 @@ const columns = computed(() => ([
   color: #334155;
 }
 </style>
+

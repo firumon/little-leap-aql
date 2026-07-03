@@ -1,4 +1,4 @@
-# PLAN: Fix Master Page Template Error
+﻿# PLAN: Fix Master Page Template Error
 **Status**: COMPLETED
 **Created**: 2026-03-12
 **Created By**: Brain Agent
@@ -21,14 +21,14 @@ A recent refactor of `MasterEntityPage.vue` introduced a `v-else-if` inside a `v
 - [ ] Re-organize the top-level template elements so that `v-if="config"`, `v-else-if="!loading"`, and any other conditional root elements are siblings.
 - [ ] Ensure the FAB and Dialog are moved outside or included appropriately in the `v-if="config"` block if they depend on `config`.
 - [ ] Ensure the overall page structure remains "stunning" and mobile-first.
-**Files**: `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+**Files**: `FRONTENT/src/pages/master/MasterEntityPage.vue`
 **Pattern**: Proper Vue template conditional structures.
 **Rule**: `v-else/v-else-if` must be adjacent siblings of a `v-if`.
 
 ### Step 2: Verify Compilation
 - [ ] Run `lint` on the file to catch syntax/template errors.
 - [ ] Confirm no more `plugin:vite:vue` errors are present.
-**Files**: `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+**Files**: `FRONTENT/src/pages/master/MasterEntityPage.vue`
 
 ## Documentation Updates Required
 - [ ] Update `Documents/CONTEXT_HANDOFF.md` to reflect the template fix.
@@ -50,7 +50,7 @@ A recent refactor of `MasterEntityPage.vue` introduced a `v-else-if` inside a `v
 - [ ] `[!]` Issue/blocker:
 
 ### Files Actually Changed
-- `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+- `FRONTENT/src/pages/master/MasterEntityPage.vue`
 
 ### Validation Performed
 - [ ] Unit/manual validation completed
@@ -58,3 +58,4 @@ A recent refactor of `MasterEntityPage.vue` introduced a `v-else-if` inside a `v
 
 ### Manual Actions Required
 - [ ] None.
+

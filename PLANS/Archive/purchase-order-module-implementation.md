@@ -1,4 +1,4 @@
-# PLAN: Purchase Order Module Implementation
+﻿# PLAN: Purchase Order Module Implementation
 **Status**: COMPLETED
 **Created**: 2026-04-26
 **Created By**: Brain Agent (Codex GPT-5)
@@ -83,52 +83,52 @@ Out of scope:
 - Related resources: `SupplierQuotations`, `PurchaseOrders`, `PurchaseOrderItems`.
 - Dependencies: `resourceRegistry.gs`, login authorization payload, frontend menu.
 
-### `FRONTENT/src/composables/operations/purchaseOrders/purchaseOrderMeta.js`
+### `FRONTENT/src/composables/operation/purchaseOrders/purchaseOrderMeta.js`
 - Action: create.
 - Purpose: PO labels, option mapping, progress grouping, dates, and currency formatting.
 - Dependencies: none except JavaScript runtime.
 
-### `FRONTENT/src/composables/operations/purchaseOrders/purchaseOrderPayload.js`
+### `FRONTENT/src/composables/operation/purchaseOrders/purchaseOrderPayload.js`
 - Action: create.
 - Purpose: stateless PO defaults, numeric/flag helpers, payload builders, and validation.
 - Dependencies: `purchaseOrderMeta.js`.
 
-### `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderQuantities.js`
+### `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderQuantities.js`
 - Action: create.
 - Purpose: frontend-only remaining quantity and PO duplication rules.
 - Dependencies: `purchaseOrderPayload.js`.
 
-### `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderTotals.js`
+### `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderTotals.js`
 - Action: create.
 - Purpose: reactive subtotal, extra charges, and total calculations.
 - Dependencies: Vue `computed`, `watch`; `purchaseOrderPayload.js`; `purchaseOrderMeta.js`.
 
-### `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderIndex.js`
+### `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderIndex.js`
 - Action: create.
 - Purpose: PO index view model with grouping, search, data loading, and navigation.
 - Dependencies: `useResourceData`, `useResourceConfig`, `useResourceNav`, `purchaseOrderMeta.js`.
 
-### `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderCreateFlow.js`
+### `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderCreateFlow.js`
 - Action: create.
 - Purpose: Add-page business flow from Supplier Quotation to PO save.
 - Dependencies: `useResourceData`, `useWorkflowStore`, `useResourceNav`, `useAuthStore`, payload/totals/quantity composables.
 
-### `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderView.js`
+### `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderView.js`
 - Action: create.
 - Purpose: read-only PO view, source quotation display, item snapshot, totals, and action execution.
 - Dependencies: `useResourceConfig`, `isActionVisible`, `useResourceData`, `useWorkflowStore`, `useResourceNav`, meta/payload helpers.
 
-### `FRONTENT/src/pages/Operations/PurchaseOrders/IndexPage.vue`
+### `FRONTENT/src/pages/operation/PurchaseOrders/IndexPage.vue`
 - Action: create.
 - Purpose: custom PO index page.
 - Dependencies: `usePurchaseOrderIndex`.
 
-### `FRONTENT/src/pages/Operations/PurchaseOrders/AddPage.vue`
+### `FRONTENT/src/pages/operation/PurchaseOrders/AddPage.vue`
 - Action: create.
 - Purpose: custom PO creation page.
 - Dependencies: `usePurchaseOrderCreateFlow`.
 
-### `FRONTENT/src/pages/Operations/PurchaseOrders/ViewPage.vue`
+### `FRONTENT/src/pages/operation/PurchaseOrders/ViewPage.vue`
 - Action: create.
 - Purpose: custom PO view/action page.
 - Dependencies: `usePurchaseOrderView`.
@@ -138,14 +138,14 @@ Out of scope:
 - Purpose: register new reusable PO composables.
 - Dependencies: created composable files.
 
-### `FRONTENT/src/pages/Operations/_custom/REGISTRY.md`
+### `FRONTENT/src/pages/operation/_custom/REGISTRY.md`
 - Action: modify only if current registry policy requires listing entity custom pages. If it only tracks tenant `_custom` pages, leave unchanged.
 - Purpose: avoid stale page override docs.
 - Dependencies: none.
 
 ### `Documents/MODULE_WORKFLOWS.md`
 - Action: modify.
-- Purpose: add Purchase Order workflow section and fix `/operations/quotations` to `/operations/supplier-quotations`.
+- Purpose: add Purchase Order workflow section and fix `/operation/quotations` to `/operation/supplier-quotations`.
 - Dependencies: implemented PO behavior.
 
 ### `Documents/PROCUREMENT_SHEET_STRUCTURE.md`
@@ -187,7 +187,7 @@ Out of scope:
 - Connects to: `setupOperationSheets.gs`, frontend option mapping.
 
 ### `purchaseOrderMeta` exports
-- File: `FRONTENT/src/composables/operations/purchaseOrders/purchaseOrderMeta.js`
+- File: `FRONTENT/src/composables/operation/purchaseOrders/purchaseOrderMeta.js`
 - Exact exports: `EXTRA_CHARGE_KEYS`, `PROGRESS_ORDER`, `labelFor`, `mapOptions`, `progressMeta`, `formatDate`, `formatCurrency`.
 - Purpose: shared display metadata.
 - Inputs: values or app-option arrays.
@@ -198,7 +198,7 @@ Out of scope:
 - Connects to: all PO composables and pages.
 
 ### `purchaseOrderPayload` exports
-- File: `FRONTENT/src/composables/operations/purchaseOrders/purchaseOrderPayload.js`
+- File: `FRONTENT/src/composables/operation/purchaseOrders/purchaseOrderPayload.js`
 - Exact exports: `toDateInputValue`, `normalizeNumber`, `normalizeFlag`, `flagValue`, `blankCharges`, `parseCharges`, `stringifyCharges`, `lineTotal`, `defaultHeaderForm`, `defaultItemForm`, `buildHeaderRecord`, `buildItemRecord`, `validatePurchaseOrder`.
 - Purpose: stateless data conversion and validation.
 - Inputs: source quotation, source item, PO form, PO items.
@@ -210,7 +210,7 @@ Out of scope:
 - Connects to: create/view/quantity/totals composables.
 
 ### `lineTotal`
-- File: `FRONTENT/src/composables/operations/purchaseOrders/purchaseOrderPayload.js`
+- File: `FRONTENT/src/composables/operation/purchaseOrders/purchaseOrderPayload.js`
 - Purpose: calculate display-only item total.
 - Inputs: item with `OrderedQuantity`, `UnitPrice`.
 - Outputs: number.
@@ -221,7 +221,7 @@ Out of scope:
 - Connects to: totals and pages.
 
 ### `defaultHeaderForm`
-- File: `FRONTENT/src/composables/operations/purchaseOrders/purchaseOrderPayload.js`
+- File: `FRONTENT/src/composables/operation/purchaseOrders/purchaseOrderPayload.js`
 - Purpose: initialize PO header from selected SupplierQuotation and optional seed.
 - Inputs: `{ quotation, seed }`.
 - Outputs: PO header form object.
@@ -232,7 +232,7 @@ Out of scope:
 - Connects to: `selectQuotation`, view hydration.
 
 ### `defaultItemForm`
-- File: `FRONTENT/src/composables/operations/purchaseOrders/purchaseOrderPayload.js`
+- File: `FRONTENT/src/composables/operation/purchaseOrders/purchaseOrderPayload.js`
 - Purpose: initialize a PO item row.
 - Inputs: `{ quotationItem, prItem, remainingQty, allowPartial, seed }`.
 - Outputs: PO item form object.
@@ -243,7 +243,7 @@ Out of scope:
 - Connects to: `usePurchaseOrderCreateFlow.itemRows`.
 
 ### `buildHeaderRecord`
-- File: `FRONTENT/src/composables/operations/purchaseOrders/purchaseOrderPayload.js`
+- File: `FRONTENT/src/composables/operation/purchaseOrders/purchaseOrderPayload.js`
 - Purpose: serialize `PurchaseOrders` parent record.
 - Inputs: PO form.
 - Outputs: object with exactly required PO header fields except generated/audit fields.
@@ -254,7 +254,7 @@ Out of scope:
 - Connects to: `save`.
 
 ### `buildItemRecord`
-- File: `FRONTENT/src/composables/operations/purchaseOrders/purchaseOrderPayload.js`
+- File: `FRONTENT/src/composables/operation/purchaseOrders/purchaseOrderPayload.js`
 - Purpose: serialize `PurchaseOrderItems` child record.
 - Inputs: item form.
 - Outputs: object with `PurchaseOrderCode`, `SupplierQuotationItemCode`, `SKU`, `Description`, `UOM`, `QuotedQuantity`, `OrderedQuantity`, `UnitPrice`, `SupplierItemCode`, `Remarks`, `Status`.
@@ -265,7 +265,7 @@ Out of scope:
 - Connects to: `compositeSave`.
 
 ### `validatePurchaseOrder`
-- File: `FRONTENT/src/composables/operations/purchaseOrders/purchaseOrderPayload.js`
+- File: `FRONTENT/src/composables/operation/purchaseOrders/purchaseOrderPayload.js`
 - Purpose: enforce all frontend business rules before save.
 - Inputs: `{ form, items, selectedQuotation, allowPartial, hasBlockingFullPo }`.
 - Outputs: `{ success, errors, selectedItems }`.
@@ -276,7 +276,7 @@ Out of scope:
 - Connects to: `usePurchaseOrderCreateFlow.save`.
 
 ### `usePurchaseOrderQuantities`
-- File: `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderQuantities.js`
+- File: `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderQuantities.js`
 - Purpose: compute remaining quantities and duplicate/full-PO blocking from cached frontend data.
 - Inputs: object containing `purchaseOrders`, `purchaseOrderItems`, `selectedQuotationCode`.
 - Outputs: `activePurchaseOrdersForQuotation`, `orderedQtyBySupplierQuotationItemCode`, `remainingQtyForItem`, `hasBlockingFullPo`.
@@ -287,7 +287,7 @@ Out of scope:
 - Connects to: create flow item rows and validation.
 
 ### `usePurchaseOrderTotals`
-- File: `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderTotals.js`
+- File: `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderTotals.js`
 - Purpose: maintain reactive PO totals.
 - Inputs: `{ form, items }`.
 - Outputs: `itemSubtotal`, `extraChargesTotal`, `suggestedTotal`, `syncAllTotals`.
@@ -298,7 +298,7 @@ Out of scope:
 - Connects to: create and view composables.
 
 ### `usePurchaseOrderIndex`
-- File: `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderIndex.js`
+- File: `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderIndex.js`
 - Purpose: PO list data, groups, search, navigation.
 - Inputs: none.
 - Outputs: `permissions`, `items`, `loading`, `searchTerm`, `groups`, `totalVisible`, `reload`, `isGroupExpanded`, `toggleGroup`, `navigateTo`, `navigateToAdd`, `supplierName`, `formatDate`, `formatCurrency`.
@@ -309,7 +309,7 @@ Out of scope:
 - Connects to: `IndexPage.vue`.
 
 ### `usePurchaseOrderCreateFlow`
-- File: `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderCreateFlow.js`
+- File: `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderCreateFlow.js`
 - Purpose: orchestrate PO creation from SupplierQuotation.
 - Inputs: none.
 - Outputs: loading/saving state, quotation selectors, form/items, totals, warnings, `loadData`, `selectQuotation`, `toggleItem`, `save`, `cancel`.
@@ -320,7 +320,7 @@ Out of scope:
 - Connects to: `AddPage.vue`.
 
 ### `usePurchaseOrderView`
-- File: `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderView.js`
+- File: `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderView.js`
 - Purpose: hydrate and display saved PO plus execute configured actions.
 - Inputs: route `code` from `useResourceConfig`.
 - Outputs: `loading`, `acting`, `record`, `items`, `quotation`, `supplier`, `warehouse`, `progress`, `availableActions`, `actionComment`, `runAction`, `goToList`, totals and formatters.
@@ -361,13 +361,13 @@ Out of scope:
 ### Step 4: Update APP.Resources code config
 - [x] Open `GAS/syncAppResources.gs`.
 - [x] In `SupplierQuotations`, update `DefaultValues` to include `AllowPartialPO`.
-- [x] In `SupplierQuotations`, keep the existing route `/operations/supplier-quotations`.
+- [x] In `SupplierQuotations`, keep the existing route `/operation/supplier-quotations`.
 - [x] In `SupplierQuotations`, add `AllowPartialPO` and `SupplierQuotationReference` to `UIFields` only if generic fallback pages need them; custom SQ pages may ignore them initially.
 - [x] In `PurchaseOrders`, replace `RequiredHeaders` with `ProcurementCode,RFQCode,SupplierQuotationCode,SupplierCode,PODate,ShipToWarehouseCode`.
 - [x] In `PurchaseOrders`, replace defaults with `Status`, `Progress: CREATED`, `Currency: AED`, `SubtotalAmount`, `TotalAmount`, and blank-charge JSON.
 - [x] In `PurchaseOrders`, replace string AdditionalActions with JSON actions for `Send`, `Acknowledge`, `Accept`, and `Cancel`. Each must use `kind: mutate`, `column: Progress`, and the required uppercase `columnValue`. Visible conditions must be: Send only when `Progress = CREATED`; Acknowledge only when `Progress = SENT`; Accept only when `Progress = ACKNOWLEDGED`; Cancel when `Progress` is in `CREATED`, `SENT`, or `ACKNOWLEDGED`.
 - [x] For each PO action, include one textarea field named `Comment` with a label matching the action, not required for Send/Acknowledge/Accept and required for Cancel.
-- [x] In `PurchaseOrders`, set Menu to show under Procurement with order `6`, label `Purchase Orders`, icon `receipt_long`, route `/operations/purchase-orders`, title `Purchase Orders`, and write access for creation through the FAB.
+- [x] In `PurchaseOrders`, set Menu to show under Procurement with order `6`, label `Purchase Orders`, icon `receipt_long`, route `/operation/purchase-orders`, title `Purchase Orders`, and write access for creation through the FAB.
 - [x] In `PurchaseOrders`, keep `ParentResource` as `Procurements`.
 - [x] In `PurchaseOrderItems`, replace `RequiredHeaders` with `PurchaseOrderCode,SupplierQuotationItemCode,SKU,OrderedQuantity`.
 - [x] In `PurchaseOrderItems`, replace `UniqueCompositeHeaders` with `PurchaseOrderCode+SupplierQuotationItemCode`.
@@ -375,7 +375,7 @@ Out of scope:
 - [x] No command after this step.
 
 ### Step 5: Create PO metadata helper
-- [x] Create folder `FRONTENT/src/composables/operations/purchaseOrders` if missing.
+- [x] Create folder `FRONTENT/src/composables/operation/purchaseOrders` if missing.
 - [x] Create `purchaseOrderMeta.js`.
 - [x] Add the exports listed in the Function plan.
 - [x] Progress metadata must include keys for `CREATED`, `SENT`, `ACKNOWLEDGED`, `ACCEPTED`, `CANCELLED`, `CLOSED`, and `OTHER`.
@@ -383,7 +383,7 @@ Out of scope:
 - [x] No API, store, router, or service imports.
 
 ### Step 6: Create PO payload helper
-- [x] Create `FRONTENT/src/composables/operations/purchaseOrders/purchaseOrderPayload.js`.
+- [x] Create `FRONTENT/src/composables/operation/purchaseOrders/purchaseOrderPayload.js`.
 - [x] Add all exports listed in the Function plan.
 - [x] `buildHeaderRecord` must output `SupplierQuotationCode`, not `QuotationCode`.
 - [x] `buildItemRecord` must output `PurchaseOrderCode` only through composite save parent injection convention; do not manually set `PurchaseOrderCode` unless editing an existing record. The child data must still use the field name `PurchaseOrderCode` if a parent code is already known.
@@ -405,7 +405,7 @@ Out of scope:
 - [x] Filter inactive rows out by default.
 - [x] Group by progress using `PROGRESS_ORDER`; default expanded group must be `CREATED`.
 - [x] Use `useResourceNav` for `navigateTo` and `navigateToAdd`.
-- [x] Create `FRONTENT/src/pages/Operations/PurchaseOrders/IndexPage.vue`.
+- [x] Create `FRONTENT/src/pages/operation/PurchaseOrders/IndexPage.vue`.
 - [x] Page must be thin: import only `usePurchaseOrderIndex`, render groups/search/refresh/FAB, and contain no business calculations.
 - [x] Follow SupplierQuotations index page layout density.
 - [x] No command after this step.
@@ -448,7 +448,7 @@ Out of scope:
 
 ### Step 12: Update docs
 - [x] Open `Documents/MODULE_WORKFLOWS.md`.
-- [x] In Supplier Quotation section 8.2 or 8.3, replace `/operations/quotations` with `/operations/supplier-quotations`.
+- [x] In Supplier Quotation section 8.2 or 8.3, replace `/operation/quotations` with `/operation/supplier-quotations`.
 - [x] Add section `9. Purchase Order Module` before the future modules comment.
 - [x] Document creation eligibility, partial/full PO behavior, frontend-only remaining quantity, generic API usage, PO AdditionalActions, and future exclusions.
 - [x] Open `Documents/PROCUREMENT_SHEET_STRUCTURE.md`.
@@ -476,7 +476,7 @@ Commands:
 
 Manual checks:
 - AppOptions contains or can be seeded with `PurchaseOrderProgress`.
-- `APP.Resources` after sync has `PurchaseOrders` visible at `/operations/purchase-orders`.
+- `APP.Resources` after sync has `PurchaseOrders` visible at `/operation/purchase-orders`.
 - `PurchaseOrders` sheet headers match the prompt and no longer use `QuotationCode`.
 - `PurchaseOrderItems` sheet headers use `PurchaseOrderCode` and do not use `POCode`, `TotalPrice`, or `LineTotal`.
 - SupplierQuotation create/view data can carry `AllowPartialPO` and `SupplierQuotationReference`.
@@ -522,8 +522,8 @@ Failure signs:
 - [x] `GAS/Constants.gs` seeds `PurchaseOrderProgress`.
 - [x] `GAS/setupOperationSheets.gs` matches required SQ/PO/PO item schemas.
 - [x] `GAS/syncAppResources.gs` exposes correct PO resources, menu, defaults, and AdditionalActions.
-- [x] PO frontend files exist under `FRONTENT/src/pages/Operations/PurchaseOrders/`.
-- [x] PO business logic exists under `FRONTENT/src/composables/operations/purchaseOrders/`.
+- [x] PO frontend files exist under `FRONTENT/src/pages/operation/PurchaseOrders/`.
+- [x] PO business logic exists under `FRONTENT/src/composables/operation/purchaseOrders/`.
 - [x] PO creation works from eligible SupplierQuotation only.
 - [x] Partial/full PO rules work exactly as specified.
 - [x] Remaining quantity is computed, not stored.
@@ -566,16 +566,16 @@ Failure signs:
 - `GAS/Constants.gs`
 - `GAS/setupOperationSheets.gs`
 - `GAS/syncAppResources.gs`
-- `FRONTENT/src/composables/operations/purchaseOrders/purchaseOrderMeta.js`
-- `FRONTENT/src/composables/operations/purchaseOrders/purchaseOrderPayload.js`
-- `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderQuantities.js`
-- `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderTotals.js`
-- `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderIndex.js`
-- `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderCreateFlow.js`
-- `FRONTENT/src/composables/operations/purchaseOrders/usePurchaseOrderView.js`
-- `FRONTENT/src/pages/Operations/PurchaseOrders/IndexPage.vue`
-- `FRONTENT/src/pages/Operations/PurchaseOrders/AddPage.vue`
-- `FRONTENT/src/pages/Operations/PurchaseOrders/ViewPage.vue`
+- `FRONTENT/src/composables/operation/purchaseOrders/purchaseOrderMeta.js`
+- `FRONTENT/src/composables/operation/purchaseOrders/purchaseOrderPayload.js`
+- `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderQuantities.js`
+- `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderTotals.js`
+- `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderIndex.js`
+- `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderCreateFlow.js`
+- `FRONTENT/src/composables/operation/purchaseOrders/usePurchaseOrderView.js`
+- `FRONTENT/src/pages/operation/PurchaseOrders/IndexPage.vue`
+- `FRONTENT/src/pages/operation/PurchaseOrders/AddPage.vue`
+- `FRONTENT/src/pages/operation/PurchaseOrders/ViewPage.vue`
 - `FRONTENT/src/composables/REGISTRY.md`
 - `Documents/MODULE_WORKFLOWS.md`
 - `Documents/PROCUREMENT_SHEET_STRUCTURE.md`

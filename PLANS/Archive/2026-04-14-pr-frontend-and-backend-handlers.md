@@ -1,4 +1,4 @@
-# PLAN: Purchase Requisition Frontend Flow + Backend Handlers
+﻿# PLAN: Purchase Requisition Frontend Flow + Backend Handlers
 **Status**: COMPLETED
 **Created**: 2026-04-14
 **Created By**: Brain Agent (Claude Opus 4.6)
@@ -9,7 +9,7 @@ Build the complete Purchase Requisition initiation flow — a multi-step fronten
 
 ## Context
 - Backend schema for PurchaseRequisitions, PurchaseRequisitionItems, Procurements, and UOM is already implemented (see `PLANS/2026-04-13-procurement-module-and-scope-infra.md`).
-- Menu item already added to PurchaseRequisitions resource pointing to `/operations/purchase-requisitions/initiate-purchase-requisitions`.
+- Menu item already added to PurchaseRequisitions resource pointing to `/operation/purchase-requisitions/initiate-purchase-requisitions`.
 - Frontend uses Quasar framework (Vue 3 + Quasar components). Stick to Quasar components maximally.
 - Existing patterns: see `FRONTENT/src/pages/Warehouse/ManageStockPage.vue` for a similar custom operation page, `FRONTENT/src/router/routes.js` for route registration, and `FRONTENT/src/composables/useCompositeForm.js` for composite save pattern.
 - AppOptions provides: `PurchaseRequisitionType`, `PurchaseRequisitionPriority`, `PurchaseRequisitionProgress`, `ProcurementProgress`.
@@ -79,13 +79,13 @@ This is registered as PostAction on PurchaseRequisitions resource. It inspects t
 ### Step 3: Frontend Route Registration
 
 Add route for the PR initiation flow in `FRONTENT/src/router/routes.js`:
-- Path: `/operations/purchase-requisitions/initiate-purchase-requisitions`
+- Path: `/operation/purchase-requisitions/initiate-purchase-requisitions`
 - Component: new page component (see Step 4)
 - Meta: `{ scope: 'operation', requiresAuth: true }`
 
 Also add routes for:
-- **Draft PR Detail View**: `/operations/purchase-requisitions/:code/draft` — editable view for Draft and Review progress PRs
-- **PR View Page**: `/operations/purchase-requisitions/:code/view` — read-only view for New/Approved/Rejected PRs
+- **Draft PR Detail View**: `/operation/purchase-requisitions/:code/draft` — editable view for Draft and Review progress PRs
+- **PR View Page**: `/operation/purchase-requisitions/:code/view` — read-only view for New/Approved/Rejected PRs
 
 ---
 
@@ -136,13 +136,13 @@ All fields except TypeReferenceCode are required. Proceed button enabled only wh
 - Single composite save: creates PR record + all PR Items in one request
 - PR fields: PRDate (auto: today), Type, Priority, RequiredDate, WarehouseCode, TypeReferenceCode (if applicable), Progress: Draft, Status: Active
 - PR Items: one row per selected SKU — PRCode, SKU, UOM (from SKU master), Quantity (user-entered), EstimatedRate: 0 (editable later in Draft view)
-- On success: auto-navigate to Draft PR Detail View (`/operations/purchase-requisitions/:code/draft`)
+- On success: auto-navigate to Draft PR Detail View (`/operation/purchase-requisitions/:code/draft`)
 
 ---
 
 ### Step 5: Draft PR Detail View Page
 
-**Route**: `/operations/purchase-requisitions/:code/draft`
+**Route**: `/operation/purchase-requisitions/:code/draft`
 **Access**: Only for PRs with Progress = Draft or Review
 
 **Purpose**: Full editable view of the PR. User can review, update, add items, and confirm.
@@ -168,13 +168,13 @@ All fields except TypeReferenceCode are required. Proceed button enabled only wh
 - **Save**: Update PR + items (composite save, stays on Draft)
 - **Confirm / Submit**: Triggers progress change Draft → New (or Review → New for re-confirm). This fires the PostAction which creates/updates the Procurement record.
 
-**After Submit**: Navigate to PR View Page (`/operations/purchase-requisitions/:code/view`)
+**After Submit**: Navigate to PR View Page (`/operation/purchase-requisitions/:code/view`)
 
 ---
 
 ### Step 6: PR View Page (Read-Only)
 
-**Route**: `/operations/purchase-requisitions/:code/view`
+**Route**: `/operation/purchase-requisitions/:code/view`
 **Access**: PRs with Progress = New, Approved, Rejected
 
 **Purpose**: Read-only view of the PR with progress action buttons for authorized users.
@@ -193,7 +193,7 @@ For Progress = Approved or Rejected: no action buttons, just the read-only view 
 ### Step 7: Navigation Logic
 
 - From menu "Initiate Purchase Requisitions" → PR Initiation Page (Step 4)
-- The existing resource list page at `/operations/purchase-requisitions` shows all PRs
+- The existing resource list page at `/operation/purchase-requisitions` shows all PRs
 - Clicking a PR row should route based on Progress:
   - Draft or Review → Draft PR Detail View
   - New, Approved, Rejected, RFQ Processed → PR View Page
@@ -253,7 +253,7 @@ For Progress = Approved or Rejected: no action buttons, just the read-only view 
 - FRONTENT/src/pages/Procurement/PRInitiationPage.vue
 - FRONTENT/src/pages/Procurement/PRDraftViewPage.vue
 - FRONTENT/src/pages/Procurement/PRViewPage.vue
-- FRONTENT/src/pages/Masters/_common/IndexPage.vue
+- FRONTENT/src/pages/master/_common/IndexPage.vue
 - Documents/RESOURCE_COLUMNS_GUIDE.md
 - Documents/GAS_API_CAPABILITIES.md
 - Documents/CONTEXT_HANDOFF.md
@@ -271,3 +271,4 @@ For Progress = Approved or Rejected: no action buttons, just the read-only view 
 - [ ] Run `setupOperationSheets` from AQL menu (for PR Review columns, Procurements CreatedUser)
 - [ ] Run `setupAppSheets` from AQL menu (for new AppOptions entries)
 - [ ] Deploy new Web App version (PostAction handler added)
+

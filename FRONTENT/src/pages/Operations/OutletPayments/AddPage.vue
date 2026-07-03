@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding class="aql-page-container">
     <!-- Page Branded Header -->
     <HeaderPanel
@@ -510,12 +510,12 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { useOutletPayments } from '../../../composables/operations/outlets/useOutletPayments.js'
-import { progressMeta } from '../../../composables/operations/outlets/outletOperationsMeta.js'
+import { useOutletPayments } from '../../../composables/operation/outlets/useOutletPayments.js'
+import { progressMeta } from '../../../composables/operation/outlets/outletOperationsMeta.js'
 import AqlList from '../../../components/shared/AqlList.vue'
 import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
 import { useCurrency } from '../../../composables/useCurrency.js'
-import { getInvoiceTotal, getInvoiceRemaining } from '../../../composables/operations/outlets/outletConsumptionPricing.js'
+import { getInvoiceTotal, getInvoiceRemaining } from '../../../composables/operation/outlets/outletConsumptionPricing.js'
 
 defineOptions({ name: 'OutletPaymentsAddPage' })
 
@@ -710,3 +710,4 @@ onMounted(async () => {
   handleQueryParameters(route.query)
 })
 </script>
+

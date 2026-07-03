@@ -1,11 +1,11 @@
-import { ref, computed, watch } from 'vue'
+﻿import { ref, computed, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from '../../../../stores/auth.js'
 import { useRecord } from '../../../resources/useRecord.js'
 import { useResourceNav } from '../../../resources/useResourceNav.js'
 import { useResourceConfig } from '../../../resources/useResourceConfig.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
-import { useProductSkuResolver } from 'src/composables/masters/products/useProductSkuResolver'
+import { useProductSkuResolver } from 'src/composables/master/products/useProductSkuResolver'
 import { todayISO, text, active } from '../outletOperationsMeta.js'
 import { compositeSaveRequest, resourceBulkRequest, executeActionRequest, batchRef, responseFailed, failureMessage, batchResultCode } from '../outletOperationsBatch.js'
 import { toNumber } from '../outletStockLogic.js'
@@ -328,3 +328,4 @@ export function useDirectRestock() {
     cancel
   }
 }
+

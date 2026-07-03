@@ -1,4 +1,4 @@
-# PLAN: GAS Record Action and Batch Reference Framework
+﻿# PLAN: GAS Record Action and Batch Reference Framework
 **Status**: COMPLETED
 **Created**: 2026-05-07
 **Created By**: Brain Agent (Kilo Code)
@@ -122,8 +122,8 @@ Rules:
 - [ ] If outlet or other composables need helper builders, add generic batch `$ref` helper functions in an appropriate composable/helper file.
 - [ ] Keep services generic and do not place business logic in services.
 - [ ] Keep components free of store/service calls.
-**Files**: [FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js](../../FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js), [FRONTENT/src/utils/appHelpers.js](../../FRONTENT/src/utils/appHelpers.js)
-**Pattern**: Current request builders in [FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js](../FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js:4)
+**Files**: [FRONTENT/src/composables/operation/outlets/outletOperationsBatch.js](../../FRONTENT/src/composables/operation/outlets/outletOperationsBatch.js), [FRONTENT/src/utils/appHelpers.js](../../FRONTENT/src/utils/appHelpers.js)
+**Pattern**: Current request builders in [FRONTENT/src/composables/operation/outlets/outletOperationsBatch.js](../FRONTENT/src/composables/operation/outlets/outletOperationsBatch.js:4)
 **Rule**: Business-specific payload construction belongs in composables.
 
 ## Documentation Updates Required
@@ -195,3 +195,4 @@ Rules:
 
 ### Manual Actions Required
 - [x] Web App redeployment after GAS push because the API contract changes.
+

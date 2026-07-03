@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="index-page">
     <GenericHeaderPanel
       :label="config?.name || 'Price Lists'"
@@ -153,7 +153,7 @@ import MasterListToolbar from 'components/_common/sections/Toolbar/Toolbar.vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useRecord } from 'src/composables/resources/useRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { usePriceListEditor } from 'src/composables/masters/priceLists/usePriceListEditor'
+import { usePriceListEditor } from 'src/composables/master/priceLists/usePriceListEditor'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 
 const nav = useResourceNav()
@@ -281,3 +281,4 @@ watch(
   z-index: 30;
 }
 </style>
+

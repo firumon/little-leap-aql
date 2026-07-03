@@ -1,4 +1,4 @@
-import { isStandalone } from 'src/utils/pwa-utils'
+﻿import { isStandalone } from 'src/utils/pwa-utils'
 
 const routes = [
   {
@@ -52,11 +52,11 @@ const routes = [
     ]
   },
   {
-    path: '/masters',
+    path: '/master',
     component: () => import('layouts/MainLayout/MainLayout.vue'),
     meta: { requiresAuth: true },
     children: [
-      { path: 'bulk-upload', component: () => import('pages/Masters/BulkUploadPage.vue'), meta: { scope: 'master' } }
+      { path: 'bulk-upload', component: () => import('pages/master/BulkUploadPage.vue'), meta: { scope: 'master' } }
     ]
   },
   {
@@ -122,3 +122,4 @@ const routes = [
 ]
 
 export default routes
+

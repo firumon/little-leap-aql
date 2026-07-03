@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div>
     <q-card flat bordered class="q-mb-md">
       <q-card-section class="row items-center no-wrap">
@@ -109,7 +109,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import OutletProgressChip from './OutletProgressChip.vue'
-import { text } from '../../../composables/operations/outlets/outletOperationsMeta.js'
+import { text } from '../../../composables/operation/outlets/outletOperationsMeta.js'
 import ResourceReports from "../../Reports/ResourceReports.vue";
 
 defineOptions({ name: 'RestockDraftView' })
@@ -185,3 +185,4 @@ function confirmAddItem() {
 
 function removeRowAt(idx) { props.removeRow(idx) }
 </script>
+

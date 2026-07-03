@@ -1,4 +1,4 @@
-# PLAN: Direct Entry Route and Menu Normalization
+﻿# PLAN: Direct Entry Route and Menu Normalization
 **Status**: IN_PROGRESS
 **Created**: 2026-04-11
 **Created By**: Brain Agent (Codex)
@@ -9,7 +9,7 @@ Normalize the stock-entry navigation and naming model so the current direct-entr
 
 ## Context
 - Current `StockMovements` menu config in `GAS/syncAppResources.gs` mixes:
-  - duplicate route aliases for `/operations/manage-stock`
+  - duplicate route aliases for `/operation/manage-stock`
   - query-string mode routes such as `?referenceType=GRN`
   - inconsistent labels (`Stock`, `Stock Entry`, `Manual Stock Entry`)
 - The current page implementation is already a dedicated direct-entry flow:
@@ -35,7 +35,7 @@ Normalize the stock-entry navigation and naming model so the current direct-entr
   - `Stock Transfer Out`
   - `Stock Transfer In`
   - `Product Dispatch`
-- [ ] Replace the current `/operations/manage-stock` aliases with clean route(s) under the `StockMovements` namespace.
+- [ ] Replace the current `/operation/manage-stock` aliases with clean route(s) under the `StockMovements` namespace.
 - [ ] Keep only the menu entries that reflect the current implemented workflows:
   - ledger/list route for `Stock Movements`
   - direct-entry route for the editable stock-entry workflow
@@ -45,8 +45,8 @@ Normalize the stock-entry navigation and naming model so the current direct-entr
 **Rule**: No query-string routes remain in active menu config after this task.
 
 ### Step 2: Refactor frontend routes to clean `StockMovements` path taxonomy
-- [ ] Update `FRONTENT/src/router/routes.js` so the current direct-entry workflow uses a clean path such as `/operations/stock-movements/direct-entry`.
-- [ ] Remove the old `/operations/manage-stock` route from active routing.
+- [ ] Update `FRONTENT/src/router/routes.js` so the current direct-entry workflow uses a clean path such as `/operation/stock-movements/direct-entry`.
+- [ ] Remove the old `/operation/manage-stock` route from active routing.
 - [ ] Keep the stock ledger/list route unchanged unless a path cleanup is strictly necessary.
 - [ ] Verify the route continues to point to the current page component until a later page-file rename is intentionally performed.
 **Files**: `FRONTENT/src/router/routes.js`
@@ -77,9 +77,9 @@ Normalize the stock-entry navigation and naming model so the current direct-entr
 ### Step 5: Review route guard and resource-page title assumptions after route cleanup
 - [ ] Verify `FRONTENT/src/router/index.js` behavior after removing query-string menu routes.
 - [ ] Confirm `to.path`-based matching is acceptable once all active menu routes are clean paths.
-- [ ] Review `FRONTENT/src/pages/Masters/ResourcePageShell.vue` for any assumptions based on first-match route titles if multiple aliases still point to one resource.
+- [ ] Review `FRONTENT/src/pages/master/ResourcePageShell.vue` for any assumptions based on first-match route titles if multiple aliases still point to one resource.
 - [ ] Apply minimal fixes only if needed for the new direct-entry route structure.
-**Files**: `FRONTENT/src/router/index.js`, `FRONTENT/src/pages/Masters/ResourcePageShell.vue`
+**Files**: `FRONTENT/src/router/index.js`, `FRONTENT/src/pages/master/ResourcePageShell.vue`
 **Pattern**: Route access is derived from `resource.ui.menus`.
 **Rule**: The route guard must work with clean path routes and must not depend on query strings.
 
@@ -91,10 +91,10 @@ Normalize the stock-entry navigation and naming model so the current direct-entr
   - direct-entry route normalization
   - query-string route removal
   - removal of unimplemented stock-mode menus
-- [ ] Update `Documents/RESOURCE_COLUMNS_GUIDE.md` if its menu examples still reference the old `/operations/manage-stock` convention.
+- [ ] Update `Documents/RESOURCE_COLUMNS_GUIDE.md` if its menu examples still reference the old `/operation/manage-stock` convention.
 **Files**: `Documents/MODULE_WORKFLOWS.md`, `Documents/AQL_MENU_ADMIN_GUIDE.md`, `Documents/LOGIN_RESPONSE.md`, `Documents/CONTEXT_HANDOFF.md`, `Documents/RESOURCE_COLUMNS_GUIDE.md`
 **Pattern**: Doc updates must ship in the same task as the behavior change.
-**Rule**: No active doc should describe `/operations/manage-stock` or query-string stock mode routes after this task.
+**Rule**: No active doc should describe `/operation/manage-stock` or query-string stock mode routes after this task.
 
 ### Step 7: Deploy metadata changes and verify end-to-end behavior
 - [ ] If `GAS/syncAppResources.gs` changes, run `npm run gas:push`.
@@ -112,7 +112,7 @@ Normalize the stock-entry navigation and naming model so the current direct-entr
 - [ ] Update `Documents/AQL_MENU_ADMIN_GUIDE.md` with the new sidebar map and direct-entry instructions.
 - [ ] Update `Documents/LOGIN_RESPONSE.md` if examples or references use the old route/labels.
 - [ ] Update `Documents/CONTEXT_HANDOFF.md` because this changes the baseline navigation architecture.
-- [ ] Update `Documents/RESOURCE_COLUMNS_GUIDE.md` if its route example still uses `/operations/manage-stock`.
+- [ ] Update `Documents/RESOURCE_COLUMNS_GUIDE.md` if its route example still uses `/operation/manage-stock`.
 - [ ] Update `FRONTENT/src/components/REGISTRY.md` and `FRONTENT/src/composables/REGISTRY.md` for renamed workflow terminology.
 
 ## Acceptance Criteria
@@ -165,3 +165,4 @@ Normalize the stock-entry navigation and naming model so the current direct-entr
 ### Manual Actions Required
 - [ ] Run `AQL 🚀 > Setup & Refactor > Sync APP.Resources from Code`
 - [ ] Re-login in the frontend app to refresh authorized resource metadata
+

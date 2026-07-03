@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding>
     <!-- Page Branded Header with Reload Button -->
     <div class="row items-center justify-between no-wrap q-mb-md">
@@ -60,8 +60,8 @@
 
 <script setup>
 import { computed, onMounted } from 'vue'
-import { useOutletStock } from '../../../composables/operations/outlets/useOutletStock.js'
-import OutletStockRows from '../../../components/Operations/Outlets/OutletStockRows.vue'
+import { useOutletStock } from '../../../composables/operation/outlets/useOutletStock.js'
+import OutletStockRows from '../../../components/operation/Outlets/OutletStockRows.vue'
 import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
 import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
@@ -87,3 +87,4 @@ const shouldBlockUi = computed(() => loading.value && hasUninitiatedDependencies
 
 onMounted(() => reload())
 </script>
+

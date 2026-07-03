@@ -1,4 +1,4 @@
-# PLAN: Fix MasterEntityPage Error and Unify UI
+﻿# PLAN: Fix MasterEntityPage Error and Unify UI
 **Status**: COMPLETED
 **Created**: 2026-03-12
 **Created By**: Brain Agent
@@ -23,7 +23,7 @@ Fix the `Uncaught TypeError: Cannot read properties of undefined (reading 'confi
 - [x] Remove the conditional `:grid="$q.screen.xs"` and make the "Card/Grid" view the default and ONLY view for all screen sizes as requested.
 - [x] Refine the Card/Grid layout to look professional on desktop (e.g., use `col-md-4 col-lg-3` to show multiple cards per row).
 - [x] Fix any other potential undefined property accesses (like `resolvedFields`).
-**Files**: `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+**Files**: `FRONTENT/src/pages/master/MasterEntityPage.vue`
 **Pattern**: Safe property access and responsive grid systems.
 **Rule**: No regressions in logic, just UI/safety fix.
 
@@ -53,7 +53,7 @@ Fix the `Uncaught TypeError: Cannot read properties of undefined (reading 'confi
 - [x] Decision: Enabled `grid` mode on `q-table` permanently for all screen sizes to satisfy the "unified UI" request. Adjusted grid column classes (`col-sm-6 col-md-4 col-lg-3`) to optimize space on wider screens.
 
 ### Files Actually Changed
-- `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+- `FRONTENT/src/pages/master/MasterEntityPage.vue`
 
 ### Validation Performed
 - [x] Verified safety of `config` property access.
@@ -61,3 +61,4 @@ Fix the `Uncaught TypeError: Cannot read properties of undefined (reading 'confi
 
 ### Manual Actions Required
 - [x] None.
+

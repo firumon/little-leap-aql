@@ -1,4 +1,4 @@
-# PLAN: Supplier Quotation Module
+﻿# PLAN: Supplier Quotation Module
 **Status**: COMPLETED
 **Created**: 2026-04-25
 **Created By**: Brain Agent (Codex)
@@ -31,7 +31,7 @@ The module must support full quotations, partial quotations, and declines; expos
   - `SupplierQuotations` and `SupplierQuotationItems` already exist in `CONFIG.OPERATION_SHEETS`.
   - `GAS/syncAppResources.gs` has placeholder metadata for both resources.
   - `GAS/setupOperationSheets.gs` currently defines old/minimal Supplier Quotation headers.
-  - RFQ custom pages exist under `FRONTENT/src/pages/Operations/Rfqs/`.
+  - RFQ custom pages exist under `FRONTENT/src/pages/operation/Rfqs/`.
   - RFQ supplier dispatch is currently represented by `RFQSuppliers.Progress = ASSIGNED/SENT/RESPONDED/...` and `SentDate`.
   - `useResourceNav` is the required navigation path.
   - `workflowStore.runBatchRequests()`, `saveComposite()`, `updateResourceRecord()`, and `executeResourceAction()` are the approved frontend write orchestration surfaces.
@@ -52,15 +52,15 @@ The module must support full quotations, partial quotations, and declines; expos
 - [ ] Inspect the current Supplier Quotation resource rows in `GAS/syncAppResources.gs`.
 - [ ] Inspect Supplier Quotation schemas in `GAS/setupOperationSheets.gs` and any other setup/refactor script that defines operation headers, defaults, or validations.
 - [ ] Inspect RFQ custom pages and composables:
-  - `FRONTENT/src/pages/Operations/Rfqs/IndexPage.vue`
-  - `FRONTENT/src/pages/Operations/Rfqs/AddPage.vue`
-  - `FRONTENT/src/pages/Operations/Rfqs/ViewPage.vue`
-  - `FRONTENT/src/composables/operations/rfqs/useRFQIndex.js`
-  - `FRONTENT/src/composables/operations/rfqs/useRFQCreateFlow.js`
-  - `FRONTENT/src/composables/operations/rfqs/useRFQView.js` if present
-  - `FRONTENT/src/composables/operations/rfqs/useRFQSupplierFlow.js`
-  - `FRONTENT/src/composables/operations/rfqs/rfqPayload.js`
-  - `FRONTENT/src/composables/operations/rfqs/rfqMeta.js`
+  - `FRONTENT/src/pages/operation/Rfqs/IndexPage.vue`
+  - `FRONTENT/src/pages/operation/Rfqs/AddPage.vue`
+  - `FRONTENT/src/pages/operation/Rfqs/ViewPage.vue`
+  - `FRONTENT/src/composables/operation/rfqs/useRFQIndex.js`
+  - `FRONTENT/src/composables/operation/rfqs/useRFQCreateFlow.js`
+  - `FRONTENT/src/composables/operation/rfqs/useRFQView.js` if present
+  - `FRONTENT/src/composables/operation/rfqs/useRFQSupplierFlow.js`
+  - `FRONTENT/src/composables/operation/rfqs/rfqPayload.js`
+  - `FRONTENT/src/composables/operation/rfqs/rfqMeta.js`
 - [ ] Inspect resource/navigation helpers and workflow stores before choosing save APIs:
   - `FRONTENT/src/composables/resources/useResourceNav.js`
   - `FRONTENT/src/composables/resources/useResourceData.js`
@@ -158,7 +158,7 @@ The module must support full quotations, partial quotations, and declines; expos
     - order `5`
     - label `Supplier Quotations`
     - icon `request_quote`
-    - route `/operations/quotations`
+    - route `/operation/quotations`
     - pageTitle `Supplier Quotations`
     - pageDescription `Record and manage supplier quotation responses`
     - show `true`
@@ -184,7 +184,7 @@ The module must support full quotations, partial quotations, and declines; expos
 **Rule**: Business `Progress` values for Supplier Quotations remain uppercase: `RECEIVED`, `ACCEPTED`, `REJECTED`.
 
 ### Step 6: Create Supplier Quotation Composable Foundation
-- [ ] Create Supplier Quotation operation composables under `FRONTENT/src/composables/operations/supplierQuotations/`.
+- [ ] Create Supplier Quotation operation composables under `FRONTENT/src/composables/operation/supplierQuotations/`.
 - [ ] Add `supplierQuotationMeta.js` for option mapping, labels, progress ordering, status chip metadata, extra charge keys, and reusable display helpers.
 - [ ] Add `supplierQuotationPayload.js` for:
   - header form defaults
@@ -205,9 +205,9 @@ The module must support full quotations, partial quotations, and declines; expos
   - `ExtraChargesBreakup` valid JSON with controlled keys
   - alternate SKUs disallowed.
 **Files**:
-  - `FRONTENT/src/composables/operations/supplierQuotations/supplierQuotationMeta.js`
-  - `FRONTENT/src/composables/operations/supplierQuotations/supplierQuotationPayload.js`
-**Pattern**: `FRONTENT/src/composables/operations/rfqs/rfqMeta.js`, `rfqPayload.js`.
+  - `FRONTENT/src/composables/operation/supplierQuotations/supplierQuotationMeta.js`
+  - `FRONTENT/src/composables/operation/supplierQuotations/supplierQuotationPayload.js`
+**Pattern**: `FRONTENT/src/composables/operation/rfqs/rfqMeta.js`, `rfqPayload.js`.
 **Rule**: Components render and invoke composables only; all business rules live in composables.
 
 ### Step 7: Build Supplier Quotation Index Flow
@@ -232,12 +232,12 @@ The module must support full quotations, partial quotations, and declines; expos
   - quotation last-updated timestamp is older than 14 days.
 - [ ] Add search/filter support across quotation code, RFQ code, supplier code/name, procurement code, response type, amount, and dates.
 - [ ] Expose navigation methods using `useResourceNav` only.
-**Files**: `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationIndex.js`.
+**Files**: `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationIndex.js`.
 **Pattern**: `useRFQIndex.js`.
 **Rule**: No direct router usage in feature flow.
 
 ### Step 8: Build Supplier Quotation Index Page
-- [ ] Create `FRONTENT/src/pages/Operations/SupplierQuotations/IndexPage.vue` or the exact resolver-mapped entity path after confirming route slug conversion for `/operations/quotations`.
+- [ ] Create `FRONTENT/src/pages/operation/SupplierQuotations/IndexPage.vue` or the exact resolver-mapped entity path after confirming route slug conversion for `/operation/quotations`.
 - [ ] Render a Quasar-first custom index:
   - compact header
   - refresh/sync action
@@ -248,8 +248,8 @@ The module must support full quotations, partial quotations, and declines; expos
   - FAB for Add when `canWrite`.
 - [ ] Clicking a card navigates to View via `useResourceNav`.
 - [ ] FAB navigates to Add via `useResourceNav`.
-**Files**: `FRONTENT/src/pages/Operations/SupplierQuotations/IndexPage.vue`.
-**Pattern**: `FRONTENT/src/pages/Operations/Rfqs/IndexPage.vue`.
+**Files**: `FRONTENT/src/pages/operation/SupplierQuotations/IndexPage.vue`.
+**Pattern**: `FRONTENT/src/pages/operation/Rfqs/IndexPage.vue`.
 **Rule**: Keep the page thin; move filtering/grouping to the composable.
 
 ### Step 9: Build Supplier Quotation Create Flow
@@ -287,12 +287,12 @@ The module must support full quotations, partial quotations, and declines; expos
   - include a final `get` for affected resources if needed for fresh deltas.
 - [ ] Set `ResponseRecordedAt` and `ResponseRecordedBy` only for new quotations.
 - [ ] Use the auth user shape for `ResponseRecordedBy`; follow existing timestamp/date conventions.
-**Files**: `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationCreateFlow.js`.
+**Files**: `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationCreateFlow.js`.
 **Pattern**: `useRFQCreateFlow.js`, `useRFQSupplierFlow.js`, `useProcurements.js`, `workflowStore.runBatchRequests()`.
 **Rule**: Progress side effects happen only on first save when there was no existing quotation code.
 
 ### Step 10: Build Supplier Quotation Add Page
-- [ ] Create `FRONTENT/src/pages/Operations/SupplierQuotations/AddPage.vue`.
+- [ ] Create `FRONTENT/src/pages/operation/SupplierQuotations/AddPage.vue`.
 - [ ] Use card-based clickable Quasar UI optimized for manual entry.
 - [ ] Include these sections:
   - RFQ selection card
@@ -308,8 +308,8 @@ The module must support full quotations, partial quotations, and declines; expos
 - [ ] For quoted/partial responses, show terms, charges, item entry, subtotal, and editable confirmed total.
 - [ ] Use AppOptions-backed selects for response type, currency, lead time type, delivery mode, shipping term, payment term, and extra charge keys.
 - [ ] Save only on explicit Save click.
-**Files**: `FRONTENT/src/pages/Operations/SupplierQuotations/AddPage.vue`.
-**Pattern**: `FRONTENT/src/pages/Operations/Rfqs/AddPage.vue`.
+**Files**: `FRONTENT/src/pages/operation/SupplierQuotations/AddPage.vue`.
+**Pattern**: `FRONTENT/src/pages/operation/Rfqs/AddPage.vue`.
 **Rule**: No auto-save and no hardcoded option lists in the page.
 
 ### Step 11: Build Supplier Quotation View/Edit Flow
@@ -329,12 +329,12 @@ The module must support full quotations, partial quotations, and declines; expos
 - [ ] Expose reject action only for `RECEIVED`.
 - [ ] Reject requires a mandatory comment and invokes the configured `Reject` AdditionalAction through `workflowStore.executeResourceAction()`.
 - [ ] Ensure fields sent with reject include `ProgressRejectedComment` and allow GAS to fill `ProgressRejectedAt` and `ProgressRejectedBy` after Step 5 fix.
-**Files**: `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationView.js`.
+**Files**: `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationView.js`.
 **Pattern**: `usePurchaseRequisitionApprovalFlow.js`, `useResourceConfig.additionalActions`, `workflowStore.executeResourceAction()`.
 **Rule**: No acceptance/comparison/scoring logic in this module.
 
 ### Step 12: Build Supplier Quotation View Page And Subcomponents
-- [ ] Create `FRONTENT/src/pages/Operations/SupplierQuotations/ViewPage.vue`.
+- [ ] Create `FRONTENT/src/pages/operation/SupplierQuotations/ViewPage.vue`.
 - [ ] Use progress-based routing/rendering:
 ```vue
 <EditableReceivedQuotation v-if="quotation.Progress === 'RECEIVED'" />
@@ -342,7 +342,7 @@ The module must support full quotations, partial quotations, and declines; expos
 <ReadOnlyQuotation v-else-if="quotation.Progress === 'REJECTED'" />
 <ReadOnlyQuotation v-else />
 ```
-- [ ] If the view would exceed the project size guidance, create UI-only components under `FRONTENT/src/components/Operations/SupplierQuotations/`, for example:
+- [ ] If the view would exceed the project size guidance, create UI-only components under `FRONTENT/src/components/operation/SupplierQuotations/`, for example:
   - `EditableReceivedQuotation.vue`
   - `ReadOnlyQuotation.vue`
   - `SupplierQuotationItemsEditor.vue`
@@ -350,26 +350,26 @@ The module must support full quotations, partial quotations, and declines; expos
 - [ ] Keep components UI-only; components may use composables but must not import stores/services or implement business rules.
 - [ ] Show rejection comment/date/user for rejected records.
 **Files**:
-  - `FRONTENT/src/pages/Operations/SupplierQuotations/ViewPage.vue`
-  - optional `FRONTENT/src/components/Operations/SupplierQuotations/*.vue`
+  - `FRONTENT/src/pages/operation/SupplierQuotations/ViewPage.vue`
+  - optional `FRONTENT/src/components/operation/SupplierQuotations/*.vue`
 **Pattern**: Purchase Requisition view/edit/review split and RFQ view page shell.
 **Rule**: Keep each file near the ~400-line project guidance.
 
 ### Step 13: Confirm Route Slug And Custom Page Resolution
-- [ ] Confirm `/operations/quotations` resolves to resource `SupplierQuotations` via menu route matching.
+- [ ] Confirm `/operation/quotations` resolves to resource `SupplierQuotations` via menu route matching.
 - [ ] Confirm entity-custom path generated from slug `quotations` maps to the intended folder. If it maps to `Quotations`, either:
-  - use folder `FRONTENT/src/pages/Operations/Quotations/`, or
-  - change route to `/operations/supplier-quotations` and update the menu/admin docs accordingly.
+  - use folder `FRONTENT/src/pages/operation/Quotations/`, or
+  - change route to `/operation/supplier-quotations` and update the menu/admin docs accordingly.
 - [ ] Prefer the least invasive route that preserves the source brief intent and actually resolves with `ActionResolverPage.vue`.
 - [ ] If a custom UI registry is required for new full-page custom files, update it.
-**Files**: `GAS/syncAppResources.gs`, `FRONTENT/src/pages/Operations/...`, `FRONTENT/src/pages/Operations/_custom/REGISTRY.md` if applicable.
+**Files**: `GAS/syncAppResources.gs`, `FRONTENT/src/pages/operation/...`, `FRONTENT/src/pages/operation/_custom/REGISTRY.md` if applicable.
 **Pattern**: `ActionResolverPage.vue` `toPascalCase(resourceSlug)` resolution.
 **Rule**: Route must match `APP.Resources.Menu` and the actual auto-discovered page path.
 
 ### Step 14: Update Registries
 - [ ] Update `FRONTENT/src/composables/REGISTRY.md` for new Supplier Quotation composables.
 - [ ] Update `FRONTENT/src/components/REGISTRY.md` if reusable Supplier Quotation components are added.
-- [ ] Update `FRONTENT/src/pages/Operations/_custom/REGISTRY.md` only if tenant custom pages are added under `_custom`.
+- [ ] Update `FRONTENT/src/pages/operation/_custom/REGISTRY.md` only if tenant custom pages are added under `_custom`.
 - [ ] If an entity-local registry pattern exists for RFQs or operation pages, add/update the Supplier Quotation equivalent only when created.
 **Files**:
   - `FRONTENT/src/composables/REGISTRY.md`
@@ -466,7 +466,7 @@ The module must support full quotations, partial quotations, and declines; expos
 - [x] Step 16 completed
 
 ### Deviations / Decisions
-- [x] `[?]` Decision needed: `/operations/quotations` resolves to entity folder `Quotations`, so the page files were implemented under `FRONTENT/src/pages/Operations/Quotations/` while resource/composable names remain Supplier Quotation specific.
+- [x] `[?]` Decision needed: `/operation/quotations` resolves to entity folder `Quotations`, so the page files were implemented under `FRONTENT/src/pages/operation/Quotations/` while resource/composable names remain Supplier Quotation specific.
 - [x] `[!]` Issue/blocker: Pre-existing deleted RFQ custom page files remain in the worktree and were not restored or modified by this plan execution.
 
 ### Files Actually Changed
@@ -474,14 +474,14 @@ The module must support full quotations, partial quotations, and declines; expos
 - `GAS/syncAppResources.gs`
 - `GAS/setupOperationSheets.gs`
 - `GAS/resourceApi.gs`
-- `FRONTENT/src/pages/Operations/Quotations/IndexPage.vue`
-- `FRONTENT/src/pages/Operations/Quotations/AddPage.vue`
-- `FRONTENT/src/pages/Operations/Quotations/ViewPage.vue`
-- `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationIndex.js`
-- `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationCreateFlow.js`
-- `FRONTENT/src/composables/operations/supplierQuotations/useSupplierQuotationView.js`
-- `FRONTENT/src/composables/operations/supplierQuotations/supplierQuotationPayload.js`
-- `FRONTENT/src/composables/operations/supplierQuotations/supplierQuotationMeta.js`
+- `FRONTENT/src/pages/operation/Quotations/IndexPage.vue`
+- `FRONTENT/src/pages/operation/Quotations/AddPage.vue`
+- `FRONTENT/src/pages/operation/Quotations/ViewPage.vue`
+- `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationIndex.js`
+- `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationCreateFlow.js`
+- `FRONTENT/src/composables/operation/supplierQuotations/useSupplierQuotationView.js`
+- `FRONTENT/src/composables/operation/supplierQuotations/supplierQuotationPayload.js`
+- `FRONTENT/src/composables/operation/supplierQuotations/supplierQuotationMeta.js`
 - `FRONTENT/src/composables/REGISTRY.md`
 - `Documents/RESOURCE_COLUMNS_GUIDE.md`
 - `Documents/PROCUREMENT_SHEET_STRUCTURE.md`
@@ -506,3 +506,4 @@ The module must support full quotations, partial quotations, and declines; expos
 
 ## Build Handoff
 Build Agent, read `PLANS/2026-04-25-supplier-quotation-module.md` and execute it end-to-end.
+

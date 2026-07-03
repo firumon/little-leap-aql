@@ -1,4 +1,4 @@
-# PLAN: Refactor MasterEntityPage into Reusable Components
+﻿# PLAN: Refactor MasterEntityPage into Reusable Components
 
 **Status**: COMPLETED
 **Created**: 2026-03-14
@@ -31,7 +31,7 @@ Refactor `MasterEntityPage.vue` (approx. 745 lines) into small, reusable Quasar/
 - **Pattern**: Composition API.
 - [x] Implemented `useMasterPage` with extracted route/config resolution, list filtering, cache-first reload + background sync, optimistic create/update workflow, and dialog/form state.
 
-### Step 2: Create UI Components in `src/components/Masters/`
+### Step 2: Create UI Components in `src/components/master/`
 - **MasterHeader.vue**: Extract title, description, and stats.
 - **MasterToolbar.vue**: Extract search input and "Include Inactive" toggle.
 - **MasterList.vue**: Extract records list and loading/empty states.
@@ -39,19 +39,19 @@ Refactor `MasterEntityPage.vue` (approx. 745 lines) into small, reusable Quasar/
 - **MasterDetailDialog.vue**: Extract record detail viewing logic.
 - **MasterEditorDialog.vue**: Extract create/edit form logic.
 - **Files**:
-    - `FRONTENT/src/components/Masters/MasterHeader.vue`
-    - `FRONTENT/src/components/Masters/MasterToolbar.vue`
-    - `FRONTENT/src/components/Masters/MasterList.vue`
-    - `FRONTENT/src/components/Masters/MasterRecordCard.vue`
-    - `FRONTENT/src/components/Masters/MasterDetailDialog.vue`
-    - `FRONTENT/src/components/Masters/MasterEditorDialog.vue`
+    - `FRONTENT/src/components/master/MasterHeader.vue`
+    - `FRONTENT/src/components/master/MasterToolbar.vue`
+    - `FRONTENT/src/components/master/MasterList.vue`
+    - `FRONTENT/src/components/master/MasterRecordCard.vue`
+    - `FRONTENT/src/components/master/MasterDetailDialog.vue`
+    - `FRONTENT/src/components/master/MasterEditorDialog.vue`
 - [x] Added all six components and mapped original UI behavior through props/emits.
 - [x] Moved scoped visual styles into component-local style blocks to preserve rendering after split.
 
 ### Step 3: Refactor `MasterEntityPage.vue`
 - Update `MasterEntityPage.vue` to import and use the new components and composable.
 - Ensure all styles are either kept in the page (if specific to page layout) or moved to components where appropriate.
-- **Files**: `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+- **Files**: `FRONTENT/src/pages/master/MasterEntityPage.vue`
 - [x] Replaced monolithic template/script with high-level component orchestration and composable wiring.
 - [x] Kept only page-level theme/background/FAB styles in page scope.
 
@@ -79,3 +79,4 @@ Refactor `MasterEntityPage.vue` (approx. 745 lines) into small, reusable Quasar/
 ## Post-Execution Notes (Build Agent fills this)
 - Executed with `little-leap-expert` workflow alignment.
 - Existing Vite warnings remained during build (dynamic import warning in `MasterIndexPage.vue` and chunking note for `masterRecords.js`), but no new errors were introduced by this plan.
+

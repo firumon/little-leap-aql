@@ -1,4 +1,4 @@
-import { ref, computed, watch } from 'vue'
+﻿import { ref, computed, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from '../../../stores/auth.js'
 import { useRecord } from '../../resources/useRecord.js'
@@ -7,7 +7,7 @@ import { useResourceConfig } from '../../resources/useResourceConfig.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { OUTLET_OPERATION_RESOURCES, RESTOCK_PROGRESS_ORDER, active, progressMeta, sortTime, text, todayISO } from './outletOperationsMeta.js'
 import { allocatedRows, approvalRequestedQty, computeRestockProgressFromItems, expandOrsiAllocationRows, recommendOrsiAllocation, restockEditableProgress, storageName, sumBy, toNumber, validateRestockAllocationRows, validateRestockApproval, validateRestockDraft, warehouseAvailableQty, warehouseDisplayName, warehouseStorageCandidatesForSku } from './outletStockLogic.js'
-import { useProductSkuResolver } from 'src/composables/masters/products/useProductSkuResolver'
+import { useProductSkuResolver } from 'src/composables/master/products/useProductSkuResolver'
 import { buildPendingRestockAllocationBatchRequests, buildRestockAllocationBatchRequests, buildRestockCancelItemsBatchRequests, buildRestockCompositePayload, buildRestockRejectBatchRequests, buildRestockSendBackRequest } from './outletRestockPayload.js'
 import { compositeSaveRequest, failureMessage, resourceGetRequest, responseFailed, resourceBulkRequest, resourceUpdateRequest } from './outletOperationsBatch.js'
 
@@ -615,4 +615,5 @@ export function useOutletRestocks() {
     navigateTo, navigateToAdd, cancel
   }
 }
+
 

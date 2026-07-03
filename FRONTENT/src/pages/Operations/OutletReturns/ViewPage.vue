@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding class="q-gutter-y-md">
     <!-- Header panel using standard Quasar elements -->
     <q-card flat bordered class="bg-white">
@@ -277,7 +277,7 @@
 import { onMounted, computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
-import { useOutletReturns } from '../../../composables/operations/outlets/useOutletReturns.js'
+import { useOutletReturns } from '../../../composables/operation/outlets/useOutletReturns.js'
 import ActionCommentDialog from '../../../components/shared/ActionCommentDialog.vue'
 import ResourceReports from 'components/Reports/ResourceReports.vue'
 
@@ -398,3 +398,4 @@ onMounted(() => {
   reload()
 })
 </script>
+

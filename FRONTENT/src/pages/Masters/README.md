@@ -1,4 +1,4 @@
-# Master Pages Architecture
+﻿# Master Pages Architecture
 
 ## Overview
 
@@ -22,7 +22,7 @@ The Master Pages system uses **sub-route pages** with **3-tier auto-discovery** 
 `ActionResolverPage.vue` resolves the correct page component at runtime:
 
 ```
-User navigates to /masters/products/add
+User navigates to /master/products/add
          |
    ActionResolverPage checks (customUIName = "A2930"):
          |
@@ -57,9 +57,9 @@ User navigates to /masters/products/add
 
 Each page is split into independently replaceable **sections** using `useSectionResolver`. Sections also follow 3-tier resolution:
 
-1. **Tenant-custom**: `components/Masters/_custom/{CustomUIName}/{Entity}{Section}.vue`
-2. **Entity-custom**: `components/Masters/{Entity}/{Section}.vue`
-3. **Default**: `components/Masters/Master{Action}{Section}.vue`
+1. **Tenant-custom**: `components/master/_custom/{CustomUIName}/{Entity}{Section}.vue`
+2. **Entity-custom**: `components/master/{Entity}/{Section}.vue`
+3. **Default**: `components/master/Master{Action}{Section}.vue`
 
 See `Documents/MODULE_WORKFLOWS.md` Section 2 for full details on sections, props, and events.
 
@@ -81,35 +81,35 @@ Generic pages that work for any resource:
 
 Override one section for a specific tenant:
 ```
-FRONTENT/src/components/Masters/_custom/{CustomUIName}/{Entity}{Section}.vue
+FRONTENT/src/components/master/_custom/{CustomUIName}/{Entity}{Section}.vue
 ```
 
 ### Option B: Entity-Custom Section
 
 Override one section for all tenants:
 ```
-FRONTENT/src/components/Masters/{Entity}/{Section}.vue
+FRONTENT/src/components/master/{Entity}/{Section}.vue
 ```
 
 ### Option C: Tenant-Custom Full Page
 
 Replace the entire page for a specific tenant:
 ```
-FRONTENT/src/pages/Masters/_custom/{CustomUIName}/{Entity}.vue
-FRONTENT/src/pages/Masters/_custom/{CustomUIName}/{Entity}{Action}.vue
+FRONTENT/src/pages/master/_custom/{CustomUIName}/{Entity}.vue
+FRONTENT/src/pages/master/_custom/{CustomUIName}/{Entity}{Action}.vue
 ```
 
 ### Option D: Entity-Custom Full Page
 
 Replace the entire page for all tenants:
 ```
-FRONTENT/src/pages/Masters/{Entity}/{Action}Page.vue
+FRONTENT/src/pages/master/{Entity}/{Action}Page.vue
 ```
 
 ### Directory Structure
 
 ```
-FRONTENT/src/pages/Masters/
+FRONTENT/src/pages/master/
 ├── _common/
 │   ├── IndexPage.vue
 │   ├── ViewPage.vue
@@ -186,3 +186,4 @@ Configured as JSON in the `AdditionalActions` column of APP.Resources:
 | `_common/*.vue` | Generic pages for all resources (5 action pages) |
 | `_custom/{Code}/*.vue` | Tenant-specific page overrides |
 | `{Entity}/*.vue` | Entity-specific page overrides |
+

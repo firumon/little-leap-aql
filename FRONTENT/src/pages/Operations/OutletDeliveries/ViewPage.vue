@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding class="q-pb-xl">
     <div v-if="!delivery" class="text-center q-pa-xl">
       <q-spinner v-if="loading" color="primary" size="3em" />
@@ -105,10 +105,10 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
-import { text } from '../../../composables/operations/outlets/outletOperationsMeta.js'
-import { useOutletDeliveries } from '../../../composables/operations/outlets/useOutletDeliveries.js'
-import OutletDeliverySummaryPanel from '../../../components/Operations/Outlets/OutletDeliverySummaryPanel.vue'
-import OutletDeliveryItemRow from '../../../components/Operations/Outlets/OutletDeliveryItemRow.vue'
+import { text } from '../../../composables/operation/outlets/outletOperationsMeta.js'
+import { useOutletDeliveries } from '../../../composables/operation/outlets/useOutletDeliveries.js'
+import OutletDeliverySummaryPanel from '../../../components/operation/Outlets/OutletDeliverySummaryPanel.vue'
+import OutletDeliveryItemRow from '../../../components/operation/Outlets/OutletDeliveryItemRow.vue'
 import ActionCommentDialog from '../../../components/shared/ActionCommentDialog.vue'
 import ResourceReports from 'components/Reports/ResourceReports.vue'
 
@@ -256,3 +256,4 @@ async function handleCancelConfirm(comment) {
 
 onMounted(() => reloadView())
 </script>
+

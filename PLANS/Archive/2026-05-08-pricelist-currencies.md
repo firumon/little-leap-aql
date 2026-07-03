@@ -1,4 +1,4 @@
-# PLAN: PriceList and Currencies — Master Resource Implementation
+﻿# PLAN: PriceList and Currencies — Master Resource Implementation
 **Status**: COMPLETED
 **Created**: 2026-05-08
 **Created By**: Brain Agent (deepseek-v4-pro)
@@ -85,7 +85,7 @@ Add three new resource entries into `APP_RESOURCES_CODE_CONFIG` array. Insert th
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{"group":["Product"],"order":4,"label":"Currencies","icon":"attach_money","route":"/masters/currencies","pageTitle":"Currencies","pageDescription":"Manage currency master records","show":true}]),
+        Menu: JSON.stringify([{"group":["Product"],"order":4,"label":"Currencies","icon":"attach_money","route":"/master/currencies","pageTitle":"Currencies","pageDescription":"Manage currency master records","show":true}]),
         UIFields: JSON.stringify([
             { header: 'Code', label: 'Code', type: 'text', required: true, hint: 'e.g. AED, INR, USD' },
             { header: 'Name', label: 'Name', type: 'text', required: true },
@@ -125,7 +125,7 @@ Add three new resource entries into `APP_RESOURCES_CODE_CONFIG` array. Insert th
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
-        Menu: JSON.stringify([{"group":["Product"],"order":5,"label":"Price Lists","icon":"sell","route":"/masters/price-lists","pageTitle":"Price Lists","pageDescription":"Manage product price lists","show":true}]),
+        Menu: JSON.stringify([{"group":["Product"],"order":5,"label":"Price Lists","icon":"sell","route":"/master/price-lists","pageTitle":"Price Lists","pageDescription":"Manage product price lists","show":true}]),
         UIFields: JSON.stringify([
             { header: 'Name', label: 'Name', type: 'text', required: true },
             { header: 'Description', label: 'Description', type: 'textarea' },
@@ -453,3 +453,4 @@ If execution is interrupted, the next agent reads this plan, finds the first unc
 - [ ] User must run `setupMasterSheets()` from the Apps Script editor to create/update the `Currencies`, `PriceList`, and `PriceListItems` sheets (and update `OutletOperatingRules` headers) in the master spreadsheet.
 - [ ] User should run `setupAppSheets()` to append the `PriceListLookup` config key to the `APP.Config` sheet (only needed if the sheet already existed before this plan).
 - [ ] User must redeploy the Web App **only if** the API contract changed (adding new resources does not change the contract).
+

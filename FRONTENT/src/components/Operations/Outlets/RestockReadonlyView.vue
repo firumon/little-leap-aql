@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="readonly-restock q-pa-md">
     <q-card flat bordered class="q-mb-md">
       <q-card-section class="row items-center no-wrap">
@@ -76,7 +76,7 @@
 <script setup>
 import { computed } from 'vue'
 import OutletProgressChip from './OutletProgressChip.vue'
-import { text } from '../../../composables/operations/outlets/outletOperationsMeta.js'
+import { text } from '../../../composables/operation/outlets/outletOperationsMeta.js'
 import ResourceReports from "../../Reports/ResourceReports.vue";
 
 defineOptions({ name: 'RestockReadonlyView' })
@@ -130,3 +130,4 @@ const decoratedRows = computed(() => props.rows.map(decorateRow))
   max-width: 100%;
 }
 </style>
+

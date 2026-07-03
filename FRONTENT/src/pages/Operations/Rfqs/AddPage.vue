@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="rfq-add">
     <q-card flat bordered class="q-mb-sm">
       <q-card-section class="row items-center no-wrap q-pa-sm">
@@ -184,7 +184,7 @@
 <script setup>
 import { h } from 'vue'
 import { QItem, QItemSection, QItemLabel } from 'quasar'
-import { useRFQCreateFlow } from 'src/composables/operations/rfqs/useRFQCreateFlow'
+import { useRFQCreateFlow } from 'src/composables/operation/rfqs/useRFQCreateFlow'
 
 const OptionRow = (props) => h(QItem, props.itemProps, () => [
   h(QItemSection, () => [
@@ -227,3 +227,4 @@ const {
   box-shadow: 0 0 0 1px var(--q-primary);
 }
 </style>
+

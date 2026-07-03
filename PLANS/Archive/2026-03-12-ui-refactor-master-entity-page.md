@@ -1,4 +1,4 @@
-# PLAN: Mobile-First UI Refactor for MasterEntityPage
+﻿# PLAN: Mobile-First UI Refactor for MasterEntityPage
 **Status**: COMPLETED
 **Created**: 2026-03-12
 **Created By**: Brain Agent
@@ -23,7 +23,7 @@ Refactor `MasterEntityPage.vue` to provide a "stunning," attractive, and easy-to
 - [x] Modify `<template>` to support a "Card View" for mobile screens (xs/sm) and "Table View" for larger screens (md+).
 - [x] Use `q-list` and `q-item` or custom `q-card` loop for the mobile view to show record details clearly.
 - [x] Implement a toggle or automatic switch between views based on screen size using Quasar's `$q.screen`.
-**Files**: `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+**Files**: `FRONTENT/src/pages/master/MasterEntityPage.vue`
 **Pattern**: Quasar responsive design patterns (using `grid` prop on `q-table` or conditional rendering).
 **Rule**: UI must be accessible and legible on 360px wide screens.
 
@@ -31,7 +31,7 @@ Refactor `MasterEntityPage.vue` to provide a "stunning," attractive, and easy-to
 - [x] Replace the top "New" button with a `q-page-sticky` Floating Action Button (FAB) for mobile users.
 - [x] Ensure the page header (Title and Search/Toggle) stays visible or is easily accessible.
 - [x] Improve the "Edit" action accessibility on mobile (e.g., swipe actions or prominent buttons in cards).
-**Files**: `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+**Files**: `FRONTENT/src/pages/master/MasterEntityPage.vue`
 **Pattern**: Mobile App UX (Bottom-right FAB for primary actions).
 **Rule**: Primary action (Create) must be reachable with one thumb on mobile.
 
@@ -39,7 +39,7 @@ Refactor `MasterEntityPage.vue` to provide a "stunning," attractive, and easy-to
 - [x] Apply consistent spacing, better typography (text-weight-bold for titles), and Quasar shadows/elevation for depth.
 - [x] Improve Loading/Empty states with `q-inner-loading` or skeleton screens.
 - [x] Enhance the dialog/form UI: use `maximized` on mobile for a full-screen "sheet" feel, or centered with better padding on desktop.
-**Files**: `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+**Files**: `FRONTENT/src/pages/master/MasterEntityPage.vue`
 **Pattern**: Quasar Material Design 3-like aesthetics.
 **Rule**: Use `callGasApi` standard notifications for all feedback.
 
@@ -67,7 +67,7 @@ Refactor `MasterEntityPage.vue` to provide a "stunning," attractive, and easy-to
 - [ ] `[!]` Issue/blocker:
 
 ### Files Actually Changed
-- `FRONTENT/src/pages/Masters/MasterEntityPage.vue`
+- `FRONTENT/src/pages/master/MasterEntityPage.vue`
 
 ### Validation Performed
 - [x] Manual mobile-view simulation in browser.
@@ -75,3 +75,4 @@ Refactor `MasterEntityPage.vue` to provide a "stunning," attractive, and easy-to
 
 ### Manual Actions Required
 - [ ] None.
+

@@ -1,4 +1,4 @@
-# PLAN: RFQ Supplier Assignment And Send Flow
+﻿# PLAN: RFQ Supplier Assignment And Send Flow
 **Status**: COMPLETED
 **Created**: 2026-04-25
 **Created By**: Brain Agent (Codex)
@@ -26,7 +26,7 @@ The RFQ itself must become read-only after supplier assignment, and supplier sen
   - `Documents/RESOURCE_COLUMNS_GUIDE.md`
   - `PLANS/_TEMPLATE.md`
 - Current implementation state already in place:
-  - RFQ index/view/create pages exist under `FRONTENT/src/pages/Operations/Rfqs/`
+  - RFQ index/view/create pages exist under `FRONTENT/src/pages/operation/Rfqs/`
   - `RFQ` view currently supports draft editing and assign-supplier navigation
   - `useResourceConfig()` already normalizes navigate actions and `visibleWhen`
   - `workflowStore.updateResourceRecord()` exists and can be reused for single-record updates
@@ -69,7 +69,7 @@ The RFQ itself must become read-only after supplier assignment, and supplier sen
 **Rule**: `SentDate` is the sheet field name, not `SendDate`.
 
 ### Step 2: Create Shared RFQ Supplier Flow Logic
-- [x] Add a reusable RFQ supplier workflow composable under `FRONTENT/src/composables/operations/rfqs/`.
+- [x] Add a reusable RFQ supplier workflow composable under `FRONTENT/src/composables/operation/rfqs/`.
 - [x] Load the RFQ record, supplier master records, and RFQ supplier rows through approved resource composables.
 - [x] Expose read-only RFQ header data for both supplier pages:
   - RFQ code
@@ -91,7 +91,7 @@ The RFQ itself must become read-only after supplier assignment, and supplier sen
   - direct RFQ/procurement update calls when state needs to advance
 - [x] Keep page-private rendering out of the composable.
 
-**Files**: `FRONTENT/src/composables/operations/rfqs/useRFQSupplierFlow.js` or equivalent shared composable
+**Files**: `FRONTENT/src/composables/operation/rfqs/useRFQSupplierFlow.js` or equivalent shared composable
 **Pattern**: `useRFQCreateFlow.js`, `usePurchaseRequisitionEditableFlow.js`
 **Rule**: The composable owns selection, payload shaping, and transition logic; pages stay thin.
 
@@ -108,7 +108,7 @@ The RFQ itself must become read-only after supplier assignment, and supplier sen
 - [x] After a successful assignment save, set the RFQ to read-only mode.
 - [x] Keep the page accessible later from the RFQ record/index route for history review.
 
-**Files**: `FRONTENT/src/pages/Operations/Rfqs/RecordAssignSupplierPage.vue`
+**Files**: `FRONTENT/src/pages/operation/Rfqs/RecordAssignSupplierPage.vue`
 **Pattern**: RFQ view page layout plus Quasar selection controls.
 **Rule**: No RFQ field editing after assignment.
 
@@ -128,7 +128,7 @@ The RFQ itself must become read-only after supplier assignment, and supplier sen
 - [x] After the write succeeds, update `Procurement.Progress` to `RFQ_SENT_TO_SUPPLIERS` only when the workflow determines the RFQ has no remaining unsent assigned supplier rows.
 - [x] Remove or hide the action forever for rows already sent, while keeping the page accessible from index for audit/history.
 
-**Files**: `FRONTENT/src/pages/Operations/Rfqs/RecordMarkAsSentPage.vue` or the final resolver-named equivalent
+**Files**: `FRONTENT/src/pages/operation/Rfqs/RecordMarkAsSentPage.vue` or the final resolver-named equivalent
 **Pattern**: Record-page custom override routed through `ActionResolverPage.vue`.
 **Rule**: Only the user-selected suppliers are updated on send.
 
@@ -139,19 +139,19 @@ The RFQ itself must become read-only after supplier assignment, and supplier sen
 - [x] Add navigation entry points to the new mark-as-sent page so dispatch can be reached from the RFQ index/record flow.
 - [x] Preserve the existing RFQ read-only summary behavior for later stages.
 
-**Files**: `FRONTENT/src/pages/Operations/Rfqs/ViewPage.vue`, `FRONTENT/src/pages/Operations/Rfqs/IndexPage.vue` if needed
+**Files**: `FRONTENT/src/pages/operation/Rfqs/ViewPage.vue`, `FRONTENT/src/pages/operation/Rfqs/IndexPage.vue` if needed
 **Pattern**: Existing RFQ gateway view and navigation gating.
 **Rule**: RFQ editing ends at the supplier assignment boundary.
 
 ### Step 6: Update Registries And Workflow Docs
 - [x] Register the new composable in `FRONTENT/src/composables/REGISTRY.md`.
-- [x] Update `FRONTENT/src/pages/Operations/_custom/REGISTRY.md` for the new RFQ custom pages.
+- [x] Update `FRONTENT/src/pages/operation/_custom/REGISTRY.md` for the new RFQ custom pages.
 - [x] Update `Documents/PROCUREMENT_SHEET_STRUCTURE.md` to describe the new supplier-assignment/send lifecycle.
 - [x] Update `Documents/RESOURCE_COLUMNS_GUIDE.md` if the RFQ supplier progress semantics changed materially.
 - [x] Update `Documents/MODULE_WORKFLOWS.md` with the RFQ supplier-dispatch workflow.
 - [x] Update `Documents/CONTEXT_HANDOFF.md` so continuation sessions understand the new RFQ state model.
 
-**Files**: `FRONTENT/src/composables/REGISTRY.md`, `FRONTENT/src/pages/Operations/_custom/REGISTRY.md`, `Documents/PROCUREMENT_SHEET_STRUCTURE.md`, `Documents/RESOURCE_COLUMNS_GUIDE.md`, `Documents/MODULE_WORKFLOWS.md`, `Documents/CONTEXT_HANDOFF.md`
+**Files**: `FRONTENT/src/composables/REGISTRY.md`, `FRONTENT/src/pages/operation/_custom/REGISTRY.md`, `Documents/PROCUREMENT_SHEET_STRUCTURE.md`, `Documents/RESOURCE_COLUMNS_GUIDE.md`, `Documents/MODULE_WORKFLOWS.md`, `Documents/CONTEXT_HANDOFF.md`
 **Pattern**: Existing registry and workflow documentation style.
 **Rule**: Keep docs aligned with actual behavior only.
 
@@ -194,11 +194,11 @@ The RFQ itself must become read-only after supplier assignment, and supplier sen
 - `GAS/Constants.gs`
 - `GAS/setupOperationSheets.gs`
 - `GAS/syncAppResources.gs`
-- `FRONTENT/src/composables/operations/rfqs/useRFQSupplierFlow.js`
-- `FRONTENT/src/pages/Operations/Rfqs/RecordAssignSupplierPage.vue`
-- `FRONTENT/src/pages/Operations/Rfqs/RecordMarkAsSentPage.vue`
+- `FRONTENT/src/composables/operation/rfqs/useRFQSupplierFlow.js`
+- `FRONTENT/src/pages/operation/Rfqs/RecordAssignSupplierPage.vue`
+- `FRONTENT/src/pages/operation/Rfqs/RecordMarkAsSentPage.vue`
 - `FRONTENT/src/composables/REGISTRY.md`
-- `FRONTENT/src/pages/Operations/Rfqs/REGISTRY.md`
+- `FRONTENT/src/pages/operation/Rfqs/REGISTRY.md`
 - `Documents/PROCUREMENT_SHEET_STRUCTURE.md`
 - `Documents/RESOURCE_COLUMNS_GUIDE.md`
 - `Documents/MODULE_WORKFLOWS.md`
@@ -211,3 +211,4 @@ The RFQ itself must become read-only after supplier assignment, and supplier sen
 ### Manual Actions Required
 - [x] `AQL > Resources > Sync APP.Resources from Code` if resource metadata changed
 - [x] `cd GAS && clasp push` if GAS files changed
+

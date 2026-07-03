@@ -1,4 +1,4 @@
-# PLAN: Outlet & Field Sales Operations Implementation
+﻿# PLAN: Outlet & Field Sales Operations Implementation
 **Status**: COMPLETED
 **Created**: 2026-04-28
 **Created By**: Brain Agent (Codex)
@@ -70,8 +70,8 @@ Current AQL supports:
 - operation-scope year-coded resources;
 - generic `get`, `create`, `update`, `bulk`, `compositeSave`, `executeAction`, and `batch`;
 - post-write hooks for stock movement storage updates;
-- custom operation pages under `FRONTENT/src/pages/Operations/{PascalCaseSlug}/`;
-- business logic in `FRONTENT/src/composables/operations/*`;
+- custom operation pages under `FRONTENT/src/pages/operation/{PascalCaseSlug}/`;
+- business logic in `FRONTENT/src/composables/operation/*`;
 - resource navigation through `useResourceNav`;
 - shared data access through stores/services only.
 
@@ -79,8 +79,8 @@ Use these existing patterns:
 - Resource metadata pattern from `GAS/syncAppResources.gs`.
 - Sheet setup pattern from `GAS/setupMasterSheets.gs` and `GAS/setupOperationSheets.gs`.
 - Movement/storage hook pattern from `GAS/stockMovements.gs`.
-- Batch request helper pattern from `FRONTENT/src/composables/operations/poReceivings/poReceivingBatch.js`.
-- Custom operation page pattern from `FRONTENT/src/pages/Operations/PurchaseOrders/`, `PoReceivings/`, and `GoodsReceipts/`.
+- Batch request helper pattern from `FRONTENT/src/composables/operation/poReceivings/poReceivingBatch.js`.
+- Custom operation page pattern from `FRONTENT/src/pages/operation/PurchaseOrders/`, `PoReceivings/`, and `GoodsReceipts/`.
 
 ## Pre-Conditions
 - [ ] Build Agent has read this plan fully before editing.
@@ -123,52 +123,52 @@ Use these existing patterns:
 - Dependencies: existing helpers used by `GAS/stockMovements.gs`, especially `openResourceSheet`, resource helpers, and sync cursor helpers.
 
 ### Frontend Composables
-`FRONTENT/src/composables/operations/outlets/outletOperationsMeta.js`
+`FRONTENT/src/composables/operation/outlets/outletOperationsMeta.js`
 - Action: create.
 - Purpose: shared constants for progress values, labels, colors, resource names, and movement reference types.
 - Dependencies: none.
 
-`FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js`
+`FRONTENT/src/composables/operation/outlets/outletOperationsBatch.js`
 - Action: create.
 - Purpose: create deterministic request builders for `batch`, `compositeSave`, `bulk`, `update`, `executeAction`, and refresh requests.
 - Dependencies: `outletOperationsMeta.js`.
 
-`FRONTENT/src/composables/operations/outlets/outletStockLogic.js`
+`FRONTENT/src/composables/operation/outlets/outletStockLogic.js`
 - Action: create.
 - Purpose: pure helpers for quantities, balances, delivery eligibility, consumption validation, value-limit checks, and duplicate-restock detection.
 - Dependencies: `outletOperationsMeta.js`.
 
-`FRONTENT/src/composables/operations/outlets/outletRestockPayload.js`
+`FRONTENT/src/composables/operation/outlets/outletRestockPayload.js`
 - Action: create.
 - Purpose: build restock parent/child composite payloads and delivery batch requests.
 - Dependencies: `outletStockLogic.js`, `outletOperationsBatch.js`.
 
-`FRONTENT/src/composables/operations/outlets/outletConsumptionPayload.js`
+`FRONTENT/src/composables/operation/outlets/outletConsumptionPayload.js`
 - Action: create.
 - Purpose: build consumption parent/child composite payloads and negative movement requests.
 - Dependencies: `outletStockLogic.js`, `outletOperationsBatch.js`.
 
-`FRONTENT/src/composables/operations/outlets/useOutletVisits.js`
+`FRONTENT/src/composables/operation/outlets/useOutletVisits.js`
 - Action: create.
 - Purpose: view-model and workflow logic for visit list/create/view/postpone/complete/cancel.
 - Dependencies: `useResourceData`, `useWorkflowStore`, `useResourceNav`, `outletOperationsBatch.js`.
 
-`FRONTENT/src/composables/operations/outlets/useOutletRestocks.js`
+`FRONTENT/src/composables/operation/outlets/useOutletRestocks.js`
 - Action: create.
 - Purpose: restock index/create/edit/review/delivery orchestration.
 - Dependencies: `useResourceData`, `useWorkflowStore`, `useResourceNav`, `outletRestockPayload.js`, `outletStockLogic.js`.
 
-`FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js`
+`FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js`
 - Action: create.
 - Purpose: delivery list/view/create flow, delivered JSON preview, and cumulative delivery validation.
 - Dependencies: `useResourceData`, `useWorkflowStore`, `useResourceNav`, `outletRestockPayload.js`.
 
-`FRONTENT/src/composables/operations/outlets/useOutletConsumption.js`
+`FRONTENT/src/composables/operation/outlets/useOutletConsumption.js`
 - Action: create.
 - Purpose: consumption create/list/view flow and negative outlet stock movement orchestration.
 - Dependencies: `useResourceData`, `useWorkflowStore`, `useResourceNav`, `outletConsumptionPayload.js`.
 
-`FRONTENT/src/composables/operations/outlets/useOutletStock.js`
+`FRONTENT/src/composables/operation/outlets/useOutletStock.js`
 - Action: create.
 - Purpose: outlet stock list/detail calculations from `OutletStorages`, enriched with SKU/Product labels and latest movements.
 - Dependencies: `useResourceData`, `useResourceNav`, `outletStockLogic.js`.
@@ -179,27 +179,27 @@ Use these existing patterns:
 - Dependencies: new composable files.
 
 ### Frontend Components
-`FRONTENT/src/components/Operations/Outlets/OutletHeaderPanel.vue`
+`FRONTENT/src/components/operation/Outlets/OutletHeaderPanel.vue`
 - Action: create.
 - Purpose: UI-only summary header for outlet operation pages.
 - Dependencies: props and emits only.
 
-`FRONTENT/src/components/Operations/Outlets/OutletItemGrid.vue`
+`FRONTENT/src/components/operation/Outlets/OutletItemGrid.vue`
 - Action: create.
 - Purpose: reusable UI-only editable/read-only SKU quantity grid for restock, delivery, and consumption rows.
 - Dependencies: props and emits only.
 
-`FRONTENT/src/components/Operations/Outlets/OutletProgressChip.vue`
+`FRONTENT/src/components/operation/Outlets/OutletProgressChip.vue`
 - Action: create.
 - Purpose: UI-only progress/status chip.
 - Dependencies: props only.
 
-`FRONTENT/src/components/Operations/Outlets/OutletStockRows.vue`
+`FRONTENT/src/components/operation/Outlets/OutletStockRows.vue`
 - Action: create.
 - Purpose: UI-only current stock rows grouped by SKU/storage.
 - Dependencies: props and emits only.
 
-`FRONTENT/src/components/Operations/Outlets/OutletMovementTimeline.vue`
+`FRONTENT/src/components/operation/Outlets/OutletMovementTimeline.vue`
 - Action: create.
 - Purpose: UI-only outlet movement timeline for record views.
 - Dependencies: props only.
@@ -210,72 +210,72 @@ Use these existing patterns:
 - Dependencies: component files.
 
 ### Frontend Pages
-`FRONTENT/src/pages/Operations/OutletVisits/IndexPage.vue`
+`FRONTENT/src/pages/operation/OutletVisits/IndexPage.vue`
 - Action: create.
 - Purpose: custom visit list grouped by planned/completed/postponed/cancelled.
 - Dependencies: `useOutletVisits.js`.
 
-`FRONTENT/src/pages/Operations/OutletVisits/AddPage.vue`
+`FRONTENT/src/pages/operation/OutletVisits/AddPage.vue`
 - Action: create.
 - Purpose: create planned visit.
 - Dependencies: `useOutletVisits.js`.
 
-`FRONTENT/src/pages/Operations/OutletVisits/ViewPage.vue`
+`FRONTENT/src/pages/operation/OutletVisits/ViewPage.vue`
 - Action: create.
 - Purpose: view visit and route actions to complete/postpone/cancel UI.
 - Dependencies: `useOutletVisits.js`.
 
-`FRONTENT/src/pages/Operations/OutletRestocks/IndexPage.vue`
+`FRONTENT/src/pages/operation/OutletRestocks/IndexPage.vue`
 - Action: create.
 - Purpose: restock list grouped by progress.
 - Dependencies: `useOutletRestocks.js`.
 
-`FRONTENT/src/pages/Operations/OutletRestocks/AddPage.vue`
+`FRONTENT/src/pages/operation/OutletRestocks/AddPage.vue`
 - Action: create.
 - Purpose: create restock draft/request with child items.
 - Dependencies: `useOutletRestocks.js`, outlet components.
 
-`FRONTENT/src/pages/Operations/OutletRestocks/ViewPage.vue`
+`FRONTENT/src/pages/operation/OutletRestocks/ViewPage.vue`
 - Action: create.
 - Purpose: switch between editable, approver review, and read-only restock views by progress.
 - Dependencies: `useOutletRestocks.js`.
 
-`FRONTENT/src/pages/Operations/OutletDeliveries/IndexPage.vue`
+`FRONTENT/src/pages/operation/OutletDeliveries/IndexPage.vue`
 - Action: create.
 - Purpose: delivery list by outlet/restock/date.
 - Dependencies: `useOutletDeliveries.js`.
 
-`FRONTENT/src/pages/Operations/OutletDeliveries/AddPage.vue`
+`FRONTENT/src/pages/operation/OutletDeliveries/AddPage.vue`
 - Action: create.
 - Purpose: create delivery against approved or partially delivered restock.
 - Dependencies: `useOutletDeliveries.js`.
 
-`FRONTENT/src/pages/Operations/OutletDeliveries/ViewPage.vue`
+`FRONTENT/src/pages/operation/OutletDeliveries/ViewPage.vue`
 - Action: create.
 - Purpose: read-only delivery event view.
 - Dependencies: `useOutletDeliveries.js`.
 
-`FRONTENT/src/pages/Operations/OutletConsumption/IndexPage.vue`
+`FRONTENT/src/pages/operation/OutletConsumption/IndexPage.vue`
 - Action: create.
 - Purpose: consumption list by outlet/date.
 - Dependencies: `useOutletConsumption.js`.
 
-`FRONTENT/src/pages/Operations/OutletConsumption/AddPage.vue`
+`FRONTENT/src/pages/operation/OutletConsumption/AddPage.vue`
 - Action: create.
 - Purpose: create consumption with child items and negative stock movement.
 - Dependencies: `useOutletConsumption.js`.
 
-`FRONTENT/src/pages/Operations/OutletConsumption/ViewPage.vue`
+`FRONTENT/src/pages/operation/OutletConsumption/ViewPage.vue`
 - Action: create.
 - Purpose: read-only consumption view with items and movements.
 - Dependencies: `useOutletConsumption.js`.
 
-`FRONTENT/src/pages/Operations/OutletStorages/IndexPage.vue`
+`FRONTENT/src/pages/operation/OutletStorages/IndexPage.vue`
 - Action: create.
 - Purpose: outlet stock list and outlet selector.
 - Dependencies: `useOutletStock.js`.
 
-`FRONTENT/src/pages/Operations/OutletStorages/ViewPage.vue`
+`FRONTENT/src/pages/operation/OutletStorages/ViewPage.vue`
 - Action: create.
 - Purpose: stock detail for a selected outlet or storage row.
 - Dependencies: `useOutletStock.js`.
@@ -529,13 +529,13 @@ Stock movement lifecycle:
 
 ## UI/UX Flow
 - Menus:
-- `Field Sales > Outlet Visits` route `/operations/outlet-visits`.
-- `Field Sales > Outlet Restocks` route `/operations/outlet-restocks`.
-- `Field Sales > Outlet Deliveries` route `/operations/outlet-deliveries`.
-- `Field Sales > Outlet Consumption` route `/operations/outlet-consumption`.
-- `Field Sales > Outlet Stock` route `/operations/outlet-storages`.
-- `Masters > Outlets` route `/masters/outlets`.
-- `Masters > Outlet Rules` route `/masters/outlet-operating-rules`.
+- `Field Sales > Outlet Visits` route `/operation/outlet-visits`.
+- `Field Sales > Outlet Restocks` route `/operation/outlet-restocks`.
+- `Field Sales > Outlet Deliveries` route `/operation/outlet-deliveries`.
+- `Field Sales > Outlet Consumption` route `/operation/outlet-consumption`.
+- `Field Sales > Outlet Stock` route `/operation/outlet-storages`.
+- `Masters > Outlets` route `/master/outlets`.
+- `Masters > Outlet Rules` route `/master/outlet-operating-rules`.
 
 Page behavior:
 - Index pages show dense operational lists with filters and progress chips.
@@ -761,7 +761,7 @@ Page behavior:
 
 ### Frontend Helper Functions
 `OUTLET_OPERATION_RESOURCES`
-- File: `FRONTENT/src/composables/operations/outlets/outletOperationsMeta.js`.
+- File: `FRONTENT/src/composables/operation/outlets/outletOperationsMeta.js`.
 - Purpose: array of resources to refresh for outlet workflows.
 - Inputs: none.
 - Outputs: resource name array.
@@ -772,7 +772,7 @@ Page behavior:
 - Connects to: refresh requests.
 
 `progressMeta`
-- File: `FRONTENT/src/composables/operations/outlets/outletOperationsMeta.js`.
+- File: `FRONTENT/src/composables/operation/outlets/outletOperationsMeta.js`.
 - Purpose: labels/colors/order for outlet statuses.
 - Inputs: progress string.
 - Outputs: display metadata.
@@ -783,7 +783,7 @@ Page behavior:
 - Connects to: progress chips/pages.
 
 `refreshOutletResourcesRequest`
-- File: `FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js`.
+- File: `FRONTENT/src/composables/operation/outlets/outletOperationsBatch.js`.
 - Purpose: build a `get` request for outlet resources.
 - Inputs: optional resource array.
 - Outputs: batch sub-request.
@@ -794,7 +794,7 @@ Page behavior:
 - Connects to: all save workflows.
 
 `compositeSaveRequest`
-- File: `FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js`.
+- File: `FRONTENT/src/composables/operation/outlets/outletOperationsBatch.js`.
 - Purpose: build a generic composite save sub-request.
 - Inputs: `{ resource, code, data, children }`.
 - Outputs: batch sub-request.
@@ -805,7 +805,7 @@ Page behavior:
 - Connects to: restock/consumption saves.
 
 `resourceBulkRequest`
-- File: `FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js`.
+- File: `FRONTENT/src/composables/operation/outlets/outletOperationsBatch.js`.
 - Purpose: build bulk sub-request.
 - Inputs: resource name and records.
 - Outputs: batch sub-request.
@@ -816,7 +816,7 @@ Page behavior:
 - Connects to: movements and item DeliveredQty updates.
 
 `resourceUpdateRequest`
-- File: `FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js`.
+- File: `FRONTENT/src/composables/operation/outlets/outletOperationsBatch.js`.
 - Purpose: build update sub-request.
 - Inputs: resource, code, data.
 - Outputs: batch sub-request.
@@ -827,7 +827,7 @@ Page behavior:
 - Connects to: totals/progress updates.
 
 `executeActionRequest`
-- File: `FRONTENT/src/composables/operations/outlets/outletOperationsBatch.js`.
+- File: `FRONTENT/src/composables/operation/outlets/outletOperationsBatch.js`.
 - Purpose: build workflow transition request.
 - Inputs: resource, code, action config, fields.
 - Outputs: batch sub-request.
@@ -838,7 +838,7 @@ Page behavior:
 - Connects to: visits/restocks.
 
 `toNumber`
-- File: `FRONTENT/src/composables/operations/outlets/outletStockLogic.js`.
+- File: `FRONTENT/src/composables/operation/outlets/outletStockLogic.js`.
 - Purpose: safe numeric conversion.
 - Inputs: any value.
 - Outputs: finite number or `0`.
@@ -849,7 +849,7 @@ Page behavior:
 - Connects to: all calculations.
 
 `remainingDeliveryQty`
-- File: `FRONTENT/src/composables/operations/outlets/outletStockLogic.js`.
+- File: `FRONTENT/src/composables/operation/outlets/outletStockLogic.js`.
 - Purpose: compute `ApprovedQty - DeliveredQty`.
 - Inputs: restock item row.
 - Outputs: non-negative number.
@@ -860,7 +860,7 @@ Page behavior:
 - Connects to: delivery validation.
 
 `currentOutletStockQty`
-- File: `FRONTENT/src/composables/operations/outlets/outletStockLogic.js`.
+- File: `FRONTENT/src/composables/operation/outlets/outletStockLogic.js`.
 - Purpose: find current balance for outlet/storage/SKU.
 - Inputs: storages array, outlet code, storage name, SKU.
 - Outputs: quantity.
@@ -871,7 +871,7 @@ Page behavior:
 - Connects to: consumption validation.
 
 `validateRestockDraft`
-- File: `FRONTENT/src/composables/operations/outlets/outletStockLogic.js`.
+- File: `FRONTENT/src/composables/operation/outlets/outletStockLogic.js`.
 - Purpose: validate restock before submit.
 - Inputs: parent form, item rows, existing restocks/items/rules.
 - Outputs: `{ valid, errors, warnings }`.
@@ -882,7 +882,7 @@ Page behavior:
 - Connects to: `useOutletRestocks.submitRestock`.
 
 `validateRestockApproval`
-- File: `FRONTENT/src/composables/operations/outlets/outletStockLogic.js`.
+- File: `FRONTENT/src/composables/operation/outlets/outletStockLogic.js`.
 - Purpose: validate approver quantities.
 - Inputs: restock, items.
 - Outputs: `{ valid, errors, warnings }`.
@@ -893,7 +893,7 @@ Page behavior:
 - Connects to: `useOutletRestocks.approveRestock`.
 
 `validateDelivery`
-- File: `FRONTENT/src/composables/operations/outlets/outletStockLogic.js`.
+- File: `FRONTENT/src/composables/operation/outlets/outletStockLogic.js`.
 - Purpose: validate delivery quantities against remaining approved quantities.
 - Inputs: restock, restock items, delivery rows.
 - Outputs: `{ valid, errors, warnings }`.
@@ -904,7 +904,7 @@ Page behavior:
 - Connects to: `useOutletDeliveries.saveDelivery`.
 
 `validateConsumption`
-- File: `FRONTENT/src/composables/operations/outlets/outletStockLogic.js`.
+- File: `FRONTENT/src/composables/operation/outlets/outletStockLogic.js`.
 - Purpose: validate consumption quantities against outlet stock.
 - Inputs: outlet, consumption rows, outlet storages.
 - Outputs: `{ valid, errors, warnings }`.
@@ -915,7 +915,7 @@ Page behavior:
 - Connects to: `useOutletConsumption.saveConsumption`.
 
 `buildRestockCompositePayload`
-- File: `FRONTENT/src/composables/operations/outlets/outletRestockPayload.js`.
+- File: `FRONTENT/src/composables/operation/outlets/outletRestockPayload.js`.
 - Purpose: construct `OutletRestocks` composite save payload.
 - Inputs: parent form, item rows, optional existing restock code.
 - Outputs: composite payload object.
@@ -926,7 +926,7 @@ Page behavior:
 - Connects to: restock save.
 
 `buildDeliveryBatchRequests`
-- File: `FRONTENT/src/composables/operations/outlets/outletRestockPayload.js`.
+- File: `FRONTENT/src/composables/operation/outlets/outletRestockPayload.js`.
 - Purpose: construct full delivery batch.
 - Inputs: restock, restock items, delivery form, delivery rows.
 - Outputs: ordered batch sub-requests.
@@ -937,7 +937,7 @@ Page behavior:
 - Connects to: delivery save.
 
 `buildConsumptionCompositePayload`
-- File: `FRONTENT/src/composables/operations/outlets/outletConsumptionPayload.js`.
+- File: `FRONTENT/src/composables/operation/outlets/outletConsumptionPayload.js`.
 - Purpose: construct `OutletConsumption` composite save payload.
 - Inputs: parent form and item rows.
 - Outputs: composite payload object.
@@ -948,7 +948,7 @@ Page behavior:
 - Connects to: consumption save.
 
 `buildConsumptionMovementRequests`
-- File: `FRONTENT/src/composables/operations/outlets/outletConsumptionPayload.js`.
+- File: `FRONTENT/src/composables/operation/outlets/outletConsumptionPayload.js`.
 - Purpose: construct negative movement bulk request after consumption save.
 - Inputs: consumption code, outlet code, consumption items.
 - Outputs: bulk movement request.
@@ -960,7 +960,7 @@ Page behavior:
 
 ### Frontend Workflow Composables
 `useOutletVisits`
-- File: `FRONTENT/src/composables/operations/outlets/useOutletVisits.js`.
+- File: `FRONTENT/src/composables/operation/outlets/useOutletVisits.js`.
 - Purpose: load visits/outlets and execute visit transitions.
 - Inputs: route/resource context from composables.
 - Outputs: reactive records, filters, selected record, action handlers.
@@ -971,7 +971,7 @@ Page behavior:
 - Connects to: OutletVisits pages.
 
 `completeVisit`
-- File: `FRONTENT/src/composables/operations/outlets/useOutletVisits.js`.
+- File: `FRONTENT/src/composables/operation/outlets/useOutletVisits.js`.
 - Purpose: complete a planned visit.
 - Inputs: visit row and form fields.
 - Outputs: workflow response.
@@ -982,7 +982,7 @@ Page behavior:
 - Connects to: visit view action.
 
 `postponeVisit`
-- File: `FRONTENT/src/composables/operations/outlets/useOutletVisits.js`.
+- File: `FRONTENT/src/composables/operation/outlets/useOutletVisits.js`.
 - Purpose: postpone original visit and create replacement planned visit.
 - Inputs: original visit, reason, new date/time.
 - Outputs: batch response.
@@ -993,7 +993,7 @@ Page behavior:
 - Connects to: visit view action.
 
 `cancelVisit`
-- File: `FRONTENT/src/composables/operations/outlets/useOutletVisits.js`.
+- File: `FRONTENT/src/composables/operation/outlets/useOutletVisits.js`.
 - Purpose: cancel planned visit.
 - Inputs: visit and reason.
 - Outputs: action response.
@@ -1004,7 +1004,7 @@ Page behavior:
 - Connects to: visit view action.
 
 `useOutletRestocks`
-- File: `FRONTENT/src/composables/operations/outlets/useOutletRestocks.js`.
+- File: `FRONTENT/src/composables/operation/outlets/useOutletRestocks.js`.
 - Purpose: restock list/create/edit/review logic.
 - Inputs: route/resource context.
 - Outputs: records, items, forms, validation state, action handlers.
@@ -1015,7 +1015,7 @@ Page behavior:
 - Connects to: OutletRestocks pages.
 
 `saveRestockDraft`
-- File: `FRONTENT/src/composables/operations/outlets/useOutletRestocks.js`.
+- File: `FRONTENT/src/composables/operation/outlets/useOutletRestocks.js`.
 - Purpose: save draft or revision using composite save.
 - Inputs: form, item rows.
 - Outputs: parent code.
@@ -1026,7 +1026,7 @@ Page behavior:
 - Connects to: restock add/view editable mode.
 
 `submitRestock`
-- File: `FRONTENT/src/composables/operations/outlets/useOutletRestocks.js`.
+- File: `FRONTENT/src/composables/operation/outlets/useOutletRestocks.js`.
 - Purpose: submit saved restock to approval.
 - Inputs: restock code.
 - Outputs: action response.
@@ -1037,7 +1037,7 @@ Page behavior:
 - Connects to: restock editable mode.
 
 `approveRestock`
-- File: `FRONTENT/src/composables/operations/outlets/useOutletRestocks.js`.
+- File: `FRONTENT/src/composables/operation/outlets/useOutletRestocks.js`.
 - Purpose: approve restock with approved quantities.
 - Inputs: restock and approved item rows.
 - Outputs: batch response.
@@ -1048,7 +1048,7 @@ Page behavior:
 - Connects to: approver view.
 
 `rejectRestock`
-- File: `FRONTENT/src/composables/operations/outlets/useOutletRestocks.js`.
+- File: `FRONTENT/src/composables/operation/outlets/useOutletRestocks.js`.
 - Purpose: reject pending restock.
 - Inputs: restock and comment.
 - Outputs: action response.
@@ -1059,7 +1059,7 @@ Page behavior:
 - Connects to: approver view.
 
 `sendBackRestock`
-- File: `FRONTENT/src/composables/operations/outlets/useOutletRestocks.js`.
+- File: `FRONTENT/src/composables/operation/outlets/useOutletRestocks.js`.
 - Purpose: request revision on same restock.
 - Inputs: restock and comment.
 - Outputs: action response.
@@ -1070,7 +1070,7 @@ Page behavior:
 - Connects to: approver view.
 
 `resolveRestockViewMode`
-- File: `FRONTENT/src/composables/operations/outlets/useOutletRestocks.js`.
+- File: `FRONTENT/src/composables/operation/outlets/useOutletRestocks.js`.
 - Purpose: choose editable/review/read-only mode.
 - Inputs: progress.
 - Outputs: `editable`, `review`, or `readonly`.
@@ -1081,7 +1081,7 @@ Page behavior:
 - Connects to: `OutletRestocks/ViewPage.vue`.
 
 `useOutletDeliveries`
-- File: `FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js`.
+- File: `FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js`.
 - Purpose: delivery create/list/view logic.
 - Inputs: route/resource context.
 - Outputs: eligible restocks, delivery rows, validation state, action handlers.
@@ -1092,7 +1092,7 @@ Page behavior:
 - Connects to: OutletDeliveries pages.
 
 `saveDelivery`
-- File: `FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js`.
+- File: `FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js`.
 - Purpose: create delivery, update cumulative item quantities, create movements, refresh.
 - Inputs: selected restock, delivery form, delivery rows.
 - Outputs: delivery code if available.
@@ -1103,7 +1103,7 @@ Page behavior:
 - Connects to: delivery add page.
 
 `useOutletConsumption`
-- File: `FRONTENT/src/composables/operations/outlets/useOutletConsumption.js`.
+- File: `FRONTENT/src/composables/operation/outlets/useOutletConsumption.js`.
 - Purpose: consumption create/list/view logic.
 - Inputs: route/resource context.
 - Outputs: consumption records, stock rows, forms, action handlers.
@@ -1114,7 +1114,7 @@ Page behavior:
 - Connects to: OutletConsumption pages.
 
 `saveConsumption`
-- File: `FRONTENT/src/composables/operations/outlets/useOutletConsumption.js`.
+- File: `FRONTENT/src/composables/operation/outlets/useOutletConsumption.js`.
 - Purpose: create consumption and negative movements in one batch.
 - Inputs: form and item rows.
 - Outputs: consumption code if available.
@@ -1125,7 +1125,7 @@ Page behavior:
 - Connects to: consumption add page.
 
 `useOutletStock`
-- File: `FRONTENT/src/composables/operations/outlets/useOutletStock.js`.
+- File: `FRONTENT/src/composables/operation/outlets/useOutletStock.js`.
 - Purpose: current outlet stock and movement detail view-model.
 - Inputs: optional outlet code or storage code from route.
 - Outputs: stock rows, grouped totals, movement timeline, navigation helpers.
@@ -1211,7 +1211,7 @@ Progress audit columns required:
 - Expected result: `OutletMovements` postAction can maintain `OutletStorages`.
 
 7. Create frontend outlet helper composables.
-- File to open: create `outletOperationsMeta.js`, `outletOperationsBatch.js`, `outletStockLogic.js`, `outletRestockPayload.js`, `outletConsumptionPayload.js` under `FRONTENT/src/composables/operations/outlets/`.
+- File to open: create `outletOperationsMeta.js`, `outletOperationsBatch.js`, `outletStockLogic.js`, `outletRestockPayload.js`, `outletConsumptionPayload.js` under `FRONTENT/src/composables/operation/outlets/`.
 - Change to make: implement the helper functions exactly listed in Function Plan.
 - Where: new folder `outlets`.
 - Avoid changing: services or stores.
@@ -1219,7 +1219,7 @@ Progress audit columns required:
 - Expected result: all reusable business logic and request construction exists outside pages/components.
 
 8. Create visit composable.
-- File to open: `FRONTENT/src/composables/operations/outlets/useOutletVisits.js`.
+- File to open: `FRONTENT/src/composables/operation/outlets/useOutletVisits.js`.
 - Change to make: implement `useOutletVisits`, `completeVisit`, `postponeVisit`, and `cancelVisit`.
 - Where: new file.
 - Avoid changing: router files; use `useResourceNav`.
@@ -1227,7 +1227,7 @@ Progress audit columns required:
 - Expected result: visit pages can load and mutate visits without direct store/service imports.
 
 9. Create restock composable.
-- File to open: `FRONTENT/src/composables/operations/outlets/useOutletRestocks.js`.
+- File to open: `FRONTENT/src/composables/operation/outlets/useOutletRestocks.js`.
 - Change to make: implement `useOutletRestocks`, `saveRestockDraft`, `submitRestock`, `approveRestock`, `rejectRestock`, `sendBackRestock`, and `resolveRestockViewMode`.
 - Where: new file.
 - Avoid changing: generic operation pages.
@@ -1235,7 +1235,7 @@ Progress audit columns required:
 - Expected result: restock pages can handle draft, submit, review, approval, rejection, and send-back.
 
 10. Create delivery composable.
-- File to open: `FRONTENT/src/composables/operations/outlets/useOutletDeliveries.js`.
+- File to open: `FRONTENT/src/composables/operation/outlets/useOutletDeliveries.js`.
 - Change to make: implement `useOutletDeliveries` and `saveDelivery`.
 - Where: new file.
 - Avoid changing: `OutletRestockItems` schema or delivery JSON semantics.
@@ -1243,7 +1243,7 @@ Progress audit columns required:
 - Expected result: delivery flow supports partial/multiple deliveries and updates cumulative item delivery quantities.
 
 11. Create consumption composable.
-- File to open: `FRONTENT/src/composables/operations/outlets/useOutletConsumption.js`.
+- File to open: `FRONTENT/src/composables/operation/outlets/useOutletConsumption.js`.
 - Change to make: implement `useOutletConsumption` and `saveConsumption`.
 - Where: new file.
 - Avoid changing: delivery/restock composables.
@@ -1251,7 +1251,7 @@ Progress audit columns required:
 - Expected result: consumption flow creates negative movements only when stock is sufficient.
 
 12. Create outlet stock composable.
-- File to open: `FRONTENT/src/composables/operations/outlets/useOutletStock.js`.
+- File to open: `FRONTENT/src/composables/operation/outlets/useOutletStock.js`.
 - Change to make: implement `useOutletStock`.
 - Where: new file.
 - Avoid changing: warehouse stock composables.
@@ -1259,7 +1259,7 @@ Progress audit columns required:
 - Expected result: outlet stock pages can show balances and movement timeline.
 
 13. Create shared UI components.
-- File to open: create all files under `FRONTENT/src/components/Operations/Outlets/` listed in Frontend Components.
+- File to open: create all files under `FRONTENT/src/components/operation/Outlets/` listed in Frontend Components.
 - Change to make: build UI-only components using props/emits only.
 - Where: new folder `Outlets`.
 - Avoid changing: stores, services, or business logic in components.
@@ -1267,15 +1267,15 @@ Progress audit columns required:
 - Expected result: pages can stay thin and reuse shared outlet UI.
 
 14. Create `OutletVisits` pages.
-- File to open: create `FRONTENT/src/pages/Operations/OutletVisits/IndexPage.vue`, `AddPage.vue`, `ViewPage.vue`.
+- File to open: create `FRONTENT/src/pages/operation/OutletVisits/IndexPage.vue`, `AddPage.vue`, `ViewPage.vue`.
 - Change to make: wire Quasar UI to `useOutletVisits` and outlet shared components.
 - Where: exact folder name `OutletVisits`.
 - Avoid changing: operation route resolver.
 - Command after step: none.
-- Expected result: `/operations/outlet-visits` resolves to custom pages.
+- Expected result: `/operation/outlet-visits` resolves to custom pages.
 
 15. Create `OutletRestocks` pages.
-- File to open: create `FRONTENT/src/pages/Operations/OutletRestocks/IndexPage.vue`, `AddPage.vue`, `ViewPage.vue`.
+- File to open: create `FRONTENT/src/pages/operation/OutletRestocks/IndexPage.vue`, `AddPage.vue`, `ViewPage.vue`.
 - Change to make: wire Quasar UI to `useOutletRestocks`; view page must switch by `resolveRestockViewMode`.
 - Where: exact folder name `OutletRestocks`.
 - Avoid changing: generic `_common` operation pages.
@@ -1283,7 +1283,7 @@ Progress audit columns required:
 - Expected result: restock list/create/review/read-only flows work from custom pages.
 
 16. Create `OutletDeliveries` pages.
-- File to open: create `FRONTENT/src/pages/Operations/OutletDeliveries/IndexPage.vue`, `AddPage.vue`, `ViewPage.vue`.
+- File to open: create `FRONTENT/src/pages/operation/OutletDeliveries/IndexPage.vue`, `AddPage.vue`, `ViewPage.vue`.
 - Change to make: wire Quasar UI to `useOutletDeliveries`; show delivery items as rows, not raw JSON.
 - Where: exact folder name `OutletDeliveries`.
 - Avoid changing: restock pages.
@@ -1291,7 +1291,7 @@ Progress audit columns required:
 - Expected result: delivery event workflow has custom pages.
 
 17. Create `OutletConsumption` pages.
-- File to open: create `FRONTENT/src/pages/Operations/OutletConsumption/IndexPage.vue`, `AddPage.vue`, `ViewPage.vue`.
+- File to open: create `FRONTENT/src/pages/operation/OutletConsumption/IndexPage.vue`, `AddPage.vue`, `ViewPage.vue`.
 - Change to make: wire Quasar UI to `useOutletConsumption`.
 - Where: exact folder name `OutletConsumption`.
 - Avoid changing: folder spelling; use singular `Consumption` to match resource slug.
@@ -1299,7 +1299,7 @@ Progress audit columns required:
 - Expected result: consumption workflow has custom pages.
 
 18. Create `OutletStorages` pages.
-- File to open: create `FRONTENT/src/pages/Operations/OutletStorages/IndexPage.vue`, `ViewPage.vue`.
+- File to open: create `FRONTENT/src/pages/operation/OutletStorages/IndexPage.vue`, `ViewPage.vue`.
 - Change to make: wire Quasar UI to `useOutletStock`.
 - Where: exact folder name `OutletStorages`.
 - Avoid changing: warehouse stock pages.
@@ -1362,13 +1362,13 @@ Progress audit columns required:
 
 ### Step 3: Frontend Business Logic
 - [ ] Complete Execution Steps 7 through 12.
-**Files**: `FRONTENT/src/composables/operations/outlets/*`
+**Files**: `FRONTENT/src/composables/operation/outlets/*`
 **Pattern**: PO Receiving/Purchase Order composable organization.
 **Rule**: all business validation, derived values, and batch orchestration live in composables.
 
 ### Step 4: Frontend UI
 - [ ] Complete Execution Steps 13 through 18.
-**Files**: `FRONTENT/src/components/Operations/Outlets/*`, `FRONTENT/src/pages/Operations/OutletVisits/*`, `FRONTENT/src/pages/Operations/OutletRestocks/*`, `FRONTENT/src/pages/Operations/OutletDeliveries/*`, `FRONTENT/src/pages/Operations/OutletConsumption/*`, `FRONTENT/src/pages/Operations/OutletStorages/*`
+**Files**: `FRONTENT/src/components/operation/Outlets/*`, `FRONTENT/src/pages/operation/OutletVisits/*`, `FRONTENT/src/pages/operation/OutletRestocks/*`, `FRONTENT/src/pages/operation/OutletDeliveries/*`, `FRONTENT/src/pages/operation/OutletConsumption/*`, `FRONTENT/src/pages/operation/OutletStorages/*`
 **Pattern**: thin custom operation pages.
 **Rule**: components use props/emits only; pages do not import services or stores directly.
 
@@ -1388,7 +1388,7 @@ Commands:
 Targeted code checks:
 - Run `rg -n "OUTLET_|OutletVisits|OutletRestocks|OutletMovements|OutletStorages" GAS`.
 - Run `rg -n "useOutlet|OutletStorages|OutletDeliveries" FRONTENT/src`.
-- Run `rg -n "router.push|src/services|src/stores" FRONTENT/src/pages/Operations/Outlet* FRONTENT/src/components/Operations/Outlets`.
+- Run `rg -n "router.push|src/services|src/stores" FRONTENT/src/pages/operation/Outlet* FRONTENT/src/components/operation/Outlets`.
 
 Expected command outputs:
 - `npm run gas:push` succeeds.
@@ -1487,9 +1487,9 @@ Tests to add or update:
 - [ ] `OutletRestockItems` includes `RequestedQty`, `ApprovedQty`, and `DeliveredQty`.
 - [ ] `OutletDeliveries` includes `DeliveredItemsJSON`.
 - [ ] `OutletStorages` uses `OutletCode + StorageName + SKU` as the balance key.
-- [ ] All frontend outlet composables exist under `FRONTENT/src/composables/operations/outlets/`.
+- [ ] All frontend outlet composables exist under `FRONTENT/src/composables/operation/outlets/`.
 - [ ] All outlet pages exist under exact PascalCase resolver folders.
-- [ ] Shared outlet components exist under `FRONTENT/src/components/Operations/Outlets/`.
+- [ ] Shared outlet components exist under `FRONTENT/src/components/operation/Outlets/`.
 - [ ] Frontend registries are updated.
 - [ ] Canonical docs are updated.
 - [ ] `npm run gas:push` succeeds.
@@ -1516,13 +1516,13 @@ Build Agent must fill this section after implementation. Change `Status` to `IN_
 - `GAS/setupOperationSheets.gs`
 - `GAS/syncAppResources.gs`
 - `GAS/outletMovements.gs`
-- `FRONTENT/src/composables/operations/outlets/`
-- `FRONTENT/src/components/Operations/Outlets/`
-- `FRONTENT/src/pages/Operations/OutletVisits/`
-- `FRONTENT/src/pages/Operations/OutletRestocks/`
-- `FRONTENT/src/pages/Operations/OutletDeliveries/`
-- `FRONTENT/src/pages/Operations/OutletConsumption/`
-- `FRONTENT/src/pages/Operations/OutletStorages/`
+- `FRONTENT/src/composables/operation/outlets/`
+- `FRONTENT/src/components/operation/Outlets/`
+- `FRONTENT/src/pages/operation/OutletVisits/`
+- `FRONTENT/src/pages/operation/OutletRestocks/`
+- `FRONTENT/src/pages/operation/OutletDeliveries/`
+- `FRONTENT/src/pages/operation/OutletConsumption/`
+- `FRONTENT/src/pages/operation/OutletStorages/`
 - `FRONTENT/src/composables/REGISTRY.md`
 - `FRONTENT/src/components/REGISTRY.md`
 - `Documents/MASTER_SHEET_STRUCTURE.md`
@@ -1543,3 +1543,4 @@ Build Agent must fill this section after implementation. Change `Status` to `IN_
 - [ ] Confirm AppOptions rows contain outlet option groups.
 - [ ] Clear resource config cache if menus/resources do not appear after sync.
 - [x] No Web App redeployment is expected unless Build Agent changes the API contract.
+

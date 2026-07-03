@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding>
     <div class="q-mb-md">
       <h1 class="text-h5 q-mt-none q-mb-sm">Direct Stock Entry</h1>
@@ -38,8 +38,8 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import StockEntryGrid from 'src/components/Operations/StockMovements/StockEntryGrid.vue'
-import { useStockMovements } from 'src/composables/operations/stock/useStockMovements'
+import StockEntryGrid from 'src/components/operation/StockMovements/StockEntryGrid.vue'
+import { useStockMovements } from 'src/composables/operation/stock/useStockMovements'
 
 const { loadWarehouses } = useStockMovements()
 
@@ -53,3 +53,4 @@ onMounted(async () => {
   loadingWarehouses.value = false
 })
 </script>
+

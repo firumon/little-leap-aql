@@ -1,4 +1,4 @@
-# PR Initiate Redesign + Delta Sync Fix
+﻿# PR Initiate Redesign + Delta Sync Fix
 
 **Date:** 2026-04-18  
 **Scope:** GAS backend bug fix, hero.scss additions, InitiatePurchaseRequisitionsPage.vue full cleanup, RecordReviewPurchaseRequisitionPage.vue appOptions fix
@@ -27,8 +27,8 @@ GAS bug: `masterApi.gs` early-exit at lines 20–26 uses stale `resource.config.
 |------|-------------|
 | `GAS/masterApi.gs` | Bug fix — early-exit condition |
 | `FRONTENT/src/css/hero.scss` | Additions — stepper + sel-btn classes |
-| `FRONTENT/src/pages/Operations/PurchaseRequisitions/InitiatePurchaseRequisitionsPage.vue` | Full cleanup |
-| `FRONTENT/src/pages/Operations/PurchaseRequisitions/RecordReviewPurchaseRequisitionPage.vue` | appOptions fix only |
+| `FRONTENT/src/pages/operation/PurchaseRequisitions/InitiatePurchaseRequisitionsPage.vue` | Full cleanup |
+| `FRONTENT/src/pages/operation/PurchaseRequisitions/RecordReviewPurchaseRequisitionPage.vue` | appOptions fix only |
 
 ---
 
@@ -482,3 +482,4 @@ Same decorator pattern as Step 3a. Remove hardcoded arrays, import `useAuthStore
 - [ ] Step 3 (Done) → navigate to view page; PR record loads without full-app refresh
 - [ ] RecordReview page → type/priority labels render correctly from appOptions
 - [ ] No Quasar component styles overridden (inspect `.q-btn`, `.q-input`, etc.)
+

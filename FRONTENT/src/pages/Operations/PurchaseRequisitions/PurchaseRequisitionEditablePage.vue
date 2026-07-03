@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page class="q-pa-md">
     <div class="editable-wrap">
       <div v-if="loading" class="page-state column items-center justify-center">
@@ -295,8 +295,8 @@
 </template>
 
 <script setup>
-import PurchaseRequisitionAddItemDialog from 'src/components/Operations/PurchaseRequisitions/PurchaseRequisitionAddItemDialog.vue'
-import { usePurchaseRequisitionEditableFlow } from 'src/composables/operations/purchaseRequisitions/usePurchaseRequisitionEditableFlow'
+import PurchaseRequisitionAddItemDialog from 'src/components/operation/PurchaseRequisitions/PurchaseRequisitionAddItemDialog.vue'
+import { usePurchaseRequisitionEditableFlow } from 'src/composables/operation/purchaseRequisitions/usePurchaseRequisitionEditableFlow'
 
 const {
   nav,
@@ -359,3 +359,4 @@ const {
   color: #334155;
 }
 </style>
+

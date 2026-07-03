@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding>
     <!-- Page Branded Header with Reload Button -->
     <div class="row items-center justify-between no-wrap q-mb-md">
@@ -209,15 +209,15 @@
 
 <script setup>
 import { ref, computed, reactive, onMounted } from 'vue'
-import { useOutletRestocks } from '../../../composables/operations/outlets/useOutletRestocks.js'
-import { useOutletVisits } from '../../../composables/operations/outlets/useOutletVisits.js'
-import RestockSummaryBar from '../../../components/Operations/Outlets/RestockSummaryBar.vue'
+import { useOutletRestocks } from '../../../composables/operation/outlets/useOutletRestocks.js'
+import { useOutletVisits } from '../../../composables/operation/outlets/useOutletVisits.js'
+import RestockSummaryBar from '../../../components/operation/Outlets/RestockSummaryBar.vue'
 import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
-import { RESTOCK_PROGRESS_ORDER, active, text, sortTime, formatDate, progressMeta } from '../../../composables/operations/outlets/outletOperationsMeta.js'
+import { RESTOCK_PROGRESS_ORDER, active, text, sortTime, formatDate, progressMeta } from '../../../composables/operation/outlets/outletOperationsMeta.js'
 import AqlList from 'components/shared/AqlList.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
 import AppDate from '../../../components/shared/AppDate.vue'
-import RestockAddFAB from '../../../components/Operations/Outlets/RestockAddFAB.vue'
+import RestockAddFAB from '../../../components/operation/Outlets/RestockAddFAB.vue'
 import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
 import ResourceReports from 'components/Reports/ResourceReports.vue'
 
@@ -381,3 +381,4 @@ onMounted(() => doReload())
 .priority-outlet-card { transition: box-shadow 0.15s ease; border-left: 3px solid var(--q-primary); }
 .priority-outlet-card:hover { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); }
 </style>
+

@@ -1,4 +1,4 @@
-# Quasar Composables Reference Guide
+﻿# Quasar Composables Reference Guide
 
 This reference guide describes how to implement and integrate composable functions inside AQL Vue components, utilizing Quasar's native composables (`useQuasar`, `useMeta`) and custom hooks.
 
@@ -35,7 +35,7 @@ Allows components to dynamically set SEO tags, metadata, page titles, and script
 The following example illustrates a composable managing page metadata, state indicators, custom form actions, and window resize events:
 
 ```javascript
-// composables/operations/useRequisitionManager.js
+// composables/operation/useRequisitionManager.js
 import { ref, computed, onUnmounted } from 'vue'
 import { useQuasar, useMeta } from 'quasar'
 import { useResourceIoStore } from 'src/stores/resourceIo'
@@ -135,3 +135,4 @@ export function useNetworkStatus() {
 *   **Naming Conventions**: Custom composables are typically named using camelCase starting with the prefix `use` (e.g., `useNetworkStatus`, `useRequisitionManager`).
 *   **Return Shapes**: Standard practices suggest returning reactive variables (`ref` or `computed`) and functions inside a flat, plain JavaScript object. This enables developers to destructure properties as needed.
 *   **Hardware and Mobile Events**: When interfacing with device components (like camera overlays or geolocation trackers), wrap calls in lifecycle hooks (`onMounted`) to ensure the DOM and Cordova/Capacitor plugins are ready.
+

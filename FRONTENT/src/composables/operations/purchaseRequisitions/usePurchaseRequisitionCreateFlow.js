@@ -1,13 +1,13 @@
-import { ref, computed, onMounted } from 'vue'
+﻿import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { format } from 'date-fns'
-import { useStockMovements } from 'src/composables/operations/stock/useStockMovements'
+import { useStockMovements } from 'src/composables/operation/stock/useStockMovements'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useAuthStore } from 'src/stores/auth'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useRecord } from 'src/composables/resources/useRecord'
 import { formatSkuVariants, todayIsoSlash, todayLongLabel } from 'src/utils/appHelpers'
-import { useProductSkuResolver } from 'src/composables/masters/products/useProductSkuResolver'
+import { useProductSkuResolver } from 'src/composables/master/products/useProductSkuResolver'
 import {
   mapPurchaseRequisitionPriorityOptions,
   mapPurchaseRequisitionTypeOptions,
@@ -257,4 +257,5 @@ export function usePurchaseRequisitionCreateFlow() {
     savePR
   }
 }
+
 

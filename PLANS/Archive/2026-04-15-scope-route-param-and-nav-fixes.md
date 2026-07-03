@@ -1,4 +1,4 @@
-# PLAN: Scope Route Param & Navigation Fixes
+﻿# PLAN: Scope Route Param & Navigation Fixes
 **Status**: COMPLETED
 **Created**: 2026-04-15
 **Created By**: Brain Agent (Claude Sonnet 4.6)
@@ -9,7 +9,7 @@ Fix the root cause of operations scope navigation resolving to masters routes, b
 
 ## Context
 - **Bug**: From operations IndexPage, the FAB "add" button navigates to masters scope instead of operations.
-- **Root cause**: `routes.js` uses `/operations/:resourceSlug` (scope hardcoded in path, not a param). `useResourceConfig:14` reads `route.params.scope || 'masters'` — `route.params.scope` is `undefined` for operations, falls back to `'masters'`. `useResourceNav` then picks `resource-add` instead of `operations-add`.
+- **Root cause**: `routes.js` uses `/operation/:resourceSlug` (scope hardcoded in path, not a param). `useResourceConfig:14` reads `route.params.scope || 'masters'` — `route.params.scope` is `undefined` for operations, falls back to `'masters'`. `useResourceNav` then picks `resource-add` instead of `operations-add`.
 - **Fix**: Make scope an explicit route param — `/:scope(operations)/:resourceSlug` — so `route.params.scope` is always populated.
 - **Accounts**: Currently grouped with masters as `/:scope(masters|accounts)`. Splitting all three into dedicated blocks gives each its own named route prefix (`accounts-*`), consistent with `operations-*` and `resource-*`.
 - **`useResourceNav` cross-resource gap**: `navigateToChildView` in `Operations/_common/ViewPage.vue` still uses a direct `router.push` named route call because `nav.goTo` only resolves the current page's scope/resourceSlug. Since `params` already shallow-merges over resolved values, passing `{ scope, resourceSlug, code }` explicitly in params is sufficient — no extra plumbing needed. This behaviour must be documented and the call site updated.
@@ -27,14 +27,14 @@ Fix the root cause of operations scope navigation resolving to masters routes, b
 
 ### Step 1: Fix route paths — make `scope` an explicit param for all three scopes
 
-- [ ] In `routes.js`, change `/operations/:resourceSlug` → `/:scope(operations)/:resourceSlug`.
-- [ ] Change `/masters/:resourceSlug` → `/:scope(masters)/:resourceSlug`.
+- [ ] In `routes.js`, change `/operation/:resourceSlug` → `/:scope(operations)/:resourceSlug`.
+- [ ] Change `/master/:resourceSlug` → `/:scope(masters)/:resourceSlug`.
 - [ ] Add a new third block `/:scope(accounts)/:resourceSlug` with identical seven-child shape.
-  - Parent component: `pages/Masters/ResourcePageShell.vue` (shared for now).
-  - All seven children point to `pages/Masters/ActionResolverPage.vue`.
+  - Parent component: `pages/master/ResourcePageShell.vue` (shared for now).
+  - All seven children point to `pages/master/ActionResolverPage.vue`.
   - Named routes: `accounts-list`, `accounts-add`, `accounts-resource-page`, `accounts-view`, `accounts-edit`, `accounts-action`, `accounts-record-page`.
   - Meta shapes identical to masters children.
-- [ ] Remove `requiresAuth: true` from `/masters/bulk-upload` child meta — inherited from `/dashboard`.
+- [ ] Remove `requiresAuth: true` from `/master/bulk-upload` child meta — inherited from `/dashboard`.
 
 **Child route shape (same for all three blocks):**
 
@@ -102,7 +102,7 @@ Note: masters named routes keep their existing `resource-*` prefix (not `masters
 
 ### Step 4: Update `navigateToChildView` in Operations ViewPage
 
-Currently `pages/Operations/_common/ViewPage.vue` has a direct `router.push` named route call for child navigation (kept from previous plan because `nav.goTo` couldn't handle cross-resource). With Step 3b in place, it can now use `nav.goTo`.
+Currently `pages/operation/_common/ViewPage.vue` has a direct `router.push` named route call for child navigation (kept from previous plan because `nav.goTo` couldn't handle cross-resource). With Step 3b in place, it can now use `nav.goTo`.
 
 - [ ] Replace the direct `router.push` named route call in `navigateToChildView` with:
   ```js
@@ -114,7 +114,7 @@ Currently `pages/Operations/_common/ViewPage.vue` has a direct `router.push` nam
   ```
 - [ ] Remove the `useRouter` import if it was only used for this call.
 
-**Files**: `FRONTENT/src/pages/Operations/_common/ViewPage.vue`
+**Files**: `FRONTENT/src/pages/operation/_common/ViewPage.vue`
 
 ---
 
@@ -132,11 +132,11 @@ Currently `pages/Operations/_common/ViewPage.vue` has a direct `router.push` nam
 ---
 
 ## Acceptance Criteria
-- [ ] Navigating to `/operations/purchase-requisitions` and clicking FAB navigates to `/operations/purchase-requisitions/_add` — not `/masters/...`.
+- [ ] Navigating to `/operation/purchase-requisitions` and clicking FAB navigates to `/operation/purchase-requisitions/_add` — not `/master/...`.
 - [ ] `route.params.scope` is `'operations'` on any operations route, `'masters'` on any masters route, `'accounts'` on any accounts route.
 - [ ] `nav.goTo('add')` from an operations page → `operations-add` named route.
 - [ ] `nav.goTo('add')` from a masters page → `resource-add` named route.
-- [ ] `nav.goTo('view', { scope: 'operations', resourceSlug: 'purchase-items', code: 'PI001' })` navigates to `/operations/purchase-items/PI001/_view` regardless of current page scope.
+- [ ] `nav.goTo('view', { scope: 'operations', resourceSlug: 'purchase-items', code: 'PI001' })` navigates to `/operation/purchase-items/PI001/_view` regardless of current page scope.
 - [ ] `navigateToChildView` in Operations ViewPage uses `nav.goTo` with explicit overrides — no direct `router.push` named route call remains.
 - [ ] Accounts scope routes resolve correctly (list, add, view, edit, action, resource-page, record-page).
 - [ ] No regression on masters navigation — all existing masters page transitions still work.
@@ -165,7 +165,7 @@ Currently `pages/Operations/_common/ViewPage.vue` has a direct `router.push` nam
 ### Files Actually Changed
 - `FRONTENT/src/router/routes.js`
 - `FRONTENT/src/composables/useResourceNav.js`
-- `FRONTENT/src/pages/Operations/_common/ViewPage.vue`
+- `FRONTENT/src/pages/operation/_common/ViewPage.vue`
 - `FRONTENT/src/composables/REGISTRY.md`
 
 ### Validation Performed
@@ -177,3 +177,4 @@ Currently `pages/Operations/_common/ViewPage.vue` has a direct `router.push` nam
 
 ### Manual Actions Required
 - [ ] None — no GAS changes, no sheet changes, no Web App redeployment.
+

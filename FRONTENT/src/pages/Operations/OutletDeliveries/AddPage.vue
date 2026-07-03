@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding>
     <HeaderPanel title="Create Outlet Delivery" subtitle="Select allocated restock items" class="q-mb-md" />
 
@@ -89,7 +89,7 @@
 
 <script setup>
 import { onMounted, computed } from 'vue'
-import { useOutletDeliveries } from '../../../composables/operations/outlets/useOutletDeliveries.js'
+import { useOutletDeliveries } from '../../../composables/operation/outlets/useOutletDeliveries.js'
 import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
 
 defineOptions({ name: 'OutletDeliveriesAddPage' })
@@ -110,3 +110,4 @@ const criteriaOptions = computed(() =>
 
 onMounted(() => reloadAdd())
 </script>
+

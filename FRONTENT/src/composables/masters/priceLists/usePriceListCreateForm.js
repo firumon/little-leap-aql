@@ -1,9 +1,9 @@
-import { ref, computed, reactive } from 'vue'
+﻿import { ref, computed, reactive } from 'vue'
 import { useAuthStore } from 'src/stores/auth'
 import { useDataStore } from 'src/stores/data'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { useProductSkuResolver } from 'src/composables/masters/products/useProductSkuResolver'
+import { useProductSkuResolver } from 'src/composables/master/products/useProductSkuResolver'
 
 export function usePriceListCreateForm() {
   const authStore = useAuthStore()
@@ -223,3 +223,4 @@ export function usePriceListCreateForm() {
     navigateBack
   }
 }
+

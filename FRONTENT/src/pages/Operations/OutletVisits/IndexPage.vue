@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding class="aql-page-container">
     <!-- Page Branded Header with Reload Button -->
     <HeaderPanelWithReload title="Outlet Visits" subtitle="Sales field planner · plan, visit, track" />
@@ -263,15 +263,15 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { todayISO } from '../../../composables/operations/outlets/outletOperationsMeta.js'
-import { useOutletVisits } from '../../../composables/operations/outlets/useOutletVisits.js'
-import VisitSummaryBar from '../../../components/Operations/Outlets/VisitSummaryBar.vue'
+import { todayISO } from '../../../composables/operation/outlets/outletOperationsMeta.js'
+import { useOutletVisits } from '../../../composables/operation/outlets/useOutletVisits.js'
+import VisitSummaryBar from '../../../components/operation/Outlets/VisitSummaryBar.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
 import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
 import DataAddFAB from '../../../components/shared/DataAddFAB.vue'
 import AppDate from '../../../components/shared/AppDate.vue'
 import ActionCommentDialog from '../../../components/shared/ActionCommentDialog.vue'
-import OutletVisitActionDialog from '../../../components/Operations/Outlets/OutletVisitActionDialog.vue'
+import OutletVisitActionDialog from '../../../components/operation/Outlets/OutletVisitActionDialog.vue'
 import SectionDividerLabel from '../../../components/shared/SectionDividerLabel.vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useResourceReload } from '../../../composables/resources/useResourceReload.js'
@@ -410,4 +410,5 @@ onMounted(async () => {
   await reloadIndex()
 })
 </script>
+
 

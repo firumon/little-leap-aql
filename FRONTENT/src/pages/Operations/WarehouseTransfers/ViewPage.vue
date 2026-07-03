@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding class="q-pb-xl">
     <q-linear-progress v-if="loading" color="primary" indeterminate rounded class="q-mb-sm" />
 
@@ -230,8 +230,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { useWarehouseTransfers } from '../../../composables/operations/warehouseTransfers/useWarehouseTransfers.js'
-import { useProductSkuResolver } from 'src/composables/masters/products/useProductSkuResolver'
+import { useWarehouseTransfers } from '../../../composables/operation/warehouseTransfers/useWarehouseTransfers.js'
+import { useProductSkuResolver } from 'src/composables/master/products/useProductSkuResolver'
 import GenericHeaderPanel from 'components/shared/GenericHeaderPanel.vue'
 import AqlList from 'components/shared/AqlList.vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
@@ -368,3 +368,4 @@ async function submitItemFulfillment() {
 
 onMounted(() => reload())
 </script>
+

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div>
     <q-card flat bordered class="q-mb-md">
       <q-card-section class="row items-center no-wrap">
@@ -121,7 +121,7 @@
 import { computed, ref, watch } from 'vue'
 import OutletProgressChip from './OutletProgressChip.vue'
 import OrsiAllocationRow from './OrsiAllocationRow.vue'
-import { text } from '../../../composables/operations/outlets/outletOperationsMeta.js'
+import { text } from '../../../composables/operation/outlets/outletOperationsMeta.js'
 import ResourceReports from "../../Reports/ResourceReports.vue";
 
 defineOptions({ name: 'RestockPendingAllocationView' })
@@ -176,3 +176,4 @@ function groupColor(key) {
   return key === 'full' ? 'positive' : key === 'partial' ? 'orange' : 'grey-6'
 }
 </script>
+

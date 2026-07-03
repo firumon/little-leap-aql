@@ -1,4 +1,4 @@
-# Quasar Layouts & Page Shells Reference
+﻿# Quasar Layouts & Page Shells Reference
 
 This document describes how page layouts are configured and structured using Quasar's layout system. It focuses on shell design, header navigation, footers, drawer configurations, and viewport space management.
 
@@ -88,7 +88,7 @@ Below is a standard layout template showing how header, drawer, and footer tabs 
     <!-- Footer Navigation (Visible on mobile viewports) -->
     <q-footer v-if="$q.screen.lt.sm" elevated class="bg-white text-primary">
       <q-tabs no-caps active-color="primary" class="text-grey-7" dense>
-        <q-route-tab to="/operations" icon="assignment" label="Operations" />
+        <q-route-tab to="/operation" icon="assignment" label="Operations" />
         <q-route-tab to="/inventory" icon="store" label="Inventory" />
         <q-route-tab to="/profile" icon="person" label="Profile" />
       </q-tabs>
@@ -118,3 +118,4 @@ const openSearch = () => {
 | **Mobile (<600px)** | `lHh Lpr lFf` | Touch swipe / toggle button | Enabled dynamic route tabs |
 | **Tablet (600-1024px)** | `hHh Lpr fFf` | Click toggle button | Hidden |
 | **Desktop (>1024px)** | `hHh Lpr fFf` | Always expanded by default | Hidden |
+

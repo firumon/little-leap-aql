@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding>
     <HeaderPanel title="New Restock Request" subtitle="Request outlet consignment stock" class="q-mb-md" />
 
@@ -139,11 +139,11 @@
 import { ref, computed, reactive, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
-import { useOutletRestocks } from '../../../composables/operations/outlets/useOutletRestocks.js'
+import { useOutletRestocks } from '../../../composables/operation/outlets/useOutletRestocks.js'
 import AqlGroupedList from '../../../components/shared/AqlGroupedList.vue'
 import AqlList from '../../../components/shared/AqlList.vue'
 import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
-import { text } from '../../../composables/operations/outlets/outletOperationsMeta.js'
+import { text } from '../../../composables/operation/outlets/outletOperationsMeta.js'
 
 defineOptions({ name: 'OutletRestocksAddPage' })
 
@@ -350,3 +350,4 @@ onMounted(async () => {
   background: var(--q-primary-light, #e3f2fd);
 }
 </style>
+

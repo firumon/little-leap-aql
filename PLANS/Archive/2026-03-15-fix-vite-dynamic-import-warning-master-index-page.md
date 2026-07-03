@@ -1,4 +1,4 @@
-# PLAN: Fix Vite Dynamic Import Warning in MasterIndexPage
+﻿# PLAN: Fix Vite Dynamic Import Warning in MasterIndexPage
 **Status**: COMPLETED
 **Created**: 2026-03-15
 **Created By**: Brain Agent
@@ -22,7 +22,7 @@ Remove Vite dev-console warnings from `MasterIndexPage.vue` by replacing unsuppo
 ### Step 1: Replace unsupported import pattern with Vite-compatible resolver
 - [x] Add a static import map via `import.meta.glob('./*Page.vue')`.
 - [x] Resolve target key from slug and lazy-load via the glob map with graceful fallback.
-**Files**: `FRONTENT/src/pages/Masters/MasterIndexPage.vue`
+**Files**: `FRONTENT/src/pages/master/MasterIndexPage.vue`
 **Pattern**: Keep existing slug-to-PascalCase naming convention and silent fallback behavior.
 **Rule**: `MasterIndexPage.vue` must auto-discover `{EntityName}Page.vue` overrides without dev warnings.
 
@@ -54,7 +54,7 @@ Remove Vite dev-console warnings from `MasterIndexPage.vue` by replacing unsuppo
 - [ ] `[!]` Issue/blocker:
 
 ### Files Actually Changed
-- `FRONTENT/src/pages/Masters/MasterIndexPage.vue`
+- `FRONTENT/src/pages/master/MasterIndexPage.vue`
 - `PLANS/2026-03-15-fix-vite-dynamic-import-warning-master-index-page.md`
 
 ### Validation Performed
@@ -63,3 +63,4 @@ Remove Vite dev-console warnings from `MasterIndexPage.vue` by replacing unsuppo
 
 ### Manual Actions Required
 - [ ] Refresh/restart Vite dev server and confirm warning is gone in console.
+

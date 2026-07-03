@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-page padding class="aql-page-container">
     <!-- Page Branded Header with Reload Button -->
     <div class="row items-center justify-between no-wrap q-mb-md">
@@ -143,11 +143,11 @@
 
 <script setup>
 import { onMounted, ref, computed } from 'vue'
-import { useOutletPayments } from '../../../composables/operations/outlets/useOutletPayments.js'
+import { useOutletPayments } from '../../../composables/operation/outlets/useOutletPayments.js'
 import { useResourceNav } from '../../../composables/resources/useResourceNav.js'
 import { useCurrency } from '../../../composables/useCurrency.js'
 import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
-import OutletProgressChip from '../../../components/Operations/Outlets/OutletProgressChip.vue'
+import OutletProgressChip from '../../../components/operation/Outlets/OutletProgressChip.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
 import DataAddFAB from '../../../components/shared/DataAddFAB.vue'
 import AqlList from "components/shared/AqlList.vue";
@@ -222,4 +222,5 @@ function formatDisplayDate(val) {
   }
 }
 </script>
+
 

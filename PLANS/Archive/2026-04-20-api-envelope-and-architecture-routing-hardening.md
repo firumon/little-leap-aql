@@ -1,4 +1,4 @@
-# PLAN: API Envelope + Architecture Routing Hardening
+﻿# PLAN: API Envelope + Architecture Routing Hardening
 **Status**: COMPLETED
 **Created**: 2026-04-20
 **Created By**: Solo Agent (Codex)
@@ -74,7 +74,7 @@ Enforce strict frontend architecture reading/routing rules and cut over GAS/fron
 - `FRONTENT/src/services/ResourceCrudService.js`
 - `FRONTENT/src/stores/workflow.js`
 - `FRONTENT/src/stores/auth.js`
-- `FRONTENT/src/composables/operations/purchaseRequisitions/usePurchaseRequisitionCreateFlow.js`
+- `FRONTENT/src/composables/operation/purchaseRequisitions/usePurchaseRequisitionCreateFlow.js`
 - `FRONTENT/src/composables/upload/useBulkUpload.js`
 
 ### Validation Performed
@@ -82,5 +82,6 @@ Enforce strict frontend architecture reading/routing rules and cut over GAS/fron
 
 ### Manual Actions Required
 - [ ] If GAS files changed: run `npm run gas:push` or `cd GAS && clasp push`
+
 
 

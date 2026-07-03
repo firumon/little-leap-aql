@@ -1,4 +1,4 @@
-# PLAN: PO Receiving + Goods Receipts Implementation
+﻿# PLAN: PO Receiving + Goods Receipts Implementation
 **Status**: COMPLETED  
 **Created**: 2026-04-27  
 **Updated**: 2026-04-27  
@@ -46,7 +46,7 @@ Agreed logic:
 - `GenerateGRN` is an `AdditionalAction` on `POReceivings`; a GAS postAction hook creates GRN rows.
 - `GoodsReceipts` can be manually invalidated through an action that sets `Status = Inactive`.
 - PostAction hooks are non-blocking in AQL. Therefore frontend must block invalid actions before calling the API; GAS hooks must defensively repair state when possible and never throw.
-- Custom page folder for PO Receiving must be `FRONTENT/src/pages/Operations/PoReceivings/`, because `ActionResolverPage.vue` uses `toPascalCase('po-receivings') -> PoReceivings`.
+- Custom page folder for PO Receiving must be `FRONTENT/src/pages/operation/PoReceivings/`, because `ActionResolverPage.vue` uses `toPascalCase('po-receivings') -> PoReceivings`.
 
 Assumptions:
 - `PurchaseOrders` already carries or can resolve the linked `ProcurementCode`.
@@ -66,7 +66,7 @@ Out of scope:
 Current state:
 - `PurchaseOrders` already exists and is the upstream source document.
 - `GoodsReceipts` and `GoodsReceiptItems` already exist as placeholders and must be revised in place.
-- The frontend operation route resolver loads custom pages from `FRONTENT/src/pages/Operations/{PascalCaseSlug}/`.
+- The frontend operation route resolver loads custom pages from `FRONTENT/src/pages/operation/{PascalCaseSlug}/`.
 - The repo requires business logic in composables, UI-only pages/components, API/IDB access only in services, and resource navigation through `useResourceNav`.
 - GAS supports generic resource actions and postAction hooks; hooks must be treated as defensive side-effect handlers, not as pre-action validation gates.
 
@@ -106,37 +106,37 @@ Current state:
 - Dependencies: existing sheet/resource helpers used by other workflow files.
 
 ### Frontend Composables
-`FRONTENT/src/composables/operations/poReceivings/poReceivingMeta.js`
+`FRONTENT/src/composables/operation/poReceivings/poReceivingMeta.js`
 - Action: create.
 - Purpose: PO Receiving progress labels, order, colors, report placeholder metadata, and deterministic system messages.
 - Dependencies: none.
 
-`FRONTENT/src/composables/operations/poReceivings/poReceivingPayload.js`
+`FRONTENT/src/composables/operation/poReceivings/poReceivingPayload.js`
 - Action: create.
 - Purpose: derived quantity helpers, validation, default forms, payload builders.
 - Dependencies: `poReceivingMeta.js`.
 
-`FRONTENT/src/composables/operations/poReceivings/usePOReceivingIndex.js`
+`FRONTENT/src/composables/operation/poReceivings/usePOReceivingIndex.js`
 - Action: create.
 - Purpose: list page view-model for PO Receiving.
 - Dependencies: `useResourceData`, `useResourceNav`, `poReceivingMeta.js`.
 
-`FRONTENT/src/composables/operations/poReceivings/usePOReceivingAddFlow.js`
+`FRONTENT/src/composables/operation/poReceivings/usePOReceivingAddFlow.js`
 - Action: create.
 - Purpose: select PO, resume draft, edit draft, save, confirm, generate GRN, replacement flow.
 - Dependencies: `useResourceData`, `useWorkflowStore`, `useResourceNav`, `useQuasar`, `poReceivingPayload.js`, `poReceivingMeta.js`.
 
-`FRONTENT/src/composables/operations/poReceivings/usePOReceivingView.js`
+`FRONTENT/src/composables/operation/poReceivings/usePOReceivingView.js`
 - Action: create.
 - Purpose: read-only receiving view, linked GRN, actions, report placeholders.
 - Dependencies: `useResourceData`, `useWorkflowStore`, `useResourceNav`, `poReceivingPayload.js`, `poReceivingMeta.js`.
 
-`FRONTENT/src/composables/operations/goodsReceipts/useGoodsReceiptIndex.js`
+`FRONTENT/src/composables/operation/goodsReceipts/useGoodsReceiptIndex.js`
 - Action: create.
 - Purpose: Goods Receipts list page view-model.
 - Dependencies: `useResourceData`, `useResourceNav`.
 
-`FRONTENT/src/composables/operations/goodsReceipts/useGoodsReceiptView.js`
+`FRONTENT/src/composables/operation/goodsReceipts/useGoodsReceiptView.js`
 - Action: create.
 - Purpose: GRN read-only view and invalidation action.
 - Dependencies: `useResourceData`, `useWorkflowStore`, `useResourceNav`.
@@ -147,27 +147,27 @@ Current state:
 - Dependencies: all new composable files.
 
 ### Frontend Components
-`FRONTENT/src/components/Operations/PoReceivings/POReceivingSummaryCards.vue`
+`FRONTENT/src/components/operation/PoReceivings/POReceivingSummaryCards.vue`
 - Action: create.
 - Purpose: UI-only summary cards for draft/view totals.
 - Dependencies: props from PO Receiving composables.
 
-`FRONTENT/src/components/Operations/PoReceivings/POReceivingItemGrid.vue`
+`FRONTENT/src/components/operation/PoReceivings/POReceivingItemGrid.vue`
 - Action: create.
 - Purpose: UI-only editable/read-only item grid with derived columns.
 - Dependencies: props/events only; no service/store imports.
 
-`FRONTENT/src/components/Operations/PoReceivings/POReceivingBulkToolbar.vue`
+`FRONTENT/src/components/operation/PoReceivings/POReceivingBulkToolbar.vue`
 - Action: create.
 - Purpose: UI-only bulk edit controls.
 - Dependencies: emits bulk intent events only.
 
-`FRONTENT/src/components/Operations/PoReceivings/POReceivingReportLinks.vue`
+`FRONTENT/src/components/operation/PoReceivings/POReceivingReportLinks.vue`
 - Action: create.
 - Purpose: UI-only disabled/future-ready report links.
 - Dependencies: report placeholder props.
 
-`FRONTENT/src/components/Operations/GoodsReceipts/GoodsReceiptItemsTable.vue`
+`FRONTENT/src/components/operation/GoodsReceipts/GoodsReceiptItemsTable.vue`
 - Action: create.
 - Purpose: UI-only accepted-item table for GRN view.
 - Dependencies: props only.
@@ -178,27 +178,27 @@ Current state:
 - Dependencies: component files above.
 
 ### Frontend Pages
-`FRONTENT/src/pages/Operations/PoReceivings/IndexPage.vue`
+`FRONTENT/src/pages/operation/PoReceivings/IndexPage.vue`
 - Action: create.
 - Purpose: custom PO Receiving index page.
 - Dependencies: `usePOReceivingIndex.js`.
 
-`FRONTENT/src/pages/Operations/PoReceivings/AddPage.vue`
+`FRONTENT/src/pages/operation/PoReceivings/AddPage.vue`
 - Action: create.
 - Purpose: custom PO Receiving add/resume draft page.
 - Dependencies: `usePOReceivingAddFlow.js`, PO Receiving components.
 
-`FRONTENT/src/pages/Operations/PoReceivings/ViewPage.vue`
+`FRONTENT/src/pages/operation/PoReceivings/ViewPage.vue`
 - Action: create.
 - Purpose: custom PO Receiving view/action page.
 - Dependencies: `usePOReceivingView.js`, PO Receiving components.
 
-`FRONTENT/src/pages/Operations/GoodsReceipts/IndexPage.vue`
+`FRONTENT/src/pages/operation/GoodsReceipts/IndexPage.vue`
 - Action: create.
 - Purpose: custom Goods Receipts index page.
 - Dependencies: `useGoodsReceiptIndex.js`.
 
-`FRONTENT/src/pages/Operations/GoodsReceipts/ViewPage.vue`
+`FRONTENT/src/pages/operation/GoodsReceipts/ViewPage.vue`
 - Action: create.
 - Purpose: custom Goods Receipts read-only view page.
 - Dependencies: `useGoodsReceiptView.js`, `GoodsReceiptItemsTable.vue`.
@@ -240,7 +240,7 @@ Current state:
 - DefaultValues: `Progress=DRAFT`, `Status=Active`.
 - Progress options: `APP_OPTIONS_SEED.POReceivingProgress`.
 - Menu: visible under `Procurement`.
-- Menu route: `/operations/po-receivings`.
+- Menu route: `/operation/po-receivings`.
 - Menu order: next after `Purchase Orders`; use order `7` if current `Purchase Orders` is `6`.
 - AdditionalActions: `Confirm`, `GenerateGRN`, `Cancel`.
 - PostAction: `handlePOReceivingWorkflow`.
@@ -318,7 +318,7 @@ Headers:
 - RequiredHeaders: `ProcurementCode,PurchaseOrderCode,POReceivingCode,Date,Status`.
 - DefaultValues: `Status=Active`.
 - Menu: visible under `Procurement`.
-- Menu route: `/operations/goods-receipts`.
+- Menu route: `/operation/goods-receipts`.
 - Menu order: immediately after `PO Receiving`; use order `8` if PO Receiving is `7`.
 - AdditionalActions: `Invalidate`.
 - PostAction: `handlePOReceivingWorkflow`.
@@ -503,7 +503,7 @@ Headers:
 
 ### Frontend Payload And Metadata
 `PO_RECEIVING_PROGRESS_META`
-- File: `FRONTENT/src/composables/operations/poReceivings/poReceivingMeta.js`.
+- File: `FRONTENT/src/composables/operation/poReceivings/poReceivingMeta.js`.
 - Purpose: labels/order/colors for `DRAFT`, `CONFIRMED`, `GRN_GENERATED`, `CANCELLED`.
 - Inputs: progress string.
 - Outputs: metadata.
@@ -514,7 +514,7 @@ Headers:
 - Connects to: all PO Receiving UI.
 
 `PO_RECEIVING_REPORT_PLACEHOLDERS`
-- File: `FRONTENT/src/composables/operations/poReceivings/poReceivingMeta.js`.
+- File: `FRONTENT/src/composables/operation/poReceivings/poReceivingMeta.js`.
 - Purpose: define disabled placeholder links for Damage List, Reject List, Short List, Excess List.
 - Inputs: none.
 - Outputs: array metadata.
@@ -525,7 +525,7 @@ Headers:
 - Connects to: `POReceivingReportLinks.vue`.
 
 `acceptedQty`
-- File: `FRONTENT/src/composables/operations/poReceivings/poReceivingPayload.js`.
+- File: `FRONTENT/src/composables/operation/poReceivings/poReceivingPayload.js`.
 - Purpose: calculate accepted quantity.
 - Inputs: `ReceivedQty`, `DamagedQty`, `RejectedQty`.
 - Outputs: `max(received - damaged - rejected, 0)`.
@@ -536,7 +536,7 @@ Headers:
 - Connects to: item grid and GRN payload reasoning.
 
 `shortQty`
-- File: `FRONTENT/src/composables/operations/poReceivings/poReceivingPayload.js`.
+- File: `FRONTENT/src/composables/operation/poReceivings/poReceivingPayload.js`.
 - Purpose: calculate shortage.
 - Inputs: `ExpectedQty`, `ReceivedQty`.
 - Outputs: `max(expected - received, 0)`.
@@ -547,7 +547,7 @@ Headers:
 - Connects to: item grid and report placeholders.
 
 `excessQty`
-- File: `FRONTENT/src/composables/operations/poReceivings/poReceivingPayload.js`.
+- File: `FRONTENT/src/composables/operation/poReceivings/poReceivingPayload.js`.
 - Purpose: calculate excess.
 - Inputs: `ExpectedQty`, `ReceivedQty`.
 - Outputs: `max(received - expected, 0)`.
@@ -558,7 +558,7 @@ Headers:
 - Connects to: item grid and report placeholders.
 
 `defaultHeaderForm`
-- File: `FRONTENT/src/composables/operations/poReceivings/poReceivingPayload.js`.
+- File: `FRONTENT/src/composables/operation/poReceivings/poReceivingPayload.js`.
 - Purpose: create header form from selected PO or existing receiving.
 - Inputs: purchase order, optional existing receiving, current user display name.
 - Outputs: header form object.
@@ -569,7 +569,7 @@ Headers:
 - Connects to: `selectPurchaseOrder`.
 
 `defaultItemForm`
-- File: `FRONTENT/src/composables/operations/poReceivings/poReceivingPayload.js`.
+- File: `FRONTENT/src/composables/operation/poReceivings/poReceivingPayload.js`.
 - Purpose: create line form from PO item and optional receiving item.
 - Inputs: PO item, optional existing receiving item.
 - Outputs: item form object with derived display values.
@@ -580,7 +580,7 @@ Headers:
 - Connects to: add flow and item grid.
 
 `validateReceiving`
-- File: `FRONTENT/src/composables/operations/poReceivings/poReceivingPayload.js`.
+- File: `FRONTENT/src/composables/operation/poReceivings/poReceivingPayload.js`.
 - Purpose: validate header and lines before save/confirm.
 - Inputs: header form and item forms.
 - Outputs: `{ valid, errors }`.
@@ -591,7 +591,7 @@ Headers:
 - Connects to: add flow buttons.
 
 `buildCompositePayload`
-- File: `FRONTENT/src/composables/operations/poReceivings/poReceivingPayload.js`.
+- File: `FRONTENT/src/composables/operation/poReceivings/poReceivingPayload.js`.
 - Purpose: serialize parent/child records for `compositeSave`.
 - Inputs: header form, item forms, existing codes.
 - Outputs: composite save payload matching existing workflow store contract.
@@ -603,7 +603,7 @@ Headers:
 
 ### Frontend PO Receiving
 `usePOReceivingIndex`
-- File: `FRONTENT/src/composables/operations/poReceivings/usePOReceivingIndex.js`.
+- File: `FRONTENT/src/composables/operation/poReceivings/usePOReceivingIndex.js`.
 - Purpose: load, group, filter, and navigate PO Receiving records.
 - Inputs: none.
 - Outputs: records, grouped records, search, loading, refresh, navigation helpers.
@@ -614,7 +614,7 @@ Headers:
 - Connects to: `PoReceivings/IndexPage.vue`.
 
 `usePOReceivingAddFlow`
-- File: `FRONTENT/src/composables/operations/poReceivings/usePOReceivingAddFlow.js`.
+- File: `FRONTENT/src/composables/operation/poReceivings/usePOReceivingAddFlow.js`.
 - Purpose: full add/resume/edit workflow.
 - Inputs: route query/code and user actions.
 - Outputs: form state, line rows, action state, handlers.
@@ -625,7 +625,7 @@ Headers:
 - Connects to: `PoReceivings/AddPage.vue`.
 
 `selectPurchaseOrder`
-- File: `FRONTENT/src/composables/operations/poReceivings/usePOReceivingAddFlow.js`.
+- File: `FRONTENT/src/composables/operation/poReceivings/usePOReceivingAddFlow.js`.
 - Purpose: select PO and hydrate receiving state.
 - Inputs: `PurchaseOrderCode`.
 - Outputs: selected PO, header form, line rows.
@@ -636,7 +636,7 @@ Headers:
 - Connects to: top PO selector.
 
 `saveDraft`
-- File: `FRONTENT/src/composables/operations/poReceivings/usePOReceivingAddFlow.js`.
+- File: `FRONTENT/src/composables/operation/poReceivings/usePOReceivingAddFlow.js`.
 - Purpose: persist current receiving.
 - Inputs: current forms.
 - Outputs: saved parent/child state.
@@ -647,7 +647,7 @@ Headers:
 - Connects to: save button.
 
 `confirmReceiving`
-- File: `FRONTENT/src/composables/operations/poReceivings/usePOReceivingAddFlow.js`.
+- File: `FRONTENT/src/composables/operation/poReceivings/usePOReceivingAddFlow.js`.
 - Purpose: save if needed, then execute `Confirm`.
 - Inputs: optional comment.
 - Outputs: refreshed receiving.
@@ -658,7 +658,7 @@ Headers:
 - Connects to: confirm button.
 
 `generateGRN`
-- File: `FRONTENT/src/composables/operations/poReceivings/usePOReceivingAddFlow.js` and `usePOReceivingView.js`.
+- File: `FRONTENT/src/composables/operation/poReceivings/usePOReceivingAddFlow.js` and `usePOReceivingView.js`.
 - Purpose: execute `GenerateGRN`.
 - Inputs: receiving code and optional comment.
 - Outputs: refreshed data and navigation target.
@@ -669,7 +669,7 @@ Headers:
 - Connects to: post-confirm prompt and view action.
 
 `startReplacement`
-- File: `FRONTENT/src/composables/operations/poReceivings/usePOReceivingAddFlow.js`.
+- File: `FRONTENT/src/composables/operation/poReceivings/usePOReceivingAddFlow.js`.
 - Purpose: invalidate active GRN, cancel old receiving, then start a new draft.
 - Inputs: existing receiving and selected PO.
 - Outputs: new draft state.
@@ -680,7 +680,7 @@ Headers:
 - Connects to: replacement prompt.
 
 `usePOReceivingView`
-- File: `FRONTENT/src/composables/operations/poReceivings/usePOReceivingView.js`.
+- File: `FRONTENT/src/composables/operation/poReceivings/usePOReceivingView.js`.
 - Purpose: read-only detail, linked GRN, actions, report placeholders.
 - Inputs: route code.
 - Outputs: receiving, items, derived summaries, linked GRN, action handlers.
@@ -692,7 +692,7 @@ Headers:
 
 ### Frontend Goods Receipts
 `useGoodsReceiptIndex`
-- File: `FRONTENT/src/composables/operations/goodsReceipts/useGoodsReceiptIndex.js`.
+- File: `FRONTENT/src/composables/operation/goodsReceipts/useGoodsReceiptIndex.js`.
 - Purpose: list active and inactive GRNs.
 - Inputs: none.
 - Outputs: records, search, status grouping, navigation helpers.
@@ -703,7 +703,7 @@ Headers:
 - Connects to: `GoodsReceipts/IndexPage.vue`.
 
 `useGoodsReceiptView`
-- File: `FRONTENT/src/composables/operations/goodsReceipts/useGoodsReceiptView.js`.
+- File: `FRONTENT/src/composables/operation/goodsReceipts/useGoodsReceiptView.js`.
 - Purpose: read-only GRN details and invalidation action.
 - Inputs: route code.
 - Outputs: GRN, items, linked PO Receiving, navigation/action handlers.
@@ -714,7 +714,7 @@ Headers:
 - Connects to: `GoodsReceipts/ViewPage.vue`.
 
 `invalidateGoodsReceipt`
-- File: `FRONTENT/src/composables/operations/goodsReceipts/useGoodsReceiptView.js`.
+- File: `FRONTENT/src/composables/operation/goodsReceipts/useGoodsReceiptView.js`.
 - Purpose: execute `GoodsReceipts.Invalidate`.
 - Inputs: current GRN.
 - Outputs: refreshed state.
@@ -767,7 +767,7 @@ Headers:
 - Expected result: hooks are non-throwing and scoped to `POReceivings` and `GoodsReceipts`.
 
 6. Create PO Receiving metadata and payload helpers.
-- File to open: create `FRONTENT/src/composables/operations/poReceivings/poReceivingMeta.js` and `FRONTENT/src/composables/operations/poReceivings/poReceivingPayload.js`.
+- File to open: create `FRONTENT/src/composables/operation/poReceivings/poReceivingMeta.js` and `FRONTENT/src/composables/operation/poReceivings/poReceivingPayload.js`.
 - Change to make: add progress/report metadata, quantity helpers, validation, default form builders, and composite payload builder.
 - Where: new composable folder.
 - Avoid changing: services, stores, and page files in this step.
@@ -775,7 +775,7 @@ Headers:
 - Expected result: all business calculations live outside pages/components.
 
 7. Create PO Receiving composables.
-- File to open: create `usePOReceivingIndex.js`, `usePOReceivingAddFlow.js`, and `usePOReceivingView.js` under `FRONTENT/src/composables/operations/poReceivings/`.
+- File to open: create `usePOReceivingIndex.js`, `usePOReceivingAddFlow.js`, and `usePOReceivingView.js` under `FRONTENT/src/composables/operation/poReceivings/`.
 - Change to make: implement the composable functions listed in this plan.
 - Where: new files.
 - Avoid changing: API services and stores unless existing public methods are missing; if missing, stop and document the exact gap before editing shared services.
@@ -783,7 +783,7 @@ Headers:
 - Expected result: pages can consume complete view-models without containing business logic.
 
 8. Create Goods Receipts composables.
-- File to open: create `FRONTENT/src/composables/operations/goodsReceipts/useGoodsReceiptIndex.js` and `FRONTENT/src/composables/operations/goodsReceipts/useGoodsReceiptView.js`.
+- File to open: create `FRONTENT/src/composables/operation/goodsReceipts/useGoodsReceiptIndex.js` and `FRONTENT/src/composables/operation/goodsReceipts/useGoodsReceiptView.js`.
 - Change to make: implement GRN list/view/invalidate view-models.
 - Where: new folder or existing `goodsReceipts` folder if already present.
 - Avoid changing: adding any direct GRN create/edit flow.
@@ -793,26 +793,26 @@ Headers:
 9. Create UI-only components.
 - File to open: create the five component files listed in the Frontend Components file plan.
 - Change to make: build presentational components using props and emits only.
-- Where: `FRONTENT/src/components/Operations/PoReceivings/` and `FRONTENT/src/components/Operations/GoodsReceipts/`.
+- Where: `FRONTENT/src/components/operation/PoReceivings/` and `FRONTENT/src/components/operation/GoodsReceipts/`.
 - Avoid changing: stores, services, and resource APIs; no business calculations inside components except displaying values already provided by composables.
 - Command after step: none.
 - Expected result: pages remain under the architecture line and avoid large inline grids/toolbars.
 
 10. Create PO Receiving pages.
-- File to open: create `FRONTENT/src/pages/Operations/PoReceivings/IndexPage.vue`, `AddPage.vue`, `ViewPage.vue`.
+- File to open: create `FRONTENT/src/pages/operation/PoReceivings/IndexPage.vue`, `AddPage.vue`, `ViewPage.vue`.
 - Change to make: compose Quasar layout from the PO Receiving composables and UI components.
 - Where: exact `PoReceivings` folder name.
 - Avoid changing: route resolver files; do not create `POReceivings` folder because resolver will not find it.
 - Command after step: none.
-- Expected result: `/operations/po-receivings`, add, and view actions resolve to custom pages.
+- Expected result: `/operation/po-receivings`, add, and view actions resolve to custom pages.
 
 11. Create Goods Receipts pages.
-- File to open: create `FRONTENT/src/pages/Operations/GoodsReceipts/IndexPage.vue` and `ViewPage.vue`.
+- File to open: create `FRONTENT/src/pages/operation/GoodsReceipts/IndexPage.vue` and `ViewPage.vue`.
 - Change to make: compose Quasar layout from Goods Receipts composables and item table.
 - Where: exact `GoodsReceipts` folder name.
 - Avoid changing: adding `AddPage.vue` or `EditPage.vue`.
 - Command after step: none.
-- Expected result: `/operations/goods-receipts` and view action resolve to custom pages; no direct add page exists.
+- Expected result: `/operation/goods-receipts` and view action resolve to custom pages; no direct add page exists.
 
 12. Update frontend registries.
 - File to open: `FRONTENT/src/composables/REGISTRY.md` and `FRONTENT/src/components/REGISTRY.md`.
@@ -877,13 +877,13 @@ This section maps to `PLANS/_TEMPLATE.md`. Use the detailed `Execution Steps` ab
 
 ### Step 4: Frontend Composables
 - [ ] Complete Execution Steps 6, 7, and 8.
-**Files**: `FRONTENT/src/composables/operations/poReceivings/*`, `FRONTENT/src/composables/operations/goodsReceipts/*`
+**Files**: `FRONTENT/src/composables/operation/poReceivings/*`, `FRONTENT/src/composables/operation/goodsReceipts/*`
 **Pattern**: purchase-order operation composables plus `useResourceData`, `useWorkflowStore`, `useResourceNav`.
 **Rule**: all business logic, validation, and derived quantities live here.
 
 ### Step 5: Frontend Components And Pages
 - [ ] Complete Execution Steps 9, 10, and 11.
-**Files**: `FRONTENT/src/components/Operations/PoReceivings/*`, `FRONTENT/src/components/Operations/GoodsReceipts/*`, `FRONTENT/src/pages/Operations/PoReceivings/*`, `FRONTENT/src/pages/Operations/GoodsReceipts/*`
+**Files**: `FRONTENT/src/components/operation/PoReceivings/*`, `FRONTENT/src/components/operation/GoodsReceipts/*`, `FRONTENT/src/pages/operation/PoReceivings/*`, `FRONTENT/src/pages/operation/GoodsReceipts/*`
 **Pattern**: UI-only Quasar components and thin operation pages.
 **Rule**: use `PoReceivings` folder exactly; do not create Goods Receipts add/edit pages.
 
@@ -907,13 +907,13 @@ Targeted setup checks:
 - Confirm Procurement menu shows `PO Receiving` before `Goods Receipts`.
 
 Manual frontend checks:
-- Open `/operations/po-receivings`; index loads and groups by progress.
+- Open `/operation/po-receivings`; index loads and groups by progress.
 - Start PO Receiving from a selected PO; PO items preload with `ExpectedQty`.
 - Edit lines and verify accepted/short/excess values update in UI only.
 - Save draft, leave, reopen, and verify no duplicate draft is created.
 - Confirm draft; verify page becomes read-only.
 - Generate GRN; verify one active `GoodsReceipts` row and accepted-only `GoodsReceiptItems` rows.
-- Open `/operations/goods-receipts`; index loads active and inactive GRNs.
+- Open `/operation/goods-receipts`; index loads active and inactive GRNs.
 - Open a GRN view; verify accepted items and link back to PO Receiving.
 - Invalidate a GRN; verify receiving rolls back from `GRN_GENERATED` to `CONFIRMED`.
 - Cancel a receiving with active GRN; verify GRN is invalidated first.
@@ -977,8 +977,8 @@ Failure signs:
 - [ ] `APP.Resources.POReceivingItems` added as hidden child resource.
 - [ ] `APP.Resources.GoodsReceipts` revised with menu, invalidation action, parent, defaults, and postAction.
 - [ ] `APP.Resources.GoodsReceiptItems` revised as hidden child resource.
-- [ ] PO Receiving custom pages exist under `FRONTENT/src/pages/Operations/PoReceivings/`.
-- [ ] Goods Receipts custom index/view pages exist under `FRONTENT/src/pages/Operations/GoodsReceipts/`.
+- [ ] PO Receiving custom pages exist under `FRONTENT/src/pages/operation/PoReceivings/`.
+- [ ] Goods Receipts custom index/view pages exist under `FRONTENT/src/pages/operation/GoodsReceipts/`.
 - [ ] No Goods Receipts add/edit page is added.
 - [ ] Derived quantities are computed in composables and not stored.
 - [ ] Draft save/resume prevents duplicate active drafts.
@@ -1027,3 +1027,4 @@ Validation performed:
 Manual actions required:
 - [ ] Confirm APP.AppOptions contains newly seeded progress values after setup/sync.
 - [ ] No Web App redeployment expected unless Build Agent changes API contracts.
+

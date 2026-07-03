@@ -28,7 +28,7 @@ function routeQuery(query) {
  *   Override scope + resourceSlug (and optionally code) in params to navigate
  *   to a different resource without constructing path strings manually.
  *   Example:
- *     nav.goTo('view', { scope: 'operations', resourceSlug: 'purchase-items', code: 'PI001' })
+ *     nav.goTo('view', { scope: 'operation', resourceSlug: 'purchase-items', code: 'PI001' })
  *
  * routeMappings is built AFTER resolvedParams is assembled (post-merge), so
  * an overridden scope in params correctly selects the right named route set.

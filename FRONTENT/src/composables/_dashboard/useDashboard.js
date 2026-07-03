@@ -27,7 +27,7 @@ export function useDashboard() {
       return allowed(perm)
     })
 
-    // Scope sorting priority hierarchy: operations (3) > accounts (2) > masters (1)
+    // Scope sorting priority hierarchy: operation (3) > accounts (2) > master (1)
     const getScopePriority = (scope) => {
       const cleanScope = String(scope || '').toLowerCase().trim()
       if (cleanScope === 'operations') return 3
@@ -201,7 +201,7 @@ export function useDashboard() {
     activeWidgets.value.forEach((widget) => {
       const { id, dataSource } = widget.metadata
       const resourcesList = dataSource.resources || (dataSource.resource ? [dataSource.resource] : [])
-      
+
       // Explicitly access Pinia reactivity layers to trigger Vue computed tracking
       resourcesList.forEach((res) => {
         const _ = dataStore.rows[res]

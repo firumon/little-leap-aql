@@ -221,7 +221,7 @@ Find lines 305-329 (CONFIG.MASTER_SHEETS.OUTLETS UIFields / defaults) and replac
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
         Menu: JSON.stringify([
-            {"group":["Outlet Operations"],"order":1,"label":"Outlets","icon":"storefront","route":"/master/outlets","pageTitle":"Outlets","pageDescription":"Manage outlet master records","show":true},
+            {"group":["Outlet Operation"],"order":1,"label":"Outlets","icon":"storefront","route":"/master/outlets","pageTitle":"Outlets","pageDescription":"Manage outlet master records","show":true},
             {"group":["Field Sales"],"order":1,"label":"Outlet Hub","icon":"hub","route":"/master/outlets/operation-hub","pageTitle":"Outlet Hub","pageDescription":"Outlet-centric view of visits, restocks, returns, invoices, and payments","show":true}
         ]),
         UIFields: JSON.stringify([
@@ -405,7 +405,7 @@ Add the shared function `computeInvoiceTaxBreakdown` at the top of `useOutletCon
     const skus = useDataStore().getRecords('SKUs') || []
     const priceLists = useDataStore().getRecords('PriceList') || []
     const plRecord = priceLists.find(p => p.Code === priceListCode && p.Status === 'Active')
-    
+
     const subtotal = itemsList.reduce((sum, item) => sum + (toNumber(item.Qty) * toNumber(item.Price)), 0)
     const disc = toNumber(headerDiscount)
 
@@ -604,7 +604,7 @@ Replace `saveInvoiceFromConsumption` function body (lines 729-766) to compute an
     }
     if (!consumptionCode) return { error: 'Consumption code required' }
     if (!items.length) return { error: 'No items to invoice' }
-    
+
     const subtotal = items.reduce((sum, item) => sum + (toNumber(item.Qty) * toNumber(item.Price)), 0)
     saving.value = true
     try {
@@ -649,7 +649,7 @@ Replace `updateInvoice` function body (lines 768-792) to support re-calculating 
       return { error: 'Unauthorized' }
     }
     if (!invoiceCode) return { error: 'Invoice code required' }
-    
+
     const invoiceRecord = invoices.items.value.find(inv => inv.Code === invoiceCode)
     if (!invoiceRecord) return { error: 'Invoice not found in store' }
 
@@ -658,14 +658,14 @@ Replace `updateInvoice` function body (lines 768-792) to support re-calculating 
       const requests = []
       const plCode = PriceListCode !== undefined ? PriceListCode : invoiceRecord.PriceListCode
       const disc = Discount !== undefined ? toNumber(Discount) : toNumber(invoiceRecord.Discount)
-      
+
       const taxBreakdown = computeInvoiceTaxBreakdown(items, plCode, disc, invoiceRecord.OutletCode)
 
       const updateData = {}
       if (PriceListCode !== undefined) updateData.PriceListCode = PriceListCode
       if (Discount !== undefined) updateData.Discount = disc
       if (ReturnDeductionTotal !== undefined) updateData.ReturnDeductionTotal = toNumber(ReturnDeductionTotal)
-      
+
       updateData.Subtotal = taxBreakdown.processedItems.reduce((sum, item) => sum + (toNumber(item.Qty) * toNumber(item.Price)), 0)
       updateData.TotalTaxableAmount = taxBreakdown.totalTaxableAmount
       updateData.TotalTaxAmount = taxBreakdown.totalTaxAmount
@@ -879,7 +879,7 @@ const realtimeTaxDetailsComputed = computed(() => {
   const plCode = editForm.value.priceListCode
   const plRecord = priceLists.items.value.find(p => p.Code === plCode && p.Status === 'Active')
   const skus = dataStore.getRecords('SKUs') || []
-  
+
   const sub = realtimeSubtotal.value
   const disc = parseFloat(editForm.value.discount) || 0
 

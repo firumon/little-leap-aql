@@ -91,7 +91,7 @@ defineProps({
 })
 const emit = defineEmits(['edit'])
 
-// AQL Project Architecture Rule: Verify operations using permission helpers
+// AQL Project Architecture Rule: Verify operation using permission helpers
 const { allowed } = useResourceConfig()
 
 const pagination = ref({

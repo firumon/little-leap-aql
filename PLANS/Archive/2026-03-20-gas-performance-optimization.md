@@ -764,7 +764,7 @@ During a typical login with 2 roles and 10 authorized resources, the GAS backend
   ```javascript
   /**
    * Clears all in-memory and CacheService caches.
-   * Call from setup/sync operations that modify APP sheets.
+   * Call from setup/sync operation that modify APP sheets.
    */
   function clearAllAppCaches() {
     // In-memory: spreadsheet cache

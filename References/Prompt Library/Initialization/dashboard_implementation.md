@@ -35,7 +35,7 @@ Every widget exports a default object with this structure:
 export default {
   metadata: {
     id: 'unique_widget_id',
-    scope: 'operations',              // 'operations' | 'accounts' | 'masters'
+    scope: 'operations',              // 'operation' | 'accounts' | 'master'
     resource: 'purchaseRequisitions', // Primary resource for permission gating
     permission: { purchaseRequisitions: 'read' },
     config: {

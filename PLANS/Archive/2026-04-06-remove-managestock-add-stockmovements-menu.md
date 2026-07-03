@@ -54,12 +54,12 @@ This plan relies on **Plan 1** (`2026-04-06-menu-column-object-to-array.md`) bei
 - [ ] In the same file, find the `StockMovements` resource entry (currently around lines 632-657, but may have shifted).
 - [ ] Its `Menu` field (after Plan 1) should look like:
   ```javascript
-  Menu: JSON.stringify([{ group: 'Operations', order: 6, label: 'Stock Movements', icon: 'swap_horiz', route: '/operation/stock-movements', pageTitle: 'Stock Movements', pageDescription: 'Global ledger of inventory flows', show: true }]),
+  Menu: JSON.stringify([{ group: 'Operation', order: 6, label: 'Stock Movements', icon: 'swap_horiz', route: '/operation/stock-movements', pageTitle: 'Stock Movements', pageDescription: 'Global ledger of inventory flows', show: true }]),
   ```
 - [ ] Add a second menu item object to the array:
   ```javascript
   Menu: JSON.stringify([
-      { group: 'Operations', order: 6, label: 'Stock Movements', icon: 'swap_horiz', route: '/operation/stock-movements', pageTitle: 'Stock Movements', pageDescription: 'Global ledger of inventory flows', show: true },
+      { group: 'Operation', order: 6, label: 'Stock Movements', icon: 'swap_horiz', route: '/operation/stock-movements', pageTitle: 'Stock Movements', pageDescription: 'Global ledger of inventory flows', show: true },
       { group: 'Warehouse', order: 1, label: 'Manage Stock', icon: 'inventory', route: '/operation/manage-stock', pageTitle: 'Manage Stock', pageDescription: 'Add, adjust, or directly enter stock movements', show: true }
   ]),
   ```

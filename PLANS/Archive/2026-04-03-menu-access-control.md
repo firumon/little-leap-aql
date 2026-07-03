@@ -359,7 +359,7 @@ The `menuAccess` field goes **inside** the `Menu` JSON string. Only resources th
 
 ```js
 Menu: JSON.stringify({
-  group: 'Masters',
+  group: 'Master',
   order: 1,
   label: 'Products',
   icon: 'inventory_2',

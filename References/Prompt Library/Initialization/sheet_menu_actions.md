@@ -43,7 +43,7 @@ The custom AQL menu actions primarily create, read, update, or toggle records in
 When creating forms or dialogs editing the `Resources` sheet, you must handle the following columns which accept JSON arrays/objects:
 - **`Menu`**: JSON array of objects representing frontend sidebar entries. For example:
   ```json
-  [{"group":["Masters"],"order":1,"label":"SKUs","icon":"grid_on","route":"/master/skus","pageTitle":"SKUs","pageDescription":"Manage SKUs","show":true}]
+  [{"group":["Master"],"order":1,"label":"SKUs","icon":"grid_on","route":"/master/skus","pageTitle":"SKUs","pageDescription":"Manage SKUs","show":true}]
   ```
   *Rule*: The dialog edit form typically updates the first array item and preserves the rest of the array via a hidden field `_menuArrayFull` (see [appMenu.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/appMenu.gs#L357-L375) mapping).
 - **`UIFields`**: JSON array of fields defining form properties.
@@ -58,7 +58,7 @@ When creating forms or dialogs editing the `Resources` sheet, you must handle th
 
 When creating or modifying admin dialogs rendered inside Google Sheets:
 - **Layout**: Keep forms clean, nicely arranged, and compact. Group related fields in labeled box containers or grids.
-- **Checkbox Handling**: Checkbox inputs frequently cause state/binding and display issues in Google Sheets HTML dialog environments. 
+- **Checkbox Handling**: Checkbox inputs frequently cause state/binding and display issues in Google Sheets HTML dialog environments.
   - *If rendering/state issues occur, or for toggle values, use `<select>` dropdowns* (e.g., `<option value="TRUE">Active</option>`) instead of raw check inputs.
 - **Nice UI/UX Feedback**: Always present loading/updating messages (e.g., `<div id="status">Saving user... Please wait.</div>`) when calling `google.script.run`. Ensure buttons are disabled during processing to prevent duplicate submissions.
 - **HTML Escaping**: Use `esc()` on all variable outputs in `buildDialogBody` to prevent rendering crashes or script injection.

@@ -15,7 +15,7 @@ Replace 8 separate menu-related columns in APP.Resources (`MenuGroup`, `MenuOrde
 ## Menu JSON Schema
 ```json
 {
-  "group": "Masters",
+  "group": "Master",
   "order": 1,
   "label": "Products",
   "icon": "inventory_2",

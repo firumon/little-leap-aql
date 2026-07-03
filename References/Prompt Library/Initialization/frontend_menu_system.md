@@ -77,7 +77,7 @@ Router.beforeEach                     ← Route guard (double-check)
 
 ```json
 {
-  "group":           ["Masters", "Product"],
+  "group":           ["Master", "Product"],
   "order":           1,
   "label":           "Products",
   "icon":            "inventory_2",
@@ -104,7 +104,7 @@ Router.beforeEach                     ← Route guard (double-check)
 
 ```json
 "group": {
-  "default": ["Masters", "Product"],
+  "default": ["Master", "Product"],
   "R001":    "",
   "R002":    "Product",
   "R003":    ["Master", "Manage"]

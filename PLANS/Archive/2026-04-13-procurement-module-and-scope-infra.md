@@ -176,7 +176,7 @@ const APP_OPTIONS_SEED = {
     RecordAccessPolicy: 'OWNER_AND_UPLINE',
     OwnerUserField: 'CreatedBy',
     AdditionalActions: 'Submit,Approve,Reject',
-    Menu: JSON.stringify([{ group: ['Operations', 'Procurement'], order: 1, label: 'Purchase Requisitions', icon: 'request_quote', route: '/operation/prs', pageTitle: 'Purchase Requisitions', pageDescription: 'Internal requests for purchase', show: true }]),
+    Menu: JSON.stringify([{ group: ['Operation', 'Procurement'], order: 1, label: 'Purchase Requisitions', icon: 'request_quote', route: '/operation/prs', pageTitle: 'Purchase Requisitions', pageDescription: 'Internal requests for purchase', show: true }]),
     UIFields: JSON.stringify([]),
     IncludeInAuthorizationPayload: 'TRUE',
     Functional: 'FALSE',
@@ -221,7 +221,7 @@ const APP_OPTIONS_SEED = {
     RecordAccessPolicy: 'OWNER_AND_UPLINE',
     OwnerUserField: 'CreatedBy',
     AdditionalActions: '',
-    Menu: JSON.stringify([{ group: ['Operations', 'Procurement'], order: 3, label: 'PR Items', icon: 'list', route: '', pageTitle: 'PR Items', pageDescription: 'Items in Purchase Requisition', show: false }]),
+    Menu: JSON.stringify([{ group: ['Operation', 'Procurement'], order: 3, label: 'PR Items', icon: 'list', route: '', pageTitle: 'PR Items', pageDescription: 'Items in Purchase Requisition', show: false }]),
     UIFields: JSON.stringify([]),
     IncludeInAuthorizationPayload: 'TRUE',
     Functional: 'FALSE',
@@ -264,7 +264,7 @@ const APP_OPTIONS_SEED = {
     RecordAccessPolicy: 'ALL',
     OwnerUserField: 'CreatedBy',
     AdditionalActions: '',
-    Menu: JSON.stringify([{ group: ['Masters', 'Product'], order: 3, label: 'UOMs', icon: 'straighten', route: '/master/uoms', pageTitle: 'Units of Measure', pageDescription: 'Manage units of measure', show: true }]),
+    Menu: JSON.stringify([{ group: ['Master', 'Product'], order: 3, label: 'UOMs', icon: 'straighten', route: '/master/uoms', pageTitle: 'Units of Measure', pageDescription: 'Manage units of measure', show: true }]),
     UIFields: JSON.stringify([
         { header: 'Code', label: 'Code', type: 'text', required: true },
         { header: 'Name', label: 'Name', type: 'text', required: true },
@@ -473,7 +473,7 @@ The route pattern needs to include `views` for the view scope. But rather than h
 
 **Option A (simple, recommended for now)**: Add `views` to the regex:
 ```javascript
-path: '/:scope(masters|operations|accounts|views)/:resourceSlug',
+path: '/:scope(master|operation|accounts|views)/:resourceSlug',
 ```
 
 **Option B (dynamic)**: Use a broader catch-all pattern and validate in the route guard. This is more future-proof but requires a route guard change.

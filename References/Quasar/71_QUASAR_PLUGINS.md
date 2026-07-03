@@ -77,10 +77,10 @@ export function useAppSyncManager(syncCallback) {
     () => AppVisibility.now,
     (isAppVisible) => {
       if (isAppVisible) {
-        // App returned to foreground: Resume operations
+        // App returned to foreground: Resume operation
         syncCallback()
       } else {
-        // App minimized: Pause operations
+        // App minimized: Pause operation
       }
     }
   )

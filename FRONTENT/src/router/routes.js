@@ -56,11 +56,11 @@ const routes = [
     component: () => import('layouts/MainLayout/MainLayout.vue'),
     meta: { requiresAuth: true },
     children: [
-      { path: 'bulk-upload', component: () => import('pages/master/BulkUploadPage.vue'), meta: { scope: 'master' } }
+      { path: 'bulk-upload', component: () => import('../pages/Master/BulkUploadPage.vue'), meta: { scope: 'master' } }
     ]
   },
   {
-    path: '/:scope(operations|masters|accounts)/:resourceSlug',
+    path: '/:scope(operation|master|accounts)/:resourceSlug',
     component: () => import('layouts/MainLayout/MainLayout.vue'),
     meta: { requiresAuth: true },
     children: [

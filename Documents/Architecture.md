@@ -1,4 +1,4 @@
-# System Architecture
+﻿# System Architecture
 
 ## Purpose
 This document owns system boundaries, component responsibilities, and interaction flows. It should not be the canonical source for detailed payload contracts or step-by-step operational setup.
@@ -25,8 +25,8 @@ graph TD
     end
 
     subgraph "Data Files"
-        REGISTRY --> MASTERS["MASTERS"]
-        REGISTRY --> OPERATIONS["OPERATIONS"]
+        REGISTRY --> master["master"]
+        REGISTRY --> operation["operation"]
         REGISTRY --> REPORTS["REPORTS"]
         REGISTRY --> ACCOUNTS["ACCOUNTS (optional)"]
     end
@@ -69,7 +69,7 @@ graph TD
 - `services/IndexedDbService.js`
   - IndexedDB persistence and metadata storage
 - `services/ResourceIoService.js`
-  - cache-first resource reads, TTL-based sync orchestration, resource mutations, batch/report commands, and client-cache operations
+  - cache-first resource reads, TTL-based sync orchestration, resource mutations, batch/report commands, and client-cache operation
 
 ## Key Interaction Flows
 
@@ -105,3 +105,4 @@ Update this file when:
 - a component's core responsibility changes
 - a major interaction flow changes materially
 - canonical detail-owner references change
+

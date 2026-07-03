@@ -84,7 +84,7 @@
         </q-card-section>
       </q-card>
 
-      <!-- 3. Operations Status Card (Flags using q-list and q-item) -->
+      <!-- 3. Operation Status Card (Flags using q-list and q-item) -->
       <q-card flat bordered class="bg-white">
         <q-card-section>
           <q-list>

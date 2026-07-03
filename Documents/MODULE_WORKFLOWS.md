@@ -114,7 +114,7 @@ All master, operation, and accounts pages (List/Index, View, Add, Edit, Action, 
 ### 2.2 Resolution Flow
 
 ```
-Route: /:scope(masters|operations)/:resourceSlug/(_add|:pageSlug|:code/(_view|_edit|_action/:action|:pageSlug))
+Route: /:scope(master|operation)/:resourceSlug/(_add|:pageSlug|:code/(_view|_edit|_action/:action|:pageSlug))
          │
          ▼
 PageResolver.vue  ← Centralized Page resolution (usePageResolver.js)
@@ -158,8 +158,8 @@ If no page is found, it renders a developer fallback page: `pages/_common/Page.v
 - `Header`: Dynamic view header (`components/_common/View/Header.vue` fallback).
 - `ActionBar`: Dynamic action triggers (`components/_common/master/View/ActionBar.vue` fallback).
 - `Details`: Record details values grid (`components/_common/master/View/Details.vue` fallback).
-- `Audit`: Creation/modification metadata (`components/_common/View/Audit.vue` fallback - Masters only).
-- `Parent`: Displays parent record card (`components/_common/View/Parent.vue` fallback - Operations only).
+- `Audit`: Creation/modification metadata (`components/_common/View/Audit.vue` fallback - master only).
+- `Parent`: Displays parent record card (`components/_common/View/Parent.vue` fallback - operation only).
 - `Children`: Dynamic child resources loops (`components/_common/master/View/Children.vue` fallback).
 - `Loading`: Page-level loading spinner (`components/_common/View/Loading.vue` fallback).
 - `Empty`: Record not found card (`components/_common/View/Empty.vue` fallback).
@@ -187,14 +187,14 @@ If no page is found, it renders a developer fallback page: `pages/_common/Page.v
 
 ### 3.1 Overview
 
-Operations pages use the identical centralized page resolver (`PageResolver.vue` / `usePageResolver.js`), section resolver (`useSectionResolver.js`), and common section wrapper (`useCommonSection.js`) as Masters, but with a different default section set — particularly for the `ViewPage`. 
+operation pages use the identical centralized page resolver (`PageResolver.vue` / `usePageResolver.js`), section resolver (`useSectionResolver.js`), and common section wrapper (`useCommonSection.js`) as master, but with a different default section set — particularly for the `ViewPage`. 
 
-Operations data generally flows top-down (e.g. Purchase Requisitions → Purchase Orders → Goods Receipts) and tracks complex lifecycles via `additionalActions`. Operations views exclude the generic `ViewAudit` section and substitute a `ViewParent` section.
+operation data generally flows top-down (e.g. Purchase Requisitions → Purchase Orders → Goods Receipts) and tracks complex lifecycles via `additionalActions`. operation views exclude the generic `ViewAudit` section and substitute a `ViewParent` section.
 
-### 3.2 Key Differences vs Masters
+### 3.2 Key Differences vs master
 
-- **Section Resolver Scope**: `useSectionResolver` (and by extension `useCommonSection`) takes `scope: 'operations'`, which sets `{ScopeFolder}` to `Operations` in candidates paths checking.
-- **ViewPage Orchestrator**: The default operations `ViewPage.vue` orchestrator includes `Parent` section and excludes `Audit` section.
+- **Section Resolver Scope**: `useSectionResolver` (and by extension `useCommonSection`) takes `scope: 'operation'`, which sets `{ScopeFolder}` to `operation` in candidates paths checking.
+- **ViewPage Orchestrator**: The default operation `ViewPage.vue` orchestrator includes `Parent` section and excludes `Audit` section.
 - **ViewDetails Filtering**: The default `OperationViewDetails` dynamically filters out both audit columns (`CreatedAt`, `UpdatedAt`, `CreatedBy`, `UpdatedBy`) and any action stamp columns dynamically generated from the resource's `additionalActions` configuration (e.g. `ApprovedBy`, `ApprovedAt`).
 - **ViewParent Handling**: `OperationViewParent` automatically fetches the parent record (based on the `{ParentName}Code` header resolution logic). 
   - If the parent record has a `Name` field, it displays as a minimal inline link: `Name (Code)`.
@@ -212,13 +212,13 @@ Operations data generally flows top-down (e.g. Purchase Requisitions → Purchas
 | `FRONTENT/src/pages/_common/AddPage.vue` | Centralized Add page orchestrator |
 | `FRONTENT/src/pages/_common/EditPage.vue` | Centralized Edit page orchestrator |
 | `FRONTENT/src/pages/_common/ActionPage.vue` | Centralized Action page orchestrator |
-| `FRONTENT/src/pages/_common/operation/ViewPage.vue` | View orchestrator for Operations (custom section set) |
+| `FRONTENT/src/pages/_common/operation/ViewPage.vue` | View orchestrator for operation (custom section set) |
 | `FRONTENT/src/components/_common/` | Consolidated global-common page section components |
-| `FRONTENT/src/components/_common/operation/` | Consolidated operations-common page section components |
+| `FRONTENT/src/components/_common/operation/` | Consolidated operation-common page section components |
 | `FRONTENT/src/composables/resources/useResourceNav.js` | Composable for route navigation logic across scopes. |
 
 ### 3.4 Architecture Contract Link
-- Operations frontend flows must comply with `Documents/ARCHITECTURE RULES.md` and the same core defaults listed in section 2.5.
+- operation frontend flows must comply with `Documents/ARCHITECTURE RULES.md` and the same core defaults listed in section 2.5.
 - Route transitions must continue to go through `useResourceNav`; section/action customization must continue through resolver composables.
 
 ---
@@ -265,7 +265,7 @@ Products now use entity-custom pages under `FRONTENT/src/pages/master/Products/`
 
 ## 5. Menu Access Control
 
-> **Full documentation of the frontend menu system**: See [AQL_FRONTEND_MENU_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_MENU_SYSTEM.md) — covers JSON schema, data flow, permission gating algorithms, tree building, route guard, and admin operations.
+> **Full documentation of the frontend menu system**: See [AQL_FRONTEND_MENU_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_MENU_SYSTEM.md) — covers JSON schema, data flow, permission gating algorithms, tree building, route guard, and admin operation.
 
 ### 5.1 Overview
 
@@ -349,7 +349,7 @@ Valid permission keys depend on role configuration. Common keys:
 1. In `GAS/syncAppResources.gs`, find the resource's config object and update its `Menu` JSON:
    ```js
    Menu: JSON.stringify({
-     group: ['Masters', 'Product'],
+     group: ['master', 'Product'],
      order: 1,
      label: 'Products',
      icon: 'inventory_2',
@@ -482,7 +482,7 @@ The RFQ supplier dispatch flow governs how suppliers are attached to a newly dra
 
 ### 7.3 Architecture Details
 - **Composables**: The shared `useRFQSupplierFlow` composable manages data fetching (RFQ header, PR metadata, Suppliers, RFQSuppliers) and orchestrates the batch assignment / dispatch updates through `workflowStore`.
-- **Custom Pages**: Both dispatch steps exist as custom full-page overrides (`RecordAssignSupplierPage` and `RecordMarkAsSentPage`) under the `Operations/Rfqs/` registry, while `ViewPage.vue` routes draft RFQs to the editable view and non-draft RFQs to the supplier overview.
+- **Custom Pages**: Both dispatch steps exist as custom full-page overrides (`RecordAssignSupplierPage` and `RecordMarkAsSentPage`) under the `operation/Rfqs/` registry, while `ViewPage.vue` routes draft RFQs to the editable view and non-draft RFQs to the supplier overview.
 - **Backend Sync**: `workflowStore.runBatchRequests` is used for the assignment / dispatch batch, with `workflowStore.updateResourceRecord` still used elsewhere for direct parent saves; no custom GAS endpoints are required for this flow.
 
 ## 8. Supplier Quotation Response Capture
@@ -544,9 +544,9 @@ PO Receiving is the frontend-owned inspection layer between Purchase Orders and 
 - **PostAction Ownership**: `POReceivings` and `GoodsReceipts` do not rely on `PostAction` hooks for workflow side effects; no custom GAS endpoint is used.
 - **Composables**: Shared POR/GRN payload and batch request construction lives under `FRONTENT/src/composables/operation/poReceivings/`, keeping Vue pages UI-only.
 
-## 11. Outlet & Field Sales Operations
+## 11. Outlet & Field Sales operation
 
-Outlet & Field Sales Operations manages consignment outlet visits, restock requests, confirmed deliveries, outlet consumption, and movement-derived outlet stock.
+Outlet & Field Sales operation manages consignment outlet visits, restock requests, confirmed deliveries, outlet consumption, and movement-derived outlet stock.
 
 ### 11.1 Resource Model
 - **Master resources**: `Outlets` and `OutletOperatingRules`.
@@ -605,4 +605,5 @@ Outlet & Field Sales Operations manages consignment outlet visits, restock reque
 13. [Bulk Upload](#13-bulk-upload)
 14. [Dashboard Widgets](#14-dashboard-widgets)
 -->
+
 

@@ -84,7 +84,7 @@ src/components/_common/
 > **Dynamic Report Item Properties**: In `DownloadsReportItem`, the `color`, `icon`, and `label` properties accept functions of the form `(report) => value`. This allows local JS logic modifiers to dynamically style and customize each download item based on its specific report metadata (e.g. coloring invoice reports differently from generic sheets reports).
 
 ### 3.2 `CrudActions.vue`
-- **Purpose**: Handles floating CRUD operations (Add, Edit, View) on the bottom-right.
+- **Purpose**: Handles floating CRUD operation (Add, Edit, View) on the bottom-right.
 - **Props**:
   - `page` (String, default `'Index'`): The active page context (`'Index'`, `'View'`, `'Edit'`).
 - **Internal Composition**:
@@ -142,7 +142,7 @@ src/components/_common/
 | **`FormActionsFormSubmit`** | `save` | Submit button inside the bar. |
 
 > [!TIP]
-> **Dynamic Form Action Properties**: In `FormActionsFormCancel` and `FormActionsFormSubmit`, button properties (`color`, `icon`, `label`, `flat`, `unelevated`) accept functions of the form `(record, props) => value`. This allows local JS logic modifiers to dynamically style and label the form buttons based on the current record or form state (e.g. changing the submit label to "Submitting..." during active save operations or altering colors depending on the page mode).
+> **Dynamic Form Action Properties**: In `FormActionsFormCancel` and `FormActionsFormSubmit`, button properties (`color`, `icon`, `label`, `flat`, `unelevated`) accept functions of the form `(record, props) => value`. This allows local JS logic modifiers to dynamically style and label the form buttons based on the current record or form state (e.g. changing the submit label to "Submitting..." during active save operation or altering colors depending on the page mode).
 
 ---
 
@@ -276,4 +276,5 @@ Some parent components explicitly expose their configuration context as scoped s
   </q-fab>
 </template>
 ```
+
 

@@ -11,10 +11,10 @@ Read this file only when:
 
 ## Project Snapshot
 - Project: AQL
-- Domain: UAE baby product distribution operations
+- Domain: UAE baby product distribution operation
 - Frontend: Quasar, Vue 3, Pinia, Vite
 - Backend: Google Apps Script Web App with a single `doPost` entry
-- Data model: Google Sheets split across APP, MASTERS, OPERATIONS, and REPORTS
+- Data model: Google Sheets split across APP, master, operation, and REPORTS
 
 ## Current Operating Model
 - `APP.Resources` is the main source of truth for resource metadata, routing, and permissions.
@@ -23,7 +23,7 @@ Read this file only when:
 - GAS deployment is done with `clasp push`; manual Apps Script copy-paste is not part of the workflow.
 - **Frontend Architecture**: Pinia remains the unified reactive state layer (record state via `useDataStore`, resource API/fetch/sync/mutation orchestration via `useResourceIoStore`, and resource fetch/sync status via `useResourceStatusStore`). IDB is the persistence layer, and sync cursors live in IDB `resource-meta` (not `localStorage`). Page shells are thin and consume composable view-models instead of importing stores/services directly.
 - **Frontend Service/Boundary Layer**: Frontend now enforces pages -> composables -> stores/services boundaries. Reusable boundaries include app/resource navigation helpers (`useAppNav`, `useResourceNav`), action/page orchestration composables, and sync orchestration (`useResourceSync`). Service contracts are standardized around `{ success, data, error }`, with env-controlled logging via `src/services/_logger.js`.
-- **Composable Structure (2026-04-25)**: `FRONTENT/src/composables/` remains purpose-grouped into `layout/`, `core/`, `resources/`, `operations/`, `masters/products/`, `reports/`, and `upload/`. Purchase Requisition editing/review pages consume the cross-stage `operations/procurements/useProcurements.js` workflow helper while PR-specific field/item concerns remain under `operations/purchaseRequisitions/`. RFQ creation/list/view logic now lives under `operations/rfqs/` including the newly added `useRFQSupplierFlow` for supplier assignment and send state dispatch.
+- **Composable Structure (2026-04-25)**: `FRONTENT/src/composables/` remains purpose-grouped into `layout/`, `core/`, `resources/`, `operation/`, `master/products/`, `reports/`, and `upload/`. Purchase Requisition editing/review pages consume the cross-stage `operation/procurements/useProcurements.js` workflow helper while PR-specific field/item concerns remain under `operation/purchaseRequisitions/`. RFQ creation/list/view logic now lives under `operation/rfqs/` including the newly added `useRFQSupplierFlow` for supplier assignment and send state dispatch.
 
 ## Current Important Constraints
 - Use `Documents/DOC_ROUTING.md` to decide which docs to read for the task.
@@ -43,12 +43,12 @@ Read this file only when:
 - PR workflow logic is now frontend-owned via `useProcurements.js`, including first submit, revision resubmit, review send-back, approve, reject, Procurement progress mapping, and comment-thread formatting using `ProgressRevisionRequiredComment` / `ProgressRejectedComment`.
 - RFQ frontend flow now has custom operation pages resolved from `FRONTENT/src/pages/operation/Rfqs/`: `IndexPage.vue` prioritizes `DRAFT` RFQs, `AddPage.vue` creates draft RFQs from approved PRs with all PR item codes stored as CSV, and `ViewPage.vue` shows a minimal read-only RFQ summary. RFQ create updates the PR to `RFQ Processed` and the linked Procurement to `RFQ_GENERATED`; if an approved PR is missing `ProcurementCode`, the frontend creates a Procurement first and uses its returned code.
 - **RFQ Supplier Flow (2026-04-25)**: Supplier dispatch is managed via two custom actions from the read-only RFQ view: `Assign Supplier` creates multi-select rows in `RFQSuppliers` as `ASSIGNED` and locks the parent RFQ, while `Mark As Sent` stamps selected rows with `SENT` / `SentDate` and advances the linked `Procurements` record to `RFQ_SENT_TO_SUPPLIERS` once all dispatch rows are out of `ASSIGNED` state.
-- **Supplier Quotation Flow (2026-04-25)**: `/operation/supplier-quotations` now resolves to custom pages under `FRONTENT/src/pages/operation/SupplierQuotations/` and composables under `operations/supplierQuotations/`. First save captures `QUOTED`, `PARTIAL`, or `DECLINED` responses into `SupplierQuotations` / `SupplierQuotationItems`; if dispatch was forgotten it moves matching `RFQSuppliers` from `ASSIGNED` to `SENT`, advances `Procurements` from `RFQ_GENERATED` to `RFQ_SENT_TO_SUPPLIERS`, then marks the supplier `RESPONDED` and advances eligible procurements to `QUOTATIONS_RECEIVED`. The view page allows editing `AllowPartialPO` and `SupplierQuotationReference`.
+- **Supplier Quotation Flow (2026-04-25)**: `/operation/supplier-quotations` now resolves to custom pages under `FRONTENT/src/pages/operation/SupplierQuotations/` and composables under `operation/supplierQuotations/`. First save captures `QUOTED`, `PARTIAL`, or `DECLINED` responses into `SupplierQuotations` / `SupplierQuotationItems`; if dispatch was forgotten it moves matching `RFQSuppliers` from `ASSIGNED` to `SENT`, advances `Procurements` from `RFQ_GENERATED` to `RFQ_SENT_TO_SUPPLIERS`, then marks the supplier `RESPONDED` and advances eligible procurements to `QUOTATIONS_RECEIVED`. The view page allows editing `AllowPartialPO` and `SupplierQuotationReference`.
 - **Purchase Order Flow (2026-04-26)**: `/operation/purchase-orders` handles PO creation from active non-declined quotations. Users can create a single Full PO (which consumes all items and blocks further full POs) or Partial POs (which allow toggling items and adjusting quantity down to frontend-computed remaining quantity). PO creation updates the source Supplier Quotation to `ACCEPTED`; when cumulative active PO quantities exactly match every RFQ item quantity, the create flow warns that closing blocks further SQs and executes the RFQ `Close` AdditionalAction only after user confirmation, with `ProgressClosedComment` set to `<user_name>/system: "Complete purchase order created, hence closing RFQ"`. PO actions use configured `AdditionalActions`; cancelling a PO marks matching `RFQSuppliers` as `CANCELLED`, rolls `PO_ISSUED` procurements back to `QUOTATIONS_RECEIVED` when no other active non-cancelled PO remains, and reopens a closed RFQ to `SENT` while clearing `ProgressClosedComment`.
 - **GRN Stock Entry (2026-04-28)**: `POReceivings` now carries direct `ProcurementCode` in setup/resource metadata and frontend POR drafts. `/operation/stock-movements/grn-entry` resolves to a Warehouse-side GRN posting page that lists active unposted GRNs by selected warehouse, allocates accepted `GoodsReceiptItems.Qty` across storage rows, and submits positive `StockMovements` rows with `ReferenceType = GRN`; `WarehouseStorages` continues to update only through the existing StockMovements hook.
 - **Warehouse Stock List (2026-04-28)**: `Warehouse > Stock List` opens `/master/warehouses/stock-list` for warehouse-card selection. Warehouse records expose a navigate-kind `ViewStock` action to `/master/warehouses/{Code}/stock`, and GRN Stock Entry redirects there after a successful stock post.
 - `procurement.gs` is now narrowed to one postAction responsibility: after Procurement create, copy the created Procurement code back to the linked Purchase Requisition when the create payload carries `linkedPurchaseRequisitionCode`.
-- Operations 3-tier UI architecture implemented, mirroring Masters but customized for operations context (ViewParent instead of ViewAudit, filtered details).
+- operation 3-tier UI architecture implemented, mirroring master but customized for operation context (ViewParent instead of ViewAudit, filtered details).
 - Frontend refactor execution completed for the service/store/page migration plan: pages and composables now consume store actions or new service modules, and the legacy `src/services/apiClient.js`, `src/services/gasApi.js`, `src/services/resourceRecords.js`, and `src/utils/db.js` files were removed.
 - Frontend architecture remediation completed on 2026-04-19: reviewed pages no longer import `src/stores/*` or `src/services/*`, direct page-level `router.push`/`$router.back` usage is removed, frontend source files are under 400 lines, and `npm run build` succeeds.
 - PR/composable reorg plan executed on 2026-04-20: the PR initiate page keeps a direct `formatSkuVariants` import, hero Sass `lighten()` usage has been removed from the targeted hero token/card files, and the current build output shows only separate `darken()` deprecation warnings in other hero partials outside that targeted migration.
@@ -91,7 +91,7 @@ Manual follow-up:
 - Run APP resource sync from the AQL sheet menu so blank `PostAction` metadata is applied to live `APP.Resources`.
 - Confirm `APP.AppOptions` contains `POReceivingProgress`, `GOODS_RECEIVING`, and `GRN_GENERATED`; append manually if the existing option rows are not updated by setup/sync.
 - No Web App redeployment is expected because no custom API contract was added.
-2026-04-28 Outlet & Field Sales Operations implemented through the assigned Build Agent plan.
+2026-04-28 Outlet & Field Sales operation implemented through the assigned Build Agent plan.
 
 Changed surfaces:
 - Added master resources `Outlets` and `OutletOperatingRules` in setup/resource metadata.
@@ -111,7 +111,7 @@ Manual follow-up:
 - Confirm `APP.AppOptions` contains outlet progress/reference groups.
 - No Web App redeployment is expected because no custom API contract was added.
 
-2026-04-30 Outlet & Field Sales Operations strict refinement executed from `PLANS/2026-04-30-outlet-field-operations-strict-refinement-plan.md`.
+2026-04-30 Outlet & Field Sales operation strict refinement executed from `PLANS/2026-04-30-outlet-field-operation-strict-refinement-plan.md`.
 
 Final refined state:
 - `OutletVisits` is reduced to `Code`, `OutletCode`, `Date`, `Status`, `StatusComment`, plus standard audit columns. Workflow status values are `PLANNED`, `COMPLETED`, `POSTPONED`, and `CANCELLED` on `Status`; visit comments use only `StatusComment`.
@@ -206,7 +206,7 @@ Manual follow-up after this execution:
 - `OutletDeliveryItems` child sheet removed from GAS config (`IsActive: 'FALSE'`) and schema setup. `OutletDeliveries` now stores a CSV of ORI codes in `OutletRestockItemCodes` column.
 - Frontend composable `useOutletDeliveries` uses a single reactive `orioRows` computed (ORIO — Outlet Restock Item Overview) joining restockItems + restocks + outlets + skus + products + warehouses.
 - AddPage redesigned with criteria-based grouping (Outlet, City, Product, Qty, Date, RequestUser, ApprovedUser) via `q-btn-toggle`, warehouse filter dropdown, and grouped `q-card` + `q-item` layout.
-- All delivery operations (create, deliver, cancel) read ORI codes from the CSV column instead of ODI child records.
+- All delivery operation (create, deliver, cancel) read ORI codes from the CSV column instead of ODI child records.
 - `AvailableOrsiPanel.vue` component deleted (replaced by inline grouped list in AddPage).
 - `OutletDeliveryItemRow.vue` retained (still used by ViewPage; now receives ORSI-backed view rows with `OutletDeliveryCode` included).
 - `DELIVERY_ITEM_PROGRESS_ORDER` and `deliveryItems` resource binding removed from frontend.
@@ -229,4 +229,5 @@ Manual follow-up after this execution:
 - Implemented a self-contained, context-aware `<ResourceReports />` component in `FRONTENT/src/components/Reports/ResourceReports.vue` that auto-derives route config, active record, and handles both dialog execution and button lists.
 - Cleaned up boilerplate across 5 list and view pages (common index/view pages and product-specific pages), removing obsolete hooks, local dialog templates, and imports.
 - Updated documentation in `Documents/MODULE_WORKFLOWS.md` and `FRONTENT/src/components/REGISTRY.md`.
+
 

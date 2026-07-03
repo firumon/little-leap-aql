@@ -17,7 +17,7 @@ Use this document when an admin asks:
 
 ## 1. Before You Start
 
-1. Open the **APP** spreadsheet (not MASTERS/operation/REPORTS).
+1. Open the **APP** spreadsheet (not master/operation/REPORTS).
 2. Refresh the sheet to ensure `AQL 🚀` menu is visible.
 3. Ensure you have edit access to APP spreadsheet.
 4. Keep `Documents/RESOURCE_COLUMNS_GUIDE.md` nearby when editing resources.
@@ -46,7 +46,7 @@ Use this document when an admin asks:
 | `⚙️ Setup & Refactor > Refactor APP Sheets` | Ensure APP sheet structure and config tabs are aligned with code. |
 | `⚙️ Setup & Refactor > Store APP File ID in Properties` | Save current APP file id to Script Properties for web app runtime fallback. |
 | `⚙️ Setup & Refactor > Refactor MASTER Sheets` | Create/refactor configured master sheets. |
-| `⚙️ Setup & Refactor > Setup All Operations` | Create/refactor operation sheets. |
+| `⚙️ Setup & Refactor > Setup All operation` | Create/refactor operation sheets. |
 | `⚙️ Setup & Refactor > Setup Base Accounts` | Create/refactor base account sheets. |
 
 Procurement sidebar order after PO receiving implementation:
@@ -170,7 +170,7 @@ Important references:
 - `Documents/APP_SHEET_STRUCTURE.md` (`Resources` schema)
 - `Menu` column now stores a JSON array of menu entries. The admin dialog edits the first entry (list/add/edit) and preserves the rest via `_menuArrayFull`, so extra sidebar rows can be added by writing `[primaryEntry, {...}]` in the sheet or via `syncAppResources.gs`.
 - Each entry carries its own `menuAccess` rule, and the frontend route guard matches the current path to the entry before evaluating permissions so multiple entries per resource can have distinct access controls.
-- **Menu Path (CSV)**: Enter the sidebar hierarchy as comma-separated labels (e.g. `Masters,Product` or `Operations,Warehouse`). This is stored as `group` (string array path) in the `Menu` JSON.
+- **Menu Path (CSV)**: Enter the sidebar hierarchy as comma-separated labels (e.g. `master,Product` or `operation,Warehouse`). This is stored as `group` (string array path) in the `Menu` JSON.
 
 ### 7.2 Manage Reports
 Purpose:
@@ -249,7 +249,7 @@ Use when:
 Use when:
 - Master sheet structures need creation or alignment.
 
-### 8.4 Setup All Operations
+### 8.4 Setup All operation
 Use when:
 - Operation sheets are missing or need schema alignment.
 
@@ -261,7 +261,7 @@ Use when:
 
 These groups appear in the **frontend application sidebar**, not in the Google Sheet `AQL` menu. They are controlled by `APP.Resources.Menu` JSON arrays (code source: `GAS/syncAppResources.gs`) and are now grouped by business relevance instead of strict scope names.
 
-> **Full documentation of the frontend menu system**: See [AQL_FRONTEND_MENU_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_MENU_SYSTEM.md) — covers JSON schema, data flow, permission gating, tree building, route guard, and admin operations.
+> **Full documentation of the frontend menu system**: See [AQL_FRONTEND_MENU_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_MENU_SYSTEM.md) — covers JSON schema, data flow, permission gating, tree building, route guard, and admin operation.
 
 ### 9.1 Product Group
 
@@ -336,7 +336,7 @@ These groups appear in the **frontend application sidebar**, not in the Google S
 - Automatically adds the tenant record to the `Tenants` sheet and creates a placeholder in the `URL` sheet.
 - Creates a new Google Drive folder with the specified Directory Name under the AQL folder (`1e8RvfsBT6XS9JDL5HY4TgM-vuZOWH4Gi`).
 - Copies the `App` template spreadsheet (`1kHbeO-OZWjYCElNQUBfWe446_uNEH2IoKiHCiRjK-K4`) and Views/Reports templates to the folder.
-- Creates empty spreadsheets for `Master`, `Operations`, and `Accounts` in the folder.
+- Creates empty spreadsheets for `Master`, `operation`, and `Accounts` in the folder.
 - Sets up the Config sheets of Views/Reports to import configuration values from the newly created `App` spreadsheet ID.
 - Runs in a multi-step modal dialog showing real-time progress for each step.
 
@@ -356,4 +356,5 @@ When any `AQL 🚀` menu item is **added, removed, renamed, or behavior-changed*
 3. Update `Documents/CONTEXT_HANDOFF.md` if runtime behavior changed.
 
 Do not close the task until these docs are aligned.
+
 

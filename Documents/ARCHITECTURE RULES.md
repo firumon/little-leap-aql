@@ -4,7 +4,7 @@
 
 ## 1. SERVICES LAYER
 * **Role**: Pure data providers (API/IDB gateway). No business logic. Standardized response: `{ success: boolean, data: any, error: any }`.
-* **APIs & IDB**: All API requests, IndexedDB operations, offline sync, queueing, and persistence logic MUST exist ONLY inside services.
+* **APIs & IDB**: All API requests, IndexedDB operation, offline sync, queueing, and persistence logic MUST exist ONLY inside services.
 * **Logging**: Inside services only, controlled via environment variable `process.env.ENABLE_LOGS`.
 
 ---
@@ -30,7 +30,7 @@
 
 ## 4. COMPOSABLES
 * **Role**: Contains all business logic, validation, workflow handling, and payload preparation.
-* **Rules**: Can use stores and other composables. Must NOT use services directly, perform API/IDB operations, or exceed ~400 lines.
+* **Rules**: Can use stores and other composables. Must NOT use services directly, perform API/IDB operation, or exceed ~400 lines.
 * **Navigation**: Must use `useResourceNav` for routing. Direct `router.push()` is forbidden.
 * **Component Resolution**: Must respect the decentralized page resolver (`usePageResolver`), section resolver (`useSectionResolver`), and common section wrapper (`useCommonSection`). Do not bypass them to perform ad-hoc template loading or layout overrides.
 * **Dynamic Currency**: Always use the `useCurrency` `_C(value, showSymbol, target, source)` helper. Do not hardcode currency symbols (e.g. `₹`, `AED`).
@@ -38,7 +38,7 @@
 ---
 
 ## 5. COMPONENTS & PAGES
-* **Role**: UI rendering only. Invokes composables. No business logic, stores, services, API calls, or IDB operations.
+* **Role**: UI rendering only. Invokes composables. No business logic, stores, services, API calls, or IDB operation.
 * **UI/Workflow Permission Gating**: All interactive elements and state-changing workflows must be gated using `allowed()` from `useResourceConfig`. For multi-resource actions, gate must verify ALL permissions (AND logic).
 
 ---
@@ -75,4 +75,5 @@ To support thin page design, organize components/composables strictly by scope:
 * **Naming**: Stores → `useXStore`, Composables → `useX`, Services → `XService`.
 * **File Size**: Max ~400 lines per file; split logically if exceeded.
 * **Refactor Freedom**: Feel free to move, split, merge, or delete files to optimize for clarity, maintainability, and architectural compliance.
+
 

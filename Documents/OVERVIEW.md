@@ -1,4 +1,4 @@
-# AQL Overview
+﻿# AQL Overview
 
 ## Purpose
 This is the short orientation document for AQL. It should explain what the system is, what it supports, and where to go next for deeper detail.
@@ -16,7 +16,7 @@ Inbound logistics, warehouse intake, and internal stock control support that com
 ## Current Runtime Direction
 - Frontend: Quasar, Vue 3, Pinia, Vite
 - Backend: Google Apps Script Web App with a single `doPost` entry
-- Data model: Google Sheets split across APP, MASTERS, OPERATIONS, REPORTS, and optionally ACCOUNTS
+- Data model: Google Sheets split across APP, master, operation, REPORTS, and optionally ACCOUNTS
 - Control plane: `APP.Resources` drives routing, permissions, metadata, and sheet resolution
 
 ## Where To Read Next
@@ -27,3 +27,4 @@ Inbound logistics, warehouse intake, and internal stock control support that com
 
 ## Maintenance Rule
 Update this file when the project identity, primary business heartbeat, major runtime direction, or canonical next-doc references change.
+

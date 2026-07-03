@@ -1,4 +1,4 @@
-# AQL - GAS API Capabilities Reference
+﻿# AQL - GAS API Capabilities Reference
 
 ## Purpose
 This document describes what the GAS backend can already do before a new backend design or implementation path is proposed.
@@ -23,7 +23,7 @@ Do not treat this as a universal startup read for every task.
 - report generation
 - batch action execution
 - year-scoped code generation for operation-scope resources (e.g., PR26000001)
-- view scope read-only behavior (no CRUD operations, full dataset return without pagination)
+- view scope read-only behavior (no CRUD operation, full dataset return without pagination)
 - delta sync via `lastUpdatedAt` cursor
 - lightweight resource update polling via `poll` action (metadata only, no row payloads)
 - strict nested write payloads (`payload.record` / `payload.data`)
@@ -416,3 +416,4 @@ Update this file when:
 - a new generic backend pattern becomes officially supported
 - escalation guidance changes
 - canonical envelope fields or resource payload contract change
+

@@ -1,4 +1,4 @@
-# AQL Frontend Enhancement & Refactoring Guidelines
+﻿# AQL Frontend Enhancement & Refactoring Guidelines
 
 This document serves as the master reference for the upcoming frontend enhancements, design consistency alignment, and refactoring work inside the AQL codebase. It consolidates all requirements, design decisions, and architectural rules discussed for the Solo Agent.
 
@@ -29,7 +29,7 @@ This document serves as the master reference for the upcoming frontend enhanceme
 
 ### 2.2 UI & Workflow Permission Gating (Section 5B)
 * **Reactive Verification**: Use the `allowed()` helper from `useResourceConfig` to check permissions before rendering interactive elements or running workflow logic.
-* **Transactional Operations**: If an operation affects multiple resources, verify permissions for all involved resources.
+* **Transactional operation**: If an operation affects multiple resources, verify permissions for all involved resources.
   * *Example*: `{ outletPayment: 'create', outletConsumptionInvoice: 'update' }`.
 * **Strict AND Fail-safe**: If any permission in a multi-resource check is false, the entire gate evaluates to false (fail-safe).
 
@@ -68,7 +68,7 @@ To achieve maximum reusability and maintain the absolute minimum file size, the 
 
 ### 4.1 `DataAddFAB.vue`
 * **Purpose**: A self-contained floating action button for record creation.
-* **Premium Styling**: Elevated shadow design modeled after `Masters/Products/IndexPage.vue` (gradient background and high elevation).
+* **Premium Styling**: Elevated shadow design modeled after `master/Products/IndexPage.vue` (gradient background and high elevation).
 * **Internal Logic**:
   * Identifies active resource slug/scope reactively.
   * Programmatically verifies `allowed('create')` or `allowed('write')`.
@@ -97,7 +97,8 @@ To achieve maximum reusability and maintain the absolute minimum file size, the 
 ## 5. Refactoring & Code Quality Controls
 
 * **Orphan Cleanup**: Unused helper functions or orphan logic identified during the enhancement process must be deleted.
-* **Deduplication**: Identical/redundant helper operations will be centralized in `src/utils/appHelpers.js` or shared composables, with dependent pages refactored to consume them.
+* **Deduplication**: Identical/redundant helper operation will be centralized in `src/utils/appHelpers.js` or shared composables, with dependent pages refactored to consume them.
 * **Consolidation & Merge**:
   * Seek explicit user approval prior to executing a merge for functions that have highly similar logic or can be consolidated with minor parameter changes.
   * Maintain target file sizes at a absolute minimum (under ~400 lines per file).
+

@@ -1,4 +1,4 @@
-# New Client Setup Guide (Tenant Generation)
+﻿# New Client Setup Guide (Tenant Generation)
 
 This guide covers the process for setting up and configuring spreadsheet files for a new tenant (client instance) using the automated generation menu.
 
@@ -20,7 +20,7 @@ This guide covers the process for setting up and configuring spreadsheet files f
    - Registers the tenant in the `Tenants` sheet (and a placeholder in `URL` sheet).
    - Creates the Google Drive folder under the main AQL folder (`1e8RvfsBT6XS9JDL5HY4TgM-vuZOWH4Gi`).
    - Copies the template files for `App`, `Views`, and `Reports` into the folder.
-   - Generates the empty spreadsheets for `Master`, `Operations`, and `Accounts` in the folder.
+   - Generates the empty spreadsheets for `Master`, `operation`, and `Accounts` in the folder.
    - Configures the `Config` sheets in Views/Reports with the appropriate `IMPORTRANGE` formula referencing the new `App` file ID.
 5. Once complete, copy the generated spreadsheet file IDs displayed in the success panel.
 
@@ -48,7 +48,7 @@ This guide covers the process for setting up and configuring spreadsheet files f
 1. Open the **`Config`** sheet in the `App` spreadsheet.
 2. Update the values with the correct file IDs and client details:
    - **`MasterFileID`**: Paste the ID of the generated `Master` spreadsheet.
-   - **`OperationFileID`**: Paste the ID of the generated `Operations` spreadsheet.
+   - **`OperationFileID`**: Paste the ID of the generated `operation` spreadsheet.
    - **`AccountsFileID`**: Paste the ID of the generated `Accounts` spreadsheet.
    - Other branding settings (e.g., `CompanyName`, `CompanyLogo`, `Currency`, etc.).
    
@@ -65,7 +65,7 @@ This guide covers the process for setting up and configuring spreadsheet files f
 ## Step 6: Generate Scoped Sheets
 In the `App` spreadsheet menu, execute the following setup actions in order:
 1. **`AQL 🚀` > `⚙️ Setup & Refactor` > `Refactor MASTER Sheets`**
-2. **`AQL 🚀` > `⚙️ Setup & Refactor` > `Setup All Operations`**
+2. **`AQL 🚀` > `⚙️ Setup & Refactor` > `Setup All operation`**
 3. **`AQL 🚀` > `⚙️ Setup & Refactor` > `Setup Base Accounts`**
 
 This will automatically create all the normalized sheets and apply formatting, schemas, data validations, and protections in the respective target spreadsheets.
@@ -83,7 +83,7 @@ This will automatically create all the normalized sheets and apply formatting, s
 > [!IMPORTANT]
 > **Pre-deployment Checklist**:
 > Before executing the deployment, ensure:
-> 1. All target spreadsheets (Master, Operations, Accounts, Views, Reports) are fully initialized and formatted (Step 6).
+> 1. All target spreadsheets (Master, operation, Accounts, Views, Reports) are fully initialized and formatted (Step 6).
 > 2. The `APP_FILE_ID` Script Property has been set inside Apps Script Project Settings (Step 3).
 > 3. The `Config` sheet values are correct, and initial system designations and users have been registered (Step 5 & Step 7).
 >
@@ -116,4 +116,5 @@ Whenever a new version of the standalone `AqlCore` script library is deployed:
    - Push and deploy the new wrapper to the specified tenant(s).
 3. **Update Access Permissions (CRITICAL)**: Because Apps Script resets web app access settings on command-line deployment, you MUST open the tenant's online script editor (using `clasp open` or Extensions > Apps Script) and change **Who has access** to **Anyone**.
 4. **Existing Tenants Update**: For already existing tenants where the library is included, sheet administrators should open their online Apps Script editor, click **Libraries > AqlCore**, change the version to the latest available version, ensure **Development mode** is set to **OFF** (false), and click **Save**. If the new version does not show up in the dropdown list, remove the `AqlCore` library entirely, re-paste the ID (`1qTNMNpdGwfF3zr-53KqWtM5ibM2bblHiHBIIwB3aJtX3k-82jMLmIiPg`), and add it again to refresh the version list cache.
+
 

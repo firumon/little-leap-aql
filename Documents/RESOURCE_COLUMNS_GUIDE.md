@@ -1,4 +1,4 @@
-# APP.Resources Columns Guide
+﻿# APP.Resources Columns Guide
 
 ## Purpose
 This document is the canonical meaning reference for `APP.Resources` columns.
@@ -86,8 +86,8 @@ When a resource requires file uploading and download capabilities (e.g., licence
 - `master`: Standard CRUD with auto-generated codes, audit columns, full sync.
 - `operation`: Transactional records with auto-generated year-scoped codes (e.g., PR26000001), audit columns, full sync.
 - `accounts`: Financial/accounting records, similar to operation scope.
-- `report`: Read-only aggregated data, no CRUD operations.
-- `view`: Read-only formula-driven sheets, no CRUD operations, no audit, no code generation, returns all non-empty rows without pagination.
+- `report`: Read-only aggregated data, no CRUD operation.
+- `view`: Read-only formula-driven sheets, no CRUD operation, no audit, no code generation, returns all non-empty rows without pagination.
 
 ## Canonical Detail Owners
 - APP control-plane context: [APP_SHEET_STRUCTURE.md](F:/LITTLE%20LEAP/AQL/Documents/APP_SHEET_STRUCTURE.md)
@@ -99,3 +99,4 @@ Update this file when:
 - a `Resources` column is added, removed, renamed, or repurposed
 - accepted values or semantics of a column change
 - runtime expectations for metadata fields change materially
+

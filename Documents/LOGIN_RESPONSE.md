@@ -106,7 +106,7 @@ Array of resource entries built by `buildAuthorizedResourceEntry()` at `GAS/reso
   "headers": ["Code", "Name", "VariantTypes", "Status", "..."],
   "ui": {
     "menus": [{
-      "group":           ["Masters", "Product"],
+      "group":           ["master", "Product"],
       "order":           1,
       "label":           "Products",
       "icon":            "inventory_2",
@@ -157,7 +157,7 @@ Key-value map read from `APP.Config` sheet by `getLoginAppConfig()` at `GAS/auth
 | `OperationsSyncTTL` | Seconds between syncs for operation-scope resources | `FRONTENT/src/stores/auth.js` → `scopeSyncConfig.operationsSyncTTL` (fallback: 300s) |
 | `reportFileID` | Google Spreadsheet ID for the REPORTS file | `GAS/reportGenerator.gs` → `resolveFileIdForScope('report')` |
 | `MasterFileID` | FileID for MASTER spreadsheet (fallback if not set in Resources.FileID) | `GAS/sheetHelpers.gs` → `resolveFileIdForScope('master')` |
-| `OperationsFileID` | FileID for OPERATIONS spreadsheet | `GAS/sheetHelpers.gs` → `resolveFileIdForScope('operation')` |
+| `OperationsFileID` | FileID for operation spreadsheet | `GAS/sheetHelpers.gs` → `resolveFileIdForScope('operation')` |
 | `AccountsFileID` | FileID for ACCOUNTS spreadsheet | `GAS/sheetHelpers.gs` → `resolveFileIdForScope('accounts')` |
 | `File` | File upload storage provider and credential configuration JSON string | `FRONTENT/src/services/StorageService.js` → `getStorageConfig()` |
 
@@ -208,4 +208,5 @@ auth.scopeSyncConfig     // { masterSyncTTL, accountsSyncTTL, operationsSyncTTL 
 // Example: get StockMovement reference types
 const types = auth.appOptionsMap['StockMovementReferenceType'] // ['GRN', 'DirectEntry', ...]
 ```
+
 

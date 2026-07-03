@@ -1,4 +1,4 @@
-# AQL Multi-Tenant System Architecture
+﻿# AQL Multi-Tenant System Architecture
 
 This document defines the architecture, data flow, and deployment procedures for the AQL Multi-Tenant URL Routing System.
 
@@ -104,7 +104,7 @@ Whenever a new tenant is added, follow these steps to connect and configure thei
 3. **Initialize Sheets & Config**:
    - In the `App` spreadsheet, click the menu **`AQL 🚀` > `⚙️ Setup & Refactor` > `Refactor APP Sheets`**.
    - Open the **`Config`** sheet and paste the generated File IDs (`MasterFileID`, `OperationFileID`, `AccountsFileID`).
-   - Run the setup menus: **`Refactor MASTER Sheets`**, **`Setup All Operations`**, and **`Setup Base Accounts`** to format the database files.
+   - Run the setup menus: **`Refactor MASTER Sheets`**, **`Setup All operation`**, and **`Setup Base Accounts`** to format the database files.
 4. **Deploy Web App**:
    - In the Apps Script editor, click **Deploy > New deployment**, select type **Web app**.
    - Configure it to execute as **Me (your admin email)** and set who has access to **Anyone**, then click **Deploy**.
@@ -129,3 +129,4 @@ Whenever you update code in the local workspace:
    - Automatically run `npx clasp deploy` to update the tenant's webapp deployment.
 4. **Access Reset (CRITICAL)**: Command-line deployment resets the web app access permissions. You MUST open the Apps Script online editor for the deployed tenant, click **Deploy > Manage deployments**, edit the active webapp deployment, and change **Who has access** to **Anyone**, then deploy.
 5. **Existing Tenants Update**: For already existing tenants where the library is included, sheet administrators should open their online Apps Script editor, click **Libraries > AqlCore**, change the version to the latest available version, ensure **Development mode** is set to **OFF** (false), and click **Save**. If the new version does not show up in the dropdown list, remove the `AqlCore` library entirely, re-paste the ID, and add it again to refresh the version list cache.
+

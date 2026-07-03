@@ -12,7 +12,7 @@
 4. [Backend Architecture](#4-backend-architecture)
 5. [Frontend Architecture](#5-frontend-architecture)
 6. [menuAccess Evaluation Reference](#6-menuaccess-evaluation-reference)
-7. [Admin Operations](#7-admin-operations)
+7. [Admin operation](#7-admin-operation)
 8. [Multi-Tenant Considerations](#8-multi-tenant-considerations)
 9. [Common Patterns & Gotchas](#9-common-patterns--gotchas)
 10. [Related Documents](#10-related-documents)
@@ -37,7 +37,7 @@ Each entry inside the `Menu` JSON array:
 
 ```json
 {
-  "group":           ["Masters", "Product"],
+  "group":           ["master", "Product"],
   "order":           1,
   "label":           "Products",
   "icon":            "inventory_2",
@@ -117,7 +117,7 @@ Since June 2026, every presentation field (`group`, `order`, `label`, `icon`, `p
 ```json
 {
   "group": {
-    "default": ["Masters", "Product"],
+    "default": ["master", "Product"],
     "R001":    "",                     // empty → renders at root level for this role
     "R002":    "Product",              // single string (still valid, wraps to ["Product"])
     "R003":    ["Master", "Manage"]    // full override for this role
@@ -391,7 +391,7 @@ The `beforeEach` guard uses an inline version of `evaluateMenuAccess` (no Vue co
 ```js
 {
   type: 'group',
-  key: 'Masters/Product',     // unique path key
+  key: 'master/Product',     // unique path key
   label: 'Product',
   icon: 'inventory',           // resolved group icon
   order: 1,                    // inherited min child order
@@ -426,7 +426,7 @@ menuAccess defined?
 
 ---
 
-## 7. Admin Operations
+## 7. Admin operation
 
 ### 7.1 Adding a New Menu Entry
 
@@ -546,4 +546,5 @@ When any of the following changes:
 - The backend parsing/normalization of `Menu` JSON changes
 
 ...update this document AND the init prompt at `References/Prompt Library/Initialization/frontend_menu_system.md` in the same task. Do not close the task until both are aligned.
+
 

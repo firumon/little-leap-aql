@@ -1,4 +1,4 @@
-# Ground Operations Workflow
+﻿# Ground operation Workflow
 
 ## Purpose
 This is the canonical business and field-workflow reference for AQL. It describes the real operating flow the system is meant to support.
@@ -11,7 +11,7 @@ The primary operating loop is:
 4. approve and execute refills
 5. raise supplier purchase orders before stock-out risk
 
-Inbound and warehouse operations support this loop.
+Inbound and warehouse operation support this loop.
 
 ## Core Entities
 - `Products`
@@ -41,7 +41,7 @@ Inbound and warehouse operations support this loop.
 4. physical quantities are checked
 5. variance or damage is noted
 6. accepted stock is assigned to storage locations
-7. inventory becomes available for downstream operations
+7. inventory becomes available for downstream operation
 
 ## Operational Rules
 - payment and collection tracking must follow configured cycles
@@ -60,3 +60,4 @@ Update this file when:
 - the real business heartbeat changes
 - the inbound/procurement field flow changes materially
 - key business entities or operational rules change
+

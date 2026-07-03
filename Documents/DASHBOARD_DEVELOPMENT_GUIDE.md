@@ -1,4 +1,4 @@
-# Dashboard Development & Customization Guide
+﻿# Dashboard Development & Customization Guide
 
 This document is the canonical reference and customization manual for building, configuring, and extending the AQL Dashboard module. Follow these protocols to keep the dashboard fully modular, performant, and secure.
 
@@ -45,7 +45,7 @@ Every widget is defined in a standalone `.js` file exporting a single default co
 export default {
   metadata: {
     id: 'unique_widget_id', // Must be unique across all widgets
-    scope: 'operations',    // 'operations' | 'accounts' | 'masters'
+    scope: 'operation',    // 'operation' | 'accounts' | 'master'
     resource: 'purchaseRequisitions', // Primary resource for permission gating
     permission: { 
       purchaseRequisitions: 'read' // Gated by allowed() helper (fail-safe AND logic)
@@ -164,3 +164,4 @@ When creating a new widget config, execute this checklist to deploy:
 4. **Test Packing**: Open the AQL Dashboard in a browser and verify the widget loads. Adjust visual `weight` or Quasar layout spans (`sm`, `md`, `lg` values out of 12) to fit perfectly.
 5. **Verify Reactivity**: Edit the corresponding Sheet resource values and confirm the metric/chart updates reactively without forcing a page reload.
 6. **Register New Visual Widgets**: If your implementation required building a new visual widget type under `src/dashboard/_widgets/`, confirm that it has been registered in the [Dashboard Widget Registry](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/dashboard/REGISTRY.md).
+

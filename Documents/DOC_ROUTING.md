@@ -1,4 +1,4 @@
-# Document Routing Guide
+﻿# Document Routing Guide
 
 ## Purpose
 This document is the canonical task-to-doc router for AQL. Use it to decide what to read after the startup file and `Documents/MULTI_AGENT_PROTOCOL.md`.
@@ -75,7 +75,7 @@ Use ONLY when explicitly asked to perform a comprehensive code review against ar
   - `Documents/AI_COLLABORATION_PROTOCOL.md`
 
 ### Frontend Resource Customization
-Use when overriding or creating custom section or sub-components for any resource scope (Masters, Operations, or Accounts)
+Use when overriding or creating custom section or sub-components for any resource scope (master, operation, or Accounts)
 (e.g., custom record card, custom details view, custom form, custom child layout, custom loading/empty states).
 - Read:
   - `Documents/CUSTOM_PAGE_AND_PAGE_SECTIONS_CUSTOMIZATIONS.md`
@@ -123,7 +123,7 @@ Use when adding, removing, renaming, or behavior-changing `AQL 🚀` sheet menu 
 ### Sidebar Menu Configuration (Frontend)
 Use when adding, removing, reordering, or changing permission gates for the web application's sidebar menu (Menu JSON in `APP.Resources`).
 - Read:
-  - `Documents/AQL_FRONTEND_MENU_SYSTEM.md` — **single canonical doc** covering schema, data flow, permission gating, tree building, route guard, and admin operations
+  - `Documents/AQL_FRONTEND_MENU_SYSTEM.md` — **single canonical doc** covering schema, data flow, permission gating, tree building, route guard, and admin operation
   - `Documents/AI_COLLABORATION_PROTOCOL.md`
 
 ### Login Payload Or Auth Response Changes
@@ -169,3 +169,4 @@ Update this file when any of the following changes:
 - mandatory-read rules for specific task categories change
 - the Non-Negotiable Frontend Pre-Read list changes (e.g. a new always-read doc is added for frontend work)
 - sidebar menu routing or permission-evaluation rules change materially
+

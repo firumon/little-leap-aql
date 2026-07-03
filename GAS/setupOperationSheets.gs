@@ -16,7 +16,7 @@ function setupOperationSheets() {
     if (typeof clearAllAppCaches === 'function') clearAllAppCaches();
     resetLogSheet_();
 
-    logToSheet_('Starting Setup All Operations');
+    logToSheet_('Starting Setup All Operation');
 
     const commonAuditColumns = ['CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy'];
 
@@ -492,7 +492,7 @@ function setupOperationSheets() {
         }
     });
 
-    logToSheet_('Setup All Operations completed');
+    logToSheet_('Setup All Operation completed');
 
     const summary = 'OPERATION setup (Resources driven) complete.\n\n' + results.join('\n');
 

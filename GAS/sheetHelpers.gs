@@ -235,7 +235,7 @@ function resolveFileIdForScope(scope, resourceFileId) {
   var capitalizedScope = normalizedScope.charAt(0).toUpperCase() + normalizedScope.slice(1).toLowerCase();
   var configKey = capitalizedScope + 'FileID';
   var configValue = getAppConfigValue(configKey);
-  
+
   // Fallback for plural legacy keys (MastersFileID, OperationsFileID, etc.)
   if (!configValue) {
     var fallbackKey = capitalizedScope + 'sFileID';
@@ -280,7 +280,7 @@ function getMetadataContext() {
   if (_metadata_cache) return _metadata_cache;
   var ss = getAppSpreadsheet();
   var sheet = ss.getSheetByName(CONFIG.SHEETS.METADATA);
-  
+
   var defaultHeaders = ['Key', 'Value'];
   var defaultIdx = { Key: 0, Value: 1 };
 
@@ -289,7 +289,7 @@ function getMetadataContext() {
   var values = sheet.getDataRange().getValues();
   var headers = values.length > 0 ? values[0] : defaultHeaders;
   var idx = getHeaderIndexMap(headers);
-  
+
   // Safety fallback if headers are malformed
   if (idx.Key === undefined) idx.Key = 0;
   if (idx.Value === undefined) idx.Value = 1;
@@ -374,7 +374,7 @@ function clearPermanentMetadataCache() {
 
 /**
  * Clears all in-memory and CacheService caches.
- * Call from setup/sync operations that modify APP sheets.
+ * Call from setup/sync operation that modify APP sheets.
  */
 function clearAllAppCaches() {
   // In-memory: spreadsheet cache

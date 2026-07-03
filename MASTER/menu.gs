@@ -107,7 +107,7 @@ function onboardStep2_copyAppTemplate(folderId) {
 function onboardStep3_createRemainingSheets(folderId, appFileId) {
   try {
     const folder = DriveApp.getFolderById(folderId);
-    const fileNames = ['Master', 'Operations', 'Accounts', 'Views', 'Reports'];
+    const fileNames = ['Master', 'Operation', 'Accounts', 'Views', 'Reports'];
     const templateIds = {
       'Reports': '10wAJaxB41u37B4aWW9G4G5iyjeSZS9nIxP_yXTw9V9U',
       'Views': '1StZu0oTCmnDskin38vXAHUh8JKru58Kl8xi_7IDVpfs'
@@ -148,7 +148,7 @@ function onboardStep3_createRemainingSheets(folderId, appFileId) {
       success: true,
       appFileId: appFileId,
       masterFileId: createdFiles['Master'],
-      operationFileId: createdFiles['Operations'],
+      operationFileId: createdFiles['Operation'],
       accountsFileId: createdFiles['Accounts'],
       viewsFileId: createdFiles['Views'],
       reportsFileId: createdFiles['Reports']

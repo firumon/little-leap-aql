@@ -29,7 +29,7 @@ function onOpen() {
       .addItem('Store APP File ID in Properties', 'setAppFileId')
       .addItem('Refactor MASTER Sheets', 'setupMasterSheets')
       .addSeparator()
-      .addItem('Setup All Operations', 'setupOperationSheets')
+      .addItem('Setup All Operation', 'setupOperationSheets')
       .addItem('Setup Base Accounts', 'setupAccountSheets'));
 
   menu.addToUi();
@@ -616,13 +616,13 @@ function buildDialogBody(action, data) {
            '<option value="">-- Create New Role --</option>' + ro + '</select></div>' +
            '<div class="g"><label>Role Name</label><input name="name" id="roleNameInput" required></div>' +
            '<div class="g"><label>Description</label><textarea name="description" id="roleDescInput"></textarea></div>' +
-           '<div class="small" style="margin-bottom: 8px; font-weight: 600; text-transform: uppercase;">Permissions Matrix</div>' + 
-           roleMatrix() + 
+           '<div class="small" style="margin-bottom: 8px; font-weight: 600; text-transform: uppercase;">Permissions Matrix</div>' +
+           roleMatrix() +
            '<button id="submitBtn">Create Role</button></form>';
   }
   else if (action === 'addResource' || action === 'editResource') {
     var ed = action === 'editResource';
-    body = '<form id="mainForm" onsubmit="event.preventDefault();submitForm(\'' + (ed ? 'handleEditResource' : 'handleAddResource') + '\')">' + (ed ? '<div class="g"><label>Resource</label><select name="resourceId" onchange="loadDetails(\'Resource\',this.value)" required><option value="">-- Select --</option>' + rso + '</select></div><input type="hidden" name="originalName">' : '') + '<div class="row"><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Scope</label><input name="scope" value="master"></div></div><div class="row"><div class="g"><label>FileID</label><input name="fileId" placeholder="Leave blank for config-driven"></div><div class="g"><label>SheetName</label><input name="sheetName"></div></div><div class="row"><div class="g"><label>CodePrefix</label><input name="codePrefix"></div><div class="g"><label>CodeSequenceLength</label><input name="codeSequenceLength" type="number"></div></div><div class="g"><label>RecordAccessPolicy</label><select name="recordAccessPolicy"><option>ALL</option><option>OWNER</option><option>OWNER_GROUP</option><option>OWNER_AND_UPLINE</option></select></div><div class="g"><label>RequiredHeaders</label><input name="requiredHeaders"></div><div class="g"><label>UniqueHeaders</label><input name="uniqueHeaders"></div><div class="g"><label>UniqueCompositeHeaders</label><input name="uniqueCompositeHeaders"></div><div class="g"><label>DefaultValues (JSON)</label><textarea name="defaultValues"></textarea></div><div class="g"><label>OwnerUserField</label><input name="ownerUserField" value="CreatedBy"></div><div class="g"><label>AdditionalActions</label><input name="additionalActions"></div><div class="row"><div class="g"><label>Menu Path (CSV)</label><input name="menuGroup" placeholder="e.g. Masters,Product"></div><div class="g"><label>MenuOrder</label><input name="menuOrder" type="number"></div></div><div class="row"><div class="g"><label>MenuLabel</label><input name="menuLabel"></div><div class="g"><label>MenuIcon</label><input name="menuIcon"></div></div><div class="g"><label>RoutePath</label><input name="routePath"></div><div class="g"><label>PageTitle</label><input name="pageTitle"></div><div class="g"><label>PageDescription</label><textarea name="pageDescription"></textarea></div><div class="g"><label>UIFields</label><textarea name="uiFields"></textarea></div><div class="checks"><label><input type="checkbox" name="isActive" value="true" checked> IsActive</label><label><input type="checkbox" name="audit" value="true"> Audit</label><label><input type="checkbox" name="showInMenu" value="true" checked> ShowInMenu</label><label><input type="checkbox" name="includeInAuthorizationPayload" value="true" checked> IncludeInAuthorizationPayload</label></div><button id="submitBtn">' + (ed ? 'Update' : 'Add') + ' Resource</button></form>';
+    body = '<form id="mainForm" onsubmit="event.preventDefault();submitForm(\'' + (ed ? 'handleEditResource' : 'handleAddResource') + '\')">' + (ed ? '<div class="g"><label>Resource</label><select name="resourceId" onchange="loadDetails(\'Resource\',this.value)" required><option value="">-- Select --</option>' + rso + '</select></div><input type="hidden" name="originalName">' : '') + '<div class="row"><div class="g"><label>Name</label><input name="name" required></div><div class="g"><label>Scope</label><input name="scope" value="master"></div></div><div class="row"><div class="g"><label>FileID</label><input name="fileId" placeholder="Leave blank for config-driven"></div><div class="g"><label>SheetName</label><input name="sheetName"></div></div><div class="row"><div class="g"><label>CodePrefix</label><input name="codePrefix"></div><div class="g"><label>CodeSequenceLength</label><input name="codeSequenceLength" type="number"></div></div><div class="g"><label>RecordAccessPolicy</label><select name="recordAccessPolicy"><option>ALL</option><option>OWNER</option><option>OWNER_GROUP</option><option>OWNER_AND_UPLINE</option></select></div><div class="g"><label>RequiredHeaders</label><input name="requiredHeaders"></div><div class="g"><label>UniqueHeaders</label><input name="uniqueHeaders"></div><div class="g"><label>UniqueCompositeHeaders</label><input name="uniqueCompositeHeaders"></div><div class="g"><label>DefaultValues (JSON)</label><textarea name="defaultValues"></textarea></div><div class="g"><label>OwnerUserField</label><input name="ownerUserField" value="CreatedBy"></div><div class="g"><label>AdditionalActions</label><input name="additionalActions"></div><div class="row"><div class="g"><label>Menu Path (CSV)</label><input name="menuGroup" placeholder="e.g. Master,Product"></div><div class="g"><label>MenuOrder</label><input name="menuOrder" type="number"></div></div><div class="row"><div class="g"><label>MenuLabel</label><input name="menuLabel"></div><div class="g"><label>MenuIcon</label><input name="menuIcon"></div></div><div class="g"><label>RoutePath</label><input name="routePath"></div><div class="g"><label>PageTitle</label><input name="pageTitle"></div><div class="g"><label>PageDescription</label><textarea name="pageDescription"></textarea></div><div class="g"><label>UIFields</label><textarea name="uiFields"></textarea></div><div class="checks"><label><input type="checkbox" name="isActive" value="true" checked> IsActive</label><label><input type="checkbox" name="audit" value="true"> Audit</label><label><input type="checkbox" name="showInMenu" value="true" checked> ShowInMenu</label><label><input type="checkbox" name="includeInAuthorizationPayload" value="true" checked> IncludeInAuthorizationPayload</label></div><button id="submitBtn">' + (ed ? 'Update' : 'Add') + ' Resource</button></form>';
   } else body = '<p>Unsupported</p>';
 
   return body;
@@ -643,7 +643,7 @@ function app_getReportManagerData() {
   try {
     const resources = getAllResourcesConfigs({ includeInactive: true });
     const templateSheets = [];
-    
+
     // Fetch template sheets from REPORTS file
     var reportsFileId = resolveFileIdForScope('report', '');
     if (reportsFileId) {
@@ -665,7 +665,7 @@ function app_getReportManagerData() {
       } catch (e) {
         console.error('Error fetching headers for ' + res.name, e);
       }
-      
+
       return {
         name: res.name,
         label: res.menuLabel || res.name,

@@ -37,6 +37,11 @@
   to { opacity: 1; }
 }
 
+@keyframes rise-in {
+  0% { transform: translateY(10px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
 // Global page layouts
 .aql-page-container {
   margin: 0 auto;
@@ -214,3 +219,77 @@
 .aql-tab--active-accent    { background: var(--q-accent-light);    color: var(--q-accent) !important; font-weight: 600 !important; }
 .aql-tab--active-grey      { background: #f1f5f9;                  color: #64748b !important; font-weight: 600 !important; }
 
+.page-card {
+  border-radius: 16px;
+  border-color: var(--aql-border);
+  background: rgba(255, 255, 255, 0.95);
+  animation: rise-in 280ms ease-out both;
+}
+
+.aql-premium-gradient-card {
+  border-radius: 6px !important;
+  border: 1px solid var(--aql-border, #d0def0) !important;
+  background: linear-gradient(135deg, #ffffff 0%, #f7f9fc 50%, #fbf6e6 100%) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02) !important;
+}
+
+/*
+  =========================================
+  FORM GRADIENT CARD - 4 PREMIUM OPTIONS
+  Uncomment/comment the backgrounds below to preview in real-time.
+  =========================================
+*/
+.aql-premium-gradient-form {
+  border-radius: 6px !important;
+  border: 1px solid var(--aql-border, #d0def0) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02) !important;
+
+  /* OPTION 1: Cool-to-Warm Diagonal Flow (Primary & Secondary) [ACTIVE] */
+  background: linear-gradient(
+    120deg,
+    #ffffff 0%,
+    color-mix(in srgb, var(--q-info, #1A6FAD) 3.5%, white) 60%,
+    color-mix(in srgb, var(--q-primary, #0F2B4A) 4.5%, white) 100%
+  ) !important;
+}
+
+
+.aql-detail-grid {
+  display: grid;
+  gap: 0;
+}
+
+.aql-detail-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 2px;
+  border-bottom: 1px dashed #e2e8f0;
+}
+
+.aql-detail-line:last-child {
+  border-bottom: none;
+}
+
+.aql-detail-key {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.aql-detail-val {
+  color: #1f2937;
+  font-size: 13px;
+  text-align: right;
+  font-weight: 500;
+}
+
+.aql-child-table {
+  th {
+    text-align: left;
+    font-weight: 600;
+    color: #475569;
+  }
+  tbody tr:hover {
+    background-color: #f1f5f9;
+  }
+}

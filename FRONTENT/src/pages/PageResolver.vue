@@ -25,14 +25,4 @@ const { resolvedComponent, notFound } = usePageResolver()
   justify-content: center;
   padding: 2rem;
 }
-.page-card {
-  border-radius: 16px;
-  border-color: var(--aql-border);
-  background: rgba(255, 255, 255, 0.95);
-  animation: rise-in 280ms ease-out both;
-}
-@keyframes rise-in {
-  0% { transform: translateY(10px); opacity: 0; }
-  100% { transform: translateY(0); opacity: 1; }
-}
 </style>

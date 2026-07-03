@@ -1,6 +1,6 @@
 <template>
   <div class="row items-center no-wrap">
-    <div class="q-mr-sm self-center" v-if="hasBack"><q-btn flat dense :icon="backIcon" color="primary" @click="$emit('click')" /></div>
+    <div class="q-mr-sm self-center" v-if="hasBack"><q-btn flat dense :icon="backIcon" color="primary" @click.stop="$emit('click')" /></div>
     <div class="col">
       <HeaderPanel :title="label" :subtitle="caption" :icon="icon">
         <template #side>

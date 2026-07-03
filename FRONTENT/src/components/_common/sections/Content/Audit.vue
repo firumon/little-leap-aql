@@ -4,26 +4,29 @@
     v-if="resolvedComponent"
     v-bind="finalProps"
   />
-  <q-card v-else-if="finalProps.record?.CreatedAt || finalProps.record?.UpdatedAt" flat bordered class="page-card q-mt-sm">
-    <q-card-section>
-      <div class="section-title">Audit</div>
-      <div class="detail-grid">
-        <div v-if="finalProps.record.CreatedAt" class="detail-line">
-          <span class="detail-key">Created</span>
-          <span class="detail-val">{{ formatDate(finalProps.record.CreatedAt) }}</span>
+  <div v-else-if="finalProps.record?.CreatedAt || finalProps.record?.UpdatedAt">
+    <SectionDividerLabel label="Audit" />
+    <q-card flat bordered class="page-card aql-premium-gradient-card">
+      <q-card-section>
+        <div class="aql-detail-grid">
+          <div v-if="finalProps.record.CreatedAt" class="aql-detail-line">
+            <span class="aql-detail-key">Created</span>
+            <span class="aql-detail-val">{{ formatDate(finalProps.record.CreatedAt) }}</span>
+          </div>
+          <div v-if="finalProps.record.UpdatedAt" class="aql-detail-line">
+            <span class="aql-detail-key">Updated</span>
+            <span class="aql-detail-val">{{ formatDate(finalProps.record.UpdatedAt) }}</span>
+          </div>
         </div>
-        <div v-if="finalProps.record.UpdatedAt" class="detail-line">
-          <span class="detail-key">Updated</span>
-          <span class="detail-val">{{ formatDate(finalProps.record.UpdatedAt) }}</span>
-        </div>
-      </div>
-    </q-card-section>
-  </q-card>
+      </q-card-section>
+    </q-card>
+  </div>
 </template>
 
 <script setup>
 import { computed, inject } from 'vue'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
+import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 
 defineOptions({ name: 'CommonAudit' })
 
@@ -52,22 +55,3 @@ function formatDate(value) {
   } catch { return String(value) }
 }
 </script>
-
-<style scoped>
-.page-card {
-  border-radius: 16px;
-  border-color: var(--aql-border);
-  background: rgba(255, 255, 255, 0.95);
-  animation: rise-in 280ms ease-out both;
-}
-.section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 12px; }
-.detail-grid { display: grid; gap: 0; }
-.detail-line { display: flex; justify-content: space-between; gap: 16px; padding: 10px 2px; border-bottom: 1px dashed #e2e8f0; }
-.detail-line:last-child { border-bottom: none; }
-.detail-key { color: #64748b; font-size: 13px; }
-.detail-val { color: #1f2937; font-size: 13px; text-align: right; font-weight: 500; }
-@keyframes rise-in {
-  0% { transform: translateY(10px); opacity: 0; }
-  100% { transform: translateY(0); opacity: 1; }
-}
-</style>

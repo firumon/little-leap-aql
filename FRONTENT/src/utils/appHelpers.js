@@ -262,3 +262,114 @@ export function resolveSyncRows(responseData, headers) {
 
   return []
 }
+
+const IRREGULAR_PLURALS = {
+  man: 'men', woman: 'women', child: 'children', person: 'people',
+  tooth: 'teeth', foot: 'feet', mouse: 'mice', goose: 'geese',
+  ox: 'oxen', louse: 'lice', die: 'dice',
+  cactus: 'cacti', focus: 'foci', fungus: 'fungi', nucleus: 'nuclei',
+  syllabus: 'syllabi', analysis: 'analyses', diagnosis: 'diagnoses',
+  thesis: 'theses', crisis: 'crises', phenomenon: 'phenomena',
+  criterion: 'criteria', datum: 'data', curriculum: 'curricula',
+  index: 'indices', matrix: 'matrices', vertex: 'vertices',
+  appendix: 'appendices', axis: 'axes',
+  quiz: 'quizzes',
+}
+
+const UNCHANGED = new Set([
+  'sheep', 'fish', 'deer', 'species', 'series', 'moose', 'aircraft',
+  'salmon', 'trout', 'swine', 'bison', 'shrimp', 'offspring',
+])
+
+const O_TAKES_S = new Set([
+  'photo', 'piano', 'halo', 'video', 'zoo', 'studio', 'radio',
+  'kilo', 'memo', 'logo', 'solo', 'silo', 'taco', 'avocado',
+])
+
+const F_TAKES_S = new Set([
+  'roof', 'chef', 'chief', 'cliff', 'proof', 'belief', 'gulf',
+  'safe', 'cafe',
+])
+
+const VOWELS = new Set(['a', 'e', 'i', 'o', 'u'])
+
+function applyCase(word, suffix) {
+  return word + suffix
+}
+
+/**
+ * Pluralize an English word.
+ * Handles regular rules and irregular/exception lookups.
+ * @param {string} word
+ * @returns {string}
+ */
+export function pluralize(word) {
+  if (!word) return word
+  const lower = word.toLowerCase()
+
+  if (UNCHANGED.has(lower)) return word
+  if (IRREGULAR_PLURALS[lower]) {
+    const plural = IRREGULAR_PLURALS[lower]
+    return word[0] === word[0].toUpperCase()
+      ? plural[0].toUpperCase() + plural.slice(1)
+      : plural
+  }
+
+  if (lower.endsWith('y')) {
+    const beforeY = lower[lower.length - 2]
+    if (!VOWELS.has(beforeY)) return applyCase(word.slice(0, -1), 'ies')
+    return applyCase(word, 's')
+  }
+
+  if (/(s|x|z|ch|sh)$/.test(lower)) return applyCase(word, 'es')
+
+  if (lower.endsWith('fe') && !F_TAKES_S.has(lower)) return applyCase(word.slice(0, -2), 'ves')
+  if (lower.endsWith('f') && !F_TAKES_S.has(lower)) return applyCase(word.slice(0, -1), 'ves')
+
+  if (lower.endsWith('o')) {
+    const beforeO = lower[lower.length - 2]
+    if (!VOWELS.has(beforeO) && !O_TAKES_S.has(lower)) return applyCase(word, 'es')
+    return applyCase(word, 's')
+  }
+
+  return applyCase(word, 's')
+}
+
+const IRREGULAR_SINGULARS = Object.fromEntries(
+  Object.entries(IRREGULAR_PLURALS).map(([k, v]) => [v, k])
+)
+
+/**
+ * Best-effort singularize an English plural word.
+ * English pluralization is lossy to reverse; covers common cases.
+ * @param {string} word
+ * @returns {string}
+ */
+export function singularize(word) {
+  if (!word) return word
+  const lower = word.toLowerCase()
+
+  if (UNCHANGED.has(lower)) return word
+  if (IRREGULAR_SINGULARS[lower]) {
+    const singular = IRREGULAR_SINGULARS[lower]
+    return word[0] === word[0].toUpperCase()
+      ? singular[0].toUpperCase() + singular.slice(1)
+      : singular
+  }
+
+  if (lower.endsWith('ies') && lower.length > 3) return word.slice(0, -3) + 'y'
+
+  if (lower.endsWith('ves')) {
+    const stem = word.slice(0, -3)
+    if (['kni', 'li', 'wi'].some(s => stem.toLowerCase().endsWith(s))) return stem + 'fe'
+    return stem + 'f'
+  }
+
+  if (/(ses|xes|zes|ches|shes)$/.test(lower)) return word.slice(0, -2)
+
+  if (lower.endsWith('oes') && !O_TAKES_S.has(lower.slice(0, -2))) return word.slice(0, -2)
+
+  if (lower.endsWith('s') && !lower.endsWith('ss')) return word.slice(0, -1)
+
+  return word
+}

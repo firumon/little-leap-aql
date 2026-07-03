@@ -98,11 +98,17 @@ function handleActionClicked(action) {
     const pageSlug = action.navigate?.pageSlug || ''
 
     if (target === 'record-page') {
-      nav.goTo(pageSlug)
-    } else if (target === 'resource-page') {
-      nav.goTo('index', {
+      nav.goTo('record-page', {
+        scope: action.navigate?.scope || nav.scope.value,
         resourceSlug: action.navigate?.resourceSlug || nav.resourceSlug.value,
-        scope: action.navigate?.scope || nav.scope.value
+        code: action.navigate?.code || nav.code.value,
+        pageSlug: pageSlug
+      })
+    } else if (target === 'resource-page') {
+      nav.goTo('resource-page', {
+        scope: action.navigate?.scope || nav.scope.value,
+        resourceSlug: action.navigate?.resourceSlug || nav.resourceSlug.value,
+        pageSlug: pageSlug
       })
     }
   } else {

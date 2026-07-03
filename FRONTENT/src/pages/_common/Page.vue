@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-gutter-y-sm" v-if="pageReady">
+  <q-page class="q-gutter-y-sm aql-page-container" v-if="pageReady">
     <template v-for="sec in sections" :key="sec">
       <!-- 1. Header Section -->
       <component :is="getSectionComponent(sec, page)" v-if="sec === 'Header'" :page="page" />
@@ -26,7 +26,6 @@
             :page="page"
             :parent-form="parentForm"
             :child-groups="childGroups"
-            :status-options="statusOptions"
             @update:field="(header, val) => { parentForm[header] = val }"
             @add-child="addChildRecord"
             @remove-child="removeChildRecord"
@@ -41,7 +40,6 @@
             :page="page"
             :parent-form="parentForm"
             :child-groups="childGroups"
-            :status-options="statusOptions"
             @update:field="(header, val) => { parentForm[header] = val }"
             @add-child="addChildRecord"
             @remove-child="removeChildRecord"
@@ -150,11 +148,7 @@ import EditToolbar from 'components/_common/Edit/Toolbar.vue'
 import ActionToolbar from 'components/_common/Action/Toolbar.vue'
 
 // Contents
-import IndexContent from 'components/_common/Index/Content.vue'
-import ViewContent from 'components/_common/View/Content.vue'
-import AddContent from 'components/_common/Add/Content.vue'
-import EditContent from 'components/_common/Edit/Content.vue'
-import ActionContent from 'components/_common/Action/Content.vue'
+import CommonContent from 'components/_common/sections/Content/Content.vue'
 
 // Actions
 import IndexActions from 'components/_common/Index/Actions.vue'
@@ -195,13 +189,7 @@ function getSectionComponent(secName, pageName) {
     if (pageName === 'Edit') return EditToolbar
     if (pageName === 'Action') return ActionToolbar
   }
-  if (secName === 'Content') {
-    if (pageName === 'Index') return IndexContent
-    if (pageName === 'View') return ViewContent
-    if (pageName === 'Add') return AddContent
-    if (pageName === 'Edit') return EditContent
-    if (pageName === 'Action') return ActionContent
-  }
+  if (secName === 'Content') return CommonContent
   if (secName === 'Action') {
     if (pageName === 'Index') return IndexActions
     if (pageName === 'View') return ViewActions
@@ -214,7 +202,7 @@ function getSectionComponent(secName, pageName) {
 
 // Form logic setup
 const {
-  parentForm, childGroups, saving, statusOptions,
+  parentForm, childGroups, saving,
   initializeForCreate, initializeForEdit, addChildRecord, removeChildRecord,
   updateChildField, save
 } = useCompositeForm(config)

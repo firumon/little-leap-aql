@@ -9,7 +9,7 @@ import {
   setResourceMetaCached,
   upsertResourceRowsCached
 } from 'src/services/ResourceIoService'
-import { mapRowsToObjects } from 'src/utils/appHelpers'
+import {mapRowsToObjects, pluralize, singularize} from 'src/utils/appHelpers'
 
 export const useDataStore = defineStore('data', () => {
   const headers = reactive({})
@@ -160,12 +160,12 @@ export const useDataStore = defineStore('data', () => {
   )
 
   // NEW: Store action to update rows from IDB sync (standardized response format)
-  async function updateRowsFromSync(resourceName, headers, rows) {
+  async function updateRowsFromSync(resourceName, headerList, rows) {
     ensureResourceState(resourceName)
     if (Array.isArray(rows) && rows.length) {
       replaceRows(resourceName, rows)
-      if (Array.isArray(headers) && headers.length) {
-        headers[resourceName] = headers
+      if (Array.isArray(headerList) && headerList.length) {
+        headers[resourceName] = headerList
       }
       return { success: true, updated: rows.length }
     }
@@ -196,76 +196,44 @@ export const useDataStore = defineStore('data', () => {
     }
   }
 
-  function _codeCandidates(header) {
-    const name = (header || '').toString().trim()
-    if (!name || name === 'Code' || !name.endsWith('Code')) return []
-    const stem = name.slice(0, -4)
-    return [stem, `${stem}s`, stem.endsWith('y') ? `${stem.slice(0, -1)}ies` : ''].filter(Boolean)
-  }
-
-  function _resolveCodeRef(header, resources) {
-    if (!header || !header.endsWith('Code')) return null
-    for (const c of _codeCandidates(header)) {
-      const match = resources.find(r => r.name.toLowerCase() === c.toLowerCase())
-      if (match) return match.name
-    }
-    return null
-  }
-
   function _deriveAllRelations(resources) {
-    // Clear existing relations
     Object.keys(resourceRelations).forEach(k => delete resourceRelations[k])
 
-    for (const res of resources) {
-      if (!res?.name) continue
-
-      // --- Parents (from parentResource chain) ---
-      const parentChain = []
-      const visited = new Set()
-      let current = res
-      while (current.parentResource && !visited.has(current.parentResource)) {
-        visited.add(current.parentResource)
-        const parent = resources.find(r => r.name === current.parentResource)
-        if (!parent) break
-        const hdrs = headers[current.name] || current.headers || []
-        const singular = parent.name.replace(/s$/, '')
-        parentChain.push({
-          resourceName: parent.name,
-          codeField: hdrs.includes('ParentCode') ? 'ParentCode' : `${singular}Code`,
-          singular
-        })
-        current = parent
+    const resourceNames = resources.map(r => r.name), resourceParents = {}, resourceChildren = {}, linkRefs = {}
+    resources.forEach(r => {
+      const headerToParent = {}
+      const parentStr = (r.parentResource || '').toString().trim()
+      if (parentStr && resourceNames.includes(parentStr)) {
+        const expectedHdr = (r.headers || []).find(h => h.endsWith('Code') && h !== 'Code' && pluralize(h.slice(0, -4)) === parentStr) || singularize(parentStr) + 'Code'
+        headerToParent[expectedHdr] = parentStr
       }
-
-      // --- Children (resources whose parentResource === this resource) ---
-      const children = resources
-        .filter(r => r.parentResource === res.name)
-        .map(r => {
-          const childHeaders = headers[r.name] || r.headers || []
-          const singular = res.name.replace(/s$/, '')
-          return {
-            name: r.name,
-            codeField: childHeaders.includes('ParentCode') ? 'ParentCode' : `${singular}Code`,
-            singular: r.name.replace(/s$/, '')
-          }
-        })
-
-      // --- Link refs (XxxCode columns not already covered by parent/child) ---
-      const usedCodeFields = new Set([
-        'Code',
-        ...parentChain.map(p => p.codeField),
-        ...children.map(c => c.codeField)
-      ])
-      const linkRefs = {}
-      const hdrs = headers[res.name] || res.headers || []
-      for (const h of hdrs) {
-        if (usedCodeFields.has(h)) continue
-        const match = _resolveCodeRef(h, resources)
-        if (match) linkRefs[h] = match
+      ;(r.headers || []).forEach(h => {
+        if (h === 'Code' || h === 'ParentCode' || !h.endsWith('Code')) return
+        const stem = h.slice(0, -4)
+        const plural = pluralize(stem)
+        if (resourceNames.includes(plural)) {
+          headerToParent[h] = plural
+        }
+      })
+      resourceParents[r.name] = Array.from(new Set(Object.values(headerToParent)))
+      for (const [hdr, pName] of Object.entries(headerToParent)) {
+        if (!Object.hasOwn(linkRefs, r.name)) linkRefs[r.name] = {}
+        linkRefs[r.name][hdr] = pName
+        const pRes = resources.find(res => res.name === pName)
+        if (pRes && pRes.scope !== 'master') {
+          if (!Object.hasOwn(resourceChildren, pRes.name)) resourceChildren[pRes.name] = []
+          if (!resourceChildren[pRes.name].includes(r.name)) resourceChildren[pRes.name].push(r.name)
+        }
       }
+    })
 
-      resourceRelations[res.name] = { parents: parentChain, children, linkRefs }
-    }
+    resources.forEach(res => {
+      resourceRelations[res.name] = {
+        parents: resourceParents[res.name]?.map(resourceName => ({ resourceName, codeField: singularize(resourceName) + 'Code', singular: singularize(resourceName) })) || [],
+        children: (resourceChildren[res.name] || []).map(name => ({ name, codeField: singularize(name) + 'Code', singular: singularize(name) })),
+        linkRefs: linkRefs[res.name] || {}
+      }
+    })
   }
 
   function getRecord(resourceName, code) {

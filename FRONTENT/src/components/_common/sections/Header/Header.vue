@@ -27,6 +27,7 @@
 
 <script setup>
 import { computed, inject, useAttrs } from 'vue'
+import { useRouter } from 'vue-router'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useCommonSection } from 'src/composables/resources/useCommonSection'
 import GenericHeaderPanel from 'components/shared/GenericHeaderPanel.vue'
@@ -34,6 +35,7 @@ import GenericHeaderPanel from 'components/shared/GenericHeaderPanel.vue'
 defineOptions({ name: 'CommonHeader', inheritAttrs: false })
 
 const attrs = useAttrs()
+const router = useRouter()
 const nav = useResourceNav()
 const props = defineProps({ page: { type: String, default: 'View' } })
 
@@ -143,7 +145,7 @@ function navigateBack() {
 
   const hasHistory = !!window.history.state?.back
   if (hasHistory) {
-    window.history.back()
+    router.back()
   } else if (currentAction.value !== 'index') {
     nav.goTo('index')
   }

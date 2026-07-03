@@ -5,6 +5,7 @@ import { useDataStore } from 'src/stores/data'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceConfig } from './useResourceConfig'
 import { evaluateFilter, normalizeListViewsMode } from 'src/composables/useListViews'
+import {singularize} from "src/utils/appHelpers.js";
 
 // Shared cache across all useRecord instances — keyed by "ResourceName::Code"
 const _enrichedCache = new Map()
@@ -42,7 +43,7 @@ function _enrichRecord(resourceName, code, dataStore) {
   // Parents
   const parentKeys = []
   for (const p of meta.parents) {
-    const key = `$${p.singular}`
+    const key = `$${p.singular.toLowerCase()}`
     parentKeys.push(key)
     Object.defineProperty(enriched, key, {
       get() {
@@ -50,7 +51,7 @@ function _enrichRecord(resourceName, code, dataStore) {
         if (!parentCode) return null
         return _enrichRecord(p.resourceName, parentCode, dataStore)
       },
-      enumerable: true, configurable: true
+      enumerable: false, configurable: true
     })
   }
 
@@ -67,14 +68,14 @@ function _enrichRecord(resourceName, code, dataStore) {
           .filter(row => row[c.codeField] === selfCode)
           .map(row => _enrichRecord(c.name, row.Code, dataStore))
       },
-      enumerable: true, configurable: true
+      enumerable: false, configurable: true
     })
   }
 
   // Link refs (cross-references via XxxCode columns not in parent/child)
   const linkKeys = []
   for (const [header, refResource] of Object.entries(meta.linkRefs)) {
-    const singular = refResource.replace(/s$/, '')
+    const singular = singularize(refResource).toLowerCase()
     const key = `$${singular}`
     // Avoid collisions with parent/child keys
     if (parentKeys.includes(key) || childKeys.includes(key)) continue
@@ -85,26 +86,27 @@ function _enrichRecord(resourceName, code, dataStore) {
         if (!refCode) return null
         return _enrichRecord(refResource, refCode, dataStore)
       },
-      enumerable: true, configurable: true
+      enumerable: false, configurable: true
     })
   }
 
   // --- Metadata getters ---
   Object.defineProperty(enriched, '_Parents', {
-    get() { return [...parentKeys] },
-    enumerable: true, configurable: true
+    get() { return [...parentKeys, ...linkKeys] },
+    enumerable: false, configurable: true
   })
   Object.defineProperty(enriched, '_Parent', {
     get() {
       const map = {}
       for (const key of parentKeys) map[key] = enriched[key]
+      for (const key of linkKeys) map[key] = enriched[key]
       return map
     },
-    enumerable: true, configurable: true
+    enumerable: false, configurable: true
   })
   Object.defineProperty(enriched, '_Children', {
     get() { return [...childKeys] },
-    enumerable: true, configurable: true
+    enumerable: false, configurable: true
   })
   Object.defineProperty(enriched, '_Child', {
     get() {
@@ -112,7 +114,7 @@ function _enrichRecord(resourceName, code, dataStore) {
       for (const key of childKeys) map[key] = enriched[key]
       return map
     },
-    enumerable: true, configurable: true
+    enumerable: false, configurable: true
   })
   Object.defineProperty(enriched, '_relation', {
     value: meta,

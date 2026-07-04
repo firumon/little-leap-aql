@@ -4,287 +4,413 @@ Welcome to your hands-on guide to AQL! This manual is designed to guide you thro
 
 ---
 
-## Daily Quick-Start Timeline
+## Getting Started
 
-```mermaid
-gantt
-    title Field Executive Daily Routine
-    dateFormat  HH:mm
-    axisFormat %H:%M
-    
-    section Start of Day
-    Load Van (Warehouse Transfers)  :active, 08:00, 08:30
-    Route Review (Outlet Visits)    :08:30, 09:00
-    
-    section Field Operations
-    Store Visit Loop (Consumptions) :09:00, 16:30
-    Payment Collection (Payments)   :10:00, 16:30
-    Fulfill Refills (Deliveries)    :11:00, 16:30
-    
-    section End of Day
-    Unload Van (Warehouse Transfers):16:30, 17:00
-```
+### Step 0.1: Log In to AQL
+
+1. Open AQL.
+2. Enter your **Email** and **Password**.
+3. Click **Login**.
+4. The system loads your personalized dashboard based on your role and permissions.
+
+> [!NOTE]
+> If you do not have login credentials, ask your system administrator to create a user account for you.
+
+![Screenshot Placeholder: AQL Login screen showing email and password fields with the Login button.](screenshots/sales_login.png)
 
 ---
 
-## 1. Start of Day: Provisioning Stock (Loading the Van)
+### Step 0.2: Understand the Sidebar Menu
 
-Before heading out, you must transfer inventory from the **Main Warehouse** into your **Van Warehouse**.
+After logging in, the **sidebar menu** on the left side of the screen is your primary navigation tool. The menu items you see depend on your role and permissions. For the Field Sales (Executive) role, most operational links are displayed directly at the root level of the sidebar for quick access on mobile screens, while master configurations are grouped under the **Manage** folder, and stock actions are under the **Stock** folder.
 
-### Step 1.1: Initiate the Transfer Request
-1. Open the sidebar menu and select **Warehouse** -> **Transfers**.
-2. Click the **Add** (+) button in the top right corner.
-3. Fill in the transfer details:
-   - **Source Warehouse**: Select the Main Warehouse (e.g., `MW01`).
-   - **Destination Warehouse**: Select your designated Van Warehouse (e.g., `VW04`).
-   - **Is Instant**: Set to `FALSE` (this sends the request to your manager for approval).
-4. Click **Add Item** to specify products to load:
-   - Select the **SKU**. The system will display the current stock available in the Main Warehouse storage.
-   - Enter the **Quantity** you want to load into your van.
-   - Repeat for all SKUs needed for the day.
-5. Click **Send for Approval** at the bottom of the screen. The transfer progress is now set to `PENDING_APPROVAL`.
+As a Field Sales Executive, you will typically see:
 
-![Screenshot Placeholder: Creating a Warehouse Transfer from Main Warehouse to Van Warehouse. Highlights the Source Warehouse, Destination Warehouse, and the SKU list with quantities.](file:///f:/LITTLE%20LEAP/AQL/Documents/screenshots/transfers_create_request.png)
+| Menu Item / Group | Description |
+|---|---|
+| **Dashboard** | Performance overview widgets (Visits, Collections, Daily Sales) |
+| **Outlet Hub** | 360° store view (Stock Balance, Operating Rules, History) |
+| **Outlet Visits** | Plan and track store visits (Overdue, Today, Future, History) |
+| **Outlet Restocks** | Track approved outlet replenishment requests |
+| **Outlet Deliveries** | Fulfill and complete stock deliveries to outlets |
+| **Outlet Returns** | Log unsold, expired, or damaged stock returns from outlets |
+| **Outlet Consumptions** | Record shelf stock counts and submit consumption data |
+| **Consumption Invoices** | View sales invoices generated for consumed stock |
+| **Outlet Payments** | Register and allocate collected payments against invoices |
+| **Manage** (Group) | Dropdown containing master data view pages: <br>• **Outlets**: View/manage outlet records <br>• **Warehouses**: View/manage warehouse records <br>• **Operating Rules**: View pricing and credit rules |
+| **Stock** (Group) | Dropdown containing inventory action pages: <br>• **Stock List**: View current stock list by warehouse <br>• **Transfers**: Create or complete van/warehouse stock transfers |
 
----
+Throughout this manual, you will be directed to navigate to root-level items directly (e.g., **Outlet Visits**, **Outlet Hub**) or using patterns like **Manage** -> **Outlets** or **Stock** -> **Transfers** for grouped items.
 
-### Step 1.2: Claim & Complete the Transfer
-Once your manager approves the request, the transfer's status changes to `APPROVED`. You must physically load the items and confirm they are in your van.
-
-1. In the **Transfers** index page, go to the **Approved** tab and click on your transfer record.
-2. Click the **Complete** (or **Claim & Complete**) button.
-3. Assign the received stock to storage areas inside your van (e.g., Storage Name: `default` or specific racks). If needed, you can split quantities across different racks.
-4. Click **Complete Warehouse Transfer**.
-
-> [!TIP]
-> Completing the transfer automatically logs the inventory into your van's system ledger. You are now responsible for these items.
-
-![Screenshot Placeholder: Completing an Approved Transfer. Shows the receive screen with options to assign received quantities to storage racks in the van.](file:///f:/LITTLE%20LEAP/AQL/Documents/screenshots/transfers_complete_claim.png)
+![AQL Sidebar Menu showing flat operational items and the Manage folder.](screenshots/sales_menu.png)
 
 ---
 
-## 2. Route Planning & Visits
+## Start of Day: Provisioning Stock (Loading the Van)
 
-Keep track of which outlets you must visit and organize your daily schedule.
+Before heading out, you must check if a transfer is required from the **Main Warehouse** into your **Van Warehouse**.
 
-### Step 2.1: View Your Visit Lists
-1. Select **Outlet Visits** from the sidebar menu.
-2. Locate the four tabs:
-   - **Overdue**: Visits scheduled for past dates that were never completed. *Action required: Reschedule or Cancel.*
-   - **Today**: Store visits scheduled for today. This is your primary route checklist.
-   - **This Week / Future**: Visits planned later in the week.
-   - **History**: Record of completed, postponed, and cancelled visits.
+### Step 1.1: Check Stock in Warehouse
+1. Open the sidebar menu and select **Stock** -> **Stock List**.
+2. A list of active warehouses is displayed. Select the Main Warehouse or your designated Van Warehouse to view its stock details.
 
-![Screenshot Placeholder: Outlet Visits list view showing Today, Overdue, and Future tabs. Displays outlets, planned dates, and status badges.](file:///f:/LITTLE%20LEAP/AQL/Documents/screenshots/visits_list_view.png)
+![All Warehouses Stock Summary](screenshots/stock_list.png)
 
----
+3. Inspect the current stock balance by SKU and storage location to determine what items need to be loaded.
 
-### Step 2.2: Schedule a New Visit (On the Fly)
-If you need to visit an unscheduled outlet:
-1. Click **Add** in the **Outlet Visits** menu.
-2. Select the **Outlet** from the dropdown list.
-3. Pick the scheduled **Date**.
-4. Add an optional planned note (e.g., *"Urgent collection request"*).
-5. Click **Plan Visit**. The progress starts as `PLANNED`.
-
-![Screenshot Placeholder: Planning a new Outlet Visit. Showcases Outlet selection, Date picker, and Plan Comment input.](file:///f:/LITTLE%20LEAP/AQL/Documents/screenshots/visits_plan_new.png)
+![Warehouse Stock Details](screenshots/stock details.png)
 
 ---
 
-### Step 2.3: Manage Visited, Postponed, or Cancelled Visits
-You can update your visit status directly:
-- **Complete**: Opens the checklist to mark the visit as done. AQL automatically plans your next visit (e.g., 14 days later) based on the outlet's visit frequency rule.
-- **Postpone**: Requires a postponement reason and a new target date. The system automatically cancels the current visit and creates a new planned visit for that new date.
-- **Cancel**: Requires a cancellation reason. Marks the visit as `CANCELLED` in history.
+### Step 1.2: Obtain Stock via Transfers
+If you need to transfer stock to your van, go to **Stock** -> **Transfers**. There are three ways to execute this:
 
-![Screenshot Placeholder: Visit Action Popup. Displays buttons for Complete, Postpone (with date/reason field), and Cancel (with reason field).](file:///f:/LITTLE%20LEAP/AQL/Documents/screenshots/visits_actions_popup.png)
+#### Option A: Instant Transfer (Recommended Flow)
+If you have access permissions to both the source (Main Warehouse) and destination (Van Warehouse), you can perform an instant transfer which applies immediately without waiting for approval.
+
+1. Navigate to **Stock** -> **Transfers** and click **Add** (+).
+2. Enter the transfer details:
+   - **Source Warehouse**: Select the Main Warehouse.
+   - **Destination Warehouse**: Select your Van Warehouse.
+   - **Is Instant**: Set to `TRUE`.
+   - **Instant Destination Storage Name**: Specify the storage area inside your van (e.g., `default`).
+3. Click **Add Item** to select SKUs and enter quantities.
+4. Click **Submit Transfer**. The stock is moved immediately. Physically load the items into your van and start the day.
+
+![Instant Warehouse Transfer](screenshots/instant.png)
+
+#### Option B: Standard Approval Flow (Manager Review)
+If you do not have permission to execute instant transfers, or when transferring between restricted warehouses:
+
+1. Navigate to **Stock** -> **Transfers** and click **Add** (+).
+2. Enter details:
+   - **Source Warehouse**: Main Warehouse.
+   - **Destination Warehouse**: Your Van Warehouse.
+   - **Is Instant**: Set to `FALSE`.
+3. Select the SKUs and quantities to load.
+4. Click **Send for Approval**. The transfer status becomes `PENDING_APPROVAL`.
+5. Once your manager approves the request (status becomes `APPROVED`):
+   - Open the approved transfer in your **Approved** tab.
+   - Click the **Complete** (or **Claim & Complete**) button.
+   - Assign the stock to your van's storage racks (e.g., `default`).
+   - Click **Complete Warehouse Transfer**. The items are now logged in your van's ledger.
+
+#### Option C: Instant Fulfillment by Warehouse Manager
+Alternatively, you can request the warehouse manager to initiate and execute an instant transfer to your van warehouse on your behalf. Once they complete it in the system, you can physically load the items and begin your route.
 
 ---
 
-## 3. At the Outlet: Count & Consumption
+## First-Time / On-Demand Tasks
+
+Use these tasks when setting up a new outlet route for the first time, planning visits, restocking store shelves, or processing customer/internal stock returns.
+
+### 1. Route Planning & Visits
+
+Keep track of which outlets you must visit and organize your daily schedule. Depending on whether you are running a fresh setup or a regular route, the flow is as follows:
+
+### First-Time Setup: Planning Initial Visits
+If there are no visits planned yet (e.g., when starting fresh with no stock in outlets):
+
+1. Open the sidebar menu and select **Outlet Visits**.
+2. At the bottom of the page, locate the **Outlets without Planned Visits** section.
+3. Expand this section to see a list of outlets that do not have any scheduled visits.
+
+![Outlets without Planned Visits](screenshots/outlet_visits.png)
+
+4. Tap on any outlet that you wish to plan a visit for. A planning popup will appear.
+5. Set the planned **Date** and add a **Plan Comment** (optional) for anything to be considered (e.g., *"Must meet Manager"*, *"Introduce new product"*, *"Take out sipper cup completely"*).
+6. Click **Plan Visit**.
+
+![Planning Outlet Visit](screenshots/planning_visit.png)
+
+---
+
+### Running Case: Postpone, Cancel, or Complete a Visit
+Once your schedule is running, you will have planned visits appearing in your lists.
+
+1. Navigate to **Outlet Visits** and select a visit from the list (**Today**, **Overdue**, or **Future**).
+2. Tapping on a visit record will open the action popup screen.
+
+![Visit Actions Popup](screenshots/visit_actions.png)
+
+Choose from the following actions:
+- **Complete**: Opens the checklist to mark the visit as done. Once submitted, the system will automatically schedule the next visit after 14 days (default) or based on the frequency defined in the outlet's operating rules.
+- **Postpone**: Requires entering a new target date and a postponement comment.
+- **Cancel**: Cancelling a visit requires a cancellation comment. You can also set an optional new date. If a new date is provided, the next schedule is automatically planned.
+
+---
+
+### 2. Restocks
+
+When outlets run low on stock, you must replenish their shelves. You have two options when initiating a restock:
+- **Standard Request**: The request must be approved by the warehouse manager, and then a delivery executive delivers it.
+- **Direct Restock (Recommended for Field Executives)**: Since you are authorized with your own Van Warehouse, you can skip the manager-approval and separate delivery workflows by choosing this option.
+
+![Restock Options](screenshots/restock_options.png)
+
+### Step: Create a Direct Restock
+1. Go to **Outlet Restocks** in the sidebar and click **Add** (+).
+2. Select the **Direct Restock** option.
+3. Select the **Source Warehouse** (your van warehouse, which will auto-select by default after the first time).
+4. Select the **Outlet** you are restocking, then proceed to the next step.
+5. If there is a planned visit scheduled for today, you can check the box to complete the visit and reschedule it after the specified days from today (default is 14 days). Unchecking it will leave the visit as is.
+6. Set the **Final Qty** for each product variant (SKU). The product list displays the available van warehouse quantity beneath each SKU. The **Final Qty** represents the total target stock the outlet should have on its shelves after replenishment.
+
+![Restock Items Entry](screenshots/restock_items.png)
+
+7. Click **Proceed to Review** to verify the details.
+
+![Restock Review](screenshots/restock_review.png)
+
+8. Under **Submission Mode**, choose **Approved**. This ensures the restock is approved instantly, avoiding the need for manager intervention. Add any comments if necessary and click **Submit**. The stock is now allocated for delivery.
+
+---
+
+### Step: Mark Deliveries as Completed
+Once the restock is submitted, the system redirects you to the Restock View page. You must confirm that the items have been physically dropped off at the outlet.
+
+1. On the Restock View page, tap the **Mark Delivered** button for the items to complete the flow.
+
+![Mark Restock Items as Delivered](screenshots/restock_view_deliver.png)
+
+---
+
+### Step: Track Restock History
+You can monitor all your restocks (both completed and pending delivery) directly from the index page.
+
+1. Go to **Outlet Restocks** and scroll to the **History** section at the bottom.
+2. Filter the list to find specific records. Approved restocks that are not yet marked as delivered will be visible here. Open them to complete the delivery confirmations.
+
+![Restocks History and Filters](screenshots/restock_history.png)
+
+---
+
+### 3. Outlet Returns
+
+Return damaged, expired, or slow-moving items from an outlet. AQL supports multiple return scenarios:
+1. **End-User Returns to Outlet**: If an end-user returns an item to the outlet after the outlet has already been invoiced, an invoice adjustment is required. If the item is damaged, it is physically removed from the outlet (stock leaving the outlet).
+2. **Internal Outlet Returns**: Returns initiated directly within the outlet due to expiry, overstock, or recall. These do not require invoice adjustments, but stock may leave the outlet.
+
+---
+
+### Step: Log a Return
+If you are visiting an outlet specifically to log a return, or if you are only performing a return during a scheduled visit:
+
+1. Open the sidebar menu, select **Outlet Returns**, and click the **Add** (+) button.
+
+![Log New Return](screenshots/outlet_return.png)
+
+2. Choose the options based on your return scenario:
+   - **Outlet & SKU**: Select the outlet and product variant.
+   - **Invoice Adjustment Required**: Check this if the outlet needs a financial credit/refund. The credit will automatically apply to the outlet's next invoice generation.
+   - **Warehouse Code**: If the stock is physically leaving the outlet, select the target destination warehouse (e.g., your van warehouse).
+
+![Select Target Warehouse](screenshots/return_target_warehouse.png)
+
+   - **Reason**: Choose a suitable reason code. If none of the predefined options match, select `OTHER`.
+
+![Choose Return Reason](screenshots/return_reason.png)
+
+   - **Comment**: Add a descriptive explanation of the return.
+3. Click **Submit**.
+
+![Submitting Return](screenshots/returning.png)
+
+---
+
+### Step: Process Warehouse Action
+Once logged, the return appears in the returns index for further processing.
+
+1. Go to **Outlet Returns** to see the list of active returns.
+
+![Returns Index List](screenshots/return_index.png)
+
+2. Tap on the return record to open its detail page.
+
+![Return Details View](screenshots/return_view.png)
+
+3. Tap **Confirm Warehouse Action** to process the stock. You will be prompted with two choices:
+   - **Stocked**: Restocks the returned item back into warehouse inventory for future use.
+   - **Dispose**: Disposes of the item permanently due to damage or expiration. A disposal reason is mandatory.
+4. Submit the action to complete the flow. All completed or cancelled returns can be viewed in the **COMPLETED & CANCELLED** section of the index page.
+
+---
+
+## Outlet Hub (360° Store View)
+
+Before starting your visits or logging transactions, you can view the complete operational status of any store in the **Outlet Hub** (accessible from the sidebar).
+
+![Outlet Hub](screenshots/outlet_hub.png)
+
+Use the Outlet Hub to view:
+- **Summary Statistics**: Overall counters for planned visits, pending restocks, pending returns, and total outstanding payments.
+- **Visits**: View scheduled visits or plan a new visit.
+- **Restocks**: View pending restocks or initiate a new restock request.
+- **Returns**: View open returns or log a new return.
+- **Stock**: Current shelf stock quantities grouped by product variant (SKUs).
+
+---
+
+## Routine Workflow
+
+Use these tasks during regular outlet visits to record sales consumption, generate invoices, collect payments, and manage end-of-day reconciliation.
+
+### 1. Outlet Consumption
 
 This is the core activity of your store visit. You will count the stock on the shelves and let the app calculate what was sold.
 
-### Step 3.1: Start the Consumption Record
-1. Go to **Outlet Consumptions** in the sidebar.
-2. Click **Add**.
-3. Select the **Outlet** you are visiting. The app will automatically detect and link today's upcoming planned visit.
+> [!NOTE]
+> **The Consumption Sales Cycle**: As a part of your routine, you visit an outlet and record its current shelf stock. From this single activity, AQL automatically handles the entire sales cycle under the hood: it calculates sold quantities, generates the invoice, manages restocking (sold items or more), marks the visit as complete, schedules a new visit according to frequency operating rules, and processes any logged returns.
 
-![Screenshot Placeholder: Starting a new Outlet Consumption. Displays the outlet selection dropdown and the auto-detected visit details.](file:///f:/LITTLE%20LEAP/AQL/Documents/screenshots/consumptions_start.png)
+#### Step: Log a New Consumption
+1. Open the sidebar menu, select **Outlet Consumptions**, and click the **Add** (+) button.
+2. Choose the **Outlet**. Outlets with planned visits scheduled for today will be displayed initially. You can select one of these or choose any store from the **All Outlets** dropdown.
+
+![Select Outlet for Consumption](screenshots/consumption_new.png)
+
+3. Click **Next** to proceed.
+4. On the items page, you will see a list of SKUs currently assigned to the outlet.
+5. The **System Qty** column shows the stock balance expected on the shelves based on system records. Note that this might differ from the actual physical shelf stock today.
+   - A physical count lower than System Qty indicates items were sold.
+   - A physical count higher than System Qty indicates items are being returned.
+6. Count the physical shelf stock and enter it in the **Counted Stock** field. You can use the `+` and `-` buttons for quick adjustments.
+7. **Add Returns**: If you have return items that are not currently in the stock list, click **Add Return** to add them separately.
+
+![Record Shelf Stock Counts](screenshots/consumption_items.png)
+
+8. Proceed to the next page to view the summary of computed sales and returns.
+
+![Consumption Summary](screenshots/consumption_summary.png)
+
+9. **Update Returns**: If return items were added, review their details on the summary page. Select the return reason, check whether invoice adjustment is required, specify if the stock is leaving the outlet, write a proper audit comment, and click **Save**.
+
+![Update Returns in Summary](screenshots/consumption_summary_return_update.png)
+
+10. **Extra Restock Items**: If the outlet requires replenishment beyond the calculated sold items, you can add extra items to the restock request here.
+11. **Discounts**: If you are planning a discount for this consumption, configure it using either Flat or Percentage-wise discount options.
+12. **Configure Restock Submission Options**: Before submitting, choose the restock option carefully based on your authorization:
+
+![Submit Options](screenshots/consumption_submit_options.png)
+
+    - **Instant Delivery**: Select this option if you are authorized with your own Van Warehouse. This bypasses manager approval and deliveries workflows. You must select the source warehouse (your van) from which you are restocking the outlet shelves.
+
+![Restock Options](screenshots/consumption_restock_options.png)
+
+    - **Standard**: Submits the restock request for manager approval and separate delivery routing.
+    - **Draft**: Saves the restock as a draft, allowing you to edit or add quantities later before submitting it.
+13. Tap **Submit**.
+14. Upon successful submission, AQL automatically:
+    - Generates a new sales invoice.
+    - Creates a restock record (visible in Outlet Restocks).
+    - Reschedules the next visit.
+    - Creates return records (if any returns were logged, visible in Outlet Returns).
 
 ---
 
-### Step 3.2: Record Shelf Stock Counts
-1. You will see a list of SKUs currently assigned to the outlet.
-2. The **System Qty** column shows the stock balance expected on the shelves.
-3. Physically count the stock on the shelf and type it into the **Counted Stock** field.
-4. The system automatically computes the **Sold Qty** as:
-   $$\text{Sold Qty} = \max(\text{System Qty} - \text{Counted Qty}, 0)$$
+#### Step: View Consumption Details
+1. You can view all logged consumptions in the **Outlet Consumptions** index page.
 
-> [!IMPORTANT]
-> The stock-count page is optimized for mobile screens. Enter counts SKU-by-SKU carefully. If a SKU is missing from the list, you can add it manually.
+![Consumptions Index List](screenshots/consumption_index.png)
 
-![Screenshot Placeholder: Stock Count input screen. Shows a list of products, their current System quantities, and the numerical input fields for Counted Stock.](file:///f:/LITTLE%20LEAP/AQL/Documents/screenshots/consumptions_count_stock.png)
+2. Tap on any record to view its complete details, computed sales breakdown, and linked invoices/restocks.
+
+![Consumption Details](screenshots/consumption_details.png)
 
 ---
 
-### Step 3.3: Review Summary & Restock Request
-1. Click **Next** to proceed to the Summary step.
-2. Review the read-only summary of sold quantities. This is what you will bill the customer.
-3. Under the **Restock Request** section, the app automatically populates replenishment quantities matching the sold items (to refill the shelf to its target levels).
-4. You can edit these replenishment quantities or add additional SKUs if the store requires more stock.
-
-![Screenshot Placeholder: Consumption Summary & Restock page. Shows a summary of calculated sales (Sold Qty) and editable inputs for Restock Refill requests.](file:///f:/LITTLE%20LEAP/AQL/Documents/screenshots/consumptions_summary_restock.png)
-
----
-
-### Step 3.4: Final Checklist & Submission
-Before hitting submit, look at the checklist items at the bottom of the page:
-- `[x] Complete Selected Visit`: Check this to mark your visit as `COMPLETED`.
-- `[x] Schedule Next Visit`: Check this to automatically plan the next visit.
-- `[x] Generate Invoice`: Check this to instantly generate a sales invoice for the sold quantities.
-- `[x] Place Restock Request`: Saves the replenishment request as a draft.
-- `[x] Submit Restock Immediately`: Sends the restock request to your manager for approval immediately.
-
-Click **Submit**. Under the hood, this posts negative stock movements for the sold stock and schedules your follow-up actions.
-
-![Screenshot Placeholder: Consumption Checklist. Displays the checklist checkboxes for visit completion, scheduling, invoice generation, and immediate restock submission.](file:///f:/LITTLE%20LEAP/AQL/Documents/screenshots/consumptions_checklist.png)
-
----
-
-## 4. Billing & Invoicing
+### 2. Invoices
 
 Review the bills generated for your sales.
 
-### Step 4.1: View consumption invoices
-1. Select **Consumption Invoices** from the sidebar menu.
-2. Locate the invoice matching your sale. Outstanding invoices are marked as `PENDING_PAYMENT` or `PARTIALLY_PAID`.
-3. Open the invoice to inspect the items, unit prices (resolved using the assigned price list), taxable amount, subtotal, and tax totals.
+1. Open **Consumption Invoices** from the sidebar.
+2. All existing active invoices will be displayed. Outstanding invoices are typically marked as `PENDING_PAYMENT` or `PARTIALLY_PAID`.
 
-> [!NOTE]
-> If you did not generate the invoice during the count submission, you can open the completed **Outlet Consumptions** record and click the **Generate Invoice** button on its details page.
+![Active Invoices List](screenshots/invoices.png)
 
-![Screenshot Placeholder: Consumption Invoices details view. Shows invoice totals, taxes, SKU breakdown with prices, and the progress badge (e.g. PENDING_PAYMENT).](file:///f:/LITTLE%20LEAP/AQL/Documents/screenshots/invoices_details.png)
+3. Tap on any invoice record in the list to open its complete invoice details page. Here you can inspect invoice totals, taxes, and SKU-level breakdowns.
+
+![Invoice Details View](screenshots/invoices_details.png)
+
+4. **Edit Mode**: You can edit the invoice by switching the edit toggle/button located just below the header panel on top.
+
+![Enable Invoice Edit Mode](screenshots/invoice_edit.png)
+
+5. Once in edit mode, all details—such as item prices, quantities, and discounts—become editable. Save your changes once done.
+
+![Edit Invoice Details](screenshots/invoice_edit_details.png)
+
+6. **Download Invoice PDF**: Click the download button on the top toolbar (just to the left of your profile picture) while on the invoice details page to download the document.
+
+![Invoice Download Button](screenshots/invoice_download.png)
+
+7. Here is an example of the downloaded invoice document layout:
+
+![Downloaded Invoice Document](screenshots/invoice_doc.png)
+
+8. **Make Payment**: You can initiate a collection payment directly from the bottom of the invoice details page by clicking the **MAKE PAYMENT** button.
+
+![Make Payment from Invoice](screenshots/invoice_make_payment.png)
 
 ---
 
-## 5. Payment Collection
+### 3. Payment Collection
 
-Collect cash, cheques, or transfers from store managers and record them in AQL.
+Collect cash, cheques, or bank transfers from store managers and record them in AQL.
 
-### Step 5.1: Select the Outlet & Outstanding Invoices
+#### Step: Log a New Payment Collection
 1. Go to **Outlet Payments** in the sidebar.
-2. Select the **Outlet**. The app immediately lists all invoices with outstanding balances.
-3. Check the boxes for the invoices you are collecting payment for.
+2. A list of pending invoices will be displayed.
 
-![Screenshot Placeholder: Registering a Payment - Selecting Invoices. Shows outstanding invoices for the selected outlet with checkable boxes and remaining balances.](file:///f:/LITTLE%20LEAP/AQL/Documents/screenshots/payments_select_invoices.png)
+![Pending Invoices List](screenshots/invoices_pending.png)
 
----
+3. Tap on any record to open the collection page.
 
-### Step 5.2: Enter Payment Details & Submit
-1. Enter the total collected **Amount** in the input field.
-2. Select the **Payment Mode** (e.g., *Cash*, *Cheque*, *Bank Transfer*, *Card*).
-3. If applicable, write down the **Reference** (e.g., Cheque number or transaction ID).
-4. **Auto-Distribution**: The app will automatically distribute your payment oldest-first across the selected invoices. You can manually adjust these values if needed.
-5. Click **Submit Payment**.
-   - Fully paid invoices transition to `PAID`.
-   - Partially paid invoices transition to `PARTIALLY_PAID`.
+![Payment Collection Selection](screenshots/payment_collection.png)
 
-> [!WARNING]
-> If you make a mistake, you can cancel a payment from the payment details page (requires a cancellation comment). This rolls back the payment amount and updates the invoice status back to unpaid.
+4. Select all the pending invoices you are collecting payment for from this outlet. This allows you to enter any payment amount and distribute it across these selected invoices.
+5. Click **Next** to proceed to the entry page.
 
-![Screenshot Placeholder: Entering Payment Details. Shows the payment amount input, mode selection dropdown, reference box, and the auto-distributed allocation breakdown.](file:///f:/LITTLE%20LEAP/AQL/Documents/screenshots/payments_submit.png)
+![Collect Payment Form](screenshots/collect_payment.png)
+
+6. Enter the total **Amount** collected.
+7. If multiple invoices are selected, you can allocate specific portions of the payment to each invoice below.
+8. Choose the **Payment Mode** (Cash, Cheque, Bank Transfer, etc.) and write any optional comments or reference numbers (e.g., cheque numbers or transaction IDs).
+9. Submit the payment.
 
 ---
 
-## 6. Restocking & Refilling (Outlet Deliveries)
+#### Step: View and Download Receipts
+1. Once successfully submitted, the payment will appear in the **Recent Collections** section on the Outlet Payments page.
 
-When a restock request is approved, you must physically deliver the items to the outlet.
+![Recent Collections History](screenshots/recent_collection.png)
 
-### Step 6.1: Track Restock Approvals
-1. Check **Outlet Restocks** in the sidebar.
-2. When the manager approves the restock, the status changes to `APPROVED`, and items transition to `ALLOCATED` (this reserves the stock from your van).
+2. Tap on any payment record to view its complete details and invoice allocations.
 
-![Screenshot Placeholder: Approved Outlet Restocks. Displays the approved request list with allocated items and quantities.](file:///f:/LITTLE%20LEAP/AQL/Documents/screenshots/restocks_approved.png)
+![Payment Details View](screenshots/payment_details.png)
 
----
+3. **Download Receipt**: Click the download button on the top toolbar (just before your profile picture) to download the payment receipt PDF.
+4. Here is a sample of the downloaded payment receipt document:
 
-### Step 6.2: Create and Fulfill the Delivery
-1. Select **Outlet Deliveries** in the sidebar.
-2. Click **Add**.
-3. Select the **Allocated Restock Items** for the outlet.
-4. Click **Submit** to create the delivery record. The delivery progress transitions to `IN_TRANSIT`.
-5. Once you physically deliver the items and refill the store shelves:
-   - Open the delivery record.
-   - Mark the items as **Delivered**.
-   - *Under the hood*: This sets progress to `COMPLETED` and posts positive stock movements to the outlet's shelves, updating their inventory balance.
-
-![Screenshot Placeholder: Fulfilling an Outlet Delivery. Shows the delivery details page with the 'Deliver' actions to confirm physical stock drop-off.](file:///f:/LITTLE%20LEAP/AQL/Documents/screenshots/deliveries_complete.png)
+![Payment Receipt PDF](screenshots/payment_receipt.png)
 
 ---
 
-## 7. Unsold & Damaged Stock Returns
-
-Return damaged, expired, or slow-moving items from an outlet back to a warehouse.
-
-### Step 7.1: Log a Return
-1. Select **Outlet Returns** in the sidebar.
-2. Click the **Add** (+) button.
-3. Fill in the return details:
-   - **Outlet**: Select the outlet returning the stock.
-   - **SKU**: Select the product.
-   - **Quantity**: Enter the quantity to return.
-   - **Reason**: Select the reason (e.g., `DAMAGE`, `EXPIRED`, `SLOW_MOVING`, `RECALL`, `OVERSTOCK`).
-   - **Invoice Adjustment Required**: Check `TRUE` if the store needs credit/refund for this return.
-   - **Warehouse Code**: Select the destination warehouse where you are taking this returned stock (e.g., your van or the main warehouse).
-4. Click **Submit**.
-
-![Screenshot Placeholder: Logging an Outlet Return. Shows dropdowns for Outlet, SKU, Return Reason, Invoice Adjustment checkboxes, and destination warehouse code.](file:///f:/LITTLE%20LEAP/AQL/Documents/screenshots/returns_log.png)
+> [!IMPORTANT]
+> **Dynamic Document Download**: A report/download button is dynamically visible on the top toolbar if there is any document or report available for download on the current page. For example, when on a payment details page, the receipt download button is enabled. Similar download options are available across other pages like invoices, visits, etc., whenever printable/downloadable files are generated.
 
 ---
 
-## 8. End of Day: Unloading the Van
+### 4. End of Day: Unloading the Van
 
-At the end of the day, you must return all unsold stock in your van back to the **Main Warehouse**.
-
-### Step 8.1: Create the Return Transfer
-1. Open the sidebar menu and select **Warehouse** -> **Transfers**.
-2. Click **Add** (+).
-3. Fill in the details:
-   - **Source Warehouse**: Select your Van Warehouse (e.g., `VW04`).
-   - **Destination Warehouse**: Select the Main Warehouse (e.g., `MW01`).
-   - **Is Instant**: Set to `FALSE`.
-4. Click **Add Item** to specify products to unload:
-   - Select the SKU.
-   - Enter the remaining quantity left in your van.
-5. Click **Send for Approval**.
-6. Return the physical goods to the warehouse. The warehouse manager will inspect the items, approve the transfer, and click **Complete** to log the stock back into the Main Warehouse ledger.
-
-![Screenshot Placeholder: Creating an End-of-Day Transfer from Van to Main Warehouse. Highlights the Van source, Main Warehouse destination, and item list.](file:///f:/LITTLE%20LEAP/AQL/Documents/screenshots/transfers_end_of_day.png)
+At the end of the day, you shall return all unsold stock in your van back to the Main Warehouse. Create a Transfer while selecting Source, Destination, and choose Instant wisely.
 
 ---
 
-## 9. Monitoring Tools: Outlet Hub & Dashboard
+### 5. Dashboard Analytics
 
-### Step 9.1: The Outlet Hub (360° Store View)
-Use the **Outlet Hub** to check a store's details before walking in:
-1. Select **Outlet Hub** in the sidebar.
-2. Select the **Outlet**.
-3. Inspect key tabs:
-   - **Stock Balance**: Current shelf quantities (`OutletStorages`).
-   - **Operating Rules**: Credit limits, visit frequency, and price lists.
-   - **History tabs**: View past visits, restocks, returns, consumptions, invoices, and payments.
-
-![Screenshot Placeholder: Outlet Hub 360 view. Shows tab buttons for Stock Balance, Operating Rules, Visits, Invoices, and Payments.](file:///f:/LITTLE%20LEAP/AQL/Documents/screenshots/hub_360_view.png)
-
----
-
-### Step 9.2: Dashboard Analytics
 Monitor your daily performance and collections:
 1. Select **Dashboard** in the sidebar.
 2. Check key performance widgets:
    - **Visits Completed**: Shows completed visits vs. planned visits for today.
    - **Pending Collections**: Total outstanding collections (AED) you need to collect.
    - **Daily Sales**: Total AED value of stock consumed today.
-
-![Screenshot Placeholder: Field Sales Dashboard. Displays visual widgets for visit progress, outstanding collections, and daily sales value.](file:///f:/LITTLE%20LEAP/AQL/Documents/screenshots/dashboard_view.png)

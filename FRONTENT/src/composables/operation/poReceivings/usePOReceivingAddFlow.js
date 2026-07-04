@@ -246,7 +246,7 @@ export function usePOReceivingAddFlow() {
       if (responseFailed(result)) return $q.notify({ type: 'negative', message: failureMessage(result, 'Failed to generate GRN.'), position: 'top' })
       const grnCode = batchParentCode(result)
       $q.notify({ type: 'positive', message: 'GRN generated.', position: 'top' })
-      if (grnCode) nav.goTo('view', { scope: 'operations', resourceSlug: 'goods-receipts', code: grnCode })
+      if (grnCode) nav.goTo('view', { scope: 'operation', resourceSlug: 'goods-receipts', code: grnCode })
     } finally {
       saving.value = false
     }

@@ -1,4 +1,4 @@
-﻿import { ref, computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from '../../../stores/auth.js'
 import { useRecord } from '../../resources/useRecord.js'
@@ -856,10 +856,10 @@ export function useOutletConsumption() {
     if (step > 1) params.query = { ...(params.query || {}), step: String(step) }
     nav.goTo('add', Object.keys(params).length ? params : undefined)
   }
-  function navigateToInvoice(code) { nav.goTo('view', { scope: 'operations', resourceSlug: 'outlet-consumption-invoices', code }) }
-  function navigateToInvoiceAdd(consumptionCode) { nav.goTo('add', { scope: 'operations', resourceSlug: 'outlet-consumption-invoices', query: { consumptionCode } }) }
-  function navigateToRestock(code) { nav.goTo('view', { scope: 'operations', resourceSlug: 'outlet-restocks', code }) }
-  function navigateToConsumption(code) { nav.goTo('view', { scope: 'operations', resourceSlug: 'outlet-consumptions', code }) }
+  function navigateToInvoice(code) { nav.goTo('view', { scope: 'operation', resourceSlug: 'outlet-consumption-invoices', code }) }
+  function navigateToInvoiceAdd(consumptionCode) { nav.goTo('add', { scope: 'operation', resourceSlug: 'outlet-consumption-invoices', query: { consumptionCode } }) }
+  function navigateToRestock(code) { nav.goTo('view', { scope: 'operation', resourceSlug: 'outlet-restocks', code }) }
+  function navigateToConsumption(code) { nav.goTo('view', { scope: 'operation', resourceSlug: 'outlet-consumptions', code }) }
 
   async function saveInvoiceFromConsumption({ consumptionCode, consumptionRecord, items = [], discount = 0, tax = 0, priceListCode = '' }) {
     if (!allowed({ outletConsumptionInvoice: 'create', outletConsumption: 'MARKINVOICEGENERATED' })) {

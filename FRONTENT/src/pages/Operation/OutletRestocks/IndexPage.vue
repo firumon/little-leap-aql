@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <q-page padding>
     <!-- Page Branded Header with Reload Button -->
     <div class="row items-center justify-between no-wrap q-mb-md">
@@ -131,6 +131,42 @@
         />
       </div>
 
+      <!-- Approved but Delivery Pending section -->
+      <q-expansion-item
+        v-model="deliveryPendingExpanded"
+        id="section-delivery-pending"
+        class="q-mb-md"
+        expand-icon-class="text-grey-6"
+      >
+        <template #header>
+          <q-item-section>
+            <span class="text-subtitle1">
+              <q-icon name="local_shipping" size="sm" class="q-mr-sm" />
+              Approved but Delivery Pending
+              <q-badge class="q-ml-sm" color="orange" outline :label="String(approvedPendingRestocks.length)" />
+            </span>
+          </q-item-section>
+        </template>
+
+        <div class="q-pt-sm">
+          <div v-if="!approvedPendingRestocks.length" class="text-grey text-center q-pa-md">
+            No pending deliveries.
+          </div>
+          <div v-else>
+            <AqlList clickable highlight
+              item-key="Code" :icon="(row) => getProgressIcon(row.Progress)" :color="(row) => progressMeta(row.Progress).color"
+              :items="approvedPendingRestocks" :layout="['label', 'caption', 'caption']"
+              :content="[
+                (row) => outletLabel(row.OutletCode),
+                (row) => [formatDate(row.Date), text(row.RequestedUser)].filter(Boolean).join(' • '),
+                (row) => itemProgressSummary(row)
+              ]"
+              @click="(row) => navigateTo(row.Code)"
+            />
+          </div>
+        </div>
+      </q-expansion-item>
+
       <!-- History section -->
       <div class="row items-center q-mb-md">
         <q-separator class="col" />
@@ -244,11 +280,10 @@ const { loading, searchTerm, items, reloadIndex, navigateTo, navigateToAdd, item
 
 const shouldBlockUi = computed(() => loading.value && hasUninitiatedDependencies.value)
 const historyExpanded = ref(false)
+const deliveryPendingExpanded = ref(false)
 
 const historyFilterOptions = [
   { label: 'All', value: '' },
-  { label: 'Approved', value: 'APPROVED' },
-  { label: 'Partially Delivered', value: 'PARTIALLY_DELIVERED' },
   { label: 'Delivered', value: 'DELIVERED' },
   { label: 'Rejected', value: 'REJECTED' }
 ]
@@ -272,8 +307,12 @@ const searchedRestocks = computed(() => {
   )
 })
 
+const approvedPendingRestocks = computed(() =>
+  items.value.filter(row => ['APPROVED', 'PARTIALLY_DELIVERED'].includes(text(row.Progress)))
+    .sort((a, b) => sortTime(b) - sortTime(a)))
+
 const historyRestocks = computed(() =>
-  items.value.filter(row => ['APPROVED', 'PARTIALLY_DELIVERED', 'DELIVERED', 'REJECTED'].includes(text(row.Progress)))
+  items.value.filter(row => ['DELIVERED', 'REJECTED'].includes(text(row.Progress)))
     .sort((a, b) => sortTime(b) - sortTime(a)))
 
 const filteredHistoryRestocks = computed(() => {
@@ -367,10 +406,7 @@ function navigateToAddOutlet(outletCode) {
 }
 
 async function doReload() {
-  await Promise.all([
-    reloadIndex(true),
-    visitsFlow.reloadIndex(true)
-  ])
+  await reloadIndex()
 }
 
 onMounted(() => doReload())

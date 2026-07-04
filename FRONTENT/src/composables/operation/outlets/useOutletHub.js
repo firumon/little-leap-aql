@@ -1,4 +1,4 @@
-﻿import { ref, computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRecord } from '../../resources/useRecord.js'
 import { useResourceNav } from '../../resources/useResourceNav.js'
 import { useResourceConfig } from '../../resources/useResourceConfig.js'
@@ -191,41 +191,41 @@ export function useOutletHub() {
   }
 
   function goToPlanVisit() {
-    nav.goTo('add', { resourceSlug: 'outlet-visits', scope: 'operations', query: buildQuery() })
+    nav.goTo('add', { resourceSlug: 'outlet-visits', scope: 'operation', query: buildQuery() })
   }
 
   function navigateToVisit(code) {
-    nav.goTo('view', { resourceSlug: 'outlet-visits', scope: 'operations', code })
+    nav.goTo('view', { resourceSlug: 'outlet-visits', scope: 'operation', code })
   }
 
   function goToNewRestock() {
-    nav.goTo('add', { resourceSlug: 'outlet-restocks', scope: 'operations', query: buildQuery() })
+    nav.goTo('add', { resourceSlug: 'outlet-restocks', scope: 'operation', query: buildQuery() })
   }
 
   function navigateToRestock(code) {
-    nav.goTo('view', { resourceSlug: 'outlet-restocks', scope: 'operations', code })
+    nav.goTo('view', { resourceSlug: 'outlet-restocks', scope: 'operation', code })
   }
 
   function goToNewReturn() {
-    nav.goTo('add', { resourceSlug: 'outlet-returns', scope: 'operations', query: buildQuery() })
+    nav.goTo('add', { resourceSlug: 'outlet-returns', scope: 'operation', query: buildQuery() })
   }
 
   function navigateToReturn(code) {
-    nav.goTo('view', { resourceSlug: 'outlet-returns', scope: 'operations', code })
+    nav.goTo('view', { resourceSlug: 'outlet-returns', scope: 'operation', code })
   }
 
   function goToStartConsumption() {
-    nav.goTo('add', { resourceSlug: 'outlet-consumptions', scope: 'operations', query: buildQuery() })
+    nav.goTo('add', { resourceSlug: 'outlet-consumptions', scope: 'operation', query: buildQuery() })
   }
 
   function goToCollectPayment(invoiceCode = '') {
     const query = buildQuery()
     if (invoiceCode) query.invoiceCode = invoiceCode
-    nav.goTo('add', { resourceSlug: 'outlet-payments', scope: 'operations', query })
+    nav.goTo('add', { resourceSlug: 'outlet-payments', scope: 'operation', query })
   }
 
   function goToPaymentCollection() {
-    nav.goTo('add', { resourceSlug: 'outlet-payments', scope: 'operations', query: buildQuery() })
+    nav.goTo('add', { resourceSlug: 'outlet-payments', scope: 'operation', query: buildQuery() })
   }
 
   return {

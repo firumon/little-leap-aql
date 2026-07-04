@@ -1,4 +1,4 @@
-﻿import { ref, computed, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
@@ -603,6 +603,11 @@ export function useWarehouseTransfers() {
       requests.push({
         action: 'get',
         resource: 'WarehouseStorages',
+        payload: {}
+      })
+      requests.push({
+        action: 'get',
+        resource: 'WarehouseTransferItems',
         payload: {}
       })
 

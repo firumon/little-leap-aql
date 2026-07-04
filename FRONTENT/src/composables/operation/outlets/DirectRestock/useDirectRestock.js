@@ -1,4 +1,4 @@
-﻿import { ref, computed, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from '../../../../stores/auth.js'
 import { useRecord } from '../../../resources/useRecord.js'
@@ -279,6 +279,19 @@ export function useDirectRestock() {
         }, {
           ProgressCompletedComment: 'Completed from direct restock submit.'
         }, ['OutletVisits']))
+      }
+
+      if (isDirect) {
+        requests.push({
+          action: 'get',
+          resource: 'OutletMovements',
+          payload: {}
+        })
+        requests.push({
+          action: 'get',
+          resource: 'OutletStorages',
+          payload: {}
+        })
       }
 
       const response = await resourceIoStore.runBatchRequests(requests)

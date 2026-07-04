@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <q-page padding>
     <div class="q-mb-md">
       <h1 class="text-h5 q-mt-none q-mb-sm">Direct Stock Entry</h1>
@@ -48,7 +48,7 @@ const loadingWarehouses = ref(true)
 const selectedWarehouse = ref(null)
 
 onMounted(async () => {
-  loadingWarehouses.ref = true
+  loadingWarehouses.value = true
   warehouses.value = await loadWarehouses()
   loadingWarehouses.value = false
 })

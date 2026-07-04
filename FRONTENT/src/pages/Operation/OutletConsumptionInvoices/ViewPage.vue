@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <q-page padding>
     <!-- Header panel with action status -->
     <HeaderPanel :subtitle="formatDisplayDate(invoice?.Date) + ' · ' + (invoice?.Code || 'Consumption Invoice')" :title="invoice ? `${outletName(invoice.OutletCode)}` : ''" class="q-mb-md">
@@ -639,7 +639,7 @@ async function saveEdit() {
 function handlePayment() {
   if (!invoice.value) return
   nav.goTo('add', {
-    scope: 'operations',
+    scope: 'operation',
     resourceSlug: 'outlet-payments',
     query: {
       outletCode: invoice.value.OutletCode,

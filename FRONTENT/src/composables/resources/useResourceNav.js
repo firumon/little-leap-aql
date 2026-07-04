@@ -1,6 +1,7 @@
 import { unref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
+import { useAuthStore } from 'src/stores/auth'
 
 function routeParam(value) {
   const resolved = unref(value)
@@ -15,6 +16,24 @@ function routeQuery(query) {
       .map(([key, value]) => [key, routeParam(value)])
       .filter(([, value]) => value !== '')
   )
+}
+
+function findScopeBySlug(auth, slug) {
+  if (!slug) return null
+  const resources = Array.isArray(auth.resources) ? auth.resources : []
+  const slugClean = String(slug).toLowerCase().replace(/-/g, '')
+  const found = resources.find((entry) => {
+    const name = (entry?.name || '').toLowerCase()
+    const slugName = (entry?.ui?.menus?.[0]?.route || '').split('/').pop() || ''
+    const slugNameClean = slugName.toLowerCase().replace(/-/g, '')
+    return (
+      name === slugClean ||
+      name === slugClean + 's' ||
+      name.replace(/s$/, '') === slugClean.replace(/s$/, '') ||
+      slugNameClean === slugClean
+    )
+  })
+  return found ? found.scope : null
 }
 
 /**
@@ -56,14 +75,37 @@ export function useResourceNav () {
    * @param {Object} [params] - Optional overrides. Shallow-merged over resolved scope/resourceSlug/code.
    */
   const goTo = (target, params = {}) => {
+    const auth = useAuthStore()
+    const targetSlug = params.resourceSlug ? routeParam(params.resourceSlug) : routeParam(resourceSlug)
+    let targetScope = params.scope ? routeParam(params.scope) : ''
+
+    // Normalize plural scope names to singular
+    if (targetScope === 'operations') targetScope = 'operation'
+    if (targetScope === 'masters') targetScope = 'master'
+
+    if (targetSlug && !targetScope) {
+      const resScope = findScopeBySlug(auth, targetSlug)
+      if (resScope) {
+        targetScope = resScope
+      }
+    }
+
+    if (!targetScope) {
+      targetScope = routeParam(scope)
+    }
+
+    // Normalize final scope just in case
+    if (targetScope === 'operations') targetScope = 'operation'
+    if (targetScope === 'masters') targetScope = 'master'
+
     const resolved = {
-      scope: routeParam(scope),
-      resourceSlug: routeParam(resourceSlug),
-      code: routeParam(code),
+      scope: targetScope,
+      resourceSlug: targetSlug,
+      code: params.code !== undefined ? routeParam(params.code) : routeParam(code),
       ...params
     }
-    resolved.scope = routeParam(resolved.scope)
-    resolved.resourceSlug = routeParam(resolved.resourceSlug)
+    resolved.scope = targetScope
+    resolved.resourceSlug = targetSlug
     resolved.code = routeParam(resolved.code)
     resolved.action = routeParam(resolved.action)
     resolved.pageSlug = routeParam(resolved.pageSlug)

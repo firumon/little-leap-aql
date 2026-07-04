@@ -1,4 +1,4 @@
-﻿import { ref, computed, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from '../../../stores/auth.js'
 import { useRecord } from '../../resources/useRecord.js'
@@ -238,7 +238,7 @@ export function useOutletRestocks() {
   }
 
   async function reload(forceSync = false) { loading.value = true; try { await resourceIoStore.fetchResources(OUTLET_OPERATION_RESOURCES, { forceSync }) } finally { loading.value = false } }
-  async function reloadIndex(forceSync = false) { loading.value = true; try { await resourceIoStore.fetchResources(['OutletRestocks', 'OutletRestockItems', 'Outlets'], { forceSync }) } finally { loading.value = false } }
+  async function reloadIndex(forceSync = false) { loading.value = true; try { await resourceIoStore.fetchResources(['OutletRestocks', 'OutletRestockItems', 'Outlets', 'OutletVisits'], { forceSync }) } finally { loading.value = false } }
   async function reloadAdd(forceSync = false) { loading.value = true; try { await resourceIoStore.fetchResources(['Outlets', 'SKUs', 'Products'], { forceSync }) } finally { loading.value = false } }
   async function reloadView(forceSync = false) { loading.value = true; try { await resourceIoStore.fetchResources(['OutletRestocks', 'OutletRestockItems', 'WarehouseStorages', 'Outlets', 'SKUs', 'Products'], { forceSync }) } finally { loading.value = false } }
 
@@ -591,6 +591,17 @@ export function useOutletRestocks() {
       requests.push(resourceUpdateRequest('OutletRestocks', restock.Code, {
         Progress: nextProgress
       }, ['OutletRestocks']))
+
+      requests.push({
+        action: 'get',
+        resource: 'OutletMovements',
+        payload: {}
+      })
+      requests.push({
+        action: 'get',
+        resource: 'OutletStorages',
+        payload: {}
+      })
 
       const result = await resourceIoStore.runBatchRequests(requests)
       if (responseFailed(result)) return notifyError(failureMessage(result, 'Failed to deliver restock items.'))

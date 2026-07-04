@@ -299,7 +299,7 @@ export function useGrnStockEntry() {
         selectedGrnCode.value = ''
         allocations.value = []
         nav.goTo('record-page', {
-          scope: 'masters',
+          scope: 'master',
           resourceSlug: 'warehouses',
           code: warehouseCode,
           pageSlug: 'stock'

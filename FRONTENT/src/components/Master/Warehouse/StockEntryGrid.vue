@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="stock-entry-grid">
     <div class="row q-mb-md">
       <q-input
@@ -130,6 +130,14 @@
           </div>
         </q-card-section>
       </q-card>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row justify-end q-mt-lg q-gutter-x-sm">
+      <q-btn color="primary" icon="save" label="Save Changes" style="min-width: 150px"
+        :disable="dirtyCount === 0" :loading="saving"
+        @click="saveChanges"
+      />
     </div>
 
     <!-- Sticky Bottom Bar -->

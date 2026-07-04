@@ -66,7 +66,7 @@ export function usePOReceivingView() {
       ])
       if (responseFailed(result)) return $q.notify({ type: 'negative', message: failureMessage(result, 'Failed to generate GRN.'), position: 'top' })
       const grnCode = resultCode(result.data?.[0])
-      if (grnCode) nav.goTo('view', { scope: 'operations', resourceSlug: 'goods-receipts', code: grnCode })
+      if (grnCode) nav.goTo('view', { scope: 'operation', resourceSlug: 'goods-receipts', code: grnCode })
     } finally {
       acting.value = false
     }
@@ -115,7 +115,7 @@ export function usePOReceivingView() {
   }
 
   function goToList() { nav.goTo('index') }
-  function goToGrn() { if (linkedGrn.value?.Code) nav.goTo('view', { scope: 'operations', resourceSlug: 'goods-receipts', code: linkedGrn.value.Code }) }
+  function goToGrn() { if (linkedGrn.value?.Code) nav.goTo('view', { scope: 'operation', resourceSlug: 'goods-receipts', code: linkedGrn.value.Code }) }
 
   return { loading, acting, record, items, summary, progress, linkedGrn, purchaseOrder, procurement, isCompletedProcurement, canConfirm, canGenerateGRN, availableActions, cancelComment, reportPlaceholders: PO_RECEIVING_REPORT_PLACEHOLDERS, loadData, confirmReceiving, generateGRN, cancelReceiving, goToList, goToGrn, formatDate }
 }

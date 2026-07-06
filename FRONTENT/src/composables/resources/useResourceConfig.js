@@ -1,6 +1,6 @@
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
 import { useAuthStore } from 'src/stores/auth'
+import { useRouteConfig } from './useRouteConfig'
 
 function findResourceConfig(auth, nameOrSlug) {
   if (!nameOrSlug) return null
@@ -39,44 +39,26 @@ function checkActionsList(resConfig, actions) {
  * Used by all resource pages (index, view, add, edit, action).
  */
 export function useResourceConfig() {
-  const route = useRoute()
+  const {
+    scope,
+    resourceSlug,
+    resourceName,
+    code,
+    pageName,
+    pageSlug,
+    level,
+    resourceConfig
+  } = useRouteConfig()
+
   const auth = useAuthStore()
 
-  const resourceSlug = computed(() => route.params.resourceSlug || '')
-  const scope = computed(() => route.params.scope || 'masters')
-  const code = computed(() => route.params.code || '')
-  const action = computed(() => route.meta?.action || route.params.action || 'index')
-  const level = computed(() => route.meta?.level || 'resource')
-
-  const config = computed(() => {
-    const resources = Array.isArray(auth.resources) ? auth.resources : []
-
-    // Match by route path (most reliable)
-    const currentPath = `/${scope.value}/${resourceSlug.value}`
-    const byRoutePath = resources.find((entry) => {
-      const menus = Array.isArray(entry?.ui?.menus) ? entry.ui.menus : []
-      return menus.some(m => m.route === currentPath)
-    })
-    if (byRoutePath) return byRoutePath
-
-    // Fallback: match by resource name derived from slug
-    const slugLower = resourceSlug.value.toLowerCase().replace(/-/g, '')
-    return resources.find((entry) => {
-      const name = (entry?.name || '').toLowerCase()
-      return name === slugLower || name === slugLower + 's' || name.replace(/s$/, '') === slugLower.replace(/s$/, '')
-    }) || null
-  })
-
-  const resourceName = computed(() => config.value?.name || '')
-  const customUIName = computed(() => config.value?.ui?.customUIName || '')
-
   const resourceHeaders = computed(() => {
-    const h = config.value?.headers
+    const h = resourceConfig.value?.headers
     return Array.isArray(h) ? h : []
   })
 
   const resolvedFields = computed(() => {
-    const uiFields = config.value?.ui?.fields
+    const uiFields = resourceConfig.value?.ui?.fields
     if (Array.isArray(uiFields) && uiFields.length) {
       return uiFields
     }
@@ -92,7 +74,7 @@ export function useResourceConfig() {
   })
 
   const additionalActions = computed(() => {
-    const raw = config.value?.additionalActions
+    const raw = resourceConfig.value?.additionalActions
     let parsed = []
     if (Array.isArray(raw)) parsed = raw
     else if (typeof raw === 'string' && raw) {
@@ -101,14 +83,6 @@ export function useResourceConfig() {
     return parsed.map(normalizeAction).filter(Boolean)
   })
 
-  /**
-   * Normalizes an action entry so every consumer sees a consistent shape:
-   *   { action, label, icon, color, confirm, kind, ...mutateFields?, navigate? }
-   * - Legacy rows without `kind` are treated as `kind: 'mutate'`.
-   * - For 'mutate' kind, column/columnValue/columnValueOptions/fields stay flat
-   *   to preserve existing consumer code (useActionFields, deriveActionStampHeaders).
-   * - For 'navigate' kind, `navigate` holds { target, pageSlug, resourceSlug?, scope? }.
-   */
   function normalizeAction(a) {
     if (!a || !a.action) return null
     const base = {
@@ -133,7 +107,6 @@ export function useResourceConfig() {
         visibleWhen: normalizeVisibleWhen(a.visibleWhen)
       }
     }
-    // mutate — lift nested mutate{} or keep legacy flat fields
     const m = a.mutate || {}
     const mutateBase = {
       ...base,
@@ -151,11 +124,6 @@ export function useResourceConfig() {
     return mutateBase
   }
 
-  /**
-   * Normalize visibleWhen to an array of {column, op, value}.
-   * Absent / null / [] → [] (treated as always visible by isActionVisible).
-   * Accepts single object or array of conditions.
-   */
   function normalizeVisibleWhen(v) {
     if (v == null) return []
     const arr = Array.isArray(v) ? v : [v]
@@ -170,7 +138,7 @@ export function useResourceConfig() {
       .filter(Boolean)
   }
 
-  const permissions = computed(() => config.value?.permissions || {})
+  const permissions = computed(() => resourceConfig.value?.permissions || {})
 
   const allowed = (query, targetResourceName) => {
     if (!query) return false
@@ -188,7 +156,7 @@ export function useResourceConfig() {
     }
 
     // Determine target resource config
-    const resConfig = targetResourceName ? findResourceConfig(auth, targetResourceName) : config.value
+    const resConfig = targetResourceName ? findResourceConfig(auth, targetResourceName) : resourceConfig.value
     if (!resConfig) return false
 
     // 2. Array of actions on a single resource
@@ -201,15 +169,14 @@ export function useResourceConfig() {
   }
 
   return {
-    route,
     scope,
     resourceSlug,
-    code,
-    action,
-    level,
-    config,
     resourceName,
-    customUIName,
+    code,
+    pageName,
+    pageSlug,
+    level,
+    resourceConfig,
     resourceHeaders,
     resolvedFields,
     additionalActions,
@@ -218,12 +185,6 @@ export function useResourceConfig() {
   }
 }
 
-/**
- * Evaluate whether an action is visible for a given record.
- * - No visibleWhen → visible
- * - All conditions must pass (AND)
- * - Null/undefined/"" treated equal for empty/notEmpty
- */
 export function isActionVisible(action, record) {
   const conds = Array.isArray(action?.visibleWhen) ? action.visibleWhen : []
   if (!conds.length) return true

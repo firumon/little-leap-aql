@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div v-if="shouldRender">
     <!-- Toolbar Dropdown Mode -->
     <template v-if="mode === 'toolbar'">
@@ -138,7 +138,7 @@ const props = defineProps({
   }
 })
 
-const { scope, config, resourceName, code } = useResourceConfig()
+const { scope, resourceConfig, resourceName, code } = useResourceConfig()
 const dataStore = useDataStore()
 
 const activeRecord = computed(() => {
@@ -170,9 +170,9 @@ const innerClass = computed(() => {
 
 const displayedReports = computed(() => {
   if (activeRecord.value) {
-    return getRecordReports(config.value)
+    return getRecordReports(resourceConfig.value)
   } else {
-    return getToolbarReports(config.value)
+    return getToolbarReports(resourceConfig.value)
   }
 })
 

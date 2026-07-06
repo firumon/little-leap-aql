@@ -131,7 +131,7 @@ export function useRecord(resourceNameOverride, codeOverride) {
   const resourceIoStore = useResourceIoStore()
   const {
     resourceName: routeResourceName, code: routeCode,
-    config: routeConfig, resourceHeaders: routeHeaders
+    resourceConfig: routeConfig, resourceHeaders: routeHeaders
   } = useResourceConfig()
 
   // --- Resource name & code resolution ---

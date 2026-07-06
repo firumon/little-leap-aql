@@ -1,6 +1,5 @@
-﻿import { ref, watch, computed, shallowRef, markRaw } from 'vue'
-import { useRoute } from 'vue-router'
-import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
+import { ref, watch, computed, shallowRef, markRaw } from 'vue'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { toPascalCase } from 'src/utils/appHelpers'
 
 // Vite statically discovers all page Vue files under src/pages
@@ -13,16 +12,20 @@ Object.keys(pageModules).forEach((rawPath) => {
   registry[normalizedKey] = pageModules[rawPath]
 })
 
-function resolveActionName(routeMeta, routeParams) {
-  if (routeMeta?.action === 'action' && routeParams?.action) return routeParams.action
-  if (routeMeta?.action) return routeMeta.action
-  if (routeParams?.action) return routeParams.action
-  return 'index'
+function resolveActionName(pageName, pageSlug) {
+  if (pageName === 'action' && pageSlug) return pageSlug
+  return pageName
 }
 
 export function usePageResolver() {
-  const route = useRoute()
-  const { config } = useResourceConfig()
+  const {
+    scope,
+    resourceSlug,
+    pageName,
+    pageSlug,
+    resourceConfig
+  } = useRouteConfig()
+
   const resolvedComponent = shallowRef(null)
   const notFound = ref(false)
   const checkedPaths = ref([])
@@ -30,20 +33,18 @@ export function usePageResolver() {
   // Watch route params and customUIName to trigger resolution reactively
   watch(
     () => [
-      route.params.resourceSlug,
-      route.meta?.action,
-      route.params.action,
-      config.value?.ui?.customUIName || '',
-      route.params.pageSlug,
-      route.params.scope || 'masters'
+      resourceSlug.value,
+      pageName.value,
+      pageSlug.value,
+      resourceConfig.value?.ui?.customUIName || '',
+      scope.value
     ],
-    async ([resourceSlug, metaAction, paramAction, customUIName, pageSlug, scope]) => {
+    async ([slug, rawPageName, rawPageSlug, customUIName, scopeVal]) => {
       resolvedComponent.value = null
       notFound.value = false
       checkedPaths.value = []
 
-      const slug = resourceSlug
-      const action = resolveActionName({ action: metaAction }, { action: paramAction })
+      const action = resolveActionName(rawPageName, rawPageSlug)
 
       if (!slug) {
         notFound.value = true
@@ -51,13 +52,13 @@ export function usePageResolver() {
       }
 
       const entityName = toPascalCase(slug)
-      const scopeFolder = toPascalCase(scope)
+      const scopeFolder = toPascalCase(scopeVal)
       const actionPageName = toPascalCase(action) + 'Page'
 
       const candidates = []
 
       if (action === 'resource-page' || action === 'record-page') {
-        const customPageName = toPascalCase(pageSlug)
+        const customPageName = toPascalCase(rawPageSlug)
         const entityFileName = action === 'resource-page'
           ? `${customPageName}Page`
           : `Record${customPageName}Page`
@@ -133,12 +134,11 @@ export function usePageResolver() {
     notFound,
     checkedPaths,
     routeInfo: computed(() => ({
-      scope: route.params.scope || 'masters',
-      resourceSlug: route.params.resourceSlug || '',
-      action: resolveActionName({ action: route.meta?.action }, { action: route.params.action }),
-      customUIName: config.value?.ui?.customUIName || '',
-      pageSlug: route.params.pageSlug || ''
+      scope: scope.value,
+      resourceSlug: resourceSlug.value,
+      action: resolveActionName(pageName.value, pageSlug.value),
+      customUIName: resourceConfig.value?.ui?.customUIName || '',
+      pageSlug: pageSlug.value
     }))
   }
 }
-

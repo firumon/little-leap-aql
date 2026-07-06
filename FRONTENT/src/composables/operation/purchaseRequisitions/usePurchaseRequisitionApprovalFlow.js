@@ -1,5 +1,5 @@
-﻿import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useQuasar } from 'quasar'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useRecord } from 'src/composables/resources/useRecord'
@@ -9,7 +9,7 @@ import { useProcurements } from 'src/composables/operation/procurements/useProcu
 import { useCurrency } from 'src/composables/useCurrency'
 
 export function usePurchaseRequisitionApprovalFlow() {
-  const route = useRoute()
+  const { code } = useRouteConfig()
   const $q = useQuasar()
   const nav = useResourceNav()
   const resourceIoStore = useResourceIoStore()
@@ -17,7 +17,6 @@ export function usePurchaseRequisitionApprovalFlow() {
   const { loadWarehouses } = useStockMovements()
   const { _C } = useCurrency()
 
-  const prCode = route.params.code
   const prResource = useRecord(ref('PurchaseRequisitions'))
   const itemsResource = useRecord(ref('PurchaseRequisitionItems'))
 
@@ -65,9 +64,9 @@ export function usePurchaseRequisitionApprovalFlow() {
         itemsResource.reload(),
         loadWarehouses().then((value) => { warehouses.value = value })
       ])
-      const pr = prResource.items.value.find((row) => row.Code === prCode)
+      const pr = prResource.items.value.find((row) => row.Code === code.value)
       prForm.value = pr ? { ...pr } : {}
-      items.value = itemsResource.items.value.filter((item) => item.PurchaseRequisitionCode === prCode)
+      items.value = itemsResource.items.value.filter((item) => item.PurchaseRequisitionCode === code.value)
     } catch (error) {
       $q.notify({ type: 'negative', message: `Failed to load Purchase Requisition: ${error.message}` })
     } finally {
@@ -77,7 +76,7 @@ export function usePurchaseRequisitionApprovalFlow() {
 
   async function loadLatestPurchaseRequisition() {
     await prResource.reload()
-    const latest = prResource.items.value.find((row) => row.Code === prCode)
+    const latest = prResource.items.value.find((row) => row.Code === code.value)
     if (latest) {
       prForm.value = { ...latest }
     }
@@ -103,7 +102,7 @@ export function usePurchaseRequisitionApprovalFlow() {
     }).onOk(async () => {
       const latestPr = await loadLatestPurchaseRequisition()
       const requestResult = procurements.buildPendingApprovalRequests({
-        prCode,
+        prCode: code.value,
         form: latestPr || prForm.value,
         action: actionKey,
         comment: actionComment.value
@@ -134,7 +133,7 @@ export function usePurchaseRequisitionApprovalFlow() {
         $q.notify({ type: 'positive', message: labelMap[actionKey] || 'Purchase Requisition updated' })
         actionComment.value = ''
         await loadData()
-        nav.goTo('view', { code: prCode })
+        nav.goTo('view', { code: code.value })
       } catch (error) {
         $q.notify({ type: 'negative', message: `Failed to update Purchase Requisition: ${error.message}` })
       } finally {

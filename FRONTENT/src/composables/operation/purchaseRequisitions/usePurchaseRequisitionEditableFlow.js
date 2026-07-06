@@ -1,5 +1,5 @@
-﻿import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useQuasar } from 'quasar'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useRecord } from 'src/composables/resources/useRecord'
@@ -25,7 +25,7 @@ function stableStringify(value) {
 }
 
 export function usePurchaseRequisitionEditableFlow() {
-  const route = useRoute()
+  const { code } = useRouteConfig()
   const $q = useQuasar()
   const nav = useResourceNav()
   const { loadWarehouses } = useStockMovements()
@@ -34,7 +34,6 @@ export function usePurchaseRequisitionEditableFlow() {
   const procurements = useProcurements()
   const { _C } = useCurrency()
 
-  const prCode = route.params.code
   const prResource = useRecord(ref('PurchaseRequisitions'))
   const itemsResource = useRecord(ref('PurchaseRequisitionItems'))
   const skusResource = useRecord(ref('SKUs'))
@@ -196,7 +195,7 @@ export function usePurchaseRequisitionEditableFlow() {
         loadWarehouses().then((value) => { warehouses.value = value })
       ])
 
-      const pr = prResource.items.value.find((row) => row.Code === prCode)
+      const pr = prResource.items.value.find((row) => row.Code === code.value)
       if (!pr) {
         $q.notify({ type: 'negative', message: 'PR not found' })
         loading.value = false
@@ -205,7 +204,7 @@ export function usePurchaseRequisitionEditableFlow() {
 
       prForm.value = { ...pr }
       items.value = itemsResource.items.value
-        .filter((item) => item.PurchaseRequisitionCode === prCode)
+        .filter((item) => item.PurchaseRequisitionCode === code.value)
         .map((item, index) => ({ ...item, _key: item.Code || `new-${index}` }))
       deletedItemCodes.value = []
       responseComment.value = ''
@@ -283,7 +282,7 @@ export function usePurchaseRequisitionEditableFlow() {
 
   function buildPayload(targetProgress = prForm.value.Progress, extraFields = {}) {
     return buildPurchaseRequisitionPayload({
-      prCode,
+      prCode: code.value,
       form: prForm.value,
       targetProgress,
       items: items.value,
@@ -339,7 +338,7 @@ export function usePurchaseRequisitionEditableFlow() {
         persistent: true
       }).onOk(async () => {
         const requestResult = procurements.buildEditableSubmitRequests({
-          prCode,
+          prCode: code.value,
           form: prForm.value,
           items: items.value,
           deletedItemCodes: deletedItemCodes.value
@@ -364,7 +363,7 @@ export function usePurchaseRequisitionEditableFlow() {
 
           $q.notify({ type: 'positive', message: 'Purchase Requisition submitted successfully' })
           await loadData()
-          nav.goTo('view', { code: prCode })
+          nav.goTo('view', { code: code.value })
           resolve({ success: true, response })
         } catch (error) {
           $q.notify({ type: 'negative', message: `Failed to submit PR: ${error.message}` })
@@ -385,11 +384,11 @@ export function usePurchaseRequisitionEditableFlow() {
         prResource.reload(),
         itemsResource.reload()
       ])
-      const pr = prResource.items.value.find((row) => row.Code === prCode)
+      const pr = prResource.items.value.find((row) => row.Code === code.value)
       if (!pr) return
       prForm.value = { ...pr }
       items.value = itemsResource.items.value
-        .filter((item) => item.PurchaseRequisitionCode === prCode)
+        .filter((item) => item.PurchaseRequisitionCode === code.value)
         .map((item, index) => ({ ...item, _key: item.Code || `new-${index}` }))
       deletedItemCodes.value = []
       await nextTick()

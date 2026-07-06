@@ -1,5 +1,5 @@
 import { ref, computed, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
 import { useResourceIoStore } from 'src/stores/resourceIo'
@@ -10,7 +10,7 @@ import { batchRef } from 'src/composables/batchRefs'
 import { useRecord } from '../../resources/useRecord.js'
 
 export function useWarehouseTransfers() {
-  const route = useRoute()
+  const { pageName, code: editCode } = useRouteConfig()
   const $q = useQuasar()
   const authStore = useAuthStore()
   const resourceIoStore = useResourceIoStore()
@@ -19,9 +19,8 @@ export function useWarehouseTransfers() {
 
   const loadedItemCodes = ref([])
   const isEditMode = computed(() => {
-    return !!route.params.code && route.path.endsWith('/_edit')
+    return !!editCode.value && pageName.value === 'edit'
   })
-  const editCode = computed(() => route.params.code)
 
   const loading = ref(false)
   const saving = ref(false)

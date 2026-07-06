@@ -1,4 +1,4 @@
-﻿# AQL Resource-Level Page & Section Customization Guide (Initialization)
+# AQL Resource-Level Page & Section Customization Guide (Initialization)
 
 This initialization prompt guides the implementation, customization, and override of frontend pages and components for specific database resources in the AQL repository. It ensures that modular customization is achieved without cluttering or modifying the shared framework-level fallback components.
 
@@ -40,7 +40,7 @@ Custom override components must **never** instantiate `useResourceConfig()` or `
 
 ```javascript
 // CORRECT: Inject provided context
-const { scope, resourceSlug, config } = inject('resourceConfig')
+const { scope, resourceSlug, resourceConfig } = inject('resourceConfig')
 const { record, loading, searchTerm } = inject('resourceRecord', { record: ref(null) })
 ```
 

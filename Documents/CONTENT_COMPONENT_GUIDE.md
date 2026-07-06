@@ -199,16 +199,13 @@ List items are **clickable by default** and emit `navigate-to-view` event:
 />
 
 <script setup>
+import { useResourceNav } from 'src/composables/resources/useResourceNav'
+
+const nav = useResourceNav()
+
 function handleNavigateToView(item) {
   // item = clicked record
-  router.push({
-    name: 'ResourceView',
-    params: {
-      scope: route.params.scope,
-      resource: route.params.resource,
-      code: item.Code
-    }
-  })
+  nav.goTo('view', { code: item.Code })
 }
 </script>
 ```
@@ -428,16 +425,13 @@ function handleUpdateChildField(groupName, index, header, value) {
 />
 
 <script setup>
+import { useResourceNav } from 'src/composables/resources/useResourceNav'
+
+const nav = useResourceNav()
+
 function handleNavigateToView(item) {
   // item = clicked record { Code, Name, ... }
-  router.push({
-    name: 'ResourceView',
-    params: {
-      scope: currentScope,
-      resource: currentResource,
-      code: item.Code
-    }
-  })
+  nav.goTo('view', { code: item.Code })
 }
 </script>
 ```

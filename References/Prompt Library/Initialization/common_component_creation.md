@@ -51,7 +51,7 @@ Common components must NOT call `useResourceConfig` or `useRecord` directly.
 
 ```javascript
 // Injecting context at component level
-const { scope, resourceSlug, config } = inject('resourceConfig')
+const { scope, resourceSlug, resourceConfig } = inject('resourceConfig')
 const { record, loading, searchTerm } = inject('resourceRecord', { record: ref(null) })
 ```
 

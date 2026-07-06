@@ -15,10 +15,10 @@
 
 <script setup>
 import { computed, ref, inject } from 'vue'
-import { useRouter } from 'vue-router'
+import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import CommonContent from 'components/_common/Content.vue'
 
-const router = useRouter()
+const nav = useResourceNav()
 const { resourceSlug, resolvedFields } = inject('resourceConfig')
 const { filteredItems } = inject('resourceRecord')
 
@@ -36,14 +36,7 @@ const listProps = computed(() => ({
 }))
 
 function handleNavigateToView(item) {
-  router.push({
-    name: 'ResourceView',
-    params: {
-      scope: router.currentRoute.value.params.scope,
-      resource: router.currentRoute.value.params.resource,
-      code: item.Code
-    }
-  })
+  nav.goTo('view', { code: item.Code })
 }
 </script>
 ```

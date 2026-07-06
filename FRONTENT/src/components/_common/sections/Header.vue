@@ -42,13 +42,13 @@ const props = defineProps({ page: { type: String, default: 'View' } })
 const resourceConfig = inject('resourceConfig')
 const resourceRecord = inject('resourceRecord', null)
 
-const { config: resolvedConfig, action, scope, resourceSlug, code: resolvedCode, additionalActions, customUIName } = resourceConfig || {}
+const { resourceConfig: resolvedConfig, pageName, scope, resourceSlug, code: resolvedCode, additionalActions, customUIName } = resourceConfig || {}
 const resolvedRecord = computed(() => resourceRecord?.record?.value)
 
 const activeConfig = computed(() => attrs.config || resolvedConfig?.value)
 const currentAction = computed(() => {
   if (attrs.actionName) return 'action'
-  return action?.value?.toLowerCase() || 'view'
+  return pageName?.value?.toLowerCase() || 'view'
 })
 const isIndexPage = computed(() => currentAction.value === 'index')
 
@@ -57,7 +57,7 @@ const recordCode = computed(() => attrs.code || recordVal.value?.Code || resolve
 
 const activeActionConfig = computed(() => {
   if (attrs.actionConfig) return attrs.actionConfig
-  const actName = attrs.actionName || action?.value
+  const actName = attrs.actionName || pageName?.value
   if (!actName) return null
   return additionalActions?.value?.find(
     (a) => a.action.toLowerCase() === actName.toLowerCase() && a.kind !== 'navigate'

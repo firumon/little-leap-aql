@@ -144,7 +144,7 @@ const nav = useResourceNav()
 
 // Inject shared context safely
 const {
-  resourceSlug, scope, resolvedFields, customUIName, resourceName, config, additionalActions, code
+  resourceSlug, scope, resolvedFields, customUIName, resourceName, additionalActions, code
 } = inject('resourceConfig', {})
 
 const {

@@ -91,7 +91,7 @@ export function useSectionResolver({ sectionName, page }) {
   const resourceConfig = inject('resourceConfig', null)
 
   const resourceSlug = computed(() => resourceConfig?.resourceSlug?.value || '')
-  const customUIName = computed(() => resourceConfig?.config?.value?.ui?.customUIName || resourceConfig?.customUIName?.value || '')
+  const customUIName = computed(() => resourceConfig?.customUIName?.value || '')
   const scope = computed(() => resourceConfig?.scope?.value || 'masters')
 
   const resolvedComponent = shallowRef(null)

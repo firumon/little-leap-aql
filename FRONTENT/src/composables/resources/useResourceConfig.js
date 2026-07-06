@@ -52,6 +52,8 @@ export function useResourceConfig() {
 
   const auth = useAuthStore()
 
+  const customUIName = computed(() => resourceConfig.value?.ui?.customUIName || '')
+
   const resourceHeaders = computed(() => {
     const h = resourceConfig.value?.headers
     return Array.isArray(h) ? h : []
@@ -177,6 +179,7 @@ export function useResourceConfig() {
     pageSlug,
     level,
     resourceConfig,
+    customUIName,
     resourceHeaders,
     resolvedFields,
     additionalActions,

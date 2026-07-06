@@ -1,4 +1,4 @@
-﻿import { isStandalone } from 'src/utils/pwa-utils'
+import { isStandalone } from 'src/utils/pwa-utils'
 
 const routes = [
   {
@@ -73,43 +73,43 @@ const routes = [
             path: '',
             name: 'index',
             component: () => import('pages/PageResolver.vue'),
-            meta: { action: 'index', level: 'resource' }
+            meta: { page: 'index', level: 'resource' }
           },
           {
             path: '_add',
             name: 'add',
             component: () => import('pages/PageResolver.vue'),
-            meta: { action: 'add', level: 'resource' }
+            meta: { page: 'add', level: 'resource' }
           },
           {
             path: ':pageSlug',
             name: 'resource-page',
             component: () => import('pages/PageResolver.vue'),
-            meta: { action: 'resource-page', level: 'resource' }
+            meta: { page: 'resource-page', level: 'resource' }
           },
           {
             path: ':code/_view',
             name: 'view',
             component: () => import('pages/PageResolver.vue'),
-            meta: { action: 'view', level: 'record' }
+            meta: { page: 'view', level: 'record' }
           },
           {
             path: ':code/_edit',
             name: 'edit',
             component: () => import('pages/PageResolver.vue'),
-            meta: { action: 'edit', level: 'record' }
+            meta: { page: 'edit', level: 'record' }
           },
           {
             path: ':code/_action/:action',
             name: 'action',
             component: () => import('pages/PageResolver.vue'),
-            meta: { action: 'action', level: 'record' }
+            meta: { page: 'action', level: 'record' }
           },
           {
             path: ':code/:pageSlug',
             name: 'record-page',
             component: () => import('pages/PageResolver.vue'),
-            meta: { action: 'record-page', level: 'record' }
+            meta: { page: 'record-page', level: 'record' }
           }
         ]
       }

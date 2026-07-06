@@ -5,53 +5,51 @@
       :resource-slug="resourceSlug"
       :resource-title="resourceTitle"
       :code="code"
-      :action="action"
+      :action="pageName"
       :action-label="actionLabel"
     />
-    <router-view :key="routeKey" />
+    <router-view :key="path" />
   </q-page>
 </template>
 
 <script setup>
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
-import ResourceBreadcrumb from 'components/_common/sections/Header/ResourceBreadcrumb.vue'
+import ResourceBreadcrumb from 'components/_common/sections/ResourceBreadcrumb.vue'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { humanizeSlug } from 'src/utils/appHelpers'
 
-const route = useRoute()
-const { scope, resourceSlug, code, action, config, additionalActions } = useResourceConfig()
+defineOptions({ name: 'ResourcePageShell' })
+
+const { pageSlug, path } = useRouteConfig()
+const { scope, resourceSlug, code, pageName, resourceConfig, additionalActions } = useResourceConfig()
 
 const resourceTitle = computed(() => {
-  const menus = config.value?.ui?.menus || []
+  const menus = resourceConfig.value?.ui?.menus || []
   const currentPath = `/${scope.value}/${resourceSlug.value}`
-  const matched = menus.find(m => m.route === currentPath)
-  return matched?.pageTitle || menus[0]?.pageTitle || config.value?.name || resourceSlug.value
+  const matched = menus.find((m) => m.route === currentPath)
+  return matched?.pageTitle || menus[0]?.pageTitle || resourceConfig.value?.name || resourceSlug.value
 })
 
 const actionLabel = computed(() => {
-  const a = action.value
-  if (!a || a === 'index') return ''
-  if (a === 'add') return 'Add'
-  if (a === 'view') return ''
-  if (a === 'edit') return 'Edit'
-  if (a === 'resource-page' || a === 'record-page') {
-    return humanizeSlug(route.params.pageSlug)
+  const p = pageName.value
+  if (!p || p === 'index') return ''
+  if (p === 'add') return 'Add'
+  if (p === 'view') return ''
+  if (p === 'edit') return 'Edit'
+  if (p === 'resource-page' || p === 'record-page') {
+    return humanizeSlug(pageSlug.value)
   }
-  if (a === 'action') {
+  if (p === 'action') {
     const actionConfig = additionalActions.value.find(
-      (ac) => ac.action.toLowerCase() === route.params.action?.toLowerCase()
+      (ac) => ac.action.toLowerCase() === pageSlug.value?.toLowerCase()
     )
-    return actionConfig?.label || humanizeSlug(route.params.action)
+    return actionConfig?.label || humanizeSlug(pageSlug.value)
   }
   // Additional actions — find label from config (legacy fallback)
   const actionConfig = additionalActions.value.find(
-    (ac) => ac.action.toLowerCase() === a.toLowerCase()
+    (ac) => ac.action.toLowerCase() === p.toLowerCase()
   )
-  return actionConfig?.label || a.charAt(0).toUpperCase() + a.slice(1)
+  return actionConfig?.label || p.charAt(0).toUpperCase() + p.slice(1)
 })
-
-// Keep router-view stable across query-only changes (e.g. ?view=),
-// so switching list views does not remount the whole page.
-const routeKey = computed(() => `${route.path}`)
 </script>

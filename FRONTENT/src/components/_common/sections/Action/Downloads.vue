@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <component
     :is="resolvedComponent"
     v-slot="{ record, page }"
@@ -54,7 +54,7 @@ const props = defineProps({
   page: { type: String, default: 'Index' }
 })
 
-const { resourceName, code, config } = inject('resourceConfig') || useResourceConfig()
+const { resourceName, code, resourceConfig } = inject('resourceConfig') || useResourceConfig()
 const dataStore = useDataStore()
 
 const activeRecord = computed(() => {
@@ -77,9 +77,9 @@ const {
 
 const displayedReports = computed(() => {
   if (activeRecord.value) {
-    return getRecordReports(config.value)
+    return getRecordReports(resourceConfig.value)
   } else {
-    return getToolbarReports(config.value)
+    return getToolbarReports(resourceConfig.value)
   }
 })
 

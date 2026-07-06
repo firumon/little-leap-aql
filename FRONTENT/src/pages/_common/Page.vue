@@ -140,7 +140,7 @@ import { useActionFields } from 'src/composables/resources/useActionFields'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
 // Static Imports of All Fallback Sections
-import Header from 'components/_common/sections/Header/Header.vue'
+import Header from 'components/_common/sections/Header.vue'
 import IndexToolbar from 'components/_common/Index/Toolbar.vue'
 import ViewToolbar from 'components/_common/View/Toolbar.vue'
 import AddToolbar from 'components/_common/Add/Toolbar.vue'
@@ -167,13 +167,13 @@ const props = defineProps({
 const router = useRouter()
 const nav = useResourceNav()
 
-const resourceConfig = useResourceConfig()
+const resConfig = useResourceConfig()
 const resourceRecord = useRecord()
 
-provide('resourceConfig', resourceConfig)
+provide('resourceConfig', resConfig)
 provide('resourceRecord', resourceRecord)
 
-const { scope, resourceSlug, code, config, resourceName, resourceHeaders, additionalActions } = resourceConfig
+const { scope, resourceSlug, code, pageSlug, pageName, resourceConfig, resourceName, resourceHeaders, additionalActions } = resConfig
 const { record, records: items, loading, reload, loadRelations, childRecordsByResource } = resourceRecord
 
 const isEmpty = computed(() => !loading.value && items.value.length === 0)
@@ -205,7 +205,7 @@ const {
   parentForm, childGroups, saving,
   initializeForCreate, initializeForEdit, addChildRecord, removeChildRecord,
   updateChildField, save
-} = useCompositeForm(config)
+} = useCompositeForm(resourceConfig)
 
 onMounted(() => {
   if (props.page === 'Add') {
@@ -274,10 +274,7 @@ const operationActions = useOperationActions()
 const actionsStore = computed(() => isOps.value ? operationActions : masterActions)
 const submitting = computed(() => actionsStore.value.submitting.value)
 
-const actionName = computed(() => {
-  const route = router.currentRoute.value
-  return route.params.action || route.meta?.action || ''
-})
+const actionName = computed(() => pageSlug.value || pageName.value || '')
 
 const currentActionConfig = computed(() => {
   return additionalActions.value.find(

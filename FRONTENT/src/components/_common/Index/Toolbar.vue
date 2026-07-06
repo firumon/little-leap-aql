@@ -25,8 +25,8 @@
 <script setup>
 import { computed, inject } from 'vue'
 import { useCommonSection } from 'src/composables/resources/useCommonSection'
-import SearchInput from 'components/_common/sections/Toolbar/SearchInput.vue'
-import ViewSwitcher from 'components/_common/sections/Toolbar/ViewSwitcher.vue'
+import SearchInput from 'components/_common/sections/SearchInput.vue'
+import ViewSwitcher from 'components/_common/sections/ViewSwitcher.vue'
 
 defineOptions({ name: 'IndexToolbar' })
 

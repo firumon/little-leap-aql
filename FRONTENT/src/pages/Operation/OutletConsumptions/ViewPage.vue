@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <q-page class="column no-scroll">
     <q-card flat bordered class="q-ma-md q-mb-none">
       <q-card-section class="q-pa-md">
@@ -136,18 +136,18 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useOutletConsumption } from '../../../composables/operation/outlets/useOutletConsumption.js'
 import OutletProgressChip from '../../../components/operation/Outlets/OutletProgressChip.vue'
 import AqlList from "components/shared/AqlList.vue";
 import ResourceReports from 'components/Reports/ResourceReports.vue'
 
 defineOptions({ name: 'OutletConsumptionViewPage' })
-const route = useRoute()
+const { code } = useRouteConfig()
 const flow = useOutletConsumption()
 const { loading, acting, reload, getConsumption, childInvoice, childRestocks, consumptionItemRows, generateInvoiceForConsumption, cancelConsumption, navigateToInvoice, navigateToRestock, outletName, visitLabel, formatDisplayDate, canReadInvoice, canReadRestock, getInvoiceTotal, allowed } = flow
 
-const record = computed(() => getConsumption(route.params.code))
+const record = computed(() => getConsumption(code.value))
 const invoice = computed(() => record.value ? childInvoice(record.value.Code) : null)
 const dependentRestocks = computed(() => record.value ? childRestocks(record.value.Code) : [])
 

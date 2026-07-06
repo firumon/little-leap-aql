@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <q-page padding class="aql-page-container">
     <!-- Page Branded Header -->
     <HeaderPanel
@@ -294,7 +294,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useOutletPayments } from '../../../composables/operation/outlets/useOutletPayments.js'
 import { progressMeta } from '../../../composables/operation/outlets/outletOperationsMeta.js'
 import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
@@ -306,7 +306,7 @@ import ResourceReports from 'components/Reports/ResourceReports.vue'
 
 defineOptions({ name: 'OutletPaymentsViewPage' })
 
-const route = useRoute()
+const { code } = useRouteConfig()
 const nav = useResourceNav()
 const flow = useOutletPayments()
 const { _C } = useCurrency()
@@ -324,7 +324,7 @@ const {
 } = flow
 
 const record = computed(() => {
-  return payments.items.value.find(p => text(p.Code) === text(route.params.code)) || null
+  return payments.items.value.find(p => text(p.Code) === text(code.value)) || null
 })
 
 const invoice = computed(() => {

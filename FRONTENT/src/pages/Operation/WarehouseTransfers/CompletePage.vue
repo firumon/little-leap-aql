@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <q-page padding class="q-pb-xl">
     <GenericHeaderPanel
       back
@@ -162,7 +162,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useQuasar } from 'quasar'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useWarehouseTransfers } from '../../../composables/operation/warehouseTransfers/useWarehouseTransfers.js'
@@ -173,12 +173,10 @@ import AqlList from "components/shared/AqlList.vue";
 defineOptions({ name: 'WarehouseTransfersCompletePage' })
 
 const $q = useQuasar()
-const route = useRoute()
+const { code: recordCode } = useRouteConfig()
 const nav = useResourceNav()
 const flow = useWarehouseTransfers()
 const { loading, saving, transfers, transferItems, warehouses, warehouseOptions, skuName, reload, getStorageOptionsForWarehouse, executeAction, completeItem, completeWarehouseTransfer } = flow
-
-const recordCode = computed(() => route.params.code)
 const record = computed(() => transfers.items.value.find(t => t.Code === recordCode.value) || null)
 const hasDestination = computed(() => !!record.value?.DestinationWarehouseCode)
 const selectedWarehouse = ref('')

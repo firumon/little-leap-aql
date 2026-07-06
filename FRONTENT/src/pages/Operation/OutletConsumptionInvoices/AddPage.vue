@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <q-page padding>
     <HeaderPanel
       :title="consumption ? `Generate Invoice — ${outletName(consumption.OutletCode)}` : 'Generate Invoice'"
@@ -104,7 +104,7 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useQuasar } from 'quasar'
 import { useOutletConsumption } from '../../../composables/operation/outlets/useOutletConsumption.js'
 import { useCurrency } from '../../../composables/useCurrency.js'
@@ -116,7 +116,7 @@ defineOptions({ name: 'OutletConsumptionInvoicesAddPage' })
 const dataStore = useDataStore()
 const { calculateLineTax } = useTaxCalculator()
 const $q = useQuasar()
-const route = useRoute()
+const { query } = useRouteConfig()
 const flow = useOutletConsumption()
 const { _C } = useCurrency()
 const { loading, saving, reload, getConsumption, childItems, childInvoice, outletName, formatDisplayDate, navigateToInvoice, cancel, productDisplayName, saveInvoiceFromConsumption, text, priceLists, resolveDefaultPriceList, resolvePriceListItems, returns, active, getInvoiceTotal } = flow
@@ -135,7 +135,7 @@ const discount = computed(() => {
 const editableItems = ref([])
 const selectedPriceList = ref('')
 
-const consumptionCode = computed(() => text(route.query.consumptionCode || ''))
+const consumptionCode = computed(() => text(query.value.consumptionCode || ''))
 const consumption = computed(() => consumptionCode.value ? getConsumption(consumptionCode.value) : null)
 
 const priceListOptions = computed(() => priceLists.items.value.map(p => ({ label: `${p.Code} - ${p.Name || ''}`, value: p.Code })))

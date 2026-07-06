@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <q-page padding class="q-pb-xl">
     <q-linear-progress v-if="loading" color="primary" indeterminate rounded class="q-mb-sm" />
 
@@ -228,7 +228,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useWarehouseTransfers } from '../../../composables/operation/warehouseTransfers/useWarehouseTransfers.js'
 import { useProductSkuResolver } from 'src/composables/master/products/useProductSkuResolver'
@@ -240,7 +240,7 @@ import ResourceActionButton from 'components/shared/ResourceActionButton.vue'
 
 defineOptions({ name: 'WarehouseTransfersViewPage' })
 
-const route = useRoute()
+const { code: recordCode } = useRouteConfig()
 const nav = useResourceNav()
 const flow = useWarehouseTransfers()
 const { loading, saving, transfers, transferItems, warehouses, warehouseOptions, skuName, reload, getStorageOptionsForWarehouse, executeAction, completeItem } = flow
@@ -265,7 +265,7 @@ function getSkuAndVariants(skuCode) {
   return variantsStr ? `${skuCode} - ${variantsStr}` : skuCode
 }
 
-const recordCode = computed(() => route.params.code)
+
 const record = computed(() => transfers.items.value.find(t => t.Code === recordCode.value) || null)
 
 const childItems = computed(() =>

@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <q-page padding class="q-pb-xl">
     <div v-if="!delivery" class="text-center q-pa-xl">
       <q-spinner v-if="loading" color="primary" size="3em" />
@@ -103,7 +103,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useQuasar } from 'quasar'
 import { text } from '../../../composables/operation/outlets/outletOperationsMeta.js'
 import { useOutletDeliveries } from '../../../composables/operation/outlets/useOutletDeliveries.js'
@@ -115,15 +115,15 @@ import ResourceReports from 'components/Reports/ResourceReports.vue'
 defineOptions({ name: 'OutletDeliveriesViewPage' })
 
 const $q = useQuasar()
-const route = useRoute()
+const { code } = useRouteConfig()
 const flow = useOutletDeliveries()
 const { loading, saving, reloadView, getDelivery, groupedDeliveryItems, deliverySummary, hasPendingDeliveryItems, hasDeliveredDeliveryItems, markSelectedDelivered, cancelDraft, canDeliver, canCancel, timeAgo, currentUserName } = flow
 
-const delivery = computed(() => getDelivery(route.params.code))
-const groupedRows = computed(() => groupedDeliveryItems(route.params.code))
+const delivery = computed(() => getDelivery(code.value))
+const groupedRows = computed(() => groupedDeliveryItems(code.value))
 const summary = computed(() => delivery.value ? deliverySummary(delivery.value) : { total: 0, delivered: 0, outlets: [], quantity: 0 })
-const hasPendingItems = computed(() => hasPendingDeliveryItems(route.params.code))
-const canCancelDelivery = computed(() => delivery.value && text(delivery.value.Progress) === 'DRAFT' && !hasDeliveredDeliveryItems(route.params.code))
+const hasPendingItems = computed(() => hasPendingDeliveryItems(code.value))
+const canCancelDelivery = computed(() => delivery.value && text(delivery.value.Progress) === 'DRAFT' && !hasDeliveredDeliveryItems(code.value))
 const isCancelled = computed(() => delivery.value && text(delivery.value.Progress) === 'CANCELLED')
 
 const selectedCodes = ref(new Set())

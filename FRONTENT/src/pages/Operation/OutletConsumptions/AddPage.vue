@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <q-page class="column no-scroll">
     <HeaderPanel title="Record Outlet Consumption" subtitle="Count stock and submit outlet side effects." class="q-pa-md" />
 
@@ -64,7 +64,7 @@
 
 <script setup>
 import { onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useOutletConsumption } from '../../../composables/operation/outlets/useOutletConsumption.js'
 import StepProgressIndicator from '../../../components/shared/StepProgressIndicator.vue'
 import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
@@ -74,7 +74,7 @@ import OutletConsumptionSummaryStep from '../../../components/operation/Outlets/
 
 defineOptions({ name: 'OutletConsumptionAddPage' })
 
-const route = useRoute()
+const { query } = useRouteConfig()
 
 const steps = [
   { name: 1, label: 'Outlet', icon: 'storefront' },
@@ -133,8 +133,8 @@ function onAddRestock(sku, qty) { restockRows.value.push({ SKU: sku, SkuLabel: s
 onMounted(async () => {
   await reload()
   form.value.OutletCode = ''
-  const queryOutlet = text(route.query.outletCode || '')
-  const queryStep = parseInt(route.query.step, 10)
+  const queryOutlet = text(query.value.outletCode || '')
+  const queryStep = parseInt(query.value.step, 10)
   if (queryOutlet) {
     onOutletChange(queryOutlet)
   }

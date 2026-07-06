@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <q-page padding>
     <div v-if="!restock" class="text-center q-pa-xl">
       <q-spinner v-if="loading" color="primary" size="3em" />
@@ -81,7 +81,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useOutletRestocks } from '../../../composables/operation/outlets/useOutletRestocks.js'
 import RestockDraftView from '../../../components/operation/Outlets/RestockDraftView.vue'
 import RestockApprovalView from '../../../components/operation/Outlets/RestockApprovalView.vue'
@@ -92,7 +92,7 @@ import ResourceReports from 'components/Reports/ResourceReports.vue'
 
 defineOptions({ name: 'OutletRestocksViewPage' })
 
-const route = useRoute()
+const { code } = useRouteConfig()
 const flow = useOutletRestocks()
 
 const {
@@ -106,7 +106,7 @@ const {
 } = flow
 
 
-const restock = computed(() => getRestock(route.params.code))
+const restock = computed(() => getRestock(code.value))
 const hasPendingItems = computed(() => rows.value.some(row => row.Progress === 'PENDING'))
 const hasPendingAllocationDraft = computed(() => pendingAllocationDraftRows.value.length > 0)
 const mode = computed(() => {
@@ -165,7 +165,7 @@ async function handleReject(comment = '') { rejectLoading.value = true; try { aw
 
 onMounted(async () => {
   await reloadView()
-  loadRestock(route.params.code)
+  loadRestock(code.value)
 })
 </script>
 

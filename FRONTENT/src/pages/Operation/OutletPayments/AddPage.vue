@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <q-page padding class="aql-page-container">
     <!-- Page Branded Header -->
     <HeaderPanel
@@ -509,7 +509,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useOutletPayments } from '../../../composables/operation/outlets/useOutletPayments.js'
 import { progressMeta } from '../../../composables/operation/outlets/outletOperationsMeta.js'
 import AqlList from '../../../components/shared/AqlList.vue'
@@ -519,7 +519,7 @@ import { getInvoiceTotal, getInvoiceRemaining } from '../../../composables/opera
 
 defineOptions({ name: 'OutletPaymentsAddPage' })
 
-const route = useRoute()
+const { query } = useRouteConfig()
 const flow = useOutletPayments()
 const { _C, defaultCurrency } = useCurrency()
 
@@ -707,7 +707,7 @@ function invoiceLabel(code) {
 
 onMounted(async () => {
   await reload()
-  handleQueryParameters(route.query)
+  handleQueryParameters(query.value)
 })
 </script>
 

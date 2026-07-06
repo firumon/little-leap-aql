@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <q-page padding class="q-pb-xl">
     <HeaderPanel title="Log Outlet Return" subtitle="Observe stock changes and log returns." class="q-mb-sm" />
 
@@ -192,13 +192,13 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useOutletReturns } from '../../../composables/operation/outlets/useOutletReturns.js'
 import HeaderPanel from "components/shared/HeaderPanel.vue";
 
 defineOptions({ name: 'OutletReturnsAddPage' })
 
-const route = useRoute()
+const { query } = useRouteConfig()
 const flow = useOutletReturns()
 const {
   saving, form,
@@ -209,7 +209,7 @@ const {
 const outletLocked = ref(false)
 
 const preselectedOutletCode = computed(() => {
-  const raw = route.query.outletCode || route.query.outletcode
+  const raw = query.value.outletCode || query.value.outletcode
   return raw ? String(raw).trim() : ''
 })
 

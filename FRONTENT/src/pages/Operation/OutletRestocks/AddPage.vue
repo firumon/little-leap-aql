@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <q-page padding>
     <HeaderPanel title="New Restock Request" subtitle="Request outlet consignment stock" class="q-mb-md" />
 
@@ -137,7 +137,7 @@
 
 <script setup>
 import { ref, computed, reactive, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useQuasar } from 'quasar'
 import { useOutletRestocks } from '../../../composables/operation/outlets/useOutletRestocks.js'
 import AqlGroupedList from '../../../components/shared/AqlGroupedList.vue'
@@ -148,7 +148,7 @@ import { text } from '../../../composables/operation/outlets/outletOperationsMet
 defineOptions({ name: 'OutletRestocksAddPage' })
 
 const $q = useQuasar()
-const route = useRoute()
+const { query } = useRouteConfig()
 const flow = useOutletRestocks()
 
 const {
@@ -330,8 +330,8 @@ async function handleSubmit() {
 
 onMounted(async () => {
   await reloadAdd()
-  if (route.query.outletCode) {
-    const match = outletOptions.value.find(o => o.value === route.query.outletCode)
+  if (query.value.outletCode) {
+    const match = outletOptions.value.find(o => o.value === query.value.outletCode)
     if (match) {
       selectOutlet(match)
     }

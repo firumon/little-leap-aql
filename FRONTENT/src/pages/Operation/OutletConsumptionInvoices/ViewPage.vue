@@ -320,7 +320,7 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useQuasar } from 'quasar'
 import { useOutletConsumption } from '../../../composables/operation/outlets/useOutletConsumption.js'
 import { useResourceNav } from '../../../composables/resources/useResourceNav.js'
@@ -337,7 +337,7 @@ const dataStore = useDataStore()
 const { calculateLineTax } = useTaxCalculator()
 
 const $q = useQuasar()
-const route = useRoute()
+const { code } = useRouteConfig()
 const nav = useResourceNav()
 const flow = useOutletConsumption()
 const { _C, defaultCurrency, roundToInterval, roundToDecimals, defaultCurrencyCode } = useCurrency()
@@ -361,7 +361,7 @@ const {
   resolvePriceListItems
 } = flow
 
-const invoice = computed(() => getInvoice(route.params.code))
+const invoice = computed(() => getInvoice(code.value))
 const editing = ref(false)
 const editForm = ref({ priceListCode: '', discountType: 'FLAT', discountValue: 0, tax: 0 })
 const editLineItems = ref([])

@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <q-page padding class="q-gutter-y-md">
     <!-- Header panel using standard Quasar elements -->
     <q-card flat bordered class="bg-white">
@@ -275,7 +275,7 @@
 
 <script setup>
 import { onMounted, computed, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useQuasar } from 'quasar'
 import { useOutletReturns } from '../../../composables/operation/outlets/useOutletReturns.js'
 import ActionCommentDialog from '../../../components/shared/ActionCommentDialog.vue'
@@ -283,9 +283,7 @@ import ResourceReports from 'components/Reports/ResourceReports.vue'
 
 defineOptions({ name: 'OutletReturnsViewPage' })
 
-const route = useRoute()
-const $q = useQuasar()
-const code = computed(() => route.params.code)
+const { code } = useRouteConfig()
 
 const flow = useOutletReturns()
 const cancelDialog = ref(false)

@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="view-page">
     <div v-if="loading" class="q-py-xl text-center">
       <q-spinner-dots color="primary" size="32px" />
@@ -92,7 +92,7 @@ const resourceRecord = useRecord()
 provide('resourceConfig', resourceConfig)
 provide('resourceRecord', resourceRecord)
 
-const { code, config, resourceName, permissions } = resourceConfig
+const { code, resourceName, permissions } = resourceConfig
 const { records: items, record, loading: resourceLoading, reload } = resourceRecord
 const { skuRows, skuLoading, loadSkuRows } = useProductSkuViewData()
 

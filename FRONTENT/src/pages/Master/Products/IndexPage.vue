@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="index-page">
     <GenericHeaderPanel
       :label="config?.name || 'Products'"
@@ -99,7 +99,7 @@ import { computed, ref, watch } from 'vue'
 import ResourceReports from 'components/Reports/ResourceReports.vue'
 import GenericHeaderPanel from 'components/shared/GenericHeaderPanel.vue'
 import MasterListToolbar from 'components/_common/sections/Toolbar/Toolbar.vue'
-import MasterListViewSwitcher from 'components/_common/sections/Toolbar/ViewSwitcher.vue'
+import MasterListViewSwitcher from 'components/_common/sections/ViewSwitcher.vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useRecord } from 'src/composables/resources/useRecord'
 import { parseVariantTypes } from 'src/composables/master/products/useProductVariants'
@@ -107,7 +107,7 @@ import { useResourceNav } from 'src/composables/resources/useResourceNav.js'
 
 const nav = useResourceNav()
 
-const { config, resourceName, resourceHeaders, permissions } = useResourceConfig()
+const { resourceName, resourceHeaders, permissions } = useResourceConfig()
 const {
   records: items,
   loading,

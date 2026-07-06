@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <q-page padding>
     <div class="row items-center justify-between no-wrap q-mb-md">
       <div class="col">
@@ -263,7 +263,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useOutletHub } from '../../../composables/operation/outlets/useOutletHub.js'
 import { useOutletVisits } from '../../../composables/operation/outlets/useOutletVisits.js'
 import { getInvoiceRemaining } from '../../../composables/operation/outlets/outletConsumptionPricing.js'
@@ -283,7 +283,7 @@ import AqlGroupedList from "components/shared/AqlGroupedList.vue";
 
 defineOptions({ name: 'OutletsOperationsHubPage' })
 
-const route = useRoute()
+const { query } = useRouteConfig()
 const flow = useOutletHub()
 const visitsFlow = useOutletVisits()
 const { _C } = useCurrency()
@@ -431,7 +431,7 @@ async function handlePlanConfirm(comment) {
 }
 
 onMounted(async () => {
-  const preset = String(route.query.outletCode || route.query.outletcode || '').trim()
+  const preset = String(query.value.outletCode || query.value.outletcode || '').trim()
   await reload()
   if (preset) selectedOutletCode.value = preset
 })

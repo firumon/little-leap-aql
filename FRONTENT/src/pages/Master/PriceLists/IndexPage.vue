@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="index-page">
     <GenericHeaderPanel
       :label="config?.name || 'Price Lists'"
@@ -157,7 +157,7 @@ import { usePriceListEditor } from 'src/composables/master/priceLists/usePriceLi
 import { useResourceIoStore } from 'src/stores/resourceIo'
 
 const nav = useResourceNav()
-const { config, resourceName, permissions } = useResourceConfig()
+const { resourceName, permissions } = useResourceConfig()
 const resourceIoStore = useResourceIoStore()
 const { records: items, searchTerm } = useRecord()
 const loading = ref(false)

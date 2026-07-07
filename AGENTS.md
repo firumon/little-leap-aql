@@ -1,4 +1,4 @@
-﻿# AQL Startup & Context Routing
+# AQL Startup & Context Routing
 
 ## Purpose
 - This is the startup file for repository-aware agents and Claude sessions in this repo.
@@ -82,7 +82,7 @@ After classifying the query, read the appropriate initialization document(s) fro
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **little-leap-aql** (10145 symbols, 16661 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **little-leap-aql** (10327 symbols, 16882 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 
@@ -122,4 +122,3 @@ This project is indexed by GitNexus as **little-leap-aql** (10145 symbols, 16661
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
 
 <!-- gitnexus:end -->
-

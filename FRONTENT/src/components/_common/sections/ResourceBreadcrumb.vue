@@ -1,42 +1,114 @@
 <template>
   <nav class="breadcrumb-bar" aria-label="Breadcrumb">
-    <span class="crumb crumb-link" @click="nav.goTo('index')">
+    <span class="crumb crumb-link" @click="handleIndexClick">
       <q-icon name="home" size="16px" class="crumb-icon" />
-      <span>{{ resourceTitle }}</span>
+      <span>{{ resolvedResourceTitle }}</span>
     </span>
 
-    <template v-if="code">
+    <template v-if="resolvedCode">
       <q-icon name="chevron_right" size="16px" class="crumb-sep" />
       <span
-        v-if="action && action !== 'view'"
+        v-if="resolvedAction && resolvedAction !== 'view'"
         class="crumb crumb-link"
-        @click="nav.goTo('view')"
+        @click="handleViewClick"
       >
-        {{ code }}
+        {{ resolvedCode }}
       </span>
-      <span v-else class="crumb crumb-current">{{ code }}</span>
+      <span v-else class="crumb crumb-current">{{ resolvedCode }}</span>
     </template>
 
-    <template v-if="actionLabel">
+    <template v-if="resolvedActionLabel">
       <q-icon name="chevron_right" size="16px" class="crumb-sep" />
-      <span class="crumb crumb-current">{{ actionLabel }}</span>
+      <span class="crumb crumb-current">{{ resolvedActionLabel }}</span>
     </template>
   </nav>
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
+import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
+import { humanizeSlug } from 'src/utils/appHelpers'
 
+const props = defineProps({
+  scope: { type: String, default: null },
+  resourceSlug: { type: String, default: null },
+  resourceTitle: { type: String, default: null },
+  code: { type: String, default: null },
+  action: { type: String, default: null },
+  actionLabel: { type: String, default: null }
+})
+
+const routeConfig = useRouteConfig()
+const resConfig = useResourceConfig()
 const nav = useResourceNav()
 
-defineProps({
-  scope: { type: String, default: 'masters' },
-  resourceSlug: { type: String, default: '' },
-  resourceTitle: { type: String, default: '' },
-  code: { type: String, default: '' },
-  action: { type: String, default: 'index' },
-  actionLabel: { type: String, default: '' }
+const resolvedScope = computed(() => {
+  if (props.scope !== null && props.scope !== undefined) return props.scope
+  return resConfig.scope.value || 'master'
 })
+
+const resolvedResourceSlug = computed(() => {
+  if (props.resourceSlug !== null && props.resourceSlug !== undefined) return props.resourceSlug
+  return resConfig.resourceSlug.value || ''
+})
+
+const resolvedResourceTitle = computed(() => {
+  if (props.resourceTitle !== null && props.resourceTitle !== undefined) return props.resourceTitle
+  const config = resConfig.resourceConfig.value
+  const menus = config?.ui?.menus || []
+  const currentPath = `/${resolvedScope.value}/${resolvedResourceSlug.value}`
+  const matched = menus.find((m) => m.route === currentPath)
+  return matched?.pageTitle || menus[0]?.pageTitle || config?.name || resolvedResourceSlug.value
+})
+
+const resolvedCode = computed(() => {
+  if (props.code !== null && props.code !== undefined) return props.code
+  return resConfig.code.value || ''
+})
+
+const resolvedAction = computed(() => {
+  if (props.action !== null && props.action !== undefined) return props.action
+  return resConfig.pageName.value || 'index'
+})
+
+const resolvedActionLabel = computed(() => {
+  if (props.actionLabel !== null && props.actionLabel !== undefined) return props.actionLabel
+  const p = resolvedAction.value
+  if (!p || p === 'index') return ''
+  if (p === 'add') return 'Add'
+  if (p === 'view') return ''
+  if (p === 'edit') return 'Edit'
+  if (p === 'resource-page' || p === 'record-page') {
+    return humanizeSlug(routeConfig.pageSlug.value)
+  }
+  if (p === 'action') {
+    const actionConfig = resConfig.additionalActions.value.find(
+      (ac) => ac.action.toLowerCase() === routeConfig.pageSlug.value?.toLowerCase()
+    )
+    return actionConfig?.label || humanizeSlug(routeConfig.pageSlug.value)
+  }
+  const actionConfig = resConfig.additionalActions.value.find(
+    (ac) => ac.action.toLowerCase() === p.toLowerCase()
+  )
+  return actionConfig?.label || p.charAt(0).toUpperCase() + p.slice(1)
+})
+
+const handleIndexClick = () => {
+  nav.goTo('index', {
+    scope: resolvedScope.value,
+    resourceSlug: resolvedResourceSlug.value
+  })
+}
+
+const handleViewClick = () => {
+  nav.goTo('view', {
+    scope: resolvedScope.value,
+    resourceSlug: resolvedResourceSlug.value,
+    code: resolvedCode.value
+  })
+}
 </script>
 
 <style scoped>

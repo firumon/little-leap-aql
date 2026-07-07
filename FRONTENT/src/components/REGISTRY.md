@@ -1,4 +1,4 @@
-﻿# Frontend Component Registry
+# Frontend Component Registry
 
 Purpose: quick discovery of reusable UI blocks under `FRONTENT/src/components/`.
 
@@ -18,7 +18,7 @@ Design principle:
 | `MasterListRecordsLoading` | Loading spinner for the master list. | `{}` | `None` | `FRONTENT/src/components/master/_common/MasterListRecordsLoading.vue` |
 | `MasterListRecordsEmpty` | Empty state for the master list. | `{}` | `None` | `FRONTENT/src/components/master/_common/MasterListRecordsEmpty.vue` |
 | `MasterListViewSwitcher` | Filter view chip bar for switching between named list views (Active/Inactive, custom filters). Shows counts per view, outlined/filled toggle for active state. Hidden when no views configured. | `{ views: Array, activeViewName: String, counts: Object }` | `update:activeViewName(name)` | `FRONTENT/src/components/master/MasterListViewSwitcher.vue` |
-| `ResourceBreadcrumb` | Breadcrumb navigation for resource sub-route pages (Resource > Code > Action). Shared across masters, operations, and accounts scopes. | `{ scope: String, resourceSlug: String, resourceTitle: String, code: String, action: String, actionLabel: String }` |  | `FRONTENT/src/components/_common/sections/Header/ResourceBreadcrumb.vue` |
+| `ResourceBreadcrumb` | Breadcrumb navigation for resource sub-route pages (Resource > Code > Action). Shared across masters, operations, and accounts scopes. Self-sufficient by default, overrideable via props. | `{ scope?: String, resourceSlug?: String, resourceTitle?: String, code?: String, action?: String, actionLabel?: String }` |  | `FRONTENT/src/components/_common/sections/ResourceBreadcrumb.vue` |
 | `ReloadButton` | Shared resource-aware refresh button. Resolves current, parent, child, and `*Code` column dependencies and refreshes them through the resource IO sync flow. | `{}` | `None` | `FRONTENT/src/components/shared/ReloadButton.vue` |
 | `AppDate` | Reusable Quasar date input with a popup calendar, configured to read/write native HTML `YYYY-MM-DD` formatted values. | `{ modelValue: String }` | `update:modelValue(value)` | `FRONTENT/src/components/shared/AppDate.vue` |
 | `OutletVisitActionDialog` | Reusable bottom-sheet dialog for complete/postpone/cancel actions on a planned outlet visit. Emits `{ action, fields }` so the caller can drive the matching composable function. | `{ modelValue: Boolean, visit: Object, outletLabel: String, saving: Boolean }` | `update:modelValue(value)`, `confirm({ action, fields })`, `cancel` | `FRONTENT/src/components/operation/Outlets/OutletVisitActionDialog.vue` |

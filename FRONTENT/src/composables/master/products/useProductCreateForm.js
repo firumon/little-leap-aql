@@ -8,7 +8,7 @@ import { useResourceNav } from 'src/composables/resources/useResourceNav'
 export function useProductCreateForm() {
   const nav = useResourceNav()
   const $q = useQuasar()
-  const { resourceConfig } = useResourceConfig()
+  const { config } = useResourceConfig()
   const {
     parentForm,
     childGroups,
@@ -19,7 +19,7 @@ export function useProductCreateForm() {
     removeChildRecord,
     updateChildField,
     save
-  } = useCompositeForm(resourceConfig)
+  } = useCompositeForm(config)
 
   const newVariantType = ref('')
   const { variantColumns } = useProductVariants(parentForm)

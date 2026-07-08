@@ -54,7 +54,7 @@ const props = defineProps({
   page: { type: String, default: 'Index' }
 })
 
-const { resourceName, code, resourceConfig } = inject('resourceConfig') || useResourceConfig()
+const { resourceName, code, config } = inject('resourceConfig') || useResourceConfig()
 const dataStore = useDataStore()
 
 const activeRecord = computed(() => {
@@ -77,9 +77,9 @@ const {
 
 const displayedReports = computed(() => {
   if (activeRecord.value) {
-    return getRecordReports(resourceConfig.value)
+    return getRecordReports(config.value)
   } else {
-    return getToolbarReports(resourceConfig.value)
+    return getToolbarReports(config.value)
   }
 })
 

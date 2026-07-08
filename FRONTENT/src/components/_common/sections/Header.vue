@@ -42,10 +42,10 @@ const props = defineProps({ page: { type: String, default: 'View' } })
 const resourceConfig = inject('resourceConfig')
 const resourceRecord = inject('resourceRecord', null)
 
-const { resourceConfig: resolvedConfig, pageName, scope, resourceSlug, code: resolvedCode, additionalActions, customUIName } = resourceConfig || {}
+const { config, pageName, scope, resourceSlug, code: resolvedCode, additionalActions, customUIName } = resourceConfig || {}
 const resolvedRecord = computed(() => resourceRecord?.record?.value)
 
-const activeConfig = computed(() => attrs.config || resolvedConfig?.value)
+const activeConfig = computed(() => attrs.config || config?.value)
 const currentAction = computed(() => {
   if (attrs.actionName) return 'action'
   return pageName?.value?.toLowerCase() || 'view'

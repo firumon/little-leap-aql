@@ -56,7 +56,7 @@ const resolvedResourceSlug = computed(() => {
 
 const resolvedResourceTitle = computed(() => {
   if (props.resourceTitle !== null && props.resourceTitle !== undefined) return props.resourceTitle
-  const config = resConfig.resourceConfig.value
+  const config = resConfig.config.value
   const menus = config?.ui?.menus || []
   const currentPath = `/${resolvedScope.value}/${resolvedResourceSlug.value}`
   const matched = menus.find((m) => m.route === currentPath)

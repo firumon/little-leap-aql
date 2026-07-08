@@ -131,7 +131,7 @@ export function useRecord(resourceNameOverride, codeOverride) {
   const resourceIoStore = useResourceIoStore()
   const {
     resourceName: routeResourceName, code: routeCode,
-    resourceConfig: routeConfig, resourceHeaders: routeHeaders
+    config, resourceHeaders: routeHeaders
   } = useResourceConfig()
 
   // --- Resource name & code resolution ---
@@ -164,7 +164,7 @@ export function useRecord(resourceNameOverride, codeOverride) {
   const activeViewName = ref('')
 
   const effectiveViews = computed(() => {
-    const cfg = routeConfig.value
+    const cfg = config.value
     const configured = cfg?.ui?.listViews
     const mode = normalizeListViewsMode(cfg?.ui?.listViewsMode || '')
 

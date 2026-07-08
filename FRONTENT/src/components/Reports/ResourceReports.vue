@@ -138,7 +138,7 @@ const props = defineProps({
   }
 })
 
-const { scope, resourceConfig, resourceName, code } = useResourceConfig()
+const { scope, config, resourceName, code } = useResourceConfig()
 const dataStore = useDataStore()
 
 const activeRecord = computed(() => {
@@ -170,9 +170,9 @@ const innerClass = computed(() => {
 
 const displayedReports = computed(() => {
   if (activeRecord.value) {
-    return getRecordReports(resourceConfig.value)
+    return getRecordReports(config.value)
   } else {
-    return getToolbarReports(resourceConfig.value)
+    return getToolbarReports(config.value)
   }
 })
 

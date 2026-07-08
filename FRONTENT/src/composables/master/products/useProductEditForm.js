@@ -9,7 +9,7 @@ import { useResourceNav } from 'src/composables/resources/useResourceNav'
 export function useProductEditForm() {
   const $q = useQuasar()
   const nav = useResourceNav()
-  const { code, resourceConfig, resourceName } = useResourceConfig()
+  const { code, config, resourceName } = useResourceConfig()
   const { items, loading: resourceLoading, reload, updateLocalRecord } = useRecord(resourceName)
   const skusResource = useRecord(ref('SKUs'))
   const {
@@ -22,7 +22,7 @@ export function useProductEditForm() {
     removeChildRecord,
     updateChildField,
     save
-  } = useCompositeForm(resourceConfig)
+  } = useCompositeForm(config)
 
   const initLoading = ref(false)
   const newVariantType = ref('')

@@ -47,20 +47,20 @@ export function useResourceConfig() {
     pageName,
     pageSlug,
     level,
-    resourceConfig
+    resourceConfig: config
   } = useRouteConfig()
 
   const auth = useAuthStore()
 
-  const customUIName = computed(() => resourceConfig.value?.ui?.customUIName || '')
+  const customUIName = computed(() => config.value?.ui?.customUIName || 'AQL')
 
   const resourceHeaders = computed(() => {
-    const h = resourceConfig.value?.headers
+    const h = config.value?.headers
     return Array.isArray(h) ? h : []
   })
 
   const resolvedFields = computed(() => {
-    const uiFields = resourceConfig.value?.ui?.fields
+    const uiFields = config.value?.ui?.fields
     if (Array.isArray(uiFields) && uiFields.length) {
       return uiFields
     }
@@ -76,7 +76,7 @@ export function useResourceConfig() {
   })
 
   const additionalActions = computed(() => {
-    const raw = resourceConfig.value?.additionalActions
+    const raw = config.value?.additionalActions
     let parsed = []
     if (Array.isArray(raw)) parsed = raw
     else if (typeof raw === 'string' && raw) {
@@ -140,7 +140,7 @@ export function useResourceConfig() {
       .filter(Boolean)
   }
 
-  const permissions = computed(() => resourceConfig.value?.permissions || {})
+  const permissions = computed(() => config.value?.permissions || {})
 
   const allowed = (query, targetResourceName) => {
     if (!query) return false
@@ -158,7 +158,7 @@ export function useResourceConfig() {
     }
 
     // Determine target resource config
-    const resConfig = targetResourceName ? findResourceConfig(auth, targetResourceName) : resourceConfig.value
+    const resConfig = targetResourceName ? findResourceConfig(auth, targetResourceName) : config.value
     if (!resConfig) return false
 
     // 2. Array of actions on a single resource
@@ -178,7 +178,7 @@ export function useResourceConfig() {
     pageName,
     pageSlug,
     level,
-    resourceConfig,
+    config,
     customUIName,
     resourceHeaders,
     resolvedFields,

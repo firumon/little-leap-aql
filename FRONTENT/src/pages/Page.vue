@@ -38,6 +38,9 @@
     </template>
 
     <!-- Loading / not-found fallback -->
+    <div v-else-if="!ready" class="flex flex-center min-height-200">
+      <q-spinner-dots color="primary" size="40px" />
+    </div>
     <PageFallback v-else :not-found="notFound" />
   </q-page>
 </template>

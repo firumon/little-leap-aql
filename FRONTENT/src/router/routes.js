@@ -63,55 +63,49 @@ const routes = [
     path: '/:scope(operation|master|accounts)/:resourceSlug',
     component: () => import('layouts/MainLayout/MainLayout.vue'),
     meta: { requiresAuth: true },
+    props: true,
     children: [
       {
         path: '',
-        component: () => import('pages/_common/ResourcePageShell.vue'),
-        props: true,
-        children: [
-          {
-            path: '',
-            name: 'index',
-            component: () => import('pages/PageResolver.vue'),
-            meta: { page: 'index', level: 'resource' }
-          },
-          {
-            path: '_add',
-            name: 'add',
-            component: () => import('pages/PageResolver.vue'),
-            meta: { page: 'add', level: 'resource' }
-          },
-          {
-            path: ':pageSlug',
-            name: 'resource-page',
-            component: () => import('pages/PageResolver.vue'),
-            meta: { page: 'resource-page', level: 'resource' }
-          },
-          {
-            path: ':code/_view',
-            name: 'view',
-            component: () => import('pages/PageResolver.vue'),
-            meta: { page: 'view', level: 'record' }
-          },
-          {
-            path: ':code/_edit',
-            name: 'edit',
-            component: () => import('pages/PageResolver.vue'),
-            meta: { page: 'edit', level: 'record' }
-          },
-          {
-            path: ':code/_action/:action',
-            name: 'action',
-            component: () => import('pages/PageResolver.vue'),
-            meta: { page: 'action', level: 'record' }
-          },
-          {
-            path: ':code/:pageSlug',
-            name: 'record-page',
-            component: () => import('pages/PageResolver.vue'),
-            meta: { page: 'record-page', level: 'record' }
-          }
-        ]
+        name: 'index',
+        component: () => import('pages/Page.vue'),
+        meta: { page: 'index', level: 'resource' }
+      },
+      {
+        path: '_add',
+        name: 'add',
+        component: () => import('pages/Page.vue'),
+        meta: { page: 'add', level: 'resource' }
+      },
+      {
+        path: ':pageSlug',
+        name: 'resource-page',
+        component: () => import('pages/Page.vue'),
+        meta: { page: 'resource-page', level: 'resource' }
+      },
+      {
+        path: ':code/_view',
+        name: 'view',
+        component: () => import('pages/Page.vue'),
+        meta: { page: 'view', level: 'record' }
+      },
+      {
+        path: ':code/_edit',
+        name: 'edit',
+        component: () => import('pages/Page.vue'),
+        meta: { page: 'edit', level: 'record' }
+      },
+      {
+        path: ':code/_action/:action',
+        name: 'action',
+        component: () => import('pages/Page.vue'),
+        meta: { page: 'action', level: 'record' }
+      },
+      {
+        path: ':code/:pageSlug',
+        name: 'record-page',
+        component: () => import('pages/Page.vue'),
+        meta: { page: 'record-page', level: 'record' }
       }
     ]
   },

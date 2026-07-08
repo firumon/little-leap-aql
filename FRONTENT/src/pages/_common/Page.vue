@@ -173,7 +173,7 @@ const resourceRecord = useRecord()
 provide('resourceConfig', resConfig)
 provide('resourceRecord', resourceRecord)
 
-const { scope, resourceSlug, code, pageSlug, pageName, resourceConfig, resourceName, resourceHeaders, additionalActions } = resConfig
+const { scope, resourceSlug, code, pageSlug, pageName, config, resourceName, resourceHeaders, additionalActions } = resConfig
 const { record, records: items, loading, reload, loadRelations, childRecordsByResource } = resourceRecord
 
 const isEmpty = computed(() => !loading.value && items.value.length === 0)
@@ -205,7 +205,7 @@ const {
   parentForm, childGroups, saving,
   initializeForCreate, initializeForEdit, addChildRecord, removeChildRecord,
   updateChildField, save
-} = useCompositeForm(resourceConfig)
+} = useCompositeForm(config)
 
 onMounted(() => {
   if (props.page === 'Add') {

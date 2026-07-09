@@ -152,6 +152,9 @@ export function usePageResolver() {
   const pageProps = computed(() => {
     const rcProps = {
       page: canonicalPage.value,
+      scope: scope.value,
+      resource: resourceSlug.value,
+      uiName: customUIName.value,
       parentForm,
       childGroups,
       actionForm,

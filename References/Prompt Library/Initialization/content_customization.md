@@ -18,16 +18,16 @@ Before creating or modifying any local Content components:
 
 To custom-tailor the content layouts:
 1. **Locate Metadata**: Read the target resource schema file under `src/metadata/schemas/` or fetch headers in `src/pages/resource/` page context.
-2. **Find Target Override Paths**: Check if local custom folder structures already exist at `src/components/[Scope]/[ResourceName]/[Page]/`.
+2. **Find Target Override Paths**: Check if overrides already exist under `src/_ui/[UiName]/components/[scope]/[ResourceName]/[page]/`.
 3. **Analyze Overriding Strategy**:
-   - Prefer **JS Logic Modifiers** (`[Section].js` at Tiers 7 & 8) for simple adjustments (altering field orders, modifying classes, toggling borders, custom labels, custom layouts).
-   - Use **Vue Template SFC Overrides** (`[Section].vue`) ONLY if the page requires complex non-standard UI elements, custom slots, or specialized inputs.
+   - Prefer **JS Logic Modifiers** (`[Section].js` under custom UI) for simple adjustments (altering field orders, modifying classes, toggling borders, custom labels, custom layouts).
+   - Use **Vue Template SFC Overrides** (`[Section].vue` under custom UI) ONLY if the page requires complex non-standard UI elements, custom slots, or specialized inputs.
 
 ---
 
 ## 2. Implementation Rules
 
-### 2.1 Writing JS Logic Modifiers (Tiers 7 & 8 only)
+### 2.1 Writing JS Logic Modifiers
 - Create the target component (e.g., `Index/List.js` or `Add/Form.js`) exporting a default function.
 - The function receives the component's `preparedProps` object, modifies it, and returns the updated props:
   ```javascript
@@ -41,7 +41,7 @@ To custom-tailor the content layouts:
   }
   ```
 
-### 2.2 Writing Vue Template Overrides (Tiers 1-8)
+### 2.2 Writing Vue Template Overrides
 - Vue overrides must contain a `<template>` block. Components without a template block are **never allowed**.
 - Bind all values using the page-provided state injection tokens (`resourceConfig` and `resourceRecord`).
 - **NEVER** use inline style blocks. Use Quasar utility classes (e.g. `q-pa-md`, `row`, `col`, `q-gutter-sm`) for spacing, grids, and alignments.

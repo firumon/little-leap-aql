@@ -1,4 +1,4 @@
-﻿# AQL Action Customization & Overriding Guide (Initialization)
+# AQL Action Customization & Overriding Guide (Initialization)
 
 Use this document to initialize an AI agent session when the task involves customizing, overriding, or debugging page-level actions, floating action buttons (FABs), sticky form actions, or workflow triggers across any page (Index, Add, Edit, View, Action) in the AQL repository.
 
@@ -45,7 +45,7 @@ Before modifying any action component or creating overrides:
 ### Pattern 1: JS Logic Modifier (Form Button Customization)
 Create a `.js` file to modify properties without altering the visual structure.
 
-#### `src/components/master/Products/Index/FormSubmit.js`
+#### `src/_ui/AQL/components/master/Products/Index/FormSubmit.js`
 ```javascript
 export default {
   label: (props) => props.saving ? 'Saving...' : 'Add Product',
@@ -61,7 +61,7 @@ Wrap the default component in a `.vue` file to customize slots.
 > [!IMPORTANT]
 > **To prevent parent orchestrator attributes from overriding your local properties, you MUST use `defineOptions({ inheritAttrs: false })` and bind `$attrs` BEFORE specifying your overrides.**
 
-#### `src/components/master/Products/Index/FormCancel.vue`
+#### `src/_ui/AQL/components/master/Products/Index/FormCancel.vue`
 ```html
 <template>
   <q-btn
@@ -81,14 +81,14 @@ defineEmits(['cancel'])
 ```
 
 ### Pattern 3: Full Orchestrator Override
-If you override a parent orchestrator (e.g. `src/components/master/Products/View/Actions.vue`), you must explicitly import and render any required default action components (e.g. `Downloads` or `CrudActions`) alongside your custom markup.
+If you override a parent orchestrator (e.g. `src/_ui/AQL/components/master/Products/View/Actions.vue`), you must explicitly import and render any required default action components (e.g. `Downloads` or `CrudActions`) alongside your custom markup.
 
 ---
 
 ## 5. Dynamic Downloads Sub-sections Configuration
 In `DownloadsReportItem`, you can pass function callbacks for properties (`color`, `icon`, `label`) that accept the `report` object as an argument:
 ```javascript
-// Example: src/components/master/Products/Index/DownloadsReportItem.js
+// Example: src/_ui/AQL/components/master/Products/Index/DownloadsReportItem.js
 export default {
   color: (report) => report.name === 'Invoice' ? 'indigo' : 'deep-orange-6',
   icon: (report) => report.name === 'Invoice' ? 'receipt' : 'picture_as_pdf',
@@ -99,7 +99,7 @@ export default {
 ## 6. Dynamic Workflow Sub-sections Configuration
 In `AdditionalActionsFabSingleBtn` and `AdditionalActionsFabItem`, you can pass function callbacks for properties (`color`, `icon`, `label`) that accept the `action` object as an argument:
 ```javascript
-// Example: src/components/master/Products/View/AdditionalActionsFabItem.js
+// Example: src/_ui/AQL/components/master/Products/View/AdditionalActionsFabItem.js
 export default {
   color: (action) => action.action === 'Approve' ? 'positive' : 'secondary',
   icon: (action) => action.action === 'Approve' ? 'check' : 'bolt',
@@ -110,7 +110,7 @@ export default {
 ## 7. Dynamic Form Actions Sub-sections Configuration
 In `FormActionsFormSubmit` and `FormActionsFormCancel`, you can pass function callbacks for properties (`color`, `icon`, `label`, `flat`, `unelevated`) that accept the `(record, props)` context as arguments:
 ```javascript
-// Example: src/components/master/Products/Add/FormSubmit.js
+// Example: src/_ui/AQL/components/master/Products/Add/FormSubmit.js
 export default {
   label: (record, props) => props.saving ? 'Saving Product...' : 'Create New Product',
   color: (record, props) => record?.status === 'Draft' ? 'amber-8' : 'primary',

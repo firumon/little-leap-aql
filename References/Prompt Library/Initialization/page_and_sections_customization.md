@@ -2,8 +2,7 @@
 
 This initialization prompt guides the implementation, customization, and override of frontend pages and components for specific database resources in the AQL repository. It ensures that modular customization is achieved without cluttering or modifying the shared framework-level fallback components.
 
-> [!IMPORTANT]
-> **Scope Boundary**: This document covers ONLY resource-level frontend overrides placed under `src/components/[Scope]/[ResourceName]/`. It does NOT cover building common fallback components under `src/components/_common/` or modifying the central resolver itself. For framework-level component creation, read [common_component_creation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/common_component_creation.md).
+> **Scope Boundary**: This document covers ONLY resource-level frontend overrides placed under `src/_ui/[UiName]/components/`. It does NOT cover building common fallback components under `src/components/_common/` or modifying the section resolver itself. For framework-level component creation, read [common_component_creation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/common_component_creation.md).
 
 ---
 
@@ -20,17 +19,27 @@ When customizing layouts for a specific resource, **direct your changes to the d
 
 ## 2. Overrides Directory Structure & Naming Contracts
 
-Standard resource-specific overrides in the codebase must be placed directly under `src/components/[Scope]/[ResourceName]/` in a completely flat structure. **No custom subdirectories** (such as `Records/`, `Forms/`, etc.) are allowed.
+All overrides and modifiers in the codebase must be placed under `src/_ui/[UiName]/components/` in a flat structure matching their scope and resource. **No custom subdirectories** (such as `Records/`, `Forms/`, etc.) are allowed.
 
-A custom override component must be placed at one of two target locations:
+A custom override component must be placed at one of the target lookup candidate locations:
 
-1. **Page-Generic Override** (Applies across all pages of the resource):
-   `src/components/[Scope]/[ResourceName]/[Section].[vue|js]`
-   - *Example*: `src/components/master/Products/Records.vue`
-2. **Page-Specific Override** (Applies ONLY on a specific page: `Index`, `View`, `Add`, `Edit`, `Action`):
-   `src/components/[Scope]/[ResourceName]/[Page]/[Section].[vue|js]`
-   - *Where `[Page]` is one of: `Index`, `View`, `Add`, `Edit`, `Action`*
-   - *Example*: `src/components/master/Products/Index/Header.vue` (overriding header ONLY on the Products Index page)
+1. **Resource & Page-Specific Override**:
+   `src/_ui/[UiName]/components/[scope]/[ResourceName]/[page]/[Section].[vue|js]`
+   - *Example*: `src/_ui/AQL/components/master/Products/Index/Header.vue` (overriding header ONLY on the Products Index page)
+2. **Resource-Specific (Page-Generic) Override**:
+   `src/_ui/[UiName]/components/[scope]/[ResourceName]/[Section].[vue|js]`
+   - *Example*: `src/_ui/AQL/components/master/Products/Records.vue` (applies to Records across all pages of Products)
+3. **Page-Specific Override**:
+   `src/_ui/[UiName]/components/[scope]/[page]/[Section].[vue|js]`
+   - *Example*: `src/_ui/AQL/components/master/Index/Header.vue`
+4. **Scope-Wide Override**:
+   `src/_ui/[UiName]/components/[scope]/[Section].[vue|js]`
+   - *Example*: `src/_ui/AQL/components/master/Header.vue`
+5. **UI-Wide Override**:
+   `src/_ui/[UiName]/components/[Section].[vue|js]`
+   - *Example*: `src/_ui/AQL/components/Header.vue`
+
+*Where `[ResourceName]` is the PascalCase form of the resource slug, and `[page]` and `[scope]` are lowercased.*
 
 ---
 
@@ -67,7 +76,7 @@ All SFC files must remain thin and presentation-focused:
 ### 6.1 Template Override: Records.vue
 To replace the default list rendering layout with a completely custom Vue template:
 
-#### `src/components/master/Products/Records.vue`
+#### `src/_ui/AQL/components/master/Products/Records.vue`
 ```html
 <template>
   <q-card flat bordered class="q-mt-sm rounded-borders">
@@ -100,9 +109,9 @@ defineEmits(['navigate-to-view'])
 ```
 
 ### 6.2 JS Logic Modifier: ViewSwitcher.js
-To customize property structures, icons, labels, or configurations programmatically without replacing the HTML layout template, create a `.js` modifier file under Tiers 7 & 8:
+To customize property structures, icons, labels, or configurations programmatically without replacing the HTML layout template, create a `.js` modifier file inside the resource components directory under custom UI (e.g. `src/_ui/AQL/components/`):
 
-#### `src/components/master/Products/Index/ViewSwitcher.js`
+#### `src/_ui/AQL/components/master/Products/Index/ViewSwitcher.js`
 ```javascript
 /**
  * Intercepts and adjusts the props fed to the ViewSwitcher fallback component.

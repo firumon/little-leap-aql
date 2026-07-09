@@ -1,5 +1,5 @@
-import {computed, inject} from 'vue'
-import {useSectionResolver} from './useSectionResolver'
+import { computed, inject } from 'vue'
+import { useSectionResolver } from './useSectionResolver'
 
 /**
  * Encapsulates the common logic of section resolver, context injections,
@@ -8,13 +8,27 @@ import {useSectionResolver} from './useSectionResolver'
 export function useCommonSection({ sectionName, page, preparedProps = {}, evaluateKeys = [] }) {
   const resourceConfig = inject('resourceConfig', null)
   const resourceRecord = inject('resourceRecord', null)
+  // Construct a single reactive object containing all context information
 
-  const { resolvedComponent, propModifier, sectionsReady } = useSectionResolver({
-    sectionName,
-    page
+  // required by useSectionResolver to match the expected computed ref signature.
+  const resolverProps = computed(() => {
+    const baseProps = typeof preparedProps === 'function'
+      ? preparedProps()
+      : (preparedProps.value || preparedProps)
+
+    return {
+      section: sectionName,
+      page: page,
+      scope: resourceConfig?.scope?.value ?? 'master',
+      resource: resourceConfig?.resourceSlug?.value ?? '',
+      uiName: resourceConfig?.customUIName?.value ?? 'AQL',
+      ...baseProps
+    }
   })
 
-  // Help function to evaluate dynamic config/modifier values
+  const { ready, resolvedComponent, finalProps: resolvedFinalProps } = useSectionResolver(resolverProps)
+
+  // Helper function to evaluate dynamic config/modifier values
   function evaluate(val) {
     if (typeof val === 'function') {
       return val(resourceRecord, resourceConfig)
@@ -22,12 +36,9 @@ export function useCommonSection({ sectionName, page, preparedProps = {}, evalua
     return val
   }
 
+  // Post-process the resolved final props to handle function evaluations (e.g. evaluateKeys)
   const finalProps = computed(() => {
-    const baseProps = typeof preparedProps === 'function'
-      ? preparedProps()
-      : (preparedProps.value || preparedProps)
-
-    const rawProps = propModifier.value(baseProps)
+    const rawProps = resolvedFinalProps.value || {}
     const evaluated = {}
     for (const key of Object.keys(rawProps)) {
       const val = rawProps[key]
@@ -44,8 +55,7 @@ export function useCommonSection({ sectionName, page, preparedProps = {}, evalua
 
   return {
     resolvedComponent,
-    propModifier,
-    sectionsReady,
+    sectionsReady: ready,
     resourceConfig,
     resourceRecord,
     evaluate,

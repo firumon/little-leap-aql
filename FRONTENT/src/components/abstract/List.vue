@@ -96,7 +96,7 @@
 import { computed, useSlots, h, defineComponent, getCurrentInstance } from 'vue'
 import { QItemLabel, QChip, QBadge, colors } from 'quasar'
 
-defineOptions({ name: 'AppList' })
+defineOptions({ name: 'List' })
 
 // Inline registered components
 const MainLabel = defineComponent({

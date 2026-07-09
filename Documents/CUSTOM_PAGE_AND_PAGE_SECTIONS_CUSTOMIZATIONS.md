@@ -1,4 +1,4 @@
-﻿# Custom Page and Page Sections Customizations
+# Custom Page and Page Sections Customizations
 
 ## 1. Overview
 
@@ -135,29 +135,36 @@ graph TD
 
 ---
 
-## 5. Customization Layers & Standard Override Tiers
+## 5. Customization Layers & Standard Override Candidates
 
-AQL enforces a strict lookup hierarchy in [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js) (which is wrapped by [useCommonSection.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useCommonSection.js) in common/orchestrator components to handle context injection and dynamic function evaluation):
+AQL enforces a strict lookup hierarchy in [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js) (which is wrapped by [useCommonSection.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useCommonSection.js) in layout-level orchestrator components to handle context injection and dynamic function evaluation).
 
-### 5.1 The 8 Lookup Tiers
-When a component calls `useSectionResolver` (or resolves via `useCommonSection`), the system checks:
+### 5.1 The Two-Step Lookup Process
 
-* **Tiers 1-6 (Tenant-Custom - `components/_custom/` - VUE ONLY)**:
-  1. `components/_custom/${customUIName}/${scopeFolder}/${entityName}/${page}/${sectionName}.vue`
-  2. `components/_custom/${customUIName}/${scopeFolder}/${entityName}/${sectionName}.vue`
-  3. `components/_custom/${customUIName}/${scopeFolder}/${page}/${sectionName}.vue`
-  4. `components/_custom/${customUIName}/${page}/${sectionName}.vue`
-  5. `components/_custom/${customUIName}/${scopeFolder}/${sectionName}.vue`
-  6. `components/_custom/${customUIName}/${sectionName}.vue`
+#### Step 1: Base Component Resolution
+First, the system tries to find the default base rendering template for the section in this priority:
+1. **Custom UI base section**: `_ui/${uiName}/components/sections/${section}.vue`
+2. **Framework base section**: `components/sections/${section}.vue`
 
-* **Tiers 7-8 (Entity-Custom - `components/{Scope}/{Entity}/` - VUE AND JS)**:
-  7. `components/${scopeFolder}/${entityName}/${page}/${sectionName}.vue` and/or `.js`
-  8. `components/${scopeFolder}/${entityName}/${sectionName}.vue` and/or `.js`
+#### Step 2: Customization & Override Candidate Scan
+If a custom UI name is configured, the system scans up to 10 candidates in order under `_ui/${uiName}/components/` (first match wins):
+1. **Vue override** (resource + page specific): `_ui/${uiName}/components/${scope}/${resource}/${page}/${section}.vue`
+2. **JS modifier** (resource + page specific): `_ui/${uiName}/components/${scope}/${resource}/${page}/${section}.js`
+3. **Vue override** (resource specific): `_ui/${uiName}/components/${scope}/${resource}/${section}.vue`
+4. **JS modifier** (resource specific): `_ui/${uiName}/components/${scope}/${resource}/${section}.js`
+5. **Vue override** (page specific): `_ui/${uiName}/components/${scope}/${page}/${section}.vue`
+6. **JS modifier** (page specific): `_ui/${uiName}/components/${scope}/${page}/${section}.js`
+7. **Vue override** (scope-wide): `_ui/${uiName}/components/${scope}/${section}.vue`
+8. **JS modifier** (scope-wide): `_ui/${uiName}/components/${scope}/${section}.js`
+9. **Vue override** (ui-wide fallback): `_ui/${uiName}/components/${section}.vue`
+10. **JS modifier** (ui-wide fallback): `_ui/${uiName}/components/${section}.js`
+
+*Note: `${resource}` is derived by converting the resource slug to PascalCase.*
 
 ### 5.2 Vue Templates vs. JS Logic Modifiers
 Overrides are divided into two types:
 1. **Vue templates (`.vue` files)**: Standard Vue files containing a `<template>` block. These act as complete layout overrides. Components without templates are **strictly forbidden**.
-2. **JS logic modifiers (`.js` files)**: Functions of the form `(props) => modifiedProps` that intercept and adjust the properties fed to the fallback template. JS modifiers are allowed **only** under local entity-custom directories (Tiers 7 & 8).
+2. **JS logic modifiers (`.js` files)**: Functions of the form `(props) => modifiedProps` that intercept and adjust the properties fed to the base section template. JS modifiers are scanned alongside Vue templates under custom UI candidates.
 
 ---
 

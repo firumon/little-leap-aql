@@ -20,9 +20,7 @@
 </template>
 
 <script setup>
-defineOptions({ name: 'AppHeader' })
-
-defineProps({
+const props = defineProps({
   title: {
     type: String,
     default: ''

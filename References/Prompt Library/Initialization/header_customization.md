@@ -1,4 +1,4 @@
-﻿# AQL Unified Header Customization Guide (Initialization)
+# AQL Unified Header Customization Guide (Initialization)
 
 Use this document to initialize an AI agent session when the task involves customizing, overriding, or debugging the resource header across any page (Index, Add, Edit, View, Action) in the AQL repository.
 
@@ -51,10 +51,10 @@ The `back` property defined in a local JS modifier override (`Header.js`) is hig
 
 ## 4. Local Customization Patterns
 
-### Pattern 1: JS Logic Modifier (Tiers 7 & 8 only — Preferred for prop changes)
-Create a `.js` file to modify the header props. You only need to return the properties you want to override; [useCommonSection.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useCommonSection.js) automatically merges and evaluates them, passing `(resourceRecord, resourceConfig)` context as the first two arguments to any function values.
+### Pattern 1: JS Logic Modifier (Preferred for prop changes)
+Create a `.js` file inside the resource components directory under custom UI (e.g. `src/_ui/AQL/components/`) to modify the header props. You only need to return the properties you want to override; [useCommonSection.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useCommonSection.js) automatically merges and evaluates them, passing `(resourceRecord, resourceConfig)` context as the first two arguments to any function values.
 
-#### `src/components/master/Products/Index/Header.js`
+#### `src/_ui/AQL/components/master/Products/Index/Header.js`
 ```javascript
 export default {
   // Override title/label and subtitle/caption (using resourceRecord and resourceConfig)
@@ -74,13 +74,13 @@ export default {
 }
 ```
 
-### Pattern 2: Custom Template Wrapping `GenericHeaderPanel` (Tiers 1-8 — Required for slot customization)
+### Pattern 2: Custom Template Wrapping `GenericHeaderPanel` (Required for slot customization)
 To customize the template structure or slots while preserving the standard layout, wrap the shared presentation panel in a `.vue` file. 
 
 > [!IMPORTANT]
 > **To prevent parent orchestrator attributes from overriding your local properties, you MUST use `defineOptions({ inheritAttrs: false })` and bind `$attrs` BEFORE specifying your overrides.**
 
-#### `src/components/master/Products/Index/Header.vue`
+#### `src/_ui/AQL/components/master/Products/Index/Header.vue`
 ```html
 <template>
   <GenericHeaderPanel
@@ -107,10 +107,10 @@ defineOptions({ inheritAttrs: false })
 > [!WARNING]
 > **Do not use a `<div>` wrapper** (e.g. `<div><GenericHeaderPanel ... /></div>`) to bypass overrides unless you intentionally want to isolate the child component. Wrapping in a `<div>` blocks the parent attributes completely, causing the panel to lose dynamic behaviors like the back button, reload actions, and status badges. Always prefer `inheritAttrs: false` instead.
 
-### Pattern 3: Complete Custom Override (Tiers 1-8)
+### Pattern 3: Complete Custom Override
 To completely bypass the standard layout, write a standard Vue template:
 
-#### `src/components/master/Products/Index/Header.vue`
+#### `src/_ui/AQL/components/master/Products/Index/Header.vue`
 ```html
 <template>
   <q-banner class="bg-primary text-white q-pa-md rounded-borders">

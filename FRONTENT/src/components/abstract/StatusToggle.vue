@@ -17,7 +17,7 @@
 import { computed, useAttrs } from 'vue'
 
 defineOptions({
-  name: 'AppStatusToggle',
+  name: 'StatusToggle',
   inheritAttrs: false
 })
 

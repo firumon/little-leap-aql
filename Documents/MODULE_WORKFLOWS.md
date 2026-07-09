@@ -1,4 +1,4 @@
-﻿# AQL — Module Workflows
+# AQL — Module Workflows
 
 This document captures the **end-to-end workflow knowledge** for each major feature/module in the AQL system. It documents the complete data flow, responsible files, configuration surfaces, and known behaviors so that any AI agent (Claude, Codex, Gemini, etc.) can work on these features without re-discovering the architecture from scratch.
 
@@ -100,42 +100,43 @@ Stock reversal and report-template generation are intentionally not implemented 
 
 ---
 
-## 2. Page & Component Resolution Architecture (12-Tier Section Resolution)
+## 2. Page & Component Resolution Architecture (Two-Step Section Resolution)
 
 ### 2.1 Overview
 
 All master, operation, and accounts pages (List/Index, View, Add, Edit, Action, and custom pages) use a **dynamic resolver architecture**. Instead of static imports, the system uses a centralized routing interceptor and section loader.
 
-- **Page-Level Resolution**: Managed by [PageResolver.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/PageResolver.vue) and [usePageResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/usePageResolver.js) (6-tier lookup sequence for standard actions, 2-tier for custom pages).
-- **Section-Level Resolution**: Managed by [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js) (wrapped by [useCommonSection.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useCommonSection.js) in layout-level orchestrator components), which dynamically resolves individual layout sections (like `Header`, `Toolbar`, `Records`, `Details`) using a **12-tier lookup priority checklist**.
-- **Bare Section Keys**: Resolvers use simple bare keys (like `Header` instead of `ListHeader`, or `Record` instead of `ListRecordsRecord`) to localize namespaces and reduce template complexity.
-- **Action Suffix Checks**: Action pages or outcome sections search for `{actionKey}{Section}.vue` first before falling back to `{Section}.vue` at each tier checked.
+- **Page-Level Resolution**: Managed by [Page.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/Page.vue) and [usePageResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/usePageResolver.js) (6-tier lookup sequence for standard actions, 2-tier for custom pages).
+- **Section-Level Resolution**: Managed by [Section.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/Section.vue), [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js), and the [useCommonSection.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useCommonSection.js) wrapper (used in layout-level orchestrator components). It resolves layouts through a two-step lookup: (1) locating the base section component, and (2) scanning up to 10 override/modifier candidates.
+- **Bare Section Keys**: Resolvers use simple bare keys (like `Header` instead of `ListHeader`, or `Records` instead of `ListRecordsRecord`) to localize namespaces and reduce template complexity.
 
 ### 2.2 Resolution Flow
 
 ```
-Route: /:scope(master|operation)/:resourceSlug/(_add|:pageSlug|:code/(_view|_edit|_action/:action|:pageSlug))
+Route: /:scope(master|operation|accounts)/:resourceSlug/(_add|:pageSlug|:code/(_view|_edit|_action/:action|:pageSlug))
          │
          ▼
-PageResolver.vue  ← Centralized Page resolution (usePageResolver.js)
+Page.vue  ← Centralized Page resolution (usePageResolver.js)
   Checks standard action priority list:
-  1. Tenant-custom, Entity-specific:  pages/_custom/{ui}/{Scope}/{Entity}/{Action}Page.vue
-  2. Tenant-custom, Scope-common:     pages/_custom/{ui}/{Scope}/{Action}Page.vue
-  3. Tenant-custom, Tenant-global:    pages/_custom/{ui}/{Action}Page.vue
-  4. Entity-custom:                   pages/{Scope}/{Entity}/{Action}Page.vue
+  1. Tenant-custom, Entity-specific:  _ui/{ui}/pages/{Scope}/{Entity}/{Action}Page.vue
+  2. Tenant-custom, Scope-common:     _ui/{ui}/pages/{Scope}/{Action}Page.vue
+  3. Tenant-custom, Tenant-global:    _ui/{ui}/pages/{Action}Page.vue
+  4. Entity-custom:                   pages/{Scope}/{Entity}/{Action}Page.vue (fallback)
   5. Scope-common fallback:           pages/_common/{Scope}/{Action}Page.vue
   6. Global-common fallback:          pages/_common/{Action}Page.vue
          │
          ▼
-_common/{Action}Page.vue  ← Thin page orchestrator
-  Uses: useCommonSection({ sectionName, page })
+Page.vue mounts Section components with v-bind="pageProps"
          │
          ▼
-Resolves sections dynamically via 12-tier lookup priority (uses global `registry` map):
-  - Tiers 1-6:   components/_custom/{ui}/{Scope}/{Entity}/{Page}/{Section}.vue (and scope/global variations)
-  - Tiers 7-8:   components/{Scope}/{Entity}/{Page}/{Section}.vue (and page-generic)
-  - Tiers 9-10:  components/_common/{Scope}/{Page}/{Section}.vue (and scope-generic)
-  - Tiers 11-12: components/_common/{Page}/{Section}.vue (and global fallback)
+Section.vue  ← Resolves sections dynamically via two-step lookup (uses lowercased glob registries):
+  Step 1: Base Component Lookup (custom-UI sections directory first, framework fallback second)
+  Step 2: Customization Override Scan (scans 10 candidates under _ui/{ui}/components/ in order):
+    - Resource + page Vue overrides and JS modifiers
+    - Resource-specific Vue overrides and JS modifiers
+    - Page-specific Vue overrides and JS modifiers
+    - Scope-wide Vue overrides and JS modifiers
+    - UI-wide Vue overrides and JS modifiers
 ```
 
 ### 2.3 Page-Level Discovery Candidates
@@ -187,13 +188,13 @@ If no page is found, it renders a developer fallback page: `pages/_common/Page.v
 
 ### 3.1 Overview
 
-operation pages use the identical centralized page resolver (`PageResolver.vue` / `usePageResolver.js`), section resolver (`useSectionResolver.js`), and common section wrapper (`useCommonSection.js`) as master, but with a different default section set — particularly for the `ViewPage`. 
+operation pages use the identical centralized page resolver (`Page.vue` / `usePageResolver.js`), section resolver (`useSectionResolver.js`), and common section wrapper (`useCommonSection.js`) as master, but with a different default section set — particularly for the `ViewPage`. 
 
 operation data generally flows top-down (e.g. Purchase Requisitions → Purchase Orders → Goods Receipts) and tracks complex lifecycles via `additionalActions`. operation views exclude the generic `ViewAudit` section and substitute a `ViewParent` section.
 
 ### 3.2 Key Differences vs master
 
-- **Section Resolver Scope**: `useSectionResolver` (and by extension `useCommonSection`) takes `scope: 'operation'`, which sets `{ScopeFolder}` to `operation` in candidates paths checking.
+- **Section Resolver Scope**: context properties (`scope`, `resource`, `uiName`) are propagated directly in `pageProps` from the page orchestrator down to the Section components, steering candidate path lookup (e.g. mapping `scope` to `operation` in candidate paths).
 - **ViewPage Orchestrator**: The default operation `ViewPage.vue` orchestrator includes `Parent` section and excludes `Audit` section.
 - **ViewDetails Filtering**: The default `OperationViewDetails` dynamically filters out both audit columns (`CreatedAt`, `UpdatedAt`, `CreatedBy`, `UpdatedBy`) and any action stamp columns dynamically generated from the resource's `additionalActions` configuration (e.g. `ApprovedBy`, `ApprovedAt`).
 - **ViewParent Handling**: `OperationViewParent` automatically fetches the parent record (based on the `{ParentName}Code` header resolution logic). 
@@ -204,9 +205,10 @@ operation data generally flows top-down (e.g. Purchase Requisitions → Purchase
 
 | File | Role |
 |---|---|
-| `FRONTENT/src/pages/PageResolver.vue` | Centralized page resolver page component |
-| `FRONTENT/src/composables/resources/usePageResolver.js` | 6-tier page resolver logic |
-| `FRONTENT/src/composables/resources/useSectionResolver.js` | 12-tier section resolver logic |
+| `FRONTENT/src/pages/Page.vue` | Centralized page orchestrator page component |
+| `FRONTENT/src/composables/resources/usePageResolver.js` | 6-tier page resolver logic, propagating scope/resource/uiName context |
+| `FRONTENT/src/components/Section.vue` | Orchestrates dynamic section loading (Loading, Resolved, Fallback Card states) |
+| `FRONTENT/src/composables/resources/useSectionResolver.js` | Hierarchical base + 10-candidate section override resolver logic |
 | `FRONTENT/src/composables/resources/useCommonSection.js` | Common orchestrator section wrapper & evaluation logic |
 | `FRONTENT/src/pages/_common/IndexPage.vue` | Centralized List page orchestrator |
 | `FRONTENT/src/pages/_common/AddPage.vue` | Centralized Add page orchestrator |

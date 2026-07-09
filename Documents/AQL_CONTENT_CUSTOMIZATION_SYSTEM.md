@@ -1,4 +1,4 @@
-﻿# AQL Content Layout & Customization System
+# AQL Content Layout & Customization System
 
 This document is the complete reference guide for the AQL Content Customization System. It explains the decentralized custom template and logic modifier architecture, fallback components, page orchestrators, and all available configuration parameters used to customize resource screens (Index, View, Add, Edit, Action) without rewriting full HTML/Vue templates.
 
@@ -9,19 +9,19 @@ This document is the complete reference guide for the AQL Content Customization 
 AQL pages resolve their inner contents using a single unified page orchestrator shell:
 - **Unified Content Orchestrator**: Resolves [Content.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_common/sections/Content/Content.vue). It dynamically determines the page mode and renders the correct sub-section fallback.
 
-This orchestrator dynamically looks for custom folder overrides at `src/components/[Scope]/[ResourceName]/` using [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js). Common components wrap this with [useCommonSection.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useCommonSection.js) to automate context injection (record/config), property modifications, and dynamic evaluations.
+This orchestrator dynamically looks for overrides under `src/_ui/[UiName]/components/` using [useSectionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useSectionResolver.js). Common components wrap this with [useCommonSection.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useCommonSection.js) to automate context injection (record/config), property modifications, and dynamic evaluations.
 
 ### Custom Templates vs. JS Logic Modifiers
-When resolving a section (like `Content`, `List`, `Details`, `Form`), the resolver checks for:
-1. **Vue Template Override (`.vue` file)**: Checked across all Tiers 1-8. It must contain a `<template>` block. If found, it completely takes over layout rendering. Vue components without a template are **strictly forbidden**.
-2. **JS Logic Modifier (`.js` file)**: Checked **only** at Tiers 7 & 8 (entity-local). It exports a default function `(props) => modifiedProps` that intercepts and adjusts the properties fed to the fallback template component (`List.vue`, `Details.vue`, `Form.vue`).
+When resolving a section (like `Content`, `List`, `Details`, `Form`), the resolver checks:
+1. **Vue Template Override (`.vue` file)**: Checked across the 10 lookup candidates. It must contain a `<template>` block. If found, it completely takes over layout rendering. Vue components without a template are **strictly forbidden**.
+2. **JS Logic Modifier (`.js` file)**: Checked across the 10 lookup candidates. It exports a default function `(props) => modifiedProps` that intercepts and adjusts the properties fed to the base section template.
 
 ---
 
 ## 2. Page Configuration Schemas (via JS Modifiers)
 
 ### 2.1 Index Page: List View (`List.js` / `List.vue`)
-Custom JS logic modifier created at `src/components/[Scope]/[Resource]/Index/List.js` or `src/components/[Scope]/[Resource]/List.js`.
+Custom JS logic modifier created at `src/_ui/[UiName]/components/[scope]/[ResourceName]/Index/List.js` or `src/_ui/[UiName]/components/[scope]/[ResourceName]/List.js`.
 
 #### Default Props Generation
 By default, the List component maps resource columns to [AqlList.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/shared/AqlList.vue) props via [useDefaultListProps.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useDefaultListProps.js):
@@ -35,7 +35,7 @@ By default, the List component maps resource columns to [AqlList.vue](file:///f:
 #### Example JS Logic Modifier for Listing
 Any `AqlList` prop (e.g. `layout`, `content`, `metaLayout`, `meta`, `chipColor`) can be overridden.
 ```javascript
-// src/components/master/Products/Index/List.js
+// src/_ui/AQL/components/master/Products/Index/List.js
 export default function (props) {
   return {
     ...props,
@@ -49,7 +49,7 @@ export default function (props) {
 ---
 
 ## 2.2 View Page: Details Card (`Details.js`)
-Custom JS logic modifier file created at `src/components/[Scope]/[Resource]/View/Details.js`.
+Custom JS logic modifier file created at `src/_ui/[UiName]/components/[scope]/[ResourceName]/View/Details.js`.
 
 #### Details Card Schema (`Details.vue` Props)
 | Parameter | Type | Default | Description |
@@ -64,7 +64,7 @@ Custom JS logic modifier file created at `src/components/[Scope]/[Resource]/View
 
 #### Example Details Modifier
 ```javascript
-// src/components/master/Products/View/Details.js
+// src/_ui/AQL/components/master/Products/View/Details.js
 export default function (props) {
   return {
     ...props,
@@ -84,7 +84,7 @@ export default function (props) {
 ---
 
 ## 2.3 Add, Edit, & Action Forms (`Form.js`)
-Custom JS logic modifier file created at `src/components/[Scope]/[Resource]/Add/Form.js`, `Edit/Form.js`, or `Action/Form.js`.
+Custom JS logic modifier file created at `src/_ui/[UiName]/components/[scope]/[ResourceName]/Add/Form.js`, `Edit/Form.js`, or `Action/Form.js`.
 
 #### Form Configuration Schema (`Form.vue` Props)
 | Parameter | Type | Default | Description |
@@ -102,7 +102,7 @@ Form inputs of type `'date'` render using [AppDate.vue](file:///f:/LITTLE%20LEAP
 
 #### Example Form Modifier
 ```javascript
-// src/components/master/Products/Add/Form.js
+// src/_ui/AQL/components/master/Products/Add/Form.js
 export default function (props) {
   return {
     ...props,
@@ -144,7 +144,7 @@ At the page content orchestrator level (`View/Content.js`), a resource custom JS
 
 #### Example Content Modifier
 ```javascript
-// src/components/operation/OutletConsumptions/View/Content.js
+// src/_ui/AQL/components/operation/OutletConsumptions/View/Content.js
 export default function (props) {
   return {
     ...props,

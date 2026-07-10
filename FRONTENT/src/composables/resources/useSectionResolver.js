@@ -25,6 +25,28 @@ Object.keys(customUiModules).forEach((rawPath) => {
   customUiRegistry[key] = customUiModules[rawPath]
 })
 
+// Expose registry for backward compatibility with ViewChildren (Children.vue)
+export const registry = {}
+Object.keys(frameworkSectionModules).forEach((rawPath) => {
+  const key = rawPath.replace(/^\.\.\/\.\.\//, '')
+  registry[key] = frameworkSectionModules[rawPath]
+})
+Object.keys(customUiModules).forEach((rawPath) => {
+  const key = rawPath.replace(/^\.\.\/\.\.\//, '')
+  registry[key] = customUiModules[rawPath]
+
+  // Legacy components/_custom/... path mapping
+  /*if (key.startsWith('_ui/')) {
+    const parts = key.split('/')
+    if (parts[2] === 'components') {
+      const uiName = parts[1]
+      const rest = parts.slice(3).join('/')
+      const legacyKey = `components/_custom/${uiName}/${rest}`
+      registry[legacyKey] = customUiModules[rawPath]
+    }
+  }*/
+})
+
 // ─── Composable ───────────────────────────────────────────────────────────────
 
 /**

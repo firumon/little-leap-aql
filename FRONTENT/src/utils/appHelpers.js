@@ -373,3 +373,22 @@ export function singularize(word) {
 
   return word
 }
+
+/**
+ * $ref linking for batched GAS requests. A $ref object lets a later sub-request
+ * reference a value (e.g. a generated code) produced by an earlier one.
+ * The $ref object is never stringified on the front-end — GAS resolves it.
+ */
+export function batchRef (path) { return { $ref: path } }
+export function isBatchRef (value) { return !!(value && typeof value === 'object' && value.$ref) }
+
+/**
+ * Returns a $ref as-is, otherwise coerces a value to a trimmed string.
+ * Used by the canonical request builders so optional refs pass through untouched.
+ */
+export function textOrRef (value) { return isBatchRef(value) ? value : String(value || '').trim() }
+
+/**
+ * Normalizes a code-or-$ref to its string/ref form (alias of textOrRef).
+ */
+export function normalizeCodeOrRef (value) { return textOrRef(value) }

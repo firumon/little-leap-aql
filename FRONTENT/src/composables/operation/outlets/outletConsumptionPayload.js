@@ -1,6 +1,7 @@
 import { todayISO, text, OUTLET_REFERENCE_TYPES } from './outletOperationsMeta.js'
 import { toNumber } from './outletStockLogic.js'
-import { compositeSaveRequest, executeActionRequest, OUTLET_ACTIONS, resourceBulkRequest, resourceCreateRequest, textOrRef } from './outletOperationsBatch.js'
+import { compositeSaveRequest, executeActionRequest, OUTLET_ACTIONS, resourceBulkRequest, resourceCreateRequest } from './outletOperationsBatch.js'
+import { textOrRef } from 'src/utils/appHelpers'
 
 export function soldRows(rows = []) {
   return rows.filter((row) => toNumber(row.SoldQty) > 0).map((row) => ({ SKU: text(row.SKU), Qty: toNumber(row.SoldQty) }))

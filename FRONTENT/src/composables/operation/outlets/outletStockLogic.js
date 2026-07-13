@@ -1,5 +1,5 @@
 import { OUTLET_DEFAULT_STORAGE, OUTLET_REFERENCE_TYPES, STOCK_MOVEMENT_REFERENCE_TYPES, active, text } from './outletOperationsMeta.js'
-import { textOrRef } from '../../batchRefs.js'
+import { textOrRef } from 'src/utils/appHelpers'
 
 export function toNumber(value) { const number = Number(value); return Number.isFinite(number) ? number : 0 }
 export function storageName(value) { return text(value) || OUTLET_DEFAULT_STORAGE }

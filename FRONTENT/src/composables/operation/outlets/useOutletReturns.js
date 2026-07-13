@@ -7,7 +7,7 @@ import { useResourceConfig } from '../../resources/useResourceConfig.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { active, formatDate, progressMeta, sortTime, text, todayISO } from './outletOperationsMeta.js'
 import { toNumber } from './outletStockLogic.js'
-import { batchRef } from '../../batchRefs.js'
+import { batchRef } from 'src/utils/appHelpers'
 import { executeActionRequest, responseFailed, failureMessage } from './outletOperationsBatch.js'
 import { resolvePriceListCode, resolvePriceListLookup, resolveSkuPrice } from './outletConsumptionPricing.js'
 

@@ -7,7 +7,8 @@ import { useResourceConfig } from '../../../resources/useResourceConfig.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useProductSkuResolver } from 'src/composables/master/products/useProductSkuResolver'
 import { todayISO, text, active } from '../outletOperationsMeta.js'
-import { compositeSaveRequest, resourceBulkRequest, executeActionRequest, batchRef, responseFailed, failureMessage, batchResultCode } from '../outletOperationsBatch.js'
+import { compositeSaveRequest, resourceBulkRequest, executeActionRequest, responseFailed, failureMessage, batchResultCode } from '../outletOperationsBatch.js'
+import { batchRef } from 'src/utils/appHelpers'
 import { toNumber } from '../outletStockLogic.js'
 
 export function useDirectRestock() {

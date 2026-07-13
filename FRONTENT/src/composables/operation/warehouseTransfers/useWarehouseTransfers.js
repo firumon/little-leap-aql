@@ -6,7 +6,7 @@ import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useWarehouseStockList } from 'src/composables/master/warehouses/useWarehouseStockList'
 import { useProductSkuResolver } from 'src/composables/master/products/useProductSkuResolver'
-import { batchRef } from 'src/composables/batchRefs'
+import { batchRef } from 'src/utils/appHelpers'
 import { useRecord } from '../../resources/useRecord.js'
 
 export function useWarehouseTransfers() {

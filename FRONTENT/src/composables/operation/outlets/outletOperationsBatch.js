@@ -1,9 +1,8 @@
-import { batchRef, isBatchRef, textOrRef } from '../../batchRefs.js'
+import { batchRef, isBatchRef, textOrRef } from 'src/utils/appHelpers'
 
 export function responseFailed(response) { return !response?.success || (Array.isArray(response.data) && response.data.some(entry => entry?.success === false)) }
 export function failureMessage(response, fallback = 'Request failed.') { const failed = Array.isArray(response?.data) ? response.data.find(entry => entry?.success === false) : null; return failed?.error || failed?.message || response?.error || response?.message || fallback }
 export function batchResultCode(response, index = 0) { const entry = Array.isArray(response?.data) ? response.data[index] : null; return entry?.data?.result?.parentCode || entry?.data?.result?.code || entry?.data?.code || '' }
-export { batchRef, isBatchRef, textOrRef }
 export function normalizeCodeOrRef(value) { return textOrRef(value) }
 export function compositeSaveRequest(payload = {}) { const { resource, code, data, children } = payload; return { action: 'compositeSave', resource, payload: { ...(code ? { code: textOrRef(code) } : {}), data, children: children || [] } } }
 export function resourceBulkRequest(resource, records = [], cursorResources = []) { return { action: 'bulk', resource, payload: { targetResource: resource, records, ...(cursorResources.length ? { lastUpdatedAtResources: [resource, ...cursorResources] } : {}) } } }

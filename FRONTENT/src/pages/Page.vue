@@ -52,6 +52,7 @@ import AqlContentWrapper from 'components/shared/AqlContentWrapper.vue'
 import PageFallback from 'pages/_common/PageFallback.vue'
 import Section from 'components/Section.vue'
 import { usePageResolver } from 'src/composables/resources/usePageResolver'
+import { usePageState } from 'src/composables/resources/usePageState'
 
 defineOptions({ name: 'AqlResourcePage' })
 
@@ -71,4 +72,9 @@ const {
 
 provide('resourceConfig', resourceConfig)
 provide('resourceRecord', resourceRecord)
+
+// Centralized page-level form-state composable (shared by Header/Content/Action sections).
+// Pass a per-resource `strategy` here once resource-specific payload logic is extracted.
+const pageState = usePageState()
+provide('pageState', pageState)
 </script>

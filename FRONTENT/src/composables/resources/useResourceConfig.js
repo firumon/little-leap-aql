@@ -38,29 +38,34 @@ function checkActionsList(resConfig, actions) {
  * Resolves the current resource configuration from route params + auth store.
  * Used by all resource pages (index, view, add, edit, action).
  */
-export function useResourceConfig() {
-  const {
-    scope,
-    resourceSlug,
-    resourceName,
-    code,
-    pageName,
-    pageSlug,
-    level,
-    resourceConfig: config
-  } = useRouteConfig()
-
+export function useResourceConfig(resourceNameOverride) {
+  const routeCfg = useRouteConfig()
   const auth = useAuthStore()
 
-  const customUIName = computed(() => config.value?.ui?.customUIName || 'AQL')
+  const activeConfig = computed(() => {
+    if (resourceNameOverride) {
+      return findResourceConfig(auth, resourceNameOverride)
+    }
+    return routeCfg.resourceConfig.value
+  })
+
+  const scope = computed(() => resourceNameOverride ? (activeConfig.value?.scope || 'master') : routeCfg.scope.value)
+  const resourceSlug = computed(() => resourceNameOverride ? (activeConfig.value?.slug || '') : routeCfg.resourceSlug.value)
+  const resourceName = computed(() => activeConfig.value?.name || '')
+  const code = computed(() => resourceNameOverride ? '' : routeCfg.code.value)
+  const pageName = computed(() => resourceNameOverride ? 'index' : routeCfg.pageName.value)
+  const pageSlug = computed(() => resourceNameOverride ? '' : routeCfg.pageSlug.value)
+  const level = computed(() => resourceNameOverride ? 'resource' : routeCfg.level.value)
+
+  const customUIName = computed(() => activeConfig.value?.ui?.customUIName || 'AQL')
 
   const resourceHeaders = computed(() => {
-    const h = config.value?.headers
+    const h = activeConfig.value?.headers
     return Array.isArray(h) ? h : []
   })
 
   const resolvedFields = computed(() => {
-    const uiFields = config.value?.ui?.fields
+    const uiFields = activeConfig.value?.ui?.fields
     if (Array.isArray(uiFields) && uiFields.length) {
       return uiFields
     }
@@ -76,7 +81,7 @@ export function useResourceConfig() {
   })
 
   const additionalActions = computed(() => {
-    const raw = config.value?.additionalActions
+    const raw = activeConfig.value?.additionalActions
     let parsed = []
     if (Array.isArray(raw)) parsed = raw
     else if (typeof raw === 'string' && raw) {

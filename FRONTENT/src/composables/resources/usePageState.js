@@ -33,6 +33,7 @@
 import { reactive, computed, toRaw } from 'vue'
 import { useQuasar } from 'quasar'
 import { useResourceIoStore } from 'src/stores/resourceIo'
+import { useResourceConfig } from './useResourceConfig'
 // Low-level $ref helpers live in appHelpers.js (stateless utils, §2); re-exported
 // here so usePageState is the single import surface for consumers.
 import { batchRef, isBatchRef, textOrRef, normalizeCodeOrRef } from 'src/utils/appHelpers'
@@ -312,8 +313,25 @@ export function usePageState (strategy = {}) {
   // Every trigger funnels through `run`: it takes the (already-built) requests,
   // sends them via the resource IO store, and returns { success, response, code }
   // back to the caller (the "source function").
-  async function run ({ requests, build: buildFn, mode = 'submit', onSuccess, notify = true, successMsg } = {}) {
+  async function run ({ requests, build: buildFn, mode = 'submit', onSuccess, reload = [], notify = true, successMsg } = {}) {
+    const errors = validationErrors.value
+    if (errors.length > 0) {
+      if (notify) {
+        $q.notify({
+          type: 'negative',
+          message: errors[0].message,
+          position: 'top'
+        })
+      }
+      return { success: false, response: null, code: '', errors }
+    }
+
     if (!requests) requests = (buildFn || build)({ mode })
+
+    if (Array.isArray(reload) && reload.length > 0) {
+      requests.push(resourceGetRequest(reload, {}))
+    }
+
     if (!requests || !requests.length) {
       if (notify) $q.notify({ type: 'warning', message: 'Nothing to submit.', position: 'top' })
       return { success: false, response: null, code: '' }
@@ -339,11 +357,12 @@ export function usePageState (strategy = {}) {
   }
 
   async function submit (opts = {}) {
-    return run({ ...opts, mode: 'submit', successMsg: 'Saved successfully.' })
+    return run({ ...opts, mode: 'submit', successMsg: opts.successMsg || 'Saved successfully.' })
   }
 
   async function saveDraft (opts = {}) {
-    return run({ ...opts, mode: 'draft', successMsg: 'Draft saved.' })
+    console.warn('saveDraft is deprecated. Use submit() and set Progress to DRAFT instead.')
+    return submit({ ...opts, successMsg: 'Draft saved.' })
   }
 
   async function executeAction (resource, actionName, fields = {}, opts = {}) {
@@ -356,8 +375,49 @@ export function usePageState (strategy = {}) {
   // Validation + lifecycle
   // ----------------------------------------------------------------------
   function validateNode (node) {
-    if (strategy.validate) return strategy.validate(node, state)
-    return []
+    const errors = []
+    try {
+      const { config } = useResourceConfig(node.resource)
+      const requiredStr = config.value?.requiredHeaders || ''
+      const requiredHeaders = requiredStr
+        ? requiredStr.split(',').map(h => h.trim()).filter(Boolean)
+        : []
+
+      if (node.many) {
+        node.records.forEach((rec, idx) => {
+          if (!rec || rec.status === 'Inactive') return
+          requiredHeaders.forEach(field => {
+            const val = rec.data?.[field]
+            if (val === undefined || val === null || val === '') {
+              errors.push({
+                resource: node.resource,
+                field,
+                message: `Row ${idx + 1}: ${field} is required`,
+                index: idx
+              })
+            }
+          })
+        })
+      } else {
+        requiredHeaders.forEach(field => {
+          const val = node.record?.[field]
+          if (val === undefined || val === null || val === '') {
+            errors.push({
+              resource: node.resource,
+              field,
+              message: `${field} is required`
+            })
+          }
+        })
+      }
+    } catch (e) {
+      console.warn('Generic validation error', e)
+    }
+
+    if (strategy.validate) {
+      errors.push(...strategy.validate(node, state))
+    }
+    return errors
   }
 
   const validationErrors = computed(() => {

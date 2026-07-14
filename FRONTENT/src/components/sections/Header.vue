@@ -6,15 +6,25 @@
 import { computed, inject, useAttrs } from 'vue'
 import { useRouter } from 'vue-router'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
+import { evaluateProp } from 'src/composables/resources/useSectionResolver'
 import Header from 'components/app/Header.vue'
 
 defineOptions({ name: 'SectionsHeader', inheritAttrs: false })
 
 const props = defineProps({
-  title: { type: String, default: undefined },
-  subtitle: { type: String, default: undefined },
+  title: { type: [String, Function], default: undefined },
+  subtitle: { type: [String, Function], default: undefined },
   back: { type: [Boolean, String, Function], default: undefined },
-  reload: { type: [Boolean, String], default: undefined }
+  reload: { type: [Boolean, String], default: undefined },
+  chip: { type: [String, Function], default: '' },
+  chipColor: { type: [String, Function], default: 'primary' },
+  chipTextColor: { type: [String, Function], default: 'white' },
+  backIcon: { type: [String, Function], default: 'arrow_back' },
+  reloadIcon: { type: [String, Function], default: 'refresh' },
+  leftIconColor: { type: [String, Function], default: 'primary' },
+  icon: { type: [String, Function], default: '' },
+  iconColor: { type: [String, Function], default: 'primary' },
 })
 
 const attrs = useAttrs()
@@ -23,12 +33,14 @@ const nav = useResourceNav()
 
 const resourceConfig = inject('resourceConfig', null)
 const resourceRecord = inject('resourceRecord', null)
+const routeConfig = useRouteConfig()
 
 // Injected resourceConfig is the useResourceConfig() return object (refs/computeds).
 const {
-  config, pageName, scope, resourceSlug,
-  code: injectedCode, additionalActions
+  config, scope, resourceSlug, additionalActions
 } = resourceConfig || {}
+
+const { pageName, code: injectedCode } = routeConfig
 
 // Resolve context from the injected config; attrs override per-instance.
 const activeConfig = computed(() => attrs.config || config?.value || null)
@@ -95,8 +107,16 @@ const showBackBtn = computed(() => hasHistory.value || !isIndex.value)
 
 const finalAttrs = computed(() => ({
   ...attrs,
-  title: props.title ?? derivedTitle.value,
-  subtitle: props.subtitle ?? derivedSubtitle.value,
+  title: evaluateProp(props.title, resourceRecord, resourceConfig) ?? derivedTitle.value,
+  subtitle: evaluateProp(props.subtitle, resourceRecord, resourceConfig) ?? derivedSubtitle.value,
+  chip: evaluateProp(props.chip, resourceRecord, resourceConfig),
+  chipColor: evaluateProp(props.chipColor, resourceRecord, resourceConfig),
+  chipTextColor: evaluateProp(props.chipTextColor, resourceRecord, resourceConfig),
+  backIcon: evaluateProp(props.backIcon, resourceRecord, resourceConfig),
+  reloadIcon: evaluateProp(props.reloadIcon, resourceRecord, resourceConfig),
+  leftIconColor: evaluateProp(props.leftIconColor, resourceRecord, resourceConfig),
+  icon: evaluateProp(props.icon, resourceRecord, resourceConfig),
+  iconColor: evaluateProp(props.iconColor, resourceRecord, resourceConfig),
   back: props.back ?? showBackBtn.value,
   reload: props.reload ?? true
 }))

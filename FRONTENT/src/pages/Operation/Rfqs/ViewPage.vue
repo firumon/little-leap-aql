@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <q-card flat bordered>
     <q-card-section v-if="loading && !record" class="text-center q-py-xl">
       <q-spinner-dots color="primary" size="36px" />
@@ -251,6 +251,7 @@
 <script setup>
 import { computed, h, ref, watch } from 'vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useRFQSupplierFlow } from 'src/composables/operation/rfqs/useRFQSupplierFlow'
 import { useRFQEditableFlow } from 'src/composables/operation/rfqs/useRFQEditableFlow'
@@ -261,7 +262,7 @@ const InfoCell = (props) => h('div', { class: 'col-12 col-sm-6 col-md-4' }, [
 ])
 
 const nav = useResourceNav()
-const { code: rfqCode } = useResourceConfig()
+const { code: rfqCode } = useRouteConfig()
 const supplierFlow = useRFQSupplierFlow(rfqCode)
 
 const {

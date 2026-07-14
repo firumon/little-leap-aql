@@ -52,10 +52,6 @@ export function useResourceConfig(resourceNameOverride) {
   const scope = computed(() => resourceNameOverride ? (activeConfig.value?.scope || 'master') : routeCfg.scope.value)
   const resourceSlug = computed(() => resourceNameOverride ? (activeConfig.value?.slug || '') : routeCfg.resourceSlug.value)
   const resourceName = computed(() => activeConfig.value?.name || '')
-  const code = computed(() => resourceNameOverride ? '' : routeCfg.code.value)
-  const pageName = computed(() => resourceNameOverride ? 'index' : routeCfg.pageName.value)
-  const pageSlug = computed(() => resourceNameOverride ? '' : routeCfg.pageSlug.value)
-  const level = computed(() => resourceNameOverride ? 'resource' : routeCfg.level.value)
 
   const customUIName = computed(() => activeConfig.value?.ui?.customUIName || 'AQL')
 
@@ -145,7 +141,7 @@ export function useResourceConfig(resourceNameOverride) {
       .filter(Boolean)
   }
 
-  const permissions = computed(() => config.value?.permissions || {})
+  const permissions = computed(() => activeConfig.value?.permissions || {})
 
   const allowed = (query, targetResourceName) => {
     if (!query) return false
@@ -175,18 +171,20 @@ export function useResourceConfig(resourceNameOverride) {
     return checkSingleAction(resConfig, query)
   }
 
+  const requiredHeaders = computed(() => {
+    const raw = activeConfig.value?.requiredHeaders || ''
+    return raw ? raw.split(',').map(h => h.trim()).filter(Boolean) : []
+  })
+
   return {
+    config: activeConfig,
     scope,
     resourceSlug,
     resourceName,
-    code,
-    pageName,
-    pageSlug,
-    level,
-    config,
     customUIName,
     resourceHeaders,
     resolvedFields,
+    requiredHeaders,
     additionalActions,
     permissions,
     allowed

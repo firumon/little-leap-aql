@@ -39,6 +39,7 @@
 import { computed, inject } from 'vue'
 import { useCommonSection } from 'src/composables/resources/useCommonSection'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useDataStore } from 'src/stores/data'
 import { useReports } from 'src/composables/reports/useReports'
 import ReportInputDialog from 'src/components/master/ReportInputDialog.vue'
@@ -54,7 +55,8 @@ const props = defineProps({
   page: { type: String, default: 'Index' }
 })
 
-const { resourceName, code, config } = inject('resourceConfig') || useResourceConfig()
+const { resourceName, config } = inject('resourceConfig') || useResourceConfig()
+const { code } = useRouteConfig()
 const dataStore = useDataStore()
 
 const activeRecord = computed(() => {

@@ -113,6 +113,7 @@ function uid () {
 export function usePageState (strategy = {}) {
   const $q = useQuasar()
   const resourceIoStore = useResourceIoStore()
+  const { requiredHeaders } = useResourceConfig()
 
   // --- core reactive state (one node per resource) ---
   const state = reactive({
@@ -377,16 +378,12 @@ export function usePageState (strategy = {}) {
   function validateNode (node) {
     const errors = []
     try {
-      const { config } = useResourceConfig(node.resource)
-      const requiredStr = config.value?.requiredHeaders || ''
-      const requiredHeaders = requiredStr
-        ? requiredStr.split(',').map(h => h.trim()).filter(Boolean)
-        : []
+      const headers = requiredHeaders.value
 
       if (node.many) {
         node.records.forEach((rec, idx) => {
           if (!rec || rec.status === 'Inactive') return
-          requiredHeaders.forEach(field => {
+          headers.forEach(field => {
             const val = rec.data?.[field]
             if (val === undefined || val === null || val === '') {
               errors.push({
@@ -399,7 +396,7 @@ export function usePageState (strategy = {}) {
           })
         })
       } else {
-        requiredHeaders.forEach(field => {
+        headers.forEach(field => {
           const val = node.record?.[field]
           if (val === undefined || val === null || val === '') {
             errors.push({

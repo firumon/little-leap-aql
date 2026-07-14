@@ -29,6 +29,7 @@
 import { computed, inject, useAttrs } from 'vue'
 import { useRouter } from 'vue-router'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useCommonSection } from 'src/composables/resources/useCommonSection'
 import GenericHeaderPanel from 'components/shared/GenericHeaderPanel.vue'
 
@@ -41,8 +42,10 @@ const props = defineProps({ page: { type: String, default: 'View' } })
 
 const resourceConfig = inject('resourceConfig')
 const resourceRecord = inject('resourceRecord', null)
+const routeConfig = useRouteConfig()
 
-const { config, pageName, scope, resourceSlug, code: resolvedCode, additionalActions, customUIName } = resourceConfig || {}
+const { config, scope, resourceSlug, additionalActions, customUIName } = resourceConfig || {}
+const { pageName, code: resolvedCode } = routeConfig
 const resolvedRecord = computed(() => resourceRecord?.record?.value)
 
 const activeConfig = computed(() => attrs.config || config?.value)

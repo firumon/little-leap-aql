@@ -5,16 +5,16 @@ import { useMasterActions } from 'src/composables/useMasterActions'
 import { useOperationActions } from 'src/composables/useOperationActions'
 import { useActionFields } from 'src/composables/resources/useActionFields'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { isActionVisible } from 'src/composables/resources/useResourceConfig'
 
 export function usePageOrchestrator(resConfig, canonicalPage) {
   const nav = useResourceNav()
   const resourceRecord = useRecord()
+  const { code, pageSlug } = useRouteConfig()
 
   const {
     scope,
-    code,
-    pageSlug,
     config,
     resourceName,
     resourceHeaders,

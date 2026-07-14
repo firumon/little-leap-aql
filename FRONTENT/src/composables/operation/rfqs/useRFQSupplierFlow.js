@@ -2,6 +2,7 @@ import { computed, ref, unref } from 'vue'
 import { useQuasar } from 'quasar'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceConfig, isActionVisible } from 'src/composables/resources/useResourceConfig'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useRecord } from 'src/composables/resources/useRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { buildPrimaryMeta } from './rfqMeta'
@@ -44,7 +45,8 @@ export function useRFQSupplierFlow(rfqCodeRef) {
   const $q = useQuasar()
   const resourceIoStore = useResourceIoStore()
   const nav = useResourceNav()
-  const { code: routeCode, additionalActions } = useResourceConfig()
+  const { additionalActions } = useResourceConfig()
+  const { code: routeCode } = useRouteConfig()
 
   const rfqResource = useRecord(ref('RFQs'))
   const prResource = useRecord(ref('PurchaseRequisitions'))

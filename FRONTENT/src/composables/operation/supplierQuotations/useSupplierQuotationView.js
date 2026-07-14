@@ -1,8 +1,9 @@
-﻿import { computed, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceConfig, isActionVisible } from 'src/composables/resources/useResourceConfig'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useRecord } from 'src/composables/resources/useRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { parsePrItemCodeCsv } from 'src/composables/operation/rfqs/rfqPayload'
@@ -36,8 +37,8 @@ export function useSupplierQuotationView() {
   const auth = useAuthStore()
   const resourceIoStore = useResourceIoStore()
   const nav = useResourceNav()
-  const { code, additionalActions } = useResourceConfig()
-
+  const { additionalActions } = useResourceConfig()
+  const { code } = useRouteConfig()
   const quotations = useRecord(ref('SupplierQuotations'))
   const quotationItems = useRecord(ref('SupplierQuotationItems'))
   const rfqs = useRecord(ref('RFQs'))

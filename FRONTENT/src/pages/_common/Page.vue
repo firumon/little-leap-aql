@@ -132,6 +132,7 @@ import { ref, computed, watch, reactive, provide, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AqlContentWrapper from 'components/shared/AqlContentWrapper.vue'
 import { useResourceConfig, isActionVisible } from 'src/composables/resources/useResourceConfig'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useRecord } from 'src/composables/resources/useRecord'
 import { useCompositeForm } from 'src/composables/resources/useCompositeForm'
 import { useMasterActions } from 'src/composables/useMasterActions'
@@ -168,12 +169,14 @@ const router = useRouter()
 const nav = useResourceNav()
 
 const resConfig = useResourceConfig()
+const routeConfig = useRouteConfig()
 const resourceRecord = useRecord()
 
 provide('resourceConfig', resConfig)
 provide('resourceRecord', resourceRecord)
 
-const { scope, resourceSlug, code, pageSlug, pageName, config, resourceName, resourceHeaders, additionalActions } = resConfig
+const { scope, resourceSlug, config, resourceName, resourceHeaders, additionalActions } = resConfig
+const { code, pageSlug, pageName } = routeConfig
 const { record, records: items, loading, reload, loadRelations, childRecordsByResource } = resourceRecord
 
 const isEmpty = computed(() => !loading.value && items.value.length === 0)

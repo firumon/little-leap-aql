@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue';
 import { useResourceConfig, isActionVisible } from '../../resources/useResourceConfig.js';
+import { useRouteConfig } from '../../resources/useRouteConfig.js';
 import { useRecord } from '../../resources/useRecord.js';
 import { useResourceIoStore } from 'src/stores/resourceIo';
 import { useResourceNav } from '../../resources/useResourceNav.js';
@@ -44,7 +45,8 @@ function extractResourceDeltaRecord(resourceDelta, headers = []) {
 
 export function usePurchaseOrderView() {
     const $q = useQuasar();
-    const { code, additionalActions } = useResourceConfig();
+    const { additionalActions } = useResourceConfig();
+    const { code } = useRouteConfig();
     const purchaseOrders = useRecord(ref('PurchaseOrders'));
     const purchaseOrderItems = useRecord(ref('PurchaseOrderItems'));
     const supplierQuotations = useRecord(ref('SupplierQuotations'));

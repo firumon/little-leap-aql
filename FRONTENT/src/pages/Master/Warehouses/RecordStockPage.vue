@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <q-page padding>
     <div class="row items-start justify-between q-col-gutter-sm q-mb-md">
       <div class="col-12 col-sm">
@@ -43,11 +43,11 @@
 
 <script setup>
 import { computed, onMounted } from 'vue'
-import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useWarehouseStockList } from 'src/composables/master/warehouses/useWarehouseStockList'
 import WarehouseStockRows from 'src/components/master/Warehouses/WarehouseStockRows.vue'
 
-const { code } = useResourceConfig()
+const { code } = useRouteConfig()
 const {
   loading,
   searchTerm,

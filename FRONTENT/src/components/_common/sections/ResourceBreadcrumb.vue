@@ -65,12 +65,12 @@ const resolvedResourceTitle = computed(() => {
 
 const resolvedCode = computed(() => {
   if (props.code !== null && props.code !== undefined) return props.code
-  return resConfig.code.value || ''
+  return routeConfig.code.value || ''
 })
 
 const resolvedAction = computed(() => {
   if (props.action !== null && props.action !== undefined) return props.action
-  return resConfig.pageName.value || 'index'
+  return routeConfig.pageName.value || 'index'
 })
 
 const resolvedActionLabel = computed(() => {

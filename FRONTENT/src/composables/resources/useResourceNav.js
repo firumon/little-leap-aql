@@ -1,6 +1,7 @@
 import { unref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useAuthStore } from 'src/stores/auth'
 
 function routeParam(value) {
@@ -66,7 +67,8 @@ function findScopeBySlug(auth, slug) {
  */
 export function useResourceNav () {
   const router = useRouter()
-  const { scope, resourceSlug, code } = useResourceConfig()
+  const { scope, resourceSlug } = useResourceConfig()
+  const { code } = useRouteConfig()
 
   /**
    * Navigate to a target page within the current (or overridden) resource.

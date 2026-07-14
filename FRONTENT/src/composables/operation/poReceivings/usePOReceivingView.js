@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import { useQuasar } from 'quasar'
 import { useResourceConfig, isActionVisible } from '../../resources/useResourceConfig.js'
+import { useRouteConfig } from '../../resources/useRouteConfig.js'
 import { useRecord } from '../../resources/useRecord.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceNav } from '../../resources/useResourceNav.js'
@@ -21,7 +22,8 @@ import {
 
 export function usePOReceivingView() {
   const $q = useQuasar()
-  const { code, additionalActions } = useResourceConfig()
+  const { additionalActions } = useResourceConfig()
+  const { code } = useRouteConfig()
   const nav = useResourceNav()
   const resourceIoStore = useResourceIoStore()
   const receivings = useRecord(ref('POReceivings'))

@@ -43,6 +43,7 @@
 import { ref, computed, inject } from 'vue'
 import { useCommonSection } from 'src/composables/resources/useCommonSection'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { isActionVisible } from 'src/composables/resources/useResourceConfig'
 import Downloads from 'components/_common/sections/Action/Downloads.vue'
 import CrudActions from 'components/_common/sections/Action/CrudActions.vue'
@@ -57,7 +58,8 @@ const props = defineProps({
 })
 
 const nav = useResourceNav()
-const { scope, resourceSlug, code, permissions, additionalActions } = inject('resourceConfig')
+const { scope, resourceSlug, permissions, additionalActions } = inject('resourceConfig')
+const { code } = useRouteConfig()
 const { record } = inject('resourceRecord')
 
 const showActionDialog = ref(false)

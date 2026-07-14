@@ -4,6 +4,7 @@ import { useAuthStore } from 'src/stores/auth'
 import { useDataStore } from 'src/stores/data'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceConfig } from './useResourceConfig'
+import { useRouteConfig } from './useRouteConfig'
 import { evaluateFilter, normalizeListViewsMode } from 'src/composables/useListViews'
 import {singularize} from "src/utils/appHelpers.js";
 
@@ -130,9 +131,10 @@ export function useRecord(resourceNameOverride, codeOverride) {
   const dataStore = useDataStore()
   const resourceIoStore = useResourceIoStore()
   const {
-    resourceName: routeResourceName, code: routeCode,
+    resourceName: routeResourceName,
     config, resourceHeaders: routeHeaders
   } = useResourceConfig()
+  const { code: routeCode } = useRouteConfig()
 
   // --- Resource name & code resolution ---
   const resolvedResourceName = computed(() => {

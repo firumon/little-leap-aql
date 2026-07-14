@@ -47,6 +47,26 @@ Object.keys(customUiModules).forEach((rawPath) => {
   }*/
 })
 
+// ─── Prop Evaluator ───────────────────────────────────────────────────────────
+//
+// Evaluates a modifier prop value. If the value is a function, it is called with
+// the unwrapped record and config objects so modifier files stay concise:
+//
+//   export default {
+//     title: (record, config) => record?.Name ?? config?.name
+//   }
+//
+// resourceRecord and resourceConfig are the full injected objects from provide/inject;
+// this helper unwraps .record.value and .config.value before passing them in.
+//
+export function evaluateProp(val, resourceRecord, resourceConfig) {
+  if (typeof val !== 'function') return val
+  return val(
+    resourceRecord?.record?.value ?? null,
+    resourceConfig?.config?.value ?? null
+  )
+}
+
 // ─── Composable ───────────────────────────────────────────────────────────────
 
 /**
@@ -60,6 +80,10 @@ export function useSectionResolver(preparedProps) {
   const ready             = ref(false)
   const resolvedComponent = shallowRef(null)
   const finalProps        = ref({})
+
+  const resourceConfig = inject('resourceConfig', null)
+  const resourceRecord = inject('resourceRecord', null)
+  const pageState      = inject('pageState', null)
 
   watch(
     () => {
@@ -174,7 +198,7 @@ export function useSectionResolver(preparedProps) {
           } else {
             // JS modifier — keeps the base section, adjusts props before passing down.
             const modifiedProps = typeof exported === 'function'
-              ? exported(currentProps)
+              ? exported(currentProps, { pageState, resourceRecord, resourceConfig })
               : exported
             resolvedComponent.value = baseSection
             finalProps.value = { ...currentProps, ...modifiedProps }

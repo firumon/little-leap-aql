@@ -116,8 +116,9 @@
 
 <script setup>
 import { computed } from 'vue'
-import ReportInputDialog from 'src/components/master/ReportInputDialog.vue'
+import ReportInputDialog from 'src/components/Master/ReportInputDialog.vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useDataStore } from 'src/stores/data'
 import { useReports } from 'src/composables/reports/useReports'
 
@@ -138,7 +139,8 @@ const props = defineProps({
   }
 })
 
-const { scope, config, resourceName, code } = useResourceConfig()
+const { scope, config, resourceName } = useResourceConfig()
+const { code } = useRouteConfig()
 const dataStore = useDataStore()
 
 const activeRecord = computed(() => {

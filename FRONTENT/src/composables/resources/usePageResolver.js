@@ -1,5 +1,6 @@
 import { ref, watch, computed, shallowRef, markRaw } from 'vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { usePageOrchestrator } from 'src/composables/resources/usePageOrchestrator'
 
 // All page JS/Vue files under src/pages/
@@ -27,12 +28,8 @@ function resolveActionName(pageName, pageSlug) {
 
 export function usePageResolver() {
   const resConfig = useResourceConfig()
-  const {
-    scope,
-    resourceSlug,
-    pageName,
-    pageSlug
-  } = resConfig
+  const { scope, resourceSlug } = resConfig
+  const { pageName, pageSlug } = useRouteConfig()
 
   const canonicalPage = computed(() =>
     resolveActionName(pageName.value, pageSlug.value)
@@ -246,7 +243,7 @@ export function usePageResolver() {
       resourceSlug: resConfig.resourceSlug.value,
       page: canonicalPage.value,
       customUIName: customUIName.value,
-      pageSlug: resConfig.pageSlug.value
+      pageSlug: pageSlug.value
     }))
   }
 }

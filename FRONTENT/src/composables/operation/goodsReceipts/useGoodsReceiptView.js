@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import { useQuasar } from 'quasar'
-import { useResourceConfig } from '../../resources/useResourceConfig.js'
+import { useRouteConfig } from '../../resources/useRouteConfig.js'
 import { useRecord } from '../../resources/useRecord.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceNav } from '../../resources/useResourceNav.js'
@@ -11,7 +11,7 @@ function text(value) { return value == null ? '' : String(value).trim() }
 
 export function useGoodsReceiptView() {
   const $q = useQuasar()
-  const { code } = useResourceConfig()
+  const { code } = useRouteConfig()
   const nav = useResourceNav()
   const resourceIoStore = useResourceIoStore()
   const receipts = useRecord(ref('GoodsReceipts'))

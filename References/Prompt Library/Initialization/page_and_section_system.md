@@ -10,20 +10,26 @@ This initialization prompt guides the creation, override, and customization of f
 
 ## 1. Architectural Overview & Context
 
+> [!IMPORTANT]
+> Before implementing anything, read the full canonical doc: [AQL_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_PAGE_AND_SECTION_SYSTEM.md). It contains the complete `pageProps` contract, BP schema, page override scan table, resolver internals, and `AqlContentWrapper` state logic — all of which are critical to getting this right.
+
 * **Page Orchestrator (`src/pages/Page.vue`)**:
-  - Dynamically resolved at runtime via `usePageResolver.js`.
-  - Mounts a full-page custom override (`resolvedPageComponent`) if matched under `src/_ui/`.
+  - Dynamically resolved at runtime via `usePageResolver.js` (which internally delegates record/form/action logic to `usePageOrchestrator.js`).
+  - Always renders `<ResourceBreadcrumb />` unconditionally — it is outside the section system.
+  - Mounts a full-page custom override (`resolvedPageComponent`) if matched under `src/_ui/` via a **6-candidate ordered scan** (see canonical doc §1.3.2).
   - Otherwise, falls back to rendering placeholding `<Section>` components for visible parts:
     - Pre-Action Sections: `visibleSectionsBeforeAction` (such as `Header`, `Toolbar`).
-    - Body Sections: `contents` wrapped inside `<AqlContentWrapper>`.
+    - Body Sections: `contents` wrapped inside `<AqlContentWrapper>` (4-state gate component — see canonical doc §1.1).
     - Post-Action Sections: `Action` section.
+  - All `<Section>` placeholders receive `pageProps` via `v-bind`. See canonical doc §1.3.4 for the **full `pageProps` contract** (20+ props including `parentForm`, `childGroups`, `actionForm`, all event handlers).
   - Contexts provided: `'resourceConfig'`, `'resourceRecord'`, and `'pageState'`.
 * **Section Placeholder (`src/components/Section.vue`)**:
   - Automatically resolves which component to render via `useSectionResolver(preparedProps)`.
+  - The resolver itself injects all three contexts internally for use by JS modifiers.
   - Renders custom Vue override, JS logic modifier + base section fallback, or a "Section Not Defined" warning.
 * **Page-Level Form State (`usePageState.js`)**:
   - Singleton page form-state provided at `Page.vue`.
-  - Exports resource-agnostic canonical GAS request builders (e.g. `compositeSaveRequest`).
+  - Full API (node mutations, strategy, request builders, validation, triggers): [PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/PAGE_STATE.md).
 
 ---
 
@@ -35,11 +41,11 @@ When creating a new base section component inside `src/components/sections/` (e.
    ```javascript
    defineOptions({ name: 'Sections[Name]', inheritAttrs: false })
    ```
-2. **Inject Page Contexts**: Inject provided scopes rather than calling page hooks locally.
+2. **Inject Page Contexts**: Inject provided scopes rather than calling page hooks locally. Always include `null` defaults so sections don't throw if rendered outside `Page.vue` during testing.
    ```javascript
-   const resourceConfig = inject('resourceConfig')
-   const resourceRecord = inject('resourceRecord')
-   const pageState      = inject('pageState')
+   const resourceConfig = inject('resourceConfig', null)
+   const resourceRecord = inject('resourceRecord', null)
+   const pageState      = inject('pageState', null)
    ```
 3. **Compound Prop Typing**: Ensure styling/label props support closure functions.
    ```javascript
@@ -54,7 +60,8 @@ When creating a new base section component inside `src/components/sections/` (e.
      label: evaluateProp(props.label, resourceRecord, resourceConfig)
    }))
    ```
-5. **Document Props**: Always document the prop catalog and default behavior at the bottom of the section component or in `Documents/AQL_PAGE_AND_SECTION_SYSTEM.md`.
+   > **Important**: `evaluateProp` unwraps Vue refs internally before calling the closure. Closure functions receive **plain objects** (`record`, `config`), not refs. Never call `.value` inside a closure prop.
+5. **Document Props**: Always document the prop catalog and default behavior in `Documents/AQL_PAGE_AND_SECTION_SYSTEM.md` §2.3.
 
 ---
 
@@ -75,7 +82,12 @@ Overrides reside under `src/_ui/[UiName]/components/`.
 9. **Vue override** (ui-wide fallback): `.../[Section].vue`
 10. **JS modifier** (ui-wide fallback): `.../[Section].js`
 
-*Note: `[Resource]` is PascalCase. `[page]` and `[scope]` are lowercased.*
+*Path segment rules (all segments are lowercased for registry lookup):*
+- `[scope]` → lowercased as-is (e.g. `master`)
+- `[Resource]` → `toPascalCase` first, then lowercased (e.g. `'purchase-orders'` → `PurchaseOrders` → **`purchaseorders`**)
+- `[page]`, `[Section]`, `[UiName]` → lowercased as-is
+
+*File names are case-insensitive* — the registry lowercases all keys at build time, so `Header.vue` and `header.vue` resolve identically.*
 
 ### 3.2 Vue Overrides vs JS Modifiers
 * **JS Modifiers (`.js`)**: Keep the base template but alter props.

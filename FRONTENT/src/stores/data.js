@@ -231,8 +231,8 @@ export const useDataStore = defineStore('data', () => {
 
     resources.forEach(res => {
       resourceRelations[res.name] = {
-        parents: resourceParents[res.name]?.map(resourceName => ({ resourceName, codeField: singularize(resourceName) + 'Code', singular: singularize(resourceName) })) || [],
-        children: (resourceChildren[res.name] || []).map(name => ({ name, codeField: singularize(name) + 'Code', singular: singularize(name) })),
+        parents: resourceParents[res.name]?.map(resourceName => ({ resourceName, codeField: singularize(resourceName) + 'Code', singular: singularize(resourceName), scope: res.scope })) || [],
+        children: (resourceChildren[res.name] || []).map(name => ({ name, codeField: singularize(name) + 'Code', singular: singularize(name), scope: res.scope })),
         linkRefs: linkRefs[res.name] || {}
       }
     })

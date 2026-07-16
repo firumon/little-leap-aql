@@ -319,6 +319,9 @@ Once a new Section component is created, you **MUST** update this file to docume
 * **[Header.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/sections/Header.vue)**: Renders the top branding panel, back arrows, status chips, and reload buttons.
   * *Props*: `title`, `subtitle`, `chip`, `chipColor`, `chipTextColor`, `back`, `reload`, `backIcon`, `reloadIcon`, `leftIconColor`, `icon`, `iconColor`.
   * *Defaults*: Derived automatically from routing metadata and `resourceConfig.ui.menus`.
+* **[FilterInput.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/sections/FilterInput.vue)**: Renders a text input for filtering or searching record datasets, supporting debounce and custom icons.
+  * *Props*: `outlined`, `debounce`, `placeholder`, `icon`, `iconColor`, `clearable`, `clearIcon`, `clearIconColor`, `label`.
+  * *Defaults*: Binds dynamically to `filterTerm` or `searchTerm` inside `resourceRecord` (falls back to local state). Default icon is `'filter_list'`.
 
 ---
 
@@ -358,7 +361,7 @@ When `Section.vue` calls `useSectionResolver(preparedProps)`, it scans for overr
 * **JS Modifiers (`.js`)**: Keep the base template but alter or computed the props passed to it. It can export a static object or a function receiving the current state.
   * *Function signature*:
     ```javascript
-    // src/_ui/AQL/components/master/products/header.js
+    // src/_ui/AQL/components/master/products/Header.js
     // Note: all path segments are lowercased; 'Products' → 'products'
     export default (currentProps, { pageState, resourceRecord, resourceConfig }) => {
       // currentProps = the full pageProps object (page, scope, resource, uiName, loading, ...)

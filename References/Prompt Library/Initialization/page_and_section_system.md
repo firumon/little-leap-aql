@@ -35,7 +35,7 @@ This initialization prompt guides the creation, override, and customization of f
 
 ## 2. Developing Section Components (Strict Guidelines)
 
-When creating a new base section component inside `src/components/sections/` (e.g., `Toolbar.vue`):
+When creating a new base section component inside `src/components/sections/` (e.g., `Toolbar.vue`, `FilterInput.vue`):
 
 1. **Disable Attribute Fallthrough**: Enable manual attribute control using `inheritAttrs: false`.
    ```javascript

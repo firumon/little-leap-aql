@@ -4,12 +4,12 @@
     :is="resolvedComponent"
     v-if="resolvedComponent"
     v-bind="finalProps"
-    v-model="searchTerm"
+    v-model="filterTerm"
   />
 
   <div v-else class="search-input-container">
     <q-input
-      v-model="searchTerm"
+      v-model="filterTerm"
       v-bind="$attrs"
       :outlined="finalProps.outlined"
       :debounce="finalProps.debounce"
@@ -21,12 +21,12 @@
         <q-icon :name="finalProps.icon" :color="finalProps.iconColor" />
       </template>
 
-      <template #append v-if="finalProps.clearable && searchTerm">
+      <template #append v-if="finalProps.clearable && filterTerm">
         <q-icon
           :name="finalProps.clearIcon"
           :color="finalProps.clearIconColor"
           class="cursor-pointer"
-          @click="searchTerm = ''"
+          @click="clearSearch"
         />
       </template>
     </q-input>
@@ -52,10 +52,11 @@ const props = defineProps({
   label: { type: String, default: '' }
 })
 
-const { searchTerm } = inject('resourceRecord', { searchTerm: ref('') })
+const { filterTerm } = inject('resourceRecord', { filterTerm: ref('') })
 
 const preparedProps = computed(() => ({
-  searchTerm: searchTerm.value,
+  searchTerm: filterTerm.value,
+  filterTerm: filterTerm.value,
   outlined: props.outlined,
   debounce: props.debounce,
   placeholder: props.placeholder,
@@ -72,4 +73,9 @@ const { resolvedComponent, finalProps } = useCommonSection({
   page: props.page,
   preparedProps
 })
+
+function clearSearch() {
+  filterTerm.value = ''
+}
 </script>
+

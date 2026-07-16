@@ -1,3 +1,3 @@
 export default {
-  sections: ['Header'],
+  sections: ['Header','FilterInput'],
 }

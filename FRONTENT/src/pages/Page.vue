@@ -1,6 +1,6 @@
 <template>
-  <q-page class="aql-page-container">
-    <ResourceBreadcrumb />
+  <q-page class="aql-page-container" :class="pageProps.pageClass">
+    <ResourceBreadcrumb class="q-mx-sm" />
 
     <!-- Full custom Vue page override (resolved from _ui/) -->
     <component

@@ -8,8 +8,8 @@
     />
 
     <MasterListToolbar
-      :search-term="searchTerm"
-      @update:search-term="searchTerm = $event"
+      :search-term="filterTerm"
+      @update:search-term="filterTerm = $event"
     />
 
     <q-card flat bordered class="records-card q-mt-sm">
@@ -159,7 +159,7 @@ import { useResourceIoStore } from 'src/stores/resourceIo'
 const nav = useResourceNav()
 const { resourceName, permissions } = useResourceConfig()
 const resourceIoStore = useResourceIoStore()
-const { records: items, searchTerm } = useRecord()
+const { records: items, filterTerm } = useRecord()
 const loading = ref(false)
 const backgroundSyncing = ref(false)
 const {
@@ -194,7 +194,7 @@ const safeGroupedSkus = computed(() => {
 })
 
 const displayedItems = computed(() => {
-  const keyword = (searchTerm.value || '').toString().trim().toLowerCase()
+  const keyword = (filterTerm.value || '').toString().trim().toLowerCase()
   if (!keyword) return items.value
   return items.value.filter((row) => {
     const aggregate = Object.values(row || {})
@@ -281,4 +281,5 @@ watch(
   z-index: 30;
 }
 </style>
+
 

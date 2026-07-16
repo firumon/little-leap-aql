@@ -10,8 +10,8 @@
     <ResourceReports />
 
     <MasterListToolbar
-      :search-term="searchTerm"
-      @update:search-term="searchTerm = $event"
+      :search-term="filterTerm"
+      @update:search-term="filterTerm = $event"
     />
 
     <MasterListViewSwitcher
@@ -112,7 +112,7 @@ const {
   records: items,
   loading,
   backgroundSyncing,
-  searchTerm,
+  filterTerm,
   reload,
   effectiveViews,
   activeViewName,
@@ -137,7 +137,7 @@ const skuCountByProduct = computed(() => {
 // Final displayed items: view filter -> SKU-aware search
 const displayedItems = computed(() => {
   const list = filteredItems.value
-  const keyword = (searchTerm.value || '').toString().trim().toLowerCase()
+  const keyword = (filterTerm.value || '').toString().trim().toLowerCase()
   if (!keyword) return list
 
   return list.filter((row) => {
@@ -219,4 +219,5 @@ watch(
   z-index: 30;
 }
 </style>
+
 

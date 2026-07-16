@@ -122,7 +122,7 @@ export function usePageResolver() {
     { immediate: true }
   )
 
-  const DEFAULT_SECTIONS = ['Header', 'Toolbar', 'Content', 'Action']
+  const DEFAULT_SECTIONS = ['Header']
   const DEFAULT_CONTENTS = []
 
   const sections = computed(() => pageProps.value.sections ?? DEFAULT_SECTIONS)
@@ -152,6 +152,7 @@ export function usePageResolver() {
       scope: scope.value,
       resource: resourceSlug.value,
       uiName: customUIName.value,
+      pageClass: 'q-gutter-y-xs',
       parentForm,
       childGroups,
       actionForm,

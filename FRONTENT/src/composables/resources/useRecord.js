@@ -11,6 +11,21 @@ import {singularize} from "src/utils/appHelpers.js";
 // Shared cache across all useRecord instances — keyed by "ResourceName::Code"
 const _enrichedCache = new Map()
 
+// Recursively collect searchable string values from a record and all its ancestors
+function _collectSearchValues(r, visited = new Set()) {
+  if (!r || visited.has(r)) return []
+  visited.add(r)
+  const values = Object.keys(r)
+    .filter(k => !k.startsWith('$') && !k.startsWith('_'))
+    .map(k => (r[k] ?? '').toString().toLowerCase())
+  const parentKeys = Array.isArray(r._Parents) ? r._Parents : []
+  for (const key of parentKeys) {
+    const parent = r._Parent?.[key]
+    if (parent) values.push(..._collectSearchValues(parent, visited))
+  }
+  return values
+}
+
 export function clearEnrichmentCache() {
   _enrichedCache.clear()
 }
@@ -158,7 +173,7 @@ export function useRecord(resourceNameOverride, codeOverride) {
   // --- Loading state ---
   const loading = ref(false)
   const backgroundSyncing = ref(false)
-  const searchTerm = ref('')
+  const filterTerm = ref('')
   const showInactive = ref(false)
   const loadRequestId = ref(0)
 
@@ -262,13 +277,10 @@ export function useRecord(resourceNameOverride, codeOverride) {
       }
     }
 
-    const keyword = (searchTerm.value || '').toString().trim().toLowerCase()
+    const keyword = (filterTerm.value || '').toString().trim().toLowerCase()
     if (!keyword) return list
     return list.filter(r => {
-      const aggregate = Object.keys(r)
-        .filter(k => !k.startsWith('$') && !k.startsWith('_'))
-        .map(k => (r[k] ?? '').toString().toLowerCase())
-        .join(' ')
+      const aggregate = _collectSearchValues(r).join(' ')
       return aggregate.includes(keyword)
     })
   })
@@ -375,7 +387,7 @@ export function useRecord(resourceNameOverride, codeOverride) {
   }
 
   function runReset() {
-    searchTerm.value = ''
+    filterTerm.value = ''
     showInactive.value = false
     activeViewName.value = defaultViewName.value
     loading.value = false
@@ -416,7 +428,7 @@ export function useRecord(resourceNameOverride, codeOverride) {
     // Loading state
     loading,
     backgroundSyncing,
-    searchTerm,
+    filterTerm,
     showInactive,
 
     // View switching states & actions
@@ -434,3 +446,4 @@ export function useRecord(resourceNameOverride, codeOverride) {
     reset: runReset
   }
 }
+

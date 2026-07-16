@@ -109,20 +109,47 @@ export function useSectionResolver(preparedProps) {
       // Priority order:
       //   a. Custom UI generic section: _ui/${uiName}/components/sections/${section}.vue
       //   b. Framework generic section: components/sections/${section}.vue
+      //   c. If neither exists, fall back to a ui-wide Vue override candidate
+      //      as the base section.
       //
-      let baseSection = null
+      const uiBase = uiKey ? `_ui/${uiKey}/components` : null
 
-      if (uiKey) {
-        const customBasePath = `_ui/${uiKey}/components/sections/${sectionKey}.vue`
-        const customBaseLoader = customUiRegistry[customBasePath]
-        if (customBaseLoader) {
-          try {
-            const mod = await customBaseLoader()
-            baseSection = markRaw(mod.default ?? mod)
-          } catch (err) {
-            console.error(`[useSectionResolver] Failed to load custom base section at "${customBasePath}":`, err)
-          }
+      // Build the override/modifier candidate list once (first match wins).
+      // Also reused for base-section fallback when no custom/framework base exists.
+      const overrideCandidates = uiBase
+        ? [
+            { path: `${uiBase}/${scopeKey}/${resourceKey}/${pageKey}/${sectionKey}.vue`, isVueOverride: true  },
+            { path: `${uiBase}/${scopeKey}/${resourceKey}/${pageKey}/${sectionKey}.js`,  isVueOverride: false },
+            { path: `${uiBase}/${scopeKey}/${resourceKey}/${sectionKey}.vue`,            isVueOverride: true  },
+            { path: `${uiBase}/${scopeKey}/${resourceKey}/${sectionKey}.js`,             isVueOverride: false },
+            { path: `${uiBase}/${scopeKey}/${pageKey}/${sectionKey}.vue`,                isVueOverride: true  },
+            { path: `${uiBase}/${scopeKey}/${pageKey}/${sectionKey}.js`,                 isVueOverride: false },
+            { path: `${uiBase}/${scopeKey}/${sectionKey}.vue`,                           isVueOverride: true  },
+            { path: `${uiBase}/${scopeKey}/${sectionKey}.js`,                            isVueOverride: false },
+            { path: `${uiBase}/${sectionKey}.vue`,                                       isVueOverride: true  },
+            { path: `${uiBase}/${sectionKey}.js`,                                        isVueOverride: false },
+          ]
+        : []
+
+      // Loads a Vue/JS module from the custom UI registry at the given path.
+      // Returns { component, isVue } so callers can decide base vs override usage.
+      async function loadCustomUiModule(path) {
+        const loader = customUiRegistry[path]
+        if (!loader) return null
+        try {
+          const mod = await loader()
+          return mod.default ?? mod
+        } catch (err) {
+          console.error(`[useSectionResolver] Failed to load module at "${path}":`, err)
+          return null
         }
+      }
+
+      let baseSection = null
+      const customBasePath = uiBase ? `${uiBase}/sections/${sectionKey}.vue` : null
+      if (customBasePath) {
+        const mod = await loadCustomUiModule(customBasePath)
+        if (mod) baseSection = markRaw(mod)
       }
 
       if (!baseSection) {
@@ -134,6 +161,19 @@ export function useSectionResolver(preparedProps) {
             baseSection = markRaw(mod.default ?? mod)
           } catch (err) {
             console.error(`[useSectionResolver] Failed to load framework section at "${frameworkBasePath}":`, err)
+          }
+        }
+      }
+
+      // No custom/framework base — let a ui-wide Vue override candidate (isVueOverride)
+      // serve as the base section. If nothing resolves here, render the fallback card.
+      if (!baseSection) {
+        for (const { path, isVueOverride } of overrideCandidates) {
+          if (!isVueOverride) continue
+          const mod = await loadCustomUiModule(path)
+          if (mod) {
+            baseSection = markRaw(mod)
+            break
           }
         }
       }
@@ -168,46 +208,28 @@ export function useSectionResolver(preparedProps) {
         return
       }
 
-      const uiBase = `_ui/${uiKey}/components`
-      const overrideCandidates = [
-        { path: `${uiBase}/${scopeKey}/${resourceKey}/${pageKey}/${sectionKey}.vue`, isVueOverride: true  },
-        { path: `${uiBase}/${scopeKey}/${resourceKey}/${pageKey}/${sectionKey}.js`,  isVueOverride: false },
-        { path: `${uiBase}/${scopeKey}/${resourceKey}/${sectionKey}.vue`,            isVueOverride: true  },
-        { path: `${uiBase}/${scopeKey}/${resourceKey}/${sectionKey}.js`,             isVueOverride: false },
-        { path: `${uiBase}/${scopeKey}/${pageKey}/${sectionKey}.vue`,                isVueOverride: true  },
-        { path: `${uiBase}/${scopeKey}/${pageKey}/${sectionKey}.js`,                 isVueOverride: false },
-        { path: `${uiBase}/${scopeKey}/${sectionKey}.vue`,                           isVueOverride: true  },
-        { path: `${uiBase}/${scopeKey}/${sectionKey}.js`,                            isVueOverride: false },
-        { path: `${uiBase}/${sectionKey}.vue`,                                       isVueOverride: true  },
-        { path: `${uiBase}/${sectionKey}.js`,                                        isVueOverride: false },
-      ]
-
       for (const { path, isVueOverride } of overrideCandidates) {
         const loader = customUiRegistry[path]
         if (!loader) continue
 
-        try {
-          const mod = await loader()
-          const exported = mod.default ?? mod
+        const exported = await loadCustomUiModule(path)
+        if (!exported) continue
 
-          if (isVueOverride) {
-            // Full Vue template override — replaces the base section entirely.
-            // Props flow through unmodified so the override component can use $attrs.
-            resolvedComponent.value = markRaw(exported)
-            finalProps.value = currentProps
-          } else {
-            // JS modifier — keeps the base section, adjusts props before passing down.
-            const modifiedProps = typeof exported === 'function'
-              ? exported(currentProps, { pageState, resourceRecord, resourceConfig })
-              : exported
-            resolvedComponent.value = baseSection
-            finalProps.value = { ...currentProps, ...modifiedProps }
-          }
-
-          break // first match wins; stop scanning
-        } catch (err) {
-          console.error(`[useSectionResolver] Failed to load override at "${path}":`, err)
+        if (isVueOverride) {
+          // Full Vue template override — replaces the base section entirely.
+          // Props flow through unmodified so the override component can use $attrs.
+          resolvedComponent.value = markRaw(exported)
+          finalProps.value = currentProps
+        } else {
+          // JS modifier — keeps the base section, adjusts props before passing down.
+          const modifiedProps = typeof exported === 'function'
+            ? exported(currentProps, { pageState, resourceRecord, resourceConfig })
+            : exported
+          resolvedComponent.value = baseSection
+          finalProps.value = { ...currentProps, ...modifiedProps }
         }
+
+        break // first match wins; stop scanning
       }
 
       // No override matched — use base section with unmodified props

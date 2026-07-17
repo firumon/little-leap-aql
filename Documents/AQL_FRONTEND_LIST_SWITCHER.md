@@ -128,16 +128,56 @@ All extra properties on the `item` object (e.g., `disabled`, custom metadata) ar
 The list view items and filtering are derived dynamically from the Google Sheets database configurations.
 
 ### 5.1. Sheet Config Relationship
-* **Spreadsheet setup**: Managed under the `ListViews` column of the `APP.Resources` sheet.
-* **JSON Schema**: Each non-empty cell contains a JSON array defining the states, icons, colors, and operators:
+* **Spreadsheet Setup**: Managed under the `ListViews` column of the `APP.Resources` sheet. See the [AQL Menu Admin Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_MENU_ADMIN_GUIDE.md#L201-L212).
+* **JSON Array Structure**: The cell contains a JSON array of item objects:
   ```json
   [
-    { "name": "Active", "color": "primary", "icon": "check" },
-    { "name": "Inactive", "color": "grey", "icon": "block", "filter": { "column": "Status", "operator": "eq", "value": "Inactive" } }
+    {
+      "name": "Inactive",
+      "default": true,
+      "color": "positive",
+      "icon": "check_circle",
+      "filter": {
+        "type": "group",
+        "logic": "AND",
+        "items": [
+          { "type": "condition", "column": "Status", "operator": "eq", "value": "Inactive" }
+        ]
+      }
+    }
   ]
   ```
-* **For detailed schema parameters & operators**, read the canonical [Resource Columns Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_COLUMNS_GUIDE.md).
-* **For admin UI tools & spreadsheet configurations**, read the canonical [AQL Menu Admin Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_MENU_ADMIN_GUIDE.md#L201-L212).
+
+### 5.1.1. Filter JSON Schema Reference
+The `filter` property does not support a raw array at its root. It must be either a **Group Object** or a **Condition Object**:
+
+#### A. Group Object (`type: "group"`)
+Used to join multiple conditions with logical operators:
+- `type`: Must be `"group"`.
+- `logic`: Either `"AND"` or `"OR"` (defaults to `"AND"`).
+- `items`: An array of filter objects (can recursively contain other groups or conditions).
+
+#### B. Condition Object (`type: "condition"`)
+Represents a single query comparison:
+- `type`: Must be `"condition"`.
+- `column`: String matching the exact Google Sheet header column name.
+- `operator`: String operator mapping to comparison logic.
+- `value`: The target comparison value. Can be a string, number, array (for `in`/`not_in`), or a dynamic token like `"$now"` (evaluated as `Date.now()`).
+
+#### C. Supported Comparison Operators
+The frontend evaluator supports the following operator keys:
+- `eq`: Equal to (case-insensitive string comparison or numeric comparison).
+- `neq`: Not equal to.
+- `in`: Checks if the column value is inside a list of values (e.g. `"value": ["Active", "Draft"]`).
+- `not_in`: Checks if the column value is NOT inside a list of values.
+- `gt`: Greater than (coerces column and value to numbers).
+- `gte`: Greater than or equal to.
+- `lt`: Less than.
+- `lte`: Less than or equal to.
+- `contains`: Checks if the column value contains the search string (substring match).
+
+For source code implementation, see `evaluateFilter` in [useListViews.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/useListViews.js#L86-L99).
+
 
 ### 5.2. Conditional Overriding Criteria
 The views switcher respects sheet-driven constraints explicitly inside the base views switcher. Whether custom JS modifiers (`ListSwitcher.js` / `ViewSwitcher.js`) or Vue overrides (`ListSwitcher.vue` / `ViewSwitcher.vue`) are applied depends on the exact value of the `ListViews` cell:

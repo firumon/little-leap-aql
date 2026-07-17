@@ -122,7 +122,7 @@ export function usePageResolver() {
     { immediate: true }
   )
 
-  const DEFAULT_SECTIONS = ['Header']
+  const DEFAULT_SECTIONS = ['PageHeader']
   const DEFAULT_CONTENTS = []
 
   const sections = computed(() => pageProps.value.sections ?? DEFAULT_SECTIONS)

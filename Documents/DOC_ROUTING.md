@@ -82,6 +82,11 @@ Use when overriding or creating custom section or sub-components for any resourc
   - `Documents/AQL_PAGE_AND_SECTION_SYSTEM.md`
   - `Documents/AQL_CONTENT_CUSTOMIZATION_SYSTEM.md`
 
+### List Switcher Customization
+Use when overriding or creating custom container or item layouts, template overrides, or dynamic modifiers for the list view switcher bar.
+- Read:
+  - `Documents/AQL_FRONTEND_LIST_SWITCHER.md`
+
 ### Action & FAB Customization
 Use when overriding or creating custom action components, floating action buttons (FABs), workflow buttons, cancel/submit forms, or workflow dialogs.
 - Read:

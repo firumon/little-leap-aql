@@ -320,8 +320,10 @@ Once a new Section component is created, you **MUST** update this file to docume
   * *Props*: `title`, `subtitle`, `chip`, `chipColor`, `chipTextColor`, `back`, `reload`, `backIcon`, `reloadIcon`, `leftIconColor`, `icon`, `iconColor`.
   * *Defaults*: Derived automatically from routing metadata and `resourceConfig.ui.menus`.
 * **[FilterInput.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/sections/FilterInput.vue)**: Renders a text input for filtering or searching record datasets, supporting debounce and custom icons.
-  * *Props*: `outlined`, `debounce`, `placeholder`, `icon`, `iconColor`, `clearable`, `clearIcon`, `clearIconColor`, `label`.
+  * *Props*: `outlined`, `debounce`, `placeholder`, `icon`, `iconColor`, `clearable`, `clearIcon`, `label`.
   * *Defaults*: Binds dynamically to `filterTerm` or `searchTerm` inside `resourceRecord` (falls back to local state). Default icon is `'filter_list'`.
+* **[ListSwitcher.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/sections/ListSwitcher.vue)**: Renders a premium pill/segment-style switcher bar for switching between named list views or states.
+  * For full catalog specification, customization scenarios, dynamic modifiers, and responsive overflow logic, refer to the canonical [AQL Frontend List Switcher Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_LIST_SWITCHER.md).
 
 ---
 
@@ -361,7 +363,7 @@ When `Section.vue` calls `useSectionResolver(preparedProps)`, it scans for overr
 * **JS Modifiers (`.js`)**: Keep the base template but alter or computed the props passed to it. It can export a static object or a function receiving the current state.
   * *Function signature*:
     ```javascript
-    // src/_ui/AQL/components/master/products/Header.js
+    // src/_ui/AQL/components/master/products/PageHeader.js
     // Note: all path segments are lowercased; 'Products' → 'products'
     export default (currentProps, { pageState, resourceRecord, resourceConfig }) => {
       // currentProps = the full pageProps object (page, scope, resource, uiName, loading, ...)

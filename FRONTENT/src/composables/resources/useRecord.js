@@ -5,7 +5,7 @@ import { useDataStore } from 'src/stores/data'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceConfig } from './useResourceConfig'
 import { useRouteConfig } from './useRouteConfig'
-import { evaluateFilter, normalizeListViewsMode } from 'src/composables/useListViews'
+import { useListViews, evaluateFilter } from 'src/composables/useListViews'
 import {singularize} from "src/utils/appHelpers.js";
 
 // Shared cache across all useRecord instances — keyed by "ResourceName::Code"
@@ -177,78 +177,6 @@ export function useRecord(resourceNameOverride, codeOverride) {
   const showInactive = ref(false)
   const loadRequestId = ref(0)
 
-  // --- View switcher states & logic ---
-  const activeViewName = ref('')
-
-  const effectiveViews = computed(() => {
-    const cfg = config.value
-    const configured = cfg?.ui?.listViews
-    const mode = normalizeListViewsMode(cfg?.ui?.listViewsMode || '')
-
-    if (Array.isArray(configured) && configured.length > 0) {
-      return configured
-    }
-
-    if (mode === 'off' || mode === 'custom') {
-      return []
-    }
-
-    const headers = routeHeaders.value || []
-    if (headers.includes('Status')) {
-      return [
-        {
-          name: 'Active',
-          default: true,
-          color: 'positive',
-          filter: {
-            type: 'group',
-            logic: 'AND',
-            items: [{ type: 'condition', column: 'Status', operator: 'eq', value: 'Active' }]
-          }
-        },
-        {
-          name: 'Inactive',
-          color: 'grey',
-          filter: {
-            type: 'group',
-            logic: 'AND',
-            items: [{ type: 'condition', column: 'Status', operator: 'eq', value: 'Inactive' }]
-          }
-        }
-      ]
-    }
-    return []
-  })
-
-  const defaultViewName = computed(() => {
-    const views = effectiveViews.value
-    if (!views.length) return ''
-    const def = views.find((v) => v.default)
-    return def ? def.name : views[0].name
-  })
-
-  const activeView = computed(() => {
-    if (!activeViewName.value || !effectiveViews.value.length) return null
-    return effectiveViews.value.find((v) => v.name === activeViewName.value) || null
-  })
-
-  function setActiveView(name) {
-    activeViewName.value = name
-  }
-
-  function initializeView() {
-    const views = effectiveViews.value
-    if (!views.length) {
-      activeViewName.value = ''
-      return
-    }
-    activeViewName.value = defaultViewName.value
-  }
-
-  watch(effectiveViews, () => {
-    initializeView()
-  }, { immediate: true })
-
   // --- Core reactive data ---
   const record = computed(() => {
     const name = resolvedResourceName.value
@@ -265,13 +193,36 @@ export function useRecord(resourceNameOverride, codeOverride) {
     )
   })
 
+  // --- Headers ---
+  const headers = computed(() => dataStore.headers[resolvedResourceName.value] || [])
+
+  // --- View switcher states & logic ---
+  const {
+    effectiveViews,
+    activeViewName,
+    activeView,
+    viewFilteredItems,
+    setActiveView
+  } = useListViews({
+    items: records,
+    resourceHeaders: headers,
+    configuredListViews: computed(() => config.value?.ui?.listViews),
+    configuredListViewsMode: computed(() => config.value?.ui?.listViewsMode),
+    enableUrlSync: false
+  })
+
+  const defaultViewName = computed(() => {
+    const views = effectiveViews.value
+    if (!views.length) return ''
+    const def = views.find((v) => v.default)
+    return def ? def.name : views[0].name
+  })
+
   // --- Search & filter ---
   const filteredRecords = computed(() => {
-    let list = records.value
+    let list = viewFilteredItems.value
 
-    if (activeView.value?.filter) {
-      list = list.filter(r => evaluateFilter(activeView.value.filter, r))
-    } else if (!activeView.value && !effectiveViews.value.length) {
+    if (!activeView.value && !effectiveViews.value.length) {
       if (!showInactive.value) {
         list = list.filter(r => (r.Status || 'Active') === 'Active')
       }
@@ -319,8 +270,7 @@ export function useRecord(resourceNameOverride, codeOverride) {
     return map
   })
 
-  // --- Headers ---
-  const headers = computed(() => dataStore.headers[resolvedResourceName.value] || [])
+
 
   // --- Data loading ---
   async function reload() {

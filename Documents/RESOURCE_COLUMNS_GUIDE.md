@@ -1,4 +1,4 @@
-﻿# APP.Resources Columns Guide
+# APP.Resources Columns Guide
 
 ## Purpose
 This document is the canonical meaning reference for `APP.Resources` columns.
@@ -81,6 +81,13 @@ When a resource requires file uploading and download capabilities (e.g., licence
 - **Form Edit/Add**: The form builders automatically render the `AqlFileUpload` component. Selecting a file initiates an immediate background upload to the storage server's `_temp/` directory.
 - **Form Save Pipeline**: On form submission, the composite form composable (`useCompositeForm.js`) submits the resource data (with the file's `UUID`) to Google Apps Script. Upon success, the frontend calls the storage service to confirm and move the file folder from `_temp/` to permanent storage (`uploads/`).
 - **Details/Views**: View details grids automatically render `AqlFilePreviewCard` for `"file"` fields. This component reads the local IndexedDB cache (`aql_uploaded_files`), fallback fetching the storage server metadata endpoint if needed, and renders an image preview (with lightbox support) or download button with appropriate file-type icons.
+
+## ListViews Column Schema & Usage
+The `ListViews` column in the `APP.Resources` sheet defines custom data filter views for the resource.
+* **Purpose**: Configures tab/segment views to filter record datasets on the resource index pages.
+* **Format**: A JSON array of view configuration objects.
+* **Overriding Rule**: If populated with a JSON array (or `[]` to explicitly disable switcher), custom template/modifier overriding for the views switcher is disabled. If blank, overrides are allowed.
+* **Detailed JSON Schema & Operators**: For the complete specification of the filter group/condition JSON objects and supported comparison operators, refer to the canonical [AQL Frontend List Switcher Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_LIST_SWITCHER.md#L126-L177).
 
 ## Scope Characteristics
 - `master`: Standard CRUD with auto-generated codes, audit columns, full sync.

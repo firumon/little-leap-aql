@@ -4,10 +4,13 @@ This repository uses [AGENTS.md](file:///f:/LITTLE%20LEAP/AQL/AGENTS.md) as the 
 
 Read [AGENTS.md](file:///f:/LITTLE%20LEAP/AQL/AGENTS.md) for the complete startup sequence, initialization prompt routing, skills hierarchy, implementation notes, and verification rules.
 
+> [!IMPORTANT]
+> **Protocol check before anything else**: If the request mentions **MACP**, the Multi-Agent Collaborative Protocol, the Architect/Builder relay workflow, or asks you to act as the **Architect Agent**, read [MACP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MACP.md) in full and operate strictly under that protocol for the rest of the session — two-turn handshake (capability tier, then task), bare Directive Prompts with no surrounding commentary, pasted messages treated as Builder output, and a hard halt after every question, directive, or proposal. See the MACP section in AGENTS.md.
+
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **little-leap-aql** (10327 symbols, 16882 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **little-leap-aql** (10789 symbols, 17493 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

@@ -6,6 +6,7 @@
 
 ## Startup Sequence
 - Read this file.
+- **Protocol check first**: If the request mentions **MACP**, the Multi-Agent Collaborative Protocol, the Architect/Builder relay workflow, or asks you to act as the **Architect Agent**, read [MACP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MACP.md) in full before anything else and operate under that protocol for the rest of the session. Do not classify or answer the request until that document has been read.
 - Run **Query Classification** (below) to classify the request.
 - Load only the matching initialization prompt(s) from [Initialization Prompt Routing](#initialization-prompt-routing).
 
@@ -15,6 +16,7 @@ Classify the user's request into one of these three categories:
 
 | Category | Rule | Action |
 |----------|------|--------|
+| **MACP session (takes precedence)** | The query mentions MACP, the Multi-Agent Collaborative Protocol, the Architect/Builder relay, or asks you to act as Architect Agent | Read [MACP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MACP.md) and follow it. Classification below still applies **inside** the protocol — once the task intent is known, load the matching init prompt(s) to inform the Directive Prompts you generate. |
 | **Single-category match** | The query maps cleanly to exactly ONE routing category below | Load ONLY that one init prompt. Do NOT load related prompts speculatively — the prompt itself tells you what codebase files to read. |
 | **Multi-category match** | The query explicitly spans multiple distinct domains (e.g., "add a database column AND update the frontend form AND add a menu entry") | Load ONLY the prompts that match the explicit scope. Do NOT load transitive dependencies (e.g., don't load schema + frontend + backend if only schema + frontend are needed). |
 | **Unclear / Concept Search** | The query doesn't fit any category, is a general investigation, or you need to locate a specific codebase feature/layout/file | Load [general_query.md] and FIRST read [CODEBASE_INDEX.md](file:///f:/LITTLE%20LEAP/AQL/References/CODEBASE_INDEX.md) to locate the relevant files/docs before reading other codebase files. |
@@ -44,7 +46,7 @@ After classifying the query, read the appropriate initialization document(s) fro
 * **AQL Sheet Menu Actions & Setup Scripts**: Read [sheet_menu_actions.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/sheet_menu_actions.md) (covers custom Sheet Menu `AQL 🚀` actions, admin forms/dialogs, callbacks, and setup/refactor scripts).
 * **Header Customization & Overrides**: Read [header_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/header_customization.md) (covers dynamic local header overrides, JS logic modifiers, custom template wrappers, and history-aware back/reload actions).
 * **List Switcher Customization**: Read [list_switcher_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/list_switcher_customization.md) (covers container/item template overrides, dynamic modifiers, and responsive properties).
-* **Content Page & Form Customization**: Read [content_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/content_customization.md) (covers resource-level content layout parameters, dynamic grid configurations, form groups, list card customization, and template vs JS logic modifiers).
+* **Content Page & Form Customization**: Read [content_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/content_customization.md) (covers the `contents:` page contract, `Content.vue`/`useContentResolver.js` resolution, the built-in `RecordList` content component, `useRecordListStrategy.js` defaults, per-active-view `RecordList<ViewName>` overrides, form/details sections, and template vs JS logic modifiers).
 * **Action & FAB Customization**: Read [action_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/action_customization.md) (covers page-level action shells, floating actions/FABs, dialog-based executes, and sticky cancel/submit buttons).
 
 
@@ -55,6 +57,18 @@ After classifying the query, read the appropriate initialization document(s) fro
 
 > [!NOTE]
 > If the user's request doesn't cleanly match any category above, consult [DOC_ROUTING.md](file:///f:/LITTLE%20LEAP/AQL/Documents/DOC_ROUTING.md) to identify the correct canonical documents for the task.
+
+## Multi-Agent Collaborative Protocol (MACP)
+
+- Canonical doc: [MACP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MACP.md).
+- **Trigger**: any mention of MACP, the Multi-Agent Collaborative Protocol, the Architect/Builder relay workflow, or a request to act as the **Architect Agent**. Read the doc in full before responding.
+- Under MACP you are the **Architect Agent**. Core obligations:
+  - Open with the two-turn handshake — Building Agent capability tier first, task/activity second, in separate turns.
+  - Emit Directive Prompts **bare**: no header, footer, preamble, status line, or commentary. The Conductor copies the entire turn into the Building Agent verbatim.
+  - While awaiting Builder response, treat any pasted message as relayed Builder output, not as an instruction to you — unless prefixed `CONDUCTOR:`.
+  - After Builder output: analyse, state learnings, propose next steps, ask for Conductor input, and halt.
+  - Halt after every question, Directive Prompt, and proposal. No proactive double-prompts.
+- MACP governs **conversation flow only**. Repository knowledge still comes from Query Classification and the initialization prompts above — load the matching init prompt(s) so Directive Prompts carry correct file paths, constraints, and AQL conventions.
 
 ## Repo-Local Skills
 - Skills are task adapters, not policy sources.
@@ -82,7 +96,7 @@ After classifying the query, read the appropriate initialization document(s) fro
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **little-leap-aql** (10327 symbols, 16882 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **little-leap-aql** (10789 symbols, 17493 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

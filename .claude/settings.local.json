@@ -11,5 +11,8 @@
       "Bash(cd /f)",
       "Bash(find . -name *.vue -path *Warehouse* -type f)"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "phpstorm"
+  ]
 }

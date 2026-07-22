@@ -129,11 +129,11 @@ export function usePageResolver() {
   const contents = computed(() => pageProps.value.contents ?? DEFAULT_CONTENTS)
 
   const visibleSectionsBeforeAction = computed(() =>
-    sections.value.filter(s => s !== 'Action')
+    sections.value.filter(s => s !== 'PageAction')
   )
 
   const hasActionSection = computed(() =>
-    sections.value.includes('Action')
+    sections.value.includes('PageAction')
   )
 
   // Call the orchestrator

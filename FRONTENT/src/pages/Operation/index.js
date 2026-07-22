@@ -1,3 +1,3 @@
 export default {
-  sections: ['PageHeader', 'Toolbar']
+  sections: ['PageHeader', 'Toolbar', 'PageAction']
 }

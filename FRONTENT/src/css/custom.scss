@@ -16,6 +16,22 @@
   --aql-ink           : #0f172a;
 }
 
+// Generic CRUD action FAB styling (shared across all floating action buttons).
+// Color/icon stay on the Quasar :color/:icon props so JS modifiers can vary them
+// without fighting this CSS.
+.aql-crud-action-fab {
+  box-shadow: 0 8px 24px rgba(15, 43, 74, 0.28);
+  transition: transform 180ms ease, box-shadow 180ms ease;
+
+  &:hover {
+    transform: translateY(-2px) scale(1.04);
+    box-shadow: 0 12px 28px rgba(15, 43, 74, 0.35);
+  }
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
 // Fade slide animation & page fade
 .fade-slide-enter-active,
 .fade-slide-leave-active {

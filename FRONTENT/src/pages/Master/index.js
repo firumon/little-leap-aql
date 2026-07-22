@@ -1,3 +1,3 @@
 export default {
-  sections: ['PageHeader','FilterInput'],
+  sections: ['PageHeader','FilterInput','PageAction'],
 }

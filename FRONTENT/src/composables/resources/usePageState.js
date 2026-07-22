@@ -127,7 +127,17 @@ export function usePageState (strategy = {}) {
     submitting: false,
     loading: false,
     currentStep: 1,
-    validationErrors: {}
+    validationErrors: {},
+    // Workflow action dialog — set by AdditionalActions/CrudActions-family sub-sections,
+    // read by the ActionDialog mounted once in Page.vue so a PageAction container
+    // override can never swallow the dialog.
+    actionDialog: {
+      show: false,
+      actionConfig: null
+    },
+    // Measured height of the FormAction sticky bar (0 until FormAction.vue mounts
+    // and reports it) — CrudActions reads this to keep its FAB clear of the bar.
+    formActionsHeight: 0
   })
 
   const hydrate = strategy.hydrate || defaultHydrate
@@ -431,7 +441,15 @@ export function usePageState (strategy = {}) {
   function reset () {
     state.nodes = new Map()
     state.primaryKey = null
-    Object.assign(meta, { saving: false, submitting: false, loading: false, currentStep: 1, validationErrors: {} })
+    Object.assign(meta, {
+      saving: false,
+      submitting: false,
+      loading: false,
+      currentStep: 1,
+      validationErrors: {},
+      actionDialog: { show: false, actionConfig: null },
+      formActionsHeight: 0
+    })
   }
 
   return {

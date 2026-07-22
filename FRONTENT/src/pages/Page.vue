@@ -32,7 +32,7 @@
 
       <Section
         v-if="hasActionSection"
-        section="Action"
+        section="PageAction"
         v-bind="pageProps"
       />
     </template>
@@ -42,6 +42,16 @@
       <q-spinner-dots color="primary" size="40px" />
     </div>
     <PageFallback v-else :not-found="notFound" />
+
+    <!-- Workflow action dialog — mounted here (outside any overridable section) so a
+         custom PageAction container override can never swallow it. State lives in
+         pageState.meta.actionDialog, set by whichever sub-section triggers a workflow action. -->
+    <ActionDialog
+      v-if="hasActionSection"
+      v-model="pageState.meta.actionDialog.show"
+      :action-config="pageState.meta.actionDialog.actionConfig"
+      :record="resourceRecord?.record?.value"
+    />
   </q-page>
 </template>
 
@@ -51,6 +61,7 @@ import ResourceBreadcrumb from 'components/_common/sections/ResourceBreadcrumb.v
 import AqlContentWrapper from 'components/shared/AqlContentWrapper.vue'
 import PageFallback from 'pages/_common/PageFallback.vue'
 import Section from 'components/Section.vue'
+import ActionDialog from 'components/_common/sections/Action/ActionDialog.vue'
 import { usePageResolver } from 'src/composables/resources/usePageResolver'
 import { usePageState } from 'src/composables/resources/usePageState'
 
@@ -73,7 +84,7 @@ const {
 provide('resourceConfig', resourceConfig)
 provide('resourceRecord', resourceRecord)
 
-// Centralized page-level form-state composable (shared by Header/Content/Action sections).
+// Centralized page-level form-state composable (shared by Header/Content/PageAction sections).
 // Pass a per-resource `strategy` here once resource-specific payload logic is extracted.
 const pageState = usePageState()
 provide('pageState', pageState)

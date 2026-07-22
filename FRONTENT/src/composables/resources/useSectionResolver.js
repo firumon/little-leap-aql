@@ -76,7 +76,7 @@ export function evaluateProp(val, resourceRecord, resourceConfig) {
  * @param {ComputedRef<object>} preparedProps - Reactive object containing at minimum:
  *   { section, page, scope, resource, uiName, ...orchestratorState }
  */
-export function useSectionResolver(preparedProps) {
+export function useSectionResolver(preparedProps, defaultComponent = null) {
   const ready             = ref(false)
   const resolvedComponent = shallowRef(null)
   const finalProps        = ref({})
@@ -176,6 +176,13 @@ export function useSectionResolver(preparedProps) {
             break
           }
         }
+      }
+
+      // No custom/framework/ui-wide base found — fall back to the caller-supplied
+      // default so a JS modifier can still adjust its props even though it was never
+      // registered under components/sections/ or _ui/.../sections/.
+      if (!baseSection && defaultComponent) {
+        baseSection = markRaw(defaultComponent)
       }
 
       // No base section exists anywhere — render the fallback card

@@ -153,6 +153,7 @@ export function usePageResolver() {
       resource: resourceSlug.value,
       uiName: customUIName.value,
       pageClass: 'q-gutter-y-xs',
+      contentClass: 'q-px-sm',
       parentForm,
       childGroups,
       actionForm,

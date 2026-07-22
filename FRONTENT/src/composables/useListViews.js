@@ -1,10 +1,145 @@
 import { ref, computed, watch } from 'vue'
+import { useAuthStore } from 'src/stores/auth'
+import { singularize } from 'src/utils/appHelpers'
 
 /**
  * Token resolver map — extensible for future tokens.
  */
 const TOKEN_RESOLVERS = {
   $now: () => Date.now()
+}
+
+// Headers an auto-generated "categorical" view should never be built from.
+const AUTO_VIEW_EXCLUDED_HEADERS = new Set([
+  'Code', 'Name', 'Status', 'Progress', 'Type',
+  'CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy', 'AccessRegion'
+])
+
+const POSITIVE_TOKENS = new Set([
+  'ACTIVE', 'APPROVED', 'COMPLETED', 'DELIVERED', 'PAID', 'CONFIRMED', 'RECEIVED', 'DONE'
+])
+const NEGATIVE_TOKENS = new Set([
+  'INACTIVE', 'REJECTED', 'CANCELLED', 'CANCELED', 'DECLINED', 'FAILED'
+])
+const WARNING_TOKENS = new Set([
+  'PENDING', 'DRAFT', 'INITIATED', 'SENT', 'ASSIGNED', 'CREATED', 'PARTIAL'
+])
+
+function colorForToken(token) {
+  const val = (token ?? '').toString().trim().toUpperCase()
+  if (!val) return 'grey'
+  if (POSITIVE_TOKENS.has(val)) return 'positive'
+  if (NEGATIVE_TOKENS.has(val)) return 'negative'
+  if (WARNING_TOKENS.has(val)) return 'warning'
+  return 'primary'
+}
+
+/**
+ * "IN_PROGRESS" / "in-progress" / "inProgress" → "In Progress"
+ */
+function humanizeToken(token) {
+  const str = (token ?? '').toString().trim()
+  if (!str) return str
+  const spaced = str.replace(/[_-]+/g, ' ').replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+  return spaced
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ')
+}
+
+function autoViewsFromValues(column, values) {
+  return values.map((val, idx) => ({
+    name: humanizeToken(val),
+    default: idx === 0,
+    color: colorForToken(val),
+    filter: {
+      type: 'group',
+      logic: 'AND',
+      items: [{ type: 'condition', column, operator: 'eq', value: val }]
+    }
+  }))
+}
+
+/**
+ * Distinct, order-preserving values observed for `column` across the live item set.
+ */
+function uniqueColumnValues(itemsRef, column) {
+  const seen = new Set()
+  const ordered = []
+  for (const row of itemsRef?.value || []) {
+    const v = row?.[column]
+    if (v === undefined || v === null || v === '') continue
+    const key = v.toString()
+    if (seen.has(key)) continue
+    seen.add(key)
+    ordered.push(v)
+  }
+  return ordered
+}
+
+/**
+ * Looks up an AppOptions group named `<ResourceName><Column>` (or the singularized
+ * resource-name variant, since seed data such as `StockMovementReferenceType` uses the
+ * singular form) — e.g. `PurchaseOrdersStatus`, `StockMovementReferenceType`.
+ */
+function appOptionValuesFor(appOptionsMap, resourceNameVal, column) {
+  if (!resourceNameVal || !column) return null
+  const candidates = [`${resourceNameVal}${column}`, `${singularize(resourceNameVal)}${column}`]
+  for (const key of candidates) {
+    const arr = appOptionsMap?.[key]
+    if (Array.isArray(arr) && arr.length) return arr
+  }
+  return null
+}
+
+/**
+ * Values to auto-generate views for `column`: a matching AppOptions group takes
+ * priority (it defines the full universe of values, including ones absent from the
+ * currently loaded rows), falling back to whatever distinct values are observed live.
+ */
+function resolveColumnValues(column, { itemsRef, headers, appOptionsMap, resourceNameVal }) {
+  if (!headers.includes(column)) return []
+  const optionValues = appOptionValuesFor(appOptionsMap, resourceNameVal, column)
+  return optionValues || uniqueColumnValues(itemsRef, column)
+}
+
+/**
+ * Scans remaining headers for an AppOptions group keyed `<ResourceName><Header>`,
+ * skipping columns already handled by Status/Progress/Type/audit logic.
+ */
+function findAppOptionColumn(headers, appOptionsMap, resourceNameVal) {
+  for (const header of headers) {
+    if (AUTO_VIEW_EXCLUDED_HEADERS.has(header)) continue
+    if (header.endsWith('Code') && header !== 'Code') continue
+    const values = appOptionValuesFor(appOptionsMap, resourceNameVal, header)
+    if (values) return { column: header, values }
+  }
+  return null
+}
+
+function buildStatusViews() {
+  return [
+    {
+      name: 'Active',
+      default: true,
+      color: 'positive',
+      filter: {
+        type: 'group',
+        logic: 'AND',
+        items: [{ type: 'condition', column: 'Status', operator: 'eq', value: 'Active' }]
+      }
+    },
+    {
+      name: 'Inactive',
+      color: 'grey',
+      filter: {
+        type: 'group',
+        logic: 'AND',
+        items: [{ type: 'condition', column: 'Status', operator: 'eq', value: 'Inactive' }]
+      }
+    }
+  ]
 }
 
 export function normalizeListViewsMode(mode) {
@@ -106,6 +241,8 @@ export function evaluateFilter(filter, row) {
  * @param {import('vue').Ref<Array>} options.resourceHeaders - resource header names
  * @param {import('vue').Ref<Array>} options.configuredListViews - from config.ui.listViews
  * @param {import('vue').Ref<String>} [options.configuredListViewsMode] - from config.ui.listViewsMode
+ * @param {import('vue').Ref<String>} [options.scope] - resource scope ('master' | 'operation' | 'accounts')
+ * @param {import('vue').Ref<String>} [options.resourceName] - resource name, used for AppOptions lookups
  * @param {Boolean} [options.enableUrlSync=false] - optional URL sync mode
  * @param {import('vue-router').RouteLocationNormalized} [options.route]
  * @param {import('vue-router').Router} [options.router]
@@ -115,17 +252,26 @@ export function useListViews({
   resourceHeaders,
   configuredListViews,
   configuredListViewsMode,
+  scope,
+  resourceName,
   enableUrlSync = false,
   route,
   router
 }) {
   const activeViewName = ref('')
+  const authStore = useAuthStore()
 
   /**
    * Build effective views:
    * - If configuredListViews is non-empty array, use it (full override).
-   * - Else if resource has a 'Status' header, auto-create Active + Inactive views.
-   * - Else no views.
+   * - Else if mode is 'off'/'custom', no auto-generation.
+   * - Else auto-generate per scope:
+   *   - master: Status header → Active/Inactive.
+   *   - operation (or any other non-master scope): Progress header → views per Progress
+   *     value; else Type header → views per Type value; else the first remaining header
+   *     with a matching `<ResourceName><Header>` AppOptions group.
+   *   Each of the above prefers a matching AppOptions group (the full universe of values)
+   *   over the distinct values currently loaded in `items`.
    */
   const effectiveViews = computed(() => {
     const configured = configuredListViews?.value
@@ -140,29 +286,25 @@ export function useListViews({
     }
 
     const headers = resourceHeaders?.value || []
-    if (headers.includes('Status')) {
-      return [
-        {
-          name: 'Active',
-          default: true,
-          color: 'positive',
-          filter: {
-            type: 'group',
-            logic: 'AND',
-            items: [{ type: 'condition', column: 'Status', operator: 'eq', value: 'Active' }]
-          }
-        },
-        {
-          name: 'Inactive',
-          color: 'grey',
-          filter: {
-            type: 'group',
-            logic: 'AND',
-            items: [{ type: 'condition', column: 'Status', operator: 'eq', value: 'Inactive' }]
-          }
-        }
-      ]
+    const scopeVal = (scope?.value || '').toString().trim().toLowerCase()
+    const resourceNameVal = (resourceName?.value || '').toString().trim()
+    const appOptionsMap = authStore.appOptionsMap || {}
+
+    if (scopeVal === 'master') {
+      if (headers.includes('Status')) return buildStatusViews()
+      return []
     }
+
+    // Operation (and any other non-master) scope.
+    const progressValues = resolveColumnValues('Progress', { itemsRef: items, headers, appOptionsMap, resourceNameVal })
+    if (progressValues.length) return autoViewsFromValues('Progress', progressValues)
+
+    const typeValues = resolveColumnValues('Type', { itemsRef: items, headers, appOptionsMap, resourceNameVal })
+    if (typeValues.length) return autoViewsFromValues('Type', typeValues)
+
+    const matched = findAppOptionColumn(headers, appOptionsMap, resourceNameVal)
+    if (matched) return autoViewsFromValues(matched.column, matched.values)
+
     return []
   })
 

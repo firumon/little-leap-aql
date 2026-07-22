@@ -147,7 +147,7 @@ export function useRecord(resourceNameOverride, codeOverride) {
   const resourceIoStore = useResourceIoStore()
   const {
     resourceName: routeResourceName,
-    config, resourceHeaders: routeHeaders
+    config, resourceHeaders: routeHeaders, scope
   } = useResourceConfig()
   const { code: routeCode } = useRouteConfig()
 
@@ -208,6 +208,8 @@ export function useRecord(resourceNameOverride, codeOverride) {
     resourceHeaders: headers,
     configuredListViews: computed(() => config.value?.ui?.listViews),
     configuredListViewsMode: computed(() => config.value?.ui?.listViewsMode),
+    scope,
+    resourceName: resolvedResourceName,
     enableUrlSync: false
   })
 

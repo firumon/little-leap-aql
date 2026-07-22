@@ -51,6 +51,43 @@ export default function() {
 }
 ```
 
+**Full example with `filter` trees** — see the working reference at [`src/_ui/AQL/components/master/currencies/ListSwitcher.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_ui/AQL/components/master/currencies/ListSwitcher.js):
+```javascript
+export default function() {
+  return {
+    maxVisibleItems: null, // null disables the "More" overflow dropdown; all items render inline
+    items: [
+      {
+        name: 'Inactive',
+        default: true,
+        color: 'positive',
+        icon: 'check_circle',
+        filter: {
+          type: 'group',
+          logic: 'AND',
+          items: [{ type: 'condition', column: 'Status', operator: 'eq', value: 'Inactive' }]
+        }
+      }
+      // ...additional items, each with its own name/color/icon/default/filter
+    ]
+  }
+}
+```
+
+**Item object properties** (see also `useListViews.js`'s auto-generated views, which share this same shape):
+- `name` (required): unique identifier, matched against `activeItem` and passed to `setActiveView(name)`.
+- `label` (optional): display text; falls back to `name`.
+- `icon` (optional): Quasar icon name.
+- `color` (optional): color keyword (`positive`, `negative`, `primary`, `warning`, `grey`, ...); defaults to `'primary'`.
+- `default` (optional): marks the view auto-selected on initial load when there's no active URL/query state.
+- `filter` (optional): a **Group** (`{ type: 'group', logic: 'AND'|'OR', items: [...] }`) or **Condition** (`{ type: 'condition', column, operator, value }`) object evaluated per-row via `evaluateFilter()`. See [Resource Columns Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_COLUMNS_GUIDE.md) and [AQL_FRONTEND_LIST_SWITCHER.md §5.1.1](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_LIST_SWITCHER.md#511-filter-json-schema-reference) for the full operator list (`eq`, `neq`, `in`, `not_in`, `gt`, `gte`, `lt`, `lte`, `contains`).
+
+**Items resolution precedence** — `ListSwitcher.vue` uses the first non-null source:
+1. Explicit `items` prop (from this JS modifier, or an explicit template binding).
+2. Fallback to `resourceRecord.effectiveViews` (sheet-configured `APP.Resources.ListViews`, or scope-aware auto-generated views from `useListViews.js`: `master` scope auto-generates Active/Inactive from `Status`; other scopes prefer `Progress`, then `Type`, then the first matching `AppOptions`-backed column).
+
+This is a full override, not a merge — returning an `items` array from `ListSwitcher.js` replaces sheet/auto-generated views entirely.
+
 ### 3.2. Overriding only the Container wrapper
 Create `ListSwitcher.vue`. Use the generic `Section` component to delegate rendering of the items so they fall back to the default styling (or custom item override) natively:
 ```html

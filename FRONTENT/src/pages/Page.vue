@@ -20,12 +20,13 @@
 
       <AqlContentWrapper
         v-if="contents && contents.length"
+        :class="pageProps.contentClass"
         v-bind="contentWrapperProps"
       >
-        <Section
+        <Content
           v-for="content in contents"
           :key="content"
-          :section="content"
+          :content="content"
           v-bind="pageProps"
         />
       </AqlContentWrapper>
@@ -61,6 +62,7 @@ import ResourceBreadcrumb from 'components/_common/sections/ResourceBreadcrumb.v
 import AqlContentWrapper from 'components/shared/AqlContentWrapper.vue'
 import PageFallback from 'pages/_common/PageFallback.vue'
 import Section from 'components/Section.vue'
+import Content from 'components/Content.vue'
 import ActionDialog from 'components/_common/sections/Action/ActionDialog.vue'
 import { usePageResolver } from 'src/composables/resources/usePageResolver'
 import { usePageState } from 'src/composables/resources/usePageState'

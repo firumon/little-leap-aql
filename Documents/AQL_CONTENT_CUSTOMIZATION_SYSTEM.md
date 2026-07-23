@@ -72,6 +72,9 @@ Path segments are lowercased for lookup; `resource` (a slug, e.g. `stock-movemen
 7. Renders either the resolved override component (when a view is active and a `RecordList<ViewName>` match exists) or `AppList` directly with `finalProps` — gated on `activeViewName` specifically to avoid the resolver ever matching this file's own registered `RecordList` content key and recursing into itself.
 8. Handles item clicks: caller-supplied `onItemClick`, else navigation to a `record-page` sub-route when `target` is set, else the default `view` page.
 
+> [!IMPORTANT]
+> **Continuous props during view switches.** `useContentResolver` runs an **async** watcher and transiently resets its `finalProps` to `{}` while it scans for a `RecordList<ViewName>` override. To prevent the list from momentarily rendering empty on every view change, `sanitizedResolvedProps` merges the synchronous `finalProps` baseline (which always carries the freshly-filtered `items` + strategy props) **under** the resolver's output: `{ ...finalProps.value, ...resolvedContentProps.value }`. The baseline keeps the list populated during the async gap; once resolution settles, the resolver's props (including any per-view JS-modifier changes) still win on top, so override behaviour is unchanged. Because `filteredRecords` is a synchronous computed off `activeViewName`, `items` already reflects the newly-selected view the instant the chip changes.
+
 ### RecordList Props
 Every prop defaults to `undefined` so `useRecordListStrategy` stays authoritative unless explicitly overridden:
 - **Data/behaviour**: `items`, `onItemClick`, `target`
@@ -83,6 +86,14 @@ Every prop defaults to `undefined` so `useRecordListStrategy` stays authoritativ
 - **Row action**: `btn`, `btnColor`
 
 Function-valued props (`label`, `caption`, `chipColor`, ...) are per-item resolvers — `(item) => value` — consumed by `abstract/List.vue` and forwarded untouched.
+
+### Centralized List Transitions
+List motion is defined once, centrally — no per-view/per-resource override touches it, and slot forwarding (`item`, `avatar`, `content`, `meta`, `btn`), the `click` emission, `itemKey` resolution, selection highlight, and loading/empty states are all untouched:
+- **Item entrance / reorder** — `abstract/List.vue` renders its items branch through a `<TransitionGroup name="aql-list-item">` with **no `tag`** (Vue 3 renders no wrapper element, so `q-item`s stay direct children of `q-list` and separators/gutter are preserved). Items fade + slide up on load/filter and glide via FLIP `-move` transitions; leaving items are taken out of flow (`position: absolute`, contained by `q-list`'s `relative-position`) so neighbours settle without a layout jump. **On a view switch, the filtered `items` array changes while the list node stays mounted, so this same TransitionGroup animates the diff between the old and new view's records — no whole-list cross-fade is used.**
+- All timing lives in `src/css/transitions.scss` (`.aql-list-item-*`), is kept in the 150–200ms range for snappiness, and is disabled under `prefers-reduced-motion`.
+
+> [!IMPORTANT]
+> **No outer `<Transition>` on `RecordList.vue`.** An earlier `<Transition name="aql-list-fade" mode="out-in">` keyed by `activeViewName` was removed: `mode="out-in"` holds the incoming node until the outgoing one finishes leaving, which — combined with `useContentResolver`'s async view scan — could stall and unmount the list on a chip change, leaving it blank until reload. `RecordList.vue` now renders `<component :is>` **directly, unkeyed**, so the list node stays mounted across view switches and prop updates flow through continuously; item-level animation is delegated entirely to `List.vue`'s `<TransitionGroup>`.
 
 ### Example JS Logic Modifier (overrides two strategy-derived columns)
 ```javascript

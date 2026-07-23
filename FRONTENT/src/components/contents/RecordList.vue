@@ -166,16 +166,24 @@ const preparedResolverProps = computed(() => ({
 
 const { resolvedComponent, finalProps: resolvedContentProps } = useContentResolver(preparedResolverProps, AppList)
 
-// useContentResolver's finalProps carries the content-identity string (e.g. "RecordListActive")
-// used for override lookup; AppList/abstract/List.vue expect `content` as an Array, so strip it
-// here unless a real Array was resolved.
+// useContentResolver runs an async watcher that transiently resets its finalProps to {}
+// while it scans for a RecordList<ViewName> override. If we bound that raw output, the list
+// would lose `items`/strategy props during every view switch and render empty until the
+// async imports settle. Merging the synchronous `finalProps` baseline (which always carries
+// `items` + strategy props) UNDER the resolver's output keeps the list populated continuously;
+// once resolution completes, the resolver's props (incl. any per-view JS-modifier changes)
+// still win on top, so override behaviour is unchanged.
+//
+// finalProps carries the content-identity string (e.g. "RecordListActive") used for override
+// lookup; AppList/abstract/List.vue expect `content` as an Array, so strip it here unless a
+// real Array was resolved.
 const sanitizedResolvedProps = computed(() => {
-  const propsObj = resolvedContentProps.value
-  if (propsObj && typeof propsObj.content === 'string') {
-    const { content, ...rest } = propsObj
+  const merged = { ...finalProps.value, ...(resolvedContentProps.value || {}) }
+  if (typeof merged.content === 'string') {
+    const { content, ...rest } = merged
     return rest
   }
-  return propsObj
+  return merged
 })
 
 function handleItemClick(item) {

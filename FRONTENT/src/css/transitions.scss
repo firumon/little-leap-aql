@@ -6,3 +6,53 @@
 .step-fade-leave-active { transition: all 220ms ease; }
 .step-fade-enter-from   { opacity: 0; transform: translateX(18px); }
 .step-fade-leave-to     { opacity: 0; transform: translateX(-18px); }
+
+// ── Page body entrance (Page.vue) ────────────────────────────────────────────
+// Centralized cross-fade between the loading spinner and the resolved section /
+// content layout. Applied once in Page.vue via <Transition name="aql-page-fade"
+// mode="out-in">; no per-section component edits required.
+.aql-page-fade-enter-active { transition: opacity 240ms ease; }
+.aql-page-fade-leave-active { transition: opacity 140ms ease; }
+.aql-page-fade-enter-from,
+.aql-page-fade-leave-to     { opacity: 0; }
+
+// Subtle staggered micro-slide reveal for each top-level section / content block
+// as the page body mounts. Targets direct children only, so nested content is
+// untouched and no wrapper markup leaks into individual sections.
+.aql-page-body > * {
+  animation: aql-section-rise 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.aql-page-body > *:nth-child(1)    { animation-delay: 20ms; }
+.aql-page-body > *:nth-child(2)    { animation-delay: 70ms; }
+.aql-page-body > *:nth-child(3)    { animation-delay: 120ms; }
+.aql-page-body > *:nth-child(4)    { animation-delay: 170ms; }
+.aql-page-body > *:nth-child(n+5)  { animation-delay: 200ms; }
+
+@keyframes aql-section-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+// ── List item entrance / reorder (abstract/List.vue TransitionGroup) ─────────
+// Items fade + slide up on load/filter; remaining items glide via FLIP `-move`.
+// Leaving items are taken out of flow (absolute, contained by q-list's
+// relative-position) so neighbours animate into place without a layout jump.
+.aql-list-item-move,
+.aql-list-item-enter-active { transition: transform 200ms ease, opacity 200ms ease; }
+.aql-list-item-leave-active {
+  transition: transform 180ms ease, opacity 180ms ease;
+  position: absolute;
+  width: 100%;
+}
+.aql-list-item-enter-from,
+.aql-list-item-leave-to     { opacity: 0; transform: translateY(8px); }
+
+// Respect users who prefer reduced motion — content still appears, just instantly.
+@media (prefers-reduced-motion: reduce) {
+  .aql-page-fade-enter-active,
+  .aql-page-fade-leave-active,
+  .aql-list-item-move,
+  .aql-list-item-enter-active,
+  .aql-list-item-leave-active { transition: none; }
+  .aql-page-body > *          { animation: none; }
+}

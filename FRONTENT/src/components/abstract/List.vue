@@ -1,5 +1,5 @@
 <template>
-  <q-list :bordered="bordered" :separator="separator" class="q-gutter-y-xs">
+  <q-list :bordered="bordered" :separator="separator" class="q-gutter-y-xs relative-position">
     <!-- Loading State -->
 
     <q-item v-if="loading && !items.length" class="flex flex-center q-pa-xl">
@@ -15,8 +15,10 @@
         </q-item-section>
       </q-item>
     </slot>
-    <!-- Items List -->
-    <template v-else>
+    <!-- Items List — TransitionGroup (no `tag`, so it renders no wrapper element and the
+         q-items stay direct children of q-list, preserving separators/gutter). Items fade
+         and slide into place on load/filter, and reorder via FLIP `-move` transitions. -->
+    <TransitionGroup v-else name="aql-list-item">
       <q-item
         v-for="(item, index) in items"
         :key="resolveKey(item, index)"
@@ -88,7 +90,7 @@
           </q-item-section>
         </slot>
       </q-item>
-    </template>
+    </TransitionGroup>
   </q-list>
 </template>
 

@@ -222,7 +222,7 @@ export const useDataStore = defineStore('data', () => {
         if (!Object.hasOwn(linkRefs, r.name)) linkRefs[r.name] = {}
         linkRefs[r.name][hdr] = pName
         const pRes = resources.find(res => res.name === pName)
-        if (pRes && pRes.scope !== 'master') {
+        if (pRes) {
           if (!Object.hasOwn(resourceChildren, pRes.name)) resourceChildren[pRes.name] = []
           if (!resourceChildren[pRes.name].includes(r.name)) resourceChildren[pRes.name].push(r.name)
         }
@@ -232,7 +232,7 @@ export const useDataStore = defineStore('data', () => {
     resources.forEach(res => {
       resourceRelations[res.name] = {
         parents: resourceParents[res.name]?.map(resourceName => ({ resourceName, codeField: singularize(resourceName) + 'Code', singular: singularize(resourceName), scope: res.scope })) || [],
-        children: (resourceChildren[res.name] || []).map(name => ({ name, codeField: singularize(name) + 'Code', singular: singularize(name), scope: res.scope })),
+        children: (resourceChildren[res.name] || []).map(name => ({ name, codeField: singularize(res.name) + 'Code', singular: singularize(name), scope: res.scope })),
         linkRefs: linkRefs[res.name] || {}
       }
     })

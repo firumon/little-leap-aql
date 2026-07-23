@@ -245,7 +245,8 @@ export function useRecord(resourceNameOverride, codeOverride) {
     const name = resolvedResourceName.value
     if (!name) return []
     const allResources = Array.isArray(authStore.resources) ? authStore.resources : []
-    return allResources.filter(r => r?.parentResource === name)
+    const relChildren = (relations.value?.children || []).map(c => c.name)
+    return allResources.filter(r => r?.parentResource === name || relChildren.includes(r?.name))
   })
 
   const parentResource = computed(() => {
@@ -267,7 +268,19 @@ export function useRecord(resourceNameOverride, codeOverride) {
     const map = {}
     for (const key of rec._Children || []) {
       const childName = key.replace(/^\$/, '')
-      map[childName] = rec[key] || []
+      if (Array.isArray(rec[key]) && rec[key].length) {
+        map[childName] = rec[key]
+      }
+    }
+    for (const childRes of childResources.value) {
+      if (!map[childRes.name] || !map[childRes.name].length) {
+        const parentCodeKey = singularize(resolvedResourceName.value) + 'Code'
+        const records = dataStore.getRecords(childRes.name) || []
+        const matched = records.filter(r => r[parentCodeKey] === rec.Code || r.ParentCode === rec.Code)
+        if (matched.length) {
+          map[childRes.name] = matched
+        }
+      }
     }
     return map
   })

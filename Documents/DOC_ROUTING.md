@@ -81,6 +81,7 @@ Use when overriding or creating custom section or sub-components for any resourc
 - Read:
   - `Documents/AQL_PAGE_AND_SECTION_SYSTEM.md`
   - `Documents/AQL_CONTENT_CUSTOMIZATION_SYSTEM.md`
+  - `Documents/AQL_VIEW_SYSTEM.md` — when customizing View content (parent/child/column overrides, scope rules, JS modifier API)
 
 ### List Switcher Customization
 Use when overriding or creating custom container or item layouts, template overrides, or dynamic modifiers for the list view switcher bar.

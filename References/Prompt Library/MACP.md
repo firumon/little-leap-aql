@@ -67,7 +67,7 @@ The Architect must adapt its directive prompts according to the capability tier 
 
 | Capability Tier | Architectural Strategy & Prompt Customization |
 | --- | --- |
-| **High Capability** | **High Autonomy**: The prompt provides high-level logic goals, target files, and constraints. The Builder is trusted to decide internal algorithm implementation, refactoring patterns, and modular architecture. |
+| **High Capability** | **High Autonomy**: The prompt provides the required outcome, referenceable docs/sections, and constraints only. No target or file-to-modify list is prescribed — the Builder is trusted to do its own lookup and decide which files to touch or create, the internal algorithm implementation, refactoring patterns, and modular architecture. |
 | **Medium Capability** | **Outcome-Driven**: The Builder owns both the logic and the code. The Architect supplies target files, dependencies, integration points, constraints, and — critically — a precise **Expected Outcome** (behaviour, inputs/outputs, edge cases, acceptance criteria). The Architect does not dictate internal algorithm design. |
 | **Low Capability** | **Fully Specified**: The Architect supplies the complete logic, the coding approach (structure, function signatures, control flow, data structures, ordering of operations), exact file locations and insertion points, naming, error handling, and edge cases — described in detail, in prose and pseudocode. The Architect does **not** write the full production code; the Builder writes it by following the specification exactly, with zero room for independent design decisions. |
 
@@ -134,9 +134,9 @@ Emitted alone, with nothing before or after it. Adjust the detail level accordin
 **Target Component/Feature**: [Feature Name]
 
 ### 1. References & Search Target
-* **Files to Modify**: `[path/to/file1.ext]`, `[path/to/file2.ext]`
-* **Files to Read for Context**: `[path/to/file3.ext]`
 * **Documents / Sections to Consult**: `[docs/SPEC.md #Section-2]`
+* **Files to Read for Context**: `[path/to/file3.ext]` *(omit for High tier — see below)*
+* **Files to Modify**: `[path/to/file1.ext]`, `[path/to/file2.ext]` *(omit for High tier — see below)*
 
 ### 2. Execution Directives
 - [ ] Task 1: [Specific instruction]
@@ -157,11 +157,11 @@ Emitted alone, with nothing before or after it. Adjust the detail level accordin
 Report the diff summary, any assumptions made, and any blockers or questions.
 ```
 
-**Tier-specific shaping of Section 2:**
+**Tier-specific shaping:**
 
-* **High** — goals and constraints; implementation choices left open.
-* **Medium** — goals plus a fully specified Section 3 (Expected Outcome); logic and code both left to the Builder.
-* **Low** — Section 2 expands into a detailed specification: step ordering, control flow, function signatures, data structures, pseudocode, exact insertion points, naming, and error handling. Full production code is still not supplied.
+* **High** — Section 1 drops **Files to Modify** and **Files to Read for Context** entirely; only **Documents / Sections to Consult** remains, if any exist. The Architect still does its own full lookup and learning of the codebase (informed by the Conductor's input) before writing the directive, but the directive itself hands the Builder only the required outcome, relevant reference docs, and constraints — the Builder does its own file discovery and decides what to touch or create. Section 2 carries goals and constraints; implementation choices are left open.
+* **Medium** — Section 1 keeps target files and dependencies. Section 2 carries goals plus a fully specified Section 3 (Expected Outcome); logic and code both left to the Builder.
+* **Low** — Section 1 keeps exact file locations and insertion points. Section 2 expands into a detailed specification: step ordering, control flow, function signatures, data structures, pseudocode, naming, and error handling. Full production code is still not supplied.
 
 ### 4.2 Analysis & Proposal (Architect → Human)
 

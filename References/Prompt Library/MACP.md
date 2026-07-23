@@ -103,7 +103,7 @@ The Architect must adapt its directive prompts according to the capability tier 
 ### Step 4: Relay & Execution
 
 1. The Human Conductor copies the Architect's entire output and pastes it into the Building Agent.
-2. The Building Agent executes and returns code changes, diffs, errors, or questions.
+2. The Building Agent executes, leaving its changes live in the repository, and returns a compact **report-back brief** (per §4.1.1) — not a full narration or pasted diffs.
 
 ### Step 5: Builder Response Analysis & Proposal
 
@@ -124,44 +124,37 @@ The Architect must adapt its directive prompts according to the capability tier 
 
 ---
 
-## 4. Standard Handover Schemas
+## 4. Handover Guidance (Not Fixed Schemas)
 
-### 4.1 Directive Prompt Template (Architect → Human → Builder)
+### 4.1 Directive Prompt (Architect → Human → Builder)
 
-Emitted alone, with nothing before or after it. Adjust the detail level according to the Capability Tier.
+Emitted alone, with nothing before or after it (the Bare Directive Rule). **There is no fixed template.** A rigid form forces every task into the same shape; when the real intent doesn't fit, the directive loses fidelity and the Builder executes a distorted version of it. Instead, the Architect elaborates the directive to fit the **capability tier** and the **nature of the task**, including only the parts that carry real signal for this particular change.
 
-```markdown
-**Target Component/Feature**: [Feature Name]
+**Elements to draw from — include what the task needs, omit what it doesn't:**
 
-### 1. References & Search Target
-* **Documents / Sections to Consult**: `[docs/SPEC.md #Section-2]`
-* **Files to Read for Context**: `[path/to/file3.ext]` *(omit for High tier — see below)*
-* **Files to Modify**: `[path/to/file1.ext]`, `[path/to/file2.ext]` *(omit for High tier — see below)*
+* **Target / Feature** — what is being built or changed.
+* **References** — reference docs and spec sections worth consulting. For **Medium/Low** tiers also the target files and files to read for context; for **High** tier these file lists are omitted (the Builder does its own discovery and decides what to touch or create).
+* **Directives** — the work to be done, shaped to tier (see below).
+* **Expected Outcome** — behaviour, inputs/outputs, edge cases, acceptance criteria. Most critical for Medium tier.
+* **Constraints & Guardrails** — invariants that must not break, conventions to follow.
+* **Report-back instruction** — always request the **brief** form described in §4.1.1.
 
-### 2. Execution Directives
-- [ ] Task 1: [Specific instruction]
-- [ ] Task 2: [Specific instruction]
+**Tier-specific shaping of the directives:**
 
-### 3. Expected Outcome
-* **Behaviour**: [What the system must do once this is done]
-* **Inputs / Outputs**: [Signatures, shapes, formats]
-* **Edge Cases**: [Cases that must be handled]
-* **Acceptance Criteria**: [Observable conditions that mark completion]
+* **High** — required outcome, reference docs, and constraints only. Implementation choices, file discovery, and which files to touch or create are all left to the Builder. The Architect still does its own full lookup and learning of the codebase (informed by the Conductor's input) before writing the directive — that understanding shapes the outcome and constraints, but the file list is not handed down.
+* **Medium** — target files, dependencies, integration points, constraints, and a fully specified **Expected Outcome**. Logic and code are both left to the Builder; internal algorithm design is not dictated.
+* **Low** — a detailed specification: step ordering, control flow, function signatures, data structures, pseudocode, exact file locations and insertion points, naming, and error handling. Full production code is still not supplied; the Builder writes it by following the spec exactly.
 
-### 4. Constraints & Guardrails
-> ⚠️ **Strict Rules**:
-> - [e.g., Do not break existing state schema in `state.js`]
-> - [e.g., Follow error-handling conventions in `logger.js`]
+### 4.1.1 Report-Back Brief (Builder → Human → Architect)
 
-### 5. Report Back
-Report the diff summary, any assumptions made, and any blockers or questions.
-```
+The Builder's modified files are already live in the repository, and the Architect reads them directly during its analysis. A long, restated report duplicates what the diff already shows and burns Builder output tokens for no gain. The directive therefore asks the Builder to report back **only a compact brief** — enough for another AI (the Architect) to orient and then go read the files, not a full narration:
 
-**Tier-specific shaping:**
+* **What changed, and where** — a short bullet list referencing the files/symbols touched or created (paths, not pasted code).
+* **Assumptions or decisions** made that are not obvious from the diff.
+* **Deviations** from the directive, if any, and why.
+* **Blockers or open questions** that need Conductor/Architect input.
 
-* **High** — Section 1 drops **Files to Modify** and **Files to Read for Context** entirely; only **Documents / Sections to Consult** remains, if any exist. The Architect still does its own full lookup and learning of the codebase (informed by the Conductor's input) before writing the directive, but the directive itself hands the Builder only the required outcome, relevant reference docs, and constraints — the Builder does its own file discovery and decides what to touch or create. Section 2 carries goals and constraints; implementation choices are left open.
-* **Medium** — Section 1 keeps target files and dependencies. Section 2 carries goals plus a fully specified Section 3 (Expected Outcome); logic and code both left to the Builder.
-* **Low** — Section 1 keeps exact file locations and insertion points. Section 2 expands into a detailed specification: step ordering, control flow, function signatures, data structures, pseudocode, naming, and error handling. Full production code is still not supplied.
+The Builder should **not** paste full file contents, large diffs, or line-by-line walkthroughs. If nothing notable happened in a category, it is omitted. The goal is a brief the Architect can read in seconds and then verify against the live files — minimal Builder tokens, zero loss of context for the Architect.
 
 ### 4.2 Analysis & Proposal (Architect → Human)
 

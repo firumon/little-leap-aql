@@ -1,35 +1,23 @@
 <template>
-  <nav class="breadcrumb-bar" aria-label="Breadcrumb">
-    <span class="crumb crumb-link" @click="handleIndexClick">
-      <q-icon name="home" size="16px" class="crumb-icon" />
-      <span>{{ resolvedResourceTitle }}</span>
-    </span>
-
-    <template v-if="resolvedCode">
-      <q-icon name="chevron_right" size="16px" class="crumb-sep" />
-      <span
-        v-if="resolvedAction && resolvedAction !== 'view'"
-        class="crumb crumb-link"
-        @click="handleViewClick"
-      >
-        {{ resolvedCode }}
-      </span>
-      <span v-else class="crumb crumb-current">{{ resolvedCode }}</span>
-    </template>
-
-    <template v-if="resolvedActionLabel">
-      <q-icon name="chevron_right" size="16px" class="crumb-sep" />
-      <span class="crumb crumb-current">{{ resolvedActionLabel }}</span>
-    </template>
-  </nav>
+  <Breadcrumb
+    :resource-title="resolvedResourceTitle"
+    :code="resolvedCode"
+    :action-label="resolvedActionLabel"
+    :is-action-view="isActionView"
+    @click-root="handleIndexClick"
+    @click-code="handleViewClick"
+  />
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import Breadcrumb from 'components/abstract/Breadcrumb.vue'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { humanizeSlug } from 'src/utils/appHelpers'
+
+defineOptions({ name: 'AppBreadcrumb' })
 
 const props = defineProps({
   scope: { type: String, default: null },
@@ -73,6 +61,8 @@ const resolvedAction = computed(() => {
   return routeConfig.pageName.value || 'index'
 })
 
+const isActionView = computed(() => !!resolvedAction.value && resolvedAction.value !== 'view')
+
 const resolvedActionLabel = computed(() => {
   if (props.actionLabel !== null && props.actionLabel !== undefined) return props.actionLabel
   const p = resolvedAction.value
@@ -110,46 +100,3 @@ const handleViewClick = () => {
   })
 }
 </script>
-
-<style scoped>
-.breadcrumb-bar {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 4px 10px;
-  font-size: 13px;
-  flex-wrap: wrap;
-}
-
-.crumb {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.crumb-link {
-  color: var(--q-primary);
-  text-decoration: none;
-  font-weight: 500;
-  border-radius: 6px;
-  padding: 2px 6px;
-  transition: background 0.15s;
-}
-
-.crumb-link:hover {
-  background: rgba(15, 43, 74, 0.08);
-}
-
-.crumb-current {
-  color: var(--master-soft-ink, #51607a);
-  font-weight: 600;
-}
-
-.crumb-sep {
-  color: #94a3b8;
-}
-
-.crumb-icon {
-  opacity: 0.7;
-}
-</style>

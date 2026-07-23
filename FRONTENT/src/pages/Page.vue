@@ -1,6 +1,6 @@
 <template>
   <q-page class="aql-page-container" :class="pageProps.pageClass">
-    <ResourceBreadcrumb :class="'q-my-' + pageProps.gutter" />
+    <Breadcrumb :class="'q-my-' + pageProps.gutter" />
 
     <!-- Full custom Vue page override (resolved from _ui/) -->
     <component
@@ -72,7 +72,7 @@
 
 <script setup>
 import { provide } from 'vue'
-import ResourceBreadcrumb from 'components/_common/sections/ResourceBreadcrumb.vue'
+import Breadcrumb from 'components/app/Breadcrumb.vue'
 import AqlContentWrapper from 'components/shared/AqlContentWrapper.vue'
 import PageFallback from 'pages/_common/PageFallback.vue'
 import Section from 'components/Section.vue'

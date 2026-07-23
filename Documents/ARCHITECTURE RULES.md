@@ -63,6 +63,8 @@
 
 ## 8. COMPONENT/COMPOSABLE SCOPING & REGISTRY
 To support thin page design, organize components/composables strictly by scope:
+* **Abstract (`src/components/abstract/`)**: Pure, stateless UI components. MUST NOT import or depend on other components, composables, Pinia stores, or services. Receives data purely via props/slots and emits pure events. Log in [components/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md).
+* **App (`src/components/app/`)**: Dependable, app-aware components. Compose `abstract/` components, import other components/composables (e.g. route/resource composables), and hold setup logic (data resolution, navigation, event handling) that the `abstract/` counterpart is forbidden from holding. Log in [components/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md).
 * **Global Shared (`src/components/shared/` & `src/composables/shared/`)**: Stateless, universally reusable blocks. Log in [components/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md).
 * **Module Shared (`src/components/operation/` / `src/composables/operation/`)**: Shared across the module. Log in local module registry.
 * **Feature Shared (`src/components/operation/Outlets/` / `src/composables/operation/outlets/`)**: Shared across the feature. Log in feature registry.

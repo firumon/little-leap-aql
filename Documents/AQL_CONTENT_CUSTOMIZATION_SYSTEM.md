@@ -1,6 +1,6 @@
 # AQL Content Layout & Customization System
 
-This document is the complete reference guide for the AQL Content Customization System. It explains the `contents:` page contract, the `Content.vue` orchestrator, `useContentResolver.js` resolution rules, the built-in `RecordList` content component, and how to create per-resource or per-active-view overrides without rewriting full HTML/Vue templates.
+This document is the complete reference guide for the AQL Content Customization System. It explains the `contents:` page contract, the `Content.vue` orchestrator, `useContentResolver.js` resolution rules, the built-in `List` content component, and how to create per-resource or per-active-view overrides without rewriting full HTML/Vue templates.
 
 ---
 
@@ -12,7 +12,7 @@ A resource page's Base Page contract (`src/pages/[scope]/[page].js`) declares wh
 // src/pages/Master/index.js
 export default {
   sections: ['PageHeader', 'FilterInput', 'PageAction'],
-  contents: ['RecordList'],
+  contents: ['List'],
 }
 ```
 
@@ -30,15 +30,15 @@ export default {
 `Content.vue` is a thin orchestrator: it merges `$attrs` with the `content` identity into `preparedProps` and hands that to [useContentResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useContentResolver.js), which performs the actual lookup. While resolving it shows a spinner; if nothing matches it renders a "Content Not Defined" card naming the missing `content`/`page`/`resource`/`scope` combination.
 
 ### Registries (built once at startup via `import.meta.glob`)
-- **Framework registry**: everything under `src/components/**/*.{vue,js}` (keyed by lowercase path, e.g. `components/contents/recordlist.vue`).
-- **Custom UI registry**: everything under `src/_ui/**/*.{vue,js}` (keyed by lowercase path, e.g. `_ui/aql/components/contents/recordlist.vue` or `_ui/aql/components/master/products/index/recordlist.vue`).
+- **Framework registry**: everything under `src/components/**/*.{vue,js}` (keyed by lowercase path, e.g. `components/contents/list.vue`).
+- **Custom UI registry**: everything under `src/_ui/**/*.{vue,js}` (keyed by lowercase path, e.g. `_ui/aql/components/contents/list.vue` or `_ui/aql/components/master/products/index/list.vue`).
 
 ### Two-Step Resolution (mirrors the Section resolver, scoped to `contents/`)
 1. **Locate the base content component**, in priority order:
    a. Custom UI generic content: `_ui/[uiName]/components/contents/[content].vue`
-   b. Framework generic content: `components/contents/[content].vue` (e.g. `RecordList.vue`)
+   b. Framework generic content: `components/contents/[content].vue` (e.g. `List.vue`)
    c. If neither exists, the first matching Vue override candidate from step 2 below is promoted to serve as the base.
-   d. If still nothing, fall back to the caller-supplied `defaultComponent` (e.g. `RecordList.vue` passes `AppList` so a JS modifier can still adjust its props even with no dedicated content file).
+   d. If still nothing, fall back to the caller-supplied `defaultComponent` (e.g. `List.vue` passes `AppList` so a JS modifier can still adjust its props even with no dedicated content file).
 2. **Locate a page/resource/scope-level override or modifier** for that base — first match wins, most specific first:
    1. `_ui/[uiName]/components/[scope]/[resource]/[page]/[content].vue` (Vue override — resource + page specific)
    2. `_ui/[uiName]/components/[scope]/[resource]/[page]/[content].js` (JS modifier — resource + page specific)
@@ -59,24 +59,24 @@ Path segments are lowercased for lookup; `resource` (a slug, e.g. `stock-movemen
 
 ---
 
-## 2. `RecordList` — The Built-In List Content Component
+## 2. `List` — The Built-In List Content Component
 
-[RecordList.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/contents/RecordList.vue) (registered content name `RecordList`, component name `ContentsRecordList`) is the framework's default Index-page content. It:
+[List.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/contents/List.vue) (registered content name `List`, component name `ContentsList`) is the framework's default Index-page content. It:
 
 1. Reads `resourceRecord.filteredRecords` (falling back to `resourceRecord.records`) and `resourceRecord.loading`, injected from the page.
-2. Derives label/caption/meta/highlight/chip resolvers from [useRecordListStrategy.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useRecordListStrategy.js) (see §3) as its baseline (`strategyProps`).
+2. Derives label/caption/meta/highlight/chip resolvers from [useListStrategy.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useListStrategy.js) (see §3) as its baseline (`strategyProps`).
 3. Layers any explicitly-passed props on top (`explicitProps` — anything the caller set that isn't `undefined`), so a page contract or JS modifier can override any single strategy-derived value (`layout`, `label`, `chipColor`, etc.) without touching the rest.
-4. Builds `preparedResolverProps` — the content-resolver identity used to find a per-active-view override — merging, **in priority order**: explicit `page`/`scope`/`resource`/`uiName` **props**, then the same as forwarded **attributes**, then `resourceConfig` context (`resourceConfig.page`, `.scope`, `.resourceSlug`, `.customUIName`), with `page` defaulting to `'index'`. This lets a manual `<RecordList page="..." resource="..." />` usage override the ambient page/resource context, e.g. embedding a different resource's list inside a custom section.
-5. Determines `content: 'RecordList<ActiveViewName>'` (PascalCased) whenever a list view is active (see §4), otherwise plain `'RecordList'`.
+4. Builds `preparedResolverProps` — the content-resolver identity used to find a per-active-view override — merging, **in priority order**: explicit `page`/`scope`/`resource`/`uiName` **props**, then the same as forwarded **attributes**, then `resourceConfig` context (`resourceConfig.page`, `.scope`, `.resourceSlug`, `.customUIName`), with `page` defaulting to `'index'`. This lets a manual `<List page="..." resource="..." />` usage override the ambient page/resource context, e.g. embedding a different resource's list inside a custom section.
+5. Determines `content: 'List<ActiveViewName>'` (PascalCased) whenever a list view is active (see §4), otherwise plain `'List'`.
 6. Feeds `preparedResolverProps` into `useContentResolver`, with [AppList.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/app/AppList.vue) as the `defaultComponent` fallback.
-7. Renders either the resolved override component (when a view is active and a `RecordList<ViewName>` match exists) or `AppList` directly with `finalProps` — gated on `activeViewName` specifically to avoid the resolver ever matching this file's own registered `RecordList` content key and recursing into itself.
+7. Renders either the resolved override component (when a view is active and a `List<ViewName>` match exists) or `AppList` directly with `finalProps` — gated on `activeViewName` specifically to avoid the resolver ever matching this file's own registered `List` content key and recursing into itself.
 8. Handles item clicks: caller-supplied `onItemClick`, else navigation to a `record-page` sub-route when `target` is set, else the default `view` page.
 
 > [!IMPORTANT]
-> **Continuous props during view switches.** `useContentResolver` runs an **async** watcher and transiently resets its `finalProps` to `{}` while it scans for a `RecordList<ViewName>` override. To prevent the list from momentarily rendering empty on every view change, `sanitizedResolvedProps` merges the synchronous `finalProps` baseline (which always carries the freshly-filtered `items` + strategy props) **under** the resolver's output: `{ ...finalProps.value, ...resolvedContentProps.value }`. The baseline keeps the list populated during the async gap; once resolution settles, the resolver's props (including any per-view JS-modifier changes) still win on top, so override behaviour is unchanged. Because `filteredRecords` is a synchronous computed off `activeViewName`, `items` already reflects the newly-selected view the instant the chip changes.
+> **Continuous props during view switches.** `useContentResolver` runs an **async** watcher and transiently resets its `finalProps` to `{}` while it scans for a `List<ViewName>` override. To prevent the list from momentarily rendering empty on every view change, `sanitizedResolvedProps` merges the synchronous `finalProps` baseline (which always carries the freshly-filtered `items` + strategy props) **under** the resolver's output: `{ ...finalProps.value, ...resolvedContentProps.value }`. The baseline keeps the list populated during the async gap; once resolution settles, the resolver's props (including any per-view JS-modifier changes) still win on top, so override behaviour is unchanged. Because `filteredRecords` is a synchronous computed off `activeViewName`, `items` already reflects the newly-selected view the instant the chip changes.
 
-### RecordList Props
-Every prop defaults to `undefined` so `useRecordListStrategy` stays authoritative unless explicitly overridden:
+### List Props
+Every prop defaults to `undefined` so `useListStrategy` stays authoritative unless explicitly overridden:
 - **Data/behaviour**: `items`, `onItemClick`, `target`
 - **Content-resolver identity** (override ambient context): `page`, `scope`, `resource`, `uiName`
 - **List container**: `itemKey`, `emptyText`, `bordered`, `itemBordered`, `separator`, `dense`, `color`, `highlight`, `highlightColor`, `clickable`, `itemClass`, `align`
@@ -93,11 +93,11 @@ List motion is defined once, centrally — no per-view/per-resource override tou
 - All timing lives in `src/css/transitions.scss` (`.aql-list-item-*`), is kept in the 150–200ms range for snappiness, and is disabled under `prefers-reduced-motion`.
 
 > [!IMPORTANT]
-> **No outer `<Transition>` on `RecordList.vue`.** An earlier `<Transition name="aql-list-fade" mode="out-in">` keyed by `activeViewName` was removed: `mode="out-in"` holds the incoming node until the outgoing one finishes leaving, which — combined with `useContentResolver`'s async view scan — could stall and unmount the list on a chip change, leaving it blank until reload. `RecordList.vue` now renders `<component :is>` **directly, unkeyed**, so the list node stays mounted across view switches and prop updates flow through continuously; item-level animation is delegated entirely to `List.vue`'s `<TransitionGroup>`.
+> **No outer `<Transition>` on `List.vue`.** An earlier `<Transition name="aql-list-fade" mode="out-in">` keyed by `activeViewName` was removed: `mode="out-in"` holds the incoming node until the outgoing one finishes leaving, which — combined with `useContentResolver`'s async view scan — could stall and unmount the list on a chip change, leaving it blank until reload. `contents/List.vue` now renders `<component :is>` **directly, unkeyed**, so the list node stays mounted across view switches and prop updates flow through continuously; item-level animation is delegated entirely to `abstract/List.vue`'s `<TransitionGroup>`.
 
 ### Example JS Logic Modifier (overrides two strategy-derived columns)
 ```javascript
-// src/_ui/AQL/components/master/products/index/recordlistInactive.js
+// src/_ui/AQL/components/master/products/index/listInactive.js
 export default function (props) {
   return {
     ...props,
@@ -109,27 +109,27 @@ export default function (props) {
 
 ---
 
-## 3. `useRecordListStrategy` — Header-Driven Defaults
+## 3. `useListStrategy` — Header-Driven Defaults
 
-Derives label/caption/meta/highlight resolvers purely from a resource's headers, parent relations, and active list-view state, so `RecordList.vue` never needs per-resource conditionals:
+Derives label/caption/meta/highlight resolvers purely from a resource's headers, parent relations, and active list-view state, so `contents/List.vue` never needs per-resource conditionals:
 - **Label**: own `Name` column → first parent relation with a `Name` column (borrowed, e.g. SKU → Product, with `Variant1..5` appended) → 2+ descriptive columns combined (`"h2 - h3"`) → single descriptive column → `Code`.
 - **Caption**: multiple parent relations → join every parent's name/code with `•`; else whatever the label didn't consume, or a `Date`/`TransactionDate`/`CreatedAt` + `CreatedBy`/`UpdatedBy`/`User`/`Agent` pair once available.
 - **Highlight / meta-chip**: tracks `Progress` → `Status` → `Type`. While a list view is active, that field is dropped from the chip (redundant with the selected view chip) in favor of a currency-formatted amount column, or — for resources with more than 7 headers — a quantity column; `highlight` still tracks the state column regardless.
 - **Meta-label / meta-caption**: data-dense resources (>7 headers) surface an amount/quantity column as `metaLabel` and one more unused descriptive column as `metaCaption`.
 
-See `FRONTENT/src/composables/resources/useRecordListStrategy.js` for the exact header-priority tables.
+See `FRONTENT/src/composables/resources/useListStrategy.js` for the exact header-priority tables.
 
 ---
 
-## 4. Per-Active-View Overrides (`RecordList<ActiveViewName>`)
+## 4. Per-Active-View Overrides (`List<ActiveViewName>`)
 
-When a list view is active (managed by `useListViews` — e.g. an "Approved" filter chip selected), `RecordList.vue` sets its content-resolver identity to `RecordList${toPascalCase(activeViewName)}` (e.g. `RecordListApproved`) instead of plain `RecordList`. This lets you fully swap or adjust the list rendering for one specific view without touching the default:
+When a list view is active (managed by `useListViews` — e.g. an "Approved" filter chip selected), `contents/List.vue` sets its content-resolver identity to `List${toPascalCase(activeViewName)}` (e.g. `ListApproved`) instead of plain `List`. This lets you fully swap or adjust the list rendering for one specific view without touching the default:
 
-- **Generic override for all resources under this view name**: `src/components/contents/RecordListApproved.vue`
-- **Tenant/resource-specific Vue override**: `src/_ui/[uiName]/components/[scope]/[resource]/[page]/RecordListApproved.vue`
-- **Tenant/resource-specific JS modifier**: `src/_ui/[uiName]/components/[scope]/[resource]/[page]/RecordListApproved.js`
+- **Generic override for all resources under this view name**: `src/components/contents/ListApproved.vue`
+- **Tenant/resource-specific Vue override**: `src/_ui/[uiName]/components/[scope]/[resource]/[page]/ListApproved.vue`
+- **Tenant/resource-specific JS modifier**: `src/_ui/[uiName]/components/[scope]/[resource]/[page]/ListApproved.js`
 
-If no `RecordList<ViewName>` match is found anywhere, resolution silently falls through — `RecordList.vue` still renders `AppList` with the default strategy-derived props, since the override lookup only affects the `content` identity string, not the fallback behaviour.
+If no `List<ViewName>` match is found anywhere, resolution silently falls through — `contents/List.vue` still renders `AppList` with the default strategy-derived props, since the override lookup only affects the `content` identity string, not the fallback behaviour.
 
 ---
 

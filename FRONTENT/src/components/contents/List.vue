@@ -8,15 +8,15 @@
 
 <script setup>
 import { computed, inject, useAttrs } from 'vue'
-import { useRecordListStrategy } from 'src/composables/resources/useRecordListStrategy'
+import { useListStrategy } from 'src/composables/resources/useListStrategy'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useContentResolver } from 'src/composables/resources/useContentResolver'
 import { toPascalCase } from 'src/utils/appHelpers'
 import AppList from 'components/app/AppList.vue'
 
-defineOptions({ name: 'ContentsRecordList', inheritAttrs: false })
+defineOptions({ name: 'ContentsList', inheritAttrs: false })
 
-// Every prop below defaults to `undefined` so useRecordListStrategy stays authoritative
+// Every prop below defaults to `undefined` so useListStrategy stays authoritative
 // unless a page contract, JS modifier, or custom UI override explicitly supplies one.
 //
 // Function-valued props (label, caption, chipColor, ...) are item resolvers consumed by
@@ -53,7 +53,7 @@ const props = defineProps({
 
   // Main content
   layout: { type: Array, default: undefined },
-  // String is accepted only because Content.vue binds the content identity ("RecordList")
+  // String is accepted only because Content.vue binds the content identity ("List")
   // under the same key; it is forwarded to the list solely when it is a real Array.
   content: { type: [Array, String], default: undefined },
   label: { type: [String, Function], default: undefined },
@@ -104,8 +104,8 @@ const records = computed(() =>
 const loading = computed(() => resourceRecord?.loading?.value ?? false)
 
 // Resource-aware label/caption/meta resolvers: own Name column, borrowed parent name
-// (SKUs, PriceListItems), or a primary-field/Code fallback — see useRecordListStrategy.
-const strategy = useRecordListStrategy(resourceConfig, resourceRecord)
+// (SKUs, PriceListItems), or a primary-field/Code fallback — see useListStrategy.
+const strategy = useListStrategy(resourceConfig, resourceRecord)
 
 const strategyProps = computed(() => ({
   layout: strategy.layout.value,
@@ -144,11 +144,11 @@ const finalProps = computed(() => ({
 }))
 
 // Active-view-aware override resolution: when a list view is selected (e.g. "Approved"),
-// look for a RecordList<ViewName> override (generic under components/contents/, or a
+// look for a List<ViewName> override (generic under components/contents/, or a
 // tenant override/JS modifier under _ui/) before falling back to AppList.
 //
-// This is only consulted while a view IS active. `components/contents/RecordList.vue` is
-// this very file's own registered content key — resolving the bare 'RecordList' identity
+// This is only consulted while a view IS active. `components/contents/List.vue` is
+// this very file's own registered content key — resolving the bare 'List' identity
 // through useContentResolver would match this file itself as the "base content" and mount
 // it as its own child, recursing forever. Gating the render on `activeViewName` keeps the
 // resolver reactive (it still runs and is available for per-view overrides) without ever
@@ -157,7 +157,7 @@ const activeViewName = computed(() => resourceRecord?.activeViewName?.value || '
 
 const preparedResolverProps = computed(() => ({
   ...finalProps.value,
-  content: activeViewName.value ? `RecordList${toPascalCase(activeViewName.value)}` : 'RecordList',
+  content: activeViewName.value ? `List${toPascalCase(activeViewName.value)}` : 'List',
   page: props.page || attrs.page || resourceConfig?.page?.value || 'index',
   scope: props.scope || attrs.scope || resourceConfig?.scope?.value,
   resource: props.resource || attrs.resource || resourceConfig?.resourceSlug?.value,
@@ -167,14 +167,14 @@ const preparedResolverProps = computed(() => ({
 const { resolvedComponent, finalProps: resolvedContentProps } = useContentResolver(preparedResolverProps, AppList)
 
 // useContentResolver runs an async watcher that transiently resets its finalProps to {}
-// while it scans for a RecordList<ViewName> override. If we bound that raw output, the list
+// while it scans for a List<ViewName> override. If we bound that raw output, the list
 // would lose `items`/strategy props during every view switch and render empty until the
 // async imports settle. Merging the synchronous `finalProps` baseline (which always carries
 // `items` + strategy props) UNDER the resolver's output keeps the list populated continuously;
 // once resolution completes, the resolver's props (incl. any per-view JS-modifier changes)
 // still win on top, so override behaviour is unchanged.
 //
-// finalProps carries the content-identity string (e.g. "RecordListActive") used for override
+// finalProps carries the content-identity string (e.g. "ListActive") used for override
 // lookup; AppList/abstract/List.vue expect `content` as an Array, so strip it here unless a
 // real Array was resolved.
 const sanitizedResolvedProps = computed(() => {

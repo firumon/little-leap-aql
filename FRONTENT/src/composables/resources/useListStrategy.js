@@ -60,7 +60,7 @@ function statusColor(rawValue) {
 
 /**
  * Derives label / caption / meta / highlight resolvers for a resource's record list from
- * its headers, parent relations, and current list-view state — so `contents/RecordList.vue`
+ * its headers, parent relations, and current list-view state — so `contents/List.vue`
  * doesn't need to know per-resource which column is "the name" (Products) vs. which one has
  * to borrow a parent's name (SKUs, PriceListItems) vs. which one has neither (StockMovements),
  * nor whether the active list-view filter already makes a status chip redundant.
@@ -68,7 +68,7 @@ function statusColor(rawValue) {
  * @param {ReturnType<typeof import('./useResourceConfig').useResourceConfig>} resourceConfig
  * @param {ReturnType<typeof import('./useRecord').useRecord>} resourceRecord
  */
-export function useRecordListStrategy(resourceConfig, resourceRecord) {
+export function useListStrategy(resourceConfig, resourceRecord) {
   const dataStore = useDataStore()
   const { _C } = useCurrency()
 

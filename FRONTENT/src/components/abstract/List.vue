@@ -1,24 +1,30 @@
 <template>
   <q-list :bordered="bordered" :separator="separator" class="q-gutter-y-xs relative-position">
-    <!-- Loading State -->
-
-    <q-item v-if="loading && !items.length" class="flex flex-center q-pa-xl">
-      <q-spinner color="primary" size="3em" />
-    </q-item>
-
-    <!-- Empty State -->
-    <slot v-else-if="!items.length" name="empty">
-      <q-item class="empty-state-container q-py-xl text-center">
-        <q-item-section>
-          <q-icon name="inventory_2" size="48px" color="grey-4" class="q-mb-sm block q-mx-auto" />
-          <q-item-label class="text-subtitle1 text-weight-bold text-grey-6">{{ emptyText }}</q-item-label>
-        </q-item-section>
+    <!-- TransitionGroup (no `tag`, so it renders no wrapper element and the q-items stay
+         direct children of q-list, preserving separators/gutter). Items fade and slide into
+         place on load/filter, and reorder via FLIP `-move` transitions. The loading spinner
+         and empty state live inside the group as keyed children so switching between
+         populated ⇄ empty ⇄ loading views cross-fades instead of unmounting abruptly. -->
+    <TransitionGroup name="aql-list-item">
+      <!-- Loading State -->
+      <q-item v-if="loading && !items.length" key="list-loading-state" class="flex flex-center q-pa-xl">
+        <q-spinner color="primary" size="3em" />
       </q-item>
-    </slot>
-    <!-- Items List — TransitionGroup (no `tag`, so it renders no wrapper element and the
-         q-items stay direct children of q-list, preserving separators/gutter). Items fade
-         and slide into place on load/filter, and reorder via FLIP `-move` transitions. -->
-    <TransitionGroup v-else name="aql-list-item">
+
+      <!-- Empty State — keyed wrapper so caller-provided #empty fragments (which may be
+           unkeyed) still participate in the group transition -->
+      <div v-else-if="!items.length" key="list-empty-state">
+        <slot name="empty">
+          <q-item class="empty-state-container q-py-xl text-center">
+            <q-item-section>
+              <q-icon name="inventory_2" size="48px" color="grey-4" class="q-mb-sm block q-mx-auto" />
+              <q-item-label class="text-subtitle1 text-weight-bold text-grey-6">{{ emptyText }}</q-item-label>
+            </q-item-section>
+          </q-item>
+        </slot>
+      </div>
+
+      <!-- Items List -->
       <q-item
         v-for="(item, index) in items"
         :key="resolveKey(item, index)"

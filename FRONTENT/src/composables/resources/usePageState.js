@@ -157,7 +157,10 @@ export function usePageState (strategy = {}) {
       record: {}, // the user-input header/body (v-model target)
       children: [], // composite child rows: [{ resource, records: [{ _action, data }] }]
       records: [], // many:true entries of THIS resource
-      controls: [], // field schema (seeded by strategy.controls)
+      // Dual-purpose: { name, codeType } entries seeded by strategy.controls (option-list
+      // schema), AND/OR { header, value } entries upserted by setControlField for non-schema
+      // custom fields — see setControlField/getControlField. Never read by defaultBuild.
+      controls: [],
       options: {}, // per-field option lists (seeded by strategy.getOptions)
       action // workflow action trigger (string key or explicit config)
     })
@@ -171,7 +174,9 @@ export function usePageState (strategy = {}) {
   // ----------------------------------------------------------------------
   // PUBLIC MUTATIONS
   // ----------------------------------------------------------------------
-  function initResource (resource, { code = null, many = false, fields = {}, action = null } = {}) {
+  function initResource (resource, { code = null, many = false, fields = {}, action = null, isPrimaryKey = false, reset = false } = {}) {
+    if (reset) resetForResource(resource)
+
     const node = createNode(resource, { code, many, action })
     Object.assign(node.record, fields)
     if (strategy.controls) {
@@ -181,8 +186,25 @@ export function usePageState (strategy = {}) {
       }
     }
     state.nodes.set(resource, node)
-    if (!state.primaryKey) state.primaryKey = resource
+    if (!state.primaryKey || isPrimaryKey || state.primaryKey !== resource) state.primaryKey = resource
     return node
+  }
+
+  // Flushes stale nodes left over from a previously-visited resource page before
+  // the new active resource takes over as primaryKey — called by initResource
+  // when { reset: true } (e.g. on a Create/Update page mount or resource switch).
+  function resetForResource (resource) {
+    state.nodes = new Map()
+    state.primaryKey = resource
+    Object.assign(meta, {
+      saving: false,
+      submitting: false,
+      loading: false,
+      currentStep: 1,
+      validationErrors: {},
+      actionDialog: { show: false, actionConfig: null },
+      formActionsHeight: 0
+    })
   }
 
   function load (resource, rawRecord = {}) {
@@ -201,6 +223,25 @@ export function usePageState (strategy = {}) {
     const node = ensureNode(resource)
     Object.assign(node.record, patch)
     return node
+  }
+
+  // Non-schema / transient field storage — `node.record` is reserved exclusively
+  // for canonical resource headers sent to GAS (see defaultBuild). A FormRecord
+  // `fields` list may reference a header outside the resolved schema (custom UI
+  // fields, wizard-only inputs, ...); those values live in `node.controls`
+  // instead (upserted by `header`) so they never leak into create/update/bulk
+  // payloads while still being reactively readable via `getControlField`/`useNode`.
+  function setControlField (resource, header, value) {
+    const node = ensureNode(resource)
+    const entry = node.controls.find((c) => c.header === header)
+    if (entry) entry.value = value
+    else node.controls.push({ header, value })
+    return node
+  }
+
+  function getControlField (resource, header) {
+    const node = state.nodes.get(resource)
+    return node?.controls.find((c) => c.header === header)?.value
   }
 
   function addChild (resource, childResource, row, { action = 'create' } = {}) {
@@ -458,9 +499,12 @@ export function usePageState (strategy = {}) {
     meta,
     // mutations
     initResource,
+    resetForResource,
     load,
     setField,
     setFields,
+    setControlField,
+    getControlField,
     addChild,
     updateChild,
     removeChild,

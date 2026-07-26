@@ -176,6 +176,9 @@ export function useResourceConfig(resourceNameOverride) {
     return raw ? raw.split(',').map(h => h.trim()).filter(Boolean) : []
   })
 
+  // APP.Resources.DefaultValues — backend-authored seed values for this resource.
+  const defaultValues = computed(() => activeConfig.value?.defaultValues || {})
+
   return {
     config: activeConfig,
     scope,
@@ -185,6 +188,7 @@ export function useResourceConfig(resourceNameOverride) {
     resourceHeaders,
     resolvedFields,
     requiredHeaders,
+    defaultValues,
     additionalActions,
     permissions,
     allowed

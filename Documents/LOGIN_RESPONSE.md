@@ -95,6 +95,7 @@ Array of resource entries built by `buildAuthorizedResourceEntry()` at `GAS/reso
   "codePrefix":         "PRD",
   "codeSequenceLength": 5,
   "functional":         false,
+  "defaultValues":      {},
   "permissions": {
     "canRead":    true,
     "canWrite":   true,
@@ -135,6 +136,7 @@ Array of resource entries built by `buildAuthorizedResourceEntry()` at `GAS/reso
 | `codePrefix` | Prefix for auto-generated codes (e.g., `PRD`) |
 | `codeSequenceLength` | Zero-padded numeric suffix length |
 | `functional` | `true` = no sheet data (e.g., BulkUploadMasters); sheet I/O must not be attempted |
+| `defaultValues` | Backend-authored seed values (`APP.Resources.DefaultValues`, JSON), keyed by header; consumed by the frontend via `useResourceConfig(resource).defaultValues` to seed `FormRecord`/`FormChild` drafts |
 | `permissions` | CRUD and custom workflow action flags (e.g. `canApprove`) derived from `APP.RolePermissions` for the user's role(s) |
 | `headers` | Sheet column headers; empty array for functional resources |
 | `ui.menus` | Sidebar menu configuration array including `menuAccess` rules. See [AQL_FRONTEND_MENU_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_MENU_SYSTEM.md) for full schema and evaluation logic. |

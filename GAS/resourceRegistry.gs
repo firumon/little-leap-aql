@@ -541,6 +541,7 @@ function buildAuthorizedResourceEntry(resourceName, options) {
     codePrefix: config.codePrefix,
     codeSequenceLength: config.codeSequenceLength,
     functional: config.functional || false,
+    defaultValues: config.defaultValues || {},
     permissions: {
       canRead: false,
       canWrite: false,

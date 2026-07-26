@@ -76,7 +76,8 @@ import {
   deriveActionStampHeaders,
   filterDetailFields,
   filterParentFields,
-  humanizeString
+  humanizeString,
+  toPascalCase
 } from 'src/utils/appHelpers'
 
 defineOptions({ name: 'ContentsViewRecord', inheritAttrs: false })
@@ -157,7 +158,10 @@ async function resolveRecordOverride() {
   if (!uiKey) return
 
   const scopeKey = (props.scope || '').toLowerCase()
-  const slugKey = (props.resourceSlug || '').toLowerCase()
+  // Normalized exactly like useContentResolver.js (toPascalCase then lowercase)
+  // so a kebab-case slug (e.g. 'outlet-visits') matches the Vite glob registry
+  // folder key ('outletvisits') instead of leaking hyphens into the path.
+  const slugKey = toPascalCase(props.resourceSlug || props.resourceName || '').toLowerCase()
   const uiBase = `_ui/${uiKey}/components`
 
   const candidates = [

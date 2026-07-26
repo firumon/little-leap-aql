@@ -98,10 +98,13 @@ async function resolveOverride(childResource) {
   if (!uiKey) return null
 
   const currentScope = (scope.value || '').toLowerCase()
-  const currentResourceSlug = (resourceSlug.value || '').toLowerCase()
+  // Normalized exactly like useContentResolver.js (toPascalCase then lowercase)
+  // so a kebab-case slug (e.g. 'outlet-visits') matches the Vite glob registry
+  // folder key ('outletvisits') instead of leaking hyphens into the path.
+  const currentResourceSlug = toPascalCase(resourceSlug.value || resourceName.value || '').toLowerCase()
   const childName = toPascalCase(childResource.name).toLowerCase()
   const childScope = (childResource.scope || scope.value || '').toLowerCase()
-  const childResourceSlug = (childResource.slug || toPascalCase(childResource.name)).toLowerCase()
+  const childResourceSlug = toPascalCase(childResource.slug || childResource.name || '').toLowerCase()
   const uiBase = `_ui/${uiKey}/components`
 
   const candidates = [

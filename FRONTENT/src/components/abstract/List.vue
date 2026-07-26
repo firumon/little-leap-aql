@@ -216,7 +216,12 @@ const props = defineProps({
   avatarColor: { type: [String, Function], default: 'primary' },
   avatarSize: { type: String, default: 'md' },
   layout: { type: Array, default: () => ['label', 'caption'] },
-  content: { type: Array, default: null },
+  // Array = per-item content column sequence. A String may arrive here when
+  // $attrs forwards a content-resolver identity (e.g. Content.vue's `content:
+  // "Create"`) down through AppList/FormChild — contentArray below already
+  // ignores non-Array values and falls back to layout, so this is a pure
+  // prop-validation widen, not a behavior change.
+  content: { type: [Array, String], default: null },
   label: { type: [String, Function], default: 'Code' },
   labelClass: { type: [String, Array, Object], default: null },
   caption: { type: [String, Function], default: null },

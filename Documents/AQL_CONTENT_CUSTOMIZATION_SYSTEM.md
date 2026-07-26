@@ -53,6 +53,9 @@ export default {
 
 Path segments are lowercased for lookup; `resource` (a slug, e.g. `stock-movements`) is PascalCased then lowercased (`stockmovements`) to match folder naming.
 
+> [!IMPORTANT]
+> **This normalization is enforced everywhere a resource slug feeds a glob-registry folder lookup**, not just in `useContentResolver.js` itself — both the `View` system (`ViewRecord.vue`'s `viewrecord.(vue|js)`, `ViewChildren.vue`'s `viewchild*.(vue|js)`, `ViewParent.vue`'s `viewparent*.(vue|js)`, and `useViewColumnResolver.js`'s `viewcolumn*.(vue|js)`) and the `Create` system (`FormRecord.vue`, `Create.vue`, `FormChild.vue` — see [AQL_CREATE_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_CREATE_CONTENT_SYSTEM.md) §9) run every resource slug through `toPascalCase(slug).toLowerCase()` before building a candidate path. A kebab-case slug (`outlet-visits`) becomes `outletvisits`, never `outlet-visits` — hyphens never appear in a glob-registry key because folder names are PascalCase-derived. Resource **menu routes** (`ui.menus[].route`, e.g. `/operation/outlet-visits`) and URL params (`route.params.resourceSlug`) ARE genuinely kebab-case in production — confirmed against live seed data in `GAS/syncAppResources.gs` — which is exactly why this normalization step exists: it converts a real kebab-case slug into the PascalCase-derived glob key. `useResourceNav.js`'s `findScopeBySlug` and `useRouteConfig.js`'s `resourceConfig` fallback correspondingly strip hyphens (`.replace(/-/g, '')`) rather than assume PascalCase input, for the same reason.
+
 ### Custom Templates vs. JS Logic Modifiers
 - **Vue Template Override (`.vue`)**: must contain a `<template>` block; **replaces the base content entirely**, and props flow through unmodified so the override can read `$attrs` directly.
 - **JS Logic Modifier (`.js`)**: exports a default `(props, { pageState, resourceRecord, resourceConfig }) => modifiedProps` (or a plain object) that keeps the base content component but adjusts the props fed into it.
@@ -225,7 +228,25 @@ export default function (props) {
 
 ---
 
-### 5.3 Order & Visibility Control in View Pages (`Content.js`)
+### 5.3 `Create` — The Built-In Create Content Component
+
+[Create.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/contents/Create.vue) (registered content name `Create`, component name `ContentsCreate`) is the framework's default resource-creation content, resolved exactly like `List`/`View` via `contents: ['Create']`:
+
+```javascript
+// src/pages/Master/create.js
+export default {
+  sections: ['PageHeader', 'PageAction'],
+  contents: ['Create'],
+}
+```
+
+`Create` renders the primary resource's input form (`FormRecord`) plus one `FormChild` per eligible child resource (resources whose `ParentResource` equals the active resource) — never a parent-relation form. All input lands directly in the shared `pageState` reactive tree via `setField`/`setControlField`/`addChild`/`updateChild`; submit is owned entirely by `PageAction` sections. Both components follow a strict **zero-hardcoding contract** — every default label, class, colour, and behaviour is an overrideable prop — and a four-step field-visibility precedence chain: **`showFields` > `hideFields` > `workflowFields`** (with `Status` hidden + seeded `'Active'` by default). Non-schema "custom" fields are routed to `pageState.setControlField`/`node.controls`, never `node.record`.
+
+**Full canonical reference — component anatomy, complete prop tables, the visibility precedence chain, `defaultValues`/`fieldProps` function resolution, the three independent override hierarchies (`FormChild<ChildName>`, `FormRecord`, `FormField<Header>` — `_ui/*` only, no framework fallback), and whole-content `create.vue`/`create.js` overrides — lives in [AQL_CREATE_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_CREATE_CONTENT_SYSTEM.md).**
+
+---
+
+### 5.4 Order & Visibility Control in View Pages (`Content.js`)
 
 At the page content orchestrator level (`View/Content.js`), a resource custom JS modifier can adjust:
 - **`order`**: Array of sections (`'Details'`, `'Parent'`, `'Children'`, `'Audit'`) defining their layout sequence.

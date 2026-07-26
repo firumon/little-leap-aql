@@ -17,6 +17,8 @@ This document defines initialization parameters for agents creating custom UI ov
 
 All override filenames use PascalCase in source, matched case-insensitively. These are the **only** paths each resolver checks — there is NO legacy `recordview*`-prefixed fallback; only `view*`-prefixed filenames resolve.
 
+> **Slug normalization**: every `{resourceSlug}` segment below is `toPascalCase(slug).toLowerCase()`, not the raw kebab-case slug — `outlet-visits` → `outletvisits` (matches `useContentResolver.js`'s own normalization). Write override folders using the PascalCase-derived form on disk (resolved case-insensitively), never with hyphens.
+
 - **Record Override**: `ViewRecord.(vue|js)` — exactly these three bases (`.vue` before `.js` at each), resolved for the target resource (`scope`, `resourceSlug`) before the base grid renders:
   - `_ui/{ui}/components/{scope}/{resourceSlug}/viewrecord.(vue|js)`
   - `_ui/{ui}/components/{scope}/viewrecord.(vue|js)`

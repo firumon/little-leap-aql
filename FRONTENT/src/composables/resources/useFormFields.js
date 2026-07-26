@@ -2,8 +2,9 @@ import { computed } from 'vue'
 import { useDataStore } from 'src/stores/data'
 import { useAuthStore } from 'src/stores/auth'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
+import { singularize, pluralize } from 'src/utils/appHelpers'
 import AqlFileUpload from 'components/shared/AqlFileUpload.vue'
-import AppDate from 'components/shared/AppDate.vue'
+import AppDate from 'components/app/Date.vue'
 import AqlStatusToggle from 'components/shared/AqlStatusToggle.vue'
 
 export const STATUS_OPTIONS = [
@@ -27,7 +28,7 @@ export function isToggleField(field) {
   return false
 }
 
-export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions = {} } = {}) {
+export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions = {}, appOptions = {} } = {}) {
   const baseProps = {
     label: field.label || field.header,
     hint: field.hint || undefined,
@@ -50,7 +51,8 @@ export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions =
     }
   }
 
-  if (field.type === 'date' || field.type === 'datetime') {
+  // Date fields: explicit type, or any header ending in "Date" (TransactionDate, ...).
+  if (field.type === 'date' || field.type === 'datetime' || /Date$/.test(field.header)) {
     return {
       header: field.header,
       component: AppDate,
@@ -64,8 +66,7 @@ export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions =
       header: field.header,
       componentName: 'q-input',
       ...baseProps,
-      label: 'Code',
-      disable: true
+      label: 'Code'
     }
   }
 
@@ -110,6 +111,20 @@ export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions =
       options: field.options || [],
       emitValue: true,
       mapOptions: true
+    }
+  }
+
+  // AppOptions-driven select — a matching `<ResourceName><Column>` option group was
+  // found in authStore.appOptionsMap (resolved to {label,value} pairs upstream).
+  if (Array.isArray(appOptions[field.header]) && appOptions[field.header].length) {
+    return {
+      header: field.header,
+      componentName: 'q-select',
+      ...baseProps,
+      options: appOptions[field.header],
+      emitValue: true,
+      mapOptions: true,
+      clearable: !field.required
     }
   }
 
@@ -179,6 +194,33 @@ export function useFormFields(resourceName) {
     return map
   })
 
+  // Per-header AppOptions lookup. For each header, probe appOptionsMap for a
+  // `<ResourceName><Column>` group, trying the resource name as-is, singular,
+  // and plural (e.g. Products/Type → ProductsType, ProductType). First hit wins;
+  // string values become {label,value} pairs for QSelect.
+  const appOptionsMap = computed(() => {
+    const map = {}
+    const cfg = config.value
+    const name = resolvedName.value
+    if (!cfg || !name) return map
+
+    const options = authStore.appOptionsMap || {}
+    const headers = Array.isArray(cfg.headers) ? cfg.headers : []
+    const nameVariants = [...new Set([name, singularize(name), pluralize(name)])]
+
+    for (const header of headers) {
+      for (const variant of nameVariants) {
+        const key = `${variant}${header}`
+        const group = options[key]
+        if (Array.isArray(group) && group.length) {
+          map[header] = group.map((v) => ({ label: String(v), value: v }))
+          break
+        }
+      }
+    }
+    return map
+  })
+
   const formFields = computed(() => {
     const cfg = config.value
     if (!cfg) return []
@@ -200,9 +242,10 @@ export function useFormFields(resourceName) {
       .map(field => mapField(field, {
         resourceName: resolvedName.value,
         linkRefs: linkRefs.value,
-        crossRefOptions: crossRefOptionsMap.value
+        crossRefOptions: crossRefOptionsMap.value,
+        appOptions: appOptionsMap.value
       }))
   })
 
-  return { formFields,mapField }
+  return { formFields, mapField }
 }

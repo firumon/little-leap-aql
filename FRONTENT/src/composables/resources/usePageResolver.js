@@ -132,17 +132,19 @@ export function usePageResolver() {
     sections.value.filter(s => s !== 'PageAction')
   )
 
-  const hasActionSection = computed(() =>
+  // `PageAction` stays declared inside the page contract's `sections` array (no BP
+  // churn), but it is no longer a Section: Page.vue mounts it through the Action
+  // subsystem (<Action action="PageAction" />). This flag is the gate for that mount.
+  const hasAction = computed(() =>
     sections.value.includes('PageAction')
   )
 
   // Call the orchestrator
   const orch = usePageOrchestrator(resConfig, canonicalPage)
   const {
-    resourceRecord, parentForm, childGroups, saving, actionForm, selectedOutcome,
-    currentActionConfig, actionAllowedForRecord, actionName, isMockMultiOutcome,
-    outcomeOptions, resolvedActionFields, submitting, handleSave, navigateBack,
-    handleSubmit, navigateToView, addChildRecord, removeChildRecord, updateChildField
+    resourceRecord, actionForm, selectedOutcome,
+    currentActionConfig, actionAllowedForRecord, actionName, column, isMockMultiOutcome,
+    outcomeOptions, resolvedActionFields, navigateBack, navigateToView
   } = orch
 
   // Assembly pageProps
@@ -156,27 +158,18 @@ export function usePageResolver() {
       pageClass: '',
       contentPadding: 'sm',
       contentClass: '',
-      parentForm,
-      childGroups,
       actionForm,
       isMockMultiOutcome: isMockMultiOutcome.value,
       outcomeOptions: outcomeOptions.value,
       resolvedActionFields: resolvedActionFields.value,
       selectedOutcome: selectedOutcome.value,
+      column: column.value,
       loading: resourceRecord.loading,
-      saving,
-      submitting,
       currentActionConfig: currentActionConfig.value,
       actionAllowedForRecord: actionAllowedForRecord.value,
       actionName: actionName.value,
-      onSave: handleSave,
       onCancel: navigateBack,
-      onSubmit: handleSubmit,
       onNavigateToView: navigateToView,
-      'onUpdate:field': (header, val) => { parentForm[header] = val },
-      'onAdd-child': addChildRecord,
-      'onRemove-child': removeChildRecord,
-      'onUpdate-child-field': updateChildField,
       'onUpdate:selected-outcome': val => { selectedOutcome.value = val },
       'onUpdate:action-field': (header, val) => { actionForm[header] = val }
     }
@@ -237,7 +230,9 @@ export function usePageResolver() {
     sections,
     contents,
     visibleSectionsBeforeAction,
-    hasActionSection,
+    hasAction,
+    // Deprecated alias kept for any consumer still reading the pre-Action-subsystem name.
+    hasActionSection: hasAction,
     contentWrapperProps,
     resourceConfig: resConfig,
     resourceRecord,

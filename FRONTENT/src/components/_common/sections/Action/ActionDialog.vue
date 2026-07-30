@@ -47,10 +47,10 @@
 
 <script setup>
 import { ref, computed, watch, reactive, inject } from 'vue'
+import { useQuasar } from 'quasar'
 import Form from 'components/_common/sections/Content/Form.vue'
 import { useActionFields } from 'src/composables/resources/useActionFields'
-import { useMasterActions } from 'src/composables/useMasterActions'
-import { useOperationActions } from 'src/composables/useOperationActions'
+import { executeActionRequest } from 'src/composables/resources/usePageState'
 
 defineOptions({ name: 'ActionDialog' })
 
@@ -62,8 +62,10 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue'])
 
-const { scope, resourceName, resourceHeaders } = inject('resourceConfig')
+const $q = useQuasar()
+const { resourceName, resourceHeaders } = inject('resourceConfig')
 const { reload } = inject('resourceRecord')
+const pageState = inject('pageState', null)
 
 const selectedOutcome = ref('')
 const actionForm = reactive({})
@@ -81,25 +83,25 @@ watch(resolvedActionFields, (fields) => {
   fields.forEach((f) => { actionForm[f.header] = '' })
 }, { immediate: true })
 
-const isOps = computed(() => scope.value?.toLowerCase() === 'operations')
-const masterActions = useMasterActions()
-const operationActions = useOperationActions()
-
-const actionsStore = computed(() => isOps.value ? operationActions : masterActions)
-const submitting = computed(() => actionsStore.value.submitting.value)
+const submitting = computed(() => !!pageState?.meta?.submitting)
 
 async function handleSubmit() {
-  await actionsStore.value.submitAction({
-    resourceName: resourceName.value,
-    code: props.record?.Code,
-    actionConfig: {
-      ...props.actionConfig,
-      column: column.value,
-      columnValue: selectedOutcome.value
-    },
-    selectedOutcome: selectedOutcome.value,
-    fields: { ...actionForm },
-    resolvedFields: resolvedActionFields.value,
+  for (const field of resolvedActionFields.value) {
+    if (field.required && !(actionForm[field.header] || '').toString().trim()) {
+      $q.notify({ type: 'negative', message: `${field.label} is required`, position: 'top' })
+      return
+    }
+  }
+
+  // Built directly (not via pageState.executeAction's ensureNode) — this dialog
+  // is mounted globally in Page.vue, so there is no guarantee a pageState node
+  // for this resource already carries the record's code.
+  const actionConfig = { ...props.actionConfig, column: column.value, columnValue: selectedOutcome.value }
+  const request = executeActionRequest(resourceName.value, props.record?.Code, actionConfig, { ...actionForm })
+
+  await pageState.run({
+    requests: [request],
+    successMsg: `${props.actionConfig?.label || props.actionConfig?.action || 'Action'} completed successfully`,
     onSuccess: async () => {
       emit('update:modelValue', false)
       await reload()

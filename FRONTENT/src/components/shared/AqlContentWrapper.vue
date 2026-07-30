@@ -46,16 +46,25 @@
 
     <!-- Content Slot (Main Payload) -->
     <slot v-else />
+
+    <!-- Submission overlay — the single blocking indicator while a form action is
+         in flight. Action buttons stay visible but disabled (they never carry their
+         own spinner); this covers the whole content area instead. Driven by
+         pageState.meta.submitting/saving, or forced via the `submitting` prop. -->
+    <q-inner-loading :showing="isSubmitting" :label="submittingLabel" label-class="text-primary text-caption">
+      <q-spinner-dots color="primary" size="48px" />
+    </q-inner-loading>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, inject } from 'vue'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
 defineOptions({ name: 'AqlContentWrapper' })
 
 const nav = useResourceNav()
+const pageState = inject('pageState', null)
 
 const props = defineProps({
   loading: { type: Boolean, default: false },
@@ -74,8 +83,17 @@ const props = defineProps({
   emptyMessage: { type: String, default: 'There are no active records in this view.' },
   
   notFoundTitle: { type: String, default: 'Record not found' },
-  notFoundMessage: { type: String, default: 'The requested record does not exist or has been deleted.' }
+  notFoundMessage: { type: String, default: 'The requested record does not exist or has been deleted.' },
+
+  // Submission overlay. Left as an opt-in force flag — the normal driver is the
+  // injected pageState, so pages get the overlay without wiring anything.
+  submitting: { type: Boolean, default: false },
+  submittingLabel: { type: String, default: 'Saving…' }
 })
+
+const isSubmitting = computed(() =>
+  props.submitting || !!pageState?.meta?.submitting || !!pageState?.meta?.saving
+)
 
 function navigateToList() {
   nav.goTo('index')

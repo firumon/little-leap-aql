@@ -1,41 +1,25 @@
 import { ref, computed, watch, reactive } from 'vue'
 import { useRecord } from 'src/composables/resources/useRecord'
-import { useCompositeForm } from 'src/composables/resources/useCompositeForm'
-import { useMasterActions } from 'src/composables/useMasterActions'
-import { useOperationActions } from 'src/composables/useOperationActions'
 import { useActionFields } from 'src/composables/resources/useActionFields'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { isActionVisible } from 'src/composables/resources/useResourceConfig'
 
+// Record loading, action-page field resolution, and navigation. Add/Edit form
+// state and submission are owned by pageState (usePageState.js) + the
+// Create/Update content components + PageAction.vue — see PAGE_STATE.md.
 export function usePageOrchestrator(resConfig, canonicalPage) {
   const nav = useResourceNav()
   const resourceRecord = useRecord()
   const { code, pageSlug } = useRouteConfig()
 
   const {
-    scope,
-    config,
     resourceName,
     resourceHeaders,
     additionalActions
   } = resConfig
 
-  const { record, loading, reload, loadRelations, childRecordsByResource } = resourceRecord
-
-  // Form logic setup
-  const {
-    parentForm, childGroups, saving,
-    initializeForCreate, initializeForEdit, addChildRecord, removeChildRecord,
-    updateChildField, save
-  } = useCompositeForm(config)
-
-  async function loadAndInitializeEdit() {
-    await reload()
-    if (!record.value) return
-    await loadRelations()
-    initializeForEdit(record.value, childRecordsByResource.value)
-  }
+  const { record, loading, reload, loadRelations } = resourceRecord
 
   // Reactively load records/relations depending on page view context
   watch(
@@ -50,31 +34,13 @@ export function usePageOrchestrator(resConfig, canonicalPage) {
           await loadRelations()
         }
       } else if (pageVal === 'edit' && newCode) {
-        await loadAndInitializeEdit()
+        await reload()
       } else if (pageVal === 'action') {
         await reload()
-      } else if (pageVal === 'add') {
-        initializeForCreate()
       }
     },
     { immediate: true }
   )
-
-  async function handleSave() {
-    const response = await save()
-    if (response.success) {
-      if (canonicalPage.value === 'edit') {
-        nav.goTo('view')
-      } else {
-        const newCode = response.data?.code || response.data?.parentCode
-        if (newCode) {
-          nav.goTo('view', { code: newCode })
-        } else {
-          nav.goTo('index')
-        }
-      }
-    }
-  }
 
   function navigateBack() {
     if (canonicalPage.value === 'edit') {
@@ -84,14 +50,8 @@ export function usePageOrchestrator(resConfig, canonicalPage) {
     }
   }
 
-  // Action execution specific logic setup
-  const isOps = computed(() => scope.value?.toLowerCase()?.startsWith('operation'))
-  const masterActions = useMasterActions()
-  const operationActions = useOperationActions()
-
-  const actionsStore = computed(() => isOps.value ? operationActions : masterActions)
-  const submitting = computed(() => actionsStore.value.submitting.value)
-
+  // Action-page field resolution — dispatch itself is owned by PageAction.vue
+  // (pageState.run/executeAction, see submitAction() there).
   const actionName = computed(() => pageSlug.value || canonicalPage.value || '')
 
   const currentActionConfig = computed(() => {
@@ -119,46 +79,22 @@ export function usePageOrchestrator(resConfig, canonicalPage) {
     fields.forEach((f) => { actionForm[f.header] = '' })
   }, { immediate: true })
 
-  async function handleSubmit() {
-    await actionsStore.value.submitAction({
-      resourceName: resourceName.value,
-      code: code.value,
-      actionConfig: {
-        ...currentActionConfig.value,
-        column: column.value,
-        columnValue: selectedOutcome.value
-      },
-      selectedOutcome: selectedOutcome.value,
-      fields: { ...actionForm },
-      resolvedFields: resolvedActionFields.value,
-      onSuccess: async () => nav.goTo('view')
-    })
-  }
-
   function navigateToView() {
     nav.goTo('view')
   }
 
   return {
     resourceRecord,
-    parentForm,
-    childGroups,
-    saving,
     actionForm,
     selectedOutcome,
     currentActionConfig,
     actionAllowedForRecord,
     actionName,
+    column,
     isMockMultiOutcome,
     outcomeOptions,
     resolvedActionFields,
-    submitting,
-    handleSave,
     navigateBack,
-    handleSubmit,
-    navigateToView,
-    addChildRecord,
-    removeChildRecord,
-    updateChildField
+    navigateToView
   }
 }

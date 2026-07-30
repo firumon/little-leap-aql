@@ -10,8 +10,9 @@
   />
   <q-btn
     v-else
+    glossy
+    push
     round
-    unelevated
     fab
     :color="color"
     :icon="icon"

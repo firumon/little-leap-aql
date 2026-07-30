@@ -1,5 +1,7 @@
 <template>
   <q-fab
+    glossy
+    push
     class="aql-crud-action-fab"
     color="primary"
     icon="more_vert"

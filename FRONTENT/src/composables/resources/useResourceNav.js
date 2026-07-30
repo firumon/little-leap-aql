@@ -146,5 +146,20 @@ export function useResourceNav () {
     router.push({ name: routeName, params: routeParams, query: routeQuery(params.query) })
   }
 
-  return { goTo }
+  /**
+   * Walk one entry back in router history. Used by cancel-style actions
+   * (`actions/FormActionCancel.vue`) where "leave without saving" means returning
+   * wherever the user came from, not a fixed route. Falls back to the resource
+   * index when this page is the first entry in the session (deep link, refresh),
+   * so the button is never a dead end.
+   */
+  const goBack = () => {
+    if (typeof window !== 'undefined' && window.history?.length > 1) {
+      router.back()
+      return
+    }
+    goTo('index')
+  }
+
+  return { goTo, goBack }
 }

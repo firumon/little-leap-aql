@@ -1,36 +1,56 @@
 <template>
   <!-- 1. Single Add FAB (Index/Resource list pages) -->
   <q-page-sticky v-if="showAdd && !showEdit" position="bottom-right" :offset="[18, 18]">
-    <component :is="resolvedAddFab" v-bind="addFabProps" @click="navigateToAdd" />
+    <div class="aql-crud-action-container">
+      <component :is="resolvedAddFab" v-bind="addFabProps" @click="navigateToAdd" />
+    </div>
   </q-page-sticky>
 
   <!-- 2. Single Edit FAB (View page with Update-only permission) -->
   <q-page-sticky v-else-if="showEdit && !showAdd" position="bottom-right" :offset="[18, 18]">
-    <component :is="resolvedEditFab" v-bind="editFabProps" @click="navigateToEdit" />
+    <div class="aql-crud-action-container">
+      <component :is="resolvedEditFab" v-bind="editFabProps" @click="navigateToEdit" />
+    </div>
   </q-page-sticky>
 
   <!-- 3. Expandable FAB Menu (View page with both Update & Write permissions) -->
   <q-page-sticky v-else-if="showEdit && showAdd" position="bottom-right" :offset="[18, 18]">
-    <component :is="resolvedCrudActionsFab" v-bind="crudActionsFabProps">
-      <template #AddFab>
-        <component :is="resolvedAddFab" v-bind="addFabProps" as-fab-action @click="navigateToAdd" />
-      </template>
-      <template #EditFab>
-        <component :is="resolvedEditFab" v-bind="editFabProps" as-fab-action @click="navigateToEdit" />
-      </template>
-    </component>
+    <div class="aql-crud-action-container">
+      <component :is="resolvedCrudActionsFab" v-bind="crudActionsFabProps">
+        <template #AddFab>
+          <component :is="resolvedAddFab" v-bind="addFabProps" as-fab-action @click="navigateToAdd" />
+        </template>
+        <template #EditFab>
+          <component :is="resolvedEditFab" v-bind="editFabProps" as-fab-action @click="navigateToEdit" />
+        </template>
+      </component>
+    </div>
   </q-page-sticky>
 </template>
 
 <script setup>
+/**
+ * CRUD floating action buttons (Add / Edit / expandable menu).
+ *
+ * Lives in the Action subsystem (`components/actions/`) and is mounted by
+ * `PageAction.vue` through `useActionResolver`, so a tenant can replace or modify
+ * it at any of the 10 `_ui/` tiers as `CrudActions.(vue|js)`.
+ *
+ * Its individual FABs (`AddFab`, `EditFab`, `CrudActionsFab`) remain presentation
+ * sections under `components/sections/` and keep resolving through
+ * `useSectionResolver`, so existing tenant FAB overrides are untouched.
+ *
+ * Entrance animation (750ms-delayed `bounceIn` on `.aql-crud-action-container`)
+ * lives in `src/css/custom.scss` — see ARCHITECTURE RULES §7.
+ */
 import { computed, inject, useAttrs } from 'vue'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
-import AddFab from './AddFab.vue'
-import EditFab from './EditFab.vue'
-import CrudActionsFab from './CrudActionsFab.vue'
+import AddFab from 'components/sections/AddFab.vue'
+import EditFab from 'components/sections/EditFab.vue'
+import CrudActionsFab from 'components/sections/CrudActionsFab.vue'
 
-defineOptions({ name: 'SectionsCrudActions', inheritAttrs: false })
+defineOptions({ name: 'ActionsCrudActions', inheritAttrs: false })
 
 const props = defineProps({
   page:     { type: String, default: 'index' },
@@ -52,7 +72,7 @@ const pageKey = computed(() => (props.page || '').toLowerCase())
 const permissions = computed(() => resourceConfig?.permissions?.value || {})
 const hasRecord = computed(() => !!resourceRecord?.record?.value)
 
-// Form pages (add/edit) — the FormAction sticky bar owns save/cancel, no floating FABs.
+// Form pages (add/edit) — the FormActions sticky bar owns save/cancel, no floating FABs.
 const isFormPage = computed(() => pageKey.value === 'add' || pageKey.value === 'edit')
 
 const showAdd = computed(() => !isFormPage.value && !!permissions.value.canWrite)

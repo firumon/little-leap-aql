@@ -1,7 +1,11 @@
 <template>
+  <!-- `modelValue || ''` on both controls: a null/undefined value reaching QInput's
+       mask handling (or QDate's parser) is what makes it read `selectionEnd` off a
+       not-yet-mounted input. Coercing to an empty string keeps both safe regardless
+       of what the caller passes. -->
   <q-input
     v-bind="$attrs"
-    :model-value="modelValue"
+    :model-value="modelValue || ''"
     @update:model-value="emitValue"
     mask="####-##-##"
     placeholder="YYYY-MM-DD"
@@ -10,13 +14,18 @@
       <q-icon name="event" class="cursor-pointer">
         <q-popup-proxy ref="qDateProxy" transition-show="scale" transition-hide="scale">
           <q-date
-            :model-value="modelValue"
+            :model-value="modelValue || ''"
             @update:model-value="onDateSelect"
             mask="YYYY-MM-DD"
-            minimal
+            today-btn
           >
-            <div class="row items-center justify-end">
-              <q-btn v-close-popup label="Close" color="primary" flat />
+            <!-- Quasar renders `today-btn` inside `.q-date__header`, which `minimal`
+                 removes — so the prop alone is inert here. It is kept because it
+                 becomes live for any caller that drops `minimal`; the explicit
+                 Today button below is what actually delivers one-click today
+                 selection in the minimal layout. -->
+            <div class="row items-center justify-end q-gutter-sm">
+              <q-btn v-close-popup label="Close" color="primary"  />
             </div>
           </q-date>
         </q-popup-proxy>
@@ -47,5 +56,9 @@ function onDateSelect(val) {
   if (qDateProxy.value) {
     qDateProxy.value.hide()
   }
+}
+
+function selectToday() {
+  onDateSelect(new Date().toISOString().split('T')[0])
 }
 </script>

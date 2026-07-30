@@ -90,18 +90,51 @@ state = reactive({
 state and are `v-model` targets. `options` is a **`computed`** — derived lazily and
 memoized, so it costs nothing until a template actually reads it. Never assign to `options`.
 
+### 4.1 Encapsulation contract (what is private vs public)
+
+The shape above is an **implementation detail**. Consumers must not reach into it.
+
+**PRIVATE — may change without touching any consumer:**
+
+- `state.nodes` — a `Map` *today*; **the keying scheme is not part of the contract**
+  (a planned change keys aliased nodes so one resource can appear more than once,
+  e.g. `OutletVisits:complete` + `OutletVisits:next`).
+- The node object shape — `record` / `children` / `records` / `controls` /
+  `identifier` / `code` / `many` / `action` / `options`.
+- The child bucket layout — `{ resource, records }`.
+
+**PUBLIC — a data contract you may rely on:**
+
+- The child row entry `{ _action, data }`, where `data` is the record body the
+  child form renders and `_action` is `'create' | 'update' | 'deactivate'`.
+  This is the interchange format between `usePageState` and `FormChild`, and it
+  is also what `defaultBuild` ships to GAS, so it is deliberately not hidden.
+  Read it freely; **write it only** via `updateChild` (patches `data`) and
+  `setChildAction` (sets `_action`).
+
+**The two rules that follow from this:**
+
+| Direction | Do | Never |
+|---|---|---|
+| **Read** node state | `useNode(resource)` (§6.5), `hasNode(resource)` | `state.nodes.get(...)` / `.has(...)`, `node.children.find(...)` |
+| **Write** node state | the mutations in §6.4 | assigning into a node or a child row (`row._action = …`) |
+
+> `state` is still on the returned object for debugging and because
+> `strategy.validate(node, state)` receives it. **It is not a consumer API** —
+> treat it as private.
+
 ---
 
 ## 5. MANDATORY usage rules (contract)
 
 For **every** resource page that collects input or submits data:
 
-1. **User input collection** → store it in the injected `usePageState` node
-   (`node.record`, `node.children`, `node.records`). Do **NOT** keep form state in
-   component-local `ref`s or page `data`.
-2. **Section Content** → bind inputs to the injected node
-   (`v-model="node.record.FieldName"`), and use `useNode(key)` to get the node +
-   its `options` + `validation` computed.
+1. **User input collection** → store it in the injected `usePageState` node via the
+   §6.4 mutations. Do **NOT** keep form state in component-local `ref`s or page
+   `data`, and do **NOT** write into the node directly.
+2. **Section Content** → read state **only** through `useNode(key)` (§6.5) — it
+   returns the node plus `record` / `exists` / `identifier` / `options` /
+   `validation` / `children`. Do **NOT** touch `state.nodes` (see §4.1).
 3. **Section Action** → call `submit()` / `saveDraft()` / `executeAction(...)` on
    the **same injected instance**. Do **NOT** build request objects by hand.
 4. **Generating API-compatible data** → happens **under the hood** via `build()`.
@@ -151,12 +184,15 @@ pageState.load('OutletConsumptions', existing)   // fills node.record from the s
 
 | Function | Purpose |
 |---|---|
-| `initResource(resource, { code, many, fields, action })` | create a node (header + line-items shape) |
+| `initResource(resource, { code, many, fields, action, isPrimaryKey, reset })` | create a node (header + line-items shape) |
+| `hasNode(resource)` | imperative existence check — **the replacement for `state.nodes.has(...)`** (use `useNode(...).exists` when a computed/template needs it reactively) |
 | `load(resource, rawRecord)` | hydrate an existing server record into the node |
 | `setField(resource, field, value)` / `setFields(resource, patch)` | set header/body fields |
+| `setControlField(resource, header, value)` / `getControlField(resource, header)` | non-schema / wizard-only fields — kept out of `record` so they never reach the payload |
 | `addChild(resource, childResource, row, { action })` | add a composite child row |
-| `updateChild(resource, childResource, index, patch)` | patch a child row |
-| `removeChild(resource, childResource, index)` | drop a child row |
+| `updateChild(resource, childResource, index, patch)` | patch a child row's `data` (**does not touch `_action`**) |
+| `setChildAction(resource, childResource, index, action)` | set a child row's `_action` — soft-delete (`'deactivate'`) or restore (`'update'`). Returns the entry, or `null` if the index is stale |
+| `removeChild(resource, childResource, index)` | drop a child row (hard splice) |
 | `addRecord(resource, row, { action })` | add a `many:true` entry (returns index) |
 | `updateRecord(resource, index, patch)` | patch a `many` entry |
 | `removeRecord(resource, index)` | drop a `many` entry |
@@ -166,19 +202,61 @@ pageState.load('OutletConsumptions', existing)   // fills node.record from the s
 > `selectOption` writes the **chosen** value into `record`; the available
 > **choices** are the read-only `options` computed — you never mutate `options`.
 
-### 6.5 `useNode(key)` — per-section reactive access
+> **Removing a child row — pick the right one.** A row the user added in this
+> session (`_action: 'create'`, no `Code`) should be **spliced** with
+> `removeChild`. A row hydrated from the server (`_action: 'update'` with a
+> `Code`) must be **soft-deleted** with `setChildAction(..., 'deactivate')`: it
+> stays in the bucket so the payload still carries it, and GAS matches on the
+> `Code` to deactivate the row. Splicing it instead would simply omit it, leaving
+> the server record untouched. `FormChild.vue` implements exactly this split in
+> `remove()`, and `restore()` reverses it with `setChildAction(..., 'update')`.
+
+### 6.5 `useNode(resource)` — THE read accessor
+
+**This is the only supported way to observe node state.** Reaching into
+`state.nodes` is a contract violation (§4.1).
+
+`resource` accepts a **string, a `ref`, or a getter**. Use a getter in any
+component whose active resource changes on navigation (`Create.vue`,
+`Update.vue`, `FormChild.vue`) — you bind **once** in `setup` and it stays
+correct across route changes:
 
 ```js
-const { node, options, validation } = pageState.useNode('OutletConsumptions')
-// template:
-//   <q-input v-model="node.record.OutletCode" />
-//   <q-select :options="options.SKUCode" v-model="node.record.SKUCode" />
-//   <span v-if="validation.length">…errors…</span>
+// static resource
+const { node, record, options, validation } = pageState.useNode('OutletConsumptions')
+
+// dynamic resource — follows resourceName across navigations
+const primary = pageState.useNode(() => resourceName.value)
+const primaryRecord = computed(() => primary.record.value || {})
 ```
 
-`node` is the reactive node, `options` is a `computed` map `{ [fieldName]: [...] }`
-auto-derived from `controls` + the `getOptions` strategy, and `validation` is a
-`computed` array of `{ field, message }`.
+Returns:
+
+| Key | Type | What it is |
+|---|---|---|
+| `node` | `computed` | the reactive node (falls back to a stable empty node) |
+| `exists` | `computed<boolean>` | whether the node has been initialized — reactive form of `hasNode` |
+| `record` | `computed` | the user-input header/body; the `v-model` target |
+| `identifier` | `computed<string>` | changes when the node is **replaced** (`initResource`/`reset`), **not** when a field is edited — key one-shot hydration off this so a reset re-seeds from the server |
+| `options` | `computed` | `{ [fieldName]: [...] }`, auto-derived from `controls` + the `getOptions` strategy |
+| `validation` | `computed` | array of `{ field, message }` |
+| `children(childResource)` | `(res) => computed` | child rows as `{ _action, data }` entries; `childResource` also accepts a string/ref/getter |
+
+```js
+// template:
+//   <q-input v-model="record.OutletCode" />
+//   <q-select :options="options.SKUCode" v-model="record.SKUCode" />
+//   <span v-if="validation.length">…errors…</span>
+
+// child rows (replaces reaching into node.children)
+const rows = primary.children(() => childName.value)
+const visible = computed(() => rows.value.filter(r => r._action !== 'deactivate'))
+```
+
+Because a missing node resolves to the empty node, **every returned computed is
+safe to read before `initResource` has run** — consumers never need optional
+chaining on the node itself. Entry identity within `children()` is stable across
+reads, so `rows.value.indexOf(row)` is a valid row→index lookup.
 
 ### 6.6 Triggers + response (the under-the-hood lifecycle)
 
@@ -250,6 +328,9 @@ Dispatch is always `resourceIoStore.runBatchRequests(requests)`.
 From `usePageState.js` you may import:
 
 - **Composable + DI:** `usePageState` (provided via `provide('pageState', pageState)` and injected via `inject('pageState')`)
+- **Read accessors:** `useNode(resource)` (§6.5), `hasNode(resource)`, `snapshot()`
+- **Mutations:** see the full table in §6.4 — including `setChildAction`, the only
+  supported way to set a child row's `_action`
 - **Generic builders:** `compositeSaveRequest`, `resourceCreateRequest`,
   `resourceUpdateRequest`, `resourceBulkRequest`, `resourceGetRequest`, `executeActionRequest`
 - **Response helpers:** `responseFailed`, `failureMessage`, `batchResultCode`
@@ -269,12 +350,19 @@ the helper and not the composable.
 ## 9. Reactivity notes
 
 - `state.nodes` is a `reactive(new Map())`. `.get`/`.set`/`.delete`/iteration are
-  tracked, so a `v-for` over nodes and `v-model="useNode(key).record.X"` are reactive.
-- Use `.get(key)`, **never** dot-access (`state.nodes.visit` is invalid for a Map).
+  tracked, so everything `useNode` derives is fully reactive — including a node
+  that does not exist yet, so a component may bind before `initResource` runs.
+- **Do not read `state.nodes` from a consumer** (§4.1) — go through `useNode` /
+  `hasNode`. This is what lets the Map and its keying change without a consumer edit.
+- Pass a **getter** to `useNode` when the resource is dynamic; a plain string
+  snapshots the name at `setup` time and will go stale on navigation.
 - `options` is a `computed`: lazy (only computed when read) + memoized — no cost on
   initial load for unused option lists.
 - Guard against binding before a node exists: `useNode(key)` returns a stable empty
   node as a fallback, but prefer initializing nodes early (in `setup`/`onMounted`).
+- `snapshot()` returns a plain deep copy keyed by resource name. It must go
+  through `Object.fromEntries` — a `Map` has no enumerable own properties, so a
+  bare `JSON.stringify(state.nodes)` silently yields `{}`.
 
 ---
 
@@ -285,9 +373,31 @@ shape, exported functions, triggers, build mapping, or strategy contract — MUS
 be reflected in this document.**
 
 - If you add/remove/rename an exported function or mutation, update §6.4 / §8.
-- If you change the node shape, update §4.
+- If you change the node shape, update §4 — and check §4.1 still classifies every
+  field correctly as private or public.
 - If you change how `build()` maps nodes to requests, update §7.
 - If you change what triggers return, update §6.6.
+- If you change what `useNode` returns, update §6.5.
+
+**Corollary — the encapsulation contract cuts both ways.** §4.1 is only true while
+consumers actually honour it. Before landing a change to the node shape or the
+`state.nodes` keying, confirm nothing has regressed to direct access:
+
+```bash
+rg -n "state\.nodes|_action\s*=[^=]|\.children\s*\.\s*find|children\?\.find" FRONTENT/src/components FRONTENT/src/composables/resources --glob '!**/usePageState.js' --glob '!**/useCompositeForm.js'
+```
+
+This must return **nothing**. Any hit means a consumer has bypassed the API and
+the "internals are free to change" guarantee no longer holds — fix the consumer
+before changing the node shape.
+
+Two deliberate exclusions, so the guard does not cry wolf:
+
+- `_action\s*=[^=]` matches only **assignment**, not `_action === '…'`. Reading
+  `_action` / `data` is legal (§4.1) — only writing is not.
+- `useCompositeForm.js` (and its `useProduct*Form.js` callers) is a **separate**
+  composable with its own `{ _action, data }` row model. It is not a
+  `usePageState` consumer, so its direct mutations are out of scope here.
 
 Keep this doc and the composable in lock-step. Treat the doc as part of the
 composable's definition, not an afterthought.

@@ -132,13 +132,6 @@ export function usePageResolver() {
     sections.value.filter(s => s !== 'PageAction')
   )
 
-  // `PageAction` stays declared inside the page contract's `sections` array (no BP
-  // churn), but it is no longer a Section: Page.vue mounts it through the Action
-  // subsystem (<Action action="PageAction" />). This flag is the gate for that mount.
-  const hasAction = computed(() =>
-    sections.value.includes('PageAction')
-  )
-
   // Call the orchestrator
   const orch = usePageOrchestrator(resConfig, canonicalPage)
   const {
@@ -230,9 +223,6 @@ export function usePageResolver() {
     sections,
     contents,
     visibleSectionsBeforeAction,
-    hasAction,
-    // Deprecated alias kept for any consumer still reading the pre-Action-subsystem name.
-    hasActionSection: hasAction,
     contentWrapperProps,
     resourceConfig: resConfig,
     resourceRecord,

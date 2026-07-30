@@ -27,67 +27,41 @@ import FormRecord from 'components/contents/FormRecord.vue'
 import FormChild from 'components/contents/FormChild.vue'
 import { singularize, toPascalCase } from 'src/utils/appHelpers'
 
-/**
- * `Create` content (page contract `contents: ['Create']`) — renders the input
- * form for the primary resource plus one FormChild container per eligible child
- * resource (`ParentResource` === active resource). All input lands directly in
- * pageState (primary node record + child buckets); submit is owned by the
- * PageAction sections, never here. Parent-relation forms are never rendered.
- *
- * ZERO-HARDCODING CONTRACT: every default behaviour, title, and class below is
- * exposed as a prop; unhandled `$attrs` flow down to the primary FormRecord and
- * every FormChild section.
- */
+// `Create` content — primary FormRecord + one FormChild per eligible child; submit is owned by PageAction.
 defineOptions({ name: 'ContentsCreate', inheritAttrs: false })
 
 const props = defineProps({
-  // Master switch for child resource handling.
   withChildren: { type: Boolean, default: true },
-  // Suppresses specific eligible child resources from rendering, matched by
-  // resource name or slug (case-insensitive). Accepts a single string or an
-  // array; hideChild/hideChildren are equivalent, both are checked.
+  // Suppress a child by resource name or slug (case-insensitive); both props are checked.
   hideChild: { type: [String, Array], default: null },
   hideChildren: { type: [String, Array], default: null },
-  // Forwarded to FormChild: 'inline' (default) | 'popup' | 'multi' | 'multiple'.
+  // 'inline' (default) | 'popup' | 'multi' | 'multiple'
   childMode: { type: String, default: 'inline' },
   closeOnAdd: { type: Boolean, default: true },
   listPosition: { type: String, default: 'top' },
-  // Extra headers to hide on top of FormRecord's own Code/Status/workflow-stamp
-  // hiding.
   hideFields: { type: Array, default: () => [] },
-  // Highest-precedence visibility switch — headers listed here render even if
-  // hideFields/showCode/workflowFields/Status-default would have hidden them.
+  // Highest-precedence visibility switch — wins over hideFields/showCode/workflowFields/Status.
   showFields: { type: Array, default: () => [] },
-  // Code is server-generated so it is hidden by default; true → renders it as
-  // a normal editable control.
+  // Code is server-generated, so hidden by default.
   showCode: { type: Boolean, default: false },
-  // Parent-link columns hidden on child forms (filled by compositeSave). Set
-  // false to render them, or supply extra names via childHideFields.
+  // Parent-link columns on child forms are filled by compositeSave, so hidden by default.
   hideParentLink: { type: Boolean, default: true },
   childHideFields: { type: Array, default: () => [] },
-  // Workflow action-stamp hiding, forwarded to the primary FormRecord + children.
   workflowFields: { type: [String, Boolean], default: 'hide' },
-  // Status visibility / seed value, forwarded to FormRecord.
   showStatus: { type: [Boolean, String], default: false },
   statusDefault: { type: String, default: 'Active' },
-  // Explicit primary-field ordering, forwarded to FormRecord.
   fields: { type: Array, default: null },
-  // Seed values for the primary node's record. Object, or (record, ctx) => Object;
-  // individual values may themselves be (record, ctx) => value functions.
+  // Object, or (record, ctx) => Object; individual values may also be (record, ctx) => value.
   defaultValues: { type: [Object, Function], default: () => ({}) },
-  // Per-field control prop overrides keyed by header (Object, function, or
-  // object of per-header functions) — forwarded to FormRecord + FormChild.
+  // Per-header control overrides: Object, function, or object of per-header functions.
   fieldProps: { type: [Object, Function], default: () => ({}) },
   columns: { type: Number, default: 1 },
-  // Primary section title. Falls back to `recordTitleFallback` when children exist.
   title: { type: String, default: '' },
   recordTitleFallback: { type: String, default: 'Details' },
-  // Per-child section title overrides, keyed by child resource name.
   sectionTitles: { type: Object, default: () => ({}) },
-  // Escape hatches merged last into the props of each rendered sub-component.
+  // Escape hatches merged last into each rendered sub-component's props.
   formRecordProps: { type: Object, default: () => ({}) },
   formChildProps: { type: Object, default: () => ({}) },
-  // Section layout / entrance.
   sectionClass: { type: [String, Array, Object], default: 'cf-section' },
   sectionStagger: { type: Number, default: 60 }
 })
@@ -103,11 +77,7 @@ const scope = computed(() => resourceConfig?.scope?.value || '')
 const resourceSlug = computed(() => resourceConfig?.resourceSlug?.value || '')
 const uiName = computed(() => resourceConfig?.customUIName?.value || '')
 
-// Ensure the primary pageState node exists before any input binds to it, and
-// flush any stale nodes left over from a previously-visited resource page
-// (pageState is a single Page.vue-provided instance shared across navigations,
-// so switching from e.g. Products/create to Warehouses/create must not carry
-// over the old primary node or child buckets).
+// pageState is shared across navigations, so a resource switch must reset the node, not reuse it.
 watch(
   resourceName,
   (name, prevName) => {
@@ -125,17 +95,14 @@ const primaryRecord = computed(
   () => pageState?.state?.nodes?.get(resourceName.value)?.record || {}
 )
 
-// Canonical schema headers -> node.record (submitted); non-schema custom
-// headers (resolved by FormRecord's `custom: true` flag) -> node.controls,
-// which defaultBuild never reads (see usePageState.js).
+// Schema headers -> node.record (submitted); custom headers -> node.controls (never built).
 function onPrimaryField (header, value, meta) {
   if (!pageState || !resourceName.value) return
   if (meta?.custom) pageState.setControlField(resourceName.value, header, value)
   else pageState.setField(resourceName.value, header, value)
 }
 
-// Child resources whose ParentResource is the active resource. In master scope
-// only master-scoped children are surfaced (mirrors ViewChildren).
+// Children of the active resource; master scope surfaces only master-scoped children.
 const eligibleChildren = computed(() => {
   if (!props.withChildren) return []
   const name = resourceName.value
@@ -155,9 +122,7 @@ const eligibleChildren = computed(() => {
   return list
 })
 
-// Dynamic `hide<ResourceName>: true` (or `hide<Slug>` / `hide<PascalName>`) prop
-// or $attrs flag — lets a caller suppress a specific child by name without
-// needing hideChild/hideChildren, e.g. `hideGoodsReceipts` / `hidePOReceivingItems`.
+// Dynamic prop/$attrs flag, e.g. `hideGoodsReceipts` — matched against child name, slug, or PascalName.
 function isChildHiddenByDynamicFlag (child) {
   const candidates = [child?.name, child?.slug, toPascalCase(child?.name || '')]
     .filter(Boolean)
@@ -173,8 +138,7 @@ function isChildHiddenByDynamicFlag (child) {
   return false
 }
 
-// hideChild/hideChildren merged into one case-insensitive lookup set — a
-// child resource is suppressed if its name OR slug matches either prop.
+// hideChild + hideChildren merged into one case-insensitive name/slug lookup set.
 const hiddenChildKeys = computed(() => {
   const raw = [
     ...(Array.isArray(props.hideChild) ? props.hideChild : props.hideChild ? [props.hideChild] : []),
@@ -183,7 +147,6 @@ const hiddenChildKeys = computed(() => {
   return new Set(raw.filter(Boolean).map((v) => String(v).toLowerCase()))
 })
 
-// Code/Status/workflow action-stamp columns are hidden by FormRecord itself.
 const primaryHideFields = computed(() => [...props.hideFields])
 
 const childHideFieldsResolved = computed(() => [
@@ -194,7 +157,7 @@ const childHideFieldsResolved = computed(() => [
   ...props.childHideFields
 ])
 
-// Unhandled attributes flow down first; explicit props win; caller escape-hatch last.
+// Precedence: $attrs, then explicit props, then the caller's escape hatch.
 const primaryFormProps = computed(() => ({
   ...attrs,
   resource: resourceName.value,
@@ -236,10 +199,7 @@ function defaultChildProps (child) {
   }
 }
 
-// ── Per-child FormChild override: formchild<ChildName>.(vue|js) ────────────
-// Mirrors ViewChildren's per-child resolution:
-//  1. _ui/{ui}/components/{scope}/{parentResourceSlug}/formchild{childName}.(vue|js)
-//  2. _ui/{ui}/components/{childScope}/{childResourceSlug}/formchild.(vue|js)
+// Per-child FormChild override lookup; candidate paths are listed in resolveChildOverride below.
 const customUiModules = import.meta.glob('../../_ui/**/*.{vue,js}')
 const customUiRegistry = {}
 Object.keys(customUiModules).forEach((rawPath) => {
@@ -265,9 +225,7 @@ async function resolveChildOverride (child) {
   const uiKey = (uiName.value || '').toLowerCase()
   if (!uiKey) return null
 
-  // Normalized exactly like useContentResolver.js (toPascalCase then lowercase)
-  // so a kebab-case slug (e.g. 'outlet-visits') matches the Vite glob registry
-  // folder key ('outletvisits') instead of leaking hyphens into the path.
+  // Normalized like useContentResolver.js so kebab-case slugs match the glob registry keys.
   const parentSlug = toPascalCase(resourceSlug.value || resourceName.value || '').toLowerCase()
   const childName = toPascalCase(child.name).toLowerCase()
   const childScope = (child.scope || scope.value || '').toLowerCase()
@@ -343,16 +301,3 @@ const sectionsList = computed(() => [
   }))
 ])
 </script>
-
-<style scoped>
-@keyframes cf-section-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.cf-section {
-  animation: cf-section-in 260ms ease-out both;
-}
-@media (prefers-reduced-motion: reduce) {
-  .cf-section { animation: none; }
-}
-</style>

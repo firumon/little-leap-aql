@@ -9,10 +9,7 @@
       v-bind="pageProps"
     />
 
-    <!-- Centralized entrance transition: seamlessly cross-fades the loading spinner
-         into the resolved section/content layout. Individual sections need no edits —
-         each direct child of .aql-page-body gets a staggered micro-slide reveal via
-         transitions.scss. -->
+    <!-- Cross-fades the spinner into the resolved layout; children stagger via transitions.scss. -->
     <Transition v-else name="aql-page-fade" mode="out-in" appear>
       <!-- Generic section layout via Section placeholders -->
       <div v-if="ready" key="body" class="aql-page-body" :class="'q-gutter-y-' + pageProps.gutter">
@@ -46,25 +43,16 @@
       <PageFallback v-else key="fallback" :not-found="notFound" />
     </Transition>
 
-    <!-- Action subsystem entry point — mounted OUTSIDE the animated .aql-page-body
-         wrapper on purpose. The entrance animation applies a CSS `transform` to body
-         children, which would make that element the containing block for the
-         q-page-sticky FAB (position: fixed) and trap it at the end of the content flow
-         instead of the viewport. Kept as a q-page child, it anchors correctly to the
-         viewport and stays out of the entrance transition (a fixed FAB should not
-         slide in). Resolution goes through useActionResolver — see
-         Documents/AQL_ACTION_SYSTEM.md. -->
+    <!-- Must stay outside .aql-page-body: its transform would trap the fixed FAB in the content flow. -->
     <Action
-      v-if="ready && hasAction"
+      v-if="ready && pageProps.noActions !== true"
       action="PageAction"
       v-bind="pageProps"
     />
 
-    <!-- Workflow action dialog — mounted here (outside any overridable action) so a
-         custom PageAction container override can never swallow it. State lives in
-         pageState.meta.actionDialog, set by whichever sub-action triggers a workflow action. -->
+    <!-- Mounted outside any overridable action so a custom PageAction override cannot swallow it. -->
     <ActionDialog
-      v-if="hasAction"
+      v-if="pageProps.noActions !== true"
       v-model="pageState.meta.actionDialog.show"
       :action-config="pageState.meta.actionDialog.actionConfig"
       :record="resourceRecord?.record?.value"
@@ -93,7 +81,6 @@ const {
   pageProps,
   sections,
   contents,
-  hasAction,
   visibleSectionsBeforeAction,
   contentWrapperProps,
   resourceConfig,
@@ -103,8 +90,7 @@ const {
 provide('resourceConfig', resourceConfig)
 provide('resourceRecord', resourceRecord)
 
-// Centralized page-level form-state composable (shared by Header/Content/PageAction sections).
-// Pass a per-resource `strategy` here once resource-specific payload logic is extracted.
+// Page-level form state, shared by the Header/Content/PageAction sections.
 const pageState = usePageState()
 provide('pageState', pageState)
 </script>

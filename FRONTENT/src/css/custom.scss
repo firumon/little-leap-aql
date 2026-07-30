@@ -59,6 +59,21 @@
   .aql-crud-action-container { animation: none; }
 }
 
+// ── Form content section entrance (contents/Create.vue, contents/Update.vue) ──
+// Global, not scoped: tenant `_ui/**` overrides cannot inherit a scoped style (ARCHITECTURE RULES §7).
+.cf-section {
+  animation: cf-section-in 260ms ease-out both;
+}
+
+@keyframes cf-section-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cf-section { animation: none; }
+}
+
 // ── FormActions sticky bar (actions/FormActions.vue) ─────────────────────────
 // Spacer reserves flow height so the fixed bar never covers the last form field.
 .aql-form-actions-spacer {

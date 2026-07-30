@@ -15,12 +15,12 @@
         <div class="row no-wrap q-gutter-xs">
           <q-btn
             flat round dense :size="actionBtnSize" :icon="editIcon" :color="editColor"
-            :disable="editIndex === records.indexOf(item)"
-            @click="startEdit(records.indexOf(item))"
+            :disable="editIndex === bucketIndexOf(item)"
+            @click="startEdit(bucketIndexOf(item))"
           />
           <q-btn
             flat round dense :size="actionBtnSize" :icon="deleteIcon" :color="deleteColor"
-            @click="remove(records.indexOf(item))"
+            @click="remove(bucketIndexOf(item))"
           />
         </div>
       </template>
@@ -100,12 +100,12 @@
         <div class="row no-wrap q-gutter-xs">
           <q-btn
             flat round dense :size="actionBtnSize" :icon="editIcon" :color="editColor"
-            :disable="editIndex === records.indexOf(item)"
-            @click="startEdit(records.indexOf(item))"
+            :disable="editIndex === bucketIndexOf(item)"
+            @click="startEdit(bucketIndexOf(item))"
           />
           <q-btn
             flat round dense :size="actionBtnSize" :icon="deleteIcon" :color="deleteColor"
-            @click="remove(records.indexOf(item))"
+            @click="remove(bucketIndexOf(item))"
           />
         </div>
       </template>
@@ -115,22 +115,24 @@
     <template v-if="mode === 'multi'">
       <TransitionGroup :name="transitionName">
         <q-card
-          v-for="(row, index) in records"
+          v-for="(row, index) in visibleRecords"
           :key="rowKey(row)"
           :flat="cardFlat" :bordered="cardBordered"
           :class="[cardClass, 'q-mb-sm']"
         >
           <q-card-section>
             <div class="row items-center justify-between q-mb-xs">
+              <!-- `index` is the VISIBLE index (gap-free numbering); every mutation
+                   below re-resolves the true bucket index via `bucketIndexOf`. -->
               <div :class="rowTitleClass">{{ rowTitle(index) }}</div>
               <q-btn
                 flat round dense :size="actionBtnSize" :icon="deleteIcon" :color="deleteColor"
-                @click="remove(index)"
+                @click="remove(bucketIndexOf(row))"
               />
             </div>
             <FormRecord
               v-bind="formRecordBindings(row.data)"
-              @update:field="(header, value) => onRowField(index, header, value)"
+              @update:field="(header, value) => onRowField(bucketIndexOf(row), header, value)"
             />
           </q-card-section>
         </q-card>
@@ -149,28 +151,13 @@
 
 <script setup>
 import { ref, computed, inject, useAttrs } from 'vue'
+import { useQuasar } from 'quasar'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import AppList from 'components/app/AppList.vue'
 import FormRecord from 'components/contents/FormRecord.vue'
 import { resolveChildFields, resolveChildTitle, toPascalCase } from 'src/utils/appHelpers'
 
-/**
- * Child-record entry container for Create/Update contents. All record inputs
- * are rendered by FormRecord; every mutation lands in pageState's child bucket
- * (addChild / updateChild / removeChild) under `parentResource`.
- *
- * childMode:
- *  - 'inline' (default): entry form always visible; submit appends + resets.
- *  - 'popup': list + "Add" button opening a q-dialog form.
- *  - 'multi' | 'multiple': one always-editable FormRecord per added row.
- *
- * listPosition: 'top' (default) shows added records above the entry form/button;
- * 'bottom' shows them below. Ignored in 'multi' mode (no separate list — every
- * row already is its own live form).
- *
- * ZERO-HARDCODING CONTRACT: every label, icon, colour, class, and dialog setting
- * below is exposed as a prop; unhandled `$attrs` flow to AppList + every FormRecord.
- */
+// Child-record entry container for Create/Update; every mutation lands in pageState's child bucket.
 defineOptions({ name: 'ContentsFormChild', inheritAttrs: false })
 
 const props = defineProps({
@@ -187,17 +174,14 @@ const props = defineProps({
     validator: (v) => ['top', 'above', 'bottom', 'below'].includes(v)
   },
   closeOnAdd: { type: Boolean, default: true },
-  // Maximum number of added record entries allowed (0 = unlimited). Use 1 for
-  // 1-to-1 child relations (e.g. Outlet -> OutletOperatingRules).
+  // 0 = unlimited; 1 for 1-to-1 child relations (e.g. Outlet -> OutletOperatingRules).
   maxRecords: { type: Number, default: 0 },
   hideFields: { type: Array, default: () => [] },
   // Highest-precedence visibility switch — forced visible on child forms.
   showFields: { type: Array, default: () => [] },
-  // Code is server-generated so it is hidden by default on child forms;
-  // true → renders it as a normal editable control.
+  // Code is server-generated, so hidden by default.
   showCode: { type: Boolean, default: false },
   columns: { type: Number, default: 1 },
-  // Section divider title; '' + titleFallback disabled hides the divider entirely.
   title: { type: String, default: '' },
 
   // ── Forwarded to every inner FormRecord ──────────────────────────────────
@@ -251,9 +235,21 @@ const props = defineProps({
   cancelColor: { type: String, default: 'grey-7' },
   editColor: { type: String, default: 'primary' },
   deleteColor: { type: String, default: 'negative' },
-  actionBtnSize: { type: String, default: 'sm' }
+  actionBtnSize: { type: String, default: 'sm' },
+
+  // ── Undo for soft-deleted rows (a notification, since the row itself is hidden) ──
+  undoRemove: { type: Boolean, default: true },
+  undoLabel: { type: String, default: 'Undo' },
+  // Defaults to `${resolvedTitle} removed` when left empty.
+  undoMessage: { type: String, default: '' },
+  undoColor: { type: String, default: 'grey-9' },
+  undoTextColor: { type: String, default: 'white' },
+  undoBtnColor: { type: String, default: 'amber' },
+  undoTimeout: { type: Number, default: 5000 },
+  undoPosition: { type: String, default: 'bottom' }
 })
 
+const $q = useQuasar()
 const attrs = useAttrs()
 
 const pageState = inject('pageState', null)
@@ -264,8 +260,8 @@ function modifierContext () {
   return { pageState, resourceConfig, resourceRecord }
 }
 
-// ── maxRecords (max added record entries) ─────────────────────────────────────
-const maxReached = computed(() => props.maxRecords > 0 && records.value.length >= props.maxRecords)
+// Visible rows only, so a soft-deleted row frees its slot for a replacement.
+const maxReached = computed(() => props.maxRecords > 0 && visibleRecords.value.length >= props.maxRecords)
 
 const mode = computed(() => (props.childMode === 'multiple' ? 'multi' : props.childMode))
 const showList = computed(() => mode.value !== 'multi')
@@ -291,9 +287,7 @@ function rowTitle (index) {
 // Content-resolver identity for the child resource's own FormRecord/FormField overrides.
 const uiName = computed(() => resourceConfig?.customUIName?.value || '')
 const fieldScope = computed(() => props.childResource?.scope || resourceConfig?.scope?.value || '')
-// Normalized exactly like useContentResolver.js (toPascalCase then lowercase)
-// so a kebab-case child slug (e.g. 'outlet-visit-items') matches the Vite glob
-// registry folder key ('outletvisititems') FormRecord's own override resolvers use.
+// Normalized like useContentResolver.js so kebab-case slugs match the glob registry keys.
 const fieldResourceSlug = computed(
   () => toPascalCase(props.childResource?.slug || childName.value).toLowerCase()
 )
@@ -305,10 +299,7 @@ const effectiveHideFields = computed(() => {
   return [...hidden]
 })
 
-// Mirrors FormRecord's own Code/showFields precedence, kept in sync here so
-// this container's derived label/caption/required-field logic agrees with
-// what FormRecord actually renders (Code visibility is forwarded via
-// `showCode`, not `hideFields`, so it must be folded back in for these).
+// Mirrors FormRecord's Code/showFields precedence so label/caption/required logic matches what it renders.
 const displayHiddenFields = computed(() => {
   const hidden = new Set(effectiveHideFields.value)
   if (!props.showCode) hidden.add('Code')
@@ -316,8 +307,7 @@ const displayHiddenFields = computed(() => {
   return [...hidden]
 })
 
-// Every inner FormRecord (draft form, dialog form, multi rows) is bound identically:
-// forwarded $attrs first, then explicit props, then caller-supplied formRecordProps.
+// Precedence: $attrs, then explicit props, then the caller's formRecordProps.
 function formRecordBindings (record) {
   return {
     ...attrs,
@@ -341,17 +331,12 @@ function formRecordBindings (record) {
   }
 }
 
-// Strip a stray string `content` attribute before it reaches AppList/abstract
-// List.vue — it's the content-resolver identity (e.g. "Create") that flows
-// through $attrs from Content.vue down through Create.vue's own `...attrs`
-// forwarding, not a per-item content column sequence. AppList's `content`
-// prop expects an Array (or undefined); label/caption above already drive
-// this list's row content, so the identity string is simply irrelevant here.
+// `content` is dropped: $attrs carries the content-resolver identity string, but AppList expects an Array.
 const listBindings = computed(() => {
   const { content, ...restAttrs } = attrs
   return {
     ...restAttrs,
-    items: records.value,
+    items: visibleRecords.value,
     itemKey: rowKey,
     label: props.itemLabel || defaultItemLabel,
     caption: props.itemCaption || defaultItemCaption,
@@ -375,6 +360,19 @@ const records = computed(() => {
   return bucket?.records || []
 })
 
+// Soft-deleted rows stay in `records` for the payload but are hidden from every list, loop, and count.
+const visibleRecords = computed(() => records.value.filter((r) => r._action !== 'deactivate'))
+
+// Rendered row -> bucket index; identity lookup, since visible rows are the same reactive objects.
+function bucketIndexOf (row) {
+  return records.value.indexOf(row)
+}
+
+// Needs a Code: GAS matches on it, and without one it would create a duplicate instead of deactivating.
+function isPersistedRow (row) {
+  return row?._action === 'update' && !!String(row?.data?.Code ?? '').trim()
+}
+
 // Stable AppList/TransitionGroup keys for wrapper objects that carry no id of their own.
 const rowKeys = new WeakMap()
 let keySeq = 0
@@ -383,11 +381,7 @@ function rowKey (row) {
   return rowKeys.get(row)
 }
 
-// Combined default seed for a fresh child row/draft — same precedence chain as
-// FormRecord.resolveDefaultValues (backend APP.Resources.DefaultValues < props
-// defaultValues < Status fallback), applied here so every new entry (1st, 2nd,
-// 3rd, ... — inline reset, popup reset, multi Add Row) starts pre-filled
-// instead of only the very first FormRecord mount being seeded.
+// Seeds every new row/draft, not just the first mount. Precedence: backend defaults < props < Status fallback.
 function createChildDefaultRecord () {
   const backend = props.childResource?.defaultValues
   const ctx = modifierContext()
@@ -465,6 +459,7 @@ function submitDraft () {
   const wasEdit = editIndex.value !== null
   if (!wasEdit && maxReached.value) return
   if (wasEdit) {
+    // editIndex is already a bucket index — no visible->bucket mapping needed.
     pageState.updateChild(props.parentResource, childName.value, editIndex.value, { ...draft.value })
   } else {
     pageState.addChild(props.parentResource, childName.value, { ...draft.value })
@@ -473,9 +468,10 @@ function submitDraft () {
   if (mode.value === 'popup' && (props.closeOnAdd || wasEdit)) dialogOpen.value = false
 }
 
+// `index` is a BUCKET index (the template resolves it via `bucketIndexOf`).
 function startEdit (index) {
   const row = records.value[index]
-  if (!row) return
+  if (!row || row._action === 'deactivate') return
   draft.value = { ...row.data }
   editIndex.value = index
   if (mode.value === 'popup') dialogOpen.value = true
@@ -486,8 +482,43 @@ function openDialog () {
   dialogOpen.value = true
 }
 
+// Direct mutation is the only way to set `_action` — pageState.updateChild merges `data` only.
+function restore (row) {
+  if (!row || row._action !== 'deactivate') return
+  row._action = 'update'
+}
+
+function notifyUndo (row) {
+  if (!props.undoRemove) return
+  $q.notify({
+    message: props.undoMessage || `${resolvedTitle.value} removed`.trim(),
+    color: props.undoColor,
+    textColor: props.undoTextColor,
+    position: props.undoPosition,
+    timeout: props.undoTimeout,
+    actions: [{
+      label: props.undoLabel,
+      color: props.undoBtnColor,
+      noCaps: true,
+      handler: () => restore(row)
+    }]
+  })
+}
+
+// `index` is a BUCKET index. Persisted rows soft-delete in place; session-added rows splice out.
 function remove (index) {
   if (!pageState) return
+  const row = records.value[index]
+  if (!row) return
+
+  if (isPersistedRow(row)) {
+    row._action = 'deactivate'
+    // No splice, so no index shifts — only an in-flight edit of this row needs clearing.
+    if (editIndex.value === index) resetDraft()
+    notifyUndo(row)
+    return
+  }
+
   pageState.removeChild(props.parentResource, childName.value, index)
   if (editIndex.value === index) resetDraft()
   else if (editIndex.value !== null && editIndex.value > index) editIndex.value -= 1
@@ -499,8 +530,10 @@ function addBlankRow () {
   pageState.addChild(props.parentResource, childName.value, createChildDefaultRecord())
 }
 
+// `index` is a BUCKET index (resolved by `bucketIndexOf` in the v-for).
 function onRowField (index, header, value) {
   if (!pageState) return
+  if (index < 0) return
   pageState.updateChild(props.parentResource, childName.value, index, { [header]: value })
 }
 

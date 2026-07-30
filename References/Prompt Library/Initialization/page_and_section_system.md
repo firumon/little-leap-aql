@@ -31,8 +31,8 @@ This initialization prompt guides the creation, override, and customization of f
   - Otherwise, falls back to rendering placeholders for visible parts:
     - Pre-Action Sections: `<Section>` per entry in `visibleSectionsBeforeAction` (such as `PageHeader`, `FilterInput`).
     - Body Contents: `<Content>` per entry in `contents`, wrapped inside `<AqlContentWrapper>` (state gate + submission overlay — see canonical doc §1.1).
-    - Page Actions: `<Action v-if="ready && hasAction" action="PageAction" />`, mounted **after** `AqlContentWrapper` and **outside** the animated `.aql-page-body` wrapper (a CSS transform on an ancestor would trap the fixed FAB). Owned by the Action subsystem.
-  - `PageAction` stays declared inside each base contract's `sections` array; `usePageResolver` filters it out of `visibleSectionsBeforeAction` and exposes `hasAction` (`hasActionSection` is a deprecated alias).
+    - Page Actions: `<Action v-if="ready && pageProps.noActions !== true" action="PageAction" />`, mounted **after** `AqlContentWrapper` and **outside** the animated `.aql-page-body` wrapper (a CSS transform on an ancestor would trap the fixed FAB). Owned by the Action subsystem.
+  - The Action subsystem is decoupled from `sections` — base contracts do not need a `'PageAction'` entry; `usePageResolver` still filters the name out of `visibleSectionsBeforeAction` if one is present. `noActions: true` suppresses both `<Action>` and the `ActionDialog`.
   - All placeholders receive `pageProps` via `v-bind`. See canonical doc §1.3.4 for the **full `pageProps` contract** (20+ props including `parentForm`, `childGroups`, `actionForm`, all event handlers).
   - Contexts provided: `'resourceConfig'`, `'resourceRecord'`, and `'pageState'`.
 * **Section Placeholder (`src/components/Section.vue`)**:

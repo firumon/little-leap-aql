@@ -18,7 +18,7 @@ the identity prop (`section` / `content` / `action`) differ.
 
 ```mermaid
 graph TD
-    PageVue[src/pages/Page.vue] --> |ready && hasAction| ActionVue[components/Action.vue<br/>action=&quot;PageAction&quot;]
+    PageVue[src/pages/Page.vue] --> |ready && !noActions| ActionVue[components/Action.vue<br/>action=&quot;PageAction&quot;]
     ActionVue --> useActionResolver[useActionResolver.js]
     useActionResolver --> |Step 1: base| BaseScan{components/actions/pageaction.vue}
     useActionResolver --> |Step 2: 10-tier scan| OverrideScan{_ui override?}
@@ -52,21 +52,20 @@ addressable override target instead of a hardcoded child.
 ### 1.2 Page integration (`src/pages/Page.vue`)
 ```html
 <Action
-  v-if="ready && hasAction"
+  v-if="ready && pageProps.noActions !== true"
   action="PageAction"
   v-bind="pageProps"
 />
 ```
 Mounted after `AqlContentWrapper`, as a **sibling of the `<Transition>`** — never inside
-`.aql-page-body`. `hasAction` comes from `usePageResolver` and is simply
-`sections.includes('PageAction')`.
+`.aql-page-body`.
 
 > [!NOTE]
-> `PageAction` is still **declared inside the page contract's `sections` array** — base
-> contracts (`pages/[Scope]/[page].js`) were not changed. `usePageResolver` filters it out
-> of `visibleSectionsBeforeAction` and exposes it via `hasAction` instead, so the Action
-> subsystem takes over the mount without any BP churn.
-> `hasActionSection` remains exported as a deprecated alias of `hasAction`.
+> The Action subsystem mounts on **every** resource page; it is not driven by the page
+> contract's `sections` array at all. `PageAction` no longer needs to be declared in
+> `sections` (and `usePageResolver` still filters it out of `visibleSectionsBeforeAction`
+> if a contract lists it). The only opt-out is `noActions: true` in a page contract or JS
+> modifier, which suppresses both `<Action>` and the workflow `ActionDialog`.
 
 ### 1.3 The Action Placeholder (`src/components/Action.vue`)
 `AqlAction` mirrors `Section.vue` / `Content.vue` exactly:

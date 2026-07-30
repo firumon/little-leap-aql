@@ -82,6 +82,7 @@ Use when overriding or creating custom section or sub-components for any resourc
   - `Documents/AQL_PAGE_AND_SECTION_SYSTEM.md`
   - `Documents/AQL_CONTENT_CUSTOMIZATION_SYSTEM.md`
   - `Documents/AQL_VIEW_SYSTEM.md` — when customizing View content (parent/child/column overrides, scope rules, JS modifier API)
+  - `Documents/AQL_CREATE_AND_UPDATE_CONTENT_SYSTEM.md` — when customizing Create/Update content (`Create.vue`/`Update.vue`/`FormRecord.vue`/`FormChild.vue` prop tables, visibility precedence, child entry modes, Update hydration, child soft-deletion)
 
 ### List Switcher Customization
 Use when overriding or creating custom container or item layouts, template overrides, or dynamic modifiers for the list view switcher bar.

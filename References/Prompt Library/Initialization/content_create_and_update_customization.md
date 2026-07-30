@@ -1,40 +1,42 @@
 ---
-name: AQL Create Content Customization
-description: Initialization prompt for creating custom UI overrides (Vue SFC, JS object, JS function) for the Create content system (Create.vue, FormRecord.vue, FormChild.vue) and for extending pageState-bound form/child-entry behavior.
+name: AQL Create & Update Content Customization
+description: Initialization prompt for creating custom UI overrides (Vue SFC, JS object, JS function) for the Create and Update content systems (Create.vue, Update.vue, FormRecord.vue, FormChild.vue) and for extending pageState-bound form/child-entry behavior, including Update hydration and child soft-deletion.
 ---
 
 # Scope Boundary
 
-This document defines initialization parameters for agents tasked with resource-level `Create` content overrides, form field customization, and child-record entry mode configuration under `src/_ui/[UiName]/components/`.
+This document defines initialization parameters for agents tasked with resource-level `Create` **and** `Update` content overrides, form field customization, and child-record entry mode configuration under `src/_ui/[UiName]/components/`.
+
+`Create` and `Update` are twins — same section layout, prop surface, child resolution, override paths, and `$attrs` forwarding. Everything below applies to both unless a rule is explicitly marked `Update`-only. The three real differences are hydration of the existing record (§2.10), three prop defaults (`showCode: true`, `codeReadonly: true`, `showStatus: true`), and child soft-deletion (§2.11).
 
 This document does NOT cover:
 - `View`/`List` content overrides — see [view_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/view_customization.md) / [content_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/content_customization.md).
-- Submit/cancel button behavior, workflow actions, or FAB wiring — those live in `PageAction` sections (`Form.js` schema, §5.2 of `AQL_CONTENT_CUSTOMIZATION_SYSTEM.md`), out of scope for `Create` content itself.
+- Submit/cancel button behavior, workflow actions, or FAB wiring — those live in `PageAction` sections (`Form.js` schema, §5.2 of `AQL_CONTENT_CUSTOMIZATION_SYSTEM.md`), out of scope for `Create`/`Update` content itself. Note that `Page.vue` mounts the Action subsystem for every resource page automatically (gated only by `pageProps.noActions !== true`) — `PageAction` is **not** listed in a page contract's `sections`.
 - Page-level section ordering/visibility (`sections: [...]`) — see [page_and_section_system.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/page_and_section_system.md).
 
 ## Required Pre-Reads
-Before creating or modifying any local `Create` content components:
-1. **System Specification**: Read [AQL_CREATE_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_CREATE_CONTENT_SYSTEM.md) — the full `Create` canonical doc: component anatomy, complete prop tables, the `showFields`/`hideFields`/`workflowFields` visibility precedence chain, `defaultValues`/`fieldProps` function resolution, child entry modes, the three override hierarchies, and whole-content override examples. [AQL_CONTENT_CUSTOMIZATION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_CONTENT_CUSTOMIZATION_SYSTEM.md) §5.3 has a one-paragraph summary + link only — read the dedicated doc for anything beyond a quick orientation.
-2. **PageState Contract**: Read [usePageState.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/usePageState.js) — `initResource` (incl. `isPrimaryKey`/`reset` lifecycle options), `setField`, `setControlField`/`getControlField` (non-schema custom fields — never `node.record`), `addChild`/`updateChild`/`removeChild`, `validateNode`.
+Before creating or modifying any local `Create`/`Update` content components:
+1. **System Specification**: Read [AQL_CREATE_AND_UPDATE_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_CREATE_AND_UPDATE_CONTENT_SYSTEM.md) — the full `Create` & `Update` canonical doc: component anatomy, complete prop tables, the `showFields`/`hideFields`/`workflowFields` visibility precedence chain, `defaultValues`/`fieldProps` function resolution, child entry modes, the three override hierarchies, whole-content override examples, `Update.vue`'s hydration lifecycle (§13), and child soft-deletion/undo (§14). [AQL_CONTENT_CUSTOMIZATION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_CONTENT_CUSTOMIZATION_SYSTEM.md) §5.3 has a one-paragraph summary + link only — read the dedicated doc for anything beyond a quick orientation.
+2. **PageState Contract**: Read [usePageState.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/usePageState.js) — `initResource` (incl. `isPrimaryKey`/`reset` lifecycle options), `load` (record hydration), `setField`, `setControlField`/`getControlField` (non-schema custom fields — never `node.record`), `addChild`/`updateChild`/`removeChild` (incl. the `{ action }` option), `defaultBuild`'s `_action` forwarding, `validateNode`.
 3. **Architecture Constraints**: Read [ARCHITECTURE RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md) for strict formatting rules (e.g. no inline `<style>` values, no `QTable`, mobile-first grid).
 
 ---
 
 ## 1. Context Tracing Protocol
 
-To customize a resource's `Create` layout or field behavior:
-1. **Confirm the page contract**: Check `src/pages/[scope]/create.js` (or equivalent) for `contents: ['Create']` — this confirms the page renders the `Create` content and which `sections` surround it (typically `PageHeader`, `PageAction`).
+To customize a resource's `Create`/`Update` layout or field behavior:
+1. **Confirm the page contract**: Check `src/pages/[scope]/create.js` for `contents: ['Create']`, or `src/pages/[scope]/edit.js` for `contents: ['Update']` — this confirms which content the page renders and which `sections` surround it (typically just `PageHeader`; the Action subsystem mounts independently of `sections`).
 2. **Locate resource schema**: Read the target resource's headers/`ui.fields` under `src/metadata/schemas/` (or via the resolved `resourceConfig.resolvedFields`) to know which fields `useFormFields` will resolve and what control type each maps to (`mapField` in `useRecord.js` / `useFormFields.js`).
 3. **Identify eligible children**: Determine which resources have `ParentResource` equal to the target resource (`resourceRecord.childResources` filtered by `child.parentResource === resourceName`) — each becomes a `FormChild` group unless `withChildren` is disabled.
 4. **Find Target Override Paths** — there are FOUR independent override levels, checked from broadest to narrowest before writing anything new:
-   1. Whole-content: `src/_ui/[UiName]/components/[scope]/[ResourceName]/[page]/create.(vue|js)` (standard content-resolver priority: resource+page → resource → page → scope → ui-wide).
+   1. Whole-content: `src/_ui/[UiName]/components/[scope]/[ResourceName]/[page]/create.(vue|js)` — or `.../[page]/update.(vue|js)` for the edit form (standard content-resolver priority: resource+page → resource → page → scope → ui-wide). The two resolve independently, so you can override just the edit form and keep the stock Create, or vice versa.
    2. Per-child form: `src/_ui/[UiName]/components/[scope]/[ParentResourceName]/FormChild[ChildResourceName].(vue|js)` or `src/_ui/[UiName]/components/[ChildScope]/[ChildResourceName]/FormChild.(vue|js)`.
    3. Per-resource form: `src/_ui/[UiName]/components/[scope]/[ResourceName]/FormRecord.(vue|js)` (applies identically to the primary resource or any child resource, since both are rendered by the same `FormRecord.vue`).
    4. Per-field control: `src/_ui/[UiName]/components/[scope]/[ResourceName]/FormField[Header].(vue|js)` — **`_ui/*` ONLY**. There is NO `src/components/shared/FormField[Header]` fallback; absent an override, the standard `useFormFields` control (`app/Date.vue`, `QSelect`, `QToggle`, `AqlFileUpload`, `QInput`, …) is used.
 
    > **Slug normalization**: `[ResourceName]`/`[ParentResourceName]`/`[ChildResourceName]` folder segments above are matched against `toPascalCase(slug).toLowerCase()`, not the raw kebab-case resource slug — `outlet-visits` → `outletvisits`. Write override folders using the PascalCase-derived form (e.g. `_ui/AQL/components/operation/OutletVisits/` on disk, resolved case-insensitively), never with hyphens.
 5. **Analyze Overriding Strategy**:
-   - Prefer a **JS Logic Modifier** for prop-level adjustments at whichever level matches the change: `create.js` for `childMode`/`closeOnAdd`/`hideFields`/`defaultHideFields`/`fields`/`defaultValues`/`columns`/`title`/`withChildren`; `FormChild<Child>.js` for one child's props only; `FormRecord.js` for one resource's field list/columns/hides; `FormField<Header>.js` for one field's control props.
+   - Prefer a **JS Logic Modifier** for prop-level adjustments at whichever level matches the change: `create.js`/`update.js` for `childMode`/`closeOnAdd`/`hideFields`/`fields`/`defaultValues`/`columns`/`title`/`withChildren` (plus `codeReadonly` on `update.js`); `FormChild<Child>.js` for one child's props only; `FormRecord.js` for one resource's field list/columns/hides; `FormField<Header>.js` for one field's control props.
    - Use a **Vue Template SFC Override** ONLY when the required layout cannot be expressed through props at any of the four levels — e.g. custom non-linear field grouping, bespoke workflow widgets interleaved with fields, or a wizard/step layout.
    - Per-child entry mode (one child `popup`, another `multi`) is now a **first-class override**, not a full `create.vue` rewrite — use a `FormChild<ChildName>.js` JS modifier (§2.3).
 
@@ -68,7 +70,7 @@ export default function (props, { pageState, resourceConfig, resourceRecord }) {
 ```
 
 - The function receives `Create.vue`'s full current prop object plus `{ pageState, resourceConfig, resourceRecord }`, and must return the adjusted prop object.
-- **ZERO-HARDCODING RULE.** Every default label, icon, colour, class, dialog width, and behaviour in `Create`/`FormRecord`/`FormChild` is already a prop. **Before writing any `.vue` override, check the prop tables in `AQL_CREATE_CONTENT_SYSTEM.md` §3** — reach for a Vue SFC override only when the *structure* differs, never to change a string, colour, or class.
+- **ZERO-HARDCODING RULE.** Every default label, icon, colour, class, dialog width, and behaviour in `Create`/`FormRecord`/`FormChild` is already a prop. **Before writing any `.vue` override, check the prop tables in `AQL_CREATE_AND_UPDATE_CONTENT_SYSTEM.md` §3** — reach for a Vue SFC override only when the *structure* differs, never to change a string, colour, or class.
 - Setting `withChildren: false` suppresses ALL child `FormChild` groups even if eligible children exist — use only when child creation must happen elsewhere (e.g. a dedicated sub-route).
 - **Workflow/audit hiding is dynamic, not a static list.** `FormRecord` hides any header matching `/(.+?)(By|At|Comment)$/` (e.g. `ProgressApprovedBy`, `StatusRejectedComment`) whenever `workflowFields` is `'hide'`/`false` (default); pass `workflowFields: 'show'`/`true` to render them. There is no `DEFAULT_CREATE_HIDDEN_FIELDS` constant — do not reintroduce a hardcoded list.
 - **`Status` is hidden and seeded `statusDefault` (`'Active'`)** by `FormRecord` when the resource has a `Status` column. Use `showStatus: true` (or list `'Status'` in `showFields`) to render it editable, or `statusDefault: 'Draft'` for a different seed — do NOT add `Status` to `hideFields`. When rendered, it is not auto-seeded.
@@ -130,7 +132,8 @@ Precedence: `...attrs` → explicit props → escape hatch (`formRecordProps`/`f
 
 ### 2.2 Writing Vue Template Overrides
 - Must contain a `<template>` block — templateless overrides are never allowed.
-- Inject `resourceConfig`, `resourceRecord`, and `pageState` directly (`inject('pageState')`, etc.) — a Vue override of `create.vue` does NOT automatically receive them as props; only `Create.vue`'s own declared props flow through `$attrs`.
+- Inject `resourceConfig`, `resourceRecord`, and `pageState` directly (`inject('pageState')`, etc.) — a Vue override of `create.vue`/`update.vue` does NOT automatically receive them as props; only `Create.vue`/`Update.vue`'s own declared props flow through `$attrs`.
+- An `update.vue` override additionally owns hydration if it does not render `Update.vue` — see §2.10 before writing one.
 - Compose using `FormRecord` and `FormChild` wherever possible instead of hand-rolling `q-input`/`q-select` controls — this preserves `useFormFields`' control-type resolution (file upload, `app/Date.vue` date-with-today-default, status toggle, cross-ref selects, and `AppOptions`-driven selects) and keeps the override thin:
 
   ```vue
@@ -283,7 +286,7 @@ defaultValues: { ResponseType: 'PARTIAL' }
 
 ### 2.7 Verification & Safety
 - Run `npx quasar build -m pwa` (or equivalent targeted check) after any override touching more than a couple of files to confirm no compilation issues.
-- If you found yourself writing a `.vue` override purely to change a label, icon, colour, class, or dialog size, STOP — that is a prop. Re-check the prop tables in `AQL_CREATE_CONTENT_SYSTEM.md` §3 and use a `.js` modifier instead.
+- If you found yourself writing a `.vue` override purely to change a label, icon, colour, class, or dialog size, STOP — that is a prop. Re-check the prop tables in `AQL_CREATE_AND_UPDATE_CONTENT_SYSTEM.md` §3 and use a `.js` modifier instead.
 - Confirm `pageState.state.primaryKey` and `pageState.state.nodes` reflect only the active resource after navigating between two different Create pages in the same session — this is the specific regression this system was hardened against.
 - If custom (non-schema) fields are involved, confirm `defaultBuild`'s assembled request payload for that resource contains ONLY canonical schema headers — custom values should be readable via `pageState.getControlField(resource, header)` but absent from `node.record`/the built request.
 
@@ -317,3 +320,59 @@ export default function (childResource) {
 }
 ```
 Once the cap is reached, every Add affordance (inline submit, popup trigger + dialog submit, multi "Add Row") is **disabled** — not hidden — so the existing record(s) stay visible and editable via the list's Edit button; only adding a *new* row is blocked.
+
+On an `Update` page the cap counts **visible** rows, so soft-deleting a row (§2.11) frees its slot — a `maxRecords: 1` relation can be replaced by removing then re-adding, which submits `deactivate(old)` + `create(new)`.
+
+### 2.10 `Update`-Only: Hydration Lifecycle Awareness
+
+`Update.vue` starts from the record the page already fetched, not a blank node. Its `syncFromServer()` runs two guarded steps:
+
+1. **Primary record** — `pageState.load(name, record)`, guarded on the composite key `${resourceName}::${node.identifier}::${recordId(record)}`. `recordId` is a `WeakMap`-assigned id per pristine server-record object (the record carries no id of its own). If the key is unchanged the load is skipped, so an unrelated recompute can never re-apply the pristine record over what the user has typed. `initResource(..., { code: record.Code })` is what makes `defaultBuild` emit an update rather than a create.
+2. **Existing child rows** — every row in `resourceRecord.childRecordsByResource[childName]` is pushed via `pageState.addChild(name, childName, { ...row }, { action: 'update' })`, guarded per `${node.identifier}::${childName}`. `defaultBuild` forwards `_action: 'update'` into the `compositeSave` child array and GAS merges by `data.Code`. The spread matters: enriched records expose relation/metadata keys as non-enumerable, so `{ ...row }` yields only canonical schema headers.
+
+**Node-reset detection.** `PageAction.onReset()` swaps in a fresh node (flushing `node.children`), but `resourceRecord.record` keeps the same object identity — so a plain record watch cannot see a reset. `Update.vue` watches `node.identifier` explicitly; when it changes both guards miss and everything re-hydrates, restoring the original server rows. Child rows may also arrive *after* mount (background fetch), so `childRecordsByResource` is watched too.
+
+Rules for overrides:
+- A **JS modifier** (`update.js`) needs none of this — `Update.vue` still renders and owns hydration.
+- A **full Vue override** (`update.vue`) that does NOT render `Update.vue` inherits none of it and must replicate the `load()` call, the child pre-population, **and** the identifier guard itself. Skipping the guards causes either clobbered user edits or duplicated child rows in the payload.
+- Never re-hydrate inside prop computation or a render path — hydration belongs in a `watch`/mount side effect.
+- If you add watchers to `Update.vue` itself, they must stay declared **below** `eligibleChildren`/`hiddenChildKeys`: both existing watchers read those computeds during dependency collection and would hit their temporal dead zone if registered earlier. A single-line comment marks this in the source — do not reorder it.
+
+### 2.11 `Update`-Only: Child Soft-Deletion (`_action: 'deactivate'`) & Undo
+
+Removing a child row that came from the server must **not** splice it out — an absent row is simply not sent, leaving the sheet untouched. `FormChild.remove()` branches instead:
+
+| Row state | Behaviour |
+|---|---|
+| `_action: 'update'` + non-blank `data.Code` | `_action` flipped in place to `'deactivate'`; GAS sets `Status = 'Inactive'`. |
+| `_action: 'create'` | Spliced via `removeChild(...)` — never persisted. |
+| `_action: 'update'` with no Code | Spliced. GAS matches on `_originalCode \|\| data.Code` and `defaultBuild` drops `_originalCode`, so a Code-less row would hit GAS's create branch and **duplicate** instead of deactivating. |
+
+The flip is a direct mutation on the bucket record (`records.value[i]._action = 'deactivate'`) because `updateChild` merges only `data` and cannot set `_action`. It is reactive — the bucket lives in `usePageState`'s `reactive()` tree.
+
+**Visible vs bucket indices.** Deactivated rows stay in the bucket (for the payload) but are filtered out of `visibleRecords`, which drives the `AppList` items, the `multi` `v-for`, and `maxReached`. The two index spaces therefore diverge: `editIndex` and every `pageState` call stay in **bucket** space, and rendered rows map back via `bucketIndexOf(row)` (identity `indexOf` — `filter` preserves the same reactive objects). `rowTitle` deliberately uses the visible index to keep `multi` numbering gap-free.
+
+**Undo** is a transient `$q.notify` with an Undo action (the row itself is hidden, so there is nowhere to put an inline control); `restore(row)` flips `_action` back to `'update'`. Message, label, colours, timeout, and position are all props — `undoRemove` (`true`), `undoLabel`, `undoMessage`, `undoColor`, `undoTextColor`, `undoBtnColor`, `undoTimeout` (`5000`), `undoPosition`. Set `undoRemove: false` to drop the notification while keeping the soft delete.
+
+Rules for overrides:
+- Do NOT reintroduce a plain `removeChild` for persisted rows in a custom `FormChild.vue` override — that silently fails to deactivate anything.
+- A custom override that renders its own row list must replicate the `visibleRecords` filter **and** the visible→bucket index mapping, or it will mutate the wrong rows once anything is deactivated.
+- Any new deactivation-related label, icon, or colour must be exposed as a prop (zero-hardcoding contract), not inlined.
+
+### 2.12 `Update`-Only: Prop Default Differences
+
+```javascript
+// src/_ui/AQL/components/master/products/edit/update.js
+export default function (props) {
+  return {
+    ...props,
+    codeReadonly: false,   // Update-only; true (default) applies readonly to the Code control
+    showCode: true,        // Update default (Create defaults false)
+    showStatus: true       // Update default (Create defaults false) — so Status is NOT auto-seeded
+  }
+}
+```
+
+- `codeReadonly` is layered **under** any caller `fieldProps.Code` (object or per-header function), so a page-level `fieldProps: { Code: { readonly: false } }` still wins.
+- Because `showStatus` defaults `true` on `Update`, `Status` renders as a normal control and is **not** auto-seeded with `statusDefault`. Pass `showStatus: false` to restore the hidden-and-seeded `Create` behaviour.
+- `defaultValues` on an edit form only fills headers the stored record leaves `undefined` — it cannot force-change a persisted value.

@@ -12,7 +12,7 @@ triggers, or the submission lifecycle on any page (Index, Add, Edit, View, Actio
 > [page_and_section_system.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/page_and_section_system.md);
 > page bodies/forms belong to
 > [content_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/content_customization.md)
-> and [content_create_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/content_create_customization.md).
+> and [content_create_and_update_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/content_create_and_update_customization.md).
 > Before writing any frontend code you MUST read
 > [ARCHITECTURE RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md).
 
@@ -51,7 +51,7 @@ and Contents but with its own resolver and base folder:
 entrance `<Transition>` (never inside `.aql-page-body`, or the fixed FAB gets trapped by
 the animation's CSS transform):
 ```html
-<Action v-if="ready && hasAction" action="PageAction" v-bind="pageProps" />
+<Action v-if="ready && pageProps.noActions !== true" action="PageAction" v-bind="pageProps" />
 ```
 
 **Component tree**:
@@ -68,8 +68,9 @@ Action.vue (action="PageAction")
         └── sections/CrudActionsFab.vue  ┘ useSectionResolver
 ```
 
-`PageAction` is still declared inside each base contract's `sections` array; `usePageResolver`
-filters it out of `visibleSectionsBeforeAction` and exposes `hasAction` instead.
+The Action subsystem is decoupled from `sections` — it mounts on every resource page and does
+not need a `'PageAction'` entry. Set `noActions: true` in a page contract or JS modifier to
+suppress both `<Action>` and the workflow `ActionDialog`.
 
 ---
 

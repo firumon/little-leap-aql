@@ -2,6 +2,21 @@
 
 This is the canonical reference document for developers and AI agents on AQL's dynamic page orchestration and layout section customization.
 
+> [!IMPORTANT]
+> **Subsystem boundary.** AQL has three placeholder paradigms, each with its own resolver,
+> base folder, and identity prop — but one shared 10-tier `_ui/` override model:
+>
+> | Paradigm | Placeholder | Resolver | Base folder | Canonical doc |
+> |----------|-------------|----------|-------------|---------------|
+> | Section | `Section.vue` (`AqlSection`) | `useSectionResolver.js` | `components/sections/` | **this document** |
+> | Content | `Content.vue` (`AqlContent`) | `useContentResolver.js` | `components/contents/` | [AQL_CONTENT_CUSTOMIZATION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_CONTENT_CUSTOMIZATION_SYSTEM.md) |
+> | Action | `Action.vue` (`AqlAction`) | `useActionResolver.js` | `components/actions/` | [AQL_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_ACTION_SYSTEM.md) |
+>
+> **`PageAction` is no longer a Section.** It is mounted by `Page.vue` as
+> `<Action action="PageAction" />` through the Action subsystem. Everything about the
+> sticky form bar, the CRUD FABs, the individual form buttons, and their override paths
+> lives in `AQL_ACTION_SYSTEM.md` — not here.
+
 ---
 
 ## 1. Architectural Overview
@@ -25,6 +40,8 @@ graph TD
 
     SectionLayout --> |v-bind pageProps| SectionVue[src/components/Section.vue]
     SectionLayout --> |contents wrapped in| AqlContentWrapper[AqlContentWrapper.vue]
+    PageVue --> |ready && hasAction, outside .aql-page-body| ActionVue[src/components/Action.vue]
+    ActionVue --> useActionResolver[useActionResolver.js<br/>see AQL_ACTION_SYSTEM.md]
 
     SectionVue --> useSectionResolver[useSectionResolver.js]
     useSectionResolver --> |Step 1: Get Base Section| BaseSection{Base Section Found?}
@@ -42,7 +59,7 @@ graph TD
 2. **Generic Section Layout**: If no custom page component is found, it renders placeholding `<Section>` components sequentially:
    - Sections in `visibleSectionsBeforeAction` (such as `Header`, `Toolbar`).
    - Content wrapper (`<AqlContentWrapper>`) wrapping the `contents` sections (e.g. list, details, or forms).
-   - Bottom page actions (`Action` section).
+   - Bottom page actions via `<Action action="PageAction" />` — the **Action subsystem**, not a Section. Gated by `hasAction` and mounted outside `.aql-page-body` (see the callout in §1.1). Full spec: [AQL_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_ACTION_SYSTEM.md).
 3. **Context Provider**:
    - Provides `'resourceConfig'` (metadata configuration).
    - Provides `'resourceRecord'` (active record reference and loading state).
@@ -59,6 +76,8 @@ graph TD
 | Empty dataset | `empty` | Card with configurable icon/title/message |
 | Normal | none of the above | `<slot />` (the sections render) |
 
+Independently of those five states, `AqlContentWrapper` also renders a **submission overlay**: a `<q-inner-loading>` + `q-spinner-dots` covering the whole content area whenever `pageState.meta.submitting`/`.saving` is true. It injects `pageState` directly, so no page wiring is needed; the `submitting` prop (default `false`) is an opt-in force flag and `submittingLabel` (default `'Saving…'`) sets the caption. This is the **single** blocking indicator during a dispatch — form action buttons are disabled rather than spinner-loaded. See [AQL_ACTION_SYSTEM.md §5](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_ACTION_SYSTEM.md).
+
 The `contentWrapperProps` computed in `usePageResolver.js` automatically derives these values per page type:
 
 | `page` value | Key Props Set |
@@ -73,7 +92,7 @@ The `contentWrapperProps` computed in `usePageResolver.js` automatically derives
 `Page.vue` wraps its three top-level states (loading spinner, resolved `.aql-page-body` section/content layout, and `PageFallback`) in a single Vue `<Transition name="aql-page-fade" mode="out-in" appear>`. This cross-fades the loading spinner into the resolved layout as soon as `ready` flips true — no per-section edits are needed. The resolved layout lives inside one `.aql-page-body` wrapper whose **direct children** (each pre-action `<Section>` such as `Header`/`Toolbar`, and the `<AqlContentWrapper>`) receive a subtle staggered micro-slide reveal (`aql-section-rise`). All timing/animation lives in `src/css/transitions.scss` (`.aql-page-fade-*`, `.aql-page-body`) and honours `prefers-reduced-motion`.
 
 > [!IMPORTANT]
-> **The `PageAction` `<Section>` (floating FAB / sticky action bar) is rendered as a sibling of the `<Transition>`, *outside* `.aql-page-body`, gated by `ready && hasActionSection`.** This is deliberate: `aql-section-rise` applies a CSS `transform` to body children, and a transformed ancestor becomes the containing block for `position: fixed` descendants — which would trap the `q-page-sticky` FAB at the end of the content flow instead of floating it at the viewport boundary. There is no CSS escape hatch for a fixed element inside a transformed subtree, so the FAB must live outside the animated wrapper. It correctly anchors to the viewport (only opacity-animated `.aql-page-container` sits above it) and is intentionally excluded from the entrance animation (a fixed FAB should not slide in). The full-page override branch (`resolvedPageComponent`), `ResourceBreadcrumb`, and `ActionDialog` are likewise kept **outside** the transition so overrides and workflow dialogs are never wrapped.
+> **The `PageAction` `<Action>` placeholder (floating FAB / sticky action bar) is rendered as a sibling of the `<Transition>`, *outside* `.aql-page-body`, gated by `ready && hasAction`.** This is deliberate: `aql-section-rise` applies a CSS `transform` to body children, and a transformed ancestor becomes the containing block for `position: fixed` descendants — which would trap the `q-page-sticky` FAB at the end of the content flow instead of floating it at the viewport boundary. There is no CSS escape hatch for a fixed element inside a transformed subtree, so the FAB must live outside the animated wrapper. It correctly anchors to the viewport (only opacity-animated `.aql-page-container` sits above it) and is intentionally excluded from the entrance animation (a fixed FAB should not slide in). The full-page override branch (`resolvedPageComponent`), `ResourceBreadcrumb`, and `ActionDialog` are likewise kept **outside** the transition so overrides and workflow dialogs are never wrapped.
 
 ### 1.2 The Section Placeholder (`src/components/Section.vue`)
 `Section.vue` is a single generic placeholder component that represents a logical area of the screen (e.g. `Header`, `Toolbar`, `Content`, `Action`).
@@ -112,7 +131,9 @@ export default (rcProps) => ({
 })
 ```
 
-**`sections` vs `contents`**: `sections` drives the full rendering sequence. `visibleSectionsBeforeAction` is everything in `sections` except `'Action'`. The `contents` array (if provided) defines section names rendered *inside* `<AqlContentWrapper>`. If `contents` is empty or absent, the wrapper is skipped.
+**`sections` vs `contents`**: `sections` drives the full rendering sequence. `visibleSectionsBeforeAction` is everything in `sections` except `'PageAction'`. The `contents` array (if provided) defines content names rendered *inside* `<AqlContentWrapper>`. If `contents` is empty or absent, the wrapper is skipped.
+
+**`PageAction` inside `sections`**: base contracts keep declaring `'PageAction'` in their `sections` array — no BP churn was needed when the Action subsystem landed. `usePageResolver` filters it out of `visibleSectionsBeforeAction` and exposes `hasAction` (`sections.includes('PageAction')`) so `Page.vue` can mount it through `<Action>` instead. `hasActionSection` remains exported as a deprecated alias of `hasAction`.
 
 **Existing base contracts**:
 

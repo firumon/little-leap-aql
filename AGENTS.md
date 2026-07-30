@@ -49,7 +49,7 @@ After classifying the query, read the appropriate initialization document(s) fro
 * **Content Page & Form Customization**: Read [content_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/content_customization.md) (covers the `contents:` page contract, `Content.vue`/`useContentResolver.js` resolution, the built-in `List` content component, `useListStrategy.js` defaults, per-active-view `List<ViewName>` overrides, form/details sections, and template vs JS logic modifiers).
 * **Create Content & Child Entry Customization**: Read [content_create_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/content_create_customization.md) (routing/implementation rules for the `Create` content system), which points to the canonical spec [AQL_CREATE_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_CREATE_CONTENT_SYSTEM.md) (covers `Create.vue`/`FormRecord.vue`/`FormChild.vue` full prop tables, the `showFields`/`hideFields`/`workflowFields` visibility precedence chain, `defaultValues`/`fieldProps` function resolution, `inline`/`popup`/`multi` child entry modes, and `create.vue`/`create.js` override paths).
 * **View Content Customization**: Read [view_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/view_customization.md) (covers parent/child/column override paths in custom UI, JS modifier function/object APIs, Vue SFC override props, and naming conventions).
-* **Action & FAB Customization**: Read [action_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/action_customization.md) (covers page-level action shells, floating actions/FABs, dialog-based executes, and sticky cancel/submit buttons).
+* **Action & FAB Customization**: Read [action_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/action_customization.md) (routing/implementation rules for the **Action Subsystem**), which points to the canonical spec [AQL_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_ACTION_SYSTEM.md) (covers `Action.vue`/`useActionResolver.js`, the `components/actions/` folder, the 10-tier action lookup, the configurable `FormActions` `actions` array with `FormActionSubmit`/`FormActionReset`/`FormActionCancel`, `CrudActions` FABs, the `PageAction` submission lifecycle hooks, and the disable-plus-overlay loading contract).
 
 
 > [!IMPORTANT]
@@ -98,7 +98,7 @@ After classifying the query, read the appropriate initialization document(s) fro
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **little-leap-aql** (10789 symbols, 17493 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **little-leap-aql** (11472 symbols, 18488 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

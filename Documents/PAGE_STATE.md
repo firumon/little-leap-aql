@@ -253,6 +253,11 @@ From `usePageState.js` you may import:
 - **Generic builders:** `compositeSaveRequest`, `resourceCreateRequest`,
   `resourceUpdateRequest`, `resourceBulkRequest`, `resourceGetRequest`, `executeActionRequest`
 - **Response helpers:** `responseFailed`, `failureMessage`, `batchResultCode`
+- **Low-level dispatch:** `run({ requests, build, mode, onSuccess, reload, notify, successMsg })` —
+  the same validate/build/dispatch/notify lifecycle `submit()`/`executeAction()`
+  funnel through, exposed directly for callers (e.g. `PageAction.vue`) that need
+  to run a caller-built request array (already `modifyPayload`-transformed)
+  through the standard lifecycle without going through `build()`.
 - **`$ref` helpers (re-exported from `appHelpers`):** `batchRef`, `isBatchRef`, `textOrRef`, `normalizeCodeOrRef`
 
 The `$ref` helpers live canonically in `FRONTENT/src/utils/appHelpers.js`

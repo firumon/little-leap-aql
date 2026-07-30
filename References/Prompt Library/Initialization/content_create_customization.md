@@ -260,7 +260,7 @@ Rules:
 - A throw in either is logged and that key is skipped — it never breaks the form.
 - A header is seeded **only when `record[header] === undefined`** (an existing value, including `''` or `null`, is never overwritten).
 - Seeding emits the normal `update:field(header, value, { custom })`; `FormRecord` never writes the record directly, so `setField`/`setControlField` routing applies unchanged.
-- Re-runs when `resource`, `defaultValues`, `showStatus`, the resource's `Status`-column presence, or the backend `APP.Resources.DefaultValues` map changes. It is **not** a live formula — don't rely on it to keep a derived column in sync on every keystroke; use a `FormField<Header>.js` modifier or a computed column for that.
+- Re-runs when `resource`, `defaultValues`, `showStatus`, the resource's `Status`-column presence, the backend `APP.Resources.DefaultValues` map changes, or the `record` object's identity changes (e.g. a `pageState` reset that swaps in a fresh blank record for the same resource — see `PageAction.vue`'s reset handler). It is **not** a live formula — don't rely on it to keep a derived column in sync on every keystroke (an in-place field edit never changes `record`'s identity); use a `FormField<Header>.js` modifier or a computed column for that.
 
 ### 2.5b `APP.Resources.DefaultValues` (backend schema metadata) & Multi-Entry Child Seeding
 

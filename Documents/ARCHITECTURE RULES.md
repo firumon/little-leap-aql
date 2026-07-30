@@ -32,7 +32,7 @@
 * **Role**: Contains all business logic, validation, workflow handling, and payload preparation.
 * **Rules**: Can use stores and other composables. Must NOT use services directly, perform API/IDB operation, or exceed ~400 lines.
 * **Navigation**: Must use `useResourceNav` for routing. Direct `router.push()` is forbidden.
-* **Component Resolution**: Must respect the decentralized page resolver (`usePageResolver`), section resolver (`useSectionResolver`), and common section wrapper (`useCommonSection`). Do not bypass them to perform ad-hoc template loading or layout overrides.
+* **Component Resolution**: Must respect the decentralized page resolver (`usePageResolver`), section resolver (`useSectionResolver`), content resolver (`useContentResolver`), action resolver (`useActionResolver`), and common section wrapper (`useCommonSection`). Do not bypass them to perform ad-hoc template loading or layout overrides.
 * **Dynamic Currency**: Always use the `useCurrency` `_C(value, showSymbol, target, source)` helper. Do not hardcode currency symbols (e.g. `₹`, `AED`).
 
 ---
@@ -58,11 +58,15 @@
 * **NO `QTable`**: Do not use `QTable` for listing records due to horizontal scrolling on mobile. Use stacked lists of `QCard` or `QList`/`QItem` instead.
 * **Aesthetic Freedom**: Style cards (using elevation, shadows, borders, or flat designs) as appropriate for a premium experience. Do not restrict to "flat/bordered only."
 * **Quasar-First**: All frontend layouts must use Quasar components/flex classes. Custom CSS in `custom.scss` is allowed only if Quasar options are completely insufficient.
+* **Shared CSS lives in `src/css/custom.scss`**: When a component genuinely needs custom CSS, define it as a named class in `FRONTENT/src/css/custom.scss` and consume it by class name. A component-local `<style>` block is a last resort for rules that are provably single-use and non-reusable.
+  * **Resolver-backed components carry NO `<style>` block at all** — anything under `components/sections/`, `components/contents/`, `components/actions/`, or `components/abstract/`. These are override targets: a tenant `.vue` override cannot inherit a scoped style, so scoped CSS silently breaks the override contract. Canonical class families already in `custom.scss`: `.aql-form-actions-*` (sticky form bar), `.aql-crud-action-*` (CRUD FABs), `.breadcrumb-bar` / `.crumb*` (breadcrumb), `.aql-list-switcher*`, `.aql-detail-*`.
+  * Animations must honour `@media (prefers-reduced-motion: reduce)`.
 
 ---
 
 ## 8. COMPONENT/COMPOSABLE SCOPING & REGISTRY
 To support thin page design, organize components/composables strictly by scope:
+* **Resolver-backed placeholders (`src/components/sections/`, `src/components/contents/`, `src/components/actions/`)**: Base components mounted dynamically by `Section.vue` / `Content.vue` / `Action.vue` and overridable per tenant through the shared 10-tier `_ui/[UiName]/components/…` lookup. Each folder is the base namespace for exactly one resolver — a file's folder *is* its resolution contract, so never place a section in `actions/` or vice versa. Use `inheritAttrs: false`, inject `resourceConfig`/`resourceRecord`/`pageState` (with `null` defaults), type customizable props as `[Type, Function]`, and evaluate them via `evaluateProp`. Carry no `<style>` block (§7). Log in [components/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md). Specs: [AQL_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_PAGE_AND_SECTION_SYSTEM.md), [AQL_CONTENT_CUSTOMIZATION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_CONTENT_CUSTOMIZATION_SYSTEM.md), [AQL_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_ACTION_SYSTEM.md).
 * **Abstract (`src/components/abstract/`)**: Pure, stateless UI components. MUST NOT import or depend on other components, composables, Pinia stores, or services. Receives data purely via props/slots and emits pure events. Log in [components/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md).
 * **App (`src/components/app/`)**: Dependable, app-aware components. Compose `abstract/` components, import other components/composables (e.g. route/resource composables), and hold setup logic (data resolution, navigation, event handling) that the `abstract/` counterpart is forbidden from holding. Log in [components/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md).
 * **Global Shared (`src/components/shared/` & `src/composables/shared/`)**: Stateless, universally reusable blocks. Log in [components/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md).

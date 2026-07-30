@@ -3,8 +3,19 @@
 This initialization prompt guides the creation, override, and customization of frontend pages and section components in the AQL repository. It establishes a dynamic layout model using `<Section>` placeholders, replacing all legacy `_common/` wrapper layouts.
 
 > [!IMPORTANT]
-> **Scope Boundary**: This document covers both developing new framework section components under `src/components/sections/` and implementing custom UI overrides/modifiers under `src/_ui/[UiName]/components/`. 
+> **Scope Boundary**: This document covers `Page.vue` orchestration plus developing new framework section components under `src/components/sections/` and implementing custom UI overrides/modifiers under `src/_ui/[UiName]/components/`.
 > Before writing any frontend code, you MUST read the global architecture rules: [ARCHITECTURE RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md).
+
+> [!IMPORTANT]
+> **Subsystem boundary — three placeholders, one override model.** Sections are only one of three paradigms. All share the identical 10-tier `_ui/` lookup described in §3; they differ only in base folder and identity prop.
+>
+> | Paradigm | Placeholder | Resolver | Base folder | Init prompt |
+> |----------|-------------|----------|-------------|-------------|
+> | Section | `Section.vue` | `useSectionResolver.js` | `components/sections/` | **this document** |
+> | Content | `Content.vue` | `useContentResolver.js` | `components/contents/` | [content_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/content_customization.md) |
+> | Action | `Action.vue` | `useActionResolver.js` | `components/actions/` | [action_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/action_customization.md) |
+>
+> **If the task touches the sticky form actions bar, submit/reset/cancel buttons, FABs, CRUD actions, or the submission lifecycle, STOP and load [action_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/action_customization.md) instead** — canonical spec: [AQL_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_ACTION_SYSTEM.md). `PageAction` is **not** a Section.
 
 ---
 
@@ -17,16 +28,18 @@ This initialization prompt guides the creation, override, and customization of f
   - Dynamically resolved at runtime via `usePageResolver.js` (which internally delegates record/form/action logic to `usePageOrchestrator.js`).
   - Always renders `<ResourceBreadcrumb />` unconditionally — it is outside the section system.
   - Mounts a full-page custom override (`resolvedPageComponent`) if matched under `src/_ui/` via a **6-candidate ordered scan** (see canonical doc §1.3.2).
-  - Otherwise, falls back to rendering placeholding `<Section>` components for visible parts:
-    - Pre-Action Sections: `visibleSectionsBeforeAction` (such as `Header`, `Toolbar`).
-    - Body Sections: `contents` wrapped inside `<AqlContentWrapper>` (4-state gate component — see canonical doc §1.1).
-    - Post-Action Sections: `Action` section.
-  - All `<Section>` placeholders receive `pageProps` via `v-bind`. See canonical doc §1.3.4 for the **full `pageProps` contract** (20+ props including `parentForm`, `childGroups`, `actionForm`, all event handlers).
+  - Otherwise, falls back to rendering placeholders for visible parts:
+    - Pre-Action Sections: `<Section>` per entry in `visibleSectionsBeforeAction` (such as `PageHeader`, `FilterInput`).
+    - Body Contents: `<Content>` per entry in `contents`, wrapped inside `<AqlContentWrapper>` (state gate + submission overlay — see canonical doc §1.1).
+    - Page Actions: `<Action v-if="ready && hasAction" action="PageAction" />`, mounted **after** `AqlContentWrapper` and **outside** the animated `.aql-page-body` wrapper (a CSS transform on an ancestor would trap the fixed FAB). Owned by the Action subsystem.
+  - `PageAction` stays declared inside each base contract's `sections` array; `usePageResolver` filters it out of `visibleSectionsBeforeAction` and exposes `hasAction` (`hasActionSection` is a deprecated alias).
+  - All placeholders receive `pageProps` via `v-bind`. See canonical doc §1.3.4 for the **full `pageProps` contract** (20+ props including `parentForm`, `childGroups`, `actionForm`, all event handlers).
   - Contexts provided: `'resourceConfig'`, `'resourceRecord'`, and `'pageState'`.
 * **Section Placeholder (`src/components/Section.vue`)**:
   - Automatically resolves which component to render via `useSectionResolver(preparedProps)`.
   - The resolver itself injects all three contexts internally for use by JS modifiers.
   - Renders custom Vue override, JS logic modifier + base section fallback, or a "Section Not Defined" warning.
+  - `Content.vue` and `Action.vue` are byte-for-byte equivalents against `useContentResolver` / `useActionResolver` — same three states, same `preparedProps = { ...attrs, <identity> }` shape.
 * **Page-Level Form State (`usePageState.js`)**:
   - Singleton page form-state provided at `Page.vue`.
   - Full API (node mutations, strategy, request builders, validation, triggers): [PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/PAGE_STATE.md).
@@ -70,7 +83,7 @@ When creating a new base section component inside `src/components/sections/` (e.
 Overrides reside under `src/_ui/[UiName]/components/`.
 
 ### 3.1 The 10-Tier Lookup Sequence
-`useSectionResolver.js` scans candidates in this order (first match wins):
+`useSectionResolver.js` scans candidates in this order (first match wins). `useContentResolver.js` and `useActionResolver.js` use the identical sequence with `[Content]` / `[Action]` substituted for `[Section]`:
 1. **Vue override** (resource + page specific): `.../[scope]/[Resource]/[page]/[Section].vue`
 2. **JS modifier** (resource + page specific): `.../[scope]/[Resource]/[page]/[Section].js`
 3. **Vue override** (resource specific): `.../[scope]/[Resource]/[Section].vue`

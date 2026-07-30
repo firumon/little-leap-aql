@@ -81,7 +81,8 @@ const resourceSlug = computed(() => resourceConfig?.resourceSlug?.value || '')
 const uiName = computed(() => resourceConfig?.customUIName?.value || '')
 
 const serverRecord = computed(() => resourceRecord?.record?.value || null)
-const primaryNode = computed(() => pageState?.state?.nodes?.get(resourceName.value) || null)
+// Bound once with a getter, so it follows resourceName across navigations.
+const primary = pageState?.useNode(() => resourceName.value) || null
 
 // Stable ids for the pristine server record — its object identity is what marks a different record.
 const recordIds = new WeakMap()
@@ -100,13 +101,12 @@ function hydrateParent () {
   const record = serverRecord.value
   if (!name || !pageState || !record) return
 
-  if (!pageState.state.nodes.has(name)) {
+  if (!pageState.hasNode(name)) {
     pageState.initResource(name, { isPrimaryKey: true, reset: true, code: record.Code })
   }
-  const node = primaryNode.value
-  if (!node) return
+  if (!primary?.exists.value) return
 
-  const key = `${name}::${node.identifier}::${recordId(record)}`
+  const key = `${name}::${primary.identifier.value}::${recordId(record)}`
   if (key === hydratedParentKey) return
   hydratedParentKey = key
   pageState.load(name, record)
@@ -115,15 +115,14 @@ function hydrateParent () {
 // Seeds each child bucket as `update` rows, once per (node instance, child resource).
 function hydrateExistingChildren () {
   const name = resourceName.value
-  const node = primaryNode.value
-  if (!name || !pageState || !node) return
+  if (!name || !pageState || !primary?.exists.value) return
 
   const childMap = resourceRecord?.childRecordsByResource?.value || {}
   for (const child of eligibleChildren.value) {
     const rows = childMap[child?.name]
     if (!Array.isArray(rows) || !rows.length) continue
 
-    const key = `${node.identifier}::${child.name}`
+    const key = `${primary.identifier.value}::${child.name}`
     if (hydratedChildKeys.has(key)) continue
     hydratedChildKeys.add(key)
 
@@ -139,7 +138,7 @@ function syncFromServer () {
   hydrateExistingChildren()
 }
 
-const primaryRecord = computed(() => primaryNode.value?.record || {})
+const primaryRecord = computed(() => primary?.record.value || {})
 
 // Schema headers -> node.record (submitted); custom headers -> node.controls (never built).
 function onPrimaryField (header, value, meta) {
@@ -215,7 +214,7 @@ watch(
 // Node replacement via PageAction.onReset(), plus late-arriving child rows from a background fetch.
 watch(
   [
-    () => primaryNode.value?.identifier,
+    () => primary?.identifier.value,
     () => resourceRecord?.childRecordsByResource?.value,
     eligibleChildren
   ],

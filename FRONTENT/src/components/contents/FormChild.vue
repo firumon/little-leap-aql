@@ -354,11 +354,10 @@ const childFields = computed(() =>
 )
 
 // ── pageState child bucket (single source of truth for added records) ────────
-const records = computed(() => {
-  const node = pageState?.state?.nodes?.get(props.parentResource)
-  const bucket = node?.children?.find((c) => c.resource === childName.value)
-  return bucket?.records || []
-})
+// Bound once with getters, so it follows both parentResource and childName.
+const parentNode = pageState?.useNode(() => props.parentResource) || null
+const childRecords = parentNode?.children(() => childName.value) || null
+const records = computed(() => childRecords?.value || [])
 
 // Soft-deleted rows stay in `records` for the payload but are hidden from every list, loop, and count.
 const visibleRecords = computed(() => records.value.filter((r) => r._action !== 'deactivate'))
@@ -482,10 +481,13 @@ function openDialog () {
   dialogOpen.value = true
 }
 
-// Direct mutation is the only way to set `_action` — pageState.updateChild merges `data` only.
+// Re-resolves the index at click time: the undo notification outlives the call to
+// remove(), so a row added/removed meanwhile would invalidate a captured index.
 function restore (row) {
-  if (!row || row._action !== 'deactivate') return
-  row._action = 'update'
+  if (!pageState || !row || row._action !== 'deactivate') return
+  const index = bucketIndexOf(row)
+  if (index < 0) return
+  pageState.setChildAction(props.parentResource, childName.value, index, 'update')
 }
 
 function notifyUndo (row) {
@@ -512,7 +514,7 @@ function remove (index) {
   if (!row) return
 
   if (isPersistedRow(row)) {
-    row._action = 'deactivate'
+    pageState.setChildAction(props.parentResource, childName.value, index, 'deactivate')
     // No splice, so no index shifts — only an in-flight edit of this row needs clearing.
     if (editIndex.value === index) resetDraft()
     notifyUndo(row)

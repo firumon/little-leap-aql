@@ -18,6 +18,30 @@
  * Options are derived automatically via `computed` (lazy + memoized).
  *
  * --------------------------------------------------------------------------
+ * Encapsulation contract — READ BEFORE ADDING A CONSUMER
+ * --------------------------------------------------------------------------
+ * PRIVATE (may change without touching consumers):
+ *   `state.nodes` (a Map today — the keying scheme is NOT part of the contract),
+ *   the node object shape (`record` / `children` / `records` / `controls` /
+ *   `identifier` / `code` / `many` / `action` / `options`), and the child bucket
+ *   layout (`{ resource, records }`).
+ *
+ *   -> READ node state through `useNode(resource)`, never `state.nodes.get(...)`.
+ *      `useNode` accepts a string, a ref, or a getter, so a component whose
+ *      active resource changes (Create/Update on navigation) binds ONCE at
+ *      setup and stays correct.
+ *   -> WRITE node state through the mutations below, never by assigning into
+ *      a node or a child row.
+ *
+ * PUBLIC (a data contract consumers may rely on):
+ *   The child row entry `{ _action, data }` — `data` is the record body that
+ *   FormChild renders and `_action` is one of 'create' | 'update' | 'deactivate'.
+ *   This shape is the interchange format between usePageState and the child
+ *   form, and it is also what `defaultBuild` ships to GAS, so it is deliberately
+ *   NOT hidden. Read it freely; change it only via `updateChild` (patches
+ *   `data`) and `setChildAction` (sets `_action`).
+ *
+ * --------------------------------------------------------------------------
  * Strategy contract (resource-specific override, optional)
  * --------------------------------------------------------------------------
  *   {
@@ -30,7 +54,7 @@
  *   }
  */
 
-import { reactive, computed, toRaw } from 'vue'
+import { reactive, computed, toRaw, unref } from 'vue'
 import { useQuasar } from 'quasar'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceConfig } from './useResourceConfig'
@@ -166,27 +190,42 @@ export function usePageState (strategy = {}) {
     })
   }
 
+  // Consumers may hand any mutation/accessor a plain string, a ref, or a getter —
+  // components whose active resource changes on navigation (Create/Update) can then
+  // bind once at setup instead of re-reading `state.nodes` on every access.
+  function toResourceName (resource) {
+    return typeof resource === 'function' ? resource() : unref(resource)
+  }
+
   function ensureNode (resource) {
-    if (!state.nodes.has(resource)) return initResource(resource)
-    return state.nodes.get(resource)
+    const name = toResourceName(resource)
+    if (!state.nodes.has(name)) return initResource(name)
+    return state.nodes.get(name)
+  }
+
+  // Imperative existence check — the supported replacement for `state.nodes.has(...)`.
+  // Use `useNode(resource).exists` when a template/computed needs it reactively.
+  function hasNode (resource) {
+    return state.nodes.has(toResourceName(resource))
   }
 
   // ----------------------------------------------------------------------
   // PUBLIC MUTATIONS
   // ----------------------------------------------------------------------
   function initResource (resource, { code = null, many = false, fields = {}, action = null, isPrimaryKey = false, reset = false } = {}) {
-    if (reset) resetForResource(resource)
+    const name = toResourceName(resource)
+    if (reset) resetForResource(name)
 
-    const node = createNode(resource, { code, many, action })
+    const node = createNode(name, { code, many, action })
     Object.assign(node.record, fields)
     if (strategy.controls) {
-      node.controls = strategy.controls(resource) || []
+      node.controls = strategy.controls(name) || []
       for (const ctrl of node.controls) {
         if (ctrl.codeType) node.options[ctrl.name] = optionResolver(ctrl.codeType, node)
       }
     }
-    state.nodes.set(resource, node)
-    if (!state.primaryKey || isPrimaryKey || state.primaryKey !== resource) state.primaryKey = resource
+    state.nodes.set(name, node)
+    if (!state.primaryKey || isPrimaryKey || state.primaryKey !== name) state.primaryKey = name
     return node
   }
 
@@ -244,11 +283,17 @@ export function usePageState (strategy = {}) {
     return node?.controls.find((c) => c.header === header)?.value
   }
 
+  // Single place that knows the bucket layout, so `node.children` stays private.
+  function childBucket (node, childResource) {
+    const name = toResourceName(childResource)
+    return node.children.find(c => c.resource === name) || null
+  }
+
   function addChild (resource, childResource, row, { action = 'create' } = {}) {
     const node = ensureNode(resource)
-    let bucket = node.children.find(c => c.resource === childResource)
+    let bucket = childBucket(node, childResource)
     if (!bucket) {
-      bucket = { resource: childResource, records: [] }
+      bucket = { resource: toResourceName(childResource), records: [] }
       node.children.push(bucket)
     }
     bucket.records.push({ _action: action, data: { ...row } })
@@ -257,14 +302,25 @@ export function usePageState (strategy = {}) {
 
   function updateChild (resource, childResource, index, patch) {
     const node = ensureNode(resource)
-    const bucket = node.children.find(c => c.resource === childResource)
+    const bucket = childBucket(node, childResource)
     if (bucket && bucket.records[index]) bucket.records[index].data = { ...bucket.records[index].data, ...patch }
   }
 
   function removeChild (resource, childResource, index) {
     const node = ensureNode(resource)
-    const bucket = node.children.find(c => c.resource === childResource)
+    const bucket = childBucket(node, childResource)
     if (bucket) bucket.records.splice(index, 1)
+  }
+
+  // Sets a child row's `_action` — `updateChild` deliberately merges `data` only,
+  // so this is the supported way to soft-delete ('deactivate') a persisted row or
+  // restore it ('update'). Returns the entry, or null when the index is stale.
+  function setChildAction (resource, childResource, index, action) {
+    const node = ensureNode(resource)
+    const entry = childBucket(node, childResource)?.records[index]
+    if (!entry) return null
+    entry._action = action
+    return entry
   }
 
   function addRecord (resource, row, { action = 'create' } = {}) {
@@ -298,8 +354,20 @@ export function usePageState (strategy = {}) {
   // ----------------------------------------------------------------------
   // useNode — per-section reactive access
   // ----------------------------------------------------------------------
+  // THE read accessor — the only supported way for a consumer to observe node state.
+  // `resource` may be a string, a ref, or a getter (see toResourceName), so a component
+  // whose active resource changes on navigation binds once at setup.
+  //
+  // A missing node resolves to `emptyNode`, so every returned computed is safe to read
+  // before `initResource` has run — consumers never need optional chaining on the node.
   function useNode (resource) {
-    const node = computed(() => state.nodes.get(resource) || emptyNode)
+    const node = computed(() => state.nodes.get(toResourceName(resource)) || emptyNode)
+    const exists = computed(() => state.nodes.has(toResourceName(resource)))
+    // Header/body the user is editing — the v-model target for the primary FormRecord.
+    const record = computed(() => node.value.record)
+    // Changes when the node is REPLACED (initResource/reset), not when a field is edited;
+    // consumers key one-shot hydration off this so a reset re-seeds from the server.
+    const identifier = computed(() => node.value.identifier)
     // options derived lazily + memoized; only computed when a template reads them
     const options = computed(() => {
       const n = node.value
@@ -310,7 +378,15 @@ export function usePageState (strategy = {}) {
       return out
     })
     const validation = computed(() => validateNode(node.value))
-    return { node, options, validation }
+
+    // Child rows for one child resource, as `{ _action, data }` entries (see the
+    // encapsulation contract above). `childResource` accepts a string/ref/getter too.
+    // Entry identity is stable across reads, so callers may use indexOf for row->index.
+    function children (childResource) {
+      return computed(() => childBucket(node.value, childResource)?.records || [])
+    }
+
+    return { node, exists, record, identifier, options, validation, children }
   }
 
   // ----------------------------------------------------------------------
@@ -474,9 +550,11 @@ export function usePageState (strategy = {}) {
     return all
   })
 
-  // plain (non-reactive) deep copy of the node tree — for send/debug snapshots
+  // plain (non-reactive) deep copy of the node tree — for send/debug snapshots.
+  // Must go through Object.fromEntries: a Map has no enumerable own properties, so
+  // JSON.stringify(map) is always "{}".
   function snapshot () {
-    return JSON.parse(JSON.stringify(toRaw(state.nodes)))
+    return JSON.parse(JSON.stringify(Object.fromEntries(toRaw(state.nodes))))
   }
 
   function reset () {
@@ -500,6 +578,7 @@ export function usePageState (strategy = {}) {
     // mutations
     initResource,
     resetForResource,
+    hasNode,
     load,
     setField,
     setFields,
@@ -508,6 +587,7 @@ export function usePageState (strategy = {}) {
     addChild,
     updateChild,
     removeChild,
+    setChildAction,
     addRecord,
     updateRecord,
     removeRecord,

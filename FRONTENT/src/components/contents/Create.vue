@@ -77,6 +77,9 @@ const scope = computed(() => resourceConfig?.scope?.value || '')
 const resourceSlug = computed(() => resourceConfig?.resourceSlug?.value || '')
 const uiName = computed(() => resourceConfig?.customUIName?.value || '')
 
+// Bound once with a getter, so it follows resourceName across navigations.
+const primary = pageState?.useNode(() => resourceName.value) || null
+
 // pageState is shared across navigations, so a resource switch must reset the node, not reuse it.
 watch(
   resourceName,
@@ -84,16 +87,14 @@ watch(
     if (!name || !pageState) return
     if (name !== prevName) {
       pageState.initResource(name, { isPrimaryKey: true, reset: true })
-    } else if (!pageState.state.nodes.has(name)) {
+    } else if (!pageState.hasNode(name)) {
       pageState.initResource(name, { isPrimaryKey: true })
     }
   },
   { immediate: true }
 )
 
-const primaryRecord = computed(
-  () => pageState?.state?.nodes?.get(resourceName.value)?.record || {}
-)
+const primaryRecord = computed(() => primary?.record.value || {})
 
 // Schema headers -> node.record (submitted); custom headers -> node.controls (never built).
 function onPrimaryField (header, value, meta) {

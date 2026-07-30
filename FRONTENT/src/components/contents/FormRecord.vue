@@ -509,7 +509,12 @@ function seedDefaults () {
 }
 
 watch(
-  [() => props.resource, hasStatus, () => props.defaultValues, statusRendered, backendDefaultValues],
+  // `() => props.record` tracks the record OBJECT's identity, not its contents —
+  // a pageState reset (e.g. PageAction.vue's onReset) swaps in a brand-new blank
+  // record object for the same resource, and this re-seeds defaults into it
+  // exactly like the initial mount did. A same-reference in-place field edit
+  // does not change identity, so this never re-runs on every keystroke.
+  [() => props.resource, hasStatus, () => props.defaultValues, statusRendered, backendDefaultValues, () => props.record],
   seedDefaults,
   { immediate: true }
 )

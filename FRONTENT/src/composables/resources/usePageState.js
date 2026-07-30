@@ -522,6 +522,11 @@ export function usePageState (strategy = {}) {
     submit,
     saveDraft,
     executeAction,
+    // Low-level dispatch — state/requests -> server -> response, with the same
+    // validate/notify/submitting lifecycle as submit()/executeAction(). Exposed
+    // for callers (e.g. PageAction.vue) that need to apply a `modifyPayload`
+    // interceptor to an executeAction request before dispatch.
+    run,
     // misc
     validationErrors,
     snapshot,

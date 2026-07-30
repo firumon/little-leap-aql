@@ -13,6 +13,6 @@
         "aql:bd": "npm --prefix FRONTENT run build && npm --prefix FRONTENT run deploy"
     },
     "dependencies": {
-        "firebase": "^12.15.0"
+        "firebase": "^12.16.0"
     }
 }

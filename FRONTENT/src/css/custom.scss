@@ -16,6 +16,12 @@
   --aql-ink           : #0f172a;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// ACTION SUBSYSTEM (src/components/actions/) — canonical styles
+// Per ARCHITECTURE RULES §7, action components carry no <style> block of their own;
+// every rule below is consumed by class name. See Documents/AQL_ACTION_SYSTEM.md.
+// ═══════════════════════════════════════════════════════════════════════════════
+
 // Generic CRUD action FAB styling (shared across all floating action buttons).
 // Color/icon stay on the Quasar :color/:icon props so JS modifiers can vary them
 // without fighting this CSS.
@@ -30,6 +36,139 @@
   &:active {
     transform: scale(0.95);
   }
+}
+
+// ── CrudActions entrance (actions/CrudActions.vue) ───────────────────────────
+// Animated on an inner wrapper, never on the q-page-sticky root itself — a
+// CSS transform on a position:fixed ancestor would turn it into the
+// containing block for its fixed descendants and break FAB positioning.
+.aql-crud-action-container {
+  animation: fab-bounce-in 550ms cubic-bezier(0.215, 0.61, 0.355, 1) 550ms both;
+}
+
+@keyframes fab-bounce-in {
+  0%   { opacity: 0; transform: scale3d(0.3, 0.3, 0.3); }
+  20%  { transform: scale3d(1.1, 1.1, 1.1); }
+  40%  { transform: scale3d(0.9, 0.9, 0.9); }
+  60%  { opacity: 1; transform: scale3d(1.03, 1.03, 1.03); }
+  80%  { transform: scale3d(0.97, 0.97, 0.97); }
+  100% { opacity: 1; transform: scale3d(1, 1, 1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aql-crud-action-container { animation: none; }
+}
+
+// ── FormActions sticky bar (actions/FormActions.vue) ─────────────────────────
+// Spacer reserves flow height so the fixed bar never covers the last form field.
+.aql-form-actions-spacer {
+  height: 80px;
+}
+
+// "Breeze" gradient: tinted on the left/empty side, fading to soft white beneath
+// the right-aligned buttons, over a blurred backdrop. The 750ms entrance delay
+// lets page content settle before the bar slides up.
+.aql-form-actions-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 2000;
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  padding: 10px 24px;
+  background: linear-gradient(
+    320deg,
+    rgba(224, 242, 254, 0.96) 0%,
+    rgba(240, 249, 255, 0.95) 50%,
+    rgba(255, 255, 255, 0.96) 100%
+  );
+  border-top: 1px solid var(--aql-border, #d0def0);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: form-actions-slide-up 380ms cubic-bezier(0.16, 1, 0.3, 1) 750ms both;
+}
+
+// Buttons are strictly middle-aligned on the bar's cross axis and gap-spaced
+// (not q-gutter-*, whose negative top margin would offset that centering).
+.aql-form-actions-content {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+// Shared chrome for every button in the bar (FormActionSubmit/Reset/Cancel and any
+// tenant FormAction<Name>). Scoped as `.q-btn.…` so it outranks Quasar's own
+// equal-specificity `.q-btn--*` padding/typography rules regardless of load order.
+.q-btn.aql-form-action-btn {
+  padding: 6px 18px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  border-radius: 8px;
+  min-height: 40px;
+
+  // Balances the icon against the 600-weight label instead of Quasar's default
+  // 1.715em, which reads oversized next to a short action word.
+  .q-icon {
+    font-size: 20px;
+  }
+}
+
+@keyframes form-actions-slide-up {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aql-form-actions-bar { animation: none; }
+}
+
+// ── Breadcrumb (abstract/Breadcrumb.vue) ─────────────────────────────────────
+.breadcrumb-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px 10px;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.crumb-link {
+  color: var(--q-primary);
+  text-decoration: none;
+  font-weight: 500;
+  border-radius: 6px;
+  padding: 2px 6px;
+  transition: background 0.15s;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(15, 43, 74, 0.08);
+  }
+}
+
+.crumb-current {
+  color: var(--master-soft-ink, #51607a);
+  font-weight: 600;
+}
+
+.crumb-sep {
+  color: #94a3b8;
+}
+
+.crumb-icon {
+  opacity: 0.7;
 }
 
 // Fade slide animation & page fade

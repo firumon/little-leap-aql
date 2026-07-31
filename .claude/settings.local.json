@@ -9,7 +9,9 @@
       "Bash(clasp push:*)",
       "Bash(clasp status:*)",
       "Bash(cd /f)",
-      "Bash(find . -name *.vue -path *Warehouse* -type f)"
+      "Bash(find . -name *.vue -path *Warehouse* -type f)",
+      "Bash(awk 'NR==23' REGISTRY.md)",
+      "Bash(awk 'NR==50' AGENTS.md)"
     ]
   },
   "enabledMcpjsonServers": [

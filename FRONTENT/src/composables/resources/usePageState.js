@@ -21,15 +21,27 @@
  * Encapsulation contract — READ BEFORE ADDING A CONSUMER
  * --------------------------------------------------------------------------
  * PRIVATE (may change without touching consumers):
- *   `state.nodes` (a Map today — the keying scheme is NOT part of the contract),
- *   the node object shape (`record` / `children` / `records` / `controls` /
- *   `identifier` / `code` / `many` / `action` / `options`), and the child bucket
- *   layout (`{ resource, records }`).
+ *   `state.nodes` (keyed by uid) and `state.index` (resource -> role -> uid) —
+ *   the keying scheme is NOT part of the contract; the node object shape
+ *   (`resource` / `record` / `children` / `records` / `controls` / `code` /
+ *   `many` / `action` / `options`); and the child bucket layout
+ *   (`{ resource, records }`).
  *
- *   -> READ node state through `useNode(resource)`, never `state.nodes.get(...)`.
- *      `useNode` accepts a string, a ref, or a getter, so a component whose
- *      active resource changes (Create/Update on navigation) binds ONCE at
- *      setup and stays correct.
+ *   -> READ node state through `useNode(resource, role?)`, never
+ *      `state.nodes.get(...)` / `state.index[...]`. `useNode` accepts a string,
+ *      a ref, or a getter, so a component whose active resource changes
+ *      (Create/Update on navigation) binds ONCE at setup and stays correct.
+ *
+ * ADDRESSING — one resource may hold several nodes, addressed by ROLE:
+ *   useNode('Outlets')                            -> role '$default'
+ *   useNode('OutletVisits', 'next')               -> the scheduled-visit node
+ *   setField({ resource: 'OutletVisits', role: 'next' }, 'Date', v)
+ *
+ *   Roles are NAMES, deliberately not ordinals. Workflows create nodes
+ *   conditionally (outlet-consumption only makes a complete-visit node when that
+ *   checkbox is ticked), so a positional index would shift and silently resolve
+ *   to the wrong node — or to the empty node, which builds an empty payload
+ *   rather than raising.
  *   -> WRITE node state through the mutations below, never by assigning into
  *      a node or a child row.
  *
@@ -131,6 +143,10 @@ function uid () {
   return 'id-' + Math.random().toString(36).slice(2) + Date.now().toString(36)
 }
 
+// The role every consumer gets when it addresses a resource by name alone. Keeps
+// the 1-node-per-resource case (all of Create/Update/FormChild today) unchanged.
+const DEFAULT_ROLE = '$default'
+
 // ==========================================================================
 // Composable
 // ==========================================================================
@@ -139,10 +155,16 @@ export function usePageState (strategy = {}) {
   const resourceIoStore = useResourceIoStore()
   const { requiredHeaders } = useResourceConfig()
 
-  // --- core reactive state (one node per resource) ---
+  // --- core reactive state ---
+  // `nodes` is keyed by an opaque uid, NOT by resource name, so one resource can
+  // hold several nodes. `index` is the addressing layer: resource -> role -> uid.
+  // Roles are NAMES, never positions — a workflow creates its nodes conditionally
+  // (outlet-consumption only makes a complete-visit node when that checkbox is
+  // ticked), so an ordinal would silently shift and resolve to the wrong node.
   const state = reactive({
     primaryKey: null,
-    nodes: new Map()
+    nodes: new Map(),
+    index: {}
   })
 
   // page-level UI meta (shared by Content + Action sections)
@@ -174,7 +196,9 @@ export function usePageState (strategy = {}) {
   // ----------------------------------------------------------------------
   function createNode (resource, { code = null, many = false, action = null } = {}) {
     return reactive({
-      identifier: uid(),
+      // NOTE: no `identifier` field — the node's identity IS its Map key (a uid).
+      // `useNode(...).identifier` surfaces that key, so consumers keying one-shot
+      // work off "this node was replaced" (Update.vue) keep working unchanged.
       resource,
       code,
       many,
@@ -197,23 +221,64 @@ export function usePageState (strategy = {}) {
     return typeof resource === 'function' ? resource() : unref(resource)
   }
 
-  function ensureNode (resource) {
-    const name = toResourceName(resource)
-    if (!state.nodes.has(name)) return initResource(name)
-    return state.nodes.get(name)
+  // Every mutation/accessor addresses a node by TARGET, which is any of:
+  //   'Outlets'                                 -> resource, default role
+  //   ref('Outlets') / () => 'Outlets'          -> same, but reactive
+  //   { resource: 'OutletVisits', role: 'next' } -> a specific role
+  // Accepting the object form here means no mutation had to grow a `role`
+  // parameter — one resolver covers setField/addChild/executeAction/... alike.
+  function resolveTarget (target, role) {
+    const raw = toResourceName(target)
+    if (raw && typeof raw === 'object') {
+      return { name: toResourceName(raw.resource), role: raw.role || role || DEFAULT_ROLE }
+    }
+    return { name: raw, role: role || DEFAULT_ROLE }
+  }
+
+  function nodeIdFor (name, role) {
+    return state.index[name]?.[role]
+  }
+
+  // THE only place a node enters `nodes` + `index`. Re-attaching an existing
+  // (resource, role) replaces it and drops the previous node, so a re-init cannot
+  // orphan an entry in `nodes` that nothing can address any more.
+  function attachNode (name, role, node) {
+    const id = uid()
+    if (!state.index[name]) state.index[name] = {}
+    const previous = state.index[name][role]
+    if (previous) state.nodes.delete(previous)
+    state.index[name][role] = id
+    state.nodes.set(id, node)
+    return id
+  }
+
+  // THE only place nodes leave. Both structures are cleared together — a stale uid
+  // in `index` would resolve to `emptyNode` and silently build an empty payload.
+  function detachAll () {
+    state.nodes = new Map()
+    state.index = {}
+  }
+
+  function ensureNode (target, role) {
+    const { name, role: r } = resolveTarget(target, role)
+    const id = nodeIdFor(name, r)
+    const existing = id ? state.nodes.get(id) : null
+    return existing || initResource(name, { role: r })
   }
 
   // Imperative existence check — the supported replacement for `state.nodes.has(...)`.
   // Use `useNode(resource).exists` when a template/computed needs it reactively.
-  function hasNode (resource) {
-    return state.nodes.has(toResourceName(resource))
+  function hasNode (target, role) {
+    const { name, role: r } = resolveTarget(target, role)
+    const id = nodeIdFor(name, r)
+    return !!id && state.nodes.has(id)
   }
 
   // ----------------------------------------------------------------------
   // PUBLIC MUTATIONS
   // ----------------------------------------------------------------------
-  function initResource (resource, { code = null, many = false, fields = {}, action = null, isPrimaryKey = false, reset = false } = {}) {
-    const name = toResourceName(resource)
+  function initResource (resource, { role, code = null, many = false, fields = {}, action = null, isPrimaryKey = false, reset = false } = {}) {
+    const { name, role: r } = resolveTarget(resource, role)
     if (reset) resetForResource(name)
 
     const node = createNode(name, { code, many, action })
@@ -224,7 +289,7 @@ export function usePageState (strategy = {}) {
         if (ctrl.codeType) node.options[ctrl.name] = optionResolver(ctrl.codeType, node)
       }
     }
-    state.nodes.set(name, node)
+    attachNode(name, r, node)
     if (!state.primaryKey || isPrimaryKey || state.primaryKey !== name) state.primaryKey = name
     return node
   }
@@ -233,8 +298,8 @@ export function usePageState (strategy = {}) {
   // the new active resource takes over as primaryKey — called by initResource
   // when { reset: true } (e.g. on a Create/Update page mount or resource switch).
   function resetForResource (resource) {
-    state.nodes = new Map()
-    state.primaryKey = resource
+    detachAll()
+    state.primaryKey = toResourceName(resource)
     Object.assign(meta, {
       saving: false,
       submitting: false,
@@ -278,8 +343,12 @@ export function usePageState (strategy = {}) {
     return node
   }
 
-  function getControlField (resource, header) {
-    const node = state.nodes.get(resource)
+  // Read-only, so it must NOT create a node the way ensureNode would — resolve
+  // through the index and return undefined when the node does not exist yet.
+  function getControlField (resource, header, role) {
+    const { name, role: r } = resolveTarget(resource, role)
+    const id = nodeIdFor(name, r)
+    const node = id ? state.nodes.get(id) : null
     return node?.controls.find((c) => c.header === header)?.value
   }
 
@@ -360,14 +429,19 @@ export function usePageState (strategy = {}) {
   //
   // A missing node resolves to `emptyNode`, so every returned computed is safe to read
   // before `initResource` has run — consumers never need optional chaining on the node.
-  function useNode (resource) {
-    const node = computed(() => state.nodes.get(toResourceName(resource)) || emptyNode)
-    const exists = computed(() => state.nodes.has(toResourceName(resource)))
+  function useNode (resource, role = DEFAULT_ROLE) {
+    const target = computed(() => resolveTarget(resource, role))
+    // resource -> role -> uid -> node. The role is a NAME, so addressing survives a
+    // node being created conditionally or the creation order changing.
+    const nodeId = computed(() => nodeIdFor(target.value.name, target.value.role))
+    const node = computed(() => (nodeId.value && state.nodes.get(nodeId.value)) || emptyNode)
+    const exists = computed(() => !!nodeId.value && state.nodes.has(nodeId.value))
     // Header/body the user is editing — the v-model target for the primary FormRecord.
     const record = computed(() => node.value.record)
-    // Changes when the node is REPLACED (initResource/reset), not when a field is edited;
-    // consumers key one-shot hydration off this so a reset re-seeds from the server.
-    const identifier = computed(() => node.value.identifier)
+    // The node's uid (its Map key). Changes when the node is REPLACED
+    // (initResource/reset), not when a field is edited — consumers key one-shot
+    // hydration off this so a reset re-seeds from the server.
+    const identifier = computed(() => nodeId.value)
     // options derived lazily + memoized; only computed when a template reads them
     const options = computed(() => {
       const n = node.value
@@ -408,7 +482,14 @@ export function usePageState (strategy = {}) {
 
   function defaultBuild () {
     const requests = []
-    for (const [resource, node] of state.nodes) {
+    // The target resource comes from `node.resource`, NEVER the Map key. Today the
+    // key happens to equal the resource name, so this is behaviour-identical — but
+    // the key is an addressing concern and the two are not the same thing. Keeping
+    // them separate is what lets the key become an alias later (so one resource can
+    // hold several nodes, e.g. a visit being completed + a visit being scheduled)
+    // without every built request silently inheriting a bogus resource name.
+    for (const node of state.nodes.values()) {
+      const resource = node.resource
       if (node.many) {
         const records = node.records.map(r => r.data)
         if (records.length) requests.push(resourceBulkRequest(resource, records))
@@ -495,7 +576,10 @@ export function usePageState (strategy = {}) {
 
   async function executeAction (resource, actionName, fields = {}, opts = {}) {
     const node = ensureNode(resource)
-    const requests = [executeActionRequest(resource, node.code, resolveActionConfig(actionName), fields)]
+    // Same rule as defaultBuild: the request targets `node.resource`, not the
+    // caller's argument. `resource` here may be a ref/getter (the accessors accept
+    // one) or, later, an alias key — neither is a resource name GAS would accept.
+    const requests = [executeActionRequest(node.resource, node.code, resolveActionConfig(actionName), fields)]
     return run({ ...opts, requests, successMsg: 'Action completed.' })
   }
 
@@ -553,12 +637,21 @@ export function usePageState (strategy = {}) {
   // plain (non-reactive) deep copy of the node tree — for send/debug snapshots.
   // Must go through Object.fromEntries: a Map has no enumerable own properties, so
   // JSON.stringify(map) is always "{}".
+  // Keyed by the readable address ('Outlets', 'OutletVisits:next'), not by the raw
+  // uid — a snapshot of uid soup is useless for debugging.
   function snapshot () {
-    return JSON.parse(JSON.stringify(Object.fromEntries(toRaw(state.nodes))))
+    const out = {}
+    for (const [name, roles] of Object.entries(state.index)) {
+      for (const [role, id] of Object.entries(roles)) {
+        const node = state.nodes.get(id)
+        if (node) out[role === DEFAULT_ROLE ? name : `${name}:${role}`] = node
+      }
+    }
+    return JSON.parse(JSON.stringify(toRaw(out)))
   }
 
   function reset () {
-    state.nodes = new Map()
+    detachAll()
     state.primaryKey = null
     Object.assign(meta, {
       saving: false,

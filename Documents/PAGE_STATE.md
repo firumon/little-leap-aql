@@ -67,13 +67,15 @@ the generic builders — import them from `usePageState` (or `appHelpers` for th
 
 ```js
 state = reactive({
-  primaryKey: null,          // the primary resource key (first initResource)
-  nodes: new Map()           // one node per resource, keyed by resource name
+  primaryKey: null,          // the primary resource name (first initResource)
+  nodes: new Map(),          // uid -> node   (NOT keyed by resource name)
+  index: {}                  // resourceName -> { role: uid }   (the addressing layer)
 })
 
-// a node (created under the hood by initResource / load):
+// a node (created under the hood by initResource / load).
+// It carries NO `identifier` field — the node's identity IS its Map key;
+// `useNode(...).identifier` surfaces that uid.
 {
-  identifier,                // uid()
   resource,                  // e.g. 'OutletConsumptions'
   code,                      // existing record code when editing, else null
   many,                      // true => this resource is a list (bulk), not a single record
@@ -96,11 +98,12 @@ The shape above is an **implementation detail**. Consumers must not reach into i
 
 **PRIVATE — may change without touching any consumer:**
 
-- `state.nodes` — a `Map` *today*; **the keying scheme is not part of the contract**
-  (a planned change keys aliased nodes so one resource can appear more than once,
-  e.g. `OutletVisits:complete` + `OutletVisits:next`).
-- The node object shape — `record` / `children` / `records` / `controls` /
-  `identifier` / `code` / `many` / `action` / `options`.
+- `state.nodes` (uid-keyed) and `state.index` (`resource -> role -> uid`) —
+  **the keying scheme is not part of the contract**. It has already changed once
+  (from resource-name keys to uid + index) with **zero consumer edits**; that is
+  the guarantee this section exists to provide.
+- The node object shape — `resource` / `record` / `children` / `records` /
+  `controls` / `code` / `many` / `action` / `options`.
 - The child bucket layout — `{ resource, records }`.
 
 **PUBLIC — a data contract you may rely on:**
@@ -116,12 +119,69 @@ The shape above is an **implementation detail**. Consumers must not reach into i
 
 | Direction | Do | Never |
 |---|---|---|
-| **Read** node state | `useNode(resource)` (§6.5), `hasNode(resource)` | `state.nodes.get(...)` / `.has(...)`, `node.children.find(...)` |
+| **Read** node state | `useNode(resource, role?)` (§6.5), `hasNode(resource, role?)` | `state.nodes.get(...)`, `state.index[...]`, `node.children.find(...)` |
 | **Write** node state | the mutations in §6.4 | assigning into a node or a child row (`row._action = …`) |
 
 > `state` is still on the returned object for debugging and because
 > `strategy.validate(node, state)` receives it. **It is not a consumer API** —
 > treat it as private.
+
+### 4.2 Addressing: multiple nodes per resource, by ROLE
+
+One resource may hold several nodes. Outlet-consumption needs two `OutletVisits`
+(complete the current visit, schedule the next) and two `OutletReturns` (create
+new, update pre-existing). Each is addressed by a **role**:
+
+```js
+// create
+initResource('OutletVisits', { code: visitCode })                          // role '$default'
+initResource({ resource: 'OutletVisits', role: 'next' }, { fields: {…} })
+
+// read
+useNode('OutletVisits')            // the $default node
+useNode('OutletVisits', 'next')    // the scheduled-visit node
+
+// write — every mutation accepts the same object target, so none of them
+// needed a new `role` parameter
+setField({ resource: 'OutletVisits', role: 'next' }, 'Date', v)
+```
+
+Addressing by a bare resource name means role `$default`, so **every existing
+call site is unchanged**.
+
+#### Why roles are names, not ordinals
+
+A positional `useNode(resource, idx)` would be simpler, but it breaks on this
+workflow. Both `OutletVisits` nodes are created *conditionally*
+([useOutletConsumption.js:708-712](../FRONTENT/src/composables/operation/outlets/useOutletConsumption.js)):
+
+| `completeVisit` ticked? | idx 0 | idx 1 |
+|---|---|---|
+| yes | complete-visit | next-visit |
+| no | **next-visit** | — |
+
+So `idx` depends on whether the user ticked *a different checkbox*. The failure is
+silent: an out-of-range index resolves to `emptyNode`, which is a valid node, so
+`build()` ships an empty payload instead of raising. `OutletReturns` has the same
+shape (create is gated on `returnRows.length`, update on `applyReturnsToInvoice`).
+
+Named roles survive conditional creation and reordering, and
+`useNode('OutletVisits', 'next')` states its intent at the call site.
+
+#### The invariant that keeps the two structures honest
+
+`nodes` and `index` must never disagree — a uid in `index` with no entry in
+`nodes` resolves to `emptyNode` and silently builds an empty payload. All
+mutation of both funnels through exactly two private helpers:
+
+- `attachNode(name, role, node)` — the only writer. Re-attaching an existing
+  `(resource, role)` deletes the previous node first, so a re-init cannot orphan
+  an unreachable entry in `nodes`.
+- `detachAll()` — the only clearer, used by both `reset()` and
+  `resetForResource()`.
+
+Invariant to assert if you touch this: `state.nodes.size` equals the total number
+of uids across `state.index`.
 
 ---
 
@@ -184,8 +244,8 @@ pageState.load('OutletConsumptions', existing)   // fills node.record from the s
 
 | Function | Purpose |
 |---|---|
-| `initResource(resource, { code, many, fields, action, isPrimaryKey, reset })` | create a node (header + line-items shape) |
-| `hasNode(resource)` | imperative existence check — **the replacement for `state.nodes.has(...)`** (use `useNode(...).exists` when a computed/template needs it reactively) |
+| `initResource(resource, { role, code, many, fields, action, isPrimaryKey, reset })` | create a node under `role` (default `$default`); re-init of the same `(resource, role)` replaces it |
+| `hasNode(resource, role?)` | imperative existence check — **the replacement for `state.nodes.has(...)`** (use `useNode(...).exists` when a computed/template needs it reactively) |
 | `load(resource, rawRecord)` | hydrate an existing server record into the node |
 | `setField(resource, field, value)` / `setFields(resource, patch)` | set header/body fields |
 | `setControlField(resource, header, value)` / `getControlField(resource, header)` | non-schema / wizard-only fields — kept out of `record` so they never reach the payload |
@@ -199,6 +259,12 @@ pageState.load('OutletConsumptions', existing)   // fills node.record from the s
 | `setAction(resource, actionName)` | set the workflow action trigger |
 | `selectOption(resource, field, value)` | write the user's chosen code value into `record` |
 
+> **Every mutation's first argument is a node *target*,** not just a resource name:
+> a string, a `ref`, a getter, or `{ resource, role }` (§4.2). That is why none of
+> them needed a separate `role` parameter —
+> `setField({ resource: 'OutletVisits', role: 'next' }, 'Date', v)` works, and a
+> bare `'OutletVisits'` means role `$default`.
+
 > `selectOption` writes the **chosen** value into `record`; the available
 > **choices** are the read-only `options` computed — you never mutate `options`.
 
@@ -211,23 +277,28 @@ pageState.load('OutletConsumptions', existing)   // fills node.record from the s
 > the server record untouched. `FormChild.vue` implements exactly this split in
 > `remove()`, and `restore()` reverses it with `setChildAction(..., 'update')`.
 
-### 6.5 `useNode(resource)` — THE read accessor
+### 6.5 `useNode(resource, role?)` — THE read accessor
 
 **This is the only supported way to observe node state.** Reaching into
-`state.nodes` is a contract violation (§4.1).
+`state.nodes` or `state.index` is a contract violation (§4.1).
 
-`resource` accepts a **string, a `ref`, or a getter**. Use a getter in any
-component whose active resource changes on navigation (`Create.vue`,
+Signature: **`useNode(resource, role = '$default')`**.
+
+`resource` accepts a **string, a `ref`, a getter, or `{ resource, role }`**. Use a
+getter in any component whose active resource changes on navigation (`Create.vue`,
 `Update.vue`, `FormChild.vue`) — you bind **once** in `setup` and it stays
 correct across route changes:
 
 ```js
-// static resource
+// static resource, default role
 const { node, record, options, validation } = pageState.useNode('OutletConsumptions')
 
 // dynamic resource — follows resourceName across navigations
 const primary = pageState.useNode(() => resourceName.value)
 const primaryRecord = computed(() => primary.record.value || {})
+
+// a specific role — see §4.2
+const nextVisit = pageState.useNode('OutletVisits', 'next')
 ```
 
 Returns:
@@ -237,7 +308,7 @@ Returns:
 | `node` | `computed` | the reactive node (falls back to a stable empty node) |
 | `exists` | `computed<boolean>` | whether the node has been initialized — reactive form of `hasNode` |
 | `record` | `computed` | the user-input header/body; the `v-model` target |
-| `identifier` | `computed<string>` | changes when the node is **replaced** (`initResource`/`reset`), **not** when a field is edited — key one-shot hydration off this so a reset re-seeds from the server |
+| `identifier` | `computed<string>` | the node's uid (its Map key). Changes when the node is **replaced** (`initResource`/`reset`), **not** when a field is edited — key one-shot hydration off this so a reset re-seeds from the server |
 | `options` | `computed` | `{ [fieldName]: [...] }`, auto-derived from `controls` + the `getOptions` strategy |
 | `validation` | `computed` | array of `{ field, message }` |
 | `children(childResource)` | `(res) => computed` | child rows as `{ _action, data }` entries; `childResource` also accepts a string/ref/getter |
@@ -305,8 +376,24 @@ Any omitted piece falls back to the built-in generic behavior (see §7).
 
 ## 7. Generic request lifecycle (`build` → send → response)
 
-`build()` (or `strategy.build`) walks `state.nodes` and produces canonical
-requests. The default mapping:
+`build()` (or `strategy.build`) walks `state.nodes` **in insertion order** and
+produces canonical requests. Insertion order is the contract: it is what lets a
+later request consume an earlier one's `$ref`.
+
+**Rule for every request builder in this composable:** the `resource` on a built
+request is always **`node.resource`** — never the Map key, and never the caller's
+argument. This applies to `defaultBuild` *and* to the `executeAction(resource, …)`
+trigger, which resolves the node first and then reads `node.resource` off it.
+
+The other two candidates are both wrong:
+
+- the **Map key** is an opaque uid (§4), never a resource name;
+- the **caller's argument** may be a `ref`, a getter, or `{ resource, role }`,
+  since the accessors explicitly accept those — passing one straight through
+  would put a *function* or an *object* where GAS expects a resource name;
+- **`node.resource`** is the only one that always names the GAS resource.
+
+The default mapping:
 
 | Node shape | Produces |
 |---|---|
@@ -328,7 +415,8 @@ Dispatch is always `resourceIoStore.runBatchRequests(requests)`.
 From `usePageState.js` you may import:
 
 - **Composable + DI:** `usePageState` (provided via `provide('pageState', pageState)` and injected via `inject('pageState')`)
-- **Read accessors:** `useNode(resource)` (§6.5), `hasNode(resource)`, `snapshot()`
+- **Read accessors:** `useNode(resource, role?)` (§6.5), `hasNode(resource, role?)`,
+  `getControlField(resource, header, role?)`, `snapshot()`
 - **Mutations:** see the full table in §6.4 — including `setChildAction`, the only
   supported way to set a child row's `_action`
 - **Generic builders:** `compositeSaveRequest`, `resourceCreateRequest`,
@@ -349,20 +437,26 @@ the helper and not the composable.
 
 ## 9. Reactivity notes
 
-- `state.nodes` is a `reactive(new Map())`. `.get`/`.set`/`.delete`/iteration are
-  tracked, so everything `useNode` derives is fully reactive — including a node
-  that does not exist yet, so a component may bind before `initResource` runs.
-- **Do not read `state.nodes` from a consumer** (§4.1) — go through `useNode` /
-  `hasNode`. This is what lets the Map and its keying change without a consumer edit.
+- `state.nodes` is a `reactive(new Map())` and `state.index` a reactive plain
+  object. Map `.get`/`.set`/`.delete`/iteration and nested-key writes on `index`
+  are all tracked, so everything `useNode` derives is fully reactive — including a
+  node that does not exist yet, so a component may bind before `initResource` runs.
+- **Do not read `state.nodes` or `state.index` from a consumer** (§4.1) — go
+  through `useNode` / `hasNode`. This is what let the keying change from
+  resource-name to uid+index with zero consumer edits.
+- `useNode` resolves `resource -> role -> uid -> node`, so it stays correct when a
+  node is replaced (the uid changes, the address does not).
 - Pass a **getter** to `useNode` when the resource is dynamic; a plain string
   snapshots the name at `setup` time and will go stale on navigation.
 - `options` is a `computed`: lazy (only computed when read) + memoized — no cost on
   initial load for unused option lists.
 - Guard against binding before a node exists: `useNode(key)` returns a stable empty
   node as a fallback, but prefer initializing nodes early (in `setup`/`onMounted`).
-- `snapshot()` returns a plain deep copy keyed by resource name. It must go
-  through `Object.fromEntries` — a `Map` has no enumerable own properties, so a
-  bare `JSON.stringify(state.nodes)` silently yields `{}`.
+- `snapshot()` returns a plain deep copy keyed by the **readable address**
+  (`'Outlets'`, `'OutletVisits:next'`), rebuilt from `index` — not by raw uid,
+  which would make a debug snapshot useless. Note it cannot just
+  `JSON.stringify(state.nodes)`: a `Map` has no enumerable own properties, so that
+  silently yields `{}`.
 
 ---
 
@@ -384,7 +478,7 @@ consumers actually honour it. Before landing a change to the node shape or the
 `state.nodes` keying, confirm nothing has regressed to direct access:
 
 ```bash
-rg -n "state\.nodes|_action\s*=[^=]|\.children\s*\.\s*find|children\?\.find" FRONTENT/src/components FRONTENT/src/composables/resources --glob '!**/usePageState.js' --glob '!**/useCompositeForm.js'
+rg -n "state\.nodes|state\.index|_action\s*=[^=]|\.children\s*\.\s*find|children\?\.find" FRONTENT/src/components FRONTENT/src/composables/resources --glob '!**/usePageState.js' --glob '!**/useCompositeForm.js'
 ```
 
 This must return **nothing**. Any hit means a consumer has bypassed the API and

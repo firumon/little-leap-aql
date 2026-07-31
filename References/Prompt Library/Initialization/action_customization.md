@@ -57,16 +57,22 @@ the animation's CSS transform):
 **Component tree**:
 ```
 Action.vue (action="PageAction")
-└── actions/PageAction.vue          ← owns the submission lifecycle
-    ├── actions/FormActions.vue     ← add / edit / action pages (resolved)
+└── actions/PageAction.vue              ← owns the submission lifecycle
+    ├── actions/FormActions.vue         ← add / edit / action pages (resolved)
     │   ├── Action → actions/FormActionReset.vue
     │   ├── Action → actions/FormActionSubmit.vue
     │   └── Action → actions/FormActionCancel.vue
-    ├── actions/CrudActions.vue     ← every other page (resolved)
-    │   ├── actions/AddFab.vue          ┐ all Actions —
-    │   ├── actions/EditFab.vue         │ resolved via
-    │   └── actions/CrudActionsFab.vue  ┘ useActionResolver
-    └── actions/ResourceReports.vue ← every other page (resolved); report downloads
+    ├── actions/ResourceActions.vue     ← every other page (resolved); unified
+    │   │                                 bottom-right FAB cluster (CRUD +
+    │   │                                 AdditionalActions workflow/navigate)
+    │   ├── Action → ResourceActionAdd / ResourceActionEdit /
+    │   │            ResourceAction<Name>  (fallback base:
+    │   │            actions/ResourceActionItem.vue — per-item 10-tier override)
+    │   └── actions/ResourceActionsFab.vue  ← expandable menu when ≥2 items
+    └── actions/ResourceReports.vue     ← every other page (resolved); report downloads
+
+(mutate-kind workflow items open components/app/ActionDialog.vue, mounted once in
+Page.vue and driven via pageState.meta.actionDialog)
 ```
 
 The Action subsystem is decoupled from `sections` — it mounts on every resource page and does
@@ -210,11 +216,43 @@ Available props: `submit`, `reset`, `cancel`, any custom action key, `modifyPayl
 > and a handler of the same name (so the click does something). Missing the handler logs
 > `[PageAction] No action handler supplied for: <key>` and does nothing else.
 
-### Pattern 5: Suppress CRUD FABs
+### Pattern 5: The unified `ResourceActions` FAB cluster
+One bottom-right cluster per non-form page, sourcing Add (`canWrite`), Edit
+(`canUpdate` + record), and every visible `AdditionalActions` entry
+(record required, `can<Action>` not explicitly false, `visibleWhen` satisfied).
+One item → standalone FAB; ≥2 → one expandable `ResourceActionsFab` menu.
+`mutate` items open the page-level `ActionDialog` (`app/ActionDialog.vue`) via
+`pageState.meta.actionDialog`; `navigate` items route via `useResourceNav`.
+
+`ActionDialog.vue` & `useActionFields.js` enforce automatic field resolution:
+- Short field names (`Comment`, `Reason`) resolve derived headers as `{column}{PascalCase(columnValue)}{name}` (e.g. `ProgressCancelledComment`).
+- Comment/reason fields render as spacious `<q-input type="textarea" autogrow outlined>` without `dense` or static `rows`.
+- `select` fields with `options[]` or `source: { resource, field, label }` resolve options dynamically from `useDataStore().getRecords()`. Labels format as `"Descriptor (Value)"` following precedence: `source.label` $\rightarrow$ `Name` column $\rightarrow$ 2nd column $\rightarrow$ raw value.
+- Options exceeding 15 items automatically enable combobox type-to-filter (`use-input`, `@filter`).
+
+Every item resolves under its own action name with `ResourceActionItem` as base, so
+each is customizable at all 10 tiers:
+
 ```javascript
-// src/_ui/AQL/components/operation/outletvisits/crudactions.js
+// Suppress the whole cluster
+// src/_ui/AQL/components/operation/outletvisits/resourceactions.js
 export default { show: false }   // or { hide: true }; both accept a function
+
+// Restyle / hide / repoint ONE item (e.g. the Approve workflow FAB)
+// src/_ui/AQL/components/operation/purchaseorders/view/resourceactionapprove.js
+export default {
+  icon: 'verified',
+  color: 'positive',
+  label: (record) => record?.Progress === 'Resubmitted' ? 'Re-Approve' : 'Approve',
+  // hide: true,                          // self-hide just this item
+  // handler: ({ nav, pageState }) => …   // REPLACES the default click behaviour
+}
 ```
+Item names: `ResourceActionAdd`, `ResourceActionEdit`, `ResourceAction<Name>`
+(PascalCased action name, lowercased on disk — `resourceactionapprove.(vue|js)`).
+A `.vue` item override must set `inheritAttrs: false`, bind `$attrs`, and emit
+`click` for the container's default dispatch to keep working. The menu trigger is
+overridable as `resourceactionsfab.(vue|js)`.
 
 ### Pattern 6: Report downloads (`ResourceReports`)
 `PageAction` mounts `actions/ResourceReports.vue` on every non-form page (bottom-left
@@ -232,13 +270,13 @@ export default { mode: 'toolbar' }   // 'fab' | 'toolbar' | 'card' | 'inline'
 export default { noReports: true }   // or { reports: { mode: 'toolbar' } }
 ```
 
-Styling shares `CrudActions`' motion and elevation (`push glossy`,
-`.aql-report-action-fab` `@extend`s `.aql-crud-action-fab`) but **not** its shape or
+Styling shares `ResourceActions`' motion and elevation (`push glossy`,
+`.aql-report-action-fab` `@extend`s `.aql-resource-action-fab`) but **not** its shape or
 colour: the report FAB is a horizontal pill (icon + `label`, default `'Reports'`,
 Quasar's own labelled-QFab geometry, not a CSS radius override) in `teal-7` with
 white text. `card`/`inline` buttons carry
 `.aql-form-action-btn` + `.aql-report-action-btn`. The pill and teal treatment are
-exclusive to `ResourceReports` — never apply them to `CrudActions`.
+exclusive to `ResourceReports` — never apply them to `ResourceActions`.
 
 It is the **one deliberate exception** to "buttons never act on their own": a report
 download never touches `pageState`, so it calls `useReports` directly rather than
@@ -248,7 +286,7 @@ logic to the dispatcher, and do not fetch or notify from the component. See
 
 ### Pattern 7: Full container override
 If you override `pageaction.vue` you must explicitly import and render `FormActions`
-and/or `CrudActions` yourself, and wire `@submit`/`@reset` to `pageState` — the base
+and/or `ResourceActions` yourself, and wire `@submit`/`@reset` to `pageState` — the base
 container's lifecycle logic is not inherited.
 
 ---
@@ -256,13 +294,13 @@ container's lifecycle logic is not inherited.
 ## 5. Strict Rules
 
 > [!CRITICAL]
-> **Permissions**: gate every action at the container level (`PageAction` / `CrudActions`)
+> **Permissions**: gate every action at the container level (`PageAction` / `ResourceActions`)
 > and drill down via props. Never render or enable an Add affordance without
 > `permissions.canWrite`, or an Edit affordance without `permissions.canUpdate`. Use
 > `allowed()` from `useResourceConfig` for workflow actions.
 
 * **No `<style>` blocks in `components/actions/`.** All action CSS lives in
-  `src/css/custom.scss` (`.aql-form-actions-*`, `.aql-form-action-btn`, `.aql-crud-action-*`) —
+  `src/css/custom.scss` (`.aql-form-actions-*`, `.aql-form-action-btn`, `.aql-resource-action-*`) —
   ARCHITECTURE RULES §7. A scoped style cannot be inherited by a tenant `.vue` override,
   so it breaks the contract.
 * **Buttons never act on their own.** Submit, Reset, and Cancel all just emit `click`;

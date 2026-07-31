@@ -245,4 +245,5 @@ The views switcher respects sheet-driven constraints explicitly inside the base 
    - **Behavior**: Custom UI JS modifiers and Vue overrides are **DISABLED / IGNORED**. 
    - **Details**: The list views are fully configured via sheet filters. Custom UI templates and JS modifiers are bypassed to enforce standard sheet-driven tabs.
 
-This conditional bypass logic is implemented inside [ViewSwitcher.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_common/sections/ViewSwitcher.vue) by evaluating the `isOverrideAllowed` computed property.
+This conditional bypass logic is implemented inside [ViewSwitcher.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/sections/ViewSwitcher.vue) by evaluating the `isOverrideAllowed` computed property.
+

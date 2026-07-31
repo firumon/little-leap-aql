@@ -92,8 +92,8 @@ Use when overriding or creating custom container or item layouts, template overr
 ### Action & FAB Customization
 Use when overriding or creating custom action components, floating action buttons (FABs), workflow buttons, cancel/submit/reset form actions, the sticky form actions bar, the submission lifecycle, or workflow dialogs.
 - Read:
-  - `Documents/AQL_ACTION_SYSTEM.md` — **canonical**: `Action.vue` / `useActionResolver.js`, the `components/actions/` folder, the 10-tier action lookup, the configurable `FormActions` `actions` array, and the loading-UX contract.
-  - `Documents/AQL_ACTION_CUSTOMIZATION_SYSTEM.md` — legacy `_common/sections/Action/` component family (pre-subsystem); consult only when working on those files.
+  - `Documents/AQL_ACTION_SYSTEM.md` — **single canonical spec**: `Action.vue` / `useActionResolver.js`, the `components/actions/` folder, the 10-tier action lookup, the configurable `FormActions` `actions` array, `ResourceActions` FAB cluster, `ActionDialog` field resolution, and the loading-UX contract.
+
 
 ### Backend Design
 Use when designing new backend behavior, evaluating options, or checking whether existing GAS capabilities already support the request.

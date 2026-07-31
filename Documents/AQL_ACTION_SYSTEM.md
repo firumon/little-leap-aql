@@ -7,7 +7,7 @@ placeholder paradigm alongside `Section.vue` and `Content.vue`.
 |----------|-------------|----------|-------------|---------|
 | Section | `components/Section.vue` (`AqlSection`) | `useSectionResolver.js` | `components/sections/` | Page chrome (header, filter, switcher) |
 | Content | `components/Content.vue` (`AqlContent`) | `useContentResolver.js` | `components/contents/` | Page body, inside `AqlContentWrapper` |
-| **Action** | **`components/Action.vue` (`AqlAction`)** | **`useActionResolver.js`** | **`components/actions/`** | **Page-level actions: sticky form bar, CRUD FABs** |
+| **Action** | **`components/Action.vue` (`AqlAction`)** | **`useActionResolver.js`** | **`components/actions/`** | **Page-level actions: sticky form bar, unified resource-action FABs** |
 
 All three share the identical 10-tier `_ui/` override model. Only the base folder and
 the identity prop (`section` / `content` / `action`) differ.
@@ -28,10 +28,11 @@ graph TD
     OverrideScan --> |None| BasePageAction[actions/PageAction.vue]
 
     BasePageAction --> |add / edit / action| FormActions[actions/FormActions.vue]
-    BasePageAction --> |every other page| CrudActions[actions/CrudActions.vue]
+    BasePageAction --> |every other page| ResourceActions[actions/ResourceActions.vue]
 
     FormActions --> |one &lt;Action&gt; per entry in `actions`| Buttons[FormActionSubmit<br/>FormActionReset<br/>FormActionCancel]
-    CrudActions --> |useActionResolver| Fabs[actions/AddFab<br/>actions/EditFab<br/>actions/CrudActionsFab]
+    ResourceActions --> |one &lt;Action&gt; per entry, fallback base| Items[ResourceActionAdd<br/>ResourceActionEdit<br/>ResourceAction&lt;Name&gt;<br/>→ actions/ResourceActionItem.vue]
+    ResourceActions --> |useActionResolver| Fab[actions/ResourceActionsFab.vue]
 ```
 
 ### 1.1 Why a separate subsystem
@@ -77,6 +78,11 @@ Mounted after `AqlContentWrapper`, as a **sibling of the `<Transition>`** — ne
   3. **Undefined** — an "Action Not Defined" warning card naming the action, page,
      resource, and scope.
 * `inheritAttrs: false`, so nothing leaks onto the DOM.
+* Accepts an optional **`fallback`** prop (a component, excluded from the resolved
+  props) forwarded to `useActionResolver` as `defaultComponent`. This is what lets
+  a container mount *dynamically named* actions — e.g. `ResourceActions`' per-item
+  `ResourceActionApprove` — against a generic base (`ResourceActionItem`) instead
+  of the warning card, while keeping every `_ui/` tier able to override that name.
 
 ### 1.4 The Action Resolver (`src/composables/resources/useActionResolver.js`)
 Two Vite glob registries built once at module load, both lowercasing every path key
@@ -122,7 +128,7 @@ First match wins:
 2. `components/actions/{action}.vue` — framework default base.
 3. Otherwise, the first `.vue` candidate from the 10-tier list below is promoted to base.
 4. Otherwise, the caller-supplied `defaultComponent` (used by `PageAction.vue` when it
-   resolves `FormActions` / `CrudActions`).
+   resolves `FormActions` / `ResourceActions`).
 5. Otherwise, `Action.vue` renders the "Action Not Defined" card.
 
 ### 2.2 Step 2 — The 10-Tier Override Scan
@@ -178,22 +184,22 @@ Identical in shape to the Section and Content resolvers (first match wins):
 | `FormActionSubmit.vue` | Base submit button. |
 | `FormActionReset.vue` | Base reset button. |
 | `FormActionCancel.vue` | Base cancel button — self-navigates via `nav.goBack()`. |
-| `CrudActions.vue` | Floating CRUD FABs with the 750ms-delayed `bounceIn` entrance. |
-| `AddFab.vue` | Round Add FAB, or a `q-fab-action` when `asFabAction` is set. |
-| `EditFab.vue` | Round Edit FAB, or a `q-fab-action` when `asFabAction` is set. |
-| `CrudActionsFab.vue` | Expandable three-dot menu hosting the Add/Edit FABs as slots. |
+| `ResourceActions.vue` | **Unified bottom-right FAB cluster** (CRUD + AdditionalActions) with the 750ms-delayed `bounceIn` entrance. |
+| `ResourceActionItem.vue` | Generic per-item base — round FAB standalone, `q-fab-action` inside the menu. |
+| `ResourceActionsFab.vue` | Expandable menu trigger hosting the items via its default slot. |
 | `ResourceReports.vue` | Report downloads as an action — pill FAB, toolbar dropdown, card bar, or inline buttons. |
 
 > [!IMPORTANT]
 > **Action components carry no `<style>` block.** Every rule lives in
-> `src/css/custom.scss` under `.aql-form-actions-*` / `.aql-crud-action-*`
-> (ARCHITECTURE RULES §7).
+> `src/css/custom.scss` under `.aql-form-actions-*` / `.aql-resource-action-*` /
+> `.aql-report-action-*` (ARCHITECTURE RULES §7).
 
 ### 3.1 `PageAction.vue`
 Mounted by `Page.vue`. Decides which cluster is live:
 * `add` / `edit` / `action` → `FormActions` (the sticky bar owns these pages entirely).
-* everything else → `CrudActions` (which applies its own record/permission gating)
-  **and** `ResourceReports` (which applies its own reports-exist gating).
+* everything else → `ResourceActions` (which applies its own permission/record/
+  `visibleWhen` gating per item) **and** `ResourceReports` (which applies its own
+  reports-exist gating).
 
 All three clusters are mounted through `useActionResolver` (with the framework component as
 `defaultComponent`), so each is independently overridable at any of the 10 tiers.
@@ -393,42 +399,88 @@ so it outranks Quasar's equal-specificity rules regardless of load order).
 > `flat: true` via a modifier is still supported — it just opts that button out of the
 > push/glossy treatment.
 
-### 3.4 `CrudActions.vue`
-Unchanged in behaviour from its previous `sections/` location — three mutually exclusive
-layouts driven by permissions and record presence. The floating action FABs (`AddFab` /
-`EditFab` / the expandable `CrudActionsFab` menu) all render with **`push glossy` styling**
-for a premium appearance matching the `FormActions` bar buttons.
+### 3.4 `ResourceActions.vue` — the unified FAB cluster
+The single bottom-right action cluster on every non-form page (evolution of the former
+`CrudActions.vue`, which it replaces along with `AddFab`/`EditFab`/`CrudActionsFab`).
+It unifies **two action sources** into one responsive cluster, so resource pages never
+grow multiple competing right-side FABs:
 
-| Condition | Renders |
-|-----------|---------|
-| `canWrite && !canUpdate` (or no record) | Single Add FAB (`push glossy`, primary color) |
-| `canUpdate && record && !canWrite` | Single Edit FAB (`push glossy`, primary color) |
-| `canWrite && canUpdate && record` | Expandable `CrudActionsFab` menu (`push glossy` three-dot button with staggered Add/Edit FABs inside) |
+| Source | Entry | Gate | Default click behaviour |
+|--------|-------|------|-------------------------|
+| Permissions | `ResourceActionAdd` | `permissions.canWrite` | `nav.goTo('add')` |
+| Permissions | `ResourceActionEdit` | `permissions.canUpdate` **and** a record in context | `nav.goTo('edit')` |
+| `resourceConfig.additionalActions` (APP.Resources `AdditionalActions` JSON) | `ResourceAction<Name>` (e.g. `ResourceActionApprove`) | record in context, `permissions.can<Action>` not explicitly `false`, `isActionVisible(action, record)` (`visibleWhen`) | `mutate` kind → opens the page-level `ActionDialog` via `pageState.meta.actionDialog`; `navigate` kind → `nav.goTo('record-page' \| 'resource-page', …)` |
 
-Never rendered on `add` / `edit` pages — `FormActions` owns those.
+**Layout** — driven by the number of visible entries:
 
-Its individual FABs (`AddFab`, `EditFab`, `CrudActionsFab`) live in **`components/actions/`**
-alongside their container and resolve through `useActionResolver`. The folder is the
-resolution contract (ARCHITECTURE RULES §8), so an action container's children must not be
-resolved as sections. The 10-tier `_ui/` override paths are unchanged — only the
-base-component lookup moved from `components/sections/{Fab}.vue` to
-`components/actions/{Fab}.vue`, so a tenant override at
-`_ui/{ui}/components/{scope}/{Resource}/addfab.vue` still resolves exactly as before. A
-`CrudActions` JS modifier can suppress the whole cluster by returning `show: false` or
-`hide: true` (plain boolean or function).
+| Entries | Renders |
+|---------|---------|
+| 0 | Nothing (no empty FAB ever floats) |
+| 1 | One standalone round FAB (`push glossy`, the entry's own color) |
+| ≥ 2 | One expandable `ResourceActionsFab` menu (`push glossy` three-dot trigger) hosting every entry as a staggered `q-fab-action` with an external pill label |
 
-> [!NOTE]
-> The only override path that changed is the tenant-wide **generic base** slot:
-> `_ui/{ui}/components/sections/addfab.vue` → `_ui/{ui}/components/actions/addfab.vue`.
-> No such file exists in the repo today, so the move is behaviour-preserving.
+Never rendered on `add` / `edit` / `action` pages — `FormActions` owns those. `PageAction`
+gates the mount, and the component re-checks internally so a direct
+`<Action action="ResourceActions" />` mount obeys the same rule.
 
-The `.aql-crud-action-container` entrance animation is applied to an **inner wrapper**,
+**Per-item 10-tier overridability.** Every entry is mounted through `<Action>` under its
+own action name with `ResourceActionItem` as the `fallback` base (§1.3). Because the name
+flows through the normal resolver, each item's icon, color, label, visibility, and click
+behaviour is overridable at all 10 `_ui/` tiers as `resourceaction<name>.(vue|js)` —
+e.g. `_ui/AQL/components/operation/purchaseorders/view/resourceactionapprove.js`.
+A JS modifier can return presentation props (`icon`, `color`, `label`, `tooltip`,
+function-valued via `evaluateProp`), self-hide the item (`show: false` / `hide: true`),
+or replace its click behaviour outright with `handler: (ctx) => …`,
+`ctx = { record, config, pageState, nav }` — `handler` REPLACES the `click` emit, the
+per-item counterpart of `FormActionCancel`'s `cancelHandler`.
+
+The menu trigger resolves the same way as `ResourceActionsFab`
+(`resourceactionsfab.(vue|js)`), and the whole cluster as `ResourceActions`
+(`resourceactions.(vue|js)`); a container modifier returning `show: false` / `hide: true`
+(plain boolean or function) suppresses everything.
+
+**Workflow dispatch & the `ActionDialog`.** A `mutate`-kind item never dispatches itself:
+it sets `pageState.meta.actionDialog = { show: true, actionConfig }`, and the
+`ActionDialog` mounted once in `Page.vue` (from **`components/app/ActionDialog.vue`**,
+outside any overridable action so a `pageaction.vue` override can never swallow it) renders
+the outcome select + per-outcome fields via `useActionFields` and dispatches through
+`pageState.run()` with an `executeActionRequest`. `noActions: true` suppresses the dialog
+together with the whole `<Action>` mount.
+
+#### 3.4.1 ActionDialog Field Resolution & Rendering Contract
+The `ActionDialog` (`app/ActionDialog.vue`) and `useActionFields` composable enforce a strict rendering & sourcing contract across workflow input fields:
+
+* **Short Field Name Header Resolution (`resolveFieldHeader`)**:
+  Field names in `AdditionalActions` JSON use canonical short names (`Comment`, `Reason`, `Remark`). `useActionFields` automatically derives the exact sheet column header as `{column}{PascalCase(columnValue)}{name}` (e.g. `Progress` + `Cancelled` + `Comment` $\rightarrow$ `ProgressCancelledComment`). If the derived header, direct header, or legacy name exists in the resource headers, the field resolves; otherwise, it is hidden.
+* **Multiline Textarea Fields (`textarea`)**:
+  Fields named `Comment`, `Reason`, `Remark`, `Note`, or `Description` (or explicitly typed as `textarea`) render as `<q-input type="textarea" autogrow outlined>`. They deliberately omit `dense` (to preserve touch target size) and static `rows` (so `autogrow` can expand naturally with user input).
+* **Option-Sourced Select Fields (`select`)**:
+  Fields explicitly typed as `select` or carrying option sourcing (`options[]` or `source: { resource, field, label }`) render as `<q-select outlined clearable emit-value map-options>`.
+  * **Option Resolution**: `source` definitions dynamically fetch records from `useDataStore().getRecords(source.resource)`.
+  * **Label Resolution Precedence**:
+    1. `source.label` if explicitly configured on the `source` object.
+    2. `Name` column if present in the target resource's headers/records.
+    3. The 2nd sheet column (index 1) as the conventional descriptor.
+    4. Fallback to raw `source.field` value.
+    Options format as `{ label: "Descriptor (Value)", value: "Value" }` (or bare `${value}` if label is missing or identical), deduped by value and sorted by label (`localeCompare`).
+  * **Combobox Filtering (> 15 Options)**: When options count exceeds 15 (`OPTION_FILTER_THRESHOLD = 15`), the control automatically enables type-to-filter (`use-input`, `hide-selected`, `fill-input`, `@filter` search).
+* **Required Field Validation**: `handleSubmit` validates all `field.required: true` inputs, notifying an error toast if any required field is empty or whitespace-only before executing the request.
+
+
+The `.aql-resource-action-container` entrance animation is applied to an **inner wrapper**,
 never to the `q-page-sticky` root — a CSS transform on a `position: fixed` ancestor turns
 it into the containing block for its fixed descendants and breaks FAB positioning.
 
+> [!NOTE]
+> **Migration from `CrudActions`.** Override names moved: `crudactions.(vue|js)` →
+> `resourceactions.(vue|js)`, `addfab`/`editfab` → `resourceactionadd`/`resourceactionedit`,
+> `crudactionsfab` → `resourceactionsfab`. No tenant override under any of the old names
+> exists in the repo, so the rename is behaviour-preserving. CSS classes renamed in step:
+> `.aql-crud-action-*` → `.aql-resource-action-*`.
+
 ### 3.5 `ResourceReports.vue`
 Report downloads as a first-class action. `PageAction` mounts it on every **non-form**
-page next to `CrudActions`. The sticky form bar does **not** host it — `FormActions`
+page next to `ResourceActions`. The sticky form bar does **not** host it — `FormActions`
 resolves `FormAction*` buttons only. It is directly mountable anywhere as
 `<Action action="ResourceReports" mode="toolbar" />`.
 
@@ -461,7 +513,7 @@ resolves `FormAction*` buttons only. It is directly mountable anywhere as
 | `icon` / `activeIcon` | `String\|Function` | `'picture_as_pdf'` / `'close'` | |
 | `tooltip` | `String\|Function` | `'Download Reports'` | |
 | `position` / `offset` | `String\|Function` / `Array\|Function` | `'bottom-left'` / `[18, 18]` | `q-page-sticky` placement in `fab` mode — bottom-**left** so it never collides with the bottom-right CRUD cluster |
-| `show` / `hide` | `Boolean\|Function` | `true` / `false` | Same suppression contract as `CrudActions` |
+| `show` / `hide` | `Boolean\|Function` | `true` / `false` | Same suppression contract as `ResourceActions` |
 | `noReports` | `Boolean\|Function` | `false` | Page-contract gate, mirroring `noActions` — see below |
 | `page` / `scope` / `resource` / `uiName` | `String` | `null` | Resolver context |
 
@@ -491,8 +543,8 @@ select preloading (`dataStore.loadResource` for `type: 'select'` inputs with a
 `useReports` (`src/composables/reports/useReports.js`) — see
 [REPORTS_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/REPORTS_SYSTEM.md).
 
-**Styling**: `push glossy` throughout, matching `CrudActionsFab` / `AddFab` and the
-`FormActions` bar buttons. `.aql-report-action-fab` `@extend`s `.aql-crud-action-fab`,
+**Styling**: `push glossy` throughout, matching the `ResourceActions` cluster and the
+`FormActions` bar buttons. `.aql-report-action-fab` `@extend`s `.aql-resource-action-fab`,
 so both floating clusters share one shadow, hover-lift and press-scale — but the report
 FAB takes a **horizontal pill** footprint — Quasar's own geometry for a labelled QFab,
 not a CSS override (icon + short `label`)
@@ -504,7 +556,7 @@ for the same pill radius. Report-specific rules in `custom.scss` are
 per §7 of ARCHITECTURE RULES.
 
 > [!IMPORTANT]
-> The pill treatment is **exclusive to `ResourceReports`**. `CrudActions` and its FABs
+> The pill treatment is **exclusive to `ResourceReports`**. `ResourceActions` and its FABs
 > keep their round footprint and navy palette unchanged — the two clusters share motion
 > and elevation, not shape or colour.
 
@@ -572,11 +624,34 @@ Supply the button itself as `_ui/AQL/components/.../formactionsavedraft.vue` (or
 modify a base). Without a handler the button renders but only logs
 `[PageAction] No action handler supplied for: saveDraft`.
 
-**Hide CRUD FABs on a resource**:
+**Hide the whole FAB cluster on a resource**:
 ```javascript
-// _ui/AQL/components/operation/outletvisits/crudactions.js
+// _ui/AQL/components/operation/outletvisits/resourceactions.js
 export default { show: false }
 ```
+
+**Restyle one workflow action's FAB item** — the item resolves under its own name:
+```javascript
+// _ui/AQL/components/operation/purchaseorders/view/resourceactionapprove.js
+export default {
+  icon: 'verified',
+  color: 'positive',
+  label: (record) => record?.Progress === 'Resubmitted' ? 'Re-Approve' : 'Approve'
+}
+```
+
+**Repoint one item's click behaviour** — `handler` replaces the container's default:
+```javascript
+// _ui/AQL/components/operation/outletrestocks/resourceactionedit.js
+export default {
+  handler: ({ nav }) => nav.goTo('record-page', { pageSlug: 'draft' })
+}
+```
+
+**Replace one item's template entirely** — supply
+`_ui/AQL/components/operation/purchaseorders/view/resourceactionapprove.vue` with
+`inheritAttrs: false`, bind `$attrs`, and emit `click` (or honour the `handler` attr) so
+the container's dispatch keeps working.
 
 **Move report downloads into the page header instead of the floating FAB**:
 ```javascript

@@ -135,7 +135,9 @@ export default { actions: ['cancel', 'submit'] }
 | `'submit'` | `FormActionSubmit` | `actions/FormActionSubmit.vue` |
 | `'cancel'` | `FormActionCancel` | `actions/FormActionCancel.vue` |
 | `'draft'` | `FormActionDraft` | *none — supply it under `_ui/`* |
-| `'reports'` | `ResourceReports` | `actions/ResourceReports.vue` (alias; self-dispatching, needs no handler) |
+
+Only `FormAction*` buttons resolve here — `ResourceReports` is not mountable from
+`actions` (reports belong to browse/view pages).
 
 Default is `['reset', 'submit']`. Entries may also be objects: `{ name: 'submit', label: 'Publish' }`.
 An unrecognised key emits `action(key)` from `FormActions` instead of `submit`/`reset`/`cancel`.
@@ -228,9 +230,6 @@ export default { mode: 'toolbar' }   // 'fab' | 'toolbar' | 'card' | 'inline'
 // Suppress, or steer, from a page contract / page JS modifier.
 // noReports drops ONLY the report cluster; noActions drops the whole <Action> mount.
 export default { noReports: true }   // or { reports: { mode: 'toolbar' } }
-
-// Add a download button to the sticky form bar — no handler needed
-export default { actions: ['reports', 'reset', 'submit'] }
 ```
 
 Styling shares `CrudActions`' motion and elevation (`push glossy`,

@@ -30,8 +30,6 @@
  *   ['cancel', 'submit']           → discard-and-leave instead of in-place reset
  *   ['cancel', 'draft', 'submit']  → resolves FormActionCancel / FormActionDraft /
  *                                    FormActionSubmit; unknown keys emit `action`
- *   ['reports', 'submit']          → 'reports' is an alias for the ResourceReports
- *                                    action (self-dispatching, no `action` emit)
  *
  * Entries may be a bare string or an object `{ name, ...props }` whose extra keys
  * are merged over the per-key defaults below.
@@ -109,41 +107,22 @@ const entryDefaults = computed(() => ({
     icon: props.cancelIcon,
     color: props.cancelColor,
     onClick: () => emit('cancel')
-  },
-  // Self-dispatching: no onClick, no `action` emit — ResourceReports runs the
-  // download itself through useReports. 'inline' keeps it a bare button in the bar
-  // rather than the floating FAB it defaults to on browse/view pages.
-  reports: {
-    mode: 'inline'
   }
 }))
 
-// Action-subsystem components that are not `FormAction*` buttons but are still
-// mountable inside the bar. `'reports'` renders the ResourceReports action, which
-// is self-dispatching (it delegates to useReports, never to pageState) and so has
-// no `onClick` in entryDefaults above.
-const ACTION_ALIASES = {
-  reports: 'ResourceReports',
-  resourcereports: 'ResourceReports'
-}
-
-// 'submit' → 'FormActionSubmit'; an already-qualified 'FormActionDraft' or an
-// aliased 'reports' passes through to its own component name.
+// 'submit' → 'FormActionSubmit'; an already-qualified 'FormActionDraft' passes
+// through unchanged.
 function actionComponentName (name) {
   const key = String(name || '').trim()
   if (!key) return ''
-  const alias = ACTION_ALIASES[key.toLowerCase()]
-  if (alias) return alias
   if (/^formaction/i.test(key)) return key
   return `FormAction${key.charAt(0).toUpperCase()}${key.slice(1)}`
 }
 
-// Maps an entry key onto its entryDefaults/actionProps slot: 'submit',
-// 'FormActionSubmit' and 'reports'/'ResourceReports' must each hit one slot.
+// Maps an entry key onto its entryDefaults/actionProps slot: 'submit' and
+// 'FormActionSubmit' must hit the same slot.
 function defaultsKey (name) {
-  const key = String(name || '').toLowerCase()
-  if (ACTION_ALIASES[key]) return 'reports'
-  return key.replace(/^formaction/, '')
+  return String(name || '').toLowerCase().replace(/^formaction/, '')
 }
 
 function normalizeEntry (entry) {

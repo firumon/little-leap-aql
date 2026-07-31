@@ -138,8 +138,9 @@
  * Lives in the Action subsystem (`components/actions/`), so it is resolvable as
  * `<Action action="ResourceReports" />` and overridable at any of the 10 `_ui/`
  * tiers as `resourcereports.(vue|js)`. `PageAction.vue` mounts it on every
- * non-form page; `FormActions.vue` accepts it as a `'reports'` entry in its
- * `actions` array. See Documents/AQL_ACTION_SYSTEM.md and Documents/REPORTS_SYSTEM.md.
+ * non-form page; the sticky form bar (`FormActions.vue`) does not host it — that
+ * bar renders `FormAction*` buttons only.
+ * See Documents/AQL_ACTION_SYSTEM.md and Documents/REPORTS_SYSTEM.md.
  *
  * Layer boundary: this component is presentation only. Every generation flow —
  * input-dialog state, dynamic select preloading, progress notifications, the

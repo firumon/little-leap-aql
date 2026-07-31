@@ -315,7 +315,12 @@ already-qualified name passes through.
 | `'cancel'` | `FormActionCancel` | `actions/FormActionCancel.vue` |
 | `'draft'` | `FormActionDraft` | *(none — tenant supplies it under `_ui/`)* |
 | `'FormActionDraft'` | `FormActionDraft` | same as above |
-| `'reports'` / `'ResourceReports'` | `ResourceReports` | `actions/ResourceReports.vue` (alias, not `FormAction`-prefixed) |
+
+> [!NOTE]
+> The bar hosts `FormAction*` buttons only — there are no non-`FormAction` aliases.
+> In particular `ResourceReports` is **not** mountable from `actions`; reports are a
+> browse/view-page affordance (see §3.5). Mount it directly with
+> `<Action action="ResourceReports" … />` if a form page genuinely needs one.
 
 **Props**:
 
@@ -423,8 +428,8 @@ it into the containing block for its fixed descendants and breaks FAB positionin
 
 ### 3.5 `ResourceReports.vue`
 Report downloads as a first-class action. `PageAction` mounts it on every **non-form**
-page next to `CrudActions`; `FormActions` mounts it inside the bar when `'reports'`
-appears in `actions`. It is also directly mountable anywhere as
+page next to `CrudActions`. The sticky form bar does **not** host it — `FormActions`
+resolves `FormAction*` buttons only. It is directly mountable anywhere as
 `<Action action="ResourceReports" mode="toolbar" />`.
 
 **Context adaptation** — the record context decides which half of the registry shows:
@@ -595,14 +600,6 @@ modifier prop, since `PageAction` declares both `reports` and `noReports`:
 export default { noReports: true }
 // …or steer it instead of dropping it: { reports: { mode: 'toolbar' } }
 ```
-
-**Put a download button in the sticky form bar** (e.g. print a draft while editing):
-```javascript
-// _ui/AQL/components/operation/purchaseorders/edit/pageaction.js
-export default { actions: ['reports', 'reset', 'submit'] }
-```
-`'reports'` is an alias for `ResourceReports`, not a `FormAction*` button — it needs
-no handler, because it dispatches its own download through `useReports`.
 
 **Intercept the submission lifecycle without touching any template**:
 ```javascript

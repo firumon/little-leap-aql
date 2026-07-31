@@ -367,8 +367,8 @@ const showCrudActions = computed(() =>
 )
 
 // Reports float alongside the CRUD cluster on browse/view pages. Form pages are
-// owned by the sticky bar, where reports are opted in per-page instead through
-// `actions: [..., 'reports']` (see FormActions.vue). ResourceReports self-hides
+// owned by the sticky bar, which hosts FormAction* buttons only — no report entry
+// is resolvable from `actions` (see FormActions.vue). ResourceReports self-hides
 // when the resource has no matching reports, so no config lookup is needed here.
 // `noReports` is read from attrs as well as props: a full `pageaction.vue` override
 // or an intermediate wrapper may pass it through without it landing on the declared

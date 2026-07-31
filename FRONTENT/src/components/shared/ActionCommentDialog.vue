@@ -1,49 +1,66 @@
 <template>
-  <q-dialog :model-value="modelValue" @update:model-value="emit('update:model-value', $event)" persistent>
-    <q-card style="min-width: 320px; max-width: 90vw; border-radius: 12px;">
-      <q-card-section class="text-h6 text-weight-bold text-primary q-pb-none">
-        {{ title }}
-      </q-card-section>
+  <AqlDialog
+    :model-value="modelValue"
+    :title="title"
+    :icon="submitIcon || 'rate_review'"
+    :variant="variant"
+    :loading="saving"
+    persistent
+    max-width="520px"
+    @update:model-value="emit('update:model-value', $event)"
+    @cancel="handleCancel"
+  >
+    <!-- Optional Slot for extra fields (e.g., Date picker, Outlet Selector) -->
+    <slot name="fields" />
 
-      <q-card-section class="q-gutter-y-md q-pt-md">
-        <!-- Optional Slot for extra fields (e.g., Date picker, Outlet Selector) -->
-        <slot name="fields" />
+    <!-- Comment/Reason text input -->
+    <q-input
+      v-model="comment"
+      type="textarea"
+      :label="label"
+      outlined
+      class="aql-dialog-field"
+      :rows="commentRows"
+      :rules="commentRequired ? [val => !!val || 'This field is required'] : []"
+      lazy-rules
+      hide-bottom-space
+    />
 
-        <!-- Comment/Reason text input -->
-        <q-input
-          v-model="comment"
-          type="textarea"
-          :label="label"
-          outlined
-          :rows="commentRows"
-          :rules="commentRequired ? [val => !!val || 'This field is required'] : []"
-          lazy-rules
-          hide-bottom-space
-        />
-      </q-card-section>
-
-      <q-card-actions align="right" class="q-px-md q-pb-md">
-        <q-btn flat label="Cancel" color="grey-7" v-close-popup @click="handleCancel" />
-        <ResourceActionButton
-          flat
-          :color="submitColor"
-          :label="submitLabel"
-          :icon="submitIcon"
-          :loading="saving"
-          :disable="isSubmitDisabled"
-          :action="action"
-          :target-resource="targetResource"
-          :hide-if-unauthorized="false"
-          @click="handleConfirm"
-        />
-      </q-card-actions>
-    </q-card>
-  </q-dialog>
+    <!-- Confirm stays a ResourceActionButton: it carries the per-action permission
+         gate, which the generic footer button has no way to evaluate. -->
+    <template #actions>
+      <q-btn
+        flat
+        no-caps
+        label="Cancel"
+        color="grey-7"
+        class="aql-dialog-btn"
+        v-close-popup
+        @click="handleCancel"
+      />
+      <ResourceActionButton
+        push
+        glossy
+        no-caps
+        class="aql-dialog-btn"
+        :color="submitColor"
+        :label="submitLabel"
+        :icon="submitIcon"
+        :loading="saving"
+        :disable="isSubmitDisabled"
+        :action="action"
+        :target-resource="targetResource"
+        :hide-if-unauthorized="false"
+        @click="handleConfirm"
+      />
+    </template>
+  </AqlDialog>
 </template>
 
 <script setup>
 import { ref, computed, watch } from 'vue'
 import ResourceActionButton from './ResourceActionButton.vue'
+import AqlDialog from './AqlDialog.vue'
 
 defineOptions({ name: 'ActionCommentDialog' })
 
@@ -83,6 +100,12 @@ const props = defineProps({
   submitIcon: {
     type: String,
     default: ''
+  },
+  // Header/banner tint, forwarded to AqlDialog. Lets a destructive confirmation
+  // (cancel, reject) read as negative without any template change at the call site.
+  variant: {
+    type: String,
+    default: 'primary'
   },
   action: {
     type: [String, Array, Object],

@@ -15,13 +15,14 @@ The AQL report UI system coordinates data from `APP.Resources.Reports` configs t
 *   **Registry Configs**: Report rules are stored in `APP.Resources` in the `Reports` column. The registry controls sheet mapping, location rules (`isRecordLevel`), parameter definitions (`inputs`), and layout overrides (`pdfOptions`).
 *   **Menu Configurations**: The sheet menu action **AQL 🚀 > Manage Reports** renders `GAS/reportManager.html`. Saving inside this dialog writes directly to the `Reports` column and clears all config caches.
 *   **Web Frontend**:
-    *   [ResourceReports.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/Reports/ResourceReports.vue) (Auto-detects active resource context, displays record-level or toolbar-level report buttons).
+    *   [actions/ResourceReports.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/actions/ResourceReports.vue) — **preferred**. Report downloads as a page action: resolved via `useActionResolver`, mounted automatically by `PageAction` on non-form pages, by `FormActions` via `actions: [… 'reports' …]`, or directly as `<Action action="ResourceReports" mode="toolbar" />`. Overridable at all 10 `_ui/` tiers as `resourcereports.(vue|js)`. Modes: `fab` / `toolbar` / `card` / `inline`. Record context comes from the injected `resourceRecord`. Spec: [AQL_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_ACTION_SYSTEM.md) §3.5; customization routing: [action_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/action_customization.md).
+    *   [Reports/ResourceReports.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/Reports/ResourceReports.vue) — **legacy**, direct-import path (auto-detects active resource context, displays record-level or toolbar-level report buttons). Retained unchanged for existing custom views/pages; do not add new call sites.
     *   [useReports.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/reports/useReports.js) (Filters reports, preloads dynamic sources, parses inputs into cells, and triggers generation).
-    *   [ReportInputDialog.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/master/ReportInputDialog.vue) (Prompts for user inputs, handles select dropdown lists, date picking, toggles).
+    *   [ReportInputDialog.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/app/ReportInputDialog.vue) (Prompts for user inputs, handles select dropdown lists, date picking, toggles).
 
 **Key File Coordinates**:
 *   Detailed Guide: [REPORTS_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/REPORTS_SYSTEM.md)
-*   Frontend Components: [ResourceReports.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/Reports/ResourceReports.vue) and [ReportInputDialog.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/master/ReportInputDialog.vue)
+*   Frontend Components: [ResourceReports.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/Reports/ResourceReports.vue) and [ReportInputDialog.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/app/ReportInputDialog.vue)
 *   Frontend Composable: [useReports.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/reports/useReports.js)
 *   GAS Dialog & Save: [reportManager.html](file:///f:/LITTLE%20LEAP/AQL/GAS/reportManager.html) and [appMenu.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/appMenu.gs)
 
@@ -35,6 +36,8 @@ When modifying Quasar report UI components:
     *   Do not query `resourceIoStore` or trigger backend Calls directly from `ResourceReports.vue` or `ReportInputDialog.vue`.
 2.  **Resource Resolvers**:
     *   Auto-derive resource names and codes using `useResourceConfig()`. If a component handles explicit rows (e.g. details dialog), pass the record as a prop to `ResourceReports`.
+    *   In the **action** component, resolve context from the injected `resourceConfig` / `resourceRecord` — never from a store. Type every customizable prop as `[Type, Function]` and evaluate it via `evaluateProp` (ARCHITECTURE RULES §8), and carry no `<style>` block: report action styling is `.aql-report-action-*` in `src/css/custom.scss` (§7).
+    *   The action is **self-dispatching** — a download never touches `pageState`, so it calls `useReports` directly instead of emitting intent to `PageAction.handleAction()`. Do not add report logic to that dispatcher.
 3.  **Dynamic Select Input Preloading**:
     *   If a report input uses a dynamic resource lookup (`type: "select"` with `source: { resource, field }`), the composable **MUST** call `dataStore.loadResource(resource)` on report initiation to seed the list in state before the dialog opens.
     *   Use the `getSelectOptions` helper in `ReportInputDialog.vue` to map unique sorted options:

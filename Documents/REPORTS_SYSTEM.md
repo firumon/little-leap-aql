@@ -182,9 +182,41 @@ The export request is constructed by fetching a Google Sheets export URL:
 
 ## 6. Frontend Quasar Integration
 
-### A. ResourceReports Component (`FRONTENT/src/components/Reports/ResourceReports.vue`)
-This component acts as the user interface container.
-*   **Auto-Derivation**: Uses `useResourceConfig()` to resolve the active resource context, scope, name, and current code.
+There are **two** report UI containers. Both are presentation-only shells over the same
+`useReports` composable; they differ in how they obtain record context and whether they
+are overridable.
+
+### A1. ResourceReports Action (`FRONTENT/src/components/actions/ResourceReports.vue`) — preferred
+A first-class member of the **Action subsystem**, so it resolves through
+`useActionResolver` and is overridable at all 10 `_ui/` tiers as `resourcereports.(vue|js)`.
+Canonical spec: [AQL_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_ACTION_SYSTEM.md) §3.5.
+*   **Mount points**: `PageAction` mounts it automatically on every non-form page;
+    `FormActions` mounts it when `actions` contains `'reports'`; or mount it directly
+    as `<Action action="ResourceReports" mode="toolbar" />`.
+*   **Context**: record from the `record` prop, else the injected `resourceRecord` —
+    a record in context selects `isRecordLevel` reports, no record selects page-level ones.
+*   **Modes**: `fab` (default floating FAB), `toolbar` (dropdown), `card` (bordered bar),
+    `inline` (bare buttons, used inside the sticky form bar).
+*   **Declarative control**: `noReports: true` (page-contract gate — drops only the
+    report cluster, unlike `noActions` which drops every page action) or
+    `reports: { mode: 'toolbar' }` on `PageAction`; a `reports` array/function prop
+    to pin an explicit report list.
+*   **Styling**: `push glossy` throughout, sharing the CRUD cluster's motion and
+    elevation (`.aql-report-action-fab` `@extend`s `.aql-crud-action-fab`) but taking a
+    horizontal **pill** footprint — icon + short `label` (default `'Reports'`) — in
+    `teal-7` with white text. `card`/`inline` buttons carry `.aql-form-action-btn` +
+    `.aql-report-action-btn`.
+*   **Input dialog**: [`app/ReportInputDialog.vue`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/app/ReportInputDialog.vue)
+    is a thin body over the shared
+    [`shared/AqlDialog.vue`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/shared/AqlDialog.vue)
+    shell — it supplies only the field list; header, banner, footer and transitions
+    come from the shell. Fields render at Quasar's standard (non-`dense`) height for
+    comfortable touch targets, per the mobile-first contract (ARCHITECTURE RULES §7).
+*   **Dialog Integration**: Hosts the `ReportInputDialog` modal to display dynamic inputs.
+
+### A2. ResourceReports Component (`FRONTENT/src/components/Reports/ResourceReports.vue`) — legacy
+Retained unchanged for the custom views and pages that import it directly.
+*   **Auto-Derivation**: Uses `useResourceConfig()` to resolve the active resource context, scope, name, and current code, and `useDataStore` to look the record up by route code.
 *   **Modes**:
     *   *Toolbar Mode*: Renders a list of flat, bordered buttons at the top of the resource grid.
     *   *Inline Mode*: Renders buttons inline when context (record row) is present.

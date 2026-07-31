@@ -31,7 +31,7 @@ graph TD
     BasePageAction --> |every other page| CrudActions[actions/CrudActions.vue]
 
     FormActions --> |one &lt;Action&gt; per entry in `actions`| Buttons[FormActionSubmit<br/>FormActionReset<br/>FormActionCancel]
-    CrudActions --> |useSectionResolver| Fabs[sections/AddFab<br/>sections/EditFab<br/>sections/CrudActionsFab]
+    CrudActions --> |useActionResolver| Fabs[actions/AddFab<br/>actions/EditFab<br/>actions/CrudActionsFab]
 ```
 
 ### 1.1 Why a separate subsystem
@@ -179,6 +179,10 @@ Identical in shape to the Section and Content resolvers (first match wins):
 | `FormActionReset.vue` | Base reset button. |
 | `FormActionCancel.vue` | Base cancel button — self-navigates via `nav.goBack()`. |
 | `CrudActions.vue` | Floating CRUD FABs with the 750ms-delayed `bounceIn` entrance. |
+| `AddFab.vue` | Round Add FAB, or a `q-fab-action` when `asFabAction` is set. |
+| `EditFab.vue` | Round Edit FAB, or a `q-fab-action` when `asFabAction` is set. |
+| `CrudActionsFab.vue` | Expandable three-dot menu hosting the Add/Edit FABs as slots. |
+| `ResourceReports.vue` | Report downloads as an action — pill FAB, toolbar dropdown, card bar, or inline buttons. |
 
 > [!IMPORTANT]
 > **Action components carry no `<style>` block.** Every rule lives in
@@ -188,9 +192,10 @@ Identical in shape to the Section and Content resolvers (first match wins):
 ### 3.1 `PageAction.vue`
 Mounted by `Page.vue`. Decides which cluster is live:
 * `add` / `edit` / `action` → `FormActions` (the sticky bar owns these pages entirely).
-* everything else → `CrudActions` (which applies its own record/permission gating).
+* everything else → `CrudActions` (which applies its own record/permission gating)
+  **and** `ResourceReports` (which applies its own reports-exist gating).
 
-Both clusters are mounted through `useActionResolver` (with the framework component as
+All three clusters are mounted through `useActionResolver` (with the framework component as
 `defaultComponent`), so each is independently overridable at any of the 10 tiers.
 
 **Props** — every one is settable from a `pageaction.js` JS modifier:
@@ -200,6 +205,8 @@ Both clusters are mounted through `useActionResolver` (with the framework compon
 | `page` | `String` (required) | — | Canonical page name |
 | `scope` / `resource` / `uiName` | `String` | `null` | Resolver context; falls back to injected `resourceConfig` |
 | `actions` | `Array` | `null` | Forwarded to `FormActions`; `null` lets `FormActions`' own default apply |
+| `reports` | `Boolean\|Object` | `true` | Report cluster on non-form pages. `false` suppresses it; an object is spread onto `ResourceReports` (e.g. `{ mode: 'toolbar' }`) |
+| `noReports` | `Boolean` | `false` | Page-contract gate — suppresses only the report cluster, leaving the CRUD FABs (cf. `noActions`, which suppresses everything) |
 | `submit` / `reset` / `cancel` | `Function` | `null` | Unified action handlers — see §3.1.1 |
 | `modifyPayload` | `Function` | `null` | `(requests, ctx) => requests` payload interceptor |
 | `successRoute` | `String\|Function` | `null` | `'view'` \| `'index'` \| `(code, ctx) => target` |
@@ -308,6 +315,7 @@ already-qualified name passes through.
 | `'cancel'` | `FormActionCancel` | `actions/FormActionCancel.vue` |
 | `'draft'` | `FormActionDraft` | *(none — tenant supplies it under `_ui/`)* |
 | `'FormActionDraft'` | `FormActionDraft` | same as above |
+| `'reports'` / `'ResourceReports'` | `ResourceReports` | `actions/ResourceReports.vue` (alias, not `FormAction`-prefixed) |
 
 **Props**:
 
@@ -394,15 +402,113 @@ for a premium appearance matching the `FormActions` bar buttons.
 
 Never rendered on `add` / `edit` pages — `FormActions` owns those.
 
-Its individual FABs (`AddFab`, `EditFab`, `CrudActionsFab`) remain **sections** under
-`components/sections/` and keep resolving through `useSectionResolver`, so existing tenant
-FAB overrides are untouched and will automatically inherit the new `push glossy` styling
-via `.aql-crud-action-fab` class. A `CrudActions` JS modifier can suppress the whole cluster by
-returning `show: false` or `hide: true` (plain boolean or function).
+Its individual FABs (`AddFab`, `EditFab`, `CrudActionsFab`) live in **`components/actions/`**
+alongside their container and resolve through `useActionResolver`. The folder is the
+resolution contract (ARCHITECTURE RULES §8), so an action container's children must not be
+resolved as sections. The 10-tier `_ui/` override paths are unchanged — only the
+base-component lookup moved from `components/sections/{Fab}.vue` to
+`components/actions/{Fab}.vue`, so a tenant override at
+`_ui/{ui}/components/{scope}/{Resource}/addfab.vue` still resolves exactly as before. A
+`CrudActions` JS modifier can suppress the whole cluster by returning `show: false` or
+`hide: true` (plain boolean or function).
+
+> [!NOTE]
+> The only override path that changed is the tenant-wide **generic base** slot:
+> `_ui/{ui}/components/sections/addfab.vue` → `_ui/{ui}/components/actions/addfab.vue`.
+> No such file exists in the repo today, so the move is behaviour-preserving.
 
 The `.aql-crud-action-container` entrance animation is applied to an **inner wrapper**,
 never to the `q-page-sticky` root — a CSS transform on a `position: fixed` ancestor turns
 it into the containing block for its fixed descendants and breaks FAB positioning.
+
+### 3.5 `ResourceReports.vue`
+Report downloads as a first-class action. `PageAction` mounts it on every **non-form**
+page next to `CrudActions`; `FormActions` mounts it inside the bar when `'reports'`
+appears in `actions`. It is also directly mountable anywhere as
+`<Action action="ResourceReports" mode="toolbar" />`.
+
+**Context adaptation** — the record context decides which half of the registry shows:
+
+| Record context | Reports shown |
+|----------------|---------------|
+| `record` prop, else injected `resourceRecord` is set (View page) | `isRecordLevel === true` |
+| No record (Index / browse page) | `isRecordLevel !== true` |
+
+**Modes**:
+
+| `mode` | Renders |
+|--------|---------|
+| `'fab'` *(default)* | `q-page-sticky` + a **pill** `q-fab` (icon + `label`) with one `q-fab-action` per report |
+| `'toolbar'` | Flat round `q-btn` opening a `q-menu` list — for a header/toolbar slot |
+| `'card'` | Flat bordered card wrapping a row of buttons — for embedding in a page body |
+| `'inline'` | Bare `push glossy` buttons, used when mounted inside the `FormActions` bar |
+
+**Props** — all `[Type, Function]` and evaluated through `evaluateProp`:
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `mode` | `String\|Function` | `'fab'` | See the mode table above |
+| `label` | `String\|Function` | `'Reports'` | Short label beside the icon — this is what gives the FAB its pill footprint |
+| `record` | `Object\|Function` | `null` | Explicit record context; falls back to injected `resourceRecord` |
+| `reports` | `Array\|Function` | `null` | Replaces the config-derived list, so a page action config can declare exactly which reports appear |
+| `color` / `itemColor` | `String\|Function` | `'teal-7'` / `'teal-7'` | Distinct from the navy CRUD cluster without competing with it |
+| `textColor` | `String\|Function` | `'white'` | Content colour on those solid surfaces |
+| `icon` / `activeIcon` | `String\|Function` | `'picture_as_pdf'` / `'close'` | |
+| `tooltip` | `String\|Function` | `'Download Reports'` | |
+| `position` / `offset` | `String\|Function` / `Array\|Function` | `'bottom-left'` / `[18, 18]` | `q-page-sticky` placement in `fab` mode — bottom-**left** so it never collides with the bottom-right CRUD cluster |
+| `show` / `hide` | `Boolean\|Function` | `true` / `false` | Same suppression contract as `CrudActions` |
+| `noReports` | `Boolean\|Function` | `false` | Page-contract gate, mirroring `noActions` — see below |
+| `page` / `scope` / `resource` / `uiName` | `String` | `null` | Resolver context |
+
+**The `noReports` gate.** `noActions: true` in a page contract or JS modifier suppresses
+the entire `<Action>` mount from `Page.vue`. `noReports: true` is the narrower switch:
+it drops only the report cluster and leaves the CRUD FABs in place. It is declared on
+**both** `PageAction` (which also checks `$attrs.noReports`, so a full `pageaction.vue`
+override or an intermediate wrapper cannot lose the gate) and `ResourceReports` itself
+(so a direct `<Action action="ResourceReports" no-reports />` mount obeys it too).
+
+```javascript
+// _ui/AQL/pages/index.js — CRUD FABs stay, report FAB goes
+export default { noReports: true }
+```
+
+> [!IMPORTANT]
+> **`ResourceReports` is self-dispatching** — the one deliberate exception to
+> "buttons never act on their own" (§3.3). Submit/Reset/Cancel emit intent because
+> `PageAction.handleAction()` dispatches them through `pageState`; a report download
+> never touches `pageState`. Routing it through the dispatcher would push report
+> knowledge into the submission lifecycle, so it calls `useReports` directly. It
+> therefore emits nothing and takes no `@`-handler from its container.
+
+**Layer boundary**: the component is presentation only. Input-dialog state, dynamic
+select preloading (`dataStore.loadResource` for `type: 'select'` inputs with a
+`source`), progress notifications, and the Base64 → Blob download all live in
+`useReports` (`src/composables/reports/useReports.js`) — see
+[REPORTS_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/REPORTS_SYSTEM.md).
+
+**Styling**: `push glossy` throughout, matching `CrudActionsFab` / `AddFab` and the
+`FormActions` bar buttons. `.aql-report-action-fab` `@extend`s `.aql-crud-action-fab`,
+so both floating clusters share one shadow, hover-lift and press-scale — but the report
+FAB takes a **horizontal pill** footprint — Quasar's own geometry for a labelled QFab,
+not a CSS override (icon + short `label`)
+rather than the CRUD cluster's round FAB, because reports are a utility affordance and
+the label makes that legible without a hover. The `card`/`inline` buttons carry
+`.aql-form-action-btn` for sticky-bar padding and weight, plus `.aql-report-action-btn`
+for the same pill radius. Report-specific rules in `custom.scss` are
+`.aql-report-action-{container,fab,item,btn,label,card,card-inner}`. No `<style>` block,
+per §7 of ARCHITECTURE RULES.
+
+> [!IMPORTANT]
+> The pill treatment is **exclusive to `ResourceReports`**. `CrudActions` and its FABs
+> keep their round footprint and navy palette unchanged — the two clusters share motion
+> and elevation, not shape or colour.
+
+> [!NOTE]
+> The legacy `components/Reports/ResourceReports.vue` is untouched and still works for
+> every direct import in custom views and pages (`<ResourceReports :record="…" />`).
+> It resolves its record from the route code via `useDataStore`; the action version
+> uses the injected `resourceRecord` instead, which is what a resolver-backed
+> component is supposed to do. New work should use the action.
 
 ---
 
@@ -466,6 +572,37 @@ modify a base). Without a handler the button renders but only logs
 // _ui/AQL/components/operation/outletvisits/crudactions.js
 export default { show: false }
 ```
+
+**Move report downloads into the page header instead of the floating FAB**:
+```javascript
+// _ui/AQL/components/operation/outletpayments/resourcereports.js
+export default { mode: 'toolbar' }
+```
+
+**Show only one report, relabelled, on a resource's View page**:
+```javascript
+// _ui/AQL/components/operation/outletreturns/view/resourcereports.js
+export default {
+  reports: (record, config) =>
+    (config?.reports || []).filter((r) => r.name === 'ReturnNote')
+}
+```
+
+**Suppress reports on a page without touching `_ui/`** — a page contract or page JS
+modifier prop, since `PageAction` declares both `reports` and `noReports`:
+```javascript
+// _ui/AQL/pages/index.js
+export default { noReports: true }
+// …or steer it instead of dropping it: { reports: { mode: 'toolbar' } }
+```
+
+**Put a download button in the sticky form bar** (e.g. print a draft while editing):
+```javascript
+// _ui/AQL/components/operation/purchaseorders/edit/pageaction.js
+export default { actions: ['reports', 'reset', 'submit'] }
+```
+`'reports'` is an alias for `ResourceReports`, not a `FormAction*` button — it needs
+no handler, because it dispatches its own download through `useReports`.
 
 **Intercept the submission lifecycle without touching any template**:
 ```javascript

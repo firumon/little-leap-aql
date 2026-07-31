@@ -62,10 +62,11 @@ Action.vue (action="PageAction")
     │   ├── Action → actions/FormActionReset.vue
     │   ├── Action → actions/FormActionSubmit.vue
     │   └── Action → actions/FormActionCancel.vue
-    └── actions/CrudActions.vue     ← every other page (resolved)
-        ├── sections/AddFab.vue          ┐ still Sections —
-        ├── sections/EditFab.vue         │ resolved via
-        └── sections/CrudActionsFab.vue  ┘ useSectionResolver
+    ├── actions/CrudActions.vue     ← every other page (resolved)
+    │   ├── actions/AddFab.vue          ┐ all Actions —
+    │   ├── actions/EditFab.vue         │ resolved via
+    │   └── actions/CrudActionsFab.vue  ┘ useActionResolver
+    └── actions/ResourceReports.vue ← every other page (resolved); report downloads
 ```
 
 The Action subsystem is decoupled from `sections` — it mounts on every resource page and does
@@ -134,6 +135,7 @@ export default { actions: ['cancel', 'submit'] }
 | `'submit'` | `FormActionSubmit` | `actions/FormActionSubmit.vue` |
 | `'cancel'` | `FormActionCancel` | `actions/FormActionCancel.vue` |
 | `'draft'` | `FormActionDraft` | *none — supply it under `_ui/`* |
+| `'reports'` | `ResourceReports` | `actions/ResourceReports.vue` (alias; self-dispatching, needs no handler) |
 
 Default is `['reset', 'submit']`. Entries may also be objects: `{ name: 'submit', label: 'Publish' }`.
 An unrecognised key emits `action(key)` from `FormActions` instead of `submit`/`reset`/`cancel`.
@@ -212,7 +214,40 @@ Available props: `submit`, `reset`, `cancel`, any custom action key, `modifyPayl
 export default { show: false }   // or { hide: true }; both accept a function
 ```
 
-### Pattern 6: Full container override
+### Pattern 6: Report downloads (`ResourceReports`)
+`PageAction` mounts `actions/ResourceReports.vue` on every non-form page (bottom-left
+FAB), gated only by whether the resource has matching reports. It adapts itself:
+with a record in context (View page) it shows `isRecordLevel` reports, without one
+(Index page) it shows page-level reports.
+
+```javascript
+// Header dropdown instead of the floating FAB, resource-wide
+// src/_ui/AQL/components/operation/outletpayments/resourcereports.js
+export default { mode: 'toolbar' }   // 'fab' | 'toolbar' | 'card' | 'inline'
+
+// Suppress, or steer, from a page contract / page JS modifier.
+// noReports drops ONLY the report cluster; noActions drops the whole <Action> mount.
+export default { noReports: true }   // or { reports: { mode: 'toolbar' } }
+
+// Add a download button to the sticky form bar — no handler needed
+export default { actions: ['reports', 'reset', 'submit'] }
+```
+
+Styling shares `CrudActions`' motion and elevation (`push glossy`,
+`.aql-report-action-fab` `@extend`s `.aql-crud-action-fab`) but **not** its shape or
+colour: the report FAB is a horizontal pill (icon + `label`, default `'Reports'`,
+Quasar's own labelled-QFab geometry, not a CSS radius override) in `teal-7` with
+white text. `card`/`inline` buttons carry
+`.aql-form-action-btn` + `.aql-report-action-btn`. The pill and teal treatment are
+exclusive to `ResourceReports` — never apply them to `CrudActions`.
+
+It is the **one deliberate exception** to "buttons never act on their own": a report
+download never touches `pageState`, so it calls `useReports` directly rather than
+emitting intent to `PageAction.handleAction()`. Keep it that way — do not add report
+logic to the dispatcher, and do not fetch or notify from the component. See
+[report_ui_development.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/report_ui_development.md).
+
+### Pattern 7: Full container override
 If you override `pageaction.vue` you must explicitly import and render `FormActions`
 and/or `CrudActions` yourself, and wire `@submit`/`@reset` to `pageState` — the base
 container's lifecycle logic is not inherited.

@@ -1,4 +1,4 @@
-import { ref, watch, computed, shallowRef, markRaw } from 'vue'
+import { ref, watch, computed, shallowRef, markRaw, unref } from 'vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { usePageOrchestrator } from 'src/composables/resources/usePageOrchestrator'
@@ -157,7 +157,10 @@ export function usePageResolver() {
       resolvedActionFields: resolvedActionFields.value,
       selectedOutcome: selectedOutcome.value,
       column: column.value,
-      loading: resourceRecord.loading,
+      // Unwrapped: every other entry here is a plain value, and passing the ref
+      // itself trips Boolean prop validation downstream ("Expected Boolean, got
+      // Object"). Reading .value inside this computed keeps it reactive.
+      loading: unref(resourceRecord.loading),
       currentActionConfig: currentActionConfig.value,
       actionAllowedForRecord: actionAllowedForRecord.value,
       actionName: actionName.value,

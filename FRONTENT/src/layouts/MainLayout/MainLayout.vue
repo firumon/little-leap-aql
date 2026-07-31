@@ -19,7 +19,6 @@
         <q-space />
 
         <div class="q-gutter-sm row items-center no-wrap">
-          <ResourceReports mode="toolbar" />
 
 <!--          <q-btn round flat icon="notifications">
             <q-badge floating color="red" rounded />
@@ -122,7 +121,6 @@
 
 <script setup>
 import MenuTreeNode from 'src/components/MenuTreeNode.vue'
-import ResourceReports from 'src/components/Reports/ResourceReports.vue'
 import { useMainLayoutNavTree } from 'src/composables/layout/useMainLayoutNavTree'
 
 const {

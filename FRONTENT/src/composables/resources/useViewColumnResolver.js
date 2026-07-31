@@ -66,15 +66,23 @@ export function useViewColumnResolver({ columnName, resourceSlug, scope, uiName 
   const resolvedComponent = shallowRef(null)
   const modifier = ref(null)
 
+  // Primitive key, not an array literal: `watch` compares a getter's result with
+  // Object.is and never deep-compares, so a fresh array would re-fire this callback
+  // (and its dynamic-import scan) on every re-evaluation, once per rendered column.
+  let resolveToken = 0
+
   watch(
-    () => [toValue(columnName), toValue(resourceSlug), toValue(scope), toValue(uiName)],
-    async ([col, slug, scp, ui]) => {
+    () => `${toValue(columnName) ?? ''}|${toValue(resourceSlug) ?? ''}|${toValue(scope) ?? ''}|${toValue(uiName) ?? ''}`,
+    async () => {
+      const token = ++resolveToken
       const { component, modifier: mod } = await resolveColumnOverride({
-        columnName: col,
-        resourceSlug: slug,
-        scope: scp,
-        uiName: ui
+        columnName:   toValue(columnName),
+        resourceSlug: toValue(resourceSlug),
+        scope:        toValue(scope),
+        uiName:       toValue(uiName)
       })
+      // A newer key superseded this scan mid-import — drop the stale result.
+      if (token !== resolveToken) return
       resolvedComponent.value = component
       modifier.value = mod
     },

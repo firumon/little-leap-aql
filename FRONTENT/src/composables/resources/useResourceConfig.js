@@ -158,8 +158,11 @@ export function useResourceConfig(resourceNameOverride) {
       })
     }
 
-    // Determine target resource config
-    const resConfig = targetResourceName ? findResourceConfig(auth, targetResourceName) : config.value
+    // Determine target resource config. `activeConfig` is the local computed —
+    // `config` is only the name this composable RETURNS it under, so referencing
+    // `config.value` here threw a ReferenceError (ES modules are strict mode) on
+    // every allowed() call that omitted an explicit target resource.
+    const resConfig = targetResourceName ? findResourceConfig(auth, targetResourceName) : activeConfig.value
     if (!resConfig) return false
 
     // 2. Array of actions on a single resource

@@ -44,25 +44,51 @@ export function usePageResolver() {
   const checkedPaths = ref([])
   const ready = ref(false)
 
+  // Monotonic token guarding against out-of-order async resolves: if the lookup key
+  // changes again while a scan awaits a dynamic import, the older scan must not
+  // write its result over the newer one.
+  let resolveToken = 0
+
   // Scan candidates
   watch(
-    () => [
-      resourceSlug.value,
-      canonicalPage.value,
-      customUIName.value,
-      scope.value
-    ],
-    async ([slug, page, uiName, scopeVal]) => {
-      ready.value = false
-      resolvedPageComponent.value = null
-      jsModifier.value = null
-      baseContractProps.value = {}
+    // Primitive key, not an array literal: `watch` compares a getter's result with
+    // Object.is and never deep-compares, so a fresh array would re-fire this
+    // callback every time any of these computeds merely re-evaluated to the SAME
+    // value — e.g. whenever a background sync replaces the auth store's resources
+    // array. That reset `ready` to false and flashed the page spinner mid-browse.
+    () => `${resourceSlug.value ?? ''}|${canonicalPage.value ?? ''}|${customUIName.value ?? ''}|${scope.value ?? ''}`,
+    async () => {
+      const token = ++resolveToken
+      const slug    = resourceSlug.value
+      const page    = canonicalPage.value
+      const uiName  = customUIName.value
+      const scopeVal = scope.value
+
+      // Resolved into locals and committed once at the end. The page component is
+      // deliberately NOT nulled up front: doing so unmounts the entire page tree —
+      // including every Section/Content/Action beneath it and the Quasar portals
+      // they render — only to rebuild it moments later.
+      let nextComponent = null
+      let nextModifier  = null
+      let nextContract  = {}
+      const paths = []
+
+      // Spinner only on the first resolve; a later key change keeps the current
+      // page rendered until its replacement is ready.
+      if (!resolvedPageComponent.value) ready.value = false
       notFound.value = false
-      checkedPaths.value = []
+
+      function commit () {
+        baseContractProps.value     = nextContract
+        jsModifier.value            = nextModifier
+        resolvedPageComponent.value = nextComponent
+        checkedPaths.value          = paths
+        ready.value                 = true
+      }
 
       if (!slug) {
         notFound.value = true
-        ready.value = true
+        commit()
         return
       }
 
@@ -73,19 +99,21 @@ export function usePageResolver() {
 
       const bpPath = `pages/${scopeVal}/${bpKey}.js`
       const bpLoader = pageRegistry[bpPath.toLowerCase()]
-      checkedPaths.value.push({ path: bpPath, found: !!bpLoader })
+      paths.push({ path: bpPath, found: !!bpLoader })
 
       if (bpLoader) {
         try {
           const mod = await bpLoader()
-          baseContractProps.value = mod.default ?? mod ?? {}
+          nextContract = mod.default ?? mod ?? {}
         } catch (err) {
           console.error(`[usePageResolver] Failed to load BP ${bpPath}:`, err)
         }
       }
+      // A newer lookup key superseded this scan mid-import — drop the stale result.
+      if (token !== resolveToken) return
 
       if (!uiName) {
-        ready.value = true
+        commit()
         return
       }
 
@@ -101,15 +129,16 @@ export function usePageResolver() {
 
       for (const { path, isVue } of candidates) {
         const loader = customUiRegistry[path.toLowerCase()]
-        checkedPaths.value.push({ path, found: !!loader })
+        paths.push({ path, found: !!loader })
         if (!loader) continue
 
         try {
           const mod = await loader()
+          if (token !== resolveToken) return
           if (isVue) {
-            resolvedPageComponent.value = markRaw(mod.default ?? mod)
+            nextComponent = markRaw(mod.default ?? mod)
           } else {
-            jsModifier.value = mod.default ?? mod
+            nextModifier = mod.default ?? mod
           }
           break // first match wins, regardless of type
         } catch (err) {
@@ -117,7 +146,7 @@ export function usePageResolver() {
         }
       }
 
-      ready.value = true
+      commit()
     },
     { immediate: true }
   )

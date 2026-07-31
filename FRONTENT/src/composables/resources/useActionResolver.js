@@ -38,7 +38,7 @@ Object.keys(customUiModules).forEach((rawPath) => {
  *
  * Mirrors useSectionResolver / useContentResolver, but scoped to the `actions/`
  * folder so page-level actions (PageAction, FormActions, the individual form
- * buttons, CrudActions) resolve independently from page sections and contents.
+ * buttons, ResourceActions) resolve independently from page sections and contents.
  *
  * Unlike useSectionResolver/useContentResolver — which snapshot their merged props
  * inside the watch — `finalProps` here is a computed over the LIVE `preparedProps`.
@@ -67,15 +67,49 @@ export function useActionResolver(preparedProps, defaultComponent = null) {
   const resourceRecord = inject('resourceRecord', null)
   const pageState      = inject('pageState', null)
 
+  // Monotonic token guarding against out-of-order async resolves: if the lookup
+  // key changes again while a scan is awaiting a dynamic import, the older scan
+  // must not write its result over the newer one.
+  let resolveToken = 0
+
   watch(
+    // MUST return a primitive. A getter returning an array literal builds a new
+    // reference on every evaluation, and `watch` compares sources with Object.is
+    // (it does not deep-compare a getter's array result) — so the callback would
+    // re-fire on every reactive read of `preparedProps`, which wraps useAttrs().
+    // That re-render feeds the next attrs change: an unbounded resolve loop that
+    // thrashes memory and pins the tab. A joined string only changes when one of
+    // the five lookup segments genuinely changes.
     () => {
-      const p = preparedProps.value
-      return [p.action, p.page, p.scope, p.resource, p.uiName]
+      const p = preparedProps.value || {}
+      return `${p.action ?? ''}|${p.page ?? ''}|${p.scope ?? ''}|${p.resource ?? ''}|${p.uiName ?? ''}`
     },
-    async ([action, page, scope, resource, uiName]) => {
-      ready.value = false
-      resolvedComponent.value = null
-      modifierProps.value = null
+    async () => {
+      const token = ++resolveToken
+      // Read the live object rather than destructuring the watch source: the
+      // source is now a string, and watch callbacks are not reactivity-tracked.
+      const { action, page, scope, resource, uiName } = preparedProps.value || {}
+
+      // Resolution writes into these locals and commits ONCE at the end (see
+      // `commit`). Nothing is nulled up front: clearing `resolvedComponent` mid-scan
+      // unmounts the live component, and for a component that renders a Quasar
+      // portal (`q-page-sticky`) the remount allocates a NEW portal node while the
+      // old one is still being torn down — which is how identical FAB clusters
+      // stacked up. Committing once means an unchanged component is re-assigned to
+      // the same object, `shallowRef` sees no change, and the portal survives.
+      let nextComponent = null
+      let nextModifier  = null
+
+      // Only show the spinner on the very first resolve. On a later key change the
+      // previous cluster stays on screen until its replacement is ready, so the
+      // page never flickers through an empty state.
+      if (!resolvedComponent.value) ready.value = false
+
+      function commit () {
+        modifierProps.value     = nextModifier
+        resolvedComponent.value = nextComponent
+        ready.value             = true
+      }
 
       // Normalize all path segments to lowercase for case-insensitive lookup
       const actionKey = (action || '').toLowerCase()
@@ -164,9 +198,14 @@ export function useActionResolver(preparedProps, defaultComponent = null) {
         baseAction = markRaw(defaultComponent)
       }
 
-      // No base action exists anywhere — render the fallback card
+      // A newer lookup key superseded this scan while it awaited its imports —
+      // drop the stale result rather than clobbering the current one.
+      if (token !== resolveToken) return
+
+      // No base action exists anywhere — commit null so Action.vue renders the
+      // "Action Not Defined" card.
       if (!baseAction) {
-        ready.value = true
+        commit()
         return
       }
 
@@ -186,8 +225,8 @@ export function useActionResolver(preparedProps, defaultComponent = null) {
       //
       if (!uiKey) {
         // No custom UI configured — use base action with unmodified props
-        resolvedComponent.value = baseAction
-        ready.value = true
+        nextComponent = baseAction
+        commit()
         return
       }
 
@@ -196,30 +235,29 @@ export function useActionResolver(preparedProps, defaultComponent = null) {
         if (!loader) continue
 
         const exported = await loadCustomUiModule(path)
+        if (token !== resolveToken) return
         if (!exported) continue
 
         if (isVueOverride) {
           // Full Vue template override — replaces the base action entirely.
           // Props flow through unmodified so the override component can use $attrs.
-          resolvedComponent.value = markRaw(exported)
+          nextComponent = markRaw(exported)
         } else {
           // JS modifier — keeps the base action, adjusts props before passing down.
           // Cached here; finalProps merges it over the live preparedProps.
-          modifierProps.value = typeof exported === 'function'
+          nextModifier = typeof exported === 'function'
             ? exported(preparedProps.value, { pageState, resourceRecord, resourceConfig })
             : exported
-          resolvedComponent.value = baseAction
+          nextComponent = baseAction
         }
 
         break // first match wins; stop scanning
       }
 
       // No override matched — use base action with unmodified props
-      if (!resolvedComponent.value) {
-        resolvedComponent.value = baseAction
-      }
+      if (!nextComponent) nextComponent = baseAction
 
-      ready.value = true
+      commit()
     },
     { immediate: true }
   )

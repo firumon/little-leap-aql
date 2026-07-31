@@ -79,21 +79,64 @@ export function evaluateProp(val, resourceRecord, resourceConfig) {
 export function useSectionResolver(preparedProps, defaultComponent = null) {
   const ready             = ref(false)
   const resolvedComponent = shallowRef(null)
-  const finalProps        = ref({})
+  // Props returned by a matched JS modifier, or null when a Vue override matched /
+  // nothing matched. Merged over the live preparedProps by `finalProps` below.
+  const modifierProps     = ref(null)
+
+  // Live computed, not a snapshot assigned inside the watch. The watch only re-runs
+  // when one of the five lookup keys changes, so a snapshot would freeze every other
+  // prop at first resolve — and re-assigning it on unrelated renders was half of the
+  // thrashing this resolver used to cause. Only the JS-modifier result is cached,
+  // since that is the one thing the async scan actually produced.
+  const finalProps = computed(() => {
+    const current = preparedProps.value || {}
+    return modifierProps.value ? { ...current, ...modifierProps.value } : current
+  })
 
   const resourceConfig = inject('resourceConfig', null)
   const resourceRecord = inject('resourceRecord', null)
   const pageState      = inject('pageState', null)
 
+  // Monotonic token guarding against out-of-order async resolves: if the lookup
+  // key changes again while a scan is awaiting a dynamic import, the older scan
+  // must not write its result over the newer one.
+  let resolveToken = 0
+
   watch(
+    // MUST return a primitive. A getter returning an array literal builds a new
+    // reference on every evaluation, and `watch` compares sources with Object.is
+    // (it does not deep-compare a getter's array result) — so the callback would
+    // re-fire on every reactive read of `preparedProps`, which wraps useAttrs().
+    // That re-render feeds the next attrs change: an unbounded resolve loop that
+    // thrashes memory and pins the tab. A joined string only changes when one of
+    // the five lookup segments genuinely changes.
     () => {
-      const p = preparedProps.value
-      return [p.section, p.page, p.scope, p.resource, p.uiName]
+      const p = preparedProps.value || {}
+      return `${p.section ?? ''}|${p.page ?? ''}|${p.scope ?? ''}|${p.resource ?? ''}|${p.uiName ?? ''}`
     },
-    async ([section, page, scope, resource, uiName]) => {
-      ready.value = false
-      resolvedComponent.value = null
-      finalProps.value = {}
+    async () => {
+      const token = ++resolveToken
+      // Read the live object rather than destructuring the watch source: the
+      // source is now a string, and watch callbacks are not reactivity-tracked.
+      const { section, page, scope, resource, uiName } = preparedProps.value || {}
+
+      // Resolution writes into these locals and commits ONCE at the end. Nothing is
+      // nulled up front: clearing `resolvedComponent` mid-scan unmounts the live
+      // component and rebuilds any portal it renders. Committing once means an
+      // unchanged component is re-assigned to the same object, `shallowRef` sees no
+      // change, and the existing DOM (and its portals) survives untouched.
+      let nextComponent = null
+      let nextModifier  = null
+
+      // Spinner only on the very first resolve; later key changes keep the previous
+      // section on screen until its replacement is ready.
+      if (!resolvedComponent.value) ready.value = false
+
+      function commit () {
+        modifierProps.value     = nextModifier
+        resolvedComponent.value = nextComponent
+        ready.value             = true
+      }
 
       // Normalize all path segments to lowercase for case-insensitive lookup
       const sectionKey  = (section  || '').toLowerCase()
@@ -185,9 +228,14 @@ export function useSectionResolver(preparedProps, defaultComponent = null) {
         baseSection = markRaw(defaultComponent)
       }
 
-      // No base section exists anywhere — render the fallback card
+      // A newer lookup key superseded this scan while it awaited its imports —
+      // drop the stale result rather than clobbering the current one.
+      if (token !== resolveToken) return
+
+      // No base section exists anywhere — commit null so the caller renders its
+      // fallback card.
       if (!baseSection) {
-        ready.value = true
+        commit()
         return
       }
 
@@ -205,13 +253,10 @@ export function useSectionResolver(preparedProps, defaultComponent = null) {
       //   9. Vue override — ui-wide:                   _ui/.../components/${section}.vue
       //  10. JS  modifier — ui-wide:                   _ui/.../components/${section}.js
       //
-      const currentProps = preparedProps.value
-
       if (!uiKey) {
         // No custom UI configured — use base section with unmodified props
-        resolvedComponent.value = baseSection
-        finalProps.value = currentProps
-        ready.value = true
+        nextComponent = baseSection
+        commit()
         return
       }
 
@@ -220,32 +265,29 @@ export function useSectionResolver(preparedProps, defaultComponent = null) {
         if (!loader) continue
 
         const exported = await loadCustomUiModule(path)
+        if (token !== resolveToken) return
         if (!exported) continue
 
         if (isVueOverride) {
           // Full Vue template override — replaces the base section entirely.
           // Props flow through unmodified so the override component can use $attrs.
-          resolvedComponent.value = markRaw(exported)
-          finalProps.value = currentProps
+          nextComponent = markRaw(exported)
         } else {
           // JS modifier — keeps the base section, adjusts props before passing down.
-          const modifiedProps = typeof exported === 'function'
-            ? exported(currentProps, { pageState, resourceRecord, resourceConfig })
+          // Cached here; finalProps merges it over the live preparedProps.
+          nextModifier = typeof exported === 'function'
+            ? exported(preparedProps.value, { pageState, resourceRecord, resourceConfig })
             : exported
-          resolvedComponent.value = baseSection
-          finalProps.value = { ...currentProps, ...modifiedProps }
+          nextComponent = baseSection
         }
 
         break // first match wins; stop scanning
       }
 
       // No override matched — use base section with unmodified props
-      if (!resolvedComponent.value) {
-        resolvedComponent.value = baseSection
-        finalProps.value = currentProps
-      }
+      if (!nextComponent) nextComponent = baseSection
 
-      ready.value = true
+      commit()
     },
     { immediate: true }
   )

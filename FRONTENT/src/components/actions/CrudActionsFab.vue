@@ -17,5 +17,5 @@
 </template>
 
 <script setup>
-defineOptions({ name: 'SectionsCrudActionsFab' })
+defineOptions({ name: 'ActionsCrudActionsFab' })
 </script>

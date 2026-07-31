@@ -26,12 +26,12 @@
 </template>
 
 <script setup>
-defineOptions({ name: 'SectionsEditFab' })
+defineOptions({ name: 'ActionsAddFab' })
 
 defineProps({
   color:       { type: String, default: 'primary' },
-  icon:        { type: String, default: 'edit' },
-  tooltip:     { type: String, default: 'Edit' },
+  icon:        { type: String, default: 'add' },
+  tooltip:     { type: String, default: 'Add New' },
   // Set when rendered inside CrudActionsFab's expandable menu, so this becomes a
   // real q-fab-action (participates in Quasar's stagger/auto-collapse behavior)
   // instead of a standalone floating q-btn.

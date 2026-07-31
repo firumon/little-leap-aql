@@ -36,19 +36,22 @@
  * `PageAction.vue` through `useActionResolver`, so a tenant can replace or modify
  * it at any of the 10 `_ui/` tiers as `CrudActions.(vue|js)`.
  *
- * Its individual FABs (`AddFab`, `EditFab`, `CrudActionsFab`) remain presentation
- * sections under `components/sections/` and keep resolving through
- * `useSectionResolver`, so existing tenant FAB overrides are untouched.
+ * Its individual FABs (`AddFab`, `EditFab`, `CrudActionsFab`) live alongside it in
+ * `components/actions/` and resolve through `useActionResolver`. The folder is the
+ * resolution contract (ARCHITECTURE RULES §8), so an action container's children
+ * must not be resolved as sections. The 10-tier `_ui/` override paths are identical
+ * either way — only the base-component lookup moved from `components/sections/` to
+ * `components/actions/`.
  *
  * Entrance animation (750ms-delayed `bounceIn` on `.aql-crud-action-container`)
  * lives in `src/css/custom.scss` — see ARCHITECTURE RULES §7.
  */
 import { computed, inject, useAttrs } from 'vue'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { useSectionResolver } from 'src/composables/resources/useSectionResolver'
-import AddFab from 'components/sections/AddFab.vue'
-import EditFab from 'components/sections/EditFab.vue'
-import CrudActionsFab from 'components/sections/CrudActionsFab.vue'
+import { useActionResolver } from 'src/composables/resources/useActionResolver'
+import AddFab from './AddFab.vue'
+import EditFab from './EditFab.vue'
+import CrudActionsFab from './CrudActionsFab.vue'
 
 defineOptions({ name: 'ActionsCrudActions', inheritAttrs: false })
 
@@ -91,17 +94,17 @@ const availableProps = computed(() => ({
 
 // Inherited attrs are spread first so availableProps' own resolved values (which may
 // themselves be defaults, not overrides) never clobber a genuine parent-supplied value —
-// but section/page/scope/resource/uiName stay authoritative from availableProps below.
-function resolverProps(section) {
-  return computed(() => ({ ...attrs, section, ...availableProps.value }))
+// but action/page/scope/resource/uiName stay authoritative from availableProps below.
+function resolverProps(action) {
+  return computed(() => ({ ...attrs, action, ...availableProps.value }))
 }
 
 const { resolvedComponent: resolvedAddFab, finalProps: addFabProps } =
-  useSectionResolver(resolverProps('AddFab'), AddFab)
+  useActionResolver(resolverProps('AddFab'), AddFab)
 
 const { resolvedComponent: resolvedEditFab, finalProps: editFabProps } =
-  useSectionResolver(resolverProps('EditFab'), EditFab)
+  useActionResolver(resolverProps('EditFab'), EditFab)
 
 const { resolvedComponent: resolvedCrudActionsFab, finalProps: crudActionsFabProps } =
-  useSectionResolver(resolverProps('CrudActionsFab'), CrudActionsFab)
+  useActionResolver(resolverProps('CrudActionsFab'), CrudActionsFab)
 </script>

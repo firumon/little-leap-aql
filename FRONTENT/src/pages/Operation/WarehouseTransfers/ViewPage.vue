@@ -108,8 +108,8 @@
         <div class="row q-gutter-sm justify-center q-mt-sm">
           <ResourceActionButton v-if="availableActions.includes('Approve')" color="positive" label="Approve" icon="check" unelevated @click="openActionDialog('Approve')"/>
           <q-btn v-if="availableActions.includes('Edit')" color="primary" label="Edit" icon="edit" unelevated @click="nav.goTo('edit')"/>
-                    <ResourceActionButton v-if="availableActions.includes('Complete')" color="primary" label="Complete Transfer" icon="check_circle" unelevated @click="nav.goTo('action', { action: 'complete' })"/>
-          <ResourceActionButton v-if="availableActions.includes('ClaimAndComplete')" color="primary" label="Claim & Complete" icon="local_shipping" unelevated @click="nav.goTo('action', { action: 'complete' })"/>
+          <ResourceActionButton v-if="availableActions.includes('Complete')" color="primary" label="Complete Transfer" icon="check_circle" unelevated @click="openActionDialog('Complete')"/>
+          <ResourceActionButton v-if="availableActions.includes('ClaimAndComplete')" color="primary" label="Claim & Complete" icon="local_shipping" unelevated @click="openActionDialog('ClaimAndComplete')"/>
           <q-btn v-if="availableActions.includes('Reject')" color="negative" label="Reject" icon="block" flat @click="openActionDialog('Reject')"/>
         </div>
       </div>

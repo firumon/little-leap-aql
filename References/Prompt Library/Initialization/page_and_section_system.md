@@ -25,7 +25,7 @@ This initialization prompt guides the creation, override, and customization of f
 > Before implementing anything, read the full canonical doc: [AQL_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_PAGE_AND_SECTION_SYSTEM.md). It contains the complete `pageProps` contract, BP schema, page override scan table, resolver internals, and `AqlContentWrapper` state logic — all of which are critical to getting this right.
 
 * **Page Orchestrator (`src/pages/Page.vue`)**:
-  - Dynamically resolved at runtime via `usePageResolver.js` (which internally delegates record/form/action logic to `usePageOrchestrator.js`).
+  - Dynamically resolved at runtime via `usePageResolver.js` (which also owns record loading via `useRecord`; form state lives in `usePageState.js`).
   - Always renders `<ResourceBreadcrumb />` unconditionally — it is outside the section system.
   - Mounts a full-page custom override (`resolvedPageComponent`) if matched under `src/_ui/` via a **6-candidate ordered scan** (see canonical doc §1.3.2).
   - Otherwise, falls back to rendering placeholders for visible parts:

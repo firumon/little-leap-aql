@@ -1,7 +1,7 @@
 import { ref, watch, computed, shallowRef, markRaw, unref } from 'vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
-import { usePageOrchestrator } from 'src/composables/resources/usePageOrchestrator'
+import { useRecord } from 'src/composables/resources/useRecord'
 
 // All page JS/Vue files under src/pages/
 const pageModules = import.meta.glob('../../pages/**/*.{vue,js}')
@@ -28,11 +28,39 @@ function resolveActionName(pageName, pageSlug) {
 
 export function usePageResolver() {
   const resConfig = useResourceConfig()
-  const { scope, resourceSlug } = resConfig
-  const { pageName, pageSlug } = useRouteConfig()
+  const { scope, resourceSlug, resourceName } = resConfig
+  const { pageName, pageSlug, code } = useRouteConfig()
 
   const canonicalPage = computed(() =>
     resolveActionName(pageName.value, pageSlug.value)
+  )
+
+  // Record loading. Add/Edit form state and submission are owned by pageState
+  // (usePageState.js) + the Create/Update content components + PageAction.vue —
+  // see PAGE_STATE.md.
+  const resourceRecord = useRecord()
+
+  // Keyed on a primitive, not an array literal, for the same reason as the
+  // resolver scan below: `watch` compares a getter's result with Object.is, so a
+  // fresh array would re-fire on every re-evaluation and re-request on each
+  // background sync.
+  watch(
+    () => `${resourceName.value ?? ''}|${code.value ?? ''}|${canonicalPage.value ?? ''}`,
+    async () => {
+      const page = canonicalPage.value
+      if (!resourceName.value) return
+      // `add` needs no server read, and a custom sub-route page (canonicalPage is
+      // its pageSlug) fetches whatever it needs itself.
+      if (page !== 'index' && page !== 'view' && !(page === 'edit' && code.value)) return
+
+      await resourceRecord.reload()
+      // Only the view page renders parents/children, so nothing else pays for
+      // the extra round of relation fetches.
+      if (page === 'view' && resourceRecord.record.value) {
+        await resourceRecord.loadRelations()
+      }
+    },
+    { immediate: true }
   )
 
   const customUIName = resConfig.customUIName
@@ -161,14 +189,6 @@ export function usePageResolver() {
     sections.value.filter(s => s !== 'PageAction')
   )
 
-  // Call the orchestrator
-  const orch = usePageOrchestrator(resConfig, canonicalPage)
-  const {
-    resourceRecord, actionForm, selectedOutcome,
-    currentActionConfig, actionAllowedForRecord, actionName, column, isMockMultiOutcome,
-    outcomeOptions, resolvedActionFields, navigateBack, navigateToView
-  } = orch
-
   // Assembly pageProps
   const pageProps = computed(() => {
     const rcProps = {
@@ -180,23 +200,10 @@ export function usePageResolver() {
       pageClass: '',
       contentPadding: 'sm',
       contentClass: '',
-      actionForm,
-      isMockMultiOutcome: isMockMultiOutcome.value,
-      outcomeOptions: outcomeOptions.value,
-      resolvedActionFields: resolvedActionFields.value,
-      selectedOutcome: selectedOutcome.value,
-      column: column.value,
       // Unwrapped: every other entry here is a plain value, and passing the ref
       // itself trips Boolean prop validation downstream ("Expected Boolean, got
       // Object"). Reading .value inside this computed keeps it reactive.
-      loading: unref(resourceRecord.loading),
-      currentActionConfig: currentActionConfig.value,
-      actionAllowedForRecord: actionAllowedForRecord.value,
-      actionName: actionName.value,
-      onCancel: navigateBack,
-      onNavigateToView: navigateToView,
-      'onUpdate:selected-outcome': val => { selectedOutcome.value = val },
-      'onUpdate:action-field': (header, val) => { actionForm[header] = val }
+      loading: unref(resourceRecord.loading)
     }
 
     // Resolve BP (function or object)
@@ -236,13 +243,6 @@ export function usePageResolver() {
     if (pageVal === 'edit') return {
       loading: loadingVal, empty: false,
       requiresRecord: true, recordExists: !!recordVal
-    }
-    if (pageVal === 'action') return {
-      loading: loadingVal, empty: false,
-      requiresRecord: true, recordExists: !!recordVal,
-      emptyIcon: 'block',
-      emptyTitle: 'Action Unavailable',
-      emptyMessage: `Action "${actionName.value}" is not available or not configured for this record.`
     }
     return { loading: false, empty: false }
   })

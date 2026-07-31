@@ -30,7 +30,7 @@ graph TD
     PageVue --> usePageResolver[usePageResolver.js]
     usePageResolver --> useResourceConfig[useResourceConfig.js]
     usePageResolver --> useRouteConfig[useRouteConfig.js]
-    usePageResolver --> usePageOrchestrator[usePageOrchestrator.js]
+    usePageResolver --> useRecord[useRecord.js]
     usePageResolver --> |Stage A: Load BP| BaseContract[pages/Scope/page.js]
     usePageResolver --> |Stage B: 6-candidate scan| CustomUiPages{Custom UI Page?}
 
@@ -103,7 +103,7 @@ The `contentWrapperProps` computed in `usePageResolver.js` automatically derives
   3. **Undefined (`!resolvedComponent`)**: Displays a warning card informing the developer that the requested section has no fallback or override.
 
 ### 1.3 The Page Resolver (`src/composables/resources/usePageResolver.js`)
-Handles page-level route resolution and loading. It is backed by `usePageOrchestrator` (see §1.3.3) which drives record loading, form state, and action execution.
+Handles page-level route resolution and loading, and owns record loading (see §1.3.3). Form state and submission are **not** its concern — those belong to `usePageState` (see [PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/PAGE_STATE.md)), which `Page.vue` provides alongside it.
 
 #### 1.3.1 Stage A — Base Page Contract (BP)
 Loads `src/pages/[Scope]/[page].js`. This JS file sets the default sections and contents layout for the page.
@@ -158,13 +158,21 @@ After loading the BP, `usePageResolver` scans `src/_ui/[UiName]/pages/` for cust
 - A **Vue override** (`isVue: true`) replaces the entire page; the section layout is bypassed.
 - A **JS modifier** (`isVue: false`) receives the merged `baseProps` and returns additional props to merge. The section layout still runs with the modified `pageProps`.
 
-#### 1.3.3 `usePageOrchestrator` — The Hidden Middle Layer
-`usePageResolver` delegates all record loading, form management, and action execution to `usePageOrchestrator`. This composable:
-- Calls `useRecord()` and triggers the correct reload strategy per page (`index` → load list, `view` → load + relations, `edit` → load + initialize form, `add` → initialize empty form, `action` → load record).
-- Sets up `useCompositeForm` for parent/child form state (`parentForm`, `childGroups`, `saving`, save handler).
-- Detects scope (`master` vs `operation`) and wires the correct action store (`useMasterActions` or `useOperationActions`) for action submission.
-- Resolves action-page-specific state via `useActionFields` (`actionForm`, `selectedOutcome`, `resolvedActionFields`, `isMockMultiOutcome`, `outcomeOptions`).
-- Exposes `handleSave`, `navigateBack`, `handleSubmit`, `navigateToView`, `addChildRecord`, `removeChildRecord`, `updateChildField`.
+#### 1.3.3 Record Loading
+`usePageResolver` calls `useRecord()` once and exposes it as `resourceRecord` (which `Page.vue` then `provide`s). A single watch, keyed on the primitive `resourceName|code|canonicalPage`, drives the reload strategy per page:
+
+| Page | What loads |
+|------|------------|
+| `index` | `reload()` — the resource list |
+| `view` | `reload()`, then `loadRelations()` for parents/children |
+| `edit` (with a `code`) | `reload()` |
+| `add` | nothing — no server read is needed |
+| custom sub-route slug | nothing — the override page fetches what it needs itself |
+
+The watch key is a template string, never an array literal: `watch` compares a getter's result with `Object.is`, so a fresh array would re-fire on every re-evaluation and re-request on each background sync.
+
+> [!NOTE]
+> This was previously split into a `usePageOrchestrator.js` middle layer, which also carried an action-page form (`actionForm`, `selectedOutcome`, `resolvedActionFields`, …). That path became unreachable once `canonicalPage` started resolving the `_action/:action` route to its **slug** rather than to `'action'`, and workflow actions moved to `ActionDialog` (see [AQL_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_ACTION_SYSTEM.md)). The orchestrator has been removed; nothing replaced the action-form half because `ActionDialog` already owns it.
 
 #### 1.3.4 The `pageProps` Contract
 `pageProps` is the computed object assembled by `usePageResolver` and `v-bind`-ed onto every `<Section>` placeholder and any full page override. **Section authors must understand every prop in this object.**
@@ -175,29 +183,14 @@ After loading the BP, `usePageResolver` scans `src/_ui/[UiName]/pages/` for cust
 | `scope` | `String` | Route scope: `'master'`, `'operation'`, `'accounts'`, etc. |
 | `resource` | `String` | Resource slug from route (e.g. `'currencies'`, `'purchase-orders'`) |
 | `uiName` | `String` | Resolved `customUIName` from `APP.Resources` (defaults to `'AQL'`) |
-| `parentForm` | `reactive({})` | Parent record form object (bound to add/edit form inputs) |
-| `childGroups` | `Array` | Child record groups for composite forms |
-| `actionForm` | `reactive({})` | Field values for the current action page |
-| `isMockMultiOutcome` | `Boolean` | Whether the action offers multiple outcome choices |
-| `outcomeOptions` | `Array` | Available outcome choices (for multi-outcome actions) |
-| `resolvedActionFields` | `Array` | Field definitions resolved for the current action |
-| `selectedOutcome` | `Ref<String>` | Currently selected action outcome |
-| `loading` | `Ref<Boolean>` | Whether the resource record/list is loading |
-| `saving` | `Ref<Boolean>` | Whether a composite save is in progress |
-| `submitting` | `Ref<Boolean>` | Whether an action submit is in progress |
-| `currentActionConfig` | `Object\|null` | The resolved action configuration from `AdditionalActions` |
-| `actionAllowedForRecord` | `Boolean` | Whether the action is visible/permitted for the current record |
-| `actionName` | `String` | Current action slug or name |
-| `onSave` | `Function` | Triggers composite save, navigates on success |
-| `onCancel` | `Function` | Navigates back (view → index, edit → view) |
-| `onSubmit` | `Function` | Triggers action submission |
-| `onNavigateToView` | `Function` | Navigates to the record's view page |
-| `'onUpdate:field'` | `Function(header, val)` | Updates a field on `parentForm` |
-| `'onAdd-child'` | `Function` | Adds a row to a child resource group |
-| `'onRemove-child'` | `Function` | Removes a row from a child resource group |
-| `'onUpdate-child-field'` | `Function` | Patches a field on a child row |
-| `'onUpdate:selected-outcome'` | `Function(val)` | Updates the selected action outcome |
-| `'onUpdate:action-field'` | `Function(header, val)` | Updates a field on `actionForm` |
+| `gutter` | `String` | Quasar spacing token for the page's vertical gutter (default `'xs'`) |
+| `pageClass` | `String` | Extra classes on the `q-page` root |
+| `contentPadding` | `String` | Quasar padding token applied to `<AqlContentWrapper>` (default `'sm'`) |
+| `contentClass` | `String` | Extra classes on `<AqlContentWrapper>` |
+| `loading` | `Boolean` | Whether the resource record/list is loading (unwrapped — passing the ref itself trips Boolean prop validation downstream) |
+
+> [!IMPORTANT]
+> **`pageProps` carries no form state.** Form values, validation, saving/submitting flags and every save/submit handler live in `usePageState`, injected as `'pageState'` by the sections and content components that need them. Sections must not expect `parentForm`, `childGroups`, `onSave`, `onSubmit`, or the action-form keys here — they were removed with `usePageOrchestrator`.
 
 > [!NOTE]
 > **BP props are merged last.** The BP's exported object (or function return) is merged on top of the base `rcProps` above. This means a BP can add additional props (e.g. `sections`, `contents`, custom config keys) that sections can then access via `attrs`.

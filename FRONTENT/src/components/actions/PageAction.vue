@@ -43,10 +43,14 @@
  *
  * Mounted by `Page.vue` as `<Action action="PageAction" />` whenever the page's
  * base contract lists `PageAction` in `sections`. It owns the submission
- * lifecycle for Add/Edit/Action pages and decides which action cluster is live
- * for the current route:
- *   - add / edit / action → `FormActions` (sticky bar)
- *   - everything else     → `ResourceActions` (unified bottom-right FAB cluster)
+ * lifecycle for Add/Edit pages and decides which action cluster is live for the
+ * current route:
+ *   - add / edit      → `FormActions` (sticky bar)
+ *   - everything else → `ResourceActions` (unified bottom-right FAB cluster)
+ *
+ * Workflow (`mutate`) AdditionalActions are NOT handled here: `ResourceActions`
+ * opens the page-level `ActionDialog` through `pageState.meta.actionDialog`,
+ * which collects the outcome/fields and dispatches its own `executeAction`.
  *
  * Both clusters are mounted through `useActionResolver`, so each is overridable
  * on its own at any of the 10 `_ui/` tiers. See Documents/AQL_ACTION_SYSTEM.md.
@@ -61,8 +65,6 @@ import { computed, inject, useAttrs } from 'vue'
 import { useQuasar } from 'quasar'
 import { useActionResolver } from 'src/composables/resources/useActionResolver'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
-import { executeActionRequest } from 'src/composables/resources/usePageState'
 import ResourceActions from './ResourceActions.vue'
 import FormActions from './FormActions.vue'
 import ResourceReports from './ResourceReports.vue'
@@ -115,7 +117,6 @@ const props = defineProps({
 
 const $q = useQuasar()
 const nav = useResourceNav()
-const { code: routeCode } = useRouteConfig()
 const resourceConfig = inject('resourceConfig', null)
 const resourceRecord = inject('resourceRecord', null)
 const pageState = inject('pageState', null)
@@ -124,28 +125,14 @@ const attrs = useAttrs()
 const pageKey = computed(() => (props.page || '').toLowerCase())
 const isAdd = computed(() => pageKey.value === 'add')
 const isEdit = computed(() => pageKey.value === 'edit')
-const isAction = computed(() => pageKey.value === 'action')
-const showFormActions = computed(() => isAdd.value || isEdit.value || isAction.value)
+const showFormActions = computed(() => isAdd.value || isEdit.value)
 
 const resourceName = computed(() => resourceConfig?.resourceName?.value || '')
-
-// Action-page field config forwarded via pageProps (see usePageOrchestrator.js /
-// usePageResolver.js) — read from $attrs rather than re-deriving it here.
-const currentActionConfig = computed(() => attrs.currentActionConfig || null)
-const actionForm = computed(() => attrs.actionForm || {})
-const selectedOutcome = computed(() => attrs.selectedOutcome || '')
-const resolvedActionFields = computed(() => attrs.resolvedActionFields || [])
-
-const submitDisabled = computed(() =>
-  isAction.value && attrs.isMockMultiOutcome ? !selectedOutcome.value : false
-)
 
 const resolvedSubmitLabel = computed(() => {
   const custom = evalProp(props.submitLabel, resourceRecord?.record?.value, modifierCtx())
   if (custom) return custom
-  if (isAdd.value) return 'Create'
-  if (isEdit.value) return 'Save'
-  return currentActionConfig.value?.label || 'Execute'
+  return isAdd.value ? 'Create' : 'Save'
 })
 
 function evalProp (val, ...args) {
@@ -235,11 +222,6 @@ async function handleAction (actionName, extraPayload = null) {
 async function runSubmit (ctx, options = {}) {
   if (!pageState) return
 
-  if (isAction.value) {
-    await runWorkflowAction(ctx, options)
-    return
-  }
-
   const callOptions = {
     build: props.modifyPayload ? (bctx) => props.modifyPayload(pageState.build(bctx), ctx) : undefined,
     successMsg: evalProp(props.successMessage, ctx) || undefined,
@@ -260,45 +242,6 @@ async function runSubmit (ctx, options = {}) {
   }
 
   const result = await pageState.submit(callOptions)
-  if (!result.success && props.onSubmitError) await props.onSubmitError(result, ctx)
-}
-
-async function runWorkflowAction (ctx, options = {}) {
-  const cfg = currentActionConfig.value
-  if (!cfg) return
-
-  for (const field of resolvedActionFields.value) {
-    if (field.required && !(actionForm.value[field.header] || '').toString().trim()) {
-      $q.notify({ type: 'negative', message: `${field.label} is required`, position: 'top' })
-      return
-    }
-  }
-
-  const code = resourceRecord?.record?.value?.Code || routeCode.value
-  const actionConfig = {
-    ...cfg,
-    column: attrs.column || cfg.column,
-    columnValue: selectedOutcome.value || cfg.columnValue || ''
-  }
-
-  let requests = [executeActionRequest(resourceName.value, code, actionConfig, { ...actionForm.value })]
-  if (props.modifyPayload) requests = props.modifyPayload(requests, ctx)
-
-  const callOptions = {
-    requests,
-    successMsg: evalProp(props.successMessage, ctx) || `${cfg.label || cfg.action || 'Action'} completed successfully`,
-    ...options
-  }
-  if (!callOptions.onSuccess) {
-    callOptions.onSuccess = async ({ response }) => {
-      pageState.reset()
-      if (props.onSubmitSuccess) await props.onSubmitSuccess({ response }, ctx)
-      else if (props.successRoute) nav.goTo(evalProp(props.successRoute, null, ctx) || 'view')
-      else defaultNavigate(null)
-    }
-  }
-
-  const result = await pageState.run(callOptions)
   if (!result.success && props.onSubmitError) await props.onSubmitError(result, ctx)
 }
 
@@ -432,7 +375,6 @@ const formActionsProps = computed(() => {
   const { action, scope, resource, uiName, page, ...modifierProps } = raw
   return {
     submitLabel: resolvedSubmitLabel.value,
-    disabled:    submitDisabled.value,
     ...(props.actions ? { actions: props.actions } : {}),
     ...modifierProps,
     page:     props.page,

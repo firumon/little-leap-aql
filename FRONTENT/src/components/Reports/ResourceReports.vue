@@ -116,7 +116,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import ReportInputDialog from 'src/components/Master/ReportInputDialog.vue'
+import ReportInputDialog from 'src/components/app/ReportInputDialog.vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useDataStore } from 'src/stores/data'

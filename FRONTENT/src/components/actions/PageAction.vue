@@ -23,6 +23,17 @@
       :page="props.page"
       v-bind="crudActionsProps"
     />
+
+    <!-- Report downloads. Self-dispatching (it delegates to useReports, never to
+         pageState), so it takes no @-handler here. It renders nothing when the
+         resource has no matching reports, or when a `resourcereports.js` modifier
+         returns show:false / hide:true. -->
+    <component
+      :is="resolvedResourceReports"
+      v-if="showResourceReports"
+      :page="props.page"
+      v-bind="resourceReportsProps"
+    />
   </div>
 </template>
 
@@ -54,6 +65,7 @@ import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { executeActionRequest } from 'src/composables/resources/usePageState'
 import CrudActions from './CrudActions.vue'
 import FormActions from './FormActions.vue'
+import ResourceReports from './ResourceReports.vue'
 
 defineOptions({ name: 'ActionsPageAction', inheritAttrs: false })
 
@@ -65,6 +77,14 @@ const props = defineProps({
   // Ordered button list handed to FormActions. Left null so FormActions' own
   // default (['reset', 'submit']) applies unless a modifier/BP sets it.
   actions:  { type: Array, default: null },
+  // Report-download cluster on non-form pages. `false` suppresses it outright; an
+  // object is spread onto ResourceReports (e.g. { mode: 'toolbar', position:
+  // 'bottom-right' }). Finer control lives in a `resourcereports.js` JS modifier.
+  reports:  { type: [Boolean, Object], default: true },
+  // Page-contract gate mirroring `noActions` (which suppresses this whole
+  // component from Page.vue). Arrives from pageProps, so a page contract or page
+  // JS modifier can drop just the report cluster while keeping the CRUD FABs.
+  noReports: { type: Boolean, default: false },
 
   // ── Unified action handlers ────────────────────────────────────────────────
   // One handler per action key, signature `(actionName, ctx) => result`, where
@@ -322,6 +342,9 @@ const { resolvedComponent: resolvedFormActions, finalProps: resolvedFormActionsP
 const { resolvedComponent: resolvedCrudActions, finalProps: resolvedCrudActionsProps } =
   useActionResolver(actionResolverProps('CrudActions'), CrudActions)
 
+const { resolvedComponent: resolvedResourceReports, finalProps: resolvedResourceReportsProps } =
+  useActionResolver(actionResolverProps('ResourceReports'), ResourceReports)
+
 // A CrudActions JS modifier can suppress the whole action (e.g. a tenant that hides
 // CRUD FABs entirely on a given resource) by returning `show: false` / `hide: true`,
 // either as a plain boolean or a function evaluated here.
@@ -342,6 +365,37 @@ const modifierVisible = computed(() => {
 const showCrudActions = computed(() =>
   !showFormActions.value && modifierVisible.value
 )
+
+// Reports float alongside the CRUD cluster on browse/view pages. Form pages are
+// owned by the sticky bar, where reports are opted in per-page instead through
+// `actions: [..., 'reports']` (see FormActions.vue). ResourceReports self-hides
+// when the resource has no matching reports, so no config lookup is needed here.
+// `noReports` is read from attrs as well as props: a full `pageaction.vue` override
+// or an intermediate wrapper may pass it through without it landing on the declared
+// prop, and the gate must hold in both cases.
+const showResourceReports = computed(() =>
+  !showFormActions.value &&
+  props.reports !== false &&
+  props.noReports !== true &&
+  attrs.noReports !== true
+)
+
+// JS-modifier props minus the resolver's own lookup keys, then the `reports`
+// object from the page contract. Unlike CrudActions this does NOT spread `...attrs`:
+// pageProps carry generic presentation keys (`icon`, `color`, `mode`) that would
+// silently hijack the report FAB. Record context reaches ResourceReports through
+// the injected `resourceRecord` instead, so nothing is lost.
+const resourceReportsProps = computed(() => {
+  const raw = resolvedResourceReportsProps.value || {}
+  const { action, scope, resource, uiName, page, ...modifierProps } = raw
+  return {
+    scope:    resolvedScope.value,
+    resource: resolvedResource.value,
+    uiName:   resolvedUiName.value,
+    ...modifierProps,
+    ...(typeof props.reports === 'object' && props.reports !== null ? props.reports : {})
+  }
+})
 
 // Forward everything: inherited pageProps attrs (for a full Vue override that needs
 // resource/scope/record context) plus whatever a JS modifier returned, minus the

@@ -42,7 +42,7 @@ import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useDataStore } from 'src/stores/data'
 import { useReports } from 'src/composables/reports/useReports'
-import ReportInputDialog from 'src/components/master/ReportInputDialog.vue'
+import ReportInputDialog from 'src/components/app/ReportInputDialog.vue'
 
 import PageSticky from 'components/_common/sections/Action/Downloads/PageSticky.vue'
 import ReportFab from 'components/_common/sections/Action/Downloads/ReportFab.vue'

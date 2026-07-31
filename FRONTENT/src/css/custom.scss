@@ -59,6 +59,61 @@
   .aql-crud-action-container { animation: none; }
 }
 
+// ── ResourceReports action (actions/ResourceReports.vue) ─────────────────────
+// Same entrance treatment as the CRUD cluster, applied to an inner wrapper only —
+// a transform on the q-page-sticky root would break fixed positioning of the FAB.
+.aql-report-action-container {
+  animation: fab-bounce-in 550ms cubic-bezier(0.215, 0.61, 0.355, 1) 550ms both;
+}
+
+// Shares the CRUD cluster's shadow/hover/press motion so the two floating clusters
+// read as one system. The horizontal pill footprint is Quasar's own: a QFab with a
+// `label` already renders as a rounded rectangle with the right padding, so no
+// radius or spacing override belongs here.
+.aql-report-action-fab {
+  @extend .aql-crud-action-fab;
+}
+
+// Sub-actions echo the pill so the expanded stack stays visually coherent.
+.aql-report-action-item.q-btn {
+  border-radius: 999px;
+}
+
+.q-btn.aql-report-action-btn {
+  border-radius: 999px;
+}
+
+// External FAB-action labels: readable over any page background.
+.aql-report-action-label {
+  font-weight: 700;
+  background: #fff;
+  color: var(--aql-ink, #212121);
+  padding: 2px 8px;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.aql-report-action-card {
+  border-radius: 16px;
+  border-color: var(--aql-border, #e2e8f0);
+  background: rgba(255, 255, 255, 0.92);
+  animation: report-action-rise-in 280ms ease-out both;
+}
+
+.aql-report-action-card-inner {
+  background: #f8fafc;
+}
+
+@keyframes report-action-rise-in {
+  from { transform: translateY(10px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aql-report-action-container,
+  .aql-report-action-card { animation: none; }
+}
+
 // ── Form content section entrance (contents/Create.vue, contents/Update.vue) ──
 // Global, not scoped: tenant `_ui/**` overrides cannot inherit a scoped style (ARCHITECTURE RULES §7).
 .cf-section {
@@ -141,6 +196,93 @@
 
 @media (prefers-reduced-motion: reduce) {
   .aql-form-actions-bar { animation: none; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// AQL DIALOG (shared/AqlDialog.vue) — canonical modal chrome
+// Consumed by class name; the SFC carries no <style> block (ARCHITECTURE RULES §7).
+// ═══════════════════════════════════════════════════════════════════════════════
+
+.aql-dialog-card {
+  border-radius: 20px;
+  overflow: hidden;   // clips the tinted header band to the card's rounded corners
+}
+
+// Header band. The variant modifier below supplies the tint; this holds the rhythm.
+.aql-dialog-header {
+  padding: 16px 20px;
+  background: var(--aql-dialog-tint, #{$primary-50});
+  color: var(--aql-dialog-ink, #{$primary});
+}
+
+.aql-dialog-header--primary  { --aql-dialog-tint: #{$primary-50};      --aql-dialog-ink: #{$primary}; }
+.aql-dialog-header--info     { --aql-dialog-tint: #{$info-light};      --aql-dialog-ink: #{$info}; }
+.aql-dialog-header--warning  { --aql-dialog-tint: #{$warning-light};   --aql-dialog-ink: #{$warning}; }
+.aql-dialog-header--negative { --aql-dialog-tint: #{$negative-light};  --aql-dialog-ink: #{$negative}; }
+.aql-dialog-header--positive { --aql-dialog-tint: #{$positive-light};  --aql-dialog-ink: #{$positive}; }
+
+// Solid ink-on-tint avatar: inherits the variant colour rather than restating it.
+.aql-dialog-icon {
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--aql-dialog-ink, #{$primary});
+}
+
+.aql-dialog-title {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0.1px;
+}
+
+.aql-dialog-subtitle {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  margin-top: 2px;
+  opacity: 0.75;
+}
+
+.aql-dialog-body {
+  padding: 18px 20px;
+  max-height: 62vh;
+  overflow-y: auto;
+}
+
+.aql-dialog-banner {
+  border-radius: 12px;
+  font-size: 13px;
+  background: var(--aql-dialog-tint, #{$primary-50});
+  color: var(--aql-dialog-ink, #{$primary});
+}
+
+.aql-dialog-banner--primary  { --aql-dialog-tint: #{$primary-50};      --aql-dialog-ink: #{$primary}; }
+.aql-dialog-banner--info     { --aql-dialog-tint: #{$info-light};      --aql-dialog-ink: #{$info}; }
+.aql-dialog-banner--warning  { --aql-dialog-tint: #{$warning-light};   --aql-dialog-ink: #{$warning}; }
+.aql-dialog-banner--negative { --aql-dialog-tint: #{$negative-light};  --aql-dialog-ink: #{$negative}; }
+.aql-dialog-banner--positive { --aql-dialog-tint: #{$positive-light};  --aql-dialog-ink: #{$positive}; }
+
+.aql-dialog-footer {
+  padding: 12px 20px;
+  gap: 8px;
+  background: #fafafa;   // Quasar grey-1, as a literal: $grey-* are not in scope here
+}
+
+.q-btn.aql-dialog-btn {
+  padding: 6px 18px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  border-radius: 10px;
+  min-height: 38px;
+}
+
+// Softer field corners inside a dialog body, matching the card's own radius scale.
+.aql-dialog-field .q-field__control {
+  border-radius: 12px;
+}
+
+.aql-dialog-hint {
+  font-size: 12px;
+  color: #{$ink-muted};
 }
 
 // ── Breadcrumb (abstract/Breadcrumb.vue) ─────────────────────────────────────

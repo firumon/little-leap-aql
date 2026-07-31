@@ -174,15 +174,15 @@ export function usePageState (strategy = {}) {
     loading: false,
     currentStep: 1,
     validationErrors: {},
-    // Workflow action dialog — set by AdditionalActions/CrudActions-family sub-sections,
-    // read by the ActionDialog mounted once in Page.vue so a PageAction container
-    // override can never swallow the dialog.
+    // Workflow action dialog — set by ResourceActions when a mutate-kind workflow
+    // FAB item is clicked, read by the ActionDialog mounted once in Page.vue so a
+    // PageAction container override can never swallow the dialog.
     actionDialog: {
       show: false,
       actionConfig: null
     },
     // Measured height of the FormAction sticky bar (0 until FormAction.vue mounts
-    // and reports it) — CrudActions reads this to keep its FAB clear of the bar.
+    // and reports it) — ResourceActions reads this to keep its FAB clear of the bar.
     formActionsHeight: 0
   })
 

@@ -68,7 +68,7 @@ import PageFallback from 'pages/_common/PageFallback.vue'
 import Section from 'components/Section.vue'
 import Content from 'components/Content.vue'
 import Action from 'components/Action.vue'
-import ActionDialog from 'components/_common/sections/Action/ActionDialog.vue'
+import ActionDialog from 'components/app/ActionDialog.vue'
 import { usePageResolver } from 'src/composables/resources/usePageResolver'
 import { usePageState } from 'src/composables/resources/usePageState'
 

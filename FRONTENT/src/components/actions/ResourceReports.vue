@@ -1,7 +1,7 @@
 <template>
   <template v-if="visible">
     <!-- 1. FAB mode (default) — floating, page-level. Bottom-left by default so it
-         never collides with CrudActions' bottom-right cluster. -->
+         never collides with ResourceActions' bottom-right cluster. -->
     <q-page-sticky v-if="resolvedMode === 'fab'" :position="resolvedPosition" :offset="resolvedOffset">
       <div class="aql-report-action-container">
         <!-- Horizontal pill: icon + short label, unlike the round CRUD FAB. Quasar
@@ -198,7 +198,7 @@ const props = defineProps({
   position:    { type: [String, Function], default: 'bottom-left' },
   offset:      { type: [Array, Function], default: () => [18, 18] },
 
-  // Visibility gates, mirroring the CrudActions modifier contract.
+  // Visibility gates, mirroring the ResourceActions modifier contract.
   show:     { type: [Boolean, Function], default: true },
   hide:     { type: [Boolean, Function], default: false },
   // Page-contract gate, mirroring `noActions`. Honoured here as well as in

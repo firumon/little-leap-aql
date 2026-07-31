@@ -22,10 +22,10 @@
 // every rule below is consumed by class name. See Documents/AQL_ACTION_SYSTEM.md.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// Generic CRUD action FAB styling (shared across all floating action buttons).
-// Color/icon stay on the Quasar :color/:icon props so JS modifiers can vary them
-// without fighting this CSS.
-.aql-crud-action-fab {
+// Generic resource-action FAB styling (shared across all floating action buttons
+// in the unified ResourceActions cluster). Color/icon stay on the Quasar
+// :color/:icon props so JS modifiers can vary them without fighting this CSS.
+.aql-resource-action-fab {
   box-shadow: 0 8px 24px rgba(15, 43, 74, 0.28);
   transition: transform 180ms ease, box-shadow 180ms ease;
 
@@ -38,12 +38,23 @@
   }
 }
 
-// ── CrudActions entrance (actions/CrudActions.vue) ───────────────────────────
+// ── ResourceActions entrance (actions/ResourceActions.vue) ───────────────────
 // Animated on an inner wrapper, never on the q-page-sticky root itself — a
 // CSS transform on a position:fixed ancestor would turn it into the
 // containing block for its fixed descendants and break FAB positioning.
-.aql-crud-action-container {
+.aql-resource-action-container {
   animation: fab-bounce-in 550ms cubic-bezier(0.215, 0.61, 0.355, 1) 550ms both;
+}
+
+// External q-fab-action labels inside the expanded ResourceActionsFab menu:
+// readable over any page background.
+.aql-resource-action-label {
+  font-weight: 700;
+  background: #fff;
+  color: var(--aql-ink, #212121);
+  padding: 2px 8px;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 @keyframes fab-bounce-in {
@@ -56,7 +67,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .aql-crud-action-container { animation: none; }
+  .aql-resource-action-container { animation: none; }
 }
 
 // ── ResourceReports action (actions/ResourceReports.vue) ─────────────────────
@@ -66,12 +77,12 @@
   animation: fab-bounce-in 550ms cubic-bezier(0.215, 0.61, 0.355, 1) 550ms both;
 }
 
-// Shares the CRUD cluster's shadow/hover/press motion so the two floating clusters
-// read as one system. The horizontal pill footprint is Quasar's own: a QFab with a
-// `label` already renders as a rounded rectangle with the right padding, so no
-// radius or spacing override belongs here.
+// Shares the resource-action cluster's shadow/hover/press motion so the two
+// floating clusters read as one system. The horizontal pill footprint is Quasar's
+// own: a QFab with a `label` already renders as a rounded rectangle with the
+// right padding, so no radius or spacing override belongs here.
 .aql-report-action-fab {
-  @extend .aql-crud-action-fab;
+  @extend .aql-resource-action-fab;
 }
 
 // Sub-actions echo the pill so the expanded stack stays visually coherent.

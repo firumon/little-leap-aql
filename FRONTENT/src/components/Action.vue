@@ -37,14 +37,21 @@ import { useActionResolver } from 'src/composables/resources/useActionResolver'
 defineOptions({ name: 'AqlAction', inheritAttrs: false })
 
 const props = defineProps({
-  action: { type: String, required: true }
+  action: { type: String, required: true },
+  // Optional base component used when no file resolves for `action` — neither a
+  // `components/actions/` base nor any `_ui/` candidate. Lets containers mount
+  // dynamically-named actions (e.g. ResourceActions' per-item
+  // `ResourceActionApprove`) against a generic base instead of the
+  // "Action Not Defined" card, while keeping every `_ui/` tier able to override.
+  fallback: { type: [Object, Function], default: null }
 })
 
 const attrs = useAttrs()
 
 // Combine all orchestrator-supplied attributes with the explicit action identity.
 // This single object is everything the resolver needs to perform its lookup.
+// `fallback` is a declared prop, so it never leaks into the resolved props.
 const preparedProps = computed(() => ({ ...attrs, action: props.action }))
 
-const { ready, resolvedComponent, finalProps } = useActionResolver(preparedProps)
+const { ready, resolvedComponent, finalProps } = useActionResolver(preparedProps, props.fallback)
 </script>

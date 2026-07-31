@@ -14,14 +14,15 @@
       @action="handleAction"
     />
 
-    <!-- CRUD Actions FAB — visibility beyond this gate is driven reactively inside
-         CrudActions.vue itself (record presence + edit-mode), or explicitly suppressed
-         by a CrudActions JS modifier returning show:false / hide:true. -->
+    <!-- Unified resource-action FAB cluster (CRUD + AdditionalActions) —
+         visibility beyond this gate is driven reactively inside
+         ResourceActions.vue itself (permissions + record presence + visibleWhen),
+         or explicitly suppressed by a ResourceActions JS modifier returning
+         show:false / hide:true. -->
     <component
-      :is="resolvedCrudActions"
-      v-if="showCrudActions"
-      :page="props.page"
-      v-bind="crudActionsProps"
+      :is="resolvedResourceActions"
+      v-if="showResourceActions"
+      v-bind="resourceActionsProps"
     />
 
     <!-- Report downloads. Self-dispatching (it delegates to useReports, never to
@@ -31,7 +32,6 @@
     <component
       :is="resolvedResourceReports"
       v-if="showResourceReports"
-      :page="props.page"
       v-bind="resourceReportsProps"
     />
   </div>
@@ -46,7 +46,7 @@
  * lifecycle for Add/Edit/Action pages and decides which action cluster is live
  * for the current route:
  *   - add / edit / action → `FormActions` (sticky bar)
- *   - everything else     → `CrudActions` (floating FABs)
+ *   - everything else     → `ResourceActions` (unified bottom-right FAB cluster)
  *
  * Both clusters are mounted through `useActionResolver`, so each is overridable
  * on its own at any of the 10 `_ui/` tiers. See Documents/AQL_ACTION_SYSTEM.md.
@@ -63,7 +63,7 @@ import { useActionResolver } from 'src/composables/resources/useActionResolver'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { executeActionRequest } from 'src/composables/resources/usePageState'
-import CrudActions from './CrudActions.vue'
+import ResourceActions from './ResourceActions.vue'
 import FormActions from './FormActions.vue'
 import ResourceReports from './ResourceReports.vue'
 
@@ -339,30 +339,30 @@ function actionResolverProps (action) {
 const { resolvedComponent: resolvedFormActions, finalProps: resolvedFormActionsProps } =
   useActionResolver(actionResolverProps('FormActions'), FormActions)
 
-const { resolvedComponent: resolvedCrudActions, finalProps: resolvedCrudActionsProps } =
-  useActionResolver(actionResolverProps('CrudActions'), CrudActions)
+const { resolvedComponent: resolvedResourceActions, finalProps: resolvedResourceActionsProps } =
+  useActionResolver(actionResolverProps('ResourceActions'), ResourceActions)
 
 const { resolvedComponent: resolvedResourceReports, finalProps: resolvedResourceReportsProps } =
   useActionResolver(actionResolverProps('ResourceReports'), ResourceReports)
 
-// A CrudActions JS modifier can suppress the whole action (e.g. a tenant that hides
-// CRUD FABs entirely on a given resource) by returning `show: false` / `hide: true`,
-// either as a plain boolean or a function evaluated here.
+// A ResourceActions JS modifier can suppress the whole cluster (e.g. a tenant
+// that hides every FAB on a given resource) by returning `show: false` /
+// `hide: true`, either as a plain boolean or a function evaluated here.
 function evalVisibility(val) {
   return typeof val === 'function' ? val() : val
 }
 
 const modifierVisible = computed(() => {
-  const raw = resolvedCrudActionsProps.value || {}
+  const raw = resolvedResourceActionsProps.value || {}
   if ('show' in raw && evalVisibility(raw.show) === false) return false
   if ('hide' in raw && evalVisibility(raw.hide) === true) return false
   return true
 })
 
 // FormActions (the sticky submit/reset bar, above) owns Add/Edit/Action pages
-// entirely; every other page defers to CrudActions' own record/edit-mode
-// visibility logic.
-const showCrudActions = computed(() =>
+// entirely; every other page defers to ResourceActions' own permission/record/
+// visibleWhen visibility logic.
+const showResourceActions = computed(() =>
   !showFormActions.value && modifierVisible.value
 )
 
@@ -380,32 +380,46 @@ const showResourceReports = computed(() =>
   attrs.noReports !== true
 )
 
-// JS-modifier props minus the resolver's own lookup keys, then the `reports`
-// object from the page contract. Unlike CrudActions this does NOT spread `...attrs`:
-// pageProps carry generic presentation keys (`icon`, `color`, `mode`) that would
-// silently hijack the report FAB. Record context reaches ResourceReports through
-// the injected `resourceRecord` instead, so nothing is lost.
+// ── Prop isolation for the floating clusters ─────────────────────────────────
+//
+// NEITHER cluster receives `...attrs`. `attrs` here is the full `pageProps` object
+// from Page.vue — 30+ form/page keys (fields, contents, defaultValues, handlers,
+// …) that a FAB has no use for. Spreading them:
+//   * leaked generic presentation keys (`icon`, `color`, `mode`, `label`) straight
+//     onto the FABs, silently hijacking their appearance;
+//   * re-created a large prop object on every page-state change, and each key became
+//     a fresh reactive dependency of every child `<Action>` placeholder below —
+//     the dependency fan-out behind `RangeError: Maximum call stack size exceeded
+//     at removeSub` when Vue unwound those subscriber lists.
+// Both clusters get explicit lookup context plus their own modifier props only.
+// Record/config context still reaches them through the injected `resourceRecord` /
+// `resourceConfig`, so nothing is actually lost.
+
+const resolverContext = computed(() => ({
+  page:     props.page,
+  scope:    resolvedScope.value,
+  resource: resolvedResource.value,
+  uiName:   resolvedUiName.value
+}))
+
 const resourceReportsProps = computed(() => {
   const raw = resolvedResourceReportsProps.value || {}
   const { action, scope, resource, uiName, page, ...modifierProps } = raw
   return {
-    scope:    resolvedScope.value,
-    resource: resolvedResource.value,
-    uiName:   resolvedUiName.value,
+    ...resolverContext.value,
     ...modifierProps,
     ...(typeof props.reports === 'object' && props.reports !== null ? props.reports : {})
   }
 })
 
-// Forward everything: inherited pageProps attrs (for a full Vue override that needs
-// resource/scope/record context) plus whatever a JS modifier returned, minus the
-// resolver's own internal lookup keys (action/scope/resource/uiName on `raw` — these
-// are resolver bookkeeping, distinct from the same-named keys that may legitimately
-// arrive via `attrs`).
-const crudActionsProps = computed(() => {
-  const raw = resolvedCrudActionsProps.value || {}
+const resourceActionsProps = computed(() => {
+  const raw = resolvedResourceActionsProps.value || {}
+  // `show`/`hide` are consumed by the visibility gate above, not forwarded.
   const { action, scope, resource, uiName, page, show, hide, ...modifierProps } = raw
-  return { ...attrs, ...modifierProps }
+  return {
+    ...resolverContext.value,
+    ...modifierProps
+  }
 })
 
 // FormActions deliberately does NOT receive `...attrs`: pageProps carries an

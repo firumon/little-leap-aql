@@ -138,7 +138,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useOutletConsumption } from '../../../composables/operation/outlets/useOutletConsumption.js'
-import OutletProgressChip from '../../../components/operation/Outlets/OutletProgressChip.vue'
+import OutletProgressChip from '/src/components/operation/Outlets/OutletProgressChip.vue'
 import AqlList from "components/shared/AqlList.vue";
 import ResourceReports from 'components/Reports/ResourceReports.vue'
 

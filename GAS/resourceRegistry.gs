@@ -11,6 +11,10 @@ var _resource_registry_context_cache = null;
 var _resource_config_map_cache = null;
 var _role_permissions_context_cache = null;
 
+// Bump this whenever the config map shape changes so stale caches are not served.
+var RESOURCE_CONFIG_CACHE_KEY = 'AQL_RESOURCE_CONFIG_MAP_V3';
+var RESOURCE_CONFIG_LEGACY_CACHE_KEYS = ['AQL_RESOURCE_CONFIG_MAP_V2'];
+
 function getResourceRegistryContext() {
   if (_resource_registry_context_cache) return _resource_registry_context_cache;
 
@@ -40,7 +44,7 @@ function getResourceConfigMap() {
 
   // Try CacheService for cross-execution persistence
   var scriptCache = CacheService.getScriptCache();
-  var cacheKey = 'AQL_RESOURCE_CONFIG_MAP_V2';
+  var cacheKey = RESOURCE_CONFIG_CACHE_KEY;
   var cachedJson = scriptCache.get(cacheKey + '_' + getAppSpreadsheet().getId());
   if (!cachedJson) {
     // Try Permanent Metadata fallback
@@ -138,7 +142,8 @@ function getResourceConfigMap() {
       reports: parseJsonCell(readOptionalCell(row, registry.idx.Reports, '[]'), []),
       customUIName: (readOptionalCell(row, registry.idx.CustomUIName, '') || '').toString().trim(),
       listViews: listViewsMeta.views,
-      listViewsMode: listViewsMeta.mode
+      listViewsMode: listViewsMeta.mode,
+      relations: parseRelationsCell(readOptionalCell(row, registry.idx.Relations, ''))
     };
   }
 
@@ -164,20 +169,24 @@ function clearResourceConfigCache() {
   _resource_config_map_cache = null;
   _resource_registry_context_cache = null;
   _resource_sheet_cache = {};
-  try {
-    CacheService.getScriptCache().remove('AQL_RESOURCE_CONFIG_MAP_V2_' + getAppSpreadsheet().getId());
-  } catch (e) { /* non-fatal */ }
-  // Clear Permanent Metadata fallback so stale data is not served on cold start
-  try {
-    var ctx = getMetadataContext();
-    if (ctx.sheet) {
-      var row = findRowByValue(ctx.sheet, ctx.idx.Key, 'AQL_RESOURCE_CONFIG_MAP_V2', 2, true);
-      if (row !== -1) {
-        ctx.sheet.deleteRow(row);
-        if (ctx.map) delete ctx.map['AQL_RESOURCE_CONFIG_MAP_V2'];
+
+  var keys = [RESOURCE_CONFIG_CACHE_KEY].concat(RESOURCE_CONFIG_LEGACY_CACHE_KEYS);
+  for (var i = 0; i < keys.length; i++) {
+    try {
+      CacheService.getScriptCache().remove(keys[i] + '_' + getAppSpreadsheet().getId());
+    } catch (e) { /* non-fatal */ }
+    // Clear Permanent Metadata fallback so stale data is not served on cold start
+    try {
+      var ctx = getMetadataContext();
+      if (ctx.sheet) {
+        var row = findRowByValue(ctx.sheet, ctx.idx.Key, keys[i], 2, true);
+        if (row !== -1) {
+          ctx.sheet.deleteRow(row);
+          if (ctx.map) delete ctx.map[keys[i]];
+        }
       }
-    }
-  } catch (e) { /* non-fatal */ }
+    } catch (e) { /* non-fatal */ }
+  }
 }
 
 function getResourceConfig(resourceName) {
@@ -365,6 +374,48 @@ function parseAdditionalActions(value) {
   try { return JSON.parse(str); } catch (e) { return []; }
 }
 
+/**
+ * Parses the APP.Resources.Relations cell into a header -> relation map.
+ *
+ * Accepted entry shapes:
+ *   "SupplierCode": "Suppliers"                                  (shorthand)
+ *   "ParentCode": { resource, targetHeader?, labelHeader? }       (extended)
+ *
+ * Shorthand entries are preserved as-is; extended entries are trimmed and
+ * stripped of unknown keys. Entries without a target resource are dropped.
+ */
+function parseRelationsCell(value) {
+  var parsed = parseJsonCell(value, {});
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+
+  var relations = {};
+  Object.keys(parsed).forEach(function(header) {
+    var key = (header || '').toString().trim();
+    if (!key) return;
+
+    var spec = parsed[header];
+    if (typeof spec === 'string') {
+      var shorthand = spec.trim();
+      if (shorthand) relations[key] = shorthand;
+      return;
+    }
+
+    if (!spec || typeof spec !== 'object' || Array.isArray(spec)) return;
+
+    var resource = (spec.resource || '').toString().trim();
+    if (!resource) return;
+
+    var entry = { resource: resource };
+    var targetHeader = (spec.targetHeader || '').toString().trim();
+    var labelHeader = (spec.labelHeader || '').toString().trim();
+    if (targetHeader) entry.targetHeader = targetHeader;
+    if (labelHeader) entry.labelHeader = labelHeader;
+    relations[key] = entry;
+  });
+
+  return relations;
+}
+
 function parseCompositeHeaders(value) {
   if (!value) return [];
 
@@ -537,6 +588,7 @@ function buildAuthorizedResourceEntry(resourceName, options) {
     name: resourceName,
     scope: config.scope,
     parentResource: config.parentResource || '',
+    relations: config.relations || {},
     sheetName: config.sheetName,
     codePrefix: config.codePrefix,
     codeSequenceLength: config.codeSequenceLength,

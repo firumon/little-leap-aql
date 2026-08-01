@@ -91,6 +91,7 @@ Array of resource entries built by `buildAuthorizedResourceEntry()` at `GAS/reso
   "name":               "Products",
   "scope":              "master",
   "parentResource":     "",
+  "relations":          { "SKU": "SKUs", "ParentCode": { "resource": "Taxes", "labelHeader": "Name" } },
   "sheetName":          "Products",
   "codePrefix":         "PRD",
   "codeSequenceLength": 5,
@@ -132,6 +133,7 @@ Array of resource entries built by `buildAuthorizedResourceEntry()` at `GAS/reso
 | `name` | Resource identifier (matches `APP.Resources.Name`) |
 | `scope` | `master`, `operation`, or `accounts` |
 | `parentResource` | Name of parent resource for child resources (e.g., `Products` for `SKUs`) |
+| `relations` | Explicit cross-resource relation map from `APP.Resources.Relations`, keyed by source column header. Values are either a target resource name (shorthand) or `{ resource, targetHeader?, labelHeader? }`. Merged over the frontend's heuristic derivation in `useDataStore._deriveAllRelations()`; explicit entries win. Empty object when unconfigured. See [RESOURCE_COLUMNS_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_COLUMNS_GUIDE.md) |
 | `sheetName` | Target Google Sheet tab name |
 | `codePrefix` | Prefix for auto-generated codes (e.g., `PRD`) |
 | `codeSequenceLength` | Zero-padded numeric suffix length |

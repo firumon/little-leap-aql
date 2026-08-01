@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 13px;
+    color: #1e293b;
+    padding: 20px;
+    background-color: #F1F1F3;
+    line-height: 1.5;
+  }
+  h2 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: #000077;
+    border-bottom: 2px solid #cbd5e1;
+    padding-bottom: 8px;
+  }
+  h3 {
+    font-size: 11px;
+    font-weight: 700;
+    color: #475569;
+    margin: 12px 0 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .row { display: flex; gap: 12px; margin-bottom: 12px; }
+  .row > * { flex: 1; }
+  label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  select, input, textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+    background: #fff;
+    color: #0f172a;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+  select:focus, input:focus, textarea:focus {
+    outline: none;
+    border-color: #000077;
+    box-shadow: 0 0 0 3px rgba(0, 0, 119, 0.15);
+  }
+  button {
+    padding: 9px 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+  button:hover { transform: translateY(-1px); }
+  button:active { transform: translateY(0); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-primary {
+    background: #000077;
+    color: #fff;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 119, 0.2);
+  }
+  .btn-primary:hover { background: #000055; }
+  .btn-danger {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+  }
+  .btn-danger:hover { background: #fecaca; }
+  .btn-secondary {
+    background: #fff;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+  }
+  .btn-secondary:hover { background: #f8fafc; }
+  .relation-card {
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+    background: #fff;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  }
+  .relation-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
+  .relation-title { font-weight: 700; font-size: 14px; color: #0f172a; }
+  .mode-badge { font-size: 10px; padding: 3px 8px; border-radius: 12px; margin-left: 8px; font-weight: 600; text-transform: uppercase; }
+  .mode-badge.simple { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+  .mode-badge.extended { background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5; }
+  .no-relations { color: #64748b; text-align: center; padding: 32px; font-size: 14px; background: #fff; border-radius: 8px; border: 1px solid #cbd5e1; }
+  .status-bar { padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; display: none; font-weight: 500; font-size: 12px; border: 1px solid transparent; }
+  .status-bar.error { display: block; background: #fef2f2; color: #991b1b; border-color: #fca5a5; }
+  .status-bar.success { display: block; background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+  .relations-toolbar { display: flex; gap: 8px; margin-bottom: 16px; justify-content: space-between; align-items: center; }
+  .hint { font-size: 11px; color: #64748b; margin-top: 4px; }
+  .preview { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 10px; margin-top: 12px; white-space: pre-wrap; word-break: break-all; color: #334155; }
+
+  /* Custom scrollbars */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #f1f5f9; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+</style>
+</head>
+<body>
+
+<div id="status" class="status-bar"></div>
+
+<div class="row">
+  <div>
+    <label>Source Resource</label>
+    <select id="resourceSelect" onchange="onResourceChange()">
+      <option value="">-- Select Resource --</option>
+    </select>
+  </div>
+</div>
+
+<div class="relations-toolbar">
+  <h2 id="relationsTitle">Relations</h2>
+  <button class="btn-primary" onclick="addRelation()" id="addBtn" disabled>+ Add Relation</button>
+</div>
+
+<div id="relationsList"></div>
+<div id="preview" class="preview" style="display:none;"></div>
+
+<div style="margin-top:16px; display:flex; gap:8px; justify-content:flex-end;">
+  <button class="btn-secondary" onclick="google.script.host.close()">Close</button>
+  <button class="btn-primary" onclick="saveRelations()" id="saveBtn" disabled>Save Relations</button>
+</div>
+
+<script>
+var DEFAULT_TARGET_HEADER = 'Code';
+var DEFAULT_LABEL_HEADER = 'Name';
+var resourceData = [];
+var currentRelations = [];
+
+google.script.run.withSuccessHandler(function(data) {
+  resourceData = data.resources || [];
+  var sel = document.getElementById('resourceSelect');
+  resourceData.forEach(function(r) {
+    var opt = document.createElement('option');
+    opt.value = r.name;
+    opt.textContent = r.label + ' (' + r.name + ')';
+    sel.appendChild(opt);
+  });
+}).withFailureHandler(function(err) {
+  showStatus('Failed to load: ' + err.message, 'error');
+}).app_getRelationsManagerData();
+
+function findResource(name) {
+  return resourceData.find(function(r) { return r.name === name; }) || null;
+}
+
+function sourceHeaders() {
+  var res = findResource(document.getElementById('resourceSelect').value);
+  return res ? (res.headers || []) : [];
+}
+
+function targetHeaders(resourceName) {
+  var res = findResource(resourceName);
+  return res ? (res.headers || []) : [];
+}
+
+function onResourceChange() {
+  var name = document.getElementById('resourceSelect').value;
+  document.getElementById('addBtn').disabled = !name;
+  document.getElementById('saveBtn').disabled = !name;
+  if (!name) { currentRelations = []; renderRelations(); return; }
+
+  var res = findResource(name);
+  var raw = res ? (res.relations || {}) : {};
+  currentRelations = Object.keys(raw).map(function(header) {
+    return expandForEdit(header, raw[header]);
+  });
+  renderRelations();
+}
+
+// Sheet storage allows a shorthand string or an extended object; the editor
+// always works with the expanded form.
+function expandForEdit(header, spec) {
+  if (typeof spec === 'string') {
+    return { header: header, resource: spec, targetHeader: DEFAULT_TARGET_HEADER, labelHeader: '' };
+  }
+  spec = spec || {};
+  return {
+    header: header,
+    resource: spec.resource || '',
+    targetHeader: spec.targetHeader || DEFAULT_TARGET_HEADER,
+    labelHeader: spec.labelHeader || ''
+  };
+}
+
+// A relation is "simple" when it matches what the frontend would resolve on its
+// own: target column `Code` and a `Name` label (the picker's default fallback).
+// Simple relations compress to a shorthand string on save.
+function isSimple(rel) {
+  var t = (!rel.targetHeader || rel.targetHeader === DEFAULT_TARGET_HEADER);
+  var l = (!rel.labelHeader || rel.labelHeader === DEFAULT_LABEL_HEADER);
+  return t && l;
+}
+
+function addRelation() {
+  currentRelations.push({ header: '', resource: '', targetHeader: DEFAULT_TARGET_HEADER, labelHeader: '' });
+  renderRelations();
+}
+function removeRelation(idx) { currentRelations.splice(idx, 1); renderRelations(); }
+
+function onFieldChange(i, field, value) {
+  currentRelations[i][field] = value;
+  renderRelations();
+}
+
+function renderRelations() {
+  var container = document.getElementById('relationsList');
+  if (!currentRelations.length) {
+    container.innerHTML = '<div class="no-relations">No relations configured. Click "+ Add Relation" to begin.</div>';
+    renderPreview();
+    return;
+  }
+
+  var srcHeaders = sourceHeaders();
+  var html = '';
+
+  currentRelations.forEach(function(rel, i) {
+    var mode = isSimple(rel) ? 'simple' : 'extended';
+    html += '<div class="relation-card">';
+    html += '<div class="relation-header"><span class="relation-title">' + esc(rel.header || 'New Relation');
+    html += '<span class="mode-badge ' + mode + '">' + mode + '</span></span>';
+    html += '<button class="btn-danger" onclick="removeRelation(' + i + ')" style="padding:4px 8px;font-size:11px;">Remove</button></div>';
+
+    html += '<div class="row">';
+    html += '<div><label>Source Column Header</label>' + headerSelect(srcHeaders, rel.header, i, 'header', 'e.g. SKU') + '</div>';
+    html += '<div><label>Related Target Resource</label><select onchange="onFieldChange(' + i + ', \'resource\', this.value)">';
+    html += '<option value="">-- Select --</option>';
+    resourceData.forEach(function(r) {
+      html += '<option value="' + esc(r.name) + '"' + (rel.resource === r.name ? ' selected' : '') + '>' + esc(r.name) + '</option>';
+    });
+    html += '</select></div>';
+    html += '</div>';
+
+    var tHeaders = targetHeaders(rel.resource);
+    html += '<div class="row">';
+    html += '<div><label>Target Header (optional)</label>' + headerSelect(tHeaders, rel.targetHeader, i, 'targetHeader', DEFAULT_TARGET_HEADER) + '</div>';
+    html += '<div><label>Label Header (optional)</label>' + labelHeaderInput(tHeaders, rel.labelHeader, i) + '</div>';
+    html += '</div>';
+    html += '<div class="hint">Target Header defaults to <code>Code</code>. Label Header sets display text — pick a column (e.g. <code>Name</code>) or type a parent path (e.g. <code>$product.Name</code> or <code>$product.Name - Variant1</code>).</div>';
+
+    html += '</div>';
+  });
+
+  container.innerHTML = html;
+  renderPreview();
+}
+
+// Headers are unavailable for functional resources / unreadable sheets, so fall
+// back to a free-text input rather than blocking configuration.
+function headerSelect(headers, value, i, field, placeholder) {
+  if (!headers.length) {
+    return '<input value="' + esc(value || '') + '" onchange="onFieldChange(' + i + ', \'' + field + '\', this.value)" placeholder="' + esc(placeholder) + '">';
+  }
+  var html = '<select onchange="onFieldChange(' + i + ', \'' + field + '\', this.value)">';
+  html += '<option value="">' + esc(placeholder) + '</option>';
+  var found = false;
+  headers.forEach(function(h) {
+    var selected = (value === h);
+    if (selected) found = true;
+    html += '<option value="' + esc(h) + '"' + (selected ? ' selected' : '') + '>' + esc(h) + '</option>';
+  });
+  if (value && !found) {
+    html += '<option value="' + esc(value) + '" selected>' + esc(value) + ' (not in sheet)</option>';
+  }
+  html += '</select>';
+  return html;
+}
+
+// Label Header is a combo input, not a strict picker: the datalist offers the
+// target sheet's columns while free text allows parent-path expressions such as
+// `$product.Name` or `$product.Name - Variant1`, which resolve on the frontend.
+function labelHeaderInput(headers, value, i) {
+  var listId = 'labelHeaders' + i;
+  var html = '<input list="' + listId + '" value="' + esc(value || '') + '"';
+  html += ' onchange="onFieldChange(' + i + ', \'labelHeader\', this.value)"';
+  html += ' placeholder="(auto) or $product.Name - Variant1">';
+  html += '<datalist id="' + listId + '">';
+  headers.forEach(function(h) {
+    html += '<option value="' + esc(h) + '"></option>';
+  });
+  html += '</datalist>';
+  return html;
+}
+
+// Compresses default simple configs to string values and extended configs to
+// object values, matching the APP.Resources.Relations storage contract.
+function serializeRelations() {
+  var out = {};
+  currentRelations.forEach(function(rel) {
+    var header = (rel.header || '').trim();
+    var resource = (rel.resource || '').trim();
+    if (!header || !resource) return;
+
+    if (isSimple(rel)) {
+      out[header] = resource;
+      return;
+    }
+
+    var entry = { resource: resource };
+    if (rel.targetHeader && rel.targetHeader !== DEFAULT_TARGET_HEADER) entry.targetHeader = rel.targetHeader;
+    if (rel.labelHeader) entry.labelHeader = rel.labelHeader;
+    out[header] = entry;
+  });
+  return out;
+}
+
+function renderPreview() {
+  var el = document.getElementById('preview');
+  var out = serializeRelations();
+  if (!Object.keys(out).length) {
+    el.style.display = 'none';
+    return;
+  }
+  el.style.display = 'block';
+  el.textContent = JSON.stringify(out, null, 2);
+}
+
+function saveRelations() {
+  var resourceName = document.getElementById('resourceSelect').value;
+  if (!resourceName) return;
+
+  var out = serializeRelations();
+  var json = JSON.stringify(out);
+
+  document.getElementById('saveBtn').disabled = true;
+  document.getElementById('saveBtn').textContent = 'Saving...';
+
+  google.script.run.withSuccessHandler(function() {
+    showStatus('Relations saved successfully!', 'success');
+    document.getElementById('saveBtn').disabled = false;
+    document.getElementById('saveBtn').textContent = 'Save Relations';
+    var res = findResource(resourceName);
+    if (res) res.relations = out;
+  }).withFailureHandler(function(err) {
+    showStatus('Failed to save: ' + err.message, 'error');
+    document.getElementById('saveBtn').disabled = false;
+    document.getElementById('saveBtn').textContent = 'Save Relations';
+  }).app_saveResourceRelations(resourceName, json);
+}
+
+function showStatus(msg, type) {
+  var el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status-bar ' + type;
+  if (type === 'success') setTimeout(function() { el.style.display = 'none'; }, 3000);
+}
+
+function esc(v) { return (v == null ? '' : String(v)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+</script>
+</body>
+</html>

@@ -20,6 +20,7 @@ function onOpen() {
       .addItem('Manage Reports', 'app_showReportManagerDialog')
       .addItem('Manage Actions', 'app_showActionManagerDialog')
       .addItem('Manage Lists', 'app_showListViewsManagerDialog')
+      .addItem('Manage Relations', 'app_showRelationsManagerDialog')
       .addSeparator()
       .addItem('Sync APP.Resources from Code', 'syncAppResourcesFromCode')
       .addItem('Regenerate App Cache', 'regenerateAppCacheAndNotify'))
@@ -860,6 +861,84 @@ function app_saveResourceListViews(resourceName, listViewsJson, listViewsMode) {
     throw new Error('Resource not found: ' + resourceName);
   } catch (e) {
     throw new Error('Failed to save list views: ' + e.message);
+  }
+}
+
+// =====================================================
+// Manage Relations Dialog
+// =====================================================
+
+function app_showRelationsManagerDialog() {
+  const html = HtmlService.createHtmlOutputFromFile('relationsManager')
+    .setWidth(940)
+    .setHeight(660)
+    .setTitle('Manage Resource Relations');
+  SpreadsheetApp.getUi().showModalDialog(html, 'Manage Resource Relations');
+}
+
+/**
+ * Fetches all data needed for the Relations Manager UI.
+ * Returns every resource with its sheet headers (used for both the source
+ * column picker and the target header / label header pickers).
+ */
+function app_getRelationsManagerData() {
+  try {
+    var resources = getAllResourcesConfigs({ includeInactive: true });
+    var resourceList = resources.map(function(res) {
+      var headers = [];
+      try {
+        if (!res.functional && res.fileId && res.sheetName) {
+          var ss = openSpreadsheetById(res.fileId);
+          var sheet = ss.getSheetByName(res.sheetName);
+          if (sheet) {
+            headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+          }
+        }
+      } catch (e) { /* skip */ }
+
+      return {
+        name: res.name,
+        label: (Array.isArray(res.menus) && res.menus.length > 0 && res.menus[0].label) || res.name,
+        headers: headers,
+        relations: res.relations || {}
+      };
+    });
+
+    return { resources: resourceList };
+  } catch (e) {
+    throw new Error('Failed to load relations manager data: ' + e.message);
+  }
+}
+
+/**
+ * Saves relations for a specific resource as JSON to the Relations column.
+ * `relationsJson` is expected pre-compressed by the dialog (simple configs as
+ * string values, extended configs as objects); it is re-validated here.
+ */
+function app_saveResourceRelations(resourceName, relationsJson) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(CONFIG.SHEETS.RESOURCES);
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    var nameIdx = headers.indexOf('Name');
+    var relationsIdx = headers.indexOf('Relations');
+
+    if (nameIdx === -1 || relationsIdx === -1) throw new Error('Columns Name or Relations not found');
+
+    var normalized = parseRelationsCell(relationsJson);
+    var valueToSave = Object.keys(normalized).length ? JSON.stringify(normalized) : '';
+
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][nameIdx] === resourceName) {
+        sheet.getRange(i + 1, relationsIdx + 1).setValue(valueToSave);
+        clearResourceConfigCache();
+        return true;
+      }
+    }
+    throw new Error('Resource not found: ' + resourceName);
+  } catch (e) {
+    throw new Error('Failed to save relations: ' + e.message);
   }
 }
 

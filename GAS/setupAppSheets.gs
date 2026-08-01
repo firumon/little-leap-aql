@@ -53,7 +53,8 @@ function setupAppSheets() {
         'PostAction',
         'Reports',
         'ListViews',
-        'CustomUIName'
+        'CustomUIName',
+        'Relations'
       ],
       autoIdFormula: null,
       validations: [
@@ -112,7 +113,8 @@ function setupAppSheets() {
         PostAction: 180,
         Reports: 320,
         ListViews: 320,
-        CustomUIName: 160
+        CustomUIName: 160,
+        Relations: 320
       }
     },
     {

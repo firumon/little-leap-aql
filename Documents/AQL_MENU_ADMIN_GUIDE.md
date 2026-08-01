@@ -41,6 +41,7 @@ Use this document when an admin asks:
 | `📚 Resources > Manage Reports` | Configure report templates and report inputs per resource. |
 | `📚 Resources > Manage Actions` | Configure `AdditionalActions` definitions per resource. |
 | `📚 Resources > Manage Lists` | Configure list view filters per resource (`ListViews`). |
+| `📚 Resources > Manage Relations` | Configure explicit cross-resource relations per resource (`Relations`). |
 | `📚 Resources > Sync APP.Resources from Code` | Reconcile sheet schema/default rows with `syncAppResources.gs` source config. |
 | `📚 Resources > Regenerate App Cache` | Clear and immediately rebuild critical APP runtime caches, including resource config and metadata-backed caches. |
 | `⚙️ Setup & Refactor > Refactor APP Sheets` | Ensure APP sheet structure and config tabs are aligned with code. |
@@ -212,7 +213,32 @@ Reference:
 - `Documents/RESOURCE_COLUMNS_GUIDE.md` (`ListViews` JSON schema + operators)
 - `Documents/MODULE_WORKFLOWS.md` section 2 (List View runtime flow)
 
-### 7.5 Sync APP.Resources from Code
+### 7.5 Manage Relations
+Purpose:
+- Configure per-resource `Relations` metadata (explicit cross-resource links).
+
+Admin input needed:
+- Source Resource
+- Source Column Header (the column on this resource holding the reference)
+- Related Target Resource
+- Target Header (optional, defaults to `Code`)
+- Label Header (optional, sets dropdown display text)
+
+Label Header is a **combo input**: the dropdown list offers the target resource's sheet columns, and free text is accepted for parent-path expressions.
+- Column name — `Name`
+- Parent path — `$product.Name`
+- Template — `$product.Name - Variant1`
+
+Behavior:
+- Default simple configs (`targetHeader = Code`, no `labelHeader`) are compressed to string values.
+- Configs with a custom target header or a label header are written as objects.
+- Saving an empty set writes a blank `Relations` cell (heuristic-only derivation).
+- Save clears the resource config cache.
+
+Reference:
+- `Documents/RESOURCE_COLUMNS_GUIDE.md` (`Relations` JSON schema)
+
+### 7.6 Sync APP.Resources from Code
 Purpose:
 - Applies `GAS/syncAppResources.gs` code-level defaults/headers to sheet safely.
 
@@ -220,7 +246,7 @@ When to use:
 - After code changes touching `APP_RESOURCES_CODE_CONFIG`
 - During setup/refactor recovery
 
-### 7.6 Regenerate App Cache
+### 7.7 Regenerate App Cache
 Purpose:
 - Clears all APP runtime caches and immediately rebuilds critical cache entries from the current sheets.
 - Includes resource config and metadata-backed APP caches.

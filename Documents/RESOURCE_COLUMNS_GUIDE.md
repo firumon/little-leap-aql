@@ -20,6 +20,8 @@ This document is the canonical meaning reference for `APP.Resources` columns.
   - `RecordAccessPolicy`, `OwnerUserField`, `AdditionalActions`
 - UI/runtime metadata
   - `Menu`, `UIFields`, `IncludeInAuthorizationPayload`, `Functional`, `PreAction`, `PostAction`, `Reports`, `ListViews`, `CustomUIName`
+- cross-resource linking
+  - `ParentResource`, `Relations`
 
 ## Usage Notes
 - `FileID` may be blank when scope-level resolution is intended.
@@ -88,6 +90,62 @@ The `ListViews` column in the `APP.Resources` sheet defines custom data filter v
 * **Format**: A JSON array of view configuration objects.
 * **Overriding Rule**: If populated with a JSON array (or `[]` to explicitly disable switcher), custom template/modifier overriding for the views switcher is disabled. If blank, overrides are allowed.
 * **Detailed JSON Schema & Operators**: For the complete specification of the filter group/condition JSON objects and supported comparison operators, refer to the canonical [AQL Frontend List Switcher Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_LIST_SWITCHER.md#L126-L177).
+
+## Relations Column Schema & Usage
+The `Relations` column declares explicit cross-resource links for a resource, overriding the frontend's name-based heuristics.
+
+* **Purpose**: Tell the frontend which target resource a column points at, which target column holds the referenced value, and which target column supplies the human-readable label.
+* **Format**: A JSON **object** keyed by the *source column header* on this resource. Blank means "heuristics only".
+* **Managed by**: `AQL 🚀 > 📚 Resources > Manage Relations` (see [AQL_MENU_ADMIN_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_MENU_ADMIN_GUIDE.md) §7.5), or directly in code via `APP_RESOURCES_CODE_CONFIG` in `GAS/syncAppResources.gs`.
+* **Exposed to the frontend** as `relations` on each resource entry in the login payload — see [LOGIN_RESPONSE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/LOGIN_RESPONSE.md).
+
+### Entry Shapes
+Two shapes are accepted per entry:
+
+```json
+{
+  "SupplierCode": "Suppliers",
+  "ParentCode": "Taxes",
+  "SKU": { "resource": "SKUs", "targetHeader": "Code", "labelHeader": "$product.Name - Variant1" }
+}
+```
+
+* **Shorthand string** — the value is the target resource name; `targetHeader` defaults to `Code` and no label header is set.
+* **Extended object**:
+  | Key | Required | Default | Meaning |
+  |---|---|---|---|
+  | `resource` | yes | — | Target resource name (must be a resource the user is authorized for, else the entry is ignored) |
+  | `targetHeader` | no | `Code` | Column on the target resource that the source column's value matches |
+  | `labelHeader` | no | (auto) | Display label for frontend dropdown pickers. A target column name, a **parent path**, or a **template** (see below); falls back to `Name`, then the first non-key/non-`Status` column |
+
+### Label Header Expressions
+`labelHeader` accepts three forms, resolved by `renderLabelExpression()` in `useFormFields.js`:
+
+| Form | Example | Renders |
+|---|---|---|
+| **Column name** | `Name` | The target row's `Name` value |
+| **Parent path** | `$product.Name` | Walks the enriched target record's reactive parent getters |
+| **Template** | `$product.Name - Variant1` | Interpolates every token; literal text between tokens is preserved |
+
+Resolution rules:
+* A token starting with `$` is a **parent path** — the target row is passed through `enrichRecord()` so reactive parent getters (`$product`, `$supplier`, `$parent`) are live, then the dotted path is walked (`enriched.$product?.Name`).
+* A bare token is substituted **only if it is a column on the target resource**; any other word is kept as literal text.
+* Tokens that resolve to null/empty render as an empty string; surrounding whitespace and dangling separators (`-`, `–`, `|`, `/`, `,`) are trimmed.
+* If **no** token resolves, the expression is discarded and the picker falls back to the `Name`/first-column heuristic.
+
+The picker appends the stored value in parentheses, so `{"SKU": {"resource":"SKUs","labelHeader":"$product.Name - Variant1"}}` renders options as `iPhone 15 Pro - 128GB Black (SKU000102)` instead of a raw code.
+
+### What It Solves
+* **Non-`Code` suffix headers**: heuristics only detect `<Singular>Code` columns. `"SKU": "SKUs"` or `"UOM": {"resource":"UOMs","labelHeader":"Name"}` links columns that don't end in `Code`.
+* **Names that don't pluralize back**: e.g. `OutletOperatingRules.PriceListCode` → `PriceList` (heuristic would look for `PriceLists`), or `PurchaseOrders.ShipToWarehouseCode` → `Warehouses`.
+* **Self-referential relations**: `Taxes.ParentCode` → `Taxes`, with `labelHeader` so the picker shows the tax name rather than a raw code.
+* **Display labels**: `labelHeader` removes hardcoded label guessing in `useFormFields.js` dropdown options.
+* **Labels that need parent context**: an SKU row alone reads as `128GB Black`; `"$product.Name - Variant1"` renders the parent product name alongside the variant.
+
+### Derivation Precedence (Frontend)
+`useDataStore._deriveAllRelations()` runs a two-pass pipeline:
+1. **Normalization** — builds one `effectiveRelations` map per resource: baseline heuristics first (`ParentResource`, `<Singular>Code` headers, `ParentCode` → self), then explicit `Relations` entries merged on top. **Explicit metadata wins.** Entries pointing at an unknown/unauthorized resource are dropped.
+2. **Topology** — `parents`, `children`, `linkRefs`, and `refs` are built *exclusively* from that normalized map, so heuristic and explicit relations behave identically downstream (`useRecord` `$parent`/`$children`/`$<singular>` getters, `useFormFields` pickers).
 
 ## Scope Characteristics
 - `master`: Standard CRUD with auto-generated codes, audit columns, full sync.

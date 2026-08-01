@@ -82,7 +82,12 @@ function initAppResourcesCodeConfig() {
         PostAction: '',
         Reports: '',
         CustomUIName: '',
-        ListViews: ''
+        ListViews: '',
+        Relations: JSON.stringify({
+            ProductCode: CONFIG.MASTER_SHEETS.PRODUCTS,
+            UOM: CONFIG.MASTER_SHEETS.UOMS,
+            TaxCode: CONFIG.MASTER_SHEETS.TAXES
+        })
     },
          {
              Name: CONFIG.MASTER_SHEETS.UOMS,
@@ -185,7 +190,10 @@ function initAppResourcesCodeConfig() {
       PostAction: '',
       Reports: '',
       CustomUIName: '',
-      ListViews: ''
+      ListViews: '',
+      Relations: JSON.stringify({
+        Currency: CONFIG.MASTER_SHEETS.CURRENCIES
+      })
     },
     {
       Name: CONFIG.MASTER_SHEETS.PRICE_LIST_ITEMS,
@@ -218,7 +226,11 @@ function initAppResourcesCodeConfig() {
       PostAction: '',
       Reports: '',
       CustomUIName: '',
-      ListViews: ''
+      ListViews: '',
+      Relations: JSON.stringify({
+        PriceListCode: CONFIG.MASTER_SHEETS.PRICE_LIST,
+        SKUCode: { resource: CONFIG.MASTER_SHEETS.SKUS, targetHeader: 'Code', labelHeader: '$product.Name' }
+      })
     },
     {
         Name: CONFIG.MASTER_SHEETS.SUPPLIERS,
@@ -391,7 +403,11 @@ function initAppResourcesCodeConfig() {
         PostAction: '',
         Reports: '',
         CustomUIName: '',
-        ListViews: ''
+        ListViews: '',
+        Relations: JSON.stringify({
+            OutletCode: CONFIG.MASTER_SHEETS.OUTLETS,
+            PriceListCode: CONFIG.MASTER_SHEETS.PRICE_LIST
+        })
     },
     {
         Name: CONFIG.MASTER_SHEETS.TAXES,
@@ -427,7 +443,10 @@ function initAppResourcesCodeConfig() {
         PostAction: '',
         Reports: '',
         CustomUIName: '',
-        ListViews: ''
+        ListViews: '',
+        Relations: JSON.stringify({
+            ParentCode: CONFIG.MASTER_SHEETS.TAXES
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.PROCUREMENTS,
@@ -487,7 +506,10 @@ function initAppResourcesCodeConfig() {
         PostAction: '',
         Reports: '',
         CustomUIName: '',
-        ListViews: ''
+        ListViews: '',
+        Relations: JSON.stringify({
+            WarehouseCode: CONFIG.MASTER_SHEETS.WAREHOUSES
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.PURCHASE_REQUISITION_ITEMS,
@@ -514,7 +536,11 @@ function initAppResourcesCodeConfig() {
         PostAction: '',
         Reports: '',
         CustomUIName: '',
-        ListViews: ''
+        ListViews: '',
+        Relations: JSON.stringify({
+            SKU: { resource: CONFIG.MASTER_SHEETS.SKUS, targetHeader: 'Code', labelHeader: '$product.Name' },
+            UOM: CONFIG.MASTER_SHEETS.UOMS
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.RFQS,
@@ -574,7 +600,10 @@ function initAppResourcesCodeConfig() {
         PostAction: '',
         Reports: '',
         CustomUIName: '',
-        ListViews: ''
+        ListViews: '',
+        Relations: JSON.stringify({
+            SupplierCode: CONFIG.MASTER_SHEETS.SUPPLIERS
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.SUPPLIER_QUOTATIONS,
@@ -605,7 +634,11 @@ function initAppResourcesCodeConfig() {
         PostAction: '',
         Reports: '',
         CustomUIName: '',
-        ListViews: ''
+        ListViews: '',
+        Relations: JSON.stringify({
+            SupplierCode: CONFIG.MASTER_SHEETS.SUPPLIERS,
+            Currency: CONFIG.MASTER_SHEETS.CURRENCIES
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.SUPPLIER_QUOTATION_ITEMS,
@@ -632,7 +665,10 @@ function initAppResourcesCodeConfig() {
         PostAction: '',
         Reports: '',
         CustomUIName: '',
-        ListViews: ''
+        ListViews: '',
+        Relations: JSON.stringify({
+            SKU: { resource: CONFIG.MASTER_SHEETS.SKUS, targetHeader: 'Code', labelHeader: '$product.Name' }
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.PURCHASE_ORDERS,
@@ -666,7 +702,12 @@ function initAppResourcesCodeConfig() {
         PostAction: '',
         Reports: '',
         CustomUIName: '',
-        ListViews: ''
+        ListViews: '',
+        Relations: JSON.stringify({
+            SupplierCode: CONFIG.MASTER_SHEETS.SUPPLIERS,
+            ShipToWarehouseCode: CONFIG.MASTER_SHEETS.WAREHOUSES,
+            Currency: CONFIG.MASTER_SHEETS.CURRENCIES
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.PURCHASE_ORDER_ITEMS,
@@ -693,7 +734,11 @@ function initAppResourcesCodeConfig() {
         PostAction: '',
         Reports: '',
         CustomUIName: '',
-        ListViews: ''
+        ListViews: '',
+        Relations: JSON.stringify({
+            SKU: { resource: CONFIG.MASTER_SHEETS.SKUS, targetHeader: 'Code', labelHeader: '$product.Name' },
+            UOM: CONFIG.MASTER_SHEETS.UOMS
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.PO_RECEIVINGS,
@@ -753,7 +798,10 @@ function initAppResourcesCodeConfig() {
         PostAction: '',
         Reports: '',
         CustomUIName: '',
-        ListViews: ''
+        ListViews: '',
+        Relations: JSON.stringify({
+            SKU: { resource: CONFIG.MASTER_SHEETS.SKUS, targetHeader: 'Code', labelHeader: '$product.Name' }
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.GOODS_RECEIPTS,
@@ -811,7 +859,10 @@ function initAppResourcesCodeConfig() {
         PostAction: '',
         Reports: '',
         CustomUIName: '',
-        ListViews: ''
+        ListViews: '',
+        Relations: JSON.stringify({
+            SKU: { resource: CONFIG.MASTER_SHEETS.SKUS, targetHeader: 'Code', labelHeader: '$product.Name' }
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.STOCK_MOVEMENTS,
@@ -848,7 +899,11 @@ function initAppResourcesCodeConfig() {
         PostAction: 'handleStockMovementsBulkSave',
         Reports: '',
         CustomUIName: '',
-        ListViews: ''
+        ListViews: '',
+        Relations: JSON.stringify({
+            WarehouseCode: CONFIG.MASTER_SHEETS.WAREHOUSES,
+            SKU: { resource: CONFIG.MASTER_SHEETS.SKUS, targetHeader: 'Code', labelHeader: '$product.Name' }
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.WAREHOUSE_STORAGES,
@@ -879,7 +934,11 @@ function initAppResourcesCodeConfig() {
         PostAction: '',
         Reports: '',
         CustomUIName: '',
-        ListViews: ''
+        ListViews: '',
+        Relations: JSON.stringify({
+            WarehouseCode: CONFIG.MASTER_SHEETS.WAREHOUSES,
+            SKU: { resource: CONFIG.MASTER_SHEETS.SKUS, targetHeader: 'Code', labelHeader: '$product.Name' }
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_VISITS,
@@ -897,7 +956,10 @@ function initAppResourcesCodeConfig() {
             {"id":"rep_1776000000012","name":"outlet-visits-today","label":"Visits Today","templateSheet":"OutletVisitsToday","isRecordLevel":false,"inputs":[],"pdfOptions":{}},
             {"id":"rep_1776000000013","name":"outlet-visits-tomorrow-upcoming","label":"Visits Tomorrow & Upcoming","templateSheet":"OutletVisitsTomorrowAndUpcomig","isRecordLevel":false,"inputs":[],"pdfOptions":{}},
             {"id":"rep_1776000000014","name":"outlet-visits-overdue","label":"Visits Overdue","templateSheet":"OutletVisitsOverdue","isRecordLevel":false,"inputs":[],"pdfOptions":{}}
-        ]), CustomUIName: '', ListViews: ''
+        ]), CustomUIName: '', ListViews: '',
+        Relations: JSON.stringify({
+            OutletCode: CONFIG.MASTER_SHEETS.OUTLETS
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_RESTOCKS,
@@ -915,12 +977,19 @@ function initAppResourcesCodeConfig() {
         UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: JSON.stringify([
             {"id":"rep_1776000000015","name":"restock-order","label":"Restock Order","templateSheet":"Restock","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
             {"id":"rep_1776000000016","name":"restock-log","label":"Restock Log","templateSheet":"RestockRecords","isRecordLevel":false,"inputs":[{"label":"User","type":"select","targetCell":"J11","source":{"resource":"OutletRestocks","field":"RequestedUser"},"default":"Any User","required":false},{"label":"Date","type":"select","targetCell":"J12","source":{"resource":"OutletRestocks","field":"Date"},"default":"Any Date","required":false},{"label":"Progress","type":"select","targetCell":"J13","source":{"resource":"OutletRestocks","field":"Progress"},"default":"All Progress","required":false}],"pdfOptions":{}}
-        ]), CustomUIName: '', ListViews: ''
+        ]), CustomUIName: '', ListViews: '',
+        Relations: JSON.stringify({
+            OutletCode: CONFIG.MASTER_SHEETS.OUTLETS
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_RESTOCK_ITEMS,
         Scope: 'operation', ParentResource: CONFIG.OPERATION_SHEETS.OUTLET_RESTOCKS, IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_RESTOCK_ITEMS,
-        CodePrefix: 'ORSI', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletRestockCode,SKU,Quantity', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Quantity":0,"Progress":"PENDING"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: JSON.stringify([{ "action": "Cancel", "label": "Cancel", "icon": "cancel", "color": "negative", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "CANCELLED", "fields": [{ "name": "Comment", "label": "Cancel Comment", "type": "textarea", "required": true }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "PENDING" } }]), Menu: JSON.stringify([]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
+        CodePrefix: 'ORSI', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletRestockCode,SKU,Quantity', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Quantity":0,"Progress":"PENDING"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: JSON.stringify([{ "action": "Cancel", "label": "Cancel", "icon": "cancel", "color": "negative", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "CANCELLED", "fields": [{ "name": "Comment", "label": "Cancel Comment", "type": "textarea", "required": true }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "PENDING" } }]), Menu: JSON.stringify([]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: '',
+        Relations: JSON.stringify({
+            WarehouseCode: CONFIG.MASTER_SHEETS.WAREHOUSES,
+            SKU: { resource: CONFIG.MASTER_SHEETS.SKUS, targetHeader: 'Code', labelHeader: '$product.Name' }
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_DELIVERIES,
@@ -965,7 +1034,12 @@ function initAppResourcesCodeConfig() {
         UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: JSON.stringify([
             {"id":"rep_1776000000019","name":"return-receipt","label":"Return Receipt","templateSheet":"Return","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
             {"id":"rep_1776000000020","name":"returns-log","label":"Returns Log","templateSheet":"ReturnRecords","isRecordLevel":false,"inputs":[{"label":"Username","type":"select","targetCell":"J11","source":{"resource":"OutletReturns","field":"Username"},"default":"Any User","required":false},{"label":"Date","type":"select","targetCell":"J12","source":{"resource":"OutletReturns","field":"Date"},"default":"All Date","required":false},{"label":"Return Reason","type":"select","targetCell":"J13","source":{"resource":"OutletReturns","field":"Reason"},"default":"Any Reason","required":false}],"pdfOptions":{}}
-        ]), CustomUIName: '', ListViews: ''
+        ]), CustomUIName: '', ListViews: '',
+        Relations: JSON.stringify({
+            OutletCode: CONFIG.MASTER_SHEETS.OUTLETS,
+            WarehouseCode: CONFIG.MASTER_SHEETS.WAREHOUSES,
+            SKU: { resource: CONFIG.MASTER_SHEETS.SKUS, targetHeader: 'Code', labelHeader: '$product.Name' }
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTIONS,
@@ -978,12 +1052,18 @@ function initAppResourcesCodeConfig() {
         Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 6, "label": "Outlet Consumptions", "icon": "point_of_sale", "route": "/operation/outlet-consumptions", "pageTitle": "Outlet Consumptions", "pageDescription": "Record outlet stock consumption", "show": true }]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: JSON.stringify([
             {"id":"rep_1776000000021","name":"consumption-receipt","label":"Consumption Receipt","templateSheet":"Consumption","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
             {"id":"rep_1776000000022","name":"consumption-records-log","label":"Consumption Log","templateSheet":"ConsumptionRecords","isRecordLevel":false,"inputs":[{"label":"Username","type":"select","targetCell":"J11","source":{"resource":"OutletConsumptions","field":"Username"},"default":"Any User","required":false},{"label":"Date","type":"select","targetCell":"J12","source":{"resource":"OutletConsumptions","field":"Date"},"default":"All Date","required":false}],"pdfOptions":{}}
-        ]), CustomUIName: '', ListViews: ''
+        ]), CustomUIName: '', ListViews: '',
+        Relations: JSON.stringify({
+            OutletCode: CONFIG.MASTER_SHEETS.OUTLETS
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_ITEMS,
         Scope: 'operation', ParentResource: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTIONS, IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_ITEMS,
-        CodePrefix: 'OCI', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletConsumptionCode,SKU,Qty', UniqueHeaders: '', UniqueCompositeHeaders: 'OutletConsumptionCode+SKU', DefaultValues: '{"Status":"Active","Qty":0}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: '', Menu: JSON.stringify([]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
+        CodePrefix: 'OCI', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletConsumptionCode,SKU,Qty', UniqueHeaders: '', UniqueCompositeHeaders: 'OutletConsumptionCode+SKU', DefaultValues: '{"Status":"Active","Qty":0}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: '', Menu: JSON.stringify([]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: '',
+        Relations: JSON.stringify({
+            SKU: { resource: CONFIG.MASTER_SHEETS.SKUS, targetHeader: 'Code', labelHeader: '$product.Name' }
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICES,
@@ -997,12 +1077,20 @@ function initAppResourcesCodeConfig() {
         Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 7, "label": "Consumption Invoices", "icon": "receipt_long", "route": "/operation/outlet-consumption-invoices", "pageTitle": "Consumption Invoices", "pageDescription": "View outlet consumption invoices", "show": true }]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: JSON.stringify([
             {"id":"rep_1776000000023","name":"consumption-invoice","label":"Consumption Invoice","templateSheet":"ConsumptionInvoice","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
             {"id":"rep_1776000000024","name":"invoice-log","label":"Invoice Log","templateSheet":"InvoiceRecords","isRecordLevel":false,"inputs":[{"label":"Date","type":"select","targetCell":"J11","source":{"resource":"OutletConsumptionInvoices","field":"Date"},"default":"All Date","required":false},{"label":"Username","type":"select","targetCell":"J12","source":{"resource":"OutletConsumptionInvoices","field":"Username"},"default":"Any User","required":false},{"label":"Progress","type":"select","targetCell":"J13","source":{"resource":"OutletConsumptionInvoices","field":"Progress"},"default":"All Progress","required":false}],"pdfOptions":{}}
-        ]), CustomUIName: '', ListViews: ''
+        ]), CustomUIName: '', ListViews: '',
+        Relations: JSON.stringify({
+            OutletCode: CONFIG.MASTER_SHEETS.OUTLETS,
+            PriceListCode: CONFIG.MASTER_SHEETS.PRICE_LIST
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICE_ITEMS,
         Scope: 'operation', ParentResource: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICES, IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICE_ITEMS,
-        CodePrefix: 'OCII', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletConsumptionInvoiceCode,SKU,Qty,Price', UniqueHeaders: '', UniqueCompositeHeaders: 'OutletConsumptionInvoiceCode+SKU', DefaultValues: '{"Status":"Active","Qty":0,"Price":0,"Total":0,"Discount":0,"TaxableAmount":0,"TaxAmount":0,"TaxCode":""}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: '', Menu: JSON.stringify([]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
+        CodePrefix: 'OCII', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletConsumptionInvoiceCode,SKU,Qty,Price', UniqueHeaders: '', UniqueCompositeHeaders: 'OutletConsumptionInvoiceCode+SKU', DefaultValues: '{"Status":"Active","Qty":0,"Price":0,"Total":0,"Discount":0,"TaxableAmount":0,"TaxAmount":0,"TaxCode":""}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: '', Menu: JSON.stringify([]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: '',
+        Relations: JSON.stringify({
+            SKU: { resource: CONFIG.MASTER_SHEETS.SKUS, targetHeader: 'Code', labelHeader: '$product.Name' },
+            TaxCode: CONFIG.MASTER_SHEETS.TAXES
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_PAYMENTS,
@@ -1067,18 +1155,29 @@ function initAppResourcesCodeConfig() {
             {"id":"rep_1776000000026","name":"payment-log","label":"Payment Log","templateSheet":"PaymentRecords","isRecordLevel":false,"inputs":[{"label":"Date","type":"select","targetCell":"J11","source":{"resource":"OutletPayments","field":"Date"},"default":"All Date","required":false},{"label":"Username","type":"select","targetCell":"J12","source":{"resource":"OutletPayments","field":"Username"},"default":"Any User","required":false},{"label":"Payment Mode","type":"select","targetCell":"J13","source":{"resource":"OutletPayments","field":"Mode"},"default":"Every Mode","required":false}],"pdfOptions":{}}
         ]),
         CustomUIName: '',
-        ListViews: ''
+        ListViews: '',
+        Relations: JSON.stringify({
+            OutletCode: CONFIG.MASTER_SHEETS.OUTLETS
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_MOVEMENTS,
         Scope: 'operation', IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_MOVEMENTS,
-        CodePrefix: 'OMV', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletCode,SKU,QtyChange,ReferenceType,ReferenceCode', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","StorageName":"_default","QtyChange":0}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: '', Menu: JSON.stringify([]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: 'handleOutletMovementsBulkSave', Reports: '', CustomUIName: '', ListViews: ''
+        CodePrefix: 'OMV', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletCode,SKU,QtyChange,ReferenceType,ReferenceCode', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","StorageName":"_default","QtyChange":0}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: '', Menu: JSON.stringify([]), UIFields: JSON.stringify([]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: 'handleOutletMovementsBulkSave', Reports: '', CustomUIName: '', ListViews: '',
+        Relations: JSON.stringify({
+            OutletCode: CONFIG.MASTER_SHEETS.OUTLETS,
+            SKU: { resource: CONFIG.MASTER_SHEETS.SKUS, targetHeader: 'Code', labelHeader: '$product.Name' }
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_STORAGES,
         Scope: 'operation', IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_STORAGES,
         CodePrefix: 'OST', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'FALSE', RequiredHeaders: 'OutletCode,SKU,Quantity', UniqueHeaders: '', UniqueCompositeHeaders: 'OutletCode+SKU', DefaultValues: '{"Quantity":0}', RecordAccessPolicy: 'ALL', OwnerUserField: 'UpdatedBy', AdditionalActions: '',
-        Menu: JSON.stringify([]), UIFields: JSON.stringify([{ header: 'OutletCode', label: 'Outlet Code', type: 'text', required: true }, { header: 'SKU', label: 'SKU', type: 'text', required: true }, { header: 'Quantity', label: 'Quantity', type: 'number', required: true }]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: ''
+        Menu: JSON.stringify([]), UIFields: JSON.stringify([{ header: 'OutletCode', label: 'Outlet Code', type: 'text', required: true }, { header: 'SKU', label: 'SKU', type: 'text', required: true }, { header: 'Quantity', label: 'Quantity', type: 'number', required: true }]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: '',
+        Relations: JSON.stringify({
+            OutletCode: CONFIG.MASTER_SHEETS.OUTLETS,
+            SKU: { resource: CONFIG.MASTER_SHEETS.SKUS, targetHeader: 'Code', labelHeader: '$product.Name' }
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.WAREHOUSE_TRANSFERS,
@@ -1109,7 +1208,11 @@ function initAppResourcesCodeConfig() {
         PostAction: 'handleWarehouseTransfers',
         Reports: '',
         CustomUIName: '',
-        ListViews: ''
+        ListViews: '',
+        Relations: JSON.stringify({
+            SourceWarehouseCode: CONFIG.MASTER_SHEETS.WAREHOUSES,
+            DestinationWarehouseCode: CONFIG.MASTER_SHEETS.WAREHOUSES
+        })
     },
     {
         Name: CONFIG.OPERATION_SHEETS.WAREHOUSE_TRANSFER_ITEMS,
@@ -1136,7 +1239,10 @@ function initAppResourcesCodeConfig() {
         PostAction: 'handleWarehouseTransferItems',
         Reports: '',
         CustomUIName: '',
-        ListViews: ''
+        ListViews: '',
+        Relations: JSON.stringify({
+            SKUCode: { resource: CONFIG.MASTER_SHEETS.SKUS, targetHeader: 'Code', labelHeader: '$product.Name' }
+        })
     },
     {
         Name: CONFIG.ACCOUNTS_SHEETS.CHART_OF_ACCOUNTS,
@@ -1188,7 +1294,10 @@ function initAppResourcesCodeConfig() {
         PostAction: '',
         Reports: '',
         CustomUIName: '',
-        ListViews: ''
+        ListViews: '',
+        Relations: JSON.stringify({
+            COACode: CONFIG.ACCOUNTS_SHEETS.CHART_OF_ACCOUNTS
+        })
     },
     {
         Name: CONFIG.ACCOUNTS_SHEETS.ASSETS,
@@ -1214,7 +1323,10 @@ function initAppResourcesCodeConfig() {
         PostAction: '',
         Reports: '',
         CustomUIName: '',
-        ListViews: ''
+        ListViews: '',
+        Relations: JSON.stringify({
+            COACode: CONFIG.ACCOUNTS_SHEETS.CHART_OF_ACCOUNTS
+        })
     },
     {
         Name: CONFIG.ACCOUNTS_SHEETS.LIABILITIES,
@@ -1240,7 +1352,10 @@ function initAppResourcesCodeConfig() {
         PostAction: '',
         Reports: '',
         CustomUIName: '',
-        ListViews: ''
+        ListViews: '',
+        Relations: JSON.stringify({
+            COACode: CONFIG.ACCOUNTS_SHEETS.CHART_OF_ACCOUNTS
+        })
     },
     {
         Name: CONFIG.ACCOUNTS_SHEETS.EQUITY,
@@ -1266,7 +1381,10 @@ function initAppResourcesCodeConfig() {
         PostAction: '',
         Reports: '',
         CustomUIName: '',
-        ListViews: ''
+        ListViews: '',
+        Relations: JSON.stringify({
+            COACode: CONFIG.ACCOUNTS_SHEETS.CHART_OF_ACCOUNTS
+        })
     },
     {
         Name: CONFIG.ACCOUNTS_SHEETS.REVENUE,
@@ -1292,7 +1410,10 @@ function initAppResourcesCodeConfig() {
         PostAction: '',
         Reports: '',
         CustomUIName: '',
-        ListViews: ''
+        ListViews: '',
+        Relations: JSON.stringify({
+            COACode: CONFIG.ACCOUNTS_SHEETS.CHART_OF_ACCOUNTS
+        })
     },
     {
         Name: CONFIG.ACCOUNTS_SHEETS.EXPENSES,
@@ -1318,7 +1439,10 @@ function initAppResourcesCodeConfig() {
         PostAction: '',
         Reports: '',
         CustomUIName: '',
-        ListViews: ''
+        ListViews: '',
+        Relations: JSON.stringify({
+            COACode: CONFIG.ACCOUNTS_SHEETS.CHART_OF_ACCOUNTS
+        })
     },
     {
         Name: CONFIG.ACCOUNTS_SHEETS.TAX_TRANSACTIONS,
@@ -1344,7 +1468,10 @@ function initAppResourcesCodeConfig() {
         PostAction: '',
         Reports: '',
         CustomUIName: '',
-        ListViews: ''
+        ListViews: '',
+        Relations: JSON.stringify({
+            TaxCode: CONFIG.MASTER_SHEETS.TAXES
+        })
     },
     // --- FUNCTIONAL RESOURCES ---
     {

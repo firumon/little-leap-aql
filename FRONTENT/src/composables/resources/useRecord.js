@@ -30,7 +30,16 @@ export function clearEnrichmentCache() {
   _enrichedCache.clear()
 }
 
-function _enrichRecord(resourceName, code, dataStore) {
+// Relations may target a non-`Code` column (e.g. Currencies.Code vs a resource
+// keyed by another unique header). Enrichment is always Code-keyed, so resolve
+// the referenced row's Code first when targetHeader is something else.
+function _resolveTargetCode(dataStore, resourceName, targetHeader, value) {
+  if (!targetHeader || targetHeader === 'Code') return value
+  const match = dataStore.getRecords(resourceName).find(r => r[targetHeader] === value)
+  return match?.Code || null
+}
+
+export function enrichRecord(resourceName, code, dataStore) {
   if (!resourceName || !code) return null
 
   const cacheKey = `${resourceName}::${code}`
@@ -63,9 +72,11 @@ function _enrichRecord(resourceName, code, dataStore) {
     parentKeys.push(key)
     Object.defineProperty(enriched, key, {
       get() {
-        const parentCode = live.value?.[p.codeField]
+        const parentValue = live.value?.[p.codeField]
+        if (!parentValue) return null
+        const parentCode = _resolveTargetCode(dataStore, p.resourceName, p.targetHeader, parentValue)
         if (!parentCode) return null
-        return _enrichRecord(p.resourceName, parentCode, dataStore)
+        return enrichRecord(p.resourceName, parentCode, dataStore)
       },
       enumerable: false, configurable: true
     })
@@ -78,29 +89,31 @@ function _enrichRecord(resourceName, code, dataStore) {
     childKeys.push(key)
     Object.defineProperty(enriched, key, {
       get() {
-        const selfCode = live.value?.Code
-        if (!selfCode) return []
+        const selfValue = live.value?.[c.targetHeader || 'Code']
+        if (!selfValue) return []
         return dataStore.getRecords(c.name)
-          .filter(row => row[c.codeField] === selfCode)
-          .map(row => _enrichRecord(c.name, row.Code, dataStore))
+          .filter(row => row[c.codeField] === selfValue)
+          .map(row => enrichRecord(c.name, row.Code, dataStore))
       },
       enumerable: false, configurable: true
     })
   }
 
-  // Link refs (cross-references via XxxCode columns not in parent/child)
+  // Link refs (cross-references via relation columns not already keyed as parent/child)
   const linkKeys = []
-  for (const [header, refResource] of Object.entries(meta.linkRefs)) {
-    const singular = singularize(refResource).toLowerCase()
+  for (const rel of Object.values(meta.refs || {})) {
+    const singular = singularize(rel.resource).toLowerCase()
     const key = `$${singular}`
     // Avoid collisions with parent/child keys
     if (parentKeys.includes(key) || childKeys.includes(key)) continue
     linkKeys.push(key)
     Object.defineProperty(enriched, key, {
       get() {
-        const refCode = live.value?.[header]
+        const refValue = live.value?.[rel.header]
+        if (!refValue) return null
+        const refCode = _resolveTargetCode(dataStore, rel.resource, rel.targetHeader, refValue)
         if (!refCode) return null
-        return _enrichRecord(refResource, refCode, dataStore)
+        return enrichRecord(rel.resource, refCode, dataStore)
       },
       enumerable: false, configurable: true
     })
@@ -182,14 +195,14 @@ export function useRecord(resourceNameOverride, codeOverride) {
     const name = resolvedResourceName.value
     const code = resolvedCode.value
     if (!name || !code) return null
-    return _enrichRecord(name, code, dataStore)
+    return enrichRecord(name, code, dataStore)
   })
 
   const records = computed(() => {
     const name = resolvedResourceName.value
     if (!name) return []
     return dataStore.getRecords(name).map(r =>
-      _enrichRecord(name, r.Code, dataStore)
+      enrichRecord(name, r.Code, dataStore)
     )
   })
 
@@ -328,7 +341,7 @@ export function useRecord(resourceNameOverride, codeOverride) {
     if (!code) return null
     const name = resolvedResourceName.value
     if (!name) return null
-    return _enrichRecord(name, code, dataStore)
+    return enrichRecord(name, code, dataStore)
   }
 
   async function updateLocalRecord(updatedRecord) {

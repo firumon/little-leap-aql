@@ -2,6 +2,7 @@ import { computed } from 'vue'
 import { useDataStore } from 'src/stores/data'
 import { useAuthStore } from 'src/stores/auth'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
+import { enrichRecord } from 'src/composables/resources/useRecord'
 import { singularize, pluralize } from 'src/utils/appHelpers'
 import AqlFileUpload from 'components/shared/AqlFileUpload.vue'
 import AppDate from 'components/app/Date.vue'
@@ -19,6 +20,41 @@ const TOGGLE_PAIRS = [
 ]
 
 const ignoredFields = ['AccessRegion', 'CreatedAt', 'CreatedBy', 'UpdatedAt', 'UpdatedBy']
+
+// Matches either a parent path (`$product.Name`) or a bare word (`Variant1`)
+// inside a `labelHeader` template. Everything else is literal text.
+const LABEL_TOKEN_RE = /\$?[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*/g
+
+function resolvePath(source, path) {
+  return path.split('.').reduce((acc, key) => (acc == null ? acc : acc[key]), source)
+}
+
+/**
+ * Renders an `APP.Resources.Relations` `labelHeader` against a target row.
+ * A plain target column name resolves directly; anything containing a `$`
+ * parent path is interpolated against the enriched record so nested getters
+ * (`$product`, `$supplier`, `$parent`) resolve reactively.
+ * Returns null when nothing in the expression resolved.
+ */
+function renderLabelExpression(expr, row, targetResource, targetHeaders, dataStore) {
+  if (targetHeaders.includes(expr)) return row[expr] ?? null
+
+  const source = expr.includes('$') ? enrichRecord(targetResource, row.Code, dataStore) : row
+  if (!source) return null
+
+  let resolvedAny = false
+  const text = expr.replace(LABEL_TOKEN_RE, (token) => {
+    const isPath = token.startsWith('$')
+    if (!isPath && !targetHeaders.includes(token)) return token
+    const value = isPath ? resolvePath(source, token) : source[token]
+    if (value == null || value === '') return ''
+    resolvedAny = true
+    return value.toString()
+  })
+
+  if (!resolvedAny) return null
+  return text.replace(/\s+/g, ' ').replace(/^[\s\-–—|/,]+|[\s\-–—|/,]+$/g, '').trim() || null
+}
 
 export function isToggleField(field) {
   if (field.type === 'toggle' || field.type === 'boolean') return true
@@ -176,20 +212,42 @@ export function useFormFields(resourceName) {
     return dataStore.getRelations(name).linkRefs || {}
   })
 
+  const relationRefs = computed(() => {
+    const name = resolvedName.value
+    if (!name) return {}
+    return dataStore.getRelations(name).refs || {}
+  })
+
+  // Picker options for relation columns. `targetHeader` decides the stored value;
+  // `labelHeader` (from APP.Resources.Relations) decides the display text and may
+  // be a target column, a parent path (`$product.Name`), or a template
+  // (`$product.Name - Variant1`). Falls back to Code/Name heuristics when absent.
   const crossRefOptionsMap = computed(() => {
     const map = {}
-    const refs = linkRefs.value
-    for (const [header, targetResource] of Object.entries(refs)) {
+    for (const [header, rel] of Object.entries(relationRefs.value)) {
+      const targetResource = rel.resource
       const records = dataStore.getRecords(targetResource) || []
       const active = records.filter((r) => (r.Status || 'Active') === 'Active')
       const targetHeaders = dataStore.headers[targetResource] || []
-      const labelField = targetHeaders.includes('Name')
+
+      const valueField = rel.targetHeader && targetHeaders.includes(rel.targetHeader)
+        ? rel.targetHeader
+        : 'Code'
+      const fallbackField = targetHeaders.includes('Name')
         ? 'Name'
-        : targetHeaders.find((h) => h !== 'Code' && h !== 'Status') || 'Code'
-      map[header] = active.map((r) => ({
-        label: labelField === 'Code' ? r.Code : `${r[labelField] || r.Code} (${r.Code})`,
-        value: r.Code
-      }))
+        : targetHeaders.find((h) => h !== valueField && h !== 'Status') || valueField
+
+      map[header] = active.map((r) => {
+        const value = r[valueField]
+        const display = rel.labelHeader
+          ? renderLabelExpression(rel.labelHeader, r, targetResource, targetHeaders, dataStore)
+          : (fallbackField === valueField ? null : r[fallbackField])
+
+        return {
+          label: display && display !== value ? `${display} (${value})` : value,
+          value
+        }
+      })
     }
     return map
   })

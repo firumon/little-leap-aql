@@ -38,7 +38,8 @@ import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import {
   toPascalCase,
   resolveChildFields,
-  resolveChildTitle
+  resolveChildTitle,
+  filterDisplayableFields
 } from 'src/utils/appHelpers'
 import ViewChildCompact from 'components/contents/ViewChildCompact.vue'
 import ViewRecord from 'components/contents/ViewRecord.vue'
@@ -243,8 +244,16 @@ async function resolveChildren() {
       continue
     }
 
-    const fields = resolveChildFields(childResource)
     const override = await resolveOverride(childResource)
+
+    // Codes identify a row rather than describe it, and audit/action stamps are
+    // metadata — neither is rendered, and neither counts toward the threshold
+    // that routes this group between the compact grid and expanded cards.
+    // ViewRecord still emits its own Code row in expanded mode (showCodeLink).
+    const fields = filterDisplayableFields(
+      resolveChildFields(childResource),
+      childResource.parentResource
+    )
 
     if (fields.length <= 5) {
       resolvers.push(buildCompactGroup(childResource, childRecords, fields, title, override))

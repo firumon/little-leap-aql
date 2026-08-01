@@ -103,7 +103,25 @@ Candidate paths (lowercased, first match wins — exactly these four, no others)
 
 The **context the override receives depends on the group's render mode**:
 
-**Compact mode (`fields.length <= 5`)** — group-level, one grid for all records:
+Both the fields **rendered** and the column count that **routes** the group come
+from `filterDisplayableFields` (in `appHelpers`), which drops columns that
+identify or stamp a row rather than describe it: the primary key `Code`, the
+parent reference (`ParentCode` / `<ParentResource>Code`), any `*Code` relation
+reference, `AUDIT_HEADERS`, and action stamps suffixed `By` / `At`. The filter
+applies to an explicit `ui.fields` list too — `ui.fields` remains the source of
+column order, labels, types, and options, but it cannot reintroduce a code or
+stamp column into a child view. `resolveChildFields` already returns filtered
+fields; `ViewChildren` re-applies the filter so a JS override that injects its
+own `fields` is held to the same contract.
+
+Neither mode renders a `Code` column: `ViewChildCompact` has no Code cell (the
+whole row is clickable and navigates by `record.Code`), and in expanded mode
+`ViewRecord` emits its own Code row from `showCodeLink` + `record.Code`,
+independent of `resolvedFields`. `FormChild` is deliberately exempt — it uses
+`resolveChildEntryFields`, which keeps relation code columns so an added row can
+still label itself.
+
+**Compact mode (<= 5 displayable columns)** — group-level, one grid for all records:
 - **Vue SFC (`.vue`)**: Custom child grid layout. Receives `{ childResource, childRecords, fields, additionalActions, ...attrs }`.
 - **JS Function/Object (`.js`)**: `mod(childResource, childRecords, { pageState, resourceConfig, resourceRecord })` (or a plain object) whose result is merged into `ViewChildCompact` props.
 
@@ -116,7 +134,7 @@ mode (> 5 columns), where per-record `ViewRecord` delegation restores the full c
 override surface. Cells with a `link`/`tel` anchor swallow the row-navigation click so
 opening the link does not also navigate away.
 
-**Expanded mode (`fields.length > 5`)** — per-record, one card per child record:
+**Expanded mode (> 5 displayable columns)** — per-record, one card per child record:
 - **Vue SFC (`.vue`)**: Rendered once per child record. Receives **individual record context** `{ record: childRecord, childResource, childRecords, ...attrs }`.
 - **JS Function/Object (`.js`)**: `mod(childRecord, childResource, { pageState, resourceConfig, resourceRecord })` (or a plain object) whose result is merged into the per-record `ViewRecord` props.
 

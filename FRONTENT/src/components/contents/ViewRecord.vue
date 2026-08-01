@@ -13,7 +13,7 @@
       <q-card-section>
         <div class="aql-detail-grid" :style="gridStyle">
           <!-- Code row with optional navigation launch icon -->
-          <div v-if="recordProps.showCodeLink && record?.Code" class="aql-detail-line items-center rv-row" :style="rowDelay(0)">
+          <div v-if="recordProps.showCodeLink && record?.Code" class="aql-detail-line items-center aql-detail-row" :style="rowDelay(0)">
             <span class="aql-detail-key">Code</span>
             <span class="aql-detail-val col overflow-hidden flex justify-end items-center">
               <span>{{ record.Code }}</span>
@@ -30,7 +30,7 @@
           <div
             v-for="(field, index) in visibleFields"
             :key="field.header"
-            class="aql-detail-line items-center rv-row"
+            class="aql-detail-line items-center aql-detail-row"
             :style="rowDelay(index + (recordProps.showCodeLink && record?.Code ? 1 : 0))"
           >
             <span class="aql-detail-key">{{ field.label }}</span>
@@ -379,13 +379,3 @@ function openRecord() {
   })
 }
 </script>
-
-<style scoped>
-@keyframes rise-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.rv-row {
-  animation: rise-in 200ms ease-out both;
-}
-</style>

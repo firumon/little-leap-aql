@@ -17,7 +17,7 @@
     <div
       v-for="(section, index) in visibleSections"
       :key="section"
-      class="rv-section"
+      class="aql-view-section"
       :style="{ animationDelay: `${index * 60}ms` }"
     >
       <ViewRecord
@@ -109,13 +109,3 @@ const detailsProps = computed(() => ({
   showCodeLink: false
 }))
 </script>
-
-<style scoped>
-@keyframes rv-section-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.rv-section {
-  animation: rv-section-in 260ms ease-out both;
-}
-</style>

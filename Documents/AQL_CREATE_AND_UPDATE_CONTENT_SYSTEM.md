@@ -58,7 +58,7 @@ Precedence everywhere is: `...attrs` → explicit component props → caller esc
 
 ## 3. Component Anatomy & Props
 
-**`Create.vue`** — orchestrator; resolves eligible children (plus any per-child `FormChild` override), owns the primary pageState node, and lays out one section per record/child group with a staggered entrance (matching `View.vue`'s `rv-section`).
+**`Create.vue`** — orchestrator; resolves eligible children (plus any per-child `FormChild` override), owns the primary pageState node, and lays out one section per record/child group with a staggered entrance (matching `View.vue`'s `aql-view-section`).
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
@@ -132,7 +132,7 @@ Three behavioural nuances:
 | `cardClass` | `String`\|`Array`\|`Object` | `'aql-premium-gradient-form'` | Card class when `card` is on. |
 | `cardFlat` / `cardBordered` | `Boolean` | `true` / `true` | Card elevation/border. |
 | `gridClass` | `String`\|`Array`\|`Object` | `'row q-col-gutter-x-md'` | Field-grid container class. |
-| `fieldClass` | `String`\|`Array`\|`Object` | `'fc-field q-py-xs'` | Per-field wrapper class (carries the rise-in animation). |
+| `fieldClass` | `String`\|`Array`\|`Object` | `'aql-form-field q-py-xs'` | Per-field wrapper class (carries the rise-in animation). |
 | `colClass` | `String` | `'col-12'` | Column span class when `columns === 1`. |
 | `colClassMulti` | `String` | `'col-12 col-sm-6'` | Column span class when `columns > 1`. |
 | `emptyText` | `String` | `'No fields configured for this resource.'` | Shown when no field survives filtering. |

@@ -127,7 +127,7 @@ import AqlFileUpload from 'components/shared/AqlFileUpload.vue'
 import AppDate from 'components/shared/AppDate.vue'
 import { useFormFields, mapField } from 'src/composables/resources/useFormFields'
 import { useDataStore } from 'src/stores/data'
-import AqlStatusToggle from "components/shared/AqlStatusToggle.vue";
+import AqlStatusToggle from "components/abstract/StatusToggle.vue";
 
 defineOptions({ name: 'CommonForm' })
 

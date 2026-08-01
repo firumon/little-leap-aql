@@ -125,14 +125,106 @@ export function filterParentFields(record, actionStampHeaders) {
 }
 
 /**
- * Resolves display fields for a child resource config:
- * Uses ui.fields if present; otherwise derives from headers, filtering out
- * Code, ParentCode, and AUDIT_HEADERS.
+ * True when a raw column header carries no display value of its own in a child
+ * grid/card. Codes identify rows rather than describe them, and audit/action
+ * stamps are metadata — counting them inflates the column count that routes a
+ * child group between the condensed grid (<= 5) and expanded cards (> 5).
+ *
+ * Excluded:
+ * 1. The primary key `Code`.
+ * 2. The parent reference column (`ParentCode`, or `<ParentResource>Code`).
+ * 3. Any header suffixed with `Code` (relation references, e.g. `WarehouseCode`).
+ * 4. AUDIT_HEADERS.
+ * 5. Action stamps suffixed with `By` / `At` (e.g. `SubmittedBy`, `VerifiedAt`).
+ *
+ * Rule 3 subsumes 1–2 and rule 5 subsumes 4; each stays spelled out so the
+ * intent survives if a narrower rule is ever needed.
+ *
+ * @param {string} header
+ * @param {string} parentResourceName - APP.Resources.ParentResource of the child
+ * @returns {boolean}
+ */
+export function isDisplayableHeader(header, parentResourceName = '') {
+  if (!header) return false
+  if (header === 'Code') return false
+  if (header === 'ParentCode') return false
+  if (parentResourceName) {
+    const parent = String(parentResourceName)
+    if (header === `${parent}Code` || header === `${singularize(parent)}Code`) return false
+  }
+  if (header.endsWith('Code')) return false
+  if (AUDIT_HEADERS.has(header)) return false
+  if (header.endsWith('By') || header.endsWith('At')) return false
+  return true
+}
+
+/**
+ * Filters raw column headers down to the displayable ones.
+ *
+ * @param {Array<string>} headers
+ * @param {string} parentResourceName
+ * @returns {Array<string>}
+ */
+export function filterDisplayableHeaders(headers, parentResourceName = '') {
+  if (!Array.isArray(headers)) return []
+  return headers.filter((h) => isDisplayableHeader(h, parentResourceName))
+}
+
+/**
+ * Filters resolved field objects down to the displayable ones. Applies to both
+ * what a child view *renders* and the column count that routes it between
+ * compact and expanded mode, so an explicit `ui.fields` list is treated on the
+ * same basis as a header-derived one.
+ *
+ * @param {Array<{header: string}>} fields
+ * @param {string} parentResourceName
+ * @returns {Array}
+ */
+export function filterDisplayableFields(fields, parentResourceName = '') {
+  if (!Array.isArray(fields)) return []
+  return fields.filter((f) => isDisplayableHeader(f?.header, parentResourceName))
+}
+
+/**
+ * Resolves the display fields for a child resource config.
+ *
+ * `ui.fields` still takes precedence as the field *source* (order, labels,
+ * types, options), but the displayable filter applies to it too: a code or
+ * audit/stamp column is never a display column, whichever source declared it.
+ * Falls back to deriving fields from the displayable headers.
  *
  * @param {Object} childResourceConfig
  * @returns {Array<{header, label, type}>}
  */
 export function resolveChildFields(childResourceConfig) {
+  if (!childResourceConfig) return []
+  const parentResourceName = childResourceConfig.parentResource
+  const uiFields = childResourceConfig.ui?.fields
+  if (Array.isArray(uiFields) && uiFields.length) {
+    return filterDisplayableFields(uiFields, parentResourceName)
+  }
+
+  return filterDisplayableHeaders(
+    childResourceConfig.headers || [],
+    parentResourceName
+  ).map((h) => ({
+    header: h,
+    label: humanizeString(h),
+    type: 'text' // Fallback type
+  }))
+}
+
+/**
+ * Entry-form counterpart of `resolveChildFields`, for contexts that describe a
+ * record being *edited* rather than laying out a read-only grid: relation code
+ * columns (`ProductCode`, `WarehouseCode`) are usually the most identifying
+ * value on an added row, so they stay in. Excludes only the primary key, the
+ * parent reference, and audit metadata.
+ *
+ * @param {Object} childResourceConfig
+ * @returns {Array<{header, label, type}>}
+ */
+export function resolveChildEntryFields(childResourceConfig) {
   if (!childResourceConfig) return []
   const uiFields = childResourceConfig.ui?.fields
   if (Array.isArray(uiFields) && uiFields.length) return uiFields

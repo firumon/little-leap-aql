@@ -421,6 +421,18 @@
   border: 1px solid #e2e8f0;
 }
 
+// Highlight accent for `abstract/List.vue` rows. The accent hue is supplied
+// inline by the component as `--aql-list-highlight-color`. Lives here because
+// `abstract/` components are override targets (ARCHITECTURE RULES §7).
+.aql-list-highlight {
+  border-left: 3px solid var(--aql-list-highlight-color) !important;
+}
+
+// Compact control padding for `abstract/StatusToggle.vue`.
+.aql-status-toggle .q-field__control {
+  padding: 0 12px;
+}
+
 .clickable-scale {
   transition: all 0.2s ease;
   &:active {
@@ -606,7 +618,56 @@
   font-weight: 500;
 }
 
+// Staggered row entrance for `contents/ViewRecord.vue`. The per-row
+// `animation-delay` is supplied inline by the component (`rowDelay(index)`).
+// Lives here rather than in a component `<style>` block because `contents/`
+// components are override targets (ARCHITECTURE RULES §7).
+@keyframes aql-rise-in-sm {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.aql-detail-row {
+  animation: aql-rise-in-sm 200ms ease-out both;
+}
+
+// Section entrance for `contents/View.vue`. The per-section `animation-delay`
+// is supplied inline by the component.
+.aql-view-section {
+  animation: rise-in 260ms ease-out both;
+}
+
+// Field entrance for `contents/FormRecord.vue` (default `fieldClass`).
+.aql-form-field {
+  animation: aql-rise-in-sm 200ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aql-detail-row,
+  .aql-view-section,
+  .aql-form-field {
+    animation: none;
+  }
+}
+
 .aql-child-table {
+  // Row density sits deliberately between Quasar's two presets: `dense` is
+  // 28px / 4px 8px (too cramped) and the default is 48px / 7px 16px (too airy).
+  // Set here rather than via the `dense` prop so there is one number to tune.
+  // Selectors are prefixed with `.q-table` to outrank Quasar's own equal-weight
+  // `.q-table thead tr` / `.q-table th` rules regardless of stylesheet order.
+  .q-table {
+    thead tr,
+    tbody td {
+      height: 36px;
+    }
+
+    th,
+    td {
+      padding: 6px 12px;
+    }
+  }
+
   th {
     text-align: left;
     font-weight: 600;

@@ -155,7 +155,7 @@ import { useQuasar } from 'quasar'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import AppList from 'components/app/AppList.vue'
 import FormRecord from 'components/contents/FormRecord.vue'
-import { resolveChildFields, resolveChildTitle, toPascalCase } from 'src/utils/appHelpers'
+import { resolveChildEntryFields, resolveChildTitle, toPascalCase } from 'src/utils/appHelpers'
 
 // Child-record entry container for Create/Update; every mutation lands in pageState's child bucket.
 defineOptions({ name: 'ContentsFormChild', inheritAttrs: false })
@@ -350,7 +350,7 @@ const listBindings = computed(() => {
 })
 
 const childFields = computed(() =>
-  resolveChildFields(props.childResource).filter(
+  resolveChildEntryFields(props.childResource).filter(
     (f) => f && f.header && !displayHiddenFields.value.includes(f.header)
   )
 )
@@ -413,7 +413,7 @@ function createChildDefaultRecord () {
     }
   }
 
-  const hasStatusField = resolveChildFields(props.childResource).some((f) => f?.header === 'Status')
+  const hasStatusField = resolveChildEntryFields(props.childResource).some((f) => f?.header === 'Status')
   const statusVisible = props.showStatus === true || props.showStatus === 'show' || props.showFields.includes('Status')
   if (hasStatusField && !statusVisible && out.Status === undefined && props.statusDefault !== null) {
     out.Status = props.statusDefault

@@ -7,7 +7,7 @@ import { singularize, pluralize } from 'src/utils/appHelpers'
 import { normalizeFieldType } from 'components/_fields/useFieldResolver'
 import AqlFileUpload from 'components/shared/AqlFileUpload.vue'
 import AppDate from 'components/app/Date.vue'
-import AqlStatusToggle from 'components/shared/AqlStatusToggle.vue'
+import AqlStatusToggle from 'components/abstract/StatusToggle.vue'
 
 export const STATUS_OPTIONS = [
   { label: 'Active', value: 'Active' },

@@ -2,21 +2,21 @@
   <div v-if="!childRecords?.length" class="text-grey-7 text-center q-py-md">No records</div>
   <q-card v-else flat bordered class="page-card aql-premium-gradient-card">
     <q-card-section>
-      <q-markup-table flat dense class="child-table aql-child-table">
+      <q-markup-table flat class="child-table aql-child-table bg-transparent">
         <thead>
           <tr>
-            <th class="text-left">Code</th>
             <th v-for="field in fields" :key="field.header" class="text-left">{{ field.label }}</th>
           </tr>
         </thead>
         <TransitionGroup tag="tbody" name="compact-row">
+          <!-- No Code column: the code identifies the row, it doesn't describe
+               it. The whole row stays clickable and navigates by `record.Code`. -->
           <tr
             v-for="record in childRecords"
             :key="record.Code"
             class="cursor-pointer"
             @click="onRowClick($event, record)"
           >
-            <td class="text-left">{{ record.Code }}</td>
             <!-- Cell values render through the same `_fields/<type>/View.vue`
                  base components as the detail grid — no type branches here.
                  `compact: true` in the config tells each one to stay on a single

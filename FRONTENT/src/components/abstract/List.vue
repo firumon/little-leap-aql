@@ -31,8 +31,8 @@
         :clickable="isItemClickable"
         v-ripple="isItemClickable"
         @click="isItemClickable && emit('click', item)"
-        :class="['interactive-list-card q-px-md', itemClass, { 'border': isHighlighted, 'q-py-sm':dense, 'q-py-md q-px-md':!dense, 'item-bordered':itemBordered }]"
-        :style="isHighlighted ? { '--border-color': highlightColor(item) } : {}"
+        :class="['interactive-list-card q-px-md', itemClass, { 'aql-list-highlight': isHighlighted, 'q-py-sm':dense, 'q-py-md q-px-md':!dense, 'item-bordered':itemBordered }]"
+        :style="isHighlighted ? { '--aql-list-highlight-color': highlightColor(item) } : {}"
       >
         <!-- Dynamic Row Content slot -->
         <slot name="item" :item="item" :index="index">
@@ -412,9 +412,3 @@ function getMetaComponentType(metaIndex) {
   return null
 }
 </script>
-
-<style scoped>
-.border {
-  border-left: 3px solid var(--border-color) !important;
-}
-</style>

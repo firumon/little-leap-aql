@@ -129,7 +129,7 @@ const props = defineProps({
   cardFlat: { type: Boolean, default: true },
   cardBordered: { type: Boolean, default: true },
   gridClass: { type: [String, Array, Object], default: 'row q-col-gutter-x-md' },
-  fieldClass: { type: [String, Array, Object], default: 'fc-field q-py-xs' },
+  fieldClass: { type: [String, Array, Object], default: 'aql-form-field q-py-xs' },
   // Column span classes for the 1-column and multi-column layouts.
   colClass: { type: String, default: 'col-12' },
   colClassMulti: { type: String, default: 'col-12 col-sm-6' },
@@ -521,16 +521,3 @@ watch(
   { immediate: true }
 )
 </script>
-
-<style scoped>
-@keyframes fc-rise-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-.fc-field {
-  animation: fc-rise-in 200ms ease-out both;
-}
-@media (prefers-reduced-motion: reduce) {
-  .fc-field { animation: none; }
-}
-</style>

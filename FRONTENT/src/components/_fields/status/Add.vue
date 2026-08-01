@@ -18,7 +18,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import AqlStatusToggle from 'components/shared/AqlStatusToggle.vue'
+import AqlStatusToggle from 'components/abstract/StatusToggle.vue'
 
 defineOptions({ name: 'FieldStatusAdd', inheritAttrs: false })
 

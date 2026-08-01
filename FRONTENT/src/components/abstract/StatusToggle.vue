@@ -71,9 +71,3 @@ function onUpdate(value) {
   emit('update:modelValue', value)
 }
 </script>
-
-<style scoped>
-.aql-status-toggle :deep(.q-field__control) {
-  padding: 0 12px;
-}
-</style>

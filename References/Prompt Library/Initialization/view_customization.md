@@ -8,8 +8,47 @@ description: Initialization prompt for creating custom UI overrides (Vue SFC, JS
 This document defines initialization parameters for agents creating custom UI overrides for the `View` content system under `src/_ui/[UiName]/components/`.
 
 ## Required Pre-Reads
-1. **System Specifications**: Read [AQL_VIEW_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_VIEW_SYSTEM.md) for full override path lookups, component contracts, and JS modifier APIs.
+1. **System Specifications**: Read [AQL_VIEW_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_VIEW_SYSTEM.md) for full override path lookups, component contracts, JS modifier APIs, and the base field subsystem (§4).
 2. **Architecture Constraints**: Read [ARCHITECTURE RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md).
+3. **Base field components** (only when the task is about how a *field type* renders rather than a single resource's column): Read [`FRONTENT/src/components/_fields/README.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_fields/README.md).
+
+---
+
+## 0. Decide the Right Layer First
+
+`ViewRecord` and `ViewChildCompact` contain **no `field.type === '…'` branches**. Every value cell is rendered by a base type component at `src/components/_fields/<type>/View.vue`, resolved through `resolveFieldComponent(resolveFieldType(field), 'view')`.
+
+Before writing an override, pick the layer that matches the intent:
+
+| Intent | Correct layer |
+|---|---|
+| Change how **one column of one resource** displays | `ViewColumn<Col>.js` modifier (§2) — preferred — or `ViewColumn<Col>.vue` |
+| Change how **a field type displays everywhere** (all links, all currency, all statuses) | Edit `src/components/_fields/<type>/View.vue` — never a per-resource override |
+| Add a **new field type** | New `_fields/<type>/{Add,Edit,View}.vue` folder + a `TYPE_ALIASES` entry if the schema spells it differently |
+| A column shows as plain text but should be a link/date/currency | Fix the column's `type` in `APP.Resources.UIFields` — do **not** patch it with a per-resource override |
+
+### 3-Tier Precedence Chain
+
+1. Per-resource custom `_ui` Vue override — `viewcolumn<header>.vue`. Replaces the cell outright.
+2. Base type component `_fields/<type>/View.vue`, via `resolveFieldComponent`.
+3. Fallback `_fields/text/View.vue`.
+
+JS modifiers are **not** a tier — a `ViewColumn<Col>.js` result merges into the `config` object handed to whichever tier-2/3 component renders, so `displayValue` keeps working against every field type. View components prefer `config.displayValue` for the visible *label* and the raw `modelValue` for anything machine-facing (an `href`, a file uuid) — so a modifier can relabel a link without breaking it.
+
+### Resolver API (`components/_fields/useFieldResolver.js`)
+
+| Function | Purpose |
+|---|---|
+| `resolveFieldComponent(type, mode)` | `add\|edit\|view` → `Add\|Edit\|View.vue`. Falls back to `text/<Mode>.vue`. Never returns null. |
+| `resolveFieldType(field)` | Field *definition* → presentation type. Explicit `field.type` wins; else `*Date` header → `date`, `Status` header → `status`, else `text`. |
+| `normalizeFieldType(type)` | Collapses synonyms (`url→link`, `money→currency`, `dropdown→select`, `boolean→toggle`, …). |
+| `fieldTypes()` / `hasFieldType(type)` | Introspection. |
+
+### Field-Component Prop Contract
+
+Any `_fields` component (and any `ViewColumn<Col>.vue` that wants to match it) takes: `modelValue` via `defineModel()`, plus `record: Object`, `config: Object`, `header: String`. View components also accept `emptyText` (default `'-'`) and `compact`.
+
+`_fields` components carry **no `<style>` block** (ARCHITECTURE RULES §7) — shared classes go in `src/css/custom.scss`.
 
 ---
 
@@ -39,7 +78,7 @@ All override filenames use PascalCase in source, matched case-insensitively. The
 
 `ViewChildren` picks a render mode per child group by displayable column count:
 
-- **Compact (`fields.length <= 5`)** — one grid for the whole group. A `ViewChild<ChildName>` override is **group-level**: Vue SFC receives `{ childResource, childRecords, fields, additionalActions }`; JS is `mod(childResource, childRecords, context)` merged into `ViewChildCompact` props.
+- **Compact (`fields.length <= 5`)** — one grid for the whole group. A `ViewChild<ChildName>` override is **group-level**: Vue SFC receives `{ childResource, childRecords, fields, additionalActions }`; JS is `mod(childResource, childRecords, context)` merged into `ViewChildCompact` props. Cells render through the same `_fields/<type>/View.vue` components as the detail grid, with `config.compact = true` (chips shrink, file cells collapse to a chip, multiline text stays on one ellipsized line). The compact grid resolves **no** per-column `ViewColumn<Col>` overrides — to customize a cell there, either use a `ViewChild<ChildName>` override or let the group go expanded (> 5 columns).
 - **Expanded (`fields.length > 5`)** — one card **per record**, each delegated to `ViewRecord`. A `ViewChild<ChildName>` override is applied **per record**: Vue SFC receives **individual record context** `{ record: childRecord, childResource, childRecords }`; JS is `mod(childRecord, childResource, context)` merged into that record's `ViewRecord` props.
 
 Because expanded child records render through `ViewRecord`, they automatically inherit column-level `ViewColumn` overrides, column JS modifiers (incl. function-valued `displayValue`/`value`), level-2 object formatting, file previews, and the Code navigation launch icon — no extra wiring needed. Reach for a `ViewChild<ChildName>` override only when you need to replace or augment the whole per-record card.

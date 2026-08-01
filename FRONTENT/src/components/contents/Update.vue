@@ -255,6 +255,8 @@ const primaryFormProps = computed(() => ({
   ...attrs,
   resource: resourceName.value,
   record: primaryRecord.value,
+  // Edit-side twin of Create → `_fields/<type>/Edit.vue`.
+  mode: 'edit',
   hideFields: primaryHideFields.value,
   showFields: props.showFields,
   showCode: props.showCode,

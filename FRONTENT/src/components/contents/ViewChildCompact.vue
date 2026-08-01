@@ -14,11 +14,21 @@
             v-for="record in childRecords"
             :key="record.Code"
             class="cursor-pointer"
-            @click="$emit('view-child', childResource, record.Code)"
+            @click="onRowClick($event, record)"
           >
             <td class="text-left">{{ record.Code }}</td>
+            <!-- Cell values render through the same `_fields/<type>/View.vue`
+                 base components as the detail grid — no type branches here.
+                 `compact: true` in the config tells each one to stay on a single
+                 dense line (chip sizing, no preview cards, no pre-line wrap). -->
             <td v-for="field in fields" :key="field.header" class="text-left">
-              {{ cellValue(record, field) }}
+              <component
+                :is="resolveFieldComponent(resolveFieldType(field), 'view')"
+                :model-value="record?.[field.header]"
+                :record="record"
+                :config="cellConfig(record, field)"
+                :header="field.header"
+              />
             </td>
           </tr>
         </TransitionGroup>
@@ -33,36 +43,39 @@
  * (ViewAudit / ViewRecordWithAudit); audit is emitted exclusively by the
  * top-level 'Audit' ordered section in View.vue.
  */
+import { resolveFieldComponent, resolveFieldType } from 'components/_fields/useFieldResolver'
+import { resolveDisplayValue } from 'src/utils/appHelpers'
+
 defineOptions({ name: 'ContentsViewChildCompact', inheritAttrs: false })
 
-defineProps({
+const props = defineProps({
   childResource: { type: Object, required: true },
   childRecords: { type: Array, default: () => [] },
   fields: { type: Array, default: () => [] }
 })
 
-defineEmits(['view-child'])
+const emit = defineEmits(['view-child'])
 
-function cellValue(record, field) {
-  const val = record?.[field.header]
-  if (field.type === 'file') return val ? '[File]' : '-'
-  if (val && typeof val === 'object') {
-    if (val.Name != null) return `${val.Name} (${val.Code})`
-    if (val.Code != null) return `${val.Code}`
-    return '-'
+// Cell context handed to the resolved `_fields` View component. Mirrors
+// ViewRecord.getColProps so the two containers agree on every cell, minus the
+// per-column `_ui` modifier layer (compact tables resolve no column overrides).
+function cellConfig (record, field) {
+  return {
+    value: record?.[field.header],
+    record,
+    field,
+    resourceName: props.childResource?.name || '',
+    columnName: field.header,
+    options: field.options,
+    displayValue: resolveDisplayValue(record?.[field.header]),
+    compact: true
   }
-  return val ?? '-'
+}
+
+// A `link`/`tel` cell renders a real anchor; letting that click also bubble to
+// the row would navigate away from the tab the browser just opened.
+function onRowClick (event, record) {
+  if (event?.target?.closest?.('a')) return
+  emit('view-child', props.childResource, record.Code)
 }
 </script>
-
-<style scoped>
-.compact-row-enter-active,
-.compact-row-leave-active {
-  transition: opacity 200ms ease, transform 200ms ease;
-}
-.compact-row-enter-from,
-.compact-row-leave-to {
-  opacity: 0;
-  transform: translateY(6px);
-}
-</style>

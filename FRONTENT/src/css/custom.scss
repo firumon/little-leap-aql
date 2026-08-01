@@ -615,6 +615,50 @@
   tbody tr:hover {
     background-color: #f1f5f9;
   }
+
+  // Cells are rendered by `_fields/<type>/View.vue` components in compact mode.
+  // Keep every one of them on a single dense line: chips must not add vertical
+  // margin, and long text/links ellipsize instead of wrapping the row taller.
+  td {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    > .q-chip {
+      margin: 0;
+      vertical-align: middle;
+    }
+
+    > a {
+      display: inline-flex;
+      max-width: 100%;
+      vertical-align: middle;
+    }
+  }
+
+  // Row enter/leave transition (TransitionGroup name="compact-row"). Lives here
+  // rather than in a component `<style>` block because `contents/` components
+  // are override targets — a tenant `.vue` override cannot inherit scoped CSS
+  // (ARCHITECTURE RULES §7).
+  .compact-row-enter-active,
+  .compact-row-leave-active {
+    transition: opacity 200ms ease, transform 200ms ease;
+  }
+  .compact-row-enter-from,
+  .compact-row-leave-to {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aql-child-table {
+    .compact-row-enter-active,
+    .compact-row-leave-active {
+      transition: none;
+    }
+  }
 }
 
 // ── List Switcher ──────────────────────────────────────────────────────────────

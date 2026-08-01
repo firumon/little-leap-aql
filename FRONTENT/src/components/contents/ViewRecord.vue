@@ -41,22 +41,17 @@
                 v-if="columnResolvers[field.header]?.component"
                 v-bind="getColProps(field)"
               />
-              <!-- 2. File preview -->
-              <template v-else-if="field.type === 'file' && record?.[field.header]">
-                <AqlFilePreviewCard
-                  class="full-width"
-                  style="max-width: 280px"
-                  :uuid="record[field.header]"
-                  :resource-name="resourceName"
-                  :column-name="field.header"
-                  v-bind="attrs"
-                />
-              </template>
-              <!-- 3. Base Column Display (handles JS function/object modifiers & default values) -->
+              <!-- 2. Base type component from `_fields/<type>/View.vue` (falls
+                   back to `_fields/text/View.vue`). `config` carries the fully
+                   resolved column props, including any ViewColumn<Header>.js
+                   modifier output (`displayValue`, `options`, ...). -->
               <component
-                :is="BaseColumnDisplay"
                 v-else
-                v-bind="getColProps(field)"
+                :is="resolveFieldComponent(resolveFieldType(field), 'view')"
+                :model-value="record?.[field.header]"
+                :record="record"
+                :config="getColProps(field)"
+                :header="field.header"
               />
             </span>
           </div>
@@ -67,9 +62,9 @@
 </template>
 
 <script setup>
-import { computed, inject, ref, watch, useAttrs, markRaw, h } from 'vue'
-import AqlFilePreviewCard from 'components/shared/AqlFilePreviewCard.vue'
+import { computed, inject, ref, watch, useAttrs, markRaw } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
+import { resolveFieldComponent, resolveFieldType } from 'components/_fields/useFieldResolver'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { resolveColumnOverride } from 'src/composables/resources/useViewColumnResolver'
 import {
@@ -77,6 +72,7 @@ import {
   filterDetailFields,
   filterParentFields,
   humanizeString,
+  resolveDisplayValue,
   toPascalCase
 } from 'src/utils/appHelpers'
 
@@ -259,12 +255,6 @@ const gridStyle = computed(() => {
   return { display: 'grid', gap: '0' }
 })
 
-// Base fallback component for cell rendering
-const BaseColumnDisplay = (colProps) => {
-  const display = colProps.displayValue ?? colProps.value ?? '-'
-  return h('span', display)
-}
-
 // ── Column-level custom UI overrides (batch-resolved in one pass) ──────────────
 const columnResolvers = ref({})
 
@@ -286,13 +276,7 @@ watch(
 )
 
 function defaultDisplayValue(field) {
-  const val = props.record?.[field.header]
-  if (val && typeof val === 'object') {
-    if (val.Name != null) return `${val.Name} (${val.Code})`
-    if (val.Code != null) return `${val.Code}`
-    return '-'
-  }
-  return val ?? '-'
+  return resolveDisplayValue(props.record?.[field.header])
 }
 
 // A JS modifier's returned/exported object may carry function-valued properties
@@ -314,7 +298,14 @@ function getColProps(field) {
     ...attrs,
     value: props.record?.[field.header],
     record: props.record,
-    field
+    field,
+    // Storage context needed by type components that address the backend by
+    // column (e.g. `_fields/file/View.vue` -> AqlFilePreviewCard).
+    resourceName: recordProps.value.resourceName,
+    columnName: field.header,
+    // Schema-authored option list so `_fields/select/View.vue` can resolve a
+    // stored value back to its label.
+    options: field.options
   }
 
   const entry = columnResolvers.value[field.header]

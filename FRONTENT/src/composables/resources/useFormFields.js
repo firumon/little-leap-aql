@@ -4,6 +4,7 @@ import { useAuthStore } from 'src/stores/auth'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { enrichRecord } from 'src/composables/resources/useRecord'
 import { singularize, pluralize } from 'src/utils/appHelpers'
+import { normalizeFieldType } from 'components/_fields/useFieldResolver'
 import AqlFileUpload from 'components/shared/AqlFileUpload.vue'
 import AppDate from 'components/app/Date.vue'
 import AqlStatusToggle from 'components/shared/AqlStatusToggle.vue'
@@ -64,6 +65,18 @@ export function isToggleField(field) {
   return false
 }
 
+/**
+ * Maps one schema field definition to its render descriptor.
+ *
+ * Every returned descriptor carries a `fieldType` — the normalized presentation
+ * type that `_fields/useFieldResolver.js` maps to `_fields/<type>/<Mode>.vue`.
+ * It is deliberately NOT named `type`, because `type` is already a QInput prop
+ * inside the returned props bag; keeping them separate lets containers strip
+ * `fieldType` before binding the rest onto a control.
+ *
+ * `component` / `componentName` remain for the legacy direct-render consumers
+ * (`_common/sections/Content/Form.vue`); FormRecord no longer reads them.
+ */
 export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions = {}, appOptions = {} } = {}) {
   const baseProps = {
     label: field.label || field.header,
@@ -77,6 +90,7 @@ export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions =
   if (field.type === 'file') {
     return {
       header: field.header,
+      fieldType: 'file',
       component: AqlFileUpload,
       componentName: 'aql-file-upload',
       ...baseProps,
@@ -91,6 +105,7 @@ export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions =
   if (field.type === 'date' || field.type === 'datetime' || /Date$/.test(field.header)) {
     return {
       header: field.header,
+      fieldType: 'date',
       component: AppDate,
       componentName: 'app-date',
       ...baseProps
@@ -100,6 +115,7 @@ export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions =
   if (field.header === 'Code') {
     return {
       header: field.header,
+      fieldType: 'text',
       componentName: 'q-input',
       ...baseProps,
       label: 'Code'
@@ -109,6 +125,7 @@ export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions =
   if (isToggleField(field)) {
     return {
       header: field.header,
+      fieldType: 'toggle',
       componentName: 'q-toggle',
       ...baseProps,
       'true-value': field.options?.[0] || 'Yes',
@@ -117,8 +134,11 @@ export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions =
   }
 
   if (field.header.toLowerCase() === 'status') {
+    // No `options` here — `_fields/status/Add.vue` reads that absence as
+    // "classic Active/Inactive column" and renders AqlStatusToggle.
     return {
       header: field.header,
+      fieldType: 'status',
       component: AqlStatusToggle,
       componentName: 'aql-status-toggle',
       ...baseProps,
@@ -131,6 +151,7 @@ export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions =
   if (field.type === 'status') {
     return {
       header: field.header,
+      fieldType: 'status',
       componentName: 'q-select',
       ...baseProps,
       options: STATUS_OPTIONS,
@@ -142,6 +163,7 @@ export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions =
   if (field.type === 'select' || field.type === 'dropdown') {
     return {
       header: field.header,
+      fieldType: 'select',
       componentName: 'q-select',
       ...baseProps,
       options: field.options || [],
@@ -155,6 +177,7 @@ export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions =
   if (Array.isArray(appOptions[field.header]) && appOptions[field.header].length) {
     return {
       header: field.header,
+      fieldType: 'select',
       componentName: 'q-select',
       ...baseProps,
       options: appOptions[field.header],
@@ -167,6 +190,7 @@ export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions =
   if (linkRefs[field.header]) {
     return {
       header: field.header,
+      fieldType: 'select',
       componentName: 'q-select',
       ...baseProps,
       options: crossRefOptions[field.header] || [],
@@ -176,15 +200,23 @@ export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions =
     }
   }
 
-  const inputType = field.type === 'number' ? 'number'
-    : field.type === 'textarea' ? 'textarea' : 'text'
+  // Everything else is a text-family input. `normalizeFieldType` collapses the
+  // schema's spelling (url/website → link, money/price → currency, ...) onto the
+  // `_fields/` folder that owns the presentation.
+  const resolvedType = normalizeFieldType(field.type)
+
+  const inputType = resolvedType === 'number' || resolvedType === 'currency' ? 'number'
+    : resolvedType === 'textarea' ? 'textarea'
+      : resolvedType === 'link' ? 'url'
+        : resolvedType === 'tel' ? 'tel' : 'text'
 
   return {
     header: field.header,
+    fieldType: resolvedType,
     componentName: 'q-input',
     ...baseProps,
     type: inputType,
-    autogrow: field.type === 'textarea'
+    autogrow: resolvedType === 'textarea'
   }
 }
 

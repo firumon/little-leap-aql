@@ -25,16 +25,21 @@
               :model-value="record[field.header]"
               :field="field"
               :record="record"
+              :config="fieldRenderProps(field)"
+              :header="field.header"
               v-bind="fieldRenderProps(field)"
               @update:model-value="onFieldUpdate(field, $event)"
             />
-            <!-- 2. Base control (schema-resolved, or a bare QInput for custom headers);
-                 a resolved formfield<header>.js modifier merges into its props. -->
+            <!-- 2. Base type component from `_fields/<type>/<Add|Edit>.vue`
+                 (falls back to `_fields/text/`). A resolved formfield<header>.js
+                 modifier is already merged into `config` by fieldRenderProps. -->
             <component
               v-else
-              :is="fieldComponent(field)"
+              :is="resolveFieldComponent(field.fieldType, mode)"
               :model-value="record[field.header]"
-              v-bind="fieldRenderProps(field)"
+              :record="record"
+              :config="fieldRenderProps(field)"
+              :header="field.header"
               @update:model-value="onFieldUpdate(field, $event)"
             />
           </div>
@@ -49,8 +54,9 @@
 
 <script setup>
 import { computed, inject, ref, watch, markRaw, useAttrs } from 'vue'
-import { QCard, QCardSection, QInput, QSelect, QToggle } from 'quasar'
+import { QCard, QCardSection } from 'quasar'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
+import { resolveFieldComponent } from 'components/_fields/useFieldResolver'
 import { useFormFields } from 'src/composables/resources/useFormFields'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { humanizeString, toPascalCase } from 'src/utils/appHelpers'
@@ -66,7 +72,9 @@ import { humanizeString, toPascalCase } from 'src/utils/appHelpers'
  *
  * ZERO-HARDCODING CONTRACT: every default behaviour, class, and label below is
  * exposed as a prop. Unhandled attributes flow through `$attrs` to the resolved
- * override / every field control.
+ * override / every field control. There are NO type-based branches in this file
+ * — presentation per field type lives entirely in `src/components/_fields/`,
+ * resolved via `resolveFieldComponent(field.fieldType, mode)`.
  */
 defineOptions({ name: 'ContentsFormRecord', inheritAttrs: false })
 
@@ -74,6 +82,10 @@ const props = defineProps({
   resource: { type: String, required: true },
   record: { type: Object, required: true },
   title: { type: String, default: '' },
+  // Render mode handed to the `_fields` resolver: 'add' -> _fields/<type>/Add.vue,
+  // 'edit' -> _fields/<type>/Edit.vue. Create.vue leaves the default; Update.vue
+  // and FormChild (when re-opening an existing row) pass 'edit'.
+  mode: { type: String, default: 'add' },
   hideFields: { type: Array, default: () => [] },
   // HIGHEST-PRECEDENCE visibility switch — any header listed here is forced
   // visible even if hideFields, workflowFields, the Status default, or the
@@ -160,7 +172,7 @@ function normalizeSlug (slug) {
 // ─── Glob registry (custom UI only) ─────────────────────────────────────────
 // Per-field / whole-form overrides are ONLY resolved under _ui/*. There is NO
 // framework `components/shared/FormField<Header>` fallback — when no _ui override
-// exists, the standard useFormFields control is used directly.
+// exists, the `_fields/<type>/<Mode>.vue` base component is used directly.
 const customUiModules = import.meta.glob('../../_ui/**/*.{vue,js}')
 const customUiRegistry = {}
 Object.keys(customUiModules).forEach((rawPath) => {
@@ -240,7 +252,7 @@ watch(
 
 // ── Field ordering + custom (non-schema) header detection ──────────────────
 function customFieldEntry (header) {
-  return { header, componentName: 'q-input', label: humanizeString(header), custom: true }
+  return { header, fieldType: 'text', label: humanizeString(header), custom: true }
 }
 
 const orderedFields = computed(() => {
@@ -322,18 +334,6 @@ const fieldColClass = computed(() =>
   props.columns > 1 ? props.colClassMulti : props.colClass
 )
 
-// mapField provides `component` for shared controls (AqlFileUpload, app/Date,
-// AqlStatusToggle); Quasar-native controls arrive as componentName strings.
-const QUASAR_CONTROLS = {
-  'q-input': QInput,
-  'q-select': QSelect,
-  'q-toggle': QToggle
-}
-
-function fieldComponent (field) {
-  return field.component || QUASAR_CONTROLS[field.componentName] || QInput
-}
-
 // Resolves the `fieldProps` prop into a plain { header: propsObject } map,
 // evaluating a function-valued prop and any per-header function values.
 const resolvedFieldProps = computed(() => {
@@ -372,8 +372,10 @@ const resolvedFieldProps = computed(() => {
 //   2. base field props from useFormFields (label, type, options, ...)
 //   3. fieldProps[header] (prop-level per-field overrides)
 //   4. FormField<Header>.js modifier output (custom UI, highest priority)
+// `fieldType`/`component`/`componentName` are resolution metadata, not control
+// props — they are stripped so nothing leaks onto the rendered input.
 function fieldRenderProps (field) {
-  const { header, component, componentName, custom, ...rest } = field
+  const { header, fieldType, component, componentName, custom, ...rest } = field
   let merged = { ...attrs, ...rest }
 
   const overrides = resolvedFieldProps.value[header]
@@ -406,7 +408,7 @@ function fieldDelay (index) {
 // ── Per-field custom UI override: formfield<header>.(vue|js) — _ui ONLY ──────
 // Strict rule: only _ui/{ui}/components/{scope}/{resourceSlug}/formfield{header}.(vue|js)
 // resolves. No components/shared fallback — absent an override, the standard
-// useFormFields control is used directly.
+// `_fields/<type>/<Mode>.vue` base component is used directly.
 const fieldResolvers = ref({})
 
 async function resolveFieldOverride (header) {

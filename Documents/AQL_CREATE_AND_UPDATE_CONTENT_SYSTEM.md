@@ -33,8 +33,9 @@ export default {
 - **Field visibility precedence — `showFields` > `hideFields` > `workflowFields`**: `FormRecord` builds an explicit hidden-set in that exact order (see §4). There is no `DEFAULT_CREATE_HIDDEN_FIELDS` constant; workflow hiding is dynamic pattern matching. Audit `Created*/Updated*` columns are stripped earlier by `useFormFields`.
 - **`Status` handling**: hidden by default and seeded with `statusDefault` (`'Active'`), so it submits without being editable. Pass `showStatus: true` (or `'show'`) — or list `'Status'` in `showFields` — to render it as a normal control instead, in which case it is **not** auto-seeded. Only applies when the resource actually has a `Status` column.
 - **Default value seeding**: any `defaultValues` entry whose header is currently `undefined` on the record is seeded the same way. `defaultValues` may be an object, a function, or an object of functions — see §5. Backend-authored `APP.Resources.DefaultValues` metadata is also folded into the same seeding pass, at the lowest precedence — see §5.1.
-- **Date fields**: date controls (field type `date`/`datetime`, or any header ending in `Date`) render via [app/Date.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/app/Date.vue), which defaults an empty value to today (`YYYY-MM-DD`) on mount.
-- **AppOptions selects**: when `useFormFields` finds an `AppOptions` group keyed `<ResourceName><Column>` (trying the resource name as-is, singular, and plural — e.g. `ProductsType`/`ProductType`), that column renders as a `QSelect` populated from the group's values.
+- **Control rendering is type-driven, never hardcoded**: `FormRecord` contains no `field.type === '…'` branches and no Quasar control map. `useFormFields.mapField` resolves each field's props **and** its `fieldType`; the control is then mounted by `resolveFieldComponent(field.fieldType, mode)` → `_fields/<type>/<Add|Edit>.vue` — see §15.
+- **Date fields**: date controls (field type `date`/`datetime`, or any header ending in `Date`) render through `_fields/date/Add.vue`, which wraps [app/Date.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/app/Date.vue) and defaults an empty value to today (`YYYY-MM-DD`) on mount.
+- **AppOptions selects**: when `useFormFields` finds an `AppOptions` group keyed `<ResourceName><Column>` (trying the resource name as-is, singular, and plural — e.g. `ProductsType`/`ProductType`), that column resolves to `fieldType: 'select'` and renders through `_fields/select/Add.vue` (a filterable `QSelect`) populated from the group's values.
 - **Child record caps**: `FormChild`'s `maxRecords` prop (default `0` = unlimited) caps how many added record entries a child bucket may hold — see §12.
 - **Dynamic child suppression**: alongside `hideChild`/`hideChildren`, `Create` also honors a dynamic `hide<ResourceName>: true` (or `hide<Slug>` / `hide<PascalName>`) prop or `$attrs` flag per eligible child — see §11.
 - **`Update` hydration**: `Update.vue` does not init a blank node — it loads the already-fetched `resourceRecord.record` into the primary node via `pageState.load()` and pre-populates each child bucket from `resourceRecord.childRecordsByResource` as `_action: 'update'` rows. Hydration is idempotent and guarded so it never clobbers in-progress edits — see §13.
@@ -114,6 +115,7 @@ Three behavioural nuances:
 |---|---|---|---|
 | `resource` | `String` | required | Resource name — resolves the control schema via `useFormFields`. |
 | `record` | `Object` | required | The reactive target object driving every control's `model-value` (a `pageState` node's `.record`, or a child row's `.data`). |
+| `mode` | `String` | `'add'` | Render mode handed to the `_fields` resolver — `'add'` → `_fields/<type>/Add.vue`, `'edit'` → `Edit.vue` (§15). `Create.vue` leaves the default; `Update.vue` passes `'edit'`; `FormChild` passes `'edit'` only while re-opening an already-added row. |
 | `title` | `String` | `''` | Optional `SectionDividerLabel` above the fields; empty renders no divider. |
 | `hideFields` | `Array` | `[]` | Field headers to exclude from rendering (step 4 of the precedence chain). |
 | `showFields` | `Array` | `[]` | **Highest precedence** — forces these headers visible regardless of `hideFields`, `workflowFields`, the `Status` default, or the `Code` default (step 5). |
@@ -304,7 +306,11 @@ fieldProps: (record, ctx) => ({ Rate: { prefix: ctx.resourceConfig.currency?.val
 3. `fieldProps[header]` — prop-level per-field overrides.
 4. `FormField<Header>.js` modifier output from `_ui/*` — **highest priority**, so a tenant's custom UI always wins over a page-level `fieldProps`.
 
-(A `FormField<Header>.vue` component override replaces the control outright rather than merging props; it still receives the merged props from steps 1–3 plus `field` and `record`.)
+The merged result is handed to the resolved `_fields/<type>/<Mode>.vue` component as its **`config`** prop, which the component spreads onto its inner Quasar control. Resolution metadata (`fieldType`, `component`, `componentName`, `custom`, `header`) is stripped first, so nothing leaks onto the rendered input.
+
+> **Control-type attributes are owned by the field component.** Each `Add.vue` binds `v-bind="config"` first and then sets its own `type` (`url`, `tel`, `textarea`, `number`, …). Consequently `fieldProps` and JS modifiers cannot change a field's input `type` — change the column's schema type instead, so both the form and the view agree. Everything else merges normally.
+
+(A `FormField<Header>.vue` component override replaces the control outright rather than merging props; it still receives the merged props from steps 1–3 plus `field`, `record`, `config`, and `header`.)
 
 ---
 
@@ -313,7 +319,7 @@ fieldProps: (record, ctx) => ({ Rate: { prefix: ctx.resourceConfig.currency?.val
 `node.record` is reserved **exclusively** for canonical resource headers sent to GAS (`defaultBuild` in `usePageState.js` reads only `node.record`/`node.children`/`node.records`/`node.action`). A `fields` entry that isn't part of the resource's resolved schema (e.g. a UI-only wizard field, a computed helper input) is flagged `custom: true` by `FormRecord` and must **never** land in `node.record`. Instead:
 - `pageState.setControlField(resource, header, value)` upserts `{ header, value }` into `node.controls` (a dedicated slot `defaultBuild` never reads).
 - `pageState.getControlField(resource, header)` reads it back.
-- If no `FormField<Header>` override is found for a custom header, `FormRecord` falls back to a bare `QInput`.
+- If no `FormField<Header>` override is found for a custom header, `FormRecord` falls back to `_fields/text/<Mode>.vue` (an outlined `QInput`) — custom entries are stamped `fieldType: 'text'`.
 
 `Create.vue` and `FormChild.vue` already implement `custom`-aware routing (`meta.custom ? setControlField : setField`); a hand-rolled `FormRecord` usage inside a full Vue override must replicate that routing itself.
 
@@ -344,8 +350,8 @@ Three independent, narrowly-scoped override points exist beneath the page-level 
    - `_ui/[uiName]/components/[scope]/[resource]/FormRecord.(vue|js)` — applies identically whether `FormRecord` is rendering the primary resource (from `Create.vue`) or a child resource (from `FormChild.vue`), since both pass their own scope/slug context down.
    - A **Vue override** replaces the base field grid entirely, receiving the full `FormRecord` prop set (`resource`, `record`, `hideFields`, `showFields`, `fields`, `defaultValues`, `fieldProps`, `columns`, `scope`, `resourceSlug`, `uiName`, `card`). A **JS modifier** — `mod(props, { pageState, resourceConfig, resourceRecord })` — adjusts those props before the base grid renders (e.g. force `columns: 2` or extend `hideFields` for one resource only).
 3. **Single-field override (resolved by `FormRecord.vue`, per visible field) — `_ui/*` ONLY**:
-   - `_ui/[uiName]/components/[scope]/[resource]/FormField<Header>.(vue|js)` — resource-specific (e.g. `FormFieldEmail.vue`). This is the **only** path checked; there is **no** `components/shared/FormField<Header>` framework fallback. When no `_ui` override exists, `FormRecord` uses the standard `useFormFields`-resolved control directly (`app/Date.vue`, `QSelect`, `QToggle`, `AqlFileUpload`, `AqlStatusToggle`, `QInput`, …).
-   - A **Vue override** replaces just that field's control, receiving `{ modelValue: record[header], field, record, ...otherFieldProps }` and expected to emit `update:model-value`. A **JS modifier** — `mod(value, record, field, { pageState, resourceConfig, resourceRecord })` (or a plain object) — merges into the base control's props per §6's merge order (mirrors `ViewRecord`'s per-column modifier contract exactly).
+   - `_ui/[uiName]/components/[scope]/[resource]/FormField<Header>.(vue|js)` — resource-specific (e.g. `FormFieldEmail.vue`). This is the **only** path checked; there is **no** `components/shared/FormField<Header>` framework fallback. When no `_ui` override exists, `FormRecord` mounts the base type component `_fields/<fieldType>/<Add|Edit>.vue` (§15).
+   - A **Vue override** replaces just that field's control, receiving `{ modelValue: record[header], field, record, config, header, ...otherFieldProps }` and expected to emit `update:model-value`. A **JS modifier** — `mod(value, record, field, { pageState, resourceConfig, resourceRecord })` (or a plain object) — merges into the base control's props per §6's merge order (mirrors `ViewRecord`'s per-column modifier contract exactly).
    - Applies to **both** schema fields and custom (non-schema) `fields` entries — for a custom header with no `_ui` override, `FormRecord` falls back to a bare `QInput`.
 
 ---
@@ -531,3 +537,122 @@ $q.notify({
 ```
 
 `restore(row)` flips `_action` back to `'update'`, which returns the row to `visibleRecords` (with its stable `rowKey`, so the list transition plays in reverse) and to a normal merge on submit. Message, label, colours, timeout, and position are all props (see §3's `undoRemove`/`undoLabel`/`undoMessage`/`undoColor`/`undoTextColor`/`undoBtnColor`/`undoTimeout`/`undoPosition`), per the zero-hardcoding contract; `undoRemove: false` suppresses the notification while leaving the soft delete intact.
+
+---
+
+## 15. Base Field Subsystem (`src/components/_fields/`)
+
+The type-driven presentation layer that renders every control in `FormRecord` and every value cell in `ViewRecord`/`ViewChildCompact`. The containers hold **no** type branches — they resolve a component and mount it.
+
+> Component-level reference (full `config` merge order, alias table, "how to add a type"): [`FRONTENT/src/components/_fields/README.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_fields/README.md). The view-side integration is documented in [AQL_VIEW_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_VIEW_SYSTEM.md) §4.
+
+### 15.1 Directory Structure — the "Option A" Pattern
+
+Each field type owns a folder holding **three explicit SFCs**:
+
+```
+src/components/_fields/
+├── README.md
+├── index.js                  # re-exports the resolver API
+├── useFieldResolver.js       # central dynamic resolver
+├── currency/{Add,Edit,View}.vue
+├── date/{Add,Edit,View}.vue
+├── file/{Add,Edit,View}.vue
+├── link/{Add,Edit,View}.vue
+├── number/{Add,Edit,View}.vue
+├── select/{Add,Edit,View}.vue
+├── status/{Add,Edit,View}.vue
+├── tel/{Add,Edit,View}.vue
+├── text/{Add,Edit,View}.vue    ← FALLBACK TYPE, must always exist
+├── textarea/{Add,Edit,View}.vue
+└── toggle/{Add,Edit,View}.vue
+```
+
+| File | Mode | Rendered by |
+|---|---|---|
+| `Add.vue` | `add` | `Create.vue` → `FormRecord` (default `mode`) |
+| `Edit.vue` | `edit` | `Update.vue` → `FormRecord` (`mode: 'edit'`), and `FormChild` while re-opening an already-added row |
+| `View.vue` | `view` | `ViewRecord`, `ViewChildCompact` |
+
+`Edit.vue` re-exports `Add.vue` whenever edit behaviour is identical — all eleven current types do this. Diverging later means editing that one file; no container changes:
+
+```vue
+<!-- _fields/<type>/Edit.vue -->
+<template>
+  <Add v-model="model" v-bind="$attrs" :record="record" :config="config" :header="header" />
+</template>
+```
+
+### 15.2 Component Prop Contract
+
+Every `Add.vue` / `Edit.vue` / `View.vue` implements exactly this surface, with `defineOptions({ name: 'Field<Type><Mode>', inheritAttrs: false })`:
+
+| Name | Kind | Description |
+|---|---|---|
+| `modelValue` | `defineModel()` | The field value. Bi-directional — writing `model.value` emits `update:modelValue`, which `FormRecord` re-emits as `update:field(header, value, { custom })` and the caller routes to `setField`/`setControlField`. |
+| `record` | `Object` prop | The full row record, so a field can read sibling columns (dynamic link construction, cross-column formatting). |
+| `config` | `Object` prop | The fully merged control props (§6 merge order), minus resolution metadata. |
+| `header` | `String` prop | The exact column header name. |
+
+`View.vue` components additionally take `emptyText` (default `'-'`) and `compact` (default `false`, also honoured as `config.compact`).
+
+### 15.3 Type Table
+
+| Type | Add / Edit | View |
+|---|---|---|
+| `text` (**fallback**) | outlined `q-input` | plain text, null fallback |
+| `link` | `q-input type="url"` + link icon/hint | `<a target="_blank" rel="noopener noreferrer">` + `open_in_new` icon |
+| `tel` | `q-input type="tel"` + phone icon | `<a href="tel:…">` + phone icon |
+| `file` | `AqlFileUpload` | `AqlFilePreviewCard` (dense chip when compact) |
+| `textarea` | `q-input type="textarea"` autogrow | multiline text (`white-space: pre-line`) |
+| `status` | `AqlStatusToggle`, or `q-select` when `config.options` exists | coloured `QChip`, map overridable via `config.statusColors` |
+| `select` | `q-select` with `use-input` local filtering | resolved option label |
+| `date` | `components/app/Date.vue` | `toLocaleDateString('en-GB', …)` |
+| `number` | `q-input type="number"` | `toLocaleString` |
+| `currency` | `q-input type="number"` prefixed with the dynamic symbol from `useCurrency` | `_C(value)` |
+| `toggle` | `q-toggle` | outlined `QChip`, positive when the value matches the column's `true-value` |
+
+`status` picks its control from `config.options`: absent ⇒ classic Active/Inactive column ⇒ `AqlStatusToggle`; present ⇒ `q-select`. This reproduces `mapField`'s two pre-existing status branches without a hardcoded header check in the component.
+
+### 15.4 Resolver API (`useFieldResolver.js`)
+
+The registry is built eagerly from `import.meta.glob('./*/*.vue', { eager: true })`, so resolution is synchronous and a control never flashes empty while a chunk loads.
+
+| Function | Signature | Behaviour |
+|---|---|---|
+| `resolveFieldComponent` | `(type, mode) => Component` | Maps `add\|edit\|view` → `Add\|Edit\|View.vue` under `_fields/<type>/`. Unknown mode → `View`. Unknown type, or a type folder missing that mode's file → `text/<Mode>.vue`. **Never returns null.** |
+| `resolveFieldType` | `(field) => string` | Takes a whole field *definition* and returns its presentation type. Explicit `field.type` wins; else header ending in `Date` → `date`, header `Status` → `status`, else `text`. For callers holding only a raw `APP.Resources.UIFields` entry (the view side). |
+| `normalizeFieldType` | `(type) => string` | Collapses schema synonyms: `url\|uri\|website\|hyperlink → link`, `phone\|mobile\|telephone → tel`, `money\|price\|amount → currency`, `dropdown\|enum\|reference → select`, `boolean\|bool\|checkbox → toggle`, `longtext\|multiline\|memo\|notes → textarea`, `datetime → date`, `int\|integer\|decimal\|float → number`, `attachment\|upload\|image → file`. Unknown → `text`. |
+| `fieldTypes` | `() => string[]` | Type folders that currently exist. |
+| `hasFieldType` | `(type) => boolean` | True when `type` resolves to a real folder rather than the fallback. |
+| `useFieldResolver` | `() => { … }` | Composable wrapper returning all of the above. |
+
+### 15.5 `fieldType` vs `type`
+
+`useFormFields.mapField` stamps every returned descriptor with a **`fieldType`** — the normalized presentation type. It is deliberately *not* named `type`, because `type` is already a QInput prop inside the same props bag; overloading it would put `type="date"` on `AppDate` and `type="select"` on `QSelect` in any consumer that spreads the descriptor.
+
+`component` / `componentName` are still emitted for the legacy direct-render consumer `_common/sections/Content/Form.vue`; `FormRecord` no longer reads them.
+
+| Container | Type source | Call |
+|---|---|---|
+| `FormRecord.vue` | `mapField` output | `resolveFieldComponent(field.fieldType, mode)` |
+| `ViewRecord.vue` | raw `UIFields` entries | `resolveFieldComponent(resolveFieldType(field), 'view')` |
+| `ViewChildCompact.vue` | raw `UIFields` entries | as above, with `config.compact = true` |
+
+### 15.6 Three-Tier Precedence Chain
+
+| Tier | Source | Notes |
+|---|---|---|
+| **1** | Per-resource custom `_ui` Vue override — `formfield<header>.vue` (form) / `viewcolumn<header>.vue` (view) | Highest priority; replaces the control/cell outright. Paths in §9.3. |
+| **2** | Base type component `_fields/<type>/<Add\|Edit\|View>.vue` | Resolved via `resolveFieldComponent`. |
+| **3** | Fallback `_fields/text/<Mode>.vue` | Unknown types and custom (non-schema) headers. |
+
+JS modifiers (`FormField<Header>.js`, `ViewColumn<Header>.js`) sit **outside** this chain — they merge into `config` (§6), so they apply to whichever tier-2/3 component renders.
+
+### 15.7 Adding a New Field Type
+
+1. Create `_fields/<type>/` with `Add.vue`, `Edit.vue`, `View.vue` per §15.2.
+2. If the schema spells the type differently, add the alias to `TYPE_ALIASES` in `useFieldResolver.js`.
+3. If `mapField` must prepare props for it (options, `accept`, `resourceName`, …), add a branch there setting `fieldType: '<type>'`.
+
+No container edits. No registry edits. `_fields` components carry **no `<style>` block** (ARCHITECTURE RULES §7) — shared classes belong in `src/css/custom.scss`.

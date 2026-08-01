@@ -136,6 +136,11 @@ If no `List<ViewName>` match is found anywhere, resolution silently falls throug
 
 ---
 
+> [!IMPORTANT]
+> **Content overrides do not control field rendering.** Individual form controls and detail/table value cells are delegated to the base field subsystem at `src/components/_fields/<type>/{Add,Edit,View}.vue`, resolved through `resolveFieldComponent(type, mode)` — the content components hold no type branches. Changing how a *field type* looks means editing that type's SFC (which applies to every resource, in add/edit/view); changing how *one column of one resource* looks means a `FormField<Header>` / `ViewColumn<Col>` override. See [AQL_CREATE_AND_UPDATE_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_CREATE_AND_UPDATE_CONTENT_SYSTEM.md) §15 and [AQL_VIEW_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_VIEW_SYSTEM.md) §4.
+
+---
+
 ## 5. Other Page Configuration Schemas (View/Add/Edit/Action — via JS Modifiers)
 
 The sections below describe the existing Section-level modifier contracts (`Details.js`, `Form.js`, `Content.js` at the page-orchestrator level) that remain unchanged by the `contents:` system above; they operate through `useSectionResolver.js` rather than `useContentResolver.js`.

@@ -313,6 +313,8 @@ function formRecordBindings (record) {
     ...attrs,
     resource: childName.value,
     record,
+    // Re-opening an already-added row is an edit; a fresh draft is an add.
+    mode: editIndex.value !== null ? 'edit' : 'add',
     hideFields: effectiveHideFields.value,
     showFields: props.showFields,
     showCode: props.showCode,

@@ -19,6 +19,36 @@ Before creating or modifying any local `Create`/`Update` content components:
 1. **System Specification**: Read [AQL_CREATE_AND_UPDATE_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_CREATE_AND_UPDATE_CONTENT_SYSTEM.md) — the full `Create` & `Update` canonical doc: component anatomy, complete prop tables, the `showFields`/`hideFields`/`workflowFields` visibility precedence chain, `defaultValues`/`fieldProps` function resolution, child entry modes, the three override hierarchies, whole-content override examples, `Update.vue`'s hydration lifecycle (§13), and child soft-deletion/undo (§14). [AQL_CONTENT_CUSTOMIZATION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_CONTENT_CUSTOMIZATION_SYSTEM.md) §5.3 has a one-paragraph summary + link only — read the dedicated doc for anything beyond a quick orientation.
 2. **PageState Contract**: Read [usePageState.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/usePageState.js) — `initResource` (incl. `isPrimaryKey`/`reset` lifecycle options), `load` (record hydration), `setField`, `setControlField`/`getControlField` (non-schema custom fields — never `node.record`), `addChild`/`updateChild`/`removeChild` (incl. the `{ action }` option), `defaultBuild`'s `_action` forwarding, `validateNode`.
 3. **Architecture Constraints**: Read [ARCHITECTURE RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md) for strict formatting rules (e.g. no inline `<style>` values, no `QTable`, mobile-first grid).
+4. **Base field components** (only when the task is about how a *field type* renders, or you are adding a new type): Read [`FRONTENT/src/components/_fields/README.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_fields/README.md), backed by §15 of the canonical doc.
+
+---
+
+## 0. Decide the Right Layer First
+
+`FormRecord` contains **no `field.type === '…'` branches and no Quasar control map**. `useFormFields.mapField` resolves each field's props **and** its `fieldType`; the control is then mounted by `resolveFieldComponent(field.fieldType, mode)` → `src/components/_fields/<type>/<Add|Edit>.vue`. `mode` is `'add'` from `Create.vue`, `'edit'` from `Update.vue`, and `'edit'` from `FormChild` only while re-opening an already-added row.
+
+Before writing an override, pick the layer that matches the intent:
+
+| Intent | Correct layer |
+|---|---|
+| Adjust props of **one field on one resource** | `fieldProps` (§2.1c) — preferred — or a `FormField<Header>.js` modifier when it must be tenant-scoped |
+| Change how **a field type renders everywhere** (all currency inputs, all file uploads) | Edit `src/components/_fields/<type>/Add.vue` — never a per-resource override |
+| Add a **new field type** | New `_fields/<type>/{Add,Edit,View}.vue` folder, a `TYPE_ALIASES` entry if the schema spells it differently, and a `mapField` branch stamping `fieldType` if props need preparing |
+| A column renders as a plain text input but should be a date/select/currency | Fix the column's `type` in `APP.Resources.UIFields` — do **not** patch it with a per-resource override, or the form and the View page will disagree |
+
+### 3-Tier Precedence Chain
+
+1. Per-resource custom `_ui` Vue override — `formfield<header>.vue`. Replaces the control outright.
+2. Base type component `_fields/<type>/<Add|Edit>.vue`, via `resolveFieldComponent`.
+3. Fallback `_fields/text/<Mode>.vue` — also what custom (non-schema) headers get.
+
+JS modifiers are **not** a tier: a `FormField<Header>.js` result merges into the `config` object handed to whichever tier-2/3 component renders.
+
+### Field-Component Prop Contract
+
+Any `_fields` component (and any `FormField<Header>.vue` that wants to match it) takes: `modelValue` via `defineModel()`, plus `record: Object`, `config: Object` (the fully merged control props), `header: String`. All declare `inheritAttrs: false` and carry **no `<style>` block** (ARCHITECTURE RULES §7).
+
+> **Control-type attributes are owned by the field component.** Each `Add.vue` binds `v-bind="config"` first, then sets its own `type` (`url`, `tel`, `textarea`, `number`, …). So `fieldProps` / JS modifiers **cannot** change a field's input `type` — change the schema type instead. Everything else merges normally.
 
 ---
 
@@ -120,6 +150,8 @@ fieldProps: (record, ctx) => ({ Rate: { prefix: ctx.resourceConfig.currency?.val
 3. `fieldProps[header]`.
 4. `FormField<Header>.js` modifier from `_ui/*` — **highest**, so tenant custom UI always beats a page-level `fieldProps`.
 
+The merged result becomes the **`config`** prop of the resolved `_fields/<type>/<Mode>.vue` component, which spreads it onto its inner Quasar control. Resolution metadata (`fieldType`, `component`, `componentName`, `custom`, `header`) is stripped first so nothing leaks onto the rendered input. The one key you cannot override this way is the control's `type` — see §0.
+
 Reach for `fieldProps` first; only create a `FormField<Header>.js` when the change must be tenant-scoped, or a `FormField<Header>.vue` when the control itself must be replaced.
 
 ### 2.1d `$attrs` Forwarding
@@ -134,7 +166,12 @@ Precedence: `...attrs` → explicit props → escape hatch (`formRecordProps`/`f
 - Must contain a `<template>` block — templateless overrides are never allowed.
 - Inject `resourceConfig`, `resourceRecord`, and `pageState` directly (`inject('pageState')`, etc.) — a Vue override of `create.vue`/`update.vue` does NOT automatically receive them as props; only `Create.vue`/`Update.vue`'s own declared props flow through `$attrs`.
 - An `update.vue` override additionally owns hydration if it does not render `Update.vue` — see §2.10 before writing one.
-- Compose using `FormRecord` and `FormChild` wherever possible instead of hand-rolling `q-input`/`q-select` controls — this preserves `useFormFields`' control-type resolution (file upload, `app/Date.vue` date-with-today-default, status toggle, cross-ref selects, and `AppOptions`-driven selects) and keeps the override thin:
+- Compose using `FormRecord` and `FormChild` wherever possible instead of hand-rolling `q-input`/`q-select` controls — this preserves the `_fields` type resolution (file upload, `app/Date.vue` date-with-today-default, status toggle, filterable cross-ref and `AppOptions` selects, currency prefixes) and keeps the override thin. If you genuinely must render one field by hand, mount the base component rather than a raw Quasar control:
+
+  ```javascript
+  import { resolveFieldComponent } from 'components/_fields/useFieldResolver'
+  // <component :is="resolveFieldComponent('currency', 'edit')" v-model="…" :record="record" :config="…" header="Rate" />
+  ```
 
   ```vue
   <!-- src/_ui/AQL/components/master/products/create/create.vue -->
@@ -216,10 +253,12 @@ export default function (value, record, field, { pageState, resourceConfig, reso
   return { hint: 'Format: XXX-0000', mask: 'AAA-9999' }
 }
 ```
-Path: `src/_ui/[UiName]/components/[scope]/[ResourceName]/FormField[Header].(vue|js)` — **`_ui/*` ONLY**. There is NO `src/components/shared/FormField[Header]` fallback: when no `_ui` override exists, `FormRecord` uses the standard `useFormFields` control directly. A `.vue` override receives `{ modelValue, field, record, ...otherProps }` and must emit `update:model-value`. Resolves for **both** schema fields and custom (non-schema) `fields` entries.
+Path: `src/_ui/[UiName]/components/[scope]/[ResourceName]/FormField[Header].(vue|js)` — **`_ui/*` ONLY**. There is NO `src/components/shared/FormField[Header]` fallback: when no `_ui` override exists, `FormRecord` mounts the base type component `_fields/<fieldType>/<Add|Edit>.vue` (§0). A `.vue` override receives `{ modelValue, field, record, config, header, ...otherProps }` and must emit `update:model-value`. Resolves for **both** schema fields and custom (non-schema) `fields` entries.
 
 **Before writing a `FormField<Header>` override, check whether the standard control already covers the need** — you rarely need one:
-- **Dates** (type `date`/`datetime`, or any `*Date` header like `TransactionDate`) already render via `app/Date.vue`, which defaults an empty value to today (`YYYY-MM-DD`) on mount.
+- **A base type component probably already does it.** `text`, `link`, `tel`, `file`, `textarea`, `status`, `select`, `date`, `number`, `currency`, and `toggle` all ship with add/edit controls (`_fields/README.md` has the table). Setting the column's `type` in `APP.Resources.UIFields` is almost always the right fix — and it also upgrades the View page for free.
+- **Dates** (type `date`/`datetime`, or any `*Date` header like `TransactionDate`) already render via `_fields/date/Add.vue` → `app/Date.vue`, which defaults an empty value to today (`YYYY-MM-DD`) on mount.
+- **Currency** columns (`currency`/`money`/`price`/`amount`) already prefix the dynamic symbol from `useCurrency` — never hardcode `₹`/`AED` in an override (ARCHITECTURE RULES §4).
 - **Enumerated selects** resolve automatically from `AppOptions`: add an option group keyed `<ResourceName><Column>` to the `APP.AppOptions` sheet (the resolver tries the resource name as-is, singular, and plural — e.g. `ProductsType`/`ProductType`) and that column becomes a `QSelect` with no frontend change. Prefer this over a hand-built `FormField<Header>` select.
 
 - **Column/field grouping** (sections, collapsible groups): not yet a first-class `Create`/`FormRecord` prop — requires a Vue override composing multiple `FormRecord` instances with different `hide-fields` splits, or wrapping in `q-expansion-item`.

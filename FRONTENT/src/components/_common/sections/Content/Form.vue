@@ -153,7 +153,7 @@ const dataStore = useDataStore()
 const { formFields } = useFormFields(props.resourceName)
 
 function fieldRenderProps(field) {
-  const { header, component, componentName, ...rest } = field
+  const { header, component, componentName, fieldType, ...rest } = field
   return rest
 }
 

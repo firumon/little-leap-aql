@@ -60,6 +60,27 @@ export function deriveActionStampHeaders(additionalActions) {
 
 
 /**
+ * Default human-readable rendering of a raw record cell value.
+ *
+ * Relation columns hydrate into an object (`{ Code, Name, ... }`); everything
+ * else is a primitive. Shared by every container that feeds `displayValue` into
+ * a `_fields/<type>/View.vue` component (ViewRecord, ViewChildCompact) so the
+ * detail grid and the compact child table never disagree on a cell.
+ *
+ * @param {*} value
+ * @param {string} emptyText
+ * @returns {*} primitive value, composed relation label, or `emptyText`
+ */
+export function resolveDisplayValue(value, emptyText = '-') {
+  if (value && typeof value === 'object') {
+    if (value.Name != null) return `${value.Name} (${value.Code})`
+    if (value.Code != null) return `${value.Code}`
+    return emptyText
+  }
+  return value ?? emptyText
+}
+
+/**
  * Filters resolvedFields for display in a detail view:
  * - Excludes Code
  * - Excludes AUDIT_HEADERS

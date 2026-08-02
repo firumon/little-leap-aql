@@ -98,7 +98,7 @@
 
     <q-card flat bordered class="q-mb-md">
       <q-card-section>
-        <q-input v-model="comment" type="textarea" label="Action Comment (required for Send Back / Reject)" outlined rows="4" />
+        <q-input v-model="comment" type="textarea" label="Action Comment (required for Send Back / Reject)" outlined />
       </q-card-section>
       <q-card-actions class="bg-grey-2">
         <q-btn color="negative" label="Reject" :loading="rejectLoading" :disable="!comment.trim()" @click="$emit('reject', comment)" />

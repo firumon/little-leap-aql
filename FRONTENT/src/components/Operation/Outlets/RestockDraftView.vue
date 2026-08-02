@@ -94,7 +94,7 @@
           v-model="comment"
           type="textarea"
           :label="isRevisionRequired ? 'Resubmission Comment (required)' : 'Submission Comment'"
-          outlined rows="4"
+          outlined
         />
       </q-card-section>
     </q-card>

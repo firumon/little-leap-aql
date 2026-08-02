@@ -258,9 +258,7 @@
           <q-input
             v-model="editReturnForm.ReasonComment"
             outlined
-            dense
             type="textarea"
-            rows="2"
             label="Details / Remarks"
             placeholder="Enter batch code, condition, details..."
           />

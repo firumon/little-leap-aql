@@ -108,7 +108,7 @@
           </q-item>
         </q-list>
         <div v-else class="text-caption text-grey-6">No pending items available to cancel.</div>
-        <q-input v-model="cancelComment" type="textarea" label="Cancel Comment" outlined rows="3" class="q-mt-md" />
+        <q-input v-model="cancelComment" type="textarea" label="Cancel Comment" outlined class="q-mt-md" />
       </q-card-section>
       <q-card-actions align="right" class="bg-grey-2">
         <q-btn color="negative" label="Cancel Selected" :loading="cancelLoading" :disable="!hasCancelSelection || !cancelComment.trim()" @click="$emit('cancel-selected', cancelComment)" />

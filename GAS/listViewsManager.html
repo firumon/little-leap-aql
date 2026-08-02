@@ -327,15 +327,15 @@
   // `param` tokens take a value after a colon, e.g. $daysIn:30.
   var TOKENS = [
     { code: '$now', label: 'Now (timestamp)', group: 'Date & Time' },
-    { code: '$date', label: "Today's date (YYYY-MM-DD)", group: 'Date & Time' },
+    { code: '$date', label: 'Date (YYYY-MM-DD)', group: 'Date & Time', param: '0' },
     { code: '$day', label: 'Day of year (1-366)', group: 'Date & Time' },
-    { code: '$month', label: 'Current month (01-12)', group: 'Date & Time' },
+    { code: '$month', label: 'Month (01-12)', group: 'Date & Time', param: '0' },
     { code: '$year', label: 'Current year (YYYY)', group: 'Date & Time' },
     { code: '$week', label: 'Current ISO week (1-53)', group: 'Date & Time' },
-    { code: '$startOfDay', label: 'Start of today (timestamp)', group: 'Date & Time' },
-    { code: '$endOfDay', label: 'End of today (timestamp)', group: 'Date & Time' },
-    { code: '$startOfMonth', label: 'Start of this month (timestamp)', group: 'Date & Time' },
-    { code: '$endOfMonth', label: 'End of this month (timestamp)', group: 'Date & Time' },
+    { code: '$startOfDay', label: 'Start of day (timestamp)', group: 'Date & Time', param: '0' },
+    { code: '$endOfDay', label: 'End of day (timestamp)', group: 'Date & Time', param: '0' },
+    { code: '$startOfMonth', label: 'Start of month (timestamp)', group: 'Date & Time', param: '0' },
+    { code: '$endOfMonth', label: 'End of month (timestamp)', group: 'Date & Time', param: '0' },
 
     { code: '$daysAgo', label: 'N days ago', group: 'Relative Days', param: '7' },
     { code: '$daysIn', label: 'In N days', group: 'Relative Days', param: '30' },

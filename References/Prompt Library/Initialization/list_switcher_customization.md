@@ -78,7 +78,7 @@ export default function() {
 - `name` (required): unique identifier, matched against `activeItem` and passed to `setActiveView(name)`.
 - `label` (optional): display text; falls back to `name`.
 - `icon` (optional): Quasar icon name.
-- `color` (optional): color keyword (`positive`, `negative`, `primary`, `warning`, `grey`, ...); defaults to `'primary'`.
+- `color` (optional): any brand name (`positive`, `primary`, ...), Quasar palette color (`red-10`, `light-blue-4`), or raw Hex/RGB value (`#e11d48`); resolved at runtime by `resolveCssColor()` in `src/utils/colorHelpers.js`. Defaults to `'primary'`. See [AQL_FRONTEND_LIST_SWITCHER.md §4.4](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_LIST_SWITCHER.md#44-dynamic-color-resolution).
 - `default` (optional): marks the view auto-selected on initial load when there's no active URL/query state.
 - `filter` (optional): a **Group** (`{ type: 'group', logic: 'AND'|'OR', items: [...] }`) or **Condition** (`{ type: 'condition', column, operator, value }`) object evaluated per-row via `evaluateFilter()`. See [Resource Columns Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_COLUMNS_GUIDE.md) and [AQL_FRONTEND_LIST_SWITCHER.md §5.1.1](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_LIST_SWITCHER.md#511-filter-json-schema-reference) for the full operator list (`eq`, `neq`, `in`, `not_in`, `gt`, `gte`, `lt`, `lte`, `contains`).
 

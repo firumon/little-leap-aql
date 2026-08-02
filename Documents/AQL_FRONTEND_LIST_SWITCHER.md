@@ -147,7 +147,7 @@ The base container is built to handle item overflows responsively:
 | `active` | `Boolean` | `false` | True if the item is currently active. |
 | `label` | `String \| Function` | `""` | Evaluated display label text. |
 | `icon` | `String \| Function` | `""` | Evaluated display icon name. |
-| `color` | `String \| Function` | `"primary"` | Color keyword matching CSS state mappings. |
+| `color` | `String \| Function` | `"primary"` | Any supported color string — see [Section 4.4](#44-dynamic-color-resolution). |
 
 #### Attribute Fallthrough (`v-bind="$attrs"`)
 All extra properties on the `item` object (e.g., `disabled`, custom metadata) are spread by the container and bound to the root button tag in `ListSwitcherItem` via `v-bind="$attrs"`.
@@ -162,7 +162,7 @@ Every entry inside the resolved `items` array — whether sourced from a `ListSw
 | `name` | `String` | Yes | Unique identifier for the view. Used as the `activeItem` match key and passed to `setActiveView(name)`. |
 | `label` | `String` | No | Display text. Falls back to `name` if omitted (see `resolvedLabel` in `ListSwitcherItem.vue`). |
 | `icon` | `String` | No | Quasar icon name rendered before the label. `null`/omitted hides the icon. |
-| `color` | `String` | No | Color keyword (e.g. `positive`, `negative`, `primary`, `warning`, `grey`) mapped to CSS custom properties for active-state styling. Defaults to `'primary'` if omitted. |
+| `color` | `String` | No | Any brand name, Quasar palette color, or raw Hex/RGB value used for active-state styling — see [Section 4.4](#44-dynamic-color-resolution). Defaults to `'primary'` if omitted. |
 | `default` | `Boolean` | No | Marks the view selected on initial load when no URL/query state is present (`defaultViewName` in `useListViews.js`). Only one item should set this `true`; if none do, the first item in the array wins. |
 | `filter` | `Object` | No | A filter tree (**Group** or **Condition** object — see [Section 5.1.1](#511-filter-json-schema-reference)) evaluated against each row via `evaluateFilter()` to determine view membership and counts. Omitting it matches all rows. |
 
@@ -173,6 +173,37 @@ Every entry inside the resolved `items` array — whether sourced from a `ListSw
   - `label` / `icon`: resolved via the container's own `label`/`icon` prop-resolver functions first (if `ListSwitcher` was given a `label`/`icon` prop or JS-modifier override), falling back to `item.label`/`item.icon`/`item.name`.
   - `color`: `item.color || 'primary'`.
 - `ListSwitcherItem.vue` then re-resolves `label`/`icon`/`color` one more time through its own `evaluateProp` against `resourceRecord`/`resourceConfig` (in case an item-level JS modifier or Vue override further customizes them), falling back to the values passed in from the container.
+
+---
+
+### 4.4. Dynamic Color Resolution
+
+The switcher has **no hardcoded per-color CSS variants**. Any color string configured on an item is resolved at runtime to a CSS color value and injected as the `--aql-switcher-color` custom property on the active element; `custom.scss` derives every visual layer from it with `color-mix()`.
+
+#### Supported color formats
+| Format | Examples | Resolves to |
+| :--- | :--- | :--- |
+| **Quasar brand name** | `primary`, `secondary`, `accent`, `positive`, `negative`, `info`, `warning`, `dark` | `var(--q-<name>)` — stays theme-aware, so tenant theme overrides apply automatically. |
+| **Quasar palette color** | `red-10`, `light-blue-4`, `teal-8`, `indigo-6`, `purple-7`, `grey`, `white`, `black` | Concrete hex, resolved once via Quasar's `colors.getPaletteColor()` and cached. Families accept shades `-1`…`-10` and accents `-11`…`-14`. |
+| **Raw CSS color** | `#e11d48`, `#0284c7`, `rgb(2 132 199)`, `var(--my-token)` | Passed through untouched. |
+| **Unrecognised / blank** | `''`, `not-a-color` | Falls back to `var(--q-primary)`. |
+
+* **Resolver**: `resolveCssColor(color, fallback)` in [`FRONTENT/src/utils/colorHelpers.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/colorHelpers.js). It is DOM-safe (returns the fallback when `document` is unavailable) and memoises palette lookups.
+* **Consumers**:
+  * `ListSwitcherItem.vue` → `itemStyle` sets `--aql-switcher-color` on active items only.
+  * `ListSwitcher.vue` → `moreButtonStyle` does the same for the "More" overflow button when the active view lives inside the dropdown; `menuItemStyle(item)` colors the active dropdown entry inline (no `text-<color>` class, so hex values work).
+
+#### Derived styling (`.aql-list-switcher-item--active` in `custom.scss`)
+| Layer | Rule |
+| :--- | :--- |
+| Background | `linear-gradient(135deg, color-mix(in srgb, var(--aql-switcher-color) 12%, white) 0%, color-mix(in srgb, var(--aql-switcher-color) 18%, white) 100%)` |
+| Text & icon | `var(--aql-switcher-color)` |
+| Box shadow | `0 2px 8px color-mix(in srgb, var(--aql-switcher-color) 18%, transparent)` |
+| Indicator dot | `color-mix(in srgb, var(--aql-switcher-color) 85%, transparent)` |
+
+The block declares its own `--aql-switcher-color: var(--q-primary)` default, so an active item renders correctly even if no inline property is set. A custom `ListSwitcherItem.vue` override only needs to set `--aql-switcher-color` (or reuse the base classes) to inherit the whole treatment.
+
+> **Note**: `color-mix()` requires a modern browser (Chrome/Edge 111+, Safari 16.2+, Firefox 113+). Older engines fall back to the flat `color` value with no gradient.
 
 ---
 
@@ -200,6 +231,7 @@ The list view items and filtering are derived dynamically from the Google Sheets
     }
   ]
   ```
+* **Admin Dialog**: The `AQL 🚀 → Manage List Views` dialog ([`GAS/listViewsManager.html`](file:///f:/LITTLE%20LEAP/AQL/GAS/listViewsManager.html)) writes this JSON. Its **Chip Color** field is a free-text input backed by a `colorSuggestions` datalist — pick a brand/palette suggestion or type any Quasar palette name or Hex code. A live swatch previews brand names and raw CSS colors; palette names (`red-10`) show a neutral swatch because they can only be resolved by the frontend at runtime. See [Section 4.4](#44-dynamic-color-resolution) for accepted formats.
 
 ### 5.1.1. Filter JSON Schema Reference
 The `filter` property does not support a raw array at its root. It must be either a **Group Object** or a **Condition Object**:

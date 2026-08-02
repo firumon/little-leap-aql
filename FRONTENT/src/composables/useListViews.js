@@ -143,22 +143,6 @@ export function normalizeListViewsMode(mode) {
 }
 
 /**
- * Attempts numeric coercion for comparison operators.
- * Returns { a, b } as numbers if both coerce, otherwise as lowercase strings.
- *
- * Used for literal (non-token) values only — token conditions carry their own
- * two-sided coercion pipelines. See src/utils/listViewTokens.js.
- */
-function coerceForComparison(a, b) {
-  const numA = Number(a)
-  const numB = Number(b)
-  if (Number.isFinite(numA) && Number.isFinite(numB)) {
-    return { a: numA, b: numB }
-  }
-  return { a: String(a).toLowerCase(), b: String(b).toLowerCase() }
-}
-
-/**
  * Compares two already-coerced values. Both sides are assumed to sit in the same space.
  */
 function compareCoerced(operator, a, b) {
@@ -190,120 +174,149 @@ function compareCoerced(operator, a, b) {
 }
 
 /**
- * Evaluates a condition whose value references a dynamic token.
+ * Compiles one condition against the current clock/user.
  *
- * The token's `coerce` pipeline normalises the column value and its `coerceToken` pipeline
- * (defaulting to `coerce`) normalises the resolved token value, so both sides end up
- * comparable. Array-valued tokens are flattened for `in` / `not_in`.
+ * Everything that does not depend on the row is resolved here — token parsing, `spec.value`,
+ * the `coerceToken` pipeline, and the lowercase/numeric forms of literal values — so a pass
+ * over thousands of rows only runs the column-side coercion and the comparison.
+ *
+ * A token anywhere in the value governs coercion for the whole condition. The list-views
+ * manager splits `in`/`not_in` values on commas, so a token can arrive wrapped in an array.
  */
-function evaluateTokenCondition({ operator, rowValue, values, governing, ctx }) {
-  const { spec } = governing
-  const columnPipeline = spec.coerce || []
-  const tokenPipeline = spec.coerceToken || spec.coerce || []
+function prepareCondition(condition, ctx) {
+  const { column, operator, value } = condition
+  const values = Array.isArray(value) ? value : [value]
+  const parsed = values.map((entry) => parseToken(entry))
+  const governing = parsed.find(Boolean)
 
-  const left = applyCoerces(rowValue, columnPipeline)
-  // A column that cannot be parsed into the comparison space is never a match — returning
-  // false explicitly rather than relying on NaN comparison semantics keeps `neq`/`not_in`
-  // from silently sweeping in every unparseable row.
-  if (typeof left === 'number' && Number.isNaN(left)) return false
-
-  const right = []
-  for (const entry of values) {
-    const token = parseToken(entry)
-    const resolved = token ? token.spec.value(token.params, ctx) : entry
-    if (Array.isArray(resolved)) {
-      resolved.forEach((item) => right.push(applyCoerces(item, tokenPipeline)))
-    } else {
-      right.push(applyCoerces(resolved, tokenPipeline))
-    }
+  if (governing) {
+    const tokenPipeline = governing.spec.coerceToken || governing.spec.coerce || []
+    const right = []
+    parsed.forEach((token, idx) => {
+      const resolved = token ? token.spec.value(token.params, ctx) : values[idx]
+      // Array-valued tokens ($userRoles) coerce per element — coercing the array whole
+      // would yield "auditor,approver" and match nothing.
+      if (Array.isArray(resolved)) {
+        resolved.forEach((item) => right.push(applyCoerces(item, tokenPipeline)))
+      } else {
+        right.push(applyCoerces(resolved, tokenPipeline))
+      }
+    })
+    return { type: 'condition', column, operator, columnPipeline: governing.spec.coerce || [], right }
   }
 
-  return compareCoerced(operator, left, right)
+  // Literal condition: pre-normalise both the whole value (`eq`/`contains`/ordered operators
+  // stringify the raw value, arrays included) and its per-entry list form (`in`/`not_in`).
+  return {
+    type: 'condition',
+    column,
+    operator,
+    literalStr: String(value).toLowerCase(),
+    literalList: values.map((entry) => String(entry).toLowerCase()),
+    literalNum: Number(value)
+  }
 }
 
 /**
- * Evaluates a single condition against a row.
+ * Compiles a filter tree (group or condition) once per evaluation pass.
+ *
+ * @param {Object} filter - group or condition node
+ * @param {Object} [ctx] - token evaluation context, `{ user }`. Required only by user tokens.
+ * @returns {Object|null} prepared tree for `evaluatePreparedFilter`
  */
-function evaluateCondition(condition, row, ctx) {
-  const { column, operator, value } = condition
+export function prepareFilter(filter, ctx = {}) {
+  if (!filter) return null
+  if (filter.type === 'condition') return prepareCondition(filter, ctx)
+  if (filter.type === 'group') {
+    return {
+      type: 'group',
+      logic: filter.logic,
+      items: (filter.items || []).map((item) => prepareFilter(item, ctx))
+    }
+  }
+  return null // unknown node = match all
+}
+
+/**
+ * Evaluates a prepared condition against a row. No token parsing happens here.
+ */
+function evaluatePreparedCondition(node, row) {
+  const { column, operator } = node
   if (!column || !(column in row)) return false
 
   const rowValue = row[column]
 
-  // A token anywhere in the value governs coercion for the whole condition. The list-views
-  // manager splits `in`/`not_in` values on commas, so a token can arrive wrapped in an array.
-  const values = Array.isArray(value) ? value : [value]
-  let governing = null
-  for (const entry of values) {
-    const token = parseToken(entry)
-    if (token) {
-      governing = token
-      break
-    }
-  }
-
-  if (governing) {
-    return evaluateTokenCondition({ operator, rowValue, values, governing, ctx })
+  if (node.right) {
+    const left = applyCoerces(rowValue, node.columnPipeline)
+    // A column that cannot be parsed into the comparison space is never a match — returning
+    // false explicitly rather than relying on NaN comparison semantics keeps `neq`/`not_in`
+    // from silently sweeping in every unparseable row.
+    if (typeof left === 'number' && Number.isNaN(left)) return false
+    return compareCoerced(operator, left, node.right)
   }
 
   const rowStr = (rowValue ?? '').toString().toLowerCase()
 
   switch (operator) {
     case 'eq':
-      return rowStr === String(value).toLowerCase()
+      return rowStr === node.literalStr
     case 'neq':
-      return rowStr !== String(value).toLowerCase()
-    case 'in': {
-      const arr = Array.isArray(value) ? value : [value]
-      return arr.some((v) => rowStr === String(v).toLowerCase())
-    }
-    case 'not_in': {
-      const arr = Array.isArray(value) ? value : [value]
-      return !arr.some((v) => rowStr === String(v).toLowerCase())
-    }
-    case 'gt': {
-      const c = coerceForComparison(rowValue, value)
-      return c.a > c.b
-    }
-    case 'gte': {
-      const c = coerceForComparison(rowValue, value)
-      return c.a >= c.b
-    }
-    case 'lt': {
-      const c = coerceForComparison(rowValue, value)
-      return c.a < c.b
-    }
+      return rowStr !== node.literalStr
+    case 'in':
+      return node.literalList.some((v) => rowStr === v)
+    case 'not_in':
+      return !node.literalList.some((v) => rowStr === v)
+    case 'gt':
+    case 'gte':
+    case 'lt':
     case 'lte': {
-      const c = coerceForComparison(rowValue, value)
-      return c.a <= c.b
+      // Numeric comparison only when BOTH sides coerce, else lowercase strings.
+      const numA = Number(rowValue)
+      const numeric = Number.isFinite(numA) && Number.isFinite(node.literalNum)
+      const a = numeric ? numA : String(rowValue).toLowerCase()
+      const b = numeric ? node.literalNum : node.literalStr
+      if (operator === 'gt') return a > b
+      if (operator === 'gte') return a >= b
+      if (operator === 'lt') return a < b
+      return a <= b
     }
     case 'contains':
-      return rowStr.includes(String(value).toLowerCase())
+      return rowStr.includes(node.literalStr)
     default:
       return false
   }
 }
 
 /**
- * Recursively evaluates a filter tree (group or condition) against a row.
+ * Recursively evaluates a prepared filter tree against a row.
+ */
+export function evaluatePreparedFilter(prepared, row) {
+  if (!prepared) return true
+  if (prepared.type === 'condition') return evaluatePreparedCondition(prepared, row)
+  if (prepared.type === 'group') {
+    const items = prepared.items
+    if (!items.length) return true // empty group = match all
+    if (prepared.logic === 'OR') {
+      return items.some((item) => evaluatePreparedFilter(item, row))
+    }
+    // Default AND
+    return items.every((item) => evaluatePreparedFilter(item, row))
+  }
+  return true
+}
+
+/**
+ * Evaluates a filter tree against a single row.
+ *
+ * Backwards-compatible entry point — prepares the filter for this one row. Filtering a
+ * collection should call `prepareFilter` once and then `evaluatePreparedFilter` per row.
  *
  * @param {Object} filter - group or condition node
  * @param {Object} row - the record under test
  * @param {Object} [ctx] - token evaluation context, `{ user }`. Required only by user tokens.
  */
 export function evaluateFilter(filter, row, ctx = {}) {
-  if (!filter) return true
-  if (filter.type === 'condition') return evaluateCondition(filter, row, ctx)
-  if (filter.type === 'group') {
-    const items = filter.items || []
-    if (!items.length) return true // empty group = match all
-    if (filter.logic === 'OR') {
-      return items.some((item) => evaluateFilter(item, row, ctx))
-    }
-    // Default AND
-    return items.every((item) => evaluateFilter(item, row, ctx))
-  }
-  return true
+  return evaluatePreparedFilter(prepareFilter(filter, ctx), row)
 }
 
 /**
@@ -404,7 +417,8 @@ export function useListViews({
     const allItems = items?.value || []
     const ctx = tokenContext.value
     for (const view of effectiveViews.value) {
-      counts[view.name] = allItems.filter((row) => evaluateFilter(view.filter, row, ctx)).length
+      const prepared = prepareFilter(view.filter, ctx)
+      counts[view.name] = allItems.filter((row) => evaluatePreparedFilter(prepared, row)).length
     }
     return counts
   })
@@ -415,8 +429,8 @@ export function useListViews({
   const viewFilteredItems = computed(() => {
     const allItems = items?.value || []
     if (!activeView.value) return allItems
-    const ctx = tokenContext.value
-    return allItems.filter((row) => evaluateFilter(activeView.value.filter, row, ctx))
+    const prepared = prepareFilter(activeView.value.filter, tokenContext.value)
+    return allItems.filter((row) => evaluatePreparedFilter(prepared, row))
   })
 
   function setActiveView(name) {

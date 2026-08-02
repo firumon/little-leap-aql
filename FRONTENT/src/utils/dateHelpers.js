@@ -15,6 +15,8 @@ import {
   endOfDay as fnsEndOfDay,
   startOfMonth as fnsStartOfMonth,
   endOfMonth as fnsEndOfMonth,
+  addDays as fnsAddDays,
+  addMonths as fnsAddMonths,
   getDayOfYear,
   getISOWeek,
   differenceInCalendarDays,
@@ -101,6 +103,16 @@ export function endOfMonth(value) {
 /** 'YYYY-MM-DD' for the given value, or '' when unparseable. */
 export function toDateOnly(value) {
   return withDate(value, (date) => format(date, 'yyyy-MM-dd'), '')
+}
+
+/** Adds whole days to the given value, returning a new Date (or null when unparseable). */
+export function addDays(value, amount) {
+  return withDate(value, (date) => fnsAddDays(date, amount))
+}
+
+/** Adds whole months to the given value, returning a new Date (or null when unparseable). */
+export function addMonths(value, amount) {
+  return withDate(value, (date) => fnsAddMonths(date, amount))
 }
 
 /** Day of year, 1-366. NaN when unparseable. */

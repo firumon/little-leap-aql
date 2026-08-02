@@ -28,6 +28,8 @@ import {
   startOfMonth,
   endOfMonth,
   toDateOnly,
+  addDays,
+  addMonths,
   dayOfYear,
   isoWeek,
   daysFromToday
@@ -88,9 +90,15 @@ export const TOKENS = {
     coerceToken: ['number']
   },
   $date: {
-    label: "Today's date (YYYY-MM-DD)",
+    label: 'Date (YYYY-MM-DD)',
     group: 'Date & Time',
-    value: () => toDateOnly(new Date()),
+    param: 'N',
+    paramDefault: '0',
+    value: (params) => {
+      const offset = params && params[0] !== undefined ? Number(params[0]) : 0
+      const days = Number.isNaN(offset) ? 0 : offset
+      return toDateOnly(addDays(new Date(), days))
+    },
     coerce: ['dateOnly'],
     coerceToken: ['text']
   },
@@ -102,9 +110,16 @@ export const TOKENS = {
     coerceToken: ['number']
   },
   $month: {
-    label: 'Current month (01-12)',
+    label: 'Month (01-12)',
     group: 'Date & Time',
-    value: () => String(new Date().getMonth() + 1).padStart(2, '0'),
+    param: 'N',
+    paramDefault: '0',
+    value: (params) => {
+      const offset = params && params[0] !== undefined ? Number(params[0]) : 0
+      const months = Number.isNaN(offset) ? 0 : offset
+      const targetDate = addMonths(new Date(), months)
+      return targetDate ? String(targetDate.getMonth() + 1).padStart(2, '0') : ''
+    },
     coerce: ['month2'],
     coerceToken: ['text']
   },
@@ -123,30 +138,54 @@ export const TOKENS = {
     coerceToken: ['number']
   },
   $startOfDay: {
-    label: 'Start of today (timestamp)',
+    label: 'Start of day (timestamp)',
     group: 'Date & Time',
-    value: () => startOfDay(new Date())?.getTime(),
+    param: 'N',
+    paramDefault: '0',
+    value: (params) => {
+      const offset = params && params[0] !== undefined ? Number(params[0]) : 0
+      const days = Number.isNaN(offset) ? 0 : offset
+      return startOfDay(addDays(new Date(), days))?.getTime()
+    },
     coerce: ['epoch'],
     coerceToken: ['number']
   },
   $endOfDay: {
-    label: 'End of today (timestamp)',
+    label: 'End of day (timestamp)',
     group: 'Date & Time',
-    value: () => endOfDay(new Date())?.getTime(),
+    param: 'N',
+    paramDefault: '0',
+    value: (params) => {
+      const offset = params && params[0] !== undefined ? Number(params[0]) : 0
+      const days = Number.isNaN(offset) ? 0 : offset
+      return endOfDay(addDays(new Date(), days))?.getTime()
+    },
     coerce: ['epoch'],
     coerceToken: ['number']
   },
   $startOfMonth: {
-    label: 'Start of this month (timestamp)',
+    label: 'Start of month (timestamp)',
     group: 'Date & Time',
-    value: () => startOfMonth(new Date())?.getTime(),
+    param: 'N',
+    paramDefault: '0',
+    value: (params) => {
+      const offset = params && params[0] !== undefined ? Number(params[0]) : 0
+      const months = Number.isNaN(offset) ? 0 : offset
+      return startOfMonth(addMonths(new Date(), months))?.getTime()
+    },
     coerce: ['epoch'],
     coerceToken: ['number']
   },
   $endOfMonth: {
-    label: 'End of this month (timestamp)',
+    label: 'End of month (timestamp)',
     group: 'Date & Time',
-    value: () => endOfMonth(new Date())?.getTime(),
+    param: 'N',
+    paramDefault: '0',
+    value: (params) => {
+      const offset = params && params[0] !== undefined ? Number(params[0]) : 0
+      const months = Number.isNaN(offset) ? 0 : offset
+      return endOfMonth(addMonths(new Date(), months))?.getTime()
+    },
     coerce: ['epoch'],
     coerceToken: ['number']
   },

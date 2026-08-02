@@ -158,7 +158,8 @@ export function useMainLayoutNavTree() {
 
   async function handleLogout() {
     await logout()
-    await router.push('/login')
+    const targetUrl = router.resolve('/login').href || '/login'
+    window.location.href = targetUrl
   }
 
   return {

@@ -1,3 +1,4 @@
 export default {
-  sections: ['PageHeader', 'Toolbar', 'PageAction']
+  sections: ['PageHeader', 'FilterInput', 'ListSwitcher'],
+  contents: ['List']
 }

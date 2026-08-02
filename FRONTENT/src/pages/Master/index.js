@@ -1,4 +1,4 @@
 export default {
-  sections: ['PageHeader','FilterInput','PageAction'],
+  sections: ['PageHeader','FilterInput','ListSwitcher'],
   contents: ['List'],
 }

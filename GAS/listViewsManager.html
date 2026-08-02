@@ -276,15 +276,34 @@
       </div>
       <div class="g">
         <label>Chip Color</label>
-        <select id="viewColor">
-          <option value="">Default (grey)</option>
-          <option value="primary">Primary (blue)</option>
-          <option value="positive">Positive (green)</option>
-          <option value="negative">Negative (red)</option>
-          <option value="warning">Warning (orange)</option>
-          <option value="info">Info (cyan)</option>
-          <option value="accent">Accent (purple)</option>
-        </select>
+        <input type="text" id="viewColor" list="colorSuggestions" placeholder="e.g. primary, red-10, #e11d48" oninput="updateColorPreview()">
+        <datalist id="colorSuggestions">
+          <!-- Brand colors (theme-aware) -->
+          <option value="primary">Brand - Primary</option>
+          <option value="secondary">Brand - Secondary</option>
+          <option value="accent">Brand - Accent</option>
+          <option value="positive">Brand - Positive (green)</option>
+          <option value="negative">Brand - Negative (red)</option>
+          <option value="warning">Brand - Warning (orange)</option>
+          <option value="info">Brand - Info (cyan)</option>
+          <option value="dark">Brand - Dark</option>
+          <!-- Quasar palette samples: any family-shade combo works -->
+          <option value="red-10">Palette - red-10</option>
+          <option value="pink-6">Palette - pink-6</option>
+          <option value="purple-7">Palette - purple-7</option>
+          <option value="indigo-6">Palette - indigo-6</option>
+          <option value="light-blue-4">Palette - light-blue-4</option>
+          <option value="teal-8">Palette - teal-8</option>
+          <option value="green-9">Palette - green-9</option>
+          <option value="amber-8">Palette - amber-8</option>
+          <option value="deep-orange-7">Palette - deep-orange-7</option>
+          <option value="blue-grey-6">Palette - blue-grey-6</option>
+          <option value="grey-7">Palette - grey-7</option>
+        </datalist>
+        <div style="display:flex; align-items:center; gap:6px; margin-top:6px">
+          <span id="colorPreview" style="width:14px; height:14px; border-radius:4px; border:1px solid #cbd5e1; background:transparent; flex:none"></span>
+          <span style="font-size:11px; color:#64748b">Brand name, Quasar palette (<code>red-10</code>, <code>light-blue-4</code>) or Hex (<code>#e11d48</code>). Blank = default.</span>
+        </div>
       </div>
     </div>
 
@@ -489,6 +508,40 @@
       document.getElementById('viewDefault').checked = false;
       renderFilterGroup(document.getElementById('filterRoot'), { type: 'group', logic: 'AND', items: [] });
     }
+
+    updateColorPreview();
+  }
+
+  // Brand keywords resolve against the AQL theme; anything else is handed to the browser's
+  // own CSS color parser. Quasar palette names (red-10, light-blue-4) are not resolvable
+  // here — the swatch stays neutral, but the frontend resolves them at runtime.
+  var BRAND_HEX = {
+    primary:   '#0F2B4A',
+    secondary: '#D4A843',
+    accent:    '#E8C060',
+    positive:  '#1A7A4A',
+    negative:  '#C0362C',
+    info:      '#1A6FAD',
+    warning:   '#C97B1A',
+    dark:      '#071824'
+  };
+
+  function updateColorPreview() {
+    var swatch = document.getElementById('colorPreview');
+    if (!swatch) return;
+    var value = (document.getElementById('viewColor').value || '').trim();
+
+    swatch.style.background = 'transparent';
+    if (!value) return;
+
+    if (BRAND_HEX[value]) {
+      swatch.style.background = BRAND_HEX[value];
+      return;
+    }
+
+    // Let the browser validate hex/rgb/named CSS colors; invalid values leave it untouched.
+    swatch.style.background = value;
+    if (!swatch.style.background) swatch.style.background = 'transparent';
   }
 
   function closeEditor() {
@@ -662,7 +715,7 @@
       filter: filter
     };
 
-    var color = document.getElementById('viewColor').value;
+    var color = document.getElementById('viewColor').value.trim();
     if (color) view.color = color;
 
     if (document.getElementById('viewDefault').checked) {

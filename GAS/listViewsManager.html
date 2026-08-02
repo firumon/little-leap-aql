@@ -323,9 +323,54 @@
     { code: 'contains', label: 'Contains' }
   ];
 
+  // Mirrors TOKENS in FRONTENT/src/utils/listViewTokens.js — keep both in sync.
+  // `param` tokens take a value after a colon, e.g. $daysIn:30.
   var TOKENS = [
-    { code: '$now', label: 'Current Date/Time ($now)' }
+    { code: '$now', label: 'Now (timestamp)', group: 'Date & Time' },
+    { code: '$date', label: "Today's date (YYYY-MM-DD)", group: 'Date & Time' },
+    { code: '$day', label: 'Day of year (1-366)', group: 'Date & Time' },
+    { code: '$month', label: 'Current month (01-12)', group: 'Date & Time' },
+    { code: '$year', label: 'Current year (YYYY)', group: 'Date & Time' },
+    { code: '$week', label: 'Current ISO week (1-53)', group: 'Date & Time' },
+    { code: '$startOfDay', label: 'Start of today (timestamp)', group: 'Date & Time' },
+    { code: '$endOfDay', label: 'End of today (timestamp)', group: 'Date & Time' },
+    { code: '$startOfMonth', label: 'Start of this month (timestamp)', group: 'Date & Time' },
+    { code: '$endOfMonth', label: 'End of this month (timestamp)', group: 'Date & Time' },
+
+    { code: '$daysAgo', label: 'N days ago', group: 'Relative Days', param: '7' },
+    { code: '$daysIn', label: 'In N days', group: 'Relative Days', param: '30' },
+
+    { code: '$userCode', label: 'My user code', group: 'Current User' },
+    { code: '$userEmail', label: 'My email', group: 'Current User' },
+    { code: '$userName', label: 'My name', group: 'Current User' },
+    { code: '$userDesignation', label: 'My designation', group: 'Current User' },
+    { code: '$userRole', label: 'My primary role', group: 'Current User' },
+    { code: '$userRoles', label: 'My roles (list)', group: 'Current User', list: true },
+    { code: '$userRegion', label: 'My region code', group: 'Current User' },
+    { code: '$userRegions', label: 'My accessible regions (list)', group: 'Current User', list: true }
   ];
+
+  /**
+   * Builds the token <select> markup, grouped by TOKENS[].group.
+   * `selectedVal` is the current condition value, which for a param token looks like "$daysIn:30".
+   */
+  function buildTokenOptions(selectedVal) {
+    var currentCode = (selectedVal || '').split(':')[0];
+    var groups = [];
+    var byGroup = {};
+
+    TOKENS.forEach(function(t) {
+      if (!byGroup[t.group]) { byGroup[t.group] = []; groups.push(t.group); }
+      byGroup[t.group].push(t);
+    });
+
+    return '<option value="">Token...</option>' + groups.map(function(g) {
+      return '<optgroup label="' + esc(g) + '">' + byGroup[g].map(function(t) {
+        var sel = (currentCode === t.code) ? ' selected' : '';
+        return '<option value="' + t.code + '"' + sel + '>' + esc(t.label) + '</option>';
+      }).join('') + '</optgroup>';
+    }).join('');
+  }
 
   window.onload = function() {
     google.script.run
@@ -342,7 +387,7 @@
     DATA.resources.forEach(function(r) {
       var opt = document.createElement('option');
       opt.value = r.name;
-      opt.textContent = r.label || r.name;
+      opt.textContent = r.name;
       sel.appendChild(opt);
     });
     document.getElementById('mainLoader').classList.add('hidden');
@@ -357,7 +402,7 @@
     if (ACTIVE_RES.listViews && ACTIVE_RES.listViews.length > 0) {
       ACTIVE_RES.listViewsMode = 'custom';
     }
-    document.getElementById('resTitle').textContent = 'List Views for ' + (ACTIVE_RES.label || ACTIVE_RES.name);
+    document.getElementById('resTitle').textContent = 'List Views for ' + ACTIVE_RES.name;
     renderViews();
     document.getElementById('managerUI').classList.remove('hidden');
   }
@@ -389,7 +434,7 @@
           '<div style="display:flex; gap:8px; align-items:center; max-width:640px">' +
             '<select id="emptyModeSelect" style="flex:1">' +
               '<option value="auto" ' + (autoChecked ? 'selected' : '') + '>Fallback to default Active/Inactive</option>' +
-              '<option value="off" ' + (!autoChecked ? 'selected' : '') + '>Switch off ListViews for ' + esc(ACTIVE_RES.label || ACTIVE_RES.name) + '</option>' +
+              '<option value="off" ' + (!autoChecked ? 'selected' : '') + '>Switch off ListViews for ' + esc(ACTIVE_RES.name) + '</option>' +
             '</select>' +
             '<button class="btn btn-secondary" onclick="applyEmptyMode()">Update</button>' +
           '</div>' +
@@ -518,8 +563,7 @@
         '<div class="flex">' +
           '<input type="text" class="c-val" value="' + esc(valueStr) + '" style="flex:1">' +
           '<select class="c-token" style="width:auto; min-width: 80px" onchange="onTokenSelect(this)">' +
-            '<option value="">Token...</option>' +
-            TOKENS.map(function(t) { return '<option value="' + t.code + '"' + (valueStr === t.code ? ' selected' : '') + '>' + t.label + '</option>'; }).join('') +
+            buildTokenOptions(valueStr) +
           '</select>' +
         '</div>' +
       '</div>' +
@@ -560,9 +604,14 @@
   function onTokenSelect(sel) {
     var row = sel.closest('.condition-row');
     var valInput = row.querySelector('.c-val');
-    if (sel.value) {
-      valInput.value = sel.value;
-    }
+    if (!sel.value) return;
+
+    var token = null;
+    TOKENS.forEach(function(t) { if (t.code === sel.value) token = t; });
+
+    // Parameterised tokens are written as "$daysIn:30" — seed the default so the admin
+    // only has to edit the number.
+    valInput.value = (token && token.param) ? (sel.value + ':' + token.param) : sel.value;
   }
 
   function readFilterFromDOM(container) {

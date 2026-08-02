@@ -802,9 +802,11 @@ function app_getListViewsManagerData() {
         }
       } catch (e) { /* skip */ }
 
+      // Identify by APP.Resources `Name` only. The old `menus[0].label` fallback surfaced the
+      // first menu entry's label, so sub-menu resources (Products, Warehouses) all displayed
+      // "Manage" instead of their own name.
       return {
         name: res.name,
-        label: (Array.isArray(res.menus) && res.menus.length > 0 && res.menus[0].label) || res.name,
         headers: headers,
         listViews: res.listViews || [],
         listViewsMode: (res.listViewsMode || 'auto').toString()

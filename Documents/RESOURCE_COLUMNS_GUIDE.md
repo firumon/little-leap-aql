@@ -89,7 +89,8 @@ The `ListViews` column in the `APP.Resources` sheet defines custom data filter v
 * **Purpose**: Configures tab/segment views to filter record datasets on the resource index pages.
 * **Format**: A JSON array of view configuration objects.
 * **Overriding Rule**: If populated with a JSON array (or `[]` to explicitly disable switcher), custom template/modifier overriding for the views switcher is disabled. If blank, overrides are allowed.
-* **Detailed JSON Schema & Operators**: For the complete specification of the filter group/condition JSON objects and supported comparison operators, refer to the canonical [AQL Frontend List Switcher Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_LIST_SWITCHER.md#L126-L177).
+* **Detailed JSON Schema & Operators**: For the complete specification of the filter group/condition JSON objects and supported comparison operators, refer to the canonical [AQL Frontend List Switcher Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_LIST_SWITCHER.md).
+* **Dynamic Tokens**: A condition `value` may be a date/time or current-user token (`$startOfMonth`, `$daysIn:7`, `$userRoles`, ...) instead of a literal, so views such as "Due This Week" or "Assigned To Me" stay correct without per-user sheets. See [Section 5.2 — Dynamic Tokens](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_LIST_SWITCHER.md#52-dynamic-tokens-datetime--current-user).
 
 ## Relations Column Schema & Usage
 The `Relations` column declares explicit cross-resource links for a resource, overriding the frontend's name-based heuristics.

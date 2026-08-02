@@ -215,7 +215,7 @@ Represents a single query comparison:
 - `type`: Must be `"condition"`.
 - `column`: String matching the exact Google Sheet header column name.
 - `operator`: String operator mapping to comparison logic.
-- `value`: The target comparison value. Can be a string, number, array (for `in`/`not_in`), or a dynamic token like `"$now"` (evaluated as `Date.now()`).
+- `value`: The target comparison value. Can be a string, number, array (for `in`/`not_in`), or a **dynamic token** such as `"$startOfMonth"`, `"$daysIn:7"` or `"$userRoles"` — see [Section 5.2](#52-dynamic-tokens-date-time--current-user).
 
 #### C. Supported Comparison Operators
 The frontend evaluator supports the following operator keys:
@@ -229,10 +229,157 @@ The frontend evaluator supports the following operator keys:
 - `lte`: Less than or equal to.
 - `contains`: Checks if the column value contains the search string (substring match).
 
-For source code implementation, see `evaluateFilter` in [useListViews.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/useListViews.js#L86-L99).
+For source code implementation, see `evaluateFilter` in [useListViews.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/useListViews.js).
 
+---
 
-### 5.2. Conditional Overriding Criteria
+### 5.2. Dynamic Tokens (Date/Time & Current User)
+
+A condition `value` may be a **token string** instead of a literal. Tokens resolve at evaluation
+time against the clock and the logged-in user, so one sheet-authored view stays correct as the
+date rolls over or a different user signs in.
+
+Registry: [`src/utils/listViewTokens.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/listViewTokens.js).
+Token names are **case-insensitive** (`$startofmonth` works). In the **Manage Lists** admin
+dialog they appear in the grouped `Token...` dropdown next to each condition's value input.
+
+#### 5.2.1. Two-Sided Coercion
+
+A token can only be compared against a sheet column when both sides sit in the same space. AQL
+sheets store dates in two shapes — audit columns (`CreatedAt`/`UpdatedAt`) hold **epoch
+milliseconds**, business date columns (`Date`, `DueDate`, `VisitDate`) hold **ISO strings**,
+sometimes with a time component.
+
+Each token therefore declares two pipelines of named primitives from `COERCES`:
+
+| Field | Applies to | Default |
+| :--- | :--- | :--- |
+| `coerce` | the **column** value | — (required) |
+| `coerceToken` | the **resolved token** value | falls back to `coerce` |
+
+Most tokens are symmetric, so `coerce` alone covers both sides. The relative-day tokens are
+deliberately asymmetric: the column is converted to *signed days from today* while the token
+stays a plain number.
+
+Because both pipelines run, **the same token works against either storage format** —
+`gte $startOfMonth` behaves identically on `CreatedAt` (epoch ms) and `VisitDate` (ISO string).
+A column value that cannot be parsed into the comparison space (blank, malformed) never matches,
+including under `neq` / `not_in`.
+
+> [!NOTE]
+> **Calendar dates are read literally.** A trailing `Z` on a column value does not shift the day —
+> `2026-08-02T20:00:00.000Z` buckets as 2 Aug regardless of the viewer's timezone. This matches
+> the long-standing `.slice(0, 10)` behaviour in `useOutletVisits` and keeps day buckets stable
+> across regions. Date arithmetic itself is delegated to `date-fns`; only the parse/dispatch step
+> in [`dateHelpers.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/dateHelpers.js) is AQL-specific.
+
+#### 5.2.2. Date & Time Tokens
+
+| Token | Resolves to | Column is compared as |
+| :--- | :--- | :--- |
+| `$now` | Current timestamp (13-digit ms) | epoch ms |
+| `$date` | Today as `YYYY-MM-DD` | `YYYY-MM-DD` |
+| `$day` | Day of year, `1`-`366` | day of year |
+| `$month` | Current month, `"01"`-`"12"` | zero-padded month |
+| `$year` | Current year, `YYYY` | year |
+| `$week` | Current ISO week, `1`-`53` | ISO week |
+| `$startOfDay` | Today 00:00:00.000 (ms) | epoch ms |
+| `$endOfDay` | Today 23:59:59.999 (ms) | epoch ms |
+| `$startOfMonth` | 1st of this month 00:00:00.000 (ms) | epoch ms |
+| `$endOfMonth` | Last of this month 23:59:59.999 (ms) | epoch ms |
+
+> ISO weeks run 1-53, not 1-52 — week 53 exists in years whose first Thursday falls late
+> (e.g. 2026-12-31 is week 53).
+
+#### 5.2.3. Relative-Day Tokens (Parameterised)
+
+| Token | Resolves to |
+| :--- | :--- |
+| `$daysAgo:N` | `-N` (past) |
+| `$daysIn:N` | `+N` (future) |
+
+The column is converted to **signed whole days from today** — future positive, past negative,
+today `0`. Both are floored to local midnight, so a time component on the column is ignored.
+
+> [!WARNING]
+> **Rolling windows need both edges.** A single `lte $daysIn:7` also matches every overdue
+> record, because an invoice due 90 days ago has an offset of `-90` and `-90 <= 7`. Always pair
+> the bounds:
+> ```json
+> { "type": "group", "logic": "AND", "items": [
+>   { "type": "condition", "column": "DueDate", "operator": "gte", "value": "$daysIn:0" },
+>   { "type": "condition", "column": "DueDate", "operator": "lte", "value": "$daysIn:7" }
+> ]}
+> ```
+
+Common single-sided patterns that are correct as-is:
+
+| Intent | Condition |
+| :--- | :--- |
+| Overdue | `DueDate` `lt` `$daysIn:0` |
+| Due today | `DueDate` `eq` `$daysIn:0` |
+| Aged 30+ days | `DueDate` `lt` `$daysAgo:30` |
+
+#### 5.2.4. Current-User Tokens
+
+| Token | Resolves to |
+| :--- | :--- |
+| `$userCode` | `user.code ?? user.id` (GAS maps `UserID` → `id`) |
+| `$userEmail` | `user.email` |
+| `$userName` | `user.name` |
+| `$userDesignation` | `user.designation.name` |
+| `$userRole` | `user.role` (primary role) |
+| `$userRoles` | **Array** of all role names |
+| `$userRegion` | `user.accessRegion.code` |
+| `$userRegions` | **Array** of `user.accessRegion.accessibleCodes` |
+
+All are compared case-insensitively and trimmed. Array-valued tokens are intended for the
+`in` / `not_in` operators, where each element is matched individually:
+
+```json
+{ "type": "condition", "column": "Role", "operator": "in", "value": "$userRoles" }
+```
+
+A literal list may mix tokens and plain values — `["Viewer", "$userRoles"]` flattens to
+`["viewer", "auditor", "approver"]`.
+
+#### 5.2.5. Worked Example — "My Open Visits This Week"
+
+```json
+{
+  "name": "My Week",
+  "color": "primary",
+  "filter": {
+    "type": "group",
+    "logic": "AND",
+    "items": [
+      { "type": "condition", "column": "AssignedTo", "operator": "eq",  "value": "$userCode" },
+      { "type": "condition", "column": "Progress",   "operator": "in",  "value": ["PLANNED", "IN_PROGRESS"] },
+      { "type": "condition", "column": "VisitDate",  "operator": "gte", "value": "$daysIn:0" },
+      { "type": "condition", "column": "VisitDate",  "operator": "lte", "value": "$daysIn:7" }
+    ]
+  }
+}
+```
+
+#### 5.2.6. Adding a Token
+
+1. Add the entry to `TOKENS` in [`listViewTokens.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/listViewTokens.js), with `value(params, ctx)` as a plain extractor plus its `coerce` / `coerceToken` pipelines. Add a new primitive to `COERCES` only if no composition of the existing ones fits.
+2. Mirror it in the `TOKENS` array in [`GAS/listViewsManager.html`](file:///f:/LITTLE%20LEAP/AQL/GAS/listViewsManager.html) so admins can pick it from the dropdown. Parameterised tokens set `param` to the seeded default.
+3. Document it in the tables above.
+
+Pipeline names are validated at module load — an unknown `COERCES` key throws immediately
+rather than silently producing an empty tab.
+
+#### 5.2.7. Runtime Notes
+
+- **Date tokens resolve when the view recomputes**, not on a timer. `viewCounts` / `viewFilteredItems` re-run when the records or the view set change, which covers normal navigation and refresh. A session left open across local midnight keeps the previous day's buckets until the next reload or data refresh.
+- **Filtering is client-side.** Tokens evaluate against the rows already loaded, so counts reflect the fetched set, not the whole sheet.
+- **Non-token conditions are unchanged** — literals still use the original numeric-then-string coercion.
+
+---
+
+### 5.3. Conditional Overriding Criteria
 The views switcher respects sheet-driven constraints explicitly inside the base views switcher. Whether custom JS modifiers (`ListSwitcher.js` / `ViewSwitcher.js`) or Vue overrides (`ListSwitcher.vue` / `ViewSwitcher.vue`) are applied depends on the exact value of the `ListViews` cell:
 
 1. **Empty String (Blank Cell)**: 

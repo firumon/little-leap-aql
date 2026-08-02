@@ -150,7 +150,7 @@ Every SFC implements the same surface: `defineModel()` for the value, plus `reco
 | `link` | `q-input type="url"` + link icon/hint | `<a target="_blank">` + `open_in_new` icon |
 | `tel` | `q-input type="tel"` + phone icon | `<a href="tel:…">` + phone icon |
 | `file` | `AqlFileUpload` | `AqlFilePreviewCard` |
-| `textarea` | `q-input type="textarea"` autogrow | multiline text (`white-space: pre-line`) |
+| `textarea` | `q-input type="textarea"` (no `autogrow`/`dense`/`rows` — they collapse it to a text-field look) | multiline text (`white-space: pre-line`) |
 | `status` | `StatusToggle`, or `q-select` when `config.options` exists | coloured `QChip` (map overridable via `config.statusColors`) |
 | `select` | `q-select` with `use-input` local filtering | resolved option label |
 | `date` | `app/Date.vue` | `toLocaleDateString('en-GB', …)` |

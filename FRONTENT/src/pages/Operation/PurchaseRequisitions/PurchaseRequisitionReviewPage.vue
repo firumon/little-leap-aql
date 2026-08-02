@@ -151,7 +151,6 @@
               v-model="actionComment"
               type="textarea"
               outlined
-              autogrow
               class="q-mt-md"
               placeholder="Add review comment"
             />

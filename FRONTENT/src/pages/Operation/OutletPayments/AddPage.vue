@@ -463,11 +463,9 @@
                       <q-input
                         v-model="reference"
                         outlined
-                        dense
                         placeholder="e.g. Bank ref#, Cheque#, transaction notes"
                         class="premium-input"
                         type="textarea"
-                        rows="3"
                       />
                     </div>
                   </div>

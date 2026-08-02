@@ -122,7 +122,7 @@
 
         <q-card-section>
           <p class="text-body2 text-grey-8 q-mt-none">This will cancel the consumption, its dependent invoice, and reject any pending restocks. This action cannot be undone.</p>
-          <q-input v-model="cancelReason" outlined type="textarea" label="Cancellation reason" :rules="[val => !!val || 'Reason is required']" rows="3" class="q-mt-md" />
+          <q-input v-model="cancelReason" outlined type="textarea" label="Cancellation reason" :rules="[val => !!val || 'Reason is required']" class="q-mt-md" />
         </q-card-section>
 
         <q-card-actions align="right" class="q-pa-md">

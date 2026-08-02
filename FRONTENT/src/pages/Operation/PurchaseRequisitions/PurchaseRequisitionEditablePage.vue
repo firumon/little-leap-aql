@@ -252,7 +252,6 @@
               v-model="responseComment"
               type="textarea"
               outlined
-              autogrow
               :label="isRevision ? 'Update Comment *' : 'Update Comment'"
               :hint="isRevision ? 'Required before updating a revised requisition' : 'Optional note for this update'"
               :rules="updateCommentRequired ? [value => !!String(value || '').trim() || 'Comment is required'] : []"

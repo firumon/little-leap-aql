@@ -76,9 +76,7 @@
                   v-model="actionComment"
                   type="textarea"
                   label="Action Comment (Required for Cancel)"
-                  dense
                   outlined
-                  autogrow
                 />
               </div>
               <div v-if="availableActions.length === 0" class="text-grey text-center q-pa-md">

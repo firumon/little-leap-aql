@@ -80,7 +80,7 @@
       <q-card style="min-width: 360px; max-width: 90vw;">
         <q-card-section class="text-h6">{{ deliverAll ? `Mark ${bulkTargetCodes.length} Items Delivered` : 'Mark Item Delivered' }}</q-card-section>
         <q-card-section>
-          <q-input v-model="deliverComment" type="textarea" label="Comment (optional)" outlined rows="2" />
+          <q-input v-model="deliverComment" type="textarea" label="Comment (optional)" outlined />
         </q-card-section>
         <q-card-actions align="right">
           <q-btn flat label="Cancel" v-close-popup />

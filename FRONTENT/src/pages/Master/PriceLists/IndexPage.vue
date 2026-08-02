@@ -85,7 +85,7 @@
                   <div class="col-12">
                     <q-input
                       v-model="editingHeader.Description"
-                      outlined dense type="textarea" autogrow label="Description"
+                      outlined type="textarea" label="Description"
                     />
                   </div>
                 </div>

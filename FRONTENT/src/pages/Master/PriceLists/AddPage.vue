@@ -34,7 +34,7 @@
             />
           </div>
           <div class="col-12">
-            <q-input v-model="form.Description" outlined dense type="textarea" autogrow label="Description" />
+            <q-input v-model="form.Description" outlined type="textarea" label="Description" />
           </div>
           <div class="col-12">
             <q-select

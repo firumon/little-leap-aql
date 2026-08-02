@@ -270,7 +270,6 @@
               val => !!val || 'Cancellation comment is required',
               val => val.trim().length >= 3 || 'Comment must be at least 3 characters long'
             ]"
-            rows="3"
             class="premium-input"
           />
         </q-card-section>

@@ -166,12 +166,12 @@
           <q-input
             v-if="actionDialog.actionName === 'Complete' || actionDialog.actionName === 'ClaimAndComplete'"
             v-model="actionDialog.fields.ProgressCompletedComment"
-            type="textarea" label="Completion Note (optional)" outlined dense
+            type="textarea" label="Completion Note (optional)" outlined
           />
           <q-input
             v-if="actionDialog.actionName === 'Reject'"
             v-model="actionDialog.fields.ProgressRejectedComment"
-            type="textarea" label="Rejection Reason *" outlined dense
+            type="textarea" label="Rejection Reason *" outlined
           />
         </q-card-section>
         <q-card-actions align="right" class="q-pb-md q-pr-lg">

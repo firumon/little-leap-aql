@@ -62,8 +62,6 @@
               type="textarea"
               label="Remarks"
               outlined
-              dense
-              autogrow
             />
           </div>
         </div>

@@ -65,10 +65,9 @@
         </template>
       </q-select>
 
-      <!-- Comment / reason / remark / note — a multiline control that grows with
-           the text. Deliberately no `dense` and no static `rows`: `dense` shrinks
-           the control below a comfortable touch target, and a fixed `rows` fights
-           `autogrow` by pinning the height instead of letting it expand. -->
+      <!-- Comment / reason / remark / note. Deliberately no `autogrow`, `dense` or
+           `rows`: each collapses the control toward a single-line height, so it stops
+           reading as a textarea. Plain type="textarea" keeps its natural box. -->
       <q-input
         v-else-if="field.type === 'textarea'"
         type="textarea"

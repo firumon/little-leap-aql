@@ -2,7 +2,6 @@
   <q-input
     v-model="model"
     outlined
-    autogrow
     v-bind="config"
     type="textarea"
   />

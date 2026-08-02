@@ -15,17 +15,14 @@
     </span>
 
     <!-- Active glow indicator -->
-    <span
-      v-if="active"
-      class="aql-list-switcher-item__dot"
-      :style="activeDotStyle"
-    />
+    <span v-if="active" class="aql-list-switcher-item__dot" />
   </button>
 </template>
 
 <script setup>
 import { computed, inject } from 'vue'
 import { evaluateProp } from 'src/composables/resources/useSectionResolver'
+import { resolveCssColor } from 'src/utils/colorHelpers'
 
 defineOptions({ name: 'SectionsListSwitcherItem', inheritAttrs: false })
 
@@ -53,24 +50,15 @@ const resolvedColor = computed(() => {
   return evaluateProp(props.color, resourceRecord, resourceConfig) || props.item?.color || 'primary'
 })
 
-const itemClasses = computed(() => {
-  const color = resolvedColor.value
-  return {
-    'aql-list-switcher-item--active':             props.active,
-    [`aql-list-switcher-item--active-${color}`]:  props.active,
-    'aql-list-switcher-item--inactive':           !props.active,
-  }
-})
+const itemClasses = computed(() => ({
+  'aql-list-switcher-item--active':   props.active,
+  'aql-list-switcher-item--inactive': !props.active,
+}))
 
+// Active items expose their resolved color as a CSS custom property; custom.scss derives
+// the gradient, text/icon color, shadow, and indicator dot from it via color-mix().
 const itemStyle = computed(() => {
   if (!props.active) return {}
-  const color = resolvedColor.value
-  if (!color || color === 'primary') return {}
-  return { '--aql-switcher-active-color': `var(--q-${color}, currentColor)` }
-})
-
-const activeDotStyle = computed(() => {
-  const color = resolvedColor.value
-  return { background: `var(--q-${color}, var(--q-primary))` }
+  return { '--aql-switcher-color': resolveCssColor(resolvedColor.value) }
 })
 </script>

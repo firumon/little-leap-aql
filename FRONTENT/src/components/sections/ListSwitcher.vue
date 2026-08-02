@@ -33,11 +33,7 @@
         <q-icon name="arrow_drop_down" class="q-ml-xs" size="16px" />
 
         <!-- Active glow indicator if active item is inside the dropdown -->
-        <span
-          v-if="isOverflowActive"
-          class="aql-list-switcher-item__dot"
-          :style="activeDotStyle(activeOverflowItem)"
-        />
+        <span v-if="isOverflowActive" class="aql-list-switcher-item__dot" />
 
         <!-- Native Quasar dropdown menu -->
         <q-menu auto-close transition-show="jump-down" transition-hide="jump-up">
@@ -49,6 +45,7 @@
               :active="finalAttrs.activeItem === item.name"
               active-class="text-weight-bold"
               :class="menuItemClasses(item)"
+              :style="menuItemStyle(item)"
               @click="handleItemClick(item.name)"
             >
               <q-item-section avatar v-if="resolvedIcon(item)" style="min-width: auto; padding-right: 8px;">
@@ -68,6 +65,7 @@ import { computed, inject, useAttrs } from 'vue'
 import { evaluateProp, useSectionResolver } from 'src/composables/resources/useSectionResolver'
 import { useQuasar } from 'quasar'
 import ListSwitcherItem from 'components/sections/ListSwitcherItem.vue'
+import { resolveCssColor } from 'src/utils/colorHelpers'
 
 defineOptions({ name: 'SectionsListSwitcher', inheritAttrs: false })
 
@@ -167,22 +165,13 @@ const moreButtonIcon = computed(() => {
 })
 
 const moreButtonClasses = computed(() => {
-  if (isOverflowActive.value) {
-    const item = activeOverflowItem.value
-    const color = item.color || 'primary'
-    return {
-      'aql-list-switcher-item--active': true,
-      [`aql-list-switcher-item--active-${color}`]: true,
-    }
-  }
+  if (isOverflowActive.value) return { 'aql-list-switcher-item--active': true }
   return { 'aql-list-switcher-item--inactive': true }
 })
 
 const moreButtonStyle = computed(() => {
   if (!isOverflowActive.value) return {}
-  const color = activeOverflowItem.value.color
-  if (!color || color === 'primary') return {}
-  return { '--aql-switcher-active-color': `var(--q-${color}, currentColor)` }
+  return { '--aql-switcher-color': resolveCssColor(activeOverflowItem.value.color) }
 })
 
 // ── Per-item resolution via useSectionResolver for 'ListSwitcherItem' ──
@@ -237,17 +226,12 @@ function buildItemProps(item) {
 
 // ── Visual helpers ──
 function menuItemClasses(item) {
-  const isActive = finalAttrs.value.activeItem === item.name
-  const color = item.color || 'primary'
-  return {
-    [`text-${color}`]: isActive,
-    'bg-grey-2': isActive,
-  }
+  return { 'bg-grey-2': finalAttrs.value.activeItem === item.name }
 }
 
-// Active dot gets active color highlight
-function activeDotStyle(item) {
-  const color = item.color || 'primary'
-  return { background: `var(--q-${color}, var(--q-primary))` }
+// Dropdown entries take their color from the same dynamic resolution as the pills
+function menuItemStyle(item) {
+  if (finalAttrs.value.activeItem !== item.name) return {}
+  return { color: resolveCssColor(item.color) }
 }
 </script>

@@ -793,61 +793,26 @@
   }
 }
 
-// Active variants — each brand color
+// Active state — fully dynamic. Components set `--aql-switcher-color` inline to any resolved
+// CSS color (brand `var(--q-*)`, Quasar palette hex, or a raw hex/rgb value) and every visual
+// layer below is derived from it via color-mix(). No per-color class variants needed.
 .aql-list-switcher-item--active {
-  &.aql-list-switcher-item--active-primary {
-    background: linear-gradient(135deg, var(--q-primary-light, #dbeafe) 0%, rgba($primary, 0.14) 100%);
-    color: var(--q-primary);
-    font-weight: 600;
-    box-shadow: 0 2px 8px rgba($primary, 0.18);
+  --aql-switcher-color: var(--q-primary);
+
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--aql-switcher-color) 12%, white) 0%,
+    color-mix(in srgb, var(--aql-switcher-color) 18%, white) 100%
+  );
+  color: var(--aql-switcher-color);
+  font-weight: 600;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--aql-switcher-color) 18%, transparent);
+
+  .aql-list-switcher-item__icon {
+    color: var(--aql-switcher-color);
   }
 
-  &.aql-list-switcher-item--active-secondary {
-    background: linear-gradient(135deg, var(--q-secondary-light, #e0f7f4) 0%, rgba($secondary, 0.14) 100%);
-    color: var(--q-secondary);
-    font-weight: 600;
-    box-shadow: 0 2px 8px rgba($secondary, 0.18);
-  }
-
-  &.aql-list-switcher-item--active-positive {
-    background: linear-gradient(135deg, var(--q-positive-light, #dcfce7) 0%, rgba($positive, 0.14) 100%);
-    color: var(--q-positive);
-    font-weight: 600;
-    box-shadow: 0 2px 8px rgba($positive, 0.18);
-  }
-
-  &.aql-list-switcher-item--active-negative {
-    background: linear-gradient(135deg, var(--q-negative-light, #fee2e2) 0%, rgba($negative, 0.14) 100%);
-    color: var(--q-negative);
-    font-weight: 600;
-    box-shadow: 0 2px 8px rgba($negative, 0.18);
-  }
-
-  &.aql-list-switcher-item--active-info {
-    background: linear-gradient(135deg, var(--q-info-light, #dbeafe) 0%, rgba($info, 0.14) 100%);
-    color: var(--q-info);
-    font-weight: 600;
-    box-shadow: 0 2px 8px rgba($info, 0.18);
-  }
-
-  &.aql-list-switcher-item--active-warning {
-    background: linear-gradient(135deg, var(--q-warning-light, #fef9c3) 0%, rgba($warning, 0.14) 100%);
-    color: var(--q-warning);
-    font-weight: 600;
-    box-shadow: 0 2px 8px rgba($warning, 0.18);
-  }
-
-  &.aql-list-switcher-item--active-accent {
-    background: linear-gradient(135deg, var(--q-accent-light, #ede9fe) 0%, rgba($accent, 0.14) 100%);
-    color: var(--q-accent);
-    font-weight: 600;
-    box-shadow: 0 2px 8px rgba($accent, 0.18);
-  }
-
-  &.aql-list-switcher-item--active-grey {
-    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-    color: #475569;
-    font-weight: 600;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  .aql-list-switcher-item__dot {
+    background: color-mix(in srgb, var(--aql-switcher-color) 85%, transparent);
   }
 }

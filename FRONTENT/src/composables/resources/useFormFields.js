@@ -210,13 +210,14 @@ export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions =
       : resolvedType === 'link' ? 'url'
         : resolvedType === 'tel' ? 'tel' : 'text'
 
+  // Textareas deliberately get no `autogrow` (nor `dense`/`rows`) — each collapses the
+  // control toward a single-line height, making it read as a plain text field.
   return {
     header: field.header,
     fieldType: resolvedType,
     componentName: 'q-input',
     ...baseProps,
-    type: inputType,
-    autogrow: resolvedType === 'textarea'
+    type: inputType
   }
 }
 

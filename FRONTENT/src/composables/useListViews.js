@@ -1,13 +1,7 @@
 import { ref, computed, watch } from 'vue'
 import { useAuthStore } from 'src/stores/auth'
 import { singularize } from 'src/utils/appHelpers'
-
-/**
- * Token resolver map — extensible for future tokens.
- */
-const TOKEN_RESOLVERS = {
-  $now: () => Date.now()
-}
+import { COERCES, applyCoerces, parseToken } from 'src/utils/listViewTokens'
 
 // Headers an auto-generated "categorical" view should never be built from.
 const AUTO_VIEW_EXCLUDED_HEADERS = new Set([
@@ -148,16 +142,12 @@ export function normalizeListViewsMode(mode) {
   return ''
 }
 
-function resolveTokenValue(value) {
-  if (typeof value === 'string' && TOKEN_RESOLVERS[value]) {
-    return TOKEN_RESOLVERS[value]()
-  }
-  return value
-}
-
 /**
  * Attempts numeric coercion for comparison operators.
  * Returns { a, b } as numbers if both coerce, otherwise as lowercase strings.
+ *
+ * Used for literal (non-token) values only — token conditions carry their own
+ * two-sided coercion pipelines. See src/utils/listViewTokens.js.
  */
 function coerceForComparison(a, b) {
   const numA = Number(a)
@@ -169,47 +159,126 @@ function coerceForComparison(a, b) {
 }
 
 /**
+ * Compares two already-coerced values. Both sides are assumed to sit in the same space.
+ */
+function compareCoerced(operator, a, b) {
+  const asArray = Array.isArray(b) ? b : [b]
+
+  switch (operator) {
+    case 'eq':
+      return a === asArray[0]
+    case 'neq':
+      return a !== asArray[0]
+    case 'in':
+      return asArray.some((v) => v === a)
+    case 'not_in':
+      return !asArray.some((v) => v === a)
+    case 'gt':
+      return a > asArray[0]
+    case 'gte':
+      return a >= asArray[0]
+    case 'lt':
+      return a < asArray[0]
+    case 'lte':
+      return a <= asArray[0]
+    case 'contains':
+      // Substring matching is only meaningful on strings, whatever the declared pipeline.
+      return COERCES.lowercase(a).includes(COERCES.lowercase(asArray[0]))
+    default:
+      return false
+  }
+}
+
+/**
+ * Evaluates a condition whose value references a dynamic token.
+ *
+ * The token's `coerce` pipeline normalises the column value and its `coerceToken` pipeline
+ * (defaulting to `coerce`) normalises the resolved token value, so both sides end up
+ * comparable. Array-valued tokens are flattened for `in` / `not_in`.
+ */
+function evaluateTokenCondition({ operator, rowValue, values, governing, ctx }) {
+  const { spec } = governing
+  const columnPipeline = spec.coerce || []
+  const tokenPipeline = spec.coerceToken || spec.coerce || []
+
+  const left = applyCoerces(rowValue, columnPipeline)
+  // A column that cannot be parsed into the comparison space is never a match — returning
+  // false explicitly rather than relying on NaN comparison semantics keeps `neq`/`not_in`
+  // from silently sweeping in every unparseable row.
+  if (typeof left === 'number' && Number.isNaN(left)) return false
+
+  const right = []
+  for (const entry of values) {
+    const token = parseToken(entry)
+    const resolved = token ? token.spec.value(token.params, ctx) : entry
+    if (Array.isArray(resolved)) {
+      resolved.forEach((item) => right.push(applyCoerces(item, tokenPipeline)))
+    } else {
+      right.push(applyCoerces(resolved, tokenPipeline))
+    }
+  }
+
+  return compareCoerced(operator, left, right)
+}
+
+/**
  * Evaluates a single condition against a row.
  */
-function evaluateCondition(condition, row) {
+function evaluateCondition(condition, row, ctx) {
   const { column, operator, value } = condition
   if (!column || !(column in row)) return false
 
   const rowValue = row[column]
+
+  // A token anywhere in the value governs coercion for the whole condition. The list-views
+  // manager splits `in`/`not_in` values on commas, so a token can arrive wrapped in an array.
+  const values = Array.isArray(value) ? value : [value]
+  let governing = null
+  for (const entry of values) {
+    const token = parseToken(entry)
+    if (token) {
+      governing = token
+      break
+    }
+  }
+
+  if (governing) {
+    return evaluateTokenCondition({ operator, rowValue, values, governing, ctx })
+  }
+
   const rowStr = (rowValue ?? '').toString().toLowerCase()
-  const resolved = resolveTokenValue(value)
 
   switch (operator) {
     case 'eq':
-      return rowStr === String(resolved).toLowerCase()
+      return rowStr === String(value).toLowerCase()
     case 'neq':
-      return rowStr !== String(resolved).toLowerCase()
+      return rowStr !== String(value).toLowerCase()
     case 'in': {
-      const arr = Array.isArray(resolved) ? resolved : [resolved]
+      const arr = Array.isArray(value) ? value : [value]
       return arr.some((v) => rowStr === String(v).toLowerCase())
     }
     case 'not_in': {
-      const arr = Array.isArray(resolved) ? resolved : [resolved]
+      const arr = Array.isArray(value) ? value : [value]
       return !arr.some((v) => rowStr === String(v).toLowerCase())
     }
     case 'gt': {
-      const c = coerceForComparison(rowValue, resolved)
+      const c = coerceForComparison(rowValue, value)
       return c.a > c.b
     }
     case 'gte': {
-      const c = coerceForComparison(rowValue, resolved)
+      const c = coerceForComparison(rowValue, value)
       return c.a >= c.b
     }
     case 'lt': {
-      const c = coerceForComparison(rowValue, resolved)
+      const c = coerceForComparison(rowValue, value)
       return c.a < c.b
     }
     case 'lte': {
-      const c = coerceForComparison(rowValue, resolved)
+      const c = coerceForComparison(rowValue, value)
       return c.a <= c.b
     }
     case 'contains':
-      return rowStr.includes(String(resolved).toLowerCase())
+      return rowStr.includes(String(value).toLowerCase())
     default:
       return false
   }
@@ -217,18 +286,22 @@ function evaluateCondition(condition, row) {
 
 /**
  * Recursively evaluates a filter tree (group or condition) against a row.
+ *
+ * @param {Object} filter - group or condition node
+ * @param {Object} row - the record under test
+ * @param {Object} [ctx] - token evaluation context, `{ user }`. Required only by user tokens.
  */
-export function evaluateFilter(filter, row) {
+export function evaluateFilter(filter, row, ctx = {}) {
   if (!filter) return true
-  if (filter.type === 'condition') return evaluateCondition(filter, row)
+  if (filter.type === 'condition') return evaluateCondition(filter, row, ctx)
   if (filter.type === 'group') {
     const items = filter.items || []
     if (!items.length) return true // empty group = match all
     if (filter.logic === 'OR') {
-      return items.some((item) => evaluateFilter(item, row))
+      return items.some((item) => evaluateFilter(item, row, ctx))
     }
     // Default AND
-    return items.every((item) => evaluateFilter(item, row))
+    return items.every((item) => evaluateFilter(item, row, ctx))
   }
   return true
 }
@@ -260,6 +333,9 @@ export function useListViews({
 }) {
   const activeViewName = ref('')
   const authStore = useAuthStore()
+
+  /** Evaluation context for user-aware tokens ($userCode, $userRoles, ...). */
+  const tokenContext = computed(() => ({ user: authStore.user }))
 
   /**
    * Build effective views:
@@ -326,8 +402,9 @@ export function useListViews({
   const viewCounts = computed(() => {
     const counts = {}
     const allItems = items?.value || []
+    const ctx = tokenContext.value
     for (const view of effectiveViews.value) {
-      counts[view.name] = allItems.filter((row) => evaluateFilter(view.filter, row)).length
+      counts[view.name] = allItems.filter((row) => evaluateFilter(view.filter, row, ctx)).length
     }
     return counts
   })
@@ -338,7 +415,8 @@ export function useListViews({
   const viewFilteredItems = computed(() => {
     const allItems = items?.value || []
     if (!activeView.value) return allItems
-    return allItems.filter((row) => evaluateFilter(activeView.value.filter, row))
+    const ctx = tokenContext.value
+    return allItems.filter((row) => evaluateFilter(activeView.value.filter, row, ctx))
   })
 
   function setActiveView(name) {

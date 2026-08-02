@@ -278,15 +278,15 @@ including under `neq` / `not_in`.
 | Token | Resolves to | Column is compared as |
 | :--- | :--- | :--- |
 | `$now` | Current timestamp (13-digit ms) | epoch ms |
-| `$date` | Today as `YYYY-MM-DD` | `YYYY-MM-DD` |
+| `$date[:N]` | Today as `YYYY-MM-DD` (or N-day offset: `$date:0` = today, `$date:1` = tomorrow, `$date:-1` = yesterday) | `YYYY-MM-DD` |
 | `$day` | Day of year, `1`-`366` | day of year |
-| `$month` | Current month, `"01"`-`"12"` | zero-padded month |
+| `$month[:N]` | Current month as `"01"`-`"12"` (or N-month offset: `$month:0` = current, `$month:1` = next month, `$month:-1` = previous month) | zero-padded month |
 | `$year` | Current year, `YYYY` | year |
 | `$week` | Current ISO week, `1`-`53` | ISO week |
-| `$startOfDay` | Today 00:00:00.000 (ms) | epoch ms |
-| `$endOfDay` | Today 23:59:59.999 (ms) | epoch ms |
-| `$startOfMonth` | 1st of this month 00:00:00.000 (ms) | epoch ms |
-| `$endOfMonth` | Last of this month 23:59:59.999 (ms) | epoch ms |
+| `$startOfDay[:N]` | Day 00:00:00.000 ms with N-day offset (default N=0 for today) | epoch ms |
+| `$endOfDay[:N]` | Day 23:59:59.999 ms with N-day offset (default N=0 for today) | epoch ms |
+| `$startOfMonth[:N]` | 1st of month 00:00:00.000 ms with N-month offset (default N=0 for this month) | epoch ms |
+| `$endOfMonth[:N]` | Last of month 23:59:59.999 ms with N-month offset (default N=0 for this month) | epoch ms |
 
 > ISO weeks run 1-53, not 1-52 — week 53 exists in years whose first Thursday falls late
 > (e.g. 2026-12-31 is week 53).
@@ -373,7 +373,8 @@ rather than silently producing an empty tab.
 
 #### 5.2.7. Runtime Notes
 
-- **Date tokens resolve when the view recomputes**, not on a timer. `viewCounts` / `viewFilteredItems` re-run when the records or the view set change, which covers normal navigation and refresh. A session left open across local midnight keeps the previous day's buckets until the next reload or data refresh.
+- **Filters are compiled once per pass.** `prepareFilter(filter, ctx)` walks the tree once and resolves every token (`spec.value` + the `coerceToken` pipeline) plus the normalised forms of literal values into a prepared node; `evaluatePreparedFilter(prepared, row)` then runs per row and does no token parsing at all. `viewCounts` / `viewFilteredItems` use this pair, so token cost is O(conditions) rather than O(conditions × rows). `evaluateFilter(filter, row, ctx)` remains as the single-row entry point and simply prepares-then-evaluates.
+- **Date tokens resolve when the view recomputes**, not on a timer. `viewCounts` / `viewFilteredItems` re-run when the records or the view set change, which covers normal navigation and refresh. A session left open across local midnight keeps the previous day's buckets until the next reload or data refresh. All rows in one pass therefore see the *same* token values — a pass can no longer straddle a midnight rollover.
 - **Filtering is client-side.** Tokens evaluate against the rows already loaded, so counts reflect the fetched set, not the whole sheet.
 - **Non-token conditions are unchanged** — literals still use the original numeric-then-string coercion.
 

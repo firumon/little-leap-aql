@@ -23,7 +23,7 @@ Read these before editing anything:
 | :--- | :--- |
 | [`FRONTENT/src/utils/listViewTokens.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/listViewTokens.js) | **Token registry + `COERCES` primitive library.** The single source of truth for token behaviour. |
 | [`FRONTENT/src/utils/dateHelpers.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/dateHelpers.js) | Date parse/normalise helpers. Calculations delegate to `date-fns`; only `parseAnyDate` is hand-rolled. |
-| [`FRONTENT/src/composables/useListViews.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/useListViews.js) | `evaluateFilter` / `evaluateCondition`, auto-generated views, active-view state. |
+| [`FRONTENT/src/composables/useListViews.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/useListViews.js) | `prepareFilter` / `evaluatePreparedFilter` / `evaluateFilter`, auto-generated views, active-view state. |
 | [`GAS/listViewsManager.html`](file:///f:/LITTLE%20LEAP/AQL/GAS/listViewsManager.html) | **Admin dialog.** Its `TOKENS` array is a hand-maintained mirror of the frontend registry. |
 | [`Documents/AQL_FRONTEND_LIST_SWITCHER.md`](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_LIST_SWITCHER.md) | **Canonical spec.** Section 5.2 is the token reference. |
 
@@ -90,11 +90,24 @@ is the working design. Do not collapse it back into a flag.
 
 ### 3.4 Evaluation flow
 
-`evaluateFilter(filter, row, ctx)` → `evaluateCondition` → if a token is present anywhere in the
-value, `evaluateTokenCondition`; otherwise the legacy literal path (`coerceForComparison`).
+Evaluation is a **two-phase, compiled** pass:
+
+1. `prepareFilter(filter, ctx)` walks the tree **once** and compiles each condition via
+   `prepareCondition`. Everything row-independent is resolved here — `parseToken`, `spec.value`,
+   the `coerceToken` pipeline, and the lowercase/numeric forms of literal values. A token condition
+   compiles to `{ column, operator, columnPipeline, right }`; a literal one to
+   `{ column, operator, literalStr, literalList, literalNum }`.
+2. `evaluatePreparedFilter(prepared, row)` runs **per row** and only applies the column-side
+   `coerce` pipeline plus `compareCoerced`. **No `parseToken` or `spec.value` call may ever move
+   into this phase** — that is the whole point of the split.
+
+`evaluateFilter(filter, row, ctx)` is retained as the backwards-compatible single-row entry point
+(it prepares, then evaluates). Collection filtering must use the two-phase pair — `viewCounts` and
+`viewFilteredItems` do.
 
 - `ctx` is `{ user }`, built in `useListViews` from `authStore.user`. It is optional (`= {}`) so
   existing call sites keep working.
+- Because the whole pass shares one compiled tree, every row sees identical token values.
 - **A token anywhere in the value governs coercion for the whole condition.** The GAS dialog
   comma-splits `in`/`not_in` values, so a token routinely arrives wrapped in an array.
 - Literal (non-token) conditions must keep using the original path. Do not unify them — that would
@@ -174,9 +187,11 @@ These are settled decisions. Preserve them, and mention them when a user's reque
    ignores a trailing `Z`, matching the long-standing `.slice(0, 10)` behaviour in
    `useOutletVisits`. Do **not** swap in `date-fns` `parseISO` — it honours the zone and would
    re-bucket existing rows across a day boundary. This is documented in §5.2.1 of the canonical doc.
-4. **Unparseable columns never match.** `evaluateTokenCondition` returns `false` explicitly on `NaN`
-   rather than riding NaN comparison semantics — otherwise `neq`/`not_in` would sweep in every blank
-   row. Do not "fix" this with `|| 0`.
+4. **Unparseable columns never match.** The token branch of `evaluatePreparedCondition` returns
+   `false` explicitly on `NaN` rather than riding NaN comparison semantics — otherwise `neq`/`not_in`
+   would sweep in every blank row. Do not "fix" this with `|| 0`. Note the guard is **NaN-only**: a
+   string-valued pipeline (`dateOnly`, `month2`) yields `''` for a blank column, so `neq $date`
+   still matches blanks. Long-standing behaviour; changing it would re-bucket existing views.
 5. **Array tokens coerce per element.** `$userRoles` must map the pipeline over each entry;
    coercing the array as a whole yields `"auditor,approver"` and matches nothing.
 6. **`contains` always forces strings**, whatever the declared pipeline. Substring matching on a

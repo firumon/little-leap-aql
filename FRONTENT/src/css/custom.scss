@@ -824,8 +824,11 @@
 // (ARCHITECTURE RULES §7) — a tenant `.vue` override could not inherit scoped CSS.
 // Layout, alignment, overflow, ellipsis and text-transform all come from Quasar
 // utility classes in the template (`row no-wrap items-stretch scroll-x`, `col`,
-// `relative-position overflow-hidden`, `ellipsis text-uppercase`, `q-py-xs q-px-sm`).
+// `relative-position overflow-hidden`, `ellipsis text-uppercase`, `q-px-sm`).
 // Only what Quasar has no utility for survives below.
+//
+// Horizontal inset only: vertical rhythm is owned by `.aql-page-body`'s gutter,
+// so the row adds no `q-py-*` of its own and stacks flush with its neighbours.
 .aql-metrics__row {
   // No Quasar gap utility exists; q-gutter-* is unusable here because its negative
   // container margin widens the row past its parent inside a scroll container.
@@ -914,4 +917,78 @@
       transform: none;
     }
   }
+}
+
+// ── Linear Progress (sections/LinearProgress.vue) ─────────────────────────────
+// Same dynamic-colour contract as the metric cards above: the component sets
+// `--aql-progress-color` inline to any resolved CSS colour and every layer below
+// derives from it via color-mix(). Section components carry no `<style>` block
+// (ARCHITECTURE RULES §7). Layout, wrapping, alignment, ellipsis, text-transform
+// and spacing all come from Quasar utility classes in the template
+// (`row items-stretch`, `col-12 col-sm`, `justify-between`, `ellipsis`,
+// `text-uppercase`, `text-caption`, `q-mt-sm q-mt-xs`, `q-px-sm`).
+// Only what Quasar has no utility for survives below.
+//
+// Horizontal inset only: vertical rhythm is owned by `.aql-page-body`'s gutter,
+// so the row adds no `q-py-*` of its own and stacks flush with its neighbours.
+.aql-linear-progress__row {
+  // No Quasar gap utility exists; q-gutter-* is unusable here because its negative
+  // container margin widens the row past its parent.
+  gap: map-get($space-sm, x);
+}
+
+.aql-linear-progress__card {
+  --aql-progress-color: var(--q-primary);
+
+  // 17px left padding = 14px + the 3px accent rail; off the Quasar spacing scale.
+  padding: 12px 14px 12px 17px;
+  border: 1px solid color-mix(in srgb, var(--aql-progress-color) 20%, transparent);
+  border-radius: $r-sm;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--aql-progress-color) 9%, white) 0%,
+    color-mix(in srgb, var(--aql-progress-color) 3%, white) 55%,
+    #ffffff 100%
+  );
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--aql-progress-color) 10%, transparent);
+
+  // Left accent rail — the colour cue, kept out of the text flow
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: color-mix(in srgb, var(--aql-progress-color) 70%, transparent);
+  }
+}
+
+// QLinearProgress paints both its track and its model from `currentColor`, so a
+// single `color` declaration themes the whole bar — this is what lets the section
+// accept raw hex/rgb values that the component's `color` prop could never take.
+.aql-linear-progress__bar {
+  color: var(--aql-progress-color);
+  border-radius: 999px;
+}
+
+// 11px / weight 600 sit between Quasar's type utilities, matching .aql-metrics__label.
+.aql-linear-progress__label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: $ink-muted;
+}
+
+.aql-linear-progress__percent {
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  color: var(--aql-progress-color);
+}
+
+// Below-bar readouts: `value` hard left, `max` hard right. The row itself is pure
+// Quasar (`row no-wrap items-center justify-between text-caption q-mt-xs`); only
+// the shared numeric treatment lives here, so both ends align digit-for-digit.
+.aql-linear-progress__val,
+.aql-linear-progress__max {
+  font-variant-numeric: tabular-nums;
+  color: $ink-muted;
 }

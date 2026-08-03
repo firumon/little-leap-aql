@@ -77,7 +77,15 @@ When creating a new base section component inside `src/components/sections/` (e.
 5. **No `<style>` block**: Section components are override targets — a tenant `.vue` override cannot inherit scoped CSS. Put every rule in `src/css/custom.scss` under an `.aql-*` class family and consume it by name (ARCHITECTURE RULES §7).
 6. **Document Props**: Always document the prop catalog and default behavior in `Documents/AQL_PAGE_AND_SECTION_SYSTEM.md` §2.3, and log the component in `FRONTENT/src/components/REGISTRY.md`.
 
-**Existing base sections**: `PageHeader`, `FilterInput`, `ListSwitcher` / `ListSwitcherItem`, and `MetricCards` (dashboard stat counters — see canonical doc §2.4). Check these for reuse before adding a new one.
+**Existing base sections**: `PageHeader`, `FilterInput`, `ListSwitcher` / `ListSwitcherItem`, `MetricCards` (dashboard stat counters — see canonical doc §2.4), and `LinearProgress` (completion progress bars from a `value`/`max` pair or a bare percentage, with `value` and `max` rendered at either end of the row below the bar — see canonical doc §2.5). Check these for reuse before adding a new one.
+
+> [!TIP]
+> `MetricCards` and `LinearProgress` share one contract worth copying for any new dashboard-style section:
+> - Closure-typed props, evaluated through `evaluateProp`.
+> - An `items` array with a single-item prop fallback used only when `items` resolves empty.
+> - A **strict hide rule** (`v-if="items.length"`) so a partial config collapses the whole section instead of rendering an empty shell.
+> - Dynamic colour via `resolveCssColor()`, written inline as a single `--aql-*-color` custom property that every layer derives from with `color-mix()`.
+> - **No class/style escape-hatch props and no `full-width` on the root.** Restyling is a `.vue` override or a `custom.scss` rule, not a prop. Sections carry a horizontal inset (`q-px-sm`) only — vertical rhythm belongs to `.aql-page-body`, which `Page.vue` renders with `q-gutter-y-{pageProps.gutter}`, so a section that adds its own `q-py-*` double-spaces against its neighbours.
 
 ---
 

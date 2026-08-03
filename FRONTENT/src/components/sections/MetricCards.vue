@@ -2,16 +2,15 @@
   <!-- Nothing renders unless at least one valid metric survived normalization -->
   <div
     v-if="metrics.length"
-    class="aql-metrics full-width"
+    class="aql-metrics"
   >
     <SectionDividerLabel v-if="finalAttrs.title" :label="finalAttrs.title" />
 
-    <div class="aql-metrics__row row no-wrap items-stretch scroll-x full-width q-py-xs q-px-sm">
+    <div class="aql-metrics__row row no-wrap items-stretch scroll-x q-px-sm">
       <div
         v-for="(metric, index) in metrics"
         :key="`${metric.label}-${index}`"
         class="aql-metrics__card col relative-position overflow-hidden"
-        :class="finalAttrs.itemClass || ''"
         :style="{ '--aql-metric-color': metric.cssColor }"
       >
         <div class="aql-metrics__value row no-wrap items-baseline">
@@ -34,17 +33,14 @@ defineOptions({ name: 'SectionsMetricCards', inheritAttrs: false })
 
 const props = defineProps({
   // Section-level divider label rendered above the metrics row
-  title:          { type: [String, Function],                 default: '' },
+  title:  { type: [String, Function],         default: '' },
   // Array form: [{ label, number, unit, color }] — each field may itself be a closure
-  items:          { type: [Array, Function],                  default: null },
+  items:  { type: [Array, Function],          default: null },
   // Single-metric fallback form, used only when `items` resolves empty
-  label:          { type: [String, Function],                 default: '' },
-  number:         { type: [Number, String, Function],         default: null },
-  unit:           { type: [String, Function],                 default: '' },
-  color:          { type: [String, Function],                 default: 'primary' },
-  containerClass: { type: [String, Function],                 default: '' },
-  containerStyle: { type: [Object, String, Function],         default: '' },
-  itemClass:      { type: [String, Function],                 default: '' },
+  label:  { type: [String, Function],         default: '' },
+  number: { type: [Number, String, Function], default: null },
+  unit:   { type: [String, Function],         default: '' },
+  color:  { type: [String, Function],         default: 'primary' },
 })
 
 // ── Contexts ──
@@ -56,10 +52,7 @@ const pageState      = inject('pageState', null)
 // pageProps (including onSubmit/onReset handlers) into every Section, and binding
 // those to a plain div would register meaningless DOM listeners.
 const finalAttrs = computed(() => ({
-  title:          evaluateProp(props.title, resourceRecord, resourceConfig) || '',
-  containerClass: evaluateProp(props.containerClass, resourceRecord, resourceConfig) || '',
-  containerStyle: evaluateProp(props.containerStyle, resourceRecord, resourceConfig) || '',
-  itemClass:      evaluateProp(props.itemClass, resourceRecord, resourceConfig) || '',
+  title: evaluateProp(props.title, resourceRecord, resourceConfig) || '',
 }))
 
 // ── Normalization ──

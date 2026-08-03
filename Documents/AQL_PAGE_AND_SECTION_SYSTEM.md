@@ -346,6 +346,7 @@ Once a new Section component is created, you **MUST** update this file to docume
 * **[ListSwitcher.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/sections/ListSwitcher.vue)**: Renders a premium pill/segment-style switcher bar for switching between named list views or states.
   * For full catalog specification, customization scenarios, dynamic modifiers, and responsive overflow logic, refer to the canonical [AQL Frontend List Switcher Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_LIST_SWITCHER.md).
 * **[MetricCards.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/sections/MetricCards.vue)**: Renders a horizontal row of dashboard stat counters — "12 overdue visits", "8 due today", and similar key operational metrics. See §2.4 below.
+* **[LinearProgress.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/sections/LinearProgress.vue)**: Renders graphical linear progress bars for completion tracking — "14 / 25 completed visits (56%)". See §2.5 below.
 
 ### 2.4 `MetricCards` — Dashboard Stat Counters
 
@@ -363,9 +364,6 @@ Once a new Section component is created, you **MUST** update this file to docume
 | `number` | `[Number, String, Function]` | `null` | Single-metric fallback. |
 | `unit` | `[String, Function]` | `''` | Single-metric fallback. |
 | `color` | `[String, Function]` | `'primary'` | Single-metric fallback. |
-| `containerClass` | `[String, Function]` | `''` | Extra classes on the section root. |
-| `containerStyle` | `[Object, String, Function]` | `''` | Inline style on the section root. |
-| `itemClass` | `[String, Function]` | `''` | Extra classes on every metric card. |
 
 **Normalization & the strict hide rule.** The component computes one internal `metrics` array:
 1. If `items` resolves to a non-empty array, each entry is normalized and entries carrying **neither** a `number` nor a `label` are dropped.
@@ -376,7 +374,9 @@ Once a new Section component is created, you **MUST** update this file to docume
 
 **Styling.** All rules are `.aql-metrics*` in [custom.scss](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/css/custom.scss) — the component carries no `<style>` block (ARCHITECTURE RULES §7). Cards are `flex: 1 1 0` so the row divides evenly across `items.length`, with `min-width: 104px` and horizontal scroll rather than squashing on narrow screens. The hover lift honours `prefers-reduced-motion`.
 
-**`$attrs` is deliberately not spread onto the root** — `Page.vue` passes 20+ `pageProps` (including `onSubmit`/`onReset`) into every Section, and binding those to a plain `div` would register meaningless DOM listeners. Use `containerClass` / `containerStyle` / `itemClass` instead.
+**Spacing.** The row carries a horizontal inset (`q-px-sm`) only. Vertical rhythm belongs to `.aql-page-body`, which `Page.vue` renders with `q-gutter-y-{pageProps.gutter}` — so the section adds no `q-py-*` of its own and its root carries no `full-width`, letting it stack flush with neighbouring sections at the page's own gutter.
+
+**`$attrs` is deliberately not spread onto the root** — `Page.vue` passes 20+ `pageProps` (including `onSubmit`/`onReset`) into every Section, and binding those to a plain `div` would register meaningless DOM listeners. The section exposes no class/style escape hatches either: restyling is a `.vue` override or a `custom.scss` rule, not a prop.
 
 *Example — JS modifier (`_ui/AQL/components/operation/outletvisits/index/metriccards.js`)*:
 ```javascript
@@ -393,6 +393,78 @@ export default (currentProps, { resourceRecord }) => ({
 *Example — single-metric form, hidden automatically when the record has no count*:
 ```html
 <Section section="MetricCards" :number="(record) => record?.PendingCount" label="Pending" unit="items" color="warning" />
+```
+
+### 2.5 `LinearProgress` — Completion Progress Bars
+
+```html
+<Section section="LinearProgress" :items="[...]" />
+```
+
+Where `MetricCards` answers "how many?", `LinearProgress` answers "how far along?" — a labelled bar with a bold percentage readout above it, and the progress figure (`14 visits`) and its target (`25 visits`) sitting at either end of the row below it.
+
+**Props catalog** — every prop accepts `Function`, evaluated through `evaluateProp`, so closures receive plain `(record, config)` objects (never refs).
+
+| Prop | Type | Default | Purpose |
+|---|---|---|---|
+| `title` | `[String, Function]` | `''` | Divider label above the row, rendered via `shared/SectionDividerLabel.vue`. Omitted when empty. |
+| `items` | `[Array, Function]` | `null` | Progress array: `{ label, value, max, color, unit }`. **Each field may itself be a closure** and is evaluated with the same `(record, config)` signature. |
+| `label` | `[String, Function]` | `''` | Single-item fallback — e.g. `"Today's Visit Completion"`. |
+| `value` | `[Number, String, Function]` | `null` | Single-item fallback — the count when `max` is set, otherwise the percentage itself. Rendered below the bar, left. |
+| `max` | `[Number, String, Function]` | `null` | Single-item fallback — the denominator, e.g. `25`. Omit to feed a percentage straight through `value`. Rendered below the bar, right. |
+| `unit` | `[String, Function]` | `''` | Noun appended to both below-bar readouts, e.g. `'visits'`. |
+| `color` | `[String, Function]` | `'primary'` | Bar/accent colour. |
+
+**Percentage resolution.** `max` is what decides how `value` is read. Numeric inputs are coerced loosely (`'14'` and `14` behave identically — sheet-backed counts arrive as both):
+1. `max` resolves to a number `> 0` → the bar uses `(value / max) * 100`, clamped to `0..100`.
+2. No usable `max` → `value` **is** the percentage. A figure in `(0..1]` is read as a fraction and scaled (`0.56` → 56%, `1` → 100%); anything above `1` is already on the 0..100 scale. Clamped to `0..100`.
+3. No numeric `value` at all → there is no percentage: the bold readout is omitted and the bar renders empty.
+
+The displayed percent is rounded to at most one decimal (`1 / 3` → `33.3%`, never `33.33333%`).
+
+**Below-bar readouts.** A `justify-between` row under the bar, derived — not configurable. There is no `caption` prop:
+* **Left (`value`)** — `` `${value} ${unit}`.trim() `` with a usable `max` (`14 visits`, or `14` with no unit). Without a usable `max` the value is itself a percentage: a named unit still prints the raw figure (`56 visits`), while an unnamed one appends `%` directly — `56%`, never `56 %`. Omitted when `value` is absent.
+  * In that unitless `%` case the readout prints the **resolved** percent, not the raw value, so it always agrees with the bar and the bold readout above: `value: 0.72` is scaled to `72%` and `value: 140` is clamped to `100%`.
+* **Right (`max`)** — `` `${max} ${unit}`.trim() `` (`25 visits`, or `25`). `null` when `max` is absent or unusable, so nothing renders on the right.
+* When only `max` renders, an empty `<span>` placeholder holds the left slot so the target stays hard right.
+* Neither present → the whole row is skipped.
+
+**Strict hide rule.** An item survives only if it carries a `label` **or** at least one of `value` / `max`. If nothing survives, the root `v-if` renders **nothing** — no empty shell, no divider. A page can therefore declare the section unconditionally and let data decide.
+
+**Colour.** `color` accepts Quasar brand names (`positive`, `warning`, `primary`), Material palette names (`teal-7`), or raw CSS values (`#e11d48`, `rgb(...)`). It is resolved by `resolveCssColor()` from `src/utils/colorHelpers.js` and written to the card as the inline custom property `--aql-progress-color`. Because `QLinearProgress` paints its track and model from `currentColor`, `.aql-linear-progress__bar { color: var(--aql-progress-color) }` themes the whole bar — which is how the section accepts raw hex values that the component's own `color` prop could never take.
+
+**Styling.** All rules are `.aql-linear-progress*` in [custom.scss](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/css/custom.scss) — the component carries no `<style>` block (ARCHITECTURE RULES §7). Cards are `col-12 col-sm`, so they stack full-width on mobile and sit side by side from the `sm` breakpoint up. The gradient, border, accent rail and percent readout all derive from `--aql-progress-color` via `color-mix()`; there is no hover transform, so nothing to gate behind `prefers-reduced-motion`. The below-bar row is pure Quasar (`row no-wrap items-center justify-between text-caption q-mt-xs`) — only the shared `tabular-nums` + muted-ink treatment on `.aql-linear-progress__val` / `__max` lives in SCSS, so both ends align digit-for-digit.
+
+**Spacing.** Same contract as §2.4 — horizontal inset (`q-px-sm`) only, no `q-py-*`, no `full-width` on the root. Vertical rhythm comes from `.aql-page-body`'s `q-gutter-y-{pageProps.gutter}`.
+
+**`$attrs` is deliberately not spread onto the root** — same reasoning as §2.4, and likewise no class/style props: restyle with a `.vue` override or a `custom.scss` rule.
+
+*Example — single bar driven off the record*:
+```html
+<Section
+  section="LinearProgress"
+  label="Today's Visit Completion"
+  :value="(record) => record?.CompletedVisits"
+  :max="(record) => record?.PlannedVisits"
+  unit="visits"
+  color="positive"
+/>
+```
+
+*Example — JS modifier producing a row of bars (`_ui/AQL/components/operation/outletvisits/index/linearprogress.js`)*:
+```javascript
+export default (currentProps, { resourceRecord }) => ({
+  title: 'Completion',
+  items: () => {
+    const visits = resourceRecord?.items?.value ?? []
+    return [
+      { label: 'Today',     value: visits.filter(v => v.DueToday && v.Done).length, max: visits.filter(v => v.DueToday).length, unit: 'visits', color: 'positive' },
+      // No `max` — `value` is the percentage itself (0.72 → 72%), and only the
+      // left readout renders, as `72%`
+      { label: 'This week', value: 0.72, color: '#6366f1' }
+    ]
+  }
+})
 ```
 
 ---

@@ -2,6 +2,7 @@ import { ref, watch, computed, shallowRef, markRaw, unref } from 'vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useRecord } from 'src/composables/resources/useRecord'
+import { toPascalCase } from 'src/utils/appHelpers'
 
 // All page JS/Vue files under src/pages/
 const pageModules = import.meta.glob('../../pages/**/*.{vue,js}')
@@ -146,13 +147,18 @@ export function usePageResolver() {
       }
 
       // ── STAGE B: Single ordered scan CC → CP → O2 → O3 → O4 → O5 ──
+      // resource slug → PascalCase → lowercase for path (e.g. 'outlet-visits' → 'outletvisits'),
+      // exactly as useContentResolver/useSectionResolver/useActionResolver normalize it, so a
+      // PascalCase `_ui/.../OutletVisits/` folder matches the lowercased Vite glob registry key.
+      const resourceKey = toPascalCase(slug || '').toLowerCase()
+
       const candidates = [
-        { path: `_ui/${uiName}/pages/${scopeVal}/${slug}/${page}.vue`, isVue: true  }, // CC
-        { path: `_ui/${uiName}/pages/${scopeVal}/${slug}/${page}.js`,  isVue: false }, // CP
-        { path: `_ui/${uiName}/pages/${scopeVal}/${page}.vue`,         isVue: true  }, // O2
-        { path: `_ui/${uiName}/pages/${scopeVal}/${page}.js`,          isVue: false }, // O3
-        { path: `_ui/${uiName}/pages/${page}.vue`,                     isVue: true  }, // O4
-        { path: `_ui/${uiName}/pages/${page}.js`,                      isVue: false }  // O5
+        { path: `_ui/${uiName}/pages/${scopeVal}/${resourceKey}/${page}.vue`, isVue: true  }, // CC
+        { path: `_ui/${uiName}/pages/${scopeVal}/${resourceKey}/${page}.js`,  isVue: false }, // CP
+        { path: `_ui/${uiName}/pages/${scopeVal}/${page}.vue`,                isVue: true  }, // O2
+        { path: `_ui/${uiName}/pages/${scopeVal}/${page}.js`,                 isVue: false }, // O3
+        { path: `_ui/${uiName}/pages/${page}.vue`,                            isVue: true  }, // O4
+        { path: `_ui/${uiName}/pages/${page}.js`,                             isVue: false }  // O5
       ]
 
       for (const { path, isVue } of candidates) {

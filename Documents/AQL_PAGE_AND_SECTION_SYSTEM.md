@@ -172,6 +172,37 @@ After loading the BP, `usePageResolver` scans `src/_ui/[UiName]/pages/` for cust
 
 The watch key is a template string, never an array literal: `watch` compares a getter's result with `Object.is`, so a fresh array would re-fire on every re-evaluation and re-request on each background sync.
 
+##### The Enriched Record (and why you must never spread one)
+
+Neither `resourceRecord.record` nor `resourceRecord.records` hands out raw sheet rows. Both run every row through `enrichRecord(resourceName, code, dataStore)` (`useRecord.js`), which returns a **cached, reactive object built entirely out of `Object.defineProperty` getters** — there are no own data properties on it at all:
+
+| Key shape | Example | `enumerable` | Resolves to |
+|-----------|---------|--------------|-------------|
+| Sheet header | `Code`, `OutletCode`, `Progress` | `true` | Live value from the data store |
+| `$<parentSingular>` | `$outlet`, `$warehouse` | **`false`** | The enriched parent record |
+| `$<ChildResource>` | `$OutletVisitItems` | **`false`** | Array of enriched child records |
+| `_Parents` / `_Parent` | — | **`false`** | Relation key list / keyed map |
+| `_Children` / `_Child` | — | **`false`** | Relation key list / keyed map |
+| `_relation` | — | **`false`** | Raw relation metadata |
+
+> [!IMPORTANT]
+> **Preserve the record reference. Never `{ ...record }`.**
+>
+> Object spread, `Object.assign({}, record)`, and `JSON.parse(JSON.stringify(record))` copy **enumerable own properties only**. Every relation getter in the table above is non-enumerable, so a spread silently produces an object with the header fields and **no `$outlet`, no `$parent`, no `$children`, no `_Parents`** — and `item.$outlet?.Name` quietly degrades to `undefined` with no error to trace. The spread also *snapshots* the header getters into plain values, so the copy stops tracking store updates and goes stale after a background sync.
+>
+> When a content or section component filters, sorts, or attaches a derived property, it must operate on the original references:
+>
+> ```javascript
+> // ✗ Strips every relation getter and freezes the values
+> out.push({ ...row, overdueDays: days })
+>
+> // ✓ Keeps the enriched reference intact
+> row.overdueDays = days
+> out.push(row)
+> ```
+>
+> Filtering and sorting are safe as-is — `Array.prototype.filter`/`sort` carry references through. Only *copying* breaks the contract. Note that a derived property assigned this way lands on the shared cached record, so keep such keys namespaced to the feature and treat them as display-only.
+
 > [!NOTE]
 > This was previously split into a `usePageOrchestrator.js` middle layer, which also carried an action-page form (`actionForm`, `selectedOutcome`, `resolvedActionFields`, …). That path became unreachable once `canonicalPage` started resolving the `_action/:action` route to its **slug** rather than to `'action'`, and workflow actions moved to `ActionDialog` (see [AQL_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_ACTION_SYSTEM.md)). The orchestrator has been removed; nothing replaced the action-form half because `ActionDialog` already owns it.
 

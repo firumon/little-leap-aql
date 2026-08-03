@@ -93,7 +93,7 @@ Finalized active GRNs are posted to warehouse stock from `/operation/stock-movem
 Stock reversal and report-template generation are intentionally not implemented in this phase.
 
 ## 1. Report Generation (PDF)
- 
+
 > [!NOTE]
 > All details regarding Report Generation, Sheets templates, metadata settings, frontend components/composables, and backend code have been consolidated into the dedicated guide: **[REPORTS_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/REPORTS_SYSTEM.md)**.
 > Please refer to that document for report architecture, configurations, and implementation rules.
@@ -188,7 +188,7 @@ If no page is found, it renders a developer fallback page: `pages/_common/Page.v
 
 ### 3.1 Overview
 
-operation pages use the identical centralized page resolver (`Page.vue` / `usePageResolver.js`), section resolver (`useSectionResolver.js`), and common section wrapper (`useCommonSection.js`) as master, but with a different default section set — particularly for the `ViewPage`. 
+operation pages use the identical centralized page resolver (`Page.vue` / `usePageResolver.js`), section resolver (`useSectionResolver.js`), and common section wrapper (`useCommonSection.js`) as master, but with a different default section set — particularly for the `ViewPage`.
 
 operation data generally flows top-down (e.g. Purchase Requisitions → Purchase Orders → Goods Receipts) and tracks complex lifecycles via `additionalActions`. operation views exclude the generic `ViewAudit` section and substitute a `ViewParent` section.
 
@@ -197,7 +197,7 @@ operation data generally flows top-down (e.g. Purchase Requisitions → Purchase
 - **Section Resolver Scope**: context properties (`scope`, `resource`, `uiName`) are propagated directly in `pageProps` from the page orchestrator down to the Section components, steering candidate path lookup (e.g. mapping `scope` to `operation` in candidate paths).
 - **ViewPage Orchestrator**: The default operation `ViewPage.vue` orchestrator includes `Parent` section and excludes `Audit` section.
 - **ViewDetails Filtering**: The default `OperationViewDetails` dynamically filters out both audit columns (`CreatedAt`, `UpdatedAt`, `CreatedBy`, `UpdatedBy`) and any action stamp columns dynamically generated from the resource's `additionalActions` configuration (e.g. `ApprovedBy`, `ApprovedAt`).
-- **ViewParent Handling**: `OperationViewParent` automatically fetches the parent record (based on the `{ParentName}Code` header resolution logic). 
+- **ViewParent Handling**: `OperationViewParent` automatically fetches the parent record (based on the `{ParentName}Code` header resolution logic).
   - If the parent record has a `Name` field, it displays as a minimal inline link: `Name (Code)`.
   - If the parent record has no `Name` field, it displays a full embedded data card excluding audit/action fields.
 
@@ -552,7 +552,7 @@ Outlet & Field Sales operation manages consignment outlet visits, restock reques
 
 ### 11.1 Resource Model
 - **Master resources**: `Outlets` and `OutletOperatingRules`.
-- **Operation resources**: `OutletVisits`, `OutletRestocks`, `OutletRestockItems`, `OutletDeliveries`, `OutletConsumptions`, `OutletConsumptionItems`, `OutletConsumptionInvoices`, `OutletConsumptionInvoiceItems`, `OutletMovements`, and `OutletStorages`.
+- **Operation resources**: `Outlet-Visits`, `OutletRestocks`, `OutletRestockItems`, `OutletDeliveries`, `OutletConsumptions`, `OutletConsumptionItems`, `OutletConsumptionInvoices`, `OutletConsumptionInvoiceItems`, `OutletMovements`, and `OutletStorages`.
 - **Source of truth**: `OutletMovements` is the stock ledger. `OutletStorages` is the derived current outlet balance keyed by `OutletCode + SKU`.
 - **Delivery truth**: `OutletDeliveries.OutletRestockItemCodes` stores a CSV of ORI codes; delivery progress is derived from ORSI row progress matched against the CSV.
 

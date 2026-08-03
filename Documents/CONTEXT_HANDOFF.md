@@ -95,7 +95,7 @@ Manual follow-up:
 
 Changed surfaces:
 - Added master resources `Outlets` and `OutletOperatingRules` in setup/resource metadata.
-- Added operation resources `OutletVisits`, `OutletRestocks`, `OutletRestockItems`, `OutletDeliveries`, `OutletConsumption`, `OutletConsumptionItems`, `OutletMovements`, and `OutletStorages`.
+- Added operation resources `Outlet-Visits`, `OutletRestocks`, `OutletRestockItems`, `OutletDeliveries`, `OutletConsumption`, `OutletConsumptionItems`, `OutletMovements`, and `OutletStorages`.
 - Added `GAS/outletMovements.gs` so `OutletMovements` post-write hooks update `OutletStorages` balances.
 - Added outlet frontend composables, shared UI components, and custom operation pages under the resolver folders.
 - Updated frontend registries and canonical sheet/resource/workflow docs.
@@ -114,7 +114,7 @@ Manual follow-up:
 2026-04-30 Outlet & Field Sales operation strict refinement executed from `PLANS/2026-04-30-outlet-field-operation-strict-refinement-plan.md`.
 
 Final refined state:
-- `OutletVisits` is reduced to `Code`, `OutletCode`, `Date`, `Status`, `StatusComment`, plus standard audit columns. Workflow status values are `PLANNED`, `COMPLETED`, `POSTPONED`, and `CANCELLED` on `Status`; visit comments use only `StatusComment`.
+- `Outlet-Visits` is reduced to `Code`, `OutletCode`, `Date`, `Status`, `StatusComment`, plus standard audit columns. Workflow status values are `PLANNED`, `COMPLETED`, `POSTPONED`, and `CANCELLED` on `Status`; visit comments use only `StatusComment`.
 - Visit completion and cancellation update the current row. Visit postponement updates the current row and creates a new planned row without previous/next link columns.
 - `OutletConsumption` is independent of visits; the operation setup, payload builder, and docs no longer use `OutletVisitCode` for consumption.
 - Historical note superseded on 2026-05-11: outlet restock allocation moved off legacy JSON allocation fields and onto row-level ORSI allocation/progress fields.
@@ -128,8 +128,8 @@ Validation performed:
 
 Manual follow-up:
 - Run AQL resource sync from the Google Sheet menu.
-- Run operation sheet setup from the Google Sheet menu to normalize `OutletVisits` headers.
-- Confirm live `OutletVisits` headers match the refined schema.
+- Run operation sheet setup from the Google Sheet menu to normalize `Outlet-Visits` headers.
+- Confirm live `Outlet-Visits` headers match the refined schema.
 - Clear frontend/resource cache or re-login if old visit fields remain visible after sync.
 - No Web App redeployment is expected because the generic API contract was not changed.
 

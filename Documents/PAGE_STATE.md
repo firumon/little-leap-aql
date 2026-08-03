@@ -128,7 +128,7 @@ The shape above is an **implementation detail**. Consumers must not reach into i
 
 ### 4.2 Addressing: multiple nodes per resource, by ROLE
 
-One resource may hold several nodes. Outlet-consumption needs two `OutletVisits`
+One resource may hold several nodes. Outlet-consumption needs two `Outlet-Visits`
 (complete the current visit, schedule the next) and two `OutletReturns` (create
 new, update pre-existing). Each is addressed by a **role**:
 
@@ -152,7 +152,7 @@ call site is unchanged**.
 #### Why roles are names, not ordinals
 
 A positional `useNode(resource, idx)` would be simpler, but it breaks on this
-workflow. Both `OutletVisits` nodes are created *conditionally*
+workflow. Both `Outlet-Visits` nodes are created *conditionally*
 ([useOutletConsumption.js:708-712](../FRONTENT/src/composables/operation/outlets/useOutletConsumption.js)):
 
 | `completeVisit` ticked? | idx 0 | idx 1 |

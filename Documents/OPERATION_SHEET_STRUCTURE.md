@@ -23,7 +23,7 @@ This document describes the current operation-scope sheet families and their rol
 - `GoodsReceiptItems`
 - `StockMovements`
 - `WarehouseStorages`
-- `OutletVisits`
+- `Outlet-Visits`
 - `OutletRestocks`
 - `OutletRestockItems`
 - `OutletDeliveries`
@@ -49,7 +49,7 @@ This document describes the current operation-scope sheet families and their rol
 
 | Resource | Role | Required Columns | Defaults / Constraints |
 |---|---|---|---|
-| `OutletVisits` | Planned/completed/postponed/cancelled field visit records. | `OutletCode`, `Date`, `Progress`, `Status` | `Status = Active`, `Progress = PLANNED`; valid progress transitions are `PLANNED -> COMPLETED`, `PLANNED -> POSTPONED`, and `PLANNED -> CANCELLED`. Transitions use additional actions and stamp `Progress<Progress>At`, `Progress<Progress>By`, and `Progress<Progress>Comment`; postponed visits create a new planned row without link columns. |
+| `Outlet-Visits` | Planned/completed/postponed/cancelled field visit records. | `OutletCode`, `Date`, `Progress`, `Status` | `Status = Active`, `Progress = PLANNED`; valid progress transitions are `PLANNED -> COMPLETED`, `PLANNED -> POSTPONED`, and `PLANNED -> CANCELLED`. Transitions use additional actions and stamp `Progress<Progress>At`, `Progress<Progress>By`, and `Progress<Progress>Comment`; postponed visits create a new planned row without link columns. |
 | `OutletRestocks` | Restock request parent document. | `Date`, `OutletCode`, `RequestedUser`, `Progress`, `Status` | `Progress = DRAFT`, `Status = Active`; editable only in `DRAFT` or `REVISION_REQUIRED`; `RequestedUser` and `ApprovedUser` store readable names because full user lookup is not loaded by the frontend. |
 | `OutletRestockItems` | Atomic requested, allocated, or delivered restock units. | `OutletRestockCode`, `WarehouseCode`, `SKU`, `StorageName`, `Quantity`, `Progress`, `Status` | creator rows start `PENDING` with blank warehouse/storage; approvers set row-level warehouse/storage and `ALLOCATED`; delivery marks rows `DELIVERED`; partial allocation creates additional PENDING ORSI rows. |
 | `OutletDeliveries` | Multi-outlet delivery header. | `Date`, `UserName`, `OutletRestockItemCodes`, `Progress`, `Status` | `Progress = DRAFT`, `Status = Active`; `OutletRestockItemCodes` holds a CSV of ORI codes; progress moves to `IN_TRANSIT`, `COMPLETED`, or `CANCELLED`. |
@@ -61,7 +61,7 @@ This document describes the current operation-scope sheet families and their rol
 | `OutletStorages` | Derived current outlet stock by outlet/SKU. | `OutletCode`, `SKU`, `Quantity` | unique by `OutletCode + SKU`; `Quantity = 0`; no audit columns; frontend read-only. |
 
 ### Outlet Operation Columns
-- `OutletVisits`: `Code`, `OutletCode`, `Date`, `Progress`, planned/completed/postponed/cancelled progress stamp/comment columns, `Status`, `AccessRegion`, audit columns.
+- `Outlet-Visits`: `Code`, `OutletCode`, `Date`, `Progress`, planned/completed/postponed/cancelled progress stamp/comment columns, `Status`, `AccessRegion`, audit columns.
 - `OutletRestocks`: `Code`, `Date`, `OutletCode`, `RequestedUser`, `ApprovedUser`, `Progress`, submit/send-back/approve/reject action stamp/comment columns, `Status`, `AccessRegion`, audit columns.
 - `OutletRestockItems`: `Code`, `OutletRestockCode`, `WarehouseCode`, `SKU`, `StorageName`, `Quantity`, `Progress`, allocated/delivered progress stamp/comment columns, `Status`, `AccessRegion`, audit columns.
 - `OutletDeliveries`: `Code`, `Date`, `UserName`, `OutletRestockItemCodes` (CSV of ORI codes), `Progress`, in-transit/completed progress stamp/comment columns, cancel audit fields, `Status`, `AccessRegion`, audit columns.

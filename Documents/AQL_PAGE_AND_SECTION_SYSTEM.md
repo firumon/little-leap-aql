@@ -155,6 +155,7 @@ After loading the BP, `usePageResolver` scans `src/_ui/[UiName]/pages/` for cust
 | 5 (O4) | `_ui/{uiName}/pages/{page}.vue` | UI-wide Vue override |
 | 6 (O5) | `_ui/{uiName}/pages/{page}.js` | UI-wide JS modifier |
 
+- `{slug}` is normalized as **`toPascalCase(slug).toLowerCase()`** — the single rule every other resolver (`useContentResolver`, `useSectionResolver`, `useActionResolver`, `useViewColumnResolver`, `FormRecord.vue`, `ViewRecord.vue`) applies. A resource slug of `outlet-visits` becomes the key `outletvisits`, which matches a PascalCase folder `_ui/{uiName}/pages/{scope}/OutletVisits/` because the Vite glob registry lowercases every path at build time. **`_ui/` override folders must be named in PascalCase** — a raw hyphenated folder (`outlet-visits/`) will NOT resolve.
 - A **Vue override** (`isVue: true`) replaces the entire page; the section layout is bypassed.
 - A **JS modifier** (`isVue: false`) receives the merged `baseProps` and returns additional props to merge. The section layout still runs with the modified `pageProps`.
 

@@ -345,6 +345,55 @@ Once a new Section component is created, you **MUST** update this file to docume
   * *Defaults*: Binds dynamically to `filterTerm` or `searchTerm` inside `resourceRecord` (falls back to local state). Default icon is `'filter_list'`.
 * **[ListSwitcher.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/sections/ListSwitcher.vue)**: Renders a premium pill/segment-style switcher bar for switching between named list views or states.
   * For full catalog specification, customization scenarios, dynamic modifiers, and responsive overflow logic, refer to the canonical [AQL Frontend List Switcher Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_LIST_SWITCHER.md).
+* **[MetricCards.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/sections/MetricCards.vue)**: Renders a horizontal row of dashboard stat counters — "12 overdue visits", "8 due today", and similar key operational metrics. See §2.4 below.
+
+### 2.4 `MetricCards` — Dashboard Stat Counters
+
+```html
+<Section section="MetricCards" :items="[...]" />
+```
+
+**Props catalog** — every prop accepts `Function`, evaluated through `evaluateProp`, so closures receive plain `(record, config)` objects (never refs).
+
+| Prop | Type | Default | Purpose |
+|---|---|---|---|
+| `title` | `[String, Function]` | `''` | Divider label above the row, rendered via `shared/SectionDividerLabel.vue`. Omitted when empty. |
+| `items` | `[Array, Function]` | `null` | Metric array: `{ label, number, unit, color }`. **Each field may itself be a closure** and is evaluated with the same `(record, config)` signature. |
+| `label` | `[String, Function]` | `''` | Single-metric fallback (see below). |
+| `number` | `[Number, String, Function]` | `null` | Single-metric fallback. |
+| `unit` | `[String, Function]` | `''` | Single-metric fallback. |
+| `color` | `[String, Function]` | `'primary'` | Single-metric fallback. |
+| `containerClass` | `[String, Function]` | `''` | Extra classes on the section root. |
+| `containerStyle` | `[Object, String, Function]` | `''` | Inline style on the section root. |
+| `itemClass` | `[String, Function]` | `''` | Extra classes on every metric card. |
+
+**Normalization & the strict hide rule.** The component computes one internal `metrics` array:
+1. If `items` resolves to a non-empty array, each entry is normalized and entries carrying **neither** a `number` nor a `label` are dropped.
+2. Otherwise the single-item props are normalized into a one-element array — but only if `number` or `label` produced a value.
+3. If nothing survives, `metrics.length === 0` and the root `v-if` renders **nothing** — no empty shell, no divider. A page can therefore declare the section unconditionally and let data decide.
+
+**Colour.** `color` accepts Quasar brand names (`negative`, `warning`, `primary`), Material palette names (`teal-7`), or raw CSS values (`#e11d48`, `rgb(...)`). It is resolved by `resolveCssColor()` from `src/utils/colorHelpers.js` and written to the card as the inline custom property `--aql-metric-color`; the gradient, border, accent rail, number, unit and shadow all derive from it via `color-mix()`. No per-colour class variants exist.
+
+**Styling.** All rules are `.aql-metrics*` in [custom.scss](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/css/custom.scss) — the component carries no `<style>` block (ARCHITECTURE RULES §7). Cards are `flex: 1 1 0` so the row divides evenly across `items.length`, with `min-width: 104px` and horizontal scroll rather than squashing on narrow screens. The hover lift honours `prefers-reduced-motion`.
+
+**`$attrs` is deliberately not spread onto the root** — `Page.vue` passes 20+ `pageProps` (including `onSubmit`/`onReset`) into every Section, and binding those to a plain `div` would register meaningless DOM listeners. Use `containerClass` / `containerStyle` / `itemClass` instead.
+
+*Example — JS modifier (`_ui/AQL/components/operation/outletvisits/index/metriccards.js`)*:
+```javascript
+export default (currentProps, { resourceRecord }) => ({
+  title: 'Today at a glance',
+  items: (record, config) => [
+    { label: 'Overdue',   number: resourceRecord?.items?.value?.filter(v => v.Overdue).length ?? 0, unit: 'visits', color: 'negative' },
+    { label: 'Due today', number: resourceRecord?.items?.value?.filter(v => v.DueToday).length ?? 0, unit: 'visits', color: 'warning' },
+    { label: 'Completed', number: config?.name ? 0 : 0, unit: 'visits', color: 'positive' }
+  ]
+})
+```
+
+*Example — single-metric form, hidden automatically when the record has no count*:
+```html
+<Section section="MetricCards" :number="(record) => record?.PendingCount" label="Pending" unit="items" color="warning" />
+```
 
 ---
 

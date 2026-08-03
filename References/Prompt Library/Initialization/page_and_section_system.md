@@ -74,7 +74,10 @@ When creating a new base section component inside `src/components/sections/` (e.
    }))
    ```
    > **Important**: `evaluateProp` unwraps Vue refs internally before calling the closure. Closure functions receive **plain objects** (`record`, `config`), not refs. Never call `.value` inside a closure prop.
-5. **Document Props**: Always document the prop catalog and default behavior in `Documents/AQL_PAGE_AND_SECTION_SYSTEM.md` §2.3.
+5. **No `<style>` block**: Section components are override targets — a tenant `.vue` override cannot inherit scoped CSS. Put every rule in `src/css/custom.scss` under an `.aql-*` class family and consume it by name (ARCHITECTURE RULES §7).
+6. **Document Props**: Always document the prop catalog and default behavior in `Documents/AQL_PAGE_AND_SECTION_SYSTEM.md` §2.3, and log the component in `FRONTENT/src/components/REGISTRY.md`.
+
+**Existing base sections**: `PageHeader`, `FilterInput`, `ListSwitcher` / `ListSwitcherItem`, and `MetricCards` (dashboard stat counters — see canonical doc §2.4). Check these for reuse before adding a new one.
 
 ---
 

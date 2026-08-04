@@ -88,12 +88,19 @@ export function useResourceConfig(resourceNameOverride) {
 
   function normalizeAction(a) {
     if (!a || !a.action) return null
+    // WHITELIST — anything not copied here is dropped before any component sees
+    // it. Add new AdditionalActions keys HERE as well as to the authoring UI, or
+    // they will vanish silently (see the `targets` note below).
     const base = {
       action: a.action,
       label: a.label || a.action,
       icon: a.icon || '',
       color: a.color || 'primary',
-      confirm: !!a.confirm
+      confirm: !!a.confirm,
+      // Optional dialog heading templates — `"{$outlet.Name} • {Code}"`.
+      // Presentational only; resolved client-side by `resolveRecordTemplate`.
+      title: a.title || '',
+      subtitle: a.subtitle === undefined ? undefined : a.subtitle
     }
     const kind = a.kind === 'navigate' ? 'navigate' : 'mutate'
     if (kind === 'navigate') {
@@ -123,6 +130,20 @@ export function useResourceConfig(resourceNameOverride) {
         ? m.fields
         : (Array.isArray(a.fields) ? a.fields : [])
     }
+    // Multi-record targets (AQL_ACTION_SYSTEM.md §7). This normalizer rebuilds
+    // each action from a key WHITELIST, so anything not copied here is silently
+    // dropped before a component ever sees it — which is exactly how `targets`
+    // went missing while icon/color/label/visibleWhen all survived, making the
+    // FAB look correct while the dialog rendered only its source field.
+    //
+    // Passed through as authored: every target key is validated server-side
+    // against the trusted config, so re-deriving the shape here would only add a
+    // second place for the contract to drift.
+    const targets = Array.isArray(m.targets)
+      ? m.targets
+      : (Array.isArray(a.targets) ? a.targets : [])
+    if (targets.length) mutateBase.targets = targets
+
     mutateBase.visibleWhen = normalizeVisibleWhen(a.visibleWhen)
     return mutateBase
   }

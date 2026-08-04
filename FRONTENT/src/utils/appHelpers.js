@@ -12,14 +12,27 @@ export function humanizeString(str) {
 
 /**
  * Converts a slug or any string to PascalCase (no spaces, first char of each word capitalised).
- * Handles hyphens and spaces as word separators.
+ * Handles hyphens, underscores and spaces as word separators.
  * e.g. "purchase-requisition-items" → "PurchaseRequisitionItems"
- * e.g. "Revision Required" → "RevisionRequired"
+ * e.g. "Revision Required"          → "RevisionRequired"
+ * e.g. "REVISION_REQUIRED"          → "RevisionRequired"
+ *
+ * Underscores are separators because workflow outcome values are authored in
+ * SCREAMING_SNAKE (`PENDING_APPROVAL`, `INVOICE_GENERATED`) and the sheet columns
+ * derived from them are PascalCase (`ProgressPendingApprovalComment`). Without
+ * it, `deriveActionStampHeaders` produced `ProgressRevision_requiredAt`, which
+ * matched no real column — so those stamp columns leaked into detail views on
+ * every underscored outcome.
+ *
+ * Kept in sync with `toActionHeaderSuffix` in GAS/resourceApi.gs, which splits on
+ * any non-alphanumeric. The two agree for every separator AQL actually uses.
+ * Where a byte-exact match with the server is required rather than merely likely,
+ * use `actionHeaderSuffix` in composables/resources/additionalActionsSchema.js.
  */
 export function toPascalCase(str) {
   if (!str) return ''
   return str
-    .split(/[- ]+/)
+    .split(/[-_ ]+/)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join('')
 }

@@ -75,13 +75,36 @@ export const useResourceIoStore = defineStore('resourceIo', () => {
     }
   }
 
+  /**
+   * Merges a server resource payload into the data store.
+   *
+   * The payload is either a FULL snapshot or a PARTIAL one, and the two must be
+   * applied differently:
+   *
+   *   `meta.hasDeltaFilter` — the read was cursor-scoped (`lastUpdatedAt`), so
+   *                           it carries only rows changed since that cursor.
+   *   `meta.directWrite`    — the rows the server just wrote, nothing else
+   *                           (`buildDirectWriteResourcePayload` in GAS).
+   *
+   * Either marker means the payload is a subset, so it must UPSERT by code.
+   * Replacing wholesale on a delta deletes every row the server did not happen
+   * to return — which is what emptied every list after a write, until a
+   * navigation triggered a full refetch and quietly restored them.
+   *
+   * Only an unmarked payload (a full fetch) may replace.
+   */
   function hydrateResourcePayload(resourcePayload = {}) {
     const dataStore = useDataStore()
     Object.entries(resourcePayload || {}).forEach(([resourceName, resourceData]) => {
       if (Array.isArray(resourceData?.headers) && resourceData.headers.length) {
         dataStore.initResource(resourceName, resourceData.headers)
       }
-      if (Array.isArray(resourceData?.rows)) {
+      if (!Array.isArray(resourceData?.rows)) return
+
+      const meta = resourceData.meta || {}
+      if (meta.hasDeltaFilter || meta.directWrite) {
+        dataStore.setRows(resourceName, resourceData.rows)
+      } else {
         dataStore.replaceRows(resourceName, resourceData.rows)
       }
     })

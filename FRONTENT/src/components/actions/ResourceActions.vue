@@ -31,27 +31,31 @@
 /**
  * Unified resource-action FAB cluster (evolution of the former `CrudActions.vue`).
  *
- * One bottom-right sticky cluster per page, sourcing its items from BOTH:
+ * One bottom-right sticky cluster per page, unifying two sources so resource
+ * pages never grow multiple competing right-side FABs:
  *   - resource permissions — Add (`canWrite`) and Edit (`canUpdate` + record),
- *   - `resourceConfig.additionalActions` (APP.Resources `AdditionalActions` JSON) —
- *     workflow/navigate actions, permission-gated (`can<Action>` explicit-deny)
- *     and `visibleWhen`-filtered via `isActionVisible`, record context required.
+ *   - AdditionalActions workflow items, whenever a record is in context.
+ *
+ * > The workflow half owns NO logic here. `useAdditionalActions().entriesFor(record)`
+ * > returns them already gated (permissions, `visibleWhen`) with `run()` bound,
+ * > and this component folds that array into `entries`. Permission and visibility
+ * > rules live in exactly one place, shared with `AdditionalActionsButtons`.
+ * > See AQL_ACTION_SYSTEM.md §7.
  *
  * Layout: a single item renders as one standalone FAB; multiple items collapse
  * into one expandable `ResourceActionsFab` menu.
  *
  * Every item is mounted through `<Action>` under a per-item action name —
- * `ResourceActionAdd`, `ResourceActionEdit`, `ResourceAction<Name>` (e.g.
- * `ResourceActionApprove`) — with `ResourceActionItem` as the fallback base, so
- * each item's icon/color/label/visibility/click is overridable at all 10 `_ui/`
- * tiers as `resourceaction<name>.(vue|js)`. The menu trigger resolves the same
- * way as `ResourceActionsFab`.
+ * `ResourceActionAdd` / `ResourceActionEdit` / `ResourceAction<Name>` — with
+ * `ResourceActionItem` as the fallback base, so each item's icon/color/label/
+ * visibility/click is overridable at all 10 `_ui/` tiers as
+ * `resourceaction<name>.(vue|js)`. The menu trigger resolves the same way as
+ * `ResourceActionsFab`.
  *
- * Dispatch: CRUD items navigate via `useResourceNav`; workflow `mutate` items
- * open the page-level `ActionDialog` through `pageState.meta.actionDialog`
- * (mounted once in `Page.vue`); `navigate` items route to their configured
- * record/resource page. A JS modifier may replace any item's behaviour by
- * returning a `handler` prop (see `ResourceActionItem.vue`).
+ * Dispatch: CRUD items navigate via `useResourceNav`; workflow items dispatch
+ * through the composable (navigate → route, mutate → shared dialog). A JS
+ * modifier may replace any item's behaviour by returning a `handler` prop
+ * (see `ResourceActionItem.vue`).
  *
  * Entrance animation (`.aql-resource-action-container`) lives in
  * `src/css/custom.scss` on an inner wrapper — never on `q-page-sticky` itself,
@@ -60,10 +64,8 @@
  */
 import { computed, inject } from 'vue'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
-import { isActionVisible } from 'src/composables/resources/useResourceConfig'
 import { useActionResolver } from 'src/composables/resources/useActionResolver'
-import { toPascalCase } from 'src/utils/appHelpers'
+import { useAdditionalActions } from 'src/composables/resources/useAdditionalActions'
 import Action from 'components/Action.vue'
 import ResourceActionItem from './ResourceActionItem.vue'
 import ResourceActionsFab from './ResourceActionsFab.vue'
@@ -82,9 +84,9 @@ const props = defineProps({
 
 const resourceConfig = inject('resourceConfig', null)
 const resourceRecord = inject('resourceRecord', null)
-const pageState      = inject('pageState', null)
 const nav = useResourceNav()
-const { code: routeCode } = useRouteConfig()
+// No resource name passed: the cluster is page-level, so it follows the route.
+const { entriesFor } = useAdditionalActions()
 
 const pageKey = computed(() => (props.page || '').toLowerCase())
 // Form pages are owned by the FormActions sticky bar. PageAction already gates
@@ -93,19 +95,6 @@ const isFormPage = computed(() => ['add', 'edit', 'action'].includes(pageKey.val
 
 const permissions = computed(() => resourceConfig?.permissions?.value || {})
 const record = computed(() => resourceRecord?.record?.value || null)
-const additionalActions = computed(() => resourceConfig?.additionalActions?.value || [])
-
-// ── Workflow/navigate actions from AdditionalActions JSON ─────────────────────
-// Record context required (they act on a record, so they belong to View-style
-// pages); permission gate is the explicit `can<Action>` flag when the backend
-// defines one; `visibleWhen` conditions evaluate against the live record.
-const visibleAdditional = computed(() => {
-  if (isFormPage.value || !record.value) return []
-  return additionalActions.value.filter((act) => {
-    if (permissions.value[`can${act.action}`] === false) return false
-    return isActionVisible(act, record.value)
-  })
-})
 
 // ── Unified entry list ────────────────────────────────────────────────────────
 //
@@ -133,47 +122,26 @@ const entries = computed(() => {
       run: () => nav.goTo('edit')
     })
   }
-  visibleAdditional.value.forEach((act) => {
-    list.push({
-      key: `additional:${act.action}`,
-      actionName: `ResourceAction${toPascalCase(act.action)}`,
-      props: {
-        ...ctx,
-        icon: act.icon || 'bolt',
-        color: act.color || 'primary',
-        label: act.label || act.action,
-        tooltip: act.label || act.action
-      },
-      run: () => runAdditional(act)
-    })
-  })
+
+  // Workflow items — already permission-gated and `visibleWhen`-filtered by the
+  // composable, with `run()` bound. Only the resolver context is merged in here;
+  // this component makes no decision about which actions are eligible.
+  if (!isFormPage.value && record.value) {
+    for (const entry of entriesFor(record.value)) {
+      list.push({
+        key: entry.key,
+        actionName: entry.actionName,
+        props: { ...ctx, ...entry.props },
+        run: entry.run
+      })
+    }
+  }
+
   return list
 })
 
 function run (entry) {
   entry.run()
-}
-
-function runAdditional (act) {
-  if (act.kind === 'navigate') {
-    const target = act.navigate?.target || 'record-page'
-    const params = {
-      scope: act.navigate?.scope || resourceConfig?.scope?.value,
-      resourceSlug: act.navigate?.resourceSlug || resourceConfig?.resourceSlug?.value,
-      pageSlug: act.navigate?.pageSlug || ''
-    }
-    if (target === 'record-page') {
-      params.code = act.navigate?.code || record.value?.Code || routeCode.value
-    }
-    nav.goTo(target, params)
-    return
-  }
-  // Mutate/workflow action → the page-level ActionDialog mounted once in
-  // Page.vue, driven through pageState so a PageAction override can't swallow it.
-  if (pageState) {
-    pageState.meta.actionDialog.actionConfig = act
-    pageState.meta.actionDialog.show = true
-  }
 }
 
 // ── Resolver context: explicit props win, injected resourceConfig is fallback ──

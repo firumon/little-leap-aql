@@ -49,14 +49,6 @@
       action="PageAction"
       v-bind="pageProps"
     />
-
-    <!-- Mounted outside any overridable action so a custom PageAction override cannot swallow it. -->
-    <ActionDialog
-      v-if="pageProps.noActions !== true"
-      v-model="pageState.meta.actionDialog.show"
-      :action-config="pageState.meta.actionDialog.actionConfig"
-      :record="resourceRecord?.record?.value"
-    />
   </q-page>
 </template>
 
@@ -68,7 +60,6 @@ import PageFallback from 'pages/_common/PageFallback.vue'
 import Section from 'components/Section.vue'
 import Content from 'components/Content.vue'
 import Action from 'components/Action.vue'
-import ActionDialog from 'components/app/ActionDialog.vue'
 import { usePageResolver } from 'src/composables/resources/usePageResolver'
 import { usePageState } from 'src/composables/resources/usePageState'
 

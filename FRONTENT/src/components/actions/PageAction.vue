@@ -48,9 +48,10 @@
  *   - add / edit      → `FormActions` (sticky bar)
  *   - everything else → `ResourceActions` (unified bottom-right FAB cluster)
  *
- * Workflow (`mutate`) AdditionalActions are NOT handled here: `ResourceActions`
- * opens the page-level `ActionDialog` through `pageState.meta.actionDialog`,
- * which collects the outcome/fields and dispatches its own `executeAction`.
+ * AdditionalActions are NOT handled here. `ResourceActions` renders them, but
+ * owns none of their logic — that lives in `useAdditionalActions.js`, shared with
+ * the embeddable `app/AdditionalActionsButtons.vue`, with one dialog mounted in
+ * `MainLayout.vue`. See AQL_ACTION_SYSTEM.md §7.
  *
  * Both clusters are mounted through `useActionResolver`, so each is overridable
  * on its own at any of the 10 `_ui/` tiers. See Documents/AQL_ACTION_SYSTEM.md.

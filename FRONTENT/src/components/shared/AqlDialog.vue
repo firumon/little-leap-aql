@@ -42,7 +42,7 @@
       <q-separator />
 
       <!-- ── Body ────────────────────────────────────────────────────────── -->
-      <q-card-section class="aql-dialog-body q-gutter-y-sm">
+      <q-card-section class="aql-dialog-body q-gutter-y-sm relative-position">
         <q-banner v-if="message" dense :class="['aql-dialog-banner', `aql-dialog-banner--${variant}`]">
           <template #avatar>
             <q-icon :name="messageIcon || variantIcon" size="20px" />
@@ -51,6 +51,15 @@
         </q-banner>
 
         <slot />
+
+        <!-- The single blocking indicator while `loading` (ARCHITECTURE RULES —
+             loading UX): buttons disable, the body takes the overlay. Scoped to
+             the body so the header stays readable and the footer stays visibly
+             disabled rather than hidden behind a scrim. -->
+        <q-inner-loading :showing="loading" color="primary">
+          <q-spinner-dots size="42px" color="primary" />
+          <div v-if="loadingLabel" class="q-mt-sm text-caption text-grey-7">{{ loadingLabel }}</div>
+        </q-inner-loading>
       </q-card-section>
 
       <!-- ── Footer ──────────────────────────────────────────────────────── -->
@@ -76,7 +85,6 @@
               :icon="confirmIcon || undefined"
               :color="confirmColor"
               class="aql-dialog-btn"
-              :loading="loading"
               :disable="loading || disableConfirm"
               @click="$emit('confirm')"
             />
@@ -103,6 +111,11 @@
  *   3. `#header` / `#actions` slots — replace the chrome outright. `#actions` is
  *      scoped with `{ loading, disabled }` so a custom footer can mirror the
  *      built-in button state without re-deriving it.
+ *
+ * `loading` follows the app-wide contract: every button DISABLES (never
+ * `:loading` — a button spinner competes with the overlay and lets the eye think
+ * only that button is busy) and the body takes a single `q-inner-loading`.
+ * `loadingLabel` optionally captions it.
  *
  * Carries no `<style>` block — all rules are `.aql-dialog-*` in `src/css/custom.scss`
  * (ARCHITECTURE RULES §7).
@@ -140,6 +153,8 @@ const props = defineProps({
   cancelLabel:   { type: String, default: 'Cancel' },
   cancelIcon:    { type: String, default: '' },
   loading:       { type: Boolean, default: false },
+  // Optional caption under the body spinner — "Saving…", "Executing action…".
+  loadingLabel:  { type: String, default: '' },
   disableConfirm:{ type: Boolean, default: false },
 
   // ── Shell ──

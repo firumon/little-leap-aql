@@ -41,8 +41,6 @@
         </q-card-section>
       </q-card>
 
-      <ViewActions page="View" />
-
       <q-card flat bordered class="page-card q-mt-sm">
         <q-card-section class="q-pa-sm q-pa-md">
           <div class="text-subtitle2 text-weight-medium q-mb-sm">SKU Variants</div>
@@ -77,7 +75,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { provide } from 'vue'
-import ViewActions from 'components/_common/View/Actions.vue'
 import MasterViewAudit from 'components/_common/sections/Content/Audit.vue'
 import { useProductVariants } from 'src/composables/master/products/useProductVariants'
 import { useProductSkuViewData } from 'src/composables/master/products/useProductSkuViewData'

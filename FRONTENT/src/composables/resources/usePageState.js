@@ -24,7 +24,7 @@
  *   `state.nodes` (keyed by uid) and `state.index` (resource -> role -> uid) —
  *   the keying scheme is NOT part of the contract; the node object shape
  *   (`resource` / `record` / `children` / `records` / `controls` / `code` /
- *   `many` / `action` / `options`); and the child bucket layout
+ *   `many` / `options`); and the child bucket layout
  *   (`{ resource, records }`).
  *
  *   -> READ node state through `useNode(resource, role?)`, never
@@ -59,7 +59,6 @@
  *   {
  *     controls(resource)        -> [{ name, codeType? }]   // field schema; codeType -> auto options
  *     getOptions(codeType, node) -> [{ label, value }]      // option lists for XxxCode columns
- *     actionConfigs             -> { actionKey: { action, column, columnValue } }  // for setAction(string)
  *     hydrate(node, raw, ctx)   -> void                     // load existing server record into node
  *     build(ctx)                -> [request]                // override generic request assembly
  *     validate(node, state)     -> [{ field, message }]     // per-node validation
@@ -174,13 +173,6 @@ export function usePageState (strategy = {}) {
     loading: false,
     currentStep: 1,
     validationErrors: {},
-    // Workflow action dialog — set by ResourceActions when a mutate-kind workflow
-    // FAB item is clicked, read by the ActionDialog mounted once in Page.vue so a
-    // PageAction container override can never swallow the dialog.
-    actionDialog: {
-      show: false,
-      actionConfig: null
-    },
     // Measured height of the FormAction sticky bar (0 until FormAction.vue mounts
     // and reports it) — ResourceActions reads this to keep its FAB clear of the bar.
     formActionsHeight: 0
@@ -226,7 +218,7 @@ export function usePageState (strategy = {}) {
   //   ref('Outlets') / () => 'Outlets'          -> same, but reactive
   //   { resource: 'OutletVisits', role: 'next' } -> a specific role
   // Accepting the object form here means no mutation had to grow a `role`
-  // parameter — one resolver covers setField/addChild/executeAction/... alike.
+  // parameter — one resolver covers setField/addChild/addRecord/... alike.
   function resolveTarget (target, role) {
     const raw = toResourceName(target)
     if (raw && typeof raw === 'object') {
@@ -306,7 +298,6 @@ export function usePageState (strategy = {}) {
       loading: false,
       currentStep: 1,
       validationErrors: {},
-      actionDialog: { show: false, actionConfig: null },
       formActionsHeight: 0
     })
   }
@@ -409,12 +400,6 @@ export function usePageState (strategy = {}) {
     node.records.splice(index, 1)
   }
 
-  function setAction (resource, actionName) {
-    const node = ensureNode(resource)
-    node.action = actionName
-    return node
-  }
-
   // writes the user's chosen value into record (options themselves are read-only computed)
   function selectOption (resource, field, value) {
     return setField(resource, field, value)
@@ -471,15 +456,6 @@ export function usePageState (strategy = {}) {
     if (raw && raw.Code) node.code = raw.Code
   }
 
-  function resolveActionConfig (action) {
-    if (typeof action === 'string') {
-      const map = strategy.actionConfigs || {}
-      if (map[action]) return map[action]
-      return { action, column: 'Progress' }
-    }
-    return action
-  }
-
   function defaultBuild () {
     const requests = []
     // The target resource comes from `node.resource`, NEVER the Map key. Today the
@@ -507,10 +483,6 @@ export function usePageState (strategy = {}) {
         requests.push(resourceUpdateRequest(resource, node.code, node.record))
       } else if (Object.keys(node.record).length) {
         requests.push(resourceCreateRequest(resource, node.record))
-      }
-
-      if (node.action) {
-        requests.push(executeActionRequest(resource, node.code, resolveActionConfig(node.action), {}))
       }
     }
     return requests
@@ -572,15 +544,6 @@ export function usePageState (strategy = {}) {
   async function saveDraft (opts = {}) {
     console.warn('saveDraft is deprecated. Use submit() and set Progress to DRAFT instead.')
     return submit({ ...opts, successMsg: 'Draft saved.' })
-  }
-
-  async function executeAction (resource, actionName, fields = {}, opts = {}) {
-    const node = ensureNode(resource)
-    // Same rule as defaultBuild: the request targets `node.resource`, not the
-    // caller's argument. `resource` here may be a ref/getter (the accessors accept
-    // one) or, later, an alias key — neither is a resource name GAS would accept.
-    const requests = [executeActionRequest(node.resource, node.code, resolveActionConfig(actionName), fields)]
-    return run({ ...opts, requests, successMsg: 'Action completed.' })
   }
 
   // ----------------------------------------------------------------------
@@ -659,7 +622,6 @@ export function usePageState (strategy = {}) {
       loading: false,
       currentStep: 1,
       validationErrors: {},
-      actionDialog: { show: false, actionConfig: null },
       formActionsHeight: 0
     })
   }
@@ -684,7 +646,6 @@ export function usePageState (strategy = {}) {
     addRecord,
     updateRecord,
     removeRecord,
-    setAction,
     selectOption,
     // section helper
     useNode,
@@ -694,11 +655,10 @@ export function usePageState (strategy = {}) {
     // triggers (return { success, response, code })
     submit,
     saveDraft,
-    executeAction,
     // Low-level dispatch — state/requests -> server -> response, with the same
-    // validate/notify/submitting lifecycle as submit()/executeAction(). Exposed
-    // for callers (e.g. PageAction.vue) that need to apply a `modifyPayload`
-    // interceptor to an executeAction request before dispatch.
+    // validate/notify/submitting lifecycle as submit(). Exposed for callers
+    // (e.g. PageAction.vue) that need to apply a `modifyPayload` interceptor to
+    // a request before dispatch.
     run,
     // misc
     validationErrors,

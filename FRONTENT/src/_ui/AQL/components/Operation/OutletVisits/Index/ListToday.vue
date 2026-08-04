@@ -45,8 +45,8 @@
 </template>
 
 <script setup>
-import { computed, inject, useAttrs } from 'vue'
-import { isActionVisible } from 'src/composables/resources/useResourceConfig'
+import { computed, useAttrs } from 'vue'
+import { useAdditionalActions } from 'src/composables/resources/useAdditionalActions'
 import AppList from 'components/app/AppList.vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 
@@ -59,8 +59,7 @@ const props = defineProps({
 })
 
 const attrs = useAttrs()
-const resourceConfig = inject('resourceConfig', null)
-const pageState      = inject('pageState', null)
+const { actionsFor: useAdditionalActionsFor, runAction } = useAdditionalActions('OutletVisits')
 
 // Workflow buttons render in escalation order, mirroring the AdditionalActions cluster.
 const ACTION_ORDER = ['Cancel', 'Postpone', 'Complete']
@@ -157,30 +156,24 @@ function progressColor (item) {
 }
 
 // Action handlers
-const additionalActions = computed(() => resourceConfig?.additionalActions?.value || [])
-const permissions = computed(() => resourceConfig?.permissions?.value || {})
-
+//
+// Eligibility (permissions + `visibleWhen`) comes entirely from the composable —
+// `only` restricts it to the three workflow actions this list surfaces. Only the
+// ESCALATION ORDER stays here, because that is a presentation choice specific to
+// this list rather than a rule about which actions are allowed.
 function actionsFor (record) {
-  const out = []
-  for (const name of ACTION_ORDER) {
-    const actionConfig = additionalActions.value.find((act) => act.action === name)
-    if (!actionConfig) continue
-    if (permissions.value[`can${name}`] === false) continue
-    if (!isActionVisible(actionConfig, record)) continue
-    out.push(actionConfig)
-  }
-  return out
+  return useAdditionalActionsFor(record, { only: ACTION_ORDER })
+    .slice()
+    .sort((a, b) => ACTION_ORDER.indexOf(a.action) - ACTION_ORDER.indexOf(b.action))
 }
 
 function actionSize (actionConfig) {
   return actionConfig.action === 'Complete' ? 'md' : 'sm'
 }
 
+// Dispatch belongs to the composable: navigate vs mutate, and the shared dialog
+// mounted once in MainLayout. See AQL_ACTION_SYSTEM.md §7.
 function triggerAction (actionConfig, record) {
-  if (pageState) {
-    pageState.meta.actionDialog.record = record
-    pageState.meta.actionDialog.actionConfig = actionConfig
-    pageState.meta.actionDialog.show = true
-  }
+  runAction(actionConfig, record)
 }
 </script>

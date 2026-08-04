@@ -66,7 +66,8 @@ Mounted after `AqlContentWrapper`, as a **sibling of the `<Transition>`** — ne
 > contract's `sections` array at all. `PageAction` no longer needs to be declared in
 > `sections` (and `usePageResolver` still filters it out of `visibleSectionsBeforeAction`
 > if a contract lists it). The only opt-out is `noActions: true` in a page contract or JS
-> modifier, which suppresses both `<Action>` and the workflow `ActionDialog`.
+> modifier, which suppresses the `<Action>` mount. It does **not** affect the
+> AdditionalActions dialog — that subsystem is independent of `<Action>` entirely (§7).
 
 ### 1.3 The Action Placeholder (`src/components/Action.vue`)
 `AqlAction` mirrors `Section.vue` / `Content.vue` exactly:
@@ -409,7 +410,15 @@ grow multiple competing right-side FABs:
 |--------|-------|------|-------------------------|
 | Permissions | `ResourceActionAdd` | `permissions.canWrite` | `nav.goTo('add')` |
 | Permissions | `ResourceActionEdit` | `permissions.canUpdate` **and** a record in context | `nav.goTo('edit')` |
-| `resourceConfig.additionalActions` (APP.Resources `AdditionalActions` JSON) | `ResourceAction<Name>` (e.g. `ResourceActionApprove`) | record in context, `permissions.can<Action>` not explicitly `false`, `isActionVisible(action, record)` (`visibleWhen`) | `mutate` kind → opens the page-level `ActionDialog` via `pageState.meta.actionDialog`; `navigate` kind → `nav.goTo('record-page' \| 'resource-page', …)` |
+| `useAdditionalActions().entriesFor(record)` | `ResourceAction<Name>` (e.g. `ResourceActionPostpone`) | applied by the composable — record in context, `can<Action>` not explicitly `false`, `visibleWhen` satisfied | the entry's bound `run()` — `navigate` routes, `mutate` opens the shared dialog |
+
+> [!IMPORTANT]
+> **`ResourceActions` owns no workflow logic.** It calls `entriesFor(record)` and merges
+> its resolver context into each returned entry's props — nothing more. Permission
+> gating, `visibleWhen`, and navigate-vs-mutate dispatch live in
+> `composables/resources/useAdditionalActions.js` (§7), shared with the embeddable
+> `components/app/AdditionalActionsButtons.vue`. A component that re-derives eligibility
+> will drift from the config contract.
 
 **Layout** — driven by the number of visible entries:
 
@@ -439,33 +448,11 @@ The menu trigger resolves the same way as `ResourceActionsFab`
 (`resourceactions.(vue|js)`); a container modifier returning `show: false` / `hide: true`
 (plain boolean or function) suppresses everything.
 
-**Workflow dispatch & the `ActionDialog`.** A `mutate`-kind item never dispatches itself:
-it sets `pageState.meta.actionDialog = { show: true, actionConfig }`, and the
-`ActionDialog` mounted once in `Page.vue` (from **`components/app/ActionDialog.vue`**,
-outside any overridable action so a `pageaction.vue` override can never swallow it) renders
-the outcome select + per-outcome fields via `useActionFields` and dispatches through
-`pageState.run()` with an `executeActionRequest`. `noActions: true` suppresses the dialog
-together with the whole `<Action>` mount.
-
-#### 3.4.1 ActionDialog Field Resolution & Rendering Contract
-The `ActionDialog` (`app/ActionDialog.vue`) and `useActionFields` composable enforce a strict rendering & sourcing contract across workflow input fields:
-
-* **Short Field Name Header Resolution (`resolveFieldHeader`)**:
-  Field names in `AdditionalActions` JSON use canonical short names (`Comment`, `Reason`, `Remark`). `useActionFields` automatically derives the exact sheet column header as `{column}{PascalCase(columnValue)}{name}` (e.g. `Progress` + `Cancelled` + `Comment` $\rightarrow$ `ProgressCancelledComment`). If the derived header, direct header, or legacy name exists in the resource headers, the field resolves; otherwise, it is hidden.
-* **Multiline Textarea Fields (`textarea`)**:
-  Fields named `Comment`, `Reason`, `Remark`, `Note`, or `Description` (or explicitly typed as `textarea`) render as `<q-input type="textarea" autogrow outlined>`. They deliberately omit `dense` (to preserve touch target size) and static `rows` (so `autogrow` can expand naturally with user input).
-* **Option-Sourced Select Fields (`select`)**:
-  Fields explicitly typed as `select` or carrying option sourcing (`options[]` or `source: { resource, field, label }`) render as `<q-select outlined clearable emit-value map-options>`.
-  * **Option Resolution**: `source` definitions dynamically fetch records from `useDataStore().getRecords(source.resource)`.
-  * **Label Resolution Precedence**:
-    1. `source.label` if explicitly configured on the `source` object.
-    2. `Name` column if present in the target resource's headers/records.
-    3. The 2nd sheet column (index 1) as the conventional descriptor.
-    4. Fallback to raw `source.field` value.
-    Options format as `{ label: "Descriptor (Value)", value: "Value" }` (or bare `${value}` if label is missing or identical), deduped by value and sorted by label (`localeCompare`).
-  * **Combobox Filtering (> 15 Options)**: When options count exceeds 15 (`OPTION_FILTER_THRESHOLD = 15`), the control automatically enables type-to-filter (`use-input`, `hide-selected`, `fill-input`, `@filter` search).
-* **Required Field Validation**: `handleSubmit` validates all `field.required: true` inputs, notifying an error toast if any required field is empty or whitespace-only before executing the request.
-
+**Workflow dispatch.** `ResourceActions` never opens a dialog itself — it invokes the
+`run()` the composable bound to each entry, which routes a `navigate` action or opens
+the single dialog mounted in `MainLayout.vue`. `noActions: true` suppresses the whole
+`<Action>` mount (and with it these FAB triggers), but the dialog is independent of
+`<Action>`, so an `AdditionalActionsButtons` trigger elsewhere on the page keeps working.
 
 The `.aql-resource-action-container` entrance animation is applied to an **inner wrapper**,
 never to the `q-page-sticky` root — a CSS transform on a `position: fixed` ancestor turns
@@ -750,7 +737,214 @@ The subsystem migration is behaviour-preserving. These are contractual:
 
 ---
 
-## 7. Strict Maintenance Rule
+## 7. Multi-Record Actions (`AdditionalActions.targets[]`)
+
+An action may write **more than one record** in a single request. A "Postpone" stamps
+the current visit *and* schedules its replacement; a "Reject" comments on the request
+*and* reopens the originating task. This is the `targets[]` array, a sibling of the
+action's own `fields[]`.
+
+> [!IMPORTANT]
+> **One composable owns all of it.** `composables/resources/useAdditionalActions.js` is
+> the single home for permission gating, `visibleWhen`, `only`/`exclude` filtering,
+> navigate-vs-mutate dispatch, input collection and submission. Every consumer — the
+> embeddable `components/app/AdditionalActionsButtons.vue`, the `ResourceActions` FAB
+> cluster, and any custom list row — asks it what a record may offer and hands clicks
+> back. **Never re-derive eligibility in a component.**
+>
+> Naming is uniform across the subsystem: `useAdditionalActions.js`,
+> `additionalActionsSchema.js`, `AdditionalActionsButtons.vue`,
+> `AdditionalActionsDialog.vue`. Server side: `GAS/actionTargets.gs`.
+>
+> It does not use `usePageState` or the 10-tier resolver (though items rendered *through*
+> `ResourceActions` still resolve per-item as `ResourceAction<Name>`, since that is the
+> FAB cluster's own mechanism).
+
+### 7.0 Composable API
+
+```javascript
+const {
+  additionalActions,   // raw config array for the resource
+  actionsFor,          // (record, { only, exclude }) -> gated action configs
+  entriesFor,          // (record, { only, exclude }) -> [{ key, name, actionName, action, props, run }]
+  runAction,           // (action, record) -> navigate routes | mutate opens the dialog
+  openAction           // (action, record) -> force the dialog, skipping the kind check
+} = useAdditionalActions(resourceName?)   // omit the name to follow the active route
+```
+
+| Consumer | Uses | Why |
+|---|---|---|
+| `AdditionalActionsButtons` | `actionsFor` + `runAction` | renders its own buttons from the raw configs |
+| `ResourceActions` | `entriesFor` | needs resolver names + presentation props to fold into its cluster |
+| A custom list row | either | e.g. `ListToday.vue` uses `actionsFor({ only })` and sorts locally |
+
+Ordering is the one thing a consumer may legitimately decide locally — it is presentation,
+not eligibility. `ListToday.vue` sorts its three actions into escalation order while still
+taking the gate from `actionsFor`.
+
+The dialog half is `useAdditionalActionsDialog()`, consumed **only** by the single
+`AdditionalActionsDialog` instance in `MainLayout.vue`.
+
+### 7.1 Config shape
+
+```json
+{
+  "action": "Postpone", "label": "Postpone", "icon": "event_repeat",
+  "color": "warning", "kind": "mutate",
+  "column": "Progress", "columnValue": "Postponed",
+  "visibleWhen": { "column": "Progress", "op": "eq", "value": "PLANNED" },
+
+  "fields": [
+    { "name": "Comment", "label": "Reason", "type": "textarea", "required": true }
+  ],
+
+  "targets": [{
+    "resource": "OutletVisits",
+    "mode": "create",
+    "key": "newVisit",
+    "label": "New Visit",
+    "fields": [
+      { "name": "OutletCode",             "from": "$record.OutletCode" },
+      { "name": "Progress",               "value": "PLANNED" },
+      { "name": "Date",                   "label": "New Date", "type": "date", "required": true },
+      { "name": "ProgressPlannedComment", "label": "Planned Comment", "type": "textarea",
+        "from": "$record.ProgressPlannedComment" }
+    ]
+  }]
+}
+```
+
+### 7.1.1 Dialog headings (`title` / `subtitle`)
+
+Both are optional **template strings** resolved against the record:
+
+```json
+"title":    "Postpone {$outlet.Name}",
+"subtitle": "{Code} • {Date}"
+```
+
+| | Behaviour |
+|---|---|
+| Placeholder syntax | `{Column}` — a dot path on the record, so `{$outlet.Name}` reads the relation getter |
+| Context | The **record only**. No `$userName` / `$today` tokens — `$outlet` (a record property) and `$userName` (a token) would collide in one namespace, and a heading describes the record. |
+| Unresolved placeholder | Renders empty, then stranded separators (`•`, `-`, `|`, `,`) are collapsed and trimmed, so `"{$outlet.Name} • {Code}"` on an un-enriched record gives `"OV26000018"`, not `" • OV26000018"` |
+| `title` absent/blank | Falls back to `label`, then `action` |
+| `subtitle` absent | Falls back to the record `Code` |
+| `subtitle: ""` | Deliberate **no subtitle** — an explicit empty string does not fall back |
+
+> [!NOTE]
+> These are **presentational and client-side only** — GAS never renders the dialog, so
+> `actionTargets.gs` is not involved. The confirm BUTTON always reads as the action
+> (`label` / `action`), never the title: a custom heading must not change what the user
+> is agreeing to.
+
+Deliberately NOT the `from`/`value` expression grammar (§7.4): a heading is usually
+several fields plus literal text, which a single-value expression cannot express, and
+`$outlet.Name` would parse there as an unknown token and throw.
+
+### 7.2 The one field rule
+
+`type` decides **visibility**; `from` / `value` decide **seeding**. There is no separate
+`editable` flag.
+
+| Field carries | Behaviour |
+|---|---|
+| `type` only | Renders blank, user fills it |
+| `from` only | Copied silently server-side, never shown |
+| `value` only | Constant or token, silent |
+| `from` + `type` | Copied as a **prefill**, rendered, user may edit |
+| `value` + `type` | Token prefill, editable |
+
+### 7.3 Two field families, deliberately asymmetric
+
+| | Keyed by | Derivation |
+|---|---|---|
+| `fields[]` (source record) | Derived header | `{column}{PascalCase(columnValue)}{name}` — `Comment` → `ProgressPostponedComment` |
+| `targets[].fields[]` | **Literal** column name | None. A target's columns have no relationship to the source's outcome. |
+
+> [!WARNING]
+> The suffix helper is `actionHeaderSuffix` in `additionalActionsSchema.js`, **not**
+> `appHelpers.toPascalCase`. `toPascalCase` splits on `[- ]` only, so `REVISION_REQUIRED`
+> becomes `Revision_required` there but `RevisionRequired` in GAS's `toActionHeaderSuffix`.
+> The derived header must match the column the backend writes. `toPascalCase` is
+> load-bearing for the section/column resolvers and is deliberately left alone.
+
+### 7.4 Expression grammar (server-authoritative)
+
+| Expression | Resolves to |
+|---|---|
+| `$record.<Column>` | Source record, **as it was before** this action mutated it |
+| `$field.<Name>` | A value typed into the action's own `fields[]` (short name or derived header) |
+| `$target.<key>.<Column>` | A column on an **earlier** target in the same run |
+| `$userName` `$userCode` `$userEmail` `$userRole` `$userDesignation` `$userRegion` | Identity tokens |
+| `$now` `$today` `$date:N` | Time tokens |
+| `$$anything` | Escape — yields the literal `$anything` |
+| anything else | Literal |
+
+An unrecognised `$token` **throws**, so a config typo fails the action instead of writing
+the string `$usrName` into a cell. The frontend's `prefillExpression` resolves only
+`$record.*` and the tokens, for display of prefilled values; the server always re-resolves.
+
+### 7.5 Execution & security model
+
+The target list is read from the **trusted `APP.Resources` config**, never from the client.
+The client sends only `fields` (values the user typed on the source record) and
+`targetFields` (values typed into target inputs) — everything copied or defaulted is
+resolved server-side. A client therefore cannot inject a target, nor write a column the
+config does not declare.
+
+That is what authorizes a target write under the action's **own** permission on the
+**source** resource, rather than `canWrite`/`canUpdate` on the target resource.
+`executeActionTargets` deliberately does not call `enforceMasterPermission` per target.
+
+Execution is two-pass:
+
+1. **Resolve + validate every target.** Expressions resolved, `required` enforced,
+   `validateRequiredFields` and `validateMasterUniqueness` run. Nothing is written.
+2. **Write.** Updates row-by-row, creates batched into one `setValues` per resource.
+
+Ordering: targets land **before** the source record's column is stamped, so a failure
+leaves the record in its original state rather than flipped to an outcome whose follow-up
+records never materialized.
+
+Two creates against the same resource in one action are safe: each prepared row is pushed
+onto the in-memory `values` snapshot, so the next generated code and the next uniqueness
+check both see it.
+
+> [!NOTE]
+> **Known residual risk.** Sheets has no transactions. If write 2 of 3 fails (lock
+> contention, quota), write 1 has already landed and a retry would duplicate it. The
+> validate-first pass makes this rare but not impossible. If it ever bites, the fix is an
+> idempotency key on the action run.
+
+### 7.6 Response & reactivity
+
+GAS returns direct-write payloads for **every** resource the action touched, merged into
+the response. `resourceIoStore.runBatchRequests` hydrates them via `hydrateResourcePayload`,
+so the dialog closes on success and the page updates through normal reactivity — **no
+refetch**. A target writing back to the source resource merges into one payload rather than
+clobbering it.
+
+### 7.7 Embedding a trigger
+
+```html
+<AdditionalActionsButtons resource="OutletVisits" :record="visit" mode="inline" />
+<AdditionalActionsButtons resource="OutletVisits" :record="visit" mode="menu" :only="['Postpone']" />
+```
+
+Or supply your own buttons while keeping the gating:
+
+```html
+<AdditionalActionsButtons resource="OutletVisits" :record="visit">
+  <template #default="{ actions, open }">
+    <q-btn v-for="a in actions" :key="a.action" :label="a.label" @click="open(a)" />
+  </template>
+</AdditionalActionsButtons>
+```
+
+---
+
+## 8. Strict Maintenance Rule
 
 > [!IMPORTANT]
 > **Documentation Sync Requirement**: Any modification to the Action subsystem — adding a

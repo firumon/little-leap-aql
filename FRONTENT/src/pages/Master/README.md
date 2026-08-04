@@ -141,7 +141,6 @@ Route slug → PascalCase folder/file name:
 | `useResourceData` | Cache-first loading, search, filter, background sync |
 | `useResourceRelations` | Parent-child discovery from auth store |
 | `useCompositeForm` | Parent + child form state, atomic composite save |
-| `useActionFields` | Column-driven field resolution for action pages |
 | `useSectionResolver` | Generic 3-tier section resolver for all page actions |
 
 ## Parent-Child (Composite) Records

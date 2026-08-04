@@ -71,13 +71,14 @@ Action.vue (action="PageAction")
     │   └── actions/ResourceActionsFab.vue  ← expandable menu when ≥2 items
     └── actions/ResourceReports.vue     ← every other page (resolved); report downloads
 
-(mutate-kind workflow items open components/app/ActionDialog.vue, mounted once in
-Page.vue and driven via pageState.meta.actionDialog)
+(ResourceActions renders AdditionalActions items too, but owns none of their
+ logic — it folds in `useAdditionalActions().entriesFor(record)`. See Pattern 7)
 ```
 
 The Action subsystem is decoupled from `sections` — it mounts on every resource page and does
 not need a `'PageAction'` entry. Set `noActions: true` in a page contract or JS modifier to
-suppress both `<Action>` and the workflow `ActionDialog`.
+suppress the `<Action>` mount. It does not affect the AdditionalActions dialog, which is
+independent of `<Action>` entirely.
 
 ---
 
@@ -218,17 +219,15 @@ Available props: `submit`, `reset`, `cancel`, any custom action key, `modifyPayl
 
 ### Pattern 5: The unified `ResourceActions` FAB cluster
 One bottom-right cluster per non-form page, sourcing Add (`canWrite`), Edit
-(`canUpdate` + record), and every visible `AdditionalActions` entry
-(record required, `can<Action>` not explicitly false, `visibleWhen` satisfied).
-One item → standalone FAB; ≥2 → one expandable `ResourceActionsFab` menu.
-`mutate` items open the page-level `ActionDialog` (`app/ActionDialog.vue`) via
-`pageState.meta.actionDialog`; `navigate` items route via `useResourceNav`.
+(`canUpdate` + record), **and** every eligible AdditionalActions item whenever a
+record is in context. One item → standalone FAB; ≥2 → one expandable
+`ResourceActionsFab` menu.
 
-`ActionDialog.vue` & `useActionFields.js` enforce automatic field resolution:
-- Short field names (`Comment`, `Reason`) resolve derived headers as `{column}{PascalCase(columnValue)}{name}` (e.g. `ProgressCancelledComment`).
-- Comment/reason fields render as spacious `<q-input type="textarea" autogrow outlined>` without `dense` or static `rows`.
-- `select` fields with `options[]` or `source: { resource, field, label }` resolve options dynamically from `useDataStore().getRecords()`. Labels format as `"Descriptor (Value)"` following precedence: `source.label` $\rightarrow$ `Name` column $\rightarrow$ 2nd column $\rightarrow$ raw value.
-- Options exceeding 15 items automatically enable combobox type-to-filter (`use-input`, `@filter`).
+> [!IMPORTANT]
+> The workflow half owns **no logic** here. `useAdditionalActions().entriesFor(record)`
+> returns entries already gated (permissions + `visibleWhen`) with `run()` bound, and
+> `ResourceActions` merely merges its resolver context into each one's props. Never
+> re-derive eligibility in a component — see Pattern 7.
 
 Every item resolves under its own action name with `ResourceActionItem` as base, so
 each is customizable at all 10 tiers:
@@ -284,7 +283,41 @@ emitting intent to `PageAction.handleAction()`. Keep it that way — do not add 
 logic to the dispatcher, and do not fetch or notify from the component. See
 [report_ui_development.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/report_ui_development.md).
 
-### Pattern 7: Full container override
+### Pattern 7: Multi-record actions (`targets[]`) — the standalone subsystem
+An `AdditionalActions` entry may carry `targets[]` alongside its own `fields[]`, letting
+one action write several records (Postpone = stamp this visit **and** create the next).
+
+> [!IMPORTANT]
+> This is **standalone** — it does NOT use `usePageState`, the 10-tier resolver, or
+> `components/actions/`. Files: `components/app/AdditionalActionsButtons.vue` (embeddable
+> triggers), `components/app/AdditionalActionsDialog.vue` (ONE dialog, mounted in
+> `MainLayout.vue`), `composables/resources/useAdditionalActions.js` +
+> `additionalActionsSchema.js`, and `GAS/actionTargets.gs`. Full spec in
+> [AQL_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_ACTION_SYSTEM.md) §7.
+
+Non-negotiables when touching it:
+* **`useResourceConfig.normalizeAction` is a key WHITELIST.** It rebuilds every action
+  from named keys, so a new `AdditionalActions` key added to the JSON, the authoring UI
+  and GAS will still be **silently dropped** before any component sees it unless it is
+  also copied there. This is exactly how `targets` went missing while the FAB looked
+  perfect. Add the key in *three* places: `actionManager.html`, `normalizeAction`, and
+  whatever consumes it.
+* **One dialog, never N.** Triggers render buttons only. A list rendering one trigger per
+  row must not mount one dialog per row.
+* **Dialog `title`/`subtitle` are record templates**, not expressions — `{Code}`,
+  `{$outlet.Name}`. Record-only context, resolved by `resolveRecordTemplate`, client-side.
+* **`type` = visible, `from`/`value` = seeded.** Both together = editable prefill.
+* **Source fields derive** (`{column}{PascalCase(columnValue)}{name}`); **target fields are
+  literal** column names.
+* **Use `actionHeaderSuffix`, not `toPascalCase`** — the latter splits on `[- ]` only and
+  diverges from GAS on underscored outcomes like `REVISION_REQUIRED`.
+* **Targets come from the trusted config, never the client.** That is what lets them write
+  under the action's own permission on the source resource.
+* **No pageState.** Its `validationErrors` gate fires on the host page's nodes, and
+  `ensureNode` collides with the page's own node for the same resource.
+* Controls render through `_fields/` — never hand-roll a `q-input` in the dialog.
+
+### Pattern 8: Full container override
 If you override `pageaction.vue` you must explicitly import and render `FormActions`
 and/or `ResourceActions` yourself, and wire `@submit`/`@reset` to `pageState` — the base
 container's lifecycle logic is not inherited.

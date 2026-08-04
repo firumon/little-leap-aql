@@ -128,6 +128,23 @@
   .checkbox-row input[type=checkbox] { width: auto; box-shadow: none; cursor: pointer; }
   .sub-section { background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 12px; margin-top: 12px; }
   .hint { font-size: 11px; color: #64748b; margin-top: 4px; }
+  .hint code { background: #e2e8f0; padding: 1px 4px; border-radius: 3px; font-size: 10px; }
+
+  /* ── Targets ─────────────────────────────────────────────────────────── */
+  .target-card { border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; margin-top: 8px; background: #fff; }
+  .target-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .target-title { font-size: 12px; font-weight: 700; color: #0f172a; }
+  .target-title .mode-badge { font-size: 9px; padding: 2px 7px; border-radius: 10px; margin-left: 6px; font-weight: 600; text-transform: uppercase; background: #eef2ff; color: #3730a3; border: 1px solid #c7d2fe; }
+  /* 7 columns: name, label, type, required, from, value, remove. A label strip
+     above the rows keeps six narrow inputs readable without per-input labels. */
+  .tf-row, .tf-head { display: grid; grid-template-columns: 1.1fr 1.1fr 108px 44px 1.2fr 1.2fr 20px; gap: 6px; align-items: center; }
+  .tf-row { margin-top: 5px; }
+  .tf-head { margin-top: 8px; font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; }
+  .tf-row .remove-field { cursor: pointer; color: #ef4444; font-size: 17px; font-weight: bold; text-align: center; }
+  .tf-row .remove-field:hover { color: #b91c1c; }
+  .tf-row input[type=checkbox] { width: auto; margin: 0 auto; display: block; box-shadow: none; cursor: pointer; }
+  /* Second line for select option sourcing — only rendered for select fields. */
+  .opt-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 4px; padding-left: 4px; border-left: 2px solid #e2e8f0; }
 
   /* Custom scrollbars */
   ::-webkit-scrollbar {
@@ -175,8 +192,12 @@
 var resourceData = [];
 var currentActions = [];
 var VALID_OPS = ['eq','ne','in','nin','empty','notEmpty'];
-var FIELD_TYPES = ['text','textarea','date','number'];
+// Mirrors the folders under FRONTENT/src/components/_fields/. Every action input
+// renders through that resolver, so anything with a folder there is authorable
+// here. An unknown type degrades to `text` rather than failing to render.
+var FIELD_TYPES = ['text','textarea','number','date','select','currency','file','link','tel','toggle','status'];
 var NAV_TARGETS = ['record-page','list','view','edit','add','action'];
+var TARGET_MODES = ['create','update'];
 
 google.script.run.withSuccessHandler(function(data) {
   resourceData = data.resources || [];
@@ -210,6 +231,15 @@ function normalizeForEdit(a) {
     a.columnValue = a.columnValue || '';
     if (!Array.isArray(a.columnValueOptions)) a.columnValueOptions = [];
     if (!Array.isArray(a.fields)) a.fields = [];
+    if (!Array.isArray(a.targets)) a.targets = [];
+    a.targets.forEach(function(t) {
+      t.mode = (t.mode === 'update') ? 'update' : 'create';
+      t.resource = t.resource || '';
+      t.key = t.key || '';
+      t.label = t.label || '';
+      t.code = t.code || '';
+      if (!Array.isArray(t.fields)) t.fields = [];
+    });
   } else {
     a.navigate = a.navigate || {};
     a.navigate.target = a.navigate.target || 'record-page';
@@ -231,7 +261,7 @@ function addAction() {
     action: '', label: '', icon: '', color: 'primary',
     kind: 'mutate',
     column: 'Progress', columnValue: '', columnValueOptions: [],
-    confirm: false, fields: [],
+    confirm: false, fields: [], targets: [],
     visibleWhen: []
   });
   renderActions();
@@ -239,6 +269,24 @@ function addAction() {
 function removeAction(idx) { currentActions.splice(idx, 1); renderActions(); }
 function addField(i) { currentActions[i].fields.push({ name: '', type: 'text', label: '', required: false }); renderActions(); }
 function removeField(i, fi) { currentActions[i].fields.splice(fi, 1); renderActions(); }
+
+// A type change re-renders because the select/option-sourcing inputs are
+// conditional on it. Safe for focus: `change` on a <select> fires after the user
+// has already committed the choice.
+function onFieldTypeChange(i, fi, val) { currentActions[i].fields[fi].type = val; renderActions(); }
+function onTargetFieldTypeChange(i, ti, fi, val) { currentActions[i].targets[ti].fields[fi].type = val; renderActions(); }
+function onTargetModeChange(i, ti, val) { currentActions[i].targets[ti].mode = val; renderActions(); }
+
+function addTarget(i) {
+  currentActions[i].targets.push({ resource: '', mode: 'create', key: '', label: '', code: '', fields: [] });
+  renderActions();
+}
+function removeTarget(i, ti) { currentActions[i].targets.splice(ti, 1); renderActions(); }
+function addTargetField(i, ti) {
+  currentActions[i].targets[ti].fields.push({ name: '', label: '', type: '', required: false, from: '', value: '' });
+  renderActions();
+}
+function removeTargetField(i, ti, fi) { currentActions[i].targets[ti].fields.splice(fi, 1); renderActions(); }
 function addCondition(i) { currentActions[i].visibleWhen.push({ column: '', op: 'eq', value: '' }); renderActions(); }
 function removeCondition(i, ci) { currentActions[i].visibleWhen.splice(ci, 1); renderActions(); }
 
@@ -282,6 +330,12 @@ function renderActions() {
     html += '</div>';
 
     html += '<div class="row">';
+    html += '<div><label>Dialog Title (optional)</label><input value="' + esc(action.title || '') + '" onchange="currentActions[' + i + '].title=this.value" placeholder="Postpone {$outlet.Name}"></div>';
+    html += '<div><label>Dialog Subtitle (optional)</label><input value="' + esc(action.subtitle == null ? '' : action.subtitle) + '" onchange="currentActions[' + i + '].subtitle=this.value" placeholder="{Code} &bull; {Date}"></div>';
+    html += '</div>';
+    html += '<div class="hint">Headings accept <code>{Column}</code> placeholders resolved against the record — <code>{Code}</code>, <code>{Progress}</code>, <code>{$outlet.Name}</code> for a related record. Blank Title falls back to the action Label; blank Subtitle falls back to the record Code.</div>';
+
+    html += '<div class="row" style="margin-top:12px;">';
     html += '<div><label>Kind</label><select onchange="onKindChange(' + i + ', this.value)">';
     ['mutate','navigate'].forEach(function(k) {
       html += '<option value="' + k + '"' + (action.kind === k ? ' selected' : '') + '>' + k + '</option>';
@@ -313,12 +367,13 @@ function renderMutateBlock(action, i) {
   html += '<div><label>Column Value Options (CSV, multi-outcome)</label><input value="' + esc((action.columnValueOptions || []).join(',')) + '" onchange="currentActions[' + i + '].columnValueOptions=this.value?this.value.split(\',\').map(function(s){return s.trim()}).filter(Boolean):[]"></div>';
   html += '</div>';
 
-  html += '<div style="margin-top:8px;"><label>Fields</label>';
+  html += '<div style="margin-top:8px;"><label>Fields — written to THIS record</label>';
+  html += '<div class="hint">Use the SHORT name (<code>Comment</code>). The column is derived as <code>{Column}{ColumnValue}{Name}</code> — e.g. <code>ProgressPostponedComment</code>. A field whose derived column does not exist on the sheet is hidden.</div>';
   (action.fields || []).forEach(function(field, fi) {
     html += '<div class="field-row">';
     html += '<input value="' + esc(field.name) + '" onchange="currentActions[' + i + '].fields[' + fi + '].name=this.value" placeholder="Name (e.g. Comment)">';
     html += '<input value="' + esc(field.label || '') + '" onchange="currentActions[' + i + '].fields[' + fi + '].label=this.value" placeholder="Label (optional)">';
-    html += '<select onchange="currentActions[' + i + '].fields[' + fi + '].type=this.value">';
+    html += '<select onchange="onFieldTypeChange(' + i + ',' + fi + ',this.value)">';
     FIELD_TYPES.forEach(function(t) {
       html += '<option value="' + t + '"' + (field.type === t ? ' selected' : '') + '>' + t + '</option>';
     });
@@ -326,9 +381,111 @@ function renderMutateBlock(action, i) {
     html += '<input type="checkbox" ' + (field.required ? 'checked' : '') + ' onchange="currentActions[' + i + '].fields[' + fi + '].required=this.checked" title="Required"> <span style="font-size:11px">Req</span>';
     html += '<span class="remove-field" onclick="removeField(' + i + ',' + fi + ')" title="Remove field">&times;</span>';
     html += '</div>';
+    html += renderOptionSourcing(i, null, fi, field);
   });
   html += '<button class="btn-secondary" onclick="addField(' + i + ')" style="margin-top:4px;padding:3px 10px;font-size:11px;">+ Add Field</button>';
-  html += '</div></div>';
+  html += '</div>';
+
+  html += renderTargetsBlock(action, i);
+  html += '</div>';
+  return html;
+}
+
+// ── Select option sourcing ────────────────────────────────────────────────────
+// `ti === null` addresses a field on the action itself; a number addresses a
+// field on that target. Both families share this editor.
+function fieldAt(i, ti, fi) {
+  return ti === null ? currentActions[i].fields[fi] : currentActions[i].targets[ti].fields[fi];
+}
+
+function setFieldOptions(i, ti, fi, csv) {
+  var f = fieldAt(i, ti, fi);
+  var list = (csv || '').split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+  if (list.length) f.options = list; else delete f.options;
+}
+
+// Authored as `Resource.Field` or `Resource.Field.LabelColumn`. Fewer than two
+// parts clears the source rather than saving a half-built one.
+function setFieldSource(i, ti, fi, str) {
+  var f = fieldAt(i, ti, fi);
+  var parts = (str || '').split('.').map(function(s) { return s.trim(); }).filter(Boolean);
+  if (parts.length < 2) { delete f.source; return; }
+  f.source = { resource: parts[0], field: parts[1] };
+  if (parts[2]) f.source.label = parts[2];
+}
+
+function renderOptionSourcing(i, ti, fi, field) {
+  if (field.type !== 'select') return '';
+  var src = field.source || {};
+  var srcStr = src.resource ? [src.resource, src.field, src.label].filter(Boolean).join('.') : '';
+  var args = i + ',' + (ti === null ? 'null' : ti) + ',' + fi;
+  var html = '<div class="opt-row">';
+  html += '<input value="' + esc((field.options || []).join(',')) + '" onchange="setFieldOptions(' + args + ',this.value)" placeholder="Options (CSV) — Low,Medium,High">';
+  html += '<input value="' + esc(srcStr) + '" onchange="setFieldSource(' + args + ',this.value)" placeholder="Source — Resource.Field[.LabelColumn]">';
+  html += '</div>';
+  return html;
+}
+
+// ── Targets ───────────────────────────────────────────────────────────────────
+function renderTargetsBlock(action, i) {
+  var html = '<div class="sub-section" style="background:#fff;"><h3>Targets — extra records this action writes</h3>';
+  html += '<div class="hint">Each target is ONE extra create/update performed in the same request. Field rule: <code>Type</code> makes it visible to the user; <code>From</code>/<code>Value</code> seed it server-side. Both together = an editable pre-fill. Leave <code>Type</code> empty for a silent copied field.</div>';
+  html += '<div class="hint">Expressions: <code>$record.Column</code>, <code>$field.Name</code>, <code>$target.key.Column</code>, <code>$userName</code>, <code>$userCode</code>, <code>$today</code>, <code>$date:7</code>. Anything else is a literal.</div>';
+
+  (action.targets || []).forEach(function(target, ti) {
+    html += '<div class="target-card">';
+    html += '<div class="target-head"><span class="target-title">' + esc(target.label || target.resource || 'New Target');
+    html += '<span class="mode-badge">' + esc(target.mode || 'create') + '</span></span>';
+    html += '<button class="btn-danger" onclick="removeTarget(' + i + ',' + ti + ')" style="padding:3px 8px;font-size:10px;">Remove Target</button></div>';
+
+    html += '<div class="row">';
+    html += '<div><label>Resource</label><select onchange="currentActions[' + i + '].targets[' + ti + '].resource=this.value"><option value="">-- Select --</option>';
+    resourceData.forEach(function(r) {
+      html += '<option value="' + esc(r.name) + '"' + (target.resource === r.name ? ' selected' : '') + '>' + esc(r.label + ' (' + r.name + ')') + '</option>';
+    });
+    html += '</select></div>';
+    html += '<div><label>Mode</label><select onchange="onTargetModeChange(' + i + ',' + ti + ',this.value)">';
+    TARGET_MODES.forEach(function(m) {
+      html += '<option value="' + m + '"' + (target.mode === m ? ' selected' : '') + '>' + m + '</option>';
+    });
+    html += '</select></div>';
+    html += '<div><label>Key</label><input value="' + esc(target.key || '') + '" onchange="currentActions[' + i + '].targets[' + ti + '].key=this.value" placeholder="newVisit"></div>';
+    html += '<div><label>Label</label><input value="' + esc(target.label || '') + '" onchange="currentActions[' + i + '].targets[' + ti + '].label=this.value" placeholder="New Visit"></div>';
+    html += '</div>';
+
+    if (target.mode === 'update') {
+      html += '<div><label>Code Expression (which record to update)</label>';
+      html += '<input value="' + esc(target.code || '') + '" onchange="currentActions[' + i + '].targets[' + ti + '].code=this.value" placeholder="$record.ParentCode">';
+      html += '<div class="hint">Required for update. An expression resolving to empty fails the action rather than creating a stray record.</div></div>';
+    }
+
+    html += '<div class="tf-head"><span>Name (column)</span><span>Label</span><span>Type</span><span>Req</span><span>From</span><span>Value</span><span></span></div>';
+    (target.fields || []).forEach(function(field, fi) {
+      html += '<div class="tf-row">';
+      html += '<input value="' + esc(field.name || '') + '" onchange="currentActions[' + i + '].targets[' + ti + '].fields[' + fi + '].name=this.value" placeholder="OutletCode">';
+      html += '<input value="' + esc(field.label || '') + '" onchange="currentActions[' + i + '].targets[' + ti + '].fields[' + fi + '].label=this.value" placeholder="optional">';
+      // An EMPTY type is meaningful here — it marks the field silent/non-editable.
+      html += '<select onchange="onTargetFieldTypeChange(' + i + ',' + ti + ',' + fi + ',this.value)">';
+      html += '<option value=""' + (!field.type ? ' selected' : '') + '>— hidden —</option>';
+      FIELD_TYPES.forEach(function(t) {
+        html += '<option value="' + t + '"' + (field.type === t ? ' selected' : '') + '>' + t + '</option>';
+      });
+      html += '</select>';
+      html += '<input type="checkbox" ' + (field.required ? 'checked' : '') + ' onchange="currentActions[' + i + '].targets[' + ti + '].fields[' + fi + '].required=this.checked" title="Required (only applies to visible fields)">';
+      // No `|| ''` fallback: `esc` already maps null/undefined to '', and a
+      // literal 0 or false must render as itself rather than as an empty box.
+      html += '<input value="' + esc(field.from) + '" onchange="currentActions[' + i + '].targets[' + ti + '].fields[' + fi + '].from=this.value" placeholder="$record.OutletCode">';
+      html += '<input value="' + esc(field.value) + '" onchange="currentActions[' + i + '].targets[' + ti + '].fields[' + fi + '].value=this.value" placeholder="PLANNED">';
+      html += '<span class="remove-field" onclick="removeTargetField(' + i + ',' + ti + ',' + fi + ')" title="Remove field">&times;</span>';
+      html += '</div>';
+      html += renderOptionSourcing(i, ti, fi, field);
+    });
+    html += '<button class="btn-secondary" onclick="addTargetField(' + i + ',' + ti + ')" style="margin-top:6px;padding:3px 10px;font-size:11px;">+ Add Target Field</button>';
+    html += '</div>';
+  });
+
+  html += '<button class="btn-secondary" onclick="addTarget(' + i + ')" style="margin-top:8px;padding:4px 12px;font-size:11px;">+ Add Target</button>';
+  html += '</div>';
   return html;
 }
 
@@ -392,11 +549,22 @@ function serializeForSave(a) {
     kind: a.kind === 'navigate' ? 'navigate' : 'mutate',
     confirm: !!a.confirm
   };
+  // Omitted entirely when blank so the dialog keeps its defaults (Label / Code)
+  // rather than being handed an empty string it would render as a blank heading.
+  if (notEmpty(a.title)) out.title = a.title;
+  if (notEmpty(a.subtitle)) out.subtitle = a.subtitle;
   if (out.kind === 'mutate') {
     out.column = a.column || 'Progress';
     out.columnValue = a.columnValue || '';
     out.columnValueOptions = Array.isArray(a.columnValueOptions) ? a.columnValueOptions : [];
-    out.fields = Array.isArray(a.fields) ? a.fields : [];
+    out.fields = (Array.isArray(a.fields) ? a.fields : []).map(cleanField).filter(Boolean);
+
+    // Targets are omitted entirely when none are configured, so an action that
+    // does not use them serializes exactly as it did before this feature.
+    var targets = (Array.isArray(a.targets) ? a.targets : [])
+      .filter(function(t) { return t && t.resource; })
+      .map(cleanTarget);
+    if (targets.length) out.targets = targets;
   } else {
     var n = a.navigate || {};
     out.navigate = {
@@ -424,6 +592,69 @@ function serializeForSave(a) {
   return out;
 }
 
+/**
+ * Drops empty keys so the saved JSON carries only what was actually authored.
+ * A cell full of `"from":"","value":"","label":""` is noise that makes the
+ * config hard to read back and hard to diff.
+ */
+function cleanField(f) {
+  if (!f || !f.name) return null;
+  var out = { name: f.name };
+  if (f.label) out.label = f.label;
+  if (f.type) out.type = f.type;
+  if (f.required) out.required = true;
+  // `from` / `value` are tested for emptiness, NOT truthiness: a literal `0` or
+  // `false` is a perfectly good constant to write into a column, and truthiness
+  // would silently discard it.
+  if (notEmpty(f.from)) out.from = f.from;
+  if (notEmpty(f.value)) out.value = f.value;
+  if (Array.isArray(f.options) && f.options.length) out.options = f.options;
+  if (f.source && f.source.resource && f.source.field) out.source = f.source;
+  return out;
+}
+
+function notEmpty(v) {
+  return v !== undefined && v !== null && String(v).trim() !== '';
+}
+
+function cleanTarget(t) {
+  var out = { resource: t.resource, mode: t.mode === 'update' ? 'update' : 'create' };
+  if (t.key) out.key = t.key;
+  if (t.label) out.label = t.label;
+  // `code` only means anything for an update — carrying it on a create would
+  // imply the record is addressable before it exists.
+  if (out.mode === 'update' && t.code) out.code = t.code;
+  out.fields = (Array.isArray(t.fields) ? t.fields : []).map(cleanField).filter(Boolean);
+  return out;
+}
+
+/**
+ * Blocking config errors. These are mistakes the runtime can only report as a
+ * failed action at click time, which is far too late to be useful — an update
+ * without a code, or a target field that neither renders nor carries a value,
+ * is always an authoring slip.
+ */
+function validateActions(actions) {
+  var errors = [];
+  actions.forEach(function(a) {
+    (a.targets || []).forEach(function(t, ti) {
+      var where = '"' + a.action + '" target ' + (t.key || '#' + (ti + 1));
+      if (t.mode === 'update' && !t.code) {
+        errors.push(where + ': update mode needs a Code expression.');
+      }
+      if (!t.fields.length) {
+        errors.push(where + ': has no fields.');
+      }
+      t.fields.forEach(function(f) {
+        if (!f.type && !f.from && f.value === undefined) {
+          errors.push(where + ', field "' + f.name + '": needs a Type, a From, or a Value.');
+        }
+      });
+    });
+  });
+  return errors;
+}
+
 function saveActions() {
   var resourceName = document.getElementById('resourceSelect').value;
   if (!resourceName) return;
@@ -431,6 +662,13 @@ function saveActions() {
   var clean = currentActions
     .filter(function(a) { return a.action; })
     .map(serializeForSave);
+
+  var errors = validateActions(clean);
+  if (errors.length) {
+    showStatus('Cannot save — ' + errors.join('  •  '), 'error');
+    return;
+  }
+
   var json = JSON.stringify(clean);
 
   document.getElementById('saveBtn').disabled = true;

@@ -1581,17 +1581,28 @@ function toActionHeaderSuffix(value) {
 }
 
 /**
- * Handles additional action execution (Approve, Reject, etc.)
- * Updates the record's column + auto-fill fields + user-provided fields.
+ * Handles additional action execution (Approve, Reject, Postpone, etc.)
+ * Updates the record's column + auto-fill fields + user-provided fields, then
+ * runs any `targets[]` the action config declares (see actionTargets.gs).
  *
  * Payload: {
- *   resource: 'Procurements',
- *   code: 'PRC00001',
- *   actionName: 'Approve',
+ *   resource: 'OutletVisits',
+ *   code: 'OV00123',
+ *   actionName: 'Postpone',
  *   column: 'Progress',
- *   columnValue: 'Approved',
- *   fields: { ProgressApprovedComment: 'Looks good' }
+ *   columnValue: 'Postponed',
+ *   fields: { ProgressPostponedComment: 'Outlet closed' },
+ *   targetFields: { newVisit: { Date: '2026-08-20' } }
  * }
+ *
+ * `fields` is keyed by DERIVED header ({column}{PascalCase(columnValue)}{name}),
+ * the long-standing contract for the action's own columns. `targetFields` is
+ * keyed by target key then LITERAL column name — a target writes real columns on
+ * another record, so nothing is derived there.
+ *
+ * Only fields the user can actually edit travel on the wire. Everything a target
+ * copies or defaults is resolved server-side from the trusted config, so the
+ * client cannot write a column the action does not declare.
  */
 function handleExecuteAction(auth, payload) {
   var resourceName = (payload.resource || '').toString().trim();
@@ -1627,13 +1638,32 @@ function handleExecuteAction(auth, payload) {
   var previousRecord = rowArrayToObject(headers, existingRow);
   enforceRecordLevelAccess(auth, resource.config, headers, existingRow);
 
+  var stampSuffix = toActionHeaderSuffix(columnValue);
+
+  // Multi-record targets (actionTargets.gs). The target list comes from the
+  // trusted APP.Resources config, never the client — that is what authorizes a
+  // target write under THIS action's permission on the source resource.
+  //
+  // Targets run BEFORE the source row is stamped: they validate as a set, so if
+  // one fails nothing is written and the record keeps its current state rather
+  // than flipping to an outcome whose follow-up records never materialized.
+  var actionConfig = findAdditionalActionConfig(resource.config, actionName);
+  var targetOutcome = executeActionTargets(auth, actionConfig && actionConfig.targets, {
+    auth: auth,
+    record: previousRecord,
+    fields: userFields,
+    targetFields: payload.targetFields || {},
+    column: column,
+    stampSuffix: stampSuffix,
+    targets: {}
+  });
+
   // Set the column value (e.g., Progress = 'Approved')
   if (idx[column] !== undefined) {
     existingRow[idx[column]] = columnValue;
   }
 
   // Set auto-fill fields: {column}{PascalCase(value)}At and {column}{PascalCase(value)}By
-  var stampSuffix = toActionHeaderSuffix(columnValue);
   var atField = column + stampSuffix + 'At';
   var byField = column + stampSuffix + 'By';
   if (idx[atField] !== undefined) existingRow[idx[atField]] = Date.now();
@@ -1655,15 +1685,35 @@ function handleExecuteAction(auth, payload) {
   updateResourceSyncCursor(resourceName);
 
   var savedRecord = rowArrayToObject(headers, existingRow);
+
+  // Direct-write payloads for every resource this action touched. Rows written
+  // by a target land in the response alongside the source record, so the store
+  // hydrates them without a follow-up fetch. A target writing back to the
+  // SOURCE resource merges into one payload rather than clobbering it.
   var directWriteResources = {};
   directWriteResources[resourceName] = buildDirectWriteResourcePayload(resourceName, resource.config, headers, [existingRow]);
+
+  Object.keys(targetOutcome.resources).forEach(function (targetResourceName) {
+    var written = targetOutcome.resources[targetResourceName];
+    if (targetResourceName === resourceName) {
+      directWriteResources[resourceName] = mergeWrittenRowsIntoResourcePayload(
+        directWriteResources[resourceName], resource.config, headers, written.rows
+      );
+      return;
+    }
+    directWriteResources[targetResourceName] = buildDirectWriteResourcePayload(
+      targetResourceName, written.config, written.headers, written.rows
+    );
+  });
+
+  var touchedResources = [resourceName].concat(Object.keys(targetOutcome.resources));
   var result = {
     success: true,
     message: actionName + ' completed successfully',
     data: mergeDeltaResourcesIntoResult(
-      { code: code, column: column, columnValue: columnValue },
+      { code: code, column: column, columnValue: columnValue, targets: summarizeActionTargetResults(targetOutcome.results) },
       mergeDirectWriteResourcePayloads(
-        collectWriteDeltaResources(auth, payload, [resourceName]),
+        collectWriteDeltaResources(auth, payload, touchedResources),
         directWriteResources
       )
     )

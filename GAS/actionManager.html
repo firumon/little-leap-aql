@@ -239,6 +239,10 @@ function normalizeForEdit(a) {
       t.label = t.label || '';
       t.code = t.code || '';
       if (!Array.isArray(t.fields)) t.fields = [];
+      // `when` normalizes into array form for the editor exactly as visibleWhen
+      // does; the serializer collapses a single condition back to an object.
+      if (t.when == null) t.when = [];
+      else if (!Array.isArray(t.when)) t.when = [t.when];
     });
   } else {
     a.navigate = a.navigate || {};
@@ -278,7 +282,7 @@ function onTargetFieldTypeChange(i, ti, fi, val) { currentActions[i].targets[ti]
 function onTargetModeChange(i, ti, val) { currentActions[i].targets[ti].mode = val; renderActions(); }
 
 function addTarget(i) {
-  currentActions[i].targets.push({ resource: '', mode: 'create', key: '', label: '', code: '', fields: [] });
+  currentActions[i].targets.push({ resource: '', mode: 'create', key: '', label: '', code: '', fields: [], when: [] });
   renderActions();
 }
 function removeTarget(i, ti) { currentActions[i].targets.splice(ti, 1); renderActions(); }
@@ -289,6 +293,56 @@ function addTargetField(i, ti) {
 function removeTargetField(i, ti, fi) { currentActions[i].targets[ti].fields.splice(fi, 1); renderActions(); }
 function addCondition(i) { currentActions[i].visibleWhen.push({ column: '', op: 'eq', value: '' }); renderActions(); }
 function removeCondition(i, ci) { currentActions[i].visibleWhen.splice(ci, 1); renderActions(); }
+
+// ── Target `when` gate ────────────────────────────────────────────────────────
+// Same condition grammar as visibleWhen, plus a left-operand SOURCE: `field`
+// reads this target's own input, `column` the source record, `expression` any
+// from/value expression. Exactly one is stored, which is why switching source
+// moves the operand across rather than adding a second key.
+var WHEN_SOURCES = ['field', 'column', 'expression'];
+
+function whenSourceOf(c) {
+  if (!c) return 'field';
+  for (var s = 0; s < WHEN_SOURCES.length; s++) {
+    if (c[WHEN_SOURCES[s]] !== undefined) return WHEN_SOURCES[s];
+  }
+  return 'field';
+}
+
+function whenOperandOf(c) {
+  var key = whenSourceOf(c);
+  return (c && c[key] != null) ? c[key] : '';
+}
+
+function targetWhenAt(i, ti, ci) { return currentActions[i].targets[ti].when[ci]; }
+
+function addTargetCondition(i, ti) {
+  var t = currentActions[i].targets[ti];
+  if (!Array.isArray(t.when)) t.when = [];
+  t.when.push({ field: '', op: 'notEmpty', value: '' });
+  renderActions();
+}
+function removeTargetCondition(i, ti, ci) { currentActions[i].targets[ti].when.splice(ci, 1); renderActions(); }
+
+function onTargetWhenSourceChange(i, ti, ci, source) {
+  var c = targetWhenAt(i, ti, ci);
+  var operand = whenOperandOf(c);
+  WHEN_SOURCES.forEach(function(k) { delete c[k]; });
+  c[source] = operand;
+  renderActions();
+}
+
+function setTargetWhenOperand(i, ti, ci, val) {
+  var c = targetWhenAt(i, ti, ci);
+  c[whenSourceOf(c)] = val;
+}
+
+function onTargetWhenOpChange(i, ti, ci, op) {
+  var c = targetWhenAt(i, ti, ci);
+  c.op = op;
+  if (op === 'empty' || op === 'notEmpty') c.value = '';
+  renderActions();
+}
 
 function onKindChange(i, val) {
   currentActions[i].kind = val;
@@ -459,6 +513,8 @@ function renderTargetsBlock(action, i) {
       html += '<div class="hint">Required for update. An expression resolving to empty fails the action rather than creating a stray record.</div></div>';
     }
 
+    html += renderTargetWhenBlock(target, i, ti);
+
     html += '<div class="tf-head"><span>Name (column)</span><span>Label</span><span>Type</span><span>Req</span><span>From</span><span>Value</span><span></span></div>';
     (target.fields || []).forEach(function(field, fi) {
       html += '<div class="tf-row">';
@@ -485,6 +541,52 @@ function renderTargetsBlock(action, i) {
   });
 
   html += '<button class="btn-secondary" onclick="addTarget(' + i + ')" style="margin-top:8px;padding:4px 12px;font-size:11px;">+ Add Target</button>';
+  html += '</div>';
+  return html;
+}
+
+/**
+ * The optional `when` gate on ONE target. Reuses the visibleWhen condition-row
+ * markup and its op list, with one extra select for the left-operand source.
+ */
+function renderTargetWhenBlock(target, i, ti) {
+  var html = '<div style="margin-top:10px;"><label>Run When (AND) — leave empty to always run</label>';
+  html += '<div class="hint">Skips this target ENTIRELY when false: nothing is resolved, validated or written, and its <code>Required</code> fields are not enforced. Use it for an OPTIONAL follow-up record — e.g. <code>field</code> / <code>Date</code> / <code>notEmpty</code> creates a replacement only when the user supplies a date.</div>';
+  html += '<div class="hint"><code>field</code> = an input on THIS target (literal column name). <code>column</code> = a column on the source record, before the action ran. <code>expression</code> = any From/Value expression (<code>$record.X</code>, <code>$field.X</code>, <code>$today</code>). Note a target another target reads via <code>$target.key.Column</code> must NOT be conditional.</div>';
+
+  (target.when || []).forEach(function(c, ci) {
+    var isList = (c.op === 'in' || c.op === 'nin');
+    var isEmptyOp = (c.op === 'empty' || c.op === 'notEmpty');
+    var source = whenSourceOf(c);
+    var valDisplay = isList
+      ? (Array.isArray(c.value) ? c.value.join(',') : (c.value || ''))
+      : (c.value == null ? '' : String(c.value));
+    var args = i + ',' + ti + ',' + ci;
+
+    html += '<div class="cond-row">';
+    html += '<select onchange="onTargetWhenSourceChange(' + args + ', this.value)">';
+    WHEN_SOURCES.forEach(function(s) {
+      html += '<option value="' + s + '"' + (source === s ? ' selected' : '') + '>' + s + '</option>';
+    });
+    html += '</select>';
+    html += '<input value="' + esc(whenOperandOf(c)) + '" onchange="setTargetWhenOperand(' + args + ', this.value)" placeholder="Date">';
+    html += '<select onchange="onTargetWhenOpChange(' + args + ', this.value)">';
+    VALID_OPS.forEach(function(op) {
+      html += '<option value="' + op + '"' + (c.op === op ? ' selected' : '') + '>' + op + '</option>';
+    });
+    html += '</select>';
+    if (isEmptyOp) {
+      html += '<input disabled placeholder="(no value)">';
+    } else if (isList) {
+      html += '<input value="' + esc(valDisplay) + '" onchange="currentActions[' + i + '].targets[' + ti + '].when[' + ci + '].value=this.value?this.value.split(\',\').map(function(s){return s.trim()}).filter(Boolean):[]" placeholder="Review,Pending">';
+    } else {
+      html += '<input value="' + esc(valDisplay) + '" onchange="currentActions[' + i + '].targets[' + ti + '].when[' + ci + '].value=this.value" placeholder="Value">';
+    }
+    html += '<span class="remove-cond" onclick="removeTargetCondition(' + args + ')" title="Remove condition">&times;</span>';
+    html += '</div>';
+  });
+
+  html += '<button class="btn-secondary" onclick="addTargetCondition(' + i + ',' + ti + ')" style="margin-top:4px;padding:3px 10px;font-size:11px;">+ Add Condition</button>';
   html += '</div>';
   return html;
 }
@@ -575,21 +677,48 @@ function serializeForSave(a) {
     if (n.scope) out.navigate.scope = n.scope;
   }
   // visibleWhen: drop invalid rows; collapse single-element array to object
-  var conds = (a.visibleWhen || [])
-    .filter(function(c) {
-      if (!c || !c.column || !c.op) return false;
-      if (c.op === 'empty' || c.op === 'notEmpty') return true;
-      if (c.op === 'in' || c.op === 'nin') return Array.isArray(c.value) && c.value.length > 0;
-      return c.value != null && String(c.value) !== '';
-    })
-    .map(function(c) {
-      var o = { column: c.column, op: c.op };
-      if (c.op !== 'empty' && c.op !== 'notEmpty') o.value = c.value;
-      return o;
-    });
+  var conds = cleanConditions(a.visibleWhen, ['column']);
   if (conds.length === 1) out.visibleWhen = conds[0];
   else if (conds.length > 1) out.visibleWhen = conds;
   return out;
+}
+
+/**
+ * Serializes one condition of the shared `eq|ne|in|nin|empty|notEmpty` grammar.
+ *
+ * `operandKeys` is the accepted left-operand set in PRECEDENCE order — just
+ * `column` for `visibleWhen`, `field` → `column` → `expression` for a target's
+ * `when`. A row naming none of them, or carrying no value where the op needs
+ * one, is dropped rather than saved half-built — the runtime evaluators on both
+ * sides drop the same shapes, so an unfinished row simply does not constrain.
+ */
+function cleanCondition(c, operandKeys) {
+  if (!c || VALID_OPS.indexOf(c.op) === -1) return null;
+
+  var key = null;
+  for (var k = 0; k < operandKeys.length; k++) {
+    if (notEmpty(c[operandKeys[k]])) { key = operandKeys[k]; break; }
+  }
+  if (!key) return null;
+
+  var isEmptyOp = (c.op === 'empty' || c.op === 'notEmpty');
+  var isList = (c.op === 'in' || c.op === 'nin');
+  if (!isEmptyOp) {
+    if (isList && !(Array.isArray(c.value) && c.value.length > 0)) return null;
+    if (!isList && (c.value == null || String(c.value) === '')) return null;
+  }
+
+  var out = {};
+  out[key] = c[key];
+  out.op = c.op;
+  if (!isEmptyOp) out.value = c.value;
+  return out;
+}
+
+function cleanConditions(list, operandKeys) {
+  return (Array.isArray(list) ? list : (list ? [list] : []))
+    .map(function(c) { return cleanCondition(c, operandKeys); })
+    .filter(Boolean);
 }
 
 /**
@@ -624,6 +753,12 @@ function cleanTarget(t) {
   // `code` only means anything for an update — carrying it on a create would
   // imply the record is addressable before it exists.
   if (out.mode === 'update' && t.code) out.code = t.code;
+  // `when` is omitted ENTIRELY when nothing valid was authored, so a target that
+  // does not use the gate serializes byte-identically to before this feature —
+  // an empty array would read as "conditional" to a human diffing the config.
+  var when = cleanConditions(t.when, ['field', 'column', 'expression']);
+  if (when.length === 1) out.when = when[0];
+  else if (when.length > 1) out.when = when;
   out.fields = (Array.isArray(t.fields) ? t.fields : []).map(cleanField).filter(Boolean);
   return out;
 }

@@ -1,4 +1,5 @@
 import { resolveFieldComponent, resolveFieldType } from 'components/_fields/useFieldResolver'
+import { evaluateConditionOp } from './useResourceConfig'
 
 /**
  * Field-schema builders for the AdditionalActions system.
@@ -243,6 +244,75 @@ function dateOnly (offsetDays) {
 }
 
 /**
+ * The addressing key for a target: an explicit `key`, else its array index.
+ * Mirrors `resolveActionTargetKey` in GAS/actionTargets.gs — the same string
+ * prefixes every one of that target's form addresses (`newVisit.Date`) and
+ * names it in `$target.<key>.<Column>`.
+ */
+export function resolveTargetKey (target, index) {
+  return String(target?.key ?? '').trim() || String(index)
+}
+
+const CONDITION_OPS = new Set(['eq', 'ne', 'in', 'nin', 'empty', 'notEmpty'])
+
+/**
+ * Normalizes a target's `when` into an array of usable conditions.
+ *
+ * Accepts a single object or an array (ANDed). A condition with an unknown op,
+ * or with none of the three left-operand keys, is DROPPED rather than treated as
+ * an error — the same forgiving posture as `normalizeVisibleWhen`, and dropping
+ * means it does not constrain, so a typo runs the target rather than silently
+ * suppressing it.
+ */
+function normalizeTargetWhen (when) {
+  if (when == null) return []
+  return (Array.isArray(when) ? when : [when])
+    .map((c) => {
+      if (!c || typeof c !== 'object' || !CONDITION_OPS.has(c.op)) return null
+      const key = ['field', 'column', 'expression'].find((k) => String(c[k] ?? '').trim())
+      return key ? { key, ref: String(c[key]).trim(), op: c.op, value: c.value } : null
+    })
+    .filter(Boolean)
+}
+
+/** A target declares a `when` gate at all — the dialog labels such a group optional. */
+export function targetHasCondition (target) {
+  return normalizeTargetWhen(target?.when).length > 0
+}
+
+/**
+ * Whether a target's `when` gate currently passes, evaluated against the LIVE
+ * dialog form.
+ *
+ * >> PRESENTATION AND VALIDATION ONLY. The server re-decides every gate in
+ * >> `isActionTargetActive` (GAS/actionTargets.gs) from the trusted config, and
+ * >> that decision is the only one that governs what is written. This exists so
+ * >> the dialog does not demand a `required` field inside a block the user has
+ * >> chosen not to fill.
+ *
+ * Left operands resolve exactly as they do server-side:
+ *   field       `form['<key>.<column>']` — this target's own input
+ *   column      `record[column]` — the source record, pre-mutation
+ *   expression  via `prefillExpression`, so the browser-answerable subset
+ *               (`$record.*`, identity/date tokens) works and `$field.*` /
+ *               `$target.*` yield '' here while the server resolves them fully.
+ *               A gate on either therefore validates leniently and is decided
+ *               for real on the server.
+ */
+export function isTargetActive (target, { record, form, key } = {}) {
+  const conditions = normalizeTargetWhen(target?.when)
+  if (!conditions.length) return true
+
+  return conditions.every((c) => {
+    let cell
+    if (c.key === 'field') cell = (form || {})[`${key}.${c.ref}`]
+    else if (c.key === 'column') cell = (record || {})[c.ref]
+    else cell = prefillExpression(c.ref, { record })
+    return evaluateConditionOp(c.op, cell, c.value)
+  })
+}
+
+/**
  * Builds the source-record field group (the action's own `fields[]`).
  *
  * A field renders only when BOTH hold: it is listed in the config, and its
@@ -273,13 +343,18 @@ export function buildSourceFieldGroup (action, { headers, columnValue, optionsFo
  * Builds one group per configured target, containing only its user-facing
  * fields. A target whose fields are entirely `from` / `value` contributes no
  * group — it still executes server-side, it just asks the user nothing.
+ *
+ * A conditional target's inputs are rendered like any other: a `when` keyed on
+ * `field` is satisfied by TYPING into this very group, so hiding it would make
+ * the condition unsatisfiable. The group is tagged `hasCondition` instead, so
+ * the dialog can present it as optional.
  */
 export function buildTargetFieldGroups (action, { record, user, optionsFor, headersFor }) {
   const targets = Array.isArray(action?.targets) ? action.targets : []
 
   return targets
     .map((target, index) => {
-      const key = String(target.key ?? '').trim() || String(index)
+      const key = resolveTargetKey(target, index)
       const targetHeaders = headersFor(target.resource)
       const mode = String(target.mode ?? '').trim().toLowerCase() === 'update' ? 'edit' : 'add'
 
@@ -296,7 +371,12 @@ export function buildTargetFieldGroups (action, { record, user, optionsFor, head
         }))
 
       return fields.length
-        ? { key, label: target.label || target.resource || '', fields }
+        ? {
+            key,
+            label: target.label || target.resource || '',
+            hasCondition: targetHasCondition(target),
+            fields
+          }
         : null
     })
     .filter(Boolean)

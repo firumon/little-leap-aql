@@ -23,6 +23,7 @@
  *     "key": "newVisit",             // optional; addresses form values + $target
  *     "code": "$record.ParentCode",  // required when mode = 'update'
  *     "label": "New Visit",
+ *     "when": { "field": "Date", "op": "notEmpty" },   // optional gate
  *     "fields": [
  *       { "name": "OutletCode", "from": "$record.OutletCode" },
  *       { "name": "Progress",   "value": "PLANNED" },
@@ -34,6 +35,13 @@
  *   type only         → user enters it, nothing pre-filled
  *   from / value only → resolved server-side, never shown, not user-editable
  *   type + from/value → pre-filled for the user, whatever they submit wins
+ *
+ * A target may carry a `when` gate. When it evaluates false the target is
+ * skipped ENTIRELY — no expression resolution, no sheet read, no validation, no
+ * write — which is what lets one action express an OPTIONAL follow-up record
+ * (cancel a visit, and create its replacement only if a date was supplied)
+ * instead of splitting into two near-duplicate config entries. Absent or empty
+ * `when` always runs, so every pre-existing config is unaffected.
  *
  * Canonical spec: Documents/AQL_ACTION_SYSTEM.md
  */
@@ -158,6 +166,12 @@ function readActionFieldValue(ctx, name) {
  * Reads a column off an earlier target in the same run. Targets execute in
  * array order, so only a target declared BEFORE this one is addressable —
  * referencing a later one throws rather than silently yielding ''.
+ *
+ * Two distinct failure modes, deliberately given different messages: a target
+ * that has not run YET is an ordering mistake (move it earlier), while a target
+ * SKIPPED by its `when` gate is a design mistake — a conditional target can
+ * never be a dependency, because the run in which it is skipped has no record
+ * for the expression to read.
  */
 function readActionTargetValue(ctx, path) {
   var parts = (path || '').toString().split('.');
@@ -170,6 +184,14 @@ function readActionTargetValue(ctx, path) {
 
   var resolved = (ctx && ctx.targets) || {};
   if (resolved[key] === undefined) {
+    var skipped = (ctx && ctx.skippedTargets) || {};
+    if (skipped[key]) {
+      throw new Error(
+        'Action expression "$target.' + key + '" refers to target "' + key + '", which was SKIPPED ' +
+        'by its "when" condition on this run, so it produced no record. A target that other targets ' +
+        'or fields read from must not be conditional — remove its "when", or drop the dependency.'
+      );
+    }
     throw new Error('Action expression "$target.' + key + '" refers to a target that has not run yet');
   }
 
@@ -250,6 +272,125 @@ function actionDateOnly(offsetDays) {
   var date = new Date();
   date.setDate(date.getDate() + (Number(offsetDays) || 0));
   return Utilities.formatDate(date, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+}
+
+// ==========================================================================
+// Target conditions (`when`)
+// ==========================================================================
+
+/**
+ * The ops a target's `when` accepts — exactly the `visibleWhen` set, so an
+ * author never has to learn a second comparison vocabulary.
+ */
+var ACTION_TARGET_CONDITION_OPS = ['eq', 'ne', 'in', 'nin', 'empty', 'notEmpty'];
+
+function isActionTargetConditionOp(op) {
+  return ACTION_TARGET_CONDITION_OPS.indexOf((op === undefined || op === null) ? '' : op.toString()) !== -1;
+}
+
+// An operand KEY is present only when it names something. `{ field: '' }` is an
+// unfinished condition, not a condition on a column called ''.
+function hasActionConditionOperand(value) {
+  return value !== undefined && value !== null && value.toString().trim() !== '';
+}
+
+// null/undefined collapse to '' so a comparison against a blank cell behaves the
+// same whichever side is blank. Mirrors the frontend's `String(cell ?? '')`.
+function actionConditionText(value) {
+  return (value === undefined || value === null) ? '' : String(value);
+}
+
+// in/nin coerce with a bare String() on both sides, matching the frontend's
+// `arr.map(String).includes(String(cell ?? ''))` exactly — including its quirk
+// that a null INSIDE the list stringifies to "null" while a null cell is ''.
+function actionConditionList(value) {
+  var arr = Array.isArray(value) ? value : [value];
+  return arr.map(function (item) { return String(item); });
+}
+
+/**
+ * Evaluates ONE `when` condition for a target.
+ *
+ * Exactly one left-operand key, in this precedence:
+ *   field       a value the user typed into THIS target's own inputs, addressed
+ *               by literal column name — ctx.targetFields[targetKey][field]
+ *   column      a column on the SOURCE record, as it was BEFORE this action
+ *               mutated it
+ *   expression  any from/value expression — $record.X, $field.X,
+ *               $target.<key>.<Column>, $today, …
+ *
+ * A condition carrying none of the three, or an op outside the set, is DROPPED
+ * rather than failing the action — the same forgiving posture as
+ * `normalizeVisibleWhen` on the client. Returns null for "dropped", true/false
+ * for a real verdict.
+ *
+ * An unrecognised `$token` inside an `expression` still THROWS, exactly as it
+ * does in a field's `from`/`value`: a typo is a config bug, not a soft "false".
+ *
+ * >> MATCHED PAIR. The comparison semantics below mirror `evalCondition` /
+ * >> `isActionVisible` in FRONTENT/src/composables/resources/useResourceConfig.js,
+ * >> which is also what the client mirror `isTargetActive`
+ * >> (additionalActionsSchema.js) evaluates. The client decides only what to
+ * >> VALIDATE; this decides what EXECUTES. Change one, change the other.
+ *
+ * @param {Object} condition
+ * @param {string} targetKey
+ * @param {Object} ctx
+ * @returns {boolean|null}
+ */
+function evaluateActionTargetCondition(condition, targetKey, ctx) {
+  if (!condition || typeof condition !== 'object') return null;
+  if (!isActionTargetConditionOp(condition.op)) return null;
+
+  var cell;
+  if (hasActionConditionOperand(condition.field)) {
+    var submitted = (ctx && ctx.targetFields && ctx.targetFields[targetKey]) || {};
+    cell = submitted[condition.field.toString().trim()];
+  } else if (hasActionConditionOperand(condition.column)) {
+    var record = (ctx && ctx.record) || {};
+    cell = record[condition.column.toString().trim()];
+  } else if (hasActionConditionOperand(condition.expression)) {
+    cell = resolveActionExpression(condition.expression, ctx);
+  } else {
+    return null;
+  }
+
+  var isEmpty = (cell === undefined || cell === null || cell === '');
+  var text = actionConditionText(cell);
+
+  switch (condition.op) {
+    case 'eq': return text === actionConditionText(condition.value);
+    case 'ne': return text !== actionConditionText(condition.value);
+    case 'in': return actionConditionList(condition.value).indexOf(text) !== -1;
+    case 'nin': return actionConditionList(condition.value).indexOf(text) === -1;
+    case 'empty': return isEmpty;
+    case 'notEmpty': return !isEmpty;
+    default: return null;
+  }
+}
+
+/**
+ * Whether a target runs at all on this pass.
+ *
+ * An absent or empty `when` yields true, so every config authored before this
+ * feature keeps its exact behaviour. A single object or an array are both
+ * accepted; an array is ANDed. Dropped (malformed) conditions simply do not
+ * constrain — a typo runs the target rather than silently suppressing it, which
+ * is the safer failure for a gate whose whole job is to skip work.
+ *
+ * @param {Object} target
+ * @param {string} targetKey
+ * @param {Object} ctx
+ * @returns {boolean}
+ */
+function isActionTargetActive(target, targetKey, ctx) {
+  if (!target || target.when === undefined || target.when === null) return true;
+
+  var list = Array.isArray(target.when) ? target.when : [target.when];
+  for (var i = 0; i < list.length; i++) {
+    if (evaluateActionTargetCondition(list[i], targetKey, ctx) === false) return false;
+  }
+  return true;
 }
 
 // ==========================================================================
@@ -493,9 +634,28 @@ function executeActionTargets(auth, targets, ctx) {
 
   // ---- Pass 1 — resolve + validate everything -----------------------------
   ctx.targets = ctx.targets || {};
+  ctx.skippedTargets = ctx.skippedTargets || {};
   for (var i = 0; i < list.length; i++) {
     var target = list[i];
     var key = resolveActionTargetKey(target, i);
+
+    // The `when` gate runs BEFORE prepareActionTarget, so a skipped target never
+    // opens a sheet context, resolves an expression, or validates. Skipping late
+    // would defeat the point: a target left blank cannot pass its own resource's
+    // validateRequiredFields.
+    if (!isActionTargetActive(target, key, ctx)) {
+      ctx.skippedTargets[key] = true;
+      results.push({
+        key: key,
+        mode: (target && target.mode ? target.mode : 'create').toString().trim().toLowerCase(),
+        resourceName: (target && target.resource ? target.resource : '').toString().trim(),
+        skipped: true
+      });
+      // Deliberately NOT registered in ctx.targets — $target.<key> must fail
+      // loudly rather than read an empty record.
+      continue;
+    }
+
     var prepared = prepareActionTarget(auth, target, key, ctx, cache);
     results.push(prepared);
     // Registered immediately so a later target can read $target.<key>.<Column>.
@@ -537,11 +697,24 @@ function executeActionTargets(auth, targets, ctx) {
  * echoing each target's whole record here would double the response size for
  * no gain. What a caller actually needs is which record each target produced.
  *
+ * A target skipped by its `when` gate is reported as `skipped: true` WITHOUT a
+ * code, so a caller can tell "this action did not create a replacement" from
+ * "this action created one" — an omitted entry would be indistinguishable from
+ * a config that never declared the target.
+ *
  * @param {Array} results
- * @returns {Array} [{ key, mode, resource, code }]
+ * @returns {Array} [{ key, mode, resource, code }] | [{ key, mode, resource, skipped: true }]
  */
 function summarizeActionTargetResults(results) {
   return (Array.isArray(results) ? results : []).map(function (entry) {
+    if (entry && entry.skipped) {
+      return {
+        key: entry.key,
+        mode: entry.mode,
+        resource: entry.resourceName,
+        skipped: true
+      };
+    }
     return {
       key: entry.key,
       mode: entry.mode,

@@ -8,7 +8,9 @@ import { useResourceNav } from './useResourceNav'
 import {
   buildFieldOptions,
   buildSourceFieldGroup,
-  buildTargetFieldGroups
+  buildTargetFieldGroups,
+  isTargetActive,
+  resolveTargetKey
 } from './additionalActionsSchema'
 
 /**
@@ -229,12 +231,41 @@ export function useAdditionalActionsDialog () {
     resetForm(allFields.value)
   }
 
+  /**
+   * Finds the configured target behind a rendered group, by the same key the
+   * schema addressed its fields with.
+   */
+  function targetForGroup (groupKey) {
+    const targets = Array.isArray(action.value?.targets) ? action.value.targets : []
+    return targets.find((target, index) => resolveTargetKey(target, index) === groupKey) || null
+  }
+
+  /**
+   * A target group whose `when` gate does not currently pass collects nothing —
+   * the server will skip the target outright, so demanding its `required` fields
+   * would make an OPTIONAL block mandatory and defeat the whole gate.
+   *
+   * The gate is a client MIRROR (`isTargetActive`); the server re-decides from
+   * the trusted config. The two can only disagree on an `expression` gate the
+   * browser cannot resolve, and only ever in the lenient direction — the worst
+   * case is a required field the client let through and the server rejects.
+   */
+  function isGroupActive (group) {
+    if (!group.key || !group.hasCondition) return true
+    const target = targetForGroup(group.key)
+    if (!target) return true
+    return isTargetActive(target, { record: record.value, form, key: group.key })
+  }
+
   function validate () {
-    for (const field of allFields.value) {
-      if (!field.required) continue
-      const value = form[field.address]
-      if (value === undefined || value === null || String(value).trim() === '') {
-        return `${field.label} is required`
+    for (const group of groups.value) {
+      if (!isGroupActive(group)) continue
+      for (const field of group.fields) {
+        if (!field.required) continue
+        const value = form[field.address]
+        if (value === undefined || value === null || String(value).trim() === '') {
+          return `${field.label} is required`
+        }
       }
     }
     return ''
@@ -247,6 +278,12 @@ export function useAdditionalActionsDialog () {
    * contract); `targetFields` is keyed by target key then literal column. Only
    * user-facing values travel — everything a target copies or defaults is
    * resolved server-side from the trusted config.
+   *
+   * EVERY typed target value is sent, including those belonging to a target
+   * whose `when` gate does not pass. The server ignores a skipped target's
+   * values, and a `when` keyed on `field` reads exactly these — filtering here
+   * would hand the server a payload that cannot satisfy the gate it is about to
+   * evaluate.
    */
   function buildPayloadFields () {
     const fields = {}

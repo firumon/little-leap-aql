@@ -885,6 +885,93 @@ An unrecognised `$token` **throws**, so a config typo fails the action instead o
 the string `$usrName` into a cell. The frontend's `prefillExpression` resolves only
 `$record.*` and the tokens, for display of prefilled values; the server always re-resolves.
 
+### 7.4.1 Conditional targets (`when`)
+
+A target may carry a `when` gate. When it evaluates false the target is **skipped
+entirely** — no expression resolution, no sheet read, no validation, no write. This is what
+lets one action express an **optional** follow-up record instead of splitting into two
+near-duplicate config entries:
+
+```json
+{
+  "resource": "OutletVisits", "mode": "create", "key": "replacementVisit",
+  "label": "Replacement Visit (optional)",
+  "when": { "field": "Date", "op": "notEmpty" },
+  "fields": [
+    { "name": "OutletCode", "from": "$record.OutletCode" },
+    { "name": "Progress",   "value": "PLANNED" },
+    { "name": "Status",     "value": "Active" },
+    { "name": "Date",       "label": "Replacement Date", "type": "date" }
+  ]
+}
+```
+
+`when` accepts a **single object or an array**; an array is ANDed.
+
+**Grammar.** Exactly one left-operand key per condition, in this precedence:
+
+| Key | Resolves to |
+|---|---|
+| `field` | a value the user typed into **this target's own** inputs — a **literal column name** (`"Date"`), read from `targetFields[<key>][<field>]` |
+| `column` | a column on the **source record**, as it was before this action mutated it |
+| `expression` | any `from`/`value` expression — `$record.X`, `$field.X`, `$target.k.C`, `$today`, … (§7.4) |
+
+Ops are exactly the `visibleWhen` set: `eq`, `ne`, `in`, `nin`, `empty`, `notEmpty`, with
+identical string-coercion and empty-handling semantics.
+
+**Forgiving, in one direction only.** A condition carrying none of the three operand keys,
+or an op outside the set, is **dropped** — not an error, exactly as `normalizeVisibleWhen`
+discards a malformed `visibleWhen` row. A dropped condition does not constrain, so a
+malformed `when` **runs** the target rather than silently suppressing it. An unrecognised
+`$token` inside an `expression` still throws, like any other expression typo.
+
+**Backward compatibility.** Absent or empty `when` ⇒ the target always runs. Every config
+authored before this feature keeps its exact behaviour, and `cleanTarget` in
+`actionManager.html` omits the key entirely when nothing was authored, so an untouched
+action re-serializes byte-identically.
+
+**Required fields inside a conditional target.** `useAdditionalActions.validate()` skips
+`required` checks for fields belonging to an **inactive** target. That is the whole point of
+the gate: `{ "field": "Date", "op": "notEmpty" }` plus a `required` sibling means *"if you
+start filling this block, finish it"* — not *"you must fill this block"*. Marking the gating
+field `required` instead would force the branch to always happen, which is the workaround
+this feature replaces.
+
+**A skipped target is not addressable.** `$target.<key>.<Column>` pointing at a target that
+was skipped **fails the whole action** with an explicit message naming the skip — nothing is
+written. A conditional target can therefore never be a dependency; make the dependent
+expression conditional too, or drop the `when`.
+
+```
+Action expression "$target.replacementVisit.Code" refers to target "replacementVisit",
+which was SKIPPED by its "when" condition on this run, so it produced no record. …
+```
+
+This is deliberately distinct from the "refers to a target that has not run yet" message: the
+first is an *ordering* mistake (move the target earlier), the second a *design* mistake.
+
+**Where it is decided.** The server is authoritative — `isActionTargetActive` /
+`evaluateActionTargetCondition` in `GAS/actionTargets.gs`, checked in `executeActionTargets`
+pass 1 **before** `prepareActionTarget`, so a skipped target never opens a sheet context.
+Skipped targets are not registered in `ctx.targets`, and
+`summarizeActionTargetResults` reports them as `{ key, mode, resource, skipped: true }` (no
+`code`) so a caller can tell "not created" from "created".
+
+The client mirror is `isTargetActive` in `additionalActionsSchema.js`. It is
+**presentation and validation only** and exists solely so the dialog does not demand a
+`required` field inside a block the user chose not to fill. `buildTargetFieldGroups` still
+renders **every** target's inputs — a `field`-keyed condition is satisfied by typing into
+that very group, so hiding it would make the condition unsatisfiable — and tags the group
+`hasCondition` so the dialog can label it optional. `buildPayloadFields()` keeps sending all
+typed target values; the server ignores those belonging to a skipped target.
+
+> [!WARNING]
+> `evaluateActionTargetCondition` (GAS) and `evaluateConditionOp`
+> (`useResourceConfig.js`, shared with `visibleWhen` and consumed by `isTargetActive`) are a
+> **matched pair**. Change one, change the other. The client can only ever be *more*
+> lenient — `prefillExpression` cannot resolve `$field.*` / `$target.*`, so a gate on either
+> validates loosely in the browser and is decided for real on the server.
+
 ### 7.5 Execution & security model
 
 The target list is read from the **trusted `APP.Resources` config**, never from the client.
@@ -899,6 +986,8 @@ That is what authorizes a target write under the action's **own** permission on 
 
 Execution is two-pass:
 
+0. **Gate.** Each target's `when` (§7.4.1) is evaluated first; a false gate skips the target
+   before pass 1 touches it at all.
 1. **Resolve + validate every target.** Expressions resolved, `required` enforced,
    `validateRequiredFields` and `validateMasterUniqueness` run. Nothing is written.
 2. **Write.** Updates row-by-row, creates batched into one `setValues` per resource.

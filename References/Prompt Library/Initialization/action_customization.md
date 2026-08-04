@@ -301,7 +301,30 @@ Non-negotiables when touching it:
   and GAS will still be **silently dropped** before any component sees it unless it is
   also copied there. This is exactly how `targets` went missing while the FAB looked
   perfect. Add the key in *three* places: `actionManager.html`, `normalizeAction`, and
-  whatever consumes it.
+  whatever consumes it. (`targets` itself is passed through **as authored**, so keys
+  *inside* a target — `when`, `code`, `mode` — ride along without a fourth edit. Anything
+  at the ACTION level still needs all three.)
+* **A target may be conditional — `when` (§7.4.1).** Single object or array (ANDed), ops
+  exactly the `visibleWhen` set, one left operand per condition: `field` (this target's own
+  input, literal column name) > `column` (source record) > `expression` (`from`/`value`
+  grammar). False ⇒ the target is skipped **entirely**: no resolution, no sheet read, no
+  validation, no write. Absent/empty ⇒ always runs, so every existing config is untouched.
+  A malformed condition is **dropped**, and the target runs.
+  - **Server decides, always.** `isActionTargetActive` (`actionTargets.gs`) runs in
+    `executeActionTargets` pass 1 *before* `prepareActionTarget`. `isTargetActive`
+    (`additionalActionsSchema.js`) is a client mirror for **validation only** — never let a
+    component or composable use it to decide whether a target executes.
+  - **The point is `required`.** `useAdditionalActions.validate()` skips `required` for
+    fields on an inactive target: *"if you start filling this block, finish it"*, not
+    *"you must fill this block"*. Marking the gating field `required` instead is the
+    workaround `when` exists to replace.
+  - **Render every target's inputs anyway.** A `field`-keyed gate is satisfied by typing
+    into that very group; hiding it makes the condition unsatisfiable.
+    `buildTargetFieldGroups` tags the group `hasCondition` instead.
+  - **A skipped target is not addressable.** `$target.<key>.<Column>` on a skipped target
+    fails the whole action with an explicit "SKIPPED by its when condition" message.
+  - **Matched pair**: `evaluateActionTargetCondition` (GAS) ↔ `evaluateConditionOp`
+    (`useResourceConfig.js`, shared with `visibleWhen`). Change one, change the other.
 * **One dialog, never N.** Triggers render buttons only. A list rendering one trigger per
   row must not mount one dialog per row.
 * **Dialog `title`/`subtitle` are record templates**, not expressions — `{Code}`,

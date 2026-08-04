@@ -227,17 +227,30 @@ export function isActionVisible(action, record) {
 }
 
 function evalCondition(c, record) {
-  const cell = record[c.column]
+  return evaluateConditionOp(c.op, record[c.column], c.value)
+}
+
+/**
+ * The comparison half of a condition, split out from `evalCondition` so the ONE
+ * implementation can be reused wherever the same `eq`/`ne`/`in`/`nin`/`empty`/
+ * `notEmpty` grammar appears — currently `visibleWhen` (here) and a target's
+ * `when` gate (`additionalActionsSchema.isTargetActive`). The server's
+ * `evaluateActionTargetCondition` in GAS/actionTargets.gs mirrors this exactly
+ * and is its matched pair; keep the three in step.
+ *
+ * An unknown op returns true, so a malformed condition does not constrain.
+ */
+export function evaluateConditionOp(op, cell, value) {
   const isEmpty = cell == null || cell === ''
-  switch (c.op) {
-    case 'eq': return String(cell ?? '') === String(c.value ?? '')
-    case 'ne': return String(cell ?? '') !== String(c.value ?? '')
+  switch (op) {
+    case 'eq': return String(cell ?? '') === String(value ?? '')
+    case 'ne': return String(cell ?? '') !== String(value ?? '')
     case 'in': {
-      const arr = Array.isArray(c.value) ? c.value : [c.value]
+      const arr = Array.isArray(value) ? value : [value]
       return arr.map(String).includes(String(cell ?? ''))
     }
     case 'nin': {
-      const arr = Array.isArray(c.value) ? c.value : [c.value]
+      const arr = Array.isArray(value) ? value : [value]
       return !arr.map(String).includes(String(cell ?? ''))
     }
     case 'empty': return isEmpty

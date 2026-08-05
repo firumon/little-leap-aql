@@ -22,13 +22,16 @@
 
 <script setup>
 /**
- * The OutletVisits row action cluster, as a component-valued prop:
+ * The OutletVisits row action cluster — one definition serving BOTH override paths:
  *
- *   btn: VisitActionButtons        // in ListOverdue.js
+ *   btn: VisitActionButtons                    // ListOverdue.js, a `.js` modifier
+ *   <VisitActionButtons :item="item" />        // ListToday.vue, a `#btn` slot
  *
- * Same buttons ListToday.vue renders through its `#btn` slot — but a `.js` modifier
- * has no slots to give (useContentResolver returns props only), so this reaches the
- * row as a component instead. abstract/Renderable.js binds `item` and nothing else.
+ * It was written for the modifier path, which has no slots to give (useContentResolver
+ * returns props only) and so needs a component; `abstract/Renderable.js` mounts it with
+ * `item` and nothing else. But nothing here is specific to that path, so the `.vue`
+ * override mounts the identical component through its slot. Keeping both on one file
+ * is the point: the escalation order below is decided once, not per list.
  */
 import AdditionalActionsButtons from 'components/app/AdditionalActionsButtons.vue'
 
@@ -48,8 +51,8 @@ function ordered (actions) {
   return actions.slice().sort((a, b) => ACTION_ORDER.indexOf(a.action) - ACTION_ORDER.indexOf(b.action))
 }
 
-// Complete is the primary path out of an overdue visit, so it reads larger.
+// Complete is the primary path out of a planned visit, so it reads larger.
 function sizeOf (action) {
-  return action.action === 'Complete' ? 'md' : 'sm'
+  return action.action === 'Complete' ? 'lg' : 'md'
 }
 </script>

@@ -7,16 +7,7 @@
     highlight-color="negative"
   >
     <template #btn="{ item }">
-      <q-btn-group flat>
-        <q-btn
-          v-for="actionConfig in actionsFor(item)" :key="actionConfig.action"
-          flat round
-          :icon="actionConfig.icon || 'bolt'" :color="actionConfig.color || 'primary'" :size="actionSize(actionConfig)"
-          @click.stop="triggerAction(actionConfig, item)"
-        >
-          <q-tooltip>{{ actionConfig.label || actionConfig.action }}</q-tooltip>
-        </q-btn>
-      </q-btn-group>
+      <VisitActionButtons :item="item" />
     </template>
   </AppList>
 
@@ -27,28 +18,22 @@
     :highlight-color="progressColor"
     empty-text="No visits scheduled for today."
   >
+    <!-- A settled visit has no workflow left to offer, so it shows its outcome
+         instead of an empty button group. -->
     <template #btn="{ item }">
       <q-icon v-if="progressOf(item) !== 'PLANNED'" name="check_circle" size="28px" :color="progressColor(item)" />
-
-      <q-btn-group v-else flat>
-        <q-btn
-          v-for="actionConfig in actionsFor(item)" :key="actionConfig.action"
-          flat round
-          :icon="actionConfig.icon || 'bolt'" :color="actionConfig.color || 'primary'" :size="actionSize(actionConfig)"
-          @click.stop="triggerAction(actionConfig, item)"
-        >
-          <q-tooltip>{{ actionConfig.label || actionConfig.action }}</q-tooltip>
-        </q-btn>
-      </q-btn-group>
+      <VisitActionButtons v-else :item="item" />
     </template>
   </AppList>
 </template>
 
 <script setup>
 import { computed, useAttrs } from 'vue'
-import { useAdditionalActions } from 'src/composables/resources/useAdditionalActions'
 import AppList from 'components/app/AppList.vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
+// Shared with ListOverdue.js, which mounts the same component as a `btn:` prop —
+// one definition of the row action cluster for both the slot and the modifier path.
+import VisitActionButtons from './VisitActionButtons.vue'
 
 defineOptions({ name: 'OutletVisitsListToday', inheritAttrs: false })
 
@@ -59,10 +44,7 @@ const props = defineProps({
 })
 
 const attrs = useAttrs()
-const { actionsFor: useAdditionalActionsFor, runAction } = useAdditionalActions('OutletVisits')
 
-// Workflow buttons render in escalation order, mirroring the AdditionalActions cluster.
-const ACTION_ORDER = ['Cancel', 'Postpone', 'Complete']
 const PROGRESS_COLORS = {
   PLANNED:   'primary',
   COMPLETED: 'positive',
@@ -153,27 +135,5 @@ function joinParts (parts) {
 
 function progressColor (item) {
   return PROGRESS_COLORS[progressOf(item)] || 'primary'
-}
-
-// Action handlers
-//
-// Eligibility (permissions + `visibleWhen`) comes entirely from the composable —
-// `only` restricts it to the three workflow actions this list surfaces. Only the
-// ESCALATION ORDER stays here, because that is a presentation choice specific to
-// this list rather than a rule about which actions are allowed.
-function actionsFor (record) {
-  return useAdditionalActionsFor(record, { only: ACTION_ORDER })
-    .slice()
-    .sort((a, b) => ACTION_ORDER.indexOf(a.action) - ACTION_ORDER.indexOf(b.action))
-}
-
-function actionSize (actionConfig) {
-  return actionConfig.action === 'Complete' ? 'md' : 'sm'
-}
-
-// Dispatch belongs to the composable: navigate vs mutate, and the shared dialog
-// mounted once in MainLayout. See AQL_ACTION_SYSTEM.md §7.
-function triggerAction (actionConfig, record) {
-  runAction(actionConfig, record)
 }
 </script>

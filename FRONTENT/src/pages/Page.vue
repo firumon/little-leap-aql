@@ -22,7 +22,7 @@
 
         <AqlContentWrapper
           v-if="contents && contents.length"
-          :class="'q-px-' + pageProps.contentPadding + ' q-gutter-y-' + pageProps.gutter + ' ' + pageProps.contentClass"
+          :class="'q-px-' + pageProps.contentPadding + ' q-pt-' + pageProps.gutter + ' q-gutter-y-' + pageProps.gutter + ' ' + pageProps.contentClass"
           v-bind="contentWrapperProps"
         >
           <Content

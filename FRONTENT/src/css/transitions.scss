@@ -49,12 +49,23 @@
 .aql-list-item-enter-from,
 .aql-list-item-leave-to     { opacity: 0; transform: translateY(8px); }
 
+// ── List VIEW switch (contents/List.vue Transition) ──────────────────────────
+// Container-level, one step up from the rows above: animates the whole list when
+// the active list view changes. Kept shorter than the row timings because
+// `mode="out-in"` runs leave and enter back to back, so the user waits for both.
+.aql-list-view-enter-active,
+.aql-list-view-leave-active { transition: opacity 140ms ease, transform 140ms ease; }
+.aql-list-view-enter-from,
+.aql-list-view-leave-to     { opacity: 0; transform: translateY(6px); }
+
 // Respect users who prefer reduced motion — content still appears, just instantly.
 @media (prefers-reduced-motion: reduce) {
   .aql-page-fade-enter-active,
   .aql-page-fade-leave-active,
   .aql-list-item-move,
   .aql-list-item-enter-active,
-  .aql-list-item-leave-active { transition: none; }
+  .aql-list-item-leave-active,
+  .aql-list-view-enter-active,
+  .aql-list-view-leave-active { transition: none; }
   .aql-page-body > *          { animation: none; }
 }

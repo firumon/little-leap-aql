@@ -1,13 +1,31 @@
 <template>
-  <component
-    :is="activeViewName ? (resolvedComponent || AppList) : AppList"
-    v-bind="activeViewName ? sanitizedResolvedProps : finalProps"
-    @click="handleItemClick"
-  />
+  <!-- View-switch transition, keyed on component IDENTITY rather than on the active view
+       name. A `.js` modifier keeps AppList mounted across view switches, so its key never
+       changes, the wrapper is never recreated, and the TransitionGroup inside
+       abstract/List.vue goes on animating rows individually (enter/leave + FLIP `-move`).
+       Only a `.vue` override actually swaps the component — and a list being unmounted
+       cannot animate its own rows — so the container fade is scoped to exactly that case.
+       Keying on the view name instead would recreate the wrapper on EVERY switch and
+       replace the per-row motion with a single block fade.
+
+       `mode="out-in"` matters beyond aesthetics: useContentResolver resolves overrides
+       asynchronously, so for ~2 frames after a switch the OLD component is still rendering
+       the NEW view's items. Holding the new branch back until the leave finishes outlasts
+       that gap, so the stale frames are never painted. The wrapper div is also always a
+       single root, which keeps overrides free to declare multiple root nodes. -->
+  <Transition name="aql-list-view" mode="out-in">
+    <div :key="viewKey">
+      <component
+        :is="renderedComponent"
+        v-bind="boundProps"
+        @click="handleItemClick"
+      />
+    </div>
+  </Transition>
 </template>
 
 <script setup>
-import { computed, inject, useAttrs } from 'vue'
+import { computed, inject, shallowRef, useAttrs, watchEffect } from 'vue'
 import { useListStrategy } from 'src/composables/resources/useListStrategy'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useContentResolver } from 'src/composables/resources/useContentResolver'
@@ -167,7 +185,26 @@ const preparedResolverProps = computed(() => ({
   uiName: props.uiName || attrs.uiName || resourceConfig?.customUIName?.value
 }))
 
-const { resolvedComponent, finalProps: resolvedContentProps } = useContentResolver(preparedResolverProps, AppList)
+const { settled, resolvedComponent, finalProps: resolvedContentProps } = useContentResolver(preparedResolverProps, AppList)
+
+// The component actually mounted, derived once so the template and the transition key
+// can never disagree about what is on screen.
+const renderedComponent = computed(() =>
+  activeViewName.value ? (resolvedComponent.value || AppList) : AppList
+)
+
+// Stable per-component id backing the wrapper key. Identity is tracked in a WeakMap
+// rather than read off `__name`, so two overrides that happen to share a component name
+// still get distinct keys (and an unnamed one never collapses into a shared bucket).
+const componentKeys = new WeakMap()
+let nextComponentKey = 0
+
+const viewKey = computed(() => {
+  const component = renderedComponent.value
+  if (!component) return '__none'
+  if (!componentKeys.has(component)) componentKeys.set(component, ++nextComponentKey)
+  return componentKeys.get(component)
+})
 
 // useContentResolver runs an async watcher that transiently resets its finalProps to {}
 // while it scans for a List<ViewName> override. If we bound that raw output, the list
@@ -188,6 +225,30 @@ const sanitizedResolvedProps = computed(() => {
   }
   return merged
 })
+
+// Props actually bound to the mounted component, held steady while the resolver scans.
+//
+// `sanitizedResolvedProps` updates SYNCHRONOUSLY on a view switch (its `items` baseline
+// comes straight from resourceRecord), but `resolvedComponent` only updates when the async
+// override lookup commits ~2 frames later. Binding the live props meant the OUTGOING
+// component rendered the INCOMING view's records in that window — visible when moving to a
+// `.vue` override as a foreign list animating in row by row, then being replaced wholesale
+// a moment later. Holding the last committed props until `settled` makes the switch atomic:
+// component and data change on the same tick, so exactly one animation runs.
+const displayProps = shallowRef(null)
+
+watchEffect(() => {
+  // Reads `settled` first and bails before touching the props, so nothing re-triggers this
+  // mid-scan; once settled it tracks the props normally and live data updates flow through.
+  if (!settled.value) return
+  displayProps.value = activeViewName.value ? sanitizedResolvedProps.value : finalProps.value
+})
+
+// Before the first commit there is nothing held yet — fall through to the live props so the
+// initial render is never blank.
+const boundProps = computed(() =>
+  displayProps.value ?? (activeViewName.value ? sanitizedResolvedProps.value : finalProps.value)
+)
 
 function handleItemClick(item) {
   if (typeof props.onItemClick === 'function') return props.onItemClick(item)

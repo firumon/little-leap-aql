@@ -4,8 +4,16 @@
          direct children of q-list, preserving separators/gutter). Items fade and slide into
          place on load/filter, and reorder via FLIP `-move` transitions. The loading spinner
          and empty state live inside the group as keyed children so switching between
-         populated ⇄ empty ⇄ loading views cross-fades instead of unmounting abruptly. -->
-    <TransitionGroup name="aql-list-item">
+         populated ⇄ empty ⇄ loading views cross-fades instead of unmounting abruptly.
+
+         `appear` is unconditional rather than a prop: motion is a property of the list, not
+         something a caller opts into. Without it the group skips its FIRST render, so a list
+         that mounts fresh — which is what a `.vue` content override does, since it swaps the
+         component identity at `contents/List.vue` instead of patching AppList in place —
+         popped in with no animation at all. Vue falls the `-appear-*` classes back to the
+         `-enter-*` ones, so transitions.scss needs no new rules and the existing
+         prefers-reduced-motion guard already covers this. -->
+    <TransitionGroup name="aql-list-item" appear>
       <!-- Loading State -->
       <q-item v-if="loading && !items.length" key="list-loading-state" class="flex flex-center q-pa-xl">
         <q-spinner color="primary" size="3em" />

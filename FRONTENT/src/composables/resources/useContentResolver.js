@@ -76,19 +76,31 @@ export function useContentResolver(preparedProps, defaultComponent = null) {
   // must not write its result over the newer one.
   let resolveToken = 0
 
+  // MUST be a primitive. A getter returning an array literal builds a new reference on
+  // every evaluation, and `watch` compares sources with Object.is (it does not
+  // deep-compare a getter's array result) — so the callback would re-fire on every
+  // reactive read of `preparedProps`, which wraps useAttrs(). That re-render feeds the
+  // next attrs change: an unbounded resolve loop that thrashes memory and pins the tab.
+  // A joined string only changes when one of the five lookup segments genuinely changes.
+  const lookupKey = computed(() => {
+    const p = preparedProps.value || {}
+    return `${p.content ?? ''}|${p.page ?? ''}|${p.scope ?? ''}|${p.resource ?? ''}|${p.uiName ?? ''}`
+  })
+
+  // The lookup key `resolvedComponent` currently corresponds to. Because resolution is
+  // async, it lags `lookupKey` for the couple of frames a scan takes.
+  const resolvedKey = ref(null)
+
+  // False while a scan is in flight — i.e. while `resolvedComponent` still holds the
+  // component for the PREVIOUS key. Callers that would otherwise feed the new key's props
+  // into the old component during that window can use this to hold the last committed
+  // state instead. Kept as a derived comparison rather than a flag toggled inside the
+  // watch, so it cannot desync from what was actually committed.
+  const settled = computed(() => resolvedKey.value === lookupKey.value)
+
   watch(
-    // MUST return a primitive. A getter returning an array literal builds a new
-    // reference on every evaluation, and `watch` compares sources with Object.is
-    // (it does not deep-compare a getter's array result) — so the callback would
-    // re-fire on every reactive read of `preparedProps`, which wraps useAttrs().
-    // That re-render feeds the next attrs change: an unbounded resolve loop that
-    // thrashes memory and pins the tab. A joined string only changes when one of
-    // the five lookup segments genuinely changes.
-    () => {
-      const p = preparedProps.value || {}
-      return `${p.content ?? ''}|${p.page ?? ''}|${p.scope ?? ''}|${p.resource ?? ''}|${p.uiName ?? ''}`
-    },
-    async () => {
+    lookupKey,
+    async (key) => {
       const token = ++resolveToken
       // Read the live object rather than destructuring the watch source: the
       // source is now a string, and watch callbacks are not reactivity-tracked.
@@ -109,6 +121,7 @@ export function useContentResolver(preparedProps, defaultComponent = null) {
       function commit () {
         modifierProps.value     = nextModifier
         resolvedComponent.value = nextComponent
+        resolvedKey.value       = key
         ready.value             = true
       }
 
@@ -263,5 +276,5 @@ export function useContentResolver(preparedProps, defaultComponent = null) {
     { immediate: true }
   )
 
-  return { ready, resolvedComponent, finalProps }
+  return { ready, settled, resolvedComponent, finalProps }
 }

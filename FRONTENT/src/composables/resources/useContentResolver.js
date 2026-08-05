@@ -48,7 +48,14 @@ export function useContentResolver(preparedProps, defaultComponent = null) {
   const resolvedComponent = shallowRef(null)
   // Props returned by a matched JS modifier, or null when a Vue override matched /
   // nothing matched. Merged over the live preparedProps by `finalProps` below.
-  const modifierProps     = ref(null)
+  //
+  // shallowRef, not ref: this holds a snapshot that is replaced wholesale on every
+  // resolve, so deep reactivity buys nothing — and it actively hurts. `ref(obj)` walks
+  // into the modifier's return value and proxies everything nested, including any
+  // component a modifier passes as a prop value (`content: [OverduePill]`). Vue warns
+  // when a proxied component definition reaches h(), and the proxy costs a walk per row.
+  // finalProps tracks the ref itself, so re-assignment still triggers as before.
+  const modifierProps     = shallowRef(null)
 
   // Live computed, not a snapshot assigned inside the watch. The watch only re-runs
   // when one of the five lookup keys changes, so a snapshot would freeze every other

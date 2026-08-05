@@ -52,47 +52,47 @@
 
           <!-- Main Content Area -->
           <q-item-section>
-            <!-- We loop over the contentArray sequence -->
-            <template v-for="(contentProp, contentIndex) in contentArray" :key="contentIndex">
-              <slot :name="'content' + contentIndex" :item="item">
-                <component v-if="contentProp !== false" :is="getComponentType(contentIndex)" :class="getContentClass(contentIndex)">
-                  <template #default>
-                    {{ resolveProp(contentProp, item) }}
-                  </template>
-                </component>
-              </slot>
-            </template>
+            <!-- We loop over the contentArray sequence. Renderable resolves each cell:
+                 caller slot > component-valued prop > wrapped scalar. -->
+            <Renderable
+              v-for="(contentProp, contentIndex) in contentArray"
+              :key="contentIndex"
+              :slot-fn="slots['content' + contentIndex]"
+              :value="contentProp"
+              :item="item"
+              :is="getComponentType(contentIndex)"
+              :class="getContentClass(contentIndex)"
+            />
           </q-item-section>
 
           <!-- Meta Section -->
           <q-item-section v-if="hasMeta(item)" side>
-            <template v-for="(metaProp, metaIndex) in metaArray" :key="metaIndex">
-              <slot :name="'meta' + metaIndex" :item="item">
-                <component
-                  v-if="metaProp !== false"
-                  :is="getMetaComponentType(metaIndex)"
-                  :color="colorMetaChip(metaIndex, item)"
-                  :outline="getMetaOutline(metaIndex)"
-                  :text-color="getMetaTextColor(metaIndex, item)"
-                >
-                  <template #default>
-                    {{ resolveProp(metaProp, item) }}
-                  </template>
-                </component>
-              </slot>
-            </template>
+            <Renderable
+              v-for="(metaProp, metaIndex) in metaArray"
+              :key="metaIndex"
+              :slot-fn="slots['meta' + metaIndex]"
+              :value="metaProp"
+              :item="item"
+              :is="getMetaComponentType(metaIndex)"
+              :color="colorMetaChip(metaIndex, item)"
+              :outline="getMetaOutline(metaIndex)"
+              :text-color="getMetaTextColor(metaIndex, item)"
+            />
           </q-item-section>
 
-          <!-- Action Section (Button) -->
+          <!-- Action Section (Button) — `btn` carries an icon name rather than slot
+               content, hence value-prop. -->
           <q-item-section v-if="hasBtn(item) || slots.btn" side>
-            <slot name="btn" :item="item">
-              <q-btn
-                flat round dense
-                :icon="resolveProp(btn, item)"
-                :color="btnColor(item)"
-                @click.stop="onActionClick(item)"
-              />
-            </slot>
+            <Renderable
+              :slot-fn="slots.btn"
+              :value="btn"
+              :item="item"
+              :is="QBtn"
+              value-prop="icon"
+              flat round dense
+              :color="btnColor(item)"
+              @click.stop="onActionClick(item)"
+            />
           </q-item-section>
         </slot>
       </q-item>
@@ -102,7 +102,8 @@
 
 <script setup>
 import { computed, useSlots, h, defineComponent, getCurrentInstance } from 'vue'
-import { QItemLabel, QChip, QBadge, colors } from 'quasar'
+import { QItemLabel, QChip, QBadge, QBtn, colors } from 'quasar'
+import Renderable, { isComponentDef } from 'components/abstract/Renderable.js'
 
 defineOptions({ name: 'List' })
 
@@ -222,24 +223,28 @@ const props = defineProps({
   // ignores non-Array values and falls back to layout, so this is a pure
   // prop-validation widen, not a behavior change.
   content: { type: [Array, String], default: null },
-  label: { type: [String, Function], default: 'Code' },
+  // Object is accepted on every prop routed through Renderable (label, caption, chip,
+  // badge, metaLabel, metaCaption, btn) so a `_ui/` JS modifier can pass a component
+  // definition instead of a value resolver — `metaCaption: OverduePill`. NOT widened on
+  // icon/avatar/*Color, which still go through resolveProp directly and would break.
+  label: { type: [String, Function, Object], default: 'Code' },
   labelClass: { type: [String, Array, Object], default: null },
-  caption: { type: [String, Function], default: null },
+  caption: { type: [String, Function, Object], default: null },
   captionClass: { type: [String, Array, Object], default: null },
   meta: { type: Array, default: null },
   metaLayout: { type: Array, default: () => ['chip', 'caption', 'label'] },
   metaColor: { type: [String, Function], default: null },
-  metaLabel: { type: [String, Function], default: null },
-  metaCaption: { type: [String, Function], default: null },
-  chip: { type: [String, Function], default: null },
+  metaLabel: { type: [String, Function, Object], default: null },
+  metaCaption: { type: [String, Function, Object], default: null },
+  chip: { type: [String, Function, Object], default: null },
   chipColor: { type: [String, Function], default: null },
   chipOutline: { type: Boolean, default: false },
   chipTextColor: { type: [String, Function], default: null },
-  badge: { type: [String, Function], default: null },
+  badge: { type: [String, Function, Object], default: null },
   badgeColor: { type: [String, Function], default: null },
   badgeTextColor: { type: [String, Function], default: 'white' },
   badgeOutline: { type: Boolean, default: false },
-  btn: { type: [String, Function], default: null },
+  btn: { type: [String, Function, Object], default: null },
   btnColor: { type: [String, Function], default: null },
 })
 
@@ -270,8 +275,12 @@ const contentArray = computed(() => {
   })
 })
 
+// A layout entry may also BE a component, in which case it wraps the resolved value in
+// place of MainLabel/MainCaption — `layout: ['caption', MyRowWrapper]`. Distinct from a
+// component-valued *content* entry, which replaces the cell entirely rather than wrapping it.
 function getComponentType(contentIndex) {
   const rowType = props.layout[contentIndex]
+  if (isComponentDef(rowType)) return rowType
   if (rowType === 'label') return MainLabel
   if (rowType === 'caption') return MainCaption
   return null
@@ -279,6 +288,10 @@ function getComponentType(contentIndex) {
 
 function resolveProp(prop, item) {
   if (prop === null || prop === undefined || prop === '') return ''
+  // A component-valued prop is returned as-is. Rendering it is Renderable's job; the
+  // callers left here (hasMeta/hasBtn/hasIcon) only need it to read as truthy, and the
+  // `prop in item` branch below would otherwise stringify it into a bogus key lookup.
+  if (isComponentDef(prop)) return prop
   if (typeof prop === 'function') return prop(item)
   return (item && typeof item === 'object' && prop in item) ? item[prop] : prop
 }
@@ -405,6 +418,7 @@ function hasMeta(item) {
 
 function getMetaComponentType(metaIndex) {
   const rowType = props.metaLayout[metaIndex]
+  if (isComponentDef(rowType)) return rowType
   if (rowType === 'label') return MetaLabel
   if (rowType === 'caption') return MetaCaption
   if (rowType === 'chip') return MetaChip

@@ -17,6 +17,12 @@ This applies to: bug fixes, one-line patches, component tweaks, composable chang
 Small fixes are the most frequent source of layer violations (e.g. calling services directly in components, using `router.push()` instead of `useResourceNav`, placing business logic in pages).
 **Do not skip this step even for trivial-seeming changes.**
 
+## Non-Negotiable Reusable-Component Pre-Read
+**Before creating or materially restructuring ANY component under `FRONTENT/src/components/{abstract,app,contents,sections}/`, you MUST read:**
+- `Documents/AQL_RENDERABLE_CONTRACT.md`
+
+Every prop a caller might want to replace with their own markup has to route through `abstract/Renderable.js`. A prop interpolated directly into a template is closed to `_ui/` customization and forces tenants into a full `.vue` override — which swaps component identity, remounts the list, and kills row transitions. This applies to new components and to any change that adds a rendered cell to an existing one.
+
 ## Task Routing
 
 ### Discussion Only
@@ -83,6 +89,13 @@ Use when overriding or creating custom section or sub-components for any resourc
   - `Documents/AQL_CONTENT_CUSTOMIZATION_SYSTEM.md`
   - `Documents/AQL_VIEW_SYSTEM.md` — when customizing View content (parent/child/column overrides, scope rules, JS modifier API)
   - `Documents/AQL_CREATE_AND_UPDATE_CONTENT_SYSTEM.md` — when customizing Create/Update content (`Create.vue`/`Update.vue`/`FormRecord.vue`/`FormChild.vue` prop tables, visibility precedence, child entry modes, Update hydration, child soft-deletion)
+
+### Reusable Render Component Creation
+Use when creating or restructuring a component under `FRONTENT/src/components/{abstract,app,contents,sections}/` — a new Section, a new content component, a new list/table/card primitive, or an app-level wrapper.
+- Read:
+  - `Documents/AQL_RENDERABLE_CONTRACT.md` — **mandatory, see Non-Negotiable Reusable-Component Pre-Read above**
+  - `Documents/ARCHITECTURE RULES.md`
+- Also read the domain doc for whatever subsystem the component belongs to (Content, Page & Section, Action).
 
 ### List Switcher Customization
 Use when overriding or creating custom container or item layouts, template overrides, or dynamic modifiers for the list view switcher bar.
@@ -177,5 +190,6 @@ Update this file when any of the following changes:
 - routing guidance changes for planning, build, backend, frontend, auth, menu, sidebar, or resume workflows
 - mandatory-read rules for specific task categories change
 - the Non-Negotiable Frontend Pre-Read list changes (e.g. a new always-read doc is added for frontend work)
+- the Non-Negotiable Reusable-Component Pre-Read list changes, or the `Renderable` contract's folder scope changes
 - sidebar menu routing or permission-evaluation rules change materially
 

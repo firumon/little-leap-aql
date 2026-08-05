@@ -11,6 +11,7 @@ This document defines initialization parameters for agents tasked with resource-
 Before creating or modifying any local Content components:
 1. **System Specifications**: Read [AQL_CONTENT_CUSTOMIZATION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_CONTENT_CUSTOMIZATION_SYSTEM.md) to review the `contents:` page contract, the `Content.vue` / `useContentResolver.js` resolution chain, the built-in `List` content component, `useListStrategy.js` defaults, and per-active-view override rules.
 2. **Architecture Constraints**: Read [ARCHITECTURE RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md) for strict formatting rules (e.g. no `<style>` blocks in local components).
+3. **If the task CREATES or restructures a content component** (rather than overriding one for a resource): also read [AQL_RENDERABLE_CONTRACT.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_RENDERABLE_CONTRACT.md) and load [renderable_contract.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/renderable_contract.md). Every overridable cell must route through `abstract/Renderable.js`, or the new component is closed to `_ui/` customization from day one.
 
 > [!IMPORTANT]
 > **Field rendering is out of scope for this prompt.** Individual form controls and detail/table value cells are NOT rendered by the content components — they are delegated to the base field subsystem at `src/components/_fields/<type>/{Add,Edit,View}.vue`, resolved through `resolveFieldComponent(type, mode)`. If the task is "make this column render as a link / currency / status chip", or "change how a field type looks", stop and route to the right prompt instead:
@@ -31,6 +32,7 @@ To custom-tailor content layouts:
 4. **Analyze Overriding Strategy**:
    - Prefer **JS Logic Modifiers** (`[Content].js` under custom UI, e.g. `list.js`) for simple adjustments (column/layout overrides, chip/meta tweaks, custom labels).
    - Use **Vue Template SFC Overrides** (`[Content].vue` under custom UI) ONLY if the page requires complex non-standard UI elements, custom slots, or specialized inputs.
+     > Before reaching for a `.vue` override, check whether a **component-valued prop** does the job from a `.js` modifier instead — `btn: VisitActionButtons`, `metaCaption: SomePill`. Any prop routed through `abstract/Renderable.js` accepts a component definition, which replaces that one cell without swapping component identity (a `.vue` override remounts the list and kills its row transitions). See [AQL_RENDERABLE_CONTRACT.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_RENDERABLE_CONTRACT.md) §1. A `.vue` override is correct only when the **structure** changes — row arrangement, extra sections, a different wrapper.
    - Use a **per-active-view override** (`List<ViewName>.vue`/`.js`, e.g. `ListApproved.js`) ONLY when the customization should apply while one specific list view/filter chip is selected, not to the resource's default list rendering.
 
 ---

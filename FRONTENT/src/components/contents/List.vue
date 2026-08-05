@@ -56,28 +56,31 @@ const props = defineProps({
   // String is accepted only because Content.vue binds the content identity ("List")
   // under the same key; it is forwarded to the list solely when it is a real Array.
   content: { type: [Array, String], default: undefined },
-  label: { type: [String, Function], default: undefined },
+  // Object widens these to accept a component definition — see the matching note in
+  // abstract/List.vue. Mirrored here because a JS modifier's props land on THIS
+  // component first and would fail validation before ever reaching the list.
+  label: { type: [String, Function, Object], default: undefined },
   labelClass: { type: [String, Array, Object], default: undefined },
-  caption: { type: [String, Function], default: undefined },
+  caption: { type: [String, Function, Object], default: undefined },
   captionClass: { type: [String, Array, Object], default: undefined },
 
   // Meta side section
   meta: { type: Array, default: undefined },
   metaLayout: { type: Array, default: undefined },
   metaColor: { type: [String, Function], default: undefined },
-  metaLabel: { type: [String, Function], default: undefined },
-  metaCaption: { type: [String, Function], default: undefined },
-  chip: { type: [String, Function], default: undefined },
+  metaLabel: { type: [String, Function, Object], default: undefined },
+  metaCaption: { type: [String, Function, Object], default: undefined },
+  chip: { type: [String, Function, Object], default: undefined },
   chipColor: { type: [String, Function], default: undefined },
   chipOutline: { type: Boolean, default: undefined },
   chipTextColor: { type: [String, Function], default: undefined },
-  badge: { type: [String, Function], default: undefined },
+  badge: { type: [String, Function, Object], default: undefined },
   badgeColor: { type: [String, Function], default: undefined },
   badgeTextColor: { type: [String, Function], default: undefined },
   badgeOutline: { type: Boolean, default: undefined },
 
   // Row action button
-  btn: { type: [String, Function], default: undefined },
+  btn: { type: [String, Function, Object], default: undefined },
   btnColor: { type: [String, Function], default: undefined },
 
   // Content-resolver identity — explicit values here (or forwarded via attrs) take

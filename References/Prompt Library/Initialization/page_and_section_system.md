@@ -60,12 +60,14 @@ When creating a new base section component inside `src/components/sections/` (e.
    const resourceRecord = inject('resourceRecord', null)
    const pageState      = inject('pageState', null)
    ```
-3. **Compound Prop Typing**: Ensure styling/label props support closure functions.
+3. **Compound Prop Typing**: Ensure styling/label props support closure functions — and add `Object` to every prop that renders caller-supplied content, so a `_ui/` JS modifier can hand over a component instead of a value.
    ```javascript
    const props = defineProps({
-     label: { type: [String, Function], default: '' }
+     label: { type: [String, Function, Object], default: '' }   // Object = component-valued
    })
    ```
+   > [!IMPORTANT]
+   > **Any section cell a tenant might want to replace MUST route through `abstract/Renderable.js`** rather than being interpolated directly into the template. A directly-interpolated prop is closed to customization and forces every tenant into a full `.vue` override. Read [AQL_RENDERABLE_CONTRACT.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_RENDERABLE_CONTRACT.md) and load [renderable_contract.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/renderable_contract.md) **before** writing the template of a new section. Bind `:item` to whatever object this section's resolvers expect — `Renderable` calls `value(item)`, so the contract holds for any resolver signature.
 4. **Evaluate Closures**: Use the `evaluateProp` helper to compute final attributes dynamically (passing the record and config to closures):
    ```javascript
    import { evaluateProp } from 'src/composables/resources/useSectionResolver'

@@ -137,6 +137,24 @@ When a list view is active (managed by `useListViews` — e.g. an "Approved" fil
 
 If no `List<ViewName>` match is found anywhere, resolution silently falls through — `contents/List.vue` still renders `AppList` with the default strategy-derived props, since the override lookup only affects the `content` identity string, not the fallback behaviour.
 
+### 4.1 Targeting a per-view list with `Props<Identity>`
+
+The per-view hop participates in the `Props<Identity>` system like any other placeholder, so a page can hand props to one view's list without a file at all:
+
+```javascript
+// _ui/AQL/pages/Operation/OutletVisits/Index.js
+export default {
+  contents: ['List'],
+  PropsList:      { layout: 'list' },     // the default List content
+  PropsListToday: { layout: 'grid' }      // only while the "Today" view is active
+}
+```
+
+The block is spread flat — `ListToday` reads `props.layout`. A `ListToday.js` modifier still wins over `PropsListToday`. See [AQL_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_PAGE_AND_SECTION_SYSTEM.md) §1.4.1 for the full contract.
+
+> [!NOTE]
+> `contents/List.vue` builds its per-view resolver bag from `$attrs` **first**, then its own strategy/explicit props. Without that, `finalProps` was assembled from *declared* props only (see `explicitProps`) and every key an ancestor drilled down without a matching `defineProps` entry — including `PropsListToday` — was dropped before the per-view resolver ever ran.
+
 ---
 
 > [!IMPORTANT]

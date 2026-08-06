@@ -156,8 +156,29 @@ After loading the BP, `usePageResolver` scans `src/_ui/[UiName]/pages/` for cust
 | 6 (O5) | `_ui/{uiName}/pages/{page}.js` | UI-wide JS modifier |
 
 - `{slug}` is normalized as **`toPascalCase(slug).toLowerCase()`** — the single rule every other resolver (`useContentResolver`, `useSectionResolver`, `useActionResolver`, `useViewColumnResolver`, `FormRecord.vue`, `ViewRecord.vue`) applies. A resource slug of `outlet-visits` becomes the key `outletvisits`, which matches a PascalCase folder `_ui/{uiName}/pages/{scope}/OutletVisits/` because the Vite glob registry lowercases every path at build time. **`_ui/` override folders must be named in PascalCase** — a raw hyphenated folder (`outlet-visits/`) will NOT resolve.
-- A **Vue override** (`isVue: true`) replaces the entire page; the section layout is bypassed.
-- A **JS modifier** (`isVue: false`) receives the merged `baseProps` and returns additional props to merge. The section layout still runs with the modified `pageProps`.
+- A **Vue override** (`isVue: true`) replaces the entire page; the section layout is bypassed. It is mounted with `v-bind="pageProps"` and declares props normally — `export default function` has no meaning here.
+- A **JS modifier** (`isVue: false`) supplies additional props to merge over `baseProps`. The section layout still runs with the modified `pageProps`.
+
+  Both an **object** and a **function** export are accepted, exactly as for a base contract:
+
+  ```javascript
+  // _ui/AQL/pages/Operation/OutletVisits/Index.js
+
+  // Object form — static contract
+  export default {
+    sections: ['PageHeader', 'MetricCards', 'FilterInput', 'ListSwitcher'],
+    contents: ['List']
+  }
+
+  // Function form — receives the merged baseProps (rcProps + base contract)
+  export default (baseProps) => ({
+    sections: baseProps.loading ? ['PageHeader'] : ['PageHeader', 'ListSwitcher'],
+    contents: ['List']
+  })
+  ```
+
+  > [!IMPORTANT]
+  > The function form is invoked **inside the `pageProps` computed**, so it re-evaluates on every reactive read. Keep it pure and cheap — no side effects, no fetching. Unlike section/content/action JS modifiers, it receives only `baseProps`; it is not handed a `{ pageState, resourceRecord, resourceConfig }` context object.
 
 #### 1.3.3 Record Loading
 `usePageResolver` calls `useRecord()` once and exposes it as `resourceRecord` (which `Page.vue` then `provide`s). A single watch, keyed on the primitive `resourceName|code|canonicalPage`, drives the reload strategy per page:
@@ -251,6 +272,57 @@ Lookup order (first match wins):
 If neither exists, `Section.vue` renders the "Section Not Defined" card.
 
 #### Step 2 — 10-Tier Override Scan (see §3)
+
+### 1.4.1 Targeted Props — `Props<Identity>` Blocks
+
+`Page.vue` binds one flat `pageProps` object to **every** placeholder, and each placeholder drills its `$attrs` down to whatever it mounts. That is a single global namespace: a `title` intended for `PageHeader` also lands on `FilterInput` and `List`.
+
+`Props<Identity>` carves targeted namespaces out of that same flat bag. Any layer that can contribute props — a base contract, a page's `Index.js`, a JS modifier — may declare them:
+
+```javascript
+// _ui/AQL/pages/Operation/OutletVisits/Index.js
+export default {
+  sections: ['PageHeader', 'MetricCards', 'FilterInput', 'ListSwitcher'],
+  contents: ['List'],
+
+  PropsSection:    { dense: true },                  // broadcast: every section
+  PropsContent:    { flat: true },                   // broadcast: every content
+  PropsPageHeader: { title: "Today's Visits" },      // just PageHeader
+  PropsList:       { layout: 'grid' },               // just the List content
+  PropsListToday:  { layout: 'compact' }             // just the ListToday per-view list
+}
+```
+
+**The block is spread flat onto the target.** `ListToday` reads `props.layout` — never `props.PropsListToday.layout`.
+
+**Precedence** (later wins), applied in each resolver's `finalProps`:
+
+```
+drilled attrs → Props<Kind> broadcast → Props<Identity> → JS modifier
+```
+
+The JS modifier stays final, matching every other override in the system. A `PageHeader.js` modifier overrides a `PropsPageHeader` block declared by the page.
+
+| Kind | Broadcast key | Identity source | Resolver |
+|------|---------------|-----------------|----------|
+| Section | `PropsSection` | the `sections:` entry | `useSectionResolver` |
+| Content | `PropsContent` | the `contents:` entry | `useContentResolver` |
+| Action  | `PropsAction`  | the `action` prop     | `useActionResolver` |
+
+**Rules and mechanics:**
+
+- **Keys are never stripped once consumed.** Every `Props*` key keeps riding the drilled `$attrs` all the way down, so a component nested three levels deep can still claim its own block. `ListToday` legitimately receives `$attrs.PropsPageHeader` and ignores it. This is expected, and it makes the merge idempotent.
+- **Key matching is case-insensitive**, mirroring the resolvers' path lookup. `PropsListToday` and `propslisttoday` both hit.
+- **A block may be a function** — `PropsList: (props) => ({ perPage: props.dense ? 50 : 25 })` — evaluated with the live props bag.
+- **Non-object blocks are ignored**, arrays included, so a stray string can never be spread onto a component.
+- **Nested identities work at any depth**, because each resolver only claims its own key. `PropsListToday` passes untouched through `Content` → `contents/List.vue` and is claimed by the per-view resolver hop inside it.
+- Helper: [`src/utils/placeholderProps.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/placeholderProps.js) (`resolvePlaceholderProps`). It returns `null` when no block matches, so resolvers hand back the original props object and preserve prop identity across unrelated re-renders.
+
+> [!IMPORTANT]
+> **Drilling makes `inheritAttrs: false` mandatory for any component with a DOM root that sits in a drill path.** `Props*` blocks are objects; with attribute fallthrough enabled Vue writes them onto the root element as `propspageheader="[object Object]"`. Every `sections/`, `contents/` and `actions/` component already declares it (§2.1). `components/abstract/List.vue` declares it too, and re-binds `$attrs.class` / `$attrs.style` explicitly so callers keep styling the list.
+
+> [!NOTE]
+> **`ListSwitcher` exception.** The per-item keys `item`, `active`, `label`, `icon`, and `color` are derived per item by `ListSwitcher` itself and are layered *on top of* the resolver output, so a `PropsListSwitcherItem` block cannot override them — the switcher-wide resolver cannot see individual items. Customize them through `ListSwitcher`'s own `label` / `icon` function props, which receive the item. All other keys behave normally.
 
 ### 1.5 The Page State (`src/composables/resources/usePageState.js`)
 Centralizes the reactive form state shared across the Header, Content, and Action sections. It is the single source of truth for input collection, request building, and submission on a resource page.

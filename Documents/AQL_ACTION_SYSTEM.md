@@ -174,6 +174,23 @@ Identical in shape to the Section and Content resolvers (first match wins):
   component through `evaluateProp(val, resourceRecord, resourceConfig)`, which calls the
   closure with **plain unwrapped objects** `(record, config)` — never call `.value` inside.
 
+### 2.4 Targeted props from an ancestor (`Props<Identity>`)
+
+`useActionResolver` participates in the shared `Props<Identity>` system, so a page contract or JS modifier can address one action directly instead of spraying props at every placeholder:
+
+```javascript
+// _ui/AQL/pages/Master/Products/Add.js
+export default {
+  PropsAction:             { dense: true },              // broadcast: every action
+  PropsFormActionSubmit:   { label: 'Create Product' },  // just the submit button
+  PropsPageAction:         { noFab: true }               // just the page FAB
+}
+```
+
+The matching block is spread **flat** onto the action (`props.label`, not `props.PropsFormActionSubmit.label`), and a JS modifier still wins over it. Precedence: `drilled attrs → PropsAction → Props<Identity> → JS modifier`.
+
+Full contract, including the case-insensitivity, function-block and `inheritAttrs` rules: [AQL_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_PAGE_AND_SECTION_SYSTEM.md) §1.4.1.
+
 ---
 
 ## 3. The `components/actions/` Directory

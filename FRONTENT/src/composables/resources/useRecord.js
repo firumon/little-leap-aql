@@ -7,11 +7,9 @@ import { useResourceConfig } from './useResourceConfig'
 import { useRouteConfig } from './useRouteConfig'
 import { useListViews, evaluateFilter } from 'src/composables/useListViews'
 import {singularize} from "src/utils/appHelpers.js";
-
 // Shared cache across all useRecord instances — keyed by "ResourceName::Code"
 const _enrichedCache = new Map()
-
-// Recursively collect searchable string values from a record and all its ancestors
+const resourcePageMap = new Map()
 function _collectSearchValues(r, visited = new Set()) {
   if (!r || visited.has(r)) return []
   visited.add(r)
@@ -25,20 +23,14 @@ function _collectSearchValues(r, visited = new Set()) {
   }
   return values
 }
-
 export function clearEnrichmentCache() {
   _enrichedCache.clear()
 }
-
-// Relations may target a non-`Code` column (e.g. Currencies.Code vs a resource
-// keyed by another unique header). Enrichment is always Code-keyed, so resolve
-// the referenced row's Code first when targetHeader is something else.
 function _resolveTargetCode(dataStore, resourceName, targetHeader, value) {
   if (!targetHeader || targetHeader === 'Code') return value
   const match = dataStore.getRecords(resourceName).find(r => r[targetHeader] === value)
   return match?.Code || null
 }
-
 export function enrichRecord(resourceName, code, dataStore) {
   if (!resourceName || !code) return null
 
@@ -48,12 +40,10 @@ export function enrichRecord(resourceName, code, dataStore) {
   const enriched = reactive({})
   _enrichedCache.set(cacheKey, enriched)   // Cache BEFORE building — prevents circular loops
 
-  // Live computed: re-evaluates when rows/headers change in the reactive store
   const live = computed(() => {
     return dataStore.getRecords(resourceName).find(r => r.Code === code) || null
   })
 
-  // --- Flat header field getters ---
   const allHeaders = dataStore.headers[resourceName] || []
   for (const h of allHeaders) {
     Object.defineProperty(enriched, h, {
@@ -62,10 +52,8 @@ export function enrichRecord(resourceName, code, dataStore) {
     })
   }
 
-  // --- Relation getters ---
   const meta = dataStore.getRelations(resourceName)
 
-  // Parents
   const parentKeys = []
   for (const p of meta.parents) {
     const key = `$${p.singular.toLowerCase()}`
@@ -82,7 +70,6 @@ export function enrichRecord(resourceName, code, dataStore) {
     })
   }
 
-  // Children
   const childKeys = []
   for (const c of meta.children) {
     const key = `$${c.name}`
@@ -104,7 +91,6 @@ export function enrichRecord(resourceName, code, dataStore) {
   for (const rel of Object.values(meta.refs || {})) {
     const singular = singularize(rel.resource).toLowerCase()
     const key = `$${singular}`
-    // Avoid collisions with parent/child keys
     if (parentKeys.includes(key) || childKeys.includes(key)) continue
     linkKeys.push(key)
     Object.defineProperty(enriched, key, {
@@ -119,7 +105,6 @@ export function enrichRecord(resourceName, code, dataStore) {
     })
   }
 
-  // --- Metadata getters ---
   Object.defineProperty(enriched, '_Parents', {
     get() { return [...parentKeys, ...linkKeys] },
     enumerable: false, configurable: true
@@ -152,7 +137,6 @@ export function enrichRecord(resourceName, code, dataStore) {
 
   return enriched
 }
-
 export function useRecord(resourceNameOverride, codeOverride) {
   const $q = useQuasar()
   const authStore = useAuthStore()
@@ -164,7 +148,6 @@ export function useRecord(resourceNameOverride, codeOverride) {
   } = useResourceConfig()
   const { code: routeCode } = useRouteConfig()
 
-  // --- Resource name & code resolution ---
   const resolvedResourceName = computed(() => {
     if (resourceNameOverride) {
       return typeof resourceNameOverride === 'function'
@@ -183,14 +166,18 @@ export function useRecord(resourceNameOverride, codeOverride) {
     return routeCode.value
   })
 
-  // --- Loading state ---
   const loading = ref(false)
   const backgroundSyncing = ref(false)
   const filterTerm = ref('')
+  const currentPage = ref(1)
   const showInactive = ref(false)
   const loadRequestId = ref(0)
 
-  // --- Core reactive data ---
+  const restorePage = name => { currentPage.value = name ? (resourcePageMap.get(name) || 1) : 1 }
+  const resetPage = () => { currentPage.value = 1; if (resolvedResourceName.value) resourcePageMap.set(resolvedResourceName.value, 1) }
+  watch(resolvedResourceName, restorePage, { immediate: true })
+  watch([resolvedResourceName, currentPage], ([name, page]) => { if (name) resourcePageMap.set(name, page) })
+
   const record = computed(() => {
     const name = resolvedResourceName.value
     const code = resolvedCode.value
@@ -206,10 +193,8 @@ export function useRecord(resourceNameOverride, codeOverride) {
     )
   })
 
-  // --- Headers ---
   const headers = computed(() => dataStore.headers[resolvedResourceName.value] || [])
 
-  // --- View switcher states & logic ---
   const {
     effectiveViews,
     activeViewName,
@@ -233,7 +218,6 @@ export function useRecord(resourceNameOverride, codeOverride) {
     return def ? def.name : views[0].name
   })
 
-  // --- Search & filter ---
   const filteredRecords = computed(() => {
     let list = viewFilteredItems.value
 
@@ -251,7 +235,8 @@ export function useRecord(resourceNameOverride, codeOverride) {
     })
   })
 
-  // --- Relation metadata ---
+  watch([filterTerm, activeViewName], resetPage)
+
   const relations = computed(() => dataStore.getRelations(resolvedResourceName.value))
 
   const childResources = computed(() => {
@@ -274,7 +259,6 @@ export function useRecord(resourceNameOverride, codeOverride) {
   const hasChildren = computed(() => childResources.value.length > 0)
   const hasParent = computed(() => !!parentResource.value)
 
-  // Backward-compatible map: { ChildResourceName: [enriched child records] }
   const childRecordsByResource = computed(() => {
     const rec = record.value
     if (!rec) return {}
@@ -297,10 +281,6 @@ export function useRecord(resourceNameOverride, codeOverride) {
     }
     return map
   })
-
-
-
-  // --- Data loading ---
   async function reload() {
     const resourceName = resolvedResourceName.value
     if (!resourceName) return
@@ -321,7 +301,6 @@ export function useRecord(resourceNameOverride, codeOverride) {
     }
   }
 
-  // Fetch all related resources (parents, children, linkRefs) from server
   async function loadRelations() {
     const rels = relations.value
     if (!rels) return
@@ -366,6 +345,7 @@ export function useRecord(resourceNameOverride, codeOverride) {
 
   function runReset() {
     filterTerm.value = ''
+    resetPage()
     showInactive.value = false
     activeViewName.value = defaultViewName.value
     loading.value = false
@@ -373,20 +353,16 @@ export function useRecord(resourceNameOverride, codeOverride) {
     loadRequestId.value++
   }
 
-  // Clear enrichment cache on re-login (auth resources change)
   watch(() => authStore.resources, () => clearEnrichmentCache(), { deep: false })
 
-  // Re-read from server when global sync completes and we have no data
   watch(() => authStore.isGlobalSyncing, (syncing, wasSyncing) => {
     if (wasSyncing && !syncing && records.value.length === 0) reload()
   })
 
   return {
-    // Identity
     resourceName: resolvedResourceName,
     code: resolvedCode,
 
-    // Enriched data
     record,
     records,
     items: records,
@@ -395,7 +371,6 @@ export function useRecord(resourceNameOverride, codeOverride) {
     headers,
     lastHeaders: headers,
 
-    // Relations
     relations,
     childResources,
     parentResource,
@@ -403,19 +378,17 @@ export function useRecord(resourceNameOverride, codeOverride) {
     hasParent,
     childRecordsByResource,
 
-    // Loading state
     loading,
     backgroundSyncing,
     filterTerm,
+    currentPage,
     showInactive,
 
-    // View switching states & actions
     effectiveViews,
     activeViewName,
     activeView,
     setActiveView,
 
-    // Methods
     reload,
     loadRelations,
     getRecordByCode,
@@ -424,4 +397,3 @@ export function useRecord(resourceNameOverride, codeOverride) {
     reset: runReset
   }
 }
-

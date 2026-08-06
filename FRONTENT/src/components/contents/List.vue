@@ -18,7 +18,9 @@
       <component
         :is="renderedComponent"
         v-bind="boundProps"
+        :page="resourceRecord?.currentPage?.value"
         @click="handleItemClick"
+        @update:page="handlePageUpdate"
       />
     </div>
   </Transition>
@@ -42,6 +44,9 @@ defineOptions({ name: 'ContentsList', inheritAttrs: false })
 const props = defineProps({
   // Data / behaviour
   items: { type: Array, default: undefined },
+  paginate: { type: Boolean, default: undefined },
+  perPage: { type: Number, default: undefined },
+  threshold: { type: Number, default: undefined },
   onItemClick: { type: Function, default: undefined },
   // Navigates to a resource sub-route on click (`record-page`, code + pageSlug) instead of
   // the default `view` page — e.g. `target="stock-list"` → /{scope}/{resource}/{code}/stock-list.
@@ -254,5 +259,9 @@ function handleItemClick(item) {
   if (typeof props.onItemClick === 'function') return props.onItemClick(item)
   if (props.target) return nav.goTo('record-page', { code: item?.Code ?? item, pageSlug: props.target })
   nav.goTo('view', { code: item?.Code ?? item })
+}
+
+function handlePageUpdate(page) {
+  if (resourceRecord?.currentPage) resourceRecord.currentPage.value = page
 }
 </script>

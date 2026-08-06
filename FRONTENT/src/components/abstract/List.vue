@@ -34,7 +34,7 @@
 
       <!-- Items List -->
       <q-item
-        v-for="(item, index) in items"
+        v-for="(item, index) in renderedItems"
         :key="resolveKey(item, index)"
         :clickable="isItemClickable"
         v-ripple="isItemClickable"
@@ -105,106 +105,31 @@
         </slot>
       </q-item>
     </TransitionGroup>
+    <q-pagination
+      v-if="paginationLive"
+      v-model="pageModel"
+      :max="totalPages"
+      :max-pages="7"
+      boundary-numbers
+      class="flex flex-center q-mt-md"
+    />
   </q-list>
 </template>
 
 <script setup>
-import { computed, useSlots, h, defineComponent, getCurrentInstance } from 'vue'
-import { QItemLabel, QChip, QBadge, QBtn, colors } from 'quasar'
+import { computed, useSlots, getCurrentInstance, ref, watch } from 'vue'
+import { QBtn, colors } from 'quasar'
 import Renderable, { isComponentDef } from 'components/abstract/Renderable.js'
+import { MainLabel, MainCaption, MetaLabel, MetaCaption, MetaChip, MetaBadge } from 'components/abstract/ListRenderers.js'
 
 defineOptions({ name: 'List' })
 
-// Inline registered components
-const MainLabel = defineComponent({
-  name: 'MainLabel',
-  setup(props, { slots }) {
-    return () => h(
-      QItemLabel,
-      { class: 'text-weight-bold text-subtitle2 text-grey-9' },
-      { default: () => slots.default ? slots.default() : null }
-    )
-  }
-})
-
-const MainCaption = defineComponent({
-  name: 'MainCaption',
-  setup(props, { slots }) {
-    return () => h(
-      QItemLabel,
-      { caption: true, class: 'text-grey-6' },
-      { default: () => slots.default ? slots.default() : null }
-    )
-  }
-})
-
-const MetaLabel = defineComponent({
-  name: 'MetaLabel',
-  props: { color: { type: String, default: 'grey-9' } },
-  setup(props, { slots }) {
-    return () => h(
-      QItemLabel,
-      { class: `text-subtitle2 text-weight-bold text-${props.color}` },
-      { default: () => slots.default ? slots.default() : null }
-    )
-  }
-})
-
-const MetaCaption = defineComponent({
-  name: 'MetaCaption',
-  setup(props, { slots }) {
-    return () => h(
-      QItemLabel,
-      { caption: true, class: 'text-weight-medium text-grey-6' },
-      { default: () => slots.default ? slots.default() : null }
-    )
-  }
-})
-
-const MetaChip = defineComponent({
-  name: 'MetaChip',
-  props: {
-    color: { type: String, default: 'primary' },
-    outline: { type: Boolean, default: false },
-    textColor: { type: String, default: 'white' }
-  },
-  setup(props, { slots }) {
-    return () => h(
-      QChip,
-      {
-        color: props.color,
-        textColor: props.textColor,
-        outline: props.outline,
-        class: 'text-weight-bold',
-        style: 'font-size: 0.75rem'
-      },
-      { default: () => slots.default ? slots.default() : null }
-    )
-  }
-})
-
-const MetaBadge = defineComponent({
-  name: 'MetaBadge',
-  props: {
-    color: { type: String, default: 'primary' },
-    outline: { type: Boolean, default: false },
-    textColor: { type: String, default: 'white' }
-  },
-  setup(props, { slots }) {
-    return () => h(
-      QBadge,
-      {
-        color: props.color,
-        textColor: props.textColor,
-        outline: props.outline,
-        label: slots.default ? slots.default() : ''
-      }
-    )
-  }
-})
-
 const props = defineProps({
   items: { type: Array, default: () => [] },
+  page: { type: Number, default: undefined },
+  paginate: { type: Boolean, default: true },
+  perPage: { type: Number, default: 25 },
+  threshold: { type: Number, default: 35 },
   itemKey: { type: [String, Function], default: 'Code' },
   loading: { type: Boolean, default: false },
   emptyText: { type: String, default: 'No items found.' },
@@ -256,9 +181,41 @@ const props = defineProps({
   btnColor: { type: [String, Function], default: null },
 })
 
-const emit = defineEmits(['click'])
+const emit = defineEmits(['click', 'update:page'])
 const slots = useSlots()
 const instance = getCurrentInstance()
+const currentPage = ref(1)
+
+const pageModel = computed({
+  get: () => props.page ?? currentPage.value,
+  set: value => setPage(value)
+})
+
+const paginationLive = computed(() => props.paginate && props.items.length > props.threshold)
+const pageSize = computed(() => Math.max(1, props.perPage || 25))
+const totalPages = computed(() => Math.max(1, Math.ceil(props.items.length / pageSize.value)))
+const renderedItems = computed(() => {
+  if (!paginationLive.value) return props.items
+  const start = (pageModel.value - 1) * pageSize.value
+  return props.items.slice(start, start + pageSize.value)
+})
+
+watch(() => props.items, () => {
+  setPage(1)
+}, { deep: true })
+
+watch([paginationLive, totalPages], () => {
+  if (!paginationLive.value || pageModel.value > totalPages.value) setPage(1)
+}, { immediate: true })
+
+watch(() => props.page, value => {
+  if (value !== undefined) currentPage.value = value
+}, { immediate: true })
+
+function setPage(value) {
+  currentPage.value = value
+  if (props.page !== undefined && props.page !== value) emit('update:page', value)
+}
 
 const hasClick = computed(() => {
   const props = instance?.vnode?.props

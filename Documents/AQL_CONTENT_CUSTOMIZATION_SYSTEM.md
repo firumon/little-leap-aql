@@ -87,8 +87,11 @@ Every prop defaults to `undefined` so `useListStrategy` stays authoritative unle
 - **Main content**: `layout`, `content` (Array — column list; forwarded only when it's a real Array, since the same prop name also carries the content-resolver's string identity), `label`, `labelClass`, `caption`, `captionClass`
 - **Meta side section**: `meta`, `metaLayout`, `metaColor`, `metaLabel`, `metaCaption`, `chip`, `chipColor`, `chipOutline`, `chipTextColor`, `badge`, `badgeColor`, `badgeTextColor`, `badgeOutline`
 - **Row action**: `btn`, `btnColor`
+- **Pagination**: `paginate` (Boolean, defaults to `true` in `abstract/List.vue`), `perPage` (Number, default `25`), `threshold` (Number, default `35`), `page` (Number, controlled current page synced with `resourceRecord.currentPage`)
 
 Function-valued props (`label`, `caption`, `chipColor`, ...) are per-item resolvers — `(item) => value` — consumed by `abstract/List.vue` and forwarded untouched.
+
+Pagination activates when `items.length > threshold` (35 by default). It renders Quasar `<q-pagination>` with `:max-pages="7"` and `boundary-numbers`, while keeping rows inside the existing `<TransitionGroup>` so pagination and filtering preserve row transitions. The active page is persisted per resource through `resourceRecord.currentPage`.
 
 ### Centralized List Transitions
 List motion is defined once, centrally — no per-view/per-resource override touches it, and slot forwarding (`item`, `avatar`, `content`, `meta`, `btn`), the `click` emission, `itemKey` resolution, selection highlight, and loading/empty states are all untouched:

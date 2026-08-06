@@ -1,5 +1,6 @@
 import { ref, watch, computed, shallowRef, markRaw, inject } from 'vue'
 import { toPascalCase } from 'src/utils/appHelpers'
+import { resolvePlaceholderProps } from 'src/utils/placeholderProps'
 import { evaluateProp } from 'src/composables/resources/useSectionResolver'
 
 // Re-exported so action components can evaluate function-valued props exactly the
@@ -60,7 +61,12 @@ export function useActionResolver(preparedProps, defaultComponent = null) {
 
   const finalProps = computed(() => {
     const current = preparedProps.value || {}
-    return modifierProps.value ? { ...current, ...modifierProps.value } : current
+    // Props addressed to THIS action by an ancestor — `PropsAction` (broadcast to
+    // every action) then `PropsPageAction` / `PropsFormActionSubmit` (this one only) —
+    // spread flat. The JS modifier still lands last. See src/utils/placeholderProps.js.
+    const placeholder = resolvePlaceholderProps(current, current.action, 'Action')
+    if (!placeholder && !modifierProps.value) return current
+    return { ...current, ...placeholder, ...modifierProps.value }
   })
 
   const resourceConfig = inject('resourceConfig', null)

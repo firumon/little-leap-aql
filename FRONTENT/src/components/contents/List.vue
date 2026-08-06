@@ -182,6 +182,12 @@ const finalProps = computed(() => ({
 const activeViewName = computed(() => resourceRecord?.activeViewName?.value || '')
 
 const preparedResolverProps = computed(() => ({
+  // `attrs` first, and deliberately: `finalProps` is built from DECLARED props only
+  // (see explicitProps), so anything an ancestor drilled down without a matching
+  // `defineProps` entry — every `Props<Identity>` block included — died here. The
+  // per-view resolver could never see `PropsListToday`. Spreading attrs underneath
+  // keeps the drill chain intact while strategy/explicit props still win on top.
+  ...attrs,
   ...finalProps.value,
   content: activeViewName.value ? `List${toPascalCase(activeViewName.value)}` : 'List',
   page: props.page || attrs.page || resourceConfig?.page?.value || 'index',

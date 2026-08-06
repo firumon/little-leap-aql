@@ -1,5 +1,6 @@
 import { ref, watch, computed, shallowRef, markRaw, inject } from 'vue'
 import { toPascalCase } from 'src/utils/appHelpers'
+import { resolvePlaceholderProps } from 'src/utils/placeholderProps'
 
 // ─── Vite Glob Registries (module-level, built once at startup) ────────────────
 //
@@ -90,7 +91,14 @@ export function useSectionResolver(preparedProps, defaultComponent = null) {
   // since that is the one thing the async scan actually produced.
   const finalProps = computed(() => {
     const current = preparedProps.value || {}
-    return modifierProps.value ? { ...current, ...modifierProps.value } : current
+    // Props addressed to THIS section by an ancestor — `PropsSection` (broadcast to
+    // every section) then `PropsPageHeader` (this one only) — spread flat, so the
+    // section reads `props.title`, not `props.PropsPageHeader.title`. The JS modifier
+    // still lands last: it is the closest, most specific layer and stays final.
+    // See src/utils/placeholderProps.js.
+    const placeholder = resolvePlaceholderProps(current, current.section, 'Section')
+    if (!placeholder && !modifierProps.value) return current
+    return { ...current, ...placeholder, ...modifierProps.value }
   })
 
   const resourceConfig = inject('resourceConfig', null)

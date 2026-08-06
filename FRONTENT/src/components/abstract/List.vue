@@ -1,5 +1,11 @@
 <template>
-  <q-list :bordered="bordered" :separator="separator" class="q-gutter-y-xs relative-position">
+  <q-list
+    :bordered="bordered"
+    :separator="separator"
+    class="q-gutter-y-xs relative-position"
+    :class="$attrs.class"
+    :style="$attrs.style"
+  >
     <!-- TransitionGroup (no `tag`, so it renders no wrapper element and the q-items stay
          direct children of q-list, preserving separators/gutter). Items fade and slide into
          place on load/filter, and reorder via FLIP `-move` transitions. The loading spinner
@@ -122,7 +128,13 @@ import { QBtn, colors } from 'quasar'
 import Renderable, { isComponentDef } from 'components/abstract/Renderable.js'
 import { MainLabel, MainCaption, MetaLabel, MetaCaption, MetaChip, MetaBadge } from 'components/abstract/ListRenderers.js'
 
-defineOptions({ name: 'List' })
+// `inheritAttrs: false` because this is the end of the drill chain. AppList forwards
+// its `$attrs` here wholesale, and page props now travel all the way down so any
+// component can claim its own `Props<Identity>` block (src/utils/placeholderProps.js).
+// With fallthrough on, every unconsumed key — object-valued `Props*` blocks included —
+// would be written onto the root element as `propspageheader="[object Object]"`.
+// `class`/`style` are re-bound explicitly below so callers keep styling this list.
+defineOptions({ name: 'List', inheritAttrs: false })
 
 const props = defineProps({
   items: { type: Array, default: () => [] },

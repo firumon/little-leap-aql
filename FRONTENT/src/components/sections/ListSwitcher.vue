@@ -175,7 +175,11 @@ const moreButtonStyle = computed(() => {
 })
 
 // ── Per-item resolution via useSectionResolver for 'ListSwitcherItem' ──
+// `attrs` is spread underneath the identity keys so the drill chain survives this
+// hop: without it the bag was rebuilt from scratch here and everything an ancestor
+// passed down — `PropsSection` and `PropsListSwitcherItem` included — was lost.
 const itemResolverProps = computed(() => ({
+  ...attrs,
   section:  'ListSwitcherItem',
   page:     props.page,
   scope:    resourceConfig?.scope?.value    ?? 'master',
@@ -183,7 +187,13 @@ const itemResolverProps = computed(() => ({
   uiName:   resourceConfig?.customUIName?.value ?? 'AQL',
 }))
 
-const { resolvedComponent: resolvedItemComponent } = useSectionResolver(itemResolverProps)
+const {
+  resolvedComponent: resolvedItemComponent,
+  finalProps: resolvedItemProps
+} = useSectionResolver(itemResolverProps)
+
+// Identity segments the resolver needs for its own lookup — plumbing, never item props.
+const ITEM_IDENTITY_KEYS = ['section', 'page', 'scope', 'resource', 'uiName']
 
 // ── Item Click Handler ──
 function handleItemClick(itemName) {
@@ -214,7 +224,21 @@ function resolvedIcon(item) {
 }
 
 function buildItemProps(item) {
+  // Resolver output forms the BASE. It was previously dropped on the floor entirely —
+  // only `resolvedItemComponent` was read — so a `ListSwitcherItem.js` modifier
+  // resolved and then had no effect at all. It also carries the drilled attrs and any
+  // `PropsListSwitcherItem` block.
+  //
+  // The five per-item keys below stay on top and are NOT overridable from a props
+  // block: they are derived per item, which the switcher-wide resolver cannot see.
+  // Customize them through this component's own `label` / `icon` function props,
+  // which receive the item. Layering them last also stops a same-named page-level
+  // attr (a stray `label`) from flattening every item.
+  const resolved = { ...resolvedItemProps.value }
+  for (const key of ITEM_IDENTITY_KEYS) delete resolved[key]
+
   return {
+    ...resolved,
     ...item,
     item,
     active: finalAttrs.value.activeItem === item.name,

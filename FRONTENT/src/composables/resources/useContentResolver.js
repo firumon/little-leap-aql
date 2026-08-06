@@ -1,5 +1,6 @@
 import { ref, watch, computed, shallowRef, markRaw, inject } from 'vue'
 import { toPascalCase } from 'src/utils/appHelpers'
+import { resolvePlaceholderProps } from 'src/utils/placeholderProps'
 import { evaluateProp } from 'src/composables/resources/useSectionResolver'
 
 // Re-exported so content components can evaluate function-valued props exactly the
@@ -64,7 +65,12 @@ export function useContentResolver(preparedProps, defaultComponent = null) {
   // since that is the one thing the async scan actually produced.
   const finalProps = computed(() => {
     const current = preparedProps.value || {}
-    return modifierProps.value ? { ...current, ...modifierProps.value } : current
+    // Props addressed to THIS content by an ancestor — `PropsContent` (broadcast to
+    // every content) then `PropsList` / `PropsListToday` (this one only) — spread flat.
+    // The JS modifier still lands last. See src/utils/placeholderProps.js.
+    const placeholder = resolvePlaceholderProps(current, current.content, 'Content')
+    if (!placeholder && !modifierProps.value) return current
+    return { ...current, ...placeholder, ...modifierProps.value }
   })
 
   const resourceConfig = inject('resourceConfig', null)

@@ -113,6 +113,20 @@ then `FRONTENT/src/components/actions/[Action].vue`.
 
 ## 4. Customization Patterns
 
+### Pattern 0: `Props<Identity>` from the page contract (no override file)
+The cheapest option — address one action by name from `_ui/.../pages/.../[page].js`:
+```javascript
+export default {
+  PropsAction:           { dense: true },              // broadcast: every action
+  PropsFormActionSubmit: { label: 'Create Product' },  // just the submit button
+  PropsPageAction:       { actions: ['cancel', 'submit'] }
+}
+```
+Spread **flat** onto the action (`props.label`), and a `.js` modifier still wins over it.
+Precedence: `drilled attrs → PropsAction → Props<Identity> → JS modifier`. Reach for a
+modifier file when the value needs record/config context; use this for plain values.
+Full contract: [AQL_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_PAGE_AND_SECTION_SYSTEM.md) §1.4.1.
+
 ### Pattern 1: JS Logic Modifier (change props, keep the template)
 ```javascript
 // src/_ui/AQL/components/master/products/add/formactionsubmit.js

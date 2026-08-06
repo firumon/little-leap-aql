@@ -73,6 +73,15 @@ if (isComponentDef(prop)) return prop
 ### 3.4 Never widen the attr spread
 `Renderable` passes `item` + `class`/`style` only to a caller's component. Do not "helpfully" add more — fallthrough attrs clobber the component's own props.
 
+### 3.5 `inheritAttrs: false` is mandatory on a DOM root
+Page props drill down the entire placeholder chain so any component can claim its own `Props<Identity>` block ([AQL_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_PAGE_AND_SECTION_SYSTEM.md) §1.4.1). Those blocks are **objects**, so a component that renders a DOM root with fallthrough enabled stringifies them onto the element as `propspageheader="[object Object]"`.
+
+Declare `inheritAttrs: false` on any new component in `abstract/`, `app/`, `contents/`, or `sections/`. If callers need to style it, re-bind explicitly on the root rather than relying on fallthrough:
+
+```html
+<q-list class="q-gutter-y-xs" :class="$attrs.class" :style="$attrs.style">
+```
+
 ---
 
 ## 4. Authoring a Component To Be Passed As A Prop

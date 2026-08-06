@@ -51,6 +51,14 @@ export default function() {
 }
 ```
 
+> [!IMPORTANT]
+> **`ListSwitcherItem.js` now actually takes effect.** `ListSwitcher` previously read only the resolved *component* from its item resolver and rebuilt every item's props by hand, so a `ListSwitcherItem.js` modifier resolved and was then silently discarded. It now forms the base of each item's props.
+>
+> Five keys remain owned by `ListSwitcher`'s per-item derivation and are layered on top, so a modifier or `PropsListSwitcherItem` block **cannot** override them: `item`, `active`, `label`, `icon`, `color`. Customize those through `ListSwitcher`'s own `label` / `icon` function props, which receive the item. Everything else merges normally.
+
+> [!TIP]
+> For plain value tweaks, a `Props<Identity>` block on the page contract avoids the file entirely — `PropsListSwitcher: { maxVisibleItems: 6 }`, or `PropsListSwitcherItem: { … }` for the items. A `.js` modifier still wins over it. See [AQL_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_PAGE_AND_SECTION_SYSTEM.md) §1.4.1. Note that a per-view item identity (`ListSwitcherItemApproved`) does **not** exist — the item resolver is switcher-wide, resolving the single identity `ListSwitcherItem`.
+
 **Full example with `filter` trees** — see the working reference at [`src/_ui/AQL/components/master/currencies/ListSwitcher.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_ui/AQL/components/master/currencies/ListSwitcher.js):
 ```javascript
 export default function() {

@@ -24,6 +24,9 @@ This initialization prompt guides the creation, override, and customization of f
 > [!IMPORTANT]
 > Before implementing anything, read the full canonical doc: [AQL_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_PAGE_AND_SECTION_SYSTEM.md). It contains the complete `pageProps` contract, BP schema, page override scan table, resolver internals, and `AqlContentWrapper` state logic — all of which are critical to getting this right.
 
+> [!TIP]
+> **Reach for `Props<Identity>` before writing an override file.** A page contract can address a single section/content/action by name — `PropsPageHeader: { title: '…' }` — without any file under `_ui/.../components/`. See §3.3 below and canonical doc §1.4.1.
+
 * **Page Orchestrator (`src/pages/Page.vue`)**:
   - Dynamically resolved at runtime via `usePageResolver.js` (which also owns record loading via `useRecord`; form state lives in `usePageState.js`).
   - Always renders `<ResourceBreadcrumb />` unconditionally — it is outside the section system.
@@ -33,7 +36,8 @@ This initialization prompt guides the creation, override, and customization of f
     - Body Contents: `<Content>` per entry in `contents`, wrapped inside `<AqlContentWrapper>` (state gate + submission overlay — see canonical doc §1.1).
     - Page Actions: `<Action v-if="ready && pageProps.noActions !== true" action="PageAction" />`, mounted **after** `AqlContentWrapper` and **outside** the animated `.aql-page-body` wrapper (a CSS transform on an ancestor would trap the fixed FAB). Owned by the Action subsystem.
   - The Action subsystem is decoupled from `sections` — base contracts do not need a `'PageAction'` entry; `usePageResolver` still filters the name out of `visibleSectionsBeforeAction` if one is present. `noActions: true` suppresses both `<Action>` and the `ActionDialog`.
-  - All placeholders receive `pageProps` via `v-bind`. See canonical doc §1.3.4 for the **full `pageProps` contract** (20+ props including `parentForm`, `childGroups`, `actionForm`, all event handlers).
+  - All placeholders receive `pageProps` via `v-bind`, and each placeholder drills its `$attrs` down to whatever it mounts — so page props reach the deepest leaf. Use `Props<Identity>` (§3.3) to address one placeholder instead of all of them. See canonical doc §1.3.4 for the **full `pageProps` contract** (20+ props including `parentForm`, `childGroups`, `actionForm`, all event handlers).
+  - A page's `_ui/.../[page].js` contract accepts **either an object or a function** export — `export default (baseProps) => ({ … })` is supported and returns props merged over `baseProps`. It runs inside the `pageProps` computed, so keep it pure and cheap. A `.vue` page override is a component, not a contract; `export default function` has no meaning there.
   - Contexts provided: `'resourceConfig'`, `'resourceRecord'`, and `'pageState'`.
 * **Section Placeholder (`src/components/Section.vue`)**:
   - Automatically resolves which component to render via `useSectionResolver(preparedProps)`.
@@ -124,6 +128,37 @@ Overrides reside under `src/_ui/[UiName]/components/`.
     })
     ```
 * **Vue Overrides (`.vue`)**: Replaces the template completely.
+
+### 3.3 Targeted Props — `Props<Identity>` (no file needed)
+
+Before creating an override file, check whether a props block is enough. `Page.vue` binds one flat `pageProps` object to every placeholder, and each drills `$attrs` downward; `Props<Identity>` carves targeted namespaces out of that shared bag:
+
+```javascript
+// _ui/AQL/pages/Operation/OutletVisits/Index.js
+export default {
+  sections: ['PageHeader', 'FilterInput', 'ListSwitcher'],
+  contents: ['List'],
+
+  PropsSection:    { dense: true },                 // broadcast: every section
+  PropsContent:    { flat: true },                  // broadcast: every content
+  PropsPageHeader: { title: "Today's Visits" },     // just PageHeader
+  PropsListToday:  { layout: 'grid' }               // just the ListToday per-view list
+}
+```
+
+**Rules to hold to:**
+- The block is spread **flat**: the target reads `props.title`, never `props.PropsPageHeader.title`.
+- Precedence is `drilled attrs → Props<Kind> → Props<Identity> → JS modifier`. **The JS modifier is always final** — never write a `Props<Name>` block expecting it to beat a `.js` modifier.
+- Broadcast keys are `PropsSection`, `PropsContent`, `PropsAction` — one per resolver family.
+- Blocks are **never stripped**; unconsumed `Props*` keys keep drilling, so a deeply nested component can claim its own. Seeing `$attrs.PropsPageHeader` inside a list item is expected, not a bug.
+- A block may be a function `(props) => ({ ... })`. Non-objects and arrays are ignored.
+- Helper: `src/utils/placeholderProps.js` → `resolvePlaceholderProps(props, identity, kind)`. Call it in a resolver's `finalProps`; do not re-implement the merge inline at a bind site.
+
+> [!IMPORTANT]
+> **Any component with a DOM root that sits in a drill path MUST declare `inheritAttrs: false`.** `Props*` blocks are objects, so with fallthrough enabled Vue writes them onto the element as `propspageheader="[object Object]"`. If a component legitimately needs `class`/`style` fallthrough, re-bind `$attrs.class` / `$attrs.style` explicitly (see `components/abstract/List.vue`).
+
+> [!NOTE]
+> When adding a new nesting hop that resolves its own identity, build its resolver bag from `$attrs` **first**, then the local props. Rebuilding the bag from scratch silently severs the drill chain — this is exactly what `contents/List.vue` and `sections/ListSwitcher.vue` used to do.
 
 ### 3.3 Attribute Fallthrough in Vue Overrides (Strict)
 To prevent property collisions when wrapping default components inside an override:

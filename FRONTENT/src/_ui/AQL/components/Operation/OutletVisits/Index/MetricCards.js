@@ -31,13 +31,11 @@ export default function (props, { resourceRecord }) {
         const row = records[i]
         if (!row) continue
         if (!isActive(row.Status)) continue
-        if (!isPlanned(row.Progress ?? row.Status)) continue
-
-        const date = row.Date || row.ScheduledAt
+        const date = row.Date, planned = isPlanned(row.Progress)
         if (!isIsoDate(date)) continue
-
         if (date.startsWith(today)) todayCount++
-        else if (date < today) overdueCount++
+        if (!planned) continue
+        if (date < today) overdueCount++
       }
 
       return [

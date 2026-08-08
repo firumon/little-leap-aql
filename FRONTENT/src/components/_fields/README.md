@@ -18,6 +18,7 @@ src/components/_fields/
 ├── useFieldResolver.js      # central dynamic resolver + type normalization
 ├── currency/{Add,Edit,View}.vue
 ├── date/{Add,Edit,View}.vue
+├── datetime/{Add,Edit,View}.vue
 ├── file/{Add,Edit,View}.vue
 ├── link/{Add,Edit,View}.vue
 ├── number/{Add,Edit,View}.vue
@@ -167,10 +168,31 @@ base type component renders.
 
 ## 5. Adding a new field type
 
+> **Maintainer rule (mandatory).** The moment a new UI field `type` appears in
+> `APP.Resources.UIFields` metadata (`GAS/syncAppResources.gs`), it MUST get a
+> matching component directory here. A type with no folder silently degrades to
+> `text/` — the schema says `datetime`, the user gets a plain text box, and
+> nothing warns anyone. Schema and `_fields/` are a single change, never two.
+
 1. Create `_fields/<type>/` with `Add.vue`, `Edit.vue`, `View.vue` following §2.
-2. If the schema spells the type differently, add the alias to `TYPE_ALIASES` in
-   `useFieldResolver.js`.
+2. Register the type in `useFieldResolver.js`: the folder name resolves on its
+   own, so add entries to `TYPE_ALIASES` only for the schema's *other* spellings
+   of the same intent (`timestamp` → `datetime`, `money` → `currency`, …).
 3. If `useFormFields.mapField` needs to prepare props for it (options, accept,
    resourceName, …), add a branch there that sets `fieldType: '<type>'`.
+   Watch the branch ORDER — `mapField` falls through to `date` for any header
+   ending in `Date`, which is why the `datetime` branch sits above it (a
+   `RespondDate` column typed `datetime` must not be captured by that heuristic).
+4. Add the folder to the §1 directory listing above.
 
 No container edits. No registry edits.
+
+### `datetime`
+
+Stores and emits `YYYY-MM-DD HH:mm:ss`, 24-hour — the same shape
+`GAS/sheetHelpers.gs → formatDateTime24()` writes into every `...At` workflow
+stamp column. `Add.vue` is a `QInput` under that mask with a `QDate` popup on
+`prepend` and a `format24h with-seconds` `QTime` popup on `append`; both pickers
+carry the full mask so choosing a date preserves the time and vice versa.
+`Add.vue` and `View.vue` both accept legacy epoch-millisecond values (rows
+stamped before the backend switched formats) and normalize them for display.

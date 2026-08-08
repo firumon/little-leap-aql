@@ -101,8 +101,21 @@ export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions =
     }
   }
 
+  // Date-time fields own their own `_fields/datetime/` control (date + 24h time
+  // pickers over a `YYYY-MM-DD HH:mm:ss` value). Checked BEFORE the date branch
+  // because a datetime header may also end in "Date" (RespondDate).
+  if (normalizeFieldType(field.type) === 'datetime') {
+    return {
+      header: field.header,
+      fieldType: 'datetime',
+      componentName: 'q-input',
+      ...baseProps,
+      clearable: !field.required
+    }
+  }
+
   // Date fields: explicit type, or any header ending in "Date" (TransactionDate, ...).
-  if (field.type === 'date' || field.type === 'datetime' || /Date$/.test(field.header)) {
+  if (field.type === 'date' || /Date$/.test(field.header)) {
     return {
       header: field.header,
       fieldType: 'date',

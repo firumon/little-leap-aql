@@ -53,11 +53,40 @@ This document is the canonical meaning reference for `APP.Resources` columns.
 - `PriceListItems` is keyed by composite `PriceListCode + SKUCode`; `Price` is a number.
 - `Currencies` uses manual codes (e.g. `AED`, `INR`) via `Code` column; `CodePrefix` and `CodeSequenceLength` are empty/0. `ConversionFactor` stores the current conversion rate (not historical).
 - `OutletOperatingRules.PriceListCode` is optional; resolution falls back to `PriceList` where `IsDefault = TRUE`.
+- `OutletOperatingRules.InvoiceDueDays` (number, default `30`) is the credit period in days used to derive `OutletConsumptionInvoices.DueDate` from the invoice `Date`.
+- Reports and views read `OutletVisits`, `OutletConsumptionInvoices` and `OutletOperatingRules` through bounded `IMPORTRANGE` ranges and address fields by fixed ordinal (`INDEX(raw, 0, 18)`, `CHOOSECOLS(row, 5)`). Changing the header order of any sheet referenced from `Sheet Formulas/` means widening the range and re-numbering every ordinal in each affected template, plus `Sheet Formulas/Reports/INDEX.md`.
+- `OutletVisits.RespondDate` (`datetime`) is blank when a visit is created and stamped `YYYY-MM-DD HH:mm:ss` when the visit is completed, postponed, or cancelled. `RespondDate` is a **by-convention column**: `handleExecuteAction` stamps it on any resource whose sheet declares it, on every action regardless of outcome, so one column answers "when was this responded to" without a coalesce across `ProgressCompletedAt` / `ProgressPostponedAt` / `ProgressCancelledAt` in every view, report and filter.
 - `OutletConsumptionInvoices` stores consumption invoice headers with optional `PriceListCode`, `Subtotal`, `Discount`, `Tax`, and `Progress` (`PENDING_PAYMENT`, `PARTIALLY_PAID`, `PAID`, `CANCELLED`). Pricing resolution can use `OutletOperatingRules.PriceListCode` or fallback to the default `PriceList`; paid/balance totals are deferred to the receipt module.
 - `OutletConsumptionInvoiceItems` stores invoice line items linked to `OutletConsumptionInvoices` by `OutletConsumptionInvoiceCode`. Each row records the priced `SKU`, `Qty`, and `Price`. Composite uniqueness is `OutletConsumptionInvoiceCode+SKU`. The invoice header `Subtotal` is generated as `sum(Qty * Price)` from active item rows.
 - `OutletRestockItems` is the atomic allocated/delivered unit for outlet restocking. Creator rows start as `Progress = PENDING` with `SKU`, `Quantity`, and blank `WarehouseCode` / `StorageName`. Approvers allocate full or partial quantities by setting row-level `WarehouseCode`, `StorageName`, `Quantity`, and `Progress = ALLOCATED`; partial allocation creates an additional PENDING ORSI row for the remainder. Delivery marks the same ORSI row `DELIVERED`.
 - `OutletMovements.ReferenceType = RestockDelivery` marks positive outlet stock from delivered ORSI rows, using `ReferenceCode = OutletDeliveries.Code`. `OutletMovements.ReferenceType = Consumption` marks negative stock from outlet consumption.
 - `OutletMovements` updates `OutletStorages` through `handleOutletMovementsBulkSave`; `OutletStorages` is keyed by `OutletCode + SKU`, contains only `Code`, `OutletCode`, `SKU`, and `Quantity`, has no audit columns, and is read-only to frontend operation pages.
+
+## UI Field Types (`UIFields[].type`)
+
+`UIFields[].type` is not free text — it names a component directory under
+`FRONTENT/src/components/_fields/<type>/`. Registered types today: `currency`,
+`date`, `datetime`, `file`, `link`, `number`, `select`, `status`, `tel`, `text`,
+`textarea`, `toggle`.
+
+> **Maintainer rule (mandatory).** Introducing a NEW `type` value in `UIFields`
+> metadata is a two-file change, never one. You must also:
+> 1. create `FRONTENT/src/components/_fields/<type>/` containing `Add.vue`,
+>    `Edit.vue` and `View.vue` (contract in
+>    [_fields/README.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_fields/README.md) §2), and
+> 2. register it in `FRONTENT/src/components/_fields/useFieldResolver.js` —
+>    the folder name resolves by itself, so `TYPE_ALIASES` is only for the
+>    schema's alternate spellings of the same intent.
+>
+> Skipping either step fails SILENTLY: `normalizeFieldType()` collapses an
+> unknown type to the `text` fallback, so the schema declares `datetime` and the
+> user is handed a plain text box with no error anywhere.
+
+`datetime` columns store `YYYY-MM-DD HH:mm:ss` (24-hour) — the shape
+`GAS/sheetHelpers.gs → formatDateTime24()` writes into every `{column}{Value}At`
+workflow stamp, and the shape the `$dateTime` action token resolves to (`$now`
+stays epoch milliseconds). `{column}{Value}By` stamps store the user's display name
+(`auth.user.Name || auth.user.UserID`), not the raw UserID.
 
 ## File Type Columns (Field Type: "file")
 

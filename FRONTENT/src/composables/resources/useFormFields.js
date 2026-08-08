@@ -108,7 +108,10 @@ export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions =
       fieldType: 'date',
       component: AppDate,
       componentName: 'app-date',
-      ...baseProps
+      ...baseProps,
+      // Same rule as the select branches: only an optional date offers a clear
+      // affordance. AppDate additionally re-seeds today on clear when required.
+      clearable: !field.required
     }
   }
 

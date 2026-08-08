@@ -6,6 +6,7 @@
   <q-input
     v-bind="$attrs"
     :model-value="modelValue || ''"
+    :clearable="clearable"
     @update:model-value="emitValue"
     mask="####-##-##"
     placeholder="YYYY-MM-DD"
@@ -41,14 +42,24 @@ defineProps({
   modelValue: {
     type: String,
     default: ''
+  },
+  // Declared (rather than left to $attrs) so the clear affordance is part of this
+  // primitive's contract: QInput's clear button emits `null`, which `emitValue`
+  // normalizes back to `''` — see the template comment on why null must not escape.
+  clearable: {
+    type: Boolean,
+    default: false
   }
 })
 
 const emit = defineEmits(['update:modelValue'])
 const qDateProxy = ref(null)
 
+// Both the clear button and a full backspace hand back `null`/`undefined`.
+// Emitting `''` instead keeps the published value a String at all times, so
+// callers can treat "cleared" as one shape rather than three.
 function emitValue(val) {
-  emit('update:modelValue', val)
+  emit('update:modelValue', val ?? '')
 }
 
 function onDateSelect(val) {

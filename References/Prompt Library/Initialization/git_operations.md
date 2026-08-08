@@ -18,49 +18,58 @@ Before staging or committing anything:
 
 ---
 
-## 2. Phase 2: Mandatory Feature-Based Grouping of Changes
+## 2. Phase 2: Mandatory Granular Subtask Grouping of Changes
 
-> **CRITICAL RULE**: Group commits strictly on the basis of **Feature / Work Unit**.
-> Each commit must be a self-contained unit for one specific feature or task, containing the code changes (composables, components, schemas) **AND** its corresponding documentation updates (canonical docs, registries, prompts) together.
+> **CRITICAL RULE**: Group commits strictly on the basis of **Granular Subtasks / Work Units**.
+> Each commit MUST be a self-contained, atomic unit for one specific subtask or sub-feature, containing the implementation code (setup scripts, components, composables, GAS functions) **AND** its corresponding documentation/template updates (sheet structures, report formulas, component docs) together.
 >
-> NEVER split a single feature into "code commit" vs "docs commit". Documentation edits belong in the exact same commit as the feature code they describe.
->
-> **Task Isolation Rule**: If a session completes multiple distinct features or tasks, you MUST create **separate atomic commits for each distinct task/feature**. Never combine two distinct tasks into a single commit.
+> **Task Isolation Rule**: If a session accomplishes multiple distinct subtasks or sub-features (even if part of the same overall directive or session), you MUST split them into **separate atomic commits for each distinct subtask**. Never lump multiple distinct subtasks into a single monolithic commit.
 
-### Example Scenarios:
+### Example Scenario (Multi-Subtask Session Breakdown):
 
-* **Scenario A (Code + Docs for 2 Features)**:
-  - Task 1: Refactoring `useAdditionalActions` into a modular pipeline → Commit 1: `feat(actions): add modular request pipeline` (includes pipeline code + action docs + registry).
-  - Task 2: Adding `includeAdditionalAction` to `usePageState` → Commit 2: `feat(pagestate): integrate additional actions into pageState batching` (includes pageState code + pageState docs).
+In a session implementing database additions, UI components, and backend stamp logic:
 
-* **Scenario B (Documentation / Prompt Updates for 2 Features)**:
-  - Task 1: Updating MACP protocol rules in `MACP.md` → Commit 1: `docs(macp): update MACP simple english & pre-directive discussion rules`.
-  - Task 2: Updating Git commit rules in `git_operations.md` → Commit 2: `docs(git): enforce feature-based commit grouping`.
+* **Subtask 1: Database Schema Expansion**:
+  - Code/Setup: `GAS/setupOperationSheets.gs`, `GAS/setupMasterSheets.gs`, `GAS/syncAppResources.gs` (headers & UIFields)
+  - Sheet Formulas: Report formula templates (`ConsumptionInvoice.md`, `OutletVisitHistory.md`, etc.) & `Sheet Formulas/Views/Outlet.md`
+  - Docs: `OPERATION_SHEET_STRUCTURE.md`, `MASTER_SHEET_STRUCTURE.md`
+  → Commit 1: `feat(schema): add RespondDate, DueDate, and InvoiceDueDays sheet columns`
 
-| Commit Type | Scope / Category | Example Feature Group |
+* **Subtask 2: UI Field Type Component Registration**:
+  - Components: `FRONTENT/src/components/_fields/datetime/{Add,Edit,View}.vue`
+  - Resolvers & Mapping: `useFieldResolver.js`, `useFormFields.js`
+  - Docs: `FRONTENT/src/components/_fields/README.md`, `RESOURCE_COLUMNS_GUIDE.md`
+  → Commit 2: `feat(fields): register datetime field component and resolver aliases`
+
+* **Subtask 3: Backend Workflow Stamp Formatting**:
+  - GAS Logic: `sheetHelpers.gs`, `resourceApi.gs`, `warehouseTransfers.gs`, `actionTargets.gs`
+  - Docs: `AQL_ACTION_SYSTEM.md`
+  → Commit 3: `feat(backend): format workflow stamps with user name and 24h datetime`
+
+| Commit Type | Scope / Category | Example Subtask Commit Group |
 |---|---|---|
-| `feat` | Complete feature implementation (code + docs) | `feat(actions): add modular request pipeline (pipeline code + action docs + registry)` |
-| `feat` | Subsystem integration (code + docs) | `feat(pagestate): integrate additional actions into pageState batching (pageState code + pageState docs)` |
+| `feat` | Database schema addition | `feat(schema): add RespondDate, DueDate, and InvoiceDueDays sheet columns` |
+| `feat` | UI Component / Field system | `feat(fields): register datetime field component and resolver aliases` |
+| `feat` | Backend GAS logic | `feat(backend): format workflow stamps with user name and 24h datetime` |
 | `fix` | Bug fix with doc updates | `fix(ui): correct textarea field binding and update dialog docs` |
 | `refactor` | Code refactoring + updated specs | `refactor(pages): streamline form state resolution and update spec docs` |
 | `docs` | System prompt or protocol update | `docs(macp): update MACP discussion and simple english rules` |
 
 ### Rules for Grouping:
-1. **Feature-First Grouping**: Group files by the **feature/task** they belong to. Code, tests, and documentation for a specific feature MUST be committed together in one atomic commit.
-2. **Task Isolation**: If multiple separate tasks/features were implemented in one session, split them into separate commits per task/feature.
-3. **No Artificial File-Type Splitting**: Do NOT artificially split docs into a separate commit from the feature code they describe. Keep the feature and its docs unified.
-4. **No Combining Unrelated Tasks**: Never combine two distinct tasks/features into one single commit, even if both are doc files or both are code files. Each task gets its own commit.
-5. **Multi-Feature File Hunk Staging**: If a single file contains modifications belonging to multiple distinct features/tasks, stage ONLY the specific lines/hunks belonging to that feature for its commit (e.g., via patch/hunk staging `git add -p` or selective staging), leaving the remaining edits in that same file to be staged in their respective feature commit.
+1. **Granular Subtask Grouping**: Identify every distinct subtask completed in the session and group files strictly by subtask.
+2. **Unified Code + Docs per Subtask**: Include both code changes AND corresponding documentation/formula updates for that subtask in the exact same commit. Do NOT split docs into a separate commit.
+3. **No Monolithic Commits**: Never combine multiple distinct subtasks into a single commit just because they were done in the same session.
+4. **Multi-Subtask File Hunk Staging**: If a single file contains changes for multiple subtasks (e.g. `syncAppResources.gs` having schema UIFields edits AND action stamp config edits), stage ONLY the specific lines/hunks belonging to that subtask for its commit (via selective file staging or patch staging), leaving remaining edits for the next subtask commit.
 
 ---
 
 ## 3. Step-by-Step Commit & Push Checklist
 
-1. **Construct the Feature Grouping Plan**:
-   - Categorize changed files by feature/task (combining code + docs for each feature) BEFORE running `git add`.
-2. **Stage & Commit Feature by Feature**:
-   - For each feature group:
-     1. Stage ONLY the files for that feature (code + docs): `git add <file1> <file2>`.
+1. **Construct the Granular Subtask Grouping Plan**:
+   - Categorize changed files and hunks into distinct subtasks BEFORE running `git add`.
+2. **Stage & Commit Subtask by Subtask**:
+   - For each subtask group:
+     1. Stage ONLY the files/hunks for that subtask (code + docs + formulas): `git add <file1> <file2>`.
      2. Verify staged status with `git status`.
      3. **GitNexus Check (Recommended)**: Before committing, run `gitnexus_detect_changes()` in the terminal to verify that your staged changes only affect expected symbols and execution flows. If GitNexus is not installed or the index is stale, skip this check.
      4. Commit with a precise, descriptive message: `git commit -m "<type>(<scope>): <precise message>"`.
@@ -77,8 +86,10 @@ Before staging or committing anything:
 
 ## 4. Guardrails (DOs and DO NOTs)
 
-- **DO NOT** use `git add .` or `git add -A` when multiple unrelated features/tasks are modified.
-- **DO NOT** artificially split documentation edits into separate commits away from the feature code they describe.
+- **DO NOT** use `git add .` or `git add -A` when multiple subtasks are modified.
+- **DO NOT** lump multiple distinct subtasks into one monolithic commit.
+- **DO NOT** artificially split documentation edits into separate commits away from the code/formulas they describe.
 - **DO NOT** commit secrets, private environment variables, or lockfiles unless requested.
-- **DO** keep each feature change self-contained (code + docs + tests together).
+- **DO** keep each subtask change self-contained (code + docs + formulas together).
 - **DO** report the exact commit history and breakdown clearly after completion.
+

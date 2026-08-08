@@ -302,12 +302,54 @@ An `AdditionalActions` entry may carry `targets[]` alongside its own `fields[]`,
 one action write several records (Postpone = stamp this visit **and** create the next).
 
 > [!IMPORTANT]
-> This is **standalone** — it does NOT use `usePageState`, the 10-tier resolver, or
-> `components/actions/`. Files: `components/app/AdditionalActionsButtons.vue` (embeddable
-> triggers), `components/app/AdditionalActionsDialog.vue` (ONE dialog, mounted in
-> `MainLayout.vue`), `composables/resources/useAdditionalActions.js` +
-> `additionalActionsSchema.js`, and `GAS/actionTargets.gs`. Full spec in
-> [AQL_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_ACTION_SYSTEM.md) §7.
+> This does NOT use the 10-tier resolver or `components/actions/`. Files:
+> `components/app/AdditionalActionsButtons.vue` (embeddable triggers),
+> `components/app/AdditionalActionsDialog.vue` (ONE dialog, mounted in
+> `MainLayout.vue`), `composables/resources/useAdditionalActions.js` (eligibility +
+> dispatch intent), `additionalActionsPipeline.js` (mechanics),
+> `additionalActionsSchema.js` (pure field builders), and `GAS/actionTargets.gs`. Full
+> spec in [AQL_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_ACTION_SYSTEM.md) §7.
+
+**Two dispatch paths — pick the right one.**
+
+| | Popup | Batched |
+|---|---|---|
+| Call | `useAdditionalActions().runAction(action, record)` | `pageState.includeAdditionalAction(name, data)` |
+| Use when | the record exists and the user fills the inputs | the action must ride **with** the page's own submission |
+| Target | `record.Code` | a concrete code, or a `$ref` to a record this batch creates |
+
+```javascript
+// Create a visit AND stamp it, atomically, in one batch.
+pageState.initResource('OutletVisits', { fields: { OutletCode, Date } })
+pageState.includeAdditionalAction('Postpone', {
+  Comment: 'Rescheduled',              // source field — SHORT authored name
+  newVisit: { Date: '2026-01-04' }     // target field — nested bag (or 'newVisit.Date')
+})
+await pageState.submit()
+```
+
+Omit `code` and it resolves automatically: the node's own `code` when editing, else
+`batchRef('<Resource>.latest.code')`. Queued actions are emitted **last** by
+`defaultBuild`, which is what makes that `$ref` resolve — a `strategy.build` override must
+append `additionalActionRequests()` itself. See
+[PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/PAGE_STATE.md) §6.4a.
+
+**The pipeline (`additionalActionsPipeline.js`).** Never hand-roll an `executeAction`
+envelope, a field schema, a seed, or a payload bucket — every step is already a function
+that resolves config/headers/options/user/transport internally:
+
+```javascript
+const {
+  resolveAction, actionTitle, actionSubtitle, actionFieldGroups, createActionForm,
+  validateActionForm, extractActionPayload, buildActionRequest,
+  dispatchActionRequests, executeAdditionalAction
+} = useAdditionalActionsPipeline(resourceName?)   // omit to follow the active route
+```
+
+Each step accepts an action **name or an already-normalized config**, so the dialog reuses
+them without a second lookup. `useAdditionalActionsDialog` and
+`usePageState.includeAdditionalAction` both run on these — a change to the wire format is
+one edit, not three.
 
 Non-negotiables when touching it:
 * **`useResourceConfig.normalizeAction` is a key WHITELIST.** It rebuilds every action
@@ -350,8 +392,13 @@ Non-negotiables when touching it:
   diverges from GAS on underscored outcomes like `REVISION_REQUIRED`.
 * **Targets come from the trusted config, never the client.** That is what lets them write
   under the action's own permission on the source resource.
-* **No pageState.** Its `validationErrors` gate fires on the host page's nodes, and
-  `ensureNode` collides with the page's own node for the same resource.
+* **The POPUP path never uses pageState.** Its `validationErrors` gate fires on the host
+  page's nodes, and `ensureNode` collides with the page's own node for the same resource.
+  The batched path is the deliberate exception and is `usePageState` by construction — it
+  queues an envelope, it does not open the dialog.
+* **`normalizeAdditionalActions` is module-scope in `useResourceConfig.js`**, so an
+  arbitrary resource's actions can be resolved, not just the active route's. The key
+  whitelist still lives inside it — that rule is unchanged.
 * Controls render through `_fields/` — never hand-roll a `q-input` in the dialog.
 
 ### Pattern 8: Full container override

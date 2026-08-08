@@ -69,7 +69,8 @@ the generic builders — import them from `usePageState` (or `appHelpers` for th
 state = reactive({
   primaryKey: null,          // the primary resource name (first initResource)
   nodes: new Map(),          // uid -> node   (NOT keyed by resource name)
-  index: {}                  // resourceName -> { role: uid }   (the addressing layer)
+  index: {},                 // resourceName -> { role: uid }   (the addressing layer)
+  pendingActions: []         // queued executeAction envelopes (§6.4a)
 })
 
 // a node (created under the hood by initResource / load).
@@ -105,6 +106,9 @@ The shape above is an **implementation detail**. Consumers must not reach into i
 - The node object shape — `resource` / `record` / `children` / `records` /
   `controls` / `code` / `many` / `action` / `options`.
 - The child bucket layout — `{ resource, records }`.
+- `state.pendingActions` and its entry shape `{ key, resource, actionName, request }`
+  — read it through `additionalActionRequests()`, write it through
+  `includeAdditionalAction()` / `excludeAdditionalAction()` (§6.4a).
 
 **PUBLIC — a data contract you may rely on:**
 
@@ -195,8 +199,9 @@ For **every** resource page that collects input or submits data:
 2. **Section Content** → read state **only** through `useNode(key)` (§6.5) — it
    returns the node plus `record` / `exists` / `identifier` / `options` /
    `validation` / `children`. Do **NOT** touch `state.nodes` (see §4.1).
-3. **Section Action** → call `submit()` / `saveDraft()` / `executeAction(...)` on
-   the **same injected instance**. Do **NOT** build request objects by hand.
+3. **Section Action** → call `submit()` / `saveDraft()` / `run()` on the **same
+   injected instance**, and queue workflow actions with `includeAdditionalAction()`
+   (§6.4a). Do **NOT** build request objects by hand.
 4. **Generating API-compatible data** → happens **under the hood** via `build()`.
    You call a friendly mutation/trigger; the composable assembles the canonical
    envelope. Do **NOT** call `resourceIoStore.createResourceRecord` / `resourceUpdateRequest`
@@ -256,7 +261,6 @@ pageState.load('OutletConsumptions', existing)   // fills node.record from the s
 | `addRecord(resource, row, { action })` | add a `many:true` entry (returns index) |
 | `updateRecord(resource, index, patch)` | patch a `many` entry |
 | `removeRecord(resource, index)` | drop a `many` entry |
-| `setAction(resource, actionName)` | set the workflow action trigger |
 | `selectOption(resource, field, value)` | write the user's chosen code value into `record` |
 
 > **Every mutation's first argument is a node *target*,** not just a resource name:
@@ -276,6 +280,50 @@ pageState.load('OutletConsumptions', existing)   // fills node.record from the s
 > `Code` to deactivate the row. Splicing it instead would simply omit it, leaving
 > the server record untouched. `FormChild.vue` implements exactly this split in
 > `remove()`, and `restore()` reverses it with `setChildAction(..., 'update')`.
+
+### 6.4a Queuing a workflow action into the batch
+
+| Function | Purpose |
+|---|---|
+| `includeAdditionalAction(actionName, data?, { resource, role, code, record, outcome }?)` | build an `executeAction` envelope for one `AdditionalActions` entry and queue it onto the next `build()` / `submit()`. Returns the request, or `null` when the action is unknown or is a `navigate` action |
+| `excludeAdditionalAction(actionName?, { resource }?)` | drop one queued action, or **all** of them when the name is omitted |
+| `additionalActionRequests()` | the queued envelopes in call order — `defaultBuild` appends these itself; a `strategy.build` override **must** append them explicitly |
+
+This is the **batched** half of the AdditionalActions subsystem. The popup half
+(`useAdditionalActions` → `AdditionalActionsDialog`) dispatches on its own, immediately,
+against a record that already exists. This one exists for the case the popup cannot
+express: *create a record **and** run a workflow action on it, in one batch*.
+
+```javascript
+// Stamp an EXISTING record — the node's own `code` is used automatically.
+pageState.initResource('OutletVisits', { code: visit.Code })
+pageState.includeAdditionalAction('Postpone', { Comment: 'Outlet closed' })
+
+// Create a record AND action it — the code becomes a $ref into this same batch.
+pageState.initResource('OutletVisits', { fields: { OutletCode, Date } })
+pageState.includeAdditionalAction('Postpone', {
+  Comment: 'Rescheduled',                    // source field, short authored name
+  newVisit: { Date: '2026-01-04' }           // target field, nested bag
+})
+await pageState.submit()
+```
+
+**Code resolution**, in order: an explicit `code` option (a string **or** a
+`batchRef(...)` `$ref`) → the addressed node's `code` → `batchRef('<Resource>.latest.code')`.
+That last fallback is what makes create-then-action a single atomic batch, and it is why
+queued actions are emitted **after** every node request (§7).
+
+**Value addressing** for `data` is the pipeline's, not this composable's: a source field
+answers to its short authored name or its derived header; a target field to
+`'<targetKey>.<Column>'` or a nested `{ targetKey: { Column } }` bag. Anything omitted
+falls back to the field's configured `from`/`value` seed. Full table:
+[AQL_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_ACTION_SYSTEM.md) §7.0.1.
+
+> Queuing an action **never creates a node** — the lookup is read-only, so an otherwise
+> empty page does not start building a create request for the resource. Calling
+> `includeAdditionalAction` twice for the same `(resource, action)` **replaces** the
+> queued envelope rather than running the action twice. `reset()` / `resetForResource()`
+> clear the queue along with the nodes.
 
 ### 6.5 `useNode(resource, role?)` — THE read accessor
 
@@ -342,8 +390,10 @@ if (success) { /* code = new parent code (batchResultCode) */ }
 // Save draft
 await pageState.saveDraft()
 
-// Workflow action on an existing record
-await pageState.executeAction('OutletVisits', 'completeVisit', { Comment: 'Done' })
+// Workflow action — QUEUE it (§6.4a), then submit; there is no standalone
+// `pageState.executeAction()` trigger.
+pageState.includeAdditionalAction('Postpone', { Comment: 'Outlet closed' })
+await pageState.submit()
 
 // With callbacks / quiet mode:
 await pageState.submit({
@@ -363,7 +413,6 @@ All triggers return `{ success: boolean, response, code }` so the caller owns th
 {
   controls(resource)        -> [{ name, codeType? }]   // field schema; codeType -> auto options
   getOptions(codeType, node) -> [{ label, value }]      // option lists for XxxCode columns
-  actionConfigs             -> { actionKey: { action, column, columnValue } }  // for setAction(string)
   hydrate(node, raw, ctx)   -> void                     // custom load of server record into node
   build(ctx)                -> [request]                // override generic request assembly
   validate(node, state)     -> [{ field, message }]     // per-node validation
@@ -382,8 +431,9 @@ later request consume an earlier one's `$ref`.
 
 **Rule for every request builder in this composable:** the `resource` on a built
 request is always **`node.resource`** — never the Map key, and never the caller's
-argument. This applies to `defaultBuild` *and* to the `executeAction(resource, …)`
-trigger, which resolves the node first and then reads `node.resource` off it.
+argument. `includeAdditionalAction` obeys the same rule from the other direction: it
+resolves the node target first and passes that resolved NAME to the pipeline, so a
+`ref`/getter/`{ resource, role }` argument never reaches the wire.
 
 The other two candidates are both wrong:
 
@@ -401,7 +451,15 @@ The default mapping:
 | `children.length` (composite) | `compositeSaveRequest({ resource, code?, data, children:[{ resource, records:[{ _action, data }] }] })` |
 | single record + `code` | `resourceUpdateRequest(resource, code, record)` |
 | single record, no `code` | `resourceCreateRequest(resource, record)` |
-| `node.action` set | `executeActionRequest(resource, code, resolveActionConfig(action), {})` appended |
+| queued via `includeAdditionalAction` | the pipeline's `executeAction` envelope, appended **after** every node request |
+
+After every node has been walked, `defaultBuild` appends
+`additionalActionRequests()` — the envelopes queued by `includeAdditionalAction`
+(§6.4a). **Last is the contract**, not an accident: a queued action whose code is
+`batchRef('OutletVisits.latest.code')` only resolves if the row it names has already been
+created earlier in the same batch. A `strategy.build` override replaces `defaultBuild`
+entirely and must therefore append `additionalActionRequests()` itself, or its page
+silently drops every queued action.
 
 All requests use the canonical envelope (`buildCanonicalRequest` in
 `GasApiService.js`). `$ref` linking for sequential batches is supported via
@@ -419,11 +477,14 @@ From `usePageState.js` you may import:
   `getControlField(resource, header, role?)`, `snapshot()`
 - **Mutations:** see the full table in §6.4 — including `setChildAction`, the only
   supported way to set a child row's `_action`
+- **Workflow actions in the batch:** `includeAdditionalAction`,
+  `excludeAdditionalAction`, `additionalActionRequests` (§6.4a). The envelope itself is
+  built by `additionalActionsPipeline`, so no executeAction wire knowledge lives here.
 - **Generic builders:** `compositeSaveRequest`, `resourceCreateRequest`,
   `resourceUpdateRequest`, `resourceBulkRequest`, `resourceGetRequest`, `executeActionRequest`
 - **Response helpers:** `responseFailed`, `failureMessage`, `batchResultCode`
 - **Low-level dispatch:** `run({ requests, build, mode, onSuccess, reload, notify, successMsg })` —
-  the same validate/build/dispatch/notify lifecycle `submit()`/`executeAction()`
+  the same validate/build/dispatch/notify lifecycle `submit()`/`saveDraft()`
   funnel through, exposed directly for callers (e.g. `PageAction.vue`) that need
   to run a caller-built request array (already `modifyPayload`-transformed)
   through the standard lifecycle without going through `build()`.

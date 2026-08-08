@@ -762,20 +762,23 @@ the current visit *and* schedules its replacement; a "Reject" comments on the re
 action's own `fields[]`.
 
 > [!IMPORTANT]
-> **One composable owns all of it.** `composables/resources/useAdditionalActions.js` is
-> the single home for permission gating, `visibleWhen`, `only`/`exclude` filtering,
-> navigate-vs-mutate dispatch, input collection and submission. Every consumer — the
+> **Two modules, one contract.** `composables/resources/useAdditionalActions.js` owns
+> *eligibility* (permission gating, `visibleWhen`, `only`/`exclude` filtering) and
+> *dispatch intent* (navigate vs. open the dialog).
+> `composables/resources/additionalActionsPipeline.js` owns *mechanics* — everything
+> between an action name and an `executeAction` envelope. Every consumer — the
 > embeddable `components/app/AdditionalActionsButtons.vue`, the `ResourceActions` FAB
-> cluster, and any custom list row — asks it what a record may offer and hands clicks
-> back. **Never re-derive eligibility in a component.**
+> cluster, any custom list row, and `usePageState` — asks them and hands clicks back.
+> **Never re-derive eligibility, or re-hand-roll an envelope, in a component.**
 >
 > Naming is uniform across the subsystem: `useAdditionalActions.js`,
-> `additionalActionsSchema.js`, `AdditionalActionsButtons.vue`,
-> `AdditionalActionsDialog.vue`. Server side: `GAS/actionTargets.gs`.
+> `additionalActionsPipeline.js`, `additionalActionsSchema.js`,
+> `AdditionalActionsButtons.vue`, `AdditionalActionsDialog.vue`. Server side:
+> `GAS/actionTargets.gs`.
 >
-> It does not use `usePageState` or the 10-tier resolver (though items rendered *through*
-> `ResourceActions` still resolve per-item as `ResourceAction<Name>`, since that is the
-> FAB cluster's own mechanism).
+> Neither uses the 10-tier resolver (though items rendered *through* `ResourceActions`
+> still resolve per-item as `ResourceAction<Name>`, since that is the FAB cluster's own
+> mechanism). The **popup** path does not use `usePageState` either — see §7.0.2.
 
 ### 7.0 Composable API
 
@@ -801,6 +804,91 @@ taking the gate from `actionsFor`.
 
 The dialog half is `useAdditionalActionsDialog()`, consumed **only** by the single
 `AdditionalActionsDialog` instance in `MainLayout.vue`.
+
+### 7.0.1 The request pipeline (`additionalActionsPipeline.js`)
+
+One workflow action, taken apart into single-responsibility steps. Every step resolves
+the resource config, the sheet headers, the select-option records, the signed-in user and
+the transport **internally**, so a caller supplies only an action name and its data:
+
+```javascript
+const {
+  resolveAction,          // (nameOrConfig, { resource }) -> { resource, action }
+  actionTitle,            // (nameOrConfig, record)       -> dialog heading
+  actionSubtitle,         // (nameOrConfig, record)       -> dialog subheading
+  actionFieldGroups,      // (nameOrConfig, { record, outcome }) -> render-ready groups + seeds
+  createActionForm,       // (nameOrConfig, { record, values })  -> reactive flat form, seeded
+  validateActionForm,     // (nameOrConfig, { record, form })    -> '' | first error message
+  extractActionPayload,   // (nameOrConfig, { form })            -> { fields, targetFields }
+  buildActionRequest,     // (nameOrConfig, { record, code, data }) -> executeAction envelope
+  dispatchActionRequests, // (envelope | envelope[])   -> { success, error, response }
+  executeAdditionalAction // build + dispatch in one call
+} = useAdditionalActionsPipeline(resourceName?)   // omit to follow the active route
+```
+
+Alongside it, four pure named exports for callers that already hold groups:
+`actionLabelOf`, `pickSuppliedValue`, `seedActionValues`, `extractActionPayload`,
+`actionFailureMessage`.
+
+**Every step takes an action *name* or an already-normalized *config***. Passing a config
+through untouched is what lets the dialog — which already holds the entry the user
+clicked — reuse each step without a second config lookup. A name is resolved through
+`normalizeAdditionalActions` (exported from `useResourceConfig.js`, module-scope so an
+arbitrary resource can be resolved, not just the active one).
+
+**Value addressing (`data`).** `buildActionRequest` accepts user values under whichever
+address a developer naturally reaches for, resolved in this order per field:
+
+| Field family | Accepted |
+|---|---|
+| Source (`fields[]`) | the flat address / derived header (`ProgressPostponedComment`), or the **short authored name** (`Comment`) |
+| Target (`targets[].fields[]`) | the flat address (`'newVisit.Date'`), or a nested bag (`{ newVisit: { Date } }`) |
+
+A target field deliberately does **not** answer to a bare column name — two targets may
+both carry a `Date`. Anything omitted falls back to the field's own `from`/`value` seed,
+then `''`.
+
+> [!NOTE]
+> **Source fields are seeded too.** `buildSourceFieldGroup` now resolves `from`/`value`
+> through `prefillExpression` exactly as the target groups do, so a source field carrying
+> `from` + `type` renders as an editable prefill (§7.2) rather than blank. Absent
+> `from`/`value` still seeds `''`, so every existing config renders unchanged.
+
+**Codes and `$ref`.** `buildActionRequest`'s `code` passes through `textOrRef`: a concrete
+string is trimmed, and a `batchRef('OutletVisits.latest.code')` `$ref` object survives
+untouched. That is what lets an action address a record created **earlier in the same
+batch** (§7.0.2). Omit `code` and it falls back to `record.Code`.
+
+A `navigate`-kind action has no envelope — `buildActionRequest` returns `null` and warns,
+because a navigate action writes nothing.
+
+### 7.0.2 Two dispatch paths, deliberately
+
+| | Popup path | Batched path |
+|---|---|---|
+| Entry point | `useAdditionalActions().runAction()` → `AdditionalActionsDialog` | `pageState.includeAdditionalAction(name, data)` |
+| When | the record already exists and the user fills the inputs | the action must travel **with** the page's own submission |
+| `usePageState` | not used | it *is* `usePageState` |
+| Target record | `record.Code` | a concrete code, or a `$ref` to a record this batch creates |
+| Dispatch | `resourceIoStore.runBatchRequests([envelope])` immediately | appended to `defaultBuild()`, sent by `submit()` |
+
+The popup path stays out of `usePageState` for two reasons that have not changed:
+`pageState.run()` gates on `validationErrors`, which validates the **host page's** nodes —
+a dialog action would be blocked by a form error that has nothing to do with it; and
+`ensureNode()` keys nodes by resource name, so an action targeting the same resource as
+its page would collide with the page's own node.
+
+The batched path exists for the case the popup cannot express: *create a record **and**
+run a workflow action on it, atomically, in one batch*. Full contract in
+[PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/PAGE_STATE.md) §6.4 / §7.
+
+```javascript
+// A page that creates a visit and immediately stamps it Postponed.
+pageState.initResource('OutletVisits', { fields: { OutletCode, Date } })
+pageState.includeAdditionalAction('Postpone', { Comment: 'Rescheduled by planner' })
+await pageState.submit()
+// -> [ create OutletVisits, executeAction Postpone { code: { $ref: 'OutletVisits.latest.code' } } ]
+```
 
 ### 7.1 Config shape
 

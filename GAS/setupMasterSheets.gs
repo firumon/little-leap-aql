@@ -113,11 +113,11 @@ function setupMasterSheets() {
     },
     {
       resourceName: CONFIG.MASTER_SHEETS.OUTLET_OPERATING_RULES,
-      headers: ['Code', 'OutletCode', 'MaxStockValueLimit', 'VisitFrequencyDays', 'CreditLimit', 'PriceListCode', 'AccessRegion', 'Status'].concat(commonAuditColumns),
+      headers: ['Code', 'OutletCode', 'MaxStockValueLimit', 'VisitFrequencyDays', 'InvoiceDueDays', 'CreditLimit', 'PriceListCode', 'AccessRegion', 'Status'].concat(commonAuditColumns),
       statusDefault: 'Active',
-      defaults: { Status: 'Active', MaxStockValueLimit: 0, VisitFrequencyDays: 14, CreditLimit: 0, PriceListCode: '' },
+      defaults: { Status: 'Active', MaxStockValueLimit: 0, VisitFrequencyDays: 14, CreditLimit: 0, InvoiceDueDays: 30, PriceListCode: '' },
       columnWidths: {
-        Code: 130, OutletCode: 140, MaxStockValueLimit: 170, VisitFrequencyDays: 170, CreditLimit: 130, PriceListCode: 140,
+        Code: 130, OutletCode: 140, MaxStockValueLimit: 170, VisitFrequencyDays: 170, InvoiceDueDays: 150, CreditLimit: 130, PriceListCode: 140,
         AccessRegion: 130, Status: 100, CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
       }
     },

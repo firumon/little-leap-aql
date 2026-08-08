@@ -12,7 +12,7 @@ The **Outlet View** combines basic outlet registry information with correspondin
 
   OutletsRaw, IMPORTRANGE(MasterFileID, "Outlets!A2:O"),
   FilteredOutlets, FILTER(OutletsRaw, IFERROR(INDEX(OutletsRaw, 0, 1) <> "", FALSE)),
-  RulesRaw, IMPORTRANGE(MasterFileID, "OutletOperatingRules!B2:F"),
+  RulesRaw, IMPORTRANGE(MasterFileID, "OutletOperatingRules!B2:G"),
 
   HEADER, {
     "Code", "Name", "ContactPerson", "Phone", "Email", "Country", "Province", "City", "Area", "CommunicationAddress", "MapLocationLink", "Picture", "Picture2", "Picture3", "Licence",
@@ -27,8 +27,8 @@ The **Outlet View** combines basic outlet registry information with correspondin
         outlet_code, INDEX(outlet_row, 1, 1),
         max_stock, IFERROR(VLOOKUP(outlet_code, RulesRaw, 2, FALSE), ""),
         visit_freq, IFERROR(VLOOKUP(outlet_code, RulesRaw, 3, FALSE), ""),
-        credit_limit, IFERROR(VLOOKUP(outlet_code, RulesRaw, 4, FALSE), ""),
-        price_list, IFERROR(VLOOKUP(outlet_code, RulesRaw, 5, FALSE), ""),
+        credit_limit, IFERROR(VLOOKUP(outlet_code, RulesRaw, 5, FALSE), ""),
+        price_list, IFERROR(VLOOKUP(outlet_code, RulesRaw, 6, FALSE), ""),
 
         HSTACK(
           outlet_row,
@@ -51,7 +51,7 @@ The **Outlet View** combines basic outlet registry information with correspondin
 
 The formula imports data from the spreadsheet corresponding to `MasterFileID` defined in the local `Config` sheet:
 1. **`Outlets`** (`Outlets!A2:O`): Primary registry of outlet profiles (containing Code, Name, Contact details, Address, Map location link, Pictures, and Licence).
-2. **`OutletOperatingRules`** (`OutletOperatingRules!B2:F`): Contains operational settings mapped by Outlet Code.
+2. **`OutletOperatingRules`** (`OutletOperatingRules!B2:G`): Contains operational settings mapped by Outlet Code. Relative columns: 1 `OutletCode`, 2 `MaxStockValueLimit`, 3 `VisitFrequencyDays`, 4 `InvoiceDueDays` *(not surfaced by this view)*, 5 `CreditLimit`, 6 `PriceListCode`.
 
 ---
 
@@ -78,8 +78,8 @@ The output table matches the following schema:
 | 15 | `Licence` | `Outlets` Col 15 | Business License details. |
 | 16 | `MaxStockValueLimit` | `RulesRaw` Col 2 | Max limit value of stock permitted. |
 | 17 | `VisitFrequencyDays` | `RulesRaw` Col 3 | Targeted customer visit frequency (in days). |
-| 18 | `CreditLimit` | `RulesRaw` Col 4 | Financial credit limit. |
-| 19 | `PriceListCode` | `RulesRaw` Col 5 | Price list code assigned to this outlet. |
+| 18 | `CreditLimit` | `RulesRaw` Col 5 | Financial credit limit. |
+| 19 | `PriceListCode` | `RulesRaw` Col 6 | Price list code assigned to this outlet. |
 
 ---
 

@@ -20,7 +20,7 @@ The **Payment Report** generates a detailed payment receipt document for a speci
   MasterFileID, VLOOKUP("masterFileID", Config!A:B, 2, 0),
 
   RawPayments, IMPORTRANGE(OutletFileID, "OutletPayments!A2:Q"),
-  RawInvoices, IMPORTRANGE(OutletFileID, "OutletConsumptionInvoices!A2:AA"),
+  RawInvoices, IMPORTRANGE(OutletFileID, "OutletConsumptionInvoices!A2:AB"),
   RawOutlets, IMPORTRANGE(MasterFileID, "Outlets!A2:Q"),
 
   RowFn, LAMBDA(idx_val_pairs, MAP(SEQUENCE(1, 39), LAMBDA(col_idx, IFERROR(VLOOKUP(col_idx, idx_val_pairs, 2, FALSE), "")))),
@@ -66,12 +66,12 @@ The **Payment Report** generates a detailed payment receipt document for a speci
 
   InvoiceMatchIdx, IFERROR(MATCH(InvoiceCode, InvoiceCodes, 0), 0),
   HasInvoice, InvoiceMatchIdx > 0,
-  InvoiceRow, IF(HasInvoice, CHOOSEROWS(RawInvoices, InvoiceMatchIdx), MAKEARRAY(1, 27, LAMBDA(r, c, ""))),
+  InvoiceRow, IF(HasInvoice, CHOOSEROWS(RawInvoices, InvoiceMatchIdx), MAKEARRAY(1, 28, LAMBDA(r, c, ""))),
 
   InvoiceDate, CHOOSEROWS(CHOOSECOLS(InvoiceRow, 3), 1),
-  InvoiceSubtotal, CHOOSEROWS(CHOOSECOLS(InvoiceRow, 7), 1),
-  InvoiceDiscount, CHOOSEROWS(CHOOSECOLS(InvoiceRow, 8), 1),
-  InvoiceProgress, CHOOSEROWS(CHOOSECOLS(InvoiceRow, 14), 1),
+  InvoiceSubtotal, CHOOSEROWS(CHOOSECOLS(InvoiceRow, 8), 1),
+  InvoiceDiscount, CHOOSEROWS(CHOOSECOLS(InvoiceRow, 9), 1),
+  InvoiceProgress, CHOOSEROWS(CHOOSECOLS(InvoiceRow, 15), 1),
 
   InvoiceSubtotalVal, IFERROR(VALUE(InvoiceSubtotal), 0),
   InvoiceDiscountVal, IFERROR(VALUE(InvoiceDiscount), 0),
@@ -165,13 +165,14 @@ The formula imports data from three spreadsheets (using `masterFileID` and `Outl
    - Column 8 (`H`): Username
    - Column 9 (`I`): Progress (`"SUBMITTED"`, `"CANCELLED"`)
    - Column 16 (`P`): Status (`"Active"`)
-2. **`OutletConsumptionInvoices`** (`OutletConsumptionInvoices!A2:AA` in Outlet Spreadsheet):
+2. **`OutletConsumptionInvoices`** (`OutletConsumptionInvoices!A2:AB` in Outlet Spreadsheet):
    - Column 1 (`A`): Invoice Code
    - Column 3 (`C`): Invoice Date
-   - Column 7 (`G`): Subtotal
-   - Column 8 (`H`): Discount
-   - Column 14 (`N`): Progress status (`"PENDING_PAYMENT"`, `"PARTIALLY_PAID"`, `"PAID"`, `"CANCELLED"`)
-   - Column 27 (`AA`): Status (`"Active"`)
+   - Column 4 (`D`): Due Date *(not read by this report)*
+   - Column 8 (`H`): Subtotal
+   - Column 9 (`I`): Discount
+   - Column 15 (`O`): Progress status (`"PENDING_PAYMENT"`, `"PARTIALLY_PAID"`, `"PAID"`, `"CANCELLED"`)
+   - Column 28 (`AB`): Status (`"Active"`)
 3. **`Outlets`** (`Outlets!A2:Q` in Master Spreadsheet):
    - Column 1 (`A`): Outlet Code
    - Column 2 (`B`): Outlet Name

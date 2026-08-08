@@ -20,7 +20,7 @@ The **ConsumptionInvoice Report** generates a comprehensive Consumption Invoice 
   MasterFileID, VLOOKUP("masterFileID", Config!A:B, 2, 0),
   SKUFileID, VLOOKUP("ViewFileID", Config!A:B, 2, 0),
 
-  RawInvoices, IMPORTRANGE(OutletFileID, "OutletConsumptionInvoices!A2:AA"),
+  RawInvoices, IMPORTRANGE(OutletFileID, "OutletConsumptionInvoices!A2:AB"),
   RawItems, IMPORTRANGE(OutletFileID, "OutletConsumptionInvoiceItems!A2:K"),
   RawOutlets, IMPORTRANGE(MasterFileID, "Outlets!A2:Q"),
   RawSKUs, IMPORTRANGE(SKUFileID, "SKU!A2:I"),
@@ -37,16 +37,16 @@ The **ConsumptionInvoice Report** generates a comprehensive Consumption Invoice 
   MatchIdx, IFERROR(MATCH($AB$6, InvoiceCodes, 0), 0),
   HasOrder, MatchIdx > 0,
 
-  OrderRow, IF(HasOrder, CHOOSEROWS(RawInvoices, MatchIdx), MAKEARRAY(1, 27, LAMBDA(r, c, ""))),
+  OrderRow, IF(HasOrder, CHOOSEROWS(RawInvoices, MatchIdx), MAKEARRAY(1, 28, LAMBDA(r, c, ""))),
 
   InvoiceDate, CHOOSEROWS(CHOOSECOLS(OrderRow, 3), 1),
-  OutletCode, CHOOSEROWS(CHOOSECOLS(OrderRow, 4), 1),
-  Username, CHOOSEROWS(CHOOSECOLS(OrderRow, 5), 1),
+  OutletCode, CHOOSEROWS(CHOOSECOLS(OrderRow, 5), 1),
+  Username, CHOOSEROWS(CHOOSECOLS(OrderRow, 6), 1),
   ConsumptionCode, CHOOSEROWS(CHOOSECOLS(OrderRow, 2), 1),
-  OrderProgress, CHOOSEROWS(CHOOSECOLS(OrderRow, 14), 1),
-  Subtotal, CHOOSEROWS(CHOOSECOLS(OrderRow, 7), 1),
-  Discount, CHOOSEROWS(CHOOSECOLS(OrderRow, 8), 1),
-  TaxDetails, CHOOSEROWS(CHOOSECOLS(OrderRow, 11), 1),
+  OrderProgress, CHOOSEROWS(CHOOSECOLS(OrderRow, 15), 1),
+  Subtotal, CHOOSEROWS(CHOOSECOLS(OrderRow, 8), 1),
+  Discount, CHOOSEROWS(CHOOSECOLS(OrderRow, 9), 1),
+  TaxDetails, CHOOSEROWS(CHOOSECOLS(OrderRow, 12), 1),
   SubtotalVal, IFERROR(VALUE(Subtotal), 0),
   DiscountVal, IFERROR(VALUE(Discount), 0),
 
@@ -174,17 +174,18 @@ The **ConsumptionInvoice Report** generates a comprehensive Consumption Invoice 
 ## Source Sheets & Column Dependencies
 
 The formula imports data from three files (using `masterFileID`, `OutletFileID`, and `ViewFileID` from Config):
-1. **`OutletConsumptionInvoices`** (`OutletConsumptionInvoices!A2:AA` in Outlet Spreadsheet):
+1. **`OutletConsumptionInvoices`** (`OutletConsumptionInvoices!A2:AB` in Outlet Spreadsheet):
    - Column 1 (`A`): Invoice Code (matches `$AB$6`)
    - Column 2 (`B`): Outlet Consumption Code
    - Column 3 (`C`): Invoice Date
-   - Column 4 (`D`): Outlet Code
-   - Column 5 (`E`): Username
-   - Column 7 (`G`): Subtotal
-   - Column 8 (`H`): Discount
-   - Column 11 (`K`): Tax Details
-   - Column 14 (`N`): Progress status (`"PENDING_PAYMENT"`, `"PARTIALLY_PAID"`, `"PAID"`, `"CANCELLED"`)
-   - Column 27 (`AA`): Status (`"Active"`)
+   - Column 4 (`D`): Due Date *(not read by this report)*
+   - Column 5 (`E`): Outlet Code
+   - Column 6 (`F`): Username
+   - Column 8 (`H`): Subtotal
+   - Column 9 (`I`): Discount
+   - Column 12 (`L`): Tax Details
+   - Column 15 (`O`): Progress status (`"PENDING_PAYMENT"`, `"PARTIALLY_PAID"`, `"PAID"`, `"CANCELLED"`)
+   - Column 28 (`AB`): Status (`"Active"`)
 2. **`OutletConsumptionInvoiceItems`** (`OutletConsumptionInvoiceItems!A2:K` in Outlet Spreadsheet):
    - Column 2 (`B`): Outlet Consumption Invoice Code (matches `$AB$6`)
    - Column 3 (`C`): SKU Code

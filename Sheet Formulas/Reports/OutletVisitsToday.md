@@ -18,12 +18,12 @@ The **OutletVisitsToday Report** compiles a listing of planned outlet visits sch
   MasterFileID, VLOOKUP("MasterFileID", Config!A:B, 2, 0),
   OutletFileID, VLOOKUP("OutletFileID", Config!A:B, 2, 0),
 
-  OutletVisitRaw, IMPORTRANGE(OutletFileID, "OutletVisits!A2:Q"),
-  Visits, IFERROR(FILTER(OutletVisitRaw, IFERROR(INDEX(OutletVisitRaw, 0, 17) = "Active", FALSE), IFERROR(INDEX(OutletVisitRaw, 0, 4) = "PLANNED", FALSE)), {"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""}),
+  OutletVisitRaw, IMPORTRANGE(OutletFileID, "OutletVisits!A2:R"),
+  Visits, IFERROR(FILTER(OutletVisitRaw, IFERROR(INDEX(OutletVisitRaw, 0, 18) = "Active", FALSE), IFERROR(INDEX(OutletVisitRaw, 0, 5) = "PLANNED", FALSE)), {"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""}),
   OutletsRaw, IMPORTRANGE(MasterFileID, "Outlets!A2:B"),
 
-  today_visits, IFERROR(FILTER(Visits, MAP(SEQUENCE(ROWS(Visits)), LAMBDA(r_idx, IFERROR(INT(INDEX(Visits, r_idx, 3)), 0) = TODAY()))), {"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""}),
-  overdue_visits_raw, IFERROR(FILTER(Visits, MAP(SEQUENCE(ROWS(Visits)), LAMBDA(r_idx, LET(d_val, INDEX(Visits, r_idx, 3), (IFERROR(INT(d_val), 0) < TODAY()))))), {"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""}),
+  today_visits, IFERROR(FILTER(Visits, MAP(SEQUENCE(ROWS(Visits)), LAMBDA(r_idx, IFERROR(INT(INDEX(Visits, r_idx, 3)), 0) = TODAY()))), {"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""}),
+  overdue_visits_raw, IFERROR(FILTER(Visits, MAP(SEQUENCE(ROWS(Visits)), LAMBDA(r_idx, LET(d_val, INDEX(Visits, r_idx, 3), (IFERROR(INT(d_val), 0) < TODAY()))))), {"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""}),
   overdue_visits, IFERROR(SORT(overdue_visits_raw, 3, TRUE), overdue_visits_raw),
 
   RowFn, LAMBDA(idx_val_pairs, MAP(SEQUENCE(1, 39), LAMBDA(col_idx, IFERROR(VLOOKUP(col_idx, idx_val_pairs, 2, FALSE), "")))),
@@ -35,7 +35,7 @@ The **OutletVisitsToday Report** compiles a listing of planned outlet visits sch
     LAMBDA(accum, r_idx,
       LET(
         outlet_code, INDEX(today_visits, r_idx, 2),
-        planned_comment, INDEX(today_visits, r_idx, 7),
+        planned_comment, INDEX(today_visits, r_idx, 8),
         outlet_name, IFERROR(VLOOKUP(outlet_code, OutletsRaw, 2, FALSE), ""),
 
         row_1, RowFn({5, r_idx; 7, outlet_name}),
@@ -58,7 +58,7 @@ The **OutletVisitsToday Report** compiles a listing of planned outlet visits sch
       LET(
         vdate, INDEX(overdue_visits, r_idx, 3),
         outlet_code, INDEX(overdue_visits, r_idx, 2),
-        planned_comment, INDEX(overdue_visits, r_idx, 7),
+        planned_comment, INDEX(overdue_visits, r_idx, 8),
         outlet_name, IFERROR(VLOOKUP(outlet_code, OutletsRaw, 2, FALSE), ""),
 
         days_overdue, TODAY() - IFERROR(INT(vdate), TODAY()),
@@ -108,13 +108,14 @@ The **OutletVisitsToday Report** compiles a listing of planned outlet visits sch
 
 ## Source Sheets & Column Dependencies
 
-1. **`OutletVisits`** (`OutletVisits!A2:Q` in Outlet Spreadsheet):
+1. **`OutletVisits`** (`OutletVisits!A2:R` in Outlet Spreadsheet):
    - Column 1 (`A`): Visit ID Code
    - Column 2 (`B`): Outlet Code
    - Column 3 (`C`): Visit Date (compared against `TODAY()`)
-   - Column 4 (`D`): Visit Progress status (filters for `"PLANNED"`)
-   - Column 7 (`G`): Planned Comment
-   - Column 17 (`Q`): Visit Record Status (filters for `"Active"`)
+   - Column 4 (`D`): Respond Date *(not read by this report)*
+   - Column 5 (`E`): Visit Progress status (filters for `"PLANNED"`)
+   - Column 8 (`H`): Planned Comment
+   - Column 18 (`R`): Visit Record Status (filters for `"Active"`)
 2. **`Outlets`** (`Outlets!A2:B` in Master Spreadsheet):
    - Column 1 (`A`): Outlet Code
    - Column 2 (`B`): Outlet Name (resolved via `VLOOKUP`)

@@ -204,14 +204,14 @@ function setupOperationSheets() {
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.OUTLET_VISITS,
-            headers: ['Code', 'OutletCode', 'Date', 'Progress',
+            headers: ['Code', 'OutletCode', 'Date', 'RespondDate', 'Progress',
                 'ProgressPlannedAt', 'ProgressPlannedBy', 'ProgressPlannedComment',
                 'ProgressCompletedAt', 'ProgressCompletedBy', 'ProgressCompletedComment',
                 'ProgressPostponedAt', 'ProgressPostponedBy', 'ProgressPostponedComment',
                 'ProgressCancelledAt', 'ProgressCancelledBy', 'ProgressCancelledComment',
                 'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active', defaults: { Status: 'Active', Progress: 'PLANNED' }, statusValidation: ['Active', 'Inactive'], progressValidation: APP_OPTIONS_SEED.OutletVisitProgress,
-            columnWidths: { Code: 150, OutletCode: 140, Date: 130, Progress: 140,
+            columnWidths: { Code: 150, OutletCode: 140, Date: 130, RespondDate: 170, Progress: 140,
                 ProgressPlannedAt: 160, ProgressPlannedBy: 150, ProgressPlannedComment: 220,
                 ProgressCompletedAt: 160, ProgressCompletedBy: 150, ProgressCompletedComment: 220,
                 ProgressPostponedAt: 160, ProgressPostponedBy: 150, ProgressPostponedComment: 220,
@@ -309,14 +309,14 @@ function setupOperationSheets() {
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICES,
-            headers: ['Code', 'OutletConsumptionCode', 'Date', 'OutletCode', 'Username', 'PriceListCode', 'Subtotal', 'Discount', 'TotalTaxableAmount', 'TotalTaxAmount', 'TaxDetails', 'OutletReturnCodes', 'ReturnDeductionTotal', 'Progress',
+            headers: ['Code', 'OutletConsumptionCode', 'Date', 'DueDate', 'OutletCode', 'Username', 'PriceListCode', 'Subtotal', 'Discount', 'TotalTaxableAmount', 'TotalTaxAmount', 'TaxDetails', 'OutletReturnCodes', 'ReturnDeductionTotal', 'Progress',
                 'ProgressPendingPaymentAt', 'ProgressPendingPaymentBy', 'ProgressPendingPaymentComment',
                 'ProgressPartiallyPaidAt', 'ProgressPartiallyPaidBy', 'ProgressPartiallyPaidComment',
                 'ProgressPaidAt', 'ProgressPaidBy', 'ProgressPaidComment',
                 'ProgressCancelledAt', 'ProgressCancelledBy', 'ProgressCancelledComment',
                 'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active', defaults: { Status: 'Active', Subtotal: 0, Discount: 0, TotalTaxableAmount: 0, TotalTaxAmount: 0, TaxDetails: '[]', OutletReturnCodes: '', ReturnDeductionTotal: 0, Progress: 'PENDING_PAYMENT' }, progressValidation: APP_OPTIONS_SEED.OutletConsumptionInvoiceProgress,
-            columnWidths: { Code: 150, OutletConsumptionCode: 200, Date: 140, OutletCode: 140, Username: 170, PriceListCode: 170, Subtotal: 120, Discount: 120, TotalTaxableAmount: 150, TotalTaxAmount: 120, TaxDetails: 250, OutletReturnCodes: 180, ReturnDeductionTotal: 150, Progress: 170, ProgressPendingPaymentAt: 180, ProgressPendingPaymentBy: 180, ProgressPendingPaymentComment: 230, ProgressPartiallyPaidAt: 180, ProgressPartiallyPaidBy: 180, ProgressPartiallyPaidComment: 230, ProgressPaidAt: 160, ProgressPaidBy: 160, ProgressPaidComment: 210, ProgressCancelledAt: 170, ProgressCancelledBy: 170, ProgressCancelledComment: 220, Status: 100, AccessRegion: 130 }
+            columnWidths: { Code: 150, OutletConsumptionCode: 200, Date: 140, DueDate: 140, OutletCode: 140, Username: 170, PriceListCode: 170, Subtotal: 120, Discount: 120, TotalTaxableAmount: 150, TotalTaxAmount: 120, TaxDetails: 250, OutletReturnCodes: 180, ReturnDeductionTotal: 150, Progress: 170, ProgressPendingPaymentAt: 180, ProgressPendingPaymentBy: 180, ProgressPendingPaymentComment: 230, ProgressPartiallyPaidAt: 180, ProgressPartiallyPaidBy: 180, ProgressPartiallyPaidComment: 230, ProgressPaidAt: 160, ProgressPaidBy: 160, ProgressPaidComment: 210, ProgressCancelledAt: 170, ProgressCancelledBy: 170, ProgressCancelledComment: 220, Status: 100, AccessRegion: 130 }
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTION_INVOICE_ITEMS,

@@ -32,11 +32,11 @@ Calculates the count of visits assigned to different progress stages for the act
   ```excel
   =LET(
     OutletFileID, VLOOKUP("OutletFileID", Config!A:B, 2, 0),
-    RawVisits, IMPORTRANGE(OutletFileID, "OutletVisits!A2:V"),
+    RawVisits, IMPORTRANGE(OutletFileID, "OutletVisits!A2:W"),
     Progress, "PLANNED",
     VisitsOutletCode, TOCOL(CHOOSECOLS(RawVisits, 2)),
-    VisitsProgress, TOCOL(CHOOSECOLS(RawVisits, 4)),
-    VisitsStatus, TOCOL(CHOOSECOLS(RawVisits, 17)),
+    VisitsProgress, TOCOL(CHOOSECOLS(RawVisits, 5)),
+    VisitsStatus, TOCOL(CHOOSECOLS(RawVisits, 18)),
     Ones, MAP(VisitsOutletCode, LAMBDA(x, 1)),
     SUM(IFERROR(FILTER(Ones, (VisitsOutletCode = $H$11) * (VisitsProgress = Progress) * (VisitsStatus = "Active")), 0))
   )
@@ -54,14 +54,14 @@ Generates a formatted chronological timeline of visits, calculating relative day
 ```excel
 =LET(
   OutletFileID, VLOOKUP("OutletFileID", Config!A:B, 2, 0),
-  RawVisits, IMPORTRANGE(OutletFileID, "OutletVisits!A2:Q"),
+  RawVisits, IMPORTRANGE(OutletFileID, "OutletVisits!A2:R"),
 
   RowFn, LAMBDA(idx_val_pairs, MAP(SEQUENCE(1, 39), LAMBDA(col_idx, IFERROR(VLOOKUP(col_idx, idx_val_pairs, 2, FALSE), "")))),
 
   VisitsOutletCode, TOCOL(CHOOSECOLS(RawVisits, 2)),
   VisitsDate, TOCOL(CHOOSECOLS(RawVisits, 3)),
-  VisitsProgress, TOCOL(CHOOSECOLS(RawVisits, 4)),
-  VisitsStatus, TOCOL(CHOOSECOLS(RawVisits, 17)),
+  VisitsProgress, TOCOL(CHOOSECOLS(RawVisits, 5)),
+  VisitsStatus, TOCOL(CHOOSECOLS(RawVisits, 18)),
 
   ParsedDates, MAP(VisitsDate, LAMBDA(d, IFERROR(IF(ISNUMBER(d), d, DATEVALUE(LEFT(d, 10))), 0))),
 
@@ -70,14 +70,14 @@ Generates a formatted chronological timeline of visits, calculating relative day
       RawVisits,
       (VisitsOutletCode = $H$11) * (VisitsStatus = "Active") * (ParsedDates > 0)
     ),
-    MAKEARRAY(1, 17, LAMBDA(r, c, ""))
+    MAKEARRAY(1, 18, LAMBDA(r, c, ""))
   ),
 
   FirstCell, CHOOSEROWS(CHOOSECOLS(Filtered, 1), 1),
   HasData, AND(NOT(ISERR(Filtered)), FirstCell <> ""),
 
   F_Date, IF(HasData, TOCOL(CHOOSECOLS(Filtered, 3)), TODAY()),
-  F_Progress, IF(HasData, TOCOL(CHOOSECOLS(Filtered, 4)), ""),
+  F_Progress, IF(HasData, TOCOL(CHOOSECOLS(Filtered, 5)), ""),
   F_ParsedDate, MAP(F_Date, LAMBDA(d, IFERROR(IF(ISNUMBER(d), d, DATEVALUE(LEFT(d, 10))), TODAY()))),
 
   F_Indices, SEQUENCE(ROWS(Filtered)),
@@ -121,14 +121,14 @@ Generates a formatted chronological timeline of visits, calculating relative day
     ItemProgress, CHOOSEROWS(F_Progress, idx),
     FormattedDate, TEXT(current_date, "yyyy-mm-dd"),
     
-    PlannedComment, CHOOSEROWS(CHOOSECOLS(row_arr, 7), 1),
+    PlannedComment, CHOOSEROWS(CHOOSECOLS(row_arr, 8), 1),
     
     ProgressComment, LET(
       p, UPPER(ItemProgress),
-      IF(p = "PLANNED", CHOOSEROWS(CHOOSECOLS(row_arr, 7), 1),
-      IF(p = "COMPLETED", CHOOSEROWS(CHOOSECOLS(row_arr, 10), 1),
-      IF(p = "POSTPONED", CHOOSEROWS(CHOOSECOLS(row_arr, 13), 1),
-      IF(p = "CANCELLED", CHOOSEROWS(CHOOSECOLS(row_arr, 16), 1),
+      IF(p = "PLANNED", CHOOSEROWS(CHOOSECOLS(row_arr, 8), 1),
+      IF(p = "COMPLETED", CHOOSEROWS(CHOOSECOLS(row_arr, 11), 1),
+      IF(p = "POSTPONED", CHOOSEROWS(CHOOSECOLS(row_arr, 14), 1),
+      IF(p = "CANCELLED", CHOOSEROWS(CHOOSECOLS(row_arr, 17), 1),
       ""))))
     ),
     
@@ -173,15 +173,16 @@ The formulas import data from the Master Spreadsheet (`MasterFileID`) and Outlet
    - Column 3 (`C`): Contact Person
    - Column 4 (`D`): Phone
    - Column 6, 7, 8, 9 (`F:I`): Address components (City, Area, Province, Country)
-2. **`OutletVisits`** (`OutletVisits!A2:V` or `A2:Q` in Outlet Spreadsheet):
+2. **`OutletVisits`** (`OutletVisits!A2:W` or `A2:R` in Outlet Spreadsheet):
    - Column 2 (`B`): Outlet Code (compared with `$H$11`)
    - Column 3 (`C`): Visit Date
-   - Column 4 (`D`): Visit Progress status (`"PLANNED"`, `"COMPLETED"`, `"POSTPONED"`, `"CANCELLED"`)
-   - Column 7 (`G`): Planned Comment
-   - Column 10 (`J`): Completed Comment
-   - Column 13 (`M`): Postponed Comment
-   - Column 16 (`P`): Cancelled Comment
-   - Column 17 (`Q`): Record Status (`"Active"`)
+   - Column 4 (`D`): Respond Date *(not read by this report)*
+   - Column 5 (`E`): Visit Progress status (`"PLANNED"`, `"COMPLETED"`, `"POSTPONED"`, `"CANCELLED"`)
+   - Column 8 (`H`): Planned Comment
+   - Column 11 (`K`): Completed Comment
+   - Column 14 (`N`): Postponed Comment
+   - Column 17 (`Q`): Cancelled Comment
+   - Column 18 (`R`): Record Status (`"Active"`)
 
 ---
 

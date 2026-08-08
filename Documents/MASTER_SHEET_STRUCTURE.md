@@ -52,8 +52,9 @@ This document describes the current master-scope sheet families and their roles.
 - **Primary key**: `Code`.
 - **Required columns**: `OutletCode`.
 - **Unique composite columns**: `OutletCode`.
-- **Default values**: `Status = Active`, `MaxStockValueLimit = 0`, `VisitFrequencyDays = 14`, `CreditLimit = 0`.
-- **Columns**: `Code`, `OutletCode`, `MaxStockValueLimit`, `VisitFrequencyDays`, `CreditLimit`, `AccessRegion`, `Status`, `CreatedAt`, `UpdatedAt`, `CreatedBy`, `UpdatedBy`.
+- **Default values**: `Status = Active`, `MaxStockValueLimit = 0`, `VisitFrequencyDays = 14`, `CreditLimit = 0`, `InvoiceDueDays = 30`.
+- **Columns**: `Code`, `OutletCode`, `MaxStockValueLimit`, `VisitFrequencyDays`, `InvoiceDueDays`, `CreditLimit`, `PriceListCode`, `AccessRegion`, `Status`, `CreatedAt`, `UpdatedAt`, `CreatedBy`, `UpdatedBy`.
+- **`InvoiceDueDays`**: days added to `OutletConsumptionInvoices.Date` to derive that invoice's `DueDate`. Defaults to `30`. Sits at relative column 4 of the `Outlet` sheet view's `OutletOperatingRules!B2:G` import — that range and its `VLOOKUP` indexes were widened when this column was added.
 - **Relationships**: rule rows are child-like master data for `Outlets`.
 
 ## Notes

@@ -384,7 +384,7 @@ function initAppResourcesCodeConfig() {
         RequiredHeaders: 'OutletCode,PriceListCode',
         UniqueHeaders: '',
         UniqueCompositeHeaders: 'OutletCode',
-        DefaultValues: '{"Status":"Active","MaxStockValueLimit":0,"VisitFrequencyDays":14,"CreditLimit":0}',
+        DefaultValues: '{"Status":"Active","MaxStockValueLimit":0,"VisitFrequencyDays":14,"CreditLimit":0,"InvoiceDueDays":30}',
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: '',
@@ -394,6 +394,7 @@ function initAppResourcesCodeConfig() {
             { header: 'PriceListCode', label: 'Price List Code', type: 'text', hint: 'Optional. Falls back to IsDefault price list.' },
             { header: 'MaxStockValueLimit', label: 'Max Stock Value Limit', type: 'currency' },
             { header: 'VisitFrequencyDays', label: 'Visit Frequency Days', type: 'number' },
+            { header: 'InvoiceDueDays', label: 'Invoice Due Days', type: 'number', hint: 'Days after invoice date before payment falls due.' },
             { header: 'CreditLimit', label: 'Credit Limit', type: 'currency' },
             { header: 'Status', label: 'Status', type: 'status', required: true }
         ]),
@@ -1152,6 +1153,7 @@ function initAppResourcesCodeConfig() {
         UIFields: JSON.stringify([
             { header: 'OutletCode', label: 'Outlet Code', type: 'text' },
             { header: 'Date', label: 'Date', type: 'date' },
+            { header: 'RespondDate', label: 'Respond Date', type: 'datetime' },
             { header: 'Progress', label: 'Progress', type: 'status' },
             { header: 'ProgressPlannedAt', label: 'Planned At', type: 'datetime' },
             { header: 'ProgressPlannedBy', label: 'Planned By', type: 'text' },
@@ -1378,6 +1380,7 @@ function initAppResourcesCodeConfig() {
         Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 7, "label": "Consumption Invoices", "icon": "receipt_long", "route": "/operation/outlet-consumption-invoices", "pageTitle": "Consumption Invoices", "pageDescription": "View outlet consumption invoices", "show": true }]), UIFields: JSON.stringify([
             { header: 'OutletConsumptionCode', label: 'Outlet Consumption Code', type: 'text' },
             { header: 'Date', label: 'Date', type: 'date' },
+            { header: 'DueDate', label: 'Due Date', type: 'date' },
             { header: 'OutletCode', label: 'Outlet Code', type: 'text' },
             { header: 'Username', label: 'User Name', type: 'text' },
             { header: 'PriceListCode', label: 'Price List Code', type: 'text' },

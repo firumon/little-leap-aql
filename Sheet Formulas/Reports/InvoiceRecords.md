@@ -23,7 +23,7 @@ The **InvoiceRecords Report** provides a filtered search and checklist log for O
   SKUFileID, VLOOKUP("ViewFileID", Config!A:B, 2, 0),
   MasterFileID, VLOOKUP("masterFileID", Config!A:B, 2, 0),
 
-  RawInvoices, IMPORTRANGE(OutletFileID, "OutletConsumptionInvoices!A2:AA"),
+  RawInvoices, IMPORTRANGE(OutletFileID, "OutletConsumptionInvoices!A2:AB"),
   RawItems, IMPORTRANGE(OutletFileID, "OutletConsumptionInvoiceItems!A2:K"),
   RawSKUs, IMPORTRANGE(SKUFileID, "SKU!A2:I"),
   RawOutlets, IMPORTRANGE(MasterFileID, "Outlets!A2:B"),
@@ -40,10 +40,10 @@ The **InvoiceRecords Report** provides a filtered search and checklist log for O
 
   InvoicesCode, TOCOL(CHOOSECOLS(RawInvoices, 1)),
   InvoicesDate, TOCOL(CHOOSECOLS(RawInvoices, 3)),
-  InvoicesOutletCode, TOCOL(CHOOSECOLS(RawInvoices, 4)),
-  InvoicesUser, TOCOL(CHOOSECOLS(RawInvoices, 5)),
-  InvoicesProgress, TOCOL(CHOOSECOLS(RawInvoices, 14)),
-  InvoicesStatus, TOCOL(CHOOSECOLS(RawInvoices, 27)),
+  InvoicesOutletCode, TOCOL(CHOOSECOLS(RawInvoices, 5)),
+  InvoicesUser, TOCOL(CHOOSECOLS(RawInvoices, 6)),
+  InvoicesProgress, TOCOL(CHOOSECOLS(RawInvoices, 15)),
+  InvoicesStatus, TOCOL(CHOOSECOLS(RawInvoices, 28)),
 
   SKU_Codes, TOCOL(CHOOSECOLS(RawSKUs, 1)),
   OutletCodes, TOCOL(CHOOSECOLS(RawOutlets, 1)),
@@ -64,7 +64,7 @@ The **InvoiceRecords Report** provides a filtered search and checklist log for O
         SEQUENCE(ROWS(RawInvoices))*0 + 1
       ))
     ),
-    MAKEARRAY(1, 27, LAMBDA(r, c, ""))
+    MAKEARRAY(1, 28, LAMBDA(r, c, ""))
   ),
 
   FirstCell, CHOOSEROWS(CHOOSECOLS(Filtered, 1), 1),
@@ -90,11 +90,11 @@ The **InvoiceRecords Report** provides a filtered search and checklist log for O
 
     InvoiceCode, CHOOSEROWS(CHOOSECOLS(row_arr, 1), 1),
     InvoiceDate, CHOOSEROWS(CHOOSECOLS(row_arr, 3), 1),
-    OutletCode, CHOOSEROWS(CHOOSECOLS(row_arr, 4), 1),
-    Username, CHOOSEROWS(CHOOSECOLS(row_arr, 5), 1),
-    OrderProgress, CHOOSEROWS(CHOOSECOLS(row_arr, 14), 1),
-    Subtotal, CHOOSEROWS(CHOOSECOLS(row_arr, 7), 1),
-    Discount, CHOOSEROWS(CHOOSECOLS(row_arr, 8), 1),
+    OutletCode, CHOOSEROWS(CHOOSECOLS(row_arr, 5), 1),
+    Username, CHOOSEROWS(CHOOSECOLS(row_arr, 6), 1),
+    OrderProgress, CHOOSEROWS(CHOOSECOLS(row_arr, 15), 1),
+    Subtotal, CHOOSEROWS(CHOOSECOLS(row_arr, 8), 1),
+    Discount, CHOOSEROWS(CHOOSECOLS(row_arr, 9), 1),
     SubtotalVal, IFERROR(VALUE(Subtotal), 0),
     DiscountVal, IFERROR(VALUE(Discount), 0),
 
@@ -169,15 +169,16 @@ The **InvoiceRecords Report** provides a filtered search and checklist log for O
 ## Source Sheets & Column Dependencies
 
 The formula queries data from four spreadsheet files (`OutletFileID`, `ViewFileID`, `masterFileID`):
-1. **`OutletConsumptionInvoices`** (`OutletConsumptionInvoices!A2:AA` in Outlet Spreadsheet):
+1. **`OutletConsumptionInvoices`** (`OutletConsumptionInvoices!A2:AB` in Outlet Spreadsheet):
    - Column 1 (`A`): Code
    - Column 3 (`C`): Date (compared to `$J$11`)
-   - Column 4 (`D`): Outlet Code
-   - Column 5 (`E`): Username (compared to `$J$12`)
-   - Column 7 (`G`): Subtotal
-   - Column 8 (`H`): Discount
-   - Column 14 (`N`): Progress status (compared to `$J$13`)
-   - Column 27 (`AA`): Record status (`"Active"`)
+   - Column 4 (`D`): Due Date *(not read by this report)*
+   - Column 5 (`E`): Outlet Code
+   - Column 6 (`F`): Username (compared to `$J$12`)
+   - Column 8 (`H`): Subtotal
+   - Column 9 (`I`): Discount
+   - Column 15 (`O`): Progress status (compared to `$J$13`)
+   - Column 28 (`AB`): Record status (`"Active"`)
 2. **`OutletConsumptionInvoiceItems`** (`OutletConsumptionInvoiceItems!A2:K` in Outlet Spreadsheet):
    - Column 2 (`B`): Outlet Consumption Invoice Code
    - Column 3 (`C`): SKU Code

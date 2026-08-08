@@ -18,7 +18,7 @@ The **OutletVisitsOverdue Report** aggregates all planned visits that have not b
   OutletFileID, VLOOKUP("OutletFileID", Config!A:B, 2, 0),
   MasterFileID, VLOOKUP("masterFileID", Config!A:B, 2, 0),
 
-  RawVisits, IMPORTRANGE(OutletFileID, "OutletVisits!A2:V"),
+  RawVisits, IMPORTRANGE(OutletFileID, "OutletVisits!A2:W"),
   RawOutlets, IMPORTRANGE(MasterFileID, "Outlets!A2:U"),
 
   RowFn, LAMBDA(idx_val_pairs, MAP(SEQUENCE(1, 39), LAMBDA(col_idx, IFERROR(VLOOKUP(col_idx, idx_val_pairs, 2, FALSE), "")))),
@@ -26,9 +26,9 @@ The **OutletVisitsOverdue Report** aggregates all planned visits that have not b
   VisitsCode, TOCOL(CHOOSECOLS(RawVisits, 1)),
   VisitsOutletCode, TOCOL(CHOOSECOLS(RawVisits, 2)),
   VisitsDate, TOCOL(CHOOSECOLS(RawVisits, 3)),
-  VisitsProgress, TOCOL(CHOOSECOLS(RawVisits, 4)),
-  VisitsComment, TOCOL(CHOOSECOLS(RawVisits, 7)),
-  VisitsStatus, TOCOL(CHOOSECOLS(RawVisits, 17)),
+  VisitsProgress, TOCOL(CHOOSECOLS(RawVisits, 5)),
+  VisitsComment, TOCOL(CHOOSECOLS(RawVisits, 8)),
+  VisitsStatus, TOCOL(CHOOSECOLS(RawVisits, 18)),
 
   OutletCodes, TOCOL(CHOOSECOLS(RawOutlets, 1)),
   OutletNames, TOCOL(CHOOSECOLS(RawOutlets, 2)),
@@ -40,7 +40,7 @@ The **OutletVisitsOverdue Report** aggregates all planned visits that have not b
       RawVisits,
       (VisitsProgress = "PLANNED") * (VisitsStatus = "Active") * (ParsedDates > 0) * (ParsedDates < TODAY())
     ),
-    MAKEARRAY(1, 22, LAMBDA(r, c, ""))
+    MAKEARRAY(1, 23, LAMBDA(r, c, ""))
   ),
 
   FirstCell, CHOOSEROWS(CHOOSECOLS(Filtered, 1), 1),
@@ -48,7 +48,7 @@ The **OutletVisitsOverdue Report** aggregates all planned visits that have not b
 
   F_OutletCode, IF(HasOverdue, TOCOL(CHOOSECOLS(Filtered, 2)), ""),
   F_Date, IF(HasOverdue, TOCOL(CHOOSECOLS(Filtered, 3)), TODAY()),
-  F_Comment, IF(HasOverdue, TOCOL(CHOOSECOLS(Filtered, 7)), ""),
+  F_Comment, IF(HasOverdue, TOCOL(CHOOSECOLS(Filtered, 8)), ""),
 
   F_ParsedDate, MAP(F_Date, LAMBDA(d, IFERROR(IF(ISNUMBER(d), d, DATEVALUE(LEFT(d, 10))), TODAY()))),
   F_DaysOverdue, MAP(F_ParsedDate, LAMBDA(pd, TODAY() - pd)),
@@ -111,13 +111,14 @@ The **OutletVisitsOverdue Report** aggregates all planned visits that have not b
 
 ## Source Sheets & Column Dependencies
 
-1. **`OutletVisits`** (`OutletVisits!A2:V` in Outlet Spreadsheet):
+1. **`OutletVisits`** (`OutletVisits!A2:W` in Outlet Spreadsheet):
    - Column 1 (`A`): Visit ID Code
    - Column 2 (`B`): Outlet Code
    - Column 3 (`C`): Visit Date (parsed and compared against `TODAY()`)
-   - Column 4 (`D`): Visit Progress status (filters for `"PLANNED"`)
-   - Column 7 (`G`): Planned Comment
-   - Column 17 (`Q`): Visit Record Status (filters for `"Active"`)
+   - Column 4 (`D`): Respond Date *(not read by this report)*
+   - Column 5 (`E`): Visit Progress status (filters for `"PLANNED"`)
+   - Column 8 (`H`): Planned Comment
+   - Column 18 (`R`): Visit Record Status (filters for `"Active"`)
 2. **`Outlets`** (`Outlets!A2:U` in Master Spreadsheet):
    - Column 1 (`A`): Outlet Code (matches visit records)
    - Column 2 (`B`): Outlet Name (resolved via `XLOOKUP`)

@@ -19,7 +19,7 @@ The **OutletInvoiceHistory Report** calculates invoice counts (KPI Dashboard) an
   SKUFileID, VLOOKUP("ViewFileID", Config!A:B, 2, 0),
   MasterFileID, VLOOKUP("masterFileID", Config!A:B, 2, 0),
 
-  RawInvoices, IMPORTRANGE(OutletFileID, "OutletConsumptionInvoices!A2:AA"),
+  RawInvoices, IMPORTRANGE(OutletFileID, "OutletConsumptionInvoices!A2:AB"),
   RawItems, IMPORTRANGE(OutletFileID, "OutletConsumptionInvoiceItems!A2:K"),
   RawSKUs, IMPORTRANGE(SKUFileID, "SKU!A2:I"),
   RawOutlets, IMPORTRANGE(MasterFileID, "Outlets!A2:B"),
@@ -28,9 +28,9 @@ The **OutletInvoiceHistory Report** calculates invoice counts (KPI Dashboard) an
   FormatEpochDateOnly, LAMBDA(val, LET(num, IFERROR(VALUE(val), 0), IF(num > 100000000000, TEXT(25569 + num / 86400000, "yyyy-mm-dd"), val))),
   ToTextAmt, LAMBDA(val, LET(num, IFERROR(VALUE(val), 0), TEXT(num, "0.00"))),
 
-  InvoicesOutletCode, TOCOL(CHOOSECOLS(RawInvoices, 4)),
-  InvoicesProgress, TOCOL(CHOOSECOLS(RawInvoices, 14)),
-  InvoicesStatus, TOCOL(CHOOSECOLS(RawInvoices, 27)),
+  InvoicesOutletCode, TOCOL(CHOOSECOLS(RawInvoices, 5)),
+  InvoicesProgress, TOCOL(CHOOSECOLS(RawInvoices, 15)),
+  InvoicesStatus, TOCOL(CHOOSECOLS(RawInvoices, 28)),
 
   SKU_Codes, TOCOL(CHOOSECOLS(RawSKUs, 1)),
   OutletCodes, TOCOL(CHOOSECOLS(RawOutlets, 1)),
@@ -51,7 +51,7 @@ The **OutletInvoiceHistory Report** calculates invoice counts (KPI Dashboard) an
       RawInvoices,
       (InvoicesOutletCode = $AB$6) * (InvoicesStatus = "Active")
     ),
-    MAKEARRAY(1, 27, LAMBDA(r, c, ""))
+    MAKEARRAY(1, 28, LAMBDA(r, c, ""))
   ),
 
   FirstCell, CHOOSEROWS(CHOOSECOLS(Filtered, 1), 1),
@@ -87,10 +87,10 @@ The **OutletInvoiceHistory Report** calculates invoice counts (KPI Dashboard) an
 
     InvoiceCode, CHOOSEROWS(CHOOSECOLS(row_arr, 1), 1),
     InvoiceDate, CHOOSEROWS(CHOOSECOLS(row_arr, 3), 1),
-    Username, CHOOSEROWS(CHOOSECOLS(row_arr, 5), 1),
-    OrderProgress, CHOOSEROWS(CHOOSECOLS(row_arr, 14), 1),
-    Subtotal, CHOOSEROWS(CHOOSECOLS(row_arr, 7), 1),
-    Discount, CHOOSEROWS(CHOOSECOLS(row_arr, 8), 1),
+    Username, CHOOSEROWS(CHOOSECOLS(row_arr, 6), 1),
+    OrderProgress, CHOOSEROWS(CHOOSECOLS(row_arr, 15), 1),
+    Subtotal, CHOOSEROWS(CHOOSECOLS(row_arr, 8), 1),
+    Discount, CHOOSEROWS(CHOOSECOLS(row_arr, 9), 1),
     SubtotalVal, IFERROR(VALUE(Subtotal), 0),
     DiscountVal, IFERROR(VALUE(Discount), 0),
 
@@ -166,15 +166,16 @@ The **OutletInvoiceHistory Report** calculates invoice counts (KPI Dashboard) an
 ## Source Sheets & Column Dependencies
 
 The formula imports data from three files (using `masterFileID`, `OutletFileID`, and `ViewFileID` from Config):
-1. **`OutletConsumptionInvoices`** (`OutletConsumptionInvoices!A2:AA` in Outlet Spreadsheet):
+1. **`OutletConsumptionInvoices`** (`OutletConsumptionInvoices!A2:AB` in Outlet Spreadsheet):
    - Column 1 (`A`): Invoice Code
    - Column 3 (`C`): Invoice Date
-   - Column 4 (`D`): Outlet Code (compared with `$AB$6`)
-   - Column 5 (`E`): Username
-   - Column 7 (`G`): Subtotal
-   - Column 8 (`H`): Discount
-   - Column 14 (`N`): Progress status (`"PENDING_PAYMENT"`, `"PARTIALLY_PAID"`, `"PAID"`, `"CANCELLED"`)
-   - Column 27 (`AA`): Status (`"Active"`)
+   - Column 4 (`D`): Due Date *(not read by this report)*
+   - Column 5 (`E`): Outlet Code (compared with `$AB$6`)
+   - Column 6 (`F`): Username
+   - Column 8 (`H`): Subtotal
+   - Column 9 (`I`): Discount
+   - Column 15 (`O`): Progress status (`"PENDING_PAYMENT"`, `"PARTIALLY_PAID"`, `"PAID"`, `"CANCELLED"`)
+   - Column 28 (`AB`): Status (`"Active"`)
 2. **`OutletConsumptionInvoiceItems`** (`OutletConsumptionInvoiceItems!A2:K` in Outlet Spreadsheet):
    - Column 2 (`B`): Outlet Consumption Invoice Code
    - Column 3 (`C`): SKU Code

@@ -919,6 +919,23 @@ await pageState.submit()
 }
 ```
 
+### 7.1.0 `visibleWhen`
+
+An object or an array of objects, ANDed. Absent or empty ⇒ always visible. Evaluated
+**client-side only**, by `isActionVisible` (`useResourceConfig.js`) through
+[`src/utils/tokenEvaluator.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/tokenEvaluator.js)
+— it decides what is OFFERED, never what is permitted. Permission is `can<Action>`, enforced
+server-side.
+
+| | |
+|---|---|
+| Shape | `{ "column": "Progress", "op": "eq", "value": "PLANNED" }` |
+| Ops | `eq`, `neq`, `in`, `not_in`, `gt`, `gte`, `lt`, `lte`, `contains`, `empty`, `notEmpty` |
+| Legacy ops | `ne` → `neq` and `nin` → `not_in` are aliased on load, so every config already in a sheet keeps working. The **Manage Actions** dialog rewrites them canonically on the next save. |
+| `value` | A literal, an array (for `in`/`not_in`), or a **dynamic token** — the same registry list views use (§5.2 of `AQL_FRONTEND_LIST_SWITCHER.md`). `{ "column": "Date", "op": "lte", "value": "$startOfDay:0" }` hides an action on future-dated records; `$userCode` / `$userRoles` gate one on the signed-in user. |
+| Comparison | Case-insensitive for literals. A date column that cannot be parsed never matches. A column absent from the record reads as blank. |
+| Malformed row | Dropped, exactly as a malformed target `when` is — a dropped condition does not constrain. |
+
 ### 7.1.1 Dialog headings (`title` / `subtitle`)
 
 Both are optional **template strings** resolved against the record:
@@ -1021,8 +1038,11 @@ near-duplicate config entries:
 | `column` | a column on the **source record**, as it was before this action mutated it |
 | `expression` | any `from`/`value` expression — `$record.X`, `$field.X`, `$target.k.C`, `$today`, … (§7.4) |
 
-Ops are exactly the `visibleWhen` set: `eq`, `ne`, `in`, `nin`, `empty`, `notEmpty`, with
-identical string-coercion and empty-handling semantics.
+Ops are `eq`, `ne`, `in`, `nin`, `empty`, `notEmpty`. This is deliberately NARROWER than
+`visibleWhen`'s set: a target's gate is decided **server-side** by
+`evaluateActionTargetCondition` (GAS), which understands only these six and no dynamic
+tokens. `visibleWhen` is purely client-side and therefore free to offer the ordered
+operators and the `$token` vocabulary; do not copy them here without adding the server half.
 
 **Forgiving, in one direction only.** A condition carrying none of the three operand keys,
 or an op outside the set, is **dropped** — not an error, exactly as `normalizeVisibleWhen`
@@ -1072,8 +1092,9 @@ typed target values; the server ignores those belonging to a skipped target.
 
 > [!WARNING]
 > `evaluateActionTargetCondition` (GAS) and `evaluateConditionOp`
-> (`useResourceConfig.js`, shared with `visibleWhen` and consumed by `isTargetActive`) are a
-> **matched pair**. Change one, change the other. The client can only ever be *more*
+> (`useResourceConfig.js`, consumed by `isTargetActive`) are a
+> **matched pair**. Change one, change the other. Note `visibleWhen` no longer routes
+> through `evaluateConditionOp` — it evaluates via `src/utils/tokenEvaluator.js`. The client can only ever be *more*
 > lenient — `prefillExpression` cannot resolve `$field.*` / `$target.*`, so a gate on either
 > validates loosely in the browser and is decided for real on the server.
 

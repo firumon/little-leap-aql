@@ -271,9 +271,13 @@ A condition `value` may be a **token string** instead of a literal. Tokens resol
 time against the clock and the logged-in user, so one sheet-authored view stays correct as the
 date rolls over or a different user signs in.
 
-Registry: [`src/utils/listViewTokens.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/listViewTokens.js).
+Registry: [`src/utils/tokenEvaluator.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/tokenEvaluator.js).
 Token names are **case-insensitive** (`$startofmonth` works). In the **Manage Lists** admin
 dialog they appear in the grouped `Token...` dropdown next to each condition's value input.
+
+The same registry backs an action's `visibleWhen` (**Manage Actions** → *Visible When*), which is
+evaluated by the same module — so `Date` / `lte` / `$startOfDay:0` hides an action on
+future-dated records and `OwnerCode` / `eq` / `$userCode` shows one only to its owner.
 
 #### 5.2.1. Two-Sided Coercion
 
@@ -396,7 +400,7 @@ A literal list may mix tokens and plain values — `["Viewer", "$userRoles"]` fl
 
 #### 5.2.6. Adding a Token
 
-1. Add the entry to `TOKENS` in [`listViewTokens.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/listViewTokens.js), with `value(params, ctx)` as a plain extractor plus its `coerce` / `coerceToken` pipelines. Add a new primitive to `COERCES` only if no composition of the existing ones fits.
+1. Add the entry to `TOKENS` in [`tokenEvaluator.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/tokenEvaluator.js), with `value(params, ctx)` as a plain extractor plus its `coerce` / `coerceToken` pipelines. Add a new primitive to `COERCES` only if no composition of the existing ones fits.
 2. Mirror it in the `TOKENS` array in [`GAS/listViewsManager.html`](file:///f:/LITTLE%20LEAP/AQL/GAS/listViewsManager.html) so admins can pick it from the dropdown. Parameterised tokens set `param` to the seeded default.
 3. Document it in the tables above.
 

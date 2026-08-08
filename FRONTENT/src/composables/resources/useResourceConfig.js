@@ -1,6 +1,12 @@
 import { computed } from 'vue'
 import { useAuthStore } from 'src/stores/auth'
 import { useRouteConfig } from './useRouteConfig'
+import {
+  OPERATORS,
+  normalizeOperator,
+  evaluateFilter,
+  resolveTokenContext
+} from 'src/utils/tokenEvaluator'
 
 export function findResourceConfig(auth, nameOrSlug) {
   if (!nameOrSlug) return null
@@ -217,38 +223,69 @@ function normalizeAction(a) {
   return mutateBase
 }
 
+/**
+ * Normalizes `visibleWhen` into a flat AND list of `{ column, op, value }`.
+ *
+ * Operators are canonicalised through the token evaluator, so the legacy `ne` / `nin`
+ * spellings all over the seed configs in `GAS/syncAppResources.gs` land on `neq` / `not_in`
+ * and every schema already in a sheet keeps evaluating.
+ */
 function normalizeVisibleWhen(v) {
   if (v == null) return []
   const arr = Array.isArray(v) ? v : [v]
-  const validOps = new Set(['eq', 'ne', 'in', 'nin', 'empty', 'notEmpty'])
   return arr
     .map((c) => {
       if (!c || typeof c !== 'object' || !c.column) return null
-      const op = validOps.has(c.op) ? c.op : null
-      if (!op) return null
-      return { column: c.column, op, value: c.value }
+      const op = normalizeOperator(c.op)
+      if (!VISIBLE_WHEN_OPS.has(op)) return null
+      // A null value would stringify to "null" in the evaluator's literal path, where the
+      // original comparison read it as a blank. Pin it to '' so that stays true.
+      return { column: c.column, op, value: c.value == null ? '' : c.value }
     })
     .filter(Boolean)
 }
 
-export function isActionVisible(action, record) {
+const VISIBLE_WHEN_OPS = new Set(OPERATORS)
+
+/**
+ * Whether ONE action should be offered for `record`.
+ *
+ * Conditions run through the shared token evaluator, so a `visibleWhen` value may be a
+ * dynamic token exactly as a list-view filter may — `{ column: 'Date', op: 'lte', value:
+ * '$startOfDay:0' }` hides an action on future-dated records, and `$userCode` / `$userRoles`
+ * gate one on the signed-in user. Plain literals behave as they always did, save that the
+ * comparison is now case-insensitive (matching list-view filters).
+ *
+ * `strictColumn: false` keeps the original posture that a condition naming a column the
+ * record does not carry is evaluated against a blank rather than failing outright.
+ *
+ * @param {Object} action - a normalized action config
+ * @param {Object} record - the record under test
+ * @param {Object} [ctx] - token context `{ user }`; read from the auth store when omitted.
+ */
+export function isActionVisible(action, record, ctx) {
   const conds = Array.isArray(action?.visibleWhen) ? action.visibleWhen : []
   if (!conds.length) return true
   if (!record || typeof record !== 'object') return true
-  return conds.every((c) => evalCondition(c, record))
-}
 
-function evalCondition(c, record) {
-  return evaluateConditionOp(c.op, record[c.column], c.value)
+  const filter = {
+    type: 'group',
+    logic: 'AND',
+    items: conds.map((c) => ({ type: 'condition', ...c }))
+  }
+  return evaluateFilter(filter, record, ctx || resolveTokenContext(), { strictColumn: false })
 }
 
 /**
- * The comparison half of a condition, split out from `evalCondition` so the ONE
- * implementation can be reused wherever the same `eq`/`ne`/`in`/`nin`/`empty`/
- * `notEmpty` grammar appears — currently `visibleWhen` (here) and a target's
- * `when` gate (`additionalActionsSchema.isTargetActive`). The server's
- * `evaluateActionTargetCondition` in GAS/actionTargets.gs mirrors this exactly
- * and is its matched pair; keep the three in step.
+ * The comparison half of a target's `when` gate — the `eq`/`ne`/`in`/`nin`/
+ * `empty`/`notEmpty` grammar used by `additionalActionsSchema.isTargetActive`.
+ * The server's `evaluateActionTargetCondition` in GAS/actionTargets.gs mirrors
+ * this exactly and is its matched pair; keep the two in step.
+ *
+ * `visibleWhen` no longer routes through here — it evaluates via
+ * `src/utils/tokenEvaluator`, which additionally accepts dynamic tokens and the
+ * ordered/`contains` operators. Targets stay on this narrower grammar because
+ * the SERVER is the authority on them and only understands these six ops.
  *
  * An unknown op returns true, so a malformed condition does not constrain.
  */

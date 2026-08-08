@@ -21,28 +21,31 @@ Read these before editing anything:
 
 | File | Role |
 | :--- | :--- |
-| [`FRONTENT/src/utils/listViewTokens.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/listViewTokens.js) | **Token registry + `COERCES` primitive library.** The single source of truth for token behaviour. |
+| [`FRONTENT/src/utils/tokenEvaluator.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/tokenEvaluator.js) | **Token registry + `COERCES` primitive library + the whole condition evaluator** (`prepareCondition` / `prepareFilter` / `evaluatePreparedFilter` / `evaluateFilter`) and the `useTokenEvaluator()` composable, which binds `{ user }` from the auth store. The single source of truth for token behaviour. |
 | [`FRONTENT/src/utils/dateHelpers.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/dateHelpers.js) | Date parse/normalise helpers. Calculations delegate to `date-fns`; only `parseAnyDate` is hand-rolled. |
-| [`FRONTENT/src/composables/useListViews.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/useListViews.js) | `prepareFilter` / `evaluatePreparedFilter` / `evaluateFilter`, auto-generated views, active-view state. |
-| [`GAS/listViewsManager.html`](file:///f:/LITTLE%20LEAP/AQL/GAS/listViewsManager.html) | **Admin dialog.** Its `TOKENS` array is a hand-maintained mirror of the frontend registry. |
+| [`FRONTENT/src/composables/useListViews.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/useListViews.js) | Auto-generated views, active-view state, per-view counts. Consumes the evaluator; re-exports `prepareFilter` / `evaluatePreparedFilter` / `evaluateFilter` for existing importers. |
+| [`FRONTENT/src/composables/resources/useResourceConfig.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useResourceConfig.js) | `normalizeVisibleWhen` / `isActionVisible` — the SECOND consumer of the evaluator. An action's `visibleWhen` accepts the same tokens a list-view filter does. |
+| [`GAS/listViewsManager.html`](file:///f:/LITTLE%20LEAP/AQL/GAS/listViewsManager.html) | **Admin dialog (list views).** Its `TOKENS` array is a hand-maintained mirror of the frontend registry. |
+| [`GAS/actionManager.html`](file:///f:/LITTLE%20LEAP/AQL/GAS/actionManager.html) | **Admin dialog (actions).** Carries a second hand-maintained `TOKENS` mirror for the "Visible When" value picker. |
 | [`Documents/AQL_FRONTEND_LIST_SWITCHER.md`](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_LIST_SWITCHER.md) | **Canonical spec.** Section 5.2 is the token reference. |
 
 ---
 
 ## 2. The Sync Contract (Non-Negotiable)
 
-The frontend registry and the GAS dialog are **two independent lists that must agree**. There is no
-build step or shared import between them — a token added on one side and forgotten on the other
-produces either an admin-invisible feature or a dropdown entry that silently matches nothing.
+The frontend registry and the two GAS dialogs are **three independent lists that must agree**. There
+is no build step or shared import between them — a token added on one side and forgotten on the
+others produces either an admin-invisible feature or a dropdown entry that silently matches nothing.
 
 > [!IMPORTANT]
-> **Adding, renaming, removing, or re-scoping ANY token requires all four of these edits:**
-> 1. `TOKENS` in `FRONTENT/src/utils/listViewTokens.js` — behaviour.
+> **Adding, renaming, removing, or re-scoping ANY token requires all five of these edits:**
+> 1. `TOKENS` in `FRONTENT/src/utils/tokenEvaluator.js` — behaviour.
 > 2. `TOKENS` in `GAS/listViewsManager.html` — admin dropdown entry (`code`, `label`, `group`, and `param` for parameterised tokens).
-> 3. The token tables in `Documents/AQL_FRONTEND_LIST_SWITCHER.md` §5.2.2 / §5.2.3 / §5.2.4.
-> 4. The verification harness in §6 below — add a case proving the new token resolves and compares.
+> 3. `TOKENS` in `GAS/actionManager.html` — the identical mirror used by the "Visible When" value picker.
+> 4. The token tables in `Documents/AQL_FRONTEND_LIST_SWITCHER.md` §5.2.2 / §5.2.3 / §5.2.4.
+> 5. The verification harness in §6 below — add a case proving the new token resolves and compares.
 >
-> The `label` and `group` strings should match between (1) and (2) so admins and developers see the
+> The `label` and `group` strings should match across (1)–(3) so admins and developers see the
 > same vocabulary. Never edit one side alone.
 
 ---
@@ -120,7 +123,7 @@ Evaluation is a **two-phase, compiled** pass:
 ### 4.1 Add a fixed token
 
 ```js
-// listViewTokens.js
+// tokenEvaluator.js
 $startOfWeek: {
   label: 'Start of this week (timestamp)',
   group: 'Date & Time',
@@ -242,10 +245,10 @@ node -e "const fs=require('fs');const h=fs.readFileSync('GAS/listViewsManager.ht
 
 ## 7. Completion Checklist
 
-- [ ] `TOKENS` updated in `listViewTokens.js`, resolver is a plain extractor, pipelines declared.
+- [ ] `TOKENS` updated in `tokenEvaluator.js`, resolver is a plain extractor, pipelines declared.
 - [ ] Any new `COERCES` primitive justified (no near-duplicate of an existing composition).
-- [ ] `TOKENS` mirrored in `GAS/listViewsManager.html` with matching `code`/`label`/`group`, plus `param` if parameterised.
-- [ ] GAS script block syntax-checked.
+- [ ] `TOKENS` mirrored in `GAS/listViewsManager.html` AND `GAS/actionManager.html` with matching `code`/`label`/`group`, plus `param` if parameterised.
+- [ ] Both GAS script blocks syntax-checked.
 - [ ] Token tables updated in `AQL_FRONTEND_LIST_SWITCHER.md` §5.2.
 - [ ] Harness run against real modules; all assertions pass; temp files deleted.
 - [ ] Existing literal-condition behaviour confirmed unchanged.

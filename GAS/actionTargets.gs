@@ -202,7 +202,7 @@ function readActionTargetValue(ctx, path) {
 /**
  * The restricted token set available to target expressions.
  *
- * Deliberately a SUBSET of the frontend's listViewTokens.js table: targets need
+ * Deliberately a SUBSET of the frontend's tokenEvaluator.js table: targets need
  * identity and today's date, not the full filter-comparison vocabulary. Adding
  * a token here does not require touching the frontend, because target
  * expressions are only ever evaluated server-side.

@@ -1,7 +1,11 @@
 import { ref, computed, watch } from 'vue'
 import { useAuthStore } from 'src/stores/auth'
 import { singularize } from 'src/utils/appHelpers'
-import { COERCES, applyCoerces, parseToken } from 'src/utils/listViewTokens'
+import { useTokenEvaluator, evaluatePreparedFilter } from 'src/utils/tokenEvaluator'
+
+// Re-exported so existing importers of the filter evaluator keep their import path. The
+// implementation now lives in `tokenEvaluator.js`, which `visibleWhen` shares.
+export { prepareFilter, evaluatePreparedFilter, evaluateFilter } from 'src/utils/tokenEvaluator'
 
 // Headers an auto-generated "categorical" view should never be built from.
 const AUTO_VIEW_EXCLUDED_HEADERS = new Set([
@@ -143,183 +147,6 @@ export function normalizeListViewsMode(mode) {
 }
 
 /**
- * Compares two already-coerced values. Both sides are assumed to sit in the same space.
- */
-function compareCoerced(operator, a, b) {
-  const asArray = Array.isArray(b) ? b : [b]
-
-  switch (operator) {
-    case 'eq':
-      return a === asArray[0]
-    case 'neq':
-      return a !== asArray[0]
-    case 'in':
-      return asArray.some((v) => v === a)
-    case 'not_in':
-      return !asArray.some((v) => v === a)
-    case 'gt':
-      return a > asArray[0]
-    case 'gte':
-      return a >= asArray[0]
-    case 'lt':
-      return a < asArray[0]
-    case 'lte':
-      return a <= asArray[0]
-    case 'contains':
-      // Substring matching is only meaningful on strings, whatever the declared pipeline.
-      return COERCES.lowercase(a).includes(COERCES.lowercase(asArray[0]))
-    default:
-      return false
-  }
-}
-
-/**
- * Compiles one condition against the current clock/user.
- *
- * Everything that does not depend on the row is resolved here — token parsing, `spec.value`,
- * the `coerceToken` pipeline, and the lowercase/numeric forms of literal values — so a pass
- * over thousands of rows only runs the column-side coercion and the comparison.
- *
- * A token anywhere in the value governs coercion for the whole condition. The list-views
- * manager splits `in`/`not_in` values on commas, so a token can arrive wrapped in an array.
- */
-function prepareCondition(condition, ctx) {
-  const { column, operator, value } = condition
-  const values = Array.isArray(value) ? value : [value]
-  const parsed = values.map((entry) => parseToken(entry))
-  const governing = parsed.find(Boolean)
-
-  if (governing) {
-    const tokenPipeline = governing.spec.coerceToken || governing.spec.coerce || []
-    const right = []
-    parsed.forEach((token, idx) => {
-      const resolved = token ? token.spec.value(token.params, ctx) : values[idx]
-      // Array-valued tokens ($userRoles) coerce per element — coercing the array whole
-      // would yield "auditor,approver" and match nothing.
-      if (Array.isArray(resolved)) {
-        resolved.forEach((item) => right.push(applyCoerces(item, tokenPipeline)))
-      } else {
-        right.push(applyCoerces(resolved, tokenPipeline))
-      }
-    })
-    return { type: 'condition', column, operator, columnPipeline: governing.spec.coerce || [], right }
-  }
-
-  // Literal condition: pre-normalise both the whole value (`eq`/`contains`/ordered operators
-  // stringify the raw value, arrays included) and its per-entry list form (`in`/`not_in`).
-  return {
-    type: 'condition',
-    column,
-    operator,
-    literalStr: String(value).toLowerCase(),
-    literalList: values.map((entry) => String(entry).toLowerCase()),
-    literalNum: Number(value)
-  }
-}
-
-/**
- * Compiles a filter tree (group or condition) once per evaluation pass.
- *
- * @param {Object} filter - group or condition node
- * @param {Object} [ctx] - token evaluation context, `{ user }`. Required only by user tokens.
- * @returns {Object|null} prepared tree for `evaluatePreparedFilter`
- */
-export function prepareFilter(filter, ctx = {}) {
-  if (!filter) return null
-  if (filter.type === 'condition') return prepareCondition(filter, ctx)
-  if (filter.type === 'group') {
-    return {
-      type: 'group',
-      logic: filter.logic,
-      items: (filter.items || []).map((item) => prepareFilter(item, ctx))
-    }
-  }
-  return null // unknown node = match all
-}
-
-/**
- * Evaluates a prepared condition against a row. No token parsing happens here.
- */
-function evaluatePreparedCondition(node, row) {
-  const { column, operator } = node
-  if (!column || !(column in row)) return false
-
-  const rowValue = row[column]
-
-  if (node.right) {
-    const left = applyCoerces(rowValue, node.columnPipeline)
-    // A column that cannot be parsed into the comparison space is never a match — returning
-    // false explicitly rather than relying on NaN comparison semantics keeps `neq`/`not_in`
-    // from silently sweeping in every unparseable row.
-    if (typeof left === 'number' && Number.isNaN(left)) return false
-    return compareCoerced(operator, left, node.right)
-  }
-
-  const rowStr = (rowValue ?? '').toString().toLowerCase()
-
-  switch (operator) {
-    case 'eq':
-      return rowStr === node.literalStr
-    case 'neq':
-      return rowStr !== node.literalStr
-    case 'in':
-      return node.literalList.some((v) => rowStr === v)
-    case 'not_in':
-      return !node.literalList.some((v) => rowStr === v)
-    case 'gt':
-    case 'gte':
-    case 'lt':
-    case 'lte': {
-      // Numeric comparison only when BOTH sides coerce, else lowercase strings.
-      const numA = Number(rowValue)
-      const numeric = Number.isFinite(numA) && Number.isFinite(node.literalNum)
-      const a = numeric ? numA : String(rowValue).toLowerCase()
-      const b = numeric ? node.literalNum : node.literalStr
-      if (operator === 'gt') return a > b
-      if (operator === 'gte') return a >= b
-      if (operator === 'lt') return a < b
-      return a <= b
-    }
-    case 'contains':
-      return rowStr.includes(node.literalStr)
-    default:
-      return false
-  }
-}
-
-/**
- * Recursively evaluates a prepared filter tree against a row.
- */
-export function evaluatePreparedFilter(prepared, row) {
-  if (!prepared) return true
-  if (prepared.type === 'condition') return evaluatePreparedCondition(prepared, row)
-  if (prepared.type === 'group') {
-    const items = prepared.items
-    if (!items.length) return true // empty group = match all
-    if (prepared.logic === 'OR') {
-      return items.some((item) => evaluatePreparedFilter(item, row))
-    }
-    // Default AND
-    return items.every((item) => evaluatePreparedFilter(item, row))
-  }
-  return true
-}
-
-/**
- * Evaluates a filter tree against a single row.
- *
- * Backwards-compatible entry point — prepares the filter for this one row. Filtering a
- * collection should call `prepareFilter` once and then `evaluatePreparedFilter` per row.
- *
- * @param {Object} filter - group or condition node
- * @param {Object} row - the record under test
- * @param {Object} [ctx] - token evaluation context, `{ user }`. Required only by user tokens.
- */
-export function evaluateFilter(filter, row, ctx = {}) {
-  return evaluatePreparedFilter(prepareFilter(filter, ctx), row)
-}
-
-/**
  * Composable: manages list views, filter evaluation, and view counts.
  *
  * @param {Object} options
@@ -347,8 +174,8 @@ export function useListViews({
   const activeViewName = ref('')
   const authStore = useAuthStore()
 
-  /** Evaluation context for user-aware tokens ($userCode, $userRoles, ...). */
-  const tokenContext = computed(() => ({ user: authStore.user }))
+  // User-aware tokens ($userCode, $userRoles, ...) read the logged-in user from here.
+  const { prepareFilter: prepareViewFilter } = useTokenEvaluator()
 
   /**
    * Build effective views:
@@ -415,9 +242,8 @@ export function useListViews({
   const viewCounts = computed(() => {
     const counts = {}
     const allItems = items?.value || []
-    const ctx = tokenContext.value
     for (const view of effectiveViews.value) {
-      const prepared = prepareFilter(view.filter, ctx)
+      const prepared = prepareViewFilter(view.filter)
       counts[view.name] = allItems.filter((row) => evaluatePreparedFilter(prepared, row)).length
     }
     return counts
@@ -429,7 +255,7 @@ export function useListViews({
   const viewFilteredItems = computed(() => {
     const allItems = items?.value || []
     if (!activeView.value) return allItems
-    const prepared = prepareFilter(activeView.value.filter, tokenContext.value)
+    const prepared = prepareViewFilter(activeView.value.filter)
     return allItems.filter((row) => evaluatePreparedFilter(prepared, row))
   })
 

@@ -191,7 +191,76 @@
 <script>
 var resourceData = [];
 var currentActions = [];
+// A TARGET's `when` gate. Deliberately the narrow set: the SERVER
+// (`evaluateActionTargetCondition` in GAS/actionTargets.gs) is the authority on
+// targets and understands only these six.
 var VALID_OPS = ['eq','ne','in','nin','empty','notEmpty'];
+
+// `visibleWhen` is evaluated CLIENT-side by FRONTENT/src/utils/tokenEvaluator.js,
+// which offers the full comparison grammar. `ne` / `nin` are the spellings this
+// editor wrote before the list was standardised — OP_ALIASES folds them onto the
+// canonical names on load, so a saved schema opens on the right option and is
+// rewritten canonically on the next save. The evaluator aliases them too, so an
+// untouched config keeps working either way.
+var VISIBLE_WHEN_OPS = ['eq','neq','in','not_in','gt','gte','lt','lte','contains','empty','notEmpty'];
+var OP_ALIASES = { ne: 'neq', nin: 'not_in' };
+
+function normalizeOp(op) {
+  return OP_ALIASES[op] || op;
+}
+
+function isListOp(op) { return op === 'in' || op === 'not_in' || op === 'nin'; }
+function isEmptyOp(op) { return op === 'empty' || op === 'notEmpty'; }
+
+// Mirrors TOKENS in FRONTENT/src/utils/tokenEvaluator.js and the copy in
+// GAS/listViewsManager.html — keep all three in sync.
+// `param` tokens take a value after a colon, e.g. $daysIn:30.
+var TOKENS = [
+  { code: '$now', label: 'Now (timestamp)', group: 'Date & Time' },
+  { code: '$date', label: 'Date (YYYY-MM-DD)', group: 'Date & Time', param: '0' },
+  { code: '$day', label: 'Day of year (1-366)', group: 'Date & Time' },
+  { code: '$month', label: 'Month (01-12)', group: 'Date & Time', param: '0' },
+  { code: '$year', label: 'Current year (YYYY)', group: 'Date & Time' },
+  { code: '$week', label: 'Current ISO week (1-53)', group: 'Date & Time' },
+  { code: '$startOfDay', label: 'Start of day (timestamp)', group: 'Date & Time', param: '0' },
+  { code: '$endOfDay', label: 'End of day (timestamp)', group: 'Date & Time', param: '0' },
+  { code: '$startOfMonth', label: 'Start of month (timestamp)', group: 'Date & Time', param: '0' },
+  { code: '$endOfMonth', label: 'End of month (timestamp)', group: 'Date & Time', param: '0' },
+
+  { code: '$daysAgo', label: 'N days ago', group: 'Relative Days', param: '7' },
+  { code: '$daysIn', label: 'In N days', group: 'Relative Days', param: '30' },
+
+  { code: '$userCode', label: 'My user code', group: 'Current User' },
+  { code: '$userEmail', label: 'My email', group: 'Current User' },
+  { code: '$userName', label: 'My name', group: 'Current User' },
+  { code: '$userDesignation', label: 'My designation', group: 'Current User' },
+  { code: '$userRole', label: 'My primary role', group: 'Current User' },
+  { code: '$userRoles', label: 'My roles (list)', group: 'Current User', list: true },
+  { code: '$userRegion', label: 'My region code', group: 'Current User' },
+  { code: '$userRegions', label: 'My accessible regions (list)', group: 'Current User', list: true }
+];
+
+/**
+ * Builds the token <select> markup, grouped by TOKENS[].group.
+ * `selectedVal` is the current condition value, which for a param token looks like "$daysIn:30".
+ */
+function buildTokenOptions(selectedVal) {
+  var currentCode = (selectedVal || '').split(':')[0];
+  var groups = [];
+  var byGroup = {};
+
+  TOKENS.forEach(function(t) {
+    if (!byGroup[t.group]) { byGroup[t.group] = []; groups.push(t.group); }
+    byGroup[t.group].push(t);
+  });
+
+  return '<option value="">Token...</option>' + groups.map(function(g) {
+    return '<optgroup label="' + esc(g) + '">' + byGroup[g].map(function(t) {
+      var sel = (currentCode === t.code) ? ' selected' : '';
+      return '<option value="' + t.code + '"' + sel + '>' + esc(t.label) + '</option>';
+    }).join('') + '</optgroup>';
+  }).join('');
+}
 // Mirrors the folders under FRONTENT/src/components/_fields/. Every action input
 // renders through that resolver, so anything with a folder there is authorable
 // here. An unknown type degrades to `text` rather than failing to render.
@@ -251,12 +320,14 @@ function normalizeForEdit(a) {
     a.navigate.resourceSlug = a.navigate.resourceSlug || '';
     a.navigate.scope = a.navigate.scope || '';
   }
-  // Normalize visibleWhen into array form for the editor.
+  // Normalize visibleWhen into array form for the editor, canonicalising the
+  // legacy `ne` / `nin` spellings so a saved schema opens on the right option.
   if (a.visibleWhen == null) {
     a.visibleWhen = [];
   } else if (!Array.isArray(a.visibleWhen)) {
     a.visibleWhen = [a.visibleWhen];
   }
+  a.visibleWhen.forEach(function(c) { if (c) c.op = normalizeOp(c.op); });
   return a;
 }
 
@@ -353,11 +424,32 @@ function onKindChange(i, val) {
 }
 
 function onOpChange(i, ci, op) {
-  currentActions[i].visibleWhen[ci].op = op;
-  // Switch value shape for in/nin vs empty/notEmpty vs eq/ne
-  if (op === 'empty' || op === 'notEmpty') {
-    currentActions[i].visibleWhen[ci].value = '';
+  var c = currentActions[i].visibleWhen[ci];
+  var wasList = isListOp(c.op);
+  c.op = op;
+  // Switch value shape for in/not_in vs empty/notEmpty vs the scalar operators.
+  if (isEmptyOp(op)) {
+    c.value = '';
+  } else if (isListOp(op) && !wasList) {
+    c.value = (c.value == null || c.value === '') ? [] : [String(c.value)];
+  } else if (!isListOp(op) && wasList) {
+    c.value = Array.isArray(c.value) ? (c.value[0] || '') : (c.value || '');
   }
+  renderActions();
+}
+
+/**
+ * Writes the picked token into the condition's value input. Parameterised tokens
+ * are written as "$daysIn:30" — the default is seeded so the admin only edits the
+ * number. A list operator keeps its array shape so the saved JSON stays uniform.
+ */
+function onVisibleWhenTokenSelect(i, ci, code) {
+  if (!code) return;
+  var c = currentActions[i].visibleWhen[ci];
+  var token = null;
+  TOKENS.forEach(function(t) { if (t.code === code) token = t; });
+  var val = (token && token.param) ? (code + ':' + token.param) : code;
+  c.value = isListOp(c.op) ? [val] : val;
   renderActions();
 }
 
@@ -613,27 +705,34 @@ function renderNavigateBlock(action, i) {
 
 function renderVisibleWhenBlock(action, i) {
   var html = '<div class="sub-section"><h3>Visible When (AND)</h3>';
-  html += '<div class="hint">Absent / empty = always visible. Multiple conditions are ANDed. Use comma-separated values for <code>in</code>/<code>nin</code>.</div>';
+  html += '<div class="hint">Absent / empty = always visible. Multiple conditions are ANDed. Use comma-separated values for <code>in</code>/<code>not_in</code>.</div>';
+  html += '<div class="hint">The value may be a literal or a <b>dynamic token</b> picked from the dropdown — resolved against the clock and the signed-in user when the action list is built. E.g. <code>Date</code> / <code>lte</code> / <code>$startOfDay:0</code> hides an action on future-dated records; <code>OwnerCode</code> / <code>eq</code> / <code>$userCode</code> shows it only to the owner. Parameterised tokens are written <code>$daysIn:30</code> — edit the number after the colon. Literal comparison is case-insensitive.</div>';
   (action.visibleWhen || []).forEach(function(c, ci) {
-    var isList = (c.op === 'in' || c.op === 'nin');
-    var isEmptyOp = (c.op === 'empty' || c.op === 'notEmpty');
+    var op = normalizeOp(c.op);
+    var isList = isListOp(op);
+    var noValue = isEmptyOp(op);
     var valDisplay = isList
       ? (Array.isArray(c.value) ? c.value.join(',') : (c.value || ''))
       : (c.value == null ? '' : String(c.value));
     html += '<div class="cond-row">';
     html += '<input value="' + esc(c.column || '') + '" onchange="currentActions[' + i + '].visibleWhen[' + ci + '].column=this.value" placeholder="Column (e.g. Progress)">';
     html += '<select onchange="onOpChange(' + i + ',' + ci + ', this.value)">';
-    VALID_OPS.forEach(function(op) {
-      html += '<option value="' + op + '"' + (c.op === op ? ' selected' : '') + '>' + op + '</option>';
+    VISIBLE_WHEN_OPS.forEach(function(o) {
+      html += '<option value="' + o + '"' + (op === o ? ' selected' : '') + '>' + o + '</option>';
     });
     html += '</select>';
-    if (isEmptyOp) {
+    if (noValue) {
       html += '<input disabled placeholder="(no value)">';
     } else if (isList) {
       html += '<input value="' + esc(valDisplay) + '" onchange="currentActions[' + i + '].visibleWhen[' + ci + '].value=this.value?this.value.split(\',\').map(function(s){return s.trim()}).filter(Boolean):[]" placeholder="Review,Pending">';
     } else {
-      html += '<input value="' + esc(valDisplay) + '" onchange="currentActions[' + i + '].visibleWhen[' + ci + '].value=this.value" placeholder="Value">';
+      html += '<input value="' + esc(valDisplay) + '" onchange="currentActions[' + i + '].visibleWhen[' + ci + '].value=this.value" placeholder="Value or $token">';
     }
+    // The token picker only WRITES into the value input — free text stays fully
+    // editable, so a literal and a token are authored the same way.
+    html += '<select style="width:150px" ' + (noValue ? 'disabled' : '') + ' onchange="onVisibleWhenTokenSelect(' + i + ',' + ci + ', this.value)">';
+    html += buildTokenOptions(valDisplay);
+    html += '</select>';
     html += '<span class="remove-cond" onclick="removeCondition(' + i + ',' + ci + ')" title="Remove condition">&times;</span>';
     html += '</div>';
   });
@@ -677,23 +776,32 @@ function serializeForSave(a) {
     if (n.scope) out.navigate.scope = n.scope;
   }
   // visibleWhen: drop invalid rows; collapse single-element array to object
-  var conds = cleanConditions(a.visibleWhen, ['column']);
+  var conds = cleanConditions(a.visibleWhen, ['column'], VISIBLE_WHEN_OPS);
   if (conds.length === 1) out.visibleWhen = conds[0];
   else if (conds.length > 1) out.visibleWhen = conds;
   return out;
 }
 
 /**
- * Serializes one condition of the shared `eq|ne|in|nin|empty|notEmpty` grammar.
+ * Serializes one condition of the shared condition grammar.
  *
  * `operandKeys` is the accepted left-operand set in PRECEDENCE order — just
  * `column` for `visibleWhen`, `field` → `column` → `expression` for a target's
  * `when`. A row naming none of them, or carrying no value where the op needs
  * one, is dropped rather than saved half-built — the runtime evaluators on both
  * sides drop the same shapes, so an unfinished row simply does not constrain.
+ *
+ * `allowedOps` differs per grammar: a target's `when` is validated SERVER-side
+ * against the six-op set, `visibleWhen` client-side against the wider one. It
+ * defaults to the narrow set so an unqualified call cannot widen a target.
  */
-function cleanCondition(c, operandKeys) {
-  if (!c || VALID_OPS.indexOf(c.op) === -1) return null;
+function cleanCondition(c, operandKeys, allowedOps) {
+  var ops = allowedOps || VALID_OPS;
+  if (!c) return null;
+  // Canonicalise before validating, so a legacy `ne`/`nin` row round-trips
+  // through the editor as `neq`/`not_in` rather than being dropped.
+  var op = (ops === VISIBLE_WHEN_OPS) ? normalizeOp(c.op) : c.op;
+  if (ops.indexOf(op) === -1) return null;
 
   var key = null;
   for (var k = 0; k < operandKeys.length; k++) {
@@ -701,23 +809,23 @@ function cleanCondition(c, operandKeys) {
   }
   if (!key) return null;
 
-  var isEmptyOp = (c.op === 'empty' || c.op === 'notEmpty');
-  var isList = (c.op === 'in' || c.op === 'nin');
-  if (!isEmptyOp) {
+  var noValue = isEmptyOp(op);
+  var isList = isListOp(op);
+  if (!noValue) {
     if (isList && !(Array.isArray(c.value) && c.value.length > 0)) return null;
     if (!isList && (c.value == null || String(c.value) === '')) return null;
   }
 
   var out = {};
   out[key] = c[key];
-  out.op = c.op;
-  if (!isEmptyOp) out.value = c.value;
+  out.op = op;
+  if (!noValue) out.value = c.value;
   return out;
 }
 
-function cleanConditions(list, operandKeys) {
+function cleanConditions(list, operandKeys, allowedOps) {
   return (Array.isArray(list) ? list : (list ? [list] : []))
-    .map(function(c) { return cleanCondition(c, operandKeys); })
+    .map(function(c) { return cleanCondition(c, operandKeys, allowedOps); })
     .filter(Boolean);
 }
 

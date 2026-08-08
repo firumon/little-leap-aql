@@ -86,6 +86,31 @@ function getSheetHeadersByMeta(fileId, sheetName, sheetObject) {
   return headers;
 }
 
+/**
+ * Formats a value as the canonical AQL workflow date-time string:
+ * `YYYY-MM-DD HH:mm:ss`, 24-hour, in the script's timezone.
+ *
+ * This is the on-sheet shape for every `...At` workflow stamp column (and for
+ * `RespondDate`). Epoch milliseconds were the previous shape; they are still
+ * accepted as INPUT here so historical rows re-stamped by a later action come
+ * back out in the readable form rather than staying numeric.
+ *
+ * @param {Date|number|string} [value] - defaults to now
+ * @returns {string}
+ */
+function formatDateTime24(value) {
+  var date;
+  if (value instanceof Date) {
+    date = value;
+  } else if (value === undefined || value === null || value === '') {
+    date = new Date();
+  } else {
+    date = new Date(typeof value === 'number' ? value : String(value));
+  }
+  if (isNaN(date.getTime())) date = new Date();
+  return Utilities.formatDate(date, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+}
+
 function getHeaderIndexMap(headers) {
   const map = {};
   headers.forEach(function(header, index) {

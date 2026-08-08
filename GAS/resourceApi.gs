@@ -1664,10 +1664,22 @@ function handleExecuteAction(auth, payload) {
   }
 
   // Set auto-fill fields: {column}{PascalCase(value)}At and {column}{PascalCase(value)}By
+  // `At` is a readable 24-hour string and `By` the user's display name, because
+  // both are surfaced verbatim in the UI, in sheet views and in printed reports.
   var atField = column + stampSuffix + 'At';
   var byField = column + stampSuffix + 'By';
-  if (idx[atField] !== undefined) existingRow[idx[atField]] = Date.now();
-  if (idx[byField] !== undefined) existingRow[idx[byField]] = auth.user.UserID;
+  if (idx[atField] !== undefined) existingRow[idx[atField]] = formatDateTime24();
+  if (idx[byField] !== undefined) existingRow[idx[byField]] = auth.user.Name || auth.user.UserID;
+
+  // RespondDate is a by-convention column, in the same spirit as the audit
+  // columns: any resource whose sheet declares it gets it stamped on every
+  // action, whatever the outcome. That is the point of it — Complete, Postpone
+  // and Cancel each write their own ProgressXxxAt, but one column answers "when
+  // was this responded to" without a three-way coalesce in every view, report and
+  // filter. Resources without the column are untouched, so nothing is hardcoded
+  // to a resource name here. Set before user fields so an editable field of the
+  // same name still wins.
+  if (idx.RespondDate !== undefined) existingRow[idx.RespondDate] = formatDateTime24();
 
   // Set user-provided fields
   Object.keys(userFields).forEach(function(fieldName) {

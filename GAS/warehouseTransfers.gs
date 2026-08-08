@@ -261,8 +261,8 @@ function updateWarehouseTransferItemsProgress(items, progress, auth, storageFiel
     var stampSuffix = toActionHeaderSuffix(progress);
     var atField = 'Progress' + stampSuffix + 'At';
     var byField = 'Progress' + stampSuffix + 'By';
-    if (idx[atField] !== undefined) rowData[idx[atField]] = Date.now();
-    if (idx[byField] !== undefined) rowData[idx[byField]] = auth.user.UserID;
+    if (idx[atField] !== undefined) rowData[idx[atField]] = formatDateTime24();
+    if (idx[byField] !== undefined) rowData[idx[byField]] = auth.user.Name || auth.user.UserID;
 
     if (storageField && idx[storageField] !== undefined) {
       rowData[idx[storageField]] = storageValue;
@@ -289,8 +289,8 @@ function updateWarehouseTransferProgress(wtCode, progress, auth, fieldsToUpdate)
   var stampSuffix = toActionHeaderSuffix(progress);
   var atField = 'Progress' + stampSuffix + 'At';
   var byField = 'Progress' + stampSuffix + 'By';
-  if (idx[atField] !== undefined) rowData[idx[atField]] = Date.now();
-  if (idx[byField] !== undefined) rowData[idx[byField]] = auth.user.UserID;
+  if (idx[atField] !== undefined) rowData[idx[atField]] = formatDateTime24();
+  if (idx[byField] !== undefined) rowData[idx[byField]] = auth.user.Name || auth.user.UserID;
 
   if (fieldsToUpdate) {
     Object.keys(fieldsToUpdate).forEach(function(k) {

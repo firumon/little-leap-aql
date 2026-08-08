@@ -998,8 +998,10 @@ several fields plus literal text, which a single-value expression cannot express
 | `$record.<Column>` | Source record, **as it was before** this action mutated it |
 | `$field.<Name>` | A value typed into the action's own `fields[]` (short name or derived header) |
 | `$target.<key>.<Column>` | A column on an **earlier** target in the same run |
-| `$userName` `$userCode` `$userEmail` `$userRole` `$userDesignation` `$userRegion` | Identity tokens |
-| `$now` `$today` `$date:N` | Time tokens |
+| `$userName` `$userCode` `$userEmail` `$userRole` `$userDesignation` `$userRegion` | Identity tokens. `$userName` is `user.Name || user.UserID` |
+| `$now` | Epoch milliseconds (`Date.now()`) |
+| `$dateTime` | `YYYY-MM-DD HH:mm:ss`, 24-hour, script timezone — the shape the `...At` stamps and `RespondDate` use. Takes **no** `:N` offset despite sitting next to `$date:N`; `$dateTime:7` silently ignores the `7` |
+| `$today` `$date:N` | `YYYY-MM-DD`, today ± N days |
 | `$$anything` | Escape — yields the literal `$anything` |
 | anything else | Literal |
 

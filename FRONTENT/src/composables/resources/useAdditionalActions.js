@@ -1,17 +1,8 @@
 import { reactive, computed, unref } from 'vue'
 import { useQuasar } from 'quasar'
-import { useAuthStore } from 'src/stores/auth'
-import { useDataStore } from 'src/stores/data'
-import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceConfig, isActionVisible } from './useResourceConfig'
 import { useResourceNav } from './useResourceNav'
-import {
-  buildFieldOptions,
-  buildSourceFieldGroup,
-  buildTargetFieldGroups,
-  isTargetActive,
-  resolveTargetKey
-} from './additionalActionsSchema'
+import { useAdditionalActionsPipeline, actionLabelOf } from './additionalActionsPipeline'
 
 /**
  * The AdditionalActions runtime — the SINGLE place workflow-action logic lives.
@@ -23,13 +14,23 @@ import {
  * collection and submission all resolve here — a component that re-implements any
  * part of it drifts the moment the config contract changes.
  *
- * Deliberately standalone from `usePageState`. `pageState.run()` gates on
- * `validationErrors`, which validates the HOST PAGE's nodes — an action would be
- * blocked by a form error that has nothing to do with it. And `ensureNode()` keys
- * nodes by resource name, so an action targeting the same resource as its page
- * would collide with the page's own node. Dispatch goes straight to the resource
- * IO store, which is where delta hydration lives anyway (`runBatchRequests` →
- * `hydrateResourcePayload`), so reactivity after a write is unaffected.
+ * The MECHANICS of turning one action into a request — field schema, seeding,
+ * validation, payload extraction, envelope, dispatch — live next door in
+ * `additionalActionsPipeline.js` as small single-responsibility steps. This file
+ * consumes them; it does not duplicate them.
+ *
+ * The POPUP path is deliberately standalone from `usePageState`. `pageState.run()`
+ * gates on `validationErrors`, which validates the HOST PAGE's nodes — a dialog
+ * action would be blocked by a form error that has nothing to do with it. And
+ * `ensureNode()` keys nodes by resource name, so an action targeting the same
+ * resource as its page would collide with the page's own node. Dispatch goes
+ * straight to the resource IO store, which is where delta hydration lives anyway
+ * (`runBatchRequests` → `hydrateResourcePayload`), so reactivity after a write is
+ * unaffected.
+ *
+ * A page that wants the OPPOSITE — a workflow action riding inside its own batch
+ * submission, so a new record and the action stamping it land together — uses
+ * `usePageState.includeAdditionalAction()`, which drives the same pipeline.
  *
  * Dialog state is a MODULE-LEVEL singleton: an index page renders one trigger per
  * row, and without a shared instance fifty rows would mount fifty dialogs.
@@ -173,9 +174,10 @@ function pascal (value) {
 
 export function useAdditionalActionsDialog () {
   const $q = useQuasar()
-  const auth = useAuthStore()
-  const dataStore = useDataStore()
-  const resourceIoStore = useResourceIoStore()
+  // Route-following by default; every step below is handed `dialog.resource`
+  // explicitly, because a trigger on a list row may target a resource that is
+  // not the page's own.
+  const pipeline = useAdditionalActionsPipeline()
 
   const action = computed(() => dialog.action)
   const record = computed(() => dialog.record)
@@ -189,40 +191,18 @@ export function useAdditionalActionsDialog () {
   const column = computed(() => action.value?.column || 'Progress')
   const columnValue = computed(() => dialog.outcome || action.value?.columnValue || '')
 
-  function optionsFor (field) {
-    const resource = field?.source?.resource
-    return buildFieldOptions(
-      field,
-      resource ? dataStore.getRecords(resource) : [],
-      resource ? (dataStore.headers?.[resource] || []) : []
-    )
-  }
-
-  function headersFor (resource) {
-    return resource ? (dataStore.headers?.[resource] || []) : []
-  }
-
   /**
    * Field groups in render order: the source record first, then one group per
-   * target that asks the user for something.
+   * target that asks the user for something. Derived by the pipeline, so the
+   * dialog and a batched `includeAdditionalAction()` see the identical schema.
    */
   const groups = computed(() => {
     if (!action.value) return []
-    const headers = headersFor(dialog.resource)
-
-    const source = buildSourceFieldGroup(action.value, {
-      headers,
-      columnValue: columnValue.value,
-      optionsFor
-    })
-    const targets = buildTargetFieldGroups(action.value, {
+    return pipeline.actionFieldGroups(action.value, {
       record: record.value,
-      user: auth.user,
-      optionsFor,
-      headersFor
+      outcome: columnValue.value,
+      resource: dialog.resource
     })
-
-    return [...(source ? [source] : []), ...targets]
   })
 
   const allFields = computed(() => groups.value.flatMap((group) => group.fields))
@@ -231,77 +211,19 @@ export function useAdditionalActionsDialog () {
     resetForm(allFields.value)
   }
 
-  /**
-   * Finds the configured target behind a rendered group, by the same key the
-   * schema addressed its fields with.
-   */
-  function targetForGroup (groupKey) {
-    const targets = Array.isArray(action.value?.targets) ? action.value.targets : []
-    return targets.find((target, index) => resolveTargetKey(target, index) === groupKey) || null
-  }
-
-  /**
-   * A target group whose `when` gate does not currently pass collects nothing —
-   * the server will skip the target outright, so demanding its `required` fields
-   * would make an OPTIONAL block mandatory and defeat the whole gate.
-   *
-   * The gate is a client MIRROR (`isTargetActive`); the server re-decides from
-   * the trusted config. The two can only disagree on an `expression` gate the
-   * browser cannot resolve, and only ever in the lenient direction — the worst
-   * case is a required field the client let through and the server rejects.
-   */
-  function isGroupActive (group) {
-    if (!group.key || !group.hasCondition) return true
-    const target = targetForGroup(group.key)
-    if (!target) return true
-    return isTargetActive(target, { record: record.value, form, key: group.key })
+  /** Shared context for every pipeline step this dialog drives. */
+  function stepContext () {
+    return {
+      record: record.value,
+      form,
+      outcome: columnValue.value,
+      resource: dialog.resource,
+      groups: groups.value
+    }
   }
 
   function validate () {
-    for (const group of groups.value) {
-      if (!isGroupActive(group)) continue
-      for (const field of group.fields) {
-        if (!field.required) continue
-        const value = form[field.address]
-        if (value === undefined || value === null || String(value).trim() === '') {
-          return `${field.label} is required`
-        }
-      }
-    }
-    return ''
-  }
-
-  /**
-   * Splits the flat form into the two wire buckets.
-   *
-   * `fields` is keyed by derived header (the long-standing executeAction
-   * contract); `targetFields` is keyed by target key then literal column. Only
-   * user-facing values travel — everything a target copies or defaults is
-   * resolved server-side from the trusted config.
-   *
-   * EVERY typed target value is sent, including those belonging to a target
-   * whose `when` gate does not pass. The server ignores a skipped target's
-   * values, and a `when` keyed on `field` reads exactly these — filtering here
-   * would hand the server a payload that cannot satisfy the gate it is about to
-   * evaluate.
-   */
-  function buildPayloadFields () {
-    const fields = {}
-    const targetFields = {}
-
-    for (const group of groups.value) {
-      for (const field of group.fields) {
-        const value = form[field.address]
-        if (!group.key) {
-          fields[field.header] = value ?? ''
-          continue
-        }
-        targetFields[group.key] = targetFields[group.key] || {}
-        targetFields[group.key][field.header] = value ?? ''
-      }
-    }
-
-    return { fields, targetFields }
+    return pipeline.validateActionForm(action.value, stepContext())
   }
 
   async function submit () {
@@ -311,35 +233,26 @@ export function useAdditionalActionsDialog () {
       return false
     }
 
-    const { fields, targetFields } = buildPayloadFields()
-    const request = {
-      action: 'executeAction',
-      resource: dialog.resource,
-      payload: {
-        code: record.value?.Code || '',
-        actionName: action.value?.action,
-        column: column.value,
-        columnValue: columnValue.value,
-        fields,
-        ...(Object.keys(targetFields).length ? { targetFields } : {})
-      }
+    const request = pipeline.buildActionRequest(action.value, stepContext())
+    if (!request) {
+      dialog.error = 'Action is not executable.'
+      return false
     }
 
     dialog.submitting = true
     dialog.error = ''
     try {
-      const response = await resourceIoStore.runBatchRequests([request])
-      const failure = failureMessage(response)
-      if (failure) {
+      const { success, error } = await pipeline.dispatchActionRequests(request)
+      if (!success) {
         // Stay open with the message inline — the user keeps what they typed and
         // can correct it, which a dismissable toast would not allow.
-        dialog.error = failure
+        dialog.error = error
         return false
       }
 
       $q.notify({
         type: 'positive',
-        message: `${action.value?.label || action.value?.action || 'Action'} completed`,
+        message: `${actionLabelOf(action.value)} completed`,
         position: 'top'
       })
       close()
@@ -377,19 +290,4 @@ export function useAdditionalActionsDialog () {
     close,
     setOutcome
   }
-}
-
-/**
- * Extracts the first failure message from a batch response, or '' on success.
- * A batch can report success at the envelope level while an individual entry
- * failed, so both layers are checked.
- */
-function failureMessage (response) {
-  if (!response?.success) {
-    return response?.error || response?.message || 'Request failed.'
-  }
-  const entries = Array.isArray(response.data) ? response.data : []
-  const failed = entries.find((entry) => entry?.success === false)
-  if (!failed) return ''
-  return failed.error || failed.message || 'Request failed.'
 }

@@ -319,9 +319,14 @@ export function isTargetActive (target, { record, form, key } = {}) {
  * derived header exists on the resource. There is no auto-detection — the JSON
  * is authoritative.
  *
+ * `record` / `user` are optional and drive the same `from`/`value` SEEDING the
+ * target groups get (§7.2: `from` + `type` is an editable prefill, not a hidden
+ * copy). Omit them and every seed is '' — which is exactly the behaviour before
+ * seeding reached this group.
+ *
  * @returns {Object|null} null when the action collects nothing on the record
  */
-export function buildSourceFieldGroup (action, { headers, columnValue, optionsFor }) {
+export function buildSourceFieldGroup (action, { headers, columnValue, optionsFor, record = null, user = null }) {
   const configFields = Array.isArray(action?.fields) ? action.fields : []
   if (!configFields.length || !columnValue) return null
 
@@ -332,7 +337,13 @@ export function buildSourceFieldGroup (action, { headers, columnValue, optionsFo
     .map((field) => {
       const header = deriveActionFieldHeader(field.name, column, suffix, headers)
       if (!header) return null
-      return describeField(field, { address: header, header, optionsFor, mode: 'edit' })
+      return describeField(field, {
+        address: header,
+        header,
+        optionsFor,
+        mode: 'edit',
+        seed: prefillExpression(field.from ?? field.value, { record, user })
+      })
     })
     .filter(Boolean)
 

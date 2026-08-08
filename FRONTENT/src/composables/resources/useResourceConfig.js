@@ -2,7 +2,7 @@ import { computed } from 'vue'
 import { useAuthStore } from 'src/stores/auth'
 import { useRouteConfig } from './useRouteConfig'
 
-function findResourceConfig(auth, nameOrSlug) {
+export function findResourceConfig(auth, nameOrSlug) {
   if (!nameOrSlug) return null
   const resources = Array.isArray(auth.resources) ? auth.resources : []
   const queryClean = String(nameOrSlug).toLowerCase().trim().replace(/s$/, '')
@@ -76,91 +76,9 @@ export function useResourceConfig(resourceNameOverride) {
       }))
   })
 
-  const additionalActions = computed(() => {
-    const raw = activeConfig.value?.additionalActions
-    let parsed = []
-    if (Array.isArray(raw)) parsed = raw
-    else if (typeof raw === 'string' && raw) {
-      try { parsed = JSON.parse(raw.trim()) } catch { parsed = [] }
-    }
-    return parsed.map(normalizeAction).filter(Boolean)
-  })
-
-  function normalizeAction(a) {
-    if (!a || !a.action) return null
-    // WHITELIST — anything not copied here is dropped before any component sees
-    // it. Add new AdditionalActions keys HERE as well as to the authoring UI, or
-    // they will vanish silently (see the `targets` note below).
-    const base = {
-      action: a.action,
-      label: a.label || a.action,
-      icon: a.icon || '',
-      color: a.color || 'primary',
-      confirm: !!a.confirm,
-      // Optional dialog heading templates — `"{$outlet.Name} • {Code}"`.
-      // Presentational only; resolved client-side by `resolveRecordTemplate`.
-      title: a.title || '',
-      subtitle: a.subtitle === undefined ? undefined : a.subtitle
-    }
-    const kind = a.kind === 'navigate' ? 'navigate' : 'mutate'
-    if (kind === 'navigate') {
-      const nav = a.navigate || {}
-      return {
-        ...base,
-        kind,
-        navigate: {
-          target: nav.target || 'record-page',
-          pageSlug: nav.pageSlug || '',
-          resourceSlug: nav.resourceSlug || null,
-          scope: nav.scope || null
-        },
-        visibleWhen: normalizeVisibleWhen(a.visibleWhen)
-      }
-    }
-    const m = a.mutate || {}
-    const mutateBase = {
-      ...base,
-      kind,
-      column: m.column || a.column || 'Progress',
-      columnValue: m.columnValue || a.columnValue || '',
-      columnValueOptions: Array.isArray(m.columnValueOptions)
-        ? m.columnValueOptions
-        : (Array.isArray(a.columnValueOptions) ? a.columnValueOptions : []),
-      fields: Array.isArray(m.fields)
-        ? m.fields
-        : (Array.isArray(a.fields) ? a.fields : [])
-    }
-    // Multi-record targets (AQL_ACTION_SYSTEM.md §7). This normalizer rebuilds
-    // each action from a key WHITELIST, so anything not copied here is silently
-    // dropped before a component ever sees it — which is exactly how `targets`
-    // went missing while icon/color/label/visibleWhen all survived, making the
-    // FAB look correct while the dialog rendered only its source field.
-    //
-    // Passed through as authored: every target key is validated server-side
-    // against the trusted config, so re-deriving the shape here would only add a
-    // second place for the contract to drift.
-    const targets = Array.isArray(m.targets)
-      ? m.targets
-      : (Array.isArray(a.targets) ? a.targets : [])
-    if (targets.length) mutateBase.targets = targets
-
-    mutateBase.visibleWhen = normalizeVisibleWhen(a.visibleWhen)
-    return mutateBase
-  }
-
-  function normalizeVisibleWhen(v) {
-    if (v == null) return []
-    const arr = Array.isArray(v) ? v : [v]
-    const validOps = new Set(['eq', 'ne', 'in', 'nin', 'empty', 'notEmpty'])
-    return arr
-      .map((c) => {
-        if (!c || typeof c !== 'object' || !c.column) return null
-        const op = validOps.has(c.op) ? c.op : null
-        if (!op) return null
-        return { column: c.column, op, value: c.value }
-      })
-      .filter(Boolean)
-  }
+  const additionalActions = computed(() =>
+    normalizeAdditionalActions(activeConfig.value?.additionalActions)
+  )
 
   const permissions = computed(() => activeConfig.value?.permissions || {})
 
@@ -217,6 +135,100 @@ export function useResourceConfig(resourceNameOverride) {
     permissions,
     allowed
   }
+}
+
+/**
+ * Parses + normalizes a resource's raw `additionalActions` (an array, or the JSON
+ * string the sheet stores) into the action configs every consumer sees.
+ *
+ * Module-scope and exported deliberately: `useResourceConfig` needs it for the
+ * ACTIVE resource, but `additionalActionsPipeline` needs it for an ARBITRARY one
+ * (a page queuing a workflow action against another resource), and neither may
+ * grow its own copy of the whitelist below.
+ */
+export function normalizeAdditionalActions(raw) {
+  let parsed = []
+  if (Array.isArray(raw)) parsed = raw
+  else if (typeof raw === 'string' && raw) {
+    try { parsed = JSON.parse(raw.trim()) } catch { parsed = [] }
+  }
+  return parsed.map(normalizeAction).filter(Boolean)
+}
+
+function normalizeAction(a) {
+  if (!a || !a.action) return null
+  // WHITELIST — anything not copied here is dropped before any component sees
+  // it. Add new AdditionalActions keys HERE as well as to the authoring UI, or
+  // they will vanish silently (see the `targets` note below).
+  const base = {
+    action: a.action,
+    label: a.label || a.action,
+    icon: a.icon || '',
+    color: a.color || 'primary',
+    confirm: !!a.confirm,
+    // Optional dialog heading templates — `"{$outlet.Name} • {Code}"`.
+    // Presentational only; resolved client-side by `resolveRecordTemplate`.
+    title: a.title || '',
+    subtitle: a.subtitle === undefined ? undefined : a.subtitle
+  }
+  const kind = a.kind === 'navigate' ? 'navigate' : 'mutate'
+  if (kind === 'navigate') {
+    const nav = a.navigate || {}
+    return {
+      ...base,
+      kind,
+      navigate: {
+        target: nav.target || 'record-page',
+        pageSlug: nav.pageSlug || '',
+        resourceSlug: nav.resourceSlug || null,
+        scope: nav.scope || null
+      },
+      visibleWhen: normalizeVisibleWhen(a.visibleWhen)
+    }
+  }
+  const m = a.mutate || {}
+  const mutateBase = {
+    ...base,
+    kind,
+    column: m.column || a.column || 'Progress',
+    columnValue: m.columnValue || a.columnValue || '',
+    columnValueOptions: Array.isArray(m.columnValueOptions)
+      ? m.columnValueOptions
+      : (Array.isArray(a.columnValueOptions) ? a.columnValueOptions : []),
+    fields: Array.isArray(m.fields)
+      ? m.fields
+      : (Array.isArray(a.fields) ? a.fields : [])
+  }
+  // Multi-record targets (AQL_ACTION_SYSTEM.md §7). This normalizer rebuilds
+  // each action from a key WHITELIST, so anything not copied here is silently
+  // dropped before a component ever sees it — which is exactly how `targets`
+  // went missing while icon/color/label/visibleWhen all survived, making the
+  // FAB look correct while the dialog rendered only its source field.
+  //
+  // Passed through as authored: every target key is validated server-side
+  // against the trusted config, so re-deriving the shape here would only add a
+  // second place for the contract to drift.
+  const targets = Array.isArray(m.targets)
+    ? m.targets
+    : (Array.isArray(a.targets) ? a.targets : [])
+  if (targets.length) mutateBase.targets = targets
+
+  mutateBase.visibleWhen = normalizeVisibleWhen(a.visibleWhen)
+  return mutateBase
+}
+
+function normalizeVisibleWhen(v) {
+  if (v == null) return []
+  const arr = Array.isArray(v) ? v : [v]
+  const validOps = new Set(['eq', 'ne', 'in', 'nin', 'empty', 'notEmpty'])
+  return arr
+    .map((c) => {
+      if (!c || typeof c !== 'object' || !c.column) return null
+      const op = validOps.has(c.op) ? c.op : null
+      if (!op) return null
+      return { column: c.column, op, value: c.value }
+    })
+    .filter(Boolean)
 }
 
 export function isActionVisible(action, record) {

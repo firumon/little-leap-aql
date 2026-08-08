@@ -69,6 +69,7 @@ import { reactive, computed, toRaw, unref } from 'vue'
 import { useQuasar } from 'quasar'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceConfig } from './useResourceConfig'
+import { useAdditionalActionsPipeline } from './additionalActionsPipeline'
 // Low-level $ref helpers live in appHelpers.js (stateless utils, §2); re-exported
 // here so usePageState is the single import surface for consumers.
 import { batchRef, isBatchRef, textOrRef, normalizeCodeOrRef } from 'src/utils/appHelpers'
@@ -163,7 +164,13 @@ export function usePageState (strategy = {}) {
   const state = reactive({
     primaryKey: null,
     nodes: new Map(),
-    index: {}
+    index: {},
+    // Queued `executeAction` envelopes (see includeAdditionalAction). Kept
+    // OUTSIDE `nodes` on purpose: an action is not a record body, it carries no
+    // controls/children/options, and `defaultBuild` must be free to emit it
+    // AFTER every node request so a `$ref` to a record created in the same batch
+    // resolves. Entries are `{ key, resource, actionName, request }`.
+    pendingActions: []
   })
 
   // page-level UI meta (shared by Content + Action sections)
@@ -177,6 +184,9 @@ export function usePageState (strategy = {}) {
     // and reports it) — ResourceActions reads this to keep its FAB clear of the bar.
     formActionsHeight: 0
   })
+
+  // Route-following; `includeAdditionalAction` overrides the resource per call.
+  const actionPipeline = useAdditionalActionsPipeline()
 
   const hydrate = strategy.hydrate || defaultHydrate
   const build = strategy.build || defaultBuild
@@ -249,6 +259,9 @@ export function usePageState (strategy = {}) {
   function detachAll () {
     state.nodes = new Map()
     state.index = {}
+    // Queued actions belong to the same page lifecycle as the nodes they ride
+    // with — a `$ref` into a batch that no longer exists is worse than nothing.
+    state.pendingActions.splice(0)
   }
 
   function ensureNode (target, role) {
@@ -406,6 +419,100 @@ export function usePageState (strategy = {}) {
   }
 
   // ----------------------------------------------------------------------
+  // AdditionalActions — workflow actions queued INTO this page's batch
+  // ----------------------------------------------------------------------
+  // The popup path (`useAdditionalActions` -> AdditionalActionsDialog) dispatches
+  // an action on its own, immediately, against a record that already exists. This
+  // is the other half: a page that wants the action to travel WITH its own
+  // submission, so a record and the action stamping it either both land or
+  // neither does — and so the action can address a record this very batch is
+  // about to create, via `$ref`.
+  //
+  // The envelope itself is built by `additionalActionsPipeline`, which resolves
+  // the action config, the field schema, the `from`/`value` seeds and the payload
+  // buckets internally. Nothing about the executeAction wire format lives here.
+
+  /**
+   * Queues a workflow action onto this page's next `submit()` / `build()`.
+   *
+   * @param {string} actionName - the `AdditionalActions` key, e.g. 'Postpone'.
+   * @param {Object} [data]     - user values, addressed by short authored name
+   *        (`{ Comment: 'Late' }`), derived header, `'<targetKey>.<Column>'`, or a
+   *        nested target bag (`{ newVisit: { Date: '2026-01-04' } }`). Anything
+   *        omitted falls back to the field's configured seed.
+   * @param {Object} [options]
+   * @param {string} [options.resource] - defaults to this page's primary resource.
+   * @param {string} [options.role]     - node role, when the resource holds several.
+   * @param {string|Object} [options.code] - a concrete record code, or a `$ref`
+   *        from `batchRef(...)`. Omit and the code is resolved automatically:
+   *        the node's own `code` when editing an existing record, otherwise
+   *        `batchRef('<Resource>.latest.code')` — which is what makes
+   *        "create a record AND run an action on it" a single batch.
+   * @param {Object} [options.record]  - explicit source record for `$record.*`
+   *        prefills and `visibleWhen`-style seeding; defaults to the node's record.
+   * @param {string} [options.outcome] - overrides `columnValue` on a
+   *        multi-outcome action.
+   * @returns {Object|null} the queued request, or null when the action is unknown.
+   */
+  function includeAdditionalAction (actionName, data = {}, options = {}) {
+    const { resource, role, code, record, outcome } = options
+    const { name, role: r } = resolveTarget(resource || state.primaryKey, role)
+    if (!name) {
+      console.warn('[usePageState] includeAdditionalAction needs a resource — none resolved for:', actionName)
+      return null
+    }
+
+    // Read-only node lookup: queuing an action must never CREATE a node, or an
+    // otherwise-empty page would start building a create request for it.
+    const id = nodeIdFor(name, r)
+    const node = id ? state.nodes.get(id) : null
+
+    const resolvedCode = code !== undefined && code !== null && code !== ''
+      ? code
+      : (node?.code || batchRef(`${name}.latest.code`))
+
+    const request = actionPipeline.buildActionRequest(actionName, {
+      resource: name,
+      record: record || node?.record || null,
+      code: resolvedCode,
+      data,
+      outcome
+    })
+    if (!request) return null
+
+    // Keyed by resource + action so calling this twice for the same action
+    // UPDATES the queued envelope rather than running the action twice.
+    const key = `${name}::${actionName}`
+    const entry = { key, resource: name, actionName, request }
+    const existing = state.pendingActions.findIndex((e) => e.key === key)
+    if (existing >= 0) state.pendingActions.splice(existing, 1, entry)
+    else state.pendingActions.push(entry)
+
+    return request
+  }
+
+  /** Drops one queued action (or all of them when `actionName` is omitted). */
+  function excludeAdditionalAction (actionName = null, { resource } = {}) {
+    if (!actionName) {
+      state.pendingActions.splice(0)
+      return
+    }
+    const { name } = resolveTarget(resource || state.primaryKey)
+    const key = `${name}::${actionName}`
+    const index = state.pendingActions.findIndex((e) => e.key === key)
+    if (index >= 0) state.pendingActions.splice(index, 1)
+  }
+
+  /**
+   * The queued envelopes, in call order. `defaultBuild` appends these itself; a
+   * `strategy.build` override must append them explicitly or its page silently
+   * drops every queued action.
+   */
+  function additionalActionRequests () {
+    return state.pendingActions.map((entry) => entry.request)
+  }
+
+  // ----------------------------------------------------------------------
   // useNode — per-section reactive access
   // ----------------------------------------------------------------------
   // THE read accessor — the only supported way for a consumer to observe node state.
@@ -485,6 +592,10 @@ export function usePageState (strategy = {}) {
         requests.push(resourceCreateRequest(resource, node.record))
       }
     }
+    // Queued workflow actions go LAST, so a `$ref` naming a record this batch
+    // creates ('OutletVisits.latest.code') resolves against a row that already
+    // exists by the time GAS reaches the executeAction entry.
+    requests.push(...additionalActionRequests())
     return requests
   }
 
@@ -647,6 +758,10 @@ export function usePageState (strategy = {}) {
     updateRecord,
     removeRecord,
     selectOption,
+    // workflow actions queued into this page's batch (see §6.4 / §7 in PAGE_STATE.md)
+    includeAdditionalAction,
+    excludeAdditionalAction,
+    additionalActionRequests,
     // section helper
     useNode,
     // build / hydrate

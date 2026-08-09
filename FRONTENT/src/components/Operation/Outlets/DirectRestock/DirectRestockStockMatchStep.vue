@@ -110,7 +110,7 @@
 <script setup>
 import { computed } from 'vue'
 import AqlList from '../../../shared/AqlList.vue'
-import AqlGroupedList from "../../../shared/AqlGroupedList.vue";
+import AqlGroupedList from "../../../app/AqlGroupedList.vue";
 
 defineOptions({ name: 'DirectRestockStockMatchStep' })
 

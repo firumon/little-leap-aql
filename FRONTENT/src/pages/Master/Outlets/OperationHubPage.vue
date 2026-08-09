@@ -279,7 +279,7 @@ import ActionCommentDialog from '../../../components/shared/ActionCommentDialog.
 import AppDate from '../../../components/shared/AppDate.vue'
 import AqlList from '../../../components/shared/AqlList.vue'
 import ReloadButton from '../../../components/shared/ReloadButton.vue'
-import AqlGroupedList from "components/shared/AqlGroupedList.vue";
+import AqlGroupedList from "components/app/AqlGroupedList.vue";
 
 defineOptions({ name: 'OutletsOperationsHubPage' })
 

@@ -57,7 +57,7 @@
 
 <script setup>
 import { computed, useSlots, useAttrs } from 'vue'
-import AqlList from './AqlList.vue'
+import AqlList from '../shared/AqlList.vue'
 
 defineOptions({ name: 'AqlGroupedList', inheritAttrs: false })
 

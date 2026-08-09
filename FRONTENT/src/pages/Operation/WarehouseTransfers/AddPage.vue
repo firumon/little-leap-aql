@@ -207,7 +207,7 @@ import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useWarehouseTransfers } from '../../../composables/operation/warehouseTransfers/useWarehouseTransfers.js'
 import HeaderPanel from 'components/shared/HeaderPanel.vue'
 import StepProgressIndicator from 'components/shared/StepProgressIndicator.vue'
-import AqlGroupedList from 'components/shared/AqlGroupedList.vue'
+import AqlGroupedList from 'components/app/AqlGroupedList.vue'
 import AqlList from 'components/shared/AqlList.vue'
 import SectionDividerLabel from "components/shared/SectionDividerLabel.vue";
 

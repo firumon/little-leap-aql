@@ -1,5 +1,5 @@
 <template>
-  <div v-if="pageState?.meta.currentStep === 2" :class="gutterClass">
+  <div v-if="visible" :class="gutterClass">
     <SectionDividerLabel label="New Items" />
     <StockMatchGroups
       :items="newRows"
@@ -14,11 +14,13 @@
 
 <script setup>
 /**
- * Step 2b of the restock wizard: SKUs the outlet does not stock yet
- * (`outletQuantity <= 0`), so any quantity here opens a new line at the outlet.
+ * SKUs the outlet does not stock yet (`outletQuantity <= 0`), so any quantity
+ * here opens a new line at the outlet.
  *
- * Same layout and same handlers as `AdjustItems` — the split is purely which
- * half of the stock-match aggregate each card renders.
+ * Same layout, same handlers and the same resource-tier placement as
+ * `AdjustItems` — the split is purely which half of the stock-match aggregate
+ * each card renders. See that file for why the step gate is a prop rather than a
+ * direct `currentStep === 2` test.
  */
 import { computed, inject, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
@@ -27,11 +29,18 @@ import { useRestockStockMatch } from 'src/_ui/AQL/composables/Operation/OutletRe
 
 defineOptions({ name: 'OutletRestocksNewItems', inheritAttrs: false })
 
+const props = defineProps({
+  // Wizard step this card belongs to; null = no wizard, always rendered.
+  step: { type: [Number, String], default: null }
+})
+
 // Vertical rhythm follows the page's own gutter token (drilled down from
 // pageProps — AQL_PAGE_AND_SECTION_SYSTEM.md §1.3.4).
 const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 
 const pageState = inject('pageState', null)
+const visible = computed(() => props.step == null || Number(props.step) === (pageState?.meta.currentStep || 1))
+
 const { newRows, isDirect, setQuantity, adjustQuantity } = useRestockStockMatch()
 </script>

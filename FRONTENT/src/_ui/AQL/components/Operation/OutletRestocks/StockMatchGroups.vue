@@ -64,10 +64,12 @@
 
 <script setup>
 /**
- * Shared row layout for both step-2 cards (`AdjustItems`, `NewItems`), so the
+ * Shared row layout for both item cards (`AdjustItems`, `NewItems`), so the
  * existing-stock list and the new-stock list are literally the same control and
- * cannot drift apart. Page-private to `OutletRestocks/Add` — it is not a page
- * `contents:` entry, so `Content.vue` never resolves it (ARCHITECTURE RULES §8).
+ * cannot drift apart. Private to `OutletRestocks` — it sits beside its two
+ * consumers rather than under a page folder because they are shared by Add and
+ * Edit, but it is not a page `contents:` entry, so `Content.vue` never resolves
+ * it (ARCHITECTURE RULES §8).
  *
  * Purely presentational: quantities arrive as props and every change leaves as an
  * event, so the single source of truth stays in `useRestockStockMatch` → pageState.

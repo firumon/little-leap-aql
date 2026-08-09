@@ -1,4 +1,5 @@
-import { batchRef, timestampLabel } from 'src/utils/appHelpers'
+import { batchRef } from 'src/utils/appHelpers'
+import { toDateTime24 } from 'src/utils/dateHelpers'
 import { resourceBulkRequest } from 'src/composables/resources/usePageState'
 import { useAuth } from 'src/composables/core/useAuth'
 

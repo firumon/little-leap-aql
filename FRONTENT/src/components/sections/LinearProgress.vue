@@ -6,7 +6,7 @@
   >
     <SectionDividerLabel v-if="finalAttrs.title" :label="finalAttrs.title" />
 
-    <div class="aql-linear-progress__row row items-stretch q-px-sm">
+    <div class="aql-linear-progress__row row items-stretch">
       <div
         v-for="(item, index) in progressItems"
         :key="`${item.label}-${index}`"
@@ -45,7 +45,7 @@ import { evaluateProp } from 'src/composables/resources/useSectionResolver'
 import { resolveCssColor } from 'src/utils/colorHelpers'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 
-defineOptions({ name: 'SectionsLinearProgress', inheritAttrs: false })
+defineOptions({ name: 'SectionsLinearProgress', inheritAttrs: true })
 
 const props = defineProps({
   // Section-level divider label rendered above the progress row

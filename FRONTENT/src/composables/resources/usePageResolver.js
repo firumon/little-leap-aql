@@ -204,11 +204,11 @@ export function usePageResolver() {
       uiName: customUIName.value,
       gutter: 'xs',
       pageClass: '',
+      sectionPadding: 'sm',
+      sectionClass: '',
       contentPadding: 'sm',
       contentClass: '',
-      // Unwrapped: every other entry here is a plain value, and passing the ref
-      // itself trips Boolean prop validation downstream ("Expected Boolean, got
-      // Object"). Reading .value inside this computed keeps it reactive.
+      ignorePadding: ['PageHeader','ListSwitcher'],
       loading: unref(resourceRecord.loading)
     }
 

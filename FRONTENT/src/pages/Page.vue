@@ -17,6 +17,8 @@
           v-for="sec in visibleSectionsBeforeAction"
           :key="sec"
           :section="sec"
+          :class="(pageProps.sectionPadding && !(pageProps.ignorePadding || []).includes(sec)) ? ['q-px-' + pageProps.sectionPadding] : []"
+          :padding="pageProps.sectionPadding"
           v-bind="pageProps"
         />
 

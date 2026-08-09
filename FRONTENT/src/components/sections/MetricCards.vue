@@ -6,7 +6,7 @@
   >
     <SectionDividerLabel v-if="finalAttrs.title" :label="finalAttrs.title" />
 
-    <div class="aql-metrics__row row no-wrap items-stretch scroll-x q-px-sm">
+    <div class="aql-metrics__row row no-wrap items-stretch scroll-x">
       <div
         v-for="(metric, index) in metrics"
         :key="`${metric.label}-${index}`"
@@ -29,7 +29,7 @@ import { evaluateProp } from 'src/composables/resources/useSectionResolver'
 import { resolveCssColor } from 'src/utils/colorHelpers'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 
-defineOptions({ name: 'SectionsMetricCards', inheritAttrs: false })
+defineOptions({ name: 'SectionsMetricCards', inheritAttrs: true })
 
 const props = defineProps({
   // Section-level divider label rendered above the metrics row

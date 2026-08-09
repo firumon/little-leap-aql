@@ -992,3 +992,26 @@
   font-variant-numeric: tabular-nums;
   color: $ink-muted;
 }
+
+// ─── OutletVisits view-page sections (.aql-visit-*) ───────────────────────────
+//
+// The custom Sections under _ui/AQL/components/Operation/OutletVisits/ reuse the
+// framework detail-card grammar wholesale — `page-card aql-premium-gradient-card`
+// plus `.aql-detail-grid` / `.aql-detail-line` / `.aql-detail-key` /
+// `.aql-detail-val` / `.aql-detail-row`, exactly as `contents/ViewRecord.vue` does.
+// That is deliberate: a bespoke card shell is what made those sections read as
+// blurry and misaligned against their framework neighbours.
+//
+// So only ONE rule is genuinely new — the tel: anchor on OutletDetails. Everything
+// else is Quasar (`q-badge rounded`, `q-list separator`, `q-item`).
+// Those sections are `_ui/` override targets and carry no `<style>` block of their
+// own (ARCHITECTURE RULES §7), which is why even this one rule lives here.
+.aql-visit-link {
+  color: var(--q-primary);
+  text-decoration: none;
+  font-weight: 500;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}

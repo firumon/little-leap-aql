@@ -35,7 +35,7 @@
       :fields="FIELDS"
       :show-fields="SHOW_FIELDS"
       :hide-fields="HIDE_FIELDS"
-      :field-props="FIELD_PROPS"
+      :field-props="fieldProps"
       @update:field="onField"
     />
   </AqlDialog>
@@ -52,6 +52,9 @@ import { computed, inject, ref } from 'vue'
 import ResourceActionItem from 'components/actions/ResourceActionItem.vue'
 import FormRecord from 'components/contents/FormRecord.vue'
 import AqlDialog from 'components/shared/AqlDialog.vue'
+import { useFormFields } from 'src/composables/resources/useFormFields'
+import { useRecord } from 'src/composables/resources/useRecord'
+import { isPlanned } from 'src/_ui/AQL/composables/Operation/OutletVisits/useVisitProgress'
 
 defineOptions({ name: 'OutletVisitsResourceActionAdd', inheritAttrs: false })
 
@@ -62,10 +65,25 @@ defineOptions({ name: 'OutletVisitsResourceActionAdd', inheritAttrs: false })
 const FIELDS = ['OutletCode', 'Date', 'ProgressPlannedComment']
 const SHOW_FIELDS = ['ProgressPlannedComment']
 const HIDE_FIELDS = ['Progress', 'RespondDate']
-const FIELD_PROPS = { ProgressPlannedComment: { label: 'Comment' }, Date: { required: true } }
 
 const resourceConfig = inject('resourceConfig', null)
+const resourceRecord = inject('resourceRecord', null)
 const pageState = inject('pageState', null)
+
+// Relation pickers, already rendered through the resource's `Relations.labelHeader`
+// rule. Read rather than rebuilt so the OutletCode option labels stay identical to
+// every other form's — this override only NARROWS the list.
+const { crossRefOptions } = useFormFields('OutletVisits')
+
+// No store import: a `_ui/` component must reach data through the injected page
+// context or a composable (ARCHITECTURE RULES §3). The page already provides the
+// OutletVisits record set — this override only ever resolves for OutletVisits, so
+// `resourceRecord.records` IS the visit list. `useRecord` is the standalone fallback
+// for a mount outside `Page.vue`, where nothing is provided.
+const fallbackRecord = useRecord('OutletVisits')
+const visitRecords = computed(() =>
+  resourceRecord?.records?.value ?? fallbackRecord.records.value ?? []
+)
 
 const dialogOpen = ref(false)
 
@@ -78,6 +96,38 @@ const primary = pageState?.useNode(() => resourceName.value) || null
 const record = computed(() => primary?.record.value || {})
 
 const submitting = computed(() => pageState?.meta.submitting === true)
+
+// Outlets that already hold an open (active + PLANNED) visit. One planned visit per
+// outlet at a time is the scheduling rule: offering an outlet that already has one
+// would let a planner queue duplicates that Postpone/Complete then fight over.
+const bookedOutletCodes = computed(() => {
+  const booked = new Set()
+  for (const visit of visitRecords.value) {
+    if (!visit || !isPlanned(visit)) continue
+    if ((visit.Status || 'Active') !== 'Active') continue
+    if (visit.OutletCode) booked.add(String(visit.OutletCode))
+  }
+  return booked
+})
+
+const availableOutletOptions = computed(() =>
+  (crossRefOptions.value?.OutletCode || []).filter((option) => !bookedOutletCodes.value.has(String(option.value)))
+)
+
+// A computed rather than a module constant: the option list is data-derived and must
+// re-narrow as visits are created or settled. FormRecord reads `fieldProps` through its
+// own `resolvedFieldProps` computed (it does not watch it by reference), so a changing
+// identity here costs nothing — unlike `fields`/`defaultValues` above.
+const fieldProps = computed(() => ({
+  ProgressPlannedComment: { label: 'Comment' },
+  Date: { required: true },
+  OutletCode: {
+    options: availableOutletOptions.value,
+    hint: availableOutletOptions.value.length
+      ? 'Only outlets without an open planned visit are listed.'
+      : 'Every outlet already has an open planned visit.'
+  }
+}))
 
 function openDialog () {
   if (!pageState) return

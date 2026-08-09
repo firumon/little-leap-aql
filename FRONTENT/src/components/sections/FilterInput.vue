@@ -1,5 +1,5 @@
 <template>
-  <div class="filter-input-container" :class="'q-px-' + padding">
+  <div class="filter-input-container">
     <q-input
       v-model="filterTerm"
       v-bind="finalAttrs"
@@ -29,7 +29,6 @@ const props = defineProps({
   clearable: { type: [Boolean, Function], default: true },
   clearIcon: { type: [String, Function], default: 'cancel' },
   label: { type: [String, Function], default: '' },
-  padding: { type: [String, Function], default: 'sm' },
 })
 
 const attrs = useAttrs()

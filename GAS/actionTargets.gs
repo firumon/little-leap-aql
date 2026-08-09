@@ -216,24 +216,20 @@ function resolveActionToken(expr, ctx) {
   var parts = (expr || '').toString().split(':');
   var token = parts[0];
   var param = parts.length > 1 ? parts[1] : '';
+  var key = token.toLowerCase();
 
   var auth = (ctx && ctx.auth) || {};
   var user = auth.user || {};
 
-  switch (token) {
-    case '$userCode': return user.UserID || '';
-    case '$userName': return user.Name || user.UserID || '';
-    case '$userEmail': return user.Email || '';
-    case '$userRole': return resolveActionUserRole(user);
-    case '$userDesignation': return resolveActionUserDesignation(user);
-    case '$userRegion': return resolveActionUserRegion(auth);
+  switch (key) {
+    case '$usercode': return user.UserID || '';
+    case '$username': return user.Name || user.UserID || '';
+    case '$useremail': return user.Email || '';
+    case '$userrole': return resolveActionUserRole(user);
+    case '$userdesignation': return resolveActionUserDesignation(user);
+    case '$userregion': return resolveActionUserRegion(auth);
     case '$now': return Date.now();
-    // The 24-hour `YYYY-MM-DD HH:mm:ss` shape handleExecuteAction writes into
-    // `...At` and `RespondDate`. Use this, not `$now`, when a target seeds a
-    // date-time column that a human reads. Unlike its neighbour `$date:N` this
-    // takes NO offset param — it is always the current instant, and a `$dateTime:7`
-    // silently drops the 7.
-    case '$dateTime': return formatDateTime24();
+    case '$datetime': return formatDateTime24();
     case '$today': return actionDateOnly(0);
     case '$date': return actionDateOnly(Number(param) || 0);
     default:

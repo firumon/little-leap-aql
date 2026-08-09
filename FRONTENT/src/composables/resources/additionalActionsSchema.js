@@ -1,4 +1,5 @@
 import { resolveFieldComponent, resolveFieldType } from 'components/_fields/useFieldResolver'
+import { toDateTime24 } from 'src/utils/dateHelpers'
 import { evaluateConditionOp } from './useResourceConfig'
 
 /**
@@ -221,14 +222,21 @@ export function prefillExpression (expression, { record, user } = {}) {
   if (head === '$target' || head === '$field') return ''
 
   const [token, param] = expr.split(':')
-  switch (token) {
-    case '$userCode': return user?.code ?? user?.id ?? ''
-    case '$userName': return user?.name ?? ''
-    case '$userEmail': return user?.email ?? ''
-    case '$userRole': return user?.role ?? ''
-    case '$userDesignation': return user?.designation?.name ?? ''
-    case '$userRegion': return user?.accessRegion?.code ?? ''
+  // Lowercased, mirroring `resolveActionToken` (GAS/actionTargets.gs) and
+  // tokenEvaluator.js's TOKEN_INDEX: every token is case-insensitive, so `$dateTime`
+  // and `$datetime` both resolve on both sides of the wire.
+  switch (token.toLowerCase()) {
+    case '$usercode': return user?.code ?? user?.id ?? ''
+    case '$username': return user?.name ?? ''
+    case '$useremail': return user?.email ?? ''
+    case '$userrole': return user?.role ?? ''
+    case '$userdesignation': return user?.designation?.name ?? ''
+    case '$userregion': return user?.accessRegion?.code ?? ''
     case '$now': return Date.now()
+    // Editable prefill of a workflow stamp: without this a target field carrying
+    // `value: '$dateTime'` plus a `type` rendered BLANK in the dialog, then the server
+    // silently re-resolved it on submit — the value appeared out of nowhere.
+    case '$datetime': return toDateTime24(new Date())
     case '$today': return dateOnly(0)
     case '$date': return dateOnly(Number(param) || 0)
     default: return ''

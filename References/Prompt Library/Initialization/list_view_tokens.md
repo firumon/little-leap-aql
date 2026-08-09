@@ -48,6 +48,23 @@ others produces either an admin-invisible feature or a dropdown entry that silen
 > The `label` and `group` strings should match across (1)–(3) so admins and developers see the
 > same vocabulary. Never edit one side alone.
 
+> [!NOTE]
+> **A second, narrower grammar shares this vocabulary: action expressions.** An
+> `AdditionalActions` `from`/`value` seed is resolved by `resolveActionToken`
+> (`GAS/actionTargets.gs`, server-authoritative) and previewed by `prefillExpression`
+> (`FRONTENT/src/composables/resources/additionalActionsSchema.js`). Those two are a
+> **matched pair** with each other — change one, change the other — and both are
+> deliberately a SUBSET of the registry above: they need identity and clock tokens, not
+> the filter-comparison vocabulary. Adding a token *there* does not oblige you to add it
+> to the five list-view edits, but a token that belongs to both grammars (`$dateTime`)
+> must be registered in all five **plus** those two, or it resolves on one side of the
+> wire and blanks on the other.
+
+| Grammar | Client | Server | Consumers |
+| :--- | :--- | :--- | :--- |
+| Filter / `visibleWhen` | `tokenEvaluator.js` (`TOKENS`) | — (client-side only) | list views, action visibility |
+| Action expressions | `additionalActionsSchema.js` (`prefillExpression`, preview only) | `GAS/actionTargets.gs` (`resolveActionToken`, authoritative) | `from` / `value` target seeds |
+
 ---
 
 ## 3. Architecture You Must Understand Before Editing
@@ -200,7 +217,11 @@ These are settled decisions. Preserve them, and mention them when a user's reque
 6. **`contains` always forces strings**, whatever the declared pipeline. Substring matching on a
    coerced number is meaningless.
 7. **Token names are matched case-insensitively** so sheet authors can write `$startofmonth`.
-   Keep new names unique case-insensitively.
+   Keep new names unique case-insensitively. This holds on **all three** evaluators:
+   `parseToken` (`tokenEvaluator.js`) lowercases through `TOKEN_INDEX`, and both
+   `resolveActionToken` (`GAS/actionTargets.gs`) and `prefillExpression`
+   (`additionalActionsSchema.js`) lowercase their switch key. A token added to any of them
+   must therefore be registered **once, in one casing** — never as two sibling cases.
 8. **Pipeline names are validated at module load.** An unknown `COERCES` key throws on import. Keep
    that guard — a typo'd pipeline name otherwise surfaces only as a silently empty tab.
 9. **Filtering is client-side.** Counts reflect the rows already loaded, not the whole sheet. Do not

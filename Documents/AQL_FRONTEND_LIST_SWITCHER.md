@@ -314,6 +314,7 @@ including under `neq` / `not_in`.
 | Token | Resolves to | Column is compared as |
 | :--- | :--- | :--- |
 | `$now` | Current timestamp (13-digit ms) | epoch ms |
+| `$dateTime` | Current instant as `YYYY-MM-DD HH:mm:ss` (24-hour) — the shape GAS stamps into `...At` / `RespondDate`. Takes **no** `:N` offset | `YYYY-MM-DD HH:mm:ss` |
 | `$date[:N]` | Today as `YYYY-MM-DD` (or N-day offset: `$date:0` = today, `$date:1` = tomorrow, `$date:-1` = yesterday) | `YYYY-MM-DD` |
 | `$day` | Day of year, `1`-`366` | day of year |
 | `$month[:N]` | Current month as `"01"`-`"12"` (or N-month offset: `$month:0` = current, `$month:1` = next month, `$month:-1` = previous month) | zero-padded month |
@@ -326,6 +327,22 @@ including under `neq` / `not_in`.
 
 > ISO weeks run 1-53, not 1-52 — week 53 exists in years whose first Thursday falls late
 > (e.g. 2026-12-31 is week 53).
+
+> [!NOTE]
+> **`$dateTime` is a full instant, so `eq` against it effectively never matches** — the
+> seconds have already moved on. The useful comparisons are the ordered ones, which work
+> because the format sorts lexicographically: `lt $dateTime` means "already in the past".
+> For day-granularity buckets use `$date:N` or `$daysIn:N` instead. Its real job is the
+> **action expression** grammar — seeding a `...At` column from an `AdditionalActions`
+> target (§7.4 of `AQL_ACTION_SYSTEM.md`), where `$now`'s epoch ms would land an
+> unreadable number in a cell a human reads.
+>
+> Its coercion pipeline is **string-valued**, so it follows the `$date` family rather than
+> the epoch family on a blank or unparseable column: the NaN guard does not fire, the
+> column reads as `''`, and `lt`/`neq` therefore still match those rows. This is
+> deliberate consistency with `$date` / `$month`, not an oversight — see invariant 4 in
+> [list_view_tokens.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/list_view_tokens.md).
+> Pair it with a `notEmpty` condition when blanks must be excluded.
 
 #### 5.2.3. Relative-Day Tokens (Parameterised)
 

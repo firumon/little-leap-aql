@@ -105,6 +105,20 @@ export function toDateOnly(value) {
   return withDate(value, (date) => format(date, 'yyyy-MM-dd'), '')
 }
 
+/**
+ * 'YYYY-MM-DD HH:mm:ss' (24-hour) for the given value, or '' when unparseable.
+ *
+ * The shape GAS's `formatDateTime24` (sheetHelpers.gs) writes into the `...At`
+ * workflow stamps and `RespondDate`, so a client-resolved `$dateTime` and a
+ * server-resolved one are byte-identical. Local time, matching `parseAnyDate`'s
+ * literal-calendar reading — the server uses the script timezone, so the two agree
+ * only while the browser and the script share a zone. That is already true of every
+ * other date token here and is not a new assumption.
+ */
+export function toDateTime24(value) {
+  return withDate(value, (date) => format(date, 'yyyy-MM-dd HH:mm:ss'), '')
+}
+
 /** Adds whole days to the given value, returning a new Date (or null when unparseable). */
 export function addDays(value, amount) {
   return withDate(value, (date) => fnsAddDays(date, amount))

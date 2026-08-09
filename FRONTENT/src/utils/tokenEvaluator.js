@@ -36,6 +36,7 @@ import {
   startOfMonth,
   endOfMonth,
   toDateOnly,
+  toDateTime24,
   addDays,
   addMonths,
   dayOfYear,
@@ -57,6 +58,8 @@ export const COERCES = {
     const date = parseAnyDate(v)
     return date ? date.getTime() : NaN
   },
+  /** Any supported date shape → 'YYYY-MM-DD HH:mm:ss' (24-hour). */
+  dateTime24: (v) => toDateTime24(v),
   /** Any supported date shape → 'YYYY-MM-DD'. */
   dateOnly: (v) => toDateOnly(v),
   /** Any supported date shape → day of year, 1-366. */
@@ -96,6 +99,26 @@ export const TOKENS = {
     value: () => nowMs(),
     coerce: ['epoch'],
     coerceToken: ['number']
+  },
+  // The 24-hour `YYYY-MM-DD HH:mm:ss` shape GAS writes into the `...At` workflow
+  // stamps and `RespondDate`. Registered here so the client half of the action
+  // expression grammar recognises it — `resolveActionToken` (GAS/actionTargets.gs)
+  // is the server half, and the two must stay in sync (list_view_tokens.md §2).
+  //
+  // `$datetime`, `$dateTime` and `$DATETIME` all resolve: TOKEN_INDEX lowercases
+  // every key, so one registration covers every casing. `resolveActionToken` now
+  // lowercases its switch for the same reason.
+  //
+  // Takes NO `:N` offset, unlike its neighbour `$date:N` — it is always the current
+  // instant. Both sides land on a string, so `eq` against a live clock effectively
+  // never matches; the useful comparisons are the ordered ones (`lt $dateTime` is
+  // "already in the past"), which work because the shape sorts lexicographically.
+  $dateTime: {
+    label: 'Now (YYYY-MM-DD HH:mm:ss)',
+    group: 'Date & Time',
+    value: () => toDateTime24(new Date()),
+    coerce: ['dateTime24'],
+    coerceToken: ['text']
   },
   $date: {
     label: 'Date (YYYY-MM-DD)',

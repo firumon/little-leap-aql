@@ -18,48 +18,49 @@ Before staging or committing anything:
 
 ---
 
-## 2. Phase 2: Mandatory Granular Subtask Grouping of Changes
+## 2. Phase 2: Mandatory Hyper-Granular Atomic Commits (Single-Feature Grouping)
 
-> **CRITICAL RULE**: Group commits strictly on the basis of **Granular Subtasks / Work Units**.
-> Each commit MUST be a self-contained, atomic unit for one specific subtask or sub-feature, containing the implementation code (setup scripts, components, composables, GAS functions) **AND** its corresponding documentation/template updates (sheet structures, report formulas, component docs) together.
+> **CRITICAL RULE**: Group commits strictly on the basis of **Single-Feature Atomic Units**.
+> Each commit MUST be a hyper-granular, self-contained atomic unit for **EXACTLY ONE single feature, component, or subtask**. Never bundle multiple features or subtasks into a single broad domain bucket.
 >
-> **Task Isolation Rule**: If a session accomplishes multiple distinct subtasks or sub-features (even if part of the same overall directive or session), you MUST split them into **separate atomic commits for each distinct subtask**. Never lump multiple distinct subtasks into a single monolithic commit.
+> **Atomic Single-Feature Isolation Rule**:
+> * **Strict 1 Feature = 1 Commit**: If a session touches 3 distinct items (e.g., updating agent startup routing, updating skill specs, and registering a composable), you MUST create 3 separate atomic commit groups — NOT 1 combined "docs" or "codebase" group.
+> * **Unified Code + Docs per Feature**: Every atomic commit includes the implementation code (components, composables, setup scripts) **AND** its corresponding documentation/template updates (sheet structures, component docs, registries) for that exact feature together.
 
-### Example Scenario (Multi-Subtask Session Breakdown):
+### Example Scenario (Multi-Feature Breakdown):
 
-In a session implementing database additions, UI components, and backend stamp logic:
+In a session updating instructions, auth composables, component relocations, and custom UI pages:
 
-* **Subtask 1: Database Schema Expansion**:
-  - Code/Setup: `GAS/setupOperationSheets.gs`, `GAS/setupMasterSheets.gs`, `GAS/syncAppResources.gs` (headers & UIFields)
-  - Sheet Formulas: Report formula templates (`ConsumptionInvoice.md`, `OutletVisitHistory.md`, etc.) & `Sheet Formulas/Views/Outlet.md`
-  - Docs: `OPERATION_SHEET_STRUCTURE.md`, `MASTER_SHEET_STRUCTURE.md`
-  → Commit 1: `feat(schema): add RespondDate, DueDate, and InvoiceDueDays sheet columns`
+* **Group 1: Agent Startup Instructions Update**:
+  - Files: `AGENTS.md`, `CLAUDE.md`
+  → Commit 1: `docs(nexus): update GitNexus MCP tool syntax and analyze command in agent headers`
 
-* **Subtask 2: UI Field Type Component Registration**:
-  - Components: `FRONTENT/src/components/_fields/datetime/{Add,Edit,View}.vue`
-  - Resolvers & Mapping: `useFieldResolver.js`, `useFormFields.js`
-  - Docs: `FRONTENT/src/components/_fields/README.md`, `RESOURCE_COLUMNS_GUIDE.md`
-  → Commit 2: `feat(fields): register datetime field component and resolver aliases`
+* **Group 2: GitNexus Skill Specifications**:
+  - Files: `.claude/skills/gitnexus/*.md`
+  → Commit 2: `docs(skills): update GitNexus skill definitions for new MCP tool signatures`
 
-* **Subtask 3: Backend Workflow Stamp Formatting**:
-  - GAS Logic: `sheetHelpers.gs`, `resourceApi.gs`, `warehouseTransfers.gs`, `actionTargets.gs`
-  - Docs: `AQL_ACTION_SYSTEM.md`
-  → Commit 3: `feat(backend): format workflow stamps with user name and 24h datetime`
+* **Group 3: Auth Composable Registry**:
+  - Files: `useAuth.js`, `FRONTENT/src/composables/REGISTRY.md`
+  → Commit 3: `docs(composables): register useAuth in composables registry`
 
-| Commit Type | Scope / Category | Example Subtask Commit Group |
+* **Group 4: Component Relocation**:
+  - Files: `AqlGroupedList.vue` (moved to `app/`), `WarehouseTransfers/AddPage.vue`, `FRONTENT/src/components/REGISTRY.md`
+  → Commit 4: `refactor(components): relocate AqlGroupedList to components/app/`
+
+| Commit Type | Scope / Category | Example Atomic Single-Feature Commit Group |
 |---|---|---|
-| `feat` | Database schema addition | `feat(schema): add RespondDate, DueDate, and InvoiceDueDays sheet columns` |
-| `feat` | UI Component / Field system | `feat(fields): register datetime field component and resolver aliases` |
-| `feat` | Backend GAS logic | `feat(backend): format workflow stamps with user name and 24h datetime` |
-| `fix` | Bug fix with doc updates | `fix(ui): correct textarea field binding and update dialog docs` |
-| `refactor` | Code refactoring + updated specs | `refactor(pages): streamline form state resolution and update spec docs` |
-| `docs` | System prompt or protocol update | `docs(macp): update MACP discussion and simple english rules` |
+| `feat` | Single UI Component | `feat(fields): enable select search filtering dynamically for 15+ options` |
+| `feat` | Single Resource Custom UI | `feat(consumptions): add custom UI pages, boards, and wizard for OutletConsumptions` |
+| `refactor` | Single Page Refactor | `refactor(restocks): streamline OutletRestocks AddPage into thin Page wrapper` |
+| `docs` | Specific Protocol / Doc | `docs(nexus): update GitNexus MCP tool syntax in agent headers` |
+| `docs` | Registry Update | `docs(composables): register useAuth in composables registry` |
+| `style` | Specific CSS Utility Set | `style(ui): add subtle card gradient utilities and update custom UI spacing guide` |
 
 ### Rules for Grouping:
-1. **Granular Subtask Grouping**: Identify every distinct subtask completed in the session and group files strictly by subtask.
-2. **Unified Code + Docs per Subtask**: Include both code changes AND corresponding documentation/formula updates for that subtask in the exact same commit. Do NOT split docs into a separate commit.
-3. **No Monolithic Commits**: Never combine multiple distinct subtasks into a single commit just because they were done in the same session.
-4. **Multi-Subtask File Hunk Staging**: If a single file contains changes for multiple subtasks (e.g. `syncAppResources.gs` having schema UIFields edits AND action stamp config edits), stage ONLY the specific lines/hunks belonging to that subtask for its commit (via selective file staging or patch staging), leaving remaining edits for the next subtask commit.
+1. **Strict 1-to-1 Feature-to-Group Mapping**: Identify every distinct feature/subtask completed in the session and create a separate group for each one. Do NOT bundle distinct subtasks under a broad bucket.
+2. **Unified Code + Docs per Feature**: Include both implementation edits AND corresponding documentation/registry updates for that specific feature in the exact same commit. Do NOT split docs into a separate commit away from the code they describe.
+3. **No Monolithic or Broad-Bucket Commits**: Never combine multiple distinct features (e.g. 2 different resources or 3 different doc updates) into one group just because they were done in the same session.
+4. **Multi-Feature File Hunk Staging**: If a single file contains changes for multiple features (e.g. `REGISTRY.md` or `custom.scss`), stage ONLY the specific lines/hunks belonging to that feature for its commit, leaving remaining edits for subsequent commits.
 
 ---
 

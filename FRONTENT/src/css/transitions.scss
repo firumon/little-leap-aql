@@ -99,8 +99,90 @@
 .aql-card-pop-enter-from   { opacity: 0; transform: scale(0.97); }
 .aql-card-pop-leave-to     { opacity: 0; transform: scale(0.97); }
 
+// Book page turn. The element hinges on its LEFT edge — the spine — so the
+// outgoing panel swings shut toward it and the incoming one swings open out of
+// it, the way a page lifts off the stack underneath.
+//
+// `perspective()` is part of the element's own transform rather than a
+// `perspective` property on the container, deliberately: the property version
+// would make every ancestor container a containing block for fixed-position
+// descendants, which is exactly the trap Page.vue already avoids by keeping the
+// FAB outside `.aql-page-body`.
+//
+// Asymmetric timing and easing carry the physics — the leaving page accelerates
+// away (ease-in) while the arriving one decelerates into place (ease-out), so the
+// pair reads as one continuous motion instead of two mirrored ones. Stopping at
+// 58deg rather than a full 90 keeps the page readable throughout; at 90 it goes
+// edge-on and momentarily disappears, which reads as a flicker.
+//
+// The hinge is `left top`, NOT `left center`. These blocks are page-length — a
+// step's content measures ~1250-2100px against a ~620px viewport — so a centred
+// origin puts the pivot hundreds of pixels below the fold and the user watches a
+// tall column swing around a point they cannot see. Anchoring at the top-left
+// corner keeps the hinge on screen, which is what makes the motion legible as a
+// page rather than a squash.
+//
+// 1200px perspective is tuned to that same geometry: much higher and the
+// foreshortening vanishes on a ~354px-wide column; much lower and the near edge
+// of a 2000px-tall block magnifies wildly as it swings past the camera plane.
+.aql-page-turn-enter-active {
+  transition: opacity 300ms ease-out, transform 340ms cubic-bezier(0.22, 0.9, 0.28, 1);
+  transform-origin: left top;
+  backface-visibility: hidden;
+}
+.aql-page-turn-leave-active {
+  transition: opacity 220ms ease-in, transform 260ms cubic-bezier(0.55, 0.06, 0.68, 0.19);
+  transform-origin: left top;
+  backface-visibility: hidden;
+}
+.aql-page-turn-enter-from,
+.aql-page-turn-leave-to { opacity: 0; transform: perspective(1200px) rotateY(-58deg); }
+
+// ── Stagger container ────────────────────────────────────────────────────────
+// Every placeholder in a page owns its own <Transition>, so without this they
+// all fire on the same tick and a step change reads as one slab of content
+// swapping. This delays each direct child by its position, turning that slab
+// into a cascade — components leave and arrive one after another.
+//
+// Add `aql-stagger` to any container whose children animate; Page.vue already
+// puts it on the section body and the content wrapper, so pages get it for free.
+//
+// The delay is driven by a custom property rather than repeating the timings per
+// child, and the selectors match on `-enter-active` / `-leave-active` as a
+// SUBSTRING so this works for all five named transitions, not just one.
+//
+// Leaving cascades faster than entering: the outgoing content is on its way out
+// and should not hold the user up, while the incoming cascade is the part worth
+// seeing.
+//
+// The step must be a decent fraction of the transition's own duration (200ms) or
+// the elements overlap so heavily that the cascade reads as a single simultaneous
+// swap. 150ms leaves only a quarter of each animation overlapping the next, which
+// is what makes the sequence legible. Override per container when needed:
+//   <div class="aql-stagger" style="--aql-stagger-enter-step: 90ms">
+.aql-stagger {
+  --aql-stagger-enter-step: 150ms;
+  --aql-stagger-leave-step: 80ms;
+}
+
+.aql-stagger > *:nth-child(1)   { --aql-stagger-i: 0; }
+.aql-stagger > *:nth-child(2)   { --aql-stagger-i: 1; }
+.aql-stagger > *:nth-child(3)   { --aql-stagger-i: 2; }
+.aql-stagger > *:nth-child(4)   { --aql-stagger-i: 3; }
+.aql-stagger > *:nth-child(5)   { --aql-stagger-i: 4; }
+.aql-stagger > *:nth-child(6)   { --aql-stagger-i: 5; }
+.aql-stagger > *:nth-child(7)   { --aql-stagger-i: 6; }
+// Beyond eight the cascade stops reading as a sequence and just feels slow, so
+// everything further down shares the last step.
+.aql-stagger > *:nth-child(n+8) { --aql-stagger-i: 7; }
+
+.aql-stagger > [class*="-enter-active"] { transition-delay: calc(var(--aql-stagger-i, 0) * var(--aql-stagger-enter-step, 150ms)); }
+.aql-stagger > [class*="-leave-active"] { transition-delay: calc(var(--aql-stagger-i, 0) * var(--aql-stagger-leave-step, 80ms)); }
+
 // Respect users who prefer reduced motion — content still appears, just instantly.
 @media (prefers-reduced-motion: reduce) {
+  .aql-stagger > [class*="-enter-active"],
+  .aql-stagger > [class*="-leave-active"] { transition-delay: 0ms; }
   .step-fade-enter-active,
   .step-fade-leave-active,
   .aql-fade-slide-up-enter-active,
@@ -113,6 +195,8 @@
   .aql-fade-smooth-leave-active,
   .aql-card-pop-enter-active,
   .aql-card-pop-leave-active,
+  .aql-page-turn-enter-active,
+  .aql-page-turn-leave-active,
   .aql-page-fade-enter-active,
   .aql-page-fade-leave-active,
   .aql-list-item-move,

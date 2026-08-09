@@ -12,7 +12,9 @@
     <!-- Cross-fades the spinner into the resolved layout; children stagger via transitions.scss. -->
     <Transition v-else name="aql-page-fade" mode="out-in" appear>
       <!-- Generic section layout via Section placeholders -->
-      <div v-if="ready" key="body" class="aql-page-body" :class="'q-gutter-y-' + pageProps.gutter">
+      <!-- `aql-stagger` cascades the per-placeholder transitions instead of
+           letting them all fire on the same tick (transitions.scss). -->
+      <div v-if="ready" key="body" class="aql-page-body aql-stagger" :class="'q-gutter-y-' + pageProps.gutter">
         <Section
           v-for="sec in visibleSectionsBeforeAction"
           :key="sec"
@@ -24,7 +26,7 @@
 
         <AqlContentWrapper
           v-if="contents && contents.length"
-          :class="'q-px-' + pageProps.contentPadding + ' q-pt-' + pageProps.gutter + ' q-gutter-y-' + pageProps.gutter + ' ' + pageProps.contentClass"
+          :class="'aql-stagger q-px-' + pageProps.contentPadding + ' q-pt-' + pageProps.gutter + ' q-gutter-y-' + pageProps.gutter + ' ' + pageProps.contentClass"
           v-bind="contentWrapperProps"
         >
           <Content

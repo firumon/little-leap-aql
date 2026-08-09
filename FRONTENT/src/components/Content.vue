@@ -5,7 +5,7 @@
        one is still occupying layout. Keys are what let Transition tell the three
        branches apart — the component's key is its content identity, so a
        placeholder that re-resolves to a different content also animates. -->
-  <Transition name="aql-fade-slide-up" mode="out-in">
+  <Transition name="aql-page-turn" mode="out-in">
     <!-- Loading state while resolution is in progress -->
     <div v-if="!ready" key="loading" class="flex flex-center q-pa-md">
       <q-spinner-dots color="primary" size="32px" />

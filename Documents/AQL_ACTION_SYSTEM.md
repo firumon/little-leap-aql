@@ -202,6 +202,8 @@ Full contract, including the case-insensitivity, function-block and `inheritAttr
 | `FormActionSubmit.vue` | Base submit button. |
 | `FormActionReset.vue` | Base reset button. |
 | `FormActionCancel.vue` | Base cancel button — self-navigates via `nav.goBack()`. |
+| `FormActionNext.vue` | Base wizard "advance a step" button — dispatcher default `currentStep + 1`. |
+| `FormActionBack.vue` | Base wizard "go back a step" button — dispatcher default `max(1, currentStep - 1)`. |
 | `ResourceActions.vue` | **Unified bottom-right FAB cluster** (CRUD + AdditionalActions) with the 750ms-delayed `bounceIn` entrance. |
 | `ResourceActionItem.vue` | Generic per-item base — round FAB standalone, `q-fab-action` inside the menu. |
 | `ResourceActionsFab.vue` | Expandable menu trigger hosting the items via its default slot. |
@@ -300,7 +302,29 @@ the button still renders, so the misconfiguration is visible rather than silent.
 > [!NOTE]
 > A custom action key must be listed in `FormActions`' `actions` array to render a
 > button, and its handler must be exported from a `pageaction.js` modifier (it reaches
-> `PageAction` via `$attrs`, since only the three built-ins are declared props).
+> `PageAction` via `$attrs`, since only `submit`/`reset`/`cancel` are declared props).
+
+**Wizard step actions (`next` / `back`).** Both have a dispatcher default —
+`currentStep + 1` and `Math.max(1, currentStep - 1)` — so `actions: ['back', 'next']`
+drives a multi-step page with no handler at all, and neither key warns when unhandled.
+They are *not* declared props, so a page overrides them from a `pageaction.js` modifier
+exactly like a custom key:
+
+```javascript
+next: (name, { pageState }) => {
+  if (!pageState.getControlField('Orders', 'OutletCode')) {
+    return { valid: false, message: 'Select an outlet to continue.' }   // veto: step does not move
+  }
+  // return nothing → the built-in increment performs the move
+}
+```
+
+> [!IMPORTANT]
+> The step change lives in the **dispatcher**, not in `FormActionNext`/`FormActionBack`.
+> A button that moved the step on click would have already advanced by the time an async
+> handler's `{ valid: false }` resolved, making the veto useless — the same reason
+> `FormActionCancel` reports intent instead of navigating. A handler that moves the step
+> itself must therefore return `false` to suppress the built-in, or it will double-step.
 
 **Reset semantics (`onReset`)** — a silent discard, no navigation and no notification:
 * On `add`: `pageState.initResource(resource, { isPrimaryKey: true, reset: true })` swaps in
@@ -337,8 +361,9 @@ already-qualified name passes through.
 | `'submit'` | `FormActionSubmit` | `actions/FormActionSubmit.vue` |
 | `'reset'` | `FormActionReset` | `actions/FormActionReset.vue` |
 | `'cancel'` | `FormActionCancel` | `actions/FormActionCancel.vue` |
-| `'draft'` | `FormActionDraft` | *(none — tenant supplies it under `_ui/`)* |
-| `'FormActionDraft'` | `FormActionDraft` | same as above |
+| `'next'` | `FormActionNext` | `actions/FormActionNext.vue` |
+| `'back'` | `FormActionBack` | `actions/FormActionBack.vue` |
+| `'FormActionNext'` | `FormActionNext` | same as above |
 
 > [!NOTE]
 > The bar hosts `FormAction*` buttons only — there are no non-`FormAction` aliases.
@@ -371,7 +396,11 @@ actions: ['reset', 'submit']
 // Discard-and-leave instead of in-place reset
 actions: ['cancel', 'submit']
 
-// Custom, with a tenant-supplied FormActionDraft under _ui/
+// Multi-step wizard, driven by pageState.meta.currentStep. With no `next`/`back`
+// handler the dispatcher's built-in step move runs, so this works as-is.
+actions: ['back', 'next']
+
+// Custom key, with a tenant-supplied FormActionDraft under _ui/
 actions: ['cancel', 'draft', 'submit']
 
 // Object entries for one-off prop tweaks

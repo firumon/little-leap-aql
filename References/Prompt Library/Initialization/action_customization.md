@@ -155,6 +155,8 @@ export default { actions: ['cancel', 'submit'] }
 | `'reset'` | `FormActionReset` | `actions/FormActionReset.vue` |
 | `'submit'` | `FormActionSubmit` | `actions/FormActionSubmit.vue` |
 | `'cancel'` | `FormActionCancel` | `actions/FormActionCancel.vue` |
+| `'next'` | `FormActionNext` | `actions/FormActionNext.vue` |
+| `'back'` | `FormActionBack` | `actions/FormActionBack.vue` |
 | `'draft'` | `FormActionDraft` | *none — supply it under `_ui/`* |
 
 Only `FormAction*` buttons resolve here — `ResourceReports` is not mountable from
@@ -191,7 +193,15 @@ the action's own name, so one modifier export covers built-ins and custom keys a
 | declared prop | `submit` | `pageState.submit()` (or `pageState.run()` on an action page) |
 | declared prop | `reset` | `onReset()` — silent discard + re-seed/re-hydrate |
 | declared prop | `cancel` | `nav.goBack()` |
+| `$attrs` | `next` | `pageState.meta.currentStep + 1` (wizard step) |
+| `$attrs` | `back` | `Math.max(1, pageState.meta.currentStep - 1)` |
 | `$attrs` | any custom key (`nextStep`, `saveDraft`, …) | `console.warn` when no handler is supplied |
+
+`actions: ['back', 'next']` therefore drives a multi-step page with no handler at all.
+Supply a `next` handler to validate: return `{ valid: false, message }` to veto the step,
+or nothing to let the built-in increment run. The step move lives in the dispatcher, not
+in the button — a self-moving button would advance before an async veto resolved. A
+handler that moves the step itself must return `false` or it will double-step.
 
 Handler signature: `(actionName, ctx) => result`, `ctx = { pageState, resourceConfig, resourceRecord, nav, payload }`.
 Handlers are awaited. Return values:

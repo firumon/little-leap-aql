@@ -163,13 +163,19 @@ function defaultNavigate (code) {
 //   4. Run the built-in default for submit/reset/cancel; dispatch a custom action
 //      only when its handler actually produced requests/build.
 //
-const BUILT_IN_ACTIONS = ['submit', 'reset', 'cancel']
+// Actions the dispatcher can complete on its own when no handler is supplied.
+// `next`/`back` are wizard step moves: they have a default but NOT a declared
+// prop, so a page overrides them through $attrs like any other custom key.
+const BUILT_IN_ACTIONS = ['submit', 'reset', 'cancel', 'next', 'back']
 
-// Built-ins are declared props; custom keys ride in on $attrs. Reading each from its
+// The subset of built-ins that are also declared props above. Everything else —
+// `next`, `back`, and any tenant key — rides in on $attrs. Reading each from its
 // own source keeps `actions: ['reset', 'nextStep', 'submit']` working from a single
 // modifier export without a custom key ever shadowing a declared prop.
+const HANDLER_PROPS = ['submit', 'reset', 'cancel']
+
 function resolveHandler (actionName) {
-  const source = BUILT_IN_ACTIONS.includes(actionName) ? props[actionName] : attrs[actionName]
+  const source = HANDLER_PROPS.includes(actionName) ? props[actionName] : attrs[actionName]
   return typeof source === 'function' ? source : null
 }
 
@@ -212,6 +218,16 @@ async function handleAction (actionName, extraPayload = null) {
       return
     case 'cancel':
       nav.goBack()
+      return
+    // Wizard step moves. Owned here rather than by FormActionNext/Back so a page's
+    // own handler can validate and veto BEFORE the step changes — a button that
+    // moved the step itself would have already advanced by the time the veto
+    // resolved. `back` floors at 1 so the bar may render it unconditionally.
+    case 'next':
+      if (pageState) pageState.meta.currentStep = (pageState.meta.currentStep || 1) + 1
+      return
+    case 'back':
+      if (pageState) pageState.meta.currentStep = Math.max(1, (pageState.meta.currentStep || 1) - 1)
       return
     default:
       // Custom action whose handler produced a dispatchable payload. Without one,

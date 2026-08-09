@@ -886,12 +886,118 @@ Every resolver keys its scan on a joined string for exactly this reason.
 
 ---
 
-## 10. Styling Contract
+## 10. Styling & Form/Wizard Rules
 
+* **No Direct Store or Service Imports in Custom UI (`src/_ui/`)** — Components under
+  `_ui/{Ui}/components/` and composables under `_ui/{Ui}/composables/` MUST NOT import a
+  Pinia store (`useAuthStore`, `useDataStore`, `useResourceIoStore`, …) or a service
+  module directly. Everything a Custom UI file needs — user identity, region access,
+  resource records, form state — is already reachable through a Core Framework
+  composable (`useAuth()`, `useRecord()`) or an injected page context (`pageState`,
+  `resourceConfig`, `resourceRecord`). Reaching past those into a store couples a tenant
+  override to internal state shape that is free to change underneath it; see
+  ARCHITECTURE RULES §5.
+* **Global User Identity & Region Access (`useAuth()`)** — [`src/composables/core/useAuth.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/core/useAuth.js)
+  is the single authorized read surface for the signed-in user. It returns
+  `{ user, isAuthenticated, logout, hasRole(roleName), hasRegionAccess(regionCode) }`,
+  where `user` is a computed `{ name, email, id, role, roles, designation,
+  accessRegion, avatar }` (or `null` when signed out). A Custom UI component needing
+  `user.value.name`, `user.value.email`, `user.value.accessRegion`, or a
+  `hasRegionAccess(regionCode)` / `hasRole(roleName)` check calls `useAuth()` — never
+  `useAuthStore()` and never a raw read of session data. See the composable registry entry
+  in [composables/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/REGISTRY.md).
 * **No `<style>` block in any resolver-backed component** — `sections/`, `contents/`,
   `actions/`, `abstract/`, and every `_ui/` override of one. These are override targets: a
   tenant `.vue` override cannot inherit a scoped style, so scoped CSS silently breaks the
   override contract.
+* **Unified Card Border Radius (`$r-md`)** — All page cards (`.page-card`), header panels (`.brand-header-card`), content cards (`.aql-premium-card`, `.aql-premium-gradient-card`, `.aql-premium-gradient-form`), and report cards (`.aql-report-action-card`) share the `$r-md` radius token from [`quasar.variables.scss`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/css/quasar.variables.scss) (currently 14px, labelled "standard cards"). Mixing different radii (e.g. a 6px header above 14px cards) on the same page is strictly forbidden. Use the **token**, never a literal — retuning the app's card corner must stay a one-line change.
+* **Dynamic Page Gutter Spacing** — A custom `_ui/` content or section component must
+  **never** hardcode a static vertical gutter class (`q-gutter-y-md`, `q-gutter-y-lg`, …).
+  It reads `gutter` off `$attrs` and builds the class from it, so the component inherits
+  whatever vertical rhythm the page is configured with.
+
+  `gutter` reaches the component as part of `pageProps`, which `Page.vue` drills through
+  the whole placeholder chain (`AQL_PAGE_AND_SECTION_SYSTEM.md` §1.3.4). `Page.vue` already
+  applies `q-gutter-y-{pageProps.gutter}` to `.aql-page-body` and to the content wrapper;
+  a component that hardcodes its own scale visibly falls out of step with the cards
+  stacked above and below it.
+
+  **Standard pattern:**
+
+  ```javascript
+  import { computed, useAttrs } from 'vue'
+
+  const attrs = useAttrs()
+  const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
+  ```
+
+  ```html
+  <div :class="gutterClass">
+    <!-- section cards / form fields -->
+  </div>
+  ```
+
+  `'sm'` is the fallback for standalone use; when mounted through a page the drilled
+  `pageProps.gutter` (default `'xs'`, see `usePageResolver.js`) wins. The inline form
+  `:class="'q-gutter-y-' + ($attrs.gutter || 'sm')"` is equivalent and fine for a one-off,
+  but prefer the computed when more than one container in the file needs it.
+
+  Two things to keep in mind:
+  * **Do not add `v-bind="$attrs"` to the root just to get `gutter` through.** These are
+    drill-path components: `pageProps` carries object-valued keys such as `PropsPageHeader`,
+    which attribute fallthrough would serialise onto the DOM as
+    `propspageheader="[object Object]"` (ARCHITECTURE RULES §8, and §8.4 above). Keep
+    `inheritAttrs: false` and read the value via `useAttrs()`.
+  * Quasar's `q-gutter-y-*` works by putting a negative top margin on the container and a
+    matching top margin on each child, so a `q-card-section` using it sits slightly tighter
+    at the top than one spaced with plain margins. That is the intended mechanism — it is
+    the same one `.aql-page-body` uses — but do not combine it with per-child `q-mb-*` on
+    the same container, or the two spacing systems fight.
+* **Exclusive Base Field Control Usage** — Every form field in a custom UI component, form,
+  or wizard MUST use a control from
+  [`src/components/_fields`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_fields)
+  (`FieldSelectAdd`, `FieldSelectEdit`, `FieldTextAdd`, `FieldNumberAdd`,
+  `FieldTextareaAdd`, `FieldDateAdd`, …). Hand-rolling a raw `q-input` or `q-select` inside
+  a component template is **strictly forbidden** — including "just this one small field".
+
+  The `_fields` controls are where per-type behaviour is centralised: the `use-input`
+  threshold below, `emit-value`/`map-options` defaults, option filtering, mask and
+  re-seeding rules, and the tenant override surface. A hand-rolled control silently opts
+  that field out of all of it, and the divergence only surfaces later as a field that
+  behaves unlike every other field on the page.
+
+  Need different behaviour? Pass it through `:config` (which is spread onto the underlying
+  Quasar control), or override the `_fields` component under `_ui/` — never bypass it.
+* **QSelect Filter / `use-input` Threshold (≥ 15 Options)** — Search filtering on a select is
+  enabled only once the list is long enough to warrant it. `select/Add.vue` computes this
+  centrally: `use-input` is on when `options.length >= 15`, and `input-debounce` plus the
+  `@filter` listener are attached only in that case. Below the threshold the control renders
+  as a plain dropdown — no focused text input, no soft keyboard covering the list being
+  picked from. An explicit `config.useInput` boolean overrides the count in either direction.
+  Because every select routes through `_fields` (see the rule above), this is a single edit
+  for the whole app; do not re-implement the threshold in a component.
+* **Form & Wizard Styling** — No inline styles, `<style>` blocks, or resource-specific CSS selectors. Use base controls from `src/components/_fields`, Quasar mobile-first grid utilities (`row`, `col-*`), shared transition classes (`fade-slide`, `step-fade`), and reusable CSS rules in `src/css/custom.scss`.
+* **Wizard `PageAction` Navigation & Sticky Bar** — A multi-step wizard drives its sticky
+  bottom bar through a `PageAction.js` action modifier (§7.1), not a bespoke footer. The
+  modifier exposes a `get actions()` getter so the button set can change with
+  `pageState.meta.currentStep`, and back/next mount the framework base buttons —
+  `FormActionBack.vue` / `FormActionNext.vue` in `src/components/actions/` — rather than
+  hand-rolled `q-btn`s:
+
+  ```javascript
+  // _ui/AQL/components/Operation/OutletRestocks/Add/PageAction.js
+  export default {
+    get actions () {
+      return pageState.meta.currentStep < lastStep ? ['back', 'next'] : ['back', 'submit']
+    }
+  }
+  ```
+* **Single Source of Truth for Form/Wizard State** — A form or wizard field reads and
+  writes its value directly through `pageState` (e.g.
+  `pageState.children('OutletRestockItems')`), never through a parallel local `ref`,
+  a mirrored map, or a watcher that syncs one into the other. `pageState` is already
+  reactive and already the value every `PageAction` handler and submit path reads from
+  (§4.2); a second copy is a second source of truth that can drift from it.
 * Shared rules go in
   [`src/css/custom.scss`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/css/custom.scss) as a
   named class. Existing families: `.aql-form-actions-*`, `.aql-resource-action-*`,

@@ -105,7 +105,7 @@
 }
 
 .aql-report-action-card {
-  border-radius: 16px;
+  border-radius: $r-md;
   border-color: var(--aql-border, #e2e8f0);
   background: rgba(255, 255, 255, 0.92);
   animation: report-action-rise-in 280ms ease-out both;
@@ -373,8 +373,12 @@
 }
 
 // Premium UI Card layouts
+//
+// Every card family below shares $r-md (quasar.variables.scss — "standard cards"),
+// so a PageHeader, a form card and a view card stack as one surface family rather
+// than three. Change the token, not the individual rules.
 .aql-premium-card {
-  border-radius: 16px;
+  border-radius: $r-md;
   border: 1px solid #e2e8f0;
   background: #ffffff;
   overflow: hidden;
@@ -382,10 +386,44 @@
 }
 
 .brand-header-card {
-  border-radius: 6px !important;
+  border-radius: $r-md !important;
   border: 1px solid var(--q-primary-light, #e0f2fe) !important;
   background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%) !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02) !important;
+}
+
+// ── Subtle card gradients ────────────────────────────────────────────────────
+// A tint family for giving cards in the same stack a semantic identity without
+// the weight of a coloured border or header band: each fades a near-white tint
+// down to pure white, so text contrast is unaffected and several can sit
+// together without competing. Compose with `.aql-premium-card` when a border is
+// also wanted — these set background and radius only.
+//
+// All five share $r-md with every other card family above; `!important` is
+// needed because Quasar's own `.q-card` radius would otherwise win.
+.aql-card-gradient-subtle {
+  border-radius: $r-md !important;
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.aql-card-gradient-emerald {
+  border-radius: $r-md !important;
+  background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%);
+}
+
+.aql-card-gradient-blue {
+  border-radius: $r-md !important;
+  background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
+}
+
+.aql-card-gradient-amber {
+  border-radius: $r-md !important;
+  background: linear-gradient(180deg, #fffbeb 0%, #ffffff 100%);
+}
+
+.aql-card-gradient-purple {
+  border-radius: $r-md !important;
+  background: linear-gradient(180deg, #faf5ff 0%, #ffffff 100%);
 }
 
 .bg-primary-light {
@@ -555,14 +593,14 @@
 .aql-tab--active-grey      { background: #f1f5f9;                  color: #64748b !important; font-weight: 600 !important; }
 
 .page-card {
-  border-radius: 16px;
+  border-radius: $r-md;
   border-color: var(--aql-border);
   background: rgba(255, 255, 255, 0.95);
   animation: rise-in 280ms ease-out both;
 }
 
 .aql-premium-gradient-card {
-  border-radius: 6px !important;
+  border-radius: $r-md !important;
   border: 1px solid var(--aql-border, #d0def0) !important;
   background: linear-gradient(135deg, #ffffff 0%, #f7f9fc 50%, #fbf6e6 100%) !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02) !important;
@@ -575,7 +613,7 @@
   =========================================
 */
 .aql-premium-gradient-form {
-  border-radius: 6px !important;
+  border-radius: $r-md !important;
   border: 1px solid var(--aql-border, #d0def0) !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02) !important;
 

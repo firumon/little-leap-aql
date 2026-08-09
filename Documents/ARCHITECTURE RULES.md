@@ -1,4 +1,4 @@
-﻿# AQL Frontend Architecture Rules (STRICT)
+# AQL Frontend Architecture Rules (STRICT)
 
 ---
 

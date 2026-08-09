@@ -1,5 +1,6 @@
-import { batchRef } from 'src/utils/appHelpers'
+import { batchRef, timestampLabel } from 'src/utils/appHelpers'
 import { resourceBulkRequest } from 'src/composables/resources/usePageState'
+import { useAuth } from 'src/composables/core/useAuth'
 
 /**
  * OutletRestocks › Add › PageAction — JS modifier (tier 2: resource + page).
@@ -25,6 +26,10 @@ import { resourceBulkRequest } from 'src/composables/resources/usePageState'
 export default (props, { pageState, resourceConfig }) => {
   const parent = pageState.useNode('OutletRestocks')
   const itemEntries = parent.children('OutletRestockItems')
+  // Safe outside setup: `useAuth` only reaches Pinia stores and statically
+  // imported Quasar plugins — it calls no `inject()`. `user` stays a computed,
+  // so reading it at submit time gives the live session user.
+  const { user } = useAuth()
 
   const step = () => pageState.meta.currentStep
   const mode = () => pageState.getControlField('OutletRestocks', 'RestockMode') || 'STANDARD'
@@ -89,10 +94,19 @@ export default (props, { pageState, resourceConfig }) => {
       if (!resourceConfig?.allowed(permission)) return { valid: false, message: 'You are not allowed to submit this restock request.' }
 
       // The comment is written straight onto the node by `SubmitOptions.vue`, so
-      // it is already in the payload — only Progress is decided here.
+      // it is already in the payload. Progress plus the submission stamps are
+      // decided here — the stamps are set under the hood alongside the comment,
+      // never exposed as form fields, so they cannot be back-dated by the user.
+      //
+      // A draft is not a submission, so it gets neither stamp: leaving them empty
+      // is what lets a later real submit record when it actually happened.
       pageState.setFields('OutletRestocks', {
         Progress: draft ? 'DRAFT' : (direct ? 'APPROVED' : 'PENDING_APPROVAL'),
-        Status: 'Active'
+        Status: 'Active',
+        ...(draft ? {} : {
+          ProgressSubmittedAt: toDateTime24(new Date()),
+          ProgressSubmittedBy: user.value?.name || user.value?.email || ''
+        })
       })
       if (draft) return { successMsg: 'Restock request saved as draft.' }
       if (!direct) return { successMsg: 'Restock request submitted.' }

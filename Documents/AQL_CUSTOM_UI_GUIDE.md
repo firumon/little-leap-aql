@@ -161,6 +161,27 @@ Reach for `inject()`/`ref()` inside one of these only when every caller is a com
 Prefer pure functions of a record: they are testable without mounting anything, and they
 stay usable from the page contract.
 
+> [!IMPORTANT]
+> **All resource-specific business logic belongs under `_ui/`.** Workflow rules, progress
+> predicates, domain flows, gate predicates, and any other logic that is about *one
+> resource* lives inside `_ui/{Ui}/composables/{Scope}/{Resource}/use{Feature}.js` — never
+> in a framework composable under `src/composables/`. Only **core infrastructural
+> concerns** — auth, `resourceIO`, routing, and the generic data stores — belong outside
+> `_ui/`; those stay generic and must never hardcode a resource name or scope
+> (ARCHITECTURE RULES §3). Consumers (page contracts, JS modifiers, action handlers,
+> content/section/header components) import these helpers from `_ui/`, keeping a single
+> source of truth for "what can this record do right now?"
+>
+> **When taking code into `_ui/`, extract only the required helper functions.** Move the
+> specific predicate / rule / flow into a new `_ui/` composable rather than relocating a
+> whole unused legacy file wholesale. Copy the exact functions a consumer needs, wire them
+> as named pure exports, and leave the undesired remainder behind. Extracting one
+> progress predicate — e.g. `restockEditableProgress(progress)` deciding whether a restock
+> may be edited — is the canonical shape: the FAB gate
+> (`ResourceActionEdit.js` → `show`), the submission veto (`Edit/PageAction.js` →
+> `submit()`), and the header read-only banner (`EditRestockHeader.vue` → `isEditable`)
+> should all read that one predicate, never re-derive it.
+
 ---
 
 ## 3. The 10-Tier Lookup

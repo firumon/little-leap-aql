@@ -85,6 +85,7 @@ Use ONLY when explicitly asked to perform a comprehensive code review against ar
 Use when overriding or creating custom section or sub-components for any resource scope (master, operation, or Accounts)
 (e.g., custom record card, custom details view, custom form, custom child layout, custom loading/empty states).
 - Read:
+  - `Documents/AQL_CUSTOM_UI_GUIDE.md` — **start here**: the operational guide to `src/_ui/` — folder layout, path-segment transformation, the shared 10-tier lookup, Vue override vs JS modifier, page contracts, `Props<Identity>` blocks, reactivity/styling contracts, and troubleshooting. The subsystem specs below are the per-paradigm detail.
   - `Documents/AQL_PAGE_AND_SECTION_SYSTEM.md`
   - `Documents/AQL_CONTENT_CUSTOMIZATION_SYSTEM.md`
   - `Documents/AQL_VIEW_SYSTEM.md` — when customizing View content (parent/child/column overrides, scope rules, JS modifier API)

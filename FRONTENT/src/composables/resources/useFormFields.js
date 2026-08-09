@@ -354,5 +354,9 @@ export function useFormFields(resourceName) {
       }))
   })
 
-  return { formFields, mapField }
+  // `crossRefOptions` is exposed so a custom UI can NARROW a relation picker without
+  // re-deriving its option shape. The `labelHeader` rendering (`Name (Code)`, parent
+  // paths, templates) lives here; a caller that rebuilt the list itself would drift
+  // from it the moment a Relations config changed. Filter the exposed array instead.
+  return { formFields, mapField, crossRefOptions: crossRefOptionsMap }
 }

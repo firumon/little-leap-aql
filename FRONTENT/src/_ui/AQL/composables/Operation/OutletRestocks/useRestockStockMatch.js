@@ -22,6 +22,14 @@ const CHILD = 'OutletRestockItems'
 const PARENT = 'OutletRestocks'
 
 const text = (value) => String(value ?? '').trim()
+// SKU codes reach this file from three independent sources — the SKUs sheet, the
+// outlet/warehouse storage rows, and the restock's own child lines — so they are
+// only ever compared through this normalizer. Matching them raw let a difference
+// in case or padding hide an existing line: the lookup missed it, `+` opened a
+// SECOND line for the same SKU, and from then on the card displayed one line's
+// quantity while the buttons edited the other's, leaving a line the UI could no
+// longer reach but the payload still carried.
+const key = (value) => text(value).toLowerCase()
 const num = (value) => {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : 0
@@ -61,14 +69,20 @@ export function useRestockStockMatch () {
     return totals
   }
 
-  // Quantities keyed by SKU, read live off pageState. Deactivated rows count as
-  // zero so a soft-deleted line renders as "not requested" rather than lingering.
+  // Quantities keyed by NORMALIZED SKU, read live off pageState. Deactivated rows
+  // count as zero so a soft-deleted line renders as "not requested" rather than
+  // lingering.
+  //
+  // Summed, not assigned. While duplicate lines for one SKU exist, assignment made
+  // the last one silently win, so the card displayed a number that was not what the
+  // payload would send — and the buttons, which edit the FIRST match, appeared dead
+  // because their writes landed on a line nothing was reading.
   const quantities = computed(() => {
     const totals = {}
     childEntries.value.forEach((entry) => {
       if (entry._action === 'deactivate') return
-      const sku = text(entry.data.SKU)
-      if (sku) totals[sku] = num(entry.data.Quantity)
+      const sku = key(entry.data.SKU)
+      if (sku) totals[sku] = (totals[sku] || 0) + num(entry.data.Quantity)
     })
     return totals
   })
@@ -91,7 +105,7 @@ export function useRestockStockMatch () {
       const variantLabel = (info.variantValues || []).filter(Boolean).join(' / ')
       const outletQuantity = outletQuantities.value[sku] || 0
       const warehouseQuantity = warehouseQuantities.value[sku] || 0
-      const restockQuantity = quantities.value[sku] || 0
+      const restockQuantity = quantities.value[key(sku)] || 0
       return {
         SKU: sku,
         productCode: text(info.productCode) || 'UNGROUPED',
@@ -119,40 +133,66 @@ export function useRestockStockMatch () {
     return (group?.items || []).reduce((sum, row) => sum + num(row[key]), 0)
   }
 
-  // Index across ALL entries (deactivated included) so an existing line that was
-  // soft-deleted is restored rather than duplicated.
-  function entryIndex (sku) {
-    return childEntries.value.findIndex((entry) => text(entry.data.SKU) === text(sku))
+  // EVERY entry for this SKU (deactivated included, so a soft-deleted line is
+  // restored rather than duplicated), lowest index first. Duplicates should not
+  // exist — but when they do, the writer below has to fold them back into one
+  // line instead of silently editing whichever one it happened to find first.
+  function matchingEntries (sku) {
+    const target = key(sku)
+    return childEntries.value.filter((entry) => key(entry.data.SKU) === target)
+  }
+
+  // Zero means "not requested". A persisted line must be soft-deleted so GAS
+  // deactivates it; a line only ever held in this form is simply dropped.
+  //
+  // Addressed by entry IDENTITY, not by a captured index: removing a line splices
+  // the bucket, which would shift every index captured before it. usePageState
+  // documents entry identity as stable across reads, so indexOf is the supported
+  // way back to a position.
+  function dropEntry (entry) {
+    const index = childEntries.value.indexOf(entry)
+    if (index < 0) return
+    if (text(entry.data.Code)) pageState.setChildAction(PARENT, CHILD, index, 'deactivate')
+    else pageState.removeChild(PARENT, CHILD, index)
   }
 
   function setQuantity (sku, value) {
     const row = rows.value.find((item) => item.SKU === sku)
     if (!row) return
     const quantity = Math.min(Math.max(0, Math.floor(num(value))), row.maxQuantity)
-    const index = entryIndex(sku)
+    const entries = matchingEntries(sku)
 
-    if (index < 0) {
+    if (!entries.length) {
       if (quantity > 0) pageState.addChild(PARENT, CHILD, { SKU: sku, Quantity: quantity, Progress: 'PENDING', Status: 'Active' })
       return
     }
 
-    const entry = childEntries.value[index]
+    // The line that survives is a persisted one when there is one, so an edit
+    // patches the existing server row instead of orphaning it behind a new line.
+    const keeper = entries.find((entry) => text(entry.data.Code)) || entries[0]
+
+    // Fold every other line for this SKU away first, so one SKU is one line again
+    // and the next read of `quantities` agrees with what these buttons just wrote.
+    entries.filter((entry) => entry !== keeper).forEach(dropEntry)
+
     if (quantity > 0) {
+      const index = childEntries.value.indexOf(keeper)
       pageState.updateChild(PARENT, CHILD, index, { Quantity: quantity })
       // Restore a line the user had zeroed out earlier in the same session.
-      if (entry._action === 'deactivate') pageState.setChildAction(PARENT, CHILD, index, text(entry.data.Code) ? 'update' : 'create')
+      if (keeper._action === 'deactivate') pageState.setChildAction(PARENT, CHILD, index, text(keeper.data.Code) ? 'update' : 'create')
       return
     }
 
-    // Zero means "not requested". A persisted line must be soft-deleted so GAS
-    // deactivates it; a line only ever held in this wizard is simply dropped.
-    if (text(entry.data.Code)) pageState.setChildAction(PARENT, CHILD, index, 'deactivate')
-    else pageState.removeChild(PARENT, CHILD, index)
+    dropEntry(keeper)
   }
 
   function adjustQuantity (sku, delta) {
     const row = rows.value.find((item) => item.SKU === sku)
-    if (row) setQuantity(sku, row.restockQuantity + delta)
+    if (!row) return
+    // Stepped off the live total rather than off `row.restockQuantity`: `rows` is a
+    // projection, and reading the source directly keeps a rapid second click from
+    // stepping off a value the first click already superseded.
+    setQuantity(sku, (quantities.value[key(sku)] || 0) + delta)
   }
 
   return {

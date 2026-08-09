@@ -58,8 +58,61 @@
 .aql-list-view-enter-from,
 .aql-list-view-leave-to     { opacity: 0; transform: translateY(6px); }
 
+// ── General-purpose transition set ───────────────────────────────────────────
+// Five named transitions any component can reach for by `name`, so a new panel
+// or dialog does not have to hand-roll its own keyframes. All share a 180-200ms
+// budget: long enough to read as motion, short enough that `mode="out-in"`
+// (which runs leave and enter back to back) still feels immediate.
+
+// Directional. The framework default for Content/Section placeholders — the
+// slight upward drift reads as content settling into place.
+.aql-fade-slide-up-enter-active,
+.aql-fade-slide-up-leave-active { transition: all 200ms ease; }
+.aql-fade-slide-up-enter-from   { opacity: 0; transform: translateY(10px); }
+.aql-fade-slide-up-leave-to     { opacity: 0; transform: translateY(-10px); }
+
+// Non-directional. For content that replaces itself in place (a panel swapping
+// its body) where a direction would imply a sequence that does not exist.
+.aql-fade-scale-enter-active,
+.aql-fade-scale-leave-active { transition: all 200ms ease; }
+.aql-fade-scale-enter-from   { opacity: 0; transform: scale(0.98); }
+.aql-fade-scale-leave-to     { opacity: 0; transform: scale(0.98); }
+
+// Horizontal. For wizard steps and anything else where forward/back is the
+// mental model; the axis carries the meaning.
+.aql-slide-right-enter-active,
+.aql-slide-right-leave-active { transition: all 200ms ease; }
+.aql-slide-right-enter-from   { opacity: 0; transform: translateX(12px); }
+.aql-slide-right-leave-to     { opacity: 0; transform: translateX(-12px); }
+
+// Opacity only — no transform, so it is safe inside containers where a
+// transform would create a containing block and detach fixed-position children.
+.aql-fade-smooth-enter-active,
+.aql-fade-smooth-leave-active { transition: opacity 180ms ease; }
+.aql-fade-smooth-enter-from   { opacity: 0; }
+.aql-fade-smooth-leave-to     { opacity: 0; }
+
+// Card-scale. Same family as fade-scale but tuned tighter for whole cards
+// entering or leaving a stack.
+.aql-card-pop-enter-active,
+.aql-card-pop-leave-active { transition: all 200ms ease; }
+.aql-card-pop-enter-from   { opacity: 0; transform: scale(0.97); }
+.aql-card-pop-leave-to     { opacity: 0; transform: scale(0.97); }
+
 // Respect users who prefer reduced motion — content still appears, just instantly.
 @media (prefers-reduced-motion: reduce) {
+  .step-fade-enter-active,
+  .step-fade-leave-active,
+  .aql-fade-slide-up-enter-active,
+  .aql-fade-slide-up-leave-active,
+  .aql-fade-scale-enter-active,
+  .aql-fade-scale-leave-active,
+  .aql-slide-right-enter-active,
+  .aql-slide-right-leave-active,
+  .aql-fade-smooth-enter-active,
+  .aql-fade-smooth-leave-active,
+  .aql-card-pop-enter-active,
+  .aql-card-pop-leave-active,
   .aql-page-fade-enter-active,
   .aql-page-fade-leave-active,
   .aql-list-item-move,

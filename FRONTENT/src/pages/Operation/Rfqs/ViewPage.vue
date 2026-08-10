@@ -316,7 +316,7 @@ watch(availableSuppliers, (rows) => {
 })
 
 function openDispatchPage(row) {
-  nav.goTo('record-page', {
+  nav.goTo('record', {
     pageSlug: 'mark-as-sent',
     query: { supplierRowCode: row?.Code || '' }
   })

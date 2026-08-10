@@ -10,7 +10,14 @@ export function useRouteConfig() {
   const resourceSlug = computed(() => route.params.resourceSlug || '')
   const code = computed(() => route.params.code || '')
   const pageName = computed(() => route.meta?.page || 'index')
-  const pageSlug = computed(() => route.params.pageSlug || route.params.action || '')
+  // Two distinct signals, deliberately NOT folded into one another:
+  //   pageSlug — the `:pageSlug` segment of a `resource` / `record` sub-route,
+  //   action   — the `:action` segment of `/{code}/_action/{action}`.
+  // Folding the action into pageSlug (as this composable used to) made an action
+  // route indistinguishable from a custom sub-route, so consumers that need the
+  // workflow action name (Breadcrumb, PageAction, usePageResolver) had to guess.
+  const pageSlug = computed(() => route.params.pageSlug || '')
+  const action = computed(() => route.params.action || '')
   const level = computed(() => route.meta?.level || 'resource')
 
   const query = computed(() => route.query)
@@ -46,6 +53,7 @@ export function useRouteConfig() {
     code,
     pageName,
     pageSlug,
+    action,
     level,
     query,
     path,

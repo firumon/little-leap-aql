@@ -25,6 +25,10 @@
             <td>{{ routeInfo.resourceSlug }}</td>
           </tr>
           <tr>
+            <td class="text-weight-bold">Page</td>
+            <td>{{ routeInfo.page }}</td>
+          </tr>
+          <tr v-if="routeInfo.action">
             <td class="text-weight-bold">Action</td>
             <td>{{ routeInfo.action }}</td>
           </tr>

@@ -4,6 +4,9 @@ import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useAuthStore } from 'src/stores/auth'
 
+// Navigation targets, identical to the route names in router/routes.js.
+const ROUTE_NAMES = ['index', 'add', 'view', 'edit', 'action', 'resource', 'record']
+
 function routeParam(value) {
   const resolved = unref(value)
   if (resolved == null) return ''
@@ -50,20 +53,21 @@ function findScopeBySlug(auth, slug) {
  *   Example:
  *     nav.goTo('view', { scope: 'operation', resourceSlug: 'purchase-items', code: 'PI001' })
  *
- * routeMappings is built AFTER resolvedParams is assembled (post-merge), so
- * an overridden scope in params correctly selects the right named route set.
+ * The param set is built AFTER resolvedParams is assembled (post-merge), so an
+ * overridden scope in params correctly selects the right route.
  *
  * Only params relevant to each target are passed to router.push — no extra
  * keys are forwarded to avoid Vue Router "discarded invalid param" warnings.
  *
- * Supported targets:
- *   'list'          → /{scope}/{resourceSlug}
- *   'add'           → /{scope}/{resourceSlug}/_add
- *   'view'          → /{scope}/{resourceSlug}/{code}/_view
- *   'edit'          → /{scope}/{resourceSlug}/{code}/_edit
- *   'action'        → /{scope}/{resourceSlug}/{code}/_action/{action}
- *   'resource-page' → /{scope}/{resourceSlug}/{pageSlug}
- *   'record-page'   → /{scope}/{resourceSlug}/{code}/{pageSlug}
+ * Supported targets (each one IS the route name in router/routes.js) — this list
+ * is exhaustive; anything else is rejected with a console error:
+ *   'index'    → /{scope}/{resourceSlug}
+ *   'add'      → /{scope}/{resourceSlug}/_add
+ *   'view'     → /{scope}/{resourceSlug}/{code}/_view
+ *   'edit'     → /{scope}/{resourceSlug}/{code}/_edit
+ *   'action'   → /{scope}/{resourceSlug}/{code}/_action/{action}
+ *   'resource' → /{scope}/{resourceSlug}/{pageSlug}
+ *   'record'   → /{scope}/{resourceSlug}/{code}/{pageSlug}
  */
 export function useResourceNav () {
   const router = useRouter()
@@ -73,7 +77,7 @@ export function useResourceNav () {
   /**
    * Navigate to a target page within the current (or overridden) resource.
    *
-   * @param {string} target - One of: 'index', 'add', 'view', 'edit', 'action', 'resource-page', 'record-page'
+   * @param {string} target - One of: 'index', 'add', 'view', 'edit', 'action', 'resource', 'record'
    * @param {Object} [params] - Optional overrides. Shallow-merged over resolved scope/resourceSlug/code.
    */
   const goTo = (target, params = {}) => {
@@ -112,21 +116,12 @@ export function useResourceNav () {
     resolved.action = routeParam(resolved.action)
     resolved.pageSlug = routeParam(resolved.pageSlug)
 
-    const routeMappings = {
-      index:           'index',
-      add:             'add',
-      view:            'view',
-      edit:            'edit',
-      action:          'action',
-      'resource-page': 'resource-page',
-      'record-page':   'record-page'
-    }
-
-    const routeName = routeMappings[target]
-    if (!routeName) {
+    if (!ROUTE_NAMES.includes(target)) {
       console.error(`[useResourceNav] Invalid navigation target: "${target}"`)
       return
     }
+    // Target name and route name are identical by design — see routes.js.
+    const routeName = target
 
     // Only pass params that each target route actually uses — avoids Vue Router
     // "discarded invalid param" warnings for unused segments.
@@ -134,13 +129,16 @@ export function useResourceNav () {
     const withCode = { ...base, code: resolved.code }
 
     const routeParams = {
-      index:           base,
-      add:             base,
-      view:            withCode,
-      edit:            withCode,
-      action:          { ...withCode, action: resolved.action },
-      'resource-page': { ...base, pageSlug: resolved.pageSlug },
-      'record-page':   { ...withCode, pageSlug: resolved.pageSlug }
+      index:    base,
+      add:      base,
+      view:     withCode,
+      edit:     withCode,
+      // `pageSlug` is the fallback for `action`: sheet-authored navigate configs
+      // carry a single slug field, and one targeting `_action/:action` puts the
+      // action name there.
+      action:   { ...withCode, action: resolved.action || resolved.pageSlug },
+      resource: { ...base, pageSlug: resolved.pageSlug },
+      record:   { ...withCode, pageSlug: resolved.pageSlug }
     }[target]
 
     router.push({ name: routeName, params: routeParams, query: routeQuery(params.query) })

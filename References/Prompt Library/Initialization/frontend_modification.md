@@ -82,7 +82,7 @@ Before modifying code:
 * **DO NOT** use `QTable` for record lists. Use vertical fluid scroll lists with `q-card` or `AqlList` / `AqlGroupedList` for mobile compatibility.
 * **DO NOT** import Pinia stores, services, or Axios wrappers directly into Vue page components.
 * **DO NOT** instantiate `useResourceConfig()` or `useRecord()` inside common child components. Always inject the page-level provided `resourceConfig` and `resourceRecord` instances to preserve unified page state.
-* **DO NOT** import `useRoute` from `vue-router` directly. Always use `useRouteConfig` from `src/composables/resources/useRouteConfig` to access route params, query, or path.
+* **DO NOT** import `useRoute` from `vue-router` directly. Always use `useRouteConfig` from `src/composables/resources/useRouteConfig` to access route params, query, or path. It exposes `scope`, `resourceSlug`, `code`, `pageSlug` (the `resource`/`record` sub-route segment), `action` (the `_action/:action` segment — a signal of its own, never folded into `pageSlug`), `pageName` (`meta.page`), `level`, `query`, `path`.
 * **DO NOT** write manual watcher chains, mirror states, or parallel arrays to keep data in sync. Keep a single reactive source.
 * **DO NOT** call raw `router.push()` or `$router.back()` directly on elements. Always route using the generic helper `useResourceNav`.
 * **DO NOT** hardcode currency symbols.

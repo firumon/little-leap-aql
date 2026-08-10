@@ -79,9 +79,9 @@ const routes = [
       },
       {
         path: ':pageSlug',
-        name: 'resource-page',
+        name: 'resource',
         component: () => import('pages/Page.vue'),
-        meta: { page: 'resource-page', level: 'resource' }
+        meta: { page: 'resource', level: 'resource' }
       },
       {
         path: ':code/_view',
@@ -103,9 +103,9 @@ const routes = [
       },
       {
         path: ':code/:pageSlug',
-        name: 'record-page',
+        name: 'record',
         component: () => import('pages/Page.vue'),
-        meta: { page: 'record-page', level: 'record' }
+        meta: { page: 'record', level: 'record' }
       }
     ]
   },

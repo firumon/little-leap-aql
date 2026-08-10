@@ -184,8 +184,11 @@ function normalizeAction(a) {
       ...base,
       kind,
       navigate: {
-        target: nav.target || 'record-page',
+        // A route name from router/routes.js — see useResourceNav's target list.
+        target: nav.target || 'record',
         pageSlug: nav.pageSlug || '',
+        // Explicit `_action/:action` segment; falls back to pageSlug at dispatch.
+        action: nav.action || '',
         resourceSlug: nav.resourceSlug || null,
         scope: nav.scope || null
       },

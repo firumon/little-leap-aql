@@ -105,6 +105,23 @@ The `contentWrapperProps` computed in `usePageResolver.js` automatically derives
 ### 1.3 The Page Resolver (`src/composables/resources/usePageResolver.js`)
 Handles page-level route resolution and loading, and owns record loading (see §1.3.3). Form state and submission are **not** its concern — those belong to `usePageState` (see [PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/PAGE_STATE.md)), which `Page.vue` provides alongside it.
 
+#### 1.3.0 Route signals (`useRouteConfig.js`)
+Every route signal the resolver (and any component) consumes comes from `useRouteConfig()` — **never** from `useRoute()` directly:
+
+| Signal | Source | Notes |
+|--------|--------|-------|
+| `scope` | `route.params.scope` | `operation` \| `master` \| `accounts`, defaults to `master` |
+| `resourceSlug` | `route.params.resourceSlug` | kebab-case URL slug |
+| `code` | `route.params.code` | record primary key on record-level routes |
+| `pageSlug` | `route.params.pageSlug` | the sub-route segment of a `resource` / `record` route |
+| `action` | `route.params.action` | the `:action` segment of `/{code}/_action/{action}` |
+| `pageName` | `route.meta.page` | `index` \| `add` \| `view` \| `edit` \| `action` \| `resource` \| `record` |
+| `level` | `route.meta.level` | `resource` \| `record` |
+
+`pageSlug` and `action` are **separate signals**. `pageSlug` used to fall back to the action param, which made a deep link to `/_action/approve` indistinguishable from a custom sub-route; consumers that need the workflow action name (`Breadcrumb.vue`, `PageAction.vue`, `usePageResolver.js`) now read `action` explicitly.
+
+Route names, `meta.page` values, and `useResourceNav`'s navigation targets are one vocabulary — `nav.goTo('record', { code, pageSlug })` pushes the route named `record`. The seven names above are the complete set; `goTo()` rejects anything else.
+
 #### 1.3.1 Stage A — Base Page Contract (BP)
 Loads `src/pages/[Scope]/[page].js`. This JS file sets the default sections and contents layout for the page.
 
@@ -112,8 +129,9 @@ Loads `src/pages/[Scope]/[page].js`. This JS file sets the default sections and 
 
 | `meta.page` value | BP file loaded |
 |-------------------|----------------|
-| `'resource-page'` | `resource.js` |
-| `'record-page'` | `record.js` |
+| `'resource'` | `resource.js` |
+| `'record'` | `record.js` |
+| `'action'` | `[action].js` — the `:action` route param, not `action.js` |
 | anything else | `[page].js` as-is |
 
 **BP export shape**: The BP can export either a plain object or a function. If it's a function, it receives the full `rcProps` (same shape as `pageProps` below) and must return an object of extra props to merge in:

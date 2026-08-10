@@ -48,7 +48,7 @@ const props = defineProps({
   perPage: { type: Number, default: undefined },
   threshold: { type: Number, default: undefined },
   onItemClick: { type: Function, default: undefined },
-  // Navigates to a resource sub-route on click (`record-page`, code + pageSlug) instead of
+  // Navigates to a resource sub-route on click (`record`, code + pageSlug) instead of
   // the default `view` page — e.g. `target="stock-list"` → /{scope}/{resource}/{code}/stock-list.
   target: { type: String, default: undefined },
 
@@ -263,7 +263,7 @@ const boundProps = computed(() =>
 
 function handleItemClick(item) {
   if (typeof props.onItemClick === 'function') return props.onItemClick(item)
-  if (props.target) return nav.goTo('record-page', { code: item?.Code ?? item, pageSlug: props.target })
+  if (props.target) return nav.goTo('record', { code: item?.Code ?? item, pageSlug: props.target })
   nav.goTo('view', { code: item?.Code ?? item })
 }
 

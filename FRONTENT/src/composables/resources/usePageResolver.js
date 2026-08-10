@@ -22,18 +22,22 @@ Object.keys(customUiModules).forEach((rawPath) => {
   customUiRegistry[normalizedKey] = customUiModules[rawPath]
 })
 
-function resolveActionName(pageName, pageSlug) {
-  if (pageName === 'action' && pageSlug) return pageSlug
+// The lookup key every resolver scan below is built from. An action route
+// resolves under its ACTION name (`/_action/approve` → `approve.vue`); every
+// other route resolves under its `meta.page` (`index`, `add`, `view`, `edit`,
+// `resource`, `record`).
+function resolveActionName(pageName, action) {
+  if (pageName === 'action' && action) return action
   return pageName
 }
 
 export function usePageResolver() {
   const resConfig = useResourceConfig()
   const { scope, resourceSlug, resourceName } = resConfig
-  const { pageName, pageSlug, code } = useRouteConfig()
+  const { pageName, pageSlug, action, code } = useRouteConfig()
 
   const canonicalPage = computed(() =>
-    resolveActionName(pageName.value, pageSlug.value)
+    resolveActionName(pageName.value, action.value)
   )
 
   // Record loading. Add/Edit form state and submission are owned by pageState
@@ -122,11 +126,9 @@ export function usePageResolver() {
       }
 
       // ── STAGE A: Load BP (always) ───────────────────────────────────
-      const bpKey = pageName.value === 'resource-page' ? 'resource'
-        : pageName.value === 'record-page' ? 'record'
-        : page
-
-      const bpPath = `pages/${scopeVal}/${bpKey}.js`
+      // `resource` / `record` name their base contract directly (pages/{scope}/
+      // resource.js, record.js); every other route uses its resolved page key.
+      const bpPath = `pages/${scopeVal}/${page}.js`
       const bpLoader = pageRegistry[bpPath.toLowerCase()]
       paths.push({ path: bpPath, found: !!bpLoader })
 
@@ -270,7 +272,8 @@ export function usePageResolver() {
       resourceSlug: resConfig.resourceSlug.value,
       page: canonicalPage.value,
       customUIName: customUIName.value,
-      pageSlug: pageSlug.value
+      pageSlug: pageSlug.value,
+      action: action.value
     }))
   }
 }

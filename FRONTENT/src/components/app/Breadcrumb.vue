@@ -70,14 +70,15 @@ const resolvedActionLabel = computed(() => {
   if (p === 'add') return 'Add'
   if (p === 'view') return ''
   if (p === 'edit') return 'Edit'
-  if (p === 'resource-page' || p === 'record-page') {
+  if (p === 'resource' || p === 'record') {
     return humanizeSlug(routeConfig.pageSlug.value)
   }
   if (p === 'action') {
+    const actionSlug = routeConfig.action.value
     const actionConfig = resConfig.additionalActions.value.find(
-      (ac) => ac.action.toLowerCase() === routeConfig.pageSlug.value?.toLowerCase()
+      (ac) => ac.action.toLowerCase() === actionSlug?.toLowerCase()
     )
-    return actionConfig?.label || humanizeSlug(routeConfig.pageSlug.value)
+    return actionConfig?.label || humanizeSlug(actionSlug)
   }
   const actionConfig = resConfig.additionalActions.value.find(
     (ac) => ac.action.toLowerCase() === p.toLowerCase()

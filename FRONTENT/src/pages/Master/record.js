@@ -1,3 +1,4 @@
 export default {
-  sections: ['PageHeader']
+  sections: ['PageHeader'],
+  contents: ['View']
 }

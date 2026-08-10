@@ -66,7 +66,7 @@ const canDirect = computed(() => {
 })
 
 function goToDirect() {
-  nav.goTo('resource-page', { pageSlug: 'direct-restock' })
+  nav.goTo('resource', { pageSlug: 'direct-restock' })
 }
 
 function goToNormal() {

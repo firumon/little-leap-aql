@@ -328,6 +328,70 @@ one action write several records (Postpone = stamp this visit **and** create the
 | Use when | the record exists and the user fills the inputs | the action must ride **with** the page's own submission |
 | Target | `record.Code` | a concrete code, or a `$ref` to a record this batch creates |
 
+**Execution Kinds (`kind`): `mutate` vs `navigate`.**
+`AdditionalActions` supports two execution behaviors:
+* **`kind: "mutate"` (default)**: Opens `AdditionalActionsDialog.vue` to prompt for input fields/comments, then dispatches an `executeAction` or `update` mutation to the backend.
+* **`kind: "navigate"`**: Bypasses the modal dialog entirely. Clicking the action immediately invokes `useResourceNav.goTo()` to open a target page or custom route.
+
+```json
+{
+  "action": "Approve",
+  "label": "Approve & Allocate Stock",
+  "icon": "task_alt",
+  "color": "positive",
+  "kind": "navigate",
+  "navigate": {
+    "target": "action",
+    "pageSlug": "approve",
+    "resourceSlug": null,
+    "scope": null
+  },
+  "visibleWhen": {
+    "column": "Progress",
+    "op": "eq",
+    "value": "PENDING_APPROVAL"
+  }
+}
+```
+
+**`navigate` config properties & routing targets:**
+* `navigate.target`: a route name from `router/routes.js` — route name, `meta.page`, and nav target share one vocabulary:
+  - `"action"` ➔ `/{scope}/{resourceSlug}/{code}/_action/{action}` (e.g. `/operation/outlet-restocks/ORS000123/_action/approve`)
+  - `"record"` (default) ➔ `/{scope}/{resourceSlug}/{code}/{pageSlug}`
+  - `"resource"` ➔ `/{scope}/{resourceSlug}/{pageSlug}`
+  - `"view"` ➔ `/{scope}/{resourceSlug}/{code}/_view`
+  - `"edit"` ➔ `/{scope}/{resourceSlug}/{code}/_edit`
+  - `"index"` ➔ `/{scope}/{resourceSlug}`
+  - This list is **exhaustive** — there are no aliases. A `navigate.target` that is not a route name is rejected by `useResourceNav.goTo()` with a console error, and the action does not navigate. Config predating the `resource-page` / `record-page` rename must be re-saved through the **Manage Actions** dialog.
+* `navigate.pageSlug`: Page or action slug parameter (e.g., `"approve"`, `"mark-delivered"`). For `target: "action"` it also seeds the `:action` segment.
+* `navigate.action`: Optional explicit `:action` segment for `target: "action"`; falls back to `pageSlug`.
+* `navigate.resourceSlug`: Optional cross-resource override (defaults to active resource if `null`).
+* `navigate.scope`: Optional cross-scope override (defaults to active scope if `null`).
+
+**Dispatch handling (`useAdditionalActions.js`):**
+```javascript
+const TARGETS_NEEDING_CODE = new Set(['view', 'edit', 'action', 'record'])
+
+if (action?.kind === 'navigate') {
+  const target = action.navigate?.target || 'record'
+  const slug = action.navigate?.pageSlug || ''
+  const params = {
+    scope: action.navigate?.scope,
+    resourceSlug: action.navigate?.resourceSlug,
+    pageSlug: slug
+  }
+  if (target === 'action') params.action = action.navigate?.action || slug
+  if (TARGETS_NEEDING_CODE.has(target)) params.code = action.navigate?.code || record?.Code
+  nav.goTo(target, params)
+  return
+}
+```
+
+> An `_action/:action` route is a FORM page: `PageAction.vue` renders the `FormActions`
+> sticky bar (not the `ResourceActions` FAB cluster) whenever `useRouteConfig().pageName`
+> is `'action'`. It cannot be detected from the resolved page key, which on an action
+> route is the ACTION NAME (`approve`), not `'action'`.
+
 ```javascript
 // Create a visit AND stamp it, atomically, in one batch.
 pageState.initResource('OutletVisits', { fields: { OutletCode, Date } })

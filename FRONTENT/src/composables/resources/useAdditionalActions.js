@@ -56,6 +56,9 @@ const dialog = reactive({
 // (`newVisit.Date`), so two targets carrying a `Date` never collide.
 const form = reactive({})
 
+// Navigate targets whose route carries a `:code` segment.
+const TARGETS_NEEDING_CODE = new Set(['view', 'edit', 'action', 'record'])
+
 function resetForm (fields) {
   Object.keys(form).forEach((key) => delete form[key])
   fields.forEach((field) => { form[field.address] = field.seed ?? '' })
@@ -134,13 +137,19 @@ export function useAdditionalActions (resourceName = null) {
    */
   function runAction (action, record) {
     if (action?.kind === 'navigate') {
-      const target = action.navigate?.target || 'record-page'
+      // `navigate.target` is a route name (see useResourceNav) — an unknown value
+      // is rejected there rather than silently rewritten here.
+      const target = action.navigate?.target || 'record'
+      const slug = action.navigate?.pageSlug || ''
       const params = {
         scope: action.navigate?.scope,
         resourceSlug: action.navigate?.resourceSlug,
-        pageSlug: action.navigate?.pageSlug || ''
+        pageSlug: slug
       }
-      if (target === 'record-page') params.code = action.navigate?.code || record?.Code
+      // `_action/:action` is its own segment, NOT `:pageSlug` — an action target
+      // authored with only a pageSlug would otherwise push an empty :action param.
+      if (target === 'action') params.action = action.navigate?.action || slug
+      if (TARGETS_NEEDING_CODE.has(target)) params.code = action.navigate?.code || record?.Code
       nav.goTo(target, params)
       return
     }

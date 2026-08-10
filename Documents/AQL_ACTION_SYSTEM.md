@@ -677,7 +677,7 @@ export default {
 ```javascript
 // _ui/AQL/components/operation/outletrestocks/resourceactionedit.js
 export default {
-  handler: ({ nav }) => nav.goTo('record-page', { pageSlug: 'draft' })
+  handler: ({ nav }) => nav.goTo('record', { pageSlug: 'draft' })
 }
 ```
 
@@ -826,6 +826,32 @@ const {
 | `AdditionalActionsButtons` | `actionsFor` + `runAction` | renders its own buttons from the raw configs |
 | `ResourceActions` | `entriesFor` | needs resolver names + presentation props to fold into its cluster |
 | A custom list row | either | e.g. `ListToday.vue` uses `actionsFor({ only })` and sorts locally |
+
+#### 7.0.1a `kind: 'navigate'` — targets and params
+
+A `navigate` action collects nothing: `runAction` maps its `navigate` block straight onto
+`useResourceNav().goTo()` and returns. `navigate.target` uses the **route-name vocabulary**
+(the route names in `router/routes.js` are the nav targets are the `meta.page` values):
+
+| `navigate.target` | Resolves to | Params sent |
+|---|---|---|
+| `index` | `/{scope}/{resourceSlug}` | — |
+| `add` | `/{scope}/{resourceSlug}/_add` | — |
+| `view` | `/{scope}/{resourceSlug}/{code}/_view` | `code` |
+| `edit` | `/{scope}/{resourceSlug}/{code}/_edit` | `code` |
+| `action` | `/{scope}/{resourceSlug}/{code}/_action/{action}` | `code`, `action` |
+| `resource` | `/{scope}/{resourceSlug}/{pageSlug}` | `pageSlug` |
+| `record` (default) | `/{scope}/{resourceSlug}/{code}/{pageSlug}` | `code`, `pageSlug` |
+
+* `code` defaults to the clicked record's `Code`; `scope` / `resourceSlug` default to the
+  active resource, and are set only for cross-resource navigation.
+* `target: 'action'` takes its `:action` segment from `navigate.action`, falling back to
+  `navigate.pageSlug` — the authoring UI writes a single slug field, and forwarding it as
+  `pageSlug` alone would push an empty `:action` param.
+* The target list above is **exhaustive**. There are no aliases: a `navigate.target` that is
+  not a route name is rejected by `useResourceNav.goTo()` with a console error, and the action
+  does not navigate. Config predating the `resource-page` / `record-page` rename must be
+  re-saved through the **Manage Actions** dialog.
 
 Ordering is the one thing a consumer may legitimately decide locally — it is presentation,
 not eligibility. `ListToday.vue` sorts its three actions into escalation order while still

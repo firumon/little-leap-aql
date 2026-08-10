@@ -266,7 +266,9 @@ function buildTokenOptions(selectedVal) {
 // renders through that resolver, so anything with a folder there is authorable
 // here. An unknown type degrades to `text` rather than failing to render.
 var FIELD_TYPES = ['text','textarea','number','date','select','currency','file','link','tel','toggle','status'];
-var NAV_TARGETS = ['record-page','list','view','edit','add','action'];
+// Route names from FRONTENT/src/router/routes.js — route name, meta.page and
+// useResourceNav target are one vocabulary. This list is exhaustive.
+var NAV_TARGETS = ['record','resource','index','view','edit','add','action'];
 var TARGET_MODES = ['create','update'];
 
 google.script.run.withSuccessHandler(function(data) {
@@ -316,7 +318,7 @@ function normalizeForEdit(a) {
     });
   } else {
     a.navigate = a.navigate || {};
-    a.navigate.target = a.navigate.target || 'record-page';
+    a.navigate.target = a.navigate.target || 'record';
     a.navigate.pageSlug = a.navigate.pageSlug || '';
     a.navigate.resourceSlug = a.navigate.resourceSlug || '';
     a.navigate.scope = a.navigate.scope || '';
@@ -419,7 +421,7 @@ function onTargetWhenOpChange(i, ti, ci, op) {
 function onKindChange(i, val) {
   currentActions[i].kind = val;
   if (val === 'navigate' && !currentActions[i].navigate) {
-    currentActions[i].navigate = { target: 'record-page', pageSlug: '', resourceSlug: '', scope: '' };
+    currentActions[i].navigate = { target: 'record', pageSlug: '', resourceSlug: '', scope: '' };
   }
   renderActions();
 }
@@ -770,7 +772,7 @@ function serializeForSave(a) {
   } else {
     var n = a.navigate || {};
     out.navigate = {
-      target: n.target || 'record-page',
+      target: n.target || 'record',
       pageSlug: n.pageSlug || ''
     };
     if (n.resourceSlug) out.navigate.resourceSlug = n.resourceSlug;

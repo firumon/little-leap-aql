@@ -64,6 +64,7 @@
  */
 import { computed, inject } from 'vue'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useActionResolver } from 'src/composables/resources/useActionResolver'
 import { useAdditionalActions } from 'src/composables/resources/useAdditionalActions'
 import Action from 'components/Action.vue'
@@ -85,13 +86,20 @@ const props = defineProps({
 const resourceConfig = inject('resourceConfig', null)
 const resourceRecord = inject('resourceRecord', null)
 const nav = useResourceNav()
+const routeConfig = useRouteConfig()
 // No resource name passed: the cluster is page-level, so it follows the route.
 const { entriesFor } = useAdditionalActions()
 
 const pageKey = computed(() => (props.page || '').toLowerCase())
 // Form pages are owned by the FormActions sticky bar. PageAction already gates
 // this, but a direct <Action action="ResourceActions" /> mount must obey too.
-const isFormPage = computed(() => ['add', 'edit', 'action'].includes(pageKey.value))
+//
+// The route check is not redundant with `pageKey`: an action route resolves its
+// page key to the ACTION NAME (`/_action/approve` → `approve`), so the literal
+// 'action' below only ever matches an explicitly passed `page="action"`.
+const isFormPage = computed(() =>
+  ['add', 'edit', 'action'].includes(pageKey.value) || routeConfig.pageName.value === 'action'
+)
 
 const permissions = computed(() => resourceConfig?.permissions?.value || {})
 const record = computed(() => resourceRecord?.record?.value || null)

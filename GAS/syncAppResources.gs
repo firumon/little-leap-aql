@@ -286,7 +286,7 @@ function initAppResourcesCodeConfig() {
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
-            {"action":"ViewStock","label":"View Stock","icon":"inventory","color":"primary","kind":"navigate","confirm":false,"navigate":{"target":"record-page","pageSlug":"stock"}}
+            {"action":"ViewStock","label":"View Stock","icon":"inventory","color":"primary","kind":"navigate","confirm":false,"navigate":{"target":"record","pageSlug":"stock"}}
         ]),
         Menu: JSON.stringify([
             {"group":["Warehouse"],"order":1,"label":"Manage","icon":"warehouse","route":"/master/warehouses","pageTitle":"Warehouses","pageDescription":"Manage warehouse master records","show":true},
@@ -593,8 +593,8 @@ function initAppResourcesCodeConfig() {
         RecordAccessPolicy: 'OWNER_AND_UPLINE',
         OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
-            {"action":"AssignSupplier","label":"Assign Supplier","icon":"group_add","color":"primary","kind":"navigate","confirm":false,"navigate":{"target":"record-page","pageSlug":"assign-supplier"},"visibleWhen":{"column":"Progress","op":"nin","value":["CLOSED","CANCELLED"]}},
-            {"action":"MarkAsSent","label":"Mark As Sent","icon":"send","color":"secondary","kind":"navigate","confirm":false,"navigate":{"target":"record-page","pageSlug":"mark-as-sent"},"visibleWhen":{"column":"Progress","op":"nin","value":["CLOSED","CANCELLED"]}},
+            {"action":"AssignSupplier","label":"Assign Supplier","icon":"group_add","color":"primary","kind":"navigate","confirm":false,"navigate":{"target":"record","pageSlug":"assign-supplier"},"visibleWhen":{"column":"Progress","op":"nin","value":["CLOSED","CANCELLED"]}},
+            {"action":"MarkAsSent","label":"Mark As Sent","icon":"send","color":"secondary","kind":"navigate","confirm":false,"navigate":{"target":"record","pageSlug":"mark-as-sent"},"visibleWhen":{"column":"Progress","op":"nin","value":["CLOSED","CANCELLED"]}},
             {"action":"Close","label":"Close RFQ","icon":"lock","color":"negative","kind":"mutate","confirm":true,"column":"Progress","columnValue":"CLOSED","columnValueOptions":[],"fields":[],"visibleWhen":{"column":"Progress","op":"eq","value":"SENT"}}
         ]),
         Menu: JSON.stringify([
@@ -1194,10 +1194,13 @@ function initAppResourcesCodeConfig() {
         RequiredHeaders: 'Date,OutletCode,RequestedUser,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: '',
         DefaultValues: '{"Status":"Active","Progress":"DRAFT"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
-            { "action": "Submit", "label": "Submit", "icon": "send", "color": "primary", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "PENDING_APPROVAL", "fields": [{ "name": "Comment", "label": "Submit Comment", "type": "textarea", "required": true }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "REVISION_REQUIRED" } },
-            { "action": "Submit", "label": "Submit", "icon": "send", "color": "primary", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "PENDING_APPROVAL", "fields": [{ "name": "Comment", "label": "Submit Comment", "type": "textarea", "required": false }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "DRAFT" } },
-            { "action": "Reject", "label": "Reject", "icon": "block", "color": "negative", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "REJECTED", "fields": [{ "name": "Comment", "label": "Rejection Comment", "type": "textarea", "required": true }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "PENDING_APPROVAL" } },
-            { "action": "SendBack", "label": "Send Back", "icon": "undo", "color": "warning", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "REVISION_REQUIRED", "fields": [{ "name": "Comment", "label": "Revision Comment", "type": "textarea", "required": true }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "PENDING_APPROVAL" } }
+            { "action": "Submit", "label": "Submit for Approval", "icon": "send", "color": "primary", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "PENDING_APPROVAL", "fields": [{ "name": "ProgressSubmittedComment", "label": "Submission Note", "type": "textarea", "required": false }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "DRAFT" } },
+            { "action": "Resubmit", "label": "Resubmit Request", "icon": "replay", "color": "primary", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "PENDING_APPROVAL", "fields": [{ "name": "ProgressSubmittedComment", "label": "Resubmission Comment (Describe Changes)", "type": "textarea", "required": true }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "REVISION_REQUIRED" } },
+            { "action": "Approve", "label": "Approve & Allocate Stock", "icon": "task_alt", "color": "positive", "kind": "navigate", "navigate": { "target": "action", "pageSlug": "approve" }, "visibleWhen": { "column": "Progress", "op": "eq", "value": "PENDING_APPROVAL" } },
+            { "action": "Revise", "label": "Request Revision", "icon": "edit_note", "color": "warning", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "REVISION_REQUIRED", "fields": [{ "name": "ProgressRevisionRequiredComment", "label": "Revision Instructions (Mandatory)", "type": "textarea", "required": true }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "PENDING_APPROVAL" } },
+            { "action": "Reject", "label": "Reject Request", "icon": "block", "color": "negative", "kind": "mutate", "confirm": true, "column": "Progress", "columnValue": "REJECTED", "fields": [{ "name": "ProgressRejectedComment", "label": "Rejection Reason (Mandatory)", "type": "textarea", "required": true }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "PENDING_APPROVAL" } },
+            { "action": "MarkDelivered", "label": "Confirm Outlet Delivery", "icon": "local_shipping", "color": "teal-7", "kind": "navigate", "navigate": { "target": "action", "pageSlug": "mark-delivered" }, "visibleWhen": { "column": "Progress", "op": "in", "value": ["APPROVED", "PARTIALLY_DELIVERED"] } },
+            { "action": "Cancel", "label": "Cancel Restock Request", "icon": "cancel", "color": "negative", "kind": "mutate", "confirm": true, "column": "Status", "columnValue": "Inactive", "fields": [{ "name": "ProgressRejectedComment", "label": "Cancellation Reason", "type": "textarea", "required": true }], "visibleWhen": { "column": "Progress", "op": "in", "value": ["DRAFT", "PENDING_APPROVAL", "REVISION_REQUIRED"] } }
         ]),
         Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 3, "label": "Outlet Restocks", "icon": "inventory", "route": "/operation/outlet-restocks", "pageTitle": "Outlet Restocks", "pageDescription": "Request, approve, and fulfill outlet restocks", "show": true }]),
         UIFields: JSON.stringify([
@@ -1232,7 +1235,7 @@ function initAppResourcesCodeConfig() {
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_RESTOCK_ITEMS,
         Scope: 'operation', ParentResource: CONFIG.OPERATION_SHEETS.OUTLET_RESTOCKS, IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_RESTOCK_ITEMS,
-        CodePrefix: 'ORSI', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletRestockCode,SKU,Quantity', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Quantity":0,"Progress":"PENDING"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: JSON.stringify([{ "action": "Cancel", "label": "Cancel", "icon": "cancel", "color": "negative", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "CANCELLED", "fields": [{ "name": "Comment", "label": "Cancel Comment", "type": "textarea", "required": true }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "PENDING" } }]), Menu: JSON.stringify([]), UIFields: JSON.stringify([
+        CodePrefix: 'ORSI', CodeSequenceLength: 7, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletRestockCode,SKU,Quantity', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Quantity":0,"Progress":"PENDING"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: '', Menu: JSON.stringify([]), UIFields: JSON.stringify([
             { header: 'OutletRestockCode', label: 'Outlet Restock Code', type: 'text' },
             { header: 'WarehouseCode', label: 'Warehouse Code', type: 'text' },
             { header: 'SKU', label: 'SKU', type: 'text' },

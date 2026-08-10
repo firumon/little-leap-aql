@@ -66,6 +66,7 @@ import { computed, inject, useAttrs } from 'vue'
 import { useQuasar } from 'quasar'
 import { useActionResolver } from 'src/composables/resources/useActionResolver'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
+import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import ResourceActions from './ResourceActions.vue'
 import FormActions from './FormActions.vue'
 import ResourceReports from './ResourceReports.vue'
@@ -118,6 +119,7 @@ const props = defineProps({
 
 const $q = useQuasar()
 const nav = useResourceNav()
+const routeConfig = useRouteConfig()
 const resourceConfig = inject('resourceConfig', null)
 const resourceRecord = inject('resourceRecord', null)
 const pageState = inject('pageState', null)
@@ -126,7 +128,11 @@ const attrs = useAttrs()
 const pageKey = computed(() => (props.page || '').toLowerCase())
 const isAdd = computed(() => pageKey.value === 'add')
 const isEdit = computed(() => pageKey.value === 'edit')
-const showFormActions = computed(() => isAdd.value || isEdit.value)
+// An action route resolves its page key to the ACTION NAME (`/_action/approve`
+// → page `approve`), so `pageKey` can never identify one. The route's own
+// `meta.page` can, which is why useRouteConfig exposes `pageName` separately.
+const isAction = computed(() => routeConfig.pageName.value === 'action')
+const showFormActions = computed(() => isAdd.value || isEdit.value || isAction.value)
 
 const resourceName = computed(() => resourceConfig?.resourceName?.value || '')
 

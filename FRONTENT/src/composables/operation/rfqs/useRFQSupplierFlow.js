@@ -354,7 +354,7 @@ export function useRFQSupplierFlow(rfqCodeRef) {
     const params = { pageSlug: action?.navigate?.pageSlug || 'assign-supplier' }
     if (action?.navigate?.resourceSlug) params.resourceSlug = action.navigate.resourceSlug
     if (action?.navigate?.scope) params.scope = action.navigate.scope
-    nav.goTo(action?.navigate?.target || 'record-page', params)
+    nav.goTo(action?.navigate?.target || 'record', params)
   }
 
   function markAsSent() {
@@ -363,7 +363,7 @@ export function useRFQSupplierFlow(rfqCodeRef) {
     const params = { pageSlug: action?.navigate?.pageSlug || 'mark-as-sent' }
     if (action?.navigate?.resourceSlug) params.resourceSlug = action.navigate.resourceSlug
     if (action?.navigate?.scope) params.scope = action.navigate.scope
-    nav.goTo(action?.navigate?.target || 'record-page', params)
+    nav.goTo(action?.navigate?.target || 'record', params)
   }
 
   function formatDate(value) {

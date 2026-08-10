@@ -298,7 +298,7 @@ export function useGrnStockEntry() {
         const warehouseCode = selectedWarehouse.value.Code
         selectedGrnCode.value = ''
         allocations.value = []
-        nav.goTo('record-page', {
+        nav.goTo('record', {
           scope: 'master',
           resourceSlug: 'warehouses',
           code: warehouseCode,

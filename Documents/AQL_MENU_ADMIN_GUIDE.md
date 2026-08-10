@@ -345,7 +345,7 @@ These groups appear in the **frontend application sidebar**, not in the Google S
 
 **What it does:**
 - Menu entry shows active warehouses as selection cards.
-- Selecting a warehouse navigates through `useResourceNav` to the warehouse stock record-page.
+- Selecting a warehouse navigates through `useResourceNav` to the warehouse stock `record` sub-route.
 - The normal Warehouse view page also exposes `View Stock` as a navigate-kind AdditionalAction.
 - The stock page reads `WarehouseStorages`, `SKUs`, and `Products` through the frontend resource data flow and displays current stock by SKU and storage.
 

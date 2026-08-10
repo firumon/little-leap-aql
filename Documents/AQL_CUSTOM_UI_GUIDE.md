@@ -109,8 +109,9 @@ in the sheet; no code change.
 | `{page}` | canonical page | lowercased as-is | `View` → `view` |
 | `{Placeholder}` | section / content / action name | lowercased as-is | `PageHeader` → `pageheader` |
 
-`{page}` is the **canonical** page name resolved by `useRouteConfig`: `'index'`, `'view'`,
-`'add'`, `'edit'`, `'action'`, or a custom sub-route slug.
+`{page}` is the **canonical** page name resolved by `usePageResolver` from `useRouteConfig`:
+`'index'`, `'view'`, `'add'`, `'edit'`, `'resource'`, `'record'`, or — on an `_action/:action`
+route — the `action` route param itself (`approve`, `send-back`, …).
 
 ### 2.2 Helper logic belongs in `composables/`, not `components/`
 
@@ -314,8 +315,9 @@ matches the component's folder.
 | 5 | `{page}.vue` | UI-wide Vue override |
 | 6 | `{page}.js` | UI-wide JS modifier |
 
-**`meta.page` → base-contract filename:** `'resource-page'` → `resource.js`,
-`'record-page'` → `record.js`, anything else → `{page}.js`.
+**`meta.page` → base-contract filename:** `'resource'` → `resource.js`,
+`'record'` → `record.js`, anything else → `{page}.js`. An `_action/:action` route
+resolves under its **action name**, so its files are `{action}.vue` / `{action}.js`.
 
 ### 4.1 Page JS modifier — the preferred tool
 

@@ -143,7 +143,7 @@ export function useWarehouseStockList(warehouseCodeRef = null) {
 
   function viewWarehouseStock(warehouseCode) {
     if (!warehouseCode) return
-    nav.goTo('record-page', {
+    nav.goTo('record', {
       scope: 'master',
       resourceSlug: 'warehouses',
       code: warehouseCode,
@@ -152,7 +152,7 @@ export function useWarehouseStockList(warehouseCodeRef = null) {
   }
 
   function goToStockList() {
-    nav.goTo('resource-page', {
+    nav.goTo('resource', {
       scope: 'master',
       resourceSlug: 'warehouses',
       pageSlug: 'stock-list'

@@ -140,9 +140,9 @@ Section.vue  ← Resolves sections dynamically via two-step lookup (uses lowerca
 ```
 
 ### 2.3 Page-Level Discovery Candidates
-Custom pages (`action: 'resource-page'` or `'record-page'`) resolve through tenant-custom and entity-specific paths only, based on the `:pageSlug` URL parameter.
-- `resource-page`: `pages/_custom/{ui}/{Scope}/{Entity}/{CustomPageName}Page.vue` → `pages/{Scope}/{Entity}/{CustomPageName}Page.vue`
-- `record-page`: `pages/_custom/{ui}/{Scope}/{Entity}/Record{CustomPageName}Page.vue` → `pages/{Scope}/{Entity}/Record{CustomPageName}Page.vue`
+Custom pages (`meta.page: 'resource'` or `'record'`) resolve through tenant-custom and entity-specific paths only, based on the `:pageSlug` URL parameter.
+- `resource`: `pages/_custom/{ui}/{Scope}/{Entity}/{CustomPageName}Page.vue` → `pages/{Scope}/{Entity}/{CustomPageName}Page.vue`
+- `record`: `pages/_custom/{ui}/{Scope}/{Entity}/Record{CustomPageName}Page.vue` → `pages/{Scope}/{Entity}/Record{CustomPageName}Page.vue`
 
 If no page is found, it renders a developer fallback page: `pages/_common/Page.vue`.
 
@@ -462,7 +462,7 @@ The GRN Stock Entry page (`/operation/stock-movements/grn-entry`) posts accepted
 ## 6B. Warehouse Stock List
 
 ### 6B.1 Overview
-Warehouse stock lookup is available from `Warehouse > Stock List`, from a Warehouse record's `View Stock` navigate action, and from GRN Stock Entry after posting. All entry points resolve to the same record-page stock view.
+Warehouse stock lookup is available from `Warehouse > Stock List`, from a Warehouse record's `View Stock` navigate action, and from GRN Stock Entry after posting. All entry points resolve to the same `record` sub-route stock view.
 
 ### 6B.2 Routes
 - Resource page: `/master/warehouses/stock-list` lists active warehouses as selection cards.

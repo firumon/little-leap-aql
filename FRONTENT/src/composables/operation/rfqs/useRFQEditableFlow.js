@@ -179,7 +179,7 @@ export function useRFQEditableFlow() {
   function assignSupplier() {
     if (!canAssignSupplier.value) return
     const action = assignSupplierAction.value
-    const target = action?.navigate?.target || 'record-page'
+    const target = action?.navigate?.target || 'record'
     const params = { pageSlug: action?.navigate?.pageSlug || 'assign-supplier' }
     if (action?.navigate?.resourceSlug) params.resourceSlug = action.navigate.resourceSlug
     if (action?.navigate?.scope) params.scope = action.navigate.scope
@@ -189,7 +189,7 @@ export function useRFQEditableFlow() {
   function markAsSent() {
     if (!canMarkAsSent.value) return
     const action = markAsSentAction.value
-    const target = action?.navigate?.target || 'record-page'
+    const target = action?.navigate?.target || 'record'
     const params = { pageSlug: action?.navigate?.pageSlug || 'mark-as-sent' }
     if (action?.navigate?.resourceSlug) params.resourceSlug = action.navigate.resourceSlug
     if (action?.navigate?.scope) params.scope = action.navigate.scope

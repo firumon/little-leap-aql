@@ -62,7 +62,7 @@
  * arriving via `$attrs` for custom keys), so a single `pageaction.js` modifier can
  * intercept, replace, or extend any action without a new prop per action.
  */
-import { computed, inject, useAttrs } from 'vue'
+import { computed, inject, unref, useAttrs } from 'vue'
 import { useQuasar } from 'quasar'
 import { useActionResolver } from 'src/composables/resources/useActionResolver'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
@@ -132,7 +132,27 @@ const isEdit = computed(() => pageKey.value === 'edit')
 // → page `approve`), so `pageKey` can never identify one. The route's own
 // `meta.page` can, which is why useRouteConfig exposes `pageName` separately.
 const isAction = computed(() => routeConfig.pageName.value === 'action')
-const showFormActions = computed(() => isAdd.value || isEdit.value || isAction.value)
+
+// ROUTE INTENT — "this URL is a form page". Owns which CLUSTER the page belongs
+// to, so ResourceActions/ResourceReports stay gated on the route alone: a popup
+// modal opened over a browse page must not suppress the background FAB cluster,
+// and an add/edit route must not grow one just because its form has not
+// initialized yet.
+const isFormRoute = computed(() => isAdd.value || isEdit.value || isAction.value)
+
+// STATE READINESS — "this page's form state actually exists". `hasNodes` is a
+// computed ref on the injected pageState; a page that never provided pageState,
+// or an older/partial provider without `hasNodes`, falls back to `true` so the
+// bar behaves exactly as it did before this gate existed.
+const hasFormNodes = computed(() => {
+  const flag = pageState?.hasNodes
+  return flag === undefined || flag === null ? true : !!unref(flag)
+})
+
+// FormActions needs BOTH: the right route AND initialized nodes. Without the
+// second half the sticky submit/reset bar renders over a form that has nothing
+// to submit — pressing Submit builds an empty batch.
+const showFormActions = computed(() => isFormRoute.value && hasFormNodes.value)
 
 const resourceName = computed(() => resourceConfig?.resourceName?.value || '')
 
@@ -328,8 +348,14 @@ const modifierVisible = computed(() => {
 // FormActions (the sticky submit/reset bar, above) owns Add/Edit/Action pages
 // entirely; every other page defers to ResourceActions' own permission/record/
 // visibleWhen visibility logic.
+//
+// Gated on `isFormRoute`, NOT `showFormActions`: the two are no longer inverses.
+// An add/edit route whose nodes have not initialized yet renders NEITHER cluster
+// — falling back to the CRUD FABs there would flash an Add/Edit FAB on top of a
+// form. Conversely a browse/view page keeps its cluster no matter what a popup
+// modal does to pageState.
 const showResourceActions = computed(() =>
-  !showFormActions.value && modifierVisible.value
+  !isFormRoute.value && modifierVisible.value
 )
 
 // Reports float alongside the CRUD cluster on browse/view pages. Form pages are
@@ -340,7 +366,7 @@ const showResourceActions = computed(() =>
 // or an intermediate wrapper may pass it through without it landing on the declared
 // prop, and the gate must hold in both cases.
 const showResourceReports = computed(() =>
-  !showFormActions.value &&
+  !isFormRoute.value &&
   props.reports !== false &&
   props.noReports !== true &&
   attrs.noReports !== true

@@ -221,6 +221,30 @@ Mounted by `Page.vue`. Decides which cluster is live:
   `visibleWhen` gating per item) **and** `ResourceReports` (which applies its own
   reports-exist gating).
 
+**The two halves of the `FormActions` gate.** Route intent alone is not enough:
+
+| Computed | Meaning | Gates |
+|---|---|---|
+| `isFormRoute` | `isAdd \|\| isEdit \|\| isAction` — this URL is a form page | `ResourceActions`, `ResourceReports` (both `!isFormRoute`) |
+| `hasFormNodes` | `pageState.hasNodes` — the form state is initialized | — |
+| `showFormActions` | **both** of the above | `FormActions` |
+
+`showFormActions` and `!isFormRoute` are deliberately **not** inverses.
+* `FormActions` needs BOTH halves, so the sticky bar cannot render over a form
+  whose nodes have not been created yet — Submit there would build an empty batch.
+* The two FAB clusters gate on `isFormRoute` only. Keying them off
+  `!showFormActions` would flash Add/Edit FABs on top of an uninitialized form
+  page, and would let anything that clears `pageState` on a browse page (a popup
+  modal, for instance) suppress the background clusters. On an add/edit route with
+  no nodes yet, **no** cluster renders.
+* `hasFormNodes` falls back to `true` when `pageState` is not injected, or when the
+  injected object predates `hasNodes` — a full `pageaction.vue` override or a
+  non-standard provider keeps its previous behaviour.
+
+`hasNodes` is exported by `usePageState` (`state.nodes.size > 0`); see
+[PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/PAGE_STATE.md) §6.4. It is
+node-count only — for a specific node use `useNode(resource).exists`.
+
 All three clusters are mounted through `useActionResolver` (with the framework component as
 `defaultComponent`), so each is independently overridable at any of the 10 tiers.
 

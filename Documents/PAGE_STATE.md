@@ -251,6 +251,7 @@ pageState.load('OutletConsumptions', existing)   // fills node.record from the s
 |---|---|
 | `initResource(resource, { role, code, many, fields, action, isPrimaryKey, reset })` | create a node under `role` (default `$default`); re-init of the same `(resource, role)` replaces it |
 | `hasNode(resource, role?)` | imperative existence check — **the replacement for `state.nodes.has(...)`** (use `useNode(...).exists` when a computed/template needs it reactively) |
+| `hasNodes` | `computed<boolean>` — whether ANY node is attached (`state.nodes.size > 0`), i.e. "this page's form state is initialized". Node-count only, resource-agnostic: it is for containers that must distinguish an initialized form page from an uninitialized one without knowing the resource (see `PageAction.vue`'s `FormActions` gate). For a SPECIFIC node use `useNode(resource).exists` |
 | `load(resource, rawRecord)` | hydrate an existing server record into the node |
 | `setField(resource, field, value)` / `setFields(resource, patch)` | set header/body fields |
 | `setControlField(resource, header, value)` / `getControlField(resource, header)` | non-schema / wizard-only fields — kept out of `record` so they never reach the payload |

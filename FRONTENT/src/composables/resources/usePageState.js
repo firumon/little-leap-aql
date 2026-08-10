@@ -271,6 +271,17 @@ export function usePageState (strategy = {}) {
     return existing || initResource(name, { role: r })
   }
 
+  // Reactive "is this page's form state initialized at all?" — true once ANY node
+  // has been attached, false again after reset()/detachAll(). `state.nodes` is a
+  // reactive Map, so reading `.size` here subscribes correctly to set/delete.
+  //
+  // Deliberately node-COUNT only, not per-resource: consumers that need a specific
+  // node still go through `useNode(resource).exists`. This one exists so a container
+  // that has no business knowing the resource (PageAction) can tell an initialized
+  // form page from an uninitialized one without reaching into `state.nodes` and
+  // breaking the encapsulation contract at the top of this file.
+  const hasNodes = computed(() => state.nodes.size > 0)
+
   // Imperative existence check — the supported replacement for `state.nodes.has(...)`.
   // Use `useNode(resource).exists` when a template/computed needs it reactively.
   function hasNode (target, role) {
@@ -745,6 +756,7 @@ export function usePageState (strategy = {}) {
     initResource,
     resetForResource,
     hasNode,
+    hasNodes,
     load,
     setField,
     setFields,

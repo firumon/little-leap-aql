@@ -1,17 +1,31 @@
 <template>
   <div v-if="visible" :class="gutterClass">
-    <q-card class="aql-premium-card aql-card-gradient-subtle" flat>
+    <q-card flat bordered class="page-card aql-premium-gradient-card">
       <q-card-section :class="gutterClass">
         <!-- What is being decided, stated once. The approver arrived from a list
-             and needs to know which request this is without going back. -->
-        <div class="row no-wrap q-col-gutter-sm">
-          <div class="col">
-            <div class="text-caption text-grey-7">Restocking</div>
-            <div class="text-subtitle1 text-weight-medium">{{ outletName }}</div>
+             and needs to know which request this is without going back.
+
+             The framework detail-card grammar rather than a bespoke two-column
+             row, with the same 40ms stagger, so this card reads identically to a
+             `contents/ViewRecord.vue` one stacked beside it (§10). -->
+        <div class="aql-detail-grid">
+          <div class="aql-detail-line items-center aql-detail-row" :style="rowDelay(0)">
+            <span class="aql-detail-key">Restocking</span>
+            <span class="aql-detail-val col overflow-hidden flex justify-end items-center">
+              {{ outletName }}
+            </span>
           </div>
-          <div class="col-auto text-right">
-            <div class="text-caption text-grey-7">Requested on</div>
-            <div class="text-subtitle1 text-weight-medium">{{ restock.Date || '—' }}</div>
+          <div class="aql-detail-line items-center aql-detail-row" :style="rowDelay(1)">
+            <span class="aql-detail-key">Requested on</span>
+            <span class="aql-detail-val col overflow-hidden flex justify-end items-center">
+              {{ restock.Date || '—' }}
+            </span>
+          </div>
+          <div class="aql-detail-line items-center aql-detail-row" :style="rowDelay(2)">
+            <span class="aql-detail-key">Request</span>
+            <span class="aql-detail-val col overflow-hidden flex justify-end items-center">
+              {{ restock.Code || '—' }}
+            </span>
           </div>
         </div>
 
@@ -49,8 +63,8 @@
 
     <!-- Allocation progress + the one-click fill. Its own card, because it acts on
          every line below rather than on the warehouse settings above. -->
-    <q-card class="aql-premium-card aql-card-gradient-subtle" flat>
-      <q-card-section class="q-gutter-y-sm">
+    <q-card flat bordered class="page-card aql-premium-gradient-card">
+      <q-card-section :class="gutterClass">
         <div class="row items-center no-wrap q-col-gutter-sm">
           <div class="col">
             <div class="text-caption text-grey-7">Allocated so far</div>
@@ -116,6 +130,11 @@ import { useRestockApproval } from 'src/_ui/AQL/composables/Operation/OutletRest
 
 defineOptions({ name: 'OutletRestocksApproveWarehouseAndLocation', inheritAttrs: false })
 
+// The framework detail-row cadence (§10). Stacked cards animate in step only if
+// every one of them uses the same interval, so it is a named constant rather
+// than a literal repeated per row.
+const ROW_STAGGER_MS = 40
+
 const props = defineProps({
   // Which wizard step this card belongs to. Declared by the page contract
   // (`Approve.js`), not hardcoded here, so the flow can be re-ordered from the
@@ -125,6 +144,8 @@ const props = defineProps({
 
 const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
+
+const rowDelay = (index) => ({ animationDelay: `${index * ROW_STAGGER_MS}ms` })
 
 const pageState = inject('pageState', null)
 const outlets = useRecord('Outlets')

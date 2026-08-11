@@ -1,5 +1,5 @@
 <template>
-  <q-card class="aql-premium-card q-mb-sm" flat>
+  <q-card flat bordered class="page-card aql-premium-gradient-card">
     <!-- PRODUCT HEADER — name | actions | totals, on one line.
          `no-wrap` keeps the three regions on the same row; the name column carries
          `min-width: 0` so it may SHRINK. Without that a flex item's implicit

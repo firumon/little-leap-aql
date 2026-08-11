@@ -5,7 +5,7 @@
          approving" and "what I am leaving unfilled" are one decision, not two. -->
     <SectionDividerLabel label="Remaining Items" />
 
-    <q-card v-if="!stayingPending.length && !cancelling.length" class="aql-premium-card" flat>
+    <q-card v-if="!stayingPending.length && !cancelling.length" flat bordered class="page-card aql-premium-gradient-card">
       <q-card-section class="text-center q-py-lg">
         <q-icon name="task_alt" size="40px" color="positive" class="q-mb-sm block q-mx-auto" />
         <div class="text-subtitle1 text-weight-bold text-grey-7">Every requested unit is covered</div>
@@ -22,7 +22,7 @@
       item-key="code"
       group-key="productCode"
       header-label="productName"
-      card-class="aql-premium-card q-mb-sm"
+      card-class="page-card aql-premium-gradient-card"
       :content="[(item) => item.variantLabel]"
       :layout="['label']"
       chip="remainder"
@@ -39,7 +39,7 @@
       item-key="code"
       group-key="productCode"
       header-label="productName"
-      card-class="aql-premium-card q-mb-sm"
+      card-class="page-card aql-premium-gradient-card"
       :content="[(item) => item.variantLabel]"
       :layout="['label']"
       :meta="[() => 'Will be cancelled', () => 'no stock movement', (item) => String(item.remainder)]"
@@ -66,7 +66,7 @@
          approver writes one note, and the button they press files it. -->
     <SectionDividerLabel label="Comment" />
 
-    <q-card class="aql-premium-card" flat>
+    <q-card flat bordered class="page-card aql-premium-gradient-card">
       <q-card-section>
         <component
           :is="CommentField"

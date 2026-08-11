@@ -12,7 +12,7 @@
       header-label="productName"
       empty-text="No stock has been allocated yet."
       empty-icon="inventory_2"
-      card-class="aql-premium-card aql-card-gradient-subtle q-mb-sm"
+      card-class="page-card aql-premium-gradient-card"
       :layout="['caption','label']"
       :content="[(item) => `${item.warehouseName}: ${item.storageName}`,(item) => item.skuLabel]"
       :chip="item => `${ item.quantity } ${ item.uom }`"
@@ -25,7 +25,7 @@
       </template>
     </AqlGroupedList>
 
-    <q-card class="aql-premium-card" flat>
+    <q-card flat bordered class="page-card aql-premium-gradient-card">
       <q-card-section class="row no-wrap q-col-gutter-sm">
         <div class="col aql-flex-wrap-text">
           <div class="text-caption text-grey-7">Total allocated</div>

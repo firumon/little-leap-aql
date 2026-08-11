@@ -2,7 +2,7 @@
   <div v-if="visible" :class="gutterClass">
     <SectionDividerLabel label="Requested Items" />
 
-    <q-card v-if="!productGroups.length" class="aql-premium-card" flat>
+    <q-card v-if="!productGroups.length" flat bordered class="page-card aql-premium-gradient-card">
       <q-card-section class="text-center q-py-xl">
         <q-icon name="inventory_2" size="48px" color="grey-4" class="q-mb-sm block q-mx-auto" />
         <div class="text-subtitle1 text-weight-bold text-grey-6">Nothing left to allocate</div>

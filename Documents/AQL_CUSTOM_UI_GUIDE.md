@@ -107,11 +107,21 @@ in the sheet; no code change.
 | `{Scope}` | route scope | lowercased as-is | `Operation` → `operation` |
 | `{Resource}` | resource **slug** | `toPascalCase` → lowercased | `purchase-orders` → `PurchaseOrders` → `purchaseorders` |
 | `{page}` | canonical page | lowercased as-is | `View` → `view` |
+| `{page}` (action route) | `:action` route **param** | `toPascalCase` → lowercased | `mark-delivered` → `MarkDelivered` → `markdelivered` |
 | `{Placeholder}` | section / content / action name | lowercased as-is | `PageHeader` → `pageheader` |
 
 `{page}` is the **canonical** page name resolved by `usePageResolver` from `useRouteConfig`:
 `'index'`, `'view'`, `'add'`, `'edit'`, `'resource'`, `'record'`, or — on an `_action/:action`
-route — the `action` route param itself (`approve`, `send-back`, …).
+route — the `action` route param, normalized through `toPascalCase(actionParam).toLowerCase()`.
+
+> [!IMPORTANT]
+> That normalization is what lets a **multi-word action slug** be filed under a PascalCase
+> name like every other `_ui/` path segment. `mark-delivered` resolves to the page key
+> `markdelivered`, which matches `pages/{Scope}/{Resource}/MarkDelivered.js` and the
+> placeholder folder `components/{Scope}/{Resource}/MarkDelivered/` through the registry's
+> `path.toLowerCase()` lookup. Naming those `mark-delivered.js` / `mark-delivered/` would
+> **never** resolve — exactly the hyphen rule that applies to `{Resource}`. Single-word
+> slugs are unchanged: `approve` → `approve` → `Approve.js`.
 
 ### 2.2 Helper logic belongs in `composables/`, not `components/`
 
@@ -1087,6 +1097,74 @@ Every resolver keys its scan on a joined string for exactly this reason.
   cards animate in step. A bespoke gradient, avatar column or hover-lift is what makes a
   custom section read as blurry and off-grid next to its neighbours; the shared shell also
   means a theme change reaches it for free.
+
+### 10.1 The card shell — one shell for every custom UI card
+
+> [!IMPORTANT]
+> **`<q-card flat bordered class="page-card aql-premium-gradient-card">` is THE card in a
+> custom UI page.** Not just detail sections — wizard steps, review summaries, selection
+> lists, empty states, comment boxes, per-product cards. If a custom `_ui/` component
+> renders a card, it renders *that* card. A page whose cards disagree about their own
+> shell reads as several half-finished designs stacked on top of each other, and that is
+> visible long before anyone can name why.
+
+**The four parts, and why each is non-negotiable:**
+
+| Part | Value | Why |
+|---|---|---|
+| Card | `flat bordered` + `page-card aql-premium-gradient-card` | `flat` drops Quasar's default shadow so `aql-premium-gradient-card`'s own `box-shadow` is the only one; `bordered` supplies the `q-card--bordered` hook the class's `border` rule refines. `page-card` carries the `$r-md` radius token and the `rise-in` entry animation. |
+| Rows | `.aql-detail-grid` › `.aql-detail-line` › `.aql-detail-key` + `.aql-detail-val` | The label/value grid every framework detail card already uses. Never rebuild it from `row no-wrap q-col-gutter-sm`. |
+| Stagger | `.aql-detail-row` + `:style="rowDelay(i)"`, 40ms | Stacked cards only animate *in step* if every one of them uses the same interval. Hoist it as `ROW_STAGGER_MS = 40`. |
+| Rhythm | the parent's `q-gutter-y-{gutter}` from `useAttrs()` | Vertical spacing belongs to the container, never to a `q-mb-*` on the card. See the trap below. |
+
+**One gutter, everywhere.** `pageProps.gutter` (seeded `'xs'` by `usePageResolver`) travels
+down through `$attrs`, and the list primitives now consume it as a declared `gutter` prop —
+[`abstract/List.vue`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/abstract/List.vue)
+for the spacing between rows, `AqlGroupedList` for the spacing between group cards (plus an
+`item-gutter` escape hatch when the groups and their rows need different rhythms). So one
+page-level setting spaces Sections, Contents, group cards and list rows identically. Accepts
+any Quasar spacing token; `none`/`false` turns it off. Never hardcode `q-gutter-y-*` or
+`q-mb-*` in a list-like component again — take the token.
+
+**Deprecated — do not reach for these in new `_ui/` work:**
+
+* `aql-premium-card`
+* `aql-card-gradient-subtle`
+* `aql-premium-card aql-card-gradient-subtle` (the pair)
+
+They predate the gradient shell and render flatter and colder beside it. Existing
+occurrences are being migrated; `_ui/AQL/components/Operation/OutletRestocks/Approve/` and
+`.../MarkDelivered/` are the reference implementations of the current language.
+
+> [!WARNING]
+> **`AqlGroupedList`'s `card-class` is APPEARANCE ONLY — never put spacing in it, and never
+> assume spacing comes with it.** Its group cards are siblings *inside* a `q-list`, so a
+> page-level `q-gutter-y-*` reaches the list root and never the cards themselves. The
+> component appends the gutter class to whatever `card-class` you pass
+> ([`AqlGroupedList.vue`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/app/AqlGroupedList.vue),
+> the same `:class="[cardClass, …]"` idiom as `contents/FormChild.vue`), so
+> `card-class="page-card aql-premium-gradient-card"` is complete on its own. Do **not** add
+> `q-mb-*` yourself — pass `gutter` instead. And do **not** add `bordered`: the component
+> already sets `bordered` as a Quasar *prop*, and `bordered` written as a class name matches
+> no rule at all.
+>
+> This bit once: `card-class` used to *default* to `q-mb-sm`, so styling the card silently
+> deleted the group cards' only source of vertical rhythm and they butted together.
+
+**A nested list is a body, not a stack of cards.** `.interactive-list-card` — the class
+every `AppList` row carries — paints an opaque white rectangle with a 4px radius. That is
+right for a row sitting directly on the page background and wrong twice over inside a group
+card: the white hides the card's gradient completely, and the 4px corners overflow the
+card's `$r-md` corner so the bottom border reads as clipped. `AqlGroupedList` wraps its
+`AppList` in `.aql-grouped-list-body`, which hands the row *fill* and *radius* back to the
+container (rows keep their separators, hover and ripple). **If you nest an `AppList` inside
+a gradient card yourself, wrap it the same way** — otherwise you get a white slab with a
+gradient hairline around it, which is the single most common way this shell is broken.
+
+**Worked example.** `_ui/AQL/components/Operation/OutletRestocks/MarkDelivered/SelectDeliveryItems.vue`
+shows the shell used three ways on one page — a detail-grid summary, a totals card, and a
+per-product selection card with a nested `.aql-detail-grid` for its storage rows — with no
+`<style>` block and no card class outside the two named above.
 * **Dynamic colours go through a CSS custom property**, not per-colour class variants:
   resolve with `resolveCssColor()` from `src/utils/colorHelpers.js`, write it inline as
   `--aql-<feature>-color`, and derive every layer with `color-mix()`. This is what lets a
@@ -1174,7 +1252,11 @@ Reading the map:
 | Per-view override never fires | The sheet's view `name` includes the `List` prefix. Use the bare bucket name (§6.1). |
 | A `Props<Identity>` block's `items`/`chip` is `undefined` inside the block function | The block was written as a static object. Only a **function** block is called with the live props bag (§8.3). |
 | A chip / meta value still shows after a `Props` block "removed" it | The key was omitted rather than set to `null`. Explicit props layer *over* the `useListStrategy` baseline; omission lets the default through (§8.3). |
-| A custom section looks blurry or misaligned beside a framework card | It built its own card shell instead of reusing `page-card aql-premium-gradient-card` + the `.aql-detail-*` row grammar (§10). |
+| A custom section looks blurry or misaligned beside a framework card | It built its own card shell instead of reusing `page-card aql-premium-gradient-card` + the `.aql-detail-*` row grammar (§10, §10.1). |
+| A card looks flatter / colder than the ones around it | It still uses the deprecated `aql-premium-card` / `aql-card-gradient-subtle` (§10.1). |
+| `AqlGroupedList` group cards touch or appear to overlap | Spacing was put in `card-class` and then overridden. `card-class` is appearance only — pass `gutter` (§10.1). |
+| A card's gradient is invisible, or its bottom corners look clipped | A nested `AppList` is painting opaque white `.interactive-list-card` rows over it. Wrap the list in `.aql-grouped-list-body` (§10.1). |
+| Row / card spacing ignores the page's `gutter` | A list-like component is hardcoding `q-gutter-y-*` or `q-mb-*` instead of taking the `gutter` token (§10.1). |
 | Page title / back arrow vanished after adding a section | `sections` replaces the base contract's array. Re-list `'PageHeader'` (§4.1). |
 | Form re-seeds defaults on every keystroke | Props allocated inline in the template (§9 rule 3). |
 | FAB trapped at the end of the content flow | Something applied a CSS `transform` to an ancestor of the `q-page-sticky` root — a transformed ancestor becomes the containing block for `position: fixed` descendants. Animate an inner wrapper instead. |

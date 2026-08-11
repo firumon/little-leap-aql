@@ -26,8 +26,17 @@ Object.keys(customUiModules).forEach((rawPath) => {
 // resolves under its ACTION name (`/_action/approve` → `approve.vue`); every
 // other route resolves under its `meta.page` (`index`, `add`, `view`, `edit`,
 // `resource`, `record`).
+//
+// The action param is normalized exactly as a resource slug is (`toPascalCase`
+// → lowercase), and for the same reason: casing is irrelevant to matching
+// because the Vite glob registry lowercases every indexed path, but a HYPHEN is
+// not. A raw `mark-delivered` produces the key `mark-delivered`, which
+// `MarkDelivered.js` (indexed as `markdelivered.js`) can never match. Folding it
+// through PascalCase first drops the separator, so a multi-word action slug can
+// be filed under a PascalCase name like every other `_ui/` path segment.
+// Single-word slugs are unaffected (`approve` → `approve`).
 function resolveActionName(pageName, action) {
-  if (pageName === 'action' && action) return action
+  if (pageName === 'action' && action) return toPascalCase(action).toLowerCase()
   return pageName
 }
 

@@ -2,8 +2,8 @@
   <q-list
     :bordered="bordered"
     :separator="separator"
-    class="q-gutter-y-xs relative-position"
-    :class="$attrs.class"
+    class="relative-position"
+    :class="[gutterClass, $attrs.class]"
     :style="$attrs.style"
   >
     <!-- TransitionGroup (no `tag`, so it renders no wrapper element and the q-items stay
@@ -146,6 +146,15 @@ const props = defineProps({
   loading: { type: Boolean, default: false },
   emptyText: { type: String, default: 'No items found.' },
   bordered: { type: Boolean, default: false },
+  // Vertical rhythm BETWEEN rows, as a Quasar spacing token (`none`/`xs`/`sm`/
+  // `md`/`lg`/`xl`) — previously the hardcoded `q-gutter-y-xs` on the root.
+  // Declared as a prop so it is fed by `pageProps.gutter`, which travels all the
+  // way down through `$attrs` (see `inheritAttrs` note below): one page-level
+  // setting now spaces Sections, Contents and list rows identically. `xs` is the
+  // default because that is what was hardcoded, and it is also what
+  // `usePageResolver` seeds `pageProps.gutter` with, so nothing shifts.
+  // `false`/`'none'` turns the gutter off for a caller that owns its own spacing.
+  gutter: { type: [String, Boolean], default: 'xs' },
   itemBordered: { type: Boolean, default: true },
   separator: { type: Boolean, default: false },
   dense: { type: Boolean, default: false },
@@ -201,6 +210,14 @@ const currentPage = ref(1)
 const pageModel = computed({
   get: () => props.page ?? currentPage.value,
   set: value => setPage(value)
+})
+
+// `q-gutter-y-none` is not a real Quasar class, so "no gutter" has to resolve to
+// no class at all rather than to a token that silently does nothing.
+const gutterClass = computed(() => {
+  const token = props.gutter
+  if (token === false || token === '' || token === 'none' || token == null) return null
+  return `q-gutter-y-${token}`
 })
 
 const paginationLive = computed(() => props.paginate && props.items.length > props.threshold)

@@ -472,6 +472,28 @@
   border: 1px solid #e2e8f0;
 }
 
+// A list nested INSIDE a grouped-list card is a body, not a set of standalone
+// cards. `.interactive-list-card` paints an opaque white 4px-radius rectangle,
+// which is right for a row sitting directly on the page background and wrong
+// here twice over: the white hides the group card's gradient completely, and the
+// 4px corners overflow the group card's own $r-md corner so the card's bottom
+// border reads as clipped.
+//
+// Scoped to the group body rather than fixed on `.interactive-list-card` itself,
+// because a standalone `AppList` still wants the white card treatment. The rows
+// keep their separators and their hover/ripple — only the fill and the radius,
+// which belong to the CONTAINER at this nesting level, are handed back.
+.aql-grouped-list-body {
+  .interactive-list-card {
+    background: transparent;
+    border-radius: 0;
+  }
+  // Bordered rows would draw a second frame just inside the group card's.
+  .interactive-list-card.item-bordered {
+    border: none;
+  }
+}
+
 // Highlight accent for `abstract/List.vue` rows. The accent hue is supplied
 // inline by the component as `--aql-list-highlight-color`. Lives here because
 // `abstract/` components are override targets (ARCHITECTURE RULES §7).

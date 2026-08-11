@@ -19,7 +19,15 @@
       </q-card>
     </slot>
 
-    <q-card v-for="(group, groupIndex) in groupedItems" :key="resolveGroupKey(group, groupIndex)" flat bordered :class="cardClass">
+    <!-- The gutter class is APPENDED, never taken from `cardClass`. These cards are
+         siblings inside the `q-list`, so a page-level `q-gutter-y-*` reaches the
+         list root and never them — their entire vertical rhythm is this one class.
+         Carrying it in `cardClass` (as its default once did) meant any caller that
+         styled the card (`card-class="page-card aql-premium-gradient-card"`)
+         silently deleted the spacing and the group cards butted together.
+         Appending it keeps appearance and rhythm separately expressible, exactly
+         as `contents/FormChild.vue` does. -->
+    <q-card v-for="(group, groupIndex) in groupedItems" :key="resolveGroupKey(group, groupIndex)" flat bordered :class="[cardClass, gutterClass]">
       <slot name="header" :group="group" :index="groupIndex">
         <q-item :class="headerClass">
           <q-item-section v-if="hasHeaderIcon(group) || slots['header-icon']" side>
@@ -44,12 +52,17 @@
 
       <q-separator />
 
-      <q-card-section class="q-pa-none">
-        <AqlList v-bind="aqlListAttrs" :items="group.items">
+      <!-- `aql-grouped-list-body` hands the row FILL and RADIUS back to this card
+           (custom.scss). A nested row is a body, not a standalone card: its own
+           opaque white would hide the card's gradient entirely, and its 4px
+           corners would overflow the card's $r-md corner and clip the bottom
+           border. -->
+      <q-card-section class="q-pa-none aql-grouped-list-body">
+        <AppList v-bind="appListAttrs" :items="group.items">
           <template v-for="(_, slotName) in $slots" :key="slotName" #[slotName]="slotData">
             <slot :name="slotName" v-bind="slotData || {}" />
           </template>
-        </AqlList>
+        </AppList>
       </q-card-section>
     </q-card>
   </q-list>
@@ -57,7 +70,7 @@
 
 <script setup>
 import { computed, useSlots, useAttrs } from 'vue'
-import AqlList from '../shared/AqlList.vue'
+import AppList from 'components/app/AppList.vue'
 
 defineOptions({ name: 'AqlGroupedList', inheritAttrs: false })
 
@@ -68,7 +81,18 @@ const props = defineProps({
   loading: { type: Boolean, default: false },
   emptyText: { type: String, default: 'No records found.' },
   emptyIcon: { type: String, default: 'inventory_2' },
-  cardClass: { type: [String, Array, Object], default: 'q-mb-sm' },
+  // Appearance only — the group card's bottom margin is appended in the template
+  // and is not overridable from here.
+  cardClass: { type: [String, Array, Object], default: '' },
+  // Vertical rhythm BETWEEN group cards, as a Quasar spacing token
+  // (`none`/`xs`/`sm`/`md`/`lg`/`xl`). Declared as a prop so it is fed by
+  // `pageProps.gutter` like everything else on the page: one setting spaces
+  // Sections, Contents, group cards and the rows inside them identically.
+  gutter: { type: [String, Boolean], default: 'sm' },
+  // The rows INSIDE a group. Defaults to `gutter`, so one knob is enough; set it
+  // only when the groups and their rows genuinely need different rhythms — a
+  // denser inner list is what keeps the grouping legible when a page runs tight.
+  itemGutter: { type: [String, Boolean], default: null },
 
   headerClass: { type: [String, Array, Object], default: 'bg-grey-2 q-py-xs q-px-sm' },
   headerLabel: { type: [String, Function], required: false },
@@ -91,9 +115,21 @@ const props = defineProps({
 const slots = useSlots()
 const attrs = useAttrs()
 
-const aqlListAttrs = computed(() => ({
+// `q-mb-none` is not a real Quasar class, so "no gutter" has to resolve to no
+// class at all rather than to a token that silently does nothing.
+const gutterClass = computed(() => {
+  const token = props.gutter
+  if (token === false || token === '' || token === 'none' || token == null) return null
+  return `q-mb-${token}`
+})
+
+// `gutter` is a declared prop here, so it no longer arrives in `$attrs` — it has
+// to be forwarded explicitly or the inner rows would silently fall back to
+// `List.vue`'s own default and stop tracking the page.
+const appListAttrs = computed(() => ({
   itemBordered: false, dense: true, separator: true,
-  ...attrs
+  ...attrs,
+  gutter: props.itemGutter ?? props.gutter
 }))
 
 const groupedItems = computed(() => {

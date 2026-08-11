@@ -183,6 +183,38 @@ stay usable from the page contract.
 > `submit()`), and the header read-only banner (`EditRestockHeader.vue` → `isEditable`)
 > should all read that one predicate, never re-derive it.
 
+### 2.3 Maximum Field Control Utilization
+
+> [!IMPORTANT]
+> **Custom UI components and forms MUST prioritize the modular base field controls in
+> [`FRONTENT/src/components/_fields/`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_fields/)
+> — resolved through `resolveFieldComponent(type, mode)` — wherever applicable, instead of
+> hand-rolling raw native or Quasar input controls directly.**
+
+A `_fields/{type}/` folder owns three explicit SFCs (`Add.vue`, `Edit.vue`, `View.vue`) and is
+the single place a given input's behaviour is defined. Reaching past it for a bare `<q-input>`
+or `<q-select>` forks that behaviour: the search-threshold rule, the option-filter debounce,
+the empty-value display text, and the add/edit/view symmetry all silently stop applying to
+that one control, and a later fix to the base field never reaches it.
+
+```javascript
+// ✓ Resolve the control — inherits every behaviour the type already defines
+import { resolveFieldComponent } from 'components/_fields/useFieldResolver'
+const Multi = resolveFieldComponent('multiselect', 'add')
+```
+```html
+<component :is="Multi" v-model="codes" :config="{ label: 'Warehouses', options }" />
+```
+
+**Reach for a raw Quasar control only when no `_fields` type fits** — and when that happens,
+the correct move is usually to *add the type* (a new `_fields/{type}/` folder plus its
+`TYPE_ALIASES` entries) rather than to inline a one-off. The type then becomes available to
+every schema-driven form as well, since `APP.Resources.UIFields` resolves through the same
+registry.
+
+This applies to `_ui/` overrides exactly as it applies to framework components: a tenant card
+that collects input is still a form.
+
 ---
 
 ## 3. The 10-Tier Lookup

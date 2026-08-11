@@ -50,6 +50,12 @@ const TYPE_ALIASES = {
   dropdown: 'select',
   enum: 'select',
   reference: 'select',
+  // Array-valued selection. A separate type from `select`, not a flag on it —
+  // the two disagree on the shape of `modelValue` (scalar vs array).
+  multi: 'multiselect',
+  multiselect: 'multiselect',
+  multiselection: 'multiselect',
+  tags: 'multiselect',
   int: 'number',
   integer: 'number',
   decimal: 'number',

@@ -135,6 +135,23 @@ export function enrichRecord(resourceName, code, dataStore) {
     enumerable: false, configurable: true
   })
 
+  // Enrichment materializes ONE GETTER PER SHEET HEADER, once. Only the values
+  // behind those getters are live — the property set itself is frozen at build
+  // time. So an object built before `dataStore.headers[resourceName]` has arrived
+  // carries no properties at all, and caching it makes that permanent: every later
+  // read returns the same empty shell no matter how much data lands afterwards.
+  //
+  // That window is reachable. `usePageResolver` preloads nothing for a custom
+  // `_action/:action` sub-route (AQL_PAGE_AND_SECTION_SYSTEM.md §1.3.3), so a cold
+  // deep link enriches during the first render, ahead of the page's own fetch. The
+  // only escape was `clearEnrichmentCache()`, which fires on an `authStore.resources`
+  // change and may never come.
+  //
+  // The entry is still written BEFORE the build above — that is the circular-relation
+  // guard and it must stay — so an un-headered result is evicted here instead, and
+  // rebuilt on the next read once the headers exist.
+  if (!allHeaders.length) _enrichedCache.delete(cacheKey)
+
   return enriched
 }
 export function useRecord(resourceNameOverride, codeOverride) {

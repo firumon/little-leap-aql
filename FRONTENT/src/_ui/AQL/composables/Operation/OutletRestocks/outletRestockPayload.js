@@ -1,11 +1,11 @@
 import { textOrRef } from 'src/utils/appHelpers'
-import { executeActionRequest, resourceBulkRequest, resourceUpdateRequest } from 'src/composables/resources/usePageState'
+import { executeActionRequest, resourceBulkRequest, resourceGetRequest, resourceUpdateRequest } from 'src/composables/resources/usePageState'
 
 /**
- * OutletRestocks › Approve — the batch payloads the approval flow writes.
+ * OutletRestocks — the batch payloads the restock workflow writes.
  *
  * Self-contained by design: this module owns every request the approve/allocate/
- * cancel/reject outcomes send, and imports nothing resource-specific. Its only
+ * cancel/reject/deliver outcomes send, and imports nothing resource-specific. Its only
  * dependencies are the generic request builders re-exported by `usePageState`
  * (PAGE_STATE.md §8) and the stateless `$ref` helper in `appHelpers` — both
  * infrastructure, neither tied to a resource.
@@ -28,6 +28,10 @@ import { executeActionRequest, resourceBulkRequest, resourceUpdateRequest } from
 // (see `useRestockApproval.js`).
 const DEFAULT_STORAGE = '_default'
 const REFERENCE_TYPE = 'OutletRestock'
+// Outlet-side movements carry their own reference type. A warehouse movement and
+// an outlet movement written for the same request describe two different legs of
+// the same journey, and the ledgers must stay tellable apart when reconciling.
+const DELIVERY_REFERENCE_TYPE = 'RestockDelivery'
 const CANCEL_ITEM_ACTION = { action: 'Cancel', column: 'Progress', columnValue: 'CANCELLED' }
 
 const text = (value) => (value == null ? '' : String(value).trim())
@@ -282,5 +286,95 @@ export function buildRestockRejectBatchRequests (restock = {}, rows = [], actorN
       ProgressRejectedAt: new Date().toISOString(),
       ProgressRejectedBy: text(actorName)
     }, ['OutletRestocks'])
+  ]
+}
+
+/**
+ * The parent's Progress once `deliveredCodes` have been marked DELIVERED.
+ *
+ * Derived from the FULL set of active child rows rather than from the delivered
+ * ones alone: "is anything still outstanding?" is a question about the rows that
+ * were *not* selected, so a builder handed only the selection cannot answer it.
+ * A row that is neither delivered-now nor already delivered — an ALLOCATED line
+ * left for a later trip, or a PENDING remainder never allocated — keeps the
+ * request PARTIALLY_DELIVERED. CANCELLED and REJECTED lines are settled history
+ * and hold nothing open.
+ *
+ * Exported because both the builder and the review step state this outcome, and
+ * they must not disagree about it.
+ */
+export function nextRestockProgress (allItems = [], deliveredCodes = []) {
+  const delivered = new Set((Array.isArray(deliveredCodes) ? deliveredCodes : []).map(text).filter(Boolean))
+  const outstanding = (Array.isArray(allItems) ? allItems : [])
+    .map(row)
+    .filter(isActive)
+    .filter((entry) => text(entry.Code) && !delivered.has(text(entry.Code)))
+    .some((entry) => ['ALLOCATED', 'PENDING'].includes(text(entry.Progress) || 'PENDING'))
+  return outstanding ? 'PARTIALLY_DELIVERED' : 'DELIVERED'
+}
+
+/**
+ * MARK AS DELIVERED — the units land at the outlet.
+ *
+ * The mirror of the approval's warehouse movement: approval wrote a NEGATIVE
+ * `StockMovements` row when the units were committed out of the warehouse, and
+ * this writes a POSITIVE `OutletMovements` row when they arrive. The two ledgers
+ * are separate resources, so nothing here touches warehouse stock — those units
+ * left it at approval time and must not be deducted twice.
+ *
+ * `options.allItems` carries the request's full active child set so the parent's
+ * next Progress can be computed (see `nextRestockProgress`). It defaults to the
+ * delivered rows, which yields `'DELIVERED'` — correct when the caller is
+ * delivering everything, and the reason the documented four-argument signature
+ * still works on its own.
+ */
+export function buildRestockDeliveryBatchRequests (restock = {}, deliveredOrsiRows = [], actorName = '', comment = '', options = {}) {
+  const parent = row(restock)
+  const deliveredRows = (Array.isArray(deliveredOrsiRows) ? deliveredOrsiRows : [])
+    .map(row)
+    .filter(isActive)
+    .filter((entry) => text(entry.Code))
+
+  // Date-only: an outlet ledger is reconciled against a day's deliveries, not a
+  // wall-clock instant. The stamp fields below keep the precise time.
+  const movementDate = new Date().toISOString().slice(0, 10)
+
+  const itemRecords = deliveredRows.map((entry) => ({
+    Code: text(entry.Code),
+    Progress: 'DELIVERED',
+    ...stampFields('ProgressDelivered', actorName, comment),
+    Status: 'Active'
+  }))
+
+  const movements = deliveredRows.map((entry) => ({
+    OutletCode: text(parent.OutletCode),
+    SKU: text(entry.SKU),
+    // Always positive, for the same reason `stockMovement` takes the absolute
+    // value: a row carrying a negative quantity must not silently reverse the
+    // direction of an arrival.
+    QtyChange: Math.abs(num(entry.Quantity)),
+    ReferenceType: DELIVERY_REFERENCE_TYPE,
+    ReferenceCode: textOrRef(parent.Code),
+    ReferenceItemCode: text(entry.Code),
+    MovementDate: movementDate,
+    Status: 'Active'
+  }))
+
+  const allItems = Array.isArray(options.allItems) && options.allItems.length ? options.allItems : deliveredRows
+  const nextProgress = nextRestockProgress(allItems, deliveredRows.map((entry) => entry.Code))
+
+  return [
+    resourceBulkRequest('OutletRestockItems', itemRecords, ['OutletRestockItems']),
+    resourceBulkRequest('OutletMovements', movements, ['OutletStorages']),
+    resourceUpdateRequest('OutletRestocks', parent.Code, {
+      Progress: nextProgress,
+      ProgressDeliveredAt: new Date().toISOString(),
+      ProgressDeliveredBy: text(actorName),
+      ProgressDeliveredComment: text(comment)
+    }, ['OutletRestocks']),
+    // The arrival just changed the outlet's balance; pull the recalculated
+    // ledger and storages back in the same round trip rather than on the next
+    // page load.
+    resourceGetRequest(['OutletMovements', 'OutletStorages'])
   ]
 }

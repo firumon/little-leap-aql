@@ -406,6 +406,19 @@
   background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
 }
 
+// A flex item that must WRAP its text rather than push its siblings out of the
+// row. A flex child's default `min-width: auto` floors it at the width of its
+// longest unbreakable word, so a long product/SKU name forces the row wider and
+// shoves the trailing action buttons and totals onto a new line. Setting
+// `min-width: 0` lets the column shrink and the text wrap inside it instead.
+//
+// `overflow-wrap` covers the remaining case: a single word longer than the whole
+// column, which has no break opportunity to wrap at and would otherwise overflow.
+.aql-flex-wrap-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .aql-card-gradient-emerald {
   border-radius: $r-md !important;
   background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%);

@@ -17,7 +17,7 @@
       label="variantLabel"
       :header-chip="(group) => `${groupTotal(group, 'restockQuantity')}`"
       header-chip-color="primary"
-      :metaLabel="(item) => `${item.restockQuantity}`"
+      metaLabel="restockQuantity"
     />
 
     <!-- Section 2 — the consequence of the request, one level removed. Collapsed

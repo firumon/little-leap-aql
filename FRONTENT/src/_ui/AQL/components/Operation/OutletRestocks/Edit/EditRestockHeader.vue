@@ -1,48 +1,44 @@
 <template>
   <div :class="gutterClass">
-    <q-card class="aql-premium-card" flat>
-      <q-card-section :class="gutterClass">
+    <q-card flat bordered class="page-card aql-premium-gradient-card">
+      <q-card-section>
         <!-- Outlet and date are fixed for the life of a restock: the request was
              raised for one outlet, and re-pointing it at another would silently
              rewrite what the approver already saw. Both are stated, not offered. -->
-        <div class="row no-wrap q-col-gutter-sm">
-          <div class="col">
-            <div class="text-caption text-grey-7">Outlet</div>
-            <div class="text-subtitle1 text-weight-medium">{{ outletName }}</div>
-          </div>
-          <div class="col-auto text-right">
-            <div class="text-caption text-grey-7">Requested on</div>
-            <div class="text-subtitle1 text-weight-medium">{{ restockDate }}</div>
+        <div class="aql-detail-grid">
+          <div
+            v-for="(line, index) in summaryLines"
+            :key="line.key"
+            class="aql-detail-line items-center aql-detail-row"
+            :style="rowDelay(index)"
+          >
+            <span class="aql-detail-key">{{ line.key }}</span>
+            <span class="aql-detail-val col overflow-hidden flex justify-end items-center">
+              {{ line.value }}
+            </span>
           </div>
         </div>
-
-        <q-separator />
-
-        <q-banner
-          v-if="!isEditable"
-          rounded
-          dense
-          class="q-mb-md bg-warning text-black"
-          data-testid="restock-locked-banner"
-        >
-          <template #avatar>
-            <q-icon name="lock" />
-          </template>
-          <div class="text-body2">
-            Editing is disabled because this restock request is currently in
-            {{ parent.record.value.Progress || 'locked' }} state.
-          </div>
-        </q-banner>
-
-        <FieldTextareaEdit
-          :model-value="comment"
-          :record="parent.record.value"
-          :config="{ label: 'Comment (optional)', disable: !isEditable }"
-          header="ProgressSubmittedComment"
-          @update:model-value="setComment"
-        />
       </q-card-section>
     </q-card>
+
+    <!-- Retained deliberately: the Edit URL is reachable directly, so a request
+         that has moved on since the link was opened has to say why nothing here
+         will save rather than failing at the sticky bar. -->
+    <q-banner
+      v-if="!isEditable"
+      rounded
+      dense
+      class="bg-warning text-black"
+      data-testid="restock-locked-banner"
+    >
+      <template #avatar>
+        <q-icon name="lock" />
+      </template>
+      <div class="text-body2">
+        Editing is disabled because this restock request is currently in
+        {{ parent.record.value.Progress || 'locked' }} state.
+      </div>
+    </q-banner>
   </div>
 </template>
 
@@ -55,29 +51,57 @@
  * badge here would invite the user to read this page as a place to move the
  * request through its lifecycle, which is the approval view's job.
  *
+ * The one workflow fact it DOES state is the revision note, because that is the
+ * instruction the user is here to act on — it belongs above the item cards, not
+ * behind a tab.
+ *
+ * Layout mirrors `MarkDelivered/SelectDeliveryItems.vue`'s summary card: the
+ * `.aql-detail-*` row grammar on a `page-card aql-premium-gradient-card` shell
+ * with the framework's 40ms stagger, so it cannot misalign against a neighbouring
+ * card.
+ *
  * It is also where the page hydrates: this is the first content the Edit contract
  * renders and `useRestockEditForm` owns the load, since the contract has no
  * `Update` component to do it (see that composable).
  *
  * Holds no state — the composable projects pageState and writes straight back
- * (ARCHITECTURE RULES §6).
+ * (ARCHITECTURE RULES §6). No `<style>` block (ARCHITECTURE RULES §7).
  */
 import { computed, useAttrs } from 'vue'
-import FieldTextareaEdit from 'components/_fields/textarea/Edit.vue'
 import { useRestockEditForm } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockEditForm'
 import { restockEditableProgress } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockProgress'
 
 defineOptions({ name: 'OutletRestocksEditRestockHeader', inheritAttrs: false })
+
+// The same 40ms cadence the framework detail cards animate on, so a custom card
+// stacked beside one enters in step. Hoisted rather than written inline: a fresh
+// object literal per render is a new prop identity every time.
+const ROW_STAGGER_MS = 40
 
 // Vertical rhythm follows the page's own gutter token (drilled down from
 // pageProps — AQL_PAGE_AND_SECTION_SYSTEM.md §1.3.4).
 const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 
-const { parent, outletName, restockDate, comment, setComment } = useRestockEditForm()
+const { parent, outletName, restockDate, isRevision, revisionNote } = useRestockEditForm()
 
 // A restock may only be edited in DRAFT or REVISION_REQUIRED. Any other state
-// renders the rest with read-only display and a lock banner — the header's card
-// is for revising a returned request, not for rewriting settled history.
+// renders read-only with a lock banner — this page is for revising a returned
+// request, not for rewriting settled history.
 const isEditable = computed(() => restockEditableProgress(parent.record.value.Progress))
+
+// The revision note is appended rather than always present: on a DRAFT there was
+// no revision, and an empty row would read as a note that says nothing.
+const summaryLines = computed(() => {
+  const lines = [
+    { key: 'Outlet', value: outletName.value || '—' },
+    { key: 'Requested on', value: restockDate.value || '—' }
+  ]
+  if (isRevision.value && revisionNote.value) {
+    lines.push({ key: 'Revision Note', value: revisionNote.value })
+  }
+  return lines
+})
+
+const rowDelay = (index) => ({ animationDelay: `${index * ROW_STAGGER_MS}ms` })
 </script>

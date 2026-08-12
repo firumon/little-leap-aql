@@ -12,8 +12,9 @@ import { restockEditableProgress } from 'src/_ui/AQL/composables/Operation/Outle
  * `Resubmit` rather than `Save`, because that is what saving an edited restock
  * actually does: the only reason a request is editable is that it came back for
  * revision, and sending it on is the point of the page. `Save Draft` is the
- * secondary intent set by `EditSaveAsDraft.vue`'s toggle — same pairing the Add
- * wizard's `SubmitOptions.vue` offers on its final step. `submitLabel` is a
+ * secondary intent set by `EditSubmitOptions.vue`'s toggle, which offers it only
+ * on a DRAFT — same pairing the Add wizard's `SubmitOptions.vue` offers on its
+ * final step. `submitLabel` is a
  * getter for the same reason `Add/PageAction.js` uses one — `useActionResolver`
  * merges this factory's result inside a `computed`, so a getter is re-read on
  * recompute while a literal would latch whatever was true at resolve time
@@ -73,9 +74,11 @@ export default (props, { pageState, resourceConfig }) => {
 
       const draft = isDraft()
 
-      // The comment is already on the node (written by `EditRestockHeader`), so
+      // The comment is already on the node (written by `EditSubmitOptions`), so
       // it rides along in the payload; Progress plus the submission stamps are
-      // decided here.
+      // decided here. It is never REQUIRED: a resubmission is a workflow fact,
+      // and stamping who/when must not hinge on whether the user had anything to
+      // say about it.
       pageState.setFields('OutletRestocks', {
         Progress: draft ? 'DRAFT' : 'PENDING_APPROVAL',
         ...(draft ? {} : {

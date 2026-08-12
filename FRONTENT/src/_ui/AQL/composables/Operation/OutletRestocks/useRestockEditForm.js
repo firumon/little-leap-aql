@@ -27,6 +27,7 @@ const CHILD = 'OutletRestockItems'
 // SKU" means or this dedupe would pass rows that the cards then merge anyway.
 const skuKey = (value) => String(value ?? '').trim().toLowerCase()
 const isActive = (row) => (row?.Status || 'Active') === 'Active'
+const text = (value) => String(value ?? '').trim()
 
 export function useRestockEditForm () {
   const pageState = inject('pageState', null)
@@ -43,32 +44,61 @@ export function useRestockEditForm () {
   const parent = pageState.useNode(PARENT)
   const serverRecord = computed(() => resourceRecord?.record?.value || null)
 
-  // Identity of the pristine server record marks "a different record", exactly as
-  // in Update.vue — the object reference, not its Code, which can repeat across
-  // a refetch of the same row.
-  let hydratedKey = ''
-  let hydratedChildren = false
+  // Hydration bookkeeping lives on the NODE, not in this closure.
+  //
+  // More than one component on the page calls this composable (`EditRestockHeader`
+  // and `EditSubmitOptions`), and each call gets its own closure — so a per-call
+  // `let hydratedKey` would let the second instance re-run the whole pass: it
+  // would reload the record over whatever the user had typed, and, worse, append
+  // a SECOND copy of every item line. A control field is scoped to the node
+  // itself, so it is shared by every caller and is discarded with the node when
+  // PageAction resets it, which is exactly the lifetime this flag needs.
+  const HYDRATED_FOR = 'EditHydratedFor'
+  const hydratedFor = () => (pageState.hasNode(PARENT)
+    ? text(pageState.getControlField(PARENT, HYDRATED_FOR))
+    : '')
 
   function hydrate () {
     const record = serverRecord.value
     if (!pageState || !record) return
+    const code = text(record.Code)
+    if (!code) return
 
-    if (!pageState.hasNode(PARENT)) {
-      pageState.initResource(PARENT, { isPrimaryKey: true, reset: true, code: record.Code })
-      hydratedChildren = false
-    }
-    if (!parent.exists.value) return
+    // The record's CODE is what the node is hydrated FOR, and a change of code
+    // means a different restock — never a re-render of this one.
+    //
+    // Reused rather than re-created is how a node leaks: `hasNode` is true for
+    // the whole resource, so walking from restock A's edit page to restock B's
+    // kept A's node and every control on it. `reset: true` detaches the node
+    // outright, which is the only thing that clears `controls` — the draft
+    // toggle, and on the action pages the comment and the allocation plan.
+    //
+    // Keyed on the Code rather than on the record OBJECT's identity: a
+    // background sync hands back a fresh enriched object for the same row, and
+    // re-hydrating on that would wipe edits the user had already made.
+    if (hydratedFor() !== code) {
+      pageState.initResource(PARENT, { isPrimaryKey: true, reset: true, code })
+      if (!parent.exists.value) return
 
-    const key = `${parent.identifier.value}::${record.Code || ''}::${recordId(record)}`
-    if (key !== hydratedKey) {
-      hydratedKey = key
+      pageState.setControlField(PARENT, HYDRATED_FOR, code)
       pageState.load(PARENT, record)
+
+      // Default the draft toggle ON when entering an existing DRAFT record. A
+      // user who opens their draft to adjust item lines and hits the primary
+      // button must save it, not accidentally submit it — the OFF default was
+      // the opposite intent. No `else`: the node is fresh, so anything that is
+      // not a DRAFT already reads as false.
+      if (text(record.Progress) === 'DRAFT') {
+        pageState.setControlField(PARENT, 'isDraft', true)
+      }
     }
 
-    if (hydratedChildren) return
+    // The node's OWN children are the record of whether the lines were seeded.
+    // Asking pageState rather than a local flag is what makes a second caller a
+    // no-op instead of a duplicate-line generator.
+    if (parent.children(CHILD).value.length) return
     const rows = (resourceRecord?.childRecordsByResource?.value || {})[CHILD]
     if (!Array.isArray(rows) || !rows.length) return
-    hydratedChildren = true
 
     // One line per SKU. The item cards address a line BY SKU, so a second row for
     // the same SKU is a line the UI can never reach: the card reads the SKU's total
@@ -91,13 +121,6 @@ export function useRestockEditForm () {
       if (sku && primaryBySku.get(sku) !== row) return
       pageState.addChild(PARENT, CHILD, { ...row }, { action: 'update' })
     })
-  }
-
-  const recordIds = new WeakMap()
-  let recordSeq = 0
-  function recordId (record) {
-    if (!recordIds.has(record)) recordIds.set(record, `rec-${++recordSeq}`)
-    return recordIds.get(record)
   }
 
   watch(
@@ -128,11 +151,36 @@ export function useRestockEditForm () {
   // the field with today's date on submit, so this reads the pristine server
   // record rather than the node it is about to stamp.
   const restockDate = computed(() => serverRecord.value?.Date || parent.record.value.Date || '—')
+
+  // The state the page was ENTERED in. Read from the pristine server record
+  // because `Edit/PageAction.js` rewrites `Progress` on the node at submit time,
+  // and both the header and `EditSubmitOptions` ask "why is this editable?" — a
+  // question about how the request arrived here, not about what it is becoming.
+  const progress = computed(() => String(serverRecord.value?.Progress || parent.record.value.Progress || '').trim())
+  const isRevision = computed(() => progress.value === 'REVISION_REQUIRED')
+
+  // Why the request came back. A workflow stamp, never edited here, so it is read
+  // off the server record rather than the node the page is about to mutate.
+  const revisionNote = computed(() => String(serverRecord.value?.ProgressRevisionRequiredComment || '').trim())
+
+  // The comment that will ride along with the RESUBMISSION. Loaded onto the node
+  // by `pageState.load`, so a previous submission's text is already there and is
+  // overwritten intentionally rather than silently wiped.
   const comment = computed(() => parent.record.value.ProgressSubmittedComment || '')
 
   function setComment (value) {
     pageState.setField(PARENT, 'ProgressSubmittedComment', value ?? '')
   }
 
-  return { parent, outletCode, outletName, restockDate, comment, setComment }
+  return {
+    parent,
+    outletCode,
+    outletName,
+    restockDate,
+    progress,
+    isRevision,
+    revisionNote,
+    comment,
+    setComment
+  }
 }

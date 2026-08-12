@@ -62,7 +62,7 @@ This document describes the current operation-scope sheet families and their rol
 
 ### Outlet Operation Columns
 - `Outlet-Visits`: `Code`, `OutletCode`, `Date`, `RespondDate`, `Progress`, planned/completed/postponed/cancelled progress stamp/comment columns, `Status`, `AccessRegion`, audit columns.
-- `OutletRestocks`: `Code`, `Date`, `OutletCode`, `RequestedUser`, `ApprovedUser`, `Progress`, submit/send-back/approve/reject action stamp/comment columns, `Status`, `AccessRegion`, audit columns.
+- `OutletRestocks`: `Code`, `Date`, `OutletCode`, `RequestedUser`, `ApprovedUser`, `Progress`, submit/send-back/approve/reject/deliver action stamp/comment columns, `Status`, `AccessRegion`, audit columns.
 - `OutletRestockItems`: `Code`, `OutletRestockCode`, `WarehouseCode`, `SKU`, `StorageName`, `Quantity`, `Progress`, allocated/delivered progress stamp/comment columns, `Status`, `AccessRegion`, audit columns.
 - `OutletDeliveries`: `Code`, `Date`, `UserName`, `OutletRestockItemCodes` (CSV of ORI codes), `Progress`, in-transit/completed progress stamp/comment columns, cancel audit fields, `Status`, `AccessRegion`, audit columns.
 - `OutletConsumptions`: `Code`, `OutletCode`, `Date`, `Username`, optional `OutletVisitCode`, `Progress`, progress action audit triplets (`PendingInvoiceGeneration`, `InvoiceGenerated`, `Cancelled`), `Status`, `AccessRegion`, audit columns.

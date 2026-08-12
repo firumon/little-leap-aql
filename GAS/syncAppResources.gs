@@ -1200,6 +1200,7 @@ function initAppResourcesCodeConfig() {
             { "action": "Revise", "label": "Request Revision", "icon": "edit_note", "color": "warning", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "REVISION_REQUIRED", "fields": [{ "name": "ProgressRevisionRequiredComment", "label": "Revision Instructions (Mandatory)", "type": "textarea", "required": true }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "PENDING_APPROVAL" } },
             { "action": "Reject", "label": "Reject Request", "icon": "block", "color": "negative", "kind": "mutate", "confirm": true, "column": "Progress", "columnValue": "REJECTED", "fields": [{ "name": "ProgressRejectedComment", "label": "Rejection Reason (Mandatory)", "type": "textarea", "required": true }], "visibleWhen": { "column": "Progress", "op": "eq", "value": "PENDING_APPROVAL" } },
             { "action": "MarkDelivered", "label": "Confirm Outlet Delivery", "icon": "local_shipping", "color": "teal-7", "kind": "navigate", "navigate": { "target": "action", "pageSlug": "mark-delivered" }, "visibleWhen": { "column": "Progress", "op": "in", "value": ["APPROVED", "PARTIALLY_DELIVERED"] } },
+            { "action": "Reallocate", "label": "Reallocate Pending Items", "icon": "inventory_2", "color": "info", "kind": "navigate", "navigate": { "target": "action", "pageSlug": "reallocate" }, "visibleWhen": { "column": "Progress", "op": "eq", "value": "PARTIALLY_DELIVERED" } },
             { "action": "Cancel", "label": "Cancel Restock Request", "icon": "cancel", "color": "negative", "kind": "mutate", "confirm": true, "column": "Status", "columnValue": "Inactive", "fields": [{ "name": "ProgressRejectedComment", "label": "Cancellation Reason", "type": "textarea", "required": true }], "visibleWhen": [{ "column": "Progress", "op": "in", "value": ["DRAFT", "PENDING_APPROVAL", "REVISION_REQUIRED"] }, { "column": "CreatedBy", "op": "eq", "value": "$userCode" }] }
         ]),
         Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 3, "label": "Outlet Restocks", "icon": "inventory", "route": "/operation/outlet-restocks", "pageTitle": "Outlet Restocks", "pageDescription": "Request, approve, and fulfill outlet restocks", "show": true }]),
@@ -1222,6 +1223,9 @@ function initAppResourcesCodeConfig() {
             { header: 'ProgressRejectedAt', label: 'Rejected At', type: 'datetime' },
             { header: 'ProgressRejectedBy', label: 'Rejected By', type: 'text' },
             { header: 'ProgressRejectedComment', label: 'Rejected Comment', type: 'textarea' },
+            { header: 'ProgressDeliveredAt', label: 'Delivered At', type: 'datetime' },
+            { header: 'ProgressDeliveredBy', label: 'Delivered By', type: 'text' },
+            { header: 'ProgressDeliveredComment', label: 'Delivered Comment', type: 'textarea' },
             { header: 'Status', label: 'Status', type: 'status' },
             { header: 'AccessRegion', label: 'Access Region', type: 'text' }
         ]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: JSON.stringify([

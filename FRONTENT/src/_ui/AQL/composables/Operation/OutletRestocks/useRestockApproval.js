@@ -280,25 +280,49 @@ export function useRestockApproval () {
   // record for it (AQL_PAGE_AND_SECTION_SYSTEM.md §1.3.3), so the node is created
   // and seeded here. It must exist for `PageAction` to render the sticky bar at
   // all — `hasNodes` gates it (AQL_ACTION_SYSTEM.md §3.1).
-  let hydratedKey = ''
+  // Bookkeeping lives on the NODE, not in this closure. FOUR components call this
+  // composable — `WarehouseAndLocation` and `ItemAllocating` at step 1,
+  // `ReviewAllocating` and `ReviewPending` at step 2 — and each call gets its own
+  // closure. A per-call `let hydratedKey` therefore starts empty when the step-2
+  // cards MOUNT, and would re-run the pass and wipe the allocation plan the
+  // approver has just spent the whole of step 1 building. A control field is
+  // scoped to the node itself, so it is shared by every caller.
+  const HYDRATED_FOR = 'ApprovalHydratedFor'
+  const hydratedFor = () => (pageState.hasNode(PARENT)
+    ? text(pageState.getControlField(PARENT, HYDRATED_FOR))
+    : '')
 
   function hydrate () {
     const record = serverRecord.value
     if (!pageState || !record) return
+    const code = text(record.Code)
+    if (!code) return
 
-    if (!pageState.hasNode(PARENT)) {
-      pageState.initResource(PARENT, { isPrimaryKey: true, reset: true, code: record.Code })
-    }
+    // The record's CODE is what the node is hydrated FOR. Anything else is a
+    // DIFFERENT restock, and its node must be built from scratch: `hasNode` is
+    // true for the whole resource, so reusing it carried the previous request's
+    // plan and comment across — and a plan is keyed by the OTHER request's item
+    // Codes, so submitting it would allocate stock against the wrong lines.
+    // `reset: true` detaches the node, which is the only thing that clears
+    // `controls`.
+    if (hydratedFor() === code) return
+
+    pageState.initResource(PARENT, { isPrimaryKey: true, reset: true, code })
     if (!parent.exists.value) return
 
-    // Keyed on the node instance + the record's code, exactly as Update.vue keys
-    // its hydration: a re-render must never wipe a plan the approver has already
-    // built, but a node replacement (a Reset) must re-seed from the server.
-    const key = `${parent.identifier.value}::${text(record.Code)}`
-    if (key === hydratedKey) return
-    hydratedKey = key
+    pageState.setControlField(PARENT, HYDRATED_FOR, code)
     pageState.load(PARENT, record)
-    if (!getPlan()) writePlan({})
+    writePlan({})
+
+    // Seed the comment from the LAST approval pass on THIS request, for the same
+    // reason the delivery flow does: an already-APPROVED request comes back to
+    // have its leftover PENDING lines allocated, and the note written the first
+    // time is usually most of the note wanted the second.
+    //
+    // Written unconditionally, because this line is only reached when the node
+    // has just been created for this record: there is no approver input to
+    // protect yet. Stepping between steps re-enters above.
+    pageState.setControlField(PARENT, COMMENT, text(record.ProgressApprovedComment))
   }
 
   watch([serverRecord, () => parent.identifier.value], () => { hydrate() }, { immediate: true })

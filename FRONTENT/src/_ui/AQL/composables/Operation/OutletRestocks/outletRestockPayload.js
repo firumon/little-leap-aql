@@ -1,4 +1,5 @@
 import { textOrRef } from 'src/utils/appHelpers'
+import { toDateTime24 } from 'src/utils/dateHelpers'
 import { executeActionRequest, resourceBulkRequest, resourceGetRequest, resourceUpdateRequest } from 'src/composables/resources/usePageState'
 
 /**
@@ -52,11 +53,25 @@ function formatTimeOnly (date = new Date()) {
   return `${h}:${String(date.getMinutes()).padStart(2, '0')} ${ampm}`
 }
 
-// Workflow stamps are written under the hood, never exposed as form fields, so
-// they cannot be back-dated by the user.
+/**
+ * One workflow stamp — the At/By/Comment triple for a `Progress<State>` prefix.
+ *
+ * The SINGLE writer of a stamp in this module, so no outcome can record two of the
+ * three columns and leave the third blank. A stamp with no `By` reads as a stage
+ * that never happened (`useRestockView().workflowStamps` drops it), which is
+ * exactly what an approval missing its actor used to look like on the timeline.
+ *
+ * `toDateTime24` rather than an ISO string: GAS stamps `Progress<State>At` with
+ * `formatDateTime24()` whenever an `executeAction` writes one, and these columns
+ * are surfaced verbatim in sheet views and printed reports. Two formats in one
+ * column would sort and read inconsistently depending on which path wrote the row.
+ *
+ * Written under the hood, never exposed as form fields, so they cannot be
+ * back-dated by the user.
+ */
 function stampFields (prefix, actorName = '', comment = '') {
   return {
-    [`${prefix}At`]: new Date().toISOString(),
+    [`${prefix}At`]: toDateTime24(new Date()),
     [`${prefix}By`]: text(actorName),
     [`${prefix}Comment`]: text(comment)
   }
@@ -143,10 +158,15 @@ export function buildRestockAllocationBatchRequests (restock = {}, rows = [], ac
     resourceBulkRequest('StockMovements', movements, ['WarehouseStorages'])
   ]
   if (options.updateRestock !== false) {
+    // The full stamp, not just the comment. Approval is reached through this
+    // builder rather than through a generic `executeAction`, so GAS never gets to
+    // auto-fill `Progress<State>At/By` (resourceApi.gs › handleExecuteAction) —
+    // writing only the comment left the approval with no actor and no time, and
+    // the View timeline drops a stamp with no actor.
     requests.push(resourceUpdateRequest('OutletRestocks', parent.Code, {
       Progress: 'APPROVED',
       ApprovedUser: text(actorName),
-      ProgressApprovedComment: text(comment)
+      ...stampFields('ProgressApproved', actorName, comment)
     }, ['OutletRestocks']))
   }
   return requests
@@ -282,9 +302,7 @@ export function buildRestockRejectBatchRequests (restock = {}, rows = [], actorN
     resourceBulkRequest('OutletRestockItems', itemRecords, ['OutletRestockItems']),
     resourceUpdateRequest('OutletRestocks', parent.Code, {
       Progress: 'REJECTED',
-      ProgressRejectedComment: text(comment),
-      ProgressRejectedAt: new Date().toISOString(),
-      ProgressRejectedBy: text(actorName)
+      ...stampFields('ProgressRejected', actorName, comment)
     }, ['OutletRestocks'])
   ]
 }
@@ -368,9 +386,7 @@ export function buildRestockDeliveryBatchRequests (restock = {}, deliveredOrsiRo
     resourceBulkRequest('OutletMovements', movements, ['OutletStorages']),
     resourceUpdateRequest('OutletRestocks', parent.Code, {
       Progress: nextProgress,
-      ProgressDeliveredAt: new Date().toISOString(),
-      ProgressDeliveredBy: text(actorName),
-      ProgressDeliveredComment: text(comment)
+      ...stampFields('ProgressDelivered', actorName, comment)
     }, ['OutletRestocks']),
     // The arrival just changed the outlet's balance; pull the recalculated
     // ledger and storages back in the same round trip rather than on the next

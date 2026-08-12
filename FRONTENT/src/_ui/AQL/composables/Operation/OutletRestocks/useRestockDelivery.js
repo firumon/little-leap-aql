@@ -215,25 +215,46 @@ export function useRestockDelivery () {
   // record for it (AQL_PAGE_AND_SECTION_SYSTEM.md §1.3.3), so the node is created
   // and seeded here. It must exist for `PageAction` to render the sticky bar at
   // all — `hasNodes` gates it (AQL_ACTION_SYSTEM.md §3.1).
-  let hydratedKey = ''
+  // Bookkeeping lives on the NODE, not in this closure. Two components call this
+  // composable (`SelectDeliveryItems` at step 1, `ReviewDelivery` at step 2), and
+  // each call gets its own closure — so a per-call `let hydratedKey` starts empty
+  // when step 2 MOUNTS, and would re-run the pass and wipe the selection the
+  // driver just made. A control field is scoped to the node itself, so it is
+  // shared by every caller and is discarded with the node.
+  const HYDRATED_FOR = 'DeliveryHydratedFor'
+  const hydratedFor = () => (pageState.hasNode(PARENT)
+    ? text(pageState.getControlField(PARENT, HYDRATED_FOR))
+    : '')
 
   function hydrate () {
     const record = serverRecord.value
     if (!pageState || !record) return
+    const code = text(record.Code)
+    if (!code) return
 
-    if (!pageState.hasNode(PARENT)) {
-      pageState.initResource(PARENT, { isPrimaryKey: true, reset: true, code: record.Code })
-    }
+    // The record's CODE is what the node is hydrated FOR. Anything else is a
+    // DIFFERENT restock, and its node must be built from scratch: `hasNode` is
+    // true for the whole resource, so reusing it carried the previous request's
+    // selection and comment across. `reset: true` detaches the node, which is
+    // the only thing that clears `controls`.
+    if (hydratedFor() === code) return
+
+    pageState.initResource(PARENT, { isPrimaryKey: true, reset: true, code })
     if (!parent.exists.value) return
 
-    // Keyed on the node instance + the record's code, exactly as `Update.vue`
-    // keys its hydration: a re-render must never wipe a selection the user has
-    // already made, but a node replacement (a Reset) must re-seed from the server.
-    const key = `${parent.identifier.value}::${text(record.Code)}`
-    if (key === hydratedKey) return
-    hydratedKey = key
+    pageState.setControlField(PARENT, HYDRATED_FOR, code)
     pageState.load(PARENT, record)
-    if (!Array.isArray(getSelection())) writeSelection([])
+    writeSelection([])
+
+    // Seed the comment from the LAST delivery on THIS request. A
+    // PARTIALLY_DELIVERED restock is delivered again, and the note explaining the
+    // first drop is usually most of the note explaining the second — presenting
+    // it to be amended is a better default than an empty box the user retypes.
+    //
+    // Written unconditionally, because this line is only reached when the node
+    // has just been created for this record: there is no user input to protect
+    // yet. Stepping back and forth within the same request re-enters above.
+    pageState.setControlField(PARENT, COMMENT, text(record.ProgressDeliveredComment))
   }
 
   watch([serverRecord, () => parent.identifier.value], () => { hydrate() }, { immediate: true })

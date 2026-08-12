@@ -2,9 +2,16 @@
  * OutletRestocks › Approve contract — `/operation/outlet-restocks/{code}/_action/approve`.
  *
  * An `_action/:action` route resolves its canonical page key to the ACTION NAME,
- * so this file is `Approve.js` (not `action.js`) and every placeholder beneath it
- * resolves under the `approve/` page tier — `.../OutletRestocks/Approve/*`
- * (AQL_CUSTOM_UI_GUIDE §2.1).
+ * so this file is `Approve.js` (not `action.js`) and a placeholder beneath it may
+ * resolve under the `approve/` page tier — `.../OutletRestocks/Approve/*`
+ * (AQL_CUSTOM_UI_GUIDE §2.1). `PageAction` and `FormActionReject` live there,
+ * because the sticky bar IS approval-specific.
+ *
+ * The four content cards do NOT. They sit one level up at the RESOURCE tier
+ * (`.../OutletRestocks/*.vue`) so that `Reallocate.js` resolves the very same
+ * files: reallocating leftovers on a PARTIALLY_DELIVERED request is the same
+ * decision as allocating at approval time, and two copies would drift. Anything
+ * genuinely approve-only belongs in `Approve/`, which outranks the resource tier.
  *
  * Two steps, both driven from the sticky bar by `Approve/PageAction.js` so the
  * content cards stay pure inputs with no navigation of their own:

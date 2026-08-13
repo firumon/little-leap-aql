@@ -7,14 +7,20 @@ import { restockEditableProgress } from 'src/_ui/AQL/composables/Operation/Outle
  *
  * The Edit page is a single view, not a wizard, so the bar is the plain pair:
  *
- *   [ Cancel ]  [ Resubmit / Save Draft ]
+ *   [ Cancel ]  [ Submit / Resubmit / Save Draft ]
  *
- * `Resubmit` rather than `Save`, because that is what saving an edited restock
- * actually does: the only reason a request is editable is that it came back for
- * revision, and sending it on is the point of the page. `Save Draft` is the
- * secondary intent set by `EditSubmitOptions.vue`'s toggle, which offers it only
- * on a DRAFT — same pairing the Add wizard's `SubmitOptions.vue` offers on its
- * final step. `submitLabel` is a
+ * Never `Save`, because that is not what the primary button does: sending the
+ * request on is the point of the page. Which verb it uses depends on the state the
+ * page was ENTERED in — a DRAFT has never been submitted, so it reads `Submit`,
+ * while a request that came back for changes reads `Resubmit`. Labelling a first
+ * submission "Resubmit" told the requester they had done this before.
+ *
+ * `Save Draft` is the secondary intent set by `EditSubmitOptions.vue`'s toggle,
+ * which offers it only on a DRAFT — the same pairing the Add wizard's
+ * `SubmitOptions.vue` offers on its final step, and it DEFAULTS ON there so
+ * opening a draft to adjust lines cannot submit it by accident.
+ *
+ * `submitLabel` is a
  * getter for the same reason `Add/PageAction.js` uses one — `useActionResolver`
  * merges this factory's result inside a `computed`, so a getter is re-read on
  * recompute while a literal would latch whatever was true at resolve time
@@ -42,6 +48,27 @@ export default (props, { pageState, resourceConfig }) => {
   const isDraft = () => pageState.getControlField('OutletRestocks', 'isDraft') === true
   const items = () => itemEntries.value.filter((entry) => entry._action !== 'deactivate')
 
+  /**
+   * The state the page was ENTERED in — a DRAFT has never been submitted, so sending it
+   * on is a Submit, while a returned request is genuinely a Resubmit.
+   *
+   * LATCHED on first sight, not read live. `submit` rewrites `Progress` on the same node
+   * this reads, and `submitLabel` is a getter re-evaluated on every recompute — so a live
+   * read flipped the button from "Submit" to "Resubmit" the instant it was pressed, while
+   * the request was still in flight. Latching also survives the hydration window: the
+   * node is empty until `useRestockEditForm` loads the record, and a blank is not an
+   * answer, so it is not recorded as one.
+   */
+  let entryProgress = null
+  const enteredAsDraft = () => {
+    if (entryProgress === null) {
+      const current = String(parent.record.value.Progress ?? '').trim()
+      if (!current) return false
+      entryProgress = current
+    }
+    return entryProgress === 'DRAFT'
+  }
+
   // Same invariant the Add wizard enforces: an edit that zeroes every line is a
   // cancellation, and cancelling is a workflow action, not a save.
   function validateItems () {
@@ -55,7 +82,10 @@ export default (props, { pageState, resourceConfig }) => {
   return {
     actions: ['cancel', 'submit'],
 
-    get submitLabel () { return isDraft() ? 'Save Draft' : 'Resubmit' },
+    get submitLabel () {
+      if (isDraft()) return 'Save Draft'
+      return enteredAsDraft() ? 'Submit' : 'Resubmit'
+    },
 
     cancel: (name, { nav }) => {
       nav.goTo('index')
@@ -73,6 +103,7 @@ export default (props, { pageState, resourceConfig }) => {
       }
 
       const draft = isDraft()
+      const firstSubmission = enteredAsDraft()
 
       // The comment is already on the node (written by `EditSubmitOptions`), so
       // it rides along in the payload; Progress plus the submission stamps are
@@ -88,7 +119,8 @@ export default (props, { pageState, resourceConfig }) => {
         })
       })
 
-      return { successMsg: draft ? 'Restock request saved as draft.' : 'Restock request resubmitted.' }
+      if (draft) return { successMsg: 'Restock request saved as draft.' }
+      return { successMsg: firstSubmission ? 'Restock request submitted for approval.' : 'Restock request resubmitted.' }
     }
   }
 }

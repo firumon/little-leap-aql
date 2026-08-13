@@ -6,7 +6,7 @@
     header-label="productName"
     :empty-text="emptyText"
     :empty-icon="emptyIcon"
-    card-class="aql-premium-card q-mb-sm"
+    card-class="page-card aql-premium-gradient-card"
     label="variantLabel"
     :caption="stockCaption"
   >
@@ -38,7 +38,7 @@
       <div class="row items-center no-wrap q-gutter-x-xs">
         <q-btn
           outline round color="secondary" icon="remove" padding="none"
-          style="min-width: 36px; min-height: 36px"
+          style="min-width: 40px; min-height: 40px"
           :disable="item.restockQuantity <= 0"
           :aria-label="`Remove one ${item.variantLabel}`"
           @click="emit('adjust', item.SKU, -1)"
@@ -52,7 +52,7 @@
         />
         <q-btn
           outline round color="secondary" icon="add" padding="none"
-          style="min-width: 36px; min-height: 36px"
+          style="min-width: 40px; min-height: 40px"
           :disable="item.restockQuantity >= item.maxQuantity"
           :aria-label="`Add one ${item.variantLabel}`"
           @click="emit('adjust', item.SKU, 1)"
@@ -94,11 +94,15 @@ const emit = defineEmits(['update', 'adjust'])
 // `FieldNumberAdd` declares `inheritAttrs: false` and v-binds `config` straight
 // onto its `q-input`, so the stepper's fixed width has to travel in `config` —
 // a `style` on the component itself would be dropped.
+//
+// NOT `dense`. This is the primary control of the whole Add/Edit flow — the number
+// the user is actually here to set — and a dense field gave it a smaller tap target
+// than the +/- buttons flanking it. Standard height also matches every other input
+// on the page, so the item cards stop reading as a denser, secondary form.
 const quantityConfig = computed(() => ({
-  dense: true,
   min: 0,
   hideBottomSpace: true,
-  style: 'width: 52px',
+  style: 'width: 64px',
   inputClass: 'text-center text-weight-bold q-px-none'
 }))
 

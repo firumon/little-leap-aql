@@ -17,6 +17,18 @@
  * that prefer the composable shape; it returns the same pure functions.
  */
 import { parseAnyDate } from 'src/utils/dateHelpers'
+import { sortByDate } from 'src/utils/sortHelpers'
+
+/**
+ * Re-exported, not redefined.
+ *
+ * Sorting rows by a date column is not visit knowledge, so the implementation lives in
+ * `src/utils/sortHelpers.js` where any resource may reach it without importing another
+ * resource's composable (ARCHITECTURE RULES §5). The name stays exported from here
+ * because `ListOverdue.js` and `RecentVisits.vue` already import it by this path, and
+ * because the presets below read better beside the rest of the visit vocabulary.
+ */
+export { sortByDate }
 
 export const PLANNED = 'PLANNED'
 export const COMPLETED = 'COMPLETED'
@@ -180,31 +192,6 @@ export function countdownColor (days) {
   if (days < 0) return 'negative'
   if (days <= 1) return 'warning'
   return 'primary'
-}
-
-/**
- * Sorts by a date-ish column without copying the rows.
- *
- * `[...items].sort()` builds a new ARRAY but carries the element references through, so
- * the enriched records keep their non-enumerable relation getters (`$outlet`, `_Parents`).
- * A `{ ...row }` copy here would silently strip them — see
- * AQL_PAGE_AND_SECTION_SYSTEM.md §1.3.3.
- *
- * Unparseable dates sink to the end in both directions rather than riding NaN comparison
- * semantics, which would scatter them unpredictably through the list.
- */
-export function sortByDate (items, column, direction = 'asc') {
-  const rows = Array.isArray(items) ? items : []
-  const sign = direction === 'desc' ? -1 : 1
-
-  return [...rows].sort((a, b) => {
-    const left = parseAnyDate(a?.[column])
-    const right = parseAnyDate(b?.[column])
-    if (!left && !right) return 0
-    if (!left) return 1
-    if (!right) return -1
-    return sign * (left - right)
-  })
 }
 
 // ─── Row presets for the read-only list views ─────────────────────────────────

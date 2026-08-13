@@ -153,9 +153,11 @@ function short (value) {
 // dropped. `config` IS spread onto the inner control, which is why the test hook
 // travels there rather than as a bare attribute.
 function binFieldConfig (sku, bin) {
+  // NOT `dense`. The bin quantities are the decision this page exists to record, and
+  // a dense field made the primary control the smallest thing on the card. Standard
+  // height also matches the inputs on every other page in the restock flow.
   return {
     label: `${short(bin.warehouseName)}: ${short(bin.storageName)}`,
-    dense: true,
     min: 0,
     hideBottomSpace: true,
     inputClass: 'text-right',

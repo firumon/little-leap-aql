@@ -1231,7 +1231,17 @@ function initAppResourcesCodeConfig() {
         ]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: JSON.stringify([
             {"id":"rep_1776000000015","name":"restock-order","label":"Restock Order","templateSheet":"Restock","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
             {"id":"rep_1776000000016","name":"restock-log","label":"Restock Log","templateSheet":"RestockRecords","isRecordLevel":false,"inputs":[{"label":"User","type":"select","targetCell":"J11","source":{"resource":"OutletRestocks","field":"RequestedUser"},"default":"Any User","required":false},{"label":"Date","type":"select","targetCell":"J12","source":{"resource":"OutletRestocks","field":"Date"},"default":"Any Date","required":false},{"label":"Progress","type":"select","targetCell":"J13","source":{"resource":"OutletRestocks","field":"Progress"},"default":"All Progress","required":false}],"pdfOptions":{}}
-        ]), CustomUIName: '', ListViews: '',
+        ]), CustomUIName: '',
+        ListViews: JSON.stringify([
+            { "name": "Drafts", "label": "My Drafts", "icon": "edit_note", "color": "grey-7", "default": true, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "DRAFT" }] } },
+            { "name": "PendingApproval", "label": "Awaiting Approval", "icon": "hourglass_top", "color": "warning", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "PENDING_APPROVAL" }] } },
+            { "name": "NeedsRevision", "label": "Needs Revision", "icon": "rate_review", "color": "orange", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "REVISION_REQUIRED" }] } },
+            { "name": "Approved", "label": "Approved", "icon": "task_alt", "color": "positive", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "APPROVED" }] } },
+            { "name": "PartiallyDelivered", "label": "Partially Delivered", "icon": "incomplete_circle", "color": "info", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "PARTIALLY_DELIVERED" }] } },
+            { "name": "PendingCompletion", "label": "Pending Completion", "icon": "pending_actions", "color": "primary", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "in", "value": ["APPROVED", "PARTIALLY_DELIVERED"] }] } },
+            { "name": "Delivered", "label": "Delivered", "icon": "local_shipping", "color": "teal-7", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "DELIVERED" }] } },
+            { "name": "Rejected", "label": "Rejected", "icon": "block", "color": "negative", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "REJECTED" }] } }
+        ]),
         Relations: JSON.stringify({
             OutletCode: CONFIG.MASTER_SHEETS.OUTLETS
         })

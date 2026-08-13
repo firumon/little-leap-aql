@@ -493,7 +493,18 @@ Once a new Section component is created, you **MUST** update this file to docume
 
 **Colour.** `color` accepts Quasar brand names (`negative`, `warning`, `primary`), Material palette names (`teal-7`), or raw CSS values (`#e11d48`, `rgb(...)`). It is resolved by `resolveCssColor()` from `src/utils/colorHelpers.js` and written to the card as the inline custom property `--aql-metric-color`; the gradient, border, accent rail, number, unit and shadow all derive from it via `color-mix()`. No per-colour class variants exist.
 
-**Styling.** All rules are `.aql-metrics*` in [custom.scss](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/css/custom.scss) — the component carries no `<style>` block (ARCHITECTURE RULES §7). Cards are `flex: 1 1 0` so the row divides evenly across `items.length`, with `min-width: 104px` and horizontal scroll rather than squashing on narrow screens. The hover lift honours `prefers-reduced-motion`.
+**Responsive grid.** The row **wraps**; it does not scroll. An off-screen metric is a metric nobody reads, and a card cluster is a summary rather than a list. `colClassFor(index, total)` picks each card's Quasar span by the TOTAL count, chosen so the last line is never a lonely stub:
+
+| `items.length` | Spans |
+|---|---|
+| 1 | `col-12` |
+| 2 | `col-6` |
+| 3 | `col-4` |
+| 4 | `col-6` (2 × 2, not 3 + 1) |
+| 5 | `col-4` for the first three, `col-6` for the last two (3 + 2) |
+| 6 or more | `col-4` throughout |
+
+**Styling.** All rules are `.aql-metrics*` in [custom.scss](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/css/custom.scss) — the component carries no `<style>` block (ARCHITECTURE RULES §7). The row's gutter is its own (`--aql-metrics-gap`), and Quasar's `col-*` widths know nothing about it, so `.aql-metrics__row > .aql-metrics__card.col-6` / `.col-4` narrow each span by its share of the gap — without that, two `col-6` cards plus one gap exceed 100% and wrap onto separate lines. The label wraps to at most two lines (`line-clamp: 2`) instead of ellipsing, because a three-across row on a phone is ~104px and truncates most real labels. The hover lift honours `prefers-reduced-motion`.
 
 **Spacing.** The row carries a horizontal inset (`q-px-sm`) only. Vertical rhythm belongs to `.aql-page-body`, which `Page.vue` renders with `q-gutter-y-{pageProps.gutter}` — so the section adds no `q-py-*` of its own and its root carries no `full-width`, letting it stack flush with neighbouring sections at the page's own gutter.
 
@@ -587,6 +598,72 @@ export default (currentProps, { resourceRecord }) => ({
   }
 })
 ```
+
+### 2.6 `WorkflowFunnel` — Proportional Pipeline Bar
+
+```html
+<Section section="WorkflowFunnel" :items="[...]" />
+```
+
+Where `MetricCards` answers "how many?" and `LinearProgress` answers "how far along?", `WorkflowFunnel` answers **"where is the work sitting?"** — one stacked horizontal bar across a workflow's states, with a legend naming each. The point of the stacked form is that each state is read RELATIVE to the others, so a pile-up at one stage is visible as a shape rather than as numbers the reader must compare by hand.
+
+Entirely state-agnostic: the states, their order, their colours and their counts all arrive as `items`, so the same section renders an approval, delivery or production workflow. Projecting records to counts is the calling resource's job — see `_ui/AQL/components/Operation/OutletRestocks/Index/WorkflowFunnel.js`.
+
+**Props catalog** — every prop accepts `Function`, evaluated through `evaluateProp` with the `(record, config)` signature.
+
+| Prop | Type | Default | Purpose |
+|---|---|---|---|
+| `title` | `[String, Function]` | `''` | Divider label above the bar, via `shared/SectionDividerLabel.vue`. Omitted when empty. |
+| `items` | `[Array, Function]` | `null` | Segment array: `{ label, count, color, icon }`, in pipeline order. **Each field may itself be a closure.** |
+
+**Normalization & the strict hide rule.** Counts are coerced loosely and anything non-positive is treated as `0`. **Zero-count states are dropped**, not rendered at 0%: an invisible segment still takes a legend row, and a legend of empty states buries the ones that matter. The root `v-if="segments.length && total > 0"` then renders **nothing** when no segment survives — a zero-width bar has nothing to be proportional to. Each surviving segment's width is `count / total`, and its tooltip states the count and the percentage (one decimal at most).
+
+**Legend.** One entry per segment: the state's `icon` (or a coloured dot when none is configured), its label, and its count in the segment's own colour. Wraps freely.
+
+**Colour.** Same contract as §2.4 — Quasar brand names, Material palette names or raw CSS, resolved by `resolveCssColor()` and written per segment as `--aql-funnel-color`.
+
+**Styling.** All rules are `.aql-funnel*` in `custom.scss`; no `<style>` block. A 2px gap separates segments so two adjacent states of similar hue stay legible as two. Segments carry **no** `min-width` — padding out a 1-of-400 sliver would make the bar lie about the proportion it exists to show.
+
+**Spacing / `$attrs`.** Same contract as §2.4.
+
+*Example — JS modifier projecting a resource's states*:
+```javascript
+export default (currentProps, { resourceRecord }) => ({
+  title: 'Workflow Pipeline',
+  items: () => {
+    const counts = tally(resourceRecord?.records?.value ?? [])
+    return WORKFLOW_STATES.map((state) => ({
+      label: progressLabel(state), count: counts[state] || 0,
+      color: progressColor(state), icon: progressIcon(state)
+    }))
+  }
+})
+```
+
+### 2.7 `AgeingBuckets` — Backlog Age Bands
+
+```html
+<Section section="AgeingBuckets" :items="[...]" />
+```
+
+Answers **"how long has the outstanding work been outstanding?"** A single "12 awaiting approval" counter cannot distinguish twelve requests raised this morning from twelve ignored for a fortnight, and those are opposite situations. Bucketing by age turns the count into a triage instruction.
+
+Age **banding is the caller's decision**, not the component's: the thresholds that matter differ per workflow (an approval queue ages in days, a stock count in months). Buckets arrive already counted, so this section owns presentation only — see `_ui/AQL/components/Operation/OutletRestocks/Index/AgeingBuckets.js`, which bands `PENDING_APPROVAL` rows at 0–1 / 2–3 / 4–7 / 7+ days using `daysFromToday` from `src/utils/dateHelpers.js`.
+
+**Props catalog** — every prop accepts `Function`, evaluated through `evaluateProp` with the `(record, config)` signature.
+
+| Prop | Type | Default | Purpose |
+|---|---|---|---|
+| `title` | `[String, Function]` | `''` | Divider label above the buckets. Omitted when empty. |
+| `items` | `[Array, Function]` | `null` | Bucket array: `{ label, count, color, caption }`, youngest band first. **Each field may itself be a closure.** |
+
+**Normalization & the strict hide rule.** A bucket without a `label` is dropped — it is not a band a reader can interpret. Unlike the funnel's segments, **empty buckets are KEPT**: the bands are a fixed scale, and "0 in 7+ days" is the reassuring half of the reading. They are dimmed (`--empty` modifier) rather than dropped, so the scale stays intact. The section as a whole still hides via `v-if="buckets.length && total > 0"` — with nothing ageing there is no backlog to triage, and a row of four zeroes reads as a problem where there is none.
+
+**Colour.** Same contract as §2.4, written per bucket as `--aql-ageing-color`. The 3px top rail is what makes the bands read as one graded scale rather than four unrelated tiles.
+
+**Styling.** All rules are `.aql-ageing*` in `custom.scss`; no `<style>` block. Buckets are `col` (equal width, one row), and the band label wraps to two lines like `.aql-metrics__label`, since four bands across a phone leave ~80px each.
+
+**Spacing / `$attrs`.** Same contract as §2.4.
 
 ---
 

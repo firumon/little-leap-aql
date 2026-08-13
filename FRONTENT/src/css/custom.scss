@@ -896,7 +896,7 @@
 // exactly like the switcher above. Section components carry no `<style>` block
 // (ARCHITECTURE RULES §7) — a tenant `.vue` override could not inherit scoped CSS.
 // Layout, alignment, overflow, ellipsis and text-transform all come from Quasar
-// utility classes in the template (`row no-wrap items-stretch scroll-x`, `col`,
+// utility classes in the template (`row wrap items-stretch`, `col-12`/`col-6`/`col-4`,
 // `relative-position overflow-hidden`, `ellipsis text-uppercase`, `q-px-sm`).
 // Only what Quasar has no utility for survives below.
 //
@@ -904,23 +904,33 @@
 // so the row adds no `q-py-*` of its own and stacks flush with its neighbours.
 .aql-metrics__row {
   // No Quasar gap utility exists; q-gutter-* is unusable here because its negative
-  // container margin widens the row past its parent inside a scroll container.
-  gap: map-get($space-sm, x);
+  // container margin widens the row past its parent.
+  --aql-metrics-gap: #{map-get($space-sm, x)};
 
-  // Narrow screens keep the row intact and scroll (via `scroll-x`) instead of
-  // squashing the numbers — Quasar has no scrollbar-hiding utility.
-  scrollbar-width: none;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
+  gap: var(--aql-metrics-gap);
 }
 
-// Three classes deliberately: `col` gives the equal-width flex sizing, but Quasar
-// pairs it with `.row > .col { min-width: 0 }` at (0,2,0). This selector is (0,3,0),
-// so the scroll-instead-of-squash floor wins without depending on stylesheet order.
-.aql-metrics__row > .aql-metrics__card.col {
-  min-width: 104px;
+// The row WRAPS (see MetricCards.vue's `colClassFor`), and Quasar's `col-*` set a
+// plain percentage width that knows nothing about the gap above — `col-6` twice is
+// 100% + one gap, which wraps every card onto its own line. Each span therefore gives
+// back its share of the gap here.
+//
+// Three classes deliberately: (0,3,0) beats Quasar's own (0,1,0) `col-*` widths
+// without depending on stylesheet order.
+.aql-metrics__row > .aql-metrics__card {
+  // Flex children default to `min-width: auto`, which would let a long label push the
+  // card past its span instead of ellipsing.
+  min-width: 0;
+
+  &.col-6 {
+    width: calc(50% - var(--aql-metrics-gap) / 2);
+    max-width: calc(50% - var(--aql-metrics-gap) / 2);
+  }
+
+  &.col-4 {
+    width: calc(100% / 3 - var(--aql-metrics-gap) * 2 / 3);
+    max-width: calc(100% / 3 - var(--aql-metrics-gap) * 2 / 3);
+  }
 }
 
 .aql-metrics__card {
@@ -974,12 +984,27 @@
   color: color-mix(in srgb, var(--aql-metric-color) 75%, white);
 }
 
+// Wraps to at most two lines instead of ellipsing. Quasar's `ellipsis` was viable
+// while the row scrolled and each card could be as wide as its label; in the wrapped
+// grid a three-card row on a phone is ~104px, which truncates most real labels.
+// `items-stretch` on the row keeps a two-line card level with its neighbours.
 .aql-metrics__label {
   margin-top: 2px;
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.05em;
+  line-height: 1.25;
+  // Tightened from the 0.05em the other section labels use: uppercase tracking at
+  // 11px costs ~5px on a word like "COMPLETION", which is the whole margin a
+  // three-across card has on a phone.
+  letter-spacing: 0.02em;
   color: $ink-muted;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  // Last resort for a label with one very long word — break it rather than clip it.
+  overflow-wrap: anywhere;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1064,6 +1089,133 @@
 .aql-linear-progress__max {
   font-variant-numeric: tabular-nums;
   color: $ink-muted;
+}
+
+// ── Workflow Funnel (sections/WorkflowFunnel.vue) ─────────────────────────────
+// Same dynamic-colour contract as the two sections above: each segment sets
+// `--aql-funnel-color` inline to any resolved CSS colour and every layer derives
+// from it, so the section accepts raw hex/rgb values a Quasar `color` prop could
+// not. Section components carry no `<style>` block (ARCHITECTURE RULES §7).
+//
+// Layout, wrapping and alignment come from Quasar utilities in the template
+// (`row no-wrap items-stretch overflow-hidden`, `row wrap items-center`,
+// `ellipsis`, `text-weight-bold`, `q-mt-sm`). Only what Quasar has no utility for
+// survives below.
+.aql-funnel__bar {
+  height: 14px;
+  border-radius: 999px;
+  // A hairline between segments so two adjacent states of similar hue stay legible
+  // as two segments rather than reading as one long band.
+  gap: 2px;
+  background: color-mix(in srgb, $border 55%, white);
+}
+
+.aql-funnel__segment {
+  // No min-width: a 1-of-400 segment is genuinely a sliver, and padding it out
+  // would make the bar lie about the proportion it exists to show.
+  background: var(--aql-funnel-color);
+  transition: width 0.25s ease;
+
+  &:first-child {
+    border-radius: 999px 0 0 999px;
+  }
+
+  &:last-child {
+    border-radius: 0 999px 999px 0;
+  }
+}
+
+.aql-funnel__legend {
+  gap: 6px 14px;
+}
+
+.aql-funnel__legend-item {
+  gap: 5px;
+  // Flex children default to `min-width: auto`, which would let a long state name
+  // push the legend wider than its row instead of ellipsing.
+  min-width: 0;
+  max-width: 100%;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: $ink-muted;
+}
+
+.aql-funnel__legend-icon {
+  color: var(--aql-funnel-color);
+}
+
+// Fallback marker for a segment configured without an icon, so every legend row
+// still carries its colour.
+.aql-funnel__legend-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--aql-funnel-color);
+}
+
+.aql-funnel__legend-count {
+  font-variant-numeric: tabular-nums;
+  color: var(--aql-funnel-color);
+}
+
+// ── Ageing Buckets (sections/AgeingBuckets.vue) ───────────────────────────────
+// Dynamic colour via `--aql-ageing-color`, exactly as above.
+.aql-ageing__row {
+  // Matching the metric-card gutter, so the two sections stack on one rhythm.
+  gap: map-get($space-sm, x);
+}
+
+.aql-ageing__bucket {
+  // 10px/12px are off the Quasar spacing scale; the 3px top rail is what makes the
+  // bands read as a single graded scale rather than four unrelated tiles.
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--aql-ageing-color) 22%, transparent);
+  border-radius: $r-sm;
+  border-top: 3px solid var(--aql-ageing-color);
+  background: color-mix(in srgb, var(--aql-ageing-color) 6%, white);
+}
+
+// An empty band is kept (the scale stays intact) but recedes, so a reader's eye
+// lands on the bands that actually hold work.
+.aql-ageing__bucket--empty {
+  border-color: $border;
+  border-top-color: $border-strong;
+  background: transparent;
+
+  .aql-ageing__count {
+    color: $ink-muted;
+  }
+}
+
+.aql-ageing__count {
+  font-size: 20px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  color: var(--aql-ageing-color);
+}
+
+// 11px / weight 600 sit between Quasar's type utilities, matching .aql-metrics__label —
+// including the two-line wrap, since four bands across a phone leave ~80px per label.
+.aql-ageing__label {
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: 0.04em;
+  color: $ink-muted;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.aql-ageing__caption {
+  font-size: 10px;
+  color: $ink-muted;
+  opacity: 0.75;
 }
 
 // ─── OutletVisits view-page sections (.aql-visit-*) ───────────────────────────

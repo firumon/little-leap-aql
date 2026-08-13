@@ -71,7 +71,12 @@ defineOptions({ name: 'SectionsListSwitcher', inheritAttrs: false })
 
 const props = defineProps({
   page:            { type: String,             default: 'Index' },
-  items:           { type: Array,              default: null }, // Default to null to check for explicit override
+  // Default to null to check for explicit override. Function form is what a JS modifier
+  // needs: a modifier's return value is resolved ONCE and cached, so a plain array would
+  // freeze at whatever `effectiveViews` held on that first tick (usually empty, since
+  // sections resolve before the fetch settles). `evaluateProp` below re-runs a closure on
+  // every render — the array form was only ever usable from a static page contract.
+  items:           { type: [Array, Function],  default: null },
   activeItem:      { type: String,             default: null }, // Default to null to check for explicit override
   label:           { type: [String, Function],   default: null },
   icon:            { type: [String, Function],   default: null },

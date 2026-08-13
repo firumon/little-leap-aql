@@ -6,8 +6,13 @@
       </q-card-section>
     </q-card>
 
+    <!-- The empty state wears the caller's `cardClass` too. It is the same slot in the
+         same list — a group card that happens to have nothing in it — so leaving it on
+         Quasar's bare default made a page's one empty card the only flat white panel
+         among gradient neighbours. Appearance only; the gutter is irrelevant with no
+         siblings to space against. -->
     <slot v-else-if="!groupedItems.length" name="empty">
-      <q-card flat bordered>
+      <q-card flat bordered :class="cardClass">
         <q-card-section class="q-pa-none">
           <q-item class="text-center q-py-xl">
             <q-item-section>

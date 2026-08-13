@@ -6,18 +6,21 @@
   >
     <SectionDividerLabel v-if="finalAttrs.title" :label="finalAttrs.title" />
 
-    <div class="aql-metrics__row row no-wrap items-stretch scroll-x">
+    <div class="aql-metrics__row row wrap items-stretch">
       <div
         v-for="(metric, index) in metrics"
         :key="`${metric.label}-${index}`"
-        class="aql-metrics__card col relative-position overflow-hidden"
+        class="aql-metrics__card relative-position overflow-hidden"
+        :class="colClassFor(index, metrics.length)"
         :style="{ '--aql-metric-color': metric.cssColor }"
       >
         <div class="aql-metrics__value row no-wrap items-baseline">
           <span class="aql-metrics__number text-weight-bold">{{ metric.number }}</span>
           <span v-if="metric.unit" class="aql-metrics__unit">{{ metric.unit }}</span>
         </div>
-        <div v-if="metric.label" class="aql-metrics__label ellipsis text-uppercase">{{ metric.label }}</div>
+        <!-- Wraps rather than ellipses: the row is now a grid (three cards fit a phone
+             at `col-4`), and "PENDING C…" is not a metric anyone can read. -->
+        <div v-if="metric.label" class="aql-metrics__label text-uppercase">{{ metric.label }}</div>
       </div>
     </div>
   </div>
@@ -97,4 +100,29 @@ const metrics = computed(() => {
   })
   return hasContent(single) ? [single] : []
 })
+
+// ── Responsive grid ──
+//
+// The row WRAPS rather than scrolling horizontally: an off-screen metric is a metric
+// nobody reads, and a card cluster is a summary, not a list. Widths are chosen per
+// COUNT so the last line is never a lonely stub — four cards read as 2×2 rather than
+// 3+1, and five as 3+2 rather than 3+1+1.
+//
+// The `col-*` classes are Quasar's, but the gap between cards is this section's own
+// (`.aql-metrics__row`), so `custom.scss` narrows each width by its share of that gap —
+// a bare `col-6` plus a gap would overflow the row.
+const COL_SPANS = {
+  1: () => 'col-12',
+  2: () => 'col-6',
+  3: () => 'col-4',
+  4: () => 'col-6',
+  5: (index) => (index < 3 ? 'col-4' : 'col-6')
+}
+
+function colClassFor(index, total) {
+  const span = COL_SPANS[total]
+  // Six or more: a uniform three-per-row grid, which divides evenly for 6, 9, 12 and
+  // leaves at worst a two-card final line.
+  return span ? span(index) : 'col-4'
+}
 </script>

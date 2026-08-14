@@ -1,0 +1,401 @@
+# Resource Domain Logic System
+
+The canonical, self-contained spec for `FRONTENT/src/_resource/**/*` — the UI-agnostic
+business/workflow logic layer — and the strict one-way import boundary that connects it to
+the UI presentation layer. Referenced by
+[RESOURCE_UI_MODULE_DEVELOPER_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_UI_MODULE_DEVELOPER_GUIDE.md),
+which covers UI-side generation; this document owns everything about the domain layer
+itself and the boundary rules around it.
+
+---
+
+## 1. Purpose
+
+Core business rules, state transitions, and workflow logic belong to the resource domain
+itself — never inside a `_ui/{Ui}/` presentation folder — so that every UI a resource might
+render under, whichever `CustomUIName` it carries, consumes the exact same underlying
+workflow logic. A resource's "what can this record do right now, and why" has exactly one
+answer, computed in exactly one place, regardless of how many different UIs display it.
+
+---
+
+## 2. The Three-Layer Boundary
+
+```
+src/components/, src/composables/, src/pages/        Layer 1 — Core System Infrastructure
+                                                       ALL app-wide, resource-agnostic
+                                                       features and functionality — not
+                                                       limited to any fixed list. MUST NEVER
+                                                       hardcode a resource or scope name.
+
+src/_resource/{Scope}/{Resource}/                     Layer 2 — Resource Domain & Business Logic
+├─ composables/use{Feature}.js                        Workflow vocabulary, state-transition
+├─ utils/                                              predicates, gate rules, payload/request
+└─ (payload builders, workflow aggregates, …)          builders. UI-agnostic, pure, no Vue
+                                                       context (no inject/ref). Single source of
+                                                       truth for "what can this record do right
+                                                       now" — identical for every UI that reads it.
+
+src/components/{sections,contents,actions}/           Layer 3 — UI Presentation
+src/_ui/{Ui}/**  (one folder per UI name)              Templates, layout, styling, and
+                                                       PRESENTATION-ONLY composables that call
+                                                       INTO Layer 2 — never re-derive domain logic.
+```
+
+### 2.1 One-way import direction, no exceptions
+
+- Layer 3 (`_ui/{Ui}/**`) may import Layer 2 (`src/_resource/**`) and Layer 1.
+- Layer 2 may import only generic Layer 1 utilities (`src/utils/`, generic Core
+  Composables) — never a store or service directly, never anything under `_ui/`.
+- Layer 1 never imports anything resource-specific from Layer 2 or 3.
+
+### 2.2 No per-UI override of domain logic
+
+If one UI genuinely needs different business behavior for a resource than another UI does,
+that difference is modeled as **data or configuration** (a sheet-driven flag, a threshold,
+a `Relations`/`UIFields` value) — never as a second code path in `src/_resource/`. The
+domain layer is 100% shared across every UI scope, by design; this is what makes "any UI
+layer consumes the exact same underlying workflow logic" true rather than aspirational.
+
+---
+
+## 3. What Belongs in `src/_resource/`
+
+Everything that answers "what can this record do right now, and why":
+
+- **Progress/workflow vocabularies** — state constants, color/icon/label maps.
+- **State-transition predicates** — e.g. an "is this record still editable" gate, an
+  "is this the terminal state" check.
+- **Stateful workflow aggregates** that back a wizard/action page — allocation plans,
+  delivery selections, anything that needs to accumulate state across a multi-step flow
+  before it becomes a request.
+- **Payload/request builders** — batch-request shaping and any sign/direction conventions
+  for the underlying data mutation.
+
+### 3.1 What does NOT belong here
+
+- Anything that renders — no Vue templates, no component definitions.
+- Anything that calls `inject()` or holds a component-lifecycle-bound `ref()`.
+- Anything that formats for display only (a row preset, a sort order for a specific list
+  view) — that is presentation, and belongs in a UI Composable (§4) instead.
+- Anything that imports a Pinia store or a service module directly.
+
+### 3.2 Accessing resource config — self-identified, never route-dependent
+
+> [!IMPORTANT]
+> A resource's domain composables know **their own resource name** — it never comes from
+> the route, and it is never passed in by a caller.
+
+`useResourceConfig(resourceNameOverride)` (`src/composables/resources/useResourceConfig.js`)
+already supports exactly this: when called with an explicit name, it resolves that
+resource's config from the auth store's resource list directly — headers, `UIFields`,
+`AdditionalActions`, `permissions`, `allowed()` — with **no dependency on the current
+route**. Route-based resolution only happens when the argument is omitted, which a
+Resource Composable must never do.
+
+Each `src/_resource/{Scope}/{Resource}/` composable hardcodes its own resource name as a
+module-level constant and calls `useResourceConfig()` with that literal whenever it needs
+config or permissions:
+
+```javascript
+// src/_resource/Operation/OutletRestocks/composables/useRestockProgress.js
+import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
+
+const RESOURCE_NAME = 'OutletRestocks'   // this composable IS OutletRestocks — always
+
+export function canApprove (record) {
+  const { allowed } = useResourceConfig(RESOURCE_NAME)
+  return allowed('approve') && record?.Progress === 'PENDING_APPROVAL'
+}
+```
+
+This is why every Layer 2 function's signature is `(record)` or `(records)` **only** —
+never `(record, config)`. The composable is not a generic function waiting to be told
+which resource it's for; it already knows. This has two consequences:
+
+- **A UI Composable never fetches or threads config through to a domain call.** It reads
+  the record (via the injection relay, §6.1) and passes only that.
+- **Multi-resource logic is composed by importing multiple named domain modules**, not by
+  parameterizing one function over different configs:
+
+  ```javascript
+  import * as OutletRestocks from 'src/_resource/Operation/OutletRestocks/composables/useRestockProgress'
+  import * as OutletVisits from 'src/_resource/Operation/OutletVisits/composables/useVisitProgress'
+
+  const canApproveEither = OutletRestocks.canApprove(record) || OutletVisits.canApprove(record)
+  ```
+
+This also means a domain function is always correct regardless of which resource's page
+it's called from — a sibling/parent record from another resource, displayed inside a
+different resource's card, still resolves its own true config, because nothing here ever
+asked the route.
+
+### 3.3 One vocabulary per resource — never a second copy
+
+> [!IMPORTANT]
+> A resource's progress/workflow vocabulary (state → label/color/icon) is defined **once**,
+> in one Layer 2 composable. Every other file that needs a state's label, color, or icon —
+> including a View-page composable that also needs a couple of item-row-level states the
+> main vocabulary doesn't cover — imports and extends the one definition. It never
+> redefines its own parallel copy, even a "kept in step with" one with a comment promising
+> to update both. A comment promising two files stay in sync is the tell that they should
+> have been one file with an import between them; the promise is the thing that eventually
+> breaks, silently, when only one side gets updated.
+
+```javascript
+// ✓ One definition, extended — not duplicated
+// src/_resource/{Scope}/{Resource}/composables/use{Feature}Progress.js
+export const PROGRESS_META = { DRAFT: { label: 'Draft', color: 'grey', icon: 'edit' }, /* … */ }
+
+// A caller needing extra, narrower states (e.g. item-row states a View card also shows)
+// imports and spreads over the one source, never restates the shared entries:
+export const ITEM_ROW_META = { ...PROGRESS_META, ALLOCATED: { label: 'Allocated', color: 'positive', icon: 'inventory' } }
+```
+
+---
+
+## 4. What Stays in `_ui/{Ui}/composables/`
+
+Presentation-only helpers that assemble **display** from a Layer-2 predicate, but are not
+themselves a business rule:
+
+- List row presets that call a Layer-2 predicate to filter/sort, then shape the result for
+  the list component.
+- Per-view sort/format functions.
+- The **injection-relay composable** (§6) — owns `inject()`, calls into Layer 2 for
+  derived values, exposes both to components.
+
+---
+
+## 5. Shape
+
+Named pure exports (importable from page contracts and JS modifiers, which run outside
+component `setup()`), plus a `use{Feature}()` wrapper for setup-context callers. Every
+export takes `record`/`records` only — never `config` — per §3.2:
+
+```javascript
+// src/_resource/{Scope}/{Resource}/composables/use{Feature}Progress.js
+import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
+
+const RESOURCE_NAME = '{Resource}'   // this composable IS {Resource} — always
+
+export function isEditable (record) {
+  return record?.Progress === 'DRAFT' || record?.Progress === 'REVISION_REQUIRED'
+}
+
+export function canApprove (record) {
+  const { allowed } = useResourceConfig(RESOURCE_NAME)
+  return allowed('approve') && record?.Progress === 'PENDING_APPROVAL'
+}
+
+export function use{Feature}Progress () {
+  return { isEditable, canApprove }
+}
+```
+
+```javascript
+// _ui/{Ui}/composables/{Scope}/{Resource}/use{Feature}RowPresets.js
+import { isEditable } from 'src/_resource/{Scope}/{Resource}/composables/use{Feature}Progress'
+
+export function editablePreset (items) {
+  return items.filter((row) => isEditable(row))
+}
+```
+
+---
+
+## 6. The Strict Import Chain
+
+> [!IMPORTANT]
+> **Enforced one-way dependency chain — zero layer-bypassing:**
+> ```
+> UI Component (.vue)
+>    │  imports ONLY UI Composables — never inject() directly, never a Core Composable,
+>    │  never a service/store
+>    ▼
+> UI Composable (_ui/{Ui}/composables/{Scope}/{Resource}/{Page}/)
+>    │  owns inject() (the context relay, §6.1) + presentation assembly
+>    │  imports Resource Composables + generic Core Composables (identity, navigation)
+>    ▼
+> Resource Composable (src/_resource/{Scope}/{Resource}/)
+>    │  domain/workflow logic, UI-agnostic, pure
+>    │  imports only generic Core Composables — never a store/service directly
+>    ▼
+> Core Composables (src/composables/)
+>    │  generic identity/navigation reads, resolvers — resource-agnostic
+>    ▼
+> Stores / Infrastructure (Pinia stores, services)
+> ```
+
+### Rules per layer
+
+- **UI Components** (`.vue` files under `_ui/{Ui}/components/`) import **only** UI
+  Composables. No direct generic Core Composable call, no direct `inject('resourceRecord')`
+  — every one of those is relayed through a UI Composable, with zero exceptions, even for
+  generic identity/navigation reads that carry no resource content.
+- **UI Composables** may import Resource Composables and generic Core Composables. They
+  must never import a Pinia store or a service module directly.
+- **Resource Composables** contain only domain logic. They must never import a store or
+  service directly, and must never import anything under `_ui/`.
+- Page contracts and JS modifiers are **exempt from the "no direct inject" clause** — they
+  already receive `{ pageState, resourceRecord, resourceConfig }` as function parameters
+  from the resolver (they run outside any component's `setup()` and never called `inject()`
+  to begin with). They still may only import UI/Resource Composables.
+
+### 6.1 The injection-relay pattern
+
+One **UI Composable per page** (Index/Add/Edit/View/action-route) owns every `inject()`
+call that page's components need. Every `.vue` component under that page's `_ui/` tree
+calls it instead of injecting directly:
+
+```
+_ui/{Ui}/composables/{Scope}/{Resource}/{Page}/use{Resource}Context.js
+_ui/{Ui}/components/{Scope}/{Resource}/{Page}/{SomeCard}.vue
+```
+
+```javascript
+// _ui/{Ui}/composables/{Scope}/{Resource}/{Page}/use{Resource}Context.js
+import { inject, computed } from 'vue'
+
+export function use{Resource}Context () {
+  const resourceRecord = inject('resourceRecord', null)
+  const resourceConfig = inject('resourceConfig', null)
+  const pageState      = inject('pageState', null)
+
+  return {
+    record:  computed(() => resourceRecord?.record?.value || null),
+    config:  computed(() => resourceConfig?.config?.value || null),
+    pageState
+  }
+}
+```
+
+```html
+<!-- _ui/{Ui}/components/{Scope}/{Resource}/{Page}/{SomeCard}.vue -->
+<script setup>
+import { use{Resource}Context } from 'src/_ui/{Ui}/composables/{Scope}/{Resource}/{Page}/use{Resource}Context'
+defineOptions({ name: '{Resource}{Page}{SomeCard}' })
+const { record } = use{Resource}Context()
+</script>
+```
+
+A resource-wide helper that has no page-specific injection needs may live directly under
+`_ui/{Ui}/composables/{Scope}/{Resource}/`, outside the page-scoped subfolder — that
+subfolder is specifically for the injection relay and anything that depends on it.
+
+> [!NOTE]
+> **A composable that injects context and is shared by every card on one page still
+> belongs in that page's subfolder** (`.../{Resource}/{Page}/`), even though it looks
+> "resource-wide" because several sibling components import it. The test is not "how many
+> components use this" — it's "does it call `inject()`." Anything that does is page-scoped
+> by definition, because `resourceRecord`/`resourceConfig`/`pageState` are only ever
+> provided per page. A file matching this shape but sitting directly under
+> `{Scope}/{Resource}/` predates this rule and should be moved the next time that module
+> is touched, not left as a second accepted shape.
+
+---
+
+## 7. Import-Boundary Self-Check
+
+Verify for every new file:
+
+- [ ] Every `.vue` under `_ui/` imports only UI Composables — no `inject()`, no Core
+      Composable import outside a UI Composable file.
+- [ ] Every UI Composable imports only Resource Composables + generic Core Composables —
+      no store, no service.
+- [ ] Every Resource Composable (`src/_resource/**`) imports only generic Core
+      Composables — no store, no service, nothing under `_ui/`.
+- [ ] No `src/_resource/**` file imports anything under `_ui/`.
+
+---
+
+## 8. How the Domain Layer Actually Gets Built
+
+The three-layer boundary (§2) describes the finished shape. It says nothing about the
+order things get written in — because most of the time, the domain layer does not exist
+yet when work starts. This section is about that: what to do while a resource's business
+logic is still being discovered, not just after it's known.
+
+### 8.1 The common case: UI work comes first, domain logic is discovered along the way
+
+Most tasks arrive as "build/update the UI for X," with no upfront resource specification.
+There is no `src/_resource/{Scope}/{Resource}/` to read from yet. That is normal, not a
+gap to apologize for.
+
+While doing that work, **classify every piece of logic as it's written**, before deciding
+where the file goes:
+
+- Is this about *how something looks or is arranged on screen* (a card layout, a color, a
+  list preset, which fields show)? → UI. It belongs under `_ui/{Ui}/`.
+- Is this about *what the record can do, or what state it's in* (is it editable, is it
+  approved, what happens when it's submitted)? → Domain. It belongs under
+  `src/_resource/{Scope}/{Resource}/`.
+
+Route each piece to its correct layer **the moment it's written** — never park business
+logic inside a `_ui/` file "temporarily" with a plan to move it later. A predicate written
+once in the right place is available to every future UI immediately; a predicate written
+in the wrong place and moved later means finding and fixing every place that came to
+depend on the wrong location in between.
+
+### 8.2 The less common case: the domain is specified upfront
+
+Sometimes a developer hands over a resource's complete business workflow before any UI
+work starts — every state, every transition, every rule. When that happens, build the
+domain layer first (as Step 1 of the guide's Generation Checklist, §14, already assumes),
+then build the UI on top of it. This is the same layering, just encountered in
+the opposite order — the classification in §8.1 still applies to anything the domain spec
+didn't anticipate and that turns up while building the UI.
+
+### 8.3 By the end of a module's UI, its domain layer is done and packed
+
+Once a resource's Index/Add/Edit/View are complete, the classification work in §8.1 has
+already produced a full `src/_resource/{Scope}/{Resource}/` — every predicate, every
+workflow rule, every payload builder that resource's UI needed. Treat that as **packed**:
+a complete, coherent, reusable unit, not a leftover pile of helpers.
+
+> [!IMPORTANT]
+> **A sibling UI built afterward — a new page for the same resource, a second UI name, a
+> related feature — reads the packed domain layer as-is. It does not rebuild, re-derive,
+> or duplicate any of it.** That is the entire point of §2's boundary: one resource, one
+> business logic layer, read by as many UIs as ever need it.
+
+### 8.4 Further enhancement stays allowed, without breaking existing consumers
+
+A resource's domain layer is never frozen. A later task may add a new predicate, a new
+workflow state, a new payload builder — the same classification from §8.1 applies to that
+new work too. The constraint is only that existing consumers keep working:
+
+- Adding a new export is always safe.
+- Changing an existing export's behavior or signature is not, unless every current caller
+  is checked first — run `gitnexus_impact` on the symbol before changing it (per
+  `AGENTS.md`), and update every caller the impact analysis surfaces.
+- Never rename a domain export with find-and-replace; use the project's rename tooling so
+  every `_ui/` caller stays correctly wired.
+
+### 8.5 A module built before this document is not evidence the rule is wrong
+
+The three-layer boundary, the strict import chain, and the injection-relay pattern (§§2,
+6, 6.1) are the target shape for every module going forward. A module built before this
+document existed will not fully match it — its domain logic may sit under `_ui/{Ui}/
+composables/` instead of `src/_resource/`, and its `.vue` components may call `inject()`
+or a Core Composable directly in many places instead of routing through one page-scoped
+context composable. That is expected, not a sign the rule doesn't hold: the rule did not
+exist yet when that module was written.
+
+Bringing an existing module into line with this document is the retroactive-migration
+work already noted in §2's placement rule and §8.4's "further enhancement" — a deliberate,
+tracked task, not something a new feature request on that module should silently take on
+as a side effect. Do not treat a pre-existing module's divergence as license to write new
+code the same way; every new file still follows §§2–7 in full, in whatever module it's
+added to.
+
+---
+
+## Maintenance Rule
+
+> [!IMPORTANT]
+> Any change to the three-layer boundary, the strict import chain, or the injection-relay
+> pattern MUST be reflected in:
+> 1. This document.
+> 2. [RESOURCE_UI_MODULE_DEVELOPER_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_UI_MODULE_DEVELOPER_GUIDE.md) if its condensed summary of this system needs to change.
+> 3. [resource_ui_module_developer.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/resource_ui_module_developer.md) if its execution checklist references the changed rule.

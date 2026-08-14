@@ -81,6 +81,34 @@ Use ONLY when explicitly asked to perform a comprehensive code review against ar
   - `Documents/REVIEW AGAINST ARCHITECTURE RULE - INSTRUCTIONS.md`
   - `Documents/AI_COLLABORATION_PROTOCOL.md`
 
+### Full Resource UI Module Generation
+Use when building, generating, or materially extending a whole resource UI module (Index +
+Add/Edit + View together) — not a single piece of an already-built module. Init prompt
+routing for this task type is owned by `AGENTS.md`'s Query Classification (Resource UI
+Module Generation takes precedence over single-category matching).
+- Read:
+  - `Documents/RESOURCE_UI_MODULE_DEVELOPER_GUIDE.md` — **start here**: the hub doc —
+    resolver mechanics, folder layout and naming, page contracts and `Props<Identity>`,
+    list rows and row action clusters, Index widget standards, the form-shape decision and
+    schema-driven generation, the View business-concept card blueprint, the action-handler
+    contract, the visual contract, and the generation checklist.
+  - `Documents/RESOURCE_DOMAIN_LOGIC_SYSTEM.md` — the three-layer architectural boundary
+    (Core Infrastructure / `src/_resource/` domain logic / `_ui/` presentation), its strict
+    one-way import chain, and the injection-relay pattern
+  - The three catalogues the guide links rather than restates — read the one the current
+    step needs, and update it there rather than restating it in a module:
+    - `FRONTENT/src/components/_fields/REGISTRY.md` — implemented field types, and the
+      contract for mounting one by hand inside a workflow form
+    - `FRONTENT/src/components/REGISTRY.md` — reusable Section/Content/app bases (Index
+      widget bases, list renderers), their props and hide rules
+    - `FRONTENT/src/_ui/{UiName}/_config/config.md` — that UI's design tokens and the
+      reasoning behind each (default UI: `FRONTENT/src/_ui/AQL/_config/config.md`)
+  - `Documents/RESOURCE_COLUMNS_GUIDE.md` — `_fields`/`UIFields`/`Relations` schema
+  - `Documents/PAGE_STATE.md` — mandatory for any Add/Edit/wizard/action page
+  - `Documents/AQL_PAGE_AND_SECTION_SYSTEM.md`, `Documents/AQL_CONTENT_CUSTOMIZATION_SYSTEM.md`,
+    `Documents/AQL_ACTION_SYSTEM.md`, `Documents/AQL_CREATE_AND_UPDATE_CONTENT_SYSTEM.md`,
+    `Documents/AQL_VIEW_SYSTEM.md` as the specific page being built requires
+
 ### Frontend Resource Customization
 Use when overriding or creating custom section or sub-components for any resource scope (master, operation, or Accounts)
 (e.g., custom record card, custom details view, custom form, custom child layout, custom loading/empty states).

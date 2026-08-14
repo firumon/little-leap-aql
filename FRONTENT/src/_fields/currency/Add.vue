@@ -11,7 +11,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { useCurrency } from 'src/composables/useCurrency'
+import { useCurrencyResource } from 'src/_resource/Master/Currencies/composables/useCurrencyResource'
 
 defineOptions({ name: 'FieldCurrencyAdd', inheritAttrs: false })
 
@@ -23,9 +23,9 @@ const props = defineProps({
   header: { type: String, default: '' }
 })
 
-const { defaultCurrency } = useCurrency()
+const { defaultCurrency } = useCurrencyResource()
 
 // Never hardcode a symbol (ARCHITECTURE RULES §4) — it comes from the Config
 // sheet's currency via the Currencies master record.
-const prefix = computed(() => props.config?.prefix ?? (defaultCurrency.value?.Symbol || ''))
+const prefix = computed(() => props.config?.prefix ?? (defaultCurrency.value?.symbol || defaultCurrency.value?.Symbol || ''))
 </script>

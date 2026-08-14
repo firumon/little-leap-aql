@@ -108,7 +108,7 @@
  * Replaces `EditSaveAsDraft.vue`. No `<style>` block (ARCHITECTURE RULES §7).
  */
 import { computed, useAttrs } from 'vue'
-import FieldTextareaEdit from 'components/_fields/textarea/Edit.vue'
+import FieldTextareaEdit from 'src/_fields/textarea/Edit.vue'
 import { useRestockEditForm } from 'src/_ui/AQL/composables/Operation/OutletRestocks/Edit/useRestockEditForm'
 
 defineOptions({ name: 'OutletRestocksEditSubmitOptions', inheritAttrs: false })

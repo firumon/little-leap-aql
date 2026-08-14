@@ -43,7 +43,7 @@
  * (ViewAudit / ViewRecordWithAudit); audit is emitted exclusively by the
  * top-level 'Audit' ordered section in View.vue.
  */
-import { resolveFieldComponent, resolveFieldType } from 'components/_fields/useFieldResolver'
+import { resolveFieldComponent, resolveFieldType } from 'src/_fields/useFieldResolver'
 import { resolveDisplayValue } from 'src/utils/appHelpers'
 
 defineOptions({ name: 'ContentsViewChildCompact', inheritAttrs: false })

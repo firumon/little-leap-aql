@@ -4,7 +4,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { useCurrency } from 'src/composables/useCurrency'
+import { useCurrencyResource } from 'src/_resource/Master/Currencies/composables/useCurrencyResource'
 
 defineOptions({ name: 'FieldCurrencyView', inheritAttrs: false })
 
@@ -21,7 +21,7 @@ const props = defineProps({
   sourceCurrency: { type: String, default: undefined }
 })
 
-const { _C } = useCurrency()
+const { _C } = useCurrencyResource()
 
 const display = computed(() => {
   const modifier = props.config?.displayValue

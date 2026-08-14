@@ -12,7 +12,7 @@ and mount it. All per-type presentation lives here.
 ## 1. Directory layout
 
 ```
-src/components/_fields/
+src/_fields/
 ├── README.md
 ├── index.js                 # re-exports the resolver API
 ├── useFieldResolver.js      # central dynamic resolver + type normalization
@@ -109,7 +109,7 @@ and the raw `modelValue` for anything machine-facing (an `href`, a file uuid).
 ## 3. Resolution
 
 ```js
-import { resolveFieldComponent, resolveFieldType } from 'components/_fields/useFieldResolver'
+import { resolveFieldComponent, resolveFieldType } from 'src/_fields/useFieldResolver'
 
 resolveFieldComponent('link', 'view')   // → _fields/link/View.vue
 resolveFieldComponent('unknown', 'add') // → _fields/text/Add.vue

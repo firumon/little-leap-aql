@@ -65,7 +65,7 @@
  * wizard-only intent, so it lives in `controls` and never reaches GAS.
  */
 import { computed, useAttrs } from 'vue'
-import FieldTextareaAdd from 'components/_fields/textarea/Add.vue'
+import FieldTextareaAdd from 'src/_fields/textarea/Add.vue'
 import { useRestockAddContext } from 'src/_ui/AQL/composables/Operation/OutletRestocks/Add/useRestockAddContext'
 
 defineOptions({ name: 'OutletRestocksSubmitOptions', inheritAttrs: false })

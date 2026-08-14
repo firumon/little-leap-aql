@@ -10,20 +10,20 @@ This document defines initialization parameters for agents creating custom UI ov
 ## Required Pre-Reads
 1. **System Specifications**: Read [UI_VIEW_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_VIEW_SYSTEM.md) for full override path lookups, component contracts, JS modifier APIs, and the base field subsystem (§4).
 2. **Architecture Constraints**: Read [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md).
-3. **Base field components** (only when the task is about how a *field type* renders rather than a single resource's column): Read [`FRONTENT/src/components/_fields/README.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_fields/README.md).
+3. **Base field components** (only when the task is about how a *field type* renders rather than a single resource's column): Read [`FRONTENT/src/_fields/README.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_fields/README.md).
 
 ---
 
 ## 0. Decide the Right Layer First
 
-`ViewRecord` and `ViewChildCompact` contain **no `field.type === '…'` branches**. Every value cell is rendered by a base type component at `src/components/_fields/<type>/View.vue`, resolved through `resolveFieldComponent(resolveFieldType(field), 'view')`.
+`ViewRecord` and `ViewChildCompact` contain **no `field.type === '…'` branches**. Every value cell is rendered by a base type component at `src/_fields/<type>/View.vue`, resolved through `resolveFieldComponent(resolveFieldType(field), 'view')`.
 
 Before writing an override, pick the layer that matches the intent:
 
 | Intent | Correct layer |
 |---|---|
 | Change how **one column of one resource** displays | `ViewColumn<Col>.js` modifier (§2) — preferred — or `ViewColumn<Col>.vue` |
-| Change how **a field type displays everywhere** (all links, all currency, all statuses) | Edit `src/components/_fields/<type>/View.vue` — never a per-resource override |
+| Change how **a field type displays everywhere** (all links, all currency, all statuses) | Edit `src/_fields/<type>/View.vue` — never a per-resource override |
 | Add a **new field type** | New `_fields/<type>/{Add,Edit,View}.vue` folder + a `TYPE_ALIASES` entry if the schema spells it differently |
 | A column shows as plain text but should be a link/date/currency | Fix the column's `type` in `APP.Resources.UIFields` — do **not** patch it with a per-resource override |
 
@@ -35,7 +35,7 @@ Before writing an override, pick the layer that matches the intent:
 
 JS modifiers are **not** a tier — a `ViewColumn<Col>.js` result merges into the `config` object handed to whichever tier-2/3 component renders, so `displayValue` keeps working against every field type. View components prefer `config.displayValue` for the visible *label* and the raw `modelValue` for anything machine-facing (an `href`, a file uuid) — so a modifier can relabel a link without breaking it.
 
-### Resolver API (`components/_fields/useFieldResolver.js`)
+### Resolver API (`src/_fields/useFieldResolver.js`)
 
 | Function | Purpose |
 |---|---|

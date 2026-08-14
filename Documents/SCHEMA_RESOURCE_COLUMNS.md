@@ -1,4 +1,4 @@
-﻿# APP.Resources Columns Guide
+# APP.Resources Columns Guide
 
 ## Purpose
 This document is the canonical meaning reference for `APP.Resources` columns.
@@ -65,16 +65,16 @@ This document is the canonical meaning reference for `APP.Resources` columns.
 ## UI Field Types (`UIFields[].type`)
 
 `UIFields[].type` is not free text — it names a component directory under
-`FRONTENT/src/components/_fields/<type>/`. Registered types today: `currency`,
+`FRONTENT/src/_fields/<type>/`. Registered types today: `currency`,
 `date`, `datetime`, `file`, `link`, `number`, `select`, `status`, `tel`, `text`,
 `textarea`, `toggle`.
 
 > **Maintainer rule (mandatory).** Introducing a NEW `type` value in `UIFields`
 > metadata is a two-file change, never one. You must also:
-> 1. create `FRONTENT/src/components/_fields/<type>/` containing `Add.vue`,
+> 1. create `FRONTENT/src/_fields/<type>/` containing `Add.vue`,
 >    `Edit.vue` and `View.vue` (contract in
->    [_fields/README.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_fields/README.md) §2), and
-> 2. register it in `FRONTENT/src/components/_fields/useFieldResolver.js` —
+>    [_fields/README.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_fields/README.md) §2), and
+> 2. register it in `FRONTENT/src/_fields/useFieldResolver.js` —
 >    the folder name resolves by itself, so `TYPE_ALIASES` is only for the
 >    schema's alternate spellings of the same intent.
 >
@@ -194,4 +194,5 @@ Update this file when:
 - a `Resources` column is added, removed, renamed, or repurposed
 - accepted values or semantics of a column change
 - runtime expectations for metadata fields change materially
+- schema changes require updating corresponding resource domain logic under `FRONTENT/src/_resource/{Scope}/{Resource}/`
 

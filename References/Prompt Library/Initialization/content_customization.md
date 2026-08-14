@@ -14,10 +14,10 @@ Before creating or modifying any local Content components:
 3. **If the task CREATES or restructures a content component** (rather than overriding one for a resource): also read [UI_RENDERABLE_CONTRACT.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RENDERABLE_CONTRACT.md) and load [renderable_contract.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/renderable_contract.md). Every overridable cell must route through `abstract/Renderable.js`, or the new component is closed to `_ui/` customization from day one.
 
 > [!IMPORTANT]
-> **Field rendering is out of scope for this prompt.** Individual form controls and detail/table value cells are NOT rendered by the content components — they are delegated to the base field subsystem at `src/components/_fields/<type>/{Add,Edit,View}.vue`, resolved through `resolveFieldComponent(type, mode)`. If the task is "make this column render as a link / currency / status chip", or "change how a field type looks", stop and route to the right prompt instead:
+> **Field rendering is out of scope for this prompt.** Individual form controls and detail/table value cells are NOT rendered by the content components — they are delegated to the base field subsystem at `src/_fields/<type>/{Add,Edit,View}.vue`, resolved through `resolveFieldComponent(type, mode)`. If the task is "make this column render as a link / currency / status chip", or "change how a field type looks", stop and route to the right prompt instead:
 > - Form-side (`Create`/`Update`/`FormRecord`/`FormChild`) → [content_create_and_update_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/content_create_and_update_customization.md) §0
 > - View-side (`ViewRecord`/`ViewChildCompact`) → [view_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/view_customization.md) §0
-> - The subsystem itself → [`FRONTENT/src/components/_fields/README.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_fields/README.md)
+> - The subsystem itself → [`FRONTENT/src/_fields/README.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_fields/README.md)
 >
 > A change to one field type there applies to **every** resource, in add, edit, and view — which is usually what is actually wanted, and is never achievable through a per-resource content override.
 

@@ -1,7 +1,7 @@
 ﻿# `_fields/` Type Registry
 
 Purpose: single source of truth for every implemented field `type` under
-`src/components/_fields/`. `UI_MODULE_DEVELOPER_GUIDE.md` §13.1 and every other
+`src/_fields/`. `UI_MODULE_DEVELOPER_GUIDE.md` §13.1 and every other
 doc that describes schema-driven form/view rendering points here instead of restating this
 table — update this file when a type is added, renamed, or its behavior changes, and every
 doc referencing it stays correct.
@@ -45,13 +45,13 @@ own columns — mounts single controls itself
 When it does, this is the contract.
 
 **Resolve; never deep-import.** `resolveFieldComponent(type, mode)` and
-`import FieldSelectAdd from 'components/_fields/select/Add.vue'` render the same component
+`import FieldSelectAdd from 'src/_fields/select/Add.vue'` render the same component
 today and diverge the moment the type gains an alias, a prepared-props branch or a
 replacement — only the resolved path follows it. The registry is built eagerly, so the
 lookup is synchronous and the control never flashes empty while a chunk loads.
 
 ```javascript
-import { resolveFieldComponent } from 'components/_fields/useFieldResolver'
+import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
 
 // Resolved once, at setup — not inside a computed or the template.
 const QtyField = resolveFieldComponent('number', 'add')

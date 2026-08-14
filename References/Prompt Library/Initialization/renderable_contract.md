@@ -7,7 +7,7 @@ description: Specialized initialization prompt for creating or materially changi
 
 This document defines initialization parameters for agents **building or restructuring reusable render components**: anything under `FRONTENT/src/components/abstract/`, `app/`, `contents/`, or `sections/`.
 
-It governs **how a component exposes its cells for customization**. It does NOT cover which override file to create for a given resource (→ [content_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/content_customization.md)), the Section resolver chain (→ [page_and_section_system.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/page_and_section_system.md)), or field-type rendering (→ `FRONTENT/src/components/_fields/README.md`).
+It governs **how a component exposes its cells for customization**. It does NOT cover which override file to create for a given resource (→ [content_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/content_customization.md)), the Section resolver chain (→ [page_and_section_system.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/page_and_section_system.md)), or field-type rendering (→ `FRONTENT/src/_fields/README.md`).
 
 > [!IMPORTANT]
 > **This prompt is additive.** If the task is "create a new Section" or "add a content component", load the matching domain prompt **and** this one. This one only governs the prop surface.

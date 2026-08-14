@@ -62,7 +62,7 @@
  * control fields back off pageState to gate `next`.
  */
 import { computed, onMounted, useAttrs } from 'vue'
-import FieldSelectAdd from 'components/_fields/select/Add.vue'
+import FieldSelectAdd from 'src/_fields/select/Add.vue'
 import { useRestockAddContext } from 'src/_ui/AQL/composables/Operation/OutletRestocks/Add/useRestockAddContext'
 
 defineOptions({ name: 'OutletRestocksOutletSelection', inheritAttrs: false })

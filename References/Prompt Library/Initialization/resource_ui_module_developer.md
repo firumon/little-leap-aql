@@ -35,7 +35,7 @@ single-piece, defer immediately to the matching narrower prompt and stop reading
 2. **Resource domain logic & import boundaries** — [UI_RESOURCE_DOMAIN_LOGIC.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md) — read in full before writing any `src/_resource/` file (Step 2) or any UI Composable (Step 3).
 3. **Architecture constraints** — [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md).
 4. **The three catalogues** the guide links rather than restates. Read the one your step needs — never restate their contents in a module:
-   - [`_fields/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_fields/REGISTRY.md) — every implemented field type, and the contract for mounting one by hand (Step 5).
+   - [`_fields/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_fields/REGISTRY.md) — every implemented field type, and the contract for mounting one by hand (Step 5).
    - [`components/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md) — every reusable Section/Content/app base, its props and its hide rules (Step 4).
    - `_ui/{Ui}/_config/config.md` — that UI's design tokens and why they hold their values (Step 8). For the default UI: [`_ui/AQL/_config/config.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_ui/AQL/_config/config.md).
 5. **Resource schema** — [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md) for `_fields`/`UIFields`/`Relations` structure.
@@ -192,7 +192,7 @@ disagree (guide §7.4).
 3. **Either shape**: every input is a `_fields` control resolved through
    `resolveFieldComponent(type, mode)` — never a deep SFC import, never a raw Quasar control.
    Labels, styles and test hooks travel in `config`
-   ([`_fields/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_fields/REGISTRY.md)).
+   ([`_fields/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_fields/REGISTRY.md)).
    If a type doesn't exist, add it there.
 4. **Share cards between Add and Edit** at the resource tier and list them in both contracts
    (guide §3.1, §13.4) — never a parallel set. Edit states its fixed identity fields

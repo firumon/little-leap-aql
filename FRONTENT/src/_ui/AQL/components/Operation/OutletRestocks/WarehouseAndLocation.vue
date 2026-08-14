@@ -124,7 +124,7 @@
  * field and writes straight back through the composable (ARCHITECTURE RULES §6).
  */
 import { computed, useAttrs } from 'vue'
-import { resolveFieldComponent } from 'components/_fields/useFieldResolver'
+import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
 import { useRestockApproval } from 'src/_ui/AQL/composables/Operation/Outlets/useRestockApproval'
 import { useRestockApprovalContext } from 'src/_ui/AQL/composables/Operation/Outlets/useRestockApprovalContext'
 

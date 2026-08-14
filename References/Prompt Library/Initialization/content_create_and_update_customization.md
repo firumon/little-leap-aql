@@ -19,20 +19,20 @@ Before creating or modifying any local `Create`/`Update` content components:
 1. **System Specification**: Read [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md) — the full `Create` & `Update` canonical doc: component anatomy, complete prop tables, the `showFields`/`hideFields`/`workflowFields` visibility precedence chain, `defaultValues`/`fieldProps` function resolution, child entry modes, the three override hierarchies, whole-content override examples, `Update.vue`'s hydration lifecycle (§13), and child soft-deletion/undo (§14). [UI_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CONTENT_SYSTEM.md) §5.3 has a one-paragraph summary + link only — read the dedicated doc for anything beyond a quick orientation.
 2. **PageState Contract**: Read [usePageState.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/usePageState.js) — `initResource` (incl. `isPrimaryKey`/`reset` lifecycle options), `load` (record hydration), `setField`, `setControlField`/`getControlField` (non-schema custom fields — never `node.record`), `addChild`/`updateChild`/`removeChild` (incl. the `{ action }` option), `defaultBuild`'s `_action` forwarding, `validateNode`.
 3. **Architecture Constraints**: Read [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md) for strict formatting rules (e.g. no inline `<style>` values, no `QTable`, mobile-first grid).
-4. **Base field components** (only when the task is about how a *field type* renders, or you are adding a new type): Read [`FRONTENT/src/components/_fields/README.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_fields/README.md), backed by §15 of the canonical doc.
+4. **Base field components** (only when the task is about how a *field type* renders, or you are adding a new type): Read [`FRONTENT/src/_fields/README.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_fields/README.md), backed by §15 of the canonical doc.
 
 ---
 
 ## 0. Decide the Right Layer First
 
-`FormRecord` contains **no `field.type === '…'` branches and no Quasar control map**. `useFormFields.mapField` resolves each field's props **and** its `fieldType`; the control is then mounted by `resolveFieldComponent(field.fieldType, mode)` → `src/components/_fields/<type>/<Add|Edit>.vue`. `mode` is `'add'` from `Create.vue`, `'edit'` from `Update.vue`, and `'edit'` from `FormChild` only while re-opening an already-added row.
+`FormRecord` contains **no `field.type === '…'` branches and no Quasar control map**. `useFormFields.mapField` resolves each field's props **and** its `fieldType`; the control is then mounted by `resolveFieldComponent(field.fieldType, mode)` → `src/_fields/<type>/<Add|Edit>.vue`. `mode` is `'add'` from `Create.vue`, `'edit'` from `Update.vue`, and `'edit'` from `FormChild` only while re-opening an already-added row.
 
 Before writing an override, pick the layer that matches the intent:
 
 | Intent | Correct layer |
 |---|---|
 | Adjust props of **one field on one resource** | `fieldProps` (§2.1c) — preferred — or a `FormField<Header>.js` modifier when it must be tenant-scoped |
-| Change how **a field type renders everywhere** (all currency inputs, all file uploads) | Edit `src/components/_fields/<type>/Add.vue` — never a per-resource override |
+| Change how **a field type renders everywhere** (all currency inputs, all file uploads) | Edit `src/_fields/<type>/Add.vue` — never a per-resource override |
 | Add a **new field type** | New `_fields/<type>/{Add,Edit,View}.vue` folder, a `TYPE_ALIASES` entry if the schema spells it differently, and a `mapField` branch stamping `fieldType` if props need preparing |
 | A column renders as a plain text input but should be a date/select/currency | Fix the column's `type` in `APP.Resources.UIFields` — do **not** patch it with a per-resource override, or the form and the View page will disagree |
 
@@ -169,7 +169,7 @@ Precedence: `...attrs` → explicit props → escape hatch (`formRecordProps`/`f
 - Compose using `FormRecord` and `FormChild` wherever possible instead of hand-rolling `q-input`/`q-select` controls — this preserves the `_fields` type resolution (file upload, `app/Date.vue` date-with-today-default, status toggle, filterable cross-ref and `AppOptions` selects, currency prefixes) and keeps the override thin. If you genuinely must render one field by hand, mount the base component rather than a raw Quasar control:
 
   ```javascript
-  import { resolveFieldComponent } from 'components/_fields/useFieldResolver'
+  import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
   // <component :is="resolveFieldComponent('currency', 'edit')" v-model="…" :record="record" :config="…" header="Rate" />
   ```
 

@@ -124,7 +124,7 @@
  * itself is independently overridable at any of the 10 `_ui/` tiers.
  */
 import { computed } from 'vue'
-import { resolveFieldComponent } from 'components/_fields/useFieldResolver'
+import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
 
 defineOptions({ name: 'OutletRestocksApproveSkuAllocatingCard', inheritAttrs: false })
 

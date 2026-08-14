@@ -1,4 +1,4 @@
-import { resolveFieldComponent, resolveFieldType } from 'components/_fields/useFieldResolver'
+import { resolveFieldComponent, resolveFieldType } from 'src/_fields/useFieldResolver'
 import { toDateTime24 } from 'src/utils/dateHelpers'
 import { evaluateConditionOp } from './useResourceConfig'
 

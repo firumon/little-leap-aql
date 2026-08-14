@@ -3,7 +3,7 @@ import { markRaw } from 'vue'
 /**
  * Central dynamic resolver for the modular base field system.
  *
- * Every field type owns a folder under `src/components/_fields/<type>/` holding
+ * Every field type owns a folder under `src/_fields/<type>/` holding
  * three explicit SFCs — `Add.vue`, `Edit.vue`, `View.vue`. Container components
  * (FormRecord.vue / ViewRecord.vue) never branch on a field type themselves;
  * they hand the resolved type + render mode to `resolveFieldComponent()` and

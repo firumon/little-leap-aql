@@ -158,7 +158,7 @@ The block is spread flat — `ListToday` reads `props.layout`. A `ListToday.js` 
 ---
 
 > [!IMPORTANT]
-> **Content overrides do not control field rendering.** Individual form controls and detail/table value cells are delegated to the base field subsystem at `src/components/_fields/<type>/{Add,Edit,View}.vue`, resolved through `resolveFieldComponent(type, mode)` — the content components hold no type branches. Changing how a *field type* looks means editing that type's SFC (which applies to every resource, in add/edit/view); changing how *one column of one resource* looks means a `FormField<Header>` / `ViewColumn<Col>` override. See [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md) §15 and [UI_VIEW_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_VIEW_SYSTEM.md) §4.
+> **Content overrides do not control field rendering.** Individual form controls and detail/table value cells are delegated to the base field subsystem at `src/_fields/<type>/{Add,Edit,View}.vue`, resolved through `resolveFieldComponent(type, mode)` — the content components hold no type branches. Changing how a *field type* looks means editing that type's SFC (which applies to every resource, in add/edit/view); changing how *one column of one resource* looks means a `FormField<Header>` / `ViewColumn<Col>` override. See [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md) §15 and [UI_VIEW_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_VIEW_SYSTEM.md) §4.
 
 ---
 

@@ -108,7 +108,7 @@
  */
 import { computed, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
-import { resolveFieldComponent } from 'components/_fields/useFieldResolver'
+import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
 import { useRestockDelivery } from 'src/_ui/AQL/composables/Operation/OutletRestocks/MarkDelivered/useRestockDelivery'
 import { useRestockDeliveryContext } from 'src/_ui/AQL/composables/Operation/OutletRestocks/MarkDelivered/useRestockDeliveryContext'
 

@@ -18,9 +18,9 @@ This document is the complete reference guide for the AQL **View** content syste
 | `ViewChildCompact` | `components/contents/ViewChildCompact.vue` | Leaf child grid renderer for <= 5 columns (`q-markup-table`). Each cell renders through `_fields/<type>/View.vue` in **compact mode**; resolves no per-column `_ui` overrides. |
 | `ViewAudit` | `components/contents/ViewAudit.vue` | Audit timestamps card (`CreatedAt` / `UpdatedAt`). Audit is ONLY rendered here. |
 | `useViewColumnResolver` | `composables/resources/useViewColumnResolver.js` | Composable resolving column custom UI overrides (`ViewColumn<Col>.(vue\|js)`). |
-| `useFieldResolver` | `components/_fields/useFieldResolver.js` | Resolves the base field component for a `(type, mode)` pair. See §4. |
+| `useFieldResolver` | `src/_fields/useFieldResolver.js` | Resolves the base field component for a `(type, mode)` pair. See §4. |
 
-> **Cell rendering is not hardcoded.** Neither `ViewRecord` nor `ViewChildCompact` contains a `field.type === '...'` branch. Every value cell is delegated to a base type component under `src/components/_fields/` — see [§4 Base Field Subsystem](#4-base-field-subsystem-srccomponents_fields).
+> **Cell rendering is not hardcoded.** Neither `ViewRecord` nor `ViewChildCompact` contains a `field.type === '...'` branch. Every value cell is delegated to a base type component under `src/_fields/` — see [§4 Base Field Subsystem](#4-base-field-subsystem-srccomponents_fields).
 
 ---
 
@@ -180,14 +180,14 @@ export default {
 
 ---
 
-## 4. Base Field Subsystem (`src/components/_fields/`)
+## 4. Base Field Subsystem (`src/_fields/`)
 
 The type-driven presentation layer shared by the View system and the Create/Update
 form system. `ViewRecord` and `ViewChildCompact` resolve a component and mount it;
 all per-type presentation lives in `_fields/`.
 
 > Component-level reference (interface contract, `config` merge order, full alias
-> table, "how to add a type"): [`FRONTENT/src/components/_fields/README.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_fields/README.md).
+> table, "how to add a type"): [`FRONTENT/src/_fields/README.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_fields/README.md).
 > The form-side integration is documented in [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md) §Base Field Subsystem.
 
 ### 4.1 Directory Structure — the "Option A" Pattern
@@ -195,7 +195,7 @@ all per-type presentation lives in `_fields/`.
 Each field type owns a folder holding **three explicit SFCs**:
 
 ```
-src/components/_fields/
+src/_fields/
 ├── README.md
 ├── index.js                  # re-exports the resolver API
 ├── useFieldResolver.js       # central dynamic resolver

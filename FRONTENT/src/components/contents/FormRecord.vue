@@ -56,7 +56,7 @@
 import { computed, inject, ref, watch, markRaw, useAttrs } from 'vue'
 import { QCard, QCardSection } from 'quasar'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
-import { resolveFieldComponent } from 'components/_fields/useFieldResolver'
+import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
 import { useFormFields } from 'src/composables/resources/useFormFields'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { humanizeString, toPascalCase } from 'src/utils/appHelpers'
@@ -73,7 +73,7 @@ import { humanizeString, toPascalCase } from 'src/utils/appHelpers'
  * ZERO-HARDCODING CONTRACT: every default behaviour, class, and label below is
  * exposed as a prop. Unhandled attributes flow through `$attrs` to the resolved
  * override / every field control. There are NO type-based branches in this file
- * — presentation per field type lives entirely in `src/components/_fields/`,
+ * — presentation per field type lives entirely in `src/_fields/`,
  * resolved via `resolveFieldComponent(field.fieldType, mode)`.
  */
 defineOptions({ name: 'ContentsFormRecord', inheritAttrs: false })

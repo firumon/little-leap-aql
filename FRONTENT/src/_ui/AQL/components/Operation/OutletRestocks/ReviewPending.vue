@@ -97,7 +97,7 @@
 import { computed, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import AqlGroupedList from 'components/app/AqlGroupedList.vue'
-import { resolveFieldComponent } from 'components/_fields/useFieldResolver'
+import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
 import { useRestockApproval } from 'src/_ui/AQL/composables/Operation/Outlets/useRestockApproval'
 import { useRestockApprovalContext } from 'src/_ui/AQL/composables/Operation/Outlets/useRestockApprovalContext'
 

@@ -11,7 +11,7 @@ because they are catalogues that go stale the moment they are duplicated:
 
 | Subsystem | Canonical spec |
 |---|---|
-| Implemented `_fields` types, and how to mount one by hand | [`_fields/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_fields/REGISTRY.md) |
+| Implemented `_fields` types, and how to mount one by hand | [`_fields/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_fields/REGISTRY.md) |
 | Reusable component bases — every generic Section/Content/app component, its props and its hide rules | [`components/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md) |
 | A UI's own design tokens — card shell, motion, spacing, tap targets | `_ui/{UiName}/_config/config.md` (e.g. [`_ui/AQL/_config/config.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_ui/AQL/_config/config.md)) |
 
@@ -238,7 +238,7 @@ defineOptions({ name: 'OutletRestocksViewAllocationDetails', inheritAttrs: false
 
 > [!IMPORTANT]
 > **Custom UI components and forms MUST use the modular base field controls in
-> [`FRONTENT/src/components/_fields/`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_fields/)
+> [`FRONTENT/src/_fields/`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_fields/)
 > — resolved through `resolveFieldComponent(type, mode)` — instead of hand-rolling raw
 > native or Quasar input controls.**
 
@@ -249,7 +249,7 @@ option-filter debounce, the empty-value display text, and the add/edit/view symm
 silently stop applying to that one control.
 
 **Resolve, never deep-import.** `resolveFieldComponent('select', 'add')` and
-`import FieldSelectAdd from 'components/_fields/select/Add.vue'` render the same component
+`import FieldSelectAdd from 'src/_fields/select/Add.vue'` render the same component
 today and diverge the moment the type gains an alias, a prepared-props branch or a
 replacement — only the resolved path follows it. The registry is built eagerly, so the
 lookup is synchronous and the control never flashes empty:
@@ -262,7 +262,7 @@ Mounting one by hand has a prop contract of its own — `modelValue`, `record`, 
 a `config` object that carries **everything else**, because the controls declare
 `inheritAttrs: false` and a plain attribute on the placeholder is dropped. That contract,
 and the full type catalogue, live in
-[`_fields/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_fields/REGISTRY.md).
+[`_fields/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_fields/REGISTRY.md).
 
 **The `mode` argument follows the value, not the page.** `'add'` when the value does not
 exist yet, `'edit'` when the control is amending one already loaded, `'view'` for read-only
@@ -2015,10 +2015,10 @@ and maps each survivor to a control **by schema signal, in this priority**:
 9. Otherwise → a generic text-family input, typed further by type normalization.
 
 Every one of these resolves through `resolveFieldComponent(type, mode)` into
-`src/components/_fields/<type>/` — the priority list decides **which type**, never which raw
+`src/_fields/<type>/` — the priority list decides **which type**, never which raw
 Quasar control. For what each resolved type renders, which aliases map to it, and how to
 mount one by hand, see
-[`_fields/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_fields/REGISTRY.md).
+[`_fields/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_fields/REGISTRY.md).
 
 ### 13.2 Cross-reference option labels
 
@@ -2312,7 +2312,7 @@ Run this per new module. Each step cites the section that governs it.
 | Domain predicate duplicated across two `_ui/{Ui}/` trees for the same resource | Business logic was left in `_ui/` instead of `src/_resource/` — extract it (§4). |
 | Row/card spacing ignores the page's `gutter` | A list-like component is hardcoding `q-gutter-y-*` or `q-mb-*` instead of taking the `gutter` token (§10.2). |
 | A card looks subtly different from its neighbours | It hardcoded a shell class instead of reading the UI's `cardClass` (§10.1). |
-| A manually mounted `_fields` control ignores its label or test hook | The value was passed as an attribute; `_fields` controls set `inheritAttrs: false` and read `config` ([`_fields/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_fields/REGISTRY.md)). |
+| A manually mounted `_fields` control ignores its label or test hook | The value was passed as an attribute; `_fields` controls set `inheritAttrs: false` and read `config` ([`_fields/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_fields/REGISTRY.md)). |
 | A field type gains an alias or a prepared-props branch and one control doesn't follow it | That control deep-imports `_fields/{type}/Add.vue` instead of calling `resolveFieldComponent` (§2.4). |
 | Cards in a grouped list sit at a different rhythm from the rest of the page | Spacing was put in `card-class`; it is appearance only, and spacing goes through the list's `gutter` prop (§10.1). |
 | A control's tap size stops matching the rest of the UI after a token change | It hardcoded `min-width`/`min-height` instead of binding `tapTargetStyle` (§10.5). |
@@ -2335,7 +2335,7 @@ Run this per new module. Each step cites the section that governs it.
 >
 > Ownership of the three catalogues this guide links rather than restates:
 > - A `_fields` type, or the manual field-mounting contract →
->   [`_fields/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_fields/REGISTRY.md).
+>   [`_fields/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_fields/REGISTRY.md).
 > - A reusable Section/Content/app component, its props or its hide rule →
 >   [`components/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md).
 > - A UI's design tokens and their rationale → that UI's `_ui/{Ui}/_config/config.md`.

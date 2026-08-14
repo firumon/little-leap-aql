@@ -76,7 +76,7 @@
  */
 import { computed } from 'vue'
 import AqlGroupedList from 'components/app/AqlGroupedList.vue'
-import FieldNumberAdd from 'components/_fields/number/Add.vue'
+import FieldNumberAdd from 'src/_fields/number/Add.vue'
 
 defineOptions({ name: 'OutletRestocksStockMatchGroups', inheritAttrs: false })
 

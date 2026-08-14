@@ -64,7 +64,7 @@
 <script setup>
 import { computed, inject, ref, watch, useAttrs, markRaw } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
-import { resolveFieldComponent, resolveFieldType } from 'components/_fields/useFieldResolver'
+import { resolveFieldComponent, resolveFieldType } from 'src/_fields/useFieldResolver'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { resolveColumnOverride } from 'src/composables/resources/useViewColumnResolver'
 import {

@@ -1,4 +1,4 @@
-# Initialization: Multi-Tenant System & Routing
+﻿# Initialization: Multi-Tenant System & Routing
 
 > **Scope boundary**: This document covers investigations, modifications, or deployments related to the dynamic multi-tenant system, the Master Apps Script project, and the frontend tenant-URL routing boot process. Self-contained — load only when query involves tenant mapping, master sheet lookup, or PWA boot configuration.
 
@@ -60,7 +60,7 @@ When editing functions inside the core `GAS/` codebase, you MUST update [tenant.
 ## 4. Tenant Onboarding & Library Upgrades
 
 * **Adding a New Tenant**: 
-  1. **Folder & Generation**: Follow the [New Client Setup Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/NEW_CLIENT_SETUP_GUIDE.md) to copy the template spreadsheet (`__tenant_app__`) and generate scoped sheets. The template spreadsheet already has the up-to-date wrapper script bound and configured to reference `AqlCore` library.
+  1. **Folder & Generation**: Follow the [New Client Setup Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/TENANT_NEW_CLIENT_SETUP.md) to copy the template spreadsheet (`__tenant_app__`) and generate scoped sheets. The template spreadsheet already has the up-to-date wrapper script bound and configured to reference `AqlCore` library.
   2. **Authorize permissions**: Select the `onOpen` function in the new tenant's online Apps Script editor and click **Run** to authorize the script. Refresh the Google Sheet to display the menu.
   3. **Set Script Property**: In the Apps Script settings, add a Script Property named `APP_FILE_ID` with the value set to the spreadsheet ID of the tenant's new `App` file.
   4. **Deploy Web App**: Deploy the project as a Web App (Execute as: `Me`, Who has access: `Anyone`) and copy the Web App URL.
@@ -73,7 +73,7 @@ When editing functions inside the core `GAS/` codebase, you MUST update [tenant.
   3. Push wrapper changes to all tenants: `npm run tenant:push`.
   4. Instruct sheet administrators to select the latest library version within their Apps Script editors (under Libraries > AqlCore), ensure Development mode is set to OFF, and click Save.
   5. *Tip:* If the latest version does not show, instruct them to remove and re-add the library.
-  6. **Step-by-Step Spreadsheet Setup**: For full instructions on folder creation, generating spreadsheets using the menu, setting up configuration/file IDs, routing custom resources, and running refactoring scripts, see the [New Client Setup Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/NEW_CLIENT_SETUP_GUIDE.md).
+  6. **Step-by-Step Spreadsheet Setup**: For full instructions on folder creation, generating spreadsheets using the menu, setting up configuration/file IDs, routing custom resources, and running refactoring scripts, see the [New Client Setup Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/TENANT_NEW_CLIENT_SETUP.md).
 
 ---
 

@@ -1,4 +1,4 @@
-# Schema Refactoring Guide
+﻿# Schema Refactoring Guide
 
 ## Purpose
 This guide explains how schema-related setup/refactor flows should be used to align sheets with current code-defined structure.
@@ -17,8 +17,8 @@ When headers/columns change, use the setup/refactor workflow rather than making 
 - workflow/action-related columns should remain aligned with current process design
 
 ## Canonical Detail Owners
-- Resource metadata semantics: [RESOURCE_COLUMNS_GUIDE.md](F:/LITTLE%20LEAP/AQL/Documents/RESOURCE_COLUMNS_GUIDE.md)
-- Setup flow: [NEW_CLIENT_SETUP_GUIDE.md](F:/LITTLE%20LEAP/AQL/Documents/NEW_CLIENT_SETUP_GUIDE.md)
+- Resource metadata semantics: [SCHEMA_RESOURCE_COLUMNS.md](F:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md)
+- Setup flow: [TENANT_NEW_CLIENT_SETUP.md](F:/LITTLE%20LEAP/AQL/Documents/TENANT_NEW_CLIENT_SETUP.md)
 
 ## Maintenance Rule
 Update this file when:

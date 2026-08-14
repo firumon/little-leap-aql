@@ -1,4 +1,4 @@
-# MASTER Sheet Structure
+﻿# MASTER Sheet Structure
 
 ## Purpose
 This document describes the current master-scope sheet families and their roles.
@@ -59,7 +59,7 @@ This document describes the current master-scope sheet families and their roles.
 
 ## Notes
 - Exact code prefixes and metadata-driven validation rules are owned by runtime configuration, not by this document.
-- For detailed resource metadata rules, use [RESOURCE_COLUMNS_GUIDE.md](F:/LITTLE%20LEAP/AQL/Documents/RESOURCE_COLUMNS_GUIDE.md)
+- For detailed resource metadata rules, use [SCHEMA_RESOURCE_COLUMNS.md](F:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md)
 
 ## Maintenance Rule
 Update this file when:

@@ -1,12 +1,12 @@
-# DEPRECATED — AQL Frontend Sidebar Menu & Access Control
+﻿# DEPRECATED — AQL Frontend Sidebar Menu & Access Control
 
 > **This init prompt has been replaced.** Use `frontend_menu_system.md` instead — it is the single authoritative initialization prompt for all frontend sidebar menu tasks.
 
 ## Why This Was Replaced
 
-The old prompt required agents to read multiple separate files (`AQL_MENU_ADMIN_GUIDE.md §9`, `resourceRegistry.gs`, `useMainLayoutNavTree.js`, `useMenuAccess.js`). The new approach consolidates everything into a single canonical document:
+The old prompt required agents to read multiple separate files (`SHEET_TOOLBAR_MENU_GUIDE.md §9`, `resourceRegistry.gs`, `useMainLayoutNavTree.js`, `useMenuAccess.js`). The new approach consolidates everything into a single canonical document:
 
-- `Documents/AQL_FRONTEND_MENU_SYSTEM.md` — Complete end-to-end documentation
+- `Documents/UI_SIDEBAR_MENU_SYSTEM.md` — Complete end-to-end documentation
 - `References/Prompt Library/Initialization/frontend_menu_system.md` — Single init prompt covering everything
 
 ## What to Use Instead

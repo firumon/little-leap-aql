@@ -15,7 +15,7 @@ Use this document to initialize an AI agent session when the task involves:
 
 Read **only** this single document for a complete understanding of the menu system:
 
-- `Documents/AQL_FRONTEND_MENU_SYSTEM.md` — Complete canonical document covering:
+- `Documents/UI_SIDEBAR_MENU_SYSTEM.md` — Complete canonical document covering:
   - JSON schema (every key, every variant)
   - End-to-end data flow (code → sheet → auth payload → frontend render)
   - Backend architecture (parse, normalize, package)
@@ -146,7 +146,7 @@ Resolution priority: `userId` > `role.id` (first match) > `"default"`. Empty `gr
 - **DO NOT** omit `menuAccess` on sensitive entries (default is `canRead`)
 - **DO NOT** rename resources that are referenced in `menuAccess.all` or `menuAccess.any` cross-resource rules
 - **DO NOT** create a new GAS file for menu config — use existing `syncAppResources.gs`
-- **DO** read `Documents/AQL_FRONTEND_MENU_SYSTEM.md` first for full understanding
+- **DO** read `Documents/UI_SIDEBAR_MENU_SYSTEM.md` first for full understanding
 - **DO** use `order` values with gaps (1, 10, 20) for future insertion flexibility
 - **DO** verify route existence before writing the menu config
 

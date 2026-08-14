@@ -1,4 +1,4 @@
-# AQL Tax & Currency System
+﻿# AQL Tax & Currency System
 
 > **Scope boundary**: This document covers tax and currency logic only — compound tax calculations, currency helpers, tax-inclusive/exclusive pricing, tax transaction storage. Its pre-reads reference canonical docs and frontend composables — read them by path. Do NOT load frontend_modification.md or backend_gas_implementation.md unless the task explicitly requires modifying that code.
 
@@ -11,7 +11,7 @@ Use this document to initialize an AI agent session when the task involves modif
 AQL's tax system is a metadata-driven engine that supports flat taxes, compound taxes (tax-on-tax), and both tax-inclusive and tax-exclusive pricing — all configured through Google Sheets master data without code changes.
 
 ### A. Core File Coordinates
-* **Tax Design Specification**: [TAX_SYSTEM_DESIGN.md](file:///f:/LITTLE%20LEAP/AQL/Documents/TAX_SYSTEM_DESIGN.md) — canonical reference for all tax logic
+* **Tax Design Specification**: [FEATURE_TAX_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_TAX_SYSTEM.md) — canonical reference for all tax logic
 * **Frontend Tax Calculator**: [useTaxCalculator.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/useTaxCalculator.js) — composable for line-level tax calculation
 * **Frontend Currency Formatter**: [useCurrency.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/useCurrency.js) — polyvalent currency display helper `_C(value, showSymbol, target, source)`
 * **Tax Master Schema**: `Taxes` sheet in Master scope — configured in [setupMasterSheets.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/setupMasterSheets.gs)
@@ -23,10 +23,10 @@ AQL's tax system is a metadata-driven engine that supports flat taxes, compound 
 ## 2. Mandatory Pre-Reads
 
 Before modifying any tax or currency logic:
-* Full tax specification: [TAX_SYSTEM_DESIGN.md](file:///f:/LITTLE%20LEAP/AQL/Documents/TAX_SYSTEM_DESIGN.md)
+* Full tax specification: [FEATURE_TAX_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_TAX_SYSTEM.md)
 * Frontend tax composable: [useTaxCalculator.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/useTaxCalculator.js)
 * Frontend currency helper: [useCurrency.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/useCurrency.js)
-* Frontend architecture rules: [ARCHITECTURE RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md)
+* Frontend architecture rules: [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md)
 
 ---
 
@@ -62,7 +62,7 @@ Before modifying any tax or currency logic:
 ## 4. Step-by-Step Implementation Checklist
 
 ### Modifying Tax Calculation Logic
-1. **Read the specification**: Read [TAX_SYSTEM_DESIGN.md](file:///f:/LITTLE%20LEAP/AQL/Documents/TAX_SYSTEM_DESIGN.md) completely.
+1. **Read the specification**: Read [FEATURE_TAX_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_TAX_SYSTEM.md) completely.
 2. **Read the composable**: Read [useTaxCalculator.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/useTaxCalculator.js) to understand the current implementation.
 3. **Modify with care**: Tax calculation affects all pricing across the entire system. Verify both forwards (exclusive) and backwards (inclusive) calculations.
 4. **Test edge cases**: Compound taxes (`CompoundOn = PREVIOUS`), flat unit taxes, zero-rate taxes, and mixed groups.
@@ -75,7 +75,7 @@ Before modifying any tax or currency logic:
 ### Modifying Tax Master Schema
 1. **Update setup script**: Modify headers in [setupMasterSheets.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/setupMasterSheets.gs) for `Taxes` sheet.
 2. **Update sync config**: Modify UIFields in [syncAppResources.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/syncAppResources.gs) for `Taxes` resource.
-3. **Update documentation**: Update [TAX_SYSTEM_DESIGN.md](file:///f:/LITTLE%20LEAP/AQL/Documents/TAX_SYSTEM_DESIGN.md).
+3. **Update documentation**: Update [FEATURE_TAX_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_TAX_SYSTEM.md).
 
 ---
 
@@ -102,5 +102,5 @@ Before modifying any tax or currency logic:
 2. Sync resources and regenerate cache if tax metadata was modified.
 
 ### C. Mathematical Verification
-1. Manually calculate expected tax amounts for test cases using the formulas in [TAX_SYSTEM_DESIGN.md](file:///f:/LITTLE%20LEAP/AQL/Documents/TAX_SYSTEM_DESIGN.md).
+1. Manually calculate expected tax amounts for test cases using the formulas in [FEATURE_TAX_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_TAX_SYSTEM.md).
 2. Compare against the system's output for the same inputs.

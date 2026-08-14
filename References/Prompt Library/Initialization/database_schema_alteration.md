@@ -1,4 +1,4 @@
-# AQL Database Schema Alteration & Sync Workflow
+﻿# AQL Database Schema Alteration & Sync Workflow
 
 > **Scope boundary**: This document covers database schema changes only — sheet setups, metadata config, view/report scans, and clasp sync. Its blast-radius steps tell you to SEARCH frontend and backend files for column references — do NOT load the frontend_modification.md or backend_gas_implementation.md init prompts unless the task explicitly requires modifying that code. Read referenced files directly by path.
 
@@ -8,7 +8,7 @@ Use this document to initialize an AI agent session when the task requires modif
 
 ## 1. Role Boundaries (Mandatory)
 
-Before proceeding, read and follow the role boundaries defined in [MULTI_AGENT_PROTOCOL.md](file:///f:/LITTLE%20LEAP/AQL/Documents/MULTI_AGENT_PROTOCOL.md). Your default role is `Guide Agent`. To execute schema changes, you must be in the `Solo Agent` or `Build Agent` role — state the role switch briefly to the user.
+Before proceeding, read and follow the role boundaries defined in [References/Prompt Library/MAP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt Library/MAP.md). Your default role is `Guide Agent`. To execute schema changes, you must be in the `Solo Agent` or `Build Agent` role — state the role switch briefly to the user.
 
 ---
 
@@ -43,14 +43,14 @@ Before writing any code, you must read the following files:
 * Core Schema Normalizer: [setup_normalizeSheetSchema in setupSheetUtils.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/setupSheetUtils.gs#L15-L49)
 * Core Code-to-Sheet Sync Config: [initAppResourcesCodeConfig in syncAppResources.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/syncAppResources.gs#L11-L60)
 * Canonical Refactoring Procedures: [SCHEMA_REFACTORING_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_REFACTORING_GUIDE.md)
-* Resource Column Definition Guide: [RESOURCE_COLUMNS_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_COLUMNS_GUIDE.md)
+* Resource Column Definition Guide: [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md)
 
 Depending on the scope of the schema alteration, also read the corresponding sheet structure doc:
-* [APP_SHEET_STRUCTURE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/APP_SHEET_STRUCTURE.md)
-* [MASTER_SHEET_STRUCTURE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/MASTER_SHEET_STRUCTURE.md)
-* [OPERATION_SHEET_STRUCTURE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/OPERATION_SHEET_STRUCTURE.md)
-* [ACCOUNTS_SHEET_STRUCTURE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ACCOUNTS_SHEET_STRUCTURE.md)
-* [PROCUREMENT_SHEET_STRUCTURE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/PROCUREMENT_SHEET_STRUCTURE.md)
+* [SHEET_APP_STRUCTURE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHEET_APP_STRUCTURE.md)
+* [SHEET_MASTER_STRUCTURE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHEET_MASTER_STRUCTURE.md)
+* [SHEET_OPERATION_STRUCTURE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHEET_OPERATION_STRUCTURE.md)
+* [SHEET_ACCOUNTS_STRUCTURE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHEET_ACCOUNTS_STRUCTURE.md)
+* [SHEET_PROCUREMENT_STRUCTURE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHEET_PROCUREMENT_STRUCTURE.md)
 
 ---
 
@@ -83,11 +83,11 @@ Once approved by the user:
 ### Step 3: Frontend Code Modifications
 1. Update any Vue pages or custom dialogs under `FRONTENT/src/pages/` binding to the altered fields.
 2. Update feature workflows or input parsing in the corresponding composables under `FRONTENT/src/composables/`.
-3. Adhere strictly to the [ARCHITECTURE RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md), specifically keeping Vue page templates thin and encapsulating business/payload adjustments inside composables.
+3. Adhere strictly to the [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md), specifically keeping Vue page templates thin and encapsulating business/payload adjustments inside composables.
 
 ### Step 4: Documentation Synchronization
-1. Document the column additions, removals, or type changes in the relevant sheet structure document under `Documents/` (e.g., [OPERATION_SHEET_STRUCTURE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/OPERATION_SHEET_STRUCTURE.md)).
-2. If the change modifies schema options or metadata columns, update [RESOURCE_COLUMNS_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_COLUMNS_GUIDE.md).
+1. Document the column additions, removals, or type changes in the relevant sheet structure document under `Documents/` (e.g., [SHEET_OPERATION_STRUCTURE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHEET_OPERATION_STRUCTURE.md)).
+2. If the change modifies schema options or metadata columns, update [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md).
 3. If dependent Sheet Views or Reports were modified, update their corresponding documentation in `Sheet Formulas/Views/` or `Sheet Formulas/Reports/` and record the change in their `INDEX.md` files.
 
 ---

@@ -1,4 +1,4 @@
-# AQL Codebase Investigation
+﻿# AQL Codebase Investigation
 
 > **Scope boundary**: This document covers codebase investigation only — tracing data flow, understanding architecture, finding implementations. It tells you which canonical docs to READ by path for each domain — do NOT load other init prompts for investigation context.
 
@@ -16,7 +16,7 @@ Before answering any AQL-specific question, follow this systematic discovery app
    - **Sheet Schema**: Setup scripts, metadata config in `GAS/syncAppResources.gs`
    - **Sheet Formulas**: Views under `Sheet Formulas/Views/`, Reports under `Sheet Formulas/Reports/`
    - **Documentation**: Canonical docs under `Documents/`
-3. **Use DOC_ROUTING.md as your compass**: Read [DOC_ROUTING.md](file:///f:/LITTLE%20LEAP/AQL/Documents/DOC_ROUTING.md) to identify which canonical documents cover the topic area if not fully mapped by the tag index.
+3. **Use CORE_DOC_ROUTING.md as your compass**: Read [CORE_DOC_ROUTING.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_DOC_ROUTING.md) to identify which canonical documents cover the topic area if not fully mapped by the tag index.
 4. **Read only target files**: Instead of doing broad searches or reading entire directories, read only the specific files highlighted in the index.
 5. **Trace the full data flow**: For any feature, trace the complete path: Frontend trigger → API action → GAS handler → Sheet operation → PostAction hooks → Response → Frontend state update.
 
@@ -28,14 +28,14 @@ Read only the docs relevant to the user's question. Use this lookup:
 
 | Question Domain | Read These Files |
 |---|---|
-| Frontend pages, components, or composables | [ARCHITECTURE RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md), [FRONTENT_README.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FRONTENT_README.md) |
+| Frontend pages, components, or composables | [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md), [CORE_OVERVIEW.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_OVERVIEW.md) |
 | Backend API actions or GAS logic | [GAS_API_CAPABILITIES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/GAS_API_CAPABILITIES.md), [GAS_PATTERNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/GAS_PATTERNS.md) |
-| Resource schema, columns, or metadata | [RESOURCE_COLUMNS_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_COLUMNS_GUIDE.md), relevant sheet structure doc |
-| Module workflows (Reports, Bulk Upload, etc.) | Relevant section of [MODULE_WORKFLOWS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/MODULE_WORKFLOWS.md) |
-| Dashboard widgets or layout | [DASHBOARD_DEVELOPMENT_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/DASHBOARD_DEVELOPMENT_GUIDE.md) |
-| Menu structure or permissions | [AQL_MENU_ADMIN_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_MENU_ADMIN_GUIDE.md) |
-| Tax or currency calculations | [TAX_SYSTEM_DESIGN.md](file:///f:/LITTLE%20LEAP/AQL/Documents/TAX_SYSTEM_DESIGN.md) |
-| Login, auth, or user payload | [LOGIN_RESPONSE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/LOGIN_RESPONSE.md) |
+| Resource schema, columns, or metadata | [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md), relevant sheet structure doc |
+| Module workflows (Reports, Bulk Upload, etc.) | Relevant section of [WORKFLOW_OUTLET_OPERATIONS.md / WORKFLOW_PROCUREMENT.md](file:///f:/LITTLE%20LEAP/AQL/Documents/WORKFLOW_OUTLET_OPERATIONS.md / WORKFLOW_PROCUREMENT.md) |
+| Dashboard widgets or layout | [FEATURE_DASHBOARD_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_DASHBOARD_GUIDE.md) |
+| Menu structure or permissions | [SHEET_TOOLBAR_MENU_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHEET_TOOLBAR_MENU_GUIDE.md) |
+| Tax or currency calculations | [FEATURE_TAX_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_TAX_SYSTEM.md) |
+| Login, auth, or user payload | [API_LOGIN_RESPONSE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/API_LOGIN_RESPONSE.md) |
 | Sheet views or report formulas | [Sheet Formulas/Views/INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Views/INDEX.md) or [Sheet Formulas/Reports/INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Reports/INDEX.md) |
 
 ---

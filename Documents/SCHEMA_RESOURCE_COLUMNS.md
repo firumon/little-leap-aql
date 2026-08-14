@@ -1,4 +1,4 @@
-# APP.Resources Columns Guide
+﻿# APP.Resources Columns Guide
 
 ## Purpose
 This document is the canonical meaning reference for `APP.Resources` columns.
@@ -118,16 +118,16 @@ The `ListViews` column in the `APP.Resources` sheet defines custom data filter v
 * **Purpose**: Configures tab/segment views to filter record datasets on the resource index pages.
 * **Format**: A JSON array of view configuration objects.
 * **Overriding Rule**: If populated with a JSON array (or `[]` to explicitly disable switcher), custom template/modifier overriding for the views switcher is disabled. If blank, overrides are allowed.
-* **Detailed JSON Schema & Operators**: For the complete specification of the filter group/condition JSON objects and supported comparison operators, refer to the canonical [AQL Frontend List Switcher Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_LIST_SWITCHER.md).
-* **Dynamic Tokens**: A condition `value` may be a date/time or current-user token (`$startOfMonth`, `$daysIn:7`, `$userRoles`, ...) instead of a literal, so views such as "Due This Week" or "Assigned To Me" stay correct without per-user sheets. See [Section 5.2 — Dynamic Tokens](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_LIST_SWITCHER.md#52-dynamic-tokens-datetime--current-user).
+* **Detailed JSON Schema & Operators**: For the complete specification of the filter group/condition JSON objects and supported comparison operators, refer to the canonical [AQL Frontend List Switcher Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_LIST_SWITCHER.md).
+* **Dynamic Tokens**: A condition `value` may be a date/time or current-user token (`$startOfMonth`, `$daysIn:7`, `$userRoles`, ...) instead of a literal, so views such as "Due This Week" or "Assigned To Me" stay correct without per-user sheets. See [Section 5.2 — Dynamic Tokens](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_LIST_SWITCHER.md#52-dynamic-tokens-datetime--current-user).
 
 ## Relations Column Schema & Usage
 The `Relations` column declares explicit cross-resource links for a resource, overriding the frontend's name-based heuristics.
 
 * **Purpose**: Tell the frontend which target resource a column points at, which target column holds the referenced value, and which target column supplies the human-readable label.
 * **Format**: A JSON **object** keyed by the *source column header* on this resource. Blank means "heuristics only".
-* **Managed by**: `AQL 🚀 > 📚 Resources > Manage Relations` (see [AQL_MENU_ADMIN_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_MENU_ADMIN_GUIDE.md) §7.5), or directly in code via `APP_RESOURCES_CODE_CONFIG` in `GAS/syncAppResources.gs`.
-* **Exposed to the frontend** as `relations` on each resource entry in the login payload — see [LOGIN_RESPONSE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/LOGIN_RESPONSE.md).
+* **Managed by**: `AQL 🚀 > 📚 Resources > Manage Relations` (see [SHEET_TOOLBAR_MENU_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHEET_TOOLBAR_MENU_GUIDE.md) §7.5), or directly in code via `APP_RESOURCES_CODE_CONFIG` in `GAS/syncAppResources.gs`.
+* **Exposed to the frontend** as `relations` on each resource entry in the login payload — see [API_LOGIN_RESPONSE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/API_LOGIN_RESPONSE.md).
 
 ### Entry Shapes
 Two shapes are accepted per entry:
@@ -185,9 +185,9 @@ The picker appends the stored value in parentheses, so `{"SKU": {"resource":"SKU
 - `view`: Read-only formula-driven sheets, no CRUD operation, no audit, no code generation, returns all non-empty rows without pagination.
 
 ## Canonical Detail Owners
-- APP control-plane context: [APP_SHEET_STRUCTURE.md](F:/LITTLE%20LEAP/AQL/Documents/APP_SHEET_STRUCTURE.md)
-- Registry/runtime behavior: [RESOURCE_REGISTRY_ARCHITECTURE.md](F:/LITTLE%20LEAP/AQL/Documents/RESOURCE_REGISTRY_ARCHITECTURE.md)
-- Module workflow behavior: [MODULE_WORKFLOWS.md](F:/LITTLE%20LEAP/AQL/Documents/MODULE_WORKFLOWS.md)
+- APP control-plane context: [SHEET_APP_STRUCTURE.md](F:/LITTLE%20LEAP/AQL/Documents/SHEET_APP_STRUCTURE.md)
+- Registry/runtime behavior: [SCHEMA_RESOURCE_REGISTRY.md](F:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_REGISTRY.md)
+- Module workflow behavior: [WORKFLOW_OUTLET_OPERATIONS.md / WORKFLOW_PROCUREMENT.md](F:/LITTLE%20LEAP/AQL/Documents/WORKFLOW_OUTLET_OPERATIONS.md / WORKFLOW_PROCUREMENT.md)
 
 ## Maintenance Rule
 Update this file when:

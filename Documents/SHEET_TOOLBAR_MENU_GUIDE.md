@@ -20,7 +20,7 @@ Use this document when an admin asks:
 1. Open the **APP** spreadsheet (not master/operation/REPORTS).
 2. Refresh the sheet to ensure `AQL 🚀` menu is visible.
 3. Ensure you have edit access to APP spreadsheet.
-4. Keep `Documents/RESOURCE_COLUMNS_GUIDE.md` nearby when editing resources.
+4. Keep `Documents/SCHEMA_RESOURCE_COLUMNS.md` nearby when editing resources.
 
 ## 2. Menu Map (Quick Reference)
 
@@ -167,8 +167,8 @@ Minimum critical fields:
 - `RecordAccessPolicy`
 
 Important references:
-- `Documents/RESOURCE_COLUMNS_GUIDE.md` (column-by-column meaning)
-- `Documents/APP_SHEET_STRUCTURE.md` (`Resources` schema)
+- `Documents/SCHEMA_RESOURCE_COLUMNS.md` (column-by-column meaning)
+- `Documents/SHEET_APP_STRUCTURE.md` (`Resources` schema)
 - `Menu` column now stores a JSON array of menu entries. The admin dialog edits the first entry (list/add/edit) and preserves the rest via `_menuArrayFull`, so extra sidebar rows can be added by writing `[primaryEntry, {...}]` in the sheet or via `syncAppResources.gs`.
 - Each entry carries its own `menuAccess` rule, and the frontend route guard matches the current path to the entry before evaluating permissions so multiple entries per resource can have distinct access controls.
 - **Menu Path (CSV)**: Enter the sidebar hierarchy as comma-separated labels (e.g. `master,Product` or `operation,Warehouse`). This is stored as `group` (string array path) in the `Menu` JSON.
@@ -184,7 +184,7 @@ Admin input needed:
 - PDF options (if needed)
 
 Reference:
-- [REPORTS_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/REPORTS_SYSTEM.md)
+- [FEATURE_REPORTS_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_REPORTS_SYSTEM.md)
 
 ### 7.3 Manage Actions
 Purpose:
@@ -195,7 +195,7 @@ Admin input needed:
 - Target fields and behavior parameters per action
 
 Reference:
-- `Documents/RESOURCE_COLUMNS_GUIDE.md` (`AdditionalActions`)
+- `Documents/SCHEMA_RESOURCE_COLUMNS.md` (`AdditionalActions`)
 
 ### 7.4 Manage Lists
 Purpose:
@@ -210,8 +210,8 @@ Behavior:
 - Deleting last custom view writes `[]` (off mode).
 
 Reference:
-- `Documents/RESOURCE_COLUMNS_GUIDE.md` (`ListViews` JSON schema + operators)
-- `Documents/MODULE_WORKFLOWS.md` section 2 (List View runtime flow)
+- `Documents/SCHEMA_RESOURCE_COLUMNS.md` (`ListViews` JSON schema + operators)
+- `Documents/WORKFLOW_OUTLET_OPERATIONS.md / WORKFLOW_PROCUREMENT.md` section 2 (List View runtime flow)
 
 ### 7.5 Manage Relations
 Purpose:
@@ -236,7 +236,7 @@ Behavior:
 - Save clears the resource config cache.
 
 Reference:
-- `Documents/RESOURCE_COLUMNS_GUIDE.md` (`Relations` JSON schema)
+- `Documents/SCHEMA_RESOURCE_COLUMNS.md` (`Relations` JSON schema)
 
 ### 7.6 Sync APP.Resources from Code
 Purpose:
@@ -287,7 +287,7 @@ Use when:
 
 These groups appear in the **frontend application sidebar**, not in the Google Sheet `AQL` menu. They are controlled by `APP.Resources.Menu` JSON arrays (code source: `GAS/syncAppResources.gs`) and are now grouped by business relevance instead of strict scope names.
 
-> **Full documentation of the frontend menu system**: See [AQL_FRONTEND_MENU_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_MENU_SYSTEM.md) — covers JSON schema, data flow, permission gating, tree building, route guard, and admin operation.
+> **Full documentation of the frontend menu system**: See [UI_SIDEBAR_MENU_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_SIDEBAR_MENU_SYSTEM.md) — covers JSON schema, data flow, permission gating, tree building, route guard, and admin operation.
 
 ### 9.1 Product Group
 
@@ -334,8 +334,8 @@ These groups appear in the **frontend application sidebar**, not in the Google S
 
 **Reference:**
 - `GAS/stockMovements.gs` — the WarehouseStorages upsert hook
-- `Documents/MODULE_WORKFLOWS.md` — Direct Stock Entry workflow section
-- `Documents/LOGIN_RESPONSE.md` — `appOptions.StockMovementReferenceType`
+- `Documents/WORKFLOW_OUTLET_OPERATIONS.md / WORKFLOW_PROCUREMENT.md` — Direct Stock Entry workflow section
+- `Documents/API_LOGIN_RESPONSE.md` — `appOptions.StockMovementReferenceType`
 
 ### 9.5 Warehouse Stock List
 
@@ -377,7 +377,7 @@ These groups appear in the **frontend application sidebar**, not in the Google S
 
 When any `AQL 🚀` menu item is **added, removed, renamed, or behavior-changed** in code:
 
-1. Update this document (`Documents/AQL_MENU_ADMIN_GUIDE.md`) in the same task.
+1. Update this document (`Documents/SHEET_TOOLBAR_MENU_GUIDE.md`) in the same task.
 2. Update index links in `Documents/README.md` if needed.
 3. Update `Documents/CONTEXT_HANDOFF.md` if runtime behavior changed.
 

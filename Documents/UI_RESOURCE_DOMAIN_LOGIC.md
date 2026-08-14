@@ -1,9 +1,9 @@
-# Resource Domain Logic System
+﻿# Resource Domain Logic System
 
 The canonical, self-contained spec for `FRONTENT/src/_resource/**/*` — the UI-agnostic
 business/workflow logic layer — and the strict one-way import boundary that connects it to
 the UI presentation layer. Referenced by
-[RESOURCE_UI_MODULE_DEVELOPER_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_UI_MODULE_DEVELOPER_GUIDE.md),
+[UI_MODULE_DEVELOPER_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md),
 which covers UI-side generation; this document owns everything about the domain layer
 itself and the boundary rules around it.
 
@@ -287,11 +287,48 @@ subfolder is specifically for the injection relay and anything that depends on i
 > **A composable that injects context and is shared by every card on one page still
 > belongs in that page's subfolder** (`.../{Resource}/{Page}/`), even though it looks
 > "resource-wide" because several sibling components import it. The test is not "how many
-> components use this" — it's "does it call `inject()`." Anything that does is page-scoped
-> by definition, because `resourceRecord`/`resourceConfig`/`pageState` are only ever
-> provided per page. A file matching this shape but sitting directly under
-> `{Scope}/{Resource}/` predates this rule and should be moved the next time that module
-> is touched, not left as a second accepted shape.
+> components use this" — it is **which pages PROVIDE the context it injects**.
+> `resourceRecord`/`resourceConfig`/`pageState` are only ever provided per page, so a
+> composable that injects is page-scoped **when one page provides its context**. A file
+> matching this shape but sitting directly under `{Scope}/{Resource}/` for a single page
+> predates this rule and should be moved the next time that module is touched, not left as
+> a second accepted shape.
+>
+> When **two or more pages provide the same context shape and resolve the same
+> components**, the composable is not page-scoped and moves up the placement ladder
+> (§6.2) to the tier those shared components already sit at. `Approve.js` and
+> `Reallocate.js` are the worked example: both resolve the same four content cards, which
+> live at the resource tier precisely so neither page owns them
+> ([UI_MODULE_DEVELOPER_GUIDE.md §3.1](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md)).
+> A `.vue` file has exactly one import line per composable, so forcing a page-scoped copy
+> of the composable would have forced a copy of all four cards too — reintroducing the
+> exact drift shared placement exists to prevent.
+
+### 6.2 Placement ladder for UI Composables
+
+A UI Composable sits at **the same tier as the most general component that imports it** —
+never higher, never lower. This is the composable-side mirror of the component tier rule
+([UI_MODULE_DEVELOPER_GUIDE.md §3.1](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md)),
+"share by placement, not by copying":
+
+| Consumers | Folder |
+|---|---|
+| One page of one resource | `_ui/{Ui}/composables/{Scope}/{Resource}/{Page}/` |
+| Two or more pages of one resource | `_ui/{Ui}/composables/{Scope}/{Resource}/` |
+| Two or more resources in one feature family | `_ui/{Ui}/composables/{Scope}/{Feature}/` |
+| Every resource in a scope | `_ui/{Ui}/composables/{Scope}/` |
+
+The ladder is forced by the module system rather than by taste: a `.vue` file has one
+import line per composable, so a composable placed BELOW the tier of a component that
+imports it cannot be reached without copying that component. Placing it ABOVE its true
+tier is the opposite error — it advertises a shared contract that only one page honours,
+and the next page to sit at that tier inherits assumptions it never agreed to.
+
+> [!IMPORTANT]
+> This ladder governs **Layer 3 only**. A Resource Composable is always
+> `src/_resource/{Scope}/{Resource}/` regardless of how many resources read it — logic
+> spanning two resources is composed by importing two domain modules from the UI side
+> (§3.2), never by promoting a domain file to a shared folder.
 
 ---
 
@@ -397,5 +434,5 @@ added to.
 > Any change to the three-layer boundary, the strict import chain, or the injection-relay
 > pattern MUST be reflected in:
 > 1. This document.
-> 2. [RESOURCE_UI_MODULE_DEVELOPER_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_UI_MODULE_DEVELOPER_GUIDE.md) if its condensed summary of this system needs to change.
+> 2. [UI_MODULE_DEVELOPER_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md) if its condensed summary of this system needs to change.
 > 3. [resource_ui_module_developer.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/resource_ui_module_developer.md) if its execution checklist references the changed rule.

@@ -1,4 +1,4 @@
-# AQL Frontend Modification & Coding Workflow
+﻿# AQL Frontend Modification & Coding Workflow
 
 > **Scope boundary**: This document covers FRONTENT/ changes only — Vue pages, composables, components, stores, services. Its blast-radius steps reference GAS backend files and sync config — read those files directly by path. Do NOT load backend_gas_implementation.md or database_schema_alteration.md unless the task explicitly requires modifying that code.
 
@@ -17,11 +17,11 @@ Use this document to initialize an AI agent session when the task involves modif
 > | [`colorHelpers.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/colorHelpers.js) | `resolveCssColor(value, fallback)` — Quasar brand names, Material palette names and raw CSS all resolve to one inline custom property. |
 > | [`placeholderProps.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/placeholderProps.js) | `resolvePlaceholderProps(props, identity, kind)` — the `Props<Identity>` merge. Call it in a resolver; never re-implement it inline. |
 >
-> **The rule this enforces**: a pure helper that is not resource knowledge belongs in `src/utils/`. It must NOT be duplicated into a `_ui/` composable, and a `_ui/` composable must NEVER import another resource's composable to borrow one — `_ui/**/OutletRestocks/**` reaching into `_ui/**/OutletVisits/**` is exactly the cross-resource dependency [ARCHITECTURE RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md) §5 forbids. Promote the helper to `src/utils/` and re-export it from the composable if the old import path must keep working.
+> **The rule this enforces**: a pure helper that is not resource knowledge belongs in `src/utils/`. It must NOT be duplicated into a `_ui/` composable, and a `_ui/` composable must NEVER import another resource's composable to borrow one — `_ui/**/OutletRestocks/**` reaching into `_ui/**/OutletVisits/**` is exactly the cross-resource dependency [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md) §5 forbids. Promote the helper to `src/utils/` and re-export it from the composable if the old import path must keep working.
 
 ## 1. Role Boundaries (Mandatory)
 
-Before proceeding, read and follow the role boundaries defined in [MULTI_AGENT_PROTOCOL.md](file:///f:/LITTLE%20LEAP/AQL/Documents/MULTI_AGENT_PROTOCOL.md). Your default role is `Guide Agent`. To execute frontend modifications, you must be in the `Solo Agent` or `Build Agent` role — state the role switch briefly to the user.
+Before proceeding, read and follow the role boundaries defined in [References/Prompt Library/MAP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt Library/MAP.md). Your default role is `Guide Agent`. To execute frontend modifications, you must be in the `Solo Agent` or `Build Agent` role — state the role switch briefly to the user.
 
 ---
 
@@ -40,14 +40,14 @@ AQL's frontend stack consists of Vue 3, Quasar Framework (v2), Pinia state manag
 ## 3. Mandatory Pre-Reads (With Line-Level Links)
 
 Before writing any code under `FRONTENT/`, you must read the following architectural rules:
-* Core Architectural Boundaries: [AQL Frontend Architecture Rules in ARCHITECTURE RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md#L1-L77)
-* General Frontend Layout conventions: [FRONTENT_README.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FRONTENT_README.md)
-* Login Payload Specification: [LOGIN_RESPONSE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/LOGIN_RESPONSE.md)
+* Core Architectural Boundaries: [AQL Frontend Architecture Rules in CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md#L1-L77)
+* General Frontend Layout conventions: [CORE_OVERVIEW.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_OVERVIEW.md)
+* Login Payload Specification: [API_LOGIN_RESPONSE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/API_LOGIN_RESPONSE.md)
 
 Depending on the widgets or workflows being modified, inspect the current registries:
 * Reusable Components: [components/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md)
 * Reusable Composables: [composables/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/REGISTRY.md)
-* If the task involves dashboard widgets: [DASHBOARD_DEVELOPMENT_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/DASHBOARD_DEVELOPMENT_GUIDE.md)
+* If the task involves dashboard widgets: [FEATURE_DASHBOARD_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_DASHBOARD_GUIDE.md)
 
 If backend metadata configuration, synced resources, or API options are required, refer to:
 * [GAS/Constants.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/Constants.gs) (contains `appOptions` source of truth)
@@ -86,7 +86,7 @@ Before modifying code:
 1. If a new reusable composable or component is created (or signature changes), log it in the corresponding registry:
    * [components/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md)
    * [composables/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/REGISTRY.md)
-2. Ensure that any page or layout files added conform to [ARCHITECTURE RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md).
+2. Ensure that any page or layout files added conform to [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md).
 
 ---
 
@@ -123,5 +123,5 @@ To test changes in real time:
 ## 8. Communication Standards
 
 * **Role Declaration**: Explicitly state that you are acting as a **Frontend Developer**.
-* **Docs Declaration**: Explicitly list all required documents read (including [ARCHITECTURE RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md)) before proceeding with implementation.
+* **Docs Declaration**: Explicitly list all required documents read (including [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md)) before proceeding with implementation.
 * **Architecture Compliance**: If a user request conflicts with the project's architecture rules, explain the conflict clearly and propose the compliant approach.

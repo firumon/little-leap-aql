@@ -1,6 +1,6 @@
 ﻿# AQL Frontend Menu System — App.Resources.Menu
 
-> **Scope:** This document covers **only** the frontend web app sidebar menu driven by the `Menu` JSON column in `APP.Resources`. It does **not** cover the `AQL 🚀` Google Sheets toolbar menu — see `Documents/AQL_MENU_ADMIN_GUIDE.md` for that.
+> **Scope:** This document covers **only** the frontend web app sidebar menu driven by the `Menu` JSON column in `APP.Resources`. It does **not** cover the `AQL 🚀` Google Sheets toolbar menu — see `Documents/SHEET_TOOLBAR_MENU_GUIDE.md` for that.
 
 ---
 
@@ -527,13 +527,13 @@ New entries should always use `group`.
 
 | Document | What it covers |
 |----------|---------------|
-| `Documents/AQL_MENU_ADMIN_GUIDE.md` | `AQL 🚀` sheet toolbar menu + sidebar taxonomy (Section 9) |
-| `Documents/MODULE_WORKFLOWS.md` §5 | Menu Access Control — architecture, rule formats, evaluation flow |
-| `Documents/LOGIN_RESPONSE.md` §4 | `ui.menus` payload shape in login response |
-| `Documents/RESOURCE_COLUMNS_GUIDE.md` | The `Menu` column definition in `APP.Resources` |
-| `Documents/FRONTENT_README.md` | Notes that authorized resources drive menu visibility |
-| `Documents/ARCHITECTURE RULES.md` | Frontend rendering rules and constraints |
-| `Documents/DOC_ROUTING.md` | Routing guide — which docs to read for which task type |
+| `Documents/SHEET_TOOLBAR_MENU_GUIDE.md` | `AQL 🚀` sheet toolbar menu + sidebar taxonomy (Section 9) |
+| `Documents/WORKFLOW_OUTLET_OPERATIONS.md / WORKFLOW_PROCUREMENT.md` §5 | Menu Access Control — architecture, rule formats, evaluation flow |
+| `Documents/API_LOGIN_RESPONSE.md` §4 | `ui.menus` payload shape in login response |
+| `Documents/SCHEMA_RESOURCE_COLUMNS.md` | The `Menu` column definition in `APP.Resources` |
+| `Documents/CORE_OVERVIEW.md` | Notes that authorized resources drive menu visibility |
+| `Documents/CORE_ARCHITECTURE_RULES.md` | Frontend rendering rules and constraints |
+| `Documents/CORE_DOC_ROUTING.md` | Routing guide — which docs to read for which task type |
 
 ---
 

@@ -1,4 +1,4 @@
-# Resource UI Module Developer Guide
+﻿# Resource UI Module Developer Guide
 
 The canonical blueprint for generating a complete resource UI module — Index, Add, Edit,
 View, and any action route it needs — under `FRONTENT/src/_ui/`. This document plus a
@@ -19,15 +19,15 @@ Plus the subsystem specs this guide summarizes inline and links out to for full 
 
 | Subsystem | Canonical spec |
 |---|---|
-| Resource domain logic & import boundaries | [RESOURCE_DOMAIN_LOGIC_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_DOMAIN_LOGIC_SYSTEM.md) |
-| Pages & Sections | [AQL_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_PAGE_AND_SECTION_SYSTEM.md) |
-| Contents | [AQL_CONTENT_CUSTOMIZATION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_CONTENT_CUSTOMIZATION_SYSTEM.md) |
-| Actions | [AQL_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_ACTION_SYSTEM.md) |
-| Create / Update forms | [AQL_CREATE_AND_UPDATE_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_CREATE_AND_UPDATE_CONTENT_SYSTEM.md) |
-| View content | [AQL_VIEW_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_VIEW_SYSTEM.md) |
-| Page state / submission | [PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/PAGE_STATE.md) |
-| Resource schema (`_fields`, `Relations`) | [RESOURCE_COLUMNS_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_COLUMNS_GUIDE.md) |
-| Architecture constraints | [ARCHITECTURE RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md) |
+| Resource domain logic & import boundaries | [UI_RESOURCE_DOMAIN_LOGIC.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md) |
+| Pages & Sections | [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md) |
+| Contents | [UI_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CONTENT_SYSTEM.md) |
+| Actions | [UI_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md) |
+| Create / Update forms | [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md) |
+| View content | [UI_VIEW_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_VIEW_SYSTEM.md) |
+| Page state / submission | [UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md) |
+| Resource schema (`_fields`, `Relations`) | [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md) |
+| Architecture constraints | [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md) |
 
 ---
 
@@ -438,7 +438,7 @@ page names it.
 ## 4. Correct Business Logic Placement — The Three-Layer Boundary
 
 > Full detail — folder structure, every rule, and worked examples — lives in
-> [RESOURCE_DOMAIN_LOGIC_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_DOMAIN_LOGIC_SYSTEM.md).
+> [UI_RESOURCE_DOMAIN_LOGIC.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
 > This section is the summary a module generator needs inline; read the linked doc before
 > writing any `src/_resource/` file.
 
@@ -462,14 +462,14 @@ are data/config, never a second code path).
 Progress/workflow vocabularies, state-transition predicates, stateful workflow aggregates
 that back a wizard/action page, and payload/request builders — everything that answers
 "what can this record do right now, and why." Full list:
-[RESOURCE_DOMAIN_LOGIC_SYSTEM.md §3](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_DOMAIN_LOGIC_SYSTEM.md).
+[UI_RESOURCE_DOMAIN_LOGIC.md §3](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
 
 ### 4.3 What stays in `_ui/{Ui}/composables/`
 
 Presentation-only helpers that assemble display from a Layer-2 predicate but are not
 themselves a business rule — row presets, per-view formatting, and the injection-relay
 composable (§6.2). Full list:
-[RESOURCE_DOMAIN_LOGIC_SYSTEM.md §4](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_DOMAIN_LOGIC_SYSTEM.md).
+[UI_RESOURCE_DOMAIN_LOGIC.md §4](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
 
 ### 4.4 Shape
 
@@ -480,7 +480,7 @@ Layer 2 export takes `record`/`records` **only** — never a `config` parameter.
 `allowed()` — never route-derived, never passed in by the caller. Multi-resource logic is
 composed by importing multiple named domain modules from the UI side, not by parameterizing
 one function over different configs. See
-[RESOURCE_DOMAIN_LOGIC_SYSTEM.md §3.2 and §5](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_DOMAIN_LOGIC_SYSTEM.md)
+[UI_RESOURCE_DOMAIN_LOGIC.md §3.2 and §5](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md)
 for the full rule and worked example.
 
 ### 4.5 One workflow vocabulary per resource
@@ -606,7 +606,7 @@ and component values in the file; anything read off the store in a `Props<Identi
 
 > [!IMPORTANT]
 > **`pageProps` carries no form state.** Form values, validation, saving/submitting flags
-> and every save/submit handler live in `pageState` (§6.2, §13.5, `PAGE_STATE.md`).
+> and every save/submit handler live in `pageState` (§6.2, §13.5, `UI_PAGE_STATE.md`).
 
 ### 5.5 Conventions every contract follows
 
@@ -656,7 +656,7 @@ readable without opening the card.
 ## 6. Strict Import Boundaries
 
 > Full detail — every layer's rules stated together with worked examples — lives in
-> [RESOURCE_DOMAIN_LOGIC_SYSTEM.md §6](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_DOMAIN_LOGIC_SYSTEM.md).
+> [UI_RESOURCE_DOMAIN_LOGIC.md §6](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
 > This section carries the injection-relay pattern in full since it's the piece a component
 > author reaches for directly while authoring UI files.
 
@@ -740,6 +740,35 @@ it.
 
 A component never calls `inject()` itself, and never imports a generic identity/navigation
 Core Composable directly — both are relayed through this one file per resource.
+
+### 6.3 Where a shared UI Composable goes — the placement ladder
+
+A UI Composable sits at **the same tier as the most general component that imports it** —
+never higher, never lower. This is §3.1's "share by placement, not by copying" applied to
+`composables/` instead of `components/`, and it uses the same tier names:
+
+| Consumers | Folder |
+|---|---|
+| One page of one resource | `_ui/{Ui}/composables/{Scope}/{Resource}/{Page}/` |
+| Two or more pages of one resource | `_ui/{Ui}/composables/{Scope}/{Resource}/` |
+| Two or more resources in one feature family | `_ui/{Ui}/composables/{Scope}/{Feature}/` |
+| Every resource in a scope | `_ui/{Ui}/composables/{Scope}/` |
+
+The test for "does this inject, so is it page-scoped?" is **which pages provide the
+context**, not whether `inject()` appears in the file. One providing page means
+page-scoped. Two pages providing the same context and resolving the same components means
+the composable belongs at the tier those shared components already sit at — see
+[UI_RESOURCE_DOMAIN_LOGIC.md §6.1–6.2](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
+
+`OutletRestocks` is the worked example: `Approve.js` and `Reallocate.js` both resolve
+`WarehouseAndLocation` / `ItemAllocating` / `ReviewAllocating` / `ReviewPending` from the
+resource tier, so `useRestockApproval` sits at the feature tier
+(`composables/Operation/Outlets/`) rather than under either page. A `.vue` file has one
+import line per composable, so a page-scoped copy of the composable would have forced a
+page-scoped copy of all four cards — the drift §3.1 exists to prevent.
+
+The ladder applies to Layer 3 only. A Resource Composable is always
+`src/_resource/{Scope}/{Resource}/` however many resources read it (§4.4).
 
 ---
 
@@ -1965,7 +1994,7 @@ it is not shown.
 
 > [!IMPORTANT]
 > **A generated form's field set comes from its `_fields` metadata
-> (`APP.Resources.UIFields`, see `RESOURCE_COLUMNS_GUIDE.md`), never hand-assembled.** A
+> (`APP.Resources.UIFields`, see `SCHEMA_RESOURCE_COLUMNS.md`), never hand-assembled.** A
 > `_ui/` override narrows or reorders the generated set; it does not replace generation with
 > a manually written field list.
 
@@ -2301,7 +2330,7 @@ Run this per new module. Each step cites the section that governs it.
 > the form-shape decision, the View blueprint, or the visual contract MUST be reflected in:
 > 1. This document.
 > 2. [resource_ui_module_developer.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/resource_ui_module_developer.md) — its condensed checklist must stay in sync with §14 above; this is the one deliberate duplication in this guide's ecosystem.
-> 3. [DOC_ROUTING.md](file:///f:/LITTLE%20LEAP/AQL/Documents/DOC_ROUTING.md) if the routing rule for resource-UI-module generation changes.
+> 3. [CORE_DOC_ROUTING.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_DOC_ROUTING.md) if the routing rule for resource-UI-module generation changes.
 > 4. [AGENTS.md](file:///f:/LITTLE%20LEAP/AQL/AGENTS.md) if the Query Classification or Initialization Prompt Routing entries change.
 >
 > Ownership of the three catalogues this guide links rather than restates:
@@ -2313,5 +2342,5 @@ Run this per new module. Each step cites the section that governs it.
 >
 > A change to the three-layer boundary, the strict import chain, or the injection-relay
 > pattern is owned by
-> [RESOURCE_DOMAIN_LOGIC_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_DOMAIN_LOGIC_SYSTEM.md) —
+> [UI_RESOURCE_DOMAIN_LOGIC.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md) —
 > update it first, then sync this document's §4/§6 summaries to match.

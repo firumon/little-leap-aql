@@ -1,4 +1,4 @@
-# AQL Renderable Contract
+﻿# AQL Renderable Contract
 
 **Canonical spec for `FRONTENT/src/components/abstract/Renderable.js`** — the single dispatch point for slot-shaped props across `abstract/`, `app/`, `contents/` and `sections/` components.
 
@@ -10,7 +10,7 @@
 
 ## 1. The Problem It Solves
 
-A `_ui/` tenant customization has two mechanisms (see [AQL_CONTENT_CUSTOMIZATION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_CONTENT_CUSTOMIZATION_SYSTEM.md)):
+A `_ui/` tenant customization has two mechanisms (see [UI_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CONTENT_SYSTEM.md)):
 
 | Mechanism | What it can do | Cost |
 |---|---|---|
@@ -141,7 +141,7 @@ A component used as a prop value receives exactly one prop:
 const props = defineProps({ item: { type: Object, required: true } })
 ```
 
-- **`item`, not a spread.** `v-bind="record"` iterates own *enumerable* keys, and the enriched record's relation getters (`$outlet`, `_Parents`) are **non-enumerable** — a spread silently drops them. See `AQL_PAGE_AND_SECTION_SYSTEM.md` §1.3.3.
+- **`item`, not a spread.** `v-bind="record"` iterates own *enumerable* keys, and the enriched record's relation getters (`$outlet`, `_Parents`) are **non-enumerable** — a spread silently drops them. See `UI_PAGE_AND_SECTION_SYSTEM.md` §1.3.3.
 - **`provide`/`inject` work normally.** The component mounts inside the host's tree, so `inject('resourceRecord')` / `'resourceConfig'` / `'pageState'` reach the same providers a `.vue` override would. Prefer `inject` inside the component over the `ctx` argument handed to the modifier, which is a one-time snapshot.
 - **`item` is whatever the host binds.** Resolvers are called as `value(item)`, so in a host whose resolvers take a different context object, bind `:item` to that object and the contract still holds.
 - **Adapt, don't reimplement.** If framework logic already exists for the job, wrap it. `VisitActionButtons.vue` contributes only the `item` → `record` binding and the escalation order; all gating and dispatch stay in `useAdditionalActions`.

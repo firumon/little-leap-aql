@@ -1,4 +1,4 @@
-# AQL Sheet Views Formulation
+﻿# AQL Sheet Views Formulation
 
 > **Scope boundary**: This document covers Google Sheets View formulas only — denormalized data views, IMPORTRANGE, VLOOKUP, Config sheet patterns. Its pre-reads reference sheet structure docs — read them by path. Do NOT load other init prompts.
 
@@ -29,7 +29,7 @@ AQL **Views** are specialized Google Sheets that consolidate, flatten, and denor
 Before writing or modifying any View formula:
 * Views catalog: [Sheet Formulas/Views/INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Views/INDEX.md)
 * The specific View's existing documentation under `Sheet Formulas/Views/`
-* Source sheet structure docs: relevant file under `Documents/` (e.g., [MASTER_SHEET_STRUCTURE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/MASTER_SHEET_STRUCTURE.md), [OPERATION_SHEET_STRUCTURE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/OPERATION_SHEET_STRUCTURE.md))
+* Source sheet structure docs: relevant file under `Documents/` (e.g., [SHEET_MASTER_STRUCTURE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHEET_MASTER_STRUCTURE.md), [SHEET_OPERATION_STRUCTURE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHEET_OPERATION_STRUCTURE.md))
 
 ---
 

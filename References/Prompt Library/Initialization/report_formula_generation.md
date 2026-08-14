@@ -1,4 +1,4 @@
-# AQL Report Formula Generation & Maintenance
+﻿# AQL Report Formula Generation & Maintenance
 
 > **Scope boundary**: This document covers Google Sheets report formulas and template configuration only — printable headers, LAMBDA row functions, virtual array calculations. Its references to frontend composables and backend GAS files are read-only.
 > 
@@ -20,9 +20,9 @@ AQL utilizes a hybrid architecture where the web frontend displays data and trig
 
 **Key File Locations**:
 - Backend Code: [reportGenerator.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/reportGenerator.gs)
-- Report Workflows: [MODULE_WORKFLOWS.md — Section 1](file:///f:/LITTLE%20LEAP/AQL/Documents/MODULE_WORKFLOWS.md#L97)
+- Report Workflows: [WORKFLOW_OUTLET_OPERATIONS.md / WORKFLOW_PROCUREMENT.md — Section 1](file:///f:/LITTLE%20LEAP/AQL/Documents/WORKFLOW_OUTLET_OPERATIONS.md / WORKFLOW_PROCUREMENT.md#L97)
 - Sheet Formulas Index: [Sheet Formulas/Reports/INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Sheet%20Formulas/Reports/INDEX.md)
-- Resource Config Guide: [RESOURCE_COLUMNS_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_COLUMNS_GUIDE.md)
+- Resource Config Guide: [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md)
 
 ---
 

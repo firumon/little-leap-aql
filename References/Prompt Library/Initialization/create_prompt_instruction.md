@@ -1,4 +1,4 @@
-# Initialization: Prompt & Instruction Creation
+﻿# Initialization: Prompt & Instruction Creation
 
 > **Scope boundary**: This document covers creating new initialization prompts only. Its discovery steps require exhaustive codebase reading — read source files directly by path. Do NOT load other init prompts for context; you are creating one.
 
@@ -11,13 +11,13 @@ Use this instruction when the user asks to create an initialization prompt, work
 Before writing any instruction or checklist, you must perform a comprehensive inspection of the entire repository to gather every piece of context. Do not rely on memory or partial scans.
 
 ### Step 1: Document Scan
-1. Read `Documents/README.md` and `Documents/DOC_ROUTING.md` to identify related documentation.
+1. Read `Documents/README.md` and `Documents/CORE_DOC_ROUTING.md` to identify related documentation.
 2. Read the full text of all documents that mention the target task or feature area.
 3. If the task touches:
-   - **Masters or Operations UI**: Read `Documents/AQL_PAGE_AND_SECTION_SYSTEM.md`.
-   - **Workflows**: Read the relevant workflow section in `Documents/MODULE_WORKFLOWS.md`.
-   - **Sheet Schemas**: Read the relevant structure file (e.g., `Documents/OPERATION_SHEET_STRUCTURE.md`) and `Documents/RESOURCE_COLUMNS_GUIDE.md`.
-   - **Tax/Currency**: Read `Documents/TAX_SYSTEM_DESIGN.md` and check `FRONTENT/src/composables/useCurrency.js`.
+   - **Masters or Operations UI**: Read `Documents/UI_PAGE_AND_SECTION_SYSTEM.md`.
+   - **Workflows**: Read the relevant workflow section in `Documents/WORKFLOW_OUTLET_OPERATIONS.md / WORKFLOW_PROCUREMENT.md`.
+   - **Sheet Schemas**: Read the relevant structure file (e.g., `Documents/SHEET_OPERATION_STRUCTURE.md`) and `Documents/SCHEMA_RESOURCE_COLUMNS.md`.
+   - **Tax/Currency**: Read `Documents/FEATURE_TAX_SYSTEM.md` and check `FRONTENT/src/composables/useCurrency.js`.
 
 ### Step 2: Codebase Scan
 Search the codebase using ripgrep (`grep_search`) for symbols, resource names, or keywords related to the task:
@@ -77,5 +77,5 @@ Specify exactly how the agent must verify the changes:
 ## 3. Phase 3: Review and Refine
 
 Before saving the generated prompt:
-1. Cross-reference the draft against `Documents/ARCHITECTURE RULES.md` to ensure zero layer violations are introduced.
+1. Cross-reference the draft against `Documents/CORE_ARCHITECTURE_RULES.md` to ensure zero layer violations are introduced.
 2. Confirm all file paths are correct, absolute, and clickable using the `file:///` scheme.

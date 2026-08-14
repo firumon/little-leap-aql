@@ -1,4 +1,4 @@
----
+﻿---
 name: AQL Create & Update Content Customization
 description: Initialization prompt for creating custom UI overrides (Vue SFC, JS object, JS function) for the Create and Update content systems (Create.vue, Update.vue, FormRecord.vue, FormChild.vue) and for extending pageState-bound form/child-entry behavior, including Update hydration and child soft-deletion.
 ---
@@ -11,14 +11,14 @@ This document defines initialization parameters for agents tasked with resource-
 
 This document does NOT cover:
 - `View`/`List` content overrides — see [view_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/view_customization.md) / [content_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/content_customization.md).
-- Submit/cancel button behavior, workflow actions, or FAB wiring — those live in `PageAction` sections (`Form.js` schema, §5.2 of `AQL_CONTENT_CUSTOMIZATION_SYSTEM.md`), out of scope for `Create`/`Update` content itself. Note that `Page.vue` mounts the Action subsystem for every resource page automatically (gated only by `pageProps.noActions !== true`) — `PageAction` is **not** listed in a page contract's `sections`.
+- Submit/cancel button behavior, workflow actions, or FAB wiring — those live in `PageAction` sections (`Form.js` schema, §5.2 of `UI_CONTENT_SYSTEM.md`), out of scope for `Create`/`Update` content itself. Note that `Page.vue` mounts the Action subsystem for every resource page automatically (gated only by `pageProps.noActions !== true`) — `PageAction` is **not** listed in a page contract's `sections`.
 - Page-level section ordering/visibility (`sections: [...]`) — see [page_and_section_system.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/page_and_section_system.md).
 
 ## Required Pre-Reads
 Before creating or modifying any local `Create`/`Update` content components:
-1. **System Specification**: Read [AQL_CREATE_AND_UPDATE_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_CREATE_AND_UPDATE_CONTENT_SYSTEM.md) — the full `Create` & `Update` canonical doc: component anatomy, complete prop tables, the `showFields`/`hideFields`/`workflowFields` visibility precedence chain, `defaultValues`/`fieldProps` function resolution, child entry modes, the three override hierarchies, whole-content override examples, `Update.vue`'s hydration lifecycle (§13), and child soft-deletion/undo (§14). [AQL_CONTENT_CUSTOMIZATION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_CONTENT_CUSTOMIZATION_SYSTEM.md) §5.3 has a one-paragraph summary + link only — read the dedicated doc for anything beyond a quick orientation.
+1. **System Specification**: Read [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md) — the full `Create` & `Update` canonical doc: component anatomy, complete prop tables, the `showFields`/`hideFields`/`workflowFields` visibility precedence chain, `defaultValues`/`fieldProps` function resolution, child entry modes, the three override hierarchies, whole-content override examples, `Update.vue`'s hydration lifecycle (§13), and child soft-deletion/undo (§14). [UI_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CONTENT_SYSTEM.md) §5.3 has a one-paragraph summary + link only — read the dedicated doc for anything beyond a quick orientation.
 2. **PageState Contract**: Read [usePageState.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/usePageState.js) — `initResource` (incl. `isPrimaryKey`/`reset` lifecycle options), `load` (record hydration), `setField`, `setControlField`/`getControlField` (non-schema custom fields — never `node.record`), `addChild`/`updateChild`/`removeChild` (incl. the `{ action }` option), `defaultBuild`'s `_action` forwarding, `validateNode`.
-3. **Architecture Constraints**: Read [ARCHITECTURE RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md) for strict formatting rules (e.g. no inline `<style>` values, no `QTable`, mobile-first grid).
+3. **Architecture Constraints**: Read [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md) for strict formatting rules (e.g. no inline `<style>` values, no `QTable`, mobile-first grid).
 4. **Base field components** (only when the task is about how a *field type* renders, or you are adding a new type): Read [`FRONTENT/src/components/_fields/README.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_fields/README.md), backed by §15 of the canonical doc.
 
 ---
@@ -100,7 +100,7 @@ export default function (props, { pageState, resourceConfig, resourceRecord }) {
 ```
 
 - The function receives `Create.vue`'s full current prop object plus `{ pageState, resourceConfig, resourceRecord }`, and must return the adjusted prop object.
-- **ZERO-HARDCODING RULE.** Every default label, icon, colour, class, dialog width, and behaviour in `Create`/`FormRecord`/`FormChild` is already a prop. **Before writing any `.vue` override, check the prop tables in `AQL_CREATE_AND_UPDATE_CONTENT_SYSTEM.md` §3** — reach for a Vue SFC override only when the *structure* differs, never to change a string, colour, or class.
+- **ZERO-HARDCODING RULE.** Every default label, icon, colour, class, dialog width, and behaviour in `Create`/`FormRecord`/`FormChild` is already a prop. **Before writing any `.vue` override, check the prop tables in `UI_CREATE_AND_UPDATE_SYSTEM.md` §3** — reach for a Vue SFC override only when the *structure* differs, never to change a string, colour, or class.
 - Setting `withChildren: false` suppresses ALL child `FormChild` groups even if eligible children exist — use only when child creation must happen elsewhere (e.g. a dedicated sub-route).
 - **Workflow/audit hiding is dynamic, not a static list.** `FormRecord` hides any header matching `/(.+?)(By|At|Comment)$/` (e.g. `ProgressApprovedBy`, `StatusRejectedComment`) whenever `workflowFields` is `'hide'`/`false` (default); pass `workflowFields: 'show'`/`true` to render them. There is no `DEFAULT_CREATE_HIDDEN_FIELDS` constant — do not reintroduce a hardcoded list.
 - **`Status` is hidden and seeded `statusDefault` (`'Active'`)** by `FormRecord` when the resource has a `Status` column. Use `showStatus: true` (or list `'Status'` in `showFields`) to render it editable, or `statusDefault: 'Draft'` for a different seed — do NOT add `Status` to `hideFields`. When rendered, it is not auto-seeded.
@@ -216,7 +216,7 @@ Precedence: `...attrs` → explicit props → escape hatch (`formRecordProps`/`f
   ```
 
 - **NEVER** use inline style blocks or raw HTML div-nesting for layout — use Quasar utility classes (`q-gutter-y-md`, `row`, `col-12 col-sm-6`, etc.).
-- **NEVER** use `QTable` for the child-record list — `FormChild`'s inline/popup modes already use `q-list`/`q-card`; a custom override must follow the same stacked-card/list pattern (§7 of `ARCHITECTURE RULES.md`).
+- **NEVER** use `QTable` for the child-record list — `FormChild`'s inline/popup modes already use `q-list`/`q-card`; a custom override must follow the same stacked-card/list pattern (§7 of `CORE_ARCHITECTURE_RULES.md`).
 
 ### 2.3 Per-Child, Per-Resource, and Per-Field Overrides (no full rewrite needed)
 
@@ -306,7 +306,7 @@ Rules:
 
 ### 2.5b `APP.Resources.DefaultValues` (backend schema metadata) & Multi-Entry Child Seeding
 
-Every resource row in `APP.Resources` carries a `DefaultValues` column (JSON object, e.g. `{"Status": "Active", "Currency": "AED"}`), exposed on the login `resources` payload entry (`GAS/resourceRegistry.gs`'s `buildAuthorizedResourceEntry()`) as `defaultValues`. `FormRecord` resolves this **automatically** via `useResourceConfig(resource).defaultValues` (never by importing `useAuthStore` directly — components must not import Pinia stores, per `ARCHITECTURE RULES.md` §5) — no wiring required in `Create.vue`/`FormChild.vue` beyond what already exists. Full precedence (lowest → highest): `APP.Resources.DefaultValues` < `defaultValues` prop < the `Status: statusDefault` fallback.
+Every resource row in `APP.Resources` carries a `DefaultValues` column (JSON object, e.g. `{"Status": "Active", "Currency": "AED"}`), exposed on the login `resources` payload entry (`GAS/resourceRegistry.gs`'s `buildAuthorizedResourceEntry()`) as `defaultValues`. `FormRecord` resolves this **automatically** via `useResourceConfig(resource).defaultValues` (never by importing `useAuthStore` directly — components must not import Pinia stores, per `CORE_ARCHITECTURE_RULES.md` §5) — no wiring required in `Create.vue`/`FormChild.vue` beyond what already exists. Full precedence (lowest → highest): `APP.Resources.DefaultValues` < `defaultValues` prop < the `Status: statusDefault` fallback.
 
 ```json
 // APP.Resources row for "SupplierQuotations" — DefaultValues column
@@ -325,7 +325,7 @@ defaultValues: { ResponseType: 'PARTIAL' }
 
 ### 2.7 Verification & Safety
 - Run `npx quasar build -m pwa` (or equivalent targeted check) after any override touching more than a couple of files to confirm no compilation issues.
-- If you found yourself writing a `.vue` override purely to change a label, icon, colour, class, or dialog size, STOP — that is a prop. Re-check the prop tables in `AQL_CREATE_AND_UPDATE_CONTENT_SYSTEM.md` §3 and use a `.js` modifier instead.
+- If you found yourself writing a `.vue` override purely to change a label, icon, colour, class, or dialog size, STOP — that is a prop. Re-check the prop tables in `UI_CREATE_AND_UPDATE_SYSTEM.md` §3 and use a `.js` modifier instead.
 - Confirm `pageState.state.primaryKey` and `pageState.state.nodes` reflect only the active resource after navigating between two different Create pages in the same session — this is the specific regression this system was hardened against.
 - If custom (non-schema) fields are involved, confirm `defaultBuild`'s assembled request payload for that resource contains ONLY canonical schema headers — custom values should be readable via `pageState.getControlField(resource, header)` but absent from `node.record`/the built request.
 

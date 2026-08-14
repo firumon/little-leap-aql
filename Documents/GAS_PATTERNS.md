@@ -1,4 +1,4 @@
-# AQL - GAS Backend Patterns Guide
+﻿# AQL - GAS Backend Patterns Guide
 
 ## Purpose
 This document is the implementation-pattern reference for GAS work in AQL.
@@ -192,7 +192,7 @@ Use for progress/status changes that also need auto-fill fields (e.g. `ProgressA
 
 ## Canonical Detail Owners
 - Capability inventory: [GAS_API_CAPABILITIES.md](GAS_API_CAPABILITIES.md)
-- Resource config semantics: [RESOURCE_COLUMNS_GUIDE.md](RESOURCE_COLUMNS_GUIDE.md)
+- Resource config semantics: [SCHEMA_RESOURCE_COLUMNS.md](SCHEMA_RESOURCE_COLUMNS.md)
 
 ## Maintenance Rule
 Update this file when:

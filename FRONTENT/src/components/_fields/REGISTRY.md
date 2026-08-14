@@ -1,7 +1,7 @@
-# `_fields/` Type Registry
+﻿# `_fields/` Type Registry
 
 Purpose: single source of truth for every implemented field `type` under
-`src/components/_fields/`. `RESOURCE_UI_MODULE_DEVELOPER_GUIDE.md` §13.1 and every other
+`src/components/_fields/`. `UI_MODULE_DEVELOPER_GUIDE.md` §13.1 and every other
 doc that describes schema-driven form/view rendering points here instead of restating this
 table — update this file when a type is added, renamed, or its behavior changes, and every
 doc referencing it stays correct.
@@ -41,7 +41,7 @@ to `text`. Adding the folder and updating this table is one change, never two.
 Most controls are mounted for you by the form generator (`useFormFields` → `FormRecord`).
 A **workflow form** — one whose primary input is a derived tree rather than the resource's
 own columns — mounts single controls itself
-([RESOURCE_UI_MODULE_DEVELOPER_GUIDE.md §13.0](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_UI_MODULE_DEVELOPER_GUIDE.md)).
+([UI_MODULE_DEVELOPER_GUIDE.md §13.0](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md)).
 When it does, this is the contract.
 
 **Resolve; never deep-import.** `resolveFieldComponent(type, mode)` and

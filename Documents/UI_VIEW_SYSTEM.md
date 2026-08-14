@@ -1,8 +1,8 @@
-# AQL View Content System
+﻿# AQL View Content System
 
 This document is the complete reference guide for the AQL **View** content system — the framework-level content family that renders a resource record's View page (details grid, parent cards, child grids, and audit timestamps). It covers the `View` content orchestrator, `ViewRecord`, `ViewParent`, `ViewChildren`, `ViewChildCompact`, `ViewAudit`, record/parent/child/column custom-UI overrides (Vue SFC, JS object, JS function), scope rules, and context injections. In expanded mode (> 5 columns) each child record is delegated to `ViewRecord`.
 
-`View` is declared via `contents: ['View']` in a page contract and resolved through the [Content.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/Content.vue) / [useContentResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useContentResolver.js) pipeline described in [AQL_CONTENT_CUSTOMIZATION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_CONTENT_CUSTOMIZATION_SYSTEM.md).
+`View` is declared via `contents: ['View']` in a page contract and resolved through the [Content.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/Content.vue) / [useContentResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useContentResolver.js) pipeline described in [UI_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CONTENT_SYSTEM.md).
 
 ---
 
@@ -188,7 +188,7 @@ all per-type presentation lives in `_fields/`.
 
 > Component-level reference (interface contract, `config` merge order, full alias
 > table, "how to add a type"): [`FRONTENT/src/components/_fields/README.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_fields/README.md).
-> The form-side integration is documented in [AQL_CREATE_AND_UPDATE_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_CREATE_AND_UPDATE_CONTENT_SYSTEM.md) §Base Field Subsystem.
+> The form-side integration is documented in [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md) §Base Field Subsystem.
 
 ### 4.1 Directory Structure — the "Option A" Pattern
 

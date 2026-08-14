@@ -1,4 +1,4 @@
-/**
+﻿/**
  * AQL UI — design tokens.
  *
  * The machine-readable half of this UI's visual contract. Every component under
@@ -15,7 +15,7 @@
  * theme-uniformity rule forbids.
  *
  * Canonical spec:
- *   Documents/RESOURCE_UI_MODULE_DEVELOPER_GUIDE.md §10
+ *   Documents/UI_MODULE_DEVELOPER_GUIDE.md §10
  */
 
 export default {

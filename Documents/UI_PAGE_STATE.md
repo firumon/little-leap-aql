@@ -1,4 +1,4 @@
-# usePageState — Centralized Page-Level Form-State Composable
+﻿# usePageState — Centralized Page-Level Form-State Composable
 
 > **Canonical reference for `FRONTENT/src/composables/resources/usePageState.js`.**
 > Any developer or AI agent working on a resource page (form, input collection,
@@ -209,7 +209,7 @@ For **every** resource page that collects input or submits data:
 5. **Using the response** → triggers **return** `{ success, response, code }`.
    Read it from the call site (or pass `onSuccess`). Do not rely on side-channel state.
 
-Violations of (1), (3), (4) are architecture-layer violations (see `Documents/ARCHITECTURE RULES.md`).
+Violations of (1), (3), (4) are architecture-layer violations (see `Documents/CORE_ARCHITECTURE_RULES.md`).
 
 ---
 
@@ -318,7 +318,7 @@ queued actions are emitted **after** every node request (§7).
 answers to its short authored name or its derived header; a target field to
 `'<targetKey>.<Column>'` or a nested `{ targetKey: { Column } }` bag. Anything omitted
 falls back to the field's configured `from`/`value` seed. Full table:
-[AQL_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_ACTION_SYSTEM.md) §7.0.1.
+[UI_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md) §7.0.1.
 
 > Queuing an action **never creates a node** — the lookup is read-only, so an otherwise
 > empty page does not start building a create request for the resource. Calling
@@ -564,5 +564,5 @@ composable's definition, not an afterthought.
 
 - `Documents/OUTLET_INPUT_TO_API_DATA_FLOW.md` — the research/discovery that drove this composable (per-resource temp-state map, worked examples, design implications §14).
 - `Documents/OUTLET_DATA_FLOW_ANALYSIS.md` — per-resource data-flow breakdown + provide/inject proposal.
-- `Documents/ARCHITECTURE RULES.md` — frontend architecture rules (composables own business logic + payload prep; single source of truth; no manual reactivity).
+- `Documents/CORE_ARCHITECTURE_RULES.md` — frontend architecture rules (composables own business logic + payload prep; single source of truth; no manual reactivity).
 - `AGENTS.md` / `CLAUDE.md` — startup + GitNexus protocol.

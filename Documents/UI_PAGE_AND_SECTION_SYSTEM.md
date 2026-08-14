@@ -1,4 +1,4 @@
-# AQL Page and Section System Guide
+﻿# AQL Page and Section System Guide
 
 This is the canonical reference document for developers and AI agents on AQL's dynamic page orchestration and layout section customization.
 
@@ -9,13 +9,13 @@ This is the canonical reference document for developers and AI agents on AQL's d
 > | Paradigm | Placeholder | Resolver | Base folder | Canonical doc |
 > |----------|-------------|----------|-------------|---------------|
 > | Section | `Section.vue` (`AqlSection`) | `useSectionResolver.js` | `components/sections/` | **this document** |
-> | Content | `Content.vue` (`AqlContent`) | `useContentResolver.js` | `components/contents/` | [AQL_CONTENT_CUSTOMIZATION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_CONTENT_CUSTOMIZATION_SYSTEM.md) |
-> | Action | `Action.vue` (`AqlAction`) | `useActionResolver.js` | `components/actions/` | [AQL_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_ACTION_SYSTEM.md) |
+> | Content | `Content.vue` (`AqlContent`) | `useContentResolver.js` | `components/contents/` | [UI_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CONTENT_SYSTEM.md) |
+> | Action | `Action.vue` (`AqlAction`) | `useActionResolver.js` | `components/actions/` | [UI_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md) |
 >
 > **`PageAction` is no longer a Section.** It is mounted by `Page.vue` as
 > `<Action action="PageAction" />` through the Action subsystem. Everything about the
 > sticky form bar, the CRUD FABs, the individual form buttons, and their override paths
-> lives in `AQL_ACTION_SYSTEM.md` — not here.
+> lives in `UI_ACTION_SYSTEM.md` — not here.
 
 ---
 
@@ -41,7 +41,7 @@ graph TD
     SectionLayout --> |v-bind pageProps| SectionVue[src/components/Section.vue]
     SectionLayout --> |contents wrapped in| AqlContentWrapper[AqlContentWrapper.vue]
     PageVue --> |ready && !noActions, outside .aql-page-body| ActionVue[src/components/Action.vue]
-    ActionVue --> useActionResolver[useActionResolver.js<br/>see AQL_ACTION_SYSTEM.md]
+    ActionVue --> useActionResolver[useActionResolver.js<br/>see UI_ACTION_SYSTEM.md]
 
     SectionVue --> useSectionResolver[useSectionResolver.js]
     useSectionResolver --> |Step 1: Get Base Section| BaseSection{Base Section Found?}
@@ -59,7 +59,7 @@ graph TD
 2. **Generic Section Layout**: If no custom page component is found, it renders placeholding `<Section>` components sequentially:
    - Sections in `visibleSectionsBeforeAction` (such as `Header`, `Toolbar`).
    - Content wrapper (`<AqlContentWrapper>`) wrapping the `contents` sections (e.g. list, details, or forms).
-   - Bottom page actions via `<Action action="PageAction" />` — the **Action subsystem**, not a Section. Mounted on every resource page outside `.aql-page-body`, gated only by `pageProps.noActions !== true` (see the callout in §1.1). Full spec: [AQL_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_ACTION_SYSTEM.md).
+   - Bottom page actions via `<Action action="PageAction" />` — the **Action subsystem**, not a Section. Mounted on every resource page outside `.aql-page-body`, gated only by `pageProps.noActions !== true` (see the callout in §1.1). Full spec: [UI_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md).
 3. **Context Provider**:
    - Provides `'resourceConfig'` (metadata configuration).
    - Provides `'resourceRecord'` (active record reference and loading state).
@@ -76,7 +76,7 @@ graph TD
 | Empty dataset | `empty` | Card with configurable icon/title/message |
 | Normal | none of the above | `<slot />` (the sections render) |
 
-Independently of those five states, `AqlContentWrapper` also renders a **submission overlay**: a `<q-inner-loading>` + `q-spinner-dots` covering the whole content area whenever `pageState.meta.submitting`/`.saving` is true. It injects `pageState` directly, so no page wiring is needed; the `submitting` prop (default `false`) is an opt-in force flag and `submittingLabel` (default `'Saving…'`) sets the caption. This is the **single** blocking indicator during a dispatch — form action buttons are disabled rather than spinner-loaded. See [AQL_ACTION_SYSTEM.md §5](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_ACTION_SYSTEM.md).
+Independently of those five states, `AqlContentWrapper` also renders a **submission overlay**: a `<q-inner-loading>` + `q-spinner-dots` covering the whole content area whenever `pageState.meta.submitting`/`.saving` is true. It injects `pageState` directly, so no page wiring is needed; the `submitting` prop (default `false`) is an opt-in force flag and `submittingLabel` (default `'Saving…'`) sets the caption. This is the **single** blocking indicator during a dispatch — form action buttons are disabled rather than spinner-loaded. See [UI_ACTION_SYSTEM.md §5](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md).
 
 The `contentWrapperProps` computed in `usePageResolver.js` automatically derives these values per page type:
 
@@ -103,7 +103,7 @@ The `contentWrapperProps` computed in `usePageResolver.js` automatically derives
   3. **Undefined (`!resolvedComponent`)**: Displays a warning card informing the developer that the requested section has no fallback or override.
 
 ### 1.3 The Page Resolver (`src/composables/resources/usePageResolver.js`)
-Handles page-level route resolution and loading, and owns record loading (see §1.3.3). Form state and submission are **not** its concern — those belong to `usePageState` (see [PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/PAGE_STATE.md)), which `Page.vue` provides alongside it.
+Handles page-level route resolution and loading, and owns record loading (see §1.3.3). Form state and submission are **not** its concern — those belong to `usePageState` (see [UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md)), which `Page.vue` provides alongside it.
 
 #### 1.3.0 Route signals (`useRouteConfig.js`)
 Every route signal the resolver (and any component) consumes comes from `useRouteConfig()` — **never** from `useRoute()` directly:
@@ -243,7 +243,7 @@ Neither `resourceRecord.record` nor `resourceRecord.records` hands out raw sheet
 > Filtering and sorting are safe as-is — `Array.prototype.filter`/`sort` carry references through. Only *copying* breaks the contract. Note that a derived property assigned this way lands on the shared cached record, so keep such keys namespaced to the feature and treat them as display-only.
 
 > [!NOTE]
-> This was previously split into a `usePageOrchestrator.js` middle layer, which also carried an action-page form (`actionForm`, `selectedOutcome`, `resolvedActionFields`, …). That path became unreachable once `canonicalPage` started resolving the `_action/:action` route to its **slug** rather than to `'action'`, and workflow actions moved to `ActionDialog` (see [AQL_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_ACTION_SYSTEM.md)). The orchestrator has been removed; nothing replaced the action-form half because `ActionDialog` already owns it.
+> This was previously split into a `usePageOrchestrator.js` middle layer, which also carried an action-page form (`actionForm`, `selectedOutcome`, `resolvedActionFields`, …). That path became unreachable once `canonicalPage` started resolving the `_action/:action` route to its **slug** rather than to `'action'`, and workflow actions moved to `ActionDialog` (see [UI_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md)). The orchestrator has been removed; nothing replaced the action-form half because `ActionDialog` already owns it.
 
 #### 1.3.4 The `pageProps` Contract
 `pageProps` is the computed object assembled by `usePageResolver` and `v-bind`-ed onto every `<Section>` placeholder and any full page override. **Section authors must understand every prop in this object.**
@@ -345,7 +345,7 @@ The JS modifier stays final, matching every other override in the system. A `Pag
 ### 1.5 The Page State (`src/composables/resources/usePageState.js`)
 Centralizes the reactive form state shared across the Header, Content, and Action sections. It is the single source of truth for input collection, request building, and submission on a resource page.
 
-> For the complete API reference (node mutations, strategy contract, request builders, triggers, and validation), see the canonical document: [PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/PAGE_STATE.md).
+> For the complete API reference (node mutations, strategy contract, request builders, triggers, and validation), see the canonical document: [UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md).
 
 **Key points for section authors:**
 - `inject('pageState')` gives access to the full `usePageState` return value.
@@ -465,7 +465,7 @@ Once a new Section component is created, you **MUST** update this file to docume
   * *Props*: `outlined`, `debounce`, `placeholder`, `icon`, `iconColor`, `clearable`, `clearIcon`, `label`.
   * *Defaults*: Binds dynamically to `filterTerm` or `searchTerm` inside `resourceRecord` (falls back to local state). Default icon is `'filter_list'`.
 * **[ListSwitcher.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/sections/ListSwitcher.vue)**: Renders a premium pill/segment-style switcher bar for switching between named list views or states.
-  * For full catalog specification, customization scenarios, dynamic modifiers, and responsive overflow logic, refer to the canonical [AQL Frontend List Switcher Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_LIST_SWITCHER.md).
+  * For full catalog specification, customization scenarios, dynamic modifiers, and responsive overflow logic, refer to the canonical [AQL Frontend List Switcher Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_LIST_SWITCHER.md).
 * **[MetricCards.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/sections/MetricCards.vue)**: Renders a horizontal row of dashboard stat counters — "12 overdue visits", "8 due today", and similar key operational metrics. See §2.4 below.
 * **[LinearProgress.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/sections/LinearProgress.vue)**: Renders graphical linear progress bars for completion tracking — "14 / 25 completed visits (56%)". See §2.5 below.
 
@@ -749,5 +749,5 @@ defineOptions({ inheritAttrs: false })
 
 > [!IMPORTANT]
 > **Documentation Sync Requirement**: Any modifications, refactoring, or additions to the Page/Section system structure (such as expanding page overrides, adding custom Vue-based page customization logic, or rewriting record/resource page flows) MUST be accompanied by updates to:
-> 1. This document: [AQL_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_PAGE_AND_SECTION_SYSTEM.md)
+> 1. This document: [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md)
 > 2. The initialization prompt: [page_and_section_system.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/page_and_section_system.md)

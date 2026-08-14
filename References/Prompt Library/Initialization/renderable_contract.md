@@ -1,4 +1,4 @@
----
+﻿---
 name: AQL Renderable Contract Agent
 description: Specialized initialization prompt for creating or materially changing any reusable render component under `abstract/`, `app/`, `contents/`, or `sections/` — enforcing that every overridable prop routes through `abstract/Renderable.js` so `_ui/` tenants can customize via cheap JS modifiers instead of full Vue overrides.
 ---
@@ -13,8 +13,8 @@ It governs **how a component exposes its cells for customization**. It does NOT 
 > **This prompt is additive.** If the task is "create a new Section" or "add a content component", load the matching domain prompt **and** this one. This one only governs the prop surface.
 
 ## Required Pre-Reads
-1. **The contract**: [AQL_RENDERABLE_CONTRACT.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_RENDERABLE_CONTRACT.md) — dispatch order, prop table, the prop-type widening rule, and known limits.
-2. **Architecture constraints**: [ARCHITECTURE RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md) — mandatory before touching anything under `FRONTENT/`.
+1. **The contract**: [UI_RENDERABLE_CONTRACT.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RENDERABLE_CONTRACT.md) — dispatch order, prop table, the prop-type widening rule, and known limits.
+2. **Architecture constraints**: [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md) — mandatory before touching anything under `FRONTENT/`.
 3. **The reference implementation**: `FRONTENT/src/components/abstract/Renderable.js` and its three call sites in `FRONTENT/src/components/abstract/List.vue`.
 
 ---
@@ -74,7 +74,7 @@ if (isComponentDef(prop)) return prop
 `Renderable` passes `item` + `class`/`style` only to a caller's component. Do not "helpfully" add more — fallthrough attrs clobber the component's own props.
 
 ### 3.5 `inheritAttrs: false` is mandatory on a DOM root
-Page props drill down the entire placeholder chain so any component can claim its own `Props<Identity>` block ([AQL_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_PAGE_AND_SECTION_SYSTEM.md) §1.4.1). Those blocks are **objects**, so a component that renders a DOM root with fallthrough enabled stringifies them onto the element as `propspageheader="[object Object]"`.
+Page props drill down the entire placeholder chain so any component can claim its own `Props<Identity>` block ([UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md) §1.4.1). Those blocks are **objects**, so a component that renders a DOM root with fallthrough enabled stringifies them onto the element as `propspageheader="[object Object]"`.
 
 Declare `inheritAttrs: false` on any new component in `abstract/`, `app/`, `contents/`, or `sections/`. If callers need to style it, re-bind explicitly on the root rather than relying on fallthrough:
 
@@ -100,4 +100,4 @@ Declare `inheritAttrs: false` on any new component in `abstract/`, `app/`, `cont
 - **Verify in the browser, not by inspection.** Prop-type warnings fire on the first render of a component-valued prop and are easily missed: load the affected page, switch to the affected view, and check the console with an explicit `warn|Invalid` filter.
 - Confirm both paths still work: a caller **slot** override and a **component-valued prop**, on the same cell.
 - Run `gitnexus_detect_changes()` before committing.
-- Update [AQL_RENDERABLE_CONTRACT.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_RENDERABLE_CONTRACT.md) §9 when a component adopts the contract, and `FRONTENT/src/components/REGISTRY.md` when a reusable API changes.
+- Update [UI_RENDERABLE_CONTRACT.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RENDERABLE_CONTRACT.md) §9 when a component adopts the contract, and `FRONTENT/src/components/REGISTRY.md` when a reusable API changes.

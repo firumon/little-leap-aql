@@ -1,4 +1,4 @@
-# AQL Backend GAS Implementation
+﻿# AQL Backend GAS Implementation
 
 > **Scope boundary**: This document covers GAS backend changes only — hooks, API handlers, batch operations, resource config. Its blast-radius steps tell you to SEARCH frontend files and sheet structures — do NOT load frontend_modification.md or database_schema_alteration.md unless the task explicitly requires modifying that code. Read referenced files directly by path.
 
@@ -30,7 +30,7 @@ AQL's backend is a Google Apps Script (GAS) project that provides a generic, met
 Before writing any GAS code:
 * API capabilities: [GAS_API_CAPABILITIES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/GAS_API_CAPABILITIES.md)
 * Implementation patterns: [GAS_PATTERNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/GAS_PATTERNS.md)
-* Resource config semantics: [RESOURCE_COLUMNS_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_COLUMNS_GUIDE.md)
+* Resource config semantics: [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md)
 
 ---
 

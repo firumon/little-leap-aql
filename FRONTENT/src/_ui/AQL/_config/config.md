@@ -1,10 +1,10 @@
-# AQL UI — Design System
+﻿# AQL UI — Design System
 
 The human-readable half of `_ui/AQL/_config/`. `config.js` beside this file holds the
 values; this file says what they mean and why they hold those values.
 
 Read this before changing a token. Read
-[RESOURCE_UI_MODULE_DEVELOPER_GUIDE.md §10](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_UI_MODULE_DEVELOPER_GUIDE.md)
+[UI_MODULE_DEVELOPER_GUIDE.md §10](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md)
 for the rules that make these tokens mandatory rather than advisory.
 
 ---
@@ -263,5 +263,5 @@ them are AQL's own.
    person who finds it inconvenient.
 3. If the change adds or renames a class, update `custom.scss` in the same commit.
 4. If the change alters what the guide's §10 promises, update
-   [RESOURCE_UI_MODULE_DEVELOPER_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_UI_MODULE_DEVELOPER_GUIDE.md)
+   [UI_MODULE_DEVELOPER_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md)
    too.

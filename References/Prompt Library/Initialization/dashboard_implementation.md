@@ -1,4 +1,4 @@
-# AQL Dashboard Implementation
+﻿# AQL Dashboard Implementation
 
 > **Scope boundary**: This document covers dashboard widget implementation only — widget config contracts, declarative pipelines, SVG widget creation, dashboard registries. Its pre-reads reference FRONTENT files and canonical docs — read them by path. Do NOT load frontend_modification.md unless the task explicitly requires modifying non-dashboard frontend code.
 
@@ -22,9 +22,9 @@ The AQL Dashboard is a fully declarative, metadata-driven widget system. Widgets
 ## 2. Mandatory Pre-Reads
 
 Before writing any dashboard code:
-* Full development guide: [DASHBOARD_DEVELOPMENT_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/DASHBOARD_DEVELOPMENT_GUIDE.md)
+* Full development guide: [FEATURE_DASHBOARD_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_DASHBOARD_GUIDE.md)
 * Widget registry and config contracts: [dashboard/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/dashboard/REGISTRY.md)
-* Frontend architecture rules: [ARCHITECTURE RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md)
+* Frontend architecture rules: [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md)
 
 ---
 

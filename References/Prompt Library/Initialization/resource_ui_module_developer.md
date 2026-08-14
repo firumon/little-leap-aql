@@ -1,4 +1,4 @@
----
+﻿---
 name: AQL Resource UI Module Developer Agent
 description: Specialized, machine-optimized initialization prompt for generating a complete resource UI module (Index, Add, Edit, View, action routes) end-to-end under FRONTENT/src/_ui/, or materially extending an existing one to cover a larger workflow.
 ---
@@ -24,16 +24,23 @@ single-piece, defer immediately to the matching narrower prompt and stop reading
 
 ## Required Pre-Reads
 
-1. **Canonical spec — read in full**: [RESOURCE_UI_MODULE_DEVELOPER_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_UI_MODULE_DEVELOPER_GUIDE.md). The authoritative hub — resolver mechanics, folder layout, page contracts, Index/Form/View blueprints and the visual contract directly; links out to the specs and catalogues below. Everything under Step 0–10 is a condensed execution checklist derived from it, not a replacement for reading it.
-2. **Resource domain logic & import boundaries** — [RESOURCE_DOMAIN_LOGIC_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_DOMAIN_LOGIC_SYSTEM.md) — read in full before writing any `src/_resource/` file (Step 2) or any UI Composable (Step 3).
-3. **Architecture constraints** — [ARCHITECTURE RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md).
+1. **Canonical spec**: [UI_MODULE_DEVELOPER_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md).
+   - **For Full Module Generation**: Read in full as the authoritative hub.
+   - **For Single-Piece Tasks or Context-Equipped Sessions**: Reference **only the matching sections** needed for that specific piece:
+     - **Button / FAB / Sticky Action / Workflow Trigger**: Read §8 (*Actions — Dispatch, Handlers & FABs*) and [UI_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md).
+     - **Card Header / Page Chrome / Metric Widget**: Read §2, §5 (*Page Contracts & `Props<Identity>`*) and [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md).
+     - **List View / Row Presentation / Row Action**: Read §7.1–§7.3, §9.3–§9.4 and [UI_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CONTENT_SYSTEM.md).
+     - **View Details / Business-Concept Card**: Read §7.4–§7.5 and [UI_VIEW_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_VIEW_SYSTEM.md).
+     - **Create / Edit Form / Wizard Step**: Read §7.6, §11, [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md), and [UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md).
+2. **Resource domain logic & import boundaries** — [UI_RESOURCE_DOMAIN_LOGIC.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md) — read in full before writing any `src/_resource/` file (Step 2) or any UI Composable (Step 3).
+3. **Architecture constraints** — [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md).
 4. **The three catalogues** the guide links rather than restates. Read the one your step needs — never restate their contents in a module:
    - [`_fields/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_fields/REGISTRY.md) — every implemented field type, and the contract for mounting one by hand (Step 5).
    - [`components/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md) — every reusable Section/Content/app base, its props and its hide rules (Step 4).
    - `_ui/{Ui}/_config/config.md` — that UI's design tokens and why they hold their values (Step 8). For the default UI: [`_ui/AQL/_config/config.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_ui/AQL/_config/config.md).
-5. **Resource schema** — [RESOURCE_COLUMNS_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_COLUMNS_GUIDE.md) for `_fields`/`UIFields`/`Relations` structure.
-6. **Page state** — [PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/PAGE_STATE.md) — mandatory for any Add/Edit/wizard/action page.
-7. Subsystem specs as needed: [AQL_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_PAGE_AND_SECTION_SYSTEM.md), [AQL_CONTENT_CUSTOMIZATION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_CONTENT_CUSTOMIZATION_SYSTEM.md), [AQL_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_ACTION_SYSTEM.md), [AQL_CREATE_AND_UPDATE_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_CREATE_AND_UPDATE_CONTENT_SYSTEM.md), [AQL_VIEW_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_VIEW_SYSTEM.md).
+5. **Resource schema** — [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md) for `_fields`/`UIFields`/`Relations` structure.
+6. **Page state** — [UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md) — mandatory for any Add/Edit/wizard/action page.
+7. Subsystem specs as needed: [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md), [UI_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CONTENT_SYSTEM.md), [UI_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md), [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md), [UI_VIEW_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_VIEW_SYSTEM.md).
 
 ---
 
@@ -44,7 +51,7 @@ Before touching any file, decide what kind of request this is. Use this table:
 | What the request looks like | What to do |
 |---|---|
 | A brand new module, or "build the whole X module" (Index + Add/Edit + View together) | This is a **FULL MODULE**. Read the whole guide. Do Steps 1–10 below, in order. |
-| A single page, or one piece of a module that already exists (just the list, just the Edit form, just one button, just one card) | This is a **PARTIAL** task. Do NOT run the full pipeline. Open only the one guide section — or the narrower prompt listed at the top of this document — that matches that one piece, and do only that. |
+| A single page, or one piece of a module that already exists (just the list, just the Edit form, just one button, just one card) | This is a **PARTIAL** task. Do NOT run the full pipeline. If the session is already equipped with context, reference **only the relevant guide section** above (or the narrower domain prompt) and execute directly. |
 | The word "dashboard", or anything that sounds like a report/summary/chart over ALL TIME or a whole month | **STOP before building anything.** Per guide §9, an Index page shows only live/open queues — it is not a dashboard. A real dashboard belongs to the separate Dashboard system ([dashboard_implementation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/dashboard_implementation.md)). Ask the user which one they mean before doing anything. |
 | Anything about a **list** (a table of records, a filter, a view tab) | Read only guide §7.1–§7.3 (per-view overrides, row presentation, row actions) and §9.4 (how a list already builds itself from the resource's fields). Do not rebuild the whole Index page for a list-only ask. |
 | The request is missing pieces — e.g. it doesn't say what the Edit page should contain, or the workflow steps aren't clear | Do **not** guess. Ask the user and wait for their answer before writing any file. |
@@ -98,7 +105,7 @@ case build UI and domain side by side: as each piece of logic gets written, clas
 first — is this about how something looks (UI), or what the record can do and what state it
 is in (domain)? Route it immediately; never park business logic in a `_ui/` file
 "temporarily." Full detail:
-[RESOURCE_DOMAIN_LOGIC_SYSTEM.md §8](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_DOMAIN_LOGIC_SYSTEM.md).
+[UI_RESOURCE_DOMAIN_LOGIC.md §8](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
 
 Rules, no exceptions:
 - Named pure exports + a `use{Feature}()` wrapper (guide §2.2, §4.4). The pure half is what

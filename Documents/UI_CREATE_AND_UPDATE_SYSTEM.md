@@ -1,6 +1,6 @@
-# AQL Create & Update Content Systems
+﻿# AQL Create & Update Content Systems
 
-This document is the complete canonical reference for the `Create` **and** `Update` content systems — the resource create/edit forms built from [Create.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/contents/Create.vue), [Update.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/contents/Update.vue), [FormRecord.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/contents/FormRecord.vue), and [FormChild.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/contents/FormChild.vue). It is a sibling document to [AQL_CONTENT_CUSTOMIZATION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_CONTENT_CUSTOMIZATION_SYSTEM.md), which covers the general `contents:` resolver, `List`, and `View`; `Create`/`Update` share that same resolver mechanics (§1 there) but have enough surface area (zero-hardcoding prop contract, five-step visibility precedence, three independent override hierarchies, custom-field storage rule, hydration lifecycle, child soft-deletion) to warrant their own canonical doc.
+This document is the complete canonical reference for the `Create` **and** `Update` content systems — the resource create/edit forms built from [Create.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/contents/Create.vue), [Update.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/contents/Update.vue), [FormRecord.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/contents/FormRecord.vue), and [FormChild.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/contents/FormChild.vue). It is a sibling document to [UI_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CONTENT_SYSTEM.md), which covers the general `contents:` resolver, `List`, and `View`; `Create`/`Update` share that same resolver mechanics (§1 there) but have enough surface area (zero-hardcoding prop contract, five-step visibility precedence, three independent override hierarchies, custom-field storage rule, hydration lifecycle, child soft-deletion) to warrant their own canonical doc.
 
 `Create.vue` (content name `Create`, component name `ContentsCreate`) and `Update.vue` (content name `Update`, component name `ContentsUpdate`) are the framework's default create/edit contents, resolved exactly like `List`/`View`:
 
@@ -26,7 +26,7 @@ export default {
 
 ## 1. Overview & Contracts
 - `Create.vue` / `Update.vue` inject `resourceConfig`, `resourceRecord`, and `pageState` (all provided once at `Page.vue`) exactly like `View.vue`.
-- **State binding, not fetching**: `Create` never calls services/stores directly (per §1/§3/§5 of `ARCHITECTURE RULES.md`) — every keystroke lands in the shared `pageState` reactive tree via `setField`/`setControlField`/`addChild`/`updateChild`, and `PageAction` sections own `submit()`/`build()`.
+- **State binding, not fetching**: `Create` never calls services/stores directly (per §1/§3/§5 of `CORE_ARCHITECTURE_RULES.md`) — every keystroke lands in the shared `pageState` reactive tree via `setField`/`setControlField`/`addChild`/`updateChild`, and `PageAction` sections own `submit()`/`build()`.
 - **Primary node lifecycle**: on mount, and whenever `resourceConfig.resourceName` changes to a *different* resource, `Create.vue` calls `pageState.initResource(name, { isPrimaryKey: true, reset: true })`. This flushes any stale node/child-bucket data left in `pageState` from a previously-visited Create/Update page (the composable instance is provided once per `Page.vue` mount and persists across in-app navigations) and sets `state.primaryKey` to the active resource. If the resource name is unchanged but the node was cleared some other way, it re-initializes without wiping other nodes (`reset` omitted).
 - **Parent Relations Constraint**: `Create` never renders a form for a parent relation — only the active resource's own fields and its **children** (resources whose `ParentResource` equals the active resource).
 - **Child Relations Rule**: child resources are read from the injected `resourceRecord.childResources`, filtered to `child.parentResource === resourceName` (in `master` scope, only `master`-scoped children are surfaced — mirrors `ViewChildren`), then further filtered by `hideChild`/`hideChildren` (see §10). If `withChildren` is `true` (default) and at least one eligible, non-hidden child exists, `Create` renders the primary `FormRecord` **and** one `FormChild` per child resource; otherwise it renders only the primary `FormRecord`.
@@ -197,7 +197,7 @@ Emits **`update:field(header, value, { custom })`** on every control's `update:m
 
 All mutations flow through `pageState.addChild(parentResource, childResource.name, row)`, `updateChild(...)`, and `removeChild(...)` — the same primitives `usePageState.js` already exposed. The one exception is the soft-delete path, which sets `_action` directly on the bucket record because `updateChild` merges only `data` (§14); `FormChild` adds no new state surface beyond that.
 
-**Added-record list rendering**: the inline/popup modes' added-record list is rendered via `AppList` (not a raw `q-list`), passing `items` (the pageState child bucket's `records` array), a function `itemKey` (stable per-row identity via a component-local `WeakMap`), function `label`/`caption` resolvers (derived from the child resource's resolved fields), and a `#btn` slot rendering Edit + Delete buttons per row. `AppList` forwards straight to `abstract/List.vue`, so FLIP entrance/reorder/removal transitions (`aql-list-item-*`, see `AQL_CONTENT_CUSTOMIZATION_SYSTEM.md` §2) and responsive layout (mobile-first `q-item` stacking) are inherited for free — no bespoke list markup or CSS.
+**Added-record list rendering**: the inline/popup modes' added-record list is rendered via `AppList` (not a raw `q-list`), passing `items` (the pageState child bucket's `records` array), a function `itemKey` (stable per-row identity via a component-local `WeakMap`), function `label`/`caption` resolvers (derived from the child resource's resolved fields), and a `#btn` slot rendering Edit + Delete buttons per row. `AppList` forwards straight to `abstract/List.vue`, so FLIP entrance/reorder/removal transitions (`aql-list-item-*`, see `UI_CONTENT_SYSTEM.md` §2) and responsive layout (mobile-first `q-item` stacking) are inherited for free — no bespoke list markup or CSS.
 
 ---
 
@@ -259,7 +259,7 @@ Resolution order: if the prop is a function it is called first; each resulting v
 
 ### 5.1 `APP.Resources.DefaultValues` (backend schema metadata)
 
-Every resource entry synced from the `APP.Resources` sheet carries a `defaultValues` object. `GAS/resourceRegistry.gs`'s `buildAuthorizedResourceEntry()` copies `config.defaultValues` onto the login `resources` payload entry (see `LOGIN_RESPONSE.md` §4), and `parseJsonCell` parses the sheet's `DefaultValues` column, e.g. `{"Status": "Active", "Currency": "AED"}`. `FormRecord` resolves this via `useResourceConfig(resource).defaultValues` — **not** by reaching into `authStore` directly (per `ARCHITECTURE RULES.md` §5, components must not import Pinia stores) — matched by its own `resource` prop (the resource **name**). This works identically whether `FormRecord` is rendering the primary resource (from `Create.vue`) or a child resource (from `FormChild.vue`), since both pass their own resource's name, with no extra wiring required from either caller.
+Every resource entry synced from the `APP.Resources` sheet carries a `defaultValues` object. `GAS/resourceRegistry.gs`'s `buildAuthorizedResourceEntry()` copies `config.defaultValues` onto the login `resources` payload entry (see `API_LOGIN_RESPONSE.md` §4), and `parseJsonCell` parses the sheet's `DefaultValues` column, e.g. `{"Status": "Active", "Currency": "AED"}`. `FormRecord` resolves this via `useResourceConfig(resource).defaultValues` — **not** by reaching into `authStore` directly (per `CORE_ARCHITECTURE_RULES.md` §5, components must not import Pinia stores) — matched by its own `resource` prop (the resource **name**). This works identically whether `FormRecord` is rendering the primary resource (from `Create.vue`) or a child resource (from `FormChild.vue`), since both pass their own resource's name, with no extra wiring required from either caller.
 
 **Full default-value precedence (lowest → highest):**
 1. `APP.Resources.DefaultValues` (backend schema metadata, resolved automatically).
@@ -331,7 +331,7 @@ The merged result is handed to the resolved `_fields/<type>/<Mode>.vue` componen
 2. **`popup`** — Same `AppList`, but with an "Add {Title}" button instead of a permanent form. Clicking it opens a `q-dialog` hosting a bare `FormRecord`; submitting calls `addChild`/`updateChild` and closes the dialog when `closeOnAdd` is `true` (edits always close). Editing an existing row reopens the dialog prefilled via the same draft state.
 3. **`multi` / `multiple`** — No shared draft state and no separate list at all (`listPosition` is a no-op here): every added child row renders its own always-editable `FormRecord` (bare, inside its own small `q-card`) bound directly to the row's live `pageState` data (`update:field` calls `updateChild` immediately, no local draft). An "Add Row" button appends a blank child node via `addChild(parentResource, childName, {})`; each row has its own remove button.
 
-Regardless of mode, list/row entrance and removal reuse the exact `aql-list-item-*` transition classes documented in `AQL_CONTENT_CUSTOMIZATION_SYSTEM.md` §2's "Centralized List Transitions" — no new CSS was added for `Create`.
+Regardless of mode, list/row entrance and removal reuse the exact `aql-list-item-*` transition classes documented in `UI_CONTENT_SYSTEM.md` §2's "Centralized List Transitions" — no new CSS was added for `Create`.
 
 ---
 
@@ -358,7 +358,7 @@ Three independent, narrowly-scoped override points exist beneath the page-level 
 
 ## 10. Custom UI Overrides (whole-content level)
 
-`Create` and `Update` participate in the same two-step content resolver as every other content (`AQL_CONTENT_CUSTOMIZATION_SYSTEM.md` §1) — `useContentResolver` is content-name-agnostic, so the two share one path shape that differs only in the filename (`create` vs `update`):
+`Create` and `Update` participate in the same two-step content resolver as every other content (`UI_CONTENT_SYSTEM.md` §1) — `useContentResolver` is content-name-agnostic, so the two share one path shape that differs only in the filename (`create` vs `update`):
 
 - **Vue Template Override** — replaces the entire content:
   - `_ui/[uiName]/components/[scope]/[resource]/[page]/create.vue` — and `.../[page]/update.vue` (resource + page specific — most common: targets just the Create/Edit page of one resource)
@@ -544,7 +544,7 @@ $q.notify({
 
 The type-driven presentation layer that renders every control in `FormRecord` and every value cell in `ViewRecord`/`ViewChildCompact`. The containers hold **no** type branches — they resolve a component and mount it.
 
-> Component-level reference (full `config` merge order, alias table, "how to add a type"): [`FRONTENT/src/components/_fields/README.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_fields/README.md). The view-side integration is documented in [AQL_VIEW_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_VIEW_SYSTEM.md) §4.
+> Component-level reference (full `config` merge order, alias table, "how to add a type"): [`FRONTENT/src/components/_fields/README.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/_fields/README.md). The view-side integration is documented in [UI_VIEW_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_VIEW_SYSTEM.md) §4.
 
 ### 15.1 Directory Structure — the "Option A" Pattern
 

@@ -1,4 +1,4 @@
-# AQL Reports System
+﻿# AQL Reports System
 
 ## 1. End-to-End Report Architecture
 
@@ -189,7 +189,7 @@ are overridable.
 ### A1. ResourceReports Action (`FRONTENT/src/components/actions/ResourceReports.vue`) — preferred
 A first-class member of the **Action subsystem**, so it resolves through
 `useActionResolver` and is overridable at all 10 `_ui/` tiers as `resourcereports.(vue|js)`.
-Canonical spec: [AQL_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_ACTION_SYSTEM.md) §3.5.
+Canonical spec: [UI_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md) §3.5.
 *   **Mount points**: `PageAction` mounts it automatically on every non-form page; or
     mount it directly as `<Action action="ResourceReports" mode="toolbar" />`. The
     sticky form bar (`FormActions`) does **not** host it — it renders `FormAction*`

@@ -1,4 +1,4 @@
-# AQL Action System Guide
+﻿# AQL Action System Guide
 
 This is the canonical reference for AQL's **Action Subsystem** — the third first-class
 placeholder paradigm alongside `Section.vue` and `Content.vue`.
@@ -189,7 +189,7 @@ export default {
 
 The matching block is spread **flat** onto the action (`props.label`, not `props.PropsFormActionSubmit.label`), and a JS modifier still wins over it. Precedence: `drilled attrs → PropsAction → Props<Identity> → JS modifier`.
 
-Full contract, including the case-insensitivity, function-block and `inheritAttrs` rules: [AQL_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_PAGE_AND_SECTION_SYSTEM.md) §1.4.1.
+Full contract, including the case-insensitivity, function-block and `inheritAttrs` rules: [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md) §1.4.1.
 
 ---
 
@@ -242,7 +242,7 @@ Mounted by `Page.vue`. Decides which cluster is live:
   non-standard provider keeps its previous behaviour.
 
 `hasNodes` is exported by `usePageState` (`state.nodes.size > 0`); see
-[PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/PAGE_STATE.md) §6.4. It is
+[UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md) §6.4. It is
 node-count only — for a specific node use `useNode(resource).exists`.
 
 All three clusters are mounted through `useActionResolver` (with the framework component as
@@ -598,7 +598,7 @@ export default { noReports: true }
 select preloading (`dataStore.loadResource` for `type: 'select'` inputs with a
 `source`), progress notifications, and the Base64 → Blob download all live in
 `useReports` (`src/composables/reports/useReports.js`) — see
-[REPORTS_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/REPORTS_SYSTEM.md).
+[FEATURE_REPORTS_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_REPORTS_SYSTEM.md).
 
 **Styling**: `push glossy` throughout, matching the `ResourceActions` cluster and the
 `FormActions` bar buttons. `.aql-report-action-fab` `@extend`s `.aql-resource-action-fab`,
@@ -959,7 +959,7 @@ its page would collide with the page's own node.
 
 The batched path exists for the case the popup cannot express: *create a record **and**
 run a workflow action on it, atomically, in one batch*. Full contract in
-[PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/PAGE_STATE.md) §6.4 / §7.
+[UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md) §6.4 / §7.
 
 ```javascript
 // A page that creates a visit and immediately stamps it Postponed.
@@ -1011,7 +1011,7 @@ server-side.
 | Shape | `{ "column": "Progress", "op": "eq", "value": "PLANNED" }` |
 | Ops | `eq`, `neq`, `in`, `not_in`, `gt`, `gte`, `lt`, `lte`, `contains`, `empty`, `notEmpty` |
 | Legacy ops | `ne` → `neq` and `nin` → `not_in` are aliased on load, so every config already in a sheet keeps working. The **Manage Actions** dialog rewrites them canonically on the next save. |
-| `value` | A literal, an array (for `in`/`not_in`), or a **dynamic token** — the same registry list views use (§5.2 of `AQL_FRONTEND_LIST_SWITCHER.md`). `{ "column": "Date", "op": "lte", "value": "$startOfDay:0" }` hides an action on future-dated records; `$userCode` / `$userRoles` gate one on the signed-in user. |
+| `value` | A literal, an array (for `in`/`not_in`), or a **dynamic token** — the same registry list views use (§5.2 of `UI_LIST_SWITCHER.md`). `{ "column": "Date", "op": "lte", "value": "$startOfDay:0" }` hides an action on future-dated records; `$userCode` / `$userRoles` gate one on the signed-in user. |
 | Comparison | Case-insensitive for literals. A date column that cannot be parsed never matches. A column absent from the record reads as blank. |
 | Malformed row | Dropped, exactly as a malformed target `when` is — a dropped condition does not constrain. |
 
@@ -1246,10 +1246,10 @@ Or supply your own buttons while keeping the gating:
 > **Documentation Sync Requirement**: Any modification to the Action subsystem — adding a
 > component under `components/actions/`, changing the resolver's scan order, altering the
 > `actions` array contract, or changing the loading UX — MUST be accompanied by updates to:
-> 1. This document: [AQL_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_ACTION_SYSTEM.md)
+> 1. This document: [UI_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md)
 > 2. The initialization prompt: [action_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/action_customization.md)
 > 3. The component registry: [components/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md)
 >
 > If the change also touches the Page/Section boundary, update
-> [AQL_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_PAGE_AND_SECTION_SYSTEM.md)
+> [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md)
 > and [page_and_section_system.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/page_and_section_system.md).

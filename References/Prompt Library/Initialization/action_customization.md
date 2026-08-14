@@ -1,4 +1,4 @@
-# AQL Action Subsystem — Customization & Overriding Guide (Initialization)
+﻿# AQL Action Subsystem — Customization & Overriding Guide (Initialization)
 
 Use this document to initialize an AI agent session when the task involves creating,
 customizing, overriding, or debugging **page-level actions**: the sticky form actions bar,
@@ -14,7 +14,7 @@ triggers, or the submission lifecycle on any page (Index, Add, Edit, View, Actio
 > [content_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/content_customization.md)
 > and [content_create_and_update_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/content_create_and_update_customization.md).
 > Before writing any frontend code you MUST read
-> [ARCHITECTURE RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md).
+> [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md).
 
 ---
 
@@ -22,7 +22,7 @@ triggers, or the submission lifecycle on any page (Index, Add, Edit, View, Actio
 
 > [!IMPORTANT]
 > Before implementing anything, read the full canonical doc:
-> [AQL_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_ACTION_SYSTEM.md).
+> [UI_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md).
 > It carries the complete prop tables for every action component, the resolution
 > internals, the tenant override cookbook, and the loading-UX contract.
 
@@ -31,7 +31,7 @@ Codebase reference files:
 * [useActionResolver.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useActionResolver.js) — the resolver.
 * [components/actions/](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/actions/) — all base action components.
 * [Page.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/Page.vue) — where the subsystem is mounted.
-* [usePageState.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/usePageState.js) — submission lifecycle; full API in [PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/PAGE_STATE.md).
+* [usePageState.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/usePageState.js) — submission lifecycle; full API in [UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md).
 * [custom.scss](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/css/custom.scss) — all action styling.
 
 ---
@@ -125,7 +125,7 @@ export default {
 Spread **flat** onto the action (`props.label`), and a `.js` modifier still wins over it.
 Precedence: `drilled attrs → PropsAction → Props<Identity> → JS modifier`. Reach for a
 modifier file when the value needs record/config context; use this for plain values.
-Full contract: [AQL_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_PAGE_AND_SECTION_SYSTEM.md) §1.4.1.
+Full contract: [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md) §1.4.1.
 
 ### Pattern 1: JS Logic Modifier (change props, keep the template)
 ```javascript
@@ -318,7 +318,7 @@ one action write several records (Postpone = stamp this visit **and** create the
 > `MainLayout.vue`), `composables/resources/useAdditionalActions.js` (eligibility +
 > dispatch intent), `additionalActionsPipeline.js` (mechanics),
 > `additionalActionsSchema.js` (pure field builders), and `GAS/actionTargets.gs`. Full
-> spec in [AQL_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_ACTION_SYSTEM.md) §7.
+> spec in [UI_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md) §7.
 
 **Two dispatch paths — pick the right one.**
 
@@ -406,7 +406,7 @@ Omit `code` and it resolves automatically: the node's own `code` when editing, e
 `batchRef('<Resource>.latest.code')`. Queued actions are emitted **last** by
 `defaultBuild`, which is what makes that `$ref` resolve — a `strategy.build` override must
 append `additionalActionRequests()` itself. See
-[PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/PAGE_STATE.md) §6.4a.
+[UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md) §6.4a.
 
 **The pipeline (`additionalActionsPipeline.js`).** Never hand-roll an `executeAction`
 envelope, a field schema, a seed, or a payload bucket — every step is already a function
@@ -526,6 +526,6 @@ container's lifecycle logic is not inherited.
 > **Documentation Sync Requirement**: Any modification, refactor, or addition to the Action
 > subsystem (new component under `components/actions/`, changed scan order, changed
 > `actions` array contract, changed loading UX) MUST be accompanied by updates to:
-> 1. The canonical doc: [AQL_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_ACTION_SYSTEM.md)
+> 1. The canonical doc: [UI_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md)
 > 2. This initialization prompt: [action_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/action_customization.md)
 > 3. The component registry: [components/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md)

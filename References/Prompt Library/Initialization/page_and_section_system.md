@@ -1,10 +1,10 @@
-# AQL Page and Section System (Initialization)
+﻿# AQL Page and Section System (Initialization)
 
 This initialization prompt guides the creation, override, and customization of frontend pages and section components in the AQL repository. It establishes a dynamic layout model using `<Section>` placeholders, replacing all legacy `_common/` wrapper layouts.
 
 > [!IMPORTANT]
 > **Scope Boundary**: This document covers `Page.vue` orchestration plus developing new framework section components under `src/components/sections/` and implementing custom UI overrides/modifiers under `src/_ui/[UiName]/components/`.
-> Before writing any frontend code, you MUST read the global architecture rules: [ARCHITECTURE RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md).
+> Before writing any frontend code, you MUST read the global architecture rules: [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md).
 
 > [!IMPORTANT]
 > **Subsystem boundary — three placeholders, one override model.** Sections are only one of three paradigms. All share the identical 10-tier `_ui/` lookup described in §3; they differ only in base folder and identity prop.
@@ -15,7 +15,7 @@ This initialization prompt guides the creation, override, and customization of f
 > | Content | `Content.vue` | `useContentResolver.js` | `components/contents/` | [content_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/content_customization.md) |
 > | Action | `Action.vue` | `useActionResolver.js` | `components/actions/` | [action_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/action_customization.md) |
 >
-> **If the task touches the sticky form actions bar, submit/reset/cancel buttons, FABs, CRUD actions, or the submission lifecycle, STOP and load [action_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/action_customization.md) instead** — canonical spec: [AQL_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_ACTION_SYSTEM.md). `PageAction` is **not** a Section.
+> **If the task touches the sticky form actions bar, submit/reset/cancel buttons, FABs, CRUD actions, or the submission lifecycle, STOP and load [action_customization.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/action_customization.md) instead** — canonical spec: [UI_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md). `PageAction` is **not** a Section.
 
 ---
 
@@ -30,12 +30,12 @@ This initialization prompt guides the creation, override, and customization of f
 > | [`colorHelpers.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/colorHelpers.js) | `resolveCssColor(value, fallback)` — Quasar brand names, Material palette names and raw CSS all resolve to one inline custom property. |
 > | [`placeholderProps.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/placeholderProps.js) | `resolvePlaceholderProps(props, identity, kind)` — the `Props<Identity>` merge. Call it in a resolver; never re-implement it inline. |
 >
-> **The rule this enforces**: a pure helper that is not resource knowledge belongs in `src/utils/`. It must NOT be duplicated into a `_ui/` composable, and a `_ui/` composable must NEVER import another resource's composable to borrow one — `_ui/**/OutletRestocks/**` reaching into `_ui/**/OutletVisits/**` is exactly the cross-resource dependency [ARCHITECTURE RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md) §5 forbids. Promote the helper to `src/utils/` and re-export it from the composable if the old import path must keep working.
+> **The rule this enforces**: a pure helper that is not resource knowledge belongs in `src/utils/`. It must NOT be duplicated into a `_ui/` composable, and a `_ui/` composable must NEVER import another resource's composable to borrow one — `_ui/**/OutletRestocks/**` reaching into `_ui/**/OutletVisits/**` is exactly the cross-resource dependency [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md) §5 forbids. Promote the helper to `src/utils/` and re-export it from the composable if the old import path must keep working.
 
 ## 1. Architectural Overview & Context
 
 > [!IMPORTANT]
-> Before implementing anything, read the full canonical doc: [AQL_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_PAGE_AND_SECTION_SYSTEM.md). It contains the complete `pageProps` contract, BP schema, page override scan table, resolver internals, and `AqlContentWrapper` state logic — all of which are critical to getting this right.
+> Before implementing anything, read the full canonical doc: [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md). It contains the complete `pageProps` contract, BP schema, page override scan table, resolver internals, and `AqlContentWrapper` state logic — all of which are critical to getting this right.
 
 > [!TIP]
 > **Reach for `Props<Identity>` before writing an override file.** A page contract can address a single section/content/action by name — `PropsPageHeader: { title: '…' }` — without any file under `_ui/.../components/`. See §3.3 below and canonical doc §1.4.1.
@@ -59,7 +59,7 @@ This initialization prompt guides the creation, override, and customization of f
   - `Content.vue` and `Action.vue` are byte-for-byte equivalents against `useContentResolver` / `useActionResolver` — same three states, same `preparedProps = { ...attrs, <identity> }` shape.
 * **Page-Level Form State (`usePageState.js`)**:
   - Singleton page form-state provided at `Page.vue`.
-  - Full API (node mutations, strategy, request builders, validation, triggers): [PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/PAGE_STATE.md).
+  - Full API (node mutations, strategy, request builders, validation, triggers): [UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md).
 
 ---
 
@@ -84,7 +84,7 @@ When creating a new base section component inside `src/components/sections/` (e.
    })
    ```
    > [!IMPORTANT]
-   > **Any section cell a tenant might want to replace MUST route through `abstract/Renderable.js`** rather than being interpolated directly into the template. A directly-interpolated prop is closed to customization and forces every tenant into a full `.vue` override. Read [AQL_RENDERABLE_CONTRACT.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_RENDERABLE_CONTRACT.md) and load [renderable_contract.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/renderable_contract.md) **before** writing the template of a new section. Bind `:item` to whatever object this section's resolvers expect — `Renderable` calls `value(item)`, so the contract holds for any resolver signature.
+   > **Any section cell a tenant might want to replace MUST route through `abstract/Renderable.js`** rather than being interpolated directly into the template. A directly-interpolated prop is closed to customization and forces every tenant into a full `.vue` override. Read [UI_RENDERABLE_CONTRACT.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RENDERABLE_CONTRACT.md) and load [renderable_contract.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/renderable_contract.md) **before** writing the template of a new section. Bind `:item` to whatever object this section's resolvers expect — `Renderable` calls `value(item)`, so the contract holds for any resolver signature.
 4. **Evaluate Closures**: Use the `evaluateProp` helper to compute final attributes dynamically (passing the record and config to closures):
    ```javascript
    import { evaluateProp } from 'src/composables/resources/useSectionResolver'
@@ -94,7 +94,7 @@ When creating a new base section component inside `src/components/sections/` (e.
    ```
    > **Important**: `evaluateProp` unwraps Vue refs internally before calling the closure. Closure functions receive **plain objects** (`record`, `config`), not refs. Never call `.value` inside a closure prop.
 5. **No `<style>` block**: Section components are override targets — a tenant `.vue` override cannot inherit scoped CSS. Put every rule in `src/css/custom.scss` under an `.aql-*` class family and consume it by name (ARCHITECTURE RULES §7).
-6. **Document Props**: Always document the prop catalog and default behavior in `Documents/AQL_PAGE_AND_SECTION_SYSTEM.md` §2.3, and log the component in `FRONTENT/src/components/REGISTRY.md`.
+6. **Document Props**: Always document the prop catalog and default behavior in `Documents/UI_PAGE_AND_SECTION_SYSTEM.md` §2.3, and log the component in `FRONTENT/src/components/REGISTRY.md`.
 
 **Existing base sections**: `PageHeader`, `FilterInput`, `ListSwitcher` / `ListSwitcherItem`, `MetricCards` (dashboard stat counters — see canonical doc §2.4), and `LinearProgress` (completion progress bars from a `value`/`max` pair or a bare percentage, with `value` and `max` rendered at either end of the row below the bar — see canonical doc §2.5). Check these for reuse before adding a new one.
 
@@ -189,5 +189,5 @@ To prevent property collisions when wrapping default components inside an overri
 
 > [!IMPORTANT]
 > **Documentation Sync Requirement**: Any modifications, refactoring, or additions to the Page/Section system structure (such as expanding page overrides, adding custom Vue-based page customization logic, or rewriting record/resource page flows) MUST be accompanied by updates to:
-> 1. The canonical doc: [AQL_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_PAGE_AND_SECTION_SYSTEM.md)
+> 1. The canonical doc: [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md)
 > 2. This initialization prompt: [page_and_section_system.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/page_and_section_system.md)

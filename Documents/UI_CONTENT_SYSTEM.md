@@ -1,4 +1,4 @@
-# AQL Content Layout & Customization System
+﻿# AQL Content Layout & Customization System
 
 This document is the complete reference guide for the AQL Content Customization System. It explains the `contents:` page contract, the `Content.vue` orchestrator, `useContentResolver.js` resolution rules, the built-in `List` content component, and how to create per-resource or per-active-view overrides without rewriting full HTML/Vue templates.
 
@@ -54,7 +54,7 @@ export default {
 Path segments are lowercased for lookup; `resource` (a slug, e.g. `stock-movements`) is PascalCased then lowercased (`stockmovements`) to match folder naming.
 
 > [!IMPORTANT]
-> **This normalization is enforced everywhere a resource slug feeds a glob-registry folder lookup**, not just in `useContentResolver.js` itself — both the `View` system (`ViewRecord.vue`'s `viewrecord.(vue|js)`, `ViewChildren.vue`'s `viewchild*.(vue|js)`, `ViewParent.vue`'s `viewparent*.(vue|js)`, and `useViewColumnResolver.js`'s `viewcolumn*.(vue|js)`) and the `Create`/`Update` system (`FormRecord.vue`, `Create.vue`, `Update.vue`, `FormChild.vue` — see [AQL_CREATE_AND_UPDATE_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_CREATE_AND_UPDATE_CONTENT_SYSTEM.md) §9) run every resource slug through `toPascalCase(slug).toLowerCase()` before building a candidate path. A kebab-case slug (`outlet-visits`) becomes `outletvisits`, never `outlet-visits` — hyphens never appear in a glob-registry key because folder names are PascalCase-derived. Resource **menu routes** (`ui.menus[].route`, e.g. `/operation/outlet-visits`) and URL params (`route.params.resourceSlug`) ARE genuinely kebab-case in production — confirmed against live seed data in `GAS/syncAppResources.gs` — which is exactly why this normalization step exists: it converts a real kebab-case slug into the PascalCase-derived glob key. `useResourceNav.js`'s `findScopeBySlug` and `useRouteConfig.js`'s `resourceConfig` fallback correspondingly strip hyphens (`.replace(/-/g, '')`) rather than assume PascalCase input, for the same reason.
+> **This normalization is enforced everywhere a resource slug feeds a glob-registry folder lookup**, not just in `useContentResolver.js` itself — both the `View` system (`ViewRecord.vue`'s `viewrecord.(vue|js)`, `ViewChildren.vue`'s `viewchild*.(vue|js)`, `ViewParent.vue`'s `viewparent*.(vue|js)`, and `useViewColumnResolver.js`'s `viewcolumn*.(vue|js)`) and the `Create`/`Update` system (`FormRecord.vue`, `Create.vue`, `Update.vue`, `FormChild.vue` — see [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md) §9) run every resource slug through `toPascalCase(slug).toLowerCase()` before building a candidate path. A kebab-case slug (`outlet-visits`) becomes `outletvisits`, never `outlet-visits` — hyphens never appear in a glob-registry key because folder names are PascalCase-derived. Resource **menu routes** (`ui.menus[].route`, e.g. `/operation/outlet-visits`) and URL params (`route.params.resourceSlug`) ARE genuinely kebab-case in production — confirmed against live seed data in `GAS/syncAppResources.gs` — which is exactly why this normalization step exists: it converts a real kebab-case slug into the PascalCase-derived glob key. `useResourceNav.js`'s `findScopeBySlug` and `useRouteConfig.js`'s `resourceConfig` fallback correspondingly strip hyphens (`.replace(/-/g, '')`) rather than assume PascalCase input, for the same reason.
 
 ### Custom Templates vs. JS Logic Modifiers
 - **Vue Template Override (`.vue`)**: must contain a `<template>` block; **replaces the base content entirely**, and props flow through unmodified so the override can read `$attrs` directly.
@@ -150,7 +150,7 @@ export default {
 }
 ```
 
-The block is spread flat — `ListToday` reads `props.layout`. A `ListToday.js` modifier still wins over `PropsListToday`. See [AQL_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_PAGE_AND_SECTION_SYSTEM.md) §1.4.1 for the full contract.
+The block is spread flat — `ListToday` reads `props.layout`. A `ListToday.js` modifier still wins over `PropsListToday`. See [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md) §1.4.1 for the full contract.
 
 > [!NOTE]
 > `contents/List.vue` builds its per-view resolver bag from `$attrs` **first**, then its own strategy/explicit props. Without that, `finalProps` was assembled from *declared* props only (see `explicitProps`) and every key an ancestor drilled down without a matching `defineProps` entry — including `PropsListToday` — was dropped before the per-view resolver ever ran.
@@ -158,7 +158,7 @@ The block is spread flat — `ListToday` reads `props.layout`. A `ListToday.js` 
 ---
 
 > [!IMPORTANT]
-> **Content overrides do not control field rendering.** Individual form controls and detail/table value cells are delegated to the base field subsystem at `src/components/_fields/<type>/{Add,Edit,View}.vue`, resolved through `resolveFieldComponent(type, mode)` — the content components hold no type branches. Changing how a *field type* looks means editing that type's SFC (which applies to every resource, in add/edit/view); changing how *one column of one resource* looks means a `FormField<Header>` / `ViewColumn<Col>` override. See [AQL_CREATE_AND_UPDATE_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_CREATE_AND_UPDATE_CONTENT_SYSTEM.md) §15 and [AQL_VIEW_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_VIEW_SYSTEM.md) §4.
+> **Content overrides do not control field rendering.** Individual form controls and detail/table value cells are delegated to the base field subsystem at `src/components/_fields/<type>/{Add,Edit,View}.vue`, resolved through `resolveFieldComponent(type, mode)` — the content components hold no type branches. Changing how a *field type* looks means editing that type's SFC (which applies to every resource, in add/edit/view); changing how *one column of one resource* looks means a `FormField<Header>` / `ViewColumn<Col>` override. See [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md) §15 and [UI_VIEW_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_VIEW_SYSTEM.md) §4.
 
 ---
 
@@ -268,7 +268,7 @@ export default {
 
 `Create` renders the primary resource's input form (`FormRecord`) plus one `FormChild` per eligible child resource (resources whose `ParentResource` equals the active resource) — never a parent-relation form. All input lands directly in the shared `pageState` reactive tree via `setField`/`setControlField`/`addChild`/`updateChild`; submit is owned entirely by `PageAction` sections. Both components follow a strict **zero-hardcoding contract** — every default label, class, colour, and behaviour is an overrideable prop — and a four-step field-visibility precedence chain: **`showFields` > `hideFields` > `workflowFields`** (with `Status` hidden + seeded `'Active'` by default). Non-schema "custom" fields are routed to `pageState.setControlField`/`node.controls`, never `node.record`.
 
-**Full canonical reference — component anatomy, complete prop tables, the visibility precedence chain, `defaultValues`/`fieldProps` function resolution, the three independent override hierarchies (`FormChild<ChildName>`, `FormRecord`, `FormField<Header>` — `_ui/*` only, no framework fallback), whole-content `create.vue`/`create.js` and `update.vue`/`update.js` overrides, `Update.vue`'s hydration lifecycle, and child soft-deletion — lives in [AQL_CREATE_AND_UPDATE_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_CREATE_AND_UPDATE_CONTENT_SYSTEM.md).**
+**Full canonical reference — component anatomy, complete prop tables, the visibility precedence chain, `defaultValues`/`fieldProps` function resolution, the three independent override hierarchies (`FormChild<ChildName>`, `FormRecord`, `FormField<Header>` — `_ui/*` only, no framework fallback), whole-content `create.vue`/`create.js` and `update.vue`/`update.js` overrides, `Update.vue`'s hydration lifecycle, and child soft-deletion — lives in [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md).**
 
 ---
 

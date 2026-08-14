@@ -1,4 +1,4 @@
-# PROCUREMENT Sheet Structure
+﻿# PROCUREMENT Sheet Structure
 
 ## Purpose
 This document describes the procurement-related sheet families used for purchasing workflow.
@@ -49,8 +49,8 @@ This document describes the procurement-related sheet families used for purchasi
 - **Procurement Progress**: saving a PO receiving draft can move `PO_ISSUED` to `GOODS_RECEIVING`; generating GRN moves procurement to `GRN_GENERATED`; invalidating a GRN rolls the receiving back to `CONFIRMED` and procurement to `GOODS_RECEIVING` unless procurement is already `COMPLETED`.
 
 ## Canonical Detail Owners
-- Workflow detail: [GROUND_OPERATIONS_WORKFLOW.md](F:/LITTLE%20LEAP/AQL/Documents/GROUND_OPERATIONS_WORKFLOW.md)
-- Resource metadata rules: [RESOURCE_COLUMNS_GUIDE.md](F:/LITTLE%20LEAP/AQL/Documents/RESOURCE_COLUMNS_GUIDE.md)
+- Workflow detail: [WORKFLOW_OUTLET_OPERATIONS.md](F:/LITTLE%20LEAP/AQL/Documents/WORKFLOW_OUTLET_OPERATIONS.md)
+- Resource metadata rules: [SCHEMA_RESOURCE_COLUMNS.md](F:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md)
 
 ## Maintenance Rule
 Update this file when:

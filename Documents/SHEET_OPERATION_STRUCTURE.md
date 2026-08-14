@@ -1,4 +1,4 @@
-# OPERATION Sheet Structure
+﻿# OPERATION Sheet Structure
 
 ## Purpose
 This document describes the current operation-scope sheet families and their roles.
@@ -89,7 +89,7 @@ This document describes the current operation-scope sheet families and their rol
 
 ## Notes
 - Exact code prefixes and hook/update behavior are owned by runtime/config docs rather than this file.
-- Use [MODULE_WORKFLOWS.md](F:/LITTLE%20LEAP/AQL/Documents/MODULE_WORKFLOWS.md) for documented module flow details.
+- Use [WORKFLOW_OUTLET_OPERATIONS.md / WORKFLOW_PROCUREMENT.md](F:/LITTLE%20LEAP/AQL/Documents/WORKFLOW_OUTLET_OPERATIONS.md / WORKFLOW_PROCUREMENT.md) for documented module flow details.
 
 ## Maintenance Rule
 Update this file when:

@@ -404,8 +404,8 @@ All `get` calls support delta filtering:
 
 ## Canonical Detail Owners
 - Implementation patterns and anti-patterns: [GAS_PATTERNS.md](GAS_PATTERNS.md)
-- Resource metadata semantics: [RESOURCE_COLUMNS_GUIDE.md](RESOURCE_COLUMNS_GUIDE.md)
-- Task-based reading expectations: [DOC_ROUTING.md](DOC_ROUTING.md)
+- Resource metadata semantics: [SCHEMA_RESOURCE_COLUMNS.md](SCHEMA_RESOURCE_COLUMNS.md)
+- Task-based reading expectations: [CORE_DOC_ROUTING.md](CORE_DOC_ROUTING.md)
 
 ## When To Escalate
 Escalate when the requirement cannot be covered by current generic CRUD, hook, batch, action, or composite-save patterns.

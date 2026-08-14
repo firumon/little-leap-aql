@@ -1,4 +1,4 @@
-# Scope Boundary: AQL List View Filters & Dynamic Tokens
+﻿# Scope Boundary: AQL List View Filters & Dynamic Tokens
 
 This prompt governs the **filter evaluation layer** behind `APP.Resources.ListViews` — the filter
 tree schema, the comparison operators, and the dynamic token system (`$startOfMonth`, `$daysIn:7`,
@@ -26,7 +26,7 @@ changing how a condition is evaluated, keeping the GAS admin dialog in sync.
 > | [`colorHelpers.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/colorHelpers.js) | `resolveCssColor(value, fallback)` — Quasar brand names, Material palette names and raw CSS all resolve to one inline custom property. |
 > | [`placeholderProps.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/placeholderProps.js) | `resolvePlaceholderProps(props, identity, kind)` — the `Props<Identity>` merge. Call it in a resolver; never re-implement it inline. |
 >
-> **The rule this enforces**: a pure helper that is not resource knowledge belongs in `src/utils/`. It must NOT be duplicated into a `_ui/` composable, and a `_ui/` composable must NEVER import another resource's composable to borrow one — `_ui/**/OutletRestocks/**` reaching into `_ui/**/OutletVisits/**` is exactly the cross-resource dependency [ARCHITECTURE RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md) §5 forbids. Promote the helper to `src/utils/` and re-export it from the composable if the old import path must keep working.
+> **The rule this enforces**: a pure helper that is not resource knowledge belongs in `src/utils/`. It must NOT be duplicated into a `_ui/` composable, and a `_ui/` composable must NEVER import another resource's composable to borrow one — `_ui/**/OutletRestocks/**` reaching into `_ui/**/OutletVisits/**` is exactly the cross-resource dependency [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md) §5 forbids. Promote the helper to `src/utils/` and re-export it from the composable if the old import path must keep working.
 
 ## 1. Domain Map & Key Files
 
@@ -40,7 +40,7 @@ Read these before editing anything:
 | [`FRONTENT/src/composables/resources/useResourceConfig.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/useResourceConfig.js) | `normalizeVisibleWhen` / `isActionVisible` — the SECOND consumer of the evaluator. An action's `visibleWhen` accepts the same tokens a list-view filter does. |
 | [`GAS/listViewsManager.html`](file:///f:/LITTLE%20LEAP/AQL/GAS/listViewsManager.html) | **Admin dialog (list views).** Its `TOKENS` array is a hand-maintained mirror of the frontend registry. |
 | [`GAS/actionManager.html`](file:///f:/LITTLE%20LEAP/AQL/GAS/actionManager.html) | **Admin dialog (actions).** Carries a second hand-maintained `TOKENS` mirror for the "Visible When" value picker. |
-| [`Documents/AQL_FRONTEND_LIST_SWITCHER.md`](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_LIST_SWITCHER.md) | **Canonical spec.** Section 5.2 is the token reference. |
+| [`Documents/UI_LIST_SWITCHER.md`](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_LIST_SWITCHER.md) | **Canonical spec.** Section 5.2 is the token reference. |
 
 ---
 
@@ -55,7 +55,7 @@ others produces either an admin-invisible feature or a dropdown entry that silen
 > 1. `TOKENS` in `FRONTENT/src/utils/tokenEvaluator.js` — behaviour.
 > 2. `TOKENS` in `GAS/listViewsManager.html` — admin dropdown entry (`code`, `label`, `group`, and `param` for parameterised tokens).
 > 3. `TOKENS` in `GAS/actionManager.html` — the identical mirror used by the "Visible When" value picker.
-> 4. The token tables in `Documents/AQL_FRONTEND_LIST_SWITCHER.md` §5.2.2 / §5.2.3 / §5.2.4.
+> 4. The token tables in `Documents/UI_LIST_SWITCHER.md` §5.2.2 / §5.2.3 / §5.2.4.
 > 5. The verification harness in §6 below — add a case proving the new token resolves and compares.
 >
 > The `label` and `group` strings should match across (1)–(3) so admins and developers see the
@@ -283,7 +283,7 @@ node -e "const fs=require('fs');const h=fs.readFileSync('GAS/listViewsManager.ht
 - [ ] Any new `COERCES` primitive justified (no near-duplicate of an existing composition).
 - [ ] `TOKENS` mirrored in `GAS/listViewsManager.html` AND `GAS/actionManager.html` with matching `code`/`label`/`group`, plus `param` if parameterised.
 - [ ] Both GAS script blocks syntax-checked.
-- [ ] Token tables updated in `AQL_FRONTEND_LIST_SWITCHER.md` §5.2.
+- [ ] Token tables updated in `UI_LIST_SWITCHER.md` §5.2.
 - [ ] Harness run against real modules; all assertions pass; temp files deleted.
 - [ ] Existing literal-condition behaviour confirmed unchanged.
 - [ ] If an existing token's semantics changed: impact stated explicitly to the user.

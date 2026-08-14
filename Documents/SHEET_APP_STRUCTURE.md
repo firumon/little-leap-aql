@@ -1,4 +1,4 @@
-# APP Sheet Structure
+﻿# APP Sheet Structure
 
 ## Purpose
 This document describes the APP spreadsheet as the control plane for authentication, authorization, config, and resource metadata.
@@ -32,7 +32,7 @@ This document describes the APP spreadsheet as the control plane for authenticat
 
 ### Resources
 - runtime metadata registry for backend and frontend
-- column meanings are owned by [RESOURCE_COLUMNS_GUIDE.md](F:/LITTLE%20LEAP/AQL/Documents/RESOURCE_COLUMNS_GUIDE.md)
+- column meanings are owned by [SCHEMA_RESOURCE_COLUMNS.md](F:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md)
 
 ### Config
 - deployment-specific settings such as file IDs and sync-related values
@@ -41,9 +41,9 @@ This document describes the APP spreadsheet as the control plane for authenticat
 APP structure is created/refreshed through setup/refactor scripts and related menu actions.
 
 ## Canonical Detail Owners
-- Resource column semantics: [RESOURCE_COLUMNS_GUIDE.md](F:/LITTLE%20LEAP/AQL/Documents/RESOURCE_COLUMNS_GUIDE.md)
-- Resource/runtime routing: [RESOURCE_REGISTRY_ARCHITECTURE.md](F:/LITTLE%20LEAP/AQL/Documents/RESOURCE_REGISTRY_ARCHITECTURE.md)
-- Setup flow: [NEW_CLIENT_SETUP_GUIDE.md](F:/LITTLE%20LEAP/AQL/Documents/NEW_CLIENT_SETUP_GUIDE.md)
+- Resource column semantics: [SCHEMA_RESOURCE_COLUMNS.md](F:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md)
+- Resource/runtime routing: [SCHEMA_RESOURCE_REGISTRY.md](F:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_REGISTRY.md)
+- Setup flow: [TENANT_NEW_CLIENT_SETUP.md](F:/LITTLE%20LEAP/AQL/Documents/TENANT_NEW_CLIENT_SETUP.md)
 
 ## Maintenance Rule
 Update this file when:

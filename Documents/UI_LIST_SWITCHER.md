@@ -1,4 +1,4 @@
-# AQL Frontend List Switcher Architecture
+﻿# AQL Frontend List Switcher Architecture
 
 This document defines the architecture, options, and override criteria for the list switching system. It details the container-level (`ListSwitcher`) and item-level (`ListSwitcherItem`) components, their design guidelines, and rules for custom UI modifications.
 
@@ -212,7 +212,7 @@ The block declares its own `--aql-switcher-color: var(--q-primary)` default, so 
 The list view items and filtering are derived dynamically from the Google Sheets database configurations.
 
 ### 5.1. Sheet Config Relationship
-* **Spreadsheet Setup**: Managed under the `ListViews` column of the `APP.Resources` sheet. See the [AQL Menu Admin Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_MENU_ADMIN_GUIDE.md#L201-L212).
+* **Spreadsheet Setup**: Managed under the `ListViews` column of the `APP.Resources` sheet. See the [AQL Menu Admin Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/SHEET_TOOLBAR_MENU_GUIDE.md#L201-L212).
 * **JSON Array Structure**: The cell contains a JSON array of item objects:
   ```json
   [
@@ -334,7 +334,7 @@ including under `neq` / `not_in`.
 > because the format sorts lexicographically: `lt $dateTime` means "already in the past".
 > For day-granularity buckets use `$date:N` or `$daysIn:N` instead. Its real job is the
 > **action expression** grammar — seeding a `...At` column from an `AdditionalActions`
-> target (§7.4 of `AQL_ACTION_SYSTEM.md`), where `$now`'s epoch ms would land an
+> target (§7.4 of `UI_ACTION_SYSTEM.md`), where `$now`'s epoch ms would land an
 > unreadable number in a cell a human reads.
 >
 > Its coercion pipeline is **string-valued**, so it follows the `$date` family rather than

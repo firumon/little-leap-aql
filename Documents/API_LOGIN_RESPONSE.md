@@ -6,7 +6,7 @@ This document is the authoritative reference for the payload returned by `handle
 
 ## Maintenance Rule
 
-> **Any change to the login response — adding/removing/renaming a top-level field, changing a generator function, changing a source sheet/column, adding or modifying an `APP.Config` key or `AppOptions` group, or changing a frontend storage location — MUST update `Documents/LOGIN_RESPONSE.md` in the same task. This is enforced the same way as the Menu Admin Guide Maintenance Rule in `CLAUDE.md`.**
+> **Any change to the login response — adding/removing/renaming a top-level field, changing a generator function, changing a source sheet/column, adding or modifying an `APP.Config` key or `AppOptions` group, or changing a frontend storage location — MUST update `Documents/API_LOGIN_RESPONSE.md` in the same task. This is enforced the same way as the Menu Admin Guide Maintenance Rule in `CLAUDE.md`.**
 
 ---
 
@@ -133,7 +133,7 @@ Array of resource entries built by `buildAuthorizedResourceEntry()` at `GAS/reso
 | `name` | Resource identifier (matches `APP.Resources.Name`) |
 | `scope` | `master`, `operation`, or `accounts` |
 | `parentResource` | Name of parent resource for child resources (e.g., `Products` for `SKUs`) |
-| `relations` | Explicit cross-resource relation map from `APP.Resources.Relations`, keyed by source column header. Values are either a target resource name (shorthand) or `{ resource, targetHeader?, labelHeader? }`. Merged over the frontend's heuristic derivation in `useDataStore._deriveAllRelations()`; explicit entries win. Empty object when unconfigured. See [RESOURCE_COLUMNS_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/RESOURCE_COLUMNS_GUIDE.md) |
+| `relations` | Explicit cross-resource relation map from `APP.Resources.Relations`, keyed by source column header. Values are either a target resource name (shorthand) or `{ resource, targetHeader?, labelHeader? }`. Merged over the frontend's heuristic derivation in `useDataStore._deriveAllRelations()`; explicit entries win. Empty object when unconfigured. See [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md) |
 | `sheetName` | Target Google Sheet tab name |
 | `codePrefix` | Prefix for auto-generated codes (e.g., `PRD`) |
 | `codeSequenceLength` | Zero-padded numeric suffix length |
@@ -141,7 +141,7 @@ Array of resource entries built by `buildAuthorizedResourceEntry()` at `GAS/reso
 | `defaultValues` | Backend-authored seed values (`APP.Resources.DefaultValues`, JSON), keyed by header; consumed by the frontend via `useResourceConfig(resource).defaultValues` to seed `FormRecord`/`FormChild` drafts |
 | `permissions` | CRUD and custom workflow action flags (e.g. `canApprove`) derived from `APP.RolePermissions` for the user's role(s) |
 | `headers` | Sheet column headers; empty array for functional resources |
-| `ui.menus` | Sidebar menu configuration array including `menuAccess` rules. See [AQL_FRONTEND_MENU_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/AQL_FRONTEND_MENU_SYSTEM.md) for full schema and evaluation logic. |
+| `ui.menus` | Sidebar menu configuration array including `menuAccess` rules. See [UI_SIDEBAR_MENU_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_SIDEBAR_MENU_SYSTEM.md) for full schema and evaluation logic. |
 | `ui.fields` | UIFields config for custom form rendering |
 | `ui.customUIName` | Drives per-tenant 3-tier component resolution in frontend |
 | `ui.listViews` / `ui.listViewsMode` | List view filter configurations |

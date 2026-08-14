@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div :class="spacingClass">
     <SectionDividerLabel :label="finalTitle" />
 
@@ -45,7 +45,7 @@
  * Reads `resourceRecord.records` (the resource list the View page's `reload()` has
  * already fetched) rather than issuing its own request: a Section must never fetch.
  * Rows are filtered and sorted, never copied — the enriched records' relation getters
- * are non-enumerable (AQL_PAGE_AND_SECTION_SYSTEM.md §1.3.3).
+ * are non-enumerable (UI_PAGE_AND_SECTION_SYSTEM.md §1.3.3).
  */
 import { computed, inject } from 'vue'
 import { evaluateProp } from 'src/composables/resources/useSectionResolver'
@@ -59,9 +59,9 @@ import {
   progressComment,
   plannedComment,
   isPlanned,
-  respondDelayDays,
-  sortByDate
-} from 'src/_ui/AQL/composables/Operation/OutletVisits/useVisitProgress'
+  respondDelayDays
+} from 'src/_resource/Operation/OutletVisits/composables/useVisitProgress'
+import { sortByDate } from 'src/utils/sortHelpers'
 
 defineOptions({ name: 'OutletVisitsRecentVisits', inheritAttrs: false })
 

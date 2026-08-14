@@ -1,6 +1,6 @@
 import { differenceInCalendarDays } from 'date-fns'
 import VisitActionButtons from './VisitActionButtons.vue'
-import { sortByDate } from 'src/_ui/AQL/composables/Operation/OutletVisits/useVisitProgress'
+import { sortByDate } from 'src/utils/sortHelpers'
 
 /**
  * OutletVisits › "Overdue" view — planned visits whose date has already passed.

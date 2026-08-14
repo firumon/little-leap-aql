@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div :class="spacingClass">
     <SectionDividerLabel :label="finalTitle" />
 
@@ -66,7 +66,7 @@
  * The outlet is read through the visit's `$outlet` relation getter, which the View
  * page's `loadRelations()` has already fetched. The record reference is never spread —
  * the relation getters are non-enumerable and a copy would drop them
- * (AQL_PAGE_AND_SECTION_SYSTEM.md §1.3.3).
+ * (UI_PAGE_AND_SECTION_SYSTEM.md §1.3.3).
  */
 import { computed, inject } from 'vue'
 import { evaluateProp } from 'src/composables/resources/useSectionResolver'

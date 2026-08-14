@@ -1,4 +1,4 @@
-import { isPlanned } from 'src/_ui/AQL/composables/Operation/OutletVisits/useVisitProgress'
+import { isPlanned } from 'src/_resource/Operation/OutletVisits/composables/useVisitProgress'
 
 /**
  * OutletVisits › Edit › FormActionSubmit — JS modifier (tier 2: resource + page).

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * OutletVisits › Edit — page JS modifier (tier CP: resource + page specific).
  *
  * A visit is only editable while it is still PLANNED, and only its schedule is
@@ -19,7 +19,7 @@ export default {
   contents: ['Update'],
 
   // Spread flat onto the `Update` content by useContentResolver — see
-  // AQL_PAGE_AND_SECTION_SYSTEM.md §1.4.1.
+  // UI_PAGE_AND_SECTION_SYSTEM.md §1.4.1.
   PropsUpdate: {
     // `fields` fixes both the SET and the ORDER of the inputs.
     fields: ['Date', 'ProgressPlannedComment'],

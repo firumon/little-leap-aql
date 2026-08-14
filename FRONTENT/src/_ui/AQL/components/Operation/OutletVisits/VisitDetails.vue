@@ -116,10 +116,10 @@ import {
   isResponded,
   respondDelayDays,
   delayColor,
-  delayLabel,
   PROGRESS_STAMPS,
   PLANNED
-} from 'src/_ui/AQL/composables/Operation/OutletVisits/useVisitProgress'
+} from 'src/_resource/Operation/OutletVisits/composables/useVisitProgress'
+import { delayLabel } from 'src/_ui/AQL/composables/Operation/OutletVisits/useVisitPresentation'
 
 defineOptions({ name: 'OutletVisitsVisitDetails', inheritAttrs: false })
 

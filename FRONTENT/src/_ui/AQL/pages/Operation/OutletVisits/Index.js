@@ -1,8 +1,8 @@
-import {
+﻿import {
   tomorrowPreset,
   upcomingsPreset,
   settledPreset
-} from 'src/_ui/AQL/composables/Operation/OutletVisits/useVisitProgress'
+} from 'src/_ui/AQL/composables/Operation/OutletVisits/useVisitPresentation'
 
 /**
  * OutletVisits › Index — page contract (tier CP: resource + page specific).
@@ -12,7 +12,7 @@ import {
  * own file when it brings a template (`ListToday.vue`) or a component-valued prop
  * (`ListOverdue.js` mounts `VisitActionButtons` as `btn`); a plain prop bag belongs in
  * the page contract, where the whole page's list behaviour reads in one place.
- * See AQL_CUSTOM_UI_GUIDE.md §8.4.
+ * See UI_MODULE_DEVELOPER_GUIDE.md §8.4.
  *
  * Each block is a FUNCTION, so it is evaluated with the live props bag on every read and
  * receives the active view's already-filtered `items` — which is what lets it re-sort

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * OutletVisits › View — page JS modifier (tier CP: resource + page specific).
  *
  * A JS modifier, NOT a `View.vue` full-page override: the three blocks below are
@@ -21,7 +21,7 @@ export default {
 
   // Spread FLAT onto their target section by useSectionResolver — a section reads
   // `props.title`, never `props.PropsVisitDetails.title`.
-  // See AQL_PAGE_AND_SECTION_SYSTEM.md §1.4.1.
+  // See UI_PAGE_AND_SECTION_SYSTEM.md §1.4.1.
   PropsOutletDetails: {
     title: 'Outlet',
     icon: 'storefront',

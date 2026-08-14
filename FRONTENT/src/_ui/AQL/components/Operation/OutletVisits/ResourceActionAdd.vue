@@ -54,7 +54,7 @@ import FormRecord from 'components/contents/FormRecord.vue'
 import AqlDialog from 'components/shared/AqlDialog.vue'
 import { useFormFields } from 'src/composables/resources/useFormFields'
 import { useRecord } from 'src/composables/resources/useRecord'
-import { isPlanned } from 'src/_ui/AQL/composables/Operation/OutletVisits/useVisitProgress'
+import { isPlanned } from 'src/_resource/Operation/OutletVisits/composables/useVisitProgress'
 
 defineOptions({ name: 'OutletVisitsResourceActionAdd', inheritAttrs: false })
 

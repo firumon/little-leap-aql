@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <SectionDividerLabel v-if="overdueVisits.length" label="Overdue Visits" />
 
   <AppList
@@ -85,7 +85,7 @@ const overdueVisits = computed(() => {
     if (!isIsoDate(date) || date >= today) continue
     // Assigned onto the record itself, never a spread copy: the enriched record's
     // relation getters ($outlet, _Parents, ...) are non-enumerable and a spread
-    // would drop them. See AQL_PAGE_AND_SECTION_SYSTEM.md §1.3.3.
+    // would drop them. See UI_PAGE_AND_SECTION_SYSTEM.md §1.3.3.
     row.overdueDays = Math.floor((todayTimestamp - Date.parse(date.slice(0, 10))) / 86400000)
     out.push(row)
   }

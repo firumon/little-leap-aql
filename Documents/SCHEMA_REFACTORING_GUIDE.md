@@ -1,4 +1,4 @@
-﻿# Schema Refactoring Guide
+# Schema Refactoring Guide
 
 ## Purpose
 This guide explains how schema-related setup/refactor flows should be used to align sheets with current code-defined structure.
@@ -14,6 +14,7 @@ When headers/columns change, use the setup/refactor workflow rather than making 
 
 ## Notes
 - resource metadata and sheet structure should stay aligned
+- whenever schema or `APP.Resources` config changes, corresponding resource business and domain logic under `FRONTENT/src/_resource/{Scope}/{Resource}/` must be updated accordingly
 - workflow/action-related columns should remain aligned with current process design
 
 ## Canonical Detail Owners
@@ -23,5 +24,5 @@ When headers/columns change, use the setup/refactor workflow rather than making 
 ## Maintenance Rule
 Update this file when:
 - the setup/refactor workflow changes
-- schema alignment expectations change
+- schema or resource domain logic alignment expectations change
 - canonical detail-owner references change

@@ -1,4 +1,4 @@
-﻿# AQL Database Schema Alteration & Sync Workflow
+# AQL Database Schema Alteration & Sync Workflow
 
 > **Scope boundary**: This document covers database schema changes only — sheet setups, metadata config, view/report scans, and clasp sync. Its blast-radius steps tell you to SEARCH frontend and backend files for column references — do NOT load the frontend_modification.md or backend_gas_implementation.md init prompts unless the task explicitly requires modifying that code. Read referenced files directly by path.
 
@@ -80,10 +80,11 @@ Once approved by the user:
    * Update the `UIFields` JSON array to reflect the new form input fields, labels, hints, and types for the frontend rendering.
    * Verify that the column name string and casing match exactly between the setup headers and the sync metadata UIFields.
 
-### Step 3: Frontend Code Modifications
-1. Update any Vue pages or custom dialogs under `FRONTENT/src/pages/` binding to the altered fields.
-2. Update feature workflows or input parsing in the corresponding composables under `FRONTENT/src/composables/`.
-3. Adhere strictly to the [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md), specifically keeping Vue page templates thin and encapsulating business/payload adjustments inside composables.
+### Step 3: Frontend & Resource Domain Logic Modifications
+1. Update corresponding resource domain logic under `FRONTENT/src/_resource/{Scope}/{Resource}/` to keep domain aggregations, enrichment mappings, and business rules synchronized with the altered schema and `APP.Resources` config.
+2. Update any Vue pages or custom dialogs under `FRONTENT/src/pages/` binding to the altered fields.
+3. Update feature workflows or input parsing in the corresponding composables under `FRONTENT/src/composables/`.
+4. Adhere strictly to the [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md), specifically keeping Vue page templates thin and encapsulating business/payload adjustments inside composables.
 
 ### Step 4: Documentation Synchronization
 1. Document the column additions, removals, or type changes in the relevant sheet structure document under `Documents/` (e.g., [SHEET_OPERATION_STRUCTURE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHEET_OPERATION_STRUCTURE.md)).
@@ -96,6 +97,7 @@ Once approved by the user:
 
 * **DO NOT** delete columns physically in active sheets unless explicitly instructed by the user, as it may break historical records or third-party formulas. Prefer making columns obsolete in code first.
 * **DO NOT** use mismatched header casings. Apps Script columns are case-sensitive.
+* **DO** update resource domain logic under `FRONTENT/src/_resource/{Scope}/{Resource}/` whenever schema columns or `APP.Resources` configurations change.
 * **DO** wrap any changes to dependent master/detail relationships in single composite payloads.
 * **DO** verify that the setup code safely preserves existing data columns when inserting a new column using the `setup_normalizeSheetSchema` handler.
 

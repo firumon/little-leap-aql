@@ -5,7 +5,7 @@ import {
   APPROVED,
   PARTIALLY_DELIVERED,
   DELIVERED
-} from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockProgress'
+} from 'src/_resource/Operation/OutletRestocks/composables/useRestockProgress'
 
 /**
  * OutletRestocks › Index › LinearProgress — JS modifier (tier CP: resource + page).

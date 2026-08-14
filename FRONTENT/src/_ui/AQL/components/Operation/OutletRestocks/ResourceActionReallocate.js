@@ -1,4 +1,4 @@
-/**
+﻿/**
  * OutletRestocks › ResourceActionReallocate — JS modifier (tier 4: resource-level).
  *
  * The sheet's `visibleWhen` already narrows this action to PARTIALLY_DELIVERED,
@@ -13,7 +13,7 @@
  *
  * `$OutletRestockItems` is the enriched record's relation getter: NON-ENUMERABLE
  * by design, so it is invisible to a spread but perfectly readable by name
- * (AQL_CUSTOM_UI_GUIDE §5.3). That is exactly why this cannot be a value bag —
+ * (UI_MODULE_DEVELOPER_GUIDE.md §5.3). That is exactly why this cannot be a value bag —
  * the list has to be read off the live record, per render.
  *
  * `show` is function-valued so it is re-evaluated per render through

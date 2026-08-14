@@ -1,4 +1,4 @@
-import { useAuth } from 'src/composables/core/useAuth'
+﻿import { useAuth } from 'src/composables/core/useAuth'
 import {
   draftsPreset,
   awaitingApprovalPreset,
@@ -8,7 +8,7 @@ import {
   pendingCompletionPreset,
   deliveredPreset,
   rejectedPreset
-} from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockProgress'
+} from 'src/_ui/AQL/composables/Operation/OutletRestocks/Index/useRestockRowPresets'
 
 /**
  * OutletRestocks › Index — page contract (tier CP: resource + page specific).
@@ -25,7 +25,7 @@ import {
  * when it brings a template (`ListPendingCompletion.vue`) or a component-valued prop
  * (`ListDrafts.js` / `ListPendingApproval.js` / `ListNeedsRevision.js` mount
  * `RestockActionButtons` as `btn`); a plain prop bag belongs in the page contract, where
- * the whole page's list behaviour reads in one place. See AQL_CUSTOM_UI_GUIDE.md §8.4.
+ * the whole page's list behaviour reads in one place. See UI_MODULE_DEVELOPER_GUIDE.md §8.4.
  *
  * Each block is a FUNCTION, so it is evaluated with the live props bag on every read and
  * receives the active view's already-filtered `items` — which is what lets it re-sort

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div v-if="pageState?.meta.currentStep === 3" :class="gutterClass">
     <!-- Draft is a standard-request concept only. A direct restock moves stock in
          the same batch it is created, so there is nothing to come back and submit
@@ -58,23 +58,24 @@
  * Both controls only record intent on pageState. The sticky bar
  * (`Add/PageAction.js`) reads `isDraft` back off the node to pick the Progress
  * value — a content card never submits on its own, or it would double-fire
- * against the PageAction dispatcher (AQL_ACTION_SYSTEM.md §5).
+ * against the PageAction dispatcher (UI_ACTION_SYSTEM.md §5).
  *
  * The comment is a real resource header (`ProgressSubmittedComment`), so it goes
  * through `setField` and rides along in the create payload; `isDraft` is
  * wizard-only intent, so it lives in `controls` and never reaches GAS.
  */
-import { computed, inject, useAttrs } from 'vue'
+import { computed, useAttrs } from 'vue'
 import FieldTextareaAdd from 'components/_fields/textarea/Add.vue'
+import { useRestockAddContext } from 'src/_ui/AQL/composables/Operation/OutletRestocks/Add/useRestockAddContext'
 
 defineOptions({ name: 'OutletRestocksSubmitOptions', inheritAttrs: false })
 
 // Vertical rhythm follows the page's own gutter token (drilled down from
-// pageProps — AQL_PAGE_AND_SECTION_SYSTEM.md §1.3.4).
+// pageProps — UI_PAGE_AND_SECTION_SYSTEM.md §1.3.4).
 const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 
-const pageState = inject('pageState', null)
+const { pageState } = useRestockAddContext()
 const parent = pageState.useNode('OutletRestocks')
 
 const comment = computed(() => parent.record.value.ProgressSubmittedComment || '')

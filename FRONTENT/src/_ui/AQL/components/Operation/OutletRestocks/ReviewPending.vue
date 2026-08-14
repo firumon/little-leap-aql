@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div v-if="visible" :class="gutterClass">
     <!-- The other half of the decision: everything NOT being covered right now.
          Kept on the same review step as the allocations, because "what I am
@@ -94,11 +94,12 @@
  * a record field, so it never leaks into a payload on its own — the sticky bar's
  * handler places it on the right column for the outcome chosen.
  */
-import { computed, inject, useAttrs } from 'vue'
+import { computed, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import AqlGroupedList from 'components/app/AqlGroupedList.vue'
 import { resolveFieldComponent } from 'components/_fields/useFieldResolver'
-import { useRestockApproval } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockApproval'
+import { useRestockApproval } from 'src/_ui/AQL/composables/Operation/Outlets/useRestockApproval'
+import { useRestockApprovalContext } from 'src/_ui/AQL/composables/Operation/Outlets/useRestockApprovalContext'
 
 defineOptions({ name: 'OutletRestocksApproveReviewPending', inheritAttrs: false })
 
@@ -109,13 +110,13 @@ const props = defineProps({
 const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 
-const pageState = inject('pageState', null)
+const { pageState } = useRestockApprovalContext()
 const { restock, pendingRows, comment, setComment } = useRestockApproval()
 
 const visible = computed(() => pageState?.meta.currentStep === props.step)
 
 // Resolved through the field registry rather than a direct import, so the comment
-// box picks up whatever the textarea control does (AQL_CUSTOM_UI_GUIDE §2.3).
+// box picks up whatever the textarea control does (UI_MODULE_DEVELOPER_GUIDE.md §2.3).
 const CommentField = resolveFieldComponent('textarea', 'edit')
 
 const commentConfig = computed(() => ({

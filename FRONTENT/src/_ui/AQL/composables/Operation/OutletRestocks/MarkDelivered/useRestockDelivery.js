@@ -1,9 +1,25 @@
-import { computed, inject, onMounted, watch } from 'vue'
+﻿import { computed, onMounted, watch } from 'vue'
 import { useRecord } from 'src/composables/resources/useRecord'
+import { useRestockDeliveryContext } from './useRestockDeliveryContext'
+import {
+  SELECTION,
+  normalizeSelection,
+  deliverableRows
+} from 'src/_resource/Operation/OutletRestocks/composables/useRestockDelivery'
 
 /**
- * OutletRestocks › MarkDelivered — the selection aggregate behind the two
- * `MarkDelivered/` cards and `MarkDelivered/PageAction.js`.
+ * OutletRestocks › MarkDelivered — the UI half of the delivery selection aggregate.
+ *
+ * PRESENTATION ONLY (UI_RESOURCE_DOMAIN_LOGIC.md §4). This file owns the `inject()`
+ * relay, the reactive projections the two cards render, the SKU labelling, and the
+ * Product → SKU → storage grouping, which is display shaping. The RULE for what may be
+ * delivered at all — `deliverableRows`, `normalizeSelection`, and the control-field key
+ * itself — lives in `src/_resource/Operation/OutletRestocks/composables/useRestockDelivery`
+ * and is imported above, so `MarkDelivered/PageAction.js` submits exactly the set step 2
+ * displayed. Nothing here re-derives it.
+ *
+ * Page-scoped per §6.1: it calls `inject()`, and only `MarkDelivered.js` resolves the two
+ * cards that use it.
  *
  * ONE reactive source of truth (ARCHITECTURE RULES §6). What the driver is
  * confirming as delivered lives in exactly one place: the `DeliverySelection`
@@ -14,27 +30,18 @@ import { useRecord } from 'src/composables/resources/useRecord'
  * watcher syncing two copies, so step 2 cannot disagree with step 1.
  *
  * It is a CONTROL field, not a local `ref`, for two reasons that are both hard
- * requirements rather than preferences (PAGE_STATE.md §6.4):
+ * requirements rather than preferences (UI_PAGE_STATE.md §6.4):
  *   1. it must survive the step-1 → step-2 navigation, which unmounts step 1;
  *   2. `MarkDelivered/PageAction.js` runs OUTSIDE a setup context and has to
  *      read it at submit time, which it can only do through `pageState`.
  * A flat ARRAY rather than a `Set`: `controls` entries are written whole and
  * read back through the same reactive bag, and an array survives that round trip
  * without a wrapper type the payload layer would then have to unwrap.
- *
- * Named PURE exports first — importable from a page contract or a JS modifier
- * without a setup context; the composable wrapper follows (AQL_CUSTOM_UI_GUIDE §2.2).
- *
- * ISOLATION: this file imports nothing resource-specific. The batch payloads live
- * in `./outletRestockPayload.js`; the only outside dependencies here are core
- * infrastructure (`useRecord`, the injected `pageState` / `resourceRecord`).
  */
 
 const PARENT = 'OutletRestocks'
 const CHILD = 'OutletRestockItems'
 
-// Wizard-only key on the parent node's `controls` bag.
-export const SELECTION = 'DeliverySelection'
 const COMMENT = 'DeliveryComment'
 
 const DEFAULT_STORAGE = '_default'
@@ -43,51 +50,18 @@ const DEFAULT_STORAGE = '_default'
 // what an unconfigured SKU is already treated as everywhere else.
 const DEFAULT_UOM = 'PCS'
 
-// Only ALLOCATED lines can be delivered. A PENDING line has no stock behind it,
-// and a DELIVERED/CANCELLED one is settled history.
-const DELIVERABLE_PROGRESS = 'ALLOCATED'
-
 const text = (value) => String(value ?? '').trim()
 const num = (value) => {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : 0
 }
 
-/**
- * Normalize anything out of a records array into a safe object.
- *
- * `useRecord().items` CAN CONTAIN `null` — it maps every store row through
- * `enrichRecord`, which returns `null` for a row with no `Code`, and the map is
- * 1:1 so that `null` lands in the array. Optional chaining alone does not survive
- * it: a guard written as `row?.Status || 'Active'` waves the null through the
- * active filter, and the NEXT predicate dereferences it. Every row read in this
- * file goes through `asRow` so a null degrades to an empty object and is then
- * dropped by the field checks (see `useRestockApproval.js`).
- */
+// `useRecord().items` CAN CONTAIN `null` — see `useRestockAllocation.js`'s `asRow` for
+// the full account. A null degrades to an empty row and is then dropped by the field
+// checks, instead of being waved through one guard and dereferenced by the next.
 const asRow = (value) => (value && typeof value === 'object' ? value : {})
 const isActive = (value) => text(asRow(value).Status || 'Active') === 'Active'
 const storageOf = (value) => text(value) || DEFAULT_STORAGE
-
-/** Codes normalized, blank-stripped and deduped — the shape everything else reads. */
-export function normalizeSelection (value) {
-  return Array.from(new Set((Array.isArray(value) ? value : []).map(text).filter(Boolean)))
-}
-
-/**
- * The ALLOCATED child rows of one request.
- *
- * Pure so `MarkDelivered/PageAction.js` can derive the very same set at submit
- * time from the injected `resourceRecord`, rather than restating the filter and
- * risking a submit that covers different rows than step 2 displayed.
- */
-export function deliverableRows (rows = [], restockCode = '') {
-  const parentCode = text(restockCode)
-  return (Array.isArray(rows) ? rows : [])
-    .map(asRow)
-    .filter((row) => text(row.Code) && isActive(row))
-    .filter((row) => !parentCode || text(row.OutletRestockCode) === parentCode)
-    .filter((row) => text(row.Progress) === DELIVERABLE_PROGRESS)
-}
 
 /**
  * Fold rows into the Product → SKU → storage tree both steps render.
@@ -184,8 +158,9 @@ export function groupDeliveryRows (rows = [], label = () => ({}), selected = [])
 }
 
 export function useRestockDelivery () {
-  const pageState = inject('pageState', null)
-  const resourceRecord = inject('resourceRecord', null)
+  // Injected once for the whole page, by the relay (§6.1) — not a second time
+  // here, or the page would have two composables injecting the same keys.
+  const { pageState, resourceRecord } = useRestockDeliveryContext()
 
   // Same accessor idiom as the rest of the restock flow, so this file imports no
   // store (ARCHITECTURE RULES §5).
@@ -212,9 +187,9 @@ export function useRestockDelivery () {
 
   // ── Hydration ──────────────────────────────────────────────────────────────
   // An `_action/:action` route is a custom sub-route: `usePageResolver` loads no
-  // record for it (AQL_PAGE_AND_SECTION_SYSTEM.md §1.3.3), so the node is created
+  // record for it (UI_PAGE_AND_SECTION_SYSTEM.md §1.3.3), so the node is created
   // and seeded here. It must exist for `PageAction` to render the sticky bar at
-  // all — `hasNodes` gates it (AQL_ACTION_SYSTEM.md §3.1).
+  // all — `hasNodes` gates it (UI_ACTION_SYSTEM.md §3.1).
   // Bookkeeping lives on the NODE, not in this closure. Two components call this
   // composable (`SelectDeliveryItems` at step 1, `ReviewDelivery` at step 2), and
   // each call gets its own closure — so a per-call `let hydratedKey` starts empty
@@ -262,7 +237,7 @@ export function useRestockDelivery () {
   onMounted(() => {
     // `usePageResolver` loads NOTHING for an `_action/:action` route — a custom
     // sub-route is expected to fetch what it needs itself
-    // (AQL_PAGE_AND_SECTION_SYSTEM.md §1.3.3), and `loadRelations()` is only
+    // (UI_PAGE_AND_SECTION_SYSTEM.md §1.3.3), and `loadRelations()` is only
     // called on a view route, so the child item rows are NOT there either. That
     // includes the request itself: without this the injected
     // `resourceRecord.record` never resolves on a cold deep link and the page

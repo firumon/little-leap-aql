@@ -1,10 +1,10 @@
-/**
+﻿/**
  * OutletRestocks › Reallocate contract — `/operation/outlet-restocks/{code}/_action/reallocate`.
  *
  * An `_action/:action` route resolves its canonical page key to the ACTION NAME,
  * so this file is `Reallocate.js` (not `action.js`) and every placeholder beneath
  * it resolves under the `reallocate/` page tier —
- * `.../OutletRestocks/Reallocate/*` (AQL_CUSTOM_UI_GUIDE §2.1).
+ * `.../OutletRestocks/Reallocate/*` (UI_MODULE_DEVELOPER_GUIDE.md §2.1).
  *
  * Where `Approve` decides a request's fate, this page picks up one that has
  * already been decided. A PARTIALLY_DELIVERED request has some lines DELIVERED
@@ -32,7 +32,7 @@
  *
  * The step each card belongs to is declared HERE rather than hardcoded in the
  * card, so the flow can be re-ordered from the contract alone
- * (AQL_PAGE_AND_SECTION_SYSTEM.md §1.4.1).
+ * (UI_PAGE_AND_SECTION_SYSTEM.md §1.4.1).
  *
  * There is no `Update` content: reallocating does not edit the request's fields,
  * it decides where the remaining stock comes from. `WarehouseAndLocation`

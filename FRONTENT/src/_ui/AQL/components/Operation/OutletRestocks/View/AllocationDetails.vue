@@ -109,10 +109,10 @@
  *
  * No `<style>` block (ARCHITECTURE RULES §7).
  */
-import { computed, inject } from 'vue'
-import { evaluateProp } from 'src/composables/resources/useSectionResolver'
+import { computed } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
-import { isApproved, useRestockView } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockView'
+import { isApproved, useRestockView } from 'src/_ui/AQL/composables/Operation/OutletRestocks/View/useRestockView'
+import { useRestockViewContext } from 'src/_ui/AQL/composables/Operation/OutletRestocks/View/useRestockViewContext'
 
 defineOptions({ name: 'OutletRestocksViewAllocationDetails', inheritAttrs: false })
 
@@ -131,8 +131,7 @@ const props = defineProps({
   gutter: { type: String, default: 'xs' }
 })
 
-const resourceConfig = inject('resourceConfig', null)
-const resourceRecord = inject('resourceRecord', null)
+const { evaluate } = useRestockViewContext()
 
 const {
   productGroups, pending, approved: recordApproved,
@@ -141,7 +140,7 @@ const {
 
 const paddingClass = computed(() => `q-px-${props.padding}`)
 const spacingClass = computed(() => `q-gutter-y-${props.gutter}`)
-const finalTitle = computed(() => evaluateProp(props.title, resourceRecord, resourceConfig))
+const finalTitle = computed(() => evaluate(props.title))
 
 const groups = computed(() => (Array.isArray(props.items) ? props.items : productGroups.value))
 const approved = computed(() => (props.record ? isApproved(props.record) : recordApproved.value))

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div v-if="visible" :class="gutterClass">
     <SectionDividerLabel :label="title" />
 
@@ -104,13 +104,13 @@
  * The GRN note is the one input on this step. It is stored as a CONTROL field,
  * not a record field, so it never leaks into a payload on its own — the sticky
  * bar's handler places it on the right columns for the outcome
- * (PAGE_STATE.md §6.4).
+ * (UI_PAGE_STATE.md §6.4).
  */
-import { computed, inject, useAttrs } from 'vue'
+import { computed, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import { resolveFieldComponent } from 'components/_fields/useFieldResolver'
-import { evaluateProp } from 'src/composables/resources/useSectionResolver'
-import { useRestockDelivery } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockDelivery'
+import { useRestockDelivery } from 'src/_ui/AQL/composables/Operation/OutletRestocks/MarkDelivered/useRestockDelivery'
+import { useRestockDeliveryContext } from 'src/_ui/AQL/composables/Operation/OutletRestocks/MarkDelivered/useRestockDeliveryContext'
 
 defineOptions({ name: 'OutletRestocksMarkDeliveredReviewDelivery', inheritAttrs: false })
 
@@ -134,9 +134,7 @@ const props = defineProps({
 const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 
-const pageState = inject('pageState', null)
-const resourceConfig = inject('resourceConfig', null)
-const resourceRecord = inject('resourceRecord', null)
+const { pageState, evaluate } = useRestockDeliveryContext()
 
 const {
   restock,
@@ -150,12 +148,12 @@ const {
 
 const visible = computed(() => pageState?.meta.currentStep === props.step)
 
-const title = computed(() => evaluateProp(props.title, resourceRecord, resourceConfig) || '')
-const commentTitle = computed(() => evaluateProp(props.commentTitle, resourceRecord, resourceConfig) || '')
+const title = computed(() => evaluate(props.title) || '')
+const commentTitle = computed(() => evaluate(props.commentTitle) || '')
 
 // Resolved through the field registry rather than a direct `q-input`, so the note
 // box picks up whatever the shared textarea control does
-// (AQL_CUSTOM_UI_GUIDE §2.3). Synchronous — the registry is built eagerly, so the
+// (UI_MODULE_DEVELOPER_GUIDE.md §2.3). Synchronous — the registry is built eagerly, so the
 // control never flashes an empty cell while a chunk loads.
 const CommentField = resolveFieldComponent('textarea', 'edit')
 const commentConfig = computed(() => COMMENT_CONFIG)

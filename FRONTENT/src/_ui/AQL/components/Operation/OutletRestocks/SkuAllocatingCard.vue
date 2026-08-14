@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-card flat bordered class="page-card aql-premium-gradient-card">
     <!-- PRODUCT HEADER — name | actions | totals, on one line.
          `no-wrap` keeps the three regions on the same row; the name column carries
@@ -136,7 +136,7 @@ const props = defineProps({
 defineEmits(['allocate', 'clear', 'quantity', 'cancel'])
 
 // Resolved once — the field registry is eager, so this is synchronous and the
-// inputs never flash empty (AQL_CUSTOM_UI_GUIDE §2.3).
+// inputs never flash empty (UI_MODULE_DEVELOPER_GUIDE.md §2.3).
 const QtyField = resolveFieldComponent('number', 'add')
 
 // Truncated hard, because the label sits in a third-width column: an untruncated

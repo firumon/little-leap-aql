@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div v-if="visible" :class="gutterClass">
     <q-card flat bordered class="page-card aql-premium-gradient-card">
       <q-card-section :class="gutterClass">
@@ -39,7 +39,7 @@
 
              Mounted through the `_fields/multiselect` control rather than a bare
              `q-select` so it inherits the shared search threshold, filter debounce
-             and chip treatment (AQL_CUSTOM_UI_GUIDE §2.3). -->
+             and chip treatment (UI_MODULE_DEVELOPER_GUIDE.md §2.3). -->
         <component
           :is="WarehouseField"
           :model-value="selectedWarehouses"
@@ -123,10 +123,10 @@
  * Holds no state of its own: every control projects the `ApprovalPlan` control
  * field and writes straight back through the composable (ARCHITECTURE RULES §6).
  */
-import { computed, inject, useAttrs } from 'vue'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { computed, useAttrs } from 'vue'
 import { resolveFieldComponent } from 'components/_fields/useFieldResolver'
-import { useRestockApproval } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockApproval'
+import { useRestockApproval } from 'src/_ui/AQL/composables/Operation/Outlets/useRestockApproval'
+import { useRestockApprovalContext } from 'src/_ui/AQL/composables/Operation/Outlets/useRestockApprovalContext'
 
 defineOptions({ name: 'OutletRestocksApproveWarehouseAndLocation', inheritAttrs: false })
 
@@ -147,8 +147,8 @@ const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 
 const rowDelay = (index) => ({ animationDelay: `${index * ROW_STAGGER_MS}ms` })
 
-const pageState = inject('pageState', null)
-const outlets = useRecord('Outlets')
+const { pageState, resource } = useRestockApprovalContext()
+const outlets = resource('Outlets')
 
 const {
   restock,

@@ -1,8 +1,30 @@
-import { computed, inject, onMounted } from 'vue'
+﻿import { computed, onMounted } from 'vue'
 import { useRecord } from 'src/composables/resources/useRecord'
+import { useRestockViewContext } from './useRestockViewContext'
+import {
+  itemProgressLabel,
+  itemProgressColor,
+  itemProgressIcon,
+  isApprovalCommitted,
+  workflowStamps
+} from 'src/_resource/Operation/OutletRestocks/composables/useRestockProgress'
 
 /**
- * OutletRestocks › View — the read-only aggregate behind the four `View/` cards.
+ * OutletRestocks › View — the UI half of the read-only aggregate behind the four
+ * `View/` cards.
+ *
+ * PRESENTATION ONLY (UI_RESOURCE_DOMAIN_LOGIC.md §4). The workflow VOCABULARY this
+ * page renders is no longer declared here. It used to carry its own `PROGRESS_META` — a
+ * verbatim copy of all seven request states plus three item-row states, with a comment
+ * promising it would be "kept in step" with the original. Two maps that must be kept in
+ * step are one map that isn't (§3.3), so the copy is gone: `ITEM_ROW_META` in
+ * `src/_resource/.../useRestockProgress` now extends the one `PROGRESS_META` with the
+ * item-row states, and the three lookups below are thin aliases onto it.
+ *
+ * The aliases keep the names the four `View/` cards already import, so the vocabulary
+ * consolidation changed no consumer.
+ *
+ * Page-scoped per §6.1: it calls `inject()`, and only `View.js` resolves its cards.
  *
  * ONE reactive source of truth (ARCHITECTURE RULES §6). Every card on the View
  * page renders a projection of the SAME `productGroups` tree — the summary reads
@@ -12,15 +34,8 @@ import { useRecord } from 'src/composables/resources/useRecord'
  * Nothing here mutates: there is no plan, no selection and no pageState write.
  * The View page is a statement of what happened, and the actions that changed it
  * live under `Approve/` and `MarkDelivered/`.
- *
- * Named PURE exports first — importable from a page contract or a JS modifier
- * without a setup context; the composable wrapper follows (AQL_CUSTOM_UI_GUIDE §2.2).
- *
- * ISOLATION: imports nothing resource-specific — only `useRecord` and the injected
- * `resourceRecord` (ARCHITECTURE RULES §5).
  */
 
-const PARENT = 'OutletRestocks'
 const CHILD = 'OutletRestockItems'
 
 const DEFAULT_STORAGE = '_default'
@@ -33,118 +48,32 @@ const num = (value) => {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : 0
 }
-// `useRecord().items` CAN CONTAIN `null` — see `useRestockApproval.js` for why. A
+// `useRecord().items` CAN CONTAIN `null` — see `useRestockAllocation.js` for why. A
 // null degrades to an empty row here and is then dropped by the field checks,
 // rather than being waved through one guard and dereferenced by the next.
 const asRow = (value) => (value && typeof value === 'object' ? value : {})
 const isActive = (value) => text(asRow(value).Status || 'Active') === 'Active'
 const storageOf = (value) => text(value) || DEFAULT_STORAGE
 
-/**
- * The presentation of every Progress value this page can render.
- *
- * ONE map for the request's own vocabulary (`OutletRestockProgress`) and the item
- * rows' (`OutletRestockItemProgress`) — the two share `DELIVERED` and `CANCELLED`
- * and must not be shown differently on the same screen. Keyed by the raw sheet
- * value, so a state added to `Constants.gs` shows up here as an unstyled grey
- * badge rather than an empty cell.
- */
-const PROGRESS_META = {
-  DRAFT: { label: 'Draft', color: 'grey-7', icon: 'edit_note' },
-  PENDING_APPROVAL: { label: 'Pending Approval', color: 'warning', icon: 'schedule' },
-  REVISION_REQUIRED: { label: 'Revision Required', color: 'orange', icon: 'undo' },
-  APPROVED: { label: 'Approved', color: 'primary', icon: 'check_circle' },
-  PARTIALLY_DELIVERED: { label: 'Partially Delivered', color: 'info', icon: 'local_shipping' },
-  DELIVERED: { label: 'Delivered', color: 'positive', icon: 'local_shipping' },
-  REJECTED: { label: 'Rejected', color: 'negative', icon: 'cancel' },
-  // Item-row states.
-  PENDING: { label: 'Pending', color: 'warning', icon: 'schedule' },
-  ALLOCATED: { label: 'Allocated', color: 'primary', icon: 'inventory_2' },
-  CANCELLED: { label: 'Cancelled', color: 'negative', icon: 'block' }
-}
-
-const FALLBACK_META = { label: '—', color: 'grey-6', icon: 'help_outline' }
-
-function progressMeta (state) {
-  return PROGRESS_META[text(state)] || FALLBACK_META
-}
-
-export function progressLabel (state) {
-  // An unmapped-but-present state states itself rather than reading as blank.
-  return PROGRESS_META[text(state)]?.label || text(state) || FALLBACK_META.label
-}
-export function progressColor (state) {
-  return progressMeta(state).color
-}
-export function progressIcon (state) {
-  return progressMeta(state).icon
-}
+// The one vocabulary, under the names this page's cards already import. `ITEM_ROW_META`
+// covers both the request's own states and its item rows', which is what this page needs
+// — it renders both on one screen.
+export const progressLabel = itemProgressLabel
+export const progressColor = itemProgressColor
+export const progressIcon = itemProgressIcon
 
 /**
- * The states in which a request has NOT yet been approved.
+ * Whether stock has been COMMITTED to this request — has it passed approval at all?
  *
- * Expressed as the unapproved set rather than the approved one deliberately: the
- * approved side keeps growing (`APPROVED`, `PARTIALLY_DELIVERED`, `DELIVERED`, and
- * whatever a later delivery stage adds), while the "no allocation exists yet" side
- * is a closed list. `isApproved` is the question the allocation card asks — has
- * stock been committed, so is there anything to show a warehouse for?
+ * Aliased to the domain predicate under the name `View/AllocationDetails.vue` imports.
+ * Note it is deliberately NOT `useRestockProgress`'s `isApproved`, which asks the
+ * narrower question "is this record sitting in the APPROVED state exactly"; a
+ * PARTIALLY_DELIVERED request answers false to that and true to this.
  */
-export const UNAPPROVED_PROGRESS = ['DRAFT', 'PENDING_APPROVAL', 'REVISION_REQUIRED']
+export const isApproved = isApprovalCommitted
 
-export function isApproved (record) {
-  const progress = text(asRow(record).Progress)
-  return !!progress && !UNAPPROVED_PROGRESS.includes(progress)
-}
-
-/**
- * The workflow stamp columns on `OutletRestocks`, in the order the request walks
- * through them.
- *
- * The column PREFIX is carried beside the state because the two genuinely differ:
- * submitting for approval moves the request to `PENDING_APPROVAL` but stamps
- * `ProgressSubmitted*` (Documents/OPERATION_SHEET_STRUCTURE.md). Deriving the
- * column from the state would silently read a column that does not exist.
- */
-export const WORKFLOW_STAMPS = [
-  { state: 'PENDING_APPROVAL', prefix: 'ProgressSubmitted', title: 'Submitted for Approval' },
-  { state: 'REVISION_REQUIRED', prefix: 'ProgressRevisionRequired', title: 'Sent Back for Revision' },
-  { state: 'APPROVED', prefix: 'ProgressApproved', title: 'Approved' },
-  { state: 'REJECTED', prefix: 'ProgressRejected', title: 'Rejected' },
-  { state: 'DELIVERED', prefix: 'ProgressDelivered', title: 'Delivered' }
-]
-
-export const WORKFLOW_STATES = WORKFLOW_STAMPS.map((stamp) => stamp.state)
-
-/**
- * Every workflow event that has actually happened, oldest first.
- *
- * A stamp with no actor is a stage the request never reached, and is dropped —
- * the timeline shows history, not a checklist of what could still happen. Stamps
- * are written as ISO strings by `outletRestockPayload.js`; an unparseable one
- * sorts to the end rather than poisoning the comparison with `NaN`, and keeps its
- * raw text so a malformed stamp is visible instead of silently blank.
- */
-export function workflowStamps (record) {
-  const row = asRow(record)
-  return WORKFLOW_STAMPS
-    .map((stamp) => {
-      const at = text(row[`${stamp.prefix}At`])
-      const parsed = at ? new Date(at) : null
-      return {
-        state: stamp.state,
-        title: stamp.title,
-        by: text(row[`${stamp.prefix}By`]),
-        at,
-        comment: text(row[`${stamp.prefix}Comment`]),
-        icon: progressIcon(stamp.state),
-        color: progressColor(stamp.state),
-        label: progressLabel(stamp.state),
-        timestamp: parsed && !Number.isNaN(parsed.getTime()) ? parsed : null
-      }
-    })
-    .filter((event) => event.by)
-    .sort((a, b) => (a.timestamp?.getTime() ?? Infinity) - (b.timestamp?.getTime() ?? Infinity))
-}
+/** Re-exported so the timeline card needs one import, not two. */
+export { workflowStamps }
 
 /** `2026-08-11T09:14:00.000Z` → `11 Aug 2026, 09:14`. Blank stays blank. */
 export function formatStampDate (value) {
@@ -255,7 +184,9 @@ export function groupViewRows (rows = [], label = () => ({}), warehouseName = (c
 }
 
 export function useRestockView () {
-  const resourceRecord = inject('resourceRecord', null)
+  // Injected once for the whole page, by the relay (§6.1) — not a second time
+  // here, or the View page would have two composables injecting `resourceRecord`.
+  const { resourceRecord } = useRestockViewContext()
 
   // Same accessor idiom as the rest of the restock flow, so this file imports no
   // store (ARCHITECTURE RULES §5).

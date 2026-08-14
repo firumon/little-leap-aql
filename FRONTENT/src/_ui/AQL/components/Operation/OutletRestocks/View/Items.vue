@@ -48,11 +48,11 @@
  *
  * No `<style>` block (ARCHITECTURE RULES §7).
  */
-import { computed, inject } from 'vue'
-import { evaluateProp } from 'src/composables/resources/useSectionResolver'
+import { computed } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import AqlGroupedList from 'components/app/AqlGroupedList.vue'
-import { useRestockView } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockView'
+import { useRestockView } from 'src/_ui/AQL/composables/Operation/OutletRestocks/View/useRestockView'
+import { useRestockViewContext } from 'src/_ui/AQL/composables/Operation/OutletRestocks/View/useRestockViewContext'
 
 defineOptions({ name: 'OutletRestocksViewItems', inheritAttrs: false })
 
@@ -64,13 +64,12 @@ const props = defineProps({
   padding: { type: String, default: 'sm' }
 })
 
-const resourceConfig = inject('resourceConfig', null)
-const resourceRecord = inject('resourceRecord', null)
+const { evaluate } = useRestockViewContext()
 
 const { productGroups, pending } = useRestockView()
 
 const spacingClass = computed(() => `q-px-${props.padding}`)
-const finalTitle = computed(() => evaluateProp(props.title, resourceRecord, resourceConfig))
+const finalTitle = computed(() => evaluate(props.title))
 
 const groups = computed(() => (Array.isArray(props.items) ? props.items : productGroups.value))
 

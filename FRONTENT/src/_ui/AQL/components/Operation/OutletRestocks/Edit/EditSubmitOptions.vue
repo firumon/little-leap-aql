@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div :class="gutterClass">
     <!-- DRAFT: the request has never been submitted, so the first question is
          whether this save submits it. The toggle leads because it decides whether
@@ -95,7 +95,7 @@
  *
  * Neither control submits: both only record intent on pageState, and the sticky
  * bar (`Edit/PageAction.js`) reads it back — a content card that submitted would
- * double-fire against the PageAction dispatcher (AQL_ACTION_SYSTEM.md §5).
+ * double-fire against the PageAction dispatcher (UI_ACTION_SYSTEM.md §5).
  * `isDraft` is page-only intent, so it lives in `controls` and never reaches GAS;
  * the comment is a real resource header, so it goes through `setField`.
  *
@@ -107,20 +107,18 @@
  *
  * Replaces `EditSaveAsDraft.vue`. No `<style>` block (ARCHITECTURE RULES §7).
  */
-import { computed, inject, useAttrs } from 'vue'
+import { computed, useAttrs } from 'vue'
 import FieldTextareaEdit from 'components/_fields/textarea/Edit.vue'
-import { useRestockEditForm } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockEditForm'
+import { useRestockEditForm } from 'src/_ui/AQL/composables/Operation/OutletRestocks/Edit/useRestockEditForm'
 
 defineOptions({ name: 'OutletRestocksEditSubmitOptions', inheritAttrs: false })
 
 // Vertical rhythm follows the page's own gutter token (drilled down from
-// pageProps — AQL_PAGE_AND_SECTION_SYSTEM.md §1.3.4).
+// pageProps — UI_PAGE_AND_SECTION_SYSTEM.md §1.3.4).
 const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 
-const pageState = inject('pageState', null)
-
-const { parent, progress, isRevision, comment, setComment } = useRestockEditForm()
+const { pageState, parent, progress, isRevision, comment, setComment } = useRestockEditForm()
 
 const isDraftState = computed(() => progress.value === 'DRAFT')
 

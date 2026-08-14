@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div v-if="pageState?.meta.currentStep === 1" :class="gutterClass">
     <q-card class="aql-premium-card" flat>
       <q-card-section :class="gutterClass">
@@ -61,34 +61,31 @@
  * Navigation belongs to the sticky bar (`Add/PageAction.js`), which reads these
  * control fields back off pageState to gate `next`.
  */
-import { computed, inject, onMounted, useAttrs } from 'vue'
+import { computed, onMounted, useAttrs } from 'vue'
 import FieldSelectAdd from 'components/_fields/select/Add.vue'
-import { useAuth } from 'src/composables/core/useAuth'
-import { useRecord } from 'src/composables/resources/useRecord'
-import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
+import { useRestockAddContext } from 'src/_ui/AQL/composables/Operation/OutletRestocks/Add/useRestockAddContext'
 
 defineOptions({ name: 'OutletRestocksOutletSelection', inheritAttrs: false })
 
 // Vertical rhythm follows the page's own gutter token (drilled down from
-// pageProps — AQL_PAGE_AND_SECTION_SYSTEM.md §1.3.4) so the gap between these
+// pageProps — UI_PAGE_AND_SECTION_SYSTEM.md §1.3.4) so the gap between these
 // cards matches the gap between page sections instead of hardcoding its own scale.
 const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 
-const pageState = inject('pageState', null)
-const resourceConfig = inject('resourceConfig', null)
-const resourceRecord = inject('resourceRecord', null)
-// Every resource this step reads goes through `useRecord`, which owns both the
-// reactive rows and the `reload()` delta-sync — so no store is imported here
-// (ARCHITECTURE RULES §5).
-const outlets = useRecord('Outlets')
-const warehouses = useRecord('Warehouses')
-const skus = useRecord('SKUs')
-const products = useRecord('Products')
-const outletStorages = useRecord('OutletStorages')
-const warehouseStorages = useRecord('WarehouseStorages')
-const { user, hasRegionAccess } = useAuth()
-const { query } = useRouteConfig()
+// Page context, identity and route reads all arrive through the Add relay, which
+// is the only file behind this page allowed to inject or to touch a Core
+// Composable (UI_RESOURCE_DOMAIN_LOGIC.md §6).
+const { pageState, resourceRecord, resource, user, hasRegionAccess, query } = useRestockAddContext()
+// Every resource this step reads goes through the relay's `useRecord` accessor,
+// which owns both the reactive rows and the `reload()` delta-sync — so no store
+// is imported here (ARCHITECTURE RULES §5).
+const outlets = resource('Outlets')
+const warehouses = resource('Warehouses')
+const skus = resource('SKUs')
+const products = resource('Products')
+const outletStorages = resource('OutletStorages')
+const warehouseStorages = resource('WarehouseStorages')
 const parent = pageState.useNode('OutletRestocks')
 
 const outletOptions = computed(() => outlets.items.value

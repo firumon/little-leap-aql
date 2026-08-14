@@ -1,5 +1,5 @@
-import { useAuth } from 'src/composables/core/useAuth'
-import { restockEditableProgress } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockProgress'
+﻿import { useAuth } from 'src/composables/core/useAuth'
+import { restockEditableProgress } from 'src/_resource/Operation/OutletRestocks/composables/useRestockProgress'
 
 /**
  * OutletRestocks › ResourceActionEdit — JS modifier (tier 4: resource-level).
@@ -16,7 +16,7 @@ import { restockEditableProgress } from 'src/_ui/AQL/composables/Operation/Outle
  * The owner is matched on the user's CODE, not their name: `CreatedBy` is written
  * by GAS as `auth.user.UserID` (`GAS/resourceApi.gs`), and `useAuth`'s flat user
  * projection exposes that same `APP.Users.UserID` as `user.id`
- * (Documents/LOGIN_RESPONSE.md §3). Names are neither unique nor stable, so
+ * (Documents/API_LOGIN_RESPONSE.md §3). Names are neither unique nor stable, so
  * comparing them would hand the FAB to any namesake.
  *
  * `useAuth()` is called at MODULE level, which is safe here: it only reaches Pinia

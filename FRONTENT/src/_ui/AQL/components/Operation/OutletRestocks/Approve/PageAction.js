@@ -1,16 +1,16 @@
-import { useAuth } from 'src/composables/core/useAuth'
+﻿import { useAuth } from 'src/composables/core/useAuth'
 import { resourceGetRequest } from 'src/composables/resources/usePageState'
 import {
   buildPendingRestockAllocationBatchRequests,
   buildRestockAllocationBatchRequests,
   buildRestockCancelItemsBatchRequests,
   buildRestockRejectBatchRequests
-} from 'src/_ui/AQL/composables/Operation/OutletRestocks/outletRestockPayload'
+} from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
 import {
   pendingAllocationRows,
   planAllocatedQty,
   splitApprovalRows
-} from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockApproval'
+} from 'src/_resource/Operation/OutletRestocks/composables/useRestockAllocation'
 
 /**
  * OutletRestocks › Approve › PageAction — JS modifier (tier 2: resource + page).
@@ -25,7 +25,7 @@ import {
  * factory once per resolve and caches the result, but merges it into `finalProps`
  * inside a `computed` — so a getter is re-read on every recompute and its reads of
  * `pageState.meta.currentStep` are tracked. A literal array would latch the step-1
- * button set forever (AQL_ACTION_SYSTEM.md §1.3).
+ * button set forever (UI_ACTION_SYSTEM.md §1.3).
  *
  * This modifier runs OUTSIDE a setup context, so it cannot call
  * `useRestockApproval()` (which injects and mounts). It does not need to: the

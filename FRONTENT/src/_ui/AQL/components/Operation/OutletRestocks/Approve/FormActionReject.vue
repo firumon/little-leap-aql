@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <q-btn
     class="aql-form-action-btn"
     glossy
@@ -18,7 +18,7 @@
  * `FormActions` resolves any `actions` entry it does not recognise as
  * `FormAction<Name>` and wires its click to the generic `action(key)` emit, which
  * `PageAction.handleAction('reject')` dispatches to the `reject` handler in
- * `Approve/PageAction.js` (AQL_ACTION_SYSTEM.md §3.2). So this component supplies
+ * `Approve/PageAction.js` (UI_ACTION_SYSTEM.md §3.2). So this component supplies
  * the button and nothing else — it reports intent upward and never dispatches,
  * for the same reason `FormActionCancel` does not navigate: a button that acted on
  * its own would make the handler's `{ valid: false }` veto unable to stop it.
@@ -26,10 +26,10 @@
  * There is no framework base for this name, so it is a `.vue` override rather than
  * a `.js` modifier, and it mirrors `FormActionSubmit`'s shape exactly — including
  * disabling (never spinner-loading) while a dispatch is in flight, since the
- * blocking indicator is `AqlContentWrapper`'s overlay (AQL_ACTION_SYSTEM.md §5).
+ * blocking indicator is `AqlContentWrapper`'s overlay (UI_ACTION_SYSTEM.md §5).
  */
-import { computed, inject } from 'vue'
-import { evaluateProp } from 'src/composables/resources/useActionResolver'
+import { computed } from 'vue'
+import { useRestockApprovalContext } from 'src/_ui/AQL/composables/Operation/Outlets/useRestockApprovalContext'
 
 defineOptions({ name: 'OutletRestocksApproveFormActionReject', inheritAttrs: false })
 
@@ -42,13 +42,7 @@ const props = defineProps({
 
 const emit = defineEmits(['click'])
 
-const resourceConfig = inject('resourceConfig', null)
-const resourceRecord = inject('resourceRecord', null)
-const pageState = inject('pageState', null)
-
-function evalProp (val) {
-  return evaluateProp(val, resourceRecord, resourceConfig)
-}
+const { pageState, evaluate: evalProp } = useRestockApprovalContext()
 
 const submitting = computed(() => !!pageState?.meta?.submitting)
 

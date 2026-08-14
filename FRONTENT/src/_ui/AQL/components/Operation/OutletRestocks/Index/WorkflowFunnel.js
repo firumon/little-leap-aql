@@ -6,7 +6,7 @@ import {
   progressLabel,
   progressColor,
   progressIcon
-} from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockProgress'
+} from 'src/_resource/Operation/OutletRestocks/composables/useRestockProgress'
 
 /**
  * OutletRestocks › Index › WorkflowFunnel — JS modifier (tier CP: resource + page).

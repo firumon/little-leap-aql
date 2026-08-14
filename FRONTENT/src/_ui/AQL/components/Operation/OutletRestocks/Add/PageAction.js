@@ -1,4 +1,4 @@
-import { batchRef } from 'src/utils/appHelpers'
+﻿import { batchRef } from 'src/utils/appHelpers'
 import { toDateTime24 } from 'src/utils/dateHelpers'
 import { resourceBulkRequest } from 'src/composables/resources/usePageState'
 import { useAuth } from 'src/composables/core/useAuth'
@@ -17,12 +17,12 @@ import { useAuth } from 'src/composables/core/useAuth'
  * `useActionResolver` calls this factory once per resolve and caches the result,
  * but merges it into `finalProps` inside a `computed` — so a getter is re-read on
  * every recompute and its reads of `pageState.meta.currentStep` are tracked. A
- * literal array would latch the step-1 button set forever (AQL_ACTION_SYSTEM.md §1.3).
+ * literal array would latch the step-1 button set forever (UI_ACTION_SYSTEM.md §1.3).
  *
  * Only `next` is intercepted; `back` is left to the dispatcher's built-in
  * decrement. `next` validates and returns `{ valid: false, message }` to veto —
  * on success it returns nothing, so the built-in increment performs the move.
- * Every handler follows the dispatcher contract in AQL_ACTION_SYSTEM.md §4.
+ * Every handler follows the dispatcher contract in UI_ACTION_SYSTEM.md §4.
  */
 export default (props, { pageState, resourceConfig }) => {
   const parent = pageState.useNode('OutletRestocks')

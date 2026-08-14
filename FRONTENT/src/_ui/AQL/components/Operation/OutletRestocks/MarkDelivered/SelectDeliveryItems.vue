@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div v-if="visible" :class="gutterClass">
     <!-- What is being confirmed, stated once. The driver arrived from a list and
          needs to know which request this is without going back. -->
@@ -152,12 +152,12 @@
  *
  * Holds no state of its own: every checkbox projects the `DeliverySelection`
  * control field and writes straight back through the composable
- * (ARCHITECTURE RULES §6, AQL_CUSTOM_UI_GUIDE §10).
+ * (ARCHITECTURE RULES §6, UI_MODULE_DEVELOPER_GUIDE.md §10).
  */
-import { computed, inject, useAttrs } from 'vue'
+import { computed, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
-import { evaluateProp } from 'src/composables/resources/useSectionResolver'
-import { useRestockDelivery } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockDelivery'
+import { useRestockDelivery } from 'src/_ui/AQL/composables/Operation/OutletRestocks/MarkDelivered/useRestockDelivery'
+import { useRestockDeliveryContext } from 'src/_ui/AQL/composables/Operation/OutletRestocks/MarkDelivered/useRestockDeliveryContext'
 
 defineOptions({ name: 'OutletRestocksMarkDeliveredSelectDeliveryItems', inheritAttrs: false })
 
@@ -177,16 +177,14 @@ const props = defineProps({
   step: { type: Number, default: 1 },
   // Customizable by any `_ui/` tier, as a value or as a function of
   // (record, config) — resolved through `evaluateProp` like every other
-  // placeholder prop (AQL_CUSTOM_UI_GUIDE §8).
+  // placeholder prop (UI_MODULE_DEVELOPER_GUIDE.md §8).
   title: { type: [String, Function], default: 'Items Out for Delivery' }
 })
 
 const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 
-const pageState = inject('pageState', null)
-const resourceConfig = inject('resourceConfig', null)
-const resourceRecord = inject('resourceRecord', null)
+const { pageState, evaluate } = useRestockDeliveryContext()
 
 const {
   restock,
@@ -204,7 +202,7 @@ const {
 
 const visible = computed(() => pageState?.meta.currentStep === props.step)
 
-const title = computed(() => evaluateProp(props.title, resourceRecord, resourceConfig) || '')
+const title = computed(() => evaluate(props.title) || '')
 
 // The same 40ms cadence the framework detail cards animate on, so a custom card
 // stacked beside one enters in step (§10).

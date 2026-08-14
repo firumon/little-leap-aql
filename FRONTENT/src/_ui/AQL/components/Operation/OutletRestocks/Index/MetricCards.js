@@ -5,7 +5,7 @@ import {
   PENDING_APPROVAL,
   REVISION_REQUIRED,
   AWAITING_DELIVERY
-} from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockProgress'
+} from 'src/_resource/Operation/OutletRestocks/composables/useRestockProgress'
 
 /**
  * OutletRestocks › Index › MetricCards — JS modifier (tier CP: resource + page).

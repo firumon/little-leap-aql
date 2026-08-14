@@ -39,10 +39,11 @@
  * line's own outstanding requirement, so nothing here performs arithmetic and
  * no input can over-allocate.
  */
-import { computed, inject, useAttrs } from 'vue'
+import { computed, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import SkuAllocatingCard from './SkuAllocatingCard.vue'
-import { useRestockApproval } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockApproval'
+import { useRestockApproval } from 'src/_ui/AQL/composables/Operation/Outlets/useRestockApproval'
+import { useRestockApprovalContext } from 'src/_ui/AQL/composables/Operation/Outlets/useRestockApprovalContext'
 
 defineOptions({ name: 'OutletRestocksApproveItemAllocating', inheritAttrs: false })
 
@@ -53,7 +54,7 @@ const props = defineProps({
 const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 
-const pageState = inject('pageState', null)
+const { pageState } = useRestockApprovalContext()
 const {
   productGroups,
   setLineQuantity,

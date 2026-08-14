@@ -1,10 +1,10 @@
-import { useAuth } from 'src/composables/core/useAuth'
-import { buildRestockDeliveryBatchRequests } from 'src/_ui/AQL/composables/Operation/OutletRestocks/outletRestockPayload'
+﻿import { useAuth } from 'src/composables/core/useAuth'
+import { buildRestockDeliveryBatchRequests } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
 import {
   deliverableRows,
   normalizeSelection,
   SELECTION
-} from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockDelivery'
+} from 'src/_resource/Operation/OutletRestocks/composables/useRestockDelivery'
 
 /**
  * OutletRestocks › MarkDelivered › PageAction — JS modifier (tier 2: resource + page).
@@ -19,7 +19,7 @@ import {
  * factory once per resolve and caches the result, but merges it into `finalProps`
  * inside a `computed` — so a getter is re-read on every recompute and its reads of
  * `pageState.meta.currentStep` are tracked. A literal array would latch the step-1
- * button set forever (AQL_ACTION_SYSTEM.md §1.3).
+ * button set forever (UI_ACTION_SYSTEM.md §1.3).
  *
  * This modifier runs OUTSIDE a setup context, so it cannot call
  * `useRestockDelivery()` (which injects and mounts). It does not need to: the
@@ -74,7 +74,7 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
 
   // Confirming a delivery writes the item rows AND an outlet stock movement, so
   // both permissions are required. Failing closed here is the rule; hiding the
-  // entry point on the View page is only UX (AQL_CUSTOM_UI_GUIDE §11).
+  // entry point on the View page is only UX (UI_MODULE_DEVELOPER_GUIDE.md §11).
   function permitted () {
     return resourceConfig?.allowed({ OutletRestocks: 'update', OutletMovements: 'create' })
   }

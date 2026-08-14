@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div :class="gutterClass">
     <q-card flat bordered class="page-card aql-premium-gradient-card">
       <q-card-section>
@@ -68,8 +68,8 @@
  * (ARCHITECTURE RULES §6). No `<style>` block (ARCHITECTURE RULES §7).
  */
 import { computed, useAttrs } from 'vue'
-import { useRestockEditForm } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockEditForm'
-import { restockEditableProgress } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockProgress'
+import { useRestockEditForm } from 'src/_ui/AQL/composables/Operation/OutletRestocks/Edit/useRestockEditForm'
+import { restockEditableProgress } from 'src/_resource/Operation/OutletRestocks/composables/useRestockProgress'
 
 defineOptions({ name: 'OutletRestocksEditRestockHeader', inheritAttrs: false })
 
@@ -79,7 +79,7 @@ defineOptions({ name: 'OutletRestocksEditRestockHeader', inheritAttrs: false })
 const ROW_STAGGER_MS = 40
 
 // Vertical rhythm follows the page's own gutter token (drilled down from
-// pageProps — AQL_PAGE_AND_SECTION_SYSTEM.md §1.3.4).
+// pageProps — UI_PAGE_AND_SECTION_SYSTEM.md §1.3.4).
 const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 

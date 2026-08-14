@@ -1,5 +1,6 @@
-import { computed, inject, onMounted, watch } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useRecord } from 'src/composables/resources/useRecord'
+import { useRestockFormContext } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockFormContext'
 
 /**
  * OutletRestocks › Edit — hydration + read-model behind `EditRestockHeader`.
@@ -30,8 +31,10 @@ const isActive = (row) => (row?.Status || 'Active') === 'Active'
 const text = (value) => String(value ?? '').trim()
 
 export function useRestockEditForm () {
-  const pageState = inject('pageState', null)
-  const resourceRecord = inject('resourceRecord', null)
+  // Injected once for the Add + Edit pages, by the shared relay (§6.1) — the two
+  // pages resolve the same resource-tier item cards, so the relay sits above both
+  // and is the single `inject()` caller behind either of them.
+  const { pageState, resourceRecord } = useRestockFormContext()
 
   // Same accessor idiom as the Add wizard, so the whole restock flow reads
   // resources through `useRecord` and imports no store (ARCHITECTURE RULES §5).
@@ -173,6 +176,9 @@ export function useRestockEditForm () {
   }
 
   return {
+    // Relayed on so `EditSubmitOptions` — which already imports this file — can
+    // read and write its `isDraft` control field without a second import (§6).
+    pageState,
     parent,
     outletCode,
     outletName,

@@ -1,10 +1,10 @@
-/**
+﻿/**
  * OutletRestocks › Approve contract — `/operation/outlet-restocks/{code}/_action/approve`.
  *
  * An `_action/:action` route resolves its canonical page key to the ACTION NAME,
  * so this file is `Approve.js` (not `action.js`) and a placeholder beneath it may
  * resolve under the `approve/` page tier — `.../OutletRestocks/Approve/*`
- * (AQL_CUSTOM_UI_GUIDE §2.1). `PageAction` and `FormActionReject` live there,
+ * (UI_MODULE_DEVELOPER_GUIDE.md §2.1). `PageAction` and `FormActionReject` live there,
  * because the sticky bar IS approval-specific.
  *
  * The four content cards do NOT. They sit one level up at the RESOURCE tier
@@ -21,7 +21,7 @@
  *
  * The step each card belongs to is declared HERE rather than hardcoded in the
  * card, so the flow can be re-ordered from the contract alone
- * (AQL_PAGE_AND_SECTION_SYSTEM.md §1.4.1).
+ * (UI_PAGE_AND_SECTION_SYSTEM.md §1.4.1).
  *
  * There is no `Update` content: an approval does not edit the request's fields,
  * it decides where its stock comes from. `WarehouseAndLocation` hydrates the

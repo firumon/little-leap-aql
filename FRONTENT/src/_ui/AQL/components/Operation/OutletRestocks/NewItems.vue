@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div v-if="visible" :class="gutterClass">
     <SectionDividerLabel label="New Items" />
     <StockMatchGroups
@@ -22,7 +22,7 @@
  * each card renders. See that file for why the step gate is a prop rather than a
  * direct `currentStep === 2` test.
  */
-import { computed, inject, useAttrs } from 'vue'
+import { computed, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import StockMatchGroups from './StockMatchGroups.vue'
 import { useRestockStockMatch } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockStockMatch'
@@ -35,12 +35,11 @@ const props = defineProps({
 })
 
 // Vertical rhythm follows the page's own gutter token (drilled down from
-// pageProps — AQL_PAGE_AND_SECTION_SYSTEM.md §1.3.4).
+// pageProps — UI_PAGE_AND_SECTION_SYSTEM.md §1.3.4).
 const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 
-const pageState = inject('pageState', null)
 const visible = computed(() => props.step == null || Number(props.step) === (pageState?.meta.currentStep || 1))
 
-const { newRows, isDirect, setQuantity, adjustQuantity } = useRestockStockMatch()
+const { pageState, newRows, isDirect, setQuantity, adjustQuantity } = useRestockStockMatch()
 </script>

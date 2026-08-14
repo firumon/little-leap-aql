@@ -1,6 +1,6 @@
-import { toDateTime24 } from 'src/utils/dateHelpers'
+﻿import { toDateTime24 } from 'src/utils/dateHelpers'
 import { useAuth } from 'src/composables/core/useAuth'
-import { restockEditableProgress } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockProgress'
+import { restockEditableProgress } from 'src/_resource/Operation/OutletRestocks/composables/useRestockProgress'
 
 /**
  * OutletRestocks › Edit › PageAction — JS modifier (tier 1: resource + page).
@@ -24,7 +24,7 @@ import { restockEditableProgress } from 'src/_ui/AQL/composables/Operation/Outle
  * getter for the same reason `Add/PageAction.js` uses one — `useActionResolver`
  * merges this factory's result inside a `computed`, so a getter is re-read on
  * recompute while a literal would latch whatever was true at resolve time
- * (AQL_ACTION_SYSTEM.md §1.3).
+ * (UI_ACTION_SYSTEM.md §1.3).
  *
  * Only `submit` is intercepted; `cancel` goes to the list rather than the
  * dispatcher's `goBack()`, since abandoning an edit should not replay whatever

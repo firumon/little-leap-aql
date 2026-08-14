@@ -1,10 +1,32 @@
-import { computed, inject } from 'vue'
+﻿import { computed } from 'vue'
 import { useRecord } from 'src/composables/resources/useRecord'
+import { useRestockFormContext } from './useRestockFormContext'
 import { useProductSkuResolver } from 'src/composables/master/products/useProductSkuResolver'
+import {
+  stockMatchFigures,
+  clampRestockQuantity
+} from 'src/_resource/Operation/OutletRestocks/composables/useRestockStockMatch'
 
 /**
- * OutletRestocks › Add › step 2 — the stock-match aggregate behind `AdjustItems`
+ * OutletRestocks — the UI half of the stock-match aggregate behind `AdjustItems`
  * and `NewItems`.
+ *
+ * PRESENTATION ONLY (UI_RESOURCE_DOMAIN_LOGIC.md §4). The ARITHMETIC — existing +
+ * restock = final, what the source warehouse is left with, and the `maxQuantity` ceiling
+ * that makes a DIRECT restock bounded and a standard one unbounded — is domain, and now
+ * lives in `src/_resource/Operation/OutletRestocks/composables/useRestockStockMatch`.
+ * What stays here is the projection the two cards render, the `useProductSkuResolver`
+ * label lookup, and the pageState child bookkeeping.
+ *
+ * RESOURCE tier, not `Add/` (§6.2). It used to sit under `Add/` — written when
+ * the Add wizard was its only caller — but `AdjustItems`/`NewItems` are resource-
+ * tier cards that BOTH `Add.js` and `Edit.js` resolve, and a `.vue` file has one
+ * import line per composable: left under `Add/`, the Edit page could only reach
+ * this aggregate by copying both cards. It sits at the tier of its most general
+ * consumer, which is where those two cards already are.
+ *
+ * It no longer calls `inject()` itself — `useRestockFormContext`, the one relay
+ * shared by the Add and Edit pages, owns that (§6.1).
  *
  * ONE reactive source of truth (ARCHITECTURE RULES §6): the restock quantity of
  * every SKU is read straight back out of `pageState`'s `OutletRestockItems`
@@ -37,7 +59,8 @@ const num = (value) => {
 const isActive = (row) => (row?.Status || 'Active') === 'Active'
 
 export function useRestockStockMatch () {
-  const pageState = inject('pageState', null)
+  // Injected once for the Add + Edit pages, by the shared relay (§6.1).
+  const { pageState } = useRestockFormContext()
   // Rows come through `useRecord`, the same accessor step 1 loads them with, so
   // this file imports no store either — the whole restock flow reads resources
   // through one idiom.
@@ -103,9 +126,6 @@ export function useRestockStockMatch () {
     return availableSkus.value.map((sku) => {
       const info = skuInfo(sku) || {}
       const variantLabel = (info.variantValues || []).filter(Boolean).join(' / ')
-      const outletQuantity = outletQuantities.value[sku] || 0
-      const warehouseQuantity = warehouseQuantities.value[sku] || 0
-      const restockQuantity = quantities.value[key(sku)] || 0
       return {
         SKU: sku,
         productCode: text(info.productCode) || 'UNGROUPED',
@@ -113,14 +133,14 @@ export function useRestockStockMatch () {
         // The variant values are what distinguishes one SKU of a product from
         // another; with no variant types configured the code is the only label left.
         variantLabel: variantLabel || sku,
-        outletQuantity,
-        warehouseQuantity,
-        restockQuantity,
-        finalQuantity: outletQuantity + restockQuantity,
-        warehouseRemaining: warehouseQuantity - restockQuantity,
-        // Standard requests are unbounded — the approver allocates against real
-        // stock later. Direct allocation cannot exceed the source warehouse.
-        maxQuantity: isDirect.value ? warehouseQuantity : Infinity
+        // The five quantity figures come from the domain layer, so the ceiling this
+        // card enforces is the same one the payload is built against.
+        ...stockMatchFigures({
+          outletQuantity: outletQuantities.value[sku] || 0,
+          warehouseQuantity: warehouseQuantities.value[sku] || 0,
+          restockQuantity: quantities.value[key(sku)] || 0,
+          isDirect: isDirect.value
+        })
       }
     }).sort((a, b) => a.productName.localeCompare(b.productName) || a.variantLabel.localeCompare(b.variantLabel))
   })
@@ -159,7 +179,7 @@ export function useRestockStockMatch () {
   function setQuantity (sku, value) {
     const row = rows.value.find((item) => item.SKU === sku)
     if (!row) return
-    const quantity = Math.min(Math.max(0, Math.floor(num(value))), row.maxQuantity)
+    const quantity = clampRestockQuantity(value, row.maxQuantity)
     const entries = matchingEntries(sku)
 
     if (!entries.length) {
@@ -196,6 +216,10 @@ export function useRestockStockMatch () {
   }
 
   return {
+    // Relayed on so `AdjustItems`/`NewItems` — which already import this file
+    // and need nothing else from the context — can gate on `meta.currentStep`
+    // without a second import line (§6).
+    pageState,
     isDirect,
     outletCode,
     warehouseCode,

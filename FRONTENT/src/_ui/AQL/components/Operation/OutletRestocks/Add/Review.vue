@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div v-if="pageState?.meta.currentStep === 3" :class="gutterClass">
     <!-- Section 1 — the actual request. Always open, because this is the list the
          user is signing off on; nothing here is optional reading. Restock
@@ -78,22 +78,22 @@
  * Submission itself belongs to the sticky bar (`Add/PageAction.js`); a content
  * card never submits on its own or it would double-fire against the dispatcher.
  */
-import { computed, inject, useAttrs } from 'vue'
+import { computed, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import AqlGroupedList from 'components/app/AqlGroupedList.vue'
-import { useRecord } from 'src/composables/resources/useRecord'
 import { useRestockStockMatch } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockStockMatch'
+import { useRestockAddContext } from 'src/_ui/AQL/composables/Operation/OutletRestocks/Add/useRestockAddContext'
 
 defineOptions({ name: 'OutletRestocksReview', inheritAttrs: false })
 
 // Vertical rhythm follows the page's own gutter token (drilled down from
-// pageProps — AQL_PAGE_AND_SECTION_SYSTEM.md §1.3.4).
+// pageProps — UI_PAGE_AND_SECTION_SYSTEM.md §1.3.4).
 const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 
-const pageState = inject('pageState', null)
-const outlets = useRecord('Outlets')
-const warehouses = useRecord('Warehouses')
+const { pageState, resource } = useRestockAddContext()
+const outlets = resource('Outlets')
+const warehouses = resource('Warehouses')
 const { rows: allRows, isDirect, warehouseCode } = useRestockStockMatch()
 const parent = pageState.useNode('OutletRestocks')
 

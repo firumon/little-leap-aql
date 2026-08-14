@@ -58,13 +58,13 @@ import { computed, useAttrs } from 'vue'
 import AppList from 'components/app/AppList.vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import RestockActionButtons from './RestockActionButtons.vue'
+import { pendingCompletionPreset } from 'src/_ui/AQL/composables/Operation/OutletRestocks/Index/useRestockRowPresets'
 import {
-  pendingCompletionPreset,
   sortByDate,
   settledAt,
   isApproved,
   isPartiallyDelivered
-} from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockProgress'
+} from 'src/_resource/Operation/OutletRestocks/composables/useRestockProgress'
 
 defineOptions({ name: 'OutletRestocksListPendingCompletion', inheritAttrs: false })
 

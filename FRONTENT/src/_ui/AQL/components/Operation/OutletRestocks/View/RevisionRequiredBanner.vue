@@ -50,9 +50,9 @@
  *
  * No `<style>` block (ARCHITECTURE RULES §7).
  */
-import { computed, inject } from 'vue'
-import { evaluateProp } from 'src/composables/resources/useSectionResolver'
-import { useRestockView } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockView'
+import { computed } from 'vue'
+import { useRestockView } from 'src/_ui/AQL/composables/Operation/OutletRestocks/View/useRestockView'
+import { useRestockViewContext } from 'src/_ui/AQL/composables/Operation/OutletRestocks/View/useRestockViewContext'
 
 defineOptions({ name: 'OutletRestocksViewRevisionRequiredBanner', inheritAttrs: false })
 
@@ -71,14 +71,13 @@ const props = defineProps({
   padding: { type: String, default: 'sm' }
 })
 
-const resourceConfig = inject('resourceConfig', null)
-const resourceRecord = inject('resourceRecord', null)
+const { evaluate } = useRestockViewContext()
 
 const { restock, pending, formatStampDate } = useRestockView()
 
 const spacingClass = computed(() => `q-px-${props.padding}`)
 const accentStyle = ACCENT_STYLE
-const finalTitle = computed(() => evaluateProp(props.title, resourceRecord, resourceConfig))
+const finalTitle = computed(() => evaluate(props.title))
 
 // Hidden while the record is still loading too: flashing an instruction card in
 // and out on a slow fetch is worse than showing it a moment late.

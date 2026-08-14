@@ -75,8 +75,7 @@
  */
 import { computed } from 'vue'
 import AdditionalActionsButtons from 'components/app/AdditionalActionsButtons.vue'
-import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { useAuth } from 'src/composables/core/useAuth'
+import { useRestockIndexContext } from 'src/_ui/AQL/composables/Operation/OutletRestocks/Index/useRestockIndexContext'
 import {
   progressOf,
   restockEditableProgress,
@@ -85,7 +84,7 @@ import {
   REVISION_REQUIRED,
   APPROVED,
   PARTIALLY_DELIVERED
-} from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockProgress'
+} from 'src/_resource/Operation/OutletRestocks/composables/useRestockProgress'
 
 defineOptions({ name: 'OutletRestocksRestockActionButtons' })
 
@@ -93,8 +92,7 @@ const props = defineProps({
   item: { type: Object, required: true }
 })
 
-const nav = useResourceNav()
-const { user } = useAuth()
+const { nav, user } = useRestockIndexContext()
 
 /**
  * One presentation for every button in the cluster, so View, Edit and the workflow

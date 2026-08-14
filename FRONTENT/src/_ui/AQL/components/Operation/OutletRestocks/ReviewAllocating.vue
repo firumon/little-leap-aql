@@ -65,10 +65,11 @@
  * decision made per product, and regrouping by location would scatter a single
  * product's split across the page.
  */
-import { computed, inject, useAttrs } from 'vue'
+import { computed, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import AqlGroupedList from 'components/app/AqlGroupedList.vue'
-import { useRestockApproval } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockApproval'
+import { useRestockApproval } from 'src/_ui/AQL/composables/Operation/Outlets/useRestockApproval'
+import { useRestockApprovalContext } from 'src/_ui/AQL/composables/Operation/Outlets/useRestockApprovalContext'
 
 defineOptions({ name: 'OutletRestocksApproveReviewAllocating', inheritAttrs: false })
 
@@ -79,7 +80,7 @@ const props = defineProps({
 const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 
-const pageState = inject('pageState', null)
+const { pageState } = useRestockApprovalContext()
 const { allocatingRows, totalAllocated, allocatedWarehouses, allocatedUom } = useRestockApproval()
 
 const visible = computed(() => pageState?.meta.currentStep === props.step)

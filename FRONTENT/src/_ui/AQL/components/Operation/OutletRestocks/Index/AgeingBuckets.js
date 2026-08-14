@@ -1,11 +1,13 @@
-import { daysFromToday } from 'src/utils/dateHelpers'
-import { useAuth } from 'src/composables/core/useAuth'
+﻿import { useAuth } from 'src/composables/core/useAuth'
 import {
   progressOf,
   countsForUser,
   PENDING_APPROVAL,
-  stampOf
-} from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockProgress'
+  stampOf,
+  daysSince,
+  AGE_BANDS,
+  ageBandOf
+} from 'src/_resource/Operation/OutletRestocks/composables/useRestockProgress'
 
 /**
  * OutletRestocks › Index › AgeingBuckets — JS modifier (tier CP: resource + page).
@@ -27,7 +29,7 @@ import {
  * disappear together.
  *
  * Age is measured from `ProgressSubmittedAt`, the stamp that PUT the request in this
- * queue (Documents/OPERATION_SHEET_STRUCTURE.md) — not from `Date`, which is the date the
+ * queue (Documents/SHEET_OPERATION_STRUCTURE.md) — not from `Date`, which is the date the
  * requester wants stock by and may be in the future. A row whose stamp was never written
  * falls back to `Date` so it still ages rather than silently landing in the freshest band.
  *
@@ -45,13 +47,10 @@ import {
  */
 const { user } = useAuth()
 
-// Ordered youngest → oldest; `max` is inclusive, and the last band is open-ended.
-const BANDS = [
-  { label: '0–1 days', caption: 'On track', color: 'positive', max: 1 },
-  { label: '2–3 days', caption: 'Watch', color: 'info', max: 3 },
-  { label: '4–7 days', caption: 'Chase', color: 'warning', max: 7 },
-  { label: '7+ days', caption: 'Overdue', color: 'negative', max: Infinity }
-]
+// The bands are `AGE_BANDS` from the domain vocabulary, NOT a local literal. They were
+// declared here and again as `ageColor`'s 1/3/7 thresholds, which is one numeric scale
+// written twice — so a row could carry a chip in one colour while this widget counted it
+// in a differently-coloured band (UI_MODULE_DEVELOPER_GUIDE.md §4.5).
 
 export default function (props, { resourceRecord, resourceConfig }) {
   return {
@@ -66,24 +65,24 @@ export default function (props, { resourceRecord, resourceConfig }) {
       if (!records || !records.length) return []
 
       const me = user.value?.id
-      const counts = BANDS.map(() => 0)
+      const counts = AGE_BANDS.map(() => 0)
 
       for (const row of records) {
         if (!countsForUser(row, me)) continue
         if (progressOf(row) !== PENDING_APPROVAL) continue
 
         const since = stampOf(row, 'ProgressSubmitted').at || row.Date
-        // `daysFromToday` is future-positive; an age is the other direction. An
-        // unparseable stamp yields NaN, which no band claims — the row is left
-        // uncounted rather than dumped into the freshest or the oldest band.
-        const age = -daysFromToday(since)
-        if (Number.isNaN(age)) continue
+        // `ageBandOf` returns null for an unparseable stamp, which no band claims —
+        // the row is left uncounted rather than dumped into the freshest or the
+        // oldest band, exactly as the local `NaN` guard here used to do.
+        const band = ageBandOf(daysSince(since))
+        if (!band) continue
 
-        const index = BANDS.findIndex((band) => age <= band.max)
+        const index = AGE_BANDS.indexOf(band)
         if (index >= 0) counts[index]++
       }
 
-      return BANDS.map((band, index) => ({
+      return AGE_BANDS.map((band, index) => ({
         label: band.label,
         caption: band.caption,
         color: band.color,

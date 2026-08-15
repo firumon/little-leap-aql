@@ -1273,6 +1273,53 @@
   opacity: 0.75;
 }
 
+// ── Gauge (sections/Gauge.vue) ────────────────────────────────────────────────
+// Dynamic colour via `--aql-gauge-color`, exactly as the widgets above. The ring's own
+// colour is a Quasar prop; this variable themes the text beneath it so the readout and
+// the arc cannot drift apart.
+.aql-gauge__row {
+  // Matching the metric-card and ageing-bucket gutter, so all three stack on one rhythm.
+  gap: map-get($space-sm, x);
+}
+
+.aql-gauge__dial {
+  min-width: 0;
+  // A dial is a fixed-size circle, so the column only ever needs to be wide enough for
+  // its label — capped so two dials sit side by side on a phone instead of stacking.
+  flex: 0 1 140px;
+  padding: 8px 4px;
+  text-align: center;
+}
+
+.aql-gauge__value {
+  font-size: 18px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  color: var(--aql-gauge-color);
+}
+
+// 11px / weight 600, matching .aql-metrics__label and .aql-ageing__label — including the
+// two-line wrap, since a dial column leaves ~130px for its name.
+.aql-gauge__label {
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: 0.04em;
+  color: $ink-muted;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.aql-gauge__caption {
+  font-size: 10px;
+  color: $ink-muted;
+  opacity: 0.75;
+}
+
 // ─── OutletVisits view-page sections (.aql-visit-*) ───────────────────────────
 //
 // The custom Sections under _ui/AQL/components/Operation/OutletVisits/ reuse the

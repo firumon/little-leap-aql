@@ -1,7 +1,7 @@
-﻿import { computed } from 'vue'
+import { computed } from 'vue'
 import { useRecord } from 'src/composables/resources/useRecord'
 import { useRestockFormContext } from './useRestockFormContext'
-import { useProductSkuResolver } from 'src/composables/master/products/useProductSkuResolver'
+import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 import {
   stockMatchFigures,
   clampRestockQuantity
@@ -15,7 +15,7 @@ import {
  * restock = final, what the source warehouse is left with, and the `maxQuantity` ceiling
  * that makes a DIRECT restock bounded and a standard one unbounded — is domain, and now
  * lives in `src/_resource/Operation/OutletRestocks/composables/useRestockStockMatch`.
- * What stays here is the projection the two cards render, the `useProductSkuResolver`
+ * What stays here is the projection the two cards render, the `useSkuResource`
  * label lookup, and the pageState child bookkeeping.
  *
  * RESOURCE tier, not `Add/` (§6.2). It used to sit under `Add/` — written when
@@ -64,7 +64,7 @@ export function useRestockStockMatch () {
   // Rows come through `useRecord`, the same accessor step 1 loads them with, so
   // this file imports no store either — the whole restock flow reads resources
   // through one idiom.
-  const { skuInfo } = useProductSkuResolver()
+  const { skuInfo } = useSkuResource()
 
   const skus = useRecord('SKUs').items
   const outletStorages = useRecord('OutletStorages').items

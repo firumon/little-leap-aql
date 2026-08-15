@@ -1,4 +1,4 @@
-﻿---
+---
 name: AQL Resource UI Module Developer Agent
 description: Specialized, machine-optimized initialization prompt for generating a complete resource UI module (Index, Add, Edit, View, action routes) end-to-end under FRONTENT/src/_ui/, or materially extending an existing one to cover a larger workflow.
 ---
@@ -145,135 +145,99 @@ disagree (guide §7.4).
 
 1. `pages/{Scope}/{Resource}/Index.js` — `sections: ['PageHeader', …]`, `contents: ['List']`,
    with a docblock stating what the page answers and in what order (guide §5.5).
-2. **Widgets** — whichever queue/ratio/pipeline/ageing reading the workflow's operational
-   state actually needs. Check
-   [`components/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md)
-   for an existing base first; add a new **generic** base if none fits, never a bespoke
-   one-off. Each is a JS modifier reading Step 2's domain composables. Every one of them:
-   - `items` **function-valued** (a modifier resolves once and is cached);
-   - returns `[]` — never zeroes — when there is nothing to say;
-   - shares the page's **one row-eligibility predicate**;
-   - counts from `records`, never `filteredRecords`;
-   - is permission-gated on the action that clears its queue, with the permission read
-     **inside** the closure.
-
-   Live/open state only — never an all-time total, terminal-state running count, or calendar
-   aggregate. Stack by descending urgency. Include a widget only when the workflow produces
-   the data it would show. The exact ratio/state/threshold is a domain decision from Step 2,
-   reasoned there, never invented in the widget file.
-3. **Switcher** — gate each pill on the permission for the action that view starts; fall back
-   to the ungated set if all are hidden; correct the active view when the default is gated
-   away, deferred to a microtask (guide §9.3).
-4. **Work queues** — `PropsList<ViewName>` blocks in the contract; a `List<ViewName>` file
-   only when it mounts a component (`btn`) or needs a template. A `.vue` per-view override
-   reads rows from **both** `props.items` and `attrs.items` (guide §7.1).
-5. **Row presentation** — verify the list strategy's inferred defaults are actually wrong
-   before writing any `label`/`caption`/`chip` resolver (guide §9.4). When presets are
-   needed: queues awaiting action sort oldest-first with an urgency chip; settled views sort
-   newest-first and drop the chip; sort and age through a resolver with a documented fallback
-   (guide §7.2).
-6. **Row actions** — at most one contextual workflow action beside the standing View/Edit
-   pair; keyed on the record's own state, never the active view; supply the View button
-   yourself; dispatch CRUD locally and delegate workflow to `AdditionalActionsButtons`
-   (guide §7.3).
+2. **The 4-Stage Index Hierarchy** (guide §9.1) — stack `sections` by descending urgency:
+   - **Stage 1 (Urgent)**: `MetricCards` — open queues needing action right now (never all-time totals or finished records).
+   - **Stage 2 (Pipeline Health)**: `LinearProgress` (fulfillment ratio with committed obligations denominator), `WorkflowFunnel` (in-flight moving stages only; exclude terminal states).
+   - **Stage 3 (Backlog Risk)**: `AgeingBuckets` — time spent in bottleneck queues, permission-gated to the actor who can clear them, aged from queue entry stamp (`...SubmittedAt`).
+   - **Stage 4 (Work Execution)**: `FilterInput`, `ListSwitcher`, and `List`.
+   Every widget modifier returns `[]` — never zeroes — when there is nothing to say.
+3. **Switcher & Combined Views** (guide §7.1, §9.3) — gate each pill on the action that view
+   starts; fall back to ungated set if all are hidden; correct active view in a microtask.
+   When combining related sub-queues in one view (e.g. Ready to Deliver + In-Progress), use
+   `SectionDividerLabel`; if all sub-lists are empty, show a single clean empty-message box.
+4. **Row Presentation & Scoping** (guide §7.2) — verify list strategy defaults before
+   writing resolvers:
+   - Personal queues ("My Drafts") filter rows down to active `userId` to avoid manager upline clutter.
+   - Queue-intent captions: approver sees requester + submit note; revision queue sees reviewer changes; settled views see actor + timestamp. Suppress raw user codes (`U0001`).
+   - Active queues sort oldest-first with outlined urgency chips; settled history sorts newest-first with plain elapsed time.
+5. **Mobile-First Row Actions** (guide §7.3) — cap at **preferred 2, maximum 3 buttons**;
+   always provide an explicit icon-only `View` button (`icon="visibility"`) because `btn`
+   turns off normal row-click navigation; ban destructive or reason-requiring actions
+   (Reject, Revise, Cancel) from list rows; check both state and record ownership for inline Edit.
 
 ---
 
 ## Step 5 — Build Add / Edit (guide §13)
 
-1. **Pick the form shape first** (guide §13.0). Is the primary input the resource's **own
-   columns** (generated form → `contents: ['Create'|'Update']`) or a **derived tree** the
-   schema cannot express — line items, allocations, a selection across child rows (workflow
-   form → bespoke content cards)? Generated is the default; do not reach for bespoke cards
-   to avoid narrowing a field set.
-2. **Generated form**: do not hand-list fields. Confirm the form-fields composable generates
-   the correct set from `_fields`/`UIFields`, then narrow only via `fields`, `showFields`,
-   `hideFields`, `fieldProps` on `PropsCreate`/`PropsUpdate`.
+1. **Pick the form shape first** (guide §13.0). Generated form (`contents: ['Create'|'Update']`)
+   for flat schema columns; workflow form (bespoke cards) for derived trees/allocations.
+   Handle conditional shortcuts (like Direct Restock) inside Add using control fields, shown
+   only when matching infrastructure exists.
+2. **Generated form**: narrow from `_fields`/`UIFields` via `fields`, `showFields`,
+   `hideFields`, `fieldProps`. Never hand-assemble fields.
 3. **Either shape**: every input is a `_fields` control resolved through
-   `resolveFieldComponent(type, mode)` — never a deep SFC import, never a raw Quasar control.
-   Labels, styles and test hooks travel in `config`
-   ([`_fields/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_fields/REGISTRY.md)).
-   If a type doesn't exist, add it there.
+   `resolveFieldComponent(type, mode)` — labels, styles and test hooks travel in `config`.
 4. **Share cards between Add and Edit** at the resource tier and list them in both contracts
-   (guide §3.1, §13.4) — never a parallel set. Edit states its fixed identity fields
-   read-only, explains a locked record in a banner, and shows the intent control its entry
-   state calls for (the non-advancing intent defaults ON).
-5. **Route values correctly** (guide §13.5): real headers through `setField`; page-only
-   intent and working state through `setControlField`; `Progress`/`...At`/`...By` stamps
-   written by the submit handler only, never exposed as fields, and omitted entirely for a
-   save that is not a submission.
-6. **Multi-step** only for a sequencing dependency or genuinely unrelated decisions — never
-   for tidiness (guide §13.6). Then: a `PageAction.js` with a `get actions()` getter keyed off
-   `pageState.meta.currentStep`; the step declared by the **contract** as a `step` prop
-   (`null` = always render) and never hardcoded in the card; wizard state in `pageState`
-   only; the review step read-only; the primary button labelled with the transition it
-   performs, latched to the entry state where submit would change what the label reads.
+   (guide §3.1, §13.4). Edit renders unchangeable facts (outlet, date) as read-only detail lines,
+   shows a lock banner when opened for a settled record, and adapts submit options by state
+   (drafts default "Save as draft" ON; returned records show resubmission comments). Suppress
+   page header reload on transactional contracts (`PropsPageHeader: { reload: false }`).
+5. **Route values correctly** (guide §13.5): real headers through `setField`; intent and
+   working state through `setControlField`; stamps written by submit handler only.
+   Track multi-caller hydration in Edit via node control field `EditHydratedFor` and deduplicate
+   child lines by SKU key during seeding. Place draft toggle before comment box.
+6. **Multi-step wizards** (guide §13.6): step assignments via `Props<Component>: { step: N }`;
+   sticky bar with `get actions()` getter; review step read-only with active choices open and
+   downstream inventory projections closed; latch `entryProgress` for stable button labels.
 
 ---
 
 ## Step 6 — Build View (guide §7.4)
 
-1. Default: `contents: ['View']` (the generic key-value grid) + `ViewColumn<Col>` overrides
-   for any field needing special rendering.
-2. Upgrade to business-concept cards ONLY if the resource has line items, allocations,
-   multi-step workflow, or more than one kind of related fact (guide §7.4's checklist).
-3. If upgrading: one card per business concept, declared in `sections` with `contents: []`,
-   all backed by **one** page-scoped UI Composable. Each card self-guards loading, empty and
-   hidden states (guide §10.4), and follows the authoring contract in §7.5 —
-   `SectionDividerLabel` heading, function-capable `title`, `items` defaulting to `null`,
-   declared `padding`.
-4. Order the stack by what the reader must do: a card that asks for an action leads; cards
-   that report one follow.
+1. Default: `contents: ['View']` (generic grid) + `ViewColumn<Col>` overrides.
+2. Upgrade to business-concept cards if the resource has line items, allocations, or workflow.
+3. **Canonical 5-Tier View Card Stack**:
+   - `1. Action Request Banner` (accented, only rendered when action is needed)
+   - `2. Parent Identity Card` (flat details; omit blank rows)
+   - `3. Content Summary Card` (what was requested)
+   - `4. Operational Breakdown` (source bins; explanatory note before approval → concrete bin rows after approval)
+   - `5. Workflow History Card` (chronological timeline by actual `...At` stamp; omit unreached steps)
+4. Back all cards with **one** page UI Composable. Pass container spacing down via
+   `(pageProps) => ({ gutter: pageProps.gutter })`.
 
 ---
 
 ## Step 7 — Build Any Action Route (guide §5.5, §8)
 
-1. Contract at `pages/{Scope}/{Resource}/{ActionName}.js` — the file name is
-   `toPascalCase(actionSlug)`, so `mark-delivered` → `MarkDelivered.js` (guide §2.1). Give it
-   an explicit `title`, `reload: false`, and a docblock with the step table.
-2. Cards at the tier their reuse demands (guide §3.1) — two routes collecting the same
-   decision resolve one set at the resource tier.
-3. **Hydration**: the route loads no record and usually has no `Create`/`Update`, so the
-   page composable owns the fetch and the seeding, called from the **first content** the
-   contract names.
-4. Sticky bar owns navigation and submission (guide §8.2–§8.4): `get actions()`; handler
-   returns `{ requests, successMsg, … }` — `successMsg`, not `successMessage`; cancel
-   navigates explicitly and returns `false`; permission re-checked at submit with a
-   lower-camel action name naming **every** resource the batch writes; a read appended for
-   anything the batch invalidated. A brand-new bar button needs a `FormAction{Name}.vue`
-   that emits only and disables (never spins) while in flight.
+1. Contract at `pages/{Scope}/{Resource}/{ActionName}.js` with explicit `title`,
+   `PropsPageHeader: { reload: false }`, and step table in docblock.
+2. Shared allocation/review cards at the resource tier. Hydration in the first content component.
+3. Sticky bar owns navigation and submission (guide §8.2–§8.4):
+   - `get actions()`; handler returns `{ requests, successMsg, … }` (`successMsg`, not `successMessage`).
+   - Validate downstream irreversibility: block rejection/reversal if child lines are already delivered.
+   - Child-only action routes (`Reallocate`) isolate payloads and permissions to child lines and stock movements, without touching parent approval state.
+   - Append `resourceGetRequest(['WarehouseStorages'])` to refresh stock cache in the same round trip.
+   - Action `show` gates inspect live relation getters (`record?.$ChildItems`) where eligibility depends on child status.
 
 ---
 
 ## Step 8 — Apply the Visual Contract (guide §10)
 
-- Every card: `<q-card flat bordered :class="ui.cardClass">`, with `ui` relayed through the
-  page context composable — never a hardcoded class string, no per-module variant, no
-  display-vs-input pair.
-- Rows: the UI's `detail*Class` grammar, and `rowDelay()` computed from `ui.rowStaggerMs` —
-  never a local `ROW_STAGGER_MS`.
-- Spacing: `pageProps.gutter` via `useAttrs()` between sibling surfaces; one declared
-  `padding` prop (`q-px-{padding}`) for horizontal inset. Spacing *inside* a card (the
-  empty/skeleton insets, a sub-block's separation) is sanctioned as written in guide §10.4 —
-  the ban is on pushing one card away from the next. Never in `card-class`.
-- All three quiet states on any self-guarding card: skeleton inside the shell while loading;
-  the standard empty shell **with its caption line**; `v-if` at the root when the card
-  contributes nothing. A fact *about* the surrounding cards is a `q-banner`, not a card.
-- Icon-only controls bind `ui.tapTargetStyle` and carry an `aria-label` — a tooltip does not
-  satisfy it, and `rowActionBtnProps` supplies neither. The flow-anchoring input is never
-  `dense`. Chips carry state (a count per state is a legend and may be a chip); a running
-  total the user is changing is text.
-- At most one accented card per page, and only the leading one that asks for an action.
+- Every card binds `<q-card flat bordered :class="ui.cardClass">` via UI config relay —
+  **never hardcode class strings or local `const ROW_STAGGER_MS = 40`**.
+- Rows: `ui.detail*Class` and `rowDelay()` computed from `ui.rowStaggerMs`.
+- Dynamic control grid partitioning: use `binColumnClass(count)` (1 item = `col-12`, 2 or 4 items = `col-6` (2+2), 3 or 5+ items = `col-4` (3+3)) to avoid stranded inputs.
+- Hierarchical pickers: use 3-level tri-state trees with `indeterminate-value="null"`.
+- Control stability: disable (rather than unmount) numerical allocation controls when covered, to prevent layout jumping mid-edit.
+- Spacing: `pageProps.gutter` between sibling cards; declared `padding` for horizontal insets. Keep spacing out of `card-class`.
+- Quiet states: skeleton inside card shell while loading; standard empty shell with descriptive caption; `v-if` at root when hiding. Banners use `q-banner`, not card shells.
 
 ---
 
 ## Step 9 — `inheritAttrs` Pass (guide §12.1)
 
-For every newly created nested component chain: intermediate containers keep default
-`inheritAttrs` (props flow through untouched); only the leaf component explicitly sets
-`inheritAttrs: false`/`true` based on its own DOM-binding needs. Do not blanket-apply
-`inheritAttrs: false` to every component in the chain.
+Intermediate containers keep default `inheritAttrs: true`; leaf components explicitly configure
+`inheritAttrs: false`/`true` based on DOM binding requirements.
 
 ---
 
@@ -281,30 +245,32 @@ For every newly created nested component chain: intermediate containers keep def
 
 Import boundaries (guide §6):
 
-- [ ] Every `.vue` under `_ui/` imports only UI Composables — grep for `inject(` and any Core
-      Composable import, and confirm none appear outside a UI Composable file.
-- [ ] Every UI Composable imports only Resource Composables + generic Core Composables — no
-      store, no service.
-- [ ] Every Resource Composable (`src/_resource/**`) imports only generic Core Composables —
-      no store, no service, nothing under `_ui/`.
+- [ ] Every `.vue` under `_ui/` imports only UI Composables — zero `inject(` or Core Composable imports in `.vue` files.
+- [ ] Every UI Composable imports only Resource Composables + generic Core Composables.
+- [ ] Every Resource Composable (`src/_resource/**`) imports only generic Core Composables.
 
-Reactivity (guide §11):
+Visual contract & tokens (guide §10):
 
-- [ ] No enriched record is spread, `Object.assign`-copied or JSON round-tripped.
-- [ ] Every enriched relation read is normalized before its first predicate.
-- [ ] Every modifier value that must track the record is function-valued; every `actions` /
-      `submitLabel` that must track state is a getter.
-- [ ] No prop object or array is allocated inline in a template.
+- [ ] No hardcoded `ROW_STAGGER_MS = 40` or class strings in `.vue` files — all read `ui.cardClass` / `ui.rowStaggerMs`.
+- [ ] Row action clusters have at most 3 (preferred 2) buttons, include an explicit View button, and omit destructive actions.
+- [ ] Transactional wizard & edit contracts declare `PropsPageHeader: { reload: false }`.
+- [ ] Grid partitioning splits 4 inputs into 2+2 (`col-6`) instead of 3+1.
+
+Reactivity & Data (guide §11, §13):
+
+- [ ] No enriched record is spread, cloned with `Object.assign`, or JSON stringified.
+- [ ] Multi-component hydration in Edit tracks `EditHydratedFor` on node control fields.
+- [ ] Child lines are deduplicated by SKU key during form seeding.
+- [ ] Downstream checks block reversals once child lines are delivered.
 
 Catalogues (guide §Maintenance Rule):
 
 - [ ] A new `_fields` type → row added to `_fields/REGISTRY.md`.
 - [ ] A new reusable Section/Content/app base → row added to `components/REGISTRY.md`.
-- [ ] A new or changed design token → value in `_config/config.js`, rationale in
-      `_config/config.md`.
+- [ ] A new or changed design token → value in `_config/config.js`, rationale in `_config/config.md`.
 
 Then:
 
 - Run `gitnexus_impact` before editing any pre-existing symbol (per `AGENTS.md`).
 - Run `gitnexus_detect_changes()` before committing.
-- Run `npm run build` only if the change is major/cross-cutting (≥10 files or equivalent).
+

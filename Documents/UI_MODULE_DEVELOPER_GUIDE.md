@@ -1,7 +1,7 @@
-﻿# Resource UI Module Developer Guide
+# 3-Layer UI — Resource UI Module Developer Guide
 
 The canonical blueprint for generating a complete resource UI module — Index, Add, Edit,
-View, and any action route it needs — under `FRONTENT/src/_ui/`. This document plus a
+View, and any action route it needs — under the **3-Layer UI Architecture** (`FRONTENT/src/_ui/`). This document plus a
 module's business workflow specification is everything a developer, or an AI agent, needs
 to produce a module.
 
@@ -435,7 +435,7 @@ page names it.
 
 ---
 
-## 4. Correct Business Logic Placement — The Three-Layer Boundary
+## 4. Correct Business Logic Placement — The 3-Layer UI Boundary
 
 > Full detail — folder structure, every rule, and worked examples — lives in
 > [UI_RESOURCE_DOMAIN_LOGIC.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
@@ -563,7 +563,9 @@ JS modifier stays final, matching every other override in the system.
 - **A block may be a function** — evaluated with the live props bag, so it can read the
   active view's already-filtered `items` and re-sort them. A static object cannot see rows.
 - **The whole BLOCK is the function, never one key inside it.** A function sitting on a
-  single key is passed through untouched and reaches a `String` prop as a closure:
+  single key is passed through untouched and reaches a `String` prop as a closure. This is
+  the exact mechanism for forwarding container layout tokens down into nested section
+  cards that render their own sub-cards:
   ```javascript
   PropsCard: (pageProps) => ({ title: 'Allocation Details', gutter: pageProps.gutter })  // ✓
   PropsCard: { gutter: (pageProps) => pageProps.gutter }                                  // ✗
@@ -812,11 +814,13 @@ const incoming = computed(() => (props.items?.length ? props.items : (attrs.item
 **A view that unions two states divides, it does not tab.** When one queue is genuinely one
 job to the person doing it — approved and partially-delivered are both "stock committed,
 not yet at the outlet" — the list view unions them and the override restores the
-distinction as a labelled divider between two groups. Splitting them into two pills makes
-the user check two lists to answer one question. When it does:
+distinction as a labelled divider (`SectionDividerLabel`) between two groups. Splitting
+them into two pills makes the user check two lists to answer one question. When it does:
 
-- **one empty state for the whole view**, not one per group — two "nothing here" cards
-  stacked read as two failures instead of one clear queue;
+- **one consolidated empty state for the whole view**, not one per group — two "nothing here"
+  cards stacked read as two failures instead of one clear queue. If one sub-list has no items,
+  hide its section divider and space completely; if *all* sub-lists are empty, show a single
+  clean empty-text box (`empty-text="Nothing awaiting delivery."`);
 - **drop any per-row chip the divider now carries.** The divider already names the state; a
   chip repeating the heading on every row is noise. Keep what varies per row.
 
@@ -839,6 +843,25 @@ per view, exported from the resource's composable and applied as a function-valu
 ```javascript
 PropsListPendingApproval: (props) => awaitingApprovalPreset(props.items)
 ```
+
+**Personal queue scoping vs. upline record access policies.** A personal work queue (such
+as `"My Drafts"`) must filter rows down to the active `userId` (`user.value?.id`). While
+`RecordAccessPolicy: OWNER_AND_UPLINE` permits managers to read subordinates' rows, drafts
+are editable only by their author. Without explicit `userId` scoping, a manager's draft
+queue becomes cluttered with un-editable drafts from other people.
+
+**Queue-intent caption derivation matrix.** A row's caption should state the exact fact
+explaining why the row sits in this specific queue, rather than a generic record summary:
+
+| Work queue | Primary caption content | Secondary detail |
+|---|---|---|
+| **Drafts** | `Date` (creation date) | Requester's private draft context |
+| **Pending Approval** | `RequestedUser` + `SubmittedComment` | Who asked and why |
+| **Needs Revision** | `RevisionRequiredComment` | The reviewer's exact instructions to change |
+| **Approved / In Fulfilment** | `Date` + `ApprovedBy` or `ApprovedComment` | Committed date and approver context |
+| **Partially Delivered** | `Date` + `DeliveredComment` | Outstanding delivery note |
+| **Delivered / History** | `Date` + `DeliveredBy` | Final completion timestamp and actor |
+| **Rejected** | `RejectedComment` | Rejection rationale |
 
 **Ordering is a work order, not a preference:**
 
@@ -877,41 +900,40 @@ the list shows "85 days" below "Yesterday" while claiming to be ordered by age. 
 stamp, fall back to the record's own date, and use the *same* reader for the sort and for
 the displayed age.
 
-**A caption carries the fact that explains why the row is in this queue** — the reviewer's
-instruction on a revision row, the approver's note on an approved one — not a generic
-restatement of the record.
+**Never surface an unresolved raw identifier code in a row.** Stamp columns are not uniform
+about this: some `*By` columns store a display name, others store a database user code
+(`U0001`). Check which before putting one in a label or caption — a raw code renders as an
+opaque string nobody can read. When the stamp holds a code, prefer the fact the reader
+actually needs (the reason, the age) and leave "who" to the View page, where it can be
+resolved.
 
-**Never surface a raw identifier column in a row.** Stamp columns are not uniform about
-this: some `*By` columns store a display name, others store a user code (`U0001`). Check
-which before putting one in a label or caption — a code renders as an identifier nobody can
-read. When the stamp holds a code, prefer the fact the reader actually needs (the reason,
-the age) and leave "who" to the View page, where it can be resolved.
+### 7.3 Mobile-first row action clusters
 
-### 7.3 Row action clusters
+A row's `btn` slot is the one place a list becomes interactive. Six rules govern it:
 
-A row's `btn` slot is the one place a list becomes interactive. Five rules govern it.
+**1. Mobile width constraint — maximum 3, preferred 2 buttons.** Most users navigate on
+mobile devices. Each button competes with the row's own content for screen width; exceeding
+3 buttons forces record labels into multi-line text wrapping and collides chips with
+captions. The standard pair is **1 View navigation button + 1 primary contextual next action**.
 
-**Cap the cluster.** At most **one contextual workflow action** alongside the standing
-View/Edit pair — three buttons total. Each button competes with the row's own content for a
-phone's width; a fourth pushes the record's name into a multi-line wrap and lets the meta
-chip collide with the caption. The only exception is a state offering two **mutually
-exclusive** next steps that a user must choose between from the list (allocate the
-remainder *or* deliver what's ready) — and Edit is necessarily absent in such a state, so
-the row still holds three. Anything beyond that goes into `AdditionalActionsButtons`' own
-menu/dialog (§8.5).
+**2. Supply the View button explicitly.** `abstract/List.vue` deliberately makes a row
+non-clickable once it carries a `btn`, so a row with buttons never has an ambiguous tap
+target. While correct in general, adding row action buttons turns off whole-row tap
+navigation — always put an icon-only `View` button back explicitly (`icon="visibility"`).
 
-**Key the cluster on the record's state, never the active view.** A modifier-mounted `btn`
+**3. Key the cluster on the record's state, never the active view.** A modifier-mounted `btn`
 component is mounted with `item` and nothing else — `useContentResolver` returns props, not
 slots, so the cluster cannot be told which view it is in. That constraint produces the right
 rule anyway: a record offers Approve because it is pending approval, not because the reader
 happens to be looking at a particular pill, and a unioned view (§7.1) holds rows in two
-states that must offer two different clusters in the same list.
+states that must offer two different clusters in the same list:
 
 ```javascript
 const ACTIONS_BY_PROGRESS = {
   [DRAFT]:             [],
   [PENDING_APPROVAL]:  ['Approve'],
-  [APPROVED]:          ['MarkDelivered']
+  [APPROVED]:          ['MarkDelivered'],
+  [PARTIALLY_DELIVERED]: ['Reallocate', 'MarkDelivered']
 }
 ```
 
@@ -919,26 +941,23 @@ This is a **whitelist of interest, not a permission list** — `useAdditionalAct
 decides which of them the signed-in user may see (§8.5). Everything omitted stays available
 on the record's View page.
 
-**Which actions to omit** is an editorial decision with a stated test. An inline row action
+**4. Prohibit destructive and reason-requiring actions on list rows.** An inline row action
 must be one tap, non-destructive, and either navigate or commit something trivially
-reversible. So:
+reversible. Therefore:
+- an action needing a **written reason** (reject, request revision) belongs on the record or
+  action page, not one tap from a scrolling list;
+- a **destructive** action (cancel, delete) is never placed on a row;
+- an action where the user **must inspect items first** (submit, resubmit) is off the row
+  — the button that opens the review form (Edit) is the one that belongs there.
 
-- an action needing a **written reason** (reject, request revision) belongs on the record,
-  not one tap from a scrolling list;
-- a **destructive** action (cancel, delete) is never one mis-tap away in a list;
-- an action whose whole point is that the user **checks something first** (submit, resubmit)
-  is off the row — the button that takes them to the check is the one that belongs there.
+**5. Inline Edit buttons require state and ownership gates.** Inline Edit is a CRUD route
+dispatched locally. It must fail closed on missing IDs, verifying both state eligibility
+and strict ownership (`CreatedBy === user.value?.id`).
 
-**Supply the View button yourself.** `abstract/List.vue` deliberately makes a row
-non-clickable once it carries a `btn`, so a row with buttons never has an ambiguous tap
-target. Correct in general, but it means adding row actions costs the row its open-on-tap —
-put the way in back explicitly.
-
-**Dispatch CRUD yourself, delegate workflow.** Edit and View are CRUD routes: the cluster
-navigates them directly, applying the same state+ownership gates the page-level FAB applies
-(§8.1). Everything else is a workflow action and goes through `AdditionalActionsButtons`,
-which owns eligibility. Render them as loose siblings at one visual scale, never in a
-`q-btn-group` — see [`_config/config.md` §3.5](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_ui/AQL/_config/config.md).
+**6. Dispatch CRUD yourself, delegate workflow.** Edit and View are CRUD routes: the cluster
+navigates them directly. Everything else is a workflow action and goes through
+`AdditionalActionsButtons`, which owns eligibility. Render them as loose siblings at one
+visual scale, never in a `q-btn-group` — see [`_config/config.md` §3.5](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_ui/AQL/_config/config.md).
 
 ### 7.4 The View Blueprint — Business-Concept Card Grouping
 
@@ -962,14 +981,15 @@ concept**, using the base-promotion path (§3.2 step 1.3).
    computeds.
 4. Build every card on the shared shell (§10.1) and the authoring contract in §7.5.
 
-**Recurring card types**, one per business concept a full-fledged record represents:
+**Canonical View Card Stacking Order:**
 
-| Card | Business concept | Reads |
-|---|---|---|
-| Header/identity card | **Identity** — who/what/when this record is | flat fields; blank rows dropped, never rendered empty |
-| Contents card | **What was requested/entered** | a grouped tree (e.g. parent-item → child-line) |
-| Disposition card | **Where it's going / coming from / being fulfilled** | the **same** grouped tree the contents card reads, re-rendered per its current state |
-| History card | **History** | an append-only timeline, ordered by actual stamp timestamp |
+```
+1. Action Request Banner   (RevisionRequiredBanner — instruction, only rendered when action is needed)
+2. Parent Identity Card    (RestockHeader — who, what, when, current state)
+3. Content Summary Card    (Items — what was requested / entered)
+4. Operational Breakdown   (AllocationDetails — source bins, where stock is coming from / going)
+5. Workflow History Card   (Workflow — chronological timeline of actual events)
+```
 
 **One composable, so cards cannot disagree.** All cards inject the same page-scoped UI
 Composable, which calls the resource's domain composable (§4) for any derived state, and
@@ -977,22 +997,25 @@ read *projections* of one derived tree rather than each re-deriving grouping log
 cards reading the identical derived structure means "what was requested" and "where it's
 coming from" can never drift apart on screen.
 
-Three rules the recurring cards each carry:
+Four rules the recurring cards each carry:
 
 - **The identity card drops blank rows rather than padding them with em dashes.** A
   detail card reads better short, and a `Note: —` row states nothing while looking like it
   does. The two facts that *identify* the record are shown even when unresolved.
-- **The disposition card renders per phase, and explains an empty phase.** Before a workflow
-  commits anything there is no source behind any line, so a source column would be an empty
-  promise — the card states each line's position and says, in one banner, when the source
-  will exist. The phase test is a domain predicate, never a `Progress` comparison written in
-  the card.
-- **The history card is history, not a checklist.** Order by the recorded timestamp, not by
-  canonical state order, so a record that went out for revision and came back reads in the
-  order it actually happened. Stages never reached are **absent, not greyed out.** Which
-  column holds which stamp is a map in the page composable, because a stamp prefix and its
-  resulting state genuinely differ (submitting stamps `ProgressSubmitted*` but moves the
-  record to `PENDING_APPROVAL`).
+- **The disposition card morphs by phase and explains empty phases.** Before a workflow
+  commits anything, there is no source behind any line — the card states each line's position
+  and says, in one banner ("Stock is allocated once approved"), when the source will exist.
+  After approval, it swaps to detailed warehouse and storage bin rows. The phase test is a
+  domain predicate, never a raw `Progress` comparison written in the card.
+- **The history timeline is chronological event history, not a checklist.** Order by the
+  recorded timestamp (`...At`), not by canonical state order, so a record that went out for
+  revision and came back reads in the order it actually happened. Stages never reached are
+  **absent, not greyed out.** Which column holds which stamp is a map in the page composable,
+  because a stamp prefix and its resulting state genuinely differ (submitting stamps
+  `ProgressSubmitted*` but moves the record to `PENDING_APPROVAL`).
+- **Pass container gutter tokens to nested section cards.** Compound cards that render
+  internal product cards must accept `gutter` from `pageProps.gutter` and space their
+  internal children consistently with the outer page rhythm (§5.2).
 
 **Where View cards go in the contract.** A business-concept card set is declared in
 `sections`, with `contents: []` — the second named exception to §9.1's
@@ -1120,7 +1143,21 @@ return !!owner && !!me && owner === me
 eligibility actually depends on the record's *children* ("are there lines left to
 allocate?"), the gate reads them off the enriched record in a function-valued `show`. A
 relation getter is non-enumerable — invisible to a spread, perfectly readable by name
-(§11).
+(§11):
+
+```javascript
+// _ui/{Ui}/components/{Scope}/{Resource}/ResourceActionReallocate.js
+function hasPendingItems (record) {
+  const rows = record?.$OutletRestockItems
+  if (!Array.isArray(rows)) return false
+  return rows.some((row) => text(row.Code) && text(row.Status || 'Active') === 'Active' &&
+    (text(row.Progress) || 'PENDING') === 'PENDING')
+}
+export default {
+  show: (record) => text(record?.Progress) === 'PARTIALLY_DELIVERED' && hasPendingItems(record),
+  label: 'Reallocate Pending Items'
+}
+```
 
 **Change the sticky bar's buttons, or veto a submission** — the container owns both:
 
@@ -1205,6 +1242,17 @@ not from the list. Go to a known route, then return `false` so the dispatcher's 
 cancel: (name, { nav }) => { nav.goTo('index'); return false }
 ```
 
+**Downstream irreversibility validation.** Any handler that performs a reversal, rejection,
+or cancellation must verify what has already occurred downstream before proceeding. If child
+lines have already been physically delivered (`active.some(row => row.Progress === 'DELIVERED')`),
+reversing or rejecting the parent record is blocked and vetoed with a clear message:
+
+```javascript
+if (active.some((row) => text(row.Progress) === 'DELIVERED')) {
+  return { valid: false, message: 'This request has delivered items and can no longer be rejected.' }
+}
+```
+
 **Refresh what the batch invalidated, in the same round trip.** If a submit changes data a
 *different* resource derives (a stock movement changing on-hand balances), append a read to
 the same batch rather than leaving the next page to discover it stale:
@@ -1275,10 +1323,11 @@ resourceConfig?.allowed({
 > `markDelivered` → `canMarkDelivered`. An all-caps `'APPROVE'` resolves to `canAPPROVE`,
 > matches nothing, and **fails closed**, silently blocking a button that should work.
 
-**Ask only for what the action actually does.** A page that settles child lines and moves
-stock without re-deciding the parent asks for the stock-write permissions and *not* the
-approval one — requiring `approve` there would lock out the warehouse user the page exists
-for.
+**Child-only action routes isolate payloads and permissions.** When an action route settles
+child lines without modifying parent state (e.g. `Reallocate` allocating leftover lines on a
+`PARTIALLY_DELIVERED` order), it asks only for stock and child line write permissions
+(`{ OutletRestockItems: 'create', StockMovements: 'create' }`), never parent approval
+permissions (`OutletRestocks: 'approve'`). The parent record remains unchanged.
 
 **When one page serves two entry states, the permission map is a function of the state, not
 a page constant.** The same approval page deciding a pending record needs the decision
@@ -1319,9 +1368,10 @@ presentation, not eligibility, and escalation order is the sensible default.
 
 ## 9. Index Page & Operational Metrics
 
-An Index page is a **worklist**, not a report. It answers "what does the signed-in user
-need to act on right now" — never "how did this resource trend last quarter." That second
-question belongs on the main system dashboard, which aggregates across resources and time.
+An Index page is a **worklist**, not a report. Users visit an Index page to handle tasks,
+clear backlogs, and review live progress. It answers "what does the signed-in user need to
+act on right now" — never "how did this resource trend last quarter." That second question
+belongs on the main system dashboard, which aggregates across resources and time.
 
 > [!IMPORTANT]
 > **Scope rule.** An Index widget may only summarize records the current user owns or is
@@ -1331,7 +1381,7 @@ question belongs on the main system dashboard, which aggregates across resources
 > volume). A widget that needs "since X date" to make sense is a dashboard chart, not an
 > Index widget.
 
-### 9.1 Sections vs. Contents — scope and the two exceptions
+### 9.1 Sections vs. Contents & The 4-Stage Index Hierarchy
 
 | | `sections` | `contents` |
 |---|---|---|
@@ -1339,14 +1389,18 @@ question belongs on the main system dashboard, which aggregates across resources
 | Rendered | Directly inside `.aql-page-body`, outside `<AqlContentWrapper>` | Inside `<AqlContentWrapper>` — loading/empty/missing-record/submission overlay handled automatically |
 | Gating | None — must self-guard | Automatic |
 
-> [!NOTE]
-> **Two named exceptions**, both record-dependent UI placed in `sections` because visual
-> placement requires it, and both paying the same price — self-guarding every state (§10.4):
-> 1. **Header-adjacent metrics** — the Index widgets below, which must sit immediately
->    beneath the page header, above the list they summarize.
-> 2. **A business-concept View card set** (§7.4), which replaces `ViewRecord` entirely.
->
-> These two, and nothing else. Any other record-dependent UI belongs in `contents`.
+**The 4-Stage Index Section Ordering Formula:**
+Stack Index sections by descending operational urgency:
+
+```
+1. Top / Immediate Action   (MetricCards — what needs my action right now)
+2. Middle / Pipeline Health (LinearProgress, WorkflowFunnel — fulfillment rate and moving stage counts)
+3. Lower / Backlog Risk     (AgeingBuckets — how long have items sat in bottleneck queues, approver-gated)
+4. Bottom / Work Execution  (FilterInput, ListSwitcher, List — the actual work queue items)
+```
+
+Every widget section hides itself (`return []`) when it has nothing to report, so a fresh
+tenant or a clear backlog presents a clean list rather than a wall of empty zeroes.
 
 ### 9.2 Index widgets
 
@@ -1365,7 +1419,7 @@ surfaces and hide rules in
 [`components/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md).**
 Read that before adding a widget; read it before inventing a base.
 
-Five rules bind every widget, whichever base it drives.
+Five rules bind every widget, whichever base it drives:
 
 **1. `items` is function-valued.** A JS modifier is invoked once, at resolve time, and its
 return is cached. A plain array freezes at whatever the store held on that first tick —
@@ -1399,7 +1453,7 @@ view already on screen is a tautology.
 have waited over a week" is an instruction to an approver and merely an anxiety to a
 requester, who cannot act on it and is often reading their own submission back as a red
 number. Return `[]` when unpermitted, so the widget disappears rather than showing empty —
-and take the permission read **inside** the closure (§3.3).
+and take the permission read **inside** the closure (§3.3):
 
 ```javascript
 export default function (props, { resourceRecord, resourceConfig }) {
@@ -1416,33 +1470,24 @@ export default function (props, { resourceRecord, resourceConfig }) {
 ```
 
 > [!IMPORTANT]
-> **Order widgets by descending urgency.** Stack `sections` so the most time-sensitive
-> question sits closest to the page header: counts first ("what needs me right now"), then a
-> ratio or pipeline ("how healthy is the flow right now"), then ageing last ("what's been
-> sitting the longest"), with the work queue content below all of them. A user scans
-> top-to-bottom.
+> **Actionable queue constraint for `MetricCards`.** Metric cards are reserved strictly for
+> open, actionable queues owned by active actors (e.g., Pending Approval, Needs Revision,
+> Pending Completion). Historical or terminal states (Delivered, Rejected) belong in the
+> funnel or reports, not in metric cards.
 >
-> **Include a widget only when the workflow produces the data it would show.** A resource
-> with no approval step has no ageing widget, because there is no permission-gated pending
-> state to age. Which widgets a module gets is a workflow decision, not a checklist.
+> **Committed obligation denominator for ratios.** A ratio's denominator includes only
+> records that incurred a true obligation (e.g. `APPROVED + PARTIALLY_DELIVERED + DELIVERED`).
+> Pre-approval drafts and rejections never became delivery commitments; including them would
+> let a user falsely improve the fulfillment rate by rejecting requests.
 >
-> **The base governs shape and scope; the resource governs the business parameter.** A base
-> constrains *what kind* of data it may show (live/open-state, one bounded set, one pending
-> state). It never dictates *which* ratio, *which* state, or *which* day thresholds — those
-> are workflow decisions, reasoned out and commented in the resource's domain layer, never
-> invented ad hoc inside a widget's modifier.
-
-Three parameter choices that recur, and the reasoning a module must supply for its own:
-
-- **A ratio's denominator is the set that incurred the obligation**, not everything. Folding
-  in states that never became an obligation lets the number be improved by *rejecting* work.
-- **A funnel excludes terminal states**, not zeroes them. Completed records accumulate
-  forever and squeeze the live states into slivers within a season.
-- **Ageing measures from the stamp that put the record in the queue**, not from a date the
-  record happens to carry — a requested-by date may be in the future. A row whose stamp was
-  never written falls back to that date so it still ages, rather than landing silently in
-  the freshest band; a row whose age is unparseable is left uncounted rather than dumped
-  into the freshest or the oldest band.
+> **In-flight funnel boundaries.** Funnel widgets represent moving pipelines and exclude
+> terminal states (`DELIVERED`, `REJECTED`) so accumulated history does not compress active
+> states into slivers over time.
+>
+> **Ageing queue selection & timestamp precedence.** Ageing breakdowns apply only to
+> queues where elapsed time indicates human friction or delay (such as approval queues), and
+> measure elapsed time from the specific queue-entry stamp (`ProgressSubmittedAt`), falling
+> back to requested `Date`, rather than creation date (`CreatedAt`).
 
 **The band table is exported from the vocabulary file, not written in the widget.** An
 ageing widget's thresholds and the colour a row's own age chip uses are the same scale — if
@@ -1775,6 +1820,23 @@ guessing. Numeric values come from `_config/config.js`.
 - **Grouped/repeating controls in a row** cap at `maxControlsPerRow` (three) before
   wrapping, and derive the column width from the item **count**, not a fixed grid — four
   splits 2+2, never 3+1 with a stranded control.
+  ```javascript
+  // Dynamic Control Grid Partitioning Formula:
+  // 1 item -> col-12; 2 or 4 items -> col-6 (2+2); 3 or 5+ items -> col-4 (3+3)
+  function binColumnClass (count) {
+    if (count <= 1) return 'col-12'
+    if (count === 2 || count === 4) return 'col-6'
+    return 'col-4'
+  }
+  ```
+- **Hierarchical 3-level tri-state selection trees** (Product › SKU › Storage Bin) in
+  delivery or dispatch pickers use `indeterminate-value="null"` on parents:
+  ```html
+  <q-checkbox :model-value="productState(prod)" :indeterminate-value="null"
+              @update:model-value="toggleProduct(prod)" />
+  ```
+  Toggling a parent sets all descendants; selecting a subset computes an indeterminate state
+  automatically.
 - **Icon-only controls** meet `minTapTargetPx` and carry an `aria-label`. **A tooltip does
   not satisfy this** — it is invisible to a screen reader and to a touch user who cannot
   hover, so a `q-tooltip` is an addition to the label, never a substitute. Note that the
@@ -1824,7 +1886,8 @@ guessing. Numeric values come from `_config/config.js`.
 - Dynamic colours go through a CSS custom property, not per-colour class variants.
 - A colour named in a `var()` must be one the build actually defines. Quasar publishes brand
   variables only for `primary`, `secondary`, `accent`, `dark`, `positive`, `negative`,
-  `info` and `warning` — anything else needs a literal fallback or it resolves to nothing.
+  `info` and `warning` — anything else needs a literal fallback (e.g.
+  `var(--q-orange, #ff9800)`) or it resolves to nothing.
 
 ---
 
@@ -2073,10 +2136,12 @@ rewrite what an approver already read.
 that has moved on since the link was opened must say why nothing here will save, in a banner
 above the form, rather than failing at the sticky bar after the user has typed.
 
-**Edit shows the intent control its entry state calls for**, not both greyed against each
-other — a draft asks "is this still a draft?", a returned record asks "what changed?". The
-non-advancing intent (save-as-draft) **defaults on**, so a user who opens their own draft to
-adjust a line and hits the primary button saves it rather than submitting it by accident.
+**State-adaptive submission controls matrix in Edit:**
+
+| Entry State (`Progress`) | Intent toggle | Resubmission commentary | Button label |
+|---|---|---|---|
+| `DRAFT` | "Save as Draft" (**defaults ON**) | Hidden when draft ON; shown when draft OFF | "Save Draft" / "Submit" |
+| `REVISION_REQUIRED` | Omitted entirely | Unconditional textarea | "Resubmit Request" |
 
 ### 13.5 `pageState` — record fields vs control fields
 
@@ -2085,20 +2150,31 @@ A form collects two different kinds of value, and they are stored differently:
 | | Written with | Reaches the backend | Examples |
 |---|---|---|---|
 | **Record field** | `setField` / `setFields` | yes, in the payload | a real resource header — `OutletCode`, `ProgressSubmittedComment` |
-| **Control field** | `setControlField` | **no** | page-only intent and working state — `isDraft`, `RestockMode`, an allocation plan, a selection set |
+| **Control field** | `setControlField` | **no** | page-only intent and working state — `isDraft`, `RestockMode`, `EditHydratedFor`, an allocation plan |
 
-**A control field is the working surface a workflow form is built on.** The user's whole
-decision — which bins, how much from each, which lines arrived — accumulates in one control
-field, which is what lets the sticky bar's handler (running outside setup) read the finished
-decision back and build the payload from it (§8.2).
+**Control fields as working surface.** The user's whole decision — which bins, how much from
+each, which lines arrived — accumulates in control fields, which is what lets the sticky bar's
+handler read the finished decision back and build the batch payload (§8.2).
 
-Two rules:
+**Multi-caller node hydration keying (`EditHydratedFor`).** When multiple components on an
+Edit page invoke the same form composable (`useRestockEditForm`), track hydration using a
+node-level control field rather than a local closure variable:
+```javascript
+const hydratedFor = () => text(pageState.getControlField?.(PARENT_NODE, 'EditHydratedFor'))
+if (hydratedFor() !== text(parent.Code)) {
+  pageState.setControlField(PARENT_NODE, 'EditHydratedFor', text(parent.Code))
+  // hydrate child lines...
+}
+```
+This prevents duplicate child-line seeding or wiping out in-progress edits across sibling cards.
 
-- **A control field never leaks into a payload on its own.** The submit handler places its
-  consequences on the right columns — that is the handler's job, not the card's.
-- **Read a value back off the node, never mirror it in a local `ref`.** Reading back is what
-  pre-seeds a control from an existing record: a comment loaded during hydration shows the
-  previous text for the user to amend rather than silently dropping it.
+**Child-line deduplication during hydration.** Normalize incoming lines by business key
+(e.g. `SkuCode`) and prioritize active records over deactivated rows before writing to
+`pageState`, eliminating duplicate lines in form steppers.
+
+**Submission intent and comment precedence.** Place the non-advancing intent toggle ("Save as
+draft") *before* the comment box, and hide the comment box when draft is toggled on (since
+a private draft has no reviewer or reader yet).
 
 **Stamps are written by the handler, under the hood.** `Progress`, `...At`, `...By` are set
 in the submit handler that causes the transition, never exposed as fields (§13.3) — so a

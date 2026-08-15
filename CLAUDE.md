@@ -10,7 +10,7 @@ Read [AGENTS.md](file:///f:/LITTLE%20LEAP/AQL/AGENTS.md) for the complete startu
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **little-leap-aql** (14060 symbols, 22742 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **little-leap-aql** (14531 symbols, 23540 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

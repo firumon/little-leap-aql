@@ -1,8 +1,8 @@
-﻿# Resource Domain Logic System
+# 3-Layer UI — Resource Domain Logic System
 
 The canonical, self-contained spec for `FRONTENT/src/_resource/**/*` — the UI-agnostic
-business/workflow logic layer — and the strict one-way import boundary that connects it to
-the UI presentation layer. Referenced by
+business/workflow logic layer in the **3-Layer UI Architecture** — and the strict one-way import boundary that connects it to
+the UI presentation layer (`_ui/`). Referenced by
 [UI_MODULE_DEVELOPER_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md),
 which covers UI-side generation; this document owns everything about the domain layer
 itself and the boundary rules around it.
@@ -12,14 +12,14 @@ itself and the boundary rules around it.
 ## 1. Purpose
 
 Core business rules, state transitions, and workflow logic belong to the resource domain
-itself — never inside a `_ui/{Ui}/` presentation folder — so that every UI a resource might
+itself (Layer 2) — never inside a `_ui/{Ui}/` presentation folder (Layer 3) — so that every UI a resource might
 render under, whichever `CustomUIName` it carries, consumes the exact same underlying
 workflow logic. A resource's "what can this record do right now, and why" has exactly one
 answer, computed in exactly one place, regardless of how many different UIs display it.
 
 ---
 
-## 2. The Three-Layer Boundary
+## 2. The 3-Layer UI Architecture & Import Boundary
 
 ```
 src/components/, src/composables/, src/pages/        Layer 1 — Core System Infrastructure

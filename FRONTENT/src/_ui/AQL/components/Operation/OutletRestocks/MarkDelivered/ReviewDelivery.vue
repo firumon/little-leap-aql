@@ -1,12 +1,12 @@
-﻿<template>
+<template>
   <div v-if="visible" :class="gutterClass">
     <SectionDividerLabel :label="title" />
 
-    <q-card v-if="!productGroups.length" flat bordered class="page-card aql-premium-gradient-card">
+    <q-card v-if="!productGroups.length" flat bordered :class="ui.cardClass">
       <q-card-section class="text-center q-py-lg">
-        <q-icon name="inventory_2" size="40px" color="grey-4" class="q-mb-sm block q-mx-auto" />
-        <div class="text-subtitle1 text-weight-bold text-grey-6">Nothing selected</div>
-        <div class="text-caption text-grey-6">Go back and pick the items that arrived.</div>
+        <q-icon name="inventory_2" :size="ui.emptyIconSize" :color="ui.emptyIconColor" class="q-mb-sm block q-mx-auto" />
+        <div :class="ui.emptyTitleClass">Nothing selected</div>
+        <div :class="ui.emptyCaptionClass">Go back and pick the items that arrived.</div>
       </q-card-section>
     </q-card>
 
@@ -19,12 +19,12 @@
       :key="product.productCode"
       flat
       bordered
-      class="page-card aql-premium-gradient-card"
+      :class="ui.cardClass"
       :style="rowDelay(index)"
     >
       <q-card-section>
         <div class="row items-center no-wrap q-col-gutter-sm">
-          <div class="col aql-flex-wrap-text">
+          <div class="col" :class="ui.flexWrapTextClass">
             <div class="text-subtitle1 text-weight-bold">{{ product.productName }}</div>
           </div>
           <div class="col-auto text-subtitle1 text-weight-bold text-positive">
@@ -36,16 +36,16 @@
 
         <div v-for="group in product.skus" :key="group.key" class="q-mt-sm">
           <div class="row items-center no-wrap q-col-gutter-sm">
-            <div class="col aql-flex-wrap-text text-body2 text-weight-medium">{{ group.label }}</div>
+            <div class="col text-body2 text-weight-medium" :class="ui.flexWrapTextClass">{{ group.label }}</div>
             <div class="col-auto text-body2 text-weight-medium text-grey-7">
               {{ group.selectedQuantity }} {{ group.uom }}
             </div>
           </div>
 
-          <div class="aql-detail-grid q-ml-sm">
-            <div v-for="row in group.rows" :key="row.code" class="aql-detail-line items-center">
-              <span class="aql-detail-key">{{ row.warehouseCode || '—' }} | {{ row.storageName }}</span>
-              <span class="aql-detail-val col overflow-hidden flex justify-end items-center">
+          <div class="q-ml-sm" :class="ui.detailGridClass">
+            <div v-for="row in group.rows" :key="row.code" class="items-center" :class="ui.detailLineClass">
+              <span :class="ui.detailKeyClass">{{ row.warehouseCode || '—' }} | {{ row.storageName }}</span>
+              <span class="col overflow-hidden flex justify-end items-center" :class="ui.detailValClass">
                 {{ row.quantity }} {{ row.uom }}
               </span>
             </div>
@@ -54,17 +54,18 @@
       </q-card-section>
     </q-card>
 
-    <q-card v-if="productGroups.length" flat bordered class="page-card aql-premium-gradient-card">
+    <q-card v-if="productGroups.length" flat bordered :class="ui.cardClass">
       <q-card-section>
-        <div class="aql-detail-grid">
+        <div :class="ui.detailGridClass">
           <div
             v-for="(line, index) in totalsLines"
             :key="line.key"
-            class="aql-detail-line items-center aql-detail-row"
+            class="items-center"
+            :class="[ui.detailLineClass, ui.detailRowClass]"
             :style="rowDelay(index)"
           >
-            <span class="aql-detail-key">{{ line.key }}</span>
-            <span class="aql-detail-val col overflow-hidden flex justify-end items-center">
+            <span :class="ui.detailKeyClass">{{ line.key }}</span>
+            <span class="col overflow-hidden flex justify-end items-center" :class="ui.detailValClass">
               {{ line.value }}
             </span>
           </div>
@@ -77,7 +78,7 @@
          genuinely noteworthy ones harder to spot. -->
     <SectionDividerLabel :label="commentTitle" />
 
-    <q-card flat bordered class="page-card aql-premium-gradient-card">
+    <q-card flat bordered :class="ui.cardClass">
       <q-card-section>
         <component
           :is="CommentField"
@@ -114,8 +115,6 @@ import { useRestockDeliveryContext } from 'src/_ui/AQL/composables/Operation/Out
 
 defineOptions({ name: 'OutletRestocksMarkDeliveredReviewDelivery', inheritAttrs: false })
 
-const ROW_STAGGER_MS = 40
-
 // Hoisted to a module constant: an object literal inline in the template is a new
 // prop identity on every render, for a value that never changes.
 const COMMENT_CONFIG = {
@@ -132,9 +131,8 @@ const props = defineProps({
 })
 
 const attrs = useAttrs()
-const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
-
-const { pageState, evaluate } = useRestockDeliveryContext()
+const { pageState, evaluate, ui } = useRestockDeliveryContext()
+const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || ui.gutterFallback || 'sm'}`)
 
 const {
   restock,
@@ -184,5 +182,5 @@ const totalsLines = computed(() => [
   { key: 'Source locations', value: String(binCount.value) }
 ])
 
-const rowDelay = (index) => ({ animationDelay: `${index * ROW_STAGGER_MS}ms` })
+const rowDelay = (index) => ({ animationDelay: `${index * ui.rowStaggerMs}ms` })
 </script>

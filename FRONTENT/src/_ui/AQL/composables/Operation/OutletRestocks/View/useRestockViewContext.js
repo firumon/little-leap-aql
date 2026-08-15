@@ -1,5 +1,6 @@
-﻿import { inject } from 'vue'
+import { inject } from 'vue'
 import { evaluateProp } from 'src/composables/resources/useSectionResolver'
+import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 
 /**
  * OutletRestocks › View — the injection relay for the View page
@@ -25,10 +26,13 @@ import { evaluateProp } from 'src/composables/resources/useSectionResolver'
 export function useRestockViewContext () {
   const resourceRecord = inject('resourceRecord', null)
   const resourceConfig = inject('resourceConfig', null)
+  const ui = useAQLConfig()
 
   return {
     resourceRecord,
     resourceConfig,
+    ui,
     evaluate: (val) => evaluateProp(val, resourceRecord, resourceConfig)
   }
 }
+

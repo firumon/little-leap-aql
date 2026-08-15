@@ -1,12 +1,13 @@
-﻿import { inject } from 'vue'
+import { inject } from 'vue'
 import { evaluateProp } from 'src/composables/resources/useActionResolver'
 import { useRecord } from 'src/composables/resources/useRecord'
+import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 
 /**
  * OutletRestocks › Approve + Reallocate — the injection relay for the two
  * allocation action routes (UI_RESOURCE_DOMAIN_LOGIC.md §6.1).
  *
- * PLACEMENT — `Operation/Outlets/`, the feature tier, beside `useRestockApproval`
+ * PLACEMENT — `Operation/OutletRestocks/`, the resource tier, beside `useRestockApproval`
  * (§6.2, and the worked example in §6.1's note).
  *
  * `Approve.js` and `Reallocate.js` provide the same context shape and resolve the
@@ -28,11 +29,13 @@ export function useRestockApprovalContext () {
   const pageState = inject('pageState', null)
   const resourceRecord = inject('resourceRecord', null)
   const resourceConfig = inject('resourceConfig', null)
+  const ui = useAQLConfig()
 
   return {
     pageState,
     resourceRecord,
     resourceConfig,
+    ui,
     evaluate: (val) => evaluateProp(val, resourceRecord, resourceConfig),
     /**
      * Core-composable relay: cards never call `useRecord` themselves (§6).
@@ -42,3 +45,4 @@ export function useRestockApprovalContext () {
     resource: (name) => useRecord(name)
   }
 }
+

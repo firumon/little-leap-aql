@@ -4,7 +4,7 @@
        occupy a slot in the page body's gutter stack and open a blank gap between
        the header and the details card. -->
   <div v-if="visible" :class="spacingClass">
-    <q-card flat bordered class="page-card aql-premium-gradient-card bg-orange-1" :style="accentStyle">
+    <q-card flat bordered :class="[ui.cardClass, ui.accentCardClass]" :style="ui.accentBorderStyle">
       <q-card-section>
         <!-- The heading carries the whole point of the card, so it is stated in
              the workflow's own icon and words rather than left to the reader to
@@ -14,15 +14,16 @@
           <div class="text-subtitle1 text-weight-bold text-orange-9">{{ finalTitle }}</div>
         </div>
 
-        <div class="aql-detail-grid">
+        <div :class="ui.detailGridClass">
           <div
             v-for="(line, index) in lines"
             :key="line.label"
-            class="aql-detail-line items-center aql-detail-row"
+            class="items-center"
+            :class="[ui.detailLineClass, ui.detailRowClass]"
             :style="rowDelay(index)"
           >
-            <span class="aql-detail-key">{{ line.label }}</span>
-            <span class="aql-detail-val col overflow-hidden flex justify-end items-center">
+            <span :class="ui.detailKeyClass">{{ line.label }}</span>
+            <span class="col overflow-hidden flex justify-end items-center" :class="ui.detailValClass">
               {{ line.value }}
             </span>
           </div>
@@ -43,7 +44,7 @@
  * uniformly neutral, so the colour is doing work rather than decorating.
  *
  * Row grammar is `RestockHeader`'s exactly (`.aql-detail-*` on a
- * `page-card aql-premium-gradient-card` shell, 40ms stagger), so the emphasis
+ * `ui.cardClass` shell, shared stagger), so the emphasis
  * reads as emphasis and not as a differently-built card.
  *
  * Renders NOTHING outside `REVISION_REQUIRED` — see the template note on `v-if`.
@@ -57,26 +58,17 @@ import { useRestockViewContext } from 'src/_ui/AQL/composables/Operation/OutletR
 defineOptions({ name: 'OutletRestocksViewRevisionRequiredBanner', inheritAttrs: false })
 
 const REVISION_REQUIRED = 'REVISION_REQUIRED'
-const ROW_STAGGER_MS = 40
-
-// Hoisted: an inline style object literal would be a fresh identity every render.
-// `--q-orange` is not one of Quasar's brand CSS variables (only primary,
-// secondary, accent, dark, positive, negative, info, warning are), so the literal
-// is carried as the fallback rather than relying on a variable that resolves to
-// nothing in a stock build.
-const ACCENT_STYLE = { borderLeft: '4px solid var(--q-orange, #ff9800)' }
 
 const props = defineProps({
   title: { type: [String, Function], default: 'Revision Required' },
   padding: { type: String, default: 'sm' }
 })
 
-const { evaluate } = useRestockViewContext()
+const { evaluate, ui } = useRestockViewContext()
 
 const { restock, pending, formatStampDate } = useRestockView()
 
 const spacingClass = computed(() => `q-px-${props.padding}`)
-const accentStyle = ACCENT_STYLE
 const finalTitle = computed(() => evaluate(props.title))
 
 // Hidden while the record is still loading too: flashing an instruction card in
@@ -96,5 +88,5 @@ const lines = computed(() => {
   ].filter((line) => String(line.value ?? '').trim())
 })
 
-const rowDelay = (index) => ({ animationDelay: `${index * ROW_STAGGER_MS}ms` })
+const rowDelay = (index) => ({ animationDelay: `${index * ui.rowStaggerMs}ms` })
 </script>

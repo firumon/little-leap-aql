@@ -10,7 +10,7 @@
       header-label="productName"
       empty-text="No items on this restock."
       empty-icon="inventory_2"
-      card-class="page-card aql-premium-gradient-card"
+      :card-class="ui.cardClass"
       label="label"
       :metaLabel="restockCaption"
     >
@@ -64,7 +64,7 @@ const props = defineProps({
   padding: { type: String, default: 'sm' }
 })
 
-const { evaluate } = useRestockViewContext()
+const { evaluate, ui } = useRestockViewContext()
 
 const { productGroups, pending } = useRestockView()
 

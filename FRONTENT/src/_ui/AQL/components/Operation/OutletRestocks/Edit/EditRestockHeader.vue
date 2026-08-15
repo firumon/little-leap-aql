@@ -1,19 +1,20 @@
-﻿<template>
+<template>
   <div :class="gutterClass">
-    <q-card flat bordered class="page-card aql-premium-gradient-card">
+    <q-card flat bordered :class="ui.cardClass">
       <q-card-section>
         <!-- Outlet and date are fixed for the life of a restock: the request was
              raised for one outlet, and re-pointing it at another would silently
              rewrite what the approver already saw. Both are stated, not offered. -->
-        <div class="aql-detail-grid">
+        <div :class="ui.detailGridClass">
           <div
             v-for="(line, index) in summaryLines"
             :key="line.key"
-            class="aql-detail-line items-center aql-detail-row"
+            class="items-center"
+            :class="[ui.detailLineClass, ui.detailRowClass]"
             :style="rowDelay(index)"
           >
-            <span class="aql-detail-key">{{ line.key }}</span>
-            <span class="aql-detail-val col overflow-hidden flex justify-end items-center">
+            <span :class="ui.detailKeyClass">{{ line.key }}</span>
+            <span class="col overflow-hidden flex justify-end items-center" :class="ui.detailValClass">
               {{ line.value }}
             </span>
           </div>
@@ -55,10 +56,7 @@
  * instruction the user is here to act on — it belongs above the item cards, not
  * behind a tab.
  *
- * Layout mirrors `MarkDelivered/SelectDeliveryItems.vue`'s summary card: the
- * `.aql-detail-*` row grammar on a `page-card aql-premium-gradient-card` shell
- * with the framework's 40ms stagger, so it cannot misalign against a neighbouring
- * card.
+ * Layout binds to the UI design tokens relayed from `useAQLConfig()`.
  *
  * It is also where the page hydrates: this is the first content the Edit contract
  * renders and `useRestockEditForm` owns the load, since the contract has no
@@ -68,20 +66,18 @@
  * (ARCHITECTURE RULES §6). No `<style>` block (ARCHITECTURE RULES §7).
  */
 import { computed, useAttrs } from 'vue'
+import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 import { useRestockEditForm } from 'src/_ui/AQL/composables/Operation/OutletRestocks/Edit/useRestockEditForm'
 import { restockEditableProgress } from 'src/_resource/Operation/OutletRestocks/composables/useRestockProgress'
 
 defineOptions({ name: 'OutletRestocksEditRestockHeader', inheritAttrs: false })
 
-// The same 40ms cadence the framework detail cards animate on, so a custom card
-// stacked beside one enters in step. Hoisted rather than written inline: a fresh
-// object literal per render is a new prop identity every time.
-const ROW_STAGGER_MS = 40
+const ui = useAQLConfig()
 
 // Vertical rhythm follows the page's own gutter token (drilled down from
 // pageProps — UI_PAGE_AND_SECTION_SYSTEM.md §1.3.4).
 const attrs = useAttrs()
-const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
+const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || ui.gutterFallback || 'sm'}`)
 
 const { parent, outletName, restockDate, isRevision, revisionNote } = useRestockEditForm()
 
@@ -103,5 +99,5 @@ const summaryLines = computed(() => {
   return lines
 })
 
-const rowDelay = (index) => ({ animationDelay: `${index * ROW_STAGGER_MS}ms` })
+const rowDelay = (index) => ({ animationDelay: `${index * ui.rowStaggerMs}ms` })
 </script>

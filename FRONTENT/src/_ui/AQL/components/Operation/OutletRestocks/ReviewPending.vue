@@ -1,15 +1,15 @@
-﻿<template>
+<template>
   <div v-if="visible" :class="gutterClass">
     <!-- The other half of the decision: everything NOT being covered right now.
          Kept on the same review step as the allocations, because "what I am
          approving" and "what I am leaving unfilled" are one decision, not two. -->
     <SectionDividerLabel label="Remaining Items" />
 
-    <q-card v-if="!stayingPending.length && !cancelling.length" flat bordered class="page-card aql-premium-gradient-card">
+    <q-card v-if="!stayingPending.length && !cancelling.length" flat bordered :class="ui.cardClass">
       <q-card-section class="text-center q-py-lg">
-        <q-icon name="task_alt" size="40px" color="positive" class="q-mb-sm block q-mx-auto" />
-        <div class="text-subtitle1 text-weight-bold text-grey-7">Every requested unit is covered</div>
-        <div class="text-caption text-grey-6">Nothing will be left pending on this request.</div>
+        <q-icon name="task_alt" :size="ui.emptyIconSize" color="positive" class="q-mb-sm block q-mx-auto" />
+        <div :class="ui.emptyTitleClass">Every requested unit is covered</div>
+        <div :class="ui.emptyCaptionClass">Nothing will be left pending on this request.</div>
       </q-card-section>
     </q-card>
 
@@ -22,7 +22,7 @@
       item-key="code"
       group-key="productCode"
       header-label="productName"
-      card-class="page-card aql-premium-gradient-card"
+      :card-class="ui.cardClass"
       :content="[(item) => item.variantLabel]"
       :layout="['label']"
       chip="remainder"
@@ -39,7 +39,7 @@
       item-key="code"
       group-key="productCode"
       header-label="productName"
-      card-class="page-card aql-premium-gradient-card"
+      :card-class="ui.cardClass"
       :content="[(item) => item.variantLabel]"
       :layout="['label']"
       :meta="[() => 'Will be cancelled', () => 'no stock movement', (item) => String(item.remainder)]"
@@ -66,7 +66,7 @@
          approver writes one note, and the button they press files it. -->
     <SectionDividerLabel label="Comment" />
 
-    <q-card flat bordered class="page-card aql-premium-gradient-card">
+    <q-card flat bordered :class="ui.cardClass">
       <q-card-section>
         <component
           :is="CommentField"
@@ -98,8 +98,8 @@ import { computed, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import AqlGroupedList from 'components/app/AqlGroupedList.vue'
 import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
-import { useRestockApproval } from 'src/_ui/AQL/composables/Operation/Outlets/useRestockApproval'
-import { useRestockApprovalContext } from 'src/_ui/AQL/composables/Operation/Outlets/useRestockApprovalContext'
+import { useRestockApproval } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockApproval'
+import { useRestockApprovalContext } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockApprovalContext'
 
 defineOptions({ name: 'OutletRestocksApproveReviewPending', inheritAttrs: false })
 
@@ -108,20 +108,21 @@ const props = defineProps({
 })
 
 const attrs = useAttrs()
-const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
+const { pageState, ui } = useRestockApprovalContext()
+const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || ui.gutterFallback || 'sm'}`)
 
-const { pageState } = useRestockApprovalContext()
-const { restock, pendingRows, comment, setComment } = useRestockApproval()
+const { pendingRows, comment, setComment, restock } = useRestockApproval()
 
 const visible = computed(() => pageState?.meta.currentStep === props.step)
 
-// Resolved through the field registry rather than a direct import, so the comment
-// box picks up whatever the textarea control does (UI_MODULE_DEVELOPER_GUIDE.md §2.3).
+// Resolved once — eager registry, synchronous lookup (UI_MODULE_DEVELOPER_GUIDE.md §2.3).
 const CommentField = resolveFieldComponent('textarea', 'edit')
 
 const commentConfig = computed(() => ({
-  label: 'Comment',
-  hint: 'Recorded against this approval.'
+  label: 'Approval comment',
+  hint: 'Optional. Recorded against this decision.',
+  hideBottomSpace: false,
+  'data-testid': 'restock-approve-comment'
 }))
 
 const stayingPending = computed(() => pendingRows.value.filter((row) => !row.cancelled))

@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <q-btn
     class="aql-form-action-btn"
     glossy
@@ -29,7 +29,7 @@
  * blocking indicator is `AqlContentWrapper`'s overlay (UI_ACTION_SYSTEM.md §5).
  */
 import { computed } from 'vue'
-import { useRestockApprovalContext } from 'src/_ui/AQL/composables/Operation/Outlets/useRestockApprovalContext'
+import { useRestockApprovalContext } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockApprovalContext'
 
 defineOptions({ name: 'OutletRestocksApproveFormActionReject', inheritAttrs: false })
 

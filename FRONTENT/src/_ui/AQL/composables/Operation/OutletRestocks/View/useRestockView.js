@@ -1,6 +1,9 @@
 ﻿import { computed, onMounted } from 'vue'
 import { useRecord } from 'src/composables/resources/useRecord'
 import { useRestockViewContext } from './useRestockViewContext'
+import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
+import { useOutletResource } from 'src/_resource/Master/Outlets/composables/useOutletResource'
+import { useWarehouseResource } from 'src/_resource/Master/Warehouses/composables/useWarehouseResource'
 import {
   itemProgressLabel,
   itemProgressColor,
@@ -87,29 +90,28 @@ export function formatStampDate (value) {
 }
 
 /**
- * A SKU's display name from its own row plus its product's.
+ * A SKU's display name, projected from its ENRICHED record.
  *
  * A SKU carries its variant VALUES in positional `Variant1..N` columns, and the
  * product names those positions through its `VariantTypes` CSV — so the values are
- * only meaningful in the product's order, which is why both rows are read. Capped
- * at five, matching the column set. Pure, so the lookup stays in the composable.
+ * only meaningful in the product's order. `enrichSku` performs that join and the
+ * five-column cap; this used to take the two RAW rows and redo both, which forced
+ * its caller to scan the SKUs array and then the Products array per label
+ * (§6 — Enrich Once, Then Project). Pure, so the lookup stays in the composable.
  */
-export function skuLabelFrom (skuRow = {}, productRow = {}, fallback = '') {
-  const sku = asRow(skuRow)
-  const product = asRow(productRow)
+export function skuLabelOf (info = {}, fallback = '') {
+  const enriched = asRow(info)
   const code = text(fallback)
-  const variantCount = text(product.VariantTypes)
-    .split(',').map((label) => label.trim()).filter(Boolean).slice(0, 5).length
-  const variants = Array.from({ length: variantCount }, (_, index) => text(sku[`Variant${index + 1}`]))
-    .filter(Boolean)
-    .join(' / ')
+  const variants = (enriched.variantValues || []).filter(Boolean).join(' / ')
   return {
-    primary: text(product.Name) || code,
+    primary: text(enriched.productName) || code,
     secondary: variants || code,
     // Falls back to the SKU so a SKU with no product still forms its own group
-    // rather than collapsing every orphan into one nameless card.
-    productCode: text(product.Code) || code,
-    uom: text(sku.UOM) || DEFAULT_UOM
+    // rather than collapsing every orphan into one nameless card — keyed off
+    // whether the product actually RESOLVED, so a SKU pointing at a product that
+    // no longer exists is treated as the orphan it is.
+    productCode: (enriched._product ? text(enriched.productCode) : '') || code,
+    uom: text(enriched.uom) || DEFAULT_UOM
   }
 }
 
@@ -143,12 +145,16 @@ export function groupViewRows (rows = [], label = () => ({}), warehouseName = (c
         productName: text(info.primary) || productCode,
         uom,
         skus: [],
-        quantity: 0
+        quantity: 0,
+        // Keyed, not scanned: `skus` grows as rows are folded in, so a `.find()` here
+        // is a scan of everything already grouped, per row (§6 — Indexed Joins).
+        // Stripped before the tree is returned.
+        _index: new Map()
       })
     }
     const product = products.get(productCode)
 
-    let group = product.skus.find((entry) => entry.sku === sku)
+    let group = product._index.get(sku)
     if (!group) {
       group = {
         key: `${productCode}:${sku}`,
@@ -162,6 +168,7 @@ export function groupViewRows (rows = [], label = () => ({}), warehouseName = (c
         states: []
       }
       product.skus.push(group)
+      product._index.set(sku, group)
     }
 
     const quantity = num(row.Quantity)
@@ -180,7 +187,7 @@ export function groupViewRows (rows = [], label = () => ({}), warehouseName = (c
     product.quantity += quantity
   })
 
-  return Array.from(products.values())
+  return Array.from(products.values()).map(({ _index, ...product }) => product)
 }
 
 export function useRestockView () {
@@ -195,6 +202,13 @@ export function useRestockView () {
   const warehouses = useRecord('Warehouses')
   const skus = useRecord('SKUs')
   const products = useRecord('Products')
+
+  // The SKU × Product, Outlet and Warehouse joins belong to the resource layer
+  // (§6 — Enrich Once, Then Project). The `useRecord` handles stay for their
+  // `reload()` below: fetching the rows is a separate concern from reading them.
+  const { getSku } = useSkuResource()
+  const { getOutlet } = useOutletResource()
+  const { getWarehouse } = useWarehouseResource()
 
   onMounted(() => {
     // A view route loads the record and its relations, but NOT the SKUs ×
@@ -211,21 +225,17 @@ export function useRestockView () {
   const outletName = computed(() => {
     const code = text(restock.value?.OutletCode)
     if (!code) return ''
-    const match = outlets.items.value.find((row) => text(asRow(row).Code) === code)
-    return text(asRow(match).Name) || code
+    return text(getOutlet(code)?.name) || code
   })
 
   function warehouseName (code) {
-    const match = warehouses.items.value.find((row) => text(asRow(row).Code) === text(code))
-    return text(asRow(match).Name) || text(code)
+    return text(getWarehouse(text(code))?.name) || text(code)
   }
 
   function skuLabel (sku) {
     const code = text(sku)
     if (!code) return { primary: 'Item', secondary: '', productCode: '', uom: DEFAULT_UOM }
-    const skuRow = asRow(skus.items.value.find((row) => text(asRow(row).Code) === code))
-    const productRow = asRow(products.items.value.find((row) => text(asRow(row).Code) === text(skuRow.ProductCode)))
-    return skuLabelFrom(skuRow, productRow, code)
+    return skuLabelOf(getSku(code) || {}, code)
   }
 
   // Read from the resource rows rather than `childRecordsByResource`, so rows

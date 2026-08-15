@@ -145,6 +145,11 @@ export function useRestockStockMatch () {
     }).sort((a, b) => a.productName.localeCompare(b.productName) || a.variantLabel.localeCompare(b.variantLabel))
   })
 
+  // `setQuantity`/`adjustQuantity` run on every +/- tap and every typed digit, and both
+  // address a row by SKU. Indexed rather than scanned over the whole catalogue, which in
+  // standard mode is every active SKU in the system (§6 — Indexed Joins).
+  const rowsBySku = computed(() => new Map(rows.value.map((row) => [row.SKU, row])))
+
   const existingRows = computed(() => rows.value.filter((row) => row.outletQuantity > 0))
   const newRows = computed(() => rows.value.filter((row) => row.outletQuantity <= 0))
   const totalRestockQuantity = computed(() => rows.value.reduce((sum, row) => sum + row.restockQuantity, 0))
@@ -177,7 +182,7 @@ export function useRestockStockMatch () {
   }
 
   function setQuantity (sku, value) {
-    const row = rows.value.find((item) => item.SKU === sku)
+    const row = rowsBySku.value.get(sku)
     if (!row) return
     const quantity = clampRestockQuantity(value, row.maxQuantity)
     const entries = matchingEntries(sku)
@@ -207,7 +212,7 @@ export function useRestockStockMatch () {
   }
 
   function adjustQuantity (sku, delta) {
-    const row = rows.value.find((item) => item.SKU === sku)
+    const row = rowsBySku.value.get(sku)
     if (!row) return
     // Stepped off the live total rather than off `row.restockQuantity`: `rows` is a
     // projection, and reading the source directly keeps a rapid second click from

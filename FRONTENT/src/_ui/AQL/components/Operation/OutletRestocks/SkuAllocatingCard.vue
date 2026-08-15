@@ -1,5 +1,5 @@
-﻿<template>
-  <q-card flat bordered class="page-card aql-premium-gradient-card">
+<template>
+  <q-card flat bordered :class="ui.cardClass">
     <!-- PRODUCT HEADER — name | actions | totals, on one line.
          `no-wrap` keeps the three regions on the same row; the name column carries
          `min-width: 0` so it may SHRINK. Without that a flex item's implicit
@@ -7,7 +7,7 @@
          actions and totals onto a new line for a long product name. -->
     <q-card-section class="q-pb-none">
       <div class="row items-center no-wrap q-col-gutter-sm">
-        <div class="col aql-flex-wrap-text">
+        <div class="col" :class="ui.flexWrapTextClass">
           <div class="text-subtitle1 text-weight-medium">{{ group.productName }}</div>
         </div>
 
@@ -49,7 +49,7 @@
 
       <!-- SKU SUB-HEADER — variant on the left, requested + status on the right. -->
       <div class="row items-center no-wrap q-col-gutter-sm q-mb-sm">
-        <div class="col aql-flex-wrap-text">
+        <div class="col" :class="ui.flexWrapTextClass">
           <div class="text-body2 text-weight-medium">{{ sku.variantLabel }}</div>
         </div>
         <!-- Status as an icon beside the figures, not a second line of prose: the
@@ -125,6 +125,7 @@
  */
 import { computed } from 'vue'
 import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
+import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 
 defineOptions({ name: 'OutletRestocksApproveSkuAllocatingCard', inheritAttrs: false })
 
@@ -134,6 +135,8 @@ const props = defineProps({
 })
 
 defineEmits(['allocate', 'clear', 'quantity', 'cancel'])
+
+const ui = useAQLConfig()
 
 // Resolved once — the field registry is eager, so this is synchronous and the
 // inputs never flash empty (UI_MODULE_DEVELOPER_GUIDE.md §2.3).
@@ -181,9 +184,11 @@ function binColumnClass (count) {
 }
 
 // The plan is keyed by bin, so an input reads its own line back rather than
-// tracking a parallel per-input ref.
+// tracking a parallel per-input ref. `linesByKey` is that keying, built once per row
+// by `useRestockApproval`: this runs inside the bin `v-for`, and scanning `lines` for
+// every bin of every SKU is exactly the render-loop lookup §6 forbids.
 function quantityIn (sku, bin) {
-  return sku.lines.find((line) => line.key === bin.id)?.quantity ?? 0
+  return sku.linesByKey.get(bin.id)?.quantity ?? 0
 }
 
 const canAllocate = computed(() =>

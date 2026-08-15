@@ -1,6 +1,8 @@
 ﻿import { computed, onMounted, watch } from 'vue'
 import { useRecord } from 'src/composables/resources/useRecord'
 import { useRestockDeliveryContext } from './useRestockDeliveryContext'
+import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
+import { useOutletResource } from 'src/_resource/Master/Outlets/composables/useOutletResource'
 import {
   SELECTION,
   normalizeSelection,
@@ -94,12 +96,16 @@ export function groupDeliveryRows (rows = [], label = () => ({}), selected = [])
         quantity: 0,
         selectedQuantity: 0,
         codes: [],
-        selectedCodes: []
+        selectedCodes: [],
+        _index: new Map()
       })
     }
     const product = products.get(productCode)
 
-    let group = product.skus.find((entry) => entry.sku === sku)
+    // Keyed, not scanned: `product.skus` grows as rows are folded in, so a `.find()`
+    // here is a scan of everything already grouped, per row (§6 — Indexed Joins).
+    // `_index` is stripped before the tree is returned.
+    let group = product._index.get(sku)
     if (!group) {
       group = {
         key: `${productCode}:${sku}`,
@@ -114,6 +120,7 @@ export function groupDeliveryRows (rows = [], label = () => ({}), selected = [])
         selectedCodes: []
       }
       product.skus.push(group)
+      product._index.set(sku, group)
     }
 
     const quantity = num(row.Quantity)
@@ -145,7 +152,7 @@ export function groupDeliveryRows (rows = [], label = () => ({}), selected = [])
   // Tri-state flags are derived, never stored: a header's checked/indeterminate
   // state is a fact about its children, and storing it would be the second source
   // of truth this module exists to avoid.
-  return Array.from(products.values()).map((product) => ({
+  return Array.from(products.values()).map(({ _index, ...product }) => ({
     ...product,
     skus: product.skus.map((group) => ({
       ...group,
@@ -169,6 +176,12 @@ export function useRestockDelivery () {
   const outlets = useRecord('Outlets')
   const skus = useRecord('SKUs')
   const products = useRecord('Products')
+
+  // The SKU × Product and Outlet joins belong to the resource layer (§6 — Enrich
+  // Once, Then Project). The `useRecord` handles stay for their `reload()` below:
+  // fetching the rows is a separate concern from reading them.
+  const { getSku } = useSkuResource()
+  const { getOutlet } = useOutletResource()
 
   const parent = pageState.useNode(PARENT)
   const serverRecord = computed(() => resourceRecord?.record?.value || null)
@@ -258,8 +271,7 @@ export function useRestockDelivery () {
   const outletName = computed(() => {
     const code = text(restock.value.OutletCode)
     if (!code) return '—'
-    const match = outlets.items.value.find((row) => text(asRow(row).Code) === code)
-    return text(asRow(match).Name) || code
+    return text(getOutlet(code)?.name) || code
   })
 
   // Read from the resource rows rather than `childRecordsByResource`, so a row
@@ -277,30 +289,29 @@ export function useRestockDelivery () {
   const items = computed(() => deliverableRows(allItems.value, restock.value.Code))
 
   /**
-   * The display name of a SKU, resolved from the SKUs + Products rows directly.
+   * The display name of a SKU, read off the enriched SKU record.
    *
    * A SKU carries its variant VALUES in positional `Variant1..N` columns, and the
-   * product names those positions through its `VariantTypes` CSV — so the values
-   * are only meaningful in the product's own order, which is why both records are
-   * read rather than the SKU alone. Capped at five, matching the column set.
+   * product names those positions through its `VariantTypes` CSV — so the values are
+   * only meaningful in the product's own order. That join, and the five-column cap,
+   * are `enrichSku`'s job. This used to redo both by scanning the SKUs array and then
+   * the Products array on every call, and it is called once per row while grouping
+   * and again per selected row while summing units (§6 — Enrich Once, Then Project).
    */
   function skuLabel (sku) {
     const code = text(sku)
     if (!code) return { primary: 'Item', secondary: '', productCode: '', uom: DEFAULT_UOM }
-    const skuRow = asRow(skus.items.value.find((row) => text(asRow(row).Code) === code))
-    const productRow = asRow(products.items.value.find((row) => text(asRow(row).Code) === text(skuRow.ProductCode)))
-    const variantCount = text(productRow.VariantTypes)
-      .split(',').map((label) => label.trim()).filter(Boolean).slice(0, 5).length
-    const variants = Array.from({ length: variantCount }, (_, index) => text(skuRow[`Variant${index + 1}`]))
-      .filter(Boolean)
-      .join(' / ')
+    const info = getSku(code) || {}
+    const variants = (info.variantValues || []).filter(Boolean).join(' / ')
     return {
-      primary: text(productRow.Name) || code,
+      primary: text(info.productName) || code,
       secondary: variants || code,
       // Falls back to the SKU so a SKU with no product still forms its own group
-      // rather than collapsing every orphan into one nameless card.
-      productCode: text(productRow.Code) || code,
-      uom: text(skuRow.UOM) || DEFAULT_UOM
+      // rather than collapsing every orphan into one nameless card — keyed off
+      // whether the product actually RESOLVED, so a SKU pointing at a product that
+      // no longer exists is treated as the orphan it is.
+      productCode: (info._product ? text(info.productCode) : '') || code,
+      uom: text(info.uom) || DEFAULT_UOM
     }
   }
 
@@ -352,15 +363,26 @@ export function useRestockDelivery () {
 
   // A header toggle is expressed in terms of the Codes beneath it rather than a
   // re-derived filter, so what a header controls is exactly what it displayed.
+  // Indexed rather than scanned: a toggle is a click handler, and the nested
+  // `.find().skus.find()` walked the whole tree on every tick (§6 — Indexed Joins).
+  const groupIndex = computed(() => {
+    const byProduct = new Map()
+    const bySku = new Map()
+    productGroups.value.forEach((product) => {
+      byProduct.set(product.productCode, product)
+      product.skus.forEach((group) => bySku.set(group.key, group))
+    })
+    return { byProduct, bySku }
+  })
+
   function toggleSku (productCode, sku, selected) {
-    const group = productGroups.value
-      .find((product) => product.productCode === text(productCode))
-      ?.skus.find((entry) => entry.sku === text(sku))
+    // The group's own `key`, which is how `groupDeliveryRows` already identifies it.
+    const group = groupIndex.value.bySku.get(`${text(productCode)}:${text(sku)}`)
     setCodes(group?.codes, selected)
   }
 
   function toggleProduct (productCode, selected) {
-    const product = productGroups.value.find((entry) => entry.productCode === text(productCode))
+    const product = groupIndex.value.byProduct.get(text(productCode))
     setCodes(product?.codes, selected)
   }
 

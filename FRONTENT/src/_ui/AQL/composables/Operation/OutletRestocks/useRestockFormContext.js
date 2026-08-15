@@ -1,5 +1,6 @@
-﻿import { inject } from 'vue'
+import { inject } from 'vue'
 import { useRecord } from 'src/composables/resources/useRecord'
+import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 
 /**
  * OutletRestocks › Add + Edit — the injection relay for the two WRITE pages
@@ -34,11 +35,13 @@ export function useRestockFormContext () {
   const pageState = inject('pageState', null)
   const resourceRecord = inject('resourceRecord', null)
   const resourceConfig = inject('resourceConfig', null)
+  const ui = useAQLConfig()
 
   return {
     pageState,
     resourceRecord,
     resourceConfig,
+    ui,
     /**
      * Core-composable relay: components never call `useRecord` themselves
      * (§6, "UI Components import ONLY UI Composables"). Invoked by the caller
@@ -49,3 +52,4 @@ export function useRestockFormContext () {
     resource: (name) => useRecord(name)
   }
 }
+

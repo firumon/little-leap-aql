@@ -12,7 +12,7 @@
       header-label="productName"
       empty-text="No stock has been allocated yet."
       empty-icon="inventory_2"
-      card-class="page-card aql-premium-gradient-card"
+      :card-class="ui.cardClass"
       :layout="['caption','label']"
       :content="[(item) => `${item.warehouseName}: ${item.storageName}`,(item) => item.skuLabel]"
       :chip="item => `${ item.quantity } ${ item.uom }`"
@@ -25,9 +25,9 @@
       </template>
     </AqlGroupedList>
 
-    <q-card flat bordered class="page-card aql-premium-gradient-card">
+    <q-card flat bordered :class="ui.cardClass">
       <q-card-section class="row no-wrap q-col-gutter-sm">
-        <div class="col aql-flex-wrap-text">
+        <div class="col" :class="ui.flexWrapTextClass">
           <div class="text-caption text-grey-7">Total allocated</div>
           <div class="text-body1">
             <div class="text-h6 text-weight-bold text-positive">{{ totalAllocated }} {{ allocatedUom }}</div>
@@ -37,7 +37,7 @@
 
         <!-- The warehouses actually DRAWN FROM, not the ones that were selected
              while deciding — this states what the batch will touch. -->
-        <div class="col-auto text-right aql-flex-wrap-text">
+        <div class="col-auto text-right" :class="ui.flexWrapTextClass">
           <div class="text-caption text-grey-7">Warehouses included</div>
           <div
             v-for="warehouse in allocatedWarehouses"
@@ -68,8 +68,8 @@
 import { computed, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import AqlGroupedList from 'components/app/AqlGroupedList.vue'
-import { useRestockApproval } from 'src/_ui/AQL/composables/Operation/Outlets/useRestockApproval'
-import { useRestockApprovalContext } from 'src/_ui/AQL/composables/Operation/Outlets/useRestockApprovalContext'
+import { useRestockApproval } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockApproval'
+import { useRestockApprovalContext } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockApprovalContext'
 
 defineOptions({ name: 'OutletRestocksApproveReviewAllocating', inheritAttrs: false })
 
@@ -78,9 +78,9 @@ const props = defineProps({
 })
 
 const attrs = useAttrs()
-const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
+const { pageState, ui } = useRestockApprovalContext()
+const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || ui.gutterFallback || 'sm'}`)
 
-const { pageState } = useRestockApprovalContext()
 const { allocatingRows, totalAllocated, allocatedWarehouses, allocatedUom } = useRestockApproval()
 
 const visible = computed(() => pageState?.meta.currentStep === props.step)

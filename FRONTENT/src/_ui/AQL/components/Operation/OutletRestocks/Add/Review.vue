@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div v-if="pageState?.meta.currentStep === 3" :class="gutterClass">
     <!-- Section 1 — the actual request. Always open, because this is the list the
          user is signing off on; nothing here is optional reading. Restock
@@ -13,7 +13,7 @@
       header-label="productName"
       empty-text="No items requested yet."
       empty-icon="production_quantity_limits"
-      card-class="aql-premium-card aql-card-gradient-subtle q-mb-sm"
+      card-class="aql-premium-card aql-card-gradient-subtle"
       label="variantLabel"
       :header-chip="(group) => `${groupTotal(group, 'restockQuantity')}`"
       header-chip-color="primary"
@@ -27,7 +27,7 @@
          stock sheet rather than a repeat of the order. -->
     <SectionDividerLabel label="Projected Outlet Inventory" />
 
-    <q-card class="aql-premium-card" flat>
+    <q-card :class="ui.cardClass" flat>
       <q-card-section class="q-px-sm">
         <q-expansion-item
           icon="inventory_2"
@@ -38,21 +38,20 @@
         >
           <q-separator spaced class="q-pb-xs" color="transparent" />
 
-            <AqlGroupedList
-              :items="projectedRows"
-              item-key="SKU"
-              group-key="productCode"
-              header-label="productName"
-              empty-text="This outlet will hold no stock."
-              card-class="q-mb-sm"
-              label="variantLabel"
-              :caption="(item) => `Existing ${item.outletQuantity} + Restocking ${item.restockQuantity}`"
-              :metaLabel="(item) => String(item.finalQuantity)"
-            >
-              <template #header-right="{ group }">
-                <span class="text-h6 text-weight-bold q-px-sm text-primary">{{ groupTotal(group, 'finalQuantity') }}</span>
-              </template>
-            </AqlGroupedList>
+          <AqlGroupedList
+            :items="projectedRows"
+            item-key="SKU"
+            group-key="productCode"
+            header-label="productName"
+            empty-text="This outlet will hold no stock."
+            label="variantLabel"
+            :caption="(item) => `Existing ${item.outletQuantity} + Restocking ${item.restockQuantity}`"
+            :metaLabel="(item) => String(item.finalQuantity)"
+          >
+            <template #header-right="{ group }">
+              <span class="text-h6 text-weight-bold q-px-sm text-primary">{{ groupTotal(group, 'finalQuantity') }}</span>
+            </template>
+          </AqlGroupedList>
 
         </q-expansion-item>
       </q-card-section>
@@ -89,9 +88,9 @@ defineOptions({ name: 'OutletRestocksReview', inheritAttrs: false })
 // Vertical rhythm follows the page's own gutter token (drilled down from
 // pageProps — UI_PAGE_AND_SECTION_SYSTEM.md §1.3.4).
 const attrs = useAttrs()
-const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
+const { pageState, resource, ui } = useRestockAddContext()
+const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || ui.gutterFallback || 'sm'}`)
 
-const { pageState, resource } = useRestockAddContext()
 const outlets = resource('Outlets')
 const warehouses = resource('Warehouses')
 const { rows: allRows, isDirect, warehouseCode } = useRestockStockMatch()

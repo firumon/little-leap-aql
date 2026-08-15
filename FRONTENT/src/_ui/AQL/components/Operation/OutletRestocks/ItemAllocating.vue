@@ -2,11 +2,11 @@
   <div v-if="visible" :class="gutterClass">
     <SectionDividerLabel label="Requested Items" />
 
-    <q-card v-if="!productGroups.length" flat bordered class="page-card aql-premium-gradient-card">
+    <q-card v-if="!productGroups.length" flat bordered :class="ui.cardClass">
       <q-card-section class="text-center q-py-xl">
-        <q-icon name="inventory_2" size="48px" color="grey-4" class="q-mb-sm block q-mx-auto" />
-        <div class="text-subtitle1 text-weight-bold text-grey-6">Nothing left to allocate</div>
-        <div class="text-caption text-grey-6">Every line on this request has already been settled.</div>
+        <q-icon name="inventory_2" :size="ui.emptyIconSize" :color="ui.emptyIconColor" class="q-mb-sm block q-mx-auto" />
+        <div :class="ui.emptyTitleClass">Nothing left to allocate</div>
+        <div :class="ui.emptyCaptionClass">Every line on this request has already been settled.</div>
       </q-card-section>
     </q-card>
 
@@ -42,8 +42,8 @@
 import { computed, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import SkuAllocatingCard from './SkuAllocatingCard.vue'
-import { useRestockApproval } from 'src/_ui/AQL/composables/Operation/Outlets/useRestockApproval'
-import { useRestockApprovalContext } from 'src/_ui/AQL/composables/Operation/Outlets/useRestockApprovalContext'
+import { useRestockApproval } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockApproval'
+import { useRestockApprovalContext } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockApprovalContext'
 
 defineOptions({ name: 'OutletRestocksApproveItemAllocating', inheritAttrs: false })
 
@@ -52,9 +52,9 @@ const props = defineProps({
 })
 
 const attrs = useAttrs()
-const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
+const { pageState, ui } = useRestockApprovalContext()
+const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || ui.gutterFallback || 'sm'}`)
 
-const { pageState } = useRestockApprovalContext()
 const {
   productGroups,
   setLineQuantity,

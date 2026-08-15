@@ -1,5 +1,6 @@
-﻿import { inject } from 'vue'
+import { inject } from 'vue'
 import { evaluateProp } from 'src/composables/resources/useSectionResolver'
+import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 
 /**
  * OutletRestocks › Mark As Delivered — the injection relay for the delivery
@@ -22,11 +23,14 @@ export function useRestockDeliveryContext () {
   const pageState = inject('pageState', null)
   const resourceRecord = inject('resourceRecord', null)
   const resourceConfig = inject('resourceConfig', null)
+  const ui = useAQLConfig()
 
   return {
     pageState,
     resourceRecord,
     resourceConfig,
+    ui,
     evaluate: (val) => evaluateProp(val, resourceRecord, resourceConfig)
   }
 }
+

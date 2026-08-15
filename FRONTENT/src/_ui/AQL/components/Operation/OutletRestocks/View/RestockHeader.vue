@@ -2,22 +2,22 @@
   <div :class="spacingClass">
     <SectionDividerLabel :label="finalTitle" />
 
-    <q-card flat bordered class="page-card aql-premium-gradient-card">
+    <q-card flat bordered :class="ui.cardClass">
       <q-card-section v-if="pending">
         <q-skeleton type="text" width="40%" class="q-mb-sm" />
         <q-skeleton type="text" width="80%" />
       </q-card-section>
 
       <q-card-section v-else-if="!restock" class="text-center q-py-lg">
-        <q-icon name="inventory_2" size="40px" color="grey-4" class="q-mb-sm block q-mx-auto" />
-        <div class="text-subtitle1 text-weight-bold text-grey-6">No restock</div>
+        <q-icon name="inventory_2" :size="ui.emptyIconSize" :color="ui.emptyIconColor" class="q-mb-sm block q-mx-auto" />
+        <div :class="ui.emptyTitleClass">No restock</div>
       </q-card-section>
 
       <q-card-section v-else>
-        <div class="aql-detail-grid">
-          <div class="aql-detail-line items-center aql-detail-row" :style="rowDelay(0)">
-            <span class="aql-detail-key">Progress</span>
-            <span class="aql-detail-val col overflow-hidden flex justify-end items-center">
+        <div :class="ui.detailGridClass">
+          <div class="items-center" :class="[ui.detailLineClass, ui.detailRowClass]" :style="rowDelay(0)">
+            <span :class="ui.detailKeyClass">Progress</span>
+            <span class="col overflow-hidden flex justify-end items-center" :class="ui.detailValClass">
               <q-icon :name="statusIcon" size="16px" :color="statusColor" class="q-mr-xs" />
               <q-badge rounded :color="statusColor" :label="statusLabel" />
             </span>
@@ -26,11 +26,12 @@
           <div
             v-for="(line, index) in lines"
             :key="line.label"
-            class="aql-detail-line items-center aql-detail-row"
+            class="items-center"
+            :class="[ui.detailLineClass, ui.detailRowClass]"
             :style="rowDelay(index + 1)"
           >
-            <span class="aql-detail-key">{{ line.label }}</span>
-            <span class="aql-detail-val col overflow-hidden flex justify-end items-center">
+            <span :class="ui.detailKeyClass">{{ line.label }}</span>
+            <span class="col overflow-hidden flex justify-end items-center" :class="ui.detailValClass">
               {{ line.value }}
             </span>
           </div>
@@ -49,8 +50,8 @@
  * single line, so it sits first and stays short.
  *
  * Layout mirrors `contents/ViewRecord.vue`: `SectionDividerLabel` heading,
- * `page-card aql-premium-gradient-card` shell, `.aql-detail-*` row grammar, 40ms
- * stagger — so it cannot misalign against a neighbouring framework card.
+ * UI cardClass shell, `.aql-detail-*` row grammar, shared stagger — so it
+ * cannot misalign against a neighbouring framework card.
  *
  * No `<style>` block (ARCHITECTURE RULES §7).
  */
@@ -61,8 +62,6 @@ import { useRestockViewContext } from 'src/_ui/AQL/composables/Operation/OutletR
 
 defineOptions({ name: 'OutletRestocksViewRestockHeader', inheritAttrs: false })
 
-const ROW_STAGGER_MS = 40
-
 const props = defineProps({
   title: { type: [String, Function], default: 'Restock Details' },
   // `(record, config) => 'positive'`. Overrides the Progress-derived status colour.
@@ -70,7 +69,7 @@ const props = defineProps({
   padding: { type: String, default: 'sm' }
 })
 
-const { evaluate } = useRestockViewContext()
+const { evaluate, ui } = useRestockViewContext()
 
 const { restock, pending, outletName, progressColor, progressIcon, progressLabel } = useRestockView()
 
@@ -96,5 +95,5 @@ const lines = computed(() => {
   ].filter((line) => String(line.value).trim())
 })
 
-const rowDelay = (index) => ({ animationDelay: `${index * ROW_STAGGER_MS}ms` })
+const rowDelay = (index) => ({ animationDelay: `${index * ui.rowStaggerMs}ms` })
 </script>

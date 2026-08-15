@@ -1,10 +1,12 @@
-﻿import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useRecord } from 'src/composables/resources/useRecord'
 import { useRestockApprovalContext } from './useRestockApprovalContext'
+import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
+import { useWarehouseResource } from 'src/_resource/Master/Warehouses/composables/useWarehouseResource'
 import {
   binKey,
   stockKey,
-  storageBinsForSku,
+  indexStorageBinsBySku,
   sortBinsLeastFirst,
   drawLeastQuantityFirst,
   planConsumption,
@@ -21,7 +23,7 @@ import {
  * `src/_resource/Operation/OutletRestocks/composables/useRestockAllocation` and is
  * imported above. Nothing here re-derives any of it.
  *
- * PLACEMENT. It sits at `composables/Operation/Outlets/` rather than under a page folder
+ * PLACEMENT. It sits at `composables/Operation/OutletRestocks/` rather than under a page folder
  * because two action routes share it: `Approve.js` and `Reallocate.js` both resolve the
  * same four content cards (`WarehouseAndLocation`, `ItemAllocating`, `ReviewAllocating`,
  * `ReviewPending`), which live at the resource tier for exactly that reason
@@ -90,6 +92,13 @@ export function useRestockApproval () {
   const warehouseStorages = useRecord('WarehouseStorages')
   const skus = useRecord('SKUs')
   const products = useRecord('Products')
+
+  // The SKU × Product and Warehouse joins are the resource layer's, not this file's
+  // (§6 — Enrich Once, Then Project). The `useRecord` handles above stay for their
+  // `reload()` in `onMounted` — fetching the rows is a separate concern from reading
+  // them, and these accessors are what the rest of the restock flow fetches with.
+  const { getSku } = useSkuResource()
+  const { getWarehouse } = useWarehouseResource()
 
   const parent = pageState.useNode(PARENT)
   const serverRecord = computed(() => resourceRecord?.record?.value || null)
@@ -216,44 +225,40 @@ export function useRestockApproval () {
   })
 
   /**
-   * The display name of a SKU, resolved from the SKUs + Products rows directly.
+   * The display name of a SKU, read off the enriched SKU record.
    *
    * A SKU carries its variant VALUES in positional `Variant1..N` columns, and the
    * product names those positions through its `VariantTypes` CSV — so the values
-   * are only meaningful in the product's own order, which is why both records are
-   * read rather than the SKU alone. Capped at five, matching the column set.
-   *
-   * The variant values are what distinguish one SKU of a product from another;
-   * with no variant types configured, the code is the only label left.
+   * are only meaningful in the product's own order. That join, and the five-column
+   * cap, are `enrichSku`'s job; this function used to redo both by scanning the SKUs
+   * array and then the Products array for every row it labelled, which made the
+   * projection below O(rows × (skus + products)) and was a third copy of an
+   * enrichment that already exists (§6 — Enrich Once, Then Project).
    */
   function skuLabel (sku) {
     const code = text(sku)
     if (!code) return { primary: 'Item', secondary: '' }
-    const skuRow = asRow(skus.items.value.find((row) => text(asRow(row).Code) === code))
-    const productRow = asRow(products.items.value.find((row) => text(asRow(row).Code) === text(skuRow.ProductCode)))
-    const variantCount = text(productRow.VariantTypes)
-      .split(',').map((label) => label.trim()).filter(Boolean).slice(0, 5).length
-    const variants = Array.from({ length: variantCount }, (_, index) => text(skuRow[`Variant${index + 1}`]))
-      .filter(Boolean)
-      .join(' / ')
+    const info = getSku(code) || {}
+    const variants = (info.variantValues || []).filter(Boolean).join(' / ')
     return {
-      primary: text(productRow.Name) || code,
+      primary: text(info.productName) || code,
       secondary: variants || code,
       // The grouping key for the allocation cards. Falls back to the SKU so a SKU
       // with no product still forms its own group rather than collapsing every
-      // orphan into one nameless card.
-      productCode: text(productRow.Code) || code,
+      // orphan into one nameless card — which is why it keys off whether the
+      // product was actually RESOLVED, not off the SKU's `ProductCode` column: a
+      // SKU pointing at a product that no longer exists is an orphan too.
+      productCode: (info._product ? text(info.productCode) : '') || code,
       // The unit every quantity on this line is counted in. It lives on the SKU
       // row — `Products` carries no UOM column — so there is nothing to fall back
       // to but the default. `PCS` is the safe default because a discrete count is
       // what an unconfigured SKU is already being treated as everywhere else.
-      uom: text(skuRow.UOM) || DEFAULT_UOM
+      uom: text(info.uom) || DEFAULT_UOM
     }
   }
 
   function warehouseName (code) {
-    const match = warehouses.items.value.find((row) => text(asRow(row).Code) === text(code))
-    return text(asRow(match).Name) || text(code) || '—'
+    return text(getWarehouse(text(code))?.name) || text(code) || '—'
   }
 
   const warehouseOptions = computed(() => warehouses.items.value
@@ -283,8 +288,18 @@ export function useRestockApproval () {
    * next is the bin at the top. Sorting here rather than in `storageBinsForSku`
    * is deliberate: only this scope knows what the plan has already committed.
    */
+  // Every SKU's candidate bins, indexed in ONE pass over `WarehouseStorages` (§6 —
+  // Indexed Joins). `binsFor` used to call `storageBinsForSku`, which scans the whole
+  // sheet, once per requested line; with the index each line is a Map read.
+  const binsBySku = computed(() => indexStorageBinsBySku(warehouseStorages.items.value))
+
+  // Membership is asked once per BIN, so the selection is read as a Set rather than
+  // re-scanned with `includes` for every bin of every row.
+  const activeWarehouseSet = computed(() => new Set(activeWarehouses.value))
+
   function binsFor (sku) {
-    return sortBinsLeastFirst(storageBinsForSku(warehouseStorages.items.value, sku).map((bin) => {
+    const selected = activeWarehouseSet.value
+    return sortBinsLeastFirst((binsBySku.value.get(text(sku)) || []).map((bin) => {
       const committed = consumption.value[stockKey(sku, bin.warehouseCode, bin.storageName)] || 0
       return {
         id: bin.id,
@@ -293,7 +308,7 @@ export function useRestockApproval () {
         storageName: bin.storageName,
         onHand: num(bin.available),
         available: Math.max(num(bin.available) - committed, 0),
-        outside: !activeWarehouses.value.includes(bin.warehouseCode)
+        outside: !selected.has(bin.warehouseCode)
       }
     }))
   }
@@ -309,6 +324,11 @@ export function useRestockApproval () {
     const bins = binsFor(item.SKU)
     const visibleBins = bins.filter((bin) => showOutsideStock.value || !bin.outside)
     const label = skuLabel(item.SKU)
+    const lines = (entry.lines || []).map((line) => ({
+      ...line,
+      warehouseName: warehouseName(line.warehouseCode),
+      key: binKey(line.warehouseCode, line.storageName)
+    }))
     return {
       code,
       SKU: text(item.SKU),
@@ -321,13 +341,14 @@ export function useRestockApproval () {
       allocated,
       remainder,
       cancelled: entry.cancelled === true,
-      lines: (entry.lines || []).map((line) => ({
-        ...line,
-        warehouseName: warehouseName(line.warehouseCode),
-        key: binKey(line.warehouseCode, line.storageName)
-      })),
+      lines,
       bins,
       visibleBins,
+      // Carried ON the row so the cards and the mutations address a line or a bin by
+      // key instead of scanning the arrays inside a `v-for` (§6 — Indexed Joins).
+      // Built here, once per row per recompute, rather than per lookup.
+      linesByKey: new Map(lines.map((line) => [line.key, line])),
+      binsById: new Map(bins.map((bin) => [bin.id, bin])),
       // Everything the approver could still draw on, inside the selected
       // warehouses — what decides whether a line is fully, partly, or not coverable.
       coverable: bins.filter((bin) => !bin.outside).reduce((sum, bin) => sum + bin.available, 0) + allocated,
@@ -336,6 +357,11 @@ export function useRestockApproval () {
         : (allocated > 0 ? 'partial' : (entry.cancelled === true ? 'cancelled' : 'none'))
     }
   }))
+
+  // Every mutation below addresses a row by Code, so the lookup is indexed rather than
+  // a scan of `rows` per keystroke and per click (§6 — Indexed Joins).
+  const rowsByCode = computed(() => new Map(rows.value.map((row) => [row.code, row])))
+  const rowFor = (code) => rowsByCode.value.get(text(code)) || null
 
   const allocatingRows = computed(() => rows.value.filter((row) => row.allocated > 0))
   const pendingRows = computed(() => rows.value.filter((row) => row.remainder > 0))
@@ -416,12 +442,12 @@ export function useRestockApproval () {
    * over-allocate a bin or over-fulfil a request.
    */
   function setLineQuantity (code, warehouseCode, storageName, quantity) {
-    const row = rows.value.find((entry) => entry.code === text(code))
+    const row = rowFor(code)
     if (!row) return
     const key = binKey(warehouseCode, storageName)
-    const existing = row.lines.find((line) => line.key === key)
+    const existing = row.linesByKey.get(key)
     const held = num(existing?.quantity)
-    const bin = row.bins.find((candidate) => candidate.id === key)
+    const bin = row.binsById.get(key)
     if (!bin) return
 
     const ceiling = Math.min(bin.available + held, row.requested - row.allocated + held)
@@ -448,7 +474,7 @@ export function useRestockApproval () {
 
   /** One requested line, filled smallest-bin-first from the selected warehouses. */
   function autoAllocateRow (code) {
-    const row = rows.value.find((entry) => entry.code === text(code))
+    const row = rowFor(code)
     if (!row) return
     const { lines } = drawLeastQuantityFirst(row.bins.filter((bin) => !bin.outside), row.requested)
     setEntry(code, { lines, cancelled: false })
@@ -461,6 +487,14 @@ export function useRestockApproval () {
    * includes the previous one's draw, so two lines for the same SKU cannot both
    * claim the same units. Reading `rows.value` fresh per iteration is what makes
    * that netting real rather than nominal.
+   *
+   * So this deliberately keeps N recomputes of `rows` — batching the writes would
+   * break the netting, which is a correctness property, not a performance one. What
+   * made that expensive was the per-row scanning inside `rows`, not the loop: the
+   * bin index is keyed off `WarehouseStorages` alone and the labels off the SKU
+   * aggregate, so neither is invalidated by a plan write. A recompute is now a walk
+   * of the requested lines with Map reads, and this loop is O(lines²) in Map reads
+   * rather than O(lines² × storages) in comparisons.
    */
   function autoAllocateAll () {
     rows.value.forEach((row) => { if (!row.cancelled) autoAllocateRow(row.code) })
@@ -468,14 +502,25 @@ export function useRestockApproval () {
 
   // Product-level bulk actions. Which SKUs belong to a product is a domain fact,
   // so the card asks for it rather than re-deriving the grouping to loop over.
+  // `productGroups` already indexed the rows by product, so this reads that grouping
+  // instead of re-filtering every row per click.
+  const rowCodesByProduct = computed(() => {
+    const map = new Map()
+    rows.value.forEach((row) => {
+      if (!map.has(row.productCode)) map.set(row.productCode, [])
+      map.get(row.productCode).push(row.code)
+    })
+    return map
+  })
+
   function skuCodesIn (productCode) {
-    return rows.value.filter((row) => row.productCode === text(productCode)).map((row) => row.code)
+    return rowCodesByProduct.value.get(text(productCode)) || []
   }
 
   function autoAllocateProduct (productCode) {
     // Re-read per code, for the same netting reason `autoAllocateAll` does.
     skuCodesIn(productCode).forEach((code) => {
-      const row = rows.value.find((entry) => entry.code === code)
+      const row = rowFor(code)
       if (row && !row.cancelled) autoAllocateRow(code)
     })
   }

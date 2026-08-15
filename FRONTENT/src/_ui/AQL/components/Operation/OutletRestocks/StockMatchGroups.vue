@@ -6,7 +6,7 @@
     header-label="productName"
     :empty-text="emptyText"
     :empty-icon="emptyIcon"
-    card-class="page-card aql-premium-gradient-card"
+    :card-class="ui.cardClass"
     label="variantLabel"
     :caption="stockCaption"
   >
@@ -38,7 +38,7 @@
       <div class="row items-center no-wrap q-gutter-x-xs">
         <q-btn
           outline round color="secondary" icon="remove" padding="none"
-          style="min-width: 40px; min-height: 40px"
+          :style="ui.tapTargetStyle"
           :disable="item.restockQuantity <= 0"
           :aria-label="`Remove one ${item.variantLabel}`"
           @click="emit('adjust', item.SKU, -1)"
@@ -52,7 +52,7 @@
         />
         <q-btn
           outline round color="secondary" icon="add" padding="none"
-          style="min-width: 40px; min-height: 40px"
+          :style="ui.tapTargetStyle"
           :disable="item.restockQuantity >= item.maxQuantity"
           :aria-label="`Add one ${item.variantLabel}`"
           @click="emit('adjust', item.SKU, 1)"
@@ -77,6 +77,7 @@
 import { computed } from 'vue'
 import AqlGroupedList from 'components/app/AqlGroupedList.vue'
 import FieldNumberAdd from 'src/_fields/number/Add.vue'
+import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 
 defineOptions({ name: 'OutletRestocksStockMatchGroups', inheritAttrs: false })
 
@@ -90,6 +91,8 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update', 'adjust'])
+
+const ui = useAQLConfig()
 
 // `FieldNumberAdd` declares `inheritAttrs: false` and v-binds `config` straight
 // onto its `q-input`, so the stepper's fixed width has to travel in `config` —

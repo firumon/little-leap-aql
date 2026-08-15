@@ -2,17 +2,17 @@
   <div :class="paddingClass">
     <SectionDividerLabel :label="finalTitle" />
 
-    <q-card v-if="pending" flat bordered class="page-card aql-premium-gradient-card">
+    <q-card v-if="pending" flat bordered :class="ui.cardClass">
       <q-card-section>
         <q-skeleton type="text" width="40%" class="q-mb-sm" />
         <q-skeleton type="text" width="80%" />
       </q-card-section>
     </q-card>
 
-    <q-card v-else-if="!groups.length" flat bordered class="page-card aql-premium-gradient-card">
+    <q-card v-else-if="!groups.length" flat bordered :class="ui.cardClass">
       <q-card-section class="text-center q-py-lg">
-        <q-icon name="warehouse" size="40px" color="grey-4" class="q-mb-sm block q-mx-auto" />
-        <div class="text-subtitle1 text-weight-bold text-grey-6">Nothing to allocate</div>
+        <q-icon name="warehouse" :size="ui.emptyIconSize" :color="ui.emptyIconColor" class="q-mb-sm block q-mx-auto" />
+        <div :class="ui.emptyTitleClass">Nothing to allocate</div>
       </q-card-section>
     </q-card>
 
@@ -32,12 +32,12 @@
         :key="product.productCode"
         flat
         bordered
-        class="page-card aql-premium-gradient-card"
+        :class="ui.cardClass"
         :style="rowDelay(index)"
       >
         <q-card-section>
           <div class="row items-center no-wrap q-col-gutter-sm">
-            <div class="col aql-flex-wrap-text">
+            <div class="col" :class="ui.flexWrapTextClass">
               <div class="text-subtitle1 text-weight-bold">{{ product.productName }}</div>
             </div>
             <div class="col-auto text-subtitle1 text-weight-bold text-primary">
@@ -49,7 +49,7 @@
 
           <div v-for="group in product.skus" :key="group.key" class="q-mt-sm">
             <div class="row items-center no-wrap q-col-gutter-sm">
-              <div class="col aql-flex-wrap-text text-body2 text-weight-medium">{{ group.label }}</div>
+              <div class="col text-body2 text-weight-medium" :class="ui.flexWrapTextClass">{{ group.label }}</div>
               <div class="col-auto row items-center no-wrap q-gutter-x-xs">
                 <q-badge
                   v-for="state in group.states"
@@ -63,22 +63,22 @@
 
             <!-- Approved: one line per bin the units are drawn from. Unapproved:
                  the SKU's own quantity, because there is no bin to name yet. -->
-            <div class="aql-detail-grid q-ml-sm">
+            <div class="q-ml-sm" :class="ui.detailGridClass">
               <template v-if="approved">
-                <div v-for="row in group.rows" :key="row.code" class="aql-detail-line items-center">
-                  <span class="aql-detail-key">
+                <div v-for="row in group.rows" :key="row.code" class="items-center" :class="ui.detailLineClass">
+                  <span :class="ui.detailKeyClass">
                     <q-icon :name="progressIcon(row.progress)" size="14px" :color="progressColor(row.progress)" class="q-mr-xs" />
                     {{ binLabel(row) }}
                   </span>
-                  <span class="aql-detail-val col overflow-hidden flex justify-end items-center">
+                  <span class="col overflow-hidden flex justify-end items-center" :class="ui.detailValClass">
                     {{ row.quantity }} {{ row.uom }}
                   </span>
                 </div>
               </template>
 
-              <div v-else class="aql-detail-line items-center">
-                <span class="aql-detail-key">Requested</span>
-                <span class="aql-detail-val col overflow-hidden flex justify-end items-center">
+              <div v-else class="items-center" :class="ui.detailLineClass">
+                <span :class="ui.detailKeyClass">Requested</span>
+                <span class="col overflow-hidden flex justify-end items-center" :class="ui.detailValClass">
                   {{ group.quantity }} {{ group.uom }}
                 </span>
               </div>
@@ -116,8 +116,6 @@ import { useRestockViewContext } from 'src/_ui/AQL/composables/Operation/OutletR
 
 defineOptions({ name: 'OutletRestocksViewAllocationDetails', inheritAttrs: false })
 
-const ROW_STAGGER_MS = 40
-
 const props = defineProps({
   title: { type: [String, Function], default: 'Allocation Details' },
   // The Product → SKU tree to render. Defaults to the request's own items.
@@ -131,7 +129,7 @@ const props = defineProps({
   gutter: { type: String, default: 'xs' }
 })
 
-const { evaluate } = useRestockViewContext()
+const { evaluate, ui } = useRestockViewContext()
 
 const {
   productGroups, pending, approved: recordApproved,
@@ -152,5 +150,5 @@ function binLabel (row) {
   return `${row.warehouseName || row.warehouseCode} | ${row.storageName}`
 }
 
-const rowDelay = (index) => ({ animationDelay: `${index * ROW_STAGGER_MS}ms` })
+const rowDelay = (index) => ({ animationDelay: `${index * ui.rowStaggerMs}ms` })
 </script>

@@ -2,16 +2,16 @@
   <div :class="spacingClass">
     <SectionDividerLabel :label="finalTitle" />
 
-    <q-card flat bordered class="page-card aql-premium-gradient-card">
+    <q-card flat bordered :class="ui.cardClass">
       <q-card-section v-if="pending">
         <q-skeleton type="text" width="40%" class="q-mb-sm" />
         <q-skeleton type="text" width="80%" />
       </q-card-section>
 
       <q-card-section v-else-if="!events.length" class="text-center q-py-lg">
-        <q-icon name="history" size="40px" color="grey-4" class="q-mb-sm block q-mx-auto" />
-        <div class="text-subtitle1 text-weight-bold text-grey-6">Nothing recorded yet</div>
-        <div class="text-caption text-grey-6">Workflow events appear here once the request moves.</div>
+        <q-icon name="history" :size="ui.emptyIconSize" :color="ui.emptyIconColor" class="q-mb-sm block q-mx-auto" />
+        <div :class="ui.emptyTitleClass">Nothing recorded yet</div>
+        <div :class="ui.emptyCaptionClass">Workflow events appear here once the request moves.</div>
       </q-card-section>
 
       <q-card-section v-else>
@@ -24,7 +24,7 @@
             :key="event.state"
             :icon="event.icon"
             :color="event.color"
-            class="aql-detail-row"
+            :class="ui.detailRowClass"
             :style="rowDelay(index)"
           >
             <template #title>
@@ -75,19 +75,17 @@ import { useRestockViewContext } from 'src/_ui/AQL/composables/Operation/OutletR
 
 defineOptions({ name: 'OutletRestocksViewWorkflow', inheritAttrs: false })
 
-const ROW_STAGGER_MS = 40
-
 const props = defineProps({
   title: { type: [String, Function], default: 'Workflow Timeline' },
   padding: { type: String, default: 'sm' }
 })
 
-const { evaluate } = useRestockViewContext()
+const { evaluate, ui } = useRestockViewContext()
 
 const { events, pending, formatStampDate } = useRestockView()
 
 const spacingClass = computed(() => `q-px-${props.padding}`)
 const finalTitle = computed(() => evaluate(props.title))
 
-const rowDelay = (index) => ({ animationDelay: `${index * ROW_STAGGER_MS}ms` })
+const rowDelay = (index) => ({ animationDelay: `${index * ui.rowStaggerMs}ms` })
 </script>

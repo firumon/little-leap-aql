@@ -1,4 +1,4 @@
-﻿import { useAuth } from 'src/composables/core/useAuth'
+import { useAuth } from 'src/composables/core/useAuth'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useRestockFormContext } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockFormContext'
 
@@ -20,7 +20,7 @@ import { useRestockFormContext } from 'src/_ui/AQL/composables/Operation/OutletR
  * pages. That keeps exactly one `inject()` caller behind the Add page.
  */
 export function useRestockAddContext () {
-  const { pageState, resourceRecord, resourceConfig, resource } = useRestockFormContext()
+  const { pageState, resourceRecord, resourceConfig, resource, ui } = useRestockFormContext()
   const { user, hasRegionAccess } = useAuth()
   const { query } = useRouteConfig()
 
@@ -29,8 +29,10 @@ export function useRestockAddContext () {
     resourceRecord,
     resourceConfig,
     resource,
+    ui,
     user,
     hasRegionAccess,
     query
   }
 }
+

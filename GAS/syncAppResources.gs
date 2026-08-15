@@ -1353,7 +1353,7 @@ function initAppResourcesCodeConfig() {
         CodePrefix: 'OC', CodeSequenceLength: 6, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletCode,Date,Username,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Progress":"PENDING_INVOICE_GENERATION"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
             {"action":"MarkInvoiceGenerated","label":"Mark Invoice Generated","icon":"receipt_long","color":"positive","kind":"mutate","confirm":true,"column":"Progress","columnValue":"INVOICE_GENERATED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Comment","type":"textarea","required":false}],"targets":[{"resource":"OutletConsumptionInvoices","mode":"create","key":"invoice","label":"Consumption Invoice","fields":[{"name":"OutletConsumptionCode","from":"$record.Code"},{"name":"OutletCode","from":"$record.OutletCode"},{"name":"Username","from":"$record.Username"},{"name":"Date","value":"$today"},{"name":"Progress","value":"PENDING_PAYMENT"},{"name":"Status","value":"Active"}]}],"visibleWhen":{"column":"Progress","op":"eq","value":"PENDING_INVOICE_GENERATION"}},
-            {"action":"Cancel","label":"Cancel","icon":"cancel","color":"negative","kind":"mutate","confirm":true,"column":"Progress","columnValue":"CANCELLED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Cancellation Comment","type":"textarea","required":true}],"visibleWhen":{"column":"Progress","op":"nin","value":["CANCELLED"]}}
+            {"action":"CancelConsumption","label":"Cancel Consumption","icon":"cancel","color":"negative","kind":"navigate","navigate":{"target":"action","pageSlug":"cancel-consumption"},"visibleWhen":{"column":"Progress","op":"nin","value":["CANCELLED"]}}
         ]),
         Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 6, "label": "Outlet Consumptions", "icon": "point_of_sale", "route": "/operation/outlet-consumptions", "pageTitle": "Outlet Consumptions", "pageDescription": "Record outlet stock consumption", "show": true }]), UIFields: JSON.stringify([
             { header: 'OutletCode', label: 'Outlet Code', type: 'text' },
@@ -1375,9 +1375,30 @@ function initAppResourcesCodeConfig() {
         ]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: JSON.stringify([
             {"id":"rep_1776000000021","name":"consumption-receipt","label":"Consumption Receipt","templateSheet":"Consumption","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
             {"id":"rep_1776000000022","name":"consumption-records-log","label":"Consumption Log","templateSheet":"ConsumptionRecords","isRecordLevel":false,"inputs":[{"label":"Username","type":"select","targetCell":"J11","source":{"resource":"OutletConsumptions","field":"Username"},"default":"Any User","required":false},{"label":"Date","type":"select","targetCell":"J12","source":{"resource":"OutletConsumptions","field":"Date"},"default":"All Date","required":false}],"pdfOptions":{}}
-        ]), CustomUIName: '', ListViews: '',
+        ]), CustomUIName: '',
+        // Four work queues, in the order a field officer walks through their day.
+        //
+        // The first two are PROJECTION views: what they list is not an
+        // OutletConsumptions row at all. `ScheduledOutlets` lists today's and overdue
+        // OutletVisits (the work still to be done), and `InvoiceableOutlets` lists
+        // OUTLETS carrying uninvoiced consumptions rather than the consumptions
+        // themselves. A sheet filter can only ever narrow this resource's own rows, so
+        // the filters below are the closest honest narrowing and the real projection is
+        // supplied by the per-view `.vue` overrides
+        // (_ui/AQL/components/Operation/OutletConsumptions/Index/List<View>.vue,
+        // UI_MODULE_DEVELOPER_GUIDE.md §7.1). The filters still matter: they drive the
+        // pill counts and keep a deep link to either view from showing settled history.
+        //
+        // The last two are ordinary state filters over this resource's own rows.
+        ListViews: JSON.stringify([
+            { "name": "ScheduledOutlets", "label": "Scheduled Outlets", "icon": "event_available", "color": "primary", "default": true, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "nin", "value": ["CANCELLED"] }] } },
+            { "name": "InvoiceableOutlets", "label": "Invoiceable Outlets", "icon": "request_quote", "color": "warning", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "PENDING_INVOICE_GENERATION" }] } },
+            { "name": "Completed", "label": "Completed", "icon": "task_alt", "color": "positive", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "INVOICE_GENERATED" }] } },
+            { "name": "Cancelled", "label": "Cancelled", "icon": "block", "color": "negative", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "CANCELLED" }] } }
+        ]),
         Relations: JSON.stringify({
-            OutletCode: CONFIG.MASTER_SHEETS.OUTLETS
+            OutletCode: CONFIG.MASTER_SHEETS.OUTLETS,
+            OutletVisitCode: CONFIG.OPERATION_SHEETS.OUTLET_VISITS
         })
     },
     {
@@ -1404,7 +1425,14 @@ function initAppResourcesCodeConfig() {
             {"action":"Cancel","label":"Cancel","icon":"cancel","color":"negative","kind":"mutate","confirm":true,"column":"Progress","columnValue":"CANCELLED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Cancellation Comment","type":"textarea","required":true}],"visibleWhen":{"column":"Progress","op":"nin","value":["PAID","CANCELLED"]}}
         ]),
         Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 7, "label": "Consumption Invoices", "icon": "receipt_long", "route": "/operation/outlet-consumption-invoices", "pageTitle": "Consumption Invoices", "pageDescription": "View outlet consumption invoices", "show": true }]), UIFields: JSON.stringify([
-            { header: 'OutletConsumptionCode', label: 'Outlet Consumption Code', type: 'text' },
+            // A COMMA-SEPARATED list when several consumptions are bundled onto one
+            // invoice (`OC-000001,OC-000002`), a single code otherwise. Deliberately not
+            // declared in `Relations` and the resource deliberately has no
+            // `ParentResource`: a relation resolves one target code, so declaring one
+            // here would silently fail to resolve every bundled invoice. Consumers match
+            // by membership in the split list, never by equality — see
+            // `src/_resource/Operation/OutletConsumptions/composables/useConsumptionPayload.js`.
+            { header: 'OutletConsumptionCode', label: 'Consumption Code(s)', type: 'text' },
             { header: 'Date', label: 'Date', type: 'date' },
             { header: 'DueDate', label: 'Due Date', type: 'date' },
             { header: 'OutletCode', label: 'Outlet Code', type: 'text' },

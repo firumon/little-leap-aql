@@ -1,5 +1,6 @@
 import { computed } from 'vue'
 import { useDataStore } from 'src/stores/data'
+import { defineSharedComposable } from 'src/utils/appHelpers'
 
 // Pure Warehouse enrichment function
 export const enrichWarehouse = (wh) => {
@@ -30,9 +31,9 @@ export const enrichWarehouse = (wh) => {
   }
 }
 
-// Composable for Warehouses master resource
-export function useWarehouseResource() {
-  const dataStore = useDataStore()
+// Composable for Warehouses master resource//
+// ONCE PER APP (CORE_ARCHITECTURE_RULES §6) — see `useSkuResource` for the rationale.
+const shared = defineSharedComposable((dataStore) => {
 
   const warehouses = computed(() => {
     const raw = dataStore.getRecords('Warehouses') || []
@@ -60,4 +61,8 @@ export function useWarehouseResource() {
     warehouseMap,
     getWarehouse
   }
+})
+
+export function useWarehouseResource() {
+  return shared(useDataStore())
 }

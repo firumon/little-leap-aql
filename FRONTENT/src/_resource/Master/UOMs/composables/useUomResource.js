@@ -1,5 +1,6 @@
 import { computed } from 'vue'
 import { useDataStore } from 'src/stores/data'
+import { defineSharedComposable } from 'src/utils/appHelpers'
 
 // Pure UOM enrichment function
 export const enrichUom = (uom, allUomsMap = new Map()) => {
@@ -24,9 +25,9 @@ export const enrichUom = (uom, allUomsMap = new Map()) => {
   }
 }
 
-// Composable for UOM master resource
-export function useUomResource() {
-  const dataStore = useDataStore()
+// Composable for UOM master resource//
+// ONCE PER APP (CORE_ARCHITECTURE_RULES §6) — see `useSkuResource` for the rationale.
+const shared = defineSharedComposable((dataStore) => {
 
   const uoms = computed(() => {
     const rawUoms = dataStore.getRecords('UOMs') || []
@@ -63,4 +64,8 @@ export function useUomResource() {
     getUom,
     convertQuantity
   }
+})
+
+export function useUomResource() {
+  return shared(useDataStore())
 }

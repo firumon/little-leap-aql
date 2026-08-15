@@ -1,5 +1,6 @@
 import { computed } from 'vue'
 import { useDataStore } from 'src/stores/data'
+import { defineSharedComposable } from 'src/utils/appHelpers'
 import { usePriceListResource } from 'src/_resource/Master/PriceLists/composables/usePriceListResource'
 
 // Pure Outlet enrichment function combining Outlets and OutletOperatingRules (1:1 relation)
@@ -58,9 +59,9 @@ export const enrichOutlet = (outlet, rulesByOutletMap = new Map(), priceListMap 
   }
 }
 
-// Composable for Outlets master resource
-export function useOutletResource() {
-  const dataStore = useDataStore()
+// Composable for Outlets master resource//
+// ONCE PER APP (CORE_ARCHITECTURE_RULES §6) — see `useSkuResource` for the rationale.
+const shared = defineSharedComposable((dataStore) => {
   const { priceListMap, defaultPriceList } = usePriceListResource()
 
   const outlets = computed(() => {
@@ -102,4 +103,8 @@ export function useOutletResource() {
     getEffectivePriceListCode,
     getEffectivePriceList
   }
+})
+
+export function useOutletResource() {
+  return shared(useDataStore())
 }

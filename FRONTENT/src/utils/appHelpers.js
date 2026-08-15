@@ -1,3 +1,5 @@
+import { effectScope } from 'vue'
+
 /**
  * Converts a camelCase or PascalCase string to a human-readable label.
  * e.g. "purchaseRequisition" → "Purchase Requisition"
@@ -518,3 +520,44 @@ export function textOrRef (value) { return isBatchRef(value) ? value : String(va
  * Normalizes a code-or-$ref to its string/ref form (alias of textOrRef).
  */
 export function normalizeCodeOrRef (value) { return textOrRef(value) }
+
+/**
+ * ONCE PER APP, NOT ONCE PER CONSUMER (CORE_ARCHITECTURE_RULES §6).
+ *
+ * Wraps a composable factory so its `computed()` graph is built exactly once and
+ * shared by every caller. A `computed()` declared inside a plain `use*()` function
+ * is memoized PER CALL SITE, so N components calling `useSkuResource()` each run
+ * the whole enrichment pass over the same rows — the work is duplicated N times
+ * and so is the memory holding the result.
+ *
+ * This is not a cache of state: the factory returns `computed()` refs that stay
+ * derived from the one reactive source, so sharing them cannot make two consumers
+ * disagree. It is the opposite of a mirror copy — it removes the copies.
+ *
+ * `identity` is whatever the caller's own singleton depends on (in practice the
+ * Pinia store instance). When it changes — a test installing a fresh Pinia, an HMR
+ * reload — the graph is rebuilt rather than served stale against a dead store.
+ *
+ * THE DETACHED SCOPE IS THE WHOLE MECHANISM, not an optimization. A `computed()`
+ * created during a component's `setup()` is registered on THAT component's effect
+ * scope and is STOPPED when it unmounts. Share it, and the second consumer inherits
+ * a dead ref: the first page to mount owns the graph, and every page after the first
+ * unmount reads a computed that no longer recomputes — which renders as a screen
+ * stuck on its loading spinner, with no error anywhere. `effectScope(true)` is
+ * detached from whatever scope happens to be active at first call, so the graph
+ * outlives every component that reads it.
+ */
+export function defineSharedComposable (factory) {
+  let cachedIdentity
+  let cachedValue
+  let cachedScope = null
+  return (identity) => {
+    if (!cachedScope || identity !== cachedIdentity) {
+      cachedScope?.stop()
+      cachedIdentity = identity
+      cachedScope = effectScope(true)
+      cachedValue = cachedScope.run(() => factory(identity))
+    }
+    return cachedValue
+  }
+}

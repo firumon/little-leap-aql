@@ -1,15 +1,36 @@
 import { computed } from 'vue'
 import { useDataStore } from 'src/stores/data'
+import { defineSharedComposable } from 'src/utils/appHelpers'
 
-// Pure single Tax record enrichment function
-export const enrichTax = (tax, allTaxes = []) => {
+/**
+ * Group raw tax rows by their ParentCode — the child index, built in ONE pass.
+ *
+ * `enrichTax` used to take the whole array and filter it for its own children, so
+ * enriching n taxes rescanned all n taxes n times (§6 — Indexed Joins). The index is
+ * built once here and each record is handed its own bucket.
+ */
+export const groupTaxesByParent = (allTaxes = []) => {
+  const map = new Map()
+  ;(Array.isArray(allTaxes) ? allTaxes : []).forEach((t) => {
+    const parent = (t?.ParentCode || '')
+    if (!parent) return
+    if (!map.has(parent)) map.set(parent, [])
+    map.get(parent).push(t)
+  })
+  return map
+}
+
+// Pure single Tax record enrichment function.
+//
+// `childRows` is this tax's OWN children, already selected by `groupTaxesByParent`.
+// An array is still accepted for callers that pass a bucket directly.
+export const enrichTax = (tax, childRows = []) => {
   if (!tax || !tax.Code) return null
   const parentCode = tax.ParentCode || ''
   const isTopLevel = !parentCode
 
-  // Find child tax components if this is a parent/group
-  const children = allTaxes
-    .filter((t) => (t.ParentCode || '') === tax.Code)
+  const children = (Array.isArray(childRows) ? childRows : [])
+    .slice()
     .sort((a, b) => (Number(a.CalculationOrder) || 1) - (Number(b.CalculationOrder) || 1))
     .map((c) => ({
       code: c.Code,
@@ -61,13 +82,14 @@ export const enrichTax = (tax, allTaxes = []) => {
   }
 }
 
-// Composable for Taxes master resource
-export function useTaxResource() {
-  const dataStore = useDataStore()
-
+// Composable for Taxes master resource.
+//
+// ONCE PER APP (CORE_ARCHITECTURE_RULES §6) — see `useSkuResource` for the rationale.
+const shared = defineSharedComposable((dataStore) => {
   const taxes = computed(() => {
     const raw = dataStore.getRecords('Taxes') || []
-    return raw.map((t) => enrichTax(t, raw)).filter(Boolean)
+    const childrenByParent = groupTaxesByParent(raw)
+    return raw.map((t) => enrichTax(t, childrenByParent.get(t.Code) || [])).filter(Boolean)
   })
 
   const activeTaxes = computed(() => taxes.value.filter((t) => t.status === 'Active'))
@@ -174,4 +196,8 @@ export function useTaxResource() {
     getTaxComponents,
     calculateLineTax
   }
+})
+
+export function useTaxResource() {
+  return shared(useDataStore())
 }

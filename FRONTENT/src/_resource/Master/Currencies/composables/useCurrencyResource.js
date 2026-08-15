@@ -1,6 +1,7 @@
 import { computed } from 'vue'
 import { useAuthStore } from 'src/stores/auth'
 import { useDataStore } from 'src/stores/data'
+import { defineSharedComposable } from 'src/utils/appHelpers'
 
 // Pure Currency enrichment function
 export const enrichCurrency = (curr) => {
@@ -31,10 +32,13 @@ export const enrichCurrency = (curr) => {
   }
 }
 
-// Composable for Currency master resource — Single Source of Truth
-export function useCurrencyResource() {
+// Composable for Currency master resource — Single Source of Truth.
+//
+// ONCE PER APP (CORE_ARCHITECTURE_RULES §6) — see `useSkuResource` for the rationale.
+// `_C()` is called from almost every money-rendering component, so this is the widest
+// consumer set in the app and the one that benefited least from per-call-site memoization.
+const shared = defineSharedComposable((dataStore) => {
   const authStore = useAuthStore()
-  const dataStore = useDataStore()
 
   // Dynamic default currency code from App Config
   const defaultCurrencyCode = computed(() => {
@@ -183,4 +187,8 @@ export function useCurrencyResource() {
     formatCurrency,
     _C
   }
+})
+
+export function useCurrencyResource() {
+  return shared(useDataStore())
 }

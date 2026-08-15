@@ -1,5 +1,6 @@
 import { computed } from 'vue'
 import { useDataStore } from 'src/stores/data'
+import { defineSharedComposable } from 'src/utils/appHelpers'
 
 export const MAX_VARIANTS = 5
 
@@ -70,10 +71,13 @@ export const enrichSku = (sku, productsMap = new Map(), uomsMap = new Map()) => 
   }
 }
 
-// Composable for SKU resource operations
-export function useSkuResource() {
-  const dataStore = useDataStore()
-
+// Composable for SKU resource operations.
+//
+// ONCE PER APP (CORE_ARCHITECTURE_RULES §6): the enrichment graph below is built one
+// time and shared by every caller. `useProductResource`, `usePriceListResource` and
+// every component reading SKU labels all land on the same `computed()` refs, so the
+// pass over the SKU sheet runs once per data change rather than once per consumer.
+const shared = defineSharedComposable((dataStore) => {
   const skus = computed(() => {
     const rawSkus = dataStore.getRecords('SKUs') || []
     const rawProducts = dataStore.getRecords('Products') || []
@@ -89,6 +93,18 @@ export function useSkuResource() {
 
   const skuMap = computed(() => new Map(skus.value.map((s) => [s.code, s])))
 
+  // Indexed once, not re-filtered per lookup (§6 — Indexed Joins). `useProductResource`
+  // reads this same index to build its nested `skus`, so the grouping exists in exactly
+  // one place and both consumers are guaranteed to agree on it.
+  const skusByProduct = computed(() => {
+    const map = new Map()
+    skus.value.forEach((s) => {
+      if (!map.has(s.productCode)) map.set(s.productCode, [])
+      map.get(s.productCode).push(s)
+    })
+    return map
+  })
+
   const getSku = (skuCode) => {
     if (!skuCode) return null
     return skuMap.value.get(skuCode) || null
@@ -98,7 +114,7 @@ export function useSkuResource() {
 
   const getSkusByProduct = (productCode) => {
     if (!productCode) return []
-    return skus.value.filter((s) => s.productCode === productCode)
+    return skusByProduct.value.get(productCode) || []
   }
 
   return {
@@ -106,8 +122,13 @@ export function useSkuResource() {
     allSkus: skus,
     activeSkus,
     skuMap,
+    skusByProduct,
     getSku,
     skuInfo,
     getSkusByProduct
   }
+})
+
+export function useSkuResource() {
+  return shared(useDataStore())
 }

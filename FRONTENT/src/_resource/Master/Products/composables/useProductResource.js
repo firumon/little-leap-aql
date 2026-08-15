@@ -1,5 +1,6 @@
 import { computed } from 'vue'
 import { useDataStore } from 'src/stores/data'
+import { defineSharedComposable } from 'src/utils/appHelpers'
 import { useSkuResource, parseVariantTypes } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 
 // Pure Product enrichment function
@@ -54,21 +55,18 @@ export const enrichProduct = (product, skusByProduct = []) => {
   }
 }
 
-// Composable for Product resource operations
-export function useProductResource() {
-  const dataStore = useDataStore()
-  const { skus } = useSkuResource()
+// Composable for Product resource operations.
+//
+// ONCE PER APP (CORE_ARCHITECTURE_RULES §6) — see `useSkuResource` for the rationale.
+const shared = defineSharedComposable((dataStore) => {
+  // The SKU → product grouping is owned by `useSkuResource` and read here rather than
+  // rebuilt (§6 — Enrich Once, Then Project). It used to be re-derived in this computed,
+  // which meant the same index existed twice and was rebuilt on every product change.
+  const { skusByProduct } = useSkuResource()
 
   const products = computed(() => {
     const rawProducts = dataStore.getRecords('Products') || []
-
-    const skusByProductMap = new Map()
-    for (const sku of skus.value) {
-      if (!skusByProductMap.has(sku.productCode)) {
-        skusByProductMap.set(sku.productCode, [])
-      }
-      skusByProductMap.get(sku.productCode).push(sku)
-    }
+    const skusByProductMap = skusByProduct.value
 
     return rawProducts.map((p) => enrichProduct(p, skusByProductMap.get(p.Code) || [])).filter(Boolean)
   })
@@ -98,4 +96,8 @@ export function useProductResource() {
     productInfo,
     getProductVariantOptions
   }
+})
+
+export function useProductResource() {
+  return shared(useDataStore())
 }

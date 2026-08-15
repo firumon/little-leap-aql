@@ -71,17 +71,43 @@ export function stockKey (sku, warehouseCode, storageName) {
 export function storageBinsForSku (storages = [], skuCode = '') {
   const target = text(skuCode)
   if (!target) return []
-  return (Array.isArray(storages) ? storages : [])
-    .map(asRow)
-    .filter(isActive)
-    .filter((entry) => text(entry.SKU) === target)
-    .map((entry) => ({
-      id: binKey(entry.WarehouseCode, storageOf(entry.StorageName)),
-      warehouseCode: text(entry.WarehouseCode),
-      storageName: storageOf(entry.StorageName),
-      available: num(entry.Quantity)
-    }))
-    .filter((bin) => bin.warehouseCode && bin.storageName && bin.available > 0)
+  return indexStorageBinsBySku(storages).get(target) || []
+}
+
+/**
+ * EVERY sku's candidate bins, in ONE pass — `Map<skuCode, bin[]>`.
+ *
+ * The indexed form of `storageBinsForSku`, and the one a caller with more than a
+ * single SKU to answer for must use (CORE_ARCHITECTURE_RULES §6 — Indexed Joins).
+ * `storageBinsForSku` scans the whole storages array, so calling it once per
+ * requested line made the approval screen's row projection O(lines × storages);
+ * the whole sheet is now walked once and each line reads its own bucket.
+ *
+ * Same filtering contract as the single-SKU form: null-safe against the `null`
+ * entries `useRecord().items` can carry (see `asRow`), and empty/negative bins are
+ * excluded — a bin with nothing in it is not a candidate, and a negative balance is
+ * a data fault that must not be presented as available stock.
+ */
+export function indexStorageBinsBySku (storages = []) {
+  const index = new Map()
+  ;(Array.isArray(storages) ? storages : []).forEach((entry) => {
+    const store = asRow(entry)
+    if (!isActive(store)) return
+    const sku = text(store.SKU)
+    if (!sku) return
+    const warehouseCode = text(store.WarehouseCode)
+    const storageName = storageOf(store.StorageName)
+    const available = num(store.Quantity)
+    if (!warehouseCode || !storageName || available <= 0) return
+    if (!index.has(sku)) index.set(sku, [])
+    index.get(sku).push({
+      id: binKey(warehouseCode, storageName),
+      warehouseCode,
+      storageName,
+      available
+    })
+  })
+  return index
 }
 
 /**
@@ -221,6 +247,7 @@ export function useRestockAllocation () {
     binKey,
     stockKey,
     storageBinsForSku,
+    indexStorageBinsBySku,
     sortBinsLeastFirst,
     drawLeastQuantityFirst,
     planConsumption,

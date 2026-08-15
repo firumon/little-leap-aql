@@ -192,18 +192,36 @@ export function buildPendingRestockAllocationBatchRequests (restock = {}, rows =
   const activeRows = (Array.isArray(rows) ? rows : []).map(row).filter(isActive)
   const allocationComment = text(comment) || `Allocated by ${text(actorName) || 'Unknown'} on ${formatTimeOnly()}`
 
-  const sourceCodes = Array.from(new Set(activeRows.map(sourceCodeOf).filter(Boolean)))
+  // Grouped in ONE pass rather than rescanned per source code. The loop below asks three
+  // questions of `activeRows` for every code it handles — the row that owns the code, the
+  // row that descends from it, and its ALLOCATED children — which made the whole builder
+  // O(codes × rows) (CORE_ARCHITECTURE_RULES §6 — Indexed Joins). Insertion order is
+  // preserved, so the batch is still emitted in the order the rows arrived.
+  const sourceCodes = []
+  const byExactCode = new Map()
+  const bySourceCode = new Map()
+  activeRows.forEach((entry) => {
+    const exact = text(entry.Code)
+    if (exact && !byExactCode.has(exact)) byExactCode.set(exact, entry)
+    const sourceCode = sourceCodeOf(entry)
+    if (!sourceCode) return
+    if (!bySourceCode.has(sourceCode)) {
+      bySourceCode.set(sourceCode, [])
+      sourceCodes.push(sourceCode)
+    }
+    bySourceCode.get(sourceCode).push(entry)
+  })
+
   const itemRecords = []
   const movements = []
 
   sourceCodes.forEach((sourceCode) => {
-    const source = activeRows.find((entry) => text(entry.Code) === sourceCode) ||
-      activeRows.find((entry) => sourceCodeOf(entry) === sourceCode)
+    const descendants = bySourceCode.get(sourceCode) || []
+    const source = byExactCode.get(sourceCode) || descendants[0]
     if (!source) return
 
     const requestedQty = num(source._approvalRequestedQty || source.Quantity)
-    const allocatedRows = activeRows.filter((entry) =>
-      sourceCodeOf(entry) === sourceCode && text(entry.Progress) === 'ALLOCATED')
+    const allocatedRows = descendants.filter((entry) => text(entry.Progress) === 'ALLOCATED')
     const allocatedQty = allocatedRows.reduce((total, entry) => total + num(entry.Quantity), 0)
     const remainingQty = Math.max(requestedQty - allocatedQty, 0)
 

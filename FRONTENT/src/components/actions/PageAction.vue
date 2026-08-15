@@ -62,7 +62,7 @@
  * arriving via `$attrs` for custom keys), so a single `pageaction.js` modifier can
  * intercept, replace, or extend any action without a new prop per action.
  */
-import { computed, inject, unref, useAttrs } from 'vue'
+import { computed, inject, onBeforeUnmount, unref, useAttrs } from 'vue'
 import { useQuasar } from 'quasar'
 import { useActionResolver } from 'src/composables/resources/useActionResolver'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
@@ -215,12 +215,80 @@ function normalizeActionResult (result) {
   return options
 }
 
+// ── Wizard step settling ──────────────────────────────────────────────────────
+//
+// A step change swaps the bar's whole button list at once (['back','next'] →
+// ['back','submit'], …). Rendering that swap on the same tick as the click both
+// looks like a glitch and leaves a window where a second click lands on a button
+// that has already been replaced — advancing two steps from one double-click.
+//
+// So a step move holds `meta.stepping` for a short settle window. Every
+// FormAction* button reads it exactly like `meta.submitting` and disables, the
+// bar dims through the swap (`.aql-form-actions-content--stepping`), and repeat
+// clicks are dropped before the page's own validation runs.
+//
+// TIMING IS THE WHOLE POINT: the flag is claimed SYNCHRONOUSLY as the click is
+// accepted, not after the step actually moves. `handleAction` awaits the page's
+// `next` handler, and `await` yields to a microtask even for a synchronous
+// handler — so a guard that only latched after that await let every click of a
+// double-click sail straight through it and advanced the wizard two or three
+// steps at once. Claim first, release on veto.
+// The move is staged so the swap itself is never on screen:
+//   t=0            claim → bar fades OUT (`--stepping`, 180ms in custom.scss)
+//   t=FADE         currentStep changes while the bar is invisible
+//   t=FADE+SETTLE  release → the new button set fades IN
+// Keep STEP_FADE_MS in step with the transition duration on
+// `.aql-form-actions-content`.
+const STEP_FADE_MS = 180
+const STEP_SETTLE_MS = 60
+const STEP_ACTIONS = ['next', 'back']
+let stepTimers = []
+
+function clearStepTimers () {
+  stepTimers.forEach(clearTimeout)
+  stepTimers = []
+}
+
+function claimStep () {
+  if (!pageState) return
+  clearStepTimers()
+  pageState.meta.stepping = true
+}
+
+function releaseStep () {
+  if (!pageState) return
+  clearStepTimers()
+  pageState.meta.stepping = false
+}
+
+function moveStep (delta) {
+  if (!pageState) return
+  clearStepTimers()
+  stepTimers.push(setTimeout(() => {
+    const current = pageState.meta.currentStep || 1
+    pageState.meta.currentStep = Math.max(1, current + delta)
+  }, STEP_FADE_MS))
+  stepTimers.push(setTimeout(releaseStep, STEP_FADE_MS + STEP_SETTLE_MS))
+}
+
+onBeforeUnmount(clearStepTimers)
+
 async function handleAction (actionName, extraPayload = null) {
   if (!actionName) return
+
+  const isStepMove = STEP_ACTIONS.includes(actionName)
+  if (isStepMove) {
+    // Swallow repeat step clicks landing inside the settle window, then claim it
+    // for this one — both before the first `await` below.
+    if (pageState?.meta?.stepping) return
+    claimStep()
+  }
+
   const ctx = { ...modifierCtx(), payload: extraPayload }
   const handler = resolveHandler(actionName)
 
   if (!handler && !BUILT_IN_ACTIONS.includes(actionName)) {
+    if (isStepMove) releaseStep()
     console.warn('[PageAction] No action handler supplied for:', actionName)
     return
   }
@@ -229,6 +297,9 @@ async function handleAction (actionName, extraPayload = null) {
   if (handler) {
     const result = await handler(actionName, ctx)
     if (result === false || result?.valid === false) {
+      // Vetoed — the step never moves, so hand the buttons straight back rather
+      // than leaving them disabled for the rest of the window.
+      if (isStepMove) releaseStep()
       if (result?.message) $q.notify({ type: 'negative', message: result.message, position: 'top' })
       return
     }
@@ -250,10 +321,10 @@ async function handleAction (actionName, extraPayload = null) {
     // moved the step itself would have already advanced by the time the veto
     // resolved. `back` floors at 1 so the bar may render it unconditionally.
     case 'next':
-      if (pageState) pageState.meta.currentStep = (pageState.meta.currentStep || 1) + 1
+      moveStep(+1)
       return
     case 'back':
-      if (pageState) pageState.meta.currentStep = Math.max(1, (pageState.meta.currentStep || 1) - 1)
+      moveStep(-1)
       return
     default:
       // Custom action whose handler produced a dispatchable payload. Without one,

@@ -55,14 +55,14 @@ function evalProp (val) {
   return evaluateProp(val, resourceRecord, resourceConfig)
 }
 
-const submitting = computed(() => !!pageState?.meta?.submitting)
+const busy = computed(() => !!pageState?.meta?.submitting || !!pageState?.meta?.stepping)
 
 const finalLabel      = computed(() => evalProp(props.label))
 const finalIcon       = computed(() => evalProp(props.icon))
 const finalColor      = computed(() => evalProp(props.color))
 const finalUnelevated = computed(() => props.unelevated)
 const finalFlat       = computed(() => props.flat)
-const isDisabled      = computed(() => !!evalProp(props.disabled) || submitting.value)
+const isDisabled      = computed(() => !!evalProp(props.disabled) || busy.value)
 
 function onClick (evt) {
   if (isDisabled.value) return

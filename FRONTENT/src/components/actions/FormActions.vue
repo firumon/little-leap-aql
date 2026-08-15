@@ -4,7 +4,18 @@
       <!-- Flex/alignment/gap all come from .aql-form-actions-content in custom.scss.
            Quasar's q-gutter-* is deliberately NOT used here: its negative top margin
            on the container fights strict vertical centering of the buttons. -->
-      <div class="aql-form-actions-content">
+      <!-- The step-change fade is driven by STATE (`meta.stepping`), not by a
+           TransitionGroup around the buttons. A per-button enter/leave transition
+           was tried first and is the wrong tool here: `<Action>` resolves its
+           component asynchronously, so a button's first DOM element is the
+           resolver's spinner and the enter lifecycle can be left stranded on
+           `-enter-from` — a permanently invisible (opacity 0) action bar. A class
+           toggled off a timer-backed flag has no lifecycle to strand: the flag is
+           always cleared by PageAction's own setTimeout. -->
+      <div
+        class="aql-form-actions-content"
+        :class="{ 'aql-form-actions-content--stepping': stepping }"
+      >
         <Action
           v-for="entry in resolvedActions"
           :key="entry.id"
@@ -73,6 +84,12 @@ const props = defineProps({
 const emit = defineEmits(['submit', 'reset', 'cancel', 'action'])
 
 const resourceConfig = inject('resourceConfig', null)
+const pageState = inject('pageState', null)
+
+// Raised by PageAction's next/back built-ins for a short settle window around a
+// wizard step change, and always cleared by its timer. Drives the bar's fade and
+// mirrors the `disable` every FormAction* button already applies for it.
+const stepping = computed(() => !!pageState?.meta?.stepping)
 
 const resolvedScope    = computed(() => props.scope    ?? resourceConfig?.scope?.value        ?? 'master')
 const resolvedResource = computed(() => props.resource ?? resourceConfig?.resourceSlug?.value ?? '')
@@ -131,9 +148,15 @@ function normalizeEntry (entry) {
   return { key: name || action || '', extra }
 }
 
-const resolvedActions = computed(() =>
-  (props.actions || [])
-    .map((entry, index) => {
+const resolvedActions = computed(() => {
+  // Occurrence counter per resolved component name. The key must be IDENTITY,
+  // not position: on a wizard page ['next'] → ['back','next'] moves Continue
+  // from index 0 to 1, and an index-based key would make the TransitionGroup
+  // tear it down and re-create it — animating a button that never left. The
+  // counter only kicks in for the (unusual) case of the same action listed twice.
+  const seen = {}
+  return (props.actions || [])
+    .map((entry) => {
       const { key, extra } = normalizeEntry(entry)
       const action = actionComponentName(key)
       if (!action) return null
@@ -143,8 +166,10 @@ const resolvedActions = computed(() =>
         onClick: () => emit('action', key)
       }
 
+      seen[action] = (seen[action] || 0) + 1
+
       return {
-        id: `${index}-${action}`,
+        id: seen[action] > 1 ? `${action}-${seen[action]}` : action,
         action,
         props: {
           ...resolverContext.value,
@@ -155,5 +180,5 @@ const resolvedActions = computed(() =>
       }
     })
     .filter(Boolean)
-)
+})
 </script>

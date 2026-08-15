@@ -200,6 +200,54 @@
   }
 }
 
+// Step-swap chrome for the wizard bar. `--stepping` is toggled off
+// `pageState.meta.stepping`, which PageAction raises for STEP_SETTLE_MS (260ms)
+// around a step change and always clears on a timer — so the bar dims and settles
+// through the moment its button set is replaced, instead of the buttons popping
+// into their new arrangement on a single tick. Deliberately a state class and not
+// a per-button enter/leave transition: see the comment in FormActions.vue.
+//
+// The transition lives on the modifier's own rule as well as the base one so the
+// row eases OUT and back IN; 180ms matches PageAction's STEP_FADE_MS, which is
+// when it changes the step — so the swap happens while the row is invisible.
+//
+// `backwards` (not `both`) on the entrance is deliberate: it holds the from-state
+// through the delay, then stops applying once finished, leaving opacity back
+// under the transition above. `both` would pin opacity at 1 forever and the
+// step fade would never show.
+.aql-form-actions-content,
+.aql-form-actions-content--stepping {
+  transition: opacity 180ms ease, transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  animation: form-actions-buttons-in 300ms ease 1150ms backwards;
+}
+
+.aql-form-actions-content--stepping {
+  opacity: 0;
+  transform: translateY(4px);
+  // Belt-and-braces alongside each button's own `disable` — no stray click can
+  // land on a button that is mid-swap.
+  pointer-events: none;
+}
+
+// Per-button fade-in. A CSS animation, not a Vue transition: it replays whenever
+// a button ELEMENT is created — which is exactly the step swap, since the bar's
+// button set is re-rendered there — and it has no lifecycle that can strand a
+// button at opacity 0 the way a stranded `<TransitionGroup>` enter once did.
+// The small stagger gives the new set a left-to-right settle.
+// No fill mode on purpose: outside the animation's run the button sits at its
+// normal opacity, so there is no state in which a button can be left invisible.
+.aql-form-actions-content .aql-form-action-btn {
+  animation: form-actions-buttons-in 220ms ease;
+
+  &:nth-child(2) { animation-delay: 60ms; }
+  &:nth-child(3) { animation-delay: 120ms; }
+}
+
+@keyframes form-actions-buttons-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
 @keyframes form-actions-slide-up {
   from { transform: translateY(100%); opacity: 0; }
   to   { transform: translateY(0); opacity: 1; }
@@ -207,6 +255,13 @@
 
 @media (prefers-reduced-motion: reduce) {
   .aql-form-actions-bar { animation: none; }
+
+  .aql-form-actions-content,
+  .aql-form-actions-content--stepping,
+  .aql-form-actions-content .aql-form-action-btn {
+    transition: none;
+    animation: none;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

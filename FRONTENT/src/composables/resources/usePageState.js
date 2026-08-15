@@ -179,6 +179,11 @@ export function usePageState (strategy = {}) {
     submitting: false,
     loading: false,
     currentStep: 1,
+    // True for a brief settle window around a wizard step change (set by
+    // PageAction's `next`/`back` built-ins). Every FormAction* button treats it
+    // exactly like `submitting`, so the bar cannot be double-clicked while its
+    // buttons are swapping for the new step.
+    stepping: false,
     validationErrors: {},
     // Measured height of the FormAction sticky bar (0 until FormAction.vue mounts
     // and reports it) — ResourceActions reads this to keep its FAB clear of the bar.
@@ -321,6 +326,7 @@ export function usePageState (strategy = {}) {
       submitting: false,
       loading: false,
       currentStep: 1,
+      stepping: false,
       validationErrors: {},
       formActionsHeight: 0
     })
@@ -743,6 +749,7 @@ export function usePageState (strategy = {}) {
       submitting: false,
       loading: false,
       currentStep: 1,
+      stepping: false,
       validationErrors: {},
       formActionsHeight: 0
     })

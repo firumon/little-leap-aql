@@ -89,16 +89,18 @@
              than inheriting the section's `q-gutter-y-md` — figures in a running total
              belong together, not spaced like separate controls. -->
         <div>
-          <div class="row justify-between text-body2">
-            <span>Subtotal</span><span>{{ _C(wizard.invoiceSubtotal.value) }}</span>
+          <div v-for="line in summaryLines" :key="line.label" class="row justify-between"
+               :class="line.strong ? 'text-body2 text-weight-medium' : 'text-body2 text-grey-8'">
+            <span>{{ line.label }}</span><span>{{ line.value }}</span>
           </div>
-          <div v-if="wizard.invoiceDiscount.value > 0" class="row justify-between text-body2">
-            <span>Discount</span><span>− {{ _C(wizard.invoiceDiscount.value) }}</span>
-          </div>
-          <div class="row justify-between text-subtitle1 text-weight-bold q-pt-xs">
+          <q-separator class="q-my-xs" />
+          <div class="row justify-between text-subtitle1 text-weight-bold">
             <span>Total</span><span>{{ _C(wizard.invoiceTotal.value) }}</span>
           </div>
-          <div class="text-caption text-grey-7">Tax is applied on submission from each item's tax code.</div>
+          <!-- States which policy produced these numbers, because the SAME lines and the
+               same discount give a different total under each one — a reader who cannot see
+               the policy cannot check the arithmetic. -->
+          <div class="text-caption text-grey-7 q-pt-xs">{{ policyCaption }}</div>
         </div>
       </q-card-section>
     </q-card>
@@ -204,9 +206,48 @@ const hasSales = computed(() => wizard.soldRows.value.length > 0)
  * same reason; this is the half the user can act on, by switching price list.
  */
 const metaLabel = (line) => (line.unpriced ? 'No price' : _C(line.total))
-const metaCaption = (line) => (line.unpriced
-  ? `${line.qty} × not in this price list`
-  : `${line.qty} × ${_C(line.price ?? 0)}`)
+const metaCaption = (line) => {
+  if (line.unpriced) return `${line.qty} × not in this price list`
+  const base = `${line.qty} × ${_C(line.price ?? 0)}`
+  // The line's own tax, stated on the line that generated it — a reader reconciling the
+  // header's tax figure otherwise has to divide it back out across the lines by hand.
+  return line.tax > 0 ? `${base} · tax ${_C(line.tax)}` : base
+}
+
+/**
+ * The running total, read ENTIRELY off the Layer 2 engine's header.
+ *
+ * Every row here is a stored invoice column, so what the user confirms on this step and what
+ * the batch writes are the same figures — not two calculations that happen to agree. Zero
+ * rows are dropped rather than shown as `0.00`: a discount line on an undiscounted invoice
+ * is a row the reader has to check before dismissing.
+ */
+const summaryLines = computed(() => {
+  const header = wizard.invoiceHeader.value
+  const rows = [
+    { label: 'Subtotal', value: _C(header.Subtotal), amount: header.Subtotal, strong: true },
+    { label: 'Discount', value: `− ${_C(header.Discount)}`, amount: header.Discount },
+    { label: 'Taxable amount', value: _C(header.TotalTaxableAmount), amount: header.TotalTaxableAmount },
+    // One row per TAX CODE. A compound tax lands as its components, which is the
+    // granularity the invoice stores and the granularity a tax return is filed at.
+    ...wizard.invoiceTaxBreakdown.value.map((entry) => ({
+      label: entry.TaxCode,
+      value: _C(entry.TaxAmount),
+      amount: entry.TaxAmount
+    })),
+    { label: 'Tax', value: _C(header.TotalTaxAmount), amount: header.TotalTaxAmount, strong: true },
+    { label: 'Returns credited', value: `− ${_C(header.ReturnDeductionTotal)}`, amount: header.ReturnDeductionTotal }
+  ]
+  return rows.filter((row) => Number(row.amount) > 0)
+})
+
+const policyCaption = computed(() => {
+  const { discountTaxPolicy, taxInclusive } = wizard.invoicePolicy.value
+  const discountRule = discountTaxPolicy === 'PRE_TAX'
+    ? 'Discount is applied before tax'
+    : 'Tax is charged on the full value, then the discount is applied'
+  return `${discountRule}. Prices ${taxInclusive ? 'include' : 'exclude'} tax.`
+})
 
 const priceListOptions = computed(() =>
   activePriceLists.value.map((list) => ({ value: list.code, label: list.name || list.code })))

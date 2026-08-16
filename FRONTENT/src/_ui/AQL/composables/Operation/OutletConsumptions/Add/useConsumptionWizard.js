@@ -12,12 +12,11 @@ import {
   defaultReturnMeta,
   defaultRestockQty,
   priceListForOutlet,
-  priceOf,
-  lineTotal,
-  discountAmount,
   warehouseAvailableQty,
   splitByWarehouseStock
 } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionStock'
+import { calculateConsumptionInvoice } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionInvoice'
+import { useTaxCalculator } from 'src/composables/useTaxCalculator'
 import {
   progressOf,
   isActiveRow,
@@ -85,9 +84,18 @@ export function useConsumptionWizard () {
   const products = resource('Products')
   const returns = resource('OutletReturns')
   const operatingRules = resource('OutletOperatingRules')
+  // Opened for the INVOICE, not for anything this file displays. `calculateLineTax` reads
+  // the tax rows straight out of the data store, and an unloaded `Taxes` resource makes it
+  // find no components and return zero tax — silently. The review step then showed a
+  // tax-free total for lines that were about to be invoiced WITH tax, because the submit
+  // ran later, by which time some other page had usually loaded them.
+  const taxes = resource('Taxes')
 
   const { getSku } = useSkuResource()
   const { getOutlet } = useOutletResource()
+  // Injected into the invoice engine rather than imported by it, so Layer 2 stays clear of
+  // the tax composable's store graph.
+  const { calculateLineTax } = useTaxCalculator()
   const index = useConsumptionIndex()
 
   // ── Control-field accessors ────────────────────────────────────────────────
@@ -260,25 +268,55 @@ export function useConsumptionWizard () {
   const discountType = computed(() => text(get(F.DISCOUNT_TYPE)) || 'FLAT')
   const discountValue = computed(() => toNumber(get(F.DISCOUNT_VALUE, 0)))
 
-  /** Priced sold lines — what the review step shows and what the invoice will bill. */
-  const invoiceLines = computed(() => soldRows.value.map((row) => {
-    const price = priceOf(row.SKU, priceListCode.value)
-    const label = skuLabel(row.SKU)
+  /**
+   * THE invoice, calculated exactly as the submit will calculate it.
+   *
+   * One call to the Layer 2 engine, and every figure the review step displays is read off
+   * its result — including the tax. The step previously summed `qty × price` and took a flat
+   * discount off it, so the "Total" the user confirmed deliberately excluded the tax the
+   * batch was about to charge; on a tax-exclusive list that is the entire tax amount, and on
+   * a PRE_TAX list the discount was applied to a base the invoice never used.
+   *
+   * `returnDeduction` is declared further down with step 5. The forward reference is safe
+   * because a `computed` getter does not run during setup — by the time anything reads this,
+   * every binding in this composable exists. Including it here is what makes the running
+   * total on step 3 keep up with returns ticked on step 5 and then reviewed by going Back.
+   */
+  const invoiceCalculation = computed(() => calculateConsumptionInvoice({
+    lines: soldRows.value,
+    priceListCode: priceListCode.value,
+    discountType: discountType.value,
+    discountValue: discountValue.value,
+    returnDeduction: returnDeduction.value,
+    calculateLineTax
+  }))
+
+  /** The engine's lines, carrying the labels only the UI needs. */
+  const invoiceLines = computed(() => invoiceCalculation.value.lines.map((line) => {
+    const label = skuLabel(line.SKU)
     return {
-      sku: text(row.SKU),
+      sku: line.SKU,
       name: label.primary,
       variant: label.secondary,
-      qty: toNumber(row.SoldQty),
-      price,
-      // A `null` price is surfaced as an unpriced line rather than billed at zero.
-      unpriced: price === null,
-      total: lineTotal(row.SoldQty, price ?? 0)
+      qty: line.Qty,
+      price: line.Price,
+      // A SKU with no price in this list is SURFACED rather than billed at zero — a silent
+      // zero is how consignment stock gets given away.
+      unpriced: line.Unpriced,
+      total: line.Total,
+      tax: line.TaxAmount
     }
   }))
 
-  const invoiceSubtotal = computed(() => invoiceLines.value.reduce((sum, line) => sum + line.total, 0))
-  const invoiceDiscount = computed(() => discountAmount(invoiceSubtotal.value, discountType.value, discountValue.value))
-  const invoiceTotal = computed(() => Math.max(0, invoiceSubtotal.value - invoiceDiscount.value))
+  const invoiceHeader = computed(() => invoiceCalculation.value.header)
+  const invoiceSubtotal = computed(() => invoiceHeader.value.Subtotal)
+  const invoiceDiscount = computed(() => invoiceHeader.value.Discount)
+  const invoiceTaxableAmount = computed(() => invoiceHeader.value.TotalTaxableAmount)
+  const invoiceTax = computed(() => invoiceHeader.value.TotalTaxAmount)
+  const invoiceReturnDeduction = computed(() => invoiceHeader.value.ReturnDeductionTotal)
+  const invoiceTotal = computed(() => invoiceHeader.value.Total)
+  const invoiceTaxBreakdown = computed(() => invoiceCalculation.value.taxBreakdown)
+  const invoicePolicy = computed(() => invoiceCalculation.value.policy)
 
   /**
    * Earlier consumptions at this outlet that still owe an invoice — the bundling candidates.
@@ -464,14 +502,16 @@ export function useConsumptionWizard () {
     // options
     outletOptions, visitOptions, plannedVisitCards, skuOptions, regionWarehouses,
     // resources (for a card that needs to `reload()` them)
-    resources: { outlets, visits, storages, warehouses, warehouseStorages, skus, products, returns, operatingRules },
+    resources: { outlets, visits, storages, warehouses, warehouseStorages, skus, products, returns, operatingRules, taxes },
     // step 2
     countRows, hasCountRows, seedCountRows, setCurrentQty, stepCurrentQty,
     addManualReturn, removeManualReturn, soldRows, returnRows, skuLabel,
     returnMeta, metaFor, setReturnMeta,
     // step 3
     generateInvoice, priceListCode, discountType, discountValue,
-    invoiceLines, invoiceSubtotal, invoiceDiscount, invoiceTotal,
+    invoiceCalculation, invoiceHeader, invoiceLines, invoiceSubtotal, invoiceDiscount,
+    invoiceTaxableAmount, invoiceTax, invoiceReturnDeduction, invoiceTotal,
+    invoiceTaxBreakdown, invoicePolicy,
     bundleCandidates, bundledCodes, toggleBundled,
     // step 4
     restockRows, directRestock, warehouseCode, markDelivered,

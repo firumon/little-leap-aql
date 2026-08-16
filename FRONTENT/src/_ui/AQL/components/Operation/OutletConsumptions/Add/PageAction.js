@@ -1,12 +1,13 @@
 import { useAuth } from 'src/composables/core/useAuth'
 import { useDataStore } from 'src/stores/data'
 import { useTaxCalculator } from 'src/composables/useTaxCalculator'
-import { resourceGetRequest } from 'src/composables/resources/usePageState'
+import { resourceGetRequest, batchResultCode } from 'src/composables/resources/usePageState'
 import { WIZARD_FIELDS as F, WIZARD_NODE as NODE } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/useConsumptionWizard'
 import {
   validateConsumption,
   soldRowsOf,
   returnRowsOf,
+  restockRowsOf,
   defaultReturnMeta,
   priceListForOutlet
 } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionStock'
@@ -49,9 +50,17 @@ import {
  * step that immediately bounced them forward again.
  *
  * ── THE SUBMIT ──
- * One batch, six resources, in dependency order. Everything after the composite save
- * chains its parent code off `$ref:OutletConsumptions.latest.code`, so nothing is split
- * into a second round trip that could fail after the first has already committed (§8.2).
+ * One batch, up to six resources, in dependency order. Everything chained to the composite
+ * save carries `$ref:OutletConsumptions.latest.code`, so nothing is split into a second
+ * round trip that could fail after the first has already committed (§8.2).
+ *
+ * NO CONSUMPTION IS WRITTEN WITHOUT A SALE. An `OutletConsumptions` row asserts a billable
+ * event, so a header with no lines can never be invoiced or settled and would sit in
+ * `PENDING_INVOICE_GENERATION` forever. A visit that only returned stock writes returns; one
+ * that only raised a restock writes a restock; both still complete and schedule visits. The
+ * batch's shape — and with it the success message and where the user lands — follows from
+ * what actually happened, which is why this handler and not a builder makes the call: it is
+ * the only place that sees the whole submission.
  */
 export default (props, { pageState, resourceConfig }) => {
   // Safe outside setup: both only reach Pinia stores and statically imported plugins —
@@ -146,13 +155,25 @@ export default (props, { pageState, resourceConfig }) => {
     return null
   }
 
-  /** The full validation gate, shared by the step-2 `next` and by `submit`. */
-  const validate = () => validateConsumption(form(), countRows(), rows('OutletStorages'), {
+  /** The restock lines that will actually be requested, zeroes already dropped. */
+  const liveRestockRows = () => restockRowsOf(get(F.RESTOCK_ROWS, []) || [])
+
+  /**
+   * The full validation gate, shared by the step-2 `next` and by `submit`.
+   *
+   * `submitting` is what separates the two. The "at least one sold item, return item, or
+   * restock item" rule can only be judged once every step has been through, so it is armed
+   * at submit and silent during navigation — otherwise step 2 would refuse to advance a
+   * restock-only audit toward the very step that gives it its restock lines.
+   */
+  const validate = (options = {}) => validateConsumption(form(), countRows(), rows('OutletStorages'), {
     generateInvoice: generateInvoice(),
     priceListCode: priceListCode(),
     directRestock: directRestock(),
     warehouseCode: text(get(F.WAREHOUSE)),
-    returnMetaOf: metaOf
+    returnMetaOf: metaOf,
+    restockRows: liveRestockRows(),
+    submitting: options.submitting === true
   })
 
   return {
@@ -197,6 +218,11 @@ export default (props, { pageState, resourceConfig }) => {
         // Only the count itself is gated here. Pricing and warehouse errors belong to the
         // steps that collect them, so a missing price does not block a user who has not
         // reached the invoice step yet.
+        //
+        // A count with NOTHING on it is deliberately not gated either. Every shelf matching
+        // the system is a legitimate audit outcome, and the officer may still be here to
+        // leave a restock behind — `STEP_VISIBLE[3]` is false with no sales, so this walks
+        // straight to step 4, where the restock is either added or the guard below stops it.
         const countErrors = result.errors.filter((error) => !/price|warehouse/i.test(error))
         if (countErrors.length) return { valid: false, message: countErrors[0] }
       }
@@ -205,7 +231,24 @@ export default (props, { pageState, resourceConfig }) => {
       // user's finger the moment they tapped one decrement too many, with no way back to
       // it except the expansion. Holding it at zero until they move on makes that
       // recoverable, and a zero line was never going to be submitted anyway.
-      if (step() === 4) pruneZeroRestockRows()
+      if (step() === 4) {
+        pruneZeroRestockRows()
+
+        // THE ONE PLACE a restock-only audit can be stopped. Steps 5 and 6 ask about
+        // returns and the visit, neither of which is an operational effect on its own, so
+        // by the time the user reaches the submit button every remaining screen is optional
+        // — an audit that recorded nothing must be caught here, on the step that offered
+        // the last chance to give it something to do.
+        //
+        // Stated as what to do next rather than as what went wrong: both remedies are named,
+        // because the user standing in the outlet knows which of the two actually happened.
+        if (!soldRowsOf(countRows()).length && !returnRowsOf(countRows()).length && !liveRestockRows().length) {
+          return {
+            valid: false,
+            message: 'Add at least one restock item to continue, or record a sold/return quantity in stock count.'
+          }
+        }
+      }
 
       // Walk to the next step that has something to ask. Returning `false` suppresses the
       // built-in single-step increment, which this jump has already performed.
@@ -224,12 +267,19 @@ export default (props, { pageState, resourceConfig }) => {
       }
     },
 
-    submit: () => {
-      const result = validate()
+    submit: (name, { nav }) => {
+      const result = validate({ submitting: true })
       if (!result.valid) return { valid: false, message: result.errors[0] }
 
-      const invoicing = generateInvoice()
-      const restockRows = (get(F.RESTOCK_ROWS, []) || []).filter((row) => Number(row.Quantity) > 0)
+      // THE ONE QUESTION THIS WHOLE HANDLER TURNS ON. An `OutletConsumptions` row asserts a
+      // billable consumption event; with no sold lines it can never be invoiced or settled
+      // and becomes a permanent orphan in `PENDING_INVOICE_GENERATION`. So a visit that only
+      // returned stock, or only raised a restock, writes those records and NO header — they
+      // are complete transactions in their own right, not fragments of a consumption.
+      const hasSold = soldRowsOf(countRows()).length > 0
+      const hasReturns = returnRowsOf(countRows()).length > 0
+      const restockRows = liveRestockRows()
+      const invoicing = hasSold && generateInvoice()
       const adjustedCodes = get(F.ADJUSTED_RETURNS, []) || []
       const completingVisit = get(F.COMPLETE_VISIT, true) === true && !!text(form().OutletVisitCode)
       const schedulingNext = get(F.SCHEDULE_NEXT, true) === true
@@ -243,8 +293,24 @@ export default (props, { pageState, resourceConfig }) => {
        * Action names are lower-camel: `allowed()` upper-cases only the first character, so
        * an all-caps name resolves to a key that can never match and fails closed silently.
        */
-      const permissions = { OutletConsumptions: 'create', OutletConsumptionItems: 'create', OutletMovements: 'create' }
-      if (returnRowsOf(countRows()).length) permissions.OutletReturns = 'create'
+      // NOTHING is unconditional. The consumption header, its lines and the ledger
+      // deduction are all gated on there being a sale, because a restock-only or
+      // return-only submission writes none of them — demanding their permissions would
+      // refuse a visit that never touches the resources they protect.
+      const permissions = {}
+      if (hasSold) {
+        permissions.OutletConsumptions = 'create'
+        permissions.OutletConsumptionItems = 'create'
+        permissions.OutletMovements = 'create'
+      }
+      // A return writes the outlet ledger too — the matrix decides the direction, and two
+      // of its four cases move stock. Claimed whenever returns exist rather than only when
+      // a movement survives the filter, so the gate does not depend on arithmetic the user
+      // can change after it is evaluated.
+      if (hasReturns) {
+        permissions.OutletReturns = 'create'
+        permissions.OutletMovements = 'create'
+      }
       if (adjustedCodes.length) permissions.OutletReturns = 'update'
       if (invoicing) {
         permissions.OutletConsumptionInvoices = 'create'
@@ -254,22 +320,42 @@ export default (props, { pageState, resourceConfig }) => {
       if (restockRows.length) {
         permissions.OutletRestocks = 'create'
         permissions.OutletRestockItems = 'create'
-        if (directRestock()) permissions.StockMovements = 'create'
+        if (directRestock()) {
+          permissions.StockMovements = 'create'
+          // Delivering on the visit puts the units on the outlet's shelf — the other leg,
+          // and a second ledger this submission would otherwise write ungated.
+          if (get(F.MARK_DELIVERED, false) === true) permissions.OutletMovements = 'create'
+        }
       }
       if (resourceConfig?.allowed(permissions) !== true) {
         return { valid: false, message: 'You do not have permission to complete this consumption workflow.' }
       }
 
       const requests = []
+      // Where each landmark request ended up, so the post-submit navigation can read the
+      // right code out of the batch response. Tracked as the batch is assembled rather than
+      // assumed from a fixed order, which changes with what the user actually chose.
+      let returnsAt = -1
+      let consumptionAt = -1
+      let restockAt = -1
 
       // 1. Returns FIRST — the invoice below needs their codes to record what it credited.
-      requests.push(...buildReturnsRequests(form(), countRows(), metaOf, { priceListCode: priceListCode() }))
+      if (hasReturns) {
+        returnsAt = requests.length
+        requests.push(...buildReturnsRequests(form(), countRows(), metaOf, { priceListCode: priceListCode() }))
+      }
 
-      // 2. The consumption and its sold lines. Everything after this chains off its $ref.
-      requests.push(buildConsumptionCompositeRequest(form(), countRows(), actor(), { generateInvoice: invoicing }))
+      // 2. The consumption and its sold lines — ONLY when something was consumed. Everything
+      //    after this that carries a `$ref` chains off it, and every one of those is itself
+      //    gated on a sale, so nothing can reference a header the batch did not write.
+      if (hasSold) {
+        consumptionAt = requests.length
+        requests.push(buildConsumptionCompositeRequest(form(), countRows(), actor(), { generateInvoice: invoicing }))
 
-      // 3. The outlet ledger deduction.
-      requests.push(buildConsumptionMovementsRequest(form(), countRows()))
+        // 3. The outlet ledger deduction.
+        const movements = buildConsumptionMovementsRequest(form(), countRows())
+        if (movements) requests.push(movements)
+      }
 
       // 4. The invoice, bundling any earlier uninvoiced audits the user ticked. Its lines
       //    are the union of this audit's sales and every bundled audit's, merged here
@@ -292,6 +378,13 @@ export default (props, { pageState, resourceConfig }) => {
           actorName: actor(),
           calculateLineTax
         })
+        // The engine ran once, inside the builder, and returned what it calculated. An
+        // invoice with no priced lines is REFUSED rather than submitted empty: the batch
+        // would otherwise create a zero-value invoice header and walk every bundled
+        // consumption to INVOICE_GENERATED against it, leaving them permanently unbillable.
+        if (!invoice.requests.length) {
+          return { valid: false, message: 'Nothing on this invoice can be priced — check the price list.' }
+        }
         requests.push(...invoice.requests)
 
         // 5. Settle the returns that were credited against it.
@@ -316,12 +409,16 @@ export default (props, { pageState, resourceConfig }) => {
 
       // 7. Replenishment, in whichever mode step 1 and step 4 selected.
       if (restockRows.length) {
+        restockAt = requests.length
         const restock = buildRestockRequests(form(), restockRows, {
           mode: directRestock() ? 'APPROVED' : 'PENDING_APPROVAL',
           warehouseCode: text(get(F.WAREHOUSE)),
           warehouseStorages: rows('WarehouseStorages'),
           markDelivered: get(F.MARK_DELIVERED, false) === true,
-          actorName: actor()
+          actorName: actor(),
+          // With no sale there is no consumption header to point at. See
+          // `buildRestockRequests` — the link is provenance, not a dependency.
+          linkToConsumption: hasSold
         })
         requests.push(...restock.requests)
       }
@@ -330,7 +427,40 @@ export default (props, { pageState, resourceConfig }) => {
       // in the same round trip rather than leaving the next page to find them stale (§8.2).
       requests.push(resourceGetRequest(['OutletStorages', 'WarehouseStorages', 'OutletVisits']))
 
-      return { requests, successMsg: 'Consumption recorded.' }
+      /**
+       * What the user is told, and where they land.
+       *
+       * The default post-submit navigation reads the code off the FIRST request in the batch
+       * and opens this resource's View page. That is right only when a consumption was
+       * written; on a restock-only submit the first request is a visit action, and the user
+       * would be sent to a consumption View for a record that does not exist. So the target
+       * is chosen from what was actually created, by the index recorded above.
+       */
+      const outcome = hasSold
+        ? { message: 'Consumption recorded.', at: consumptionAt, slug: '' }
+        : restockAt >= 0
+          ? {
+              message: hasReturns ? 'Returns and restock request recorded.' : 'Restock request created.',
+              at: restockAt,
+              slug: 'outlet-restocks'
+            }
+          : { message: 'Returns recorded.', at: returnsAt, slug: 'outlet-returns' }
+
+      return {
+        requests,
+        successMsg: outcome.message,
+        onSuccess: ({ response }) => {
+          // The default handler resets for us; supplying our own replaces it, so the wizard
+          // state has to be cleared here or the next audit opens on the last one's answers.
+          pageState.reset()
+          const code = outcome.at >= 0 ? text(batchResultCode(response, outcome.at)) : ''
+          // A bulk create does not always report a single code. Landing on the resource's
+          // index is the honest fallback — better than a View route built on a blank code.
+          if (!code) return nav.goTo('index')
+          if (!outcome.slug) return nav.goTo('view', { code })
+          nav.goTo('view', { scope: 'operation', resourceSlug: outcome.slug, code })
+        }
+      }
     }
   }
 

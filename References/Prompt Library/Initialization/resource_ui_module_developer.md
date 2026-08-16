@@ -115,6 +115,7 @@ Rules, no exceptions:
   headers/permissions/`allowed()`.
 - **One workflow vocabulary** — states, order, and their label/colour/icon — declared here
   and read by every widget, chip, badge and gate (guide §4.5).
+- **Domain Payload Chains for Cross-Resource Mutations** — cross-resource side-effects (e.g. Order → Invoice, Audit → Restock) live exclusively in Layer 2 payload builders calling sibling domain builders. All builders must return the canonical envelope `{ valid, requests, permissions, message, successMsg }` ([UI_RESOURCE_DOMAIN_LOGIC.md §9](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md#9-domain-payload-chain-architecture)).
 - No `inject()`, no `ref()` unless every caller is inside a UI Composable.
 - No import of a Pinia store, a service module, or anything under `_ui/`.
 
@@ -212,8 +213,9 @@ disagree (guide §7.4).
 1. Contract at `pages/{Scope}/{Resource}/{ActionName}.js` with explicit `title`,
    `PropsPageHeader: { reload: false }`, and step table in docblock.
 2. Shared allocation/review cards at the resource tier. Hydration in the first content component.
-3. Sticky bar owns navigation and submission (guide §8.2–§8.4):
-   - `get actions()`; handler returns `{ requests, successMsg, … }` (`successMsg`, not `successMessage`).
+3. Sticky bar owns navigation and submission (guide §8.2–§8.5):
+   - Zero UI Schema Invention: delegate cross-resource batch preparation to Layer 2 domain payload chain builder.
+   - `PageAction.js` handler invokes chain builder, checks `!result.valid`, gates with `resourceConfig.allowed(result.permissions)`, and returns `{ requests: result.requests, successMsg: result.successMsg }`.
    - Validate downstream irreversibility: block rejection/reversal if child lines are already delivered.
    - Child-only action routes (`Reallocate`) isolate payloads and permissions to child lines and stock movements, without touching parent approval state.
    - Append `resourceGetRequest(['WarehouseStorages'])` to refresh stock cache in the same round trip.
@@ -243,11 +245,14 @@ Intermediate containers keep default `inheritAttrs: true`; leaf components expli
 
 ## Step 10 — Self-Check, Verify & Commit
 
-Import boundaries (guide §6):
+Import boundaries & Domain Chains (guide §6, [UI_RESOURCE_DOMAIN_LOGIC.md §9](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md#9-domain-payload-chain-architecture)):
 
 - [ ] Every `.vue` under `_ui/` imports only UI Composables — zero `inject(` or Core Composable imports in `.vue` files.
 - [ ] Every UI Composable imports only Resource Composables + generic Core Composables.
 - [ ] Every Resource Composable (`src/_resource/**`) imports only generic Core Composables.
+- [ ] Cross-resource mutations are encapsulated in Layer 2 Domain Payload Chains; zero secondary schema rows constructed in `_ui/` or `PageAction.js`.
+- [ ] All Domain Payload Chain builders return the canonical envelope `{ valid, requests, permissions, message, successMsg }`.
+- [ ] `PageAction.js` gates submissions using `resourceConfig.allowed(result.permissions)`.
 
 Visual contract & tokens (guide §10):
 
@@ -273,4 +278,3 @@ Then:
 
 - Run `gitnexus_impact` before editing any pre-existing symbol (per `AGENTS.md`).
 - Run `gitnexus_detect_changes()` before committing.
-

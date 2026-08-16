@@ -19,7 +19,7 @@ Plus the subsystem specs this guide summarizes inline and links out to for full 
 
 | Subsystem | Canonical spec |
 |---|---|
-| Resource domain logic & import boundaries | [UI_RESOURCE_DOMAIN_LOGIC.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md) |
+| Resource domain logic, import boundaries & payload chains | [UI_RESOURCE_DOMAIN_LOGIC.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md) |
 | Pages & Sections | [UI_PAGE_AND_SECTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_AND_SECTION_SYSTEM.md) |
 | Contents | [UI_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CONTENT_SYSTEM.md) |
 | Actions | [UI_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md) |
@@ -1348,7 +1348,56 @@ function permitted () {
 A single literal map covering both states either over-asks (locking out the user the second
 state exists for) or under-asks (letting an unpermitted user perform the first).
 
-### 8.5 Workflow eligibility is not yours to re-derive
+### 8.5 Cross-Resource Actions via Domain Payload Chains
+
+> [!IMPORTANT]
+> **Zero UI Schema Invention**: `PageAction.js`, action handlers, and custom forms must **never** construct secondary or child business records directly inside `_ui/`. 
+> When a submission on Resource A causes side-effects or creates records in Resource B (e.g. Order → Invoice, Audit → Restock, Approval → Audit Logs), all batch request construction and permission aggregation must be delegated to the primary resource's Layer 2 Domain Payload Builder (`src/_resource/{Scope}/{Resource}/composables/use{Resource}Payload.js`). See [UI_RESOURCE_DOMAIN_LOGIC.md §9](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md#9-domain-payload-chain-architecture) for the full specification.
+
+#### Standard Consumption Pattern in `PageAction.js`
+
+Every `PageAction.js` handler orchestrating a cross-resource mutation follows this exact 5-step pipeline:
+
+```javascript
+// _ui/{Ui}/components/{Scope}/{Resource}/{Page}/PageAction.js
+import { buildAuditCompletionChainRequests } from 'src/_resource/{Scope}/{Resource}/composables/use{Resource}Payload'
+
+export default {
+  actions: ['cancel', 'submit'],
+  submit: (name, { pageState, resourceRecord, resourceConfig }) => {
+    // 1. Collect inputs and draft allocations from pageState
+    const formRecord = pageState.state.formRecord
+    const discrepancies = pageState.state.nodes.get('Discrepancies')?.children || []
+    const auditRecord = resourceRecord?.record?.value
+
+    // 2. Invoke the Layer 2 Domain Payload Chain Builder
+    const result = buildAuditCompletionChainRequests({
+      auditRecord,
+      discrepancies,
+      actor: formRecord.ActorName,
+      notes: formRecord.Notes
+    })
+
+    // 3. Early exit if internal business validation fails
+    if (!result.valid) {
+      return { valid: false, message: result.message }
+    }
+
+    // 4. Gate submission with aggregated permissions returned by the chain
+    if (!resourceConfig?.allowed(result.permissions)) {
+      return { valid: false, message: 'You do not have permission to execute all required operations in this action.' }
+    }
+
+    // 5. Return requests and toast message to pageState.submit()
+    return {
+      requests: result.requests,
+      successMsg: result.successMsg
+    }
+  }
+}
+```
+
+### 8.6 Workflow eligibility is not yours to re-derive
 
 `AdditionalActions` gating — permissions, `visibleWhen`, `only`/`exclude`, and
 navigate-vs-mutate dispatch — lives in a dedicated Core Composable; request mechanics live
@@ -1356,7 +1405,7 @@ in the additive-actions pipeline. A component that re-derives eligibility drifts
 config contract. Ordering is the **one** thing a consumer may decide locally — it is
 presentation, not eligibility, and escalation order is the sensible default.
 
-### 8.6 Suppression gates
+### 8.7 Suppression gates
 
 | Gate | Effect |
 |---|---|

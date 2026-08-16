@@ -31,6 +31,7 @@
 ## 4. COMPOSABLES
 * **Role**: Contains all business logic, validation, workflow handling, and payload preparation.
 * **Rules**: Can use stores and other composables. Must NOT use services directly, perform API/IDB operation, or exceed ~400 lines.
+* **Domain Payload Chains**: When a business mutation on Resource A causes side-effects on Resource B (e.g. Order → Invoice, Audit → Restock), Layer 2 of Resource A calls the domain payload builder of Resource B directly. Layer 2 owns all cross-resource batch construction and permission aggregation. Builders must return the canonical envelope `{ valid, requests, permissions, message, successMsg }`.
 * **Navigation**: Must use `useResourceNav` for routing. Direct `router.push()` is forbidden.
 * **Component Resolution**: Must respect the decentralized page resolver (`usePageResolver`), section resolver (`useSectionResolver`), content resolver (`useContentResolver`), action resolver (`useActionResolver`), and common section wrapper (`useCommonSection`). Do not bypass them to perform ad-hoc template loading or layout overrides.
 * **Dynamic Currency**: Always use the `useCurrency` `_C(value, showSymbol, target, source)` helper. Do not hardcode currency symbols (e.g. `₹`, `AED`).
@@ -39,6 +40,7 @@
 
 ## 5. COMPONENTS & PAGES
 * **Role**: UI rendering only. Invokes composables. No business logic, stores, services, API calls, or IDB operation.
+* **Zero UI Schema Invention**: Page action handlers (`PageAction.js`) and UI components must never construct secondary/child business rows or calculate business formulas directly. UI passes collected form inputs to the Layer 2 Domain Payload Chain, checks validity and aggregated permissions (`resourceConfig.allowed(result.permissions)`), and passes `result.requests` to `pageState.submit()`.
 * **UI/Workflow Permission Gating**: All interactive elements and state-changing workflows must be gated using `allowed()` from `useResourceConfig`. For multi-resource actions, gate must verify ALL permissions (AND logic).
 
 ---

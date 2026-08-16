@@ -428,11 +428,219 @@ added to.
 
 ---
 
+## 9. Domain Payload Chain Architecture
+
+### 9.1 Definition & Purpose
+
+In complex business workflows, mutations on a primary resource frequently trigger mutations across one or more related secondary resources (for example: an Order generating an Invoice, an Audit triggering Restock and StockMovement rows, or an Approval appending Status Logs).
+
+Under the **3-Layer UI Architecture**, **Layer 2 (`src/_resource/{Scope}/{Resource}/`) is the sole owner of multi-resource mutation chains.**
+
+```
+Layer 3 (UI Presentation)
+   │  PageAction.js collects user form inputs
+   │  Calls top-level Layer 2 chain builder
+   ▼
+Layer 2 (Primary Domain: Resource A)
+   │  Validates business rules for Resource A
+   │  Builds primary batch requests
+   │  Directly calls Layer 2 Domain Builder for Resource B
+   ▼
+Layer 2 (Secondary Domain: Resource B)
+   │  Validates business rules for Resource B
+   │  Builds secondary batch requests (using batchRef for symbolic foreign keys)
+   │  Returns standardized envelope
+   ▼
+Layer 3 (UI Presentation)
+   │  Receives unified { valid, requests, permissions, successMsg }
+   │  Gates execution with resourceConfig.allowed(result.permissions)
+   │  Hands requests directly to pageState.submit() for atomic GAS execution
+```
+
+**Why this rule is absolute:**
+- **Zero UI Schema Invention**: Presentation components (`_ui/`, `PageAction.js`, `.vue`) must NEVER handcraft backend table rows, default column values, or business calculation formulas for secondary resources.
+- **Single Source of Truth**: The domain logic for creating or updating Resource B lives exclusively in Resource B's own Layer 2 files, reused identically whether triggered by the Resource B standalone UI or an automated chain from Resource A.
+- **Atomicity via GAS Batching**: All operations across the entire chain are bundled into a single batch array and committed atomically in one server round trip.
+
+---
+
+### 9.2 The Universal Return Envelope
+
+Every domain payload builder participating in a chain must return a standardized envelope object:
+
+```javascript
+{
+  valid: boolean,        // false if internal domain validation or business constraints fail
+  requests: Array,       // Array of standard GAS batch requests (saveComposite, bulk, etc.)
+  permissions: Object,   // Aggregated map of required permissions across the entire chain
+  message?: string,      // Failure or validation error message if valid === false
+  successMsg?: string    // Optional user-facing success toast message
+}
+```
+
+#### Envelope Field Specification
+
+| Field | Type | Purpose |
+|---|---|---|
+| `valid` | `boolean` | `true` if all business invariants, allocations, and constraints pass; `false` otherwise. |
+| `requests` | `Array<Object>` | Complete, ordered array of GAS batch request objects ready for `pageState.submit()`. |
+| `permissions` | `Object` | Permission requirements dictionary combining all resources touched by the chain (e.g. `{ Orders: 'create', Invoices: 'create' }`). |
+| `message` | `string` (optional) | Human-readable explanation when `valid === false`. Displayed to the user as a validation error toast or banner. |
+| `successMsg` | `string` (optional) | Standardized completion toast text returned upon successful submission. |
+
+---
+
+### 9.3 Chaining & Composition Pattern
+
+When a primary domain builder invokes secondary domain builders:
+
+1. **Child Builder Invocation**: The primary builder invokes the secondary domain builder function with the relevant subset of input data.
+2. **Early Exit on Failure**: If any child builder returns `valid: false`, the parent immediately halts further processing and bubbles the child's error envelope upward.
+3. **Strict Request Ordering**: Parent requests MUST appear in the `requests` array before any child requests that depend on them or reference their generated identifiers.
+4. **Permission Merging (Union)**: The parent merges all child `permissions` dictionaries into its own permissions map, ensuring Layer 3 can perform a comprehensive, single-gate check.
+
+```javascript
+// src/_resource/Operation/Audits/composables/useAuditPayload.js
+import { buildRestockChainRequests } from 'src/_resource/Operation/Restocks/composables/useRestockPayload'
+import { resourceGetRequest } from 'src/composables/resources/usePageState'
+import { batchRef } from 'src/utils/appHelpers'
+
+const RESOURCE_NAME = 'Audits'
+
+export function buildAuditCompletionChainRequests ({ auditRecord, discrepancies, actor, notes }) {
+  // 1. Validate primary domain constraints
+  if (!auditRecord?.Code) {
+    return { valid: false, message: 'Audit code is missing.' }
+  }
+  if (!discrepancies?.length) {
+    return { valid: false, message: 'No audit discrepancy lines provided.' }
+  }
+
+  // 2. Build primary resource batch request
+  const primaryRequests = [
+    {
+      resource: RESOURCE_NAME,
+      action: 'saveComposite',
+      data: {
+        record: {
+          Code: auditRecord.Code,
+          Status: 'COMPLETED',
+          CompletedBy: actor,
+          Notes: notes || ''
+        }
+      }
+    }
+  ]
+
+  let aggregatedPermissions = {
+    [RESOURCE_NAME]: 'update'
+  }
+
+  const allRequests = [...primaryRequests]
+
+  // 3. Conditionally chain secondary domain builder(s) if restock is required
+  const restockItems = discrepancies.filter((d) => d.variance < 0)
+  if (restockItems.length > 0) {
+    const restockResult = buildRestockChainRequests({
+      sourceAuditCode: auditRecord.Code,
+      items: restockItems,
+      actor
+    })
+
+    // 4. Early exit on secondary domain validation failure
+    if (!restockResult.valid) {
+      return {
+        valid: false,
+        message: `Restock chain validation failed: ${restockResult.message}`
+      }
+    }
+
+    // 5. Merge requests in strict dependency order & merge permissions
+    allRequests.push(...restockResult.requests)
+    aggregatedPermissions = {
+      ...aggregatedPermissions,
+      ...restockResult.permissions
+    }
+  }
+
+  // 6. Include cache refresh requests in the same batch
+  allRequests.push(resourceGetRequest(['WarehouseStorages', 'Audits']))
+
+  return {
+    valid: true,
+    requests: allRequests,
+    permissions: aggregatedPermissions,
+    successMsg: 'Audit completed and restock movements generated successfully.'
+  }
+}
+```
+
+---
+
+### 9.4 Symbolic ID Linking (`batchRef`)
+
+When creating a new parent record alongside dependent child or sibling records within the same batch trip, the parent ID or Code is not yet known on the client.
+
+Chain payload builders MUST use symbolic reference objects created via `batchRef()`:
+
+```javascript
+import { batchRef } from 'src/utils/appHelpers'
+
+// Child record linking to parent created in an earlier request of the same batch
+const childRequest = {
+  resource: 'StockMovements',
+  action: 'bulk',
+  data: {
+    rows: items.map((item) => ({
+      ItemCode: item.ItemCode,
+      Quantity: item.Quantity,
+      ReferenceCode: batchRef('Restocks.latest.code'), // Backend resolves to newly generated parent code
+      SourceType: 'RESTOCK'
+    }))
+  }
+}
+```
+
+- Never split parent and child mutations into multiple network round trips solely to retrieve generated IDs.
+- Never stringify or interpolate `$ref` objects into strings.
+
+---
+
+### 9.5 Post-Mutation Balance & Cache Refreshing
+
+Any domain chain whose execution invalidates client-side cached aggregates (such as stock balances, account ledgers, parent status headers, or audit logs) MUST append the appropriate `resourceGetRequest` queries to the end of the `requests` array:
+
+```javascript
+import { resourceGetRequest } from 'src/composables/resources/usePageState'
+
+// Appended to requests array
+allRequests.push(resourceGetRequest(['WarehouseStorages', 'StockMovements']))
+```
+
+This guarantees that all related store caches and UI aggregates update in the exact same network round trip, preventing stale views or desynchronized UI screens.
+
+---
+
+### 9.6 Strict Guardrails for Domain Payload Builders
+
+Every payload chain builder in Layer 2 must adhere to the following strict guardrails:
+
+1. **Pure JavaScript Functions**: No Vue reactivity (`ref`, `reactive`, `computed`), no Vue lifecycle hooks, and no component injection (`inject()`).
+2. **Deterministic Inputs**: All required records, form data, actor details, and configuration must be passed explicitly in the argument object.
+3. **No Direct Store/Service Calls**: Domain payload builders never call Pinia stores or API services directly. They merely assemble and return the declarative request objects.
+4. **Allowed Dependencies**:
+   - Generic utilities from `src/utils/appHelpers` (e.g. `batchRef`, `batchRefList`, formatting helpers).
+   - Standard batch request helpers from `src/composables/resources/usePageState` (e.g. `resourceGetRequest`).
+   - Sibling Layer 2 domain composables / payload builders.
+
+---
+
 ## Maintenance Rule
 
 > [!IMPORTANT]
-> Any change to the three-layer boundary, the strict import chain, or the injection-relay
-> pattern MUST be reflected in:
+> Any change to the three-layer boundary, the strict import chain, the injection-relay
+> pattern, or the Domain Payload Chain Architecture MUST be reflected in:
 > 1. This document.
 > 2. [UI_MODULE_DEVELOPER_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_MODULE_DEVELOPER_GUIDE.md) if its condensed summary of this system needs to change.
 > 3. [resource_ui_module_developer.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/resource_ui_module_developer.md) if its execution checklist references the changed rule.
+

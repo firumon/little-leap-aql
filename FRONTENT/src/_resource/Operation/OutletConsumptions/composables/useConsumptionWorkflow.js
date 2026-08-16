@@ -126,6 +126,13 @@ export function buildNextVisitRequest (form = {}, frequencyDays = 0, actorName =
  * POSITIVE `OutletMovements` arrival. That is the mirror of the warehouse deduction:
  * approval takes the units off the warehouse shelf, delivery puts them on the outlet's.
  * Nothing here touches warehouse stock twice.
+ *
+ * ── STANDING ALONE ──
+ * `linkToConsumption: false` writes a BLANK `OutletConsumptionCode`. A restock raised by an
+ * audit that consumed nothing has no parent consumption to point at — the batch does not
+ * create one — and leaving the default `$ref` in place would ask GAS to resolve a reference
+ * to a record that was never written. The restock is a first-class request in its own right;
+ * the link is a provenance note, not a dependency.
  */
 export function buildRestockRequests (form = {}, restockRows = [], options = {}) {
   const entry = asRow(form)
@@ -139,6 +146,18 @@ export function buildRestockRequests (form = {}, restockRows = [], options = {})
   const actorName = text(options.actorName)
   const date = text(entry.Date) || todayISO()
   const markDelivered = direct && options.markDelivered === true
+  // Explicit opt-OUT rather than a falsy check: `''` is exactly what a caller with no
+  // consumption would pass, and `|| batchRef(…)` would silently turn that into the $ref it
+  // was trying to suppress.
+  const standalone = options.linkToConsumption === false
+  const consumptionCode = standalone
+    ? ''
+    : textOrRef(options.consumptionRef || batchRef(`${CONSUMPTIONS}.latest.code`))
+  // The workflow timeline shows this verbatim, so it has to be true of the record it is
+  // written on: a standalone restock has no consumption to have been submitted "with".
+  const origin = standalone
+    ? 'Submitted from an outlet visit that recorded no consumption.'
+    : 'Submitted with an outlet consumption.'
 
   // Only a direct restock splits against real stock. A draft or an approval request is
   // allocated later, by someone looking at the warehouse at that time — splitting now
@@ -187,11 +206,11 @@ export function buildRestockRequests (form = {}, restockRows = [], options = {})
     data: {
       Date: date,
       OutletCode: text(entry.OutletCode),
-      OutletConsumptionCode: textOrRef(options.consumptionRef || batchRef(`${CONSUMPTIONS}.latest.code`)),
+      OutletConsumptionCode: consumptionCode,
       RequestedUser: text(entry.Username),
       ApprovedUser: direct ? actorName : '',
       Progress: parentProgress,
-      ...(mode === 'PENDING_APPROVAL' ? stampFields('ProgressSubmitted', actorName, 'Submitted with an outlet consumption.') : {}),
+      ...(mode === 'PENDING_APPROVAL' ? stampFields('ProgressSubmitted', actorName, origin) : {}),
       ...(direct ? stampFields('ProgressApproved', actorName, 'Auto-approved as a direct restock from the source warehouse.') : {}),
       ...(markDelivered ? stampFields('ProgressDelivered', actorName, 'Delivered to the outlet during consumption submission.') : {}),
       Status: 'Active'

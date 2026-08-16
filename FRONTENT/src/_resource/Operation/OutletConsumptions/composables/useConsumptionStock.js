@@ -138,6 +138,19 @@ export function returnRowsOf (rows = []) {
   return (Array.isArray(rows) ? rows : []).map(asRow).filter((row) => toNumber(row.ReturnQty) > 0)
 }
 
+/**
+ * The restock lines that will actually be requested.
+ *
+ * A different shape from the two above — restock rows are `{ SKU, Quantity }` collected on
+ * step 4, not count rows — but it is the same question, so it is stated the same way and in
+ * the same place. A zeroed line is not a restock; the wizard keeps it on screen until the
+ * user leaves the step, and it is dropped here as well as there.
+ */
+export function restockRowsOf (rows = []) {
+  return (Array.isArray(rows) ? rows : []).map(asRow)
+    .filter((row) => text(row.SKU) && toNumber(row.Quantity) > 0)
+}
+
 // ─── The return matrix ────────────────────────────────────────────────────────
 //
 // Two independent booleans decide what a return does, and the four combinations are NOT
@@ -266,6 +279,16 @@ export function discountAmount (subtotal, type = 'FLAT', value = 0) {
  *
  * Returns `{ valid, errors, warnings }`. Warnings do not block — an unpriced SKU is only
  * an error when an invoice is actually being generated, and is worth saying either way.
+ *
+ * ── THE "SOMETHING HAPPENED" RULE ──
+ * A consumption needs at least one operational effect, and a RESTOCK is one of them. An
+ * audit that counted every shelf exactly as the system had it, found no damage, and left a
+ * replenishment request behind is a legitimate visit — the officer did the work and the
+ * outlet is getting stock. Requiring a sale would force them to invent one.
+ *
+ * The check is SUBMIT-ONLY (`options.submitting`), and that is what makes the wizard
+ * navigable: the restock lines are collected on step 4, so applying it while the user is
+ * still on step 2 would refuse to let them reach the step where they would satisfy it.
  */
 export function validateConsumption (form = {}, rows = [], storages = [], options = {}) {
   const errors = []
@@ -278,16 +301,21 @@ export function validateConsumption (form = {}, rows = [], storages = [], option
 
   const sold = soldRowsOf(rows)
   const returns = returnRowsOf(rows)
+  const restocks = restockRowsOf(options.restockRows)
 
-  if (!sold.length && !returns.length) {
-    errors.push('Record at least one sold or returned quantity before submitting.')
+  if (options.submitting && !sold.length && !returns.length && !restocks.length) {
+    errors.push('At least one sold item, return item, or restock item is required to record a consumption.')
   }
 
   // One pass to index the outlet's stock, then O(1) per row. A `.find()` per row over the
   // storages array would be O(n×m) and re-run on every reactive invalidation
   // (CORE_ARCHITECTURE_RULES §6 — Indexed Joins, Never Linear Scans).
+  //
+  // Skipped outright when nothing sold: the whole index exists to answer "did this line
+  // consume more than the outlet held", and on a restock-only audit there is no such line
+  // to ask about — indexing every storage row to then loop over nothing is pure cost.
   const available = new Map()
-  ;(Array.isArray(storages) ? storages : []).map(asRow).forEach((storage) => {
+  ;(sold.length ? (Array.isArray(storages) ? storages : []) : []).map(asRow).forEach((storage) => {
     if (!isActive(storage)) return
     if (text(storage.OutletCode) !== text(entry.OutletCode)) return
     const sku = text(storage.SKU)
@@ -409,6 +437,7 @@ export function useConsumptionStock () {
     recountRow,
     soldRowsOf,
     returnRowsOf,
+    restockRowsOf,
     defaultReturnMeta,
     returnQtyChange,
     returnProgressFor,

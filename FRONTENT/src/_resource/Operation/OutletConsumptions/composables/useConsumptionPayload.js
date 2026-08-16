@@ -35,10 +35,9 @@ import {
   returnProgressFor,
   creditsInvoice,
   priceOf,
-  lineTotal,
-  discountAmount,
   DEFAULT_STORAGE
 } from './useConsumptionStock'
+import { calculateConsumptionInvoice, invoiceItemOf } from './useConsumptionInvoice'
 import { PENDING_INVOICE_GENERATION, INVOICE_GENERATED } from './useConsumptionProgress'
 
 const CONSUMPTIONS = 'OutletConsumptions'
@@ -93,8 +92,12 @@ export function stampFields (prefix, actorName = '', comment = '') {
  * the invoice exists (`buildInvoiceRequests`), so the state column can never claim an
  * invoice that a later request in the batch failed to write.
  *
- * A consumption with only returns and no sales is legitimate — a damage-only audit — so
- * an empty `children` array is not an error here; `validateConsumption` owns that call.
+ * ONLY CALLED WHEN SOMETHING WAS ACTUALLY CONSUMED. An `OutletConsumptions` row asserts a
+ * billable consumption event, and one written with no lines can never be invoiced or
+ * settled — it sits in `PENDING_INVOICE_GENERATION` forever, polluting the invoiceable
+ * queue with a bill that has nothing to put on it. A visit that only returned stock or only
+ * raised a restock writes those records directly and no header at all; the caller
+ * (`Add/PageAction.js`) is what decides, because it is what knows the whole submission.
  */
 export function buildConsumptionCompositeRequest (form = {}, countRows = [], actorName = '', options = {}) {
   const entry = asRow(form)
@@ -136,10 +139,19 @@ export function buildConsumptionCompositeRequest (form = {}, countRows = [], act
  * `OutletStorages` is named as a cursor resource so the recalculated balances come back in
  * the same round trip — GAS's `applyBatchOutletMovementsToOutletStorages` hook rewrites
  * them as this request lands, and the next page would otherwise read a stale shelf.
+ *
+ * Returns `null` when nothing sold. A restock-only audit consumed no stock, so it has no
+ * ledger movement to write — and a bulk request carrying an empty `records` array is not
+ * "no movement", it is a round trip that asks GAS to recalculate every outlet storage
+ * balance on the strength of nothing. The caller pushes the result only when it is truthy,
+ * the same contract `buildVisitCompleteRequest` and `buildNextVisitRequest` already use.
  */
 export function buildConsumptionMovementsRequest (form = {}, countRows = [], consumptionRef = null) {
   const entry = asRow(form)
-  const records = soldRowsOf(countRows).map((row) => ({
+  const sold = soldRowsOf(countRows)
+  if (!sold.length) return null
+
+  const records = sold.map((row) => ({
     OutletCode: text(entry.OutletCode),
     StorageName: text(row.StorageName) || DEFAULT_STORAGE,
     SKU: text(row.SKU),
@@ -238,63 +250,6 @@ export function buildReturnAdjustmentRequests (returnRows = [], invoiceRef = nul
 // ─── 4. The invoice ───────────────────────────────────────────────────────────
 
 /**
- * Price one sold line through the tax pipeline.
- *
- * `calculateLineTax` is injected by the caller rather than imported, so this module stays
- * free of the tax composable's store graph and the arithmetic stays testable with a stub.
- */
-function priceLine (row, priceListCode, calculateLineTax) {
-  const sku = text(row.SKU)
-  const qty = toNumber(row.SoldQty ?? row.Qty)
-  const price = priceOf(sku, priceListCode) ?? 0
-
-  if (typeof calculateLineTax !== 'function') {
-    return { SKU: sku, Qty: qty, Price: price, Total: lineTotal(qty, price), Discount: 0, TaxableAmount: lineTotal(qty, price), TaxAmount: 0, TaxCode: '' }
-  }
-
-  // A SKU with no tax configuration, or a price list the calculator cannot resolve, must
-  // not abort the whole submission — the line is billed untaxed and the failure is visible
-  // as a zero tax amount rather than as a lost invoice.
-  try {
-    const result = calculateLineTax({ skuCode: sku, priceListCode, quantity: qty, discount: 0 })
-    return {
-      SKU: sku,
-      Qty: qty,
-      Price: price,
-      Total: toNumber(result.subtotal),
-      Discount: toNumber(result.discountAmount),
-      TaxableAmount: toNumber(result.taxableAmount),
-      TaxAmount: toNumber(result.taxAmount),
-      TaxCode: text((result.taxBreakdown || []).map((entry) => entry.taxCode).filter(Boolean).join(','))
-    }
-  } catch (error) {
-    return { SKU: sku, Qty: qty, Price: price, Total: lineTotal(qty, price), Discount: 0, TaxableAmount: lineTotal(qty, price), TaxAmount: 0, TaxCode: '' }
-  }
-}
-
-/**
- * The invoice totals for a set of priced lines — the numbers the review step displays and
- * the header stores, computed ONCE so the two cannot disagree.
- */
-export function summariseInvoice (lines = [], { discountType = 'FLAT', discountValue = 0, returnDeduction = 0 } = {}) {
-  const subtotal = lines.reduce((total, line) => total + toNumber(line.Total), 0)
-  const taxableAmount = lines.reduce((total, line) => total + toNumber(line.TaxableAmount), 0)
-  const taxAmount = lines.reduce((total, line) => total + toNumber(line.TaxAmount), 0)
-  const discount = discountAmount(subtotal, discountType, discountValue)
-  const deduction = Math.max(0, toNumber(returnDeduction))
-  return {
-    subtotal,
-    taxableAmount,
-    taxAmount,
-    discount,
-    returnDeduction: deduction,
-    // Floored at zero: a credit larger than the bill is a zero invoice, never a negative
-    // one the payment flow would then try to collect.
-    total: Math.max(0, subtotal - discount + taxAmount - deduction)
-  }
-}
-
-/**
  * The invoice header, its line items, and the state walk for EVERY consumption it covers.
  *
  * BUNDLING is the reason this is one builder rather than three. When the user bundles
@@ -317,14 +272,28 @@ export function buildInvoiceRequests (form = {}, soldLines = [], options = {}) {
   const bundledCodes = (Array.isArray(options.bundledConsumptionCodes) ? options.bundledConsumptionCodes : []).map(text).filter(Boolean)
   const actorName = text(options.actorName)
 
-  const lines = (Array.isArray(soldLines) ? soldLines : []).map(asRow)
-    .filter((row) => text(row.SKU) && toNumber(row.SoldQty ?? row.Qty) > 0)
-    .map((row) => priceLine(row, priceListCode, options.calculateLineTax))
+  // EVERY figure below comes from this one call — the same call the wizard's review step
+  // makes to display them. This builder decides what belongs on the bill and where it is
+  // written; it does not do arithmetic (see `useConsumptionInvoice.js`).
+  const invoice = calculateConsumptionInvoice({
+    lines: soldLines,
+    priceListCode,
+    discountType: options.discountType,
+    discountValue: options.discountValue,
+    returnDeduction: options.returnDeduction,
+    calculateLineTax: options.calculateLineTax
+  })
 
-  if (!lines.length) return { requests: [], summary: summariseInvoice([], options) }
+  if (!invoice.lines.length) return { requests: [], invoice }
 
-  const summary = summariseInvoice(lines, options)
   const invoiceDate = dateOf(entry)
+
+  // The net payable is CALCULATED but not STORED: `OutletConsumptionInvoices` has no `Total`
+  // column (`setupOperationSheets.gs`), and every reader — the View card, the payments page,
+  // the printed invoice — derives it from the six stored figures. Writing a seventh column
+  // the sheet does not declare would put a figure in the payload that nothing reads back.
+  // It stays on `invoice.header.Total` for the UI, which is the point of one engine.
+  const { Total, ...storedTotals } = invoice.header
 
   const header = {
     // The one column that is a LIST rather than a code. See the note above.
@@ -334,21 +303,19 @@ export function buildInvoiceRequests (form = {}, soldLines = [], options = {}) {
     OutletCode: text(entry.OutletCode),
     Username: text(entry.Username),
     PriceListCode: priceListCode,
-    Subtotal: summary.subtotal,
-    Discount: summary.discount,
-    TotalTaxableAmount: summary.taxableAmount,
-    TotalTaxAmount: summary.taxAmount,
-    TaxDetails: JSON.stringify(lines.map((line) => ({ sku: line.SKU, taxCode: line.TaxCode, taxAmount: line.TaxAmount }))),
+    // `Subtotal`, `Discount`, `TotalTaxableAmount`, `TotalTaxAmount`, `TaxDetails` (grouped
+    // by tax code, never SKU-wise) and `ReturnDeductionTotal` — spread whole, so a column
+    // can never be assembled here from a figure the engine did not produce.
+    ...storedTotals,
     OutletReturnCodes: (Array.isArray(options.returnCodes) ? options.returnCodes : []).map(text).filter(Boolean).join(','),
-    ReturnDeductionTotal: summary.returnDeduction,
     Progress: 'PENDING_PAYMENT',
     ...stampFields('ProgressPendingPayment', actorName, text(options.invoiceComment)),
     Status: 'Active'
   }
 
-  const items = lines.map((line) => ({
+  const items = invoice.lines.map((line) => ({
     OutletConsumptionInvoiceCode: textOrRef(batchRef(`${INVOICES}.latest.code`)),
-    ...line,
+    ...invoiceItemOf(line),
     Status: 'Active'
   }))
 
@@ -363,7 +330,9 @@ export function buildInvoiceRequests (form = {}, soldLines = [], options = {}) {
       markGenerated(batchRef(CONSUMPTION_REF_PATH)),
       ...bundledCodes.map(markGenerated)
     ],
-    summary
+    // The whole calculation bundle, not a private summary shape — a caller that wants to
+    // confirm what it just submitted reads the same object the review step displayed.
+    invoice
   }
 }
 
@@ -384,7 +353,10 @@ export function useConsumptionPayload () {
     buildConsumptionMovementsRequest,
     buildReturnsRequests,
     buildReturnAdjustmentRequests,
-    summariseInvoice,
     buildInvoiceRequests
   }
 }
+
+// The invoice arithmetic lives in its own Layer 2 file but is re-exported here, so a caller
+// assembling a submit still has ONE import for the builders AND the engine behind them.
+export { calculateConsumptionInvoice, groupTaxDetails, invoiceItemOf } from './useConsumptionInvoice'

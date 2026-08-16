@@ -96,11 +96,28 @@ const shared = defineSharedComposable((dataStore) => {
     return covered
   })
 
-  /** Consumptions still owed an invoice — the state column AND the absence of a real invoice. */
+  /**
+   * Consumptions still owed an invoice — the state column, the absence of a real invoice,
+   * AND something billable to put on one.
+   *
+   * The third condition guards against ORPHAN headers — a consumption row carrying no
+   * billable lines, which can never be invoiced and would sit in the Invoiceable Outlets
+   * queue and the wizard's bundling list forever, offering a bill with nothing on it.
+   *
+   * The submit path no longer creates them (`Add/PageAction.js` writes no header unless
+   * something was actually consumed), so this now covers rows written before that rule
+   * existed. It stays because the queue must be correct about the data on the sheet, not
+   * about the data the current code would have written.
+   */
+  const hasBillableLines = (row) => (Array.isArray(row?.$OutletConsumptionItems) ? row.$OutletConsumptionItems : [])
+    .map(asRow).some((item) => isActiveRow(item) && num(item.Qty) > 0)
+
   const uninvoicedConsumptions = computed(() => {
     const covered = invoicedConsumptionCodes.value
     return consumptions.value.filter((row) =>
-      progressOf(row) === PENDING_INVOICE_GENERATION && !covered.has(text(row.Code)))
+      progressOf(row) === PENDING_INVOICE_GENERATION &&
+      !covered.has(text(row.Code)) &&
+      hasBillableLines(row))
   })
 
   /**

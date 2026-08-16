@@ -70,6 +70,7 @@ import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import { useCurrency } from 'src/composables/useCurrency'
 import { useConsumptionView, formatDate } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/View/useConsumptionView'
 import { useConsumptionViewContext } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/View/useConsumptionViewContext'
+import { netPayableOf, storedTaxBreakdown } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionInvoice'
 
 defineOptions({ name: 'OutletConsumptionsViewInvoiceDetails', inheritAttrs: false })
 
@@ -89,17 +90,30 @@ const siblings = computed(() => invoiceSiblings.value)
 const lines = computed(() => {
   const row = invoice.value
   if (!row) return []
-  const net = (Number(row.Subtotal) || 0) - (Number(row.Discount) || 0) +
-    (Number(row.TotalTaxAmount) || 0) - (Number(row.ReturnDeductionTotal) || 0)
+  // The net payable is DERIVED IN LAYER 2, not here. `OutletConsumptionInvoices` has no
+  // `Total` column, and the formula depends on the price list's discount policy — under
+  // PRE_TAX the discount is already inside `TotalTaxableAmount`, so this card subtracting it
+  // again would understate every discounted invoice it displays.
+  const net = netPayableOf(row)
   return [
     // `isCode` is what mounts the inline open-in-new button beside this one row.
     { label: 'Invoice', value: row.Code || '', isCode: !!row.Code },
     { label: 'Date', value: formatDate(row.Date) },
     { label: 'Subtotal', value: _C(Number(row.Subtotal) || 0) },
     { label: 'Discount', value: Number(row.Discount) > 0 ? `− ${_C(Number(row.Discount))}` : '' },
+    { label: 'Taxable amount', value: Number(row.TotalTaxableAmount) > 0 ? _C(Number(row.TotalTaxableAmount)) : '' },
+    // One row per TAX CODE, read straight off the header's grouped `TaxDetails` rather
+    // than re-summing the item rows — the breakdown a reader reconciles against is the one
+    // that was stored, not one this card derived a second time.
+    ...storedTaxBreakdown(row)
+      .filter((entry) => Number(entry.TaxAmount) > 0)
+      .map((entry) => ({
+        label: entry.TaxCode,
+        value: _C(Number(entry.TaxAmount) || 0)
+      })),
     { label: 'Tax', value: Number(row.TotalTaxAmount) > 0 ? _C(Number(row.TotalTaxAmount)) : '' },
     { label: 'Returns credited', value: Number(row.ReturnDeductionTotal) > 0 ? `− ${_C(Number(row.ReturnDeductionTotal))}` : '' },
-    { label: 'Total', value: _C(Math.max(0, net)) }
+    { label: 'Total', value: _C(net) }
   ].filter((line) => String(line.value).trim())
 })
 

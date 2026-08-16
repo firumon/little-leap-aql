@@ -69,6 +69,7 @@ export function useConsumptionView () {
   const skus = useRecord('SKUs')
   const products = useRecord('Products')
   const outlets = useRecord('Outlets')
+  const uoms = useRecord('UOMs')
 
   // The SKU × Product and Outlet joins belong to the resource layer (§6 — Enrich Once,
   // Then Project). The `useRecord` handles stay for their `reload()` below: fetching rows
@@ -77,10 +78,10 @@ export function useConsumptionView () {
   const { getOutlet } = useOutletResource()
 
   onMounted(() => {
-    // A view route loads the record and its relations, but NOT the five sibling resources
+    // A view route loads the record and its relations, but NOT the sibling resources
     // these cards project over. `reload()` renders from whatever the store already holds
     // and syncs the delta in the background, so a warm cache shows the page immediately.
-    ;[items, invoices, restocks, restockItems, returns, consumptions, skus, products, outlets]
+    ;[items, invoices, restocks, restockItems, returns, consumptions, skus, products, outlets, uoms]
       .forEach((resource) => resource.reload())
   })
 
@@ -92,11 +93,16 @@ export function useConsumptionView () {
 
   const outletName = computed(() => text(getOutlet(outletCode.value)?.name) || outletCode.value)
 
+  /**
+   * Resolves SKU display information via O(1) Map lookup (CORE_ARCHITECTURE_RULES §6).
+   * Reads from the shared, app-wide enriched SKU graph in `useSkuResource()`.
+   */
   function skuLabel (sku) {
     const raw = text(sku)
     const info = asRow(getSku(raw))
     const variants = (info.variantValues || []).filter(Boolean).join(' / ')
-    return { primary: text(info.productName) || raw, secondary: variants || raw }
+    const uom = text(info.uom || info.baseUom || '')
+    return { primary: text(info.productName) || raw, secondary: variants || raw, uom }
   }
 
   /** Section 2 — the SKUs this audit consumed. */
@@ -107,7 +113,17 @@ export function useConsumptionView () {
       .filter((row) => text(row.OutletConsumptionCode) === code.value && isActiveRow(row) && text(row.Code))
       .map((row) => {
         const label = skuLabel(row.SKU)
-        return { code: text(row.Code), sku: text(row.SKU), name: label.primary, variant: label.secondary, qty: num(row.Qty) }
+        const q = num(row.Qty)
+        const unit = label.uom || 'Qty'
+        return {
+          code: text(row.Code),
+          sku: text(row.SKU),
+          name: label.primary,
+          variant: label.secondary,
+          qty: q,
+          uom: label.uom,
+          qtyWithUom: `${q} ${unit}`
+        }
       })
   })
 
@@ -129,13 +145,17 @@ export function useConsumptionView () {
       .filter((row) => isActiveRow(row) && parentCodes.has(text(row.OutletRestockCode)) && text(row.Code))
       .map((row) => {
         const label = skuLabel(row.SKU)
+        const q = num(row.Quantity)
+        const unit = label.uom || 'Qty'
         return {
           code: text(row.Code),
           restockCode: text(row.OutletRestockCode),
           sku: text(row.SKU),
           name: label.primary,
           variant: label.secondary,
-          qty: num(row.Quantity),
+          qty: q,
+          uom: label.uom,
+          qtyWithUom: `${q} ${unit}`,
           progress: text(row.Progress) || 'PENDING'
         }
       })
@@ -164,11 +184,15 @@ export function useConsumptionView () {
       .filter((row) => isActiveRow(row) && text(row.OutletCode) === outletCode.value && text(row.Date) === date)
       .map((row) => {
         const label = skuLabel(row.SKU)
+        const q = num(row.Qty)
+        const unit = label.uom || 'Qty'
         return {
           code: text(row.Code),
           name: label.primary,
           variant: label.secondary,
-          qty: num(row.Qty),
+          qty: q,
+          uom: label.uom,
+          qtyWithUom: `${q} ${unit}`,
           reason: text(row.Reason),
           progress: text(row.Progress),
           warehouseCode: text(row.WarehouseCode)

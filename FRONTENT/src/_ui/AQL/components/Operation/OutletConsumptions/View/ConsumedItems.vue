@@ -1,37 +1,48 @@
 <template>
   <div :class="spacingClass">
     <SectionDividerLabel :label="finalTitle" />
-    <q-card flat bordered :class="ui.cardClass">
-      <q-card-section v-if="pending">
+
+    <!-- The two non-list states keep a card SHELL, because there is no row for the card to
+         land on — a bare skeleton or a floating icon on the page background reads as a
+         layout fault rather than as a state. -->
+    <q-card v-if="pending" flat bordered :class="ui.cardClass">
+      <q-card-section>
         <q-skeleton type="text" width="60%" class="q-mb-sm" />
         <q-skeleton type="text" width="90%" />
       </q-card-section>
+    </q-card>
 
-      <q-card-section v-else-if="!rows.length" class="text-center q-py-lg">
+    <q-card v-else-if="!rows.length" flat bordered :class="ui.cardClass">
+      <q-card-section class="text-center q-py-lg">
         <q-icon name="inventory_2" :size="ui.emptyIconSize" :color="ui.emptyIconColor" class="q-mb-sm block q-mx-auto" />
         <div :class="ui.emptyTitleClass">Nothing consumed</div>
+        <!-- Names both remaining possibilities. A restock-only audit is now a supported
+             outcome, so a caption offering "returns only" as the sole explanation would
+             read as though something had gone missing. -->
         <div :class="ui.emptyCaptionClass">
-          This audit found no stock had sold — it may have recorded returns only.
+          This audit found no stock had sold — it may have recorded a restock or returns only.
         </div>
       </q-card-section>
-
-      <!-- `AppList`, not a hand-rolled `q-list`. The three lists on this page were each
-           built by hand with slightly different density and side sections, which is
-           exactly the drift the shared list component exists to prevent — it owns the row
-           rhythm, the avatar treatment and the transitions for all of them (§8 Registry
-           Check & Reuse). -->
-      <q-card-section v-else class="q-pa-none">
-        <AppList
-          :items="rows"
-          item-key="code"
-          :label="(row) => row.name"
-          :caption="(row) => row.variant"
-          :chip="(row) => row.qty"
-          chip-color="positive"
-          separator
-        />
-      </q-card-section>
     </q-card>
+
+    <!-- UN-NESTED: each row IS a card (`itemClass`), rather than a list of separated rows
+         inside one outer card. Standardised across all four list sections on this page —
+         a card-per-row and a card-of-rows next to each other read as two different kinds
+         of content when they are the same kind (§8 Registry Check & Reuse).
+
+         `gutter` is forwarded rather than left to `List.vue`'s own `xs` default, so the
+         page's spacing rhythm is set in ONE place and travels down. -->
+    <AppList
+      v-else
+      :items="rows"
+      item-key="code"
+      :label="(row) => row.name"
+      :caption="(row) => row.variant"
+      :meta-layout="META_LAYOUT"
+      :meta-label="(row) => row.qtyWithUom"
+      :itemClass="ui.cardClass"
+      :gutter="gutter"
+    />
   </div>
 </template>
 
@@ -56,10 +67,15 @@ import { useConsumptionViewContext } from 'src/_ui/AQL/composables/Operation/Out
 
 defineOptions({ name: 'OutletConsumptionsViewConsumedItems', inheritAttrs: false })
 
+const META_LAYOUT = ['label']
+
 const props = defineProps({
   title: { type: [String, Function], default: 'Consumed Items' },
   items: { type: Array, default: null },
-  padding: { type: String, default: 'sm' }
+  padding: { type: String, default: 'sm' },
+  // Vertical rhythm BETWEEN the row cards. `'none'` turns it off for a caller that owns
+  // its own spacing; see `List.vue`'s `gutterClass`.
+  gutter: { type: String, default: 'sm' }
 })
 
 const { evaluate, ui } = useConsumptionViewContext()

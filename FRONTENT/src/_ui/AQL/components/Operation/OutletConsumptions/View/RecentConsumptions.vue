@@ -1,23 +1,21 @@
 <template>
   <div v-if="rows.length" :class="spacingClass">
     <SectionDividerLabel :label="finalTitle" />
-    <q-card flat bordered :class="ui.cardClass">
-      <!-- Standardised on `AppList`, which also restores whole-row tap navigation and the
-           row transitions the hand-built list did not have. -->
-      <q-card-section class="q-pa-none">
-        <AppList
-          :items="rows"
-          item-key="code"
-          :label="(row) => formatDate(row.date)"
-          :caption="(row) => row.username"
-          :chip="(row) => progressLabel(row.progress)"
-          :chip-color="(row) => progressColor(row.progress)"
-          separator
-          clickable
-          @click="open"
-        />
-      </q-card-section>
-    </q-card>
+    <!-- UN-NESTED, like the three list sections above it. Each prior audit is its own
+         tappable card, which also makes the tap target the card the user is aiming at
+         rather than a separated row inside one. -->
+    <AppList
+      :items="rows"
+      item-key="code"
+      :label="(row) => formatDate(row.date)"
+      :caption="(row) => row.username"
+      :chip="(row) => progressLabel(row.progress)"
+      :chip-color="(row) => progressColor(row.progress)"
+      :itemClass="ui.cardClass"
+      :gutter="gutter"
+      clickable
+      @click="open"
+    />
   </div>
 </template>
 
@@ -49,7 +47,8 @@ defineOptions({ name: 'OutletConsumptionsViewRecentConsumptions', inheritAttrs: 
 const props = defineProps({
   title: { type: [String, Function], default: 'Recent Consumptions Here' },
   items: { type: Array, default: null },
-  padding: { type: String, default: 'sm' }
+  padding: { type: String, default: 'sm' },
+  gutter: { type: String, default: 'sm' }
 })
 
 const { evaluate, ui, nav } = useConsumptionViewContext()

@@ -4,25 +4,18 @@
        `v-if` at the root rather than an empty shell (§10.4). -->
   <div v-if="rows.length" :class="spacingClass">
     <SectionDividerLabel :label="finalTitle" />
-    <q-card flat bordered :class="ui.cardClass">
-      <!-- Name LEFT, quantity and state RIGHT, in one right-aligned meta column.
-           `metaLayout` is what stacks them: without it the quantity and the chip were laid
-           out by the list's own defaults and drifted apart, so a long product name pushed
-           the figure away from the chip that qualifies it. Declaring the column makes the
-           two read as one right-hand block on every row, whatever the name's length. -->
-      <q-card-section class="q-pa-none">
-        <AppList
-          :items="rows"
-          item-key="code"
-          :label="(row) => row.name"
-          :caption="(row) => row.variant"
-          :meta-layout="META_LAYOUT"
-          :meta-label="(row) => row.qty"
-          :meta-caption="(row) => relatedLabel(row.progress)"
-          separator
-        />
-      </q-card-section>
-    </q-card>
+    <AppList
+      :items="rows"
+      item-key="code"
+      :label="(row) => row.name"
+      :caption="(row) => row.variant"
+      :meta-layout="META_LAYOUT"
+      :meta-label="(row) => row.qtyWithUom"
+      :chip="(row) => relatedLabel(row.progress)"
+      :chip-color="(row) => relatedColor(row.progress)"
+      :itemClass="ui.cardClass"
+      :gutter="gutter"
+    />
   </div>
 </template>
 
@@ -59,12 +52,13 @@ defineOptions({ name: 'OutletConsumptionsViewRestockDetails', inheritAttrs: fals
  * by reference, so an inline value re-runs its resolvers on every keystroke elsewhere on
  * the page (§11 rule 5).
  */
-const META_LAYOUT = ['label', 'caption']
+const META_LAYOUT = ['label', 'chip']
 
 const props = defineProps({
   title: { type: [String, Function], default: 'Restock' },
   items: { type: Array, default: null },
-  padding: { type: String, default: 'sm' }
+  padding: { type: String, default: 'sm' },
+  gutter: { type: String, default: 'sm' }
 })
 
 const { evaluate, ui } = useConsumptionViewContext()

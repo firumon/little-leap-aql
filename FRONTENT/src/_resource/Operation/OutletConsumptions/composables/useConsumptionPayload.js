@@ -7,10 +7,11 @@
  * dispatches them (UI_RESOURCE_DOMAIN_LOGIC.md §3).
  *
  * This file owns the CORE writes — the consumption itself, the outlet ledger, returns, and
- * the (possibly bundled) invoice. The optional workflow side-effects — completing a visit,
- * scheduling the next one, raising a restock, cascading a cancellation — live in
- * `useConsumptionWorkflow.js` beside it and are re-exported at the bottom, so a caller
- * still has exactly one import.
+ * the (possibly bundled) invoice. It is the BOTTOM of the chain: `useConsumptionWorkflow.js`
+ * beside it imports these builders, delegates the visit and restock legs to those domains,
+ * and exposes `buildConsumptionWorkflowChainRequests` as the ONE entry point Layer 3 calls
+ * (§9.1). The dependency runs one way — workflow → payload — so neither module's
+ * initialisation order depends on the other's.
  *
  * PURE functions throughout: no refs, no injects, no stores, nothing rendered. They take
  * plain rows and return canonical request envelopes, so a `PageAction.js` running outside
@@ -335,14 +336,6 @@ export function buildInvoiceRequests (form = {}, soldLines = [], options = {}) {
     invoice
   }
 }
-
-// Re-exported so a caller assembling a submit has ONE import for every builder it needs.
-export {
-  buildVisitCompleteRequest,
-  buildNextVisitRequest,
-  buildRestockRequests,
-  buildCancellationRequests
-} from './useConsumptionWorkflow'
 
 // Composable shape for setup-context callers. Same functions, one import (§5).
 export function useConsumptionPayload () {

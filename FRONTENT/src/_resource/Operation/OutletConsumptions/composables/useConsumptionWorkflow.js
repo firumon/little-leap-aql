@@ -1,253 +1,339 @@
 /**
- * OutletConsumptions — the OPTIONAL workflow side-effects of a consumption. Layer 2.
+ * OutletConsumptions — the WORKFLOW CHAIN a consumption submit runs. Layer 2.
  *
- * A consumption submit always writes the records in `useConsumptionPayload.js`. Everything
- * here is conditional on a choice the user made in the wizard: complete the visit,
- * schedule the next one, raise a restock, ship it immediately — plus the cancellation
- * cascade, which is the reverse of all of it.
+ * A consumption is not one record; it is an atomic transaction across up to six resources,
+ * two of which belong to OTHER domains. `buildConsumptionWorkflowChainRequests` below is
+ * the single entry point that orchestrates all of it: it validates, builds this resource's
+ * own writes, and delegates the visit and restock legs to their owning domains rather than
+ * restating their schemas (UI_RESOURCE_DOMAIN_LOGIC.md §9.1).
  *
- * Split out of `useConsumptionPayload.js` purely for file size (CORE_ARCHITECTURE_RULES
- * §9, ~400 lines); it is the same layer, the same purity rules, and its builders are
- * re-exported from that file so a caller still has one import.
+ * The core writes — the consumption, its lines, the outlet ledger, returns, the invoice —
+ * live in `useConsumptionPayload.js` beside this file and are imported from it. The split
+ * is purely file size (CORE_ARCHITECTURE_RULES §9); it is the same layer and the same
+ * purity rules. The dependency runs ONE way — workflow → payload — so neither module's
+ * initialisation order depends on the other's.
  *
- * PURE throughout — plain rows in, canonical request envelopes out.
+ * PURE throughout — plain rows in, canonical request envelopes out. No refs, no injects,
+ * no stores, nothing rendered (§9.6).
  */
 
-import { batchRef, textOrRef } from 'src/utils/appHelpers'
-import { addDays, toDateOnly, toDateTime24 } from 'src/utils/dateHelpers'
 import {
-  compositeSaveRequest,
   resourceBulkRequest,
-  resourceCreateRequest,
   executeActionRequest,
   resourceGetRequest
 } from 'src/composables/resources/resourceRequests'
-import { toNumber, splitByWarehouseStock, DEFAULT_STORAGE } from './useConsumptionStock'
+import {
+  buildVisitCompletionChainRequests,
+  buildNextVisitChainRequests
+} from 'src/_resource/Operation/OutletVisits/composables/useVisitPayload'
+import { buildRestockChainRequests } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
+import { toNumber, soldRowsOf, returnRowsOf, validateConsumption } from './useConsumptionStock'
 import { CANCELLED, rejectableRestocks } from './useConsumptionProgress'
+import {
+  stampFields,
+  buildConsumptionCompositeRequest,
+  buildConsumptionMovementsRequest,
+  buildReturnsRequests,
+  buildReturnAdjustmentRequests,
+  buildInvoiceRequests
+} from './useConsumptionPayload'
 
+const CONSUMPTIONS = 'OutletConsumptions'
+const CONSUMPTION_ITEMS = 'OutletConsumptionItems'
+const INVOICES = 'OutletConsumptionInvoices'
+const INVOICE_ITEMS = 'OutletConsumptionInvoiceItems'
+const OUTLET_MOVEMENTS = 'OutletMovements'
 const VISITS = 'OutletVisits'
 const RESTOCKS = 'OutletRestocks'
 const RESTOCK_ITEMS = 'OutletRestockItems'
-const STOCK_MOVEMENTS = 'StockMovements'
-const OUTLET_MOVEMENTS = 'OutletMovements'
-const CONSUMPTIONS = 'OutletConsumptions'
-const INVOICES = 'OutletConsumptionInvoices'
-
-// A warehouse movement and an outlet movement written for the same restock describe two
-// different legs of one journey; the ledgers must stay tellable apart when reconciling.
-const REF_RESTOCK = 'OutletRestock'
-const REF_RESTOCK_DELIVERY = 'RestockDelivery'
+const RETURNS = 'OutletReturns'
 
 const text = (value) => (value == null ? '' : String(value).trim())
 const asRow = (value) => (value && typeof value === 'object' ? value : {})
-const todayISO = () => new Date().toISOString().slice(0, 10)
+const asList = (value) => (Array.isArray(value) ? value : [])
+const isActive = (value) => text(asRow(value).Status || 'Active') === 'Active'
 
-// Restated rather than imported from the payload module, which re-exports THIS file — a
-// mutual import would make the two modules' initialisation order load-dependent.
-//
-// `toDateTime24`, IDENTICALLY to the payload module's copy, and that is the whole point of
-// naming it here rather than reaching for `toISOString()`: these are the same
-// `Progress<State>At` columns GAS stamps with `formatDateTime24()`, and two formats in one
-// column would sort and read inconsistently depending on which path wrote the row.
-function stampFields (prefix, actorName = '', comment = '') {
-  return {
-    [`${prefix}At`]: toDateTime24(new Date()),
-    [`${prefix}By`]: text(actorName),
-    [`${prefix}Comment`]: text(comment)
+/**
+ * Claim one action on one resource, keeping anything already claimed.
+ *
+ * Two legs of a chain routinely touch the SAME resource with DIFFERENT actions — this
+ * submission completes one visit (`update`) and schedules another (`create`). A plain
+ * overwrite would silently drop whichever ran first, and the batch would then execute a
+ * write the user was never gated on. `allowed()` AND-s an array of actions for one
+ * resource (`useResourceConfig.checkActionsList`), so the union is expressed as an array
+ * and stays a single, comprehensive gate check (§9.3.4).
+ */
+function claim (permissions, resource, action) {
+  const name = text(resource)
+  const act = text(action)
+  if (!name || !act) return permissions
+  const existing = permissions[name]
+  if (existing === undefined) {
+    permissions[name] = act
+    return permissions
   }
+  const list = Array.isArray(existing) ? existing : [existing]
+  if (!list.includes(act)) permissions[name] = [...list, act]
+  return permissions
 }
 
-// ─── Visits ───────────────────────────────────────────────────────────────────
-
-/**
- * Complete the planned visit this audit was carried out against.
- *
- * Routed through `executeAction` rather than a direct update so GAS applies the same
- * `Progress<State>` stamping and validation the standalone Visits page gets — the visit's
- * own workflow rules are not this module's to reimplement.
- */
-export function buildVisitCompleteRequest (visitCode, actorName = '', comment = '') {
-  const code = text(visitCode)
-  if (!code) return null
-  return executeActionRequest(VISITS, code, {
-    action: 'Complete', column: 'Progress', columnValue: 'COMPLETED'
-  }, {
-    RespondDate: todayISO(),
-    ProgressCompletedComment: text(comment) || `Completed from outlet consumption by ${text(actorName) || 'Unknown'}.`
-  }, [VISITS])
+/** Union a child builder's whole permissions dictionary into the chain's (§9.3.4). */
+function mergePermissions (permissions, incoming = {}) {
+  Object.entries(asRow(incoming)).forEach(([resource, action]) => {
+    (Array.isArray(action) ? action : [action]).forEach((one) => claim(permissions, resource, one))
+  })
+  return permissions
 }
 
+// ─── The master chain ─────────────────────────────────────────────────────────
+
 /**
- * Plan the NEXT visit, `frequencyDays` after this audit.
+ * EVERY request one consumption submission sends, in dependency order.
  *
- * `frequencyDays` is REQUIRED and is not defaulted here. A cadence this module invented
- * would silently schedule every outlet on a number nobody configured; the caller resolves
- * it through `visitFrequencyFor`, which reads the outlet's own operating rule and falls
- * back to the backend's configured default. A non-positive value yields `null` — no visit
- * is planned rather than one planned for tomorrow.
+ * ── WHAT DECIDES THE SHAPE ──
+ * NO CONSUMPTION IS WRITTEN WITHOUT A SALE. An `OutletConsumptions` row asserts a billable
+ * event, so a header with no lines can never be invoiced or settled and would sit in
+ * `PENDING_INVOICE_GENERATION` forever. A visit that only returned stock writes returns;
+ * one that only raised a restock writes a restock; both still complete and schedule visits.
+ * The batch's shape — and with it the success message and where the user lands — follows
+ * from what actually happened.
+ *
+ * ── THE ORDER, AND WHY ──
+ *   1. returns          FIRST: the invoice needs their codes to record what it credited.
+ *   2. consumption      the header + sold lines, as one composite save.
+ *   3. outlet ledger    the negative movement for what was consumed.
+ *   4. invoice          bundling any earlier un-invoiced audits the user ticked.
+ *   5. return settle    the returns credited against that invoice.
+ *   6. visits           complete this one, plan the next — delegated to OutletVisits (§9.1).
+ *   7. restock          the replenishment — delegated to OutletRestocks (§9.1).
+ *   8. refresh          the balances this batch just invalidated (§9.5).
+ *
+ * Everything chained to the composite save carries `$ref:OutletConsumptions.latest.code`,
+ * so nothing is split into a second round trip that could fail after the first committed.
+ *
+ * ── PERMISSIONS ──
+ * NOTHING is unconditional. The map is a function of what the user actually chose, so a
+ * plain stock count is not blocked by an invoice permission it never needed — and a direct
+ * restock cannot proceed without the warehouse-movement permission it genuinely requires.
+ * Child domains' permission maps are merged in (union), so Layer 3 performs ONE gate check
+ * covering the whole chain (§9.3.4).
+ *
+ * ── THE `outcome` FIELD ──
+ * Post-submit navigation reads a code out of the batch response by INDEX. Which index is
+ * right depends on what was written: a restock-only submit has no consumption to open. The
+ * indices are recorded as the batch is assembled rather than assumed from a fixed order,
+ * and returned as contextual metadata for the caller's `onSuccess`.
  */
-export function buildNextVisitRequest (form = {}, frequencyDays = 0, actorName = '') {
+export function buildConsumptionWorkflowChainRequests ({
+  form = {},
+  countRows = [],
+  actorName = '',
+  // Stock & validation context
+  outletStorages = [],
+  warehouseStorages = [],
+  operatingRules = [],
+  // Returns
+  returnMetaOf = () => ({}),
+  returnRows = [],
+  adjustedReturnCodes = [],
+  // Invoicing
+  generateInvoice = true,
+  priceListCode = '',
+  bundledConsumptionCodes = [],
+  consumptionItems = [],
+  discountType = 'FLAT',
+  discountValue = 0,
+  invoiceComment = '',
+  calculateLineTax = null,
+  // Restock
+  restockRows = [],
+  directRestock = false,
+  warehouseCode = '',
+  markDelivered = false,
+  // Visits
+  completeVisit = true,
+  scheduleNext = true
+} = {}) {
   const entry = asRow(form)
-  const frequency = toNumber(frequencyDays)
-  const outletCode = text(entry.OutletCode)
-  if (!outletCode || frequency <= 0) return null
+  const sold = soldRowsOf(countRows)
+  const returns = returnRowsOf(countRows)
+  const hasSold = sold.length > 0
+  const hasReturns = returns.length > 0
+  const invoicing = hasSold && generateInvoice === true
 
-  const base = text(entry.Date) || todayISO()
-  const nextDate = toDateOnly(addDays(base, frequency))
-  if (!nextDate) return null
+  // 0. The full domain validation gate — the same one the wizard's step-2 `next` runs,
+  //    now with `submitting` armed so the "at least one of the three" rule applies.
+  const check = validateConsumption(entry, countRows, outletStorages, {
+    generateInvoice: invoicing,
+    priceListCode,
+    directRestock: directRestock === true,
+    warehouseCode,
+    returnMetaOf,
+    restockRows,
+    submitting: true
+  })
+  if (!check.valid) return { valid: false, requests: [], permissions: {}, message: check.errors[0] }
 
-  return resourceCreateRequest(VISITS, {
-    OutletCode: outletCode,
-    Date: nextDate,
-    Progress: 'PLANNED',
-    ProgressPlannedComment: `Auto-planned ${frequency} days after the consumption recorded by ${text(actorName) || text(entry.Username) || 'Unknown'} on ${base}.`,
-    Status: 'Active'
-  }, [VISITS])
-}
+  const adjustedCodes = asList(adjustedReturnCodes).map(text).filter(Boolean)
+  const completingVisit = completeVisit === true && !!text(entry.OutletVisitCode)
 
-// ─── Restocks ─────────────────────────────────────────────────────────────────
+  const permissions = {}
+  const requests = []
+  // Where each landmark request ended up, so post-submit navigation reads the right code.
+  let returnsAt = -1
+  let consumptionAt = -1
+  let restockAt = -1
 
-/**
- * The restock request a consumption raises, in whichever of three modes was chosen.
- *
- *   DRAFT             parent DRAFT, lines PENDING. Nothing is committed; the requester
- *                     finishes it later from the Restocks module.
- *   PENDING_APPROVAL  parent PENDING_APPROVAL with its submission stamp, lines PENDING.
- *                     An approver allocates stock afterwards.
- *   APPROVED (direct) parent APPROVED. Lines the chosen warehouse can actually cover
- *                     become ALLOCATED against it and deduct warehouse stock immediately;
- *                     anything short stays PENDING for a later allocation.
- *
- * PARTIAL COVER IS A SUPPORTED OUTCOME, not a failure. `splitByWarehouseStock` decides the
- * split, so a direct restock ships what the warehouse has instead of refusing whole — and
- * the shortfall survives as PENDING lines rather than being silently dropped.
- *
- * `markDelivered` additionally walks the allocated lines to DELIVERED and writes the
- * POSITIVE `OutletMovements` arrival. That is the mirror of the warehouse deduction:
- * approval takes the units off the warehouse shelf, delivery puts them on the outlet's.
- * Nothing here touches warehouse stock twice.
- *
- * ── STANDING ALONE ──
- * `linkToConsumption: false` writes a BLANK `OutletConsumptionCode`. A restock raised by an
- * audit that consumed nothing has no parent consumption to point at — the batch does not
- * create one — and leaving the default `$ref` in place would ask GAS to resolve a reference
- * to a record that was never written. The restock is a first-class request in its own right;
- * the link is a provenance note, not a dependency.
- */
-export function buildRestockRequests (form = {}, restockRows = [], options = {}) {
-  const entry = asRow(form)
-  const rows = (Array.isArray(restockRows) ? restockRows : []).map(asRow)
-    .filter((row) => text(row.SKU) && toNumber(row.Quantity) > 0)
-  if (!rows.length) return { requests: [], allocated: [], pending: [], shortfall: 0 }
+  // 1. Returns FIRST — the invoice below needs their codes to record what it credited.
+  if (hasReturns) {
+    returnsAt = requests.length
+    requests.push(...buildReturnsRequests(entry, countRows, returnMetaOf, { priceListCode }))
+    claim(permissions, RETURNS, 'create')
+    // A return writes the outlet ledger too — the matrix decides the direction, and two of
+    // its four cases move stock. Claimed whenever returns exist rather than only when a
+    // movement survives the filter, so the gate does not depend on arithmetic the user can
+    // change after it is evaluated.
+    claim(permissions, OUTLET_MOVEMENTS, 'create')
+  }
 
-  const mode = text(options.mode).toUpperCase() || 'PENDING_APPROVAL'
-  const direct = mode === 'APPROVED'
-  const warehouseCode = text(options.warehouseCode)
-  const actorName = text(options.actorName)
-  const date = text(entry.Date) || todayISO()
-  const markDelivered = direct && options.markDelivered === true
-  // Explicit opt-OUT rather than a falsy check: `''` is exactly what a caller with no
-  // consumption would pass, and `|| batchRef(…)` would silently turn that into the $ref it
-  // was trying to suppress.
-  const standalone = options.linkToConsumption === false
-  const consumptionCode = standalone
-    ? ''
-    : textOrRef(options.consumptionRef || batchRef(`${CONSUMPTIONS}.latest.code`))
-  // The workflow timeline shows this verbatim, so it has to be true of the record it is
-  // written on: a standalone restock has no consumption to have been submitted "with".
-  const origin = standalone
-    ? 'Submitted from an outlet visit that recorded no consumption.'
-    : 'Submitted with an outlet consumption.'
+  // 2. The consumption and its sold lines — ONLY when something was consumed. Everything
+  //    after this that carries a `$ref` chains off it, and every one of those is itself
+  //    gated on a sale, so nothing can reference a header the batch did not write.
+  if (hasSold) {
+    consumptionAt = requests.length
+    requests.push(buildConsumptionCompositeRequest(entry, countRows, actorName, { generateInvoice: invoicing }))
+    claim(permissions, CONSUMPTIONS, 'create')
+    claim(permissions, CONSUMPTION_ITEMS, 'create')
 
-  // Only a direct restock splits against real stock. A draft or an approval request is
-  // allocated later, by someone looking at the warehouse at that time — splitting now
-  // would record an availability that has expired by the time it is acted on.
-  const split = direct
-    ? splitByWarehouseStock(rows, warehouseCode, options.warehouseStorages || [])
-    : { allocated: [], pending: rows.map((row) => ({ SKU: text(row.SKU), Quantity: toNumber(row.Quantity) })), shortfall: 0 }
-
-  const itemProgress = markDelivered ? 'DELIVERED' : 'ALLOCATED'
-  const children = [
-    ...split.allocated.map((row) => ({
-      _action: 'create',
-      data: {
-        SKU: row.SKU,
-        Quantity: row.Quantity,
-        WarehouseCode: warehouseCode,
-        StorageName: DEFAULT_STORAGE,
-        Progress: itemProgress,
-        ...stampFields('ProgressAllocated', actorName, 'Allocated from the source warehouse during consumption submission.'),
-        ...(markDelivered ? stampFields('ProgressDelivered', actorName, 'Delivered to the outlet during consumption submission.') : {}),
-        Status: 'Active'
-      }
-    })),
-    ...split.pending.map((row) => ({
-      _action: 'create',
-      data: {
-        SKU: row.SKU,
-        Quantity: row.Quantity,
-        WarehouseCode: '',
-        StorageName: '',
-        Progress: 'PENDING',
-        Status: 'Active'
-      }
-    }))
-  ]
-
-  // A direct restock whose lines were ALL delivered is finished; one carrying a shortfall
-  // is not, and says so rather than claiming completion. Derived from the pending lines
-  // themselves, so the parent state cannot disagree with its children.
-  const parentProgress = direct
-    ? (markDelivered ? (split.pending.length ? 'PARTIALLY_DELIVERED' : 'DELIVERED') : 'APPROVED')
-    : mode
-
-  const requests = [compositeSaveRequest({
-    resource: RESTOCKS,
-    data: {
-      Date: date,
-      OutletCode: text(entry.OutletCode),
-      OutletConsumptionCode: consumptionCode,
-      RequestedUser: text(entry.Username),
-      ApprovedUser: direct ? actorName : '',
-      Progress: parentProgress,
-      ...(mode === 'PENDING_APPROVAL' ? stampFields('ProgressSubmitted', actorName, origin) : {}),
-      ...(direct ? stampFields('ProgressApproved', actorName, 'Auto-approved as a direct restock from the source warehouse.') : {}),
-      ...(markDelivered ? stampFields('ProgressDelivered', actorName, 'Delivered to the outlet during consumption submission.') : {}),
-      Status: 'Active'
-    },
-    children: [{ resource: RESTOCK_ITEMS, records: children }]
-  })]
-
-  if (direct && split.allocated.length) {
-    // NEGATIVE: the units are committed OUT of the warehouse. `Math.abs` first, so a row
-    // carrying a negative quantity cannot flip the direction and credit the warehouse.
-    requests.push(resourceBulkRequest(STOCK_MOVEMENTS, split.allocated.map((row) => ({
-      WarehouseCode: warehouseCode,
-      StorageName: DEFAULT_STORAGE,
-      SKU: row.SKU,
-      QtyChange: -Math.abs(row.Quantity),
-      ReferenceType: REF_RESTOCK,
-      ReferenceCode: textOrRef(batchRef(`${RESTOCKS}.latest.code`)),
-      Status: 'Active'
-    })), ['WarehouseStorages']))
-
-    if (markDelivered) {
-      // POSITIVE, on the OUTLET ledger — the other leg. Written only when the user
-      // confirmed the stock physically travelled with them.
-      requests.push(resourceBulkRequest(OUTLET_MOVEMENTS, split.allocated.map((row) => ({
-        OutletCode: text(entry.OutletCode),
-        StorageName: DEFAULT_STORAGE,
-        SKU: row.SKU,
-        QtyChange: Math.abs(row.Quantity),
-        ReferenceType: REF_RESTOCK_DELIVERY,
-        ReferenceCode: textOrRef(batchRef(`${RESTOCKS}.latest.code`)),
-        MovementDate: date,
-        Status: 'Active'
-      })), ['OutletStorages']))
+    // 3. The outlet ledger deduction.
+    const movements = buildConsumptionMovementsRequest(entry, countRows)
+    if (movements) {
+      requests.push(movements)
+      claim(permissions, OUTLET_MOVEMENTS, 'create')
     }
   }
 
-  return { requests, allocated: split.allocated, pending: split.pending, shortfall: split.shortfall }
+  // 4. The invoice, bundling any earlier un-invoiced audits the user ticked. Its lines are
+  //    the UNION of this audit's sales and every bundled audit's — resolved here, from the
+  //    stored item rows, because deciding what belongs on the bill is a domain question.
+  if (invoicing) {
+    const bundled = asList(bundledConsumptionCodes).map(text).filter(Boolean)
+    const bundledLines = bundled.flatMap((code) => asList(consumptionItems)
+      .map(asRow)
+      .filter((row) => text(row.OutletConsumptionCode) === code && isActive(row))
+      .map((row) => ({ SKU: row.SKU, SoldQty: row.Qty })))
+
+    const invoice = buildInvoiceRequests(entry, [...sold, ...bundledLines], {
+      priceListCode,
+      bundledConsumptionCodes: bundled,
+      returnDeduction: returnDeductionOf(returnRows, adjustedCodes),
+      discountType: text(discountType) || 'FLAT',
+      discountValue: Number(discountValue) || 0,
+      invoiceComment: text(invoiceComment),
+      returnCodes: adjustedCodes,
+      actorName,
+      calculateLineTax
+    })
+    // The engine ran once, inside the builder, and returned what it calculated. An invoice
+    // with no priced lines is REFUSED rather than submitted empty: the batch would
+    // otherwise create a zero-value invoice header and walk every bundled consumption to
+    // INVOICE_GENERATED against it, leaving them permanently unbillable.
+    if (!invoice.requests.length) {
+      return { valid: false, requests: [], permissions: {}, message: 'Nothing on this invoice can be priced — check the price list.' }
+    }
+    requests.push(...invoice.requests)
+    claim(permissions, INVOICES, 'create')
+    claim(permissions, INVOICE_ITEMS, 'create')
+
+    // 5. Settle the returns that were credited against it.
+    if (adjustedCodes.length) {
+      const selected = asList(returnRows).map(asRow).filter((row) => adjustedCodes.includes(text(row.Code)))
+      requests.push(...buildReturnAdjustmentRequests(selected))
+      claim(permissions, RETURNS, 'update')
+    }
+  }
+
+  // 6. Close the visit this audit was made against, and plan the next one. BOTH delegated
+  //    to OutletVisits' own domain builders — a visit's schema and cadence rule are not
+  //    this module's to restate (§9.1). `refresh: false` because step 8 pulls the visits
+  //    back once for the whole batch.
+  if (completingVisit) {
+    const completion = buildVisitCompletionChainRequests({ visitCode: entry.OutletVisitCode, actorName, refresh: false })
+    if (!completion.valid) return { valid: false, requests: [], permissions: {}, message: completion.message }
+    requests.push(...completion.requests)
+    mergePermissions(permissions, completion.permissions)
+  }
+  if (scheduleNext === true) {
+    const next = buildNextVisitChainRequests({ form: entry, operatingRules, actorName, refresh: false })
+    if (!next.valid) return { valid: false, requests: [], permissions: {}, message: next.message }
+    requests.push(...next.requests)
+    mergePermissions(permissions, next.permissions)
+  }
+  // Both visit legs claim the SAME resource key — completion `update`, scheduling `create`
+  // — so a plain merge lets whichever ran last silently drop the other's claim. Completion
+  // is restated here, after the merge, so a submission doing both is gated on the write it
+  // actually performs against an EXISTING record rather than only on the create.
+  if (completingVisit) claim(permissions, VISITS, 'update')
+
+  // 7. Replenishment, in whichever mode step 1 and step 4 selected — delegated to
+  //    OutletRestocks' own domain builder. With no sale there is no consumption header to
+  //    point at; the link is provenance, not a dependency.
+  const restock = buildRestockChainRequests({
+    form: entry,
+    lines: restockRows,
+    mode: directRestock === true ? 'DIRECT' : 'PENDING_APPROVAL',
+    warehouseCode,
+    warehouseStorages,
+    markDelivered: markDelivered === true,
+    linkToConsumption: hasSold,
+    actorName
+  })
+  if (!restock.valid) return { valid: false, requests: [], permissions: {}, message: restock.message }
+  if (restock.requests.length) {
+    restockAt = requests.length
+    requests.push(...restock.requests)
+    mergePermissions(permissions, restock.permissions)
+    claim(permissions, RESTOCK_ITEMS, 'create')
+  }
+
+  // Nothing at all to write is not a submission. Reachable only if validation let an empty
+  // audit through, which it should not — stated anyway rather than sending an empty batch.
+  if (!requests.length) {
+    return { valid: false, requests: [], permissions: {}, message: 'This visit recorded nothing to submit.' }
+  }
+
+  // 8. The batch just changed balances three other resources derive from. Pull them back
+  //    in the same round trip rather than leaving the next page to find them stale (§9.5).
+  requests.push(resourceGetRequest(['OutletStorages', 'WarehouseStorages', 'OutletVisits']))
+
+  /**
+   * What the user is told, and where they land.
+   *
+   * The default post-submit navigation reads the code off the FIRST request in the batch
+   * and opens THIS resource's View page. That is right only when a consumption was
+   * written; on a restock-only submit the first request is a visit action, and the user
+   * would be sent to a consumption View for a record that does not exist.
+   */
+  const outcome = hasSold
+    ? { message: 'Consumption recorded.', at: consumptionAt, slug: '' }
+    : restockAt >= 0
+      ? {
+          message: hasReturns ? 'Returns and restock request recorded.' : 'Restock request created.',
+          at: restockAt,
+          slug: 'outlet-restocks'
+        }
+      : { message: 'Returns recorded.', at: returnsAt, slug: 'outlet-returns' }
+
+  return { valid: true, requests, permissions, outcome, successMsg: outcome.message }
+}
+
+/** The monetary credit the ticked returns apply — read off the stored rows, not recomputed. */
+function returnDeductionOf (returnRows = [], codes = []) {
+  if (!codes?.length) return 0
+  return asList(returnRows)
+    .map(asRow)
+    .filter((row) => codes.includes(text(row.Code)))
+    .reduce((sum, row) => sum + toNumber(row.Qty) * toNumber(row.Price), 0)
 }
 
 // ─── Cancellation cascade ─────────────────────────────────────────────────────
@@ -297,8 +383,7 @@ export function buildCancellationRequests (record = {}, reason = '', options = {
     }, stampFields('ProgressRejected', actorName, cascadeNote), [RESTOCKS]))
     // Its lines are retired with it, so a rejected request cannot leave PENDING rows a
     // later reallocation would try to fill.
-    const lines = (Array.isArray(restock.$OutletRestockItems) ? restock.$OutletRestockItems : [])
-      .map(asRow).filter((line) => text(line.Code))
+    const lines = asList(restock.$OutletRestockItems).map(asRow).filter((line) => text(line.Code))
     if (lines.length) {
       requests.push(resourceBulkRequest(RESTOCK_ITEMS, lines.map((line) => ({ Code: text(line.Code), Status: 'Inactive' })), [RESTOCK_ITEMS]))
     }
@@ -313,9 +398,7 @@ export function buildCancellationRequests (record = {}, reason = '', options = {
 // Composable shape for setup-context callers. Same functions, one import (§5).
 export function useConsumptionWorkflow () {
   return {
-    buildVisitCompleteRequest,
-    buildNextVisitRequest,
-    buildRestockRequests,
+    buildConsumptionWorkflowChainRequests,
     buildCancellationRequests
   }
 }

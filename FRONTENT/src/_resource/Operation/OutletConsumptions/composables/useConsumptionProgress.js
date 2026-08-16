@@ -23,14 +23,10 @@
 import { daysFromToday } from 'src/utils/dateHelpers'
 import { sortByDate } from 'src/utils/sortHelpers'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
+import { defaultVisitFrequencyDays, visitFrequencyFor } from 'src/_resource/Operation/OutletVisits/composables/useVisitCadence'
 
 // This composable IS OutletConsumptions — always. Never route-derived (§3.2).
 const RESOURCE_NAME = 'OutletConsumptions'
-
-// The resource that owns the per-outlet audit cadence. Read for its DefaultValues rather
-// than for its rows, so the frequency fallback is a configured number rather than a
-// constant compiled into the frontend — see `defaultVisitFrequencyDays` below.
-const OPERATING_RULES_RESOURCE = 'OutletOperatingRules'
 
 // Re-exported so a consumer that already imports this file for the workflow vocabulary
 // does not need a second import line to sort the rows it just filtered.
@@ -397,37 +393,12 @@ export function workflowStamps (record) {
 // derive from this one function (UI_MODULE_DEVELOPER_GUIDE.md §4.5, §9.2).
 
 /**
- * The configured visit cadence, with NO hardcoded frontend fallback.
- *
- * Read from `OutletOperatingRules`' backend `DefaultValues` — the same
- * `VisitFrequencyDays: 14` the sheet setup seeds — so retuning the cadence is a sheet
- * change, not a code change. Returns `0` when the config has not landed yet; every caller
- * below treats `0` as "cadence unknown" and declines to band rather than inventing one.
+ * The visit cadence rule is a question about a VISIT, so it is owned by
+ * `_resource/Operation/OutletVisits/composables/useVisitCadence.js` and merely re-exported
+ * here — one definition, read by both modules (§3.3). Every existing caller keeps its
+ * import line; the ageing bands below still read the cadence through it.
  */
-export function defaultVisitFrequencyDays () {
-  const { defaultValues } = useResourceConfig(OPERATING_RULES_RESOURCE)
-  const configured = num(defaultValues?.value?.VisitFrequencyDays ?? defaultValues?.VisitFrequencyDays)
-  return configured > 0 ? configured : 0
-}
-
-/**
- * The cadence that applies to one outlet: its own operating rule, else the configured
- * default. The caller supplies the rules so this stays pure.
- *
- * Deliberately reads `OutletOperatingRules` rows rather than `enrichOutlet`'s
- * `visitFrequencyDays`, which falls back to a literal `14` compiled into
- * `_resource/Master/Outlets`. That literal predates the rule that a cadence must be
- * configured rather than assumed; going through it here would reintroduce exactly the
- * hardcoded constant this module is required not to carry. The enriched outlet is still
- * the right source for everything else it exposes.
- */
-export function visitFrequencyFor (outletCode, operatingRules = []) {
-  const code = text(outletCode)
-  const rule = (Array.isArray(operatingRules) ? operatingRules : [])
-    .map(asRow)
-    .find((entry) => isActiveRow(entry) && text(entry.OutletCode) === code && num(entry.VisitFrequencyDays) > 0)
-  return num(rule?.VisitFrequencyDays) || defaultVisitFrequencyDays()
-}
+export { defaultVisitFrequencyDays, visitFrequencyFor }
 
 /**
  * The four ageing bands for a given cadence `F`, youngest → oldest. `max` is inclusive and

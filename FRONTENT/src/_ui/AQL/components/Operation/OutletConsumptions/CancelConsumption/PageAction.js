@@ -1,6 +1,6 @@
 import { useAuth } from 'src/composables/core/useAuth'
 import { useDataStore } from 'src/stores/data'
-import { buildCancellationRequests } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionPayload'
+import { buildCancellationRequests } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionWorkflow'
 import {
   cancellability,
   findInvoiceFor,

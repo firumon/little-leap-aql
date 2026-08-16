@@ -21,6 +21,7 @@
 
 import { usePriceListResource } from 'src/_resource/Master/PriceLists/composables/usePriceListResource'
 import { useOutletResource } from 'src/_resource/Master/Outlets/composables/useOutletResource'
+import { splitByWarehouseStock } from 'src/_resource/Operation/OutletRestocks/composables/useRestockStockMatch'
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
 
@@ -386,42 +387,13 @@ export function warehouseAvailableQty (sku, warehouseCode, warehouseStorages = [
 }
 
 /**
- * Split restock lines into what the warehouse can cover now and what it cannot.
- *
- * The covered half becomes `ALLOCATED` item rows against the source warehouse; the rest
- * stays `PENDING` for a later allocation. A line partially covered appears in BOTH halves,
- * which is what lets a direct restock ship what it has instead of failing whole.
- *
- * Indexed in one pass for the same reason `validateConsumption` is.
+ * "What can the source warehouse cover for this restock" is an OutletRestocks question, so
+ * `splitByWarehouseStock` is owned by
+ * `_resource/Operation/OutletRestocks/composables/useRestockStockMatch.js` and merely
+ * re-exported here — one definition, read by both modules (§3.3). Every existing caller
+ * keeps its import line.
  */
-export function splitByWarehouseStock (rows = [], warehouseCode = '', warehouseStorages = []) {
-  const warehouse = text(warehouseCode)
-  const stock = new Map()
-  ;(Array.isArray(warehouseStorages) ? warehouseStorages : []).map(asRow).forEach((entry) => {
-    if (!isActive(entry) || text(entry.WarehouseCode) !== warehouse) return
-    const sku = text(entry.SKU)
-    if (!sku) return
-    stock.set(sku, (stock.get(sku) || 0) + toNumber(entry.Quantity))
-  })
-
-  const allocated = []
-  const pending = []
-  ;(Array.isArray(rows) ? rows : []).map(asRow).forEach((row) => {
-    const sku = text(row.SKU)
-    const wanted = toNumber(row.Quantity)
-    if (!sku || wanted <= 0) return
-    const onHand = stock.get(sku) || 0
-    const covered = Math.min(wanted, onHand)
-    if (covered > 0) {
-      allocated.push({ SKU: sku, Quantity: covered })
-      // Decremented so two lines for the same SKU cannot each claim the whole shelf.
-      stock.set(sku, onHand - covered)
-    }
-    if (wanted - covered > 0) pending.push({ SKU: sku, Quantity: wanted - covered })
-  })
-
-  return { allocated, pending, shortfall: pending.reduce((total, row) => total + row.Quantity, 0) }
-}
+export { splitByWarehouseStock }
 
 // Composable shape for setup-context callers. Same functions, one import (§5).
 export function useConsumptionStock () {

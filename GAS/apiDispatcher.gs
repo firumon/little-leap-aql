@@ -525,6 +525,30 @@ function resolveBatchReferencesDeep(value, batchContext) {
     if (keys.length === 1 && value.$ref !== undefined) {
       return resolveBatchReferencePath(batchContext, value.$ref);
     }
+    // A $ref JOINED to literal codes already known to the caller — e.g. an invoice
+    // bundling the consumption this batch is about to create together with several
+    // earlier ones, whose column holds a comma-separated list.
+    //
+    // The join happens HERE, on resolution, rather than in the frontend: the transport
+    // contract forbids stringifying or concatenating a $ref payload object
+    // (CORE_ARCHITECTURE_RULES §3), because a client-side concatenation would have to
+    // guess the code before the batch has created the record. The literals are plain
+    // strings; only the unresolved half is a reference.
+    if (value.$ref !== undefined && Array.isArray(value.$append)) {
+      var head = resolveBatchReferencePath(batchContext, value.$ref);
+      var separator = value.$separator === undefined ? ',' : String(value.$separator);
+      var parts = [head].concat(value.$append)
+        .map(function (part) { return (part === null || part === undefined ? '' : String(part).trim()); })
+        .filter(function (part) { return part !== ''; });
+      // De-duplicated: a caller that also listed the new record's own code would
+      // otherwise write it twice, and membership tests downstream read the list as a set.
+      var seen = {};
+      return parts.filter(function (part) {
+        if (seen[part]) return false;
+        seen[part] = true;
+        return true;
+      }).join(separator);
+    }
     var cloned = {};
     keys.forEach(function (key) {
       cloned[key] = resolveBatchReferencesDeep(value[key], batchContext);

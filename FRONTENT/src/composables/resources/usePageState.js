@@ -72,8 +72,8 @@ import { useResourceConfig } from './useResourceConfig'
 import { useAdditionalActionsPipeline } from './additionalActionsPipeline'
 // Low-level $ref helpers live in appHelpers.js (stateless utils, §2); re-exported
 // here so usePageState is the single import surface for consumers.
-import { batchRef, isBatchRef, textOrRef, normalizeCodeOrRef } from 'src/utils/appHelpers'
-export { batchRef, isBatchRef, textOrRef, normalizeCodeOrRef }
+import { batchRef, batchRefList, isBatchRef, textOrRef, normalizeCodeOrRef } from 'src/utils/appHelpers'
+export { batchRef, batchRefList, isBatchRef, textOrRef, normalizeCodeOrRef }
 
 // ==========================================================================
 // Canonical request builders + response helpers (resource-agnostic — Single Source of Truth)

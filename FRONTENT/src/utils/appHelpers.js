@@ -511,6 +511,22 @@ export function batchRef (path) { return { $ref: path } }
 export function isBatchRef (value) { return !!(value && typeof value === 'object' && value.$ref) }
 
 /**
+ * A $ref JOINED to literal codes the caller already holds, for a column that stores a
+ * separated LIST — e.g. an invoice bundling the consumption this batch is about to create
+ * together with several earlier ones.
+ *
+ * The join is performed by GAS at resolution time (`apiDispatcher.gs` ›
+ * `resolveBatchReferencesDeep`), never here: concatenating on the front-end would mean
+ * guessing the generated code before the batch has produced it, which is exactly what the
+ * transport contract's "do not stringify/concatenate $ref values" rule forbids
+ * (CORE_ARCHITECTURE_RULES §3). Duplicates are dropped server-side, so passing a list that
+ * happens to include the new record's own code is safe.
+ */
+export function batchRefList (path, codes = [], separator = ',') {
+  return { $ref: path, $append: (Array.isArray(codes) ? codes : []).map((code) => String(code ?? '').trim()).filter(Boolean), $separator: separator }
+}
+
+/**
  * Returns a $ref as-is, otherwise coerces a value to a trimmed string.
  * Used by the canonical request builders so optional refs pass through untouched.
  */

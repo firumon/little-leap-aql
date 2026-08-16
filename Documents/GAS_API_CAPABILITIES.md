@@ -1,4 +1,4 @@
-﻿# AQL - GAS API Capabilities Reference
+# AQL - GAS API Capabilities Reference
 
 ## Purpose
 This document describes what the GAS backend can already do before a new backend design or implementation path is proposed.
@@ -302,9 +302,10 @@ Rules:
 - Later sub-requests may use explicit value references with `{ "$ref": "ResourceName.path" }`. Supported paths include `ResourceName.latest.code`, `ResourceName.latest.record.Code`, `ResourceName.byCode.CODE.Field`, and `ResourceName.records.0.Field`.
 - `$ref` resolution is explicit only. GAS does not infer missing fields and fails the current sub-request with a clear error when a path cannot be resolved.
 - `$ref` payload values must reach GAS as objects. Frontend code must not stringify `$ref` values with `String()`, template literals, concatenation, or normal text helpers.
-- Frontend batch payload builders should use `FRONTENT/src/composables/batchRefs.js`: `batchRef(path)` creates a `{ "$ref": "..." }` object, and `textOrRef(value)` preserves `$ref` objects while trimming normal string codes.
+- Frontend batch payload builders should use `FRONTENT/src/utils/appHelpers.js` (re-exported by `usePageState.js`): `batchRef(path)` creates a `{ "$ref": "..." }` object, `textOrRef(value)` preserves `$ref` objects while trimming normal string codes, and `batchRefList(path, codes, separator)` creates a list-joining reference `{ "$ref": "...", "$append": [...], "$separator": "," }`.
 - Use `textOrRef(value)` for any field that may contain a same-batch generated code, including `payload.code`, `ParentCode`, `ReferenceCode`, and resource-specific foreign-key code fields.
-- Current GAS `$ref` resolution replaces whole values only. It does not interpolate refs inside larger strings, so comments/messages must not include same-batch `$ref` codes unless a separate template feature is implemented.
+- **Joining `$ref` with literal codes (`$append` / `batchRefList`)**: When a column stores a delimited list (e.g. comma-separated codes on an invoice covering both a newly created consumption and existing historical ones), the client MUST NOT string-concatenate an unresolved `$ref`. Instead, pass `{ "$ref": "ResourceName.latest.code", "$append": ["EXISTING-001", "EXISTING-002"], "$separator": "," }`. GAS resolves the `$ref` path, prepends it to the `$append` list, de-duplicates entries, and joins them using `$separator` (defaults to `,`).
+- Other than structured `$append` list joins, GAS `$ref` resolution replaces whole values only. It does not arbitrary-interpolate refs inside unstructured comments or message strings.
 - Response:
 ```json
 {

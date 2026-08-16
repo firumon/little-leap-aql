@@ -1,4 +1,4 @@
-﻿# usePageState — Centralized Page-Level Form-State Composable
+# usePageState — Centralized Page-Level Form-State Composable
 
 > **Canonical reference for `FRONTENT/src/composables/resources/usePageState.js`.**
 > Any developer or AI agent working on a resource page (form, input collection,
@@ -53,7 +53,7 @@ is in:
 | Provided at | `FRONTENT/src/pages/Page.vue` (alongside `resourceConfig` / `resourceRecord`)        |
 | Injected by | Header / Content / Action sections via `inject('pageState')`                         |
 | Generic request builders | defined inline in `usePageState.js` (SSoT)                                           |
-| `$ref` helpers (`batchRef`/`isBatchRef`/`textOrRef`/`normalizeCodeOrRef`) | `FRONTENT/src/utils/appHelpers.js` (stateless utils, re-exported by `usePageState`)  |
+| `$ref` helpers (`batchRef`/`batchRefList`/`isBatchRef`/`textOrRef`/`normalizeCodeOrRef`) | `FRONTENT/src/utils/appHelpers.js` (stateless utils, re-exported by `usePageState`)  |
 | Dispatch transport | `useResourceIoStore().runBatchRequests` (Pinia, `FRONTENT/src/stores/resourceIo.js`) |
 
 Legendary file `outletOperationsBatch.js` still exists as a **legacy** home for
@@ -489,7 +489,7 @@ From `usePageState.js` you may import:
   funnel through, exposed directly for callers (e.g. `PageAction.vue`) that need
   to run a caller-built request array (already `modifyPayload`-transformed)
   through the standard lifecycle without going through `build()`.
-- **`$ref` helpers (re-exported from `appHelpers`):** `batchRef`, `isBatchRef`, `textOrRef`, `normalizeCodeOrRef`
+- **`$ref` helpers (re-exported from `appHelpers`):** `batchRef`, `batchRefList`, `isBatchRef`, `textOrRef`, `normalizeCodeOrRef`
 
 The `$ref` helpers live canonically in `FRONTENT/src/utils/appHelpers.js`
 (stateless utilities). Import them from `appHelpers` directly when you only need

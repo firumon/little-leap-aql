@@ -1,4 +1,4 @@
-﻿# AQL - GAS Backend Patterns Guide
+# AQL - GAS Backend Patterns Guide
 
 ## Purpose
 This document is the implementation-pattern reference for GAS work in AQL.
@@ -52,9 +52,10 @@ Use `batch` when you need to write data and immediately get fresh rows back, or 
 - Frontend requests MUST NOT send custom `ref` names.
 - Use explicit `{ "$ref": "ResourceName.latest.code" }`, `{ "$ref": "ResourceName.latest.record.Code" }`, `{ "$ref": "ResourceName.byCode.CODE.Field" }`, or `{ "$ref": "ResourceName.records.0.Field" }` objects in payload values.
 - Frontend code MUST preserve `$ref` values as objects until GAS receives them. Do not pass `$ref` values through `String()`, template literals, concatenation, or generic text-normalization helpers.
-- Frontend batch builders that may receive either a normal code or a `$ref` MUST use the shared `FRONTENT/src/composables/batchRefs.js` helpers: `batchRef(path)` to create refs and `textOrRef(value)` to preserve refs while trimming normal text.
+- Frontend batch builders that may receive either a normal code or a `$ref` MUST use the shared `FRONTENT/src/utils/appHelpers.js` (or `usePageState.js`) helpers: `batchRef(path)` to create refs, `textOrRef(value)` to preserve refs while trimming normal text, and `batchRefList(path, codes, separator)` to create multi-code joined refs (`$ref` + `$append`).
 - Use normal text helpers only for values that cannot be batch refs. Use `textOrRef(value)` for fields such as `code`, `ParentCode`, `ReferenceCode`, `SourceCode`, `TargetCode`, and same-batch foreign-key fields.
-- Do not embed `$ref` values inside comments or other sentence strings. Either omit the same-batch generated code from the comment, write the comment after the code is known, or add an explicit backend template feature before using refs inside strings.
+- **List / Multi-Code columns (`$append`)**: When a field stores a delimited list combining a pending batch-generated code with existing codes, use `batchRefList(path, existingCodes, separator)`. This emits `{ "$ref": "...", "$append": [...], "$separator": "," }` which GAS resolves, prepends, de-duplicates, and joins.
+- Do not embed `$ref` values inside comments or other freeform sentence strings. Either omit the same-batch generated code from the comment, write the comment after the code is known, or add an explicit backend template feature before using refs inside strings.
 - `latest` means the latest successful output for that resource in the current batch.
 - `byCode` is deterministic access for loaded or written records.
 - Unresolved `$ref` paths fail the current sub-request. GAS does not infer missing fields.

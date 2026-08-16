@@ -105,7 +105,7 @@ Read only the files relevant to the query or task at hand:
 
 1. **Verify Action Capabilities**: Before writing custom endpoints, check if standard CRUD, `compositeSave`, `executeAction`, or `batch` can handle the requirement.
 2. **Examine Resource Registry Config**: View resource properties in `syncAppResources.gs` (e.g. write/read permissions, `PostAction` configuration).
-3. **Trace Frontend Request Generation**: Inspect the calling page or composable (e.g., `useCompositeForm.js`) to see how it builds payload structures. Ensure same-batch generated fields use `batchRef` or `textOrRef` from `batchRefs.js`.
+3. **Trace Frontend Request Generation**: Inspect the calling page or composable (e.g., `useCompositeForm.js`) to see how it builds payload structures. Ensure same-batch generated fields use `batchRef`, `textOrRef`, or `batchRefList` from `appHelpers.js` (re-exported by `usePageState.js`).
 4. **Trace Backend Dispatching**: Ensure the action runs through `apiDispatcher.gs` and is authenticated.
 5. **Inspect PostAction Hooks**: Locate the hook function in its specific GAS module file (e.g., `procurement.gs`, `stockMovements.gs`). Verify arguments map precisely to `(payload, result, auth, action, meta, resourceName)`.
 6. **Ingestion & Store Verification**: Verify that the returned response contains standard `data.resources` which are fed to `ingestResourcePayloads` in `GasApiService.js`.
@@ -115,7 +115,7 @@ Read only the files relevant to the query or task at hand:
 ## 5. Explicit Guardrails (DOs and DO NOTs)
 
 - **DO NOT** bypass the generic API dispatcher to create custom `doGet` or `doPost` action branches.
-- **DO NOT** stringify, concatenate, or format `$ref` objects on the frontend. They must be sent as raw JSON objects `{ "$ref": "..." }`.
+- **DO NOT** stringify, concatenate, or format `$ref` objects on the frontend. They must be sent as raw JSON objects `{ "$ref": "..." }` or `{ "$ref": "...", "$append": [...] }` via `batchRefList`.
 - **DO NOT** make consecutive, separate API requests when transactional ordering or quick readbacks are needed; use the `batch` action instead.
 - **DO NOT** hardcode resource-specific business side effects directly inside `resourceApi.gs`; always use `PostAction` hooks inside target modules.
 - **DO** verify that the response payload structure matches the canonical envelope so frontend IndexedDB/Pinia state updates trigger seamlessly.

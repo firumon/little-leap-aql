@@ -1,13 +1,26 @@
 import { useDataStore } from 'src/stores/data'
+import { usePriceListResource } from 'src/_resource/Master/PriceLists/composables/usePriceListResource'
 
 export const useTaxCalculator = () => {
   const dataStore = useDataStore()
+  const { getPriceList, getItemOf } = usePriceListResource()
 
   const getAllActiveTaxes = () => {
     const records = dataStore.getRecords('Taxes') || []
     return records.filter(r => r.Status === 'Active')
   }
 
+  /**
+   * A SKU's price and tax configuration under one price list.
+   *
+   * Price resolution is DELEGATED to `usePriceListResource`, which owns the INLINE-vs-ITEMS
+   * split keyed by `AppConfigMap.PriceListLookup`. This function previously read
+   * `PriceListItems` directly — the ITEMS path only. On an INLINE tenant (the default, and
+   * the one where prices live in the price list's own `SKUPrices` map) that sheet is empty,
+   * so every price resolved to 0 and every invoice was silently taxed on a zero base while
+   * still displaying a correct unit price. Reading the enriched list fixes that for every
+   * caller at once rather than per invoice screen.
+   */
   const getSkuPricingAndTax = (skuCode, priceListCode) => {
     const skus = dataStore.getRecords('SKUs') || []
     const skuRecord = skus.find(s => s.Code === skuCode && s.Status === 'Active')
@@ -15,24 +28,19 @@ export const useTaxCalculator = () => {
       throw new Error(`SKU not found or inactive: ${skuCode}`)
     }
 
-    const priceLists = dataStore.getRecords('PriceList') || []
-    const plRecord = priceLists.find(p => p.Code === priceListCode && p.Status === 'Active')
-    if (!plRecord) {
+    const priceList = getPriceList(priceListCode)
+    if (!priceList || priceList.status !== 'Active') {
       throw new Error(`Price List not found or inactive: ${priceListCode}`)
     }
 
-    const priceListItems = dataStore.getRecords('PriceListItems') || []
-    const pliRecord = priceListItems.find(p => p.PriceListCode === priceListCode && p.SKUCode === skuCode && p.Status === 'Active')
-
-    const price = pliRecord ? Number(pliRecord.Price) : 0
-    const rsp = pliRecord ? Number(pliRecord.RSP) : 0
+    const item = getItemOf(skuCode, priceListCode)
 
     return {
       taxCode: skuRecord.TaxCode || '',
-      price,
-      rsp,
-      taxInclusive: plRecord.TaxInclusive === 'TRUE' || plRecord.TaxInclusive === true,
-      discountTaxPolicy: plRecord.DiscountTaxPolicy || 'PRE_TAX'
+      price: Number(item?.price) || 0,
+      rsp: Number(item?.rsp) || 0,
+      taxInclusive: priceList.taxInclusive,
+      discountTaxPolicy: priceList.discountTaxPolicy || 'PRE_TAX'
     }
   }
 

@@ -417,6 +417,27 @@ export function buildRestockDeliveryBatchRequests (restock = {}, deliveredOrsiRo
   ]
 }
 
+/**
+ * CREATION — raising a restock request in DRAFT / PENDING_APPROVAL / DIRECT mode.
+ *
+ * Lives in `useRestockCreation.js` beside this file purely for file size
+ * (CORE_ARCHITECTURE_RULES §9); it is the same layer and the same purity rules, and every
+ * export is re-exported here so a caller assembling a create still has ONE import.
+ *
+ * `buildRestockCreateChainRequests` is what the standalone Add wizard submits;
+ * `buildRestockChainRequests` is what a sibling domain chain (the consumption wizard's
+ * step-4 replenishment) calls. Both return the Universal Return Envelope
+ * (UI_RESOURCE_DOMAIN_LOGIC.md §9.2).
+ */
+export {
+  RESTOCK_REF_PATH,
+  restockCreateFields,
+  restockCreatePermissions,
+  buildRestockCreateChainRequests,
+  buildRestockRequests,
+  buildRestockChainRequests
+} from './useRestockCreation'
+
 // Composable shape for setup-context callers. Same functions, one import (§5).
 export function useRestockPayload () {
   return {

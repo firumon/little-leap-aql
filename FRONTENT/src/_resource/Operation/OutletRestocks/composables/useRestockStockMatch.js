@@ -19,6 +19,9 @@ const num = (value) => {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : 0
 }
+const text = (value) => (value == null ? '' : String(value).trim())
+const asRow = (value) => (value && typeof value === 'object' ? value : {})
+const isActive = (value) => text(asRow(value).Status || 'Active') === 'Active'
 
 /**
  * The ceiling one requested line may reach.
@@ -62,11 +65,54 @@ export function stockMatchFigures ({ outletQuantity = 0, warehouseQuantity = 0, 
   }
 }
 
+/**
+ * Split restock lines into what the warehouse can cover now and what it cannot.
+ *
+ * The covered half becomes `ALLOCATED` item rows against the source warehouse; the rest
+ * stays `PENDING` for a later allocation. A line partially covered appears in BOTH halves,
+ * which is what lets a direct restock ship what it has instead of failing whole.
+ *
+ * "What can this warehouse cover for this restock" is an OutletRestocks question, so the
+ * answer lives here. `useConsumptionStock.js` re-exports it, so the consumption wizard —
+ * the first caller to ask — keeps its import line and there is still ONE definition (§3.3).
+ *
+ * Indexed in one pass rather than rescanned per line (CORE_ARCHITECTURE_RULES §6).
+ */
+export function splitByWarehouseStock (rows = [], warehouseCode = '', warehouseStorages = []) {
+  const warehouse = text(warehouseCode)
+  const stock = new Map()
+  ;(Array.isArray(warehouseStorages) ? warehouseStorages : []).map(asRow).forEach((entry) => {
+    if (!isActive(entry) || text(entry.WarehouseCode) !== warehouse) return
+    const sku = text(entry.SKU)
+    if (!sku) return
+    stock.set(sku, (stock.get(sku) || 0) + num(entry.Quantity))
+  })
+
+  const allocated = []
+  const pending = []
+  ;(Array.isArray(rows) ? rows : []).map(asRow).forEach((row) => {
+    const sku = text(row.SKU)
+    const wanted = num(row.Quantity)
+    if (!sku || wanted <= 0) return
+    const onHand = stock.get(sku) || 0
+    const covered = Math.min(wanted, onHand)
+    if (covered > 0) {
+      allocated.push({ SKU: sku, Quantity: covered })
+      // Decremented so two lines for the same SKU cannot each claim the whole shelf.
+      stock.set(sku, onHand - covered)
+    }
+    if (wanted - covered > 0) pending.push({ SKU: sku, Quantity: wanted - covered })
+  })
+
+  return { allocated, pending, shortfall: pending.reduce((total, row) => total + row.Quantity, 0) }
+}
+
 // Composable shape for setup-context callers. Same functions, one import (§5).
 export function useRestockStockMatch () {
   return {
     maxRestockQuantity,
     clampRestockQuantity,
-    stockMatchFigures
+    stockMatchFigures,
+    splitByWarehouseStock
   }
 }

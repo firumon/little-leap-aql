@@ -1,7 +1,8 @@
-﻿import { batchRef } from 'src/utils/appHelpers'
-import { toDateTime24 } from 'src/utils/dateHelpers'
-import { resourceBulkRequest } from 'src/composables/resources/usePageState'
-import { useAuth } from 'src/composables/core/useAuth'
+﻿import { useAuth } from 'src/composables/core/useAuth'
+import {
+  restockCreateFields,
+  buildRestockCreateChainRequests
+} from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
 
 /**
  * OutletRestocks › Add › PageAction — JS modifier (tier 2: resource + page).
@@ -78,60 +79,55 @@ export default (props, { pageState, resourceConfig }) => {
       return validateItems()
     },
 
-    // Three outcomes, in precedence order:
-    //   draft    → DRAFT, nothing leaves the page; the user finishes it later
-    //   standard → PENDING_APPROVAL, an approver allocates stock afterwards
-    //   direct   → APPROVED plus the stock movements, allocated immediately from
-    //              the source warehouse in the same batch, referencing the restock
-    //              code this batch is about to create via `$ref`.
+    /**
+     * A THIN ADAPTER, nothing more (UI_RESOURCE_DOMAIN_LOGIC.md §9.1).
+     *
+     * This handler collects what the wizard asked — outlet, mode, warehouse, lines,
+     * draft intent — and hands it to `OutletRestocks`' own Layer 2 chain builder. Which
+     * `Progress` each mode lands in, which columns carry the submission stamp, and what
+     * the direct mode's `StockMovements` deduction looks like are all decided THERE, and
+     * are identical whether a restock is raised from this page or chained off a
+     * consumption submit.
+     *
+     * Two calls rather than one, because the page owns the form node: the domain's field
+     * decisions are applied to it first (`restockCreateFields`), and the composite save
+     * `pageState.build()` then assembles rides into the chain builder as `baseRequests`,
+     * so a field the wizard collects — the date, the requesting user, the submission
+     * comment — is never restated in Layer 2 and never invented in Layer 3.
+     */
     submit: () => {
-      if (!parent.record.value.OutletCode) return { valid: false, message: 'Select an outlet before submitting.' }
-      const invalid = validateItems()
-      if (invalid) return invalid
-
-      const direct = mode() === 'DIRECT'
-      const draft = isDraft()
-      const permission = direct ? { OutletRestocks: 'create', StockMovements: 'create' } : 'create'
-      if (!resourceConfig?.allowed(permission)) return { valid: false, message: 'You are not allowed to submit this restock request.' }
-
-      // The comment is written straight onto the node by `SubmitOptions.vue`, so
-      // it is already in the payload. Progress plus the submission stamps are
-      // decided here — the stamps are set under the hood alongside the comment,
-      // never exposed as form fields, so they cannot be back-dated by the user.
-      //
-      // A draft is not a submission, so it gets neither stamp: leaving them empty
-      // is what lets a later real submit record when it actually happened.
-      pageState.setFields('OutletRestocks', {
-        Progress: draft ? 'DRAFT' : (direct ? 'APPROVED' : 'PENDING_APPROVAL'),
-        Status: 'Active',
-        ...(draft ? {} : {
-          ProgressSubmittedAt: toDateTime24(new Date()),
-          ProgressSubmittedBy: user.value?.name || user.value?.email || ''
-        })
-      })
-      if (draft) return { successMsg: 'Restock request saved as draft.' }
-      if (!direct) return { successMsg: 'Restock request submitted.' }
-
-      const source = { WarehouseCode: warehouse(), StorageName: '_default' }
+      const actorName = user.value?.name || user.value?.email || ''
       const lines = items()
-      lines.forEach((entry) => {
-        const index = itemEntries.value.indexOf(entry)
-        pageState.updateChild('OutletRestocks', 'OutletRestockItems', index, { ...source, Progress: 'ALLOCATED' })
+      const fields = restockCreateFields({
+        mode: mode(),
+        draft: isDraft(),
+        warehouseCode: warehouse(),
+        actorName,
+        comment: parent.record.value.ProgressSubmittedComment
       })
 
-      const movements = lines.map((entry) => ({
-        ...source,
-        SKU: entry.data.SKU,
-        QtyChange: -Math.abs(Number(entry.data.Quantity)),
-        ReferenceType: 'OutletRestock',
-        ReferenceCode: batchRef('OutletRestocks.latest.code'),
-        Status: 'Active'
-      }))
-
-      return {
-        requests: [...pageState.build(), resourceBulkRequest('StockMovements', movements, ['WarehouseStorages'])],
-        successMsg: 'Restock request submitted.'
+      pageState.setFields('OutletRestocks', fields.header)
+      if (fields.linePatch) {
+        lines.forEach((entry) => {
+          pageState.updateChild('OutletRestocks', 'OutletRestockItems', itemEntries.value.indexOf(entry), fields.linePatch)
+        })
       }
+
+      const result = buildRestockCreateChainRequests({
+        outletCode: parent.record.value.OutletCode,
+        mode: mode(),
+        draft: isDraft(),
+        warehouseCode: warehouse(),
+        lines: lines.map((entry) => entry.data),
+        baseRequests: pageState.build(),
+        actorName
+      })
+      if (!result.valid) return { valid: false, message: result.message }
+      if (resourceConfig?.allowed(result.permissions) !== true) {
+        return { valid: false, message: 'You are not allowed to submit this restock request.' }
+      }
+
+      return { requests: result.requests, successMsg: result.successMsg }
     }
   }
 }

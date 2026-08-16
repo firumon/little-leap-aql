@@ -749,6 +749,12 @@ function dispatchResourceCrudAction(action, auth, payload) {
 function handlePollAction(auth, payload) {
   const cursors = payload && payload.cursors ? payload.cursors : {};
   const updatedResources = [];
+
+  // Stamp the cursor BEFORE reading any resource state. If the stamp were taken
+  // after evaluation, a write landing mid-evaluation would carry a
+  // LastDataUpdatedAt earlier than the returned serverTime; the client would
+  // then advance its unchanged-resource cursor past that write and never see it.
+  const serverTime = Date.now();
   const configMap = getResourceConfigMap() || {};
 
   Object.keys(cursors).forEach(function (resourceName) {
@@ -771,11 +777,12 @@ function handlePollAction(auth, payload) {
     }
   });
 
+  // Strictly a cursor check — never a row payload.
   return {
     success: true,
     data: {
       updatedResources: updatedResources,
-      serverTime: Date.now()
+      serverTime: serverTime
     }
   };
 }

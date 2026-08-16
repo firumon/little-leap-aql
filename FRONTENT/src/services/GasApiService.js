@@ -11,9 +11,24 @@ const logger = createLogger('GasApiService')
 const API_VERSION = 'v1'
 
 let onApiRequestCallback = null
+let onApiResponseCallback = null
 
 export function registerApiRequestListener(callback) {
   onApiRequestCallback = callback
+}
+
+export function registerApiResponseListener(callback) {
+  onApiResponseCallback = callback
+}
+
+/** Lifecycle notifications are advisory; a listener fault must never fail the API call. */
+function notifyLifecycle(callback, action) {
+  if (typeof callback !== 'function') return
+  try {
+    callback(action)
+  } catch (error) {
+    logger.warn('API lifecycle listener error', { action, error: error?.message || String(error) })
+  }
 }
 
 function createRequestId() {
@@ -223,12 +238,11 @@ export async function executeGasApi(action, payload = {}, options = {}) {
 
   const requestBody = buildCanonicalRequest(action, payload, authToken, requireAuth)
 
-  if (action !== 'poll' && typeof onApiRequestCallback === 'function') {
-    try {
-      onApiRequestCallback(action)
-    } catch (e) {
-      // Safe boundary check
-    }
+  // `poll` is the background heartbeat itself, so it must not drive its own
+  // pause/reset lifecycle. Every other action is user-driven.
+  const isLifecycleAction = action !== 'poll'
+  if (isLifecycleAction) {
+    notifyLifecycle(onApiRequestCallback, action)
   }
 
   try {
@@ -266,5 +280,9 @@ export async function executeGasApi(action, payload = {}, options = {}) {
     const errorMsg = getGasApiErrorMessage(error)
     logger.error('GAS API error', { action, error: errorMsg })
     return standardizeResponse(false, null, errorMsg)
+  } finally {
+    if (isLifecycleAction) {
+      notifyLifecycle(onApiResponseCallback, action)
+    }
   }
 }

@@ -110,6 +110,28 @@ export const useResourceIoStore = defineStore('resourceIo', () => {
     })
   }
 
+  /**
+   * Re-reads the synced resources out of IndexedDB and pushes the full snapshot
+   * into `useDataStore`, so every consumer of the reactive rows sees the change.
+   * IndexedDB is authoritative here: `syncResourcesBatch` has already upserted
+   * the delta into it, so a replace cannot drop untouched rows.
+   */
+  async function hydrateSyncedResourcesFromCache(resourceNames = []) {
+    const names = normalizeResourceNames(resourceNames)
+    if (!names.length) return
+
+    const dataStore = useDataStore()
+    const resourceStatus = useResourceStatusStore()
+
+    for (const resourceName of names) {
+      const headers = resourceStatus.byResource[resourceName]?.headers || []
+      if (headers.length) {
+        dataStore.initResource(resourceName, headers)
+      }
+      await dataStore.seedResourceFromCache(resourceName)
+    }
+  }
+
   async function fetchResource(resourceName, options = {}) {
     if (!resourceName) {
       return { success: false, headers: [], rows: [], records: [] }
@@ -223,6 +245,12 @@ export const useResourceIoStore = defineStore('resourceIo', () => {
         lastSyncAt: Date.now()
       }, response.error || response.message || 'Resource sync failed'), {})
     }
+
+    // `syncResourcesBatch` lands the delta in IndexedDB only. Without this pass
+    // the reactive rows in `useDataStore` stay on the pre-sync snapshot, so a
+    // background-detected change (the polling path) would never reach the UI.
+    const syncedResources = Array.isArray(response.data?.synced) ? response.data.synced : []
+    await hydrateSyncedResourcesFromCache(syncedResources)
 
     return normalizeResponse(standardizeResponse(true, {
       resources,

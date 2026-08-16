@@ -4,6 +4,15 @@
 - This is the startup file for repository-aware agents and Claude sessions in this repo.
 - Keep this file lean. Use canonical docs for detailed policy.
 
+## Language and Communication Rule (STRICT)
+- Always speak and write in very simple, easy English.
+- Write like a lower primary school story book.
+- Use short sentences.
+- Use small, everyday words.
+- Do not use big, fancy, or confusing words.
+- Do not use double-meaning sentences or hard grammar.
+- Keep everything direct, clear, and very easy to understand.
+
 ## Startup Sequence
 - Read this file.
 - **Protocol check first**:

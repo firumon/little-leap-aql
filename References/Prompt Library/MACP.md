@@ -67,7 +67,7 @@ The Architect must adapt its directive prompts according to the capability tier 
 
 | Capability Tier | Architectural Strategy & Prompt Customization |
 | --- | --- |
-| **High Capability** | **High Autonomy**: The prompt provides the required outcome, referenceable docs/sections, and constraints only. No target or file-to-modify list is prescribed — the Builder is trusted to do its own lookup and decide which files to touch or create, the internal algorithm implementation, refactoring patterns, and modular architecture. |
+| **High Capability** | **High Autonomy with Purpose & Intent**: The prompt provides the required outcome, referenceable docs/sections, constraints, and **critically, the underlying purpose, business intent, and rationale behind architectural decisions**. This equips the autonomous Builder with the full context of *why* choices are made so it can independently navigate edge cases, file creation/updates, data flow arrangements, and modular architecture. |
 | **Medium Capability** | **Outcome-Driven**: The Builder owns both the logic and the code. The Architect supplies target files, dependencies, integration points, constraints, and — critically — a precise **Expected Outcome** (behaviour, inputs/outputs, edge cases, acceptance criteria). The Architect does not dictate internal algorithm design. |
 | **Low Capability** | **Fully Specified**: The Architect supplies the complete logic, the coding approach (structure, function signatures, control flow, data structures, ordering of operations), exact file locations and insertion points, naming, error handling, and edge cases — described in detail, in prose and pseudocode. The Architect does **not** write the full production code; the Builder writes it by following the specification exactly, with zero room for independent design decisions. |
 
@@ -144,7 +144,7 @@ Emitted alone, with nothing before or after it (the Bare Directive Rule). **Ther
 
 **Tier-specific shaping of the directives:**
 
-* **High** — required outcome, reference docs, and constraints only. Implementation choices, file discovery, and which files to touch or create are all left to the Builder. The Architect still does its own full lookup and learning of the codebase (informed by the Conductor's input) before writing the directive — that understanding shapes the outcome and constraints, but the file list is not handed down.
+* **High** — required outcome, underlying purpose/intent, decision rationale, reference docs, and constraints. Implementation choices, file discovery, and which files to touch or create are all left to the Builder. The Architect explains the *why* behind decisions so the autonomous Builder can make fully aligned structural and data-flow decisions independently.
 * **Medium** — target files, dependencies, integration points, constraints, and a fully specified **Expected Outcome**. Logic and code are both left to the Builder; internal algorithm design is not dictated.
 * **Low** — a detailed specification: step ordering, control flow, function signatures, data structures, pseudocode, exact file locations and insertion points, naming, and error handling. Full production code is still not supplied; the Builder writes it by following the spec exactly.
 

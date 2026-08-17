@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, reactive, ref } from 'vue'
-import { getResourceMetaCached } from 'src/services/ResourceIoService'
+import { getAllResourceMetaCached } from 'src/services/ResourceIoService'
 
 const DEFAULT_RESOURCE_SYNC_TTL_SEC = 300
 
@@ -146,15 +146,21 @@ export const useResourceStatusStore = defineStore('resourceStatus', () => {
     const seen = new Set()
     const resourceList = Array.isArray(resources) ? resources : []
 
+    // All metas in one read, rather than a transaction per resource.
+    const metaResponse = await getAllResourceMetaCached()
+    const metaByResource = metaResponse?.success && metaResponse.data instanceof Map
+      ? metaResponse.data
+      : new Map()
+
     for (const resource of resourceList) {
       const name = normalizeResourceName(resource?.name)
       if (!name) continue
       seen.add(name)
       applyAuthorizedResource(resource, appConfig)
 
-      const response = await getResourceMetaCached(name)
-      if (response?.success && response.data) {
-        applyResourceMeta(name, response.data)
+      const meta = metaByResource.get(name)
+      if (meta) {
+        applyResourceMeta(name, meta)
       }
     }
 

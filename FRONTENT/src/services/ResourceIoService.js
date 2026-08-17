@@ -12,6 +12,7 @@ import {
   draftGet,
   draftSave,
   metaGet,
+  metaGetAll,
   metaSet,
   rowsGet,
   rowsUpsert,
@@ -845,6 +846,10 @@ export async function setAuthorizedResources(resources = [], resetCursors = fals
 
 export async function clearAllStorage() {
   return storagesClear()
+}
+
+export async function getAllResourceMetaCached() {
+  return metaGetAll()
 }
 
 export async function getResourceMetaCached(resource) {

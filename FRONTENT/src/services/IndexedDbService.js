@@ -106,6 +106,16 @@ export async function getResourceMeta(resource) {
   return (await ensureDB()).get('resource-meta', resource)
 }
 
+/** Every resource's meta in one transaction, keyed by resource name. */
+export async function getAllResourceMeta() {
+  const entries = await (await ensureDB()).getAll('resource-meta')
+  const byResource = new Map()
+  for (const entry of entries) {
+    if (entry?.resource) byResource.set(entry.resource, entry)
+  }
+  return byResource
+}
+
 function toPlainStringArray(value, fallback = []) {
   if (!Array.isArray(value)) {
     return Array.isArray(fallback) ? fallback : []
@@ -133,17 +143,25 @@ function toCloneSafeObject(value, fallback = null) {
 export async function setAuthorizedResources(resources = [], resetCursors = false) {
   const db = await ensureDB()
   const tx = db.transaction('resource-meta', 'readwrite')
+
+  // One `getAll` rather than a `get` per resource; puts are issued, not awaited.
+  const existingByName = new Map()
+  for (const entry of await tx.store.getAll()) {
+    if (entry?.resource) existingByName.set(entry.resource, entry)
+  }
+
+  const pending = []
   for (const resource of resources) {
     const name = (resource?.name || '').toString().trim()
     if (!name) continue
 
-    const existing = await tx.store.get(name)
+    const existing = existingByName.get(name)
     const headers = toPlainStringArray(resource?.headers, existing?.headers || [])
     const permissions = toCloneSafeObject(
       resource?.permissions,
       toCloneSafeObject(existing?.permissions, null)
     )
-    await tx.store.put({
+    pending.push(tx.store.put({
       resource: name,
       headers,
       permissions,
@@ -154,8 +172,10 @@ export async function setAuthorizedResources(resources = [], resetCursors = fals
       lastSyncAt: resetCursors ? null : (existing?.lastSyncAt || null),
       lastFetchAt: resetCursors ? null : (existing?.lastFetchAt || null),
       hasHydratedOnce: resetCursors ? false : existing?.hasHydratedOnce === true
-    })
+    }))
   }
+
+  await Promise.all(pending)
   await tx.done
 }
 
@@ -182,8 +202,10 @@ export async function upsertResourceRows(resource, headers = [], rows = []) {
   const updatedAtIndex = headers.indexOf('UpdatedAt')
   const db = await ensureDB()
   const tx = db.transaction('resource-records', 'readwrite')
-  let affected = 0
+  const storedAt = Date.now()
+  const pending = []
 
+  // Puts are issued in the loop and awaited together, not one at a time.
   for (const row of rows) {
     if (!Array.isArray(row)) continue
 
@@ -191,18 +213,19 @@ export async function upsertResourceRows(resource, headers = [], rows = []) {
     if (!code) continue
 
     const updatedAtRaw = updatedAtIndex === -1 ? null : row[updatedAtIndex]
-    await tx.store.put({
+    pending.push(tx.store.put({
       id: `${resource}::${code}`,
       resource,
       code,
       row,
       updatedAt: parseDateForSort(updatedAtRaw),
-      storedAt: Date.now()
-    })
-    affected += 1
+      storedAt
+    }))
   }
 
+  await Promise.all(pending)
   await tx.done
+  const affected = pending.length
 
   for (const fn of rowListeners) {
     try {

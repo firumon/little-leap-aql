@@ -13,6 +13,7 @@ import {
   removeFromSyncQueue,
   setResourceMeta,
   getResourceMeta,
+  getAllResourceMeta,
   upsertResourceRows,
   getResourceRows,
   deleteResourceRowByCode,
@@ -89,6 +90,15 @@ export async function metaSet(resource, meta) {
   } catch (error) {
     logger.error('Meta set failed', { resource, error: error.message })
     return standardizeResponse(false, null, error.message)
+  }
+}
+
+export async function metaGetAll() {
+  try {
+    return standardizeResponse(true, await getAllResourceMeta())
+  } catch (error) {
+    logger.error('Meta getAll failed', { error: error.message })
+    return standardizeResponse(false, new Map(), error.message)
   }
 }
 

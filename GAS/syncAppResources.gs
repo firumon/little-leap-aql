@@ -1445,6 +1445,8 @@ function initAppResourcesCodeConfig() {
             { header: 'TaxDetails', label: 'Tax Details', type: 'textarea' },
             { header: 'OutletReturnCodes', label: 'Outlet Return Codes', type: 'textarea' },
             { header: 'ReturnDeductionTotal', label: 'Return Deduction Total', type: 'currency' },
+            { header: 'SettlementMismatchAmount', label: 'Settlement Mismatch', type: 'currency' },
+            { header: 'SettlementReason', label: 'Settlement Reason', type: 'text' },
             { header: 'Progress', label: 'Progress', type: 'status' },
             { header: 'ProgressPendingPaymentAt', label: 'Pending Payment At', type: 'datetime' },
             { header: 'ProgressPendingPaymentBy', label: 'Pending Payment By', type: 'text' },
@@ -1463,7 +1465,18 @@ function initAppResourcesCodeConfig() {
         ]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: JSON.stringify([
             {"id":"rep_1776000000023","name":"consumption-invoice","label":"Consumption Invoice","templateSheet":"ConsumptionInvoice","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
             {"id":"rep_1776000000024","name":"invoice-log","label":"Invoice Log","templateSheet":"InvoiceRecords","isRecordLevel":false,"inputs":[{"label":"Date","type":"select","targetCell":"J11","source":{"resource":"OutletConsumptionInvoices","field":"Date"},"default":"All Date","required":false},{"label":"Username","type":"select","targetCell":"J12","source":{"resource":"OutletConsumptionInvoices","field":"Username"},"default":"Any User","required":false},{"label":"Progress","type":"select","targetCell":"J13","source":{"resource":"OutletConsumptionInvoices","field":"Progress"},"default":"All Progress","required":false}],"pdfOptions":{}}
-        ]), CustomUIName: '', ListViews: '',
+        ]), CustomUIName: '',
+        ListViews: JSON.stringify([
+            { "name": "NearDue", "label": "Near Due", "icon": "event", "color": "primary", "default": true, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "in", "value": ["PENDING_PAYMENT", "PARTIALLY_PAID"] }, { "type": "condition", "column": "DueDate", "operator": "gte", "value": "$daysIn:0" }, { "type": "condition", "column": "DueDate", "operator": "lte", "value": "$daysIn:7" }] } },
+            { "name": "Overdue", "label": "Overdue", "icon": "running_with_errors", "color": "negative", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "in", "value": ["PENDING_PAYMENT", "PARTIALLY_PAID"] }, { "type": "condition", "column": "DueDate", "operator": "lt", "value": "$daysIn:0" }] } },
+            { "name": "Completed", "label": "Completed", "icon": "task_alt", "color": "positive", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "PAID" }] } },
+            { "name": "Cancelled", "label": "Cancelled", "icon": "block", "color": "negative", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "CANCELLED" }] } },
+            { "name": "PendingInvoices", "label": "Pending", "icon": "pending_actions", "color": "orange", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "in", "value": ["PENDING_PAYMENT", "PARTIALLY_PAID"] }] } },
+            { "name": "HighValueInvoices", "label": "High Value", "icon": "trending_up", "color": "deep-orange", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "in", "value": ["PENDING_PAYMENT", "PARTIALLY_PAID"] }] } },
+            { "name": "WaiveOffInvoices", "label": "Waive-off", "icon": "cleaning_services", "color": "blue-grey-6", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "in", "value": ["PENDING_PAYMENT", "PARTIALLY_PAID"] }] } },
+            { "name": "OutletPendings", "label": "Outlet Pendings", "icon": "storefront", "color": "indigo-6", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "in", "value": ["PENDING_PAYMENT", "PARTIALLY_PAID"] }] } },
+            { "name": "InvoiceableOutlets", "label": "To Invoice", "icon": "request_quote", "color": "warning", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "in", "value": ["PENDING_PAYMENT", "PARTIALLY_PAID"] }] } }
+        ]),
         Relations: JSON.stringify({
             OutletCode: CONFIG.MASTER_SHEETS.OUTLETS,
             PriceListCode: CONFIG.MASTER_SHEETS.PRICE_LIST

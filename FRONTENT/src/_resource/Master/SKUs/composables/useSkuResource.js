@@ -112,6 +112,40 @@ const shared = defineSharedComposable((dataStore) => {
 
   const skuInfo = (skuCode) => getSku(skuCode)
 
+  /**
+   * How a SKU is NAMED anywhere in the app: the product on top, what distinguishes this
+   * variant beneath it.
+   *
+   *   { primary: 'Fruit Feeder', secondary: 'Red / 500ml', uom: 'PCS' }
+   *
+   * A SKU CODE IS NOT A NAME. `CK3-09` identifies a row to the system and means nothing to
+   * the person reading it, so the code is only ever the FALLBACK — used for `secondary` when
+   * a product declares no variant types, and for `primary` when the SKU resolves to no
+   * product at all. Everywhere else the reader sees words.
+   *
+   * This lives in Layer 2, not in a page composable, because "what do we call this SKU" is
+   * one question with one answer for every screen that asks it. Two UI-side copies of this
+   * rule already exist (`useConsumptionWizard.skuLabel`, `useRestockView.skuLabelOf`) and
+   * they are exactly the drift UI_RESOURCE_DOMAIN_LOGIC.md §3.3 warns about — new callers
+   * take it from here so a third copy never happens.
+   */
+  const skuLabelOf = (skuCode) => {
+    const code = String(skuCode == null ? '' : skuCode).trim()
+    const info = getSku(code) || {}
+    const variants = (info.variantValues || []).filter(Boolean).join(' / ')
+    return {
+      primary: info.productName || code,
+      secondary: variants || code,
+      uom: info.uom || 'PCS'
+    }
+  }
+
+  /** The same name as one string, for a select option or a single-line row. */
+  const skuLabelText = (skuCode) => {
+    const { primary, secondary } = skuLabelOf(skuCode)
+    return secondary && secondary !== primary ? `${primary} · ${secondary}` : primary
+  }
+
   const getSkusByProduct = (productCode) => {
     if (!productCode) return []
     return skusByProduct.value.get(productCode) || []
@@ -125,6 +159,8 @@ const shared = defineSharedComposable((dataStore) => {
     skusByProduct,
     getSku,
     skuInfo,
+    skuLabelOf,
+    skuLabelText,
     getSkusByProduct
   }
 })

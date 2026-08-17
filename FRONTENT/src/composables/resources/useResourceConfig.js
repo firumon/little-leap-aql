@@ -1,4 +1,4 @@
-import { computed } from 'vue'
+import { computed, unref } from 'vue'
 import { useAuthStore } from 'src/stores/auth'
 import { useRouteConfig } from './useRouteConfig'
 import {
@@ -45,18 +45,47 @@ function checkActionsList(resConfig, actions) {
  * Used by all resource pages (index, view, add, edit, action).
  */
 export function useResourceConfig(resourceNameOverride) {
-  const routeCfg = useRouteConfig()
   const auth = useAuthStore()
 
+  // WHETHER there is an override is decided ONCE, here, from the raw argument —
+  // deliberately NOT from its unwrapped value.
+  //
+  // `useRouteConfig()` calls `useRoute()`, which is an `inject()`: it is only
+  // legal during `setup()` and must therefore run synchronously on this line for
+  // the route-resolved case, never deferred into a `computed()` that first
+  // evaluates after setup has returned. So the branch that selects it cannot be
+  // reactive — a ref whose value arrives later could not retroactively make the
+  // injection legal.
+  //
+  // This costs nothing, because the three computeds below already branched on
+  // this same raw truthiness: a ref or getter is an object and has always taken
+  // the override path regardless of what it holds, and `''`/`undefined` has
+  // always taken the route path. Behaviour is unchanged for every caller; the
+  // only difference is that the route is no longer touched when it is not read,
+  // so a domain composable calling `useResourceConfig('SomeResource')` from a
+  // PageAction submit handler (outside setup — UI_RESOURCE_DOMAIN_LOGIC §3.2/§6)
+  // no longer trips the `inject()` warning.
+  const hasOverride = !!resourceNameOverride
+  const routeCfg = hasOverride ? null : useRouteConfig()
+
+  // The override's VALUE, unlike its presence, may legitimately be reactive.
+  // Normalised the same way `useRecord` normalises its own override.
+  const overrideName = computed(() => {
+    if (!hasOverride) return ''
+    return typeof resourceNameOverride === 'function'
+      ? resourceNameOverride()
+      : unref(resourceNameOverride)
+  })
+
   const activeConfig = computed(() => {
-    if (resourceNameOverride) {
-      return findResourceConfig(auth, resourceNameOverride)
+    if (hasOverride) {
+      return findResourceConfig(auth, overrideName.value)
     }
     return routeCfg.resourceConfig.value
   })
 
-  const scope = computed(() => resourceNameOverride ? (activeConfig.value?.scope || 'master') : routeCfg.scope.value)
-  const resourceSlug = computed(() => resourceNameOverride ? (activeConfig.value?.slug || '') : routeCfg.resourceSlug.value)
+  const scope = computed(() => hasOverride ? (activeConfig.value?.scope || 'master') : routeCfg.scope.value)
+  const resourceSlug = computed(() => hasOverride ? (activeConfig.value?.slug || '') : routeCfg.resourceSlug.value)
   const resourceName = computed(() => activeConfig.value?.name || '')
 
   const customUIName = computed(() => activeConfig.value?.ui?.customUIName || 'AQL')

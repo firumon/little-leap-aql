@@ -1479,6 +1479,23 @@ and removes itself from the page entirely on an empty `items`. A 0% bar on a wor
 has not started is a false alarm, not information; a wall of zeroes on a fresh tenant reads
 as a broken page. Never zero-fill to keep a widget on screen.
 
+The guard is **all-or-nothing across the whole widget**, and it is the widget's own last
+statement before the `return`. A `MetricCards` hides only when *every* card it would render
+is zero; a single live figure keeps the whole set on screen, and the zeroes beside it are
+then real context rather than noise — that is what per-card grey-vs-alarm colouring is for.
+Never hide individual cards out of a rendered set: the row would change width between reads
+and the reader loses the fixed position they scan for.
+
+**Test the figure each card actually prints.** A money card is empty when its *amount* is
+zero, not when its row count is — an aggregate can return rows that all total nothing, and a
+guard written against `.length` alone lets a wall of `AED 0.00` through. Test amounts and
+counts together, exactly the set of values the returned items display.
+
+**Empty is not "not yet loaded".** Both look like zero on the first tick, and the widget
+correctly renders nothing for both — the distinction costs nothing here *only because* rule 1
+keeps `items` function-valued, so the widget appears by itself the moment the fetch settles.
+A widget that hides on a cached array never comes back, which reads as permanent emptiness.
+
 **3. Every widget on a page shares one row-eligibility predicate**, exported from the
 resource's domain layer and applied identically:
 
@@ -2431,6 +2448,7 @@ Run this per new module. Each step cites the section that governs it.
 | An Index metric changes when the user switches list view | It counted `filteredRecords` instead of `records` (§9.2). |
 | A user lands on an empty list with no pill highlighted | The default view was gated away and the active view was never corrected (§9.3). |
 | A widget shows a wall of zeroes on a fresh tenant | It zero-filled instead of returning `[]` (§9.2). |
+| A money widget shows a wall of `AED 0.00` on a fresh tenant | Its hide guard tested row `.length` instead of the amounts the cards print (§9.2 rule 2). |
 | Row buttons push the record name into a multi-line wrap | The cluster exceeded three buttons (§7.3). |
 | A UI Composable importing a store directly | Violates §6.1 — relay through a generic Core Composable instead. |
 | A `.vue` component calling `inject()` directly | Violates §6.2 — move the injection into that resource's context composable. |

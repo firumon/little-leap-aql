@@ -27,6 +27,11 @@ import { useCurrencyResource } from 'src/_resource/Master/Currencies/composables
  * The composables are called INSIDE the closure rather than at module scope: they reach
  * Pinia, and a read taken at resolve time would latch whatever the store held before the
  * tenant's data landed.
+ *
+ * Returns `[]` when every one of those figures is zero, which trips the section's strict hide
+ * rule and removes it from the page (§9.2 rule 2). The grey-vs-alarm colouring below still
+ * matters: it covers the PARTIAL case — nothing overdue but stock waiting to be billed — where
+ * the widget stays and individual cards read zero.
  */
 export default function () {
   return {
@@ -37,6 +42,10 @@ export default function () {
       const open = collections.value
       const today = todayCollection.value
       const toInvoice = pendingInvoiceGeneration.value.length
+
+      if (!open.overdueAmount && !open.overdueCount && !open.overdueOutletCount &&
+          !toInvoice && !today.total) return []
+
       // Grey rather than red when there is nothing overdue: a zero painted as an alarm
       // trains the reader to ignore the colour when it finally means something.
       const overdueColor = open.overdueCount > 0 ? 'negative' : 'grey-6'

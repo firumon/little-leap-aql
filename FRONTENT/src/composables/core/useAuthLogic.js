@@ -7,6 +7,7 @@
 
 import { Notify, Loading } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
+import { useDataStore } from 'src/stores/data'
 import { useInitialResourceSync } from 'src/composables/resources/useInitialResourceSync'
 import { usePollingStore } from 'src/stores/polling'
 
@@ -62,9 +63,14 @@ export function useAuthLogic() {
       const data = await auth.loginRequest(email, password)
 
       if (data.success) {
+        // Holds the data store's cache seeding until the session cache is ready.
+        const dataStore = useDataStore()
+        dataStore.beginCacheReset()
         auth.applySessionData(data.data || {})
 
-        auth.initializeClientSession(true).catch(() => {})
+        auth.initializeClientSession(true)
+          .catch(() => {})
+          .finally(() => dataStore.endCacheReset())
 
         // Background global sync
         auth.isGlobalSyncing = true
@@ -142,6 +148,8 @@ export function useAuthLogic() {
     const polling = usePollingStore()
     polling.stop()
     auth.clearSessionState()
+    // The store's watcher skips its wipe on an empty list, so clear these here.
+    useDataStore().resetSeedState()
 
     try {
       await auth.clearClientSession()

@@ -26,10 +26,10 @@ function _collectSearchValues(r, visited = new Set()) {
 export function clearEnrichmentCache() {
   _enrichedCache.clear()
 }
+// Indexed, not scanned: the callers are plain getters that re-run on every read.
 function _resolveTargetCode(dataStore, resourceName, targetHeader, value) {
   if (!targetHeader || targetHeader === 'Code') return value
-  const match = dataStore.getRecords(resourceName).find(r => r[targetHeader] === value)
-  return match?.Code || null
+  return dataStore.getRecordBy(resourceName, targetHeader, value)?.Code || null
 }
 export function enrichRecord(resourceName, code, dataStore) {
   if (!resourceName || !code) return null
@@ -40,9 +40,8 @@ export function enrichRecord(resourceName, code, dataStore) {
   const enriched = reactive({})
   _enrichedCache.set(cacheKey, enriched)   // Cache BEFORE building — prevents circular loops
 
-  const live = computed(() => {
-    return dataStore.getRecords(resourceName).find(r => r.Code === code) || null
-  })
+  // Read once per property access, so it must be an indexed lookup.
+  const live = computed(() => dataStore.getRecord(resourceName, code))
 
   const allHeaders = dataStore.headers[resourceName] || []
   for (const h of allHeaders) {
@@ -78,8 +77,7 @@ export function enrichRecord(resourceName, code, dataStore) {
       get() {
         const selfValue = live.value?.[c.targetHeader || 'Code']
         if (!selfValue) return []
-        return dataStore.getRecords(c.name)
-          .filter(row => row[c.codeField] === selfValue)
+        return dataStore.getRecordsBy(c.name, c.codeField, selfValue)
           .map(row => enrichRecord(c.name, row.Code, dataStore))
       },
       enumerable: false, configurable: true
@@ -205,9 +203,7 @@ export function useRecord(resourceNameOverride, codeOverride) {
   const records = computed(() => {
     const name = resolvedResourceName.value
     if (!name) return []
-    return dataStore.getRecords(name).map(r =>
-      enrichRecord(name, r.Code, dataStore)
-    )
+    return dataStore.getRecords(name).map(r => enrichRecord(name, r.Code, dataStore))
   })
 
   const headers = computed(() => dataStore.headers[resolvedResourceName.value] || [])

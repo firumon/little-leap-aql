@@ -76,9 +76,7 @@ export function useDashboard() {
   // 4. Batch asynchronous loading sequence on mount
   onMounted(async () => {
     const resourcesToFetch = requiredResources.value.filter((res) => {
-      const rows = dataStore.rows[res] || []
-      // Fetch if empty in Pinia, and not already loading/syncing
-      return rows.length === 0 && !dataStore.loadingByResource[res] && !dataStore.backgroundSyncingByResource[res]
+      return !dataStore.hasRows(res) && !dataStore.loadingByResource[res] && !dataStore.backgroundSyncingByResource[res]
     })
 
     if (resourcesToFetch.length > 0) {
@@ -202,9 +200,9 @@ export function useDashboard() {
       const { id, dataSource } = widget.metadata
       const resourcesList = dataSource.resources || (dataSource.resource ? [dataSource.resource] : [])
 
-      // Explicitly access Pinia reactivity layers to trigger Vue computed tracking
+      // Touch the row count so this computed tracks the rows, not the container.
       resourcesList.forEach((res) => {
-        const _ = dataStore.rows[res]
+        dataStore.getRowCount(res)
       })
 
       try {

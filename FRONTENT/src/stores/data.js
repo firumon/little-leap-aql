@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { reactive, watch, computed } from 'vue'
+import { reactive, watch, computed, effectScope } from 'vue'
 import { useAuthStore } from './auth'
 import { useResourceStatusStore } from './resourceStatus'
 import { onRowsUpserted } from 'src/services/IndexedDbCacheService'
@@ -35,10 +35,22 @@ function _normalizeRelationSpec(spec) {
 
 export const useDataStore = defineStore('data', () => {
   const headers = reactive({})
-  const rows = reactive({})
   const loadingByResource = reactive({})
   const backgroundSyncingByResource = reactive({})
   const resourceRelations = reactive({})
+
+  // Raw Maps keyed by row Code; reactivity is carried by the version counter, so
+  // never read `rows` directly from outside — use the accessors below.
+  const rows = {}
+  const rowsVersion = reactive({})
+
+  function _touch(resourceName) {
+    return rowsVersion[resourceName]
+  }
+
+  function _bump(resourceName) {
+    rowsVersion[resourceName] = (rowsVersion[resourceName] || 0) + 1
+  }
 
   function ensureResourceState(resourceName) {
     if (!resourceName) return
@@ -46,7 +58,8 @@ export const useDataStore = defineStore('data', () => {
       headers[resourceName] = []
     }
     if (!rows[resourceName]) {
-      rows[resourceName] = []
+      rows[resourceName] = new Map()
+      rowsVersion[resourceName] = 0
     }
   }
 
@@ -61,38 +74,172 @@ export const useDataStore = defineStore('data', () => {
     ensureResourceState(resourceName)
     if (!newRows || newRows.length === 0) return
 
-    const map = new Map((rows[resourceName] || []).map((row) => [row[0], row]))
+    const map = rows[resourceName]
     for (const row of newRows) {
       if (row && row.length > 0) {
         map.set(row[0], row)
       }
     }
-    rows[resourceName] = Array.from(map.values())
+    _bump(resourceName)
   }
 
   function replaceRows(resourceName, newRows) {
     ensureResourceState(resourceName)
-    rows[resourceName] = newRows || []
+    const map = new Map()
+    for (const row of newRows || []) {
+      if (row && row.length > 0) map.set(row[0], row)
+    }
+    rows[resourceName] = map
+    _bump(resourceName)
   }
 
   function getRows(resourceName) {
+    if (!resourceName) return []
     ensureResourceState(resourceName)
-    return rows[resourceName] || []
+    return _projection(resourceName).rowList.value
+  }
+
+  function getRowCount(resourceName) {
+    if (!resourceName) return 0
+    ensureResourceState(resourceName)
+    _touch(resourceName)
+    return rows[resourceName].size
+  }
+
+  function hasRows(resourceName) {
+    return getRowCount(resourceName) > 0
+  }
+
+  // Per-resource projection, memoized so repeat reads never re-map the rows. The
+  // scope is store-owned so a caller's component scope cannot stop these.
+  const _projectionScope = effectScope(true)
+  const _projections = new Map()
+
+  function _projection(resourceName) {
+    let entry = _projections.get(resourceName)
+    if (entry) return entry
+    entry = _projectionScope.run(() => {
+      // Rows, records and the Code index in one pass over the Map.
+      const projected = computed(() => {
+        // The dependency: the Map is raw, so this is what triggers a rebuild.
+        _touch(resourceName)
+        const map = rows[resourceName]
+        const hdrs = headers[resourceName] || []
+        const width = hdrs.length
+        const rowList = []
+        const records = []
+        const byCode = new Map()
+
+        if (map) {
+          for (const row of map.values()) {
+            rowList.push(row)
+            // A cached IndexedDB payload can hand back objects, not arrays.
+            let record
+            if (Array.isArray(row)) {
+              record = {}
+              for (let i = 0; i < width; i++) record[hdrs[i]] = row[i]
+            } else {
+              record = { ...row }
+            }
+            records.push(record)
+            if (record.Code) byCode.set(record.Code, record)
+          }
+        }
+
+        return { rowList, records, byCode }
+      })
+
+      return {
+        rowList: computed(() => projected.value.rowList),
+        records: computed(() => projected.value.records),
+        byCode: computed(() => projected.value.byCode),
+        // Per-(resource, header) indexes, built on first ask.
+        indexes: new Map()
+      }
+    })
+    _projections.set(resourceName, entry)
+    return entry
+  }
+
+  function _index(resourceName, header) {
+    const entry = _projection(resourceName)
+    let index = entry.indexes.get(header)
+    if (index) return index
+    index = _projectionScope.run(() => computed(() => {
+      const map = new Map()
+      for (const record of entry.records.value) {
+        const value = record[header]
+        if (value === undefined || value === null || value === '') continue
+        const bucket = map.get(value)
+        if (bucket) bucket.push(record)
+        else map.set(value, [record])
+      }
+      return map
+    }))
+    entry.indexes.set(header, index)
+    return index
   }
 
   function getRecords(resourceName) {
-    return mapRowsToObjects(getRows(resourceName), headers[resourceName] || [])
+    if (!resourceName) return []
+    ensureResourceState(resourceName)
+    return _projection(resourceName).records.value
+  }
+
+  /** All records whose `header` equals `value`. O(1) lookup, shared array. */
+  function getRecordsBy(resourceName, header, value) {
+    if (!resourceName || !header) return []
+    if (value === undefined || value === null || value === '') return []
+    ensureResourceState(resourceName)
+    if (header === 'Code') {
+      const match = _projection(resourceName).byCode.value.get(value)
+      return match ? [match] : []
+    }
+    return _index(resourceName, header).value.get(value) || []
+  }
+
+  /** First record whose `header` equals `value`, or null. */
+  function getRecordBy(resourceName, header, value) {
+    return getRecordsBy(resourceName, header, value)[0] || null
+  }
+
+  // A resource is read out of IndexedDB once per session; `force` re-reads.
+  const _seeded = new Set()
+  const _seedInFlight = new Map()
+
+  function resetSeedState() {
+    _seeded.clear()
+    _seedInFlight.clear()
   }
 
   async function seedResourceFromCache(resourceName, options = {}) {
     if (!resourceName) return []
     ensureResourceState(resourceName)
-    const response = await getResourceRowsCached(resourceName)
-    const idbRows = Array.isArray(response?.data) ? response.data : []
-    if (idbRows.length) {
-      replaceRows(resourceName, idbRows)
+
+    if (!options.force) {
+      // Raw rows, not `getRows()`, so the projection stays lazy.
+      if (_seeded.has(resourceName)) return Array.from(rows[resourceName].values())
+      // Concurrent callers join the read in flight instead of issuing their own.
+      const inFlight = _seedInFlight.get(resourceName)
+      if (inFlight) return inFlight
     }
-    return idbRows
+
+    const read = (async () => {
+      try {
+        const response = await getResourceRowsCached(resourceName)
+        const idbRows = Array.isArray(response?.data) ? response.data : []
+        if (idbRows.length) {
+          replaceRows(resourceName, idbRows)
+        }
+        _seeded.add(resourceName)
+        return idbRows
+      } finally {
+        _seedInFlight.delete(resourceName)
+      }
+    })()
+
+    _seedInFlight.set(resourceName, read)
+    return read
   }
 
   async function loadResource(resourceName, options = {}) {
@@ -154,7 +301,24 @@ export const useDataStore = defineStore('data', () => {
     setRows(resource, upsertedRows)
   })
 
+  // Holds seeding until login's cache reset finishes. Default OPEN: a page
+  // refresh never calls `initializeClientSession`, so only a login closes it.
+  let _cacheReady = Promise.resolve()
+  let _openCacheGate = null
+
+  function beginCacheReset() {
+    if (_openCacheGate) return
+    _cacheReady = new Promise((resolve) => { _openCacheGate = resolve })
+  }
+
+  function endCacheReset() {
+    if (!_openCacheGate) return
+    _openCacheGate()
+    _openCacheGate = null
+  }
+
   async function seedAuthorizedResources(resourcesList = []) {
+    await _cacheReady
     for (const resource of resourcesList) {
       if (!resource?.name) continue
       initResource(resource.name, resource.headers || [])
@@ -174,6 +338,8 @@ export const useDataStore = defineStore('data', () => {
       if (!resourcesList?.length) return
       if (previousResources?.length) {
         Object.keys(rows).forEach((resourceName) => replaceRows(resourceName, []))
+        // Rows are gone, so the seeded marks must go too.
+        resetSeedState()
       }
       seedAuthorizedResources(resourcesList)
       _deriveAllRelations(resourcesList)
@@ -316,7 +482,8 @@ export const useDataStore = defineStore('data', () => {
 
   function getRecord(resourceName, code) {
     if (!resourceName || !code) return null
-    return getRecords(resourceName).find(r => r.Code === code) || null
+    ensureResourceState(resourceName)
+    return _projection(resourceName).byCode.value.get(code) || null
   }
 
   function getRelations(resourceName) {
@@ -334,7 +501,14 @@ export const useDataStore = defineStore('data', () => {
     setRows,
     replaceRows,
     getRows,
+    getRowCount,
+    hasRows,
+    beginCacheReset,
+    endCacheReset,
+    resetSeedState,
     getRecords,
+    getRecordsBy,
+    getRecordBy,
     getRecord,
     getRelations,
     seedResourceFromCache,

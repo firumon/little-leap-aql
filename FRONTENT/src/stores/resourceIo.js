@@ -111,10 +111,9 @@ export const useResourceIoStore = defineStore('resourceIo', () => {
   }
 
   /**
-   * Re-reads the synced resources out of IndexedDB and pushes the full snapshot
-   * into `useDataStore`, so every consumer of the reactive rows sees the change.
-   * IndexedDB is authoritative here: `syncResourcesBatch` has already upserted
-   * the delta into it, so a replace cannot drop untouched rows.
+   * Ensures every synced resource is present in `useDataStore`. Rows the sync
+   * just wrote already arrived via `onRowsUpserted`, and `seedResourceFromCache`
+   * skips anything already read, so this only covers unseeded resources.
    */
   async function hydrateSyncedResourcesFromCache(resourceNames = []) {
     const names = normalizeResourceNames(resourceNames)

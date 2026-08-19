@@ -99,7 +99,15 @@ After classifying the query, read the appropriate initialization document(s) fro
 - For frontend edits, keep pages thin when the task materially changes page structure and update frontend registries only when reusable interfaces change.
 - **Before touching any file under `FRONTENT/`, read `Documents/CORE_ARCHITECTURE_RULES.md` without exception — this includes small fixes, one-liners, and style tweaks. Layer violations most often enter through minor edits.**
 - For backend edits, prefer existing GAS files and patterns first. Create a new GAS file only when the current structure cannot support the task cleanly.
-- If GAS files change, run `npm run gas:push` from the repo root or `cd GAS && clasp push`.
+
+## Remote Updates & External Sync Policy (STRICT)
+- **Do not update remote files, repositories, or services automatically.**
+- Any action that modifies files or state outside the local file system is restricted. This includes:
+  - `gas:push` / `clasp push` (deploying to Google Apps Script)
+  - `git push` (updating remote git repository)
+  - Cloud deploys, remote uploads, or external sync scripts.
+- **Allowed ONLY when explicitly requested by the user.**
+- **Mandatory User-Quote Requirement:** Whenever performing any remote update action, the agent MUST explicitly quote or cite the exact statement where the user asked for this action (e.g. *"Performing GAS push because you explicitly requested: '<exact user quote>' "*).
 
 ## Verification
 - Do not run broad verification by default.

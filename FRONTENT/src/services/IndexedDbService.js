@@ -94,11 +94,11 @@ export async function setResourceMeta(resource, meta = {}) {
   if (!resource) return null
   const db = await ensureDB()
   const current = await db.get('resource-meta', resource)
-  return db.put('resource-meta', {
+  return db.put('resource-meta', toCloneSafeMeta({
     ...(current || {}),
     resource,
     ...meta
-  })
+  }))
 }
 
 export async function getResourceMeta(resource) {
@@ -122,6 +122,37 @@ function toPlainStringArray(value, fallback = []) {
   }
 
   return value.map((item) => (item === null || item === undefined ? '' : String(item)))
+}
+
+/**
+ * Strips Vue reactivity (and anything else structuredClone chokes on) off a
+ * resource-meta record before it reaches IndexedDB.
+ *
+ * Callers routinely hand us values read straight out of a Pinia store — e.g.
+ * `statusStore.byResource[name].headers` — which come back as reactive Proxies.
+ * `db.put` structured-clones its argument, and a Proxy is not cloneable, so the
+ * write rejects with `DataCloneError: [object Array] could not be cloned`.
+ * That rejection killed the whole polling run before it could fetch deltas, and
+ * was swallowed elsewhere by `withTimeout`, silently stranding the sync cursor.
+ *
+ * Sanitizing here rather than at each call site means no future caller can
+ * reintroduce the fault by passing reactive state.
+ */
+function toCloneSafeMeta(meta) {
+  if (!meta || typeof meta !== 'object') return meta
+
+  const safe = {}
+  for (const key of Object.keys(meta)) {
+    const value = meta[key]
+    if (value === null || value === undefined || typeof value !== 'object') {
+      safe[key] = value
+      continue
+    }
+    safe[key] = Array.isArray(value)
+      ? toCloneSafeObject(value, [])
+      : toCloneSafeObject(value, null)
+  }
+  return safe
 }
 
 function toCloneSafeObject(value, fallback = null) {
@@ -170,6 +201,7 @@ export async function setAuthorizedResources(resources = [], resetCursors = fals
       codePrefix: resource.codePrefix || existing?.codePrefix || '',
       codeSequenceLength: resource.codeSequenceLength || existing?.codeSequenceLength || null,
       lastSyncAt: resetCursors ? null : (existing?.lastSyncAt || null),
+      lastDataUpdatedAt: resetCursors ? null : (existing?.lastDataUpdatedAt || null),
       lastFetchAt: resetCursors ? null : (existing?.lastFetchAt || null),
       hasHydratedOnce: resetCursors ? false : existing?.hasHydratedOnce === true
     }))

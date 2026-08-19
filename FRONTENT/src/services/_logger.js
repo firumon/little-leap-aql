@@ -1,7 +1,13 @@
 /**
- * Service Logger — environment-controlled debug logging
+ * Service Logger
+ *
  * Usage: const logger = createLogger('ServiceName')
- *        logger.debug('message') — only logs if VITE_ENABLE_LOGS=true
+ *
+ * `debug` and `info` are diagnostic chatter and stay behind VITE_ENABLE_LOGS.
+ * `warn` and `error` ALWAYS emit: a failure the developer never sees is a
+ * failure that gets misdiagnosed. Gating errors behind an unset env flag once
+ * turned a hard DataCloneError in the polling loop into a phantom "silent
+ * bailout" that read as a logic bug for as long as it went unnoticed.
  */
 
 function resolveEnvFlag(value) {
@@ -44,17 +50,14 @@ export function createLogger(serviceName) {
         console.log(`[${serviceName}:INFO] ${msg}${logData}`)
       }
     },
+    // Intentionally NOT gated — see the file header.
     warn: (msg, data) => {
-      if (shouldLog()) {
-        const logData = formatLogData(data)
-        console.warn(`[${serviceName}:WARN] ${msg}${logData}`)
-      }
+      const logData = formatLogData(data)
+      console.warn(`[${serviceName}:WARN] ${msg}${logData}`)
     },
     error: (msg, data) => {
-      if (shouldLog()) {
-        const logData = formatLogData(data)
-        console.error(`[${serviceName}:ERROR] ${msg}${logData}`)
-      }
+      const logData = formatLogData(data)
+      console.error(`[${serviceName}:ERROR] ${msg}${logData}`)
     }
   }
 }

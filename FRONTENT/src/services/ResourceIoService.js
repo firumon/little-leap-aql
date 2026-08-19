@@ -36,7 +36,16 @@ let queueTimerId = null
 let queueFlushPromise = null
 let queuedSyncHandler = null
 
-export async function withTimeout(promise, fallbackValue) {
+/**
+ * Races a promise against a short timer so a wedged IndexedDB call cannot stall
+ * a sync.
+ *
+ * A rejection is still absorbed — callers depend on the fallback — but it is
+ * logged first. Silently equating "timed out" with "threw" is what hid a
+ * DataCloneError on every resource-meta write, so the cursor never persisted
+ * and the same resources resynced forever with no trace.
+ */
+export async function withTimeout(promise, fallbackValue, label = '') {
   try {
     return await Promise.race([
       promise,
@@ -44,7 +53,11 @@ export async function withTimeout(promise, fallbackValue) {
         setTimeout(() => resolve(fallbackValue), DB_TIMEOUT_MS)
       })
     ])
-  } catch {
+  } catch (error) {
+    logger.error('Deferred operation failed; using fallback', {
+      ...(label ? { operation: label } : {}),
+      error: error?.message || String(error)
+    })
     return fallbackValue
   }
 }
@@ -111,6 +124,7 @@ export async function readCachedResourcePayload(resourceName, authorizedResource
       source,
       skipped: source === 'syncing-skip',
       lastSyncAt: normalizeCursorValue(meta?.lastSyncAt) || null,
+      lastDataUpdatedAt: normalizeCursorValue(meta?.lastDataUpdatedAt) || null,
       lastFetchAt: getCacheRefreshedAt(meta)
     }
   }
@@ -129,7 +143,7 @@ export async function ensureHeaders(resourceName, authorizedResources = []) {
       logger.debug('Headers from store', { resource: resourceName })
       withTimeout(setResourceMeta(resourceName, {
         headers: storeResource.headers
-      }), null)
+      }), null, `setHeaders:${resourceName}`)
       return standardizeResponse(true, storeResource.headers)
     }
 
@@ -138,7 +152,7 @@ export async function ensureHeaders(resourceName, authorizedResources = []) {
       const found = response.data.result.resources.find((entry) => entry?.name === resourceName)
       if (Array.isArray(found?.headers) && found.headers.length) {
         logger.debug('Headers from API', { resource: resourceName })
-        withTimeout(setResourceMeta(resourceName, { headers: found.headers }), null)
+        withTimeout(setResourceMeta(resourceName, { headers: found.headers }), null, `setHeaders:${resourceName}`)
         return standardizeResponse(true, found.headers)
       }
     }
@@ -201,6 +215,9 @@ async function persistBatchResourcePayload(resourceName, resourceData = {}) {
     await metaSet(resourceName, {
       ...(headers.length ? { headers } : {}),
       lastSyncAt: normalizeCursorValue(resourceData.meta.lastSyncAt) || Date.now(),
+      ...(normalizeCursorValue(resourceData.meta.lastDataUpdatedAt)
+        ? { lastDataUpdatedAt: normalizeCursorValue(resourceData.meta.lastDataUpdatedAt) }
+        : {}),
       lastFetchAt: Date.now(),
       hasHydratedOnce: true
     })
@@ -263,7 +280,9 @@ export async function syncResourcesBatch(resourceNames = [], authorizedResources
     logger.debug('Fetching resources', { count: syncNames.length })
     const response = await executeGasApi('get', payload, {
       showLoading: options.showLoading === true,
-      showError: options.showError === true
+      showError: options.showError === true,
+      // Poll-driven syncs are not user activity — see executeGasApi.
+      background: options.background === true
     })
 
     if (!response.success) {
@@ -302,10 +321,15 @@ export async function syncResourcesBatch(resourceNames = [], authorizedResources
       const nextMeta = {
         headers,
         lastSyncAt: resourceResponse?.meta?.lastSyncAt || Date.now(),
+        // The `get` response carries the authoritative data cursor; this is the
+        // only place the client is allowed to advance it.
+        lastDataUpdatedAt: normalizeCursorValue(resourceResponse?.meta?.lastDataUpdatedAt)
+          || normalizeCursorValue(resourceResponse?.meta?.lastSyncAt)
+          || Date.now(),
         lastFetchAt: Date.now(),
         hasHydratedOnce: true
       }
-      await withTimeout(setResourceMeta(resourceName, nextMeta), null)
+      await withTimeout(setResourceMeta(resourceName, nextMeta), null, `setResourceMeta:${resourceName}`)
       metaByResource[resourceName] = nextMeta
       completedResources.push(resourceName)
     }
@@ -443,6 +467,7 @@ export async function fetchResourceRecords(resourceName, authorizedResources = [
         resource: resourceName,
         source: effectiveRows.length ? (freshRows.length ? 'cache+sync' : 'cache') : 'sync',
         lastSyncAt: normalizeCursorValue(latestMeta?.lastSyncAt) || effectiveCursor || null,
+        lastDataUpdatedAt: normalizeCursorValue(latestMeta?.lastDataUpdatedAt) || null,
         lastFetchAt: getCacheRefreshedAt(latestMeta) || cacheRefreshedAt
       }
     }, staleMessage)
@@ -540,7 +565,7 @@ export async function fetchResourceRecordsBatch(resourceNames = [], authorizedRe
       for (const resourceName of syncNames) {
         const state = stateByResource[resourceName]
         if (!state?.cachedRows?.length && state?.syncCursor && !state.hasHydratedOnce) {
-          await withTimeout(setResourceMeta(resourceName, { lastSyncAt: null }), null)
+          await withTimeout(setResourceMeta(resourceName, { lastSyncAt: null }), null, `resetCursor:${resourceName}`)
         }
       }
 
@@ -568,6 +593,7 @@ export async function fetchResourceRecordsBatch(resourceNames = [], authorizedRe
       const freshRows = await withTimeout(getResourceRows(resourceName), [])
       const rows = freshRows.length ? freshRows : state.cachedRows
       const lastSyncAt = normalizeCursorValue(meta?.lastSyncAt) || state.effectiveCursor || null
+      const lastDataUpdatedAt = normalizeCursorValue(meta?.lastDataUpdatedAt) || null
       const lastFetchAt = getCacheRefreshedAt(meta) || state.cacheRefreshedAt || null
 
       resources[resourceName] = {
@@ -580,6 +606,7 @@ export async function fetchResourceRecordsBatch(resourceNames = [], authorizedRe
             ? 'cache-empty'
             : (syncedNames.includes(resourceName) ? 'sync' : 'cache'),
           lastSyncAt,
+          lastDataUpdatedAt,
           lastFetchAt
         }
       }

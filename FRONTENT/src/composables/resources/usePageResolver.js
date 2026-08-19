@@ -247,9 +247,20 @@ export function usePageResolver() {
     const recordVal = resourceRecord.record.value
     const itemsVal = resourceRecord.records.value
 
+    // ONLY MEANINGFUL WHILE NO VIEW IS SELECTED. This gate replaces the whole content
+    // area — the List included — with a "no records" card, judged on the count of the
+    // page's OWN resource. A list view is free to project a DIFFERENT resource
+    // (OutletConsumptionInvoices' "To Invoice" reads OutletConsumptions), and for those
+    // the count here answers a question nobody asked: a tenant with 37 outlets waiting to
+    // be invoiced but no invoice yet on the books saw its pill say "To Invoice (37)"
+    // above an empty card, because the invoices table itself was empty.
+    //
+    // With a view active the decision belongs to that view, which knows what it is
+    // showing and carries its own empty state — usually a better-worded one than this
+    // card's generic line.
     if (pageVal === 'index') return {
       loading: loadingVal,
-      empty: !loadingVal && itemsVal.length === 0,
+      empty: !loadingVal && itemsVal.length === 0 && !resourceRecord.activeViewName?.value,
       hasData: itemsVal.length > 0
     }
     if (pageVal === 'view') return {

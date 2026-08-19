@@ -125,7 +125,12 @@
             </q-item-section>
             <q-item-section :class="ui.flexWrapTextClass">
               <q-item-label>{{ candidate.date }}</q-item-label>
-              <q-item-label caption>{{ candidate.username }} · {{ candidate.qty }} units</q-item-label>
+              <!-- The units clause appears only when the lines are actually loaded: a
+                   candidate whose item rows have not been fetched must not read as an
+                   empty consumption (see `bundleCandidates`). -->
+              <q-item-label caption>
+                {{ candidate.username }}<template v-if="candidate.qty !== undefined"> · {{ candidate.qty }} units</template>
+              </q-item-label>
             </q-item-section>
           </q-item>
         </q-list>

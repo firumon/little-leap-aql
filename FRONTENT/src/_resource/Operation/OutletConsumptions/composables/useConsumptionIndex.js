@@ -51,6 +51,7 @@ const shared = defineSharedComposable((dataStore) => {
   const rows = (name) => (dataStore.getRecords(name) || []).map(asRow).filter(isActiveRow)
 
   const consumptions = computed(() => rows('OutletConsumptions'))
+  const consumptionItems = computed(() => rows('OutletConsumptionItems'))
   const visits = computed(() => rows('OutletVisits'))
   const invoices = computed(() => rows('OutletConsumptionInvoices'))
   const outlets = computed(() => rows('Outlets'))
@@ -97,27 +98,64 @@ const shared = defineSharedComposable((dataStore) => {
   })
 
   /**
-   * Consumptions still owed an invoice — the state column, the absence of a real invoice,
-   * AND something billable to put on one.
+   * Consumption code → the total quantity its item rows carry.
    *
-   * The third condition guards against ORPHAN headers — a consumption row carrying no
-   * billable lines, which can never be invoiced and would sit in the Invoiceable Outlets
-   * queue and the wizard's bundling list forever, offering a bill with nothing on it.
+   * BUILT BY JOIN, never from `row.$OutletConsumptionItems` — the store nests children onto
+   * a record only when that record is hydrated individually (a View page), so records read
+   * from a LIST carry no `$`-prefixed child arrays at all and a consumer reading them sees
+   * every consumption as empty. Same trap, same fix as `useInvoiceIndex`'s
+   * `consumptionItemsByCode`; see `uninvoicedConsumptions` below for what it cost here.
    *
-   * The submit path no longer creates them (`Add/PageAction.js` writes no header unless
-   * something was actually consumed), so this now covers rows written before that rule
-   * existed. It stays because the queue must be correct about the data on the sheet, not
-   * about the data the current code would have written.
+   * ANSWERS `undefined`, NOT `0`, FOR A CONSUMPTION WITH NO ITEM ROWS LOADED. The child
+   * resource is fetched on demand, so "no rows for this code" means either an empty
+   * consumption or an unloaded one, and those must not render the same. A caller showing
+   * this figure has to decide what to print when it is missing rather than being handed a
+   * confident zero — which is exactly the lie the wizard was telling.
+   *
+   * One pass into a `Map`, so each lookup is O(1) rather than a scan per consumption
+   * (CORE_ARCHITECTURE_RULES §6).
    */
-  const hasBillableLines = (row) => (Array.isArray(row?.$OutletConsumptionItems) ? row.$OutletConsumptionItems : [])
-    .map(asRow).some((item) => isActiveRow(item) && num(item.Qty) > 0)
+  const soldQtyByConsumption = computed(() => {
+    const map = new Map()
+    consumptionItems.value.forEach((item) => {
+      const code = text(item.OutletConsumptionCode)
+      if (!code) return
+      map.set(code, (map.get(code) || 0) + num(item.Qty))
+    })
+    return map
+  })
 
+  /** Total counted quantity of one consumption, or `undefined` if its lines are not loaded. */
+  const soldQtyOfConsumption = (code) => soldQtyByConsumption.value.get(text(code))
+
+  /**
+   * Consumptions still owed an invoice — the state column and the absence of a real
+   * invoice. Two conditions, both answerable from the PARENT row alone.
+   *
+   * NO LINE-ITEM CONDITION HERE, DELIBERATELY. An earlier version also required the
+   * consumption to carry a billable line, to keep ORPHAN headers out of the queue. That
+   * test cannot be asked at Index level: child rows are fetched only when a record is
+   * hydrated individually (a View page), so `OutletConsumptionItems` has zero rows on this
+   * page and `row.$OutletConsumptionItems` does not exist at all on records read from a
+   * LIST — see the same warning at `useInvoiceIndex.js`'s `itemsByConsumption`. The guard
+   * therefore reported EVERY consumption as empty and emptied the whole queue: 63 rows
+   * sitting in PENDING_INVOICE_GENERATION rendered as "Everything is invoiced".
+   *
+   * Loading every item row just to answer it would be the wrong trade — a whole child
+   * resource pulled into an index page for a guard against rows the submit path no longer
+   * writes (`Add/PageAction.js` writes no header unless something was actually consumed).
+   * A projection over parent rows must not depend on data the page does not load; the
+   * orphan case belongs where the items ARE loaded — the Add-invoice wizard, which reads
+   * the real lines before it offers a bill.
+   *
+   * The failure directions are not symmetric either: a stray empty header shows one extra
+   * row that resolves itself when opened, while this guard hid every real one.
+   */
   const uninvoicedConsumptions = computed(() => {
     const covered = invoicedConsumptionCodes.value
     return consumptions.value.filter((row) =>
       progressOf(row) === PENDING_INVOICE_GENERATION &&
-      !covered.has(text(row.Code)) &&
-      hasBillableLines(row))
+      !covered.has(text(row.Code)))
   })
 
   /**
@@ -339,6 +377,7 @@ const shared = defineSharedComposable((dataStore) => {
     frequencyByOutlet,
     invoicedConsumptionCodes,
     uninvoicedConsumptions,
+    soldQtyOfConsumption,
     outletAudits,
     auditByOutlet,
     consumptionsToday,

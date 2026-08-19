@@ -90,6 +90,13 @@ export function useConsumptionWizard () {
   // tax-free total for lines that were about to be invoiced WITH tax, because the submit
   // ran later, by which time some other page had usually loaded them.
   const taxes = resource('Taxes')
+  // Opened for the same reason as `Taxes`, and it is the BUNDLING leg that needs it:
+  // `Add/PageAction.js` passes `rows('OutletConsumptionItems')` to the workflow builder,
+  // which takes the union of the bundled consumptions' lines as the invoice's lines. Left
+  // unloaded, a ticked candidate contributes nothing and the bill silently omits it. Item
+  // rows are child rows, fetched only on demand, so this page has to ask for them itself.
+  // It also gives `bundleCandidates` the quantities it prints.
+  const consumptionItems = resource('OutletConsumptionItems')
 
   const { getSku } = useSkuResource()
   const { getOutlet } = useOutletResource()
@@ -324,6 +331,13 @@ export function useConsumptionWizard () {
    * Read from the shared Index aggregate so this list and the Index page's "Invoiceable
    * Outlets" queue are the same set; a user who arrived from that queue sees exactly the
    * backlog it promised.
+   *
+   * `qty` comes from Layer 2's indexed join, NOT from `row.$OutletConsumptionItems` — a
+   * record read from a list carries no `$`-prefixed child arrays, so the old expression
+   * scored every candidate "0 units" no matter how much was counted. It is `undefined`
+   * while the item rows are not loaded, and the card prints the units clause only when a
+   * real figure exists: an unloaded consumption must not be advertised as an empty one,
+   * since the tick beside it puts those lines on the bill.
    */
   const bundleCandidates = computed(() => index.uninvoicedConsumptions.value
     .filter((row) => text(row.OutletCode) === outletCode.value)
@@ -331,8 +345,7 @@ export function useConsumptionWizard () {
       code: text(row.Code),
       date: text(row.Date),
       username: text(row.Username),
-      qty: (Array.isArray(row.$OutletConsumptionItems) ? row.$OutletConsumptionItems : [])
-        .map(asRow).reduce((sum, item) => sum + toNumber(item.Qty), 0)
+      qty: index.soldQtyOfConsumption(text(row.Code))
     }))
     .sort((a, b) => (a.date < b.date ? 1 : -1)))
 
@@ -502,7 +515,7 @@ export function useConsumptionWizard () {
     // options
     outletOptions, visitOptions, plannedVisitCards, skuOptions, regionWarehouses,
     // resources (for a card that needs to `reload()` them)
-    resources: { outlets, visits, storages, warehouses, warehouseStorages, skus, products, returns, operatingRules, taxes },
+    resources: { outlets, visits, storages, warehouses, warehouseStorages, skus, products, returns, operatingRules, taxes, consumptionItems },
     // step 2
     countRows, hasCountRows, seedCountRows, setCurrentQty, stepCurrentQty,
     addManualReturn, removeManualReturn, soldRows, returnRows, skuLabel,

@@ -665,6 +665,37 @@ Age **banding is the caller's decision**, not the component's: the thresholds th
 
 **Spacing / `$attrs`.** Same contract as §2.4.
 
+### 2.8 `DistributionBars` — Ranked Categorical Breakdown
+
+```html
+<Section section="DistributionBars" :items="[...]" />
+```
+
+Answers **"where is this concentrated?"** A row of counters states five numbers; a ranked set of bars states their *shape*, because each bar is drawn relative to the largest and the reader sees the distribution rather than reconstructing it. Built entirely from `q-linear-progress` and Quasar utility classes — no charting library (CORE_ARCHITECTURE_RULES §7, Quasar-First).
+
+Entirely **dimension-agnostic**. Provinces, cities, warehouses, suppliers, payment modes: the projection from records to `{ label, count }` belongs to the calling resource's JS modifier, exactly as it does for `MetricCards` and `WorkflowFunnel`. The first consumer is `_ui/AQL/components/Master/Outlets/Index/DistributionBars.js`, which supplies three groups — Province, City, Area.
+
+**Two accepted `items` shapes.** A flat `[{ label, count }]` renders one group and no selector; a grouped `[{ key, label, items: [{ label, count }] }]` renders a `q-btn-toggle` above the bars so the reader switches dimension without leaving the card. A toggle with one option is a label wearing a button's clothes, so the selector is omitted below two groups.
+
+**Props catalog** — `title`, `items` and `color` accept `Function`, evaluated through `evaluateProp` with the `(record, config)` signature.
+
+| Prop | Type | Default | Purpose |
+|---|---|---|---|
+| `title` | `[String, Function]` | `''` | Divider label above the card. Omitted when empty. |
+| `items` | `[Array, Function]` | `null` | Flat or grouped, per above. **Function-valued in a JS modifier**, or it latches the empty first tick. |
+| `color` | `[String, Function]` | `'primary'` | One colour for the whole set — the bars are one measurement, not a legend. |
+| `maxBars` | `Number` | `8` | Bars before the tail collapses into one `+ N more` caption line. A breakdown is a shape; thirty bars is a table. |
+| `cardClass` | `[String, Array, Object]` | `''` | The calling UI's card shell. **Deliberately empty here**: a framework base may not import a `_ui/{Ui}/_config/`, so the resource's JS modifier relays its own `ui.cardClass` (UI_MODULE_DEVELOPER_GUIDE.md §10.1). |
+| `rowStaggerMs` | `Number` | `40` | Per-row entrance delay, matching the UI's `rowStaggerMs` token. |
+
+**Normalization & the strict hide rule.** A bar without a label, or with a count of zero, is dropped — an invisible bar still costs a row. A **group** whose bars all drop is removed from the selector entirely rather than offered and then found empty: a tenant that never fills `Area` gets no Area tab. When every group drops, the section renders nothing at all (§9.2 rule 2).
+
+**Selection.** The user's choice is held separately from the resolved active group, so a selection that becomes invalid as data lands (its group emptied out) falls back silently to the first available group instead of leaving the card blank.
+
+**Styling.** No `<style>` block — every class is Quasar's own or one of the canonical shared families (`.aql-detail-row`, `.aql-flex-wrap-text`) already in `custom.scss`. `inheritAttrs: false`, per §12.1's leaf rule.
+
+**Spacing / `$attrs`.** Same contract as §2.4.
+
 ---
 
 ## 3. Section Customization & Overrides

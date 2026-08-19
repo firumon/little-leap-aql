@@ -241,13 +241,13 @@ function handleResourceCreateRecord(auth, payload) {
   rowData[idx.Code] = code;
 
   applyAccessRegionOnWrite(rowData, idx, auth);
-  applyAuditFields(rowData, idx, auth, resource.config, true);
+  const recordTimestamp = applyAuditFields(rowData, idx, auth, resource.config, true);
   validateRequiredFields(rowData, idx, schema.requiredHeaders, resourceName);
   validateMasterUniqueness(values, idx, rowData, schema, -1, resourceName);
 
   const targetRow = sheet.getLastRow() + 1;
   sheet.getRange(targetRow, 1, 1, headers.length).setValues([rowData]);
-  updateResourceSyncCursor(resourceName);
+  updateResourceSyncCursor(resourceName, recordTimestamp);
 
   var savedRecord = rowArrayToObject(headers, rowData);
   var result = {
@@ -390,12 +390,12 @@ function handleResourceUpdateRecord(auth, payload) {
   const mergedRow = mergeMasterRow(existingRow, idx, providedValues, schema);
   mergedRow[idx.Code] = code;
 
-  applyAuditFields(mergedRow, idx, auth, resource.config, false);
+  const recordTimestamp = applyAuditFields(mergedRow, idx, auth, resource.config, false);
   validateRequiredFields(mergedRow, idx, schema.requiredHeaders, resourceName);
   validateMasterUniqueness(values, idx, mergedRow, schema, rowNumber, resourceName);
 
   sheet.getRange(rowNumber, 1, 1, headers.length).setValues([mergedRow]);
-  updateResourceSyncCursor(resourceName);
+  updateResourceSyncCursor(resourceName, recordTimestamp);
 
   var savedRecord = rowArrayToObject(headers, mergedRow);
   var result = {
@@ -539,6 +539,32 @@ function buildResourceRowsResponse(auth, resourceName, resource, rows, lastUpdat
     return canAccessRowByPolicy(auth, resource.config, row, idx);
   });
 
+  // Derive the true data cursor from the rows we just read: max(UpdatedAt).
+  // Single-pass tracking — never Math.max(...rows), which overflows the call
+  // stack on large sheets.
+  var maxUpdatedAt = 0;
+  const updatedAtIdx = idx.UpdatedAt;
+  if (updatedAtIdx !== undefined) {
+    for (var i = 0; i < rows.length; i++) {
+      var ts = normalizeUpdatedAtMillis(rows[i][updatedAtIdx]);
+      if (ts > maxUpdatedAt) maxUpdatedAt = ts;
+    }
+  }
+
+  if (maxUpdatedAt) {
+    // Keep the dynamic cursor store honest even when the write path was
+    // bypassed (manual sheet edits, imports, formula-driven rows).
+    bumpResourceSyncCursorCache(resourceName, maxUpdatedAt);
+  } else {
+    // Delta read returned nothing new: report the stored cursor rather than 0,
+    // so the client never rewinds its own lastDataUpdatedAt.
+    try {
+      maxUpdatedAt = getResourceSyncCursor(resourceName) || 0;
+    } catch (e) {
+      maxUpdatedAt = 0;
+    }
+  }
+
   return {
     success: true,
     rows: filteredRows,
@@ -548,9 +574,28 @@ function buildResourceRowsResponse(auth, resourceName, resource, rows, lastUpdat
       sheetName: resource.config.sheetName,
       requestedBy: auth && auth.user ? auth.user.UserID : null,
       hasDeltaFilter: !!lastUpdatedAt,
+      lastDataUpdatedAt: maxUpdatedAt,
       lastSyncAt: Date.now()
     }
   };
+}
+
+/**
+ * Coerces an UpdatedAt cell to epoch millis.
+ * Rows written by applyAuditFields hold a raw number; legacy/manual rows may
+ * hold a Date or a date string.
+ */
+function normalizeUpdatedAtMillis(value) {
+  if (value === '' || value === null || value === undefined) return 0;
+  if (typeof value === 'number') return isFinite(value) ? value : 0;
+  if (value instanceof Date) {
+    var t = value.getTime();
+    return isNaN(t) ? 0 : t;
+  }
+  var numeric = Number(value);
+  if (isFinite(numeric) && numeric > 0) return numeric;
+  var parsed = parseDateInput(value);
+  return parsed ? parsed.getTime() : 0;
 }
 
 function enforceRecordLevelAccess(auth, resourceConfig, headers, rowValues) {
@@ -785,6 +830,14 @@ function normalizeValueByHeader(header, value) {
   return value;
 }
 
+/**
+ * Stamps audit columns and returns the timestamp used, so write handlers can
+ * advance the resource sync cursor with the exact same value that landed in
+ * the row's UpdatedAt cell (a cursor ahead of the row would hide the write
+ * from the very next poll).
+ *
+ * @return {number} epoch millis
+ */
 function applyAuditFields(row, idx, auth, resourceConfig, isCreate) {
   const now = Date.now();
 
@@ -794,6 +847,8 @@ function applyAuditFields(row, idx, auth, resourceConfig, isCreate) {
     if (isCreate && idx.CreatedBy !== undefined) row[idx.CreatedBy] = auth.user.UserID;
     if (idx.UpdatedBy !== undefined) row[idx.UpdatedBy] = auth.user.UserID;
   }
+
+  return now;
 }
 
 function validateRequiredFields(row, idx, requiredHeaders, resourceName) {
@@ -1342,6 +1397,7 @@ function handleCompositeSave(auth, payload) {
   var parentRowData;
   var parentRowNumber = -1;
 
+  var parentTimestamp = 0;
   if (isEdit) {
     parentCode = payload.code.toString().trim();
     parentRowNumber = findRowByValue(parentSheet, parentIdx.Code, parentCode, 2, true);
@@ -1352,7 +1408,7 @@ function handleCompositeSave(auth, payload) {
     enforceRecordLevelAccess(auth, parentResource.config, parentHeaders, existingRow);
     parentRowData = mergeMasterRow(existingRow, parentIdx, parentProvidedValues, parentSchema);
     parentRowData[parentIdx.Code] = parentCode;
-    applyAuditFields(parentRowData, parentIdx, auth, parentResource.config, false);
+    parentTimestamp = applyAuditFields(parentRowData, parentIdx, auth, parentResource.config, false);
   } else {
     parentCode = providedParentCode;
     if (!parentCode) {
@@ -1368,7 +1424,7 @@ function handleCompositeSave(auth, payload) {
     parentRowData = buildNewResourceRow(parentHeaders, parentIdx, parentProvidedValues, parentSchema);
     parentRowData[parentIdx.Code] = parentCode;
     applyAccessRegionOnWrite(parentRowData, parentIdx, auth);
-    applyAuditFields(parentRowData, parentIdx, auth, parentResource.config, true);
+    parentTimestamp = applyAuditFields(parentRowData, parentIdx, auth, parentResource.config, true);
   }
 
   // Validate parent
@@ -1408,7 +1464,7 @@ function handleCompositeSave(auth, payload) {
     var childSeqLength = childResource.config.codeSequenceLength || 6;
     var childCurrentValues = childValues.slice();
 
-    var childOps = { resourceName: childResourceName, config: childResource.config, sheet: childSheet, headers: childHeaders, newRows: [], updateOps: [] };
+    var childOps = { resourceName: childResourceName, config: childResource.config, sheet: childSheet, headers: childHeaders, newRows: [], updateOps: [], maxTimestamp: 0 };
 
     for (var r = 0; r < childRecords.length; r++) {
       var rec = childRecords[r];
@@ -1436,7 +1492,8 @@ function handleCompositeSave(auth, payload) {
           if (deactivateRowNum !== -1) {
             var deactivateRow = childSheet.getRange(deactivateRowNum, 1, 1, childHeaders.length).getValues()[0];
             deactivateRow[childIdx.Status] = 'Inactive';
-            applyAuditFields(deactivateRow, childIdx, auth, childResource.config, false);
+            var deactivateTs = applyAuditFields(deactivateRow, childIdx, auth, childResource.config, false);
+            if (deactivateTs > childOps.maxTimestamp) childOps.maxTimestamp = deactivateTs;
             childOps.updateOps.push({ rowNumber: deactivateRowNum, rowData: deactivateRow });
           }
         } else if (recAction === 'update' && originalCode) {
@@ -1448,7 +1505,8 @@ function handleCompositeSave(auth, payload) {
           var existingChildRow = childSheet.getRange(updateRowNum, 1, 1, childHeaders.length).getValues()[0];
           var mergedChild = mergeMasterRow(existingChildRow, childIdx, childProvidedValues, childSchema);
           mergedChild[childIdx.Code] = nextCode;
-          applyAuditFields(mergedChild, childIdx, auth, childResource.config, false);
+          var mergedChildTs = applyAuditFields(mergedChild, childIdx, auth, childResource.config, false);
+          if (mergedChildTs > childOps.maxTimestamp) childOps.maxTimestamp = mergedChildTs;
           validateRequiredFields(mergedChild, childIdx, childSchema.requiredHeaders, childResourceName);
           validateMasterUniqueness(childCurrentValues, childIdx, mergedChild, childSchema, updateRowNum, childResourceName);
           childOps.updateOps.push({ rowNumber: updateRowNum, rowData: mergedChild });
@@ -1461,7 +1519,8 @@ function handleCompositeSave(auth, payload) {
           var newChildRow = buildNewResourceRow(childHeaders, childIdx, childProvidedValues, childSchema);
           newChildRow[childIdx.Code] = newChildCode;
           applyAccessRegionOnWrite(newChildRow, childIdx, auth);
-          applyAuditFields(newChildRow, childIdx, auth, childResource.config, true);
+          var newChildTs = applyAuditFields(newChildRow, childIdx, auth, childResource.config, true);
+          if (newChildTs > childOps.maxTimestamp) childOps.maxTimestamp = newChildTs;
           validateRequiredFields(newChildRow, childIdx, childSchema.requiredHeaders, childResourceName);
           validateMasterUniqueness(childCurrentValues, childIdx, newChildRow, childSchema, -1, childResourceName);
           childOps.newRows.push(newChildRow);
@@ -1492,7 +1551,7 @@ function handleCompositeSave(auth, payload) {
     var parentTargetRow = parentSheet.getLastRow() + 1;
     parentSheet.getRange(parentTargetRow, 1, 1, parentHeaders.length).setValues([parentRowData]);
   }
-  updateResourceSyncCursor(parentResourceName);
+  updateResourceSyncCursor(parentResourceName, parentTimestamp);
 
   // Write children
   var affectedResources = [parentResourceName];
@@ -1507,7 +1566,7 @@ function handleCompositeSave(auth, payload) {
     for (var u = 0; u < ops.updateOps.length; u++) {
       ops.sheet.getRange(ops.updateOps[u].rowNumber, 1, 1, ops.headers.length).setValues([ops.updateOps[u].rowData]);
     }
-    updateResourceSyncCursor(ops.resourceName);
+    updateResourceSyncCursor(ops.resourceName, ops.maxTimestamp);
 
     var touchedKey = (ops.resourceName || '').toString().trim().toLowerCase();
     if (touchedKey && !touchedResourceMap[touchedKey]) {
@@ -1689,12 +1748,12 @@ function handleExecuteAction(auth, payload) {
   });
 
   // Apply audit
-  applyAuditFields(existingRow, idx, auth, resource.config, false);
+  var recordTimestamp = applyAuditFields(existingRow, idx, auth, resource.config, false);
 
   // Write back
   sheet.getRange(rowNumber, 1, 1, headers.length).setValues([existingRow]);
   SpreadsheetApp.flush();
-  updateResourceSyncCursor(resourceName);
+  updateResourceSyncCursor(resourceName, recordTimestamp);
 
   var savedRecord = rowArrayToObject(headers, existingRow);
 
@@ -1772,6 +1831,10 @@ function handleResourceBulkUpsertRecords(auth, payload) {
 
   var newRows = [];       // Array of rowData arrays to append
   var updateOps = [];     // Array of {rowNumber, rowData} to write back
+  // Newest audit timestamp stamped in this batch; drives the sync cursor.
+  // Tracked with a single-pass max (never Math.max(...array) — bulk batches can
+  // be large enough to blow the call stack on a spread).
+  var maxRecordTimestamp = 0;
 
   // Track Codes seen within this batch. When the same Code appears more than
   // once (e.g., allocation split), subsequent occurrences force a new INSERT
@@ -1799,7 +1862,8 @@ function handleResourceBulkUpsertRecords(auth, payload) {
         rowData = buildNewResourceRow(headers, idx, providedValues, schema);
         rowData[idx.Code] = newCode;
         applyAccessRegionOnWrite(rowData, idx, auth);
-        applyAuditFields(rowData, idx, auth, resource.config, true);
+        var createdAtTs = applyAuditFields(rowData, idx, auth, resource.config, true);
+        if (createdAtTs > maxRecordTimestamp) maxRecordTimestamp = createdAtTs;
         validateRequiredFields(rowData, idx, schema.requiredHeaders, targetResourceName);
         validateMasterUniqueness(currentValues, idx, rowData, schema, -1, targetResourceName);
 
@@ -1813,7 +1877,8 @@ function handleResourceBulkUpsertRecords(auth, payload) {
         enforceRecordLevelAccess(auth, resource.config, headers, existingRow);
         rowData = mergeMasterRow(existingRow, idx, providedValues, schema);
         rowData[idx.Code] = code;
-        applyAuditFields(rowData, idx, auth, resource.config, false);
+        var updatedAtTs = applyAuditFields(rowData, idx, auth, resource.config, false);
+        if (updatedAtTs > maxRecordTimestamp) maxRecordTimestamp = updatedAtTs;
         validateRequiredFields(rowData, idx, schema.requiredHeaders, targetResourceName);
         validateMasterUniqueness(currentValues, idx, rowData, schema, rowNumber, targetResourceName);
 
@@ -1838,7 +1903,7 @@ function handleResourceBulkUpsertRecords(auth, payload) {
     sheet.getRange(updateOps[u].rowNumber, 1, 1, headers.length).setValues([updateOps[u].rowData]);
   }
 
-  updateResourceSyncCursor(targetResourceName);
+  updateResourceSyncCursor(targetResourceName, maxRecordTimestamp);
   var allFailed = results.errors.length >= records.length;
   var hasErrors = results.errors.length > 0;
   var bulkMessage = buildBulkUpsertResultMessage(targetResourceName, results, records.length);

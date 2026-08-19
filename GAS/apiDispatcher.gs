@@ -755,19 +755,23 @@ function handlePollAction(auth, payload) {
   // LastDataUpdatedAt earlier than the returned serverTime; the client would
   // then advance its unchanged-resource cursor past that write and never see it.
   const serverTime = Date.now();
-  const configMap = getResourceConfigMap() || {};
 
-  Object.keys(cursors).forEach(function (resourceName) {
+  // Live cursors come from the dedicated cursor store (CacheService keyed by
+  // spreadsheet id + resource), NOT from the frozen resource config snapshot.
+  // The config snapshot is cached permanently and its lastDataUpdatedAt goes
+  // stale the moment any write lands, which is what made every poll report
+  // zero updates.
+  const resourceNames = Object.keys(cursors);
+  const serverCursors = getResourceSyncCursors(resourceNames) || {};
+
+  resourceNames.forEach(function (resourceName) {
     try {
       const clientCursor = Number(cursors[resourceName]) || 0;
-      const config = configMap[resourceName];
-      if (!config) return;
 
       // Check if user has read permission
       enforceMasterPermission(auth, resourceName, 'canRead');
 
-      // Compare client cursor with server's LastDataUpdatedAt
-      const serverLastUpdated = config.lastDataUpdatedAt || 0;
+      const serverLastUpdated = Number(serverCursors[resourceName]) || 0;
       if (serverLastUpdated > clientCursor) {
         updatedResources.push(resourceName);
       }

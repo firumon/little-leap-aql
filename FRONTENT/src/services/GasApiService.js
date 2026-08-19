@@ -22,10 +22,10 @@ export function registerApiResponseListener(callback) {
 }
 
 /** Lifecycle notifications are advisory; a listener fault must never fail the API call. */
-function notifyLifecycle(callback, action) {
+function notifyLifecycle(callback, action, meta = {}) {
   if (typeof callback !== 'function') return
   try {
-    callback(action)
+    callback(action, meta)
   } catch (error) {
     logger.warn('API lifecycle listener error', { action, error: error?.message || String(error) })
   }
@@ -174,9 +174,13 @@ async function ingestResourcePayloads(resourcesPayload, token) {
     }
 
     const lastSyncAt = payload?.meta?.lastSyncAt || Date.now()
+    // Data cursor (max UpdatedAt on the server) — distinct from lastSyncAt,
+    // which is only a "when did we last talk to the server" stamp.
+    const lastDataUpdatedAt = payload?.meta?.lastDataUpdatedAt || lastSyncAt
     await setResourceMeta(resourceName, {
       headers,
       lastSyncAt,
+      lastDataUpdatedAt,
       lastFetchAt: Date.now(),
       hasHydratedOnce: true
     })
@@ -201,9 +205,13 @@ async function ingestResourcePayloads(resourcesPayload, token) {
     }
 
     const lastSyncAt = payload?.meta?.lastSyncAt || Date.now()
+    // Data cursor (max UpdatedAt on the server) — distinct from lastSyncAt,
+    // which is only a "when did we last talk to the server" stamp.
+    const lastDataUpdatedAt = payload?.meta?.lastDataUpdatedAt || lastSyncAt
     await setResourceMeta(resourceName, {
       headers,
       lastSyncAt,
+      lastDataUpdatedAt,
       lastFetchAt: Date.now(),
       hasHydratedOnce: true
     })
@@ -227,6 +235,8 @@ export async function executeGasApi(action, payload = {}, options = {}) {
   const {
     requireAuth = true,
     token = null,
+    background = false,
+    timeout = null,
     tokenResolver = () => localStorage.getItem('token')
   } = options
 
@@ -239,15 +249,20 @@ export async function executeGasApi(action, payload = {}, options = {}) {
   const requestBody = buildCanonicalRequest(action, payload, authToken, requireAuth)
 
   // `poll` is the background heartbeat itself, so it must not drive its own
-  // pause/reset lifecycle. Every other action is user-driven.
+  // pause/resume lifecycle. Every other action suspends the countdown while it
+  // runs, but `background: true` marks a call the poller made on its own behalf
+  // (the delta `get` after a poll finds changes) — that still holds the
+  // countdown, yet must NOT collapse the escalation ladder, or a tab nobody is
+  // watching would sit at Tier 0 forever just because its data keeps changing.
   const isLifecycleAction = action !== 'poll'
+  const lifecycleMeta = { background: background === true }
   if (isLifecycleAction) {
-    notifyLifecycle(onApiRequestCallback, action)
+    notifyLifecycle(onApiRequestCallback, action, lifecycleMeta)
   }
 
   try {
     logger.debug('Calling GAS API', { action, requestId: requestBody.requestId })
-    const response = await apiClient.post('', requestBody)
+    const response = await apiClient.post('', requestBody, timeout ? { timeout } : {})
     const data = response?.data
 
     if (!isCanonicalEnvelope(data)) {
@@ -282,7 +297,7 @@ export async function executeGasApi(action, payload = {}, options = {}) {
     return standardizeResponse(false, null, errorMsg)
   } finally {
     if (isLifecycleAction) {
-      notifyLifecycle(onApiResponseCallback, action)
+      notifyLifecycle(onApiResponseCallback, action, lifecycleMeta)
     }
   }
 }

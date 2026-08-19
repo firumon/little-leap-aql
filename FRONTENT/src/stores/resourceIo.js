@@ -234,6 +234,7 @@ export const useResourceIoStore = defineStore('resourceIo', () => {
       showLoading: options.showLoading === true,
       showError: options.showError === true,
       forceSync: options.forceSync === true,
+      background: options.background === true,
       resourceStatus
     })
 

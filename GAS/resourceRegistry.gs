@@ -229,11 +229,171 @@ function openResourceSheet(resourceName) {
   return { config, file, sheet };
 }
 
-function updateResourceSyncCursor(resourceName) {
+/**
+ * ------------------------------------------------------------
+ * Dynamic sync cursor store
+ * ------------------------------------------------------------
+ * The data cursor (`LastDataUpdatedAt`) changes on every write, so it is kept
+ * OUT of the heavy, long-lived resource config snapshot
+ * (AQL_RESOURCE_CONFIG_MAP_V3 / permanent metadata) which is intentionally
+ * frozen. Cursors live in their own CacheService keys:
+ *
+ *   AQL_CURSOR_<SpreadsheetId>_<ResourceName>
+ *
+ * The spreadsheet id is part of the key so standalone (AqlCore) deployments
+ * shared across tenants cannot collide. APP.Resources remains the durable
+ * store; CacheService is the fast path with a 6h TTL and a sheet-backed
+ * fallback on cold start.
+ */
+var CURSOR_CACHE_PREFIX = 'AQL_CURSOR_';
+var CURSOR_CACHE_TTL_SEC = 21600; // 6 hours
+var _resource_cursor_cache = {};
+
+function buildResourceCursorCacheKey(resourceName) {
+  return CURSOR_CACHE_PREFIX + getAppSpreadsheet().getId() + '_' + resourceName;
+}
+
+/**
+ * Reads sync cursors for the given resource names.
+ * Fast path: CacheService (one batched getAll). Cold start falls back to the
+ * LastDataUpdatedAt cell in APP.Resources and re-populates the cache.
+ *
+ * @param {string[]} resourceNames
+ * @return {Object} map of resourceName -> epoch millis (0 when unknown)
+ */
+function getResourceSyncCursors(resourceNames) {
+  var names = [];
+  var out = {};
+  var list = Array.isArray(resourceNames) ? resourceNames : [resourceNames];
+
+  for (var n = 0; n < list.length; n++) {
+    var name = (list[n] || '').toString().trim();
+    if (!name || out[name] !== undefined) continue;
+    out[name] = 0;
+    names.push(name);
+  }
+  if (!names.length) return out;
+
+  var pending = [];
+  for (var a = 0; a < names.length; a++) {
+    var memName = names[a];
+    if (_resource_cursor_cache[memName] !== undefined) {
+      out[memName] = _resource_cursor_cache[memName];
+    } else {
+      pending.push(memName);
+    }
+  }
+  if (!pending.length) return out;
+
+  var keys = [];
+  var keyToName = {};
+  for (var b = 0; b < pending.length; b++) {
+    var key = buildResourceCursorCacheKey(pending[b]);
+    keys.push(key);
+    keyToName[key] = pending[b];
+  }
+
+  var cached = {};
+  try {
+    cached = CacheService.getScriptCache().getAll(keys) || {};
+  } catch (e) {
+    cached = {};
+  }
+
+  var missing = [];
+  for (var c = 0; c < keys.length; c++) {
+    var k = keys[c];
+    var nm = keyToName[k];
+    if (cached[k] !== undefined && cached[k] !== null && cached[k] !== '') {
+      var parsed = Number(cached[k]) || 0;
+      out[nm] = parsed;
+      _resource_cursor_cache[nm] = parsed;
+    } else {
+      missing.push(nm);
+    }
+  }
+
+  if (!missing.length) return out;
+
+  // Cold start: hydrate the misses from APP.Resources in a single sheet read.
+  var toCache = {};
+  try {
+    var registry = getResourceRegistryContext();
+    if (registry.idx.LastDataUpdatedAt !== undefined) {
+      var wanted = {};
+      for (var m = 0; m < missing.length; m++) wanted[missing[m]] = true;
+
+      for (var i = 1; i < registry.values.length; i++) {
+        var row = registry.values[i];
+        var rowName = (row[registry.idx.Name] || '').toString().trim();
+        if (!rowName || !wanted[rowName]) continue;
+
+        var value = Number(row[registry.idx.LastDataUpdatedAt]) || 0;
+        out[rowName] = value;
+        _resource_cursor_cache[rowName] = value;
+        toCache[buildResourceCursorCacheKey(rowName)] = String(value);
+      }
+    }
+  } catch (e) {
+    console.warn('getResourceSyncCursors: sheet fallback failed: ' + e.message);
+  }
+
+  if (Object.keys(toCache).length) {
+    try {
+      CacheService.getScriptCache().putAll(toCache, CURSOR_CACHE_TTL_SEC);
+    } catch (e) { /* cache is best-effort */ }
+  }
+
+  return out;
+}
+
+/** Single-resource convenience wrapper around getResourceSyncCursors(). */
+function getResourceSyncCursor(resourceName) {
+  var name = (resourceName || '').toString().trim();
+  if (!name) return 0;
+  return getResourceSyncCursors([name])[name] || 0;
+}
+
+/**
+ * Writes a cursor to CacheService (and the in-memory mirror) without touching
+ * the sheet. Monotonic: an older timestamp never rewinds a newer one.
+ * Used by read paths that derive max(UpdatedAt) from the rows they just read.
+ */
+function bumpResourceSyncCursorCache(resourceName, timestamp) {
+  var name = (resourceName || '').toString().trim();
+  var ts = Number(timestamp) || 0;
+  if (!name || !ts) return 0;
+
+  var current = _resource_cursor_cache[name];
+  if (current === undefined) {
+    current = getResourceSyncCursors([name])[name] || 0;
+  }
+  if (ts <= current) return current;
+
+  _resource_cursor_cache[name] = ts;
+  try {
+    CacheService.getScriptCache().put(buildResourceCursorCacheKey(name), String(ts), CURSOR_CACHE_TTL_SEC);
+  } catch (e) { /* cache is best-effort */ }
+  return ts;
+}
+
+/**
+ * Advances the durable sync cursor for a resource.
+ * Writes APP.Resources.LastDataUpdatedAt and immediately refreshes the
+ * CacheService key so the very next poll execution observes the change.
+ *
+ * @param {string} resourceName
+ * @param {number} [timestamp] epoch millis; defaults to Date.now(). Callers
+ *   that just stamped audit fields should pass the identical timestamp so the
+ *   cursor and the row's UpdatedAt cannot disagree.
+ */
+function updateResourceSyncCursor(resourceName, timestamp) {
   var name = (resourceName || '').toString().trim();
   if (!name) {
     throw new Error('Resource name is required');
   }
+
+  var now = Number(timestamp) || Date.now();
 
   var registry = getResourceRegistryContext();
   if (registry.idx.LastDataUpdatedAt === undefined) {
@@ -245,8 +405,16 @@ function updateResourceSyncCursor(resourceName) {
     var rowName = (row[registry.idx.Name] || '').toString().trim();
     if (rowName !== name) continue;
 
-    var now = Date.now();
     registry.appSheet.getRange(i + 1, registry.idx.LastDataUpdatedAt + 1).setValue(now);
+    // Keep the cached registry values in step so a later read in this same
+    // execution does not resurrect the pre-write value.
+    row[registry.idx.LastDataUpdatedAt] = now;
+
+    // Dynamic cursor store: visible to the next execution's poll in ~1ms.
+    _resource_cursor_cache[name] = now;
+    try {
+      CacheService.getScriptCache().put(buildResourceCursorCacheKey(name), String(now), CURSOR_CACHE_TTL_SEC);
+    } catch (e) { /* cache is best-effort */ }
 
     // Update the in-memory config map if loaded, so subsequent reads in
     // the same execution see the new cursor without re-reading the sheet

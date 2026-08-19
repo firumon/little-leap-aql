@@ -5,6 +5,7 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useAuthStore } from 'src/stores/auth'
+import { useAuthLogic } from 'src/composables/core/useAuthLogic'
 import { requestNotificationPermission, subscribeToPush } from 'src/utils/notifications'
 import { useQuasar } from 'quasar'
 
@@ -42,6 +43,14 @@ onMounted(async () => {
   // Sync token with Service Worker on app load
   if (authStore.token) {
     authStore.notifyServiceWorker(authStore.token)
+  }
+
+  // A reload never passes through login(), so the client bootstrap — cache
+  // init, resource status hydration, polling — has to be re-run here for an
+  // existing session. Awaited before notifications so the heartbeat is up
+  // regardless of what the permission prompt does.
+  if (authStore.isAuthenticated) {
+    await useAuthLogic().restoreSession()
   }
 
   // Handle Notifications

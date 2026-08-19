@@ -77,7 +77,12 @@ function createStatus(resourceName) {
     headers: [],
     syncing: false,
     inFlightCount: 0,
+    // lastSyncAt  — when the client last completed a sync round-trip
+    // lastDataUpdatedAt — server-side data cursor (max UpdatedAt); the only
+    //   value polling compares against, and it only ever advances on a `get`
+    // lastFetchAt — local cache heartbeat, bumped even by empty polls
     lastSyncAt: null,
+    lastDataUpdatedAt: null,
     lastFetchAt: null,
     ttl: DEFAULT_RESOURCE_SYNC_TTL_SEC,
     lastError: '',
@@ -109,6 +114,14 @@ export const useResourceStatusStore = defineStore('resourceStatus', () => {
     return status
   }
 
+  /**
+   * Local cache heartbeat only — never touches lastSyncAt/lastDataUpdatedAt.
+   * Used by the poller when the server reports no changes.
+   */
+  function markFetched(resourceName, timestamp = Date.now()) {
+    return patchResource(resourceName, { lastFetchAt: toTimestamp(timestamp) })
+  }
+
   function applyAuthorizedResource(resource = {}, appConfig = {}) {
     const name = normalizeResourceName(resource?.name)
     if (!name) return null
@@ -131,11 +144,17 @@ export const useResourceStatusStore = defineStore('resourceStatus', () => {
     const headers = toStringArray(meta?.headers)
     const lastSyncAt = toTimestamp(meta?.lastSyncAt)
     const lastFetchAt = toTimestamp(meta?.lastFetchAt)
+    // Absent from a partial meta patch (e.g. an empty-poll heartbeat) means
+    // "unchanged", never "reset to null".
+    const nextDataCursor = meta?.lastDataUpdatedAt === undefined
+      ? byResource[name]?.lastDataUpdatedAt ?? null
+      : toTimestamp(meta?.lastDataUpdatedAt)
     const hydrated = meta?.hasHydratedOnce === true || !!lastSyncAt || !!lastFetchAt
 
     return patchResource(name, {
       ...(headers.length ? { headers } : {}),
       lastSyncAt,
+      lastDataUpdatedAt: nextDataCursor,
       lastFetchAt,
       hydrated,
       initiated: hydrated || byResource[name]?.initiated === true
@@ -242,6 +261,7 @@ export const useResourceStatusStore = defineStore('resourceStatus', () => {
   const initiated = computed(() => statusList.value.filter((entry) => entry.initiated).map((entry) => entry.resource))
   const hydrated = computed(() => statusList.value.filter((entry) => entry.hydrated).map((entry) => entry.resource))
   const lastSync = computed(() => Object.fromEntries(statusList.value.map((entry) => [entry.resource, entry.lastSyncAt])))
+  const lastDataUpdated = computed(() => Object.fromEntries(statusList.value.map((entry) => [entry.resource, entry.lastDataUpdatedAt])))
   const lastFetch = computed(() => Object.fromEntries(statusList.value.map((entry) => [entry.resource, entry.lastFetchAt])))
   const headers = computed(() => Object.fromEntries(statusList.value.map((entry) => [entry.resource, entry.headers])))
   const ttl = computed(() => Object.fromEntries(statusList.value.map((entry) => [entry.resource, entry.ttl])))
@@ -254,12 +274,14 @@ export const useResourceStatusStore = defineStore('resourceStatus', () => {
     initiated,
     hydrated,
     lastSync,
+    lastDataUpdated,
     lastFetch,
     headers,
     ttl,
     initializeResources,
     applyAuthorizedResource,
     applyResourceMeta,
+    markFetched,
     markSyncStarted,
     markSyncFinished,
     markSyncFailed,

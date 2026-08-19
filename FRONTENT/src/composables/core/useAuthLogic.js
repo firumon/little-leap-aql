@@ -92,6 +92,42 @@ export function useAuthLogic() {
     }
   }
 
+  /**
+   * Re-establishes an already-authenticated session after a page reload.
+   *
+   * `login()` is the only thing that bootstraps the client — it initialises the
+   * IndexedDB session, hydrates resource status, and starts polling. A refresh
+   * never goes through it, so without this the app comes back with an empty
+   * `resourceStatus` (no resource is `initiated`, so a poll would have nothing
+   * to ask about) and a polling store that was never started at all.
+   *
+   * The one deliberate difference from login is `resetCursors: false`. Login
+   * wipes the sync cursors because it is starting a new session; a reload must
+   * preserve `lastDataUpdatedAt` / `lastSyncAt` / `hasHydratedOnce`, or every
+   * refresh would re-download every resource from scratch.
+   *
+   * Deliberately does NOT re-run `syncInitialResources()`: the cache survives
+   * the reload, and the first poll picks up anything that changed while the tab
+   * was gone. Refetching everything on every refresh would be pure waste.
+   */
+  async function restoreSession() {
+    if (!auth.isAuthenticated) return { success: false, message: 'No session to restore' }
+
+    const polling = usePollingStore()
+
+    try {
+      // Awaited so resource status is populated before the first poll fires.
+      await auth.initializeClientSession(false)
+    } catch (error) {
+      // A cache-init failure must not leave the app without a heartbeat; the
+      // poll can still run against whatever status the pages populate lazily.
+      console.error('[useAuthLogic] Session restore failed to initialise cache:', error)
+    }
+
+    polling.start()
+    return { success: true }
+  }
+
   async function updateAvatar(avatarUrl) {
     const data = await auth.updateAvatarRequest(avatarUrl)
     if (!data.success) {
@@ -163,6 +199,7 @@ export function useAuthLogic() {
   return {
     login,
     logout,
+    restoreSession,
     updateAvatar,
     updateName,
     updateEmail,

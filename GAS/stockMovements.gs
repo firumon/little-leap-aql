@@ -146,6 +146,8 @@ function applyStockMovementToWarehouseStorages(record, auth) {
     }
 
     var now    = Date.now();
+    // Newest timestamp stamped on a WarehouseStorages row in this call.
+    var maxTimestamp = 0;
     var userId = auth && auth.user ? (auth.user.UserID || '') : '';
 
     if (matchedRowNumber !== -1) {
@@ -159,6 +161,7 @@ function applyStockMovementToWarehouseStorages(record, auth) {
       } else {
         // Update the row
         existingRow[idx.Quantity] = newQty;
+        if (now > maxTimestamp) maxTimestamp = now;
         if (idx.UpdatedAt !== undefined) existingRow[idx.UpdatedAt] = now;
         if (idx.UpdatedBy !== undefined) existingRow[idx.UpdatedBy] = userId;
         sheet.getRange(matchedRowNumber, 1, 1, headers.length).setValues([existingRow]);
@@ -174,11 +177,13 @@ function applyStockMovementToWarehouseStorages(record, auth) {
       if (idx.SKU           !== undefined) rowData[idx.SKU]           = sku;
       if (idx.Quantity      !== undefined) rowData[idx.Quantity]      = qtyChange;
       applyAccessRegionOnWrite(rowData, idx, auth);
-      applyAuditFields(rowData, idx, auth, config, true);
+      var createdTimestamp = applyAuditFields(rowData, idx, auth, config, true);
+      if (createdTimestamp > maxTimestamp) maxTimestamp = createdTimestamp;
       sheet.getRange(sheet.getLastRow() + 1, 1, 1, headers.length).setValues([rowData]);
     }
 
-    updateResourceSyncCursor('WarehouseStorages');
+    // A row that hit zero was deleted rather than stamped — fall back to now.
+    updateResourceSyncCursor('WarehouseStorages', maxTimestamp || Date.now());
     return { success: true };
 
   } catch (e) {
@@ -207,6 +212,8 @@ function applyBatchStockMovementsToWarehouseStorages(records, auth) {
   var codePrefix = (config.codePrefix || 'LOC').toString().trim();
   var codeSeqLen = config.codeSequenceLength || 5;
   var now        = Date.now();
+  // Newest timestamp stamped on a WarehouseStorages row across this batch.
+  var maxTimestamp = 0;
   var userId     = auth && auth.user ? (auth.user.UserID || '') : '';
 
   // updatedRows: sparse map of row-index-in-values → updated row array
@@ -239,6 +246,7 @@ function applyBatchStockMovementsToWarehouseStorages(records, auth) {
     if (matchedIndex !== -1) {
       var existing = (updatedRows[matchedIndex] || currentValues[matchedIndex]).slice();
       existing[idx.Quantity] = Number(existing[idx.Quantity] || 0) + qtyChange;
+      if (now > maxTimestamp) maxTimestamp = now;
       if (idx.UpdatedAt !== undefined) existing[idx.UpdatedAt] = now;
       if (idx.UpdatedBy !== undefined) existing[idx.UpdatedBy] = userId;
 
@@ -263,7 +271,8 @@ function applyBatchStockMovementsToWarehouseStorages(records, auth) {
 
       if (qtyChange > 0) { // Don't insert negative/zero new records
         applyAccessRegionOnWrite(newRow, idx, auth);
-        applyAuditFields(newRow, idx, auth, config, true);
+        var newRowTimestamp = applyAuditFields(newRow, idx, auth, config, true);
+        if (newRowTimestamp > maxTimestamp) maxTimestamp = newRowTimestamp;
         newRows.push(newRow);
         currentValues.push(newRow); // visible to subsequent iterations in this batch
       }
@@ -303,6 +312,7 @@ function applyBatchStockMovementsToWarehouseStorages(records, auth) {
   }
 
   if (updatedIndices.length || newRows.length || rowsToDelete.length > 0) {
-    updateResourceSyncCursor('WarehouseStorages');
+    // Deletions stamp no row, so a delete-only batch falls back to wall-clock.
+    updateResourceSyncCursor('WarehouseStorages', maxTimestamp || Date.now());
   }
 }

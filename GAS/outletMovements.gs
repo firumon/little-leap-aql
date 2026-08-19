@@ -60,6 +60,9 @@ function applyBatchOutletMovementsToOutletStorages(records, auth) {
     var newRows = [];
     var rowsToDelete = [];
     var now = Date.now();
+    // Newest timestamp actually stamped on a row; `now` covers the update path,
+    // applyAuditFields' return covers the create path.
+    var maxTimestamp = 0;
     var userId = auth && auth.user ? (auth.user.UserID || '') : '';
 
     keys.forEach(function (key) {
@@ -79,6 +82,7 @@ function applyBatchOutletMovementsToOutletStorages(records, auth) {
         var nextQty = Number(existing[idx.Quantity] || 0) + entry.qtyChange;
         if (nextQty < 0) Logger.log('OutletStorages negative balance warning: ' + key + ' -> ' + nextQty);
         existing[idx.Quantity] = nextQty;
+        if (now > maxTimestamp) maxTimestamp = now;
         if (idx.UpdatedAt !== undefined) existing[idx.UpdatedAt] = now;
         if (idx.UpdatedBy !== undefined) existing[idx.UpdatedBy] = userId;
         if (nextQty <= 0) {
@@ -96,7 +100,8 @@ function applyBatchOutletMovementsToOutletStorages(records, auth) {
         if (idx.OutletCode !== undefined) newRow[idx.OutletCode] = entry.outletCode;
         if (idx.SKU !== undefined) newRow[idx.SKU] = entry.sku;
         if (idx.Quantity !== undefined) newRow[idx.Quantity] = entry.qtyChange;
-        applyAuditFields(newRow, idx, auth, config, true);
+        var newRowTimestamp = applyAuditFields(newRow, idx, auth, config, true);
+        if (newRowTimestamp > maxTimestamp) maxTimestamp = newRowTimestamp;
         if (idx.UpdatedBy !== undefined) newRow[idx.UpdatedBy] = userId;
         newRows.push(newRow);
         currentValues.push(newRow);
@@ -116,7 +121,10 @@ function applyBatchOutletMovementsToOutletStorages(records, auth) {
       }
       for (var k = 0; k < uniqueRowsToDelete.length; k++) sheet.deleteRow(uniqueRowsToDelete[k]);
     }
-    if (Object.keys(updatedRows).length || newRows.length || rowsToDelete.length > 0) updateResourceSyncCursor('OutletStorages');
+    if (Object.keys(updatedRows).length || newRows.length || rowsToDelete.length > 0) {
+      // Deletions stamp no row, so fall back to wall-clock for a delete-only batch.
+      updateResourceSyncCursor('OutletStorages', maxTimestamp || Date.now());
+    }
     return { success: true };
   } catch (e) {
     Logger.log('applyBatchOutletMovementsToOutletStorages ERROR: ' + String(e));
@@ -137,6 +145,7 @@ function cleanupZeroOutletStorages() {
   }
   rowsToDelete.sort(function (a, b) { return b - a; });
   for (var d = 0; d < rowsToDelete.length; d++) sheet.deleteRow(rowsToDelete[d]);
-  if (rowsToDelete.length) updateResourceSyncCursor('OutletStorages');
+  // Deletions leave no row to read a timestamp from — stamp the removal itself.
+  if (rowsToDelete.length) updateResourceSyncCursor('OutletStorages', Date.now());
   return { success: true, deletedRows: rowsToDelete.length };
 }

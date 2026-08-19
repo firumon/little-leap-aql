@@ -433,7 +433,10 @@ function getActionSheetContext(cache, resourceName) {
     schema: buildMasterSchemaFromResourceConfig(resource.config),
     appendRows: [],
     updateRows: [],
-    writtenRows: []
+    writtenRows: [],
+    // Newest audit timestamp stamped against this resource in this action;
+    // handed to updateResourceSyncCursor so the cursor matches the rows.
+    maxTimestamp: 0
   };
   return cache[name];
 }
@@ -557,7 +560,8 @@ function prepareActionTargetCreate(auth, target, targetKey, sheetCtx, providedVa
   rowData[idx.Code] = code;
 
   applyAccessRegionOnWrite(rowData, idx, auth);
-  applyAuditFields(rowData, idx, auth, config, true);
+  var createTimestamp = applyAuditFields(rowData, idx, auth, config, true);
+  if (createTimestamp > sheetCtx.maxTimestamp) sheetCtx.maxTimestamp = createTimestamp;
   validateRequiredFields(rowData, idx, sheetCtx.schema.requiredHeaders, sheetCtx.resourceName);
   validateMasterUniqueness(sheetCtx.values, idx, rowData, sheetCtx.schema, -1, sheetCtx.resourceName);
 
@@ -592,7 +596,8 @@ function prepareActionTargetUpdate(auth, target, targetKey, ctx, sheetCtx, provi
   enforceRecordLevelAccess(auth, sheetCtx.config, sheetCtx.headers, existingRow);
 
   var rowData = mergeMasterRow(existingRow, idx, providedValues, sheetCtx.schema);
-  applyAuditFields(rowData, idx, auth, sheetCtx.config, false);
+  var updateTimestamp = applyAuditFields(rowData, idx, auth, sheetCtx.config, false);
+  if (updateTimestamp > sheetCtx.maxTimestamp) sheetCtx.maxTimestamp = updateTimestamp;
   validateRequiredFields(rowData, idx, sheetCtx.schema.requiredHeaders, sheetCtx.resourceName);
   validateMasterUniqueness(sheetCtx.values, idx, rowData, sheetCtx.schema, rowNumber, sheetCtx.resourceName);
 
@@ -682,7 +687,7 @@ function executeActionTargets(auth, targets, ctx) {
       sheetCtx.appendRows.forEach(function (row) { sheetCtx.writtenRows.push(row); });
     }
 
-    updateResourceSyncCursor(resourceName);
+    updateResourceSyncCursor(resourceName, sheetCtx.maxTimestamp);
     resources[resourceName] = {
       config: sheetCtx.config,
       headers: sheetCtx.headers,

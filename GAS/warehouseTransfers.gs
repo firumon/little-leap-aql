@@ -179,6 +179,8 @@ function writeStockMovements(movements, auth) {
   var codeSeqLength = resource.config.codeSequenceLength || 6;
 
   var rowsToWrite = [];
+  // Newest audit timestamp across the batch; drives the StockMovements cursor.
+  var maxMovementTimestamp = 0;
   for (var i = 0; i < movements.length; i++) {
     var mov = movements[i];
     var row = new Array(headers.length).fill('');
@@ -194,13 +196,14 @@ function writeStockMovements(movements, auth) {
     row[idx.Status] = 'Active';
 
     applyAccessRegionOnWrite(row, idx, auth);
-    applyAuditFields(row, idx, auth, resource.config, true);
+    var movementTimestamp = applyAuditFields(row, idx, auth, resource.config, true);
+    if (movementTimestamp > maxMovementTimestamp) maxMovementTimestamp = movementTimestamp;
     rowsToWrite.push(row);
   }
 
   sheet.getRange(lastRow + 1, 1, rowsToWrite.length, headers.length).setValues(rowsToWrite);
   SpreadsheetApp.flush();
-  updateResourceSyncCursor('StockMovements');
+  updateResourceSyncCursor('StockMovements', maxMovementTimestamp);
 
   // Trigger warehouse storage balance updates
   var storageRecords = movements.map(function(mov) {
@@ -248,6 +251,8 @@ function updateWarehouseTransferItemsProgress(items, progress, auth, storageFiel
   var sheet = resource.sheet;
   var headers = sheet.getDataRange().getValues()[0] || [];
   var idx = getHeaderIndexMap(headers);
+  // Newest audit timestamp across the items touched in this progress update.
+  var maxItemTimestamp = 0;
 
   for (var i = 0; i < items.length; i++) {
     var item = items[i];
@@ -268,11 +273,12 @@ function updateWarehouseTransferItemsProgress(items, progress, auth, storageFiel
       rowData[idx[storageField]] = storageValue;
     }
 
-    applyAuditFields(rowData, idx, auth, resource.config, false);
+    var itemTimestamp = applyAuditFields(rowData, idx, auth, resource.config, false);
+    if (itemTimestamp > maxItemTimestamp) maxItemTimestamp = itemTimestamp;
     sheet.getRange(rowNumber, 1, 1, headers.length).setValues([rowData]);
   }
   SpreadsheetApp.flush();
-  updateResourceSyncCursor('WarehouseTransferItems');
+  updateResourceSyncCursor('WarehouseTransferItems', maxItemTimestamp);
 }
 
 /**
@@ -298,9 +304,9 @@ function updateWarehouseTransferProgress(wtCode, progress, auth, fieldsToUpdate)
     });
   }
 
-  applyAuditFields(rowData, idx, auth, context.resource.config, false);
+  var transferTimestamp = applyAuditFields(rowData, idx, auth, context.resource.config, false);
   context.sheet.getRange(context.rowNumber, 1, 1, context.headers.length).setValues([rowData]);
-  updateResourceSyncCursor('WarehouseTransfers');
+  updateResourceSyncCursor('WarehouseTransfers', transferTimestamp);
   return rowArrayToObject(context.headers, rowData);
 }
 

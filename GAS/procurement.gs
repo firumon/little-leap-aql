@@ -74,9 +74,9 @@ function updateResourceRecordFieldsByCode(resourceName, code, fields, auth) {
     }
   }
 
-  applyAuditFields(rowData, context.idx, auth, context.resource.config, false);
+  var recordTimestamp = applyAuditFields(rowData, context.idx, auth, context.resource.config, false);
   context.sheet.getRange(context.rowNumber, 1, 1, context.headers.length).setValues([rowData]);
-  updateResourceSyncCursor(resourceName);
+  updateResourceSyncCursor(resourceName, recordTimestamp);
   return rowArrayToObject(context.headers, rowData);
 }
 

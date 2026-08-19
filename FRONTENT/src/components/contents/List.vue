@@ -55,6 +55,8 @@ const props = defineProps({
   // List container
   itemKey: { type: [String, Function], default: undefined },
   emptyText: { type: String, default: undefined },
+  emptyIcon: { type: String, default: undefined },
+  emptyIconColor: { type: String, default: undefined },
   bordered: { type: Boolean, default: undefined },
   itemBordered: { type: Boolean, default: undefined },
   separator: { type: Boolean, default: undefined },

@@ -31,7 +31,7 @@
         <slot name="empty">
           <q-item class="empty-state-container q-py-xl text-center">
             <q-item-section>
-              <q-icon name="inventory_2" size="48px" color="grey-4" class="q-mb-sm block q-mx-auto" />
+              <q-icon :name="emptyIcon" size="48px" :color="emptyIconColor" class="q-mb-sm block q-mx-auto" />
               <q-item-label class="text-subtitle1 text-weight-bold text-grey-6">{{ emptyText }}</q-item-label>
             </q-item-section>
           </q-item>
@@ -145,6 +145,14 @@ const props = defineProps({
   itemKey: { type: [String, Function], default: 'Code' },
   loading: { type: Boolean, default: false },
   emptyText: { type: String, default: 'No items found.' },
+  // The empty state's icon and its tint. Both were hardcoded here, which made every empty
+  // list in the app say the same thing in the same tone — and an empty state's MEANING is
+  // not uniform: a queue that is clear is good news and a search that matched nothing is a
+  // typo, and neither reads correctly under a generic grey box glyph
+  // (UI_MODULE_DEVELOPER_GUIDE.md §10.4 — "empty is not always neutral"). The defaults are
+  // the previously hardcoded values, so every existing caller is unchanged.
+  emptyIcon: { type: String, default: 'inventory_2' },
+  emptyIconColor: { type: String, default: 'grey-4' },
   bordered: { type: Boolean, default: false },
   // Vertical rhythm BETWEEN rows, as a Quasar spacing token (`none`/`xs`/`sm`/
   // `md`/`lg`/`xl`) — previously the hardcoded `q-gutter-y-xs` on the root.

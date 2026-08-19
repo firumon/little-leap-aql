@@ -127,12 +127,19 @@ Loads `src/pages/[Scope]/[page].js`. This JS file sets the default sections and 
 
 **Special page key mapping** (route `meta.page` → BP filename):
 
-| `meta.page` value | BP file loaded |
-|-------------------|----------------|
-| `'resource'` | `resource.js` |
-| `'record'` | `record.js` |
-| `'action'` | `[action].js` — the `:action` route param, not `action.js` |
-| anything else | `[page].js` as-is |
+| `meta.page` value | Canonical page key | BP file loaded |
+|-------------------|--------------------|----------------|
+| `'resource'` with a `:pageSlug` | `toPascalCase(pageSlug).toLowerCase()` | `[PageSlug].js`, falling back to `resource.js` |
+| `'record'` with a `:pageSlug` | `toPascalCase(pageSlug).toLowerCase()` | `[PageSlug].js`, falling back to `record.js` |
+| `'resource'` / `'record'` with no slug | `resource` / `record` | `resource.js` / `record.js` |
+| `'action'` | `toPascalCase(action).toLowerCase()` | `[Action].js` — the `:action` route param, not `action.js` |
+| anything else | `page` as-is | `[page].js` as-is |
+
+All three custom-page keys (`action`, `resource` sub-route, `record` sub-route) are normalized the same way: `toPascalCase(slug).toLowerCase()`. PascalCase drops the hyphen so a multi-word slug (`my-custom-page`) can be authored as a PascalCase file/folder (`MyCustomPage`), and the trailing lowercase matches the Vite glob registry, which lowercases every indexed path.
+
+Because the canonical key is what flows into `rcProps.page`, every downstream placeholder resolves under it too: a `resource` sub-route `/operation/outlets/my-custom-page` looks its sections/contents/actions up in `_ui/[Ui]/components/[Scope]/[Resource]/MyCustomPage/[Placeholder].vue` before falling back to the scope- and framework-level tiers.
+
+**Stage A fallback**: the framework layer is not expected to ship an empty `pages/[Scope]/[CustomPage].js` for every slug an app invents. If the specific BP is missing on a `resource` / `record` sub-route, the resolver loads the route's generic contract (`resource.js` / `record.js`) instead, so its defaults (`PageHeader`, …) stay available. Both attempts appear in `checkedPaths`.
 
 **BP export shape**: The BP can export either a plain object or a function. If it's a function, it receives the full `rcProps` (same shape as `pageProps` below) and must return an object of extra props to merge in:
 

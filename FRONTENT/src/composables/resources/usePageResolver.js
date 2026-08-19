@@ -23,9 +23,12 @@ Object.keys(customUiModules).forEach((rawPath) => {
 })
 
 // The lookup key every resolver scan below is built from. An action route
-// resolves under its ACTION name (`/_action/approve` → `approve.vue`); every
-// other route resolves under its `meta.page` (`index`, `add`, `view`, `edit`,
-// `resource`, `record`).
+// resolves under its ACTION name (`/_action/approve` → `approve.vue`); a
+// `resource` / `record` SUB-route resolves under its `:pageSlug`
+// (`/operation/outlets/my-custom-page` → `MyCustomPage.js`, and every
+// Section/Content/Action beneath it under `components/{Scope}/{Resource}/
+// MyCustomPage/`); every other route resolves under its `meta.page` (`index`,
+// `add`, `view`, `edit`), as do slug-less `resource` / `record` routes.
 //
 // The action param is normalized exactly as a resource slug is (`toPascalCase`
 // → lowercase), and for the same reason: casing is irrelevant to matching
@@ -35,8 +38,11 @@ Object.keys(customUiModules).forEach((rawPath) => {
 // through PascalCase first drops the separator, so a multi-word action slug can
 // be filed under a PascalCase name like every other `_ui/` path segment.
 // Single-word slugs are unaffected (`approve` → `approve`).
-function resolveActionName(pageName, action) {
+function resolvePageKey(pageName, action, pageSlug) {
   if (pageName === 'action' && action) return toPascalCase(action).toLowerCase()
+  if ((pageName === 'resource' || pageName === 'record') && pageSlug) {
+    return toPascalCase(pageSlug).toLowerCase()
+  }
   return pageName
 }
 
@@ -46,7 +52,7 @@ export function usePageResolver() {
   const { pageName, pageSlug, action, code } = useRouteConfig()
 
   const canonicalPage = computed(() =>
-    resolveActionName(pageName.value, action.value)
+    resolvePageKey(pageName.value, action.value, pageSlug.value)
   )
 
   // Record loading. Add/Edit form state and submission are owned by pageState
@@ -98,11 +104,12 @@ export function usePageResolver() {
     // callback every time any of these computeds merely re-evaluated to the SAME
     // value — e.g. whenever a background sync replaces the auth store's resources
     // array. That reset `ready` to false and flashed the page spinner mid-browse.
-    () => `${resourceSlug.value ?? ''}|${canonicalPage.value ?? ''}|${customUIName.value ?? ''}|${scope.value ?? ''}`,
+    () => `${resourceSlug.value ?? ''}|${canonicalPage.value ?? ''}|${pageName.value ?? ''}|${customUIName.value ?? ''}|${scope.value ?? ''}`,
     async () => {
       const token = ++resolveToken
       const slug    = resourceSlug.value
       const page    = canonicalPage.value
+      const routeKind = pageName.value
       const uiName  = customUIName.value
       const scopeVal = scope.value
 
@@ -135,11 +142,21 @@ export function usePageResolver() {
       }
 
       // ── STAGE A: Load BP (always) ───────────────────────────────────
-      // `resource` / `record` name their base contract directly (pages/{scope}/
-      // resource.js, record.js); every other route uses its resolved page key.
+      // The base contract is looked up under the resolved page key. A custom
+      // sub-route resolves to its slug (`MyCustomPage`), and the framework layer
+      // is NOT expected to carry an empty `pages/{scope}/mycustompage.js` for
+      // every slug an app invents — so when that misses, fall back to the
+      // route's generic contract (`resource.js` / `record.js`) and keep its
+      // defaults (PageHeader, …) available.
       const bpPath = `pages/${scopeVal}/${page}.js`
-      const bpLoader = pageRegistry[bpPath.toLowerCase()]
+      let bpLoader = pageRegistry[bpPath.toLowerCase()]
       paths.push({ path: bpPath, found: !!bpLoader })
+
+      if (!bpLoader && page !== routeKind && (routeKind === 'resource' || routeKind === 'record')) {
+        const fallbackPath = `pages/${scopeVal}/${routeKind}.js`
+        bpLoader = pageRegistry[fallbackPath.toLowerCase()]
+        paths.push({ path: fallbackPath, found: !!bpLoader })
+      }
 
       if (bpLoader) {
         try {

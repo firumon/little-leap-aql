@@ -159,16 +159,23 @@ either way.
 | `{Resource}` | resource **slug** | `toPascalCase` → lowercased | `purchase-orders` → `PurchaseOrders` → `purchaseorders` |
 | `{page}` | canonical page | lowercased as-is | `View` → `view` |
 | `{page}` (action route) | `:action` route **param** | `toPascalCase` → lowercased | `mark-delivered` → `MarkDelivered` → `markdelivered` |
+| `{page}` (custom sub-route) | `:pageSlug` route **param** | `toPascalCase` → lowercased | `my-custom-page` → `MyCustomPage` → `mycustompage` |
 | `{Placeholder}` | section / content / action name | lowercased as-is | `PageHeader` → `pageheader` |
 
 `{page}` is the **canonical** page name resolved by `usePageResolver`: `'index'`, `'view'`,
-`'add'`, `'edit'`, `'resource'`, `'record'`, or — on an `_action/:action` route — the
-`action` route param, normalized through `toPascalCase(actionParam).toLowerCase()`. That
-normalization is what lets a **multi-word action slug** be filed under a PascalCase name
-like every other `_ui/` path segment: `mark-delivered` resolves to the page key
-`markdelivered`, matching both `pages/{Scope}/{Resource}/MarkDelivered.js` and the
-placeholder folder `components/{Scope}/{Resource}/MarkDelivered/`. Single-word slugs are
-unchanged: `approve` → `approve` → `Approve.js`.
+`'add'`, `'edit'`, `'resource'`, `'record'`, or — on a **custom** route — the route's own
+slug: the `action` param on `_action/:action`, and the `pageSlug` param on a `resource`
+(`/{scope}/{resource}/:pageSlug`) or `record` (`/{scope}/{resource}/{code}/:pageSlug`)
+sub-route. All three are normalized the same way, through
+`toPascalCase(slug).toLowerCase()`. That normalization is what lets a **multi-word slug**
+be filed under a PascalCase name like every other `_ui/` path segment: `mark-delivered`
+resolves to the page key `markdelivered`, matching both
+`pages/{Scope}/{Resource}/MarkDelivered.js` and the placeholder folder
+`components/{Scope}/{Resource}/MarkDelivered/`; a `my-custom-page` sub-route resolves to
+`mycustompage` and reads `MyCustomPage.js` plus
+`components/{Scope}/{Resource}/MyCustomPage/`. Single-word slugs are unchanged: `approve`
+→ `approve` → `Approve.js`. A `resource` / `record` route with **no** slug keeps its
+canonical name (`resource` / `record`), unchanged from before.
 
 ### 2.2 Helper logic belongs in `composables/`, not `components/`
 
@@ -288,6 +295,12 @@ its `TYPE_ALIASES` entries) rather than to inline a one-off.
 | 4 | `{scope}/{page}.js` | Scope-wide JS modifier |
 | 5 | `{page}.vue` | UI-wide Vue override |
 | 6 | `{page}.js` | UI-wide JS modifier |
+
+On a custom `resource` / `record` sub-route, `{page}` is the normalized `pageSlug`, so the
+page override lives at `_ui/{ui}/pages/{scope}/{resource}/MyCustomPage.js`. The framework
+layer does **not** need a matching `src/pages/{Scope}/MyCustomPage.js`: when that base
+contract is missing, the resolver falls back to `resource.js` / `record.js`, so the
+standard defaults (`PageHeader`, …) still apply.
 
 A page JS modifier is the preferred tool — it declares *which* placeholders render and
 hands each its props (§5). A full-page `.vue` override is the **last resort**: it replaces
@@ -641,7 +654,7 @@ Add, Edit and every action route qualify. Reloading mid-form discards what the u
 and re-seeds the node underneath them; the control invites a data loss the page cannot
 undo. An Index or View page keeps it.
 
-**Title an action route explicitly, by the verb it performs** — `'Approve Restock'`,
+**Title an action or custom sub-route explicitly, by the verb it performs** — `'Approve Restock'`,
 `'Confirm Delivery'`, `'Reallocate Stock'`. A custom sub-route has no canonical page name to
 humanize, and the reader arrived from a list and needs to know what they walked into.
 

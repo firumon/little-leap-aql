@@ -331,7 +331,25 @@ function initAppResourcesCodeConfig() {
         DefaultValues: '{"Status":"Active","Country":"UAE","TaxRegistrationNumber":"","TaxRegistrationName":""}',
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
-        AdditionalActions: '',
+        // The four operational entry points an outlet's View page offers, as FAB items.
+        //
+        // All four are `navigate` actions: they collect nothing here, they open the target
+        // resource's own Add flow, which already owns that workflow's validation. Declaring
+        // them here rather than as buttons inside the View cards is what keeps eligibility in
+        // ONE place — the Action subsystem gates each on the target resource's permissions
+        // and on `visibleWhen` (UI_ACTION_SYSTEM.md §7).
+        //
+        // Each carries a `_ui` click handler (`components/Master/Outlets/View/
+        // ResourceAction<Name>.js`) that adds `?outletCode=` so the target wizard opens with
+        // this outlet already chosen. The `navigate` block below is the fallback if that
+        // handler is ever removed: the user still lands on the right Add page, just without
+        // the preselection.
+        AdditionalActions: JSON.stringify([
+            {"action":"NewRestock","label":"New Restock","icon":"inventory_2","color":"teal-7","kind":"navigate","confirm":false,"navigate":{"target":"add","scope":"operation","resourceSlug":"outlet-restocks"},"visibleWhen":{"column":"Status","op":"eq","value":"Active"}},
+            {"action":"NewConsumption","label":"New Consumption","icon":"point_of_sale","color":"deep-orange","kind":"navigate","confirm":false,"navigate":{"target":"add","scope":"operation","resourceSlug":"outlet-consumptions"},"visibleWhen":{"column":"Status","op":"eq","value":"Active"}},
+            {"action":"NewInvoice","label":"New Invoice","icon":"receipt_long","color":"primary","kind":"navigate","confirm":false,"navigate":{"target":"add","scope":"operation","resourceSlug":"outlet-consumption-invoices"},"visibleWhen":{"column":"Status","op":"eq","value":"Active"}},
+            {"action":"NewPayment","label":"New Payment","icon":"payments","color":"positive","kind":"navigate","confirm":false,"navigate":{"target":"add","scope":"operation","resourceSlug":"outlet-payments"},"visibleWhen":{"column":"Status","op":"eq","value":"Active"}}
+        ]),
         Menu: JSON.stringify([
             {"group":["Outlet Operations"],"order":1,"label":"Outlets","icon":"storefront","route":"/master/outlets","pageTitle":"Outlets","pageDescription":"Manage outlet master records","show":true},
             {"group":["Field Sales"],"order":1,"label":"Outlet Hub","icon":"hub","route":"/master/outlets/operation-hub","pageTitle":"Outlet Hub","pageDescription":"Outlet-centric view of visits, restocks, returns, invoices, and payments","show":true}
@@ -369,7 +387,24 @@ function initAppResourcesCodeConfig() {
             {"id":"rep_1776000000011","name":"outlet-stock-detail","label":"Stock Detail","templateSheet":"OutletStockDetail","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}}
         ]),
         CustomUIName: '',
-        ListViews: ''
+        // Six queues, declared here so `AllOutlets` is the page's DEFAULT view and every pill
+        // resolves its `Index/List<Name>.vue` override. Without this row the resource falls
+        // through to auto-derived views (one per `Status` value — "Active", "Inactive"), and
+        // the Index opens on a view no override is registered for.
+        //
+        // Five of the six are defined by events in OTHER resources — an Outlets row cannot
+        // state when it was last paid — so the filters below are never what fills them; the
+        // `.vue` override reads the Layer 2 aggregate. The entries exist for the NAME, the
+        // default flag and the pill order; labels, icons and counts come from
+        // `Index/ListSwitcher.js`.
+        ListViews: JSON.stringify([
+            { "name": "AllOutlets", "label": "All Outlets", "icon": "storefront", "color": "primary", "default": true, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }] } },
+            { "name": "NoUpdates", "label": "No Updates", "icon": "running_with_errors", "color": "negative", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }] } },
+            { "name": "RecentlyRestocked", "label": "Restocked", "icon": "inventory_2", "color": "teal-7", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }] } },
+            { "name": "RecentlyConsumed", "label": "Consumed", "icon": "point_of_sale", "color": "deep-orange", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }] } },
+            { "name": "RecentlyPaid", "label": "Paid", "icon": "payments", "color": "positive", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }] } },
+            { "name": "RecentlyVisited", "label": "Visited", "icon": "event_available", "color": "info", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }] } }
+        ])
     },
     {
         Name: CONFIG.MASTER_SHEETS.OUTLET_OPERATING_RULES,

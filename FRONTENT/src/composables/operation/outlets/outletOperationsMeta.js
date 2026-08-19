@@ -44,7 +44,7 @@ const META = {
   ALLOCATED: ['Allocated', 'primary'],
   IN_TRANSIT: ['In Transit', 'primary'],
   DELIVERED: ['Delivered', 'positive'],
-  PENDING_INVOICE_GENERATION: ['Pending Invoice Generation', 'warning'],
+  PENDING_INVOICE_GENERATION: ['Invoice Generation Pending', 'warning'],
   INVOICE_GENERATED: ['Invoice Generated', 'positive'],
   PENDING_PAYMENT: ['Pending Payment', 'warning'],
   PARTIALLY_PAID: ['Partially Paid', 'info'],

@@ -57,11 +57,16 @@ export const IN_FLIGHT_STATES = WORKFLOW_STATES.filter((state) => !TERMINAL_STAT
 //
 // ONE map, keyed by the raw sheet value, read by every chip, badge, widget legend and
 // gate on every page. A component picking its own colour for a state is how a metric card
-// and the row beneath it end up disagreeing about what "Pending Invoice" looks like
+// and the row beneath it end up disagreeing about what "Invoice Generation Pending" looks
 // (UI_MODULE_DEVELOPER_GUIDE.md §4.5).
 
 export const PROGRESS_META = {
-  [PENDING_INVOICE_GENERATION]: { label: 'Pending Invoice', color: 'warning', icon: 'receipt_long' },
+  // "Invoice Generation Pending", NOT "Pending Invoice" — the two read as opposites to a
+  // user. An invoice that is pending is one already raised and waiting to be PAID, which is
+  // this app's `PENDING_PAYMENT` further down the chain. This state is the step before any
+  // invoice exists: the consumption is counted, billable, and waiting for someone to
+  // generate the bill. The old wording named the wrong half of the workflow.
+  [PENDING_INVOICE_GENERATION]: { label: 'Invoice Generation Pending', color: 'warning', icon: 'receipt_long' },
   [INVOICE_GENERATED]: { label: 'Invoiced', color: 'positive', icon: 'task_alt' },
   [CANCELLED]: { label: 'Cancelled', color: 'negative', icon: 'block' }
 }

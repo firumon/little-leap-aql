@@ -47,7 +47,7 @@
       <div v-if="pendingInvoiceItems.length" class="q-mb-lg">
         <div class="row items-center q-mb-sm">
           <q-icon name="receipt" color="warning" size="sm" class="q-mr-sm" />
-          <span class="text-subtitle1 text-weight-medium">Pending Invoice Generation</span>
+          <span class="text-subtitle1 text-weight-medium">Invoice Generation Pending</span>
           <q-badge class="q-ml-sm" color="warning" :label="String(pendingInvoiceItems.length)" />
         </div>
         <AqlList :items="pendingInvoiceItems" item-key="Code" :layout="['label', 'caption', 'caption']"

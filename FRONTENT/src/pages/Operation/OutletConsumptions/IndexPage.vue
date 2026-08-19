@@ -143,7 +143,7 @@ const { loading, items, searchTerm, canCreate, pendingInvoiceItems, invoiceGener
 
 const shouldBlockUi = computed(() => loading.value && hasUninitiatedDependencies.value)
 
-const pendingMeta = { label: 'Pending Invoice Generation', color: 'warning' }
+const pendingMeta = { label: 'Invoice Generation Pending', color: 'warning' }
 const generatedMeta = { label: 'Invoice Generated', color: 'positive' }
 
 const todayPlannedVisits = computed(() => {

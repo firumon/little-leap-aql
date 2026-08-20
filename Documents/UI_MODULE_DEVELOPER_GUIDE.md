@@ -496,6 +496,30 @@ one function over different configs. See
 [UI_RESOURCE_DOMAIN_LOGIC.md §3.2 and §5](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md)
 for the full rule and worked example.
 
+### 4.4b The domain composition cascade
+
+Every resource — including child relations and configuration entities
+(`OutletOperatingRules`, `OutletStorages`) — gets its own Layer 2 module, and downstream
+resources consume upstream ones **in series** rather than reaching past them to the store.
+Three rules govern the chain, and the module you are generating must satisfy all three:
+
+1. **No bypass links, no hardcoded defaults.** A resource default comes from
+   `useResourceConfig(RESOURCE_NAME).defaultValues`, never a literal in a consumer.
+2. **Non-destructive entity travel.** An enricher spreads the source row first and adds
+   derived keys beside it; Layer 3 picks what to render.
+3. **Pre-indexed lookups.** The owning resource publishes single, composite and rollup
+   `Map` indexes built in one pass; consumers read them in `O(1)`.
+
+Full rule, index schemas and self-check:
+[UI_RESOURCE_DOMAIN_LOGIC.md §10](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
+
+**Discovering a gap mid-build.** If, while building a page, you find that a domain helper,
+aggregation or cross-resource projection is missing from Layer 2, do NOT write it in the
+page or its UI composable. Name the gap, say which resource module owns it, ask the user to
+confirm, then implement it in that Layer 2 module to the full invariant set and consume it
+from the page. Protocol:
+[UI_RESOURCE_DOMAIN_LOGIC.md §10.6](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md).
+
 ### 4.5 One workflow vocabulary per resource
 
 A resource's states, their order, and their **label, colour and icon** are declared once, in

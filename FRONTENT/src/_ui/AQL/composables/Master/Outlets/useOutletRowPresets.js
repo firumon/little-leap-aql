@@ -1,5 +1,4 @@
 import {
-  ACTIVITY_STREAMS,
   ageInDays,
   activityColor,
   activityLabel
@@ -14,8 +13,7 @@ import {
  *
  *     MINA PHARMACY                        ← label:   the outlet
  *     Dubai · Al Barsha                    ← caption: where it is
- *     Last restock 3 days ago              ← caption: why it is in THIS queue
- *                          [ 3 days ago ]  ← chip:    that same age, banded by colour
+ *                          [ 3 days ago ]  ← chip:    the age, banded by colour
  *
  * A view keyed to one stream (`RecentlyPaid`) measures that stream; the two directory views
  * measure overall activity across all five. Both go through the same builder, so the chip on
@@ -31,10 +29,6 @@ import {
  */
 
 const text = (value) => (value == null ? '' : String(value).trim())
-
-const STREAM_LABELS = Object.fromEntries(
-  ACTIVITY_STREAMS.map((stream) => [stream.key, stream.label])
-)
 
 /** "Dubai · Al Barsha" — whichever of the three location levels the tenant actually fills. */
 export function locationLine (summary) {
@@ -55,14 +49,6 @@ export function rowAgeDays (summary, stream) {
   if (!summary) return null
   if (!stream) return summary.lastActivityDays ?? null
   return ageInDays(summary.streams?.[stream]?.lastAt)
-}
-
-/** "Last payment 3 days ago" / "No payment recorded" — the caption stating why the row is here. */
-export function rowReason (summary, stream) {
-  const days = rowAgeDays(summary, stream)
-  const noun = stream ? STREAM_LABELS[stream]?.toLowerCase() : 'activity'
-  if (days === null) return `No ${noun} recorded`
-  return `Last ${noun} ${activityLabel(days).toLowerCase()}`
 }
 
 /**
@@ -101,14 +87,12 @@ export function outletRowPreset (rows = [], {
     // is a result rather than an absence, so it is the only one that passes a tint.
     emptyIconColor: searching ? 'grey-4' : (emptyIconColor || 'grey-4'),
 
-    // Positional pairs — `abstract/List.vue` maps only `label`/`caption` from `layout`, so a
-    // row needing TWO caption lines supplies `content` explicitly and lets `layout` decide
-    // only how each slot is styled. The two arrays must stay the same length.
-    layout: ['label', 'caption', 'caption'],
+    // Positional pairs — `layout` decides how each slot is styled, `content` supplies it.
+    // The two arrays must stay the same length.
+    layout: ['label', 'caption'],
     content: [
       (row) => text(row.name) || text(row.code),
-      (row) => locationLine(row),
-      (row) => rowReason(row, stream)
+      (row) => locationLine(row)
     ],
 
     // The age as a chip: it is the one value a reader scans the column for, and the chip

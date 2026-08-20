@@ -35,7 +35,9 @@ import {
   buildConsumptionMovementsRequest,
   buildReturnsRequests,
   buildReturnAdjustmentRequests,
-  buildInvoiceRequests
+  buildInvoiceRequests,
+  restorableConsumptionLines,
+  buildConsumptionReversalMovementsRequest
 } from './useConsumptionPayload'
 
 const CONSUMPTIONS = 'OutletConsumptions'
@@ -47,6 +49,7 @@ const VISITS = 'OutletVisits'
 const RESTOCKS = 'OutletRestocks'
 const RESTOCK_ITEMS = 'OutletRestockItems'
 const RETURNS = 'OutletReturns'
+const OUTLET_STORAGES = 'OutletStorages'
 
 const text = (value) => (value == null ? '' : String(value).trim())
 const asRow = (value) => (value && typeof value === 'object' ? value : {})
@@ -145,6 +148,8 @@ export function buildConsumptionWorkflowChainRequests ({
   discountValue = 0,
   invoiceComment = '',
   calculateLineTax = null,
+  // Per-SKU unit price overrides, as a resolver. Omitted, the price list decides.
+  resolvePrice = null,
   // Restock
   restockRows = [],
   directRestock = false,
@@ -152,7 +157,10 @@ export function buildConsumptionWorkflowChainRequests ({
   markDelivered = false,
   // Visits
   completeVisit = true,
-  scheduleNext = true
+  scheduleNext = true,
+  // The cadence the officer confirmed on the last step. `null` falls back to the outlet's
+  // configured visit frequency, which is every existing caller's behaviour.
+  nextVisitDays = null
 } = {}) {
   const entry = asRow(form)
   const sold = soldRowsOf(countRows)
@@ -232,7 +240,8 @@ export function buildConsumptionWorkflowChainRequests ({
       invoiceComment: text(invoiceComment),
       returnCodes: adjustedCodes,
       actorName,
-      calculateLineTax
+      calculateLineTax,
+      resolvePrice
     })
     // The engine ran once, inside the builder, and returned what it calculated. An invoice
     // with no priced lines is REFUSED rather than submitted empty: the batch would
@@ -264,7 +273,7 @@ export function buildConsumptionWorkflowChainRequests ({
     mergePermissions(permissions, completion.permissions)
   }
   if (scheduleNext === true) {
-    const next = buildNextVisitChainRequests({ form: entry, operatingRules, actorName, refresh: false })
+    const next = buildNextVisitChainRequests({ form: entry, frequencyDays: nextVisitDays, operatingRules, actorName, refresh: false })
     if (!next.valid) return { valid: false, requests: [], permissions: {}, message: next.message }
     requests.push(...next.requests)
     mergePermissions(permissions, next.permissions)
@@ -351,10 +360,16 @@ function returnDeductionOf (returnRows = [], codes = []) {
  *     PARTIALLY_DELIVERED is left alone: its stock has physically moved, and the caller is
  *     expected to have refused the cancellation outright (`cancellability`).
  *
- * NO REVERSING MOVEMENTS ARE WRITTEN. A cancellation does not put the consumed units back
- * on the outlet's shelf, because the audit found them gone — the count was a measurement,
- * not an instruction, and reversing it would restate a physical fact that is still true.
- * Correcting a miscount is a fresh audit, which is why this module has no Edit page.
+ * THE OUTLET LEDGER IS REVERSED. A cancelled consumption is a consumption that never
+ * happened, so the units it deducted are put back on the outlet's shelf with compensating
+ * POSITIVE movements — one per SKU and storage, built by
+ * `buildConsumptionReversalMovementsRequest` from the original ledger rows so the stock
+ * lands back exactly where it was taken from. Without this, cancelling left the shelf
+ * permanently short by an amount no later audit could account for.
+ *
+ * The reversal is derived from the SAME pure helper (`restorableConsumptionLines`) that the
+ * cancellation review screen renders, so what the user is shown and what the batch writes
+ * cannot disagree.
  */
 export function buildCancellationRequests (record = {}, reason = '', options = {}) {
   const consumption = asRow(record)
@@ -368,6 +383,15 @@ export function buildCancellationRequests (record = {}, reason = '', options = {
   const requests = [executeActionRequest(CONSUMPTIONS, code, {
     action: 'CancelConsumption', column: 'Progress', columnValue: CANCELLED
   }, stampFields('ProgressCancelled', actorName, text(reason)), [CONSUMPTIONS])]
+
+  // Put the consumed units back on the outlet's shelf. `options.consumptionItems` and
+  // `options.outletMovements` are the sources the helper reads; when neither is supplied
+  // nothing is restorable and no ledger request is added at all (never an empty bulk).
+  const reversal = buildConsumptionReversalMovementsRequest(consumption, {
+    items: options.consumptionItems,
+    movements: options.outletMovements
+  })
+  if (reversal) requests.push(reversal)
 
   const invoiceCode = text(invoice.Code)
   const invoiceProgress = text(invoice.Progress).toUpperCase()
@@ -389,16 +413,19 @@ export function buildCancellationRequests (record = {}, reason = '', options = {
     }
   })
 
-  // The cancellation changed data three other resources derive from. Pull them back in the
+  // The cancellation changed data four other resources derive from. Pull them back in the
   // same round trip rather than leaving the next page to discover it stale.
-  requests.push(resourceGetRequest([CONSUMPTIONS, INVOICES, RESTOCKS]))
+  requests.push(resourceGetRequest([CONSUMPTIONS, INVOICES, RESTOCKS, OUTLET_STORAGES]))
   return requests
 }
+
+export { restorableConsumptionLines }
 
 // Composable shape for setup-context callers. Same functions, one import (§5).
 export function useConsumptionWorkflow () {
   return {
     buildConsumptionWorkflowChainRequests,
-    buildCancellationRequests
+    buildCancellationRequests,
+    restorableConsumptionLines
   }
 }

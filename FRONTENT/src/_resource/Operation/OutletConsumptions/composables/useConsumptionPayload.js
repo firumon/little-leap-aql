@@ -58,6 +58,7 @@ export const CONSUMPTION_REF_PATH = `${CONSUMPTIONS}.latest.code`
 
 const text = (value) => (value == null ? '' : String(value).trim())
 const asRow = (value) => (value && typeof value === 'object' ? value : {})
+const asList = (value) => (Array.isArray(value) ? value : [])
 const todayISO = () => new Date().toISOString().slice(0, 10)
 const dateOf = (form) => text(asRow(form).Date) || todayISO()
 
@@ -160,6 +161,100 @@ export function buildConsumptionMovementsRequest (form = {}, countRows = [], con
     ReferenceType: REF_CONSUMPTION,
     ReferenceCode: textOrRef(consumptionRef || batchRef(CONSUMPTION_REF_PATH)),
     MovementDate: dateOf(entry),
+    Status: 'Active'
+  }))
+  return resourceBulkRequest(OUTLET_MOVEMENTS, records, ['OutletStorages'])
+}
+
+// ─── 2b. Reversing the outlet ledger on cancellation ──────────────────────────
+
+/** The ledger reference type a cancellation writes, so a reconciliation can tell a
+ *  restoration apart from an original sale on the same consumption code. */
+const REF_CONSUMPTION_CANCELLED = 'ConsumptionCancelled'
+
+/**
+ * WHAT GOES BACK ON THE SHELF when a consumption is cancelled — one line per SKU and
+ * storage, positive, matching what the original audit took off.
+ *
+ * The truth is read from the LEDGER first. The original movements know the storage each
+ * unit came off and the exact quantity that was posted, so reversing them restores the
+ * same shelf the sale emptied. When the ledger rows are not loaded, the stored
+ * `OutletConsumptionItems` lines are the fallback; they carry no storage, so they land on
+ * the outlet's default storage — the same place `buildConsumptionMovementsRequest` puts a
+ * line whose count row named no storage.
+ *
+ * PURE and shared: the cancellation review screen renders exactly this list, and the
+ * builder below writes exactly this list. One derivation, so the preview cannot promise a
+ * restoration the batch does not perform.
+ *
+ * @param {Object} consumption  the consumption row being cancelled
+ * @param {Object} sources
+ * @param {Array}  [sources.items]      `OutletConsumptionItems` rows (any outlet's — filtered here)
+ * @param {Array}  [sources.movements]  `OutletMovements` rows (any outlet's — filtered here)
+ * @returns {Array<{ sku, storageName, qty }>}
+ */
+export function restorableConsumptionLines (consumption = {}, sources = {}) {
+  const record = asRow(consumption)
+  const code = text(record.Code)
+  if (!code) return []
+
+  const buckets = new Map()
+  const add = (sku, storageName, qty) => {
+    const amount = Math.abs(toNumber(qty))
+    if (!sku || amount <= 0) return
+    const key = `${sku}\u0000${storageName}`
+    // Sum into the index, never assign — one SKU can be counted from several storages,
+    // and several ledger rows can carry the same pair (CORE_ARCHITECTURE_RULES §6).
+    buckets.set(key, (buckets.get(key) || 0) + amount)
+  }
+
+  const ledger = asList(sources.movements)
+    .map(asRow)
+    .filter((row) => text(row.ReferenceType) === REF_CONSUMPTION &&
+      text(row.ReferenceCode) === code &&
+      toNumber(row.QtyChange) < 0)
+
+  if (ledger.length) {
+    ledger.forEach((row) => add(text(row.SKU), text(row.StorageName) || DEFAULT_STORAGE, row.QtyChange))
+  } else {
+    asList(sources.items)
+      .map(asRow)
+      .filter((row) => text(row.OutletConsumptionCode) === code && text(row.Status || 'Active') === 'Active')
+      .forEach((row) => add(text(row.SKU), text(row.StorageName) || DEFAULT_STORAGE, row.Qty))
+  }
+
+  return [...buckets.entries()].map(([key, qty]) => {
+    const [sku, storageName] = key.split('\u0000')
+    return { sku, storageName, qty }
+  })
+}
+
+/**
+ * One POSITIVE outlet movement per restorable line — the compensating entry that puts a
+ * cancelled consumption's units back on the outlet's shelf.
+ *
+ * `Math.abs(…)` rather than a bare negation of the original: a ledger row that is already
+ * positive (a correction posted by hand) must not flip this restoration into a second
+ * deduction. The magnitude is absolute; the sign is the contract, the mirror image of
+ * `buildConsumptionMovementsRequest`.
+ *
+ * `OutletStorages` is named as a cursor resource so the recalculated shelf balances come
+ * back in the same round trip. Returns `null` when nothing is restorable, so the caller
+ * pushes it only when it is truthy.
+ */
+export function buildConsumptionReversalMovementsRequest (consumption = {}, sources = {}) {
+  const record = asRow(consumption)
+  const lines = restorableConsumptionLines(record, sources)
+  if (!lines.length) return null
+
+  const records = lines.map((line) => ({
+    OutletCode: text(record.OutletCode),
+    StorageName: line.storageName || DEFAULT_STORAGE,
+    SKU: line.sku,
+    QtyChange: Math.abs(toNumber(line.qty)),
+    ReferenceType: REF_CONSUMPTION_CANCELLED,
+    ReferenceCode: text(record.Code),
+    MovementDate: toDateTime24(new Date()).slice(0, 10),
     Status: 'Active'
   }))
   return resourceBulkRequest(OUTLET_MOVEMENTS, records, ['OutletStorages'])
@@ -282,7 +377,13 @@ export function buildInvoiceRequests (form = {}, soldLines = [], options = {}) {
     discountType: options.discountType,
     discountValue: options.discountValue,
     returnDeduction: options.returnDeduction,
-    calculateLineTax: options.calculateLineTax
+    calculateLineTax: options.calculateLineTax,
+    // The unit prices the officer typed on the review step, if any. Passed as a RESOLVER
+    // rather than as pre-priced lines, so an override stays inside the one calculation —
+    // tax, discount apportionment and the net payable all recompute off it instead of the
+    // UI patching a total the engine never saw. Omitted, the engine falls back to the
+    // price list, which is every existing caller's behaviour.
+    ...(typeof options.resolvePrice === 'function' ? { resolvePrice: options.resolvePrice } : {})
   })
 
   if (!invoice.lines.length) return { requests: [], invoice }
@@ -341,6 +442,8 @@ export function buildInvoiceRequests (form = {}, soldLines = [], options = {}) {
 export function useConsumptionPayload () {
   return {
     CONSUMPTION_REF_PATH,
+    restorableConsumptionLines,
+    buildConsumptionReversalMovementsRequest,
     stampFields,
     buildConsumptionCompositeRequest,
     buildConsumptionMovementsRequest,

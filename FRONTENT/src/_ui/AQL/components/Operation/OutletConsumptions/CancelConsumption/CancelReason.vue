@@ -45,9 +45,30 @@
       </q-card-section>
     </q-card>
 
-    <q-banner dense rounded class="bg-grey-2 text-body2">
-      Stock is not put back. The audit recorded what was physically on the shelf, and
-      cancelling it does not change that — correct a miscount by recording a new audit.
+    <!-- What physically moves. Shown as its own card, above the reason's consequences,
+         because it is the part of a cancellation people most often get wrong. -->
+    <q-card v-if="restorations.length" flat bordered :class="ui.cardClass">
+      <q-card-section>
+        <SectionDividerLabel label="STOCK RETURNED TO THIS OUTLET" />
+        <div class="text-caption text-grey-8 q-pb-sm">
+          These quantities go back onto the outlet's shelf when the cancellation is submitted.
+        </div>
+        <q-list separator dense>
+          <q-item v-for="line in restorations" :key="`${line.sku}-${line.storageName}`" class="q-py-sm">
+            <q-item-section :class="ui.flexWrapTextClass">
+              <q-item-label>{{ line.sku }}</q-item-label>
+              <q-item-label caption>{{ line.storageName }}</q-item-label>
+            </q-item-section>
+            <q-item-section side>
+              <q-chip dense outline color="positive" :label="`+${line.qty}`" />
+            </q-item-section>
+          </q-item>
+        </q-list>
+      </q-card-section>
+    </q-card>
+
+    <q-banner v-else dense rounded class="bg-grey-2 text-body2">
+      This audit recorded no consumed units, so no stock moves back.
     </q-banner>
   </div>
 </template>
@@ -66,9 +87,10 @@
  * attributed to someone else (§13.3, §13.5). The control field is the working surface the
  * sticky bar reads back.
  *
- * The final banner states the consequence that surprises people: cancelling does not
- * restore stock. A banner rather than a card, because it is a fact ABOUT the action rather
- * than a fact of its own (§10.4).
+ * The final card states the consequence that surprises people: cancelling DOES put the
+ * consumed units back on the outlet's shelf, and it names them line by line before the
+ * user commits. It is rendered from the same pure domain helper the submit builds its
+ * compensating movements from, so the preview and the batch cannot drift.
  *
  * No `<style>` block (ARCHITECTURE RULES §7).
  */
@@ -82,7 +104,7 @@ defineOptions({ name: 'OutletConsumptionsCancelConsumptionCancelReason', inherit
 const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 
-const { pageState, ui, cascade, gate } = useConsumptionCancelContext()
+const { pageState, ui, cascade, gate, restorations } = useConsumptionCancelContext()
 
 const NODE = 'OutletConsumptions'
 // `'add'`, because the mode follows the VALUE rather than the page: this reason does not

@@ -11,6 +11,7 @@ import {
   relatedLabel,
   relatedColor
 } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionProgress'
+import { restorableConsumptionLines } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionWorkflow'
 
 /**
  * OutletConsumptions › CancelConsumption — the action route's context and hydration.
@@ -38,11 +39,16 @@ export function useConsumptionCancelContext () {
   const restocks = useRecord('OutletRestocks')
   const restockItems = useRecord('OutletRestockItems')
   const outlets = useRecord('Outlets')
+  // The two sources the stock restoration is derived from: the audit's own lines, and the
+  // ledger rows it posted. The ledger is preferred because it knows WHICH storage each unit
+  // came off; the lines are the fallback when the ledger has not loaded.
+  const consumptionItems = useRecord('OutletConsumptionItems')
+  const outletMovements = useRecord('OutletMovements')
 
   onMounted(() => {
     // Every resource the gate and the cascade preview need, loaded once here rather than
     // per card. `reload()` renders from the warm cache and syncs the delta in background.
-    ;[consumptions, invoices, restocks, restockItems, outlets].forEach((resource) => resource.reload())
+    ;[consumptions, invoices, restocks, restockItems, outlets, consumptionItems, outletMovements].forEach((resource) => resource.reload())
   })
 
   const text = (value) => (value == null ? '' : String(value).trim())
@@ -82,10 +88,20 @@ export function useConsumptionCancelContext () {
     return entries
   })
 
+  /**
+   * Exactly what goes back on the outlet's shelf — the SAME pure derivation the cancellation
+   * batch writes its compensating movements from, so the preview cannot promise a
+   * restoration the submit does not perform.
+   */
+  const restorations = computed(() => restorableConsumptionLines(record.value, {
+    items: consumptionItems.items.value,
+    movements: outletMovements.items.value
+  }))
+
   const gate = computed(() => cancellability(record.value, {
     invoice: invoice.value,
     restocks: linkedRestocks.value
   }))
 
-  return { pageState, resourceConfig, ui, record, invoice, linkedRestocks, cascade, gate }
+  return { pageState, resourceConfig, ui, record, invoice, linkedRestocks, cascade, gate, restorations, consumptionItems, outletMovements }
 }

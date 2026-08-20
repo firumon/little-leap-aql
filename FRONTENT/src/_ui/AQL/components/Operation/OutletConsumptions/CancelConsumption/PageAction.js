@@ -31,8 +31,10 @@ import {
  *                     restock means stock and money have already moved, and nothing this
  *                     handler can write undoes either.
  *
- * The cascade itself is Layer 2's (`buildCancellationRequests`), including its deliberate
- * refusal to write reversing stock movements.
+ * The cascade itself is Layer 2's (`buildCancellationRequests`), including the compensating
+ * POSITIVE outlet movements that put the consumed units back on the shelf. This handler only
+ * hands it the rows the reversal is derived from — the audit's lines and its ledger entries —
+ * and claims the `OutletMovements` permission that write requires.
  */
 export default (props, { pageState, resourceConfig }) => {
   // Safe outside setup: both only reach Pinia stores and call no `inject()`.
@@ -83,7 +85,15 @@ export default (props, { pageState, resourceConfig }) => {
        * names are lower-camel: `allowed()` upper-cases only the first character, so an
        * all-caps name resolves to a key that never matches and fails closed (§8.4).
        */
+      // The audit's own lines and the ledger rows it posted — the sources the reversal is
+      // derived from. Read here rather than in the builder, which stays pure.
+      const consumptionItems = rows('OutletConsumptionItems')
+      const outletMovements = rows('OutletMovements')
+
       const permissions = { OutletConsumptions: 'cancelConsumption' }
+      // The cancellation puts the consumed units back on the outlet's shelf, so it is gated
+      // on the ledger write it actually performs.
+      permissions.OutletMovements = 'create'
       if (invoice && progressOf(invoice) !== 'PAID' && progressOf(invoice) !== 'CANCELLED') {
         permissions.OutletConsumptionInvoices = 'cancel'
       }
@@ -98,7 +108,7 @@ export default (props, { pageState, resourceConfig }) => {
       }
 
       return {
-        requests: buildCancellationRequests(consumption, why, { invoice, restocks, actorName: actor() }),
+        requests: buildCancellationRequests(consumption, why, { invoice, restocks, consumptionItems, outletMovements, actorName: actor() }),
         successMsg: 'Consumption cancelled.',
         // The route's outcome lands back on the record so the user sees the cancelled
         // state and its cascade, rather than being returned to a list. `pageState.reset()`

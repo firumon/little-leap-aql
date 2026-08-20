@@ -2,6 +2,17 @@
   <div v-if="isActive" :class="gutterClass">
     <SectionDividerLabel label="ITEMS TO BILL" />
 
+    <!-- The one consequence people do not expect. An invoice raised WITHOUT a consumption
+         behind it bills the outlet but changes no shelf: there was no count to deduct from
+         the outlet, and no allocation to deduct from a warehouse. Said loudly, and only when
+         it applies — a banner shown on every invoice would be read past on the one that
+         matters (§10.4). -->
+    <q-banner v-if="isDirectInvoice" dense rounded class="bg-orange-1 text-body2">
+      <template #avatar><q-icon name="warning" color="warning" /></template>
+      Creating an invoice directly without a consumption will not record any outlet or
+      warehouse stock movements.
+    </q-banner>
+
     <q-card flat bordered :class="ui.cardClass">
       <q-card-section v-if="!lines.length" class="text-center q-py-lg">
         <q-icon name="receipt_long" :size="ui.emptyIconSize" :color="ui.emptyIconColor" class="q-mb-sm block q-mx-auto" />
@@ -54,66 +65,44 @@
       </q-list>
     </q-card>
 
-    <!-- An EXPANSION, not a dialog — the same control the consumption wizard's restock step
-         uses. The remaining SKUs are already on screen with their own quantity box, so adding
-         three items is three taps and the bill stays visible above.
-         Hidden once every SKU is on the bill: an expansion promising items and opening onto
+    <!-- The SHARED drawer — the same control the consumption wizard's restock and return
+         steps use, so "add another item" is one recurring pattern rather than three similar
+         ones. It owns the filter, the row rhythm and the leave transition; the quantity box
+         and the add button are this wizard's own.
+         Hidden once every SKU is on the bill: a drawer promising items and opening onto
          nothing is worse than no control. -->
-    <q-expansion-item
-      v-if="skuCandidates.length"
-      icon="add_circle_outline"
+    <AqlAddItemsExpansion
+      :items="visibleCandidates"
       label="Add more items"
+      search-label="Search items to bill"
       :caption="`${skuCandidates.length} more item(s) available`"
-      header-class="text-primary text-weight-medium"
-      class="rounded-borders"
-      :class="ui.cardClass"
+      :card-class="ui.cardClass + ' q-py-sm'"
     >
-      <q-card-section>
-        <component
-          :is="TextField"
-          :model-value="search"
-          :record="{}"
-          :config="{ label: 'Search items', clearable: true }"
-          header="Search"
-          @update:model-value="(value) => (search = value)"
-        />
-      </q-card-section>
-
-      <q-list separator>
-        <q-item v-for="option in visibleCandidates" :key="option.value">
-          <q-item-section :class="ui.flexWrapTextClass">
-            <q-item-label>{{ option.primary }}</q-item-label>
-            <q-item-label caption>{{ option.secondary }}</q-item-label>
-          </q-item-section>
-
-          <q-item-section side>
-            <div class="row items-center no-wrap q-gutter-x-sm">
-              <div style="width: 72px">
-                <component
-                  :is="NumberField"
-                  :model-value="pendingQty[option.value] ?? 1"
-                  :record="{}"
-                  :config="{ dense: true, inputClass: 'text-center' }"
-                  header="Qty"
-                  @update:model-value="(value) => (pendingQty[option.value] = value)"
-                />
-              </div>
-              <q-btn
-                dense round no-caps
-                color="primary"
-                icon="add"
-                :aria-label="`Add ${option.primary} to the invoice`"
-                @click="addItem(option.value)"
-              />
-            </div>
-          </q-item-section>
-        </q-item>
-
-        <q-item v-if="!visibleCandidates.length">
-          <q-item-section class="text-grey-7">No item matches that search.</q-item-section>
-        </q-item>
-      </q-list>
-    </q-expansion-item>
+      <template #row="{ option }">
+        <!-- Quantity only. The price belongs to the LINE, not to the act of adding one: once
+             the item is on the bill above it gets the same editable unit-price box every
+             other line has, so asking for it twice would be two controls for one value. -->
+        <div class="row items-center no-wrap q-gutter-x-sm">
+          <div style="width: 72px">
+            <component
+              :is="NumberField"
+              :model-value="pendingQty[option.value] ?? 1"
+              :record="{}"
+              :config="{ dense: true, inputClass: 'text-center' }"
+              header="Qty"
+              @update:model-value="(value) => (pendingQty[option.value] = value)"
+            />
+          </div>
+          <q-btn
+            dense round no-caps
+            color="primary"
+            icon="add"
+            :aria-label="`Add ${option.primary} to the invoice`"
+            @click="addItem(option.value)"
+          />
+        </div>
+      </template>
+    </AqlAddItemsExpansion>
   </div>
 </template>
 
@@ -147,8 +136,9 @@
  *
  * No `<style>` block (ARCHITECTURE RULES §7).
  */
-import { computed, reactive, ref, useAttrs } from 'vue'
+import { computed, reactive, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
+import AqlAddItemsExpansion from 'components/shared/AqlAddItemsExpansion.vue'
 import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
 import { useInvoiceAddContext } from 'src/_ui/AQL/composables/Operation/OutletConsumptionInvoices/Add/useInvoiceAddContext'
 
@@ -163,7 +153,6 @@ const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 
 const CurrencyField = resolveFieldComponent('currency', 'add')
 const NumberField = resolveFieldComponent('number', 'add')
-const TextField = resolveFieldComponent('text', 'add')
 
 const {
   ui, money, groupedLines, invoice, extraItems, selectedCodes,
@@ -182,8 +171,6 @@ const showSources = computed(() => selectedCodes.value.length > 1)
 const isActive = computed(() =>
   props.step == null || Number(props.step) === currentStep.value)
 
-const search = ref('')
-
 /**
  * Per-candidate quantity, keyed by SKU. A `reactive` map rather than one `ref` per row,
  * because the expansion renders an arbitrary number of them. Entries are dropped as they are
@@ -191,10 +178,18 @@ const search = ref('')
  */
 const pendingQty = reactive({})
 
+/**
+ * An invoice with NO consumption behind it — every line was added by hand.
+ *
+ * The distinction is what the warning banner turns on: a bundled invoice bills counts that
+ * already moved stock, while a direct one bills something no audit ever recorded, so no
+ * ledger anywhere is touched by it.
+ */
+const isDirectInvoice = computed(() => !selectedCodes.value.length)
+
 const skuCandidates = computed(() => skuCandidatesFor(''))
-// Capped: a list rendering a full SKU master is unusable on a phone, and the search box is
-// the intended way through a large catalogue.
-const visibleCandidates = computed(() => skuCandidatesFor(search.value).slice(0, 25))
+// Capped for the same reason, and the drawer's own filter narrows what is shown within it.
+const visibleCandidates = computed(() => skuCandidates.value.slice(0, 25))
 
 /** SKUs the user added by hand — the only ones a remove button is offered for. */
 const manualSkus = computed(() => new Set(extraItems.value.map((row) => String(row.SKU || '').trim())))

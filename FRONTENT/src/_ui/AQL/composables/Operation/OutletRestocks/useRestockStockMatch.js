@@ -2,6 +2,8 @@ import { computed } from 'vue'
 import { useRecord } from 'src/composables/resources/useRecord'
 import { useRestockFormContext } from './useRestockFormContext'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
+import { useOutletStorageResource } from 'src/_resource/Operation/OutletStorages/composables/useOutletStorageResource'
+import { useWarehouseStorageResource } from 'src/_resource/Operation/WarehouseStorages/composables/useWarehouseStorageResource'
 import {
   stockMatchFigures,
   clampRestockQuantity
@@ -67,8 +69,11 @@ export function useRestockStockMatch () {
   const { skuInfo } = useSkuResource()
 
   const skus = useRecord('SKUs').items
-  const outletStorages = useRecord('OutletStorages').items
-  const warehouseStorages = useRecord('WarehouseStorages').items
+  // Both stock sides come from their OWN resource's domain index (outlet × SKU and
+  // warehouse × SKU, each built once for the whole app) rather than from a filter over the
+  // storage sheet per code — this recomputes on every keystroke in the quantity field.
+  const { stockObjectOf: outletStockObjectOf } = useOutletStorageResource()
+  const { stockObjectOf: warehouseStockObjectOf } = useWarehouseStorageResource()
 
   const parent = pageState.useNode(PARENT)
   const childEntries = parent.children(CHILD)
@@ -79,18 +84,8 @@ export function useRestockStockMatch () {
 
   // Stock on hand at the chosen outlet, and — direct mode only — at the source
   // warehouse. Both are summed per SKU because a SKU can sit in several storages.
-  const outletQuantities = computed(() => sumBySku(outletStorages.value, (row) => text(row.OutletCode) === outletCode.value))
-  const warehouseQuantities = computed(() => sumBySku(warehouseStorages.value, (row) => !!warehouseCode.value && text(row.WarehouseCode) === warehouseCode.value))
-
-  function sumBySku (source, predicate) {
-    const totals = {}
-    source.filter(isActive).filter(predicate).forEach((row) => {
-      const sku = text(row.SKU)
-      if (!sku) return
-      totals[sku] = (totals[sku] || 0) + num(row.Quantity)
-    })
-    return totals
-  }
+  const outletQuantities = computed(() => outletStockObjectOf(outletCode.value))
+  const warehouseQuantities = computed(() => (warehouseCode.value ? warehouseStockObjectOf(warehouseCode.value) : {}))
 
   // Quantities keyed by NORMALIZED SKU, read live off pageState. Deactivated rows
   // count as zero so a soft-deleted line renders as "not requested" rather than

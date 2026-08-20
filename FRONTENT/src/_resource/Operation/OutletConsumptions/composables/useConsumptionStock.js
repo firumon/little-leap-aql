@@ -22,6 +22,10 @@
 import { usePriceListResource } from 'src/_resource/Master/PriceLists/composables/usePriceListResource'
 import { useOutletResource } from 'src/_resource/Master/Outlets/composables/useOutletResource'
 import { splitByWarehouseStock } from 'src/_resource/Operation/OutletRestocks/composables/useRestockStockMatch'
+import {
+  indexWarehouseStock,
+  stockOf as warehouseStockOf
+} from 'src/_resource/Operation/WarehouseStorages/composables/useWarehouseStorageResource'
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
 
@@ -379,11 +383,14 @@ export function warehouseAvailableQty (sku, warehouseCode, warehouseStorages = [
   const skuCode = text(sku)
   const warehouse = text(warehouseCode)
   if (!skuCode || !warehouse) return 0
-  return (Array.isArray(warehouseStorages) ? warehouseStorages : [])
-    .map(asRow)
-    .filter(isActive)
-    .filter((entry) => text(entry.SKU) === skuCode && text(entry.WarehouseCode) === warehouse)
-    .reduce((total, entry) => total + toNumber(entry.Quantity), 0)
+  // Read out of the `WarehouseStorages` index rather than re-summing the sheet: that
+  // resource owns the warehouse × SKU totals (§10.4). `warehouseStorages` may be raw rows
+  // OR an already-built index — a caller asking per row passes the index and pays for the
+  // pass once instead of once per line.
+  const index = warehouseStorages && warehouseStorages.stockByWarehouseAndSku
+    ? warehouseStorages
+    : indexWarehouseStock(warehouseStorages)
+  return warehouseStockOf(index, warehouse, skuCode)
 }
 
 /**

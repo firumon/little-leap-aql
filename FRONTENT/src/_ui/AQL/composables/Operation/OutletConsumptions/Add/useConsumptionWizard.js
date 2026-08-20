@@ -2,6 +2,8 @@ import { computed } from 'vue'
 import { useConsumptionAddContext } from './useConsumptionAddContext'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 import { useOutletResource } from 'src/_resource/Master/Outlets/composables/useOutletResource'
+import { useOutletStorageResource } from 'src/_resource/Operation/OutletStorages/composables/useOutletStorageResource'
+import { useWarehouseStorageResource } from 'src/_resource/Operation/WarehouseStorages/composables/useWarehouseStorageResource'
 import {
   toNumber,
   buildCountRow,
@@ -12,7 +14,6 @@ import {
   defaultReturnMeta,
   defaultRestockQty,
   priceListForOutlet,
-  warehouseAvailableQty,
   splitByWarehouseStock
 } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionStock'
 import { calculateConsumptionInvoice } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionInvoice'
@@ -100,6 +101,12 @@ export function useConsumptionWizard () {
 
   const { getSku } = useSkuResource()
   const { getOutlet } = useOutletResource()
+  // The stock index (outlet × SKU, built once for the whole app) — the wizard seeds and
+  // validates against it instead of rescanning `OutletStorages` per outlet.
+  const { stockRowsOf } = useOutletStorageResource()
+  // The warehouse side of the same story — one index for the whole app, read by the
+  // coverage split and by the per-line availability figure below.
+  const { index: warehouseStockIndex, stockOf: warehouseStockOf } = useWarehouseStorageResource()
   // Injected into the invoice engine rather than imported by it, so Layer 2 stays clear of
   // the tax composable's store graph.
   const { calculateLineTax } = useTaxCalculator()
@@ -204,9 +211,11 @@ export function useConsumptionWizard () {
     if (!code) return
     if (!force && text(get(F.SEEDED_FOR)) === code) return
 
-    const rows = storages.items.value
-      .map(asRow)
-      .filter((row) => isActiveRow(row) && text(row.OutletCode) === code && toNumber(row.Quantity) > 0)
+    // O(1) into the OutletStorages index rather than a scan of the whole storage sheet:
+    // `stockRowsOf` returns exactly this outlet's active, non-zero balances, already
+    // grouped by the resource that owns them.
+    const rows = stockRowsOf(code)
+      .filter((row) => toNumber(row.Quantity) > 0)
       .map((row) => buildCountRow(row))
 
     set(F.SEEDED_FOR, code)
@@ -419,10 +428,12 @@ export function useConsumptionWizard () {
    */
   const restockCoverage = computed(() => {
     if (!directRestock.value || !warehouseCode.value) return { allocated: [], pending: [], shortfall: 0 }
-    return splitByWarehouseStock(restockRows.value, warehouseCode.value, warehouseStorages.items.value)
+    return splitByWarehouseStock(restockRows.value, warehouseCode.value, warehouseStockIndex.value)
   })
 
-  const availableAt = (sku) => warehouseAvailableQty(sku, warehouseCode.value, warehouseStorages.items.value)
+  // Asked once per restock line, so it reads the shared warehouse × SKU index instead of
+  // re-summing the storage sheet per line (§10.4 — no scan inside a loop).
+  const availableAt = (sku) => warehouseStockOf(warehouseCode.value, sku)
 
   /**
    * SKUs not yet on the restock list — what the "Add other items" expansion offers.

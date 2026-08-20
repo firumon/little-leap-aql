@@ -15,13 +15,17 @@
  * holds reactive state, renders, or touches a store.
  */
 
+import {
+  indexWarehouseStock,
+  stockMapOf as warehouseStockMapOf
+} from 'src/_resource/Operation/WarehouseStorages/composables/useWarehouseStorageResource'
+
 const num = (value) => {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : 0
 }
 const text = (value) => (value == null ? '' : String(value).trim())
 const asRow = (value) => (value && typeof value === 'object' ? value : {})
-const isActive = (value) => text(asRow(value).Status || 'Active') === 'Active'
 
 /**
  * The ceiling one requested line may reach.
@@ -79,14 +83,14 @@ export function stockMatchFigures ({ outletQuantity = 0, warehouseQuantity = 0, 
  * Indexed in one pass rather than rescanned per line (CORE_ARCHITECTURE_RULES §6).
  */
 export function splitByWarehouseStock (rows = [], warehouseCode = '', warehouseStorages = []) {
-  const warehouse = text(warehouseCode)
-  const stock = new Map()
-  ;(Array.isArray(warehouseStorages) ? warehouseStorages : []).map(asRow).forEach((entry) => {
-    if (!isActive(entry) || text(entry.WarehouseCode) !== warehouse) return
-    const sku = text(entry.SKU)
-    if (!sku) return
-    stock.set(sku, (stock.get(sku) || 0) + num(entry.Quantity))
-  })
+  // The warehouse's per-SKU totals are NOT summed here: `WarehouseStorages` owns that index
+  // (§10.4), and this file reads it. A MUTABLE COPY, because the allocation below decrements
+  // as it goes — the shared index is a read-only projection and must never be written to.
+  // `warehouseStorages` may be raw rows or an already-built index; both resolve the same way.
+  const source = warehouseStorages && warehouseStorages.stockByWarehouseAndSku
+    ? warehouseStorages
+    : indexWarehouseStock(warehouseStorages)
+  const stock = new Map(warehouseStockMapOf(source, warehouseCode))
 
   const allocated = []
   const pending = []

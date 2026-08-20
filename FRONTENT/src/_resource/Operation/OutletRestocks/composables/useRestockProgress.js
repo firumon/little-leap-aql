@@ -32,6 +32,15 @@ export const APPROVED = 'APPROVED'
 export const PARTIALLY_DELIVERED = 'PARTIALLY_DELIVERED'
 export const DELIVERED = 'DELIVERED'
 export const REJECTED = 'REJECTED'
+/**
+ * CANCELLED — the request was withdrawn after it existed, at any stage before delivery.
+ *
+ * Distinct from REJECTED, which is an APPROVER's verdict on a request awaiting approval.
+ * A cancellation is the requester's or a manager's withdrawal, and it can happen to an
+ * already-APPROVED request whose stock has been committed — which is why cancelling one
+ * writes compensating warehouse movements (`useRestockCancellation.js`).
+ */
+export const CANCELLED = 'CANCELLED'
 
 /** Every request state, in the order a request walks through them. */
 export const WORKFLOW_STATES = [
@@ -41,7 +50,8 @@ export const WORKFLOW_STATES = [
   APPROVED,
   PARTIALLY_DELIVERED,
   DELIVERED,
-  REJECTED
+  REJECTED,
+  CANCELLED
 ]
 
 /**
@@ -57,10 +67,10 @@ export const AWAITING_DELIVERY = [APPROVED, PARTIALLY_DELIVERED]
 /**
  * States a request can never leave — the two ways it stops being work.
  *
- * `DELIVERED` and `REJECTED` have no outgoing transition in `AdditionalActions`
- * (`GAS/syncAppResources.gs`): nothing acts on a request in either state again.
+ * `DELIVERED`, `REJECTED` and `CANCELLED` have no outgoing transition in `AdditionalActions`
+ * (`GAS/syncAppResources.gs`): nothing acts on a request in any of them again.
  */
-export const TERMINAL_STATES = [DELIVERED, REJECTED]
+export const TERMINAL_STATES = [DELIVERED, REJECTED, CANCELLED]
 
 /**
  * The states a request is still MOVING through.
@@ -72,7 +82,7 @@ export const TERMINAL_STATES = [DELIVERED, REJECTED]
  */
 export const IN_FLIGHT_STATES = WORKFLOW_STATES.filter((state) => !TERMINAL_STATES.includes(state))
 
-/** Whether a row has come to rest — delivered or rejected. */
+/** Whether a row has come to rest — delivered, rejected or cancelled. */
 export function isTerminal (row) {
   return TERMINAL_STATES.includes(progressOf(row))
 }
@@ -103,7 +113,8 @@ export const PROGRESS_META = {
   [APPROVED]: { label: 'Approved', color: 'primary', icon: 'check_circle' },
   [PARTIALLY_DELIVERED]: { label: 'Partially Delivered', color: 'info', icon: 'local_shipping' },
   [DELIVERED]: { label: 'Delivered', color: 'positive', icon: 'local_shipping' },
-  [REJECTED]: { label: 'Rejected', color: 'negative', icon: 'cancel' }
+  [REJECTED]: { label: 'Rejected', color: 'negative', icon: 'cancel' },
+  [CANCELLED]: { label: 'Cancelled', color: 'negative', icon: 'block' }
 }
 
 /**
@@ -152,7 +163,8 @@ export const PROGRESS_STAMP_PREFIX = {
   [APPROVED]: 'ProgressApproved',
   [PARTIALLY_DELIVERED]: 'ProgressDelivered',
   [DELIVERED]: 'ProgressDelivered',
-  [REJECTED]: 'ProgressRejected'
+  [REJECTED]: 'ProgressRejected',
+  [CANCELLED]: 'ProgressCancelled'
 }
 
 /**
@@ -167,7 +179,8 @@ export const WORKFLOW_STAMPS = [
   { state: REVISION_REQUIRED, prefix: 'ProgressRevisionRequired', title: 'Sent Back for Revision' },
   { state: APPROVED, prefix: 'ProgressApproved', title: 'Approved' },
   { state: REJECTED, prefix: 'ProgressRejected', title: 'Rejected' },
-  { state: DELIVERED, prefix: 'ProgressDelivered', title: 'Delivered' }
+  { state: DELIVERED, prefix: 'ProgressDelivered', title: 'Delivered' },
+  { state: CANCELLED, prefix: 'ProgressCancelled', title: 'Cancelled' }
 ]
 
 // ─── Progress vocabulary ──────────────────────────────────────────────────────
@@ -258,6 +271,10 @@ export function isDelivered (row) {
 
 export function isRejected (row) {
   return progressOf(row) === REJECTED
+}
+
+export function isCancelled (row) {
+  return progressOf(row) === CANCELLED
 }
 
 /** Approved or partially delivered — there is still stock owed to the outlet. */
@@ -461,6 +478,7 @@ export function useRestockProgress () {
     PARTIALLY_DELIVERED,
     DELIVERED,
     REJECTED,
+    CANCELLED,
     ITEM_PENDING,
     ITEM_ALLOCATED,
     ITEM_CANCELLED,
@@ -494,6 +512,7 @@ export function useRestockProgress () {
     isPartiallyDelivered,
     isDelivered,
     isRejected,
+    isCancelled,
     isAwaitingDelivery,
     isApprovalCommitted,
     isOwnedBy,

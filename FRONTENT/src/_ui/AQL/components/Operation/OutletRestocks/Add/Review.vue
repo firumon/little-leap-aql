@@ -47,6 +47,7 @@
             label="variantLabel"
             :caption="(item) => `Existing ${item.outletQuantity} + Restocking ${item.restockQuantity}`"
             :metaLabel="(item) => String(item.finalQuantity)"
+            item-gutter="sm"
           >
             <template #header-right="{ group }">
               <span class="text-h6 text-weight-bold q-px-sm text-primary">{{ groupTotal(group, 'finalQuantity') }}</span>

@@ -226,6 +226,7 @@ function setupOperationSheets() {
                 'ProgressApprovedAt', 'ProgressApprovedBy', 'ProgressApprovedComment',
                 'ProgressRejectedAt', 'ProgressRejectedBy', 'ProgressRejectedComment',
                 'ProgressDeliveredAt', 'ProgressDeliveredBy', 'ProgressDeliveredComment',
+                'ProgressCancelledAt', 'ProgressCancelledBy', 'ProgressCancelledComment',
                 'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active', defaults: { Status: 'Active', Progress: 'DRAFT' }, progressValidation: APP_OPTIONS_SEED.OutletRestockProgress,
             columnWidths: { Code: 150, Date: 130, OutletCode: 140, OutletConsumptionCode: 180, RequestedUser: 180, ApprovedUser: 180, Progress: 180,
@@ -234,6 +235,7 @@ function setupOperationSheets() {
                 ProgressApprovedAt: 160, ProgressApprovedBy: 150, ProgressApprovedComment: 220,
                 ProgressRejectedAt: 160, ProgressRejectedBy: 150, ProgressRejectedComment: 220,
                 ProgressDeliveredAt: 170, ProgressDeliveredBy: 170, ProgressDeliveredComment: 220,
+                ProgressCancelledAt: 170, ProgressCancelledBy: 170, ProgressCancelledComment: 220,
                 Status: 100, AccessRegion: 130 }
         },
         {

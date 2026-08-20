@@ -8,56 +8,43 @@
  * `useConsumptionProgress.js` re-exports both functions, so every existing caller keeps its
  * import line and there is still exactly ONE definition of the cadence rule.
  *
- * ISOLATION (§2.1): the only import is the generic `useResourceConfig` Core Composable. No
- * store, no service, nothing under `_ui/`.
+ * ── THE CASCADE, NOT A BYPASS ──
+ * The NUMBER itself belongs to `OutletOperatingRules`, so this file no longer scans that
+ * sheet or reads its `DefaultValues` itself — it consumes the rules domain in series and
+ * states only what is a VISIT rule: that the cadence is what schedules the next visit, and
+ * that an unresolvable cadence means "do not schedule" rather than "schedule at a guess".
+ * The scan it used to do was a `.find()` per outlet over every rule row; the rules domain
+ * indexes them once and answers in O(1).
+ *
+ * ISOLATION (§2.1): the only import is another Layer 2 domain module. No store, no service,
+ * nothing under `_ui/`.
  */
 
-import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
-
-// The resource that owns the per-outlet visit cadence. Read for its DefaultValues rather
-// than for its rows, so the fallback is a configured number rather than a constant
-// compiled into the frontend — see `defaultVisitFrequencyDays` below.
-const OPERATING_RULES_RESOURCE = 'OutletOperatingRules'
-
-const text = (value) => (value == null ? '' : String(value).trim())
-const asRow = (value) => (value && typeof value === 'object' ? value : {})
-const num = (value) => {
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : 0
-}
-const isActiveRow = (value) => text(asRow(value).Status || 'Active') === 'Active'
+import {
+  operatingRuleDefaults,
+  visitFrequencyFor as ruleVisitFrequencyFor
+} from 'src/_resource/Master/OutletOperatingRules/composables/useOutletOperatingRulesResource'
 
 /**
  * The configured visit cadence, with NO hardcoded frontend fallback.
  *
- * Read from `OutletOperatingRules`' backend `DefaultValues` — the same
- * `VisitFrequencyDays: 14` the sheet setup seeds — so retuning the cadence is a sheet
- * change, not a code change. Returns `0` when the config has not landed yet; every caller
- * treats `0` as "cadence unknown" and declines to band or schedule rather than inventing one.
+ * Read from `OutletOperatingRules`' backend `DefaultValues` — so retuning the cadence is a
+ * sheet change, not a code change. Returns `0` when the config has not landed yet; every
+ * caller treats `0` as "cadence unknown" and declines to band or schedule rather than
+ * inventing one.
  */
 export function defaultVisitFrequencyDays () {
-  const { defaultValues } = useResourceConfig(OPERATING_RULES_RESOURCE)
-  const configured = num(defaultValues?.value?.VisitFrequencyDays ?? defaultValues?.VisitFrequencyDays)
-  return configured > 0 ? configured : 0
+  return operatingRuleDefaults().visitFrequencyDays
 }
 
 /**
  * The cadence that applies to one outlet: its own operating rule, else the configured
- * default. The caller supplies the rules so this stays pure.
- *
- * Deliberately reads `OutletOperatingRules` rows rather than `enrichOutlet`'s
- * `visitFrequencyDays`, which falls back to a literal `14` compiled into
- * `_resource/Master/Outlets`. That literal predates the rule that a cadence must be
- * configured rather than assumed; going through it here would reintroduce exactly the
- * hardcoded constant this module is required not to carry. The enriched outlet is still
- * the right source for everything else it exposes.
+ * default. The caller supplies the rules — raw rows OR an already-built
+ * `Map<OutletCode, rule>` — so this stays pure and a caller inside a loop can hand over an
+ * index instead of an array.
  */
 export function visitFrequencyFor (outletCode, operatingRules = []) {
-  const code = text(outletCode)
-  const rule = (Array.isArray(operatingRules) ? operatingRules : [])
-    .map(asRow)
-    .find((entry) => isActiveRow(entry) && text(entry.OutletCode) === code && num(entry.VisitFrequencyDays) > 0)
-  return num(rule?.VisitFrequencyDays) || defaultVisitFrequencyDays()
+  return ruleVisitFrequencyFor(outletCode, operatingRules)
 }
 
 // Composable shape for setup-context callers. Same functions, one import (§5).

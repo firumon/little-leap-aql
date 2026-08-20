@@ -36,7 +36,7 @@ const asRow = (value) => (value && typeof value === 'object' ? value : {})
 //
 // `ACTIVITY_WINDOW_DAYS` is a RELATIONSHIP window: an outlet that has ordered, been billed
 // or paid inside a month is a live account. It is deliberately wider, because a healthy
-// outlet on a 14-day visit cadence (the `OutletOperatingRules` default) would otherwise
+// outlet on a short visit cadence (whatever `OutletOperatingRules` is configured with) would otherwise
 // flip in and out of "active" between two ordinary visits.
 
 /** How far forward and back the visit queues on the Index page look. */

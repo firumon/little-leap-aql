@@ -28,6 +28,11 @@
  */
 
 import { usePriceListResource } from 'src/_resource/Master/PriceLists/composables/usePriceListResource'
+import {
+  operatingRuleDefaults,
+  priceListCodeFor as rulePriceListCodeFor,
+  invoiceDueDaysFor as ruleInvoiceDueDaysFor
+} from 'src/_resource/Master/OutletOperatingRules/composables/useOutletOperatingRulesResource'
 import { useCurrencyResource } from 'src/_resource/Master/Currencies/composables/useCurrencyResource'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 import { useTaxResource } from 'src/_resource/Master/Taxes/composables/useTaxResource'
@@ -56,8 +61,17 @@ const isActiveRow = (row) => {
   return !status || status.toUpperCase() === 'ACTIVE'
 }
 
-/** The default number of days an invoice is given to be paid, when nobody configured one. */
-export const DEFAULT_INVOICE_DUE_DAYS = 30
+/**
+ * The default number of days an invoice is given to be paid, when the outlet declares none.
+ *
+ * CONFIGURED, not compiled in: it comes from `OutletOperatingRules`' own backend
+ * `DefaultValues` through that resource's domain module, which is where the term lives.
+ * `0` means nobody has configured one — a caller that needs a date treats that as "due on
+ * issue" rather than inventing a window.
+ */
+export function defaultInvoiceDueDays () {
+  return operatingRuleDefaults().invoiceDueDays
+}
 
 // ─── 1. Which price list an outlet bills at ───────────────────────────────────
 
@@ -80,12 +94,11 @@ export function resolvePriceListCode (outletCode = '', rules = []) {
   const { getPriceList, defaultPriceList } = usePriceListResource()
   const outlet = text(outletCode)
 
-  const rule = (Array.isArray(rules) ? rules : [])
-    .map(asRow)
-    .find((entry) => isActiveRow(entry) && text(entry.OutletCode) === outlet && text(entry.PriceListCode))
-
-  if (rule) {
-    const matched = getPriceList(text(rule.PriceListCode))
+  // The rule's price list comes from the OutletOperatingRules domain — indexed once there
+  // rather than re-scanned per outlet here.
+  const ruleCode = rulePriceListCodeFor(outlet, rules)
+  if (ruleCode) {
+    const matched = getPriceList(ruleCode)
     if (matched) return text(matched.code || matched.Code)
   }
 
@@ -96,22 +109,21 @@ export function resolvePriceListCode (outletCode = '', rules = []) {
 /**
  * How many days after issue an invoice for this outlet falls due.
  *
- * Read off the outlet's operating rule when it declares one, otherwise the module default.
- * A rule of `0` is treated as unset rather than as "due the same day" — a zero in an
- * unconfigured numeric column is far more often a blank that got coerced than a deliberate
- * same-day term.
+ * Read off the outlet's operating rule when it declares one, otherwise the CONFIGURED
+ * default of the `OutletOperatingRules` resource. A rule of `0` is treated as unset rather
+ * than as "due the same day" — a zero in an unconfigured numeric column is far more often a
+ * blank that got coerced than a deliberate same-day term.
+ *
+ * A thin adapter onto that resource's domain module, kept here so every existing caller
+ * keeps its import line while there is still ONE definition of the term (§3.3).
  */
 export function invoiceDueDaysFor (outletCode = '', rules = []) {
-  const outlet = text(outletCode)
-  const rule = (Array.isArray(rules) ? rules : [])
-    .map(asRow)
-    .find((entry) => isActiveRow(entry) && text(entry.OutletCode) === outlet)
-  const configured = num(rule?.InvoiceDueDays)
-  return configured > 0 ? configured : DEFAULT_INVOICE_DUE_DAYS
+  return ruleInvoiceDueDaysFor(outletCode, rules)
 }
 
 /** The due date `days` after `fromISO`, as `YYYY-MM-DD`. */
-export function dueDateFrom (fromISO = '', days = DEFAULT_INVOICE_DUE_DAYS) {
+export function dueDateFrom (fromISO = '', days = null) {
+  if (days === null || days === undefined) days = defaultInvoiceDueDays()
   const base = text(fromISO) ? new Date(`${text(fromISO)}T00:00:00`) : new Date()
   if (Number.isNaN(base.getTime())) return ''
   base.setDate(base.getDate() + Math.max(0, num(days)))
@@ -276,7 +288,7 @@ export function isMicroBalance (balance, priceListCode = '') {
 // Composable shape for setup-context callers. Same functions, one import (§5).
 export function useInvoiceCalculation () {
   return {
-    DEFAULT_INVOICE_DUE_DAYS,
+    defaultInvoiceDueDays,
     resolvePriceListCode,
     invoiceDueDaysFor,
     dueDateFrom,

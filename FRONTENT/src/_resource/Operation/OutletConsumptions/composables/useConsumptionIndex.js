@@ -38,6 +38,7 @@ import {
   PENDING_INVOICE_GENERATION,
   CANCELLED
 } from './useConsumptionProgress'
+import { indexRulesByOutlet } from 'src/_resource/Master/OutletOperatingRules/composables/useOutletOperatingRulesResource'
 
 const text = (value) => (value == null ? '' : String(value).trim())
 const asRow = (value) => (value && typeof value === 'object' ? value : {})
@@ -71,9 +72,11 @@ const shared = defineSharedComposable((dataStore) => {
    */
   const frequencyByOutlet = computed(() => {
     const fallback = defaultVisitFrequencyDays()
+    // Indexed by the OutletOperatingRules domain — one pass over the sheet, shared with
+    // every other module that asks the same question, then O(1) per outlet here.
+    const rules = indexRulesByOutlet(operatingRules.value)
     const map = new Map()
-    operatingRules.value.forEach((rule) => {
-      const code = text(rule.OutletCode)
+    rules.forEach((rule, code) => {
       const frequency = num(rule.VisitFrequencyDays)
       if (code && frequency > 0) map.set(code, frequency)
     })

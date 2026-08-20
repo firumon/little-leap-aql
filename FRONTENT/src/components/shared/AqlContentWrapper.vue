@@ -15,32 +15,40 @@
     </div>
 
     <!-- Record Not Found State -->
-    <q-card v-else-if="requiresRecord && !recordExists" flat bordered class="empty-card q-ma-md">
-      <q-card-section class="text-center q-py-xl">
-        <q-icon name="search_off" size="56px" color="grey-5" />
-        <div class="text-h6 text-grey-7 q-mt-md">{{ notFoundTitle }}</div>
-        <div class="text-caption text-grey-5 q-mt-sm">{{ notFoundMessage }}</div>
-        <slot name="not-found-actions">
-          <q-btn
-            v-if="showBackToList"
-            flat
-            color="primary"
-            label="Back to List"
-            icon="arrow_back"
-            class="q-mt-md"
-            @click="navigateToList"
-          />
-        </slot>
+    <q-card v-else-if="requiresRecord && !recordExists" flat class="aql-empty-state aql-empty-state--muted q-ma-md">
+      <q-card-section class="aql-empty-state__body">
+        <div class="aql-empty-state__halo">
+          <q-icon name="search_off" size="40px" />
+        </div>
+        <div class="aql-empty-state__title">{{ notFoundTitle }}</div>
+        <div class="aql-empty-state__message">{{ notFoundMessage }}</div>
+        <div class="aql-empty-state__actions">
+          <slot name="not-found-actions">
+            <q-btn
+              v-if="showBackToList"
+              unelevated
+              no-caps
+              color="primary"
+              label="Back to List"
+              icon="arrow_back"
+              @click="navigateToList"
+            />
+          </slot>
+        </div>
       </q-card-section>
     </q-card>
 
     <!-- Empty Dataset State -->
-    <q-card v-else-if="empty" flat bordered class="empty-card q-ma-md">
-      <q-card-section class="text-center q-py-xl">
-        <q-icon :name="emptyIcon" size="56px" color="grey-5" />
-        <div class="text-h6 text-grey-7 q-mt-md">{{ emptyTitle }}</div>
-        <div class="text-caption text-grey-5 q-mt-sm">{{ emptyMessage }}</div>
-        <slot name="empty-actions" />
+    <q-card v-else-if="empty" flat class="aql-empty-state q-ma-md">
+      <q-card-section class="aql-empty-state__body">
+        <div class="aql-empty-state__halo">
+          <q-icon :name="emptyIcon" size="40px" />
+        </div>
+        <div class="aql-empty-state__title">{{ emptyTitle }}</div>
+        <div class="aql-empty-state__message">{{ emptyMessage }}</div>
+        <div class="aql-empty-state__actions">
+          <slot name="empty-actions" />
+        </div>
       </q-card-section>
     </q-card>
 
@@ -103,15 +111,5 @@ function navigateToList() {
 <style scoped>
 .min-height-200 {
   min-height: 200px;
-}
-.empty-card {
-  border-radius: 16px;
-  border-color: var(--aql-border, #e2e8f0);
-  background: rgba(255, 255, 255, 0.95);
-  animation: rise-in 280ms ease-out both;
-}
-@keyframes rise-in {
-  0% { transform: translateY(10px); opacity: 0; }
-  100% { transform: translateY(0); opacity: 1; }
 }
 </style>

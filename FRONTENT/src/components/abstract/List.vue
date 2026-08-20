@@ -117,6 +117,9 @@
       :max="totalPages"
       :max-pages="7"
       boundary-numbers
+      size="md"
+      gutter="xs"
+      padding="sm md"
       class="flex flex-center q-mt-md"
     />
   </q-list>

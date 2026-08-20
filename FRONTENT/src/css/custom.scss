@@ -572,6 +572,87 @@
   padding: 2rem 1.5rem;
 }
 
+// ---------------------------------------------------------------------------
+// Empty / not-found state card (AqlContentWrapper and any page needing the same
+// look). A soft, solid card with a haloed themed icon, a clear title/message
+// hierarchy and a gentle rise-in entrance. Lives here — not in a scoped block —
+// so every empty surface in the app reads the same.
+// ---------------------------------------------------------------------------
+.aql-empty-state {
+  --aql-empty-color: var(--q-primary);
+  border-radius: 16px;
+  border: 1px solid var(--aql-border, #d0def0) !important;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--aql-empty-color) 5%, white) 0%,
+    #ffffff 62%
+  );
+  animation: aql-empty-rise 280ms ease-out both;
+}
+
+// Neutral variant — used for "record not found", where a primary-tinted card
+// would read as a normal, expected state instead of a dead end.
+.aql-empty-state--muted {
+  --aql-empty-color: #64748b;
+}
+
+.aql-empty-state__body {
+  padding: 40px 24px;
+  text-align: center;
+}
+
+.aql-empty-state__halo {
+  width: 84px;
+  height: 84px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--aql-empty-color);
+  background: color-mix(in srgb, var(--aql-empty-color) 10%, white);
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--aql-empty-color) 5%, transparent);
+}
+
+.aql-empty-state__title {
+  margin-top: 20px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--aql-ink, #0f172a);
+}
+
+.aql-empty-state__message {
+  margin: 8px auto 0;
+  max-width: 34ch;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--aql-ink, #0f172a) 55%, white);
+}
+
+.aql-empty-state__actions {
+  margin-top: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+
+  &:empty {
+    display: none;
+  }
+}
+
+@keyframes aql-empty-rise {
+  0%   { transform: translateY(10px); opacity: 0; }
+  100% { transform: translateY(0);    opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aql-empty-state {
+    animation: none;
+  }
+}
+
 .shortcut-chip {
   font-size: 0.75rem;
   padding: 2px 8px;

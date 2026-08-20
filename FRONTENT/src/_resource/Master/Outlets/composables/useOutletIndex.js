@@ -27,6 +27,7 @@ import { computed } from 'vue'
 import { defineSharedComposable } from 'src/utils/appHelpers'
 import { useDataStore } from 'src/stores/data'
 import { useOutletResource } from './useOutletResource'
+import { useOutletStorageResource } from 'src/_resource/Operation/OutletStorages/composables/useOutletStorageResource'
 import {
   VISIT_WINDOW_DAYS,
   ACTIVITY_WINDOW_DAYS,
@@ -46,10 +47,6 @@ import { PLANNED as VISIT_PLANNED, COMPLETED as VISIT_COMPLETED } from 'src/_res
 
 const text = (value) => (value == null ? '' : String(value).trim())
 const asRow = (value) => (value && typeof value === 'object' ? value : {})
-const num = (value) => {
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : 0
-}
 const upper = (value) => text(value).toUpperCase()
 
 /** Group already-filtered rows into a `Map` keyed by their outlet code. */
@@ -103,7 +100,10 @@ const shared = defineSharedComposable((dataStore) => {
   const rawInvoices = computed(() => rows('OutletConsumptionInvoices'))
   const rawPayments = computed(() => rows('OutletPayments'))
   const rawReturns = computed(() => rows('OutletReturns'))
-  const rawStorages = computed(() => (dataStore.getRecords('OutletStorages') || []).map(asRow))
+  // Stock is NOT re-read or re-grouped here: `OutletStorages` owns its own index (rows by
+  // outlet, quantities by outlet × SKU, and the reverse), and this module consumes it —
+  // one pass over the storage sheet for the whole app, not one per aggregate.
+  const { rawStorages, rowsByOutlet: storagesByOutlet, stockRowsOf } = useOutletStorageResource()
 
   // ── Indexed joins — every stream keyed by outlet, built exactly once ─────────
 
@@ -113,7 +113,6 @@ const shared = defineSharedComposable((dataStore) => {
   const invoicesByOutlet = computed(() => groupByOutlet(rawInvoices.value))
   const paymentsByOutlet = computed(() => groupByOutlet(rawPayments.value))
   const returnsByOutlet = computed(() => groupByOutlet(rawReturns.value))
-  const storagesByOutlet = computed(() => groupByOutlet(rawStorages.value))
 
   /** The five activity streams, resolved to their live maps, in vocabulary order. */
   const streamMaps = computed(() => ({
@@ -381,9 +380,7 @@ const shared = defineSharedComposable((dataStore) => {
     invoicesFor: (code) => sortedFor(invoicesByOutlet.value, code, 'Date'),
     paymentsFor: (code) => sortedFor(paymentsByOutlet.value, code, 'Date'),
     returnsFor: (code) => sortedFor(returnsByOutlet.value, code, 'Date'),
-    stockFor: (code) => [...(storagesByOutlet.value.get(text(code)) || [])]
-      .filter((row) => num(row.Quantity) !== 0)
-      .sort((a, b) => num(b.Quantity) - num(a.Quantity))
+    stockFor: (code) => stockRowsOf(code)
   }
 })
 

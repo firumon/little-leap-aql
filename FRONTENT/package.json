@@ -9,7 +9,8 @@
   "scripts": {
     "test": "echo \"No test specified\" && exit 0",
     "dev": "quasar dev -m pwa",
-    "build": "npm version patch --no-git-tag-version && quasar build -m pwa",
+    "build": "quasar build -m pwa",
+    "bump": "npm version patch --no-git-tag-version",
     "postinstall": "quasar prepare",
     "deploy": "firebase deploy --only hosting:aqlpwa"
   },

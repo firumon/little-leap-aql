@@ -10,7 +10,7 @@
         "tenant:push": "node scripts/deploy-tenant.js",
         "tenant:update-libs": "node scripts/update-tenant-libraries.js",
         "aql:deploy": "firebase deploy --only hosting:aqlpwa",
-        "aql:bd": "npm --prefix FRONTENT run build && npm --prefix FRONTENT run deploy"
+        "aql:bd": "npm --prefix FRONTENT run bump && npm --prefix FRONTENT run build && npm --prefix FRONTENT run deploy"
     },
     "dependencies": {
         "firebase": "^12.16.0"

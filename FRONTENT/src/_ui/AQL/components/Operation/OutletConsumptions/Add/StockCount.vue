@@ -104,45 +104,41 @@
          opening onto nothing is worse than no control at all. -->
     <template v-if="wizard.returnCandidates.value.length">
       <SectionDividerLabel label="FOUND SOMETHING ELSE?" />
-      <q-expansion-item
+      <!-- The shared drawer: the filter, row rhythm and leave transition are its; only
+           the quantity box and the add button are this step's own. -->
+      <AqlAddItemsExpansion
+        :items="wizard.returnCandidates.value"
         icon="assignment_return"
         label="Add extra return items"
-        :caption="`${wizard.returnCandidates.value.length} item(s) available`"
+        search-label="Search items to return"
         header-class="text-orange-9 text-weight-medium"
-        class="rounded-borders"
-        :class="ui.cardClass"
+        :caption="`${wizard.returnCandidates.value.length} item(s) available`"
+        :card-class="ui.cardClass"
       >
-        <q-list separator>
-          <q-item v-for="option in wizard.returnCandidates.value" :key="option.value">
-            <q-item-section>
-              <q-item-label>{{ option.label }}</q-item-label>
-            </q-item-section>
-            <q-item-section side>
-              <div class="row items-center no-wrap q-gutter-sm">
-                <div style="width: 64px">
-                  <component
-                    :is="NumberField"
-                    :model-value="pendingQty[option.value] ?? 1"
-                    :record="{}"
-                    :config="{ dense: true, inputClass: 'text-center' }"
-                    header="Qty"
-                    @update:model-value="(v) => (pendingQty[option.value] = v)"
-                  />
-                </div>
-                <q-btn
-                  dense
-                  round
-                  no-caps
-                  color="orange"
-                  icon="add"
-                  :aria-label="`Add ${option.label} as a return`"
-                  @click="addReturn(option.value)"
-                />
-              </div>
-            </q-item-section>
-          </q-item>
-        </q-list>
-      </q-expansion-item>
+        <template #row="{ option }">
+          <div class="row items-center no-wrap q-gutter-sm">
+            <div style="width: 64px">
+              <component
+                :is="NumberField"
+                :model-value="pendingQty[option.value] ?? 1"
+                :record="{}"
+                :config="{ dense: true, inputClass: 'text-center' }"
+                header="Qty"
+                @update:model-value="(v) => (pendingQty[option.value] = v)"
+              />
+            </div>
+            <q-btn
+              dense
+              round
+              no-caps
+              color="orange"
+              icon="add"
+              :aria-label="`Add ${option.label} as a return`"
+              @click="addReturn(option.value)"
+            />
+          </div>
+        </template>
+      </AqlAddItemsExpansion>
     </template>
   </div>
 </template>
@@ -168,6 +164,7 @@
  */
 import { computed, reactive, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
+import AqlAddItemsExpansion from 'components/shared/AqlAddItemsExpansion.vue'
 import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
 import { useConsumptionWizard } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/useConsumptionWizard'
 

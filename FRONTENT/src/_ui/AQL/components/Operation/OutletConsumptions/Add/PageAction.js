@@ -9,7 +9,8 @@ import {
   returnRowsOf,
   restockRowsOf,
   defaultReturnMeta,
-  priceListForOutlet
+  priceListForOutlet,
+  priceOf
 } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionStock'
 import { buildConsumptionWorkflowChainRequests } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionWorkflow'
 
@@ -87,9 +88,31 @@ export default (props, { pageState, resourceConfig }) => {
     const kept = rowsNow.filter((row) => Number(row.Quantity) > 0)
     if (kept.length !== rowsNow.length) pageState.setControlField(NODE, F.RESTOCK_ROWS, kept)
   }
-  const directRestock = () => get(F.DIRECT_RESTOCK, false) === true
+  /**
+   * Whether this visit leaves a restock at all — the step-4 switch.
+   *
+   * Read here as well as in the card, and everything restock-shaped below goes through it:
+   * a user who turns the restock off after filling lines must not have those lines
+   * submitted because they are still sitting in the control field. Defaults to TRUE, which
+   * is the behaviour every existing flow had before the switch existed.
+   */
+  const enableRestock = () => get(F.ENABLE_RESTOCK, true) !== false
+  const directRestock = () => enableRestock() && get(F.DIRECT_RESTOCK, false) === true
   const generateInvoice = () => get(F.GENERATE_INVOICE, true) === true && soldRowsOf(countRows()).length > 0
   const priceListCode = () => text(get(F.PRICE_LIST)) || text(priceListForOutlet(outletCode())?.code)
+
+  /**
+   * The engine's price resolver: an override the officer typed on step 3, else the price
+   * list's own answer. Mirrors `useConsumptionWizard.resolvePrice` — same control field,
+   * same fallback — so what was confirmed on screen is what is billed.
+   */
+  const resolvePrice = (sku, listCode) => {
+    const overrides = get(F.PRICE_OVERRIDES, {}) || {}
+    const override = overrides[text(sku)]
+    return override === undefined || override === null || override === ''
+      ? priceOf(sku, listCode)
+      : Number(override) || 0
+  }
 
   /** Unsettled returns raised on an EARLIER visit, which step 5 also offers to settle. */
   const hasPendingReturns = () => rows('OutletReturns').some((row) =>
@@ -144,7 +167,7 @@ export default (props, { pageState, resourceConfig }) => {
   }
 
   /** The restock lines that will actually be requested, zeroes already dropped. */
-  const liveRestockRows = () => restockRowsOf(get(F.RESTOCK_ROWS, []) || [])
+  const liveRestockRows = () => (enableRestock() ? restockRowsOf(get(F.RESTOCK_ROWS, []) || []) : [])
 
   /**
    * The full validation gate, shared by the step-2 `next` and by `submit`.
@@ -197,9 +220,6 @@ export default (props, { pageState, resourceConfig }) => {
     next: () => {
       if (step() === 1) {
         if (!outletCode()) return { valid: false, message: 'Select an outlet to continue.' }
-        if (directRestock() && !text(get(F.WAREHOUSE))) {
-          return { valid: false, message: 'Select a source warehouse to continue.' }
-        }
       }
       if (step() === 2) {
         const result = validate()
@@ -221,6 +241,13 @@ export default (props, { pageState, resourceConfig }) => {
       // recoverable, and a zero line was never going to be submitted anyway.
       if (step() === 4) {
         pruneZeroRestockRows()
+
+        // The source warehouse is asked for HERE now, on the step that offers the DIRECT
+        // choice. It used to be gated on step 1, which asked the question before the user
+        // had decided whether there would be a restock at all.
+        if (directRestock() && !text(get(F.WAREHOUSE))) {
+          return { valid: false, message: 'Select a source warehouse to continue.' }
+        }
 
         // THE ONE PLACE a restock-only audit can be stopped. Steps 5 and 6 ask about
         // returns and the visit, neither of which is an operational effect on its own, so
@@ -289,12 +316,23 @@ export default (props, { pageState, resourceConfig }) => {
         // Injected rather than imported by Layer 2, so the domain stays clear of the tax
         // composable's store graph.
         calculateLineTax,
+        // The unit prices the officer typed on step 3, as a resolver — so the batch prices
+        // every line exactly as the review step displayed it. Read straight off the control
+        // field, because this handler runs outside any setup context and cannot call the
+        // wizard composable that owns the same accessor.
+        resolvePrice,
         restockRows: liveRestockRows(),
         directRestock: directRestock(),
-        warehouseCode: text(get(F.WAREHOUSE)),
-        markDelivered: get(F.MARK_DELIVERED, false) === true,
+        warehouseCode: directRestock() ? text(get(F.WAREHOUSE)) : '',
+        markDelivered: enableRestock() && get(F.MARK_DELIVERED, false) === true,
         completeVisit: get(F.COMPLETE_VISIT, true) === true,
-        scheduleNext: get(F.SCHEDULE_NEXT, true) === true
+        scheduleNext: get(F.SCHEDULE_NEXT, true) === true,
+        // The cadence the officer confirmed on step 6, in days. `null` leaves the outlet's
+        // configured frequency in charge.
+        nextVisitDays: (() => {
+          const stored = get(F.NEXT_VISIT_DAYS, null)
+          return stored === null || stored === undefined || stored === '' ? null : Number(stored) || 0
+        })()
       })
 
       if (!result.valid) return { valid: false, message: result.message }

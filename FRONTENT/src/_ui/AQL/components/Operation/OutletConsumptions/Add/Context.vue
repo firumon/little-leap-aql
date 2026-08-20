@@ -13,6 +13,27 @@
           @update:model-value="selectOutlet"
         />
 
+        <!-- One-tap picks for the outlets the round is actually on. The select above stays
+             for everything else — these are a shortcut, never the only way in. Chips rather
+             than a second list: they cost one line, and the officer is choosing between a
+             handful of names they already recognise. -->
+        <template v-if="wizard.suggestedOutlets.value.length">
+          <div class="text-caption text-grey-7">Scheduled today or overdue</div>
+          <div class="row q-gutter-xs">
+            <q-chip
+              v-for="suggestion in wizard.suggestedOutlets.value"
+              :key="suggestion.code"
+              clickable
+              :outline="suggestion.code !== wizard.outletCode.value"
+              :color="suggestion.isOverdue ? 'orange' : 'primary'"
+              :text-color="suggestion.code === wizard.outletCode.value ? 'white' : undefined"
+              :icon="suggestion.isOverdue ? 'event_busy' : 'event_available'"
+              :label="suggestion.label"
+              @click="pickSuggestion(suggestion)"
+            />
+          </div>
+        </template>
+
         <!-- A banner, not a card: it states a fact ABOUT the field above it (§10.4). -->
         <q-banner
           v-if="wizard.outletCode.value && !wizard.plannedVisitCards.value.length"
@@ -69,40 +90,6 @@
       </div>
     </template>
 
-    <!-- Direct restock is offered ONLY where it can actually be honoured: the user's
-         access region must contain a warehouse to draw from. An unavailable mode is not
-         shown disabled, it is not shown (§13.0). -->
-    <q-card v-if="wizard.regionWarehouses.value.length" flat bordered :class="ui.cardClass">
-      <q-card-section>
-        <div class="row items-center no-wrap q-col-gutter-sm">
-          <div class="col" :class="ui.flexWrapTextClass">
-            <div class="text-subtitle1 text-weight-medium">Direct restock</div>
-            <div class="text-caption text-grey-8">
-              Carry replacement stock from your region's warehouse on this visit, instead
-              of raising a request for someone to approve.
-            </div>
-          </div>
-          <div class="col-auto">
-            <q-toggle :model-value="wizard.directRestock.value" color="primary" @update:model-value="setDirect" />
-          </div>
-        </div>
-      </q-card-section>
-
-      <q-card-section v-if="wizard.directRestock.value" class="q-pt-none">
-        <component
-          :is="SelectField"
-          v-if="wizard.regionWarehouses.value.length > 1"
-          :model-value="wizard.warehouseCode.value"
-          :record="{}"
-          :config="{ label: 'Source warehouse', options: wizard.regionWarehouses.value, clearable: false }"
-          header="WarehouseCode"
-          @update:model-value="(value) => wizard.set(FIELDS.WAREHOUSE, value)"
-        />
-        <div v-else class="text-body2 text-grey-8">
-          Drawing from <span class="text-weight-medium">{{ wizard.regionWarehouses.value[0].label }}</span>.
-        </div>
-      </q-card-section>
-    </q-card>
   </div>
 </template>
 
@@ -110,11 +97,14 @@
 /**
  * Step 1 — context and restock source.
  *
- * Two differently-scoped questions, so two cards (§7.5): which outlet and visit this audit
- * belongs to, and where any replenishment will come from. The second is a MODE chosen
- * before any data is entered, produces the same record shape, and differs only in the
- * states the submit handler writes — which is exactly the test for building a branch
- * inside Add rather than as its own action route (§13.0).
+ * ONE question, asked once: which outlet and visit this audit belongs to.
+ *
+ * The restock MODE used to be asked here too, and it did not belong. Whether a restock is
+ * direct or standard is only meaningful once there IS a restock, and the officer can turn
+ * the whole restock off two steps later — so the mode sat on step 1 asking about something
+ * that might never exist. It now lives on the restock step itself, beside the lines it
+ * routes (§10.5). The space it freed goes to the suggested-outlet chips, which answer the
+ * question this screen actually asks.
  *
  * `Username` and `Date` are never rendered. They are system facts — the signed-in user and
  * today — seeded onto the node below and left out of the form entirely, so an audit cannot
@@ -132,7 +122,7 @@ import { computed, onMounted, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
 import { formatDate } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/View/useConsumptionView'
-import { useConsumptionWizard, WIZARD_FIELDS as FIELDS } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/useConsumptionWizard'
+import { useConsumptionWizard } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/useConsumptionWizard'
 
 defineOptions({ name: 'OutletConsumptionsAddContext', inheritAttrs: false })
 
@@ -193,15 +183,14 @@ function autoSelectTodaysVisit () {
   if (match) selectVisit(match.value)
 }
 
-function setDirect (value) {
-  const direct = value === true && wizard.regionWarehouses.value.length > 0
-  wizard.set(FIELDS.DIRECT_RESTOCK, direct)
-  // Turning it off clears the warehouse so a stale code cannot ride along on a request
-  // that is no longer direct.
-  wizard.set(FIELDS.WAREHOUSE, direct
-    ? (wizard.warehouseCode.value || wizard.regionWarehouses.value[0].value)
-    : '')
-  if (!direct) wizard.set(FIELDS.MARK_DELIVERED, false)
+/**
+ * A suggestion carries its own planned visit, so tapping one answers BOTH questions on this
+ * screen at once — which is the whole point of offering it. The visit is applied after
+ * `selectOutlet`, which clears any previously chosen one.
+ */
+function pickSuggestion (suggestion) {
+  selectOutlet(suggestion.code)
+  if (suggestion.visitCode) selectVisit(suggestion.visitCode)
 }
 
 onMounted(async () => {

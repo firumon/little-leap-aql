@@ -1,7 +1,57 @@
 <template>
   <div v-if="visible" :class="gutterClass">
     <SectionDividerLabel label="RESTOCK" />
-    <q-card flat bordered :class="ui.cardClass">
+
+    <!-- The enable switch. A single line — label left, toggle right — not a bordered card:
+         a heavy card around one control reads as a section of its own and competes with the
+         restock list it governs. -->
+    <q-item class="q-px-md q-py-sm">
+      <q-item-section :class="ui.flexWrapTextClass">
+        <q-item-label class="text-subtitle1 text-weight-medium">Restock</q-item-label>
+        <q-item-label caption>Turn off if this visit sends nothing back to the outlet.</q-item-label>
+      </q-item-section>
+      <q-item-section side>
+        <q-toggle :model-value="wizard.enableRestock.value" color="primary" @update:model-value="setEnabled" />
+      </q-item-section>
+    </q-item>
+
+    <!-- The routing choice, and it belongs HERE rather than on step 1: it is only
+         meaningful once there IS a restock, and it is hidden with the rest of the step when
+         there is not. Offered only where it can be honoured — the user's access region must
+         contain a warehouse to draw from (§13.0). -->
+    <template v-if="wizard.enableRestock.value && wizard.regionWarehouses.value.length">
+      <q-item class="q-px-md q-py-sm">
+        <q-item-section :class="ui.flexWrapTextClass">
+          <q-item-label class="text-subtitle1 text-weight-medium">Direct restock</q-item-label>
+          <q-item-label caption>
+            Carry the stock from your region's warehouse now, instead of raising a request
+            for someone to approve.
+          </q-item-label>
+        </q-item-section>
+        <q-item-section side>
+          <q-toggle :model-value="wizard.directRestock.value" color="primary" @update:model-value="setDirect" />
+        </q-item-section>
+      </q-item>
+
+      <q-card v-if="wizard.directRestock.value" flat bordered :class="ui.cardClass">
+        <q-card-section>
+          <component
+            :is="SelectField"
+            v-if="wizard.regionWarehouses.value.length > 1"
+            :model-value="wizard.warehouseCode.value"
+            :record="{}"
+            :config="{ label: 'Source warehouse', options: wizard.regionWarehouses.value, clearable: false }"
+            header="WarehouseCode"
+            @update:model-value="(value) => wizard.set(FIELDS.WAREHOUSE, value)"
+          />
+          <div v-else class="text-body2 text-grey-8">
+            Drawing from <span class="text-weight-medium">{{ wizard.regionWarehouses.value[0].label }}</span>.
+          </div>
+        </q-card-section>
+      </q-card>
+    </template>
+
+    <q-card v-if="wizard.enableRestock.value" flat bordered :class="ui.cardClass">
       <q-card-section>
         <!-- The auto-fill states its rule on screen: a computed result the user did not
              specify is one they have to undo by hand to trust (§10.5). -->
@@ -83,57 +133,50 @@
          remaining SKUs are already on screen with their own quantity box, so adding three
          items is three taps and the restock list stays visible above.
          Hidden entirely once every SKU is on the list — an expansion promising items and
-         opening onto nothing is worse than no control. -->
-    <q-expansion-item
-      v-if="wizard.restockCandidates.value.length"
-      icon="add_circle_outline"
+         opening onto nothing is worse than no control.
+         The shell (filter, row rhythm, leave transition) is the SHARED drawer; only the
+         quantity box and the add button are this step's own. -->
+    <AqlAddItemsExpansion
+      v-if="wizard.enableRestock.value"
+      :items="wizard.restockCandidates.value"
       label="Add other items to restock"
-      :caption="`${wizard.restockCandidates.value.length} more item(s) available`"
-      header-class="text-primary text-weight-medium"
-      class="rounded-borders"
-      :class="ui.cardClass"
+      search-label="Search items to restock"
+      :card-class="ui.cardClass + ' q-py-sm'"
     >
-      <q-list separator>
-        <q-item v-for="option in wizard.restockCandidates.value" :key="option.value">
-          <q-item-section>
-            <q-item-label>{{ option.label }}</q-item-label>
-          </q-item-section>
-          <q-item-section side>
-            <div class="row items-center no-wrap q-gutter-sm">
-              <div style="width: 64px">
-                <component
-                  :is="NumberField"
-                  :model-value="pendingQty[option.value] ?? 1"
-                  :record="{}"
-                  :config="{ dense: true, inputClass: 'text-center' }"
-                  header="Quantity"
-                  @update:model-value="(v) => (pendingQty[option.value] = v)"
-                />
-              </div>
-              <!-- Identical presentation to step 2's own add button (`dense round` with an
-                   `add` glyph), so the two expansions read as one recurring control rather
-                   than two similar ones. Only the colour differs, and it differs because
-                   the two expansions mean different things: orange for a return, primary
-                   for a restock — the same pairing the metric chips use. -->
-              <q-btn
-                dense
-                round
-                no-caps
-                color="primary"
-                icon="add"
-                :aria-label="`Add ${option.label} to the restock`"
-                @click="addFromExpansion(option.value)"
-              />
-            </div>
-          </q-item-section>
-        </q-item>
-      </q-list>
-    </q-expansion-item>
+      <template #row="{ option }">
+        <div class="row items-center no-wrap q-gutter-sm">
+          <div style="width: 64px">
+            <component
+              :is="NumberField"
+              :model-value="pendingQty[option.value] ?? 1"
+              :record="{}"
+              :config="{ dense: true, inputClass: 'text-center' }"
+              header="Quantity"
+              @update:model-value="(v) => (pendingQty[option.value] = v)"
+            />
+          </div>
+          <!-- Identical presentation to step 2's own add button (`dense round` with an
+               `add` glyph), so the two drawers read as one recurring control rather than
+               two similar ones. Only the colour differs, and it differs because they mean
+               different things: orange for a return, primary for a restock — the same
+               pairing the metric chips use. -->
+          <q-btn
+            dense
+            round
+            no-caps
+            color="primary"
+            icon="add"
+            :aria-label="`Add ${option.label} to the restock`"
+            @click="addFromExpansion(option.value)"
+          />
+        </div>
+      </template>
+    </AqlAddItemsExpansion>
 
     <!-- Only when a direct restock is actually being carried. A shortfall warning on a
          request someone else will allocate later would be describing stock levels that
          will have changed by the time it matters. -->
-    <template v-if="wizard.directRestock.value && wizard.restockRows.value.length">
+    <template v-if="wizard.enableRestock.value && wizard.directRestock.value && wizard.restockRows.value.length">
       <q-banner v-if="wizard.restockCoverage.value.shortfall > 0" dense rounded class="bg-orange-1 text-body2">
         <template #avatar><q-icon name="warning" color="warning" /></template>
         The warehouse cannot cover {{ wizard.restockCoverage.value.shortfall }} unit(s).
@@ -184,6 +227,10 @@
  * builder calls at submit time, so what the user reads here and what the batch writes
  * cannot disagree.
  *
+ * The step also owns the two decisions that used to sit on step 1 — whether to leave a
+ * restock at all, and whether it is carried directly or routed for approval. Both are only
+ * meaningful once there IS a restock, and both are hidden together when there is not.
+ *
  * The delivery toggle is only offered for a direct restock — an approval-route request has
  * no allocated stock to deliver yet, so the question would be meaningless (§10.5).
  *
@@ -191,6 +238,7 @@
  */
 import { computed, reactive, useAttrs, onMounted } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
+import AqlAddItemsExpansion from 'components/shared/AqlAddItemsExpansion.vue'
 import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
 import { useConsumptionWizard, WIZARD_FIELDS as FIELDS } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/useConsumptionWizard'
 
@@ -205,6 +253,8 @@ const wizard = useConsumptionWizard()
 const { ui, pageState } = wizard
 
 const NumberField = resolveFieldComponent('number', 'add')
+// The source warehouse picker, resolved rather than deep-imported (§2.4).
+const SelectField = resolveFieldComponent('select', 'add')
 
 const visible = computed(() =>
   props.step == null || Number(props.step) === (pageState?.meta.currentStep || 1))
@@ -217,6 +267,39 @@ const visible = computed(() =>
  * added, so the map never outgrows the list it mirrors.
  */
 const pendingQty = reactive({})
+
+/**
+ * Turning the restock OFF clears everything that only makes sense with one — the lines, the
+ * mode and the delivery tick. A stale DIRECT flag left behind would otherwise route a
+ * request that no longer exists, and re-enabling would silently restore choices the user
+ * has already walked away from.
+ */
+function setEnabled (value) {
+  const on = value === true
+  wizard.set(FIELDS.ENABLE_RESTOCK, on)
+  if (on) {
+    wizard.syncRestockFromSales()
+    return
+  }
+  wizard.set(FIELDS.RESTOCK_ROWS, [])
+  wizard.set(FIELDS.DIRECT_RESTOCK, false)
+  wizard.set(FIELDS.WAREHOUSE, '')
+  wizard.set(FIELDS.MARK_DELIVERED, false)
+}
+
+/**
+ * Turning DIRECT on seeds the source warehouse (the only one, or the first of several);
+ * turning it off clears it so a stale code cannot ride along on a request that is no longer
+ * direct, and drops the delivery tick with it.
+ */
+function setDirect (value) {
+  const direct = value === true && wizard.regionWarehouses.value.length > 0
+  wizard.set(FIELDS.DIRECT_RESTOCK, direct)
+  wizard.set(FIELDS.WAREHOUSE, direct
+    ? (wizard.warehouseCode.value || wizard.regionWarehouses.value[0].value)
+    : '')
+  if (!direct) wizard.set(FIELDS.MARK_DELIVERED, false)
+}
 
 function addFromExpansion (sku) {
   wizard.addRestockRow(sku, pendingQty[sku] ?? 1)
@@ -246,5 +329,5 @@ function coverageClass (row) {
 
 // The mirror runs on arrival as well as on every count change, so a user who reaches this
 // step without touching a counter still sees lines rather than an empty card.
-onMounted(() => wizard.syncRestockFromSales())
+onMounted(() => { if (wizard.enableRestock.value) wizard.syncRestockFromSales() })
 </script>

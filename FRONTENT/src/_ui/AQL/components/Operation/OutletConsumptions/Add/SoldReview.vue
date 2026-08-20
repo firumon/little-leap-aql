@@ -7,15 +7,76 @@
     <!-- Headings sit OUTSIDE their cards, so a scroll down the step is scannable by
          heading alone and every card starts with content rather than a label (§7.5). -->
     <SectionDividerLabel label="SOLD THIS VISIT" />
-    <AppList
-      :items="wizard.invoiceLines.value"
-      :item-class="ui.cardClass"
-      :layout="ROW_LAYOUT"
-      :content="ROW_CONTENT"
-      :meta-layout="META_LAYOUT"
-      :meta-label="metaLabel"
-      :meta-caption="metaCaption"
-    />
+    <q-card flat bordered :class="ui.cardClass">
+      <q-list separator>
+        <q-item v-for="line in wizard.invoiceLines.value" :key="line.sku" class="q-py-sm">
+          <q-item-section :class="ui.flexWrapTextClass">
+            <q-item-label class="text-weight-medium">{{ line.name }}</q-item-label>
+            <q-item-label caption>{{ line.variant }}</q-item-label>
+            <q-item-label caption :class="line.unpriced ? 'text-negative' : 'text-grey-8'">
+              {{ lineCaption(line) }}
+            </q-item-label>
+          </q-item-section>
+
+          <q-item-section side>
+            <div class="row items-center no-wrap q-gutter-x-sm">
+              <!-- The quantity as a SOLID chip, not a caption. It is the one figure an
+                   officer scans this list for — it is what they just counted — and it is a
+                   short list of their own numbers, so it reads as an anchor rather than as
+                   the wall of alarms a solid chip makes of a long banded column (§7.2). -->
+              <q-chip color="primary" text-color="white" class="text-bold" size="md" square :label="`${line.qty}`" />
+              <div style="width: 96px">
+                <!-- The price list is the DEFAULT, not the law. Editing here re-runs the
+                     whole engine — line tax, discount apportionment and the payable move
+                     together — because the override is passed to the calculation as a price
+                     RESOLVER rather than patched onto a total the engine never saw. -->
+                <component
+                  :is="CurrencyField"
+                  :model-value="line.price"
+                  :record="line"
+                  :config="{ label: 'Unit price', inputClass: 'text-right text-weight-bold' }"
+                  header="Price"
+                  @update:model-value="(value) => wizard.setLinePrice(line.sku, value)"
+                />
+              </div>
+            </div>
+          </q-item-section>
+        </q-item>
+      </q-list>
+    </q-card>
+
+    <!-- Hidden entirely when the outlet has no backlog — a bundling card offering nothing
+         to bundle is a question the user has to read to dismiss. -->
+    <template v-if="wizard.bundleCandidates.value.length">
+      <SectionDividerLabel label="BUNDLE EARLIER CONSUMPTIONS" />
+      <q-card flat bordered :class="ui.cardClass">
+      <q-card-section>
+        <div class="text-caption text-grey-8 q-pb-sm">
+          This outlet has earlier consumptions that were never billed. Tick any to put them on
+          this same invoice.
+        </div>
+        <q-list separator dense>
+          <q-item v-for="candidate in wizard.bundleCandidates.value" :key="candidate.code" tag="label" v-ripple>
+            <q-item-section side top>
+              <q-checkbox
+                :model-value="wizard.bundledCodes.value.includes(candidate.code)"
+                @update:model-value="() => wizard.toggleBundled(candidate.code)"
+              />
+            </q-item-section>
+            <q-item-section :class="ui.flexWrapTextClass">
+              <q-item-label>{{ candidate.date }}</q-item-label>
+              <!-- The units clause appears only when the lines are actually loaded: a
+                   candidate whose item rows have not been fetched must not read as an
+                   empty consumption (see `bundleCandidates`). -->
+              <q-item-label caption>
+                {{ candidate.username }}<template v-if="candidate.qty !== undefined"> · {{ candidate.qty }} units</template>
+              </q-item-label>
+            </q-item-section>
+          </q-item>
+        </q-list>
+      </q-card-section>
+      </q-card>
+    </template>
 
     <SectionDividerLabel label="INVOICING" />
     <q-card flat bordered :class="ui.cardClass">
@@ -104,39 +165,6 @@
         </div>
       </q-card-section>
     </q-card>
-
-    <!-- Hidden entirely when the outlet has no backlog — a bundling card offering nothing
-         to bundle is a question the user has to read to dismiss. -->
-    <template v-if="wizard.generateInvoice.value && wizard.bundleCandidates.value.length">
-      <SectionDividerLabel label="BUNDLE EARLIER CONSUMPTIONS" />
-      <q-card flat bordered :class="ui.cardClass">
-      <q-card-section>
-        <div class="text-caption text-grey-8 q-pb-sm">
-          This outlet has earlier consumptions that were never billed. Tick any to put them on
-          this same invoice.
-        </div>
-        <q-list separator dense>
-          <q-item v-for="candidate in wizard.bundleCandidates.value" :key="candidate.code" tag="label" v-ripple>
-            <q-item-section side top>
-              <q-checkbox
-                :model-value="wizard.bundledCodes.value.includes(candidate.code)"
-                @update:model-value="() => wizard.toggleBundled(candidate.code)"
-              />
-            </q-item-section>
-            <q-item-section :class="ui.flexWrapTextClass">
-              <q-item-label>{{ candidate.date }}</q-item-label>
-              <!-- The units clause appears only when the lines are actually loaded: a
-                   candidate whose item rows have not been fetched must not read as an
-                   empty consumption (see `bundleCandidates`). -->
-              <q-item-label caption>
-                {{ candidate.username }}<template v-if="candidate.qty !== undefined"> · {{ candidate.qty }} units</template>
-              </q-item-label>
-            </q-item-section>
-          </q-item>
-        </q-list>
-      </q-card-section>
-      </q-card>
-    </template>
   </div>
 </template>
 
@@ -144,16 +172,29 @@
 /**
  * Step 3 — sold review and invoice configuration.
  *
- * Three differently-scoped questions, so three cards (§7.5): what was sold (a read-only
- * restatement of step 2), how this invoice is priced, and which earlier audits ride along
- * on it.
+ * Three differently-scoped questions, so three cards (§7.5), and they are asked in the order
+ * an accountant would ask them:
  *
- * BUNDLING is the reason the third card exists. An outlet visited weekly but invoiced
+ *   1. SOLD THIS VISIT           what this audit found sold, with the unit price editable
+ *   2. BUNDLE EARLIER            which earlier unbilled audits ride along on the same bill
+ *   3. INVOICING                 the price list, discount and the total of BOTH of the above
+ *
+ * The order is load-bearing: the total covers the bundled lines as well as this visit's, so
+ * the two lists that feed it have to be settled before it is read. Showing the total first,
+ * with the bundling underneath, invited the officer to confirm an amount that then changed
+ * under them.
+ *
+ * BUNDLING is the reason the second card exists. An outlet visited weekly but invoiced
  * monthly accumulates four uninvoiced audits; billing them separately produces four
  * invoices the outlet then has to reconcile. Ticking them here puts every line on one
  * invoice and walks all of them to `INVOICE_GENERATED` in the same batch — the invoice's
  * `OutletConsumptionCode` column holds the comma-separated list, joined server-side so the
  * code this batch is about to create stays an unresolved reference.
+ *
+ * The UNIT PRICE is editable on the first card and nowhere else. The price list is the
+ * default, not the law — a negotiated one-off or a stale list both need overriding at the
+ * moment of billing — and the override is handed to the engine as a price RESOLVER, so line
+ * tax, discount apportionment and the payable all move with it.
  *
  * "Generate invoice" is ON by default: the overwhelmingly common case is that a sale is
  * billed, and defaulting it off would make the exception the default path.
@@ -166,7 +207,6 @@ import { useCurrency } from 'src/composables/useCurrency'
 import { usePriceListResource } from 'src/_resource/Master/PriceLists/composables/usePriceListResource'
 import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
 import { useConsumptionWizard, WIZARD_FIELDS as FIELDS } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/useConsumptionWizard'
-import AppList from "components/app/AppList.vue";
 
 defineOptions({ name: 'OutletConsumptionsAddSoldReview', inheritAttrs: false })
 
@@ -179,13 +219,6 @@ const DISCOUNT_TYPES = [
   { value: 'PERCENT', label: 'Percentage' }
 ]
 
-// Every list layout array is a module constant, never an inline literal in the template:
-// a fresh array identity on each render re-runs `abstract/List.vue`'s resolvers, which
-// watch these props BY REFERENCE (§11 rule 5).
-const ROW_LAYOUT = ['label', 'caption']
-const ROW_CONTENT = ['name', 'variant']
-const META_LAYOUT = ['label', 'caption']
-
 const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 
@@ -195,6 +228,7 @@ const { _C } = useCurrency()
 const { activePriceLists } = usePriceListResource()
 
 const SelectField = resolveFieldComponent('select', 'add')
+const CurrencyField = resolveFieldComponent('currency', 'add')
 const NumberField = resolveFieldComponent('number', 'add')
 const TextareaField = resolveFieldComponent('textarea', 'add')
 
@@ -210,10 +244,9 @@ const hasSales = computed(() => wizard.soldRows.value.length > 0)
  * consignment stock gets given away. `validateConsumption` refuses the submission for the
  * same reason; this is the half the user can act on, by switching price list.
  */
-const metaLabel = (line) => (line.unpriced ? 'No price' : _C(line.total))
-const metaCaption = (line) => {
-  if (line.unpriced) return `${line.qty} × not in this price list`
-  const base = `${line.qty} × ${_C(line.price ?? 0)}`
+const lineCaption = (line) => {
+  if (line.unpriced) return 'Not in this price list — set a unit price to bill it'
+  const base = _C(line.total)
   // The line's own tax, stated on the line that generated it — a reader reconciling the
   // header's tax figure otherwise has to divide it back out across the lines by hand.
   return line.tax > 0 ? `${base} · tax ${_C(line.tax)}` : base

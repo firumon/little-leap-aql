@@ -14,6 +14,7 @@ import {
   defaultReturnMeta,
   defaultRestockQty,
   priceListForOutlet,
+  priceOf,
   splitByWarehouseStock
 } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionStock'
 import { calculateConsumptionInvoice } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionInvoice'
@@ -51,6 +52,7 @@ const F = {
   COUNT_ROWS: 'CountRows',
   RETURN_META: 'ReturnMeta',
   RESTOCK_ROWS: 'RestockRows',
+  ENABLE_RESTOCK: 'EnableRestock',
   BUNDLED: 'BundledCodes',
   ADJUSTED_RETURNS: 'AdjustedReturnCodes',
   DIRECT_RESTOCK: 'DirectRestock',
@@ -58,15 +60,20 @@ const F = {
   MARK_DELIVERED: 'MarkDelivered',
   GENERATE_INVOICE: 'GenerateInvoice',
   PRICE_LIST: 'PriceListCode',
+  PRICE_OVERRIDES: 'PriceOverrides',
   DISCOUNT_TYPE: 'DiscountType',
   DISCOUNT_VALUE: 'DiscountValue',
   INVOICE_COMMENT: 'InvoiceComment',
   COMPLETE_VISIT: 'CompleteVisit',
   SCHEDULE_NEXT: 'ScheduleNextVisit',
+  NEXT_VISIT_DAYS: 'NextVisitDays',
   SEEDED_FOR: 'SeededForOutlet'
 }
 
 export { F as WIZARD_FIELDS, NODE as WIZARD_NODE }
+
+/** How many one-tap outlet chips step 1 offers before the select is the faster route. */
+const SUGGESTED_OUTLET_LIMIT = 8
 
 const text = (value) => (value == null ? '' : String(value).trim())
 const asRow = (value) => (value && typeof value === 'object' ? value : {})
@@ -181,6 +188,47 @@ export function useConsumptionWizard () {
   })
 
   /**
+   * Outlets the officer is most likely to be standing in — one tap instead of a search.
+   *
+   * Built from the PLANNED visit queue: an outlet with a visit due today or overdue is
+   * where the round actually is, and the select above stays for everything else. Soonest
+   * first, deduped by outlet, and capped — a chip row long enough to need scrolling is
+   * slower than typing.
+   *
+   * Indexed in ONE pass rather than a `.find()` per visit (CORE_ARCHITECTURE_RULES §6).
+   */
+  const suggestedOutlets = computed(() => {
+    const today = new Date().toISOString().slice(0, 10)
+    const byCode = new Map(outlets.items.value
+      .map(asRow)
+      .filter(isActiveRow)
+      .map((row) => [text(row.Code), row]))
+
+    const seen = new Set()
+    return visits.items.value
+      .map(asRow)
+      .filter((row) => isActiveRow(row) && progressOf(row) === 'PLANNED')
+      .sort((a, b) => (text(a.Date) < text(b.Date) ? -1 : 1))
+      .reduce((list, row) => {
+        const code = text(row.OutletCode)
+        const outlet = byCode.get(code)
+        if (!code || !outlet || seen.has(code)) return list
+        seen.add(code)
+        const date = text(row.Date)
+        list.push({
+          code,
+          visitCode: text(row.Code),
+          label: text(outlet.Name) || code,
+          date,
+          isToday: date === today,
+          isOverdue: !!date && date < today
+        })
+        return list
+      }, [])
+      .slice(0, SUGGESTED_OUTLET_LIMIT)
+  })
+
+  /**
    * Warehouses in the user's own access region.
    *
    * `hasRegionAccess` rather than a flat equality test, because it also honours
@@ -285,6 +333,51 @@ export function useConsumptionWizard () {
   const discountValue = computed(() => toNumber(get(F.DISCOUNT_VALUE, 0)))
 
   /**
+   * Unit prices the officer typed over the price list's answer.
+   *
+   * The list is the DEFAULT, not the law: a negotiated one-off or a stale list both need
+   * overriding at the moment of billing. Held as a control field like every other wizard
+   * answer, so `Add/PageAction.js` — which runs outside setup — reads back exactly what the
+   * review step displayed.
+   */
+  const priceOverrides = computed(() => asRow(get(F.PRICE_OVERRIDES, {})))
+
+  function setLinePrice (sku, value) {
+    const key = text(sku)
+    if (!key) return
+    set(F.PRICE_OVERRIDES, { ...priceOverrides.value, [key]: toNumber(value) })
+  }
+
+  /**
+   * The resolver the engine prices through: an override if one was typed, otherwise the
+   * price list's own answer.
+   *
+   * A RESOLVER rather than pre-priced lines, so the override stays inside the ONE
+   * calculation — line tax, discount apportionment and the net payable all move with it.
+   */
+  const resolvePrice = (sku, listCode) => {
+    const override = priceOverrides.value[text(sku)]
+    return override === undefined || override === null || override === '' ? priceOf(sku, listCode) : toNumber(override)
+  }
+
+  /**
+   * The sold lines of every EARLIER audit the officer ticked to ride along on this bill.
+   *
+   * Read from the stored item rows, grouped by their consumption in ONE pass rather than
+   * rescanned per ticked code (CORE_ARCHITECTURE_RULES §6). Shaped exactly as the workflow
+   * builder shapes them, because the whole point is that the total shown here is the total
+   * the batch writes.
+   */
+  const bundledLines = computed(() => {
+    const wanted = new Set(bundledCodes.value.map(text).filter(Boolean))
+    if (!wanted.size) return []
+    return consumptionItems.items.value
+      .map(asRow)
+      .filter((row) => isActiveRow(row) && wanted.has(text(row.OutletConsumptionCode)))
+      .map((row) => ({ SKU: text(row.SKU), SoldQty: toNumber(row.Qty) }))
+  })
+
+  /**
    * THE invoice, calculated exactly as the submit will calculate it.
    *
    * One call to the Layer 2 engine, and every figure the review step displays is read off
@@ -299,16 +392,38 @@ export function useConsumptionWizard () {
    * total on step 3 keep up with returns ticked on step 5 and then reviewed by going Back.
    */
   const invoiceCalculation = computed(() => calculateConsumptionInvoice({
-    lines: soldRows.value,
+    // Everything the bill covers: what sold on THIS visit, plus every earlier audit the
+    // officer ticked to bundle. The submit takes exactly this union, so the total confirmed
+    // on the review step is the total the batch writes — previously the bundled lines were
+    // added only at submit time, and ticking a backlog silently changed the amount.
+    lines: [...soldRows.value, ...bundledLines.value],
     priceListCode: priceListCode.value,
     discountType: discountType.value,
     discountValue: discountValue.value,
     returnDeduction: returnDeduction.value,
-    calculateLineTax
+    calculateLineTax,
+    resolvePrice
+  }))
+
+  /**
+   * The SAME engine over THIS visit's lines alone — what the "Sold this visit" list renders.
+   *
+   * A second call, not a second implementation: the list has to show this visit's rows, and
+   * filtering them back out of the bundled union is impossible once an earlier audit sold
+   * the same SKU. Same engine, same resolver, same policy, so the two cannot disagree about
+   * what a line costs.
+   */
+  const visitCalculation = computed(() => calculateConsumptionInvoice({
+    lines: soldRows.value,
+    priceListCode: priceListCode.value,
+    // No discount and no return credit: those belong to the INVOICE, not to a line, and
+    // apportioning them across this subset would print a per-line figure the bill never uses.
+    calculateLineTax,
+    resolvePrice
   }))
 
   /** The engine's lines, carrying the labels only the UI needs. */
-  const invoiceLines = computed(() => invoiceCalculation.value.lines.map((line) => {
+  const invoiceLines = computed(() => visitCalculation.value.lines.map((line) => {
     const label = skuLabel(line.SKU)
     return {
       sku: line.SKU,
@@ -366,6 +481,16 @@ export function useConsumptionWizard () {
   }
 
   // ── Step 4: restock ────────────────────────────────────────────────────────
+
+  /**
+   * Whether this visit leaves a restock behind at all.
+   *
+   * Defaults to TRUE: replenishment mirrors consumption, and the overwhelmingly common
+   * case is that a visit which sold something also restocks it. Turning it off hides the
+   * whole step's body — including the DIRECT/STANDARD choice, which is meaningless once
+   * there is no restock to route.
+   */
+  const enableRestock = computed(() => get(F.ENABLE_RESTOCK, true) !== false)
 
   const restockRows = computed(() => get(F.RESTOCK_ROWS, []) || [])
   const directRestock = computed(() => get(F.DIRECT_RESTOCK, false) === true)
@@ -511,12 +636,52 @@ export function useConsumptionWizard () {
   /** The outlet's own cadence, or the backend's configured default. Never a literal. */
   const frequencyDays = computed(() => visitFrequencyFor(outletCode.value, operatingRules.items.value))
 
-  const nextVisitDate = computed(() => {
-    if (!frequencyDays.value) return ''
-    const base = new Date(text(node.record.value.Date) || new Date().toISOString().slice(0, 10))
-    base.setDate(base.getDate() + frequencyDays.value)
-    return base.toISOString().slice(0, 10)
+  /**
+   * The next visit, as TWO linked answers.
+   *
+   * On a phone, "in how many days" and "on what date" are each easier than the other
+   * depending on what the officer is thinking about — a cadence, or a day they will be back
+   * in the area. So both are offered and each writes the other: the DAYS count is the stored
+   * answer (a number the submit hands straight to the visit domain), and the DATE is derived
+   * from it. Typing a date is converted back to a day count on the way in, so there is still
+   * exactly ONE stored value and the two boxes cannot disagree.
+   *
+   * Seeded from the outlet's configured cadence; `0` means the cadence is unknown and no
+   * next visit is scheduled rather than one being invented.
+   */
+  const nextVisitDays = computed(() => {
+    const stored = get(F.NEXT_VISIT_DAYS, null)
+    return stored === null || stored === undefined || stored === '' ? frequencyDays.value : toNumber(stored)
   })
+
+  /** The audit's own date is day zero — the same base the visit domain counts from. */
+  const scheduleBaseDate = () => text(node.record.value.Date) || new Date().toISOString().slice(0, 10)
+
+  function addDaysFromBase (days) {
+    const base = new Date(scheduleBaseDate())
+    if (Number.isNaN(base.getTime())) return ''
+    base.setDate(base.getDate() + (toNumber(days) || 0))
+    return base.toISOString().slice(0, 10)
+  }
+
+  const nextVisitDate = computed(() => {
+    if (!nextVisitDays.value) return ''
+    return addDaysFromBase(nextVisitDays.value)
+  })
+
+  /** Days in → the date follows. Negative counts are refused; a visit is not scheduled backwards. */
+  function setNextVisitDays (value) {
+    set(F.NEXT_VISIT_DAYS, Math.max(0, Math.round(toNumber(value))))
+  }
+
+  /** A date in → the day count follows, as whole calendar days from the audit's own date. */
+  function setNextVisitDate (value) {
+    const chosen = new Date(text(value))
+    const base = new Date(scheduleBaseDate())
+    if (Number.isNaN(chosen.getTime()) || Number.isNaN(base.getTime())) return
+    const days = Math.round((chosen.getTime() - base.getTime()) / 86400000)
+    setNextVisitDays(days)
+  }
 
   const outletName = computed(() => text(getOutlet(outletCode.value)?.name) || outletCode.value)
 
@@ -524,7 +689,7 @@ export function useConsumptionWizard () {
     // context
     node, pageState, ui, user, query, outletCode, visitCode, outletName,
     // options
-    outletOptions, visitOptions, plannedVisitCards, skuOptions, regionWarehouses,
+    outletOptions, visitOptions, plannedVisitCards, suggestedOutlets, skuOptions, regionWarehouses,
     // resources (for a card that needs to `reload()` them)
     resources: { outlets, visits, storages, warehouses, warehouseStorages, skus, products, returns, operatingRules, taxes, consumptionItems },
     // step 2
@@ -533,18 +698,20 @@ export function useConsumptionWizard () {
     returnMeta, metaFor, setReturnMeta,
     // step 3
     generateInvoice, priceListCode, discountType, discountValue,
+    priceOverrides, setLinePrice, resolvePrice, bundledLines,
     invoiceCalculation, invoiceHeader, invoiceLines, invoiceSubtotal, invoiceDiscount,
     invoiceTaxableAmount, invoiceTax, invoiceReturnDeduction, invoiceTotal,
     invoiceTaxBreakdown, invoicePolicy,
     bundleCandidates, bundledCodes, toggleBundled,
     // step 4
-    restockRows, directRestock, warehouseCode, markDelivered,
+    restockRows, enableRestock, directRestock, warehouseCode, markDelivered,
     syncRestockFromSales, setRestockQty, addRestockRow, removeRestockRow,
     restockCoverage, availableAt, restockCandidates, returnCandidates,
     // step 5
     pendingReturns, adjustedReturnCodes, toggleAdjustedReturn, returnDeduction,
     // step 6
-    completeVisit, scheduleNextVisit, frequencyDays, nextVisitDate,
+    completeVisit, scheduleNextVisit, frequencyDays, nextVisitDays, nextVisitDate,
+    setNextVisitDays, setNextVisitDate,
     // raw control-field access, for the cards' own toggles
     get, set, PENDING_INVOICE_GENERATION
   }

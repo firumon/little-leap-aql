@@ -40,20 +40,51 @@
             <div class="text-subtitle1 text-weight-medium">Schedule the next visit</div>
             <div class="text-caption text-grey-8">
               <template v-if="wizard.frequencyDays.value">
-                {{ wizard.frequencyDays.value }} days from today — {{ wizard.nextVisitDate.value }}.
+                Suggested from this outlet's cadence — adjust either box below.
               </template>
               <template v-else>
-                No visit frequency is configured for this outlet, so no date can be
-                calculated.
+                No visit frequency is configured for this outlet, so no date is suggested.
+                Set one below to schedule anyway.
               </template>
             </div>
           </div>
           <div class="col-auto">
             <q-toggle
-              :model-value="wizard.scheduleNextVisit.value && !!wizard.frequencyDays.value"
+              :model-value="wizard.scheduleNextVisit.value && !!wizard.nextVisitDays.value"
               color="primary"
-              :disable="!wizard.frequencyDays.value"
+              :disable="!wizard.nextVisitDays.value"
               @update:model-value="(v) => wizard.set(FIELDS.SCHEDULE_NEXT, v === true)"
+            />
+          </div>
+        </div>
+      </q-card-section>
+
+      <!-- TWO linked boxes, because on a phone each is the faster answer depending on what
+           the officer is thinking about: a cadence ("come back in a fortnight") or a day
+           they know they will be in the area. Typing in either updates the other; the DAYS
+           count is the single stored value, so the two can never disagree.
+           `type="number"` with `v-model.number` is what raises the numeric keypad — a text
+           box here means the officer taps through to the number pad for a two-digit entry. -->
+      <q-card-section class="q-pt-none">
+        <div class="row q-col-gutter-sm">
+          <div class="col-5">
+            <q-input
+              v-model.number="daysModel"
+              type="number"
+              inputmode="numeric"
+              min="0"
+              label="In days"
+              outlined
+              hide-bottom-space
+            />
+          </div>
+          <div class="col-7">
+            <AppDate
+              :model-value="wizard.nextVisitDate.value"
+              label="Next visit date"
+              outlined
+              hide-bottom-space
+              @update:model-value="wizard.setNextVisitDate"
             />
           </div>
         </div>
@@ -85,6 +116,7 @@
 import { computed, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import { useCurrency } from 'src/composables/useCurrency'
+import AppDate from 'components/shared/AppDate.vue'
 import { useConsumptionWizard, WIZARD_FIELDS as FIELDS } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/useConsumptionWizard'
 
 defineOptions({ name: 'OutletConsumptionsAddVisitOptions', inheritAttrs: false })
@@ -100,6 +132,18 @@ const { _C } = useCurrency()
 
 const visible = computed(() =>
   props.step == null || Number(props.step) === (pageState?.meta.currentStep || 1))
+
+/**
+ * The days box, as a writable computed over the wizard's single stored value.
+ *
+ * A local `ref` kept in step with a watcher would be a second source of truth for the same
+ * answer (ARCHITECTURE RULES §6); this reads and writes the one control field directly, so
+ * the date box beside it moves on the same tick.
+ */
+const daysModel = computed({
+  get: () => wizard.nextVisitDays.value,
+  set: (value) => wizard.setNextVisitDays(value)
+})
 
 const rowDelay = (index) => ({ animationDelay: `${index * ui.rowStaggerMs}ms` })
 

@@ -8,6 +8,7 @@
 var _appSpreadsheetCache = null;
 var _sheet_headers_cache = {};
 var _openedSpreadsheetsCache = {};
+var _config_map_cache = null;
 
 /**
  * Safely opens a spreadsheet by ID, caching the reference in memory
@@ -33,10 +34,102 @@ function getSheetHeaders(sheet) {
   return getSheetHeadersByMeta(sheet.getParent().getId(), sheet.getName(), sheet);
 }
 
-/**
- * Fetches headers using fileId and sheetName, checking CacheService first.
- * Only opens the sheet if not in cache.
- */
+// Values past the ~100KB CacheService cap are split across <key>_C0..Cn with a
+// <key>_MANIFEST holding the part count. One getAll to read, one putAll to write.
+function buildCacheChunkKeys(baseKey, count) {
+  var keys = [];
+  for (var i = 0; i < count; i++) keys.push(baseKey + '_C' + i);
+  return keys;
+}
+
+function putChunkedCache(baseKey, json, ttlSeconds) {
+  var ttl = ttlSeconds || CACHE_TTL_SEC;
+  var text = (json === null || json === undefined) ? '' : String(json);
+  var parts = [];
+  for (var i = 0; i < text.length; i += CACHE_CHUNK_CHARS) {
+    parts.push(text.substring(i, i + CACHE_CHUNK_CHARS));
+  }
+  if (!parts.length) parts.push('');
+
+  var batch = {};
+  batch[baseKey + '_MANIFEST'] = String(parts.length);
+  for (var p = 0; p < parts.length; p++) batch[baseKey + '_C' + p] = parts[p];
+
+  var cache;
+  try {
+    cache = CacheService.getScriptCache();
+  } catch (e) {
+    return false;
+  }
+
+  try {
+    cache.putAll(batch, ttl);
+    return true;
+  } catch (e) { /* fall through */ }
+
+  // putAll limits the COMBINED payload, so a batch can fail yet succeed key by key.
+  var keys = Object.keys(batch);
+  for (var k = 0; k < keys.length; k++) {
+    try {
+      cache.put(keys[k], batch[keys[k]], ttl);
+    } catch (e) {
+      // A partial write would leave a manifest pointing at missing chunks.
+      try { cache.removeAll(keys); } catch (e2) { /* best-effort */ }
+      return false;
+    }
+  }
+  return true;
+}
+
+function getChunkedCache(baseKey) {
+  try {
+    var cache = CacheService.getScriptCache();
+
+    // Manifest plus the likely chunks in ONE getAll, not two round-trips.
+    var probeKeys = [baseKey + '_MANIFEST'];
+    for (var p = 0; p < CACHE_CHUNK_PROBE; p++) probeKeys.push(baseKey + '_C' + p);
+
+    var found = cache.getAll(probeKeys) || {};
+    var manifest = found[baseKey + '_MANIFEST'];
+    if (!manifest) return null;
+
+    var count = Number(manifest) || 0;
+    if (count <= 0) return null;
+
+    if (count > CACHE_CHUNK_PROBE) {
+      var restKeys = [];
+      for (var r = CACHE_CHUNK_PROBE; r < count; r++) restKeys.push(baseKey + '_C' + r);
+      var rest = cache.getAll(restKeys) || {};
+      for (var key in rest) {
+        if (Object.prototype.hasOwnProperty.call(rest, key)) found[key] = rest[key];
+      }
+    }
+
+    var out = '';
+    for (var i = 0; i < count; i++) {
+      var part = found[baseKey + '_C' + i];
+      // A partial value is unusable; rebuild beats parsing truncated JSON.
+      if (part === undefined || part === null) return null;
+      out += part;
+    }
+    return out;
+  } catch (e) {
+    return null;
+  }
+}
+
+function removeChunkedCache(baseKey) {
+  try {
+    var cache = CacheService.getScriptCache();
+    var count = Number(cache.get(baseKey + '_MANIFEST')) || 0;
+    var keys = [baseKey + '_MANIFEST'];
+    // Sweep generously so a shrunk payload leaves no readable orphan tail.
+    var sweep = Math.max(count, 8);
+    for (var i = 0; i < sweep; i++) keys.push(baseKey + '_C' + i);
+    cache.removeAll(keys);
+  } catch (e) { /* non-fatal */ }
+}
+
 function getSheetHeadersByMeta(fileId, sheetName, sheetObject) {
   if (!fileId || !sheetName) return [];
   var cacheKey = 'HEADERS_' + fileId + '_' + sheetName;
@@ -79,11 +172,139 @@ function getSheetHeadersByMeta(fileId, sheetName, sheetObject) {
   // Persist to CacheService AND Permanent Metadata
   try {
     var jsonValue = JSON.stringify(headers);
-    scriptCache.put(cacheKey, jsonValue, 300);
+    scriptCache.put(cacheKey, jsonValue, CACHE_TTL_SEC);
     setPermanentMetadata(cacheKey, jsonValue);
   } catch (e) { /* non-fatal */ }
 
   return headers;
+}
+
+// Batched header resolution: one getAll, one putAll, one grouped metadata write.
+// The per-resource path costs a TextFinder-backed sheet write EACH, and login asks
+// for all ~49 at once. Writes the same HEADERS_<fileId>_<sheetName> keys.
+function getSheetHeadersBatch(entries) {
+  var out = {};
+  var list = Array.isArray(entries) ? entries : [];
+  if (!list.length) return out;
+
+  var wanted = {};
+  var order = [];
+  for (var i = 0; i < list.length; i++) {
+    var entry = list[i] || {};
+    var fileId = (entry.fileId || '').toString().trim();
+    var sheetName = (entry.sheetName || '').toString().trim();
+    if (!fileId || !sheetName) continue;
+
+    var pairKey = fileId + '::' + sheetName;
+    if (wanted[pairKey]) continue;
+    wanted[pairKey] = { fileId: fileId, sheetName: sheetName, cacheKey: 'HEADERS_' + fileId + '_' + sheetName };
+    order.push(pairKey);
+  }
+  if (!order.length) return out;
+
+  var pending = [];
+  for (var a = 0; a < order.length; a++) {
+    var memPair = wanted[order[a]];
+    var memHit = _sheet_headers_cache[memPair.cacheKey];
+    if (memHit) {
+      out[order[a]] = memHit;
+    } else {
+      pending.push(order[a]);
+    }
+  }
+  if (!pending.length) return out;
+
+  // One getAll for every remaining key.
+  var cacheKeys = [];
+  var keyToPair = {};
+  for (var b = 0; b < pending.length; b++) {
+    var ck = wanted[pending[b]].cacheKey;
+    cacheKeys.push(ck);
+    keyToPair[ck] = pending[b];
+  }
+
+  var cached = {};
+  try {
+    cached = CacheService.getScriptCache().getAll(cacheKeys) || {};
+  } catch (e) {
+    cached = {};
+  }
+
+  var stillPending = [];
+  for (var c = 0; c < pending.length; c++) {
+    var pairKeyC = pending[c];
+    var raw = cached[wanted[pairKeyC].cacheKey];
+    if (raw) {
+      try {
+        var parsed = JSON.parse(raw);
+        out[pairKeyC] = parsed;
+        _sheet_headers_cache[wanted[pairKeyC].cacheKey] = parsed;
+        continue;
+      } catch (e) { /* fall through to metadata/sheet */ }
+    }
+    stillPending.push(pairKeyC);
+  }
+  if (!stillPending.length) return out;
+
+  var sheetPending = [];
+  for (var d = 0; d < stillPending.length; d++) {
+    var pairKeyD = stillPending[d];
+    var meta = getPermanentMetadata(wanted[pairKeyD].cacheKey);
+    if (meta) {
+      try {
+        var parsedMeta = JSON.parse(meta);
+        out[pairKeyD] = parsedMeta;
+        _sheet_headers_cache[wanted[pairKeyD].cacheKey] = parsedMeta;
+        continue;
+      } catch (e) { /* fall through to sheet */ }
+    }
+    sheetPending.push(pairKeyD);
+  }
+  if (!sheetPending.length) return out;
+
+  // Sheet reads for genuine misses only; openSpreadsheetById dedupes per file.
+  var cacheWrites = {};
+  var metadataWrites = {};
+
+  for (var e2 = 0; e2 < sheetPending.length; e2++) {
+    var pairKeyE = sheetPending[e2];
+    var pair = wanted[pairKeyE];
+    try {
+      var ss = openSpreadsheetById(pair.fileId);
+      var sheet = ss ? ss.getSheetByName(pair.sheetName) : null;
+      if (!sheet) {
+        out[pairKeyE] = [];
+        continue;
+      }
+
+      var lastColumn = sheet.getLastColumn();
+      if (!lastColumn) {
+        out[pairKeyE] = [];
+        continue;
+      }
+
+      var headers = sheet.getRange(1, 1, 1, lastColumn).getValues()[0];
+      out[pairKeyE] = headers;
+      _sheet_headers_cache[pair.cacheKey] = headers;
+
+      var json = JSON.stringify(headers);
+      cacheWrites[pair.cacheKey] = json;
+      metadataWrites[pair.cacheKey] = json;
+    } catch (err) {
+      out[pairKeyE] = [];
+    }
+  }
+
+  if (Object.keys(cacheWrites).length) {
+    try {
+      CacheService.getScriptCache().putAll(cacheWrites, CACHE_TTL_SEC);
+    } catch (e) { /* cache is best-effort */ }
+  }
+  if (Object.keys(metadataWrites).length) {
+    setPermanentMetadataBatch(metadataWrites);
+  }
+
+  return out;
 }
 
 /**
@@ -196,12 +417,19 @@ function setAppFileId() {
  * Uses CacheService (6-hour TTL) since config rarely changes.
  */
 function getConfigMap() {
+  // Memo: resolveFileIdForScope calls this twice per resource row, so a config
+  // rebuild otherwise issues ~100 blocking CacheService round-trips.
+  if (_config_map_cache) return _config_map_cache;
+
   var ss = getAppSpreadsheet();
   var cacheKey = 'APP_CONFIG_MAP_V2_' + ss.getId();
   var cache = CacheService.getScriptCache();
   var cached = cache.get(cacheKey);
   if (cached) {
-    try { return JSON.parse(cached); } catch (e) { /* fall through */ }
+    try {
+      _config_map_cache = JSON.parse(cached);
+      return _config_map_cache;
+    } catch (e) { /* fall through */ }
   }
 
   var sheet = ss.getSheetByName(CONFIG.SHEETS.CONFIG);
@@ -215,7 +443,8 @@ function getConfigMap() {
     if (key) map[key] = value;
   }
 
-  cache.put(cacheKey, JSON.stringify(map), 300); // 5 minutes
+  _config_map_cache = map;
+  cache.put(cacheKey, JSON.stringify(map), CACHE_TTL_SEC);
   return map;
 }
 
@@ -224,6 +453,7 @@ function getConfigMap() {
  * Call after any write to the Config sheet.
  */
 function clearConfigCache() {
+  _config_map_cache = null;
   var cache = CacheService.getScriptCache();
   cache.remove('APP_CONFIG_MAP_V2_' + getAppSpreadsheet().getId());
 }
@@ -363,6 +593,134 @@ function setPermanentMetadata(key, value) {
   if (ctx.map) ctx.map[key] = jsonValue;
 }
 
+// Batched metadata write: row numbers come from the cached grid, not a TextFinder
+// scan per key, and all new keys append as one setValues block.
+function setPermanentMetadataBatch(entries) {
+  var map = entries && typeof entries === 'object' ? entries : {};
+  var keys = Object.keys(map);
+  if (!keys.length) return;
+
+  var ctx = getMetadataContext();
+  if (!ctx.sheet) {
+    // Let the single-key path create the sheet, then batch the remainder.
+    setPermanentMetadata(keys[0], map[keys[0]]);
+    if (keys.length === 1) return;
+    var rest = {};
+    for (var r = 1; r < keys.length; r++) rest[keys[r]] = map[keys[r]];
+    setPermanentMetadataBatch(rest);
+    return;
+  }
+
+  var rowByKey = {};
+  for (var i = 1; i < ctx.values.length; i++) {
+    var existingKey = (ctx.values[i][ctx.idx.Key] || '').toString().trim();
+    if (existingKey && rowByKey[existingKey] === undefined) {
+      rowByKey[existingKey] = i + 1;
+    }
+  }
+
+  var appends = [];
+  for (var k = 0; k < keys.length; k++) {
+    var key = keys[k];
+    var value = map[key];
+    var jsonValue = typeof value === 'string' ? value : JSON.stringify(value);
+
+    if (jsonValue.length > METADATA_CHUNK_CHARS) {
+      setPermanentMetadataLarge(key, jsonValue);
+      continue;
+    }
+
+    var row = rowByKey[key];
+    if (row !== undefined) {
+      ctx.sheet.getRange(row, ctx.idx.Value + 1).setValue(jsonValue);
+    } else {
+      appends.push([key, jsonValue]);
+    }
+    if (ctx.map) ctx.map[key] = jsonValue;
+  }
+
+  if (appends.length) {
+    var startRow = ctx.sheet.getLastRow() + 1;
+    ctx.sheet.getRange(startRow, 1, appends.length, 2).setValues(appends);
+    // Keep the cached grid in step so a later read does not re-append.
+    for (var a = 0; a < appends.length; a++) {
+      ctx.values.push([appends[a][0], appends[a][1]]);
+    }
+  }
+}
+
+// A cell caps at 50000 chars, so large values split across <key>#0..#n rows with a
+// <key>#COUNT row. The plain single-row form is read first, so existing rows still work.
+function getPermanentMetadataLarge(key) {
+  var ctx = getMetadataContext();
+  if (!ctx.map) return undefined;
+
+  var direct = ctx.map[key];
+  if (direct !== undefined && direct !== null && direct !== '') return direct;
+
+  var count = Number(ctx.map[key + '#COUNT']) || 0;
+  if (count <= 0) return undefined;
+
+  var out = '';
+  for (var i = 0; i < count; i++) {
+    var part = ctx.map[key + '#' + i];
+    // A missing part means a torn write; rebuild beats truncated JSON.
+    if (part === undefined || part === null) return undefined;
+    out += part;
+  }
+  return out;
+}
+
+function setPermanentMetadataLarge(key, value) {
+  var text = typeof value === 'string' ? value : JSON.stringify(value);
+
+  if (text.length <= METADATA_CHUNK_CHARS) {
+    setPermanentMetadata(key, text);
+    clearPermanentMetadataChunks(key);
+    return;
+  }
+
+  var parts = [];
+  for (var i = 0; i < text.length; i += METADATA_CHUNK_CHARS) {
+    parts.push(text.substring(i, i + METADATA_CHUNK_CHARS));
+  }
+
+  var batch = {};
+  batch[key + '#COUNT'] = String(parts.length);
+  for (var p = 0; p < parts.length; p++) {
+    batch[key + '#' + p] = parts[p];
+  }
+
+  // The single-row form must not survive alongside the chunked form.
+  var ctx = getMetadataContext();
+  if (ctx.sheet && ctx.map && ctx.map[key] !== undefined) {
+    var row = findRowByValue(ctx.sheet, ctx.idx.Key, key, 2, true);
+    if (row !== -1) {
+      ctx.sheet.getRange(row, ctx.idx.Value + 1).setValue('');
+    }
+    delete ctx.map[key];
+  }
+
+  setPermanentMetadataBatch(batch);
+}
+
+function clearPermanentMetadataChunks(key) {
+  var ctx = getMetadataContext();
+  if (!ctx.sheet || !ctx.map) return;
+
+  var count = Number(ctx.map[key + '#COUNT']) || 0;
+  if (count <= 0) return;
+
+  var chunkKeys = [key + '#COUNT'];
+  for (var i = 0; i < count; i++) chunkKeys.push(key + '#' + i);
+
+  for (var c = 0; c < chunkKeys.length; c++) {
+    var row = findRowByValue(ctx.sheet, ctx.idx.Key, chunkKeys[c], 2, true);
+    if (row !== -1) ctx.sheet.getRange(row, ctx.idx.Value + 1).setValue('');
+    delete ctx.map[chunkKeys[c]];
+  }
+}
+
 /**
  * Clears permanent metadata rows from the APP Metadata sheet.
  * Returns a summary so menu wrappers and manual script runs can verify the target.
@@ -407,6 +765,7 @@ function clearAllAppCaches() {
   _sheet_headers_cache = {};
   _metadata_cache = null;
   _openedSpreadsheetsCache = {};
+  _config_map_cache = null;
 
   var metadataSummary = clearPermanentMetadataCache();
 
@@ -417,6 +776,7 @@ function clearAllAppCaches() {
   if (typeof clearRolesCache === 'function') clearRolesCache();
   if (typeof clearAccessRegionCache === 'function') clearAccessRegionCache();
   if (typeof clearDesignationsCache === 'function') clearDesignationsCache();
+  if (typeof clearUsersCache === 'function') clearUsersCache();
 
   return metadataSummary;
 }
@@ -458,8 +818,7 @@ function regenerateAllAppCaches() {
 }
 
 /**
- * Warms sheet header metadata for active sheet-backed resources so login does not
- * need to perform the first expensive cross-file header reads.
+ * Warms sheet header metadata so login does not pay the first cross-file reads.
  */
 function warmResourceHeaderCaches() {
   var result = { rebuilt: 0, skipped: 0, failures: [] };
@@ -470,24 +829,82 @@ function warmResourceHeaderCaches() {
   }
 
   var configMap = getResourceConfigMap() || {};
+  var entries = [];
+  var pairToResource = {};
+
   Object.keys(configMap).forEach(function(resourceName) {
     var config = configMap[resourceName] || {};
     if (config.functional || config.isActive === false || !config.fileId || !config.sheetName) {
       result.skipped++;
       return;
     }
+    var pairKey = config.fileId + '::' + config.sheetName;
+    if (pairToResource[pairKey] === undefined) {
+      pairToResource[pairKey] = resourceName;
+      entries.push({ fileId: config.fileId, sheetName: config.sheetName });
+    }
+  });
 
-    try {
-      var headers = getSheetHeadersByMeta(config.fileId, config.sheetName);
-      if (headers && headers.length) {
-        result.rebuilt++;
-      } else {
-        result.skipped++;
-      }
-    } catch (e) {
-      result.failures.push(resourceName + ': ' + e.message);
+  if (!entries.length) return result;
+
+  var headersByPair;
+  try {
+    headersByPair = getSheetHeadersBatch(entries);
+  } catch (e) {
+    result.failures.push('Batch header warm failed: ' + (e && e.message ? e.message : e));
+    return result;
+  }
+
+  Object.keys(pairToResource).forEach(function(pairKey) {
+    var headers = headersByPair[pairKey];
+    if (headers && headers.length) {
+      result.rebuilt++;
+    } else {
+      result.skipped++;
+      result.failures.push(pairToResource[pairKey] + ': no headers resolved');
     }
   });
 
   return result;
+}
+
+// Ops check: confirms the config map actually persists across executions.
+// Run from the Apps Script editor (never as a cell formula - custom functions
+// cannot write, so the purge silently no-ops and the result is meaningless).
+// warmSource 'cache' + healthy true is the pass condition.
+function diagCacheHealth() {
+  var report = {};
+  var scopedKey = RESOURCE_CONFIG_CACHE_KEY + '_' + getAppSpreadsheet().getId();
+
+  clearResourceConfigCache();
+  report.purgedCache = !getChunkedCache(scopedKey);
+  report.purgedMetadata = !getPermanentMetadataLarge(RESOURCE_CONFIG_CACHE_KEY);
+
+  _resource_config_map_source = '';
+  var t0 = Date.now();
+  var map = getResourceConfigMap();
+  report.coldMs = Date.now() - t0;
+  report.coldSource = _resource_config_map_source;
+  report.resources = Object.keys(map).length;
+  report.bytes = JSON.stringify(map).length;
+
+  _resource_config_map_cache = null;
+  _resource_registry_context_cache = null;
+  _metadata_cache = null;
+  _resource_config_map_source = '';
+
+  var t1 = Date.now();
+  getResourceConfigMap();
+  report.warmMs = Date.now() - t1;
+  report.warmSource = _resource_config_map_source;
+
+  report.cachePersisted = !!getChunkedCache(scopedKey);
+  report.metadataPersisted = !!getPermanentMetadataLarge(RESOURCE_CONFIG_CACHE_KEY);
+  report.catalogGeneration = getCatalogGeneration();
+  report.healthy = report.warmSource === 'cache'
+    && report.cachePersisted
+    && report.metadataPersisted;
+
+  Logger.log(JSON.stringify(report, null, 2));
+  return report;
 }

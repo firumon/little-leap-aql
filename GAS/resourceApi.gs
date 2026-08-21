@@ -4,13 +4,81 @@
  * ============================================================
  */
 
+// Memoized per execution: an initial sync spans only 3-4 files.
+var _file_last_updated_cache = {};
+
+function getSpreadsheetLastUpdatedMillis(fileId) {
+  var id = (fileId || '').toString().trim();
+  if (!id) return 0;
+  if (_file_last_updated_cache[id] !== undefined) return _file_last_updated_cache[id];
+
+  var millis = 0;
+  try {
+    var updated = DriveApp.getFileById(id).getLastUpdated();
+    millis = updated ? updated.getTime() : 0;
+  } catch (e) {
+    millis = 0;
+  }
+
+  _file_last_updated_cache[id] = millis;
+  return millis;
+}
+
+// Answers an unchanged delta read from the cursor instead of re-reading the sheet.
+// The response is byte-identical to a delta read that matched no rows.
+// Skipping needs BOTH guards: the sync cursor (covers API writes) and the file
+// modification time (covers manual edits, imports and formulas, which the cursor
+// cannot see). Guard 2 is per-FILE, so any change forces a real read of every
+// resource in it - a needless read costs time, a wrongly skipped one costs data.
+function resolveUnchangedResourceResponse(auth, resourceName, config, lastUpdatedAt) {
+  if (!lastUpdatedAt) return null;
+  if (config.scope === 'view') return null;
+
+  var clientCursor = lastUpdatedAt.getTime();
+
+  var storedCursor = 0;
+  try {
+    storedCursor = getResourceSyncCursor(resourceName) || 0;
+  } catch (e) {
+    return null;
+  }
+  if (!storedCursor) return null;
+  if (storedCursor > clientCursor) return null;
+
+  var fileUpdated = getSpreadsheetLastUpdatedMillis(config.fileId);
+  if (!fileUpdated) return null;
+  if (fileUpdated > clientCursor) return null;
+
+  return {
+    success: true,
+    rows: [],
+    meta: {
+      resource: resourceName,
+      fileId: config.fileId,
+      sheetName: config.sheetName,
+      requestedBy: auth && auth.user ? auth.user.UserID : null,
+      hasDeltaFilter: true,
+      lastDataUpdatedAt: storedCursor,
+      lastSyncAt: Date.now()
+    }
+  };
+}
+
 function handleResourceGetRecords(auth, payload) {
   const resourceName = resolveResourceName(payload);
-  const resource = openResourceSheet(resourceName);
+  // Config first: the permission check and short-circuit need no spreadsheet.
+  const config = getResourceConfig(resourceName);
   enforceMasterPermission(auth, resourceName, 'canRead');
 
   const lastUpdatedAt = payload && payload.lastUpdatedAt ? parseDateInput(payload.lastUpdatedAt) : null;
-  const headers = getSheetHeaders(resource.sheet);
+
+  const unchanged = resolveUnchangedResourceResponse(auth, resourceName, config, lastUpdatedAt);
+  if (unchanged) return unchanged;
+
+  const resource = openResourceSheet(resourceName);
+  // Not getSheetHeaders: that derives the file id via a getParent() round-trip
+  // per resource, ~40 of them on an initial sync. Same cache key.
+  const headers = getSheetHeadersByMeta(config.fileId, config.sheetName, resource.sheet);
 
   if (!headers.length) {
     return buildResourceRowsResponse(auth, resourceName, resource, [], lastUpdatedAt, []);
@@ -542,7 +610,9 @@ function enforceMasterPermission(auth, resourceName, permissionName) {
 }
 
 function buildResourceRowsResponse(auth, resourceName, resource, rows, lastUpdatedAt, headersInput) {
-  const headers = Array.isArray(headersInput) && headersInput.length ? headersInput : getSheetHeaders(resource.sheet);
+  const headers = Array.isArray(headersInput) && headersInput.length
+    ? headersInput
+    : getSheetHeadersByMeta(resource.config.fileId, resource.config.sheetName, resource.sheet);
   const idx = getHeaderIndexMap(headers);
   const filteredRows = rows.filter(function (row) {
     return canAccessRowByPolicy(auth, resource.config, row, idx);

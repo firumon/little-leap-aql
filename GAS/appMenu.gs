@@ -95,6 +95,7 @@ function handleCreateUser(form) {
       Avatar: '',
       ApiKey: ''
     }));
+    if (typeof clearUsersCache === 'function') clearUsersCache();
     return ok('User created.');
   } catch (e) { return fail(e); }
 }
@@ -118,6 +119,7 @@ function handleUpdateUser(form) {
     put(ctx.sheet, row, ctx.idx.AccessRegion, normalizeAccessRegionCode(form.accessRegion));
     put(ctx.sheet, row, ctx.idx.Status, txt(form.status || 'Active'));
     if (txt(form.password)) put(ctx.sheet, row, ctx.idx.PasswordHash, hashPasswordMenu(form.password));
+    if (typeof clearUsersCache === 'function') clearUsersCache();
     return ok('User updated.');
   } catch (e) { return fail(e); }
 }
@@ -129,6 +131,7 @@ function handleToggleUserStatus(form) {
     if (row === -1) throw new Error('User not found.');
     const cur = (get(ctx.sheet, row, ctx.idx.Status) || 'Active').toString().trim();
     put(ctx.sheet, row, ctx.idx.Status, cur === 'Active' ? 'Inactive' : 'Active');
+    if (typeof clearUsersCache === 'function') clearUsersCache();
     return ok('Status updated.');
   } catch (e) { return fail(e); }
 }

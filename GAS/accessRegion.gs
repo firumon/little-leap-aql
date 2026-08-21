@@ -16,8 +16,7 @@ function getAccessRegionContext() {
   }
 
   // Try CacheService first
-  var scriptCache = CacheService.getScriptCache();
-  var cachedJson = scriptCache.get('AQL_ACCESS_REGIONS_V1_' + getAppSpreadsheet().getId());
+  var cachedJson = getChunkedCache('AQL_ACCESS_REGIONS_V1_' + getAppSpreadsheet().getId());
   if (cachedJson) {
     try {
       __accessRegionContextCache = JSON.parse(cachedJson);
@@ -71,9 +70,7 @@ function getAccessRegionContext() {
   // Persist to CacheService
   try {
     var json = JSON.stringify(__accessRegionContextCache);
-    if (json.length < 100000) {
-      scriptCache.put('AQL_ACCESS_REGIONS_V1_' + getAppSpreadsheet().getId(), json, 300);
-    }
+    putChunkedCache('AQL_ACCESS_REGIONS_V1_' + getAppSpreadsheet().getId(), json, CACHE_TTL_SEC);
   } catch (e) { /* non-fatal */ }
 
   return __accessRegionContextCache;
@@ -82,7 +79,9 @@ function getAccessRegionContext() {
 function clearAccessRegionCache() {
   __accessRegionContextCache = null;
   try {
-    CacheService.getScriptCache().remove('AQL_ACCESS_REGIONS_V1_' + getAppSpreadsheet().getId());
+    var scopedACCE = 'AQL_ACCESS_REGIONS_V1_' + getAppSpreadsheet().getId();
+    CacheService.getScriptCache().remove(scopedACCE);
+    removeChunkedCache(scopedACCE);
   } catch (e) { /* non-fatal */ }
 }
 

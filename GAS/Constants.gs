@@ -4,6 +4,18 @@
  * ============================================================
  */
 
+// CacheService TTL cap is 21600s; every cache below is invalidated explicitly on write.
+const CACHE_TTL_SEC = 21600;
+
+// Sheets hard-caps a cell at 50000 chars; large cache payloads are chunked across rows.
+const METADATA_CHUNK_CHARS = 45000;
+
+// CacheService caps a value at 100KB and measures BYTES while JS slices CHARACTERS.
+const CACHE_CHUNK_CHARS = 50000;
+
+// Chunks fetched speculatively with the manifest so a chunked read costs one round-trip.
+const CACHE_CHUNK_PROBE = 4;
+
 const CONFIG = {
   BRAND_COLOR: '#4a86c8',
   SHEETS: {

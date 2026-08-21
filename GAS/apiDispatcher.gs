@@ -710,10 +710,10 @@ function isGenericCrudAction(action, payload) {
 function dispatchResourceCrudAction(action, auth, payload) {
   const normalizedAction = (action || '').toString().trim().toLowerCase();
 
-  // Resolve resource config for view scope validation
+  // Config only: this check reads one field and must not open the spreadsheet.
   const resourceName = resolveResourceName(payload);
-  const resource = openResourceSheet(resourceName);
-  if (resource.config.scope === 'view' && normalizedAction !== 'get') {
+  const resourceConfig = getResourceConfig(resourceName);
+  if (resourceConfig.scope === 'view' && normalizedAction !== 'get') {
     return { success: false, error: 'View-scope resources are read-only.' };
   }
 

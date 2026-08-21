@@ -29,17 +29,47 @@ function buildUserRowObject(headers, rowValues) {
 /**
  * Build headers/index context once for Users sheet.
  */
-function getUsersContext() {
-  if (_users_context_cache) {
-    return _users_context_cache;
-  }
+function buildUsersCacheKey() {
+  return 'AQL_USERS_CONTEXT_V1_' + getAppSpreadsheet().getId();
+}
 
-  const sheet = getAppSpreadsheet().getSheetByName(CONFIG.SHEETS.USERS);
-  if (!sheet) {
-    throw new Error('Users sheet not found');
-  }
+// MUST be called after any Users write not mirrored into the cached values, or
+// the next execution reads a stale grid.
+function clearUsersCache() {
+  _users_context_cache = null;
+  try {
+    CacheService.getScriptCache().remove(buildUsersCacheKey());
+  } catch (e) { /* non-fatal */ }
+}
 
-  const values = sheet.getDataRange().getValues();
+// Re-publishes the grid after an in-place edit; keeps the next cache hit.
+function persistUsersCache(context) {
+  if (!context || !Array.isArray(context.values)) return;
+  try {
+    var json = JSON.stringify({
+      values: stripUsersPasswordHash(context.values, context.idx),
+      headers: context.headers
+    });
+    putChunkedCache(buildUsersCacheKey(), json, CACHE_TTL_SEC);
+  } catch (e) { /* non-fatal */ }
+}
+
+// Every path that publishes the grid to CacheService MUST go through this:
+// a cold read still carries real hashes, which must not leave the sheet.
+function stripUsersPasswordHash(values, idx) {
+  var hashIdx = idx ? idx.PasswordHash : undefined;
+  if (hashIdx === undefined) return values;
+
+  return values.map(function (row, rowIndex) {
+    if (rowIndex === 0) return row;
+    var copy = row.slice();
+    copy[hashIdx] = '';
+    return copy;
+  });
+}
+
+// Rebuilds the derived lookup maps; pure in-memory, no RPCs.
+function buildUsersContextFromValues(sheet, values) {
   const headers = values && values.length ? values[0] : [];
   const idx = getHeaderIndexMap(headers);
   const rowsByNumber = {};
@@ -71,7 +101,7 @@ function getUsersContext() {
     }
   }
 
-  _users_context_cache = {
+  return {
     sheet: sheet,
     values: values,
     headers: headers,
@@ -82,7 +112,66 @@ function getUsersContext() {
     rowByApiKey: rowByApiKey,
     userById: userById
   };
+}
+
+// On the hot path of every protected request. Cached across executions;
+// PasswordHash is stripped before caching and read from the sheet by handleLogin.
+function getUsersContext() {
+  if (_users_context_cache) {
+    return _users_context_cache;
+  }
+
+  const sheet = getAppSpreadsheet().getSheetByName(CONFIG.SHEETS.USERS);
+  if (!sheet) {
+    throw new Error('Users sheet not found');
+  }
+
+  const cachedJson = getChunkedCache(buildUsersCacheKey());
+  if (cachedJson) {
+    try {
+      const parsed = JSON.parse(cachedJson);
+      if (parsed && Array.isArray(parsed.values) && parsed.values.length) {
+        _users_context_cache = buildUsersContextFromValues(sheet, parsed.values);
+        return _users_context_cache;
+      }
+    } catch (e) { /* fall through to a fresh read */ }
+  }
+
+  const values = sheet.getDataRange().getValues();
+  const headers = values && values.length ? values[0] : [];
+  const idx = getHeaderIndexMap(headers);
+
+  const safeValues = stripUsersPasswordHash(values, idx);
+
+  _users_context_cache = buildUsersContextFromValues(sheet, values);
+
+  try {
+    const json = JSON.stringify({ values: safeValues, headers: headers });
+    putChunkedCache(buildUsersCacheKey(), json, CACHE_TTL_SEC);
+  } catch (e) { /* non-fatal */ }
+
   return _users_context_cache;
+}
+
+// Mirrors a single-cell Users write into the cached grid.
+function syncUsersCachedCell(context, rowNumber, headerName, value) {
+  if (!context) return;
+
+  const columnIndex = context.idx ? context.idx[headerName] : undefined;
+  if (columnIndex === undefined) return;
+
+  const rowIndex = rowNumber - 1;
+  if (Array.isArray(context.values) && context.values[rowIndex]) {
+    context.values[rowIndex][columnIndex] = value;
+  }
+  if (context.rowsByNumber && context.rowsByNumber[rowNumber]) {
+    context.rowsByNumber[rowNumber][headerName] = value;
+  }
+
+  if (headerName === 'PasswordHash') {
+    return;
+  }
+  persistUsersCache(context);
 }
 
 /**
@@ -100,7 +189,12 @@ function handleLogin(email, password) {
   const row = users.rowsByNumber[emailRow] || getRowAsObject(users.sheet, emailRow, users.headers);
   const passwordHash = hashPassword(password || '');
 
-  if (row.PasswordHash !== passwordHash) {
+  // Straight from the sheet: a cache-hit row carries a blank hash.
+  const storedHash = users.idx.PasswordHash === undefined
+    ? row.PasswordHash
+    : users.sheet.getRange(emailRow, users.idx.PasswordHash + 1).getValue();
+
+  if (storedHash !== passwordHash) {
     return { success: false, message: 'Invalid credentials' };
   }
 
@@ -111,6 +205,8 @@ function handleLogin(email, password) {
   const token = Utilities.getUuid();
   users.sheet.getRange(emailRow, users.idx.ApiKey + 1).setValue(token);
   users.rowByApiKey[normalizeTokenKey(token)] = emailRow;
+  // Critical: a stale ApiKey column would reject the token just issued.
+  syncUsersCachedCell(users, emailRow, 'ApiKey', token);
   const roleIds = resolveUserRoleIds(row);
 
   return {
@@ -258,9 +354,7 @@ function safeGetRoleResourceAccess(roleId, options) {
 function handleUpdateAvatar(auth, avatarUrl) {
   const value = (avatarUrl || '').toString().trim();
   auth.sheet.getRange(auth.rowNumber, auth.idx.Avatar + 1).setValue(value);
-  if (_users_context_cache && _users_context_cache.rowsByNumber[auth.rowNumber]) {
-    _users_context_cache.rowsByNumber[auth.rowNumber].Avatar = value;
-  }
+  syncUsersCachedCell(_users_context_cache, auth.rowNumber, 'Avatar', value);
   return { success: true, avatarUrl: value };
 }
 
@@ -271,9 +365,7 @@ function handleUpdateName(auth, name) {
   }
 
   auth.sheet.getRange(auth.rowNumber, auth.idx.Name + 1).setValue(value);
-  if (_users_context_cache && _users_context_cache.rowsByNumber[auth.rowNumber]) {
-    _users_context_cache.rowsByNumber[auth.rowNumber].Name = value;
-  }
+  syncUsersCachedCell(_users_context_cache, auth.rowNumber, 'Name', value);
   return { success: true, name: value };
 }
 
@@ -291,10 +383,10 @@ function handleUpdateEmail(auth, newEmail) {
   }
 
   auth.sheet.getRange(auth.rowNumber, auth.idx.Email + 1).setValue(email);
-  if (_users_context_cache && _users_context_cache.rowsByNumber[auth.rowNumber]) {
-    _users_context_cache.rowsByNumber[auth.rowNumber].Email = email;
+  if (_users_context_cache) {
     _users_context_cache.rowByEmail[emailKey] = auth.rowNumber;
   }
+  syncUsersCachedCell(_users_context_cache, auth.rowNumber, 'Email', email);
   return { success: true, email: email };
 }
 
@@ -319,9 +411,7 @@ function handleUpdatePassword(auth, currentPassword, newPassword) {
 
   const updatedHash = hashPassword(updated);
   auth.sheet.getRange(auth.rowNumber, auth.idx.PasswordHash + 1).setValue(updatedHash);
-  if (_users_context_cache && _users_context_cache.rowsByNumber[auth.rowNumber]) {
-    _users_context_cache.rowsByNumber[auth.rowNumber].PasswordHash = updatedHash;
-  }
+  syncUsersCachedCell(_users_context_cache, auth.rowNumber, 'PasswordHash', updatedHash);
   return { success: true };
 }
 
@@ -333,8 +423,7 @@ function getRolesCache() {
   if (_roles_cache) return _roles_cache;
 
   // Try CacheService
-  var scriptCache = CacheService.getScriptCache();
-  var cachedJson = scriptCache.get('AQL_ROLES_CACHE_V1_' + getAppSpreadsheet().getId());
+  var cachedJson = getChunkedCache('AQL_ROLES_CACHE_V1_' + getAppSpreadsheet().getId());
   if (cachedJson) {
     try {
       _roles_cache = JSON.parse(cachedJson);
@@ -368,9 +457,7 @@ function getRolesCache() {
   // Persist to CacheService
   try {
     var json = JSON.stringify(_roles_cache);
-    if (json.length < 100000) {
-      scriptCache.put('AQL_ROLES_CACHE_V1_' + getAppSpreadsheet().getId(), json, 300);
-    }
+    putChunkedCache('AQL_ROLES_CACHE_V1_' + getAppSpreadsheet().getId(), json, CACHE_TTL_SEC);
   } catch (e) { /* non-fatal */ }
 
   return _roles_cache;
@@ -383,7 +470,9 @@ function getRolesCache() {
 function clearRolesCache() {
   _roles_cache = null;
   try {
-    CacheService.getScriptCache().remove('AQL_ROLES_CACHE_V1_' + getAppSpreadsheet().getId());
+    var scopedROLE = 'AQL_ROLES_CACHE_V1_' + getAppSpreadsheet().getId();
+    CacheService.getScriptCache().remove(scopedROLE);
+    removeChunkedCache(scopedROLE);
   } catch (e) { /* non-fatal */ }
 }
 
@@ -398,8 +487,7 @@ function getDesignationsCache() {
   if (_designations_cache) return _designations_cache;
 
   // Try CacheService
-  var scriptCache = CacheService.getScriptCache();
-  var cachedJson = scriptCache.get('AQL_DESIGNATIONS_CACHE_V1_' + getAppSpreadsheet().getId());
+  var cachedJson = getChunkedCache('AQL_DESIGNATIONS_CACHE_V1_' + getAppSpreadsheet().getId());
   if (cachedJson) {
     try {
       _designations_cache = JSON.parse(cachedJson);
@@ -436,9 +524,7 @@ function getDesignationsCache() {
   // Persist to CacheService
   try {
     var json = JSON.stringify(_designations_cache);
-    if (json.length < 100000) {
-      scriptCache.put('AQL_DESIGNATIONS_CACHE_V1_' + getAppSpreadsheet().getId(), json, 300);
-    }
+    putChunkedCache('AQL_DESIGNATIONS_CACHE_V1_' + getAppSpreadsheet().getId(), json, CACHE_TTL_SEC);
   } catch (e) { /* non-fatal */ }
 
   return _designations_cache;
@@ -447,7 +533,9 @@ function getDesignationsCache() {
 function clearDesignationsCache() {
   _designations_cache = null;
   try {
-    CacheService.getScriptCache().remove('AQL_DESIGNATIONS_CACHE_V1_' + getAppSpreadsheet().getId());
+    var scopedDESI = 'AQL_DESIGNATIONS_CACHE_V1_' + getAppSpreadsheet().getId();
+    CacheService.getScriptCache().remove(scopedDESI);
+    removeChunkedCache(scopedDESI);
   } catch (e) { /* non-fatal */ }
 }
 

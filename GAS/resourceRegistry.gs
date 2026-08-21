@@ -20,6 +20,60 @@ var _role_permissions_context_cache = null;
 var _role_resource_access_cache = {};
 var _readable_resource_set_cache = {};
 
+// The role catalog is a pure function of the permissions grid, config map, role ids
+// and options. Its key space is one entry per (role combination x options), which the
+// clear paths cannot enumerate - so a generation token namespaces every entry and
+// dropping the token retires all of them at once.
+//
+// Deliberately NOT PropertiesService: inside a library that resolves to the LIBRARY's
+// properties, shared across tenants, and a failed setProperty would silently skip
+// invalidation and serve stale permissions. The token lives in the same cache as the
+// catalogs it guards, so losing it can only ever cause a rebuild, never a stale read.
+var _catalog_generation = null;
+
+function buildCatalogGenerationKey() {
+  return 'AQL_CATALOG_GEN_' + getAppSpreadsheet().getId();
+}
+
+function getCatalogGeneration() {
+  if (_catalog_generation) return _catalog_generation;
+
+  var key = buildCatalogGenerationKey();
+  try {
+    var cache = CacheService.getScriptCache();
+    var current = cache.get(key);
+    if (!current) {
+      // Minting a fresh token orphans every catalog cached under the old one.
+      // A uuid, not a timestamp: two mints in the same millisecond would collide
+      // and make pre-bump catalogs readable again.
+      current = Utilities.getUuid().replace(/-/g, '').substring(0, 12);
+      cache.put(key, current, CACHE_TTL_SEC);
+    }
+    _catalog_generation = current;
+  } catch (e) {
+    // No cache means no catalog reads either; any stable value is fine.
+    _catalog_generation = '0';
+  }
+  return _catalog_generation;
+}
+
+// Retires every cached role catalog for this spreadsheet.
+function bumpCatalogGeneration() {
+  _catalog_generation = null;
+  try {
+    CacheService.getScriptCache().remove(buildCatalogGenerationKey());
+  } catch (e) { /* non-fatal: the memo clears regardless */ }
+}
+
+function buildRoleCatalogCacheKey(memoKey) {
+  return 'AQL_CATALOG_' + getAppSpreadsheet().getId()
+    + '_G' + getCatalogGeneration()
+    + '_' + memoKey.replace(/[^A-Za-z0-9_|:-]/g, '');
+}
+
+// Diagnostics: 'cache' | 'metadata' | 'rebuild' for the last config map read.
+var _resource_config_map_source = '';
+
 // Bump this whenever the config map shape changes so stale caches are not served.
 var RESOURCE_CONFIG_CACHE_KEY = 'AQL_RESOURCE_CONFIG_MAP_V3';
 var RESOURCE_CONFIG_LEGACY_CACHE_KEYS = ['AQL_RESOURCE_CONFIG_MAP_V2'];
@@ -51,18 +105,32 @@ function getResourceRegistryContext() {
 function getResourceConfigMap() {
   if (_resource_config_map_cache) return _resource_config_map_cache;
 
-  // Try CacheService for cross-execution persistence
-  var scriptCache = CacheService.getScriptCache();
+  // Both layers chunked: this map is ~117KB, past the CacheService value cap AND
+  // the 50000-char cell cap, and the old guards silently skipped both writes.
   var cacheKey = RESOURCE_CONFIG_CACHE_KEY;
-  var cachedJson = scriptCache.get(cacheKey + '_' + getAppSpreadsheet().getId());
+  var scopedKey = cacheKey + '_' + getAppSpreadsheet().getId();
+  var cachedJson = getChunkedCache(scopedKey);
+  var servedFromMetadata = false;
+
   if (!cachedJson) {
     // Try Permanent Metadata fallback
-    cachedJson = getPermanentMetadata(cacheKey);
+    cachedJson = getPermanentMetadataLarge(cacheKey);
+    servedFromMetadata = !!cachedJson;
   }
 
   if (cachedJson) {
     try {
       _resource_config_map_cache = JSON.parse(cachedJson);
+
+      // Promote metadata hits, or the faster CacheService tier stays starved:
+      // the fallback answers every execution and returns before the persist below.
+      if (servedFromMetadata) {
+        _resource_config_map_source = 'metadata';
+        putChunkedCache(scopedKey, cachedJson, CACHE_TTL_SEC);
+      } else {
+        _resource_config_map_source = 'cache';
+      }
+
       return _resource_config_map_cache;
     } catch (e) { /* fall through to fresh build */ }
   }
@@ -158,13 +226,13 @@ function getResourceConfigMap() {
 
   _resource_config_map_cache = map;
 
-  // Persist to CacheService AND Permanent Metadata
+  // Persist to CacheService AND Permanent Metadata, both chunked so neither
+  // silently drops an oversized payload.
+  _resource_config_map_source = 'rebuild';
   try {
     var json = JSON.stringify(map);
-    if (json.length < 100000) {
-      scriptCache.put(cacheKey + '_' + getAppSpreadsheet().getId(), json, 300);
-    }
-    setPermanentMetadata(cacheKey, json);
+    putChunkedCache(scopedKey, json, CACHE_TTL_SEC);
+    setPermanentMetadataLarge(cacheKey, json);
   } catch (e) { /* non-fatal */ }
 
   return map;
@@ -181,20 +249,29 @@ function clearResourceConfigCache() {
   // The catalog memos embed resource config (scope, isActive, UI, actions).
   _role_resource_access_cache = {};
   _readable_resource_set_cache = {};
+  // ...and so do the cached catalogs in CacheService.
+  bumpCatalogGeneration();
 
   var keys = [RESOURCE_CONFIG_CACHE_KEY].concat(RESOURCE_CONFIG_LEGACY_CACHE_KEYS);
   for (var i = 0; i < keys.length; i++) {
     try {
-      CacheService.getScriptCache().remove(keys[i] + '_' + getAppSpreadsheet().getId());
+      var scoped = keys[i] + '_' + getAppSpreadsheet().getId();
+      CacheService.getScriptCache().remove(scoped);
+      removeChunkedCache(scoped);
     } catch (e) { /* non-fatal */ }
     // Clear Permanent Metadata fallback so stale data is not served on cold start
     try {
+      // Chunks first: the deleteRow below shifts row numbers.
+      clearPermanentMetadataChunks(keys[i]);
+
       var ctx = getMetadataContext();
       if (ctx.sheet) {
         var row = findRowByValue(ctx.sheet, ctx.idx.Key, keys[i], 2, true);
         if (row !== -1) {
           ctx.sheet.deleteRow(row);
           if (ctx.map) delete ctx.map[keys[i]];
+          // Drop the context; the cached grid still holds the deleted row.
+          _metadata_cache = null;
         }
       }
     } catch (e) { /* non-fatal */ }
@@ -858,9 +935,9 @@ function parseCompositeHeaders(value) {
 function getRolePermissionsContext() {
   if (_role_permissions_context_cache) return _role_permissions_context_cache;
 
-  // Try CacheService
-  var scriptCache = CacheService.getScriptCache();
-  var cachedJson = scriptCache.get('AQL_ROLE_PERMS_CONTEXT_V1_' + getAppSpreadsheet().getId());
+  // Chunked: a wildcard-heavy grid can exceed the ~100KB per-value cap.
+  var permsCacheKey = 'AQL_ROLE_PERMS_CONTEXT_V1_' + getAppSpreadsheet().getId();
+  var cachedJson = getChunkedCache(permsCacheKey);
   if (cachedJson) {
     try {
       var parsed = JSON.parse(cachedJson);
@@ -887,12 +964,10 @@ function getRolePermissionsContext() {
 
   _role_permissions_context_cache = { rolePermSheet: rolePermSheet, values: values, headers: headers, idx: idx };
 
-  // Persist to CacheService (serializable parts only â€” exclude sheet object)
+  // Persist to CacheService (serializable parts only - exclude sheet object)
   try {
     var json = JSON.stringify({ values: values, headers: headers, idx: idx });
-    if (json.length < 100000) {
-      scriptCache.put('AQL_ROLE_PERMS_CONTEXT_V1_' + getAppSpreadsheet().getId(), json, 300);
-    }
+    putChunkedCache(permsCacheKey, json, CACHE_TTL_SEC);
   } catch (e) { /* non-fatal */ }
 
   return _role_permissions_context_cache;
@@ -907,8 +982,11 @@ function clearRolePermissionsCache() {
   // The catalog memos are derived from the permissions context.
   _role_resource_access_cache = {};
   _readable_resource_set_cache = {};
+  bumpCatalogGeneration();
   try {
-    CacheService.getScriptCache().remove('AQL_ROLE_PERMS_CONTEXT_V1_' + getAppSpreadsheet().getId());
+    var permsKey = 'AQL_ROLE_PERMS_CONTEXT_V1_' + getAppSpreadsheet().getId();
+    CacheService.getScriptCache().remove(permsKey);
+    removeChunkedCache(permsKey);
   } catch (e) { /* non-fatal */ }
 }
 
@@ -923,6 +1001,19 @@ function getRoleResourceAccess(roleId, options) {
     + '::' + (options && options.scope ? normalizeResourceScope(options.scope) : '');
   if (_role_resource_access_cache[memoKey]) return _role_resource_access_cache[memoKey];
 
+  // A hit skips the config map parse, permissions walk and header resolution.
+  const catalogCacheKey = buildRoleCatalogCacheKey(memoKey);
+  const cachedCatalog = getChunkedCache(catalogCacheKey);
+  if (cachedCatalog) {
+    try {
+      const parsedCatalog = JSON.parse(cachedCatalog);
+      if (Array.isArray(parsedCatalog)) {
+        _role_resource_access_cache[memoKey] = parsedCatalog;
+        return parsedCatalog;
+      }
+    } catch (e) { /* fall through to a fresh build */ }
+  }
+
   const includeHeaders = options && options.includeHeaders === true;
   const includeUiConfig = !(options && options.includeUiConfig === false);
   const scopeFilter = options && options.scope ? normalizeResourceScope(options.scope) : '';
@@ -931,6 +1022,15 @@ function getRoleResourceAccess(roleId, options) {
   const resourceMap = {};
   const allowedActionsMap = {};
   const possibleActionsMap = {};
+
+  // Batch every header before the loop; per-resource resolution costs a
+  // TextFinder-backed metadata write each, ~49 of them inside login.
+  if (includeHeaders) {
+    prewarmResourceHeaders(wildcardTargets);
+  }
+
+  // Logged once: a console.warn per resource is an RPC inside a full-catalog loop.
+  const skippedResources = [];
 
   for (let i = 1; i < permissionsContext.values.length; i++) {
     const row = permissionsContext.values[i];
@@ -951,7 +1051,8 @@ function getRoleResourceAccess(roleId, options) {
         const entry = buildAuthorizedResourceEntry(resourceName, {
           includeHeaders: includeHeaders,
           includeUiConfig: includeUiConfig,
-          scopeFilter: scopeFilter
+          scopeFilter: scopeFilter,
+          skippedSink: skippedResources
         });
         if (!entry) continue;
         resourceMap[resourceName] = entry;
@@ -995,8 +1096,42 @@ function getRoleResourceAccess(roleId, options) {
     return entry;
   });
 
+  if (skippedResources.length) {
+    console.warn('getRoleResourceAccess skipped ' + skippedResources.length
+      + ' unconfigured resource(s): ' + skippedResources.join(', '));
+  }
+
   _role_resource_access_cache[memoKey] = result;
+  try {
+    putChunkedCache(catalogCacheKey, JSON.stringify(result), CACHE_TTL_SEC);
+  } catch (e) { /* cache is best-effort */ }
   return result;
+}
+
+// Seeds the in-memory header cache in one batched pass.
+function prewarmResourceHeaders(resourceNames) {
+  var names = Array.isArray(resourceNames) ? resourceNames : [];
+  if (!names.length) return;
+
+  var configMap = getResourceConfigMap();
+  var entries = [];
+
+  for (var i = 0; i < names.length; i++) {
+    var config = configMap[names[i]];
+    if (!config) continue;
+    if (config.functional) continue;
+    if (!config.isActive) continue;
+    if (!config.fileId || !config.sheetName) continue;
+    entries.push({ fileId: config.fileId, sheetName: config.sheetName });
+  }
+
+  if (!entries.length) return;
+
+  try {
+    getSheetHeadersBatch(entries);
+  } catch (e) {
+    console.warn('prewarmResourceHeaders failed: ' + (e && e.message ? e.message : e));
+  }
 }
 
 /**
@@ -1036,7 +1171,11 @@ function buildAuthorizedResourceEntry(resourceName, options) {
   try {
     config = getResourceConfig(resourceName);
   } catch (err) {
-    console.warn('buildAuthorizedResourceEntry skipped resource "' + resourceName + '": ' + (err && err.message ? err.message : err));
+    if (Array.isArray(opts.skippedSink)) {
+      opts.skippedSink.push(resourceName);
+    } else {
+      console.warn('buildAuthorizedResourceEntry skipped resource "' + resourceName + '": ' + (err && err.message ? err.message : err));
+    }
     return null;
   }
 

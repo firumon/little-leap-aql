@@ -43,7 +43,9 @@ function showEditResourceDialog() { CORE_LIB.showEditResourceDialog(); }
 function app_showReportManagerDialog() { CORE_LIB.app_showReportManagerDialog(); }
 function app_showActionManagerDialog() { CORE_LIB.app_showActionManagerDialog(); }
 function app_showListViewsManagerDialog() { CORE_LIB.app_showListViewsManagerDialog(); }
+function app_showRelationsManagerDialog() { CORE_LIB.app_showRelationsManagerDialog(); }
 function syncAppResourcesFromCode() { CORE_LIB.syncAppResourcesFromCode(); }
+function recalculateAllResourcesLastDataUpdatedAtAndNotify() { CORE_LIB.recalculateAllResourcesLastDataUpdatedAtAndNotify(); }
 function regenerateAppCacheAndNotify() { CORE_LIB.regenerateAppCacheAndNotify(); }
 
 // --- Setup & Refactor Submenu ---
@@ -94,6 +96,10 @@ function app_saveResourceListViews(resourceName, json, listViewsMode) {
 // --- Report Manager Dialog ---
 function app_getReportManagerData() { return CORE_LIB.app_getReportManagerData(); }
 function app_saveResourceReports(resourceName, json) { return CORE_LIB.app_saveResourceReports(resourceName, json); }
+
+// --- Relations Manager Dialog ---
+function app_getRelationsManagerData() { return CORE_LIB.app_getRelationsManagerData(); }
+function app_saveResourceRelations(resourceName, json) { return CORE_LIB.app_saveResourceRelations(resourceName, json); }
 
 // --- Roles Setup Progress Dialog ---
 function app_getRolesSetupSteps() { return CORE_LIB.app_getRolesSetupSteps(); }

@@ -7,29 +7,32 @@
  * Headers: Code, Name, Detail, Project ID, Deployment ID
  */
 
-function doGet(e) {
-  return handleMasterRequest(e ? e.parameter : {});
-}
-
 function doPost(e) {
   var params = {};
-  try {
-    if (e && e.postData && e.postData.contents) {
-      params = JSON.parse(e.postData.contents);
-    } else if (e && e.parameter) {
-      params = e.parameter;
+  if (e && e.parameter) {
+    for (var k in e.parameter) {
+      params[k] = e.parameter[k];
     }
-  } catch (err) {
-    return textResponse('ERROR: Invalid JSON in request body');
+  }
+  if (e && e.postData && e.postData.contents) {
+    try {
+      var json = JSON.parse(e.postData.contents);
+      for (var jk in json) {
+        params[jk] = json[jk];
+      }
+    } catch (err) {
+      // Ignore JSON parse error if params were supplied in query string
+    }
   }
   return handleMasterRequest(params);
 }
 
 function handleMasterRequest(params) {
   var action = (params.action || '').toString().trim();
+  var tenantCode = (params.tenantCode || params.tenant || params.t || params.code || '').toString().trim();
   
-  if (action === 'getTenantUrl') {
-    var tenantCode = (params.tenantCode || '').toString().trim();
+  // If tenantCode is provided or action is getTenantUrl
+  if (action === 'getTenantUrl' || (!action && tenantCode)) {
     if (!tenantCode) {
       return textResponse('ERROR: Tenant code is required');
     }
@@ -55,7 +58,13 @@ function handleMasterRequest(params) {
     });
   }
   
-  return textResponse('ERROR: Invalid action');
+  // Default fallback: return active tenants list
+  var list = getAllTenantRecords();
+  return jsonResponse({
+    success: true,
+    message: 'AQL Master Tenant Router Active',
+    tenants: list
+  });
 }
 
 function getTenantsSheet() {

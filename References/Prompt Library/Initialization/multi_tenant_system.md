@@ -1,4 +1,4 @@
-﻿# Initialization: Multi-Tenant System & Routing
+# Initialization: Multi-Tenant System & Routing
 
 > **Scope boundary**: This document covers investigations, modifications, or deployments related to the dynamic multi-tenant system, the Master Apps Script project, and the frontend tenant-URL routing boot process. Self-contained — load only when query involves tenant mapping, master sheet lookup, or PWA boot configuration.
 
@@ -64,16 +64,13 @@ When editing functions inside the core `GAS/` codebase, you MUST update [tenant.
   2. **Authorize permissions**: Select the `onOpen` function in the new tenant's online Apps Script editor and click **Run** to authorize the script. Refresh the Google Sheet to display the menu.
   3. **Set Script Property**: In the Apps Script settings, add a Script Property named `APP_FILE_ID` with the value set to the spreadsheet ID of the tenant's new `App` file.
   4. **Deploy Web App**: Deploy the project as a Web App (Execute as: `Me`, Who has access: `Anyone`) and copy the Web App URL.
-  5. **Register in TENANTS Master Sheet**: Add the tenant `Code`, Web App `URL`, and details to the `URL` tab of the central `TENANTS` Master spreadsheet.
-  6. **Add to local Registry**: Copy the Apps Script **Script ID** (from Project Settings) and add it under the `tenants` object in **[tenant_registry.json](file:///f:/LITTLE%20LEAP/AQL/TENANTS/tenant_registry.json)** so that future library updates can be pushed automatically.
+  5. **Register in TENANTS Master Sheet**: Add the tenant `Code`, `Name`, `Detail`, `Project ID` (Script ID from Project Settings), and `Deployment ID` (from Manage Deployments) directly into the central **`Tenants`** spreadsheet tab.
+  6. *Automation Sync:* Automation scripts (`npm run tenant:push`, `npm run tenant:update-libs`) automatically fetch live project IDs from the Master sheet API. No local registry file editing is required.
   7. *Cache Refresh Tip:* If a newly published version does not appear, remove the `AqlCore` library entirely, re-paste the ID (`1qTNMNpdGwfF3zr-53KqWtM5ibM2bblHiHBIIwB3aJtX3k-82jMLmIiPg`), and add it again to refresh Google's version list cache.
 * **Upgrading AqlCore Library Version**:
   1. Push local changes to `AqlCore` and `AQL` using `npm run gas:push` (which runs `push-gas.js`). Publish a new version in `AqlCore`.
-  2. Update `"version": "NEW_VERSION"` inside **[appsscript.json](file:///f:/LITTLE%20LEAP/AQL/TENANTS/appsscript.json)** (setting `developmentMode` to `false`).
-  3. Push wrapper changes to all tenants: `npm run tenant:push`.
-  4. Instruct sheet administrators to select the latest library version within their Apps Script editors (under Libraries > AqlCore), ensure Development mode is set to OFF, and click Save.
-  5. *Tip:* If the latest version does not show, instruct them to remove and re-add the library.
-  6. **Step-by-Step Spreadsheet Setup**: For full instructions on folder creation, generating spreadsheets using the menu, setting up configuration/file IDs, routing custom resources, and running refactoring scripts, see the [New Client Setup Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/TENANT_NEW_CLIENT_SETUP.md).
+  2. Push library version upgrade to all tenants: `npm run tenant:update-libs`. (This automatically queries the latest version, updates `appsscript.json`, and pushes the manifest to all tenants without resetting web app access permissions).
+  3. **Step-by-Step Spreadsheet Setup**: For full instructions on folder creation, generating spreadsheets using the menu, setting up configuration/file IDs, routing custom resources, and running refactoring scripts, see the [New Client Setup Guide](file:///f:/LITTLE%20LEAP/AQL/Documents/TENANT_NEW_CLIENT_SETUP.md).
 
 ---
 
@@ -81,15 +78,20 @@ When editing functions inside the core `GAS/` codebase, you MUST update [tenant.
 
 > [!WARNING]
 > **API Deployment Permission Reset**: 
-> Running `npx clasp deploy` or `npm run master:deploy` automatically resets the Google Apps Script Web App's access permissions to **"Only myself"** (due to Google API security restrictions).
+> Running CLI deployments (`npx clasp deploy`, `npm run gas:deploy`, `npm run master:deploy`, or `npm run tenant:deploy`) automatically resets the Google Apps Script Web App's access permissions to **"Anyone with Google account"** or **"Only myself"** (due to Google Apps Script API limitations). This breaks the web application API calls.
 
-### Safe Pushing Rule
-To update the Master script without resetting the access settings:
-1. Run `npm run master:push` to push the local code modifications to the project.
-2. Visit the online Apps Script IDE (`npm run master:open`).
-3. Click **Deploy > Manage deployments**, click **Edit (Pencil)** on the deployment `AKfycbzf...`, choose **New version**, ensure access is **Anyone**, and click **Deploy**.
-
-If you run `npm run master:deploy`, you must immediately instruct the user to open the online IDE and manually change the access level back to **Anyone**.
+### Safe Deployment Policy
+1. **Pushing is Safe**: Running push scripts (`npm run gas:push`, `npm run master:push`, `npm run tenant:push`, `npm run tenant:update-libs`) only sends code, manifests, and library versions, and does NOT reset deployment permissions.
+2. **Deployments Must Be Manual by Default**:
+   - The AI agent must NOT trigger CLI deployments (`npm run gas:deploy`, `npm run master:deploy`, `npm run tenant:deploy`) automatically.
+   - The AI agent must notify the user to perform deployment manually via the online editor:
+     1. Open the project in Google Apps Script editor.
+     2. Click **Deploy** > **Manage deployments**.
+     3. Click **Edit** (pencil icon) on the active deployment.
+     4. Select **Version: New version**.
+     5. Ensure **Execute as**: *Me* and **Who has access**: *Anyone*.
+     6. Click **Deploy**.
+3. **Override**: If the user explicitly instructs the agent to run CLI deployment even after knowing this issue, the agent may proceed and immediately remind the user to fix the permission in the online editor.
 
 ---
 

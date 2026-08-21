@@ -1,4 +1,4 @@
-﻿# AQL Backend GAS Implementation
+# AQL Backend GAS Implementation
 
 > **Scope boundary**: This document covers GAS backend changes only — hooks, API handlers, batch operations, resource config. Its blast-radius steps tell you to SEARCH frontend files and sheet structures — do NOT load frontend_modification.md or database_schema_alteration.md unless the task explicitly requires modifying that code. Read referenced files directly by path.
 
@@ -99,9 +99,19 @@ Rules:
 
 ## 6. Targeted Verification Plan
 
-### A. Deploy GAS Changes
-1. Push changes: `npm run gas:push` (or `cd GAS && clasp push`)
-2. **Redeployment Rule**: Request Web App redeployment only when the `doPost` request/response contract changes. Do not request redeployment for hook additions or metadata config updates.
+### A. Push & Deploy GAS Changes
+1. **Push Changes**: Run `npm run gas:push` (or `cd GAS && clasp push`) when explicitly requested by user.
+2. **Deployment Restriction (CRITICAL)**:
+   - **DO NOT run automated `clasp deploy` or deployment scripts by default.** 
+   - Deploying via `clasp deploy` automatically resets the Web App access permission to *"Anyone with Google account"*, which breaks the web application API.
+   - **Warn the user & provide manual steps**:
+     1. Open the Google Apps Script editor online.
+     2. Click **Deploy** > **Manage deployments**.
+     3. Click the **Edit** (pencil) icon on the active Web App deployment.
+     4. Select **Version: New version**.
+     5. Verify **Execute as**: *Me (admin email)* and **Who has access**: *Anyone*.
+     6. Click **Deploy**.
+   - If the user explicitly asks for CLI deployment after being warned, the agent may proceed.
 
 ### B. Sheets Propagation (If Config Changed)
 Instruct the user to run:

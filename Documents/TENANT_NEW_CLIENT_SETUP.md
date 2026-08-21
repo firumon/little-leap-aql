@@ -1,4 +1,4 @@
-﻿# New Client Setup Guide (Tenant Generation)
+# New Client Setup Guide (Tenant Generation)
 
 This guide covers the process for setting up and configuring spreadsheet files for a new tenant (client instance) using the automated generation menu.
 
@@ -97,24 +97,23 @@ This will automatically create all the normalized sheets and apply formatting, s
    - **Who has access**: `Anyone`
 5. Click **Deploy**. Copy the generated **Web App URL**.
 6. Open the central **`TENANTS`** Master spreadsheet.
-7. Go to the **`URL`** tab and add a new row containing:
+7. Go to the **`Tenants`** tab and add a new row containing:
    - **`Code`**: The tenant code (e.g., `NEWCO`).
-   - **`URL`**: The copied Web App URL.
-   - **`Details`**: E.g., Company name or details.
-8. Register the tenant in the local repository registry:
-   - Copy the Apps Script **Script ID** (found in Project Settings / Gear icon of the tenant's Apps Script editor).
-   - Open **[tenant_registry.json](file:///f:/LITTLE%20LEAP/AQL/TENANTS/tenant_registry.json)** in your codebase and add your tenant code and Script ID under the `tenants` object. This ensures that the tenant receives future script upgrades when running `npm run tenant:push`.
+   - **`Name`**: Company or tenant display name.
+   - **`Detail`**: Company description or details.
+   - **`Project ID`**: The Apps Script **Script ID** (found under Project Settings / Gear icon).
+   - **`Deployment ID`**: The Deployment ID extracted from the Web App URL or Manage Deployments.
+8. Automation scripts (`npm run tenant:push`, `npm run tenant:update-libs`) automatically fetch live project IDs from the Master sheet API. No local registry file editing is required.
 
 ---
 
 ## Maintenance & Library Upgrades (Existing Tenants)
 Whenever a new version of the standalone `AqlCore` script library is deployed:
 1. **Pushing Code Updates**: Run `npm run gas:push` to deploy local workspace changes to both `AQL` (dev sheet) and `AqlCore` (standalone library). Once pushed to `AqlCore`, publish a new version of the library.
-2. **Automated Manifest Update & Deployment**: Running `npm run tenant:push` (or `node scripts/deploy-tenant.js`) will:
+2. **Safe Automated Library Upgrade**: Run `npm run tenant:update-libs` to:
    - Query the latest version of the `AqlCore` library (Script ID: `1qTNMNpdGwfF3zr-53KqWtM5ibM2bblHiHBIIwB3aJtX3k-82jMLmIiPg`).
-   - Automatically update both `"version"` and `"libraryId"` fields in `TENANTS/appsscript.json` (setting `developmentMode` to `false`).
-   - Push and deploy the new wrapper to the specified tenant(s).
-3. **Update Access Permissions (CRITICAL)**: Because Apps Script resets web app access settings on command-line deployment, you MUST open the tenant's online script editor (using `clasp open` or Extensions > Apps Script) and change **Who has access** to **Anyone**.
-4. **Existing Tenants Update**: For already existing tenants where the library is included, sheet administrators should open their online Apps Script editor, click **Libraries > AqlCore**, change the version to the latest available version, ensure **Development mode** is set to **OFF** (false), and click **Save**. If the new version does not show up in the dropdown list, remove the `AqlCore` library entirely, re-paste the ID (`1qTNMNpdGwfF3zr-53KqWtM5ibM2bblHiHBIIwB3aJtX3k-82jMLmIiPg`), and add it again to refresh the version list cache.
+   - Automatically update `"version"` in `TENANTS/appsscript.json` (setting `developmentMode` to `false`).
+   - Fetch live tenant list from the Master sheet and push the updated manifest to all tenants without redeploying (preserving "Anyone" web app access permissions).
+3. **Web App Redeployment (If Needed)**: Run `npm run tenant:deploy` only when a full Web App redeployment is required. Because Apps Script resets web app access settings on CLI deployment, you must open the tenant's online script editor and ensure **Who has access** is set to **Anyone**.
 
 

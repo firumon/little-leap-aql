@@ -11,6 +11,15 @@ var _resource_registry_context_cache = null;
 var _resource_config_map_cache = null;
 var _role_permissions_context_cache = null;
 
+// Execution-scoped memos for the role->resource catalog. The catalog is a pure
+// function of (roleIds, options) plus the permissions context and the config
+// map, all of which are frozen for the life of one execution. Without these,
+// enforceMasterPermission rebuilt the entire catalog once per resource, turning
+// every poll and multi-get into an O(resources x permissionRows x resources)
+// loop. Both are cleared by clearRolePermissionsCache/clearResourceConfigCache.
+var _role_resource_access_cache = {};
+var _readable_resource_set_cache = {};
+
 // Bump this whenever the config map shape changes so stale caches are not served.
 var RESOURCE_CONFIG_CACHE_KEY = 'AQL_RESOURCE_CONFIG_MAP_V3';
 var RESOURCE_CONFIG_LEGACY_CACHE_KEYS = ['AQL_RESOURCE_CONFIG_MAP_V2'];
@@ -169,6 +178,9 @@ function clearResourceConfigCache() {
   _resource_config_map_cache = null;
   _resource_registry_context_cache = null;
   _resource_sheet_cache = {};
+  // The catalog memos embed resource config (scope, isActive, UI, actions).
+  _role_resource_access_cache = {};
+  _readable_resource_set_cache = {};
 
   var keys = [RESOURCE_CONFIG_CACHE_KEY].concat(RESOURCE_CONFIG_LEGACY_CACHE_KEYS);
   for (var i = 0; i < keys.length; i++) {
@@ -248,6 +260,8 @@ function openResourceSheet(resourceName) {
 var CURSOR_CACHE_PREFIX = 'AQL_CURSOR_';
 var CURSOR_CACHE_TTL_SEC = 21600; // 6 hours
 var _resource_cursor_cache = {};
+// Cursor bumps queued by read paths, flushed as one putAll at end of request.
+var _pending_cursor_writes = {};
 
 function buildResourceCursorCacheKey(resourceName) {
   return CURSOR_CACHE_PREFIX + getAppSpreadsheet().getId() + '_' + resourceName;
@@ -338,6 +352,15 @@ function getResourceSyncCursors(resourceNames) {
     console.warn('getResourceSyncCursors: sheet fallback failed: ' + e.message);
   }
 
+  // Memoize genuine misses as 0. Without this, a resource absent from both
+  // CacheService and APP.Resources re-issued a getAll on every subsequent
+  // lookup within the same execution.
+  for (var z = 0; z < missing.length; z++) {
+    if (_resource_cursor_cache[missing[z]] === undefined) {
+      _resource_cursor_cache[missing[z]] = 0;
+    }
+  }
+
   if (Object.keys(toCache).length) {
     try {
       CacheService.getScriptCache().putAll(toCache, CURSOR_CACHE_TTL_SEC);
@@ -364,17 +387,53 @@ function bumpResourceSyncCursorCache(resourceName, timestamp) {
   var ts = Number(timestamp) || 0;
   if (!name || !ts) return 0;
 
-  var current = _resource_cursor_cache[name];
-  if (current === undefined) {
-    current = getResourceSyncCursors([name])[name] || 0;
-  }
+  // In-memory compare only. The previous version called getResourceSyncCursors()
+  // on a memory miss, so every first read of a resource cost a CacheService
+  // round-trip AND a put — 2 blocking RPCs per resource on every multi-get.
+  // A bump that loses a race is harmless: the durable cursor in APP.Resources is
+  // owned by the write path (updateResourceSyncCursor), and this is a
+  // best-effort correction for rows changed outside it.
+  var current = _resource_cursor_cache[name] || 0;
   if (ts <= current) return current;
 
   _resource_cursor_cache[name] = ts;
-  try {
-    CacheService.getScriptCache().put(buildResourceCursorCacheKey(name), String(ts), CURSOR_CACHE_TTL_SEC);
-  } catch (e) { /* cache is best-effort */ }
+  _pending_cursor_writes[buildResourceCursorCacheKey(name)] = String(ts);
   return ts;
+}
+
+/**
+ * Flushes queued cursor bumps in a single putAll. Called once per request from
+ * doPost; safe to call when nothing is queued.
+ */
+function flushPendingCursorWrites() {
+  var keys = Object.keys(_pending_cursor_writes);
+  if (!keys.length) return;
+
+  var batch = _pending_cursor_writes;
+  _pending_cursor_writes = {};
+
+  try {
+    var cache = CacheService.getScriptCache();
+
+    // Monotonic guard. bumpResourceSyncCursorCache compares against memory only,
+    // which reads as 0 for a resource this execution never loaded — so verify
+    // against the stored value before overwriting. One getAll for the whole
+    // batch, not one per resource.
+    var stored = cache.getAll(keys) || {};
+    var toWrite = {};
+    var writeCount = 0;
+
+    for (var i = 0; i < keys.length; i++) {
+      var key = keys[i];
+      var existing = Number(stored[key]) || 0;
+      if ((Number(batch[key]) || 0) > existing) {
+        toWrite[key] = batch[key];
+        writeCount++;
+      }
+    }
+
+    if (writeCount) cache.putAll(toWrite, CURSOR_CACHE_TTL_SEC);
+  } catch (e) { /* cache is best-effort */ }
 }
 
 /**
@@ -489,6 +548,13 @@ function updateMultipleResourceSyncCursors(cursorMap) {
  * Scans each active, sheet-backed resource in APP.Resources, finds its maximum
  * UpdatedAt timestamp, and updates both APP.Resources.LastDataUpdatedAt and CacheService
  * in a single batch operation.
+ *
+ * WARNING — MAINTENANCE ONLY. This opens and fully reads EVERY active
+ * sheet-backed resource in one execution. Its cost grows with total row count
+ * across the whole tenant and it will approach the 6-minute execution ceiling
+ * on large datasets, holding the user's single-threaded quota for the duration.
+ * Invoke it only from the sheet menu, during a quiet window. Do NOT attach it
+ * to a time-driven trigger, doPost, or any API action.
  *
  * @return {Object} execution summary
  */
@@ -838,6 +904,9 @@ function getRolePermissionsContext() {
  */
 function clearRolePermissionsCache() {
   _role_permissions_context_cache = null;
+  // The catalog memos are derived from the permissions context.
+  _role_resource_access_cache = {};
+  _readable_resource_set_cache = {};
   try {
     CacheService.getScriptCache().remove('AQL_ROLE_PERMS_CONTEXT_V1_' + getAppSpreadsheet().getId());
   } catch (e) { /* non-fatal */ }
@@ -846,6 +915,13 @@ function clearRolePermissionsCache() {
 function getRoleResourceAccess(roleId, options) {
   const roleIds = normalizeRoleIds(roleId);
   if (!roleIds.length) return [];
+
+  // Memo key must cover every input that changes the shape of the result.
+  const memoKey = roleIds.join('|') + '::'
+    + (options && options.includeHeaders === true ? '1' : '0')
+    + (options && options.includeUiConfig === false ? '0' : '1')
+    + '::' + (options && options.scope ? normalizeResourceScope(options.scope) : '');
+  if (_role_resource_access_cache[memoKey]) return _role_resource_access_cache[memoKey];
 
   const includeHeaders = options && options.includeHeaders === true;
   const includeUiConfig = !(options && options.includeUiConfig === false);
@@ -903,7 +979,7 @@ function getRoleResourceAccess(roleId, options) {
     }
   }
 
-  return Object.keys(resourceMap).map(function(resourceName) {
+  const result = Object.keys(resourceMap).map(function(resourceName) {
     const entry = resourceMap[resourceName];
     const possibleActions = possibleActionsMap[resourceName] || [];
     if (includeUiConfig && possibleActions.length) {
@@ -918,6 +994,39 @@ function getRoleResourceAccess(roleId, options) {
     }
     return entry;
   });
+
+  _role_resource_access_cache[memoKey] = result;
+  return result;
+}
+
+/**
+ * Names a role is allowed to read, as a hash for O(1) membership tests.
+ *
+ * NOTE ON SEMANTICS: this deliberately mirrors the existing
+ * enforceMasterPermission behaviour, which grants read on *presence* in the
+ * catalog rather than on permissions.canRead. getRoleResourceAccess inserts an
+ * entry into its map before evaluating actions and never removes it, so a
+ * permission row with an empty Actions cell currently yields read access.
+ * Tightening that is an authorization change, not a performance one — it is
+ * tracked separately and must not be folded in here.
+ *
+ * @param {string[]} roleIds
+ * @return {Object} map of resourceName -> true
+ */
+function getReadableResourceNameSet(roleIds) {
+  const ids = normalizeRoleIds(roleIds);
+  if (!ids.length) return {};
+
+  const key = ids.join('|');
+  if (_readable_resource_set_cache[key]) return _readable_resource_set_cache[key];
+
+  const set = {};
+  getRoleResourceAccess(ids, { includeUiConfig: false }).forEach(function(entry) {
+    if (entry && entry.name) set[entry.name] = true;
+  });
+
+  _readable_resource_set_cache[key] = set;
+  return set;
 }
 
 function buildAuthorizedResourceEntry(resourceName, options) {

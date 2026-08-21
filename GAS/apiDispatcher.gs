@@ -43,6 +43,13 @@ function doPost(e) {
       };
     }
     return jsonResponse(buildErrorEnvelope(request, err && err.message ? err.message : String(err)));
+  } finally {
+    // Read paths queue sync-cursor bumps instead of writing one CacheService key
+    // at a time. Flush them as a single batch, on every exit path including the
+    // early returns above.
+    try {
+      if (typeof flushPendingCursorWrites === 'function') flushPendingCursorWrites();
+    } catch (flushErr) { /* never let a cache flush break the response */ }
   }
 
   return jsonResponse(buildApiEnvelope(request, result));
@@ -764,20 +771,24 @@ function handlePollAction(auth, payload) {
   const resourceNames = Object.keys(cursors);
   const serverCursors = getResourceSyncCursors(resourceNames) || {};
 
+  // Resolve readable resources ONCE for the whole heartbeat. Calling
+  // enforceMasterPermission per resource rebuilt the permission catalog on every
+  // iteration, and the surrounding try/catch cost a console.warn RPC for each
+  // resource the user cannot read — on a poll that fires every 30s.
+  const roleIds = auth && Array.isArray(auth.roleIds) ? auth.roleIds : [];
+  const readable = getReadableResourceNameSet(roleIds);
+
   resourceNames.forEach(function (resourceName) {
-    try {
-      const clientCursor = Number(cursors[resourceName]) || 0;
+    // Mirror enforceMasterPermission exactly: catalog membership first, then
+    // the hasRolePermission fallback for resources the catalog omits (inactive,
+    // or IncludeInAuthorizationPayload=FALSE). Skipping straight to the set
+    // alone would silently stop reporting updates for those resources.
+    if (!readable[resourceName] && !hasRolePermission(roleIds, resourceName, 'canRead')) return;
 
-      // Check if user has read permission
-      enforceMasterPermission(auth, resourceName, 'canRead');
-
-      const serverLastUpdated = Number(serverCursors[resourceName]) || 0;
-      if (serverLastUpdated > clientCursor) {
-        updatedResources.push(resourceName);
-      }
-    } catch (e) {
-      // Log individual resource permission or fetch errors, but do not block other resources
-      console.warn('Error polling resource ' + resourceName + ': ' + e.message);
+    const clientCursor = Number(cursors[resourceName]) || 0;
+    const serverLastUpdated = Number(serverCursors[resourceName]) || 0;
+    if (serverLastUpdated > clientCursor) {
+      updatedResources.push(resourceName);
     }
   });
 

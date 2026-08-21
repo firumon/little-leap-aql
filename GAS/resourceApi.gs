@@ -59,6 +59,14 @@ function handleResourceGetMultiRecords(auth, payload) {
     throw new Error('Master resources are required');
   }
 
+  // Warm every cursor in ONE batched lookup. buildResourceRowsResponse falls
+  // back to the stored cursor whenever a delta read returns no rows — which is
+  // the common case while polling — and that fallback used to issue a separate
+  // CacheService round-trip per resource.
+  try {
+    getResourceSyncCursors(requestedResources);
+  } catch (e) { /* best-effort warm; per-resource lookup still works */ }
+
   const data = {};
   requestedResources.forEach(function (resourceName) {
     const singlePayload = cloneWithResource(payload, resourceName);
@@ -521,9 +529,10 @@ function enforceMasterPermission(auth, resourceName, permissionName) {
   const roleIds = auth && Array.isArray(auth.roleIds) ? auth.roleIds : [];
   
   if (permissionName === 'canRead') {
-    const assignedResources = getRoleResourceAccess(roleIds, { includeUiConfig: false });
-    const isAssigned = assignedResources.some(function(r) { return r.name === resourceName; });
-    if (isAssigned) return;
+    // Hash lookup against a memoized set. The previous linear .some() over a
+    // freshly rebuilt catalog made this guard the most expensive call in the
+    // API. Semantics are unchanged — see getReadableResourceNameSet().
+    if (getReadableResourceNameSet(roleIds)[resourceName]) return;
   }
 
   const allowed = hasRolePermission(roleIds, resourceName, permissionName);

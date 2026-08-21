@@ -16,7 +16,6 @@ const CORE_LIB = AqlCore;
 // ============================================================
 
 function doPost(e) { return CORE_LIB.doPost(e); }
-function doGet(e) { return CORE_LIB.doGet(e); }
 
 // ============================================================
 // 2. Spreadsheet Triggers
@@ -47,6 +46,9 @@ function app_showRelationsManagerDialog() { CORE_LIB.app_showRelationsManagerDia
 function syncAppResourcesFromCode() { CORE_LIB.syncAppResourcesFromCode(); }
 function recalculateAllResourcesLastDataUpdatedAtAndNotify() { CORE_LIB.recalculateAllResourcesLastDataUpdatedAtAndNotify(); }
 function regenerateAppCacheAndNotify() { CORE_LIB.regenerateAppCacheAndNotify(); }
+
+// --- Diagnostics (run from the Apps Script editor, never as a cell formula) ---
+function diagCacheHealth() { return CORE_LIB.diagCacheHealth(); }
 
 // --- Setup & Refactor Submenu ---
 function setupAppSheets() { CORE_LIB.setupAppSheets(); }

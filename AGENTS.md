@@ -4,6 +4,10 @@
 - This is the startup file for repository-aware agents and Claude sessions in this repo.
 - Keep this file lean. Use canonical docs for detailed policy.
 
+### System Knowledge (`Documents/`) vs. Agent Execution Prompts (`References/Prompt Library/`)
+- **`Documents/` (Humans & AI Agents)**: Canonical architecture specifications, data schemas, domain workflows, and system rules. Both humans and AI agents read these files to understand how the system works.
+- **`References/Prompt Library/Initialization/` (AI Agents Only)**: Machine-optimized, task-specific procedural prompts and checklists. These instruct the AI agent on how to completely execute a specific task or workflow.
+
 ## Language and Communication Rule (STRICT)
 - Always speak and write in very simple, easy English.
 - Write like a lower primary school story book.
@@ -113,6 +117,13 @@ After classifying the query, read the appropriate initialization document(s) fro
 - Do not run broad verification by default.
 - Prefer targeted checks.
 - Run `npm run build` for frontend only when the change is major or cross-cutting, typically around 10 or more touched files or equivalent risk.
+
+## Documentation Gap & Self-Healing Rule (STRICT)
+- When a bug, missed parallel update, or execution failure happens because a document or prompt lacked required instructions or dependency steps:
+  1. **Identify the Gap**: Find which canonical doc (`Documents/`) or initialization prompt (`References/Prompt Library/Initialization/`) missed the rule.
+  2. **Notify the User**: Explain the documentation gap clearly in simple words.
+  3. **Ask Permission**: Ask the user for permission to update the affected documents and prompts immediately.
+  4. **Update & Prevent**: Once approved, update the docs and prompts so future developers and AI agents do not repeat the mistake.
 
 ## Maintenance Rule
 - Update this file when startup behavior, default reading expectations, role invocation, deployment expectations, or canonical startup references change.

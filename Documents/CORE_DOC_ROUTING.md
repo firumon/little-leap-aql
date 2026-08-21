@@ -9,6 +9,10 @@ This document is the canonical task-to-doc router for AQL. Use it to decide what
 - Do not load `PLANS/` or backend-heavy docs unless the task actually needs them.
 - **Init prompt routing is owned by AGENTS.md** — use its Query Classification table to decide which init prompt (if any) to load. This file covers canonical docs only, not init prompts.
 
+### System Knowledge (`Documents/`) vs. Agent Execution Prompts (`References/Prompt Library/`)
+- **`Documents/` (Humans & AI Agents)**: Canonical architecture specifications, data schemas, domain workflows, and system rules. Both humans and AI agents read these files to understand how the system works.
+- **`References/Prompt Library/Initialization/` (AI Agents Only)**: Machine-optimized, task-specific procedural prompts and checklists. These instruct the AI agent on how to completely execute a specific task or workflow.
+
 ## Non-Negotiable Frontend Pre-Read
 **Before touching ANY file under `FRONTENT/` — regardless of scope, size, or perceived simplicity — you MUST read:**
 - `Documents/CORE_ARCHITECTURE_RULES.md`

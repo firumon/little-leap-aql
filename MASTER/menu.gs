@@ -33,7 +33,7 @@ function onboardStep1_initTenant(name, code, dirName) {
     let tenantsSheet = ss.getSheetByName('Tenants');
     if (!tenantsSheet) {
       tenantsSheet = ss.insertSheet('Tenants');
-      tenantsSheet.appendRow(['Code', 'Name']);
+      tenantsSheet.appendRow(['Code', 'Name', 'Detail', 'Project ID', 'Deployment ID']);
     }
 
     const tenantsData = tenantsSheet.getDataRange().getValues();
@@ -41,21 +41,6 @@ function onboardStep1_initTenant(name, code, dirName) {
       const existingCode = (tenantsData[i][0] || '').toString().trim().toUpperCase();
       if (existingCode === sCode) {
         throw new Error('Tenant Code "' + sCode + '" already exists in Tenants sheet.');
-      }
-    }
-
-    // Check for duplicate in URL sheet
-    let urlSheet = ss.getSheetByName('URL');
-    if (!urlSheet) {
-      urlSheet = ss.insertSheet('URL');
-      urlSheet.appendRow(['Code', 'URL', 'Details']);
-    }
-
-    const urlData = urlSheet.getDataRange().getValues();
-    for (let i = 1; i < urlData.length; i++) {
-      const existingCode = (urlData[i][0] || '').toString().trim().toUpperCase();
-      if (existingCode === sCode) {
-        throw new Error('Tenant Code "' + sCode + '" already exists in URL sheet.');
       }
     }
 
@@ -71,9 +56,8 @@ function onboardStep1_initTenant(name, code, dirName) {
     const newFolder = parentFolder.createFolder(sDirName);
     const newFolderId = newFolder.getId();
 
-    // Write records
-    tenantsSheet.appendRow([sCode, sName]);
-    urlSheet.appendRow([sCode, '', sName]);
+    // Write record to unified Tenants sheet
+    tenantsSheet.appendRow([sCode, sName, sName, '', '']);
 
     return {
       success: true,

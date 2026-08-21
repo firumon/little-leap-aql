@@ -427,6 +427,189 @@ function updateResourceSyncCursor(resourceName, timestamp) {
   throw new Error('Resource not configured: ' + name);
 }
 
+/**
+ * Advances the durable sync cursor for multiple resources in a single batch write.
+ * Writes APP.Resources.LastDataUpdatedAt and immediately refreshes the
+ * CacheService keys so poll executions observe the changes.
+ *
+ * @param {Object} cursorMap Map of resourceName -> timestamp (epoch millis)
+ * @return {Object} summary of updated resources
+ */
+function updateMultipleResourceSyncCursors(cursorMap) {
+  if (!cursorMap || typeof cursorMap !== 'object') {
+    return { updated: 0, resources: [] };
+  }
+
+  var registry = getResourceRegistryContext();
+  if (registry.idx.LastDataUpdatedAt === undefined) {
+    return { updated: 0, resources: [] };
+  }
+
+  var toCache = {};
+  var updatedNames = [];
+  var hasChanges = false;
+
+  for (var i = 1; i < registry.values.length; i++) {
+    var row = registry.values[i];
+    var rowName = (row[registry.idx.Name] || '').toString().trim();
+    if (!rowName || cursorMap[rowName] === undefined) continue;
+
+    var ts = Number(cursorMap[rowName]) || 0;
+    row[registry.idx.LastDataUpdatedAt] = ts;
+
+    _resource_cursor_cache[rowName] = ts;
+    toCache[buildResourceCursorCacheKey(rowName)] = String(ts);
+
+    if (_resource_config_map_cache && _resource_config_map_cache[rowName]) {
+      _resource_config_map_cache[rowName].lastDataUpdatedAt = ts;
+    }
+
+    updatedNames.push(rowName);
+    hasChanges = true;
+  }
+
+  if (hasChanges && registry.values.length > 1) {
+    var colValues = [];
+    for (var r = 1; r < registry.values.length; r++) {
+      colValues.push([registry.values[r][registry.idx.LastDataUpdatedAt] || 0]);
+    }
+    registry.appSheet.getRange(2, registry.idx.LastDataUpdatedAt + 1, colValues.length, 1).setValues(colValues);
+  }
+
+  if (Object.keys(toCache).length) {
+    try {
+      CacheService.getScriptCache().putAll(toCache, CURSOR_CACHE_TTL_SEC);
+    } catch (e) { /* cache is best-effort */ }
+  }
+
+  return { updated: updatedNames.length, resources: updatedNames };
+}
+
+/**
+ * Scans each active, sheet-backed resource in APP.Resources, finds its maximum
+ * UpdatedAt timestamp, and updates both APP.Resources.LastDataUpdatedAt and CacheService
+ * in a single batch operation.
+ *
+ * @return {Object} execution summary
+ */
+function recalculateAllResourcesLastDataUpdatedAt() {
+  var registry = getResourceRegistryContext();
+  if (registry.idx.LastDataUpdatedAt === undefined) {
+    throw new Error('APP.Resources sheet missing LastDataUpdatedAt column');
+  }
+
+  var cursorMap = {};
+  var details = [];
+  var errors = [];
+  var skipped = 0;
+  var spreadsheetMap = {};
+
+  function openSpreadsheetSafe(fileId) {
+    if (!fileId) return null;
+    if (spreadsheetMap[fileId]) return spreadsheetMap[fileId];
+    try {
+      var ss = SpreadsheetApp.openById(fileId);
+      spreadsheetMap[fileId] = ss;
+      return ss;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  for (var i = 1; i < registry.values.length; i++) {
+    var row = registry.values[i];
+    var name = (row[registry.idx.Name] || '').toString().trim();
+    if (!name) continue;
+
+    var isActive = row[registry.idx.IsActive];
+    var isFunctional = row[registry.idx.Functional];
+    var isDeactivated = (isActive !== undefined && (isActive === false || String(isActive).trim().toUpperCase() === 'FALSE'));
+    var isFunc = (isFunctional !== undefined && (isFunctional === true || String(isFunctional).trim().toUpperCase() === 'TRUE'));
+
+    if (isDeactivated || isFunc) {
+      skipped++;
+      continue;
+    }
+
+    var scope = (row[registry.idx.Scope] || 'master').toString().trim();
+    var rawFileId = (row[registry.idx.FileID] || '').toString().trim();
+    var sheetName = (row[registry.idx.SheetName] || name).toString().trim();
+    var fileId = resolveFileIdForScope(scope, rawFileId);
+
+    if (!fileId || !sheetName) {
+      skipped++;
+      continue;
+    }
+
+    try {
+      var ss = openSpreadsheetSafe(fileId);
+      if (!ss) {
+        errors.push(name + ': Could not open spreadsheet ' + fileId);
+        continue;
+      }
+
+      var sheet = ss.getSheetByName(sheetName);
+      if (!sheet) {
+        errors.push(name + ': Sheet "' + sheetName + '" not found in ' + fileId);
+        continue;
+      }
+
+      var data = sheet.getDataRange().getValues();
+      var maxUpdatedAt = 0;
+
+      if (data && data.length > 1) {
+        var headers = data[0];
+        var updatedAtIdx = -1;
+        var createdAtIdx = -1;
+
+        for (var h = 0; h < headers.length; h++) {
+          var hName = (headers[h] || '').toString().trim();
+          if (hName === 'UpdatedAt') {
+            updatedAtIdx = h;
+            break;
+          }
+          if (hName === 'CreatedAt') {
+            createdAtIdx = h;
+          }
+        }
+
+        var checkColIdx = updatedAtIdx !== -1 ? updatedAtIdx : createdAtIdx;
+
+        if (checkColIdx !== -1) {
+          for (var r = 1; r < data.length; r++) {
+            var cellVal = data[r][checkColIdx];
+            var ts = typeof normalizeUpdatedAtMillis === 'function'
+              ? normalizeUpdatedAtMillis(cellVal)
+              : (Number(cellVal) || (cellVal instanceof Date ? cellVal.getTime() : 0));
+            if (ts > maxUpdatedAt) {
+              maxUpdatedAt = ts;
+            }
+          }
+        }
+      }
+
+      cursorMap[name] = maxUpdatedAt;
+      details.push({
+        name: name,
+        sheetName: sheetName,
+        maxUpdatedAt: maxUpdatedAt
+      });
+    } catch (err) {
+      errors.push(name + ': ' + err.message);
+    }
+  }
+
+  var updateResult = updateMultipleResourceSyncCursors(cursorMap);
+
+  return {
+    scanned: details.length,
+    updated: updateResult.updated,
+    skipped: skipped,
+    details: details,
+    errors: errors
+  };
+}
+
 function normalizeCodeSequenceLength(value) {
   const num = Number(value);
   if (!Number.isFinite(num) || num < 0) {

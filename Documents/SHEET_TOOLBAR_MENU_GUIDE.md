@@ -1,4 +1,4 @@
-﻿# AQL Menu Admin Guide
+# AQL Menu Admin Guide
 
 This is the **single admin-facing guide** for all actions available in the Google Sheet menu:
 
@@ -43,6 +43,7 @@ Use this document when an admin asks:
 | `📚 Resources > Manage Lists` | Configure list view filters per resource (`ListViews`). |
 | `📚 Resources > Manage Relations` | Configure explicit cross-resource relations per resource (`Relations`). |
 | `📚 Resources > Sync APP.Resources from Code` | Reconcile sheet schema/default rows with `syncAppResources.gs` source config. |
+| `📚 Resources > ⚡ Recalculate LastDataUpdatedAt` | Scans all resources, computes max UpdatedAt from sheet rows, and updates APP.Resources + CacheService in batch. |
 | `📚 Resources > Regenerate App Cache` | Clear and immediately rebuild critical APP runtime caches, including resource config and metadata-backed caches. |
 | `⚙️ Setup & Refactor > Refactor APP Sheets` | Ensure APP sheet structure and config tabs are aligned with code. |
 | `⚙️ Setup & Refactor > Store APP File ID in Properties` | Save current APP file id to Script Properties for web app runtime fallback. |
@@ -246,7 +247,20 @@ When to use:
 - After code changes touching `APP_RESOURCES_CODE_CONFIG`
 - During setup/refactor recovery
 
-### 7.7 Regenerate App Cache
+### 7.7 ⚡ Recalculate LastDataUpdatedAt
+Purpose:
+- Scans all active sheet-backed resources, finds the maximum `UpdatedAt` timestamp across all rows, and updates `APP.Resources.LastDataUpdatedAt` in a single batch write.
+- Also populates `CacheService` keys (`AQL_CURSOR_<SpreadsheetId>_<ResourceName>`) so client polling detects fresh data immediately.
+
+When to use:
+- When tenant or local sheet records were updated directly/manually without going through API dispatchers.
+- When `LastDataUpdatedAt` values are empty, zero, or out-of-sync with actual row data.
+
+Result:
+- Logs scan progress to `_LOGS_` sheet.
+- Shows completion alert with count of resources scanned, updated, and skipped.
+
+### 7.8 Regenerate App Cache
 Purpose:
 - Clears all APP runtime caches and immediately rebuilds critical cache entries from the current sheets.
 - Includes resource config and metadata-backed APP caches.
@@ -372,14 +386,16 @@ These groups appear in the **frontend application sidebar**, not in the Google S
 2. Editing `APP.Resources` JSON columns manually without valid JSON.
 3. Changing resource names casually after routes/permissions already depend on them.
 4. Forgetting to sync/refactor after schema-related code updates.
+5. Forgetting to update `TENANTS/tenant.gs` when adding/editing menu items or dialog callbacks, breaking menu actions on tenant spreadsheets.
 
 ## 12. Maintenance Rule (Mandatory)
 
 When any `AQL 🚀` menu item is **added, removed, renamed, or behavior-changed** in code:
 
 1. Update this document (`Documents/SHEET_TOOLBAR_MENU_GUIDE.md`) in the same task.
-2. Update index links in `Documents/README.md` if needed.
-3. Update `Documents/CONTEXT_HANDOFF.md` if runtime behavior changed.
+2. Update the multi-tenant wrapper template in `TENANTS/tenant.gs` with the corresponding trigger and dialog forwarders.
+3. Update index links in `Documents/README.md` if needed.
+4. Update `Documents/CONTEXT_HANDOFF.md` if runtime behavior changed.
 
 Do not close the task until these docs are aligned.
 

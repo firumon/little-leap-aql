@@ -1,4 +1,4 @@
-﻿# Initialization: AQL Sheet Menu Actions & Setup Scripts
+# Initialization: AQL Sheet Menu Actions & Setup Scripts
 
 > **Scope boundary**: This document covers modifying, configuring, and adding items to the Google Sheets AQL custom menu (`AQL 🚀`), managing admin dialogs, handling menu-triggered GAS callbacks, and running the setup/refactoring scripts that initialize sheet schemas. **DO NOT** load any frontend codebase files under `FRONTENT/` or frontend-only docs/specs when the task is restricted to sheet menu/setup scripts, to keep memory footprint and token consumption minimal.
 
@@ -16,6 +16,7 @@ Before writing any menu actions or setup code, you must read the following files
 - The APP sheet database configuration in [setupAppSheets.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/setupAppSheets.gs#L9-L100).
 - The MASTER sheet database configuration in [setupMasterSheets.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/setupMasterSheets.gs#L12-L50).
 - The AQL Menu Admin Guide in [SHEET_TOOLBAR_MENU_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHEET_TOOLBAR_MENU_GUIDE.md#L18-L56).
+- The Multi-Tenant Wrapper template in [tenant.gs](file:///f:/LITTLE%20LEAP/AQL/TENANTS/tenant.gs).
 
 ---
 
@@ -73,6 +74,7 @@ When creating or modifying admin dialogs rendered inside Google Sheets:
 4. **Backend Callback Handler**: Implement `function handle<Action>(form)` to receive form input, sanitize it (e.g. using `txt(form.field)`), validate fields (required, duplicate codes), write/append to the target sheet, and return an `{ success: true, message: '...' }` envelope.
 5. **Code Config Sync**: If the modification involves default system resources, also update `APP_RESOURCES_CODE_CONFIG` inside `GAS/syncAppResources.gs` so the changes are applied during code sync.
 6. **Sheet Refactoring Setup**: If the sheet schema changes, update the config list in `setupAppSheets.gs` or `setupMasterSheets.gs` with the new columns, column widths, validation rules, and default values.
+7. **Multi-Tenant Wrapper Sync**: Update [tenant.gs](file:///f:/LITTLE%20LEAP/AQL/TENANTS/tenant.gs) with the new menu trigger forwarders and any HTML dialog callback forwarders so tenant container-bound spreadsheets can execute them.
 
 ---
 
@@ -80,6 +82,7 @@ When creating or modifying admin dialogs rendered inside Google Sheets:
 
 - **DO NOT** load or edit frontend codes/docs under `FRONTENT/` when editing sheet menu actions. Keep memory and token usage to the minimum.
 - **DO NOT** hardcode spreadsheet IDs inside setup scripts; always retrieve them dynamically from `CONFIG.SHEETS.CONFIG` or use `resolveFileIdForScope(scope, code)`.
+- **DO** update [tenant.gs](file:///f:/LITTLE%20LEAP/AQL/TENANTS/tenant.gs) whenever adding or modifying menu items or HTML dialog callbacks.
 - **DO** use `clearResourceConfigCache()`, `clearRolesCache()`, `clearRolePermissionsCache()`, or `clearAllAppCaches()` to invalidate cached sheets when records are created or edited.
 - **DO** validate JSON formatting before saving JSON-backed fields.
 - **DO** log action status to the log sheet via `logToSheet_` inside handlers.

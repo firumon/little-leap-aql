@@ -23,6 +23,7 @@ function onOpen() {
       .addItem('Manage Relations', 'app_showRelationsManagerDialog')
       .addSeparator()
       .addItem('Sync APP.Resources from Code', 'syncAppResourcesFromCode')
+      .addItem('⚡ Recalculate LastDataUpdatedAt', 'recalculateAllResourcesLastDataUpdatedAtAndNotify')
       .addItem('Regenerate App Cache', 'regenerateAppCacheAndNotify'))
     .addSeparator()
     .addSubMenu(ui.createMenu('⚙️ Setup & Refactor')
@@ -941,6 +942,28 @@ function app_saveResourceRelations(resourceName, relationsJson) {
     throw new Error('Resource not found: ' + resourceName);
   } catch (e) {
     throw new Error('Failed to save relations: ' + e.message);
+  }
+}
+
+function recalculateAllResourcesLastDataUpdatedAtAndNotify() {
+  resetLogSheet_();
+  logToSheet_('Starting Recalculate LastDataUpdatedAt for All Resources');
+  try {
+    var result = recalculateAllResourcesLastDataUpdatedAt();
+    logToSheet_('Recalculate complete. Scanned: ' + result.scanned + ', Updated: ' + result.updated + ', Skipped: ' + result.skipped);
+    if (result.errors && result.errors.length) {
+      logToSheet_('Errors encountered: ' + result.errors.join('; '));
+    }
+    SpreadsheetApp.getUi().alert(
+      'Resource Sync Cursors Recalculated.\n\n' +
+      'Resources Scanned: ' + result.scanned + '\n' +
+      'Cursors Updated: ' + result.updated + '\n' +
+      'Resources Skipped: ' + result.skipped + '\n' +
+      (result.errors.length ? '\nErrors:\n' + result.errors.slice(0, 5).join('\n') : '')
+    );
+  } catch (e) {
+    logToSheet_('Error recalculating cursors: ' + e.message);
+    SpreadsheetApp.getUi().alert('Error recalculating LastDataUpdatedAt: ' + e.message);
   }
 }
 

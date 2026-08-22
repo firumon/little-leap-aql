@@ -1,4 +1,7 @@
 import { computed } from 'vue'
+import { useRecord } from 'src/composables/resources/useRecord'
+import { useCurrency } from 'src/composables/useCurrency'
+import { grandTotalOf } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceCalculation'
 import { useOutletResource } from 'src/_resource/Master/Outlets/composables/useOutletResource'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 import { useWarehouseResource } from 'src/_resource/Master/Warehouses/composables/useWarehouseResource'
@@ -20,42 +23,22 @@ import {
 } from 'src/_resource/Operation/OutletReturns/composables/useReturnProgress'
 import { useReturnViewContext } from './useReturnViewContext'
 
-/**
- * OutletReturns › View — the presentation aggregate all five View cards read.
- *
- * ONE composable, so the cards cannot disagree (UI_MODULE_DEVELOPER_GUIDE.md §7.4). Every
- * card reads a projection of the same derived record rather than each re-deriving its own
- * — which is what makes "what came back" and "what happened to it" impossible to drift
- * apart on screen.
- *
- * Not one business rule is re-derived here. Every predicate, label and colour is a call
- * into `_resource/Operation/OutletReturns` (§4); the master names come from the Outlets,
- * SKUs and Warehouses domains in series, never from a raw store scan (§10.1). What this
- * file adds is display assembly and nothing else.
- *
- * `pending` exists because View cards are declared in `sections`, which render OUTSIDE
- * `<AqlContentWrapper>` and therefore self-guard their own loading and empty states
- * (§10.4, §7.4).
- */
 export function useReturnView () {
   const { resourceRecord } = useReturnViewContext()
 
   const { getOutlet } = useOutletResource()
   const { skuLabelText } = useSkuResource()
   const { getWarehouse } = useWarehouseResource()
+  const { _C } = useCurrency()
+
+  const invoices = useRecord('OutletConsumptionInvoices')
+  const invoiceItems = useRecord('OutletConsumptionInvoiceItems')
 
   const text = (value) => (value == null ? '' : String(value).trim())
 
   const record = computed(() => resourceRecord?.record?.value || null)
   const pending = computed(() => resourceRecord?.loading?.value === true)
 
-  /**
-   * Master names, resolved through each owning domain.
-   *
-   * Each falls back to the raw code rather than to a dash: an unresolved code is still
-   * information the reader can act on (they can search for it), while an em dash discards
-   * it. A blank source stays blank so the card's own row filter can drop the line.
-   */
   const outletName = computed(() => {
     const code = text(record.value?.OutletCode)
     if (!code) return ''
@@ -74,12 +57,6 @@ export function useReturnView () {
     return text(getWarehouse(code)?.Name) || code
   })
 
-  /**
-   * The two tracks, each as a small display object the status cards render directly.
-   *
-   * `state` is the word the card prints; `color`/`icon` come from the same vocabulary the
-   * progress chip uses, so a settled track and a completed return read as the same green.
-   */
   const commercialTrack = computed(() => {
     const row = record.value
     if (!row) return null
@@ -120,6 +97,48 @@ export function useReturnView () {
     }
   })
 
+  const sourceInvoice = computed(() => {
+    const row = record.value
+    const code = text(row?.SourceInvoiceCode)
+    if (!code) return null
+
+    const header = invoices.items.value.find((entry) => text(entry.Code) === code) || null
+    const sku = text(row?.SKU)
+
+    let qty = 0
+    let unitPrice = null
+    let lineTotal = 0
+    for (const line of invoiceItems.items.value) {
+      if (text(line.OutletConsumptionInvoiceCode) !== code) continue
+      if (sku && text(line.SKU) !== sku) continue
+      const lineQty = Number(line.Qty) || 0
+      const linePrice = Number(line.Price) || 0
+      qty += lineQty
+      lineTotal += Number(line.Total) || lineQty * linePrice
+      if (unitPrice === null) unitPrice = linePrice
+    }
+
+    const returnedQty = Math.abs(Number(row?.Qty) || 0)
+    const returnedPrice = Number(row?.Price) || 0
+
+    return {
+      code,
+      // Present even when the invoice rows have not loaded (or the bill was archived): the
+      // CODE is on the return itself, and stating it beats hiding the whole card.
+      found: !!header,
+      date: text(header?.Date),
+      username: text(header?.Username),
+      priceListCode: text(header?.PriceListCode),
+      invoiceTotal: header ? _C(grandTotalOf(header)) : '',
+      billedQty: qty,
+      billedUnitPrice: unitPrice === null ? '' : _C(unitPrice),
+      billedLineTotal: _C(lineTotal),
+      returnedQty,
+      priceMatches: unitPrice === null || Math.abs(unitPrice - returnedPrice) < 0.005,
+      overReturned: qty > 0 && returnedQty > qty
+    }
+  })
+
   /** The audit events that actually happened, oldest first — built by Layer 2. */
   const timeline = computed(() => workflowStamps(record.value))
 
@@ -134,6 +153,8 @@ export function useReturnView () {
     warehouseName,
     commercialTrack,
     warehouseTrack,
+    sourceInvoice,
+    invoiceResources: [invoices, invoiceItems],
     timeline,
     creditValue,
     // Vocabulary passthroughs, so a card has ONE import for its data and its labels.

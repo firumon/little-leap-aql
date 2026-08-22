@@ -242,16 +242,6 @@ function normalizeActionResult (result) {
 const STEP_FADE_MS = 180
 const STEP_SETTLE_MS = 60
 const STEP_ACTIONS = ['next', 'back']
-
-// The SAME race, on the submit button.
-//
-// `meta.submitting` only goes true inside `pageState.run()` — which is reached after the
-// page's own `submit` handler has been awaited, and `await` yields to a microtask even for
-// a synchronous handler. So both clicks of a double-click cleared the guard and two
-// identical batches went to the server. Claimed here instead, synchronously, on the tick
-// the click is accepted: every FormAction* button already reads `meta.submitting`, so the
-// whole bar disables on the first click. `run()` sets it true again and clears it in its
-// own `finally`; the veto paths below hand it straight back.
 let stepTimers = []
 
 function clearStepTimers () {
@@ -294,6 +284,8 @@ async function handleAction (actionName, extraPayload = null) {
     claimStep()
   }
 
+  // Claimed synchronously: `run()` only sets `submitting` after the handler is awaited, so
+  // both clicks of a double-click got through and dispatched two identical batches.
   const isSubmit = actionName === 'submit'
   if (isSubmit) {
     if (pageState?.meta?.submitting) return
@@ -329,9 +321,7 @@ async function handleAction (actionName, extraPayload = null) {
       try {
         await runSubmit(ctx, options)
       } finally {
-        // `run()` clears the flag itself, but it is not reached when there is nothing to
-        // dispatch or no `pageState` — and a bar left permanently disabled is worse than
-        // the double-click this guards.
+        // `run()` clears it too, but is not reached when there is nothing to dispatch.
         if (pageState) pageState.meta.submitting = false
       }
       return

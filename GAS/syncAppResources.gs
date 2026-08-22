@@ -1314,7 +1314,13 @@ function initAppResourcesCodeConfig() {
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_DELIVERIES,
         Scope: 'operation', IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_DELIVERIES,
-        CodePrefix: 'ODL', CodeSequenceLength: 6, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'Date,UserName,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Progress":"DRAFT"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy', AdditionalActions: '',
+        CodePrefix: 'ODL', CodeSequenceLength: 6, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'Date,UserName,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Progress":"DRAFT"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy',
+        AdditionalActions: JSON.stringify([
+            { "action": "MarkDeliver", "label": "Record Delivery", "icon": "assignment_turned_in", "color": "positive", "kind": "navigate", "navigate": { "target": "action", "pageSlug": "mark-deliver" }, "visibleWhen": { "column": "Progress", "op": "in", "value": ["DRAFT", "IN_TRANSIT"] } },
+            { "action": "MakeInTransit", "label": "Dispatch Delivery", "icon": "local_shipping", "color": "info", "kind": "navigate", "navigate": { "target": "action", "pageSlug": "make-in-transit" }, "visibleWhen": { "column": "Progress", "op": "eq", "value": "DRAFT" } },
+            { "action": "MarkComplete", "label": "Complete Delivery", "icon": "check_circle", "color": "positive", "kind": "navigate", "navigate": { "target": "action", "pageSlug": "mark-complete" }, "visibleWhen": { "column": "Progress", "op": "eq", "value": "IN_TRANSIT" } },
+            { "action": "Cancel", "label": "Cancel Delivery", "icon": "cancel", "color": "negative", "kind": "navigate", "navigate": { "target": "action", "pageSlug": "cancel" }, "visibleWhen": { "column": "Progress", "op": "eq", "value": "DRAFT" } }
+        ]),
         Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 4, "label": "Outlet Deliveries", "icon": "local_shipping", "route": "/operation/outlet-deliveries", "pageTitle": "Outlet Deliveries", "pageDescription": "Create, deliver, or cancel allocated outlet restock items", "show": true }]),
         UIFields: JSON.stringify([
             { header: 'Date', label: 'Date', type: 'date', required: true },
@@ -1336,7 +1342,13 @@ function initAppResourcesCodeConfig() {
             {"id":"rep_1777000000001","name":"delivery-worklist","label":"Delivery Worklist","templateSheet":"RestockDeliveriesWorklist","isRecordLevel":false,"inputs":[{"label":"Warehouse","type":"select","targetCell":"AB6","source":{"resource":"Warehouses","field":"Code"},"required":true}],"pdfOptions":{}},
             {"id":"rep_1776000000017","name":"delivery-receipt","label":"Delivery Receipt","templateSheet":"Delivery","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
             {"id":"rep_1776000000018","name":"delivery-log","label":"Delivery Log","templateSheet":"DeliveryRecords","isRecordLevel":false,"inputs":[{"label":"Driver/User","type":"select","targetCell":"J11","source":{"resource":"OutletDeliveries","field":"UserName"},"default":"Any User","required":false},{"label":"Date","type":"select","targetCell":"J12","source":{"resource":"OutletDeliveries","field":"Date"},"default":"Any Date","required":false}],"pdfOptions":{}}
-        ]), CustomUIName: '', ListViews: ''
+        ]), CustomUIName: '', ListViews: JSON.stringify([
+            { "name": "Pending", "label": "Pending", "icon": "inventory", "color": "grey-7", "default": true, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }, { "type": "condition", "column": "Progress", "operator": "eq", "value": "DRAFT" }] } },
+            { "name": "InTransit", "label": "In Transit", "icon": "local_shipping", "color": "info", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }, { "type": "condition", "column": "Progress", "operator": "eq", "value": "IN_TRANSIT" }] } },
+            { "name": "Outlets", "label": "Ready to Load", "icon": "storefront", "color": "warning", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }] } },
+            { "name": "Completed", "label": "Completed", "icon": "check_circle", "color": "positive", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }, { "type": "condition", "column": "Progress", "operator": "eq", "value": "COMPLETED" }] } },
+            { "name": "Cancelled", "label": "Cancelled", "icon": "block", "color": "negative", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }, { "type": "condition", "column": "Progress", "operator": "eq", "value": "CANCELLED" }] } }
+        ])
     },
     {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_RETURNS,
@@ -1346,9 +1358,9 @@ function initAppResourcesCodeConfig() {
         DefaultValues: '{"Status":"Active","Qty":0,"Price":0,"Progress":"SUBMITTED","InvoiceAdjustmentRequired":false,"InvoiceAdjustmentDone":false,"WarehouseActionRequired":false,"WarehouseActionCompleted":false,"WarehouseAction":"","WarehouseActionDisposedReason":""}',
         RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
-            { "action": "Dispose", "label": "Dispose Stock", "icon": "delete_outline", "color": "negative", "kind": "mutate", "confirm": true, "column": "WarehouseAction", "columnValue": "Disposed", "columnValueOptions": [], "fields": [{ "name": "Reason", "label": "Disposal Reason", "type": "textarea", "required": true }], "visibleWhen": { "column": "WarehouseActionCompleted", "op": "eq", "value": "FALSE" } },
-            { "action": "Stock", "label": "Stock to Warehouse", "icon": "store", "color": "primary", "kind": "mutate", "confirm": true, "column": "WarehouseAction", "columnValue": "Stocked", "columnValueOptions": [], "fields": [], "visibleWhen": { "column": "WarehouseActionCompleted", "op": "eq", "value": "FALSE" } },
-            { "action": "Cancel", "label": "Cancel", "icon": "cancel", "color": "negative", "kind": "mutate", "confirm": true, "column": "Progress", "columnValue": "CANCELLED", "columnValueOptions": [], "fields": [{ "name": "Comment", "label": "Cancellation Reason", "type": "textarea", "required": true }], "visibleWhen": { "column": "Progress", "op": "nin", "value": ["CANCELLED"] } }
+            { "action": "WarehouseAction", "label": "Confirm Warehouse Action", "icon": "warehouse", "color": "purple", "kind": "navigate", "navigate": { "target": "action", "pageSlug": "warehouse-action" }, "visibleWhen": { "column": "Progress", "op": "nin", "value": ["COMPLETED", "CANCELLED"] } },
+            { "action": "MarkInvoiceAdjusted", "label": "Settle Return Credit", "icon": "receipt_long", "color": "primary", "kind": "navigate", "navigate": { "target": "action", "pageSlug": "mark-invoice-adjusted" }, "visibleWhen": { "column": "Progress", "op": "nin", "value": ["COMPLETED", "CANCELLED"] } },
+            { "action": "Cancel", "label": "Cancel Return", "icon": "cancel", "color": "negative", "kind": "navigate", "navigate": { "target": "action", "pageSlug": "cancel" }, "visibleWhen": { "column": "Progress", "op": "nin", "value": ["COMPLETED", "CANCELLED"] } }
         ]),
         Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 5, "label": "Outlet Returns", "icon": "assignment_return", "route": "/operation/outlet-returns", "pageTitle": "Outlet Returns", "pageDescription": "Track sales returns and unsold inventory returns from outlets", "show": true }]),
         UIFields: JSON.stringify([
@@ -1378,7 +1390,11 @@ function initAppResourcesCodeConfig() {
         ]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: JSON.stringify([
             {"id":"rep_1776000000019","name":"return-receipt","label":"Return Receipt","templateSheet":"Return","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
             {"id":"rep_1776000000020","name":"returns-log","label":"Returns Log","templateSheet":"ReturnRecords","isRecordLevel":false,"inputs":[{"label":"Username","type":"select","targetCell":"J11","source":{"resource":"OutletReturns","field":"Username"},"default":"Any User","required":false},{"label":"Date","type":"select","targetCell":"J12","source":{"resource":"OutletReturns","field":"Date"},"default":"All Date","required":false},{"label":"Return Reason","type":"select","targetCell":"J13","source":{"resource":"OutletReturns","field":"Reason"},"default":"Any Reason","required":false}],"pdfOptions":{}}
-        ]), CustomUIName: '', ListViews: '',
+        ]), CustomUIName: '', ListViews: JSON.stringify([
+            { "name": "Open", "label": "Open", "icon": "pending_actions", "color": "warning", "default": true, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }, { "type": "condition", "column": "Progress", "operator": "nin", "value": ["COMPLETED", "CANCELLED"] }] } },
+            { "name": "Completed", "label": "Completed", "icon": "check_circle", "color": "positive", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }, { "type": "condition", "column": "Progress", "operator": "eq", "value": "COMPLETED" }] } },
+            { "name": "Cancelled", "label": "Cancelled", "icon": "block", "color": "negative", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }, { "type": "condition", "column": "Progress", "operator": "eq", "value": "CANCELLED" }] } }
+        ]),
         Relations: JSON.stringify({
             OutletCode: CONFIG.MASTER_SHEETS.OUTLETS,
             WarehouseCode: CONFIG.MASTER_SHEETS.WAREHOUSES,

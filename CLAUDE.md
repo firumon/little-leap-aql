@@ -16,6 +16,7 @@ Write code that explains itself. Do not narrate it.
 - When one is truly warranted: **1 line, 2 at the very most.** Never a paragraph, never a rationale essay.
 - Prefer a clearer name, a smaller function, or a well-named constant over any comment.
 - This applies to every language in the repo — `.vue`, `.js`, `.gs` alike.
+- Write the few comments you keep in very simple, easy English. Short sentence. Small words.
 
 **Clean up as you go.** Whenever you edit a file, delete the long comments and docblocks you find in it. Keep nothing unless it is genuinely load-bearing, and then strip it to 1 line (2 at the very most). This is expected in the diff, not scope creep — but stay inside the file you were already editing.
 

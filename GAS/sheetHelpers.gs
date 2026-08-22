@@ -130,17 +130,19 @@ function removeChunkedCache(baseKey) {
   } catch (e) { /* non-fatal */ }
 }
 
-function getSheetHeadersByMeta(fileId, sheetName, sheetObject) {
+function getSheetHeadersByMeta(fileId, sheetName, sheetObject, options) {
   if (!fileId || !sheetName) return [];
   var cacheKey = 'HEADERS_' + fileId + '_' + sheetName;
+  // `force` skips every cache tier and re-reads row 1; the rebuild paths pass it.
+  var force = !!(options && options.force);
 
   // 1. Memory Cache
-  if (_sheet_headers_cache[cacheKey]) return _sheet_headers_cache[cacheKey];
+  if (!force && _sheet_headers_cache[cacheKey]) return _sheet_headers_cache[cacheKey];
 
   // 2. CacheService
   var scriptCache = CacheService.getScriptCache();
-  var cached = scriptCache.get(cacheKey);
-  if (!cached) {
+  var cached = force ? null : scriptCache.get(cacheKey);
+  if (!cached && !force) {
     // 2.5 Permanent Metadata (fallback for CacheService)
     cached = getPermanentMetadata(cacheKey);
   }
@@ -182,10 +184,13 @@ function getSheetHeadersByMeta(fileId, sheetName, sheetObject) {
 // Batched header resolution: one getAll, one putAll, one grouped metadata write.
 // The per-resource path costs a TextFinder-backed sheet write EACH, and login asks
 // for all ~49 at once. Writes the same HEADERS_<fileId>_<sheetName> keys.
-function getSheetHeadersBatch(entries) {
+function getSheetHeadersBatch(entries, options) {
   var out = {};
   var list = Array.isArray(entries) ? entries : [];
   if (!list.length) return out;
+
+  // Forced: re-read row 1 and write through both tiers — the only way a schema change lands.
+  var force = !!(options && options.force);
 
   var wanted = {};
   var order = [];
@@ -205,7 +210,7 @@ function getSheetHeadersBatch(entries) {
   var pending = [];
   for (var a = 0; a < order.length; a++) {
     var memPair = wanted[order[a]];
-    var memHit = _sheet_headers_cache[memPair.cacheKey];
+    var memHit = force ? null : _sheet_headers_cache[memPair.cacheKey];
     if (memHit) {
       out[order[a]] = memHit;
     } else {
@@ -224,10 +229,12 @@ function getSheetHeadersBatch(entries) {
   }
 
   var cached = {};
-  try {
-    cached = CacheService.getScriptCache().getAll(cacheKeys) || {};
-  } catch (e) {
-    cached = {};
+  if (!force) {
+    try {
+      cached = CacheService.getScriptCache().getAll(cacheKeys) || {};
+    } catch (e) {
+      cached = {};
+    }
   }
 
   var stillPending = [];
@@ -249,7 +256,7 @@ function getSheetHeadersBatch(entries) {
   var sheetPending = [];
   for (var d = 0; d < stillPending.length; d++) {
     var pairKeyD = stillPending[d];
-    var meta = getPermanentMetadata(wanted[pairKeyD].cacheKey);
+    var meta = force ? null : getPermanentMetadata(wanted[pairKeyD].cacheKey);
     if (meta) {
       try {
         var parsedMeta = JSON.parse(meta);
@@ -304,7 +311,45 @@ function getSheetHeadersBatch(entries) {
     setPermanentMetadataBatch(metadataWrites);
   }
 
+  // Non-enumerable so a caller iterating `fileId::sheetName` entries does not see it.
+  try {
+    Object.defineProperty(out, '__persisted', {
+      value: Object.keys(metadataWrites).length,
+      enumerable: false
+    });
+  } catch (e) { /* diagnostics only */ }
+
   return out;
+}
+
+// CacheService cannot enumerate keys, so purging needs the list rebuilt from config.
+function sheetHeaderCacheKeys() {
+  var keys = [];
+  var seen = {};
+  try {
+    var configMap = (typeof getResourceConfigMap === 'function' ? getResourceConfigMap() : null) || {};
+    Object.keys(configMap).forEach(function(resourceName) {
+      var config = configMap[resourceName] || {};
+      if (!config.fileId || !config.sheetName) return;
+      var key = 'HEADERS_' + config.fileId + '_' + config.sheetName;
+      if (seen[key]) return;
+      seen[key] = true;
+      keys.push(key);
+    });
+  } catch (e) { /* a broken config map must not block the rest of the purge */ }
+  return keys;
+}
+
+// Without this the `HEADERS_*` CacheService entries outlive a schema change by 6h, and the
+// stale column order maps every row one position out.
+function clearSheetHeaderCaches() {
+  var keys = sheetHeaderCacheKeys();
+  _sheet_headers_cache = {};
+  if (!keys.length) return 0;
+  try {
+    CacheService.getScriptCache().removeAll(keys);
+  } catch (e) { /* non-fatal: the memo and metadata clears still stand */ }
+  return keys.length;
 }
 
 /**
@@ -760,6 +805,9 @@ function clearPermanentMetadataCache() {
  * Call from setup/sync operation that modify APP sheets.
  */
 function clearAllAppCaches() {
+  // First, while the config map is still readable — the key names come from it.
+  var headerKeysCleared = clearSheetHeaderCaches();
+
   // In-memory: spreadsheet cache
   _appSpreadsheetCache = null;
   _sheet_headers_cache = {};
@@ -768,6 +816,7 @@ function clearAllAppCaches() {
   _config_map_cache = null;
 
   var metadataSummary = clearPermanentMetadataCache();
+  metadataSummary.headerCacheKeysCleared = headerKeysCleared;
 
   // Delegate to module-specific cache clears
   if (typeof clearConfigCache === 'function') clearConfigCache();
@@ -811,6 +860,7 @@ function regenerateAllAppCaches() {
   summary.rebuiltCaches = rebuilt;
   summary.skippedCaches = skipped;
   summary.headerCachesRebuilt = headerSummary.rebuilt;
+  summary.headerCachesPersisted = headerSummary.persisted;
   summary.headerCachesSkipped = headerSummary.skipped;
   summary.headerCacheFailures = headerSummary.failures;
   summary.message = 'APP caches cleared and regenerated.';
@@ -821,7 +871,7 @@ function regenerateAllAppCaches() {
  * Warms sheet header metadata so login does not pay the first cross-file reads.
  */
 function warmResourceHeaderCaches() {
-  var result = { rebuilt: 0, skipped: 0, failures: [] };
+  var result = { rebuilt: 0, skipped: 0, persisted: 0, failures: [] };
 
   if (typeof getResourceConfigMap !== 'function') {
     result.failures.push('APP.Resources config map unavailable.');
@@ -849,7 +899,8 @@ function warmResourceHeaderCaches() {
 
   var headersByPair;
   try {
-    headersByPair = getSheetHeadersBatch(entries);
+    // Forced: this IS the rebuild, so it must not read the cache it is rebuilding.
+    headersByPair = getSheetHeadersBatch(entries, { force: true });
   } catch (e) {
     result.failures.push('Batch header warm failed: ' + (e && e.message ? e.message : e));
     return result;
@@ -865,7 +916,72 @@ function warmResourceHeaderCaches() {
     }
   });
 
+  // `rebuilt > 0` with `persisted === 0` is the stale-cache signature: nothing was re-read.
+  result.persisted = headersByPair.__persisted || 0;
+  if (result.rebuilt && !result.persisted) {
+    result.failures.push('Headers resolved but none persisted — they came from a cache, not the sheet.');
+  }
+
   return result;
+}
+
+// Editor check after a schema change: compares live sheet headers against both cache
+// tiers. `healthy: true` is the pass; omit the name to check every resource.
+function diagResourceHeaders(resourceName) {
+  var configMap = getResourceConfigMap() || {};
+  var names = resourceName
+    ? [resourceName]
+    : Object.keys(configMap).filter(function(name) {
+        var config = configMap[name] || {};
+        return !config.functional && config.isActive !== false && config.fileId && config.sheetName;
+      });
+
+  var report = { checked: 0, stale: [], rows: [] };
+  var scriptCache = CacheService.getScriptCache();
+
+  names.forEach(function(name) {
+    var config = configMap[name];
+    if (!config || !config.fileId || !config.sheetName) return;
+
+    var cacheKey = 'HEADERS_' + config.fileId + '_' + config.sheetName;
+    var live = [];
+    try {
+      var ss = openSpreadsheetById(config.fileId);
+      var sheet = ss ? ss.getSheetByName(config.sheetName) : null;
+      var lastColumn = sheet ? sheet.getLastColumn() : 0;
+      if (sheet && lastColumn) live = sheet.getRange(1, 1, 1, lastColumn).getValues()[0];
+    } catch (e) { /* reported as an empty live list below */ }
+
+    function parse(raw) {
+      if (!raw) return null;
+      try { return JSON.parse(raw); } catch (e) { return null; }
+    }
+
+    var fromCache = parse(scriptCache.get(cacheKey));
+    var fromMetadata = parse(getPermanentMetadata(cacheKey));
+    var liveJson = JSON.stringify(live);
+
+    var row = {
+      resource: name,
+      sheetColumns: live.length,
+      cache: fromCache ? (JSON.stringify(fromCache) === liveJson ? 'in sync' : 'STALE') : 'absent',
+      metadata: fromMetadata ? (JSON.stringify(fromMetadata) === liveJson ? 'in sync' : 'STALE') : 'absent',
+      missingFromCache: fromCache
+        ? live.filter(function(h) { return fromCache.indexOf(h) === -1; })
+        : [],
+      missingFromMetadata: fromMetadata
+        ? live.filter(function(h) { return fromMetadata.indexOf(h) === -1; })
+        : []
+    };
+
+    report.checked++;
+    report.rows.push(row);
+    if (row.cache === 'STALE' || row.metadata === 'STALE') report.stale.push(name);
+  });
+
+  report.healthy = report.stale.length === 0;
+  Logger.log(JSON.stringify(report, null, 2));
+  return report;
 }
 
 // Ops check: confirms the config map actually persists across executions.

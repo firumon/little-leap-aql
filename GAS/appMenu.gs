@@ -981,8 +981,10 @@ function regenerateAppCacheAndNotify() {
       'APP caches regenerated.\n\n' +
       'Spreadsheet: ' + (summary.spreadsheetName || summary.spreadsheetId || 'APP') + '\n' +
       'Metadata rows cleared: ' + (summary.clearedRows || 0) + '\n' +
+      'Header cache keys purged: ' + (summary.headerCacheKeysCleared || 0) + '\n' +
       'Caches rebuilt: ' + ((summary.rebuiltCaches || []).join(', ') || 'None') + '\n' +
       'Header metadata caches rebuilt: ' + (summary.headerCachesRebuilt || 0) +
+      ' (re-read from sheet: ' + (summary.headerCachesPersisted || 0) + ')' +
       ((summary.headerCachesSkipped || 0) ? '\nHeader metadata caches skipped: ' + summary.headerCachesSkipped : '') +
       ((summary.skippedCaches || []).length
         ? '\nCaches skipped: ' + summary.skippedCaches.join(', ')

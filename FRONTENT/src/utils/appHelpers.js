@@ -577,3 +577,22 @@ export function defineSharedComposable (factory) {
     return cachedValue
   }
 }
+
+/**
+ * Quasar column width for `count` controls laid out in one row — at most three per row,
+ * always evenly divided.
+ *
+ *   1 → 12 | 2 → 6+6 | 3 → 4+4+4 | 4 → 6+6 over two rows | 5,6+ → 4+4+4
+ *
+ * Four splits 2+2 rather than 3+1 so no row is left with a single stranded input.
+ *
+ * Lives here rather than in the card that first needed it because grid partitioning is a
+ * layout rule every form with side-by-side inputs asks the same question about — a second
+ * copy is how two forms start wrapping differently (ARCHITECTURE RULES §8).
+ */
+export function binColumnClass (count) {
+  const n = Number(count) || 0
+  if (n <= 1) return 'col-12'
+  if (n === 2 || n === 4) return 'col-6'
+  return 'col-4'
+}

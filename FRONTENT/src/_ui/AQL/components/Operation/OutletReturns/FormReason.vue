@@ -29,15 +29,6 @@
 </template>
 
 <script setup>
-/**
- * OutletReturns › FormReason — card 5 of the shared return form (resource tier).
- *
- * Why it came back. The comment's label carries the asterisk rather than a separate hint,
- * because reason OTHER is the one code that cannot stand without an explanation and the
- * requirement belongs on the field it applies to (`REASON_REQUIRING_COMMENT`, Layer 2).
- *
- * Holds no state (§6). No `<style>` block (§7).
- */
 import { computed, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import FieldSelectAdd from 'src/_fields/select/Add.vue'

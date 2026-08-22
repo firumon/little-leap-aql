@@ -3,9 +3,6 @@
     <SectionDividerLabel label="QUANTITY &amp; VALUE" />
     <q-card flat bordered :class="ui.cardClass">
       <q-card-section>
-        <!-- The list is the premise for both figures under it, so it takes the full width
-             and the quantity/price pair shares the row below, equally. Both gaps are the
-             page's own gutter token (§10.2). -->
         <div class="row" :class="[gutterXClass, gutterYClass]">
           <div class="col-12">
             <FieldSelectAdd
@@ -43,17 +40,6 @@
 </template>
 
 <script setup>
-/**
- * OutletReturns › FormQuantityValue — card 3 of the shared return form (resource tier).
- *
- * What the return is worth: which list it is priced from, how many units, and the unit
- * credit. The price list selector writes NO column — `OutletReturns` declares no
- * `PriceListCode` header, so it is a CONTROL FIELD (§13.5) whose only job is to decide what
- * goes in `Price`. It is shown because an officer pricing a credit needs to see which list
- * the figure came from; it is not stored, because the sheet has nowhere to put it.
- *
- * Holds no state (§6). No `<style>` block (§7).
- */
 import { computed, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import FieldSelectAdd from 'src/_fields/select/Add.vue'

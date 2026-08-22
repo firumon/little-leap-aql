@@ -25,19 +25,29 @@ import {
   compositeSaveRequest,
   resourceBulkRequest,
   resourceCreateRequest,
-  resourceUpdateRequest,
   executeActionRequest
 } from 'src/composables/resources/resourceRequests'
 import {
   toNumber,
   soldRowsOf,
   returnRowsOf,
-  returnQtyChange,
-  returnProgressFor,
   creditsInvoice,
   priceOf,
   DEFAULT_STORAGE
 } from './useConsumptionStock'
+/**
+ * The OutletReturns domain owns every return row this consumption writes (§9.1).
+ *
+ * A consumption DISCOVERS returns — a surplus line counted at the outlet — but it does not
+ * get to decide what a return record looks like, which way its ledger movement points, or
+ * when it counts as reconciled. Those are OutletReturns' rules, and they are now read from
+ * the one place that states them, so a return raised here is identical to one logged from
+ * the standalone Returns page.
+ */
+import {
+  buildReturnBulkCreateBatch,
+  buildReturnInvoiceAdjustmentLinkedBatch
+} from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
 import { calculateConsumptionInvoice, invoiceItemOf } from './useConsumptionInvoice'
 import { PENDING_INVOICE_GENERATION, INVOICE_GENERATED } from './useConsumptionProgress'
 
@@ -46,12 +56,13 @@ const CONSUMPTION_ITEMS = 'OutletConsumptionItems'
 const INVOICES = 'OutletConsumptionInvoices'
 const INVOICE_ITEMS = 'OutletConsumptionInvoiceItems'
 const OUTLET_MOVEMENTS = 'OutletMovements'
-const RETURNS = 'OutletReturns'
 
 /** The ledger reference type each leg of the journey writes. Kept tellable apart so a
- *  reconciliation can say WHY a balance moved, not just that it did. */
+ *  reconciliation can say WHY a balance moved, not just that it did.
+ *
+ *  The RETURN leg's reference type is no longer stated here — it belongs to the
+ *  OutletReturns domain, which writes it. */
 const REF_CONSUMPTION = 'Consumption'
-const REF_RETURN = 'OutletReturn'
 
 /** The batch path every request in one submit chains its parent code off. */
 export const CONSUMPTION_REF_PATH = `${CONSUMPTIONS}.latest.code`
@@ -265,11 +276,18 @@ export function buildConsumptionReversalMovementsRequest (consumption = {}, sour
 /**
  * The `OutletReturns` rows a count's surplus lines produce, plus their ledger movements.
  *
- * The movement quantity comes from `returnQtyChange`, the one place the IAR/WAR truth
- * table is written down — so a return credited-and-kept adds stock back, a return shipped
- * out removes it, and the two cases where the flags cancel write no ledger row at all.
- * Zero movements are FILTERED rather than written: an empty ledger row is noise that makes
- * a reconciliation look like it moved something.
+ * DELEGATED to the OutletReturns domain (§9.1). What is decided HERE is consumption-side:
+ * which counted rows are surplus, what each is worth against the price list, and which
+ * return meta the officer attached to the SKU. What a return ROW looks like, which way its
+ * ledger movement points, and when it counts as reconciled are decided THERE, by
+ * `buildReturnBulkCreateBatch`.
+ *
+ * One behaviour changes with this delegation, and it is a fix rather than a side effect.
+ * The old local rule keyed COMPLETED off the warehouse track alone, so a return raised
+ * with `InvoiceAdjustmentRequired = TRUE` and no warehouse leg was stamped COMPLETED at
+ * creation — before the outlet had been credited anything, and with no queue that could
+ * ever surface it. The shared rule (`isReturnCompleted`) requires EVERY flagged track to
+ * be done, so such a return now correctly stays open until an invoice credits it.
  *
  * Returns are created BEFORE the consumption in the submit order, because the invoice
  * needs their codes to record what it credited — see `buildConsumptionSubmitRequests`.
@@ -282,47 +300,45 @@ export function buildReturnsRequests (form = {}, countRows = [], metaOf = () => 
   const priceListCode = text(options.priceListCode)
   const movementDate = dateOf(entry)
 
-  const returns = rows.map((row) => {
+  // One line per surplus row, in the shape the OutletReturns domain takes. This builder
+  // decides WHICH rows are returns and WHAT they are worth — both consumption-side
+  // questions. It does not decide what a return row looks like or which way its ledger
+  // movement points; those are OutletReturns' own rules.
+  const lines = rows.map((row) => {
     const meta = asRow(metaOf(row.SKU))
     return {
-      OutletCode: text(entry.OutletCode),
-      Date: movementDate,
-      Username: text(entry.Username),
-      SKU: text(row.SKU),
-      Qty: Math.abs(toNumber(row.ReturnQty)),
-      // A missing price is stored as 0 here rather than blocking: the return itself is a
+      form: {
+        OutletCode: text(entry.OutletCode),
+        Date: movementDate,
+        Username: text(entry.Username),
+        SKU: text(row.SKU),
+        Qty: Math.abs(toNumber(row.ReturnQty)),
+        StorageName: text(row.StorageName) || DEFAULT_STORAGE,
+        Reason: text(meta.Reason) || 'DAMAGE',
+        ReasonComment: text(meta.ReasonComment),
+        InvoiceAdjustmentRequired: creditsInvoice(meta),
+        WarehouseActionRequired: meta.WarehouseActionRequired === true,
+        WarehouseCode: meta.WarehouseActionRequired === true ? text(meta.WarehouseCode) : ''
+      },
+      // A missing price is stored as 0 rather than blocking: the return itself is a
       // physical fact that must be recorded even when it carries no monetary credit.
       // `validateConsumption` is what refuses to INVOICE an unpriced line.
-      Price: priceOf(row.SKU, priceListCode) ?? 0,
-      Reason: text(meta.Reason) || 'DAMAGE',
-      ReasonComment: text(meta.ReasonComment),
-      InvoiceAdjustmentRequired: creditsInvoice(meta) ? 'TRUE' : 'FALSE',
-      InvoiceAdjustmentDone: 'FALSE',
-      WarehouseActionRequired: meta.WarehouseActionRequired === true ? 'TRUE' : 'FALSE',
-      WarehouseActionCompleted: 'FALSE',
-      WarehouseCode: meta.WarehouseActionRequired === true ? text(meta.WarehouseCode) : '',
-      Progress: returnProgressFor(meta),
-      Status: 'Active'
+      resolvedPrice: priceOf(row.SKU, priceListCode) ?? 0
     }
   })
 
-  const movements = rows
-    .map((row) => ({ row, change: returnQtyChange(row.ReturnQty, metaOf(row.SKU)) }))
-    .filter((pair) => pair.change !== 0)
-    .map((pair) => ({
-      OutletCode: text(entry.OutletCode),
-      StorageName: text(pair.row.StorageName) || DEFAULT_STORAGE,
-      SKU: text(pair.row.SKU),
-      QtyChange: pair.change,
-      ReferenceType: REF_RETURN,
-      ReferenceCode: textOrRef(batchRef(`${RETURNS}.latest.code`)),
-      MovementDate: movementDate,
-      Status: 'Active'
-    }))
+  const built = buildReturnBulkCreateBatch({
+    lines,
+    actorName: text(entry.Username),
+    movementDate
+  })
 
-  const requests = [resourceBulkRequest(RETURNS, returns, [RETURNS])]
-  if (movements.length) requests.push(resourceBulkRequest(OUTLET_MOVEMENTS, movements, ['OutletStorages']))
-  return requests
+  // An array, not the envelope — every caller here splices these into a larger request
+  // list it is already assembling. The envelope's `valid` is surfaced by raising, because
+  // a return line that fails validation means the whole consumption submit is malformed
+  // and must not be dispatched half-built.
+  if (!built.valid) throw new Error(built.message || 'Return lines could not be built.')
+  return built.requests
 }
 
 /**
@@ -333,14 +349,11 @@ export function buildReturnsRequests (form = {}, countRows = [], metaOf = () => 
  * return does: still owed to a warehouse, or done.
  */
 export function buildReturnAdjustmentRequests (returnRows = [], invoiceRef = null) {
-  return (Array.isArray(returnRows) ? returnRows : []).map(asRow).filter((row) => text(row.Code)).map((row) => {
-    const awaitingWarehouse = text(row.WarehouseActionRequired) === 'TRUE' && text(row.WarehouseActionCompleted) !== 'TRUE'
-    return resourceUpdateRequest(RETURNS, text(row.Code), {
-      InvoiceAdjustmentDone: 'TRUE',
-      ConsumptionInvoiceCode: textOrRef(invoiceRef || batchRef(`${INVOICES}.latest.code`)),
-      Progress: awaitingWarehouse ? 'AWAITING_WAREHOUSE_RECEIPT' : 'COMPLETED'
-    }, [RETURNS])
+  const built = buildReturnInvoiceAdjustmentLinkedBatch({
+    returnRows,
+    invoiceCode: invoiceRef || batchRef(`${INVOICES}.latest.code`)
   })
+  return built.requests
 }
 
 // ─── 4. The invoice ───────────────────────────────────────────────────────────

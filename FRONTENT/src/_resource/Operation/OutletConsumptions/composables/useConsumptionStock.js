@@ -26,6 +26,20 @@ import {
   indexWarehouseStock,
   stockOf as warehouseStockOf
 } from 'src/_resource/Operation/WarehouseStorages/composables/useWarehouseStorageResource'
+/**
+ * The return matrix below is DESCRIBED here but OWNED by OutletReturns (§10.1).
+ *
+ * A consumption decides which counted rows are surplus; what a surplus DOES — which way the
+ * ledger moves, when the row counts as reconciled — is the returns domain's rule. Both
+ * helpers below delegate to it so the wizard's preview banner and the payload builder can
+ * never describe the same toggles differently.
+ */
+import { returnQtyChange as returnDomainQtyChange } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
+import {
+  isReturnCompleted,
+  SUBMITTED as RETURN_SUBMITTED,
+  COMPLETED as RETURN_COMPLETED
+} from 'src/_resource/Operation/OutletReturns/composables/useReturnProgress'
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
 
@@ -166,10 +180,15 @@ export function restockRowsOf (rows = []) {
 //  WAR = WarehouseActionRequired   — the units physically leave for a warehouse.
 //
 //  IAR  WAR  destination            ledger QtyChange   next Progress
-//   ✓    ✗   stays at the outlet    +ReturnQty         COMPLETED
-//   ✗    ✓   ships to a warehouse   -ReturnQty         AWAITING_WAREHOUSE_RECEIPT
-//   ✓    ✓   ships to a warehouse    0                 AWAITING_WAREHOUSE_RECEIPT
-//   ✗    ✗   stays, written off      0                 COMPLETED
+//   ✓    ✗   stays at the outlet    +ReturnQty         SUBMITTED (credit still owed)
+//   ✗    ✓   ships to a warehouse   -ReturnQty         SUBMITTED (receipt still owed)
+//   ✓    ✓   ships to a warehouse    0                 SUBMITTED (both still owed)
+//   ✗    ✗   stays, written off      0                 COMPLETED (nothing owed)
+//
+// The Progress column is NOT derived from WAR alone, which is what this file used to do.
+// A return lands COMPLETED only when every track it flagged as required is already
+// resolved — and at creation none of them are — so the only row born complete is the one
+// that asked for nothing. See `isReturnCompleted` in the OutletReturns domain.
 //
 // The two zero rows are the ones worth stating out loud. Case 3 nets to zero because the
 // surplus was never in the ledger to begin with and is now leaving — crediting it AND
@@ -197,17 +216,35 @@ export function defaultReturnMeta () {
  * empty ledger row.
  */
 export function returnQtyChange (quantity, meta = {}) {
-  const qty = Math.abs(toNumber(quantity))
-  const iar = asRow(meta).InvoiceAdjustmentRequired === true
-  const war = asRow(meta).WarehouseActionRequired === true
-  if (iar && !war) return qty
-  if (!iar && war) return -qty
-  return 0
+  return returnDomainQtyChange(quantity, {
+    invoiceRequired: asRow(meta).InvoiceAdjustmentRequired === true,
+    warehouseRequired: asRow(meta).WarehouseActionRequired === true
+  })
 }
 
-/** The Progress a newly-created return lands in, per the matrix above. */
+/**
+ * The Progress a newly-created return lands in.
+ *
+ * DELEGATED to the OutletReturns domain, which owns the completion rule. This used to key
+ * COMPLETED off the warehouse track alone — so a return the outlet was owed a credit for,
+ * with no warehouse leg, was stamped COMPLETED before anyone had credited it and could
+ * never surface in a queue. The shared rule requires EVERY flagged track to be resolved.
+ *
+ * Kept as a named export with its original `(meta)` signature because the wizard's preview
+ * banner (`Add/PendingReturns.vue`) calls it to tell the user what the toggles will do. It
+ * MUST answer with whatever the payload builder will actually write, which is why it now
+ * asks the same function the builder asks instead of restating the rule.
+ */
 export function returnProgressFor (meta = {}) {
-  return asRow(meta).WarehouseActionRequired === true ? 'AWAITING_WAREHOUSE_RECEIPT' : 'COMPLETED'
+  const row = asRow(meta)
+  // The flags as the row will carry them, in the string form the domain reads.
+  const pending = {
+    InvoiceAdjustmentRequired: row.InvoiceAdjustmentRequired === true ? 'TRUE' : 'FALSE',
+    InvoiceAdjustmentDone: 'FALSE',
+    WarehouseActionRequired: row.WarehouseActionRequired === true ? 'TRUE' : 'FALSE',
+    WarehouseActionCompleted: 'FALSE'
+  }
+  return isReturnCompleted(pending) ? RETURN_COMPLETED : RETURN_SUBMITTED
 }
 
 /** Whether a return credits the invoice — the half of the matrix pricing cares about. */

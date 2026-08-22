@@ -32,10 +32,18 @@ import {
   resourceUpdateRequest,
   executeActionRequest
 } from 'src/composables/resources/resourceRequests'
+import { stampFields } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionPayload'
+/**
+ * The OutletReturns domain owns both directions of the return-credit link (§9.1).
+ *
+ * An invoice DECIDES which returns it credits — that is an invoicing question. What
+ * crediting does to a return row, and whether the row is thereby reconciled, is
+ * OutletReturns' own rule, read here rather than restated.
+ */
 import {
-  stampFields,
-  buildReturnAdjustmentRequests
-} from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionPayload'
+  buildReturnInvoiceAdjustmentLinkedBatch,
+  buildReturnInvoiceCreditReversalBatch
+} from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
 import {
   calculateConsumptionInvoice,
   invoiceItemOf
@@ -47,7 +55,6 @@ import { balanceDueOf } from './useInvoiceCalculation'
 const INVOICES = 'OutletConsumptionInvoices'
 const INVOICE_ITEMS = 'OutletConsumptionInvoiceItems'
 const CONSUMPTIONS = 'OutletConsumptions'
-const RETURNS = 'OutletReturns'
 const PAYMENTS = 'OutletPayments'
 
 const text = (value) => (value == null ? '' : String(value).trim())
@@ -183,7 +190,11 @@ export function buildInvoiceGenerationRequests ({
     resourceCreateRequest(INVOICES, header, [INVOICES]),
     resourceBulkRequest(INVOICE_ITEMS, items, [INVOICE_ITEMS]),
     ...markGenerated,
-    ...buildReturnAdjustmentRequests(credits, batchRef(INVOICE_REF_PATH))
+    ...buildReturnInvoiceAdjustmentLinkedBatch({
+      returnRows: credits,
+      invoiceCode: batchRef(INVOICE_REF_PATH),
+      actorName
+    }).requests
   ]
 
   return {
@@ -349,16 +360,9 @@ export function buildCancellationRequests ({ record = {}, comment = '', actorNam
     }, stampFields('ProgressPendingInvoiceGeneration', actorName, `Invoice ${code} cancelled; consumption is invoiceable again.`), [CONSUMPTIONS]))
   })
 
-  // A plain update, not an `executeAction`: `OutletReturns` declares no additional actions
-  // at all, and its forward adjustment (`buildReturnAdjustmentRequests`) is likewise a plain
-  // update. Reverting by the same mechanism it was set by keeps one write path per column.
-  credits.forEach((row) => {
-    requests.push(resourceUpdateRequest(RETURNS, text(row.Code), {
-      InvoiceAdjustmentDone: 'FALSE',
-      ConsumptionInvoiceCode: '',
-      Progress: 'AWAITING_INVOICE_ADJUSTMENT'
-    }, [RETURNS]))
-  })
+  // Reversing the credit is the OutletReturns domain's own inverse of the forward link, so
+  // both directions are written by one owner and cannot drift apart.
+  requests.push(...buildReturnInvoiceCreditReversalBatch({ returnRows: credits }).requests)
 
   return {
     valid: true,

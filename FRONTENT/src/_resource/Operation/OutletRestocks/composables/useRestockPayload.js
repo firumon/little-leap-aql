@@ -367,6 +367,14 @@ export function nextRestockProgress (allItems = [], deliveredCodes = []) {
  * delivered rows, which yields `'DELIVERED'` — correct when the caller is
  * delivering everything, and the reason the documented four-argument signature
  * still works on its own.
+ *
+ * `options.referenceCode` names WHAT delivered these units, on the ledger row.
+ * It defaults to the restock's own code, which is what the standalone
+ * `MarkDelivered` route means: that request was fulfilled directly, with no
+ * manifest involved. An `OutletDeliveries` manifest passes its OWN code instead,
+ * because a delivery run bundles lines from several requests and the ledger has
+ * to be traceable back to the run that physically carried them. `ReferenceItemCode`
+ * pins the individual line either way, so nothing is lost in the default case.
  */
 export function buildRestockDeliveryBatchRequests (restock = {}, deliveredOrsiRows = [], actorName = '', comment = '', options = {}) {
   const parent = row(restock)
@@ -394,7 +402,7 @@ export function buildRestockDeliveryBatchRequests (restock = {}, deliveredOrsiRo
     // direction of an arrival.
     QtyChange: Math.abs(num(entry.Quantity)),
     ReferenceType: DELIVERY_REFERENCE_TYPE,
-    ReferenceCode: textOrRef(parent.Code),
+    ReferenceCode: textOrRef(options.referenceCode || parent.Code),
     ReferenceItemCode: text(entry.Code),
     MovementDate: movementDate,
     Status: 'Active'

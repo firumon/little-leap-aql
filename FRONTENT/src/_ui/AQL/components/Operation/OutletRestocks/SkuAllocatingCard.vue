@@ -126,6 +126,7 @@
 import { computed } from 'vue'
 import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
 import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
+import { binColumnClass } from 'src/utils/appHelpers'
 
 defineOptions({ name: 'OutletRestocksApproveSkuAllocatingCard', inheritAttrs: false })
 
@@ -170,17 +171,6 @@ function binFieldConfig (sku, bin) {
     suffix: `/${bin.available}`,
     'data-testid': `restock-approve-qty-${sku.code}-${bin.id}`
   }
-}
-
-/**
- * Column width from bin count — at most three per row, always evenly divided.
- *   1 → 12 | 2 → 6+6 | 3 → 4+4+4 | 4 → 6+6 over two rows | 5,6+ → 4+4+4
- * Four splits 2+2 rather than 3+1 so no row is left with a single stranded input.
- */
-function binColumnClass (count) {
-  if (count <= 1) return 'col-12'
-  if (count === 2 || count === 4) return 'col-6'
-  return 'col-4'
 }
 
 // The plan is keyed by bin, so an input reads its own line back rather than

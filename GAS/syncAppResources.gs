@@ -1355,7 +1355,7 @@ function initAppResourcesCodeConfig() {
         Scope: 'operation', IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_RETURNS,
         CodePrefix: 'OR', CodeSequenceLength: 6, LastDataUpdatedAt: 0, Audit: 'TRUE',
         RequiredHeaders: 'OutletCode,Date,SKU,Qty', UniqueHeaders: '', UniqueCompositeHeaders: '',
-        DefaultValues: '{"Status":"Active","Qty":0,"Price":0,"Progress":"SUBMITTED","InvoiceAdjustmentRequired":false,"InvoiceAdjustmentDone":false,"WarehouseActionRequired":false,"WarehouseActionCompleted":false,"WarehouseAction":"","WarehouseActionDisposedReason":""}',
+        DefaultValues: '{"Status":"Active","Qty":0,"Price":0,"Progress":"SUBMITTED","InvoiceAdjustmentRequired":false,"InvoiceAdjustmentDone":false,"WarehouseActionRequired":false,"WarehouseActionCompleted":false,"WarehouseAction":"","WarehouseActionDisposedReason":"","ConsumptionInvoiceCode":"","SourceInvoiceCode":""}',
         RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
             { "action": "WarehouseAction", "label": "Confirm Warehouse Action", "icon": "warehouse", "color": "purple", "kind": "navigate", "navigate": { "target": "action", "pageSlug": "warehouse-action" }, "visibleWhen": { "column": "Progress", "op": "nin", "value": ["COMPLETED", "CANCELLED"] } },
@@ -1374,7 +1374,8 @@ function initAppResourcesCodeConfig() {
             { header: 'ReasonComment', label: 'Reason Comment', type: 'textarea' },
             { header: 'InvoiceAdjustmentRequired', label: 'Invoice Adjustment Required', type: 'text' },
             { header: 'InvoiceAdjustmentDone', label: 'Invoice Adjustment Done', type: 'text' },
-            { header: 'ConsumptionInvoiceCode', label: 'Consumption Invoice Code', type: 'text' },
+            { header: 'ConsumptionInvoiceCode', label: 'Settled On Invoice', type: 'text' },
+            { header: 'SourceInvoiceCode', label: 'Billed On Invoice', type: 'text' },
             { header: 'WarehouseActionRequired', label: 'Warehouse Action Required', type: 'text' },
             { header: 'WarehouseActionCompleted', label: 'Warehouse Action Completed', type: 'text' },
             { header: 'WarehouseCode', label: 'Warehouse Code', type: 'text' },
@@ -1390,11 +1391,18 @@ function initAppResourcesCodeConfig() {
         ]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: JSON.stringify([
             {"id":"rep_1776000000019","name":"return-receipt","label":"Return Receipt","templateSheet":"Return","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
             {"id":"rep_1776000000020","name":"returns-log","label":"Returns Log","templateSheet":"ReturnRecords","isRecordLevel":false,"inputs":[{"label":"Username","type":"select","targetCell":"J11","source":{"resource":"OutletReturns","field":"Username"},"default":"Any User","required":false},{"label":"Date","type":"select","targetCell":"J12","source":{"resource":"OutletReturns","field":"Date"},"default":"All Date","required":false},{"label":"Return Reason","type":"select","targetCell":"J13","source":{"resource":"OutletReturns","field":"Reason"},"default":"Any Reason","required":false}],"pdfOptions":{}}
-        ]), CustomUIName: '', ListViews: JSON.stringify([
-            { "name": "Open", "label": "Open", "icon": "pending_actions", "color": "warning", "default": true, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }, { "type": "condition", "column": "Progress", "operator": "nin", "value": ["COMPLETED", "CANCELLED"] }] } },
+        ]), CustomUIName: '',
+        // The AWAITING views filter on the track flag PAIRS, which no `Progress eq <state>`
+        // auto-view can express; `name` is what the frontend resolves `PropsList<name>` from.
+        ListViews: JSON.stringify([
+            { "name": "Submitted", "label": "Submitted", "icon": "assignment_return", "color": "warning", "default": true, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }, { "type": "condition", "column": "Progress", "operator": "nin", "value": ["COMPLETED", "CANCELLED"] }] } },
+            { "name": "AwaitingInvoiceAdjustment", "label": "Awaiting Invoice Adjustment", "icon": "receipt_long", "color": "info", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }, { "type": "condition", "column": "Progress", "operator": "nin", "value": ["COMPLETED", "CANCELLED"] }, { "type": "condition", "column": "InvoiceAdjustmentRequired", "operator": "eq", "value": "TRUE" }, { "type": "condition", "column": "InvoiceAdjustmentDone", "operator": "ne", "value": "TRUE" }] } },
+            { "name": "AwaitingWarehouseReceipt", "label": "Awaiting Warehouse Receipt", "icon": "warehouse", "color": "purple", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }, { "type": "condition", "column": "Progress", "operator": "nin", "value": ["COMPLETED", "CANCELLED"] }, { "type": "condition", "column": "WarehouseActionRequired", "operator": "eq", "value": "TRUE" }, { "type": "condition", "column": "WarehouseActionCompleted", "operator": "ne", "value": "TRUE" }] } },
             { "name": "Completed", "label": "Completed", "icon": "check_circle", "color": "positive", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }, { "type": "condition", "column": "Progress", "operator": "eq", "value": "COMPLETED" }] } },
             { "name": "Cancelled", "label": "Cancelled", "icon": "block", "color": "negative", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }, { "type": "condition", "column": "Progress", "operator": "eq", "value": "CANCELLED" }] } }
         ]),
+        // No relation for either invoice column: `enrichRecord` keys the getter off the target
+        // resource, so both would claim `$outletconsumptioninvoice` and shadow each other.
         Relations: JSON.stringify({
             OutletCode: CONFIG.MASTER_SHEETS.OUTLETS,
             WarehouseCode: CONFIG.MASTER_SHEETS.WAREHOUSES,

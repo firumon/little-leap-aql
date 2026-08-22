@@ -273,6 +273,8 @@ function setupOperationSheets() {
             headers: [
                 'Code', 'OutletCode', 'Date', 'Username', 'SKU', 'Qty', 'Price', 'Reason', 'ReasonComment',
                 'InvoiceAdjustmentRequired', 'InvoiceAdjustmentDone', 'ConsumptionInvoiceCode',
+                // The bill it was SOLD on — `ConsumptionInvoiceCode` is the one that SETTLES it.
+                'SourceInvoiceCode',
                 'WarehouseActionRequired', 'WarehouseActionCompleted', 'WarehouseCode',
                 'WarehouseAction', 'WarehouseActionDisposedReason',
                 'WarehouseActionDisposedAt', 'WarehouseActionDisposedBy',
@@ -280,7 +282,7 @@ function setupOperationSheets() {
                 'Progress', 'Status', 'AccessRegion'
             ].concat(commonAuditColumns),
             statusDefault: 'Active',
-            defaults: { Status: 'Active', Qty: 0, Price: 0, Progress: 'SUBMITTED', InvoiceAdjustmentRequired: 'FALSE', InvoiceAdjustmentDone: 'FALSE', WarehouseActionRequired: 'FALSE', WarehouseActionCompleted: 'FALSE', WarehouseAction: '', WarehouseActionDisposedReason: '', ConsumptionInvoiceCode: '' },
+            defaults: { Status: 'Active', Qty: 0, Price: 0, Progress: 'SUBMITTED', InvoiceAdjustmentRequired: 'FALSE', InvoiceAdjustmentDone: 'FALSE', WarehouseActionRequired: 'FALSE', WarehouseActionCompleted: 'FALSE', WarehouseAction: '', WarehouseActionDisposedReason: '', ConsumptionInvoiceCode: '', SourceInvoiceCode: '' },
             progressValidation: APP_OPTIONS_SEED.OutletReturnProgress,
             reasonValidation: APP_OPTIONS_SEED.OutletReturnReason,
             warehouseActionValidation: APP_OPTIONS_SEED.OutletReturnWarehouseAction,
@@ -288,6 +290,7 @@ function setupOperationSheets() {
                 Code: 150, OutletCode: 140, Date: 130, Username: 170, SKU: 150, Qty: 100, Price: 120,
                 Reason: 140, ReasonComment: 200,
                 InvoiceAdjustmentRequired: 160, InvoiceAdjustmentDone: 150, ConsumptionInvoiceCode: 200,
+                SourceInvoiceCode: 200,
                 WarehouseActionRequired: 160, WarehouseActionCompleted: 150,
                 WarehouseCode: 140, WarehouseAction: 150, WarehouseActionDisposedReason: 200,
                 WarehouseActionDisposedAt: 160, WarehouseActionDisposedBy: 150,

@@ -242,6 +242,16 @@ function normalizeActionResult (result) {
 const STEP_FADE_MS = 180
 const STEP_SETTLE_MS = 60
 const STEP_ACTIONS = ['next', 'back']
+
+// The SAME race, on the submit button.
+//
+// `meta.submitting` only goes true inside `pageState.run()` — which is reached after the
+// page's own `submit` handler has been awaited, and `await` yields to a microtask even for
+// a synchronous handler. So both clicks of a double-click cleared the guard and two
+// identical batches went to the server. Claimed here instead, synchronously, on the tick
+// the click is accepted: every FormAction* button already reads `meta.submitting`, so the
+// whole bar disables on the first click. `run()` sets it true again and clears it in its
+// own `finally`; the veto paths below hand it straight back.
 let stepTimers = []
 
 function clearStepTimers () {
@@ -284,11 +294,18 @@ async function handleAction (actionName, extraPayload = null) {
     claimStep()
   }
 
+  const isSubmit = actionName === 'submit'
+  if (isSubmit) {
+    if (pageState?.meta?.submitting) return
+    if (pageState) pageState.meta.submitting = true
+  }
+
   const ctx = { ...modifierCtx(), payload: extraPayload }
   const handler = resolveHandler(actionName)
 
   if (!handler && !BUILT_IN_ACTIONS.includes(actionName)) {
     if (isStepMove) releaseStep()
+    if (isSubmit && pageState) pageState.meta.submitting = false
     console.warn('[PageAction] No action handler supplied for:', actionName)
     return
   }
@@ -300,6 +317,7 @@ async function handleAction (actionName, extraPayload = null) {
       // Vetoed — the step never moves, so hand the buttons straight back rather
       // than leaving them disabled for the rest of the window.
       if (isStepMove) releaseStep()
+      if (isSubmit && pageState) pageState.meta.submitting = false
       if (result?.message) $q.notify({ type: 'negative', message: result.message, position: 'top' })
       return
     }
@@ -308,7 +326,14 @@ async function handleAction (actionName, extraPayload = null) {
 
   switch (actionName) {
     case 'submit':
-      await runSubmit(ctx, options)
+      try {
+        await runSubmit(ctx, options)
+      } finally {
+        // `run()` clears the flag itself, but it is not reached when there is nothing to
+        // dispatch or no `pageState` — and a bar left permanently disabled is worse than
+        // the double-click this guards.
+        if (pageState) pageState.meta.submitting = false
+      }
       return
     case 'reset':
       onReset()

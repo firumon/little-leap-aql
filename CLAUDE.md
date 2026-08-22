@@ -7,6 +7,18 @@ Read [AGENTS.md](file:///f:/LITTLE%20LEAP/AQL/AGENTS.md) for the complete startu
 > [!IMPORTANT]
 > **Protocol check before anything else**: If the request mentions **MACP**, the Multi-Agent Collaborative Protocol, the Architect/Builder relay workflow, or asks you to act as the **Architect Agent**, read [MACP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MACP.md) in full and operate strictly under that protocol for the rest of the session — two-turn handshake (capability tier, then task), bare Directive Prompts with no surrounding commentary, pasted messages treated as Builder output, and a hard halt after every question, directive, or proposal. See the MACP section in AGENTS.md.
 
+# Code Comments — Keep Them Rare
+
+Write code that explains itself. Do not narrate it.
+
+- **Default: no comment.** No JSDoc blocks, no file-header docblocks, no section banners, no restating what the next line does.
+- A comment is allowed only when the code cannot carry the information — a non-obvious constraint, a workaround, or a decision a reader would otherwise undo.
+- When one is truly warranted: **1 line, 2 at the very most.** Never a paragraph, never a rationale essay.
+- Prefer a clearer name, a smaller function, or a well-named constant over any comment.
+- This applies to every language in the repo — `.vue`, `.js`, `.gs` alike.
+
+**Clean up as you go.** Whenever you edit a file, delete the long comments and docblocks you find in it. Keep nothing unless it is genuinely load-bearing, and then strip it to 1 line (2 at the very most). This is expected in the diff, not scope creep — but stay inside the file you were already editing.
+
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 

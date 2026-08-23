@@ -23,7 +23,7 @@ import {
 } from './outletConsumptionPayload.js'
 import { resolveInvoicePricing, resolvePriceListCode, resolvePricesForPriceList, resolvePriceListLookup, resolveSkuPrice } from './outletConsumptionPricing.js'
 import { netPayableOf, roundPayable } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceCalculation'
-import { useTaxCalculator } from '../../useTaxCalculator.js'
+import { useTaxResource } from 'src/_resource/Master/Taxes/composables/useTaxResource'
 import { useCurrency } from '../../useCurrency.js'
 import { useDataStore } from '../../../stores/data.js'
 
@@ -49,7 +49,7 @@ export function useOutletConsumption() {
     let totalTaxAmount = 0
     const detailsMap = {}
 
-    const { calculateLineTax } = useTaxCalculator()
+    const { calculateLineTax } = useTaxResource()
 
     const processedItems = itemsList.map(item => {
       const skuRecord = skus.find(s => s.Code === item.SKU && s.Status === 'Active')
@@ -70,8 +70,8 @@ export function useOutletConsumption() {
 
       // Round individual fields to standard decimals (not interval)
       const roundedTaxable = roundToDecimals(lineTax.taxableAmount, currencyCode)
-      const roundedTaxAmount = roundToDecimals(lineTax.taxAmount, currencyCode)
-      const roundedDiscount = roundToDecimals(lineTax.discountAmount, currencyCode)
+      const roundedTaxAmount = roundToDecimals(lineTax.totalTax, currencyCode)
+      const roundedDiscount = roundToDecimals(lineTax.discount, currencyCode)
       const roundedTotal = roundToDecimals(lineTax.grossAmount, currencyCode)
 
       totalTaxableAmount += roundedTaxable

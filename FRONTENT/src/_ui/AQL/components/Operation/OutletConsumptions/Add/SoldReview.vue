@@ -8,41 +8,49 @@
          heading alone and every card starts with content rather than a label (§7.5). -->
     <SectionDividerLabel label="SOLD THIS VISIT" />
     <q-card flat bordered :class="ui.cardClass">
-      <q-list separator>
-        <q-item v-for="line in wizard.invoiceLines.value" :key="line.sku" class="q-py-sm">
-          <q-item-section :class="ui.flexWrapTextClass">
-            <q-item-label class="text-weight-medium">{{ line.name }}</q-item-label>
-            <q-item-label caption>{{ line.variant }}</q-item-label>
-            <q-item-label caption :class="line.unpriced ? 'text-negative' : 'text-grey-8'">
-              {{ lineCaption(line) }}
-            </q-item-label>
-          </q-item-section>
+      <!-- `item-class="bg-transparent"` and `item-bordered=false` let the card own the
+           surface. A row painting its own background inside a card whose corners are rounded
+           to a different radius leaves a sliver of border showing in each corner. -->
+      <AqlList
+        :items="wizard.invoiceLines.value"
+        item-key="sku"
+        :layout="['label', 'caption', 'caption', 'caption']"
+        :content="content"
+        :meta-layout="['chip']"
+        :chip="(row) => `${row.qty}`"
+        chip-color="primary"
+        :separator="true"
+        :item-bordered="false"
+        item-class="bg-transparent"
+        gutter="none"
+      >
+        <!-- ONLY WHEN THERE IS AN INVOICE TO PRICE. A unit price is an invoice figure and
+             nothing else — `OutletConsumptionItems` stores no price column — so with
+             invoicing off the box would collect a number with nowhere to go. Switching the
+             toggle off also discards whatever was already typed
+             (`wizard.setGenerateInvoice`).
 
-          <q-item-section side>
-            <div class="row items-center no-wrap q-gutter-x-sm">
-              <!-- The quantity as a SOLID chip, not a caption. It is the one figure an
-                   officer scans this list for — it is what they just counted — and it is a
-                   short list of their own numbers, so it reads as an anchor rather than as
-                   the wall of alarms a solid chip makes of a long banded column (§7.2). -->
-              <q-chip color="primary" text-color="white" class="text-bold" size="md" square :label="`${line.qty}`" />
-              <div style="width: 96px">
-                <!-- The price list is the DEFAULT, not the law. Editing here re-runs the
-                     whole engine — line tax, discount apportionment and the payable move
-                     together — because the override is passed to the calculation as a price
-                     RESOLVER rather than patched onto a total the engine never saw. -->
-                <component
-                  :is="CurrencyField"
-                  :model-value="line.price"
-                  :record="line"
-                  :config="{ label: 'Unit price', inputClass: 'text-right text-weight-bold' }"
-                  header="Price"
-                  @update:model-value="(value) => wizard.setLinePrice(line.sku, value)"
-                />
-              </div>
-            </div>
-          </q-item-section>
-        </q-item>
-      </q-list>
+             The control sits in the row's ACTION slot: a caller slot wins outright in
+             `abstract/Renderable.js` (rule 1), so it renders as-is with no `QBtn` wrapper —
+             and AppList turns row-clicking off for any list that supplies this slot, so a tap
+             on the input is never swallowed by the row. -->
+        <template v-if="wizard.generateInvoice.value" #btn="{ item }">
+          <div style="width: 96px">
+            <!-- The price list is the DEFAULT, not the law. Editing here re-runs the whole
+                 engine — line tax, discount apportionment and the payable move together —
+                 because the override is passed to the calculation as a price RESOLVER rather
+                 than patched onto a total the engine never saw. -->
+            <component
+              :is="CurrencyField"
+              :model-value="item.price"
+              :record="item"
+              :config="PRICE_CONFIG"
+              header="Price"
+              @update:model-value="(value) => wizard.setLinePrice(item.sku, value)"
+            />
+          </div>
+        </template>
+      </AqlList>
     </q-card>
 
     <!-- Hidden entirely when the outlet has no backlog — a bundling card offering nothing
@@ -87,10 +95,13 @@
             <div class="text-caption text-grey-8">Bill this outlet for what was sold.</div>
           </div>
           <div class="col-auto">
+            <!-- Routed through the wizard rather than a bare `set`, because turning
+                 invoicing off also has to DISCARD the typed unit prices — one rule, owned
+                 in one place. -->
             <q-toggle
               :model-value="wizard.generateInvoice.value"
               color="primary"
-              @update:model-value="(v) => wizard.set(FIELDS.GENERATE_INVOICE, v === true)"
+              @update:model-value="(v) => wizard.setGenerateInvoice(v)"
             />
           </div>
         </div>
@@ -191,18 +202,26 @@
  * `OutletConsumptionCode` column holds the comma-separated list, joined server-side so the
  * code this batch is about to create stays an unresolved reference.
  *
+ * The first card is built on `abstract/List.vue`, the same way the invoice Edit page's items
+ * list is, so both screens that re-price a line read as one recurring pattern: product,
+ * variant, the line's value, a "was … Restore" note when it was moved, the quantity as a meta
+ * chip, and the price control in the row's action slot.
+ *
  * The UNIT PRICE is editable on the first card and nowhere else. The price list is the
  * default, not the law — a negotiated one-off or a stale list both need overriding at the
  * moment of billing — and the override is handed to the engine as a price RESOLVER, so line
- * tax, discount apportionment and the payable all move with it.
+ * tax, discount apportionment and the payable all move with it. It is hidden entirely while
+ * "Generate invoice" is off, because a price with no invoice has nowhere to be stored.
  *
  * "Generate invoice" is ON by default: the overwhelmingly common case is that a sale is
  * billed, and defaulting it off would make the exception the default path.
  *
  * No `<style>` block (ARCHITECTURE RULES §7).
  */
-import { computed, useAttrs } from 'vue'
+import { computed, defineComponent, h, useAttrs } from 'vue'
+import { QItemLabel, QBtn } from 'quasar'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
+import AqlList from 'components/abstract/List.vue'
 import { useCurrency } from 'src/composables/useCurrency'
 import { usePriceListResource } from 'src/_resource/Master/PriceLists/composables/usePriceListResource'
 import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
@@ -245,12 +264,75 @@ const hasSales = computed(() => wizard.soldRows.value.length > 0)
  * same reason; this is the half the user can act on, by switching price list.
  */
 const lineCaption = (line) => {
+  // Nothing is being billed, so no money belongs on the row at all.
+  if (!wizard.generateInvoice.value) return ''
   if (line.unpriced) return 'Not in this price list — set a unit price to bill it'
   const base = _C(line.total)
   // The line's own tax, stated on the line that generated it — a reader reconciling the
   // header's tax figure otherwise has to divide it back out across the lines by hand.
   return line.tax > 0 ? `${base} · tax ${_C(line.tax)}` : base
 }
+
+/**
+ * The two caption cells below are COMPONENTS, not value resolvers.
+ *
+ * `Renderable` mounts a component-valued cell outright (rule 3), while a resolver returning
+ * nothing still gets wrapped in a caption element — which would leave an empty line, and its
+ * line-height, on every row that has nothing to say. It is also what lets the value cell pick
+ * its own colour: the default caption wrapper is fixed at `text-grey-6`, and an unpriced line
+ * has to read as a warning.
+ */
+const LineValueNote = defineComponent({
+  name: 'SoldLineValueNote',
+  props: { item: { type: Object, required: true } },
+  setup: (props) => () => {
+    const caption = lineCaption(props.item)
+    if (!caption) return null
+    return h(QItemLabel, {
+      caption: true,
+      class: props.item.unpriced ? 'text-negative' : 'text-grey-8'
+    }, () => caption)
+  }
+})
+
+/**
+ * Only on a line whose price the officer actually moved. The list price is the fact the
+ * override is being judged against, so it is stated beside the new one rather than replacing
+ * it — and the restore puts the line back without the officer having to remember the number.
+ */
+const RepricedNote = defineComponent({
+  name: 'SoldLineRepricedNote',
+  props: { item: { type: Object, required: true } },
+  setup: (props) => () => {
+    const row = props.item
+    if (!row.overridden || !wizard.generateInvoice.value) return null
+    return h(QItemLabel, { caption: true, class: 'text-orange-9' }, () => [
+      `was ${_C(row.listPrice)} `,
+      h(QBtn, {
+        flat: true,
+        dense: true,
+        noCaps: true,
+        size: 'sm',
+        color: 'primary',
+        label: 'Restore',
+        class: 'q-ml-xs q-px-xs',
+        'aria-label': `Restore the price list's price for ${row.name}`,
+        onClick: () => wizard.resetLinePrice(row.sku)
+      })
+    ])
+  }
+})
+
+const content = [
+  (row) => row.name,
+  (row) => row.variant,
+  LineValueNote,
+  RepricedNote
+]
+
+// Hoisted: a fresh object literal per render is a new prop identity every time, which
+// re-runs the control's own watchers on every keystroke in a sibling row (§11 rule 5).
+const PRICE_CONFIG = { label: 'Unit price', inputClass: 'text-right text-weight-bold' }
 
 /**
  * The running total, read ENTIRELY off the Layer 2 engine's header.

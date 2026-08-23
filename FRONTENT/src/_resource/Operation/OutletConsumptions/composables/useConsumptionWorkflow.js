@@ -253,6 +253,8 @@ export function buildConsumptionWorkflowChainRequests ({
     requests.push(...invoice.requests)
     claim(permissions, INVOICES, 'create')
     claim(permissions, INVOICE_ITEMS, 'create')
+    // The tax-ledger rows the invoice builder chained on (§9.3.4).
+    mergePermissions(permissions, invoice.permissions)
 
     // 5. Settle the returns that were credited against it.
     if (adjustedCodes.length) {

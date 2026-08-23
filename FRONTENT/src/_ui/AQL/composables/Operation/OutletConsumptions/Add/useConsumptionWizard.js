@@ -17,8 +17,10 @@ import {
   priceOf,
   splitByWarehouseStock
 } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionStock'
-import { calculateConsumptionInvoice } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionInvoice'
-import { useTaxCalculator } from 'src/composables/useTaxCalculator'
+import {
+  calculateConsumptionInvoice,
+  makeLineTaxResolver
+} from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionInvoice'
 import {
   progressOf,
   isActiveRow,
@@ -114,9 +116,6 @@ export function useConsumptionWizard () {
   // The warehouse side of the same story — one index for the whole app, read by the
   // coverage split and by the per-line availability figure below.
   const { index: warehouseStockIndex, stockOf: warehouseStockOf } = useWarehouseStorageResource()
-  // Injected into the invoice engine rather than imported by it, so Layer 2 stays clear of
-  // the tax composable's store graph.
-  const { calculateLineTax } = useTaxCalculator()
   const index = useConsumptionIndex()
 
   // ── Control-field accessors ────────────────────────────────────────────────
@@ -361,6 +360,48 @@ export function useConsumptionWizard () {
   }
 
   /**
+   * The tax calculator both calculations below are driven by, built from the SAME
+   * `resolvePrice` the lines are priced through.
+   *
+   * THIS IS WHY AN EDITED PRICE NOW MOVES THE TAX. The wizard used to hand the engine
+   * a second tax calculator (since deleted) which RE-RESOLVED the price from the price list
+   * off the SKU it is given — so a typed override moved `Subtotal` and `Total` while
+   * `TaxableAmount` and `TotalTaxAmount` stayed on the list price. That was not just a
+   * display fault: `Add/PageAction.js` passed the same calculator, so the invoice was
+   * WRITTEN with a taxable base its own line prices did not add up to.
+   *
+   * `makeLineTaxResolver` lives beside the engine and is the one resolver every billing
+   * screen uses (§3.3 — one rule, one owner).
+   */
+  const lineTaxResolver = computed(() => makeLineTaxResolver({
+    priceListCode: priceListCode.value,
+    resolvePrice
+  }))
+
+  /**
+   * Turn invoicing on or off.
+   *
+   * Switching it OFF DISCARDS every typed unit price. A price on this wizard is an INVOICE
+   * figure and nothing else — `OutletConsumptionItems` has no price column, so a consumption
+   * recorded without an invoice stores no price anywhere. Keeping the overrides would leave
+   * a value the user can no longer see, still sitting in the state the submit reads, ready to
+   * be applied to whatever invoice a later toggle-on produces.
+   */
+  function setGenerateInvoice (on) {
+    const enabled = on === true
+    set(F.GENERATE_INVOICE, enabled)
+    if (!enabled) set(F.PRICE_OVERRIDES, {})
+  }
+
+  /** Put one line back on the price list's own answer. */
+  function resetLinePrice (sku) {
+    const key = text(sku)
+    if (!key || !(key in priceOverrides.value)) return
+    const { [key]: dropped, ...rest } = priceOverrides.value
+    set(F.PRICE_OVERRIDES, rest)
+  }
+
+  /**
    * The sold lines of every EARLIER audit the officer ticked to ride along on this bill.
    *
    * Read from the stored item rows, grouped by their consumption in ONE pass rather than
@@ -401,8 +442,8 @@ export function useConsumptionWizard () {
     discountType: discountType.value,
     discountValue: discountValue.value,
     returnDeduction: returnDeduction.value,
-    calculateLineTax,
-    resolvePrice
+    resolvePrice,
+    calculateLineTax: lineTaxResolver.value
   }))
 
   /**
@@ -418,19 +459,24 @@ export function useConsumptionWizard () {
     priceListCode: priceListCode.value,
     // No discount and no return credit: those belong to the INVOICE, not to a line, and
     // apportioning them across this subset would print a per-line figure the bill never uses.
-    calculateLineTax,
-    resolvePrice
+    resolvePrice,
+    calculateLineTax: lineTaxResolver.value
   }))
 
   /** The engine's lines, carrying the labels only the UI needs. */
   const invoiceLines = computed(() => visitCalculation.value.lines.map((line) => {
     const label = skuLabel(line.SKU)
+    const listPrice = toNumber(priceOf(line.SKU, priceListCode.value))
     return {
       sku: line.SKU,
       name: label.primary,
       variant: label.secondary,
       qty: line.Qty,
       price: line.Price,
+      // What the list would have charged, and whether the officer moved off it — the pair
+      // the row's "was … Restore" affordance is built from.
+      listPrice,
+      overridden: text(line.SKU) in priceOverrides.value,
       // A SKU with no price in this list is SURFACED rather than billed at zero — a silent
       // zero is how consignment stock gets given away.
       unpriced: line.Unpriced,
@@ -698,7 +744,7 @@ export function useConsumptionWizard () {
     returnMeta, metaFor, setReturnMeta,
     // step 3
     generateInvoice, priceListCode, discountType, discountValue,
-    priceOverrides, setLinePrice, resolvePrice, bundledLines,
+    priceOverrides, setLinePrice, resetLinePrice, resolvePrice, setGenerateInvoice, bundledLines,
     invoiceCalculation, invoiceHeader, invoiceLines, invoiceSubtotal, invoiceDiscount,
     invoiceTaxableAmount, invoiceTax, invoiceReturnDeduction, invoiceTotal,
     invoiceTaxBreakdown, invoicePolicy,

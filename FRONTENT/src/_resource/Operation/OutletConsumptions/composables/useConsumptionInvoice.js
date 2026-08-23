@@ -46,6 +46,8 @@
 
 import { toNumber, priceOf, lineTotal, discountAmount } from './useConsumptionStock'
 import { usePriceListResource } from 'src/_resource/Master/PriceLists/composables/usePriceListResource'
+import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
+import { useTaxResource } from 'src/_resource/Master/Taxes/composables/useTaxResource'
 
 const text = (value) => (value == null ? '' : String(value).trim())
 const asRow = (value) => (value && typeof value === 'object' ? value : {})
@@ -135,6 +137,78 @@ export function groupTaxDetails (lines = []) {
     })
   })
   return [...grouped.values()]
+}
+
+// ─── The ONE tax resolver the engine is driven by ─────────────────────────────
+
+/**
+ * Build the `calculateLineTax` resolver `calculateConsumptionInvoice` injects per line.
+ *
+ * ── WHY THIS EXISTS AT ALL ──
+ * The engine takes the tax calculator as an ARGUMENT and, when it gets none, bills every line
+ * UNTAXED — a deliberate choice there (a zero tax is visible and correctable; a lost invoice
+ * is neither). So a caller that forgets to pass one silently produces an invoice with
+ * `Tax Amount 0.00` on every line.
+ *
+ * ── WHY IT IS NOT JUST A TAX COMPOSABLE, HANDED OVER RAW ──
+ * Two mismatches have to be bridged, and bridging them in each caller is how callers drift:
+ *
+ *   1. SHAPE. The Taxes domain returns `{ taxableAmount, totalTax, breakdown: [{ code,
+ *      amount }] }`; this engine reads `{ taxableAmount, taxAmount, taxBreakdown:
+ *      [{ taxCode, taxAmount }] }`. The mapping happens once, here.
+ *   2. PRICE. The engine hands the calculator a SKU and a quantity, not a price — but every
+ *      screen that bills lets the user OVERRIDE a unit price, and tax must be charged on the
+ *      price actually being billed. So this takes the same `resolvePrice` the engine uses for
+ *      the line itself, guaranteeing the taxed price and the billed price are one number.
+ *
+ * ── WHY IT LIVES HERE, NEXT TO THE ENGINE ──
+ * It was written in the invoices module, where the second caller could not see it. The
+ * consumption wizard therefore passed a second, now-deleted tax calculator straight through
+ * instead — and that one RE-RESOLVES the price from the price list, so an overridden unit
+ * price moved `Subtotal` and `Total` but left `TaxableAmount` and `TotalTaxAmount` sitting on
+ * the list price, in the review step AND in the row the batch then wrote. One resolver beside
+ * the one engine is what stops that happening again. `useInvoiceCalculation.js` re-exports it,
+ * so the invoices module's callers are unchanged.
+ *
+ * The tax CODE comes from the SKU master and the two policy flags from the price list — the
+ * same sources `invoicePolicyOf` reads, so a line's tax obeys the same policy its discount
+ * does.
+ */
+export function makeLineTaxResolver ({ priceListCode = '', resolvePrice = null, interState = false } = {}) {
+  const listCode = text(priceListCode)
+  const { discountTaxPolicy, taxInclusive } = invoicePolicyOf(listCode)
+
+  return ({ skuCode = '', quantity = 0, discount = 0 } = {}) => {
+    const { getSku } = useSkuResource()
+    const { calculateLineTax } = useTaxResource()
+
+    const sku = text(skuCode)
+    const taxCode = text(getSku(sku)?.taxCode)
+    const price = typeof resolvePrice === 'function' ? (resolvePrice(sku, listCode) ?? 0) : 0
+
+    const result = calculateLineTax({
+      price,
+      quantity: toNumber(quantity),
+      discount: toNumber(discount),
+      taxCode,
+      taxInclusive,
+      discountTaxPolicy,
+      // The place-of-supply branch, bound once here so every line of one invoice is priced on
+      // the same side of it — see `SupplyScope` in the Taxes domain module.
+      interState
+    })
+
+    return {
+      taxableAmount: toNumber(result.taxableAmount),
+      taxAmount: toNumber(result.totalTax),
+      // One entry per tax COMPONENT — a compound tax (GST18 → CGST9 + SGST9) contributes two,
+      // because that is the granularity a tax return is filed at.
+      taxBreakdown: (result.breakdown || []).map((entry) => ({
+        taxCode: text(entry.code),
+        taxAmount: toNumber(entry.amount)
+      }))
+    }
+  }
 }
 
 /**
@@ -345,6 +419,7 @@ export function useConsumptionInvoice () {
     invoicePolicyOf,
     groupTaxDetails,
     invoiceItemOf,
+    makeLineTaxResolver,
     calculateConsumptionInvoice,
     storedTaxBreakdown,
     netPayableOf

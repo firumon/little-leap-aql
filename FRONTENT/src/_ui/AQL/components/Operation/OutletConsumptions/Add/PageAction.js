@@ -1,6 +1,6 @@
 import { useAuth } from 'src/composables/core/useAuth'
 import { useDataStore } from 'src/stores/data'
-import { useTaxCalculator } from 'src/composables/useTaxCalculator'
+import { makeLineTaxResolver } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionInvoice'
 import { batchResultCode } from 'src/composables/resources/usePageState'
 import { WIZARD_FIELDS as F, WIZARD_NODE as NODE } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/useConsumptionWizard'
 import {
@@ -57,7 +57,6 @@ export default (props, { pageState, resourceConfig }) => {
   // the live session user rather than whoever was signed in at import.
   const { user } = useAuth()
   const dataStore = useDataStore()
-  const { calculateLineTax } = useTaxCalculator()
 
   const node = pageState.useNode(NODE)
   const step = () => pageState.meta.currentStep
@@ -314,8 +313,10 @@ export default (props, { pageState, resourceConfig }) => {
         discountValue: get(F.DISCOUNT_VALUE, 0),
         invoiceComment: text(get(F.INVOICE_COMMENT)),
         // Injected rather than imported by Layer 2, so the domain stays clear of the tax
-        // composable's store graph.
-        calculateLineTax,
+        // composable's store graph. Built from the SAME `resolvePrice` below, so an
+        // overridden unit price is taxed at the price actually being billed — the one
+        // resolver the review step is driven by (`useConsumptionWizard.lineTaxResolver`).
+        calculateLineTax: makeLineTaxResolver({ priceListCode: priceListCode(), resolvePrice }),
         // The unit prices the officer typed on step 3, as a resolver — so the batch prices
         // every line exactly as the review step displayed it. Read straight off the control
         // field, because this handler runs outside any setup context and cannot call the

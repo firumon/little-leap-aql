@@ -116,14 +116,6 @@ export function useInvoiceViewContext () {
     collected: computed(() => row.value?.collected ?? 0),
     grandTotal: computed(() => row.value?.total ?? 0),
 
-    /**
-     * The payable written the way a VIEW surface writes it: `exact (rounded)`, or just the
-     * exact figure when the currency's rounding interval changed nothing.
-     *
-     * Both numbers, because this is where the bill gets reconciled: the exact one is what the
-     * line items add up to, the rounded one is what a payment can actually settle. Layer 2
-     * owns both the pair and the bracket convention, so no two cards write it differently.
-     */
     payableText: computed(() => payableLabel(payableFiguresOf(record.value || {}), money)),
     payments: computed(() => row.value?.payments || []),
 

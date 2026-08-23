@@ -16,9 +16,6 @@
 
       <q-separator />
 
-      <!-- `exact (rounded)` — see `payableText`. The exact figure leads because it is the one
-           the lines above add up to; the bracket is what a payment can actually settle, and
-           it only appears when the currency's rounding interval moved the number. -->
       <q-card-section class="row items-center justify-between q-py-sm">
         <div class="text-subtitle2 text-weight-bold">Net Payable</div>
         <div class="text-h6 text-weight-bolder text-primary">{{ payableText }}</div>

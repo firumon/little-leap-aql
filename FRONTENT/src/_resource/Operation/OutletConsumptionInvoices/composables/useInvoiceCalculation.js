@@ -172,25 +172,10 @@ export function grandTotalOf (row = {}) {
 }
 
 /**
- * The payable as BOTH numbers, plus whether they actually differ.
+ * The payable as both numbers. The exact one is what the lines add up to; the rounded one is
+ * what a payment can settle.
  *
- * ── WHY A SCREEN NEEDS BOTH ──
- * The exact figure is the one the line items add up to, so it is the only one a reader can
- * check the arithmetic against. The rounded one is what a payment actually settles, because
- * a currency rounding to 0.05 has no coin for a 3-fils residue. Showing only the rounded
- * figure makes the invoice look like it cannot add up; showing only the exact one asks for a
- * payment nobody can hand over.
- *
- * So the DISPLAY RULE, and it is a rule about surfaces rather than about numbers:
- *
- *   data-entry screens   exact only — the user is still building the figure, and a
- *                        settlement number they cannot influence is noise mid-edit.
- *   view / payment       `exact (rounded)` — both, because this is where somebody reconciles
- *                        the bill and where somebody collects against it.
- *
- * `differs` is what keeps the bracket honest: on the overwhelmingly common invoice the two
- * are identical, and printing `426.30 (426.30)` on every one of them trains the reader to
- * stop seeing the bracket on the rare invoice where it means something.
+ * Display rule: data-entry screens show exact only, view/payment show `exact (rounded)`.
  */
 export function payableFigures (exactValue, priceListCode = '') {
   const exact = num(exactValue)
@@ -204,14 +189,7 @@ export function payableFiguresOf (row = {}) {
   return payableFigures(netPayableOf(entry), entry.PriceListCode)
 }
 
-/**
- * How a view or payment surface WRITES that pair: `exact (rounded)`, or just the exact
- * figure when rounding changed nothing.
- *
- * The currency formatter is passed IN rather than imported, keeping this pure and letting
- * each page format in the invoice's own currency — and putting the bracket convention in one
- * place, so three cards cannot end up writing it three ways.
- */
+/** `exact (rounded)`, or just the exact figure when rounding changed nothing. */
 export function payableLabel (figures, money) {
   const entry = figures && typeof figures === 'object' ? figures : { exact: 0, rounded: 0 }
   const format = typeof money === 'function' ? money : ((value) => String(num(value)))

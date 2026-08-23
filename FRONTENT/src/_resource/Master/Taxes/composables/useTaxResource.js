@@ -20,6 +20,42 @@ export const groupTaxesByParent = (allTaxes = []) => {
   return map
 }
 
+/**
+ * WHICH PLACE-OF-SUPPLY BRANCH a tax component belongs to (`Taxes.SupplyScope`).
+ *
+ * Some taxes split by destination and charge a DIFFERENT set of components each way — Indian
+ * GST is the standard case: a sale inside the state charges CGST + SGST, a sale across state
+ * lines charges IGST instead, and the two are alternatives that must never both apply. They
+ * are modelled as siblings under one parent (`GST18` → `CGST9`, `SGST9`, `IGST18`), so
+ * something has to say which branch a component is for.
+ *
+ * BLANK MEANS ALWAYS, and that default is load-bearing: every ordinary tax — VAT, US sales
+ * tax, excise, a carbon levy — applies regardless of destination, and none of them will ever
+ * carry this column. Treating blank as "intra-state only" would silently drop every one of
+ * them from an inter-state sale.
+ */
+export const SUPPLY_ALWAYS = ''
+export const SUPPLY_INTRA = 'INTRA'
+export const SUPPLY_INTER = 'INTER'
+
+function normaliseSupplyScope (value) {
+  const raw = (value == null ? '' : String(value)).trim().toUpperCase()
+  return raw === SUPPLY_INTRA || raw === SUPPLY_INTER ? raw : SUPPLY_ALWAYS
+}
+
+/**
+ * Does this component apply to the transaction being priced?
+ *
+ * `interState` defaults to FALSE everywhere — the overwhelmingly common sale is a local one,
+ * and a caller that has no concept of place of supply gets the intra-state branch rather than
+ * a surprise.
+ */
+export function appliesToSupply (component, interState = false) {
+  const scope = normaliseSupplyScope(component?.supplyScope ?? component?.SupplyScope)
+  if (scope === SUPPLY_ALWAYS) return true
+  return interState === true ? scope === SUPPLY_INTER : scope === SUPPLY_INTRA
+}
+
 // Pure single Tax record enrichment function.
 //
 // `childRows` is this tax's OWN children, already selected by `groupTaxesByParent`.
@@ -40,6 +76,7 @@ export const enrichTax = (tax, childRows = []) => {
       flatUnit: Number(c.FlatUnit) || 0,
       calculationOrder: Number(c.CalculationOrder) || 1,
       compoundOn: c.CompoundOn || '',
+      supplyScope: normaliseSupplyScope(c.SupplyScope),
       description: c.Description || '',
       status: c.Status || 'Active',
       _raw: c
@@ -65,6 +102,7 @@ export const enrichTax = (tax, childRows = []) => {
     flatUnit,
     calculationOrder: Number(tax.CalculationOrder) || 1,
     compoundOn: tax.CompoundOn || '',
+    supplyScope: normaliseSupplyScope(tax.SupplyScope),
     description: tax.Description || '',
     accessRegion: tax.AccessRegion || '',
     status: tax.Status || 'Active',
@@ -105,24 +143,58 @@ const shared = defineSharedComposable((dataStore) => {
     return taxMap.value.get(code) || null
   }
 
-  // Returns sorted active tax components for a given tax code (group or single)
-  const getTaxComponents = (taxCode) => {
+  /**
+   * The active components of a tax, in `CalculationOrder`, narrowed to the branch this
+   * transaction is on.
+   *
+   * The `SupplyScope` filter is what stops a GST group charging CGST + SGST + IGST all at
+   * once — see `appliesToSupply`. A group whose children carry no scope is unaffected.
+   */
+  const getTaxComponents = (taxCode, { interState = false } = {}) => {
     if (!taxCode) return []
     const tax = getTax(taxCode)
     if (!tax) return []
     if (tax.children && tax.children.length > 0) {
-      return tax.children.filter((c) => c.status === 'Active')
+      return tax.children.filter((c) => c.status === 'Active' && appliesToSupply(c, interState))
     }
-    return tax.status === 'Active' ? [tax] : []
+    return tax.status === 'Active' && appliesToSupply(tax, interState) ? [tax] : []
   }
 
-  // Calculate taxes on a line item
-  const calculateLineTax = ({ price = 0, quantity = 1, discount = 0, taxCode = '', taxInclusive = false, discountTaxPolicy = 'PRE_TAX' } = {}) => {
+  /**
+   * THE tax calculation for one line. Every tax figure in the app comes from here.
+   *
+   * ── IT TAKES A PRICE, NEVER A SKU ──
+   * Deliberately, and it is the whole reason this is the only survivor. The second calculator
+   * that used to sit in `src/composables/` (now deleted) accepted a `skuCode` and resolved the
+   * price from the price list ITSELF — so on any screen that lets the user override a unit
+   * price, the line was taxed at the list price while it was billed at the typed one.
+   * `Subtotal` moved and `TotalTaxAmount` did not, in the review step AND in the row that got
+   * written. A calculator that cannot see the price cannot be handed one, so this one
+   * demands it.
+   *
+   * ── THE PLACE-OF-SUPPLY BRANCH ──
+   * `interState` (default `false`) picks which components apply, through `SupplyScope`. It is
+   * the caller's fact, not this module's: only the transaction knows whether the buyer is in
+   * the seller's state. A tax whose components carry no scope ignores it entirely.
+   *
+   * ── THE THREE COMPOUND MODES ──
+   *   compoundOn = ''           charged on the line's own taxable amount.
+   *   compoundOn = 'PREVIOUS'   charged on the taxable amount PLUS every component already
+   *                             applied — a surcharge stacked on the running total.
+   *   compoundOn = '<taxCode>'  charged on that ONE named component's tax amount — a cess
+   *                             levied on a specific duty rather than on the goods.
+   * Components arrive in `CalculationOrder` (sorted once, in `enrichTax`), which is what makes
+   * "already applied" well-defined.
+   *
+   * PURE: takes plain numbers and a tax code, touches no invoice, no price list and no store
+   * beyond the Taxes rows this module owns.
+   */
+  const calculateLineTax = ({ price = 0, quantity = 1, discount = 0, taxCode = '', taxInclusive = false, discountTaxPolicy = 'PRE_TAX', interState = false } = {}) => {
     const numPrice = Number(price) || 0
     const numQty = Number(quantity) || 0
     const numDisc = Number(discount) || 0
 
-    const components = getTaxComponents(taxCode)
+    const components = getTaxComponents(taxCode, { interState })
     let itemPrice = numPrice
 
     if (taxInclusive && components.length > 0) {
@@ -144,16 +216,25 @@ const shared = defineSharedComposable((dataStore) => {
     let totalTax = 0
     let runningPreceding = 0
     const breakdown = []
+    // What each component charged, so a later one can compound on it BY NAME — see the
+    // three modes in the docblock.
+    const taxByCode = {}
 
     components.forEach((comp) => {
       let base = taxableAmount
       if (comp.compoundOn === 'PREVIOUS') {
         base = taxableAmount + runningPreceding
+      } else if (comp.compoundOn) {
+        // A component naming one that has not been applied yet charges nothing rather than
+        // silently falling back to the full taxable amount, which would over-charge by the
+        // whole line instead of by a rounding error.
+        base = taxByCode[comp.compoundOn] || 0
       }
       const pctAmt = (base * (Number(comp.percentageTransaction) || 0)) / 100
       const flatAmt = (Number(comp.flatUnit) || 0) * numQty
       const compTax = pctAmt + flatAmt
 
+      taxByCode[comp.code] = compTax
       runningPreceding += compTax
       totalTax += compTax
 

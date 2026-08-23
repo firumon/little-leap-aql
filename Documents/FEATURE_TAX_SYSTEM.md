@@ -21,6 +21,7 @@ The `Taxes` sheet is a master-scope resource containing the following columns:
 | **`FlatUnit`** | Number | `0` | Flat tax amount per quantity unit (applied directly to quantity). | `19.90` (Fuel Excise), `2.05` (Cigarette Excise) |
 | **`CalculationOrder`** | Number | `1` | Evaluation sequence (1, 2, 3...) for children under the same parent. | `1` for Excise, `2` for compound VAT |
 | **`CompoundOn`** | Text | `(Blank)` | **Controls Tax-on-Tax compounding:**<br>• `(Blank)`: Applies only to transaction base price.<br>• `PREVIOUS`: Applies to `(Base Price + all preceding tax amounts)`.<br>• `[TaxCode]`: Applies its percentage *only* on a specific preceding tax's calculated amount. | `PREVIOUS` (for Fuel VAT), `EXCISE` (for Cess on Excise) |
+| **`SupplyScope`** | Text | `(Blank)` | **Controls place-of-supply branching:**<br>• `(Blank)`: always applies, whatever the destination.<br>• `INTRA`: applies only to a sale within the seller's state.<br>• `INTER`: applies only to a sale across state lines.<br>Exists because some taxes charge a *different set* of components each way and the alternatives sit as siblings under one parent. | `INTRA` (for CGST9/SGST9), `INTER` (for IGST18) |
 | **`Description`** | Text | `(Blank)` | Internal notes or explanations. | `Central GST portion for intra-state sales` |
 | **`Status`** | Text | `Active` | Normal active/inactive validation state. | `Active`, `Inactive` |
 | **`AccessRegion`** | Text | `(Blank)` | Scoped access region validation for AQL. | `Dubai`, `MH` |
@@ -52,6 +53,27 @@ Pricing behavior and discount-tax policies are configured at the price list leve
 ## 5. Transactional Storage Schema: `TaxTransactions` Sheet
 Calculated tax amounts are summarized and stored in the **`TaxTransactions`** sheet (under the `accounts` scope) at the **Invoice + Tax Category/Code** level to optimize row volume.
 
+> [!NOTE]
+> **Written by** `src/_resource/Accounts/TaxTransactions/composables/useTaxTransactionPayload.js`,
+> chained off invoice generation from both paths that raise one — the invoices module's own
+> wizard (`useInvoicePayload.buildInvoiceGenerationRequests`) and a consumption submit
+> (`useConsumptionPayload.buildInvoiceRequests`) — so a bill lands in the ledger identically
+> either way. The rows carry no arithmetic of their own; every figure is lifted from the
+> grouped breakdown the one engine already produced.
+>
+> **On edit**, the rows are REPLACED: the old set is marked `Inactive` and a new set written in
+> the same batch, because an edit can change the *set* of tax codes and not just the amounts.
+> Nothing is ever hard-deleted — a return already filed against those figures has to stay
+> reconstructable.
+>
+> **A zero-rated component still writes a row** (§7, Example 7); a blank `TaxCode` writes none.
+
+> [!WARNING]
+> **Cancellation does not yet reverse the ledger.** `buildCancellationRequests` accepts the
+> rows and retires them, but the live `Cancel` button is a generic `AdditionalActions`
+> `executeAction` that never reaches that builder — so a cancelled invoice currently leaves its
+> tax rows `Active`. Routing Cancel through the domain builder is the outstanding piece.
+
 | Column Name | Data Type | Purpose / Description | Example |
 | :--- | :--- | :--- | :--- |
 | **`Code`** | Text (Key) | Unique tax transaction record code (prefix `TXD` + sequence). | `TXD2600001` |
@@ -76,50 +98,64 @@ Calculated tax amounts are summarized and stored in the **`TaxTransactions`** sh
 
 To simplify development and prevent logic duplication across the codebase, a single tax engine utility (implemented as a backend GAS helper and a frontend Pinia composable) handles both **forwards** (exclusive) and **backwards** (inclusive) tax calculations.
 
-### A. Core JS Composable Interface (`useTaxCalculator`)
+### A. Frontend Interface (`useTaxResource`) — Layer 2, Master/Taxes
 
-Developers do not need to perform manual lookups for prices, SKU configurations, or tax rates. The composable automates database checks internally.
+Every tax figure in the frontend comes from ONE function, in the Master/Taxes domain module:
+`src/_resource/Master/Taxes/composables/useTaxResource.js`. There is no second calculator.
+A `src/composables/useTaxCalculator.js` used to exist alongside it and has been **deleted**:
+`src/composables/` is for core app concerns only, never for a resource's own rules.
+
+> [!IMPORTANT]
+> **It takes a `price`, never a `skuCode`.** The deleted calculator accepted a SKU and
+> resolved the price from the price list itself, which meant that on any screen where the
+> user can override a unit price, the line was **taxed at the list price while it was billed
+> at the typed one** — `Subtotal` moved and `TotalTaxAmount` did not, on screen and in the
+> row that got written. A calculator that cannot see the price cannot be handed one. The
+> caller resolves the price (through a price RESOLVER, so an override flows into tax,
+> discount apportionment and the payable together) and passes it in.
 
 ```javascript
-import { useTaxCalculator } from 'src/composables/useTaxCalculator';
+import { useTaxResource } from 'src/_resource/Master/Taxes/composables/useTaxResource'
 
-// Initialize the composable
-const { calculateLineTax } = useTaxCalculator();
+const { calculateLineTax } = useTaxResource()
 
-// Execute calculation by passing basic transaction IDs
 const lineTaxResult = calculateLineTax({
-  skuCode: 'SKU001',
+  price: 100.00,              // REQUIRED — the price actually being billed
   quantity: 10,
-  priceListCode: 'PL001',
-  discount: 15.00 // Optional line-level discount (defaults to 0)
-});
+  discount: 15.00,            // optional line-level discount (defaults to 0)
+  taxCode: 'GST18',           // from the SKU master
+  taxInclusive: false,        // from the price list
+  discountTaxPolicy: 'PRE_TAX'// from the price list
+})
 ```
 
 #### Output Structure (`lineTaxResult`):
 ```javascript
 {
-  subtotal: 1000.00,       // Gross subtotal (PriceListPrice * quantity)
-  itemPrice: 100.00,       // Net unit price (back-calculated if TaxInclusive is TRUE)
-  taxableAmount: 985.00,   // Base value tax is computed on (subtotal adjusted for pre-tax discounts)
-  taxAmount: 49.25,        // Total accumulated tax amount for the line
-  discountAmount: 15.00,   // Applied line discount
-  grossAmount: 1034.25,    // Final total customer payable amount for this line
-  taxBreakdown: [          // Detailed child component tax rows
-    {
-      taxCode: 'CGST9',
-      taxName: 'CGST 9%',
-      taxRate: 9,
-      taxAmount: 24.625
-    },
-    {
-      taxCode: 'SGST9',
-      taxName: 'SGST 9%',
-      taxRate: 9,
-      taxAmount: 24.625
-    }
+  subtotal: 1000.00,       // itemPrice * quantity (the NET base when TaxInclusive is TRUE)
+  itemPrice: 100.00,       // net unit price (back-calculated if TaxInclusive is TRUE)
+  taxableAmount: 985.00,   // base value tax is computed on (adjusted for pre-tax discounts)
+  totalTax: 49.25,         // total accumulated tax for the line
+  discount: 15.00,         // applied line discount
+  grossAmount: 1034.25,    // final total payable for this line
+  breakdown: [             // one entry per tax COMPONENT
+    { code: 'CGST9', name: 'CGST 9%', base: 985.00, rate: 9, flatUnit: 0, amount: 24.625 },
+    { code: 'SGST9', name: 'SGST 9%', base: 985.00, rate: 9, flatUnit: 0, amount: 24.625 }
   ]
 }
 ```
+
+#### Invoice callers use the shared resolver, not this function directly
+
+An invoice line is priced by `calculateConsumptionInvoice`
+(`src/_resource/Operation/OutletConsumptions/composables/useConsumptionInvoice.js`), which
+takes the tax calculator as an argument. `makeLineTaxResolver`, in that same file, is the one
+adapter that binds a price resolver and the price list's policy flags to `calculateLineTax`
+and renames its output to the engine's field names. It performs no arithmetic. Billing screens
+pass `makeLineTaxResolver({ priceListCode, resolvePrice })` and never build their own.
+
+Omitting it bills every line **untaxed** — the engine treats a missing calculator as "no tax"
+by design, so a caller that forgets it produces `Tax Amount 0.00` silently.
 
 ---
 
@@ -144,6 +180,19 @@ The price list value is treated as the final gross price. The engine resolves th
 2.  Back-calculate the net unit price:
     $$\text{itemPrice} = \frac{\text{PriceListPrice}}{1 + R}$$
 3.  Perform the pre-tax or post-tax discount adjustments and evaluate the sequential compounding calculation steps to resolve `taxableAmount`, `taxAmount`, and `grossAmount`.
+
+> [!WARNING]
+> **This back-calculation is only exact for plain, non-compounded percentage taxes.** Step 1
+> sums percentage rates of non-compounded children only, which means:
+> * a **`FlatUnit`** levy is never backed out of the gross price, and
+> * a **compounded** component's rate is missing from the divisor (for GST 5% then PST 9.975%
+>   on `PREVIOUS`, the true divisor is `1.05 × 1.09975`, not `1 + 0.05`).
+>
+> Round-tripping a gross price back through the engine therefore returns the original total for
+> Examples 4, 9 and 10, and **overstates** it for Examples 1, 2, 5, 6 and 8. This only bites a
+> price list with `TaxInclusive = TRUE` whose tax group compounds or carries a flat unit;
+> exclusive price lists are unaffected. Fixing it means changing the formula above, which
+> changes money, so it is left stated rather than silently altered.
 
 ---
 
@@ -300,15 +349,46 @@ Suppose we sell standard baby products in the UAE. The transaction contains **5 
 Suppose we sell goods worth **₹1,000** within Maharashtra (Intra-State transaction).
 *   **Selling Price (Subtotal):** ₹1,000
 *   **Tax Group Configuration (`GST18`):**
-    1.  `CGST9`: `ParentCode = GST18`, `PercentageTransaction = 9`, `CalculationOrder = 1`, `CompoundOn = (Blank)`
-    2.  `SGST9`: `ParentCode = GST18`, `PercentageTransaction = 9`, `CalculationOrder = 1`, `CompoundOn = (Blank)`
+    1.  `CGST9`: `ParentCode = GST18`, `PercentageTransaction = 9`, `CalculationOrder = 1`, `CompoundOn = (Blank)`, **`SupplyScope = INTRA`**
+    2.  `SGST9`: `ParentCode = GST18`, `PercentageTransaction = 9`, `CalculationOrder = 1`, `CompoundOn = (Blank)`, **`SupplyScope = INTRA`**
+    3.  `IGST18`: `ParentCode = GST18`, `PercentageTransaction = 18`, `CalculationOrder = 1`, `CompoundOn = (Blank)`, **`SupplyScope = INTER`**
 
-**Engine Execution Steps:**
+**Engine Execution Steps (intra-state — `interState = false`, the default):**
 1.  **Row 1 (`CGST9`):** Calculates 9% on the subtotal (₹1,000) $\rightarrow$ **₹90.00**
 2.  **Row 2 (`SGST9`):** Calculates 9% on the subtotal (₹1,000) $\rightarrow$ **₹90.00**
-3.  **Result:** Subtotal ₹1,000.00 | CGST ₹90.00 | SGST ₹90.00 | **Total Invoice: ₹1,180.00**
+3.  `IGST18` is skipped — its scope is `INTER`.
+4.  **Result:** Subtotal ₹1,000.00 | CGST ₹90.00 | SGST ₹90.00 | **Total Invoice: ₹1,180.00**
+
+**Engine Execution Steps (inter-state — `interState = true`):**
+1.  `CGST9` and `SGST9` are skipped — their scope is `INTRA`.
+2.  **Row 3 (`IGST18`):** Calculates 18% on the subtotal (₹1,000) $\rightarrow$ **₹180.00**
+3.  **Result:** Subtotal ₹1,000.00 | IGST ₹180.00 | **Total Invoice: ₹1,180.00**
+
+> [!IMPORTANT]
+> **Leaving `SupplyScope` blank on all three charges all three** — 9 + 9 + 18 = 36%. Blank
+> means "always applies", which is correct for every tax that does *not* branch (VAT, US sales
+> tax, excise) and is the only safe default for them. A GST group therefore MUST have the
+> column filled in on its children. `interState` is supplied by the caller, because only the
+> transaction knows where the buyer is; it defaults to `false`.
 
 ---
 
-## 8. Frontend Integration (Post-Implementation)
-*(Note: To be detailed here once the backend tax module and its core frontend database composables have been implemented. This section will guide developer consumption of components and hooks like `useTaxCalculation`.)*
+## 8. Frontend Integration
+
+| Need | Import |
+| :--- | :--- |
+| Tax rows, groups, components, and **the** line calculation | `_resource/Master/Taxes/composables/useTaxResource.js` |
+| The calculator bound to a price resolver + price-list policy, ready for the invoice engine | `makeLineTaxResolver` in `_resource/Operation/OutletConsumptions/composables/useConsumptionInvoice.js` |
+| A whole invoice (lines, discount apportionment, grouped `TaxDetails`, net payable) | `calculateConsumptionInvoice`, same file |
+| Writing the tax ledger | `_resource/Accounts/TaxTransactions/composables/useTaxTransactionPayload.js` |
+
+Rules that hold across all of them:
+
+1.  **One calculator.** `useTaxResource().calculateLineTax` is the only place tax arithmetic
+    happens. Nothing under `src/composables/` may hold resource logic — the former
+    `useTaxCalculator.js` was deleted for exactly that reason.
+2.  **Pass a price, not a SKU.** See §6.A.
+3.  **Never omit the tax calculator** when calling `calculateConsumptionInvoice` — a missing
+    one bills every line untaxed, silently.
+4.  **`interState` travels with the transaction**, not with the tax. Bind it once per document
+    via `makeLineTaxResolver` so every line of one invoice is priced on the same branch.

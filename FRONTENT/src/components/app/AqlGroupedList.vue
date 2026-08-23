@@ -145,7 +145,6 @@ const groupedItems = computed(() => {
     if (!groups.has(normalizedKey)) {
       groups.set(normalizedKey, {
         key: normalizedKey,
-        label: resolveProp(props.groupLabel || props.headerLabel || props.groupKey, item, normalizedKey),
         icon: resolveProp(props.headerIcon, item),
         firstItem: item,
         items: []
@@ -155,9 +154,20 @@ const groupedItems = computed(() => {
   })
   return Array.from(groups.values()).map(group => ({
     ...group,
+    label: resolveGroupLabel(group),
     headerRight: resolveProp(props.headerChip || props.headerBadge, group)
   }))
 })
+
+// A label FUNCTION gets the whole group, like `headerCaption` and `headerChip` do — it is a
+// header prop and must see `group.items`. A string key still reads off the first row.
+function resolveGroupLabel (group) {
+  const prop = props.groupLabel || props.headerLabel
+  if (typeof prop === 'function') return prop(group)
+  if (prop) return resolveProp(prop, group.firstItem, group.key)
+  // `groupKey` is a key extractor, so it is always given a row.
+  return resolveProp(props.groupKey, group.firstItem, group.key)
+}
 
 function resolveProp(prop, source, fallback = '') {
   if (prop === null || prop === undefined || prop === '') return fallback

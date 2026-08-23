@@ -329,12 +329,12 @@ import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
 import OutletProgressChip from '../../../components/operation/Outlets/OutletProgressChip.vue'
 import ResourceActionButton from '../../../components/shared/ResourceActionButton.vue'
 import { useDataStore } from '../../../stores/data.js'
-import { useTaxCalculator } from '../../../composables/useTaxCalculator.js'
+import { useTaxResource } from 'src/_resource/Master/Taxes/composables/useTaxResource'
 import ResourceReports from 'components/Reports/ResourceReports.vue'
 
 defineOptions({ name: 'OutletConsumptionInvoicesViewPage' })
 const dataStore = useDataStore()
-const { calculateLineTax } = useTaxCalculator()
+const { calculateLineTax } = useTaxResource()
 
 const $q = useQuasar()
 const { code } = useRouteConfig()
@@ -428,7 +428,7 @@ const realtimeTaxDetailsComputed = computed(() => {
     })
 
     const roundedTaxable = roundToDecimals(lineTax.taxableAmount, currencyCode)
-    const roundedTaxAmount = roundToDecimals(lineTax.taxAmount, currencyCode)
+    const roundedTaxAmount = roundToDecimals(lineTax.totalTax, currencyCode)
 
     totalTaxableAmount += roundedTaxable
     totalTaxAmount += roundedTaxAmount
@@ -505,9 +505,9 @@ const realtimeLineItems = computed(() => {
     return {
       ...item,
       Total: roundToDecimals(lineTax.grossAmount, currencyCode),
-      Discount: roundToDecimals(lineTax.discountAmount, currencyCode),
+      Discount: roundToDecimals(lineTax.discount, currencyCode),
       TaxableAmount: roundToDecimals(lineTax.taxableAmount, currencyCode),
-      TaxAmount: roundToDecimals(lineTax.taxAmount, currencyCode),
+      TaxAmount: roundToDecimals(lineTax.totalTax, currencyCode),
       TaxCode: taxCode
     }
   })

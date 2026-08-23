@@ -48,8 +48,25 @@ import {
   calculateConsumptionInvoice,
   invoiceItemOf
 } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionInvoice'
+import { priceOf } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionStock'
+/**
+ * The tax LEDGER is the accounts domain's own rule, called here rather than restated (§9.1):
+ * an invoice DECIDES what tax it charged, and the `accounts` scope decides how that lands in
+ * a filing-grade table.
+ */
+import {
+  buildTaxTransactionRequests,
+  buildTaxTransactionReplacementRequests,
+  buildTaxTransactionReversalRequests
+} from 'src/_resource/Accounts/TaxTransactions/composables/useTaxTransactionPayload'
 import { INVOICE_GENERATED } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionProgress'
-import { validateInvoiceDraft, validateSettlement, transitionForBalance } from './useInvoiceWorkflow'
+import {
+  validateInvoiceDraft,
+  validateSettlement,
+  transitionForBalance,
+  progressOf,
+  PENDING_PAYMENT
+} from './useInvoiceWorkflow'
 import { balanceDueOf } from './useInvoiceCalculation'
 
 const INVOICES = 'OutletConsumptionInvoices'
@@ -186,9 +203,21 @@ export function buildInvoiceGenerationRequests ({
     ...stampFields('ProgressInvoiceGenerated', actorName, 'Invoice generated from pending outlet consumption.')
   }, [CONSUMPTIONS]))
 
+  // One ledger row per tax code this invoice charged, pointing at the invoice by `$ref`
+  // because its code does not exist until GAS commits the create above.
+  const ledger = buildTaxTransactionRequests({
+    resource: INVOICES,
+    resourceCode: batchRef(INVOICE_REF_PATH),
+    date: invoiceDate,
+    counterPartyType: 'Outlet',
+    counterPartyCode: text(outletCode),
+    taxBreakdown: invoice.taxBreakdown
+  })
+
   const requests = [
     resourceCreateRequest(INVOICES, header, [INVOICES]),
     resourceBulkRequest(INVOICE_ITEMS, items, [INVOICE_ITEMS]),
+    ...ledger.requests,
     ...markGenerated,
     ...buildReturnInvoiceAdjustmentLinkedBatch({
       returnRows: credits,
@@ -209,7 +238,8 @@ export function buildInvoiceGenerationRequests ({
       outletConsumptionInvoice: 'create',
       // `update`, matching the plain write above — the action is no longer dispatched.
       ...(consumptions.length ? { outletConsumption: 'update' } : {}),
-      ...(credits.length ? { outletReturn: 'update' } : {})
+      ...(credits.length ? { outletReturn: 'update' } : {}),
+      ...ledger.permissions
     },
     successMsg: 'Invoice generated.',
     // The whole calculation bundle, so a caller confirming what it submitted reads the same
@@ -341,7 +371,7 @@ export function buildSettlementRequests ({
  * ever be invoiced again. The reversal is part of the cancellation, in the same atomic
  * batch, which is why it lives in the builder rather than in whatever UI pressed the button.
  */
-export function buildCancellationRequests ({ record = {}, comment = '', actorName = '', returnRows = [] } = {}) {
+export function buildCancellationRequests ({ record = {}, comment = '', actorName = '', returnRows = [], taxTransactionRows = null } = {}) {
   const invoice = asRow(record)
   const code = text(invoice.Code)
   if (!code) return { valid: false, message: 'The invoice could not be identified.' }
@@ -364,6 +394,10 @@ export function buildCancellationRequests ({ record = {}, comment = '', actorNam
   // both directions are written by one owner and cannot drift apart.
   requests.push(...buildReturnInvoiceCreditReversalBatch({ returnRows: credits }).requests)
 
+  // A cancelled invoice charged nothing, so its ledger rows must not appear in a return.
+  const ledger = buildTaxTransactionReversalRequests({ existingRows: taxTransactionRows || [] })
+  requests.push(...ledger.requests)
+
   return {
     valid: true,
     requests,
@@ -373,9 +407,296 @@ export function buildCancellationRequests ({ record = {}, comment = '', actorNam
     permissions: {
       outletConsumptionInvoice: 'cancel',
       ...(consumptions.length ? { outletConsumption: 'MarkPendingInvoiceGeneration' } : {}),
-      ...(credits.length ? { outletReturn: 'update' } : {})
+      ...(credits.length ? { outletReturn: 'update' } : {}),
+      ...ledger.permissions
     },
     successMsg: 'Invoice cancelled.'
+  }
+}
+
+// ─── 5. Editing an issued invoice ─────────────────────────────────────────────
+
+/**
+ * The stored items an edit works over: active rows with a SKU, in sheet order.
+ *
+ * Exported so the Edit page's cards and this module's builder read ONE definition of "which
+ * lines are on this invoice" — a card that filtered differently would offer a price box for
+ * a row the batch then refuses to write.
+ */
+export function editableInvoiceItems (record = {}) {
+  const children = asRow(record).$OutletConsumptionInvoiceItems
+  return (Array.isArray(children) ? children : [])
+    .map(asRow)
+    .filter((item) => text(item.SKU) && text(item.Status || 'Active').toUpperCase() === 'ACTIVE')
+}
+
+/**
+ * The commercial terms an Edit page opens with, read off the stored row.
+ *
+ * ── WHY `DiscountType` IS ALWAYS `FLAT` HERE ──
+ * `OutletConsumptionInvoices` stores the RESOLVED discount amount (`Discount`) and no
+ * type/value pair — a percentage typed at generation time is already an amount by the time
+ * the row exists. So an invoice reopened for edit starts as the flat amount it actually
+ * carries. Switching to `PERCENT` in the form recomputes from the live subtotal, which is
+ * the only reading that can be honoured.
+ */
+export function invoiceEditDefaults (record = {}) {
+  const row = asRow(record)
+  return {
+    dueDate: text(row.DueDate) || text(row.Date),
+    discountType: 'FLAT',
+    discountValue: num(row.Discount),
+    priceListCode: text(row.PriceListCode)
+  }
+}
+
+/**
+ * The price an edit bills each line at, in strict precedence: the user's override, then the
+ * chosen price list, then the price ALREADY STORED on that line.
+ *
+ * ── THE PRICE LIST IS ONLY CONSULTED WHEN IT CHANGED ──
+ * While the invoice stays on the list it was issued under, an untouched line keeps its
+ * stored price and nothing else. An invoice is a historical document: re-resolving untouched
+ * rows against a list that has moved since would silently re-price items nobody looked at,
+ * on nothing more than a master-data change.
+ *
+ * SWITCHING the list is the one thing that can only mean "bill this against those prices
+ * instead", so then untouched lines DO re-resolve. A SKU the new list does not carry falls
+ * back to its stored price rather than to zero — dropping a real line to nothing because a
+ * list is incomplete is the silent give-away this whole module guards against, and the Edit
+ * page surfaces the fallback on the row instead.
+ */
+export function makeStoredPriceResolver (items = [], overrides = {}, { priceListCode = '', issuedPriceListCode = '' } = {}) {
+  const stored = new Map((Array.isArray(items) ? items : [])
+    .map(asRow)
+    .map((item) => [text(item.SKU), num(item.Price)]))
+  const typed = overrides && typeof overrides === 'object' ? overrides : {}
+
+  const chosen = text(priceListCode)
+  const switched = !!chosen && chosen !== text(issuedPriceListCode)
+
+  return (sku) => {
+    const key = text(sku)
+    const override = typed[key]
+    if (override !== undefined && override !== null && override !== '') return num(override)
+
+    const fallback = stored.has(key) ? stored.get(key) : 0
+    if (!switched) return fallback
+
+    const listed = priceOf(key, chosen)
+    return listed === null || listed === undefined ? fallback : num(listed)
+  }
+}
+
+/**
+ * Recalculate an issued invoice from its own stored lines, with the user's price overrides
+ * and header terms applied.
+ *
+ * ONE call to the shared engine, exactly as generation makes — which is what keeps an edited
+ * invoice's tax, discount apportionment and net payable reconciled with each other. The
+ * override is handed over as a price RESOLVER, so it flows through line tax and
+ * apportionment rather than patching a total the engine never saw.
+ *
+ * Exported because the Edit page's summary card shows this object live while the user types,
+ * and the builder below submits from the same call.
+ */
+export function recalculateStoredInvoice ({
+  record = {},
+  items = [],
+  discountType = 'FLAT',
+  discountValue = 0,
+  priceListCode = '',
+  priceOverrides = {},
+  calculateLineTax = null
+} = {}) {
+  const row = asRow(record)
+  const issued = text(row.PriceListCode)
+  // Blank means "unchanged" rather than "no list": the Edit page only sends a code once the
+  // user has picked one, and defaulting to nothing would re-run the whole invoice under the
+  // fallback policy `invoicePolicyOf` uses for an unresolvable list.
+  const chosen = text(priceListCode) || issued
+  const resolvePrice = makeStoredPriceResolver(items, priceOverrides, {
+    priceListCode: chosen,
+    issuedPriceListCode: issued
+  })
+
+  return calculateConsumptionInvoice({
+    lines: (Array.isArray(items) ? items : []).map(asRow).map((item) => ({ SKU: item.SKU, Qty: item.Qty })),
+    priceListCode: chosen,
+    discountType,
+    discountValue,
+    // Return credits are NOT editable here: crediting a return also closes it, and undoing
+    // that is the cancellation chain's job, not an edit's. The stored deduction is carried
+    // through so the recomputed payable still nets it off.
+    returnDeduction: num(row.ReturnDeductionTotal),
+    resolvePrice,
+    calculateLineTax
+  })
+}
+
+const ITEM_FIGURES = ['Price', 'Total', 'Discount', 'TaxableAmount', 'TaxAmount']
+
+/** Two money figures the sheet cannot tell apart. */
+const sameMoney = (a, b) => Math.abs(num(a) - num(b)) < 0.000001
+
+/**
+ * Everything an edit of an issued invoice writes, as one atomic batch:
+ *
+ *   1. the header — the new due date, and every total the recalculation moved,
+ *   2. one update per line item whose figures actually changed.
+ *
+ * ── ONLY CHANGED LINES ARE WRITTEN ──
+ * An invoice bundling a month of counts can carry dozens of items, and a user who corrected
+ * one price should not produce dozens of audit rows saying nothing changed. Unchanged lines
+ * are compared on the five money columns plus the tax code, and dropped.
+ *
+ * ── WHAT IS NOT EDITABLE, AND WHY ──
+ * `OutletCode` and `PriceListCode` are fixed: both decide the tax and discount POLICY the
+ * stored figures were computed under, so changing either would need every line re-derived
+ * against a different rulebook — that is a new invoice, not an edit. Quantities are fixed
+ * because they are physical counts already recorded against a consumption. And the edit is
+ * refused outright once money has been collected or the document has come to rest, which is
+ * the same `PENDING_PAYMENT` boundary `canEditInvoice` gates the button on.
+ */
+export function buildInvoiceUpdateRequests ({
+  record = {},
+  items = null,
+  dueDate = undefined,
+  discountType = undefined,
+  discountValue = undefined,
+  priceListCode = undefined,
+  priceOverrides = {},
+  calculateLineTax = null,
+  // The invoice's CURRENT tax-ledger rows. Passed in rather than looked up, because a builder
+  // stays store-free (§9.6) — `Edit/PageAction.js` reads them through the accounts domain's
+  // own accessor. Omitted, the ledger is left untouched: writing a second set without
+  // retiring the first would double-count the invoice in every return it appears in.
+  taxTransactionRows = null
+} = {}) {
+  const row = asRow(record)
+  const code = text(row.Code)
+  if (!code) return { valid: false, message: 'The invoice could not be identified.' }
+
+  if (progressOf(row) !== PENDING_PAYMENT) {
+    return { valid: false, message: 'This invoice can no longer be edited — it has been paid, part-paid or cancelled.' }
+  }
+
+  const lines = Array.isArray(items) ? items.map(asRow) : editableInvoiceItems(row)
+  if (!lines.length) return { valid: false, message: 'This invoice has no items to price.' }
+
+  const defaults = invoiceEditDefaults(row)
+  const terms = {
+    dueDate: text(dueDate) || defaults.dueDate,
+    discountType: text(discountType) || defaults.discountType,
+    discountValue: discountValue === undefined || discountValue === null || discountValue === ''
+      ? defaults.discountValue
+      : num(discountValue),
+    priceListCode: text(priceListCode) || defaults.priceListCode
+  }
+
+  if (!terms.dueDate) return { valid: false, message: 'Set a due date for this invoice.' }
+  if (!terms.priceListCode) return { valid: false, message: 'Choose a price list for this invoice.' }
+  if (terms.discountValue < 0) return { valid: false, message: 'A discount cannot be negative.' }
+  if (terms.discountType === 'PERCENT' && terms.discountValue > 100) {
+    return { valid: false, message: 'A percentage discount cannot be more than 100.' }
+  }
+
+  const priceFor = makeStoredPriceResolver(lines, priceOverrides, {
+    priceListCode: terms.priceListCode,
+    issuedPriceListCode: defaults.priceListCode
+  })
+  if (lines.some((item) => priceFor(item.SKU) < 0)) {
+    return { valid: false, message: 'A unit price cannot be negative.' }
+  }
+
+  const invoice = recalculateStoredInvoice({
+    record: row,
+    items: lines,
+    discountType: terms.discountType,
+    discountValue: terms.discountValue,
+    priceListCode: terms.priceListCode,
+    priceOverrides,
+    calculateLineTax
+  })
+
+  // `Total` is derived by every reader, never stored, and `ReturnDeductionTotal` is not
+  // editable here — writing either would put a value in the payload that this page did not
+  // let the user change. See `buildInvoiceGenerationRequests`.
+  const { Total, ReturnDeductionTotal, ...storedTotals } = invoice.header
+
+  /**
+   * ── NO PROGRESS STAMP IS REWRITTEN ──
+   * The obvious place to record an edit is `ProgressPendingPayment*`, and it is the wrong
+   * one: those three columns already hold WHEN the invoice was raised and the note it was
+   * raised under, and an edit that overwrote them would destroy that in order to say
+   * something the resource's own audit columns (`Audit: 'TRUE'` → UpdatedAt/UpdatedBy)
+   * already record. There is no column for "why this bill changed", so the page does not ask
+   * for one.
+   */
+  const requests = [resourceUpdateRequest(INVOICES, code, {
+    DueDate: terms.dueDate,
+    PriceListCode: terms.priceListCode,
+    ...storedTotals
+  }, [INVOICES])]
+
+  /**
+   * The tax ledger, re-stated to match the recalculated invoice.
+   *
+   * Only when the caller supplied the existing rows — see the parameter's note. An edit that
+   * moved no tax figure still replaces them, which is correct and cheap: the rows carry the
+   * taxable base too, and that moves whenever a price does.
+   */
+  const ledger = Array.isArray(taxTransactionRows)
+    ? buildTaxTransactionReplacementRequests({
+      existingRows: taxTransactionRows,
+      resource: INVOICES,
+      resourceCode: code,
+      date: text(row.Date),
+      counterPartyType: 'Outlet',
+      counterPartyCode: text(row.OutletCode),
+      taxBreakdown: invoice.taxBreakdown
+    })
+    : { requests: [], permissions: {} }
+
+  requests.push(...ledger.requests)
+
+  const calculated = new Map(invoice.lines.map((line) => [text(line.SKU), line]))
+
+  // Counted rather than inferred from `requests.length`, which now also carries ledger rows.
+  let itemUpdates = 0
+
+  lines.forEach((item) => {
+    const line = calculated.get(text(item.SKU))
+    const itemCode = text(item.Code)
+    if (!line || !itemCode) return
+
+    const unchanged = ITEM_FIGURES.every((key) => sameMoney(item[key], line[key])) &&
+      text(item.TaxCode) === text(line.TaxCode)
+    if (unchanged) return
+
+    itemUpdates += 1
+    requests.push(resourceUpdateRequest(INVOICE_ITEMS, itemCode, {
+      Price: num(line.Price),
+      Total: num(line.Total),
+      Discount: num(line.Discount),
+      TaxableAmount: num(line.TaxableAmount),
+      TaxAmount: num(line.TaxAmount),
+      TaxCode: text(line.TaxCode)
+    }, [INVOICE_ITEMS]))
+  })
+
+  return {
+    valid: true,
+    requests,
+    permissions: {
+      outletConsumptionInvoice: 'update',
+      // Asked for only when a line is actually being rewritten, so a user editing only the
+      // due date is not refused on a privilege the batch never exercises.
+      ...(itemUpdates ? { outletConsumptionInvoiceItem: 'update' } : {}),
+      ...ledger.permissions
+    },
+    successMsg: 'Invoice updated.',
+    invoice
   }
 }
 
@@ -386,6 +707,11 @@ export function useInvoicePayload () {
     buildInvoiceGenerationRequests,
     buildPaymentRequests,
     buildSettlementRequests,
-    buildCancellationRequests
+    buildCancellationRequests,
+    buildInvoiceUpdateRequests,
+    recalculateStoredInvoice,
+    makeStoredPriceResolver,
+    editableInvoiceItems,
+    invoiceEditDefaults
   }
 }

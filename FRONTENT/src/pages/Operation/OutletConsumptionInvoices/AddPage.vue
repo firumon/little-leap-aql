@@ -110,11 +110,11 @@ import { useOutletConsumption } from '../../../composables/operation/outlets/use
 import { useCurrency } from '../../../composables/useCurrency.js'
 import HeaderPanel from '../../../components/shared/HeaderPanel.vue'
 import { useDataStore } from '../../../stores/data.js'
-import { useTaxCalculator } from '../../../composables/useTaxCalculator.js'
+import { useTaxResource } from 'src/_resource/Master/Taxes/composables/useTaxResource'
 
 defineOptions({ name: 'OutletConsumptionInvoicesAddPage' })
 const dataStore = useDataStore()
-const { calculateLineTax } = useTaxCalculator()
+const { calculateLineTax } = useTaxResource()
 const $q = useQuasar()
 const { query } = useRouteConfig()
 const flow = useOutletConsumption()
@@ -172,8 +172,8 @@ const taxDetailsComputed = computed(() => {
     })
 
     const roundedTaxable = roundToDecimals(lineTax.taxableAmount, currencyCode)
-    const roundedTaxAmount = roundToDecimals(lineTax.taxAmount, currencyCode)
-    const roundedDiscount = roundToDecimals(lineTax.discountAmount, currencyCode)
+    const roundedTaxAmount = roundToDecimals(lineTax.totalTax, currencyCode)
+    const roundedDiscount = roundToDecimals(lineTax.discount, currencyCode)
     const roundedTotal = roundToDecimals(lineTax.grossAmount, currencyCode)
 
     totalTaxableAmount += roundedTaxable

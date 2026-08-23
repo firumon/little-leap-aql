@@ -34,10 +34,9 @@ import {
   invoiceDueDaysFor as ruleInvoiceDueDaysFor
 } from 'src/_resource/Master/OutletOperatingRules/composables/useOutletOperatingRulesResource'
 import { useCurrencyResource } from 'src/_resource/Master/Currencies/composables/useCurrencyResource'
-import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
-import { useTaxResource } from 'src/_resource/Master/Taxes/composables/useTaxResource'
 import {
   calculateConsumptionInvoice,
+  makeLineTaxResolver,
   netPayableOf,
   storedTaxBreakdown,
   invoicePolicyOf,
@@ -130,68 +129,6 @@ export function dueDateFrom (fromISO = '', days = null) {
   return base.toISOString().slice(0, 10)
 }
 
-// ─── 1b. How a line is taxed ──────────────────────────────────────────────────
-
-/**
- * Build the `calculateLineTax` resolver `calculateConsumptionInvoice` injects per line.
- *
- * ── WHY THIS EXISTS AT ALL ──
- * The engine takes the tax calculator as an ARGUMENT and, when it gets none, bills every line
- * UNTAXED — a deliberate choice there (a zero tax is visible and correctable; a lost invoice
- * is neither). The consequence is that a caller which forgets to pass one silently produces
- * an invoice with `Tax Amount 0.00` on every line, which is exactly what the Add wizard was
- * doing.
- *
- * ── WHY IT IS NOT JUST `useTaxResource().calculateLineTax` ──
- * Two mismatches had to be bridged, and bridging them in each caller is how the two callers
- * drift:
- *
- *   1. SHAPE. The Taxes domain returns `{ taxableAmount, totalTax, breakdown: [{ code,
- *      amount }] }`; the invoice engine reads `{ taxableAmount, taxAmount, taxBreakdown:
- *      [{ taxCode, taxAmount }] }`. The mapping happens once, here.
- *   2. PRICE. The engine hands over a SKU and a quantity, not a price — but this module lets
- *      the user OVERRIDE a unit price on the wizard, and tax must be charged on the price
- *      actually being billed. So the resolver takes the same `resolvePrice` the engine uses
- *      for the line itself, guaranteeing the taxed price and the billed price are one number.
- *
- * The tax CODE comes from the SKU master and the two policy flags from the price list — the
- * same sources `invoicePolicyOf` reads, so a line's tax obeys the same policy its discount
- * does.
- */
-export function makeLineTaxResolver ({ priceListCode = '', resolvePrice = null } = {}) {
-  const listCode = text(priceListCode)
-  const { discountTaxPolicy, taxInclusive } = invoicePolicyOf(listCode)
-
-  return ({ skuCode = '', quantity = 0, discount = 0 } = {}) => {
-    const { getSku } = useSkuResource()
-    const { calculateLineTax } = useTaxResource()
-
-    const sku = text(skuCode)
-    const taxCode = text(getSku(sku)?.taxCode)
-    const price = typeof resolvePrice === 'function' ? (resolvePrice(sku, listCode) ?? 0) : 0
-
-    const result = calculateLineTax({
-      price,
-      quantity: num(quantity),
-      discount: num(discount),
-      taxCode,
-      taxInclusive,
-      discountTaxPolicy
-    })
-
-    return {
-      taxableAmount: num(result.taxableAmount),
-      taxAmount: num(result.totalTax),
-      // One entry per tax COMPONENT — a compound tax (GST18 → CGST9 + SGST9) contributes two,
-      // because that is the granularity a tax return is filed at.
-      taxBreakdown: (result.breakdown || []).map((entry) => ({
-        taxCode: text(entry.code),
-        taxAmount: num(entry.amount)
-      }))
-    }
-  }
-}
-
 // ─── 2. Currency rounding ─────────────────────────────────────────────────────
 
 /**
@@ -232,6 +169,54 @@ export function roundPayable (value, priceListCode = '') {
 export function grandTotalOf (row = {}) {
   const entry = asRow(row)
   return roundPayable(netPayableOf(entry), entry.PriceListCode)
+}
+
+/**
+ * The payable as BOTH numbers, plus whether they actually differ.
+ *
+ * ── WHY A SCREEN NEEDS BOTH ──
+ * The exact figure is the one the line items add up to, so it is the only one a reader can
+ * check the arithmetic against. The rounded one is what a payment actually settles, because
+ * a currency rounding to 0.05 has no coin for a 3-fils residue. Showing only the rounded
+ * figure makes the invoice look like it cannot add up; showing only the exact one asks for a
+ * payment nobody can hand over.
+ *
+ * So the DISPLAY RULE, and it is a rule about surfaces rather than about numbers:
+ *
+ *   data-entry screens   exact only — the user is still building the figure, and a
+ *                        settlement number they cannot influence is noise mid-edit.
+ *   view / payment       `exact (rounded)` — both, because this is where somebody reconciles
+ *                        the bill and where somebody collects against it.
+ *
+ * `differs` is what keeps the bracket honest: on the overwhelmingly common invoice the two
+ * are identical, and printing `426.30 (426.30)` on every one of them trains the reader to
+ * stop seeing the bracket on the rare invoice where it means something.
+ */
+export function payableFigures (exactValue, priceListCode = '') {
+  const exact = num(exactValue)
+  const rounded = roundPayable(exact, priceListCode)
+  return { exact, rounded, differs: Math.abs(exact - rounded) >= 0.000001 }
+}
+
+/** The same pair, for a STORED invoice row. */
+export function payableFiguresOf (row = {}) {
+  const entry = asRow(row)
+  return payableFigures(netPayableOf(entry), entry.PriceListCode)
+}
+
+/**
+ * How a view or payment surface WRITES that pair: `exact (rounded)`, or just the exact
+ * figure when rounding changed nothing.
+ *
+ * The currency formatter is passed IN rather than imported, keeping this pure and letting
+ * each page format in the invoice's own currency — and putting the bracket convention in one
+ * place, so three cards cannot end up writing it three ways.
+ */
+export function payableLabel (figures, money) {
+  const entry = figures && typeof figures === 'object' ? figures : { exact: 0, rounded: 0 }
+  const format = typeof money === 'function' ? money : ((value) => String(num(value)))
+  const exact = format(entry.exact)
+  return entry.differs ? `${exact} (${format(entry.rounded)})` : exact
 }
 
 // ─── 3. What is still owed ────────────────────────────────────────────────────
@@ -296,6 +281,9 @@ export function useInvoiceCalculation () {
     invoiceCurrencyOf,
     roundPayable,
     grandTotalOf,
+    payableFigures,
+    payableFiguresOf,
+    payableLabel,
     countsAsPayment,
     paidTotalOf,
     balanceDueOf,
@@ -313,6 +301,7 @@ export function useInvoiceCalculation () {
  */
 export {
   calculateConsumptionInvoice,
+  makeLineTaxResolver,
   netPayableOf,
   storedTaxBreakdown,
   invoicePolicyOf,

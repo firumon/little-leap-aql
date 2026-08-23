@@ -34,7 +34,7 @@
           {{ money(balance) }}
         </div>
         <div v-if="collected > 0" class="text-caption text-grey-7 q-mt-xs">
-          {{ money(collected) }} received of {{ money(grandTotal) }}
+          {{ money(collected) }} received of {{ payableText }}
         </div>
       </q-card-section>
 
@@ -80,7 +80,7 @@ const props = defineProps({
 
 const {
   ui, record, row, outletName, progressMeta,
-  balance, collected, grandTotal, money, isCancelled, isPaid
+  balance, collected, payableText, money, isCancelled, isPaid
 } = useInvoiceViewContext()
 
 const spacingClass = computed(() => `q-px-${props.padding}`)

@@ -139,40 +139,13 @@ export function groupTaxDetails (lines = []) {
   return [...grouped.values()]
 }
 
-// ─── The ONE tax resolver the engine is driven by ─────────────────────────────
-
 /**
- * Build the `calculateLineTax` resolver `calculateConsumptionInvoice` injects per line.
+ * The `calculateLineTax` resolver this engine is driven by. Bridges the Taxes domain's field
+ * names, and binds the SAME `resolvePrice` the lines use so an overridden price is taxed at
+ * the price actually billed.
  *
- * ── WHY THIS EXISTS AT ALL ──
- * The engine takes the tax calculator as an ARGUMENT and, when it gets none, bills every line
- * UNTAXED — a deliberate choice there (a zero tax is visible and correctable; a lost invoice
- * is neither). So a caller that forgets to pass one silently produces an invoice with
- * `Tax Amount 0.00` on every line.
- *
- * ── WHY IT IS NOT JUST A TAX COMPOSABLE, HANDED OVER RAW ──
- * Two mismatches have to be bridged, and bridging them in each caller is how callers drift:
- *
- *   1. SHAPE. The Taxes domain returns `{ taxableAmount, totalTax, breakdown: [{ code,
- *      amount }] }`; this engine reads `{ taxableAmount, taxAmount, taxBreakdown:
- *      [{ taxCode, taxAmount }] }`. The mapping happens once, here.
- *   2. PRICE. The engine hands the calculator a SKU and a quantity, not a price — but every
- *      screen that bills lets the user OVERRIDE a unit price, and tax must be charged on the
- *      price actually being billed. So this takes the same `resolvePrice` the engine uses for
- *      the line itself, guaranteeing the taxed price and the billed price are one number.
- *
- * ── WHY IT LIVES HERE, NEXT TO THE ENGINE ──
- * It was written in the invoices module, where the second caller could not see it. The
- * consumption wizard therefore passed a second, now-deleted tax calculator straight through
- * instead — and that one RE-RESOLVES the price from the price list, so an overridden unit
- * price moved `Subtotal` and `Total` but left `TaxableAmount` and `TotalTaxAmount` sitting on
- * the list price, in the review step AND in the row the batch then wrote. One resolver beside
- * the one engine is what stops that happening again. `useInvoiceCalculation.js` re-exports it,
- * so the invoices module's callers are unchanged.
- *
- * The tax CODE comes from the SKU master and the two policy flags from the price list — the
- * same sources `invoicePolicyOf` reads, so a line's tax obeys the same policy its discount
- * does.
+ * Lives beside the engine so every billing screen uses one resolver. Omit it and every line
+ * bills untaxed, silently.
  */
 export function makeLineTaxResolver ({ priceListCode = '', resolvePrice = null, interState = false } = {}) {
   const listCode = text(priceListCode)
@@ -193,16 +166,14 @@ export function makeLineTaxResolver ({ priceListCode = '', resolvePrice = null, 
       taxCode,
       taxInclusive,
       discountTaxPolicy,
-      // The place-of-supply branch, bound once here so every line of one invoice is priced on
-      // the same side of it — see `SupplyScope` in the Taxes domain module.
+      // Bound once so every line of one invoice prices on the same branch.
       interState
     })
 
     return {
       taxableAmount: toNumber(result.taxableAmount),
       taxAmount: toNumber(result.totalTax),
-      // One entry per tax COMPONENT — a compound tax (GST18 → CGST9 + SGST9) contributes two,
-      // because that is the granularity a tax return is filed at.
+      // One entry per COMPONENT: the granularity a return is filed at.
       taxBreakdown: (result.breakdown || []).map((entry) => ({
         taxCode: text(entry.code),
         taxAmount: toNumber(entry.amount)

@@ -359,41 +359,19 @@ export function useConsumptionWizard () {
     return override === undefined || override === null || override === '' ? priceOf(sku, listCode) : toNumber(override)
   }
 
-  /**
-   * The tax calculator both calculations below are driven by, built from the SAME
-   * `resolvePrice` the lines are priced through.
-   *
-   * THIS IS WHY AN EDITED PRICE NOW MOVES THE TAX. The wizard used to hand the engine
-   * a second tax calculator (since deleted) which RE-RESOLVED the price from the price list
-   * off the SKU it is given — so a typed override moved `Subtotal` and `Total` while
-   * `TaxableAmount` and `TotalTaxAmount` stayed on the list price. That was not just a
-   * display fault: `Add/PageAction.js` passed the same calculator, so the invoice was
-   * WRITTEN with a taxable base its own line prices did not add up to.
-   *
-   * `makeLineTaxResolver` lives beside the engine and is the one resolver every billing
-   * screen uses (§3.3 — one rule, one owner).
-   */
+  // Built from the SAME resolvePrice the lines use, so an edited price moves the tax too.
   const lineTaxResolver = computed(() => makeLineTaxResolver({
     priceListCode: priceListCode.value,
     resolvePrice
   }))
 
-  /**
-   * Turn invoicing on or off.
-   *
-   * Switching it OFF DISCARDS every typed unit price. A price on this wizard is an INVOICE
-   * figure and nothing else — `OutletConsumptionItems` has no price column, so a consumption
-   * recorded without an invoice stores no price anywhere. Keeping the overrides would leave
-   * a value the user can no longer see, still sitting in the state the submit reads, ready to
-   * be applied to whatever invoice a later toggle-on produces.
-   */
+  // Off DISCARDS the typed prices: they are invoice figures, and there is no invoice.
   function setGenerateInvoice (on) {
     const enabled = on === true
     set(F.GENERATE_INVOICE, enabled)
     if (!enabled) set(F.PRICE_OVERRIDES, {})
   }
 
-  /** Put one line back on the price list's own answer. */
   function resetLinePrice (sku) {
     const key = text(sku)
     if (!key || !(key in priceOverrides.value)) return
@@ -473,8 +451,6 @@ export function useConsumptionWizard () {
       variant: label.secondary,
       qty: line.Qty,
       price: line.Price,
-      // What the list would have charged, and whether the officer moved off it — the pair
-      // the row's "was … Restore" affordance is built from.
       listPrice,
       overridden: text(line.SKU) in priceOverrides.value,
       // A SKU with no price in this list is SURFACED rather than billed at zero — a silent

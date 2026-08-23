@@ -312,10 +312,7 @@ export default (props, { pageState, resourceConfig }) => {
         discountType: text(get(F.DISCOUNT_TYPE)),
         discountValue: get(F.DISCOUNT_VALUE, 0),
         invoiceComment: text(get(F.INVOICE_COMMENT)),
-        // Injected rather than imported by Layer 2, so the domain stays clear of the tax
-        // composable's store graph. Built from the SAME `resolvePrice` below, so an
-        // overridden unit price is taxed at the price actually being billed — the one
-        // resolver the review step is driven by (`useConsumptionWizard.lineTaxResolver`).
+        // Same resolver the review step uses, built from the same resolvePrice below.
         calculateLineTax: makeLineTaxResolver({ priceListCode: priceListCode(), resolvePrice }),
         // The unit prices the officer typed on step 3, as a resolver — so the batch prices
         // every line exactly as the review step displayed it. Read straight off the control

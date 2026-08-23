@@ -232,15 +232,8 @@ export function useOutletPaymentViewContext () {
     invoiceCode,
     invoiceTotal,
 
-    /**
-     * The invoice total as a COLLECTOR reads it: `exact (rounded)`, the bracket appearing only
-     * when the currency's rounding interval moved the figure.
-     *
-     * This is a payment surface, so both belong: the exact number is what the bill's lines add
-     * up to and what a customer queries against, the rounded one is what can actually be
-     * handed over. `invoiceTotal` stays the rounded NUMBER, because that is what the balance
-     * arithmetic settles against — this is a label, not a second calculation.
-     */
+    // A label, not a second calculation: `invoiceTotal` stays the rounded number the
+    // balance arithmetic settles against.
     invoiceTotalText: computed(() => payableLabel(payableFiguresOf(invoice.value || {}), (v) => _C(num(v), true))),
     invoicePaidSoFar,
     invoiceBalance,

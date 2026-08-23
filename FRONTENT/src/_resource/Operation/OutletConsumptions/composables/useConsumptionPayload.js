@@ -49,11 +49,6 @@ import {
   buildReturnInvoiceAdjustmentLinkedBatch
 } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
 import { calculateConsumptionInvoice, invoiceItemOf } from './useConsumptionInvoice'
-/**
- * The tax LEDGER is the accounts domain's own rule, called here rather than restated (§9.1):
- * an invoice DECIDES what tax it charged, and the `accounts` scope decides how that lands in
- * a filing-grade table.
- */
 import { buildTaxTransactionRequests } from 'src/_resource/Accounts/TaxTransactions/composables/useTaxTransactionPayload'
 import { PENDING_INVOICE_GENERATION, INVOICE_GENERATED } from './useConsumptionProgress'
 
@@ -444,9 +439,7 @@ export function buildInvoiceRequests (form = {}, soldLines = [], options = {}) {
     action: 'MarkInvoiceGenerated', column: 'Progress', columnValue: INVOICE_GENERATED
   }, stampFields('ProgressInvoiceGenerated', actorName, 'Invoice generated during consumption submission.'), [CONSUMPTIONS])
 
-  // The tax ledger for this invoice — the SAME chain the invoices module's own generator
-  // writes, so a bill raised from a consumption submit and one raised from the invoice wizard
-  // land identically in a tax return.
+  // Same ledger chain the invoices module writes, so both paths land identically.
   const ledger = buildTaxTransactionRequests({
     resource: INVOICES,
     resourceCode: batchRef(`${INVOICES}.latest.code`),

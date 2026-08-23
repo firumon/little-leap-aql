@@ -1,12 +1,20 @@
 /**
- * OutletPayments › allocation mathematics, balance derivation, and auto-distribution — Layer 2.
+ * OutletPayments › allocation and distribution — Layer 2.
  *
- * Pure financial calculations for invoice settling, payment sum reduction,
- * and sequential distribution across multiple selected invoices.
+ * NO ARITHMETIC OF ITS OWN. Every invoice figure is read from
+ * `OutletConsumptionInvoices/composables/useInvoiceCalculation.js`, which is the one
+ * pricing engine (UI_RESOURCE_DOMAIN_LOGIC.md §8.3). A second formula here is what let
+ * `TotalTaxAmount` fall out of the payable.
  */
 
 import { useCurrencyResource } from 'src/_resource/Master/Currencies/composables/useCurrencyResource'
-import { usePriceListResource } from 'src/_resource/Master/PriceLists/composables/usePriceListResource'
+import {
+  grandTotalOf,
+  countsAsPayment,
+  paidTotalOf,
+  balanceDueOf,
+  invoiceCurrencyOf
+} from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceCalculation'
 
 const text = (value) => (value == null ? '' : String(value).trim())
 const asRow = (value) => (value && typeof value === 'object' ? value : {})
@@ -14,102 +22,67 @@ const num = (value) => {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : 0
 }
+const money = (value) => Number(num(value).toFixed(2))
 
-const isActiveRow = (row) => {
-  const status = text(asRow(row).Status)
-  return !status || status.toUpperCase() === 'ACTIVE'
-}
-
-/**
- * Net total of an invoice before payments.
- * Net Total = Subtotal - Discount - ReturnDeductionTotal
- */
+/** The tax-inclusive, currency-rounded payable of an invoice. */
 export function netInvoiceTotalOf (invoice = {}) {
-  const row = asRow(invoice)
-  const subtotal = num(row.Subtotal)
-  const discount = num(row.Discount)
-  const returnDeduction = num(row.ReturnDeductionTotal)
-  return Math.max(0, subtotal - discount - returnDeduction)
+  return grandTotalOf(asRow(invoice))
 }
 
 /**
- * Filter predicate for valid active payments.
+ * Group payment rows by the invoice they credit, in ONE pass.
+ *
+ * Pass the result straight back into `autoDistribute` when the caller already holds an
+ * index — a flat array is regrouped here rather than rescanned per invoice (§6).
  */
-export function countsAsPayment (payment = {}) {
-  const row = asRow(payment)
-  return isActiveRow(row) && text(row.Progress).toUpperCase() !== 'CANCELLED'
+export function indexPaymentsByInvoice (payments = []) {
+  if (payments instanceof Map) return payments
+  const map = new Map()
+  for (const payment of (Array.isArray(payments) ? payments : [])) {
+    const row = asRow(payment)
+    if (!countsAsPayment(row)) continue
+    const code = text(row.OutletConsumptionInvoiceCode)
+    if (!code) continue
+    const bucket = map.get(code)
+    if (bucket) bucket.push(row)
+    else map.set(code, [row])
+  }
+  return map
 }
 
-/**
- * Total collected amount against an invoice from its own payment rows.
- */
-export function paidTotalOf (payments = []) {
-  return (Array.isArray(payments) ? payments : [])
-    .filter(countsAsPayment)
-    .reduce((sum, payment) => sum + num(asRow(payment).Amount), 0)
-}
-
-/**
- * Outstanding unpaid balance on an invoice.
- */
-export function balanceDueOf (invoice = {}, payments = []) {
-  const total = netInvoiceTotalOf(invoice)
-  const paid = paidTotalOf(payments)
-  return Math.max(0, Number((total - paid).toFixed(2)))
-}
-
-/**
- * Sequential auto-distribution across selected invoices (oldest first).
- */
+/** Sequential auto-distribution across selected invoices, oldest first. */
 export function autoDistribute (totalVal, selectedInvoices = [], payments = []) {
-  const sortedInvoices = [...(Array.isArray(selectedInvoices) ? selectedInvoices : [])]
-    .sort((a, b) => new Date(a.Date || 0) - new Date(b.Date || 0))
+  const invoices = Array.isArray(selectedInvoices) ? selectedInvoices : []
+  const byInvoice = indexPaymentsByInvoice(payments)
+  const sorted = [...invoices].sort((a, b) => new Date(asRow(a).Date || 0) - new Date(asRow(b).Date || 0))
 
   const allocations = {}
-  let remainingAlloc = Number(totalVal) || 0
+  let remainingAlloc = money(totalVal)
 
-  for (const inv of sortedInvoices) {
-    const invCode = text(inv.Code)
-    const invPayments = (Array.isArray(payments) ? payments : []).filter(
-      p => text(p.OutletConsumptionInvoiceCode) === invCode
-    )
-    const invBal = balanceDueOf(inv, invPayments)
+  for (const inv of sorted) {
+    const invCode = text(asRow(inv).Code)
+    const invBal = money(balanceDueOf(inv, byInvoice.get(invCode) || []))
 
     if (remainingAlloc >= invBal) {
-      allocations[invCode] = Number(invBal.toFixed(2))
-      remainingAlloc -= invBal
+      allocations[invCode] = invBal
+      remainingAlloc = money(remainingAlloc - invBal)
     } else if (remainingAlloc > 0) {
-      allocations[invCode] = Number(remainingAlloc.toFixed(2))
+      allocations[invCode] = remainingAlloc
       remainingAlloc = 0
     } else {
       allocations[invCode] = 0
     }
   }
 
-  // Ensure every selected invoice has a numeric entry
-  for (const inv of selectedInvoices) {
-    const invCode = text(inv.Code)
-    if (!(invCode in allocations)) {
-      allocations[invCode] = 0
-    }
+  for (const inv of invoices) {
+    const invCode = text(asRow(inv).Code)
+    if (!(invCode in allocations)) allocations[invCode] = 0
   }
 
   return allocations
 }
 
-/**
- * Resolves currency code for a given price list.
- */
-export function invoiceCurrencyOf (priceListCode = '') {
-  const { getPriceList } = usePriceListResource()
-  const { defaultCurrencyCode } = useCurrencyResource()
-  const list = getPriceList(text(priceListCode))
-  return text(list?.currency || list?.Currency) || text(defaultCurrencyCode?.value)
-}
-
-/**
- * Returns the maximum residual balance eligible for a small balance waiver (< 10x Rounding Interval or max 10.00).
- */
+/** Largest residue a collector may waive off: 10x the rounding interval, at least 10.00. */
 export function residualThreshold (priceListCode = '') {
   const { getCurrency, defaultCurrencyCode } = useCurrencyResource()
   const currency = getCurrency(invoiceCurrencyOf(priceListCode) || text(defaultCurrencyCode?.value))
@@ -117,29 +90,25 @@ export function residualThreshold (priceListCode = '') {
   return Math.max(10, Number((interval * 10).toFixed(2)))
 }
 
-/**
- * Determines if an invoice balance is small enough for residual balance waiver.
- */
 export function isWaiverEligible (balance = 0, priceListCode = '') {
   const b = num(balance)
   return b > 0 && b <= residualThreshold(priceListCode)
 }
 
-/**
- * Generates audit comment for residual waiver.
- */
 export function waiverCommentOf (totalPaid, pendingTotal, invoiceCount, reason) {
   return `Total paid ${totalPaid} of pending ${pendingTotal} selecting ${invoiceCount}, and balance dropped due to ${reason}`
 }
 
-// ─── Composable Wrapper ───────────────────────────────────────────────────────
+export { grandTotalOf, countsAsPayment, paidTotalOf, balanceDueOf, invoiceCurrencyOf }
 
 export function useOutletPaymentAllocation () {
   return {
     netInvoiceTotalOf,
+    grandTotalOf,
     countsAsPayment,
     paidTotalOf,
     balanceDueOf,
+    indexPaymentsByInvoice,
     autoDistribute,
     invoiceCurrencyOf,
     residualThreshold,

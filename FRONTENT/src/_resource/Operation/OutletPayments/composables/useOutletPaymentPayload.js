@@ -24,7 +24,8 @@ import {
   balanceDueOf,
   countsAsPayment,
   isWaiverEligible,
-  waiverCommentOf
+  waiverCommentOf,
+  indexPaymentsByInvoice
 } from './useOutletPaymentAllocation'
 
 const PAYMENTS = 'OutletPayments'
@@ -108,6 +109,7 @@ export function buildOutletPaymentCreationRequests ({
   const requests = []
   const dateStr = todayISO()
   const user = text(username) || text(actorName) || 'Unknown'
+  const paymentsByInvoice = indexPaymentsByInvoice(existingPayments)
 
   for (const { invoice, code, allocated } of activeAllocations) {
     // 1. Payment Record
@@ -127,9 +129,7 @@ export function buildOutletPaymentCreationRequests ({
     requests.push(resourceCreateRequest(PAYMENTS, paymentRecord, [PAYMENTS]))
 
     // 2. Derive Invoice State Transition
-    const invPayments = (Array.isArray(existingPayments) ? existingPayments : [])
-      .filter(p => text(p.OutletConsumptionInvoiceCode) === code)
-    const invBal = balanceDueOf(invoice, invPayments)
+    const invBal = balanceDueOf(invoice, paymentsByInvoice.get(code) || [])
     const remaining = Math.max(0, Number((invBal - allocated).toFixed(2)))
 
     if (waiveResidual && isWaiverEligible(remaining, invoice.PriceListCode)) {

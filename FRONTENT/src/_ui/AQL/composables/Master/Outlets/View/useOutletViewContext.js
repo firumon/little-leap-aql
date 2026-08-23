@@ -21,6 +21,7 @@ import {
   netInvoiceTotalOf,
   paidTotalOf
 } from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentAllocation'
+import { storedTaxBreakdown } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceCalculation'
 
 /**
  * Outlets › View — the injection relay for the View page
@@ -154,11 +155,21 @@ export function useOutletViewContext () {
     return {
       row: invoice,
       code: invoiceCode,
+      outletCode: text(invoice.OutletCode),
       date: text(invoice.Date),
       dueDate: text(invoice.DueDate),
+      progress: upper(invoice.Progress),
+      priceListCode: text(invoice.PriceListCode),
+      subtotal: num(invoice.Subtotal),
+      discount: num(invoice.Discount),
+      totalTaxableAmount: num(invoice.TotalTaxableAmount) || num(invoice.Subtotal),
+      totalTaxAmount: num(invoice.TotalTaxAmount),
+      taxDetails: storedTaxBreakdown(invoice),
+      returnDeductionTotal: num(invoice.ReturnDeductionTotal),
       total,
       collected,
       balance: Math.max(0, Number((total - collected).toFixed(2))),
+      payments: own,
       meta: InvoiceWorkflow.progressMetaOf(invoice),
       isOpen: InvoiceWorkflow.isOpen(invoice)
     }

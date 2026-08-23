@@ -15,6 +15,7 @@ import {
   paidTotalOf,
   countsAsPayment
 } from './useOutletPaymentAllocation'
+import { storedTaxBreakdown } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceCalculation'
 import {
   SUBMITTED,
   CANCELLED,
@@ -108,6 +109,7 @@ const shared = defineSharedComposable((dataStore) => {
         const collected = paidTotalOf(ownPayments)
         const balance = Math.max(0, Number((total - collected).toFixed(2)))
         const outletCode = text(inv.OutletCode)
+        const taxable = num(inv.TotalTaxableAmount) || num(inv.Subtotal)
         const dueIn = text(inv.DueDate) ? -daysSince(inv.DueDate) : null
         const invProgress = text(inv.Progress).toUpperCase()
         const isInvoiceOpen = (invProgress === 'PENDING_PAYMENT' || invProgress === 'PARTIALLY_PAID') && balance > 0.01
@@ -121,6 +123,13 @@ const shared = defineSharedComposable((dataStore) => {
           dueDate: text(inv.DueDate),
           progress: invProgress,
           username: text(inv.Username),
+          priceListCode: text(inv.PriceListCode),
+          subtotal: num(inv.Subtotal),
+          discount: num(inv.Discount),
+          totalTaxableAmount: taxable,
+          totalTaxAmount: num(inv.TotalTaxAmount),
+          taxDetails: storedTaxBreakdown(inv),
+          returnDeductionTotal: num(inv.ReturnDeductionTotal),
           total,
           collected,
           balance,
@@ -162,6 +171,13 @@ const shared = defineSharedComposable((dataStore) => {
       }
     })
   })
+
+  // Invoice Code -> raw / enriched row, so a lookup never scans the whole ledger
+  const invoiceByCode = computed(() =>
+    new Map(rawInvoices.value.map(inv => [text(inv.Code), inv])))
+
+  const invoiceRowByCode = computed(() =>
+    new Map(invoiceRows.value.map(row => [row.code, row])))
 
   // Open active invoices
   const openInvoices = computed(() => invoiceRows.value.filter(inv => inv.isOpen))
@@ -255,6 +271,8 @@ const shared = defineSharedComposable((dataStore) => {
     invoicesByOutlet,
     paymentsByOutlet,
     invoiceRows,
+    invoiceByCode,
+    invoiceRowByCode,
     paymentRows,
     openInvoices,
     overdueMetrics,

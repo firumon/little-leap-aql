@@ -105,17 +105,11 @@ export function useOutletPaymentViewContext () {
   const invoiceCode = computed(() =>
     text(record.value?.OutletConsumptionInvoiceCode || record.value?.invoiceCode))
 
-  const invoice = computed(() => {
-    const target = invoiceCode.value
-    if (!target) return null
-    return index.rawInvoices.value.find((row) => text(row.Code) === target) || null
-  })
+  const invoice = computed(() =>
+    (invoiceCode.value ? index.invoiceByCode.value.get(invoiceCode.value) : null) || null)
 
-  const invoiceRow = computed(() => {
-    const target = invoiceCode.value
-    if (!target) return null
-    return index.invoiceRows.value.find((row) => text(row.code) === target) || null
-  })
+  const invoiceRow = computed(() =>
+    (invoiceCode.value ? index.invoiceRowByCode.value.get(invoiceCode.value) : null) || null)
 
   const invoiceTotal = computed(() => (invoice.value ? netInvoiceTotalOf(invoice.value) : 0))
 

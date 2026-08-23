@@ -29,7 +29,7 @@
  */
 
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
-import { isMicroBalance, balanceDueOf } from './useInvoiceCalculation'
+import { isMicroBalance, balanceDueOf, grandTotalOf } from './useInvoiceCalculation'
 
 const RESOURCE_NAME = 'OutletConsumptionInvoices'
 
@@ -117,17 +117,14 @@ export function progressForBalance (record = {}, balance = 0) {
 }
 
 /**
- * Has ANY money been collected? Used only by `progressForBalance` above.
- *
- * Expressed as "is the outstanding balance smaller than the whole bill" rather than by
- * summing payments again, so the two figures can never disagree: whatever the caller
- * computed the balance from is what decides whether the invoice is partially paid.
+ * The whole bill, to compare an outstanding balance against. Tax-inclusive, from the one
+ * pricing engine — comparing a tax-inclusive balance to a tax-excluded total is what kept
+ * part-paid invoices stuck in PENDING_PAYMENT.
  */
 function grandTotalGuard (record, balance) {
-  const total = num(asRow(record).Subtotal) - num(asRow(record).Discount) - num(asRow(record).ReturnDeductionTotal)
-  // A zero or unreadable total cannot distinguish "partly paid" from "untouched"; treat the
-  // balance as the full bill so the invoice stays PENDING_PAYMENT rather than claiming a
-  // partial payment nobody made.
+  const total = grandTotalOf(asRow(record))
+  // A zero total cannot tell "partly paid" from "untouched"; fall back to the balance so
+  // the invoice stays PENDING_PAYMENT rather than claiming a payment nobody made.
   return total > 0 ? total : num(balance)
 }
 

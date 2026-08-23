@@ -114,7 +114,7 @@
           <div class="aql-detail-grid">
             <div v-for="entry in taxBreakdown" :key="entry.TaxCode" class="aql-detail-line">
               <div class="aql-detail-key">
-                {{ entry.TaxCode }} on on {{ money(entry.TaxableAmount) }}
+                {{ entry.TaxCode }} on {{ money(entry.TaxableAmount) }}
               </div>
               <div class="aql-detail-val">{{ money(entry.TaxAmount) }}</div>
             </div>

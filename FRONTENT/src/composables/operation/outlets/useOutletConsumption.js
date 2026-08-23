@@ -21,7 +21,8 @@ import {
   buildRestockSubmitRequest,
   buildVisitCompleteRequest
 } from './outletConsumptionPayload.js'
-import { resolveInvoicePricing, resolvePriceListCode, resolvePricesForPriceList, getInvoiceTotal, getInvoiceRemaining, resolvePriceListLookup, resolveSkuPrice } from './outletConsumptionPricing.js'
+import { resolveInvoicePricing, resolvePriceListCode, resolvePricesForPriceList, resolvePriceListLookup, resolveSkuPrice } from './outletConsumptionPricing.js'
+import { netPayableOf, roundPayable } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceCalculation'
 import { useTaxCalculator } from '../../useTaxCalculator.js'
 import { useCurrency } from '../../useCurrency.js'
 import { useDataStore } from '../../../stores/data.js'
@@ -113,21 +114,23 @@ export function useOutletConsumption() {
     }
   }
 
+  // The invoice's own PriceListCode may be blank on legacy rows; resolve it so the payable
+  // is rounded on the right currency instead of the tenant default.
+  function priceListCodeOf(inv = {}) {
+    if (inv?.PriceListCode) return inv.PriceListCode
+    if (!inv?.OutletCode) return ''
+    return resolvePriceListCode(inv.OutletCode, rules.items.value, priceLists.items.value)
+  }
+
   function getInvoiceTotalRounded(inv = {}) {
-    const rawTotal = toNumber(inv?.Subtotal) - toNumber(inv?.Discount) - toNumber(inv?.ReturnDeductionTotal)
-    const plCode = inv?.PriceListCode || (inv?.OutletCode ? resolvePriceListCode(inv.OutletCode, rules.items.value, priceLists.items.value) : '')
-    const plRecord = priceLists.items.value.find(p => p.Code === plCode && p.Status === 'Active')
-    const { roundToInterval, defaultCurrencyCode } = useCurrency()
-    const currencyCode = plRecord ? plRecord.Currency : defaultCurrencyCode.value
-    return roundToInterval(rawTotal, currencyCode)
+    return roundPayable(netPayableOf(inv || {}), priceListCodeOf(inv))
   }
 
   function getInvoiceRemainingRounded(inv = {}, paymentsList = []) {
-    const total = getInvoiceTotalRounded(inv)
-    const paid = paymentsList
+    const paid = (paymentsList || [])
       .filter(p => active(p) && text(p.OutletConsumptionInvoiceCode) === text(inv?.Code) && text(p.Progress) !== 'CANCELLED')
       .reduce((sum, p) => sum + toNumber(p.Amount), 0)
-    return Math.max(0, total - paid)
+    return Math.max(0, getInvoiceTotalRounded(inv) - paid)
   }
 
   const nav = useResourceNav()

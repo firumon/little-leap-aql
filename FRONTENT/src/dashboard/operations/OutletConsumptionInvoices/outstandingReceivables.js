@@ -33,7 +33,7 @@ export default {
           const progress = String(inv.Progress || '').toUpperCase().trim()
           if (progress === 'CANCELLED' || progress === 'PAID') return
 
-          // Use financial helper to compute unpaid balance including ReturnDeductionTotal
+          // Tax-inclusive unpaid balance, from the one pricing engine
           outstanding += getInvoiceRemaining(inv, payments)
         })
 

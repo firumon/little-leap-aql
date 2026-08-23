@@ -1,5 +1,6 @@
 import { active, text } from './outletOperationsMeta.js'
 import { toNumber } from './outletStockLogic.js'
+import { grandTotalOf, balanceDueOf } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceCalculation'
 
 export function resolvePriceListCode(outletCode, rules = [], priceLists = []) {
   const rule = rules.find((row) => active(row) && text(row.OutletCode) === text(outletCode))
@@ -89,23 +90,35 @@ export function resolveInvoicePricing({ outletCode, rules = [], priceLists = [],
   return { priceListCode, items, subtotal, error: '' }
 }
 
-/**
- * Computes the net total for a consumption invoice.
- * Net Total = Subtotal - Discount + Tax - ReturnDeductionTotal
- */
+/** Tax-inclusive payable of an invoice, from the one pricing engine. */
 export function getInvoiceTotal(inv = {}) {
-  return toNumber(inv?.Subtotal) - toNumber(inv?.Discount) - toNumber(inv?.ReturnDeductionTotal)
+  return grandTotalOf(inv || {})
 }
 
-/**
- * Computes the remaining unpaid balance for a consumption invoice.
- * Remaining = Net Total - Sum(Active Payments)
- */
+// One index per payments array, reused across calls, so a loop over invoices does O(1)
+// lookups instead of rescanning every payment per invoice.
+const paymentIndexCache = new WeakMap()
+
+function paymentsForInvoice(payments, invoiceCode) {
+  if (!Array.isArray(payments)) return []
+  let index = paymentIndexCache.get(payments)
+  if (!index) {
+    index = new Map()
+    for (const p of payments) {
+      if (!active(p) || text(p?.Progress) === 'CANCELLED') continue
+      const code = text(p?.OutletConsumptionInvoiceCode)
+      if (!code) continue
+      const bucket = index.get(code)
+      if (bucket) bucket.push(p)
+      else index.set(code, [p])
+    }
+    paymentIndexCache.set(payments, index)
+  }
+  return index.get(invoiceCode) || []
+}
+
+/** Remaining unpaid balance, tax included. */
 export function getInvoiceRemaining(inv = {}, payments = []) {
-  const total = getInvoiceTotal(inv)
-  const paid = payments
-    .filter(p => active(p) && text(p.OutletConsumptionInvoiceCode) === text(inv?.Code) && text(p.Progress) !== 'CANCELLED')
-    .reduce((sum, p) => sum + toNumber(p.Amount), 0)
-  return Math.max(0, total - paid)
+  return balanceDueOf(inv || {}, paymentsForInvoice(payments, text(inv?.Code)))
 }
 

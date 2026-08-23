@@ -28,7 +28,7 @@
           </div>
           <div class="aql-detail-line">
             <div class="aql-detail-key">Invoice total</div>
-            <div class="aql-detail-val">{{ money(invoiceTotal) }}</div>
+            <div class="aql-detail-val">{{ invoiceTotalText }}</div>
           </div>
           <div class="aql-detail-line">
             <div class="aql-detail-key">Received to date</div>
@@ -92,7 +92,7 @@ const props = defineProps({
 })
 
 const {
-  evaluate, ui, money, invoice, invoiceCode, invoiceTotal,
+  evaluate, ui, money, invoice, invoiceCode, invoiceTotalText,
   invoicePaidSoFar, invoiceBalance, invoiceProgressMetaOf, payInvoice
 } = useOutletPaymentViewContext()
 

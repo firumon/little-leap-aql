@@ -20,6 +20,10 @@ import {
 } from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentAllocation'
 import { buildOutletPaymentCancellationRequests } from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentPayload'
 import { progressMetaOf as invoiceProgressMetaOf } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceWorkflow'
+import {
+  payableFiguresOf,
+  payableLabel
+} from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceCalculation'
 
 /**
  * OutletPayments › View — the injection relay for the View page
@@ -227,6 +231,17 @@ export function useOutletPaymentViewContext () {
     invoiceRow,
     invoiceCode,
     invoiceTotal,
+
+    /**
+     * The invoice total as a COLLECTOR reads it: `exact (rounded)`, the bracket appearing only
+     * when the currency's rounding interval moved the figure.
+     *
+     * This is a payment surface, so both belong: the exact number is what the bill's lines add
+     * up to and what a customer queries against, the rounded one is what can actually be
+     * handed over. `invoiceTotal` stays the rounded NUMBER, because that is what the balance
+     * arithmetic settles against — this is a label, not a second calculation.
+     */
+    invoiceTotalText: computed(() => payableLabel(payableFiguresOf(invoice.value || {}), (v) => _C(num(v), true))),
     invoicePaidSoFar,
     invoiceBalance,
     invoiceAllPayments,

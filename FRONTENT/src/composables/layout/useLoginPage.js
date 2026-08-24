@@ -8,6 +8,7 @@ export function useLoginPage() {
   const appNav = useAppNav()
   const { login } = useAuthLogic()
   const loading = ref(false)
+  const errorMessage = ref('')
 
   const loginForm = reactive({
     identifier: '',
@@ -15,10 +16,19 @@ export function useLoginPage() {
   })
 
   async function handleLogin() {
+    errorMessage.value = ''
     loading.value = true
     try {
       const result = await login(loginForm.identifier, loginForm.password)
       if (!result.success) {
+        const errorMsg = result.message || 'Invalid credentials'
+        errorMessage.value = errorMsg
+        $q.notify({
+          type: 'negative',
+          message: errorMsg,
+          position: 'top',
+          timeout: 3000
+        })
         return result
       }
 
@@ -40,7 +50,7 @@ export function useLoginPage() {
   return {
     loginForm,
     loading,
+    errorMessage,
     handleLogin
   }
 }
-

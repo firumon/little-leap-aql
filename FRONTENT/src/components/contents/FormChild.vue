@@ -335,7 +335,8 @@ function formRecordBindings (record) {
 
 // `content` is dropped: $attrs carries the content-resolver identity string, but AppList expects an Array.
 const listBindings = computed(() => {
-  const { content, ...restAttrs } = attrs
+  // `page` is the route page name from PageResolver; List reads `page` as a page number.
+  const { content, page, ...restAttrs } = attrs
   return {
     ...restAttrs,
     items: visibleRecords.value,

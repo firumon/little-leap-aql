@@ -7,14 +7,25 @@ import {
   evaluateFilter,
   resolveTokenContext
 } from 'src/utils/tokenEvaluator'
+import { singularize, pluralize } from 'src/utils/appHelpers'
+
+// Both spellings a name can take. Stripping one trailing `s` (as this used to) never
+// matched an `-ies` resource: `outletDelivery` vs `outletdeliverie`.
+const nameForms = (value) => {
+  const lower = String(value || '').toLowerCase().trim()
+  const singular = singularize(lower)
+  return new Set([lower, singular, pluralize(singular)])
+}
 
 export function findResourceConfig(auth, nameOrSlug) {
   if (!nameOrSlug) return null
   const resources = Array.isArray(auth.resources) ? auth.resources : []
-  const queryClean = String(nameOrSlug).toLowerCase().trim().replace(/s$/, '')
+  const queryForms = nameForms(nameOrSlug)
   return resources.find((r) => {
-    const rNameClean = String(r.name || '').toLowerCase().trim().replace(/s$/, '')
-    return rNameClean === queryClean
+    for (const form of nameForms(r.name)) {
+      if (queryForms.has(form)) return true
+    }
+    return false
   }) || null
 }
 

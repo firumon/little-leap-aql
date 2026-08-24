@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/comment-guard.mjs\"",
+            "statusMessage": "Checking comment length",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  }
+}

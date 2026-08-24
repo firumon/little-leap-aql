@@ -71,6 +71,45 @@
   * **Resolver-backed components carry NO `<style>` block at all** — anything under `components/sections/`, `components/contents/`, `components/actions/`, or `components/abstract/`. These are override targets: a tenant `.vue` override cannot inherit a scoped style, so scoped CSS silently breaks the override contract. Canonical class families already in `custom.scss`: `.aql-form-actions-*` (sticky form bar), `.aql-resource-action-*` (unified resource-action FABs), `.aql-report-action-*` (report FAB/pill), `.breadcrumb-bar` / `.crumb*` (breadcrumb), `.aql-list-switcher*`, `.aql-detail-*`.
   * Animations must honour `@media (prefers-reduced-motion: reduce)`.
 
+### 7.1 Spacing Invariants (STRICT)
+
+Two rules govern every gap on a page. Both are page-level tokens, never per-component choices — a card that picks its own numbers is how one module drifts away from the rest of the app.
+
+#### 7.1.1 Mandatory Card Gutter
+
+**All vertical space between consecutive cards, lists, sections and grouped blocks MUST resolve from `pageProps.gutter`.**
+
+* Between siblings inside one component: `q-gutter-y-{gutter}` on their container.
+* On a card that is not a flex sibling (a `q-list` child, a group card): `q-mb-{gutter}` on the card itself.
+* A component that renders cards takes the token as a prop and passes it on — `AqlGroupedList` has a `gutter` prop for exactly this. A page-level `q-gutter-y-*` reaches the list root, never the cards inside it.
+* Never hardcode `q-mb-md`, `q-mt-lg`, `q-py-md` or a `style="margin…"` for spacing between blocks.
+
+```html
+<!-- WRONG: fixed gap, ignores the page -->
+<div class="q-gutter-y-md">
+
+<!-- RIGHT: the page decides -->
+<div :class="`q-gutter-y-${attrs.gutter || 'sm'}`">
+```
+
+#### 7.1.2 Single-Layer Edge Padding (Anti-Double-Padding)
+
+**The gap between the screen edge and the content edge MUST equal exactly `pageProps.sectionPadding` for a section and `pageProps.contentPadding` for a content — applied once, by one owner.**
+
+`Page.vue` already insets every `<Section>` placeholder with `q-px-{sectionPadding}` and wraps contents in `<AqlContentWrapper class="q-px-{contentPadding}">`. A child that adds its own `q-px-*` on top produces `sm + sm`, and the page's left edge stops lining up with every other page's.
+
+**Who owns the inset:**
+
+| Situation | Who applies `q-px-*` |
+|---|---|
+| Section with `inheritAttrs: false` (the leaf the resolver mounts) | **The component**, from its declared `padding` prop — `inheritAttrs: false` drops the placeholder's class, so this is the only layer |
+| Section with attribute fallthrough on | **`Page.vue`** — the component adds none |
+| Content inside `<AqlContentWrapper>` | **The wrapper** — the content adds none |
+
+**Invisible containers never pad.** A wrapper carrying no border, no background and no card surface is not a visual boundary, so padding on it is indistinguishable from padding on its child — and doubles it. If a transparent `div`, a section root or a `q-card-section` holds children that already pad themselves, the outer layer applies none.
+
+**A single-child row is not a row.** Once a `row`/`col` wrapper holds one child, drop the wrapper — `q-col-gutter-*` on a one-column row adds a negative-margin/padding pair that reads as inconsistent edge spacing.
+
 ---
 
 ## 8. COMPONENT/COMPOSABLE SCOPING & REGISTRY

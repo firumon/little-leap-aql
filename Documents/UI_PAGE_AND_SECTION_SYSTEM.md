@@ -273,6 +273,36 @@ Neither `resourceRecord.record` nor `resourceRecord.records` hands out raw sheet
 > [!NOTE]
 > **BP props are merged last.** The BP's exported object (or function return) is merged on top of the base `rcProps` above. This means a BP can add additional props (e.g. `sections`, `contents`, custom config keys) that sections can then access via `attrs`.
 
+> [!IMPORTANT]
+> `sectionPadding` (default `'sm'`) is also part of this contract. `Page.vue` uses it twice — as a `q-px-{sectionPadding}` **class** on each `<Section>` placeholder, and as a `:padding` **prop** — because the class is dropped by any section declaring `inheritAttrs: false`. See §1.3.5.
+
+#### 1.3.5 Spacing Invariants (STRICT)
+
+Canonical statement in [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md) §7.1. What they mean for a section author:
+
+**1 — Card gutter.** Every vertical gap between cards, lists or grouped blocks resolves from `pageProps.gutter`. A section reads it off `attrs` and spaces its own children with it:
+
+```js
+const attrs = useAttrs()
+const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
+```
+
+Vertical rhythm BETWEEN sections is not yours — `.aql-page-body` already carries `q-gutter-y-{gutter}`. A section root must therefore add no `q-py-*` and no `full-width`, or it stops stacking flush with its neighbours.
+
+**2 — Single-layer edge padding.** The screen-edge-to-content gap must equal `sectionPadding` exactly once. `Page.vue` puts `q-px-{sectionPadding}` on the placeholder AND passes `padding` as a prop, and which one survives depends on your `inheritAttrs`:
+
+* **`inheritAttrs: false`** (the normal case for a resolver leaf) — the placeholder's class is dropped. Apply the inset yourself, from the declared prop: `` :class="`q-px-${props.padding}`" ``.
+* **fallthrough on** — the placeholder's class lands on your root. Add none of your own, or the page reads `sm + sm`.
+
+Never both. And an invisible wrapper — no border, no background, no card — never pads children that already pad themselves.
+
+**Verifying it.** Measure, do not eyeball. Two sections on the same page must report the same left edge:
+
+```js
+[...document.querySelectorAll('.aql-page-body > *')]
+  .map(el => el.getBoundingClientRect().left)
+```
+
 ### 1.4 The Section Resolver (`src/composables/resources/useSectionResolver.js`)
 Resolves section-level components and options using a two-step lookup.
 

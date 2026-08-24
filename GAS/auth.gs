@@ -38,7 +38,8 @@ function buildUsersCacheKey() {
 function clearUsersCache() {
   _users_context_cache = null;
   try {
-    CacheService.getScriptCache().remove(buildUsersCacheKey());
+    // The grid is written in chunks, so the base key alone holds nothing.
+    removeChunkedCache(buildUsersCacheKey());
   } catch (e) { /* non-fatal */ }
 }
 
@@ -116,8 +117,11 @@ function buildUsersContextFromValues(sheet, values) {
 
 // On the hot path of every protected request. Cached across executions;
 // PasswordHash is stripped before caching and read from the sheet by handleLogin.
-function getUsersContext() {
-  if (_users_context_cache) {
+// `force` skips both cache tiers and re-reads the grid; validateToken passes it
+// when a token misses, so a diverged cache cannot lock every user out.
+function getUsersContext(options) {
+  const force = !!(options && options.force);
+  if (!force && _users_context_cache) {
     return _users_context_cache;
   }
 
@@ -126,12 +130,13 @@ function getUsersContext() {
     throw new Error('Users sheet not found');
   }
 
-  const cachedJson = getChunkedCache(buildUsersCacheKey());
+  const cachedJson = force ? null : getChunkedCache(buildUsersCacheKey());
   if (cachedJson) {
     try {
       const parsed = JSON.parse(cachedJson);
       if (parsed && Array.isArray(parsed.values) && parsed.values.length) {
         _users_context_cache = buildUsersContextFromValues(sheet, parsed.values);
+        _users_context_cache.fromCache = true;
         return _users_context_cache;
       }
     } catch (e) { /* fall through to a fresh read */ }
@@ -178,7 +183,9 @@ function syncUsersCachedCell(context, rowNumber, headerName, value) {
  * Handle Login
  */
 function handleLogin(email, password) {
-  const users = getUsersContext();
+  // Fresh grid: login resolves the row it writes the new token into, and it also
+  // republishes the cache every protected request then reads.
+  const users = getUsersContext({ force: true });
   const emailKey = normalizeEmailKey(email);
   const emailRow = users.rowByEmail[emailKey] || -1;
 
@@ -225,8 +232,16 @@ function handleLogin(email, password) {
 function validateToken(token) {
   if (!token) return null;
 
-  const users = getUsersContext();
-  const rowNumber = users.rowByApiKey[normalizeTokenKey(token)] || -1;
+  const key = normalizeTokenKey(token);
+  let users = getUsersContext();
+  let rowNumber = users.rowByApiKey[key] || -1;
+
+  // A cached grid that has drifted from the sheet would reject a token the sheet
+  // holds. Never trust a cache miss for auth — re-read once before rejecting.
+  if (rowNumber === -1 && users.fromCache) {
+    users = getUsersContext({ force: true });
+    rowNumber = users.rowByApiKey[key] || -1;
+  }
 
   if (rowNumber === -1) {
     return null;

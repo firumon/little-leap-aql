@@ -10,16 +10,17 @@
         <q-btn
           unelevated
           rounded
-          color="primary"
+          color="secondary"
+          text-color="primary"
           size="lg"
           @click="handleInstall"
-          class="q-px-xl q-py-sm shadow-2"
+          class="q-px-xl q-py-sm"
           label="Install App"
           icon-right="get_app"
         />
 
         <div class="q-mt-md">
-          <q-btn flat color="primary" @click="showInstructions = true" label="How to install manually?" />
+          <q-btn flat color="secondary" @click="showInstructions = true" label="How to install manually?" />
         </div>
       </div>
 
@@ -27,14 +28,14 @@
         <h2 class="text-h6 q-mb-md">Installation Guide</h2>
         <q-list dense>
           <q-item>
-            <q-item-section avatar><q-icon name="smartphone" color="primary" /></q-item-section>
+            <q-item-section avatar><q-icon name="smartphone" color="secondary" /></q-item-section>
             <q-item-section>
               <q-item-label class="text-weight-bold">iOS / Safari</q-item-label>
               <q-item-label caption>Tap the 'Share' icon and select 'Add to Home Screen'</q-item-label>
             </q-item-section>
           </q-item>
           <q-item>
-            <q-item-section avatar><q-icon name="laptop" color="primary" /></q-item-section>
+            <q-item-section avatar><q-icon name="laptop" color="secondary" /></q-item-section>
             <q-item-section>
               <q-item-label class="text-weight-bold">Android / Chrome</q-item-label>
               <q-item-label caption>Tap the three dots in the corner and select 'Install app'</q-item-label>

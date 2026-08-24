@@ -1,14 +1,15 @@
 <template>
   <div class="select-tenant-page flex-grow-1 flex flex-center">
     <div class="full-width">
-      <p class="text-body1 text-grey-8 text-center q-mb-lg">
-        AQL is a next-generation resource and operations management platform. 
+      <p class="text-body1 text-grey-8 q-mb-lg">
+        AQL is a next-generation resource and operations management platform.
         Please enter your tenant code to connect to your workspace.
       </p>
 
       <q-form @submit="handleSubmit" class="q-gutter-md">
         <q-input
           v-model="tenantCode"
+          dark
           outlined
           rounded
           label="Tenant Code"
@@ -27,14 +28,15 @@
           {{ errorMessage }}
         </div>
 
-        <div class="text-center">
+        <div>
           <q-btn
             type="submit"
             unelevated
             rounded
-            color="primary"
+            color="secondary"
+            text-color="primary"
             size="lg"
-            class="q-px-xl q-py-sm shadow-2"
+            class="full-width q-py-sm"
             label="Connect"
             :loading="loading"
           />
@@ -69,15 +71,15 @@ async function handleSubmit() {
       headers: { 'Content-Type': 'text/plain' }
     })
 
-    const returnedUrl = typeof response.data === 'string' 
-      ? response.data.trim() 
+    const returnedUrl = typeof response.data === 'string'
+      ? response.data.trim()
       : response.data?.url
 
     if (returnedUrl && returnedUrl.startsWith('https://')) {
       // Save details to cache
       localStorage.setItem('aql_tenant_url', returnedUrl)
       localStorage.setItem('aql_tenant_code', code)
-      
+
       // Perform redirect using window.location to force boot file refresh with the new URL
       window.location.href = window.location.origin + '/?t=' + code
     } else {

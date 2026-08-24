@@ -39,7 +39,7 @@ export default function (props, { resourceRecord }) {
   const ui = useAQLConfig()
 
   return {
-    title: 'User Visit Performance (Yesterday vs Today)',
+    title: 'Visit Performance',
     layout: 'inline',
     cardClass: ui.cardClass,
     rowStaggerMs: ui.rowStaggerMs,

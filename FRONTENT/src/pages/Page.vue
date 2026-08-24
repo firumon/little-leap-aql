@@ -86,6 +86,7 @@ provide('resourceConfig', resourceConfig)
 provide('resourceRecord', resourceRecord)
 
 // Page-level form state, shared by the Header/Content/PageAction sections.
-const pageState = usePageState()
+// `persist: false` on a page contract opts that page out of localStorage drafts.
+const pageState = usePageState({}, { persist: () => pageProps.value?.persist })
 provide('pageState', pageState)
 </script>

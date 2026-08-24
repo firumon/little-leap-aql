@@ -329,6 +329,8 @@ async function handleAction (actionName, extraPayload = null) {
       onReset()
       return
     case 'cancel':
+      // Leaving without saving discards the draft too, same as Reset.
+      pageState?.clearDraft?.()
       nav.goBack()
       return
     // Wizard step moves. Owned here rather than by FormActionNext/Back so a page's
@@ -376,6 +378,8 @@ async function runSubmit (ctx, options = {}) {
 
 function onReset () {
   if (!pageState) return
+  // Reset means "throw my unsaved work away", so the stored draft goes too.
+  pageState.clearDraft?.()
   if (resourceName.value) {
     const original = resourceRecord?.record?.value
     // Swaps in a fresh node/record object for the same resource (no navigation,

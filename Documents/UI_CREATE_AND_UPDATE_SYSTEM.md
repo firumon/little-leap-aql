@@ -656,3 +656,72 @@ JS modifiers (`FormField<Header>.js`, `ViewColumn<Header>.js`) sit **outside** t
 3. If `mapField` must prepare props for it (options, `accept`, `resourceName`, …), add a branch there setting `fieldType: '<type>'`.
 
 No container edits. No registry edits. `_fields` components carry **no `<style>` block** (ARCHITECTURE RULES §7) — shared classes belong in `src/css/custom.scss`.
+
+---
+
+## 16. Draft Persistence — Add/Edit forms survive a reload
+
+Every Add, Edit, action, and custom sub-route page auto-saves the user's input to
+`localStorage` and restores it on the next visit. It is on by default; no page,
+content, or `_ui/` override has to ask for it.
+
+**Canonical spec: [UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md) §10.** Only the
+form-side facts are repeated here.
+
+### 16.1 What this means for `Create.vue` / `Update.vue` / `FormRecord` / `FormChild`
+
+**Nothing.** These components stay agnostic of storage. They keep reading and
+writing `pageState` exactly as §3 and §13 describe. The whole mechanism lives in
+`usePageState.js` + `usePageStateDraft.js`.
+
+The two ordering facts worth knowing:
+
+- The draft is applied **after** initialization — `defaultValues` (§5),
+  `strategy.controls`, and `Update.vue`'s server hydration (§13) all run first,
+  and the draft is laid on top. On a record page the restore waits until a node
+  actually carries the route's `code`, so it cannot be clobbered by a late
+  `pageState.load`.
+- Restore writes **in place**: fields go into the existing `node.record` object,
+  child rows are spliced into the existing `children` arrays. No node and no
+  record object is replaced, so `FormRecord`'s identity-keyed default-seeding
+  watch (§5) does not re-fire, `FormChild`'s row indexes stay valid, and
+  `Update.vue`'s `identifier`-keyed one-shot hydration (§13) is unaffected.
+
+Child rows come back with their `_action` intact, so a row soft-deleted with
+`_action: 'deactivate'` (§14) is still soft-deleted after a reload.
+
+`meta.currentStep` is saved too, so a multi-step wizard reopens on the step the
+user left.
+
+### 16.2 Storage keys
+
+| Page | Key |
+|---|---|
+| Add | `aql_<Resource>_Add` |
+| Edit | `aql_<Resource>_Edit_<Code>` |
+| Action route | `aql_<Resource>_<Action>` (+ `_<Code>` when the route has one) |
+| Custom sub-route | `aql_<Resource>_<PageSlug>` (+ `_<Code>` when the route has one) |
+
+`index` and `view` pages collect no input and get no draft.
+
+### 16.3 Lifecycle
+
+- A **successful** `submit()` clears the draft.
+- A **failed** submit keeps it — a network or validation failure must not cost the
+  user their work.
+- `FormActionReset` and `FormActionCancel` (§ [UI_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md))
+  both clear it — Reset and leaving via Cancel both mean "discard my unsaved work".
+- Logout keeps it. Drafts are not session data.
+
+### 16.4 Opting a page out
+
+```js
+// pages/{scope}/{page}.js, or a _ui/ page override
+export default { persist: false }
+```
+
+Use it for pages where a stale draft would be actively wrong — a form seeded
+entirely from a live server calculation, for instance. Manual control
+(`persistDraft()`, `restoreDraft()`, `clearDraft()`, `draftKey`) is on `pageState`;
+see UI_PAGE_STATE.md §10.6, including why the manual save is **not** called
+`saveDraft()`.

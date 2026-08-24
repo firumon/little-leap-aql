@@ -23,7 +23,8 @@
  * on its own — that would pop two history entries per click.
  *
  * `cancelHandler` is a local escape hatch for standalone use outside PageAction:
- * when supplied it fully replaces the emit, so the container never also navigates.
+ * when supplied it fully replaces the emit, so the container never also navigates
+ * (and never clears the draft — PageAction's built-in `cancel` case does that).
  *
  * Overridable per tenant through the 10-tier action lookup as
  * `FormActionCancel.(vue|js)` — see Documents/AQL_ACTION_SYSTEM.md.

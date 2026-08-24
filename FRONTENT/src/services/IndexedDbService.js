@@ -335,14 +335,18 @@ export async function clearAllClientStorage() {
   dbPromise = null
 
   try {
-    const activeUrl = localStorage.getItem('aql_tenant_url')
-    const activeTenant = localStorage.getItem('aql_tenant_code')
+    // Every `aql_` key is either tenant identity or a usePageState draft
+    // (UI_PAGE_STATE.md §10) — both must outlive a logout, so keep them all
+    // instead of naming keys one by one.
+    const keep = {}
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith('aql_')) keep[key] = localStorage.getItem(key)
+    }
 
     localStorage.clear()
     sessionStorage.clear()
 
-    if (activeUrl) localStorage.setItem('aql_tenant_url', activeUrl)
-    if (activeTenant) localStorage.setItem('aql_tenant_code', activeTenant)
+    for (const [key, value] of Object.entries(keep)) localStorage.setItem(key, value)
   } catch {
     // no-op
   }

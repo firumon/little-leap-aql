@@ -70,6 +70,7 @@ import { useQuasar } from 'quasar'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceConfig } from './useResourceConfig'
 import { useAdditionalActionsPipeline } from './additionalActionsPipeline'
+import { usePageStateDraft } from './usePageStateDraft'
 // Low-level $ref helpers live in appHelpers.js (stateless utils, §2); re-exported
 // here so usePageState is the single import surface for consumers.
 import { batchRef, batchRefList, isBatchRef, textOrRef, normalizeCodeOrRef } from 'src/utils/appHelpers'
@@ -150,7 +151,7 @@ const DEFAULT_ROLE = '$default'
 // ==========================================================================
 // Composable
 // ==========================================================================
-export function usePageState (strategy = {}) {
+export function usePageState (strategy = {}, options = {}) {
   const $q = useQuasar()
   const resourceIoStore = useResourceIoStore()
   const { requiredHeaders } = useResourceConfig()
@@ -655,6 +656,9 @@ export function usePageState (strategy = {}) {
       if (!success) {
         if (notify) $q.notify({ type: 'negative', message: failureMessage(response, 'Request failed.'), position: 'top' })
       } else {
+        // Only a success clears it — a server or network failure must leave the
+        // user's work in storage so a reload can still bring it back.
+        draft.clearDraft()
         if (notify) $q.notify({ type: 'positive', message: successMsg, position: 'top' })
         if (onSuccess) onSuccess({ response, code })
       }
@@ -741,6 +745,75 @@ export function usePageState (strategy = {}) {
     return JSON.parse(JSON.stringify(toRaw(out)))
   }
 
+  // ----------------------------------------------------------------------
+  // Draft persistence (localStorage) — see UI_PAGE_STATE.md §10
+  // ----------------------------------------------------------------------
+  function serializeDraft () {
+    const nodes = []
+    let hasData = false
+    for (const [name, roles] of Object.entries(state.index)) {
+      for (const [role, id] of Object.entries(roles)) {
+        const node = state.nodes.get(id)
+        if (!node) continue
+        // Only the { header, value } entries are kept — the { name, codeType }
+        // schema half is re-seeded by strategy.controls on every initResource.
+        const controls = node.controls.filter((c) => c.header !== undefined)
+        nodes.push({ resource: node.resource, role, code: node.code, many: node.many, record: node.record, children: node.children, records: node.records, controls })
+        if (Object.keys(node.record).length || node.children.length || node.records.length || controls.length) hasData = true
+      }
+    }
+    return JSON.parse(JSON.stringify({ primaryKey: state.primaryKey, currentStep: meta.currentStep, nodes, hasData }))
+  }
+
+  function applyDraft (payload) {
+    if (!payload || !Array.isArray(payload.nodes)) return false
+    for (const entry of payload.nodes) {
+      if (!entry?.resource) continue
+      const role = entry.role || DEFAULT_ROLE
+      const id = nodeIdFor(entry.resource, role)
+      // A node the draft carries but the page has not created is a conditional
+      // workflow node (§4.2) — the user's own input is what brought it into being.
+      const node = (id && state.nodes.get(id)) || initResource(entry.resource, { role, code: entry.code, many: entry.many })
+
+      const record = entry.record || {}
+      for (const key of Object.keys(node.record)) if (!(key in record)) delete node.record[key]
+      Object.assign(node.record, record)
+
+      if (entry.code) node.code = entry.code
+      node.many = !!entry.many
+
+      const children = (entry.children || []).map((bucket) => ({
+        resource: bucket.resource,
+        records: (bucket.records || []).map((r) => ({ _action: r._action || 'create', data: { ...r.data } }))
+      }))
+      node.children.splice(0, node.children.length, ...children)
+
+      const records = (entry.records || []).map((r) => ({ _action: r._action || 'create', data: { ...r.data } }))
+      node.records.splice(0, node.records.length, ...records)
+
+      for (const ctrl of entry.controls || []) {
+        if (ctrl?.header === undefined) continue
+        const existing = node.controls.find((c) => c.header === ctrl.header)
+        if (existing) existing.value = ctrl.value
+        else node.controls.push({ header: ctrl.header, value: ctrl.value })
+      }
+    }
+    if (payload.primaryKey) state.primaryKey = payload.primaryKey
+    if (payload.currentStep) meta.currentStep = payload.currentStep
+    return true
+  }
+
+  const draft = usePageStateDraft({
+    enabled: () => {
+      const fromOptions = typeof options.persist === 'function' ? options.persist() : options.persist
+      return fromOptions !== false && strategy.persist !== false
+    },
+    probe: () => ({ count: state.nodes.size, codes: [...state.nodes.values()].map((n) => n.code).filter(Boolean) }),
+    sources: [state, () => meta.currentStep],
+    serialize: serializeDraft,
+    apply: applyDraft
+  })
+
   function reset () {
     detachAll()
     state.primaryKey = null
@@ -794,6 +867,12 @@ export function usePageState (strategy = {}) {
     // (e.g. PageAction.vue) that need to apply a `modifyPayload` interceptor to
     // a request before dispatch.
     run,
+    // localStorage draft (auto save/restore; `saveDraft` above is the deprecated
+    // submit trigger, so the manual save is named `persistDraft`)
+    draftKey: draft.draftKey,
+    persistDraft: draft.persistDraft,
+    restoreDraft: draft.restoreDraft,
+    clearDraft: draft.clearDraft,
     // misc
     validationErrors,
     snapshot,

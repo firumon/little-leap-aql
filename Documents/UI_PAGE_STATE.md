@@ -50,6 +50,7 @@ is in:
 | Concern | Where                                                                                |
 |---|--------------------------------------------------------------------------------------|
 | The composable | `FRONTENT/src/composables/resources/usePageState.js`                                 |
+| localStorage draft persistence (§10) | `FRONTENT/src/composables/resources/usePageStateDraft.js`      |
 | Provided at | `FRONTENT/src/pages/Page.vue` (alongside `resourceConfig` / `resourceRecord`)        |
 | Injected by | Header / Content / Action sections via `inject('pageState')`                         |
 | Generic request builders | defined inline in `usePageState.js` (SSoT)                                           |
@@ -490,6 +491,7 @@ From `usePageState.js` you may import:
   to run a caller-built request array (already `modifyPayload`-transformed)
   through the standard lifecycle without going through `build()`.
 - **`$ref` helpers (re-exported from `appHelpers`):** `batchRef`, `batchRefList`, `isBatchRef`, `textOrRef`, `normalizeCodeOrRef`
+- **Draft persistence (§10):** `draftKey`, `persistDraft`, `restoreDraft`, `clearDraft`
 
 The `$ref` helpers live canonically in `FRONTENT/src/utils/appHelpers.js`
 (stateless utilities). Import them from `appHelpers` directly when you only need
@@ -522,7 +524,127 @@ the helper and not the composable.
 
 ---
 
-## 10. Maintenance rule (NON-NEGOTIABLE)
+## 10. Draft persistence (localStorage)
+
+Every form/add/edit page auto-saves what the user has typed into `localStorage`
+and restores it on the next visit. This exists for the accidental reload: a
+pull-to-refresh on a phone, a tab crash, a logout in the middle of a long wizard.
+
+The storage layer lives in
+`FRONTENT/src/composables/resources/usePageStateDraft.js`. It owns the key, the
+debounce, and the restore-once lifecycle. It never touches node internals — the
+two functions that know the node shape (`serializeDraft` / `applyDraft`) stay in
+`usePageState.js`, so the encapsulation contract in §4.1 still holds. Sections
+(`FormRecord`, `FormChild`, `PageAction`, `_ui/` components) know nothing about
+storage; they keep talking to `pageState` only.
+
+### 10.1 The storage key
+
+Derived from the route, so it is deterministic and cannot collide:
+
+| Page | Key |
+|---|---|
+| Add / create | `aql_<Resource>_Add` — e.g. `aql_OutletRestocks_Add` |
+| Edit / update | `aql_<Resource>_Edit_<Code>` — e.g. `aql_OutletRestocks_Edit_REC001` |
+| Action route | `aql_<Resource>_<Action>` , plus `_<Code>` when the route carries one |
+| Custom sub-route | `aql_<Resource>_<PageSlug>` , plus `_<Code>` when the route carries one |
+
+`index` and `view` pages collect no input, so they get **no key and no draft**.
+The action/sub-route name is folded through `toPascalCase`, exactly like every
+other `_ui/` path segment, so `mark-delivered` keys as `MarkDelivered`.
+
+The `_<Code>` suffix on action and custom pages is deliberate: the same action on
+two different records must not share one draft.
+
+### 10.2 What is saved
+
+Per node (addressed by `resource` + `role`, §4.2): `record`, `children`,
+`records`, `code`, `many`, and the `{ header, value }` half of `controls`. Page
+level: `primaryKey` and `meta.currentStep`, so a wizard reopens on the step the
+user left.
+
+Deliberately **not** saved:
+
+- transient meta — `saving`, `submitting`, `loading`, `stepping`,
+  `formActionsHeight`, `validationErrors`;
+- the `{ name, codeType }` half of `controls`, which `strategy.controls` re-seeds
+  on every `initResource`;
+- `state.pendingActions` — a queued `$ref` into a batch that no longer exists is
+  worse than nothing.
+
+Writes are debounced by 300 ms, so fast typing does not thrash storage. A state
+with no data at all is never written, which is what stops the blank form left
+behind by `reset()` or a successful submit from burying a real draft.
+
+### 10.3 Restore order
+
+The initialization flow is unchanged — default values, `strategy.controls`, and
+server hydration (`load` / `hydrate`) all run **first**. Only then is the draft
+laid on top:
+
+1. The page mounts and `Create.vue` / `Update.vue` calls `initResource`.
+2. On a record page, `Update.vue` hydrates the server row (`pageState.load`).
+3. The draft is restored **once per key**, and only after the page has settled —
+   which on a record page means a node now carries the route's `code`. Restoring
+   earlier would simply be overwritten by the hydration that follows.
+4. Fields are written **in place** into the existing `node.record` object, and
+   `children` / `records` are spliced into the existing arrays. The node is never
+   replaced, so `v-model` bindings, `FormChild` rows and `identifier`-keyed
+   one-shot hydration all keep working, and every restored row is a live reactive
+   proxy.
+
+A node the draft carries but the page has not created (a conditional workflow
+node, §4.2) is created by the restore.
+
+If the stored value is corrupt or unparseable, it is discarded, a warning is
+logged, and the page carries on with the freshly initialized form.
+
+### 10.4 Clearing
+
+| Event | Draft |
+|---|---|
+| `submit()` / `run()` **succeeds** | cleared automatically |
+| `submit()` / `run()` **fails** (server or network) | **kept** — the user must not lose their work |
+| The user hits Reset in `PageAction` | cleared |
+| The user hits Cancel in `PageAction` | cleared — leaving without saving discards the draft too. Not applied when `FormActionCancel`'s `cancelHandler` escape hatch fully replaces the built-in `cancel` case. |
+| Logout | **kept** — `clearAllClientStorage` (`IndexedDbService.js`) preserves every `aql_` key across its full-storage wipe |
+| Tenant switch / full storage cleanse | cleared, along with everything else |
+
+Drafts are never tied to the auth session. Every key starts with `aql_` and
+survives a logout on purpose, so a user can come back later and finish.
+
+### 10.5 Opting out
+
+Persistence is on by default. Any of these turns it off for one page:
+
+```js
+// a page contract (pages/{scope}/{page}.js or a _ui/ override)
+export default { persist: false }
+
+// a resource strategy passed to usePageState
+usePageState({ persist: false })
+```
+
+`Page.vue` forwards `pageProps.persist` into the composable, so the page-contract
+switch works from the same place every other page prop is authored.
+
+### 10.6 Manual control
+
+| Function | Purpose |
+|---|---|
+| `draftKey` | `computed<string>` — the active key, `''` when this page has none |
+| `persistDraft()` | write the current state now, skipping the debounce |
+| `restoreDraft(key?)` | re-apply a stored draft on demand |
+| `clearDraft(key?)` | remove the stored draft |
+
+> **Naming note:** the manual save is `persistDraft()`, **not** `saveDraft()`.
+> `saveDraft()` is the long-standing (deprecated) *submit* trigger on this same
+> object — reusing the name would silently send a form to the server where the
+> caller expected a local write.
+
+---
+
+## 11. Maintenance rule (NON-NEGOTIABLE)
 
 **Any change to `FRONTENT/src/composables/resources/usePageState.js` — its node
 shape, exported functions, triggers, build mapping, or strategy contract — MUST
@@ -534,6 +656,9 @@ be reflected in this document.**
 - If you change how `build()` maps nodes to requests, update §7.
 - If you change what triggers return, update §6.6.
 - If you change what `useNode` returns, update §6.5.
+- If you change the draft key format, what is serialized, the restore order, or
+  the opt-out switch, update §10 — and check `usePageStateDraft.js` and this doc
+  still agree on the key table.
 
 **Corollary — the encapsulation contract cuts both ways.** §4.1 is only true while
 consumers actually honour it. Before landing a change to the node shape or the
@@ -560,7 +685,7 @@ composable's definition, not an afterthought.
 
 ---
 
-## 11. Related documents
+## 12. Related documents
 
 - `Documents/OUTLET_INPUT_TO_API_DATA_FLOW.md` — the research/discovery that drove this composable (per-resource temp-state map, worked examples, design implications §14).
 - `Documents/OUTLET_DATA_FLOW_ANALYSIS.md` — per-resource data-flow breakdown + provide/inject proposal.

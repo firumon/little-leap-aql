@@ -159,7 +159,10 @@ export function useMainLayoutNavTree() {
   async function handleLogout() {
     await logout()
     const targetUrl = router.resolve('/login').href || '/login'
-    window.location.href = targetUrl
+    // A standalone PWA can silently drop a same-origin href change. reload() is
+    // a safety net — the auth guard sends any route back to /login anyway.
+    window.location.replace(targetUrl)
+    setTimeout(() => window.location.reload(), 150)
   }
 
   return {

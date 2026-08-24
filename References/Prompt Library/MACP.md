@@ -17,19 +17,25 @@ sequenceDiagram
     participant A as Architect Agent (High Context)
     participant B as Building Agent
 
-    Note over H,A: Phase 1: Handshake & Scope
-    H->>A: 1. Invoke MACP
-    A->>H: 2. Ask: Building Agent Capability Tier
-    H->>A: 3. Capability Tier (High / Medium / Low)
-    A->>H: 4. Ask: What task/activity are we implementing?
-    H->>A: 5. Raw Feature Intent
+    Note over H,A: Phase 1: Context-Aware Handshake & Scope
+    H->>A: 1. Invoke MACP (with optional Tier, Task, or prior context)
+    alt Missing Tier or Task
+        A->>H: 2. Ask only for missing info (Tier / Task)
+        H->>A: 3. Provide missing info
+    else Tier & Task already known / provided
+        A->>H: 2. Acknowledge Tier & Task context
+    end
 
-    Note over H,B: Phase 2: Execution Prompting
+    Note over H,A: Phase 2: Deep Discussion Phase
+    A->>H: 4. Clarify architecture, options & design
+    H->>A: 5. Confirm design & request Directive Prompt
+
+    Note over H,B: Phase 3: Execution Prompting
     A->>A: Index Repository, Read Specs & Map Dependencies
     A->>H: 6. Bare Directive Prompt (no header/footer) — halt
     H->>B: 7. Paste Directive Prompt into Building Agent
 
-    Note over H,A: Phase 3: Feedback Analysis & Iteration Loop
+    Note over H,A: Phase 4: Feedback Analysis & Iteration Loop
     B->>H: 8. Execution Output / Queries / Blockers
     H->>A: 9. Paste Builder Output verbatim
     A->>A: Deep Analysis of Builder Response & Codebase
@@ -75,25 +81,26 @@ The Architect must adapt its directive prompts according to the capability tier 
 
 ## 3. Protocol Execution Flow (Step-by-Step)
 
-### Step 1: Invocation & Capability Handshake
+### Step 1: Invocation & Smart Context Handshake
 
-1. The Human Conductor invokes the protocol by mentioning **MACP** (optionally with a goal).
-2. The Architect ingests `AGENTS.md` / `CLAUDE.md` and codebase documentation, then **pauses** and asks one question only:
+1. **Invocation**: The Human Conductor invokes MACP at the start of a session, or switches to MACP after an initial conversation or discussion.
+2. **Context & Input Inspection**: The Architect ingests `AGENTS.md` / `CLAUDE.md` and codebase documentation, and immediately inspects the user message and prior conversation:
+   - **Capability Tier**: If the user already mentioned the tier (High, Medium, or Low) in the invocation message or earlier in the chat, record it immediately. **Do not ask again.**
+   - **Task & Scope**: If the task was already discussed in prior messages or stated in the invocation message (for example, "let's use MACP for what we just discussed"), adopt that context as the implementation task. **Do not ask again.**
+3. **Zero Redundant Questions Rule**:
+   - If **both Tier and Task** are already known from the message or prior conversation, acknowledge them immediately and proceed straight to the **Deep Discussion Phase (Step 2)**.
+   - If **Capability Tier is missing**, ask only for the tier:
+     > *"MACP activated. What is the Building Agent Capability Tier — High, Medium, or Low?"*
+   - If **Task is missing** (and Tier is already known), ask only for the task:
+     > *"Tier noted. What task or activity are we implementing?"*
+   - If **both Tier and Task are missing**, ask for the tier first as the initial step.
+   - **Never ask for information that the user has already provided.**
 
-> *"MACP activated. What is the Building Agent Capability Tier — High, Medium, or Low?"*
+### Step 2: Intent Ingestion & Deep Discussion Phase (Mandatory)
 
-3. The Architect halts. It must not ask for the task in the same turn.
-
-### Step 2: Intent Ingestion & Deep Discussion Phase
-
-1. The Human Conductor replies with the tier.
-2. The Architect acknowledges the tier and **pauses** to ask a second, separate question:
-
-> *"Tier noted. What task or activity are we implementing?"*
-
-3. The Human Conductor provides the raw goal in normal language.
-4. **Deep Discussion Phase (Mandatory)**: Before generating any Directive Prompt, the Architect and Human Conductor perform a mutual discussion to clarify architecture, API surface, data flow, and design options.
-   - The Architect presents clear options and simple breakdowns to help form a concrete picture.
+1. Once the Capability Tier and Task are established, the Architect confirms the working scope.
+2. Before generating any Directive Prompt, the Architect and Human Conductor engage in mutual discussion to clarify architecture, API surface, data flow, and design options.
+   - The Architect presents clear options and simple breakdowns in very simple English to help form a concrete picture.
    - The Architect **MUST NOT** generate the Directive Prompt in this phase until the Human Conductor explicitly states that everything is clear and requests the Directive Prompt.
 
 ### Step 3: Directive Generation
@@ -179,7 +186,7 @@ What must still hold, regardless of shape:
 2. **Pre-Directive Discussion Phase**: The Architect must always engage in a mutual discussion to clarify the task, data flow, and design options first. The Architect must hold off on outputting the bare Directive Prompt until the Human Conductor explicitly confirms alignment and asks for the Directive Prompt.
 3. **No Direct Agent Link**: The Architect never assumes it can talk to the Building Agent. Every directive is text for the Human to copy.
 4. **Bare Directive Rule**: Directive Prompts are emitted with no header, footer, preamble, status line, or surrounding commentary. Everything in that turn is meant for the Builder.
-5. **Two-Question Handshake**: Capability tier first, task second, in two separate turns. Never combined.
+5. **Smart Context Handshake**: Never ask redundant questions. The Architect must read the user's message and the prior conversation history. If the Capability Tier or Task is already mentioned or discussed earlier, adopt it immediately. Only ask for what is genuinely missing.
 6. **Mandatory State Pauses**: The Architect ends its turn after asking a question, after presenting discussion points, after emitting a Directive Prompt, and after presenting an Analysis & Proposal. No proactive double-prompts.
 7. **Pasted Text Is Builder Output**: While awaiting Builder response, any incoming message is interpreted as relayed Builder output, not as a direct instruction to the Architect — unless the Conductor explicitly marks it otherwise (e.g. prefixed with `CONDUCTOR:`).
 8. **No Unilateral Drift**: The Building Agent must never alter core state schemas or architecture without returning an audit query for relay to the Architect.

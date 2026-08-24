@@ -56,7 +56,7 @@ export function useOutletRestocks() {
   const restockResource = computed(() => (Array.isArray(authStore.resources) ? authStore.resources : []).find(r => r.name === 'OutletRestocks') || {})
   const resourcePerms = computed(() => restockResource.value.permissions || {})
   const canCreate = computed(() => allowed('CREATE'))
-  const canApprove = computed(() => allowed('APPROVE'))
+  const canApprove = computed(() => allowed('Approve'))
 
   function currentUserName() {
     const user = authStore.user || {}
@@ -312,7 +312,7 @@ export function useOutletRestocks() {
   }
 
   async function approveRestock(restock, approvedRows = rows.value, comment = '') {
-    if (!allowed({ outletRestock: 'APPROVE', outletRestockItem: 'create', stockMovement: 'create' })) {
+    if (!allowed({ outletRestock: 'Approve', outletRestockItem: 'create', stockMovement: 'create' })) {
       return notifyError('You do not have permission to approve restocks.')
     }
     const validation = validateRestockApproval(restock, approvedRows, warehouseStorages.items.value)
@@ -328,7 +328,7 @@ export function useOutletRestocks() {
   }
 
   async function allocatePendingRestockItems(restock, allocatedPendingRows = rows.value, comment = '') {
-    if (!allowed({ outletRestock: 'SUBMIT', stockMovement: 'create' })) {
+    if (!allowed({ outletRestock: 'Submit', stockMovement: 'create' })) {
       return notifyError('You do not have permission to allocate pending restock items.')
     }
     const rowsToAllocate = allocatedPendingRows.filter(row => text(row.Progress) === 'ALLOCATED' && (!text(row.Code) || text(row._pendingSourceCode)))
@@ -351,7 +351,7 @@ export function useOutletRestocks() {
   }
 
   async function cancelPendingRestockItems(restock, comment = '') {
-    if (!allowed('CANCEL', 'OutletRestockItems')) {
+    if (!allowed('Cancel', 'OutletRestocks')) {
       return notifyError('You do not have permission to cancel pending restock items.')
     }
     if (!text(comment)) return notifyWarning('Cancel comment is required.')
@@ -373,7 +373,7 @@ export function useOutletRestocks() {
   }
 
   async function rejectRestock(restock, comment) {
-    if (!allowed('REJECT')) {
+    if (!allowed('Reject')) {
       return notifyError('You do not have permission to reject this restock.')
     }
     if (!text(comment)) return notifyWarning('Comment is required.')
@@ -390,7 +390,7 @@ export function useOutletRestocks() {
   }
 
   async function sendBackRestock(restock, comment) {
-    if (!allowed('SENDBACK')) {
+    if (!allowed('Revise')) {
       return notifyError('You do not have permission to send back this restock.')
     }
     if (!text(comment)) return notifyWarning('Comment is required.')

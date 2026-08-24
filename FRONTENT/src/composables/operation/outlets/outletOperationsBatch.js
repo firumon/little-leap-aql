@@ -15,11 +15,11 @@ export const OUTLET_ACTIONS = {
   completeVisit: { action: 'Complete', column: 'Progress', columnValue: 'COMPLETED' },
   postponeVisit: { action: 'Postpone', column: 'Progress', columnValue: 'POSTPONED' },
   cancelVisit: { action: 'Cancel', column: 'Progress', columnValue: 'CANCELLED' },
-  cancelConsumption: { action: 'Cancel', column: 'Progress', columnValue: 'CANCELLED' },
+  cancelConsumption: { action: 'CancelConsumption', column: 'Progress', columnValue: 'CANCELLED' },
   submitRestock: { action: 'Submit', column: 'Progress', columnValue: 'PENDING_APPROVAL' },
   approveRestock: { action: 'Approve', column: 'Progress', columnValue: 'APPROVED' },
   rejectRestock: { action: 'Reject', column: 'Progress', columnValue: 'REJECTED' },
-  sendBackRestock: { action: 'SendBack', column: 'Progress', columnValue: 'REVISION_REQUIRED' },
+  sendBackRestock: { action: 'Revise', column: 'Progress', columnValue: 'REVISION_REQUIRED' },
   cancelRestockItem: { action: 'Cancel', column: 'Progress', columnValue: 'CANCELLED' },
   invoiceGenerated: { action: 'MarkInvoiceGenerated', column: 'Progress', columnValue: 'INVOICE_GENERATED' }
 }

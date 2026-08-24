@@ -27,7 +27,7 @@ import { useResourceConfig } from '../../../composables/resources/useResourceCon
 
 const { allowed } = useResourceConfig()
 const canCreate = computed(() => allowed('CREATE'))
-const canApprove = computed(() => allowed('APPROVE'))
+const canApprove = computed(() => allowed('Approve'))
 
 const allStats = [
   { key: 'DRAFT', label: 'Drafts', count: 0, bgClass: 'bg-grey-2', textClass: 'text-grey-8' },

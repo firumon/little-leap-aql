@@ -153,7 +153,7 @@ const dependentRestocks = computed(() => record.value ? childRestocks(record.val
 
 const canCancel = computed(() => {
   if (!record.value) return false
-  if (!allowed('CANCEL')) return false
+  if (!allowed('CancelConsumption')) return false
   if (record.value.Progress === 'CANCELLED') return false
   if (invoice.value && invoice.value.Progress === 'PAID') return false
   if (dependentRestocks.value.some(r => ['APPROVED', 'DELIVERED', 'PARTIALLY_DELIVERED'].includes(r.Progress))) return false

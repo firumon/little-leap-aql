@@ -23,7 +23,7 @@
  * supplied and `contents/List.vue`'s default click handler opens the View page.
  */
 export default {
-  sections: ['PageHeader', 'MetricCards', 'LinearProgress', 'FilterInput', 'ListSwitcher'],
+  sections: ['PageHeader', 'MetricCards', 'LinearProgress', 'DualDistributionBars', 'FilterInput', 'ListSwitcher'],
   contents: ['List'],
 
   PropsListTomorrow: (props) => tomorrowPreset(props.items),

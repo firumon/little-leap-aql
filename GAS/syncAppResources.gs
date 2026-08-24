@@ -515,7 +515,11 @@ function initAppResourcesCodeConfig() {
         PostAction: 'linkProcurementCodeToPurchaseRequisition',
         Reports: '',
         CustomUIName: '',
-        ListViews: ''
+        ListViews: JSON.stringify([
+            { "name": "InFlight", "label": "In Flight", "icon": "sync", "color": "primary", "default": true, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "nin", "value": ["COMPLETED", "CANCELLED"] }] } },
+            { "name": "Completed", "label": "Completed", "icon": "task_alt", "color": "positive", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "COMPLETED" }] } },
+            { "name": "Cancelled", "label": "Cancelled", "icon": "block", "color": "negative", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "CANCELLED" }] } }
+        ])
     },
     {
         Name: CONFIG.OPERATION_SHEETS.PURCHASE_REQUISITIONS,
@@ -536,7 +540,8 @@ function initAppResourcesCodeConfig() {
         AdditionalActions: JSON.stringify([
             {"action":"Approve","label":"Approve","icon":"check_circle","color":"primary","kind":"mutate","confirm":false,"column":"Progress","columnValue":"Approved","columnValueOptions":[],"fields":[],"visibleWhen":{"column":"Progress","op":"eq","value":"Pending Approval"}},
             {"action":"Reject","label":"Reject","icon":"cancel","color":"warning","kind":"mutate","confirm":false,"column":"Progress","columnValue":"Rejected","columnValueOptions":[],"fields":[{"name":"Comment","label":"Comment","type":"textarea","required":true}],"visibleWhen":{"column":"Progress","op":"eq","value":"Pending Approval"}},
-            {"action":"SendBack","label":"Request Revision","icon":"undo","color":"info","kind":"mutate","confirm":false,"column":"Progress","columnValue":"Revision Required","columnValueOptions":[],"fields":[{"name":"Comment","label":"Comment","type":"textarea","required":true}],"visibleWhen":{"column":"Progress","op":"eq","value":"Pending Approval"}}
+            {"action":"SendBack","label":"Request Revision","icon":"undo","color":"info","kind":"mutate","confirm":false,"column":"Progress","columnValue":"Revision Required","columnValueOptions":[],"fields":[{"name":"Comment","label":"Comment","type":"textarea","required":true}],"visibleWhen":{"column":"Progress","op":"eq","value":"Pending Approval"}},
+            {"action":"Review","label":"Review Requisition","icon":"rate_review","color":"primary","kind":"navigate","confirm":false,"navigate":{"target":"record","pageSlug":"review"},"visibleWhen":{"column":"Progress","op":"eq","value":"Pending Approval"}}
         ]),
         Menu: JSON.stringify([
             {"group":["Procurement"],"order":2,"label":"Requisitions","icon":"request_quote","route":"/operation/purchase-requisitions","pageTitle":"Purchase Requisitions","pageDescription":"Internal requests for purchase","show":true},
@@ -569,7 +574,14 @@ function initAppResourcesCodeConfig() {
         PostAction: '',
         Reports: '',
         CustomUIName: '',
-        ListViews: '',
+        ListViews: JSON.stringify([
+            { "name": "Drafts", "label": "My Drafts", "icon": "edit_note", "color": "grey-7", "default": true, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "Draft" }] } },
+            { "name": "PendingApproval", "label": "Awaiting Approval", "icon": "hourglass_top", "color": "warning", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "Pending Approval" }] } },
+            { "name": "NeedsRevision", "label": "Needs Revision", "icon": "rate_review", "color": "orange", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "Revision Required" }] } },
+            { "name": "Approved", "label": "Approved", "icon": "task_alt", "color": "primary", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "Approved" }] } },
+            { "name": "RfqProcessed", "label": "RFQ Processed", "icon": "request_quote", "color": "positive", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "RFQ Processed" }] } },
+            { "name": "Rejected", "label": "Rejected", "icon": "block", "color": "negative", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "Rejected" }] } }
+        ]),
         Relations: JSON.stringify({
             WarehouseCode: CONFIG.MASTER_SHEETS.WAREHOUSES
         })
@@ -666,7 +678,12 @@ function initAppResourcesCodeConfig() {
         PostAction: '',
         Reports: '',
         CustomUIName: '',
-        ListViews: ''
+        ListViews: JSON.stringify([
+            { "name": "Drafts", "label": "Drafts", "icon": "edit_note", "color": "grey-7", "default": true, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "DRAFT" }] } },
+            { "name": "Sent", "label": "Out for Quoting", "icon": "send", "color": "primary", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "SENT" }] } },
+            { "name": "Closed", "label": "Closed", "icon": "lock", "color": "positive", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "CLOSED" }] } },
+            { "name": "Cancelled", "label": "Cancelled", "icon": "block", "color": "negative", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "CANCELLED" }] } }
+        ])
     },
     {
         Name: CONFIG.OPERATION_SHEETS.RFQ_SUPPLIERS,
@@ -766,7 +783,11 @@ function initAppResourcesCodeConfig() {
         PostAction: '',
         Reports: '',
         CustomUIName: '',
-        ListViews: '',
+        ListViews: JSON.stringify([
+            { "name": "Received", "label": "Awaiting Decision", "icon": "mark_email_read", "color": "warning", "default": true, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "RECEIVED" }] } },
+            { "name": "Accepted", "label": "Accepted", "icon": "verified", "color": "positive", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "ACCEPTED" }] } },
+            { "name": "Rejected", "label": "Rejected", "icon": "block", "color": "negative", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "REJECTED" }] } }
+        ]),
         Relations: JSON.stringify({
             SupplierCode: CONFIG.MASTER_SHEETS.SUPPLIERS,
             Currency: CONFIG.MASTER_SHEETS.CURRENCIES
@@ -834,7 +855,7 @@ function initAppResourcesCodeConfig() {
             {"action":"Send","label":"Send","icon":"send","color":"primary","kind":"mutate","confirm":false,"column":"Progress","columnValue":"SENT","columnValueOptions":[],"fields":[{"name":"Comment","label":"Comment","type":"textarea","required":false}],"visibleWhen":{"column":"Progress","op":"eq","value":"CREATED"}},
             {"action":"Acknowledge","label":"Acknowledge","icon":"done","color":"info","kind":"mutate","confirm":false,"column":"Progress","columnValue":"ACKNOWLEDGED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Comment","type":"textarea","required":false}],"visibleWhen":{"column":"Progress","op":"eq","value":"SENT"}},
             {"action":"Accept","label":"Accept","icon":"check_circle","color":"positive","kind":"mutate","confirm":false,"column":"Progress","columnValue":"ACCEPTED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Comment","type":"textarea","required":false}],"visibleWhen":{"column":"Progress","op":"eq","value":"ACKNOWLEDGED"}},
-            {"action":"Cancel","label":"Cancel","icon":"cancel","color":"negative","kind":"mutate","confirm":false,"column":"Progress","columnValue":"CANCELLED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Cancel Comment","type":"textarea","required":true}],"visibleWhen":{"column":"Progress","op":"in","value":["CREATED","SENT","ACKNOWLEDGED"]}}
+            {"action":"Cancel","label":"Cancel","icon":"cancel","color":"negative","kind":"navigate","confirm":false,"column":"Progress","columnValue":"CANCELLED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Cancel Comment","type":"textarea","required":true}],"navigate":{"target":"record","pageSlug":"cancel-order"},"visibleWhen":{"column":"Progress","op":"in","value":["CREATED","SENT","ACKNOWLEDGED"]}}
         ]),
         Menu: JSON.stringify([
             {"group":["Procurement"],"order":6,"label":"Purchase Orders","icon":"receipt_long","route":"/operation/purchase-orders","pageTitle":"Purchase Orders","pageDescription":"Manage purchase orders","show":true,"menuAccess":{"require":"canWrite"}}
@@ -872,7 +893,12 @@ function initAppResourcesCodeConfig() {
         PostAction: '',
         Reports: '',
         CustomUIName: '',
-        ListViews: '',
+        ListViews: JSON.stringify([
+            { "name": "Open", "label": "Open Orders", "icon": "receipt_long", "color": "primary", "default": true, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "in", "value": ["CREATED", "SENT", "ACKNOWLEDGED"] }] } },
+            { "name": "Receiving", "label": "Goods Receiving", "icon": "inventory_2", "color": "orange", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "in", "value": ["ACCEPTED", "GOODS_RECEIVING"] }] } },
+            { "name": "Completed", "label": "Completed", "icon": "task_alt", "color": "positive", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "in", "value": ["GRN_GENERATED", "COMPLETED", "CLOSED"] }] } },
+            { "name": "Cancelled", "label": "Cancelled", "icon": "block", "color": "negative", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "CANCELLED" }] } }
+        ]),
         Relations: JSON.stringify({
             SupplierCode: CONFIG.MASTER_SHEETS.SUPPLIERS,
             ShipToWarehouseCode: CONFIG.MASTER_SHEETS.WAREHOUSES,
@@ -940,8 +966,8 @@ function initAppResourcesCodeConfig() {
         OwnerUserField: 'CreatedBy',
         AdditionalActions: JSON.stringify([
             {"action":"Confirm","label":"Confirm","icon":"task_alt","color":"positive","kind":"mutate","confirm":false,"column":"Progress","columnValue":"CONFIRMED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Confirmation Comment","type":"textarea","required":false}],"visibleWhen":{"column":"Progress","op":"eq","value":"DRAFT"}},
-            {"action":"GenerateGRN","label":"Generate GRN","icon":"receipt_long","color":"primary","kind":"mutate","confirm":true,"column":"Progress","columnValue":"GRN_GENERATED","columnValueOptions":[],"fields":[{"name":"Comment","label":"GRN Generation Comment","type":"textarea","required":false}],"targets":[{"resource":"GoodsReceipts","mode":"create","key":"goodsReceipt","label":"Goods Receipt","fields":[{"name":"ProcurementCode","from":"$record.ProcurementCode"},{"name":"PurchaseOrderCode","from":"$record.PurchaseOrderCode"},{"name":"POReceivingCode","from":"$record.Code"},{"name":"Date","value":"$today"},{"name":"Status","value":"Active"}]}],"visibleWhen":{"column":"Progress","op":"eq","value":"CONFIRMED"}},
-            {"action":"Cancel","label":"Cancel","icon":"cancel","color":"negative","kind":"mutate","confirm":false,"column":"Progress","columnValue":"CANCELLED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Cancellation Comment","type":"textarea","required":true}],"visibleWhen":{"column":"Progress","op":"in","value":["DRAFT","CONFIRMED","GRN_GENERATED"]}}
+            {"action":"GenerateGRN","label":"Generate GRN","icon":"receipt_long","color":"primary","kind":"navigate","confirm":false,"navigate":{"target":"record","pageSlug":"generate-grn"},"column":"Progress","columnValue":"GRN_GENERATED","columnValueOptions":[],"fields":[{"name":"Comment","label":"GRN Generation Comment","type":"textarea","required":false}],"targets":[{"resource":"GoodsReceipts","mode":"create","key":"goodsReceipt","label":"Goods Receipt","fields":[{"name":"ProcurementCode","from":"$record.ProcurementCode"},{"name":"PurchaseOrderCode","from":"$record.PurchaseOrderCode"},{"name":"POReceivingCode","from":"$record.Code"},{"name":"Date","value":"$today"},{"name":"Status","value":"Active"}]}],"visibleWhen":{"column":"Progress","op":"eq","value":"CONFIRMED"}},
+            {"action":"Cancel","label":"Cancel","icon":"cancel","color":"negative","kind":"navigate","confirm":false,"column":"Progress","columnValue":"CANCELLED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Cancellation Comment","type":"textarea","required":true}],"navigate":{"target":"record","pageSlug":"cancel-receiving"},"visibleWhen":{"column":"Progress","op":"in","value":["DRAFT","CONFIRMED","GRN_GENERATED"]}}
         ]),
         Menu: JSON.stringify([
             {"group":["Procurement"],"order":7,"label":"PO Receiving","icon":"inventory_2","route":"/operation/po-receivings","pageTitle":"PO Receiving","pageDescription":"Inspect received purchase order quantities before GRN finalization","show":true,"menuAccess":{"require":"canWrite"}}
@@ -971,7 +997,12 @@ function initAppResourcesCodeConfig() {
         PostAction: '',
         Reports: '',
         CustomUIName: '',
-        ListViews: ''
+        ListViews: JSON.stringify([
+            { "name": "Drafts", "label": "In Progress", "icon": "edit_note", "color": "blue-grey", "default": true, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "DRAFT" }] } },
+            { "name": "Confirmed", "label": "Awaiting GRN", "icon": "task_alt", "color": "primary", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "CONFIRMED" }] } },
+            { "name": "GrnGenerated", "label": "GRN Generated", "icon": "receipt_long", "color": "positive", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "GRN_GENERATED" }] } },
+            { "name": "Cancelled", "label": "Cancelled", "icon": "block", "color": "negative", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "CANCELLED" }] } }
+        ])
     },
     {
         Name: CONFIG.OPERATION_SHEETS.PO_RECEIVING_ITEMS,
@@ -1050,7 +1081,10 @@ function initAppResourcesCodeConfig() {
         PostAction: '',
         Reports: '',
         CustomUIName: '',
-        ListViews: ''
+        ListViews: JSON.stringify([
+            { "name": "Active", "label": "Valid Receipts", "icon": "fact_check", "color": "positive", "default": true, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }] } },
+            { "name": "Invalidated", "label": "Invalidated", "icon": "block", "color": "negative", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Inactive" }] } }
+        ])
     },
     {
         Name: CONFIG.OPERATION_SHEETS.GOODS_RECEIPT_ITEMS,

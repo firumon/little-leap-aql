@@ -19,7 +19,8 @@ import * as InvoiceWorkflow from 'src/_resource/Operation/OutletConsumptionInvoi
 import * as PaymentProgress from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentProgress'
 import {
   netInvoiceTotalOf,
-  paidTotalOf
+  paidTotalOf,
+  balanceDueOf
 } from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentAllocation'
 import { storedTaxBreakdown } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceCalculation'
 
@@ -168,7 +169,7 @@ export function useOutletViewContext () {
       returnDeductionTotal: num(invoice.ReturnDeductionTotal),
       total,
       collected,
-      balance: Math.max(0, Number((total - collected).toFixed(2))),
+      balance: Number(balanceDueOf(invoice, own).toFixed(2)),
       payments: own,
       meta: InvoiceWorkflow.progressMetaOf(invoice),
       isOpen: InvoiceWorkflow.isOpen(invoice)

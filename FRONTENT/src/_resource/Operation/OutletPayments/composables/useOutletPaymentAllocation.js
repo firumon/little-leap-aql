@@ -24,7 +24,7 @@ const num = (value) => {
 }
 const money = (value) => Number(num(value).toFixed(2))
 
-/** The tax-inclusive, currency-rounded payable of an invoice. */
+/** The tax-inclusive ACTUAL payable of an invoice — what a balance is measured against. */
 export function netInvoiceTotalOf (invoice = {}) {
   return grandTotalOf(asRow(invoice))
 }
@@ -82,12 +82,18 @@ export function autoDistribute (totalVal, selectedInvoices = [], payments = []) 
   return allocations
 }
 
-/** Largest residue a collector may waive off: 10x the rounding interval, at least 10.00. */
+/**
+ * Largest residue a collector may waive at the till: 5x the currency's rounding interval.
+ *
+ * Deliberately tiny. This is the rounding-artefact lane, not the write-off lane — a real
+ * shortfall goes through the invoice's own audited `MarkPaid` settlement, where the reason
+ * and the amount are stamped on the invoice row.
+ */
 export function residualThreshold (priceListCode = '') {
   const { getCurrency, defaultCurrencyCode } = useCurrencyResource()
   const currency = getCurrency(invoiceCurrencyOf(priceListCode) || text(defaultCurrencyCode?.value))
   const interval = num(currency?.roundingInterval) || 0.01
-  return Math.max(10, Number((interval * 10).toFixed(2)))
+  return Number((interval * 5).toFixed(2))
 }
 
 export function isWaiverEligible (balance = 0, priceListCode = '') {

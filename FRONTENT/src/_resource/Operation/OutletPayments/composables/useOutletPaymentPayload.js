@@ -2,7 +2,8 @@
  * OutletPayments › batch mutation payloads — Layer 2.
  *
  * Encapsulates cross-resource batch construction for:
- * 1. Payment creation + invoice state transition ('MarkPaid' or 'MarkPartiallyPaid', with residual waiver)
+ * 1. Payment creation + invoice state transition. PAID needs an exact match or an
+ *    explicit residual waiver carrying a reason; anything else stays PARTIALLY_PAID.
  * 2. Payment cancellation + invoice state reversion ('Cancel', 'MarkPendingPayment', 'MarkPartiallyPaid', 'MarkPaid')
  *
  * All builders return canonical envelope:
@@ -27,6 +28,7 @@ import {
   waiverCommentOf,
   indexPaymentsByInvoice
 } from './useOutletPaymentAllocation'
+import { buildSettlementRequests } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoicePayload'
 
 const PAYMENTS = 'OutletPayments'
 const INVOICES = 'OutletConsumptionInvoices'
@@ -107,6 +109,9 @@ export function buildOutletPaymentCreationRequests ({
   }
 
   const requests = []
+  // Merged in below rather than assumed: only a batch that actually force-settles an invoice
+  // asks for the `MarkPaid` privilege.
+  let settlementPermissions = {}
   const dateStr = todayISO()
   const user = text(username) || text(actorName) || 'Unknown'
   const paymentsByInvoice = indexPaymentsByInvoice(existingPayments)
@@ -133,17 +138,26 @@ export function buildOutletPaymentCreationRequests ({
     const remaining = Math.max(0, Number((invBal - allocated).toFixed(2)))
 
     if (waiveResidual && isWaiverEligible(remaining, invoice.PriceListCode)) {
+      // THE INVOICE DOMAIN WRITES ITS OWN SETTLEMENT (Domain Payload Chains). Writing
+      // `SettlementReason`/`SettlementMismatchAmount` and the `ProgressPaid` stamps from
+      // here would be a second implementation of the invoice's own rule — the one the
+      // settle route calls — free to disagree with it the day either changes.
       const note = text(waiverComment) || waiverCommentOf(allocated, invBal, invoices.length, waiverReason)
-      requests.push(executeActionRequest(INVOICES, code, {
-        action: 'MarkPaid',
-        column: 'Progress',
-        columnValue: 'PAID'
-      }, {
-        SettlementReason: waiverReason,
-        SettlementMismatchAmount: remaining,
-        ...stampFields('ProgressPaid', actorName || user, note)
-      }, [INVOICES]))
-    } else if (remaining <= 0.01) {
+      const settlement = buildSettlementRequests({
+        record: invoice,
+        reason: waiverReason,
+        comment: note,
+        mismatchAmount: remaining,
+        balanceDue: remaining,
+        actorName: actorName || user
+      })
+      if (!settlement.valid) return { valid: false, message: settlement.message }
+      requests.push(...settlement.requests)
+      settlementPermissions = { ...settlementPermissions, ...settlement.permissions }
+    } else if (remaining <= 0) {
+      // PAID only on an EXACT match. Any leftover — a cent, a rounding residue — keeps the
+      // invoice PARTIALLY_PAID until somebody settles it through the audited action and
+      // records why. A silent flip here is money written off with nobody's name on it.
       requests.push(executeActionRequest(INVOICES, code, {
         action: 'MarkPaid',
         column: 'Progress',
@@ -163,7 +177,8 @@ export function buildOutletPaymentCreationRequests ({
     requests,
     permissions: {
       outletPayment: 'create',
-      outletConsumptionInvoice: 'update'
+      outletConsumptionInvoice: 'update',
+      ...settlementPermissions
     },
     successMsg: 'Payment submitted successfully.'
   }
@@ -220,8 +235,8 @@ export function buildOutletPaymentCancellationRequests ({
     let nextProgress = 'PENDING_PAYMENT'
     let stamp = 'ProgressPendingPayment'
 
-    if (otherPaid > 0.01) {
-      if (remaining <= 0.01) {
+    if (otherPaid > 0) {
+      if (remaining <= 0) {
         transitionAction = 'MarkPaid'
         nextProgress = 'PAID'
         stamp = 'ProgressPaid'

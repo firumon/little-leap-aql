@@ -232,8 +232,7 @@ export function useOutletPaymentViewContext () {
     invoiceCode,
     invoiceTotal,
 
-    // A label, not a second calculation: `invoiceTotal` stays the rounded number the
-    // balance arithmetic settles against.
+    // A label, not a second calculation: the actual payable, printed on its own.
     invoiceTotalText: computed(() => payableLabel(payableFiguresOf(invoice.value || {}), (v) => _C(num(v), true))),
     invoicePaidSoFar,
     invoiceBalance,

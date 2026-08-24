@@ -51,7 +51,7 @@
       </q-list>
     </q-card>
 
-    <template v-if="waiveResidual && residualBalance > 0.01">
+    <template v-if="waiveResidual && residualBalance > 0">
       <SectionDividerLabel label="WRITE-OFF" />
 
       <q-banner dense rounded class="bg-orange-1 text-orange-10">

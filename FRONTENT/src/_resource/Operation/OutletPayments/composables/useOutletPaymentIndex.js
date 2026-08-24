@@ -13,6 +13,7 @@ import { useDataStore } from 'src/stores/data'
 import {
   netInvoiceTotalOf,
   paidTotalOf,
+  balanceDueOf,
   countsAsPayment
 } from './useOutletPaymentAllocation'
 import { storedTaxBreakdown } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceCalculation'
@@ -107,12 +108,12 @@ const shared = defineSharedComposable((dataStore) => {
         const ownPayments = paidMap.get(code) || []
         const total = netInvoiceTotalOf(inv)
         const collected = paidTotalOf(ownPayments)
-        const balance = Math.max(0, Number((total - collected).toFixed(2)))
+        const balance = Number(balanceDueOf(inv, ownPayments).toFixed(2))
         const outletCode = text(inv.OutletCode)
         const taxable = num(inv.TotalTaxableAmount) || num(inv.Subtotal)
         const dueIn = text(inv.DueDate) ? -daysSince(inv.DueDate) : null
         const invProgress = text(inv.Progress).toUpperCase()
-        const isInvoiceOpen = (invProgress === 'PENDING_PAYMENT' || invProgress === 'PARTIALLY_PAID') && balance > 0.01
+        const isInvoiceOpen = (invProgress === 'PENDING_PAYMENT' || invProgress === 'PARTIALLY_PAID') && balance > 0
 
         return {
           ...inv,

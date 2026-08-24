@@ -11,6 +11,7 @@ import {
   residualThreshold,
   waiverCommentOf
 } from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentAllocation'
+import { settlementReasons } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceWorkflow'
 
 /**
  * OutletPayments › Add — the injection relay and shared wizard state
@@ -62,19 +63,9 @@ export const MODE_ICONS = {
   Other: 'more_horiz'
 }
 
-/**
- * Why a residual balance was written off.
- *
- * A fixed list, not free text: the reason is what an auditor filters a write-off report by,
- * and a typed sentence cannot be counted. The free-text note beside it is additive.
- */
-export const WAIVER_REASONS = [
-  'Small Difference Rounding',
-  'Customer Discount Granted',
-  'Currency Conversion Difference',
-  'Write-off Approval',
-  'Other'
-]
+// Why a residual balance was written off. The list is AppOptions data, owned by the invoice
+// domain — the value lands in the invoice's own `SettlementReason` column, which the sheet
+// validates against exactly that list.
 
 export function useOutletPaymentAddContext () {
   const pageState = inject('pageState', null)
@@ -174,8 +165,10 @@ export function useOutletPaymentAddContext () {
     set: (value) => setField('WaiveResidual', value === true)
   })
 
+  const waiverReasons = computed(() => settlementReasons())
+
   const waiverReason = computed({
-    get: () => text(field('WaiverReason')) || WAIVER_REASONS[0],
+    get: () => text(field('WaiverReason')) || waiverReasons.value[0] || '',
     set: (value) => setField('WaiverReason', text(value))
   })
 
@@ -284,11 +277,11 @@ export function useOutletPaymentAddContext () {
    * Layer 2.
    */
   const canWaiveResidual = computed(() => {
-    if (residualBalance.value <= 0.01) return false
+    if (residualBalance.value <= 0) return false
     if (!selectedInvoices.value.length) return false
     return selectedInvoices.value.every((row) => {
       const remaining = Math.max(0, money2(num(row.balance) - num(allocations.value[text(row.code)])))
-      return remaining <= 0.01 || isWaiverEligible(remaining, row.PriceListCode)
+      return remaining <= 0 || isWaiverEligible(remaining, row.PriceListCode)
     })
   })
 
@@ -310,14 +303,14 @@ export function useOutletPaymentAddContext () {
    * The receipt, invoice by invoice, exactly as it will be written.
    *
    * `outcome` restates the transition the payload builder will choose from the SAME inputs —
-   * applied ≥ balance means PAID, a waived remainder means PAID, anything else means
-   * PARTIALLY_PAID. It is the one thing on the review step a reader cannot work out for
+   * applied ≥ balance means PAID, an explicitly waived remainder means PAID, anything else
+   * — including a one-cent residue — means PARTIALLY_PAID. It is the one thing on the review step a reader cannot work out for
    * themselves, and it is what makes the step a review rather than a summary.
    */
   const receiptLines = computed(() => selectedInvoices.value.map((row) => {
     const applied = num(allocations.value[text(row.code)])
     const remaining = Math.max(0, money2(num(row.balance) - applied))
-    const waived = waiveResidual.value && remaining > 0.01 && isWaiverEligible(remaining, row.PriceListCode)
+    const waived = waiveResidual.value && remaining > 0 && isWaiverEligible(remaining, row.PriceListCode)
 
     return {
       code: text(row.code),
@@ -326,8 +319,8 @@ export function useOutletPaymentAddContext () {
       applied,
       remaining,
       waived,
-      outcome: (remaining <= 0.01 || waived) ? 'Fully paid' : 'Partially paid',
-      settled: remaining <= 0.01 || waived
+      outcome: (remaining <= 0 || waived) ? 'Fully paid' : 'Partially paid',
+      settled: remaining <= 0 || waived
     }
   }))
 
@@ -406,7 +399,7 @@ export function useOutletPaymentAddContext () {
 
     MODE_OPTIONS,
     MODE_ICONS,
-    WAIVER_REASONS,
+    waiverReasons,
     modeIconOf: (value) => MODE_ICONS[text(value)] || MODE_ICONS.Other,
 
     outletCode,

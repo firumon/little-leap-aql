@@ -143,7 +143,7 @@
               :is="SelectField"
               :model-value="waiverReason"
               :record="{}"
-              :config="{ options: WAIVER_REASONS, label: 'Reason', clearable: false }"
+              :config="{ options: waiverReasons, label: 'Reason', clearable: false }"
               header="WaiverReason"
               @update:model-value="(value) => (waiverReason = value)"
             />
@@ -214,7 +214,7 @@ const CurrencyField = resolveFieldComponent('currency', 'add')
 const TextareaField = resolveFieldComponent('textarea', 'add')
 
 const {
-  ui, money, MODE_OPTIONS, WAIVER_REASONS,
+  ui, money, MODE_OPTIONS, waiverReasons,
   amount, allocations, setAllocation, distribute,
   totalAllocated, allocationDiff, reconcileToAllocations,
   selectedInvoices, selectedBalance, outletBalance, outletInvoices, setSelectedCodes,

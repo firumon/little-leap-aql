@@ -4,10 +4,11 @@
  * The stack is ordered by what a reader needs first: the exception, then the headline, then
  * the evidence, then the context.
  *
- * `SettlementBanner` leads because it is the only card that CONTRADICTS what the rest of the
- * page implies — a PAID chip on a bill that never collected its full value reads as a data
- * error until the reason is stated. It renders nothing in every ordinary case, so nothing is
- * displaced when there is no settlement.
+ * `SettlementDetails` sits directly under the header because it is the only card that
+ * CONTRADICTS what the rest of the page implies — a PAID chip on a bill that never collected
+ * its full value reads as a data error until the reason is stated, and the reader needs that
+ * reason before reaching the figures it explains. It renders nothing in every ordinary case,
+ * so nothing is displaced when there is no settlement.
  *
  * `contents` is empty: the generic record grid would restate, column by column, what
  * `InvoiceHeader` and `BillingSummary` already say in the workflow's own vocabulary — and
@@ -20,8 +21,8 @@
 export default {
   sections: [
     'PageHeader',
-    'SettlementBanner',
     'InvoiceHeader',
+    'SettlementDetails',
     'BilledItems',
     'BillingSummary',
     'InvoicePayments',
@@ -33,6 +34,9 @@ export default {
   PropsPageHeader: {
     title: 'Consumption Invoice',
     reload: false
+  },
+  PropsSettlementDetails: {
+    title: 'Settlement'
   },
   PropsBilledItems: {
     title: 'Billed Items'

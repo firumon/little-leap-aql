@@ -65,7 +65,6 @@ const { ui, money, record, invoice } = useInvoiceEditContext()
 const header = computed(() => invoice.value.header)
 const taxBreakdown = computed(() => invoice.value.taxBreakdown)
 
-// Data-entry page: exact figures only. The `exact (rounded)` pair is for View/payment.
 const grandTotal = computed(() => header.value.Total)
 const issuedTotal = computed(() => netPayableOf(record.value || {}))
 

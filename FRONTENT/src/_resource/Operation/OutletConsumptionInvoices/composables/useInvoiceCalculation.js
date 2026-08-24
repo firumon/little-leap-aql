@@ -160,22 +160,28 @@ export function roundPayable (value, priceListCode = '') {
 }
 
 /**
- * The rounded net payable of a STORED invoice row.
+ * What a STORED invoice row is owed — the ACTUAL net payable, never the rounded one.
  *
- * `netPayableOf` derives the exact figure from the six stored columns; this is that figure
- * at the currency's interval. Both exist because they answer different questions: the exact
- * one reconciles against the line items, the rounded one is what a payment settles.
+ * ── WHY THE ACTUAL FIGURE IS THE BASIS ──
+ * This is the number the invoice DISPLAYS and the number every balance is measured against,
+ * and those two must be the same number. When the total was snapped to the currency interval
+ * first, a bill printing 100.03 was collected against 100.05, so an outlet that paid exactly
+ * what the invoice said still owed two cents, and one that overpaid by the interval showed as
+ * settled on money it never handed over. Both are the silent leakage the audit rules exist to
+ * stop.
+ *
+ * Rounding is a TENDER concern, not a ledger one: `roundPayable` still says what cash can
+ * actually change hands, and it is applied where somebody hands money over — never to the
+ * debt itself.
  */
 export function grandTotalOf (row = {}) {
-  const entry = asRow(row)
-  return roundPayable(netPayableOf(entry), entry.PriceListCode)
+  return netPayableOf(asRow(row))
 }
 
 /**
- * The payable as both numbers. The exact one is what the lines add up to; the rounded one is
- * what a payment can settle.
- *
- * Display rule: data-entry screens show exact only, view/payment show `exact (rounded)`.
+ * The payable as both numbers. The exact one is what the invoice is owed and what every
+ * balance is measured against; the rounded one is only what CASH can be tendered in, for a
+ * screen that needs to suggest a payable amount.
  */
 export function payableFigures (exactValue, priceListCode = '') {
   const exact = num(exactValue)
@@ -189,12 +195,15 @@ export function payableFiguresOf (row = {}) {
   return payableFigures(netPayableOf(entry), entry.PriceListCode)
 }
 
-/** `exact (rounded)`, or just the exact figure when rounding changed nothing. */
+/**
+ * The ONE money string a screen prints for a payable — the actual amount, never a
+ * composite. A bracketed second figure beside it reads as two conflicting totals on the
+ * same bill, and the actual figure is the one the balance is measured against.
+ */
 export function payableLabel (figures, money) {
-  const entry = figures && typeof figures === 'object' ? figures : { exact: 0, rounded: 0 }
+  const entry = figures && typeof figures === 'object' ? figures : { exact: 0 }
   const format = typeof money === 'function' ? money : ((value) => String(num(value)))
-  const exact = format(entry.exact)
-  return entry.differs ? `${exact} (${format(entry.rounded)})` : exact
+  return format(entry.exact)
 }
 
 // ─── 3. What is still owed ────────────────────────────────────────────────────
@@ -218,7 +227,7 @@ export function paidTotalOf (payments = []) {
 }
 
 /**
- * What is still owed on an invoice — the rounded grand total less what has been collected.
+ * What is still owed on an invoice — the ACTUAL payable less what has been collected.
  *
  * FLOORED AT ZERO. An overpayment is a credit to be handled on the outlet's account, never
  * a negative balance that would show as money the business owes the outlet on this row and
@@ -230,7 +239,30 @@ export function paidTotalOf (payments = []) {
  * that map in one pass.
  */
 export function balanceDueOf (row = {}, payments = []) {
-  return Math.max(0, grandTotalOf(row) - paidTotalOf(payments))
+  return Math.max(0, grandTotalOf(row) - paidTotalOf(payments) - settledOffOf(row))
+}
+
+/**
+ * Value discharged by DECISION rather than by cash — the audited `MarkPaid` write-off.
+ *
+ * It reduces the balance for the same reason a payment does: the outlet no longer owes it.
+ * Without this, a settled invoice showed "Settled in full" over a live outstanding figure in
+ * green, and the written-off amount stayed in every per-invoice balance for good.
+ *
+ * ONLY WHILE THE INVOICE IS PAID. `SettlementMismatchAmount` is a column, so it survives an
+ * invoice being walked back to PARTIALLY_PAID by a reversed payment — and a stale write-off
+ * must stop discharging a debt that has been reopened.
+ *
+ * NEVER NEGATIVE. A settled overpayment stores a negative mismatch; subtracting it would
+ * inflate the balance into money the outlet does not owe.
+ *
+ * The state is compared as a literal rather than imported from `useInvoiceWorkflow`, which
+ * reads this file — the import would be a cycle.
+ */
+export function settledOffOf (row = {}) {
+  const entry = asRow(row)
+  if (text(entry.Progress).toUpperCase() !== 'PAID') return 0
+  return Math.max(0, num(entry.SettlementMismatchAmount))
 }
 
 /**
@@ -265,6 +297,7 @@ export function useInvoiceCalculation () {
     countsAsPayment,
     paidTotalOf,
     balanceDueOf,
+    settledOffOf,
     isMicroBalance,
     calculateConsumptionInvoice,
     netPayableOf,

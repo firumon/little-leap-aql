@@ -28,8 +28,9 @@
  * already knows which resource it is (§3.2).
  */
 
+import { useAuthStore } from 'src/stores/auth'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
-import { isMicroBalance, balanceDueOf, grandTotalOf } from './useInvoiceCalculation'
+import { balanceDueOf, grandTotalOf } from './useInvoiceCalculation'
 
 const RESOURCE_NAME = 'OutletConsumptionInvoices'
 
@@ -77,6 +78,16 @@ export const TERMINAL_STATES = [PAID, CANCELLED]
  */
 export const SETTLEMENT_OTHER = 'Other'
 
+/**
+ * The reason list itself, read from the synced `AppOptions` so the dialog, the payment
+ * waiver and the sheet's own data validation all offer one list. A second array compiled
+ * into a screen writes values the sheet then rejects.
+ */
+export function settlementReasons () {
+  const options = useAuthStore().appOptionsMap?.OutletConsumptionInvoiceSettlementReasons
+  return (Array.isArray(options) ? options : []).map(text).filter(Boolean)
+}
+
 export function progressOf (record) {
   return text(asRow(record).Progress).toUpperCase()
 }
@@ -106,20 +117,22 @@ export function isPaid (record) {
  * decision about the document, and a stray payment landing against it must not silently
  * resurrect it into the collections queue.
  *
- * "Settled" is judged by `isMicroBalance`, not by `<= 0.01`: on a currency rounding to 0.05
- * a residue smaller than the smallest coin can never be paid off, so treating it as
- * outstanding would strand the invoice permanently.
+ * PAID IS EXACT. Money alone closes an invoice only when nothing at all is left. A residue
+ * of one cent is still a residue, and the only route from there to PAID is the audited
+ * `MarkPaid` settlement, which records WHY the gap was accepted. Letting a sub-interval
+ * remainder flip the state on its own is the unaudited leakage this rule exists to stop —
+ * the invoice sits in PARTIALLY_PAID until somebody signs for the difference.
  */
 export function progressForBalance (record = {}, balance = 0) {
   if (isCancelled(record)) return CANCELLED
-  if (isMicroBalance(balance, asRow(record).PriceListCode)) return PAID
+  if (num(balance) <= 0) return PAID
   return num(balance) < grandTotalGuard(record, balance) ? PARTIALLY_PAID : PENDING_PAYMENT
 }
 
 /**
- * The whole bill, to compare an outstanding balance against. Tax-inclusive, from the one
- * pricing engine — comparing a tax-inclusive balance to a tax-excluded total is what kept
- * part-paid invoices stuck in PENDING_PAYMENT.
+ * The whole bill, to compare an outstanding balance against. Tax-inclusive and ACTUAL, from
+ * the one pricing engine — comparing a tax-inclusive balance to a tax-excluded total is what
+ * kept part-paid invoices stuck in PENDING_PAYMENT.
  */
 function grandTotalGuard (record, balance) {
   const total = grandTotalOf(asRow(record))
@@ -138,7 +151,7 @@ function grandTotalGuard (record, balance) {
 export function transitionForBalance (record = {}, balance = 0) {
   const next = progressForBalance(record, balance)
   if (next === progressOf(record)) return null
-  if (next === PAID) return { action: 'MarkPaid', columnValue: PAID, stamp: 'ProgressPaid', comment: 'Completely paid.' }
+  if (next === PAID) return { action: 'MarkPaid', columnValue: PAID, stamp: 'ProgressPaid', comment: 'Paid in full.' }
   if (next === PARTIALLY_PAID) return { action: 'MarkPartiallyPaid', columnValue: PARTIALLY_PAID, stamp: 'ProgressPartiallyPaid', comment: 'Payment received; balance outstanding.' }
   return { action: 'MarkPendingPayment', columnValue: PENDING_PAYMENT, stamp: 'ProgressPendingPayment', comment: 'Payment reversed; balance outstanding.' }
 }
@@ -188,6 +201,38 @@ export function canCancelInvoice (record) {
 }
 
 // ─── Forced settlement ────────────────────────────────────────────────────────
+
+/**
+ * Can this invoice be force-settled right now, and what is the gap?
+ *
+ * ONE predicate behind the FAB gate, the route's lock banner and the submit veto (§8.6), and
+ * it also answers the three figures the route displays — so the settle page derives nothing
+ * of its own and cannot show a balance the builder disagrees with.
+ *
+ * NO PERMISSION CHECK, deliberately: `PageAction.js` calls this from outside `setup()`, where
+ * `useResourceConfig()` cannot run. Permission travels back in the builder's envelope and
+ * Layer 3 gates on it — the same split `validateInvoiceDraft` documents. `canMarkPaid` stays
+ * for the FAB, which IS in setup.
+ *
+ * `payments` is the invoice's own payment rows; `useInvoiceIndex` is what joins them.
+ */
+export function settlementGate (record = {}, payments = []) {
+  const entry = asRow(record)
+  const total = grandTotalOf(entry)
+  const balance = balanceDueOf(entry, payments)
+  const figures = {
+    total,
+    balance,
+    collected: Math.max(0, num((total - balance).toFixed(2))),
+    // What the invoice would write off if the user accepts the whole gap. A starting value,
+    // not a forced one — a part-waiver is a real case.
+    suggestedMismatch: num(balance.toFixed(2))
+  }
+  if (isCancelled(entry)) return { ...figures, allowed: false, reason: 'This invoice was cancelled — there is nothing to settle.' }
+  if (isPaid(entry)) return { ...figures, allowed: false, reason: 'This invoice is already paid.' }
+  if (!isOpen(entry)) return { ...figures, allowed: false, reason: 'This invoice is not open for settlement.' }
+  return { ...figures, allowed: true, reason: '' }
+}
 
 /**
  * Validate a `MarkPaid` settlement before it is dispatched.
@@ -309,6 +354,7 @@ export function useInvoiceWorkflow () {
     OPEN_STATES,
     TERMINAL_STATES,
     SETTLEMENT_OTHER,
+    settlementReasons,
     progressOf,
     progressMetaOf,
     isOpen,
@@ -322,6 +368,7 @@ export function useInvoiceWorkflow () {
     canRecordPayment,
     canMarkPaid,
     canCancelInvoice,
+    settlementGate,
     validateSettlement,
     settlementOf,
     validateInvoiceDraft

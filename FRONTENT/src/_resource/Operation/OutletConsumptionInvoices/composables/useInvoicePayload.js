@@ -58,6 +58,7 @@ import { INVOICE_GENERATED } from 'src/_resource/Operation/OutletConsumptions/co
 import {
   validateInvoiceDraft,
   validateSettlement,
+  settlementGate,
   transitionForBalance,
   progressOf,
   PENDING_PAYMENT
@@ -316,24 +317,39 @@ export function buildPaymentRequests ({
 /**
  * Close an invoice while a balance remains, recording why the gap was accepted.
  *
+ * THE ONE ROUTE FROM A RESIDUE TO `PAID`. Money alone never closes an invoice that still
+ * owes something (`progressForBalance`), so every write-off, rounding residue and accepted
+ * underpayment arrives here and leaves a reason behind it.
+ *
  * The mismatch and the reason go onto their own columns (`executeAction` writes any field
  * whose name matches a header), and the comment derives to `ProgressPaidComment` off the
  * action's stamp suffix. `validateSettlement` owns the rules — including the one GAS cannot
  * express, that `Other` demands a comment.
+ *
+ * Hand it `payments` — the invoice's own rows — and the balance is derived here rather than
+ * trusted from the caller, so a stale figure typed into a screen cannot become the amount
+ * written off. `balanceDue` remains accepted for a caller that already holds the joined
+ * figure and no rows.
  */
 export function buildSettlementRequests ({
   record = {},
   reason = '',
   comment = '',
   mismatchAmount = null,
-  balanceDue = 0,
+  balanceDue = null,
+  payments = null,
   actorName = ''
 } = {}) {
   const invoice = asRow(record)
   const code = text(invoice.Code)
   if (!code) return { valid: false, message: 'The invoice could not be identified.' }
 
-  const check = validateSettlement({ record: invoice, reason, comment, mismatchAmount, balanceDue })
+  const gate = settlementGate(invoice, Array.isArray(payments) ? payments : [])
+  if (!gate.allowed) return { valid: false, message: gate.reason }
+
+  const owed = Array.isArray(payments) || balanceDue === null ? gate.balance : num(balanceDue)
+
+  const check = validateSettlement({ record: invoice, reason, comment, mismatchAmount, balanceDue: owed })
   if (!check.valid) return { valid: false, message: check.message }
 
   const note = text(comment) || `Settled: ${check.settlement.SettlementReason}.`

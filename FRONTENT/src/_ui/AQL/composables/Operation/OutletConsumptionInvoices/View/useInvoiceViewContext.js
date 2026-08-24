@@ -10,7 +10,8 @@ import {
   invoicePolicyOf,
   invoiceCurrencyOf,
   payableFiguresOf,
-  payableLabel
+  payableLabel,
+  settledOffOf
 } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceCalculation'
 import {
   progressMetaOf,
@@ -114,6 +115,9 @@ export function useInvoiceViewContext () {
 
     balance: computed(() => row.value?.balance ?? 0),
     collected: computed(() => row.value?.collected ?? 0),
+    // What the audited settlement discharged — the third term that makes
+    // received + settled + remaining add up to the payable.
+    settledOff: computed(() => settledOffOf(record.value || {})),
     grandTotal: computed(() => row.value?.total ?? 0),
 
     payableText: computed(() => payableLabel(payableFiguresOf(record.value || {}), money)),

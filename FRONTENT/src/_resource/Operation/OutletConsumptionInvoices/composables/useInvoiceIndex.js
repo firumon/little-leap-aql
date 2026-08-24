@@ -39,6 +39,7 @@ import {
 import {
   grandTotalOf,
   paidTotalOf,
+  balanceDueOf,
   countsAsPayment,
   isMicroBalance
 } from './useInvoiceCalculation'
@@ -164,7 +165,7 @@ const shared = defineSharedComposable((dataStore) => {
       const own = paid.get(code) || []
       const total = grandTotalOf(invoice)
       const collected = paidTotalOf(own)
-      const balance = Math.max(0, total - collected)
+      const balance = balanceDueOf(invoice, own)
       const outletCode = text(invoice.OutletCode)
       const dueIn = text(invoice.DueDate) ? -daysSince(invoice.DueDate) : null
 

@@ -27,7 +27,8 @@ src/_fields/
 ├── tel/{Add,Edit,View}.vue
 ├── text/{Add,Edit,View}.vue   ← FALLBACK TYPE, must always exist
 ├── textarea/{Add,Edit,View}.vue
-└── toggle/{Add,Edit,View}.vue
+├── toggle/{Add,Edit,View}.vue
+└── toggleitem/{Add,Edit,View}.vue
 ```
 
 Every type folder holds **three explicit SFCs** (Option A):
@@ -196,3 +197,56 @@ stamp column. `Add.vue` is a `QInput` under that mask with a `QDate` popup on
 carry the full mask so choosing a date preserves the time and vice versa.
 `Add.vue` and `View.vue` both accept legacy epoch-millisecond values (rows
 stamped before the backend switched formats) and normalize them for display.
+
+### `toggleitem`
+
+A titled toggle **row**: title and description on the left, a `q-toggle` on the right. Its
+own type rather than a flag on `toggle`, because it renders a label of its own — mounting it
+where a bare `toggle` belongs prints the label twice, once in the row and once beside the
+switch.
+
+**Card-agnostic.** It renders the row and nothing else — no card, no border, no outer
+padding — so it drops into whatever card, dialog or section the caller already has. The
+caller owns the surface; this owns the row.
+
+| `config` key | Alias | Meaning |
+|---|---|---|
+| `label` | `title` | The row's title. Falls back to `header`. |
+| `caption` | `description` | Secondary line under the title. Omitted when blank. |
+| `color` | — | Toggle colour (default `primary`). |
+| `disable` | — | Renders the switch non-interactive. |
+
+Any other `config` key passes through to the `q-toggle` (`true-value`, `false-value`,
+`keep-color`, …). The four above are consumed by the row and deliberately not forwarded.
+
+`View.vue` mirrors the same two-column shape with a square chip in place of the switch, so a
+view page and its form read alike; `compact` drops the description and shrinks the chip for
+child-table rows.
+
+**Where it earns its place**: a settings-style choice that needs a sentence of explanation —
+`OutletRestocks` Add's draft-vs-direct switch, `OutletConsumptions` Add's restock toggle.
+For a bare boolean cell in a generated form, `toggle` is still the right type.
+
+### Textarea Field Invariant (STRICT)
+
+**A `textarea` control must look like a multiline box on arrival, before anyone types.**
+
+Do **not** pass `dense`, `autogrow`, or a small `rows` to a `textarea` field's `config`:
+
+* `dense` strips the vertical padding that distinguishes a textarea from a text input.
+* `autogrow` starts the control at a single row and grows only as the user types — so at the
+  moment the user is deciding whether to write a paragraph, the control is telling them it
+  wants a few words. It also makes the form reflow under the cursor.
+* A cramped `rows` (1–2) reads as a text input with a drag handle.
+
+```javascript
+// WRONG — arrives as a one-line box
+:config="{ label: 'Comment', autogrow: true, dense: true }"
+
+// RIGHT — a real multiline box from the start
+:config="{ label: 'Comment', rows: 4 }"
+```
+
+The base `textarea/Add.vue` already renders `outlined` with Quasar's default height; the
+invariant is about what CALLERS pass down. Where a note is genuinely a single line, use
+`text`, not a shrunken `textarea`.

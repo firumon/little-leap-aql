@@ -65,7 +65,15 @@ const TYPE_ALIASES = {
   price: 'currency',
   boolean: 'toggle',
   bool: 'toggle',
-  checkbox: 'toggle'
+  checkbox: 'toggle',
+  // A titled toggle ROW, not a bare switch. Separate from `toggle` because it renders a
+  // label and caption of its own — mounting it where `toggle` belongs prints the label twice.
+  toggleitem: 'toggleitem',
+  'toggle-item': 'toggleitem',
+  togglerow: 'toggleitem',
+  'toggle-row': 'toggleitem',
+  switchitem: 'toggleitem',
+  'switch-item': 'toggleitem'
 }
 
 // ─── Registry build ──────────────────────────────────────────────────────────

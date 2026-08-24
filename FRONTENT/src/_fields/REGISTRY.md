@@ -22,6 +22,7 @@ to `text`. Adding the folder and updating this table is one change, never two.
 | `multiselect` | `multi`, `multiselection`, `tags` | `QSelect multiple` — array-valued `modelValue`, a distinct type from `select` (not a flag on it) | Comma-joined label list |
 | `status` | — (also inferred from a header named `status`) | Chip-styled select (`AqlStatusToggle` or `q-select` with `STATUS_OPTIONS`) | Colored status chip |
 | `toggle` | `boolean`, `bool`, `checkbox` (also inferred from a 2-option Yes/No-shaped `options` array) | `q-toggle` switch | On/off chip or icon |
+| `toggleitem` | `toggle-item`, `togglerow`, `toggle-row`, `switchitem`, `switch-item` | Titled toggle ROW — title + description left, `q-toggle` right; renders no card of its own | Same row with a square state chip in place of the switch |
 | `tel` | `phone`, `mobile`, `telephone` | `QInput type="tel"` | `tel:` anchor or plain span |
 | `link` | `url`, `uri`, `website`, `hyperlink` | `QInput type="url"` | Anchor, opens external |
 | `file` | `attachment`, `upload`, `image` | File picker / uploader | `AqlFilePreviewCard`, or a dense `attach_file` chip when `compact` |
@@ -35,6 +36,23 @@ to `text`. Adding the folder and updating this table is one change, never two.
 - Resolution: `resolveFieldComponent(type, mode)` — unknown type or missing mode file falls
   back to `text`. See `README.md` §3 for the full resolution/precedence chain and
   `useFieldResolver.js` for `TYPE_ALIASES`.
+
+### Textarea Field Invariant (STRICT)
+
+A `textarea` must read as a multiline box before anyone types in it. Callers must NOT pass
+`dense`, `autogrow`, or a 1–2 row count in `config` — `dense` removes the padding that tells
+a textarea apart from a text input, and `autogrow` starts at one row, so the control looks
+like a single-line field exactly when the user is deciding whether to write a paragraph.
+Pass `rows` (4 or more) instead. If the value really is one line, the type is `text`.
+Full rationale in `README.md` § Textarea Field Invariant.
+
+### `toggleitem` vs `toggle`
+
+`toggle` is a bare switch for a boolean cell in a generated form. `toggleitem` is a titled
+row for a choice that needs a sentence of explanation, and it draws its own label — mounting
+it where `toggle` belongs prints the label twice. It renders no card, so it sits inside
+whatever surface the caller owns. `config` keys: `label`/`title`, `caption`/`description`,
+`color`, `disable`; everything else passes through to the `q-toggle`.
 
 ## Mounting a control by hand
 

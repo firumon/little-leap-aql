@@ -5,7 +5,6 @@
     :caption="caption"
     :lines="lines"
     :pending="pending"
-    :padding="padding"
   />
 </template>
 
@@ -31,8 +30,7 @@ import { useReturnViewContext } from 'src/_ui/AQL/composables/Operation/OutletRe
 defineOptions({ name: 'OutletReturnsViewCommercialStatus', inheritAttrs: false })
 
 const props = defineProps({
-  title: { type: [String, Function], default: 'Commercial Credit' },
-  padding: { type: String, default: 'sm' }
+  title: { type: [String, Function], default: 'Commercial Credit' }
 })
 
 const { evaluate } = useReturnViewContext()

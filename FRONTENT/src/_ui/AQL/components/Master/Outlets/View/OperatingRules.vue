@@ -1,5 +1,5 @@
 <template>
-  <div v-if="record" :class="paddingClass">
+  <div v-if="record">
     <SectionDividerLabel :label="finalTitle" />
 
     <q-card flat bordered :class="ui.cardClass">
@@ -55,13 +55,6 @@
  * row and resolved the effective price list, including the tenant-wide fallback — so this
  * card never re-derives which price list applies (§4).
  *
- * ── SPACING COMES FROM THE PAGE, THROUGH THE `padding` PROP ──
- * `Page.vue` puts `q-px-{pageProps.sectionPadding}` on the placeholder AND passes the same
- * token as a `:padding` prop. Only the prop reaches this component: `inheritAttrs: false`
- * (§12.1, mandatory on the leaf the resolver mounts) drops the class along with the rest of
- * `$attrs`. So the inset is applied from the declared prop — the sanctioned channel for a
- * section's horizontal inset (§7.5, §10.2). Vertical rhythm stays the page body's gutter.
- *
  * No `<style>` block (CORE_ARCHITECTURE_RULES §7).
  */
 import { computed } from 'vue'
@@ -71,21 +64,11 @@ import { useOutletViewContext } from 'src/_ui/AQL/composables/Master/Outlets/Vie
 defineOptions({ name: 'OutletsViewOperatingRules', inheritAttrs: false })
 
 const props = defineProps({
-  title: { type: [String, Function], default: 'Operating Rules' },
-  // Horizontal inset, supplied by `Page.vue` as `:padding="pageProps.sectionPadding"`.
-  //
-  // Needed because this component sets `inheritAttrs: false` (§12.1 — it is the leaf the
-  // resolver mounts), which DROPS the `q-px-{sectionPadding}` class `Page.vue` also puts on
-  // the placeholder. The framework passes the same token as a real PROP for exactly this
-  // case: a declared `padding` prop is the sanctioned channel for a section's horizontal
-  // inset (§7.5, §10.2) and the only one that survives a leaf. Vertical rhythm still belongs
-  // to the page body's gutter.
-  padding: { type: String, default: 'sm' }
+  title: { type: [String, Function], default: 'Operating Rules' }
 })
 
 const { evaluate, ui, pending, record, money } = useOutletViewContext()
 
-const paddingClass = computed(() => (props.padding ? `q-px-${props.padding}` : ''))
 const finalTitle = computed(() => evaluate(props.title))
 const rowDelay = (index) => ({ animationDelay: `${index * ui.rowStaggerMs}ms` })
 

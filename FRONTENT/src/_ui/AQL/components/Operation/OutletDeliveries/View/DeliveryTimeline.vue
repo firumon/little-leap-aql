@@ -1,5 +1,5 @@
 <template>
-  <div v-if="pending || timeline.length" :class="spacingClass">
+  <div v-if="pending || timeline.length">
     <SectionDividerLabel :label="finalTitle" />
 
     <q-card flat bordered :class="ui.cardClass">
@@ -41,14 +41,12 @@ import { useDeliveryViewContext } from 'src/_ui/AQL/composables/Operation/Outlet
 defineOptions({ name: 'OutletDeliveriesViewDeliveryTimeline', inheritAttrs: false })
 
 const props = defineProps({
-  title: { type: [String, Function], default: 'History' },
-  padding: { type: String, default: 'sm' }
+  title: { type: [String, Function], default: 'History' }
 })
 
 const { evaluate, ui } = useDeliveryViewContext()
 const { pending, timeline } = useDeliveryView()
 
-const spacingClass = computed(() => `q-px-${props.padding}`)
 const finalTitle = computed(() => evaluate(props.title))
 
 const rowDelay = (index) => ({ animationDelay: `${index * ui.rowStaggerMs}ms` })

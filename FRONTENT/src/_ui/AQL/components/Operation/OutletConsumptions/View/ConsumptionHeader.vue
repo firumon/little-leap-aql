@@ -1,5 +1,5 @@
 <template>
-  <div :class="spacingClass">
+  <div>
     <SectionDividerLabel :label="finalTitle" />
     <q-card flat bordered :class="ui.cardClass">
       <q-card-section v-if="pending">
@@ -57,14 +57,12 @@ defineOptions({ name: 'OutletConsumptionsViewConsumptionHeader', inheritAttrs: f
 
 const props = defineProps({
   title: { type: [String, Function], default: 'Consumption Details' },
-  color: { type: [String, Function], default: null },
-  padding: { type: String, default: 'sm' }
+  color: { type: [String, Function], default: null }
 })
 
 const { evaluate, ui } = useConsumptionViewContext()
 const { record, pending, outletName, consumedTotal, progressColor, progressIcon, progressLabel } = useConsumptionView()
 
-const spacingClass = computed(() => `q-px-${props.padding}`)
 const finalTitle = computed(() => evaluate(props.title))
 
 const statusColor = computed(() => evaluate(props.color) || progressColor(record.value?.Progress))

@@ -1,5 +1,5 @@
 <template>
-  <div v-if="form.OutletCode && form.SKU" :class="spacingClass">
+  <div v-if="form.OutletCode && form.SKU">
     <SectionDividerLabel label="BILLED ON" />
     <q-card flat bordered :class="ui.cardClass">
       <q-card-section v-if="!matchingInvoices.length" class="text-body2 text-grey-8">
@@ -54,7 +54,6 @@ defineOptions({ name: 'OutletReturnsFormBilledOn', inheritAttrs: false })
 
 const attrs = useAttrs()
 const gutter = computed(() => attrs.gutter || 'sm')
-const spacingClass = computed(() => `q-gutter-y-${gutter.value}`)
 
 const {
   ui,

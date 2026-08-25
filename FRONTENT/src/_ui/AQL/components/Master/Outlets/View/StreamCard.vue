@@ -1,5 +1,5 @@
 <template>
-  <div :class="paddingClass">
+  <div>
     <SectionDividerLabel :label="title" />
 
     <q-card flat bordered :class="ui.cardClass" class="q-pa-md">
@@ -118,19 +118,10 @@ const props = defineProps({
   emptyTitle: { type: String, default: 'Nothing recorded' },
   // The required caption saying whether that emptiness is normal.
   emptyText: { type: String, default: '' },
-  emptyIcon: { type: String, default: 'inbox' },
-  // Horizontal inset, forwarded by the SECTION that mounts this card.
-  //
-  // This card is a resource-private sub-component (§2.3), so `Page.vue` never reaches it —
-  // its caller (`Visits.vue`, `CurrentStock.vue`, …) IS the resolved section, receives
-  // `:padding="pageProps.sectionPadding"` there, and hands it down. Applying it here rather
-  // than in six callers keeps the six identical (§10.2).
-  padding: { type: String, default: 'sm' }
+  emptyIcon: { type: String, default: 'inbox' }
 })
 
 const { ui, pending } = useOutletViewContext()
-
-const paddingClass = computed(() => (props.padding ? `q-px-${props.padding}` : ''))
 
 const rows = computed(() => {
   const all = Array.isArray(props.items) ? props.items : []

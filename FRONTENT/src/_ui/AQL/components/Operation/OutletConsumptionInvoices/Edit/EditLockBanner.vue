@@ -1,5 +1,5 @@
 <template>
-  <div v-if="locked" :class="spacingClass">
+  <div v-if="locked">
     <q-banner dense rounded class="bg-orange-1 text-body2">
       <template #avatar><q-icon name="lock" color="warning" /></template>
       {{ message }}
@@ -13,13 +13,7 @@ import { useInvoiceEditContext } from 'src/_ui/AQL/composables/Operation/OutletC
 
 defineOptions({ name: 'OutletConsumptionInvoicesEditLockBanner', inheritAttrs: false })
 
-const props = defineProps({
-  padding: { type: String, default: 'sm' }
-})
-
 const { locked, isPaid, isCancelled, progressMeta } = useInvoiceEditContext()
-
-const spacingClass = computed(() => `q-px-${props.padding}`)
 
 const message = computed(() => {
   if (isPaid.value) {

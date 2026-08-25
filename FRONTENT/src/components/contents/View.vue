@@ -13,7 +13,7 @@
   </q-card>
 
   <!-- Sections -->
-  <div v-else>
+  <div v-else :class="'q-gutter-y-' + gutter">
     <div
       v-for="(section, index) in visibleSections"
       :key="section"
@@ -24,9 +24,9 @@
         v-if="section === 'Details'"
         v-bind="detailsProps"
       />
-      <ViewParent v-else-if="section === 'Parent'" v-bind="attrs" />
-      <ViewChildren v-else-if="section === 'Children'" v-bind="attrs" />
-      <ViewAudit v-else-if="section === 'Audit'" v-bind="attrs" />
+      <ViewParent v-else-if="section === 'Parent'" v-bind="subProps" />
+      <ViewChildren v-else-if="section === 'Children'" v-bind="subProps" />
+      <ViewAudit v-else-if="section === 'Audit'" v-bind="subProps" />
     </div>
   </div>
 </template>
@@ -43,6 +43,7 @@ defineOptions({ name: 'ContentsView', inheritAttrs: false })
 const attrs = useAttrs()
 
 const props = defineProps({
+  gutter: { type: String, default: 'xs' },
   order: { type: Array, default: null },
   hide: { type: Array, default: () => [] },
   detailsConfig: { type: Object, default: () => ({}) }
@@ -60,6 +61,8 @@ const {
   childResources,
   loading
 } = inject('resourceRecord')
+
+const gutter = computed(() => props.gutter || 'xs')
 
 const isMaster = computed(() => scope.value?.toLowerCase() === 'master')
 
@@ -97,8 +100,10 @@ const visibleSections = computed(() =>
   })
 )
 
+const subProps = computed(() => ({ ...attrs, gutter: gutter.value }))
+
 const detailsProps = computed(() => ({
-  ...attrs,
+  ...subProps.value,
   record: rec.value,
   resolvedFields: resolvedFields?.value ?? null,
   resourceName: resourceName.value,

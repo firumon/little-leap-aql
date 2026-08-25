@@ -1,5 +1,5 @@
 <template>
-  <div v-if="rows.length > 1" :class="spacingClass">
+  <div v-if="rows.length > 1">
     <SectionDividerLabel :label="finalTitle" />
 
     <AppList
@@ -44,13 +44,11 @@ import { useOutletPaymentViewContext } from 'src/_ui/AQL/composables/Operation/O
 defineOptions({ name: 'OutletPaymentsViewInvoiceAllPayments', inheritAttrs: false })
 
 const props = defineProps({
-  title: { type: [String, Function], default: 'All Payments on This Invoice' },
-  padding: { type: String, default: 'sm' }
+  title: { type: [String, Function], default: 'All Payments on This Invoice' }
 })
 
 const { evaluate, money, record, invoiceAllPayments, openPayment } = useOutletPaymentViewContext()
 
-const spacingClass = computed(() => `q-px-${props.padding}`)
 const finalTitle = computed(() => evaluate(props.title))
 
 const text = (value) => (value == null ? '' : String(value).trim())

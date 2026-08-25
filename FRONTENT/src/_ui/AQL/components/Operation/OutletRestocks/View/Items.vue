@@ -1,5 +1,5 @@
 <template>
-  <div :class="spacingClass">
+  <div>
     <SectionDividerLabel :label="finalTitle" />
 
     <AqlGroupedList
@@ -60,15 +60,13 @@ const props = defineProps({
   title: { type: [String, Function], default: 'Items Summary' },
   // The Product → SKU tree to render. Defaults to the request's own items; a
   // caller (or a JS modifier) may narrow it without this card re-deriving anything.
-  items: { type: Array, default: null },
-  padding: { type: String, default: 'sm' }
+  items: { type: Array, default: null }
 })
 
 const { evaluate, ui } = useRestockViewContext()
 
 const { productGroups, pending } = useRestockView()
 
-const spacingClass = computed(() => `q-px-${props.padding}`)
 const finalTitle = computed(() => evaluate(props.title))
 
 const groups = computed(() => (Array.isArray(props.items) ? props.items : productGroups.value))

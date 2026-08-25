@@ -1,5 +1,5 @@
 <template>
-  <div :class="spacingClass">
+  <div>
     <SectionDividerLabel :label="finalTitle" />
 
     <!-- The two non-list states keep a card SHELL, because there is no row for the card to
@@ -72,7 +72,6 @@ const META_LAYOUT = ['label']
 const props = defineProps({
   title: { type: [String, Function], default: 'Consumed Items' },
   items: { type: Array, default: null },
-  padding: { type: String, default: 'sm' },
   // Vertical rhythm BETWEEN the row cards. `'none'` turns it off for a caller that owns
   // its own spacing; see `List.vue`'s `gutterClass`.
   gutter: { type: String, default: 'sm' }
@@ -81,7 +80,6 @@ const props = defineProps({
 const { evaluate, ui } = useConsumptionViewContext()
 const { consumedItems, pending } = useConsumptionView()
 
-const spacingClass = computed(() => `q-px-${props.padding}`)
 const finalTitle = computed(() => evaluate(props.title))
 // `null` means "use my own projection"; `[]` means "a caller handed me nothing" — the two
 // are deliberately not collapsed, or the card could not be narrowed by a caller (§7.5).

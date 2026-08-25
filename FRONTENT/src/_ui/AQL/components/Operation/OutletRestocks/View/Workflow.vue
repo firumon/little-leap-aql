@@ -1,5 +1,5 @@
 <template>
-  <div :class="spacingClass">
+  <div>
     <SectionDividerLabel :label="finalTitle" />
 
     <q-card flat bordered :class="ui.cardClass">
@@ -76,15 +76,13 @@ import { useRestockViewContext } from 'src/_ui/AQL/composables/Operation/OutletR
 defineOptions({ name: 'OutletRestocksViewWorkflow', inheritAttrs: false })
 
 const props = defineProps({
-  title: { type: [String, Function], default: 'Workflow Timeline' },
-  padding: { type: String, default: 'sm' }
+  title: { type: [String, Function], default: 'Workflow Timeline' }
 })
 
 const { evaluate, ui } = useRestockViewContext()
 
 const { events, pending, formatStampDate } = useRestockView()
 
-const spacingClass = computed(() => `q-px-${props.padding}`)
 const finalTitle = computed(() => evaluate(props.title))
 
 const rowDelay = (index) => ({ animationDelay: `${index * ui.rowStaggerMs}ms` })

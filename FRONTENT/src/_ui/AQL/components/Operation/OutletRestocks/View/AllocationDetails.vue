@@ -1,5 +1,5 @@
 <template>
-  <div :class="paddingClass">
+  <div>
     <SectionDividerLabel :label="finalTitle" />
 
     <q-card v-if="pending" flat bordered :class="ui.cardClass">
@@ -19,7 +19,7 @@
     <!-- One card per product, so the rhythm BETWEEN them is this container's, not a
          margin baked into each card. `gutter` is fed from `pageProps.gutter`, so
          these cards space themselves exactly as the page's Sections and Contents do. -->
-    <div v-else :class="spacingClass">
+    <div v-else>
       <!-- Before approval there is no stock behind any line, so a warehouse column
            would be an empty promise. The card states only where each SKU stands. -->
       <q-banner v-if="!approved" dense rounded class="bg-grey-2 text-grey-8">
@@ -123,7 +123,6 @@ const props = defineProps({
   // The request itself. Defaults to the injected record; supplied only when a
   // caller renders this card against something other than the page's own record.
   record: { type: Object, default: null },
-  padding: { type: String, default: 'sm' },
   // Vertical rhythm between the product cards, as a Quasar spacing token. Fed from
   // `pageProps.gutter` by the page contract so one setting spaces the whole page.
   gutter: { type: String, default: 'xs' }
@@ -136,8 +135,6 @@ const {
   progressColor, progressIcon, progressLabel
 } = useRestockView()
 
-const paddingClass = computed(() => `q-px-${props.padding}`)
-const spacingClass = computed(() => `q-gutter-y-${props.gutter}`)
 const finalTitle = computed(() => evaluate(props.title))
 
 const groups = computed(() => (Array.isArray(props.items) ? props.items : productGroups.value))

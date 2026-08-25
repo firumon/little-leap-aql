@@ -1,5 +1,5 @@
 <template>
-  <div :class="spacingClass">
+  <div>
     <SectionDividerLabel :label="finalTitle" />
 
     <q-card flat bordered :class="ui.cardClass">
@@ -73,14 +73,12 @@ defineOptions({ name: 'OutletReturnsViewReturnIdentity', inheritAttrs: false })
 const props = defineProps({
   title: { type: [String, Function], default: 'Return Details' },
   // `(record, config) => 'positive'`. Overrides the Progress-derived status colour.
-  color: { type: [String, Function], default: null },
-  padding: { type: String, default: 'sm' }
+  color: { type: [String, Function], default: null }
 })
 
 const { evaluate, ui } = useReturnViewContext()
 const { record, pending, outletName, progressColor, progressIcon, progressLabel } = useReturnView()
 
-const spacingClass = computed(() => `q-px-${props.padding}`)
 const finalTitle = computed(() => evaluate(props.title))
 
 const statusColor = computed(() => evaluate(props.color) || progressColor(record.value?.Progress))

@@ -9,13 +9,16 @@
       <q-spinner-dots color="primary" size="32px" />
     </div>
 
-    <!-- Resolved: render the matched section component with all merged props -->
-    <component
+    <!-- Resolved: the wrapper carries the page's section padding, because
+         inheritAttrs:false here (and in most section widgets) drops the class
+         Page.vue puts on this placeholder. -->
+    <div
       v-else-if="resolvedComponent"
-      :is="resolvedComponent"
       :key="preparedProps.section"
-      v-bind="finalProps"
-    />
+      :class="sectionWrapperClass"
+    >
+      <component :is="resolvedComponent" v-bind="finalProps" />
+    </div>
 
     <!-- Fallback: no section component found for this context -->
     <div v-else key="fallback" class="flex flex-center q-pa-xl">
@@ -54,4 +57,14 @@ const attrs = useAttrs()
 const preparedProps = computed(() => ({ ...attrs, section: props.section }))
 
 const { ready, resolvedComponent, finalProps } = useSectionResolver(preparedProps)
+
+const sectionWrapperClass = computed(() => {
+  const cfg = finalProps.value || {}
+  const token = cfg.sectionPadding || cfg.padding
+  const ignored = (cfg.ignorePadding || []).includes(props.section)
+  return [
+    token && !ignored ? `q-px-${token}` : null,
+    cfg.sectionClass || null
+  ].filter(Boolean)
+})
 </script>

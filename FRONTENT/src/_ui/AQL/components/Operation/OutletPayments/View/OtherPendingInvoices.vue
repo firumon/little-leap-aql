@@ -1,5 +1,5 @@
 <template>
-  <div v-if="rows.length" :class="spacingClass">
+  <div v-if="rows.length">
     <SectionDividerLabel :label="finalTitle" />
 
     <AppList
@@ -60,13 +60,11 @@ import { dueText } from 'src/_ui/AQL/composables/Operation/OutletPayments/Index/
 defineOptions({ name: 'OutletPaymentsViewOtherPendingInvoices', inheritAttrs: false })
 
 const props = defineProps({
-  title: { type: [String, Function], default: 'Other Open Invoices' },
-  padding: { type: String, default: 'sm' }
+  title: { type: [String, Function], default: 'Other Open Invoices' }
 })
 
 const { evaluate, money, otherPendingInvoices, payInvoice } = useOutletPaymentViewContext()
 
-const spacingClass = computed(() => `q-px-${props.padding}`)
 const finalTitle = computed(() => evaluate(props.title))
 
 const canCreate = computed(() => canCreatePayment())

@@ -3,7 +3,7 @@
        then not shown is indistinguishable from one that was never recorded, and this is
        the page a dispute gets settled on — so the empty state is part of the answer here
        rather than noise (§10.4). -->
-  <div :class="spacingClass">
+  <div>
     <SectionDividerLabel :label="finalTitle" />
     <q-card v-if="!rows.length" flat bordered :class="ui.cardClass">
       <q-card-section class="text-center q-py-lg">
@@ -76,14 +76,12 @@ const META_LAYOUT = ['label', 'chip']
 const props = defineProps({
   title: { type: [String, Function], default: 'Returns' },
   items: { type: Array, default: null },
-  padding: { type: String, default: 'sm' },
   gutter: { type: String, default: 'sm' }
 })
 
 const { evaluate, ui } = useConsumptionViewContext()
 const { outletReturns, relatedColor, relatedLabel } = useConsumptionView()
 
-const spacingClass = computed(() => `q-px-${props.padding}`)
 const finalTitle = computed(() => evaluate(props.title))
 const rows = computed(() => (props.items === null ? outletReturns.value : props.items))
 

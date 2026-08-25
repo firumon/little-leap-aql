@@ -1,5 +1,5 @@
 <template>
-  <div v-if="locked" :class="spacingClass">
+  <div v-if="locked">
     <q-banner rounded class="bg-orange-1 text-body2">
       <template #avatar><q-icon name="lock" color="warning" /></template>
       {{ message }}
@@ -21,13 +21,7 @@ import {
 
 defineOptions({ name: 'OutletDeliveriesEditLockBanner', inheritAttrs: false })
 
-const props = defineProps({
-  padding: { type: String, default: 'sm' }
-})
-
 const { resourceRecord } = useDeliveryFormContext()
-
-const spacingClass = computed(() => `q-px-${props.padding}`)
 
 const record = computed(() => resourceRecord?.record?.value || null)
 

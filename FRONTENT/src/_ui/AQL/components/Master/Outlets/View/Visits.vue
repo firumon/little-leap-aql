@@ -3,7 +3,6 @@
     :title="finalTitle"
     :items="visits"
     :list="list"
-    :padding="padding"
     empty-title="No visits recorded"
     empty-text="Nobody has been scheduled to this outlet yet."
     empty-icon="event_busy"
@@ -21,13 +20,6 @@
  * The card reports; it does not offer to plan one. The Plan Visit entry point lives in the
  * Action subsystem, which owns its permission gate.
  *
- * ── SPACING COMES FROM THE PAGE, THROUGH THE `padding` PROP ──
- * `Page.vue` puts `q-px-{pageProps.sectionPadding}` on the placeholder AND passes the same
- * token as a `:padding` prop. Only the prop reaches this component: `inheritAttrs: false`
- * (§12.1, mandatory on the leaf the resolver mounts) drops the class along with the rest of
- * `$attrs`. So the inset is applied from the declared prop — the sanctioned channel for a
- * section's horizontal inset (§7.5, §10.2). Vertical rhythm stays the page body's gutter.
- *
  * No `<style>` block (CORE_ARCHITECTURE_RULES §7).
  */
 import { computed } from 'vue'
@@ -37,16 +29,7 @@ import { useOutletViewContext } from 'src/_ui/AQL/composables/Master/Outlets/Vie
 defineOptions({ name: 'OutletsViewVisits', inheritAttrs: false })
 
 const props = defineProps({
-  title: { type: [String, Function], default: 'Visits' },
-  // Horizontal inset, supplied by `Page.vue` as `:padding="pageProps.sectionPadding"`.
-  //
-  // Needed because this component sets `inheritAttrs: false` (§12.1 — it is the leaf the
-  // resolver mounts), which DROPS the `q-px-{sectionPadding}` class `Page.vue` also puts on
-  // the placeholder. The framework passes the same token as a real PROP for exactly this
-  // case: a declared `padding` prop is the sanctioned channel for a section's horizontal
-  // inset (§7.5, §10.2) and the only one that survives a leaf. Vertical rhythm still belongs
-  // to the page body's gutter.
-  padding: { type: String, default: 'sm' }
+  title: { type: [String, Function], default: 'Visits' }
 })
 
 const { evaluate, visits, visitMeta, openRecord } = useOutletViewContext()

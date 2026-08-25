@@ -1,5 +1,5 @@
 <template>
-  <div :class="spacingClass">
+  <div>
     <SectionDividerLabel :label="finalTitle" />
     <q-card flat bordered class="page-card aql-premium-gradient-card">
       <q-card-section v-if="pending">
@@ -136,8 +136,6 @@ const resourceRecord = inject('resourceRecord', null)
 function evalProp (val) {
   return evaluateProp(val, resourceRecord, resourceConfig)
 }
-
-const spacingClass = computed(() => `q-px-${props.padding}`)
 
 const finalTitle = computed(() => evalProp(props.title))
 

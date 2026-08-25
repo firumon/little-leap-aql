@@ -1,5 +1,5 @@
 <template>
-  <MetricCards :title="finalTitle" :items="items" :class="paddingClass" />
+  <MetricCards :title="finalTitle" :items="items" />
 </template>
 
 <script setup>
@@ -30,23 +30,13 @@ import { useOutletViewContext } from 'src/_ui/AQL/composables/Master/Outlets/Vie
 defineOptions({ name: 'OutletsViewSummaryStats', inheritAttrs: false })
 
 const props = defineProps({
-  title: { type: [String, Function], default: 'Open Positions' },
-  // Horizontal inset, supplied by `Page.vue` as `:padding="pageProps.sectionPadding"`.
-  //
-  // Needed because this component sets `inheritAttrs: false` (§12.1 — it is the leaf the
-  // resolver mounts), which DROPS the `q-px-{sectionPadding}` class `Page.vue` also puts on
-  // the placeholder. The framework passes the same token as a real PROP for exactly this
-  // case: a declared `padding` prop is the sanctioned channel for a section's horizontal
-  // inset (§7.5, §10.2) and the only one that survives a leaf. Vertical rhythm still belongs
-  // to the page body's gutter.
-  padding: { type: String, default: 'sm' }
+  title: { type: [String, Function], default: 'Open Positions' }
 })
 
 const {
   evaluate, pending, money, plannedVisits, pendingRestocks, openReturns, outstanding, stockUnits
 } = useOutletViewContext()
 
-const paddingClass = computed(() => (props.padding ? `q-px-${props.padding}` : ''))
 const finalTitle = computed(() => evaluate(props.title))
 
 const items = computed(() => {

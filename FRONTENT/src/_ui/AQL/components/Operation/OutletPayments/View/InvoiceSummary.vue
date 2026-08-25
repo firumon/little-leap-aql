@@ -1,5 +1,5 @@
 <template>
-  <div v-if="invoice" :class="spacingClass">
+  <div v-if="invoice">
     <SectionDividerLabel :label="finalTitle" />
 
     <q-card :class="ui.cardClass">
@@ -87,8 +87,7 @@ import { useOutletPaymentViewContext } from 'src/_ui/AQL/composables/Operation/O
 defineOptions({ name: 'OutletPaymentsViewInvoiceSummary', inheritAttrs: false })
 
 const props = defineProps({
-  title: { type: [String, Function], default: 'Credited Invoice' },
-  padding: { type: String, default: 'sm' }
+  title: { type: [String, Function], default: 'Credited Invoice' }
 })
 
 const {
@@ -96,7 +95,6 @@ const {
   invoicePaidSoFar, invoiceBalance, invoiceProgressMetaOf, payInvoice
 } = useOutletPaymentViewContext()
 
-const spacingClass = computed(() => `q-px-${props.padding}`)
 const finalTitle = computed(() => evaluate(props.title))
 
 const invoiceMeta = computed(() => invoiceProgressMetaOf(invoice.value))

@@ -1,5 +1,5 @@
 ﻿<template>
-  <div :class="spacingClass">
+  <div>
     <SectionDividerLabel :label="finalTitle" />
 
     <q-card flat>
@@ -80,8 +80,6 @@ const nav = useResourceNav()
 function evalProp (val) {
   return evaluateProp(val, resourceRecord, resourceConfig)
 }
-
-const spacingClass = computed(() => `q-px-${props.padding}`)
 
 const finalTitle = computed(() => evalProp(props.title))
 const finalEmptyText = computed(() => evalProp(props.emptyText))

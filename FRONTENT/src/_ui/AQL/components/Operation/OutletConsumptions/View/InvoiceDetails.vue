@@ -1,5 +1,5 @@
 <template>
-  <div v-if="invoice" :class="spacingClass">
+  <div v-if="invoice">
     <SectionDividerLabel :label="finalTitle" />
     <q-card flat bordered :class="ui.cardClass">
       <q-card-section>
@@ -75,15 +75,13 @@ import { netPayableOf, storedTaxBreakdown } from 'src/_resource/Operation/Outlet
 defineOptions({ name: 'OutletConsumptionsViewInvoiceDetails', inheritAttrs: false })
 
 const props = defineProps({
-  title: { type: [String, Function], default: 'Invoice' },
-  padding: { type: String, default: 'sm' }
+  title: { type: [String, Function], default: 'Invoice' }
 })
 
 const { evaluate, ui, nav } = useConsumptionViewContext()
 const { invoice, invoiceSiblings, relatedColor, relatedIcon, relatedLabel } = useConsumptionView()
 const { _C } = useCurrency()
 
-const spacingClass = computed(() => `q-px-${props.padding}`)
 const finalTitle = computed(() => evaluate(props.title))
 const siblings = computed(() => invoiceSiblings.value)
 

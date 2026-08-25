@@ -1,6 +1,6 @@
 <template>
   <!-- Strict hide rule: nothing renders unless a row carries a non-zero figure. -->
-  <div v-if="items.length && series.length" :class="paddingClass">
+  <div v-if="items.length && series.length">
     <SectionDividerLabel v-if="resolvedTitle" :label="resolvedTitle" />
     <MultiSeriesBarsWidget
       :items="items"
@@ -34,17 +34,13 @@ const props = defineProps({
   maxRows: { type: Number, default: 12 },
   // Empty by design: the resource's modifier relays its own `ui.cardClass`.
   cardClass: { type: [String, Array, Object, Function], default: '' },
-  rowStaggerMs: { type: Number, default: 40 },
-  // `inheritAttrs: false` drops Page.vue's `q-px-*`, so the inset arrives as a prop.
-  padding: { type: String, default: 'sm' }
+  rowStaggerMs: { type: Number, default: 40 }
 })
 
 const resourceConfig = inject('resourceConfig', null)
 const resourceRecord = inject('resourceRecord', null)
 
 const evaluate = (val) => evaluateProp(val, resourceRecord, resourceConfig)
-
-const paddingClass = computed(() => (props.padding ? `q-px-${props.padding}` : ''))
 
 const resolvedTitle = computed(() => evaluate(props.title) || '')
 const resolvedCardClass = computed(() => evaluate(props.cardClass) || '')

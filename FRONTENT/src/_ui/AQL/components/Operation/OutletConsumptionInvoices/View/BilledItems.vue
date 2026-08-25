@@ -1,5 +1,5 @@
 <template>
-  <div :class="spacingClass">
+  <div>
     <SectionDividerLabel :label="finalTitle" />
 
     <AqlList
@@ -48,13 +48,11 @@ import { useInvoiceViewContext } from 'src/_ui/AQL/composables/Operation/OutletC
 defineOptions({ name: 'OutletConsumptionInvoicesViewBilledItems', inheritAttrs: false })
 
 const props = defineProps({
-  title: { type: [String, Function], default: 'Billed Items' },
-  padding: { type: String, default: 'sm' }
+  title: { type: [String, Function], default: 'Billed Items' }
 })
 
 const { evaluate, items, money, skuLabelOf } = useInvoiceViewContext()
 
-const spacingClass = computed(() => `q-px-${props.padding}`)
 const finalTitle = computed(() => evaluate(props.title))
 
 const num = (value) => Number(value) || 0

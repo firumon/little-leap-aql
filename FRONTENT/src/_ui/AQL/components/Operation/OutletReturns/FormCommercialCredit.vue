@@ -1,5 +1,5 @@
 <template>
-  <div :class="spacingClass">
+  <div>
     <SectionDividerLabel label="COMMERCIAL CREDIT" />
     <q-card flat bordered :class="ui.cardClass">
       <q-card-section>
@@ -33,7 +33,6 @@ defineOptions({ name: 'OutletReturnsFormCommercialCredit', inheritAttrs: false }
 const attrs = useAttrs()
 const gutter = computed(() => attrs.gutter || 'sm')
 const gutterXClass = computed(() => `q-col-gutter-x-${gutter.value}`)
-const spacingClass = computed(() => `q-gutter-y-${gutter.value}`)
 
 const { ui, invoiceRequired, setInvoiceRequired } = useReturnFormFields()
 </script>

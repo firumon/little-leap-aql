@@ -1,5 +1,5 @@
 <template>
-  <div :class="spacingClass">
+  <div>
     <q-card :class="ui.cardClass">
       <q-card-section class="q-pb-none">
         <div class="row items-start justify-between no-wrap q-gutter-x-sm">
@@ -74,16 +74,13 @@ import { useInvoiceViewContext } from 'src/_ui/AQL/composables/Operation/OutletC
 defineOptions({ name: 'OutletConsumptionInvoicesViewInvoiceHeader', inheritAttrs: false })
 
 const props = defineProps({
-  title: { type: [String, Function], default: 'Invoice' },
-  padding: { type: String, default: 'sm' }
+  title: { type: [String, Function], default: 'Invoice' }
 })
 
 const {
   ui, record, row, outletName, progressMeta,
   balance, collected, payableText, money, isCancelled, isPaid
 } = useInvoiceViewContext()
-
-const spacingClass = computed(() => `q-px-${props.padding}`)
 
 const balanceLabel = computed(() => {
   if (isCancelled.value) return 'Cancelled — nothing to pay'

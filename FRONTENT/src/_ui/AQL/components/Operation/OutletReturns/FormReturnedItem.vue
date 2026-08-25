@@ -1,5 +1,5 @@
 <template>
-  <div :class="spacingClass">
+  <div>
     <q-banner v-if="outletLocked" dense rounded class="bg-blue-1 text-body2 q-mb-sm">
       <template #avatar><q-icon name="info" color="primary" /></template>
       {{ lockMessage }} <span class="text-weight-medium">{{ lockedOutletLabel }}</span>.
@@ -49,7 +49,6 @@ const attrs = useAttrs()
 const gutter = computed(() => attrs.gutter || 'sm')
 const gutterXClass = computed(() => `q-col-gutter-x-${gutter.value}`)
 const gutterYClass = computed(() => `q-gutter-y-${gutter.value}`)
-const spacingClass = computed(() => `q-gutter-y-${gutter.value}`)
 
 const {
   ui,

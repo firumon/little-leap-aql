@@ -7,7 +7,6 @@
     :note="warehouseTrack?.disposalReason || ''"
     note-label="Disposal Reason"
     :pending="pending"
-    :padding="padding"
   />
 </template>
 
@@ -35,8 +34,7 @@ import { useReturnViewContext } from 'src/_ui/AQL/composables/Operation/OutletRe
 defineOptions({ name: 'OutletReturnsViewWarehouseStatus', inheritAttrs: false })
 
 const props = defineProps({
-  title: { type: [String, Function], default: 'Physical Stock' },
-  padding: { type: String, default: 'sm' }
+  title: { type: [String, Function], default: 'Physical Stock' }
 })
 
 const { evaluate } = useReturnViewContext()

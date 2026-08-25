@@ -1,5 +1,5 @@
 <template>
-  <div :class="spacingClass">
+  <div>
     <!-- THE EXCEPTION, FIRST. A cancelled receipt still shows an amount, and an amount reads
          as collected money until the reversal is stated beside it. -->
     <q-banner v-if="isPaymentCancelled" dense rounded class="bg-red-1 text-red-10 q-mb-sm">
@@ -126,16 +126,13 @@ import { useOutletPaymentViewContext } from 'src/_ui/AQL/composables/Operation/O
 defineOptions({ name: 'OutletPaymentsViewPaymentSummary', inheritAttrs: false })
 
 const props = defineProps({
-  title: { type: [String, Function], default: 'Payment' },
-  padding: { type: String, default: 'sm' }
+  title: { type: [String, Function], default: 'Payment' }
 })
 
 const {
   ui, money, record, outletName, isPaymentCancelled, saving,
   canCancel, cancelDialogOpen, cancelComment, openCancelDialog, confirmCancel
 } = useOutletPaymentViewContext()
-
-const spacingClass = computed(() => `q-px-${props.padding}`)
 
 const amount = computed(() => Number(record.value?.Amount ?? record.value?.amount) || 0)
 

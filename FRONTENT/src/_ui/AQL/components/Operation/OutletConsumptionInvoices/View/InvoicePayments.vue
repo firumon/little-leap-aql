@@ -1,5 +1,5 @@
 <template>
-  <div :class="spacingClass">
+  <div>
     <SectionDividerLabel :label="finalTitle" />
     <AqlList
       :items="rows"
@@ -66,13 +66,11 @@ import { useInvoiceViewContext } from 'src/_ui/AQL/composables/Operation/OutletC
 defineOptions({ name: 'OutletConsumptionInvoicesViewInvoicePayments', inheritAttrs: false })
 
 const props = defineProps({
-  title: { type: [String, Function], default: 'Payments' },
-  padding: { type: String, default: 'sm' }
+  title: { type: [String, Function], default: 'Payments' }
 })
 
 const { evaluate, ui, payments, collected, balance, settledOff, settlement, money } = useInvoiceViewContext()
 
-const spacingClass = computed(() => `q-px-${props.padding}`)
 const finalTitle = computed(() => evaluate(props.title))
 
 /** Payment mode → the icon that reads fastest in a list. */

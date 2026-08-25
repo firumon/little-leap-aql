@@ -1,5 +1,5 @@
 <template>
-  <div v-if="pending || timeline.length" :class="spacingClass">
+  <div v-if="pending || timeline.length">
     <SectionDividerLabel :label="finalTitle" />
 
     <q-card flat bordered :class="ui.cardClass">
@@ -65,14 +65,12 @@ import { useReturnViewContext } from 'src/_ui/AQL/composables/Operation/OutletRe
 defineOptions({ name: 'OutletReturnsViewReturnTimeline', inheritAttrs: false })
 
 const props = defineProps({
-  title: { type: [String, Function], default: 'History' },
-  padding: { type: String, default: 'sm' }
+  title: { type: [String, Function], default: 'History' }
 })
 
 const { evaluate, ui } = useReturnViewContext()
 const { pending, timeline } = useReturnView()
 
-const spacingClass = computed(() => `q-px-${props.padding}`)
 const finalTitle = computed(() => evaluate(props.title))
 
 const rowDelay = (index) => ({ animationDelay: `${index * ui.rowStaggerMs}ms` })

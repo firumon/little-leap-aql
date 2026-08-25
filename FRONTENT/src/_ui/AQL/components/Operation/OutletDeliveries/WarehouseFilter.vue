@@ -1,6 +1,6 @@
 <template>
   <!-- Renders nothing at all when there is nothing to choose between. See the docblock. -->
-  <div v-if="options.length > 1" :class="spacingClass">
+  <div v-if="options.length > 1">
     <q-card flat bordered :class="ui.cardClass">
       <q-card-section class="row items-center no-wrap q-col-gutter-sm">
         <div class="col-auto">
@@ -52,7 +52,7 @@ import { useDeliveryFormContext } from 'src/_ui/AQL/composables/Operation/Outlet
 defineOptions({ name: 'OutletDeliveriesWarehouseFilter', inheritAttrs: false })
 
 const props = defineProps({
-  padding: { type: String, default: 'sm' },
+
   /** Supplied by the Edit contract so the filter reads that manifest's selectable set. */
   record: { type: Object, default: null }
 })
@@ -65,7 +65,6 @@ const { warehouseOptions, warehouseFilter, setWarehouseFilter } = useDeliverySel
   record: () => props.record || resourceRecord?.record?.value || null
 })
 
-const spacingClass = computed(() => `q-px-${props.padding}`)
 const options = computed(() => warehouseOptions.value)
 const current = computed(() => warehouseFilter.value)
 

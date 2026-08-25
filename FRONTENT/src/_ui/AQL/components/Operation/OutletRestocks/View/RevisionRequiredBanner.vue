@@ -3,7 +3,7 @@
        this section must contribute nothing at all. A hidden root would still
        occupy a slot in the page body's gutter stack and open a blank gap between
        the header and the details card. -->
-  <div v-if="visible" :class="spacingClass">
+  <div v-if="visible">
     <q-card flat bordered :class="[ui.cardClass, ui.accentCardClass]" :style="ui.accentBorderStyle">
       <q-card-section>
         <!-- The heading carries the whole point of the card, so it is stated in
@@ -60,15 +60,13 @@ defineOptions({ name: 'OutletRestocksViewRevisionRequiredBanner', inheritAttrs: 
 const REVISION_REQUIRED = 'REVISION_REQUIRED'
 
 const props = defineProps({
-  title: { type: [String, Function], default: 'Revision Required' },
-  padding: { type: String, default: 'sm' }
+  title: { type: [String, Function], default: 'Revision Required' }
 })
 
 const { evaluate, ui } = useRestockViewContext()
 
 const { restock, pending, formatStampDate } = useRestockView()
 
-const spacingClass = computed(() => `q-px-${props.padding}`)
 const finalTitle = computed(() => evaluate(props.title))
 
 // Hidden while the record is still loading too: flashing an instruction card in

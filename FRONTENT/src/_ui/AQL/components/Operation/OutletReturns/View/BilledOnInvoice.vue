@@ -1,5 +1,5 @@
 <template>
-  <div v-if="pending || invoice" :class="spacingClass">
+  <div v-if="pending || invoice">
     <SectionDividerLabel :label="finalTitle" />
 
     <q-card flat bordered :class="ui.cardClass">
@@ -61,15 +61,13 @@ import { useReturnViewContext } from 'src/_ui/AQL/composables/Operation/OutletRe
 defineOptions({ name: 'OutletReturnsViewBilledOnInvoice', inheritAttrs: false })
 
 const props = defineProps({
-  title: { type: [String, Function], default: 'Billed On' },
-  padding: { type: String, default: 'sm' }
+  title: { type: [String, Function], default: 'Billed On' }
 })
 
 const { evaluate, ui } = useReturnViewContext()
 const { pending, sourceInvoice, invoiceResources } = useReturnView()
 const nav = useResourceNav()
 
-const spacingClass = computed(() => `q-px-${props.padding}`)
 const finalTitle = computed(() => evaluate(props.title))
 
 const invoice = computed(() => sourceInvoice.value)

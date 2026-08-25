@@ -2,7 +2,7 @@
   <!-- Hidden entirely when this audit raised no restock. A card saying "no replenishment"
        on every audit that needed none is a row of noise on the common case, so it uses
        `v-if` at the root rather than an empty shell (§10.4). -->
-  <div v-if="rows.length" :class="spacingClass">
+  <div v-if="rows.length">
     <SectionDividerLabel :label="finalTitle" />
     <AppList
       :items="rows"
@@ -57,14 +57,12 @@ const META_LAYOUT = ['label', 'chip']
 const props = defineProps({
   title: { type: [String, Function], default: 'Restock' },
   items: { type: Array, default: null },
-  padding: { type: String, default: 'sm' },
   gutter: { type: String, default: 'sm' }
 })
 
 const { evaluate, ui } = useConsumptionViewContext()
 const { restockLines, relatedColor, relatedLabel } = useConsumptionView()
 
-const spacingClass = computed(() => `q-px-${props.padding}`)
 const finalTitle = computed(() => evaluate(props.title))
 const rows = computed(() => (props.items === null ? restockLines.value : props.items))
 </script>

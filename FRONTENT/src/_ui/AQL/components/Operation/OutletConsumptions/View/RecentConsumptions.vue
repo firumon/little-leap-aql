@@ -1,5 +1,5 @@
 <template>
-  <div v-if="rows.length" :class="spacingClass">
+  <div v-if="rows.length">
     <SectionDividerLabel :label="finalTitle" />
     <!-- UN-NESTED, like the three list sections above it. Each prior audit is its own
          tappable card, which also makes the tap target the card the user is aiming at
@@ -47,14 +47,12 @@ defineOptions({ name: 'OutletConsumptionsViewRecentConsumptions', inheritAttrs: 
 const props = defineProps({
   title: { type: [String, Function], default: 'Recent Consumptions Here' },
   items: { type: Array, default: null },
-  padding: { type: String, default: 'sm' },
   gutter: { type: String, default: 'sm' }
 })
 
 const { evaluate, ui, nav } = useConsumptionViewContext()
 const { recentConsumptions, progressColor, progressLabel } = useConsumptionView()
 
-const spacingClass = computed(() => `q-px-${props.padding}`)
 const finalTitle = computed(() => evaluate(props.title))
 const rows = computed(() => (props.items === null ? recentConsumptions.value : props.items))
 

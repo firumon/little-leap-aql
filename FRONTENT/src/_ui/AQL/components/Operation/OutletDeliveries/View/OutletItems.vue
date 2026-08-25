@@ -1,5 +1,5 @@
 <template>
-  <div v-if="pending || rows.length" :class="spacingClass">
+  <div v-if="pending || rows.length">
     <SectionDividerLabel :label="finalTitle" />
 
     <q-card v-if="pending" flat bordered :class="ui.cardClass">
@@ -52,15 +52,13 @@ import { useDeliveryViewContext } from 'src/_ui/AQL/composables/Operation/Outlet
 defineOptions({ name: 'OutletDeliveriesViewOutletItems', inheritAttrs: false })
 
 const props = defineProps({
-  title: { type: [String, Function], default: 'Outlets & Items' },
-  padding: { type: String, default: 'sm' }
+  title: { type: [String, Function], default: 'Outlets & Items' }
 })
 
 const attrs = useAttrs()
 const { evaluate, ui } = useDeliveryViewContext()
 const { pending, outletGroups } = useDeliveryView()
 
-const spacingClass = computed(() => `q-px-${props.padding}`)
 const finalTitle = computed(() => evaluate(props.title))
 
 // Flattened, but still in outlet order, so `AqlGroupedList` regroups it exactly as it came.

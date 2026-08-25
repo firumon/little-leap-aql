@@ -1,5 +1,5 @@
 <template>
-  <div :class="spacingClass">
+  <div>
     <SectionDividerLabel :label="title" />
 
     <q-card flat bordered :class="ui.cardClass">
@@ -91,12 +91,10 @@ const props = defineProps({
   lines: { type: Array, default: () => [] },
   note: { type: String, default: '' },
   noteLabel: { type: String, default: 'Note' },
-  pending: { type: Boolean, default: false },
-  padding: { type: String, default: 'sm' }
+  pending: { type: Boolean, default: false }
 })
 
 const ui = useAQLConfig()
 
-const spacingClass = computed(() => `q-px-${props.padding}`)
 const rowDelay = (index) => ({ animationDelay: `${index * ui.rowStaggerMs}ms` })
 </script>

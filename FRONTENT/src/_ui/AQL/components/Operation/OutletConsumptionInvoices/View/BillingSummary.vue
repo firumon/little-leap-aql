@@ -1,5 +1,5 @@
 <template>
-  <div :class="spacingClass">
+  <div>
     <SectionDividerLabel :label="finalTitle" />
 
     <q-card :class="ui.cardClass">
@@ -74,13 +74,11 @@ import { useInvoiceViewContext } from 'src/_ui/AQL/composables/Operation/OutletC
 defineOptions({ name: 'OutletConsumptionInvoicesViewBillingSummary', inheritAttrs: false })
 
 const props = defineProps({
-  title: { type: [String, Function], default: 'Billing Summary' },
-  padding: { type: String, default: 'sm' }
+  title: { type: [String, Function], default: 'Billing Summary' }
 })
 
 const { evaluate, ui, record, taxBreakdown, policy, payableText, money } = useInvoiceViewContext()
 
-const spacingClass = computed(() => `q-px-${props.padding}`)
 const finalTitle = computed(() => evaluate(props.title))
 
 const num = (value) => Number(value) || 0

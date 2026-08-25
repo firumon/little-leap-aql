@@ -1,5 +1,5 @@
 <template>
-  <div v-if="pending || record" :class="spacingClass">
+  <div v-if="pending || record">
     <SectionDividerLabel :label="finalTitle" />
 
     <q-card flat bordered :class="ui.cardClass">
@@ -44,15 +44,13 @@ import { useReturnViewContext } from 'src/_ui/AQL/composables/Operation/OutletRe
 defineOptions({ name: 'OutletReturnsViewReturnedItem', inheritAttrs: false })
 
 const props = defineProps({
-  title: { type: [String, Function], default: 'Returned Item' },
-  padding: { type: String, default: 'sm' }
+  title: { type: [String, Function], default: 'Returned Item' }
 })
 
 const { evaluate, ui } = useReturnViewContext()
 const { record, pending, skuName, creditValue, reasonLabel } = useReturnView()
 const { _C } = useCurrency()
 
-const spacingClass = computed(() => `q-px-${props.padding}`)
 const finalTitle = computed(() => evaluate(props.title))
 
 const quantity = computed(() => Math.abs(Number(record.value?.Qty) || 0))

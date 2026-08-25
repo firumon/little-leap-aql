@@ -335,7 +335,13 @@ export default (props, { pageState, resourceConfig }) => {
 
       if (!result.valid) return { valid: false, message: result.message }
       if (resourceConfig?.allowed(result.permissions) !== true) {
-        return { valid: false, message: 'You do not have permission to complete this consumption workflow.' }
+        const gaps = resourceConfig?.missing?.(result.permissions) || []
+        const detail = gaps.map(({ resource, action }) => `${resource} (${action})`).join(', ')
+        return {
+          valid: false,
+          message: 'You do not have permission to complete this consumption workflow.' +
+            (detail ? ` Missing: ${detail}` : '')
+        }
       }
 
       const outcome = result.outcome

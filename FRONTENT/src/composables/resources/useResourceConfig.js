@@ -159,6 +159,37 @@ export function useResourceConfig(resourceNameOverride) {
     return checkSingleAction(resConfig, query)
   }
 
+  // Same query shapes as `allowed`, but returns what is NOT granted:
+  // `[{ resource, action }]`. A whole missing resource reports action `*`.
+  const missing = (query, targetResourceName) => {
+    if (!query) return [{ resource: targetResourceName || resourceName.value || '(unknown)', action: '*' }]
+
+    if (typeof query === 'object' && !Array.isArray(query)) {
+      const gaps = []
+      for (const [resName, actQuery] of Object.entries(query)) {
+        const resConfig = findResourceConfig(auth, resName)
+        if (!resConfig) {
+          gaps.push({ resource: resName, action: '*' })
+          continue
+        }
+        const actions = Array.isArray(actQuery) ? actQuery : [actQuery]
+        for (const act of actions) {
+          if (!checkSingleAction(resConfig, act)) gaps.push({ resource: resName, action: String(act) })
+        }
+      }
+      return gaps
+    }
+
+    const name = targetResourceName || resourceName.value || '(unknown)'
+    const resConfig = targetResourceName ? findResourceConfig(auth, targetResourceName) : activeConfig.value
+    if (!resConfig) return [{ resource: name, action: '*' }]
+
+    const actions = Array.isArray(query) ? query : [query]
+    return actions
+      .filter((act) => !checkSingleAction(resConfig, act))
+      .map((act) => ({ resource: resConfig.name || name, action: String(act) }))
+  }
+
   const requiredHeaders = computed(() => {
     const raw = activeConfig.value?.requiredHeaders || ''
     return raw ? raw.split(',').map(h => h.trim()).filter(Boolean) : []
@@ -179,7 +210,8 @@ export function useResourceConfig(resourceNameOverride) {
     defaultValues,
     additionalActions,
     permissions,
-    allowed
+    allowed,
+    missing
   }
 }
 

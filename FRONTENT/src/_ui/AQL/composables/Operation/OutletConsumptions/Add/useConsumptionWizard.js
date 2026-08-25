@@ -1,4 +1,5 @@
 import { computed } from 'vue'
+import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useConsumptionAddContext } from './useConsumptionAddContext'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 import { useOutletResource } from 'src/_resource/Master/Outlets/composables/useOutletResource'
@@ -586,8 +587,17 @@ export function useConsumptionWizard () {
 
   // ── Step 6: visit completion ───────────────────────────────────────────────
 
-  const completeVisit = computed(() => get(F.COMPLETE_VISIT, true) === true && !!visitCode.value)
-  const scheduleNextVisit = computed(() => get(F.SCHEDULE_NEXT, true) === true)
+  // Both default ON, and both are additionally gated on the visit action they will
+  // actually claim at submit time. The page contract hides the matching content for a
+  // role that lacks the action; without the same gate here the default would still put
+  // the claim in the batch and the whole audit would be refused over a hidden toggle.
+  const visitGate = () => useResourceConfig('OutletVisits')
+
+  const completeVisit = computed(() =>
+    get(F.COMPLETE_VISIT, true) === true && !!visitCode.value && !!visitGate().allowed('complete'))
+
+  const scheduleNextVisit = computed(() =>
+    get(F.SCHEDULE_NEXT, true) === true && !!visitGate().allowed('create'))
 
   /** The outlet's own cadence, or the backend's configured default. Never a literal. */
   const frequencyDays = computed(() => visitFrequencyFor(outletCode.value, operatingRules.items.value))

@@ -43,6 +43,14 @@ export default {
   ],
   contents: [],
 
+  // Declarative gating (useSectionResolver). A section that renders ANOTHER resource's
+  // rows is hidden from a role that cannot read that resource; the rest render as before.
+  permissions: {
+    RestockDetails: ['OutletRestocks:read'],
+    InvoiceDetails: ['OutletConsumptionInvoices:read'],
+    Returns: ['OutletReturns:read']
+  },
+
   PropsPageHeader: { title: 'Outlet Consumption' },
   PropsConsumptionHeader: { title: 'Consumption Details' },
   PropsConsumedItems: { title: 'Consumed Items' },

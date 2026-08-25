@@ -59,7 +59,7 @@ const asList = (value) => (Array.isArray(value) ? value : [])
  * Claim one action on one resource, keeping anything already claimed.
  *
  * Two legs of a chain routinely touch the SAME resource with DIFFERENT actions — this
- * submission completes one visit (`update`) and schedules another (`create`). A plain
+ * submission completes one visit (`complete`) and schedules another (`create`). A plain
  * overwrite would silently drop whichever ran first, and the batch would then execute a
  * write the user was never gated on. `allowed()` AND-s an array of actions for one
  * resource (`useResourceConfig.checkActionsList`), so the union is expressed as an array
@@ -267,11 +267,11 @@ export function buildConsumptionWorkflowChainRequests ({
     requests.push(...next.requests)
     mergePermissions(permissions, next.permissions)
   }
-  // Both visit legs claim the SAME resource key — completion `update`, scheduling `create`
-  // — so a plain merge lets whichever ran last silently drop the other's claim. Completion
-  // is restated here, after the merge, so a submission doing both is gated on the write it
-  // actually performs against an EXISTING record rather than only on the create.
-  if (completingVisit) claim(permissions, VISITS, 'update')
+  // Both visit legs claim the SAME resource key — completion `complete`, scheduling
+  // `create` — so a plain merge lets whichever ran last silently drop the other's claim.
+  // Completion is restated here, after the merge, so a submission doing both is gated on
+  // the registered action it actually performs rather than only on the create.
+  if (completingVisit) claim(permissions, VISITS, 'complete')
 
   // 7. Replenishment, in whichever mode step 1 and step 4 selected — delegated to
   //    OutletRestocks' own domain builder. With no sale there is no consumption header to
@@ -292,6 +292,9 @@ export function buildConsumptionWorkflowChainRequests ({
     requests.push(...restock.requests)
     mergePermissions(permissions, restock.permissions)
     claim(permissions, RESTOCK_ITEMS, 'create')
+    // A DIRECT restock skips the approval queue — it IS the approval, so it is gated on
+    // `approve` as well as `create`, not on `create` alone.
+    if (directRestock === true) claim(permissions, RESTOCKS, 'approve')
   }
 
   // Nothing at all to write is not a submission. Reachable only if validation let an empty

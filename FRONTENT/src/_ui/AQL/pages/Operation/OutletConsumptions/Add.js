@@ -1,21 +1,5 @@
-// OutletConsumptions › Add — page contract.
-//
-// A six-step audit wizard. One content per thing the user is deciding, each listed here
-// with its own step (UI_CONTENT_SYSTEM §6):
-//
-//   step 1  Context         outlet, planned visit, whether stock is carried
-//   step 2  StockCount      the physical count
-//   step 3  SoldReview      what sold, pricing, bundled earlier audits
-//   step 4  RestockOptions  restock on/off, direct or approval, delivered now
-//           RestockItems    the restock lines, add drawer, coverage warning
-//   step 5  PendingReturns  unsettled returns to credit — SKIPPED when there are none
-//   step 6  VisitOptions    read-only summary, visit completion, next visit
-//
-// The button table per step lives in `Add/PageAction.js`; the step assignment lives here.
-//
-// `reload: false` — the counts are owned by `pageState`, and a reload mid-count would
-// discard shelf work with no undo. There is NO edit page: a consumption is immutable, so
-// correcting a miscount is a fresh audit.
+// OutletConsumptions › Add — a six-step audit wizard. One content per decision;
+// the button table per step lives in `Add/PageAction.js`.
 export default {
   sections: ['PageHeader'],
   contents: [
@@ -25,8 +9,20 @@ export default {
     'RestockOptions',
     'RestockItems',
     'PendingReturns',
-    'VisitOptions'
+    'VisitSummary',
+    'CompleteVisit',
+    'ScheduleNextVisit'
   ],
+
+  // Declarative gating (useContentResolver). Each leg claims the SAME action its Layer 2
+  // builder claims at submit time, so a role never sees a control it would be refused.
+  permissions: {
+    RestockOptions: ['OutletRestocks:create'],
+    RestockItems: ['OutletRestocks:create'],
+    PendingReturns: ['OutletReturns:read'],
+    CompleteVisit: ['OutletVisits:complete:$OutletVisitCode'],
+    ScheduleNextVisit: ['OutletVisits:create']
+  },
 
   PropsPageHeader: {
     title: 'Record Outlet Consumption',
@@ -39,5 +35,7 @@ export default {
   PropsRestockOptions: { step: 4 },
   PropsRestockItems: { step: 4 },
   PropsPendingReturns: { step: 5 },
-  PropsVisitOptions: { step: 6 }
+  PropsVisitSummary: { step: 6 },
+  PropsCompleteVisit: { step: 6 },
+  PropsScheduleNextVisit: { step: 6 }
 }

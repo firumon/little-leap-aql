@@ -127,7 +127,7 @@
  * RESOLVER rather than patched onto a total the engine never saw. The caption under each row
  * updates on the same tick as the review step's grand total.
  *
- * The add-more expansion mirrors `OutletConsumptions/Add/RestockReview.vue` so the two
+ * The add-more expansion mirrors `OutletConsumptions/Add/RestockItems.vue` so the two
  * wizards' "add another item" control is one recurring pattern rather than two similar ones.
  * Already-billed SKUs are filtered out upstream.
  *

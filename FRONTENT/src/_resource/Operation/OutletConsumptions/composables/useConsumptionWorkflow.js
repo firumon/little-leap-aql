@@ -54,7 +54,6 @@ const OUTLET_STORAGES = 'OutletStorages'
 const text = (value) => (value == null ? '' : String(value).trim())
 const asRow = (value) => (value && typeof value === 'object' ? value : {})
 const asList = (value) => (Array.isArray(value) ? value : [])
-const isActive = (value) => text(asRow(value).Status || 'Active') === 'Active'
 
 /**
  * Claim one action on one resource, keeping anything already claimed.
@@ -105,7 +104,7 @@ function mergePermissions (permissions, incoming = {}) {
  *   1. returns          FIRST: the invoice needs their codes to record what it credited.
  *   2. consumption      the header + sold lines, as one composite save.
  *   3. outlet ledger    the negative movement for what was consumed.
- *   4. invoice          bundling any earlier un-invoiced audits the user ticked.
+ *   4. invoice          the bill for what sold on this visit.
  *   5. return settle    the returns credited against that invoice.
  *   6. visits           complete this one, plan the next — delegated to OutletVisits (§9.1).
  *   7. restock          the replenishment — delegated to OutletRestocks (§9.1).
@@ -142,8 +141,6 @@ export function buildConsumptionWorkflowChainRequests ({
   // Invoicing
   generateInvoice = true,
   priceListCode = '',
-  bundledConsumptionCodes = [],
-  consumptionItems = [],
   discountType = 'FLAT',
   discountValue = 0,
   invoiceComment = '',
@@ -221,19 +218,10 @@ export function buildConsumptionWorkflowChainRequests ({
     }
   }
 
-  // 4. The invoice, bundling any earlier un-invoiced audits the user ticked. Its lines are
-  //    the UNION of this audit's sales and every bundled audit's — resolved here, from the
-  //    stored item rows, because deciding what belongs on the bill is a domain question.
+  // 4. The invoice for this audit's sales.
   if (invoicing) {
-    const bundled = asList(bundledConsumptionCodes).map(text).filter(Boolean)
-    const bundledLines = bundled.flatMap((code) => asList(consumptionItems)
-      .map(asRow)
-      .filter((row) => text(row.OutletConsumptionCode) === code && isActive(row))
-      .map((row) => ({ SKU: row.SKU, SoldQty: row.Qty })))
-
-    const invoice = buildInvoiceRequests(entry, [...sold, ...bundledLines], {
+    const invoice = buildInvoiceRequests(entry, sold, {
       priceListCode,
-      bundledConsumptionCodes: bundled,
       returnDeduction: returnDeductionOf(returnRows, adjustedCodes),
       discountType: text(discountType) || 'FLAT',
       discountValue: Number(discountValue) || 0,
@@ -243,10 +231,9 @@ export function buildConsumptionWorkflowChainRequests ({
       calculateLineTax,
       resolvePrice
     })
-    // The engine ran once, inside the builder, and returned what it calculated. An invoice
-    // with no priced lines is REFUSED rather than submitted empty: the batch would
-    // otherwise create a zero-value invoice header and walk every bundled consumption to
-    // INVOICE_GENERATED against it, leaving them permanently unbillable.
+    // An invoice with no priced lines is REFUSED, not submitted empty: the batch would
+    // create a zero-value header and mark the consumption invoiced against it, leaving it
+    // permanently unbillable.
     if (!invoice.requests.length) {
       return { valid: false, requests: [], permissions: {}, message: 'Nothing on this invoice can be priced — check the price list.' }
     }

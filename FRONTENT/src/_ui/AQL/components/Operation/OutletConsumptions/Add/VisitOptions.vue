@@ -159,8 +159,7 @@ const summary = computed(() => {
     { label: 'Returns', value: wizard.returnRows.value.length ? `${wizard.returnRows.value.length} line(s)` : '' },
     { label: 'Invoice', value: wizard.generateInvoice.value && wizard.soldRows.value.length ? _C(wizard.invoiceTotal.value) : '' },
     { label: 'Credit applied', value: wizard.returnDeduction.value > 0 ? `− ${_C(wizard.returnDeduction.value)}` : '' },
-    { label: 'Restock', value: restockTotal > 0 ? `${restockTotal} unit(s)` : '' },
-    { label: 'Bundled consumptions', value: wizard.bundledCodes.value.length ? `${wizard.bundledCodes.value.length} earlier consumption(s)` : '' }
+    { label: 'Restock', value: restockTotal > 0 ? `${restockTotal} unit(s)` : '' }
   ].filter((line) => String(line.value).trim())
 })
 </script>

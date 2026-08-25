@@ -7,7 +7,7 @@
  * dispatches them (UI_RESOURCE_DOMAIN_LOGIC.md §3).
  *
  * This file owns the CORE writes — the consumption itself, the outlet ledger, returns, and
- * the (possibly bundled) invoice. It is the BOTTOM of the chain: `useConsumptionWorkflow.js`
+ * the invoice. It is the BOTTOM of the chain: `useConsumptionWorkflow.js`
  * beside it imports these builders, delegates the visit and restock legs to those domains,
  * and exposes `buildConsumptionWorkflowChainRequests` as the ONE entry point Layer 3 calls
  * (§9.1). The dependency runs one way — workflow → payload — so neither module's
@@ -19,7 +19,7 @@
  * `usePageState` specifically so this module's graph stays store-free (§2.1).
  */
 
-import { batchRef, batchRefList, textOrRef } from 'src/utils/appHelpers'
+import { batchRef, textOrRef } from 'src/utils/appHelpers'
 import { toDateTime24 } from 'src/utils/dateHelpers'
 import {
   compositeSaveRequest,
@@ -359,27 +359,11 @@ export function buildReturnAdjustmentRequests (returnRows = [], invoiceRef = nul
 
 // ─── 4. The invoice ───────────────────────────────────────────────────────────
 
-/**
- * The invoice header, its line items, and the state walk for EVERY consumption it covers.
- *
- * BUNDLING is the reason this is one builder rather than three. When the user bundles
- * earlier uninvoiced consumptions, one invoice covers several consumption codes, and:
- *
- *   - `OutletConsumptionCode` holds the comma-separated list. It is built with
- *     `batchRefList`, so the code of the consumption THIS batch is creating stays an
- *     unresolved `$ref` and GAS performs the join — the front-end never concatenates a
- *     reference to a record that does not exist yet (CORE_ARCHITECTURE_RULES §3).
- *   - every bundled consumption gets its own `MarkInvoiceGenerated` action, so none is
- *     left claiming to be uninvoiced. The new one is walked by `$ref`; the earlier ones by
- *     their known codes.
- *   - the line items are the UNION of all bundled consumptions' sold lines, which the
- *     caller supplies already merged — this builder prices what it is given and does not
- *     decide what belongs on the bill.
- */
+// The invoice header, its line items, and the walk that marks the consumption invoiced.
+// `OutletConsumptionCode` is a list column on the sheet, but one consumption fills it.
 export function buildInvoiceRequests (form = {}, soldLines = [], options = {}) {
   const entry = asRow(form)
   const priceListCode = text(options.priceListCode)
-  const bundledCodes = (Array.isArray(options.bundledConsumptionCodes) ? options.bundledConsumptionCodes : []).map(text).filter(Boolean)
   const actorName = text(options.actorName)
 
   // EVERY figure below comes from this one call — the same call the wizard's review step
@@ -412,8 +396,7 @@ export function buildInvoiceRequests (form = {}, soldLines = [], options = {}) {
   const { Total, ...storedTotals } = invoice.header
 
   const header = {
-    // The one column that is a LIST rather than a code. See the note above.
-    OutletConsumptionCode: batchRefList(CONSUMPTION_REF_PATH, bundledCodes),
+    OutletConsumptionCode: textOrRef(batchRef(CONSUMPTION_REF_PATH)),
     Date: invoiceDate,
     DueDate: text(options.dueDate) || invoiceDate,
     OutletCode: text(entry.OutletCode),
@@ -454,8 +437,7 @@ export function buildInvoiceRequests (form = {}, soldLines = [], options = {}) {
       resourceCreateRequest(INVOICES, header, [INVOICES]),
       resourceBulkRequest(INVOICE_ITEMS, items, [INVOICE_ITEMS]),
       ...ledger.requests,
-      markGenerated(batchRef(CONSUMPTION_REF_PATH)),
-      ...bundledCodes.map(markGenerated)
+      markGenerated(batchRef(CONSUMPTION_REF_PATH))
     ],
     permissions: ledger.permissions,
     // The whole calculation bundle, not a private summary shape — a caller that wants to

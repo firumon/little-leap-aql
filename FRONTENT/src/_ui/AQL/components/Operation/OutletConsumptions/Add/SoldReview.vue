@@ -31,34 +31,6 @@
       </AqlList>
     </q-card>
 
-    <template v-if="wizard.bundleCandidates.value.length">
-      <SectionDividerLabel label="BUNDLE EARLIER CONSUMPTIONS" />
-      <q-card flat bordered :class="ui.cardClass">
-      <q-card-section>
-        <div class="text-caption text-grey-8 q-pb-sm">
-          This outlet has earlier consumptions that were never billed. Tick any to put them on
-          this same invoice.
-        </div>
-        <q-list separator dense>
-          <q-item v-for="candidate in wizard.bundleCandidates.value" :key="candidate.code" tag="label" v-ripple>
-            <q-item-section side top>
-              <q-checkbox
-                :model-value="wizard.bundledCodes.value.includes(candidate.code)"
-                @update:model-value="() => wizard.toggleBundled(candidate.code)"
-              />
-            </q-item-section>
-            <q-item-section :class="ui.flexWrapTextClass">
-              <q-item-label>{{ candidate.date }}</q-item-label>
-              <q-item-label caption>
-                {{ candidate.username }}<template v-if="candidate.qty !== undefined"> · {{ candidate.qty }} units</template>
-              </q-item-label>
-            </q-item-section>
-          </q-item>
-        </q-list>
-      </q-card-section>
-      </q-card>
-    </template>
-
     <SectionDividerLabel label="INVOICING" />
     <q-card flat bordered :class="ui.cardClass">
       <q-card-section>
@@ -139,10 +111,7 @@
 </template>
 
 <script setup>
-/**
- * Step 3 — what sold, which earlier audits ride along, and the invoice terms. In that order:
- * the total covers the bundled lines too, so both lists must settle before it is read.
- */
+// Step 3 — what sold and the invoice terms.
 import { computed, defineComponent, h, useAttrs } from 'vue'
 import { QItemLabel, QBtn } from 'quasar'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'

@@ -55,7 +55,6 @@ const F = {
   RETURN_META: 'ReturnMeta',
   RESTOCK_ROWS: 'RestockRows',
   ENABLE_RESTOCK: 'EnableRestock',
-  BUNDLED: 'BundledCodes',
   ADJUSTED_RETURNS: 'AdjustedReturnCodes',
   DIRECT_RESTOCK: 'DirectRestock',
   WAREHOUSE: 'RestockWarehouseCode',
@@ -100,14 +99,6 @@ export function useConsumptionWizard () {
   // tax-free total for lines that were about to be invoiced WITH tax, because the submit
   // ran later, by which time some other page had usually loaded them.
   const taxes = resource('Taxes')
-  // Opened for the same reason as `Taxes`, and it is the BUNDLING leg that needs it:
-  // `Add/PageAction.js` passes `rows('OutletConsumptionItems')` to the workflow builder,
-  // which takes the union of the bundled consumptions' lines as the invoice's lines. Left
-  // unloaded, a ticked candidate contributes nothing and the bill silently omits it. Item
-  // rows are child rows, fetched only on demand, so this page has to ask for them itself.
-  // It also gives `bundleCandidates` the quantities it prints.
-  const consumptionItems = resource('OutletConsumptionItems')
-
   const { getSku } = useSkuResource()
   const { getOutlet } = useOutletResource()
   // The stock index (outlet × SKU, built once for the whole app) — the wizard seeds and
@@ -270,7 +261,6 @@ export function useConsumptionWizard () {
     set(F.RETURN_META, {})
     // Restocks mirror sales, and there are none yet.
     set(F.RESTOCK_ROWS, [])
-    set(F.BUNDLED, [])
     set(F.ADJUSTED_RETURNS, [])
     set(F.PRICE_LIST, text(priceListForOutlet(code)?.code))
   }
@@ -380,23 +370,6 @@ export function useConsumptionWizard () {
   }
 
   /**
-   * The sold lines of every EARLIER audit the officer ticked to ride along on this bill.
-   *
-   * Read from the stored item rows, grouped by their consumption in ONE pass rather than
-   * rescanned per ticked code (CORE_ARCHITECTURE_RULES §6). Shaped exactly as the workflow
-   * builder shapes them, because the whole point is that the total shown here is the total
-   * the batch writes.
-   */
-  const bundledLines = computed(() => {
-    const wanted = new Set(bundledCodes.value.map(text).filter(Boolean))
-    if (!wanted.size) return []
-    return consumptionItems.items.value
-      .map(asRow)
-      .filter((row) => isActiveRow(row) && wanted.has(text(row.OutletConsumptionCode)))
-      .map((row) => ({ SKU: text(row.SKU), SoldQty: toNumber(row.Qty) }))
-  })
-
-  /**
    * THE invoice, calculated exactly as the submit will calculate it.
    *
    * One call to the Layer 2 engine, and every figure the review step displays is read off
@@ -411,11 +384,7 @@ export function useConsumptionWizard () {
    * total on step 3 keep up with returns ticked on step 5 and then reviewed by going Back.
    */
   const invoiceCalculation = computed(() => calculateConsumptionInvoice({
-    // Everything the bill covers: what sold on THIS visit, plus every earlier audit the
-    // officer ticked to bundle. The submit takes exactly this union, so the total confirmed
-    // on the review step is the total the batch writes — previously the bundled lines were
-    // added only at submit time, and ticking a backlog silently changed the amount.
-    lines: [...soldRows.value, ...bundledLines.value],
+    lines: soldRows.value,
     priceListCode: priceListCode.value,
     discountType: discountType.value,
     discountValue: discountValue.value,
@@ -424,14 +393,8 @@ export function useConsumptionWizard () {
     calculateLineTax: lineTaxResolver.value
   }))
 
-  /**
-   * The SAME engine over THIS visit's lines alone — what the "Sold this visit" list renders.
-   *
-   * A second call, not a second implementation: the list has to show this visit's rows, and
-   * filtering them back out of the bundled union is impossible once an earlier audit sold
-   * the same SKU. Same engine, same resolver, same policy, so the two cannot disagree about
-   * what a line costs.
-   */
+  // The same engine without the discount or return credit — per-line prices for the
+  // "Sold this visit" list, so the list and the bill cannot disagree on what a line costs.
   const visitCalculation = computed(() => calculateConsumptionInvoice({
     lines: soldRows.value,
     priceListCode: priceListCode.value,
@@ -471,37 +434,6 @@ export function useConsumptionWizard () {
   const invoiceTaxBreakdown = computed(() => invoiceCalculation.value.taxBreakdown)
   const invoicePolicy = computed(() => invoiceCalculation.value.policy)
 
-  /**
-   * Earlier consumptions at this outlet that still owe an invoice — the bundling candidates.
-   *
-   * Read from the shared Index aggregate so this list and the Index page's "Invoiceable
-   * Outlets" queue are the same set; a user who arrived from that queue sees exactly the
-   * backlog it promised.
-   *
-   * `qty` comes from Layer 2's indexed join, NOT from `row.$OutletConsumptionItems` — a
-   * record read from a list carries no `$`-prefixed child arrays, so the old expression
-   * scored every candidate "0 units" no matter how much was counted. It is `undefined`
-   * while the item rows are not loaded, and the card prints the units clause only when a
-   * real figure exists: an unloaded consumption must not be advertised as an empty one,
-   * since the tick beside it puts those lines on the bill.
-   */
-  const bundleCandidates = computed(() => index.uninvoicedConsumptions.value
-    .filter((row) => text(row.OutletCode) === outletCode.value)
-    .map((row) => ({
-      code: text(row.Code),
-      date: text(row.Date),
-      username: text(row.Username),
-      qty: index.soldQtyOfConsumption(text(row.Code))
-    }))
-    .sort((a, b) => (a.date < b.date ? 1 : -1)))
-
-  const bundledCodes = computed(() => get(F.BUNDLED, []) || [])
-  function toggleBundled (code) {
-    const value = text(code)
-    const current = bundledCodes.value
-    set(F.BUNDLED, current.includes(value) ? current.filter((entry) => entry !== value) : [...current, value])
-  }
-
   // ── Step 4: restock ────────────────────────────────────────────────────────
 
   /**
@@ -535,8 +467,10 @@ export function useConsumptionWizard () {
         ? prior
         : { SKU: sku, Quantity: defaultRestockQty(row.SystemQty, row.CurrentQty), _edited: false }
     })
-    // Hand-added SKUs that were never sold survive the re-sync.
+    // Only rows the user authored survive a SKU leaving the sales list. An untouched
+    // mirror row must follow its sale back to zero, not stick at the old quantity.
     restockRows.value.forEach((row) => {
+      if (!row._edited) return
       if (!rows.some((entry) => text(entry.SKU) === text(row.SKU))) rows.push(row)
     })
     set(F.RESTOCK_ROWS, rows.filter((row) => toNumber(row.Quantity) > 0 || row._edited))
@@ -713,18 +647,17 @@ export function useConsumptionWizard () {
     // options
     outletOptions, visitOptions, plannedVisitCards, suggestedOutlets, skuOptions, regionWarehouses,
     // resources (for a card that needs to `reload()` them)
-    resources: { outlets, visits, storages, warehouses, warehouseStorages, skus, products, returns, operatingRules, taxes, consumptionItems },
+    resources: { outlets, visits, storages, warehouses, warehouseStorages, skus, products, returns, operatingRules, taxes },
     // step 2
     countRows, hasCountRows, seedCountRows, setCurrentQty, stepCurrentQty,
     addManualReturn, removeManualReturn, soldRows, returnRows, skuLabel,
     returnMeta, metaFor, setReturnMeta,
     // step 3
     generateInvoice, priceListCode, discountType, discountValue,
-    priceOverrides, setLinePrice, resetLinePrice, resolvePrice, setGenerateInvoice, bundledLines,
+    priceOverrides, setLinePrice, resetLinePrice, resolvePrice, setGenerateInvoice,
     invoiceCalculation, invoiceHeader, invoiceLines, invoiceSubtotal, invoiceDiscount,
     invoiceTaxableAmount, invoiceTax, invoiceReturnDeduction, invoiceTotal,
     invoiceTaxBreakdown, invoicePolicy,
-    bundleCandidates, bundledCodes, toggleBundled,
     // step 4
     restockRows, enableRestock, directRestock, warehouseCode, markDelivered,
     syncRestockFromSales, setRestockQty, addRestockRow, removeRestockRow,

@@ -307,8 +307,6 @@ export default (props, { pageState, resourceConfig }) => {
         adjustedReturnCodes: get(F.ADJUSTED_RETURNS, []) || [],
         generateInvoice: generateInvoice(),
         priceListCode: priceListCode(),
-        bundledConsumptionCodes: get(F.BUNDLED, []) || [],
-        consumptionItems: rows('OutletConsumptionItems'),
         discountType: text(get(F.DISCOUNT_TYPE)),
         discountValue: get(F.DISCOUNT_VALUE, 0),
         invoiceComment: text(get(F.INVOICE_COMMENT)),

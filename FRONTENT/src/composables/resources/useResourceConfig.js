@@ -51,6 +51,85 @@ function checkActionsList(resConfig, actions) {
   return actions.every((act) => checkSingleAction(resConfig, act))
 }
 
+// ─── Declarative permission rules ─────────────────────────────────────────────
+//
+// Grammar (one rule per string):
+//   'update'                        -> action on the active resource
+//   'OutletRestocks:create'         -> action on a named resource
+//   'OutletVisits:complete:$code'   -> same, with a context token for diagnostics
+//
+// A token is looked up in `context.record`, `context.form`, then the page state's
+// node records. An unresolved token never denies: the rule falls back to the
+// user's general permission for that action on that resource.
+
+export function parsePermissionRule (rule) {
+  const raw = String(rule || '').trim()
+  if (!raw) return null
+  const [first, second, third] = raw.split(':').map((part) => part.trim())
+  if (!second) return { resource: '', action: first, token: '' }
+  return { resource: first, action: second, token: third || '' }
+}
+
+function readRowToken (source, wanted) {
+  const row = unref(source)
+  if (!row || typeof row !== 'object') return ''
+  for (const [key, value] of Object.entries(row)) {
+    if (key.toLowerCase() !== wanted) continue
+    return value == null ? '' : String(value)
+  }
+  return ''
+}
+
+function readPageStateToken (pageState, wanted) {
+  const nodes = unref(pageState)?.state?.nodes
+  if (!nodes || typeof nodes.values !== 'function') return ''
+  for (const node of nodes.values()) {
+    const hit = readRowToken(node?.record, wanted)
+    if (hit) return hit
+  }
+  return ''
+}
+
+export function resolveRuleToken (token, context = {}) {
+  const wanted = String(token || '').replace(/^\$/, '').trim().toLowerCase()
+  if (!wanted) return ''
+  return readRowToken(context.record, wanted)
+    || readRowToken(context.form, wanted)
+    || readPageStateToken(context.pageState, wanted)
+}
+
+// The rules NOT granted, as `[{ rule, resource, action, token }]`. Reactive when
+// read inside a computed: it tracks the auth store and every context ref it reads.
+export function explainMissingRules (rules, context = {}) {
+  const list = Array.isArray(rules) ? rules : (rules ? [rules] : [])
+  if (!list.length) return []
+
+  const auth = useAuthStore()
+  const gaps = []
+
+  for (const rule of list) {
+    const parsed = parsePermissionRule(rule)
+    if (!parsed || !parsed.action) continue
+
+    const resConfig = parsed.resource
+      ? findResourceConfig(auth, parsed.resource)
+      : (unref(context.config) || null)
+
+    const token = parsed.token ? resolveRuleToken(parsed.token, context) : ''
+    const name = resConfig?.name || parsed.resource || '(active)'
+
+    if (!resConfig || !checkSingleAction(resConfig, parsed.action)) {
+      gaps.push({ rule: String(rule), resource: name, action: parsed.action, token })
+    }
+  }
+
+  return gaps
+}
+
+export function evalPermissionRules (rules, context = {}) {
+  return explainMissingRules(rules, context).length === 0
+}
+
 /**
  * Resolves the current resource configuration from route params + auth store.
  * Used by all resource pages (index, view, add, edit, action).
@@ -58,29 +137,11 @@ function checkActionsList(resConfig, actions) {
 export function useResourceConfig(resourceNameOverride) {
   const auth = useAuthStore()
 
-  // WHETHER there is an override is decided ONCE, here, from the raw argument —
-  // deliberately NOT from its unwrapped value.
-  //
-  // `useRouteConfig()` calls `useRoute()`, which is an `inject()`: it is only
-  // legal during `setup()` and must therefore run synchronously on this line for
-  // the route-resolved case, never deferred into a `computed()` that first
-  // evaluates after setup has returned. So the branch that selects it cannot be
-  // reactive — a ref whose value arrives later could not retroactively make the
-  // injection legal.
-  //
-  // This costs nothing, because the three computeds below already branched on
-  // this same raw truthiness: a ref or getter is an object and has always taken
-  // the override path regardless of what it holds, and `''`/`undefined` has
-  // always taken the route path. Behaviour is unchanged for every caller; the
-  // only difference is that the route is no longer touched when it is not read,
-  // so a domain composable calling `useResourceConfig('SomeResource')` from a
-  // PageAction submit handler (outside setup — UI_RESOURCE_DOMAIN_LOGIC §3.2/§6)
-  // no longer trips the `inject()` warning.
+  // Decided ONCE from the raw argument, not its unwrapped value: useRouteConfig()
+  // calls inject() and must run synchronously inside setup().
   const hasOverride = !!resourceNameOverride
   const routeCfg = hasOverride ? null : useRouteConfig()
 
-  // The override's VALUE, unlike its presence, may legitimately be reactive.
-  // Normalised the same way `useRecord` normalises its own override.
   const overrideName = computed(() => {
     if (!hasOverride) return ''
     return typeof resourceNameOverride === 'function'
@@ -143,10 +204,6 @@ export function useResourceConfig(resourceNameOverride) {
       })
     }
 
-    // Determine target resource config. `activeConfig` is the local computed —
-    // `config` is only the name this composable RETURNS it under, so referencing
-    // `config.value` here threw a ReferenceError (ES modules are strict mode) on
-    // every allowed() call that omitted an explicit target resource.
     const resConfig = targetResourceName ? findResourceConfig(auth, targetResourceName) : activeConfig.value
     if (!resConfig) return false
 
@@ -159,8 +216,6 @@ export function useResourceConfig(resourceNameOverride) {
     return checkSingleAction(resConfig, query)
   }
 
-  // Same query shapes as `allowed`, but returns what is NOT granted:
-  // `[{ resource, action }]`. A whole missing resource reports action `*`.
   const missing = (query, targetResourceName) => {
     if (!query) return [{ resource: targetResourceName || resourceName.value || '(unknown)', action: '*' }]
 
@@ -211,19 +266,16 @@ export function useResourceConfig(resourceNameOverride) {
     additionalActions,
     permissions,
     allowed,
-    missing
+    missing,
+    evalRules: (rules, context = {}) =>
+      evalPermissionRules(rules, { config: activeConfig, ...context }),
+    missingRules: (rules, context = {}) =>
+      explainMissingRules(rules, { config: activeConfig, ...context })
   }
 }
 
-/**
- * Parses + normalizes a resource's raw `additionalActions` (an array, or the JSON
- * string the sheet stores) into the action configs every consumer sees.
- *
- * Module-scope and exported deliberately: `useResourceConfig` needs it for the
- * ACTIVE resource, but `additionalActionsPipeline` needs it for an ARBITRARY one
- * (a page queuing a workflow action against another resource), and neither may
- * grow its own copy of the whitelist below.
- */
+// Parses the sheet's raw `additionalActions` (array or JSON string) into action configs.
+// Exported because additionalActionsPipeline needs it for an ARBITRARY resource.
 export function normalizeAdditionalActions(raw) {
   let parsed = []
   if (Array.isArray(raw)) parsed = raw
@@ -235,9 +287,7 @@ export function normalizeAdditionalActions(raw) {
 
 function normalizeAction(a) {
   if (!a || !a.action) return null
-  // WHITELIST — anything not copied here is dropped before any component sees
-  // it. Add new AdditionalActions keys HERE as well as to the authoring UI, or
-  // they will vanish silently (see the `targets` note below).
+  // WHITELIST — a key not copied here is dropped before any component sees it.
   const base = {
     action: a.action,
     label: a.label || a.action,
@@ -280,15 +330,7 @@ function normalizeAction(a) {
       ? m.fields
       : (Array.isArray(a.fields) ? a.fields : [])
   }
-  // Multi-record targets (AQL_ACTION_SYSTEM.md §7). This normalizer rebuilds
-  // each action from a key WHITELIST, so anything not copied here is silently
-  // dropped before a component ever sees it — which is exactly how `targets`
-  // went missing while icon/color/label/visibleWhen all survived, making the
-  // FAB look correct while the dialog rendered only its source field.
-  //
-  // Passed through as authored: every target key is validated server-side
-  // against the trusted config, so re-deriving the shape here would only add a
-  // second place for the contract to drift.
+  // Passed through as authored: every target key is validated server-side.
   const targets = Array.isArray(m.targets)
     ? m.targets
     : (Array.isArray(a.targets) ? a.targets : [])
@@ -298,13 +340,8 @@ function normalizeAction(a) {
   return mutateBase
 }
 
-/**
- * Normalizes `visibleWhen` into a flat AND list of `{ column, op, value }`.
- *
- * Operators are canonicalised through the token evaluator, so the legacy `ne` / `nin`
- * spellings all over the seed configs in `GAS/syncAppResources.gs` land on `neq` / `not_in`
- * and every schema already in a sheet keeps evaluating.
- */
+// Flattens `visibleWhen` into an AND list of `{ column, op, value }`, canonicalising
+// legacy `ne`/`nin` spellings through the token evaluator.
 function normalizeVisibleWhen(v) {
   if (v == null) return []
   const arr = Array.isArray(v) ? v : [v]
@@ -322,22 +359,9 @@ function normalizeVisibleWhen(v) {
 
 const VISIBLE_WHEN_OPS = new Set(OPERATORS)
 
-/**
- * Whether ONE action should be offered for `record`.
- *
- * Conditions run through the shared token evaluator, so a `visibleWhen` value may be a
- * dynamic token exactly as a list-view filter may — `{ column: 'Date', op: 'lte', value:
- * '$startOfDay:0' }` hides an action on future-dated records, and `$userCode` / `$userRoles`
- * gate one on the signed-in user. Plain literals behave as they always did, save that the
- * comparison is now case-insensitive (matching list-view filters).
- *
- * `strictColumn: false` keeps the original posture that a condition naming a column the
- * record does not carry is evaluated against a blank rather than failing outright.
- *
- * @param {Object} action - a normalized action config
- * @param {Object} record - the record under test
- * @param {Object} [ctx] - token context `{ user }`; read from the auth store when omitted.
- */
+// Whether ONE action should be offered for `record`. Conditions run through the shared
+// token evaluator, so a `visibleWhen` value may be a dynamic token like a list filter.
+// `strictColumn: false` keeps a condition naming a missing column evaluating as blank.
 export function isActionVisible(action, record, ctx) {
   const conds = Array.isArray(action?.visibleWhen) ? action.visibleWhen : []
   if (!conds.length) return true
@@ -351,19 +375,8 @@ export function isActionVisible(action, record, ctx) {
   return evaluateFilter(filter, record, ctx || resolveTokenContext(), { strictColumn: false })
 }
 
-/**
- * The comparison half of a target's `when` gate — the `eq`/`ne`/`in`/`nin`/
- * `empty`/`notEmpty` grammar used by `additionalActionsSchema.isTargetActive`.
- * The server's `evaluateActionTargetCondition` in GAS/actionTargets.gs mirrors
- * this exactly and is its matched pair; keep the two in step.
- *
- * `visibleWhen` no longer routes through here — it evaluates via
- * `src/utils/tokenEvaluator`, which additionally accepts dynamic tokens and the
- * ordered/`contains` operators. Targets stay on this narrower grammar because
- * the SERVER is the authority on them and only understands these six ops.
- *
- * An unknown op returns true, so a malformed condition does not constrain.
- */
+// The comparison half of a target's `when` gate. GAS/actionTargets.gs mirrors this
+// exactly and is its matched pair; keep the two in step. An unknown op returns true.
 export function evaluateConditionOp(op, cell, value) {
   const isEmpty = cell == null || cell === ''
   switch (op) {

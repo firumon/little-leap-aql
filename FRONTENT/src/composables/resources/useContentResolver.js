@@ -2,6 +2,7 @@ import { ref, watch, computed, shallowRef, markRaw, inject } from 'vue'
 import { toPascalCase } from 'src/utils/appHelpers'
 import { resolvePlaceholderProps } from 'src/utils/placeholderProps'
 import { evaluateProp } from 'src/composables/resources/useSectionResolver'
+import { evalPermissionRules } from 'src/composables/resources/useResourceConfig'
 
 // Re-exported so content components can evaluate function-valued props exactly the
 // way section components do, without reaching into the section resolver themselves.
@@ -76,6 +77,20 @@ export function useContentResolver(preparedProps, defaultComponent = null) {
   const resourceConfig = inject('resourceConfig', null)
   const resourceRecord = inject('resourceRecord', null)
   const pageState      = inject('pageState', null)
+
+  // Declarative gate from the page contract's top-level `permissions` block:
+  //   permissions: { CompleteVisit: ['OutletVisits:complete:$code'] }
+  // A content with no entry renders unconditionally, as it always did.
+  const permitted = computed(() => {
+    const current = preparedProps.value || {}
+    const rules = current.permissions?.[current.content]
+    if (!rules) return true
+    return evalPermissionRules(rules, {
+      config: resourceConfig?.config,
+      record: resourceRecord?.record,
+      pageState
+    })
+  })
 
   // Monotonic token guarding against out-of-order async resolves: if the lookup
   // key changes again while a scan is awaiting a dynamic import, the older scan
@@ -282,5 +297,5 @@ export function useContentResolver(preparedProps, defaultComponent = null) {
     { immediate: true }
   )
 
-  return { ready, settled, resolvedComponent, finalProps }
+  return { ready, settled, permitted, resolvedComponent, finalProps }
 }

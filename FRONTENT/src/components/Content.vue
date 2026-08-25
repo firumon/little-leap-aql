@@ -5,7 +5,7 @@
        one is still occupying layout. Keys are what let Transition tell the three
        branches apart — the component's key is its content identity, so a
        placeholder that re-resolves to a different content also animates. -->
-  <Transition name="aql-page-turn" mode="out-in">
+  <Transition v-if="permitted" name="aql-page-turn" mode="out-in">
     <!-- Loading state while resolution is in progress -->
     <div v-if="!ready" key="loading" class="flex flex-center q-pa-md">
       <q-spinner-dots color="primary" size="32px" />
@@ -55,5 +55,5 @@ const attrs = useAttrs()
 // This single object is everything the resolver needs to perform its lookup.
 const preparedProps = computed(() => ({ ...attrs, content: props.content }))
 
-const { ready, resolvedComponent, finalProps } = useContentResolver(preparedProps)
+const { ready, permitted, resolvedComponent, finalProps } = useContentResolver(preparedProps)
 </script>

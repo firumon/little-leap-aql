@@ -3,7 +3,7 @@
        spinner hands off to the resolved section instead of popping. Keys are what
        let Transition tell the three branches apart — the component's key is its
        section identity, so a placeholder that re-resolves also animates. -->
-  <Transition name="aql-page-turn" mode="out-in">
+  <Transition v-if="permitted" name="aql-page-turn" mode="out-in">
     <!-- Loading state while resolution is in progress -->
     <div v-if="!ready" key="loading" class="flex flex-center q-pa-md">
       <q-spinner-dots color="primary" size="32px" />
@@ -56,7 +56,7 @@ const attrs = useAttrs()
 // This single object is everything the resolver needs to perform its lookup.
 const preparedProps = computed(() => ({ ...attrs, section: props.section }))
 
-const { ready, resolvedComponent, finalProps } = useSectionResolver(preparedProps)
+const { ready, permitted, resolvedComponent, finalProps } = useSectionResolver(preparedProps)
 
 const sectionWrapperClass = computed(() => {
   const cfg = finalProps.value || {}

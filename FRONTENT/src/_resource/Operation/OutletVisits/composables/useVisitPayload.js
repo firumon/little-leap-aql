@@ -129,7 +129,7 @@ export function buildVisitCompletionChainRequests ({ visitCode = '', actorName =
   return {
     valid: true,
     requests,
-    permissions: { [RESOURCE_NAME]: 'update' },
+    permissions: { [RESOURCE_NAME]: 'complete' },
     successMsg: 'Visit completed.'
   }
 }

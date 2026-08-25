@@ -47,6 +47,16 @@ export default {
     'ReviewAllocating',
     'ReviewPending'
   ],
+
+  // Declarative gating (useContentResolver / useSectionResolver). Each entry names the
+  // registered action its route or its foreign resource actually needs; anything not
+  // listed renders unconditionally, exactly as before.
+  permissions: {
+    WarehouseAndLocation: ['OutletRestocks:reallocate:$Code'],
+    ItemAllocating: ['OutletRestocks:reallocate:$Code'],
+    ReviewAllocating: ['OutletRestocks:reallocate:$Code', 'StockMovements:create'],
+    ReviewPending: ['OutletRestocks:reallocate:$Code']
+  },
   PropsPageHeader: {
     title: 'Reallocate Stock',
     reload: false

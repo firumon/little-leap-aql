@@ -153,16 +153,29 @@ export function isEditable (row) {
   return isPlanned(row)
 }
 
-/**
- * Whether the visit may be completed, postponed or cancelled right now.
- *
- * All three outcome transitions share one precondition — the visit is still PLANNED — and
- * one permission, `update`. Permission is resolved here from this module's own resource
- * name, never passed in (§3.2).
- */
-export function canRespond (row) {
+// Each outcome transition claims its OWN registered action, not generic `update`:
+// a role granted `canComplete` without record-edit rights must still be able to
+// close a visit. Permission is resolved from this module's own resource name (§3.2).
+function canTransition (row, action) {
   const { allowed } = useResourceConfig(RESOURCE_NAME)
-  return allowed('update') && isPlanned(row)
+  return allowed(action) && isPlanned(row)
+}
+
+export function canComplete (row) {
+  return canTransition(row, 'complete')
+}
+
+export function canPostpone (row) {
+  return canTransition(row, 'postpone')
+}
+
+export function canCancel (row) {
+  return canTransition(row, 'cancel')
+}
+
+/** Whether ANY outcome transition is open to this user right now. */
+export function canRespond (row) {
+  return canComplete(row) || canPostpone(row) || canCancel(row)
 }
 
 // ─── Dates & delay ────────────────────────────────────────────────────────────
@@ -258,6 +271,9 @@ export function useVisitProgress () {
     isResponded,
     isEditable,
     canRespond,
+    canComplete,
+    canPostpone,
+    canCancel,
     progressColor,
     progressIcon,
     progressLabel,

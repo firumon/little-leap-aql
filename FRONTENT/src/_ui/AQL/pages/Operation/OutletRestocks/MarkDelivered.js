@@ -28,6 +28,14 @@ export default {
     'SelectDeliveryItems',
     'ReviewDelivery'
   ],
+
+  // Declarative gating (useContentResolver / useSectionResolver). Each entry names the
+  // registered action its route or its foreign resource actually needs; anything not
+  // listed renders unconditionally, exactly as before.
+  permissions: {
+    SelectDeliveryItems: ['OutletRestocks:markDelivered:$Code'],
+    ReviewDelivery: ['OutletRestocks:markDelivered:$Code', 'OutletMovements:create']
+  },
   PropsPageHeader: {
     title: 'Confirm Delivery',
     reload: false

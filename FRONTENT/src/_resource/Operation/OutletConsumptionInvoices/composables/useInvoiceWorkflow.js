@@ -179,12 +179,13 @@ export function canRecordPayment (record) {
 }
 
 /**
- * Forced settlement is an `update` on the invoice, gated additionally on the document still
- * being open — a PAID invoice has nothing to settle and a CANCELLED one must not be
- * resurrected into PAID.
+ * Forced settlement claims the registered `markPaid` action, not generic `update`: a role
+ * granted canMarkPaid without record-edit rights must still be able to settle. Gated
+ * additionally on the document still being open — a PAID invoice has nothing to settle and
+ * a CANCELLED one must not be resurrected into PAID.
  */
 export function canMarkPaid (record) {
-  return !!gate().allowed({ outletConsumptionInvoice: 'update' }) && isOpen(record)
+  return !!gate().allowed({ outletConsumptionInvoice: 'markPaid' }) && isOpen(record)
 }
 
 /**

@@ -27,6 +27,13 @@ export default {
   sections: ['PageHeader'],
   contents: ['SettleBalance'],
 
+  // Declarative gating (useContentResolver / useSectionResolver). Each entry names the
+  // registered action its route or its foreign resource actually needs; anything not
+  // listed renders unconditionally, exactly as before.
+  permissions: {
+    SettleBalance: ['OutletConsumptionInvoices:markPaid:$Code']
+  },
+
   PropsPageHeader: {
     title: 'Settle Invoice',
     reload: false

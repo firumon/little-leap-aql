@@ -22,6 +22,13 @@ export default {
   sections: ['PageHeader'],
   contents: ['DepartConfirm'],
 
+  // Declarative gating (useContentResolver / useSectionResolver). Each entry names the
+  // registered action its route or its foreign resource actually needs; anything not
+  // listed renders unconditionally, exactly as before.
+  permissions: {
+    DepartConfirm: ['OutletDeliveries:makeInTransit:$Code']
+  },
+
   PropsPageHeader: {
     title: 'Dispatch Delivery',
     reload: false

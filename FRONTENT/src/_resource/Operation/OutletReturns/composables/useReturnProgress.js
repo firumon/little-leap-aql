@@ -1,4 +1,5 @@
 
+import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { sortByDate } from 'src/utils/sortHelpers'
 
 // Re-exported so a consumer that already imports this file for the workflow vocabulary
@@ -181,19 +182,25 @@ export function isEditable (record) {
     !warehouseActionCompleted(record)
 }
 
+// Each gate claims its OWN registered action, not generic `update`: a role granted
+// canWarehouseAction without record-edit rights must still be able to settle that leg.
+function may (action) {
+  return !!useResourceConfig(RESOURCE_NAME).allowed(action)
+}
+
 /** A return may be cancelled at any point before it comes to rest. */
 export function canCancel (record) {
-  return isOpen(record)
+  return may('cancel') && isOpen(record)
 }
 
 /** The warehouse leg is owed and unresolved — the `WarehouseAction` route's show condition. */
 export function canConfirmWarehouseAction (record) {
-  return warehouseActionRequired(record) && !warehouseActionCompleted(record)
+  return may('warehouseAction') && warehouseActionRequired(record) && !warehouseActionCompleted(record)
 }
 
 /** The credit is owed and unresolved — the `MarkInvoiceAdjusted` route's show condition. */
 export function canMarkInvoiceAdjusted (record) {
-  return invoiceAdjustmentRequired(record) && !invoiceAdjustmentDone(record)
+  return may('markInvoiceAdjusted') && invoiceAdjustmentRequired(record) && !invoiceAdjustmentDone(record)
 }
 
 export const TIMELINE_EVENTS = [

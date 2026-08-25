@@ -72,11 +72,11 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
     return deliverableRows(childRows(), restock().Code).filter((row) => chosen.has(text(row.Code)))
   }
 
-  // Confirming a delivery writes the item rows AND an outlet stock movement, so
-  // both permissions are required. Failing closed here is the rule; hiding the
-  // entry point on the View page is only UX (UI_MODULE_DEVELOPER_GUIDE.md §11).
+  // Claims the registered `markDelivered` action rather than generic `update`, plus
+  // the outlet stock movement the batch actually writes. Failing closed here is the
+  // rule; hiding the entry point on the View page is only UX.
   function permitted () {
-    return resourceConfig?.allowed({ OutletRestocks: 'update', OutletMovements: 'create' })
+    return resourceConfig?.allowed({ OutletRestocks: 'markDelivered', OutletMovements: 'create' })
   }
 
   return {

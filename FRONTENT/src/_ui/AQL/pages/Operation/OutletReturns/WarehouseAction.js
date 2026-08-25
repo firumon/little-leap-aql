@@ -33,6 +33,13 @@ export default {
   sections: ['PageHeader'],
   contents: ['WarehouseActionCard'],
 
+  // Declarative gating (useContentResolver / useSectionResolver). Each entry names the
+  // registered action its route or its foreign resource actually needs; anything not
+  // listed renders unconditionally, exactly as before.
+  permissions: {
+    WarehouseActionCard: ['OutletReturns:warehouseAction:$Code']
+  },
+
   PropsPageHeader: {
     title: 'Confirm Warehouse Action',
     reload: false

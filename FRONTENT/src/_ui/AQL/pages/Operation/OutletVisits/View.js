@@ -19,6 +19,13 @@ export default {
   sections: ['PageHeader', 'OutletDetails', 'VisitDetails', 'RecentVisits'],
   contents: [],
 
+  // Declarative gating (useSectionResolver). A section that renders ANOTHER resource's
+  // rows is hidden from a role that cannot read that resource; the rest render as before.
+  permissions: {
+    OutletDetails: ['Outlets:read:$OutletCode'],
+    RecentVisits: ['OutletVisits:read']
+  },
+
   // Spread FLAT onto their target section by useSectionResolver — a section reads
   // `props.title`, never `props.PropsVisitDetails.title`.
   // See UI_PAGE_AND_SECTION_SYSTEM.md §1.4.1.

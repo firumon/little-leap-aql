@@ -78,13 +78,11 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         return { valid: false, message: 'Every line on this request has already been settled.' }
       }
 
-      /**
-       * Gated on what the batch ACTUALLY writes. A request with nothing allocated moves no
-       * warehouse stock, so it must not demand the movement permission it never uses —
-       * failing closed on a permission the action does not need is as wrong as failing open
-       * on one it does.
-       */
-      const permissions = { OutletRestocks: 'update', OutletRestockItems: 'update' }
+      // Claims the registered `cancel` action, not generic `update`: a role granted
+      // canCancel without record-edit rights must still be able to close a request.
+      // Item rows still take `update` — that is a plain child write, not a workflow step.
+      // The stock permission is added only when the batch actually moves warehouse stock.
+      const permissions = { OutletRestocks: 'cancel', OutletRestockItems: 'update' }
       if (returnableItems(rows, parent.Code).length) permissions.StockMovements = 'create'
       if (resourceConfig?.allowed(permissions) !== true) {
         return { valid: false, message: 'You are not allowed to cancel this restock request.' }

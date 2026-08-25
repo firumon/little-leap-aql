@@ -322,7 +322,7 @@ export function buildReturnWarehouseActionBatch ({
     valid: true,
     requests,
     permissions: {
-      outletReturn: 'update',
+      outletReturn: 'warehouseAction',
       ...(stocksBackIn ? { stockMovement: 'create' } : {})
     },
     successMsg: isDisposed ? 'Return disposed.' : 'Return stocked into the warehouse.'
@@ -347,7 +347,7 @@ export function buildReturnMarkInvoiceAdjustedBatch ({ record = {}, actorName = 
       resourceUpdateRequest(RESOURCE_NAME, code, update, [RESOURCE_NAME]),
       resourceGetRequest([RESOURCE_NAME])
     ],
-    permissions: { outletReturn: 'update' },
+    permissions: { outletReturn: 'markInvoiceAdjusted' },
     successMsg: 'Invoice adjustment settled.'
   }
 }

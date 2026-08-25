@@ -112,14 +112,14 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
     return buildRestockCancelItemsBatchRequests(restock(), rows, actor(), comment() || 'Cancelled: no warehouse stock available.')
   }
 
-  // Stock-write permission only. Reallocating commits units to an outlet that was
-  // approved long ago; it re-decides nothing, so `OutletRestocks: 'approve'` is
-  // deliberately absent. Action names are lower-case on purpose —
-  // `checkSingleAction` derives the permission key by upper-casing the FIRST
-  // character only (`create` → `canCreate`), so an all-caps name resolves to a
-  // key that can never match and fails closed.
+  // Claims the registered `reallocate` action plus the stock writes the batch makes.
+  // `approve` is deliberately absent: reallocating commits units to an outlet that was
+  // approved long ago, it re-decides nothing. Action names are lower-case on purpose —
+  // `checkSingleAction` upper-cases the FIRST character only (`create` → `canCreate`).
   function permitted () {
-    return resourceConfig?.allowed({ OutletRestockItems: 'create', StockMovements: 'create' })
+    return resourceConfig?.allowed({
+      OutletRestocks: 'reallocate', OutletRestockItems: 'create', StockMovements: 'create'
+    })
   }
 
   return {

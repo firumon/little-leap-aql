@@ -239,7 +239,7 @@ export function buildDeliveryMarkInTransitBatch ({ record = {}, actorName = '', 
       }, [RESOURCE_NAME]),
       resourceGetRequest([RESOURCE_NAME])
     ],
-    permissions: { outletDelivery: 'update' },
+    permissions: { outletDelivery: 'makeInTransit' },
     successMsg: 'Delivery marked as in transit.'
   }
 }
@@ -366,7 +366,7 @@ export function buildDeliveryMarkDeliveredBatch ({
     valid: true,
     requests,
     permissions: {
-      outletDelivery: 'update',
+      outletDelivery: 'markDeliver',
       outletRestockItem: 'update',
       outletRestock: 'update',
       outletMovement: 'create'
@@ -533,7 +533,7 @@ export function buildDeliveryMarkCompleteBatch ({
       }, [RESOURCE_NAME]),
       resourceGetRequest([RESOURCE_NAME])
     ],
-    permissions: { outletDelivery: 'update' },
+    permissions: { outletDelivery: 'markComplete' },
     successMsg: `Delivery ${code} completed.`
   }
 }
@@ -594,7 +594,7 @@ export function buildDeliveryCancelBatch ({
       ...restockProgressRefreshRequests([...affectedRestocks], orsiRows),
       resourceGetRequest([RESOURCE_NAME, RESTOCKS])
     ],
-    permissions: { outletDelivery: 'update', outletRestock: 'update' },
+    permissions: { outletDelivery: 'cancel', outletRestock: 'update' },
     successMsg: `Delivery ${code} cancelled. Its items are available for another run.`
   }
 }

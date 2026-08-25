@@ -2,9 +2,9 @@
   <q-list
     :bordered="bordered"
     :separator="separator"
-    class="relative-position"
+    class="relative-position aql-stagger"
     :class="[gutterClass, $attrs.class]"
-    :style="$attrs.style"
+    :style="[staggerStyle, $attrs.style]"
   >
     <!-- TransitionGroup (no `tag`, so it renders no wrapper element and the q-items stay
          direct children of q-list, preserving separators/gutter). Items fade and slide into
@@ -230,6 +230,13 @@ const gutterClass = computed(() => {
   if (token === false || token === '' || token === 'none' || token == null) return null
   return `q-gutter-y-${token}`
 })
+
+// Rows are short and numerous, so the cascade runs much tighter than the
+// page-level default or it reads as lag.
+const staggerStyle = {
+  '--aql-stagger-enter-step': '35ms',
+  '--aql-stagger-leave-step': '25ms'
+}
 
 const paginationLive = computed(() => props.paginate && props.items.length > props.threshold)
 const pageSize = computed(() => Math.max(1, props.perPage || 25))

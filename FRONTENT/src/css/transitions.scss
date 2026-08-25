@@ -176,6 +176,17 @@
 // everything further down shares the last step.
 .aql-stagger > *:nth-child(n+8) { --aql-stagger-i: 7; }
 
+// Rows are cheap to follow, so the list ladder runs deeper than the page one
+// before it flattens out.
+.q-list.aql-stagger > *:nth-child(8) { --aql-stagger-i: 7; }
+.q-list.aql-stagger > *:nth-child(9) { --aql-stagger-i: 8; }
+.q-list.aql-stagger > *:nth-child(10) { --aql-stagger-i: 9; }
+.q-list.aql-stagger > *:nth-child(11) { --aql-stagger-i: 10; }
+.q-list.aql-stagger > *:nth-child(12) { --aql-stagger-i: 11; }
+.q-list.aql-stagger > *:nth-child(13) { --aql-stagger-i: 12; }
+.q-list.aql-stagger > *:nth-child(14) { --aql-stagger-i: 13; }
+.q-list.aql-stagger > *:nth-child(n+15) { --aql-stagger-i: 14; }
+
 .aql-stagger > [class*="-enter-active"] { transition-delay: calc(var(--aql-stagger-i, 0) * var(--aql-stagger-enter-step, 150ms)); }
 .aql-stagger > [class*="-leave-active"] { transition-delay: calc(var(--aql-stagger-i, 0) * var(--aql-stagger-leave-step, 80ms)); }
 

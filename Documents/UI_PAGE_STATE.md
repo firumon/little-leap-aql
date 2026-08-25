@@ -584,10 +584,11 @@ laid on top:
 
 1. The page mounts and `Create.vue` / `Update.vue` calls `initResource`.
 2. On a record page, `Update.vue` hydrates the server row (`pageState.load`).
-3. The draft is restored **once per key**, and only after the page has settled —
-   which on a record page means a node now carries the route's `code`. Restoring
-   earlier would simply be overwritten by the hydration that follows.
-4. Fields are written **in place** into the existing `node.record` object, and
+3. Once the page has settled — which on a record page means a node now carries
+   the route's `code` — the stored draft is **not** applied on its own. A
+   confirmation dialog asks the user first (§10.3.1). Settling earlier and
+   restoring would simply be overwritten by the hydration that follows.
+4. On **Restore**, fields are written **in place** into the existing `node.record` object, and
    `children` / `records` are spliced into the existing arrays. The node is never
    replaced, so `v-model` bindings, `FormChild` rows and `identifier`-keyed
    one-shot hydration all keep working, and every restored row is a live reactive
@@ -595,6 +596,26 @@ laid on top:
 
 A node the draft carries but the page has not created (a conditional workflow
 node, §4.2) is created by the restore.
+
+#### 10.3.1 The confirmation prompt
+
+When a readable draft exists for the active key, `usePageStateDraft` opens a
+Quasar `Dialog` — **"Restore Unsaved Draft?"**, persistent, with a primary
+**Restore** button and a flat negative **Discard** button.
+
+- **Restore** — the draft is applied and auto-save resumes.
+- **Discard** — the draft is removed from storage and the user carries on with
+  the clean / server-hydrated form. The blank state is not written straight back
+  (the `holdsAfterClear` baseline covers this), and the user is not asked again.
+
+The prompt is asked **at most once per key settlement**, and never when there is
+no valid draft in storage. Auto-save stays shut until the user answers, so
+edits made while the dialog is open cannot bury the stored draft. If the route
+key changes while the dialog is open, the answer is ignored.
+
+This is entirely inside the composable. Pages, sections and content components
+configure nothing and render no dialog of their own — it works everywhere
+`usePageState` is used.
 
 If the stored value is corrupt or unparseable, it is discarded, a warning is
 logged, and the page carries on with the freshly initialized form.

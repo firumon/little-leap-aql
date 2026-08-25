@@ -1,4 +1,5 @@
 import { computed, watch } from 'vue'
+import { Dialog } from 'quasar'
 import { useRouteConfig } from './useRouteConfig'
 import { toPascalCase } from 'src/utils/appHelpers'
 
@@ -54,6 +55,7 @@ export function usePageStateDraft ({ enabled, probe, sources = [], serialize, ap
   }
 
   let restoredFor = ''
+  let promptedFor = ''
   let timer = null
   // Set by clearDraft. A cleared page re-seeds its defaults, and that alone must
   // not write the blank form back over the clear. See holdsAfterClear().
@@ -134,20 +136,48 @@ export function usePageStateDraft ({ enabled, probe, sources = [], serialize, ap
 
   watch(draftKey, () => {
     restoredFor = ''
+    promptedFor = ''
     suspended = null
     if (timer) { clearTimeout(timer); timer = null }
   })
 
-  // Restore runs once per key, and only after the page has settled.
+  // Auto-save was shut until now, so whatever the form already holds has never
+  // been written. Without this, the first save waits for one more edit.
+  function resumeSaving (key) {
+    if (draftKey.value !== key) return
+    restoredFor = key
+    scheduleSave()
+  }
+
+  function askToRestore (key) {
+    Dialog.create({
+      title: 'Restore Unsaved Draft?',
+      message: 'We found unsaved changes for this form. Would you like to restore them or discard?',
+      persistent: true,
+      ok: { label: 'Restore', color: 'primary', flat: false },
+      cancel: { label: 'Discard', color: 'negative', flat: true }
+    })
+      .onOk(() => {
+        if (draftKey.value !== key) return
+        restoreDraft(key)
+        resumeSaving(key)
+      })
+      .onCancel(() => {
+        if (draftKey.value !== key) return
+        clearDraft(key)
+        resumeSaving(key)
+      })
+  }
+
+  // Runs once per key, and only after the page has settled. A stored draft is
+  // never laid on the form until the user says so.
   watch(
     [draftKey, () => isSettled()],
     ([key, settled]) => {
-      if (!key || !settled || !isEnabled() || restoredFor === key) return
-      restoredFor = key
-      restoreDraft(key)
-      // Auto-save was shut until now, so whatever the form already holds has
-      // never been written. Without this, the first save waits for one more edit.
-      scheduleSave()
+      if (!key || !settled || !isEnabled() || promptedFor === key) return
+      promptedFor = key
+      if (read(key)) askToRestore(key)
+      else resumeSaving(key)
     },
     { immediate: true, flush: 'post' }
   )

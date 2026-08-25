@@ -52,10 +52,10 @@ export default {
   // registered action its route or its foreign resource actually needs; anything not
   // listed renders unconditionally, exactly as before.
   permissions: {
-    WarehouseAndLocation: ['OutletRestocks:reallocate:$Code'],
-    ItemAllocating: ['OutletRestocks:reallocate:$Code'],
-    ReviewAllocating: ['OutletRestocks:reallocate:$Code', 'StockMovements:create'],
-    ReviewPending: ['OutletRestocks:reallocate:$Code']
+    WarehouseAndLocation: ['OutletRestocks:reallocate'],
+    ItemAllocating: ['OutletRestocks:reallocate'],
+    ReviewAllocating: ['OutletRestocks:reallocate', 'StockMovements:create'],
+    ReviewPending: ['OutletRestocks:reallocate']
   },
   PropsPageHeader: {
     title: 'Reallocate Stock',

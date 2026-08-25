@@ -113,11 +113,7 @@ export function useSectionResolver(preparedProps, defaultComponent = null) {
     const current = preparedProps.value || {}
     const rules = current.permissions?.[current.section]
     if (!rules) return true
-    return evalPermissionRules(rules, {
-      config: resourceConfig?.config,
-      record: resourceRecord?.record,
-      pageState
-    })
+    return evalPermissionRules(rules, { config: resourceConfig?.config })
   })
 
   // Monotonic token guarding against out-of-order async resolves: if the lookup

@@ -33,8 +33,8 @@ export default {
   // registered action its route or its foreign resource actually needs; anything not
   // listed renders unconditionally, exactly as before.
   permissions: {
-    SelectDeliveryItems: ['OutletRestocks:markDelivered:$Code'],
-    ReviewDelivery: ['OutletRestocks:markDelivered:$Code', 'OutletMovements:create']
+    SelectDeliveryItems: ['OutletRestocks:markDelivered'],
+    ReviewDelivery: ['OutletRestocks:markDelivered', 'OutletMovements:create']
   },
   PropsPageHeader: {
     title: 'Confirm Delivery',

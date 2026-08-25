@@ -54,52 +54,22 @@ function checkActionsList(resConfig, actions) {
 // ─── Declarative permission rules ─────────────────────────────────────────────
 //
 // Grammar (one rule per string):
-//   'update'                        -> action on the active resource
-//   'OutletRestocks:create'         -> action on a named resource
-//   'OutletVisits:complete:$code'   -> same, with a context token for diagnostics
+//   'update'                 -> action on the active resource
+//   'OutletRestocks:create'  -> action on a named resource
 //
-// A token is looked up in `context.record`, `context.form`, then the page state's
-// node records. An unresolved token never denies: the rule falls back to the
-// user's general permission for that action on that resource.
+// Record-scoped rules ('Resource:action:$Field') are NOT implemented yet. A third
+// segment is ignored, never enforced, so do not write one expecting it to gate.
 
 export function parsePermissionRule (rule) {
   const raw = String(rule || '').trim()
   if (!raw) return null
-  const [first, second, third] = raw.split(':').map((part) => part.trim())
-  if (!second) return { resource: '', action: first, token: '' }
-  return { resource: first, action: second, token: third || '' }
+  const [first, second] = raw.split(':').map((part) => part.trim())
+  if (!second) return { resource: '', action: first }
+  return { resource: first, action: second }
 }
 
-function readRowToken (source, wanted) {
-  const row = unref(source)
-  if (!row || typeof row !== 'object') return ''
-  for (const [key, value] of Object.entries(row)) {
-    if (key.toLowerCase() !== wanted) continue
-    return value == null ? '' : String(value)
-  }
-  return ''
-}
-
-function readPageStateToken (pageState, wanted) {
-  const nodes = unref(pageState)?.state?.nodes
-  if (!nodes || typeof nodes.values !== 'function') return ''
-  for (const node of nodes.values()) {
-    const hit = readRowToken(node?.record, wanted)
-    if (hit) return hit
-  }
-  return ''
-}
-
-export function resolveRuleToken (token, context = {}) {
-  const wanted = String(token || '').replace(/^\$/, '').trim().toLowerCase()
-  if (!wanted) return ''
-  return readRowToken(context.record, wanted)
-    || readRowToken(context.form, wanted)
-    || readPageStateToken(context.pageState, wanted)
-}
-
-// The rules NOT granted, as `[{ rule, resource, action, token }]`. Reactive when
-// read inside a computed: it tracks the auth store and every context ref it reads.
+// The rules NOT granted, as `[{ rule, resource, action }]`. Reactive when read
+// inside a computed: it tracks the auth store and the config it is given.
 export function explainMissingRules (rules, context = {}) {
   const list = Array.isArray(rules) ? rules : (rules ? [rules] : [])
   if (!list.length) return []
@@ -115,11 +85,12 @@ export function explainMissingRules (rules, context = {}) {
       ? findResourceConfig(auth, parsed.resource)
       : (unref(context.config) || null)
 
-    const token = parsed.token ? resolveRuleToken(parsed.token, context) : ''
-    const name = resConfig?.name || parsed.resource || '(active)'
-
     if (!resConfig || !checkSingleAction(resConfig, parsed.action)) {
-      gaps.push({ rule: String(rule), resource: name, action: parsed.action, token })
+      gaps.push({
+        rule: String(rule),
+        resource: resConfig?.name || parsed.resource || '(active)',
+        action: parsed.action
+      })
     }
   }
 
@@ -129,6 +100,7 @@ export function explainMissingRules (rules, context = {}) {
 export function evalPermissionRules (rules, context = {}) {
   return explainMissingRules(rules, context).length === 0
 }
+
 
 /**
  * Resolves the current resource configuration from route params + auth store.

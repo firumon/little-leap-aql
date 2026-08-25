@@ -37,7 +37,7 @@ export default {
   // registered action its route or its foreign resource actually needs; anything not
   // listed renders unconditionally, exactly as before.
   permissions: {
-    WarehouseActionCard: ['OutletReturns:warehouseAction:$Code']
+    WarehouseActionCard: ['OutletReturns:warehouseAction']
   },
 
   PropsPageHeader: {

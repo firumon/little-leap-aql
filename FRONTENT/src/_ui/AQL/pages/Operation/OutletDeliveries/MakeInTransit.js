@@ -26,7 +26,7 @@ export default {
   // registered action its route or its foreign resource actually needs; anything not
   // listed renders unconditionally, exactly as before.
   permissions: {
-    DepartConfirm: ['OutletDeliveries:makeInTransit:$Code']
+    DepartConfirm: ['OutletDeliveries:makeInTransit']
   },
 
   PropsPageHeader: {

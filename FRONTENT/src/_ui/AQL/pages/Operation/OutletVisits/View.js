@@ -22,7 +22,7 @@ export default {
   // Declarative gating (useSectionResolver). A section that renders ANOTHER resource's
   // rows is hidden from a role that cannot read that resource; the rest render as before.
   permissions: {
-    OutletDetails: ['Outlets:read:$OutletCode'],
+    OutletDetails: ['Outlets:read'],
     RecentVisits: ['OutletVisits:read']
   },
 

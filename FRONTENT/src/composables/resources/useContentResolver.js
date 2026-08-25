@@ -79,17 +79,13 @@ export function useContentResolver(preparedProps, defaultComponent = null) {
   const pageState      = inject('pageState', null)
 
   // Declarative gate from the page contract's top-level `permissions` block:
-  //   permissions: { CompleteVisit: ['OutletVisits:complete:$code'] }
+  //   permissions: { CompleteVisit: ['OutletVisits:complete'] }
   // A content with no entry renders unconditionally, as it always did.
   const permitted = computed(() => {
     const current = preparedProps.value || {}
     const rules = current.permissions?.[current.content]
     if (!rules) return true
-    return evalPermissionRules(rules, {
-      config: resourceConfig?.config,
-      record: resourceRecord?.record,
-      pageState
-    })
+    return evalPermissionRules(rules, { config: resourceConfig?.config })
   })
 
   // Monotonic token guarding against out-of-order async resolves: if the lookup

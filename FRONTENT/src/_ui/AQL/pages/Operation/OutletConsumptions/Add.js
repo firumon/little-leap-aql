@@ -20,7 +20,7 @@ export default {
     RestockOptions: ['OutletRestocks:create'],
     RestockItems: ['OutletRestocks:create'],
     PendingReturns: ['OutletReturns:read'],
-    CompleteVisit: ['OutletVisits:complete:$OutletVisitCode'],
+    CompleteVisit: ['OutletVisits:complete'],
     ScheduleNextVisit: ['OutletVisits:create']
   },
 

@@ -2324,6 +2324,11 @@ export default {
 Document the flow as a table in the file's docblock — `step 1 outlet + mode → [Cancel]
 [Continue]` — so the shape is readable without tracing the getter.
 
+**A step is a screen, not a file.** Two or more contents may share one `step` — split the
+step's blocks by job and list each in the contract (UI_CONTENT_SYSTEM §6). Step 4 of the
+consumption wizard is `RestockOptions` (how the restock is routed) plus `RestockItems`
+(what is in it), both at `step: 4`.
+
 **Steps are declared by the contract, not the card.** Each card takes a `step` prop and
 gates on it; the contract assigns it (§5.5). `step: null` means "no wizard, always render",
 which is what lets one card serve a wizard Add and a single-view Edit:

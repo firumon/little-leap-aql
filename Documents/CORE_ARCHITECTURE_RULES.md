@@ -41,6 +41,7 @@
 ## 5. COMPONENTS & PAGES
 * **Role**: UI rendering only. Invokes composables. No business logic, stores, services, API calls, or IDB operation.
 * **Zero UI Schema Invention**: Page action handlers (`PageAction.js`) and UI components must never construct secondary/child business rows or calculate business formulas directly. UI passes collected form inputs to the Layer 2 Domain Payload Chain, checks validity and aggregated permissions (`resourceConfig.allowed(result.permissions)`), and passes `result.requests` to `pageState.submit()`.
+* **Content Atomicity**: One content/section component does one job, and every one of them is declared in the page contract with its own `Props<Identity>` block — never imported by a sibling. Atomic means one job, not one field. Rule and split test: [UI_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CONTENT_SYSTEM.md) §6.
 * **UI/Workflow Permission Gating**: All interactive elements and state-changing workflows must be gated using `allowed()` from `useResourceConfig`. For multi-resource actions, gate must verify ALL permissions (AND logic).
 
 ---

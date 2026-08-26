@@ -139,7 +139,7 @@
             <div class="col-12 col-sm-auto">
               <q-btn
                 v-if="!updateAvailable"
-                unelevated
+                padding="sm"
                 color="primary"
                 icon="refresh"
                 label="Check for updates"
@@ -149,7 +149,7 @@
               />
               <q-btn
                 v-else
-                unelevated
+                padding="sm"
                 color="warning"
                 text-color="white"
                 icon="download"

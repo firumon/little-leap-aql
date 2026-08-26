@@ -28,6 +28,9 @@ Do not treat this as a universal startup read for every task.
 - lightweight resource update polling via `poll` action (metadata only, no row payloads)
 - strict nested write payloads (`payload.record` / `payload.data`)
 - delta-on-write for `create`, `update`, `bulk`, `executeAction`, and `compositeSave`
+- dynamic rolling session security handshake (`sessionKey` proof derived from UUID segments, verified in bounded window `WINDOW = 2`)
+- zero-lookup authentication context caching in `CacheService` (`AQL_SESSION_<SpreadsheetId>_<token>`)
+- aligned action permissions in `executeAction` (evaluates specific action permission or `canUpdate`)
 
 ---
 
@@ -42,6 +45,7 @@ All requests and responses use one transport envelope.
   "action": "get",
   "resource": ["Products", "Procurements"],
   "token": "...",
+  "sessionKey": "...",
   "payload": {
     "lastUpdatedAtByResource": {
       "Products": 1713400000000
@@ -54,6 +58,7 @@ Rules:
 - `scope` is not required in request payload.
 - `resource` supports string or array.
 - `requestId` is echoed in the response.
+- `sessionKey` is a dynamic rolling proof derived from the token UUID parameters and request generation counter.
 
 ### Response
 ```json

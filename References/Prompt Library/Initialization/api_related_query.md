@@ -54,9 +54,11 @@ Read only the files relevant to the query or task at hand:
   "action": "get" | "create" | "update" | "bulk" | "record" | "compositeSave" | "executeAction" | "batch",
   "resource": "ResourceName" | ["Resource1", "Resource2"],
   "token": "auth-token",
+  "sessionKey": "rolling-session-key",
   "payload": {}
 }
 ```
+- **Dynamic Session Security**: Protected requests carry a rolling `sessionKey` computed from UUID parameters and client generation counter. Verified by `verifySessionProof` in `GAS/sessionProof.gs` in a bounded window `WINDOW = 2`.
 - **Strict Payload Nesting**: For write actions (`create`, `update`, `bulk`, `record`, `compositeSave`, `executeAction`), fields must reside under nested keys (e.g. `payload.record`, `payload.data`, or `payload.records`). Direct top-level payload properties will be rejected by `validateStrictNestedPayload` in [apiDispatcher.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/apiDispatcher.gs#L148-L169).
 
 ### B. Canonical Response Envelope

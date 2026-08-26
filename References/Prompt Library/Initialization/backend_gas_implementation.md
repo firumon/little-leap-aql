@@ -12,11 +12,12 @@ AQL's backend is a Google Apps Script (GAS) project that provides a generic, met
 
 ### A. Core File Coordinates
 * **API Dispatcher**: [apiDispatcher.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/apiDispatcher.gs) — routes `doPost` requests to action handlers
+* **Session Proof & Cryptography**: [sessionProof.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/sessionProof.gs) — verifies dynamic rolling sessionKey proofs, manages unified `AQL_SESSION_...` cache
 * **Generic Resource API**: [resourceApi.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/resourceApi.gs) — handles get, create, update, bulk, compositeSave, executeAction, batch, record
 * **Resource Registry**: [resourceRegistry.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/resourceRegistry.gs) — resolves resource metadata, permissions, and sheet coordinates
 * **Resource Config (Code → Sheet Sync)**: [syncAppResources.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/syncAppResources.gs) — defines UIFields, RequiredHeaders, validation rules, PostAction hooks
 * **Constants & Options**: [Constants.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/Constants.gs) — app-wide constants and `appOptions`
-* **Auth & Login**: [auth.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/auth.gs) — handles `handleLogin`, token validation, user context
+* **Auth & Login**: [auth.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/auth.gs) — handles `handleLogin`, session state seeding, profile mutations
 * **PostAction Hook Files**: Domain-specific hook scripts:
   - [stockMovements.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/stockMovements.gs) — warehouse stock balance updates
   - [procurement.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/procurement.gs) — procurement workflow linking

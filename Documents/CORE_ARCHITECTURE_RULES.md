@@ -23,8 +23,7 @@
   * `useDataStore` (`src/stores/data.js`): Default owner of reactive resource rows.
   * `useResourceIoStore` (`src/stores/resourceIo.js`): Single command surface for API/fetch/sync/mutations. Hydrates `useDataStore`.
   * `useResourceStatusStore` (`src/stores/resourceStatus.js`): Fetch/sync status registry only. No API commands.
-* **Resource/Scope Specificity**: Stores must be fully generic. No store or service function may reference specific resource names (e.g. `StockMovements`) or scopes (e.g. `Master`). Resource-specific orchestration must live in composables.
-* **API Transport Contract**: One canonical envelope for frontend-to-GAS requests/responses. All resource data in responses must persist via IDB/data flow. Batch dependencies must use `$ref` payload objects resolved by GAS; do not stringify/concatenate `$ref` values or put them in comments (for multi-code lists, use `$ref` + `$append` via `batchRefList`).
+* **API Transport Contract**: One canonical envelope for frontend-to-GAS requests/responses (`{ requestId, action, token, sessionKey, resource, payload }`). Every protected request must carry a rolling `sessionKey` derived from the session token UUID parameters and the local generation counter. All resource data in responses must persist via IDB/data flow. Batch dependencies must use `$ref` payload objects resolved by GAS; do not stringify/concatenate `$ref` values or put them in comments (for multi-code lists, use `$ref` + `$append` via `batchRefList`).
 
 ---
 

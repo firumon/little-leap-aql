@@ -285,7 +285,6 @@ function handleResourceCreateRecord(auth, payload) {
   const resourceName = resolveResourceName(payload);
   const resource = openResourceSheet(resourceName);
   const schema = buildMasterSchemaFromResourceConfig(resource.config);
-  enforceMasterPermission(auth, resourceName, 'canWrite');
 
   const sheet = resource.sheet;
   const values = sheet.getDataRange().getValues();
@@ -439,7 +438,6 @@ function handleResourceUpdateRecord(auth, payload) {
   const resourceName = resolveResourceName(payload);
   const resource = openResourceSheet(resourceName);
   const schema = buildMasterSchemaFromResourceConfig(resource.config);
-  enforceMasterPermission(auth, resourceName, 'canUpdate');
 
   const sheet = resource.sheet;
   const values = sheet.getDataRange().getValues();
@@ -591,6 +589,16 @@ function attachResourceName(payload, resourceName) {
   });
   cloned.resource = resourceName;
   return cloned;
+}
+
+// Writes are already gated by the frontend role rules and by the session proof
+// at doPost, so only record-level policy is re-checked on the write path.
+// An action is allowed by its own grant OR by general update rights.
+function enforceActionPermission(auth, resourceName, actionName) {
+  const roleIds = auth && Array.isArray(auth.roleIds) ? auth.roleIds : [];
+  if (hasRoleActionPermission(roleIds, resourceName, actionName)) return;
+  if (hasRolePermission(roleIds, resourceName, 'canUpdate')) return;
+  throw new Error('Access denied for ' + resourceName + ' (' + actionName + ')');
 }
 
 function enforceMasterPermission(auth, resourceName, permissionName) {
@@ -1452,13 +1460,6 @@ function handleCompositeSave(auth, payload) {
   var parentResource = openResourceSheet(parentResourceName);
   var parentSchema = buildMasterSchemaFromResourceConfig(parentResource.config);
 
-  // Check permissions
-  if (isEdit) {
-    enforceMasterPermission(auth, parentResourceName, 'canUpdate');
-  } else {
-    enforceMasterPermission(auth, parentResourceName, 'canWrite');
-  }
-
   var parentSheet = parentResource.sheet;
   var parentValues = parentSheet.getDataRange().getValues();
   var parentHeaders = parentValues[0] || [];
@@ -1525,13 +1526,6 @@ function handleCompositeSave(auth, payload) {
     var childRecords = Array.isArray(childGroup.records) ? childGroup.records : [];
     if (!childRecords.length) continue;
 
-    try {
-      enforceMasterPermission(auth, childResourceName, 'canWrite');
-      enforceMasterPermission(auth, childResourceName, 'canUpdate');
-    } catch (err) {
-      validationErrors.push({ resource: childResourceName, message: err.message || err.toString() });
-      continue;
-    }
 
     var childResource = openResourceSheet(childResourceName);
     var childSchema = buildMasterSchemaFromResourceConfig(childResource.config);
@@ -1758,8 +1752,7 @@ function handleExecuteAction(auth, payload) {
 
   var userFields = payload.fields || {};
 
-  // Permission check
-  enforceMasterPermission(auth, resourceName, 'canUpdate');
+  enforceActionPermission(auth, resourceName, actionName);
 
   var resource = openResourceSheet(resourceName);
   var sheet = resource.sheet;
@@ -1887,10 +1880,6 @@ function handleResourceBulkUpsertRecords(auth, payload) {
   if (!records.length) {
     return { success: false, message: 'No records provided' };
   }
-
-  // Enforce permissions on the TARGET resource (not the caller)
-  enforceMasterPermission(auth, targetResourceName, 'canWrite');
-  enforceMasterPermission(auth, targetResourceName, 'canUpdate');
 
   var resource = openResourceSheet(targetResourceName);
   var schema = buildMasterSchemaFromResourceConfig(resource.config);

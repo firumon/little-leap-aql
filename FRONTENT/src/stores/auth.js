@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { executeGasApi } from 'src/services/GasApiService'
+import { clearSessionGeneration, resetSessionGeneration } from 'src/services/SessionKeyService'
 import { useResourceStatusStore } from 'src/stores/resourceStatus'
 import {
   clearAllStorage,
@@ -82,10 +83,12 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('resources')
     localStorage.removeItem('appConfig')
     localStorage.removeItem('appOptions')
+    clearSessionGeneration()
   }
 
   function applySessionData(sessionData = {}) {
     token.value = sessionData?.token || null
+    resetSessionGeneration()
     user.value = sessionData?.user || null
     resources.value = Array.isArray(sessionData?.resources) ? sessionData.resources : []
     appConfig.value = sessionData?.appConfig && typeof sessionData.appConfig === 'object' ? sessionData.appConfig : {}

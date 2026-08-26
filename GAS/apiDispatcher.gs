@@ -26,10 +26,17 @@ function doPost(e) {
     }
 
     // Protected actions
+    var proof = verifySessionProof(request.token, request.sessionKey);
+    if (!proof.ok) {
+      return jsonResponse(buildErrorEnvelope(request, 'Unauthorized / ' + proof.message));
+    }
+
     var authContext = validateToken(request.token);
     if (!authContext) {
+      clearSessionProofState(request.token);
       return jsonResponse(buildErrorEnvelope(request, 'Unauthorized'));
     }
+    authContext.sessionGeneration = proof.generation;
 
     result = dispatchProtectedAction(action, authContext, request.payload);
   } catch (err) {
@@ -39,7 +46,8 @@ function doPost(e) {
         action: '',
         resource: '',
         payload: {},
-        token: ''
+        token: '',
+        sessionKey: ''
       };
     }
     return jsonResponse(buildErrorEnvelope(request, err && err.message ? err.message : String(err)));
@@ -60,6 +68,7 @@ function normalizeIncomingRequest(raw) {
   var requestId = (source.requestId || '').toString().trim() || Utilities.getUuid();
   var action = (source.action || '').toString().trim();
   var token = (source.token || '').toString().trim();
+  var sessionKey = (source.sessionKey || '').toString().trim();
   var mergedPayload = mergePayloadWithTopLevel(source, action);
   var resource = normalizeResourceSelector(
     mergedPayload.resource !== undefined ? mergedPayload.resource : source.resource
@@ -83,6 +92,7 @@ function normalizeIncomingRequest(raw) {
     requestId: requestId,
     action: action,
     token: token,
+    sessionKey: sessionKey,
     resource: resource,
     payload: mergedPayload
   };
@@ -131,6 +141,7 @@ function mergePayloadWithTopLevel(source, action) {
     requestId: true,
     action: true,
     token: true,
+    sessionKey: true,
     payload: true
   };
   Object.keys(source || {}).forEach(function (key) {
@@ -161,6 +172,7 @@ function validateStrictNestedPayload(source, action) {
     requestId: true,
     action: true,
     token: true,
+    sessionKey: true,
     payload: true,
     resource: true,
     scope: true

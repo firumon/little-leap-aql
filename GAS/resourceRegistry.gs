@@ -10,6 +10,8 @@ var _resource_sheet_cache = {};
 var _resource_registry_context_cache = null;
 var _resource_config_map_cache = null;
 var _role_permissions_context_cache = null;
+var _role_permission_memo = {};
+var _role_action_permission_memo = {};
 
 // Execution-scoped memos for the role->resource catalog. The catalog is a pure
 // function of (roleIds, options) plus the permissions context and the config
@@ -982,6 +984,8 @@ function clearRolePermissionsCache() {
   // The catalog memos are derived from the permissions context.
   _role_resource_access_cache = {};
   _readable_resource_set_cache = {};
+  _role_permission_memo = {};
+  _role_action_permission_memo = {};
   bumpCatalogGeneration();
   try {
     var permsKey = 'AQL_ROLE_PERMS_CONTEXT_V1_' + getAppSpreadsheet().getId();
@@ -1237,6 +1241,8 @@ function toBooleanCell(value) {
 
 function getRolePermissionForResource(roleId, resourceName) {
   const normalizedRoleIds = normalizeRoleIds(roleId);
+  const memoKey = normalizedRoleIds.join('|') + '::' + (resourceName || '');
+  if (_role_permission_memo[memoKey]) return _role_permission_memo[memoKey];
   const normalizedResourceName = (resourceName || '').toString().trim();
   const emptyPermissions = {
     canRead: false,
@@ -1246,6 +1252,7 @@ function getRolePermissionForResource(roleId, resourceName) {
   };
 
   if (!normalizedRoleIds.length || !normalizedResourceName) {
+    _role_permission_memo[memoKey] = emptyPermissions;
     return emptyPermissions;
   }
 
@@ -1278,6 +1285,7 @@ function getRolePermissionForResource(roleId, resourceName) {
     result.canDelete = result.canDelete || permissionSet.canDelete;
   }
 
+  _role_permission_memo[memoKey] = result;
   return result;
 }
 
@@ -1292,6 +1300,15 @@ function hasRoleActionPermission(roleId, resourceName, actionName) {
 
   const roleIds = normalizeRoleIds(roleId);
   if (!roleIds.length) return false;
+
+  const memoKey = roleIds.join('|') + '::' + (resourceName || '') + '::' + normalizedAction;
+  if (_role_action_permission_memo[memoKey] === undefined) {
+    _role_action_permission_memo[memoKey] = computeRoleActionPermission(roleIds, resourceName, normalizedAction);
+  }
+  return _role_action_permission_memo[memoKey];
+}
+
+function computeRoleActionPermission(roleIds, resourceName, normalizedAction) {
 
   const permissionsContext = getRolePermissionsContext();
   for (let i = 1; i < permissionsContext.values.length; i++) {

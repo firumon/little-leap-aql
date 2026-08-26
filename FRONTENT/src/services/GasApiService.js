@@ -1,5 +1,6 @@
 import { apiClient } from 'src/services/ApiClientService'
 import { createLogger, standardizeResponse } from './_logger'
+import { buildSessionPayload } from 'src/services/SessionKeyService'
 import {
   getResourceMeta,
   setResourceMeta,
@@ -72,13 +73,13 @@ function buildCanonicalRequest(action, payload = {}, token = null, requireAuth =
     })
   }
 
-  return {
+  return buildSessionPayload({
     requestId,
     action,
     ...(requireAuth ? { token } : {}),
     ...(resource !== undefined ? { resource } : {}),
     payload: nextPayload
-  }
+  })
 }
 
 function isCanonicalEnvelope(data) {
@@ -99,14 +100,14 @@ function isCanonicalEnvelope(data) {
 async function fetchAuthorizedHeaders(token) {
   if (!token) return []
 
-  const requestBody = {
+  const requestBody = buildSessionPayload({
     requestId: createRequestId(),
     action: 'getAuthorizedResources',
     token,
     payload: {
       includeHeaders: true
     }
-  }
+  })
 
   try {
     const response = await apiClient.post('', requestBody)

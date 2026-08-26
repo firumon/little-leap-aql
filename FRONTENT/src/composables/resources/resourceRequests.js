@@ -5,8 +5,8 @@
  * envelopes and inspecting batch responses.
  */
 
-import { batchRef, isBatchRef, textOrRef, normalizeCodeOrRef } from 'src/utils/appHelpers'
-export { batchRef, isBatchRef, textOrRef, normalizeCodeOrRef }
+import { batchRef, batchRefList, isBatchRef, textOrRef, normalizeCodeOrRef } from 'src/utils/appHelpers'
+export { batchRef, batchRefList, isBatchRef, textOrRef, normalizeCodeOrRef }
 
 export function responseFailed (response) {
   return !response?.success || (Array.isArray(response.data) && response.data.some(entry => entry?.success === false))

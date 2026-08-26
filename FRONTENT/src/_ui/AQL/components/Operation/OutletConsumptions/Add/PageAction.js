@@ -1,7 +1,7 @@
 import { useAuth } from 'src/composables/core/useAuth'
 import { useDataStore } from 'src/stores/data'
 import { makeLineTaxResolver } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionInvoice'
-import { batchResultCode } from 'src/composables/resources/usePageState'
+import { batchResultCode } from 'src/composables/resources/resourceRequests'
 import { WIZARD_FIELDS as F, WIZARD_NODE as NODE } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/useConsumptionWizard'
 import {
   validateConsumption,

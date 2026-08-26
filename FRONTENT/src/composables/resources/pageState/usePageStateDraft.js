@@ -1,6 +1,6 @@
 import { computed, watch } from 'vue'
 import { Dialog } from 'quasar'
-import { useRouteConfig } from './useRouteConfig'
+import { useRouteConfig } from '../useRouteConfig'
 import { toPascalCase } from 'src/utils/appHelpers'
 
 const PREFIX = 'aql'

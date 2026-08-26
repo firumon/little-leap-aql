@@ -1,5 +1,5 @@
 ﻿import { useAuth } from 'src/composables/core/useAuth'
-import { resourceGetRequest } from 'src/composables/resources/usePageState'
+import { resourceGetRequest } from 'src/composables/resources/resourceRequests'
 import {
   buildPendingRestockAllocationBatchRequests,
   buildRestockCancelItemsBatchRequests

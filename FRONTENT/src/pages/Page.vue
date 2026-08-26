@@ -63,7 +63,7 @@ import Section from 'components/Section.vue'
 import Content from 'components/Content.vue'
 import Action from 'components/Action.vue'
 import { usePageResolver } from 'src/composables/resources/usePageResolver'
-import { usePageState } from 'src/composables/resources/usePageState'
+import { usePageState } from 'src/composables/resources/pageState'
 
 defineOptions({ name: 'AqlResourcePage' })
 

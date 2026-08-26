@@ -41,7 +41,7 @@
                   </q-item-section>
                   <q-item-section>Profile</q-item-section>
                 </q-item>
-                <q-item clickable v-close-popup>
+                <q-item clickable v-close-popup to="/settings">
                   <q-item-section avatar>
                     <q-icon name="settings" />
                   </q-item-section>

@@ -26,17 +26,15 @@ function doPost(e) {
     }
 
     // Protected actions
+    // The session proof carries the full auth context, so a verified request
+    // needs no user lookup at all.
     var proof = verifySessionProof(request.token, request.sessionKey);
     if (!proof.ok) {
       return jsonResponse(buildErrorEnvelope(request, 'Unauthorized / ' + proof.message));
     }
 
-    var authContext = validateToken(request.token);
-    if (!authContext) {
-      clearSessionProofState(request.token);
-      return jsonResponse(buildErrorEnvelope(request, 'Unauthorized'));
-    }
-    authContext.sessionGeneration = proof.generation;
+    var authContext = proof.auth;
+    authContext.token = request.token;
 
     result = dispatchProtectedAction(action, authContext, request.payload);
   } catch (err) {

@@ -37,6 +37,8 @@ function buildUsersCacheKey() {
 // the next execution reads a stale grid.
 function clearUsersCache() {
   _users_context_cache = null;
+  // Sessions hold a copy of the user row, so they must age out with it.
+  if (typeof bumpSessionAuthVersion === 'function') bumpSessionAuthVersion();
   try {
     // The grid is written in chunks, so the base key alone holds nothing.
     removeChunkedCache(buildUsersCacheKey());
@@ -209,12 +211,27 @@ function handleLogin(email, password) {
     return { success: false, message: 'Account is inactive' };
   }
 
+  // The previous token is about to stop existing in the sheet. Its cached
+  // session would otherwise keep answering requests.
+  const previousToken = normalizeTokenKey(row.ApiKey);
+  if (previousToken) {
+    clearSessionProofState(previousToken);
+    delete users.rowByApiKey[previousToken];
+  }
+
   const token = Utilities.getUuid();
   users.sheet.getRange(emailRow, users.idx.ApiKey + 1).setValue(token);
   users.rowByApiKey[normalizeTokenKey(token)] = emailRow;
   // Critical: a stale ApiKey column would reject the token just issued.
   syncUsersCachedCell(users, emailRow, 'ApiKey', token);
   const roleIds = resolveUserRoleIds(row);
+
+  seedSessionProofState(token, {
+    rowNumber: emailRow,
+    user: sanitizeUserRowForSession(row),
+    roleIds: roleIds,
+    accessRegionScope: buildUserAccessRegionScope(row)
+  });
 
   return {
     success: true,
@@ -226,10 +243,33 @@ function handleLogin(email, password) {
   };
 }
 
-/**
- * Stateless validation with direct user row lookup.
- */
-function validateToken(token) {
+// The session cache never carries a password hash.
+function sanitizeUserRowForSession(userRow) {
+  const copy = {};
+  Object.keys(userRow || {}).forEach(function (header) {
+    if (header === 'PasswordHash') return;
+    copy[header] = userRow[header];
+  });
+  return copy;
+}
+
+// Writes the first session state at login so the first request is a cache hit.
+function seedSessionProofState(token, authContext) {
+  const params = deriveSessionParams(token);
+  if (!params) return;
+
+  writeSessionProofState(token, {
+    uuid_code: deriveSessionCode(token, params.letterShift, params.digitShift),
+    generation: 0,
+    user: authContext.user,
+    roleIds: authContext.roleIds,
+    accessRegionScope: authContext.accessRegionScope,
+    rowNumber: authContext.rowNumber
+  });
+}
+
+// Sheet-backed resolve. Only runs on a session cache miss.
+function resolveUserAuthFromSheet(token) {
   if (!token) return null;
 
   const key = normalizeTokenKey(token);
@@ -247,18 +287,51 @@ function validateToken(token) {
     return null;
   }
 
-  const user = users.rowsByNumber[rowNumber] || getRowAsObject(users.sheet, rowNumber, users.headers);
-  const roleIds = resolveUserRoleIds(user);
-  const accessRegionScope = buildUserAccessRegionScope(user);
+  const rawUser = users.rowsByNumber[rowNumber] || getRowAsObject(users.sheet, rowNumber, users.headers);
+  const user = sanitizeUserRowForSession(rawUser);
   return {
-    rowNumber,
-    user,
-    roleIds,
-    accessRegionScope,
-    sheet: users.sheet,
-    headers: users.headers,
-    idx: users.idx
+    rowNumber: rowNumber,
+    user: user,
+    roleIds: resolveUserRoleIds(user),
+    accessRegionScope: buildUserAccessRegionScope(user)
   };
+}
+
+/**
+ * Session-cache first. A miss falls back to the sheet and re-seeds the session.
+ */
+function validateToken(token) {
+  if (!token) return null;
+
+  const state = readSessionProofState(token);
+  if (state && state.user) {
+    return {
+      token: token,
+      rowNumber: state.rowNumber,
+      user: state.user,
+      roleIds: state.roleIds,
+      accessRegionScope: state.accessRegionScope
+    };
+  }
+
+  const authContext = resolveUserAuthFromSheet(token);
+  if (!authContext) return null;
+
+  seedSessionProofState(token, authContext);
+  authContext.token = token;
+  return authContext;
+}
+
+// The Users sheet handle is only needed by the profile writers, so it is
+// attached on demand instead of on every request.
+function ensureAuthSheetContext(auth) {
+  if (auth && auth.sheet) return auth;
+
+  const users = getUsersContext();
+  auth.sheet = users.sheet;
+  auth.headers = users.headers;
+  auth.idx = users.idx;
+  return auth;
 }
 
 /**
@@ -368,8 +441,10 @@ function safeGetRoleResourceAccess(roleId, options) {
 
 function handleUpdateAvatar(auth, avatarUrl) {
   const value = (avatarUrl || '').toString().trim();
+  ensureAuthSheetContext(auth);
   auth.sheet.getRange(auth.rowNumber, auth.idx.Avatar + 1).setValue(value);
   syncUsersCachedCell(_users_context_cache, auth.rowNumber, 'Avatar', value);
+  updateSessionAuth(auth.token, { Avatar: value });
   return { success: true, avatarUrl: value };
 }
 
@@ -379,8 +454,10 @@ function handleUpdateName(auth, name) {
     return { success: false, message: 'Name is required' };
   }
 
+  ensureAuthSheetContext(auth);
   auth.sheet.getRange(auth.rowNumber, auth.idx.Name + 1).setValue(value);
   syncUsersCachedCell(_users_context_cache, auth.rowNumber, 'Name', value);
+  updateSessionAuth(auth.token, { Name: value });
   return { success: true, name: value };
 }
 
@@ -397,11 +474,13 @@ function handleUpdateEmail(auth, newEmail) {
     return { success: false, message: 'Email already in use' };
   }
 
+  ensureAuthSheetContext(auth);
   auth.sheet.getRange(auth.rowNumber, auth.idx.Email + 1).setValue(email);
   if (_users_context_cache) {
     _users_context_cache.rowByEmail[emailKey] = auth.rowNumber;
   }
   syncUsersCachedCell(_users_context_cache, auth.rowNumber, 'Email', email);
+  updateSessionAuth(auth.token, { Email: email });
   return { success: true, email: email };
 }
 
@@ -417,6 +496,7 @@ function handleUpdatePassword(auth, currentPassword, newPassword) {
     return { success: false, message: 'New password must be at least 6 characters' };
   }
 
+  ensureAuthSheetContext(auth);
   const storedHash = auth.sheet.getRange(auth.rowNumber, auth.idx.PasswordHash + 1).getValue();
   const currentHash = hashPassword(current);
 

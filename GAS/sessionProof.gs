@@ -9,6 +9,51 @@
 const SESSION_GEN_WINDOW = 2;
 
 var _session_proof_memory = {};
+var _session_auth_version = null;
+
+function buildSessionAuthVersionKey() {
+  return 'AQL_SESSION_AUTHVER_' + getAppSpreadsheet().getId();
+}
+
+// Cached auth would otherwise survive an admin changing a user's roles,
+// region, or status. Every session state is stamped with this version.
+function getSessionAuthVersion() {
+  if (_session_auth_version) return _session_auth_version;
+
+  const key = buildSessionAuthVersionKey();
+  try {
+    const cached = CacheService.getScriptCache().get(key);
+    if (cached) {
+      _session_auth_version = cached;
+      return cached;
+    }
+  } catch (e) { /* fall through */ }
+
+  let value = '1';
+  try {
+    value = PropertiesService.getScriptProperties().getProperty(key) || '1';
+  } catch (e) { /* keep the default */ }
+
+  try {
+    CacheService.getScriptCache().put(key, value, CACHE_TTL_SEC);
+  } catch (e) { /* non-fatal */ }
+
+  _session_auth_version = value;
+  return value;
+}
+
+function bumpSessionAuthVersion() {
+  const key = buildSessionAuthVersionKey();
+  const next = String(Date.now());
+  _session_auth_version = next;
+  _session_proof_memory = {};
+  try {
+    PropertiesService.getScriptProperties().setProperty(key, next);
+  } catch (e) { /* non-fatal */ }
+  try {
+    CacheService.getScriptCache().put(key, next, CACHE_TTL_SEC);
+  } catch (e) { /* non-fatal */ }
+}
 
 function buildSessionProofCacheKey(token) {
   return 'AQL_SESSION_' + getAppSpreadsheet().getId() + '_' + token;
@@ -73,12 +118,18 @@ function decodeSessionGeneration(sessionKey, uuidCode, params) {
 }
 
 function readSessionProofState(token) {
-  if (_session_proof_memory[token]) return _session_proof_memory[token];
+  const version = getSessionAuthVersion();
+
+  const inMemory = _session_proof_memory[token];
+  if (inMemory) {
+    return inMemory.v === version ? inMemory : null;
+  }
+
   try {
     const raw = CacheService.getScriptCache().get(buildSessionProofCacheKey(token));
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed.generation === 'number') {
+      if (parsed && typeof parsed.generation === 'number' && parsed.v === version) {
         _session_proof_memory[token] = parsed;
         return parsed;
       }
@@ -88,6 +139,7 @@ function readSessionProofState(token) {
 }
 
 function writeSessionProofState(token, state) {
+  state.v = getSessionAuthVersion();
   _session_proof_memory[token] = state;
   try {
     CacheService.getScriptCache().put(buildSessionProofCacheKey(token), JSON.stringify(state), CACHE_TTL_SEC);
@@ -121,8 +173,19 @@ function verifySessionProof(token, sessionKey) {
   }
 
   let state = readSessionProofState(token);
-  if (!state) {
-    state = { uuid_code: expectedUuidCode, generation: clientGen - 1 };
+  if (!state || !state.user) {
+    const authContext = resolveUserAuthFromSheet(token);
+    if (!authContext) {
+      return { ok: false, message: 'Unauthorized' };
+    }
+    state = {
+      uuid_code: expectedUuidCode,
+      generation: clientGen - 1,
+      user: authContext.user,
+      roleIds: authContext.roleIds,
+      accessRegionScope: authContext.accessRegionScope,
+      rowNumber: authContext.rowNumber
+    };
   }
 
   const stored = state.generation;
@@ -134,5 +197,51 @@ function verifySessionProof(token, sessionKey) {
   state.generation = Math.max(stored, clientGen);
   writeSessionProofState(token, state);
 
-  return { ok: true, generation: clientGen };
+  return {
+    ok: true,
+    generation: clientGen,
+    auth: {
+      rowNumber: state.rowNumber,
+      user: state.user,
+      roleIds: state.roleIds,
+      accessRegionScope: state.accessRegionScope,
+      sessionGeneration: clientGen
+    }
+  };
+}
+
+const SESSION_AUTH_LEVEL_KEYS = {
+  roleIds: true,
+  accessRegionScope: true,
+  rowNumber: true
+};
+
+/**
+ * Patches the live session so a profile edit is visible on the very next
+ * request. Unknown keys are treated as user-row columns.
+ */
+function updateSessionAuth(token, patch) {
+  if (!token || !patch) return null;
+
+  const state = readSessionProofState(token);
+  if (!state || !state.user) return null;
+
+  let regionChanged = false;
+  Object.keys(patch).forEach(function (key) {
+    if (SESSION_AUTH_LEVEL_KEYS[key]) {
+      state[key] = patch[key];
+      return;
+    }
+    state.user[key] = patch[key];
+    if (key === 'AccessRegion') regionChanged = true;
+    if (key === 'Roles') state.roleIds = resolveUserRoleIds(state.user);
+  });
+
+  if (regionChanged) {
+    state.accessRegionScope = buildUserAccessRegionScope(state.user);
+  }
+
+  delete state.user.PasswordHash;
+  writeSessionProofState(token, state);
+  return state;
 }

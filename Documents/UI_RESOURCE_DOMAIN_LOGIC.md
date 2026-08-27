@@ -443,18 +443,19 @@ Layer 3 (UI Presentation)
    ▼
 Layer 2 (Primary Domain: Resource A)
    │  Validates business rules for Resource A
-   │  Builds primary batch requests
+   │  Builds primary NODE PAYLOADS
    │  Directly calls Layer 2 Domain Builder for Resource B
    ▼
 Layer 2 (Secondary Domain: Resource B)
    │  Validates business rules for Resource B
-   │  Builds secondary batch requests (using batchRef for symbolic foreign keys)
+   │  Builds secondary node payloads (using batchRef for symbolic foreign keys)
    │  Returns standardized envelope
    ▼
 Layer 3 (UI Presentation)
-   │  Receives unified { valid, requests, permissions, successMsg }
+   │  Receives unified { valid, nodes, permissions, successMsg }
    │  Gates execution with resourceConfig.allowed(result.permissions)
-   │  Hands requests directly to pageState.submit() for atomic GAS execution
+   │  Hands nodes to pageState.applyNodes(), then returns { successMsg }
+   │  pageState.build() assembles the batch for atomic GAS execution
 ```
 
 **Why this rule is absolute:**
@@ -471,22 +472,75 @@ Every domain payload builder participating in a chain must return a standardized
 ```javascript
 {
   valid: boolean,        // false if internal domain validation or business constraints fail
-  requests: Array,       // Array of standard GAS batch requests (saveComposite, bulk, etc.)
+  nodes: Array,          // pageState NODE PAYLOADS, ready for pageState.applyNodes()
   permissions: Object,   // Aggregated map of required permissions across the entire chain
   message?: string,      // Failure or validation error message if valid === false
   successMsg?: string    // Optional user-facing success toast message
 }
 ```
 
+> [!IMPORTANT]
+> **`nodes`, never `requests`.** A builder returns node payloads and lets `pageState.build()`
+> turn them into GAS requests. Returning ready-made request envelopes forces Layer 3 into
+> `run({ requests })`, which skips `build()` and makes every node on the page inert —
+> validation sees nothing, drafts save nothing, `snapshot()` shows nothing. See
+> [UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md) §5 and §5.2.
+
 #### Envelope Field Specification
 
 | Field | Type | Purpose |
 |---|---|---|
 | `valid` | `boolean` | `true` if all business invariants, allocations, and constraints pass; `false` otherwise. |
-| `requests` | `Array<Object>` | Complete, ordered array of GAS batch request objects ready for `pageState.submit()`. |
+| `nodes` | `Array<NodePayload>` | Ordered node payloads ready for `pageState.applyNodes()`. |
 | `permissions` | `Object` | Permission requirements dictionary combining all resources touched by the chain (e.g. `{ Orders: 'create', Invoices: 'create' }`). |
 | `message` | `string` (optional) | Human-readable explanation when `valid === false`. Displayed to the user as a validation error toast or banner. |
 | `successMsg` | `string` (optional) | Standardized completion toast text returned upon successful submission. |
+
+#### The node payload shape
+
+`src/composables/resources/nodePayloads.js` is the Layer 1 counterpart of
+`resourceRequests.js`. Build every payload through it rather than writing the object
+by hand:
+
+| Helper | Writes | Becomes |
+|---|---|---|
+| `createNode(resource, record, reload?, payload?)` | one new row | `create` |
+| `updateNode(resource, code, record, reload?, role?)` | one existing row | `update` |
+| `bulkNode(resource, records, reload?)` | many rows of one resource | `bulk` |
+| `compositeNode({ resource, code?, record, children, reload? })` | a header plus its line items | `compositeSave` |
+| `actionNode(resource, code, actionConfig, fields, { key?, reload? })` | a workflow stamp on an existing row | `executeAction` |
+| `reloadNode(resources)` | nothing — a re-read only | folded into the batch's trailing `get` |
+
+#### `derive` — keeping a column in step after hydration
+
+A node payload may carry `derive: [{ on, handler }]`. `on` ADDRESSES a reactive slice of
+the tree; `handler(value, pageState)` writes the result back. The domain keeps the rule,
+pageState does the writing, and the UI reads the node — never a figure the builder
+returned on the side.
+
+```js
+deriveNode('OutletConsumptionInvoices', [derive(
+  { resource: 'OutletConsumptionInvoiceItems', records: true },
+  (rows, pageState) => pageState.setFields('OutletConsumptionInvoices', {
+    Subtotal: rows.reduce((total, row) => total + Number(row.data.Total || 0), 0)
+  })
+)])
+```
+
+`on` takes one of: `{ resource, role?, children: 'X' }`, `{ resource, records: true }`,
+`{ resource, field: 'X' }`, `{ resource }` (the whole record), or `{ control: 'X' }`.
+Entries are keyed by that address, so re-hydrating REPLACES rather than stacking a second
+writer on one column. See UI_PAGE_STATE.md §12.4.
+
+#### Two addressing rules that decide the shape
+
+1. **A node is addressed by `resource` plus `role`.** Several roleless payloads for one
+   resource collapse onto a single address. A batch writing SEVERAL rows of one resource
+   therefore uses `bulkNode` with a `Code` on each record, or gives each `updateNode` its
+   own `role` (the record's own code is a good role name).
+2. **A queued action is keyed by `key`.** `actionNode` defaults to
+   `resource::action::code`, which is already unique per row. Only pass an explicit `key`
+   when two different stamps of the same action target the same row.
 
 ---
 
@@ -496,84 +550,74 @@ When a primary domain builder invokes secondary domain builders:
 
 1. **Child Builder Invocation**: The primary builder invokes the secondary domain builder function with the relevant subset of input data.
 2. **Early Exit on Failure**: If any child builder returns `valid: false`, the parent immediately halts further processing and bubbles the child's error envelope upward.
-3. **Strict Request Ordering**: Parent requests MUST appear in the `requests` array before any child requests that depend on them or reference their generated identifiers.
+3. **Strict Node Ordering**: Parent nodes MUST appear in the `nodes` array before any child nodes that depend on them or reference their generated identifiers. `pageState` gives each address a build slot the first time it appears, so the array's order is the batch's order.
 4. **Permission Merging (Union)**: The parent merges all child `permissions` dictionaries into its own permissions map, ensuring Layer 3 can perform a comprehensive, single-gate check.
 
 ```javascript
 // src/_resource/Operation/Audits/composables/useAuditPayload.js
-import { buildRestockChainRequests } from 'src/_resource/Operation/Restocks/composables/useRestockPayload'
-import { resourceGetRequest } from 'src/composables/resources/usePageState'
-import { batchRef } from 'src/utils/appHelpers'
+import { buildRestockChainNodes } from 'src/_resource/Operation/Restocks/composables/useRestockPayload'
+import { reloadNode, updateNode } from 'src/composables/resources/nodePayloads'
 
 const RESOURCE_NAME = 'Audits'
 
-export function buildAuditCompletionChainRequests ({ auditRecord, discrepancies, actor, notes }) {
-  // 1. Validate primary domain constraints
+export function buildAuditCompletionChainNodes ({ auditRecord, discrepancies, actor, notes }) {
   if (!auditRecord?.Code) {
-    return { valid: false, message: 'Audit code is missing.' }
+    return { valid: false, nodes: [], permissions: {}, message: 'Audit code is missing.' }
   }
   if (!discrepancies?.length) {
-    return { valid: false, message: 'No audit discrepancy lines provided.' }
+    return { valid: false, nodes: [], permissions: {}, message: 'No audit discrepancy lines provided.' }
   }
 
-  // 2. Build primary resource batch request
-  const primaryRequests = [
-    {
-      resource: RESOURCE_NAME,
-      action: 'saveComposite',
-      data: {
-        record: {
-          Code: auditRecord.Code,
-          Status: 'COMPLETED',
-          CompletedBy: actor,
-          Notes: notes || ''
-        }
-      }
-    }
-  ]
+  const nodes = [updateNode(RESOURCE_NAME, auditRecord.Code, {
+    Status: 'COMPLETED',
+    CompletedBy: actor,
+    Notes: notes || ''
+  }, [RESOURCE_NAME])]
 
-  let aggregatedPermissions = {
-    [RESOURCE_NAME]: 'update'
-  }
+  let permissions = { [RESOURCE_NAME]: 'update' }
 
-  const allRequests = [...primaryRequests]
-
-  // 3. Conditionally chain secondary domain builder(s) if restock is required
   const restockItems = discrepancies.filter((d) => d.variance < 0)
   if (restockItems.length > 0) {
-    const restockResult = buildRestockChainRequests({
-      sourceAuditCode: auditRecord.Code,
-      items: restockItems,
-      actor
-    })
-
-    // 4. Early exit on secondary domain validation failure
-    if (!restockResult.valid) {
-      return {
-        valid: false,
-        message: `Restock chain validation failed: ${restockResult.message}`
-      }
+    const restock = buildRestockChainNodes({ sourceAuditCode: auditRecord.Code, items: restockItems, actor })
+    if (!restock.valid) {
+      return { valid: false, nodes: [], permissions: {}, message: `Restock chain validation failed: ${restock.message}` }
     }
-
-    // 5. Merge requests in strict dependency order & merge permissions
-    allRequests.push(...restockResult.requests)
-    aggregatedPermissions = {
-      ...aggregatedPermissions,
-      ...restockResult.permissions
-    }
+    nodes.push(...restock.nodes)
+    permissions = { ...permissions, ...restock.permissions }
   }
 
-  // 6. Include cache refresh requests in the same batch
-  allRequests.push(resourceGetRequest(['WarehouseStorages', 'Audits']))
+  nodes.push(reloadNode(['WarehouseStorages']))
 
   return {
     valid: true,
-    requests: allRequests,
-    permissions: aggregatedPermissions,
+    nodes,
+    permissions,
     successMsg: 'Audit completed and restock movements generated successfully.'
   }
 }
 ```
+
+Layer 3 then stays a thin adapter:
+
+```javascript
+// _ui/AQL/components/Operation/Audits/Complete/PageAction.js
+submit: () => {
+  const result = buildAuditCompletionChainNodes({ ... })
+  if (!result.valid) return { valid: false, message: result.message }
+  if (resourceConfig?.allowed(result.permissions) !== true) {
+    return { valid: false, message: 'You are not allowed to complete this audit.' }
+  }
+
+  pageState.applyNodes(result.nodes)
+  return { successMsg: result.successMsg }
+}
+```
+
+**A builder must not return a node for a record the PAGE already owns.** `applyNodes`
+replaces what it writes, so a payload naming the page's own form node would wipe the
+fields the user typed. A standalone Add wizard's builder returns only the EXTRA nodes and
+exposes its column decisions as a fields helper the page applies to its own node — see
+`restockCreateFields` / `buildRestockCreateChainNodes`.
 
 ---
 
@@ -585,20 +629,15 @@ Chain payload builders MUST use symbolic reference objects created via `batchRef
 
 ```javascript
 import { batchRef } from 'src/utils/appHelpers'
+import { bulkNode } from 'src/composables/resources/nodePayloads'
 
-// Child record linking to parent created in an earlier request of the same batch
-const childRequest = {
-  resource: 'StockMovements',
-  action: 'bulk',
-  data: {
-    rows: items.map((item) => ({
-      ItemCode: item.ItemCode,
-      Quantity: item.Quantity,
-      ReferenceCode: batchRef('Restocks.latest.code'), // Backend resolves to newly generated parent code
-      SourceType: 'RESTOCK'
-    }))
-  }
-}
+// Child rows linking to a parent created earlier in the same batch
+bulkNode('StockMovements', items.map((item) => ({
+  ItemCode: item.ItemCode,
+  Quantity: item.Quantity,
+  ReferenceCode: batchRef('Restocks.latest.code'),
+  SourceType: 'RESTOCK'
+})))
 ```
 
 - Never split parent and child mutations into multiple network round trips solely to retrieve generated IDs.
@@ -608,16 +647,23 @@ const childRequest = {
 
 ### 9.5 Post-Mutation Balance & Cache Refreshing
 
-Any domain chain whose execution invalidates client-side cached aggregates (such as stock balances, account ledgers, parent status headers, or audit logs) MUST append the appropriate `resourceGetRequest` queries to the end of the `requests` array:
+Any domain chain whose execution invalidates client-side cached aggregates (such as stock balances, account ledgers, parent status headers, or audit logs) MUST declare the resources to re-read.
+
+Every node builder takes a `reload` argument, and `pageState` hoists it to the batch. It is
+**always additive and deduped**, so several nodes may name the same resource and the batch
+still ends in exactly one `get`:
 
 ```javascript
-import { resourceGetRequest } from 'src/composables/resources/usePageState'
-
-// Appended to requests array
-allRequests.push(resourceGetRequest(['WarehouseStorages', 'StockMovements']))
+bulkNode('StockMovements', rows, ['WarehouseStorages'])
 ```
 
-This guarantees that all related store caches and UI aggregates update in the exact same network round trip, preventing stale views or desynchronized UI screens.
+Use `reloadNode(['WarehouseStorages', 'StockMovements'])` for a re-read that belongs to no
+particular node. It carries no body, so it hoists its list and never attaches a node.
+
+> [!IMPORTANT]
+> **Cursors are not a builder's job.** Never put `lastUpdatedAtByResource` or
+> `lastUpdatedAtResources` in anything you build — `runBatchRequests` collects every
+> resource in the batch and injects them, overwriting whatever was there.
 
 ---
 
@@ -627,10 +673,13 @@ Every payload chain builder in Layer 2 must adhere to the following strict guard
 
 1. **Pure JavaScript Functions**: No Vue reactivity (`ref`, `reactive`, `computed`), no Vue lifecycle hooks, and no component injection (`inject()`).
 2. **Deterministic Inputs**: All required records, form data, actor details, and configuration must be passed explicitly in the argument object.
-3. **No Direct Store/Service Calls**: Domain payload builders never call Pinia stores or API services directly. They merely assemble and return the declarative request objects.
-4. **Allowed Dependencies**:
+3. **No Direct Store/Service Calls**: Domain payload builders never call Pinia stores or API services directly. They merely assemble and return the declarative node payloads.
+4. **Node payloads, not requests**: builders import `src/composables/resources/nodePayloads`, never `resourceRequests`. A builder that reaches for a request envelope is building a batch Layer 3 cannot validate.
+5. **Never build another resource's payload.** A builder writes nodes for the resource it OWNS, plus that resource's own composite children. Every other resource in the chain is reached by calling ITS domain builder and splicing the returned `nodes` — never by hand-writing its columns. A resource's own child relations (`OutletConsumptionItems`, `PurchaseOrderItems`) are the exception: they ride in `children` of their parent's composite.
+6. **No positional promises**: never return "the code is at index N of the response". Name the RESOURCE and let the caller resolve the position off `pageState.build()` — a node that ships nothing is skipped, so positions are not knowable at build time.
+7. **Allowed Dependencies**:
    - Generic utilities from `src/utils/appHelpers` (e.g. `batchRef`, `batchRefList`, formatting helpers).
-   - Standard batch request helpers from `src/composables/resources/usePageState` (e.g. `resourceGetRequest`).
+   - The node payload builders in `src/composables/resources/nodePayloads`.
    - Sibling Layer 2 domain composables / payload builders.
 
 ---
@@ -642,11 +691,32 @@ Sections 2–9 govern one resource's domain module. This section governs how two
 ### 10.1 The linear cascade (X -> Y -> Z)
 
 > [!IMPORTANT]
-> **Every resource gets its own Layer 2 module — including child relations and
+> **Every resource gets its own Layer 2 module — including child relations, ledgers and
 > configuration entities.** `OutletOperatingRules` and `OutletStorages` are resources, not
 > columns of `Outlets`. A resource whose only job is to configure another one still owns
 > its own `src/_resource/{Scope}/{Resource}/composables/` module, because that is where its
 > defaults, its index and its vocabulary belong.
+
+**Ledgers are resources, not side effects.** `StockMovements` and `OutletMovements` own
+their sign rule, their `ReferenceType` vocabulary and their default storage. Five modules
+used to restate them — three separate definitions of the string `'OutletRestock'` alone.
+Every writer now calls `stockMovementRow` / `outletMovementRow`, so a row that would
+credit a warehouse for a deduction cannot be written by getting a sign wrong at a call
+site. The direction is a NAME (`OUT_OF_WAREHOUSE`, `ONTO_THE_SHELF`), never a bare `-1`.
+
+**A child relation earns its own module when something OUTSIDE its parent needs it.**
+`OutletConsumptionInvoiceItems` does: its row projection was defined in
+`OutletConsumptions`, which does not own it. `PurchaseOrderItems` does not — its rows are
+built only inside its parent's own `compositeSave`, and a module there would be an empty
+folder adding an import hop.
+
+> [!WARNING]
+> **Do not split a child's PROGRESS vocabulary out of its parent.** `OutletRestockItems`
+> extends `OutletRestocks`' `PROGRESS_META` rather than restating it, because a View card
+> renders both on one screen and `DELIVERED` must look identical in each. Moving the item
+> states to their own module either breaks that fusion or forces a circular import — the
+> exact two-files-kept-in-sync problem §3.3 forbids. `OutletDeliveries` already reads them
+> through the parent, which is correct delegation.
 
 Downstream resources consume upstream domain modules **in series**, never by reaching past
 one to the raw store:

@@ -14,6 +14,11 @@ export function usePageStateBuild ({ state, registry, additionalActionRequests }
     if (raw && raw.Code) node.code = raw.Code
   }
 
+  function withPayload (request, node) {
+    if (!request || !node.payload || !Object.keys(node.payload).length) return request
+    return { ...request, payload: { ...request.payload, ...node.payload } }
+  }
+
   function requestForNode (node) {
     const resource = node.resource
     if (node.many) {
@@ -44,7 +49,7 @@ export function usePageStateBuild ({ state, registry, additionalActionRequests }
   function defaultBuild ({ reload } = {}) {
     const requests = []
     registry.eachNode((node) => {
-      const request = requestForNode(node)
+      const request = withPayload(requestForNode(node), node)
       if (request) requests.push(request)
     })
     // Queued actions go after every node, so a `$ref` naming a record this batch

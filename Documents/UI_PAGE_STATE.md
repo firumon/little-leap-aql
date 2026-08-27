@@ -62,6 +62,7 @@ Node
 ├── record    { [header]: value }     ▶ SHIPS — the header/body the user edits
 ├── children  Bucket[]                ▶ SHIPS — composite children
 ├── records   Row[]                   ▶ SHIPS when many:true
+├── payload   { [key]: value }        ▶ SHIPS beside the record, request-level extras
 ├── controls  Control[]               ✕ NEVER SHIPS
 └── options   { [field]: Option[] }   option lists, derived from codeType
 ```
@@ -205,8 +206,9 @@ and it cannot drift from what is actually submitted.
 `run({ requests })` skips `build()`. It exists for callers that must apply a
 `modifyPayload` interceptor. **Reaching for it makes every node on the page
 inert.** If you find yourself using it because "the batch is too complex for
-nodes", read §10 — that complexity belongs in a Layer 2 builder that returns
-node-shaped payloads, not raw requests.
+nodes", read §12 — that complexity belongs in a Layer 2 builder that returns
+node-shaped payloads, not raw requests. No Layer 2 builder in `_resource/` uses it,
+and none should.
 
 ---
 
@@ -284,7 +286,7 @@ pageState.setResource('OutletVisits', 'next', payload)
 pageState.setResource(payload)          // payload carries .resource / .role
 ```
 
-The third form is what makes hydrating from Layer 2 a one-liner (§10).
+The third form is what `applyNodes` uses to hydrate a Layer 2 envelope (§10).
 
 ```js
 pageState.setResource({
@@ -454,6 +456,31 @@ draft **only on success**, and returns `{ success, response, code }`.
 The same lifecycle, lower level. `submit` is a thin wrapper. Pass `requests` to
 bypass `build()` — see the warning in §5.2.
 
+### `applyNodes(nodes)`
+
+Hydrates a Layer 2 envelope. THE way a domain builder's output reaches the page:
+
+```js
+const result = buildRestockCancellationNodes(parent, rows, actor, reason)
+if (!result.valid) return { valid: false, message: result.message }
+pageState.applyNodes(result.nodes)
+return { successMsg: result.successMsg }
+```
+
+Payloads sharing an address are merged first, so several builders' output can be
+concatenated without the later one replacing the earlier:
+
+```js
+pageState.applyNodes([...allocation.nodes, ...cancellations.nodes])
+```
+
+Each merged address is then written with `setResource` (replace). A payload carrying only
+`actions` or `reload` is hoisted WITHOUT attaching a node — an empty node ships nothing but
+would still be validated.
+
+**It replaces, so a builder must never return a node the page already owns.** On an Add
+wizard the page holds the form node; its builder returns only the extra nodes.
+
 ### `setReload(names)`
 
 ```js
@@ -504,39 +531,111 @@ nowhere — two docblocks in `useInvoicePayload.js` claim otherwise and are wron
 
 ## 12. Layer 2 payloads
 
-A resource's Layer 2 builder should return **node-shaped payloads**, not request
-envelopes. That keeps one assembly path, and keeps validation, drafts and
-inspection working.
+A resource's Layer 2 builder returns the envelope
+`{ valid, nodes, permissions, message?, successMsg? }`, where `nodes` are **node-shaped
+payloads**, not request envelopes. That keeps one assembly path, and keeps validation,
+drafts and inspection working. Full contract: `UI_RESOURCE_DOMAIN_LOGIC.md` §9.2.
+
+Build them with `src/composables/resources/nodePayloads` — `createNode`, `updateNode`,
+`bulkNode`, `compositeNode`, `actionNode`, `reloadNode` — never by hand.
 
 ```js
 // _resource/Operation/OutletRestocks/composables/useRestockPayload.js
-export function buildRestockPayload (rows, { outletCode, actorName, date }) {
+import { bulkNode, compositeNode } from 'src/composables/resources/nodePayloads'
+
+export function buildRestockChainNodes (rows, { outletCode, actorName, date }) {
   return {
-    resource: 'OutletRestocks',
-    record: {
-      Date: date, OutletCode: outletCode, RequestedUser: actorName,
-      OutletConsumptionCode: batchRef('OutletConsumptions.latest.code'),
-      Progress: 'PENDING_APPROVAL', Status: 'Active'
-    },
-    children: [{
-      resource: 'OutletRestockItems',
-      records: rows.map(r => ({ SKU: r.SKU, Quantity: r.Quantity, Status: 'Active' }))
-    }],
-    reload: ['OutletStorages']
+    valid: true,
+    nodes: [compositeNode({
+      resource: 'OutletRestocks',
+      record: {
+        Date: date, OutletCode: outletCode, RequestedUser: actorName,
+        OutletConsumptionCode: batchRef('OutletConsumptions.latest.code'),
+        Progress: 'PENDING_APPROVAL', Status: 'Active'
+      },
+      children: [{
+        resource: 'OutletRestockItems',
+        records: rows.map(r => ({ SKU: r.SKU, Quantity: r.Quantity, Status: 'Active' }))
+      }],
+      reload: ['OutletStorages']
+    })],
+    permissions: { OutletRestocks: 'create', OutletRestockItems: 'create' },
+    successMsg: 'Restock request created.'
   }
 }
 ```
 
-Hydrating is then one loop:
+Hydrating is then one call (§6, `applyNodes`):
 
 ```js
-envelope.nodes.forEach(node => pageState.setResource(node))
+pageState.applyNodes(envelope.nodes)
 ```
 
-**What is still Layer 2's job at submit time:** ledger rows derived from the
-final state (`OutletMovements`), tax rows, `executeAction` on records that
-already exist, and the permission map. Those are not user input and do not
-belong in nodes.
+### 12.1 Addressing decides the shape
+
+A node is addressed by `resource` plus `role`, so **several roleless payloads for one
+resource collapse onto one address**. A batch writing several rows of one resource must
+either use `bulkNode` with a `Code` on each record, or give each `updateNode` its own
+`role` — the record's own code is a good role name:
+
+```js
+// N restock parents in one delivery run
+updateNode('OutletRestocks', code, { Progress: next }, ['OutletRestocks'], code)
+```
+
+Queued actions are keyed instead. `actionNode` defaults to `resource::action::code`, which
+is unique per row, so a per-row batch of stamps survives the dedupe in §15.
+
+### 12.2 What is still Layer 2's job at submit time
+
+Ledger rows derived from the final state (`OutletMovements`), tax rows, `executeAction` on
+records that already exist, and the permission map. Those are not user input and do not
+belong in nodes the user edits — but they still travel as node payloads.
+
+### 12.3 `derive` — the UI reads nodes, nothing else
+
+Once an envelope is hydrated, the page must read its numbers off the NODE, not off a
+figure the builder handed back on the side. When a column depends on other node state, the
+domain declares the dependency and pageState does the writing:
+
+```js
+import { derive, deriveNode } from 'src/composables/resources/nodePayloads'
+
+deriveNode('Invoices', [derive(
+  { resource: 'InvoiceItems', records: true },
+  (rows, pageState) => pageState.setFields('Invoices', {
+    Subtotal: rows.reduce((total, row) => total + Number(row.data.Total || 0), 0)
+  })
+)])
+```
+
+| `on` | Watches |
+|---|---|
+| `{ resource, role?, children: 'X' }` | that child bucket's rows |
+| `{ resource, records: true }` | a many-node's rows |
+| `{ resource, field: 'X' }` | one column |
+| `{ resource }` | the whole record |
+| `{ control: 'X', resource?, role? }` | a control |
+
+- Handlers run **immediately** on registration and on every change (`deep`). Pass
+  `immediate: false` / `deep: false` to opt out.
+- Entries are keyed by their address, so hydrating twice REPLACES the writer rather than
+  stacking two on one column. Pass an explicit `key` for two derivations on one address.
+- They live in a scope pageState owns, so registering from a submit handler — outside any
+  component scope — does not leak. `reset()` and `resetForResource()` drop them all.
+- `pageState.derive([...])` registers one directly, for a page with a rule of its own.
+
+This replaces the manual `watch` in a `ready()` hook shown in §14.
+
+### 12.4 Never promise a position
+
+A builder must not return "the code is at index N of the response". A node that ships
+nothing is skipped by `build()`, so positions are not knowable when the envelope is made.
+Name the RESOURCE and let the caller resolve it after hydration:
+
+```js
+const at = pageState.build().findIndex((request) => request.resource === outcome.resource)
+```
 
 ## 13. Drafts (localStorage)
 
@@ -752,6 +851,10 @@ notifies with the first message.
 
 `useNode(...).validation` is the same check scoped to one node.
 
+Required headers are read **per node's own resource**, so a `StockMovements` row in a
+restock batch is not held to `OutletRestocks`' columns. A node that builds no request is
+not checked at all — it is not a form the user can fix.
+
 This only works if the data is in nodes. See §5.
 
 ## 18. Debugging
@@ -782,6 +885,12 @@ logs as opaque uid soup.
 6. Never build `lastUpdatedAtByResource`. The transport owns cursors.
 7. `ready` must not be `async`.
 8. Do not use `run({ requests })` to escape modelling.
+9. A Layer 2 builder returns `nodes`, never `requests` (§12).
+10. Several rows of one resource are one `bulkNode`, or one node per `role` — never
+    several roleless nodes, which collapse onto one address.
+11. A builder never hand-writes another resource's columns — it calls that resource's own
+    builder and splices its `nodes`.
+12. A derived column is declared with `derive`, not recomputed in the UI (§12.3).
 
 ## 20. Related
 

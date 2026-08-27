@@ -19,6 +19,9 @@ export function useNodeRegistry ({ state, strategy = {}, optionResolver = () => 
       record: {},
       children: [],
       records: [],
+      // Extra keys merged into the built request's payload, for the few GAS writes that
+      // take one beside the record (linkedPurchaseRequisitionCode).
+      payload: {},
       // Dual-purpose: { name, codeType } seeded by strategy.controls, and
       // { header, value } upserted by setControlField for non-schema fields.
       controls: [],

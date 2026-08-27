@@ -1,4 +1,5 @@
 import { computed } from 'vue'
+import { isBodylessNode, mergeNodePayloads } from '../nodePayloads'
 
 // The friendly write API. Every mutation resolves its node through the registry,
 // so no consumer ever assigns into a node or a child row directly.
@@ -6,6 +7,10 @@ export function usePageStateMutations ({ state, registry, hydrate }) {
   const { ensureNode, peekNode, childBucket, toResourceName, resolveTarget } = registry
 
   const isPlainObject = (v) => !!v && typeof v === 'object' && !Array.isArray(v)
+
+  // Set by usePageState once the derive registry exists.
+  let deriveSink = null
+  const bindDerive = (fn) => { deriveSink = fn }
 
   // A row may arrive as { _action, data } or as a bare record body.
   const toRow = (row) => (isPlainObject(row) && 'data' in row
@@ -41,6 +46,8 @@ export function usePageStateMutations ({ state, registry, hydrate }) {
     const record = payload.record || {}
     if (replace) for (const key of Object.keys(node.record)) if (!(key in record)) delete node.record[key]
     Object.assign(node.record, record)
+
+    if (payload.payload) Object.assign(node.payload, payload.payload)
 
     if (payload.children || replace) {
       const buckets = children.map((b) => ({ resource: toResourceName(b.resource), records: (b.records || []).map(toRow) }))
@@ -93,6 +100,7 @@ export function usePageStateMutations ({ state, registry, hydrate }) {
   // nodes contribute to one batch, so hoisting is always additive — a later
   // setResource must never wipe what an earlier one asked for.
   function hoistBatchExtras (payload) {
+    if (payload.derive?.length && deriveSink) deriveSink(payload.derive)
     for (const name of payload.reload || []) {
       if (name && !state.reload.includes(name)) state.reload.push(name)
     }
@@ -113,6 +121,17 @@ export function usePageStateMutations ({ state, registry, hydrate }) {
   function updateResource (a, b, c) {
     const { target, role, payload } = resourceArgs(a, b, c)
     return writeNode(target, role, payload, false)
+  }
+
+  // Hydrates a Layer 2 envelope's `nodes`. Payloads sharing an address merge first, so
+  // several builders can be concatenated. An actions-only payload hoists without a node.
+  function applyNodes (nodes = []) {
+    const written = []
+    for (const payload of mergeNodePayloads(nodes)) {
+      if (isBodylessNode(payload)) hoistBatchExtras(payload)
+      else written.push(writeNode({ resource: payload.resource, role: payload.role }, undefined, payload, true))
+    }
+    return written
   }
 
   function load (resource, rawRecord = {}) {
@@ -227,9 +246,11 @@ export function usePageStateMutations ({ state, registry, hydrate }) {
   }
 
   return {
+    bindDerive,
     load,
     setResource,
     updateResource,
+    applyNodes,
     setField,
     setFields,
     setControlField,

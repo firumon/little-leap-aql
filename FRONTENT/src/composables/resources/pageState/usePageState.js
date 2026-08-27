@@ -1,4 +1,4 @@
-import { reactive } from 'vue'
+import { reactive, onScopeDispose } from 'vue'
 import { useQuasar } from 'quasar'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { responseFailed, failureMessage, batchResultCode, resourceGetRequest } from '../resourceRequests'
@@ -9,6 +9,7 @@ import { usePageStateBuild } from './usePageStateBuild'
 import { usePageStateValidation } from './usePageStateValidation'
 import { usePageStateSerialization } from './usePageStateSerialization'
 import { usePageStateDraft } from './usePageStateDraft'
+import { usePageStateDerive } from './usePageStateDerive'
 
 function metaDefaults () {
   return {
@@ -58,6 +59,14 @@ export function usePageState (strategy = {}, options = {}) {
   const build = strategy.build || defaultBuild
 
   const mutations = usePageStateMutations({ state, registry, hydrate })
+  const derive = usePageStateDerive({ registry, mutations })
+  // Layer 2 declares derivations; they are registered as nodes are hydrated and torn
+  // down with the page.
+  // Assigned once the API object below exists. A draft restore can hydrate nodes before
+  // then, and a handler with no pageState to write to has nothing to do.
+  let pageApi = null
+  mutations.bindDerive((entries) => { if (pageApi) derive.register(entries, pageApi) })
+  onScopeDispose(() => derive.stop())
   const { validationErrors, nodeValidation } = usePageStateValidation({ state, registry, strategy })
   const { snapshot, serializeDraft, applyDraft } = usePageStateSerialization({ state, meta, registry, setResource: mutations.setResource })
 
@@ -79,6 +88,7 @@ export function usePageState (strategy = {}, options = {}) {
   // Flushes nodes left over from a previously-visited resource page before the
   // new active resource takes over as primaryKey.
   function resetForResource (resource) {
+    derive.clear()
     registry.detachAll()
     state.controls.splice(0)
     state.reload.splice(0)
@@ -99,6 +109,7 @@ export function usePageState (strategy = {}, options = {}) {
   }
 
   function reset () {
+    derive.clear()
     registry.detachAll()
     state.controls.splice(0)
     state.reload.splice(0)
@@ -166,7 +177,7 @@ export function usePageState (strategy = {}, options = {}) {
     return submit({ ...opts, successMsg: 'Draft saved.' })
   }
 
-  return {
+  const api = {
     state,
     meta,
     initResource,
@@ -191,6 +202,12 @@ export function usePageState (strategy = {}, options = {}) {
     clearDraft: draft.clearDraft,
     validationErrors,
     snapshot,
-    reset
+    reset,
+    // Derivations declared outside an envelope, for a page that needs one of its own.
+    derive: (entries) => derive.register(entries, pageApi),
+    clearDerive: derive.clear
   }
+
+  pageApi = api
+  return api
 }

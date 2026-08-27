@@ -1,0 +1,56 @@
+import { effectScope, computed, watch } from 'vue'
+
+// Derived columns declared by Layer 2 and run by pageState. The domain says WHAT depends
+// on what; the writing happens here, so the UI only ever reads nodes.
+export function usePageStateDerive ({ registry, mutations }) {
+  // Its own scope: applyNodes is often called from a submit handler, outside any
+  // component scope, where a bare watch would leak for the life of the tab.
+  const scope = effectScope()
+  const stoppers = new Map()
+
+  // An `on` address names a reactive slice of the tree. Layer 2 is pure, so it can only
+  // describe the slice — never hold a ref to it.
+  function sourceFor (on) {
+    const spec = typeof on === 'string' ? { field: on } : (on || {})
+    if (spec.control !== undefined) {
+      return computed(() => mutations.getControl(spec.control, null, spec.resource, spec.role))
+    }
+    const bound = registry.useNode(spec.resource, spec.role)
+    if (spec.children) return bound.children(spec.children)
+    if (spec.records) return computed(() => bound.node.value.records)
+    if (spec.field) return computed(() => bound.node.value.record[spec.field])
+    return computed(() => bound.node.value.record)
+  }
+
+  function keyFor (entry) {
+    if (entry.key) return entry.key
+    const spec = typeof entry.on === 'string' ? { field: entry.on } : (entry.on || {})
+    return [spec.resource || '', spec.role || '', spec.children || '', spec.field || '', spec.control || '', spec.records ? 'records' : '']
+      .join('::')
+  }
+
+  // Re-registering the same key REPLACES it. Hydrating twice must not stack two writers
+  // on one column.
+  function register (entries = [], api) {
+    for (const entry of entries) {
+      if (!entry || typeof entry.handler !== 'function') continue
+      const key = keyFor(entry)
+      stoppers.get(key)?.()
+      scope.run(() => {
+        const source = sourceFor(entry.on)
+        const stop = watch(source, (value, previous) => entry.handler(value, api, previous), {
+          deep: entry.deep !== false,
+          immediate: entry.immediate !== false
+        })
+        stoppers.set(key, stop)
+      })
+    }
+  }
+
+  function clear () {
+    for (const stop of stoppers.values()) stop()
+    stoppers.clear()
+  }
+
+  return { register, clear, stop: () => { clear(); scope.stop() }, count: () => stoppers.size }
+}

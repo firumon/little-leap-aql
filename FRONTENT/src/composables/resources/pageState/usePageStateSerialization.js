@@ -26,7 +26,7 @@ export function usePageStateSerialization ({ state, meta, registry, setResource 
       // Only { header, value } entries are kept — the { name, codeType } schema
       // half is re-seeded by strategy.controls on every initResource.
       const controls = node.controls.filter((c) => c.header !== undefined)
-      nodes.push({ resource: node.resource, role, code: node.code, many: node.many, record: node.record, children: node.children, records: node.records, controls })
+      nodes.push({ resource: node.resource, role, code: node.code, many: node.many, record: node.record, children: node.children, records: node.records, payload: node.payload, controls })
       if (Object.keys(node.record).length || node.children.length || node.records.length || controls.length) hasData = true
     })
     // Top level, NOT inside a node entry — page controls must restore even when

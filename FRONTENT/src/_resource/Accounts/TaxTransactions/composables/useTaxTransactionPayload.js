@@ -1,15 +1,9 @@
 import { useDataStore } from 'src/stores/data'
 import { textOrRef } from 'src/utils/appHelpers'
-import {
-  resourceBulkRequest,
-  resourceUpdateRequest
-} from 'src/composables/resources/resourceRequests'
+import { bulkNode } from 'src/composables/resources/nodePayloads'
 
-/**
- * The tax ledger: one row per document per tax code, so a return can be filed without
- * parsing every invoice's `TaxDetails` JSON. Figures are lifted from the engine's grouped
- * breakdown — no arithmetic here.
- */
+// The tax ledger: one row per document per tax code, so a return can be filed without
+// parsing every invoice's TaxDetails JSON. No arithmetic here.
 
 const TAX_TRANSACTIONS = 'TaxTransactions'
 
@@ -23,10 +17,8 @@ const todayISO = () => new Date().toISOString().slice(0, 10)
 
 export const TAX_TRANSACTION_RESOURCES = [TAX_TRANSACTIONS]
 
-/**
- * Reads the CACHE and never fetches. A page that means to REPLACE a document's rows must
- * load the resource first, or it sees none and writes a second set.
- */
+// Reads the CACHE and never fetches. A page replacing a document's rows must load the
+// resource first, or it sees none and writes a second set.
 export function taxTransactionRowsOf (resource = '', resourceCode = '') {
   const name = text(resource)
   const code = text(resourceCode)
@@ -39,14 +31,9 @@ export function taxTransactionRowsOf (resource = '', resourceCode = '') {
       text(row.Status || 'Active').toUpperCase() === 'ACTIVE')
 }
 
-/**
- * A zero-rated component still writes a row — the return has to show the value that was
- * zero-rated. A blank tax code writes none: an exempt item is out of scope.
- *
- * `resourceCode` may be a batch `$ref`, so these can chain off a document the same batch
- * is creating.
- */
-export function buildTaxTransactionRequests ({
+// A zero-rated component still writes a row, but a blank tax code writes none - an exempt
+// item is out of scope. resourceCode may be a $ref to a document this batch is creating.
+export function buildTaxTransactionNodes ({
   resource = '',
   resourceCode = '',
   date = '',
@@ -60,7 +47,7 @@ export function buildTaxTransactionRequests ({
     .map(asRow)
     .filter((entry) => text(entry.TaxCode))
 
-  if (!name || !resourceCode || !entries.length) return { requests: [], permissions: {} }
+  if (!name || !resourceCode || !entries.length) return { valid: true, nodes: [], permissions: {} }
 
   const rows = entries.map((entry) => ({
     Date: text(date) || todayISO(),
@@ -76,40 +63,44 @@ export function buildTaxTransactionRequests ({
   }))
 
   return {
-    requests: [resourceBulkRequest(TAX_TRANSACTIONS, rows, [TAX_TRANSACTIONS])],
+    valid: true,
+    nodes: [bulkNode(TAX_TRANSACTIONS, rows, [TAX_TRANSACTIONS])],
     permissions: { taxTransaction: 'create' }
   }
 }
 
-/** Deactivated, never deleted: a filed return must stay reconstructable. */
-export function buildTaxTransactionReversalRequests ({ existingRows = [] } = {}) {
+// Deactivated, never deleted: a filed return must stay reconstructable.
+export function buildTaxTransactionReversalNodes ({ existingRows = [] } = {}) {
   const rows = (Array.isArray(existingRows) ? existingRows : [])
     .map(asRow)
     .filter((row) => text(row.Code))
 
-  if (!rows.length) return { requests: [], permissions: {} }
+  if (!rows.length) return { valid: true, nodes: [], permissions: {} }
 
+  // One bulk, not one update per row: they all address the same resource, and a node is
+  // addressed by resource.
   return {
-    requests: rows.map((row) => resourceUpdateRequest(TAX_TRANSACTIONS, text(row.Code), {
+    valid: true,
+    nodes: [bulkNode(TAX_TRANSACTIONS, rows.map((row) => ({
+      Code: text(row.Code),
       Status: 'Inactive'
-    }, [TAX_TRANSACTIONS])),
+    })), [TAX_TRANSACTIONS])],
     permissions: { taxTransaction: 'update' }
   }
 }
 
-/**
- * Replace rather than update in place: an edit can change the SET of tax codes, not just
- * the amounts, so there is no row to match against.
- */
-export function buildTaxTransactionReplacementRequests ({
+// Replace rather than update in place: an edit can change the SET of tax codes, not just
+// the amounts, so there is no row to match against.
+export function buildTaxTransactionReplacementNodes ({
   existingRows = [],
   ...creation
 } = {}) {
-  const reversal = buildTaxTransactionReversalRequests({ existingRows })
-  const fresh = buildTaxTransactionRequests(creation)
+  const reversal = buildTaxTransactionReversalNodes({ existingRows })
+  const fresh = buildTaxTransactionNodes(creation)
 
   return {
-    requests: [...reversal.requests, ...fresh.requests],
+    valid: true,
+    nodes: [...reversal.nodes, ...fresh.nodes],
     permissions: { ...reversal.permissions, ...fresh.permissions }
   }
 }
@@ -119,8 +110,8 @@ export function useTaxTransactionPayload () {
     TAX_TRANSACTIONS,
     TAX_TRANSACTION_RESOURCES,
     taxTransactionRowsOf,
-    buildTaxTransactionRequests,
-    buildTaxTransactionReversalRequests,
-    buildTaxTransactionReplacementRequests
+    buildTaxTransactionNodes,
+    buildTaxTransactionReversalNodes,
+    buildTaxTransactionReplacementNodes
   }
 }

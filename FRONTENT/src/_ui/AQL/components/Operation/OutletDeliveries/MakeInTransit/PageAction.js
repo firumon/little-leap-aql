@@ -1,5 +1,5 @@
 import { useAuth } from 'src/composables/core/useAuth'
-import { buildDeliveryMarkInTransitBatch } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryPayload'
+import { buildDeliveryMarkInTransitNodes } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryPayload'
 import { canMakeInTransit } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryProgress'
 
 /**
@@ -44,7 +44,7 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         return { valid: false, message: 'Only a draft delivery can be marked as in transit.' }
       }
 
-      const result = buildDeliveryMarkInTransitBatch({
+      const result = buildDeliveryMarkInTransitNodes({
         record: row,
         actorName: actor(),
         comment: text(pageState.getControlField(NODE, 'InTransitComment'))
@@ -56,8 +56,8 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         return { valid: false, message: 'You are not allowed to dispatch this delivery.' }
       }
 
+      pageState.applyNodes(result.nodes)
       return {
-        requests: result.requests,
         successMsg: result.successMsg,
         onSuccess: () => { pageState.reset() }
       }

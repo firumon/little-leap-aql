@@ -198,7 +198,7 @@ export function canCancel (record, orsiRows = null) {
 /**
  * Whether every line on the manifest is delivered, so it may be closed.
  *
- * The safety net behind auto-completion: `buildDeliveryMarkDeliveredBatch` closes a manifest
+ * The safety net behind auto-completion: `buildDeliveryMarkDeliveredNodes` closes a manifest
  * itself the moment its last line lands, so this is for the run that did not close — a line
  * delivered through the standalone restock route, or a batch that partially failed.
  *

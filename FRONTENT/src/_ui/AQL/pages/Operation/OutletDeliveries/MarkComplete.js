@@ -7,7 +7,7 @@
  *   single step   confirmation + optional note   →   [ Cancel ] [ Complete Delivery ]
  *
  * ── A SAFETY NET, NOT THE NORMAL PATH ──
- * `buildDeliveryMarkDeliveredBatch` closes a run itself the moment its last line lands, so
+ * `buildDeliveryMarkDeliveredNodes` closes a run itself the moment its last line lands, so
  * in healthy operation nobody ever opens this page. It exists for the manifest that did NOT
  * close — a line delivered through the standalone restock route, or a batch that partially
  * failed — which would otherwise sit in the active queue forever with nothing left to

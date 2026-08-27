@@ -1,6 +1,6 @@
 import { useAuth } from 'src/composables/core/useAuth'
 import { restockItemRows, restockRows } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryRows'
-import { buildDeliveryMarkDeliveredBatch } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryPayload'
+import { buildDeliveryMarkDeliveredNodes } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryPayload'
 import { canDeliver } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryProgress'
 
 /**
@@ -74,7 +74,7 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         return { valid: false, message: 'This delivery has come to rest and can no longer take deliveries.' }
       }
 
-      const result = buildDeliveryMarkDeliveredBatch({
+      const result = buildDeliveryMarkDeliveredNodes({
         deliveryRecord: row,
         deliveredOrsiCodes: selectedCodes(),
         allOrsiRows: restockItemRows(),
@@ -89,8 +89,8 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         return { valid: false, message: 'You are not allowed to record this delivery.' }
       }
 
+      pageState.applyNodes(result.nodes)
       return {
-        requests: result.requests,
         successMsg: result.successMsg,
         // The ticks and the note would otherwise survive the navigation and re-seed the next
         // run opened on this route.

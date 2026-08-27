@@ -1,6 +1,6 @@
 import { useAuth } from 'src/composables/core/useAuth'
 import { useDataStore } from 'src/stores/data'
-import { buildDeliveryCreateBatch } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryPayload'
+import { buildDeliveryCreateNodes } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryPayload'
 
 // `actions` must stay a getter so the step read stays tracked (UI_ACTION_SYSTEM.md §1.3).
 const SELECTION = 'DeliverySelection'
@@ -64,7 +64,7 @@ export default (props, { pageState, resourceConfig }) => {
     },
 
     submit: () => {
-      const result = buildDeliveryCreateBatch({
+      const result = buildDeliveryCreateNodes({
         userName: actor(),
         selectedOrsiCodes: selectedCodes()
       })
@@ -75,8 +75,8 @@ export default (props, { pageState, resourceConfig }) => {
         return { valid: false, message: 'You are not allowed to create a delivery.' }
       }
 
+      pageState.applyNodes(result.nodes)
       return {
-        requests: result.requests,
         successMsg: result.successMsg,
         // Otherwise the selection survives the navigation and re-seeds the next visit with
         // lines that are now on the run just created.

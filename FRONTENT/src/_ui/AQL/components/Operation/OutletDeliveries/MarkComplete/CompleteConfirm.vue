@@ -14,7 +14,7 @@
 /**
  * OutletDeliveries › MarkComplete › CompleteConfirm — the action route's content.
  *
- * A SAFETY NET, not the normal path. `buildDeliveryMarkDeliveredBatch` closes a run itself
+ * A SAFETY NET, not the normal path. `buildDeliveryMarkDeliveredNodes` closes a run itself
  * the moment its last line lands, so this route exists for the manifest that did NOT close —
  * a line delivered through the standalone restock route, or a batch that partially failed —
  * and would otherwise sit in the active queue forever.

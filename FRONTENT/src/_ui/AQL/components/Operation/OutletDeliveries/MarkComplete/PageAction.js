@@ -1,6 +1,6 @@
 import { useAuth } from 'src/composables/core/useAuth'
 import { itemRowsForCodes } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryRows'
-import { buildDeliveryMarkCompleteBatch } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryPayload'
+import { buildDeliveryMarkCompleteNodes } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryPayload'
 import { orsisForDelivery } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryProgress'
 
 /**
@@ -62,7 +62,7 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
       const row = record()
       if (!text(row.Code)) return { valid: false, message: 'This delivery could not be loaded.' }
 
-      const result = buildDeliveryMarkCompleteBatch({
+      const result = buildDeliveryMarkCompleteNodes({
         record: row,
         orsiRows: manifestRows(),
         actorName: actor(),
@@ -75,8 +75,8 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         return { valid: false, message: 'You are not allowed to complete this delivery.' }
       }
 
+      pageState.applyNodes(result.nodes)
       return {
-        requests: result.requests,
         successMsg: result.successMsg,
         onSuccess: () => { pageState.reset() }
       }

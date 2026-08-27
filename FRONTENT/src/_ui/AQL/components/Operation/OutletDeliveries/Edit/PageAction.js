@@ -1,6 +1,6 @@
 import { useAuth } from 'src/composables/core/useAuth'
 import { restockItemRows } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryRows'
-import { buildDeliveryEditManifestBatch } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryPayload'
+import { buildDeliveryEditManifestNodes } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryPayload'
 import { isEditable } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryProgress'
 
 // Submit re-checks `isEditable` because the run may have departed while this page was open.
@@ -38,7 +38,7 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         return { valid: false, message: 'Only a draft delivery can have its items edited.' }
       }
 
-      const result = buildDeliveryEditManifestBatch({
+      const result = buildDeliveryEditManifestNodes({
         record: row,
         newOrsiCodes: selectedCodes(),
         allOrsiRows: restockItemRows(),
@@ -51,8 +51,8 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         return { valid: false, message: 'You are not allowed to change this delivery.' }
       }
 
+      pageState.applyNodes(result.nodes)
       return {
-        requests: result.requests,
         successMsg: result.successMsg,
         onSuccess: () => { pageState.reset() }
       }

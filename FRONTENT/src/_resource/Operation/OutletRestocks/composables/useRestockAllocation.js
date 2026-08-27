@@ -170,7 +170,7 @@ export function planAllocatedQty (entry) {
 
 /**
  * Translate one requested item + its plan entry into the row shape
- * `buildRestockAllocationBatchRequests` consumes (initial approval).
+ * `buildRestockAllocationNodes` consumes (initial approval).
  *
  * The ORIGINAL row's `Code` is attached to exactly one emitted row, so a Code is
  * never written twice in one batch:
@@ -213,7 +213,7 @@ export function splitApprovalRows (item = {}, entry = {}) {
 
 /**
  * Translate the same plan into the row shape
- * `buildPendingRestockAllocationBatchRequests` consumes (later allocation).
+ * `buildPendingRestockAllocationNodes` consumes (later allocation).
  *
  * That builder groups by a SOURCE code, so the untouched source row is emitted
  * alongside the allocated bins, each tagged with `_pendingSourceCode`. It decides

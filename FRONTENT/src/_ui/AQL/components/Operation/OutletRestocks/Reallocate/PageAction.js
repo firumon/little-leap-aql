@@ -1,8 +1,7 @@
 ﻿import { useAuth } from 'src/composables/core/useAuth'
-import { resourceGetRequest } from 'src/composables/resources/resourceRequests'
 import {
-  buildPendingRestockAllocationBatchRequests,
-  buildRestockCancelItemsBatchRequests
+  buildPendingRestockAllocationNodes,
+  buildRestockCancelItemNodes
 } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
 import {
   pendingAllocationRows,
@@ -25,14 +24,14 @@ import {
  * builder and the conditional submit label all collapse away:
  *
  *   • no `isInitialApproval` — the request is PARTIALLY_DELIVERED by definition
- *   • no `splitApprovalRows` / `buildRestockAllocationBatchRequests`
+ *   • no `splitApprovalRows` / `buildRestockAllocationNodes`
  *   • no `reject` — a request that has already delivered stock cannot be
  *     rejected, and `Approve/PageAction.js` blocks exactly that case
  *   • `submitLabel` is the static `'Allocate Stock'`, not a getter
  *
  * THE PARENT RECORD IS NEVER WRITTEN. Reallocating settles child lines and moves
  * stock; the request stays PARTIALLY_DELIVERED until a delivery says otherwise.
- * `buildPendingRestockAllocationBatchRequests` emits only `OutletRestockItems`
+ * `buildPendingRestockAllocationNodes` emits only `OutletRestockItems`
  * and `StockMovements` requests, and nothing here adds an `OutletRestocks` one.
  * That is also why `permitted()` asks for stock-write permission rather than
  * `approve` — no approval is taking place.
@@ -106,10 +105,10 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
   // Cancelling a remainder writes no stock movement — the units were never taken
   // out of the warehouse — so it is an `executeAction` stamp, dispatched after the
   // bulk write that (re)creates the row it targets.
-  function cancelRequests () {
+  function cancelNodes () {
     const rows = cancelledItems().map((item) => ({ Code: text(item.Code), Progress: 'PENDING' }))
     if (!rows.length) return []
-    return buildRestockCancelItemsBatchRequests(restock(), rows, actor(), comment() || 'Cancelled: no warehouse stock available.')
+    return buildRestockCancelItemNodes(restock(), rows, actor(), comment() || 'Cancelled: no warehouse stock available.').nodes
   }
 
   // Claims the registered `reallocate` action plus the stock writes the batch makes.
@@ -172,16 +171,9 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
       }
 
       const rows = allocated.flatMap((item) => pendingAllocationRows(item, entryFor(item)))
-      return {
-        requests: [
-          ...buildPendingRestockAllocationBatchRequests(parent, rows, actor(), comment()),
-          ...cancelRequests(),
-          // The allocation just changed on-hand stock; pull the recalculated
-          // storages back in the same round trip rather than on the next page load.
-          resourceGetRequest(['WarehouseStorages'])
-        ],
-        successMsg: 'Pending items allocated.'
-      }
+      const result = buildPendingRestockAllocationNodes(parent, rows, actor(), comment())
+      pageState.applyNodes([...result.nodes, ...cancelNodes()])
+      return { successMsg: result.successMsg }
     },
 
     successRoute: 'view'

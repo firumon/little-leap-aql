@@ -1,10 +1,9 @@
 ﻿import { useAuth } from 'src/composables/core/useAuth'
-import { resourceGetRequest } from 'src/composables/resources/resourceRequests'
 import {
-  buildPendingRestockAllocationBatchRequests,
-  buildRestockAllocationBatchRequests,
-  buildRestockCancelItemsBatchRequests,
-  buildRestockRejectBatchRequests
+  buildPendingRestockAllocationNodes,
+  buildRestockAllocationNodes,
+  buildRestockCancelItemNodes,
+  buildRestockRejectNodes
 } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
 import {
   pendingAllocationRows,
@@ -92,13 +91,12 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
 
   const totalAllocated = () => pendingItems().reduce((sum, item) => sum + planAllocatedQty(entryFor(item)), 0)
 
-  // Cancelling a remainder writes no stock movement — the units were never taken
-  // out of the warehouse — so it is an `executeAction` stamp, dispatched after the
-  // bulk write that (re)creates the row it targets.
-  function cancelRequests () {
+  // Cancelling a remainder moves no stock — the units never left the warehouse — so it
+  // is a queued executeAction, dispatched after the bulk write that recreates the row.
+  function cancelNodes () {
     const rows = cancelledItems().map((item) => ({ Code: text(item.Code), Progress: 'PENDING' }))
     if (!rows.length) return []
-    return buildRestockCancelItemsBatchRequests(restock(), rows, actor(), comment() || 'Cancelled: no warehouse stock available.')
+    return buildRestockCancelItemNodes(restock(), rows, actor(), comment() || 'Cancelled: no warehouse stock available.').nodes
   }
 
   // Action names are lower-case on purpose. `checkSingleAction` derives the
@@ -166,33 +164,20 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
       }
 
       if (isInitialApproval()) {
-        // `splitApprovalRows` attaches the original row's Code to exactly one
-        // emitted row, so no Code is written twice in the same batch.
+        // `splitApprovalRows` attaches the original row's Code to exactly one emitted
+        // row, so no Code is written twice in the same batch.
         const rows = pendingItems().flatMap((item) => splitApprovalRows(item, entryFor(item)))
-        return {
-          requests: [
-            ...buildRestockAllocationBatchRequests(parent, rows, actor(), comment()),
-            ...cancelRequests(),
-            // The allocation just changed on-hand stock; pull the recalculated
-            // storages back in the same round trip rather than on the next page load.
-            resourceGetRequest(['WarehouseStorages'])
-          ],
-          successMsg: 'Restock request approved and stock allocated.'
-        }
+        const result = buildRestockAllocationNodes(parent, rows, actor(), comment())
+        pageState.applyNodes([...result.nodes, ...cancelNodes()])
+        return { successMsg: result.successMsg }
       }
 
-      // Later allocation: the builder groups by source Code and decides for
-      // itself whether each source row is reused, shrunk to a remainder, or
-      // deactivated, so only rows carrying allocations are handed to it.
+      // Later allocation: the builder groups by source Code and decides for itself
+      // whether each source row is reused, shrunk to a remainder, or deactivated.
       const rows = allocated.flatMap((item) => pendingAllocationRows(item, entryFor(item)))
-      return {
-        requests: [
-          ...buildPendingRestockAllocationBatchRequests(parent, rows, actor(), comment()),
-          ...cancelRequests(),
-          resourceGetRequest(['WarehouseStorages'])
-        ],
-        successMsg: 'Pending items allocated.'
-      }
+      const result = buildPendingRestockAllocationNodes(parent, rows, actor(), comment())
+      pageState.applyNodes([...result.nodes, ...cancelNodes()])
+      return { successMsg: result.successMsg }
     },
 
     /**
@@ -214,12 +199,10 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         return { valid: false, message: 'This request has delivered items and can no longer be rejected.' }
       }
 
+      const result = buildRestockRejectNodes(parent, active, actor(), comment())
+      pageState.applyNodes(result.nodes)
       return {
-        requests: [
-          ...buildRestockRejectBatchRequests(parent, active, actor(), comment()),
-          resourceGetRequest(['WarehouseStorages'])
-        ],
-        successMsg: 'Restock request rejected.',
+        successMsg: result.successMsg,
         onSuccess: () => {
           pageState.reset()
           nav.goTo('view')

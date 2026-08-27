@@ -1,7 +1,7 @@
 ﻿import { useAuth } from 'src/composables/core/useAuth'
 import {
   restockCreateFields,
-  buildRestockCreateChainRequests
+  buildRestockCreateChainNodes
 } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
 
 /**
@@ -79,22 +79,9 @@ export default (props, { pageState, resourceConfig }) => {
       return validateItems()
     },
 
-    /**
-     * A THIN ADAPTER, nothing more (UI_RESOURCE_DOMAIN_LOGIC.md §9.1).
-     *
-     * This handler collects what the wizard asked — outlet, mode, warehouse, lines,
-     * draft intent — and hands it to `OutletRestocks`' own Layer 2 chain builder. Which
-     * `Progress` each mode lands in, which columns carry the submission stamp, and what
-     * the direct mode's `StockMovements` deduction looks like are all decided THERE, and
-     * are identical whether a restock is raised from this page or chained off a
-     * consumption submit.
-     *
-     * Two calls rather than one, because the page owns the form node: the domain's field
-     * decisions are applied to it first (`restockCreateFields`), and the composite save
-     * `pageState.build()` then assembles rides into the chain builder as `baseRequests`,
-     * so a field the wizard collects — the date, the requesting user, the submission
-     * comment — is never restated in Layer 2 and never invented in Layer 3.
-     */
+    // A thin adapter. The wizard collects outlet, mode, warehouse and lines; Layer 2
+    // decides every column. The page owns the restock node, so the domain's field
+    // decisions are applied to it and the builder only adds what the node cannot hold.
     submit: () => {
       const actorName = user.value?.name || user.value?.email || ''
       const lines = items()
@@ -113,13 +100,12 @@ export default (props, { pageState, resourceConfig }) => {
         })
       }
 
-      const result = buildRestockCreateChainRequests({
+      const result = buildRestockCreateChainNodes({
         outletCode: parent.record.value.OutletCode,
         mode: mode(),
         draft: isDraft(),
         warehouseCode: warehouse(),
         lines: lines.map((entry) => entry.data),
-        baseRequests: pageState.build(),
         actorName
       })
       if (!result.valid) return { valid: false, message: result.message }
@@ -127,7 +113,8 @@ export default (props, { pageState, resourceConfig }) => {
         return { valid: false, message: 'You are not allowed to submit this restock request.' }
       }
 
-      return { requests: result.requests, successMsg: result.successMsg }
+      pageState.applyNodes(result.nodes)
+      return { successMsg: result.successMsg }
     }
   }
 }

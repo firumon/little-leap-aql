@@ -5,7 +5,7 @@ import {
   cancellability,
   cancellableItems,
   returnableItems,
-  buildRestockCancellationBatchRequests
+  buildRestockCancellationNodes
 } from 'src/_resource/Operation/OutletRestocks/composables/useRestockCancellation'
 
 /**
@@ -78,24 +78,19 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         return { valid: false, message: 'Every line on this request has already been settled.' }
       }
 
-      // Claims the registered `cancel` action, not generic `update`: a role granted
-      // canCancel without record-edit rights must still be able to close a request.
-      // Item rows still take `update` — that is a plain child write, not a workflow step.
-      // The stock permission is added only when the batch actually moves warehouse stock.
-      const permissions = { OutletRestocks: 'cancel', OutletRestockItems: 'update' }
-      if (returnableItems(rows, parent.Code).length) permissions.StockMovements = 'create'
-      if (resourceConfig?.allowed(permissions) !== true) {
+      // The domain states which permissions this cancellation actually needs — it claims
+      // `cancel` rather than generic `update`, and stock only when units come back.
+      const result = buildRestockCancellationNodes(parent, rows, actor(), why)
+      if (!result.valid) return { valid: false, message: result.message }
+      if (resourceConfig?.allowed(result.permissions) !== true) {
         return { valid: false, message: 'You are not allowed to cancel this restock request.' }
       }
 
+      pageState.applyNodes(result.nodes)
       return {
-        requests: buildRestockCancellationBatchRequests(parent, rows, actor(), why),
-        successMsg: returnableItems(rows, parent.Code).length
-          ? 'Restock cancelled and warehouse stock returned.'
-          : 'Restock cancelled.',
-        // Land back on the record so the driver sees the settled state and its lines,
-        // rather than being returned to a list. `pageState.reset()` first, or the typed
-        // reason survives the navigation and re-seeds the next visit.
+        successMsg: result.successMsg,
+        // Reset first, or the typed reason survives the navigation and re-seeds the
+        // next visit to this route.
         onSuccess: () => {
           pageState.reset()
         }

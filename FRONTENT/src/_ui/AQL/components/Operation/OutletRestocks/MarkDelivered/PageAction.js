@@ -1,5 +1,5 @@
 ﻿import { useAuth } from 'src/composables/core/useAuth'
-import { buildRestockDeliveryBatchRequests } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
+import { buildRestockDeliveryNodes } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
 import {
   deliverableRows,
   normalizeSelection,
@@ -128,12 +128,11 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         return { valid: false, message: 'Select at least one item to confirm as delivered.' }
       }
 
-      return {
-        requests: buildRestockDeliveryBatchRequests(parent, delivered, actor(), comment(), {
-          allItems: childRows()
-        }),
-        successMsg: 'Delivery confirmed and outlet stock updated.'
-      }
+      const result = buildRestockDeliveryNodes(parent, delivered, actor(), comment(), {
+        allItems: childRows()
+      })
+      pageState.applyNodes(result.nodes)
+      return { successMsg: result.successMsg }
     },
 
     successRoute: 'view'

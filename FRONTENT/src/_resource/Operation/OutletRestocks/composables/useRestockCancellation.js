@@ -7,7 +7,7 @@
  * below, so the batch can never settle rows the review did not display.
  *
  * ── WHY CANCELLATION IS NOT REJECTION ──
- * `buildRestockRejectBatchRequests` already reverses allocated stock, but it drives the
+ * `buildRestockRejectNodes` already reverses allocated stock, but it drives the
  * whole request to `REJECTED` and deactivates every line. That is an approver's verdict on
  * a request still awaiting approval. A CANCELLATION happens later and to a request that may
  * be part-fulfilled, so two things differ and both matter:
@@ -29,9 +29,7 @@
  * holds reactive state, renders, or touches a store.
  */
 
-import { textOrRef } from 'src/utils/appHelpers'
-import { toDateTime24 } from 'src/utils/dateHelpers'
-import { resourceBulkRequest, resourceGetRequest, resourceUpdateRequest } from 'src/composables/resources/resourceRequests'
+import { bulkNode, updateNode } from 'src/composables/resources/nodePayloads'
 import {
   CANCELLED,
   DELIVERED,
@@ -42,9 +40,9 @@ import {
   progressOf
 } from './useRestockProgress'
 
-const DEFAULT_STORAGE = '_default'
-const REFERENCE_TYPE = 'OutletRestock'
+import { stampFields } from 'src/utils/workflowStamp'
 
+import { INTO_WAREHOUSE, STOCK_REFERENCE, stockMovementRow, buildStockMovementNodes } from 'src/_resource/Operation/StockMovements/composables/useStockMovementPayload'
 const text = (value) => (value == null ? '' : String(value).trim())
 const num = (value) => {
   const parsed = Number(value)
@@ -147,53 +145,35 @@ export function nextProgressAfterCancellation (rows = [], restockCode = '') {
   return deliveredItems(rows, restockCode).length ? DELIVERED : CANCELLED
 }
 
-/** One workflow stamp — the At/By/Comment triple for a `Progress<State>` prefix. */
-function stampFields (prefix, actorName = '', comment = '') {
-  return {
-    [`${prefix}At`]: toDateTime24(new Date()),
-    [`${prefix}By`]: text(actorName),
-    [`${prefix}Comment`]: text(comment)
-  }
-}
 
-/**
- * CANCEL the request — return committed stock, settle the open lines, stamp the parent.
- *
- * Order matters: the POSITIVE warehouse movements are emitted FIRST, while the rows they
- * describe are still readable, exactly as the reject builder does it.
- *
- * The item rows are marked `CANCELLED` rather than deactivated. A deactivated row vanishes
- * from every view, taking with it the record of how much was committed and returned; a
- * cancelled one stays on the request and states what happened to it.
- */
-export function buildRestockCancellationBatchRequests (restock = {}, rows = [], actorName = '', comment = '') {
+// Cancel: return committed stock, settle the open lines, stamp the parent. Lines are
+// marked CANCELLED, not deactivated, so the request still shows what was committed.
+export function buildRestockCancellationNodes (restock = {}, rows = [], actorName = '', comment = '') {
   const parent = asRow(restock)
   const parentCode = text(parent.Code)
-  if (!parentCode) return []
+  if (!parentCode) return { valid: false, nodes: [], permissions: {}, message: 'This restock request could not be loaded.' }
 
   const returning = returnableItems(rows, parentCode)
   const cancelling = cancellableItems(rows, parentCode)
 
-  const requests = []
+  const nodes = []
 
   // 1. Put the committed units back on the warehouse shelf they came off.
   if (returning.length) {
-    requests.push(resourceBulkRequest('StockMovements', returning.map((entry) => ({
-      WarehouseCode: text(entry.WarehouseCode),
-      StorageName: text(entry.StorageName) || DEFAULT_STORAGE,
-      SKU: text(entry.SKU),
-      // Always positive, for the same reason the allocation movement is always negative:
-      // a row carrying a negative quantity must not flip the direction of the return.
-      QtyChange: Math.abs(num(entry.Quantity)),
-      ReferenceType: REFERENCE_TYPE,
-      ReferenceCode: textOrRef(entry.Code || parentCode),
-      Status: 'Active'
-    })), ['WarehouseStorages']))
+    nodes.push(...buildStockMovementNodes(returning.map((entry) => stockMovementRow({
+      warehouseCode: entry.WarehouseCode,
+      storageName: entry.StorageName,
+      sku: entry.SKU,
+      qty: entry.Quantity,
+      direction: INTO_WAREHOUSE,
+      referenceType: STOCK_REFERENCE.RESTOCK,
+      referenceCode: entry.Code || parentCode
+    }))).nodes)
   }
 
   // 2. Settle every open line. Kept Active so the request still shows what was committed.
   if (cancelling.length) {
-    requests.push(resourceBulkRequest('OutletRestockItems', cancelling.map((entry) => ({
+    nodes.push(bulkNode('OutletRestockItems', cancelling.map((entry) => ({
       Code: text(entry.Code),
       Progress: ITEM_CANCELLED,
       ...stampFields('ProgressCancelled', actorName, comment),
@@ -202,15 +182,21 @@ export function buildRestockCancellationBatchRequests (restock = {}, rows = [], 
   }
 
   // 3. The parent, settled on what actually happened.
-  requests.push(resourceUpdateRequest('OutletRestocks', parentCode, {
+  nodes.push(updateNode('OutletRestocks', parentCode, {
     Progress: nextProgressAfterCancellation(rows, parentCode),
     ...stampFields('ProgressCancelled', actorName, comment)
-  }, ['OutletRestocks']))
+  }, ['OutletRestocks', 'OutletRestockItems']))
 
-  // 4. The return just changed warehouse balances; pull them back in the same round trip
-  //    rather than leaving the next page to read a stale shelf.
-  requests.push(resourceGetRequest(['OutletRestocks', 'OutletRestockItems', 'WarehouseStorages']))
-  return requests
+  const permissions = { OutletRestocks: 'cancel', OutletRestockItems: 'update' }
+  // Only claimed when the batch actually moves warehouse stock.
+  if (returning.length) permissions.StockMovements = 'create'
+
+  return {
+    valid: true,
+    nodes,
+    permissions,
+    successMsg: returning.length ? 'Restock cancelled and warehouse stock returned.' : 'Restock cancelled.'
+  }
 }
 
 // Composable shape for setup-context callers. Same functions, one import (§5).
@@ -226,6 +212,6 @@ export function useRestockCancellation () {
     returnableItems,
     restockCancellationPreview,
     nextProgressAfterCancellation,
-    buildRestockCancellationBatchRequests
+    buildRestockCancellationNodes
   }
 }

@@ -1,5 +1,5 @@
 import { useAuth } from 'src/composables/core/useAuth'
-import { buildReturnCreateBatch } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
+import { buildReturnCreateNodes } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
 import { returnRequiresTrack, REASON_REQUIRING_COMMENT } from 'src/_resource/Operation/OutletReturns/composables/useReturnProgress'
 
 const NODE = 'OutletReturns'
@@ -37,7 +37,7 @@ export default (props, { pageState, resourceConfig }) => {
         return { valid: false, message: 'Reason "Other" needs an explanation.' }
       }
 
-      const result = buildReturnCreateBatch({
+      const result = buildReturnCreateNodes({
         form: entry,
         // The figure the form resolved and the officer may have overridden. The builder
         // records what it is handed; it never prices anything itself.
@@ -51,8 +51,8 @@ export default (props, { pageState, resourceConfig }) => {
         return { valid: false, message: 'You are not allowed to log this return.' }
       }
 
+      pageState.applyNodes(result.nodes)
       return {
-        requests: result.requests,
         successMsg: result.successMsg,
         // The typed form would otherwise survive the navigation and re-seed the next visit.
         onSuccess: () => { pageState.reset() }

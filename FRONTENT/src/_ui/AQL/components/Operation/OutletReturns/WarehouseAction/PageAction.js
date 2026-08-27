@@ -1,5 +1,5 @@
 import { useAuth } from 'src/composables/core/useAuth'
-import { buildReturnWarehouseActionBatch } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
+import { buildReturnWarehouseActionNodes } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
 import {
   STOCKED,
   DISPOSED,
@@ -68,7 +68,7 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         return { valid: false, message: 'A disposal reason is required when writing stock off.' }
       }
 
-      const result = buildReturnWarehouseActionBatch({
+      const result = buildReturnWarehouseActionNodes({
         record: row,
         actionType,
         storageName: control('WarehouseStorageName'),
@@ -82,8 +82,8 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         return { valid: false, message: 'You are not allowed to confirm this warehouse action.' }
       }
 
+      pageState.applyNodes(result.nodes)
       return {
-        requests: result.requests,
         successMsg: result.successMsg,
         // The typed disposal reason would otherwise survive the navigation and re-seed the
         // next return opened on this route.

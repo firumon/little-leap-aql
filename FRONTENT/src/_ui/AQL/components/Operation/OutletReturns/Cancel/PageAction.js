@@ -1,5 +1,5 @@
 import { useAuth } from 'src/composables/core/useAuth'
-import { buildReturnCancelBatch } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
+import { buildReturnCancelNodes } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
 import { canCancel } from 'src/_resource/Operation/OutletReturns/composables/useReturnProgress'
 
 /**
@@ -63,15 +63,15 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
       const why = reason()
       if (!why) return { valid: false, message: 'A cancellation reason is required.' }
 
-      const result = buildReturnCancelBatch({ record: row, reason: why, actorName: actor() })
+      const result = buildReturnCancelNodes({ record: row, reason: why, actorName: actor() })
       if (!result.valid) return { valid: false, message: result.message }
 
       if (resourceConfig?.allowed(result.permissions) !== true) {
         return { valid: false, message: 'You are not allowed to cancel this return.' }
       }
 
+      pageState.applyNodes(result.nodes)
       return {
-        requests: result.requests,
         successMsg: result.successMsg,
         // The typed reason would otherwise survive the navigation and re-seed the next
         // return opened on this route.

@@ -1,4 +1,4 @@
-import { buildReturnUpdateBatch } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
+import { buildReturnUpdateNodes } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
 import { REASON_REQUIRING_COMMENT } from 'src/_resource/Operation/OutletReturns/composables/useReturnProgress'
 
 const NODE = 'OutletReturns'
@@ -29,7 +29,7 @@ export default (props, { pageState, resourceRecord, resourceConfig }) => {
         return { valid: false, message: 'Reason "Other" needs an explanation.' }
       }
 
-      const result = buildReturnUpdateBatch({
+      const result = buildReturnUpdateNodes({
         record: stored(),
         form: entry,
         // The figure the form resolved and the officer may have overridden. The builder
@@ -43,8 +43,8 @@ export default (props, { pageState, resourceRecord, resourceConfig }) => {
         return { valid: false, message: 'You are not allowed to edit this return.' }
       }
 
+      pageState.applyNodes(result.nodes)
       return {
-        requests: result.requests,
         successMsg: result.successMsg,
         // The typed form would otherwise survive the navigation and re-seed the next visit.
         onSuccess: () => { pageState.reset() }

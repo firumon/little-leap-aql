@@ -34,7 +34,7 @@
  *
  * For a credit settled OUTSIDE the invoice cycle: a cash refund, a manual credit note, an
  * adjustment agreed off-system. The ordinary path is an invoice crediting the return
- * automatically at finalisation (`buildReturnInvoiceAdjustmentLinkedBatch`); this route is
+ * automatically at finalisation (`buildReturnInvoiceAdjustmentLinkedNodes`); this route is
  * the exception, so it collects no input beyond the confirmation itself — there is nothing
  * to decide, only something to attest.
  *

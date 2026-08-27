@@ -1,13 +1,7 @@
 
 import { batchRef, textOrRef } from 'src/utils/appHelpers'
 import { toDateTime24 } from 'src/utils/dateHelpers'
-import {
-  resourceBulkRequest,
-  resourceCreateRequest,
-  resourceUpdateRequest,
-  resourceGetRequest,
-  executeActionRequest
-} from 'src/composables/resources/resourceRequests'
+import { actionNode, bulkNode, createNode, updateNode } from 'src/composables/resources/nodePayloads'
 import {
   SUBMITTED,
   COMPLETED,
@@ -23,6 +17,8 @@ import {
   warehouseActionCompleted
 } from './useReturnProgress'
 
+import { INTO_WAREHOUSE, STOCK_REFERENCE, stockMovementRow, buildStockMovementNodes } from 'src/_resource/Operation/StockMovements/composables/useStockMovementPayload'
+import { OFF_THE_SHELF, ONTO_THE_SHELF, OUTLET_REFERENCE, outletMovementRow } from 'src/_resource/Operation/OutletMovements/composables/useOutletMovementPayload'
 const RESOURCE_NAME = 'OutletReturns' // this module IS OutletReturns — always
 
 const OUTLET_MOVEMENTS = 'OutletMovements'
@@ -63,20 +59,22 @@ export function storedQtyChange (record) {
   })
 }
 
+// The outlet ledger's own row builder. `qtyChange` already carries its sign from
+// `returnQtyChange` - the matrix below is what decides the direction, not the caller.
 function outletMovement ({ outletCode, storageName, sku, qtyChange, referenceCode, movementDate }) {
-  return {
-    OutletCode: text(outletCode),
-    StorageName: text(storageName) || DEFAULT_STORAGE,
-    SKU: text(sku),
-    QtyChange: qtyChange,
-    ReferenceType: REF_RETURN,
-    ReferenceCode: textOrRef(referenceCode),
-    MovementDate: text(movementDate) || todayISO(),
-    Status: 'Active'
-  }
+  return outletMovementRow({
+    outletCode,
+    storageName,
+    sku,
+    qty: qtyChange,
+    direction: toNumber(qtyChange) < 0 ? OFF_THE_SHELF : ONTO_THE_SHELF,
+    referenceType: OUTLET_REFERENCE.RETURN,
+    referenceCode,
+    movementDate
+  })
 }
 
-export function buildReturnCreateBatch ({ form = {}, resolvedPrice = 0, actorName = '' } = {}) {
+export function buildReturnCreateNodes ({ form = {}, resolvedPrice = 0, actorName = '' } = {}) {
   const entry = asRow(form)
   const outletCode = text(entry.OutletCode)
   const sku = text(entry.SKU)
@@ -119,11 +117,11 @@ export function buildReturnCreateBatch ({ form = {}, resolvedPrice = 0, actorNam
   // The completion question asked of the row as it will be STORED — not of the form.
   record.Progress = isReturnCompleted(record) ? COMPLETED : SUBMITTED
 
-  const requests = [resourceCreateRequest(RESOURCE_NAME, record, [RESOURCE_NAME])]
+  const nodes = [createNode(RESOURCE_NAME, record, [RESOURCE_NAME])]
 
   const qtyChange = returnQtyChange(qty, { invoiceRequired, warehouseRequired })
   if (qtyChange !== 0) {
-    requests.push(resourceCreateRequest(OUTLET_MOVEMENTS, outletMovement({
+    nodes.push(createNode(OUTLET_MOVEMENTS, outletMovement({
       outletCode,
       storageName: entry.StorageName,
       sku,
@@ -136,7 +134,7 @@ export function buildReturnCreateBatch ({ form = {}, resolvedPrice = 0, actorNam
 
   return {
     valid: true,
-    requests,
+    nodes,
     permissions: {
       outletReturn: 'create',
       ...(qtyChange !== 0 ? { outletMovement: 'create' } : {})
@@ -145,7 +143,7 @@ export function buildReturnCreateBatch ({ form = {}, resolvedPrice = 0, actorNam
   }
 }
 
-export function buildReturnUpdateBatch ({ record = {}, form = {}, resolvedPrice = 0 } = {}) {
+export function buildReturnUpdateNodes ({ record = {}, form = {}, resolvedPrice = 0 } = {}) {
   const stored = asRow(record)
   const entry = asRow(form)
   const code = text(stored.Code)
@@ -189,11 +187,11 @@ export function buildReturnUpdateBatch ({ record = {}, form = {}, resolvedPrice 
   const merged = { ...stored, ...changes }
   changes.Progress = isReturnCompleted(merged) ? COMPLETED : (text(stored.Progress) || SUBMITTED)
 
-  const requests = [resourceUpdateRequest(RESOURCE_NAME, code, changes, [RESOURCE_NAME])]
+  const nodes = [updateNode(RESOURCE_NAME, code, changes, [RESOURCE_NAME, 'OutletStorages'])]
 
   const delta = returnQtyChange(qty, { invoiceRequired, warehouseRequired }) - storedQtyChange(stored)
   if (delta !== 0) {
-    requests.push(resourceCreateRequest(OUTLET_MOVEMENTS, outletMovement({
+    nodes.push(createNode(OUTLET_MOVEMENTS, outletMovement({
       outletCode: stored.OutletCode,
       storageName: stored.StorageName,
       // The correction follows the CORRECTED item: an edit that changed the SKU has to move
@@ -205,11 +203,9 @@ export function buildReturnUpdateBatch ({ record = {}, form = {}, resolvedPrice 
     }), ['OutletStorages']))
   }
 
-  requests.push(resourceGetRequest([RESOURCE_NAME, 'OutletStorages']))
-
   return {
     valid: true,
-    requests,
+    nodes,
     permissions: {
       outletReturn: 'update',
       ...(delta !== 0 ? { outletMovement: 'create' } : {})
@@ -218,15 +214,15 @@ export function buildReturnUpdateBatch ({ record = {}, form = {}, resolvedPrice 
   }
 }
 
-export function buildReturnBulkCreateBatch ({ lines = [], actorName = '', movementDate = '' } = {}) {
+export function buildReturnBulkCreateNodes ({ lines = [], actorName = '', movementDate = '' } = {}) {
   const entries = asList(lines).map(asRow).filter((line) => text(asRow(line.form).SKU))
-  if (!entries.length) return { valid: true, requests: [], permissions: {} }
+  if (!entries.length) return { valid: true, nodes: [], permissions: {} }
 
   const records = []
   const movements = []
 
   for (const line of entries) {
-    const built = buildReturnCreateBatch({
+    const built = buildReturnCreateNodes({
       form: line.form,
       resolvedPrice: line.resolvedPrice,
       actorName
@@ -236,18 +232,18 @@ export function buildReturnBulkCreateBatch ({ lines = [], actorName = '', moveme
 
     // Unwrap the per-line requests back into the two bulk collections. The builder is the
     // one that decided every column and every sign; this only regroups them.
-    for (const request of built.requests) {
-      if (request.resource === RESOURCE_NAME) records.push(request.payload.record)
-      else movements.push({ ...request.payload.record, MovementDate: text(movementDate) || request.payload.record.MovementDate })
+    for (const node of built.nodes) {
+      if (node.resource === RESOURCE_NAME) records.push(node.record)
+      else movements.push({ ...node.record, MovementDate: text(movementDate) || node.record.MovementDate })
     }
   }
 
-  const requests = [resourceBulkRequest(RESOURCE_NAME, records, [RESOURCE_NAME])]
-  if (movements.length) requests.push(resourceBulkRequest(OUTLET_MOVEMENTS, movements, ['OutletStorages']))
+  const nodes = [bulkNode(RESOURCE_NAME, records, [RESOURCE_NAME])]
+  if (movements.length) nodes.push(bulkNode(OUTLET_MOVEMENTS, movements, ['OutletStorages']))
 
   return {
     valid: true,
-    requests,
+    nodes,
     permissions: {
       outletReturn: 'create',
       ...(movements.length ? { outletMovement: 'create' } : {})
@@ -256,7 +252,7 @@ export function buildReturnBulkCreateBatch ({ lines = [], actorName = '', moveme
   }
 }
 
-export function buildReturnWarehouseActionBatch ({
+export function buildReturnWarehouseActionNodes ({
   record = {},
   actionType = STOCKED,
   storageName = '',
@@ -298,29 +294,25 @@ export function buildReturnWarehouseActionBatch ({
   // the stored row — the physical track is about to become settled.
   if (isReturnCompleted({ ...row, ...update })) update.Progress = COMPLETED
 
-  const requests = [resourceUpdateRequest(RESOURCE_NAME, code, update, [RESOURCE_NAME])]
+  const nodes = [updateNode(RESOURCE_NAME, code, update, [RESOURCE_NAME, 'WarehouseStorages'])]
 
   const stocksBackIn = !isDisposed && text(row.WarehouseCode)
   if (stocksBackIn) {
-    requests.push(resourceCreateRequest(STOCK_MOVEMENTS, {
-      WarehouseCode: text(row.WarehouseCode),
-      StorageName: text(storageName) || DEFAULT_STORAGE,
-      SKU: text(row.SKU),
-      // Always positive: the warehouse is RECEIVING units, whatever sign the outlet ledger
-      // took when they left the shelf.
-      QtyChange: Math.abs(toNumber(row.Qty)),
-      ReferenceType: REF_RETURN,
-      ReferenceCode: code,
-      MovementDate: todayISO(),
-      Status: 'Active'
-    }, ['WarehouseStorages']))
+    // The warehouse RECEIVES, whatever sign the outlet ledger took when they left.
+    nodes.push(...buildStockMovementNodes([stockMovementRow({
+      warehouseCode: row.WarehouseCode,
+      storageName,
+      sku: row.SKU,
+      qty: row.Qty,
+      direction: INTO_WAREHOUSE,
+      referenceType: STOCK_REFERENCE.RETURN,
+      referenceCode: code
+    })]).nodes)
   }
-
-  requests.push(resourceGetRequest([RESOURCE_NAME, 'WarehouseStorages']))
 
   return {
     valid: true,
-    requests,
+    nodes,
     permissions: {
       outletReturn: 'warehouseAction',
       ...(stocksBackIn ? { stockMovement: 'create' } : {})
@@ -329,7 +321,7 @@ export function buildReturnWarehouseActionBatch ({
   }
 }
 
-export function buildReturnMarkInvoiceAdjustedBatch ({ record = {}, actorName = '', comment = '' } = {}) {
+export function buildReturnMarkInvoiceAdjustedNodes ({ record = {}, actorName = '', comment = '' } = {}) {
   const row = asRow(record)
   const code = text(row.Code)
 
@@ -343,57 +335,56 @@ export function buildReturnMarkInvoiceAdjustedBatch ({ record = {}, actorName = 
 
   return {
     valid: true,
-    requests: [
-      resourceUpdateRequest(RESOURCE_NAME, code, update, [RESOURCE_NAME]),
-      resourceGetRequest([RESOURCE_NAME])
-    ],
+    nodes: [updateNode(RESOURCE_NAME, code, update, [RESOURCE_NAME])],
     permissions: { outletReturn: 'markInvoiceAdjusted' },
     successMsg: 'Invoice adjustment settled.'
   }
 }
 
-export function buildReturnInvoiceAdjustmentLinkedBatch ({ returnRows = [], invoiceCode = null, actorName = '' } = {}) {
+export function buildReturnInvoiceAdjustmentLinkedNodes ({ returnRows = [], invoiceCode = null, actorName = '' } = {}) {
   const rows = asList(returnRows).map(asRow).filter((row) => text(row.Code))
-  if (!rows.length) return { valid: true, requests: [], permissions: {} }
+  if (!rows.length) return { valid: true, nodes: [], permissions: {} }
 
-  const requests = rows.map((row) => {
+  // One bulk, not one update per row: a node is addressed by resource, so several
+  // single-record nodes for OutletReturns would collapse onto each other.
+  const records = rows.map((row) => {
     const update = {
+      Code: text(row.Code),
       InvoiceAdjustmentDone: 'TRUE',
       ConsumptionInvoiceCode: textOrRef(invoiceCode)
     }
     // Per row, against that row's own warehouse track — never one verdict for the batch.
     if (isReturnCompleted({ ...row, ...update })) update.Progress = COMPLETED
-    return resourceUpdateRequest(RESOURCE_NAME, text(row.Code), update, [RESOURCE_NAME])
+    return update
   })
 
   return {
     valid: true,
-    requests,
+    nodes: [bulkNode(RESOURCE_NAME, records, [RESOURCE_NAME])],
     permissions: { outletReturn: 'update' },
     successMsg: `${rows.length} return${rows.length === 1 ? '' : 's'} credited.`
   }
 }
 
-export function buildReturnInvoiceCreditReversalBatch ({ returnRows = [] } = {}) {
+export function buildReturnInvoiceCreditReversalNodes ({ returnRows = [] } = {}) {
   const rows = asList(returnRows).map(asRow)
     .filter((row) => text(row.Code) && !isCancelled(row))
-  if (!rows.length) return { valid: true, requests: [], permissions: {} }
-
-  const requests = rows.map((row) => resourceUpdateRequest(RESOURCE_NAME, text(row.Code), {
-    InvoiceAdjustmentDone: 'FALSE',
-    ConsumptionInvoiceCode: '',
-    Progress: SUBMITTED
-  }, [RESOURCE_NAME]))
+  if (!rows.length) return { valid: true, nodes: [], permissions: {} }
 
   return {
     valid: true,
-    requests,
+    nodes: [bulkNode(RESOURCE_NAME, rows.map((row) => ({
+      Code: text(row.Code),
+      InvoiceAdjustmentDone: 'FALSE',
+      ConsumptionInvoiceCode: '',
+      Progress: SUBMITTED
+    })), [RESOURCE_NAME])],
     permissions: { outletReturn: 'update' },
     successMsg: `${rows.length} return credit${rows.length === 1 ? '' : 's'} reversed.`
   }
 }
 
-export function buildReturnCancelBatch ({ record = {}, reason = '', actorName = '' } = {}) {
+export function buildReturnCancelNodes ({ record = {}, reason = '', actorName = '' } = {}) {
   const row = asRow(record)
   const code = text(row.Code)
 
@@ -401,8 +392,8 @@ export function buildReturnCancelBatch ({ record = {}, reason = '', actorName = 
   if (isCancelled(row)) return { valid: false, message: 'This return is already cancelled.' }
   if (!text(reason)) return { valid: false, message: 'A cancellation reason is required.' }
 
-  const requests = [
-    executeActionRequest(RESOURCE_NAME, code, {
+  const nodes = [
+    actionNode(RESOURCE_NAME, code, {
       action: 'Cancel',
       column: 'Progress',
       columnValue: CANCELLED
@@ -410,12 +401,12 @@ export function buildReturnCancelBatch ({ record = {}, reason = '', actorName = 
       Comment: text(reason),
       ProgressCancelledComment: text(reason),
       ProgressCancelledBy: text(actorName)
-    }, [RESOURCE_NAME])
+    }, { reload: [RESOURCE_NAME, 'OutletStorages'] })
   ]
 
   const reversal = -storedQtyChange(row)
   if (reversal !== 0) {
-    requests.push(resourceCreateRequest(OUTLET_MOVEMENTS, outletMovement({
+    nodes.push(createNode(OUTLET_MOVEMENTS, outletMovement({
       outletCode: row.OutletCode,
       storageName: row.StorageName,
       sku: row.SKU,
@@ -425,11 +416,9 @@ export function buildReturnCancelBatch ({ record = {}, reason = '', actorName = 
     }), ['OutletStorages']))
   }
 
-  requests.push(resourceGetRequest([RESOURCE_NAME, 'OutletStorages']))
-
   return {
     valid: true,
-    requests,
+    nodes,
     permissions: {
       // An action permission resolves as `can<PascalCase(action)>`, so the value must be
       // the action's OWN name exactly as GAS declares it.
@@ -446,13 +435,13 @@ export function useReturnPayload () {
     RETURN_REF_PATH,
     returnQtyChange,
     storedQtyChange,
-    buildReturnCreateBatch,
-    buildReturnUpdateBatch,
-    buildReturnBulkCreateBatch,
-    buildReturnWarehouseActionBatch,
-    buildReturnMarkInvoiceAdjustedBatch,
-    buildReturnInvoiceAdjustmentLinkedBatch,
-    buildReturnInvoiceCreditReversalBatch,
-    buildReturnCancelBatch
+    buildReturnCreateNodes,
+    buildReturnUpdateNodes,
+    buildReturnBulkCreateNodes,
+    buildReturnWarehouseActionNodes,
+    buildReturnMarkInvoiceAdjustedNodes,
+    buildReturnInvoiceAdjustmentLinkedNodes,
+    buildReturnInvoiceCreditReversalNodes,
+    buildReturnCancelNodes
   }
 }

@@ -1,5 +1,5 @@
 import { useAuth } from 'src/composables/core/useAuth'
-import { buildReturnMarkInvoiceAdjustedBatch } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
+import { buildReturnMarkInvoiceAdjustedNodes } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
 import { canMarkInvoiceAdjusted } from 'src/_resource/Operation/OutletReturns/composables/useReturnProgress'
 
 /**
@@ -49,15 +49,15 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         return { valid: false, message: 'This return no longer needs an invoice adjustment.' }
       }
 
-      const result = buildReturnMarkInvoiceAdjustedBatch({ record: row, actorName: actor() })
+      const result = buildReturnMarkInvoiceAdjustedNodes({ record: row, actorName: actor() })
       if (!result.valid) return { valid: false, message: result.message }
 
       if (resourceConfig?.allowed(result.permissions) !== true) {
         return { valid: false, message: 'You are not allowed to settle this return.' }
       }
 
+      pageState.applyNodes(result.nodes)
       return {
-        requests: result.requests,
         successMsg: result.successMsg,
         onSuccess: () => { pageState.reset() }
       }

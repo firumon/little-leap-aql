@@ -69,7 +69,7 @@ export function useReturnView () {
       invoiceCode,
       state: !required ? 'Not required' : (done ? 'Credited' : 'Pending credit'),
       // A settled-directly credit carries no invoice code — see
-      // `buildReturnMarkInvoiceAdjustedBatch`. Saying so is more honest than a blank row.
+      // `buildReturnMarkInvoiceAdjustedNodes`. Saying so is more honest than a blank row.
       detail: !required ? '' : (done ? (invoiceCode || 'Settled directly') : ''),
       color: !required ? 'grey-7' : (done ? 'positive' : 'warning'),
       icon: !required ? 'remove_circle_outline' : (done ? 'check_circle' : 'schedule')

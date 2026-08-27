@@ -588,7 +588,7 @@ export default {
   sections: ['PageHeader'],
   contents: ['Context', 'StockCount', 'RestockOptions'],
 
-  ready ({ pageState, resourceRecord, route }) {
+  ready ({ pageState, resourceRecord, routeInfo }) {
     pageState.initResource('OutletConsumptions', {
       reset: true,
       fields: { Date: today(), Status: 'Active' }
@@ -597,7 +597,23 @@ export default {
 }
 ```
 
-`ctx` is `{ pageState, pageProps, resourceConfig, resourceRecord, route, routeInfo }`.
+`ctx` is `{ pageState, pageProps, resourceConfig, resourceRecord, routeInfo }`.
+
+`routeInfo` is a computed carrying everything the page can know about where it
+is — there is no `route`, because `ready` runs outside setup and could not call
+`useRoute()` anyway:
+
+| | |
+|---|---|
+| `scope`, `resourceSlug`, `resourceName` | which resource |
+| `page` | resolved page key (`add`, `view`, a slug, an action) |
+| `routeKind` | the raw `meta.page` (`index`, `add`, `view`, `edit`, `resource`, `record`, `action`) |
+| `level` | `resource` or `record` |
+| `code`, `pageSlug`, `action` | the route params that matter |
+| `params` | all of them, raw |
+| `query` | `?outletCode=…` and friends |
+| `path`, `fullPath` | for logging and navigation decisions |
+| `customUIName` | the active `_ui` layer |
 
 ### Why it exists
 
@@ -625,10 +641,10 @@ ready ({ pageState }) {
 **Seeding a page** — defaults, deep-link params, the primary node:
 
 ```js
-ready ({ pageState, route }) {
+ready ({ pageState, routeInfo }) {
   pageState.initResource('OutletConsumptions', {
     reset: true,
-    fields: { OutletCode: route.query.outletCode || '', Date: today() }
+    fields: { OutletCode: routeInfo.value.query.outletCode || '', Date: today() }
   })
   pageState.setControl('isRestocking', true)
 }
@@ -638,12 +654,16 @@ ready ({ pageState, route }) {
 `:code` changes, so watch it here:
 
 ```js
-ready ({ pageState, resourceRecord, route }) {
-  watch(() => route.params.code, () => {
+ready ({ pageState, resourceRecord, routeInfo }) {
+  watch(() => routeInfo.value.code, () => {
     if (resourceRecord.record.value) pageState.load('Outlets', resourceRecord.record.value)
   }, { immediate: true })
 }
 ```
+
+Watch a **field** of `routeInfo`, not `routeInfo` itself — it returns a fresh
+object on every recompute, so watching the whole thing fires far more than you
+want.
 
 **Keeping a derived column in step** — until a first-class derive exists:
 

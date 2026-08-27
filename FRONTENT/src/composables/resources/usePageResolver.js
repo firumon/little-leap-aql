@@ -49,7 +49,7 @@ function resolvePageKey(pageName, action, pageSlug) {
 export function usePageResolver() {
   const resConfig = useResourceConfig()
   const { scope, resourceSlug, resourceName } = resConfig
-  const { pageName, pageSlug, action, code } = useRouteConfig()
+  const { pageName, pageSlug, action, code, query, path, level, route } = useRouteConfig()
 
   const canonicalPage = computed(() =>
     resolvePageKey(pageName.value, action.value, pageSlug.value)
@@ -322,13 +322,24 @@ export function usePageResolver() {
     resourceConfig: resConfig,
     resourceRecord,
     checkedPaths,
+    // Everything a page contract can learn about where it is. Carries the whole
+    // of `route` that matters here, so a contract never needs useRoute() — which
+    // it could not call anyway, running outside setup.
     routeInfo: computed(() => ({
       scope: resConfig.scope.value,
       resourceSlug: resConfig.resourceSlug.value,
+      resourceName: resConfig.resourceName.value,
       page: canonicalPage.value,
+      routeKind: pageName.value,
       customUIName: customUIName.value,
       pageSlug: pageSlug.value,
-      action: action.value
+      action: action.value,
+      code: code.value,
+      level: level.value,
+      query: query.value,
+      path: path.value,
+      fullPath: route.fullPath,
+      params: { ...route.params }
     }))
   }
 }

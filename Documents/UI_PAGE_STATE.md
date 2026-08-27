@@ -1,714 +1,772 @@
-# usePageState — Centralized Page-Level Form-State Composable
+# usePageState — Page-Level Form State
 
-> **Canonical reference for `FRONTENT/src/composables/resources/usePageState.js`.**
-> Any developer or AI agent working on a resource page (form, input collection,
-> API preparation, submit) **MUST** read this doc and **MUST** use this composable.
-> See the **Maintenance Rule** at the end: changes to the composable require changes to this doc.
+`FRONTENT/src/composables/resources/pageState/`
 
----
+One instance per page. Created and provided in `Page.vue`, injected by every
+Header / Content / Action section beneath it. It holds what the user is building
+and turns it into a GAS batch.
 
-## 1. What this composable is for
-
-`usePageState` is the **single source of truth** for a resource page's entire
-form/input lifecycle:
-
-1. **Collect** user input (form fields, line-item grids, workflow-action inputs).
-2. **Hold** it in one shared reactive state while the user moves between steps/sections.
-3. **Prepare** an API-compatible request from that state (the AQL canonical envelope).
-4. **Send** it through the resource IO store (single transport).
-5. **Return** the server response to the caller.
-
-It is designed for the new page architecture, where a page is split into
-**Header / Content / Action** sections:
-- **Content** renders the form and binds inputs.
-- **Action** renders submit / save-draft / workflow buttons.
-- Both share **one live reactive instance**, so an edit in Content is instantly
-  visible to Action (e.g. enabling/disabling the submit button, live summary).
-
-It is **not outlet-specific**. Outlets, Procurement, Accounts, HR, and any
-future module all use the same composable.
+> **Read §5 before writing a page.** It describes the one mistake this system
+> keeps attracting, and the whole API is shaped to avoid it.
 
 ---
 
-## 2. Why it exists (the problem it removes)
+## 1. What it is for
 
-Historically, temp form state was stored inconsistently across the codebase:
-some flows kept it in composable refs, some kept the *entire* form in
-page/component-local refs, and several flows hand-rolled request objects instead
-of using the centralized builders. That produced drift, duplicate logic, and
-sections that could not communicate reactively.
+A form page collects input across several resources and submits them as one
+batch. `pageState` is the single place that input lives while the user works.
 
-This composable replaces all of that with one contract. The research behind it
-is in:
-- `Documents/OUTLET_INPUT_TO_API_DATA_FLOW.md` (per-resource, with `file:line` citations)
-- `Documents/OUTLET_DATA_FLOW_ANALYSIS.md`
+It answers four questions:
 
----
+| Question | Answer |
+|---|---|
+| Where does user input live? | `state.nodes` — one node per resource being written |
+| Where does page working state live? | `state.controls` — never sent to GAS |
+| What gets submitted? | `build()` walks the nodes and produces requests |
+| What survives a reload? | The draft, in `localStorage` |
 
-## 3. Architecture position
+## 2. Getting it
 
-| Concern | Where                                                                                |
-|---|--------------------------------------------------------------------------------------|
-| The composable | `FRONTENT/src/composables/resources/usePageState.js`                                 |
-| localStorage draft persistence (§10) | `FRONTENT/src/composables/resources/usePageStateDraft.js`      |
-| Provided at | `FRONTENT/src/pages/Page.vue` (alongside `resourceConfig` / `resourceRecord`)        |
-| Injected by | Header / Content / Action sections via `inject('pageState')`                         |
-| Generic request builders | defined inline in `usePageState.js` (SSoT)                                           |
-| `$ref` helpers (`batchRef`/`batchRefList`/`isBatchRef`/`textOrRef`/`normalizeCodeOrRef`) | `FRONTENT/src/utils/appHelpers.js` (stateless utils, re-exported by `usePageState`)  |
-| Dispatch transport | `useResourceIoStore().runBatchRequests` (Pinia, `FRONTENT/src/stores/resourceIo.js`) |
-
-Legendary file `outletOperationsBatch.js` still exists as a **legacy** home for
-outlet-specific builders + `OUTLET_ACTIONS`. New code must NOT reach for it for
-the generic builders — import them from `usePageState` (or `appHelpers` for the
-`$ref` helpers). Full migration of the legacy file is deferred.
-
----
-
-## 4. The state model
+Already provided. Inject it:
 
 ```js
-state = reactive({
-  primaryKey: null,          // the primary resource name (first initResource)
-  nodes: new Map(),          // uid -> node   (NOT keyed by resource name)
-  index: {},                 // resourceName -> { role: uid }   (the addressing layer)
-  pendingActions: []         // queued executeAction envelopes (§6.4a)
-})
-
-// a node (created under the hood by initResource / load).
-// It carries NO `identifier` field — the node's identity IS its Map key;
-// `useNode(...).identifier` surfaces that uid.
-{
-  resource,                  // e.g. 'OutletConsumptions'
-  code,                      // existing record code when editing, else null
-  many,                      // true => this resource is a list (bulk), not a single record
-  record: {},                // THE user-input object (v-model target)
-  children: [],              // composite child rows: [{ resource, records:[{ _action, data }] }]
-  records: [],               // many:true entries of THIS resource: [{ _action, data }]
-  controls: [],              // field schema: [{ name, codeType? }] (seeds options)
-  options: {},               // per-field option lists (seeded from controls)
-  action                     // workflow action trigger (string key or {action,column,columnValue})
-}
-```
-
-**Mutability rule:** `record`, `children`, `records`, `action` are **mutable reactive**
-state and are `v-model` targets. `options` is a **`computed`** — derived lazily and
-memoized, so it costs nothing until a template actually reads it. Never assign to `options`.
-
-### 4.1 Encapsulation contract (what is private vs public)
-
-The shape above is an **implementation detail**. Consumers must not reach into it.
-
-**PRIVATE — may change without touching any consumer:**
-
-- `state.nodes` (uid-keyed) and `state.index` (`resource -> role -> uid`) —
-  **the keying scheme is not part of the contract**. It has already changed once
-  (from resource-name keys to uid + index) with **zero consumer edits**; that is
-  the guarantee this section exists to provide.
-- The node object shape — `resource` / `record` / `children` / `records` /
-  `controls` / `code` / `many` / `action` / `options`.
-- The child bucket layout — `{ resource, records }`.
-- `state.pendingActions` and its entry shape `{ key, resource, actionName, request }`
-  — read it through `additionalActionRequests()`, write it through
-  `includeAdditionalAction()` / `excludeAdditionalAction()` (§6.4a).
-
-**PUBLIC — a data contract you may rely on:**
-
-- The child row entry `{ _action, data }`, where `data` is the record body the
-  child form renders and `_action` is `'create' | 'update' | 'deactivate'`.
-  This is the interchange format between `usePageState` and `FormChild`, and it
-  is also what `defaultBuild` ships to GAS, so it is deliberately not hidden.
-  Read it freely; **write it only** via `updateChild` (patches `data`) and
-  `setChildAction` (sets `_action`).
-
-**The two rules that follow from this:**
-
-| Direction | Do | Never |
-|---|---|---|
-| **Read** node state | `useNode(resource, role?)` (§6.5), `hasNode(resource, role?)` | `state.nodes.get(...)`, `state.index[...]`, `node.children.find(...)` |
-| **Write** node state | the mutations in §6.4 | assigning into a node or a child row (`row._action = …`) |
-
-> `state` is still on the returned object for debugging and because
-> `strategy.validate(node, state)` receives it. **It is not a consumer API** —
-> treat it as private.
-
-### 4.2 Addressing: multiple nodes per resource, by ROLE
-
-One resource may hold several nodes. Outlet-consumption needs two `Outlet-Visits`
-(complete the current visit, schedule the next) and two `OutletReturns` (create
-new, update pre-existing). Each is addressed by a **role**:
-
-```js
-// create
-initResource('OutletVisits', { code: visitCode })                          // role '$default'
-initResource({ resource: 'OutletVisits', role: 'next' }, { fields: {…} })
-
-// read
-useNode('OutletVisits')            // the $default node
-useNode('OutletVisits', 'next')    // the scheduled-visit node
-
-// write — every mutation accepts the same object target, so none of them
-// needed a new `role` parameter
-setField({ resource: 'OutletVisits', role: 'next' }, 'Date', v)
-```
-
-Addressing by a bare resource name means role `$default`, so **every existing
-call site is unchanged**.
-
-#### Why roles are names, not ordinals
-
-A positional `useNode(resource, idx)` would be simpler, but it breaks on this
-workflow. Both `Outlet-Visits` nodes are created *conditionally*
-([useOutletConsumption.js:708-712](../FRONTENT/src/composables/operation/outlets/useOutletConsumption.js)):
-
-| `completeVisit` ticked? | idx 0 | idx 1 |
-|---|---|---|
-| yes | complete-visit | next-visit |
-| no | **next-visit** | — |
-
-So `idx` depends on whether the user ticked *a different checkbox*. The failure is
-silent: an out-of-range index resolves to `emptyNode`, which is a valid node, so
-`build()` ships an empty payload instead of raising. `OutletReturns` has the same
-shape (create is gated on `returnRows.length`, update on `applyReturnsToInvoice`).
-
-Named roles survive conditional creation and reordering, and
-`useNode('OutletVisits', 'next')` states its intent at the call site.
-
-#### The invariant that keeps the two structures honest
-
-`nodes` and `index` must never disagree — a uid in `index` with no entry in
-`nodes` resolves to `emptyNode` and silently builds an empty payload. All
-mutation of both funnels through exactly two private helpers:
-
-- `attachNode(name, role, node)` — the only writer. Re-attaching an existing
-  `(resource, role)` deletes the previous node first, so a re-init cannot orphan
-  an unreachable entry in `nodes`.
-- `detachAll()` — the only clearer, used by both `reset()` and
-  `resetForResource()`.
-
-Invariant to assert if you touch this: `state.nodes.size` equals the total number
-of uids across `state.index`.
-
----
-
-## 5. MANDATORY usage rules (contract)
-
-For **every** resource page that collects input or submits data:
-
-1. **User input collection** → store it in the injected `usePageState` node via the
-   §6.4 mutations. Do **NOT** keep form state in component-local `ref`s or page
-   `data`, and do **NOT** write into the node directly.
-2. **Section Content** → read state **only** through `useNode(key)` (§6.5) — it
-   returns the node plus `record` / `exists` / `identifier` / `options` /
-   `validation` / `children`. Do **NOT** touch `state.nodes` (see §4.1).
-3. **Section Action** → call `submit()` / `saveDraft()` / `run()` on the **same
-   injected instance**, and queue workflow actions with `includeAdditionalAction()`
-   (§6.4a). Do **NOT** build request objects by hand.
-4. **Generating API-compatible data** → happens **under the hood** via `build()`.
-   You call a friendly mutation/trigger; the composable assembles the canonical
-   envelope. Do **NOT** call `resourceIoStore.createResourceRecord` / `resourceUpdateRequest`
-   with an inline payload from a page or component.
-5. **Using the response** → triggers **return** `{ success, response, code }`.
-   Read it from the call site (or pass `onSuccess`). Do not rely on side-channel state.
-
-Violations of (1), (3), (4) are architecture-layer violations (see `Documents/CORE_ARCHITECTURE_RULES.md`).
-
----
-
-## 6. How to use it (consumer guide)
-
-### 6.1 Provide — already wired in `Page.vue`
-
-```js
-import { usePageState } from 'src/composables/resources/usePageState'
-// inside <script setup> of Page.vue:
-const pageState = usePageState()      // pass a per-resource `strategy` when one exists
-provide('pageState', pageState)
-```
-
-### 6.2 Inject — in any Header / Content / Action section
-
-```js
-import { inject } from 'vue'
 const pageState = inject('pageState')
 ```
 
-### 6.3 Initialize a resource node (under the hood)
+In a page contract, it arrives as an argument — see §12.
+
+## 3. The state model
+
+```
+pageState
+├── state
+│   ├── primaryKey  string|null              the page's main resource
+│   ├── nodes       Map<uid, Node>           PRIVATE — never read directly
+│   ├── index       { [res]: { [role]: uid } } PRIVATE — never read directly
+│   ├── controls    [{ header, value }]      page working state, never sent
+│   ├── actions     Entry[]                  queued executeAction envelopes
+│   └── reload      string[]                 resources to re-read after the batch
+├── meta            page-level UI flags (§4)
+└── the API         (§6 onward)
+```
+
+### 3.1 The node
+
+One node is one resource's contribution to the batch.
+
+```
+Node
+├── resource  string              the GAS resource name
+├── code      string|$ref|null    set ⇒ update, unset ⇒ create
+├── many      boolean             true ⇒ this node is a bulk write
+├── record    { [header]: value }     ▶ SHIPS — the header/body the user edits
+├── children  Bucket[]                ▶ SHIPS — composite children
+├── records   Row[]                   ▶ SHIPS when many:true
+├── controls  Control[]               ✕ NEVER SHIPS
+└── options   { [field]: Option[] }   option lists, derived from codeType
+```
+
+`Bucket` is `{ resource, records: Row[] }`.
+`Row` is `{ _action: 'create'|'update'|'deactivate', data: {…} }`.
+
+`Row` is the one **public** data contract — FormChild renders it and
+`build()` ships it. Read it freely; change it only through `updateChild`
+(patches `data`) and `setChildAction` (sets `_action`).
+
+### 3.2 Addressing — resource plus ROLE
+
+Nodes are keyed by an opaque uid, not by resource name, so **one resource can
+hold several nodes**. `index` maps `resource → role → uid`.
+
+```
+index
+├── "OutletConsumptions"
+│    └── "$default"  ──▶ node
+└── "OutletVisits"
+     ├── "complete"  ──▶ node        the visit being closed
+     └── "next"      ──▶ node        the visit being scheduled
+```
+
+Roles are **names, never positions**. A workflow creates nodes conditionally, so
+an ordinal would shift the moment a checkbox is unticked and silently resolve to
+the wrong node.
+
+Every accessor takes a target in any of three forms:
 
 ```js
-// create flow
-pageState.initResource('OutletConsumptions', {
-  many: false,
-  fields: { OutletCode: 'OUT-001', Date: todayISO() }
-})
-
-// edit flow — hydrate an existing record into the node
-pageState.initResource('OutletConsumptions', { code: existing.Code })
-pageState.load('OutletConsumptions', existing)   // fills node.record from the server row
+useNode('Outlets')                                   // role '$default'
+useNode('OutletVisits', 'next')                      // explicit role
+setField({ resource: 'OutletVisits', role: 'next' }, 'Date', v)
 ```
 
-### 6.4 Mutations (all friendly, no manual `state.nodes.set`)
+A target may also be a `ref` or a getter, so a component whose resource changes
+on navigation binds once at setup and stays correct.
 
-| Function | Purpose |
-|---|---|
-| `initResource(resource, { role, code, many, fields, action, isPrimaryKey, reset })` | create a node under `role` (default `$default`); re-init of the same `(resource, role)` replaces it |
-| `hasNode(resource, role?)` | imperative existence check — **the replacement for `state.nodes.has(...)`** (use `useNode(...).exists` when a computed/template needs it reactively) |
-| `hasNodes` | `computed<boolean>` — whether ANY node is attached (`state.nodes.size > 0`), i.e. "this page's form state is initialized". Node-count only, resource-agnostic: it is for containers that must distinguish an initialized form page from an uninitialized one without knowing the resource (see `PageAction.vue`'s `FormActions` gate). For a SPECIFIC node use `useNode(resource).exists` |
-| `load(resource, rawRecord)` | hydrate an existing server record into the node |
-| `setField(resource, field, value)` / `setFields(resource, patch)` | set header/body fields |
-| `setControlField(resource, header, value)` / `getControlField(resource, header)` | non-schema / wizard-only fields — kept out of `record` so they never reach the payload |
-| `addChild(resource, childResource, row, { action })` | add a composite child row |
-| `updateChild(resource, childResource, index, patch)` | patch a child row's `data` (**does not touch `_action`**) |
-| `setChildAction(resource, childResource, index, action)` | set a child row's `_action` — soft-delete (`'deactivate'`) or restore (`'update'`). Returns the entry, or `null` if the index is stale |
-| `removeChild(resource, childResource, index)` | drop a child row (hard splice) |
-| `addRecord(resource, row, { action })` | add a `many:true` entry (returns index) |
-| `updateRecord(resource, index, patch)` | patch a `many` entry |
-| `removeRecord(resource, index)` | drop a `many` entry |
-| `selectOption(resource, field, value)` | write the user's chosen code value into `record` |
+### 3.3 Build order is a slot
 
-> **Every mutation's first argument is a node *target*,** not just a resource name:
-> a string, a `ref`, a getter, or `{ resource, role }` (§4.2). That is why none of
-> them needed a separate `role` parameter —
-> `setField({ resource: 'OutletVisits', role: 'next' }, 'Date', v)` works, and a
-> bare `'OutletVisits'` means role `$default`.
+Each address claims a slot the first time it appears and keeps it for the life of
+the page. Re-initialising a node, or removing and re-adding one, returns it to
+its original position.
 
-> `selectOption` writes the **chosen** value into `record`; the available
-> **choices** are the read-only `options` computed — you never mutate `options`.
+This matters because request order is what makes `$ref` resolve (§9). Without
+it, a user stepping backwards through a wizard could reorder the batch.
 
-> **Removing a child row — pick the right one.** A row the user added in this
-> session (`_action: 'create'`, no `Code`) should be **spliced** with
-> `removeChild`. A row hydrated from the server (`_action: 'update'` with a
-> `Code`) must be **soft-deleted** with `setChildAction(..., 'deactivate')`: it
-> stays in the bucket so the payload still carries it, and GAS matches on the
-> `Code` to deactivate the row. Splicing it instead would simply omit it, leaving
-> the server record untouched. `FormChild.vue` implements exactly this split in
-> `remove()`, and `restore()` reverses it with `setChildAction(..., 'update')`.
+### 3.4 Private, by contract
 
-### 6.4a Queuing a workflow action into the batch
+`state.nodes` and `state.index` are private. The uid scheme is not part of the
+contract.
 
-| Function | Purpose |
-|---|---|
-| `includeAdditionalAction(actionName, data?, { resource, role, code, record, outcome }?)` | build an `executeAction` envelope for one `AdditionalActions` entry and queue it onto the next `build()` / `submit()`. Returns the request, or `null` when the action is unknown or is a `navigate` action |
-| `excludeAdditionalAction(actionName?, { resource }?)` | drop one queued action, or **all** of them when the name is omitted |
-| `additionalActionRequests()` | the queued envelopes in call order — `defaultBuild` appends these itself; a `strategy.build` override **must** append them explicitly |
+- **Read** through `useNode()` / `hasNode()` / `getControl()`
+- **Write** through the mutations in §6
 
-This is the **batched** half of the AdditionalActions subsystem. The popup half
-(`useAdditionalActions` → `AdditionalActionsDialog`) dispatches on its own, immediately,
-against a record that already exists. This one exists for the case the popup cannot
-express: *create a record **and** run a workflow action on it, in one batch*.
+A stale uid resolves to a blank node, which builds an empty payload instead of
+raising. That is why direct access is banned.
 
-```javascript
-// Stamp an EXISTING record — the node's own `code` is used automatically.
-pageState.initResource('OutletVisits', { code: visit.Code })
-pageState.includeAdditionalAction('Postpone', { Comment: 'Outlet closed' })
+## 4. `meta` — page-level UI flags
 
-// Create a record AND action it — the code becomes a $ref into this same batch.
-pageState.initResource('OutletVisits', { fields: { OutletCode, Date } })
-pageState.includeAdditionalAction('Postpone', {
-  Comment: 'Rescheduled',                    // source field, short authored name
-  newVisit: { Date: '2026-01-04' }           // target field, nested bag
-})
-await pageState.submit()
-```
-
-**Code resolution**, in order: an explicit `code` option (a string **or** a
-`batchRef(...)` `$ref`) → the addressed node's `code` → `batchRef('<Resource>.latest.code')`.
-That last fallback is what makes create-then-action a single atomic batch, and it is why
-queued actions are emitted **after** every node request (§7).
-
-**Value addressing** for `data` is the pipeline's, not this composable's: a source field
-answers to its short authored name or its derived header; a target field to
-`'<targetKey>.<Column>'` or a nested `{ targetKey: { Column } }` bag. Anything omitted
-falls back to the field's configured `from`/`value` seed. Full table:
-[UI_ACTION_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_ACTION_SYSTEM.md) §7.0.1.
-
-> Queuing an action **never creates a node** — the lookup is read-only, so an otherwise
-> empty page does not start building a create request for the resource. Calling
-> `includeAdditionalAction` twice for the same `(resource, action)` **replaces** the
-> queued envelope rather than running the action twice. `reset()` / `resetForResource()`
-> clear the queue along with the nodes.
-
-### 6.5 `useNode(resource, role?)` — THE read accessor
-
-**This is the only supported way to observe node state.** Reaching into
-`state.nodes` or `state.index` is a contract violation (§4.1).
-
-Signature: **`useNode(resource, role = '$default')`**.
-
-`resource` accepts a **string, a `ref`, a getter, or `{ resource, role }`**. Use a
-getter in any component whose active resource changes on navigation (`Create.vue`,
-`Update.vue`, `FormChild.vue`) — you bind **once** in `setup` and it stays
-correct across route changes:
-
-```js
-// static resource, default role
-const { node, record, options, validation } = pageState.useNode('OutletConsumptions')
-
-// dynamic resource — follows resourceName across navigations
-const primary = pageState.useNode(() => resourceName.value)
-const primaryRecord = computed(() => primary.record.value || {})
-
-// a specific role — see §4.2
-const nextVisit = pageState.useNode('OutletVisits', 'next')
-```
-
-Returns:
-
-| Key | Type | What it is |
+| Field | Type | Meaning |
 |---|---|---|
-| `node` | `computed` | the reactive node (falls back to a stable empty node) |
-| `exists` | `computed<boolean>` | whether the node has been initialized — reactive form of `hasNode` |
-| `record` | `computed` | the user-input header/body; the `v-model` target |
-| `identifier` | `computed<string>` | the node's uid (its Map key). Changes when the node is **replaced** (`initResource`/`reset`), **not** when a field is edited — key one-shot hydration off this so a reset re-seeds from the server |
-| `options` | `computed` | `{ [fieldName]: [...] }`, auto-derived from `controls` + the `getOptions` strategy |
-| `validation` | `computed` | array of `{ field, message }` |
-| `children(childResource)` | `(res) => computed` | child rows as `{ _action, data }` entries; `childResource` also accepts a string/ref/getter |
+| `currentStep` | number | Wizard step. Written by PageAction's `next`/`back`, read by every step card |
+| `submitting` | boolean | Flipped by `run()` around every dispatch; FormAction buttons disable on it |
+| `stepping` | boolean | Brief settle window around a step change, so the bar cannot be double-clicked |
+| `saving` | boolean | Also flipped by `run()`. `AqlContentWrapper` dims the page on `submitting \|\| saving` |
 
-```js
-// template:
-//   <q-input v-model="record.OutletCode" />
-//   <q-select :options="options.SKUCode" v-model="record.SKUCode" />
-//   <span v-if="validation.length">…errors…</span>
+That is the whole of `meta`. `loading`, `validationErrors` and `formActionsHeight`
+were removed on 2026-08-27 — nothing had ever read them, and `meta.validationErrors`
+was an empty object shadowing the real top-level `validationErrors` **array**.
 
-// child rows (replaces reaching into node.children)
-const rows = primary.children(() => childName.value)
-const visible = computed(() => rows.value.filter(r => r._action !== 'deactivate'))
-```
+Do not add a field here without a consumer. `meta` is for flags several sections
+share; anything one page needs belongs in `state.controls` (§8).
 
-Because a missing node resolves to the empty node, **every returned computed is
-safe to read before `initResource` has run** — consumers never need optional
-chaining on the node itself. Entry identity within `children()` is stable across
-reads, so `rows.value.indexOf(row)` is a valid row→index lookup.
+---
 
-### 6.6 Triggers + response (the under-the-hood lifecycle)
+## 5. The mistake to avoid
 
-Every trigger funnels through an internal `run()` that does
-**state → build → `resourceIoStore.runBatchRequests` → return `{ success, response, code }`**.
+**Read `_ui/AQL/composables/Operation/OutletConsumptions/Add/useConsumptionWizard.js`
+as a warning, not a template.**
 
-```js
-// Submit (final)
-const { success, response, code } = await pageState.submit()
-if (success) { /* code = new parent code (batchResultCode) */ }
+That wizard writes across six resources. Its pageState looks like this at the
+final step, one click before submit:
 
-// Save draft
-await pageState.saveDraft()
-
-// Workflow action — QUEUE it (§6.4a), then submit; there is no standalone
-// `pageState.executeAction()` trigger.
-pageState.includeAdditionalAction('Postpone', { Comment: 'Outlet closed' })
-await pageState.submit()
-
-// With callbacks / quiet mode:
-await pageState.submit({
-  notify: true,                       // default; shows $q.notify
-  onSuccess: ({ response, code }) => nav.goTo('index'),
-  successMsg: 'Consumption saved.'
-})
-```
-
-All triggers return `{ success: boolean, response, code }` so the caller owns the response.
-
-### 6.7 Strategy (resource-specific overrides)
-
-`usePageState(strategy)` accepts an optional `strategy` for bespoke payloads:
-
-```js
+```json
 {
-  controls(resource)        -> [{ name, codeType? }]   // field schema; codeType -> auto options
-  getOptions(codeType, node) -> [{ label, value }]      // option lists for XxxCode columns
-  hydrate(node, raw, ctx)   -> void                     // custom load of server record into node
-  build(ctx)                -> [request]                // override generic request assembly
-  validate(node, state)     -> [{ field, message }]     // per-node validation
+  "nodeCount": 1,
+  "node": {
+    "resource": "OutletConsumptions",
+    "record": { "OutletCode": "OUT00001", "Date": "2026-08-26", … },
+    "children": [],          ← empty
+    "records":  []           ← empty
+  },
+  "controls": {
+    "CountRows":    "ARRAY(28)",
+    "RestockRows":  [ { "SKU": "CK3-01", "Quantity": 3 } ],
+    "ReturnMeta":   {}, "PriceListCode": "PLC00001", …
+  }
 }
 ```
 
-Any omitted piece falls back to the built-in generic behavior (see §7).
+One node. 28 counted items and a fully-formed restock sitting in `controls` —
+the bucket that never ships. Then `PageAction.submit` returns `{ requests }`,
+which makes `run()` skip `build()` entirely and dispatch a batch assembled by a
+423-line Layer 2 builder.
 
----
+**Four things are lost by doing this:**
 
-## 7. Generic request lifecycle (`build` → send → response)
+1. **Validation is blind.** `validationErrors` sees a record with six headers and
+   nothing to complain about. It has no idea 28 rows are pending.
+2. **Drafts save the wrong thing.** An opaque blob restores, but the nodes that
+   would have described it never existed.
+3. **Logic is duplicated.** `resolvePrice` exists twice — in the wizard and in
+   `PageAction.js` — with a comment promising they stay in sync. What step 3
+   displays and what step 6 bills are two code paths.
+4. **State that decides writes exists nowhere.** `CompleteVisit` and
+   `ScheduleNextVisit` render as ON but are never stored; they are
+   `get(F.COMPLETE_VISIT, true)` defaults. A draft cannot capture an explicit
+   "no", and two visit records depend on them.
 
-`build()` (or `strategy.build`) walks `state.nodes` **in insertion order** and
-produces canonical requests. Insertion order is the contract: it is what lets a
-later request consume an earlier one's `$ref`.
+### 5.1 What to do instead
 
-**Rule for every request builder in this composable:** the `resource` on a built
-request is always **`node.resource`** — never the Map key, and never the caller's
-argument. `includeAdditionalAction` obeys the same rule from the other direction: it
-resolves the node target first and passes that resolved NAME to the pipeline, so a
-`ref`/getter/`{ resource, role }` argument never reaches the wire.
-
-The other two candidates are both wrong:
-
-- the **Map key** is an opaque uid (§4), never a resource name;
-- the **caller's argument** may be a `ref`, a getter, or `{ resource, role }`,
-  since the accessors explicitly accept those — passing one straight through
-  would put a *function* or an *object* where GAS expects a resource name;
-- **`node.resource`** is the only one that always names the GAS resource.
-
-The default mapping:
-
-| Node shape | Produces |
+| The user is entering… | Put it in |
 |---|---|
-| `many: true` with `records` | `resourceBulkRequest(resource, records)` (plain rows) |
-| `children.length` (composite) | `compositeSaveRequest({ resource, code?, data, children:[{ resource, records:[{ _action, data }] }] })` |
-| single record + `code` | `resourceUpdateRequest(resource, code, record)` |
-| single record, no `code` | `resourceCreateRequest(resource, record)` |
-| queued via `includeAdditionalAction` | the pipeline's `executeAction` envelope, appended **after** every node request |
+| A column on the resource being written | `record` (`setField`) |
+| Line items of that resource | `children` (`addChild`) |
+| Many rows of one resource | `records` (`addRecord`) |
+| Another resource entirely | **another node** (`initResource` / `setResource`) |
+| The same resource, twice | another node with a **role** |
+| A wizard-only input, no column | `controls` (`setControl`) |
+| Whether a resource is written at all | **the node's existence** (`removeNode`) |
 
-After every node has been walked, `defaultBuild` appends
-`additionalActionRequests()` — the envelopes queued by `includeAdditionalAction`
-(§6.4a). **Last is the contract**, not an accident: a queued action whose code is
-`batchRef('OutletVisits.latest.code')` only resolves if the row it names has already been
-created earlier in the same batch. A `strategy.build` override replaces `defaultBuild`
-entirely and must therefore append `additionalActionRequests()` itself, or its page
-silently drops every queued action.
+That last row is worth reading twice. Do not store `completeVisit: true`. Create
+or remove the `OutletVisits:complete` node. The node's presence *is* the boolean,
+and it cannot drift from what is actually submitted.
 
-All requests use the canonical envelope (`buildCanonicalRequest` in
-`GasApiService.js`). `$ref` linking for sequential batches is supported via
-`batchRef('Resource.latest.code')` (never stringified on the front-end).
-Dispatch is always `resourceIoStore.runBatchRequests(requests)`.
+### 5.2 The `{ requests }` escape hatch
 
----
-
-## 8. Exported surface (single source of truth)
-
-From `usePageState.js` you may import:
-
-- **Composable + DI:** `usePageState` (provided via `provide('pageState', pageState)` and injected via `inject('pageState')`)
-- **Read accessors:** `useNode(resource, role?)` (§6.5), `hasNode(resource, role?)`,
-  `getControlField(resource, header, role?)`, `snapshot()`
-- **Mutations:** see the full table in §6.4 — including `setChildAction`, the only
-  supported way to set a child row's `_action`
-- **Workflow actions in the batch:** `includeAdditionalAction`,
-  `excludeAdditionalAction`, `additionalActionRequests` (§6.4a). The envelope itself is
-  built by `additionalActionsPipeline`, so no executeAction wire knowledge lives here.
-- **Generic builders:** `compositeSaveRequest`, `resourceCreateRequest`,
-  `resourceUpdateRequest`, `resourceBulkRequest`, `resourceGetRequest`, `executeActionRequest`
-- **Response helpers:** `responseFailed`, `failureMessage`, `batchResultCode`
-- **Low-level dispatch:** `run({ requests, build, mode, onSuccess, reload, notify, successMsg })` —
-  the same validate/build/dispatch/notify lifecycle `submit()`/`saveDraft()`
-  funnel through, exposed directly for callers (e.g. `PageAction.vue`) that need
-  to run a caller-built request array (already `modifyPayload`-transformed)
-  through the standard lifecycle without going through `build()`.
-- **`$ref` helpers (re-exported from `appHelpers`):** `batchRef`, `batchRefList`, `isBatchRef`, `textOrRef`, `normalizeCodeOrRef`
-- **Draft persistence (§10):** `draftKey`, `persistDraft`, `restoreDraft`, `clearDraft`
-
-The `$ref` helpers live canonically in `FRONTENT/src/utils/appHelpers.js`
-(stateless utilities). Import them from `appHelpers` directly when you only need
-the helper and not the composable.
+`run({ requests })` skips `build()`. It exists for callers that must apply a
+`modifyPayload` interceptor. **Reaching for it makes every node on the page
+inert.** If you find yourself using it because "the batch is too complex for
+nodes", read §10 — that complexity belongs in a Layer 2 builder that returns
+node-shaped payloads, not raw requests.
 
 ---
 
-## 9. Reactivity notes
+## 6. API — nodes
 
-- `state.nodes` is a `reactive(new Map())` and `state.index` a reactive plain
-  object. Map `.get`/`.set`/`.delete`/iteration and nested-key writes on `index`
-  are all tracked, so everything `useNode` derives is fully reactive — including a
-  node that does not exist yet, so a component may bind before `initResource` runs.
-- **Do not read `state.nodes` or `state.index` from a consumer** (§4.1) — go
-  through `useNode` / `hasNode`. This is what let the keying change from
-  resource-name to uid+index with zero consumer edits.
-- `useNode` resolves `resource -> role -> uid -> node`, so it stays correct when a
-  node is replaced (the uid changes, the address does not).
-- Pass a **getter** to `useNode` when the resource is dynamic; a plain string
-  snapshots the name at `setup` time and will go stale on navigation.
-- `options` is a `computed`: lazy (only computed when read) + memoized — no cost on
-  initial load for unused option lists.
-- Guard against binding before a node exists: `useNode(key)` returns a stable empty
-  node as a fallback, but prefer initializing nodes early (in `setup`/`onMounted`).
-- `snapshot()` returns a plain deep copy keyed by the **readable address**
-  (`'Outlets'`, `'OutletVisits:next'`), rebuilt from `index` — not by raw uid,
-  which would make a debug snapshot useless. Note it cannot just
-  `JSON.stringify(state.nodes)`: a `Map` has no enumerable own properties, so that
-  silently yields `{}`.
+### `initResource(resource, options?)`
 
----
-
-## 10. Draft persistence (localStorage)
-
-Every form/add/edit page auto-saves what the user has typed into `localStorage`
-and restores it on the next visit. This exists for the accidental reload: a
-pull-to-refresh on a phone, a tab crash, a logout in the middle of a long wizard.
-
-The storage layer lives in
-`FRONTENT/src/composables/resources/usePageStateDraft.js`. It owns the key, the
-debounce, and the restore-once lifecycle. It never touches node internals — the
-two functions that know the node shape (`serializeDraft` / `applyDraft`) stay in
-`usePageState.js`, so the encapsulation contract in §4.1 still holds. Sections
-(`FormRecord`, `FormChild`, `PageAction`, `_ui/` components) know nothing about
-storage; they keep talking to `pageState` only.
-
-### 10.1 The storage key
-
-Derived from the route, so it is deterministic and cannot collide:
-
-| Page | Key |
-|---|---|
-| Add / create | `aql_<Resource>_Add` — e.g. `aql_OutletRestocks_Add` |
-| Edit / update | `aql_<Resource>_Edit_<Code>` — e.g. `aql_OutletRestocks_Edit_REC001` |
-| Action route | `aql_<Resource>_<Action>` , plus `_<Code>` when the route carries one |
-| Custom sub-route | `aql_<Resource>_<PageSlug>` , plus `_<Code>` when the route carries one |
-
-`index` and `view` pages collect no input, so they get **no key and no draft**.
-The action/sub-route name is folded through `toPascalCase`, exactly like every
-other `_ui/` path segment, so `mark-delivered` keys as `MarkDelivered`.
-
-The `_<Code>` suffix on action and custom pages is deliberate: the same action on
-two different records must not share one draft.
-
-### 10.2 What is saved
-
-Per node (addressed by `resource` + `role`, §4.2): `record`, `children`,
-`records`, `code`, `many`, and the `{ header, value }` half of `controls`. Page
-level: `primaryKey` and `meta.currentStep`, so a wizard reopens on the step the
-user left.
-
-Deliberately **not** saved:
-
-- transient meta — `saving`, `submitting`, `loading`, `stepping`,
-  `formActionsHeight`, `validationErrors`;
-- the `{ name, codeType }` half of `controls`, which `strategy.controls` re-seeds
-  on every `initResource`;
-- `state.pendingActions` — a queued `$ref` into a batch that no longer exists is
-  worse than nothing.
-
-Writes are debounced by 300 ms, so fast typing does not thrash storage. A state
-with no data at all is never written, which is what stops the blank form left
-behind by `reset()` or a successful submit from burying a real draft.
-
-### 10.3 Restore order
-
-The initialization flow is unchanged — default values, `strategy.controls`, and
-server hydration (`load` / `hydrate`) all run **first**. Only then is the draft
-laid on top:
-
-1. The page mounts and `Create.vue` / `Update.vue` calls `initResource`.
-2. On a record page, `Update.vue` hydrates the server row (`pageState.load`).
-3. Once the page has settled — which on a record page means a node now carries
-   the route's `code` — the stored draft is **not** applied on its own. A
-   confirmation dialog asks the user first (§10.3.1). Settling earlier and
-   restoring would simply be overwritten by the hydration that follows.
-4. On **Restore**, fields are written **in place** into the existing `node.record` object, and
-   `children` / `records` are spliced into the existing arrays. The node is never
-   replaced, so `v-model` bindings, `FormChild` rows and `identifier`-keyed
-   one-shot hydration all keep working, and every restored row is a live reactive
-   proxy.
-
-A node the draft carries but the page has not created (a conditional workflow
-node, §4.2) is created by the restore.
-
-#### 10.3.1 The confirmation prompt
-
-When a readable draft exists for the active key, `usePageStateDraft` opens a
-Quasar `Dialog` — **"Restore Unsaved Draft?"**, persistent, with a primary
-**Restore** button and a flat negative **Discard** button.
-
-- **Restore** — the draft is applied and auto-save resumes.
-- **Discard** — the draft is removed from storage and the user carries on with
-  the clean / server-hydrated form. The blank state is not written straight back
-  (the `holdsAfterClear` baseline covers this), and the user is not asked again.
-
-The prompt is asked **at most once per key settlement**, and never when there is
-no valid draft in storage. Auto-save stays shut until the user answers, so
-edits made while the dialog is open cannot bury the stored draft. If the route
-key changes while the dialog is open, the answer is ignored.
-
-This is entirely inside the composable. Pages, sections and content components
-configure nothing and render no dialog of their own — it works everywhere
-`usePageState` is used.
-
-If the stored value is corrupt or unparseable, it is discarded, a warning is
-logged, and the page carries on with the freshly initialized form.
-
-### 10.4 Clearing
-
-| Event | Draft |
-|---|---|
-| `submit()` / `run()` **succeeds** | cleared automatically |
-| `submit()` / `run()` **fails** (server or network) | **kept** — the user must not lose their work |
-| The user hits Reset in `PageAction` | cleared |
-| The user hits Cancel in `PageAction` | cleared — leaving without saving discards the draft too. Not applied when `FormActionCancel`'s `cancelHandler` escape hatch fully replaces the built-in `cancel` case. |
-| Logout | **kept** — `clearAllClientStorage` (`IndexedDbService.js`) preserves every `aql_` key across its full-storage wipe |
-| Tenant switch / full storage cleanse | cleared, along with everything else |
-
-Drafts are never tied to the auth session. Every key starts with `aql_` and
-survives a logout on purpose, so a user can come back later and finish.
-
-### 10.5 Opting out
-
-Persistence is on by default. Any of these turns it off for one page:
+Creates or replaces a node. Returns it.
 
 ```js
-// a page contract (pages/{scope}/{page}.js or a _ui/ override)
-export default { persist: false }
+pageState.initResource('OutletConsumptions', {
+  reset: true,                    // flush the previous page's nodes first
+  fields: { Date: today(), Username: user.name, Status: 'Active' },
+  isPrimaryKey: true
+})
 
-// a resource strategy passed to usePageState
-usePageState({ persist: false })
+pageState.initResource('OutletVisits', { role: 'next' })
+pageState.initResource('OutletMovements', { many: true })
+pageState.initResource('Outlets', { code: 'OUT00001' })   // ⇒ update, not create
 ```
 
-`Page.vue` forwards `pageProps.persist` into the composable, so the page-contract
-switch works from the same place every other page prop is authored.
-
-### 10.6 Manual control
-
-| Function | Purpose |
+| Option | Meaning |
 |---|---|
-| `draftKey` | `computed<string>` — the active key, `''` when this page has none |
-| `persistDraft()` | write the current state now, skipping the debounce |
-| `restoreDraft(key?)` | re-apply a stored draft on demand |
-| `clearDraft(key?)` | remove the stored draft |
+| `role` | Address under a role other than `$default` |
+| `code` | Existing record code, or a `$ref`. Set ⇒ the node updates instead of creates |
+| `many` | This node is a bulk write |
+| `fields` | Seed values merged into `record` |
+| `reset` | Flush every node first — use on page mount |
+| `isPrimaryKey` | Force this resource to become `state.primaryKey` |
 
-> **Naming note:** the manual save is `persistDraft()`, **not** `saveDraft()`.
-> `saveDraft()` is the long-standing (deprecated) *submit* trigger on this same
-> object — reusing the name would silently send a form to the server where the
-> caller expected a local write.
+### `removeNode(resource, role?)` → boolean
 
----
+Drops one node. Returns `false` for an unknown address, so it is safe to call
+unconditionally.
 
-## 11. Maintenance rule (NON-NEGOTIABLE)
-
-**Any change to `FRONTENT/src/composables/resources/usePageState.js` — its node
-shape, exported functions, triggers, build mapping, or strategy contract — MUST
-be reflected in this document.**
-
-- If you add/remove/rename an exported function or mutation, update §6.4 / §8.
-- If you change the node shape, update §4 — and check §4.1 still classifies every
-  field correctly as private or public.
-- If you change how `build()` maps nodes to requests, update §7.
-- If you change what triggers return, update §6.6.
-- If you change what `useNode` returns, update §6.5.
-- If you change the draft key format, what is serialized, the restore order, or
-  the opt-out switch, update §10 — and check `usePageStateDraft.js` and this doc
-  still agree on the key table.
-
-**Corollary — the encapsulation contract cuts both ways.** §4.1 is only true while
-consumers actually honour it. Before landing a change to the node shape or the
-`state.nodes` keying, confirm nothing has regressed to direct access:
-
-```bash
-rg -n "state\.nodes|state\.index|_action\s*=[^=]|\.children\s*\.\s*find|children\?\.find" FRONTENT/src/components FRONTENT/src/composables/resources --glob '!**/usePageState.js' --glob '!**/useCompositeForm.js'
+```js
+pageState.removeNode('OutletVisits', 'next')   // user unticked "schedule next"
 ```
 
-This must return **nothing**. Any hit means a consumer has bypassed the API and
-the "internals are free to change" guarantee no longer holds — fix the consumer
-before changing the node shape.
+Removing `OutletVisits:next` leaves `OutletVisits:complete` untouched. Queued
+actions are **not** touched — call `excludeAdditionalAction` too if the action
+should go with it.
 
-Two deliberate exclusions, so the guard does not cry wolf:
+### `hasNode(resource, role?)` / `hasNodes`
 
-- `_action\s*=[^=]` matches only **assignment**, not `_action === '…'`. Reading
-  `_action` / `data` is legal (§4.1) — only writing is not.
-- `useCompositeForm.js` (and its `useProduct*Form.js` callers) is a **separate**
-  composable with its own `{ _action, data }` row model. It is not a
-  `usePageState` consumer, so its direct mutations are out of scope here.
+`hasNode` is imperative. `hasNodes` is a computed — true once any node exists.
+Use `useNode(...).exists` when a template needs it reactively.
 
-Keep this doc and the composable in lock-step. Treat the doc as part of the
-composable's definition, not an afterthought.
+### `resetForResource(resource)` / `reset()`
 
----
+`reset()` clears everything — nodes, controls, reload, actions, meta.
+`resetForResource(name)` does the same, then sets `primaryKey`.
 
-## 12. Related documents
+## 7. API — writing a node
 
-- `Documents/OUTLET_INPUT_TO_API_DATA_FLOW.md` — the research/discovery that drove this composable (per-resource temp-state map, worked examples, design implications §14).
-- `Documents/OUTLET_DATA_FLOW_ANALYSIS.md` — per-resource data-flow breakdown + provide/inject proposal.
-- `Documents/CORE_ARCHITECTURE_RULES.md` — frontend architecture rules (composables own business logic + payload prep; single source of truth; no manual reactivity).
-- `AGENTS.md` / `CLAUDE.md` — startup + GitNexus protocol.
+### `setField` / `setFields`
+
+```js
+pageState.setField('OutletConsumptions', 'OutletCode', 'OUT00001')
+pageState.setFields('OutletConsumptions', { Date: '2026-08-27', Status: 'Active' })
+```
+
+Creates the node if missing.
+
+### `setResource` / `updateResource`
+
+Writes a whole node-shaped object at once. `setResource` **replaces** — it clears
+what the payload leaves out. `updateResource` **merges**.
+
+Three call forms:
+
+```js
+pageState.setResource('OutletRestocks', payload)
+pageState.setResource('OutletVisits', 'next', payload)
+pageState.setResource(payload)          // payload carries .resource / .role
+```
+
+The third form is what makes hydrating from Layer 2 a one-liner (§10).
+
+```js
+pageState.setResource({
+  resource: 'OutletRestocks',
+  record: { OutletCode: 'OUT00001', Progress: 'PENDING_APPROVAL' },
+  children: [{
+    resource: 'OutletRestockItems',
+    records: [{ SKU: 'CK3-01', Quantity: 3 }]      // bare rows are fine
+  }],
+  reload: ['OutletStorages'],                      // hoisted to state.reload
+  actions: [executeActionEnvelope]                 // hoisted to state.actions
+})
+```
+
+| Payload key | Behaviour |
+|---|---|
+| `record` | Merged; `setResource` first deletes keys the payload omits |
+| `children` | Replaced (`setResource`) or merged per child resource (`updateResource`) |
+| `records` | Replaced or appended. Non-empty implies `many: true` |
+| `code`, `many` | Set when present |
+| `controls` | Only touched when named. A replace drops the `{header,value}` half and keeps the `{name,codeType}` schema half |
+| `reload` | **Hoisted** to `state.reload`, always additive, deduped |
+| `actions` | **Hoisted** to `state.actions`, deduped by key |
+
+**Hoisting is always additive**, even under `setResource`. Several nodes
+contribute to one batch, so a later call must never wipe what an earlier one
+asked for.
+
+**Guard:** `many: true` together with `children` **throws**. `build()` would
+drop the children silently, so it is rejected at the point of the mistake.
+
+Rows may be `{ SKU: 'X', Qty: 3 }` or `{ _action: 'update', data: {…} }`. Both
+normalise.
+
+### Children
+
+```js
+pageState.addChild('OutletConsumptions', 'OutletConsumptionItems', { SKU: 'CK3-01', Qty: 3 })
+pageState.updateChild('OutletConsumptions', 'OutletConsumptionItems', 0, { Qty: 5 })
+pageState.setChildAction('OutletConsumptions', 'OutletConsumptionItems', 0, 'deactivate')
+pageState.removeChild('OutletConsumptions', 'OutletConsumptionItems', 0)
+```
+
+`updateChild` merges `data` only. To soft-delete a persisted row use
+`setChildAction(..., 'deactivate')` — that is what GAS expects.
+
+### Many-rows
+
+```js
+const i = pageState.addRecord('OutletMovements', { SKU: 'CK3-01', QtyChange: -3 })
+pageState.updateRecord('OutletMovements', i, { QtyChange: -4 })
+pageState.removeRecord('OutletMovements', i)
+```
+
+`addRecord` sets `many = true` automatically.
+
+## 8. API — controls
+
+Controls hold anything that is **not** a column on a resource: wizard toggles,
+selections over existing records, UI bookkeeping. They never reach GAS.
+
+### Page-level (`state.controls`)
+
+```js
+pageState.setControl('NextVisitDays', 21)
+pageState.getControl('NextVisitDays', 14)      // 14 is the fallback; default null
+const days = pageState.useControl('NextVisitDays', 14)   // writable computed
+```
+
+`useControl` returns a writable computed, so a template can bind it directly:
+
+```vue
+<q-input v-model="days" type="number" />
+```
+
+**Page controls outlive every node.** That is the reason they exist. If
+`NextVisitDays` lived on the `OutletVisits:next` node, `removeNode` would destroy
+the number the user typed, and re-ticking the toggle would lose it.
+
+### Node-scoped
+
+Pass a resource (and role) as the 3rd and 4th arguments:
+
+```js
+pageState.setControl('Note', 'text', 'OutletVisits', 'next')
+pageState.getControl('Note', '',     'OutletVisits', 'next')
+pageState.useControl('Note', '',     'OutletVisits', 'next')
+```
+
+Signature is uniform: `(header, value|fallback, resource?, role?)`.
+Writes create the node; **reads never do**.
+
+`setControlField(resource, header, value, role?)` and
+`getControlField(resource, header, role?)` are the older resource-first
+equivalents. Both still work.
+
+### Which to use
+
+| State | Where |
+|---|---|
+| Survives node removal, or relates to no node | `state.controls` |
+| Belongs to one specific node's editing session | node-scoped |
+| Is a column GAS will store | **not a control** — `record` |
+
+## 9. Reading — `useNode`
+
+```js
+const { node, record, exists, identifier, options, validation, children } =
+  pageState.useNode('OutletConsumptions')
+```
+
+| Key | Type | Use |
+|---|---|---|
+| `node` | `Computed<Node>` | The whole node |
+| `record` | `Computed<object>` | v-model target for the primary FormRecord |
+| `exists` | `Computed<boolean>` | Reactive `hasNode` |
+| `identifier` | `Computed<string>` | The node's uid. Changes when the node is **replaced**, not edited — key one-shot hydration off this |
+| `options` | `Computed<object>` | Per-field option lists, lazy and memoized |
+| `validation` | `Computed<Error[]>` | Required headers + `strategy.validate` for this node |
+| `children(res)` | `() ⇒ Computed<Row[]>` | Child rows. Entry identity is stable, so `indexOf` works |
+
+**`node` is always an object, never `null`.** A missing node resolves to a blank
+one whose `record` is `{}`, `children` is `[]`, and so on — safe to read before
+`initResource` has run and after `removeNode`. Each `useNode()` call gets its own
+blank, so a `v-model` bound while the node is missing cannot leak into another.
+
+## 10. Submitting
+
+### `build()` → request array
+
+Walked in slot order, first match wins per node:
+
+| The node has | Request |
+|---|---|
+| `many` and rows in `records` | `bulk` |
+| entries in `children` | `compositeSave` (with `code` when set) |
+| a `code` | `update` |
+| any key in `record` | `create` |
+| none of the above | skipped |
+
+Then, in order: every entry in `state.actions` as `executeAction`, and finally
+one `get` built from `state.reload`.
+
+```
+nodes → actions → get
+```
+
+Actions come after the nodes so a `$ref` naming a record this batch creates
+resolves against a row that already exists. The `get` is last so it sees the
+finished batch.
+
+### `submit(options?)`
+
+```js
+const { success, response, code } = await pageState.submit({
+  successMsg: 'Consumption recorded.',
+  reload: ['OutletStorages'],
+  onSuccess: ({ response, code }) => nav.goTo('view', { code })
+})
+```
+
+Validates first (`validationErrors`), notifies on failure, dispatches, clears the
+draft **only on success**, and returns `{ success, response, code }`.
+
+### `run(options)`
+
+The same lifecycle, lower level. `submit` is a thin wrapper. Pass `requests` to
+bypass `build()` — see the warning in §5.2.
+
+### `setReload(names)`
+
+```js
+pageState.setReload(['OutletStorages', 'WarehouseStorages'])
+```
+
+Replaces `state.reload`. A per-call `run({ reload })` unions with it into a
+single deduped `get` and leaves `state.reload` untouched.
+
+**Cursors are not your job.** `runBatchRequests` collects every resource in the
+batch, builds `lastUpdatedAtByResource` from local cache, and injects it into
+every request. Never put `lastUpdatedAtByResource` or `lastUpdatedAtResources` in
+anything you build — it would be overwritten.
+
+## 11. `$ref` — linking records inside one batch
+
+`batchRef(path)` returns `{ $ref: path }`. The frontend never resolves it; GAS
+walks the whole request tree and resolves it before each sub-request.
+
+```js
+import { batchRef } from 'src/composables/resources/resourceRequests'
+
+pageState.setResource({
+  resource: 'OutletRestocks',
+  record: {
+    OutletConsumptionCode: batchRef('OutletConsumptions.latest.code'),
+    OutletCode: 'OUT00001'
+  }
+})
+```
+
+Path grammar is `<Resource>.<property walk>` against a context GAS accumulates
+as the batch runs:
+
+| Path | Resolves to |
+|---|---|
+| `OutletConsumptions.latest.code` | code of the last consumption created |
+| `OutletReturns.records.3.Code` | the 4th return row's code |
+| `X.byCode.OC-0042.SomeColumn` | any column of a known row |
+
+A `$ref` works anywhere in the tree — inside `record`, inside a child row's
+`data`. Unresolvable paths **throw** server-side, so an ordering mistake fails
+loudly.
+
+`batchRefList(path, codes)` joins a `$ref` to codes you already hold, for a
+column storing a separated list. GAS performs the join. It is currently used
+nowhere — two docblocks in `useInvoicePayload.js` claim otherwise and are wrong.
+
+## 12. Layer 2 payloads
+
+A resource's Layer 2 builder should return **node-shaped payloads**, not request
+envelopes. That keeps one assembly path, and keeps validation, drafts and
+inspection working.
+
+```js
+// _resource/Operation/OutletRestocks/composables/useRestockPayload.js
+export function buildRestockPayload (rows, { outletCode, actorName, date }) {
+  return {
+    resource: 'OutletRestocks',
+    record: {
+      Date: date, OutletCode: outletCode, RequestedUser: actorName,
+      OutletConsumptionCode: batchRef('OutletConsumptions.latest.code'),
+      Progress: 'PENDING_APPROVAL', Status: 'Active'
+    },
+    children: [{
+      resource: 'OutletRestockItems',
+      records: rows.map(r => ({ SKU: r.SKU, Quantity: r.Quantity, Status: 'Active' }))
+    }],
+    reload: ['OutletStorages']
+  }
+}
+```
+
+Hydrating is then one loop:
+
+```js
+envelope.nodes.forEach(node => pageState.setResource(node))
+```
+
+**What is still Layer 2's job at submit time:** ledger rows derived from the
+final state (`OutletMovements`), tax rows, `executeAction` on records that
+already exist, and the permission map. Those are not user input and do not
+belong in nodes.
+
+## 13. Drafts (localStorage)
+
+Automatic. Debounced 300 ms. Key is derived from the route:
+
+```
+aql_<Resource>_Add
+aql_<Resource>_Edit_<Code>
+aql_<Resource>_<PageName>[_<Code>]
+```
+
+Index and view pages get no key.
+
+Stored payload:
+
+```json
+{ "v": 1, "key": "…", "savedAt": 0,
+  "primaryKey": "…", "currentStep": 1, "hasData": true,
+  "nodes":    [ { "resource", "role", "code", "many", "record", "children", "records", "controls" } ],
+  "controls": [ { "header", "value" } ],
+  "actions":  [ { "key", "resource", "actionName", "request" } ],
+  "reload":   [ "OutletStorages" ] }
+```
+
+- `controls`, `actions` and `reload` sit at the **top level**, so they restore
+  even when the nodes they relate to do not exist yet.
+- Restore is **additive** for those three and **replaces** nodes — a restore runs
+  after the page has seeded its own defaults and must not wipe them.
+- `hasData` counts nodes, controls and actions. `reload` alone never makes a
+  blank page worth saving.
+- Only `{ header, value }` controls are saved; the `{ name, codeType }` schema
+  half is re-seeded by `strategy.controls`.
+- The draft is cleared **only on a successful submit**. A failed request leaves
+  the user's work in storage.
+
+Manual control: `draftKey`, `persistDraft()`, `restoreDraft()`, `clearDraft()`.
+Opt a page out with `persist: false` on its contract.
+
+## 14. `ready(ctx)` — the page contract hook
+
+A page contract may export `ready`. It runs **once per page**, in an
+`effectScope` owned by `Page.vue`, as soon as the contract has actually landed.
+
+```js
+// _ui/AQL/pages/Operation/OutletConsumptions/Add.js
+import { watch } from 'vue'
+
+export default {
+  sections: ['PageHeader'],
+  contents: ['Context', 'StockCount', 'RestockOptions'],
+
+  ready ({ pageState, resourceRecord, route }) {
+    pageState.initResource('OutletConsumptions', {
+      reset: true,
+      fields: { Date: today(), Status: 'Active' }
+    })
+  }
+}
+```
+
+`ctx` is `{ pageState, pageProps, resourceConfig, resourceRecord, route, routeInfo }`.
+
+### Why it exists
+
+It is the only place with **page lifetime**. Step cards mount and unmount as the
+user moves between steps — a `watch` registered in a card stops the moment that
+card leaves the screen, which is usually right before submit reads its result.
+
+`ready` also cannot go in the props-factory form of a contract
+(`export default function () {}`), because that runs inside a `computed` and
+would create a new watcher on every recompute.
+
+### Use cases
+
+**Conditional node lifecycle** — the node's existence is the boolean (§5.1):
+
+```js
+ready ({ pageState }) {
+  watch(() => pageState.getControl('isRestocking'), (on) => {
+    if (!on) return pageState.removeNode('OutletRestocks')
+    pageState.setResource('OutletRestocks', null, buildRestockPayload(rows, ctx))
+  })
+}
+```
+
+**Seeding a page** — defaults, deep-link params, the primary node:
+
+```js
+ready ({ pageState, route }) {
+  pageState.initResource('OutletConsumptions', {
+    reset: true,
+    fields: { OutletCode: route.query.outletCode || '', Date: today() }
+  })
+  pageState.setControl('isRestocking', true)
+}
+```
+
+**Reacting to a different record** — `ready` does not re-run when only
+`:code` changes, so watch it here:
+
+```js
+ready ({ pageState, resourceRecord, route }) {
+  watch(() => route.params.code, () => {
+    if (resourceRecord.record.value) pageState.load('Outlets', resourceRecord.record.value)
+  }, { immediate: true })
+}
+```
+
+**Keeping a derived column in step** — until a first-class derive exists:
+
+```js
+ready ({ pageState }) {
+  const items = pageState.useNode('Invoices').children('InvoiceItems')
+  watch(items, (rows) => {
+    pageState.setField('Invoices', 'Subtotal',
+      rows.reduce((s, r) => s + r.data.Qty * r.data.Price, 0))
+  }, { deep: true })
+}
+```
+
+**Declaring the batch tail** once, instead of at every submit site:
+
+```js
+ready ({ pageState }) {
+  pageState.setReload(['OutletStorages', 'OutletVisits'])
+}
+```
+
+**Anything needing teardown** — `onScopeDispose` fires when the page changes:
+
+```js
+ready () {
+  const id = setInterval(refreshQueue, 30000)
+  onScopeDispose(() => clearInterval(id))
+}
+```
+
+### Rules
+
+1. **`ready` must not be `async`.** `scope.run()` captures only effects created
+   synchronously; a `watch` after an `await` escapes the scope and leaks
+   forever. Dev mode warns if `ready` returns a promise. Start promises freely —
+   just do not create effects inside their callbacks.
+2. **It re-runs when the page changes**, not when the route changes and not when
+   only `:code` changes. Use a `watch` inside for per-record behaviour.
+3. **An override's `ready` replaces the base contract's**, same as every other
+   contract key.
+4. `ready` is stripped from `pageProps` before it is bound to children, so it
+   never leaks into `$attrs`.
+
+## 15. Workflow actions in the batch
+
+`includeAdditionalAction` queues an `executeAction` into this page's own
+submission, so a record and the action stamping it either both land or neither
+does.
+
+```js
+pageState.includeAdditionalAction('Complete', { Comment: 'Done on site' }, {
+  resource: 'OutletVisits',
+  role: 'complete',
+  code: 'OV26000051'          // omit ⇒ node's code, else batchRef('X.latest.code')
+})
+
+pageState.excludeAdditionalAction('Complete', { resource: 'OutletVisits' })
+```
+
+Keyed by `resource::actionName`, so queuing twice **updates** the envelope rather
+than running the action twice.
+
+Popup actions are a different path — `useAdditionalActions` dispatches
+immediately against a record that already exists, and deliberately does not go
+through `pageState`, because `run()` would gate it on the host page's validation
+errors.
+
+## 16. Strategy overrides
+
+`usePageState(strategy, options)` — all keys optional.
+
+| Key | Signature | Purpose |
+|---|---|---|
+| `controls` | `(resource) ⇒ [{ name, codeType }]` | Field schema; `codeType` drives option lists |
+| `getOptions` | `(codeType, node) ⇒ [{ label, value }]` | Option lists |
+| `hydrate` | `(node, raw, ctx)` | Load a server record into a node |
+| `build` | `(ctx) ⇒ [request]` | Replace `defaultBuild`. **Must append `additionalActionRequests()` and the reload itself** |
+| `validate` | `(node, state) ⇒ [{ field, message }]` | Per-node validation |
+| `persist` | `false` | Opt out of drafts |
+
+## 17. Validation
+
+`validationErrors` is a computed **array** across every node — required headers
+from the resource config, plus `strategy.validate`. `run()` blocks on it and
+notifies with the first message.
+
+`useNode(...).validation` is the same check scoped to one node.
+
+This only works if the data is in nodes. See §5.
+
+## 18. Debugging
+
+In dev, `window.pageState` is the live instance. It is deleted when the page
+unmounts, so it is never stale.
+
+```js
+pageState.snapshot()                    // whole tree as plain JSON, readable addresses
+pageState.state.nodes.size
+pageState.state.index                   // resource → role → uid
+pageState.build({ mode: 'submit' })     // what would be sent
+pageState.validationErrors.value        // note .value — it is a computed
+pageState.getControl('NextVisitDays')
+```
+
+`snapshot()` keys nodes by readable address (`OutletVisits:next`) and puts page
+controls, actions and reload under `$page`. Prefer it over `state.nodes`, which
+logs as opaque uid soup.
+
+## 19. Rules
+
+1. Never read `state.nodes` or `state.index`. Use `useNode` / `hasNode`.
+2. Never assign into a node or a child row. Use the mutations.
+3. Anything GAS stores goes in `record` / `children` / `records`. Never `controls`.
+4. Whether a resource is written is the **node's existence**, not a boolean.
+5. Roles are names, never positions.
+6. Never build `lastUpdatedAtByResource`. The transport owns cursors.
+7. `ready` must not be `async`.
+8. Do not use `run({ requests })` to escape modelling.
+
+## 20. Related
+
+- `UI_RESOURCE_DOMAIN_LOGIC.md` — layers, and what belongs in Layer 2
+- `UI_ACTION_SYSTEM.md` — AdditionalActions, both paths
+- `UI_CREATE_AND_UPDATE_SYSTEM.md` — the generic form pages
+- `UI_PAGE_AND_SECTION_SYSTEM.md` — page contracts and resolution
+- `CORE_ARCHITECTURE_RULES.md` — `$ref` transport rules

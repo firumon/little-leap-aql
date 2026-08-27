@@ -55,7 +55,7 @@
 </template>
 
 <script setup>
-import { provide } from 'vue'
+import { provide, onUnmounted, watch, effectScope } from 'vue'
 import Breadcrumb from 'components/app/Breadcrumb.vue'
 import AqlContentWrapper from 'components/shared/AqlContentWrapper.vue'
 import PageFallback from 'pages/_common/PageFallback.vue'
@@ -72,12 +72,15 @@ const {
   notFound,
   resolvedPageComponent,
   pageProps,
+  pageReady,
+  contractVersion,
   sections,
   contents,
   visibleSectionsBeforeAction,
   contentWrapperProps,
   resourceConfig,
-  resourceRecord
+  resourceRecord,
+  routeInfo
 } = usePageResolver()
 
 provide('resourceConfig', resourceConfig)
@@ -87,4 +90,33 @@ provide('resourceRecord', resourceRecord)
 // `persist: false` on a page contract opts that page out of localStorage drafts.
 const pageState = usePageState({}, { persist: () => pageProps.value?.persist })
 provide('pageState', pageState)
+
+// A page contract may export `ready(ctx)`. Triggered by `contractVersion`, which
+// only moves at commit — a route-derived key fires ~30ms early, while pageReady
+// still holds the PREVIOUS page's hook, and runs it on the wrong page.
+let readyScope = null
+function stopReadyScope () {
+  readyScope?.stop()
+  readyScope = null
+}
+
+watch([pageReady, contractVersion], ([hook]) => {
+  stopReadyScope()
+  if (!hook) return
+  readyScope = effectScope()
+  const result = readyScope.run(() => hook({
+    pageState,
+    pageProps,
+    resourceConfig,
+    resourceRecord,
+    routeInfo
+  }))
+  // `scope.run` only captures effects created synchronously, so a watch after an
+  // await escapes it and never gets disposed.
+  if (process.env.DEV && result && typeof result.then === 'function') {
+    console.warn('[Page] ready() is async. Create watches synchronously — effects made after an await leak.')
+  }
+}, { immediate: true })
+
+onUnmounted(stopReadyScope)
 </script>

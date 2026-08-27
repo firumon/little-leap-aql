@@ -14,15 +14,10 @@ function metaDefaults () {
   return {
     saving: false,
     submitting: false,
-    loading: false,
     currentStep: 1,
     // True for a brief settle window around a wizard step change, so the action
     // bar cannot be double-clicked while its buttons swap for the new step.
-    stepping: false,
-    validationErrors: {},
-    // Measured height of the FormAction sticky bar — ResourceActions reads it to
-    // keep its FAB clear of the bar.
-    formActionsHeight: 0
+    stepping: false
   }
 }
 
@@ -39,7 +34,13 @@ export function usePageState (strategy = {}, options = {}) {
     // Queued executeAction envelopes. Kept OUTSIDE `nodes` on purpose: an action
     // is not a record body, and build must emit it after every node request so a
     // `$ref` to a record created in the same batch resolves.
-    pendingActions: []
+    actions: [],
+    // Resources to re-read once the batch has written. Page level, not per node —
+    // a reload is about the batch. Cursors are the transport's job, never ours.
+    reload: [],
+    // Page-level controls, [{ header, value }]. Outlive every node, so a value the
+    // user typed about a node survives that node being removed and re-added.
+    controls: []
   })
   const meta = reactive(metaDefaults())
 
@@ -47,7 +48,8 @@ export function usePageState (strategy = {}, options = {}) {
   const registry = useNodeRegistry({ state, strategy, optionResolver })
 
   const actions = usePageStateActions({ state, registry })
-  const { defaultHydrate, defaultBuild } = usePageStateBuild({
+  const { defaultHydrate, defaultBuild, reloadNames } = usePageStateBuild({
+    state,
     registry,
     additionalActionRequests: actions.additionalActionRequests
   })
@@ -55,9 +57,9 @@ export function usePageState (strategy = {}, options = {}) {
   const hydrate = strategy.hydrate || defaultHydrate
   const build = strategy.build || defaultBuild
 
-  const mutations = usePageStateMutations({ registry, hydrate })
+  const mutations = usePageStateMutations({ state, registry, hydrate })
   const { validationErrors, nodeValidation } = usePageStateValidation({ state, registry, strategy })
-  const { snapshot, serializeDraft, applyDraft } = usePageStateSerialization({ state, meta, registry })
+  const { snapshot, serializeDraft, applyDraft } = usePageStateSerialization({ state, meta, registry, setResource: mutations.setResource })
 
   const draft = usePageStateDraft({
     enabled: () => {
@@ -78,6 +80,8 @@ export function usePageState (strategy = {}, options = {}) {
   // new active resource takes over as primaryKey.
   function resetForResource (resource) {
     registry.detachAll()
+    state.controls.splice(0)
+    state.reload.splice(0)
     state.primaryKey = registry.toResourceName(resource)
     resetMeta()
   }
@@ -86,8 +90,18 @@ export function usePageState (strategy = {}, options = {}) {
     return registry.initResource(resource, { ...opts, onReset: resetForResource })
   }
 
+  // Replaces the re-read list. Cursors are added by the transport, so this is
+  // only ever resource names.
+  function setReload (resources = []) {
+    const names = (Array.isArray(resources) ? resources : [resources]).filter(Boolean)
+    state.reload.splice(0, state.reload.length, ...new Set(names))
+    return state.reload
+  }
+
   function reset () {
     registry.detachAll()
+    state.controls.splice(0)
+    state.reload.splice(0)
     state.primaryKey = null
     resetMeta()
   }
@@ -107,9 +121,14 @@ export function usePageState (strategy = {}, options = {}) {
       return { success: false, response: null, code: '', errors }
     }
 
-    if (!requests) requests = (buildFn || build)({ mode })
-
-    if (Array.isArray(reload) && reload.length > 0) requests.push(resourceGetRequest(reload, {}))
+    if (requests) {
+      // Externally supplied requests never went through build(), so the re-read
+      // has to be appended here instead.
+      const names = reloadNames(reload)
+      if (names.length) requests.push(resourceGetRequest(names, {}))
+    } else {
+      requests = (buildFn || build)({ mode, reload })
+    }
 
     if (!requests || !requests.length) {
       if (notify) $q.notify({ type: 'warning', message: 'Nothing to submit.', position: 'top' })
@@ -154,6 +173,8 @@ export function usePageState (strategy = {}, options = {}) {
     resetForResource,
     hasNode: registry.hasNode,
     hasNodes: registry.hasNodes,
+    removeNode: registry.removeNode,
+    setReload,
     ...mutations,
     ...actions,
     useNode,

@@ -38,25 +38,25 @@ export function usePageStateActions ({ state, registry }) {
     // rather than running the action twice.
     const key = `${name}::${actionName}`
     const entry = { key, resource: name, actionName, request }
-    const existing = state.pendingActions.findIndex((e) => e.key === key)
-    if (existing >= 0) state.pendingActions.splice(existing, 1, entry)
-    else state.pendingActions.push(entry)
+    const existing = state.actions.findIndex((e) => e.key === key)
+    if (existing >= 0) state.actions.splice(existing, 1, entry)
+    else state.actions.push(entry)
 
     return request
   }
 
   function excludeAdditionalAction (actionName = null, { resource } = {}) {
     if (!actionName) {
-      state.pendingActions.splice(0)
+      state.actions.splice(0)
       return
     }
     const { name } = registry.resolveTarget(resource || state.primaryKey)
-    const index = state.pendingActions.findIndex((e) => e.key === `${name}::${actionName}`)
-    if (index >= 0) state.pendingActions.splice(index, 1)
+    const index = state.actions.findIndex((e) => e.key === `${name}::${actionName}`)
+    if (index >= 0) state.actions.splice(index, 1)
   }
 
   function additionalActionRequests () {
-    return state.pendingActions.map((entry) => entry.request)
+    return state.actions.map((entry) => entry.request)
   }
 
   return { includeAdditionalAction, excludeAdditionalAction, additionalActionRequests }

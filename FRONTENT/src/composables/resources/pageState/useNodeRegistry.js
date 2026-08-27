@@ -11,7 +11,7 @@ function uid () {
 // Owns node storage and addressing. Read nodes through useNode/ensureNode/hasNode,
 // never `state.nodes` or `state.index`. Roles are names, never positions.
 export function useNodeRegistry ({ state, strategy = {}, optionResolver = () => [] }) {
-  function createNode (resource, { code = null, many = false, action = null } = {}) {
+  function createNode (resource, { code = null, many = false } = {}) {
     return reactive({
       resource,
       code,
@@ -22,12 +22,9 @@ export function useNodeRegistry ({ state, strategy = {}, optionResolver = () => 
       // Dual-purpose: { name, codeType } seeded by strategy.controls, and
       // { header, value } upserted by setControlField for non-schema fields.
       controls: [],
-      options: {},
-      action
+      options: {}
     })
   }
-
-  const emptyNode = createNode('__empty__')
 
   // Consumers may pass a string, a ref, or a getter, so a component whose active
   // resource changes on navigation binds once at setup.
@@ -48,31 +45,63 @@ export function useNodeRegistry ({ state, strategy = {}, optionResolver = () => 
     return state.index[name]?.[role]
   }
 
+  // Build order. An address keeps the slot it first claimed, so re-attaching or
+  // removing and re-adding a node cannot reorder the batch and break a `$ref`.
+  const slotOfAddress = new Map()
+  const slotOfId = new Map()
+  let nextSlot = 0
+
+  function claimSlot (name, role, id) {
+    const address = `${name}::${role}`
+    if (!slotOfAddress.has(address)) slotOfAddress.set(address, nextSlot++)
+    slotOfId.set(id, slotOfAddress.get(address))
+  }
+
   // THE only place a node enters. Re-attaching a (resource, role) drops the
   // previous node, so a re-init cannot orphan an unaddressable entry.
   function attachNode (name, role, node) {
     const id = uid()
     if (!state.index[name]) state.index[name] = {}
     const previous = state.index[name][role]
-    if (previous) state.nodes.delete(previous)
+    if (previous) {
+      state.nodes.delete(previous)
+      slotOfId.delete(previous)
+    }
     state.index[name][role] = id
     state.nodes.set(id, node)
+    claimSlot(name, role, id)
     return id
   }
 
-  // THE only place nodes leave. Both structures clear together — a stale uid
-  // would resolve to emptyNode and silently build an empty payload.
+  // Drops ONE node. Queued actions are left alone — a caller that also wants the
+  // action gone calls excludeAdditionalAction itself.
+  function removeNode (target, role) {
+    const { name, role: r } = resolveTarget(target, role)
+    const id = nodeIdFor(name, r)
+    if (!id) return false
+    state.nodes.delete(id)
+    slotOfId.delete(id)
+    delete state.index[name][r]
+    if (!Object.keys(state.index[name]).length) delete state.index[name]
+    return true
+  }
+
+  // THE only place every node leaves. Both structures clear together — a stale
+  // uid would resolve to a blank node and silently build an empty payload.
   function detachAll () {
     state.nodes = new Map()
     state.index = {}
-    state.pendingActions.splice(0)
+    state.actions.splice(0)
+    slotOfAddress.clear()
+    slotOfId.clear()
+    nextSlot = 0
   }
 
-  function initResource (resource, { role, code = null, many = false, fields = {}, action = null, isPrimaryKey = false, reset = false, onReset } = {}) {
+  function initResource (resource, { role, code = null, many = false, fields = {}, isPrimaryKey = false, reset = false, onReset } = {}) {
     const { name, role: r } = resolveTarget(resource, role)
     if (reset) onReset?.(name)
 
-    const node = createNode(name, { code, many, action })
+    const node = createNode(name, { code, many })
     Object.assign(node.record, fields)
     if (strategy.controls) {
       node.controls = strategy.controls(name) || []
@@ -114,28 +143,38 @@ export function useNodeRegistry ({ state, strategy = {}, optionResolver = () => 
     return node.children.find(c => c.resource === name) || null
   }
 
-  // Attachment order. Request order depends on this, so it must stay the node
-  // Map's own order — the index would put a re-attached node back in its old slot.
+  // Slot order — the order each address FIRST appeared. Request order depends on
+  // this, and a `$ref` breaks if it moves.
   function eachNode (visit) {
-    for (const node of state.nodes.values()) visit(node)
+    const entries = []
+    for (const [id, node] of state.nodes) entries.push([slotOfId.get(id) ?? Infinity, node])
+    entries.sort((a, b) => a[0] - b[0])
+    for (const [, node] of entries) visit(node)
   }
 
-  // Index order, with the readable address. For snapshots and drafts.
+  // Same slot order, plus the readable address. For snapshots and drafts, so a
+  // restored draft re-claims its slots in the order they were first claimed.
   function eachAddressedNode (visit) {
+    const entries = []
     for (const [name, roles] of Object.entries(state.index)) {
       for (const [role, id] of Object.entries(roles)) {
         const node = state.nodes.get(id)
-        if (node) visit(node, { name, role, id })
+        if (node) entries.push([slotOfId.get(id) ?? Infinity, node, { name, role, id }])
       }
     }
+    entries.sort((a, b) => a[0] - b[0])
+    for (const [, node, address] of entries) visit(node, address)
   }
 
-  // THE read accessor. A missing node resolves to emptyNode, so every returned
-  // computed is safe to read before initResource has run.
+  // THE read accessor. `node` is ALWAYS an object — a missing node resolves to a
+  // blank one, so every returned computed is safe to read before initResource has
+  // run, or after removeNode. The blank is created per call: a shared one let a
+  // v-model bound while the node was missing leak into every other missing node.
   function useNode (resource, role = DEFAULT_ROLE) {
+    const blank = createNode('')
     const target = computed(() => resolveTarget(resource, role))
     const nodeId = computed(() => nodeIdFor(target.value.name, target.value.role))
-    const node = computed(() => (nodeId.value && state.nodes.get(nodeId.value)) || emptyNode)
+    const node = computed(() => (nodeId.value && state.nodes.get(nodeId.value)) || blank)
     const exists = computed(() => !!nodeId.value && state.nodes.has(nodeId.value))
     const record = computed(() => node.value.record)
     // Changes when the node is REPLACED, not when a field is edited — consumers
@@ -157,11 +196,11 @@ export function useNodeRegistry ({ state, strategy = {}, optionResolver = () => 
 
   return {
     createNode,
-    emptyNode,
     toResourceName,
     resolveTarget,
     nodeIdFor,
     attachNode,
+    removeNode,
     detachAll,
     initResource,
     ensureNode,

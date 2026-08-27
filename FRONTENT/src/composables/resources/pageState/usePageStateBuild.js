@@ -2,12 +2,13 @@ import {
   compositeSaveRequest,
   resourceBulkRequest,
   resourceCreateRequest,
+  resourceGetRequest,
   resourceUpdateRequest
 } from '../resourceRequests'
 
 // Turns node state into GAS request envelopes. A `strategy.build` override
 // replaces `defaultBuild` and must append `additionalActionRequests()` itself.
-export function usePageStateBuild ({ registry, additionalActionRequests }) {
+export function usePageStateBuild ({ state, registry, additionalActionRequests }) {
   function defaultHydrate (node, raw) {
     Object.assign(node.record, raw || {})
     if (raw && raw.Code) node.code = raw.Code
@@ -34,17 +35,26 @@ export function usePageStateBuild ({ registry, additionalActionRequests }) {
     return null
   }
 
-  function defaultBuild () {
+  // `state.reload` plus anything this one call adds, deduped and in order.
+  function reloadNames (extra = []) {
+    const list = [...state.reload, ...(Array.isArray(extra) ? extra : [extra])]
+    return [...new Set(list.filter(Boolean))]
+  }
+
+  function defaultBuild ({ reload } = {}) {
     const requests = []
     registry.eachNode((node) => {
       const request = requestForNode(node)
       if (request) requests.push(request)
     })
-    // Queued actions go LAST so a `$ref` naming a record this batch creates
-    // resolves against a row that already exists.
+    // Queued actions go after every node, so a `$ref` naming a record this batch
+    // creates resolves against a row that already exists.
     requests.push(...additionalActionRequests())
+    // The re-read goes last of all, so it sees the finished batch.
+    const names = reloadNames(reload)
+    if (names.length) requests.push(resourceGetRequest(names, {}))
     return requests
   }
 
-  return { defaultHydrate, defaultBuild }
+  return { defaultHydrate, defaultBuild, reloadNames }
 }

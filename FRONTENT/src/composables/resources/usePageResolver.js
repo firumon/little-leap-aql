@@ -90,6 +90,7 @@ export function usePageResolver() {
   const baseContractProps = ref({})
   const notFound = ref(false)
   const checkedPaths = ref([])
+  const contractVersion = ref(0)
   const ready = ref(false)
 
   // Monotonic token guarding against out-of-order async resolves: if the lookup key
@@ -133,6 +134,9 @@ export function usePageResolver() {
         resolvedPageComponent.value = nextComponent
         checkedPaths.value          = paths
         ready.value                 = true
+        // Bumped HERE, never from a route-derived getter — the route changes
+        // before the contract lands, and firing then uses the old page's hook.
+        contractVersion.value++
       }
 
       if (!slug) {
@@ -224,7 +228,7 @@ export function usePageResolver() {
   )
 
   // Assembly pageProps
-  const pageProps = computed(() => {
+  const mergedContract = computed(() => {
     const rcProps = {
       page: canonicalPage.value,
       scope: scope.value,
@@ -255,6 +259,18 @@ export function usePageResolver() {
     }
 
     return baseProps
+  })
+
+  // `ready` is a hook, not a prop. Kept out of pageProps because pageProps is
+  // v-bound onto every Section/Content, where a function key becomes an attr.
+  const pageProps = computed(() => {
+    const { ready, ...props } = mergedContract.value
+    return props
+  })
+
+  const pageReady = computed(() => {
+    const fn = mergedContract.value.ready
+    return typeof fn === 'function' ? fn : null
   })
 
   // Assembly contentWrapperProps
@@ -297,6 +313,8 @@ export function usePageResolver() {
     notFound,
     resolvedPageComponent,
     pageProps,
+    pageReady,
+    contractVersion,
     sections,
     contents,
     visibleSectionsBeforeAction,

@@ -17,21 +17,16 @@
  * below rather than restated (UI_RESOURCE_DOMAIN_LOGIC.md §8.3).
  *
  * ── THE ENVELOPE ──
- * Every builder here returns the canonical `{ valid, requests, permissions, message,
+ * Every builder here returns the canonical `{ valid, nodes, permissions, message,
  * successMsg }` (§9.2), so Layer 3 does one `allowed(result.permissions)` check and hands
- * `result.requests` straight to `pageState.submit()` — it never inspects, reorders or adds
+ * `result.nodes` straight to `pageState.applyNodes()` — it never inspects, reorders or adds
  * to them (§9.1, Zero UI Schema Invention).
  *
  * PURE (§9.6): no reactivity, no injects, no stores. Every record it needs is an argument.
  */
 
 import { batchRef, textOrRef } from 'src/utils/appHelpers'
-import {
-  resourceBulkRequest,
-  resourceCreateRequest,
-  resourceUpdateRequest,
-  executeActionRequest
-} from 'src/composables/resources/resourceRequests'
+import { actionNode, bulkNode, createNode, derive, deriveNode, updateNode } from 'src/composables/resources/nodePayloads'
 import { stampFields } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionPayload'
 /**
  * The OutletReturns domain owns both directions of the return-credit link (§9.1).
@@ -41,18 +36,15 @@ import { stampFields } from 'src/_resource/Operation/OutletConsumptions/composab
  * OutletReturns' own rule, read here rather than restated.
  */
 import {
-  buildReturnInvoiceAdjustmentLinkedBatch,
-  buildReturnInvoiceCreditReversalBatch
+  buildReturnInvoiceAdjustmentLinkedNodes,
+  buildReturnInvoiceCreditReversalNodes
 } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
-import {
-  calculateConsumptionInvoice,
-  invoiceItemOf
-} from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionInvoice'
+import { calculateConsumptionInvoice } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionInvoice'
 import { priceOf } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionStock'
 import {
-  buildTaxTransactionRequests,
-  buildTaxTransactionReplacementRequests,
-  buildTaxTransactionReversalRequests
+  buildTaxTransactionNodes,
+  buildTaxTransactionReplacementNodes,
+  buildTaxTransactionReversalNodes
 } from 'src/_resource/Accounts/TaxTransactions/composables/useTaxTransactionPayload'
 import { INVOICE_GENERATED } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionProgress'
 import {
@@ -63,8 +55,7 @@ import {
   progressOf,
   PENDING_PAYMENT
 } from './useInvoiceWorkflow'
-import { balanceDueOf } from './useInvoiceCalculation'
-
+import { buildInvoiceItemNodes, changedInvoiceItemRows } from 'src/_resource/Operation/OutletConsumptionInvoiceItems/composables/useInvoiceItemPayload'
 const INVOICES = 'OutletConsumptionInvoices'
 const INVOICE_ITEMS = 'OutletConsumptionInvoiceItems'
 const CONSUMPTIONS = 'OutletConsumptions'
@@ -84,6 +75,113 @@ export const INVOICE_REF_PATH = `${INVOICES}.latest.code`
 
 // ─── 1. Generating an invoice ─────────────────────────────────────────────────
 
+// THE one writer of an invoice document. Both the standalone generation page and the
+// consumption wizard come through here, so the two cannot drift on what an invoice is.
+//
+// `consumptionRef` is what the header points at: real codes as a CSV, or a $ref when the
+// consumption is created in this same batch. `markConsumptions` are the rows walked to
+// INVOICE_GENERATED - a plain update, never executeAction('MarkInvoiceGenerated'), whose
+// `targets` block in syncAppResources.gs would create a SECOND, empty invoice beside the
+// real one this batch already wrote.
+export function buildInvoiceDocumentNodes ({
+  invoice = null,
+  outletCode = '',
+  username = '',
+  priceListCode = '',
+  invoiceDate = '',
+  dueDate = '',
+  consumptionRef = '',
+  markConsumptions = [],
+  returnCodes = [],
+  linkReturnRows = null,
+  actorName = '',
+  comment = ''
+} = {}) {
+  if (!invoice?.lines?.length) {
+    return { valid: false, nodes: [], permissions: {}, message: 'Nothing on this invoice could be priced. Check the price list covers these SKUs.' }
+  }
+
+  const date = text(invoiceDate) || todayISO()
+  const marks = codeList(markConsumptions)
+
+  // `Total` is CALCULATED but not STORED - the sheet has no such column, and every reader
+  // derives it from the six stored figures (`netPayableOf`).
+  const { Total, ...storedTotals } = invoice.header
+
+  const header = {
+    OutletConsumptionCode: textOrRef(consumptionRef),
+    Date: date,
+    DueDate: text(dueDate) || date,
+    OutletCode: text(outletCode),
+    Username: text(username),
+    PriceListCode: text(priceListCode),
+    // Spread whole, so no column is ever assembled from a figure the engine did not make.
+    ...storedTotals,
+    OutletReturnCodes: (Array.isArray(returnCodes) ? returnCodes : []).map(text).filter(Boolean).join(','),
+    SettlementMismatchAmount: 0,
+    SettlementReason: '',
+    Progress: 'PENDING_PAYMENT',
+    ...stampFields('ProgressPendingPayment', actorName, text(comment) || 'Invoice generated from outlet consumptions.'),
+    Status: 'Active'
+  }
+
+
+  const markGenerated = marks.length
+    ? [bulkNode(CONSUMPTIONS, marks.map((code) => ({
+      Code: textOrRef(code),
+      Progress: INVOICE_GENERATED,
+      ...stampFields('ProgressInvoiceGenerated', actorName, 'Invoice generated from pending outlet consumption.')
+    })), [CONSUMPTIONS])]
+    : []
+
+  // Points at the invoice by $ref: its code does not exist until GAS commits the create.
+  const ledger = buildTaxTransactionNodes({
+    resource: INVOICES,
+    resourceCode: batchRef(INVOICE_REF_PATH),
+    date,
+    counterPartyType: 'Outlet',
+    counterPartyCode: text(outletCode),
+    taxBreakdown: invoice.taxBreakdown
+  })
+
+  const credits = Array.isArray(linkReturnRows) ? linkReturnRows : []
+  const linked = credits.length
+    ? buildReturnInvoiceAdjustmentLinkedNodes({ returnRows: credits, invoiceCode: batchRef(INVOICE_REF_PATH), actorName })
+    : { nodes: [] }
+
+  return {
+    valid: true,
+    nodes: [
+      createNode(INVOICES, header, [INVOICES]),
+      ...buildInvoiceItemNodes(invoice.lines, batchRef(INVOICE_REF_PATH)).nodes,
+      ...ledger.nodes,
+      ...markGenerated,
+      ...linked.nodes,
+      // The stored totals follow the line items, so an edit to a row in pageState cannot
+      // leave the header claiming a figure nothing adds up to.
+      deriveNode(INVOICES, [derive(
+        { resource: INVOICE_ITEMS, records: true },
+        (rows, pageState) => {
+          const sum = (key) => (rows || []).reduce((total, row) => total + num(row?.data?.[key]), 0)
+          pageState.setFields(INVOICES, {
+            Subtotal: sum('Total'),
+            TotalTaxableAmount: sum('TaxableAmount'),
+            TotalTaxAmount: sum('TaxAmount')
+          })
+        }
+      )])
+    ],
+    permissions: {
+      outletConsumptionInvoice: 'create',
+      ...(marks.length ? { outletConsumption: 'update' } : {}),
+      ...(credits.length ? { outletReturn: 'update' } : {}),
+      ...ledger.permissions
+    },
+    successMsg: 'Invoice generated.',
+    invoice
+  }
+}
+
 /**
  * The whole chain an invoice generation writes, in dependency order:
  *
@@ -102,7 +200,7 @@ export const INVOICE_REF_PATH = `${INVOICES}.latest.code`
  * makes to display the figures. That is what makes the number the user agreed to and the
  * number the sheet stores the same number by construction (see `useConsumptionInvoice.js`).
  */
-export function buildInvoiceGenerationRequests ({
+export function buildInvoiceGenerationNodes ({
   outletCode = '',
   username = '',
   actorName = '',
@@ -146,169 +244,50 @@ export function buildInvoiceGenerationRequests ({
     ...(typeof resolvePrice === 'function' ? { resolvePrice } : {})
   })
 
-  if (!invoice.lines.length) {
-    return { valid: false, message: 'Nothing on this invoice could be priced. Check the price list covers these SKUs.' }
-  }
-
-  // `Total` is CALCULATED but not STORED — `OutletConsumptionInvoices` has no `Total`
-  // column, and every reader derives it from the six stored figures (`netPayableOf`).
-  // Writing it would put a value in the payload that nothing reads back.
-  const { Total, ...storedTotals } = invoice.header
-
-  const header = {
-    // A plain comma-separated list, NOT a `batchRefList`: unlike the consumption-side
-    // builder, every consumption here already exists and has a real code.
-    OutletConsumptionCode: consumptions.join(','),
-    Date: invoiceDate,
-    DueDate: text(dueDate) || invoiceDate,
-    OutletCode: text(outletCode),
-    Username: text(username),
-    PriceListCode: text(priceListCode),
-    ...storedTotals,
-    OutletReturnCodes: credits.map((row) => text(row.Code)).join(','),
-    SettlementMismatchAmount: 0,
-    SettlementReason: '',
-    Progress: 'PENDING_PAYMENT',
-    ...stampFields('ProgressPendingPayment', actorName, text(comment) || 'Invoice generated from outlet consumptions.'),
-    Status: 'Active'
-  }
-
-  const items = invoice.lines.map((line) => ({
-    OutletConsumptionInvoiceCode: textOrRef(batchRef(INVOICE_REF_PATH)),
-    ...invoiceItemOf(line),
-    Status: 'Active'
-  }))
-
-  /**
-   * Walk each covered consumption to `INVOICE_GENERATED`.
-   *
-   * ── A PLAIN UPDATE, NOT `executeAction('MarkInvoiceGenerated')` ──
-   * That action carries a `targets` block in `syncAppResources.gs` which CREATES an
-   * `OutletConsumptionInvoices` row as a side effect. It exists for the generic path, where
-   * marking a consumption invoiced is what brings the invoice into being — but this chain has
-   * already created the real invoice two requests earlier, so firing the action produced a
-   * SECOND, empty invoice: no due date, zero subtotal, zero tax, pointing at the same
-   * consumption.
-   *
-   * Writing the column directly performs the same state change without the side effect. The
-   * audit stamps are written explicitly here, so the row records exactly what the action
-   * would have stamped.
-   */
-  const markGenerated = consumptions.map((code) => resourceUpdateRequest(CONSUMPTIONS, code, {
-    Progress: INVOICE_GENERATED,
-    ...stampFields('ProgressInvoiceGenerated', actorName, 'Invoice generated from pending outlet consumption.')
-  }, [CONSUMPTIONS]))
-
-  // Points at the invoice by $ref: its code does not exist until GAS commits the create.
-  const ledger = buildTaxTransactionRequests({
-    resource: INVOICES,
-    resourceCode: batchRef(INVOICE_REF_PATH),
-    date: invoiceDate,
-    counterPartyType: 'Outlet',
-    counterPartyCode: text(outletCode),
-    taxBreakdown: invoice.taxBreakdown
+  // Every consumption here already exists, so the header carries real codes.
+  return buildInvoiceDocumentNodes({
+    invoice,
+    outletCode,
+    username,
+    priceListCode,
+    invoiceDate,
+    dueDate,
+    consumptionRef: consumptions.join(','),
+    markConsumptions: consumptions,
+    returnCodes: credits.map((row) => text(row.Code)),
+    linkReturnRows: credits,
+    actorName,
+    comment
   })
-
-  const requests = [
-    resourceCreateRequest(INVOICES, header, [INVOICES]),
-    resourceBulkRequest(INVOICE_ITEMS, items, [INVOICE_ITEMS]),
-    ...ledger.requests,
-    ...markGenerated,
-    ...buildReturnInvoiceAdjustmentLinkedBatch({
-      returnRows: credits,
-      invoiceCode: batchRef(INVOICE_REF_PATH),
-      actorName
-    }).requests
-  ]
-
-  return {
-    valid: true,
-    requests,
-    // Union of every resource this chain touches, so Layer 3 gates the whole thing in one
-    // check rather than discovering a missing permission mid-batch (§9.3).
-    // An action permission is looked up as `can<PascalCase(action)>`, so the value must be
-    // the action's OWN name exactly as GAS declares it — `MarkInvoiceGenerated`, not an
-    // upper-cased variant, which resolves to `canMARKINVOICEGENERATED` and is always false.
-    permissions: {
-      outletConsumptionInvoice: 'create',
-      // `update`, matching the plain write above — the action is no longer dispatched.
-      ...(consumptions.length ? { outletConsumption: 'update' } : {}),
-      ...(credits.length ? { outletReturn: 'update' } : {}),
-      ...ledger.permissions
-    },
-    successMsg: 'Invoice generated.',
-    // The whole calculation bundle, so a caller confirming what it submitted reads the same
-    // object the review step displayed.
-    invoice
-  }
 }
 
-// ─── 2. Recording a payment ───────────────────────────────────────────────────
+// ─── 2. The state walk a balance implies ─────────────────────────────────────
 
-/**
- * A payment against an invoice, PLUS the state walk that payment implies.
- *
- * The transition is derived from the balance AFTER this payment, by the one function that
- * owns that rule (`transitionForBalance`) — so the invoice's `Progress` and its payment
- * rows can never tell different stories. When the balance is unchanged in state terms the
- * transition is `null` and no action is appended at all, which is what stops a second
- * payment on an already-PAID invoice re-stamping `ProgressPaidAt`.
- */
-export function buildPaymentRequests ({
+// The invoice's OWN transition, for whoever moved the balance. OutletPayments writes the
+// payment row and calls this rather than deciding MarkPaid/MarkPartiallyPaid itself, so
+// the invoice's Progress and its payments can never tell different stories.
+//
+// No transition yields NO node: re-stamping ProgressPaidAt would overwrite the real
+// settlement time with a later one.
+export function buildInvoiceBalanceTransitionNodes ({
   record = {},
-  amount = 0,
-  mode = 'Cash',
-  reference = '',
-  date = '',
-  username = '',
+  balance = 0,
   actorName = '',
-  comment = '',
-  existingPayments = []
+  comment = ''
 } = {}) {
   const invoice = asRow(record)
   const code = text(invoice.Code)
-  if (!code) return { valid: false, message: 'The invoice could not be identified.' }
+  if (!code) return { valid: false, nodes: [], permissions: {}, message: 'The invoice could not be identified.' }
 
-  const paid = num(amount)
-  if (paid <= 0) return { valid: false, message: 'Enter a payment amount greater than zero.' }
-
-  const payment = {
-    Date: text(date) || todayISO(),
-    OutletCode: text(invoice.OutletCode),
-    OutletConsumptionInvoiceCode: code,
-    Amount: paid,
-    Mode: text(mode) || 'Cash',
-    Reference: text(reference),
-    Username: text(username),
-    Progress: 'SUBMITTED',
-    ...stampFields('ProgressSubmitted', actorName, text(comment)),
-    Status: 'Active'
-  }
-
-  const requests = [resourceCreateRequest(PAYMENTS, payment, [PAYMENTS])]
-
-  // The balance this payment leaves behind, measured against the payments that already
-  // count plus this one — the same `balanceDueOf` every card reads.
-  const remaining = balanceDueOf(invoice, [...(Array.isArray(existingPayments) ? existingPayments : []), payment])
-  const transition = transitionForBalance(invoice, remaining)
-
-  if (transition) {
-    requests.push(executeActionRequest(INVOICES, code, {
-      action: transition.action, column: 'Progress', columnValue: transition.columnValue
-    }, stampFields(transition.stamp, actorName, transition.comment), [INVOICES]))
-  }
+  const transition = transitionForBalance(invoice, balance)
+  if (!transition) return { valid: true, nodes: [], permissions: {} }
 
   return {
     valid: true,
-    requests,
-    // The invoice privilege is the TRANSITION this payment triggers, when it triggers one —
-    // a payment that leaves the state unchanged needs no invoice permission at all.
-    permissions: {
-      outletPayment: 'create',
-      ...(transition ? { outletConsumptionInvoice: transition.action } : {})
-    },
-    successMsg: transition?.columnValue === 'PAID' ? 'Payment recorded. Invoice fully settled.' : 'Payment recorded.',
-    remaining
+    nodes: [actionNode(INVOICES, code, {
+      action: transition.action, column: 'Progress', columnValue: transition.columnValue
+    }, stampFields(transition.stamp, actorName, text(comment) || transition.comment), { reload: [INVOICES] })],
+    permissions: { outletConsumptionInvoice: transition.action }
   }
 }
 
@@ -331,7 +310,7 @@ export function buildPaymentRequests ({
  * written off. `balanceDue` remains accepted for a caller that already holds the joined
  * figure and no rows.
  */
-export function buildSettlementRequests ({
+export function buildSettlementNodes ({
   record = {},
   reason = '',
   comment = '',
@@ -356,13 +335,13 @@ export function buildSettlementRequests ({
 
   return {
     valid: true,
-    requests: [executeActionRequest(INVOICES, code, {
+    nodes: [actionNode(INVOICES, code, {
       action: 'MarkPaid', column: 'Progress', columnValue: 'PAID'
     }, {
       SettlementReason: check.settlement.SettlementReason,
       SettlementMismatchAmount: check.settlement.SettlementMismatchAmount,
       ...stampFields('ProgressPaid', actorName, note)
-    }, [INVOICES])],
+    }, { reload: [INVOICES] })],
     // The action this dispatches, so a user who may update an invoice but may not force-settle
     // one is correctly refused.
     permissions: { outletConsumptionInvoice: 'MarkPaid' },
@@ -381,7 +360,7 @@ export function buildSettlementRequests ({
  * ever be invoiced again. The reversal is part of the cancellation, in the same atomic
  * batch, which is why it lives in the builder rather than in whatever UI pressed the button.
  */
-export function buildCancellationRequests ({ record = {}, comment = '', actorName = '', returnRows = [], taxTransactionRows = null } = {}) {
+export function buildCancellationNodes ({ record = {}, comment = '', actorName = '', returnRows = [], taxTransactionRows = null, releaseConsumptions = true } = {}) {
   const invoice = asRow(record)
   const code = text(invoice.Code)
   if (!code) return { valid: false, message: 'The invoice could not be identified.' }
@@ -390,33 +369,37 @@ export function buildCancellationRequests ({ record = {}, comment = '', actorNam
   const consumptions = codeList(text(invoice.OutletConsumptionCode).split(','))
   const credits = (Array.isArray(returnRows) ? returnRows : []).map(asRow).filter((row) => text(row.Code))
 
-  const requests = [executeActionRequest(INVOICES, code, {
+  const nodes = [actionNode(INVOICES, code, {
     action: 'Cancel', column: 'Progress', columnValue: 'CANCELLED'
-  }, stampFields('ProgressCancelled', actorName, text(comment)), [INVOICES])]
+  }, stampFields('ProgressCancelled', actorName, text(comment)), { reload: [INVOICES] })]
 
-  consumptions.forEach((consumptionCode) => {
-    requests.push(executeActionRequest(CONSUMPTIONS, consumptionCode, {
+  // One queued action per consumption, each keyed by its own code. Skipped when the
+  // CONSUMPTION is what is being cancelled - walking it back to invoiceable would undo
+  // the cancellation that triggered this.
+  const released = releaseConsumptions ? consumptions : []
+  released.forEach((consumptionCode) => {
+    nodes.push(actionNode(CONSUMPTIONS, consumptionCode, {
       action: 'MarkPendingInvoiceGeneration', column: 'Progress', columnValue: 'PENDING_INVOICE_GENERATION'
-    }, stampFields('ProgressPendingInvoiceGeneration', actorName, `Invoice ${code} cancelled; consumption is invoiceable again.`), [CONSUMPTIONS]))
+    }, stampFields('ProgressPendingInvoiceGeneration', actorName, `Invoice ${code} cancelled; consumption is invoiceable again.`), { reload: [CONSUMPTIONS] }))
   })
 
   // Reversing the credit is the OutletReturns domain's own inverse of the forward link, so
   // both directions are written by one owner and cannot drift apart.
-  requests.push(...buildReturnInvoiceCreditReversalBatch({ returnRows: credits }).requests)
+  nodes.push(...buildReturnInvoiceCreditReversalNodes({ returnRows: credits }).nodes)
 
   // A cancelled invoice charged nothing, so its ledger rows must leave the return.
-  const ledger = buildTaxTransactionReversalRequests({ existingRows: taxTransactionRows || [] })
-  requests.push(...ledger.requests)
+  const ledger = buildTaxTransactionReversalNodes({ existingRows: taxTransactionRows || [] })
+  nodes.push(...ledger.nodes)
 
   return {
     valid: true,
-    requests,
+    nodes,
     // Gated on the actions this chain actually DISPATCHES, not on a generic `update`: the
     // consumptions are walked back by `MarkPendingInvoiceGeneration`, so that is the
     // privilege the user needs.
     permissions: {
       outletConsumptionInvoice: 'cancel',
-      ...(consumptions.length ? { outletConsumption: 'MarkPendingInvoiceGeneration' } : {}),
+      ...(released.length ? { outletConsumption: 'MarkPendingInvoiceGeneration' } : {}),
       ...(credits.length ? { outletReturn: 'update' } : {}),
       ...ledger.permissions
     },
@@ -503,7 +486,6 @@ export function recalculateStoredInvoice ({
   })
 }
 
-const ITEM_FIGURES = ['Price', 'Total', 'Discount', 'TaxableAmount', 'TaxAmount']
 
 const sameMoney = (a, b) => Math.abs(num(a) - num(b)) < 0.000001
 
@@ -511,7 +493,7 @@ const sameMoney = (a, b) => Math.abs(num(a) - num(b)) < 0.000001
  * One atomic batch: the header totals, plus an update per line whose figures actually moved.
  * Unchanged lines are dropped so a one-price fix does not write dozens of audit rows.
  */
-export function buildInvoiceUpdateRequests ({
+export function buildInvoiceUpdateNodes ({
   record = {},
   items = null,
   dueDate = undefined,
@@ -574,14 +556,14 @@ export function buildInvoiceUpdateRequests ({
 
   // No progress stamp is rewritten: those columns say why the invoice was RAISED, and the
   // resource's audit columns already record who edited it.
-  const requests = [resourceUpdateRequest(INVOICES, code, {
+  const nodes = [updateNode(INVOICES, code, {
     DueDate: terms.dueDate,
     PriceListCode: terms.priceListCode,
     ...storedTotals
   }, [INVOICES])]
 
   const ledger = Array.isArray(taxTransactionRows)
-    ? buildTaxTransactionReplacementRequests({
+    ? buildTaxTransactionReplacementNodes({
       existingRows: taxTransactionRows,
       resource: INVOICES,
       resourceCode: code,
@@ -590,38 +572,20 @@ export function buildInvoiceUpdateRequests ({
       counterPartyCode: text(row.OutletCode),
       taxBreakdown: invoice.taxBreakdown
     })
-    : { requests: [], permissions: {} }
+    : { nodes: [], permissions: {} }
 
-  requests.push(...ledger.requests)
+  nodes.push(...ledger.nodes)
 
   const calculated = new Map(invoice.lines.map((line) => [text(line.SKU), line]))
 
-  // Counted, not inferred from requests.length, which also carries ledger rows.
-  let itemUpdates = 0
-
-  lines.forEach((item) => {
-    const line = calculated.get(text(item.SKU))
-    const itemCode = text(item.Code)
-    if (!line || !itemCode) return
-
-    const unchanged = ITEM_FIGURES.every((key) => sameMoney(item[key], line[key])) &&
-      text(item.TaxCode) === text(line.TaxCode)
-    if (unchanged) return
-
-    itemUpdates += 1
-    requests.push(resourceUpdateRequest(INVOICE_ITEMS, itemCode, {
-      Price: num(line.Price),
-      Total: num(line.Total),
-      Discount: num(line.Discount),
-      TaxableAmount: num(line.TaxableAmount),
-      TaxAmount: num(line.TaxAmount),
-      TaxCode: text(line.TaxCode)
-    }, [INVOICE_ITEMS]))
-  })
+  // Which rows actually moved is the ITEM resource's own question.
+  const itemRecords = changedInvoiceItemRows(lines, invoice.lines, sameMoney)
+  const itemUpdates = itemRecords.length
+  if (itemUpdates) nodes.push(bulkNode(INVOICE_ITEMS, itemRecords, [INVOICE_ITEMS]))
 
   return {
     valid: true,
-    requests,
+    nodes,
     permissions: {
       outletConsumptionInvoice: 'update',
       ...(itemUpdates ? { outletConsumptionInvoiceItem: 'update' } : {}),
@@ -636,11 +600,11 @@ export function buildInvoiceUpdateRequests ({
 export function useInvoicePayload () {
   return {
     INVOICE_REF_PATH,
-    buildInvoiceGenerationRequests,
-    buildPaymentRequests,
-    buildSettlementRequests,
-    buildCancellationRequests,
-    buildInvoiceUpdateRequests,
+    buildInvoiceGenerationNodes,
+    buildInvoiceBalanceTransitionNodes,
+    buildSettlementNodes,
+    buildCancellationNodes,
+    buildInvoiceUpdateNodes,
     recalculateStoredInvoice,
     makeStoredPriceResolver,
     editableInvoiceItems,

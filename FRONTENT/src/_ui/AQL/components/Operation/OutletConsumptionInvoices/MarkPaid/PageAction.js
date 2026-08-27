@@ -1,6 +1,6 @@
 import { useAuth } from 'src/composables/core/useAuth'
 import { useDataStore } from 'src/stores/data'
-import { buildSettlementRequests } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoicePayload'
+import { buildSettlementNodes } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoicePayload'
 import { settlementGate } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceWorkflow'
 import { countsAsPayment } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceCalculation'
 import { NODE } from 'src/_ui/AQL/composables/Operation/OutletConsumptionInvoices/MarkPaid/useInvoiceSettleContext'
@@ -12,7 +12,7 @@ import { NODE } from 'src/_ui/AQL/composables/Operation/OutletConsumptionInvoice
  *
  * A single-step route, so `actions` is a plain array rather than a getter (§11 rule 4).
  *
- * IT ASSEMBLES NOTHING. The three answers go straight to `buildSettlementRequests`, which
+ * IT ASSEMBLES NOTHING. The three answers go straight to `buildSettlementNodes`, which
  * validates them, derives the outstanding balance from the payment rows itself, and returns
  * the envelope — so this handler holds no rule that Layer 2 does not already own (§8.5).
  *
@@ -67,7 +67,7 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
       const gate = settlementGate(invoice, payments)
       if (!gate.allowed) return { valid: false, message: gate.reason }
 
-      const result = buildSettlementRequests({
+      const result = buildSettlementNodes({
         record: invoice,
         payments,
         reason: control('SettlementReason'),
@@ -81,8 +81,8 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         return { valid: false, message: 'You are not allowed to settle this invoice.' }
       }
 
+      pageState.applyNodes(result.nodes)
       return {
-        requests: result.requests,
         successMsg: result.successMsg,
         // Lands back on the record so the settlement banner is the first thing seen.
         // `reset()` first, or the typed reason survives and re-seeds the next visit.

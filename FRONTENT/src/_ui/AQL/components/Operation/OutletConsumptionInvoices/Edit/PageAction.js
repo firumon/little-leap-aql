@@ -1,5 +1,5 @@
 import {
-  buildInvoiceUpdateRequests,
+  buildInvoiceUpdateNodes,
   editableInvoiceItems,
   makeStoredPriceResolver
 } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoicePayload'
@@ -51,7 +51,7 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
       const issuedPriceListCode = text(row.PriceListCode)
       const priceListCode = text(field('PriceListCode')) || issuedPriceListCode
 
-      const result = buildInvoiceUpdateRequests({
+      const result = buildInvoiceUpdateNodes({
         record: row,
         items,
         dueDate: field('DueDate'),
@@ -75,7 +75,9 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         return { valid: false, message: 'You are not allowed to change this invoice.' }
       }
 
-      return { requests: result.requests, successMsg: result.successMsg }
+      pageState.applyNodes(result.nodes)
+
+      return { successMsg: result.successMsg }
     },
 
     // Never return an `onSuccess` with the requests: that would replace PageAction.vue's

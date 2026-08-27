@@ -1,5 +1,5 @@
 import { useAuth } from 'src/composables/core/useAuth'
-import { buildInvoiceGenerationRequests } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoicePayload'
+import { buildInvoiceGenerationNodes } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoicePayload'
 import {
   resolvePriceListCode,
   invoiceDueDaysFor,
@@ -29,7 +29,7 @@ import { priceOf } from 'src/_resource/Operation/OutletConsumptions/composables/
  * built-in increment performs the move (§4).
  *
  * ── A THIN ADAPTER, NOTHING MORE (UI_RESOURCE_DOMAIN_LOGIC.md §9.1) ──
- * `submit` collects the wizard's answers and hands them to `buildInvoiceGenerationRequests`.
+ * `submit` collects the wizard's answers and hands them to `buildInvoiceGenerationNodes`.
  * It performs NO arithmetic and builds NO rows: which columns the header carries, how the
  * lines are priced and taxed, which consumptions get walked to `INVOICE_GENERATED` and which
  * returns get marked adjusted are all decided in Layer 2 — identically whether an invoice is
@@ -181,7 +181,7 @@ export default (props, { pageState, resourceConfig }) => {
       const priceListCode = text(field('PriceListCode')) || resolvePriceListCode(outletCode, rules)
       const today = new Date().toISOString().slice(0, 10)
 
-      const result = buildInvoiceGenerationRequests({
+      const result = buildInvoiceGenerationNodes({
         outletCode,
         username: user.value?.name || user.value?.email || '',
         actorName: user.value?.name || user.value?.email || '',
@@ -206,7 +206,9 @@ export default (props, { pageState, resourceConfig }) => {
         return { valid: false, message: 'You are not allowed to generate this invoice.' }
       }
 
-      return { requests: result.requests, successMsg: result.successMsg }
+      pageState.applyNodes(result.nodes)
+
+      return { successMsg: result.successMsg }
     }
   }
 }

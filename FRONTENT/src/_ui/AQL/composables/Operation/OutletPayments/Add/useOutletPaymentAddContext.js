@@ -28,7 +28,7 @@ import { settlementReasons } from 'src/_resource/Operation/OutletConsumptionInvo
  *
  * That is also what makes the review step honest: the figures it shows are read from the same
  * control fields `PageAction.js` submits from, through the same
- * `buildOutletPaymentCreationRequests`. The receipt the user agreed to and the rows the sheet
+ * `buildOutletPaymentCreationNodes`. The receipt the user agreed to and the rows the sheet
  * stores are the same batch by construction, not by two implementations agreeing.
  *
  * ── WHY THE AMOUNT IS SYNCED IN SETTERS, NOT IN A WATCHER ──
@@ -81,7 +81,7 @@ export function useOutletPaymentAddContext () {
    * The two values the review step shows but nobody types: WHO is collecting and WHEN.
    *
    * Read from the live session and the clock here, and stamped onto every payment row by
-   * `buildOutletPaymentCreationRequests` from the same two sources — so the receipt reviewed
+   * `buildOutletPaymentCreationNodes` from the same two sources — so the receipt reviewed
    * and the receipt written name the same collector on the same date.
    */
   const collectorName = computed(() => text(user.value?.name || user.value?.email) || 'Unknown')

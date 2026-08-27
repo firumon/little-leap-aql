@@ -17,13 +17,7 @@ import {
   countsAsPayment
 } from './useOutletPaymentAllocation'
 import { storedTaxBreakdown } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceCalculation'
-import {
-  SUBMITTED,
-  CANCELLED,
-  progressOf,
-  isSubmitted
-} from './useOutletPaymentProgress'
-
+import { CANCELLED, progressOf, isSubmitted } from './useOutletPaymentProgress'
 const text = (value) => (value == null ? '' : String(value).trim())
 const asRow = (value) => (value && typeof value === 'object' ? value : {})
 const num = (value) => {

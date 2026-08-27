@@ -18,7 +18,7 @@ import {
   paidTotalOf,
   balanceDueOf
 } from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentAllocation'
-import { buildOutletPaymentCancellationRequests } from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentPayload'
+import { buildOutletPaymentCancellationNodes } from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentPayload'
 import { progressMetaOf as invoiceProgressMetaOf } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceWorkflow'
 import {
   payableFiguresOf,
@@ -173,7 +173,7 @@ export function useOutletPaymentViewContext () {
     }
 
     const actor = text(user.value?.name || user.value?.email) || 'Unknown'
-    const result = buildOutletPaymentCancellationRequests({
+    const result = buildOutletPaymentCancellationNodes({
       paymentRecord: record.value,
       comment: reason,
       actorName: actor,

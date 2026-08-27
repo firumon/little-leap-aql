@@ -81,7 +81,7 @@
  *
  * The line that earns the step is `outcome`: which invoices this payment CLOSES. It is derived
  * in the page context from the same allocation-versus-balance comparison
- * `buildOutletPaymentCreationRequests` uses to choose between `MarkPaid` and
+ * `buildOutletPaymentCreationNodes` uses to choose between `MarkPaid` and
  * `MarkPartiallyPaid`, so the transition shown and the transition written are one decision.
  *
  * The collector and the date are shown though nobody typed them, because they are stamped onto

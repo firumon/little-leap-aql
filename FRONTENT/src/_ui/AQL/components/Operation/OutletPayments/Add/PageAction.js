@@ -1,6 +1,6 @@
 import { useAuth } from 'src/composables/core/useAuth'
 import { useOutletPaymentIndex } from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentIndex'
-import { buildOutletPaymentCreationRequests } from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentPayload'
+import { buildOutletPaymentCreationNodes } from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentPayload'
 
 /**
  * OutletPayments › Add › PageAction — JS modifier (tier CP: resource + page).
@@ -23,7 +23,7 @@ import { buildOutletPaymentCreationRequests } from 'src/_resource/Operation/Outl
  *
  * ── A THIN ADAPTER, NOTHING MORE (UI_RESOURCE_DOMAIN_LOGIC.md §9.1) ──
  * `submit` collects the wizard's answers and hands them to
- * `buildOutletPaymentCreationRequests`. It performs NO arithmetic and builds NO rows: how many
+ * `buildOutletPaymentCreationNodes`. It performs NO arithmetic and builds NO rows: how many
  * payment rows one collection becomes, which invoice transitions to `PAID` versus
  * `PARTIALLY_PAID`, whether a residual is small enough to waive and what audit sentence that
  * writes are all decided in Layer 2 — identically whether a payment is recorded here or
@@ -141,7 +141,7 @@ export default (props, { pageState, resourceConfig }) => {
       const { rawPayments } = useOutletPaymentIndex()
       const actor = actorName()
 
-      const result = buildOutletPaymentCreationRequests({
+      const result = buildOutletPaymentCreationNodes({
         selectedOutletCode: outlet(),
         selectedInvoices: selectedInvoices(),
         allocations: allocations(),
@@ -149,7 +149,7 @@ export default (props, { pageState, resourceConfig }) => {
         mode: text(field('Mode')) || 'Cash',
         reference: text(field('Reference')),
         // The logged-in collector and today's date are stamped onto every payment row by the
-        // builder, from these two values — see `buildOutletPaymentCreationRequests`.
+        // builder, from these two values — see `buildOutletPaymentCreationNodes`.
         username: actor,
         actorName: actor,
         existingPayments: rawPayments.value,
@@ -163,7 +163,9 @@ export default (props, { pageState, resourceConfig }) => {
         return { valid: false, message: 'You are not allowed to record this payment.' }
       }
 
-      return { requests: result.requests, successMsg: result.successMsg }
+      pageState.applyNodes(result.nodes)
+
+      return { successMsg: result.successMsg }
     }
   }
 }

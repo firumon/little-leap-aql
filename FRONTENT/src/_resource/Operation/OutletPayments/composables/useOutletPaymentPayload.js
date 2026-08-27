@@ -7,15 +7,12 @@
  * 2. Payment cancellation + invoice state reversion ('Cancel', 'MarkPendingPayment', 'MarkPartiallyPaid', 'MarkPaid')
  *
  * All builders return canonical envelope:
- *   { valid, requests, permissions, message, successMsg }
+ *   { valid, nodes, permissions, message, successMsg }
  *
  * PURE: no Vue refs, no Pinia stores, no injects.
  */
 
-import {
-  resourceCreateRequest,
-  executeActionRequest
-} from 'src/composables/resources/resourceRequests'
+import { actionNode, bulkNode } from 'src/composables/resources/nodePayloads'
 import {
   canCreatePayment,
   canCancelPayment
@@ -28,8 +25,9 @@ import {
   waiverCommentOf,
   indexPaymentsByInvoice
 } from './useOutletPaymentAllocation'
-import { buildSettlementRequests } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoicePayload'
+import { buildInvoiceBalanceTransitionNodes, buildSettlementNodes } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoicePayload'
 
+import { stampFields } from 'src/utils/workflowStamp'
 const PAYMENTS = 'OutletPayments'
 const INVOICES = 'OutletConsumptionInvoices'
 
@@ -41,21 +39,10 @@ const num = (value) => {
 }
 const todayISO = () => new Date().toISOString().slice(0, 10)
 
-export function stampFields (prefix, actorName = '', comment = '') {
-  const atKey = `${prefix}At`
-  const byKey = `${prefix}By`
-  const commentKey = `${prefix}Comment`
-  const now = new Date().toISOString()
-  return {
-    [atKey]: now,
-    ...(actorName ? { [byKey]: actorName } : {}),
-    ...(comment ? { [commentKey]: comment } : {})
-  }
-}
 
 // ─── 1. Payment Creation Batch ────────────────────────────────────────────────
 
-export function buildOutletPaymentCreationRequests ({
+export function buildOutletPaymentCreationNodes ({
   selectedOutletCode = '',
   selectedInvoices = [],
   allocations = {},
@@ -108,7 +95,7 @@ export function buildOutletPaymentCreationRequests ({
     return { valid: false, message: 'Please select a waiver reason for the residual balance.' }
   }
 
-  const requests = []
+  const nodes = []
   // Merged in below rather than assumed: only a batch that actually force-settles an invoice
   // asks for the `MarkPaid` privilege.
   let settlementPermissions = {}
@@ -131,7 +118,9 @@ export function buildOutletPaymentCreationRequests ({
       Status: 'Active'
     }
 
-    requests.push(resourceCreateRequest(PAYMENTS, paymentRecord, [PAYMENTS]))
+    // A bulk of one: several invoices in a run write several payment rows, and they all
+    // share the one OutletPayments address.
+    nodes.push(bulkNode(PAYMENTS, [paymentRecord], [PAYMENTS]))
 
     // 2. Derive Invoice State Transition
     const invBal = balanceDueOf(invoice, paymentsByInvoice.get(code) || [])
@@ -143,7 +132,7 @@ export function buildOutletPaymentCreationRequests ({
       // here would be a second implementation of the invoice's own rule — the one the
       // settle route calls — free to disagree with it the day either changes.
       const note = text(waiverComment) || waiverCommentOf(allocated, invBal, invoices.length, waiverReason)
-      const settlement = buildSettlementRequests({
+      const settlement = buildSettlementNodes({
         record: invoice,
         reason: waiverReason,
         comment: note,
@@ -152,29 +141,29 @@ export function buildOutletPaymentCreationRequests ({
         actorName: actorName || user
       })
       if (!settlement.valid) return { valid: false, message: settlement.message }
-      requests.push(...settlement.requests)
+      nodes.push(...settlement.nodes)
       settlementPermissions = { ...settlementPermissions, ...settlement.permissions }
-    } else if (remaining <= 0) {
-      // PAID only on an EXACT match. Any leftover — a cent, a rounding residue — keeps the
-      // invoice PARTIALLY_PAID until somebody settles it through the audited action and
-      // records why. A silent flip here is money written off with nobody's name on it.
-      requests.push(executeActionRequest(INVOICES, code, {
-        action: 'MarkPaid',
-        column: 'Progress',
-        columnValue: 'PAID'
-      }, stampFields('ProgressPaid', actorName || user, `Payment of ${allocated} received via ${payMode}. Invoice fully paid.`), [INVOICES]))
     } else {
-      requests.push(executeActionRequest(INVOICES, code, {
-        action: 'MarkPartiallyPaid',
-        column: 'Progress',
-        columnValue: 'PARTIALLY_PAID'
-      }, stampFields('ProgressPartiallyPaid', actorName || user, `Payment of ${allocated} received via ${payMode}; balance remaining: ${remaining.toFixed(2)}.`), [INVOICES]))
+      // The invoice domain decides its own state walk. PAID only on an exact match: any
+      // leftover keeps it PARTIALLY_PAID until somebody settles it through the audited
+      // action and records why.
+      const walk = buildInvoiceBalanceTransitionNodes({
+        record: invoice,
+        balance: remaining,
+        actorName: actorName || user,
+        comment: remaining <= 0
+          ? `Payment of ${allocated} received via ${payMode}. Invoice fully paid.`
+          : `Payment of ${allocated} received via ${payMode}; balance remaining: ${remaining.toFixed(2)}.`
+      })
+      if (!walk.valid) return { valid: false, message: walk.message }
+      nodes.push(...walk.nodes)
+      settlementPermissions = { ...settlementPermissions, ...walk.permissions }
     }
   }
 
   return {
     valid: true,
-    requests,
+    nodes,
     permissions: {
       outletPayment: 'create',
       outletConsumptionInvoice: 'update',
@@ -186,7 +175,7 @@ export function buildOutletPaymentCreationRequests ({
 
 // ─── 2. Payment Cancellation Batch ────────────────────────────────────────────
 
-export function buildOutletPaymentCancellationRequests ({
+export function buildOutletPaymentCancellationNodes ({
   paymentRecord = {},
   comment = '',
   actorName = '',
@@ -209,15 +198,15 @@ export function buildOutletPaymentCancellationRequests ({
     return { valid: false, message: 'Cancellation comment is mandatory (minimum 3 characters).' }
   }
 
-  const requests = [
-    executeActionRequest(PAYMENTS, paymentCode, {
+  const nodes = [
+    actionNode(PAYMENTS, paymentCode, {
       action: 'Cancel',
       column: 'Progress',
       columnValue: 'CANCELLED'
     }, {
       ProgressCancelledComment: reason,
       ...stampFields('ProgressCancelled', actorName, reason)
-    }, [PAYMENTS])
+    }, { reload: [PAYMENTS] })
   ]
 
   const invoice = asRow(invoiceRecord)
@@ -231,35 +220,20 @@ export function buildOutletPaymentCancellationRequests ({
 
     const remaining = Math.max(0, Number((total - otherPaid).toFixed(2)))
 
-    let transitionAction = 'MarkPendingPayment'
-    let nextProgress = 'PENDING_PAYMENT'
-    let stamp = 'ProgressPendingPayment'
-
-    if (otherPaid > 0) {
-      if (remaining <= 0) {
-        transitionAction = 'MarkPaid'
-        nextProgress = 'PAID'
-        stamp = 'ProgressPaid'
-      } else {
-        transitionAction = 'MarkPartiallyPaid'
-        nextProgress = 'PARTIALLY_PAID'
-        stamp = 'ProgressPartiallyPaid'
-      }
-    }
-
-    requests.push(executeActionRequest(INVOICES, invoiceCode, {
-      action: transitionAction,
-      column: 'Progress',
-      columnValue: nextProgress
-    }, {
-      Comment: `Payment ${paymentCode} cancelled: ${reason}`,
-      ...stampFields(stamp, actorName, `Payment ${paymentCode} cancelled: ${reason}`)
-    }, [INVOICES]))
+    // Again the invoice's own walk, from the balance this cancellation leaves behind.
+    const walk = buildInvoiceBalanceTransitionNodes({
+      record: invoice,
+      balance: remaining,
+      actorName,
+      comment: `Payment ${paymentCode} cancelled: ${reason}`
+    })
+    if (!walk.valid) return { valid: false, message: walk.message }
+    nodes.push(...walk.nodes)
   }
 
   return {
     valid: true,
-    requests,
+    nodes,
     permissions: {
       outletPayment: 'update',
       outletConsumptionInvoice: 'update'
@@ -273,7 +247,9 @@ export function buildOutletPaymentCancellationRequests ({
 export function useOutletPaymentPayload () {
   return {
     stampFields,
-    buildOutletPaymentCreationRequests,
-    buildOutletPaymentCancellationRequests
+    buildOutletPaymentCreationNodes,
+    buildOutletPaymentCancellationNodes
   }
 }
+
+export { stampFields }

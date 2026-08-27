@@ -11,7 +11,7 @@
  * that disagrees with its own consequences.
  *
  * The supported correction is a NEW audit: recount the shelf and record what is actually
- * there now. That is also why `buildCancellationRequests` deliberately writes no reversing
+ * there now. That is also why `buildConsumptionCancellationNodes` deliberately writes no reversing
  * stock movements — cancelling an audit does not un-observe it.
  *
  * PLACED AT THE RESOURCE TIER (§3.1), not per page, because the rule is a property of the

@@ -9,7 +9,7 @@
  * This file owns the CORE writes — the consumption itself, the outlet ledger, returns, and
  * the invoice. It is the BOTTOM of the chain: `useConsumptionWorkflow.js`
  * beside it imports these builders, delegates the visit and restock legs to those domains,
- * and exposes `buildConsumptionWorkflowChainRequests` as the ONE entry point Layer 3 calls
+ * and exposes `buildConsumptionWorkflowChainNodes` as the ONE entry point Layer 3 calls
  * (§9.1). The dependency runs one way — workflow → payload — so neither module's
  * initialisation order depends on the other's.
  *
@@ -19,14 +19,8 @@
  * `usePageState` specifically so this module's graph stays store-free (§2.1).
  */
 
-import { batchRef, textOrRef } from 'src/utils/appHelpers'
-import { toDateTime24 } from 'src/utils/dateHelpers'
-import {
-  compositeSaveRequest,
-  resourceBulkRequest,
-  resourceCreateRequest,
-  executeActionRequest
-} from 'src/composables/resources/resourceRequests'
+import { batchRef } from 'src/utils/appHelpers'
+import { compositeNode } from 'src/composables/resources/nodePayloads'
 import {
   toNumber,
   soldRowsOf,
@@ -45,13 +39,21 @@ import {
  * the standalone Returns page.
  */
 import {
-  buildReturnBulkCreateBatch,
-  buildReturnInvoiceAdjustmentLinkedBatch
+  buildReturnBulkCreateNodes,
+  buildReturnInvoiceAdjustmentLinkedNodes
 } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
-import { calculateConsumptionInvoice, invoiceItemOf } from './useConsumptionInvoice'
-import { buildTaxTransactionRequests } from 'src/_resource/Accounts/TaxTransactions/composables/useTaxTransactionPayload'
+import { calculateConsumptionInvoice } from './useConsumptionInvoice'
+import { buildInvoiceDocumentNodes } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoicePayload'
 import { PENDING_INVOICE_GENERATION, INVOICE_GENERATED } from './useConsumptionProgress'
 
+import { stampFields } from 'src/utils/workflowStamp'
+import {
+  OFF_THE_SHELF,
+  ONTO_THE_SHELF,
+  OUTLET_REFERENCE,
+  outletMovementRow,
+  buildOutletMovementNodes
+} from 'src/_resource/Operation/OutletMovements/composables/useOutletMovementPayload'
 const CONSUMPTIONS = 'OutletConsumptions'
 const CONSUMPTION_ITEMS = 'OutletConsumptionItems'
 const INVOICES = 'OutletConsumptionInvoices'
@@ -63,7 +65,6 @@ const OUTLET_MOVEMENTS = 'OutletMovements'
  *
  *  The RETURN leg's reference type is no longer stated here — it belongs to the
  *  OutletReturns domain, which writes it. */
-const REF_CONSUMPTION = 'Consumption'
 
 /** The batch path every request in one submit chains its parent code off. */
 export const CONSUMPTION_REF_PATH = `${CONSUMPTIONS}.latest.code`
@@ -74,27 +75,6 @@ const asList = (value) => (Array.isArray(value) ? value : [])
 const todayISO = () => new Date().toISOString().slice(0, 10)
 const dateOf = (form) => text(asRow(form).Date) || todayISO()
 
-/**
- * One workflow stamp — the At/By/Comment triple for a `Progress<State>` prefix.
- *
- * The SINGLE writer of a stamp in this module, so no outcome can record two of the three
- * columns and leave the third blank. A stamp with no `By` reads as a stage that never
- * happened and is dropped from the View timeline.
- *
- * `toDateTime24` rather than an ISO string, because GAS stamps these same columns with
- * `formatDateTime24()` whenever an `executeAction` writes one — two formats in one column
- * would sort and read inconsistently depending on which path wrote the row.
- *
- * Written under the hood, never exposed as form fields, so a submission cannot be
- * back-dated or attributed to someone else (UI_MODULE_DEVELOPER_GUIDE.md §13.5).
- */
-export function stampFields (prefix, actorName = '', comment = '') {
-  return {
-    [`${prefix}At`]: toDateTime24(new Date()),
-    [`${prefix}By`]: text(actorName),
-    [`${prefix}Comment`]: text(comment)
-  }
-}
 
 // ─── 1. The consumption itself ────────────────────────────────────────────────
 
@@ -103,7 +83,7 @@ export function stampFields (prefix, actorName = '', comment = '') {
  *
  * ALWAYS lands in `PENDING_INVOICE_GENERATION`, even when an invoice is generated in the
  * same batch. The walk to `INVOICE_GENERATED` is a separate `executeAction` appended after
- * the invoice exists (`buildInvoiceRequests`), so the state column can never claim an
+ * the invoice exists (`buildInvoiceNodes`), so the state column can never claim an
  * invoice that a later request in the batch failed to write.
  *
  * ONLY CALLED WHEN SOMETHING WAS ACTUALLY CONSUMED. An `OutletConsumptions` row asserts a
@@ -113,16 +93,16 @@ export function stampFields (prefix, actorName = '', comment = '') {
  * raised a restock writes those records directly and no header at all; the caller
  * (`Add/PageAction.js`) is what decides, because it is what knows the whole submission.
  */
-export function buildConsumptionCompositeRequest (form = {}, countRows = [], actorName = '', options = {}) {
+export function buildConsumptionCompositeNode (form = {}, countRows = [], actorName = '', options = {}) {
   const entry = asRow(form)
   const sold = soldRowsOf(countRows)
   const note = options.generateInvoice
     ? 'Consumption recorded; invoice generated in the same submission.'
     : 'Consumption recorded; invoice generation pending.'
 
-  return compositeSaveRequest({
+  return compositeNode({
     resource: CONSUMPTIONS,
-    data: {
+    record: {
       OutletCode: text(entry.OutletCode),
       Date: dateOf(entry),
       Username: text(entry.Username),
@@ -137,7 +117,8 @@ export function buildConsumptionCompositeRequest (form = {}, countRows = [], act
         _action: 'create',
         data: { SKU: text(row.SKU), Qty: toNumber(row.SoldQty), Status: 'Active' }
       }))
-    }]
+    }],
+    reload: [CONSUMPTIONS, CONSUMPTION_ITEMS]
   })
 }
 
@@ -158,31 +139,30 @@ export function buildConsumptionCompositeRequest (form = {}, countRows = [], act
  * ledger movement to write — and a bulk request carrying an empty `records` array is not
  * "no movement", it is a round trip that asks GAS to recalculate every outlet storage
  * balance on the strength of nothing. The caller pushes the result only when it is truthy,
- * the same contract `buildVisitCompleteRequest` and `buildNextVisitRequest` already use.
+ * the same contract `buildVisitCompleteNode` and `buildNextVisitNode` already use.
  */
-export function buildConsumptionMovementsRequest (form = {}, countRows = [], consumptionRef = null) {
+export function buildConsumptionMovementsNode (form = {}, countRows = [], consumptionRef = null) {
   const entry = asRow(form)
   const sold = soldRowsOf(countRows)
   if (!sold.length) return null
 
-  const records = sold.map((row) => ({
-    OutletCode: text(entry.OutletCode),
-    StorageName: text(row.StorageName) || DEFAULT_STORAGE,
-    SKU: text(row.SKU),
-    QtyChange: -Math.abs(toNumber(row.SoldQty)),
-    ReferenceType: REF_CONSUMPTION,
-    ReferenceCode: textOrRef(consumptionRef || batchRef(CONSUMPTION_REF_PATH)),
-    MovementDate: dateOf(entry),
-    Status: 'Active'
+  const records = sold.map((row) => outletMovementRow({
+    outletCode: entry.OutletCode,
+    storageName: row.StorageName,
+    sku: row.SKU,
+    qty: row.SoldQty,
+    direction: OFF_THE_SHELF,
+    referenceType: OUTLET_REFERENCE.CONSUMPTION,
+    referenceCode: consumptionRef || batchRef(CONSUMPTION_REF_PATH),
+    movementDate: dateOf(entry)
   }))
-  return resourceBulkRequest(OUTLET_MOVEMENTS, records, ['OutletStorages'])
+  return buildOutletMovementNodes(records).nodes[0] || null
 }
 
 // ─── 2b. Reversing the outlet ledger on cancellation ──────────────────────────
 
 /** The ledger reference type a cancellation writes, so a reconciliation can tell a
  *  restoration apart from an original sale on the same consumption code. */
-const REF_CONSUMPTION_CANCELLED = 'ConsumptionCancelled'
 
 /**
  * WHAT GOES BACK ON THE SHELF when a consumption is cancelled — one line per SKU and
@@ -192,7 +172,7 @@ const REF_CONSUMPTION_CANCELLED = 'ConsumptionCancelled'
  * unit came off and the exact quantity that was posted, so reversing them restores the
  * same shelf the sale emptied. When the ledger rows are not loaded, the stored
  * `OutletConsumptionItems` lines are the fallback; they carry no storage, so they land on
- * the outlet's default storage — the same place `buildConsumptionMovementsRequest` puts a
+ * the outlet's default storage — the same place `buildConsumptionMovementsNode` puts a
  * line whose count row named no storage.
  *
  * PURE and shared: the cancellation review screen renders exactly this list, and the
@@ -248,28 +228,27 @@ export function restorableConsumptionLines (consumption = {}, sources = {}) {
  * `Math.abs(…)` rather than a bare negation of the original: a ledger row that is already
  * positive (a correction posted by hand) must not flip this restoration into a second
  * deduction. The magnitude is absolute; the sign is the contract, the mirror image of
- * `buildConsumptionMovementsRequest`.
+ * `buildConsumptionMovementsNode`.
  *
  * `OutletStorages` is named as a cursor resource so the recalculated shelf balances come
  * back in the same round trip. Returns `null` when nothing is restorable, so the caller
  * pushes it only when it is truthy.
  */
-export function buildConsumptionReversalMovementsRequest (consumption = {}, sources = {}) {
+export function buildConsumptionReversalMovementsNode (consumption = {}, sources = {}) {
   const record = asRow(consumption)
   const lines = restorableConsumptionLines(record, sources)
   if (!lines.length) return null
 
-  const records = lines.map((line) => ({
-    OutletCode: text(record.OutletCode),
-    StorageName: line.storageName || DEFAULT_STORAGE,
-    SKU: line.sku,
-    QtyChange: Math.abs(toNumber(line.qty)),
-    ReferenceType: REF_CONSUMPTION_CANCELLED,
-    ReferenceCode: text(record.Code),
-    MovementDate: toDateTime24(new Date()).slice(0, 10),
-    Status: 'Active'
+  const records = lines.map((line) => outletMovementRow({
+    outletCode: record.OutletCode,
+    storageName: line.storageName,
+    sku: line.sku,
+    qty: line.qty,
+    direction: ONTO_THE_SHELF,
+    referenceType: OUTLET_REFERENCE.CONSUMPTION_CANCELLED,
+    referenceCode: record.Code
   }))
-  return resourceBulkRequest(OUTLET_MOVEMENTS, records, ['OutletStorages'])
+  return buildOutletMovementNodes(records).nodes[0] || null
 }
 
 // ─── 3. Returns ───────────────────────────────────────────────────────────────
@@ -281,7 +260,7 @@ export function buildConsumptionReversalMovementsRequest (consumption = {}, sour
  * which counted rows are surplus, what each is worth against the price list, and which
  * return meta the officer attached to the SKU. What a return ROW looks like, which way its
  * ledger movement points, and when it counts as reconciled are decided THERE, by
- * `buildReturnBulkCreateBatch`.
+ * `buildReturnBulkCreateNodes`.
  *
  * One behaviour changes with this delegation, and it is a fix rather than a side effect.
  * The old local rule keyed COMPLETED off the warehouse track alone, so a return raised
@@ -293,7 +272,7 @@ export function buildConsumptionReversalMovementsRequest (consumption = {}, sour
  * Returns are created BEFORE the consumption in the submit order, because the invoice
  * needs their codes to record what it credited — see `buildConsumptionSubmitRequests`.
  */
-export function buildReturnsRequests (form = {}, countRows = [], metaOf = () => ({}), options = {}) {
+export function buildReturnsNodes (form = {}, countRows = [], metaOf = () => ({}), options = {}) {
   const entry = asRow(form)
   const rows = returnRowsOf(countRows)
   if (!rows.length) return []
@@ -328,7 +307,7 @@ export function buildReturnsRequests (form = {}, countRows = [], metaOf = () => 
     }
   })
 
-  const built = buildReturnBulkCreateBatch({
+  const built = buildReturnBulkCreateNodes({
     lines,
     actorName: text(entry.Username),
     movementDate
@@ -339,7 +318,7 @@ export function buildReturnsRequests (form = {}, countRows = [], metaOf = () => 
   // a return line that fails validation means the whole consumption submit is malformed
   // and must not be dispatched half-built.
   if (!built.valid) throw new Error(built.message || 'Return lines could not be built.')
-  return built.requests
+  return built.nodes
 }
 
 /**
@@ -349,26 +328,24 @@ export function buildReturnsRequests (form = {}, countRows = [], metaOf = () => 
  * EARLIER visit that were never credited. Their `Progress` follows the same matrix a fresh
  * return does: still owed to a warehouse, or done.
  */
-export function buildReturnAdjustmentRequests (returnRows = [], invoiceRef = null) {
-  const built = buildReturnInvoiceAdjustmentLinkedBatch({
+export function buildReturnAdjustmentNodes (returnRows = [], invoiceRef = null) {
+  const built = buildReturnInvoiceAdjustmentLinkedNodes({
     returnRows,
     invoiceCode: invoiceRef || batchRef(`${INVOICES}.latest.code`)
   })
-  return built.requests
+  return built.nodes
 }
 
-// ─── 4. The invoice ───────────────────────────────────────────────────────────
-
-// The invoice header, its line items, and the walk that marks the consumption invoiced.
-// `OutletConsumptionCode` is a list column on the sheet, but one consumption fills it.
-export function buildInvoiceRequests (form = {}, soldLines = [], options = {}) {
+// The invoice for this audit's sales.
+//
+// The bill's SCHEMA is not this module's - `buildInvoiceDocumentNodes` owns every column,
+// so an invoice raised here is identical to one raised from the Invoices module. What is
+// decided HERE is consumption-side: which lines sold, and what they are worth.
+export function buildInvoiceNodes (form = {}, soldLines = [], options = {}) {
   const entry = asRow(form)
   const priceListCode = text(options.priceListCode)
-  const actorName = text(options.actorName)
 
-  // EVERY figure below comes from this one call — the same call the wizard's review step
-  // makes to display them. This builder decides what belongs on the bill and where it is
-  // written; it does not do arithmetic (see `useConsumptionInvoice.js`).
+  // EVERY figure comes from this one call - the same call the wizard's review step makes.
   const invoice = calculateConsumptionInvoice({
     lines: soldLines,
     priceListCode,
@@ -376,74 +353,31 @@ export function buildInvoiceRequests (form = {}, soldLines = [], options = {}) {
     discountValue: options.discountValue,
     returnDeduction: options.returnDeduction,
     calculateLineTax: options.calculateLineTax,
-    // The unit prices the officer typed on the review step, if any. Passed as a RESOLVER
-    // rather than as pre-priced lines, so an override stays inside the one calculation —
-    // tax, discount apportionment and the net payable all recompute off it instead of the
-    // UI patching a total the engine never saw. Omitted, the engine falls back to the
-    // price list, which is every existing caller's behaviour.
+    // A RESOLVER, not pre-priced lines, so an override the officer typed flows through tax
+    // and discount apportionment inside the one engine.
     ...(typeof options.resolvePrice === 'function' ? { resolvePrice: options.resolvePrice } : {})
   })
 
-  if (!invoice.lines.length) return { requests: [], invoice }
+  if (!invoice.lines.length) return { valid: true, nodes: [], permissions: {}, invoice }
 
-  const invoiceDate = dateOf(entry)
-
-  // The net payable is CALCULATED but not STORED: `OutletConsumptionInvoices` has no `Total`
-  // column (`setupOperationSheets.gs`), and every reader — the View card, the payments page,
-  // the printed invoice — derives it from the six stored figures. Writing a seventh column
-  // the sheet does not declare would put a figure in the payload that nothing reads back.
-  // It stays on `invoice.header.Total` for the UI, which is the point of one engine.
-  const { Total, ...storedTotals } = invoice.header
-
-  const header = {
-    OutletConsumptionCode: textOrRef(batchRef(CONSUMPTION_REF_PATH)),
-    Date: invoiceDate,
-    DueDate: text(options.dueDate) || invoiceDate,
-    OutletCode: text(entry.OutletCode),
-    Username: text(entry.Username),
-    PriceListCode: priceListCode,
-    // `Subtotal`, `Discount`, `TotalTaxableAmount`, `TotalTaxAmount`, `TaxDetails` (grouped
-    // by tax code, never SKU-wise) and `ReturnDeductionTotal` — spread whole, so a column
-    // can never be assembled here from a figure the engine did not produce.
-    ...storedTotals,
-    OutletReturnCodes: (Array.isArray(options.returnCodes) ? options.returnCodes : []).map(text).filter(Boolean).join(','),
-    Progress: 'PENDING_PAYMENT',
-    ...stampFields('ProgressPendingPayment', actorName, text(options.invoiceComment)),
-    Status: 'Active'
-  }
-
-  const items = invoice.lines.map((line) => ({
-    OutletConsumptionInvoiceCode: textOrRef(batchRef(`${INVOICES}.latest.code`)),
-    ...invoiceItemOf(line),
-    Status: 'Active'
-  }))
-
-  const markGenerated = (code) => executeActionRequest(CONSUMPTIONS, code, {
-    action: 'MarkInvoiceGenerated', column: 'Progress', columnValue: INVOICE_GENERATED
-  }, stampFields('ProgressInvoiceGenerated', actorName, 'Invoice generated during consumption submission.'), [CONSUMPTIONS])
-
-  // Same ledger chain the invoices module writes, so both paths land identically.
-  const ledger = buildTaxTransactionRequests({
-    resource: INVOICES,
-    resourceCode: batchRef(`${INVOICES}.latest.code`),
-    date: invoiceDate,
-    counterPartyType: 'Outlet',
-    counterPartyCode: text(entry.OutletCode),
-    taxBreakdown: invoice.taxBreakdown
+  const built = buildInvoiceDocumentNodes({
+    invoice,
+    outletCode: text(entry.OutletCode),
+    username: text(entry.Username),
+    priceListCode,
+    invoiceDate: dateOf(entry),
+    dueDate: options.dueDate,
+    // The consumption does not exist yet; GAS resolves this to its generated code.
+    consumptionRef: batchRef(CONSUMPTION_REF_PATH),
+    markConsumptions: [batchRef(CONSUMPTION_REF_PATH)],
+    returnCodes: options.returnCodes,
+    // The workflow links the selected returns itself, from its own selection.
+    linkReturnRows: null,
+    actorName: text(options.actorName),
+    comment: text(options.invoiceComment) || 'Invoice generated during consumption submission.'
   })
 
-  return {
-    requests: [
-      resourceCreateRequest(INVOICES, header, [INVOICES]),
-      resourceBulkRequest(INVOICE_ITEMS, items, [INVOICE_ITEMS]),
-      ...ledger.requests,
-      markGenerated(batchRef(CONSUMPTION_REF_PATH))
-    ],
-    permissions: ledger.permissions,
-    // The whole calculation bundle, not a private summary shape — a caller that wants to
-    // confirm what it just submitted reads the same object the review step displayed.
-    invoice
-  }
+  return { ...built, invoice }
 }
 
 // Composable shape for setup-context callers. Same functions, one import (§5).
@@ -451,16 +385,18 @@ export function useConsumptionPayload () {
   return {
     CONSUMPTION_REF_PATH,
     restorableConsumptionLines,
-    buildConsumptionReversalMovementsRequest,
+    buildConsumptionReversalMovementsNode,
     stampFields,
-    buildConsumptionCompositeRequest,
-    buildConsumptionMovementsRequest,
-    buildReturnsRequests,
-    buildReturnAdjustmentRequests,
-    buildInvoiceRequests
+    buildConsumptionCompositeNode,
+    buildConsumptionMovementsNode,
+    buildReturnsNodes,
+    buildReturnAdjustmentNodes,
+    buildInvoiceNodes
   }
 }
 
 // The invoice arithmetic lives in its own Layer 2 file but is re-exported here, so a caller
 // assembling a submit still has ONE import for the builders AND the engine behind them.
 export { calculateConsumptionInvoice, groupTaxDetails, invoiceItemOf } from './useConsumptionInvoice'
+
+export { stampFields }

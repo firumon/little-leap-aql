@@ -99,18 +99,6 @@ function normaliseLines (lines = []) {
     .filter((row) => row.sku && row.qty > 0)
 }
 
-/**
- * The stored item record for a calculated line — the eight `OutletConsumptionInvoiceItems`
- * columns, minus the two carriers.
- *
- * `TaxParts` is per-line working state the header's grouped `TaxDetails` is folded from, and
- * `Unpriced` is a display flag for the review step. Neither is a column, so neither is
- * written.
- */
-export function invoiceItemOf (line) {
-  const { TaxParts, Unpriced, ...record } = asRow(line)
-  return record
-}
 
 /**
  * The invoice's tax breakdown, GROUPED BY TAX CODE.
@@ -396,3 +384,6 @@ export function useConsumptionInvoice () {
     netPayableOf
   }
 }
+
+// Owned by OutletConsumptionInvoiceItems; re-exported so existing callers keep one import.
+export { invoiceItemOf } from 'src/_resource/Operation/OutletConsumptionInvoiceItems/composables/useInvoiceItemPayload'

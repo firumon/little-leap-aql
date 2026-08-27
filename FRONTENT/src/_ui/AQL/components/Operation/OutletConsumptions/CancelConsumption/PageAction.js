@@ -1,6 +1,6 @@
 import { useAuth } from 'src/composables/core/useAuth'
 import { useDataStore } from 'src/stores/data'
-import { buildCancellationRequests } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionWorkflow'
+import { buildConsumptionCancellationNodes } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionWorkflow'
 import {
   cancellability,
   findInvoiceFor,
@@ -31,7 +31,7 @@ import {
  *                     restock means stock and money have already moved, and nothing this
  *                     handler can write undoes either.
  *
- * The cascade itself is Layer 2's (`buildCancellationRequests`), including the compensating
+ * The cascade itself is Layer 2's (`buildConsumptionCancellationNodes`), including the compensating
  * POSITIVE outlet movements that put the consumed units back on the shelf. This handler only
  * hands it the rows the reversal is derived from — the audit's lines and its ledger entries —
  * and claims the `OutletMovements` permission that write requires.
@@ -107,9 +107,12 @@ export default (props, { pageState, resourceConfig }) => {
         return { valid: false, message: 'You do not have permission to cancel this workflow.' }
       }
 
+      const result = buildConsumptionCancellationNodes(consumption, why, { invoice, restocks, consumptionItems, outletMovements, actorName: actor() })
+      if (!result.valid) return { valid: false, message: result.message }
+
+      pageState.applyNodes(result.nodes)
       return {
-        requests: buildCancellationRequests(consumption, why, { invoice, restocks, consumptionItems, outletMovements, actorName: actor() }),
-        successMsg: 'Consumption cancelled.',
+        successMsg: result.successMsg,
         // The route's outcome lands back on the record so the user sees the cancelled
         // state and its cascade, rather than being returned to a list. `pageState.reset()`
         // first, or the typed reason survives the navigation and re-seeds the next visit.

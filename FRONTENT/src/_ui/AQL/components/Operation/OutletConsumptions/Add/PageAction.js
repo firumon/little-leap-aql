@@ -12,7 +12,7 @@ import {
   priceListForOutlet,
   priceOf
 } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionStock'
-import { buildConsumptionWorkflowChainRequests } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionWorkflow'
+import { buildConsumptionWorkflowChainNodes } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionWorkflow'
 
 /**
  * OutletConsumptions › Add › PageAction — JS modifier (tier 2: resource + page).
@@ -44,7 +44,7 @@ import { buildConsumptionWorkflowChainRequests } from 'src/_resource/Operation/O
  * NOT ASSEMBLED HERE. One batch across up to six resources — two of them owned by other
  * domains — is a multi-resource mutation chain, and Layer 2 is its sole owner
  * (UI_RESOURCE_DOMAIN_LOGIC.md §9.1). `submit` below collects the wizard's answers, calls
- * `buildConsumptionWorkflowChainRequests`, gates on the permissions it returns, and hands
+ * `buildConsumptionWorkflowChainNodes`, gates on the permissions it returns, and hands
  * its requests straight to the dispatcher. No table schema, no default column value, no
  * `$ref`, and no permission derivation is written in this file.
  *
@@ -290,12 +290,12 @@ export default (props, { pageState, resourceConfig }) => {
      *
      * The batch's shape, its order, which resources it writes, what the user is told and
      * where they land are all decided in
-     * `useConsumptionWorkflow.buildConsumptionWorkflowChainRequests` — including the visit
+     * `useConsumptionWorkflow.buildConsumptionWorkflowChainNodes` — including the visit
      * and restock legs, which it delegates to those resources' OWN domain builders rather
      * than restating their schemas here.
      */
     submit: (name, { nav }) => {
-      const result = buildConsumptionWorkflowChainRequests({
+      const result = buildConsumptionWorkflowChainNodes({
         form: form(),
         countRows: countRows(),
         actorName: actor(),
@@ -343,15 +343,20 @@ export default (props, { pageState, resourceConfig }) => {
       }
 
       const outcome = result.outcome
+      pageState.applyNodes(result.nodes)
+      // Resolved AFTER hydration, off the batch this page will actually send: the domain
+      // names the resource to open, and only build() knows where it lands in the order.
+      const at = outcome.resource
+        ? pageState.build().findIndex((request) => request.resource === outcome.resource)
+        : -1
       return {
-        requests: result.requests,
         successMsg: result.successMsg,
         onSuccess: ({ response }) => {
           // The default handler resets for us; supplying our own replaces it, so the
           // wizard state has to be cleared here or the next audit opens on the last
           // one's answers.
           pageState.reset()
-          const code = outcome.at >= 0 ? text(batchResultCode(response, outcome.at)) : ''
+          const code = at >= 0 ? text(batchResultCode(response, at)) : ''
           // A bulk create does not always report a single code. Landing on the resource's
           // index is the honest fallback — better than a View route built on a blank code.
           if (!code) return nav.goTo('index')

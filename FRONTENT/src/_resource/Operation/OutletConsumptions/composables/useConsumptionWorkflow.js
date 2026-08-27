@@ -2,7 +2,7 @@
  * OutletConsumptions — the WORKFLOW CHAIN a consumption submit runs. Layer 2.
  *
  * A consumption is not one record; it is an atomic transaction across up to six resources,
- * two of which belong to OTHER domains. `buildConsumptionWorkflowChainRequests` below is
+ * two of which belong to OTHER domains. `buildConsumptionWorkflowChainNodes` below is
  * the single entry point that orchestrates all of it: it validates, builds this resource's
  * own writes, and delegates the visit and restock legs to their owning domains rather than
  * restating their schemas (UI_RESOURCE_DOMAIN_LOGIC.md §9.1).
@@ -17,27 +17,24 @@
  * no stores, nothing rendered (§9.6).
  */
 
+import { actionNode, reloadNode } from 'src/composables/resources/nodePayloads'
 import {
-  resourceBulkRequest,
-  executeActionRequest,
-  resourceGetRequest
-} from 'src/composables/resources/resourceRequests'
-import {
-  buildVisitCompletionChainRequests,
-  buildNextVisitChainRequests
+  buildVisitCompletionChainNodes,
+  buildNextVisitChainNodes
 } from 'src/_resource/Operation/OutletVisits/composables/useVisitPayload'
-import { buildRestockChainRequests } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
+import { buildRestockChainNodes, buildRestockRejectNodes } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
+import { buildCancellationNodes as buildInvoiceCancellationNodes } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoicePayload'
 import { toNumber, soldRowsOf, returnRowsOf, validateConsumption } from './useConsumptionStock'
 import { CANCELLED, rejectableRestocks } from './useConsumptionProgress'
 import {
   stampFields,
-  buildConsumptionCompositeRequest,
-  buildConsumptionMovementsRequest,
-  buildReturnsRequests,
-  buildReturnAdjustmentRequests,
-  buildInvoiceRequests,
+  buildConsumptionCompositeNode,
+  buildConsumptionMovementsNode,
+  buildReturnsNodes,
+  buildReturnAdjustmentNodes,
+  buildInvoiceNodes,
   restorableConsumptionLines,
-  buildConsumptionReversalMovementsRequest
+  buildConsumptionReversalMovementsNode
 } from './useConsumptionPayload'
 
 const CONSUMPTIONS = 'OutletConsumptions'
@@ -120,13 +117,10 @@ function mergePermissions (permissions, incoming = {}) {
  * Child domains' permission maps are merged in (union), so Layer 3 performs ONE gate check
  * covering the whole chain (§9.3.4).
  *
- * ── THE `outcome` FIELD ──
- * Post-submit navigation reads a code out of the batch response by INDEX. Which index is
- * right depends on what was written: a restock-only submit has no consumption to open. The
- * indices are recorded as the batch is assembled rather than assumed from a fixed order,
- * and returned as contextual metadata for the caller's `onSuccess`.
+ * `outcome` names the RESOURCE whose code post-submit navigation should open. A
+ * restock-only submit has no consumption to open, so the caller cannot assume a position.
  */
-export function buildConsumptionWorkflowChainRequests ({
+export function buildConsumptionWorkflowChainNodes ({
   form = {},
   countRows = [],
   actorName = '',
@@ -177,22 +171,23 @@ export function buildConsumptionWorkflowChainRequests ({
     restockRows,
     submitting: true
   })
-  if (!check.valid) return { valid: false, requests: [], permissions: {}, message: check.errors[0] }
+  if (!check.valid) return { valid: false, nodes: [], permissions: {}, message: check.errors[0] }
 
   const adjustedCodes = asList(adjustedReturnCodes).map(text).filter(Boolean)
   const completingVisit = completeVisit === true && !!text(entry.OutletVisitCode)
 
   const permissions = {}
-  const requests = []
-  // Where each landmark request ended up, so post-submit navigation reads the right code.
-  let returnsAt = -1
-  let consumptionAt = -1
-  let restockAt = -1
+  const nodes = []
+  // Which resources this submission actually wrote, so post-submit navigation can find
+  // the right code in the response without depending on a position.
+  let wroteReturns = false
+  let wroteConsumption = false
+  let wroteRestock = false
 
   // 1. Returns FIRST — the invoice below needs their codes to record what it credited.
   if (hasReturns) {
-    returnsAt = requests.length
-    requests.push(...buildReturnsRequests(entry, countRows, returnMetaOf, { priceListCode }))
+    wroteReturns = true
+    nodes.push(...buildReturnsNodes(entry, countRows, returnMetaOf, { priceListCode }))
     claim(permissions, RETURNS, 'create')
     // A return writes the outlet ledger too — the matrix decides the direction, and two of
     // its four cases move stock. Claimed whenever returns exist rather than only when a
@@ -205,22 +200,22 @@ export function buildConsumptionWorkflowChainRequests ({
   //    after this that carries a `$ref` chains off it, and every one of those is itself
   //    gated on a sale, so nothing can reference a header the batch did not write.
   if (hasSold) {
-    consumptionAt = requests.length
-    requests.push(buildConsumptionCompositeRequest(entry, countRows, actorName, { generateInvoice: invoicing }))
+    wroteConsumption = true
+    nodes.push(buildConsumptionCompositeNode(entry, countRows, actorName, { generateInvoice: invoicing }))
     claim(permissions, CONSUMPTIONS, 'create')
     claim(permissions, CONSUMPTION_ITEMS, 'create')
 
     // 3. The outlet ledger deduction.
-    const movements = buildConsumptionMovementsRequest(entry, countRows)
+    const movements = buildConsumptionMovementsNode(entry, countRows)
     if (movements) {
-      requests.push(movements)
+      nodes.push(movements)
       claim(permissions, OUTLET_MOVEMENTS, 'create')
     }
   }
 
   // 4. The invoice for this audit's sales.
   if (invoicing) {
-    const invoice = buildInvoiceRequests(entry, sold, {
+    const invoice = buildInvoiceNodes(entry, sold, {
       priceListCode,
       returnDeduction: returnDeductionOf(returnRows, adjustedCodes),
       discountType: text(discountType) || 'FLAT',
@@ -234,10 +229,10 @@ export function buildConsumptionWorkflowChainRequests ({
     // An invoice with no priced lines is REFUSED, not submitted empty: the batch would
     // create a zero-value header and mark the consumption invoiced against it, leaving it
     // permanently unbillable.
-    if (!invoice.requests.length) {
-      return { valid: false, requests: [], permissions: {}, message: 'Nothing on this invoice can be priced — check the price list.' }
+    if (!invoice.nodes.length) {
+      return { valid: false, nodes: [], permissions: {}, message: 'Nothing on this invoice can be priced — check the price list.' }
     }
-    requests.push(...invoice.requests)
+    nodes.push(...invoice.nodes)
     claim(permissions, INVOICES, 'create')
     claim(permissions, INVOICE_ITEMS, 'create')
     // The tax-ledger rows the invoice builder chained on (§9.3.4).
@@ -246,7 +241,7 @@ export function buildConsumptionWorkflowChainRequests ({
     // 5. Settle the returns that were credited against it.
     if (adjustedCodes.length) {
       const selected = asList(returnRows).map(asRow).filter((row) => adjustedCodes.includes(text(row.Code)))
-      requests.push(...buildReturnAdjustmentRequests(selected))
+      nodes.push(...buildReturnAdjustmentNodes(selected))
       claim(permissions, RETURNS, 'update')
     }
   }
@@ -256,15 +251,15 @@ export function buildConsumptionWorkflowChainRequests ({
   //    this module's to restate (§9.1). `refresh: false` because step 8 pulls the visits
   //    back once for the whole batch.
   if (completingVisit) {
-    const completion = buildVisitCompletionChainRequests({ visitCode: entry.OutletVisitCode, actorName, refresh: false })
-    if (!completion.valid) return { valid: false, requests: [], permissions: {}, message: completion.message }
-    requests.push(...completion.requests)
+    const completion = buildVisitCompletionChainNodes({ visitCode: entry.OutletVisitCode, actorName, refresh: false })
+    if (!completion.valid) return { valid: false, nodes: [], permissions: {}, message: completion.message }
+    nodes.push(...completion.nodes)
     mergePermissions(permissions, completion.permissions)
   }
   if (scheduleNext === true) {
-    const next = buildNextVisitChainRequests({ form: entry, frequencyDays: nextVisitDays, operatingRules, actorName, refresh: false })
-    if (!next.valid) return { valid: false, requests: [], permissions: {}, message: next.message }
-    requests.push(...next.requests)
+    const next = buildNextVisitChainNodes({ form: entry, frequencyDays: nextVisitDays, operatingRules, actorName, refresh: false })
+    if (!next.valid) return { valid: false, nodes: [], permissions: {}, message: next.message }
+    nodes.push(...next.nodes)
     mergePermissions(permissions, next.permissions)
   }
   // Both visit legs claim the SAME resource key — completion `complete`, scheduling
@@ -276,7 +271,7 @@ export function buildConsumptionWorkflowChainRequests ({
   // 7. Replenishment, in whichever mode step 1 and step 4 selected — delegated to
   //    OutletRestocks' own domain builder. With no sale there is no consumption header to
   //    point at; the link is provenance, not a dependency.
-  const restock = buildRestockChainRequests({
+  const restock = buildRestockChainNodes({
     form: entry,
     lines: restockRows,
     mode: directRestock === true ? 'DIRECT' : 'PENDING_APPROVAL',
@@ -286,10 +281,10 @@ export function buildConsumptionWorkflowChainRequests ({
     linkToConsumption: hasSold,
     actorName
   })
-  if (!restock.valid) return { valid: false, requests: [], permissions: {}, message: restock.message }
-  if (restock.requests.length) {
-    restockAt = requests.length
-    requests.push(...restock.requests)
+  if (!restock.valid) return { valid: false, nodes: [], permissions: {}, message: restock.message }
+  if (restock.nodes.length) {
+    wroteRestock = true
+    nodes.push(...restock.nodes)
     mergePermissions(permissions, restock.permissions)
     claim(permissions, RESTOCK_ITEMS, 'create')
     // A DIRECT restock skips the approval queue — it IS the approval, so it is gated on
@@ -299,13 +294,13 @@ export function buildConsumptionWorkflowChainRequests ({
 
   // Nothing at all to write is not a submission. Reachable only if validation let an empty
   // audit through, which it should not — stated anyway rather than sending an empty batch.
-  if (!requests.length) {
-    return { valid: false, requests: [], permissions: {}, message: 'This visit recorded nothing to submit.' }
+  if (!nodes.length) {
+    return { valid: false, nodes: [], permissions: {}, message: 'This visit recorded nothing to submit.' }
   }
 
   // 8. The batch just changed balances three other resources derive from. Pull them back
   //    in the same round trip rather than leaving the next page to find them stale (§9.5).
-  requests.push(resourceGetRequest(['OutletStorages', 'WarehouseStorages', 'OutletVisits']))
+  nodes.push(reloadNode(['OutletStorages', 'WarehouseStorages', 'OutletVisits']))
 
   /**
    * What the user is told, and where they land.
@@ -315,17 +310,17 @@ export function buildConsumptionWorkflowChainRequests ({
    * written; on a restock-only submit the first request is a visit action, and the user
    * would be sent to a consumption View for a record that does not exist.
    */
-  const outcome = hasSold
-    ? { message: 'Consumption recorded.', at: consumptionAt, slug: '' }
-    : restockAt >= 0
+  const outcome = hasSold && wroteConsumption
+    ? { message: 'Consumption recorded.', resource: CONSUMPTIONS, slug: '' }
+    : wroteRestock
       ? {
           message: hasReturns ? 'Returns and restock request recorded.' : 'Restock request created.',
-          at: restockAt,
+          resource: RESTOCKS,
           slug: 'outlet-restocks'
         }
-      : { message: 'Returns recorded.', at: returnsAt, slug: 'outlet-returns' }
+      : { message: 'Returns recorded.', resource: wroteReturns ? RETURNS : '', slug: 'outlet-returns' }
 
-  return { valid: true, requests, permissions, outcome, successMsg: outcome.message }
+  return { valid: true, nodes, permissions, outcome, successMsg: outcome.message }
 }
 
 /** The monetary credit the ticked returns apply — read off the stored rows, not recomputed. */
@@ -355,7 +350,7 @@ function returnDeductionOf (returnRows = [], codes = []) {
  * THE OUTLET LEDGER IS REVERSED. A cancelled consumption is a consumption that never
  * happened, so the units it deducted are put back on the outlet's shelf with compensating
  * POSITIVE movements — one per SKU and storage, built by
- * `buildConsumptionReversalMovementsRequest` from the original ledger rows so the stock
+ * `buildConsumptionReversalMovementsNode` from the original ledger rows so the stock
  * lands back exactly where it was taken from. Without this, cancelling left the shelf
  * permanently short by an amount no later audit could account for.
  *
@@ -363,52 +358,73 @@ function returnDeductionOf (returnRows = [], codes = []) {
  * cancellation review screen renders, so what the user is shown and what the batch writes
  * cannot disagree.
  */
-export function buildCancellationRequests (record = {}, reason = '', options = {}) {
+export function buildConsumptionCancellationNodes (record = {}, reason = '', options = {}) {
   const consumption = asRow(record)
   const code = text(consumption.Code)
-  if (!code) return []
+  if (!code) return { valid: false, nodes: [], permissions: {}, message: 'This consumption could not be identified.' }
 
   const actorName = text(options.actorName)
   const invoice = asRow(options.invoice)
   const cascadeNote = `Cancelled as a dependent of outlet consumption ${code}${actorName ? ` by ${actorName}` : ''}.`
 
-  const requests = [executeActionRequest(CONSUMPTIONS, code, {
+  const nodes = [actionNode(CONSUMPTIONS, code, {
     action: 'CancelConsumption', column: 'Progress', columnValue: CANCELLED
-  }, stampFields('ProgressCancelled', actorName, text(reason)), [CONSUMPTIONS])]
+  }, stampFields('ProgressCancelled', actorName, text(reason)), { reload: [CONSUMPTIONS] })]
 
   // Put the consumed units back on the outlet's shelf. `options.consumptionItems` and
   // `options.outletMovements` are the sources the helper reads; when neither is supplied
   // nothing is restorable and no ledger request is added at all (never an empty bulk).
-  const reversal = buildConsumptionReversalMovementsRequest(consumption, {
+  const reversal = buildConsumptionReversalMovementsNode(consumption, {
     items: options.consumptionItems,
     movements: options.outletMovements
   })
-  if (reversal) requests.push(reversal)
+  if (reversal) nodes.push(reversal)
 
+  const permissions = { [CONSUMPTIONS]: 'CancelConsumption' }
+
+  // The invoice cancels itself. `releaseConsumptions: false` because THIS consumption is
+  // what is being cancelled - walking it back to invoiceable would undo that.
   const invoiceCode = text(invoice.Code)
   const invoiceProgress = text(invoice.Progress).toUpperCase()
   if (invoiceCode && invoiceProgress !== 'PAID' && invoiceProgress !== CANCELLED) {
-    requests.push(executeActionRequest(INVOICES, invoiceCode, {
-      action: 'Cancel', column: 'Progress', columnValue: CANCELLED
-    }, stampFields('ProgressCancelled', actorName, cascadeNote), [INVOICES]))
+    const cancelled = buildInvoiceCancellationNodes({
+      record: invoice,
+      comment: cascadeNote,
+      actorName,
+      returnRows: options.invoiceReturnRows || [],
+      taxTransactionRows: options.invoiceTaxRows || null,
+      releaseConsumptions: false
+    })
+    if (!cancelled.valid) return { valid: false, nodes: [], permissions: {}, message: cancelled.message }
+    nodes.push(...cancelled.nodes)
+    Object.assign(permissions, cancelled.permissions)
   }
 
+  // Each restock rejects itself. `rejectableRestocks` has already excluded anything that
+  // moved stock, so the reject builder's reversal leg is empty by construction.
   rejectableRestocks(options.restocks).forEach((restock) => {
-    requests.push(executeActionRequest(RESTOCKS, text(restock.Code), {
-      action: 'RejectRestock', column: 'Progress', columnValue: 'REJECTED'
-    }, stampFields('ProgressRejected', actorName, cascadeNote), [RESTOCKS]))
-    // Its lines are retired with it, so a rejected request cannot leave PENDING rows a
-    // later reallocation would try to fill.
-    const lines = asList(restock.$OutletRestockItems).map(asRow).filter((line) => text(line.Code))
-    if (lines.length) {
-      requests.push(resourceBulkRequest(RESTOCK_ITEMS, lines.map((line) => ({ Code: text(line.Code), Status: 'Inactive' })), [RESTOCK_ITEMS]))
-    }
+    const rejected = buildRestockRejectNodes(
+      restock,
+      asList(restock.$OutletRestockItems),
+      actorName,
+      cascadeNote,
+      { role: text(restock.Code) }
+    )
+    if (!rejected.valid) return
+    nodes.push(...rejected.nodes)
+    Object.assign(permissions, rejected.permissions)
   })
 
   // The cancellation changed data four other resources derive from. Pull them back in the
   // same round trip rather than leaving the next page to discover it stale.
-  requests.push(resourceGetRequest([CONSUMPTIONS, INVOICES, RESTOCKS, OUTLET_STORAGES]))
-  return requests
+  nodes.push(reloadNode([CONSUMPTIONS, INVOICES, RESTOCKS, OUTLET_STORAGES]))
+
+  return {
+    valid: true,
+    nodes,
+    permissions,
+    successMsg: 'Consumption cancelled.'
+  }
 }
 
 export { restorableConsumptionLines }
@@ -416,8 +432,8 @@ export { restorableConsumptionLines }
 // Composable shape for setup-context callers. Same functions, one import (§5).
 export function useConsumptionWorkflow () {
   return {
-    buildConsumptionWorkflowChainRequests,
-    buildCancellationRequests,
+    buildConsumptionWorkflowChainNodes,
+    buildConsumptionCancellationNodes,
     restorableConsumptionLines
   }
 }

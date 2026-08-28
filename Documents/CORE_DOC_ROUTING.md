@@ -59,6 +59,7 @@ Use when editing files under `FRONTENT/`.
 - Read:
   - `Documents/CORE_ARCHITECTURE_RULES.md` — **mandatory, see Non-Negotiable Frontend Pre-Read above**
   - [MAP.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/MAP.md)
+  - `Documents/SHARED_UTILITIES_INDEX.md` — **read before adding ANY new utility/helper/core function** (canonical catalogue; enforces the Reuse-First policy in `AGENTS.md`)
   - `Documents/UI_PAGE_STATE.md` — **MUST be used for any resource page that collects input or submits data** (centralized form-state composable: API prep, Content/Action section contract, response handling).
 - Frontend work MUST comply with the Vue Reactivity Contract in `Documents/CORE_ARCHITECTURE_RULES.md`; manual synchronization that imitates Vue reactivity is a serious architecture violation.
 - If the task affects reusable building blocks, also read/update:
@@ -105,6 +106,13 @@ Use when overriding or creating custom section or sub-components for any resourc
   - `Documents/UI_VIEW_SYSTEM.md` — when customizing View content (parent/child/column overrides, scope rules, JS modifier API)
   - `Documents/UI_CREATE_AND_UPDATE_SYSTEM.md` — when customizing Create/Update content (`Create.vue`/`Update.vue`/`FormRecord.vue`/`FormChild.vue` prop tables, visibility precedence, child entry modes, Update hydration, child soft-deletion)
   - `Documents/UI_ACTION_SYSTEM.md` — when modifying buttons, FABs, or sticky actions bar
+
+### Utility Function Discovery & New Helper Creation
+Use when looking for an existing helper, deciding where a new utility belongs, or adding any new utility/helper/core function across Layer 1, Layer 2, or Layer 3.
+- Read:
+  - `Documents/SHARED_UTILITIES_INDEX.md` — **canonical catalogue of every shared utility, helper, and core composable**, with per-function purpose, purity, and reuse/extend guidance. This is the first stop before writing any new helper.
+  - `AGENTS.md` → **Reuse First & Anti-Duplication Policy (STRICT)** — mandatory search-before-create rule and the required Exhaustion Quote.
+- Prefer extending an existing utility file (see the Extension Cheat-Sheet in the index) over creating a new file.
 
 ### Reusable Render Component Creation
 Use when creating or restructuring a component under `FRONTENT/src/components/{abstract,app,contents,sections}/` — a new Section, a new content component, a new list/table/card primitive, or an app-level wrapper.
@@ -204,6 +212,7 @@ Use when inspecting, designing, or changing Google Sheets printable report templ
 Update this file when any of the following changes:
 - a new recurring task type is introduced
 - a canonical reference doc is added, removed, or renamed
+- a new shared utility/helper file or function is introduced (keep `Documents/SHARED_UTILITIES_INDEX.md` and `AGENTS.md` Reuse-First policy in sync)
 - routing guidance changes for planning, build, backend, frontend, auth, menu, sidebar, or resume workflows
 - mandatory-read rules for specific task categories change
 - the Non-Negotiable Frontend Pre-Read list changes (e.g. a new always-read doc is added for frontend work)

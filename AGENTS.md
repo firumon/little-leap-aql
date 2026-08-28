@@ -104,6 +104,19 @@ After classifying the query, read the appropriate initialization document(s) fro
 - **Before touching any file under `FRONTENT/`, read `Documents/CORE_ARCHITECTURE_RULES.md` without exception — this includes small fixes, one-liners, and style tweaks. Layer violations most often enter through minor edits.**
 - For backend edits, prefer existing GAS files and patterns first. Create a new GAS file only when the current structure cannot support the task cleanly.
 
+## Reuse First & Anti-Duplication Policy (STRICT)
+- **Never create a new utility, helper, or core function without first checking existing implementations.** Before adding any new utility, helper function, core method, or file across Layer 1 (Core Infrastructure), Layer 2 (`src/_resource/` domain logic), or Layer 3 (`src/_ui/` presentation), you MUST inspect what already exists.
+- **Check the canonical index first**: Read [Documents/SHARED_UTILITIES_INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHARED_UTILITIES_INDEX.md) and the relevant files under `FRONTENT/src/utils/`, `FRONTENT/src/composables/`, and `FRONTENT/src/_resource/` to confirm no existing helper already covers the capability.
+- **Prefer extension over new files**: When a missing capability is closely related to an existing utility (e.g. a new date calculation, a new string transform, a new payload builder), add a clean, pure function to the existing utility file rather than creating a new file. Concrete homes:
+  - String / object transforms → `FRONTENT/src/utils/appHelpers.js`
+  - Date / time ops → `FRONTENT/src/utils/dateHelpers.js`
+  - Colors / visual → `FRONTENT/src/utils/colorHelpers.js`
+  - Sorting / tokens → `FRONTENT/src/utils/sortHelpers.js`, `FRONTENT/src/utils/tokenEvaluator.js`
+  - Workflow / audit stamps → `FRONTENT/src/utils/workflowStamp.js`
+  - Node / payload builders → `FRONTENT/src/composables/resources/nodePayloads.js`
+- **Mandatory Exhaustion Quote**: When an agent DOES create a new helper function or file, it MUST explicitly cite in its output:
+  > *"Checked existing utilities in [list of files / SHARED_UTILITIES_INDEX.md] and confirmed no existing helper accomplishes <function/feature>. Adding/extending <function_name> in <file_path> because <specific rationale>."*
+
 ## Remote Updates & External Sync Policy (STRICT)
 - **Do not update remote files, repositories, or services automatically.**
 - Any action that modifies files or state outside the local file system is restricted. This includes:

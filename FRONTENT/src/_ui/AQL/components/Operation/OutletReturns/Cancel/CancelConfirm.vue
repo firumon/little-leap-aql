@@ -137,11 +137,11 @@ const reversalColor = computed(() => (reversal.value === 0 ? 'grey-7' : 'primary
 const reversalIcon = computed(() => (reversal.value === 0 ? 'info' : 'swap_vert'))
 const reversalClass = computed(() => (reversal.value === 0 ? 'bg-grey-2 text-body2' : 'bg-blue-1 text-body2'))
 
-const reason = computed(() => pageState?.getControlField(NODE, 'CancelReason') || '')
-const setReason = (value) => pageState?.setControlField(NODE, 'CancelReason', value)
+const reason = computed(() => pageState?.getControls('CancelReason', null, NODE) || '')
+const setReason = (value) => pageState?.setControls('CancelReason', value, NODE)
 
 onMounted(async () => {
-  pageState.setControlField(NODE, 'CancelReason', '')
+  pageState.setControls('CancelReason', '', NODE)
   await Promise.all([outlets, skus, products].map((res) => res.reload()))
 })
 </script>

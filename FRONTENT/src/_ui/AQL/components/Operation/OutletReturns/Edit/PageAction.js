@@ -37,15 +37,12 @@ export default (props, { pageState, resourceRecord, resourceConfig }) => {
         resolvedPrice: Number(entry.Price) || 0
       })
 
-      if (!result.valid) return { valid: false, message: result.message }
 
-      if (resourceConfig?.allowed(result.permissions) !== true) {
-        return { valid: false, message: 'You are not allowed to edit this return.' }
-      }
 
-      pageState.applyNodes(result.nodes)
+      const applied = pageState.applyNodes(result)
+      if (applied.valid === false) return false
       return {
-        successMsg: result.successMsg,
+        successMsg: applied.successMsg,
         // The typed form would otherwise survive the navigation and re-seed the next visit.
         onSuccess: () => { pageState.reset() }
       }

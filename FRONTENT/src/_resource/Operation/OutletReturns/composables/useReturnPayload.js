@@ -1,7 +1,6 @@
 
 import { batchRef, textOrRef } from 'src/utils/appHelpers'
 import { toDateTime24 } from 'src/utils/dateHelpers'
-import { actionNode, bulkNode, createNode, updateNode } from 'src/composables/resources/nodePayloads'
 import {
   SUBMITTED,
   COMPLETED,
@@ -74,21 +73,62 @@ function outletMovement ({ outletCode, storageName, sku, qtyChange, referenceCod
   })
 }
 
+import { useAuth } from 'src/composables/core/useAuth'
+import { resourceRow } from 'src/composables/resources/useResourceConfig'
+import { priceOf, priceListForOutlet } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionStock'
+
+// ROW builder: one OutletReturns sheet row, with every column the domain can answer already
+// resolved — the credit price included. A return has no children, so a row is all it needs.
+export function returnRow (parent = {}, extra = {}) {
+  const { user } = useAuth()
+  const seed = { ...asRow(parent), ...asRow(extra) }
+  const outletCode = text(seed.OutletCode)
+  const priceListCode = text(seed.PriceListCode) || text(priceListForOutlet(outletCode)?.code)
+  const price = seed.Price === undefined || seed.Price === null || seed.Price === ''
+    ? toNumber(priceOf(seed.SKU, priceListCode))
+    : toNumber(seed.Price)
+
+  return resourceRow(RESOURCE_NAME, {
+    Username: user.value?.name || '',
+    Date: todayISO(),
+    Reason: 'DAMAGE',
+    InvoiceAdjustmentRequired: flag(true),
+    InvoiceAdjustmentDone: 'FALSE',
+    WarehouseActionRequired: flag(false),
+    WarehouseActionCompleted: 'FALSE',
+    Progress: SUBMITTED,
+    Status: 'Active'
+  }, parent, extra, { Price: Math.round(price * 100) / 100 })
+}
+
+// NODE builder: the pageState many-node those rows sit on. A return carries no aggregate,
+// so there is nothing to derive.
+export function returnsNode (records = [], options = {}) {
+  const rows = (Array.isArray(records) ? records : []).map((row) => returnRow(row, options.extra))
+  return {
+    resource: RESOURCE_NAME,
+    many: true,
+    records: rows,
+    permissions: { create: 'You are not allowed to log a return.' },
+    successMsg: `${rows.length} return${rows.length === 1 ? '' : 's'} logged.`
+  }
+}
+
 export function buildReturnCreateNodes ({ form = {}, resolvedPrice = 0, actorName = '' } = {}) {
   const entry = asRow(form)
   const outletCode = text(entry.OutletCode)
   const sku = text(entry.SKU)
   const qty = Math.abs(toNumber(entry.Qty))
 
-  if (!outletCode) return { valid: false, message: 'Outlet is required.' }
-  if (!sku) return { valid: false, message: 'SKU is required.' }
-  if (qty <= 0) return { valid: false, message: 'Returned quantity must be greater than 0.' }
+  if (!outletCode) return [{ valid: false, message: 'Outlet is required.' }]
+  if (!sku) return [{ valid: false, message: 'SKU is required.' }]
+  if (qty <= 0) return [{ valid: false, message: 'Returned quantity must be greater than 0.' }]
 
   const invoiceRequired = isFlagged(entry.InvoiceAdjustmentRequired)
   const warehouseRequired = isFlagged(entry.WarehouseActionRequired)
 
   if (warehouseRequired && !text(entry.WarehouseCode)) {
-    return { valid: false, message: 'Target warehouse is required when stock is leaving the outlet.' }
+    return [{ valid: false, message: 'Target warehouse is required when stock is leaving the outlet.' }]
   }
 
   const record = {
@@ -117,11 +157,11 @@ export function buildReturnCreateNodes ({ form = {}, resolvedPrice = 0, actorNam
   // The completion question asked of the row as it will be STORED — not of the form.
   record.Progress = isReturnCompleted(record) ? COMPLETED : SUBMITTED
 
-  const nodes = [createNode(RESOURCE_NAME, record, [RESOURCE_NAME])]
+  const nodes = [{ resource: RESOURCE_NAME, record: record, reload: [RESOURCE_NAME] , permissions: { create: 'You are not allowed to create this outlet return.' }}]
 
   const qtyChange = returnQtyChange(qty, { invoiceRequired, warehouseRequired })
   if (qtyChange !== 0) {
-    nodes.push(createNode(OUTLET_MOVEMENTS, outletMovement({
+    nodes.push({ resource: OUTLET_MOVEMENTS, record: outletMovement({
       outletCode,
       storageName: entry.StorageName,
       sku,
@@ -129,18 +169,10 @@ export function buildReturnCreateNodes ({ form = {}, resolvedPrice = 0, actorNam
       // The return does not exist yet; GAS resolves this to its generated code (§9.4).
       referenceCode: batchRef(RETURN_REF_PATH),
       movementDate: record.Date
-    }), ['OutletStorages']))
+    }), reload: ['OutletStorages'] , permissions: { create: 'You are not allowed to create this outlet movement.' }})
   }
 
-  return {
-    valid: true,
-    nodes,
-    permissions: {
-      outletReturn: 'create',
-      ...(qtyChange !== 0 ? { outletMovement: 'create' } : {})
-    },
-    successMsg: 'Return logged.'
-  }
+  return nodes
 }
 
 export function buildReturnUpdateNodes ({ record = {}, form = {}, resolvedPrice = 0 } = {}) {
@@ -148,26 +180,26 @@ export function buildReturnUpdateNodes ({ record = {}, form = {}, resolvedPrice 
   const entry = asRow(form)
   const code = text(stored.Code)
 
-  if (!code) return { valid: false, message: 'Return code is missing.' }
+  if (!code) return [{ valid: false, message: 'Return code is missing.' }]
   if (!isEditable(stored)) {
-    return { valid: false, message: 'This return can no longer be edited. Cancel and re-log it instead.' }
+    return [{ valid: false, message: 'This return can no longer be edited. Cancel and re-log it instead.' }]
   }
 
   const sku = text(entry.SKU)
   const qty = Math.abs(toNumber(entry.Qty))
 
-  if (!sku) return { valid: false, message: 'SKU is required.' }
-  if (qty <= 0) return { valid: false, message: 'Returned quantity must be greater than 0.' }
+  if (!sku) return [{ valid: false, message: 'SKU is required.' }]
+  if (qty <= 0) return [{ valid: false, message: 'Returned quantity must be greater than 0.' }]
 
   const invoiceRequired = isFlagged(entry.InvoiceAdjustmentRequired)
   const warehouseRequired = isFlagged(entry.WarehouseActionRequired)
 
   if (!invoiceRequired && !warehouseRequired) {
-    return { valid: false, message: 'A return must either be credited on an invoice or move stock off the shelf.' }
+    return [{ valid: false, message: 'A return must either be credited on an invoice or move stock off the shelf.' }]
   }
 
   if (warehouseRequired && !text(entry.WarehouseCode)) {
-    return { valid: false, message: 'Target warehouse is required when stock is leaving the outlet.' }
+    return [{ valid: false, message: 'Target warehouse is required when stock is leaving the outlet.' }]
   }
 
   const changes = {
@@ -187,11 +219,11 @@ export function buildReturnUpdateNodes ({ record = {}, form = {}, resolvedPrice 
   const merged = { ...stored, ...changes }
   changes.Progress = isReturnCompleted(merged) ? COMPLETED : (text(stored.Progress) || SUBMITTED)
 
-  const nodes = [updateNode(RESOURCE_NAME, code, changes, [RESOURCE_NAME, 'OutletStorages'])]
+  const nodes = [{ resource: RESOURCE_NAME, code: textOrRef(code), record: changes, reload: [RESOURCE_NAME, 'OutletStorages'] , permissions: { update: 'You are not allowed to update this outlet return.' }}]
 
   const delta = returnQtyChange(qty, { invoiceRequired, warehouseRequired }) - storedQtyChange(stored)
   if (delta !== 0) {
-    nodes.push(createNode(OUTLET_MOVEMENTS, outletMovement({
+    nodes.push({ resource: OUTLET_MOVEMENTS, record: outletMovement({
       outletCode: stored.OutletCode,
       storageName: stored.StorageName,
       // The correction follows the CORRECTED item: an edit that changed the SKU has to move
@@ -200,23 +232,17 @@ export function buildReturnUpdateNodes ({ record = {}, form = {}, resolvedPrice 
       qtyChange: delta,
       referenceCode: code,
       movementDate: todayISO()
-    }), ['OutletStorages']))
+    }), reload: ['OutletStorages'] , permissions: { create: 'You are not allowed to create this outlet movement.' }})
   }
 
-  return {
-    valid: true,
-    nodes,
-    permissions: {
-      outletReturn: 'update',
-      ...(delta !== 0 ? { outletMovement: 'create' } : {})
-    },
-    successMsg: `Return ${code} updated.`
-  }
+  return nodes
 }
 
 export function buildReturnBulkCreateNodes ({ lines = [], actorName = '', movementDate = '' } = {}) {
   const entries = asList(lines).map(asRow).filter((line) => text(asRow(line.form).SKU))
-  if (!entries.length) return { valid: true, nodes: [], permissions: {} }
+  if (!entries.length) return [
+    
+  ]
 
   const records = []
   const movements = []
@@ -228,28 +254,20 @@ export function buildReturnBulkCreateNodes ({ lines = [], actorName = '', moveme
       actorName
     })
     // Bubble the child's own message rather than restating it (§9.3).
-    if (!built.valid) return built
+    if (built[0]?.valid === false) return built
 
     // Unwrap the per-line requests back into the two bulk collections. The builder is the
     // one that decided every column and every sign; this only regroups them.
-    for (const node of built.nodes) {
+    for (const node of built) {
       if (node.resource === RESOURCE_NAME) records.push(node.record)
       else movements.push({ ...node.record, MovementDate: text(movementDate) || node.record.MovementDate })
     }
   }
 
-  const nodes = [bulkNode(RESOURCE_NAME, records, [RESOURCE_NAME])]
-  if (movements.length) nodes.push(bulkNode(OUTLET_MOVEMENTS, movements, ['OutletStorages']))
+  const nodes = [{ resource: RESOURCE_NAME, many: true, records: records, reload: [RESOURCE_NAME] , permissions: { create: 'You are not allowed to create this outlet return.' }}]
+  if (movements.length) nodes.push({ resource: OUTLET_MOVEMENTS, many: true, records: movements, reload: ['OutletStorages'] , permissions: { create: 'You are not allowed to create this outlet movement.' }})
 
-  return {
-    valid: true,
-    nodes,
-    permissions: {
-      outletReturn: 'create',
-      ...(movements.length ? { outletMovement: 'create' } : {})
-    },
-    successMsg: `${records.length} return${records.length === 1 ? '' : 's'} logged.`
-  }
+  return nodes
 }
 
 export function buildReturnWarehouseActionNodes ({
@@ -262,14 +280,14 @@ export function buildReturnWarehouseActionNodes ({
   const row = asRow(record)
   const code = text(row.Code)
 
-  if (!code) return { valid: false, message: 'Return code is missing.' }
-  if (isCancelled(row)) return { valid: false, message: 'A cancelled return cannot be actioned.' }
-  if (!warehouseActionRequired(row)) return { valid: false, message: 'This return has no warehouse action to confirm.' }
-  if (warehouseActionCompleted(row)) return { valid: false, message: 'The warehouse action is already confirmed.' }
+  if (!code) return [{ valid: false, message: 'Return code is missing.' }]
+  if (isCancelled(row)) return [{ valid: false, message: 'A cancelled return cannot be actioned.' }]
+  if (!warehouseActionRequired(row)) return [{ valid: false, message: 'This return has no warehouse action to confirm.' }]
+  if (warehouseActionCompleted(row)) return [{ valid: false, message: 'The warehouse action is already confirmed.' }]
 
   const isDisposed = text(actionType) === DISPOSED
   if (isDisposed && !text(disposalReason)) {
-    return { valid: false, message: 'A disposal reason is required when writing stock off.' }
+    return [{ valid: false, message: 'A disposal reason is required when writing stock off.' }]
   }
 
   const now = toDateTime24(new Date())
@@ -294,7 +312,7 @@ export function buildReturnWarehouseActionNodes ({
   // the stored row — the physical track is about to become settled.
   if (isReturnCompleted({ ...row, ...update })) update.Progress = COMPLETED
 
-  const nodes = [updateNode(RESOURCE_NAME, code, update, [RESOURCE_NAME, 'WarehouseStorages'])]
+  const nodes = [{ resource: RESOURCE_NAME, code: textOrRef(code), record: update, reload: [RESOURCE_NAME, 'WarehouseStorages'] , permissions: { warehouseAction: 'You are not allowed to warehouse action this outlet return.' }}]
 
   const stocksBackIn = !isDisposed && text(row.WarehouseCode)
   if (stocksBackIn) {
@@ -307,43 +325,34 @@ export function buildReturnWarehouseActionNodes ({
       direction: INTO_WAREHOUSE,
       referenceType: STOCK_REFERENCE.RETURN,
       referenceCode: code
-    })]).nodes)
+    })]))
   }
 
-  return {
-    valid: true,
-    nodes,
-    permissions: {
-      outletReturn: 'warehouseAction',
-      ...(stocksBackIn ? { stockMovement: 'create' } : {})
-    },
-    successMsg: isDisposed ? 'Return disposed.' : 'Return stocked into the warehouse.'
-  }
+  return nodes
 }
 
 export function buildReturnMarkInvoiceAdjustedNodes ({ record = {}, actorName = '', comment = '' } = {}) {
   const row = asRow(record)
   const code = text(row.Code)
 
-  if (!code) return { valid: false, message: 'Return code is missing.' }
-  if (isCancelled(row)) return { valid: false, message: 'A cancelled return cannot be settled.' }
-  if (!invoiceAdjustmentRequired(row)) return { valid: false, message: 'This return needs no invoice adjustment.' }
-  if (isFlagged(row.InvoiceAdjustmentDone)) return { valid: false, message: 'The invoice adjustment is already settled.' }
+  if (!code) return [{ valid: false, message: 'Return code is missing.' }]
+  if (isCancelled(row)) return [{ valid: false, message: 'A cancelled return cannot be settled.' }]
+  if (!invoiceAdjustmentRequired(row)) return [{ valid: false, message: 'This return needs no invoice adjustment.' }]
+  if (isFlagged(row.InvoiceAdjustmentDone)) return [{ valid: false, message: 'The invoice adjustment is already settled.' }]
 
   const update = { InvoiceAdjustmentDone: 'TRUE' }
   if (isReturnCompleted({ ...row, ...update })) update.Progress = COMPLETED
 
-  return {
-    valid: true,
-    nodes: [updateNode(RESOURCE_NAME, code, update, [RESOURCE_NAME])],
-    permissions: { outletReturn: 'markInvoiceAdjusted' },
-    successMsg: 'Invoice adjustment settled.'
-  }
+  return [
+    { resource: RESOURCE_NAME, code: textOrRef(code), record: update, reload: [RESOURCE_NAME] , permissions: { markInvoiceAdjusted: 'You are not allowed to mark invoice adjusted this outlet return.' }, successMsg: 'Invoice adjustment settled.' }
+  ]
 }
 
 export function buildReturnInvoiceAdjustmentLinkedNodes ({ returnRows = [], invoiceCode = null, actorName = '' } = {}) {
   const rows = asList(returnRows).map(asRow).filter((row) => text(row.Code))
-  if (!rows.length) return { valid: true, nodes: [], permissions: {} }
+  if (!rows.length) return [
+    
+  ]
 
   // One bulk, not one update per row: a node is addressed by resource, so several
   // single-record nodes for OutletReturns would collapse onto each other.
@@ -358,81 +367,71 @@ export function buildReturnInvoiceAdjustmentLinkedNodes ({ returnRows = [], invo
     return update
   })
 
-  return {
-    valid: true,
-    nodes: [bulkNode(RESOURCE_NAME, records, [RESOURCE_NAME])],
-    permissions: { outletReturn: 'update' },
-    successMsg: `${rows.length} return${rows.length === 1 ? '' : 's'} credited.`
-  }
+  return [
+    { resource: RESOURCE_NAME, many: true, records: records, reload: [RESOURCE_NAME] , permissions: { update: 'You are not allowed to update this outlet return.' }, successMsg: `${rows.length} return${rows.length === 1 ? '' : 's'} credited.` }
+  ]
 }
 
 export function buildReturnInvoiceCreditReversalNodes ({ returnRows = [] } = {}) {
   const rows = asList(returnRows).map(asRow)
     .filter((row) => text(row.Code) && !isCancelled(row))
-  if (!rows.length) return { valid: true, nodes: [], permissions: {} }
+  if (!rows.length) return [
+    
+  ]
 
-  return {
-    valid: true,
-    nodes: [bulkNode(RESOURCE_NAME, rows.map((row) => ({
+  return [
+    { resource: RESOURCE_NAME, many: true, records: rows.map((row) => ({
       Code: text(row.Code),
       InvoiceAdjustmentDone: 'FALSE',
       ConsumptionInvoiceCode: '',
       Progress: SUBMITTED
-    })), [RESOURCE_NAME])],
-    permissions: { outletReturn: 'update' },
-    successMsg: `${rows.length} return credit${rows.length === 1 ? '' : 's'} reversed.`
-  }
+    })), reload: [RESOURCE_NAME] , permissions: { update: 'You are not allowed to update this outlet return.' }, successMsg: `${rows.length} return credit${rows.length === 1 ? '' : 's'} reversed.` }
+  ]
 }
 
 export function buildReturnCancelNodes ({ record = {}, reason = '', actorName = '' } = {}) {
   const row = asRow(record)
   const code = text(row.Code)
 
-  if (!code) return { valid: false, message: 'Return code is missing.' }
-  if (isCancelled(row)) return { valid: false, message: 'This return is already cancelled.' }
-  if (!text(reason)) return { valid: false, message: 'A cancellation reason is required.' }
+  if (!code) return [{ valid: false, message: 'Return code is missing.' }]
+  if (isCancelled(row)) return [{ valid: false, message: 'This return is already cancelled.' }]
+  if (!text(reason)) return [{ valid: false, message: 'A cancellation reason is required.' }]
 
   const nodes = [
-    actionNode(RESOURCE_NAME, code, {
+    { resource: RESOURCE_NAME, actions: [{ ...{
       action: 'Cancel',
       column: 'Progress',
       columnValue: CANCELLED
-    }, {
-      Comment: text(reason),
-      ProgressCancelledComment: text(reason),
-      ProgressCancelledBy: text(actorName)
-    }, { reload: [RESOURCE_NAME, 'OutletStorages'] })
+    }, code: textOrRef(code), data: {
+      fields: {
+        Comment: text(reason),
+        ProgressCancelledComment: text(reason),
+        ProgressCancelledBy: text(actorName)
+      }
+    } }], reload: [RESOURCE_NAME, 'OutletStorages'] , permissions: { Cancel: 'You are not allowed to cancel this outlet return.' }}
   ]
 
   const reversal = -storedQtyChange(row)
   if (reversal !== 0) {
-    nodes.push(createNode(OUTLET_MOVEMENTS, outletMovement({
+    nodes.push({ resource: OUTLET_MOVEMENTS, record: outletMovement({
       outletCode: row.OutletCode,
       storageName: row.StorageName,
       sku: row.SKU,
       qtyChange: reversal,
       referenceCode: code,
       movementDate: todayISO()
-    }), ['OutletStorages']))
+    }), reload: ['OutletStorages'] , permissions: { create: 'You are not allowed to create this outlet movement.' }})
   }
 
-  return {
-    valid: true,
-    nodes,
-    permissions: {
-      // An action permission resolves as `can<PascalCase(action)>`, so the value must be
-      // the action's OWN name exactly as GAS declares it.
-      outletReturn: 'Cancel',
-      ...(reversal !== 0 ? { outletMovement: 'create' } : {})
-    },
-    successMsg: `Return ${code} cancelled.`
-  }
+  return nodes
 }
 
 // Composable shape for setup-context callers. Same functions, one import (§5).
 export function useReturnPayload () {
   return {
     RETURN_REF_PATH,
+    returnRow,
+    returnsNode,
     returnQtyChange,
     storedQtyChange,
     buildReturnCreateNodes,

@@ -140,13 +140,13 @@ export function useReturnFormFields () {
   const invoiceRequired = computed(() => form.value.InvoiceAdjustmentRequired === true)
   const warehouseRequired = computed(() => form.value.WarehouseActionRequired === true)
 
-  const priceListCode = computed(() => text(pageState.getControlField(NODE, PRICE_LIST_CONTROL)))
+  const priceListCode = computed(() => text(pageState.getControls(PRICE_LIST_CONTROL, null, NODE)))
 
   // A control field, not a ref: the invoice picker and the price field are separate cards.
-  const priceTouched = computed(() => pageState.getControlField(NODE, PRICE_TOUCHED_CONTROL) === true)
+  const priceTouched = computed(() => pageState.getControls(PRICE_TOUCHED_CONTROL, null, NODE) === true)
 
-  const set = (key, value) => pageState.setField(NODE, key, value)
-  const setControl = (key, value) => pageState.setControlField(NODE, key, value)
+  const set = (key, value) => pageState.setRecord(key, value, NODE)
+  const setControl = (key, value) => pageState.setControls(key, value, NODE)
 
   function setOutlet (value) {
     set('OutletCode', value)
@@ -367,11 +367,11 @@ export function useReturnFormSeed (mode = 'add') {
     if (!record) return
     const code = t(record.Code)
     if (!code) return
-    if (t(pageState.getControlField(NODE, HYDRATED_FOR_CONTROL)) === code) return
+    if (t(pageState.getControls(HYDRATED_FOR_CONTROL, null, NODE)) === code) return
 
     pageState.initResource(NODE, { isPrimaryKey: true, reset: true, code })
-    pageState.setControlField(NODE, HYDRATED_FOR_CONTROL, code)
-    pageState.load(NODE, record)
+    pageState.setControls(HYDRATED_FOR_CONTROL, code, NODE)
+    pageState.load(record, NODE)
 
     const flag = (value) => value === true || t(value).toUpperCase() === 'TRUE'
     set('InvoiceAdjustmentRequired', flag(record.InvoiceAdjustmentRequired))

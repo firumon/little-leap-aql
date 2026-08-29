@@ -37,7 +37,7 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
 
   const record = () => resourceRecord?.record?.value || {}
   const actor = () => text(user.value?.name || user.value?.email || '')
-  const reason = () => text(pageState.getControlField(NODE, 'CancelReason'))
+  const reason = () => text(pageState.getControls('CancelReason', null, NODE))
 
   return {
     actions: ['cancel', 'submit'],
@@ -64,15 +64,12 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
       if (!why) return { valid: false, message: 'A cancellation reason is required.' }
 
       const result = buildReturnCancelNodes({ record: row, reason: why, actorName: actor() })
-      if (!result.valid) return { valid: false, message: result.message }
 
-      if (resourceConfig?.allowed(result.permissions) !== true) {
-        return { valid: false, message: 'You are not allowed to cancel this return.' }
-      }
 
-      pageState.applyNodes(result.nodes)
+      const applied = pageState.applyNodes(result)
+      if (applied.valid === false) return false
       return {
-        successMsg: result.successMsg,
+        successMsg: applied.successMsg,
         // The typed reason would otherwise survive the navigation and re-seed the next
         // return opened on this route.
         onSuccess: () => { pageState.reset() }

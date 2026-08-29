@@ -182,14 +182,14 @@ const actionOptions = [
   { label: 'Disposed — written off, not re-stocked', value: DISPOSED }
 ]
 
-const actionType = computed(() => pageState?.getControlField(NODE, 'WarehouseActionType') || STOCKED)
+const actionType = computed(() => pageState?.getControls('WarehouseActionType', null, NODE) || STOCKED)
 const isStocked = computed(() => actionType.value === STOCKED)
-const storageName = computed(() => pageState?.getControlField(NODE, 'WarehouseStorageName') || '')
-const disposalReason = computed(() => pageState?.getControlField(NODE, 'WarehouseDisposalReason') || '')
+const storageName = computed(() => pageState?.getControls('WarehouseStorageName', null, NODE) || '')
+const disposalReason = computed(() => pageState?.getControls('WarehouseDisposalReason', null, NODE) || '')
 
-const setActionType = (value) => pageState?.setControlField(NODE, 'WarehouseActionType', value)
-const setStorageName = (value) => pageState?.setControlField(NODE, 'WarehouseStorageName', value)
-const setDisposalReason = (value) => pageState?.setControlField(NODE, 'WarehouseDisposalReason', value)
+const setActionType = (value) => pageState?.setControls('WarehouseActionType', value, NODE)
+const setStorageName = (value) => pageState?.setControls('WarehouseStorageName', value, NODE)
+const setDisposalReason = (value) => pageState?.setControls('WarehouseDisposalReason', value, NODE)
 
 const dispositionCaption = computed(() => isStocked.value
   ? `Adds ${quantity.value} units back to ${warehouseName.value || 'the target warehouse'}.`
@@ -218,9 +218,9 @@ const outcomeText = computed(() => {
 onMounted(async () => {
   // Control fields only — this route changes no field the user typed into a form, so the
   // node holds working state and nothing else (§13.5).
-  pageState.setControlField(NODE, 'WarehouseActionType', STOCKED)
-  pageState.setControlField(NODE, 'WarehouseStorageName', DEFAULT_STORAGE)
-  pageState.setControlField(NODE, 'WarehouseDisposalReason', '')
+  pageState.setControls('WarehouseActionType', STOCKED, NODE)
+  pageState.setControls('WarehouseStorageName', DEFAULT_STORAGE, NODE)
+  pageState.setControls('WarehouseDisposalReason', '', NODE)
 
   await Promise.all([outlets, skus, products, warehouses].map((res) => res.reload()))
 })

@@ -50,15 +50,12 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
       }
 
       const result = buildReturnMarkInvoiceAdjustedNodes({ record: row, actorName: actor() })
-      if (!result.valid) return { valid: false, message: result.message }
 
-      if (resourceConfig?.allowed(result.permissions) !== true) {
-        return { valid: false, message: 'You are not allowed to settle this return.' }
-      }
 
-      pageState.applyNodes(result.nodes)
+      const applied = pageState.applyNodes(result)
+      if (applied.valid === false) return false
       return {
-        successMsg: result.successMsg,
+        successMsg: applied.successMsg,
         onSuccess: () => { pageState.reset() }
       }
     },

@@ -246,6 +246,28 @@ export function useResourceConfig(resourceNameOverride) {
   }
 }
 
+const isPlainObject = (value) => !!value && typeof value === 'object' && !Array.isArray(value)
+
+// A plain SHEET ROW for one resource: the backend's default values, then the caller's,
+// with every key the sheet does not have dropped. `_action` survives because build()
+// reads it off the row and strips it itself.
+export function resourceRow (resource, ...sources) {
+  const { resourceHeaders, defaultValues } = useResourceConfig(resource)
+  const merged = Object.assign({}, defaultValues?.value || {},
+    ...sources.map((source) => (isPlainObject(source) ? source : {})))
+
+  const headers = resourceHeaders?.value || []
+  // No headers means the config has not landed yet. Dropping every key would silently
+  // empty the row, so an unknown schema keeps what it was given.
+  if (!headers.length) return merged
+
+  const allowed = new Set([...headers, '_action'])
+  return Object.keys(merged).reduce((row, key) => {
+    if (allowed.has(key)) row[key] = merged[key]
+    return row
+  }, {})
+}
+
 // Parses the sheet's raw `additionalActions` (array or JSON string) into action configs.
 // Exported because additionalActionsPipeline needs it for an ARBITRARY resource.
 export function normalizeAdditionalActions(raw) {

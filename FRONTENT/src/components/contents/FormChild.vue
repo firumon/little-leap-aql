@@ -131,7 +131,7 @@
               />
             </div>
             <FormRecord
-              v-bind="formRecordBindings(row.data)"
+              v-bind="formRecordBindings(row)"
               @update:field="(header, value) => onRowField(bucketIndexOf(row), header, value)"
             />
           </q-card-section>
@@ -372,7 +372,7 @@ function bucketIndexOf (row) {
 
 // Needs a Code: GAS matches on it, and without one it would create a duplicate instead of deactivating.
 function isPersistedRow (row) {
-  return row?._action === 'update' && !!String(row?.data?.Code ?? '').trim()
+  return row?._action === 'update' && !!String(row?.Code ?? '').trim()
 }
 
 // Stable AppList/TransitionGroup keys for wrapper objects that carry no id of their own.
@@ -462,9 +462,9 @@ function submitDraft () {
   if (!wasEdit && maxReached.value) return
   if (wasEdit) {
     // editIndex is already a bucket index — no visible->bucket mapping needed.
-    pageState.updateChild(props.parentResource, childName.value, editIndex.value, { ...draft.value })
+    pageState.updateChild(childName.value, editIndex.value, { ...draft.value }, props.parentResource)
   } else {
-    pageState.addChild(props.parentResource, childName.value, { ...draft.value })
+    pageState.addChild(childName.value, { ...draft.value }, props.parentResource)
   }
   resetDraft()
   if (mode.value === 'popup' && (props.closeOnAdd || wasEdit)) dialogOpen.value = false
@@ -474,7 +474,8 @@ function submitDraft () {
 function startEdit (index) {
   const row = records.value[index]
   if (!row || row._action === 'deactivate') return
-  draft.value = { ...row.data }
+  const { _action, ...data } = row
+  draft.value = { ...data }
   editIndex.value = index
   if (mode.value === 'popup') dialogOpen.value = true
 }
@@ -490,7 +491,7 @@ function restore (row) {
   if (!pageState || !row || row._action !== 'deactivate') return
   const index = bucketIndexOf(row)
   if (index < 0) return
-  pageState.setChildAction(props.parentResource, childName.value, index, 'update')
+  pageState.setChildAction(childName.value, index, 'update', props.parentResource)
 }
 
 function notifyUndo (row) {
@@ -517,14 +518,14 @@ function remove (index) {
   if (!row) return
 
   if (isPersistedRow(row)) {
-    pageState.setChildAction(props.parentResource, childName.value, index, 'deactivate')
+    pageState.setChildAction(childName.value, index, 'deactivate', props.parentResource)
     // No splice, so no index shifts — only an in-flight edit of this row needs clearing.
     if (editIndex.value === index) resetDraft()
     notifyUndo(row)
     return
   }
 
-  pageState.removeChild(props.parentResource, childName.value, index)
+  pageState.removeChild(childName.value, index, props.parentResource)
   if (editIndex.value === index) resetDraft()
   else if (editIndex.value !== null && editIndex.value > index) editIndex.value -= 1
 }
@@ -532,14 +533,14 @@ function remove (index) {
 // ── Multi mode: rows bound straight to pageState records ─────────────────────
 function addBlankRow () {
   if (!pageState || maxReached.value) return
-  pageState.addChild(props.parentResource, childName.value, createChildDefaultRecord())
+  pageState.addChild(childName.value, createChildDefaultRecord(), props.parentResource)
 }
 
 // `index` is a BUCKET index (resolved by `bucketIndexOf` in the v-for).
 function onRowField (index, header, value) {
   if (!pageState) return
   if (index < 0) return
-  pageState.updateChild(props.parentResource, childName.value, index, { [header]: value })
+  pageState.updateChild(childName.value, index, { [header]: value }, props.parentResource)
 }
 
 // ── Added-record list display (AppList label/caption resolvers) ─────────────
@@ -549,7 +550,7 @@ function displayValue (value) {
 }
 
 function defaultItemLabel (row) {
-  const data = row?.data
+  const data = row
   for (const field of childFields.value) {
     const v = displayValue(data?.[field.header])
     if (v !== '' && v !== null && v !== undefined) return v
@@ -558,7 +559,7 @@ function defaultItemLabel (row) {
 }
 
 function defaultItemCaption (row) {
-  const data = row?.data
+  const data = row
   const labelHeader = childFields.value.find(
     (f) => displayValue(data?.[f.header]) !== ''
   )?.header

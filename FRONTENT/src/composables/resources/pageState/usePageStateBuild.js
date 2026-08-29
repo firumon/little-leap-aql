@@ -1,5 +1,6 @@
 import {
   compositeSaveRequest,
+  executeActionRequest,
   resourceBulkRequest,
   resourceCreateRequest,
   resourceGetRequest,
@@ -8,7 +9,25 @@ import {
 
 // Turns node state into GAS request envelopes. A `strategy.build` override
 // replaces `defaultBuild` and must append `additionalActionRequests()` itself.
-export function usePageStateBuild ({ state, registry, additionalActionRequests }) {
+export function usePageStateBuild ({ state, registry }) {
+  // Queued actions are pure domain models in state; the executeAction wire format
+  // is put on here, deduped by key so a re-queued action runs once.
+  function additionalActionRequests () {
+    const seen = new Set()
+    const requests = []
+    for (const entry of state.actions) {
+      if (!entry?.resource || seen.has(entry.key)) continue
+      seen.add(entry.key)
+      requests.push(executeActionRequest(entry.resource, entry.code, entry.actionConfig, entry.data))
+    }
+    return requests
+  }
+
+  // Every resource a queued action asks to be re-read.
+  function actionReloadNames () {
+    return state.actions.flatMap((entry) => (Array.isArray(entry?.reload) ? entry.reload : []))
+  }
+
   function defaultHydrate (node, raw) {
     Object.assign(node.record, raw || {})
     if (raw && raw.Code) node.code = raw.Code
@@ -22,13 +41,14 @@ export function usePageStateBuild ({ state, registry, additionalActionRequests }
   function requestForNode (node) {
     const resource = node.resource
     if (node.many) {
-      const records = node.records.map(r => r.data)
+      const records = node.records.map(({ _action, ...data }) => data)
       return records.length ? resourceBulkRequest(resource, records) : null
     }
     if (node.children.length) {
+      // Rows are plain data in state; the GAS wire format is put on here.
       const children = node.children.map(c => ({
         resource: c.resource,
-        records: c.records.map(r => ({ _action: r._action || 'create', data: r.data }))
+        records: c.records.map(({ _action, ...data }) => ({ _action: _action || 'create', data }))
       }))
       const data = { ...node.record }
       return node.code
@@ -42,7 +62,7 @@ export function usePageStateBuild ({ state, registry, additionalActionRequests }
 
   // `state.reload` plus anything this one call adds, deduped and in order.
   function reloadNames (extra = []) {
-    const list = [...state.reload, ...(Array.isArray(extra) ? extra : [extra])]
+    const list = [...state.reload, ...actionReloadNames(), ...(Array.isArray(extra) ? extra : [extra])]
     return [...new Set(list.filter(Boolean))]
   }
 
@@ -61,5 +81,5 @@ export function usePageStateBuild ({ state, registry, additionalActionRequests }
     return requests
   }
 
-  return { defaultHydrate, defaultBuild, reloadNames }
+  return { defaultHydrate, defaultBuild, reloadNames, additionalActionRequests }
 }

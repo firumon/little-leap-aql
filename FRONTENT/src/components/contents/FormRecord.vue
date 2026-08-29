@@ -67,7 +67,7 @@ import { humanizeString, toPascalCase } from 'src/utils/appHelpers'
  * resolved field of `resource`, reading values from `record` and emitting
  * `update:field(header, value, { custom })` — the caller (Create/FormChild,
  * later Update) decides where the value lands in pageState: canonical schema
- * headers go to `setField`, non-schema `custom` headers go to `setControlField`
+ * headers go to `setRecord`, non-schema `custom` headers go to `setControl`
  * (never `node.record` — see usePageState.js).
  *
  * ZERO-HARDCODING CONTRACT: every default behaviour, class, and label below is
@@ -451,8 +451,8 @@ watch(
 // ── Default value seeding (supports functions at both levels) ────────────────
 // FormRecord stays purely presentational — it never writes to pageState itself.
 // Any header present in the effective defaults but not yet set on `record` is
-// emitted as a normal field update so the caller's existing setField/
-// setControlField routing seeds it exactly like a user edit would.
+// emitted as a normal field update so the caller's existing setRecord/
+// setControl routing seeds it exactly like a user edit would.
 //
 //   defaultValues: { Status: 'Draft' }                       // plain object
 //   defaultValues: (record, ctx) => ({ Status: 'Draft' })    // function prop

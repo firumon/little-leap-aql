@@ -23,7 +23,7 @@ export function useNodeRegistry ({ state, strategy = {}, optionResolver = () => 
       // take one beside the record (linkedPurchaseRequisitionCode).
       payload: {},
       // Dual-purpose: { name, codeType } seeded by strategy.controls, and
-      // { header, value } upserted by setControlField for non-schema fields.
+      // { header, value } upserted by setControl for non-schema fields.
       controls: [],
       options: {}
     })
@@ -113,7 +113,9 @@ export function useNodeRegistry ({ state, strategy = {}, optionResolver = () => 
       }
     }
     attachNode(name, r, node)
-    if (!state.primaryKey || isPrimaryKey || state.primaryKey !== name) state.primaryKey = name
+    // Only an explicit claim, or the very first node, decides the page's resource. Any
+    // node attached later - a secondary leg, a lazily added bulk row - must not steal it.
+    if (isPrimaryKey || !state.primaryKey) state.primaryKey = name
     return node
   }
 

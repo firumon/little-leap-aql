@@ -60,17 +60,21 @@ export function resourceGetRequest (resources = [], payload = {}) {
   return { action: 'get', resource: names, payload }
 }
 
-export function executeActionRequest (resource, code, actionConfig, fields = {}, cursorResources = []) {
+export function executeActionRequest (resource, code, actionConfig = {}, data = {}) {
+  const fields = data.fields || (data.Comment !== undefined ? data : {})
+  const targetFields = data.targets || data.targetFields || null
+  const columnValue = data.columnValue || actionConfig.columnValue || ''
+
   return {
     action: 'executeAction',
     resource,
     payload: {
       code: textOrRef(code),
-      actionName: actionConfig.action,
-      column: actionConfig.column,
-      columnValue: actionConfig.columnValue,
+      actionName: actionConfig.action || actionConfig.actionName || '',
+      column: actionConfig.column || 'Progress',
+      columnValue,
       fields,
-      ...(cursorResources.length ? { lastUpdatedAtResources: [resource, ...cursorResources] } : {})
+      ...(targetFields && Object.keys(targetFields).length ? { targetFields } : {})
     }
   }
 }

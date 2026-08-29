@@ -390,7 +390,7 @@ function onReset () {
     // (resourceRecord is never mutated by form input — only pageState.node.record
     // is) so unsaved edits are discarded without losing the original values.
     pageState.initResource(resourceName.value, { isPrimaryKey: true, reset: true, code: original?.Code })
-    if (!isAdd.value && original) pageState.load(resourceName.value, original)
+    if (!isAdd.value && original) pageState.load(original, resourceName.value)
   } else {
     pageState.reset()
   }

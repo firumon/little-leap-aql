@@ -99,8 +99,8 @@ const primaryRecord = computed(() => primary?.record.value || {})
 // Schema headers -> node.record (submitted); custom headers -> node.controls (never built).
 function onPrimaryField (header, value, meta) {
   if (!pageState || !resourceName.value) return
-  if (meta?.custom) pageState.setControlField(resourceName.value, header, value)
-  else pageState.setField(resourceName.value, header, value)
+  if (meta?.custom) pageState.setControls(header, value, resourceName.value)
+  else pageState.setRecord(header, value, resourceName.value)
 }
 
 // Children of the active resource; master scope surfaces only master-scoped children.

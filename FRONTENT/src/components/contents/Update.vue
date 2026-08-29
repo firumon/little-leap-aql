@@ -109,7 +109,7 @@ function hydrateParent () {
   const key = `${name}::${primary.identifier.value}::${recordId(record)}`
   if (key === hydratedParentKey) return
   hydratedParentKey = key
-  pageState.load(name, record)
+  pageState.load(record, name)
 }
 
 // Seeds each child bucket as `update` rows, once per (node instance, child resource).
@@ -128,7 +128,7 @@ function hydrateExistingChildren () {
 
     // Relation/metadata keys are non-enumerable, so the spread yields only schema headers.
     for (const row of rows) {
-      pageState.addChild(name, child.name, { ...row }, { action: 'update' })
+      pageState.addChild(child.name, { ...row }, name, null, { action: 'update' })
     }
   }
 }
@@ -143,8 +143,8 @@ const primaryRecord = computed(() => primary?.record.value || {})
 // Schema headers -> node.record (submitted); custom headers -> node.controls (never built).
 function onPrimaryField (header, value, meta) {
   if (!pageState || !resourceName.value) return
-  if (meta?.custom) pageState.setControlField(resourceName.value, header, value)
-  else pageState.setField(resourceName.value, header, value)
+  if (meta?.custom) pageState.setControls(header, value, resourceName.value)
+  else pageState.setRecord(header, value, resourceName.value)
 }
 
 // Children of the active resource; master scope surfaces only master-scoped children.

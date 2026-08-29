@@ -2,7 +2,7 @@ import { effectScope, computed, watch } from 'vue'
 
 // Derived columns declared by Layer 2 and run by pageState. The domain says WHAT depends
 // on what; the writing happens here, so the UI only ever reads nodes.
-export function usePageStateDerive ({ registry, mutations }) {
+export function usePageStateDerive ({ registry, mutations, actions }) {
   // Its own scope: applyNodes is often called from a submit handler, outside any
   // component scope, where a bare watch would leak for the life of the tab.
   const scope = effectScope()
@@ -13,20 +13,31 @@ export function usePageStateDerive ({ registry, mutations }) {
   function sourceFor (on) {
     const spec = typeof on === 'string' ? { field: on } : (on || {})
     if (spec.control !== undefined) {
-      return computed(() => mutations.getControl(spec.control, null, spec.resource, spec.role))
+      return computed(() => mutations.getControls(spec.control, null, spec.resource, spec.role))
+    }
+    if (spec.action !== undefined) {
+      return computed(() => actions.getActions(spec.action, null, spec.resource, spec.role))
     }
     const bound = registry.useNode(spec.resource, spec.role)
+    if (spec.children === true) return computed(() => bound.node.value.children)
     if (spec.children) return bound.children(spec.children)
     if (spec.records) return computed(() => bound.node.value.records)
-    if (spec.field) return computed(() => bound.node.value.record[spec.field])
+    // `record` names the whole record or one of its columns; `field` is the older spelling.
+    const field = spec.field || (typeof spec.record === 'string' ? spec.record : '')
+    if (field) return computed(() => bound.node.value.record[field])
     return computed(() => bound.node.value.record)
   }
 
   function keyFor (entry) {
     if (entry.key) return entry.key
     const spec = typeof entry.on === 'string' ? { field: entry.on } : (entry.on || {})
-    return [spec.resource || '', spec.role || '', spec.children || '', spec.field || '', spec.control || '', spec.records ? 'records' : '']
-      .join('::')
+    return [
+      spec.resource || '', spec.role || '',
+      spec.children === true ? '*' : (spec.children || ''),
+      spec.field || (typeof spec.record === 'string' ? spec.record : ''),
+      spec.control || '', spec.action || '',
+      spec.records ? 'records' : '', spec.record === true ? 'record' : ''
+    ].join('::')
   }
 
   // Re-registering the same key REPLACES it. Hydrating twice must not stack two writers

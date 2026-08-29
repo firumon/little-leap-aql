@@ -35,7 +35,7 @@ export function usePageStateSerialization ({ state, meta, registry, setResource 
     if (controls.length) hasData = true
     // A queued action is real user intent, so it counts as data worth keeping.
     // `reload` is plumbing — it never makes an otherwise-blank page worth saving.
-    const actions = state.actions.filter((entry) => entry?.request)
+    const actions = state.actions.filter((entry) => entry?.key && entry.resource)
     if (actions.length) hasData = true
     return JSON.parse(JSON.stringify({
       primaryKey: state.primaryKey, currentStep: meta.currentStep,
@@ -63,7 +63,7 @@ export function usePageStateSerialization ({ state, meta, registry, setResource 
       if (name && !state.reload.includes(name)) state.reload.push(name)
     }
     for (const entry of payload.actions || []) {
-      if (!entry?.key || !entry.request) continue
+      if (!entry?.key || !entry.resource) continue
       const at = state.actions.findIndex((e) => e.key === entry.key)
       if (at >= 0) state.actions.splice(at, 1, entry)
       else state.actions.push(entry)

@@ -49,17 +49,13 @@ export function usePageState (strategy = {}, options = {}) {
   const registry = useNodeRegistry({ state, strategy, optionResolver })
 
   const actions = usePageStateActions({ state, registry })
-  const { defaultHydrate, defaultBuild, reloadNames } = usePageStateBuild({
-    state,
-    registry,
-    additionalActionRequests: actions.additionalActionRequests
-  })
+  const { defaultHydrate, defaultBuild, reloadNames, additionalActionRequests } = usePageStateBuild({ state, registry })
 
   const hydrate = strategy.hydrate || defaultHydrate
   const build = strategy.build || defaultBuild
 
-  const mutations = usePageStateMutations({ state, registry, hydrate })
-  const derive = usePageStateDerive({ registry, mutations })
+  const mutations = usePageStateMutations({ state, registry, hydrate, notify: (opts) => $q.notify(opts) })
+  const derive = usePageStateDerive({ registry, mutations, actions })
   // Layer 2 declares derivations; they are registered as nodes are hydrated and torn
   // down with the page.
   // Assigned once the API object below exists. A draft restore can hydrate nodes before
@@ -188,6 +184,7 @@ export function usePageState (strategy = {}, options = {}) {
     setReload,
     ...mutations,
     ...actions,
+    additionalActionRequests,
     useNode,
     build,
     hydrate,

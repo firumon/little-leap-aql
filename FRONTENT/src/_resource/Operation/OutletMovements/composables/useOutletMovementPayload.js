@@ -1,6 +1,5 @@
 import { textOrRef } from 'src/utils/appHelpers'
 import { toDateTime24 } from 'src/utils/dateHelpers'
-import { bulkNode, createNode } from 'src/composables/resources/nodePayloads'
 
 // The OUTLET ledger. The mirror of StockMovements: units leave a warehouse there and
 // arrive on an outlet's shelf here, and the two must stay tellable apart when reconciling.
@@ -15,6 +14,10 @@ export const OUTLET_REFERENCE = {
   RESTOCK_DELIVERY: 'RestockDelivery',
   RETURN: 'OutletReturn'
 }
+
+// One audit can write this ledger twice — units leaving on a sale and units arriving on a
+// restock delivery. A node is addressed by resource AND role, so each leg names its own.
+export const OUTLET_ROLE = { SALE: 'sale', DELIVERY: 'delivery' }
 
 export const OFF_THE_SHELF = -1
 export const ONTO_THE_SHELF = 1
@@ -55,32 +58,74 @@ export function outletMovementRow ({
 }
 
 export function outletMovementPermissions () {
-  return { [RESOURCE_NAME]: 'create' }
+  return { create: 'You are not allowed to move outlet stock.' }
 }
 
 // An empty list yields NO node - see the note on the warehouse ledger.
 export function buildOutletMovementNodes (rows = []) {
   const records = (Array.isArray(rows) ? rows : []).filter(Boolean)
-  if (!records.length) return { valid: true, nodes: [], permissions: {} }
+  if (!records.length) return []
+  return [{
+    resource: RESOURCE_NAME,
+    many: true,
+    records,
+    permissions: outletMovementPermissions(),
+    reload: [OUTLET_STORAGES]
+  }]
+}
+
+// NODE builder: high-level items in, a complete self-contained node out. The mirror of
+// stockMovementsNode — same contract, the outlet shelf instead of the warehouse.
+export function outletMovementsNode (items = [], {
+  outletCode = '',
+  referenceCode = '',
+  referenceType = OUTLET_REFERENCE.RESTOCK_DELIVERY,
+  direction = ONTO_THE_SHELF,
+  movementDate = '',
+  role = ''
+} = {}) {
+  const records = (Array.isArray(items) ? items : []).map((row) => outletMovementRow({
+    outletCode,
+    storageName: row?.StorageName,
+    sku: row?.SKU,
+    qty: row?.Quantity ?? row?.Qty,
+    direction,
+    referenceType,
+    referenceCode,
+    movementDate
+  })).filter(Boolean)
+
+  if (!records.length) return null
   return {
-    valid: true,
-    nodes: [bulkNode(RESOURCE_NAME, records, [OUTLET_STORAGES, RESOURCE_NAME])],
+    resource: RESOURCE_NAME,
+    ...(text(role) ? { role: text(role) } : {}),
+    many: true,
+    records,
+    reload: [OUTLET_STORAGES],
     permissions: outletMovementPermissions()
   }
 }
 
 export function buildOutletMovementNode (row) {
-  return row ? createNode(RESOURCE_NAME, row, [OUTLET_STORAGES]) : null
+  if (!row) return null
+  return {
+    resource: RESOURCE_NAME,
+    record: row,
+    permissions: outletMovementPermissions(),
+    reload: [OUTLET_STORAGES]
+  }
 }
 
 export function useOutletMovementPayload () {
   return {
     RESOURCE_NAME,
     OUTLET_REFERENCE,
+    OUTLET_ROLE,
     OFF_THE_SHELF,
     ONTO_THE_SHELF,
     DEFAULT_STORAGE,
     outletMovementRow,
+    outletMovementsNode,
     outletMovementPermissions,
     buildOutletMovementNodes,
     buildOutletMovementNode

@@ -148,14 +148,14 @@ const allOutstandingCodes = computed(() =>
 // Held in a control field. The sticky bar reads it back to build the batch.
 
 const selectedCodes = computed(() => {
-  const raw = pageState?.getControlField(NODE, SELECTION_FIELD)
+  const raw = pageState?.getControls(SELECTION_FIELD, null, NODE)
   return Array.isArray(raw) ? raw.map(text).filter(Boolean) : []
 })
 
 const selectedSet = computed(() => new Set(selectedCodes.value))
 
 const setSelection = (codes) =>
-  pageState?.setControlField(NODE, SELECTION_FIELD, [...new Set((codes || []).map(text).filter(Boolean))])
+  pageState?.setControls(SELECTION_FIELD, [...new Set((codes || []).map(text).filter(Boolean))], NODE)
 
 const isSelected = (code) => selectedSet.value.has(text(code))
 
@@ -203,8 +203,8 @@ const summaryLine = computed(() => {
 const outstandingLine = computed(() =>
   `${allOutstandingCodes.value.length} still to deliver on this run`)
 
-const comment = computed(() => pageState?.getControlField(NODE, COMMENT_FIELD) || '')
-const setComment = (value) => pageState?.setControlField(NODE, COMMENT_FIELD, value)
+const comment = computed(() => pageState?.getControls(COMMENT_FIELD, null, NODE) || '')
+const setComment = (value) => pageState?.setControls(COMMENT_FIELD, value, NODE)
 
 // Warehouse and bin are established on the manifest; repeating them per line pushed the
 // variant that actually tells two SKUs apart out of view.
@@ -214,7 +214,7 @@ function lineCaption (line) {
 
 onMounted(async () => {
   setSelection([])
-  pageState?.setControlField(NODE, COMMENT_FIELD, '')
+  pageState?.setControls(COMMENT_FIELD, '', NODE)
   await preload()
 })
 </script>

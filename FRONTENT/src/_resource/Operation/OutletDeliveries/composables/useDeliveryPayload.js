@@ -42,7 +42,7 @@
  * store and reasonably conclude this file broke the rule.
  */
 
-import { createNode, updateNode } from 'src/composables/resources/nodePayloads'
+import { textOrRef } from 'src/utils/appHelpers'
 import {
   buildRestockDeliveryNodes,
   nextRestockProgress
@@ -143,10 +143,18 @@ function restockProgressRefreshNodes (restockCodes, allItemRows) {
   // A role per request code: nodes are addressed by resource plus role, so roleless
   // updates for several restocks would collapse onto one address.
   return [...new Set(asList(restockCodes).map(text).filter(Boolean))]
-    .map((code) => updateNode(RESTOCKS, code, {
-      // The restock domain's own formula, over that request's FULL active child set.
-      Progress: nextRestockProgress(byRestock.get(code) || [], [])
-    }, [RESTOCKS], code))
+    .map((code) => ({
+      resource: RESTOCKS,
+      role: code,
+      code: textOrRef(code),
+      record: {
+        // The restock domain's own formula, over that request's FULL active child set.
+        Progress: nextRestockProgress(byRestock.get(code) || [], [])
+      },
+      reload: [RESTOCKS]
+    , permissions: { update: 'You are not allowed to update this outlet restock.' }, successMsg: allDelivered
+      ? `Delivery ${code} completed — all ${ratio.total} items delivered.`
+      : `${targetCodes.length} item${targetCodes.length === 1 ? '' : 's'} delivered. ${ratio.total - ratio.delivered} remaining.`}))
 }
 
 // ─── 1. Creating a manifest ───────────────────────────────────────────────────
@@ -162,10 +170,10 @@ function restockProgressRefreshNodes (restockCodes, allItemRows) {
 export function buildDeliveryCreateNodes ({ date = '', userName = '', selectedOrsiCodes = [] } = {}) {
   const codes = asList(selectedOrsiCodes).map(text).filter(Boolean)
   if (!codes.length) {
-    return { valid: false, message: 'Select at least one allocated item for this delivery.' }
+    return [{ valid: false, message: 'Select at least one allocated item for this delivery.' }]
   }
   if (!text(userName)) {
-    return { valid: false, message: 'A driver or delivery agent is required.' }
+    return [{ valid: false, message: 'A driver or delivery agent is required.' }]
   }
 
   const record = {
@@ -176,12 +184,9 @@ export function buildDeliveryCreateNodes ({ date = '', userName = '', selectedOr
     Status: 'Active'
   }
 
-  return {
-    valid: true,
-    nodes: [createNode(RESOURCE_NAME, record, [RESOURCE_NAME])],
-    permissions: { outletDelivery: 'create' },
-    successMsg: `Delivery draft created with ${codes.length} item${codes.length === 1 ? '' : 's'}.`
-  }
+  return [
+    { resource: RESOURCE_NAME, record: record, reload: [RESOURCE_NAME], successMsg: `Delivery draft created with ${codes.length} item${codes.length === 1 ? '' : 's'}.` }
+  ]
 }
 
 // ─── 2. Departure ─────────────────────────────────────────────────────────────
@@ -197,25 +202,20 @@ export function buildDeliveryMarkInTransitNodes ({ record = {}, actorName = '', 
   const row = asRow(record)
   const code = text(row.Code)
 
-  if (!code) return { valid: false, message: 'Delivery code is missing.' }
+  if (!code) return [{ valid: false, message: 'Delivery code is missing.' }]
   if (!isDraft(row)) {
-    return { valid: false, message: 'Only a draft delivery can be marked as in transit.' }
+    return [{ valid: false, message: 'Only a draft delivery can be marked as in transit.' }]
   }
   if (!orsisForDelivery(row).length) {
-    return { valid: false, message: 'This delivery carries no items.' }
+    return [{ valid: false, message: 'This delivery carries no items.' }]
   }
 
-  return {
-    valid: true,
-    nodes: [
-      updateNode(RESOURCE_NAME, code, {
+  return [
+    { resource: RESOURCE_NAME, code: textOrRef(code), record: {
         Progress: IN_TRANSIT,
         ...stampFields('ProgressInTransit', actorName, comment || 'Delivery departed.')
-      }, [RESOURCE_NAME])
-    ],
-    permissions: { outletDelivery: 'makeInTransit' },
-    successMsg: 'Delivery marked as in transit.'
-  }
+      }, reload: [RESOURCE_NAME], successMsg: 'Delivery marked as in transit.' }
+  ]
 }
 
 // ─── 3. Proof of delivery ─────────────────────────────────────────────────────
@@ -252,9 +252,9 @@ export function buildDeliveryMarkDeliveredNodes ({
   const manifest = asRow(deliveryRecord)
   const code = text(manifest.Code)
 
-  if (!code) return { valid: false, message: 'Delivery code is missing.' }
+  if (!code) return [{ valid: false, message: 'Delivery code is missing.' }]
   if (!canDeliver(manifest)) {
-    return { valid: false, message: 'This delivery has come to rest and can no longer take deliveries.' }
+    return [{ valid: false, message: 'This delivery has come to rest and can no longer take deliveries.' }]
   }
 
   const manifestCodes = orsisForDelivery(manifest)
@@ -269,7 +269,7 @@ export function buildDeliveryMarkDeliveredNodes ({
     .filter((itemCode) => text(itemsByCode.get(itemCode)?.Progress) !== ITEM_DELIVERED)
 
   if (!targetCodes.length) {
-    return { valid: false, message: 'Select at least one undelivered item on this delivery.' }
+    return [{ valid: false, message: 'Select at least one undelivered item on this delivery.' }]
   }
 
   const note = text(comment) || `Delivered by ${text(actorName) || 'driver'}, ${code}`
@@ -277,7 +277,7 @@ export function buildDeliveryMarkDeliveredNodes ({
   // One leg per parent request — the grouping the restock domain expects.
   const groups = groupByRestock(targetCodes, itemsByCode)
   if (!groups.size) {
-    return { valid: false, message: 'The selected items could not be matched to a restock request.' }
+    return [{ valid: false, message: 'The selected items could not be matched to a restock request.' }]
   }
 
   const nodes = []
@@ -303,14 +303,11 @@ export function buildDeliveryMarkDeliveredNodes ({
       referenceCode: code,
       // One role per parent request, so several requests on one run stay separate nodes.
       role: restockCode
-    }).nodes)
+    }))
   }
 
   if (missingParents.length) {
-    return {
-      valid: false,
-      message: `Restock request ${missingParents[0]} could not be loaded, so its items cannot be delivered.`
-    }
+    return [{ valid: false, message: `Restock request ${missingParents[0]} could not be loaded, so its items cannot be delivered.` }]
   }
 
   // The manifest's own state, asked of the picture AFTER this batch lands. The index is
@@ -327,26 +324,14 @@ export function buildDeliveryMarkDeliveredNodes ({
   const allDelivered = ratio.total > 0 && ratio.delivered === ratio.total
   const nextProgress = allDelivered ? COMPLETED : IN_TRANSIT
 
-  nodes.push(updateNode(RESOURCE_NAME, code, {
+  nodes.push({ resource: RESOURCE_NAME, code: textOrRef(code), record: {
     Progress: nextProgress,
     ...(allDelivered
       ? stampFields('ProgressCompleted', actorName, `All ${ratio.total} items delivered.`)
       : stampFields('ProgressInTransit', actorName, `Delivered ${ratio.delivered} of ${ratio.total} items.`))
-  }, ['OutletStorages', RESTOCK_ITEMS, RESOURCE_NAME, RESTOCKS]))
+  }, reload: ['OutletStorages', RESTOCK_ITEMS, RESOURCE_NAME, RESTOCKS] })
 
-  return {
-    valid: true,
-    nodes,
-    permissions: {
-      outletDelivery: 'markDeliver',
-      outletRestockItem: 'update',
-      outletRestock: 'update',
-      outletMovement: 'create'
-    },
-    successMsg: allDelivered
-      ? `Delivery ${code} completed — all ${ratio.total} items delivered.`
-      : `${targetCodes.length} item${targetCodes.length === 1 ? '' : 's'} delivered. ${ratio.total - ratio.delivered} remaining.`
-  }
+  return nodes
 }
 
 // ─── 4. Editing the line-up ───────────────────────────────────────────────────
@@ -377,14 +362,14 @@ export function buildDeliveryEditManifestNodes ({
   const manifest = asRow(record)
   const code = text(manifest.Code)
 
-  if (!code) return { valid: false, message: 'Delivery code is missing.' }
+  if (!code) return [{ valid: false, message: 'Delivery code is missing.' }]
   if (isCancelled(manifest) || isCompleted(manifest)) {
-    return { valid: false, message: 'This delivery has come to rest and its items can no longer be changed.' }
+    return [{ valid: false, message: 'This delivery has come to rest and its items can no longer be changed.' }]
   }
 
   const nextCodes = [...new Set(asList(newOrsiCodes).map(text).filter(Boolean))]
   if (!nextCodes.length) {
-    return { valid: false, message: 'A delivery must carry at least one item. Cancel it instead.' }
+    return [{ valid: false, message: 'A delivery must carry at least one item. Cancel it instead.' }]
   }
 
   const itemsByCode = indexByCode(allOrsiRows)
@@ -396,10 +381,7 @@ export function buildDeliveryEditManifestNodes ({
     .filter((itemCode) => text(itemsByCode.get(itemCode)?.Progress) === ITEM_DELIVERED)
 
   if (droppedDelivered.length) {
-    return {
-      valid: false,
-      message: `${droppedDelivered.length} selected item${droppedDelivered.length === 1 ? ' has' : 's have'} already been delivered and cannot be removed from this delivery.`
-    }
+    return [{ valid: false, message: `${droppedDelivered.length} selected item${droppedDelivered.length === 1 ? ' has' : 's have'} already been delivered and cannot be removed from this delivery.` }]
   }
 
   // Every parent touched on either side of the change — a request that lost its last line
@@ -423,15 +405,10 @@ export function buildDeliveryEditManifestNodes ({
       : {})
   }
 
-  return {
-    valid: true,
-    nodes: [
-      updateNode(RESOURCE_NAME, code, update, [RESOURCE_NAME, RESTOCK_ITEMS, RESTOCKS]),
-      ...restockProgressRefreshNodes([...affectedRestocks], allOrsiRows)
-    ],
-    permissions: { outletDelivery: 'update', outletRestock: 'update' },
-    successMsg: `Delivery updated — ${nextCodes.length} item${nextCodes.length === 1 ? '' : 's'}.`
-  }
+  return [
+    { resource: RESOURCE_NAME, code: textOrRef(code), record: update, reload: [RESOURCE_NAME, RESTOCK_ITEMS, RESTOCKS], successMsg: `Delivery updated — ${nextCodes.length} item${nextCodes.length === 1 ? '' : 's'}.` },
+    ...restockProgressRefreshNodes([...affectedRestocks], allOrsiRows)
+  ]
 }
 
 /**
@@ -449,7 +426,7 @@ export function buildDeliveryRemoveItemsNodes ({
 } = {}) {
   const manifest = asRow(deliveryRecord)
   const removing = new Set(asList(orsiCodesToRemove).map(text).filter(Boolean))
-  if (!removing.size) return { valid: false, message: 'Select at least one item to remove.' }
+  if (!removing.size) return [{ valid: false, message: 'Select at least one item to remove.' }]
 
   const remaining = orsisForDelivery(manifest).filter((code) => !removing.has(code))
 
@@ -483,29 +460,21 @@ export function buildDeliveryMarkCompleteNodes ({
   const manifest = asRow(record)
   const code = text(manifest.Code)
 
-  if (!code) return { valid: false, message: 'Delivery code is missing.' }
+  if (!code) return [{ valid: false, message: 'Delivery code is missing.' }]
   if (!isInTransit(manifest)) {
-    return { valid: false, message: 'Only a delivery in transit can be completed.' }
+    return [{ valid: false, message: 'Only a delivery in transit can be completed.' }]
   }
   if (!canComplete(manifest, orsiRows)) {
     const ratio = deliveryRatio(manifest, orsiRows)
-    return {
-      valid: false,
-      message: `${ratio.total - ratio.delivered} item${ratio.total - ratio.delivered === 1 ? ' is' : 's are'} still undelivered on this delivery.`
-    }
+    return [{ valid: false, message: `${ratio.total - ratio.delivered} item${ratio.total - ratio.delivered === 1 ? ' is' : 's are'} still undelivered on this delivery.` }]
   }
 
-  return {
-    valid: true,
-    nodes: [
-      updateNode(RESOURCE_NAME, code, {
+  return [
+    { resource: RESOURCE_NAME, code: textOrRef(code), record: {
         Progress: COMPLETED,
         ...stampFields('ProgressCompleted', actorName, comment || 'Delivery confirmed complete.')
-      }, [RESOURCE_NAME])
-    ],
-    permissions: { outletDelivery: 'markComplete' },
-    successMsg: `Delivery ${code} completed.`
-  }
+      }, reload: [RESOURCE_NAME], successMsg: `Delivery ${code} completed.` }
+  ]
 }
 
 /**
@@ -530,20 +499,17 @@ export function buildDeliveryCancelNodes ({
   const manifest = asRow(record)
   const code = text(manifest.Code)
 
-  if (!code) return { valid: false, message: 'Delivery code is missing.' }
-  if (isCancelled(manifest)) return { valid: false, message: 'This delivery is already cancelled.' }
-  if (!text(reason)) return { valid: false, message: 'A cancellation reason is required.' }
+  if (!code) return [{ valid: false, message: 'Delivery code is missing.' }]
+  if (isCancelled(manifest)) return [{ valid: false, message: 'This delivery is already cancelled.' }]
+  if (!text(reason)) return [{ valid: false, message: 'A cancellation reason is required.' }]
 
   if (!canCancel(manifest, orsiRows)) {
     // The two failures are genuinely different and the operator's next step differs, so
     // they are reported apart rather than as one "cannot cancel".
     if (!isDraft(manifest)) {
-      return { valid: false, message: 'Only a draft delivery can be cancelled. Remove its remaining items instead.' }
+      return [{ valid: false, message: 'Only a draft delivery can be cancelled. Remove its remaining items instead.' }]
     }
-    return {
-      valid: false,
-      message: 'Items on this delivery have already been handed over, so it can no longer be cancelled.'
-    }
+    return [{ valid: false, message: 'Items on this delivery have already been handed over, so it can no longer be cancelled.' }]
   }
 
   const affectedRestocks = new Set()
@@ -553,19 +519,14 @@ export function buildDeliveryCancelNodes ({
     if (parentCode) affectedRestocks.add(parentCode)
   }
 
-  return {
-    valid: true,
-    nodes: [
-      updateNode(RESOURCE_NAME, code, {
+  return [
+    { resource: RESOURCE_NAME, code: textOrRef(code), record: {
         Progress: CANCELLED,
         // Plain Cancelled* - this sheet does NOT prefix them with Progress.
         ...stampFields('Cancelled', actorName, reason)
-      }, [RESOURCE_NAME, RESTOCKS]),
-      ...restockProgressRefreshNodes([...affectedRestocks], orsiRows)
-    ],
-    permissions: { outletDelivery: 'cancel', outletRestock: 'update' },
-    successMsg: `Delivery ${code} cancelled. Its items are available for another run.`
-  }
+      }, reload: [RESOURCE_NAME, RESTOCKS], successMsg: `Delivery ${code} cancelled. Its items are available for another run.` },
+    ...restockProgressRefreshNodes([...affectedRestocks], orsiRows)
+  ]
 }
 
 // Composable shape for setup-context callers. Same functions, one import (§5).

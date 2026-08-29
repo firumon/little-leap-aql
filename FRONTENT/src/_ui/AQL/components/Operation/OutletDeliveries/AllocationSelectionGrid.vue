@@ -92,11 +92,11 @@ const summaryLine = computed(() => selectionSummary.value.label)
 // ─── Expansion ────────────────────────────────────────────────────────────────
 
 const openKeys = computed(() => {
-  const raw = pageState?.getControlField(SELECTION, 'OpenKeys')
+  const raw = pageState?.getControls('OpenKeys', null, SELECTION)
   return new Set(Array.isArray(raw) ? raw : [])
 })
 
-const setOpenKeys = (keys) => pageState?.setControlField(SELECTION, 'OpenKeys', [...keys])
+const setOpenKeys = (keys) => pageState?.setControls('OpenKeys', [...keys], SELECTION)
 
 function toggleOpen (key) {
   const next = new Set(openKeys.value)
@@ -125,7 +125,7 @@ const onToggle = (node, on) => {
 
 // Keyed, not unconditional: the record arrives late, and re-seeding on every tick would
 // wipe edits already made.
-const hydratedFor = () => String(pageState?.getControlField(SELECTION, 'HydratedFor') ?? '').trim()
+const hydratedFor = () => String(pageState?.getControls('HydratedFor', null, SELECTION) ?? '').trim()
 
 function seedSelection () {
   const record = manifest()
@@ -133,14 +133,14 @@ function seedSelection () {
 
   if (!code) {
     if (hydratedFor() !== '__add') {
-      pageState?.setControlField(SELECTION, 'HydratedFor', '__add')
+      pageState?.setControls('HydratedFor', '__add', SELECTION)
       setSelection([])
     }
     return
   }
 
   if (hydratedFor() === code) return
-  pageState?.setControlField(SELECTION, 'HydratedFor', code)
+  pageState?.setControls('HydratedFor', code, SELECTION)
   setSelection(orsisForDelivery(record))
 }
 

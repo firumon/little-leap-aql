@@ -146,19 +146,19 @@ export function useDeliverySelection (options = {}) {
   })
 
   const warehouseFilter = computed(() =>
-    text(pageState?.getControlField(SELECTION, WAREHOUSE_FILTER)))
+    text(pageState?.getControls(WAREHOUSE_FILTER, null, SELECTION)))
 
   const setWarehouseFilter = (value) =>
-    pageState?.setControlField(SELECTION, WAREHOUSE_FILTER, text(value))
+    pageState?.setControls(WAREHOUSE_FILTER, text(value), SELECTION)
 
   const selectedWarehouse = computed(() =>
     warehouseOptions.value.find((option) => option.value === warehouseFilter.value) || null)
 
   const groupBy = computed(() =>
-    text(pageState?.getControlField(SELECTION, GROUP_BY)) || DEFAULT_GROUP_BY)
+    text(pageState?.getControls(GROUP_BY, null, SELECTION)) || DEFAULT_GROUP_BY)
 
   const setGroupBy = (value) =>
-    pageState?.setControlField(SELECTION, GROUP_BY, text(value) || DEFAULT_GROUP_BY)
+    pageState?.setControls(GROUP_BY, text(value) || DEFAULT_GROUP_BY, SELECTION)
 
   /** The queue after the warehouse filter — what the tree actually renders. */
   const visibleItems = computed(() => {
@@ -265,15 +265,14 @@ export function useDeliverySelection (options = {}) {
   // Held in a control field. The sticky bar reads it back to build the batch.
 
   const selectedCodes = computed(() => {
-    const raw = pageState?.getControlField(SELECTION, 'Codes')
+    const raw = pageState?.getControls('Codes', null, SELECTION)
     return Array.isArray(raw) ? raw.map(text).filter(Boolean) : []
   })
 
   const selectedSet = computed(() => new Set(selectedCodes.value))
 
   function setSelection (codes) {
-    pageState?.setControlField(SELECTION, 'Codes',
-      [...new Set((codes || []).map(text).filter(Boolean))])
+    pageState?.setControls('Codes', [...new Set((codes || []).map(text).filter(Boolean))], SELECTION)
   }
 
   const isSelected = (code) => selectedSet.value.has(text(code))

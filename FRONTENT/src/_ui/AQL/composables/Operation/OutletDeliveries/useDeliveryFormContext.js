@@ -20,7 +20,7 @@ import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
  * Layer 2, not a second injection.
  *
  * The RAW injected handles are returned, not unwrapped values: `pageState` is an imperative
- * API (`useNode`, `getControlField`, `setField`) that must pass through untouched, and
+ * API (`useNode`, `getControl`, `setField`) that must pass through untouched, and
  * `resourceRecord` is read by callers that already know its shape.
  */
 export function useDeliveryFormContext () {

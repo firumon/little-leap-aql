@@ -17,7 +17,7 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
   const actor = () => text(user.value?.name || user.value?.email || '')
 
   const selectedCodes = () => {
-    const raw = pageState.getControlField(SELECTION, 'Codes')
+    const raw = pageState.getControls('Codes', null, SELECTION)
     return Array.isArray(raw) ? raw.map(text).filter(Boolean) : []
   }
 
@@ -45,15 +45,12 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         actorName: actor()
       })
 
-      if (!result.valid) return { valid: false, message: result.message }
 
-      if (resourceConfig?.allowed(result.permissions) !== true) {
-        return { valid: false, message: 'You are not allowed to change this delivery.' }
-      }
 
-      pageState.applyNodes(result.nodes)
+      const applied = pageState.applyNodes(result)
+      if (applied.valid === false) return false
       return {
-        successMsg: result.successMsg,
+        successMsg: applied.successMsg,
         onSuccess: () => { pageState.reset() }
       }
     },

@@ -21,11 +21,11 @@ export default (props, { pageState, resourceConfig }) => {
   const step = () => pageState.meta?.currentStep || 1
 
   const selectedCodes = () => {
-    const raw = pageState.getControlField(SELECTION, 'Codes')
+    const raw = pageState.getControls('Codes', null, SELECTION)
     return Array.isArray(raw) ? raw.map(text).filter(Boolean) : []
   }
 
-  const warehouse = () => text(pageState.getControlField(SELECTION, WAREHOUSE_FILTER))
+  const warehouse = () => text(pageState.getControls(WAREHOUSE_FILTER, null, SELECTION))
 
   /** A run loads one van at one warehouse, so the ticks may not straddle two of them. */
   const warehousesOfSelection = () => {
@@ -69,15 +69,12 @@ export default (props, { pageState, resourceConfig }) => {
         selectedOrsiCodes: selectedCodes()
       })
 
-      if (!result.valid) return { valid: false, message: result.message }
 
-      if (resourceConfig?.allowed(result.permissions) !== true) {
-        return { valid: false, message: 'You are not allowed to create a delivery.' }
-      }
 
-      pageState.applyNodes(result.nodes)
+      const applied = pageState.applyNodes(result)
+      if (applied.valid === false) return false
       return {
-        successMsg: result.successMsg,
+        successMsg: applied.successMsg,
         // Otherwise the selection survives the navigation and re-seeds the next visit with
         // lines that are now on the run just created.
         onSuccess: () => { pageState.reset() }

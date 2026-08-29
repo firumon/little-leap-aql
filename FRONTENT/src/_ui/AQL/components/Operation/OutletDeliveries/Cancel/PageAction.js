@@ -38,7 +38,7 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
 
   const record = () => resourceRecord?.record?.value || {}
   const actor = () => text(user.value?.name || user.value?.email || '')
-  const reason = () => text(pageState.getControlField(NODE, 'CancelReason'))
+  const reason = () => text(pageState.getControls('CancelReason', null, NODE))
 
   /** Only the rows this manifest carries — see `MarkComplete/PageAction.js`. */
   const manifestRows = () => itemRowsForCodes(orsisForDelivery(record()))
@@ -67,15 +67,12 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         reason: reason()
       })
 
-      if (!result.valid) return { valid: false, message: result.message }
 
-      if (resourceConfig?.allowed(result.permissions) !== true) {
-        return { valid: false, message: 'You are not allowed to cancel this delivery.' }
-      }
 
-      pageState.applyNodes(result.nodes)
+      const applied = pageState.applyNodes(result)
+      if (applied.valid === false) return false
       return {
-        successMsg: result.successMsg,
+        successMsg: applied.successMsg,
         onSuccess: () => { pageState.reset() }
       }
     },

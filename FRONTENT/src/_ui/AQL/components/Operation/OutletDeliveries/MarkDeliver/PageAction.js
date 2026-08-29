@@ -49,7 +49,7 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
   const actor = () => text(user.value?.name || user.value?.email || '')
 
   const selectedCodes = () => {
-    const raw = pageState.getControlField(NODE, SELECTION_FIELD)
+    const raw = pageState.getControls(SELECTION_FIELD, null, NODE)
     return Array.isArray(raw) ? raw.map(text).filter(Boolean) : []
   }
 
@@ -80,18 +80,15 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         allOrsiRows: restockItemRows(),
         allRestockRows: restockRows(),
         actorName: actor(),
-        comment: text(pageState.getControlField(NODE, COMMENT_FIELD))
+        comment: text(pageState.getControls(COMMENT_FIELD, null, NODE))
       })
 
-      if (!result.valid) return { valid: false, message: result.message }
 
-      if (resourceConfig?.allowed(result.permissions) !== true) {
-        return { valid: false, message: 'You are not allowed to record this delivery.' }
-      }
 
-      pageState.applyNodes(result.nodes)
+      const applied = pageState.applyNodes(result)
+      if (applied.valid === false) return false
       return {
-        successMsg: result.successMsg,
+        successMsg: applied.successMsg,
         // The ticks and the note would otherwise survive the navigation and re-seed the next
         // run opened on this route.
         onSuccess: () => { pageState.reset() }

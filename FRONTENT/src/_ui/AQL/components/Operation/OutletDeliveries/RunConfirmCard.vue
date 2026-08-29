@@ -97,8 +97,8 @@ const outcomeIcon = computed(() => (props.outcomeTone === 'negative' ? 'warning'
 const outcomeClass = computed(() =>
   (props.outcomeTone === 'negative' ? 'bg-red-1 text-body2' : 'bg-blue-1 text-body2'))
 
-const comment = computed(() => pageState?.getControlField(NODE, props.commentField) || '')
-const setComment = (value) => pageState?.setControlField(NODE, props.commentField, value)
+const comment = computed(() => pageState?.getControls(props.commentField, null, NODE) || '')
+const setComment = (value) => pageState?.setControls(props.commentField, value, NODE)
 
 /**
  * The HYDRATION POINT for every route that mounts this card (§5.5).
@@ -107,7 +107,7 @@ const setComment = (value) => pageState?.setControlField(NODE, props.commentFiel
  * comment field and opens the item and restock sheets the ratio above is measured from.
  */
 onMounted(async () => {
-  pageState?.setControlField(NODE, props.commentField, '')
+  pageState?.setControls(props.commentField, '', NODE)
   await preload()
 })
 </script>

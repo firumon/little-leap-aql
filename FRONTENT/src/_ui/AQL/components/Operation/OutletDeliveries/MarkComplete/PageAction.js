@@ -66,18 +66,15 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         record: row,
         orsiRows: manifestRows(),
         actorName: actor(),
-        comment: text(pageState.getControlField(NODE, 'CompleteComment'))
+        comment: text(pageState.getControls('CompleteComment', null, NODE))
       })
 
-      if (!result.valid) return { valid: false, message: result.message }
 
-      if (resourceConfig?.allowed(result.permissions) !== true) {
-        return { valid: false, message: 'You are not allowed to complete this delivery.' }
-      }
 
-      pageState.applyNodes(result.nodes)
+      const applied = pageState.applyNodes(result)
+      if (applied.valid === false) return false
       return {
-        successMsg: result.successMsg,
+        successMsg: applied.successMsg,
         onSuccess: () => { pageState.reset() }
       }
     },

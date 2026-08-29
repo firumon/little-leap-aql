@@ -1,6 +1,5 @@
 import { useDataStore } from 'src/stores/data'
 import { textOrRef } from 'src/utils/appHelpers'
-import { bulkNode } from 'src/composables/resources/nodePayloads'
 
 // The tax ledger: one row per document per tax code, so a return can be filed without
 // parsing every invoice's TaxDetails JSON. No arithmetic here.
@@ -47,7 +46,9 @@ export function buildTaxTransactionNodes ({
     .map(asRow)
     .filter((entry) => text(entry.TaxCode))
 
-  if (!name || !resourceCode || !entries.length) return { valid: true, nodes: [], permissions: {} }
+  if (!name || !resourceCode || !entries.length) return [
+    
+  ]
 
   const rows = entries.map((entry) => ({
     Date: text(date) || todayISO(),
@@ -62,11 +63,11 @@ export function buildTaxTransactionNodes ({
     Status: 'Active'
   }))
 
-  return {
-    valid: true,
-    nodes: [bulkNode(TAX_TRANSACTIONS, rows, [TAX_TRANSACTIONS])],
-    permissions: { taxTransaction: 'create' }
-  }
+  return [
+    { resource: TAX_TRANSACTIONS, many: true, records: rows, reload: [TAX_TRANSACTIONS],
+      permissions: { create: 'You are not allowed to create this tax transaction.' }
+    }
+  ]
 }
 
 // Deactivated, never deleted: a filed return must stay reconstructable.
@@ -75,18 +76,20 @@ export function buildTaxTransactionReversalNodes ({ existingRows = [] } = {}) {
     .map(asRow)
     .filter((row) => text(row.Code))
 
-  if (!rows.length) return { valid: true, nodes: [], permissions: {} }
+  if (!rows.length) return [
+    
+  ]
 
   // One bulk, not one update per row: they all address the same resource, and a node is
   // addressed by resource.
-  return {
-    valid: true,
-    nodes: [bulkNode(TAX_TRANSACTIONS, rows.map((row) => ({
+  return [
+    { resource: TAX_TRANSACTIONS, many: true, records: rows.map((row) => ({
       Code: text(row.Code),
       Status: 'Inactive'
-    })), [TAX_TRANSACTIONS])],
-    permissions: { taxTransaction: 'update' }
-  }
+    })), reload: [TAX_TRANSACTIONS],
+      permissions: { update: 'You are not allowed to update this tax transaction.' }
+    }
+  ]
 }
 
 // Replace rather than update in place: an edit can change the SET of tax codes, not just
@@ -98,11 +101,10 @@ export function buildTaxTransactionReplacementNodes ({
   const reversal = buildTaxTransactionReversalNodes({ existingRows })
   const fresh = buildTaxTransactionNodes(creation)
 
-  return {
-    valid: true,
-    nodes: [...reversal.nodes, ...fresh.nodes],
-    permissions: { ...reversal.permissions, ...fresh.permissions }
-  }
+  return [
+    ...reversal,
+    ...fresh
+  ]
 }
 
 export function useTaxTransactionPayload () {

@@ -49,8 +49,8 @@ export function useInvoiceSettleContext () {
   const currencyCode = computed(() => invoiceCurrencyOf(record.value?.PriceListCode))
   const money = (value) => _C(Number(value) || 0, true, currencyCode.value)
 
-  const control = (key) => pageState?.getControlField(NODE, key)
-  const setControl = (key, value) => pageState?.setControlField(NODE, key, value)
+  const control = (key) => pageState?.getControls(key, null, NODE)
+  const setControl = (key, value) => pageState?.setControls(key, value, NODE)
 
   const reason = computed(() => String(control('SettlementReason') || '').trim())
   const comment = computed(() => String(control('SettlementComment') || '').trim())

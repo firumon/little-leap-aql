@@ -1,5 +1,4 @@
 import { textOrRef } from 'src/utils/appHelpers'
-import { bulkNode } from 'src/composables/resources/nodePayloads'
 
 // The invoice's line rows. Their SHAPE lived in OutletConsumptions, which does not own
 // them - a consumption discovers what is billable, an invoice item states what was billed.
@@ -34,12 +33,12 @@ export function buildInvoiceItemNodes (lines = [], invoiceCode = '') {
   const records = (Array.isArray(lines) ? lines : [])
     .filter(Boolean)
     .map((line) => invoiceItemRow(line, invoiceCode))
-  if (!records.length) return { valid: true, nodes: [], permissions: {} }
-  return {
-    valid: true,
-    nodes: [bulkNode(RESOURCE_NAME, records, [RESOURCE_NAME])],
-    permissions: invoiceItemPermissions()
-  }
+  if (!records.length) return [
+    
+  ]
+  return [
+    { resource: RESOURCE_NAME, many: true, records: records, reload: [RESOURCE_NAME] }
+  ]
 }
 
 // The rows an EDIT rewrites, keyed by Code. Only lines whose figures actually moved, so

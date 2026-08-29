@@ -19,8 +19,8 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
 
   // Same EditFor guard as the context: stale answers must not reach another invoice.
   const field = (header) => {
-    if (text(pageState.getControlField(NODE, 'EditFor')) !== text(record().Code)) return undefined
-    return pageState.getControlField(NODE, header)
+    if (text(pageState.getControls('EditFor', null, NODE)) !== text(record().Code)) return undefined
+    return pageState.getControls(header, null, NODE)
   }
 
   const overrides = () => {
@@ -70,14 +70,11 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         })
       })
 
-      if (!result.valid) return { valid: false, message: result.message }
-      if (resourceConfig?.allowed(result.permissions) !== true) {
-        return { valid: false, message: 'You are not allowed to change this invoice.' }
-      }
 
-      pageState.applyNodes(result.nodes)
+      const applied = pageState.applyNodes(result)
+      if (applied.valid === false) return false
 
-      return { successMsg: result.successMsg }
+      return { successMsg: applied.successMsg }
     },
 
     // Never return an `onSuccess` with the requests: that would replace PageAction.vue's

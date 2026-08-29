@@ -46,16 +46,16 @@ export function useInvoiceEditContext () {
   const defaults = computed(() => invoiceEditDefaults(record.value || {}))
 
   // The node outlives a route change, so answers typed against another invoice are ignored.
-  const ownsAnswers = () => text(pageState?.getControlField(NODE, 'EditFor')) === code.value
+  const ownsAnswers = () => text(pageState?.getControls('EditFor', null, NODE)) === code.value
 
   const field = (header) => {
     if (!ownsAnswers()) return undefined
-    return pageState?.getControlField(NODE, header)
+    return pageState?.getControls(header, null, NODE)
   }
 
   const setField = (header, value) => {
-    pageState?.setControlField(NODE, 'EditFor', code.value)
-    pageState?.setControlField(NODE, header, value)
+    pageState?.setControls('EditFor', code.value, NODE)
+    pageState?.setControls(header, value, NODE)
   }
 
   const dueDate = computed({

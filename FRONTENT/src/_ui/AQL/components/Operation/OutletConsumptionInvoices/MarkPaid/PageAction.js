@@ -38,7 +38,7 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
 
   const record = () => asRow(resourceRecord?.record?.value)
   const actor = () => text(user.value?.name || user.value?.email || '')
-  const control = (key) => pageState?.getControlField(NODE, key)
+  const control = (key) => pageState?.getControls(key, null, NODE)
 
   /** This invoice's own payment rows — the join the builder derives the balance from. */
   const paymentsFor = (code) => (dataStore.getRecords('OutletPayments') || [])
@@ -75,15 +75,12 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         mismatchAmount: control('SettlementMismatchAmount'),
         actorName: actor()
       })
-      if (!result.valid) return { valid: false, message: result.message }
 
-      if (resourceConfig?.allowed(result.permissions) !== true) {
-        return { valid: false, message: 'You are not allowed to settle this invoice.' }
-      }
 
-      pageState.applyNodes(result.nodes)
+      const applied = pageState.applyNodes(result)
+      if (applied.valid === false) return false
       return {
-        successMsg: result.successMsg,
+        successMsg: applied.successMsg,
         // Lands back on the record so the settlement banner is the first thing seen.
         // `reset()` first, or the typed reason survives and re-seeds the next visit.
         onSuccess: () => {

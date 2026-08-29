@@ -1,46 +1,18 @@
-/**
- * OutletConsumptionInvoices › the batch payloads an invoice writes — Layer 2.
- *
- * ── HOW THIS DIFFERS FROM THE CONSUMPTION-SIDE BUILDER ──
- * `OutletConsumptions/composables/useConsumptionPayload.js` already builds an invoice, for
- * the case where the consumption and its invoice are created in ONE submit. There, the
- * consumption's code does not exist yet, so the invoice's `OutletConsumptionCode` is a
- * `batchRefList` that GAS resolves.
- *
- * This module builds the OTHER case: an invoice raised from this resource's own Add page,
- * over consumptions that were recorded earlier and already have codes. Nothing is
- * unresolved, so nothing is a `$ref` except the invoice's own code, which its line items
- * chain off.
- *
- * The two are separate builders because their reference topology genuinely differs — but
- * they share the ONE arithmetic engine and the ONE return-adjustment builder, both imported
- * below rather than restated (UI_RESOURCE_DOMAIN_LOGIC.md §8.3).
- *
- * ── THE ENVELOPE ──
- * Every builder here returns the canonical `{ valid, nodes, permissions, message,
- * successMsg }` (§9.2), so Layer 3 does one `allowed(result.permissions)` check and hands
- * `result.nodes` straight to `pageState.applyNodes()` — it never inspects, reorders or adds
- * to them (§9.1, Zero UI Schema Invention).
- *
- * PURE (§9.6): no reactivity, no injects, no stores. Every record it needs is an argument.
- */
-
+// OutletConsumptionInvoices payloads. Layer 2. Raised here or from a consumption submit;
+// both share one arithmetic engine and one return-adjustment builder.
 import { batchRef, textOrRef } from 'src/utils/appHelpers'
-import { actionNode, bulkNode, createNode, derive, deriveNode, updateNode } from 'src/composables/resources/nodePayloads'
+import { useAuth } from 'src/composables/core/useAuth'
+import { resourceRow } from 'src/composables/resources/useResourceConfig'
 import { stampFields } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionPayload'
-/**
- * The OutletReturns domain owns both directions of the return-credit link (§9.1).
- *
- * An invoice DECIDES which returns it credits — that is an invoicing question. What
- * crediting does to a return row, and whether the row is thereby reconciled, is
- * OutletReturns' own rule, read here rather than restated.
- */
+// OutletReturns owns both directions of the return-credit link.
 import {
   buildReturnInvoiceAdjustmentLinkedNodes,
   buildReturnInvoiceCreditReversalNodes
 } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
-import { calculateConsumptionInvoice } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionInvoice'
-import { priceOf } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionStock'
+import { calculateConsumptionInvoice, makeLineTaxResolver } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionInvoice'
+import { priceOf, priceListForOutlet } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionStock'
+import { dueDateFrom } from './useInvoiceCalculation'
+import { useOutletOperatingRulesResource } from 'src/_resource/Master/OutletOperatingRules/composables/useOutletOperatingRulesResource'
 import {
   buildTaxTransactionNodes,
   buildTaxTransactionReplacementNodes,
@@ -73,16 +45,167 @@ const codeList = (values) => (Array.isArray(values) ? values : []).map(text).fil
 /** The batch path an invoice's children chain their parent code off. */
 export const INVOICE_REF_PATH = `${INVOICES}.latest.code`
 
+// ROW builder: one OutletConsumptionInvoiceItems sheet row.
+export function invoiceItemRow (row, extra) {
+  return resourceRow(INVOICE_ITEMS, row, extra)
+}
+
+const rowOf = (row) => asRow(row?.data ?? row)
+
+// The three header figures the line rows add up to. One definition for both derive rules.
+function sumItemFigures (rows = []) {
+  const list = (Array.isArray(rows) ? rows : []).map(rowOf)
+  const sum = (key) => list.reduce((total, row) => total + num(row[key]), 0)
+  return {
+    Subtotal: sum('Total'),
+    TotalTaxableAmount: sum('TaxableAmount'),
+    TotalTaxAmount: sum('TaxAmount')
+  }
+}
+
+// NODE builder: an invoice and its lines, fully priced and taxed here. Layer 3 passes
+// `{ SKU, Qty }` and binds. `options.withDerive` (on by default) keeps totals in step.
+export function invoiceNode (parent = {}, children = [], extra = {}, options = {}) {
+  const { user } = useAuth()
+  const { invoiceDueDaysOf } = useOutletOperatingRulesResource()
+
+  const seed = { ...asRow(parent), ...asRow(extra) }
+  const outletCode = text(seed.OutletCode)
+  const date = text(seed.Date) || todayISO()
+  const priceListCode = text(seed.PriceListCode) || text(priceListForOutlet(outletCode)?.code)
+  const dueDate = text(seed.DueDate) || dueDateFrom(date, invoiceDueDaysOf(outletCode)) || date
+
+  const lines = (Array.isArray(children) ? children : []).map(rowOf)
+    .map((row) => ({ SKU: text(row.SKU), Qty: num(row.Qty) }))
+    .filter((line) => line.SKU && line.Qty > 0)
+
+  // The tax resolver needs the price too - without it every line taxes on zero.
+  const resolvePrice = typeof options.resolvePrice === 'function' ? options.resolvePrice : priceOf
+
+  // No lines means a header-only merge, so nothing is priced: zeroed totals would land on
+  // top of lines the node already carries.
+  const priced = lines.length
+    ? calculateConsumptionInvoice({
+      lines,
+      priceListCode,
+      discountType: text(seed.DiscountType) || 'FLAT',
+      discountValue: num(seed.DiscountValue ?? seed.Discount),
+      returnDeduction: num(seed.ReturnDeductionTotal),
+      resolvePrice,
+      calculateLineTax: options.calculateLineTax || makeLineTaxResolver({ priceListCode, resolvePrice })
+    })
+    : null
+
+  // `Total` is calculated but never stored — the sheet has no such column.
+  const { Total, ...totals } = priced?.header || {}
+
+  const record = resourceRow(INVOICES,
+    { Username: user.value?.name || '', Progress: PENDING_PAYMENT, Status: 'Active' },
+    parent, extra,
+    { Date: date, DueDate: dueDate, OutletCode: outletCode, PriceListCode: priceListCode, ...totals })
+
+  const rows = (priced?.lines || []).map((line) => invoiceItemRow(line))
+
+  return {
+    resource: INVOICES,
+    record,
+    // No bucket when there are no lines, so a merge can set the header without wiping
+    // lines that are already there.
+    ...(rows.length ? { children: [{ resource: INVOICE_ITEMS, records: rows , permissions: { update: 'You are not allowed to update this outlet consumption invoice item.' }}] } : {}),
+    permissions: { create: 'You are not allowed to create an invoice.' },
+    ...(options.withDerive === false ? {} : { derive: invoiceCompositionDerive() })
+  , successMsg: 'Invoice cancelled.', successMsg: 'Invoice updated.'}
+}
+
+// ─── The invoice while it is being COMPOSED in pageState ─────────────────────
+
+const DISCOUNT_TYPE = 'DiscountType'
+const DISCOUNT_VALUE = 'DiscountValue'
+
+const blank = (value) => value === '' || value === null || value === undefined
+
+// The price a line is BILLED at: what the officer typed on the row, else the price list's.
+// A RESOLVER rather than pre-priced lines, so the typed price flows through tax and
+// discount apportionment inside the one engine.
+export function makeInvoiceLinePriceResolver (rows = []) {
+  const typed = new Map((Array.isArray(rows) ? rows : []).map(rowOf)
+    .map((row) => [text(row.SKU), row.Price]))
+  return (sku, listCode) => {
+    const value = typed.get(text(sku))
+    return blank(value) ? priceOf(sku, listCode) : num(value)
+  }
+}
+
+// Layer 2 recalculation over the live node: the line rows carry the prices, so one engine
+// call refreshes every line figure and every header total.
+export function repriceInvoiceInPageState (pageState) {
+  const record = pageState.getRecord(null, INVOICES)
+  if (!record) return
+
+  const rows = pageState.getChildRows(INVOICE_ITEMS, INVOICES)
+  if (!rows.length) return
+
+  const priceListCode = text(record.PriceListCode)
+  const resolvePrice = makeInvoiceLinePriceResolver(rows)
+
+  const priced = calculateConsumptionInvoice({
+    lines: rows.map((row) => ({ SKU: row.SKU, Qty: row.Qty })),
+    priceListCode,
+    discountType: text(pageState.getControls(DISCOUNT_TYPE, 'FLAT', INVOICES)) || 'FLAT',
+    discountValue: num(pageState.getControls(DISCOUNT_VALUE, 0, INVOICES)),
+    returnDeduction: num(record.ReturnDeductionTotal),
+    resolvePrice,
+    calculateLineTax: makeLineTaxResolver({ priceListCode, resolvePrice })
+  })
+
+  const bySku = new Map(priced.lines.map((line) => [text(line.SKU), line]))
+  rows.forEach((row, index) => {
+    const line = bySku.get(text(row.SKU))
+    if (!line) return
+    const figures = {
+      Price: line.Price,
+      Total: line.Total,
+      Discount: line.Discount,
+      TaxableAmount: line.TaxableAmount,
+      TaxAmount: line.TaxAmount,
+      TaxCode: line.TaxCode
+    }
+    // Only what MOVED: an unchanged write would re-trigger the watcher that called this.
+    const moved = Object.keys(figures).filter((key) => row[key] !== figures[key])
+    if (moved.length) {
+      pageState.setChildren(INVOICE_ITEMS, index, null,
+        Object.fromEntries(moved.map((key) => [key, figures[key]])), INVOICES)
+    }
+  })
+
+  // `Total` is derived by readers and the deduction is not this screen's to move.
+  const { Total, ReturnDeductionTotal, ...totals } = priced.header
+  pageState.setRecord(null, totals, INVOICES)
+}
+
+// What the composed invoice depends on: its own lines, its price list, its discount terms.
+export function invoiceCompositionDerive () {
+  const reprice = (value, pageState) => repriceInvoiceInPageState(pageState)
+  return [
+    { on: { resource: INVOICES, children: INVOICE_ITEMS , permissions: { create: 'You are not allowed to create this outlet consumption invoice.' }}, handler: reprice },
+    { on: { resource: INVOICES, control: DISCOUNT_TYPE , permissions: { update: 'You are not allowed to update this outlet consumption invoice.' }}, handler: reprice },
+    { on: { resource: INVOICES, control: DISCOUNT_VALUE }, handler: reprice },
+    { on: { resource: INVOICES, field: 'PriceListCode' }, handler: (value, pageState, previous) => {
+      // A different list re-prices every line: the typed prices were for the old one.
+      if (previous !== undefined && text(previous) !== text(value)) {
+        pageState.getChildRows(INVOICE_ITEMS, INVOICES).forEach((row, index) =>
+          pageState.setChildren(INVOICE_ITEMS, index, 'Price',
+            priceOf(row.SKU, text(value)) ?? 0, INVOICES))
+      }
+      repriceInvoiceInPageState(pageState)
+    } }
+  ]
+}
+
 // ─── 1. Generating an invoice ─────────────────────────────────────────────────
 
-// THE one writer of an invoice document. Both the standalone generation page and the
-// consumption wizard come through here, so the two cannot drift on what an invoice is.
-//
-// `consumptionRef` is what the header points at: real codes as a CSV, or a $ref when the
-// consumption is created in this same batch. `markConsumptions` are the rows walked to
-// INVOICE_GENERATED - a plain update, never executeAction('MarkInvoiceGenerated'), whose
-// `targets` block in syncAppResources.gs would create a SECOND, empty invoice beside the
-// real one this batch already wrote.
+// THE one writer of an invoice document. The standalone page and the consumption wizard
+// both come through here, so they cannot drift on what an invoice is.
 export function buildInvoiceDocumentNodes ({
   invoice = null,
   outletCode = '',
@@ -98,7 +221,7 @@ export function buildInvoiceDocumentNodes ({
   comment = ''
 } = {}) {
   if (!invoice?.lines?.length) {
-    return { valid: false, nodes: [], permissions: {}, message: 'Nothing on this invoice could be priced. Check the price list covers these SKUs.' }
+    return [{ valid: false, message: 'Nothing on this invoice could be priced. Check the price list covers these SKUs.' }]
   }
 
   const date = text(invoiceDate) || todayISO()
@@ -126,13 +249,18 @@ export function buildInvoiceDocumentNodes ({
   }
 
 
-  const markGenerated = marks.length
-    ? [bulkNode(CONSUMPTIONS, marks.map((code) => ({
-      Code: textOrRef(code),
+  // One role per code, or these collapse onto the consumption node the same batch creates.
+  // An update, not a bulk: GAS reads a bulk as an upload.
+  const markGenerated = marks.map((code, index) => ({
+    resource: CONSUMPTIONS,
+    role: `invoiceGenerated${index}`,
+    code: textOrRef(code),
+    record: {
       Progress: INVOICE_GENERATED,
       ...stampFields('ProgressInvoiceGenerated', actorName, 'Invoice generated from pending outlet consumption.')
-    })), [CONSUMPTIONS])]
-    : []
+    },
+    reload: [CONSUMPTIONS]
+  , permissions: { update: 'You are not allowed to update this outlet consumption.' }}))
 
   // Points at the invoice by $ref: its code does not exist until GAS commits the create.
   const ledger = buildTaxTransactionNodes({
@@ -149,57 +277,20 @@ export function buildInvoiceDocumentNodes ({
     ? buildReturnInvoiceAdjustmentLinkedNodes({ returnRows: credits, invoiceCode: batchRef(INVOICE_REF_PATH), actorName })
     : { nodes: [] }
 
-  return {
-    valid: true,
-    nodes: [
-      createNode(INVOICES, header, [INVOICES]),
-      ...buildInvoiceItemNodes(invoice.lines, batchRef(INVOICE_REF_PATH)).nodes,
-      ...ledger.nodes,
-      ...markGenerated,
-      ...linked.nodes,
-      // The stored totals follow the line items, so an edit to a row in pageState cannot
+  return [
+    { resource: INVOICES, record: header, reload: [INVOICES], successMsg: 'Invoice generated.' },
+    ...buildInvoiceItemNodes(invoice.lines, batchRef(INVOICE_REF_PATH)),
+    ...ledger,
+    ...markGenerated,
+    ...linked,
+    // The stored totals follow the line items, so an edit to a row in pageState cannot
       // leave the header claiming a figure nothing adds up to.
-      deriveNode(INVOICES, [derive(
-        { resource: INVOICE_ITEMS, records: true },
-        (rows, pageState) => {
-          const sum = (key) => (rows || []).reduce((total, row) => total + num(row?.data?.[key]), 0)
-          pageState.setFields(INVOICES, {
-            Subtotal: sum('Total'),
-            TotalTaxableAmount: sum('TaxableAmount'),
-            TotalTaxAmount: sum('TaxAmount')
-          })
-        }
-      )])
-    ],
-    permissions: {
-      outletConsumptionInvoice: 'create',
-      ...(marks.length ? { outletConsumption: 'update' } : {}),
-      ...(credits.length ? { outletReturn: 'update' } : {}),
-      ...ledger.permissions
-    },
-    successMsg: 'Invoice generated.',
-    invoice
-  }
+      { resource: INVOICES, derive: [{ on: { resource: INVOICE_ITEMS, records: true }, handler: (rows, pageState) => pageState.setRecord(null, sumItemFigures(rows), INVOICES) }] }
+  ]
 }
 
-/**
- * The whole chain an invoice generation writes, in dependency order:
- *
- *   1. the invoice header,
- *   2. its line items, chained to the header by `$ref`,
- *   3. `MarkInvoiceGenerated` on every consumption the invoice covers,
- *   4. `InvoiceAdjustmentDone` on every return it credited.
- *
- * ORDER IS THE CONTRACT, not a preference (§9.3): the items reference a header that must
- * already exist, and the consumptions must not be walked to `INVOICE_GENERATED` until the
- * invoice they are claiming actually landed. GAS commits the array atomically, so a failure
- * anywhere leaves every consumption still invoiceable rather than pointing at an invoice
- * that was never written.
- *
- * The arithmetic is ONE call to the shared engine — the same call the wizard's review step
- * makes to display the figures. That is what makes the number the user agreed to and the
- * number the sheet stores the same number by construction (see `useConsumptionInvoice.js`).
- */
+// Header, then items, then the consumption and return marks. The order is the contract:
+// nothing may claim an invoice that a later request in the batch could fail to write.
 export function buildInvoiceGenerationNodes ({
   outletCode = '',
   username = '',
@@ -214,10 +305,8 @@ export function buildInvoiceGenerationNodes ({
   discountValue = 0,
   comment = '',
   calculateLineTax = null,
-  // The UI's per-SKU price overrides, as a RESOLVER rather than pre-priced lines — the
-  // override then flows through tax and discount apportionment inside the one engine
-  // instead of the caller patching a total the engine never saw. Omitted, the engine falls
-  // back to the price list.
+  // A RESOLVER, not pre-priced lines: the override then flows through tax and discount
+  // apportionment inside the one engine.
   resolvePrice = null
 } = {}) {
   const invoiceDate = text(date) || todayISO()
@@ -230,7 +319,7 @@ export function buildInvoiceGenerationNodes ({
   const returnDeduction = credits.reduce((sum, row) => sum + (num(row.Qty) * num(row.Price)), 0)
 
   const check = validateInvoiceDraft({ outletCode, priceListCode, lines, dueDate: text(dueDate) || invoiceDate })
-  if (!check.valid) return { valid: false, message: check.message }
+  if (!check.valid) return [{ valid: false, message: check.message }]
 
   const invoice = calculateConsumptionInvoice({
     lines: check.lines,
@@ -263,12 +352,8 @@ export function buildInvoiceGenerationNodes ({
 
 // ─── 2. The state walk a balance implies ─────────────────────────────────────
 
-// The invoice's OWN transition, for whoever moved the balance. OutletPayments writes the
-// payment row and calls this rather than deciding MarkPaid/MarkPartiallyPaid itself, so
-// the invoice's Progress and its payments can never tell different stories.
-//
-// No transition yields NO node: re-stamping ProgressPaidAt would overwrite the real
-// settlement time with a later one.
+// The invoice's own transition, for whoever moved the balance. No transition yields no
+// node - re-stamping ProgressPaidAt would overwrite the real settlement time.
 export function buildInvoiceBalanceTransitionNodes ({
   record = {},
   balance = 0,
@@ -277,39 +362,24 @@ export function buildInvoiceBalanceTransitionNodes ({
 } = {}) {
   const invoice = asRow(record)
   const code = text(invoice.Code)
-  if (!code) return { valid: false, nodes: [], permissions: {}, message: 'The invoice could not be identified.' }
+  if (!code) return [{ valid: false, message: 'The invoice could not be identified.' }]
 
   const transition = transitionForBalance(invoice, balance)
-  if (!transition) return { valid: true, nodes: [], permissions: {} }
+  if (!transition) return [
+    
+  ]
 
-  return {
-    valid: true,
-    nodes: [actionNode(INVOICES, code, {
+  return [
+    { resource: INVOICES, actions: [{ ...{
       action: transition.action, column: 'Progress', columnValue: transition.columnValue
-    }, stampFields(transition.stamp, actorName, text(comment) || transition.comment), { reload: [INVOICES] })],
-    permissions: { outletConsumptionInvoice: transition.action }
-  }
+    }, code: textOrRef(code), data: { fields: stampFields(transition.stamp, actorName, text(comment) || transition.comment) } }], reload: [INVOICES] }
+  ]
 }
 
 // ─── 3. Forced settlement ─────────────────────────────────────────────────────
 
-/**
- * Close an invoice while a balance remains, recording why the gap was accepted.
- *
- * THE ONE ROUTE FROM A RESIDUE TO `PAID`. Money alone never closes an invoice that still
- * owes something (`progressForBalance`), so every write-off, rounding residue and accepted
- * underpayment arrives here and leaves a reason behind it.
- *
- * The mismatch and the reason go onto their own columns (`executeAction` writes any field
- * whose name matches a header), and the comment derives to `ProgressPaidComment` off the
- * action's stamp suffix. `validateSettlement` owns the rules — including the one GAS cannot
- * express, that `Other` demands a comment.
- *
- * Hand it `payments` — the invoice's own rows — and the balance is derived here rather than
- * trusted from the caller, so a stale figure typed into a screen cannot become the amount
- * written off. `balanceDue` remains accepted for a caller that already holds the joined
- * figure and no rows.
- */
+// The one route from a leftover balance to PAID. Money alone never closes such an invoice,
+// so every write-off comes through here and leaves a reason behind it.
 export function buildSettlementNodes ({
   record = {},
   reason = '',
@@ -321,90 +391,67 @@ export function buildSettlementNodes ({
 } = {}) {
   const invoice = asRow(record)
   const code = text(invoice.Code)
-  if (!code) return { valid: false, message: 'The invoice could not be identified.' }
+  if (!code) return [{ valid: false, message: 'The invoice could not be identified.' }]
 
   const gate = settlementGate(invoice, Array.isArray(payments) ? payments : [])
-  if (!gate.allowed) return { valid: false, message: gate.reason }
+  if (!gate.allowed) return [{ valid: false, message: gate.reason }]
 
   const owed = Array.isArray(payments) || balanceDue === null ? gate.balance : num(balanceDue)
 
   const check = validateSettlement({ record: invoice, reason, comment, mismatchAmount, balanceDue: owed })
-  if (!check.valid) return { valid: false, message: check.message }
+  if (!check.valid) return [{ valid: false, message: check.message }]
 
   const note = text(comment) || `Settled: ${check.settlement.SettlementReason}.`
 
-  return {
-    valid: true,
-    nodes: [actionNode(INVOICES, code, {
+  return [
+    { resource: INVOICES, actions: [{ ...{
       action: 'MarkPaid', column: 'Progress', columnValue: 'PAID'
-    }, {
-      SettlementReason: check.settlement.SettlementReason,
-      SettlementMismatchAmount: check.settlement.SettlementMismatchAmount,
-      ...stampFields('ProgressPaid', actorName, note)
-    }, { reload: [INVOICES] })],
-    // The action this dispatches, so a user who may update an invoice but may not force-settle
-    // one is correctly refused.
-    permissions: { outletConsumptionInvoice: 'MarkPaid' },
-    successMsg: 'Invoice settled.'
-  }
+    }, code: textOrRef(code), data: {
+      fields: {
+        SettlementReason: check.settlement.SettlementReason,
+        SettlementMismatchAmount: check.settlement.SettlementMismatchAmount,
+        ...stampFields('ProgressPaid', actorName, note)
+      }
+    } }], reload: [INVOICES], successMsg: 'Invoice settled.' }
+  ]
 }
 
 // ─── 4. Cancellation ──────────────────────────────────────────────────────────
 
-/**
- * Cancel an invoice and RELEASE everything it was holding.
- *
- * Cancelling the header alone would strand both sides of the chain: the consumptions would
- * stay `INVOICE_GENERATED` against an invoice that no longer bills them, and the returns
- * would stay `InvoiceAdjustmentDone` against a credit nobody received — so neither could
- * ever be invoiced again. The reversal is part of the cancellation, in the same atomic
- * batch, which is why it lives in the builder rather than in whatever UI pressed the button.
- */
+// Cancel an invoice and release everything it held. Without the reversal the consumptions
+// and returns stay locked to an invoice that no longer bills them.
 export function buildCancellationNodes ({ record = {}, comment = '', actorName = '', returnRows = [], taxTransactionRows = null, releaseConsumptions = true } = {}) {
   const invoice = asRow(record)
   const code = text(invoice.Code)
-  if (!code) return { valid: false, message: 'The invoice could not be identified.' }
-  if (!text(comment)) return { valid: false, message: 'A cancellation comment is required.' }
+  if (!code) return [{ valid: false, message: 'The invoice could not be identified.' }]
+  if (!text(comment)) return [{ valid: false, message: 'A cancellation comment is required.' }]
 
   const consumptions = codeList(text(invoice.OutletConsumptionCode).split(','))
   const credits = (Array.isArray(returnRows) ? returnRows : []).map(asRow).filter((row) => text(row.Code))
 
-  const nodes = [actionNode(INVOICES, code, {
+  const nodes = [{ resource: INVOICES, actions: [{ ...{
     action: 'Cancel', column: 'Progress', columnValue: 'CANCELLED'
-  }, stampFields('ProgressCancelled', actorName, text(comment)), { reload: [INVOICES] })]
+  }, code: textOrRef(code), data: { fields: stampFields('ProgressCancelled', actorName, text(comment)) } }], reload: [INVOICES] }]
 
   // One queued action per consumption, each keyed by its own code. Skipped when the
   // CONSUMPTION is what is being cancelled - walking it back to invoiceable would undo
   // the cancellation that triggered this.
   const released = releaseConsumptions ? consumptions : []
   released.forEach((consumptionCode) => {
-    nodes.push(actionNode(CONSUMPTIONS, consumptionCode, {
+    nodes.push({ resource: CONSUMPTIONS, actions: [{ ...{
       action: 'MarkPendingInvoiceGeneration', column: 'Progress', columnValue: 'PENDING_INVOICE_GENERATION'
-    }, stampFields('ProgressPendingInvoiceGeneration', actorName, `Invoice ${code} cancelled; consumption is invoiceable again.`), { reload: [CONSUMPTIONS] }))
+    }, code: textOrRef(consumptionCode), data: { fields: stampFields('ProgressPendingInvoiceGeneration', actorName, `Invoice ${code} cancelled; consumption is invoiceable again.`) } }], reload: [CONSUMPTIONS] })
   })
 
   // Reversing the credit is the OutletReturns domain's own inverse of the forward link, so
   // both directions are written by one owner and cannot drift apart.
-  nodes.push(...buildReturnInvoiceCreditReversalNodes({ returnRows: credits }).nodes)
+  nodes.push(...buildReturnInvoiceCreditReversalNodes({ returnRows: credits }))
 
   // A cancelled invoice charged nothing, so its ledger rows must leave the return.
   const ledger = buildTaxTransactionReversalNodes({ existingRows: taxTransactionRows || [] })
-  nodes.push(...ledger.nodes)
+  nodes.push(...ledger)
 
-  return {
-    valid: true,
-    nodes,
-    // Gated on the actions this chain actually DISPATCHES, not on a generic `update`: the
-    // consumptions are walked back by `MarkPendingInvoiceGeneration`, so that is the
-    // privilege the user needs.
-    permissions: {
-      outletConsumptionInvoice: 'cancel',
-      ...(released.length ? { outletConsumption: 'MarkPendingInvoiceGeneration' } : {}),
-      ...(credits.length ? { outletReturn: 'update' } : {}),
-      ...ledger.permissions
-    },
-    successMsg: 'Invoice cancelled.'
-  }
+  return nodes
 }
 
 // ─── 5. Editing an issued invoice ─────────────────────────────────────────────
@@ -428,11 +475,8 @@ export function invoiceEditDefaults (record = {}) {
   }
 }
 
-/**
- * Override, then the chosen price list, then the line's stored price. The list is only
- * consulted when it CHANGED: an invoice is historical, so an untouched line must not
- * re-price just because master data moved.
- */
+// Override, then the chosen price list, then the stored price. The list is read only when
+// it CHANGED - an invoice is historical and must not re-price on its own.
 export function makeStoredPriceResolver (items = [], overrides = {}, { priceListCode = '', issuedPriceListCode = '' } = {}) {
   const stored = new Map((Array.isArray(items) ? items : [])
     .map(asRow)
@@ -489,10 +533,8 @@ export function recalculateStoredInvoice ({
 
 const sameMoney = (a, b) => Math.abs(num(a) - num(b)) < 0.000001
 
-/**
- * One atomic batch: the header totals, plus an update per line whose figures actually moved.
- * Unchanged lines are dropped so a one-price fix does not write dozens of audit rows.
- */
+// One batch: the header totals plus an update per line whose figures moved. Unchanged
+// lines are dropped so a one-price fix does not write dozens of audit rows.
 export function buildInvoiceUpdateNodes ({
   record = {},
   items = null,
@@ -507,14 +549,14 @@ export function buildInvoiceUpdateNodes ({
 } = {}) {
   const row = asRow(record)
   const code = text(row.Code)
-  if (!code) return { valid: false, message: 'The invoice could not be identified.' }
+  if (!code) return [{ valid: false, message: 'The invoice could not be identified.' }]
 
   if (progressOf(row) !== PENDING_PAYMENT) {
-    return { valid: false, message: 'This invoice can no longer be edited — it has been paid, part-paid or cancelled.' }
+    return [{ valid: false, message: 'This invoice can no longer be edited — it has been paid, part-paid or cancelled.' }]
   }
 
   const lines = Array.isArray(items) ? items.map(asRow) : editableInvoiceItems(row)
-  if (!lines.length) return { valid: false, message: 'This invoice has no items to price.' }
+  if (!lines.length) return [{ valid: false, message: 'This invoice has no items to price.' }]
 
   const defaults = invoiceEditDefaults(row)
   const terms = {
@@ -526,11 +568,11 @@ export function buildInvoiceUpdateNodes ({
     priceListCode: text(priceListCode) || defaults.priceListCode
   }
 
-  if (!terms.dueDate) return { valid: false, message: 'Set a due date for this invoice.' }
-  if (!terms.priceListCode) return { valid: false, message: 'Choose a price list for this invoice.' }
-  if (terms.discountValue < 0) return { valid: false, message: 'A discount cannot be negative.' }
+  if (!terms.dueDate) return [{ valid: false, message: 'Set a due date for this invoice.' }]
+  if (!terms.priceListCode) return [{ valid: false, message: 'Choose a price list for this invoice.' }]
+  if (terms.discountValue < 0) return [{ valid: false, message: 'A discount cannot be negative.' }]
   if (terms.discountType === 'PERCENT' && terms.discountValue > 100) {
-    return { valid: false, message: 'A percentage discount cannot be more than 100.' }
+    return [{ valid: false, message: 'A percentage discount cannot be more than 100.' }]
   }
 
   const priceFor = makeStoredPriceResolver(lines, priceOverrides, {
@@ -538,7 +580,7 @@ export function buildInvoiceUpdateNodes ({
     issuedPriceListCode: defaults.priceListCode
   })
   if (lines.some((item) => priceFor(item.SKU) < 0)) {
-    return { valid: false, message: 'A unit price cannot be negative.' }
+    return [{ valid: false, message: 'A unit price cannot be negative.' }]
   }
 
   const invoice = recalculateStoredInvoice({
@@ -556,11 +598,11 @@ export function buildInvoiceUpdateNodes ({
 
   // No progress stamp is rewritten: those columns say why the invoice was RAISED, and the
   // resource's audit columns already record who edited it.
-  const nodes = [updateNode(INVOICES, code, {
+  const nodes = [{ resource: INVOICES, code: textOrRef(code), record: {
     DueDate: terms.dueDate,
     PriceListCode: terms.priceListCode,
     ...storedTotals
-  }, [INVOICES])]
+  }, reload: [INVOICES] }]
 
   const ledger = Array.isArray(taxTransactionRows)
     ? buildTaxTransactionReplacementNodes({
@@ -572,39 +614,34 @@ export function buildInvoiceUpdateNodes ({
       counterPartyCode: text(row.OutletCode),
       taxBreakdown: invoice.taxBreakdown
     })
-    : { nodes: [], permissions: {} }
+    : []
 
-  nodes.push(...ledger.nodes)
+  nodes.push(...ledger)
 
   const calculated = new Map(invoice.lines.map((line) => [text(line.SKU), line]))
 
   // Which rows actually moved is the ITEM resource's own question.
   const itemRecords = changedInvoiceItemRows(lines, invoice.lines, sameMoney)
   const itemUpdates = itemRecords.length
-  if (itemUpdates) nodes.push(bulkNode(INVOICE_ITEMS, itemRecords, [INVOICE_ITEMS]))
+  if (itemUpdates) nodes.push({ resource: INVOICE_ITEMS, many: true, records: itemRecords, reload: [INVOICE_ITEMS] })
 
-  return {
-    valid: true,
-    nodes,
-    permissions: {
-      outletConsumptionInvoice: 'update',
-      ...(itemUpdates ? { outletConsumptionInvoiceItem: 'update' } : {}),
-      ...ledger.permissions
-    },
-    successMsg: 'Invoice updated.',
-    invoice
-  }
+  return nodes
 }
 
 // Composable shape for setup-context callers. Same functions, one import (§5).
 export function useInvoicePayload () {
   return {
     INVOICE_REF_PATH,
+    invoiceNode,
+    invoiceItemRow,
     buildInvoiceGenerationNodes,
     buildInvoiceBalanceTransitionNodes,
     buildSettlementNodes,
     buildCancellationNodes,
     buildInvoiceUpdateNodes,
+    invoiceCompositionDerive,
+    repriceInvoiceInPageState,
+    makeInvoiceLinePriceResolver,
     recalculateStoredInvoice,
     makeStoredPriceResolver,
     editableInvoiceItems,

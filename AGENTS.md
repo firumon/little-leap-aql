@@ -110,6 +110,7 @@ After classifying the query, read the appropriate initialization document(s) fro
 - For frontend edits, keep pages thin when the task materially changes page structure and update frontend registries only when reusable interfaces change.
 - **Before touching any file under `FRONTENT/`, read `Documents/CORE_ARCHITECTURE_RULES.md` without exception — this includes small fixes, one-liners, and style tweaks. Layer violations most often enter through minor edits.**
 - For backend edits, prefer existing GAS files and patterns first. Create a new GAS file only when the current structure cannot support the task cleanly.
+- **Layer 2 returns the Universal Return Envelope, always.** Every function exported from `FRONTENT/src/_resource/` and consumed across a layer boundary returns `{ valid, nodes, permissions, message?, successMsg? }` — single-node builders included. Build it with `nodeEnvelope()` and combine children with `mergeEnvelopes()`, both from `FRONTENT/src/composables/resources/nodePayloads.js`. Layer 3 checks `result.valid`, shows `result.message` on failure, and applies `result.nodes` (or `result.nodes[0]` for a single-node builder). Row helpers that return a bare sheet row are the only exception. See `Documents/UI_RESOURCE_DOMAIN_LOGIC.md` §9.1–§9.3.
 
 ## Reuse First & Anti-Duplication Policy (STRICT)
 - **Never create a new utility, helper, or core function without first checking existing implementations.** Before adding any new utility, helper function, core method, or file across Layer 1 (Core Infrastructure), Layer 2 (`src/_resource/` domain logic), or Layer 3 (`src/_ui/` presentation), you MUST inspect what already exists.
@@ -123,6 +124,15 @@ After classifying the query, read the appropriate initialization document(s) fro
   - Node / payload builders → `FRONTENT/src/composables/resources/nodePayloads.js`
 - **Mandatory Exhaustion Quote**: When an agent DOES create a new helper function or file, it MUST explicitly cite in its output:
   > *"Checked existing utilities in [list of files / SHARED_UTILITIES_INDEX.md] and confirmed no existing helper accomplishes <function/feature>. Adding/extending <function_name> in <file_path> because <specific rationale>."*
+
+## Single Domain Source of Truth Policy (STRICT)
+- **Every resource domain (`src/_resource/{Scope}/{Resource}/`) MUST have exactly ONE calculation path for each domain concept.**
+- **Never create a second function for a new task or workflow**: When a new task requires building a node, calculating progress, or formatting rows, you MUST route through the existing row/node builder (`<resource>ItemRow`, `<resource>Node`, `derive<Resource>Progress`).
+- **If a new task has slightly different inputs or flags**, generalize and extend the existing builder with options — DO NOT write a parallel function (`build<Task>Nodes`, `custom<Task>Fields`) that duplicates the domain arithmetic or stamps.
+- **Rule of One**:
+    - Exactly ONE function that calculates item-level progress and stamps (`<resource>ItemRow`).
+    - Exactly ONE function that calculates parent-level progress and stamps (`derive<Resource>Progress` / `<resource>Node`).
+    - All workflows (standalone create, wizard submission, chained create) MUST call that ONE engine.
 
 ## Remote Updates & External Sync Policy (STRICT)
 - **Do not update remote files, repositories, or services automatically.**

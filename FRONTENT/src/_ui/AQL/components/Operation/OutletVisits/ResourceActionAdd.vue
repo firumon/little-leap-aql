@@ -154,8 +154,8 @@ function closeDialog () {
 // would fire on that swap, re-creating the node we just cleared.
 function onField (header, value, meta) {
   if (!dialogOpen.value || !pageState) return
-  if (meta?.custom) pageState.setControlField(resourceName.value, header, value)
-  else pageState.setField(resourceName.value, header, value)
+  if (meta?.custom) pageState.setControls(header, value, resourceName.value)
+  else pageState.setRecord(header, value, resourceName.value)
 }
 
 async function onConfirm () {

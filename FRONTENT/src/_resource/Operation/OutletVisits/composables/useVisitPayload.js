@@ -1,10 +1,11 @@
+import { textOrRef } from 'src/utils/appHelpers'
 import { addDays, toDateOnly } from 'src/utils/dateHelpers'
-import { actionNode, createNode } from 'src/composables/resources/nodePayloads'
+import { stampFields } from 'src/utils/workflowStamp'
 import { visitFrequencyFor } from './useVisitCadence'
 import { COMPLETED, PLANNED } from './useVisitProgress'
 
 // The only source of truth for creating, scheduling or completing a visit, whichever
-// module triggers it. Every export returns { valid, nodes, permissions, successMsg }.
+// module triggers it. Every export returns Node Objects (UI_PAGE_STATE.md §5).
 
 const RESOURCE_NAME = 'OutletVisits'
 
@@ -25,80 +26,113 @@ export function buildVisitCreateNode (visit = {}, options = {}) {
   if (!outletCode || !date) return null
 
   return {
-    ...createNode(RESOURCE_NAME, {
+    resource: RESOURCE_NAME,
+    ...(options.role ? { role: options.role } : {}),
+    record: {
       OutletCode: outletCode,
       Date: date,
       Progress: PLANNED,
       ProgressPlannedComment: text(entry.ProgressPlannedComment) || text(options.comment),
       ...(text(entry.Username) ? { Username: text(entry.Username) } : {}),
       Status: 'Active'
-    }, [RESOURCE_NAME]),
-    ...(options.role ? { role: options.role } : {})
+    },
+    permissions: { create: 'You are not allowed to schedule a visit.' },
+    reload: [RESOURCE_NAME]
   }
 }
 
 export function buildVisitScheduleChainNodes ({ visit = {}, comment = '', role = '' } = {}) {
   const node = buildVisitCreateNode(visit, { comment, role })
   if (!node) {
-    return { valid: false, nodes: [], permissions: {}, message: 'Select an outlet and a visit date to schedule a visit.' }
+    return [{ valid: false, message: 'Select an outlet and a visit date to schedule a visit.' }]
   }
-  return {
-    valid: true,
-    nodes: [node],
-    permissions: { [RESOURCE_NAME]: 'create' },
-    successMsg: 'Visit scheduled.'
-  }
+  return [{ ...node, successMsg: 'Visit scheduled.' }]
 }
 
 // Routed through executeAction, not a plain update, so GAS applies the same Progress
 // stamping the standalone Visits page gets. A visit's rules are not a caller's to redo.
-export function buildVisitCompleteNode (visitCode, actorName = '', comment = '') {
+// `nextVisit` rides along as the action's own `nextVisit` TARGET, not as a second node:
+// the Complete action already declares that target, so GAS plans the next visit as part
+// of closing this one.
+export function buildVisitCompleteNode (visitCode, actorName = '', comment = '', nextVisit = {}) {
   const code = text(visitCode)
   if (!code) return null
-  return actionNode(RESOURCE_NAME, code, {
-    action: 'Complete', column: 'Progress', columnValue: COMPLETED
-  }, {
-    RespondDate: todayISO(),
-    ProgressCompletedComment: text(comment) || `Completed from outlet consumption by ${text(actorName) || 'Unknown'}.`
-  }, { reload: [RESOURCE_NAME] })
+  const planned = asRow(nextVisit)
+  const plannedDate = toDateOnly(text(planned.Date)) || text(planned.Date)
+  return {
+    resource: RESOURCE_NAME,
+    permissions: { complete: 'You are not allowed to complete this visit.' },
+    actions: [{
+      action: 'Complete',
+      column: 'Progress',
+      columnValue: COMPLETED,
+      code: textOrRef(code),
+      data: {
+        fields: {
+          RespondDate: todayISO(),
+          // The DERIVED header only. `Comment` is the authored short name and would land
+          // beside this one as a second, conflicting answer to the same question.
+          ProgressCompletedComment: text(comment) || `Completed from outlet consumption by ${text(actorName) || 'Unknown'}.`
+        },
+        ...(plannedDate
+          ? {
+              targets: {
+                nextVisit: {
+                  Date: plannedDate,
+                  ProgressPlannedComment: text(planned.ProgressPlannedComment)
+                }
+              }
+            }
+          : {})
+      }
+    }],
+    reload: [RESOURCE_NAME]
+  }
 }
 
-// A blank code yields a VALID, EMPTY envelope. A consumption recorded against no planned
-// visit has nothing to complete, and refusing there would block a real submission.
-export function buildVisitCompletionChainNodes ({ visitCode = '', actorName = '', comment = '' } = {}) {
-  const node = buildVisitCompleteNode(visitCode, actorName, comment)
-  if (!node) return { valid: true, nodes: [], permissions: {} }
-  return {
-    valid: true,
-    nodes: [node],
-    permissions: { [RESOURCE_NAME]: 'complete' },
-    successMsg: 'Visit completed.'
-  }
+// A blank code yields NO nodes. A consumption recorded against no planned visit has
+// nothing to complete, and refusing there would block a real submission.
+export function buildVisitCompletionChainNodes ({ visitCode = '', actorName = '', comment = '', nextVisit = {} } = {}) {
+  const node = buildVisitCompleteNode(visitCode, actorName, comment, nextVisit)
+  if (!node) return []
+  const planned = !!text(asRow(nextVisit).Date)
+  return [{ ...node, successMsg: planned ? 'Visit completed and the next one planned.' : 'Visit completed.' }]
 }
 
 // frequencyDays is required and never defaulted here. A cadence invented in this file
 // would schedule every outlet on a number nobody configured.
-export function buildNextVisitNode (form = {}, frequencyDays = 0, actorName = '') {
+export function buildNextVisitNode (form = {}, frequencyDays = 0, actorName = '', visit = {}) {
   const entry = asRow(form)
+  const seed = asRow(visit)
   const frequency = num(frequencyDays)
-  const outletCode = text(entry.OutletCode)
-  if (!outletCode || frequency <= 0) return null
-
+  const outletCode = text(seed.OutletCode) || text(entry.OutletCode)
   const base = text(entry.Date) || todayISO()
-  const nextDate = toDateOnly(addDays(base, frequency))
-  if (!nextDate) return null
+
+  // A date the officer set on the seeded node wins; otherwise the cadence decides. With
+  // neither there is no visit to plan.
+  const nextDate = toDateOnly(text(seed.Date)) ||
+    (frequency > 0 ? toDateOnly(addDays(base, frequency)) : '')
+  if (!outletCode || !nextDate) return null
+
+  const planner = text(seed.Username) || text(actorName) || text(entry.Username) || 'Unknown'
+  const comment = text(seed.ProgressPlannedComment) ||
+    `Auto-planned ${frequency} days after the consumption recorded by ${planner} on ${base}.`
 
   return {
-    ...createNode(RESOURCE_NAME, {
-      OutletCode: outletCode,
-      Date: nextDate,
-      Progress: PLANNED,
-      ProgressPlannedComment: `Auto-planned ${frequency} days after the consumption recorded by ${text(actorName) || text(entry.Username) || 'Unknown'} on ${base}.`,
-      Status: 'Active'
-    }, [RESOURCE_NAME]),
+    resource: RESOURCE_NAME,
     // Its own role: the same batch may also complete a visit, and a next visit is a
     // different record from the one being closed.
-    role: 'next'
+    role: 'next',
+    record: {
+      OutletCode: outletCode,
+      Date: nextDate,
+      Username: planner,
+      Progress: PLANNED,
+      ...stampFields('ProgressPlanned', planner, comment),
+      Status: 'Active'
+    },
+    permissions: { create: 'You are not allowed to schedule the next visit.' },
+    reload: [RESOURCE_NAME]
   }
 }
 
@@ -108,21 +142,17 @@ export function buildNextVisitChainNodes ({
   form = {},
   frequencyDays = null,
   operatingRules = [],
-  actorName = ''
+  actorName = '',
+  visit = {}
 } = {}) {
   const frequency = frequencyDays === null || frequencyDays === undefined
     ? visitFrequencyFor(asRow(form).OutletCode, operatingRules)
     : num(frequencyDays)
 
-  const node = buildNextVisitNode(form, frequency, actorName)
-  if (!node) return { valid: true, nodes: [], permissions: {} }
+  const node = buildNextVisitNode(form, frequency, actorName, visit)
+  if (!node) return []
 
-  return {
-    valid: true,
-    nodes: [node],
-    permissions: { [RESOURCE_NAME]: 'create' },
-    successMsg: 'Next visit scheduled.'
-  }
+  return [{ ...node, successMsg: 'Next visit scheduled.' }]
 }
 
 export function useVisitPayload () {

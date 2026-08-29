@@ -47,7 +47,29 @@ export function visitFrequencyFor (outletCode, operatingRules = []) {
   return ruleVisitFrequencyFor(outletCode, operatingRules)
 }
 
+const text = (value) => (value == null ? '' : String(value).trim())
+const num = (value) => {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+/** The date `days` after `fromISO`, as `YYYY-MM-DD`. A visit is never scheduled backwards. */
+export function visitDateFrom (fromISO = '', days = 0) {
+  const base = text(fromISO) ? new Date(`${text(fromISO)}T00:00:00`) : new Date()
+  if (Number.isNaN(base.getTime())) return ''
+  base.setDate(base.getDate() + Math.max(0, Math.round(num(days))))
+  return base.toISOString().slice(0, 10)
+}
+
+/** Whole calendar days between two dates, for the date box that drives the day count. */
+export function visitDaysBetween (fromISO = '', toISO = '') {
+  const base = new Date(`${text(fromISO)}T00:00:00`)
+  const chosen = new Date(`${text(toISO)}T00:00:00`)
+  if (Number.isNaN(base.getTime()) || Number.isNaN(chosen.getTime())) return null
+  return Math.max(0, Math.round((chosen.getTime() - base.getTime()) / 86400000))
+}
+
 // Composable shape for setup-context callers. Same functions, one import (§5).
 export function useVisitCadence () {
-  return { defaultVisitFrequencyDays, visitFrequencyFor }
+  return { defaultVisitFrequencyDays, visitFrequencyFor, visitDateFrom, visitDaysBetween }
 }

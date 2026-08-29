@@ -1,5 +1,3 @@
-import { actionNode, bulkNode, updateNode } from 'src/composables/resources/nodePayloads'
-
 import { stampFields } from 'src/utils/workflowStamp'
 import {
   OUT_OF_WAREHOUSE,
@@ -9,13 +7,10 @@ import {
   buildStockMovementNodes
 } from 'src/_resource/Operation/StockMovements/composables/useStockMovementPayload'
 import { ONTO_THE_SHELF, OUTLET_REFERENCE, outletMovementRow, buildOutletMovementNodes } from 'src/_resource/Operation/OutletMovements/composables/useOutletMovementPayload'
-// Every export returns { valid, nodes, permissions, successMsg } — pageState node
-// payloads, never requests. outlets/outletRestockPayload.js is a legacy copy of the signs.
+// Every export returns Node Objects, never requests. See UI_PAGE_STATE.md §5.
 
 const RESOURCE_NAME = 'OutletRestocks'
 const RESTOCK_ITEMS = 'OutletRestockItems'
-const STOCK_MOVEMENTS = 'StockMovements'
-const OUTLET_MOVEMENTS = 'OutletMovements'
 
 const CANCEL_ITEM_ACTION = { action: 'Cancel', column: 'Progress', columnValue: 'CANCELLED' }
 
@@ -57,13 +52,27 @@ function sourceCodeOf (value = {}) {
   return text(entry._pendingSourceCode || entry.Code || entry._approvalSourceKey).replace(/^pending:/, '')
 }
 
-function allocationPermissions (updatesParent) {
-  return {
-    [RESTOCK_ITEMS]: 'create',
-    [STOCK_MOVEMENTS]: 'create',
-    ...(updatesParent ? { [RESOURCE_NAME]: 'approve' } : {})
-  }
-}
+const ITEM_WRITE = { create: 'You are not allowed to change restock items.' }
+
+// Bulk write of restock lines. `many: true` because a batch of lines is one sheet write.
+const itemsNode = (records) => ({
+  resource: RESTOCK_ITEMS,
+  many: true,
+  records,
+  permissions: ITEM_WRITE,
+  reload: [RESTOCK_ITEMS]
+})
+
+// The parent header, updated in place. A role keeps a cascade over several requests apart:
+// two roleless updates would collapse onto one address.
+const parentNode = (code, record, permissions, role = '') => ({
+  resource: RESOURCE_NAME,
+  ...(role ? { role } : {}),
+  code,
+  record,
+  permissions,
+  reload: [RESOURCE_NAME]
+})
 
 // Initial approval: allocate stock, deduct the warehouse, move the parent to APPROVED.
 export function buildRestockAllocationNodes (restock = {}, rows = [], actorName = '', comment = '', options = {}) {
@@ -108,24 +117,19 @@ export function buildRestockAllocationNodes (restock = {}, rows = [], actorName 
 
   const updatesParent = options.updateRestock !== false
   const nodes = [
-    bulkNode(RESTOCK_ITEMS, itemRecords, [RESTOCK_ITEMS]),
-    ...buildStockMovementNodes(movements).nodes
+    { ...itemsNode(itemRecords), successMsg: 'Restock request approved and stock allocated.' },
+    ...buildStockMovementNodes(movements)
   ]
   if (updatesParent) {
     // GAS only auto-fills the stamp for an executeAction, and this is not one.
-    nodes.push(updateNode(RESOURCE_NAME, parent.Code, {
+    nodes.push(parentNode(parent.Code, {
       Progress: 'APPROVED',
       ApprovedUser: text(actorName),
       ...stampFields('ProgressApproved', actorName, comment)
-    }, [RESOURCE_NAME]))
+    }, { approve: 'You are not allowed to approve this restock request.' }))
   }
 
-  return {
-    valid: true,
-    nodes,
-    permissions: allocationPermissions(updatesParent),
-    successMsg: 'Restock request approved and stock allocated.'
-  }
+  return nodes
 }
 
 // Later allocation: fill leftover PENDING lines. Grouped by source Code, because what
@@ -215,28 +219,28 @@ export function buildPendingRestockAllocationNodes (restock = {}, rows = [], act
     })
   })
 
-  return {
-    valid: true,
-    nodes: [
-      bulkNode(RESTOCK_ITEMS, itemRecords, [RESTOCK_ITEMS]),
-      ...buildStockMovementNodes(movements).nodes
-    ],
-    permissions: allocationPermissions(false),
-    successMsg: 'Pending items allocated.'
-  }
+  return [
+    { ...itemsNode(itemRecords), successMsg: 'Pending items allocated.' },
+    ...buildStockMovementNodes(movements)
+  ]
 }
 
 // Cancel a PENDING line. No stock moves — the units never left the warehouse. Each row
 // gets its own action key, or pageState would dedupe the batch down to one stamp.
 export function buildRestockCancelItemNodes (restock = {}, rows = [], actorName = '', comment = '') {
-  const nodes = (Array.isArray(rows) ? rows : [])
+  return (Array.isArray(rows) ? rows : [])
     .map(row)
     .filter((entry) => text(entry.Code) && text(entry.Progress) === 'PENDING')
-    .map((entry) => actionNode(RESTOCK_ITEMS, text(entry.Code), CANCEL_ITEM_ACTION, {
-      ...stampFields('ProgressCancelled', actorName, comment)
-    }, { reload: [RESTOCK_ITEMS] }))
-
-  return { valid: true, nodes, permissions: nodes.length ? { [RESTOCK_ITEMS]: 'cancel' } : {} }
+    .map((entry) => ({
+      resource: RESTOCK_ITEMS,
+      permissions: { cancel: 'You are not allowed to cancel a restock item.' },
+      actions: [{
+        ...CANCEL_ITEM_ACTION,
+        code: text(entry.Code),
+        data: { fields: stampFields('ProgressCancelled', actorName, comment) }
+      }],
+      reload: [RESTOCK_ITEMS]
+    }))
 }
 
 // Reject: deactivate every line and put any allocated units back on the shelf.
@@ -252,20 +256,18 @@ export function buildRestockRejectNodes (restock = {}, rows = [], actorName = ''
     .filter((entry) => text(entry.Code))
     .map((entry) => ({ Code: text(entry.Code), Status: 'Inactive' }))
 
-  return {
-    valid: true,
-    nodes: [
-      ...buildStockMovementNodes(movements).nodes,
-      bulkNode(RESTOCK_ITEMS, itemRecords, [RESTOCK_ITEMS]),
-      // A role, so a cascade rejecting several requests keeps them as separate nodes.
-      updateNode(RESOURCE_NAME, parent.Code, {
+  return [
+    ...buildStockMovementNodes(movements),
+    itemsNode(itemRecords),
+    {
+      ...parentNode(parent.Code, {
         Progress: 'REJECTED',
         ...stampFields('ProgressRejected', actorName, comment)
-      }, [RESOURCE_NAME], text(options.role) || text(parent.Code))
-    ],
-    permissions: { [RESOURCE_NAME]: 'reject', [RESTOCK_ITEMS]: 'create', [STOCK_MOVEMENTS]: 'create' },
-    successMsg: 'Restock request rejected.'
-  }
+      }, { reject: 'You are not allowed to reject this restock request.' },
+      text(options.role) || text(parent.Code)),
+      successMsg: 'Restock request rejected.'
+    }
+  ]
 }
 
 // Needs the FULL child set: "is anything left open?" is about the rows NOT delivered.
@@ -310,31 +312,33 @@ export function buildRestockDeliveryNodes (restock = {}, deliveredOrsiRows = [],
   const allItems = Array.isArray(options.allItems) && options.allItems.length ? options.allItems : deliveredRows
   const nextProgress = nextRestockProgress(allItems, deliveredRows.map((entry) => entry.Code))
 
-  return {
-    valid: true,
-    nodes: [
-      bulkNode(RESTOCK_ITEMS, itemRecords, [RESTOCK_ITEMS]),
-      ...buildOutletMovementNodes(movements).nodes,
-      // A delivery run covers several requests, so the parent update takes a role — one
-      // roleless node per request would collapse them onto a single address.
-      updateNode(RESOURCE_NAME, parent.Code, {
+  return [
+    itemsNode(itemRecords),
+    ...buildOutletMovementNodes(movements),
+    {
+      ...parentNode(parent.Code, {
         Progress: nextProgress,
         ...stampFields('ProgressDelivered', actorName, comment)
-      }, [RESOURCE_NAME], text(options.role) || text(parent.Code))
-    ],
-    permissions: { [RESOURCE_NAME]: 'markDelivered', [RESTOCK_ITEMS]: 'create', [OUTLET_MOVEMENTS]: 'create' },
-    successMsg: 'Delivery confirmed and outlet stock updated.'
-  }
+      }, { markDelivered: 'You are not allowed to confirm this delivery.' },
+      text(options.role) || text(parent.Code)),
+      successMsg: 'Delivery confirmed and outlet stock updated.'
+    }
+  ]
 }
 
 // Creation lives next door, split for file size. Re-exported so callers keep one import.
 export {
   RESTOCK_REF_PATH,
-  restockCreateFields,
-  restockCreatePermissions,
-  buildRestockCreateChainNodes,
-  buildRestockNodes,
-  buildRestockChainNodes
+  RESTOCK_CONTROL,
+  buildRestockChainNodes,
+  buildRestockMovementNodes,
+  deriveParentRestockProgress,
+  restockNode,
+  restockItemRow,
+  restockFlags,
+  restockItemProgress,
+  restockProgressDerive,
+  syncRestockProgressInPageState
 } from './useRestockCreation'
 
 export function useRestockPayload () {

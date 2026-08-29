@@ -100,19 +100,19 @@ const matchingWarehouses = computed(() => warehouses.items.value
   .filter((row) => hasRegionAccess(row.AccessRegion))
   .map((row) => ({ label: [row.Code, row.Name].filter(Boolean).join(' · '), value: row.Code })))
 
-const isDirect = computed(() => pageState.getControlField('OutletRestocks', 'RestockMode') === 'DIRECT')
-const warehouseCode = computed(() => pageState.getControlField('OutletRestocks', 'WarehouseCode') || '')
+const isDirect = computed(() => pageState.getControls('RestockMode', null, 'OutletRestocks') === 'DIRECT')
+const warehouseCode = computed(() => pageState.getControls('WarehouseCode', null, 'OutletRestocks') || '')
 
-function setOutlet (value) { pageState.setField('OutletRestocks', 'OutletCode', value) }
-function setWarehouse (value) { pageState.setControlField('OutletRestocks', 'WarehouseCode', value) }
+function setOutlet (value) { pageState.setRecord('OutletCode', value, 'OutletRestocks') }
+function setWarehouse (value) { pageState.setControls('WarehouseCode', value, 'OutletRestocks') }
 
 // Turning DIRECT on seeds the source warehouse (the only one, or the first of
 // several); turning it off clears it so a stale code cannot ride along on a
 // standard request.
 function setDirect (value) {
   const direct = value === true && matchingWarehouses.value.length > 0
-  pageState.setControlField('OutletRestocks', 'RestockMode', direct ? 'DIRECT' : 'STANDARD')
-  pageState.setControlField('OutletRestocks', 'WarehouseCode', direct ? (warehouseCode.value || matchingWarehouses.value[0].value) : '')
+  pageState.setControls('RestockMode', direct ? 'DIRECT' : 'STANDARD', 'OutletRestocks')
+  pageState.setControls('WarehouseCode', direct ? (warehouseCode.value || matchingWarehouses.value[0].value) : '', 'OutletRestocks')
 }
 
 onMounted(async () => {
@@ -126,7 +126,7 @@ onMounted(async () => {
       Status: 'Active'
     }
   })
-  pageState.setControlField('OutletRestocks', 'RestockMode', 'STANDARD')
+  pageState.setControls('RestockMode', 'STANDARD', 'OutletRestocks')
   // Storages are loaded here, at step 1, so step 2's stock-match aggregate
   // (useRestockStockMatch) already has outlet + warehouse quantities the moment
   // the user advances, instead of each step-2 card issuing its own fetch.

@@ -42,8 +42,8 @@ export function useRestockCancelContext () {
 
   const gate = computed(() => preview.value.gate)
 
-  const reason = computed(() => pageState?.getControlField(PARENT, CANCEL_REASON) || '')
-  const setReason = (value) => pageState?.setControlField(PARENT, CANCEL_REASON, value)
+  const reason = computed(() => pageState?.getControls(CANCEL_REASON, null, PARENT) || '')
+  const setReason = (value) => pageState?.setControls(CANCEL_REASON, value, PARENT)
 
   return {
     pageState,

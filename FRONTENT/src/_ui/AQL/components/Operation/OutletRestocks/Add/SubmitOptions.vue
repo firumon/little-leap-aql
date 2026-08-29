@@ -79,9 +79,9 @@ const { pageState } = useRestockAddContext()
 const parent = pageState.useNode('OutletRestocks')
 
 const comment = computed(() => parent.record.value.ProgressSubmittedComment || '')
-const isDirect = computed(() => pageState.getControlField('OutletRestocks', 'RestockMode') === 'DIRECT')
-const isDraft = computed(() => pageState.getControlField('OutletRestocks', 'isDraft') === true)
+const isDirect = computed(() => pageState.getControls('RestockMode', null, 'OutletRestocks') === 'DIRECT')
+const isDraft = computed(() => pageState.getControls('isDraft', null, 'OutletRestocks') === true)
 
-function setComment (value) { pageState.setField('OutletRestocks', 'ProgressSubmittedComment', value ?? '') }
-function setDraft (value) { pageState.setControlField('OutletRestocks', 'isDraft', value === true) }
+function setComment (value) { pageState.setRecord('ProgressSubmittedComment', value ?? '', 'OutletRestocks') }
+function setDraft (value) { pageState.setControls('isDraft', value === true, 'OutletRestocks') }
 </script>

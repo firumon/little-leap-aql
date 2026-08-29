@@ -111,8 +111,8 @@ export function useRestockApproval () {
   // Always written as a NEW object. `controls` entries are reactive, but replacing
   // the value outright means every projection below re-runs on one assignment
   // rather than depending on deep tracking of a nested structure.
-  const getPlan = () => pageState.getControlField(PARENT, PLAN)
-  const writePlan = (next) => pageState.setControlField(PARENT, PLAN, next)
+  const getPlan = () => pageState.getControls(PLAN, null, PARENT)
+  const writePlan = (next) => pageState.setControls(PLAN, next, PARENT)
   const plan = computed(() => getPlan() || {})
 
   // ── Hydration ──────────────────────────────────────────────────────────────
@@ -129,7 +129,7 @@ export function useRestockApproval () {
   // scoped to the node itself, so it is shared by every caller.
   const HYDRATED_FOR = 'ApprovalHydratedFor'
   const hydratedFor = () => (pageState.hasNode(PARENT)
-    ? text(pageState.getControlField(PARENT, HYDRATED_FOR))
+    ? text(pageState.getControls(HYDRATED_FOR, null, PARENT))
     : '')
 
   function hydrate () {
@@ -150,8 +150,8 @@ export function useRestockApproval () {
     pageState.initResource(PARENT, { isPrimaryKey: true, reset: true, code })
     if (!parent.exists.value) return
 
-    pageState.setControlField(PARENT, HYDRATED_FOR, code)
-    pageState.load(PARENT, record)
+    pageState.setControls(HYDRATED_FOR, code, PARENT)
+    pageState.load(record, PARENT)
     writePlan({})
 
     // Seed the comment from the LAST approval pass on THIS request, for the same
@@ -162,7 +162,7 @@ export function useRestockApproval () {
     // Written unconditionally, because this line is only reached when the node
     // has just been created for this record: there is no approver input to
     // protect yet. Stepping between steps re-enters above.
-    pageState.setControlField(PARENT, COMMENT, text(record.ProgressApprovedComment))
+    pageState.setControls(COMMENT, text(record.ProgressApprovedComment), PARENT)
   }
 
   watch([serverRecord, () => parent.identifier.value], () => { hydrate() }, { immediate: true })
@@ -185,17 +185,17 @@ export function useRestockApproval () {
   // Deduped and blank-stripped on read, so a `null` cleared out of the multiselect
   // (Quasar's `clearable` emits `null`, not `[]`) can never reach the bin filter.
   const selectedWarehouses = computed(() => {
-    const raw = pageState.getControlField(PARENT, WAREHOUSES)
+    const raw = pageState.getControls(WAREHOUSES, null, PARENT)
     return Array.from(new Set((Array.isArray(raw) ? raw : []).map(text).filter(Boolean)))
   })
-  const showOutsideStock = computed(() => pageState.getControlField(PARENT, SHOW_OUTSIDE) === true)
-  const comment = computed(() => text(pageState.getControlField(PARENT, COMMENT)))
+  const showOutsideStock = computed(() => pageState.getControls(SHOW_OUTSIDE, null, PARENT) === true)
+  const comment = computed(() => text(pageState.getControls(COMMENT, null, PARENT)))
 
   function setSelectedWarehouses (codes) {
-    pageState.setControlField(PARENT, WAREHOUSES, Array.isArray(codes) ? codes.map(text).filter(Boolean) : [])
+    pageState.setControls(WAREHOUSES, Array.isArray(codes) ? codes.map(text).filter(Boolean) : [], PARENT)
   }
-  function setShowOutsideStock (value) { pageState.setControlField(PARENT, SHOW_OUTSIDE, value === true) }
-  function setComment (value) { pageState.setControlField(PARENT, COMMENT, value ?? '') }
+  function setShowOutsideStock (value) { pageState.setControls(SHOW_OUTSIDE, value === true, PARENT) }
+  function setComment (value) { pageState.setControls(COMMENT, value ?? '', PARENT) }
 
   // ── The request's item rows ────────────────────────────────────────────────
   const restock = computed(() => serverRecord.value || {})

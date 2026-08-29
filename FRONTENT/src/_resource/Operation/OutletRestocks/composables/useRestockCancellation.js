@@ -29,7 +29,6 @@
  * holds reactive state, renders, or touches a store.
  */
 
-import { bulkNode, updateNode } from 'src/composables/resources/nodePayloads'
 import {
   CANCELLED,
   DELIVERED,
@@ -151,7 +150,7 @@ export function nextProgressAfterCancellation (rows = [], restockCode = '') {
 export function buildRestockCancellationNodes (restock = {}, rows = [], actorName = '', comment = '') {
   const parent = asRow(restock)
   const parentCode = text(parent.Code)
-  if (!parentCode) return { valid: false, nodes: [], permissions: {}, message: 'This restock request could not be loaded.' }
+  if (!parentCode) return [{ valid: false, message: 'This restock request could not be loaded.' }]
 
   const returning = returnableItems(rows, parentCode)
   const cancelling = cancellableItems(rows, parentCode)
@@ -168,35 +167,39 @@ export function buildRestockCancellationNodes (restock = {}, rows = [], actorNam
       direction: INTO_WAREHOUSE,
       referenceType: STOCK_REFERENCE.RESTOCK,
       referenceCode: entry.Code || parentCode
-    }))).nodes)
+    }))))
   }
 
   // 2. Settle every open line. Kept Active so the request still shows what was committed.
   if (cancelling.length) {
-    nodes.push(bulkNode('OutletRestockItems', cancelling.map((entry) => ({
-      Code: text(entry.Code),
-      Progress: ITEM_CANCELLED,
-      ...stampFields('ProgressCancelled', actorName, comment),
-      Status: 'Active'
-    })), ['OutletRestockItems']))
+    nodes.push({
+      resource: 'OutletRestockItems',
+      many: true,
+      records: cancelling.map((entry) => ({
+        Code: text(entry.Code),
+        Progress: ITEM_CANCELLED,
+        ...stampFields('ProgressCancelled', actorName, comment),
+        Status: 'Active'
+      })),
+      permissions: { update: 'You are not allowed to change restock items.' },
+      reload: ['OutletRestockItems']
+    })
   }
 
   // 3. The parent, settled on what actually happened.
-  nodes.push(updateNode('OutletRestocks', parentCode, {
-    Progress: nextProgressAfterCancellation(rows, parentCode),
-    ...stampFields('ProgressCancelled', actorName, comment)
-  }, ['OutletRestocks', 'OutletRestockItems']))
-
-  const permissions = { OutletRestocks: 'cancel', OutletRestockItems: 'update' }
-  // Only claimed when the batch actually moves warehouse stock.
-  if (returning.length) permissions.StockMovements = 'create'
-
-  return {
-    valid: true,
-    nodes,
-    permissions,
+  nodes.push({
+    resource: 'OutletRestocks',
+    code: parentCode,
+    record: {
+      Progress: nextProgressAfterCancellation(rows, parentCode),
+      ...stampFields('ProgressCancelled', actorName, comment)
+    },
+    permissions: { cancel: 'You are not allowed to cancel this restock request.' },
+    reload: ['OutletRestockItems'],
     successMsg: returning.length ? 'Restock cancelled and warehouse stock returned.' : 'Restock cancelled.'
-  }
+  })
+
+  return nodes
 }
 
 // Composable shape for setup-context callers. Same functions, one import (§5).

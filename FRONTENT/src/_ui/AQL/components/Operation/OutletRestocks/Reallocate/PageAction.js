@@ -70,8 +70,8 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
 
   const step = () => pageState.meta.currentStep
   const restock = () => resourceRecord?.record?.value || {}
-  const plan = () => pageState.getControlField(PARENT, 'ApprovalPlan') || {}
-  const comment = () => text(pageState.getControlField(PARENT, 'ApprovalComment'))
+  const plan = () => pageState.getControls('ApprovalPlan', null, PARENT) || {}
+  const comment = () => text(pageState.getControls('ApprovalComment', null, PARENT))
   const actor = () => user.value?.name || user.value?.email || ''
 
   // Only PENDING lines are allocatable — a DELIVERED or ALLOCATED line is settled
@@ -108,7 +108,7 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
   function cancelNodes () {
     const rows = cancelledItems().map((item) => ({ Code: text(item.Code), Progress: 'PENDING' }))
     if (!rows.length) return []
-    return buildRestockCancelItemNodes(restock(), rows, actor(), comment() || 'Cancelled: no warehouse stock available.').nodes
+    return buildRestockCancelItemNodes(restock(), rows, actor(), comment() || 'Cancelled: no warehouse stock available.')
   }
 
   // Claims the registered `reallocate` action plus the stock writes the batch makes.
@@ -172,7 +172,7 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
 
       const rows = allocated.flatMap((item) => pendingAllocationRows(item, entryFor(item)))
       const result = buildPendingRestockAllocationNodes(parent, rows, actor(), comment())
-      pageState.applyNodes([...result.nodes, ...cancelNodes()])
+      pageState.applyNodes([...result, ...cancelNodes()])
       return { successMsg: result.successMsg }
     },
 

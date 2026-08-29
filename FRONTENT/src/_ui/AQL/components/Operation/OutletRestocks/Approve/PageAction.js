@@ -54,8 +54,8 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
 
   const step = () => pageState.meta.currentStep
   const restock = () => resourceRecord?.record?.value || {}
-  const plan = () => pageState.getControlField(PARENT, 'ApprovalPlan') || {}
-  const comment = () => text(pageState.getControlField(PARENT, 'ApprovalComment'))
+  const plan = () => pageState.getControls('ApprovalPlan', null, PARENT) || {}
+  const comment = () => text(pageState.getControls('ApprovalComment', null, PARENT))
   const actor = () => user.value?.name || user.value?.email || ''
 
   // A restock still awaiting a decision is being APPROVED (the parent moves to
@@ -96,7 +96,7 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
   function cancelNodes () {
     const rows = cancelledItems().map((item) => ({ Code: text(item.Code), Progress: 'PENDING' }))
     if (!rows.length) return []
-    return buildRestockCancelItemNodes(restock(), rows, actor(), comment() || 'Cancelled: no warehouse stock available.').nodes
+    return buildRestockCancelItemNodes(restock(), rows, actor(), comment() || 'Cancelled: no warehouse stock available.')
   }
 
   // Action names are lower-case on purpose. `checkSingleAction` derives the
@@ -168,16 +168,16 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         // row, so no Code is written twice in the same batch.
         const rows = pendingItems().flatMap((item) => splitApprovalRows(item, entryFor(item)))
         const result = buildRestockAllocationNodes(parent, rows, actor(), comment())
-        pageState.applyNodes([...result.nodes, ...cancelNodes()])
-        return { successMsg: result.successMsg }
+        pageState.applyNodes([...result, ...cancelNodes()])
+        return { successMsg: applied.successMsg }
       }
 
       // Later allocation: the builder groups by source Code and decides for itself
       // whether each source row is reused, shrunk to a remainder, or deactivated.
       const rows = allocated.flatMap((item) => pendingAllocationRows(item, entryFor(item)))
       const result = buildPendingRestockAllocationNodes(parent, rows, actor(), comment())
-      pageState.applyNodes([...result.nodes, ...cancelNodes()])
-      return { successMsg: result.successMsg }
+      pageState.applyNodes([...result, ...cancelNodes()])
+      return { successMsg: applied.successMsg }
     },
 
     /**
@@ -200,9 +200,10 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
       }
 
       const result = buildRestockRejectNodes(parent, active, actor(), comment())
-      pageState.applyNodes(result.nodes)
+      const applied = pageState.applyNodes(result)
+      if (applied.valid === false) return false
       return {
-        successMsg: result.successMsg,
+        successMsg: applied.successMsg,
         onSuccess: () => {
           pageState.reset()
           nav.goTo('view')

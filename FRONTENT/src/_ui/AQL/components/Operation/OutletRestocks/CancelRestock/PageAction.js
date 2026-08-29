@@ -42,7 +42,7 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
 
   const restock = () => resourceRecord?.record?.value || {}
   const actor = () => user.value?.name || user.value?.email || ''
-  const reason = () => text(pageState.getControlField(PARENT, CANCEL_REASON))
+  const reason = () => text(pageState.getControls(CANCEL_REASON, null, PARENT))
 
   function childRows () {
     const rows = (resourceRecord?.childRecordsByResource?.value || {})[CHILD]
@@ -81,14 +81,11 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
       // The domain states which permissions this cancellation actually needs — it claims
       // `cancel` rather than generic `update`, and stock only when units come back.
       const result = buildRestockCancellationNodes(parent, rows, actor(), why)
-      if (!result.valid) return { valid: false, message: result.message }
-      if (resourceConfig?.allowed(result.permissions) !== true) {
-        return { valid: false, message: 'You are not allowed to cancel this restock request.' }
-      }
 
-      pageState.applyNodes(result.nodes)
+      const applied = pageState.applyNodes(result)
+      if (applied.valid === false) return false
       return {
-        successMsg: result.successMsg,
+        successMsg: applied.successMsg,
         // Reset first, or the typed reason survives the navigation and re-seeds the
         // next visit to this route.
         onSuccess: () => {

@@ -45,7 +45,7 @@ export default (props, { pageState, resourceConfig }) => {
   // so reading it at submit time gives the live session user.
   const { user } = useAuth()
 
-  const isDraft = () => pageState.getControlField('OutletRestocks', 'isDraft') === true
+  const isDraft = () => pageState.getControls('isDraft', null, 'OutletRestocks') === true
   const items = () => itemEntries.value.filter((entry) => entry._action !== 'deactivate')
 
   /**
@@ -73,7 +73,7 @@ export default (props, { pageState, resourceConfig }) => {
   // cancellation, and cancelling is a workflow action, not a save.
   function validateItems () {
     const lines = items()
-    if (!lines.length || !lines.some((entry) => Number(entry.data.Quantity) > 0)) {
+    if (!lines.length || !lines.some((entry) => Number(entry.Quantity) > 0)) {
       return { valid: false, message: 'Add at least one item with a quantity greater than zero.' }
     }
     return null
@@ -110,14 +110,14 @@ export default (props, { pageState, resourceConfig }) => {
       // decided here. It is never REQUIRED: a resubmission is a workflow fact,
       // and stamping who/when must not hinge on whether the user had anything to
       // say about it.
-      pageState.setFields('OutletRestocks', {
+      pageState.setRecord(null, {
         Progress: draft ? 'DRAFT' : 'PENDING_APPROVAL',
         ...(draft ? {} : {
           Date: new Date().toISOString().slice(0, 10),
           ProgressSubmittedAt: toDateTime24(new Date()),
           ProgressSubmittedBy: user.value?.name || user.value?.email || ''
         })
-      })
+      }, 'OutletRestocks')
 
       if (draft) return { successMsg: 'Restock request saved as draft.' }
       return { successMsg: firstSubmission ? 'Restock request submitted for approval.' : 'Restock request resubmitted.' }

@@ -194,8 +194,8 @@ export function useRestockDelivery () {
   // Always written as a NEW array. `controls` entries are reactive, but replacing
   // the value outright means every projection below re-runs on one assignment
   // rather than depending on deep tracking of a mutated array.
-  const getSelection = () => pageState.getControlField(PARENT, SELECTION)
-  const writeSelection = (next) => pageState.setControlField(PARENT, SELECTION, normalizeSelection(next))
+  const getSelection = () => pageState.getControls(SELECTION, null, PARENT)
+  const writeSelection = (next) => pageState.setControls(SELECTION, normalizeSelection(next), PARENT)
   const selectedCodes = computed(() => normalizeSelection(getSelection()))
 
   // ── Hydration ──────────────────────────────────────────────────────────────
@@ -211,7 +211,7 @@ export function useRestockDelivery () {
   // shared by every caller and is discarded with the node.
   const HYDRATED_FOR = 'DeliveryHydratedFor'
   const hydratedFor = () => (pageState.hasNode(PARENT)
-    ? text(pageState.getControlField(PARENT, HYDRATED_FOR))
+    ? text(pageState.getControls(HYDRATED_FOR, null, PARENT))
     : '')
 
   function hydrate () {
@@ -230,8 +230,8 @@ export function useRestockDelivery () {
     pageState.initResource(PARENT, { isPrimaryKey: true, reset: true, code })
     if (!parent.exists.value) return
 
-    pageState.setControlField(PARENT, HYDRATED_FOR, code)
-    pageState.load(PARENT, record)
+    pageState.setControls(HYDRATED_FOR, code, PARENT)
+    pageState.load(record, PARENT)
     writeSelection([])
 
     // Seed the comment from the LAST delivery on THIS request. A
@@ -242,7 +242,7 @@ export function useRestockDelivery () {
     // Written unconditionally, because this line is only reached when the node
     // has just been created for this record: there is no user input to protect
     // yet. Stepping back and forth within the same request re-enters above.
-    pageState.setControlField(PARENT, COMMENT, text(record.ProgressDeliveredComment))
+    pageState.setControls(COMMENT, text(record.ProgressDeliveredComment), PARENT)
   }
 
   watch([serverRecord, () => parent.identifier.value], () => { hydrate() }, { immediate: true })
@@ -262,8 +262,8 @@ export function useRestockDelivery () {
     ;[restocks, restockItems, outlets, skus, products].forEach((resource) => resource.reload())
   })
 
-  const comment = computed(() => text(pageState.getControlField(PARENT, COMMENT)))
-  function setComment (value) { pageState.setControlField(PARENT, COMMENT, value ?? '') }
+  const comment = computed(() => text(pageState.getControls(COMMENT, null, PARENT)))
+  function setComment (value) { pageState.setControls(COMMENT, value ?? '', PARENT) }
 
   // ── The request's item rows ────────────────────────────────────────────────
   const restock = computed(() => serverRecord.value || {})

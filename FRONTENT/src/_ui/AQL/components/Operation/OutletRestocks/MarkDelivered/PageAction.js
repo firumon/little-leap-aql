@@ -50,9 +50,9 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
 
   const step = () => pageState.meta.currentStep
   const restock = () => resourceRecord?.record?.value || {}
-  const comment = () => text(pageState.getControlField(PARENT, COMMENT))
+  const comment = () => text(pageState.getControls(COMMENT, null, PARENT))
   const actor = () => user.value?.name || user.value?.email || ''
-  const selection = () => normalizeSelection(pageState.getControlField(PARENT, SELECTION))
+  const selection = () => normalizeSelection(pageState.getControls(SELECTION, null, PARENT))
 
   // Every active child row of this request. The parent's next Progress is a
   // question about the rows that were NOT selected — an allocated line left for a
@@ -131,8 +131,9 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
       const result = buildRestockDeliveryNodes(parent, delivered, actor(), comment(), {
         allItems: childRows()
       })
-      pageState.applyNodes(result.nodes)
-      return { successMsg: result.successMsg }
+      const applied = pageState.applyNodes(result)
+      if (applied.valid === false) return false
+      return { successMsg: applied.successMsg }
     },
 
     successRoute: 'view'

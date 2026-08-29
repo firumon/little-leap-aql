@@ -122,7 +122,7 @@ const { pageState, parent, progress, isRevision, comment, setComment } = useRest
 
 const isDraftState = computed(() => progress.value === 'DRAFT')
 
-const isDraft = computed(() => pageState.getControlField('OutletRestocks', 'isDraft') === true)
+const isDraft = computed(() => pageState.getControls('isDraft', null, 'OutletRestocks') === true)
 
-function setDraft (value) { pageState.setControlField('OutletRestocks', 'isDraft', value === true) }
+function setDraft (value) { pageState.setControls('isDraft', value === true, 'OutletRestocks') }
 </script>

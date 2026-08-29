@@ -58,7 +58,7 @@ export function useRestockEditForm () {
   // PageAction resets it, which is exactly the lifetime this flag needs.
   const HYDRATED_FOR = 'EditHydratedFor'
   const hydratedFor = () => (pageState.hasNode(PARENT)
-    ? text(pageState.getControlField(PARENT, HYDRATED_FOR))
+    ? text(pageState.getControls(HYDRATED_FOR, null, PARENT))
     : '')
 
   function hydrate () {
@@ -83,8 +83,8 @@ export function useRestockEditForm () {
       pageState.initResource(PARENT, { isPrimaryKey: true, reset: true, code })
       if (!parent.exists.value) return
 
-      pageState.setControlField(PARENT, HYDRATED_FOR, code)
-      pageState.load(PARENT, record)
+      pageState.setControls(HYDRATED_FOR, code, PARENT)
+      pageState.load(record, PARENT)
 
       // Default the draft toggle ON when entering an existing DRAFT record. A
       // user who opens their draft to adjust item lines and hits the primary
@@ -92,7 +92,7 @@ export function useRestockEditForm () {
       // the opposite intent. No `else`: the node is fresh, so anything that is
       // not a DRAFT already reads as false.
       if (text(record.Progress) === 'DRAFT') {
-        pageState.setControlField(PARENT, 'isDraft', true)
+        pageState.setControls('isDraft', true, PARENT)
       }
     }
 
@@ -122,7 +122,7 @@ export function useRestockEditForm () {
     rows.forEach((row) => {
       const sku = skuKey(row.SKU)
       if (sku && primaryBySku.get(sku) !== row) return
-      pageState.addChild(PARENT, CHILD, { ...row }, { action: 'update' })
+      pageState.addChild(CHILD, { ...row }, PARENT, null, { action: 'update' })
     })
   }
 
@@ -172,7 +172,7 @@ export function useRestockEditForm () {
   const comment = computed(() => parent.record.value.ProgressSubmittedComment || '')
 
   function setComment (value) {
-    pageState.setField(PARENT, 'ProgressSubmittedComment', value ?? '')
+    pageState.setRecord('ProgressSubmittedComment', value ?? '', PARENT)
   }
 
   return {

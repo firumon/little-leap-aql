@@ -79,8 +79,8 @@ export function useRestockStockMatch () {
   const childEntries = parent.children(CHILD)
 
   const outletCode = computed(() => text(parent.record.value.OutletCode))
-  const isDirect = computed(() => pageState.getControlField(PARENT, 'RestockMode') === 'DIRECT')
-  const warehouseCode = computed(() => (isDirect.value ? text(pageState.getControlField(PARENT, 'WarehouseCode')) : ''))
+  const isDirect = computed(() => pageState.getControls('RestockMode', null, PARENT) === 'DIRECT')
+  const warehouseCode = computed(() => (isDirect.value ? text(pageState.getControls('WarehouseCode', null, PARENT)) : ''))
 
   // Stock on hand at the chosen outlet, and — direct mode only — at the source
   // warehouse. Both are summed per SKU because a SKU can sit in several storages.
@@ -99,8 +99,8 @@ export function useRestockStockMatch () {
     const totals = {}
     childEntries.value.forEach((entry) => {
       if (entry._action === 'deactivate') return
-      const sku = key(entry.data.SKU)
-      if (sku) totals[sku] = (totals[sku] || 0) + num(entry.data.Quantity)
+      const sku = key(entry.SKU)
+      if (sku) totals[sku] = (totals[sku] || 0) + num(entry.Quantity)
     })
     return totals
   })
@@ -159,7 +159,7 @@ export function useRestockStockMatch () {
   // line instead of silently editing whichever one it happened to find first.
   function matchingEntries (sku) {
     const target = key(sku)
-    return childEntries.value.filter((entry) => key(entry.data.SKU) === target)
+    return childEntries.value.filter((entry) => key(entry.SKU) === target)
   }
 
   // Zero means "not requested". A persisted line must be soft-deleted so GAS
@@ -172,8 +172,8 @@ export function useRestockStockMatch () {
   function dropEntry (entry) {
     const index = childEntries.value.indexOf(entry)
     if (index < 0) return
-    if (text(entry.data.Code)) pageState.setChildAction(PARENT, CHILD, index, 'deactivate')
-    else pageState.removeChild(PARENT, CHILD, index)
+    if (text(entry.Code)) pageState.setChildAction(CHILD, index, 'deactivate', PARENT)
+    else pageState.removeChild(CHILD, index, PARENT)
   }
 
   function setQuantity (sku, value) {
@@ -183,13 +183,13 @@ export function useRestockStockMatch () {
     const entries = matchingEntries(sku)
 
     if (!entries.length) {
-      if (quantity > 0) pageState.addChild(PARENT, CHILD, { SKU: sku, Quantity: quantity, Progress: 'PENDING', Status: 'Active' })
+      if (quantity > 0) pageState.addChild(CHILD, { SKU: sku, Quantity: quantity, Progress: 'PENDING', Status: 'Active' }, PARENT)
       return
     }
 
     // The line that survives is a persisted one when there is one, so an edit
     // patches the existing server row instead of orphaning it behind a new line.
-    const keeper = entries.find((entry) => text(entry.data.Code)) || entries[0]
+    const keeper = entries.find((entry) => text(entry.Code)) || entries[0]
 
     // Fold every other line for this SKU away first, so one SKU is one line again
     // and the next read of `quantities` agrees with what these buttons just wrote.
@@ -197,9 +197,9 @@ export function useRestockStockMatch () {
 
     if (quantity > 0) {
       const index = childEntries.value.indexOf(keeper)
-      pageState.updateChild(PARENT, CHILD, index, { Quantity: quantity })
+      pageState.updateChild(CHILD, index, { Quantity: quantity }, PARENT)
       // Restore a line the user had zeroed out earlier in the same session.
-      if (keeper._action === 'deactivate') pageState.setChildAction(PARENT, CHILD, index, text(keeper.data.Code) ? 'update' : 'create')
+      if (keeper._action === 'deactivate') pageState.setChildAction(CHILD, index, text(keeper.Code) ? 'update' : 'create', PARENT)
       return
     }
 

@@ -1,8 +1,5 @@
 ﻿import { useAuth } from 'src/composables/core/useAuth'
-import {
-  restockCreateFields,
-  buildRestockCreateChainNodes
-} from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
+import { buildRestockChainNodes } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
 
 /**
  * OutletRestocks › Add › PageAction — JS modifier (tier 2: resource + page).
@@ -34,17 +31,17 @@ export default (props, { pageState, resourceConfig }) => {
   const { user } = useAuth()
 
   const step = () => pageState.meta.currentStep
-  const mode = () => pageState.getControlField('OutletRestocks', 'RestockMode') || 'STANDARD'
-  const warehouse = () => pageState.getControlField('OutletRestocks', 'WarehouseCode') || ''
+  const mode = () => pageState.getControls('RestockMode', null, 'OutletRestocks') || 'STANDARD'
+  const warehouse = () => pageState.getControls('WarehouseCode', null, 'OutletRestocks') || ''
   // Wizard-only intent set by `SubmitOptions.vue`; direct restocks never offer it.
-  const isDraft = () => pageState.getControlField('OutletRestocks', 'isDraft') === true && mode() !== 'DIRECT'
+  const isDraft = () => pageState.getControls('isDraft', null, 'OutletRestocks') === true && mode() !== 'DIRECT'
   const items = () => itemEntries.value.filter((entry) => entry._action !== 'deactivate')
 
   // Reused by step 2's `next` gate and by `submit`: no request leaves the page
   // without at least one line carrying a positive quantity.
   function validateItems () {
     const lines = items()
-    if (!lines.length || lines.some((entry) => Number(entry.data.Quantity) <= 0)) {
+    if (!lines.length || lines.some((entry) => Number(entry.Quantity) <= 0)) {
       return { valid: false, message: 'Add at least one item with a quantity greater than zero.' }
     }
     return null
@@ -79,42 +76,24 @@ export default (props, { pageState, resourceConfig }) => {
       return validateItems()
     },
 
-    // A thin adapter. The wizard collects outlet, mode, warehouse and lines; Layer 2
-    // decides every column. The page owns the restock node, so the domain's field
-    // decisions are applied to it and the builder only adds what the node cannot hold.
+    // A thin adapter. The wizard collects outlet, mode, warehouse and lines; the domain
+    // builder decides every column and returns the whole submission, header included.
     submit: () => {
       const actorName = user.value?.name || user.value?.email || ''
-      const lines = items()
-      const fields = restockCreateFields({
+      const result = buildRestockChainNodes({
+        form: parent.record.value,
+        lines: items().map(({ _action, ...data }) => data),
         mode: mode(),
         draft: isDraft(),
         warehouseCode: warehouse(),
-        actorName,
-        comment: parent.record.value.ProgressSubmittedComment
-      })
-
-      pageState.setFields('OutletRestocks', fields.header)
-      if (fields.linePatch) {
-        lines.forEach((entry) => {
-          pageState.updateChild('OutletRestocks', 'OutletRestockItems', itemEntries.value.indexOf(entry), fields.linePatch)
-        })
-      }
-
-      const result = buildRestockCreateChainNodes({
-        outletCode: parent.record.value.OutletCode,
-        mode: mode(),
-        draft: isDraft(),
-        warehouseCode: warehouse(),
-        lines: lines.map((entry) => entry.data),
+        linkToConsumption: false,
+        comment: parent.record.value.ProgressSubmittedComment,
         actorName
       })
-      if (!result.valid) return { valid: false, message: result.message }
-      if (resourceConfig?.allowed(result.permissions) !== true) {
-        return { valid: false, message: 'You are not allowed to submit this restock request.' }
-      }
 
-      pageState.applyNodes(result.nodes)
-      return { successMsg: result.successMsg }
+      const applied = pageState.applyNodes(result)
+      if (applied.valid === false) return false
+      return { successMsg: applied.successMsg }
     }
   }
 }

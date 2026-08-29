@@ -45,7 +45,7 @@ Add this as the final line of the `<script setup>` block in
 
 ```js
 // Dev-only console handle: lets a developer drive the live page state
-// (setField / submit) from the browser console without the UI. Re-assigned on
+// (setRecord / submit) from the browser console without the UI. Re-assigned on
 // every Page mount, so it always points at the currently rendered page.
 if (process.env.DEV) window.__pageState = pageState
 ```
@@ -162,7 +162,32 @@ and read inconsistently forever after.
 Compute the stamp **once per record** and reuse it across every triple, so the
 record's timeline is internally consistent.
 
-### 3.4 Codes are auto-generated — leave them alone
+### 3.4 Prove the session BEFORE building anything
+
+> [!CAUTION]
+> A tenant whose GAS deployment lags the frontend rejects **every** request with
+> `Unauthorized / Invalid session proof` — reads included. Logging out and back in
+> does **not** fix it, and neither does any change to the payload.
+
+Worse, retrying makes it strictly worse. `createSessionKey()`
+(`src/services/SessionKeyService.js`) calls `nextGeneration()` on **every** request,
+success or failure, while `verifySessionProof()` (`GAS/sessionProof.gs`) only advances
+its stored generation on a **successful** verify. Failures ratchet the client away from
+a frozen server counter, and `SESSION_GEN_WINDOW` is 2.
+
+**So the first call of every session is a read-only `get`, never a write:**
+
+```js
+(async () => { const res = await window.pageState.run({
+    requests: [{ action: 'get', resource: ['Warehouses'], payload: {} }], notify: false })
+  return JSON.stringify({ success: res?.success, error: res?.response?.error || '' }) })()
+```
+
+`success: true` → proceed. Anything else → **stop**. It is a deployment problem, not a
+data problem: push and redeploy `sessionProof.gs` to that tenant. Building a payload
+first wastes the work and burns generations for nothing.
+
+### 3.5 Codes are auto-generated — leave them alone
 
 `generateNextYearScopedCode` (`GAS/resourceApi.gs`) derives the year segment from
 `new Date().getFullYear()` **server-side**, so historical rows get a current-year
@@ -237,6 +262,13 @@ Records are keyed `Resource::Code`, so codes come from the **key**, not the valu
 > `localStorage.clear()` and deletes the IndexedDB (`IndexedDbService.js`). Visit
 > the relevant list pages first so the masters populate, then re-run the guard.
 
+> [!CAUTION]
+> **A dev rehearsal does not validate live data.** Masters differ per tenant. A run
+> rehearsed on `AQL` skipped 4 SKUs (28 of 180 units) that `LPAJAEGCC` holds perfectly
+> well. Rehearsing proves the *payload and the auth path*; it says nothing about which
+> lines survive on the target. Re-run §4.2 against the real tenant, always, and never
+> carry a skip list across.
+
 ### 4.3 The standing skip rule
 
 > [!IMPORTANT]
@@ -270,6 +302,29 @@ units, 37% of the invoice**. Never let a settled rule hide a number that large.
 
 ---
 
+### 4.4 Are those numbers quantities? PROVE IT
+
+A ledger stores **units**. A source extract very often stores **money** — and the two
+are indistinguishable by looking at a grid of integers.
+
+The tell is a `RATE` column. If one exists, test whether every non-zero cell divides
+evenly by its row's rate:
+
+```js
+const q = value / rate
+const clean = Math.abs(q - Math.round(q)) < 1e-9
+```
+
+Across a real matrix of 180 non-zero cells, **every one** divided evenly — 21 SKUs at
+rates from 8 to 58. That is not coincidence; it proves the cells were `rate × qty`.
+Writing them as quantities would have posted **482 units as 3,806**.
+
+Divisibility is evidence, not proof: at rate 1 the two are identical, and a rate of 10
+makes many quantities look plausible either way. **Confirm the reading with the user
+before building**, and say which interpretation you used in the report.
+
+---
+
 ## 5. Batch shape
 
 One batch per parent record. Order matters — GAS resolves `$ref` against records
@@ -285,8 +340,8 @@ last. get         [<derived balance resources>]
 
 ```js
 ps.initResource('<Parent>', { reset: true })   // reset:true — fresh node per record
-ps.setFields('<Parent>', { /* header */ })
-kept.forEach(i => ps.addChild('<Parent>', '<Child>', { /* line */ }))
+ps.setRecord(null, { /* header */ }, '<Parent>')
+kept.forEach(i => ps.addChild('<Child>', { /* line */ }, '<Parent>'))
 const base = ps.build()                        // → [compositeSave]
 ```
 
@@ -475,6 +530,7 @@ under `FRONTENT/public/` and would otherwise ship with a build.
 
 - [ ] **Dev handle re-added** to `Page.vue` (§1) — it is not in the repo
 - [ ] **Correct tenant confirmed** — `aql_tenant_code` matches the intended tenant
+- [ ] **Read-only `get` returned `success: true`** (§3.4) — prove the session before building
 - [ ] **Masters loaded and guard passed** (§4.2) — never validate against a cold cache
 - [ ] Runner re-installed after any tenant switch or reload (`window.*` does not survive)
 - [ ] Profile for this resource exists in Part B, or was derived with the user
@@ -483,6 +539,7 @@ under `FRONTENT/public/` and would otherwise ship with a build.
 - [ ] `$datetime` rule confirmed explicitly (§3.3)
 - [ ] Ledger legs confirmed against the resource's own `use*Payload.js` (§5.3)
 - [ ] Master references validated; unresolvable values quantified and ruled on
+- [ ] Source numbers confirmed as **quantities, not values** (§4.4)
 - [ ] `window.__pageState` confirmed live on the `_add` route (dev build only)
 - [ ] Record 1 previewed un-dispatched; `validationErrors` empty
 - [ ] Each record verified from IndexedDB before the next is sent
@@ -497,9 +554,23 @@ under `FRONTENT/public/` and would otherwise ship with a build.
 
 ## B.1 OutletRestocks — VERIFIED
 
-Runs of 2026-08-19 against dummy data; **5 records** (`ORS26000048`–`ORS26000052`),
-all legs confirmed on every one. One 30s tool timeout encountered and resolved
-per §6.1 — the batch had landed.
+Run of 2026-08-28 against **live `LPAJAEGCC`**; **7 records**
+(`ORS26000027`–`ORS26000033`), 39 lines, 180 units, **zero skips**. Every leg confirmed:
+39 children, 39 `StockMovements` (−180), 39 `OutletMovements` (+180), and all nine
+must-stay-blank stamp columns empty on all 7.
+
+Earlier run of 2026-08-19 against dummy data; 5 records (`ORS26000048`–`ORS26000052`).
+One 30s tool timeout encountered and resolved per §6.1 — the batch had landed.
+
+**Two failures worth remembering from the 2026-08-28 run:**
+
+1. The tenant rejected every request with `Invalid session proof` until its GAS was
+   redeployed. Cost several dispatches before diagnosis — now prevented by §3.4.
+2. A batch appeared to hang for ~4 minutes with `submitting: true`. `performance
+   .getEntriesByType('resource')` showed the request had **completed in 17.3s**; the
+   client's post-processing was stuck. Resolved without resending: the code sequence
+   was contiguous (`…67` with no `…68`), proving nothing had landed. **Sequence
+   contiguity is a reliable no-duplicate check** — cheaper than any other evidence.
 
 | | |
 |---|---|
@@ -533,9 +604,19 @@ Progress · Progress{Allocated,Delivered,Cancelled}{At,By,Comment} · Status · 
 
 Trailing `get`: `['WarehouseStorages', 'OutletStorages']`
 
-**Constants agreed for the dummy run** — re-confirm per tenant:
+**Constants** — re-confirm per tenant:
 `WarehouseCode: WH001`, `StorageName: _default`, `OutletConsumptionCode: ''`
 (blank — a restored restock stands alone and has no consumption to point at).
+
+**Stamps for a `DELIVERED` restore.** Parent writes `Submitted` + `Approved` +
+`Delivered`; child writes `Allocated` + `Delivered`. Parent `RevisionRequired`,
+`Rejected`, `Cancelled` and child `Cancelled` **stay blank** — that is a pass
+criterion, not an omission. One timestamp per record, reused across every triple.
+
+> [!NOTE]
+> `src/pages/Page.vue` may already carry a `window.pageState` handle as an uncommitted
+> working-tree change. If so, **use it and edit nothing** — §9 then has nothing to
+> revert. Check before adding `window.__pageState`.
 
 **Masters to validate:** `SKUs`, `Outlets`, `Warehouses`.
 
@@ -543,8 +624,13 @@ Trailing `get`: `['WarehouseStorages', 'OutletStorages']`
 
 ## B.2 OutletConsumptions — VERIFIED
 
-Run of 2026-08-19 against dummy data; 2 records offered, **1 written**
-(`OC26000024`), 1 correctly skipped per §4.3. Shelf reconciled 8 → 4.
+Run of 2026-08-28 against **live `LPAJAEGCC`**; **17 records**
+(`OC26000048`–`OC26000064`), 180 lines, 482 units, zero skips. Verified: 180 children,
+180 `OutletMovements` (−482), every parent `PENDING_INVOICE_GENERATION` with the
+`InvoiceGenerated` and `Cancelled` triples blank.
+
+Earlier run of 2026-08-19 against dummy data; 2 records offered, 1 written
+(`OC26000024`), 1 correctly skipped per §4.3.
 
 | | |
 |---|---|
@@ -555,10 +641,19 @@ Run of 2026-08-19 against dummy data; 2 records offered, **1 written**
 | Required headers | parent `OutletCode,Date,Username,Progress,Status`; child `OutletConsumptionCode,SKU,Qty` |
 | Unique composite | child `OutletConsumptionCode+SKU` — **one row per SKU**; merge duplicate source lines before writing |
 
-> [!NOTE]
-> Unlike the restock `_add` page, `snapshot()` is **`{}`** on mount — no node is
-> auto-seeded. `initResource('OutletConsumptions', { reset: true })` is mandatory,
-> and `Date` / `Username` must be set explicitly rather than inherited.
+> [!CAUTION]
+> **The `_add` page seeds a companion `OutletRestocks` node.** As of 2026-08-28 the
+> snapshot carries *two* nodes: `OutletConsumptions` and an `OutletRestocks` prefilled
+> `DELIVERED` with `WarehouseCode: WH002` and `direct`/`deliver` controls — the
+> restock-alongside-consumption flow. Left attached, every `build()` would also write a
+> **phantom restock crediting warehouse stock that never moved**.
+>
+> `initResource('OutletConsumptions', { reset: true })` detaches it — but **verify, do
+> not assume**: the preview must show exactly `compositeSave:OutletConsumptions`,
+> `bulk:OutletMovements`, `get:OutletStorages`, with no `OutletRestocks` and no `WH002`.
+>
+> (An earlier run recorded `snapshot()` as `{}` here. The page changed; re-read the
+> snapshot every time rather than trusting a profile's account of it.)
 
 **Parent columns**
 
@@ -612,6 +707,13 @@ through an action that presupposes an invoice row.
 Source documents may reuse a doc number already seen on another resource
 (`LP/LL25-0001` exists as both a restock and a consumption). Separate series —
 not a collision, and not a reason to pause.
+
+> [!NOTE]
+> **`ProgressInvoiceGenerated*` stamps do not belong on a restore.** Writing them while
+> `Progress` stays `PENDING_INVOICE_GENERATION` makes the record claim an invoice exists
+> while sitting in the invoiceable queue. Setting `Progress: INVOICE_GENERATED` instead
+> is self-consistent but points at invoice rows the restore never created. Leave both
+> blank and let the real `MarkInvoiceGenerated` action stamp them.
 
 **Still open** (not encountered in the verified run):
 

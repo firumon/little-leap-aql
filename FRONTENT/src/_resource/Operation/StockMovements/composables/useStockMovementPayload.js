@@ -1,6 +1,5 @@
 import { textOrRef } from 'src/utils/appHelpers'
 import { toDateTime24 } from 'src/utils/dateHelpers'
-import { bulkNode, createNode } from 'src/composables/resources/nodePayloads'
 
 // The WAREHOUSE ledger. Every module that moves warehouse stock writes through here, so
 // the sign rule and the ReferenceType vocabulary have one home.
@@ -56,24 +55,63 @@ export function stockMovementRow ({
 }
 
 export function stockMovementPermissions () {
-  return { [RESOURCE_NAME]: 'create' }
+  return { create: 'You are not allowed to move warehouse stock.' }
 }
 
 // An empty list yields NO node. A bulk with no records is not "no movement" - it is a
 // round trip asking GAS to recalculate every warehouse balance on the strength of nothing.
 export function buildStockMovementNodes (rows = []) {
   const records = (Array.isArray(rows) ? rows : []).filter(Boolean)
-  if (!records.length) return { valid: true, nodes: [], permissions: {} }
+  if (!records.length) return []
+  return [{
+    resource: RESOURCE_NAME,
+    many: true,
+    records,
+    permissions: stockMovementPermissions(),
+    reload: [WAREHOUSE_STORAGES]
+  }]
+}
+
+// NODE builder: high-level items in, a complete self-contained node out. Callers hand
+// over the item list and the reference; the row shape, the sign and the storage reload
+// stay inside this module.
+export function stockMovementsNode (items = [], {
+  warehouseCode = '',
+  referenceCode = '',
+  referenceType = STOCK_REFERENCE.RESTOCK,
+  direction = OUT_OF_WAREHOUSE,
+  movementDate = ''
+} = {}) {
+  const records = (Array.isArray(items) ? items : []).map((row) => stockMovementRow({
+    warehouseCode,
+    storageName: row?.StorageName,
+    sku: row?.SKU,
+    qty: row?.Quantity ?? row?.Qty,
+    direction,
+    referenceType,
+    referenceCode,
+    movementDate
+  })).filter(Boolean)
+
+  if (!records.length) return null
   return {
-    valid: true,
-    nodes: [bulkNode(RESOURCE_NAME, records, [WAREHOUSE_STORAGES])],
+    resource: RESOURCE_NAME,
+    many: true,
+    records,
+    reload: [WAREHOUSE_STORAGES],
     permissions: stockMovementPermissions()
   }
 }
 
 // One row, for a caller that genuinely writes a single movement.
 export function buildStockMovementNode (row) {
-  return row ? createNode(RESOURCE_NAME, row, [WAREHOUSE_STORAGES]) : null
+  if (!row) return null
+  return {
+    resource: RESOURCE_NAME,
+    record: row,
+    permissions: stockMovementPermissions(),
+    reload: [WAREHOUSE_STORAGES]
+  }
 }
 
 export function useStockMovementPayload () {
@@ -84,6 +122,7 @@ export function useStockMovementPayload () {
     INTO_WAREHOUSE,
     DEFAULT_STORAGE,
     stockMovementRow,
+    stockMovementsNode,
     stockMovementPermissions,
     buildStockMovementNodes,
     buildStockMovementNode

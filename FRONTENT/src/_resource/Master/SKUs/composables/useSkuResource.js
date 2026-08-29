@@ -123,11 +123,9 @@ const shared = defineSharedComposable((dataStore) => {
    * a product declares no variant types, and for `primary` when the SKU resolves to no
    * product at all. Everywhere else the reader sees words.
    *
-   * This lives in Layer 2, not in a page composable, because "what do we call this SKU" is
-   * one question with one answer for every screen that asks it. Two UI-side copies of this
-   * rule already exist (`useConsumptionWizard.skuLabel`, `useRestockView.skuLabelOf`) and
-   * they are exactly the drift UI_RESOURCE_DOMAIN_LOGIC.md §3.3 warns about — new callers
-   * take it from here so a third copy never happens.
+   * This lives in Layer 2 because "what do we call this SKU" is one question with one
+   * answer for every screen that asks it. `useRestockView.skuLabelOf` is a UI-side copy —
+   * the drift §3.3 warns about. New callers take it from here.
    */
   const skuLabelOf = (skuCode) => {
     const code = String(skuCode == null ? '' : skuCode).trim()

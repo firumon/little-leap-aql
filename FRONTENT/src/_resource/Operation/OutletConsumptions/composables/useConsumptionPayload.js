@@ -1,26 +1,7 @@
-/**
- * OutletConsumptions — the batch payloads a consumption submit writes. Layer 2.
- *
- * A consumption is not one record; it is an atomic transaction across up to six resources.
- * The sign conventions, the state each side-effect lands in, and the order the requests
- * must run in ARE the business rule, so they live here rather than in the sticky bar that
- * dispatches them (UI_RESOURCE_DOMAIN_LOGIC.md §3).
- *
- * This file owns the CORE writes — the consumption itself, the outlet ledger, returns, and
- * the invoice. It is the BOTTOM of the chain: `useConsumptionWorkflow.js`
- * beside it imports these builders, delegates the visit and restock legs to those domains,
- * and exposes `buildConsumptionWorkflowChainNodes` as the ONE entry point Layer 3 calls
- * (§9.1). The dependency runs one way — workflow → payload — so neither module's
- * initialisation order depends on the other's.
- *
- * PURE functions throughout: no refs, no injects, no stores, nothing rendered. They take
- * plain rows and return canonical request envelopes, so a `PageAction.js` running outside
- * any setup context can call them (§5). `resourceRequests` is imported rather than
- * `usePageState` specifically so this module's graph stays store-free (§2.1).
- */
-
+// OutletConsumptions payloads. Layer 2. A consumption writes across several resources at
+// once, so the signs, the states and the order live here, not in the UI.
 import { batchRef } from 'src/utils/appHelpers'
-import { compositeNode } from 'src/composables/resources/nodePayloads'
+import { resourceRow } from 'src/composables/resources/useResourceConfig'
 import {
   toNumber,
   soldRowsOf,
@@ -51,8 +32,8 @@ import {
   OFF_THE_SHELF,
   ONTO_THE_SHELF,
   OUTLET_REFERENCE,
-  outletMovementRow,
-  buildOutletMovementNodes
+  OUTLET_ROLE,
+  outletMovementsNode
 } from 'src/_resource/Operation/OutletMovements/composables/useOutletMovementPayload'
 const CONSUMPTIONS = 'OutletConsumptions'
 const CONSUMPTION_ITEMS = 'OutletConsumptionItems'
@@ -93,6 +74,46 @@ const dateOf = (form) => text(asRow(form).Date) || todayISO()
  * raised a restock writes those records directly and no header at all; the caller
  * (`Add/PageAction.js`) is what decides, because it is what knows the whole submission.
  */
+import { useAuth } from 'src/composables/core/useAuth'
+import { useConsumptionIndex } from './useConsumptionIndex'
+
+// ROW builder: one OutletConsumptionItems sheet row.
+export function consumptionItemRow (child, extra) {
+  return resourceRow(CONSUMPTION_ITEMS, child, extra)
+}
+
+/** Today's PLANNED visit for this outlet, which a walk-in audit belongs to. */
+function plannedVisitCodeFor (outletCode) {
+  const code = text(outletCode)
+  if (!code) return ''
+  const { auditByOutlet } = useConsumptionIndex()
+  return text(auditByOutlet.value.get(code)?.plannedToday?.Code)
+}
+
+// NODE builder: a consumption and its lines, with every column the domain can answer
+// already resolved. `OutletConsumptions` stores no aggregate, so there is nothing to derive.
+export function consumptionNode (parent = {}, children = [], extra = {}) {
+  const { user } = useAuth()
+  const seed = { ...asRow(parent), ...asRow(extra) }
+  const outletCode = text(seed.OutletCode)
+
+  const record = resourceRow(CONSUMPTIONS, {
+    Username: user.value?.name || '',
+    Date: todayISO(),
+    Progress: PENDING_INVOICE_GENERATION,
+    Status: 'Active'
+  }, parent, extra, {
+    OutletVisitCode: text(seed.OutletVisitCode) || plannedVisitCodeFor(outletCode)
+  })
+
+  return {
+    resource: CONSUMPTIONS,
+    record,
+    // A bucket, not a bare list: that is the shape pageState stores children in.
+    children: [{ resource: CONSUMPTION_ITEMS, records: (children || []).map((child) => consumptionItemRow(child)) }],
+    permissions: { create: 'You are not allowed to record a consumption.' }
+  }
+}
 export function buildConsumptionCompositeNode (form = {}, countRows = [], actorName = '', options = {}) {
   const entry = asRow(form)
   const sold = soldRowsOf(countRows)
@@ -100,7 +121,7 @@ export function buildConsumptionCompositeNode (form = {}, countRows = [], actorN
     ? 'Consumption recorded; invoice generated in the same submission.'
     : 'Consumption recorded; invoice generation pending.'
 
-  return compositeNode({
+  return {
     resource: CONSUMPTIONS,
     record: {
       OutletCode: text(entry.OutletCode),
@@ -119,7 +140,7 @@ export function buildConsumptionCompositeNode (form = {}, countRows = [], actorN
       }))
     }],
     reload: [CONSUMPTIONS, CONSUMPTION_ITEMS]
-  })
+  }
 }
 
 // ─── 2. The outlet ledger ─────────────────────────────────────────────────────
@@ -146,17 +167,20 @@ export function buildConsumptionMovementsNode (form = {}, countRows = [], consum
   const sold = soldRowsOf(countRows)
   if (!sold.length) return null
 
-  const records = sold.map((row) => outletMovementRow({
+  return outletMovementsNode(sold.map((row) => ({
+    StorageName: row.StorageName,
+    SKU: row.SKU,
+    Quantity: row.SoldQty
+  })), {
     outletCode: entry.OutletCode,
-    storageName: row.StorageName,
-    sku: row.SKU,
-    qty: row.SoldQty,
+    // The sale leg. A restock delivery on the same audit writes the same resource, so
+    // without a role apiece the two would collide on one node address.
+    role: OUTLET_ROLE.SALE,
     direction: OFF_THE_SHELF,
     referenceType: OUTLET_REFERENCE.CONSUMPTION,
     referenceCode: consumptionRef || batchRef(CONSUMPTION_REF_PATH),
     movementDate: dateOf(entry)
-  }))
-  return buildOutletMovementNodes(records).nodes[0] || null
+  })
 }
 
 // ─── 2b. Reversing the outlet ledger on cancellation ──────────────────────────
@@ -202,7 +226,7 @@ export function restorableConsumptionLines (consumption = {}, sources = {}) {
 
   const ledger = asList(sources.movements)
     .map(asRow)
-    .filter((row) => text(row.ReferenceType) === REF_CONSUMPTION &&
+    .filter((row) => text(row.ReferenceType) === OUTLET_REFERENCE.CONSUMPTION &&
       text(row.ReferenceCode) === code &&
       toNumber(row.QtyChange) < 0)
 
@@ -239,16 +263,16 @@ export function buildConsumptionReversalMovementsNode (consumption = {}, sources
   const lines = restorableConsumptionLines(record, sources)
   if (!lines.length) return null
 
-  const records = lines.map((line) => outletMovementRow({
+  return outletMovementsNode(lines.map((line) => ({
+    StorageName: line.storageName,
+    SKU: line.sku,
+    Quantity: line.qty
+  })), {
     outletCode: record.OutletCode,
-    storageName: line.storageName,
-    sku: line.sku,
-    qty: line.qty,
     direction: ONTO_THE_SHELF,
     referenceType: OUTLET_REFERENCE.CONSUMPTION_CANCELLED,
     referenceCode: record.Code
-  }))
-  return buildOutletMovementNodes(records).nodes[0] || null
+  })
 }
 
 // ─── 3. Returns ───────────────────────────────────────────────────────────────
@@ -296,14 +320,18 @@ export function buildReturnsNodes (form = {}, countRows = [], metaOf = () => ({}
         StorageName: text(row.StorageName) || DEFAULT_STORAGE,
         Reason: text(meta.Reason) || 'DAMAGE',
         ReasonComment: text(meta.ReasonComment),
+        SourceInvoiceCode: text(meta.SourceInvoiceCode),
         InvoiceAdjustmentRequired: creditsInvoice(meta),
         WarehouseActionRequired: meta.WarehouseActionRequired === true,
         WarehouseCode: meta.WarehouseActionRequired === true ? text(meta.WarehouseCode) : ''
       },
-      // A missing price is stored as 0 rather than blocking: the return itself is a
-      // physical fact that must be recorded even when it carries no monetary credit.
-      // `validateConsumption` is what refuses to INVOICE an unpriced line.
-      resolvedPrice: priceOf(row.SKU, priceListCode) ?? 0
+      // The price the officer settled on wins - it may have come off the source invoice
+      // rather than the price list. A missing price is stored as 0 rather than blocking:
+      // the return is a physical fact even when it carries no credit. `validateConsumption`
+      // is what refuses to INVOICE an unpriced line.
+      resolvedPrice: meta.Price === null || meta.Price === undefined || meta.Price === ''
+        ? (priceOf(row.SKU, priceListCode) ?? 0)
+        : toNumber(meta.Price)
     }
   })
 
@@ -313,12 +341,11 @@ export function buildReturnsNodes (form = {}, countRows = [], metaOf = () => ({}
     movementDate
   })
 
-  // An array, not the envelope — every caller here splices these into a larger request
-  // list it is already assembling. The envelope's `valid` is surfaced by raising, because
-  // a return line that fails validation means the whole consumption submit is malformed
-  // and must not be dispatched half-built.
-  if (!built.valid) throw new Error(built.message || 'Return lines could not be built.')
-  return built.nodes
+  // Raised rather than returned: every caller here splices these into a larger list it is
+  // already assembling, and a bad return line means the whole consumption submit is
+  // malformed and must not be dispatched half-built.
+  if (built[0]?.valid === false) throw new Error(built[0].message || 'Return lines could not be built.')
+  return built
 }
 
 /**
@@ -333,7 +360,7 @@ export function buildReturnAdjustmentNodes (returnRows = [], invoiceRef = null) 
     returnRows,
     invoiceCode: invoiceRef || batchRef(`${INVOICES}.latest.code`)
   })
-  return built.nodes
+  return built
 }
 
 // The invoice for this audit's sales.
@@ -358,7 +385,9 @@ export function buildInvoiceNodes (form = {}, soldLines = [], options = {}) {
     ...(typeof options.resolvePrice === 'function' ? { resolvePrice: options.resolvePrice } : {})
   })
 
-  if (!invoice.lines.length) return { valid: true, nodes: [], permissions: {}, invoice }
+  if (!invoice.lines.length) return [
+    
+  ]
 
   const built = buildInvoiceDocumentNodes({
     invoice,
@@ -387,6 +416,8 @@ export function useConsumptionPayload () {
     restorableConsumptionLines,
     buildConsumptionReversalMovementsNode,
     stampFields,
+    consumptionNode,
+    consumptionItemRow,
     buildConsumptionCompositeNode,
     buildConsumptionMovementsNode,
     buildReturnsNodes,

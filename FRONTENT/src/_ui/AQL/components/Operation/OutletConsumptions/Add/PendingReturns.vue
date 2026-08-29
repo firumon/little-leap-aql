@@ -1,49 +1,64 @@
 <template>
-  <!-- Gated on there being ANY return work — a surplus counted on this visit, or an
-       unsettled return from an earlier one. The sticky bar skips the step outright when
-       both are empty, so this guard only ever fires for a user who arrived another way. -->
-  <div v-if="visible && (returnRows.length || wizard.pendingReturns.value.length)" :class="gutterClass">
+  <div v-if="visible && (returnRows.length || pendingReturns.length)" :class="gutterClass">
 
-    <!-- ── Returns found on THIS visit ───────────────────────────────────────── -->
     <template v-if="returnRows.length">
       <SectionDividerLabel label="RETURNS FOUND TODAY" />
 
-      <!-- Two toggles decide what a return DOES, and the four combinations are not
-           intuitive, so the consequence of the current pair is spelled out per line rather
-           than left for the user to infer from two switch positions (§10.5). -->
       <q-banner dense rounded class="bg-grey-2 text-body2">
         Each item needs a reason. Credit the outlet for it, send it back to a warehouse, or
         both — the two are independent.
       </q-banner>
 
-      <q-card v-for="row in returnRows" :key="row.SKU" flat bordered :class="ui.cardClass">
+      <q-card v-for="entry in returnRows" :key="entry.row.SKU" flat bordered :class="ui.cardClass">
         <q-card-section :class="gutterClass" class="q-mt-sm">
           <div class="row items-center no-wrap" :class="gutterClass">
             <div class="col" :class="ui.flexWrapTextClass">
-              <div class="text-subtitle2 text-weight-medium">{{ wizard.skuLabel(row.SKU).primary }}</div>
-              <div class="text-caption text-grey-7">{{ wizard.skuLabel(row.SKU).secondary }}</div>
+              <div class="text-subtitle2 text-weight-medium">{{ skuLabel(entry.row.SKU).primary }}</div>
+              <div class="text-caption text-grey-7">{{ skuLabel(entry.row.SKU).secondary }}</div>
             </div>
             <div class="col-auto">
-              <q-chip square color="orange" text-color="white" :label="`Return: ${row.ReturnQty}`" class="q-ma-none" />
+              <q-chip square color="orange" text-color="white" :label="`Return: ${entry.row.Qty}`" class="q-ma-none" />
             </div>
           </div>
 
           <component
             :is="SelectField"
-            :model-value="wizard.metaFor(row.SKU).Reason"
-            :record="{}"
+            :model-value="entry.row.Reason"
+            :record="entry.row"
             :config="{ label: 'Reason', options: REASON_OPTIONS, clearable: false }"
             header="Reason"
-            @update:model-value="(v) => wizard.setReturnMeta(row.SKU, { Reason: v })"
+            @update:model-value="(v) => setField(entry.index, 'Reason', v)"
           />
 
           <component
             :is="TextareaField"
-            :model-value="wizard.metaFor(row.SKU).ReasonComment"
-            :record="{}"
+            :model-value="entry.row.ReasonComment"
+            :record="entry.row"
             :config="{ label: 'Remarks (optional)', hideBottomSpace: true }"
             header="ReasonComment"
-            @update:model-value="(v) => wizard.setReturnMeta(row.SKU, { ReasonComment: v })"
+            @update:model-value="(v) => setField(entry.index, 'ReasonComment', v)"
+          />
+
+          <component
+            :is="SelectField"
+            :model-value="entry.row.SourceInvoiceCode"
+            :record="entry.row"
+            :config="{
+              label: 'Billed on invoice (optional)',
+              options: sourceInvoiceOptions(entry.row.SKU),
+              clearable: true
+            }"
+            header="SourceInvoiceCode"
+            @update:model-value="(v) => setSourceInvoice(entry.index, entry.row.SKU, v)"
+          />
+
+          <component
+            :is="CurrencyField"
+            :model-value="entry.row.Price"
+            :record="entry.row"
+            :config="{ label: 'Credit price', inputClass: 'text-right text-weight-bold' }"
+            header="Price"
+            @update:model-value="(v) => setField(entry.index, 'Price', num(v))"
           />
 
           <div class="row items-center no-wrap q-mt-sm q-px-sm ">
@@ -55,10 +70,10 @@
             </div>
             <div class="col-auto">
               <q-toggle
-                :model-value="wizard.metaFor(row.SKU).InvoiceAdjustmentRequired"
+                :model-value="isTrue(entry.row.InvoiceAdjustmentRequired)"
                 color="primary"
-                :aria-label="`Credit ${wizard.skuLabel(row.SKU).primary} against the invoice`"
-                @update:model-value="(v) => wizard.setReturnMeta(row.SKU, { InvoiceAdjustmentRequired: v === true })"
+                :aria-label="`Credit ${skuLabel(entry.row.SKU).primary} against the invoice`"
+                @update:model-value="(v) => setFlag(entry.index, 'InvoiceAdjustmentRequired', v)"
               />
             </div>
           </div>
@@ -72,10 +87,10 @@
             </div>
             <div class="col-auto">
               <q-toggle
-                :model-value="wizard.metaFor(row.SKU).WarehouseActionRequired"
+                :model-value="isTrue(entry.row.WarehouseActionRequired)"
                 color="purple"
-                :aria-label="`Send ${wizard.skuLabel(row.SKU).primary} back to a warehouse`"
-                @update:model-value="(v) => setWarehouseAction(row.SKU, v)"
+                :aria-label="`Send ${skuLabel(entry.row.SKU).primary} back to a warehouse`"
+                @update:model-value="(v) => setWarehouseAction(entry.index, v)"
               />
             </div>
           </div>
@@ -83,27 +98,25 @@
           <!-- Required, and only shown when it can be answered: a target warehouse on a
                return that is not being shipped anywhere is a field with no meaning. -->
           <component
-            v-if="wizard.metaFor(row.SKU).WarehouseActionRequired"
+            v-if="isTrue(entry.row.WarehouseActionRequired)"
             :is="SelectField"
-            :model-value="wizard.metaFor(row.SKU).WarehouseCode"
-            :record="{}"
+            :model-value="entry.row.WarehouseCode"
+            :record="entry.row"
             :config="{ label: 'Target warehouse', options: warehouseOptions, clearable: false }"
             header="WarehouseCode"
-            @update:model-value="(v) => wizard.setReturnMeta(row.SKU, { WarehouseCode: v })"
+            @update:model-value="(v) => setField(entry.index, 'WarehouseCode', v)"
           />
 
-          <!-- The resulting outcome, stated plainly. This is the line that makes the two
-               toggles legible: the ledger effect of the four combinations is genuinely
-               surprising, and two of them move no stock at all. -->
-          <q-banner dense rounded :class="outcomeClass(row.SKU)">
-            {{ outcomeText(row.SKU) }}
+          <!-- The ledger effect of the four toggle pairs is genuinely surprising, and two
+               of them move no stock at all, so each line states its own. -->
+          <q-banner dense rounded :class="outcomeClass(entry.row)">
+            {{ outcomeText(entry.row) }}
           </q-banner>
         </q-card-section>
       </q-card>
     </template>
 
-    <!-- ── Unsettled returns from EARLIER visits ─────────────────────────────── -->
-    <template v-if="wizard.pendingReturns.value.length">
+    <template v-if="pendingReturns.length">
       <SectionDividerLabel label="UNSETTLED RETURNS" />
       <q-card flat bordered :class="ui.cardClass">
         <q-card-section>
@@ -113,11 +126,11 @@
           </div>
 
           <q-list separator>
-            <q-item v-for="row in wizard.pendingReturns.value" :key="row.code" tag="label" v-ripple>
+            <q-item v-for="row in pendingReturns" :key="row.code" tag="label" v-ripple>
               <q-item-section side top>
                 <q-checkbox
-                  :model-value="wizard.adjustedReturnCodes.value.includes(row.code)"
-                  @update:model-value="() => wizard.toggleAdjustedReturn(row.code)"
+                  :model-value="adjustedReturnCodes.includes(row.code)"
+                  @update:model-value="() => toggleAdjustedReturn(row.code)"
                 />
               </q-item-section>
               <q-item-section :class="ui.flexWrapTextClass">
@@ -132,11 +145,11 @@
             </q-item>
           </q-list>
 
-          <template v-if="wizard.returnDeduction.value > 0">
+          <template v-if="returnDeduction > 0">
             <q-separator class="q-my-md" />
             <div class="row justify-between text-subtitle1 text-weight-bold">
               <span>Credit against this invoice</span>
-              <span class="text-negative">− {{ _C(wizard.returnDeduction.value) }}</span>
+              <span class="text-negative">− {{ _C(returnDeduction) }}</span>
             </div>
           </template>
         </q-card-section>
@@ -146,52 +159,32 @@
 </template>
 
 <script setup>
-/**
- * Step 5 — return management.
- *
- * Two different jobs, so two labelled sections (§7.1's "a view that unions two states
- * divides, it does not tab"):
- *
- *   RETURNS FOUND TODAY   every surplus the count produced, each needing its routing
- *                         decided — why it came back, whether the outlet is credited, and
- *                         whether the stock physically leaves.
- *   UNSETTLED RETURNS     returns raised on an EARLIER visit that were meant to credit an
- *                         invoice and never did. Ticked here, they settle against this one.
- *
- * THE TWO TOGGLES ARE INDEPENDENT, and that is the whole reason each line states its
- * outcome in a banner. The four combinations of `InvoiceAdjustmentRequired` (IAR) and
- * `WarehouseActionRequired` (WAR) map to genuinely non-obvious ledger effects — two of them
- * write no stock movement at all, for opposite reasons — and a user reading two switch
- * positions cannot be expected to derive that. The truth table itself lives in Layer 2
- * (`returnQtyChange` / `returnProgressFor`); this file only renders what it says, so the
- * sentence on screen and the movement the batch writes cannot drift apart.
- *
- * Defaults follow the spec: credit ON, warehouse OFF — the ordinary case is a damaged unit
- * the outlet is not charged for and nobody drives back to a warehouse.
- *
- * The step SKIPS ITSELF when neither section has rows; the skip lives in `Add/PageAction.js`
- * with the rest of the navigation.
- *
- * No `<style>` block (ARCHITECTURE RULES §7).
- */
-import { computed, useAttrs } from 'vue'
+// Step 5 - return management, in two sections: the surpluses this count produced, each
+// needing its routing decided, and returns from an earlier visit that never credited an
+// invoice. Every field of a today's-return binds straight to its OutletReturns record.
+import { computed, inject, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import { useCurrency } from 'src/composables/useCurrency'
 import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
-import { RETURN_REASONS, returnQtyChange, returnProgressFor } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionStock'
-import { useConsumptionWizard } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/useConsumptionWizard'
+import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
+import { useAuth } from 'src/composables/core/useAuth'
+import { useRecord } from 'src/composables/resources/useRecord'
+import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
+import {
+  RETURN_REASONS,
+  returnQtyChange,
+  returnProgressFor,
+  priceOf,
+  priceListForOutlet
+} from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionStock'
 import { formatDate } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/View/useConsumptionView'
+import { NODE, CTRL, getCtrl, setCtrl, stepVisible } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/nodes'
 
 defineOptions({ name: 'OutletConsumptionsAddPendingReturns', inheritAttrs: false })
 
 const props = defineProps({ step: { type: [Number, String], default: null } })
 
-/**
- * The reason vocabulary, projected from Layer 2's list — never restated here, so adding a
- * reason to the domain adds it to this dropdown with no second edit (§4.5).
- * Hoisted to a module constant: an inline literal would re-run the select's resolvers on
- * every render (§11 rule 5).
- */
+// Hoisted: an inline literal would re-run the select's resolvers on every render.
 const REASON_OPTIONS = RETURN_REASONS.map((reason) => ({
   value: reason,
   label: reason.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (c) => c.toUpperCase())
@@ -200,47 +193,123 @@ const REASON_OPTIONS = RETURN_REASONS.map((reason) => ({
 const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 
-const wizard = useConsumptionWizard()
-const { ui, pageState } = wizard
+const ui = useAQLConfig()
+const pageState = inject('pageState')
 const { _C } = useCurrency()
+const { hasRegionAccess } = useAuth()
+const { getSku } = useSkuResource()
+const warehouses = useRecord('Warehouses')
+const returns = useRecord(NODE.RETURNS)
+const invoices = useRecord(NODE.INVOICES)
+const invoiceItems = useRecord(NODE.INVOICE_ITEMS)
 
 const SelectField = resolveFieldComponent('select', 'add')
 const TextareaField = resolveFieldComponent('textarea', 'add')
+const CurrencyField = resolveFieldComponent('currency', 'add')
 
-const visible = computed(() =>
-  props.step == null || Number(props.step) === (pageState?.meta.currentStep || 1))
+const text = (value) => (value == null ? '' : String(value).trim())
+const num = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0)
+const isTrue = (value) => text(value).toUpperCase() === 'TRUE'
+const flag = (value) => (value === true ? 'TRUE' : 'FALSE')
+const isActive = (row) => !text(row?.Status) || text(row.Status).toUpperCase() === 'ACTIVE'
 
-const returnRows = computed(() => wizard.returnRows.value)
+const consumption = pageState.useNode(NODE.CONSUMPTION)
+const returnsState = pageState.useNode(NODE.RETURNS)
+const invoice = pageState.useNode(NODE.INVOICES)
 
-const warehouseOptions = computed(() => wizard.regionWarehouses.value)
+const visible = computed(() => stepVisible(pageState, props.step))
+
+const outletCode = computed(() => text(consumption.node.value.record.OutletCode))
+
+/** The surpluses this visit counted, each with its index on the OutletReturns many-node. */
+const returnRows = computed(() => (returnsState.node.value.records || [])
+  .map((row, index) => ({ row, index }))
+  .filter((entry) => num(entry.row.Qty) > 0))
+
+function skuLabel (sku) {
+  const info = getSku(text(sku)) || {}
+  const variants = (info.variantValues || []).filter(Boolean).join(' / ')
+  return { primary: text(info.productName) || text(sku), secondary: variants || text(sku) }
+}
+
+// ── Direct binding onto the OutletReturns records ────────────────────────────
+
+const setField = (index, key, value) => pageState.setRecords(index, key, value, NODE.RETURNS)
+
+// The sheet stores the two flags as strings, never as native booleans.
+const setFlag = (index, key, value) => setField(index, key, flag(value === true))
+
+// `hasRegionAccess`, not a flat equality test: it also honours universe-scoped users.
+const warehouseOptions = computed(() => warehouses.items.value
+  .filter((row) => isActive(row) && hasRegionAccess(row.AccessRegion))
+  .map((row) => ({ value: text(row.Code), label: text(row.Name) || text(row.Code) })))
 
 /** Indexed once, not scanned per render pass (CORE_ARCHITECTURE_RULES §6). */
 const warehouseNameByCode = computed(() =>
   new Map(warehouseOptions.value.map((option) => [option.value, option.label])))
 
-const warehouseName = (code) =>
-  warehouseNameByCode.value.get(String(code || '').trim()) || 'a warehouse'
+const warehouseName = (code) => warehouseNameByCode.value.get(text(code)) || 'a warehouse'
 
-/**
- * Turning the warehouse toggle on seeds the only sensible default target; turning it off
- * clears it, so a stale code cannot ride along on a return that is staying put.
- */
-function setWarehouseAction (sku, value) {
+// On seeds the only sensible target; off clears it, so a stale code cannot ride along on
+// a return that is staying put.
+function setWarehouseAction (index, value) {
   const on = value === true
-  wizard.setReturnMeta(sku, {
-    WarehouseActionRequired: on,
-    WarehouseCode: on ? (wizard.metaFor(sku).WarehouseCode || warehouseOptions.value[0]?.value || '') : ''
-  })
+  const current = text(pageState.getRecords(index, 'WarehouseCode', NODE.RETURNS))
+  setFlag(index, 'WarehouseActionRequired', on)
+  setField(index, 'WarehouseCode', on ? (current || warehouseOptions.value[0]?.value || '') : '')
 }
 
-/** The plain-language outcome of the current toggle pair, derived from Layer 2's table. */
-function outcomeText (sku) {
-  const meta = wizard.metaFor(sku)
+// ── The source invoice, and the price it billed ─────────────────────────────
+
+const priceListCode = computed(() => text(priceListForOutlet(outletCode.value)?.code))
+
+const defaultPriceOf = (sku) => num(priceOf(sku, priceListCode.value))
+
+/** Past invoice lines for this outlet, grouped by SKU. Indexed once, not scanned per row. */
+const invoiceLinesBySku = computed(() => {
+  const headers = new Map(invoices.items.value
+    .filter((row) => text(row.OutletCode) === outletCode.value)
+    .map((row) => [text(row.Code), row]))
+
+  return invoiceItems.items.value.reduce((map, item) => {
+    const header = headers.get(text(item.OutletConsumptionInvoiceCode))
+    const sku = text(item.SKU)
+    if (!header || !sku) return map
+    const label = `${formatDate(header.Date)} · ${text(header.Username)} · ` +
+      `${num(item.Qty)} pcs (@${_C(num(item.Price))}) · Inv ${_C(num(header.Total || header.Subtotal))}`
+    const list = map.get(sku) || []
+    list.push({ value: text(header.Code), label, price: num(item.Price) })
+    map.set(sku, list)
+    return map
+  }, new Map())
+})
+
+const sourceInvoiceOptions = (sku) => invoiceLinesBySku.value.get(text(sku)) || []
+
+// Picking an invoice credits the return at what the outlet actually paid; clearing it
+// falls back to the outlet's price list, never to a stale invoice rate.
+function setSourceInvoice (index, sku, code) {
+  const value = text(code)
+  setField(index, 'SourceInvoiceCode', value)
+  const picked = sourceInvoiceOptions(sku).find((option) => option.value === value)
+  setField(index, 'Price', picked ? picked.price : defaultPriceOf(sku))
+}
+
+// ── The outcome banner ──────────────────────────────────────────────────────
+
+const metaOf = (row) => ({
+  InvoiceAdjustmentRequired: isTrue(row.InvoiceAdjustmentRequired),
+  WarehouseActionRequired: isTrue(row.WarehouseActionRequired),
+  WarehouseCode: text(row.WarehouseCode)
+})
+
+/** The plain-language outcome of the current toggle pair, from Layer 2's table. */
+function outcomeText (row) {
+  const meta = metaOf(row)
   const change = returnQtyChange(1, meta)
   const progress = returnProgressFor(meta)
   const credited = meta.InvoiceAdjustmentRequired ? 'credited on the invoice' : 'not credited'
-  // The warehouse's NAME, never its code. A raw `WH001` in a sentence is an opaque string
-  // the reader cannot check against the dropdown right above it (§7.2).
+  // The warehouse's NAME, never its code — a raw `WH001` is opaque to the reader (§7.2).
   const destination = meta.WarehouseActionRequired
     ? `shipped to ${warehouseName(meta.WarehouseCode)}`
     : 'left at the outlet'
@@ -250,12 +319,52 @@ function outcomeText (sku) {
   return `${capitalise(destination)}, ${credited}. ${ledger} Marked ${progress.replace(/_/g, ' ').toLowerCase()}.`
 }
 
-/** Warning-tinted only when nothing at all happens — the one combination worth querying. */
-function outcomeClass (sku) {
-  const meta = wizard.metaFor(sku)
+/** Warning-tinted only when nothing at all happens — the one pair worth querying. */
+function outcomeClass (row) {
+  const meta = metaOf(row)
   const inert = !meta.InvoiceAdjustmentRequired && !meta.WarehouseActionRequired
   return inert ? 'bg-orange-1 text-body2' : 'bg-grey-2 text-body2'
 }
 
 const capitalise = (value) => String(value).replace(/^\w/, (c) => c.toUpperCase())
+
+// ── Unsettled returns from earlier visits ───────────────────────────────────
+
+/** Returns raised at this outlet that were meant to credit an invoice and never did. */
+const pendingReturns = computed(() => returns.items.value
+  .filter((row) => isActive(row) &&
+    text(row.OutletCode) === outletCode.value &&
+    text(row.InvoiceAdjustmentRequired) === 'TRUE' &&
+    text(row.InvoiceAdjustmentDone) !== 'TRUE' &&
+    text(row.Progress) !== 'CANCELLED')
+  .map((row) => {
+    const label = skuLabel(row.SKU)
+    return {
+      code: text(row.Code),
+      name: label.primary,
+      variant: label.secondary,
+      qty: num(row.Qty),
+      value: num(row.Qty) * num(row.Price),
+      reason: text(row.Reason),
+      date: text(row.Date)
+    }
+  }))
+
+const adjustedReturnCodes = computed(() => getCtrl(pageState, CTRL.ADJUSTED_RETURNS, []) || [])
+
+const returnDeduction = computed(() => pendingReturns.value
+  .filter((row) => adjustedReturnCodes.value.includes(row.code))
+  .reduce((sum, row) => sum + row.value, 0))
+
+// The credit is an invoice COLUMN, so it goes onto the invoice node. Step 3 and the recap
+// then read it off the record instead of recalculating it.
+function toggleAdjustedReturn (code) {
+  const value = text(code)
+  const current = adjustedReturnCodes.value
+  setCtrl(pageState, CTRL.ADJUSTED_RETURNS,
+    current.includes(value) ? current.filter((entry) => entry !== value) : [...current, value])
+  if (invoice.exists.value) {
+    pageState.setRecord('ReturnDeductionTotal', returnDeduction.value, NODE.INVOICES)
+  }
+}
 </script>

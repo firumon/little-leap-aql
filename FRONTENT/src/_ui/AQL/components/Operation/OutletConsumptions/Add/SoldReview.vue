@@ -4,7 +4,7 @@
     <q-card flat bordered :class="ui.cardClass">
       <!-- bg-transparent: the card owns the surface, else its corners show a border sliver. -->
       <AqlList
-        :items="wizard.invoiceLines.value"
+        :items="lines"
         item-key="sku"
         :layout="['label', 'caption', 'caption', 'caption']"
         :content="content"
@@ -16,15 +16,15 @@
         item-class="bg-transparent"
         gutter="none"
       >
-        <template v-if="wizard.generateInvoice.value" #btn="{ item }">
+        <template #btn="{ item }">
           <div style="width: 96px">
             <component
               :is="CurrencyField"
               :model-value="item.price"
               :record="item"
-              :config="PRICE_CONFIG"
+              :config="priceConfig"
               header="Price"
-              @update:model-value="(value) => wizard.setLinePrice(item.sku, value)"
+              @update:model-value="(value) => setLinePrice(item.index, value)"
             />
           </div>
         </template>
@@ -40,68 +40,65 @@
             <div class="text-caption text-grey-8">Bill this outlet for what was sold.</div>
           </div>
           <div class="col-auto">
-            <q-toggle
-              :model-value="wizard.generateInvoice.value"
-              color="primary"
-              @update:model-value="(v) => wizard.setGenerateInvoice(v)"
-            />
+            <q-toggle v-model="invoicing" color="primary" />
           </div>
         </div>
       </q-card-section>
-      <q-card-section v-if="wizard.generateInvoice.value" class="q-pt-none column" :class="gutterClass">
+      <q-card-section class="q-pt-none column" :class="gutterClass">
         <component
           :is="SelectField"
-          :model-value="wizard.priceListCode.value"
+          v-model="priceListCode"
           :record="{}"
-          :config="{ label: 'Price list', options: priceListOptions, clearable: false}"
+          :config="priceListConfig"
           header="PriceListCode"
-          @update:model-value="(v) => wizard.set(FIELDS.PRICE_LIST, v)"
+        />
+        <component
+          :is="DateField"
+          v-model="dueDate"
+          :record="{}"
+          :config="dueDateConfig"
+          header="DueDate"
         />
 
         <!-- Plain wrapper is load-bearing: it absorbs q-col-gutter-md's -16px margin. -->
-        <div>
-          <div class="row q-col-gutter-md">
+          <div class="row" :class="gutterClassColX">
             <div class="col-6">
               <component
                 :is="SelectField"
-                :model-value="wizard.discountType.value"
+                v-model="discountType"
                 :record="{}"
-                :config="{ label: 'Discount type', options: DISCOUNT_TYPES, clearable: false}"
+                :config="discountTypeConfig"
                 header="DiscountType"
-                @update:model-value="(v) => wizard.set(FIELDS.DISCOUNT_TYPE, v)"
               />
             </div>
             <div class="col-6">
               <component
                 :is="NumberField"
-                :model-value="wizard.discountValue.value"
+                v-model="discountValue"
                 :record="{}"
-                :config="{ label: wizard.discountType.value === 'PERCENT' ? 'Discount %' : 'Discount amount'}"
+                :config="discountValueConfig"
                 header="DiscountValue"
-                @update:model-value="(v) => wizard.set(FIELDS.DISCOUNT_VALUE, v)"
               />
             </div>
           </div>
-        </div>
 
         <component
           :is="TextareaField"
-          :model-value="wizard.get(FIELDS.INVOICE_COMMENT, '')"
+          v-model="invoiceComment"
           :record="{}"
-          :config="{ label: 'Invoice note (optional)'}"
+          :config="commentConfig"
           header="InvoiceComment"
-          @update:model-value="(v) => wizard.set(FIELDS.INVOICE_COMMENT, v)"
         />
 
         <q-separator />
-        <div>
+        <div :class="invoicing ? '' : 'text-grey-6'">
           <div v-for="line in summaryLines" :key="line.label" class="row justify-between"
                :class="line.strong ? 'text-body2 text-weight-medium' : 'text-body2 text-grey-8'">
             <span>{{ line.label }}</span><span>{{ line.value }}</span>
           </div>
           <q-separator class="q-my-xs" />
           <div class="row justify-between text-subtitle1 text-weight-bold">
-            <span>Total</span><span>{{ _C(wizard.invoiceTotal.value) }}</span>
+            <span>Total</span><span>{{ _C(invoiceTotal) }}</span>
           </div>
           <div class="text-caption text-grey-7 q-pt-xs">{{ policyCaption }}</div>
         </div>
@@ -111,15 +108,25 @@
 </template>
 
 <script setup>
-// Step 3 — what sold and the invoice terms.
-import { computed, defineComponent, h, useAttrs } from 'vue'
+// Step 3 - what sold, and the invoice terms. Every input writes straight into the
+// OutletConsumptionInvoices node; Layer 2's derive rules do the maths from there.
+import { computed, defineComponent, h, inject, useAttrs, watch } from 'vue'
 import { QItemLabel, QBtn } from 'quasar'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import AqlList from 'components/abstract/List.vue'
 import { useCurrency } from 'src/composables/useCurrency'
+import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 import { usePriceListResource } from 'src/_resource/Master/PriceLists/composables/usePriceListResource'
+import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
-import { useConsumptionWizard, WIZARD_FIELDS as FIELDS } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/useConsumptionWizard'
+import { priceOf } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionStock'
+import { invoiceNode } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoicePayload'
+import {
+  netPayableOf,
+  storedTaxBreakdown,
+  invoicePolicyOf
+} from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionInvoice'
+import { NODE, CTRL, INVOICING, stepVisible } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/nodes'
 
 defineOptions({ name: 'OutletConsumptionsAddSoldReview', inheritAttrs: false })
 
@@ -132,43 +139,144 @@ const DISCOUNT_TYPES = [
 
 const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
+const gutterClassColX = computed(() => `q-col-gutter-x-${attrs.gutter || 'sm'}`)
 
-const wizard = useConsumptionWizard()
-const { ui, pageState } = wizard
+const ui = useAQLConfig()
+const pageState = inject('pageState')
 const { _C } = useCurrency()
 const { activePriceLists } = usePriceListResource()
+const { getSku } = useSkuResource()
 
 const SelectField = resolveFieldComponent('select', 'add')
 const CurrencyField = resolveFieldComponent('currency', 'add')
 const NumberField = resolveFieldComponent('number', 'add')
+const DateField = resolveFieldComponent('date', 'add')
 const TextareaField = resolveFieldComponent('textarea', 'add')
 
-const visible = computed(() =>
-  props.step == null || Number(props.step) === (pageState?.meta.currentStep || 1))
+const text = (value) => (value == null ? '' : String(value).trim())
+const num = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0)
 
-const hasSales = computed(() => wizard.soldRows.value.length > 0)
+const invoice = pageState.useNode(NODE.INVOICES)
+const consumption = pageState.useNode(NODE.CONSUMPTION)
+
+const visible = computed(() => stepVisible(pageState, props.step))
+
+// Page-level, so turning invoicing off keeps the node and everything typed on it.
+const invoicing = pageState.useControls(INVOICING, true)
+
+// Turned back on, the invoice refills from what sold — the node is dropped on the way
+// past this step, so coming back has to rebuild it rather than show an empty card.
+watch([invoicing, visible], ([on, shown]) => {
+  if (on !== true || !shown || invoice.exists.value) return
+  const header = consumption.node.value.record || {}
+  const sold = (consumption.children(NODE.ITEMS).value || [])
+    .filter((row) => num(row.Qty) > 0)
+    .map((row) => ({ SKU: text(row.SKU), Qty: num(row.Qty) }))
+  if (!sold.length) return
+  pageState.setResource(NODE.INVOICES, null, invoiceNode({
+    OutletCode: text(header.OutletCode),
+    Date: text(header.Date),
+    Username: text(header.Username)
+  }, sold))
+}, { immediate: true })
+
+const priceListCode = pageState.useRecord('PriceListCode', NODE.INVOICES)
+const dueDate = pageState.useRecord('DueDate', NODE.INVOICES)
+const discountType = pageState.useControls(CTRL.DISCOUNT_TYPE.header, 'FLAT', NODE.INVOICES)
+const discountValue = pageState.useControls(CTRL.DISCOUNT_VALUE.header, 0, NODE.INVOICES)
+
+// Not a sheet column: it becomes the invoice's progress comment, so it stays a control.
+const invoiceComment = pageState.useControls(CTRL.INVOICE_COMMENT.header, '', NODE.INVOICES)
+
+// Memoised: a fresh literal per render re-runs each field's watchers on every keystroke.
+const disabled = computed(() => invoicing.value !== true)
+const priceListOptions = computed(() =>
+  activePriceLists.value.map((list) => ({ value: list.code, label: list.name || list.code })))
+
+const priceConfig = computed(() => ({
+  label: 'Unit price', inputClass: 'text-right text-weight-bold', disable: disabled.value
+}))
+const priceListConfig = computed(() => ({
+  label: 'Price list', options: priceListOptions.value, clearable: false, disable: disabled.value
+}))
+const discountTypeConfig = computed(() => ({
+  label: 'Discount type', options: DISCOUNT_TYPES, clearable: false, disable: disabled.value
+}))
+const discountValueConfig = computed(() => ({
+  label: discountType.value === 'PERCENT' ? 'Discount %' : 'Discount amount', disable: disabled.value
+}))
+const dueDateConfig = computed(() => ({ label: 'Due date', disable: disabled.value }))
+const commentConfig = computed(() => ({ label: 'Invoice note (optional)', disable: disabled.value }))
+
+// ── Everything below READS the node ─────────────────────────────────────────
+
+const header = computed(() => invoice.node.value.record)
+const invoiceTotal = computed(() => netPayableOf(header.value))
+const invoiceTaxBreakdown = computed(() => storedTaxBreakdown(header.value))
+const invoicePolicy = computed(() => invoicePolicyOf(text(priceListCode.value)))
+
+function skuLabel (sku) {
+  const info = getSku(text(sku)) || {}
+  const variants = (info.variantValues || []).filter(Boolean).join(' / ')
+  return { primary: text(info.productName) || text(sku), secondary: variants || text(sku) }
+}
+
+// WHAT SOLD is the consumption's own answer, so the list is read from there. The invoice
+// node is dropped whenever invoicing is off, and a list read off it would vanish with it.
+const soldItems = computed(() => (consumption.children(NODE.ITEMS).value || [])
+  .filter((row) => num(row.Qty) > 0))
+
+const hasSales = computed(() => soldItems.value.length > 0)
+
+// The billed line for a SKU, and where it sits — the address a price edit is written to.
+const invoiceLineBySku = computed(() => new Map(
+  (invoice.children(NODE.INVOICE_ITEMS).value || [])
+    .map((row, index) => [text(row.SKU), { row, index }])))
+
+const lines = computed(() => soldItems.value.map((item) => {
+  const sku = text(item.SKU)
+  const label = skuLabel(sku)
+  const listed = priceOf(sku, text(priceListCode.value))
+  const priced = listed !== null && listed !== undefined
+  const billed = invoiceLineBySku.value.get(sku)
+  const row = billed?.row || {}
+  // No invoice line yet — the price list is what this would bill at.
+  const price = billed ? num(row.Price) : num(listed)
+  return {
+    index: billed ? billed.index : -1,
+    sku,
+    name: label.primary,
+    variant: label.secondary,
+    qty: num(item.Qty),
+    price,
+    basePrice: num(listed),
+    // Surfaced only while it would still bill at zero - typing a price answers it.
+    unpriced: !priced && price <= 0,
+    overridden: priced && price !== num(listed),
+    total: billed ? num(row.Total) : price * num(item.Qty),
+    tax: num(row.TaxAmount)
+  }
+}))
+
+const setLinePrice = (index, value) => {
+  if (index < 0) return
+  pageState.setChildren(NODE.INVOICE_ITEMS, index, 'Price', num(value), NODE.INVOICES)
+}
 
 const lineCaption = (line) => {
-  // Nothing is being billed, so no money belongs on the row at all.
-  if (!wizard.generateInvoice.value) return ''
   if (line.unpriced) return 'Not in this price list — set a unit price to bill it'
   const base = _C(line.total)
-  // The line's own tax, stated on the line that generated it — a reader reconciling the
-  // header's tax figure otherwise has to divide it back out across the lines by hand.
+  // The line's own tax, stated on the line that generated it.
   return line.tax > 0 ? `${base} · tax ${_C(line.tax)}` : base
 }
 
 const LineValueNote = defineComponent({
   name: 'SoldLineValueNote',
   props: { item: { type: Object, required: true } },
-  setup: (props) => () => {
-    const caption = lineCaption(props.item)
-    if (!caption) return null
-    return h(QItemLabel, {
-      caption: true,
-      class: props.item.unpriced ? 'text-negative' : 'text-grey-8'
-    }, () => caption)
-  }
+  setup: (props) => () => h(QItemLabel, {
+    caption: true,
+    class: props.item.unpriced ? 'text-negative' : 'text-grey-8'
+  }, () => lineCaption(props.item))
 })
 
 const RepricedNote = defineComponent({
@@ -176,9 +284,9 @@ const RepricedNote = defineComponent({
   props: { item: { type: Object, required: true } },
   setup: (props) => () => {
     const row = props.item
-    if (!row.overridden || !wizard.generateInvoice.value) return null
+    if (!row.overridden) return null
     return h(QItemLabel, { caption: true, class: 'text-orange-9' }, () => [
-      `was ${_C(row.listPrice)} `,
+      `was ${_C(row.basePrice)} `,
       h(QBtn, {
         flat: true,
         dense: true,
@@ -186,9 +294,10 @@ const RepricedNote = defineComponent({
         size: 'sm',
         color: 'primary',
         label: 'Restore',
+        disable: disabled.value,
         class: 'q-ml-xs q-px-xs',
-        'aria-label': `Restore the price list's price for ${row.name}`,
-        onClick: () => wizard.resetLinePrice(row.sku)
+        'aria-label': `Restore the price list price for ${row.name}`,
+        onClick: () => setLinePrice(row.index, row.basePrice)
       })
     ])
   }
@@ -201,36 +310,30 @@ const content = [
   RepricedNote
 ]
 
-// Memoised: a fresh literal per render re-runs the control's watchers on every keystroke.
-const PRICE_CONFIG = { label: 'Unit price', inputClass: 'text-right text-weight-bold' }
-
 const summaryLines = computed(() => {
-  const header = wizard.invoiceHeader.value
+  const row = header.value
   const rows = [
-    { label: 'Subtotal', value: _C(header.Subtotal), amount: header.Subtotal, strong: true },
-    { label: 'Discount', value: `− ${_C(header.Discount)}`, amount: header.Discount },
-    { label: 'Taxable amount', value: _C(header.TotalTaxableAmount), amount: header.TotalTaxableAmount },
+    { label: 'Subtotal', value: _C(row.Subtotal), amount: row.Subtotal, strong: true },
+    { label: 'Discount', value: `− ${_C(row.Discount)}`, amount: row.Discount },
+    { label: 'Taxable amount', value: _C(row.TotalTaxableAmount), amount: row.TotalTaxableAmount },
     // One row per TAX CODE. A compound tax lands as its components, which is the
-    // granularity the invoice stores and the granularity a tax return is filed at.
-    ...wizard.invoiceTaxBreakdown.value.map((entry) => ({
+    // granularity the invoice stores and a tax return is filed at.
+    ...invoiceTaxBreakdown.value.map((entry) => ({
       label: entry.TaxCode,
       value: _C(entry.TaxAmount),
       amount: entry.TaxAmount
     })),
-    { label: 'Tax', value: _C(header.TotalTaxAmount), amount: header.TotalTaxAmount, strong: true },
-    { label: 'Returns credited', value: `− ${_C(header.ReturnDeductionTotal)}`, amount: header.ReturnDeductionTotal }
+    { label: 'Tax', value: _C(row.TotalTaxAmount), amount: row.TotalTaxAmount, strong: true },
+    { label: 'Returns credited', value: `− ${_C(row.ReturnDeductionTotal)}`, amount: row.ReturnDeductionTotal }
   ]
-  return rows.filter((row) => Number(row.amount) > 0)
+  return rows.filter((entry) => Number(entry.amount) > 0)
 })
 
 const policyCaption = computed(() => {
-  const { discountTaxPolicy, taxInclusive } = wizard.invoicePolicy.value
+  const { discountTaxPolicy, taxInclusive } = invoicePolicy.value
   const discountRule = discountTaxPolicy === 'PRE_TAX'
     ? 'Discount is applied before tax'
     : 'Tax is charged on the full value, then the discount is applied'
   return `${discountRule}. Prices ${taxInclusive ? 'include' : 'exclude'} tax.`
 })
-
-const priceListOptions = computed(() =>
-  activePriceLists.value.map((list) => ({ value: list.code, label: list.name || list.code })))
 </script>

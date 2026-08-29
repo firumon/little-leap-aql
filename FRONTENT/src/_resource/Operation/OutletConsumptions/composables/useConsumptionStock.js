@@ -98,53 +98,51 @@ export function defaultRestockQty (systemQty, currentQty) {
 }
 
 /**
- * One count row, derived from an outlet storage row.
+ * Count rows rebuilt from the wizard's own nodes.
  *
- * `currentQty` starts AT the system quantity rather than at zero: the overwhelmingly
- * common audit outcome is "some of this sold", and seeding at zero would mean an officer
- * who skips a line has silently declared the entire shelf sold.
+ * The consumption's item rows say what SOLD and the returns node's records say what came
+ * BACK; the shelf says what the system held. Together they are the count row every builder
+ * and validator in this module already reads, so the node graph does not need a second,
+ * parallel copy of the count.
  */
-export function buildCountRow (storage = {}, currentQty = null) {
-  const entry = asRow(storage)
-  const system = toNumber(entry.Quantity)
-  const current = currentQty === null || currentQty === undefined ? system : toNumber(currentQty)
-  return {
-    SKU: text(entry.SKU),
-    StorageName: text(entry.StorageName) || DEFAULT_STORAGE,
-    SystemQty: system,
-    CurrentQty: current,
-    SoldQty: soldQty(system, current),
-    ReturnQty: returnQty(system, current),
-    isManualReturn: false
-  }
-}
+export function countRowsOf (soldItems = [], returnRecords = [], storages = [], outletCode = '') {
+  const outlet = text(outletCode)
+  const shelf = new Map()
+  ;(Array.isArray(storages) ? storages : []).map(asRow).forEach((row) => {
+    if (!isActive(row) || text(row.OutletCode) !== outlet) return
+    const sku = text(row.SKU)
+    if (!sku) return
+    const held = shelf.get(sku)
+    shelf.set(sku, {
+      StorageName: held?.StorageName || text(row.StorageName) || DEFAULT_STORAGE,
+      SystemQty: (held?.SystemQty || 0) + toNumber(row.Quantity)
+    })
+  })
 
-/**
- * A manual return line for a SKU the outlet's storage does not carry.
- *
- * `SystemQty = 0` by construction, so the shared arithmetic above yields `SoldQty = 0` and
- * `ReturnQty = qty` with no special case anywhere downstream. A damaged unit is entered
- * exactly like a counted surplus, because that is what it is.
- */
-export function buildManualReturnRow (sku, qty = 0) {
-  const quantity = Math.max(0, toNumber(qty))
-  return {
-    SKU: text(sku),
-    StorageName: DEFAULT_STORAGE,
-    SystemQty: 0,
-    CurrentQty: quantity,
-    SoldQty: 0,
-    ReturnQty: quantity,
-    isManualReturn: true
-  }
-}
+  const totalBySku = (rows) => (Array.isArray(rows) ? rows : []).map(asRow).reduce((map, row) => {
+    const sku = text(row.SKU)
+    if (sku) map.set(sku, (map.get(sku) || 0) + toNumber(row.Qty))
+    return map
+  }, new Map())
 
-/** Re-derive a row's three quantities after the user changes the physical count. */
-export function recountRow (row = {}, currentQty) {
-  const entry = asRow(row)
-  const system = toNumber(entry.SystemQty)
-  const current = Math.max(0, toNumber(currentQty))
-  return { ...entry, CurrentQty: current, SoldQty: soldQty(system, current), ReturnQty: returnQty(system, current) }
+  const sold = totalBySku(soldItems)
+  const returned = totalBySku(returnRecords)
+
+  return [...new Set([...sold.keys(), ...returned.keys()])].map((sku) => {
+    const held = shelf.get(sku)
+    const system = held?.SystemQty || 0
+    const soldQty = sold.get(sku) || 0
+    const returnQty = returned.get(sku) || 0
+    return {
+      SKU: sku,
+      StorageName: held?.StorageName || DEFAULT_STORAGE,
+      SystemQty: system,
+      CurrentQty: Math.max(0, system - soldQty + returnQty),
+      SoldQty: soldQty,
+      ReturnQty: returnQty,
+      isManualReturn: !held
+    }
+  })
 }
 
 /** The rows that produce `OutletConsumptionItems` and negative movements. */
@@ -165,7 +163,7 @@ export function returnRowsOf (rows = []) {
  * the same place. A zeroed line is not a restock; the wizard keeps it on screen until the
  * user leaves the step, and it is dropped here as well as there.
  */
-export function restockRowsOf (rows = []) {
+function restockRowsOf (rows = []) {
   return (Array.isArray(rows) ? rows : []).map(asRow)
     .filter((row) => text(row.SKU) && toNumber(row.Quantity) > 0)
 }
@@ -196,17 +194,6 @@ export function restockRowsOf (rows = []) {
 // nobody is paid for it.
 
 export const RETURN_REASONS = ['DAMAGE', 'EXPIRED', 'SLOW_MOVING', 'RECALL', 'OVERSTOCK', 'SPECIFICATION_MISMATCH', 'OTHER']
-
-/** The default routing for a newly-added return line: credit it, leave it at the outlet. */
-export function defaultReturnMeta () {
-  return {
-    Reason: 'DAMAGE',
-    ReasonComment: '',
-    InvoiceAdjustmentRequired: true,
-    WarehouseActionRequired: false,
-    WarehouseCode: ''
-  }
-}
 
 /**
  * The ledger movement a return line writes, per the matrix above.
@@ -448,13 +435,9 @@ export function useConsumptionStock () {
     soldQty,
     returnQty,
     defaultRestockQty,
-    buildCountRow,
-    buildManualReturnRow,
-    recountRow,
+    countRowsOf,
     soldRowsOf,
     returnRowsOf,
-    restockRowsOf,
-    defaultReturnMeta,
     returnQtyChange,
     returnProgressFor,
     creditsInvoice,

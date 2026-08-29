@@ -19,12 +19,15 @@
 </template>
 
 <script setup>
-// Step 6a — read-only recap. Figures only, no controls: a decision stays editable
-// only beside the evidence it was made against (§13.6).
-import { computed, useAttrs } from 'vue'
+// Step 6a - read-only recap, straight off the nodes. Figures only, no controls: a
+// decision stays editable only beside the evidence it was made against (§13.6).
+import { computed, inject, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import { useCurrency } from 'src/composables/useCurrency'
-import { useConsumptionWizard } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/useConsumptionWizard'
+import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
+import { useOutletResource } from 'src/_resource/Master/Outlets/composables/useOutletResource'
+import { netPayableOf } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionInvoice'
+import { NODE, stepVisible } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/nodes'
 
 defineOptions({ name: 'OutletConsumptionsAddVisitSummary', inheritAttrs: false })
 
@@ -33,25 +36,45 @@ const props = defineProps({ step: { type: [Number, String], default: null } })
 const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 
-const wizard = useConsumptionWizard()
-const { ui, pageState } = wizard
+const ui = useAQLConfig()
+const pageState = inject('pageState')
 const { _C } = useCurrency()
+const { getOutlet } = useOutletResource()
 
-const visible = computed(() =>
-  props.step == null || Number(props.step) === (pageState?.meta.currentStep || 1))
+const text = (value) => (value == null ? '' : String(value).trim())
+const num = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0)
+
+const consumption = pageState.useNode(NODE.CONSUMPTION)
+const returnsState = pageState.useNode(NODE.RETURNS)
+const restock = pageState.useNode(NODE.RESTOCKS)
+const invoice = pageState.useNode(NODE.INVOICES)
+
+const visible = computed(() => stepVisible(pageState, props.step))
 
 const rowDelay = (index) => ({ animationDelay: `${index * ui.rowStaggerMs}ms` })
+
+const outletCode = computed(() => text(consumption.node.value.record.OutletCode))
+const outletName = computed(() => text(getOutlet(outletCode.value)?.name) || outletCode.value)
+
+const soldRows = computed(() =>
+  (consumption.children(NODE.ITEMS).value || []).filter((row) => num(row.Qty) > 0))
+const returnRows = computed(() =>
+  (returnsState.node.value.records || []).filter((row) => num(row.Qty) > 0))
 
 // Blank rows are dropped rather than padded with em dashes — `Returns: —` states nothing
 // while looking like it does (§7.4).
 const summary = computed(() => {
-  const restockTotal = wizard.restockRows.value.reduce((sum, row) => sum + (Number(row.Quantity) || 0), 0)
+  const header = invoice.node.value.record
+  const credit = num(header.ReturnDeductionTotal)
+  const restockTotal = (restock.children(NODE.RESTOCK_ITEMS).value || [])
+    .reduce((sum, row) => sum + num(row.Quantity), 0)
+
   return [
-    { label: 'Outlet', value: wizard.outletName.value },
-    { label: 'Items sold', value: wizard.soldRows.value.length ? `${wizard.soldRows.value.length} line(s)` : '' },
-    { label: 'Returns', value: wizard.returnRows.value.length ? `${wizard.returnRows.value.length} line(s)` : '' },
-    { label: 'Invoice', value: wizard.generateInvoice.value && wizard.soldRows.value.length ? _C(wizard.invoiceTotal.value) : '' },
-    { label: 'Credit applied', value: wizard.returnDeduction.value > 0 ? `− ${_C(wizard.returnDeduction.value)}` : '' },
+    { label: 'Outlet', value: outletName.value },
+    { label: 'Items sold', value: soldRows.value.length ? `${soldRows.value.length} line(s)` : '' },
+    { label: 'Returns', value: returnRows.value.length ? `${returnRows.value.length} line(s)` : '' },
+    { label: 'Invoice', value: invoice.exists.value && soldRows.value.length ? _C(netPayableOf(header)) : '' },
+    { label: 'Credit applied', value: credit > 0 ? `− ${_C(credit)}` : '' },
     { label: 'Restock', value: restockTotal > 0 ? `${restockTotal} unit(s)` : '' }
   ].filter((line) => String(line.value).trim())
 })

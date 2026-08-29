@@ -9,12 +9,12 @@
         <q-item-label caption>Turn off if this visit sends nothing back to the outlet.</q-item-label>
       </q-item-section>
       <q-item-section side>
-        <q-toggle :model-value="wizard.enableRestock.value" color="primary" @update:model-value="setEnabled" />
+        <q-toggle v-model="restocking" color="primary" />
       </q-item-section>
     </q-item>
 
     <!-- Only shown when the region has a warehouse to draw from (§13.0). -->
-    <template v-if="wizard.enableRestock.value && wizard.regionWarehouses.value.length">
+    <template v-if="restocking && regionWarehouses.length">
       <q-item class="q-px-md q-py-sm">
         <q-item-section :class="ui.flexWrapTextClass">
           <q-item-label class="text-subtitle1 text-weight-medium">Direct restock</q-item-label>
@@ -24,44 +24,39 @@
           </q-item-label>
         </q-item-section>
         <q-item-section side>
-          <q-toggle :model-value="wizard.directRestock.value" color="primary" @update:model-value="setDirect" />
+          <q-toggle v-model="direct" color="primary" />
         </q-item-section>
       </q-item>
 
-      <q-card v-if="wizard.directRestock.value" flat bordered :class="ui.cardClass">
+      <q-card v-if="direct" flat bordered :class="ui.cardClass">
         <q-card-section>
           <component
             :is="SelectField"
-            v-if="wizard.regionWarehouses.value.length > 1"
-            :model-value="wizard.warehouseCode.value"
+            v-if="regionWarehouses.length > 1"
+            v-model="warehouseCode"
             :record="{}"
-            :config="{ label: 'Source warehouse', options: wizard.regionWarehouses.value, clearable: false }"
+            :config="{ label: 'Source warehouse', options: regionWarehouses, clearable: false }"
             header="WarehouseCode"
-            @update:model-value="(value) => wizard.set(FIELDS.WAREHOUSE, value)"
           />
           <div v-else class="text-body2 text-grey-8">
-            Drawing from <span class="text-weight-medium">{{ wizard.regionWarehouses.value[0].label }}</span>.
+            Drawing from <span class="text-weight-medium">{{ regionWarehouses[0].label }}</span>.
           </div>
         </q-card-section>
       </q-card>
 
       <!-- Sits with the routing choice it belongs to. -->
-      <q-card v-if="wizard.directRestock.value && wizard.restockRows.value.length" flat bordered :class="ui.cardClass">
+      <q-card v-if="direct && restockRows.length" flat bordered :class="ui.cardClass">
         <q-card-section>
           <div class="row items-center no-wrap q-col-gutter-sm">
             <div class="col" :class="ui.flexWrapTextClass">
-              <div class="text-subtitle1 text-weight-medium">Delivered on this visit</div>
+              <div class="text-subtitle1 text-weight-medium">Deliver Instantly</div>
               <div class="text-caption text-grey-8">
                 Tick if you are carrying this stock with you now. It will be added to the
                 outlet's balance immediately.
               </div>
             </div>
             <div class="col-auto">
-              <q-toggle
-                :model-value="wizard.markDelivered.value"
-                color="primary"
-                @update:model-value="(v) => wizard.set(FIELDS.MARK_DELIVERED, v === true)"
-              />
+              <q-toggle v-model="deliver" color="primary" />
             </div>
           </div>
         </q-card-section>
@@ -71,12 +66,17 @@
 </template>
 
 <script setup>
-// Step 4a — the restock decisions: leave one at all, route it direct or for approval,
-// and hand it over now. The lines themselves live in RestockItems.
-import { computed, useAttrs } from 'vue'
+// Step 4a - the restock decisions: leave one at all, route it direct or for approval,
+// and hand it over now. Every toggle is a control on the restock node, and Layer 2's
+// derive rules turn them into progress. The lines live in RestockItems, same node.
+import { computed, inject, useAttrs, watch } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
-import { useConsumptionWizard, WIZARD_FIELDS as FIELDS } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/useConsumptionWizard'
+import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
+import { useAuth } from 'src/composables/core/useAuth'
+import { useRecord } from 'src/composables/resources/useRecord'
+import { RESTOCK_CONTROL, restockNode } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
+import { NODE, RESTOCKING, stepVisible } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/nodes'
 
 defineOptions({ name: 'OutletConsumptionsAddRestockOptions', inheritAttrs: false })
 
@@ -85,37 +85,72 @@ const props = defineProps({ step: { type: [Number, String], default: null } })
 const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 
-const wizard = useConsumptionWizard()
-const { ui, pageState } = wizard
+const ui = useAQLConfig()
+const pageState = inject('pageState')
+const { hasRegionAccess } = useAuth()
+const warehouses = useRecord('Warehouses')
 
-// The source warehouse picker, resolved rather than deep-imported (§2.4).
 const SelectField = resolveFieldComponent('select', 'add')
 
-const visible = computed(() =>
-  props.step == null || Number(props.step) === (pageState?.meta.currentStep || 1))
+const text = (value) => (value == null ? '' : String(value).trim())
+const isActive = (row) => !text(row?.Status) || text(row.Status).toUpperCase() === 'ACTIVE'
 
-// Turning restock off clears the lines, the mode and the delivery tick, so a stale
-// DIRECT flag cannot route a request that no longer exists.
-function setEnabled (value) {
-  const on = value === true
-  wizard.set(FIELDS.ENABLE_RESTOCK, on)
-  if (on) {
-    wizard.syncRestockFromSales()
-    return
-  }
-  wizard.set(FIELDS.RESTOCK_ROWS, [])
-  wizard.set(FIELDS.DIRECT_RESTOCK, false)
-  wizard.set(FIELDS.WAREHOUSE, '')
-  wizard.set(FIELDS.MARK_DELIVERED, false)
+const consumption = pageState.useNode(NODE.CONSUMPTION)
+const restock = pageState.useNode(NODE.RESTOCKS)
+
+const visible = computed(() => stepVisible(pageState, props.step))
+
+const restocking = pageState.useControls(RESTOCKING, true)
+const direct = pageState.useControls(RESTOCK_CONTROL.DIRECT, false, NODE.RESTOCKS)
+const deliver = pageState.useControls(RESTOCK_CONTROL.DELIVER, false, NODE.RESTOCKS)
+const warehouseCode = pageState.useControls(RESTOCK_CONTROL.WAREHOUSE, '', NODE.RESTOCKS)
+
+const restockRows = computed(() => restock.children(NODE.RESTOCK_ITEMS).value || [])
+
+// `hasRegionAccess`, not a flat equality test: it also honours universe-scoped users
+// and rolled-up child regions.
+const regionWarehouses = computed(() => warehouses.items.value
+  .filter((row) => isActive(row) && hasRegionAccess(row.AccessRegion))
+  .map((row) => ({ value: text(row.Code), label: text(row.Name) || text(row.Code) })))
+
+// Turned back on it refills from what sold, the same rule step 2 applies as it counts.
+// Seeded WITH the routing answers: the node decides its lines' progress from them, so a
+// node built blind would land every line PENDING and keep no warehouse.
+function seedRestockNode () {
+  if (restock.exists.value) return
+  const sold = (consumption.children(NODE.ITEMS).value || [])
+    .filter((row) => Number(row.Qty) > 0)
+    .map((row) => ({ SKU: text(row.SKU), Quantity: Number(row.Qty) }))
+  const houses = regionWarehouses.value
+  const canDirect = houses.length > 0
+  pageState.setResource(NODE.RESTOCKS, null, restockNode(
+    { OutletCode: text(consumption.node.value.record.OutletCode) },
+    sold,
+    {
+      [RESTOCK_CONTROL.DIRECT]: canDirect,
+      [RESTOCK_CONTROL.DELIVER]: canDirect,
+      [RESTOCK_CONTROL.WAREHOUSE]: canDirect ? (warehouseCode.value || houses[0].value) : ''
+    }))
 }
 
-// DIRECT on seeds the source warehouse; off clears it and the delivery tick.
-function setDirect (value) {
-  const direct = value === true && wizard.regionWarehouses.value.length > 0
-  wizard.set(FIELDS.DIRECT_RESTOCK, direct)
-  wizard.set(FIELDS.WAREHOUSE, direct
-    ? (wizard.warehouseCode.value || wizard.regionWarehouses.value[0].value)
-    : '')
-  if (!direct) wizard.set(FIELDS.MARK_DELIVERED, false)
-}
+// The node carries the routing controls, so only the region answer is written here.
+// Warehouses arrive after mount, so this waits for them rather than settling on `false`
+// while the list is still empty.
+// `restock.exists` is a dependency, not just a guard: step 2 drops the node and re-seeds
+// it, and without watching that the routing answers would stay wherever the drop left them.
+watch([restocking, regionWarehouses, restock.exists], ([on, houses]) => {
+  if (on !== true) return
+  seedRestockNode()
+  if (!houses.length) return (direct.value = false)
+  if (direct.value !== true) direct.value = true
+  if (deliver.value !== true) deliver.value = true
+  if (!warehouseCode.value) warehouseCode.value = houses[0].value
+}, { immediate: true })
+
+// Off clears the warehouse, so no stale allocation reaches the batch. `deliver` is left
+// alone — Layer 2 already ignores it while `direct` is off.
+watch(direct, (on) => {
+  if (on !== true) return (warehouseCode.value = '')
+  if (!warehouseCode.value && regionWarehouses.value.length) warehouseCode.value = regionWarehouses.value[0].value
+})
 </script>

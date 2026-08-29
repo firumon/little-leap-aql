@@ -1,116 +1,131 @@
-import { useAuth } from 'src/composables/core/useAuth'
 import { useDataStore } from 'src/stores/data'
-import { makeLineTaxResolver } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionInvoice'
 import { batchResultCode } from 'src/composables/resources/resourceRequests'
-import { WIZARD_FIELDS as F, WIZARD_NODE as NODE } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/useConsumptionWizard'
+import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import {
-  validateConsumption,
-  soldRowsOf,
-  returnRowsOf,
-  restockRowsOf,
-  defaultReturnMeta,
-  priceListForOutlet,
-  priceOf
+  NODE,
+  ROLE,
+  CTRL,
+  INVOICING,
+  RESTOCKING,
+  VISIT_COMPLETE_COMMENT,
+  VISIT_COMPLETE_COMMENT_FIELD,
+  getCtrl
+} from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/nodes'
+import {
+  toNumber,
+  countRowsOf
 } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionStock'
+import { makeLineTaxResolver } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionInvoice'
 import { buildConsumptionWorkflowChainNodes } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionWorkflow'
+import { consumptionNode } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionPayload'
+import { returnsNode } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
+import { RESTOCK_CONTROL, restockNode } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
+import { invoiceNode, makeInvoiceLinePriceResolver } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoicePayload'
 
-/**
- * OutletConsumptions › Add › PageAction — JS modifier (tier 2: resource + page).
- *
- * Drives the six-step audit wizard entirely from the sticky bar, so the step cards stay
- * pure inputs with no navigation of their own — a card that navigated would double-fire
- * against the dispatcher and make a handler's veto unable to stop it (§13.6).
- *
- *   step 1  outlet, visit, restock source  →  [ Cancel ] [ Continue ]
- *   step 2  physical count                 →  [ Back   ] [ Continue ]
- *   step 3  sold review + invoice          →  [ Back   ] [ Continue ]
- *   step 4  restock + transfer             →  [ Back   ] [ Continue ]
- *   step 5  pending returns (SKIPPED when there are none)
- *                                          →  [ Back   ] [ Continue ]
- *   step 6  visit completion               →  [ Back   ] [ Record Audit ]
- *
- * `actions` is a GETTER, not a plain array. `useActionResolver` calls this factory once per
- * resolve and caches the result, but merges it into `finalProps` inside a `computed` — so a
- * getter is re-read on every recompute and its reads of `pageState.meta.currentStep` are
- * tracked. A literal array would latch the step-1 button set forever (§11 rule 4).
- *
- * ── STEP 5 SKIPPING ──
- * Both `next` and `back` step over step 5 when the outlet has no unsettled returns. It is
- * done here rather than by auto-advancing inside the card because navigation belongs to
- * the bar: a card that advanced itself would fight the Back button, landing the user on a
- * step that immediately bounced them forward again.
- *
- * ── THE SUBMIT ──
- * NOT ASSEMBLED HERE. One batch across up to six resources — two of them owned by other
- * domains — is a multi-resource mutation chain, and Layer 2 is its sole owner
- * (UI_RESOURCE_DOMAIN_LOGIC.md §9.1). `submit` below collects the wizard's answers, calls
- * `buildConsumptionWorkflowChainNodes`, gates on the permissions it returns, and hands
- * its requests straight to the dispatcher. No table schema, no default column value, no
- * `$ref`, and no permission derivation is written in this file.
- *
- * What DOES stay here is navigation and step visibility — which screen the user is on and
- * which button set the bar shows. That is presentation, and it is all this file decides.
- */
+// The sticky bar for the six-step wizard: navigation, the step-2 hand-off, the submit.
+// The nodes ARE the answers, so nothing is collected here - this file reads pageState,
+// purifies it on the transition, and lets Layer 2 build the batch.
 export default (props, { pageState, resourceConfig }) => {
-  // Safe outside setup: both only reach Pinia stores and statically imported plugins —
-  // neither calls `inject()`. `user` stays a computed, so reading it at submit time gives
-  // the live session user rather than whoever was signed in at import.
-  const { user } = useAuth()
   const dataStore = useDataStore()
 
-  const node = pageState.useNode(NODE)
   const step = () => pageState.meta.currentStep
-  const get = (field, fallback = null) => {
-    const value = pageState.getControlField(NODE, field)
-    return value === undefined || value === null ? fallback : value
-  }
   const text = (value) => (value == null ? '' : String(value).trim())
-  const actor = () => user.value?.name || user.value?.email || ''
-  const form = () => node.record.value
-
-  const countRows = () => get(F.COUNT_ROWS, []) || []
-  const returnMeta = () => get(F.RETURN_META, {}) || {}
-  const metaOf = (sku) => ({ ...defaultReturnMeta(), ...(returnMeta()[text(sku)] || {}) })
   const rows = (name) => dataStore.getRecords(name) || []
 
-  const outletCode = () => text(form().OutletCode)
+  const consumption = pageState.useNode(NODE.CONSUMPTION)
+  const returns = pageState.useNode(NODE.RETURNS)
+  const restock = pageState.useNode(NODE.RESTOCKS)
+  const invoice = pageState.useNode(NODE.INVOICES)
 
-  /**
-   * Drop restock lines the user zeroed out.
-   *
-   * Written here rather than in the card because the card must NOT remove them — see the
-   * `next` handler. `_edited` is preserved on survivors so the sales mirror still leaves
-   * hand-adjusted quantities alone.
-   */
-  function pruneZeroRestockRows () {
-    const rowsNow = get(F.RESTOCK_ROWS, []) || []
-    const kept = rowsNow.filter((row) => Number(row.Quantity) > 0)
-    if (kept.length !== rowsNow.length) pageState.setControlField(NODE, F.RESTOCK_ROWS, kept)
+  const outletCode = () => text(pageState.getRecord('OutletCode', NODE.CONSUMPTION))
+
+  const isTrue = (value) => text(value).toUpperCase() === 'TRUE'
+
+  // One return record, in the shape the Layer 2 return builder reads it.
+  const returnMetaFrom = (row) => ({
+    Reason: text(row?.Reason) || 'DAMAGE',
+    ReasonComment: text(row?.ReasonComment),
+    SourceInvoiceCode: text(row?.SourceInvoiceCode),
+    Price: row?.Price === undefined || row?.Price === null || row?.Price === '' ? null : toNumber(row.Price),
+    InvoiceAdjustmentRequired: isTrue(row?.InvoiceAdjustmentRequired),
+    WarehouseActionRequired: isTrue(row?.WarehouseActionRequired),
+    WarehouseCode: text(row?.WarehouseCode)
+  })
+
+  // Only positive lines are real answers. A zero is a row the officer opened and left.
+  const soldItems = () => (consumption.children(NODE.ITEMS).value || []).filter((row) => toNumber(row.Qty) > 0)
+  const returnItems = () => (returns.node.value.records || []).filter((row) => toNumber(row.Qty) > 0)
+  const restockItems = () => (restock.children(NODE.RESTOCK_ITEMS).value || []).filter((row) => toNumber(row.Quantity) > 0)
+
+  const invoiceAllowed = () => useResourceConfig(NODE.INVOICES).allowed('create') === true
+  const restockAllowed = () => useResourceConfig(NODE.RESTOCKS).allowed('create') === true
+
+  const invoiceLines = () => invoice.children(NODE.INVOICE_ITEMS).value || []
+
+  // The prices the reviewed lines carry, else the price list. Used by the SUBMIT, which
+  // rebuilds the whole chain through Layer 2 rather than reading the reviewed node.
+  const priceResolver = () => makeInvoiceLinePriceResolver(invoiceLines())
+
+  // The step 4a answers, in the shape Layer 2 reads them.
+  const restockControls = () => ({
+    [RESTOCK_CONTROL.DIRECT]: getCtrl(pageState, CTRL.DIRECT_RESTOCK, false) === true,
+    [RESTOCK_CONTROL.DELIVER]: getCtrl(pageState, CTRL.MARK_DELIVERED, false) === true,
+    [RESTOCK_CONTROL.WAREHOUSE]: text(getCtrl(pageState, CTRL.WAREHOUSE))
+  })
+
+  const completingVisit = () => getCtrl(pageState, CTRL.COMPLETE_VISIT, true) === true &&
+    !!text(pageState.getRecord('OutletVisitCode', NODE.CONSUMPTION))
+
+  const invoicingOn = () => pageState.getControls(INVOICING, true) === true
+  const restockingOn = () => pageState.getControls(RESTOCKING, true) === true
+
+  // Leaving step 4 settles the restock: the answers stop changing, so the node is rebuilt
+  // once from the surviving lines and its derive rules are dropped.
+  function settleRestock () {
+    if (!restockingOn()) return pageState.removeNode(NODE.RESTOCKS)
+    const kept = restockItems()
+    if (!kept.length) return pageState.removeNode(NODE.RESTOCKS)
+    pageState.setResource(NODE.RESTOCKS, null, restockNode(
+      { ...restock.node.value.record }, kept, restockControls(), { withDerive: false }))
   }
-  /**
-   * Whether this visit leaves a restock at all — the step-4 switch.
-   *
-   * Read here as well as in the card, and everything restock-shaped below goes through it:
-   * a user who turns the restock off after filling lines must not have those lines
-   * submitted because they are still sitting in the control field. Defaults to TRUE, which
-   * is the behaviour every existing flow had before the switch existed.
-   */
-  const enableRestock = () => get(F.ENABLE_RESTOCK, true) !== false
-  const directRestock = () => enableRestock() && get(F.DIRECT_RESTOCK, false) === true
-  const generateInvoice = () => get(F.GENERATE_INVOICE, true) === true && soldRowsOf(countRows()).length > 0
-  const priceListCode = () => text(get(F.PRICE_LIST)) || text(priceListForOutlet(outletCode())?.code)
 
-  /**
-   * The engine's price resolver: an override the officer typed on step 3, else the price
-   * list's own answer. Mirrors `useConsumptionWizard.resolvePrice` — same control field,
-   * same fallback — so what was confirmed on screen is what is billed.
-   */
-  const resolvePrice = (sku, listCode) => {
-    const overrides = get(F.PRICE_OVERRIDES, {}) || {}
-    const override = overrides[text(sku)]
-    return override === undefined || override === null || override === ''
-      ? priceOf(sku, listCode)
-      : Number(override) || 0
+  // Drop every zeroed line, then rebuild each node from the survivors through its own
+  // Layer 2 builder. Done on the TRANSITION, not on the keystroke that reached zero -
+  // that would unmount the row under the officer's finger.
+  function purify (sold, returned, restocks) {
+    // Same shape for all three: keep the non-zero lines, rebuild through the resource's own
+    // Layer 2 node builder, re-apply. Only record/children/records are replaced, so each
+    // node keeps its controls. A leg with nothing left loses its node.
+    pageState.setResource(NODE.CONSUMPTION, null,
+      consumptionNode({ ...consumption.node.value.record }, sold))
+
+    if (restocks.length) {
+      pageState.setResource(NODE.RESTOCKS, null,
+        restockNode({ ...restock.node.value.record }, restocks, restockControls()))
+    } else {
+      pageState.removeNode(NODE.RESTOCKS)
+    }
+
+    if (returned.length) pageState.setResource(NODE.RETURNS, null, returnsNode(returned))
+    else pageState.removeNode(NODE.RETURNS)
+  }
+
+  // Decides only THAT there is an invoice, and gives it the outlet and the lines. What is
+  // ON it - prices, discount, tax, totals - is SoldReview's, which owns those terms.
+  function seedInvoice (sold) {
+    const header = pageState.getRecord(null, NODE.CONSUMPTION) || {}
+    pageState.setResource(NODE.INVOICES, null, invoiceNode(
+      {
+        ...invoice.node.value.record,
+        OutletCode: text(header.OutletCode),
+        Date: text(header.Date),
+        Username: text(header.Username)
+      },
+      sold.map((row) => ({ SKU: text(row.SKU), Qty: toNumber(row.Qty) })),
+      {},
+      // Re-entering step 3 must not undo a price the officer already typed.
+      { resolvePrice: priceResolver() }
+    ))
   }
 
   /** Unsettled returns raised on an EARLIER visit, which step 5 also offers to settle. */
@@ -120,29 +135,13 @@ export default (props, { pageState, resourceConfig }) => {
     text(row?.InvoiceAdjustmentRequired) === 'TRUE' &&
     text(row?.InvoiceAdjustmentDone) !== 'TRUE')
 
-  /**
-   * Which steps have anything to ask, given what the count actually found.
-   *
-   * A step is SKIPPED when its question has no subject — not merely when it would render
-   * empty. Two of the six qualify:
-   *
-   *   step 3  sold review + invoicing  — nothing sold, so there is nothing to price and no
-   *                                      invoice to configure. A damage-only visit goes
-   *                                      straight from the count to the restock.
-   *   step 5  returns                  — no surplus counted and no unsettled return from an
-   *                                      earlier visit, so there is no routing to decide.
-   *
-   * Expressed as one predicate per step and walked by `nextStep`/`prevStep` below, rather
-   * than as a pair of hardcoded jumps. The previous form special-cased 4→6 in `next` and
-   * 6→4 in `back`; adding a second skippable step to that shape would have produced four
-   * more branches, and any two of them could disagree about where the user lands.
-   */
+  // A step is skipped when its question has no subject.
   const STEP_VISIBLE = {
     1: () => true,
     2: () => true,
-    3: () => soldRowsOf(countRows()).length > 0,
-    4: () => true,
-    5: () => returnRowsOf(countRows()).length > 0 || hasPendingReturns(),
+    3: () => invoiceAllowed() && soldItems().length > 0,
+    4: () => restockItems().length > 0,
+    5: () => returnItems().length > 0 || hasPendingReturns(),
     6: () => true
   }
 
@@ -165,107 +164,109 @@ export default (props, { pageState, resourceConfig }) => {
     return null
   }
 
-  /** The restock lines that will actually be requested, zeroes already dropped. */
-  const liveRestockRows = () => (enableRestock() ? restockRowsOf(get(F.RESTOCK_ROWS, []) || []) : [])
+  // The answers the Layer 2 chain takes, read straight off the nodes and their controls.
+  function chainInputs () {
+    const form = pageState.getRecord(null, NODE.CONSUMPTION) || {}
+    const outletStorages = rows('OutletStorages')
+    const priceListCode = text(invoice.node.value.record.PriceListCode)
 
-  /**
-   * The full validation gate, shared by the step-2 `next` and by `submit`.
-   *
-   * `submitting` is what separates the two. The "at least one sold item, return item, or
-   * restock item" rule can only be judged once every step has been through, so it is armed
-   * at submit and silent during navigation — otherwise step 2 would refuse to advance a
-   * restock-only audit toward the very step that gives it its restock lines.
-   */
-  const validate = (options = {}) => validateConsumption(form(), countRows(), rows('OutletStorages'), {
-    generateInvoice: generateInvoice(),
-    priceListCode: priceListCode(),
-    directRestock: directRestock(),
-    warehouseCode: text(get(F.WAREHOUSE)),
-    returnMetaOf: metaOf,
-    restockRows: liveRestockRows(),
-    submitting: options.submitting === true
-  })
+    const resolvePrice = priceResolver()
+
+    // The step-5 answers live on the OutletReturns records themselves, keyed by SKU here
+    // because that is how the Layer 2 builder asks for them.
+    const returnBySku = new Map(returnItems().map((row) => [text(row.SKU), row]))
+    const restocking = restock.exists.value && restockingOn()
+    const directRestock = restocking && getCtrl(pageState, CTRL.DIRECT_RESTOCK, false) === true
+    const days = getCtrl(pageState, CTRL.NEXT_VISIT_DAYS, null)
+
+    return {
+      form,
+      countRows: countRowsOf(soldItems(), returnItems(), outletStorages, text(form.OutletCode)),
+      actorName: text(form.Username),
+      outletStorages,
+      warehouseStorages: rows('WarehouseStorages'),
+      operatingRules: rows('OutletOperatingRules'),
+      returnRows: rows('OutletReturns'),
+      returnMetaOf: (sku) => returnMetaFrom(returnBySku.get(text(sku))),
+      adjustedReturnCodes: (getCtrl(pageState, CTRL.ADJUSTED_RETURNS, []) || []).map(text).filter(Boolean),
+      generateInvoice: invoice.exists.value && invoicingOn(),
+      priceListCode,
+      dueDate: text(invoice.node.value.record.DueDate),
+      discountType: text(getCtrl(pageState, CTRL.DISCOUNT_TYPE)) || 'FLAT',
+      discountValue: toNumber(getCtrl(pageState, CTRL.DISCOUNT_VALUE, 0)),
+      invoiceComment: text(getCtrl(pageState, CTRL.INVOICE_COMMENT)),
+      calculateLineTax: makeLineTaxResolver({ priceListCode, resolvePrice }),
+      resolvePrice,
+      restockRows: restocking ? restockItems() : [],
+      directRestock,
+      warehouseCode: directRestock ? text(getCtrl(pageState, CTRL.WAREHOUSE)) : '',
+      markDelivered: directRestock && getCtrl(pageState, CTRL.MARK_DELIVERED, false) === true,
+      // Step 6's two answers, read where each one lives: the toggle's own control, and
+      // the planned-visit node the scheduling card seeds.
+      completeVisit: completingVisit(),
+      completeComment: text(pageState.getActions(
+        'Complete', `fields.${VISIT_COMPLETE_COMMENT_FIELD}`, NODE.VISITS)) || VISIT_COMPLETE_COMMENT,
+      scheduleNext: pageState.hasNode(NODE.VISITS, ROLE.NEXT),
+      nextVisit: pageState.getRecord(null, NODE.VISITS, ROLE.NEXT) || {},
+      nextVisitDays: days === null || days === '' ? null : toNumber(days)
+    }
+  }
 
   return {
     get actions () {
       if (step() === 1) return ['cancel', 'next']
-      // Keyed on whether a NEXT step exists rather than on the literal step number: with
-      // step 5 skipped, step 4 is the last screen before submit and must show the submit
-      // button, not a Continue that leads nowhere.
+      // Keyed on whether a NEXT step exists: with step 5 skipped, step 4 is the last screen.
       if (nextStep(step()) === null) return ['back', 'submit']
       return ['back', 'next']
     },
 
-    // Static: this page has exactly one possible outcome, so the label states the
-    // transition it performs rather than tracking any state (§13.6).
     submitLabel: 'Record Consumption',
 
-    // Leaving abandons an unsaved audit, so go to the list rather than `goBack()` — the
-    // user may have arrived from an outlet page. Returning `false` stops the built-in
-    // `goBack()` from popping a second history entry on top of it (§8.2).
+    // Leaving abandons an unsaved audit, so go to the list rather than `goBack()`.
     cancel: (name, { nav }) => {
       nav.goTo('index')
       return false
     },
 
-    // Two phases, and the order is the whole contract: VALIDATE the step being left, then
-    // WALK to the next step that has something to ask.
-    //
-    // They were previously interleaved — each step's validation branch ended in its own
-    // `return`, so the walk below was unreachable from steps 1 and 2 and the step-3 bypass
-    // silently never fired for the case it exists for (a damage-only visit leaving step 2).
-    // Validation now only returns EARLY when it actually vetoes; the walk is the single
-    // exit every non-vetoed transition takes.
     next: () => {
       if (step() === 1) {
         if (!outletCode()) return { valid: false, message: 'Select an outlet to continue.' }
       }
+
       if (step() === 2) {
-        const result = validate()
-        // Only the count itself is gated here. Pricing and warehouse errors belong to the
-        // steps that collect them, so a missing price does not block a user who has not
-        // reached the invoice step yet.
-        //
-        // A count with NOTHING on it is deliberately not gated either. Every shelf matching
-        // the system is a legitimate audit outcome, and the officer may still be here to
-        // leave a restock behind — `STEP_VISIBLE[3]` is false with no sales, so this walks
-        // straight to step 4, where the restock is either added or the guard below stops it.
-        const countErrors = result.errors.filter((error) => !/price|warehouse/i.test(error))
-        if (countErrors.length) return { valid: false, message: countErrors[0] }
-      }
-      // Leaving step 4 prunes any line the user zeroed out. Done on the TRANSITION, not on
-      // the keystroke that reached zero: pruning live would unmount the row under the
-      // user's finger the moment they tapped one decrement too many, with no way back to
-      // it except the expansion. Holding it at zero until they move on makes that
-      // recoverable, and a zero line was never going to be submitted anyway.
-      if (step() === 4) {
-        pruneZeroRestockRows()
+        const sold = soldItems()
+        const returned = returnItems()
+        const restocks = restockItems()
 
-        // The source warehouse is asked for HERE now, on the step that offers the DIRECT
-        // choice. It used to be gated on step 1, which asked the question before the user
-        // had decided whether there would be a restock at all.
-        if (directRestock() && !text(get(F.WAREHOUSE))) {
-          return { valid: false, message: 'Select a source warehouse to continue.' }
-        }
-
-        // THE ONE PLACE a restock-only audit can be stopped. Steps 5 and 6 ask about
-        // returns and the visit, neither of which is an operational effect on its own, so
-        // by the time the user reaches the submit button every remaining screen is optional
-        // — an audit that recorded nothing must be caught here, on the step that offered
-        // the last chance to give it something to do.
-        //
-        // Stated as what to do next rather than as what went wrong: both remedies are named,
-        // because the user standing in the outlet knows which of the two actually happened.
-        if (!soldRowsOf(countRows()).length && !returnRowsOf(countRows()).length && !liveRestockRows().length) {
+        if (!sold.length && !restocks.length && !returned.length) {
           return {
             valid: false,
-            message: 'Add at least one restock item to continue, or record a sold/return quantity in stock count.'
+            message: 'Consumption requires at least one sold, restock, or return item to proceed.'
           }
         }
+
+        purify(sold, returned, restocks)
+
+        if (restocks.length && restockAllowed()) pageState.setControls(RESTOCKING, true)
+
+        if (sold.length && invoiceAllowed()) {
+          seedInvoice(sold)
+          pageState.setControls(INVOICING, true)
+          pageState.meta.currentStep = 3
+        } else {
+          pageState.removeNode(NODE.INVOICES)
+          pageState.meta.currentStep = restocks.length ? 4 : 5
+        }
+        // `false` suppresses the built-in increment - this jump already moved the step.
+        return false
       }
 
-      // Walk to the next step that has something to ask. Returning `false` suppresses the
-      // built-in single-step increment, which this jump has already performed.
+      // Leaving step 3 settles the invoice: the toggle is the answer, so a node the
+      // officer turned off must not travel on into the rest of the wizard.
+      if (step() === 3 && !invoicingOn()) pageState.removeNode(NODE.INVOICES)
+
+      if (step() === 4) settleRestock()
+
       const target = nextStep(step())
       if (target !== null && target !== step() + 1) {
         pageState.meta.currentStep = target
@@ -281,84 +282,29 @@ export default (props, { pageState, resourceConfig }) => {
       }
     },
 
-    /**
-     * A THIN ADAPTER, nothing more (UI_RESOURCE_DOMAIN_LOGIC.md §9.1).
-     *
-     * Everything this handler does is collect the wizard's answers and the rows the
-     * domain needs to reason about, hand them to ONE Layer 2 chain builder, gate the
-     * whole chain on the permissions that builder returns, and forward its requests.
-     *
-     * The batch's shape, its order, which resources it writes, what the user is told and
-     * where they land are all decided in
-     * `useConsumptionWorkflow.buildConsumptionWorkflowChainNodes` — including the visit
-     * and restock legs, which it delegates to those resources' OWN domain builders rather
-     * than restating their schemas here.
-     */
+    // A thin adapter: Layer 2 decides the batch, build() turns the nodes into requests.
     submit: (name, { nav }) => {
-      const result = buildConsumptionWorkflowChainNodes({
-        form: form(),
-        countRows: countRows(),
-        actorName: actor(),
-        outletStorages: rows('OutletStorages'),
-        warehouseStorages: rows('WarehouseStorages'),
-        operatingRules: rows('OutletOperatingRules'),
-        returnMetaOf: metaOf,
-        returnRows: rows('OutletReturns'),
-        adjustedReturnCodes: get(F.ADJUSTED_RETURNS, []) || [],
-        generateInvoice: generateInvoice(),
-        priceListCode: priceListCode(),
-        discountType: text(get(F.DISCOUNT_TYPE)),
-        discountValue: get(F.DISCOUNT_VALUE, 0),
-        invoiceComment: text(get(F.INVOICE_COMMENT)),
-        // Same resolver the review step uses, built from the same resolvePrice below.
-        calculateLineTax: makeLineTaxResolver({ priceListCode: priceListCode(), resolvePrice }),
-        // The unit prices the officer typed on step 3, as a resolver — so the batch prices
-        // every line exactly as the review step displayed it. Read straight off the control
-        // field, because this handler runs outside any setup context and cannot call the
-        // wizard composable that owns the same accessor.
-        resolvePrice,
-        restockRows: liveRestockRows(),
-        directRestock: directRestock(),
-        warehouseCode: directRestock() ? text(get(F.WAREHOUSE)) : '',
-        markDelivered: enableRestock() && get(F.MARK_DELIVERED, false) === true,
-        completeVisit: get(F.COMPLETE_VISIT, true) === true,
-        scheduleNext: get(F.SCHEDULE_NEXT, true) === true,
-        // The cadence the officer confirmed on step 6, in days. `null` leaves the outlet's
-        // configured frequency in charge.
-        nextVisitDays: (() => {
-          const stored = get(F.NEXT_VISIT_DAYS, null)
-          return stored === null || stored === undefined || stored === '' ? null : Number(stored) || 0
-        })()
-      })
+      const hadSales = soldItems().length > 0
+      const applied = pageState.applyNodes(buildConsumptionWorkflowChainNodes(chainInputs()))
+      if (applied.valid === false) return false
+      const outcome = applied.outcome
+      // Nothing sold means no consumption row to write.
+      if (!hadSales) pageState.removeNode(NODE.CONSUMPTION)
+      // The toggle is off, so the reviewed invoice node must not reach the batch.
+      if (!invoicingOn()) pageState.removeNode(NODE.INVOICES)
+      if (!restockingOn()) pageState.removeNode(NODE.RESTOCKS)
 
-      if (!result.valid) return { valid: false, message: result.message }
-      if (resourceConfig?.allowed(result.permissions) !== true) {
-        const gaps = resourceConfig?.missing?.(result.permissions) || []
-        const detail = gaps.map(({ resource, action }) => `${resource} (${action})`).join(', ')
-        return {
-          valid: false,
-          message: 'You do not have permission to complete this consumption workflow.' +
-            (detail ? ` Missing: ${detail}` : '')
-        }
-      }
-
-      const outcome = result.outcome
-      pageState.applyNodes(result.nodes)
-      // Resolved AFTER hydration, off the batch this page will actually send: the domain
-      // names the resource to open, and only build() knows where it lands in the order.
-      const at = outcome.resource
+      // Resolved after hydration: only build() knows where the resource lands in the batch.
+      const at = outcome?.resource
         ? pageState.build().findIndex((request) => request.resource === outcome.resource)
         : -1
       return {
-        successMsg: result.successMsg,
+        successMsg: applied.successMsg,
         onSuccess: ({ response }) => {
-          // The default handler resets for us; supplying our own replaces it, so the
-          // wizard state has to be cleared here or the next audit opens on the last
-          // one's answers.
+          // Our handler replaces the default reset, so clear the wizard here.
           pageState.reset()
           const code = at >= 0 ? text(batchResultCode(response, at)) : ''
-          // A bulk create does not always report a single code. Landing on the resource's
-          // index is the honest fallback — better than a View route built on a blank code.
+          // A bulk create may report no single code. The index is the honest fallback.
           if (!code) return nav.goTo('index')
           if (!outcome.slug) return nav.goTo('view', { code })
           nav.goTo('view', { scope: 'operation', resourceSlug: outcome.slug, code })

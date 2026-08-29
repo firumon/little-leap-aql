@@ -82,7 +82,6 @@ import { computed } from 'vue'
 import AppList from 'components/app/AppList.vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import { useConsumptionIndexContext } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Index/useConsumptionIndexContext'
-import { formatDate } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Index/useConsumptionRowPresets'
 
 defineOptions({ name: 'OutletConsumptionsIndexListScheduledOutlets', inheritAttrs: false })
 

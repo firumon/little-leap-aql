@@ -114,6 +114,6 @@ const NODE = 'OutletConsumptions'
 // keep applying (§2.4).
 const TextareaField = resolveFieldComponent('textarea', 'add')
 
-const reason = computed(() => pageState?.getControlField(NODE, 'CancelReason') || '')
-const setReason = (value) => pageState?.setControlField(NODE, 'CancelReason', value)
+const reason = computed(() => pageState?.getControls('CancelReason', null, NODE) || '')
+const setReason = (value) => pageState?.setControls('CancelReason', value, NODE)
 </script>

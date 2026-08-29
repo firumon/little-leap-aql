@@ -185,15 +185,6 @@ export function isActiveRow (row) {
   return text(asRow(row).Status || 'Active') === 'Active'
 }
 
-export function isPendingInvoice (row) {
-  return progressOf(row) === PENDING_INVOICE_GENERATION
-}
-
-/** Whether the consumption has walked to `INVOICE_GENERATED`. */
-export function isInvoiceGenerated (row) {
-  return progressOf(row) === INVOICE_GENERATED
-}
-
 export function isCancelled (row) {
   return progressOf(row) === CANCELLED
 }
@@ -201,19 +192,6 @@ export function isCancelled (row) {
 /** Whether a consumption has come to rest. */
 export function isTerminal (row) {
   return TERMINAL_STATES.includes(progressOf(row))
-}
-
-/**
- * Whether an INVOICE actually exists for this consumption.
- *
- * Deliberately NOT the same question as `isInvoiceGenerated`, which reads the
- * consumption's own state column. The two normally agree, and where they do not the
- * invoice row is the truth: a bundled invoice generated later from a sibling consumption
- * writes the invoice before the state, and a state written without a surviving invoice row
- * is stale. The caller supplies the candidate invoices so this stays pure.
- */
-export function hasInvoice (row, invoices = []) {
-  return !!findInvoiceFor(row, invoices)
 }
 
 /**
@@ -478,11 +456,8 @@ export function useConsumptionProgress () {
     relatedIcon,
     relatedLabel,
     isActiveRow,
-    isPendingInvoice,
-    isInvoiceGenerated,
     isCancelled,
     isTerminal,
-    hasInvoice,
     findInvoiceFor,
     consumptionCodesOf,
     cancellability,

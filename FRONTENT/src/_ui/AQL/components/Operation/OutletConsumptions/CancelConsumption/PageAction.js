@@ -46,7 +46,7 @@ export default (props, { pageState, resourceConfig }) => {
   const rows = (name) => (dataStore.getRecords(name) || []).map(asRow)
 
   const NODE = 'OutletConsumptions'
-  const reason = () => text(pageState.getControlField(NODE, 'CancelReason'))
+  const reason = () => text(pageState.getControls('CancelReason', null, NODE))
   const actor = () => user.value?.name || user.value?.email || ''
 
   const record = () => rows(NODE).find((row) => text(row.Code) === text(pageState.meta?.code)) || null
@@ -108,11 +108,11 @@ export default (props, { pageState, resourceConfig }) => {
       }
 
       const result = buildConsumptionCancellationNodes(consumption, why, { invoice, restocks, consumptionItems, outletMovements, actorName: actor() })
-      if (!result.valid) return { valid: false, message: result.message }
 
-      pageState.applyNodes(result.nodes)
+      const applied = pageState.applyNodes(result)
+      if (applied.valid === false) return false
       return {
-        successMsg: result.successMsg,
+        successMsg: applied.successMsg,
         // The route's outcome lands back on the record so the user sees the cancelled
         // state and its cascade, rather than being returned to a list. `pageState.reset()`
         // first, or the typed reason survives the navigation and re-seeds the next visit.

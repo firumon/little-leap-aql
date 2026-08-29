@@ -4,6 +4,16 @@
     {
       "name": "aql-frontend",
       "url": "http://localhost:9000"
+    },
+    {
+      "name": "aql-frontend-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "cwd": "FRONTENT",
+      "port": 9000
     }
   ]
 }

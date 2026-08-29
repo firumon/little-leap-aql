@@ -12,7 +12,7 @@
  * PURE: no Vue refs, no Pinia stores, no injects.
  */
 
-import { actionNode, bulkNode } from 'src/composables/resources/nodePayloads'
+import { textOrRef } from 'src/utils/appHelpers'
 import {
   canCreatePayment,
   canCancelPayment
@@ -58,22 +58,22 @@ export function buildOutletPaymentCreationNodes ({
   waiverComment = ''
 } = {}) {
   if (!canCreatePayment()) {
-    return { valid: false, message: 'You do not have permission to submit payments.' }
+    return [{ valid: false, message: 'You do not have permission to submit payments.' }]
   }
 
   const outletCode = text(selectedOutletCode)
   if (!outletCode) {
-    return { valid: false, message: 'Select an outlet to record payment.' }
+    return [{ valid: false, message: 'Select an outlet to record payment.' }]
   }
 
   const invoices = (Array.isArray(selectedInvoices) ? selectedInvoices : []).map(asRow)
   if (!invoices.length) {
-    return { valid: false, message: 'Select at least one invoice to pay.' }
+    return [{ valid: false, message: 'Select at least one invoice to pay.' }]
   }
 
   const amount = num(totalAmount)
   if (amount <= 0) {
-    return { valid: false, message: 'Payment amount must be greater than zero.' }
+    return [{ valid: false, message: 'Payment amount must be greater than zero.' }]
   }
 
   const payMode = text(mode) || 'Cash'
@@ -83,7 +83,7 @@ export function buildOutletPaymentCreationNodes ({
     .filter(item => item.allocated > 0)
 
   if (!activeAllocations.length) {
-    return { valid: false, message: 'Allocate payment amount to at least one invoice.' }
+    return [{ valid: false, message: 'Allocate payment amount to at least one invoice.' }]
   }
 
   const allocatedSum = activeAllocations.reduce((sum, item) => sum + item.allocated, 0)
@@ -92,7 +92,7 @@ export function buildOutletPaymentCreationNodes ({
   }
 
   if (waiveResidual && !text(waiverReason)) {
-    return { valid: false, message: 'Please select a waiver reason for the residual balance.' }
+    return [{ valid: false, message: 'Please select a waiver reason for the residual balance.' }]
   }
 
   const nodes = []
@@ -120,7 +120,7 @@ export function buildOutletPaymentCreationNodes ({
 
     // A bulk of one: several invoices in a run write several payment rows, and they all
     // share the one OutletPayments address.
-    nodes.push(bulkNode(PAYMENTS, [paymentRecord], [PAYMENTS]))
+    nodes.push({ resource: PAYMENTS, many: true, records: [paymentRecord], reload: [PAYMENTS] , permissions: { create: 'You are not allowed to create this outlet payment.' }, successMsg: 'Payment submitted successfully.', successMsg: 'Payment receipt cancelled successfully.'})
 
     // 2. Derive Invoice State Transition
     const invBal = balanceDueOf(invoice, paymentsByInvoice.get(code) || [])
@@ -140,9 +140,8 @@ export function buildOutletPaymentCreationNodes ({
         balanceDue: remaining,
         actorName: actorName || user
       })
-      if (!settlement.valid) return { valid: false, message: settlement.message }
-      nodes.push(...settlement.nodes)
-      settlementPermissions = { ...settlementPermissions, ...settlement.permissions }
+      if (settlement[0]?.valid === false) return settlement
+      nodes.push(...settlement)
     } else {
       // The invoice domain decides its own state walk. PAID only on an exact match: any
       // leftover keeps it PARTIALLY_PAID until somebody settles it through the audited
@@ -155,22 +154,12 @@ export function buildOutletPaymentCreationNodes ({
           ? `Payment of ${allocated} received via ${payMode}. Invoice fully paid.`
           : `Payment of ${allocated} received via ${payMode}; balance remaining: ${remaining.toFixed(2)}.`
       })
-      if (!walk.valid) return { valid: false, message: walk.message }
-      nodes.push(...walk.nodes)
-      settlementPermissions = { ...settlementPermissions, ...walk.permissions }
+      if (walk[0]?.valid === false) return walk
+      nodes.push(...walk)
     }
   }
 
-  return {
-    valid: true,
-    nodes,
-    permissions: {
-      outletPayment: 'create',
-      outletConsumptionInvoice: 'update',
-      ...settlementPermissions
-    },
-    successMsg: 'Payment submitted successfully.'
-  }
+  return nodes
 }
 
 // ─── 2. Payment Cancellation Batch ────────────────────────────────────────────
@@ -186,27 +175,29 @@ export function buildOutletPaymentCancellationNodes ({
   const paymentCode = text(payment.Code)
 
   if (!paymentCode) {
-    return { valid: false, message: 'Payment record is missing identifier.' }
+    return [{ valid: false, message: 'Payment record is missing identifier.' }]
   }
 
   if (!canCancelPayment(payment)) {
-    return { valid: false, message: 'You do not have permission to cancel this payment.' }
+    return [{ valid: false, message: 'You do not have permission to cancel this payment.' }]
   }
 
   const reason = text(comment)
   if (!reason || reason.length < 3) {
-    return { valid: false, message: 'Cancellation comment is mandatory (minimum 3 characters).' }
+    return [{ valid: false, message: 'Cancellation comment is mandatory (minimum 3 characters).' }]
   }
 
   const nodes = [
-    actionNode(PAYMENTS, paymentCode, {
+    { resource: PAYMENTS, actions: [{ ...{
       action: 'Cancel',
       column: 'Progress',
       columnValue: 'CANCELLED'
-    }, {
-      ProgressCancelledComment: reason,
-      ...stampFields('ProgressCancelled', actorName, reason)
-    }, { reload: [PAYMENTS] })
+    }, code: textOrRef(paymentCode), data: {
+      fields: {
+        ProgressCancelledComment: reason,
+        ...stampFields('ProgressCancelled', actorName, reason)
+      }
+    } }], reload: [PAYMENTS] , permissions: { update: 'You are not allowed to update this outlet payment.' }}
   ]
 
   const invoice = asRow(invoiceRecord)
@@ -227,19 +218,11 @@ export function buildOutletPaymentCancellationNodes ({
       actorName,
       comment: `Payment ${paymentCode} cancelled: ${reason}`
     })
-    if (!walk.valid) return { valid: false, message: walk.message }
-    nodes.push(...walk.nodes)
+    if (walk[0]?.valid === false) return walk
+    nodes.push(...walk)
   }
 
-  return {
-    valid: true,
-    nodes,
-    permissions: {
-      outletPayment: 'update',
-      outletConsumptionInvoice: 'update'
-    },
-    successMsg: 'Payment receipt cancelled successfully.'
-  }
+  return nodes
 }
 
 // ─── Composable Wrapper ───────────────────────────────────────────────────────

@@ -181,7 +181,7 @@ export function useOutletPaymentViewContext () {
       allInvoicePayments: invoiceAllPayments.value
     })
 
-    if (!result.valid) {
+    if (result.valid === false) {
       $q.notify({ type: 'warning', message: result.message, position: 'top' })
       return false
     }

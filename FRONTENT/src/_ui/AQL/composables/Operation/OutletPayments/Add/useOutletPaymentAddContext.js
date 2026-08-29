@@ -89,10 +89,10 @@ export function useOutletPaymentAddContext () {
 
   // ── The wizard's answers ────────────────────────────────────────────────────
   const field = (header, fallback = '') => {
-    const value = pageState?.getControlField(NODE, header)
+    const value = pageState?.getControls(header, null, NODE)
     return value === undefined || value === null ? fallback : value
   }
-  const setField = (header, value) => pageState?.setControlField(NODE, header, value)
+  const setField = (header, value) => pageState?.setControls(header, value, NODE)
 
   const outletOptions = computed(() => index.rawOutlets.value
     .map((outlet) => ({

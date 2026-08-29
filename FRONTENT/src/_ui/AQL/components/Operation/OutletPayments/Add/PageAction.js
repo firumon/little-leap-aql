@@ -60,7 +60,7 @@ export default (props, { pageState, resourceConfig }) => {
   pageState.useNode(NODE)
 
   const field = (header, fallback = '') => {
-    const value = pageState.getControlField(NODE, header)
+    const value = pageState.getControls(header, null, NODE)
     return value === undefined || value === null ? fallback : value
   }
 
@@ -158,14 +158,11 @@ export default (props, { pageState, resourceConfig }) => {
         waiverComment: text(field('WaiverComment'))
       })
 
-      if (!result.valid) return { valid: false, message: result.message }
-      if (resourceConfig?.allowed(result.permissions) !== true) {
-        return { valid: false, message: 'You are not allowed to record this payment.' }
-      }
 
-      pageState.applyNodes(result.nodes)
+      const applied = pageState.applyNodes(result)
+      if (applied.valid === false) return false
 
-      return { successMsg: result.successMsg }
+      return { successMsg: applied.successMsg }
     }
   }
 }

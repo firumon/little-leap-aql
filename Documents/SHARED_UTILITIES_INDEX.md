@@ -147,27 +147,28 @@ Generic token registry + condition evaluator. Shared by `APP.Resources.ListViews
 
 ---
 
-## 6. Node & Payload Builders
-**File**: `FRONTENT/src/composables/resources/nodePayloads.js`
+## 6. Resource Config & Row Sanitization
+**File**: `FRONTENT/src/composables/resources/useResourceConfig.js`
 
-Builds the request payloads the GAS dispatcher consumes. This is the single home for node-shape construction and header sanitization. Pure (returns plain payload objects).
+The resource's schema, permissions and default values — and the one row sanitizer every
+Layer 2 builder uses. Pure apart from reading the auth store's resource registry.
 
 | Function | Purpose |
 |----------|---------|
-| `resourceRow(resource, ...sources)` | Merge sources into one row-shaped object for `resource`. |
-| `createNode(resource, record, reload, payload)` | Payload for a single create. |
-| `updateNode(resource, code, record, reload, role)` | Payload for a single update by code. |
-| `bulkNode(resource, records, reload)` | Payload for a bulk create/update. |
-| `compositeNode({ resource, role, code, record, children, reload })` | Payload wrapping a parent + child operations in one request. |
-| `derive(on, handler, options)` | Declare a derivation hook applied to a node. |
-| `deriveNode(resource, entries, role)` | Payload for derived/computed child generation. |
-| `reloadNode(resources)` | Payload requesting a reload of named resources after a batch. |
-| `actionNode(resource, code, actionConfig, fields, { key, reload })` | Payload for an action/button-triggered write. |
-| `isBodylessNode(payload)` | True when a node carries no body (e.g. pure reload). |
-| `mergeNodePayloads(payloads)` | Combine several node payloads into one batched request. |
+| `useResourceConfig(resourceNameOverride?)` | The active (or named) resource's config: headers, fields, required headers, `defaultValues`, `additionalActions`, `allowed`, `missing`. |
+| `resourceRow(resource, ...sources)` | Merge sources over the backend defaults into one row for `resource`, dropping every key the sheet does not have. `_action` survives. |
+| `findResourceConfig(auth, nameOrSlug)` | Look up a resource config by name or slug, tolerant of plural/singular. |
 
-**When to reuse**: any code that constructs a create/update/bulk/composite/action request.
-**When to extend**: add a new node variant here. Do not build raw payloads inline in components or `_ui/` composables — that bypasses header sanitization.
+**Node objects are written by hand.** There is no constructor module — `nodePayloads.js`
+was deleted on 2026-08-29. The Node shape is specified in
+[UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md) §5, and
+`actionKeyFor` lives in
+`FRONTENT/src/composables/resources/pageState/usePageStateActions.js`.
+
+**When to reuse**: any Layer 2 builder that shapes a sheet row, or any code that asks what
+the signed-in user may do to a resource.
+**When to extend**: add row/schema helpers here. Do not re-derive headers or default
+values elsewhere — that bypasses sanitization.
 
 ---
 
@@ -228,7 +229,7 @@ Builds the request payloads the GAS dispatcher consumes. This is the single home
 | Resource-agnostic sorting | `src/utils/sortHelpers.js` |
 | List-view / action token or operator | `src/utils/tokenEvaluator.js` |
 | Workflow/audit stamp column | `src/utils/workflowStamp.js` |
-| Create/update/bulk/composite/action payload | `src/composables/resources/nodePayloads.js` |
+| Sheet-row sanitization, resource schema, permission checks | `src/composables/resources/useResourceConfig.js` |
 | Push / PWA / placeholder props / IDB compat | the matching file in §7 |
 
 If a capability spans a genuinely new domain with no home above, create a new file ONLY after confirming none of these cover it, and record the new file in this index and in `CORE_DOC_ROUTING.md`.

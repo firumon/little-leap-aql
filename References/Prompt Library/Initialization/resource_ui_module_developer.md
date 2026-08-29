@@ -183,8 +183,8 @@ disagree (guide §7.4).
    shows a lock banner when opened for a settled record, and adapts submit options by state
    (drafts default "Save as draft" ON; returned records show resubmission comments). Suppress
    page header reload on transactional contracts (`PropsPageHeader: { reload: false }`).
-5. **Route values correctly** (guide §13.5): real headers through `setField`; intent and
-   working state through `setControlField`; stamps written by submit handler only.
+5. **Route values correctly** (guide §13.5): real headers through `setRecord`; intent and
+   working state through `setControls`; stamps written by submit handler only.
    Track multi-caller hydration in Edit via node control field `EditHydratedFor` and deduplicate
    child lines by SKU key during seeding. Place draft toggle before comment box.
 6. **Multi-step wizards** (guide §13.6): step assignments via `Props<Component>: { step: N }`;

@@ -17,7 +17,7 @@ This document does NOT cover:
 ## Required Pre-Reads
 Before creating or modifying any local `Create`/`Update` content components:
 1. **System Specification**: Read [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md) — the full `Create` & `Update` canonical doc: component anatomy, complete prop tables, the `showFields`/`hideFields`/`workflowFields` visibility precedence chain, `defaultValues`/`fieldProps` function resolution, child entry modes, the three override hierarchies, whole-content override examples, `Update.vue`'s hydration lifecycle (§13), and child soft-deletion/undo (§14). [UI_CONTENT_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CONTENT_SYSTEM.md) §5.3 has a one-paragraph summary + link only — read the dedicated doc for anything beyond a quick orientation.
-2. **PageState Contract**: Read [usePageState.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/usePageState.js) — `initResource` (incl. `isPrimaryKey`/`reset` lifecycle options), `load` (record hydration), `setField`, `setControlField`/`getControlField` (non-schema custom fields — never `node.record`), `addChild`/`updateChild`/`removeChild` (incl. the `{ action }` option), `defaultBuild`'s `_action` forwarding, `validateNode`.
+2. **PageState Contract**: Read [usePageState.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/resources/usePageState.js) — `initResource` (incl. `isPrimaryKey`/`reset` lifecycle options), `load` (record hydration), `setRecord`/`useRecord`, `setControls`/`getControls`/`useControls` (non-schema custom fields — never `node.record`), `addChild`/`updateChild`/`removeChild` (incl. the `{ action }` option). Every mutation takes its own arguments first and the address (`resource`, `role`) LAST, both optional — no resource means the page's `primaryKey`, `defaultBuild`'s `_action` forwarding, `validateNode`.
 3. **Architecture Constraints**: Read [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md) for strict formatting rules (e.g. no inline `<style>` values, no `QTable`, mobile-first grid).
 4. **Base field components** (only when the task is about how a *field type* renders, or you are adding a new type): Read [`FRONTENT/src/_fields/README.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_fields/README.md), backed by §15 of the canonical doc.
 
@@ -210,7 +210,7 @@ Precedence: `...attrs` → explicit props → escape hatch (`formRecordProps`/`f
   )
 
   function onField(header, value) {
-    pageState.setField('Products', header, value)
+    pageState.setRecord('Products', header, value)
   }
   </script>
   ```
@@ -267,13 +267,13 @@ Path: `src/_ui/[UiName]/components/[scope]/[ResourceName]/FormField[Header].(vue
 
 A `fields` array entry not present in the resource's resolved schema (`resourceConfig.resolvedFields`) is a **custom field**. `FormRecord` flags it `custom: true` and emits `update:field(header, value, { custom: true })`.
 
-**`node.record` is reserved exclusively for canonical schema headers** — `defaultBuild` in `usePageState.js` reads only `node.record`/`node.children`/`node.records`/`node.action`, and a stray custom header inside `node.record` would be silently sent to GAS as if it were a real column. Route custom-field updates to `pageState.setControlField(resource, header, value)` instead (upserts `{ header, value }` into `node.controls`, which `defaultBuild` never reads):
+**`node.record` is reserved exclusively for canonical schema headers** — `defaultBuild` in `usePageState.js` reads only `node.record`/`node.children`/`node.records`/`node.action`, and a stray custom header inside `node.record` would be silently sent to GAS as if it were a real column. Route custom-field updates to `pageState.setControls(header, value, resource)` instead (upserts `{ header, value }` into `node.controls`, which `defaultBuild` never reads):
 
 ```javascript
 // Inside a custom Create.vue / FormRecord.vue override that renders FormRecord directly:
 function onField(header, value, meta) {
-  if (meta?.custom) pageState.setControlField('Products', header, value)
-  else pageState.setField('Products', header, value)
+  if (meta?.custom) pageState.setControls(header, value, 'Products')
+  else pageState.setRecord('Products', header, value)
 }
 ```
 `Create.vue` and `FormChild.vue` already implement this routing — you only need to replicate it if you hand-roll a `FormRecord` usage inside a full Vue override.
@@ -301,7 +301,7 @@ Rules:
 - If the prop is a function it is invoked first; each resulting value that is itself a function is then invoked.
 - A throw in either is logged and that key is skipped — it never breaks the form.
 - A header is seeded **only when `record[header] === undefined`** (an existing value, including `''` or `null`, is never overwritten).
-- Seeding emits the normal `update:field(header, value, { custom })`; `FormRecord` never writes the record directly, so `setField`/`setControlField` routing applies unchanged.
+- Seeding emits the normal `update:field(header, value, { custom })`; `FormRecord` never writes the record directly, so `setRecord`/`setControls` routing applies unchanged.
 - Re-runs when `resource`, `defaultValues`, `showStatus`, the resource's `Status`-column presence, the backend `APP.Resources.DefaultValues` map changes, or the `record` object's identity changes (e.g. a `pageState` reset that swaps in a fresh blank record for the same resource — see `PageAction.vue`'s reset handler). It is **not** a live formula — don't rely on it to keep a derived column in sync on every keystroke (an in-place field edit never changes `record`'s identity); use a `FormField<Header>.js` modifier or a computed column for that.
 
 ### 2.5b `APP.Resources.DefaultValues` (backend schema metadata) & Multi-Entry Child Seeding
@@ -327,7 +327,7 @@ defaultValues: { ResponseType: 'PARTIAL' }
 - Run `npx quasar build -m pwa` (or equivalent targeted check) after any override touching more than a couple of files to confirm no compilation issues.
 - If you found yourself writing a `.vue` override purely to change a label, icon, colour, class, or dialog size, STOP — that is a prop. Re-check the prop tables in `UI_CREATE_AND_UPDATE_SYSTEM.md` §3 and use a `.js` modifier instead.
 - Confirm `pageState.state.primaryKey` and `pageState.state.nodes` reflect only the active resource after navigating between two different Create pages in the same session — this is the specific regression this system was hardened against.
-- If custom (non-schema) fields are involved, confirm `defaultBuild`'s assembled request payload for that resource contains ONLY canonical schema headers — custom values should be readable via `pageState.getControlField(resource, header)` but absent from `node.record`/the built request.
+- If custom (non-schema) fields are involved, confirm `defaultBuild`'s assembled request payload for that resource contains ONLY canonical schema headers — custom values should be readable via `pageState.getControls(header, null, resource)` but absent from `node.record`/the built request.
 
 ### 2.8 `hideChild` / `hideChildren` — Suppress a Child Resource
 

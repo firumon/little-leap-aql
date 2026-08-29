@@ -266,7 +266,7 @@ export default {
 }
 ```
 
-`Create` renders the primary resource's input form (`FormRecord`) plus one `FormChild` per eligible child resource (resources whose `ParentResource` equals the active resource) — never a parent-relation form. All input lands directly in the shared `pageState` reactive tree via `setField`/`setControlField`/`addChild`/`updateChild`; submit is owned entirely by `PageAction` sections. Both components follow a strict **zero-hardcoding contract** — every default label, class, colour, and behaviour is an overrideable prop — and a four-step field-visibility precedence chain: **`showFields` > `hideFields` > `workflowFields`** (with `Status` hidden + seeded `'Active'` by default). Non-schema "custom" fields are routed to `pageState.setControlField`/`node.controls`, never `node.record`.
+`Create` renders the primary resource's input form (`FormRecord`) plus one `FormChild` per eligible child resource (resources whose `ParentResource` equals the active resource) — never a parent-relation form. All input lands directly in the shared `pageState` reactive tree via `setRecord`/`setControls`/`addChild`/`updateChild`; submit is owned entirely by `PageAction` sections. Both components follow a strict **zero-hardcoding contract** — every default label, class, colour, and behaviour is an overrideable prop — and a four-step field-visibility precedence chain: **`showFields` > `hideFields` > `workflowFields`** (with `Status` hidden + seeded `'Active'` by default). Non-schema "custom" fields are routed to `pageState.setControl`/`node.controls`, never `node.record`.
 
 **Full canonical reference — component anatomy, complete prop tables, the visibility precedence chain, `defaultValues`/`fieldProps` function resolution, the three independent override hierarchies (`FormChild<ChildName>`, `FormRecord`, `FormField<Header>` — `_ui/*` only, no framework fallback), whole-content `create.vue`/`create.js` and `update.vue`/`update.js` overrides, `Update.vue`'s hydration lifecycle, and child soft-deletion — lives in [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md).**
 
@@ -342,9 +342,16 @@ visibility flag. Supply it from the contract; never hardcode a page-specific val
 the content, and never reach into a sibling content for it.
 
 Do **not** pass domain data between contents as props. Two contents that work on the same
-data both call the same feature composable (`useConsumptionWizard`), which reads and writes
-`pageState`. That is what keeps them independently mountable and re-orderable — a split
-that needed props to flow sideways would not be a split at all.
+data both bind to the same `pageState` node, and get their domain answers from that
+resource's Layer 2 builders. That is what keeps them independently mountable and
+re-orderable — a split that needed props to flow sideways would not be a split at all.
+
+> [!CAUTION]
+> A shared **feature composable** is not the way to do this. `OutletConsumptions/Add` used
+> to hold one (`useConsumptionWizard.js`, 552 lines) that every step card imported; it grew
+> a second copy of the invoice arithmetic and a control array mirroring rows that already
+> lived on a node — and the mirror silently stopped reaching the submitted batch. The node
+> is the shared state, and Layer 2 is the shared logic. Nothing else is needed.
 
 ### 6.4 Where the files live
 

@@ -6,7 +6,7 @@ One instance per page. Created and provided in `Page.vue`, injected by every
 Header / Content / Action section beneath it. It holds what the user is building
 and turns it into a GAS batch.
 
-> **Read §5 before writing a page.** It describes the one mistake this system
+> **Read §5 and §5A before writing a page.** It describes the one mistake this system
 > keeps attracting, and the whole API is shaped to avoid it.
 
 ---
@@ -92,16 +92,40 @@ Roles are **names, never positions**. A workflow creates nodes conditionally, so
 an ordinal would shift the moment a checkbox is unticked and silently resolve to
 the wrong node.
 
-Every accessor takes a target in any of three forms:
+**Readers** take the address first: `useNode('Outlets')`,
+`useNode('OutletVisits', 'next')`, `hasNode(...)`, `removeNode(...)`.
+
+**Mutations take it LAST, and both halves are optional** — the arguments the
+mutation is about come first, then `resource`, then `role`:
 
 ```js
-useNode('Outlets')                                   // role '$default'
-useNode('OutletVisits', 'next')                      // explicit role
-setField({ resource: 'OutletVisits', role: 'next' }, 'Date', v)
+setRecord('Date', v)                              // page's primaryKey, role '$default'
+setRecord('Date', v, 'OutletVisits')              // named resource, role '$default'
+setRecord('Date', v, 'OutletVisits', 'next')      // named resource and role
 ```
 
-A target may also be a `ref` or a getter, so a component whose resource changes
-on navigation binds once at setup and stays correct.
+Omitting the resource is the normal case on a form page: the page's own resource
+is `state.primaryKey`, so it never has to be repeated.
+
+Accessors are named for the SLOT they address, so a call says which half of the node it
+touches. `controls` and `actions` are keyed by NAME; `records` and `children` by INDEX,
+and each of those has a `use*Index` mapping a column value to its position:
+
+| Slot | get / set / use | index map |
+|---|---|---|
+| `record` | `getRecord(key?, …)` | — |
+| `records` | `getRecords(index, key?, …)`, `getRecordRows(…)` | `useRecordsIndex(key, …)` |
+| `children` | `getChildren(child, index, key?, …)`, `getChildRows(child, …)` | `useChildrenIndex(child, key, …)` |
+| `controls` | `getControls(name, fallback?, …)` | — |
+| `actions` | `getActions(actionName, path?, …)` | — |
+
+`records` and `children` return the whole row when `key` is null; `record` returns the
+whole record object. `actions` takes a DOT PATH into the queued action's data
+(`'fields.Comment'`) and returns the whole `data` object when it is null — §15.2.
+
+A resource may also be a `ref` or a getter, so a component whose resource changes
+on navigation binds once at setup and stays correct. `{ resource, role }` is
+accepted wherever a reader takes an address.
 
 ### 3.3 Build order is a slot
 
@@ -141,12 +165,211 @@ share; anything one page needs belongs in `state.controls` (§8).
 
 ---
 
-## 5. The mistake to avoid
+## 5. The Unified Node Transport Structure
 
-**Read `_ui/AQL/composables/Operation/OutletConsumptions/Add/useConsumptionWizard.js`
-as a warning, not a template.**
+**Every Layer 2 domain builder returns a Node Object, or an array of Node Objects. Nothing
+else.** No envelope, no `{ valid, nodes, permissions }` wrapper, no constructor helpers. A
+Node is a plain JavaScript object that carries everything the page needs to know about one
+write: its data, its working controls, its action stamps, its reactive derivations, its
+security gate and its secondary re-reads.
 
-That wizard writes across six resources. Its pageState looks like this at the
+```js
+{
+  resource: 'OutletRestocks',      // required — the sheet this node writes
+  role: '$default',                // optional — second half of the address (§3.2)
+  code: 'OR001',                   // optional — a string or a $ref; present = update
+  record: { OutletCode: 'OL1' },   // the parent header fields
+  children: [                      // a composite write
+    { resource: 'OutletRestockItems', records: [{ SKU: 'S1', Quantity: 3 }] }
+  ],
+  // or, for a bulk write of one resource:
+  // many: true, records: [ ... ]
+  controls: [{ header: 'direct', value: true }],
+  actions: [{ action: 'Approve', code: '$ref:OutletRestocks.latest.code', data: { fields: {} } }],
+  derive: [{ on: { control: 'direct' }, handler: (value, pageState) => { } }],
+  permissions: { create: 'You are not allowed to create a restock request.' },
+  reload: ['WarehouseStorages'],
+  successMsg: 'Restock request submitted.'
+}
+```
+
+Combining builders is plain array work:
+
+```js
+return [restockNode, ...movementNodes].filter(Boolean)
+```
+
+`applyNodes` (§10) is the only door these come through. It accepts one node or an array.
+
+### 5.1 `permissions` — the gate travels with the node
+
+`{ [action]: 'message shown when the user does not have it' }`, checked against **this
+node's own resource**. `applyNodes` calls `resourceConfig.allowed(action, node.resource)`
+for each entry; the first gap notifies with that message and aborts the whole batch. A
+half-applied submission is worse than none.
+
+```js
+permissions: {
+  create: 'You are not allowed to create a restock request.',
+  approve: 'You are not allowed to approve a direct restock.'
+}
+```
+
+Layer 3 no longer calls `allowed(...)` before submitting. The node it hands over already
+says what it needs and what to say when the answer is no.
+
+### 5.2 `actions` — the address is inherited
+
+An entry is a pure domain model; the `executeAction` wire request is built at `build()`
+time, after every node write, so a `$ref` to a record this batch creates resolves.
+
+```js
+actions: [{
+  action: 'Complete',            // or actionConfig: { action, column, columnValue }
+  column: 'Progress',
+  columnValue: 'COMPLETED',
+  code: textOrRef(visitCode),    // omit for the page's own record
+  data: {
+    fields: { RespondDate: today },             // -> payload.fields
+    targets: { nextVisit: { Date: nextDate } }  // -> payload.targetFields, omitted when empty
+  }
+}]
+```
+
+`resource` and `role` are **inherited from the node** when the entry leaves them out. The
+dedupe key defaults to `resource#role::action::code`, which is unique per target row, so a
+per-row batch of stamps never collapses into one stamp.
+
+### 5.3 `controls` — working state, seeded with the data
+
+`[{ header, value }]` or `{ header: value }`. Both are seeded into the node's controls
+scoped by `resource` and `role`, so a toggle the builder decided and a toggle the user
+flips read back through the same `getControls(header, fallback, resource, role)`.
+
+### 5.4 `derive` — the UI reads nodes, nothing else
+
+The domain declares WHAT depends on what; pageState does the writing. Handlers run
+immediately on registration and on every change (`deep`); pass `immediate: false` /
+`deep: false` to opt out. Entries are keyed by their address, so hydrating twice REPLACES
+the writer rather than stacking two on one column.
+
+| `on` | Watches |
+|---|---|
+| `{ record: 'Field' }` | one column of the record |
+| `{ record: true }` (or `{}`) | the whole record |
+| `{ records: true }` | a many-node's rows |
+| `{ children: 'ChildResource' }` | that child bucket's rows |
+| `{ children: true }` | every child bucket |
+| `{ control: 'header' }` | a control |
+| `{ action: 'ActionName' }` | a queued action's `data` |
+
+Each accepts `resource` and `role` to address another node; without them it reads the node
+the entry travelled on. `field: 'X'` is the older spelling of `record: 'X'` and still works.
+
+```js
+derive: [{
+  on: { resource: 'InvoiceItems', records: true },
+  handler: (rows, pageState) => pageState.setRecord('Subtotal',
+    rows.reduce((total, row) => total + Number(row.Total || 0), 0), 'Invoices')
+}]
+```
+
+### 5.5 `reload` cleans itself
+
+List the secondary sheets whose balances this write changes. **A resource the batch itself
+writes is stripped automatically** — GAS returns a written resource in the same response,
+so asking for it back is a wasted round trip. A node may safely name its own resource; it
+simply will not survive into `state.reload`.
+
+### 5.6 `successMsg` and `outcome`
+
+Optional. Whichever node sets them last wins, and `applyNodes` hands them back, so the
+page says what the domain decided without restating it:
+
+```js
+const applied = pageState.applyNodes(buildRestockChainNodes(inputs))
+if (applied.valid === false) return false
+return { successMsg: applied.successMsg }
+```
+
+`outcome` is for a chain that also decides where the user lands — `{ message, resource,
+slug }`. Never promise a position in the batch; name the RESOURCE (§12.4).
+
+### 5.7 A builder that cannot build
+
+Return the veto as a one-element list, so callers can spread any builder's result
+unconditionally:
+
+```js
+if (!outletCode) return [{ valid: false, message: 'Select an outlet before submitting.' }]
+```
+
+`applyNodes` notifies with that message and returns `{ valid: false, message }` without
+writing anything.
+
+### 5.8 Ledger nodes and action targets
+
+Two rules about who builds what, both learned in `OutletConsumptions/Add`.
+
+**A ledger node is built by the ledger, not by its caller.** Call
+`stockMovementsNode(items, options)` or `outletMovementsNode(items, options)` and push the
+result. They return one complete node with its records, its permissions and its storage
+reload already on it, or `null` when the item list is empty — an empty bulk is not "no
+movement", it is a round trip asking GAS to recalculate every balance on the strength of
+nothing.
+
+**A record a workflow action already declares as a TARGET is not a second node.** The
+`OutletVisits` `Complete` action declares a `nextVisit` target, so closing a visit and
+planning its successor is one action:
+
+```js
+data: {
+  fields: { Comment },
+  targets: { nextVisit: { Date, ProgressPlannedComment } }
+}
+```
+
+Screens edit that in place with `pageState.useActions(...)` and `pageState.setActions(...)`.
+Build a standalone create node for the same record ONLY when no action is carrying it —
+queuing both writes the record twice.
+
+**Address a field by its DERIVED header, not by its authored name.** The action schema
+derives a field's storage header from the action's column and outcome, so the `Comment`
+authored on `OutletVisits.Complete` (`column: 'Progress'`, `columnValue: 'COMPLETED'`)
+lives on the entry as `ProgressCompletedComment`:
+
+```js
+pageState.useActions('Complete', 'fields.ProgressCompletedComment')   // ✔ the real address
+pageState.useActions('Complete', 'fields.Comment')                    // ✘ writes a stray key
+```
+
+The short authored name is accepted when SEEDING (`includeAdditionalAction`), which is why
+it looks right and fails quietly — it never becomes a readable address.
+
+**A target must be supplied on every re-queue.** `includeAdditionalAction` replaces the
+entry and re-seeds it from the config, so a target left out falls back to its configured
+default (`"value": "$date:30"`) and queues a record nobody asked for. Supply it explicitly,
+blank when nothing is planned, and address it flat — the seeder reads a target value at
+`<targetKey>.<Column>`, so a nested `{ targets: {...} }` bag is ignored:
+
+```js
+pageState.includeAdditionalAction('Complete', {
+  ProgressCompletedComment: comment,
+  nextVisit: planning ? { Date, ProgressPlannedComment } : { Date: '', ProgressPlannedComment: '' }
+}, { resource: 'OutletVisits', code })
+```
+
+---
+
+## 5A. The mistake to avoid
+
+**`OutletConsumptions/Add` is the worked example — of what went wrong, and of the
+fix.** It used to keep a 552-line feature composable,
+`_ui/AQL/composables/Operation/OutletConsumptions/Add/useConsumptionWizard.js`, that
+every step card imported. **That file has been deleted**; the cards now bind straight to
+`pageState` and take their domain answers from Layer 2. Read what follows as the reason.
+
+The wizard writes across six resources. Its pageState looked like this at the
 final step, one click before submit:
 
 ```json
@@ -185,23 +408,35 @@ which makes `run()` skip `build()` entirely and dispatch a batch assembled by a
    `get(F.COMPLETE_VISIT, true)` defaults. A draft cannot capture an explicit
    "no", and two visit records depend on them.
 
-### 5.1 What to do instead
+### 5A.1 What to do instead
 
 | The user is entering… | Put it in |
 |---|---|
-| A column on the resource being written | `record` (`setField`) |
+| A column on the resource being written | `record` (`setRecord`) |
 | Line items of that resource | `children` (`addChild`) |
 | Many rows of one resource | `records` (`addRecord`) |
 | Another resource entirely | **another node** (`initResource` / `setResource`) |
 | The same resource, twice | another node with a **role** |
-| A wizard-only input, no column | `controls` (`setControl`) |
+| A wizard-only input, no column | `controls` (`setControls`) |
 | Whether a resource is written at all | **the node's existence** (`removeNode`) |
 
 That last row is worth reading twice. Do not store `completeVisit: true`. Create
 or remove the `OutletVisits:complete` node. The node's presence *is* the boolean,
 and it cannot drift from what is actually submitted.
 
-### 5.2 The `{ requests }` escape hatch
+**A control that mirrors rows a node already holds is the same bug wearing a different
+hat.** `RestockRows` above was written and read only inside the wizard, while the submit
+read the restock node's children — so every quantity typed on step 4 was discarded. If a
+control's value could be spelled as a record, a child or a node's existence, spell it that
+way. `controls` is for what the sheet has no column for: a toggle, a selection over rows
+that already exist, a price override.
+
+**And a figure the domain can compute is not page state at all.** The wizard held a second
+call to `calculateConsumptionInvoice` so step 3 could show a total. It should ask Layer 2
+for a fully-priced node instead and bind to the columns on it — see
+UI_RESOURCE_DOMAIN_LOGIC.md §9.7.
+
+### 5A.2 The `{ requests }` escape hatch
 
 `run({ requests })` skips `build()`. It exists for callers that must apply a
 `modifyPayload` interceptor. **Reaching for it makes every node on the page
@@ -264,14 +499,50 @@ Use `useNode(...).exists` when a template needs it reactively.
 
 ## 7. API — writing a node
 
-### `setField` / `setFields`
+### `setRecord` / `setRecord`
 
 ```js
-pageState.setField('OutletConsumptions', 'OutletCode', 'OUT00001')
-pageState.setFields('OutletConsumptions', { Date: '2026-08-27', Status: 'Active' })
+pageState.setRecord('OutletCode', 'OUT00001')                       // primary node
+pageState.setRecord(null, { Date: '2026-08-27', Status: 'Active' }) // whole record
+pageState.setRecord('Date', v, 'OutletVisits', 'next')              // another node
 ```
 
 Creates the node if missing.
+
+### `useRecord`
+
+A record column as a writable computed, so a template can `v-model` it:
+
+```js
+const outletCode = pageState.useRecord('OutletCode')                // primary node
+const nextDate = pageState.useRecord('Date', 'OutletVisits', 'next')
+```
+
+```vue
+<component :is="SelectField" v-model="outletCode" header="OutletCode" />
+```
+
+Signature is `(key = null, resource?, role?)`; `key` null gives the whole record. The
+read never creates a node; the write does, so a `v-model` bound before `initResource` has
+run cannot land in the blank node `useNode` hands back (§9) and be silently lost.
+**Never `v-model` `useNode(...).record.value.X`** — that is the loss this exists to
+prevent.
+
+### Children and many-rows, one row at a time
+
+```js
+const items = pageState.useNode('OutletConsumptions').children('OutletConsumptionItems')
+const bySku = pageState.useChildrenIndex('OutletConsumptionItems', 'SKU')
+
+const qty = pageState.useChildren('OutletConsumptionItems', () => bySku.value.CK3, 'Qty')
+qty.value = 4
+
+const returns = pageState.useRecordsIndex('SKU', 'OutletReturns')
+pageState.useRecords(() => returns.value.CK3, 'Qty', 'OutletReturns').value = 2
+```
+
+`index` may be a **getter**, so a binding made once keeps pointing at the right row after
+rows are added or removed. Reads never create a node.
 
 ### `setResource` / `updateResource`
 
@@ -323,11 +594,20 @@ normalise.
 
 ### Children
 
+A child row is **plain data** — `{ SKU, Qty }`. The `{ _action, data }` envelope is the
+GAS wire format and is put on by `build()`, never held in state. `_action` survives as one
+optional flat key, set only by `setChildAction`, because a soft delete is user intent that
+cannot be re-derived.
+
 ```js
-pageState.addChild('OutletConsumptions', 'OutletConsumptionItems', { SKU: 'CK3-01', Qty: 3 })
-pageState.updateChild('OutletConsumptions', 'OutletConsumptionItems', 0, { Qty: 5 })
-pageState.setChildAction('OutletConsumptions', 'OutletConsumptionItems', 0, 'deactivate')
-pageState.removeChild('OutletConsumptions', 'OutletConsumptionItems', 0)
+pageState.addChild('OutletConsumptionItems', { SKU: 'CK3-01', Qty: 3 })   // ⇒ the new index
+pageState.updateChild('OutletConsumptionItems', 0, { Qty: 5 })
+pageState.setChildAction('OutletConsumptionItems', 0, 'deactivate')
+pageState.removeChild('OutletConsumptionItems', 0)
+
+// A parent other than the page's own:
+pageState.addChild('OutletRestockItems', row, 'OutletRestocks')
+pageState.addChild('OutletRestockItems', row, 'OutletRestocks', null, { action: 'update' })
 ```
 
 `updateChild` merges `data` only. To soft-delete a persisted row use
@@ -336,9 +616,9 @@ pageState.removeChild('OutletConsumptions', 'OutletConsumptionItems', 0)
 ### Many-rows
 
 ```js
-const i = pageState.addRecord('OutletMovements', { SKU: 'CK3-01', QtyChange: -3 })
-pageState.updateRecord('OutletMovements', i, { QtyChange: -4 })
-pageState.removeRecord('OutletMovements', i)
+const i = pageState.addRecord({ SKU: 'CK3-01', QtyChange: -3 }, 'OutletMovements')
+pageState.updateRecord(i, { QtyChange: -4 }, 'OutletMovements')
+pageState.removeRecord(i, 'OutletMovements')
 ```
 
 `addRecord` sets `many = true` automatically.
@@ -351,12 +631,12 @@ selections over existing records, UI bookkeeping. They never reach GAS.
 ### Page-level (`state.controls`)
 
 ```js
-pageState.setControl('NextVisitDays', 21)
-pageState.getControl('NextVisitDays', 14)      // 14 is the fallback; default null
-const days = pageState.useControl('NextVisitDays', 14)   // writable computed
+pageState.setControls('NextVisitDays', 21)
+pageState.getControls('NextVisitDays', 14)      // 14 is the fallback; default null
+const days = pageState.useControls('NextVisitDays', 14)   // writable computed
 ```
 
-`useControl` returns a writable computed, so a template can bind it directly:
+`useControls` returns a writable computed, so a template can bind it directly:
 
 ```vue
 <q-input v-model="days" type="number" />
@@ -366,22 +646,33 @@ const days = pageState.useControl('NextVisitDays', 14)   // writable computed
 `NextVisitDays` lived on the `OutletVisits:next` node, `removeNode` would destroy
 the number the user typed, and re-ticking the toggle would lose it.
 
+> [!CAUTION]
+> **A control is never a copy of something a node already holds.** Mirroring the rows a
+> card edits into a control — a `CountRows` beside the children that ARE the count — gives
+> the page two sources of truth that drift. Bind the card to the node. See
+> UI_RESOURCE_DOMAIN_LOGIC.md §9.8 for the wizard lifecycle this belongs to.
+
 ### Node-scoped
 
 Pass a resource (and role) as the 3rd and 4th arguments:
 
 ```js
-pageState.setControl('Note', 'text', 'OutletVisits', 'next')
-pageState.getControl('Note', '',     'OutletVisits', 'next')
-pageState.useControl('Note', '',     'OutletVisits', 'next')
+pageState.setControls('Note', 'text', 'OutletVisits', 'next')
+pageState.getControls('Note', '',     'OutletVisits', 'next')
+pageState.useControls('Note', '',     'OutletVisits', 'next')
 ```
 
-Signature is uniform: `(header, value|fallback, resource?, role?)`.
+Signature is uniform: `(name, value|fallback, resource?, role?)`.
 Writes create the node; **reads never do**.
 
-`setControlField(resource, header, value, role?)` and
-`getControlField(resource, header, role?)` are the older resource-first
-equivalents. Both still work.
+`setControlField` / `getControlField` — the old resource-first pair — were
+**deleted on 2026-08-27**. Every caller moved to `setControls` / `getControls`,
+which already had the address-last shape. A missing control now reads as the
+fallback (`null` by default) rather than `undefined`.
+
+The accessors were renamed after their slot on **2026-08-28**: `setField`/`setFields` →
+`setRecord`, `useField` → `useRecord`, `setControl` → `setControls`, and the child and
+many-row families gained the matching `getChildren`/`getRecords` names.
 
 ### Which to use
 
@@ -454,29 +745,35 @@ draft **only on success**, and returns `{ success, response, code }`.
 ### `run(options)`
 
 The same lifecycle, lower level. `submit` is a thin wrapper. Pass `requests` to
-bypass `build()` — see the warning in §5.2.
+bypass `build()` — see the warning in §5A.2.
 
 ### `applyNodes(nodes)`
 
-Hydrates a Layer 2 envelope. THE way a domain builder's output reaches the page:
+THE way a domain builder's output reaches the page. Takes one Node Object or an array of
+them (§5) and returns `{ valid, success, nodes, successMsg?, outcome? }`:
 
 ```js
-const result = buildRestockCancellationNodes(parent, rows, actor, reason)
-if (!result.valid) return { valid: false, message: result.message }
-pageState.applyNodes(result.nodes)
-return { successMsg: result.successMsg }
+const applied = pageState.applyNodes(buildRestockCancellationNodes(parent, rows, actor, reason))
+if (applied.valid === false) return false
+return { successMsg: applied.successMsg }
 ```
 
-Payloads sharing an address are merged first, so several builders' output can be
-concatenated without the later one replacing the earlier:
+In order, it:
 
-```js
-pageState.applyNodes([...allocation.nodes, ...cancellations.nodes])
-```
+1. **Gates.** Every node's `permissions` is checked against its own resource. The first gap
+   notifies and returns `{ valid: false, message }` — nothing is written.
+2. **Merges.** Nodes sharing an address are collapsed, so builders can be concatenated
+   without the later one replacing the earlier:
+   ```js
+   pageState.applyNodes([...allocation, ...cancellations])
+   ```
+3. **Mounts** `record`, `children`, `records` and `controls`.
+4. **Hoists** `actions` (inheriting each node's resource and role) and registers `derive`.
+5. **Cleans the re-read**, dropping any resource this batch already writes (§5.5).
 
-Each merged address is then written with `setResource` (replace). A payload carrying only
-`actions` or `reload` is hoisted WITHOUT attaching a node — an empty node ships nothing but
-would still be validated.
+Each merged address is written with `setResource` (replace). A node carrying only `actions`
+or `reload` is hoisted WITHOUT attaching a node — an empty node ships nothing but would
+still be validated.
 
 **It replaces, so a builder must never return a node the page already owns.** On an Add
 wizard the page holds the form node; its builder returns only the extra nodes.
@@ -531,60 +828,59 @@ nowhere — two docblocks in `useInvoicePayload.js` claim otherwise and are wron
 
 ## 12. Layer 2 payloads
 
-A resource's Layer 2 builder returns the envelope
-`{ valid, nodes, permissions, message?, successMsg? }`, where `nodes` are **node-shaped
-payloads**, not request envelopes. That keeps one assembly path, and keeps validation,
-drafts and inspection working. Full contract: `UI_RESOURCE_DOMAIN_LOGIC.md` §9.2.
+A resource's Layer 2 builder returns **Node Objects** — the Unified Node Transport
+Structure of §5 — never request envelopes and never a `{ valid, nodes, permissions }`
+wrapper. That keeps one assembly path, and keeps validation, drafts and inspection working.
+Full contract: `UI_RESOURCE_DOMAIN_LOGIC.md` §9.2.
 
-Build them with `src/composables/resources/nodePayloads` — `createNode`, `updateNode`,
-`bulkNode`, `compositeNode`, `actionNode`, `reloadNode` — never by hand.
+Write them as plain object literals. There is no constructor module: `nodePayloads.js` was
+deleted on 2026-08-29, `resourceRow` moved to
+`src/composables/resources/useResourceConfig.js`, and `actionKeyFor` lives in
+`src/composables/resources/pageState/usePageStateActions.js`.
 
 ```js
 // _resource/Operation/OutletRestocks/composables/useRestockPayload.js
-import { bulkNode, compositeNode } from 'src/composables/resources/nodePayloads'
+import { resourceRow } from 'src/composables/resources/useResourceConfig'
 
 export function buildRestockChainNodes (rows, { outletCode, actorName, date }) {
-  return {
-    valid: true,
-    nodes: [compositeNode({
-      resource: 'OutletRestocks',
-      record: {
-        Date: date, OutletCode: outletCode, RequestedUser: actorName,
-        OutletConsumptionCode: batchRef('OutletConsumptions.latest.code'),
-        Progress: 'PENDING_APPROVAL', Status: 'Active'
-      },
-      children: [{
-        resource: 'OutletRestockItems',
-        records: rows.map(r => ({ SKU: r.SKU, Quantity: r.Quantity, Status: 'Active' }))
-      }],
-      reload: ['OutletStorages']
-    })],
-    permissions: { OutletRestocks: 'create', OutletRestockItems: 'create' },
+  return [{
+    resource: 'OutletRestocks',
+    record: resourceRow('OutletRestocks', {
+      Date: date, OutletCode: outletCode, RequestedUser: actorName,
+      OutletConsumptionCode: batchRef('OutletConsumptions.latest.code'),
+      Progress: 'PENDING_APPROVAL', Status: 'Active'
+    }),
+    children: [{
+      resource: 'OutletRestockItems',
+      records: rows.map((r) => ({ SKU: r.SKU, Quantity: r.Quantity, Status: 'Active' }))
+    }],
+    permissions: { create: 'You are not allowed to create a restock request.' },
+    reload: ['OutletStorages'],
     successMsg: 'Restock request created.'
-  }
+  }]
 }
 ```
 
-Hydrating is then one call (§6, `applyNodes`):
+Hydrating is then one call (§10, `applyNodes`):
 
 ```js
-pageState.applyNodes(envelope.nodes)
+pageState.applyNodes(buildRestockChainNodes(rows, context))
 ```
 
 ### 12.1 Addressing decides the shape
 
 A node is addressed by `resource` plus `role`, so **several roleless payloads for one
 resource collapse onto one address**. A batch writing several rows of one resource must
-either use `bulkNode` with a `Code` on each record, or give each `updateNode` its own
+either set `many: true` with a `Code` on each record, or give each update node its own
 `role` — the record's own code is a good role name:
 
 ```js
 // N restock parents in one delivery run
-updateNode('OutletRestocks', code, { Progress: next }, ['OutletRestocks'], code)
+{ resource: 'OutletRestocks', role: code, code: textOrRef(code), record: { Progress: next } }
 ```
 
-Queued actions are keyed instead. `actionNode` defaults to `resource::action::code`, which
-is unique per row, so a per-row batch of stamps survives the dedupe in §15.
+Queued actions are keyed instead — see §5.2. `data.columnValue` overrides
+`actionConfig.columnValue` for a multi-outcome action.
 
 ### 12.2 What is still Layer 2's job at submit time
 
@@ -594,36 +890,12 @@ belong in nodes the user edits — but they still travel as node payloads.
 
 ### 12.3 `derive` — the UI reads nodes, nothing else
 
-Once an envelope is hydrated, the page must read its numbers off the NODE, not off a
-figure the builder handed back on the side. When a column depends on other node state, the
-domain declares the dependency and pageState does the writing:
+Once nodes are applied, the page must read its numbers off the NODE, not off a figure the
+builder handed back on the side. The full `on` grammar is in §5.4.
 
-```js
-import { derive, deriveNode } from 'src/composables/resources/nodePayloads'
-
-deriveNode('Invoices', [derive(
-  { resource: 'InvoiceItems', records: true },
-  (rows, pageState) => pageState.setFields('Invoices', {
-    Subtotal: rows.reduce((total, row) => total + Number(row.data.Total || 0), 0)
-  })
-)])
-```
-
-| `on` | Watches |
-|---|---|
-| `{ resource, role?, children: 'X' }` | that child bucket's rows |
-| `{ resource, records: true }` | a many-node's rows |
-| `{ resource, field: 'X' }` | one column |
-| `{ resource }` | the whole record |
-| `{ control: 'X', resource?, role? }` | a control |
-
-- Handlers run **immediately** on registration and on every change (`deep`). Pass
-  `immediate: false` / `deep: false` to opt out.
-- Entries are keyed by their address, so hydrating twice REPLACES the writer rather than
-  stacking two on one column. Pass an explicit `key` for two derivations on one address.
-- They live in a scope pageState owns, so registering from a submit handler — outside any
-  component scope — does not leak. `reset()` and `resetForResource()` drop them all.
 - `pageState.derive([...])` registers one directly, for a page with a rule of its own.
+- Derivations live in a scope pageState owns, so registering from a submit handler —
+  outside any component scope — does not leak. `reset()` and `resetForResource()` drop them.
 
 This replaces the manual `watch` in a `ready()` hook shown in §14.
 
@@ -726,11 +998,11 @@ would create a new watcher on every recompute.
 
 ### Use cases
 
-**Conditional node lifecycle** — the node's existence is the boolean (§5.1):
+**Conditional node lifecycle** — the node's existence is the boolean (§5A.1):
 
 ```js
 ready ({ pageState }) {
-  watch(() => pageState.getControl('isRestocking'), (on) => {
+  watch(() => pageState.getControls('isRestocking'), (on) => {
     if (!on) return pageState.removeNode('OutletRestocks')
     pageState.setResource('OutletRestocks', null, buildRestockPayload(rows, ctx))
   })
@@ -745,7 +1017,7 @@ ready ({ pageState, routeInfo }) {
     reset: true,
     fields: { OutletCode: routeInfo.value.query.outletCode || '', Date: today() }
   })
-  pageState.setControl('isRestocking', true)
+  pageState.setControls('isRestocking', true)
 }
 ```
 
@@ -755,7 +1027,7 @@ ready ({ pageState, routeInfo }) {
 ```js
 ready ({ pageState, resourceRecord, routeInfo }) {
   watch(() => routeInfo.value.code, () => {
-    if (resourceRecord.record.value) pageState.load('Outlets', resourceRecord.record.value)
+    if (resourceRecord.record.value) pageState.load(resourceRecord.record.value, 'Outlets')
   }, { immediate: true })
 }
 ```
@@ -770,8 +1042,8 @@ want.
 ready ({ pageState }) {
   const items = pageState.useNode('Invoices').children('InvoiceItems')
   watch(items, (rows) => {
-    pageState.setField('Invoices', 'Subtotal',
-      rows.reduce((s, r) => s + r.data.Qty * r.data.Price, 0))
+    pageState.setRecord('Subtotal',
+      rows.reduce((s, r) => s + r.data.Qty * r.data.Price, 0), 'Invoices')
   }, { deep: true })
 }
 ```
@@ -822,8 +1094,63 @@ pageState.includeAdditionalAction('Complete', { Comment: 'Done on site' }, {
 pageState.excludeAdditionalAction('Complete', { resource: 'OutletVisits' })
 ```
 
-Keyed by `resource::actionName`, so queuing twice **updates** the envelope rather
+Keyed by `resource::actionName`, so queuing twice **updates** the entry rather
 than running the action twice.
+
+### 15.1 Reading and writing a queued action
+
+`getActions` / `setActions` / `useActions` address a queued action the same way every
+other slot is addressed — by name, then an optional path, then the resource and role:
+
+```js
+pageState.getActions('Complete')                        // the whole data object, or null
+pageState.getActions('Complete', 'fields.ProgressCompletedComment')   // one address
+
+pageState.setActions('Complete', 'fields.ProgressCompletedComment', 'Done on site')
+pageState.setActions('Complete', 'targets.nextVisit.Date', '2026-09-05')
+pageState.setActions('Complete', { fields: { Comment: 'Done' } })   // replace the data
+pageState.setActions('Complete', null)                              // remove the action
+```
+
+The path is a dot address into the entry's `data` — `fields.<DerivedHeader>` (§5.8, NOT the
+short authored name),
+`targets.<targetKey>.<Column>`, or `columnValue`. Missing branches are created on
+write, so a target's first field does not need the bag seeded first. Writing a path
+when nothing is queued yet queues the action first, so a form can start empty.
+
+`useActions` is the writable computed, for `v-model` straight onto one field:
+
+```vue
+<q-input v-model="comment" label="Reason" />
+<q-input v-model="nextDate" type="date" label="Next visit" />
+
+<script setup>
+const comment  = pageState.useActions('Complete', 'fields.ProgressCompletedComment')
+const nextDate = pageState.useActions('Complete', 'targets.nextVisit.Date')
+</script>
+```
+
+Entries are addressed by `resource#role::actionName::code` (`actionKeyFor` in
+`usePageStateActions.js`). An action queued for the page's own record leaves the code half
+empty, which is why queuing it twice updates one entry; a node's `actions` entry keys on
+the row's code, so a per-row batch of stamps stays apart. A read by name takes the page's
+own entry when there is one, else the first per-row entry for that action.
+
+### 15.2 `state.actions` holds domain models, not wire requests
+
+Every entry is `{ key, resource, code, actionConfig, data, reload }`, whether it was
+queued by `applyNodes` from a node's `actions` (§5.2) or by `includeAdditionalAction`. `includeAdditionalAction` still runs the action pipeline to
+resolve the config, the field schema and the seeds, but keeps only the resolved
+`{ actionConfig, data: { fields, targets } }`.
+
+The `executeAction` envelope is built once, at `build()` time, by
+`usePageStateBuild.additionalActionRequests()` passing each entry to
+`executeActionRequest(resource, code, actionConfig, data)`. Entries are deduped by `key`,
+and every entry's `reload` joins the batch's re-read.
+
+So a queued action stays inspectable and draftable as plain state — `pageState.snapshot()`
+shows the intent, not a compiled request — and the wire format lives in exactly one
+place.
 
 Popup actions are a different path — `useAdditionalActions` dispatches
 immediately against a record that already exists, and deliberately does not go
@@ -855,7 +1182,7 @@ Required headers are read **per node's own resource**, so a `StockMovements` row
 restock batch is not held to `OutletRestocks`' columns. A node that builds no request is
 not checked at all — it is not a form the user can fix.
 
-This only works if the data is in nodes. See §5.
+This only works if the data is in nodes. See §5A.
 
 ## 18. Debugging
 
@@ -868,7 +1195,7 @@ pageState.state.nodes.size
 pageState.state.index                   // resource → role → uid
 pageState.build({ mode: 'submit' })     // what would be sent
 pageState.validationErrors.value        // note .value — it is a computed
-pageState.getControl('NextVisitDays')
+pageState.getControls('NextVisitDays')
 ```
 
 `snapshot()` keys nodes by readable address (`OutletVisits:next`) and puts page
@@ -885,11 +1212,11 @@ logs as opaque uid soup.
 6. Never build `lastUpdatedAtByResource`. The transport owns cursors.
 7. `ready` must not be `async`.
 8. Do not use `run({ requests })` to escape modelling.
-9. A Layer 2 builder returns `nodes`, never `requests` (§12).
-10. Several rows of one resource are one `bulkNode`, or one node per `role` — never
+9. A Layer 2 builder returns Node Objects, never `requests` (§5, §12).
+10. Several rows of one resource are one `many: true` node, or one node per `role` — never
     several roleless nodes, which collapse onto one address.
 11. A builder never hand-writes another resource's columns — it calls that resource's own
-    builder and splices its `nodes`.
+    builder and spreads the nodes it returns.
 12. A derived column is declared with `derive`, not recomputed in the UI (§12.3).
 
 ## 20. Related

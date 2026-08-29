@@ -26,7 +26,7 @@ export default {
 
 ## 1. Overview & Contracts
 - `Create.vue` / `Update.vue` inject `resourceConfig`, `resourceRecord`, and `pageState` (all provided once at `Page.vue`) exactly like `View.vue`.
-- **State binding, not fetching**: `Create` never calls services/stores directly (per §1/§3/§5 of `CORE_ARCHITECTURE_RULES.md`) — every keystroke lands in the shared `pageState` reactive tree via `setField`/`setControlField`/`addChild`/`updateChild`, and `PageAction` sections own `submit()`/`build()`.
+- **State binding, not fetching**: `Create` never calls services/stores directly (per §1/§3/§5 of `CORE_ARCHITECTURE_RULES.md`) — every keystroke lands in the shared `pageState` reactive tree via `setRecord`/`setControls`/`addChild`/`updateChild`, and `PageAction` sections own `submit()`/`build()`.
 - **Primary node lifecycle**: on mount, and whenever `resourceConfig.resourceName` changes to a *different* resource, `Create.vue` calls `pageState.initResource(name, { isPrimaryKey: true, reset: true })`. This flushes any stale node/child-bucket data left in `pageState` from a previously-visited Create/Update page (the composable instance is provided once per `Page.vue` mount and persists across in-app navigations) and sets `state.primaryKey` to the active resource. If the resource name is unchanged but the node was cleared some other way, it re-initializes without wiping other nodes (`reset` omitted).
 - **Parent Relations Constraint**: `Create` never renders a form for a parent relation — only the active resource's own fields and its **children** (resources whose `ParentResource` equals the active resource).
 - **Child Relations Rule**: child resources are read from the injected `resourceRecord.childResources`, filtered to `child.parentResource === resourceName` (in `master` scope, only `master`-scoped children are surfaced — mirrors `ViewChildren`), then further filtered by `hideChild`/`hideChildren` (see §10). If `withChildren` is `true` (default) and at least one eligible, non-hidden child exists, `Create` renders the primary `FormRecord` **and** one `FormChild` per child resource; otherwise it renders only the primary `FormRecord`.
@@ -139,7 +139,7 @@ Three behavioural nuances:
 | `emptyClass` | `String`\|`Array`\|`Object` | `'text-grey-6 text-center q-pa-md'` | Empty-state class. |
 | `fieldStagger` | `Number` | `40` | Per-field entrance delay in ms; `0` disables the stagger. |
 
-Emits **`update:field(header, value, { custom })`** on every control's `update:model-value` (and for seeded defaults) — `custom` is `true` when the header isn't part of the resource's resolved schema. `Create.vue`/`FormChild.vue` route `custom: true` updates to `pageState.setControlField` and everything else to `pageState.setField`/child bucket mutations.
+Emits **`update:field(header, value, { custom })`** on every control's `update:model-value` (and for seeded defaults) — `custom` is `true` when the header isn't part of the resource's resolved schema. `Create.vue`/`FormChild.vue` route `custom: true` updates to `pageState.setControls` and everything else to `pageState.setRecord`/child bucket mutations.
 
 **`FormChild.vue`** — child-record entry/list container. Every individual record's inputs are always delegated to `FormRecord`, regardless of mode.
 
@@ -195,7 +195,7 @@ Emits **`update:field(header, value, { custom })`** on every control's `update:m
 | `undoTimeout` | `Number` | `5000` | Notification lifetime in ms. |
 | `undoPosition` | `String` | `'bottom'` | Quasar notify position. |
 
-All mutations flow through `pageState.addChild(parentResource, childResource.name, row)`, `updateChild(...)`, and `removeChild(...)` — the same primitives `usePageState.js` already exposed. The one exception is the soft-delete path, which sets `_action` directly on the bucket record because `updateChild` merges only `data` (§14); `FormChild` adds no new state surface beyond that.
+All mutations flow through `pageState.addChild(childResource.name, row, parentResource)`, `updateChild(...)`, and `removeChild(...)` — the same primitives `usePageState.js` already exposed. The one exception is the soft-delete path, which sets `_action` directly on the bucket record because `updateChild` merges only `data` (§14); `FormChild` adds no new state surface beyond that.
 
 **Added-record list rendering**: the inline/popup modes' added-record list is rendered via `AppList` (not a raw `q-list`), passing `items` (the pageState child bucket's `records` array), a function `itemKey` (stable per-row identity via a component-local `WeakMap`), function `label`/`caption` resolvers (derived from the child resource's resolved fields), and a `#btn` slot rendering Edit + Delete buttons per row. `AppList` forwards straight to `abstract/List.vue`, so FLIP entrance/reorder/removal transitions (`aql-list-item-*`, see `UI_CONTENT_SYSTEM.md` §2) and responsive layout (mobile-first `q-item` stacking) are inherited for free — no bespoke list markup or CSS.
 
@@ -255,7 +255,7 @@ defaultValues: {
   TotalQty: (record) => (record.CartonQty || 0) * (record.UnitsPerCarton || 0)
 }
 ```
-Resolution order: if the prop is a function it is called first; each resulting value that is itself a function is then called. A throw in either is logged and that key is skipped. Each resolved header is seeded **only when `record[header] === undefined`**, by emitting the normal `update:field` — `FormRecord` never writes `record` directly, so the caller's `setField`/`setControlField` routing applies unchanged. Seeding re-runs when `resource`, `defaultValues`, `showStatus`, the resource's `Status`-column presence, or the backend `APP.Resources.DefaultValues` map changes.
+Resolution order: if the prop is a function it is called first; each resulting value that is itself a function is then called. A throw in either is logged and that key is skipped. Each resolved header is seeded **only when `record[header] === undefined`**, by emitting the normal `update:field` — `FormRecord` never writes `record` directly, so the caller's `setRecord`/`setControls` routing applies unchanged. Seeding re-runs when `resource`, `defaultValues`, `showStatus`, the resource's `Status`-column presence, or the backend `APP.Resources.DefaultValues` map changes.
 
 ### 5.1 `APP.Resources.DefaultValues` (backend schema metadata)
 
@@ -281,7 +281,7 @@ defaultValues: { ResponseType: 'PARTIAL' }   // wins over the backend "QUOTED"
 
 `FormChild` exposes an internal `createChildDefaultRecord()` helper that resolves the same three-tier precedence chain as §5.1 (`childResource.defaultValues` < `defaultValues` prop < `Status` fallback) and returns a fresh, pre-filled data object. Unlike relying solely on `FormRecord`'s own mount-time seeding watcher (which only fires once per component instance), `createChildDefaultRecord()` is called explicitly every time a **new** entry point is created, so defaults apply consistently to the 1st, 2nd, 3rd, and every subsequent row:
 - **`inline`/`popup` modes**: `resetDraft()` (called after every successful Add, on Cancel, and when a popup dialog opens for a new entry) seeds `draft` with `createChildDefaultRecord()` instead of `{}`.
-- **`multi` mode**: `addBlankRow()` seeds the newly-added `pageState` row the same way instead of `addChild(..., {})`.
+- **`multi` mode**: `addBlankRow()` seeds the newly-added `pageState` row the same way instead of `addChild(child, {}, parent)`.
 
 This means a child resource with `defaultValues: { Currency: 'AED' }` (or a backend `APP.Resources.DefaultValues` entry) has every row pre-filled with `Currency: 'AED'` the moment it's created — the user never has to re-select a value that should always be the same.
 
@@ -317,11 +317,11 @@ The merged result is handed to the resolved `_fields/<type>/<Mode>.vue` componen
 ## 7. Custom (Non-Schema) Fields — Strict Storage Rule
 
 `node.record` is reserved **exclusively** for canonical resource headers sent to GAS (`defaultBuild` in `usePageState.js` reads only `node.record`/`node.children`/`node.records`/`node.action`). A `fields` entry that isn't part of the resource's resolved schema (e.g. a UI-only wizard field, a computed helper input) is flagged `custom: true` by `FormRecord` and must **never** land in `node.record`. Instead:
-- `pageState.setControlField(resource, header, value)` upserts `{ header, value }` into `node.controls` (a dedicated slot `defaultBuild` never reads).
-- `pageState.getControlField(resource, header)` reads it back.
+- `pageState.setControls(header, value, resource)` upserts `{ header, value }` into `node.controls` (a dedicated slot `defaultBuild` never reads).
+- `pageState.getControls(header, fallback, resource)` reads it back.
 - If no `FormField<Header>` override is found for a custom header, `FormRecord` falls back to `_fields/text/<Mode>.vue` (an outlined `QInput`) — custom entries are stamped `fieldType: 'text'`.
 
-`Create.vue` and `FormChild.vue` already implement `custom`-aware routing (`meta.custom ? setControlField : setField`); a hand-rolled `FormRecord` usage inside a full Vue override must replicate that routing itself.
+`Create.vue` and `FormChild.vue` already implement `custom`-aware routing (`meta.custom ? setControls : setRecord`); a hand-rolled `FormRecord` usage inside a full Vue override must replicate that routing itself.
 
 ---
 
@@ -329,7 +329,7 @@ The merged result is handed to the resolved `_fields/<type>/<Mode>.vue` componen
 
 1. **`inline` (default)** — The added-records `AppList` (positioned per `listPosition`, above by default) sits alongside a permanent `FormRecord` (bare, `:card="false"`, wrapped in `FormChild`'s own card). Submitting (guarded by `canSubmit` — at least one filled field, all resource-required fields present) calls `addChild` and resets the draft. Edit repopulates the draft and switches the button to "Update", calling `updateChild` on submit; Delete calls `removeChild`.
 2. **`popup`** — Same `AppList`, but with an "Add {Title}" button instead of a permanent form. Clicking it opens a `q-dialog` hosting a bare `FormRecord`; submitting calls `addChild`/`updateChild` and closes the dialog when `closeOnAdd` is `true` (edits always close). Editing an existing row reopens the dialog prefilled via the same draft state.
-3. **`multi` / `multiple`** — No shared draft state and no separate list at all (`listPosition` is a no-op here): every added child row renders its own always-editable `FormRecord` (bare, inside its own small `q-card`) bound directly to the row's live `pageState` data (`update:field` calls `updateChild` immediately, no local draft). An "Add Row" button appends a blank child node via `addChild(parentResource, childName, {})`; each row has its own remove button.
+3. **`multi` / `multiple`** — No shared draft state and no separate list at all (`listPosition` is a no-op here): every added child row renders its own always-editable `FormRecord` (bare, inside its own small `q-card`) bound directly to the row's live `pageState` data (`update:field` calls `updateChild` immediately, no local draft). An "Add Row" button appends a blank child node via `addChild(childName, {}, parentResource)`; each row has its own remove button.
 
 Regardless of mode, list/row entrance and removal reuse the exact `aql-list-item-*` transition classes documented in `UI_CONTENT_SYSTEM.md` §2's "Centralized List Transitions" — no new CSS was added for `Create`.
 
@@ -394,7 +394,7 @@ export default function (props, { pageState, resourceConfig, resourceRecord }) {
       resource="Products"
       :record="pageState.state.nodes.get('Products')?.record || {}"
       :columns="2"
-      @update:field="(h, v) => pageState.setField('Products', h, v)"
+      @update:field="(h, v) => pageState.setRecord(h, v, 'Products')"
     />
     <!-- custom child layout, workflow-specific widgets, etc. -->
   </div>
@@ -464,7 +464,7 @@ On an `Update` page the cap counts **visible** rows only, so soft-deleting a row
 
 ```javascript
 pageState.initResource(name, { isPrimaryKey: true, reset: true, code: record.Code })  // only if the node is absent
-pageState.load(name, record)                                                          // guarded, see below
+pageState.load(record, name)                                                          // guarded, see below
 ```
 
 `load()` is keyed on a composite guard `${name}::${node.identifier}::${recordId(record)}`:
@@ -478,7 +478,7 @@ If the composite key is unchanged, `load()` is skipped. This is what makes hydra
 Each row from `resourceRecord.childRecordsByResource[childName]` is pushed as an `update` entry:
 
 ```javascript
-pageState.addChild(name, child.name, { ...row }, { action: 'update' })
+pageState.addChild(child.name, { ...row }, name, null, { action: 'update' })
 ```
 
 - `defaultBuild` forwards this verbatim into the `compositeSave` child records array as `_action: 'update'`, and GAS's `handleCompositeSave` locates the sheet row by `data.Code` and merges it.
@@ -589,7 +589,7 @@ Every `Add.vue` / `Edit.vue` / `View.vue` implements exactly this surface, with 
 
 | Name | Kind | Description |
 |---|---|---|
-| `modelValue` | `defineModel()` | The field value. Bi-directional — writing `model.value` emits `update:modelValue`, which `FormRecord` re-emits as `update:field(header, value, { custom })` and the caller routes to `setField`/`setControlField`. |
+| `modelValue` | `defineModel()` | The field value. Bi-directional — writing `model.value` emits `update:modelValue`, which `FormRecord` re-emits as `update:field(header, value, { custom })` and the caller routes to `setRecord`/`setControls`. |
 | `record` | `Object` prop | The full row record, so a field can read sibling columns (dynamic link construction, cross-column formatting). |
 | `config` | `Object` prop | The fully merged control props (§6 merge order), minus resolution metadata. |
 | `header` | `String` prop | The exact column header name. |

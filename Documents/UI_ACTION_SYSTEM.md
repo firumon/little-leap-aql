@@ -336,7 +336,7 @@ exactly like a custom key:
 
 ```javascript
 next: (name, { pageState }) => {
-  if (!pageState.getControlField('Orders', 'OutletCode')) {
+  if (!pageState.getControls('OutletCode', null, 'Orders')) {
     return { valid: false, message: 'Select an outlet to continue.' }   // veto: step does not move
   }
   // return nothing → the built-in increment performs the move
@@ -355,7 +355,7 @@ next: (name, { pageState }) => {
   a fresh record object. `FormRecord.vue` keys its default-seeding watch on that object's
   identity, so the resource's configured default values are re-seeded rather than leaving
   a blank form.
-* On `edit` / `action`: additionally `pageState.load(resource, original)` re-hydrates the
+* On `edit` / `action`: additionally `pageState.load(original, resource)` re-hydrates the
   pristine server record (`resourceRecord` is never mutated by form input — only
   `pageState.node.record` is), so unsaved edits are discarded without losing originals.
 
@@ -672,7 +672,7 @@ and must emit `submit` / `reset` / `cancel` / `action(key)` for `PageAction` to 
 export default {
   actions: ['cancel', 'saveDraft', 'submit'],           // renders FormActionSaveDraft
   saveDraft: (name, { pageState }) => {                  // dispatched via pageState.run()
-    pageState.setField('PurchaseRequisitions', 'Progress', 'DRAFT')
+    pageState.setRecord('Progress', 'DRAFT', 'PurchaseRequisitions')
     return { requests: pageState.build({ mode: 'draft' }), successMsg: 'Draft saved.' }
   }
 }
@@ -950,6 +950,31 @@ because a navigate action writes nothing.
 | `usePageState` | not used | it *is* `usePageState` |
 | Target record | `record.Code` | a concrete code, or a `$ref` to a record this batch creates |
 | Dispatch | `resourceIoStore.runBatchRequests([envelope])` immediately | appended to `defaultBuild()`, sent by `submit()` |
+| Stored as | nothing — built and sent in one call | a **pure domain model** in `pageState.actions`; the envelope is built at `build()` time |
+
+A queued action is then readable and writable by name and dot path, so a page can render
+its own inputs instead of the dialog:
+
+```js
+pageState.includeAdditionalAction('Complete', {}, { resource: 'OutletVisits' })
+
+const comment  = pageState.useActions('Complete', 'fields.Comment')
+const nextDate = pageState.useActions('Complete', 'targets.nextVisit.Date')
+
+pageState.getActions('Complete')                    // whole data object
+pageState.setActions('Complete', null)              // unqueue
+```
+
+`fields.<Header>` and `targets.<targetKey>.<Column>` are the same two wire buckets §7.0.1
+describes — the path IS the address the envelope uses. Full contract in
+[UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md) §15.1.
+
+The batched path never stores a wire request. `includeAdditionalAction` runs the pipeline
+to resolve the config and the field schema, then keeps
+`{ key, resource, code, actionConfig, data: { fields, targets } }`. `build()` turns each
+entry into its `executeAction` envelope via
+`executeActionRequest(resource, code, actionConfig, data)` — see
+[UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md) §15.2.
 
 The popup path stays out of `usePageState` for two reasons that have not changed:
 `pageState.run()` gates on `validationErrors`, which validates the **host page's** nodes —

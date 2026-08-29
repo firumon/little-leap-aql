@@ -1407,29 +1407,18 @@ export default {
     const discrepancies = pageState.state.nodes.get('Discrepancies')?.children || []
     const auditRecord = resourceRecord?.record?.value
 
-    // 2. Invoke the Layer 2 Domain Payload Chain Builder
-    const result = buildAuditCompletionChainRequests({
+    // 2. Invoke the Layer 2 Domain Payload Chain Builder, and hand its Node Objects
+    //    straight to applyNodes. It gates on each node's own permissions, notifies on a
+    //    refusal, and reports back what the domain decided to say.
+    const applied = pageState.applyNodes(buildAuditCompletionChainNodes({
       auditRecord,
       discrepancies,
       actor: formRecord.ActorName,
       notes: formRecord.Notes
-    })
+    }))
+    if (applied.valid === false) return false
 
-    // 3. Early exit if internal business validation fails
-    if (!result.valid) {
-      return { valid: false, message: result.message }
-    }
-
-    // 4. Gate submission with aggregated permissions returned by the chain
-    if (!resourceConfig?.allowed(result.permissions)) {
-      return { valid: false, message: 'You do not have permission to execute all required operations in this action.' }
-    }
-
-    // 5. Return requests and toast message to pageState.submit()
-    return {
-      requests: result.requests,
-      successMsg: result.successMsg
-    }
+    return { successMsg: applied.successMsg }
   }
 }
 ```
@@ -2130,7 +2119,7 @@ A workflow form is not a licence to hand-assemble a resource's columns. Even ins
 
 - **every input is still a `_fields` control**, resolved through `resolveFieldComponent`
   (§2.4) — no raw `q-input`/`q-select`;
-- **every real header still writes through `pageState.setField`** and rides the normal
+- **every real header still writes through `pageState.setRecord`** and rides the normal
   payload — §13.5;
 - **a header collected on more than one page uses the same header, the same control and the
   same wording on each.** A draft submitted from Edit and one submitted from the Add wizard
@@ -2252,8 +2241,8 @@ A form collects two different kinds of value, and they are stored differently:
 
 | | Written with | Reaches the backend | Examples |
 |---|---|---|---|
-| **Record field** | `setField` / `setFields` | yes, in the payload | a real resource header — `OutletCode`, `ProgressSubmittedComment` |
-| **Control field** | `setControlField` | **no** | page-only intent and working state — `isDraft`, `RestockMode`, `EditHydratedFor`, an allocation plan |
+| **Record field** | `setRecord` / `setRecord` | yes, in the payload | a real resource header — `OutletCode`, `ProgressSubmittedComment` |
+| **Control field** | `setControls` | **no** | page-only intent and working state — `isDraft`, `RestockMode`, `EditHydratedFor`, an allocation plan |
 
 **Control fields as working surface.** The user's whole decision — which bins, how much from
 each, which lines arrived — accumulates in control fields, which is what lets the sticky bar's
@@ -2263,9 +2252,9 @@ handler read the finished decision back and build the batch payload (§8.2).
 Edit page invoke the same form composable (`useRestockEditForm`), track hydration using a
 node-level control field rather than a local closure variable:
 ```javascript
-const hydratedFor = () => text(pageState.getControlField?.(PARENT_NODE, 'EditHydratedFor'))
+const hydratedFor = () => text(pageState.getControl?.('EditHydratedFor', null, PARENT_NODE))
 if (hydratedFor() !== text(parent.Code)) {
-  pageState.setControlField(PARENT_NODE, 'EditHydratedFor', text(parent.Code))
+  pageState.setControls('EditHydratedFor', text(parent.Code), PARENT_NODE)
   // hydrate child lines...
 }
 ```

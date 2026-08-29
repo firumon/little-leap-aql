@@ -17,6 +17,13 @@
 - Do not use double-meaning sentences or hard grammar.
 - Keep everything direct, clear, and very easy to understand.
 
+## Strict Truthfulness & Evidence-First Rule (STRICT)
+- Never speak from memory, assumptions, or guesses.
+- Never claim a feature exists without verifying it directly in the codebase or canonical docs first.
+- Every statement must be precise, accurate, and backed by direct evidence (file paths and line numbers).
+- Do not speak on behalf of AQL, the user, or any system element.
+- If a feature, function, or rule does not exist in the code, state clearly and plainly that it is missing or not implemented yet.
+
 ## Startup Sequence
 - Read this file.
 - **Protocol check first**:

@@ -42,10 +42,11 @@
         :is="field.component"
         v-for="field in group.fields"
         :key="field.address"
-        v-model="form[field.address]"
+        :model-value="readField(group, field)"
         :record="dialog.record || {}"
         :config="field.config"
         :header="field.header"
+        @update:model-value="(value) => writeField(group, field, value)"
       />
     </template>
   </AqlDialog>
@@ -63,6 +64,9 @@
  * the component the composable already resolved, so a config that asks for a
  * `file` or `currency` input works with no change here.
  *
+ * Field values live in the composable's own `pageState`, not in a local form, so
+ * the popup submits through the same build/run pipeline every page uses.
+ *
  * On success the dialog closes immediately and does NOT refetch — GAS returns
  * write deltas for every resource the action touched, and `runBatchRequests`
  * hydrates them into the data store, so reactivity updates the page on its own.
@@ -78,8 +82,9 @@ import { resolveRecordTemplate } from 'src/composables/resources/additionalActio
 defineOptions({ name: 'AppAdditionalActionsDialog' })
 
 const {
-  dialog, form, groups, isMultiOutcome, outcomeOptions,
-  columnValue, syncForm, submit, close, setOutcome
+  dialog, groups, isMultiOutcome, outcomeOptions,
+  columnValue, readField, writeField,
+  syncForm, submit, close, setOutcome
 } = useAdditionalActionsDialog()
 
 // The confirm BUTTON always reads as the action itself ("Postpone"), never as the

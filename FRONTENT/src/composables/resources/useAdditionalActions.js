@@ -1,42 +1,25 @@
-import { reactive, computed, unref } from 'vue'
+import {reactive, computed, unref, onUnmounted} from 'vue'
 import { useQuasar } from 'quasar'
 import { useResourceConfig, isActionVisible } from './useResourceConfig'
 import { useResourceNav } from './useResourceNav'
-import { useAdditionalActionsPipeline, actionLabelOf } from './additionalActionsPipeline'
+import { useAdditionalActionsPipeline, actionLabelOf, actionFailureMessage } from './additionalActionsPipeline'
+import { usePageState } from './pageState'
 
-/**
- * The AdditionalActions runtime — the SINGLE place workflow-action logic lives.
- *
- * Every consumer (the embeddable `AdditionalActionsButtons`, the `ResourceActions`
- * FAB cluster, any custom list row) asks this composable which actions a record
- * may offer and hands clicks back to it. Permission gating, `visibleWhen`
- * evaluation, `only`/`exclude` filtering, navigate-vs-mutate dispatch, input
- * collection and submission all resolve here — a component that re-implements any
- * part of it drifts the moment the config contract changes.
- *
- * The MECHANICS of turning one action into a request — field schema, seeding,
- * validation, payload extraction, envelope, dispatch — live next door in
- * `additionalActionsPipeline.js` as small single-responsibility steps. This file
- * consumes them; it does not duplicate them.
- *
- * The POPUP path is deliberately standalone from `usePageState`. `pageState.run()`
- * gates on `validationErrors`, which validates the HOST PAGE's nodes — a dialog
- * action would be blocked by a form error that has nothing to do with it. And
- * `ensureNode()` keys nodes by resource name, so an action targeting the same
- * resource as its page would collide with the page's own node. Dispatch goes
- * straight to the resource IO store, which is where delta hydration lives anyway
- * (`runBatchRequests` → `hydrateResourcePayload`), so reactivity after a write is
- * unaffected.
- *
- * A page that wants the OPPOSITE — a workflow action riding inside its own batch
- * submission, so a new record and the action stamping it land together — uses
- * `usePageState.includeAdditionalAction()`, which drives the same pipeline.
- *
- * Dialog state is a MODULE-LEVEL singleton: an index page renders one trigger per
- * row, and without a shared instance fifty rows would mount fifty dialogs.
- *
- * Canonical spec: Documents/AQL_ACTION_SYSTEM.md §7
- */
+// The AdditionalActions runtime — the one place workflow-action logic lives.
+// Eligibility, visibleWhen gating, navigate-vs-mutate dispatch, input collection
+// and submission all resolve here. The mechanics of turning one action into a
+// request live in `additionalActionsPipeline.js`.
+//
+// The popup owns its OWN `usePageState` instance rather than the host page's: a
+// dialog action must not be blocked by an unrelated form error on the page, and
+// index pages have no pageState at all. With no nodes, build() emits just this
+// action, so the dialog and a batched `includeAdditionalAction()` submit through
+// the identical pipeline.
+//
+// Dialog state is a MODULE-LEVEL singleton: an index page renders one trigger per
+// row, and without a shared instance fifty rows would mount fifty dialogs.
+//
+// Canonical spec: Documents/UI_ACTION_SYSTEM.md §7
 
 // ---------------------------------------------------------------------------
 // Shared dialog state — one per app, however many triggers are mounted.
@@ -51,18 +34,8 @@ const dialog = reactive({
   error: ''
 })
 
-// Flat address → value. Addresses are the derived header for source fields
-// (`ProgressPostponedComment`) and `<targetKey>.<Column>` for target fields
-// (`newVisit.Date`), so two targets carrying a `Date` never collide.
-const form = reactive({})
-
 // Navigate targets whose route carries a `:code` segment.
 const TARGETS_NEEDING_CODE = new Set(['view', 'edit', 'action', 'record'])
-
-function resetForm (fields) {
-  Object.keys(form).forEach((key) => delete form[key])
-  fields.forEach((field) => { form[field.address] = field.seed ?? '' })
-}
 
 // ---------------------------------------------------------------------------
 // Trigger surface
@@ -187,9 +160,13 @@ export function useAdditionalActionsDialog () {
   // explicitly, because a trigger on a list row may target a resource that is
   // not the page's own.
   const pipeline = useAdditionalActionsPipeline()
+  // The dialog's own submission channel. No nodes are ever created on it, so
+  // `validationErrors` stays empty and build() emits only the queued action.
+  const pageState = usePageState({}, { persist: false })
 
   const action = computed(() => dialog.action)
   const record = computed(() => dialog.record)
+  const actionName = computed(() => String(action.value?.action || ''))
 
   const isMultiOutcome = computed(() => {
     const options = action.value?.columnValueOptions
@@ -200,11 +177,9 @@ export function useAdditionalActionsDialog () {
   const column = computed(() => action.value?.column || 'Progress')
   const columnValue = computed(() => dialog.outcome || action.value?.columnValue || '')
 
-  /**
-   * Field groups in render order: the source record first, then one group per
-   * target that asks the user for something. Derived by the pipeline, so the
-   * dialog and a batched `includeAdditionalAction()` see the identical schema.
-   */
+  // Field groups in render order: the source record first, then one group per
+  // target that asks the user for something. Derived by the pipeline, so the
+  // dialog and a batched `includeAdditionalAction()` see the identical schema.
   const groups = computed(() => {
     if (!action.value) return []
     return pipeline.actionFieldGroups(action.value, {
@@ -214,25 +189,56 @@ export function useAdditionalActionsDialog () {
     })
   })
 
-  const allFields = computed(() => groups.value.flatMap((group) => group.fields))
+  // The queued entry this dialog is editing. Held so submit can check the code
+  // it resolved before sending.
+  let queued = null
 
-  function syncForm () {
-    resetForm(allFields.value)
+  // Source fields live under `fields`, target fields under `targets` — the two
+  // wire buckets `extractActionPayload` already splits them into.
+  function fieldPath (group, field) {
+    return group.key ? `targets.${field.address}` : `fields.${field.address}`
   }
 
-  /** Shared context for every pipeline step this dialog drives. */
-  function stepContext () {
-    return {
-      record: record.value,
-      form,
-      outcome: columnValue.value,
+  function readField (group, field) {
+    const value = pageState.getActions(actionName.value, fieldPath(group, field), dialog.resource)
+    return value === undefined || value === null ? '' : value
+  }
+
+  function writeField (group, field, value) {
+    pageState.setActions(actionName.value, fieldPath(group, field), value, dialog.resource)
+  }
+
+  // Re-queue with empty data, so every field falls back to its own seed.
+  function syncForm () {
+    pageState.excludeAdditionalAction()
+    queued = null
+    if (!action.value) return
+    queued = pageState.includeAdditionalAction(actionName.value, {}, {
       resource: dialog.resource,
-      groups: groups.value
+      code: record.value?.Code,
+      record: record.value,
+      outcome: columnValue.value
+    })
+  }
+
+  // `validateActionForm` reads a FLAT address map — the shape a `when` gate keyed
+  // on `field` resolves against — so the queued buckets are folded back into one.
+  function flatForm () {
+    const values = {}
+    for (const group of groups.value) {
+      for (const field of group.fields) values[field.address] = readField(group, field)
     }
+    return values
   }
 
   function validate () {
-    return pipeline.validateActionForm(action.value, stepContext())
+    return pipeline.validateActionForm(action.value, {
+      record: record.value,
+      form: flatForm(),
+      outcome: columnValue.value,
+      resource: dialog.resource,
+      groups: groups.value
+    })
   }
 
   async function submit () {
@@ -242,8 +248,9 @@ export function useAdditionalActionsDialog () {
       return false
     }
 
-    const request = pipeline.buildActionRequest(action.value, stepContext())
-    if (!request) {
+    // A `$ref` code means no record code reached the queue — the dialog always
+    // acts on a record that already exists, so that is not executable here.
+    if (!queued || typeof queued.code !== 'string' || !queued.code) {
       dialog.error = 'Action is not executable.'
       return false
     }
@@ -251,11 +258,11 @@ export function useAdditionalActionsDialog () {
     dialog.submitting = true
     dialog.error = ''
     try {
-      const { success, error } = await pipeline.dispatchActionRequests(request)
+      const { success, response } = await pageState.run({ notify: false })
       if (!success) {
         // Stay open with the message inline — the user keeps what they typed and
         // can correct it, which a dismissable toast would not allow.
-        dialog.error = error
+        dialog.error = actionFailureMessage(response) || 'Request failed.'
         return false
       }
 
@@ -275,11 +282,12 @@ export function useAdditionalActionsDialog () {
   }
 
   function close () {
+    pageState.excludeAdditionalAction()
+    queued = null
     dialog.open = false
     dialog.action = null
     dialog.record = null
     dialog.error = ''
-    resetForm([])
   }
 
   function setOutcome (value) {
@@ -288,12 +296,13 @@ export function useAdditionalActionsDialog () {
 
   return {
     dialog,
-    form,
     groups,
     isMultiOutcome,
     outcomeOptions,
     column,
     columnValue,
+    readField,
+    writeField,
     syncForm,
     submit,
     close,

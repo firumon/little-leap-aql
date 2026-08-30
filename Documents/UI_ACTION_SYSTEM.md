@@ -831,7 +831,7 @@ action's own `fields[]`.
 >
 > Neither uses the 10-tier resolver (though items rendered *through* `ResourceActions`
 > still resolve per-item as `ResourceAction<Name>`, since that is the FAB cluster's own
-> mechanism). The **popup** path does not use `usePageState` either — see §7.0.2.
+> mechanism). The **popup** path drives its OWN `usePageState` instance — see §7.0.2.
 
 ### 7.0 Composable API
 
@@ -947,10 +947,10 @@ because a navigate action writes nothing.
 |---|---|---|
 | Entry point | `useAdditionalActions().runAction()` → `AdditionalActionsDialog` | `pageState.includeAdditionalAction(name, data)` |
 | When | the record already exists and the user fills the inputs | the action must travel **with** the page's own submission |
-| `usePageState` | not used | it *is* `usePageState` |
+| `usePageState` | its OWN instance, `usePageState({}, { persist: false })`, held by `useAdditionalActionsDialog` — never the host page's | the host page's own instance |
 | Target record | `record.Code` | a concrete code, or a `$ref` to a record this batch creates |
-| Dispatch | `resourceIoStore.runBatchRequests([envelope])` immediately | appended to `defaultBuild()`, sent by `submit()` |
-| Stored as | nothing — built and sent in one call | a **pure domain model** in `pageState.actions`; the envelope is built at `build()` time |
+| Dispatch | `pageState.run({ notify: false })` — with no nodes, `build()` emits just the action | appended to `defaultBuild()`, sent by `submit()` |
+| Stored as | a **pure domain model** in the dialog's own `pageState.actions` | a **pure domain model** in the page's `pageState.actions` |
 
 A queued action is then readable and writable by name and dot path, so a page can render
 its own inputs instead of the dialog:
@@ -976,11 +976,16 @@ entry into its `executeAction` envelope via
 `executeActionRequest(resource, code, actionConfig, data)` — see
 [UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md) §15.2.
 
-The popup path stays out of `usePageState` for two reasons that have not changed:
-`pageState.run()` gates on `validationErrors`, which validates the **host page's** nodes —
-a dialog action would be blocked by a form error that has nothing to do with it; and
-`ensureNode()` keys nodes by resource name, so an action targeting the same resource as
-its page would collide with the page's own node.
+Both paths now submit through `pageState`. What the popup must NOT do is share the HOST
+page's instance: `pageState.run()` gates on `validationErrors`, which validates that page's
+nodes — a dialog action would be blocked by a form error that has nothing to do with it —
+and the dialog is a single global singleton, while an index page has no `pageState` at all.
+So `useAdditionalActionsDialog` builds its own. It creates no nodes on it (`initResource` is
+never called), which is what keeps `validationErrors` empty and `build()` down to the one
+`executeAction` envelope. Field values are read and written through `getActions` /
+`setActions` at `fields.<Header>` and `targets.<targetKey>.<Column>`; the required-field
+check still runs through `pipeline.validateActionForm` before `run()`, because `run()`
+validates nodes, not action fields.
 
 The batched path exists for the case the popup cannot express: *create a record **and**
 run a workflow action on it, atomically, in one batch*. Full contract in

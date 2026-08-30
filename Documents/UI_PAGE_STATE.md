@@ -1152,10 +1152,16 @@ So a queued action stays inspectable and draftable as plain state — `pageState
 shows the intent, not a compiled request — and the wire format lives in exactly one
 place.
 
-Popup actions are a different path — `useAdditionalActions` dispatches
-immediately against a record that already exists, and deliberately does not go
-through `pageState`, because `run()` would gate it on the host page's validation
-errors.
+The AdditionalActions popup uses this same machinery, on a `pageState` of its
+own: `useAdditionalActionsDialog` holds a `usePageState({}, { persist: false })`
+instance, queues the action onto it, binds every dialog field through
+`getActions` / `setActions`, and submits with `run({ notify: false })`. It never
+calls `initResource`, so the instance has no nodes — `validationErrors` stays
+empty and `build()` emits just the one `executeAction`. It must not share the
+host page's instance, because `run()` would then gate the dialog on that page's
+validation errors, and an index page has no `pageState` to share. Action-field
+`required` checks still run through `pipeline.validateActionForm` before `run()`,
+since `run()` validates nodes, not action data.
 
 ## 16. Strategy overrides
 

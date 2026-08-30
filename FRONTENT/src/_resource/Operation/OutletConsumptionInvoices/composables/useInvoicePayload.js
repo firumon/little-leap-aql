@@ -1,6 +1,6 @@
 // OutletConsumptionInvoices payloads. Layer 2. Raised here or from a consumption submit;
 // both share one arithmetic engine and one return-adjustment builder.
-import { batchRef, textOrRef } from 'src/utils/appHelpers'
+import { batchRef, isBatchRef, textOrRef } from 'src/utils/appHelpers'
 import { useAuth } from 'src/composables/core/useAuth'
 import { resourceRow } from 'src/composables/resources/useResourceConfig'
 import { stampFields } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionPayload'
@@ -225,7 +225,8 @@ export function buildInvoiceDocumentNodes ({
   }
 
   const date = text(invoiceDate) || todayISO()
-  const marks = codeList(markConsumptions)
+  const marks = codeList((Array.isArray(markConsumptions) ? markConsumptions : [])
+    .filter((code) => !isBatchRef(code) && !String(code).startsWith('$ref:')))
 
   // `Total` is CALCULATED but not STORED - the sheet has no such column, and every reader
   // derives it from the six stored figures (`netPayableOf`).

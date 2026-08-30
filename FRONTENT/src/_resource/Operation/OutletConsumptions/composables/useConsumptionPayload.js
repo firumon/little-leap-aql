@@ -62,10 +62,8 @@ const dateOf = (form) => text(asRow(form).Date) || todayISO()
 /**
  * The consumption header plus its sold lines, as one composite save.
  *
- * ALWAYS lands in `PENDING_INVOICE_GENERATION`, even when an invoice is generated in the
- * same batch. The walk to `INVOICE_GENERATED` is a separate `executeAction` appended after
- * the invoice exists (`buildInvoiceNodes`), so the state column can never claim an
- * invoice that a later request in the batch failed to write.
+ * Lands in `INVOICE_GENERATED` when this batch also creates its invoice. Otherwise it
+ * lands in `PENDING_INVOICE_GENERATION` for the standalone invoice workflow.
  *
  * ONLY CALLED WHEN SOMETHING WAS ACTUALLY CONSUMED. An `OutletConsumptions` row asserts a
  * billable consumption event, and one written with no lines can never be invoiced or
@@ -117,7 +115,10 @@ export function consumptionNode (parent = {}, children = [], extra = {}) {
 export function buildConsumptionCompositeNode (form = {}, countRows = [], actorName = '', options = {}) {
   const entry = asRow(form)
   const sold = soldRowsOf(countRows)
-  const note = options.generateInvoice
+  const generated = options.generateInvoice === true
+  const progress = generated ? INVOICE_GENERATED : PENDING_INVOICE_GENERATION
+  const stamp = generated ? 'ProgressInvoiceGenerated' : 'ProgressPendingInvoiceGeneration'
+  const note = generated
     ? 'Consumption recorded; invoice generated in the same submission.'
     : 'Consumption recorded; invoice generation pending.'
 
@@ -128,8 +129,8 @@ export function buildConsumptionCompositeNode (form = {}, countRows = [], actorN
       Date: dateOf(entry),
       Username: text(entry.Username),
       OutletVisitCode: text(entry.OutletVisitCode),
-      Progress: PENDING_INVOICE_GENERATION,
-      ...stampFields('ProgressPendingInvoiceGeneration', actorName, note),
+      Progress: progress,
+      ...stampFields(stamp, actorName, note),
       Status: 'Active'
     },
     children: [{
@@ -398,7 +399,7 @@ export function buildInvoiceNodes (form = {}, soldLines = [], options = {}) {
     dueDate: options.dueDate,
     // The consumption does not exist yet; GAS resolves this to its generated code.
     consumptionRef: batchRef(CONSUMPTION_REF_PATH),
-    markConsumptions: [batchRef(CONSUMPTION_REF_PATH)],
+    markConsumptions: [],
     returnCodes: options.returnCodes,
     // The workflow links the selected returns itself, from its own selection.
     linkReturnRows: null,

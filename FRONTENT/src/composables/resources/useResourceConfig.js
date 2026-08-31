@@ -31,7 +31,11 @@ export function findResourceConfig(auth, nameOrSlug) {
 
 function checkSingleAction(resConfig, action) {
   if (!resConfig) return false
-  const cleanAction = String(action || '').trim().replace(/^can/, '')
+  // `(?=[A-Z])` matters: the prefix is only stripped from the `canCancel` FORM. A bare
+  // action name that merely starts with the letters "can" must survive intact —
+  // `'cancel'` was being cut to `'cel'` and checked as `canCel`, so every `cancel`
+  // permission in the app failed closed no matter what the role granted.
+  const cleanAction = String(action || '').trim().replace(/^can(?=[A-Z])/, '')
   const actionLower = cleanAction.toLowerCase()
 
   // Standard CRUD checks

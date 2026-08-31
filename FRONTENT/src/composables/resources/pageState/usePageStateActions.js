@@ -70,7 +70,10 @@ export function usePageStateActions ({ state, registry }) {
     })
     if (!request) return null
 
-    const key = actionKeyFor(name, actionName, r)
+    // Keyed WITH the code, exactly as applyNodes keys a node's own actions. Keyed without
+    // it, the same action on the same record landed twice - once from a card, once from
+    // the Layer 2 chain - and only one of the two could ever be removed again.
+    const key = actionKeyFor(name, actionName, r, request.payload.code)
     const entry = {
       key,
       resource: name,

@@ -121,6 +121,16 @@ function resolveActionExpression(expression, ctx) {
   // Numbers, booleans and dates are already literal values.
   if (typeof expression !== 'string') return expression;
 
+  // A `${...}` tag makes the whole string a TEMPLATE: each tag resolves on its own
+  // and the text around it is kept verbatim, so a header can be assembled from
+  // several tokens (`---POSTPONED ON ${$today}---`).
+  if (/\$\{[^}]*\}/.test(expression)) {
+    return expression.replace(/\$\{([^}]*)\}/g, function (match, inner) {
+      var value = resolveActionExpression(String(inner).trim(), ctx);
+      return value === undefined || value === null ? '' : String(value);
+    });
+  }
+
   var expr = expression.trim();
   if (!expr || expr.charAt(0) !== '$') return expression;
   if (expr.indexOf('$$') === 0) return expr.slice(1);

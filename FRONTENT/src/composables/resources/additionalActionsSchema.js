@@ -206,9 +206,22 @@ function tidySeparators (text) {
  * / date tokens. `$target.*` is deliberately absent — it refers to a record that
  * does not exist until the server runs.
  */
+const TEMPLATE_TAG = /\$\{([^}]*)\}/g
+
 export function prefillExpression (expression, { record, user } = {}) {
   if (expression === undefined || expression === null) return ''
   if (typeof expression !== 'string') return expression
+
+  // A `${...}` tag makes the whole string a TEMPLATE: each tag resolves on its own
+  // and the text around it is kept verbatim, so a header can be assembled from
+  // several tokens (`---POSTPONED ON ${$today}---`).
+  if (TEMPLATE_TAG.test(expression)) {
+    TEMPLATE_TAG.lastIndex = 0
+    return expression.replace(TEMPLATE_TAG, (_match, inner) => {
+      const value = prefillExpression(String(inner).trim(), { record, user })
+      return value === undefined || value === null ? '' : String(value)
+    })
+  }
 
   const expr = expression.trim()
   if (!expr || expr[0] !== '$') return expression

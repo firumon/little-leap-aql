@@ -120,18 +120,16 @@ export function usePageStateMutations ({ state, registry, hydrate, notify }) {
     }
   }
 
-  // Every resource this page already writes. GAS returns a written resource in the same
-  // response, so asking for it back in the re-read is a wasted round trip.
-  const writtenResources = () => new Set([...state.nodes.values()].map((node) => node.resource))
-
   // `reload` and `actions` on a payload belong to the BATCH, not the node. Several
   // nodes contribute to one batch, so hoisting is always additive — a later
   // setResource must never wipe what an earlier one asked for.
   function hoistBatchExtras (payload) {
     if (payload.derive?.length && deriveSink) deriveSink(payload.derive)
-    const written = writtenResources()
+    // Kept whole. What the batch writes for itself is dropped at build time, when the
+    // finished batch is known — a node applied later, or one since removed, made this
+    // snapshot the wrong place to decide it.
     for (const name of payload.reload || []) {
-      if (name && !written.has(name) && !state.reload.includes(name)) state.reload.push(name)
+      if (name && !state.reload.includes(name)) state.reload.push(name)
     }
     for (const entry of payload.actions || []) {
       const normalized = toActionEntry(entry, payload.resource, payload.role)
@@ -263,7 +261,10 @@ export function usePageStateMutations ({ state, registry, hydrate, notify }) {
     const written = []
     for (const node of merged) {
       if (isBodylessNode(node)) hoistBatchExtras(node)
-      else written.push(writeNode({ resource: node.resource, role: node.role }, undefined, node, true))
+      // `merge: true` means "these columns join a node the PAGE owns". A replace would
+      // clear the buckets the payload leaves out, which is how a live header rebuild
+      // deleted the very lines the user had just typed.
+      else written.push(writeNode({ resource: node.resource, role: node.role }, undefined, node, node.merge !== true))
     }
 
     // A chain may also say what the page should tell the user and where to land.
@@ -276,6 +277,58 @@ export function usePageStateMutations ({ state, registry, hydrate, notify }) {
       ...(successMsg ? { successMsg } : {}),
       ...(outcome ? { outcome } : {})
     }
+  }
+
+  // Nodes this page's live rebuild put up last pass, as `resource::role`. The role is
+  // part of it: one resource can hold many roled nodes - a stamp per consumption - and
+  // pruning by resource alone left every one of them behind.
+  const liveSeen = new Set()
+  const seenKey = (resource, role) => `${resource}::${role || ''}`
+
+  // One resource can hold many queued stamps, so actions prune by KEY, not by resource.
+  const liveActionsSeen = new Set()
+
+  // The door a LIVE rebuild comes through. A rebuild states the WHOLE batch, so anything the
+  // new pass stopped emitting is dropped here — `applyNodes` on its own only ever adds.
+  // A veto is skipped rather than notified: it is right at submit, wrong while typing.
+  function applyLive (nodes = [], { keep = [] } = {}) {
+    const list = (Array.isArray(nodes) ? nodes : [nodes]).filter(Boolean)
+    // A veto bails without pruning — the user is still typing. An EMPTY list does not: it
+    // says the batch is now nothing, so what the last pass queued has to go.
+    if (list.some((node) => node?.valid === false)) return false
+    if (list.length && applyNodes(list)?.valid === false) return false
+
+    const emitted = new Set()
+    for (const node of list) {
+      for (const entry of node?.actions || []) {
+        let key = null
+        try { key = toActionEntry(entry, node.resource, node.role)?.key } catch { key = null }
+        if (key) emitted.add(key)
+      }
+    }
+    for (const key of liveActionsSeen) {
+      if (emitted.has(key)) continue
+      const at = state.actions.findIndex((e) => e.key === key)
+      if (at >= 0) state.actions.splice(at, 1)
+    }
+    liveActionsSeen.clear()
+    for (const key of emitted) liveActionsSeen.add(key)
+
+    if (!keep.length) return true
+
+    // `keep` names the nodes the PAGE owns, not the builder: its form node must survive a
+    // pass that emitted nothing.
+    const current = new Set(list.filter((node) => node?.resource).map((node) => seenKey(node.resource, node.role)))
+    const owned = new Set(keep.filter(Boolean))
+    for (const key of liveSeen) {
+      if (current.has(key)) continue
+      const [resource, role] = key.split('::')
+      if (owned.has(resource)) continue
+      registry.removeNode(resource, role || undefined)
+    }
+    liveSeen.clear()
+    for (const key of current) liveSeen.add(key)
+    return true
   }
 
   // The address is the LAST thing every mutation takes, and it is optional: no
@@ -486,6 +539,7 @@ export function usePageStateMutations ({ state, registry, hydrate, notify }) {
     setResource,
     updateResource,
     applyNodes,
+    applyLive,
     getRecord,
     setRecord,
     useRecord,

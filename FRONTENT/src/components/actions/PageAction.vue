@@ -98,6 +98,7 @@ const props = defineProps({
   //   false | { valid: false, message } → abort (message is notified)
   //   Array                             → treated as `{ requests: [...] }`
   //   Object                            → merged into the pageState call options
+  //   { step: n } from next/back        → move to that step instead of ±1
   //   undefined | true                  → continue with the built-in default
   submit:  { type: Function, default: null },
   reset:   { type: Function, default: null },
@@ -261,12 +262,18 @@ function releaseStep () {
   pageState.meta.stepping = false
 }
 
-function moveStep (delta) {
+// `target` is the step a handler asked for by returning `{ step: n }` — a wizard that
+// skips a step it has nothing to ask on. It travels through the SAME staged move as a
+// plain +1, so a skip is not a second, unfaded way of changing the step.
+function moveStep (delta, target = null) {
   if (!pageState) return
   clearStepTimers()
+  const asked = Number(target)
   stepTimers.push(setTimeout(() => {
     const current = pageState.meta.currentStep || 1
-    pageState.meta.currentStep = Math.max(1, current + delta)
+    pageState.meta.currentStep = Number.isFinite(asked) && asked > 0
+      ? asked
+      : Math.max(1, current + delta)
   }, STEP_FADE_MS))
   stepTimers.push(setTimeout(releaseStep, STEP_FADE_MS + STEP_SETTLE_MS))
 }
@@ -338,10 +345,10 @@ async function handleAction (actionName, extraPayload = null) {
     // moved the step itself would have already advanced by the time the veto
     // resolved. `back` floors at 1 so the bar may render it unconditionally.
     case 'next':
-      moveStep(+1)
+      moveStep(+1, options.step)
       return
     case 'back':
-      moveStep(-1)
+      moveStep(-1, options.step)
       return
     default:
       // Custom action whose handler produced a dispatchable payload. Without one,

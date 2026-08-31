@@ -447,6 +447,112 @@ and none should.
 
 ---
 
+## 5B. The batch is LIVE — `submit` only validates
+
+**`pageState` holds the complete, ready-to-send batch at every moment of the wizard, not
+at the end of it.** Every user input — a keystroke, a tick, a toggle — goes straight to
+Layer 2 and the node set it returns is applied immediately. `snapshot()` at step 1 shows
+the same shape it will show one click before submit, only with fewer rows.
+
+```js
+// In the page's composable — a setup context, so it can watch.
+function setQuantity (code, qty) {
+  const next = { ...planFromNodes(), [code]: qty }
+  pageState.applyNodes(buildAllocationNodes(record.value, next, actor(), comment.value))
+}
+```
+
+```js
+// PageAction.submit — validation and a message. Nothing else.
+submit: () => {
+  if (!allocated().length) return { valid: false, message: 'Allocate at least one item.' }
+  return { successMsg: 'Restock approved and stock allocated.' }
+}
+```
+
+### 5B.1 What `submit` may and may not do
+
+| `submit` may | `submit` must not |
+|---|---|
+| Check the user's decision is complete | Call a Layer 2 builder |
+| Re-check a staleness gate | Call `applyNodes` |
+| Return `{ valid: false, message }` | Write a record, child, record row or control |
+| Return `{ successMsg }` / `onSuccess` | Clear or rearrange anything |
+
+**A custom `submit` that builds is a defect, not a style.** Building at submit means the
+user reviewed one thing and sent another; worse, the state it mutates is still on screen,
+so the page visibly re-arranges under the user at the moment they commit. If a page needs
+no validation beyond the generic one, it needs **no custom `submit` at all**.
+
+The single exception: a value that genuinely cannot exist until the moment of dispatch.
+There are very few — a client-side timestamp is one. Everything else can be computed as
+the user works, and therefore must be.
+
+### 5B.2 One representation, never a draft beside the payload
+
+The rows the cards edit and the rows `build()` ships are **the same rows**. Do not keep a
+working copy to be translated at submit — that is §5A wearing a wizard hat, and it
+guarantees the two drift.
+
+A row may carry frontend-only tags to link it back to the input it came from. **`build()`
+strips every key beginning with `_`**, so `_sourceCode`, `_requestedQty` and friends never
+reach GAS. `_action` is the oldest member of that family, not a special case.
+
+### 5B.3 Rebuild loops — watch the INPUT, never the output
+
+A live rebuild writes nodes. If it also *watches* those nodes it will re-enter forever.
+
+- Watch the raw input: a control, a record column, the selection, the note.
+- Write to a different address than the one being watched, **or** let the write be a
+  no-op for the watcher (a primitive that compares equal does not re-fire).
+- `pageState.derive` (§5.4) is the declarative form and is preferred; a `watch` in the
+  page's own composable is fine when the rule is presentational.
+
+### 5B.4 The permission gate stays in `applyNodes`
+
+`applyNodes` checks every node's `permissions` against that node's own resource and
+notifies on the first gap, writing nothing (§5.1). That is true of a live rebuild too —
+a node the user may not write must not silently enter the batch, and the moment it is
+refused is the moment to say so.
+
+So a live rebuild is only reached on a page the user is already entitled to be on. **If a
+gate fires while the user is merely typing, the bug is upstream**: the entry point that
+routed them here is not gated on the same permission the node demands. Fix the entry
+point, never the gate.
+
+### 5B.5 What `controls` are for — the whole list
+
+A control is legitimate in exactly three cases:
+
+1. **A UI switch** that enables or disables part of the screen, and has no column.
+2. **One value shared by several nodes** — a `WarehouseCode` picked once and written into
+   a restock node, its items, and a movement node.
+3. **A node-level mode** that decides how the record, children or rows are *arranged* —
+   "Direct Approval", "Instant Deliver". The control is the question; the node set is the
+   answer, recomputed by `derive` or a watcher.
+
+Anything else has a home: a column is `record`, a line is `children`, a bulk row is
+`records`, and "is this resource written at all" is the node's existence (§5A.1).
+
+**Bookkeeping controls are not one of the three.** A `HydratedFor` marker recording which
+record the node was built for is asking a question the node already answers — compare
+`useNode(...).code`. Do not add a control to remember something state already holds.
+
+### 5B.6 Bind the node directly
+
+Every slot has a writable computed, so a template `v-model`s the real state and the
+rebuild follows from the write. There is no separate "apply" step for the user to forget.
+
+```js
+pageState.useRecord('ProgressApprovedComment')            // a column
+pageState.useChildren('OutletRestockItems', () => i, 'Quantity')   // a line
+pageState.useRecords(() => i, 'Quantity', 'StockMovements')        // a bulk row
+pageState.useControls('DirectApproval', false, 'OutletRestocks')   // a mode
+pageState.useActions('Complete', 'fields.ProgressCompletedComment')
+```
+
+---
+
 ## 6. API — nodes
 
 ### `initResource(resource, options?)`
@@ -1224,6 +1330,15 @@ logs as opaque uid soup.
 11. A builder never hand-writes another resource's columns — it calls that resource's own
     builder and spreads the nodes it returns.
 12. A derived column is declared with `derive`, not recomputed in the UI (§12.3).
+13. **The batch is live.** Nodes are rebuilt as the user works; `submit` validates and
+    returns a message, and never builds, applies or mutates (§5B).
+14. **One representation.** No draft copy beside the payload. `build()` strips `_`-prefixed
+    keys, so a live row may carry frontend-only tags (§5B.2).
+15. A live rebuild watches its INPUT, never the nodes it writes (§5B.3).
+16. `controls` are only a UI switch, a value shared across nodes, or a node-level mode —
+    never storage, never bookkeeping (§5B.5).
+17. The permission gate lives in `applyNodes` and nowhere else. An entry point must be
+    gated on the same permission its nodes demand (§5B.4).
 
 ## 20. Related
 

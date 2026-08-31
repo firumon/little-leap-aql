@@ -14,6 +14,8 @@ import {
   makeLineTaxResolver
 } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceCalculation'
 import { priceOf } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionStock'
+import { useAuth } from 'src/composables/core/useAuth'
+import { buildInvoiceGenerationNodes, repriceInvoiceInPageState } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoicePayload'
 
 /**
  * OutletConsumptionInvoices › Add — the injection relay and shared wizard state
@@ -43,6 +45,17 @@ const num = (value) => {
 }
 
 const NODE = 'OutletConsumptionInvoices'
+const ITEMS = 'OutletConsumptionInvoiceItems'
+
+// Every answer that IS stored goes on the record; the lines go in `children`. Only
+// `DiscountType`, `DiscountValue` and `ApplyReturns` stay controls - none of them is
+// stored, they only decide what the stored figures become (UI_PAGE_STATE.md §5B.5).
+const COLUMNS = new Set([
+  'OutletCode', 'DueDate', 'PriceListCode',
+  'OutletConsumptionCode', 'OutletReturnCodes', 'ProgressPendingPaymentComment'
+])
+
+const csv = (value) => text(value).split(',').map(text).filter(Boolean)
 
 export function useInvoiceAddContext () {
   const pageState = inject('pageState', null)
@@ -59,10 +72,14 @@ export function useInvoiceAddContext () {
 
   // ── The wizard's answers ────────────────────────────────────────────────────
   const field = (header, fallback = '') => {
-    const value = pageState?.getControls(header, null, NODE)
+    const value = COLUMNS.has(header)
+      ? pageState?.getRecord(header, NODE)
+      : pageState?.getControls(header, null, NODE)
     return value === undefined || value === null ? fallback : value
   }
-  const setField = (header, value) => pageState?.setControls(header, value, NODE)
+  const setField = (header, value) => (COLUMNS.has(header)
+    ? pageState?.setRecord(header, value, NODE)
+    : pageState?.setControls(header, value, NODE))
 
   /**
    * The outlet.
@@ -84,12 +101,12 @@ export function useInvoiceAddContext () {
       // different consumptions, may bill on a different price list, and certainly has
       // different returns. Clearing them here is what stops the review step showing a
       // total assembled from two outlets.
-      setField('ConsumptionCodes', [])
-      setField('ExtraItems', [])
+      setField('OutletConsumptionCode', '')
+      clearLines()
       // A different outlet has different returns; carrying the old selection over would
       // credit one outlet's returns against another's bill.
       setField('ApplyReturns', false)
-      setField('ReturnCodes', [])
+      setField('OutletReturnCodes', '')
       setField('PriceListCode', resolvePriceListCode(text(value), index.operatingRules.value))
       setField('DueDate', defaultDueDate(text(value)))
     }
@@ -120,27 +137,16 @@ export function useInvoiceAddContext () {
     set: (value) => setField('DiscountValue', num(value))
   })
 
+  // The note IS stored - `stampFields` writes it to this column. It is not working state.
   const comment = computed({
-    get: () => text(field('Comment')),
-    set: (value) => setField('Comment', text(value))
+    get: () => text(field('ProgressPendingPaymentComment')),
+    set: (value) => setField('ProgressPendingPaymentComment', text(value))
   })
 
-  /** The consumption codes ticked in step 1. */
+  /** The consumption codes ticked in step 1 - the record's own column, not a copy of it. */
   const selectedCodes = computed({
-    get: () => {
-      const value = field('ConsumptionCodes', [])
-      return Array.isArray(value) ? value : []
-    },
-    set: (value) => setField('ConsumptionCodes', Array.isArray(value) ? value : [])
-  })
-
-  /** Extra SKUs added by hand in step 2, as `[{ SKU, Qty }]`. */
-  const extraItems = computed({
-    get: () => {
-      const value = field('ExtraItems', [])
-      return Array.isArray(value) ? value : []
-    },
-    set: (value) => setField('ExtraItems', Array.isArray(value) ? value : [])
+    get: () => csv(field('OutletConsumptionCode')),
+    set: (value) => setField('OutletConsumptionCode', (Array.isArray(value) ? value : []).map(text).filter(Boolean).join(','))
   })
 
   // ── What the answers imply ──────────────────────────────────────────────────
@@ -183,7 +189,21 @@ export function useInvoiceAddContext () {
    * unreadable invoice. Each grouped line keeps the sources it came from so the step-2 card
    * can show which counts contributed.
    */
-  const groupedLines = computed(() => {
+  const lineRows = () => pageState?.getChildRows(ITEMS, NODE) || []
+
+  const clearLines = () => {
+    for (let i = lineRows().length - 1; i >= 0; i--) pageState?.removeChild(ITEMS, i, NODE)
+  }
+
+  const lineIndexOf = (sku) => lineRows().findIndex((row) => text(row.SKU) === text(sku))
+
+  /**
+   * Re-seed the lines that came from ticked consumptions, keeping hand-added ones.
+   *
+   * `_sources` says where a line's quantity came from. It is frontend-only (`_` prefix), so
+   * `build()` strips it before the row reaches the sheet.
+   */
+  function seedLinesFromConsumptions () {
     const chosen = new Set(selectedCodes.value)
     const bySku = new Map()
 
@@ -193,11 +213,8 @@ export function useInvoiceAddContext () {
         const sku = text(item.SKU)
         if (!sku) return
         const qty = num(item.Qty)
-        const entry = bySku.get(sku) || { SKU: sku, Qty: 0, sources: [] }
+        const entry = bySku.get(sku) || { Qty: 0, sources: [] }
         entry.Qty += qty
-        // Each source carries its OWN quantity, not just its origin: on a bundled invoice the
-        // whole point of listing sources is to show how the line's total was made up, and
-        // "2026-08-16 · Firose" without a number says where some unknown share came from.
         entry.sources.push({
           key: `${consumption.code}-${sku}`,
           qty,
@@ -207,21 +224,44 @@ export function useInvoiceAddContext () {
       })
     })
 
-    extraItems.value.forEach((extra) => {
-      const sku = text(extra.SKU)
-      if (!sku) return
-      const qty = num(extra.Qty)
-      const entry = bySku.get(sku) || { SKU: sku, Qty: 0, sources: [] }
-      entry.Qty += qty
-      entry.sources.push({ key: `manual-${sku}`, qty, label: `${qty} added manually` })
-      bySku.set(sku, entry)
-    })
+    // Drop the rows the ticks no longer justify. A hand-added row is never dropped here -
+    // only `removeLine` takes one off.
+    for (let i = lineRows().length - 1; i >= 0; i--) {
+      const row = lineRows()[i]
+      if (row._manual) continue
+      if (!bySku.has(text(row.SKU))) pageState?.removeChild(ITEMS, i, NODE)
+    }
 
-    return [...bySku.values()]
-      .filter((entry) => entry.Qty > 0)
-      .map((entry) => {
-        const label = skuLabelOf(entry.SKU)
-        return { ...entry, primary: label.primary, secondary: label.secondary, uom: label.uom }
+    bySku.forEach((entry, sku) => {
+      const at = lineIndexOf(sku)
+      if (at < 0) {
+        pageState?.addChild(ITEMS, { SKU: sku, Qty: entry.Qty, _sources: entry.sources }, NODE)
+        return
+      }
+      const row = lineRows()[at]
+      // A hand-added row that a tick now also covers keeps its own quantity on top.
+      const manual = row._manual ? num(row.Qty) : 0
+      pageState?.setChildren(ITEMS, at, null, { Qty: entry.Qty + manual, _sources: entry.sources }, NODE)
+    })
+  }
+
+  /** The bill, read straight off the node. One row per SKU. */
+  const groupedLines = computed(() => {
+    pageState?.useNode(NODE)
+    return lineRows()
+      .filter((row) => num(row.Qty) > 0)
+      .map((row) => {
+        const label = skuLabelOf(row.SKU)
+        return {
+          SKU: text(row.SKU),
+          Qty: num(row.Qty),
+          Price: row.Price,
+          sources: Array.isArray(row._sources) ? row._sources : [],
+          manual: row._manual === true,
+          primary: label.primary,
+          secondary: label.secondary,
+          uom: label.uom
+        }
       })
   })
 
@@ -273,17 +313,14 @@ export function useInvoiceAddContext () {
       // Turning it ON selects everything, which is the common case and keeps the toggle
       // useful on its own. Turning it OFF clears the selection so a later re-tick does not
       // silently restore a set the user had narrowed and then abandoned.
-      setField('ReturnCodes', on ? creditableReturns.value.map((row) => row.code) : [])
+      selectedReturnCodes.value = on ? creditableReturns.value.map((row) => row.code) : []
     }
   })
 
   /** Which of the available returns this invoice credits. */
   const selectedReturnCodes = computed({
-    get: () => {
-      const value = field('ReturnCodes', [])
-      return Array.isArray(value) ? value : []
-    },
-    set: (value) => setField('ReturnCodes', Array.isArray(value) ? [...value] : [])
+    get: () => csv(field('OutletReturnCodes')),
+    set: (value) => setField('OutletReturnCodes', (Array.isArray(value) ? value : []).map(text).filter(Boolean).join(','))
   })
 
   /**
@@ -300,49 +337,33 @@ export function useInvoiceAddContext () {
   const returnDeduction = computed(() =>
     selectedReturns.value.reduce((sum, row) => sum + row.amount, 0))
 
-  /**
-   * Per-SKU price overrides typed on step 2, as `{ [SKU]: price }`.
-   *
-   * Held separately from the lines because a line is DERIVED (from ticks and extras) and is
-   * rebuilt whenever those change — an override written onto a line would be lost the moment
-   * a consumption was re-ticked. Keyed by SKU, it survives.
-   */
-  const priceOverrides = computed({
-    get: () => {
-      const value = field('PriceOverrides', {})
-      return value && typeof value === 'object' ? value : {}
-    },
-    set: (value) => setField('PriceOverrides', value && typeof value === 'object' ? value : {})
-  })
-
-  /** Add a SKU to the bill by hand, or top up the quantity if it is already an extra. */
+  /** Add a SKU to the bill by hand, or top up the quantity if it is already a line. */
   const addExtraItem = (sku, qty = 1) => {
     const code = text(sku)
     const quantity = num(qty)
     if (!code || quantity <= 0) return
-    const existing = extraItems.value.find((row) => text(row.SKU) === code)
-    extraItems.value = existing
-      ? extraItems.value.map((row) => (text(row.SKU) === code ? { ...row, Qty: num(row.Qty) + quantity } : row))
-      : [...extraItems.value, { SKU: code, Qty: quantity }]
+    const at = lineIndexOf(code)
+    if (at < 0) pageState?.addChild(ITEMS, { SKU: code, Qty: quantity, _manual: true, _sources: [] }, NODE)
+    else pageState?.setChildren(ITEMS, at, 'Qty', num(lineRows()[at].Qty) + quantity, NODE)
   }
 
   /**
    * Drop a line from the bill.
    *
-   * A manually added SKU is removed outright. A line that came from a ticked consumption
-   * cannot be removed this way — its quantity is what was actually counted, and deleting it
-   * would bill the outlet for less than it consumed without any record of the decision.
-   * Untick the consumption in step 1 instead.
+   * A hand-added SKU is removed outright. A line that came from a ticked consumption cannot
+   * be removed this way - its quantity is what was actually counted. Untick the consumption.
    */
   const removeLine = (sku) => {
-    const code = text(sku)
-    extraItems.value = extraItems.value.filter((row) => text(row.SKU) !== code)
+    const at = lineIndexOf(sku)
+    if (at < 0) return
+    if (!lineRows()[at]._manual) return
+    pageState?.removeChild(ITEMS, at, NODE)
   }
 
+  /** The typed unit price. It lives ON the line now, so a re-tick can no longer lose it. */
   const setLinePrice = (sku, value) => {
-    const key = text(sku)
-    if (!key) return
-    priceOverrides.value = { ...priceOverrides.value, [key]: num(value) }
+    const at = lineIndexOf(sku)
+    if (at >= 0) pageState?.setChildren(ITEMS, at, 'Price', num(value), NODE)
   }
 
   /**
@@ -354,8 +375,9 @@ export function useInvoiceAddContext () {
    * instead of the UI patching a total the engine never saw.
    */
   const resolvePrice = (sku, listCode) => {
-    const override = priceOverrides.value[text(sku)]
-    if (override !== undefined && override !== null && override !== '') return num(override)
+    const at = lineIndexOf(sku)
+    const typed = at >= 0 ? lineRows()[at].Price : undefined
+    if (typed !== undefined && typed !== null && typed !== '') return num(typed)
     return priceOf(sku, listCode)
   }
 
@@ -482,6 +504,60 @@ export function useInvoiceAddContext () {
     if (seeded && !text(field('OutletCode'))) outletCode.value = seeded
   }
 
+  const { user } = useAuth()
+  const actorName = () => text(user.value?.name || user.value?.email)
+
+  /**
+   * THE LIVE BATCH - the header and the dependent tail only.
+   *
+   * The LINES are not rebuilt here. They live in `children`, which is where the user put
+   * them, and `withItems: false` is what stops this pass splicing the same rows back on top
+   * of them - a write the children watcher below would answer with another rebuild, for ever
+   * (UI_PAGE_STATE.md §5B.3 - watch the input, never the output).
+   */
+  function rebuild () {
+    const outlet = text(outletCode.value)
+    const lines = groupedLines.value.map((line) => ({ SKU: line.SKU, Qty: line.Qty }))
+    if (!outlet || !lines.length) {
+      pageState?.applyLive([], { keep: [NODE] })
+      return
+    }
+    const listCode = text(priceListCode.value)
+    const today = new Date().toISOString().slice(0, 10)
+    pageState.applyLive(buildInvoiceGenerationNodes({
+      outletCode: outlet,
+      username: actorName(),
+      actorName: actorName(),
+      date: today,
+      dueDate: text(dueDate.value) || today,
+      priceListCode: listCode,
+      lines,
+      consumptionCodes: selectedCodes.value,
+      returnRows: selectedReturns.value,
+      discountType: text(discountType.value) || 'FLAT',
+      discountValue: num(discountValue.value),
+      comment: text(comment.value),
+      withItems: false,
+      resolvePrice,
+      // The SAME resolver the review step displays, so the tax the user agreed to and the
+      // tax the sheet stores are one calculation, not two that happen to agree.
+      calculateLineTax: makeLineTaxResolver({ priceListCode: listCode, resolvePrice })
+    }), { keep: [NODE] })
+  }
+
+  // Ticking a consumption re-seeds the lines it contributes; everything else only re-cuts
+  // the header and the tail. `repriceInvoiceInPageState` fills each line's figures in place.
+  pageState?.derive([
+    { key: 'invoiceAdd:ticks', on: { resource: NODE, field: 'OutletConsumptionCode' }, handler: () => { seedLinesFromConsumptions(); rebuild() } },
+    { key: 'invoiceAdd:lines', on: { resource: NODE, children: ITEMS }, handler: () => { repriceInvoiceInPageState(pageState); rebuild() } },
+    { key: 'invoiceAdd:returns', on: { resource: NODE, field: 'OutletReturnCodes' }, handler: rebuild },
+    { key: 'invoiceAdd:applyReturns', on: { resource: NODE, control: 'ApplyReturns' }, handler: rebuild },
+    { key: 'invoiceAdd:discountType', on: { resource: NODE, control: 'DiscountType' }, handler: () => { repriceInvoiceInPageState(pageState); rebuild() } },
+    { key: 'invoiceAdd:discountValue', on: { resource: NODE, control: 'DiscountValue' }, handler: () => { repriceInvoiceInPageState(pageState); rebuild() } },
+    { key: 'invoiceAdd:terms', on: { resource: NODE, field: 'PriceListCode' }, handler: () => { repriceInvoiceInPageState(pageState); rebuild() } },
+    { key: 'invoiceAdd:dueDate', on: { resource: NODE, field: 'DueDate' }, handler: rebuild, immediate: false }
+  ])
+
   return {
     pageState,
     initNode,
@@ -497,8 +573,6 @@ export function useInvoiceAddContext () {
     discountValue,
     comment,
     selectedCodes,
-    extraItems,
-    priceOverrides,
     setLinePrice,
     skuLabelOf,
     skuCandidates,

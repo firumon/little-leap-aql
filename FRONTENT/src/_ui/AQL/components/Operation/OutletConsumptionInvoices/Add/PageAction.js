@@ -1,13 +1,3 @@
-import { useAuth } from 'src/composables/core/useAuth'
-import { buildInvoiceGenerationNodes } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoicePayload'
-import {
-  resolvePriceListCode,
-  invoiceDueDaysFor,
-  dueDateFrom,
-  makeLineTaxResolver
-} from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceCalculation'
-import { useInvoiceIndex } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceIndex'
-import { priceOf } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionStock'
 
 /**
  * OutletConsumptionInvoices › Add › PageAction — JS modifier (tier CP: resource + page).
@@ -29,11 +19,11 @@ import { priceOf } from 'src/_resource/Operation/OutletConsumptions/composables/
  * built-in increment performs the move (§4).
  *
  * ── A THIN ADAPTER, NOTHING MORE (UI_RESOURCE_DOMAIN_LOGIC.md §9.1) ──
- * `submit` collects the wizard's answers and hands them to `buildInvoiceGenerationNodes`.
- * It performs NO arithmetic and builds NO rows: which columns the header carries, how the
- * lines are priced and taxed, which consumptions get walked to `INVOICE_GENERATED` and which
- * returns get marked adjusted are all decided in Layer 2 — identically whether an invoice is
- * raised here or chained off a consumption submit (Zero UI Schema Invention).
+ * THE BATCH IS LIVE. `useInvoiceAddContext` hands the wizard's answers to
+ * `buildInvoiceGenerationNodes` on every change, so which columns the header carries, how
+ * the lines are priced and taxed, which consumptions get walked to `INVOICE_GENERATED` and
+ * which returns get marked adjusted are all decided in Layer 2 as the user works. `submit`
+ * only validates (UI_PAGE_STATE.md §5B).
  *
  * It re-reads the control fields rather than importing the page context, because a
  * `PageAction.js` runs OUTSIDE any component `setup()` and cannot call the `inject()` the
@@ -42,19 +32,15 @@ import { priceOf } from 'src/_resource/Operation/OutletConsumptions/composables/
  */
 
 const NODE = 'OutletConsumptionInvoices'
+const ITEMS = 'OutletConsumptionInvoiceItems'
 
 const text = (value) => (value == null ? '' : String(value).trim())
 const num = (value) => {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : 0
 }
-const asArray = (value) => (Array.isArray(value) ? value : [])
 
-export default (props, { pageState, resourceConfig }) => {
-  // Safe outside setup: `useAuth` only reaches Pinia stores and calls no `inject()`. `user`
-  // stays a computed, so reading it at submit time gives the live session user.
-  const { user } = useAuth()
-
+export default (props, { pageState }) => {
   /**
    * Register the page's form node.
    *
@@ -65,86 +51,12 @@ export default (props, { pageState, resourceConfig }) => {
    */
   pageState.useNode(NODE)
 
-  const field = (header, fallback = '') => {
-    const value = pageState.getControls(header, null, NODE)
-    return value === undefined || value === null ? fallback : value
-  }
-
-  // Defaulted to 1, never read bare. Before the first step move `currentStep` may not be set,
-  // and an undefined step falls past the step-1 branch below into the item check — which
-  // vetoes `next` on a wizard that has not asked for items yet, stranding the user on step 1.
   const step = () => pageState.meta?.currentStep || 1
-  const outlet = () => text(field('OutletCode'))
-  const selectedCodes = () => asArray(field('ConsumptionCodes', [])).map(text).filter(Boolean)
-  const extras = () => asArray(field('ExtraItems', []))
-  const overrides = () => {
-    const value = field('PriceOverrides', {})
-    return value && typeof value === 'object' ? value : {}
-  }
+  const outlet = () => text(pageState.getRecord('OutletCode', NODE))
 
-  /**
-   * The billable lines, rebuilt from the same answers the step cards derived them from.
-   *
-   * This is the one piece of shaping the adapter does, and it is unavoidable: the lines live
-   * only as a `computed()` inside the page context, which this module cannot reach. The
-   * GROUPING RULE is the same one the context applies — one row per SKU, quantities summed
-   * across every ticked count — so the bill submitted is the bill reviewed.
-   */
-  function billableLines () {
-    const { pendingInvoiceGeneration, itemsOfConsumption } = useInvoiceIndex()
-    const chosen = new Set(selectedCodes())
-    const bySku = new Map()
-
-    pendingInvoiceGeneration.value
-      .filter((row) => chosen.has(text(row.Code)))
-      .forEach((row) => {
-        // The aggregate's indexed join, not `row.$OutletConsumptionItems`: list records carry
-        // no nested children, so that accessor would submit an empty bill.
-        asArray(itemsOfConsumption(row.Code))
-          .filter((item) => text(item?.Status || 'Active').toUpperCase() === 'ACTIVE')
-          .forEach((item) => {
-            const sku = text(item.SKU)
-            if (!sku) return
-            bySku.set(sku, (bySku.get(sku) || 0) + num(item.Qty))
-          })
-      })
-
-    extras().forEach((extra) => {
-      const sku = text(extra.SKU)
-      if (!sku) return
-      bySku.set(sku, (bySku.get(sku) || 0) + num(extra.Qty))
-    })
-
-    return [...bySku.entries()]
-      .filter(([, qty]) => qty > 0)
-      .map(([SKU, Qty]) => ({ SKU, Qty }))
-  }
-
-  /**
-   * The returns this invoice actually credits.
-   *
-   * OPT-IN and per-return: nothing is credited unless the user turned return credits on, and
-   * then only the ones they ticked. Crediting is not just a deduction — it also marks the
-   * return adjusted — so an unticked return must be left completely untouched.
-   *
-   * The qualifying rule (adjustment required, not done, not cancelled) still lives in
-   * Layer 2; this only intersects it with the selection.
-   */
-  function creditedReturns (outletCode) {
-    if (field('ApplyReturns', false) !== true) return []
-    const chosen = new Set(asArray(field('ReturnCodes', [])).map(text).filter(Boolean))
-    if (!chosen.size) return []
-    const { returnsAwaitingAdjustment } = useInvoiceIndex()
-    return returnsAwaitingAdjustment.value
-      .filter((row) => text(row.OutletCode) === outletCode && chosen.has(text(row.Code)))
-  }
-
-  /** The user's price overrides, else the price list — the same resolver step 2 previewed. */
-  function resolvePrice (sku, listCode) {
-    const override = overrides()[text(sku)]
-    if (override !== undefined && override !== null && override !== '') return num(override)
-    return priceOf(sku, listCode)
-  }
+  // The lines are the node's own children now, so there is nothing to re-derive here: the
+  // bill this checks IS the bill the batch carries.
+  const billableLines = () => pageState.getChildRows(ITEMS, NODE).filter((row) => num(row.Qty) > 0)
 
   return {
     get actions () {
@@ -175,37 +87,10 @@ export default (props, { pageState, resourceConfig }) => {
     },
 
     submit: () => {
-      const { operatingRules } = useInvoiceIndex()
-      const outletCode = outlet()
-      const rules = operatingRules.value
-      const priceListCode = text(field('PriceListCode')) || resolvePriceListCode(outletCode, rules)
-      const today = new Date().toISOString().slice(0, 10)
+      if (!outlet()) return { valid: false, message: 'Select an outlet to invoice.' }
+      if (!billableLines().length) return { valid: false, message: 'This invoice has no billable lines.' }
 
-      const result = buildInvoiceGenerationNodes({
-        outletCode,
-        username: user.value?.name || user.value?.email || '',
-        actorName: user.value?.name || user.value?.email || '',
-        date: today,
-        dueDate: text(field('DueDate')) || dueDateFrom(today, invoiceDueDaysFor(outletCode, rules)),
-        priceListCode,
-        lines: billableLines(),
-        consumptionCodes: selectedCodes(),
-        returnRows: creditedReturns(outletCode),
-        discountType: text(field('DiscountType')) || 'FLAT',
-        discountValue: num(field('DiscountValue', 0)),
-        comment: text(field('Comment')),
-        resolvePrice,
-        // The SAME resolver the review step displayed, built from the same price resolver —
-        // so the tax the user agreed to and the tax the sheet stores are one calculation, not
-        // two that happen to agree.
-        calculateLineTax: makeLineTaxResolver({ priceListCode, resolvePrice })
-      })
-
-
-      const applied = pageState.applyNodes(result)
-      if (applied.valid === false) return false
-
-      return { successMsg: applied.successMsg }
+      return { successMsg: 'Invoice generated.' }
     }
   }
 }

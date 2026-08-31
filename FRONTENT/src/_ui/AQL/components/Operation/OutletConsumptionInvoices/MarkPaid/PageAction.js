@@ -1,7 +1,5 @@
-import { useAuth } from 'src/composables/core/useAuth'
 import { useDataStore } from 'src/stores/data'
-import { buildSettlementNodes } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoicePayload'
-import { settlementGate } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceWorkflow'
+import { settlementGate, validateSettlement } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceWorkflow'
 import { countsAsPayment } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceCalculation'
 import { NODE } from 'src/_ui/AQL/composables/Operation/OutletConsumptionInvoices/MarkPaid/useInvoiceSettleContext'
 
@@ -32,13 +30,11 @@ const text = (value) => (value == null ? '' : String(value).trim())
 const asRow = (value) => (value && typeof value === 'object' ? value : {})
 
 export default (props, { pageState, resourceConfig, resourceRecord }) => {
-  // Safe outside setup: both only reach Pinia stores and call no `inject()`.
-  const { user } = useAuth()
+  // Safe outside setup: reaches Pinia stores and calls no `inject()`.
   const dataStore = useDataStore()
 
   const record = () => asRow(resourceRecord?.record?.value)
-  const actor = () => text(user.value?.name || user.value?.email || '')
-  const control = (key) => pageState?.getControls(key, null, NODE)
+  const control = (key) => pageState?.getControls(key, undefined, NODE)
 
   /** This invoice's own payment rows — the join the builder derives the balance from. */
   const paymentsFor = (code) => (dataStore.getRecords('OutletPayments') || [])
@@ -67,20 +63,17 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
       const gate = settlementGate(invoice, payments)
       if (!gate.allowed) return { valid: false, message: gate.reason }
 
-      const result = buildSettlementNodes({
+      const check = validateSettlement({
         record: invoice,
-        payments,
         reason: control('SettlementReason'),
         comment: control('SettlementComment'),
         mismatchAmount: control('SettlementMismatchAmount'),
-        actorName: actor()
+        balanceDue: gate.balance
       })
+      if (!check.valid) return { valid: false, message: check.message }
 
-
-      const applied = pageState.applyNodes(result)
-      if (applied.valid === false) return false
       return {
-        successMsg: applied.successMsg,
+        successMsg: 'Invoice settled.',
         // Lands back on the record so the settlement banner is the first thing seen.
         // `reset()` first, or the typed reason survives and re-seeds the next visit.
         onSuccess: () => {

@@ -27,7 +27,7 @@ import {
   progressOf,
   PENDING_PAYMENT
 } from './useInvoiceWorkflow'
-import { buildInvoiceItemNodes, changedInvoiceItemRows } from 'src/_resource/Operation/OutletConsumptionInvoiceItems/composables/useInvoiceItemPayload'
+import { nodePayloadForParent, changedInvoiceItemRows } from 'src/_resource/Operation/OutletConsumptionInvoiceItems/composables/useInvoiceItemPayload'
 const INVOICES = 'OutletConsumptionInvoices'
 const INVOICE_ITEMS = 'OutletConsumptionInvoiceItems'
 const CONSUMPTIONS = 'OutletConsumptions'
@@ -45,23 +45,7 @@ const codeList = (values) => (Array.isArray(values) ? values : []).map(text).fil
 /** The batch path an invoice's children chain their parent code off. */
 export const INVOICE_REF_PATH = `${INVOICES}.latest.code`
 
-// ROW builder: one OutletConsumptionInvoiceItems sheet row.
-export function invoiceItemRow (row, extra) {
-  return resourceRow(INVOICE_ITEMS, row, extra)
-}
-
 const rowOf = (row) => asRow(row?.data ?? row)
-
-// The three header figures the line rows add up to. One definition for both derive rules.
-function sumItemFigures (rows = []) {
-  const list = (Array.isArray(rows) ? rows : []).map(rowOf)
-  const sum = (key) => list.reduce((total, row) => total + num(row[key]), 0)
-  return {
-    Subtotal: sum('Total'),
-    TotalTaxableAmount: sum('TaxableAmount'),
-    TotalTaxAmount: sum('TaxAmount')
-  }
-}
 
 // NODE builder: an invoice and its lines, fully priced and taxed here. Layer 3 passes
 // `{ SKU, Qty }` and binds. `options.withDerive` (on by default) keeps totals in step.
@@ -104,17 +88,33 @@ export function invoiceNode (parent = {}, children = [], extra = {}, options = {
     parent, extra,
     { Date: date, DueDate: dueDate, OutletCode: outletCode, PriceListCode: priceListCode, ...totals })
 
-  const rows = (priced?.lines || []).map((line) => invoiceItemRow(line))
+  const itemBucket = nodePayloadForParent(priced?.lines || [])
 
   return {
     resource: INVOICES,
     record,
-    // No bucket when there are no lines, so a merge can set the header without wiping
-    // lines that are already there.
-    ...(rows.length ? { children: [{ resource: INVOICE_ITEMS, records: rows , permissions: { update: 'You are not allowed to update this outlet consumption invoice item.' }}] } : {}),
+    ...(itemBucket.length ? { children: itemBucket } : {}),
     permissions: { create: 'You are not allowed to create an invoice.' },
     ...(options.withDerive === false ? {} : { derive: invoiceCompositionDerive() })
-  , successMsg: 'Invoice cancelled.', successMsg: 'Invoice updated.'}
+  }
+}
+
+// The invoice a VISIT raises, seeded from the consumption and what it sold. The one place
+// that says which consumption columns an invoice inherits, so no screen re-decides it.
+// `existing` is the invoice as it stands, so a price list already picked survives a
+// re-seed; a blank one falls back to the outlet's own default inside `invoiceNode`.
+export function invoiceNodeForConsumption (consumption = {}, soldRows = [], { existing = {}, resolvePrice } = {}) {
+  const entry = asRow(consumption)
+  const lines = (Array.isArray(soldRows) ? soldRows : []).map(asRow)
+    .map((row) => ({ SKU: text(row.SKU), Qty: num(row.Qty) }))
+    .filter((row) => row.SKU && row.Qty > 0)
+  if (!lines.length) return null
+  return invoiceNode({
+    ...asRow(existing),
+    OutletCode: text(entry.OutletCode),
+    Date: text(entry.Date),
+    Username: text(entry.Username)
+  }, lines, {}, resolvePrice ? { resolvePrice } : {})
 }
 
 // ─── The invoice while it is being COMPOSED in pageState ─────────────────────
@@ -187,8 +187,8 @@ export function repriceInvoiceInPageState (pageState) {
 export function invoiceCompositionDerive () {
   const reprice = (value, pageState) => repriceInvoiceInPageState(pageState)
   return [
-    { on: { resource: INVOICES, children: INVOICE_ITEMS , permissions: { create: 'You are not allowed to create this outlet consumption invoice.' }}, handler: reprice },
-    { on: { resource: INVOICES, control: DISCOUNT_TYPE , permissions: { update: 'You are not allowed to update this outlet consumption invoice.' }}, handler: reprice },
+    { on: { resource: INVOICES, children: INVOICE_ITEMS }, handler: reprice },
+    { on: { resource: INVOICES, control: DISCOUNT_TYPE }, handler: reprice },
     { on: { resource: INVOICES, control: DISCOUNT_VALUE }, handler: reprice },
     { on: { resource: INVOICES, field: 'PriceListCode' }, handler: (value, pageState, previous) => {
       // A different list re-prices every line: the typed prices were for the old one.
@@ -218,10 +218,21 @@ export function buildInvoiceDocumentNodes ({
   returnCodes = [],
   linkReturnRows = null,
   actorName = '',
-  comment = ''
+  comment = '',
+  // The LIVE path holds the lines in the node already and prices them in place, so it asks
+  // for the header and the dependent tail only. Re-stating the bucket there would splice
+  // the same rows back on every pass and the children watcher would never settle.
+  withItems = true
 } = {}) {
   if (!invoice?.lines?.length) {
     return [{ valid: false, message: 'Nothing on this invoice could be priced. Check the price list covers these SKUs.' }]
+  }
+
+  // A line the price list does not cover bills at zero, and the sheet rejects it with
+  // "Price is required" AFTER the consumption stamps have already gone out. Stop here.
+  const unpriced = invoice.lines.filter((line) => line.Unpriced).map((line) => text(line.SKU))
+  if (unpriced.length) {
+    return [{ valid: false, message: `No price for ${unpriced.join(', ')} in this price list. Add the price, or remove the item.` }]
   }
 
   const date = text(invoiceDate) || todayISO()
@@ -274,19 +285,29 @@ export function buildInvoiceDocumentNodes ({
   })
 
   const credits = Array.isArray(linkReturnRows) ? linkReturnRows : []
+  // `[]`, not `{ nodes: [] }` — this list is SPREAD below, and an object threw
+  // "linked is not iterable" for every invoice raised without a return credit.
   const linked = credits.length
     ? buildReturnInvoiceAdjustmentLinkedNodes({ returnRows: credits, invoiceCode: batchRef(INVOICE_REF_PATH), actorName })
-    : { nodes: [] }
+    : []
 
+  // ONE composite: the header and its lines land together, and GAS writes the parent code
+  // onto every child itself. The totals on `header` come from the one engine above, so no
+  // reader has to add the lines up a second time.
   return [
-    { resource: INVOICES, record: header, reload: [INVOICES], successMsg: 'Invoice generated.' },
-    ...buildInvoiceItemNodes(invoice.lines, batchRef(INVOICE_REF_PATH)),
+    {
+      resource: INVOICES,
+      record: header,
+      // Without the lines this is a MERGE onto the node the page already holds - it must
+      // not replace, or the children go with it.
+      ...(withItems ? { children: nodePayloadForParent(invoice.lines) } : { merge: true }),
+      reload: [INVOICES],
+      permissions: { create: 'You are not allowed to create an invoice.' },
+      successMsg: 'Invoice generated.'
+    },
     ...ledger,
     ...markGenerated,
-    ...linked,
-    // The stored totals follow the line items, so an edit to a row in pageState cannot
-      // leave the header claiming a figure nothing adds up to.
-      { resource: INVOICES, derive: [{ on: { resource: INVOICE_ITEMS, records: true }, handler: (rows, pageState) => pageState.setRecord(null, sumItemFigures(rows), INVOICES) }] }
+    ...linked
   ]
 }
 
@@ -305,6 +326,7 @@ export function buildInvoiceGenerationNodes ({
   discountType = 'FLAT',
   discountValue = 0,
   comment = '',
+  withItems = true,
   calculateLineTax = null,
   // A RESOLVER, not pre-priced lines: the override then flows through tax and discount
   // apportionment inside the one engine.
@@ -347,7 +369,8 @@ export function buildInvoiceGenerationNodes ({
     returnCodes: credits.map((row) => text(row.Code)),
     linkReturnRows: credits,
     actorName,
-    comment
+    comment,
+    withItems
   })
 }
 
@@ -366,9 +389,7 @@ export function buildInvoiceBalanceTransitionNodes ({
   if (!code) return [{ valid: false, message: 'The invoice could not be identified.' }]
 
   const transition = transitionForBalance(invoice, balance)
-  if (!transition) return [
-    
-  ]
+  if (!transition) return []
 
   return [
     { resource: INVOICES, actions: [{ ...{
@@ -404,16 +425,18 @@ export function buildSettlementNodes ({
 
   const note = text(comment) || `Settled: ${check.settlement.SettlementReason}.`
 
+  // The audited action, not a plain field write: GAS gates it on `markPaid`, so a role
+  // granted settlement without record-edit rights can still close the invoice.
   return [
-    { resource: INVOICES, actions: [{ ...{
-      action: 'MarkPaid', column: 'Progress', columnValue: 'PAID'
-    }, code: textOrRef(code), data: {
-      fields: {
+    { resource: INVOICES, actions: [{
+      action: 'MarkPaid', column: 'Progress', columnValue: 'PAID',
+      code: textOrRef(code),
+      data: { fields: {
         SettlementReason: check.settlement.SettlementReason,
         SettlementMismatchAmount: check.settlement.SettlementMismatchAmount,
         ...stampFields('ProgressPaid', actorName, note)
-      }
-    } }], reload: [INVOICES], successMsg: 'Invoice settled.' }
+      } }
+    }], reload: [INVOICES], permissions: { markPaid: 'You are not allowed to settle this invoice.' }, successMsg: 'Invoice settled.' }
   ]
 }
 
@@ -527,7 +550,9 @@ export function recalculateStoredInvoice ({
     // Returns are not editable here; carried through so the payable still nets them off.
     returnDeduction: num(row.ReturnDeductionTotal),
     resolvePrice,
-    calculateLineTax
+    // Built from THIS resolver when the caller gives none. A tax resolver without the
+    // price taxes every line on zero, so it is not left to each caller to remember.
+    calculateLineTax: calculateLineTax || makeLineTaxResolver({ priceListCode: chosen, resolvePrice })
   })
 }
 
@@ -619,13 +644,14 @@ export function buildInvoiceUpdateNodes ({
 
   nodes.push(...ledger)
 
-  const calculated = new Map(invoice.lines.map((line) => [text(line.SKU), line]))
-
   // Which rows actually moved is the ITEM resource's own question.
   const itemRecords = changedInvoiceItemRows(lines, invoice.lines, sameMoney)
-  const itemUpdates = itemRecords.length
-  if (itemUpdates) nodes.push({ resource: INVOICE_ITEMS, many: true, records: itemRecords, reload: [INVOICE_ITEMS] })
+  if (itemRecords.length) {
+    nodes.push({ resource: INVOICE_ITEMS, many: true, records: itemRecords, reload: [INVOICE_ITEMS], permissions: { update: 'You are not allowed to update invoice items.' } })
+  }
 
+  nodes[0].permissions = { update: 'You are not allowed to edit this invoice.' }
+  nodes[0].successMsg = 'Invoice updated.'
   return nodes
 }
 
@@ -634,7 +660,7 @@ export function useInvoicePayload () {
   return {
     INVOICE_REF_PATH,
     invoiceNode,
-    invoiceItemRow,
+    invoiceNodeForConsumption,
     buildInvoiceGenerationNodes,
     buildInvoiceBalanceTransitionNodes,
     buildSettlementNodes,

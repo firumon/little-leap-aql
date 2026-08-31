@@ -155,7 +155,7 @@ const CurrencyField = resolveFieldComponent('currency', 'add')
 const NumberField = resolveFieldComponent('number', 'add')
 
 const {
-  ui, money, groupedLines, invoice, extraItems, selectedCodes,
+  ui, money, groupedLines, invoice, selectedCodes,
   skuCandidatesFor, setLinePrice, removeLine, addExtraItem, step: currentStep
 } = useInvoiceAddContext()
 
@@ -191,9 +191,6 @@ const skuCandidates = computed(() => skuCandidatesFor(''))
 // Capped for the same reason, and the drawer's own filter narrows what is shown within it.
 const visibleCandidates = computed(() => skuCandidates.value.slice(0, 25))
 
-/** SKUs the user added by hand — the only ones a remove button is offered for. */
-const manualSkus = computed(() => new Set(extraItems.value.map((row) => String(row.SKU || '').trim())))
-
 /**
  * The rows, joined to the CALCULATED lines so each shows the price actually used and the tax
  * it attracted. The calculation is read, never repeated — `invoice.lines` is the same array
@@ -208,7 +205,7 @@ const lines = computed(() => {
       price: Number(priced.Price) || 0,
       total: Number(priced.Total) || 0,
       tax: Number(priced.TaxAmount) || 0,
-      manual: manualSkus.value.has(line.SKU)
+      manual: line.manual
     }
   })
 })

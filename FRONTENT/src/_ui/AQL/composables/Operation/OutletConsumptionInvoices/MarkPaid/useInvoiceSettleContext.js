@@ -49,7 +49,9 @@ export function useInvoiceSettleContext () {
   const currencyCode = computed(() => invoiceCurrencyOf(record.value?.PriceListCode))
   const money = (value) => _C(Number(value) || 0, true, currencyCode.value)
 
-  const control = (key) => pageState?.getControls(key, null, NODE)
+  // `MarkPaid` is registered `kind: navigate`, so `setActions` has no request to attach a
+  // value to and drops it. Writing a control re-cuts the live batch.
+  const control = (key) => pageState?.getControls(key, undefined, NODE)
   const setControl = (key, value) => pageState?.setControls(key, value, NODE)
 
   const reason = computed(() => String(control('SettlementReason') || '').trim())

@@ -19,7 +19,9 @@ import {
 } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoicePayload'
 import { canEditInvoice, progressMetaOf, isPaid, isCancelled } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceWorkflow'
 
-const NODE = 'InvoiceEdit'
+// The real resource node. The edit's answers are CONTROLS on it: the record columns are
+// written by `buildInvoiceUpdateNodes`, never typed straight onto the node.
+export const NODE = 'OutletConsumptionInvoices'
 
 const text = (value) => (value == null ? '' : String(value).trim())
 const num = (value) => {
@@ -46,15 +48,12 @@ export function useInvoiceEditContext () {
   const defaults = computed(() => invoiceEditDefaults(record.value || {}))
 
   // The node outlives a route change, so answers typed against another invoice are ignored.
-  const ownsAnswers = () => text(pageState?.getControls('EditFor', null, NODE)) === code.value
+  const ownsAnswers = () => text(pageState?.useNode(NODE).node.value.code) === code.value
 
-  const field = (header) => {
-    if (!ownsAnswers()) return undefined
-    return pageState?.getControls(header, null, NODE)
-  }
+  const field = (header) => (ownsAnswers() ? pageState?.getControls(header, null, NODE) : undefined)
 
   const setField = (header, value) => {
-    pageState?.setControls('EditFor', code.value, NODE)
+    if (!pageState?.hasNode(NODE)) pageState?.initResource(NODE, { isPrimaryKey: true, code: code.value })
     pageState?.setControls(header, value, NODE)
   }
 

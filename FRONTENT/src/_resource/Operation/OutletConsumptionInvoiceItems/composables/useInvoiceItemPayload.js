@@ -1,5 +1,3 @@
-import { textOrRef } from 'src/utils/appHelpers'
-
 // The invoice's line rows. Their SHAPE lived in OutletConsumptions, which does not own
 // them - a consumption discovers what is billable, an invoice item states what was billed.
 
@@ -16,29 +14,17 @@ export function invoiceItemOf (line) {
   return record
 }
 
-export function invoiceItemRow (line, invoiceCode) {
-  return {
-    OutletConsumptionInvoiceCode: textOrRef(invoiceCode),
-    ...invoiceItemOf(line),
-    Status: 'Active'
-  }
+// One sheet row. The parent code is NOT set here: a composite save fills it in from the
+// invoice it just wrote, so no caller has to hold a code that does not exist yet.
+export function invoiceItemRow (line) {
+  return { ...invoiceItemOf(line), Status: 'Active' }
 }
 
-export function invoiceItemPermissions () {
-  return { [RESOURCE_NAME]: 'create' }
-}
-
-// An empty list yields NO node - a bulk with no records is a wasted round trip.
-export function buildInvoiceItemNodes (lines = [], invoiceCode = '') {
-  const records = (Array.isArray(lines) ? lines : [])
-    .filter(Boolean)
-    .map((line) => invoiceItemRow(line, invoiceCode))
-  if (!records.length) return [
-    
-  ]
-  return [
-    { resource: RESOURCE_NAME, many: true, records: records, reload: [RESOURCE_NAME] }
-  ]
+// The `children` bucket an invoice carries. A list, never a node: these rows are written
+// inside the parent's composite. No bucket when empty, so a merge cannot wipe live lines.
+export function nodePayloadForParent (lines = []) {
+  const records = (Array.isArray(lines) ? lines : []).filter(Boolean).map(invoiceItemRow)
+  return records.length ? [{ resource: RESOURCE_NAME, records }] : []
 }
 
 // The rows an EDIT rewrites, keyed by Code. Only lines whose figures actually moved, so
@@ -70,8 +56,7 @@ export function useInvoiceItemPayload () {
     ITEM_FIGURES,
     invoiceItemOf,
     invoiceItemRow,
-    invoiceItemPermissions,
-    buildInvoiceItemNodes,
+    nodePayloadForParent,
     changedInvoiceItemRows
   }
 }

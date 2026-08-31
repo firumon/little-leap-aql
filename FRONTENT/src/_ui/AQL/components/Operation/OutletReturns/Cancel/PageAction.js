@@ -1,5 +1,3 @@
-import { useAuth } from 'src/composables/core/useAuth'
-import { buildReturnCancelNodes } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
 import { canCancel } from 'src/_resource/Operation/OutletReturns/composables/useReturnProgress'
 
 /**
@@ -32,12 +30,8 @@ const NODE = 'OutletReturns'
 const text = (value) => (value == null ? '' : String(value).trim())
 
 export default (props, { pageState, resourceConfig, resourceRecord }) => {
-  // Safe outside setup: `useAuth` only reaches Pinia stores and calls no `inject()`.
-  const { user } = useAuth()
-
   const record = () => resourceRecord?.record?.value || {}
-  const actor = () => text(user.value?.name || user.value?.email || '')
-  const reason = () => text(pageState.getControls('CancelReason', null, NODE))
+  const reason = () => text(pageState.getControls('CancelReason', '', NODE))
 
   return {
     actions: ['cancel', 'submit'],
@@ -63,13 +57,8 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
       const why = reason()
       if (!why) return { valid: false, message: 'A cancellation reason is required.' }
 
-      const result = buildReturnCancelNodes({ record: row, reason: why, actorName: actor() })
-
-
-      const applied = pageState.applyNodes(result)
-      if (applied.valid === false) return false
       return {
-        successMsg: applied.successMsg,
+        successMsg: `Return ${text(row.Code)} cancelled.`,
         // The typed reason would otherwise survive the navigation and re-seed the next
         // return opened on this route.
         onSuccess: () => { pageState.reset() }

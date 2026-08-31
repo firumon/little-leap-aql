@@ -1,3 +1,12 @@
+import { watch } from 'vue'
+import { useAuth } from 'src/composables/core/useAuth'
+import { buildReturnCancelNodes } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
+
+const NODE = 'OutletReturns'
+// A control, not the queued Cancel action's field: `Cancel` is registered `kind: navigate`,
+// and `setActions` silently drops a write to an action that has no request envelope.
+const REASON = 'CancelReason'
+
 /**
  * OutletReturns › Cancel contract — `/operation/outlet-returns/{code}/_action/cancel`.
  *
@@ -37,5 +46,28 @@ export default {
   PropsPageHeader: {
     title: 'Cancel Return',
     reload: false
+  },
+
+  // The batch is cut as soon as a reason is typed, so `PageAction.submit` only validates
+  // (UI_PAGE_STATE.md §5B).
+  ready ({ pageState, resourceRecord }) {
+    const { user } = useAuth()
+    const loaded = () => resourceRecord?.record?.value || {}
+
+    watch(() => [
+      String(loaded().Code ?? '').trim(),
+      pageState.getControls(REASON, '', NODE)
+    ], () => {
+      const record = loaded()
+      const code = String(record.Code ?? '').trim()
+      if (!code) return
+      // Created once, never replaced: initResource would drop the reason being typed.
+      if (!pageState.hasNode(NODE)) pageState.initResource(NODE, { isPrimaryKey: true, code })
+      pageState.applyLive(buildReturnCancelNodes({
+        record,
+        reason: String(pageState.getControls(REASON, '', NODE) ?? '').trim(),
+        actorName: user.value?.name || user.value?.email || ''
+      }), { keep: [NODE] })
+    }, { immediate: true, deep: true })
   }
 }

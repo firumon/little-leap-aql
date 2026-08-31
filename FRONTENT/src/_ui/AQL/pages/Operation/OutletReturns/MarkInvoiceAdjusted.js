@@ -1,3 +1,7 @@
+import { watch } from 'vue'
+import { useAuth } from 'src/composables/core/useAuth'
+import { buildReturnMarkInvoiceAdjustedNodes } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
+
 /**
  * OutletReturns › MarkInvoiceAdjusted contract —
  * `/operation/outlet-returns/{code}/_action/mark-invoice-adjusted`.
@@ -36,5 +40,22 @@ export default {
   PropsPageHeader: {
     title: 'Settle Return Credit',
     reload: false
+  },
+
+  // Nothing is collected on this route, so the batch is complete the moment the return
+  // loads and `PageAction.submit` only validates (UI_PAGE_STATE.md §5B).
+  ready ({ pageState, resourceRecord }) {
+    const { user } = useAuth()
+    const NODE = 'OutletReturns'
+    const loaded = () => resourceRecord?.record?.value || {}
+
+    watch(() => String(loaded().Code ?? '').trim(), (code) => {
+      if (!code) return
+      if (!pageState.hasNode(NODE)) pageState.initResource(NODE, { isPrimaryKey: true, code })
+      pageState.applyLive(buildReturnMarkInvoiceAdjustedNodes({
+        record: loaded(),
+        actorName: user.value?.name || user.value?.email || ''
+      }), { keep: [NODE] })
+    }, { immediate: true })
   }
 }

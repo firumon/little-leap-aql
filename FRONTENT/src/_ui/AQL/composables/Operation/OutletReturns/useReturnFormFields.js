@@ -12,7 +12,8 @@ import {
   REASON_META,
   REASONS,
   REASON_REQUIRING_COMMENT,
-  returnRequiresTrack
+  returnRequiresTrack,
+  isFlagged
 } from 'src/_resource/Operation/OutletReturns/composables/useReturnProgress'
 
 export const NODE = 'OutletReturns'
@@ -137,8 +138,9 @@ export function useReturnFormFields () {
   // The SOURCE bill, never `ConsumptionInvoiceCode` — that column belongs to the credit chain.
   const selectedInvoiceCode = computed(() => text(form.value.SourceInvoiceCode))
 
-  const invoiceRequired = computed(() => form.value.InvoiceAdjustmentRequired === true)
-  const warehouseRequired = computed(() => form.value.WarehouseActionRequired === true)
+  // The sheet stores 'TRUE'/'FALSE' strings, so the toggle reads through `isFlagged`.
+  const invoiceRequired = computed(() => isFlagged(form.value.InvoiceAdjustmentRequired))
+  const warehouseRequired = computed(() => isFlagged(form.value.WarehouseActionRequired))
 
   const priceListCode = computed(() => text(pageState.getControls(PRICE_LIST_CONTROL, null, NODE)))
 
@@ -182,12 +184,13 @@ export function useReturnFormFields () {
   }
 
   function setInvoiceRequired (value) {
-    set('InvoiceAdjustmentRequired', value === true)
-    if (value !== true) set('SourceInvoiceCode', '')
+    const on = isFlagged(value)
+    set('InvoiceAdjustmentRequired', on)
+    if (!on) set('SourceInvoiceCode', '')
   }
 
   function setWarehouseRequired (value) {
-    const on = value === true
+    const on = isFlagged(value)
     set('WarehouseActionRequired', on)
     // Cleared on the way off, so a stale warehouse code cannot ride along on a return whose
     // stock never leaves the shelf.
@@ -373,9 +376,8 @@ export function useReturnFormSeed (mode = 'add') {
     pageState.setControls(HYDRATED_FOR_CONTROL, code, NODE)
     pageState.load(record, NODE)
 
-    const flag = (value) => value === true || t(value).toUpperCase() === 'TRUE'
-    set('InvoiceAdjustmentRequired', flag(record.InvoiceAdjustmentRequired))
-    set('WarehouseActionRequired', flag(record.WarehouseActionRequired))
+    set('InvoiceAdjustmentRequired', isFlagged(record.InvoiceAdjustmentRequired))
+    set('WarehouseActionRequired', isFlagged(record.WarehouseActionRequired))
 
     // The stored price is the figure that was recorded, so it is treated as typed: the
     // cascade must never re-price a correction someone already made.
@@ -394,7 +396,7 @@ export function useReturnFormSeed (mode = 'add') {
 
     if (outletLocked.value) setOutlet(presetOutletCode.value)
 
-    if (form.value.WarehouseActionRequired === true && !t(form.value.WarehouseCode)) {
+    if (isFlagged(form.value.WarehouseActionRequired) && !t(form.value.WarehouseCode)) {
       set('WarehouseCode', warehouseOptions.value[0]?.value || '')
     }
   })

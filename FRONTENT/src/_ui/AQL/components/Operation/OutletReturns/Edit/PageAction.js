@@ -1,4 +1,3 @@
-import { buildReturnUpdateNodes } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
 import { REASON_REQUIRING_COMMENT } from 'src/_resource/Operation/OutletReturns/composables/useReturnProgress'
 
 const NODE = 'OutletReturns'
@@ -29,20 +28,8 @@ export default (props, { pageState, resourceRecord, resourceConfig }) => {
         return { valid: false, message: 'Reason "Other" needs an explanation.' }
       }
 
-      const result = buildReturnUpdateNodes({
-        record: stored(),
-        form: entry,
-        // The figure the form resolved and the officer may have overridden. The builder
-        // records what it is handed; it never prices anything itself.
-        resolvedPrice: Number(entry.Price) || 0
-      })
-
-
-
-      const applied = pageState.applyNodes(result)
-      if (applied.valid === false) return false
       return {
-        successMsg: applied.successMsg,
+        successMsg: `Return ${text(stored().Code)} updated.`,
         // The typed form would otherwise survive the navigation and re-seed the next visit.
         onSuccess: () => { pageState.reset() }
       }

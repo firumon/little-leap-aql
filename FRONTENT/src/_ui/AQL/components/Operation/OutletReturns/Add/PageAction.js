@@ -1,5 +1,3 @@
-import { useAuth } from 'src/composables/core/useAuth'
-import { buildReturnCreateNodes } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
 import { returnRequiresTrack, REASON_REQUIRING_COMMENT } from 'src/_resource/Operation/OutletReturns/composables/useReturnProgress'
 
 const NODE = 'OutletReturns'
@@ -7,12 +5,8 @@ const NODE = 'OutletReturns'
 const text = (value) => (value == null ? '' : String(value).trim())
 
 export default (props, { pageState, resourceConfig }) => {
-  // Safe outside setup: `useAuth` only reaches Pinia stores and calls no `inject()`.
-  const { user } = useAuth()
-
   const node = pageState.useNode(NODE)
   const form = () => node.record.value || {}
-  const actor = () => text(user.value?.name || user.value?.email || '')
 
   return {
     actions: ['cancel', 'submit'],
@@ -37,20 +31,8 @@ export default (props, { pageState, resourceConfig }) => {
         return { valid: false, message: 'Reason "Other" needs an explanation.' }
       }
 
-      const result = buildReturnCreateNodes({
-        form: entry,
-        // The figure the form resolved and the officer may have overridden. The builder
-        // records what it is handed; it never prices anything itself.
-        resolvedPrice: Number(entry.Price) || 0,
-        actorName: actor()
-      })
-
-
-
-      const applied = pageState.applyNodes(result)
-      if (applied.valid === false) return false
       return {
-        successMsg: applied.successMsg,
+        successMsg: 'Return logged.',
         // The typed form would otherwise survive the navigation and re-seed the next visit.
         onSuccess: () => { pageState.reset() }
       }

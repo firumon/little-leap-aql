@@ -1,5 +1,3 @@
-import { useAuth } from 'src/composables/core/useAuth'
-import { buildReturnMarkInvoiceAdjustedNodes } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
 import { canMarkInvoiceAdjusted } from 'src/_resource/Operation/OutletReturns/composables/useReturnProgress'
 
 /**
@@ -26,11 +24,7 @@ import { canMarkInvoiceAdjusted } from 'src/_resource/Operation/OutletReturns/co
 const text = (value) => (value == null ? '' : String(value).trim())
 
 export default (props, { pageState, resourceConfig, resourceRecord }) => {
-  // Safe outside setup: `useAuth` only reaches Pinia stores and calls no `inject()`.
-  const { user } = useAuth()
-
   const record = () => resourceRecord?.record?.value || {}
-  const actor = () => text(user.value?.name || user.value?.email || '')
 
   return {
     actions: ['cancel', 'submit'],
@@ -49,13 +43,8 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         return { valid: false, message: 'This return no longer needs an invoice adjustment.' }
       }
 
-      const result = buildReturnMarkInvoiceAdjustedNodes({ record: row, actorName: actor() })
-
-
-      const applied = pageState.applyNodes(result)
-      if (applied.valid === false) return false
       return {
-        successMsg: applied.successMsg,
+        successMsg: `Return ${text(row.Code)} settled against its invoice.`,
         onSuccess: () => { pageState.reset() }
       }
     },

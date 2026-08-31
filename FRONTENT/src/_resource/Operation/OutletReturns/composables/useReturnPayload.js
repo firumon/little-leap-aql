@@ -1,6 +1,7 @@
 
 import { batchRef, textOrRef } from 'src/utils/appHelpers'
 import { toDateTime24 } from 'src/utils/dateHelpers'
+import { stampFields } from 'src/utils/workflowStamp'
 import {
   SUBMITTED,
   COMPLETED,
@@ -17,10 +18,9 @@ import {
 } from './useReturnProgress'
 
 import { INTO_WAREHOUSE, STOCK_REFERENCE, stockMovementRow, buildStockMovementNodes } from 'src/_resource/Operation/StockMovements/composables/useStockMovementPayload'
-import { OFF_THE_SHELF, ONTO_THE_SHELF, OUTLET_REFERENCE, outletMovementRow } from 'src/_resource/Operation/OutletMovements/composables/useOutletMovementPayload'
+import { OFF_THE_SHELF, ONTO_THE_SHELF, OUTLET_REFERENCE, outletMovementRow, buildOutletMovementNode, buildOutletMovementNodes } from 'src/_resource/Operation/OutletMovements/composables/useOutletMovementPayload'
 const RESOURCE_NAME = 'OutletReturns' // this module IS OutletReturns — always
 
-const OUTLET_MOVEMENTS = 'OutletMovements'
 const STOCK_MOVEMENTS = 'StockMovements'
 
 const REF_RETURN = 'OutletReturn'
@@ -58,20 +58,9 @@ export function storedQtyChange (record) {
   })
 }
 
-// The outlet ledger's own row builder. `qtyChange` already carries its sign from
-// `returnQtyChange` - the matrix below is what decides the direction, not the caller.
-function outletMovement ({ outletCode, storageName, sku, qtyChange, referenceCode, movementDate }) {
-  return outletMovementRow({
-    outletCode,
-    storageName,
-    sku,
-    qty: qtyChange,
-    direction: toNumber(qtyChange) < 0 ? OFF_THE_SHELF : ONTO_THE_SHELF,
-    referenceType: OUTLET_REFERENCE.RETURN,
-    referenceCode,
-    movementDate
-  })
-}
+// `qtyChange` already carries its sign from `returnQtyChange`; the ledger takes a
+// magnitude plus a direction.
+const shelfDirection = (qtyChange) => (toNumber(qtyChange) < 0 ? OFF_THE_SHELF : ONTO_THE_SHELF)
 
 import { useAuth } from 'src/composables/core/useAuth'
 import { resourceRow } from 'src/composables/resources/useResourceConfig'
@@ -145,7 +134,7 @@ export function buildReturnCreateNodes ({ form = {}, resolvedPrice = 0, actorNam
     // Only ever populated by the invoice chain, never at creation: a return carries a
     // SETTLEMENT invoice code once an invoice has actually credited it.
     ConsumptionInvoiceCode: '',
-    SourceInvoiceCode: text(entry.SourceInvoiceCode),
+    SourceInvoiceCode: invoiceRequired ? text(entry.SourceInvoiceCode) : '',
     WarehouseActionRequired: flag(warehouseRequired),
     WarehouseActionCompleted: 'FALSE',
     WarehouseCode: warehouseRequired ? text(entry.WarehouseCode) : '',
@@ -161,15 +150,17 @@ export function buildReturnCreateNodes ({ form = {}, resolvedPrice = 0, actorNam
 
   const qtyChange = returnQtyChange(qty, { invoiceRequired, warehouseRequired })
   if (qtyChange !== 0) {
-    nodes.push({ resource: OUTLET_MOVEMENTS, record: outletMovement({
+    nodes.push(buildOutletMovementNode(outletMovementRow({
       outletCode,
       storageName: entry.StorageName,
       sku,
-      qtyChange,
+      qty: qtyChange,
+      direction: shelfDirection(qtyChange),
+      referenceType: OUTLET_REFERENCE.RETURN,
       // The return does not exist yet; GAS resolves this to its generated code (§9.4).
       referenceCode: batchRef(RETURN_REF_PATH),
       movementDate: record.Date
-    }), reload: ['OutletStorages'] , permissions: { create: 'You are not allowed to create this outlet movement.' }})
+    })))
   }
 
   return nodes
@@ -211,7 +202,7 @@ export function buildReturnUpdateNodes ({ record = {}, form = {}, resolvedPrice 
     InvoiceAdjustmentRequired: flag(invoiceRequired),
     WarehouseActionRequired: flag(warehouseRequired),
     WarehouseCode: warehouseRequired ? text(entry.WarehouseCode) : '',
-    SourceInvoiceCode: text(entry.SourceInvoiceCode)
+    SourceInvoiceCode: invoiceRequired ? text(entry.SourceInvoiceCode) : ''
   }
 
   // The completion question asked of the row as it will BE once this lands, never of the
@@ -223,16 +214,18 @@ export function buildReturnUpdateNodes ({ record = {}, form = {}, resolvedPrice 
 
   const delta = returnQtyChange(qty, { invoiceRequired, warehouseRequired }) - storedQtyChange(stored)
   if (delta !== 0) {
-    nodes.push({ resource: OUTLET_MOVEMENTS, record: outletMovement({
+    nodes.push(buildOutletMovementNode(outletMovementRow({
       outletCode: stored.OutletCode,
       storageName: stored.StorageName,
       // The correction follows the CORRECTED item: an edit that changed the SKU has to move
       // the units back onto the shelf they never left and off the one they did.
       sku,
-      qtyChange: delta,
+      qty: delta,
+      direction: shelfDirection(delta),
+      referenceType: OUTLET_REFERENCE.RETURN,
       referenceCode: code,
       movementDate: todayISO()
-    }), reload: ['OutletStorages'] , permissions: { create: 'You are not allowed to create this outlet movement.' }})
+    })))
   }
 
   return nodes
@@ -265,7 +258,7 @@ export function buildReturnBulkCreateNodes ({ lines = [], actorName = '', moveme
   }
 
   const nodes = [{ resource: RESOURCE_NAME, many: true, records: records, reload: [RESOURCE_NAME] , permissions: { create: 'You are not allowed to create this outlet return.' }}]
-  if (movements.length) nodes.push({ resource: OUTLET_MOVEMENTS, many: true, records: movements, reload: ['OutletStorages'] , permissions: { create: 'You are not allowed to create this outlet movement.' }})
+  nodes.push(...buildOutletMovementNodes(movements))
 
   return nodes
 }
@@ -397,30 +390,27 @@ export function buildReturnCancelNodes ({ record = {}, reason = '', actorName = 
   if (isCancelled(row)) return [{ valid: false, message: 'This return is already cancelled.' }]
   if (!text(reason)) return [{ valid: false, message: 'A cancellation reason is required.' }]
 
+  // A plain update, not the `Cancel` action: the route REPLACED that mutate, so it is
+  // registered as `kind: navigate` and has no executeAction envelope to build.
   const nodes = [
-    { resource: RESOURCE_NAME, actions: [{ ...{
-      action: 'Cancel',
-      column: 'Progress',
-      columnValue: CANCELLED
-    }, code: textOrRef(code), data: {
-      fields: {
-        Comment: text(reason),
-        ProgressCancelledComment: text(reason),
-        ProgressCancelledBy: text(actorName)
-      }
-    } }], reload: [RESOURCE_NAME, 'OutletStorages'] , permissions: { Cancel: 'You are not allowed to cancel this outlet return.' }}
+    { resource: RESOURCE_NAME, code: textOrRef(code), record: {
+      Progress: CANCELLED,
+      ...stampFields('ProgressCancelled', actorName, reason)
+    }, reload: [RESOURCE_NAME, 'OutletStorages'] , permissions: { Cancel: 'You are not allowed to cancel this outlet return.' }, successMsg: `Return ${code} cancelled.` }
   ]
 
   const reversal = -storedQtyChange(row)
   if (reversal !== 0) {
-    nodes.push({ resource: OUTLET_MOVEMENTS, record: outletMovement({
+    nodes.push(buildOutletMovementNode(outletMovementRow({
       outletCode: row.OutletCode,
       storageName: row.StorageName,
       sku: row.SKU,
-      qtyChange: reversal,
+      qty: reversal,
+      direction: shelfDirection(reversal),
+      referenceType: OUTLET_REFERENCE.RETURN,
       referenceCode: code,
       movementDate: todayISO()
-    }), reload: ['OutletStorages'] , permissions: { create: 'You are not allowed to create this outlet movement.' }})
+    })))
   }
 
   return nodes

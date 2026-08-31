@@ -182,14 +182,16 @@ const actionOptions = [
   { label: 'Disposed — written off, not re-stocked', value: DISPOSED }
 ]
 
-const actionType = computed(() => pageState?.getControls('WarehouseActionType', null, NODE) || STOCKED)
+// Two of the three answers are COLUMNS the builder writes, so they bind to the record;
+// the bin only names a target for the movement node, so it stays a control (§5B.5).
+const actionType = computed(() => pageState?.getRecord('WarehouseAction', NODE) || STOCKED)
 const isStocked = computed(() => actionType.value === STOCKED)
 const storageName = computed(() => pageState?.getControls('WarehouseStorageName', null, NODE) || '')
-const disposalReason = computed(() => pageState?.getControls('WarehouseDisposalReason', null, NODE) || '')
+const disposalReason = computed(() => pageState?.getRecord('WarehouseActionDisposedReason', NODE) || '')
 
-const setActionType = (value) => pageState?.setControls('WarehouseActionType', value, NODE)
+const setActionType = (value) => pageState?.setRecord('WarehouseAction', value, NODE)
 const setStorageName = (value) => pageState?.setControls('WarehouseStorageName', value, NODE)
-const setDisposalReason = (value) => pageState?.setControls('WarehouseDisposalReason', value, NODE)
+const setDisposalReason = (value) => pageState?.setRecord('WarehouseActionDisposedReason', value, NODE)
 
 const dispositionCaption = computed(() => isStocked.value
   ? `Adds ${quantity.value} units back to ${warehouseName.value || 'the target warehouse'}.`
@@ -218,7 +220,7 @@ const outcomeText = computed(() => {
 onMounted(async () => {
   // Control fields only — this route changes no field the user typed into a form, so the
   // node holds working state and nothing else (§13.5).
-  pageState.setControls('WarehouseActionType', STOCKED, NODE)
+  pageState.setRecord('WarehouseAction', STOCKED, NODE)
   pageState.setControls('WarehouseStorageName', DEFAULT_STORAGE, NODE)
   pageState.setControls('WarehouseDisposalReason', '', NODE)
 

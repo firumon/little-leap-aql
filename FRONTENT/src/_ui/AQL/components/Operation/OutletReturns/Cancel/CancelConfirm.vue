@@ -85,6 +85,7 @@ import { storedQtyChange } from 'src/_resource/Operation/OutletReturns/composabl
 defineOptions({ name: 'OutletReturnsCancelConfirm', inheritAttrs: false })
 
 const NODE = 'OutletReturns'
+const REASON = 'CancelReason'
 
 const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
@@ -137,11 +138,14 @@ const reversalColor = computed(() => (reversal.value === 0 ? 'grey-7' : 'primary
 const reversalIcon = computed(() => (reversal.value === 0 ? 'info' : 'swap_vert'))
 const reversalClass = computed(() => (reversal.value === 0 ? 'bg-grey-2 text-body2' : 'bg-blue-1 text-body2'))
 
-const reason = computed(() => pageState?.getControls('CancelReason', null, NODE) || '')
-const setReason = (value) => pageState?.setControls('CancelReason', value, NODE)
+// A control, not the queued Cancel action's field: `Cancel` is registered `kind: navigate`,
+// so `setActions` has no request to attach the value to and drops it. Writing it re-cuts
+// the live batch the contract keeps applied.
+const reason = computed(() => pageState?.getControls(REASON, '', NODE) || '')
+const setReason = (value) => pageState?.setControls(REASON, value ?? '', NODE)
 
 onMounted(async () => {
-  pageState.setControls('CancelReason', '', NODE)
+  pageState.setControls(REASON, '', NODE)
   await Promise.all([outlets, skus, products].map((res) => res.reload()))
 })
 </script>

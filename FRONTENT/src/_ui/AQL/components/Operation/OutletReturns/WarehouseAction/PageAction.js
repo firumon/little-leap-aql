@@ -1,5 +1,3 @@
-import { useAuth } from 'src/composables/core/useAuth'
-import { buildReturnWarehouseActionNodes } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
 import {
   STOCKED,
   DISPOSED,
@@ -37,12 +35,9 @@ const NODE = 'OutletReturns'
 const text = (value) => (value == null ? '' : String(value).trim())
 
 export default (props, { pageState, resourceConfig, resourceRecord }) => {
-  // Safe outside setup: `useAuth` only reaches Pinia stores and calls no `inject()`.
-  const { user } = useAuth()
-
   const record = () => resourceRecord?.record?.value || {}
-  const actor = () => text(user.value?.name || user.value?.email || '')
   const control = (key) => text(pageState.getControls(key, null, NODE))
+  const column = (key) => text(pageState.getRecord(key, NODE))
 
   return {
     actions: ['cancel', 'submit'],
@@ -61,27 +56,15 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         return { valid: false, message: 'This return no longer needs a warehouse action.' }
       }
 
-      const actionType = control('WarehouseActionType') || STOCKED
-      const disposalReason = control('WarehouseDisposalReason')
+      const actionType = column('WarehouseAction') || STOCKED
+      const disposalReason = column('WarehouseActionDisposedReason')
 
       if (actionType === DISPOSED && !disposalReason) {
         return { valid: false, message: 'A disposal reason is required when writing stock off.' }
       }
 
-      const result = buildReturnWarehouseActionNodes({
-        record: row,
-        actionType,
-        storageName: control('WarehouseStorageName'),
-        disposalReason,
-        actorName: actor()
-      })
-
-
-
-      const applied = pageState.applyNodes(result)
-      if (applied.valid === false) return false
       return {
-        successMsg: applied.successMsg,
+        successMsg: `Warehouse action confirmed for ${text(row.Code)}.`,
         // The typed disposal reason would otherwise survive the navigation and re-seed the
         // next return opened on this route.
         onSuccess: () => { pageState.reset() }

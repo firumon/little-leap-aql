@@ -6,8 +6,7 @@
  *    explicit residual waiver carrying a reason; anything else stays PARTIALLY_PAID.
  * 2. Payment cancellation + invoice state reversion ('Cancel', 'MarkPendingPayment', 'MarkPartiallyPaid', 'MarkPaid')
  *
- * All builders return canonical envelope:
- *   { valid, nodes, permissions, message, successMsg }
+ * Every builder returns an array of Nodes (UI_PAGE_STATE.md §5), or a one-element veto.
  *
  * PURE: no Vue refs, no Pinia stores, no injects.
  */
@@ -40,12 +39,50 @@ const num = (value) => {
 const todayISO = () => new Date().toISOString().slice(0, 10)
 
 
+/**
+ * The columns EVERY receipt row of one collection shares. One Mode, one Reference and one
+ * collector are fanned across N rows here, so no screen writes a payment column itself.
+ */
+export function paymentRowFields ({ mode = 'Cash', reference = '', username = '', actorName = '', comment = '', date = '' } = {}) {
+  const payMode = text(mode) || 'Cash'
+  const user = text(username) || text(actorName) || 'Unknown'
+  return {
+    Date: text(date) || todayISO(),
+    Mode: payMode,
+    Reference: text(reference),
+    Username: user,
+    Progress: 'SUBMITTED',
+    ...stampFields('ProgressSubmitted', actorName || user, text(comment) || `Payment received via ${payMode}.`),
+    Status: 'Active'
+  }
+}
+
+/**
+ * Stamp the shared columns onto the receipt rows the PAGE holds.
+ *
+ * Only what MOVED is written: the rows are watched, and an unchanged write would answer its
+ * own watcher for ever (UI_PAGE_STATE.md §5B.3).
+ */
+export function stampPaymentRowsInPageState (pageState, options = {}) {
+  const rows = pageState.getRecordRows(PAYMENTS)
+  if (!rows.length) return
+  const fields = paymentRowFields(options)
+  rows.forEach((row, index) => {
+    const moved = Object.keys(fields).filter((key) => row[key] !== fields[key])
+    if (moved.length) {
+      pageState.setRecords(index, null, Object.fromEntries(moved.map((key) => [key, fields[key]])), PAYMENTS)
+    }
+  })
+}
+
 // ─── 1. Payment Creation Batch ────────────────────────────────────────────────
 
 export function buildOutletPaymentCreationNodes ({
   selectedOutletCode = '',
   selectedInvoices = [],
-  allocations = {},
+  // The receipt rows the PAGE holds, `[{ OutletConsumptionInvoiceCode, Amount }]`. They are
+  // read, never restated: `withRows: false` leaves them where the user put them.
+  rows = [],
   totalAmount = 0,
   mode = 'Cash',
   reference = '',
@@ -55,7 +92,8 @@ export function buildOutletPaymentCreationNodes ({
   existingPayments = [],
   waiveResidual = false,
   waiverReason = '',
-  waiverComment = ''
+  waiverComment = '',
+  withRows = true
 } = {}) {
   if (!canCreatePayment()) {
     return [{ valid: false, message: 'You do not have permission to submit payments.' }]
@@ -78,8 +116,11 @@ export function buildOutletPaymentCreationNodes ({
 
   const payMode = text(mode) || 'Cash'
 
+  const allocated = new Map((Array.isArray(rows) ? rows : []).map(asRow)
+    .map((row) => [text(row.OutletConsumptionInvoiceCode), num(row.Amount)]))
+
   const activeAllocations = invoices
-    .map(inv => ({ invoice: inv, code: text(inv.Code), allocated: num(allocations[text(inv.Code)]) }))
+    .map(inv => ({ invoice: inv, code: text(inv.Code), allocated: num(allocated.get(text(inv.Code))) }))
     .filter(item => item.allocated > 0)
 
   if (!activeAllocations.length) {
@@ -88,7 +129,7 @@ export function buildOutletPaymentCreationNodes ({
 
   const allocatedSum = activeAllocations.reduce((sum, item) => sum + item.allocated, 0)
   if (Math.abs(allocatedSum - amount) > 0.01) {
-    return { valid: false, message: `Sum of allocations (${allocatedSum.toFixed(2)}) does not match collected amount (${amount.toFixed(2)}).` }
+    return [{ valid: false, message: `Sum of allocations (${allocatedSum.toFixed(2)}) does not match collected amount (${amount.toFixed(2)}).` }]
   }
 
   if (waiveResidual && !text(waiverReason)) {
@@ -96,33 +137,29 @@ export function buildOutletPaymentCreationNodes ({
   }
 
   const nodes = []
-  // Merged in below rather than assumed: only a batch that actually force-settles an invoice
-  // asks for the `MarkPaid` privilege.
-  let settlementPermissions = {}
-  const dateStr = todayISO()
-  const user = text(username) || text(actorName) || 'Unknown'
   const paymentsByInvoice = indexPaymentsByInvoice(existingPayments)
+  const shared = paymentRowFields({ mode: payMode, reference, username, actorName, comment })
+
+  if (withRows) {
+    nodes.push({
+      resource: PAYMENTS,
+      many: true,
+      records: activeAllocations.map(({ code, allocated }) => ({
+        OutletCode: outletCode,
+        OutletConsumptionInvoiceCode: code,
+        Amount: allocated,
+        ...shared
+      })),
+      reload: [PAYMENTS],
+      permissions: { create: 'You are not allowed to record a payment.' },
+      successMsg: 'Payment recorded.'
+    })
+  } else {
+    nodes.push({ resource: PAYMENTS, merge: true, record: {}, reload: [PAYMENTS], permissions: { create: 'You are not allowed to record a payment.' }, successMsg: 'Payment recorded.' })
+  }
 
   for (const { invoice, code, allocated } of activeAllocations) {
-    // 1. Payment Record
-    const paymentRecord = {
-      Date: dateStr,
-      OutletCode: outletCode,
-      OutletConsumptionInvoiceCode: code,
-      Amount: allocated,
-      Mode: payMode,
-      Reference: text(reference),
-      Username: user,
-      Progress: 'SUBMITTED',
-      ...stampFields('ProgressSubmitted', actorName || user, text(comment) || `Payment received via ${payMode}.`),
-      Status: 'Active'
-    }
-
-    // A bulk of one: several invoices in a run write several payment rows, and they all
-    // share the one OutletPayments address.
-    nodes.push({ resource: PAYMENTS, many: true, records: [paymentRecord], reload: [PAYMENTS] , permissions: { create: 'You are not allowed to create this outlet payment.' }, successMsg: 'Payment submitted successfully.', successMsg: 'Payment receipt cancelled successfully.'})
-
-    // 2. Derive Invoice State Transition
+    // Derive Invoice State Transition
     const invBal = balanceDueOf(invoice, paymentsByInvoice.get(code) || [])
     const remaining = Math.max(0, Number((invBal - allocated).toFixed(2)))
 
@@ -197,7 +234,7 @@ export function buildOutletPaymentCancellationNodes ({
         ProgressCancelledComment: reason,
         ...stampFields('ProgressCancelled', actorName, reason)
       }
-    } }], reload: [PAYMENTS] , permissions: { update: 'You are not allowed to update this outlet payment.' }}
+    } }], reload: [PAYMENTS], permissions: { update: 'You are not allowed to cancel this payment.' }, successMsg: 'Payment receipt cancelled.' }
   ]
 
   const invoice = asRow(invoiceRecord)

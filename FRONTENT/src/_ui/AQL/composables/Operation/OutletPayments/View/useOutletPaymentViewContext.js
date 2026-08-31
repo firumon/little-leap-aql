@@ -5,7 +5,6 @@ import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useRecord } from 'src/composables/resources/useRecord'
 import { useAuth } from 'src/composables/core/useAuth'
-import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useCurrencyResource } from 'src/_resource/Master/Currencies/composables/useCurrencyResource'
 import { useOutletPaymentIndex } from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentIndex'
 import {
@@ -54,9 +53,9 @@ export function useOutletPaymentViewContext () {
   const nav = useResourceNav()
   const { code } = useRouteConfig()
   const { user } = useAuth()
-  const resourceIoStore = useResourceIoStore()
   const { _C } = useCurrencyResource()
 
+  const pageState = inject('pageState', null)
   const resourceConfig = inject('resourceConfig', null)
   const resourceRecord = inject('resourceRecord', null)
 
@@ -157,54 +156,34 @@ export function useOutletPaymentViewContext () {
     cancelDialogOpen.value = true
   }
 
-  /**
-   * Cancel the receipt and put the invoice back where it belongs.
-   *
-   * Both halves go out as ONE batch built in Layer 2: a cancellation that reversed the payment
-   * without recalculating the invoice would leave a PAID invoice with no money against it, and
-   * which state the invoice reverts to (pending, partially paid, or still paid because another
-   * receipt covers it) is an accounting decision, not a UI one.
-   */
+  // Both halves go out as ONE batch built in Layer 2: reversing the receipt without
+  // recalculating the invoice would leave a PAID invoice with no money against it.
   async function confirmCancel () {
     const reason = text(cancelComment.value)
     if (reason.length < 3) {
       $q.notify({ type: 'warning', message: 'Give a reason of at least 3 characters.', position: 'top' })
       return false
     }
+    if (!pageState) return false
 
     const actor = text(user.value?.name || user.value?.email) || 'Unknown'
-    const result = buildOutletPaymentCancellationNodes({
+    const applied = pageState.applyNodes(buildOutletPaymentCancellationNodes({
       paymentRecord: record.value,
       comment: reason,
       actorName: actor,
       invoiceRecord: invoice.value,
       allInvoicePayments: invoiceAllPayments.value
-    })
-
-    if (result.valid === false) {
-      $q.notify({ type: 'warning', message: result.message, position: 'top' })
-      return false
-    }
+    }))
+    if (applied.valid === false) return false
 
     saving.value = true
     try {
-      const response = await resourceIoStore.runBatchRequests(result.requests)
-      if (response && response.success === false) {
-        $q.notify({
-          type: 'negative',
-          message: response.message || response.error || 'Could not cancel the receipt.',
-          position: 'top'
-        })
-        return false
-      }
-
-      $q.notify({ type: 'positive', message: result.successMsg, position: 'top' })
+      const { success } = await pageState.submit({ successMsg: applied.successMsg })
+      if (!success) return false
+      pageState.reset()
       cancelDialogOpen.value = false
       nav.goTo('index')
       return true
-    } catch (err) {
-      $q.notify({ type: 'negative', message: err.message || 'Cancellation failed.', position: 'top' })
-      return false
     } finally {
       saving.value = false
     }

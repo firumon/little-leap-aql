@@ -39,7 +39,6 @@
         </div>
       </q-card-section>
 
-<!--
       <template v-if="canCancel">
         <q-separator />
         <q-card-section class="row justify-end q-py-sm">
@@ -53,7 +52,6 @@
           />
         </q-card-section>
       </template>
--->
     </q-card>
 
     <!-- REASON IS MANDATORY, and the button stays disabled until one is given. A cancellation

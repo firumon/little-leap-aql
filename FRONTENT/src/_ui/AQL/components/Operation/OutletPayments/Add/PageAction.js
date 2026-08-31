@@ -1,6 +1,3 @@
-import { useAuth } from 'src/composables/core/useAuth'
-import { useOutletPaymentIndex } from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentIndex'
-import { buildOutletPaymentCreationNodes } from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentPayload'
 
 /**
  * OutletPayments › Add › PageAction — JS modifier (tier CP: resource + page).
@@ -42,13 +39,8 @@ const num = (value) => {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : 0
 }
-const asArray = (value) => (Array.isArray(value) ? value : [])
 
 export default (props, { pageState, resourceConfig }) => {
-  // Safe outside setup: `useAuth` only reaches Pinia stores and calls no `inject()`. `user`
-  // stays a computed, so reading it at submit time gives the live session user.
-  const { user } = useAuth()
-
   /**
    * Register the page's form node.
    *
@@ -69,30 +61,10 @@ export default (props, { pageState, resourceConfig }) => {
   // `next` on a wizard that has not asked for an amount yet, stranding the user on step 1.
   const step = () => pageState.meta?.currentStep || 1
   const outlet = () => text(field('OutletCode'))
-  const invoiceCodes = () => asArray(field('InvoiceCodes', [])).map(text).filter(Boolean)
-  const allocations = () => {
-    const value = field('Allocations', {})
-    return value && typeof value === 'object' ? value : {}
-  }
+  // The receipt rows the batch actually carries - not a second copy of the answer.
+  const receiptRows = () => pageState.getRecordRows(NODE)
+  const invoiceCodes = () => receiptRows().map((row) => text(row.OutletConsumptionInvoiceCode)).filter(Boolean)
   const amount = () => num(field('Amount', 0))
-
-  /**
-   * The chosen invoices, as the aggregate's own rows.
-   *
-   * Re-resolved from `useOutletPaymentIndex` rather than carried in a control field: the
-   * builder needs each invoice's stored totals and its existing payments to decide the
-   * transition, and a snapshot written at selection time would let a payment recorded from
-   * another device in the meantime go unseen.
-   */
-  function selectedInvoices () {
-    const { openInvoices } = useOutletPaymentIndex()
-    const chosen = new Set(invoiceCodes())
-    return openInvoices.value
-      .filter((row) => chosen.has(text(row.code)))
-      .map((row) => ({ ...row, Code: text(row.code) }))
-  }
-
-  const actorName = () => text(user.value?.name || user.value?.email) || 'Unknown'
 
   return {
     get actions () {
@@ -126,7 +98,7 @@ export default (props, { pageState, resourceConfig }) => {
         return { valid: false, message: 'Enter the amount collected.' }
       }
 
-      const allocated = Object.values(allocations()).reduce((sum, value) => sum + num(value), 0)
+      const allocated = receiptRows().reduce((sum, row) => sum + num(row.Amount), 0)
       if (Math.abs(allocated - collected) > 0.01) {
         return {
           valid: false,
@@ -137,32 +109,23 @@ export default (props, { pageState, resourceConfig }) => {
       return undefined
     },
 
+    // Validation only. `useOutletPaymentAddContext` hands the wizard's answers to
+    // `buildOutletPaymentCreationNodes` on every change, so the receipt rows are already
+    // in the batch (UI_PAGE_STATE.md §5B).
     submit: () => {
-      const { rawPayments } = useOutletPaymentIndex()
-      const actor = actorName()
+      if (!outlet()) return { valid: false, message: 'Select an outlet to record payment.' }
+      if (!invoiceCodes().length) return { valid: false, message: 'Select at least one invoice to settle.' }
+      if (amount() <= 0) return { valid: false, message: 'Enter the amount collected.' }
 
-      const result = buildOutletPaymentCreationNodes({
-        selectedOutletCode: outlet(),
-        selectedInvoices: selectedInvoices(),
-        allocations: allocations(),
-        totalAmount: amount(),
-        mode: text(field('Mode')) || 'Cash',
-        reference: text(field('Reference')),
-        // The logged-in collector and today's date are stamped onto every payment row by the
-        // builder, from these two values — see `buildOutletPaymentCreationNodes`.
-        username: actor,
-        actorName: actor,
-        existingPayments: rawPayments.value,
-        waiveResidual: field('WaiveResidual', false) === true,
-        waiverReason: text(field('WaiverReason')),
-        waiverComment: text(field('WaiverComment'))
-      })
+      // A ticked invoice that got no share is a receipt row of zero. It is kept all the way
+      // through the wizard because the rows ARE the tick list, so dropping it earlier would
+      // wipe the selection and break Back. Here there is no way back, so it goes.
+      const rows = receiptRows()
+      for (let i = rows.length - 1; i >= 0; i--) {
+        if (num(rows[i].Amount) <= 0) pageState.removeRecord(i, NODE)
+      }
 
-
-      const applied = pageState.applyNodes(result)
-      if (applied.valid === false) return false
-
-      return { successMsg: applied.successMsg }
+      return { successMsg: 'Payment recorded.' }
     }
   }
 }

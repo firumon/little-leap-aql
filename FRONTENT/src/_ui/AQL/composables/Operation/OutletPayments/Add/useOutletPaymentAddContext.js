@@ -12,6 +12,7 @@ import {
   waiverCommentOf
 } from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentAllocation'
 import { settlementReasons } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceWorkflow'
+import { buildOutletPaymentCreationNodes, stampPaymentRowsInPageState } from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentPayload'
 
 /**
  * OutletPayments › Add — the injection relay and shared wizard state
@@ -110,9 +111,14 @@ export function useOutletPaymentAddContext () {
       .sort((a, b) => text(a.date).localeCompare(text(b.date)))
   })
 
+  // The receipt rows ARE the answer. One row per invoice this collection settles, carrying
+  // that invoice's code and its share - both real columns, so neither is a control.
+  const rows = () => pageState?.getRecordRows(NODE) || []
+  const rowIndexOf = (code) => rows().findIndex((row) => text(row.OutletConsumptionInvoiceCode) === text(code))
+
   const selectedCodes = computed(() => {
-    const value = field('InvoiceCodes', [])
-    return Array.isArray(value) ? value.map(text).filter(Boolean) : []
+    pageState?.useNode(NODE)
+    return rows().map((row) => text(row.OutletConsumptionInvoiceCode)).filter(Boolean)
   })
 
   /** The chosen invoices, as aggregate rows — never as bare codes. */
@@ -146,8 +152,12 @@ export function useOutletPaymentAddContext () {
   })
 
   const allocations = computed(() => {
-    const value = field('Allocations', {})
-    return value && typeof value === 'object' ? value : {}
+    pageState?.useNode(NODE)
+    return rows().reduce((map, row) => {
+      const code = text(row.OutletConsumptionInvoiceCode)
+      if (code) map[code] = num(row.Amount)
+      return map
+    }, {})
   })
 
   const mode = computed({
@@ -188,7 +198,15 @@ export function useOutletPaymentAddContext () {
    */
   function setSelectedCodes (codes) {
     const next = (Array.isArray(codes) ? codes : []).map(text).filter(Boolean)
-    setField('InvoiceCodes', next)
+    const wanted = new Set(next)
+    for (let i = rows().length - 1; i >= 0; i--) {
+      if (!wanted.has(text(rows()[i].OutletConsumptionInvoiceCode))) pageState?.removeRecord(i, NODE)
+    }
+    next.forEach((code) => {
+      if (rowIndexOf(code) < 0) {
+        pageState?.addRecord({ OutletCode: text(field('OutletCode')), OutletConsumptionInvoiceCode: code, Amount: 0 }, NODE)
+      }
+    })
     amount.value = selectedBalance.value
   }
 
@@ -238,18 +256,19 @@ export function useOutletPaymentAddContext () {
    * has to hold whether the split was produced by this button or by typing an amount.
    */
   function distribute (total) {
-    setField('Allocations', calcAutoDistribute(
+    const split = calcAutoDistribute(
       num(total),
       // The builder keys allocations by `Code`; aggregate rows carry both spellings.
       selectedInvoices.value.map((row) => ({ ...row, Code: text(row.code) })),
       index.rawPayments.value
-    ))
+    )
+    Object.entries(split).forEach(([code, value]) => setAllocation(code, value))
   }
 
+  /** The share written straight onto that invoice's receipt row. */
   function setAllocation (code, value) {
-    const key = text(code)
-    if (!key) return
-    setField('Allocations', { ...allocations.value, [key]: money2(value) })
+    const at = rowIndexOf(code)
+    if (at >= 0) pageState?.setRecords(at, 'Amount', money2(value), NODE)
   }
 
   const totalAllocated = computed(() =>
@@ -387,6 +406,55 @@ export function useOutletPaymentAddContext () {
     if (!selectedCodes.value.length) return
     amount.value = selectedBalance.value
   }
+
+  // THE LIVE BATCH: every answer goes to Layer 2 at once, so step 3 reviews the real rows
+  // and `PageAction.submit` only validates (UI_PAGE_STATE.md §5B).
+  function rebuild () {
+    const outletCode = text(field('OutletCode'))
+    const invoices = selectedInvoices.value.map((row) => ({ ...row, Code: text(row.code) }))
+    if (!outletCode || !invoices.length) {
+      // The node stays: the outlet lives on it. The empty apply drops the invoice stamps
+      // the last pass queued.
+      pageState?.applyLive([], { keep: [NODE] })
+      return
+    }
+    // The shared columns go onto the rows the page holds; the builder never restates them.
+    stampPaymentRowsInPageState(pageState, {
+      mode: text(field('Mode')) || 'Cash',
+      reference: text(field('Reference')),
+      username: collectorName.value,
+      actorName: collectorName.value,
+      comment: ''
+    })
+    pageState.applyLive(buildOutletPaymentCreationNodes({
+      selectedOutletCode: outletCode,
+      selectedInvoices: invoices,
+      rows: rows(),
+      withRows: false,
+      totalAmount: num(amount.value),
+      mode: text(field('Mode')) || 'Cash',
+      reference: text(field('Reference')),
+      // The logged-in collector and today's date are stamped onto every payment row by the
+      // builder, from these two values.
+      username: collectorName.value,
+      actorName: collectorName.value,
+      existingPayments: index.rawPayments.value,
+      waiveResidual: field('WaiveResidual', false) === true,
+      waiverReason: text(field('WaiverReason')),
+      waiverComment: text(field('WaiverComment'))
+    }), { keep: [NODE] })
+  }
+
+  pageState?.derive([
+    { key: 'paymentAdd:outlet', on: { resource: NODE, control: 'OutletCode' }, handler: rebuild },
+    { key: 'paymentAdd:rows', on: { resource: NODE, records: true }, handler: rebuild },
+    { key: 'paymentAdd:amount', on: { resource: NODE, control: 'Amount' }, handler: rebuild },
+    { key: 'paymentAdd:mode', on: { resource: NODE, control: 'Mode' }, handler: rebuild },
+    { key: 'paymentAdd:reference', on: { resource: NODE, control: 'Reference' }, handler: rebuild },
+    { key: 'paymentAdd:waive', on: { resource: NODE, control: 'WaiveResidual' }, handler: rebuild },
+    { key: 'paymentAdd:waiveReason', on: { resource: NODE, control: 'WaiverReason' }, handler: rebuild },
+    { key: 'paymentAdd:waiveComment', on: { resource: NODE, control: 'WaiverComment' }, handler: rebuild }
+  ])
 
   return {
     pageState,

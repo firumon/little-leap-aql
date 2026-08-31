@@ -1,7 +1,9 @@
-import { useAuth } from 'src/composables/core/useAuth'
 import { itemRowsForCodes } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryRows'
-import { buildDeliveryMarkCompleteNodes } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryPayload'
-import { orsisForDelivery } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryProgress'
+import {
+  deliveryRatio,
+  isInTransit,
+  orsisForDelivery
+} from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryProgress'
 
 /**
  * OutletDeliveries › MarkComplete › PageAction — JS modifier (tier 2: resource + page).
@@ -34,11 +36,7 @@ const NODE = 'OutletDeliveries'
 const text = (value) => (value == null ? '' : String(value).trim())
 
 export default (props, { pageState, resourceConfig, resourceRecord }) => {
-  // Safe outside setup: neither reaches `inject()`.
-  const { user } = useAuth()
-
   const record = () => resourceRecord?.record?.value || {}
-  const actor = () => text(user.value?.name || user.value?.email || '')
 
   /**
    * Only the rows this manifest carries.
@@ -62,19 +60,17 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
       const row = record()
       if (!text(row.Code)) return { valid: false, message: 'This delivery could not be loaded.' }
 
-      const result = buildDeliveryMarkCompleteNodes({
-        record: row,
-        orsiRows: manifestRows(),
-        actorName: actor(),
-        comment: text(pageState.getControls('CompleteComment', null, NODE))
-      })
+      // The same two questions the builder asks, so the veto the user reads here is the
+      // one that would have stopped the batch.
+      if (!isInTransit(row)) return { valid: false, message: 'Only a delivery in transit can be completed.' }
+      const ratio = deliveryRatio(row, manifestRows())
+      const outstanding = ratio.total - ratio.delivered
+      if (!ratio.total || outstanding > 0) {
+        return { valid: false, message: `${outstanding} item${outstanding === 1 ? ' is' : 's are'} still undelivered on this delivery.` }
+      }
 
-
-
-      const applied = pageState.applyNodes(result)
-      if (applied.valid === false) return false
       return {
-        successMsg: applied.successMsg,
+        successMsg: `Delivery ${text(row.Code)} completed.`,
         onSuccess: () => { pageState.reset() }
       }
     },

@@ -1,25 +1,16 @@
-import { useAuth } from 'src/composables/core/useAuth'
-import { restockItemRows } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryRows'
-import { buildDeliveryEditManifestNodes } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryPayload'
 import { isEditable } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryProgress'
 
 // Submit re-checks `isEditable` because the run may have departed while this page was open.
 // Item rows come from Layer 2, not `useRecord`: a modifier runs outside component setup.
-const SELECTION = 'DeliverySelection'
 
 const text = (value) => (value == null ? '' : String(value).trim())
 
 export default (props, { pageState, resourceConfig, resourceRecord }) => {
-  // Safe outside setup: neither reaches `inject()`.
-  const { user } = useAuth()
-
   const record = () => resourceRecord?.record?.value || {}
-  const actor = () => text(user.value?.name || user.value?.email || '')
 
-  const selectedCodes = () => {
-    const raw = pageState.getControls('Codes', null, SELECTION)
-    return Array.isArray(raw) ? raw.map(text).filter(Boolean) : []
-  }
+  // The ticks ARE the manifest's own CSV column, not a control (UI_PAGE_STATE.md §5B.2).
+  const selectedCodes = () => text(pageState.getRecord('OutletRestockItemCodes', 'OutletDeliveries'))
+    .split(',').map(text).filter(Boolean)
 
   return {
     actions: ['cancel', 'submit'],
@@ -38,19 +29,12 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         return { valid: false, message: 'Only a draft delivery can have its items edited.' }
       }
 
-      const result = buildDeliveryEditManifestNodes({
-        record: row,
-        newOrsiCodes: selectedCodes(),
-        allOrsiRows: restockItemRows(),
-        actorName: actor()
-      })
+      if (!selectedCodes().length) {
+        return { valid: false, message: 'A delivery must carry at least one item.' }
+      }
 
-
-
-      const applied = pageState.applyNodes(result)
-      if (applied.valid === false) return false
       return {
-        successMsg: applied.successMsg,
+        successMsg: `Delivery ${text(row.Code)} updated.`,
         onSuccess: () => { pageState.reset() }
       }
     },

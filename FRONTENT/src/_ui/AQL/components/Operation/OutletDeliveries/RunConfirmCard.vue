@@ -68,7 +68,7 @@ const props = defineProps({
   commentRequired: { type: Boolean, default: false },
   commentLabel: { type: String, default: 'Comment' },
   /** The `pageState` control field this card reads and writes. */
-  commentField: { type: String, default: 'RunComment' },
+  commentField: { type: String, default: 'ProgressInTransitComment' },
   /** Only used to give the `_fields` control a header name; nothing is written to it. */
   commentHeader: { type: String, default: 'ProgressInTransitComment' }
 })
@@ -97,17 +97,17 @@ const outcomeIcon = computed(() => (props.outcomeTone === 'negative' ? 'warning'
 const outcomeClass = computed(() =>
   (props.outcomeTone === 'negative' ? 'bg-red-1 text-body2' : 'bg-blue-1 text-body2'))
 
-const comment = computed(() => pageState?.getControls(props.commentField, null, NODE) || '')
-const setComment = (value) => pageState?.setControls(props.commentField, value, NODE)
+// The note is a COLUMN on the manifest, bound straight through `useRecord`. Writing it
+// re-cuts the live batch the page's `ready` keeps applied (UI_PAGE_STATE.md §5B).
+const comment = pageState?.useRecord(props.commentField, NODE)
+const setComment = (value) => { if (comment) comment.value = value ?? '' }
 
 /**
- * The HYDRATION POINT for every route that mounts this card (§5.5).
- *
- * An `_action` route has no `Create`/`Update` content to seed the node, so this seeds the
- * comment field and opens the item and restock sheets the ratio above is measured from.
+ * Opens the item and restock sheets the ratio above is measured from. The node itself is
+ * seeded by the page contract's `ready`, which also keeps the batch applied — a card
+ * mounts and unmounts, and the batch must outlive it.
  */
 onMounted(async () => {
-  pageState?.setControls(props.commentField, '', NODE)
   await preload()
 })
 </script>

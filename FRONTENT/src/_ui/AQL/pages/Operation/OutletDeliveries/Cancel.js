@@ -1,3 +1,8 @@
+import { liveDeliveryRun } from 'src/_ui/AQL/composables/Operation/OutletDeliveries/useDeliveryRunLive'
+import { buildDeliveryCancelNodes } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryPayload'
+import { itemRowsForCodes } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryRows'
+import { orsisForDelivery } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryProgress'
+
 /**
  * OutletDeliveries › Cancel contract — `/operation/outlet-deliveries/{code}/_action/cancel`.
  *
@@ -36,5 +41,18 @@ export default {
   PropsPageHeader: {
     title: 'Cancel Delivery',
     reload: false
-  }
+  },
+
+  // The batch is built as soon as a reason is typed and re-cut on every edit, so
+  // `PageAction.submit` only validates (UI_PAGE_STATE.md §5B). This sheet does NOT
+  // prefix its stamps with `Progress`.
+  ready: liveDeliveryRun({
+    commentField: 'CancelledComment',
+    build: ({ record, actorName, comment }) => buildDeliveryCancelNodes({
+      record,
+      orsiRows: itemRowsForCodes(orsisForDelivery(record)),
+      actorName,
+      reason: comment
+    })
+  })
 }

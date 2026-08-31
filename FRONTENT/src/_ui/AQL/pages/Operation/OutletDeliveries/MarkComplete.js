@@ -1,3 +1,8 @@
+import { liveDeliveryRun } from 'src/_ui/AQL/composables/Operation/OutletDeliveries/useDeliveryRunLive'
+import { buildDeliveryMarkCompleteNodes } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryPayload'
+import { itemRowsForCodes } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryRows'
+import { orsisForDelivery } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryProgress'
+
 /**
  * OutletDeliveries › MarkComplete contract —
  * `/operation/outlet-deliveries/{code}/_action/mark-complete`.
@@ -30,5 +35,17 @@ export default {
   PropsPageHeader: {
     title: 'Complete Delivery',
     reload: false
-  }
+  },
+
+  // The batch is built the moment the page opens and re-cut as the note is typed, so
+  // `PageAction.submit` only validates (UI_PAGE_STATE.md §5B).
+  ready: liveDeliveryRun({
+    commentField: 'ProgressCompletedComment',
+    build: ({ record, actorName, comment }) => buildDeliveryMarkCompleteNodes({
+      record,
+      orsiRows: itemRowsForCodes(orsisForDelivery(record)),
+      actorName,
+      comment
+    })
+  })
 }

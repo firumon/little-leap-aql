@@ -1,6 +1,3 @@
-import { useAuth } from 'src/composables/core/useAuth'
-import { restockItemRows, restockRows } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryRows'
-import { buildDeliveryMarkDeliveredNodes } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryPayload'
 import { canDeliver } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryProgress'
 
 /**
@@ -35,23 +32,17 @@ import { canDeliver } from 'src/_resource/Operation/OutletDeliveries/composables
  * runs outside any component setup and `useRecord` calls `useQuasar()`, which needs one. No
  * rule is decided locally; the rows are read and handed straight to Layer 2.
  */
-const NODE = 'OutletDeliveries'
-const SELECTION_FIELD = 'DeliverSelection'
-const COMMENT_FIELD = 'DeliverComment'
+const ITEMS = 'OutletRestockItems'
 
 const text = (value) => (value == null ? '' : String(value).trim())
 
 export default (props, { pageState, resourceConfig, resourceRecord }) => {
-  // Safe outside setup: neither reaches `inject()`.
-  const { user } = useAuth()
-
   const record = () => resourceRecord?.record?.value || {}
-  const actor = () => text(user.value?.name || user.value?.email || '')
 
-  const selectedCodes = () => {
-    const raw = pageState.getControls(SELECTION_FIELD, null, NODE)
-    return Array.isArray(raw) ? raw.map(text).filter(Boolean) : []
-  }
+  // The ticks ARE the live `OutletRestockItems` write (UI_PAGE_STATE.md §5B.2).
+  const selectedCodes = () => (pageState.getRecordRows(ITEMS) || [])
+    .map((row) => text(row?.Code))
+    .filter(Boolean)
 
   return {
     actions: ['cancel', 'submit'],
@@ -74,21 +65,13 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         return { valid: false, message: 'This delivery has come to rest and can no longer take deliveries.' }
       }
 
-      const result = buildDeliveryMarkDeliveredNodes({
-        deliveryRecord: row,
-        deliveredOrsiCodes: selectedCodes(),
-        allOrsiRows: restockItemRows(),
-        allRestockRows: restockRows(),
-        actorName: actor(),
-        comment: text(pageState.getControls(COMMENT_FIELD, null, NODE))
-      })
+      const codes = selectedCodes()
+      if (!codes.length) {
+        return { valid: false, message: 'Select at least one undelivered item on this delivery.' }
+      }
 
-
-
-      const applied = pageState.applyNodes(result)
-      if (applied.valid === false) return false
       return {
-        successMsg: applied.successMsg,
+        successMsg: `${codes.length} item${codes.length === 1 ? '' : 's'} delivered.`,
         // The ticks and the note would otherwise survive the navigation and re-seed the next
         // run opened on this route.
         onSuccess: () => { pageState.reset() }

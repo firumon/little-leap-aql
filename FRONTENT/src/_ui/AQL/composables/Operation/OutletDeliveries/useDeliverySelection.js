@@ -13,6 +13,9 @@ import { useDeliveryFormContext } from './useDeliveryFormContext'
 // Every join is a Map built in one pass, so the tree stays cheap to rebuild.
 
 const SELECTION = 'DeliverySelection'
+const NODE = 'OutletDeliveries'
+// The manifest's own CSV of allocated item codes — a real sheet column, not a control.
+const CODES_COLUMN = 'OutletRestockItemCodes'
 const WAREHOUSE_FILTER = 'DeliveryWarehouseFilter'
 const GROUP_BY = 'DeliveryGroupBy'
 
@@ -262,17 +265,19 @@ export function useDeliverySelection (options = {}) {
     return buildLevel(visibleItems.value, levels, 0, leaf, groupBy.value)
   })
 
-  // Held in a control field. The sticky bar reads it back to build the batch.
-
-  const selectedCodes = computed(() => {
-    const raw = pageState?.getControls('Codes', null, SELECTION)
-    return Array.isArray(raw) ? raw.map(text).filter(Boolean) : []
-  })
+  // THE SELECTION IS THE MANIFEST'S OWN COLUMN. `OutletRestockItemCodes` is what the
+  // sheet stores and what the builder writes, so the ticks and the row that will be sent
+  // are one value — no control mirroring them, nothing to drift (UI_PAGE_STATE.md §5B.2).
+  const selectedCodes = computed(() => text(pageState?.getRecord(CODES_COLUMN, NODE))
+    .split(',')
+    .map(text)
+    .filter(Boolean))
 
   const selectedSet = computed(() => new Set(selectedCodes.value))
 
   function setSelection (codes) {
-    pageState?.setControls('Codes', [...new Set((codes || []).map(text).filter(Boolean))], SELECTION)
+    const next = [...new Set((codes || []).map(text).filter(Boolean))]
+    pageState?.setRecord(CODES_COLUMN, next.join(','), NODE)
   }
 
   const isSelected = (code) => selectedSet.value.has(text(code))

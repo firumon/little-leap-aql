@@ -109,17 +109,22 @@ import {
   isCancelled,
   isCompleted
 } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryProgress'
+import { buildDeliveryMarkDeliveredNodes } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryPayload'
+import { restockItemRows, restockRows } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryRows'
+import { useAuth } from 'src/composables/core/useAuth'
 
 defineOptions({ name: 'OutletDeliveriesMarkDeliverSelectDeliveredItems', inheritAttrs: false })
 
 const NODE = 'OutletDeliveries'
-const SELECTION_FIELD = 'DeliverSelection'
+const ITEMS = 'OutletRestockItems'
+const MOVEMENTS = 'OutletMovements'
 const COMMENT_FIELD = 'DeliverComment'
 
 const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 
 const { ui, pageState, resourceRecord } = useDeliveryFormContext()
+const { user } = useAuth()
 const { outletGroups, preload } = useDeliveryView()
 
 const text = (value) => (value == null ? '' : String(value).trim())
@@ -145,17 +150,33 @@ const codesOf = (group) => group.items.map((line) => text(line.Code))
 const allOutstandingCodes = computed(() =>
   outstandingGroups.value.flatMap(codesOf))
 
-// Held in a control field. The sticky bar reads it back to build the batch.
-
-const selectedCodes = computed(() => {
-  const raw = pageState?.getControls(SELECTION_FIELD, null, NODE)
-  return Array.isArray(raw) ? raw.map(text).filter(Boolean) : []
-})
+// THE SELECTION IS THE NODE. A ticked line is a row in the live `OutletRestockItems`
+// write, so what this card shows ticked and what the batch delivers are one thing
+// (UI_PAGE_STATE.md §5B.2). Every tick re-cuts the batch, so the sticky bar has nothing
+// left to build.
+const selectedCodes = computed(() => (pageState?.getRecordRows(ITEMS) || [])
+  .map((row) => text(row?.Code))
+  .filter(Boolean))
 
 const selectedSet = computed(() => new Set(selectedCodes.value))
 
-const setSelection = (codes) =>
-  pageState?.setControls(SELECTION_FIELD, [...new Set((codes || []).map(text).filter(Boolean))], NODE)
+function setSelection (codes) {
+  const list = [...new Set((codes || []).map(text).filter(Boolean))]
+  const manifest = record.value || {}
+  if (!text(manifest.Code) || !list.length) {
+    pageState?.removeNode(ITEMS)
+    pageState?.removeNode(MOVEMENTS)
+    return
+  }
+  pageState.applyLive(buildDeliveryMarkDeliveredNodes({
+    deliveryRecord: manifest,
+    deliveredOrsiCodes: list,
+    allOrsiRows: restockItemRows(),
+    allRestockRows: restockRows(),
+    actorName: text(user.value?.name || user.value?.email),
+    comment: comment.value
+  }))
+}
 
 const isSelected = (code) => selectedSet.value.has(text(code))
 
@@ -203,8 +224,14 @@ const summaryLine = computed(() => {
 const outstandingLine = computed(() =>
   `${allOutstandingCodes.value.length} still to deliver on this run`)
 
+// One note stamped onto EVERY delivered row — a single value shared by many nodes, which
+// is what a node-scoped control is for (UI_PAGE_STATE.md §5B.5). Editing it re-cuts the
+// batch so the stamps follow.
 const comment = computed(() => pageState?.getControls(COMMENT_FIELD, null, NODE) || '')
-const setComment = (value) => pageState?.setControls(COMMENT_FIELD, value, NODE)
+function setComment (value) {
+  pageState?.setControls(COMMENT_FIELD, value, NODE)
+  if (selectedCodes.value.length) setSelection(selectedCodes.value)
+}
 
 // Warehouse and bin are established on the manifest; repeating them per line pushed the
 // variant that actually tells two SKUs apart out of view.
@@ -213,8 +240,6 @@ function lineCaption (line) {
 }
 
 onMounted(async () => {
-  setSelection([])
-  pageState?.setControls(COMMENT_FIELD, '', NODE)
   await preload()
 })
 </script>

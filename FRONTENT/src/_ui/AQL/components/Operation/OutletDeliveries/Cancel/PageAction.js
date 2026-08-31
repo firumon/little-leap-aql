@@ -1,6 +1,4 @@
-import { useAuth } from 'src/composables/core/useAuth'
 import { itemRowsForCodes } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryRows'
-import { buildDeliveryCancelNodes } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryPayload'
 import { orsisForDelivery } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryProgress'
 
 /**
@@ -33,12 +31,8 @@ const NODE = 'OutletDeliveries'
 const text = (value) => (value == null ? '' : String(value).trim())
 
 export default (props, { pageState, resourceConfig, resourceRecord }) => {
-  // Safe outside setup: neither reaches `inject()`.
-  const { user } = useAuth()
-
   const record = () => resourceRecord?.record?.value || {}
-  const actor = () => text(user.value?.name || user.value?.email || '')
-  const reason = () => text(pageState.getControls('CancelReason', null, NODE))
+  const reason = () => text(pageState.getRecord('CancelledComment', NODE))
 
   /** Only the rows this manifest carries — see `MarkComplete/PageAction.js`. */
   const manifestRows = () => itemRowsForCodes(orsisForDelivery(record()))
@@ -60,19 +54,10 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
       const row = record()
       if (!text(row.Code)) return { valid: false, message: 'This delivery could not be loaded.' }
 
-      const result = buildDeliveryCancelNodes({
-        record: row,
-        orsiRows: manifestRows(),
-        actorName: actor(),
-        reason: reason()
-      })
+      if (!reason()) return { valid: false, message: 'A cancellation reason is required.' }
 
-
-
-      const applied = pageState.applyNodes(result)
-      if (applied.valid === false) return false
       return {
-        successMsg: applied.successMsg,
+        successMsg: `Delivery ${text(row.Code)} cancelled. Its items are available for another run.`,
         onSuccess: () => { pageState.reset() }
       }
     },

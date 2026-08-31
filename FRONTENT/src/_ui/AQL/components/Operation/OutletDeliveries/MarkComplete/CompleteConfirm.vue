@@ -5,7 +5,7 @@
     :blocked-message="blockedMessage"
     :outcome="outcome"
     comment-label="Comment (optional)"
-    comment-field="CompleteComment"
+    comment-field="ProgressCompletedComment"
     comment-header="ProgressCompletedComment"
   />
 </template>

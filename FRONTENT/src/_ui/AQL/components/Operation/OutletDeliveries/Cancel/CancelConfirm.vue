@@ -7,7 +7,7 @@
     outcome-tone="negative"
     comment-required
     comment-label="Cancellation Reason *"
-    comment-field="CancelReason"
+    comment-field="CancelledComment"
     comment-header="CancelledComment"
   />
 </template>

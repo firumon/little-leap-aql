@@ -1,6 +1,5 @@
 import { useAuth } from 'src/composables/core/useAuth'
 import { useDataStore } from 'src/stores/data'
-import { buildDeliveryCreateNodes } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryPayload'
 
 // `actions` must stay a getter so the step read stays tracked (UI_ACTION_SYSTEM.md §1.3).
 const SELECTION = 'DeliverySelection'
@@ -20,10 +19,9 @@ export default (props, { pageState, resourceConfig }) => {
 
   const step = () => pageState.meta?.currentStep || 1
 
-  const selectedCodes = () => {
-    const raw = pageState.getControls('Codes', null, SELECTION)
-    return Array.isArray(raw) ? raw.map(text).filter(Boolean) : []
-  }
+  // The ticks ARE the manifest's own CSV column, not a control (UI_PAGE_STATE.md §5B.2).
+  const selectedCodes = () => text(pageState.getRecord('OutletRestockItemCodes', NODE))
+    .split(',').map(text).filter(Boolean)
 
   const warehouse = () => text(pageState.getControls(WAREHOUSE_FILTER, null, SELECTION))
 
@@ -64,17 +62,12 @@ export default (props, { pageState, resourceConfig }) => {
     },
 
     submit: () => {
-      const result = buildDeliveryCreateNodes({
-        userName: actor(),
-        selectedOrsiCodes: selectedCodes()
-      })
+      const codes = selectedCodes()
+      if (!codes.length) return { valid: false, message: 'Select at least one allocated item for this delivery.' }
+      if (!actor()) return { valid: false, message: 'A driver or delivery agent is required.' }
 
-
-
-      const applied = pageState.applyNodes(result)
-      if (applied.valid === false) return false
       return {
-        successMsg: applied.successMsg,
+        successMsg: `Delivery draft created with ${codes.length} item${codes.length === 1 ? '' : 's'}.`,
         // Otherwise the selection survives the navigation and re-seeds the next visit with
         // lines that are now on the run just created.
         onSuccess: () => { pageState.reset() }

@@ -1,3 +1,6 @@
+import { liveDeliveryRun } from 'src/_ui/AQL/composables/Operation/OutletDeliveries/useDeliveryRunLive'
+import { buildDeliveryMarkInTransitNodes } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryPayload'
+
 /**
  * OutletDeliveries › MakeInTransit contract —
  * `/operation/outlet-deliveries/{code}/_action/make-in-transit`.
@@ -32,5 +35,13 @@ export default {
   PropsPageHeader: {
     title: 'Dispatch Delivery',
     reload: false
-  }
+  },
+
+  // The batch is built the moment the page opens and re-cut as the note is typed, so
+  // `PageAction.submit` only validates (UI_PAGE_STATE.md §5B).
+  ready: liveDeliveryRun({
+    commentField: 'ProgressInTransitComment',
+    build: ({ record, actorName, comment }) =>
+      buildDeliveryMarkInTransitNodes({ record, actorName, comment })
+  })
 }

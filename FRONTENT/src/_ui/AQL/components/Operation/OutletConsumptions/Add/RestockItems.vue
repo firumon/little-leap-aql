@@ -126,7 +126,7 @@ import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 import { useRecord } from 'src/composables/resources/useRecord'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 import { useWarehouseStorageResource } from 'src/_resource/Operation/WarehouseStorages/composables/useWarehouseStorageResource'
-import { RESTOCK_CONTROL, restockItemRow } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
+import { RESTOCK_CONTROL, restockItemRow, restockRoutingOf } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
 import { splitByWarehouseStock } from 'src/_resource/Operation/OutletRestocks/composables/useRestockStockMatch'
 import { NODE, RESTOCKING, stepVisible } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/nodes'
 
@@ -156,7 +156,6 @@ const visible = computed(() => stepVisible(pageState, props.step))
 const restocking = pageState.useControls(RESTOCKING, true)
 const restockRows = computed(() => restock.children(NODE.RESTOCK_ITEMS).value || [])
 const direct = pageState.useControls(RESTOCK_CONTROL.DIRECT, false, NODE.RESTOCKS)
-const deliverInstantly = pageState.useControls(RESTOCK_CONTROL.DELIVER, false, NODE.RESTOCKS)
 const warehouseCode = computed(() => text(pageState.getControls(RESTOCK_CONTROL.WAREHOUSE, '', NODE.RESTOCKS)))
 
 function skuLabel (sku) {
@@ -171,11 +170,7 @@ function setQty (index, value) {
 }
 
 // The routing answers a new line inherits, so it lands with the same progress as the rest.
-const routingContext = () => ({
-  [RESTOCK_CONTROL.DIRECT]: direct.value === true,
-  [RESTOCK_CONTROL.DELIVER]: deliverInstantly.value === true,
-  [RESTOCK_CONTROL.WAREHOUSE]: warehouseCode.value
-})
+const routingContext = () => restockRoutingOf(pageState)
 
 // Quantity per candidate SKU. Entries are dropped once added.
 const pendingQty = reactive({})

@@ -75,7 +75,7 @@ import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
 import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 import { useAuth } from 'src/composables/core/useAuth'
 import { useRecord } from 'src/composables/resources/useRecord'
-import { RESTOCK_CONTROL, restockNode } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
+import { RESTOCK_CONTROL, restockNodeForConsumption } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
 import { NODE, RESTOCKING, stepVisible } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/nodes'
 
 defineOptions({ name: 'OutletConsumptionsAddRestockOptions', inheritAttrs: false })
@@ -113,34 +113,25 @@ const regionWarehouses = computed(() => warehouses.items.value
   .filter((row) => isActive(row) && hasRegionAccess(row.AccessRegion))
   .map((row) => ({ value: text(row.Code), label: text(row.Name) || text(row.Code) })))
 
-// Turned back on it refills from what sold, the same rule step 2 applies as it counts.
-// Seeded WITH the routing answers: the node decides its lines' progress from them, so a
-// node built blind would land every line PENDING and keep no warehouse.
+// Turned back on it refills from what sold. What that means is OutletRestocks' own rule,
+// so the consumption and its sold rows go to Layer 2 and the node comes back ready.
 function seedRestockNode () {
-  if (restock.exists.value) return
-  const sold = (consumption.children(NODE.ITEMS).value || [])
-    .filter((row) => Number(row.Qty) > 0)
-    .map((row) => ({ SKU: text(row.SKU), Quantity: Number(row.Qty) }))
-  const houses = regionWarehouses.value
-  const canDirect = houses.length > 0
-  pageState.setResource(NODE.RESTOCKS, null, restockNode(
-    { OutletCode: text(consumption.node.value.record.OutletCode) },
-    sold,
+  pageState.setResource(NODE.RESTOCKS, null, restockNodeForConsumption(
+    consumption.node.value.record,
+    consumption.children(NODE.ITEMS).value,
     {
-      [RESTOCK_CONTROL.DIRECT]: canDirect,
-      [RESTOCK_CONTROL.DELIVER]: canDirect,
-      [RESTOCK_CONTROL.WAREHOUSE]: canDirect ? (warehouseCode.value || houses[0].value) : ''
+      warehouseCodes: regionWarehouses.value.map((house) => house.value),
+      warehouseCode: warehouseCode.value
     }))
 }
 
-// The node carries the routing controls, so only the region answer is written here.
 // Warehouses arrive after mount, so this waits for them rather than settling on `false`
-// while the list is still empty.
-// `restock.exists` is a dependency, not just a guard: step 2 drops the node and re-seeds
-// it, and without watching that the routing answers would stay wherever the drop left them.
-watch([restocking, regionWarehouses, restock.exists], ([on, houses]) => {
+// while the list is still empty. Keyed on the LINE COUNT, not on the node: a disabled
+// field writing its control back re-creates an empty node, and an existence test then
+// reads that shell as a filled restock and never refills it.
+watch([restocking, regionWarehouses, () => restockRows.value.length], ([on, houses, lines]) => {
   if (on !== true) return
-  seedRestockNode()
+  if (lines === 0) seedRestockNode()
   if (!houses.length) return (direct.value = false)
   if (direct.value !== true) direct.value = true
   if (deliver.value !== true) deliver.value = true
@@ -149,7 +140,11 @@ watch([restocking, regionWarehouses, restock.exists], ([on, houses]) => {
 
 // Off clears the warehouse, so no stale allocation reaches the batch. `deliver` is left
 // alone — Layer 2 already ignores it while `direct` is off.
+// Guarded on the node: writing a control CREATES the node, so an unguarded clear here
+// resurrected the node step 2 had just dropped. The re-created node hid the removal from
+// the routing watcher above, which then never re-seeded and left the restock PENDING.
 watch(direct, (on) => {
+  if (!restock.exists.value) return
   if (on !== true) return (warehouseCode.value = '')
   if (!warehouseCode.value && regionWarehouses.value.length) warehouseCode.value = regionWarehouses.value[0].value
 })

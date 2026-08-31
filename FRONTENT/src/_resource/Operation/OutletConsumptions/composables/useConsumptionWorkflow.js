@@ -142,6 +142,7 @@ export function buildConsumptionWorkflowChainNodes ({
     const check = validateConsumption(entry, countRows, outletStorages, {
       generateInvoice: invoicing,
       priceListCode,
+      resolvePrice,
       directRestock: directRestock === true,
       warehouseCode,
       returnMetaOf,
@@ -334,16 +335,16 @@ export function buildConsumptionCancellationNodes (record = {}, reason = '', opt
   const invoice = asRow(options.invoice)
   const cascadeNote = `Cancelled as a dependent of outlet consumption ${code}${actorName ? ` by ${actorName}` : ''}.`
 
+  // A plain update, not the `CancelConsumption` action: the route REPLACED that mutate, so
+  // it is registered as `kind: navigate` and has no executeAction envelope to build.
   const nodes = [{
     resource: CONSUMPTIONS,
     permissions: { CancelConsumption: 'You are not allowed to cancel this consumption.' },
-    actions: [{
-      action: 'CancelConsumption',
-      column: 'Progress',
-      columnValue: CANCELLED,
-      code: textOrRef(code),
-      data: { fields: stampFields('ProgressCancelled', actorName, text(reason)) }
-    }],
+    code: textOrRef(code),
+    record: {
+      Progress: CANCELLED,
+      ...stampFields('ProgressCancelled', actorName, text(reason))
+    },
     reload: [CONSUMPTIONS],
     successMsg: 'Consumption cancelled.'
   }]

@@ -114,6 +114,10 @@ const NODE = 'OutletConsumptions'
 // keep applying (§2.4).
 const TextareaField = resolveFieldComponent('textarea', 'add')
 
-const reason = computed(() => pageState?.getControls('CancelReason', null, NODE) || '')
-const setReason = (value) => pageState?.setControls('CancelReason', value, NODE)
+// A control, not a queued action field: `CancelConsumption` is registered `kind: navigate`,
+// so `setActions` has no request to attach the value to and drops it. Writing it re-cuts
+// the live batch the contract keeps applied.
+const REASON = 'CancelReason'
+const reason = computed(() => pageState?.getControls(REASON, '', NODE) || '')
+const setReason = (value) => pageState?.setControls(REASON, value ?? '', NODE)
 </script>

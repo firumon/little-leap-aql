@@ -120,7 +120,7 @@ import { usePriceListResource } from 'src/_resource/Master/PriceLists/composable
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
 import { priceOf } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionStock'
-import { invoiceNode } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoicePayload'
+import { invoiceNodeForConsumption } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoicePayload'
 import {
   netPayableOf,
   storedTaxBreakdown,
@@ -164,21 +164,20 @@ const visible = computed(() => stepVisible(pageState, props.step))
 // Page-level, so turning invoicing off keeps the node and everything typed on it.
 const invoicing = pageState.useControls(INVOICING, true)
 
-// Turned back on, the invoice refills from what sold — the node is dropped on the way
-// past this step, so coming back has to rebuild it rather than show an empty card.
-watch([invoicing, visible], ([on, shown]) => {
-  if (on !== true || !shown || invoice.exists.value) return
-  const header = consumption.node.value.record || {}
-  const sold = (consumption.children(NODE.ITEMS).value || [])
-    .filter((row) => num(row.Qty) > 0)
-    .map((row) => ({ SKU: text(row.SKU), Qty: num(row.Qty) }))
-  if (!sold.length) return
-  pageState.setResource(NODE.INVOICES, null, invoiceNode({
-    OutletCode: text(header.OutletCode),
-    Date: text(header.Date),
-    Username: text(header.Username)
-  }, sold))
-}, { immediate: true })
+// Turned back on, the invoice refills from what sold. The rebuild is
+// OutletConsumptionInvoices' own rule, so the sold rows go to Layer 2 and the node comes
+// back priced. Keyed on the LINES, not on the node: a disabled field on this card writes
+// its control back and re-creates an empty node, and an existence test then reads that
+// shell as a filled invoice.
+watch([invoicing, visible, () => invoice.children(NODE.INVOICE_ITEMS).value.length],
+  ([on, shown, billed]) => {
+    if (on !== true || !shown || billed > 0) return
+    const node = invoiceNodeForConsumption(
+      consumption.node.value.record,
+      consumption.children(NODE.ITEMS).value,
+      { existing: invoice.node.value.record })
+    if (node) pageState.setResource(NODE.INVOICES, null, node)
+  }, { immediate: true })
 
 const priceListCode = pageState.useRecord('PriceListCode', NODE.INVOICES)
 const dueDate = pageState.useRecord('DueDate', NODE.INVOICES)

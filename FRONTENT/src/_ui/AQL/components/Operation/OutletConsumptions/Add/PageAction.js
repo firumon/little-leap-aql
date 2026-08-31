@@ -17,14 +17,17 @@ import {
 } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionStock'
 import { makeLineTaxResolver } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionInvoice'
 import { buildConsumptionWorkflowChainNodes } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionWorkflow'
+import { nextVisitPlan } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/useNextVisitPlan'
 import { consumptionNode } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionPayload'
 import { returnsNode } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
 import { RESTOCK_CONTROL, restockNode } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
-import { invoiceNode, makeInvoiceLinePriceResolver } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoicePayload'
+import { invoiceNodeForConsumption, makeInvoiceLinePriceResolver } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoicePayload'
 
-// The sticky bar for the six-step wizard: navigation, the step-2 hand-off, the submit.
-// The nodes ARE the answers, so nothing is collected here - this file reads pageState,
-// purifies it on the transition, and lets Layer 2 build the batch.
+// The sticky bar for the six-step wizard. The nodes are the answers, so nothing is
+// collected here. These two hold what the live chain handed back, for `submit` to report.
+export const CHAIN_SUCCESS = 'ChainSuccessMsg'
+export const CHAIN_OUTCOME = 'ChainOutcome'
+
 export default (props, { pageState, resourceConfig }) => {
   const dataStore = useDataStore()
 
@@ -110,22 +113,14 @@ export default (props, { pageState, resourceConfig }) => {
     else pageState.removeNode(NODE.RETURNS)
   }
 
-  // Decides only THAT there is an invoice, and gives it the outlet and the lines. What is
-  // ON it - prices, discount, tax, totals - is SoldReview's, which owns those terms.
+  // Decides only THAT there is an invoice. What is on it is Layer 2's, and the price
+  // resolver keeps a price the officer already typed from being undone on re-entry.
   function seedInvoice (sold) {
-    const header = pageState.getRecord(null, NODE.CONSUMPTION) || {}
-    pageState.setResource(NODE.INVOICES, null, invoiceNode(
-      {
-        ...invoice.node.value.record,
-        OutletCode: text(header.OutletCode),
-        Date: text(header.Date),
-        Username: text(header.Username)
-      },
-      sold.map((row) => ({ SKU: text(row.SKU), Qty: toNumber(row.Qty) })),
-      {},
-      // Re-entering step 3 must not undo a price the officer already typed.
-      { resolvePrice: priceResolver() }
-    ))
+    const node = invoiceNodeForConsumption(
+      pageState.getRecord(null, NODE.CONSUMPTION),
+      sold,
+      { existing: invoice.node.value.record, resolvePrice: priceResolver() })
+    if (node) pageState.setResource(NODE.INVOICES, null, node)
   }
 
   /** Unsettled returns raised on an EARLIER visit, which step 5 also offers to settle. */
@@ -140,7 +135,9 @@ export default (props, { pageState, resourceConfig }) => {
     1: () => true,
     2: () => true,
     3: () => invoiceAllowed() && soldItems().length > 0,
-    4: () => restockItems().length > 0,
+    // Permission only, never the toggle or the lines: turning restock off drops the node,
+    // and a line count read off it then locked the step the user turns it back on in.
+    4: () => restockAllowed(),
     5: () => returnItems().length > 0 || hasPendingReturns(),
     6: () => true
   }
@@ -165,6 +162,8 @@ export default (props, { pageState, resourceConfig }) => {
   }
 
   // The answers the Layer 2 chain takes, read straight off the nodes and their controls.
+  // Exported through `buildChainInputs` below so the page contract's live chain and this
+  // modifier read ONE assembly of the wizard's answers, never two that must agree.
   function chainInputs () {
     const form = pageState.getRecord(null, NODE.CONSUMPTION) || {}
     const outletStorages = rows('OutletStorages')
@@ -178,6 +177,7 @@ export default (props, { pageState, resourceConfig }) => {
     const restocking = restock.exists.value && restockingOn()
     const directRestock = restocking && getCtrl(pageState, CTRL.DIRECT_RESTOCK, false) === true
     const days = getCtrl(pageState, CTRL.NEXT_VISIT_DAYS, null)
+    const plan = nextVisitPlan(pageState, rows('OutletOperatingRules'))
 
     return {
       form,
@@ -206,11 +206,81 @@ export default (props, { pageState, resourceConfig }) => {
       completeVisit: completingVisit(),
       completeComment: text(pageState.getActions(
         'Complete', `fields.${VISIT_COMPLETE_COMMENT_FIELD}`, NODE.VISITS)) || VISIT_COMPLETE_COMMENT,
-      scheduleNext: pageState.hasNode(NODE.VISITS, ROLE.NEXT),
-      nextVisit: pageState.getRecord(null, NODE.VISITS, ROLE.NEXT) || {},
-      nextVisitDays: days === null || days === '' ? null : toNumber(days)
+      // The PLAN, not the node. A plan that rides on the Complete action's own target has
+      // no standalone node - the scheduling card drops it precisely then - so reading the
+      // node here left the chain's Complete carrying no next visit at all.
+      scheduleNext: plan.willSchedule,
+      nextVisit: pageState.hasNode(NODE.VISITS, ROLE.NEXT)
+        ? (pageState.getRecord(null, NODE.VISITS, ROLE.NEXT) || {})
+        : {
+          OutletCode: text(form.OutletCode),
+          Date: plan.date,
+          ProgressPlannedComment: plan.comment,
+          Username: text(form.Username)
+        },
+      nextVisitDays: plan.days || (days === null || days === '' ? null : toNumber(days))
     }
   }
+
+  // Run on its own, not inside the rebuild: the rebuild exits early when the digest is
+  // unchanged, and a toggle flipped in that window left its node behind.
+  function enforceToggles () {
+    if (!invoicingOn()) pageState.removeNode(NODE.INVOICES)
+    if (!restockingOn()) pageState.removeNode(NODE.RESTOCKS)
+    // Same rule for the queued action: applyNodes replaces an entry, it never drops one
+    // the answer retired. Removing it from the card instead desynced this rebuild's digest.
+    if (!completingVisit()) pageState.excludeAdditionalAction('Complete', { resource: NODE.VISITS })
+  }
+
+  // The live chain: every answer re-derives the whole batch, so submit only validates.
+  // The digest stops the loop, since the builder rewrites the nodes it reads.
+  let lastDigest = ''
+  function rebuildChain () {
+    enforceToggles()
+    if (!soldItems().length && !returnItems().length) return
+    const args = chainInputs()
+    const digest = JSON.stringify(args, (key, value) => (typeof value === 'function' ? undefined : value))
+    if (digest === lastDigest) return
+    lastDigest = digest
+
+    const nodes = buildConsumptionWorkflowChainNodes(args)
+    if (!Array.isArray(nodes) || nodes.some((node) => node?.valid === false)) return
+    const applied = pageState.applyNodes(nodes)
+    if (applied.valid === false) return
+
+    // Nothing sold means no consumption row to write; a toggle that is off must not leave
+    // its node in the batch. The node's EXISTENCE is the answer, kept in step live (§5A.1).
+    if (!soldItems().length) pageState.removeNode(NODE.CONSUMPTION)
+    enforceToggles()
+
+    pageState.setControls(CHAIN_SUCCESS, applied.successMsg || 'Consumption recorded.')
+    pageState.setControls(CHAIN_OUTCOME, applied.outcome || null)
+  }
+
+  pageState.derive([
+    { key: 'consumptionAdd:consumption', on: { resource: NODE.CONSUMPTION, children: true }, handler: rebuildChain },
+    { key: 'consumptionAdd:header', on: { resource: NODE.CONSUMPTION, record: true }, handler: rebuildChain },
+    { key: 'consumptionAdd:returns', on: { resource: NODE.RETURNS, records: true }, handler: rebuildChain },
+    { key: 'consumptionAdd:invoicing', on: { control: INVOICING }, handler: rebuildChain },
+    { key: 'consumptionAdd:invoice', on: { resource: NODE.INVOICES, record: true }, handler: rebuildChain },
+    { key: 'consumptionAdd:invoiceItems', on: { resource: NODE.INVOICES, children: true }, handler: rebuildChain },
+    { key: 'consumptionAdd:discountType', on: { control: CTRL.DISCOUNT_TYPE.header, resource: NODE.INVOICES }, handler: rebuildChain },
+    { key: 'consumptionAdd:discountValue', on: { control: CTRL.DISCOUNT_VALUE.header, resource: NODE.INVOICES }, handler: rebuildChain },
+    { key: 'consumptionAdd:invoiceComment', on: { control: CTRL.INVOICE_COMMENT.header, resource: NODE.INVOICES }, handler: rebuildChain },
+    { key: 'consumptionAdd:restocking', on: { control: RESTOCKING }, handler: rebuildChain },
+    // A toggle fires BEFORE its step re-seeds the node, so the toggle alone rebuilds a
+    // chain that still has no invoice or restock in it. These follow the nodes themselves.
+    { key: 'consumptionAdd:restock', on: { resource: NODE.RESTOCKS, record: true }, handler: rebuildChain },
+    { key: 'consumptionAdd:restockItems', on: { resource: NODE.RESTOCKS, children: true }, handler: rebuildChain },
+    { key: 'consumptionAdd:directRestock', on: { control: RESTOCK_CONTROL.DIRECT, resource: NODE.RESTOCKS }, handler: rebuildChain },
+    { key: 'consumptionAdd:markDelivered', on: { control: RESTOCK_CONTROL.DELIVER, resource: NODE.RESTOCKS }, handler: rebuildChain },
+    { key: 'consumptionAdd:warehouse', on: { control: RESTOCK_CONTROL.WAREHOUSE, resource: NODE.RESTOCKS }, handler: rebuildChain },
+    // Step 6's answers feed the chain too, so the Complete action it builds follows them.
+    { key: 'consumptionAdd:completeVisit', on: { control: CTRL.COMPLETE_VISIT.header }, handler: rebuildChain },
+    { key: 'consumptionAdd:scheduleNext', on: { control: CTRL.SCHEDULE_NEXT.header }, handler: rebuildChain },
+    { key: 'consumptionAdd:nextVisitDays', on: { control: CTRL.NEXT_VISIT_DAYS.header }, handler: rebuildChain },
+    { key: 'consumptionAdd:nextVisitComment', on: { control: CTRL.NEXT_VISIT_COMMENT.header }, handler: rebuildChain }
+  ])
 
   return {
     get actions () {
@@ -252,13 +322,12 @@ export default (props, { pageState, resourceConfig }) => {
         if (sold.length && invoiceAllowed()) {
           seedInvoice(sold)
           pageState.setControls(INVOICING, true)
-          pageState.meta.currentStep = 3
-        } else {
-          pageState.removeNode(NODE.INVOICES)
-          pageState.meta.currentStep = restocks.length ? 4 : 5
+          return { step: 3 }
         }
-        // `false` suppresses the built-in increment - this jump already moved the step.
-        return false
+        pageState.removeNode(NODE.INVOICES)
+        // Asked for, never set here: PageAction moves the step behind its own fade, so a
+        // skip looks the same as a plain Continue instead of swapping the bar mid-fade.
+        return { step: nextStep(2) ?? LAST_STEP }
       }
 
       // Leaving step 3 settles the invoice: the toggle is the answer, so a node the
@@ -268,45 +337,35 @@ export default (props, { pageState, resourceConfig }) => {
       if (step() === 4) settleRestock()
 
       const target = nextStep(step())
-      if (target !== null && target !== step() + 1) {
-        pageState.meta.currentStep = target
-        return false
-      }
+      return target !== null && target !== step() + 1 ? { step: target } : undefined
     },
 
     back: () => {
       const target = prevStep(step())
-      if (target !== null && target !== step() - 1) {
-        pageState.meta.currentStep = target
-        return false
-      }
+      return target !== null && target !== step() - 1 ? { step: target } : undefined
     },
 
-    // A thin adapter: Layer 2 decides the batch, build() turns the nodes into requests.
+    // Validation only: pageState already holds exactly what will be sent.
     submit: (name, { nav }) => {
-      const hadSales = soldItems().length > 0
-      const applied = pageState.applyNodes(buildConsumptionWorkflowChainNodes(chainInputs()))
-      if (applied.valid === false) return false
-      const outcome = applied.outcome
-      // Nothing sold means no consumption row to write.
-      if (!hadSales) pageState.removeNode(NODE.CONSUMPTION)
-      // The toggle is off, so the reviewed invoice node must not reach the batch.
-      if (!invoicingOn()) pageState.removeNode(NODE.INVOICES)
-      if (!restockingOn()) pageState.removeNode(NODE.RESTOCKS)
+      if (!soldItems().length && !returnItems().length) {
+        return { valid: false, message: 'Count at least one item before submitting.' }
+      }
 
+      const outcome = pageState.getControls(CHAIN_OUTCOME) || null
       // Resolved after hydration: only build() knows where the resource lands in the batch.
       const at = outcome?.resource
         ? pageState.build().findIndex((request) => request.resource === outcome.resource)
         : -1
+
       return {
-        successMsg: applied.successMsg,
+        successMsg: pageState.getControls(CHAIN_SUCCESS) || 'Consumption recorded.',
         onSuccess: ({ response }) => {
           // Our handler replaces the default reset, so clear the wizard here.
           pageState.reset()
           const code = at >= 0 ? text(batchResultCode(response, at)) : ''
           // A bulk create may report no single code. The index is the honest fallback.
           if (!code) return nav.goTo('index')
-          if (!outcome.slug) return nav.goTo('view', { code })
+          if (!outcome?.slug) return nav.goTo('view', { code })
           nav.goTo('view', { scope: 'operation', resourceSlug: outcome.slug, code })
         }
       }

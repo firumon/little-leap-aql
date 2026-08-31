@@ -133,7 +133,7 @@ import { useOutletStorageResource } from 'src/_resource/Operation/OutletStorages
 import { consumptionNode, consumptionItemRow } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionPayload'
 import { soldQty, returnQty, defaultRestockQty } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionStock'
 import { returnRow, returnsNode } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
-import { restockNode, restockItemRow } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
+import { restockNode, restockItemRow, restockRoutingOf } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
 
 defineOptions({ name: 'OutletConsumptionsAddStockCount', inheritAttrs: false })
 
@@ -288,13 +288,17 @@ const restockQtyOf = memoise(restockModels, (code) => {
 
 // Replenishment mirrors consumption: what sold is what needs sending back. The header is
 // MERGED so lines already added survive; the OutletRestocks domain fills its own columns.
+// The routing answers are handed BACK IN: `restockNode` always writes all three controls,
+// so building without them resets a direct restock to "pending, no warehouse", and step 4a
+// never notices because the node kept existing.
 function setRestockQty (code, qty) {
   if (!restocksAllowed) return
   const index = restockIndexBySku.value[code]
   if (index !== undefined) return pageState.setChildren(RESTOCK_ITEMS, index, 'Quantity', qty, RESTOCKS)
   if (qty <= 0) return
-  pageState.updateResource(RESTOCKS, null, restockNode({ OutletCode: outletCode.value }))
-  pageState.addChild(RESTOCK_ITEMS, restockItemRow({ SKU: code, Quantity: qty }), RESTOCKS)
+  const routing = restockRoutingOf(pageState)
+  pageState.updateResource(RESTOCKS, null, restockNode({ OutletCode: outletCode.value }, [], routing))
+  pageState.addChild(RESTOCK_ITEMS, restockItemRow({ SKU: code, Quantity: qty }, routing), RESTOCKS)
 }
 
 /**

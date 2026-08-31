@@ -375,6 +375,11 @@ export function validateConsumption (form = {}, rows = [], storages = [], option
     const priceListCode = text(options.priceListCode)
     if (!priceListCode) errors.push('No price list resolves for this outlet — an invoice cannot be priced.')
     sold.forEach((row) => {
+      // The REVIEWED price wins. Step 3 offers a unit price for a SKU the list does not
+      // carry, so reading the list alone called a line unpriced that the officer had
+      // already priced, and froze the whole chain.
+      const reviewed = options.resolvePrice ? options.resolvePrice(row.SKU) : null
+      if (reviewed !== null && reviewed !== undefined && reviewed !== '') return
       // Strictly `null` — a legitimately free line priced at 0 is not an error, an
       // UNPRICED line is. Collapsing the two would bill a missing price as a giveaway.
       if (priceOf(row.SKU, priceListCode) === null) {

@@ -16,14 +16,6 @@
  */
 
 /**
- * The control-field key the delivery selection is stored under.
- *
- * Domain rather than presentation: `MarkDelivered/PageAction.js` reads the same key at
- * submit time that the cards write, and neither may guess it independently.
- */
-export const SELECTION = 'DeliverySelection'
-
-/**
  * Only ALLOCATED lines can be delivered. A PENDING line has no stock behind it,
  * and a DELIVERED/CANCELLED one is settled history.
  */
@@ -69,7 +61,6 @@ export function deliverableRows (rows = [], restockCode = '') {
 // Composable shape for setup-context callers. Same functions, one import (§5).
 export function useRestockDelivery () {
   return {
-    SELECTION,
     DELIVERABLE_PROGRESS,
     normalizeSelection,
     deliverableRows

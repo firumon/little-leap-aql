@@ -1,12 +1,5 @@
-﻿import { useAuth } from 'src/composables/core/useAuth'
-import {
-  buildPendingRestockAllocationNodes,
-  buildRestockCancelItemNodes
-} from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
-import {
-  pendingAllocationRows,
-  planAllocatedQty
-} from 'src/_resource/Operation/OutletRestocks/composables/useRestockAllocation'
+﻿import { planAllocatedQty } from 'src/_resource/Operation/OutletRestocks/composables/useRestockAllocation'
+import { readApprovalPlan } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockApproval'
 
 /**
  * OutletRestocks › Reallocate › PageAction — JS modifier (tier 2: resource + page).
@@ -44,12 +37,11 @@ import {
  *
  * This modifier runs OUTSIDE a setup context, so it cannot call
  * `useRestockApproval()` (which injects and mounts). It does not need to: the
- * approver's decision is already fully materialized in the `ApprovalPlan` control
- * field, and the item rows come off the injected `resourceRecord`. Only the PURE
- * exports of that composable are imported here — the same functions the cards
- * render from, so what is submitted is what step 2 displayed.
+ * approver's decision is already fully materialized in the LIVE nodes that
+ * `useRestockApproval` applies on every allocation change. THE HANDLERS ONLY
+ * VALIDATE — there is nothing left to build at submit, so nothing here mutates
+ * state.
  */
-const PARENT = 'OutletRestocks'
 const CHILD = 'OutletRestockItems'
 
 const text = (value) => String(value ?? '').trim()
@@ -63,16 +55,9 @@ const asRow = (value) => (value && typeof value === 'object' ? value : {})
 const isActive = (value) => text(asRow(value).Status || 'Active') === 'Active'
 
 export default (props, { pageState, resourceConfig, resourceRecord }) => {
-  // Safe outside setup: `useAuth` only reaches Pinia stores and statically
-  // imported Quasar plugins — it calls no `inject()`. `user` stays a computed, so
-  // reading it at submit time gives the live session user.
-  const { user } = useAuth()
-
   const step = () => pageState.meta.currentStep
   const restock = () => resourceRecord?.record?.value || {}
-  const plan = () => pageState.getControls('ApprovalPlan', null, PARENT) || {}
-  const comment = () => text(pageState.getControls('ApprovalComment', null, PARENT))
-  const actor = () => user.value?.name || user.value?.email || ''
+  const plan = () => readApprovalPlan(pageState)
 
   // Only PENDING lines are allocatable — a DELIVERED or ALLOCATED line is settled
   // history, and on a PARTIALLY_DELIVERED request most of them are.
@@ -101,15 +86,6 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
   }
 
   const totalAllocated = () => pendingItems().reduce((sum, item) => sum + planAllocatedQty(entryFor(item)), 0)
-
-  // Cancelling a remainder writes no stock movement — the units were never taken
-  // out of the warehouse — so it is an `executeAction` stamp, dispatched after the
-  // bulk write that (re)creates the row it targets.
-  function cancelNodes () {
-    const rows = cancelledItems().map((item) => ({ Code: text(item.Code), Progress: 'PENDING' }))
-    if (!rows.length) return []
-    return buildRestockCancelItemNodes(restock(), rows, actor(), comment() || 'Cancelled: no warehouse stock available.')
-  }
 
   // Claims the registered `reallocate` action plus the stock writes the batch makes.
   // `approve` is deliberately absent: reallocating commits units to an outlet that was
@@ -164,16 +140,11 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
       const parent = restock()
       if (!text(parent.Code)) return { valid: false, message: 'This restock request could not be loaded.' }
       if (!permitted()) return { valid: false, message: 'You are not allowed to allocate stock for this request.' }
-
-      const allocated = allocatedItems()
-      if (!allocated.length) {
+      if (!allocatedItems().length) {
         return { valid: false, message: 'Allocate stock to at least one pending item before continuing.' }
       }
 
-      const rows = allocated.flatMap((item) => pendingAllocationRows(item, entryFor(item)))
-      const result = buildPendingRestockAllocationNodes(parent, rows, actor(), comment())
-      pageState.applyNodes([...result, ...cancelNodes()])
-      return { successMsg: result.successMsg }
+      return { successMsg: 'Stock allocated to the pending items.' }
     },
 
     successRoute: 'view'

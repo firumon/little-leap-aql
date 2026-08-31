@@ -1,6 +1,4 @@
-﻿import { useAuth } from 'src/composables/core/useAuth'
-import { buildRestockChainNodes } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
-
+﻿
 /**
  * OutletRestocks › Add › PageAction — JS modifier (tier 2: resource + page).
  *
@@ -25,11 +23,6 @@ import { buildRestockChainNodes } from 'src/_resource/Operation/OutletRestocks/c
 export default (props, { pageState, resourceConfig }) => {
   const parent = pageState.useNode('OutletRestocks')
   const itemEntries = parent.children('OutletRestockItems')
-  // Safe outside setup: `useAuth` only reaches Pinia stores and statically
-  // imported Quasar plugins — it calls no `inject()`. `user` stays a computed,
-  // so reading it at submit time gives the live session user.
-  const { user } = useAuth()
-
   const step = () => pageState.meta.currentStep
   const mode = () => pageState.getControls('RestockMode', null, 'OutletRestocks') || 'STANDARD'
   const warehouse = () => pageState.getControls('WarehouseCode', null, 'OutletRestocks') || ''
@@ -76,24 +69,18 @@ export default (props, { pageState, resourceConfig }) => {
       return validateItems()
     },
 
-    // A thin adapter. The wizard collects outlet, mode, warehouse and lines; the domain
-    // builder decides every column and returns the whole submission, header included.
+    // Validation only. `Add.js`'s `ready` hands the wizard's answers to
+    // `buildRestockChainNodes` on every change, so the batch is already complete
+    // (UI_PAGE_STATE.md §5B).
     submit: () => {
-      const actorName = user.value?.name || user.value?.email || ''
-      const result = buildRestockChainNodes({
-        form: parent.record.value,
-        lines: items().map(({ _action, ...data }) => data),
-        mode: mode(),
-        draft: isDraft(),
-        warehouseCode: warehouse(),
-        linkToConsumption: false,
-        comment: parent.record.value.ProgressSubmittedComment,
-        actorName
-      })
+      if (!parent.record.value.OutletCode) return { valid: false, message: 'Select an outlet before submitting.' }
+      if (mode() === 'DIRECT' && !warehouse()) {
+        return { valid: false, message: 'Select a source warehouse before submitting a direct restock.' }
+      }
+      const invalid = validateItems()
+      if (invalid) return invalid
 
-      const applied = pageState.applyNodes(result)
-      if (applied.valid === false) return false
-      return { successMsg: applied.successMsg }
+      return { successMsg: isDraft() ? 'Restock draft saved.' : 'Restock request created.' }
     }
   }
 }

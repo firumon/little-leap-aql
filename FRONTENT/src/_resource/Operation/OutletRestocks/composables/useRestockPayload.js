@@ -49,7 +49,19 @@ function stockMovement (source = {}, referenceCode = '', direction = OUT_OF_WARE
 // The source item Code a row descends from, whichever tag the caller used.
 function sourceCodeOf (value = {}) {
   const entry = row(value)
-  return text(entry._pendingSourceCode || entry.Code || entry._approvalSourceKey).replace(/^pending:/, '')
+  return text(entry._sourceCode || entry._pendingSourceCode || entry.Code || entry._approvalSourceKey).replace(/^pending:/, '')
+}
+
+// Frontend-only tags carried onto every emitted row. `build()` strips `_` keys, so they
+// never reach GAS — they are what lets the live node be read back as a per-line plan.
+function sourceTags (value = {}) {
+  const entry = row(value)
+  const code = sourceCodeOf(entry)
+  return {
+    ...(code ? { _sourceCode: code } : {}),
+    ...(entry._requestedQty !== undefined ? { _requestedQty: num(entry._requestedQty) } : {}),
+    ...(entry._cancelled === true ? { _cancelled: true } : {})
+  }
 }
 
 const ITEM_WRITE = { create: 'You are not allowed to change restock items.' }
@@ -92,7 +104,8 @@ export function buildRestockAllocationNodes (restock = {}, rows = [], actorName 
       Quantity: num(entry.Quantity),
       Progress: progress,
       ...(progress === 'ALLOCATED' ? stampFields('ProgressAllocated', actorName, allocationComment) : {}),
-      Status: 'Active'
+      Status: 'Active',
+      ...sourceTags(entry)
     }
   })
 
@@ -180,7 +193,8 @@ export function buildPendingRestockAllocationNodes (restock = {}, rows = [], act
         Quantity: num(entry.Quantity),
         Progress: 'ALLOCATED',
         ...stampFields('ProgressAllocated', actorName, allocationComment),
-        Status: 'Active'
+        Status: 'Active',
+        ...sourceTags(entry)
       }
       itemRecords.push(record)
       movements.push(stockMovement(record, sourceCode, OUT_OF_WAREHOUSE))
@@ -196,11 +210,12 @@ export function buildPendingRestockAllocationNodes (restock = {}, rows = [], act
         StorageName: '',
         Quantity: remainingQty,
         Progress: 'PENDING',
-        Status: 'Active'
+        Status: 'Active',
+        ...sourceTags(source)
       })
     } else {
       // Split across bins, so the source row has nothing left to hold.
-      itemRecords.push({ Code: sourceCode, Status: 'Inactive' })
+      itemRecords.push({ Code: sourceCode, Status: 'Inactive', ...sourceTags(source) })
     }
 
     allocatedRows.forEach((entry) => {
@@ -212,7 +227,8 @@ export function buildPendingRestockAllocationNodes (restock = {}, rows = [], act
         Quantity: num(entry.Quantity),
         Progress: 'ALLOCATED',
         ...stampFields('ProgressAllocated', actorName, allocationComment),
-        Status: 'Active'
+        Status: 'Active',
+        ...sourceTags(entry)
       }
       itemRecords.push(record)
       movements.push(stockMovement(record, sourceCode || parent.Code, OUT_OF_WAREHOUSE))
@@ -233,7 +249,9 @@ export function buildRestockCancelItemNodes (restock = {}, rows = [], actorName 
     .filter((entry) => text(entry.Code) && text(entry.Progress) === 'PENDING')
     .map((entry) => ({
       resource: RESTOCK_ITEMS,
-      permissions: { cancel: 'You are not allowed to cancel a restock item.' },
+      // `update`, not `cancel`: the sheet grants CRUD on the child rows and has no
+      // per-outcome flag for them. Cancelling a line stamps a row that already exists.
+      permissions: { update: 'You are not allowed to change restock items.' },
       actions: [{
         ...CANCEL_ITEM_ACTION,
         code: text(entry.Code),
@@ -316,11 +334,15 @@ export function buildRestockDeliveryNodes (restock = {}, deliveredOrsiRows = [],
     itemsNode(itemRecords),
     ...buildOutletMovementNodes(movements),
     {
+      // `role` defaults to the request's own code so a delivery RUN can settle several
+      // requests in one batch (§12.1). A page confirming ONE request passes `role: ''`
+      // and gets the roleless address, so it does not end up holding two nodes for the
+      // same record — one carrying the write and one empty.
       ...parentNode(parent.Code, {
         Progress: nextProgress,
         ...stampFields('ProgressDelivered', actorName, comment)
       }, { markDelivered: 'You are not allowed to confirm this delivery.' },
-      text(options.role) || text(parent.Code)),
+      options.role !== undefined ? text(options.role) : text(parent.Code)),
       successMsg: 'Delivery confirmed and outlet stock updated.'
     }
   ]
@@ -332,12 +354,15 @@ export {
   RESTOCK_CONTROL,
   buildRestockChainNodes,
   buildRestockMovementNodes,
+  defaultSubmissionComment,
   deriveParentRestockProgress,
   restockNode,
+  restockNodeForConsumption,
   restockItemRow,
   restockFlags,
   restockItemProgress,
   restockProgressDerive,
+  restockRoutingOf,
   syncRestockProgressInPageState
 } from './useRestockCreation'
 

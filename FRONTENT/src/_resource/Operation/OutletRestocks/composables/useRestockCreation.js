@@ -109,15 +109,23 @@ function restockParentFields (flags = {}, parent = {}, rows = [], actorName = ''
   }
 }
 
+/**
+ * The note a submission carries when the user has not written one.
+ *
+ * Exported so the Add wizard can SEED it into the record and let the user amend it —
+ * a default the user never sees is a value invented at submit.
+ */
+export function defaultSubmissionComment (withConsumption = true) {
+  return withConsumption ? 'Submitted with an outlet consumption.' : 'Submitted from an outlet visit.'
+}
+
 // NODE builder: a restock and its lines. `extra` carries the routing answers; the derive
 // rules keep both levels in step when the officer changes one later.
 export function restockNode (parent = {}, children = [], extra = {}, options = {}) {
   const actorName = actor()
   const flags = restockFlags(extra)
   const rows = (Array.isArray(children) ? children : []).map((child) => restockItemRow(child, extra))
-  const origin = text(extra.origin) || (extra.linkToConsumption === false
-    ? 'Submitted from an outlet visit.'
-    : 'Submitted with an outlet consumption.')
+  const origin = text(extra.origin) || defaultSubmissionComment(extra.linkToConsumption !== false)
 
   const record = resourceRow(RESOURCE_NAME, {
     RequestedUser: actorName,
@@ -147,16 +155,40 @@ export function restockNode (parent = {}, children = [], extra = {}, options = {
   }
 }
 
+// The restock a VISIT raises, seeded from the consumption and what it sold. The one place
+// that says a restock refills what the outlet just sold, and that a user with no warehouse
+// to draw from cannot carry it directly.
+export function restockNodeForConsumption (consumption = {}, soldRows = [], { warehouseCodes = [], warehouseCode = '' } = {}) {
+  const entry = asRow(consumption)
+  const lines = (Array.isArray(soldRows) ? soldRows : []).map(asRow)
+    .map((row) => ({ SKU: text(row.SKU), Quantity: num(row.Qty ?? row.Quantity) }))
+    .filter((row) => row.SKU && row.Quantity > 0)
+  const houses = (Array.isArray(warehouseCodes) ? warehouseCodes : []).map(text).filter(Boolean)
+  const direct = houses.length > 0
+  return restockNode({ OutletCode: text(entry.OutletCode) }, lines, {
+    [RESTOCK_CONTROL.DIRECT]: direct,
+    [RESTOCK_CONTROL.DELIVER]: direct,
+    [RESTOCK_CONTROL.WAREHOUSE]: direct ? (text(warehouseCode) || houses[0]) : ''
+  })
+}
+
+// The routing answers as they stand on the node. Every screen that rebuilds the node has
+// to hand these back in - `restockNode` always writes all three, so a build without them
+// silently resets the routing to "pending, no warehouse".
+export function restockRoutingOf (pageState) {
+  return {
+    [RESTOCK_CONTROL.DIRECT]: pageState?.getControls(RESTOCK_CONTROL.DIRECT, false, RESOURCE_NAME) === true,
+    [RESTOCK_CONTROL.DELIVER]: pageState?.getControls(RESTOCK_CONTROL.DELIVER, false, RESOURCE_NAME) === true,
+    [RESTOCK_CONTROL.WAREHOUSE]: text(pageState?.getControls(RESTOCK_CONTROL.WAREHOUSE, '', RESOURCE_NAME))
+  }
+}
+
 // Re-reads the routing controls and rewrites the progress they decide, on the parent and
 // on every line. Only what MOVED is written, so a re-run costs nothing.
 export function syncRestockProgressInPageState (pageState) {
   if (!pageState?.hasNode?.(RESOURCE_NAME)) return
   const actorName = actor()
-  const flags = restockFlags({
-    [RESTOCK_CONTROL.DIRECT]: pageState.getControls(RESTOCK_CONTROL.DIRECT, false, RESOURCE_NAME) === true,
-    [RESTOCK_CONTROL.DELIVER]: pageState.getControls(RESTOCK_CONTROL.DELIVER, false, RESOURCE_NAME) === true,
-    [RESTOCK_CONTROL.WAREHOUSE]: pageState.getControls(RESTOCK_CONTROL.WAREHOUSE, '', RESOURCE_NAME)
-  })
+  const flags = restockFlags(restockRoutingOf(pageState))
 
   const rows = pageState.getChildRows(RESTOCK_ITEMS, RESOURCE_NAME)
   const nextRows = rows.map((row) => restockItemFields(flags, row, actorName))
@@ -311,8 +343,10 @@ export function useRestockCreation () {
     RESTOCK_CONTROL,
     buildRestockChainNodes,
     buildRestockMovementNodes,
+    defaultSubmissionComment,
     deriveParentRestockProgress,
     restockNode,
+    restockNodeForConsumption,
     restockItemRow,
     restockFlags,
     restockItemProgress,

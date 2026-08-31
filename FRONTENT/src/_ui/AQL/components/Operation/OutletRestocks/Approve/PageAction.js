@@ -1,15 +1,10 @@
 ﻿import { useAuth } from 'src/composables/core/useAuth'
+import { buildRestockRejectNodes } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
+import { planAllocatedQty } from 'src/_resource/Operation/OutletRestocks/composables/useRestockAllocation'
 import {
-  buildPendingRestockAllocationNodes,
-  buildRestockAllocationNodes,
-  buildRestockCancelItemNodes,
-  buildRestockRejectNodes
-} from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
-import {
-  pendingAllocationRows,
-  planAllocatedQty,
-  splitApprovalRows
-} from 'src/_resource/Operation/OutletRestocks/composables/useRestockAllocation'
+  clearApprovalPlan,
+  readApprovalPlan
+} from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockApproval'
 
 /**
  * OutletRestocks › Approve › PageAction — JS modifier (tier 2: resource + page).
@@ -26,12 +21,17 @@ import {
  * `pageState.meta.currentStep` are tracked. A literal array would latch the step-1
  * button set forever (UI_ACTION_SYSTEM.md §1.3).
  *
+ * THE HANDLERS ONLY VALIDATE. The batch is assembled LIVE as the approver works —
+ * `useRestockApproval` applies the Layer 2 nodes on every allocation change — so by
+ * the time this runs, `pageState` already holds exactly what will be sent. `submit`
+ * therefore builds nothing and writes nothing: it checks the decision is sound and
+ * hands back the message. Mutating state here is what made the totals visibly
+ * re-arrange under the approver at the moment they pressed Approve.
+ *
  * This modifier runs OUTSIDE a setup context, so it cannot call
- * `useRestockApproval()` (which injects and mounts). It does not need to: the
- * approver's decision is already fully materialized in the `ApprovalPlan` control
- * field, and the item rows come off the injected `resourceRecord`. Only the PURE
- * exports of that composable are imported here — the same functions the cards
- * render from, so what is submitted is what step 2 displayed.
+ * `useRestockApproval()` (which injects and mounts). It reads the same live node
+ * through that composable's pure `readApprovalPlan`, so what it validates is what
+ * step 2 displayed.
  */
 const PARENT = 'OutletRestocks'
 const CHILD = 'OutletRestockItems'
@@ -54,7 +54,7 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
 
   const step = () => pageState.meta.currentStep
   const restock = () => resourceRecord?.record?.value || {}
-  const plan = () => pageState.getControls('ApprovalPlan', null, PARENT) || {}
+  const plan = () => readApprovalPlan(pageState)
   const comment = () => text(pageState.getControls('ApprovalComment', null, PARENT))
   const actor = () => user.value?.name || user.value?.email || ''
 
@@ -90,14 +90,6 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
   }
 
   const totalAllocated = () => pendingItems().reduce((sum, item) => sum + planAllocatedQty(entryFor(item)), 0)
-
-  // Cancelling a remainder moves no stock — the units never left the warehouse — so it
-  // is a queued executeAction, dispatched after the bulk write that recreates the row.
-  function cancelNodes () {
-    const rows = cancelledItems().map((item) => ({ Code: text(item.Code), Progress: 'PENDING' }))
-    if (!rows.length) return []
-    return buildRestockCancelItemNodes(restock(), rows, actor(), comment() || 'Cancelled: no warehouse stock available.')
-  }
 
   // Action names are lower-case on purpose. `checkSingleAction` derives the
   // permission key by upper-casing the FIRST character only (`approve` →
@@ -157,27 +149,15 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
       const parent = restock()
       if (!text(parent.Code)) return { valid: false, message: 'This restock request could not be loaded.' }
       if (!permitted()) return { valid: false, message: 'You are not allowed to approve this restock request.' }
-
-      const allocated = allocatedItems()
-      if (!allocated.length) {
+      if (!allocatedItems().length) {
         return { valid: false, message: 'Allocate stock to at least one item before approving. Reject the request if nothing can be fulfilled.' }
       }
 
-      if (isInitialApproval()) {
-        // `splitApprovalRows` attaches the original row's Code to exactly one emitted
-        // row, so no Code is written twice in the same batch.
-        const rows = pendingItems().flatMap((item) => splitApprovalRows(item, entryFor(item)))
-        const result = buildRestockAllocationNodes(parent, rows, actor(), comment())
-        pageState.applyNodes([...result, ...cancelNodes()])
-        return { successMsg: applied.successMsg }
+      return {
+        successMsg: isInitialApproval()
+          ? 'Restock request approved and stock allocated.'
+          : 'Stock allocated to the pending items.'
       }
-
-      // Later allocation: the builder groups by source Code and decides for itself
-      // whether each source row is reused, shrunk to a remainder, or deactivated.
-      const rows = allocated.flatMap((item) => pendingAllocationRows(item, entryFor(item)))
-      const result = buildPendingRestockAllocationNodes(parent, rows, actor(), comment())
-      pageState.applyNodes([...result, ...cancelNodes()])
-      return { successMsg: applied.successMsg }
     },
 
     /**
@@ -200,6 +180,7 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
       }
 
       const result = buildRestockRejectNodes(parent, active, actor(), comment())
+      clearApprovalPlan(pageState)
       const applied = pageState.applyNodes(result)
       if (applied.valid === false) return false
       return {

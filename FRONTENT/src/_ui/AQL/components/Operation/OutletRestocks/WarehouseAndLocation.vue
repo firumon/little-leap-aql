@@ -119,8 +119,8 @@
  * first content the contract renders, so it is where that composable is first
  * called (the pattern `EditRestockHeader` uses on the Edit page).
  *
- * Holds no state of its own: every control projects the `ApprovalPlan` control
- * field and writes straight back through the composable (ARCHITECTURE RULES §6).
+ * Holds no state of its own: every control projects the node's own state and
+ * writes straight back through the composable (ARCHITECTURE RULES §6).
  */
 import { computed, useAttrs } from 'vue'
 import { resolveFieldComponent } from 'src/_fields/useFieldResolver'

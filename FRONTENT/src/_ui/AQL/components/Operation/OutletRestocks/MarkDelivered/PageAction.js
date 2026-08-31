@@ -1,10 +1,4 @@
-﻿import { useAuth } from 'src/composables/core/useAuth'
-import { buildRestockDeliveryNodes } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
-import {
-  deliverableRows,
-  normalizeSelection,
-  SELECTION
-} from 'src/_resource/Operation/OutletRestocks/composables/useRestockDelivery'
+﻿import { deliverableRows } from 'src/_resource/Operation/OutletRestocks/composables/useRestockDelivery'
 
 /**
  * OutletRestocks › MarkDelivered › PageAction — JS modifier (tier 2: resource + page).
@@ -21,16 +15,17 @@ import {
  * `pageState.meta.currentStep` are tracked. A literal array would latch the step-1
  * button set forever (UI_ACTION_SYSTEM.md §1.3).
  *
+ * THE HANDLERS ONLY VALIDATE. The batch is assembled LIVE as the driver ticks
+ * lines — `useRestockDelivery` applies the Layer 2 nodes on every change to the
+ * selection or the note — so by the time this runs, `pageState` already holds
+ * exactly what will be sent. `submit` therefore builds nothing and writes nothing.
+ *
  * This modifier runs OUTSIDE a setup context, so it cannot call
- * `useRestockDelivery()` (which injects and mounts). It does not need to: the
- * driver's decision is already fully materialized in the `DeliverySelection`
- * control field, and the item rows come off the injected `resourceRecord`. Only
- * the PURE exports of that composable are imported here — the same filter the
- * cards render from, so what is submitted is what step 2 displayed.
+ * `useRestockDelivery()` (which injects and mounts). It reads the selection off
+ * `pageState` and filters through the same PURE `deliverableRows` the cards render
+ * from, so what it validates is what step 2 displayed.
  */
-const PARENT = 'OutletRestocks'
 const CHILD = 'OutletRestockItems'
-const COMMENT = 'DeliveryComment'
 
 const text = (value) => String(value ?? '').trim()
 
@@ -43,16 +38,11 @@ const asRow = (value) => (value && typeof value === 'object' ? value : {})
 const isActive = (value) => text(asRow(value).Status || 'Active') === 'Active'
 
 export default (props, { pageState, resourceConfig, resourceRecord }) => {
-  // Safe outside setup: `useAuth` only reaches Pinia stores and statically
-  // imported Quasar plugins — it calls no `inject()`. `user` stays a computed, so
-  // reading it at submit time gives the live session user.
-  const { user } = useAuth()
-
   const step = () => pageState.meta.currentStep
   const restock = () => resourceRecord?.record?.value || {}
-  const comment = () => text(pageState.getControls(COMMENT, null, PARENT))
-  const actor = () => user.value?.name || user.value?.email || ''
-  const selection = () => normalizeSelection(pageState.getControls(SELECTION, null, PARENT))
+  // The ticked lines ARE the live `OutletRestockItems` write — there is no selection
+  // control to read (UI_PAGE_STATE.md §5A.1).
+  const selection = () => (pageState.getRecordRows(CHILD) || []).map((row) => text(asRow(row).Code)).filter(Boolean)
 
   // Every active child row of this request. The parent's next Progress is a
   // question about the rows that were NOT selected — an allocated line left for a
@@ -122,18 +112,11 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
       const parent = restock()
       if (!text(parent.Code)) return { valid: false, message: 'This restock request could not be loaded.' }
       if (!permitted()) return { valid: false, message: 'You are not allowed to confirm delivery for this restock request.' }
-
-      const delivered = selectedItems()
-      if (!delivered.length) {
+      if (!selectedItems().length) {
         return { valid: false, message: 'Select at least one item to confirm as delivered.' }
       }
 
-      const result = buildRestockDeliveryNodes(parent, delivered, actor(), comment(), {
-        allItems: childRows()
-      })
-      const applied = pageState.applyNodes(result)
-      if (applied.valid === false) return false
-      return { successMsg: applied.successMsg }
+      return { successMsg: 'Delivery confirmed and outlet stock updated.' }
     },
 
     successRoute: 'view'

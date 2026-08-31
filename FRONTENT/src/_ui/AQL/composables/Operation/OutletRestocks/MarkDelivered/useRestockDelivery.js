@@ -1,10 +1,11 @@
 ﻿import { computed, onMounted, watch } from 'vue'
+import { useAuth } from 'src/composables/core/useAuth'
 import { useRecord } from 'src/composables/resources/useRecord'
+import { buildRestockDeliveryNodes } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
 import { useRestockDeliveryContext } from './useRestockDeliveryContext'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 import { useOutletResource } from 'src/_resource/Master/Outlets/composables/useOutletResource'
 import {
-  SELECTION,
   normalizeSelection,
   deliverableRows
 } from 'src/_resource/Operation/OutletRestocks/composables/useRestockDelivery'
@@ -44,7 +45,6 @@ import {
 const PARENT = 'OutletRestocks'
 const CHILD = 'OutletRestockItems'
 
-const COMMENT = 'DeliveryComment'
 
 const DEFAULT_STORAGE = '_default'
 // The unit a SKU is counted in when its own `UOM` column is blank — the same
@@ -164,6 +164,20 @@ export function groupDeliveryRows (rows = [], label = () => ({}), selected = [])
   }))
 }
 
+const ITEMS = 'OutletRestockItems'
+const OUTLET_MOVEMENTS = 'OutletMovements'
+const DELIVERED_COMMENT = 'ProgressDeliveredComment'
+
+// Everything the confirmation writes, dropped in one go. The parent node stays — it
+// carries the selection and the note, and `hasNodes` gates the sticky bar.
+export function clearDeliveryPayload (pageState) {
+  pageState.removeNode(ITEMS)
+  pageState.removeNode(OUTLET_MOVEMENTS)
+  // The note is the driver's own input, not part of the selection, so it survives.
+  const note = pageState.getRecord(DELIVERED_COMMENT, PARENT)
+  pageState.setResource(PARENT, { record: note ? { [DELIVERED_COMMENT]: note } : {} })
+}
+
 export function useRestockDelivery () {
   // Injected once for the whole page, by the relay (§6.1) — not a second time
   // here, or the page would have two composables injecting the same keys.
@@ -194,25 +208,25 @@ export function useRestockDelivery () {
   // Always written as a NEW array. `controls` entries are reactive, but replacing
   // the value outright means every projection below re-runs on one assignment
   // rather than depending on deep tracking of a mutated array.
-  const getSelection = () => pageState.getControls(SELECTION, null, PARENT)
-  const writeSelection = (next) => pageState.setControls(SELECTION, normalizeSelection(next), PARENT)
-  const selectedCodes = computed(() => normalizeSelection(getSelection()))
+  // THE SELECTION IS THE NODE. A ticked line is a row in the live `OutletRestockItems`
+  // write; unticking removes it. There is no control mirroring the choice, so what the
+  // driver sees ticked and what the batch delivers cannot drift (UI_PAGE_STATE.md §5A.1
+  // — "whether a resource is written is the node's existence").
+  const selectedCodes = computed(() => normalizeSelection(
+    (pageState.getRecordRows(ITEMS) || []).map((row) => text(asRow(row).Code))
+  ))
 
   // ── Hydration ──────────────────────────────────────────────────────────────
   // An `_action/:action` route is a custom sub-route: `usePageResolver` loads no
   // record for it (UI_PAGE_AND_SECTION_SYSTEM.md §1.3.3), so the node is created
   // and seeded here. It must exist for `PageAction` to render the sticky bar at
   // all — `hasNodes` gates it (UI_ACTION_SYSTEM.md §3.1).
-  // Bookkeeping lives on the NODE, not in this closure. Two components call this
-  // composable (`SelectDeliveryItems` at step 1, `ReviewDelivery` at step 2), and
-  // each call gets its own closure — so a per-call `let hydratedKey` starts empty
-  // when step 2 MOUNTS, and would re-run the pass and wipe the selection the
-  // driver just made. A control field is scoped to the node itself, so it is
-  // shared by every caller and is discarded with the node.
-  const HYDRATED_FOR = 'DeliveryHydratedFor'
-  const hydratedFor = () => (pageState.hasNode(PARENT)
-    ? text(pageState.getControls(HYDRATED_FOR, null, PARENT))
-    : '')
+  // Whether the node was already built for THIS request is asked of the node's own
+  // `code` — there is no bookkeeping control for it. Two components call this
+  // composable (`SelectDeliveryItems` at step 1, `ReviewDelivery` at step 2) and each
+  // call gets its own closure, so a per-call `let hydratedKey` would start empty when
+  // step 2 MOUNTS and re-run the pass, wiping the selection just made.
+  const hydratedFor = () => (pageState.hasNode(PARENT) ? text(parent.node.value.code) : '')
 
   function hydrate () {
     const record = serverRecord.value
@@ -230,9 +244,9 @@ export function useRestockDelivery () {
     pageState.initResource(PARENT, { isPrimaryKey: true, reset: true, code })
     if (!parent.exists.value) return
 
-    pageState.setControls(HYDRATED_FOR, code, PARENT)
-    pageState.load(record, PARENT)
-    writeSelection([])
+    // The node carries the delivery's OWN writes, not a copy of the loaded row: a
+    // full `load` here would put every column of the request into the batch.
+    clearDeliveryPayload(pageState)
 
     // Seed the comment from the LAST delivery on THIS request. A
     // PARTIALLY_DELIVERED restock is delivered again, and the note explaining the
@@ -242,7 +256,7 @@ export function useRestockDelivery () {
     // Written unconditionally, because this line is only reached when the node
     // has just been created for this record: there is no user input to protect
     // yet. Stepping back and forth within the same request re-enters above.
-    pageState.setControls(COMMENT, text(record.ProgressDeliveredComment), PARENT)
+    pageState.setRecord(DELIVERED_COMMENT, text(record.ProgressDeliveredComment), PARENT)
   }
 
   watch([serverRecord, () => parent.identifier.value], () => { hydrate() }, { immediate: true })
@@ -262,8 +276,14 @@ export function useRestockDelivery () {
     ;[restocks, restockItems, outlets, skus, products].forEach((resource) => resource.reload())
   })
 
-  const comment = computed(() => text(pageState.getControls(COMMENT, null, PARENT)))
-  function setComment (value) { pageState.setControls(COMMENT, value ?? '', PARENT) }
+  // The note is a COLUMN on the parent, bound straight through `useRecord` — not a
+  // control. Writing it re-cuts the live batch.
+  const commentField = pageState.useRecord(DELIVERED_COMMENT, PARENT)
+  const comment = computed(() => text(commentField.value))
+  function setComment (value) { commentField.value = value ?? '' }
+
+  const { user } = useAuth()
+  const actor = () => user.value?.name || user.value?.email || ''
 
   // ── The request's item rows ────────────────────────────────────────────────
   const restock = computed(() => serverRecord.value || {})
@@ -287,6 +307,33 @@ export function useRestockDelivery () {
   })
 
   const items = computed(() => deliverableRows(allItems.value, restock.value.Code))
+
+  // ── The live batch ─────────────────────────────────────────────────────────
+  // ONE representation. What step 2 reviews and what `submit` ships are the same nodes:
+  // the Layer 2 builder runs on every tick and on every edit of the note, so the batch
+  // is complete and inspectable at every step and `submit` has nothing left to assemble.
+  function writeSelection (next) {
+    const record = restock.value
+    const chosen = new Set(normalizeSelection(next))
+    const delivered = items.value.filter((row) => chosen.has(text(row.Code)))
+    if (!text(record.Code) || !delivered.length) {
+      clearDeliveryPayload(pageState)
+      return
+    }
+    // `role: ''` keeps the parent on the ROLELESS address — this page confirms exactly
+    // one request, so a roled second node would leave an empty one beside it.
+    pageState.applyNodes(buildRestockDeliveryNodes(record, delivered, actor(), comment.value, {
+      allItems: allItems.value,
+      role: ''
+    }))
+  }
+
+  // The note is stamped ONTO the rows, so the live batch has to be re-cut when it
+  // changes. Keyed off the note, never off the node the rebuild writes, so this cannot
+  // feed itself.
+  watch(comment, () => {
+    if (selectedCodes.value.length) writeSelection(selectedCodes.value)
+  })
 
   /**
    * The display name of a SKU, read off the enriched SKU record.

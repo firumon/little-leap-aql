@@ -1,11 +1,9 @@
-import { useAuth } from 'src/composables/core/useAuth'
 import {
   CANCEL_REASON,
   activeItemsOf,
   cancellability,
   cancellableItems,
-  returnableItems,
-  buildRestockCancellationNodes
+  returnableItems
 } from 'src/_resource/Operation/OutletRestocks/composables/useRestockCancellation'
 
 /**
@@ -26,6 +24,9 @@ import {
  *   3. PERMISSION — the batch writes warehouse movements, so it is gated on the ledger
  *      write it actually performs, not merely on updating the request.
  *
+ * THE HANDLER ONLY VALIDATES. `useRestockCancelContext` applies the cancellation nodes as
+ * soon as a reason is typed, so `pageState` already holds exactly what will be sent.
+ *
  * This modifier runs OUTSIDE a setup context, so it imports only the PURE domain exports
  * and reads its rows off the injected `resourceRecord` — the same rows `CancelReview.vue`
  * renders its preview from.
@@ -37,11 +38,7 @@ const text = (value) => (value == null ? '' : String(value).trim())
 const asRow = (value) => (value && typeof value === 'object' ? value : {})
 
 export default (props, { pageState, resourceConfig, resourceRecord }) => {
-  // Safe outside setup: `useAuth` only reaches Pinia stores and calls no `inject()`.
-  const { user } = useAuth()
-
   const restock = () => resourceRecord?.record?.value || {}
-  const actor = () => user.value?.name || user.value?.email || ''
   const reason = () => text(pageState.getControls(CANCEL_REASON, null, PARENT))
 
   function childRows () {
@@ -78,14 +75,10 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         return { valid: false, message: 'Every line on this request has already been settled.' }
       }
 
-      // The domain states which permissions this cancellation actually needs — it claims
-      // `cancel` rather than generic `update`, and stock only when units come back.
-      const result = buildRestockCancellationNodes(parent, rows, actor(), why)
-
-      const applied = pageState.applyNodes(result)
-      if (applied.valid === false) return false
       return {
-        successMsg: applied.successMsg,
+        successMsg: returnableItems(rows, parent.Code).length
+          ? 'Restock cancelled and warehouse stock returned.'
+          : 'Restock cancelled.',
         // Reset first, or the typed reason survives the navigation and re-seeds the
         // next visit to this route.
         onSuccess: () => {

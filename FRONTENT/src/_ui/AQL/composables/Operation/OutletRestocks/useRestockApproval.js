@@ -3,6 +3,7 @@ import { useRecord } from 'src/composables/resources/useRecord'
 import { useRestockApprovalContext } from './useRestockApprovalContext'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 import { useWarehouseResource } from 'src/_resource/Master/Warehouses/composables/useWarehouseResource'
+import { useAuth } from 'src/composables/core/useAuth'
 import {
   binKey,
   stockKey,
@@ -10,8 +11,15 @@ import {
   sortBinsLeastFirst,
   drawLeastQuantityFirst,
   planConsumption,
-  planAllocatedQty
+  planAllocatedQty,
+  pendingAllocationRows,
+  splitApprovalRows
 } from 'src/_resource/Operation/OutletRestocks/composables/useRestockAllocation'
+import {
+  buildPendingRestockAllocationNodes,
+  buildRestockAllocationNodes,
+  buildRestockCancelItemNodes
+} from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
 
 /**
  * OutletRestocks › allocation context — the UI half of the approval aggregate.
@@ -35,23 +43,23 @@ import {
  *
  * ONE reactive source of truth (ARCHITECTURE RULES §6). The approver's whole
  * decision — which bins each requested line draws from, which remainders are
- * cancelled, which warehouses are being inspected — lives in exactly one place:
- * the `ApprovalPlan` control field on the `OutletRestocks` pageState node. Every
- * computed below is a pure projection of
- * (WarehouseStorages × SKUs × the request's item rows × that plan), and every
- * mutation writes only the plan back. There is no mirror map and no watcher
+ * cancelled — lives in the `OutletRestockItems` CHILDREN of the `OutletRestocks`
+ * node, because that decision is line-item data of the batch, not a UI switch
+ * (UI_PAGE_STATE.md §5A.1). `controls` keeps only the view flags: the warehouses
+ * being inspected, the outside-stock toggle, and the approval comment.
+ *
+ * Every computed below is a pure projection of
+ * (WarehouseStorages × SKUs × the request's item rows × those children), and every
+ * mutation writes only the children back. There is no mirror map and no watcher
  * syncing two copies, so the review step cannot disagree with the allocation step.
  *
- * The plan is a CONTROL field rather than a record field because it is a
- * wizard-only structure that must never reach a GAS payload (UI_PAGE_STATE.md §6.4);
- * `Approve/PageAction.js` translates it into item rows at submit time.
+ * The children are a DRAFT of the rows to be written. `Approve/PageAction.js`
+ * clears them and lets the Layer 2 builder's own node replace them at submit time,
+ * so the wizard shape never reaches GAS.
  */
 
 const PARENT = 'OutletRestocks'
 const CHILD = 'OutletRestockItems'
-
-// Wizard-only keys on the parent node's `controls` bag.
-const PLAN = 'ApprovalPlan'
 // ONE warehouse selection, not a default plus a list of extras. The split forced
 // the approver to answer two questions ("which warehouse?" then "which others?")
 // to express one intent, and made "deselect the warehouse I am allocating from"
@@ -59,7 +67,6 @@ const PLAN = 'ApprovalPlan'
 // warehouse; the order they were picked in carries no meaning.
 const WAREHOUSES = 'ApprovalWarehouses'
 const SHOW_OUTSIDE = 'ApprovalShowOutsideStock'
-const COMMENT = 'ApprovalComment'
 
 // The unit a SKU is counted in when its own `UOM` column is blank. A discrete
 // count is what an unconfigured SKU is already treated as everywhere else, so
@@ -77,6 +84,47 @@ const num = (value) => {
 // field checks, rather than being waved through one guard and dereferenced by the next.
 const asRow = (value) => (value && typeof value === 'object' ? value : {})
 const isActive = (value) => text(asRow(value).Status || 'Active') === 'Active'
+
+const ITEMS = 'OutletRestockItems'
+const MOVEMENTS = 'StockMovements'
+const APPROVED_COMMENT = 'ProgressApprovedComment'
+
+/**
+ * The approver's plan, read back off the LIVE `OutletRestockItems` node.
+ *
+ * That node holds the rows this batch will actually write — there is no second
+ * draft copy. `_sourceCode` names the requested line a row descends from and
+ * `_cancelled` marks a remainder the approver gave up on; `build()` strips both,
+ * so neither reaches GAS.
+ */
+export function readApprovalPlan (pageState) {
+  const plan = {}
+  ;(pageState?.getRecordRows?.(ITEMS) || []).forEach((raw) => {
+    const row = asRow(raw)
+    const code = text(row._sourceCode)
+    if (!code) return
+    if (!plan[code]) plan[code] = { lines: [], cancelled: false }
+    if (row._cancelled === true) plan[code].cancelled = true
+    if (text(row.Progress) !== 'ALLOCATED') return
+    plan[code].lines.push({
+      warehouseCode: text(row.WarehouseCode),
+      storageName: text(row.StorageName),
+      quantity: num(row.Quantity)
+    })
+  })
+  return plan
+}
+
+// Everything the approval writes, dropped in one go. The parent node itself stays —
+// it carries the warehouse selection and the comment, and `hasNodes` gates the bar.
+export function clearApprovalPlan (pageState) {
+  pageState.removeNode(ITEMS)
+  pageState.removeNode(MOVEMENTS)
+  pageState.excludeAdditionalAction()
+  // The note is the approver's own input, not part of the plan, so it survives a clear.
+  const note = pageState.getRecord(APPROVED_COMMENT, PARENT)
+  pageState.setResource(PARENT, { record: note ? { [APPROVED_COMMENT]: note } : {} })
+}
 
 export function useRestockApproval () {
   // Injected once for both the Approve and Reallocate routes, by the relay
@@ -103,34 +151,74 @@ export function useRestockApproval () {
   const parent = pageState.useNode(PARENT)
   const serverRecord = computed(() => resourceRecord?.record?.value || null)
 
+  const { user } = useAuth()
+  const actor = () => user.value?.name || user.value?.email || ''
+
   // ── Plan accessors ─────────────────────────────────────────────────────────
-  // Declared before hydration, which seeds an empty plan on its immediate run —
-  // a `const` referenced from an eagerly-invoked watcher above it would be in its
-  // temporal dead zone.
-  //
-  // Always written as a NEW object. `controls` entries are reactive, but replacing
-  // the value outright means every projection below re-runs on one assignment
-  // rather than depending on deep tracking of a nested structure.
-  const getPlan = () => pageState.getControls(PLAN, null, PARENT)
-  const writePlan = (next) => pageState.setControls(PLAN, next, PARENT)
-  const plan = computed(() => getPlan() || {})
+  // ONE representation. What the cards read and what `submit` ships are the same
+  // node: every mutation runs the Layer 2 builder and applies its nodes STRAIGHT
+  // AWAY, so the batch is complete and inspectable at every step and `submit` has
+  // nothing left to assemble (UI_PAGE_STATE.md §5A).
+  const plan = computed(() => readApprovalPlan(pageState))
+
+  function writePlan (next) {
+    const record = serverRecord.value || {}
+    const items = pendingItems.value
+    const entryOf = (item) => (next || {})[text(item.Code)] || {}
+
+    // Nothing decided yet means nothing to write. Leaving the nodes up would put an
+    // APPROVED parent and a set of unchanged item rows in the batch for a page the
+    // approver has only looked at.
+    const decided = items.filter((item) => planAllocatedQty(entryOf(item)) > 0 || entryOf(item).cancelled === true)
+    if (!text(record.Code) || !decided.length) {
+      clearApprovalPlan(pageState)
+      return
+    }
+
+    const nodes = isInitialApproval.value
+      ? buildRestockAllocationNodes(record, items.flatMap((item) => splitApprovalRows(item, entryOf(item))), actor(), comment.value)
+      : buildPendingRestockAllocationNodes(
+        record,
+        items.filter((item) => planAllocatedQty(entryOf(item)) > 0).flatMap((item) => pendingAllocationRows(item, entryOf(item))),
+        actor(),
+        comment.value
+      )
+
+    pageState.applyNodes([...nodes, ...cancelNodesFor(next, items)])
+  }
+
+  // Cancelling a remainder moves no stock, so it is a queued executeAction rather
+  // than a row in the bulk write. Only a remainder that still EXISTS can be given
+  // up on — striking out a line that was fully allocated would cancel stock the
+  // approver just committed.
+  function cancelNodesFor (next, items) {
+    const rows = items
+      .filter((item) => {
+        const entry = (next || {})[text(item.Code)] || {}
+        return entry.cancelled === true && num(item.Quantity) - planAllocatedQty(entry) > 0
+      })
+      .map((item) => ({ Code: text(item.Code), Progress: 'PENDING' }))
+    if (!rows.length) return []
+    return buildRestockCancelItemNodes(
+      serverRecord.value || {},
+      rows,
+      actor(),
+      comment.value || 'Cancelled: no warehouse stock available.'
+    )
+  }
 
   // ── Hydration ──────────────────────────────────────────────────────────────
   // An `_action/:action` route is a custom sub-route: `usePageResolver` loads no
   // record for it (UI_PAGE_AND_SECTION_SYSTEM.md §1.3.3), so the node is created
   // and seeded here. It must exist for `PageAction` to render the sticky bar at
   // all — `hasNodes` gates it (UI_ACTION_SYSTEM.md §3.1).
-  // Bookkeeping lives on the NODE, not in this closure. FOUR components call this
-  // composable — `WarehouseAndLocation` and `ItemAllocating` at step 1,
-  // `ReviewAllocating` and `ReviewPending` at step 2 — and each call gets its own
-  // closure. A per-call `let hydratedKey` therefore starts empty when the step-2
-  // cards MOUNT, and would re-run the pass and wipe the allocation plan the
-  // approver has just spent the whole of step 1 building. A control field is
-  // scoped to the node itself, so it is shared by every caller.
-  const HYDRATED_FOR = 'ApprovalHydratedFor'
-  const hydratedFor = () => (pageState.hasNode(PARENT)
-    ? text(pageState.getControls(HYDRATED_FOR, null, PARENT))
-    : '')
+  // Whether the node was already built for THIS request is asked of the node's own
+  // `code` — there is no bookkeeping control for it. FOUR components call this
+  // composable (`WarehouseAndLocation` and `ItemAllocating` at step 1,
+  // `ReviewAllocating` and `ReviewPending` at step 2) and each call gets its own
+  // closure, so a per-call `let hydratedKey` would start empty when the step-2 cards
+  // MOUNT and re-run the pass, wiping the plan built on step 1.
+  const hydratedFor = () => (pageState.hasNode(PARENT) ? text(parent.node.value.code) : '')
 
   function hydrate () {
     const record = serverRecord.value
@@ -150,19 +238,14 @@ export function useRestockApproval () {
     pageState.initResource(PARENT, { isPrimaryKey: true, reset: true, code })
     if (!parent.exists.value) return
 
-    pageState.setControls(HYDRATED_FOR, code, PARENT)
-    pageState.load(record, PARENT)
-    writePlan({})
+    // The node carries the approval's OWN writes, not a copy of the loaded row: a
+    // full `load` here would put every column of the request into the batch.
+    clearApprovalPlan(pageState)
 
-    // Seed the comment from the LAST approval pass on THIS request, for the same
-    // reason the delivery flow does: an already-APPROVED request comes back to
-    // have its leftover PENDING lines allocated, and the note written the first
-    // time is usually most of the note wanted the second.
-    //
-    // Written unconditionally, because this line is only reached when the node
-    // has just been created for this record: there is no approver input to
-    // protect yet. Stepping between steps re-enters above.
-    pageState.setControls(COMMENT, text(record.ProgressApprovedComment), PARENT)
+    // Seed the note from the LAST approval pass on THIS request: an already-APPROVED
+    // request comes back to have its leftover PENDING lines allocated, and the note
+    // written the first time is usually most of the note wanted the second.
+    pageState.setRecord(APPROVED_COMMENT, text(record.ProgressApprovedComment), PARENT)
   }
 
   watch([serverRecord, () => parent.identifier.value], () => { hydrate() }, { immediate: true })
@@ -189,13 +272,17 @@ export function useRestockApproval () {
     return Array.from(new Set((Array.isArray(raw) ? raw : []).map(text).filter(Boolean)))
   })
   const showOutsideStock = computed(() => pageState.getControls(SHOW_OUTSIDE, null, PARENT) === true)
-  const comment = computed(() => text(pageState.getControls(COMMENT, null, PARENT)))
+  // The note is a COLUMN, bound straight to the parent record — not a control. It exists
+  // only on an initial approval: a later allocation never writes the parent, and there is
+  // no other column for it to land in, so that route does not collect one.
+  const commentField = pageState.useRecord(APPROVED_COMMENT, PARENT)
+  const comment = computed(() => (isInitialApproval.value ? text(commentField.value) : ''))
 
   function setSelectedWarehouses (codes) {
     pageState.setControls(WAREHOUSES, Array.isArray(codes) ? codes.map(text).filter(Boolean) : [], PARENT)
   }
   function setShowOutsideStock (value) { pageState.setControls(SHOW_OUTSIDE, value === true, PARENT) }
-  function setComment (value) { pageState.setControls(COMMENT, value ?? '', PARENT) }
+  function setComment (value) { commentField.value = value ?? '' }
 
   // ── The request's item rows ────────────────────────────────────────────────
   const restock = computed(() => serverRecord.value || {})
@@ -427,6 +514,14 @@ export function useRestockApproval () {
     return Array.from(codes).map((code) => ({ code, name: warehouseName(code) }))
   })
 
+  // The comment is stamped ONTO the rows, so the live batch has to be re-cut when it
+  // changes. Keyed off the comment itself, never off the node the rebuild writes, so
+  // this cannot feed itself.
+  watch([comment, isInitialApproval], () => {
+    const current = plan.value
+    if (Object.keys(current).length) writePlan(current)
+  })
+
   // ── Mutations (the only writers of the plan) ───────────────────────────────
   function setEntry (code, patch) {
     const current = plan.value[text(code)] || { lines: [], cancelled: false }
@@ -530,7 +625,7 @@ export function useRestockApproval () {
   }
 
   function resetPlan () {
-    writePlan({})
+    clearApprovalPlan(pageState)
   }
 
   return {

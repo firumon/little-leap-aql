@@ -62,22 +62,23 @@
       </div>
     </q-banner>
 
-    <!-- One comment for the decision. Deliberately not a field per outcome: the
-         approver writes one note, and the button they press files it. -->
-    <SectionDividerLabel label="Comment" />
+    <!-- Only an INITIAL approval has a column for a note. A later allocation never
+         writes the parent, so the field is not offered rather than collected and dropped. -->
+    <template v-if="isInitialApproval">
+      <SectionDividerLabel label="Comment" />
 
-    <q-card flat bordered :class="ui.cardClass">
-      <q-card-section>
-        <component
-          :is="CommentField"
-          :model-value="comment"
-          :record="restock"
-          :config="commentConfig"
-          header="ProgressApprovedComment"
-          @update:model-value="setComment"
-        />
-      </q-card-section>
-    </q-card>
+      <q-card flat bordered :class="ui.cardClass">
+        <q-card-section>
+          <component
+            :is="CommentField"
+            v-model="commentModel"
+            :record="restock"
+            :config="commentConfig"
+            header="ProgressApprovedComment"
+          />
+        </q-card-section>
+      </q-card>
+    </template>
   </div>
 </template>
 
@@ -90,9 +91,10 @@
  * both in view. Restating it as an editable control here would let the approver
  * write off a line without seeing the stock they are writing it off against.
  *
- * The comment is the one input on this step. It is stored as a control field, not
- * a record field, so it never leaks into a payload on its own — the sticky bar's
- * handler places it on the right column for the outcome chosen.
+ * The comment is the one input on this step, and it is a RECORD column
+ * (`ProgressApprovedComment`) bound straight through `useRecord` — writing it re-cuts the
+ * live batch, so what is reviewed here is what is sent. It renders only on an initial
+ * approval, because a later allocation writes no parent record to hold it.
  */
 import { computed, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
@@ -111,7 +113,9 @@ const attrs = useAttrs()
 const { pageState, ui } = useRestockApprovalContext()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || ui.gutterFallback || 'sm'}`)
 
-const { pendingRows, comment, setComment, restock } = useRestockApproval()
+const { pendingRows, comment, setComment, restock, isInitialApproval } = useRestockApproval()
+
+const commentModel = computed({ get: () => comment.value, set: setComment })
 
 const visible = computed(() => pageState?.meta.currentStep === props.step)
 

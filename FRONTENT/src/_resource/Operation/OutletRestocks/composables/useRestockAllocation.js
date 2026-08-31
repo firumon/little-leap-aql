@@ -187,7 +187,15 @@ export function splitApprovalRows (item = {}, entry = {}) {
   const requested = num(item.Quantity)
   const lines = (entry?.lines || []).filter((line) => num(line.quantity) > 0)
   const remainder = Math.max(requested - planAllocatedQty(entry), 0)
-  const base = { SKU: text(item.SKU), OutletRestockCode: text(item.OutletRestockCode), Status: 'Active' }
+  // `_sourceCode` / `_requestedQty` / `_cancelled` are frontend-only tags (stripped by
+  // `build()`): they are what lets the live node be read back as a per-line plan.
+  const base = {
+    SKU: text(item.SKU),
+    OutletRestockCode: text(item.OutletRestockCode),
+    Status: 'Active',
+    _sourceCode: code,
+    _requestedQty: requested
+  }
 
   const rows = lines.map((line, index) => ({
     ...base,
@@ -205,7 +213,8 @@ export function splitApprovalRows (item = {}, entry = {}) {
       WarehouseCode: '',
       StorageName: '',
       Quantity: remainder,
-      Progress: 'PENDING'
+      Progress: 'PENDING',
+      ...(entry?.cancelled === true ? { _cancelled: true } : {})
     })
   }
   return rows
@@ -223,8 +232,21 @@ export function splitApprovalRows (item = {}, entry = {}) {
 export function pendingAllocationRows (item = {}, entry = {}) {
   const code = text(item.Code)
   const requested = num(item.Quantity)
-  const base = { SKU: text(item.SKU), OutletRestockCode: text(item.OutletRestockCode), Status: 'Active' }
-  const source = { ...base, Code: code, Quantity: requested, Progress: 'PENDING', _approvalRequestedQty: requested }
+  const base = {
+    SKU: text(item.SKU),
+    OutletRestockCode: text(item.OutletRestockCode),
+    Status: 'Active',
+    _sourceCode: code,
+    _requestedQty: requested
+  }
+  const source = {
+    ...base,
+    Code: code,
+    Quantity: requested,
+    Progress: 'PENDING',
+    _approvalRequestedQty: requested,
+    ...(entry?.cancelled === true ? { _cancelled: true } : {})
+  }
 
   const allocated = (entry?.lines || [])
     .filter((line) => num(line.quantity) > 0)

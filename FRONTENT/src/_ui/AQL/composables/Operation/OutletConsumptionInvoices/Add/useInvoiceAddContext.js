@@ -519,12 +519,18 @@ export function useInvoiceAddContext () {
     const outlet = text(outletCode.value)
     const lines = groupedLines.value.map((line) => ({ SKU: line.SKU, Qty: line.Qty }))
     if (!outlet || !lines.length) {
-      pageState?.applyLive([], { keep: [NODE] })
+      // Nothing to invoice, so the dependants the last pass raised have to go. The page's
+      // own node stays — it holds the answers and gates the sticky bar.
+      for (let i = 0; i < selectedCodes.value.length; i++) {
+        pageState?.removeNode('OutletConsumptions', `invoiceGenerated${i}`)
+      }
+      pageState?.removeNode('TaxTransactions')
+      pageState?.removeNode('OutletReturns')
       return
     }
     const listCode = text(priceListCode.value)
     const today = new Date().toISOString().slice(0, 10)
-    pageState.applyLive(buildInvoiceGenerationNodes({
+    pageState.applyNodes(buildInvoiceGenerationNodes({
       outletCode: outlet,
       username: actorName(),
       actorName: actorName(),
@@ -542,7 +548,7 @@ export function useInvoiceAddContext () {
       // The SAME resolver the review step displays, so the tax the user agreed to and the
       // tax the sheet stores are one calculation, not two that happen to agree.
       calculateLineTax: makeLineTaxResolver({ priceListCode: listCode, resolvePrice })
-    }), { keep: [NODE] })
+    }))
   }
 
   // Ticking a consumption re-seeds the lines it contributes; everything else only re-cuts

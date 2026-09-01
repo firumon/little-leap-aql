@@ -1,4 +1,6 @@
+import { useAuth } from 'src/composables/core/useAuth'
 import { useDataStore } from 'src/stores/data'
+import { buildConsumptionCancellationNodes } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionWorkflow'
 import {
   cancellability,
   findInvoiceFor,
@@ -34,8 +36,9 @@ import {
  * hands it the rows the reversal is derived from — the audit's lines and its ledger entries —
  * and claims the `OutletMovements` permission that write requires.
  */
-export default (props, { pageState, resourceConfig, resourceRecord }) => {
-  // Safe outside setup: reaches Pinia stores and calls no `inject()`.
+export default (props, { pageState, resourceConfig }) => {
+  // Safe outside setup: both only reach Pinia stores and call no `inject()`.
+  const { user } = useAuth()
   const dataStore = useDataStore()
 
   const text = (value) => (value == null ? '' : String(value).trim())
@@ -43,15 +46,10 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
   const rows = (name) => (dataStore.getRecords(name) || []).map(asRow)
 
   const NODE = 'OutletConsumptions'
-  const reason = () => text(pageState.getControls('CancelReason', '', NODE))
+  const reason = () => text(pageState.getControls('CancelReason', null, NODE))
+  const actor = () => user.value?.name || user.value?.email || ''
 
-  // The route's own loaded row, never `pageState.meta` — meta carries no code.
-  const loaded = () => asRow(resourceRecord?.record?.value)
-  const record = () => {
-    const code = text(loaded().Code)
-    if (!code) return null
-    return rows(NODE).find((row) => text(row.Code) === code) || loaded()
-  }
+  const record = () => rows(NODE).find((row) => text(row.Code) === text(pageState.meta?.code)) || null
 
   return {
     actions: ['cancel', 'submit'],
@@ -87,6 +85,11 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
        * names are lower-camel: `allowed()` upper-cases only the first character, so an
        * all-caps name resolves to a key that never matches and fails closed (§8.4).
        */
+      // The audit's own lines and the ledger rows it posted — the sources the reversal is
+      // derived from. Read here rather than in the builder, which stays pure.
+      const consumptionItems = rows('OutletConsumptionItems')
+      const outletMovements = rows('OutletMovements')
+
       const permissions = { OutletConsumptions: 'cancelConsumption' }
       // The cancellation puts the consumed units back on the outlet's shelf, so it is gated
       // on the ledger write it actually performs.
@@ -104,8 +107,12 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         return { valid: false, message: 'You do not have permission to cancel this workflow.' }
       }
 
+      const result = buildConsumptionCancellationNodes(consumption, why, { invoice, restocks, consumptionItems, outletMovements, actorName: actor() })
+
+      const applied = pageState.applyNodes(result)
+      if (applied.valid === false) return false
       return {
-        successMsg: 'Consumption cancelled and its workflow reversed.',
+        successMsg: applied.successMsg,
         // The route's outcome lands back on the record so the user sees the cancelled
         // state and its cascade, rather than being returned to a list. `pageState.reset()`
         // first, or the typed reason survives the navigation and re-seeds the next visit.

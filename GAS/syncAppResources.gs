@@ -364,6 +364,8 @@ function initAppResourcesCodeConfig() {
             { header: 'Area', label: 'Area', type: 'text' },
             { header: 'City', label: 'City', type: 'text' },
             { header: 'CommunicationAddress', label: 'Communication Address', type: 'textarea' },
+            { header: 'ShippingAddress', label: 'Shipping Address', type: 'textarea' },
+            { header: 'BillingAddress', label: 'Billing Address', type: 'textarea' },
             { header: 'MapLocationLink', label: 'Map Location Link', type: 'link' },
             { header: 'Picture', label: 'Picture', type: 'file', accept: 'image/*' },
             { header: 'Picture2', label: 'Picture 2', type: 'file', accept: 'image/*' },

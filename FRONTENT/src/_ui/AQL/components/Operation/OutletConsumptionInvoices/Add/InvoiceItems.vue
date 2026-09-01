@@ -107,35 +107,9 @@
 </template>
 
 <script setup>
-/**
- * OutletConsumptionInvoices › Add › Step 2 — the bill's lines, and their prices.
- *
- * ── ONE ROW PER SKU, NOT PER COUNT ──
- * The ticked consumptions are grouped by SKU upstream, and each row carries chips naming the
- * counts it came from. An outlet audited weekly and invoiced monthly gets one line per
- * product showing four sources, rather than four lines the customer has to add up.
- *
- * ── A CODE IS NOT A NAME ──
- * Every row leads with the PRODUCT and states the variant beneath it, from the SKUs domain's
- * own `skuLabelOf`. The code appears only where it is the sole distinguishing fact.
- *
- * ── WHY THE PRICE IS EDITABLE ──
- * The price list is the default, not the law: a negotiated one-off, a damaged-goods
- * concession or a stale list all need overriding at the moment of billing. Editing a price
- * re-runs the WHOLE engine — line tax, discount apportionment and the net payable move
- * together, because the override is passed to `calculateConsumptionInvoice` as a price
- * RESOLVER rather than patched onto a total the engine never saw. The caption under each row
- * updates on the same tick as the review step's grand total.
- *
- * The add-more expansion mirrors `OutletConsumptions/Add/RestockItems.vue` so the two
- * wizards' "add another item" control is one recurring pattern rather than two similar ones.
- * Already-billed SKUs are filtered out upstream.
- *
- * Fields mount through `resolveFieldComponent` (§2.4). Spacing comes from `pageProps.gutter`
- * via `$attrs`, never a hardcoded margin (§10.2).
- *
- * No `<style>` block (ARCHITECTURE RULES §7).
- */
+// Step 2 - the bill's lines and their prices. Ticked counts are grouped one row per SKU.
+// The price list is a default, not the law: an edited price is passed to the engine as a
+// resolver, so tax, discount and the payable all move with it.
 import { computed, reactive, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import AqlAddItemsExpansion from 'components/shared/AqlAddItemsExpansion.vue'
@@ -159,43 +133,23 @@ const {
   skuCandidatesFor, setLinePrice, removeLine, addExtraItem, step: currentStep
 } = useInvoiceAddContext()
 
-/**
- * Whether a line needs to say where its quantity came from.
- *
- * Only once the invoice BUNDLES more than one consumption. Until then every line has exactly
- * one origin — the single ticked count — and printing it under each row repeats the same
- * fact as many times as there are items.
- */
+// With one count ticked every line came from it, so naming the source tells nobody anything.
 const showSources = computed(() => selectedCodes.value.length > 1)
 
 const isActive = computed(() =>
   props.step == null || Number(props.step) === currentStep.value)
 
-/**
- * Per-candidate quantity, keyed by SKU. A `reactive` map rather than one `ref` per row,
- * because the expansion renders an arbitrary number of them. Entries are dropped as they are
- * added, so the map never outgrows the list it mirrors.
- */
+// Per-candidate quantity, keyed by SKU. Entries are dropped once added.
 const pendingQty = reactive({})
 
-/**
- * An invoice with NO consumption behind it — every line was added by hand.
- *
- * The distinction is what the warning banner turns on: a bundled invoice bills counts that
- * already moved stock, while a direct one bills something no audit ever recorded, so no
- * ledger anywhere is touched by it.
- */
+// Nothing counted behind this bill, so no stock anywhere moves. The banner says so.
 const isDirectInvoice = computed(() => !selectedCodes.value.length)
 
 const skuCandidates = computed(() => skuCandidatesFor(''))
 // Capped for the same reason, and the drawer's own filter narrows what is shown within it.
 const visibleCandidates = computed(() => skuCandidates.value.slice(0, 25))
 
-/**
- * The rows, joined to the CALCULATED lines so each shows the price actually used and the tax
- * it attracted. The calculation is read, never repeated — `invoice.lines` is the same array
- * the review step totals and the payload builder writes.
- */
+// Joined to the calculated lines, never recalculated: the same array the review step totals.
 const lines = computed(() => {
   const calculated = new Map(invoice.value.lines.map((line) => [line.SKU, line]))
   return groupedLines.value.map((line) => {

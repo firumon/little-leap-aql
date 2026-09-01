@@ -1,24 +1,3 @@
-import { watch } from 'vue'
-import { useAuth } from 'src/composables/core/useAuth'
-import { buildSettlementNodes } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoicePayload'
-import { countsAsPayment } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceCalculation'
-import { useDataStore } from 'src/stores/data'
-
-const NODE = 'OutletConsumptionInvoices'
-// Controls, not queued action fields: `MarkPaid` is registered `kind: navigate`, and
-// `setActions` silently drops a write to an action that has no request envelope.
-const REASON = 'SettlementReason'
-const MISMATCH = 'SettlementMismatchAmount'
-const COMMENT = 'SettlementComment'
-
-const asRow = (value) => (value && typeof value === 'object' ? value : {})
-const text = (value) => (value == null ? '' : String(value).trim())
-
-/** This invoice's own payment rows — the join the builder derives the balance from. */
-const paymentsFor = (code) => (useDataStore().getRecords('OutletPayments') || [])
-  .map(asRow)
-  .filter((row) => text(row.OutletConsumptionInvoiceCode) === code && countsAsPayment(row))
-
 /**
  * OutletConsumptionInvoices › MarkPaid contract —
  * `/operation/outlet-consumption-invoices/{code}/_action/mark-paid`.
@@ -58,34 +37,5 @@ export default {
   PropsPageHeader: {
     title: 'Settle Invoice',
     reload: false
-  },
-
-  // The settlement is assembled as the answers are given, so `PageAction.submit` only
-  // validates (UI_PAGE_STATE.md §5B).
-  ready ({ pageState, resourceRecord }) {
-    const { user } = useAuth()
-    const loaded = () => resourceRecord?.record?.value || {}
-
-    watch(() => [
-      text(loaded().Code),
-      pageState.getControls(REASON, '', NODE),
-      pageState.getControls(MISMATCH, undefined, NODE),
-      pageState.getControls(COMMENT, '', NODE)
-    ], () => {
-      const record = loaded()
-      const code = text(record.Code)
-      if (!code) return
-      // Created once, never replaced: initResource would drop the answers being given.
-      if (!pageState.hasNode(NODE)) pageState.initResource(NODE, { isPrimaryKey: true, code })
-      pageState.applyLive(buildSettlementNodes({
-        record,
-        payments: paymentsFor(code),
-        reason: pageState.getControls(REASON, '', NODE),
-        comment: pageState.getControls(COMMENT, '', NODE),
-        // Not coerced: a blank reads as "the whole outstanding balance" downstream.
-        mismatchAmount: pageState.getControls(MISMATCH, undefined, NODE),
-        actorName: user.value?.name || user.value?.email || ''
-      }), { keep: [NODE] })
-    }, { immediate: true, deep: true })
   }
 }

@@ -3,7 +3,7 @@
 import { batchRef, isBatchRef, textOrRef } from 'src/utils/appHelpers'
 import { useAuth } from 'src/composables/core/useAuth'
 import { resourceRow } from 'src/composables/resources/useResourceConfig'
-import { stampFields } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionPayload'
+import { stampFields, buildConsumptionInvoiceReleaseNodes } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionPayload'
 // OutletReturns owns both directions of the return-credit link.
 import {
   buildReturnInvoiceAdjustmentLinkedNodes,
@@ -44,6 +44,9 @@ const codeList = (values) => (Array.isArray(values) ? values : []).map(text).fil
 
 /** The batch path an invoice's children chain their parent code off. */
 export const INVOICE_REF_PATH = `${INVOICES}.latest.code`
+
+// One wording for a raised invoice, whether the node chain reports it or the page does.
+export const INVOICE_GENERATED_MESSAGE = 'Invoice generated.'
 
 const rowOf = (row) => asRow(row?.data ?? row)
 
@@ -303,7 +306,7 @@ export function buildInvoiceDocumentNodes ({
       ...(withItems ? { children: nodePayloadForParent(invoice.lines) } : { merge: true }),
       reload: [INVOICES],
       permissions: { create: 'You are not allowed to create an invoice.' },
-      successMsg: 'Invoice generated.'
+      successMsg: INVOICE_GENERATED_MESSAGE
     },
     ...ledger,
     ...markGenerated,
@@ -457,15 +460,16 @@ export function buildCancellationNodes ({ record = {}, comment = '', actorName =
     action: 'Cancel', column: 'Progress', columnValue: 'CANCELLED'
   }, code: textOrRef(code), data: { fields: stampFields('ProgressCancelled', actorName, text(comment)) } }], reload: [INVOICES] }]
 
-  // One queued action per consumption, each keyed by its own code. Skipped when the
-  // CONSUMPTION is what is being cancelled - walking it back to invoiceable would undo
-  // the cancellation that triggered this.
-  const released = releaseConsumptions ? consumptions : []
-  released.forEach((consumptionCode) => {
-    nodes.push({ resource: CONSUMPTIONS, actions: [{ ...{
-      action: 'MarkPendingInvoiceGeneration', column: 'Progress', columnValue: 'PENDING_INVOICE_GENERATION'
-    }, code: textOrRef(consumptionCode), data: { fields: stampFields('ProgressPendingInvoiceGeneration', actorName, `Invoice ${code} cancelled; consumption is invoiceable again.`) } }], reload: [CONSUMPTIONS] })
-  })
+  // OutletConsumptions owns the invoiceable state and its stamp, so the release nodes are
+  // asked for, not written here. Skipped when the CONSUMPTION is what is being cancelled -
+  // walking it back to invoiceable would undo the cancellation that triggered this.
+  if (releaseConsumptions && consumptions.length) {
+    nodes.push(...buildConsumptionInvoiceReleaseNodes({
+      consumptionCodes: consumptions,
+      invoiceCode: code,
+      actorName
+    }))
+  }
 
   // Reversing the credit is the OutletReturns domain's own inverse of the forward link, so
   // both directions are written by one owner and cannot drift apart.
@@ -659,6 +663,7 @@ export function buildInvoiceUpdateNodes ({
 export function useInvoicePayload () {
   return {
     INVOICE_REF_PATH,
+    INVOICE_GENERATED_MESSAGE,
     invoiceNode,
     invoiceNodeForConsumption,
     buildInvoiceGenerationNodes,

@@ -141,36 +141,9 @@
 </template>
 
 <script setup>
-/**
- * OutletConsumptionInvoices › Add › Step 3 — terms, discount, and what it all comes to.
- *
- * ── THE SUMMARY IS THE THING BEING AGREED TO ──
- * Every figure here comes from ONE call to `calculateConsumptionInvoice`, held on the page
- * context — the same object `PageAction.js` submits. That is why the engine takes a price
- * resolver rather than pre-priced lines: a discount typed here re-runs line tax and
- * apportionment together, so the total on screen is not an approximation of what will be
- * written, it IS what will be written.
- *
- * The tax summary is one line per TAX CODE, from the same grouped breakdown the View page
- * shows after submission — so the invoice reads the same before and after it exists.
- *
- * ── WHY THE RETURNS BANNER IS NOT A CHOICE ──
- * Unadjusted returns are credited automatically, and the banner reports rather than offers. A
- * return the outlet is owed money for is a debt whether or not the person raising this
- * invoice remembers it, and making it opt-in would let an invoice silently overcharge. Which
- * returns qualify is decided in Layer 2.
- *
- * The discount control SWITCHES TYPE with the mode — a currency field for a flat amount, a
- * plain number for a percentage — because a `%` value rendered with a currency symbol reads
- * as money and gets typed as money.
- *
- * Every field mounts through `resolveFieldComponent` (§2.4), including the comment: a
- * `textarea` type resolves to the app's own multi-line control rather than a `q-input`
- * dressed up with `autogrow`. Nothing here is `dense` — these are the primary inputs of the
- * step. Spacing is `pageProps.gutter` throughout, never a hardcoded margin (§10.2).
- *
- * No `<style>` block; `.aql-detail-*` are the canonical shared classes (ARCHITECTURE RULES §7).
- */
+// Step 3 - terms, discount, credited returns, and the total. Every figure comes from the
+// one `calculateConsumptionInvoice` call on the page context, which is also what gets
+// submitted, so the screen and the sheet cannot disagree.
 import { computed, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
@@ -199,12 +172,7 @@ const {
 const isActive = computed(() =>
   props.step == null || Number(props.step) === currentStep.value)
 
-/**
- * `q-toggle`/`q-checkbox` need writable models. The context exposes writable computeds
- * already, but `v-model` on a destructured computed cannot assign through — these thin
- * wrappers restore the write. The checkbox array is copied on set because `q-checkbox`'s
- * `val` binding mutates in place, which would never reach the control-field setter.
- */
+// `v-model` cannot assign through a destructured computed, so these thin wrappers do it.
 const applyReturnsModel = computed({
   get: () => applyReturns.value,
   set: (value) => { applyReturns.value = value }
@@ -232,8 +200,8 @@ const summary = computed(() => {
   const entry = header.value
   const preTax = invoice.value.policy.discountTaxPolicy === 'PRE_TAX'
 
-  // Every component is stated even at zero: this is a reconciliation, and a reader checking
-  // why the total is what it is needs to see a zero rather than infer it from a missing row.
+  // Every line is stated even at zero: this is a reconciliation, so a missing row would
+  // leave the reader guessing.
   return [
     { key: 'subtotal', label: 'Subtotal', value: entry.Subtotal },
     {

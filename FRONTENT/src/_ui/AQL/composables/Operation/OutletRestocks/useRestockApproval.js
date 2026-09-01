@@ -282,7 +282,13 @@ export function useRestockApproval () {
     pageState.setControls(WAREHOUSES, Array.isArray(codes) ? codes.map(text).filter(Boolean) : [], PARENT)
   }
   function setShowOutsideStock (value) { pageState.setControls(SHOW_OUTSIDE, value === true, PARENT) }
-  function setComment (value) { commentField.value = value ?? '' }
+  // The comment is stamped ONTO the rows, so typing it has to re-cut the batch. Done
+  // here, on the user's own edit, never from a watcher over the nodes we write.
+  function setComment (value) {
+    commentField.value = value ?? ''
+    const current = plan.value
+    if (Object.keys(current).length) writePlan(current)
+  }
 
   // ── The request's item rows ────────────────────────────────────────────────
   const restock = computed(() => serverRecord.value || {})
@@ -512,14 +518,6 @@ export function useRestockApproval () {
       if (text(line.warehouseCode)) codes.add(text(line.warehouseCode))
     }))
     return Array.from(codes).map((code) => ({ code, name: warehouseName(code) }))
-  })
-
-  // The comment is stamped ONTO the rows, so the live batch has to be re-cut when it
-  // changes. Keyed off the comment itself, never off the node the rebuild writes, so
-  // this cannot feed itself.
-  watch([comment, isInitialApproval], () => {
-    const current = plan.value
-    if (Object.keys(current).length) writePlan(current)
   })
 
   // ── Mutations (the only writers of the plan) ───────────────────────────────

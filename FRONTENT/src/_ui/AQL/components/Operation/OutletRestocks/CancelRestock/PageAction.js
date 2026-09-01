@@ -1,9 +1,11 @@
+import { useAuth } from 'src/composables/core/useAuth'
 import {
   CANCEL_REASON,
   activeItemsOf,
   cancellability,
   cancellableItems,
-  returnableItems
+  returnableItems,
+  buildRestockCancellationNodes
 } from 'src/_resource/Operation/OutletRestocks/composables/useRestockCancellation'
 
 /**
@@ -38,7 +40,11 @@ const text = (value) => (value == null ? '' : String(value).trim())
 const asRow = (value) => (value && typeof value === 'object' ? value : {})
 
 export default (props, { pageState, resourceConfig, resourceRecord }) => {
+  // Safe outside setup: `useAuth` only reaches Pinia stores and calls no `inject()`.
+  const { user } = useAuth()
+
   const restock = () => resourceRecord?.record?.value || {}
+  const actor = () => user.value?.name || user.value?.email || ''
   const reason = () => text(pageState.getControls(CANCEL_REASON, null, PARENT))
 
   function childRows () {
@@ -75,10 +81,14 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         return { valid: false, message: 'Every line on this request has already been settled.' }
       }
 
+      // The domain states which permissions this cancellation actually needs — it claims
+      // `cancel` rather than generic `update`, and stock only when units come back.
+      const result = buildRestockCancellationNodes(parent, rows, actor(), why)
+
+      const applied = pageState.applyNodes(result)
+      if (applied.valid === false) return false
       return {
-        successMsg: returnableItems(rows, parent.Code).length
-          ? 'Restock cancelled and warehouse stock returned.'
-          : 'Restock cancelled.',
+        successMsg: applied.successMsg,
         // Reset first, or the typed reason survives the navigation and re-seeds the
         // next visit to this route.
         onSuccess: () => {

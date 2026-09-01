@@ -280,7 +280,12 @@ export function useRestockDelivery () {
   // control. Writing it re-cuts the live batch.
   const commentField = pageState.useRecord(DELIVERED_COMMENT, PARENT)
   const comment = computed(() => text(commentField.value))
-  function setComment (value) { commentField.value = value ?? '' }
+  // The note is stamped ONTO the rows, so typing it has to re-cut the batch. Done here,
+  // on the user's own edit, never from a watcher over the nodes we write.
+  function setComment (value) {
+    commentField.value = value ?? ''
+    if (selectedCodes.value.length) writeSelection(selectedCodes.value)
+  }
 
   const { user } = useAuth()
   const actor = () => user.value?.name || user.value?.email || ''
@@ -327,13 +332,6 @@ export function useRestockDelivery () {
       role: ''
     }))
   }
-
-  // The note is stamped ONTO the rows, so the live batch has to be re-cut when it
-  // changes. Keyed off the note, never off the node the rebuild writes, so this cannot
-  // feed itself.
-  watch(comment, () => {
-    if (selectedCodes.value.length) writeSelection(selectedCodes.value)
-  })
 
   /**
    * The display name of a SKU, read off the enriched SKU record.

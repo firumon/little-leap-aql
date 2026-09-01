@@ -12,7 +12,7 @@
           :record="{}"
           :config="{ options: outletOptions, label: 'Outlet', clearable: false }"
           header="OutletCode"
-          @update:model-value="(value) => (outletCode = value)"
+          @update:model-value="pickOutlet"
         />
       </q-card-section>
     </q-card>
@@ -39,7 +39,7 @@
               flat no-caps
               color="primary"
               :label="isAllSelected ? 'Clear all' : 'Select all'"
-              @click="toggleSelectAll"
+              @click="pickAll"
             />
           </q-card-section>
 
@@ -50,7 +50,7 @@
               <q-item-section side top>
                 <q-checkbox
                   :model-value="selectedCodes.includes(row.code)"
-                  @update:model-value="toggleInvoice(row.code)"
+                  @update:model-value="pickInvoice(row.code)"
                 />
               </q-item-section>
 
@@ -140,20 +140,16 @@ const {
   initNode, loadSources, reseedAmount
 } = useOutletPaymentAddContext()
 
+const pickInvoice = (code) => toggleInvoice(code)
+const pickAll = () => toggleSelectAll()
+const pickOutlet = (value) => { outletCode.value = value }
+
 const isActive = computed(() =>
   props.step == null || Number(props.step) === currentStep.value)
 
-/**
- * Register the page's form node, on the FIRST step.
- *
- * The wizard writes no record through `pageState` — its answers are control fields and its
- * requests are built in Layer 2 — but the node must exist, because the sticky form-actions bar
- * is gated on `pageState.hasNodes`. Step 1 owns the call because it always mounts first.
- *
- * The node is created FIRST and the fetch awaited after it, so the bar is never missing for
- * the length of a round trip. `reseedAmount` then fills in the default the seeded invoice
- * could not supply while the aggregate was still empty.
- */
+// Step 1 always mounts first, so it creates the page node the sticky bar is gated on, then
+// fetches. `reseedAmount` fills the default a seeded invoice could not supply while the
+// aggregate was still empty.
 onMounted(async () => {
   initNode()
   await loadSources()

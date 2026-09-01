@@ -14,32 +14,13 @@ import {
 import { settlementReasons } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceWorkflow'
 import { buildOutletPaymentCreationNodes, stampPaymentRowsInPageState } from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentPayload'
 
-/**
- * OutletPayments › Add — the injection relay and shared wizard state
- * (UI_RESOURCE_DOMAIN_LOGIC.md §6.1).
- *
- * ONE `inject()` for the three step cards, and ONE place the wizard's answers live.
- *
- * ── WHY THE ANSWERS ARE CONTROL FIELDS ──
- * A collection is not assembled the way an ordinary create form is. One payment entered here
- * may become SEVERAL payment rows — one per invoice it settles — each with its own amount, and
- * each paired with a state transition on the invoice it credits. So there is no `pageState`
- * child collection to bind to; there is a set of wizard answers, held as control fields, from
- * which the whole batch is built in Layer 2.
- *
- * That is also what makes the review step honest: the figures it shows are read from the same
- * control fields `PageAction.js` submits from, through the same
- * `buildOutletPaymentCreationNodes`. The receipt the user agreed to and the rows the sheet
- * stores are the same batch by construction, not by two implementations agreeing.
- *
- * ── WHY THE AMOUNT IS SYNCED IN SETTERS, NOT IN A WATCHER ──
- * This relay is called once per consuming card, so a `watch()` here would be registered three
- * times and fire three times per change. Every knock-on (re-defaulting the amount when the
- * invoice selection changes, redistributing when the amount changes) therefore happens inside
- * the setter that caused it, which runs exactly once whichever card wrote it.
- *
- * PLACEMENT — `Add/`, the page tier (§6.2): only this page provides the context it injects.
- */
+// OutletPayments › Add — one inject() for the three step cards, and the one place the
+// wizard's state lives. One collection becomes several receipt ROWS, one per invoice it
+// settles, held in `records`; how it was taken stays in `controls`. Every change re-applies
+// the Layer 2 node graph, so what is reviewed is what is submitted.
+//
+// Knock-ons live in the SETTERS, not a watch(): this relay runs once per consuming card, so
+// a watch here would be registered three times and fire three times per change.
 
 const NODE = 'OutletPayments'
 
@@ -78,13 +59,7 @@ export function useOutletPaymentAddContext () {
   const { user } = useAuth()
   const index = useOutletPaymentIndex()
 
-  /**
-   * The two values the review step shows but nobody types: WHO is collecting and WHEN.
-   *
-   * Read from the live session and the clock here, and stamped onto every payment row by
-   * `buildOutletPaymentCreationNodes` from the same two sources — so the receipt reviewed
-   * and the receipt written name the same collector on the same date.
-   */
+  // Who is collecting and when. Read here and stamped by Layer 2 from the same two sources.
   const collectorName = computed(() => text(user.value?.name || user.value?.email) || 'Unknown')
   const collectionDate = computed(() => new Date().toISOString().slice(0, 10))
 
@@ -189,13 +164,8 @@ export function useOutletPaymentAddContext () {
 
   // ── Selection ───────────────────────────────────────────────────────────────
 
-  /**
-   * Replace the chosen invoices, and re-default the amount to what they owe.
-   *
-   * The amount follows the selection because settling the chosen invoices in full is what a
-   * collector means the overwhelming majority of the time; typing over it afterwards is one
-   * gesture, whereas re-deriving the total by hand is arithmetic the page already knows.
-   */
+  // The amount follows the selection: settling the chosen invoices in full is what a
+  // collector means almost every time, and typing over it is one gesture.
   function setSelectedCodes (codes) {
     const next = (Array.isArray(codes) ? codes : []).map(text).filter(Boolean)
     const wanted = new Set(next)
@@ -227,14 +197,8 @@ export function useOutletPaymentAddContext () {
     setSelectedCodes(isAllSelected.value ? [] : outletInvoices.value.map((row) => text(row.code)))
   }
 
-  /**
-   * The outlet.
-   *
-   * Reads the CONTROL FIELD only, never the route query as a fallback: a query read here would
-   * make the wizard DISPLAY an outlet that `PageAction.js` — which sees control fields and
-   * nothing else — could not find, and every attempt to advance would be vetoed against a form
-   * that plainly showed one. The query is SEEDED into the field once, in `initNode`.
-   */
+  // Never the route query as a fallback: `initNode` seeds it in once, so the screen and the
+  // submit path share one source of truth.
   const outletCode = computed({
     get: () => text(field('OutletCode')),
     set: (value) => {
@@ -248,13 +212,8 @@ export function useOutletPaymentAddContext () {
 
   // ── Allocation ──────────────────────────────────────────────────────────────
 
-  /**
-   * Split a collected amount across the chosen invoices, OLDEST INVOICE FIRST.
-   *
-   * The rule lives in Layer 2 (`autoDistribute`) rather than here, because "oldest debt is
-   * settled first" is an accounting policy, not a presentation choice — and the same policy
-   * has to hold whether the split was produced by this button or by typing an amount.
-   */
+  // Oldest invoice first. The rule is Layer 2's (`autoDistribute`) - it is an accounting
+  // policy, not a presentation choice.
   function distribute (total) {
     const split = calcAutoDistribute(
       num(total),
@@ -287,14 +246,8 @@ export function useOutletPaymentAddContext () {
   /** What would still be owed on the chosen invoices after this payment lands. */
   const residualBalance = computed(() => Math.max(0, money2(selectedBalance.value - amount.value)))
 
-  /**
-   * Whether the shortfall is small enough to write off.
-   *
-   * Every chosen invoice must clear the test individually, not the total: a waiver marks each
-   * invoice PAID on its own row, and a $200 shortfall spread over twenty invoices is twenty
-   * write-offs, not one small one. The threshold itself is a currency property resolved in
-   * Layer 2.
-   */
+  // Each invoice must clear the test on its own: a shortfall spread over twenty invoices is
+  // twenty write-offs, not one small one.
   const canWaiveResidual = computed(() => {
     if (residualBalance.value <= 0) return false
     if (!selectedInvoices.value.length) return false
@@ -306,11 +259,8 @@ export function useOutletPaymentAddContext () {
 
   const waiverLimit = computed(() => residualThreshold(selectedInvoices.value[0]?.PriceListCode))
 
-  /**
-   * The audit sentence the waiver writes onto each settled invoice, shown before it is written.
-   * Built by the same Layer 2 function the payload builder falls back to, so the preview and
-   * the stored comment are one string.
-   */
+  // The audit sentence the waiver will write, built by the same Layer 2 function that
+  // writes it - so the preview and the stored comment are one string.
   const waiverAuditComment = computed(() => waiverCommentOf(
     _C(amount.value, true),
     _C(selectedBalance.value, true),
@@ -318,14 +268,8 @@ export function useOutletPaymentAddContext () {
     waiverReason.value
   ))
 
-  /**
-   * The receipt, invoice by invoice, exactly as it will be written.
-   *
-   * `outcome` restates the transition the payload builder will choose from the SAME inputs —
-   * applied ≥ balance means PAID, an explicitly waived remainder means PAID, anything else
-   * — including a one-cent residue — means PARTIALLY_PAID. It is the one thing on the review step a reader cannot work out for
-   * themselves, and it is what makes the step a review rather than a summary.
-   */
+  // The receipt, invoice by invoice. `outcome` restates the transition Layer 2 will choose
+  // from the same inputs - the one thing a reader cannot work out alone.
   const receiptLines = computed(() => selectedInvoices.value.map((row) => {
     const applied = num(allocations.value[text(row.code)])
     const remaining = Math.max(0, money2(num(row.balance) - applied))
@@ -345,29 +289,16 @@ export function useOutletPaymentAddContext () {
 
   // ── Sources ─────────────────────────────────────────────────────────────────
 
-  /**
-   * Every resource this wizard reads.
-   *
-   * `OutletConsumptionInvoices` is the one that MUST be here: the whole wizard is a list of
-   * open invoices and the balances they carry, and nothing else on this route fetches them.
-   * `Outlets` supplies the names; `OutletPayments` is fetched by the route but is listed so a
-   * balance is never computed against a stale payment set.
-   */
+  // `OutletConsumptionInvoices` must be here: the wizard IS a list of open invoices and
+  // nothing else on this route fetches them. The rest supply names and current balances.
   const sources = ['OutletConsumptionInvoices', 'OutletPayments', 'Outlets']
     .map((name) => useRecord(name))
 
   /** Renders from cache and syncs the delta in the background — never blocks first paint. */
   const loadSources = () => Promise.all(sources.map((resource) => resource.reload()))
 
-  /**
-   * Create the page's `pageState` node and seed the answers the wizard was opened with.
-   *
-   * The node must EXIST even though no record is written through it, because the sticky
-   * form-actions bar is gated on `pageState.hasNodes` and renders nothing without one.
-   *
-   * `reset: true` clears any node left behind by a previously-visited resource page, so a
-   * receipt opened straight after another form does not inherit its half-filled state.
-   */
+  // `reset: true` drops any node a previously-visited page left behind, so a receipt opened
+  // straight after another form does not inherit its half-filled state.
   const initNode = () => {
     pageState?.initResource(NODE, {
       reset: true,
@@ -392,15 +323,8 @@ export function useOutletPaymentAddContext () {
     if (seededInvoice && !selectedCodes.value.length) setSelectedCodes([seededInvoice])
   }
 
-  /**
-   * Re-default the amount once the invoices have actually arrived.
-   *
-   * `initNode` runs BEFORE the fetch settles — it has to, because the sticky form-actions bar
-   * is gated on the node existing and would otherwise be missing for the length of a round
-   * trip. At that moment the aggregate is empty, so a seeded invoice has no balance yet and
-   * the amount seeds as zero. This runs after the load and fills it in, but only while the
-   * user has not typed anything of their own.
-   */
+  // `initNode` runs before the fetch settles, so a seeded invoice has no balance yet. This
+  // fills the amount in afterwards, but only while the user has typed nothing of their own.
   const reseedAmount = () => {
     if (num(field('Amount', 0)) > 0) return
     if (!selectedCodes.value.length) return
@@ -409,13 +333,21 @@ export function useOutletPaymentAddContext () {
 
   // THE LIVE BATCH: every answer goes to Layer 2 at once, so step 3 reviews the real rows
   // and `PageAction.submit` only validates (UI_PAGE_STATE.md §5B).
+  // `applyNodes` only ever adds, and a stamp is keyed by its invoice's own code - so a
+  // deselected invoice keeps its queued transition unless the tail is taken down first.
+  function clearDependentNodes () {
+    pageState?.excludeAdditionalAction()
+    pageState?.removeNode('OutletConsumptionInvoices')
+  }
+
   function rebuild () {
+    clearDependentNodes()
     const outletCode = text(field('OutletCode'))
     const invoices = selectedInvoices.value.map((row) => ({ ...row, Code: text(row.code) }))
     if (!outletCode || !invoices.length) {
-      // The node stays: the outlet lives on it. The empty apply drops the invoice stamps
-      // the last pass queued.
-      pageState?.applyLive([], { keep: [NODE] })
+      // The node stays - it holds the answers and gates the sticky bar - but there is
+      // nothing for Layer 2 to refuse either.
+      setField('BuildError', '')
       return
     }
     // The shared columns go onto the rows the page holds; the builder never restates them.
@@ -426,7 +358,7 @@ export function useOutletPaymentAddContext () {
       actorName: collectorName.value,
       comment: ''
     })
-    pageState.applyLive(buildOutletPaymentCreationNodes({
+    const applied = pageState.applyNodes(buildOutletPaymentCreationNodes({
       selectedOutletCode: outletCode,
       selectedInvoices: invoices,
       rows: rows(),
@@ -442,7 +374,11 @@ export function useOutletPaymentAddContext () {
       waiveResidual: field('WaiveResidual', false) === true,
       waiverReason: text(field('WaiverReason')),
       waiverComment: text(field('WaiverComment'))
-    }), { keep: [NODE] })
+    }))
+
+    // Why Layer 2 refused, in its own words, so the sticky bar can veto submit with it
+    // instead of inventing a second rule.
+    setField('BuildError', applied.valid === false ? text(applied.message) : '')
   }
 
   pageState?.derive([

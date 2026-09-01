@@ -1,14 +1,11 @@
 import { ref, computed, inject } from 'vue'
-import { useQuasar } from 'quasar'
 import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useRecord } from 'src/composables/resources/useRecord'
-import { useAuth } from 'src/composables/core/useAuth'
 import { useCurrencyResource } from 'src/_resource/Master/Currencies/composables/useCurrencyResource'
 import { useOutletPaymentIndex } from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentIndex'
 import {
-  canCancelPayment,
   isCancelled,
   progressMetaOf
 } from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentProgress'
@@ -17,7 +14,6 @@ import {
   paidTotalOf,
   balanceDueOf
 } from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentAllocation'
-import { buildOutletPaymentCancellationNodes } from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentPayload'
 import { progressMetaOf as invoiceProgressMetaOf } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceWorkflow'
 import {
   payableFiguresOf,
@@ -48,14 +44,11 @@ const num = (value) => {
 let pending = null
 
 export function useOutletPaymentViewContext () {
-  const $q = useQuasar()
   const ui = useAQLConfig()
   const nav = useResourceNav()
   const { code } = useRouteConfig()
-  const { user } = useAuth()
   const { _C } = useCurrencyResource()
 
-  const pageState = inject('pageState', null)
   const resourceConfig = inject('resourceConfig', null)
   const resourceRecord = inject('resourceRecord', null)
 
@@ -76,8 +69,6 @@ export function useOutletPaymentViewContext () {
   }
 
   const saving = ref(false)
-  const cancelDialogOpen = ref(false)
-  const cancelComment = ref('')
 
   const loading = computed(() => resourceRecord?.loading?.value ?? false)
 
@@ -147,48 +138,6 @@ export function useOutletPaymentViewContext () {
       .slice(0, 10)
   })
 
-  // ── Cancellation ────────────────────────────────────────────────────────────
-
-  const canCancel = computed(() => !!record.value && canCancelPayment(record.value))
-
-  function openCancelDialog () {
-    cancelComment.value = ''
-    cancelDialogOpen.value = true
-  }
-
-  // Both halves go out as ONE batch built in Layer 2: reversing the receipt without
-  // recalculating the invoice would leave a PAID invoice with no money against it.
-  async function confirmCancel () {
-    const reason = text(cancelComment.value)
-    if (reason.length < 3) {
-      $q.notify({ type: 'warning', message: 'Give a reason of at least 3 characters.', position: 'top' })
-      return false
-    }
-    if (!pageState) return false
-
-    const actor = text(user.value?.name || user.value?.email) || 'Unknown'
-    const applied = pageState.applyNodes(buildOutletPaymentCancellationNodes({
-      paymentRecord: record.value,
-      comment: reason,
-      actorName: actor,
-      invoiceRecord: invoice.value,
-      allInvoicePayments: invoiceAllPayments.value
-    }))
-    if (applied.valid === false) return false
-
-    saving.value = true
-    try {
-      const { success } = await pageState.submit({ successMsg: applied.successMsg })
-      if (!success) return false
-      pageState.reset()
-      cancelDialogOpen.value = false
-      nav.goTo('index')
-      return true
-    } finally {
-      saving.value = false
-    }
-  }
-
   return {
     ui,
     loading,
@@ -220,12 +169,6 @@ export function useOutletPaymentViewContext () {
 
     otherPendingInvoices,
     recentPayments,
-
-    canCancel,
-    cancelDialogOpen,
-    cancelComment,
-    openCancelDialog,
-    confirmCancel,
 
     /** Start a payment against one invoice, pre-loading the outlet and the invoice. */
     payInvoice: (invCode, outCode) => nav.goTo('add', {

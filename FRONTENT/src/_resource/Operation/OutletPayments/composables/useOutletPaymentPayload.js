@@ -30,6 +30,9 @@ import { stampFields } from 'src/utils/workflowStamp'
 const PAYMENTS = 'OutletPayments'
 const INVOICES = 'OutletConsumptionInvoices'
 
+// One wording for a recorded collection, used by the node chain and by the page.
+export const PAYMENT_RECORDED_MESSAGE = 'Payment recorded.'
+
 const text = (value) => (value == null ? '' : String(value).trim())
 const asRow = (value) => (value && typeof value === 'object' ? value : {})
 const num = (value) => {
@@ -152,10 +155,10 @@ export function buildOutletPaymentCreationNodes ({
       })),
       reload: [PAYMENTS],
       permissions: { create: 'You are not allowed to record a payment.' },
-      successMsg: 'Payment recorded.'
+      successMsg: PAYMENT_RECORDED_MESSAGE
     })
   } else {
-    nodes.push({ resource: PAYMENTS, merge: true, record: {}, reload: [PAYMENTS], permissions: { create: 'You are not allowed to record a payment.' }, successMsg: 'Payment recorded.' })
+    nodes.push({ resource: PAYMENTS, merge: true, record: {}, reload: [PAYMENTS], permissions: { create: 'You are not allowed to record a payment.' }, successMsg: PAYMENT_RECORDED_MESSAGE })
   }
 
   for (const { invoice, code, allocated } of activeAllocations) {
@@ -175,7 +178,7 @@ export function buildOutletPaymentCreationNodes ({
         comment: note,
         mismatchAmount: remaining,
         balanceDue: remaining,
-        actorName: actorName || user
+        actorName: actorName || username
       })
       if (settlement[0]?.valid === false) return settlement
       nodes.push(...settlement)
@@ -186,7 +189,7 @@ export function buildOutletPaymentCreationNodes ({
       const walk = buildInvoiceBalanceTransitionNodes({
         record: invoice,
         balance: remaining,
-        actorName: actorName || user,
+        actorName: actorName || username,
         comment: remaining <= 0
           ? `Payment of ${allocated} received via ${payMode}. Invoice fully paid.`
           : `Payment of ${allocated} received via ${payMode}; balance remaining: ${remaining.toFixed(2)}.`
@@ -201,12 +204,23 @@ export function buildOutletPaymentCreationNodes ({
 
 // ─── 2. Payment Cancellation Batch ────────────────────────────────────────────
 
+// The one statement of what a cancellation reason must be. The card disables its button on
+// it and the builder vetoes on it, so the two cannot disagree.
+export function cancellationCommentError (comment = '') {
+  const reason = text(comment)
+  return !reason || reason.length < 3
+    ? 'Cancellation comment is mandatory (minimum 3 characters).'
+    : ''
+}
+
+
 export function buildOutletPaymentCancellationNodes ({
   paymentRecord = {},
   comment = '',
   actorName = '',
   invoiceRecord = null,
-  allInvoicePayments = []
+  allInvoicePayments = [],
+  requireComment = true
 } = {}) {
   const payment = asRow(paymentRecord)
   const paymentCode = text(payment.Code)
@@ -220,9 +234,10 @@ export function buildOutletPaymentCancellationNodes ({
   }
 
   const reason = text(comment)
-  if (!reason || reason.length < 3) {
-    return [{ valid: false, message: 'Cancellation comment is mandatory (minimum 3 characters).' }]
-  }
+  // `requireComment: false` lets the page mount this batch while the reason is still being
+  // typed. The veto still guards the submit, so an empty reason can never be sent.
+  const commentError = requireComment ? cancellationCommentError(reason) : ''
+  if (commentError) return [{ valid: false, message: commentError }]
 
   const nodes = [
     { resource: PAYMENTS, actions: [{ ...{
@@ -267,8 +282,10 @@ export function buildOutletPaymentCancellationNodes ({
 export function useOutletPaymentPayload () {
   return {
     stampFields,
+    PAYMENT_RECORDED_MESSAGE,
     buildOutletPaymentCreationNodes,
-    buildOutletPaymentCancellationNodes
+    buildOutletPaymentCancellationNodes,
+    cancellationCommentError
   }
 }
 

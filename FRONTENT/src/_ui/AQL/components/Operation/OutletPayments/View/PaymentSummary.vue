@@ -39,58 +39,7 @@
         </div>
       </q-card-section>
 
-      <template v-if="canCancel">
-        <q-separator />
-        <q-card-section class="row justify-end q-py-sm">
-          <q-btn
-            flat no-caps
-            color="negative"
-            icon="block"
-            label="Cancel payment receipt"
-            :disable="saving"
-            @click="openCancelDialog"
-          />
-        </q-card-section>
-      </template>
     </q-card>
-
-    <!-- REASON IS MANDATORY, and the button stays disabled until one is given. A cancellation
-         moves an invoice's balance back up; whoever reconciles that figure tomorrow has only
-         this sentence to explain it. -->
-    <q-dialog v-model="cancelDialogOpen" persistent>
-      <q-card style="min-width: 320px; max-width: 480px">
-        <q-card-section>
-          <div class="text-subtitle1 text-weight-bold">Cancel this receipt?</div>
-          <div class="text-caption text-grey-8 q-mt-xs">
-            The payment is reversed and the credited invoice's balance is recalculated. Both
-            happen together and neither can be undone from here.
-          </div>
-        </q-card-section>
-
-        <q-card-section>
-          <q-input
-            v-model="cancelComment"
-            outlined
-            autogrow
-            type="textarea"
-            label="Reason"
-            hint="At least 3 characters."
-          />
-        </q-card-section>
-
-        <q-card-actions align="right">
-          <q-btn flat no-caps label="Keep it" v-close-popup :disable="saving" />
-          <q-btn
-            unelevated no-caps
-            color="negative"
-            label="Cancel receipt"
-            :loading="saving"
-            :disable="reasonTooShort"
-            @click="confirmCancel"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
   </div>
 </template>
 
@@ -98,8 +47,7 @@
 /**
  * OutletPayments › View › PaymentSummary — Section (tier CP: resource + page).
  *
- * The receipt itself: what was taken, from whom, when, how, and by whom — plus the one action
- * this page can still perform on it.
+ * The receipt itself: what was taken, from whom, when, how, and by whom.
  *
  * ── WHY THE CANCELLATION BANNER LEADS ──
  * It is the only element that CONTRADICTS what the rest of the page implies. A cancelled
@@ -111,9 +59,8 @@
  * is named, once (UI_MODULE_DEVELOPER_GUIDE.md §10). The detail rows use the canonical
  * `.aql-detail-*` grid rather than a hand-built row/col.
  *
- * Every value is read from the page context, which reads Layer 2. Nothing here sums a payment
- * or decides whether a receipt may be cancelled — `canCancelPayment` owns that, so the button
- * and the request builder cannot disagree about it (ARCHITECTURE RULES §6).
+ * Every value is read from the page context, which reads Layer 2. Nothing here sums a payment.
+ * Cancelling is the `Cancel` additional action's own route, not a control on this card.
  *
  * No `<style>` block (ARCHITECTURE RULES §7).
  */
@@ -128,13 +75,10 @@ const props = defineProps({
 })
 
 const {
-  ui, money, record, outletName, isPaymentCancelled, saving,
-  canCancel, cancelDialogOpen, cancelComment, openCancelDialog, confirmCancel
+  ui, money, record, outletName, isPaymentCancelled
 } = useOutletPaymentViewContext()
 
 const amount = computed(() => Number(record.value?.Amount ?? record.value?.amount) || 0)
-
-const reasonTooShort = computed(() => String(cancelComment.value || '').trim().length < 3)
 
 const details = computed(() => {
   const entry = record.value || {}

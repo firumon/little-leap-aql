@@ -15,6 +15,10 @@
  * holds reactive state, renders, or touches a store.
  */
 
+// The control key the delivery selection is stored under. The cards write it and
+// `MarkDelivered/PageAction.js` reads it, so neither may guess it on its own.
+export const SELECTION = 'DeliverySelection'
+
 /**
  * Only ALLOCATED lines can be delivered. A PENDING line has no stock behind it,
  * and a DELIVERED/CANCELLED one is settled history.
@@ -61,6 +65,7 @@ export function deliverableRows (rows = [], restockCode = '') {
 // Composable shape for setup-context callers. Same functions, one import (§5).
 export function useRestockDelivery () {
   return {
+    SELECTION,
     DELIVERABLE_PROGRESS,
     normalizeSelection,
     deliverableRows

@@ -292,6 +292,9 @@ function normalizeAction(a) {
     icon: a.icon || '',
     color: a.color || 'primary',
     confirm: !!a.confirm,
+    // Offered on a page with NO record in context (the Index FAB cluster). It acts on the
+    // resource, not on a row, so it is never listed among a row's own actions.
+    resourceLevel: a.resourceLevel === true,
     // Optional dialog heading templates — `"{$outlet.Name} • {Code}"`.
     // Presentational only; resolved client-side by `resolveRecordTemplate`.
     title: a.title || '',

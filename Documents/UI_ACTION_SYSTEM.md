@@ -1028,6 +1028,42 @@ await pageState.submit()
 }
 ```
 
+### 7.1.-1 `resourceLevel`
+
+`"resourceLevel": true` marks an action that belongs to the RESOURCE, not to a row — a
+Quick Visit raised from the Index page, where no record is in context.
+
+Such an action **creates the row it then stamps**. `handleExecuteAction` accepts a request
+with no `code` only when the config says `resourceLevel`, builds the source row from the
+action's own `fields[]` through the normal create path (Code, `DefaultValues`,
+`AccessRegion`, audit, required/unique checks), and carries on from there. So the outcome
+stamp, `RespondDate` and every target run exactly as they do for a row-level action, and
+`$record.*` in a target resolves against the row just created.
+
+`actionsFor` splits the two sets and never mixes them: with no record it returns only the
+resource-level actions, with a record only the row-level ones. So `ResourceActions` offers
+a resource-level item in the Index FAB cluster, and a row's own action menu never grows one.
+On top of `can<Action>`, a resource-level action also needs `canWrite`, because it writes a
+new row. `visibleWhen` has no record to test and is skipped.
+
+### 7.1.-0.5 `fields[]` — `type` decides visibility
+
+The source group follows the SAME rule as a target's fields (`GAS/actionTargets.gs`):
+
+| Field shape | Behaviour |
+|---|---|
+| `from` / `value` only, no `type` | resolved server-side from the trusted config, never rendered, never user-editable |
+| `type` + `from` / `value` | pre-filled for the user, whatever they submit wins |
+| `type`, no seed | an empty input |
+
+A hidden field is resolved by `buildActionSourceFields` and **overrides** whatever the
+client sent for the same header — that is what makes a hidden stamp trustworthy. Use it for
+`$dateTime` / `$userName` stamps and fixed values. `$record.*` is not useful here: it reads
+the row as it was BEFORE the action, and on a `resourceLevel` create there is no such row.
+
+A typed field the client did not send is left untouched rather than blanked, so an older
+caller cannot clear a column it never knew about.
+
 ### 7.1.0 `visibleWhen`
 
 An object or an array of objects, ANDed. Absent or empty ⇒ always visible. Evaluated

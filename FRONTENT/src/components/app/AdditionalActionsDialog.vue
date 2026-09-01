@@ -38,16 +38,31 @@
            the record the dialog is already titled with. -->
       <SectionDividerLabel v-if="group.label" :label="group.label" />
 
-      <component
-        :is="field.component"
-        v-for="field in group.fields"
-        :key="field.address"
-        :model-value="readField(group, field)"
-        :record="dialog.record || {}"
-        :config="field.config"
-        :header="field.header"
-        @update:model-value="(value) => writeField(group, field, value)"
-      />
+      <template v-for="field in group.fields" :key="field.address">
+        <!-- 1. Per-field custom UI override (ActionField<Address>.vue). It binds to
+             pageState itself, so it can read its siblings' answers. -->
+        <component
+          :is="fieldOverrides[field.address]"
+          v-if="fieldOverrides[field.address]"
+          :action-name="actionName"
+          :resource="dialog.resource"
+          :field="field"
+          :group-key="group.key"
+          :record="dialog.record || {}"
+          :config="field.config"
+          :header="field.header"
+        />
+        <!-- 2. Base type component from `_fields/<type>/Add.vue`. -->
+        <component
+          v-else
+          :is="field.component"
+          :model-value="readField(group, field)"
+          :record="dialog.record || {}"
+          :config="field.config"
+          :header="field.header"
+          @update:model-value="(value) => writeField(group, field, value)"
+        />
+      </template>
     </template>
   </AqlDialog>
 </template>
@@ -73,19 +88,77 @@
  * On failure it stays open with the message inline, preserving what the user
  * typed.
  */
-import { computed, watch } from 'vue'
+import { computed, markRaw, provide, ref, watch } from 'vue'
 import AqlDialog from 'components/shared/AqlDialog.vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import { useAdditionalActionsDialog } from 'src/composables/resources/useAdditionalActions'
+import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { resolveRecordTemplate } from 'src/composables/resources/additionalActionsSchema'
+import { toPascalCase } from 'src/utils/appHelpers'
 
 defineOptions({ name: 'AppAdditionalActionsDialog' })
 
 const {
-  dialog, groups, isMultiOutcome, outcomeOptions,
+  dialog, pageState, actionName, groups, isMultiOutcome, outcomeOptions,
   columnValue, readField, writeField,
   syncForm, submit, close, setOutcome
 } = useAdditionalActionsDialog()
+
+// The dialog owns its own pageState (see useAdditionalActions). Provided so a per-field
+// override can bind with `useActions` / `useControls` like any other page component.
+provide('pageState', pageState)
+
+// ── Per-field `_ui/` overrides ────────────────────────────────────────────────
+//
+// Same contract as FormRecord's `FormField<Header>`: `_ui/*` only, no framework
+// fallback — with no override the `_fields/<type>` base control renders as before.
+//
+// Keyed by the field's ADDRESS, not its name: a source field is `Date`, a target's is
+// `nextVisit.Date`, and two targets may each carry a `Date`. The address is already the
+// unique one, so `nextVisit.Date` resolves to `actionfieldnextvisitdate.vue`.
+const customUiModules = import.meta.glob('../../_ui/**/*.vue')
+const customUiRegistry = {}
+Object.keys(customUiModules).forEach((rawPath) => {
+  customUiRegistry[rawPath.replace(/^\.\.\/\.\.\//, '').toLowerCase()] = customUiModules[rawPath]
+})
+
+const fieldOverrides = ref({})
+
+function overrideFileName (address) {
+  const parts = String(address || '').split('.').filter(Boolean)
+  if (!parts.length) return ''
+  return `actionfield${parts.map((part) => toPascalCase(part)).join('')}`.toLowerCase()
+}
+
+async function resolveFieldOverrides () {
+  fieldOverrides.value = {}
+  const name = dialog.resource
+  if (!name) return
+
+  const { scope, resourceSlug, customUIName } = useResourceConfig(name)
+  const uiKey = String(customUIName.value || '').toLowerCase()
+  const scopeKey = String(scope.value || '').toLowerCase()
+  const slugKey = toPascalCase(resourceSlug.value || name).toLowerCase()
+  if (!uiKey || !scopeKey || !slugKey) return
+
+  const resolved = {}
+  for (const group of groups.value) {
+    for (const field of group.fields) {
+      const file = overrideFileName(field.address)
+      if (!file) continue
+      const path = `_ui/${uiKey}/components/${scopeKey}/${slugKey}/${file}.vue`
+      const loader = customUiRegistry[path]
+      if (!loader) continue
+      try {
+        const mod = await loader()
+        resolved[field.address] = markRaw(mod.default || mod)
+      } catch (err) {
+        console.warn('[AdditionalActionsDialog] Failed to load field override:', path, err)
+      }
+    }
+  }
+  fieldOverrides.value = resolved
+}
 
 // The confirm BUTTON always reads as the action itself ("Postpone"), never as the
 // heading — a custom title must not change what the user is agreeing to.
@@ -124,7 +197,10 @@ const dialogVariant = computed(() => {
 // input survives.
 watch(
   () => `${dialog.action?.action ?? ''}::${dialog.record?.Code ?? ''}::${columnValue.value}`,
-  syncForm,
+  () => {
+    syncForm()
+    resolveFieldOverrides()
+  },
   { immediate: true }
 )
 

@@ -355,6 +355,9 @@ export function buildSourceFieldGroup (action, { headers, columnValue, optionsFo
   const suffix = actionHeaderSuffix(columnValue)
 
   const fields = configFields
+    // No `type` means the server resolves it from the trusted config and the user never
+    // sees it — the same rule target fields already follow (GAS/actionTargets.gs §34).
+    .filter((field) => field?.name && field?.type)
     .map((field) => {
       const header = deriveActionFieldHeader(field.name, column, suffix, headers)
       if (!header) return null

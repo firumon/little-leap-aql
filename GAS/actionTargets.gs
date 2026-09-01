@@ -502,6 +502,60 @@ function buildActionTargetRecord(target, targetKey, ctx) {
 }
 
 /**
+ * The sheet header one of an action's OWN `fields[]` writes to.
+ *
+ * Mirrors `deriveActionFieldHeader` in additionalActionsSchema.js: the outcome-scoped
+ * header first, then the plain column. Null when neither exists, so a config typo
+ * writes nothing instead of creating a stray column.
+ */
+function deriveActionSourceHeader(name, column, stampSuffix, idx) {
+  if (!name) return null;
+  var derived = column + stampSuffix + name;
+  if (idx[derived] !== undefined) return derived;
+  if (idx[name] !== undefined) return name;
+  return null;
+}
+
+/**
+ * Turns an action's own `fields[]` into a plain { header: value } record.
+ *
+ * Same rule as `buildActionTargetRecord`, applied to the SOURCE row: `type` decides
+ * visibility, `from`/`value` decide seeding. A field with no `type` is never shown and
+ * never user-submittable, so its config value always stands and the client is ignored —
+ * which is what makes a hidden stamp trustworthy.
+ *
+ * A typed field the client did not send is left out entirely rather than blanked, so
+ * this cannot clear a column an older caller never knew about.
+ */
+function buildActionSourceFields(actionConfig, ctx) {
+  var fields = (actionConfig && Array.isArray(actionConfig.fields)) ? actionConfig.fields : [];
+  var submitted = (ctx && ctx.fields) || {};
+  var record = {};
+
+  fields.forEach(function (field) {
+    var name = (field && field.name ? field.name : '').toString().trim();
+    if (!name) return;
+
+    var header = deriveActionSourceHeader(name, ctx.column, ctx.stampSuffix, ctx.idx);
+    if (!header) return;
+
+    var isUserFacing = !!(field.type && field.type.toString().trim());
+    if (isUserFacing) {
+      if (submitted[header] !== undefined) record[header] = submitted[header];
+      else if (submitted[name] !== undefined) record[header] = submitted[name];
+      else if (field.from !== undefined) record[header] = resolveActionExpression(field.from, ctx);
+      else if (field.value !== undefined) record[header] = resolveActionExpression(field.value, ctx);
+      return;
+    }
+
+    if (field.from !== undefined) record[header] = resolveActionExpression(field.from, ctx);
+    else if (field.value !== undefined) record[header] = resolveActionExpression(field.value, ctx);
+  });
+
+  return record;
+}
+
+/**
  * Enforces `required` on a target's user-facing fields.
  *
  * Only fields carrying a `type` are checked: a `from`/`value` field marked

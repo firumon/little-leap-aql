@@ -62,16 +62,22 @@ export function useAdditionalActions (resourceName = null) {
    * controlled" rather than "denied".
    */
   function actionsFor (record, { only, exclude } = {}) {
-    if (!record) return []
     const allow = Array.isArray(only) && only.length ? only.map(String) : null
     const deny = Array.isArray(exclude) && exclude.length ? exclude.map(String) : null
+    // No record means a resource-level page (the Index FAB cluster): only actions that
+    // declare themselves resource-level belong there. With a record it is the opposite —
+    // a resource-level action is not one of that row's own, so it stays out of its menu.
+    const wantResourceLevel = !record
 
     return (additionalActions.value || []).filter((action) => {
       const name = String(action?.action ?? '')
       if (!name) return false
+      if ((action.resourceLevel === true) !== wantResourceLevel) return false
       if (allow && !allow.includes(name)) return false
       if (deny && deny.includes(name)) return false
       if (permissions.value?.[`can${name}`] === false) return false
+      // A resource-level action writes a new row, so it also needs plain write access.
+      if (wantResourceLevel && permissions.value?.canWrite === false) return false
       return isActionVisible(action, record)
     })
   }
@@ -248,9 +254,11 @@ export function useAdditionalActionsDialog () {
       return false
     }
 
-    // A `$ref` code means no record code reached the queue — the dialog always
-    // acts on a record that already exists, so that is not executable here.
-    if (!queued || typeof queued.code !== 'string' || !queued.code) {
+    // A `$ref` code means no record code reached the queue — the dialog acts on a record
+    // that already exists. The one exception is a resource-level action, which creates the
+    // row it stamps and is therefore addressed by no code at all.
+    const resourceLevel = action.value?.resourceLevel === true
+    if (!queued || typeof queued.code !== 'string' || (!queued.code && !resourceLevel)) {
       dialog.error = 'Action is not executable.'
       return false
     }
@@ -294,8 +302,19 @@ export function useAdditionalActionsDialog () {
     dialog.outcome = value
   }
 
+// Console handle for debugging. Cleared on unmount so it is never a stale page.
+  if (process.env.DEV) {
+    window.ps = pageState
+    onUnmounted(() => { if (window.ps === pageState) delete window.ps })
+  }
+
   return {
     dialog,
+    // Handed to the field components so a per-field `_ui/` override can bind straight
+    // onto the queued action — `useActions(actionName, 'targets.nextVisit.Date', resource)`
+    // — instead of reading one value through a prop and losing sight of its siblings.
+    pageState,
+    actionName,
     groups,
     isMultiOutcome,
     outcomeOptions,

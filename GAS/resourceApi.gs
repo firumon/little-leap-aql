@@ -1741,7 +1741,6 @@ function handleExecuteAction(auth, payload) {
   if (!resourceName) return { success: false, message: 'Resource is required' };
 
   var code = (payload.code || '').toString().trim();
-  if (!code) return { success: false, message: 'Record code is required' };
 
   var actionName = (payload.actionName || '').toString().trim();
   if (!actionName) return { success: false, message: 'Action name is required' };
@@ -1760,6 +1759,35 @@ function handleExecuteAction(auth, payload) {
   var headers = values[0] || [];
   var idx = getHeaderIndexMap(headers);
 
+  var actionConfig = findAdditionalActionConfig(resource.config, actionName);
+  var stampSuffix = toActionHeaderSuffix(columnValue);
+
+  // The action's own fields, resolved from the trusted config: a field with no `type`
+  // is never user-submittable, so its value comes from here and not from the browser.
+  var sourceFields = buildActionSourceFields(actionConfig, {
+    auth: auth,
+    record: null,
+    fields: userFields,
+    column: column,
+    stampSuffix: stampSuffix,
+    idx: idx
+  });
+
+  // A resource-level action owns no row yet — it CREATES the record it then stamps. The
+  // whole create path is reused, so the Code, the sheet defaults, AccessRegion, the audit
+  // columns and the required/unique checks are the same ones a normal create gets.
+  if (!code) {
+    if (!actionConfig || actionConfig.resourceLevel !== true) {
+      return { success: false, message: 'Record code is required' };
+    }
+    var created = handleResourceCreateRecord(auth, { resource: resourceName, record: sourceFields });
+    if (!created.success) return created;
+    code = (created.data && created.data.code ? created.data.code : '').toString().trim();
+    if (!code) return { success: false, message: 'Could not create the ' + resourceName + ' record for ' + actionName };
+    SpreadsheetApp.flush();
+    values = sheet.getDataRange().getValues();
+  }
+
   var rowNumber = findRowByValue(sheet, idx.Code, code, 2, true);
   if (rowNumber === -1) {
     return { success: false, message: resourceName + ' record not found: ' + code };
@@ -1769,8 +1797,6 @@ function handleExecuteAction(auth, payload) {
   var previousRecord = rowArrayToObject(headers, existingRow);
   enforceRecordLevelAccess(auth, resource.config, headers, existingRow);
 
-  var stampSuffix = toActionHeaderSuffix(columnValue);
-
   // Multi-record targets (actionTargets.gs). The target list comes from the
   // trusted APP.Resources config, never the client — that is what authorizes a
   // target write under THIS action's permission on the source resource.
@@ -1778,7 +1804,6 @@ function handleExecuteAction(auth, payload) {
   // Targets run BEFORE the source row is stamped: they validate as a set, so if
   // one fails nothing is written and the record keeps its current state rather
   // than flipping to an outcome whose follow-up records never materialized.
-  var actionConfig = findAdditionalActionConfig(resource.config, actionName);
   var targetOutcome = executeActionTargets(auth, actionConfig && actionConfig.targets, {
     auth: auth,
     record: previousRecord,
@@ -1812,10 +1837,15 @@ function handleExecuteAction(auth, payload) {
   // same name still wins.
   if (idx.RespondDate !== undefined) existingRow[idx.RespondDate] = formatDateTime24();
 
-  // Set user-provided fields
-  Object.keys(userFields).forEach(function(fieldName) {
+  // Set the action's own fields. `sourceFields` is the config-resolved set, so a hidden
+  // `from`/`value` field lands here too; anything the client sent that the config does
+  // not declare still applies, which is the older contract.
+  var writeFields = {};
+  Object.keys(userFields).forEach(function (fieldName) { writeFields[fieldName] = userFields[fieldName]; });
+  Object.keys(sourceFields).forEach(function (fieldName) { writeFields[fieldName] = sourceFields[fieldName]; });
+  Object.keys(writeFields).forEach(function(fieldName) {
     if (idx[fieldName] !== undefined) {
-      existingRow[idx[fieldName]] = userFields[fieldName];
+      existingRow[idx[fieldName]] = writeFields[fieldName];
     }
   });
 

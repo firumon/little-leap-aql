@@ -133,8 +133,10 @@ const entries = computed(() => {
 
   // Workflow items — already permission-gated and `visibleWhen`-filtered by the
   // composable, with `run()` bound. Only the resolver context is merged in here;
-  // this component makes no decision about which actions are eligible.
-  if (!isFormPage.value && record.value) {
+  // this component makes no decision about which actions are eligible. A null record
+  // is passed through on purpose: the composable answers with the resource-level
+  // actions instead, which is what an Index page's cluster offers.
+  if (!isFormPage.value) {
     for (const entry of entriesFor(record.value)) {
       list.push({
         key: entry.key,

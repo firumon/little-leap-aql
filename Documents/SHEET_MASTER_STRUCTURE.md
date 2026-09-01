@@ -43,7 +43,7 @@ This document describes the current master-scope sheet families and their roles.
 - **Required columns**: `Name`.
 - **Unique columns**: `Name`.
 - **Default values**: `Status = Active`, `Country = UAE`.
-- **Columns**: `Code`, `Name`, `ContactPerson`, `Phone`, `Email`, `Country`, `Province`, `Area`, `City`, `CommunicationAddress`, `MapLocationLink`, `Picture`, `Picture2`, `Picture3`, `Licence`, `AccessRegion`, `Status`, `CreatedAt`, `UpdatedAt`, `CreatedBy`, `UpdatedBy`.
+- **Columns**: `Code`, `Name`, `ContactPerson`, `Phone`, `Email`, `Country`, `Province`, `Area`, `City`, `CommunicationAddress`, `ShippingAddress`, `BillingAddress`, `MapLocationLink`, `Picture`, `Picture2`, `Picture3`, `Licence`, `TaxRegistrationNumber`, `TaxRegistrationName`, `AccessRegion`, `Status`, `CreatedAt`, `UpdatedAt`, `CreatedBy`, `UpdatedBy`.
 - **Relationships**: referenced by outlet operation resources through `OutletCode`.
 
 ### `OutletOperatingRules`

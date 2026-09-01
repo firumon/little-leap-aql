@@ -447,66 +447,7 @@ and none should.
 
 ---
 
-## 5B. The batch is LIVE — `submit` only validates
-
-**`pageState` holds the complete, ready-to-send batch at every moment of the wizard, not
-at the end of it.** Every user input — a keystroke, a tick, a toggle — goes straight to
-Layer 2 and the node set it returns is applied immediately. `snapshot()` at step 1 shows
-the same shape it will show one click before submit, only with fewer rows.
-
-```js
-// In the page's composable — a setup context, so it can watch.
-function setQuantity (code, qty) {
-  const next = { ...planFromNodes(), [code]: qty }
-  pageState.applyNodes(buildAllocationNodes(record.value, next, actor(), comment.value))
-}
-```
-
-```js
-// PageAction.submit — validation and a message. Nothing else.
-submit: () => {
-  if (!allocated().length) return { valid: false, message: 'Allocate at least one item.' }
-  return { successMsg: 'Restock approved and stock allocated.' }
-}
-```
-
-### 5B.1 What `submit` may and may not do
-
-| `submit` may | `submit` must not |
-|---|---|
-| Check the user's decision is complete | Call a Layer 2 builder |
-| Re-check a staleness gate | Call `applyNodes` |
-| Return `{ valid: false, message }` | Write a record, child, record row or control |
-| Return `{ successMsg }` / `onSuccess` | Clear or rearrange anything |
-
-**A custom `submit` that builds is a defect, not a style.** Building at submit means the
-user reviewed one thing and sent another; worse, the state it mutates is still on screen,
-so the page visibly re-arranges under the user at the moment they commit. If a page needs
-no validation beyond the generic one, it needs **no custom `submit` at all**.
-
-The single exception: a value that genuinely cannot exist until the moment of dispatch.
-There are very few — a client-side timestamp is one. Everything else can be computed as
-the user works, and therefore must be.
-
-### 5B.2 One representation, never a draft beside the payload
-
-The rows the cards edit and the rows `build()` ships are **the same rows**. Do not keep a
-working copy to be translated at submit — that is §5A wearing a wizard hat, and it
-guarantees the two drift.
-
-A row may carry frontend-only tags to link it back to the input it came from. **`build()`
-strips every key beginning with `_`**, so `_sourceCode`, `_requestedQty` and friends never
-reach GAS. `_action` is the oldest member of that family, not a special case.
-
-### 5B.3 Rebuild loops — watch the INPUT, never the output
-
-A live rebuild writes nodes. If it also *watches* those nodes it will re-enter forever.
-
-- Watch the raw input: a control, a record column, the selection, the note.
-- Write to a different address than the one being watched, **or** let the write be a
-  no-op for the watcher (a primitive that compares equal does not re-fire).
-- `pageState.derive` (§5.4) is the declarative form and is preferred; a `watch` in the
-  page's own composable is fine when the rule is presentational.
+## 5B. Controls, binding and the permission gate
 
 ### 5B.4 The permission gate stays in `applyNodes`
 
@@ -1330,14 +1271,14 @@ logs as opaque uid soup.
 11. A builder never hand-writes another resource's columns — it calls that resource's own
     builder and spreads the nodes it returns.
 12. A derived column is declared with `derive`, not recomputed in the UI (§12.3).
-13. **The batch is live.** Nodes are rebuilt as the user works; `submit` validates and
-    returns a message, and never builds, applies or mutates (§5B).
-14. **One representation.** No draft copy beside the payload. `build()` strips `_`-prefixed
-    keys, so a live row may carry frontend-only tags (§5B.2).
-15. A live rebuild watches its INPUT, never the nodes it writes (§5B.3).
-16. `controls` are only a UI switch, a value shared across nodes, or a node-level mode —
+13. **One representation.** No draft copy beside the payload. `build()` strips `_`-prefixed
+    keys, so a row may carry frontend-only tags.
+14. Layer 3 hands the nodes a builder returns to `applyNodes`. A rebuild driven by user
+    input belongs in the page's own component or `derive` — never in a watcher chain
+    (CORE_ARCHITECTURE_RULES.md §6).
+15. `controls` are only a UI switch, a value shared across nodes, or a node-level mode —
     never storage, never bookkeeping (§5B.5).
-17. The permission gate lives in `applyNodes` and nowhere else. An entry point must be
+16. The permission gate lives in `applyNodes` and nowhere else. An entry point must be
     gated on the same permission its nodes demand (§5B.4).
 
 ## 20. Related

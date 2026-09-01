@@ -847,11 +847,10 @@ Every payload chain builder in Layer 2 must adhere to the following strict guard
 5. **Never build another resource's payload.** A builder writes nodes for the resource it OWNS, plus that resource's own composite children. Every other resource in the chain is reached by calling ITS domain builder and splicing the returned `nodes` — never by hand-writing its columns. A resource's own child relations (`OutletConsumptionItems`, `PurchaseOrderItems`) are the exception: they ride in `children` of their parent's composite.
 6. **No positional promises**: never return "the code is at index N of the response". Name the RESOURCE and let the caller resolve the position off `pageState.build()` — a node that ships nothing is skipped, so positions are not knowable at build time.
 7. **A ledger module encapsulates its own row builder.** `StockMovements` and `OutletMovements` own the sign rule, the storage default and the reload their sheet needs. A calling module hands over the ITEM list and the reference, never a hand-built movement row: `stockMovementsNode(items, { warehouseCode, referenceCode, referenceType, direction, movementDate })` and `outletMovementsNode(items, { outletCode, referenceCode, referenceType, direction, movementDate })` return the complete, self-contained node — records built inside, `reload: ['WarehouseStorages']` / `['OutletStorages']` attached, permissions attached — or `null` when there is nothing to post. `stockMovementRow` / `outletMovementRow` stay exported only for the two chains that must decide a per-row sign or reference themselves (`OutletReturns`, the restock corrections); a new caller uses the node builder.
-8. **Callable on every keystroke.** A builder is the ONLY thing that turns user input into
-   sheet rows, and Layer 3 calls it live — on every tick, every quantity, every toggle —
-   not once at submit. So it must be cheap, idempotent, and total: the same inputs always
-   give the same nodes, and a half-filled input gives a smaller node set rather than a
-   throw. See UI_PAGE_STATE.md §5B.
+8. **Cheap, idempotent and total.** A builder is the ONLY thing that turns user input into
+   sheet rows, and it may be called once at submit or repeatedly as the user works. The
+   same inputs always give the same nodes, and a half-filled input gives a smaller node
+   set rather than a throw.
 9. **Return the COMPLETE row.** A builder hands back the finished sheet record — stamps,
    `Status`, derived columns and all — never a fragment for Layer 3 to finish. Layer 3
    does `applyNodes` and nothing else; the moment it has to add a column, that column's

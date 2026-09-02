@@ -130,6 +130,25 @@ function setupMasterSheets() {
         Code: 130, Name: 200, ParentCode: 130, PercentageTransaction: 160, FlatUnit: 120, CalculationOrder: 130, CompoundOn: 130, Description: 300, AccessRegion: 130, Status: 100,
         CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
       }
+    },
+    {
+      resourceName: CONFIG.MASTER_SHEETS.LEADS,
+      headers: ['Code', 'Name', 'ContactPerson1', 'ContactPerson2', 'Phone1', 'Phone2', 'Type', 'Progress',
+                'ProgressLaterAt', 'ProgressLaterBy', 'ProgressLaterComment',
+                'ProgressRejectedAt', 'ProgressRejectedBy', 'ProgressRejectedComment',
+                'ProgressApprovedAt', 'ProgressApprovedBy', 'ProgressApprovedComment',
+                'Country', 'Province', 'City', 'Area', 'AccessRegion', 'Status'].concat(commonAuditColumns),
+      statusDefault: 'Active',
+      defaults: { Status: 'Active', Progress: 'Draft' },
+      columnWidths: {
+        Code: 130, Name: 240, ContactPerson1: 180, ContactPerson2: 180, Phone1: 140, Phone2: 140,
+        Type: 130, Progress: 130,
+        ProgressLaterAt: 160, ProgressLaterBy: 150, ProgressLaterComment: 220,
+        ProgressRejectedAt: 160, ProgressRejectedBy: 150, ProgressRejectedComment: 220,
+        ProgressApprovedAt: 160, ProgressApprovedBy: 150, ProgressApprovedComment: 220,
+        Country: 120, Province: 150, City: 140, Area: 150,
+        AccessRegion: 130, Status: 100, CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140
+      }
     }
    ];
 

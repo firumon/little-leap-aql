@@ -400,6 +400,24 @@ function setupOperationSheets() {
                 ProgressCancelledAt: 160, ProgressCancelledBy: 150, ProgressCancelledComment: 200,
                 Status: 100
             }
+        },
+        {
+            resourceName: CONFIG.OPERATION_SHEETS.LEAD_FOLLOW_UPS,
+            headers: ['Code', 'LeadCode', 'Date', 'RespondDate', 'Username', 'Purpose', 'PurposeDetail', 'Outcome', 'Progress',
+                'ProgressCompletedAt', 'ProgressCompletedBy', 'ProgressCompletedComment',
+                'ProgressPostponedAt', 'ProgressPostponedBy', 'ProgressPostponedComment',
+                'ProgressCancelledAt', 'ProgressCancelledBy', 'ProgressCancelledComment',
+                'Status', 'AccessRegion'].concat(commonAuditColumns),
+            statusDefault: 'Active',
+            defaults: { Status: 'Active', Progress: 'Awaiting' },
+            columnWidths: {
+                Code: 150, LeadCode: 140, Date: 130, RespondDate: 170, Username: 170,
+                Purpose: 170, PurposeDetail: 260, Outcome: 260, Progress: 140,
+                ProgressCompletedAt: 160, ProgressCompletedBy: 150, ProgressCompletedComment: 220,
+                ProgressPostponedAt: 160, ProgressPostponedBy: 150, ProgressPostponedComment: 220,
+                ProgressCancelledAt: 160, ProgressCancelledBy: 150, ProgressCancelledComment: 220,
+                Status: 100, AccessRegion: 130
+            }
         }
     ];
 

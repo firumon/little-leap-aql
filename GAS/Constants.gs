@@ -41,6 +41,7 @@ const CONFIG = {
     OUTLETS: 'Outlets',
     OUTLET_OPERATING_RULES: 'OutletOperatingRules',
     TAXES: 'Taxes',
+    LEADS: 'Leads',
   },
   OPERATION_SHEETS: {
     PROCUREMENTS: 'Procurements',
@@ -71,7 +72,8 @@ const CONFIG = {
     OUTLET_CONSUMPTION_INVOICE_ITEMS: 'OutletConsumptionInvoiceItems',
     OUTLET_PAYMENTS: 'OutletPayments',
     OUTLET_MOVEMENTS: 'OutletMovements',
-    OUTLET_STORAGES: 'OutletStorages'
+    OUTLET_STORAGES: 'OutletStorages',
+    LEAD_FOLLOW_UPS: 'LeadFollowUps'
   },
   ACCOUNTS_SHEETS: {
     ASSETS: 'Assets',
@@ -130,4 +132,8 @@ const  APP_OPTIONS_SEED = {
   PurchaseOrderProgress: ['CREATED','SENT','ACKNOWLEDGED','ACCEPTED','CANCELLED','CLOSED'],
   SupplierQuotationExtraChargeType: ['tax','freight','commission','handling','other'],
   Currency: ['AED', 'INR', 'USD', 'EUR', 'GBP'],
+  LeadType: ['Outlet', 'Warehouse', 'Supplier', 'Customer', 'Distributor', 'Agent', 'Partner'],
+  LeadProgress: ['Draft', 'Processing', 'Later', 'Rejected', 'Approved'],
+  LeadFollowUpPurpose: ['Initial Contact', 'Follow-up Visit', 'Phone Call', 'Business Discussion', 'Product Demo', 'Price Discussion', 'Agreement Signing', 'Document Collection', 'Decision Making', 'Others'],
+  LeadFollowUpProgress: ['Awaiting', 'Completed', 'Postponed', 'Cancelled'],
 };

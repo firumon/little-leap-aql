@@ -22,6 +22,7 @@ src/_fields/
 ├── file/{Add,Edit,View}.vue
 ├── link/{Add,Edit,View}.vue
 ├── number/{Add,Edit,View}.vue
+├── openselect/{Add,Edit,View}.vue
 ├── select/{Add,Edit,View}.vue
 ├── status/{Add,Edit,View}.vue
 ├── tel/{Add,Edit,View}.vue
@@ -197,6 +198,21 @@ stamp column. `Add.vue` is a `QInput` under that mask with a `QDate` popup on
 carry the full mask so choosing a date preserves the time and vice versa.
 `Add.vue` and `View.vue` both accept legacy epoch-millisecond values (rows
 stamped before the backend switched formats) and normalize them for display.
+
+### `openselect`
+
+A `select` whose option list is OPEN. The list is the suggestion, not the rule: under the
+options sits an **Enter a new value** row that prompts for free text, adds it to the list and
+selects it. Its own type rather than a flag on `select`, because `select` guarantees the
+stored value is one of the listed options and callers rely on that.
+
+Use it where a column has a known vocabulary that users must still be able to extend without
+a schema change — `Leads.Type`, seeded from the `LeadType` AppOptions group. `config.options`
+seeds the list from either source (`field.options` or the AppOptions group `mapField` resolves).
+`config.freeTextLabel` renames the prompt row.
+
+A value already stored outside the list is appended to the options so it renders as selected
+rather than blank — the same reason `View.vue` falls back to the raw value when nothing matches.
 
 ### `toggleitem`
 

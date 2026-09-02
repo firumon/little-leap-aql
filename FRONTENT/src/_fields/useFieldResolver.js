@@ -50,6 +50,13 @@ const TYPE_ALIASES = {
   dropdown: 'select',
   enum: 'select',
   reference: 'select',
+  // A select whose option list is open: pick a known value, or type one the list
+  // does not have yet. Separate from `select`, which refuses an unlisted value.
+  combo: 'openselect',
+  combobox: 'openselect',
+  freeselect: 'openselect',
+  freetext: 'openselect',
+  opendropdown: 'openselect',
   // Array-valued selection. A separate type from `select`, not a flag on it —
   // the two disagree on the shape of `modelValue` (scalar vs array).
   multi: 'multiselect',

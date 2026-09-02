@@ -19,6 +19,7 @@ to `text`. Adding the folder and updating this table is one change, never two.
 | `date` | — (also inferred from any header ending in `Date` with no explicit type) | `QDate`-backed input | Formatted date span |
 | `datetime` | `timestamp`, `date-time`, `datetimelocal` | `QInput` masked `YYYY-MM-DD HH:mm:ss` (24h) with `QDate` prepend + `QTime` (`format24h with-seconds`) append popups | Formatted datetime span; both Add and View accept legacy epoch-millisecond values and normalize them |
 | `select` | `dropdown`, `enum`, `reference` | `QSelect`, options from `field.options` or a cross-reference (`APP.Resources.Relations`) | Resolved option label span |
+| `openselect` | `combo`, `combobox`, `freeselect`, `freetext`, `opendropdown` | `QSelect` seeded from `field.options` or the column's AppOptions group, plus an **Enter a new value** row under the list that prompts for free text, adds it to the options and selects it. A stored value outside the list still shows as selected. | Resolved option label, or the raw stored value when it is not in the list |
 | `multiselect` | `multi`, `multiselection`, `tags` | `QSelect multiple` — array-valued `modelValue`, a distinct type from `select` (not a flag on it) | Comma-joined label list |
 | `status` | — (also inferred from a header named `status`) | Chip-styled select (`AqlStatusToggle` or `q-select` with `STATUS_OPTIONS`) | Colored status chip |
 | `toggle` | `boolean`, `bool`, `checkbox` (also inferred from a 2-option Yes/No-shaped `options` array) | `q-toggle` switch | On/off chip or icon |

@@ -42,6 +42,7 @@ import ResourceActionItem from 'components/actions/ResourceActionItem.vue'
 import FormRecord from 'components/contents/FormRecord.vue'
 import AqlDialog from 'components/shared/AqlDialog.vue'
 import { followUpSeedNode } from 'src/_resource/Operation/LeadFollowUps/composables/useFollowUpPayload'
+import { useLeadResource } from 'src/_resource/Master/Leads/composables/useLeadResource'
 
 defineOptions({ name: 'LeadFollowUpsResourceActionAdd', inheritAttrs: false })
 
@@ -50,7 +51,6 @@ defineOptions({ name: 'LeadFollowUpsResourceActionAdd', inheritAttrs: false })
 const FIELDS = ['LeadCode', 'Date', 'Purpose', 'PurposeDetail']
 
 const FIELD_PROPS = {
-  LeadCode: { label: 'Lead', required: true },
   Date: { required: true },
   Purpose: { required: true },
   PurposeDetail: { label: 'Purpose Detail', rows: 4 }
@@ -58,6 +58,10 @@ const FIELD_PROPS = {
 
 const resourceConfig = inject('resourceConfig', null)
 const pageState = inject('pageState', null)
+
+const { openLeads } = useLeadResource()
+const openLeadOptions = computed(() =>
+  openLeads.value.map((lead) => ({ label: lead.displayName, value: lead.code })))
 
 const dialogOpen = ref(false)
 
@@ -71,7 +75,11 @@ const record = computed(() => primary?.record.value || {})
 
 const submitting = computed(() => pageState?.meta.submitting === true)
 
-const fieldProps = computed(() => FIELD_PROPS)
+// A settled lead is not worth a follow-up, so only open ones are offered.
+const fieldProps = computed(() => ({
+  ...FIELD_PROPS,
+  LeadCode: { label: 'Lead', required: true, options: openLeadOptions.value }
+}))
 
 // `initResource` claims the address and the primary key; `applyNodes` then replaces the
 // record with the domain-complete one from Layer 2 (Username, Date, Progress, Status).

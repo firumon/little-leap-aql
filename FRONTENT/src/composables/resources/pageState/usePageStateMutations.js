@@ -279,58 +279,6 @@ export function usePageStateMutations ({ state, registry, hydrate, notify }) {
     }
   }
 
-  // Nodes this page's live rebuild put up last pass, as `resource::role`. The role is
-  // part of it: one resource can hold many roled nodes - a stamp per consumption - and
-  // pruning by resource alone left every one of them behind.
-  const liveSeen = new Set()
-  const seenKey = (resource, role) => `${resource}::${role || ''}`
-
-  // One resource can hold many queued stamps, so actions prune by KEY, not by resource.
-  const liveActionsSeen = new Set()
-
-  // The door a LIVE rebuild comes through. A rebuild states the WHOLE batch, so anything the
-  // new pass stopped emitting is dropped here — `applyNodes` on its own only ever adds.
-  // A veto is skipped rather than notified: it is right at submit, wrong while typing.
-  function applyLive (nodes = [], { keep = [] } = {}) {
-    const list = (Array.isArray(nodes) ? nodes : [nodes]).filter(Boolean)
-    // A veto bails without pruning — the user is still typing. An EMPTY list does not: it
-    // says the batch is now nothing, so what the last pass queued has to go.
-    if (list.some((node) => node?.valid === false)) return false
-    if (list.length && applyNodes(list)?.valid === false) return false
-
-    const emitted = new Set()
-    for (const node of list) {
-      for (const entry of node?.actions || []) {
-        let key = null
-        try { key = toActionEntry(entry, node.resource, node.role)?.key } catch { key = null }
-        if (key) emitted.add(key)
-      }
-    }
-    for (const key of liveActionsSeen) {
-      if (emitted.has(key)) continue
-      const at = state.actions.findIndex((e) => e.key === key)
-      if (at >= 0) state.actions.splice(at, 1)
-    }
-    liveActionsSeen.clear()
-    for (const key of emitted) liveActionsSeen.add(key)
-
-    if (!keep.length) return true
-
-    // `keep` names the nodes the PAGE owns, not the builder: its form node must survive a
-    // pass that emitted nothing.
-    const current = new Set(list.filter((node) => node?.resource).map((node) => seenKey(node.resource, node.role)))
-    const owned = new Set(keep.filter(Boolean))
-    for (const key of liveSeen) {
-      if (current.has(key)) continue
-      const [resource, role] = key.split('::')
-      if (owned.has(resource)) continue
-      registry.removeNode(resource, role || undefined)
-    }
-    liveSeen.clear()
-    for (const key of current) liveSeen.add(key)
-    return true
-  }
-
   // The address is the LAST thing every mutation takes, and it is optional: no
   // resource means the page's primary one, no role means '$default'.
   const nodeAt = (resource, role) => ensureNode(resource || state.primaryKey, role)
@@ -539,7 +487,6 @@ export function usePageStateMutations ({ state, registry, hydrate, notify }) {
     setResource,
     updateResource,
     applyNodes,
-    applyLive,
     getRecord,
     setRecord,
     useRecord,

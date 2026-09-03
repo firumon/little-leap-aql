@@ -5,7 +5,8 @@ import { textOrRef } from 'src/utils/appHelpers'
 import { resourceRow } from 'src/composables/resources/useResourceConfig'
 import { stampFields } from 'src/utils/workflowStamp'
 import { useAuth } from 'src/composables/core/useAuth'
-import { DRAFT, canonicalProgress, canMoveTo, stampPrefixFor } from './useLeadProgress'
+import { DRAFT, PROCESSING, canonicalProgress, canMoveTo, canTransitionTo, isDraft, stampPrefixFor } from './useLeadProgress'
+import { useLeadResource } from './useLeadResource'
 
 const RESOURCE_NAME = 'Leads'
 
@@ -67,6 +68,20 @@ export function leadProgressNode (leadCode, target, { comment = '', actorName = 
   }
 }
 
+// A lead starts being worked the moment the first follow-up is raised. Draft only:
+// a settled or already-working lead is left where it is, and a user who cannot update
+// leads gets no node rather than a denied submit.
+export function leadProcessingNode (leadCode) {
+  const code = text(leadCode)
+  if (!code) return null
+
+  const { leadOf } = useLeadResource()
+  const lead = leadOf(code)
+  if (!lead || !isDraft(lead) || !canTransitionTo(lead, PROCESSING)) return null
+
+  return leadProgressNode(code, PROCESSING)
+}
+
 // The gate lives here so every caller refuses the same move.
 export function buildLeadProgressChainNodes ({
   leadCode = '',
@@ -96,6 +111,7 @@ export function useLeadPayload () {
     leadNode,
     buildLeadCreateChainNodes,
     leadProgressNode,
+    leadProcessingNode,
     buildLeadProgressChainNodes
   }
 }

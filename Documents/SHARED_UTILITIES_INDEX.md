@@ -10,6 +10,8 @@ This is the canonical catalogue of every reusable helper, utility, and core comp
 - **Purity**: a "pure" function returns the same output for the same input and has no side effects. Prefer pure functions for new logic.
 - **Extend, don't duplicate**: if your new capability is a sibling of an existing function, add it to the same file. Do not open a new file unless the capability genuinely belongs to a new domain.
 - **Mandatory Exhaustion Quote**: when you do create or extend a helper, cite your search findings in your output exactly as `AGENTS.md` requires.
+- **Ask BEFORE you create, not after.** The exhaustion quote is a *request for permission*, not a note in a completion summary. Post it and wait for the user's yes before the file or the exported function exists. The file list you cite must be files you actually opened — citing an unread file is a false audit.
+- **Core files are read-only without explicit user approval.** `src/composables/core/`, `src/composables/resources/`, `src/utils/`, `src/stores/`, `src/services/`, `src/router/` and the shared component bases under `src/components/{abstract,app,sections,contents,actions,shared,_dashboard_widgets}/` are NOT the place to park a capability one module happened to need. Put it in that module's own tier — Layer 3 `_ui/` for presentation, Layer 2 `src/_resource/` for domain logic. An "additive" core change is still permanent surface area for every other module. Full rule: `AGENTS.md` → **Reuse First & Anti-Duplication Policy (STRICT)**.
 
 ---
 
@@ -74,6 +76,8 @@ All date math delegates to `date-fns`; only `parseAnyDate` is hand-rolled becaus
 | `dayOfYear(value)` | 1–366 (or `NaN`). |
 | `isoWeek(value)` | ISO week 1–53 (or `NaN`). |
 | `daysFromToday(value)` | Signed whole days from today (future positive, past negative). |
+| `hoursFromNow(value)` | Signed whole hours from now (future positive, past negative), truncated toward zero. Keeps the time part, so it can express a sub-day window. |
+| `relativeTimeLabel(value)` | How long ago, as a chip string — `'3h ago'` under a day, `'2d ago'` beyond it. `''` when unparseable. |
 
 **When to reuse**: every date parse, format, or arithmetic need in the frontend.
 **When to extend**: add new `date-fns`-backed helpers here. Never hand-roll another date parser — extend `parseAnyDate` if a new storage shape appears.

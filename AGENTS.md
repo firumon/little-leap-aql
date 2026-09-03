@@ -125,6 +125,19 @@ After classifying the query, read the appropriate initialization document(s) fro
 - **Mandatory Exhaustion Quote**: When an agent DOES create a new helper function or file, it MUST explicitly cite in its output:
   > *"Checked existing utilities in [list of files / SHARED_UTILITIES_INDEX.md] and confirmed no existing helper accomplishes <function/feature>. Adding/extending <function_name> in <file_path> because <specific rationale>."*
 
+- **Layer 1 / core files are READ-ONLY unless the user explicitly asks.** A core file is anything outside a resource's own tier that many modules already depend on: `src/composables/core/`, `src/composables/resources/`, `src/utils/`, `src/stores/`, `src/services/`, `src/router/`, and the shared component bases under `src/components/{abstract,app,sections,contents,actions,shared,_dashboard_widgets}/`.
+  - Never add a function, a parameter, a return key, or a "small additive helper" to one of these because a single module needed it. Additive is not harmless: it is how one module's minute need becomes permanent surface area every other module has to read past.
+  - A need discovered while building a module belongs in **that module's own tier** — Layer 3 `_ui/` for presentation, Layer 2 `src/_resource/` for domain logic. That is what the three layers are for.
+  - If the capability genuinely belongs in core (three or more unrelated modules would each re-implement it), STOP. Report it, show the audit below, and wait for the user to say yes. Proceed only after explicit approval, and quote the approval in your output.
+  - This applies to a one-line change as much as a rewrite.
+
+- **Ask BEFORE creating any new file or function — never after.** Creation is not a step you report in a summary; it is a step you request. Before writing a new file, or adding a new exported function to an existing one, post an audit report to the user and wait:
+  > *"I need `<function/file>` because `<specific reason>`. I searched `Documents/SHARED_UTILITIES_INDEX.md` and read `<explicit file list>`, and found nothing that accomplishes this. I propose adding it at `<path>` because `<rationale>`. May I create it?"*
+  - The `<explicit file list>` must be files you **actually opened** in this session. Naming a file you did not read is a false audit and is worse than no audit at all.
+  - The search is not optional and it is not a formality — it is the whole reason the report exists. `SHARED_UTILITIES_INDEX.md` is the canonical catalogue; read it and the source files it points at.
+  - This covers Layer 1, Layer 2 and Layer 3 alike. A new `_ui/` widget file is cheap and usually approved; a new core helper usually is not. Ask for both.
+  - Extending an existing file with a new export counts as creation. Editing the body of an existing function does not.
+
 ## Single Domain Source of Truth Policy (STRICT)
 - **Every resource domain (`src/_resource/{Scope}/{Resource}/`) MUST have exactly ONE calculation path for each domain concept.**
 - **Never create a second function for a new task or workflow**: When a new task requires building a node, calculating progress, or formatting rows, you MUST route through the existing row/node builder (`<resource>ItemRow`, `<resource>Node`, `derive<Resource>Progress`).

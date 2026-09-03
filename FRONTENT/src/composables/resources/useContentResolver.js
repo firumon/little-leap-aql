@@ -48,35 +48,29 @@ Object.keys(customUiModules).forEach((rawPath) => {
 export function useContentResolver(preparedProps, defaultComponent = null) {
   const ready             = ref(false)
   const resolvedComponent = shallowRef(null)
-  // Props returned by a matched JS modifier, or null when a Vue override matched /
-  // nothing matched. Merged over the live preparedProps by `finalProps` below.
-  //
-  // shallowRef, not ref: this holds a snapshot that is replaced wholesale on every
-  // resolve, so deep reactivity buys nothing — and it actively hurts. `ref(obj)` walks
-  // into the modifier's return value and proxies everything nested, including any
-  // component a modifier passes as a prop value (`content: [OverduePill]`). Vue warns
-  // when a proxied component definition reaches h(), and the proxy costs a walk per row.
-  // finalProps tracks the ref itself, so re-assignment still triggers as before.
-  const modifierProps     = shallowRef(null)
+  // Holds the modifier FUNCTION, not its result. A modifier returns a sorted slice of
+  // `props.items`, so calling it once at resolve time froze the list. shallowRef so Vue
+  // never proxies it.
+  const modifier          = shallowRef(null)
 
-  // Live computed, not a snapshot assigned inside the watch. The watch only re-runs
-  // when one of the five lookup keys changes, so a snapshot would freeze every other
-  // prop at first resolve — and re-assigning it on unrelated renders was half of the
-  // thrashing this resolver used to cause. Only the JS-modifier result is cached,
-  // since that is the one thing the async scan actually produced.
+  const resourceConfig = inject('resourceConfig', null)
+  const resourceRecord = inject('resourceRecord', null)
+  const pageState      = inject('pageState', null)
+
+  // Live computed, not a snapshot assigned inside the watch: the watch only re-runs when
+  // one of the five lookup keys changes, so a snapshot would freeze every prop.
   const finalProps = computed(() => {
     const current = preparedProps.value || {}
     // Props addressed to THIS content by an ancestor — `PropsContent` (broadcast to
     // every content) then `PropsList` / `PropsListToday` (this one only) — spread flat.
     // The JS modifier still lands last. See src/utils/placeholderProps.js.
     const placeholder = resolvePlaceholderProps(current, current.content, 'Content')
-    if (!placeholder && !modifierProps.value) return current
-    return { ...current, ...placeholder, ...modifierProps.value }
+    const applied = typeof modifier.value === 'function'
+      ? modifier.value(current, { pageState, resourceRecord, resourceConfig })
+      : modifier.value
+    if (!placeholder && !applied) return current
+    return { ...current, ...placeholder, ...applied }
   })
-
-  const resourceConfig = inject('resourceConfig', null)
-  const resourceRecord = inject('resourceRecord', null)
-  const pageState      = inject('pageState', null)
 
   // Declarative gate from the page contract's top-level `permissions` block:
   //   permissions: { CompleteVisit: ['OutletVisits:complete'] }
@@ -136,7 +130,7 @@ export function useContentResolver(preparedProps, defaultComponent = null) {
       if (!resolvedComponent.value) ready.value = false
 
       function commit () {
-        modifierProps.value     = nextModifier
+        modifier.value          = nextModifier
         resolvedComponent.value = nextComponent
         resolvedKey.value       = key
         ready.value             = true
@@ -275,10 +269,8 @@ export function useContentResolver(preparedProps, defaultComponent = null) {
           nextComponent = markRaw(exported)
         } else {
           // JS modifier — keeps the base content, adjusts props before passing down.
-          // Cached here; finalProps merges it over the live preparedProps.
-          nextModifier = typeof exported === 'function'
-            ? exported(preparedProps.value, { pageState, resourceRecord, resourceConfig })
-            : exported
+          // Cached unapplied; finalProps runs it over the live preparedProps.
+          nextModifier = typeof exported === 'function' ? markRaw(exported) : exported
           nextComponent = baseContent
         }
 

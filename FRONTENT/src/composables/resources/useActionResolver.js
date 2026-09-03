@@ -55,9 +55,13 @@ Object.keys(customUiModules).forEach((rawPath) => {
 export function useActionResolver(preparedProps, defaultComponent = null) {
   const ready             = ref(false)
   const resolvedComponent = shallowRef(null)
-  // Props returned by a matched JS modifier, or null when a Vue override matched /
-  // nothing matched. Merged over the live preparedProps by `finalProps` below.
-  const modifierProps     = ref(null)
+  // Holds the modifier FUNCTION, not its result. Calling it once at resolve time froze
+  // every prop it derives from live data. shallowRef so Vue never proxies it.
+  const modifier          = shallowRef(null)
+
+  const resourceConfig = inject('resourceConfig', null)
+  const resourceRecord = inject('resourceRecord', null)
+  const pageState      = inject('pageState', null)
 
   const finalProps = computed(() => {
     const current = preparedProps.value || {}
@@ -65,13 +69,12 @@ export function useActionResolver(preparedProps, defaultComponent = null) {
     // every action) then `PropsPageAction` / `PropsFormActionSubmit` (this one only) —
     // spread flat. The JS modifier still lands last. See src/utils/placeholderProps.js.
     const placeholder = resolvePlaceholderProps(current, current.action, 'Action')
-    if (!placeholder && !modifierProps.value) return current
-    return { ...current, ...placeholder, ...modifierProps.value }
+    const applied = typeof modifier.value === 'function'
+      ? modifier.value(current, { pageState, resourceRecord, resourceConfig })
+      : modifier.value
+    if (!placeholder && !applied) return current
+    return { ...current, ...placeholder, ...applied }
   })
-
-  const resourceConfig = inject('resourceConfig', null)
-  const resourceRecord = inject('resourceRecord', null)
-  const pageState      = inject('pageState', null)
 
   // Monotonic token guarding against out-of-order async resolves: if the lookup
   // key changes again while a scan is awaiting a dynamic import, the older scan
@@ -112,7 +115,7 @@ export function useActionResolver(preparedProps, defaultComponent = null) {
       if (!resolvedComponent.value) ready.value = false
 
       function commit () {
-        modifierProps.value     = nextModifier
+        modifier.value          = nextModifier
         resolvedComponent.value = nextComponent
         ready.value             = true
       }
@@ -250,10 +253,8 @@ export function useActionResolver(preparedProps, defaultComponent = null) {
           nextComponent = markRaw(exported)
         } else {
           // JS modifier — keeps the base action, adjusts props before passing down.
-          // Cached here; finalProps merges it over the live preparedProps.
-          nextModifier = typeof exported === 'function'
-            ? exported(preparedProps.value, { pageState, resourceRecord, resourceConfig })
-            : exported
+          // Cached unapplied; finalProps runs it over the live preparedProps.
+          nextModifier = typeof exported === 'function' ? markRaw(exported) : exported
           nextComponent = baseAction
         }
 

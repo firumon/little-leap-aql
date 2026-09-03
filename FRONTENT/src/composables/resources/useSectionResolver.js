@@ -81,15 +81,16 @@ export function evaluateProp(val, resourceRecord, resourceConfig) {
 export function useSectionResolver(preparedProps, defaultComponent = null) {
   const ready             = ref(false)
   const resolvedComponent = shallowRef(null)
-  // Props returned by a matched JS modifier, or null when a Vue override matched /
-  // nothing matched. Merged over the live preparedProps by `finalProps` below.
-  const modifierProps     = ref(null)
+  // Holds the modifier FUNCTION, not its result. Calling it once at resolve time froze
+  // every prop it derives from live data. shallowRef so Vue never proxies it.
+  const modifier          = shallowRef(null)
 
-  // Live computed, not a snapshot assigned inside the watch. The watch only re-runs
-  // when one of the five lookup keys changes, so a snapshot would freeze every other
-  // prop at first resolve — and re-assigning it on unrelated renders was half of the
-  // thrashing this resolver used to cause. Only the JS-modifier result is cached,
-  // since that is the one thing the async scan actually produced.
+  const resourceConfig = inject('resourceConfig', null)
+  const resourceRecord = inject('resourceRecord', null)
+  const pageState      = inject('pageState', null)
+
+  // Live computed, not a snapshot assigned inside the watch: the watch only re-runs when
+  // one of the five lookup keys changes, so a snapshot would freeze every prop.
   const finalProps = computed(() => {
     const current = preparedProps.value || {}
     // Props addressed to THIS section by an ancestor — `PropsSection` (broadcast to
@@ -98,13 +99,12 @@ export function useSectionResolver(preparedProps, defaultComponent = null) {
     // still lands last: it is the closest, most specific layer and stays final.
     // See src/utils/placeholderProps.js.
     const placeholder = resolvePlaceholderProps(current, current.section, 'Section')
-    if (!placeholder && !modifierProps.value) return current
-    return { ...current, ...placeholder, ...modifierProps.value }
+    const applied = typeof modifier.value === 'function'
+      ? modifier.value(current, { pageState, resourceRecord, resourceConfig })
+      : modifier.value
+    if (!placeholder && !applied) return current
+    return { ...current, ...placeholder, ...applied }
   })
-
-  const resourceConfig = inject('resourceConfig', null)
-  const resourceRecord = inject('resourceRecord', null)
-  const pageState      = inject('pageState', null)
 
   // Declarative gate from the page contract's top-level `permissions` block:
   //   permissions: { RestockOptions: ['OutletRestocks:approve'] }
@@ -152,7 +152,7 @@ export function useSectionResolver(preparedProps, defaultComponent = null) {
       if (!resolvedComponent.value) ready.value = false
 
       function commit () {
-        modifierProps.value     = nextModifier
+        modifier.value          = nextModifier
         resolvedComponent.value = nextComponent
         ready.value             = true
       }
@@ -293,10 +293,8 @@ export function useSectionResolver(preparedProps, defaultComponent = null) {
           nextComponent = markRaw(exported)
         } else {
           // JS modifier — keeps the base section, adjusts props before passing down.
-          // Cached here; finalProps merges it over the live preparedProps.
-          nextModifier = typeof exported === 'function'
-            ? exported(preparedProps.value, { pageState, resourceRecord, resourceConfig })
-            : exported
+          // Cached unapplied; finalProps runs it over the live preparedProps.
+          nextModifier = typeof exported === 'function' ? markRaw(exported) : exported
           nextComponent = baseSection
         }
 

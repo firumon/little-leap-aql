@@ -55,9 +55,12 @@ export function usePageStateActions ({ state, registry }) {
     // otherwise-empty page would start building a create request for it.
     const node = registry.peekNode(name, r)
 
+    // A resource-level action creates the row it stamps, so it is addressed by NO code.
+    // Defaulting it to a `$ref` would point at a record this batch never creates.
+    const { action: config } = actionPipeline.resolveAction(actionName, { resource: name })
     const resolvedCode = code !== undefined && code !== null && code !== ''
       ? code
-      : (node?.code || batchRef(`${name}.latest.code`))
+      : (config?.resourceLevel === true ? '' : (node?.code || batchRef(`${name}.latest.code`)))
 
     // The pipeline resolves the config, the field schema and the seeds; only its
     // resolved parts are kept, never the wire envelope. build() rebuilds that.

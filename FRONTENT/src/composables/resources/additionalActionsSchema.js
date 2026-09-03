@@ -347,7 +347,7 @@ export function isTargetActive (target, { record, form, key } = {}) {
  *
  * @returns {Object|null} null when the action collects nothing on the record
  */
-export function buildSourceFieldGroup (action, { headers, columnValue, optionsFor, record = null, user = null }) {
+export function buildSourceFieldGroup (action, { resource = '', headers, columnValue, optionsFor, record = null, user = null }) {
   const configFields = Array.isArray(action?.fields) ? action.fields : []
   if (!configFields.length || !columnValue) return null
 
@@ -364,6 +364,7 @@ export function buildSourceFieldGroup (action, { headers, columnValue, optionsFo
       return describeField(field, {
         address: header,
         header,
+        resource,
         optionsFor,
         mode: 'edit',
         seed: prefillExpression(field.from ?? field.value, { record, user })
@@ -399,6 +400,7 @@ export function buildTargetFieldGroups (action, { record, user, optionsFor, head
         .map((field) => describeField(field, {
           address: `${key}.${field.name}`,
           header: field.name,
+          resource: target.resource || '',
           optionsFor,
           mode,
           // `from` / `value` on a typed field is a PREFILL the user may edit.
@@ -423,10 +425,10 @@ export function buildTargetFieldGroups (action, { record, user, optionsFor, head
  * `config` is the props bag `_fields/<type>/<Mode>.vue` consumes — the action
  * system's equivalent of `FormRecord.fieldRenderProps()`.
  */
-function describeField (field, { address, header, optionsFor, mode, seed = '' }) {
+function describeField (field, { address, header, resource = '', optionsFor, mode, seed = '' }) {
   const type = resolveActionFieldType(field, header)
   const label = field.label || String(field.name ?? '').replace(/([a-z])([A-Z])/g, '$1 $2')
-  const options = type === 'select' ? optionsFor(field) : null
+  const options = type === 'select' ? optionsFor(field, resource) : null
 
   return {
     address,

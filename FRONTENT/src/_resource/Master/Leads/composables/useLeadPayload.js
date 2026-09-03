@@ -2,6 +2,7 @@
 // triggers it. Every export returns Node Objects (UI_PAGE_STATE.md §5).
 
 import { textOrRef } from 'src/utils/appHelpers'
+import { toDateOnly } from 'src/utils/dateHelpers'
 import { resourceRow } from 'src/composables/resources/useResourceConfig'
 import { stampFields } from 'src/utils/workflowStamp'
 import { useAuth } from 'src/composables/core/useAuth'
@@ -71,7 +72,7 @@ export function leadProgressNode (leadCode, target, { comment = '', actorName = 
 // A lead starts being worked the moment the first follow-up is raised. Draft only:
 // a settled or already-working lead is left where it is, and a user who cannot update
 // leads gets no node rather than a denied submit.
-export function leadProcessingNode (leadCode) {
+export function leadProcessingNode (leadCode, { comment = '', actorName = '' } = {}) {
   const code = text(leadCode)
   if (!code) return null
 
@@ -79,7 +80,12 @@ export function leadProcessingNode (leadCode) {
   const lead = leadOf(code)
   if (!lead || !isDraft(lead) || !canTransitionTo(lead, PROCESSING)) return null
 
-  return leadProgressNode(code, PROCESSING)
+  const { user } = useAuth()
+  const actor = text(actorName) || text(user.value?.name) || text(user.value?.id)
+  const started = text(comment) ||
+    `Processing from Draft started on ${toDateOnly(new Date())} by ${actor || 'unknown'}`
+
+  return leadProgressNode(code, PROCESSING, { comment: started, actorName: actor })
 }
 
 // The gate lives here so every caller refuses the same move.

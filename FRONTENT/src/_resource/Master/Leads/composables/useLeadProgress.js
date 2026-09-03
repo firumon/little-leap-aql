@@ -38,8 +38,9 @@ export const PROGRESS_ICONS = {
   [APPROVED]: 'verified'
 }
 
-// Draft and Processing have no stamp columns on the sheet.
+// Draft has no stamp columns on the sheet.
 export const PROGRESS_STAMPS = {
+  [PROCESSING]: { comment: 'ProgressProcessingComment', by: 'ProgressProcessingBy', at: 'ProgressProcessingAt' },
   [LATER]: { comment: 'ProgressLaterComment', by: 'ProgressLaterBy', at: 'ProgressLaterAt' },
   [REJECTED]: { comment: 'ProgressRejectedComment', by: 'ProgressRejectedBy', at: 'ProgressRejectedAt' },
   [APPROVED]: { comment: 'ProgressApprovedComment', by: 'ProgressApprovedBy', at: 'ProgressApprovedAt' }

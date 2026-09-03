@@ -504,7 +504,8 @@ function initAppResourcesCodeConfig() {
         AdditionalActions: JSON.stringify([
             {"action": "Approve", "label": "Approve Lead", "title": "Approve Lead", "subtitle": "{Name}", "icon": "verified", "color": "positive", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "Approved", "columnValueOptions": [], "fields": [{"name": "Comment", "label": "Approval Comment", "type": "textarea", "required": true}], "visibleWhen": {"column": "Progress", "op": "eq", "value": "Processing"}},
             {"action": "Reject", "label": "Reject Lead", "title": "Reject Lead", "subtitle": "{Name}", "icon": "cancel", "color": "negative", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "Rejected", "columnValueOptions": [], "fields": [{"name": "Comment", "label": "Rejection Reason", "type": "textarea", "required": true}], "visibleWhen": {"column": "Progress", "op": "eq", "value": "Processing"}},
-            {"action": "Later", "label": "Mark for Later", "title": "Mark for Later", "subtitle": "{Name}", "icon": "schedule", "color": "warning", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "Later", "columnValueOptions": [], "fields": [{"name": "Comment", "label": "Reason for Later", "type": "textarea", "required": true}], "visibleWhen": {"column": "Progress", "op": "eq", "value": "Processing"}}
+            {"action": "Later", "label": "Mark for Later", "title": "Mark for Later", "subtitle": "{Name}", "icon": "schedule", "color": "warning", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "Later", "columnValueOptions": [], "fields": [{"name": "Comment", "label": "Reason for Later", "type": "textarea", "required": true}], "visibleWhen": {"column": "Progress", "op": "eq", "value": "Processing"}},
+            {"action": "ResumeLead", "label": "Resume Lead", "title": "Resume Lead", "subtitle": "{Name}", "icon": "autorenew", "color": "primary", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "Processing", "columnValueOptions": [], "fields": [{"name": "ContactPerson1", "label": "Contact Person 1", "type": "text", "from": "$record.ContactPerson1"}, {"name": "Phone1", "label": "Phone 1", "type": "tel", "from": "$record.Phone1"}, {"name": "ContactPerson2", "label": "Contact Person 2", "type": "text", "from": "$record.ContactPerson2"}, {"name": "Phone2", "label": "Phone 2", "type": "tel", "from": "$record.Phone2"}, {"name": "ProgressProcessingComment", "value": "Resuming from Later on ${$today} by ${$userName}"}, {"name": "ProgressProcessingAt", "value": "$dateTime"}, {"name": "ProgressProcessingBy", "value": "$userName"}], "visibleWhen": {"column": "Progress", "op": "eq", "value": "Later"}}
         ]),
         Menu: JSON.stringify([{"group":["Leads"],"order":1,"label":"Leads","icon":"person_search","route":"/master/leads","pageTitle":"Leads","pageDescription":"Manage possible future outlets, suppliers, customers and partners","show":true}]),
         UIFields: JSON.stringify([
@@ -515,6 +516,9 @@ function initAppResourcesCodeConfig() {
             { header: 'Phone2', label: 'Phone 2', type: 'tel' },
             { header: 'Type', label: 'Type', type: 'openselect', required: true, hint: 'Pick a type, or add a new one.' },
             { header: 'Progress', label: 'Progress', type: 'select' },
+            { header: 'ProgressProcessingAt', label: 'Processing At', type: 'datetime' },
+            { header: 'ProgressProcessingBy', label: 'Processing By', type: 'text' },
+            { header: 'ProgressProcessingComment', label: 'Processing Comment', type: 'textarea' },
             { header: 'ProgressLaterAt', label: 'Later At', type: 'datetime' },
             { header: 'ProgressLaterBy', label: 'Later By', type: 'text' },
             { header: 'ProgressLaterComment', label: 'Later Comment', type: 'textarea' },

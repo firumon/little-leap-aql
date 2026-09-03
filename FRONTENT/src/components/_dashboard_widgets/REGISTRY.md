@@ -15,6 +15,7 @@ Rule: update this file whenever a widget is added or its prop contract changes.
 | `WorkflowFunnel` | One proportional stacked bar across workflow stages, plus legend. | `{ items: Array }` | `sections/WorkflowFunnel.vue` |
 | `DistributionBars` | Ranked single-series category bars with an optional dimension toggle. | `{ items: Array, color: String ('primary'), maxBars: Number (8), cardClass: [String,Array,Object], rowStaggerMs: Number (40) }` | `sections/DistributionBars.vue` |
 | `MultiSeriesBars` | N rows × M series — one bar per series in every row, on one shared scale. Two layouts: a bar per line, or every series end to end on one track. | `{ items: Array, series: Array, layout: String ('stacked'), max: [Number,String] (null), maxRows: Number (12), cardClass: [String,Array,Object], rowStaggerMs: Number (40) }` | `sections/DualDistributionBars.vue` |
+| `WorkList` | A short, clickable list of records placed among an Index page's widgets — states WHICH records, where a counter can only state how many. Composes `components/app/AppList.vue`; pagination is force-disabled. Emits `row-click`; it never navigates. | `{ items: Array, hiddenCount: Number (0), itemKey: [String,Function] ('Code'), layout/content/metaLayout: Array, label/caption/metaLabel/metaCaption/chip/badge/btn: [String,Function,Object], chipColor/badgeColor/icon/iconColor/highlightColor: [String,Function], chipOutline: Boolean (false), dense: Boolean (true) }` | `sections/WorkList.vue` |
 
 ---
 
@@ -140,4 +141,32 @@ items: [
   { label: 'Andi', values: { yesterday: 6, today: 9 } },
   { label: 'Budi', values: { yesterday: 4, today: 3 } }
 ]
+```
+
+---
+
+## `WorkList`
+
+`items: [ …record objects… ]` — already sliced by the wrapper. This widget draws what it
+is handed and computes no window of its own.
+
+The only interactive widget in this folder. It stays pure by emitting `row-click` with
+the row object and letting the section wrapper decide where that goes — navigation needs
+`useResourceNav`, which is a composable and may not be imported here.
+
+Row cells are forwarded verbatim to `abstract/List.vue`, which routes each one through
+`abstract/Renderable.js`. So `label`, `caption`, `chip`, `badge`, `metaLabel`,
+`metaCaption` and `btn` are typed `[String, Function, Object]` — an Object is a whole
+component for that cell. `chipColor`, `icon`, `iconColor` and `highlightColor` resolve
+directly and stay narrowly typed on purpose. These are PER-ROW resolvers called as
+`fn(row)`, not `(record, config)` closures — the widget still evaluates nothing itself.
+
+`hiddenCount` renders one `+ N more` caption under the list. The wrapper supplies it;
+the widget never decides what was left out.
+
+```js
+items: [{ Code: 'LED-004', Name: 'Delta', Type: 'Outlet' }],
+hiddenCount: 2,
+label: (lead) => lead.Name,
+caption: (lead) => lead.Type
 ```

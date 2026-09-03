@@ -38,6 +38,16 @@ A section wrapper is thin on purpose. It:
 4. enforces the strict hide rule (`v-if="items.length"`),
 5. mounts the widget with resolved props only.
 
+## Interaction
+
+Most widgets here are read-only. One (`WorkList`) has clickable rows, and the rule that
+keeps it in this folder is: **a widget emits, it never navigates.** `useResourceNav` is a
+composable, so the row click leaves as a plain `row-click` event and the section wrapper
+decides where it goes.
+
+The same split applies to windowing. A widget draws the array it is handed; deciding how
+many rows that array should hold belongs to the wrapper, alongside the closure resolution.
+
 ## Naming
 
 Domain-agnostic, professional names. Never prefix or suffix a component with

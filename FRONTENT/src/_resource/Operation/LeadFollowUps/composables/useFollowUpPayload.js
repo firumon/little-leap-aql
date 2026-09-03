@@ -6,6 +6,7 @@ import { toDateOnly, toDateTime24 } from 'src/utils/dateHelpers'
 import { resourceRow } from 'src/composables/resources/useResourceConfig'
 import { stampFields } from 'src/utils/workflowStamp'
 import { useAuth } from 'src/composables/core/useAuth'
+import { leadProcessingNode } from 'src/_resource/Master/Leads/composables/useLeadPayload'
 import {
   AWAITING,
   COMPLETED,
@@ -16,6 +17,7 @@ import {
 } from './useFollowUpProgress'
 
 const RESOURCE_NAME = 'LeadFollowUps'
+const LEAD_RESOURCE = 'Leads'
 
 const text = (value) => (value == null ? '' : String(value).trim())
 const asRow = (value) => (value && typeof value === 'object' ? value : {})
@@ -66,7 +68,9 @@ export function buildFollowUpCreateChainNodes ({ followUp = {}, extra = {}, role
   if (!node) {
     return [{ valid: false, message: 'This follow-up cannot be saved.' }]
   }
-  return [{ ...node, successMsg: 'Follow-up added.' }]
+
+  const lead = leadProcessingNode(entry.LeadCode)
+  return [...(lead ? [lead] : []), { ...node, successMsg: 'Follow-up added.' }]
 }
 
 // Answers an awaiting follow-up. RespondDate is stamped here rather than by GAS:
@@ -144,7 +148,34 @@ export function buildNextFollowUpChainNodes ({ followUp = {}, actorName = '' } =
  * so the UI only ever writes the four a human answers.
  */
 export function followUpSeedNode (parent = {}) {
-  return followUpNode(parent, {}, { seed: true })
+  const node = followUpNode(parent, {}, { seed: true })
+  return { ...node, derive: followUpLeadDerive() }
+}
+
+/**
+ * Moving the lead is the LEAD module's call, so only its code decides. Re-run on every
+ * LeadCode change: the node the last lead earned is dropped before the new one is asked
+ * for, otherwise switching leads would submit a move on both.
+ */
+export function syncLeadProcessingInPageState (pageState, leadCode, previousCode) {
+  if (!pageState) return
+
+  const previous = text(previousCode)
+  if (previous) pageState.removeNode(LEAD_RESOURCE, previous)
+
+  const code = text(leadCode)
+  if (!code) return
+
+  const node = leadProcessingNode(code)
+  if (node) pageState.applyNodes(node)
+  else pageState.removeNode(LEAD_RESOURCE, code)
+}
+
+export function followUpLeadDerive () {
+  return [{
+    on: { resource: RESOURCE_NAME, field: 'LeadCode' },
+    handler: (value, pageState, previous) => syncLeadProcessingInPageState(pageState, value, previous)
+  }]
 }
 
 export function useFollowUpPayload () {
@@ -159,6 +190,8 @@ export function useFollowUpPayload () {
     buildFollowUpCreateChainNodes,
     followUpResponseNode,
     buildFollowUpResponseChainNodes,
-    buildNextFollowUpChainNodes
+    buildNextFollowUpChainNodes,
+    followUpLeadDerive,
+    syncLeadProcessingInPageState
   }
 }

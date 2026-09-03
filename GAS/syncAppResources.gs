@@ -501,7 +501,11 @@ function initAppResourcesCodeConfig() {
         DefaultValues: '{"Status":"Active","Progress":"Draft"}',
         RecordAccessPolicy: 'ALL',
         OwnerUserField: 'CreatedBy',
-        AdditionalActions: '',
+        AdditionalActions: JSON.stringify([
+            {"action": "Approve", "label": "Approve Lead", "title": "Approve Lead", "subtitle": "{Name}", "icon": "verified", "color": "positive", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "Approved", "columnValueOptions": [], "fields": [{"name": "Comment", "label": "Approval Comment", "type": "textarea", "required": true}], "visibleWhen": {"column": "Progress", "op": "eq", "value": "Processing"}},
+            {"action": "Reject", "label": "Reject Lead", "title": "Reject Lead", "subtitle": "{Name}", "icon": "cancel", "color": "negative", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "Rejected", "columnValueOptions": [], "fields": [{"name": "Comment", "label": "Rejection Reason", "type": "textarea", "required": true}], "visibleWhen": {"column": "Progress", "op": "eq", "value": "Processing"}},
+            {"action": "Later", "label": "Mark for Later", "title": "Mark for Later", "subtitle": "{Name}", "icon": "schedule", "color": "warning", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "Later", "columnValueOptions": [], "fields": [{"name": "Comment", "label": "Reason for Later", "type": "textarea", "required": true}], "visibleWhen": {"column": "Progress", "op": "eq", "value": "Processing"}}
+        ]),
         Menu: JSON.stringify([{"group":["Leads"],"order":1,"label":"Leads","icon":"person_search","route":"/master/leads","pageTitle":"Leads","pageDescription":"Manage possible future outlets, suppliers, customers and partners","show":true}]),
         UIFields: JSON.stringify([
             { header: 'Name', label: 'Name', type: 'text', required: true },
@@ -533,7 +537,15 @@ function initAppResourcesCodeConfig() {
         PostAction: '',
         Reports: '',
         CustomUIName: '',
-        ListViews: ''
+        ListViews: JSON.stringify([
+            { "name": "RecentlyFollowedUp", "label": "Recently Followed Up", "icon": "history", "color": "primary", "default": true, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }] } },
+            { "name": "Draft", "label": "Draft", "icon": "edit_note", "color": "grey-7", "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "Draft" }] } },
+            { "name": "Processing", "label": "Processing", "icon": "autorenew", "color": "primary", "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "Processing" }] } },
+            { "name": "OldLeads", "label": "Old Leads", "icon": "schedule", "color": "amber-8", "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "Processing" }] } },
+            { "name": "Rejected", "label": "Rejected", "icon": "cancel", "color": "negative", "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "Rejected" }] } },
+            { "name": "Later", "label": "Later", "icon": "schedule", "color": "warning", "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "Later" }] } },
+            { "name": "Approved", "label": "Approved", "icon": "verified", "color": "positive", "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "Approved" }] } }
+        ])
     },
     {
         Name: CONFIG.OPERATION_SHEETS.PROCUREMENTS,
@@ -1902,7 +1914,12 @@ function initAppResourcesCodeConfig() {
         DefaultValues: '{"Status":"Active","Progress":"Awaiting"}',
         RecordAccessPolicy: 'OWNER_AND_UPLINE',
         OwnerUserField: 'CreatedBy',
-        AdditionalActions: '',
+        AdditionalActions: JSON.stringify([
+            {"action": "QuickFollowUp", "label": "Quick Follow Up", "title": "Quick Follow Up", "subtitle": "", "icon": "bolt", "color": "primary", "kind": "mutate", "resourceLevel": true, "confirm": false, "column": "Progress", "columnValue": "Completed", "columnValueOptions": [], "fields": [{"name": "LeadCode", "label": "Lead", "type": "select", "source": {"resource": "Leads", "field": "Code", "label": "Name"}, "required": true}, {"name": "Username", "value": "$userName"}, {"name": "Date", "value": "$today"}, {"name": "Purpose", "value": "Others"}, {"name": "PurposeDetail", "value": "Quick visit"}, {"name": "Outcome", "label": "Follow-up Outcome", "type": "textarea", "required": true}, {"name": "ProgressCompletedComment", "value": "Quick follow-up recorded by ${$userName} on ${$dateTime}"}, {"name": "ProgressCompletedAt", "value": "$dateTime"}, {"name": "ProgressCompletedBy", "value": "$userName"}], "targets": [{"resource": "LeadFollowUps", "mode": "create", "key": "nextFollowUp", "label": "Next Follow Up (optional)", "when": {"field": "Date", "op": "notEmpty"}, "fields": [{"name": "LeadCode", "from": "$record.LeadCode"}, {"name": "Progress", "value": "Awaiting"}, {"name": "Status", "value": "Active"}, {"name": "Username", "value": "$userName"}, {"name": "Date", "label": "Next Follow Up Date", "type": "date", "value": "$date:15", "required": false}, {"name": "Purpose", "label": "Next Purpose", "type": "select", "required": true}, {"name": "PurposeDetail", "label": "Next Purpose Detail", "type": "textarea", "required": false}]}, {"resource": "Leads", "mode": "update", "key": "lead", "code": "$record.LeadCode", "fields": [{"name": "Progress", "value": "Processing"}]}]},
+            {"action": "Complete", "label": "Complete", "subtitle": "{$lead.Name}", "icon": "task_alt", "color": "positive", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "Completed", "columnValueOptions": [], "fields": [{"name": "Outcome", "label": "Follow-up Outcome", "type": "textarea", "required": true}], "targets": [{"resource": "LeadFollowUps", "mode": "create", "key": "nextFollowUp", "label": "Next Follow Up (optional)", "when": {"field": "Date", "op": "notEmpty"}, "fields": [{"name": "LeadCode", "from": "$record.LeadCode"}, {"name": "Progress", "value": "Awaiting"}, {"name": "Status", "value": "Active"}, {"name": "Username", "value": "$userName"}, {"name": "Date", "label": "Next Follow Up Date", "type": "date", "value": "$date:15", "required": false}, {"name": "Purpose", "label": "Next Purpose", "type": "select", "required": true}, {"name": "PurposeDetail", "label": "Next Purpose Detail", "type": "textarea", "required": false}]}], "visibleWhen": {"column": "Progress", "op": "eq", "value": "Awaiting"}},
+            {"action": "Postpone", "label": "Postpone", "subtitle": "{$lead.Name}", "icon": "event_repeat", "color": "warning", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "Postponed", "columnValueOptions": [], "fields": [{"name": "Comment", "label": "Postpone Reason", "type": "textarea", "required": true}], "targets": [{"resource": "LeadFollowUps", "mode": "create", "key": "nextFollowUp", "label": "Rescheduled Follow Up", "fields": [{"name": "LeadCode", "from": "$record.LeadCode"}, {"name": "Progress", "value": "Awaiting"}, {"name": "Status", "value": "Active"}, {"name": "Username", "value": "$userName"}, {"name": "Date", "label": "New Follow Up Date", "type": "date", "value": "$date:15", "required": true}, {"name": "Purpose", "label": "Purpose", "type": "select", "required": true, "from": "$record.Purpose"}, {"name": "PurposeDetail", "label": "Purpose Detail", "type": "textarea", "required": false, "from": "---POSTPONED ON ${$today}---\n${$record.PurposeDetail}"}]}], "visibleWhen": {"column": "Progress", "op": "eq", "value": "Awaiting"}},
+            {"action": "Cancel", "label": "Cancel", "subtitle": "{$lead.Name}", "icon": "cancel", "color": "negative", "kind": "mutate", "confirm": false, "column": "Progress", "columnValue": "Cancelled", "columnValueOptions": [], "fields": [{"name": "Comment", "label": "Cancellation Reason", "type": "textarea", "required": true}], "visibleWhen": {"column": "Progress", "op": "eq", "value": "Awaiting"}}
+        ]),
         Menu: JSON.stringify([{"group":["Leads"],"order":2,"label":"Lead Follow Ups","icon":"follow_the_signs","route":"/operation/lead-follow-ups","pageTitle":"Lead Follow Ups","pageDescription":"Track lead communication, visits and follow-up outcomes","show":true}]),
         UIFields: JSON.stringify([
             { header: 'LeadCode', label: 'Lead', type: 'text', required: true },
@@ -1931,7 +1948,16 @@ function initAppResourcesCodeConfig() {
         PostAction: '',
         Reports: '',
         CustomUIName: '',
-        ListViews: '',
+        ListViews: JSON.stringify([
+            { "name": "Recent", "label": "Recent", "icon": "schedule", "color": "primary", "default": true, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "RespondDate", "operator": "gte", "value": "$hoursAgo:48" }, { "type": "condition", "column": "RespondDate", "operator": "lte", "value": "$hoursIn:0" }] } },
+            { "name": "Overdue", "label": "Overdue", "icon": "running_with_errors", "color": "negative", "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "Awaiting" }, { "type": "condition", "column": "Date", "operator": "lt", "value": "$daysIn:0" }] } },
+            { "name": "Today", "label": "Today", "icon": "today", "color": "primary", "filter": { "type": "group", "logic": "OR", "items": [{ "type": "condition", "column": "Date", "operator": "eq", "value": "$date:0" }, { "type": "condition", "column": "RespondDate", "operator": "eq", "value": "$date:0" }] } },
+            { "name": "Tomorrow", "label": "Tomorrow", "icon": "event", "color": "info", "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "Awaiting" }, { "type": "condition", "column": "Date", "operator": "eq", "value": "$daysIn:1" }] } },
+            { "name": "Upcomings", "label": "Upcomings", "icon": "date_range", "color": "indigo-6", "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "Awaiting" }, { "type": "condition", "column": "Date", "operator": "gt", "value": "$daysIn:1" }] } },
+            { "name": "Completed", "label": "Completed", "icon": "task_alt", "color": "positive", "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "Completed" }] } },
+            { "name": "Postponed", "label": "Postponed", "icon": "event_repeat", "color": "warning", "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "Postponed" }] } },
+            { "name": "Cancelled", "label": "Cancelled", "icon": "cancel", "color": "negative", "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "Cancelled" }] } }
+        ]),
         Relations: JSON.stringify({
             LeadCode: { resource: CONFIG.MASTER_SHEETS.LEADS, targetHeader: 'Code', labelHeader: 'Name' }
         })

@@ -41,7 +41,8 @@ import {
   addMonths,
   dayOfYear,
   isoWeek,
-  daysFromToday
+  daysFromToday,
+  hoursFromNow
 } from 'src/utils/dateHelpers'
 
 /**
@@ -77,7 +78,9 @@ export const COERCES = {
   /** Any supported date shape → ISO week number, 1-53. */
   week: (v) => isoWeek(v),
   /** Any supported date shape → signed whole days from today (future positive). */
-  dayNum: (v) => daysFromToday(v)
+  dayNum: (v) => daysFromToday(v),
+  /** Any supported date shape → signed whole hours from now (future positive). */
+  hourNum: (v) => hoursFromNow(v)
 }
 
 const nowMs = () => Date.now()
@@ -239,6 +242,28 @@ export const TOKENS = {
     paramDefault: '30',
     value: (params) => Math.abs(Number(params[0])),
     coerce: ['dayNum'],
+    coerceToken: ['number']
+  },
+
+  // ---- Relative hours (parameterised) ---------------------------------------
+  // Same shape as the day family, but the column keeps its time part instead of
+  // being floored to midnight — the only way to express a sub-day window.
+  $hoursAgo: {
+    label: 'N hours ago',
+    group: 'Relative Hours',
+    param: 'N',
+    paramDefault: '24',
+    value: (params) => -Math.abs(Number(params[0])),
+    coerce: ['hourNum'],
+    coerceToken: ['number']
+  },
+  $hoursIn: {
+    label: 'In N hours',
+    group: 'Relative Hours',
+    param: 'N',
+    paramDefault: '24',
+    value: (params) => Math.abs(Number(params[0])),
+    coerce: ['hourNum'],
     coerceToken: ['number']
   },
 

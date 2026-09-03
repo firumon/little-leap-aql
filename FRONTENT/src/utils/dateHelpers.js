@@ -20,6 +20,7 @@ import {
   getDayOfYear,
   getISOWeek,
   differenceInCalendarDays,
+  differenceInHours,
   format,
   isValid
 } from 'date-fns'
@@ -146,4 +147,31 @@ export function isoWeek(value) {
  */
 export function daysFromToday(value) {
   return withDate(value, (date) => differenceInCalendarDays(date, new Date()), NaN)
+}
+
+/**
+ * Signed whole hours between the given value and now. Future is positive, past
+ * negative, and the remainder is truncated toward zero. NaN when unparseable.
+ * e.g. 90 minutes ago → -1, in 3 hours → 3.
+ *
+ * Unlike daysFromToday this does NOT floor to midnight, so it can express a
+ * sub-day window ("responded in the last 48 hours").
+ */
+export function hoursFromNow(value) {
+  return withDate(value, (date) => differenceInHours(date, new Date()), NaN)
+}
+
+/**
+ * How long ago a past instant was, as a short chip string: `'3h ago'` under a day,
+ * `'2d ago'` beyond it. `''` when the value will not parse.
+ *
+ * Rolls over to days on purpose — an hours-only count reads fine at 3 hours and
+ * badly at 500.
+ */
+export function relativeTimeLabel(value) {
+  const hours = hoursFromNow(value)
+  if (Number.isNaN(hours)) return ''
+  const past = Math.max(0, -hours)
+  if (past < 24) return `${past}h ago`
+  return `${Math.floor(past / 24)}d ago`
 }

@@ -373,6 +373,37 @@ Common single-sided patterns that are correct as-is:
 | Due today | `DueDate` `eq` `$daysIn:0` |
 | Aged 30+ days | `DueDate` `lt` `$daysAgo:30` |
 
+#### 5.2.3a. Relative-Hour Tokens (Parameterised)
+
+| Token | Resolves to |
+| :--- | :--- |
+| `$hoursAgo:N` | `-N` (past) |
+| `$hoursIn:N` | `+N` (future) |
+
+The column is converted to **signed whole hours from now** — future positive, past negative,
+truncated toward zero (90 minutes ago reads as `-1`). Unlike the day family the column is **not**
+floored to local midnight, so its time component is what makes the comparison. Use these only for
+sub-day windows; anything measured in days belongs to `$daysAgo` / `$daysIn`, which are stable
+across a clock that keeps moving.
+
+Because the column keeps its time part, these are the right tokens for the datetime stamps GAS
+writes — `RespondDate`, `ProgressCompletedAt` and the rest of the `...At` family — and they work
+equally on an epoch-ms audit column.
+
+> [!WARNING]
+> **Rolling windows need both edges here too.** `gte $hoursAgo:48` alone also matches anything
+> dated in the future, whose offset is positive. Pair the bounds:
+> ```json
+> { "type": "group", "logic": "AND", "items": [
+>   { "type": "condition", "column": "RespondDate", "operator": "gte", "value": "$hoursAgo:48" },
+>   { "type": "condition", "column": "RespondDate", "operator": "lte", "value": "$hoursIn:0" }
+> ]}
+> ```
+
+> [!NOTE]
+> Like every date token, these resolve when the view recomputes rather than on a timer — a
+> session left open for hours keeps the window it was built with until reload.
+
 #### 5.2.4. Current-User Tokens
 
 | Token | Resolves to |

@@ -77,6 +77,25 @@ export function isToggleField(field) {
  * `component` / `componentName` remain for the legacy direct-render consumers
  * (`_common/sections/Content/Form.vue`); FormRecord no longer reads them.
  */
+/**
+ * The AppOptions group backing one column, as `{label,value}` pairs, or `[]`.
+ * Probes `<ResourceName><Column>` with the resource name as-is, singular and plural
+ * (Products/Type → ProductsType, ProductType). First hit wins.
+ */
+export function appOptionGroupFor (optionsMap = {}, resourceName = '', header = '') {
+  const name = String(resourceName || '').trim()
+  const column = String(header || '').trim()
+  if (!name || !column) return []
+
+  for (const variant of new Set([name, singularize(name), pluralize(name)])) {
+    const group = optionsMap[`${variant}${column}`]
+    if (Array.isArray(group) && group.length) {
+      return group.map((value) => ({ label: String(value), value }))
+    }
+  }
+  return []
+}
+
 export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions = {}, appOptions = {} } = {}) {
   const baseProps = {
     label: field.label || field.header,
@@ -176,13 +195,31 @@ export function mapField(field, { resourceName, linkRefs = {}, crossRefOptions =
     }
   }
 
+  // An open-ended list: the AppOptions group seeds it, and the control lets the user
+  // add a value the group does not carry yet. Sits above `select` so the explicit
+  // type is not swallowed by it.
+  if (normalizeFieldType(field.type) === 'openselect') {
+    return {
+      header: field.header,
+      fieldType: 'openselect',
+      componentName: 'q-select',
+      ...baseProps,
+      options: field.options || appOptions[field.header] || [],
+      emitValue: true,
+      mapOptions: true,
+      clearable: !field.required
+    }
+  }
+
   if (field.type === 'select' || field.type === 'dropdown') {
     return {
       header: field.header,
       fieldType: 'select',
       componentName: 'q-select',
       ...baseProps,
-      options: field.options || [],
+      // A schema `select` that names no options is asking for the column's AppOptions
+      // group — without this it renders an empty dropdown.
+      options: field.options || appOptions[field.header] || crossRefOptions[field.header] || [],
       emitValue: true,
       mapOptions: true
     }
@@ -313,17 +350,10 @@ export function useFormFields(resourceName) {
 
     const options = authStore.appOptionsMap || {}
     const headers = Array.isArray(cfg.headers) ? cfg.headers : []
-    const nameVariants = [...new Set([name, singularize(name), pluralize(name)])]
 
     for (const header of headers) {
-      for (const variant of nameVariants) {
-        const key = `${variant}${header}`
-        const group = options[key]
-        if (Array.isArray(group) && group.length) {
-          map[header] = group.map((v) => ({ label: String(v), value: v }))
-          break
-        }
-      }
+      const group = appOptionGroupFor(options, name, header)
+      if (group.length) map[header] = group
     }
     return map
   })

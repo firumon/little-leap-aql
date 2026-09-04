@@ -1,7 +1,6 @@
-import { liveDeliveryRun } from 'src/_ui/AQL/composables/Operation/OutletDeliveries/useDeliveryRunLive'
-import { buildDeliveryCancelNodes } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryPayload'
-import { itemRowsForCodes } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryRows'
-import { orsisForDelivery } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryProgress'
+import { CANCELLED } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryProgress'
+
+const RESOURCE = 'OutletDeliveries'
 
 /**
  * OutletDeliveries › Cancel contract — `/operation/outlet-deliveries/{code}/_action/cancel`.
@@ -33,6 +32,18 @@ import { orsisForDelivery } from 'src/_resource/Operation/OutletDeliveries/compo
  * declares `CancelledAt/By/Comment`, so it shows on the View timeline afterwards.
  *
  * `reload: false` — the typed reason is the page's state and reloading would discard it.
+ *
+ * The node is LIVE from the first render (UI_PAGE_STATE.md §14). `ready` runs once per page
+ * and is the only hook with page lifetime, so this is where the manifest node is seeded:
+ * it carries the CODE it will update and the columns THIS route writes, and the confirm
+ * card binds its text straight onto the record. Nothing is assembled at submit time.
+ *
+ * `reset: true` drops whatever the previous page left behind — `Page.vue` keeps ONE
+ * pageState for every resource page in the session, so the node sitting here may be the
+ * record the View page just hydrated.
+ *
+ * The `...At` / `...By` stamps are NOT seeded. They record when the operator confirmed,
+ * not when the page opened, so the builder writes them at submit.
  */
 export default {
   sections: ['PageHeader'],
@@ -43,16 +54,12 @@ export default {
     reload: false
   },
 
-  // The batch is built as soon as a reason is typed and re-cut on every edit, so
-  // `PageAction.submit` only validates (UI_PAGE_STATE.md §5B). This sheet does NOT
-  // prefix its stamps with `Progress`.
-  ready: liveDeliveryRun({
-    commentField: 'CancelledComment',
-    build: ({ record, actorName, comment }) => buildDeliveryCancelNodes({
-      record,
-      orsiRows: itemRowsForCodes(orsisForDelivery(record)),
-      actorName,
-      reason: comment
+  ready ({ pageState, routeInfo }) {
+    pageState.initResource(RESOURCE, {
+      code: routeInfo.value.code,
+      isPrimaryKey: true,
+      reset: true,
+      fields: { Progress: CANCELLED, CancelledComment: '' }
     })
-  })
+  }
 }

@@ -10,16 +10,24 @@
  * It owns the MANIFEST: its state machine, its CSV line-up, and when a run counts as
  * departed or finished.
  *
- * It owns NONE of the following, and calls the restock domain for every one of them:
- *   - what happens to an `OutletRestockItems` row when it is delivered;
- *   - the positive `OutletMovements` row that arrival writes;
- *   - the parent `OutletRestocks` progress that results.
+ * ── EVERY NODE HERE IS AN `OutletDeliveries` NODE ──
+ * This module NEVER constructs a node for a sheet it does not own — no `OutletRestocks`,
+ * no `OutletRestockItems`, no `OutletMovements`. It asks the restock domain and MERGES
+ * whatever comes back, without inspecting it:
  *
- * All three are `buildRestockDeliveryNodes`, called once per affected parent request
- * (§9.1, §10.1). The restock progress formula in particular is NEVER replicated here — it
- * is `nextRestockProgress`, which the standalone `MarkDelivered` route also uses, so a line
- * delivered on a manifest and the same line delivered directly leave the parent in the same
- * state by construction.
+ *   - a line handed over, its ledger row and its parent's resulting progress
+ *       → `buildRestockDeliveryNodes`, once per affected request;
+ *   - a parent's progress after its line-up changed but nothing was delivered
+ *       → `buildRestockProgressRefreshNodes`.
+ *
+ * Which resources those cover, and how many nodes each returns, is the restock domain's
+ * business. A run may therefore write four sheets in one batch while this file only ever
+ * writes one — and a line delivered on a manifest and the same line delivered directly
+ * leave the parent identical by construction, because one builder produced both (§9.1).
+ *
+ * The same rule governs `reload`: a node here names its OWN sheet only. The merged nodes
+ * declare the sheets their own writes invalidate, so restating them would be this module
+ * asserting something about a domain it cannot see (§5.5).
  *
  * PURE functions throughout: no refs, no injects, no store or service call, nothing
  * rendered. Every builder takes plain rows and returns the canonical envelope
@@ -45,7 +53,7 @@
 import { textOrRef } from 'src/utils/appHelpers'
 import {
   buildRestockDeliveryNodes,
-  nextRestockProgress
+  buildRestockProgressRefreshNodes
 } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
 import {
   DRAFT,
@@ -61,14 +69,13 @@ import {
   canComplete,
   canDeliver,
   orsisForDelivery,
-  deliveryRatio
+  deliveryRatio,
+  projectedDeliveryRatio,
+  nextDeliveryProgress
 } from './useDeliveryProgress'
 
 import { stampFields } from 'src/utils/workflowStamp'
 const RESOURCE_NAME = 'OutletDeliveries' // this module IS OutletDeliveries — always
-
-const RESTOCKS = 'OutletRestocks'
-const RESTOCK_ITEMS = 'OutletRestockItems'
 
 const text = (value) => (value == null ? '' : String(value).trim())
 const asRow = (value) => (value && typeof value === 'object' ? value : {})
@@ -118,74 +125,41 @@ function groupByRestock (codes, itemsByCode) {
   return groups
 }
 
-/**
- * The parent-restock updates implied by a manifest change that delivers NOTHING.
- *
- * Removing lines from a run, or cancelling it, does not touch any `OutletRestockItems` row —
- * the lines stay ALLOCATED and become available for another van. But the parent request's
- * progress is still recomputed, because `nextRestockProgress` is the one function that
- * decides it and the parent may have been left in a stale state by an earlier partial
- * delivery.
- *
- * Called with an empty delivered-set, so it asks the restock domain the same question the
- * delivery path asks, with nothing newly delivered.
- */
-function restockProgressRefreshNodes (restockCodes, allItemRows) {
-  const byRestock = new Map()
-  for (const raw of asList(allItemRows)) {
-    const row = asRow(raw)
-    const parentCode = text(row.OutletRestockCode)
-    if (!parentCode) continue
-    if (!byRestock.has(parentCode)) byRestock.set(parentCode, [])
-    byRestock.get(parentCode).push(row)
-  }
-
-  // A role per request code: nodes are addressed by resource plus role, so roleless
-  // updates for several restocks would collapse onto one address.
-  return [...new Set(asList(restockCodes).map(text).filter(Boolean))]
-    .map((code) => ({
-      resource: RESTOCKS,
-      role: code,
-      code: textOrRef(code),
-      record: {
-        // The restock domain's own formula, over that request's FULL active child set.
-        Progress: nextRestockProgress(byRestock.get(code) || [], [])
-      },
-      reload: [RESTOCKS]
-    , permissions: { update: 'You are not allowed to update this outlet restock.' }, successMsg: allDelivered
-      ? `Delivery ${code} completed — all ${ratio.total} items delivered.`
-      : `${targetCodes.length} item${targetCodes.length === 1 ? '' : 's'} delivered. ${ratio.total - ratio.delivered} remaining.`}))
-}
-
 // ─── 1. Creating a manifest ───────────────────────────────────────────────────
 
 /**
  * A new DRAFT manifest over the selected allocated lines.
+ *
+ * Takes the LIVE record the Add page has been building since step 1 — its `Date`,
+ * `UserName` and `OutletRestockItemCodes` are already there. This builder validates it and
+ * normalises the workflow columns; it never assembles a row from loose arguments.
  *
  * The lines themselves are NOT touched: they stay `ALLOCATED`, because bundling a line into
  * a run is a planning act, not a physical one. Nothing has left a warehouse that had not
  * already left it at approval time, and nothing has reached an outlet. That is also why a
  * manifest can be cancelled with no ledger consequences at all (see the cancel builder).
  */
-export function buildDeliveryCreateNodes ({ date = '', userName = '', selectedOrsiCodes = [] } = {}) {
-  const codes = asList(selectedOrsiCodes).map(text).filter(Boolean)
+export function buildDeliveryCreateNodes ({ record = {} } = {}) {
+  const row = asRow(record)
+  // The live record's own CSV, read by the domain's one parser — the page never hands over
+  // a second list that could disagree with the column it has been writing since step 1.
+  const codes = orsisForDelivery(row)
+
   if (!codes.length) {
     return [{ valid: false, message: 'Select at least one allocated item for this delivery.' }]
   }
-  if (!text(userName)) {
+  if (!text(row.UserName)) {
     return [{ valid: false, message: 'A driver or delivery agent is required.' }]
   }
 
-  const record = {
-    Date: text(date) || todayISO(),
-    UserName: text(userName),
-    Progress: DRAFT,
-    OutletRestockItemCodes: codesToCsv(codes),
-    Status: 'Active'
-  }
-
   return [
-    { resource: RESOURCE_NAME, record: record, reload: [RESOURCE_NAME], successMsg: `Delivery draft created with ${codes.length} item${codes.length === 1 ? '' : 's'}.` }
+    { resource: RESOURCE_NAME, record: {
+        Date: text(row.Date) || todayISO(),
+        UserName: text(row.UserName),
+        Progress: DRAFT,
+        OutletRestockItemCodes: codesToCsv(codes),
+        Status: 'Active'
+      }, reload: [RESOURCE_NAME], successMsg: `Delivery draft created with ${codes.length} item${codes.length === 1 ? '' : 's'}.` }
   ]
 }
 
@@ -310,26 +284,18 @@ export function buildDeliveryMarkDeliveredNodes ({
     return [{ valid: false, message: `Restock request ${missingParents[0]} could not be loaded, so its items cannot be delivered.` }]
   }
 
-  // The manifest's own state, asked of the picture AFTER this batch lands. The index is
-  // patched rather than the rows re-fetched, because the answer must reflect what this
-  // batch is about to write, not what the store currently holds.
-  const deliveredSet = new Set(targetCodes)
-  const projectedRows = manifestCodes.map((itemCode) => {
-    const row = itemsByCode.get(itemCode)
-    if (!row) return { Code: itemCode, Progress: '' }
-    return deliveredSet.has(itemCode) ? { ...row, Progress: ITEM_DELIVERED } : row
-  })
-
-  const ratio = deliveryRatio(manifest, projectedRows)
-  const allDelivered = ratio.total > 0 && ratio.delivered === ratio.total
-  const nextProgress = allDelivered ? COMPLETED : IN_TRANSIT
+  // The manifest's own state after this batch lands. The MarkDeliver page derives the same
+  // value onto the live node as lines are ticked, through this same function.
+  const ratio = projectedDeliveryRatio(manifest, targetCodes, allOrsiRows)
+  const nextProgress = nextDeliveryProgress(manifest, targetCodes, allOrsiRows)
+  const allDelivered = nextProgress === COMPLETED
 
   nodes.push({ resource: RESOURCE_NAME, code: textOrRef(code), record: {
     Progress: nextProgress,
     ...(allDelivered
       ? stampFields('ProgressCompleted', actorName, `All ${ratio.total} items delivered.`)
       : stampFields('ProgressInTransit', actorName, `Delivered ${ratio.delivered} of ${ratio.total} items.`))
-  }, reload: ['OutletStorages', RESTOCK_ITEMS, RESOURCE_NAME, RESTOCKS] })
+  }, reload: [RESOURCE_NAME] })
 
   return nodes
 }
@@ -406,8 +372,8 @@ export function buildDeliveryEditManifestNodes ({
   }
 
   return [
-    { resource: RESOURCE_NAME, code: textOrRef(code), record: update, reload: [RESOURCE_NAME, RESTOCK_ITEMS, RESTOCKS], successMsg: `Delivery updated — ${nextCodes.length} item${nextCodes.length === 1 ? '' : 's'}.` },
-    ...restockProgressRefreshNodes([...affectedRestocks], allOrsiRows)
+    { resource: RESOURCE_NAME, code: textOrRef(code), record: update, reload: [RESOURCE_NAME], successMsg: `Delivery updated — ${nextCodes.length} item${nextCodes.length === 1 ? '' : 's'}.` },
+    ...buildRestockProgressRefreshNodes({ restockCodes: [...affectedRestocks], allItemRows: allOrsiRows })
   ]
 }
 
@@ -524,8 +490,8 @@ export function buildDeliveryCancelNodes ({
         Progress: CANCELLED,
         // Plain Cancelled* - this sheet does NOT prefix them with Progress.
         ...stampFields('Cancelled', actorName, reason)
-      }, reload: [RESOURCE_NAME, RESTOCKS], successMsg: `Delivery ${code} cancelled. Its items are available for another run.` },
-    ...restockProgressRefreshNodes([...affectedRestocks], orsiRows)
+      }, reload: [RESOURCE_NAME], successMsg: `Delivery ${code} cancelled. Its items are available for another run.` },
+    ...buildRestockProgressRefreshNodes({ restockCodes: [...affectedRestocks], allItemRows: orsiRows })
   ]
 }
 

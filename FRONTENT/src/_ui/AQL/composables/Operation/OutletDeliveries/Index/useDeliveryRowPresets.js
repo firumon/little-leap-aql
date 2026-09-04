@@ -25,6 +25,7 @@
  * component setup; the composable wrapper follows for setup-context callers (§2.2).
  */
 
+import { hoursFromNow } from 'src/utils/dateHelpers'
 import {
   sortByDate,
   settledAt,
@@ -36,6 +37,7 @@ import {
   isCompleted,
   isCancelled,
   progressOf,
+  progressColor,
   progressLabel,
   orsisForDelivery
 } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryProgress'
@@ -136,6 +138,67 @@ export function cancelledPreset (items) {
   })
 }
 
+/**
+ * Age on a sliding scale: hours under a day, then days, then months past 99 days.
+ * `ageLabel` alone reads badly at both ends - "Today" hides a run that moved a minute
+ * ago, and "400 days" is a number nobody converts in their head.
+ */
+export function relativeAgeLabel (stamp) {
+  const hours = hoursFromNow(stamp)
+  if (!Number.isNaN(hours)) {
+    const past = Math.max(0, -hours)
+    // `hoursFromNow` truncates, so anything under the hour lands on 0.
+    if (past < 1) return 'just now'
+    if (past < 24) return past === 1 ? '1 hour' : `${past} hours`
+  }
+  const days = daysSince(stamp)
+  if (days === null || days === undefined || Number.isNaN(days)) return ''
+  if (days > 99) return `${Math.floor(days / 30)} months`
+  return ageLabel(days)
+}
+
+/** The same scale, read off a manifest's own last-movement stamp. */
+export function recentAgeLabel (row) {
+  return relativeAgeLabel(settledAt(row))
+}
+
+/**
+ * "Recent" - the latest 50 live runs, newest first, whatever state they are in.
+ *
+ * DRAFTS ARE INCLUDED. A draft is a loaded van waiting to depart - the earliest stage of
+ * the workflow, not a private scratchpad - so a coordinator who has just built a run must
+ * find it here. Its own `Pending` pill still exists for working the backlog alone.
+ *
+ * Only cancelled runs are left out: an abandoned run never moved, so it is not part of
+ * "what moved lately?". The cap is a hard 50 for the same reason.
+ *
+ * Ordered by `settledAt` - the stamp the run's CURRENT state wrote, falling back to `Date`
+ * then `CreatedAt`. This sheet carries no `UpdatedAt` column, and `settledAt` is the
+ * domain's own answer to "when did this last move?".
+ */
+export function recentPreset (items) {
+  const live = asList(items)
+    .filter(isActiveRow)
+    .filter((row) => !isCancelled(row))
+
+  return {
+    items: sortByDate(live, settledAt, 'desc').slice(0, 50),
+    layout: ['label', 'caption'],
+    label: (row) => driverName(row) || text(row?.Code),
+    caption: (row) => joinParts([text(row?.Date), `${itemCount(row)} items`]),
+    metaLayout: ['chip', 'badge'],
+    chip: recentAgeLabel,
+    chipColor: 'grey-7',
+    chipOutline: true,
+    badge: (row) => progressLabel(progressOf(row)),
+    badgeColor: (row) => progressColor(progressOf(row)),
+    meta: null,
+    metaLabel: null,
+    metaCaption: null
+  }
+}
+
+
 // Composable shape for setup-context callers. Same functions, one import (§2.2).
 export function useDeliveryRowPresets () {
   return {
@@ -143,6 +206,9 @@ export function useDeliveryRowPresets () {
     joinParts,
     itemCount,
     driverName,
+    relativeAgeLabel,
+    recentAgeLabel,
+    recentPreset,
     pendingPreset,
     inTransitPreset,
     completedPreset,

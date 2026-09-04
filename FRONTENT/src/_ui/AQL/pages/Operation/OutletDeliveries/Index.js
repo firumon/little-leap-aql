@@ -1,4 +1,5 @@
 import {
+  recentPreset,
   pendingPreset,
   inTransitPreset,
   completedPreset,
@@ -19,14 +20,15 @@ import {
  * Every widget hides itself when it has nothing to report, so a tenant with no deliveries
  * sees a bare list rather than a wall of zeroes.
  *
- * ── THE FIVE LIST VIEWS ──
- *   Pending    (default)  DRAFT manifests — loaded, not departed. Oldest first.
+ * ── THE SIX LIST VIEWS ──
+ *   Recent     (default)  the last 50 live runs, drafts included. Newest first.
+ *   Pending               DRAFT manifests — loaded, not departed. Oldest first.
  *   InTransit             on the road. Oldest first.
  *   Outlets               NOT a manifest list — the unassigned allocation queue. See below.
  *   Completed             settled runs, newest first.
  *   Cancelled             abandoned runs, newest first.
  *
- * Four of the five are plain prop bags and therefore live here as `Props<Identity>` blocks
+ * Five of the six are plain prop bags and therefore live here as `Props<Identity>` blocks
  * rather than standalone `List<View>.js` files (§5.3). Each is a FUNCTION, so it is
  * evaluated with the live props bag on every read and receives the active view's
  * already-filtered `items` — which is what lets it re-filter and re-sort them. A static
@@ -70,6 +72,7 @@ export default {
     title: 'Outlet Deliveries'
   },
 
+  PropsListRecent: (props) => recentPreset(props.items),
   PropsListPending: (props) => pendingPreset(props.items),
   PropsListInTransit: (props) => inTransitPreset(props.items),
   PropsListCompleted: (props) => completedPreset(props.items),

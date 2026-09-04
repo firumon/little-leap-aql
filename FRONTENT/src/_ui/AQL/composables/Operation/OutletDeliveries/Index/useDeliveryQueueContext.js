@@ -87,9 +87,11 @@ export function useDeliveryQueueContext () {
         })
       }
 
-      const days = daysSince(text(row.ProgressAllocatedAt) || settledAt(parent || {}))
+      const allocatedAt = text(row.ProgressAllocatedAt) || settledAt(parent || {})
+      const days = daysSince(allocatedAt)
       groups.get(key).items.push({
         ...row,
+        allocatedAt,
         skuLabel: text(skuLabelText(text(row.SKU))) || text(row.SKU),
         quantity: Math.abs(Number(row.Quantity) || 0),
         restockCode: text(row.OutletRestockCode),
@@ -107,7 +109,12 @@ export function useDeliveryQueueContext () {
         // week-old problem, whatever else was allocated this morning. Stays NaN when no
         // line has a readable stamp, so an unknown age never renders as "today".
         oldestDays: group.items.reduce(
-          (max, row) => (!Number.isFinite(row.days) ? max : Math.max(Number.isFinite(max) ? max : 0, row.days)), NaN)
+          (max, row) => (!Number.isFinite(row.days) ? max : Math.max(Number.isFinite(max) ? max : 0, row.days)), NaN),
+        // The stamp behind that worst age, so the row can print the date it started
+        // waiting instead of only how long ago that was.
+        oldestAt: group.items.reduce(
+          (oldest, row) => (!Number.isFinite(row.days) ? oldest
+            : (!oldest || row.days > oldest.days ? row : oldest)), null)?.allocatedAt || ''
       }))
       // Oldest backlog first — the same work order the manifest lists use. An unknown age
       // sorts last rather than poisoning the comparison with NaN.

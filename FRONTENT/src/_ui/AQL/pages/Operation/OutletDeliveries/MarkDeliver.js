@@ -1,3 +1,27 @@
+import { watch } from 'vue'
+import { restockItemRows } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryRows'
+import { nextDeliveryProgress } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryProgress'
+
+const RESOURCE = 'OutletDeliveries'
+// Which lines were handed over. Stays a CONTROL: it is a selection over rows that already
+// exist, which `UI_PAGE_STATE_NODES.md` §5B.5 names as a legitimate control, and it maps to
+// no column on this sheet.
+const SELECTION_FIELD = 'DeliverSelection'
+
+/**
+ * The node is LIVE from the first render (UI_PAGE_STATE.md §14). It carries the CODE it
+ * will update, and its `Progress` follows the ticks: `nextDeliveryProgress` is the ONE
+ * function the payload builder also calls, so what the node says the run is about to become
+ * and what the batch actually writes cannot drift.
+ *
+ * Nothing the user types on this route belongs to an `OutletDeliveries` column — the note
+ * lands on the restock lines and the movement rows, and the manifest's own stamp comment is
+ * generated from the count. So `Progress` is the whole of this record, and that is honest
+ * rather than thin.
+ *
+ * `reset: true` drops whatever the previous page left behind — `Page.vue` keeps ONE
+ * pageState for every resource page in the session.
+ */
 /**
  * OutletDeliveries › MarkDeliver contract —
  * `/operation/outlet-deliveries/{code}/_action/mark-deliver`.
@@ -40,5 +64,32 @@ export default {
   PropsPageHeader: {
     title: 'Record Delivery',
     reload: false
+  },
+
+  ready ({ pageState, routeInfo, resourceRecord }) {
+    pageState.initResource(RESOURCE, {
+      code: routeInfo.value.code,
+      isPrimaryKey: true,
+      reset: true
+    })
+
+    // Keyed on a primitive: `watch` compares with Object.is, so a fresh array would re-fire
+    // on every read. The row COUNT is in the key because the item sheet lands after the
+    // page does, and the first answer must not be frozen against an empty store.
+    watch(
+      () => [
+        (pageState.getControls(SELECTION_FIELD, [], RESOURCE) || []).join(','),
+        String(resourceRecord?.record?.value?.Code || ''),
+        restockItemRows().length
+      ].join('|'),
+      () => {
+        const manifest = resourceRecord?.record?.value
+        if (!manifest) return
+        const ticked = pageState.getControls(SELECTION_FIELD, [], RESOURCE) || []
+        pageState.setRecord(
+          'Progress', nextDeliveryProgress(manifest, ticked, restockItemRows()), RESOURCE)
+      },
+      { immediate: true }
+    )
   }
 }

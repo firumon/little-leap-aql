@@ -1,7 +1,6 @@
-import { liveDeliveryRun } from 'src/_ui/AQL/composables/Operation/OutletDeliveries/useDeliveryRunLive'
-import { buildDeliveryMarkCompleteNodes } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryPayload'
-import { itemRowsForCodes } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryRows'
-import { orsisForDelivery } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryProgress'
+import { COMPLETED } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryProgress'
+
+const RESOURCE = 'OutletDeliveries'
 
 /**
  * OutletDeliveries › MarkComplete contract —
@@ -27,6 +26,18 @@ import { orsisForDelivery } from 'src/_resource/Operation/OutletDeliveries/compo
  * and restock sheets before the gate can answer honestly.
  *
  * `reload: false` — consistent with every other transactional route in the module (§5.5).
+ *
+ * The node is LIVE from the first render (UI_PAGE_STATE.md §14). `ready` runs once per page
+ * and is the only hook with page lifetime, so this is where the manifest node is seeded:
+ * it carries the CODE it will update and the columns THIS route writes, and the confirm
+ * card binds its text straight onto the record. Nothing is assembled at submit time.
+ *
+ * `reset: true` drops whatever the previous page left behind — `Page.vue` keeps ONE
+ * pageState for every resource page in the session, so the node sitting here may be the
+ * record the View page just hydrated.
+ *
+ * The `...At` / `...By` stamps are NOT seeded. They record when the operator confirmed,
+ * not when the page opened, so the builder writes them at submit.
  */
 export default {
   sections: ['PageHeader'],
@@ -37,15 +48,12 @@ export default {
     reload: false
   },
 
-  // The batch is built the moment the page opens and re-cut as the note is typed, so
-  // `PageAction.submit` only validates (UI_PAGE_STATE.md §5B).
-  ready: liveDeliveryRun({
-    commentField: 'ProgressCompletedComment',
-    build: ({ record, actorName, comment }) => buildDeliveryMarkCompleteNodes({
-      record,
-      orsiRows: itemRowsForCodes(orsisForDelivery(record)),
-      actorName,
-      comment
+  ready ({ pageState, routeInfo }) {
+    pageState.initResource(RESOURCE, {
+      code: routeInfo.value.code,
+      isPrimaryKey: true,
+      reset: true,
+      fields: { Progress: COMPLETED, ProgressCompletedComment: '' }
     })
-  })
+  }
 }

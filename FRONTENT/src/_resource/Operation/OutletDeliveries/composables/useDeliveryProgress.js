@@ -171,6 +171,44 @@ export function deliveryRatio (record, orsiRows = []) {
 }
 
 /** Whether any line on this manifest has already been handed over. */
+/**
+ * The manifest's state AFTER `deliveredCodes` are handed over — COMPLETED once its CSV has
+ * nothing left outstanding, IN_TRANSIT while any line remains.
+ *
+ * Asked of the PROJECTED picture, never of the stored rows: the answer must reflect what a
+ * batch is about to write, not what the store currently holds. The item index is patched
+ * rather than re-fetched for exactly that reason.
+ *
+ * ONE function, two callers — `buildDeliveryMarkDeliveredNodes` writes it into the batch,
+ * and the MarkDeliver page derives it live onto the node as lines are ticked. They cannot
+ * disagree about what a run is about to become.
+ */
+export function projectedDeliveryRatio (record, deliveredCodes = [], orsiRows = []) {
+  const manifest = asRow(record)
+  const delivered = new Set(asList(deliveredCodes).map(text).filter(Boolean))
+
+  const byCode = new Map()
+  for (const raw of asList(orsiRows)) {
+    const row = asRow(raw)
+    const code = text(row.Code)
+    if (code) byCode.set(code, row)
+  }
+
+  const projected = orsisForDelivery(manifest).map((code) => {
+    const row = byCode.get(code)
+    if (!row) return { Code: code, Progress: '' }
+    return delivered.has(code) ? { ...row, Progress: ITEM_DELIVERED } : row
+  })
+
+  return deliveryRatio(manifest, projected)
+}
+
+/** The state that ratio implies. Split so a caller can report the count as well. */
+export function nextDeliveryProgress (record, deliveredCodes = [], orsiRows = []) {
+  const ratio = projectedDeliveryRatio(record, deliveredCodes, orsiRows)
+  return ratio.total > 0 && ratio.delivered === ratio.total ? COMPLETED : IN_TRANSIT
+}
+
 export function hasDeliveredItems (record, orsiRows = []) {
   return deliveryRatio(record, orsiRows).delivered > 0
 }
@@ -348,6 +386,8 @@ export function useDeliveryProgress () {
     isActive,
     orsisForDelivery,
     deliveryRatio,
+    projectedDeliveryRatio,
+    nextDeliveryProgress,
     hasDeliveredItems,
     canCancel,
     canComplete,

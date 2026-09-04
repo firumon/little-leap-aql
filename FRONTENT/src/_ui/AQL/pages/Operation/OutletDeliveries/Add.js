@@ -1,12 +1,27 @@
-import { watch } from 'vue'
 import { useAuth } from 'src/composables/core/useAuth'
-import { buildDeliveryCreateNodes } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryPayload'
+import { toDateOnly } from 'src/utils/dateHelpers'
+import { DRAFT } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryProgress'
 
-const NODE = 'OutletDeliveries'
-const CODES = 'OutletRestockItemCodes'
+const RESOURCE = 'OutletDeliveries'
 
-// Two steps: pick the allocated lines, then check the warehouse pick list.
-// Reload is off because the ticks live in `pageState` and a reload would drop them.
+/**
+ * OutletDeliveries › Add — two steps: pick the allocated lines, then check the warehouse
+ * pick list. The button table per step lives in `Add/PageAction.js`.
+ *
+ * Reload is off because the run is being built in `pageState` and a reload would drop it.
+ *
+ * ── THE NODE IS LIVE FROM THE FIRST RENDER ──
+ * `ready` runs once per page and is the only hook with page lifetime, so this is where the
+ * manifest node is seeded (UI_PAGE_STATE.md §14). It is a real `OutletDeliveries` row from
+ * the moment step 1 draws: `Date`, `UserName`, `Progress` and `Status` are already on it,
+ * and ticking a line writes straight into `OutletRestockItemCodes`. Nothing is assembled at
+ * submit time.
+ *
+ * `reset: true` drops whatever the previous page left behind — `Page.vue` keeps ONE
+ * pageState for every resource page in the session, so the node sitting here may be the
+ * manifest the View page just hydrated. Without the wipe, submit would issue an UPDATE
+ * against a record the user never opened.
+ */
 export default {
   sections: ['PageHeader'],
   contents: ['SelectAllocations', 'PickSummary'],
@@ -19,21 +34,20 @@ export default {
   PropsSelectAllocations: { step: 1 },
   PropsPickSummary: { step: 2 },
 
-  // The run is built as the lines are ticked, so step 2 reviews the actual batch and
-  // `PageAction.submit` only validates (UI_PAGE_STATE.md §5B). Keyed off the CSV column
-  // the ticks write, which the builder puts back unchanged — so this cannot feed itself.
   ready ({ pageState }) {
+    // Safe outside setup: `useAuth` only reaches Pinia stores and calls no `inject()`.
     const { user } = useAuth()
-    watch(() => String(pageState.getRecord(CODES, NODE) ?? ''), (csv) => {
-      const codes = csv.split(',').map((code) => code.trim()).filter(Boolean)
-      if (!codes.length) {
-        pageState.setResource(NODE, { record: { [CODES]: '' } })
-        return
+
+    pageState.initResource(RESOURCE, {
+      isPrimaryKey: true,
+      reset: true,
+      fields: {
+        Date: toDateOnly(new Date()),
+        UserName: String(user.value?.name || user.value?.email || '').trim(),
+        Progress: DRAFT,
+        OutletRestockItemCodes: '',
+        Status: 'Active'
       }
-      pageState.applyLive(buildDeliveryCreateNodes({
-        userName: user.value?.name || user.value?.email || '',
-        selectedOrsiCodes: codes
-      }))
-    }, { immediate: true })
+    })
   }
 }

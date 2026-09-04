@@ -1,12 +1,3 @@
-import { watch } from 'vue'
-import { useAuth } from 'src/composables/core/useAuth'
-import { buildDeliveryEditManifestNodes } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryPayload'
-import { restockItemRows } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryRows'
-import { orsisForDelivery } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryProgress'
-
-const NODE = 'OutletDeliveries'
-const CODES = 'OutletRestockItemCodes'
-
 /**
  * OutletDeliveries › Edit — page contract.
  *
@@ -46,29 +37,5 @@ export default {
   PropsPageHeader: {
     title: 'Edit Delivery',
     reload: false
-  },
-
-  // Seed the grid from the manifest, then keep the batch applied as the ticks change, so
-  // `PageAction.submit` only validates (UI_PAGE_STATE.md §5B).
-  ready ({ pageState, resourceRecord }) {
-    const { user } = useAuth()
-    const manifest = () => resourceRecord?.record?.value || {}
-
-    watch(() => String(manifest().Code || '').trim(), (code) => {
-      if (!code || pageState.hasNode(NODE)) return
-      pageState.initResource(NODE, { isPrimaryKey: true, code })
-      pageState.setRecord(CODES, orsisForDelivery(manifest()).join(','), NODE)
-    }, { immediate: true })
-
-    watch(() => String(pageState.getRecord(CODES, NODE) ?? ''), (csv) => {
-      const record = manifest()
-      if (!String(record.Code || '').trim()) return
-      pageState.applyLive(buildDeliveryEditManifestNodes({
-        record,
-        newOrsiCodes: csv.split(',').map((c) => c.trim()).filter(Boolean),
-        allOrsiRows: restockItemRows(),
-        actorName: user.value?.name || user.value?.email || ''
-      }))
-    })
   }
 }

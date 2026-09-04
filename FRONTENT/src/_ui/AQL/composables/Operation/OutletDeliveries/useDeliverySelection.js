@@ -6,18 +6,27 @@ import {
   availableAllocatedItems,
   itemsSelectableFor
 } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryAllocation'
-import { ITEM_DELIVERED } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryProgress'
+import {
+  ITEM_DELIVERED,
+  orsisForDelivery
+} from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryProgress'
 import { useDeliveryFormContext } from './useDeliveryFormContext'
 
 // Layer 2 says which lines can be picked. This file only shapes them for the screen.
 // Every join is a Map built in one pass, so the tree stays cheap to rebuild.
 
-const SELECTION = 'DeliverySelection'
-const NODE = 'OutletDeliveries'
-// The manifest's own CSV of allocated item codes — a real sheet column, not a control.
-const CODES_COLUMN = 'OutletRestockItemCodes'
-const WAREHOUSE_FILTER = 'DeliveryWarehouseFilter'
-const GROUP_BY = 'DeliveryGroupBy'
+// THE NODE IS THE MANIFEST. There is no `DeliverySelection` sheet, so there is no node by
+// that name either - every control and every column here is addressed on the real resource
+// (UI_PAGE_STATE.md §5, §5A.1).
+export const NODE = 'OutletDeliveries'
+// The manifest's own CSV of allocated item codes - a real sheet column, not a control. The
+// ticks and the row that will be sent are ONE value, so they cannot drift.
+export const CODES_COLUMN = 'OutletRestockItemCodes'
+export const WAREHOUSE_FILTER = 'WarehouseFilter'
+// Derived from the queue and published for the sticky bar, which gates step 1 on it and
+// runs outside any setup context - it cannot reach the rows this file already holds.
+export const WAREHOUSE_REQUIRED = 'WarehouseRequired'
+const GROUP_BY = 'GroupBy'
 
 const text = (value) => (value == null ? '' : String(value).trim())
 const asRow = (value) => (value && typeof value === 'object' ? value : {})
@@ -149,19 +158,19 @@ export function useDeliverySelection (options = {}) {
   })
 
   const warehouseFilter = computed(() =>
-    text(pageState?.getControls(WAREHOUSE_FILTER, null, SELECTION)))
+    text(pageState?.getControls(WAREHOUSE_FILTER, null, NODE)))
 
   const setWarehouseFilter = (value) =>
-    pageState?.setControls(WAREHOUSE_FILTER, text(value), SELECTION)
+    pageState?.setControls(WAREHOUSE_FILTER, text(value), NODE)
 
   const selectedWarehouse = computed(() =>
     warehouseOptions.value.find((option) => option.value === warehouseFilter.value) || null)
 
   const groupBy = computed(() =>
-    text(pageState?.getControls(GROUP_BY, null, SELECTION)) || DEFAULT_GROUP_BY)
+    text(pageState?.getControls(GROUP_BY, null, NODE)) || DEFAULT_GROUP_BY)
 
   const setGroupBy = (value) =>
-    pageState?.setControls(GROUP_BY, text(value) || DEFAULT_GROUP_BY, SELECTION)
+    pageState?.setControls(GROUP_BY, text(value) || DEFAULT_GROUP_BY, NODE)
 
   /** The queue after the warehouse filter — what the tree actually renders. */
   const visibleItems = computed(() => {
@@ -265,13 +274,14 @@ export function useDeliverySelection (options = {}) {
     return buildLevel(visibleItems.value, levels, 0, leaf, groupBy.value)
   })
 
-  // THE SELECTION IS THE MANIFEST'S OWN COLUMN. `OutletRestockItemCodes` is what the
-  // sheet stores and what the builder writes, so the ticks and the row that will be sent
-  // are one value — no control mirroring them, nothing to drift (UI_PAGE_STATE.md §5B.2).
-  const selectedCodes = computed(() => text(pageState?.getRecord(CODES_COLUMN, NODE))
-    .split(',')
-    .map(text)
-    .filter(Boolean))
+  // THE SELECTION IS THE MANIFEST'S OWN COLUMN. A ticked line writes straight into
+  // `OutletRestockItemCodes` on the live `OutletDeliveries` node, so validation, drafts and
+  // the submitted row all see the same value with nothing mirroring it (§5A.1).
+  // `orsisForDelivery` is the domain's one CSV reader - a second split here would disagree
+  // with it about blanks.
+
+  const selectedCodes = computed(() =>
+    orsisForDelivery({ [CODES_COLUMN]: pageState?.getRecord(CODES_COLUMN, NODE) }))
 
   const selectedSet = computed(() => new Set(selectedCodes.value))
 
@@ -381,7 +391,7 @@ export function useDeliverySelection (options = {}) {
   }
 
   return {
-    SELECTION,
+    NODE,
     GROUP_BY_OPTIONS,
     selectableItems,
     visibleItems,

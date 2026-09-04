@@ -1,4 +1,6 @@
+import { useAuth } from 'src/composables/core/useAuth'
 import { itemRowsForCodes } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryRows'
+import { buildDeliveryCancelNodes } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryPayload'
 import { orsisForDelivery } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryProgress'
 
 /**
@@ -31,7 +33,13 @@ const NODE = 'OutletDeliveries'
 const text = (value) => (value == null ? '' : String(value).trim())
 
 export default (props, { pageState, resourceConfig, resourceRecord }) => {
+  // Safe outside setup: neither reaches `inject()`.
+  const { user } = useAuth()
+
   const record = () => resourceRecord?.record?.value || {}
+  const actor = () => text(user.value?.name || user.value?.email || '')
+  // The reason is a COLUMN on this sheet, so it lives on the live node's record, not in
+  // a control mirroring it (UI_PAGE_STATE_NODES.md §5A.1).
   const reason = () => text(pageState.getRecord('CancelledComment', NODE))
 
   /** Only the rows this manifest carries — see `MarkComplete/PageAction.js`. */
@@ -54,12 +62,20 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
       const row = record()
       if (!text(row.Code)) return { valid: false, message: 'This delivery could not be loaded.' }
 
-      if (!reason()) return { valid: false, message: 'A cancellation reason is required.' }
+      const result = buildDeliveryCancelNodes({
+        record: row,
+        orsiRows: manifestRows(),
+        actorName: actor(),
+        reason: reason()
+      })
 
-      return {
-        successMsg: `Delivery ${text(row.Code)} cancelled. Its items are available for another run.`,
-        onSuccess: () => { pageState.reset() }
-      }
+      const applied = pageState.applyNodes(result)
+      if (applied.valid === false) return false
+
+      // No `onSuccess` of its own: `PageAction.vue` installs its default — reset pageState,
+      // then follow `successRoute` — only when the submit supplies none. Overriding it to
+      // call `reset()` silently drops the navigation and the success notice.
+      return { successMsg: applied.successMsg }
     },
 
     // Back to the ledger rather than to the cancelled run: there is nothing left to do with

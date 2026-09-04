@@ -31,7 +31,11 @@
 // A single-warehouse tenant gets a badge instead of a select it cannot answer.
 import { computed, useAttrs, watch } from 'vue'
 import AllocationSelectionGrid from '../AllocationSelectionGrid.vue'
-import { useDeliverySelection } from 'src/_ui/AQL/composables/Operation/OutletDeliveries/useDeliverySelection'
+import {
+  useDeliverySelection,
+  NODE,
+  WAREHOUSE_REQUIRED
+} from 'src/_ui/AQL/composables/Operation/OutletDeliveries/useDeliverySelection'
 import { useDeliveryFormContext } from 'src/_ui/AQL/composables/Operation/OutletDeliveries/useDeliveryFormContext'
 
 defineOptions({ name: 'OutletDeliveriesAddSelectAllocations', inheritAttrs: false })
@@ -65,8 +69,11 @@ const soleWarehouseLabel = computed(() =>
 const showWarehouseError = computed(() =>
   options.value.length > 1 && !warehouseFilter.value && selectedCodes.value.length > 0)
 
-// With one warehouse there is no choice to make, so the filter is set rather than asked for.
+// A run loads one van at one warehouse. With one warehouse there is no choice to make, so
+// the filter is set rather than asked for. The sticky bar gates step 1 on the same fact
+// but cannot see these rows, so it is published as a control for it to read.
 watch(options, (list) => {
+  pageState?.setControls(WAREHOUSE_REQUIRED, list.length > 1, NODE)
   if (list.length === 1 && warehouseFilter.value !== list[0].value) setWarehouseFilter(list[0].value)
 }, { immediate: true })
 </script>

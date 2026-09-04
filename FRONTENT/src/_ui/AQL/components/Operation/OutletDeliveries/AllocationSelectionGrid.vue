@@ -68,7 +68,7 @@ const { ui, pageState, resourceRecord } = useDeliveryFormContext()
 const manifest = () => props.record || resourceRecord?.record?.value || null
 
 const {
-  SELECTION,
+  NODE,
   treeNodes,
   visibleItems,
   groupBy,
@@ -78,7 +78,6 @@ const {
   toggleItem,
   toggleCodes,
   groupState,
-  setSelection,
   preload
 } = useDeliverySelection({ record: manifest })
 
@@ -92,11 +91,11 @@ const summaryLine = computed(() => selectionSummary.value.label)
 // ─── Expansion ────────────────────────────────────────────────────────────────
 
 const openKeys = computed(() => {
-  const raw = pageState?.getControls('OpenKeys', null, SELECTION)
+  const raw = pageState?.getControls('OpenKeys', null, NODE)
   return new Set(Array.isArray(raw) ? raw : [])
 })
 
-const setOpenKeys = (keys) => pageState?.setControls('OpenKeys', [...keys], SELECTION)
+const setOpenKeys = (keys) => pageState?.setControls('OpenKeys', [...keys], NODE)
 
 function toggleOpen (key) {
   const next = new Set(openKeys.value)
@@ -123,25 +122,26 @@ const onToggle = (node, on) => {
 
 // ─── Hydration ────────────────────────────────────────────────────────────────
 
-// Keyed, not unconditional: the record arrives late, and re-seeding on every tick would
-// wipe edits already made.
-const hydratedFor = () => String(pageState?.getControls('HydratedFor', null, SELECTION) ?? '').trim()
+// EDIT ONLY. Add seeds its own blank node in the page contract's `ready` hook, so a record
+// with no code has nothing to hydrate here.
+//
+// Keyed on the NODE'S OWN CODE, not on a bookkeeping control: the node already records
+// which manifest it was built for, and a control mirroring that is a question state can
+// answer itself (§5B.5). The record also arrives late, and re-seeding on every tick would
+// wipe ticks already made.
+const { node } = pageState.useNode(NODE)
 
 function seedSelection () {
   const record = manifest()
   const code = String(record?.Code ?? '').trim()
+  if (!code) return
+  if (String(node.value.code ?? '').trim() === code) return
 
-  if (!code) {
-    if (hydratedFor() !== '__add') {
-      pageState?.setControls('HydratedFor', '__add', SELECTION)
-      setSelection([])
-    }
-    return
-  }
-
-  if (hydratedFor() === code) return
-  pageState?.setControls('HydratedFor', code, SELECTION)
-  setSelection(orsisForDelivery(record))
+  pageState.initResource(NODE, {
+    code,
+    isPrimaryKey: true,
+    fields: { OutletRestockItemCodes: orsisForDelivery(record).join(',') }
+  })
 }
 
 onMounted(async () => {

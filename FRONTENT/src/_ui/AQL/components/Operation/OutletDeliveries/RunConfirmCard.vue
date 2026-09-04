@@ -67,9 +67,12 @@ const props = defineProps({
   outcomeTone: { type: String, default: 'info' },
   commentRequired: { type: Boolean, default: false },
   commentLabel: { type: String, default: 'Comment' },
-  /** The `pageState` control field this card reads and writes. */
-  commentField: { type: String, default: 'ProgressInTransitComment' },
-  /** Only used to give the `_fields` control a header name; nothing is written to it. */
+  /**
+   * The COLUMN on `OutletDeliveries` this note is written to — a real header, not a control
+   * name. What the operator types goes straight onto the live node's record, so the node
+   * describes the whole write from the first keystroke (UI_PAGE_STATE_NODES.md §5A.1).
+   * The page contract's `ready` seeds it blank; this card only edits it.
+   */
   commentHeader: { type: String, default: 'ProgressInTransitComment' }
 })
 
@@ -97,17 +100,18 @@ const outcomeIcon = computed(() => (props.outcomeTone === 'negative' ? 'warning'
 const outcomeClass = computed(() =>
   (props.outcomeTone === 'negative' ? 'bg-red-1 text-body2' : 'bg-blue-1 text-body2'))
 
-// The note is a COLUMN on the manifest, bound straight through `useRecord`. Writing it
-// re-cuts the live batch the page's `ready` keeps applied (UI_PAGE_STATE.md §5B).
-const comment = pageState?.useRecord(props.commentField, NODE)
-const setComment = (value) => { if (comment) comment.value = value ?? '' }
+const comment = computed(() => {
+  const value = pageState?.getRecord(props.commentHeader, NODE)
+  return value == null ? '' : String(value)
+})
+const setComment = (value) => pageState?.setRecord(props.commentHeader, value, NODE)
 
 /**
- * Opens the item and restock sheets the ratio above is measured from. The node itself is
- * seeded by the page contract's `ready`, which also keeps the batch applied — a card
- * mounts and unmounts, and the batch must outlive it.
+ * The HYDRATION POINT for every route that mounts this card (§5.5) — it opens the item and
+ * restock sheets the ratio above is measured from.
+ *
+ * It no longer seeds anything. The node, its code and its blank comment column are the page
+ * contract's `ready` hook's job, which has page lifetime where a card's `onMounted` does not.
  */
-onMounted(async () => {
-  await preload()
-})
+onMounted(preload)
 </script>

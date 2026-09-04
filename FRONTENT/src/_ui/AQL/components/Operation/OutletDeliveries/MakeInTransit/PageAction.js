@@ -1,3 +1,5 @@
+import { useAuth } from 'src/composables/core/useAuth'
+import { buildDeliveryMarkInTransitNodes } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryPayload'
 import { canMakeInTransit } from 'src/_resource/Operation/OutletDeliveries/composables/useDeliveryProgress'
 
 /**
@@ -19,7 +21,11 @@ const NODE = 'OutletDeliveries'
 const text = (value) => (value == null ? '' : String(value).trim())
 
 export default (props, { pageState, resourceConfig, resourceRecord }) => {
+  // Safe outside setup: `useAuth` only reaches Pinia stores and calls no `inject()`.
+  const { user } = useAuth()
+
   const record = () => resourceRecord?.record?.value || {}
+  const actor = () => text(user.value?.name || user.value?.email || '')
 
   return {
     actions: ['cancel', 'submit'],
@@ -38,10 +44,19 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         return { valid: false, message: 'Only a draft delivery can be marked as in transit.' }
       }
 
-      return {
-        successMsg: 'Delivery marked as in transit.',
-        onSuccess: () => { pageState.reset() }
-      }
+      const result = buildDeliveryMarkInTransitNodes({
+        record: row,
+        actorName: actor(),
+        comment: text(pageState.getRecord('ProgressInTransitComment', NODE))
+      })
+
+      const applied = pageState.applyNodes(result)
+      if (applied.valid === false) return false
+
+      // No `onSuccess` of its own: `PageAction.vue` installs its default — reset pageState,
+      // then follow `successRoute` — only when the submit supplies none. Overriding it to
+      // call `reset()` silently drops the navigation and the success notice.
+      return { successMsg: applied.successMsg }
     },
 
     successRoute: 'view'

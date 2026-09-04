@@ -181,8 +181,7 @@ export function buildRestockCancellationNodes (restock = {}, rows = [], actorNam
         ...stampFields('ProgressCancelled', actorName, comment),
         Status: 'Active'
       })),
-      permissions: { update: 'You are not allowed to change restock items.' },
-      reload: ['OutletRestockItems']
+      permissions: { update: 'You are not allowed to change restock items.' }
     })
   }
 
@@ -195,7 +194,6 @@ export function buildRestockCancellationNodes (restock = {}, rows = [], actorNam
       ...stampFields('ProgressCancelled', actorName, comment)
     },
     permissions: { cancel: 'You are not allowed to cancel this restock request.' },
-    reload: ['OutletRestockItems'],
     successMsg: returning.length ? 'Restock cancelled and warehouse stock returned.' : 'Restock cancelled.'
   })
 

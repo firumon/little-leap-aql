@@ -203,7 +203,6 @@ export function restockNode (parent = {}, children = [], extra = {}, options = {
       create: 'You are not allowed to create a restock request.',
       ...(flags.direct ? { approve: 'You are not allowed to approve a direct restock.' } : {})
     },
-    reload: [RESOURCE_NAME, RESTOCK_ITEMS],
     ...(options.withDerive === false ? {} : { derive: restockProgressDerive() })
   }
 }
@@ -347,7 +346,6 @@ export function restockSubmissionNodes (pageState, { draft = false, comment = ''
       create: 'You are not allowed to create a restock request.',
       ...(flags.direct ? { approve: 'You are not allowed to approve a direct restock.' } : {})
     },
-    reload: [RESOURCE_NAME, RESTOCK_ITEMS],
     successMsg: flags.draft ? 'Restock request saved as draft.' : 'Restock request submitted.'
   }]
 }

@@ -102,29 +102,10 @@ const { nav, user } = useRestockIndexContext()
  */
 const BTN = { flat: true, round: true, dense: true, size: 'md' }
 
-/**
- * The workflow actions each state surfaces INLINE, in escalation order.
- *
- * This is a whitelist of interest, not a permission list — `useAdditionalActions` still
- * decides which of these the signed-in user may actually see. Everything omitted stays in
- * the page-level FAB cluster on the View page.
- *
- * At most ONE workflow action per state, which keeps every row at two buttons. That is a
- * layout constraint as much as an editorial one — each button competes with the row's own
- * content for a phone's width, and three pushed the outlet name into a four-line wrap and
- * let the age chip collide with the caption. What is deliberately NOT here:
- *
- *   - `Submit` / `Resubmit` are off the draft and revision rows. Sending a request on is
- *     the whole point of opening it: the requester is meant to check the item lines
- *     first, and `Edit` is the button that takes them there — where the submit toggle and
- *     its comment field live (`Edit/EditSubmitOptions.vue`).
- *   - `Reject` and `Revise` are off the approval row. Both are refusals that require the
- *     approver to write a reason, which is a considered act belonging on the record, not
- *     a one-tap decision from a list. `Approve` stays because it navigates to the
- *     allocation page rather than committing anything on the spot.
- *   - `Cancel` is off every row. A destructive action does not belong one mis-tap away
- *     in a scrolling list.
- */
+const text = (value) => String(value ?? '').trim()
+
+// Inline workflow actions per state. Not a permission list — `useAdditionalActions`
+// still filters these. Everything else stays in the View page FAB.
 const ACTIONS_BY_PROGRESS = {
   [DRAFT]: [],
   [REVISION_REQUIRED]: [],
@@ -133,16 +114,36 @@ const ACTIONS_BY_PROGRESS = {
   [PARTIALLY_DELIVERED]: ['Reallocate', 'MarkDelivered']
 }
 
+const asRow = (value) => (value && typeof value === 'object' ? value : {})
+
+// Same pending test as `ResourceActionReallocate.js`: an unset line Progress means PENDING.
+function hasPendingItems (record) {
+  const rows = record?.$OutletRestockItems
+  if (!Array.isArray(rows)) return false
+  return rows
+    .map(asRow)
+    .some((row) => text(row.Code) &&
+      text(row.Status || 'Active') === 'Active' &&
+      (text(row.Progress) || 'PENDING') === 'PENDING')
+}
+
 const progress = computed(() => progressOf(props.item))
 
-const allowedActions = computed(() => ACTIONS_BY_PROGRESS[progress.value] || [])
+const allowedActions = computed(() => {
+  const base = ACTIONS_BY_PROGRESS[progress.value] || []
+  // An APPROVED request can still hold PENDING lines waiting for stock.
+  if (progress.value === APPROVED && hasPendingItems(props.item)) return ['Reallocate', ...base]
+  if (base.includes('Reallocate') && !hasPendingItems(props.item)) {
+    return base.filter((action) => action !== 'Reallocate')
+  }
+  return base
+})
 
 function ordered (actions) {
   const order = allowedActions.value
   return actions.slice().sort((a, b) => order.indexOf(a.action) - order.indexOf(b.action))
 }
 
-const text = (value) => String(value ?? '').trim()
 
 /**
  * Editable state AND ownership, both required.

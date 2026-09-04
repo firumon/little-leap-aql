@@ -7,6 +7,7 @@ import {
   buildStockMovementNodes
 } from 'src/_resource/Operation/StockMovements/composables/useStockMovementPayload'
 import { ONTO_THE_SHELF, OUTLET_REFERENCE, outletMovementRow, buildOutletMovementNodes } from 'src/_resource/Operation/OutletMovements/composables/useOutletMovementPayload'
+import { deriveParentRestockProgress } from './useRestockCreation'
 // Every export returns Node Objects, never requests. See UI_PAGE_STATE.md §5.
 
 const RESOURCE_NAME = 'OutletRestocks'
@@ -71,8 +72,7 @@ const itemsNode = (records) => ({
   resource: RESTOCK_ITEMS,
   many: true,
   records,
-  permissions: ITEM_WRITE,
-  reload: [RESTOCK_ITEMS]
+  permissions: ITEM_WRITE
 })
 
 // The parent header, updated in place. A role keeps a cascade over several requests apart:
@@ -82,8 +82,7 @@ const parentNode = (code, record, permissions, role = '') => ({
   ...(role ? { role } : {}),
   code,
   record,
-  permissions,
-  reload: [RESOURCE_NAME]
+  permissions
 })
 
 // Initial approval: allocate stock, deduct the warehouse, move the parent to APPROVED.
@@ -256,8 +255,7 @@ export function buildRestockCancelItemNodes (restock = {}, rows = [], actorName 
         ...CANCEL_ITEM_ACTION,
         code: text(entry.Code),
         data: { fields: stampFields('ProgressCancelled', actorName, comment) }
-      }],
-      reload: [RESTOCK_ITEMS]
+      }]
     }))
 }
 
@@ -298,6 +296,52 @@ export function nextRestockProgress (allItems = [], deliveredCodes = []) {
     .filter((entry) => text(entry.Code) && !delivered.has(text(entry.Code)))
     .some((entry) => ['ALLOCATED', 'PENDING'].includes(text(entry.Progress) || 'PENDING'))
   return outstanding ? 'PARTIALLY_DELIVERED' : 'DELIVERED'
+}
+
+/**
+ * Recompute requests' own progress from their CURRENT lines, and write nothing else.
+ *
+ * The refresh a caller needs after it changed WHICH lines are in flight without delivering
+ * any of them — a delivery run edited, or abandoned. It lives HERE because a request's
+ * progress is the restock domain's arithmetic: a caller assembling this node itself would
+ * be a second place deciding what a request's state is (§9.1). Callers merge the result.
+ *
+ * `deriveParentRestockProgress` is asked with a BLANK parent so it DERIVES rather than
+ * echoing the stored value, over each request's full active child set. That is also why
+ * this is not `nextRestockProgress`: that one answers "what does this delivery leave
+ * behind?" and reads PARTIALLY_DELIVERED for a request with nothing delivered at all.
+ *
+ * ── THE FLOOR IS `APPROVED`, ALWAYS ──
+ * A request only reaches this builder because at least one of its lines was ALLOCATED onto
+ * a run, which cannot happen before approval. So approval is a FACT here, not something to
+ * re-derive. The raw derivation does not know that: it reads a request whose stock was only
+ * partly covered — some lines ALLOCATED, the rest still PENDING — as PENDING_APPROVAL, and
+ * writing that would un-approve a request and re-offer "Approve & Allocate Stock" for work
+ * already approved. Re-planning a van must never reopen an approval.
+ */
+function refreshedProgress (children) {
+  const derived = deriveParentRestockProgress({}, children)
+  return derived === 'PENDING_APPROVAL' ? 'APPROVED' : derived
+}
+
+export function buildRestockProgressRefreshNodes ({ restockCodes = [], allItemRows = [] } = {}) {
+  const byRestock = new Map()
+  for (const raw of (Array.isArray(allItemRows) ? allItemRows : [])) {
+    const entry = row(raw)
+    const parentCode = text(entry.OutletRestockCode)
+    if (!parentCode) continue
+    if (!byRestock.has(parentCode)) byRestock.set(parentCode, [])
+    byRestock.get(parentCode).push(entry)
+  }
+
+  // A role per request code: nodes are addressed by resource plus role, so roleless
+  // updates for several requests would collapse onto one address.
+  return [...new Set((Array.isArray(restockCodes) ? restockCodes : []).map(text).filter(Boolean))]
+    .map((code) => parentNode(
+      code,
+      { Progress: refreshedProgress(byRestock.get(code) || []) },
+      { update: 'You are not allowed to update this outlet restock.' },
+      code))
 }
 
 // Delivery is the other leg. Approval already took these units off the warehouse, so
@@ -377,6 +421,7 @@ export function useRestockPayload () {
     buildRestockCancelItemNodes,
     buildRestockRejectNodes,
     buildRestockDeliveryNodes,
+    buildRestockProgressRefreshNodes,
     nextRestockProgress
   }
 }

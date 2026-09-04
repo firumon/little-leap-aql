@@ -9,28 +9,33 @@
       </q-card-section>
 
       <template v-else-if="outlet">
-        <q-list>
-          <q-item>
-            <q-item-section side top><q-icon :name="finalIcon" :color="finalColor" /></q-item-section>
-            <q-item-section>
-              <q-item-label class="text-subtitle2 text-weight-bold">{{ outletName }}</q-item-label>
-              <q-item-label caption>{{ outletCode }}</q-item-label>
-            </q-item-section>
-            <q-item-section side top>
-              <q-btn flat round dense size="sm" :color="finalColor" icon="open_in_new" :aria-label="finalLinkLabel" @click="openOutlet"/>
-            </q-item-section>
-          </q-item>
-        </q-list>
-
-        <q-separator v-if="visibleLines.length" />
-
-        <q-card-section v-if="visibleLines.length">
+        <q-card-section>
           <div class="aql-detail-grid">
+            <div class="aql-detail-line items-center aql-detail-row" :style="rowDelay(0)">
+              <span class="aql-detail-key">{{ outletName }}</span>
+              <span class="aql-detail-val col overflow-hidden flex justify-end items-center">
+                <span class="ellipsis">{{ outletCode }}</span>
+                <q-btn
+                  flat
+                  round
+                  dense
+                  size="sm"
+                  :color="finalColor"
+                  icon="open_in_new"
+                  class="q-ml-xs"
+                  :aria-label="finalLinkLabel"
+                  @click="openOutlet"
+                >
+                  <q-tooltip>{{ finalLinkLabel }}</q-tooltip>
+                </q-btn>
+              </span>
+            </div>
+
             <div
               v-for="(line, index) in visibleLines"
               :key="line.label"
               class="aql-detail-line items-center aql-detail-row"
-              :style="rowDelay(index)"
+              :style="rowDelay(index + 1)"
             >
               <span class="aql-detail-key">{{ line.label }}</span>
               <span class="aql-detail-val col overflow-hidden flex justify-end items-center">

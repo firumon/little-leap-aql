@@ -66,6 +66,7 @@
  */
 import { computed, useAttrs } from 'vue'
 import FieldTextareaAdd from 'src/_fields/textarea/Add.vue'
+import { RESTOCK_CONTROL } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
 import { useRestockAddContext } from 'src/_ui/AQL/composables/Operation/OutletRestocks/Add/useRestockAddContext'
 
 defineOptions({ name: 'OutletRestocksSubmitOptions', inheritAttrs: false })
@@ -79,7 +80,7 @@ const { pageState } = useRestockAddContext()
 const parent = pageState.useNode('OutletRestocks')
 
 const comment = computed(() => parent.record.value.ProgressSubmittedComment || '')
-const isDirect = computed(() => pageState.getControls('RestockMode', null, 'OutletRestocks') === 'DIRECT')
+const isDirect = computed(() => pageState.getControls(RESTOCK_CONTROL.DIRECT, false, 'OutletRestocks') === true)
 const isDraft = computed(() => pageState.getControls('isDraft', null, 'OutletRestocks') === true)
 
 function setComment (value) { pageState.setRecord('ProgressSubmittedComment', value ?? '', 'OutletRestocks') }

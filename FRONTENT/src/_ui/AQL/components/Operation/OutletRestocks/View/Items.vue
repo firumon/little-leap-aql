@@ -13,6 +13,7 @@
       :card-class="ui.cardClass"
       label="label"
       :metaLabel="restockCaption"
+      :gutter
     >
       <!-- The group header carries the product's own total. Only the restock
            figure: this card states what was asked for, and the outlet's own
@@ -60,7 +61,8 @@ const props = defineProps({
   title: { type: [String, Function], default: 'Items Summary' },
   // The Product → SKU tree to render. Defaults to the request's own items; a
   // caller (or a JS modifier) may narrow it without this card re-deriving anything.
-  items: { type: Array, default: null }
+  items: { type: Array, default: null },
+  gutter: { type: String, default: 'xs' }
 })
 
 const { evaluate, ui } = useRestockViewContext()

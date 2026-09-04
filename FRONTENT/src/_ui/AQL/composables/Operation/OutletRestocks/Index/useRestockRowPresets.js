@@ -26,6 +26,7 @@
  * component setup; the composable wrapper follows for setup-context callers (§2.2).
  */
 
+import { hoursFromNow } from 'src/utils/dateHelpers'
 import {
   sortByDate,
   settledAt,
@@ -36,7 +37,8 @@ import {
   progressColor,
   progressLabel,
   isPartiallyDelivered,
-  isOwnedBy
+  isOwnedBy,
+  isDraft
 } from 'src/_resource/Operation/OutletRestocks/composables/useRestockProgress'
 
 /** Outlet display name, falling back through the relation getter to the raw code. */
@@ -239,12 +241,64 @@ export function rejectedPreset (items) {
 }
 
 
+/**
+ * Age on a sliding scale: hours under a day, then days, then months past 99 days.
+ * `ageLabel` alone reads badly at both ends - "Today" hides a request raised a
+ * minute ago, and "400 days" is a number nobody converts in their head.
+ */
+export function recentAgeLabel (row) {
+  const stamp = settledAt(row)
+  const hours = hoursFromNow(stamp)
+  if (!Number.isNaN(hours)) {
+    const past = Math.max(0, -hours)
+    // `hoursFromNow` truncates, so anything under the hour lands on 0 - and "0 hours ago"
+    // is not something anyone says.
+    if (past < 1) return 'Just now'
+    if (past < 24) return past === 1 ? '1 hour ago' : `${past} hours ago`
+  }
+  const days = daysSince(stamp)
+  if (days === null || days === undefined || Number.isNaN(days)) return ''
+  if (days > 99) return `${Math.floor(days / 30)} months`
+  return ageLabel(days)
+}
+
+/**
+ * "Recent" - the latest 50 live restocks, newest first, whatever state they are in.
+ *
+ * Drafts are left out: they are unsubmitted personal work and already have their own
+ * view. The cap is a hard 50 because this view answers "what moved lately?", not
+ * "show me everything".
+ */
+export function recentPreset (items) {
+  const live = (Array.isArray(items) ? items : []).filter((row) => !isDraft(row))
+
+  return {
+    items: sortByDate(live, settledAt, 'desc').slice(0, 50),
+    layout: ['caption', 'label'],
+    label: outletName,
+    caption: (row) => joinParts([row.Date, row.RequestedUser]),
+    metaLayout: ['chip', 'badge'],
+    chip: recentAgeLabel,
+    chipColor: 'grey-7',
+    chipOutline: true,
+    badge: (row) => progressLabel(progressOf(row)),
+    badgeColor: (row) => progressColor(progressOf(row)),
+    meta: null,
+    metaLabel: null,
+    metaCaption: null,
+    highlightColor: (row) => progressColor(progressOf(row))
+  }
+}
+
+
 // Composable shape for setup-context callers. Same functions, one import.
 export function useRestockRowPresets () {
   return {
     outletName,
     joinParts,
     ageLabel,
+    recentAgeLabel,
+    recentPreset,
     draftsPreset,
     awaitingApprovalPreset,
     needsRevisionPreset,

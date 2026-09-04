@@ -11,7 +11,7 @@
  *   NeedsRevision     → create        (the requester revises and resubmits)
  *   PendingCompletion → markDelivered OR reallocate  (the fulfilment work queue)
  *
- * The four remaining views (Approved, PartiallyDelivered, Delivered, Rejected) are
+ * The remaining views (Recent, Approved, PartiallyDelivered, Delivered, Rejected) are
  * read-only states of the same records the user can already see, so they carry no gate
  * beyond the resource's own read permission — that is standard resource view behaviour
  * and is not re-implemented here.

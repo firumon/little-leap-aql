@@ -19,7 +19,7 @@
     <!-- One card per product, so the rhythm BETWEEN them is this container's, not a
          margin baked into each card. `gutter` is fed from `pageProps.gutter`, so
          these cards space themselves exactly as the page's Sections and Contents do. -->
-    <div v-else>
+    <div v-else :class="`q-gutter-y-${gutter || 'sm'}`">
       <!-- Before approval there is no stock behind any line, so a warehouse column
            would be an empty promise. The card states only where each SKU stands. -->
       <q-banner v-if="!approved" dense rounded class="bg-grey-2 text-grey-8">

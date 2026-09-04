@@ -356,6 +356,7 @@ export {
   buildRestockMovementNodes,
   defaultSubmissionComment,
   deriveParentRestockProgress,
+  restockDirectOptions,
   restockNode,
   restockNodeForConsumption,
   restockItemRow,
@@ -363,6 +364,9 @@ export {
   restockItemProgress,
   restockProgressDerive,
   restockRoutingOf,
+  restockSubmissionNodes,
+  syncRestockInPageState,
+  syncRestockLedgersInPageState,
   syncRestockProgressInPageState
 } from './useRestockCreation'
 

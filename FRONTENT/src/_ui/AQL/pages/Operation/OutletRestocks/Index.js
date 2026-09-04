@@ -1,5 +1,6 @@
 ﻿import { useAuth } from 'src/composables/core/useAuth'
 import {
+  recentPreset,
   draftsPreset,
   awaitingApprovalPreset,
   needsRevisionPreset,
@@ -50,12 +51,14 @@ export default {
     'LinearProgress',
     'WorkflowFunnel',
     'AgeingBuckets',
+    'RestockVolume',
     'FilterInput',
     'ListSwitcher'
   ],
   contents: ['List'],
 
   // The one view that is scoped to a PERSON rather than to a state — see `draftsPreset`.
+  PropsListRecent: (props) => recentPreset(props.items),
   PropsListDrafts: (props) => draftsPreset(props.items, user.value?.id),
   PropsListPendingApproval: (props) => awaitingApprovalPreset(props.items),
   PropsListNeedsRevision: (props) => needsRevisionPreset(props.items),

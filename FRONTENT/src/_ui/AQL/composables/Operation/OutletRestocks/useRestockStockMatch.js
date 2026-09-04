@@ -8,6 +8,7 @@ import {
   stockMatchFigures,
   clampRestockQuantity
 } from 'src/_resource/Operation/OutletRestocks/composables/useRestockStockMatch'
+import { RESTOCK_CONTROL } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
 
 /**
  * OutletRestocks — the UI half of the stock-match aggregate behind `AdjustItems`
@@ -79,8 +80,8 @@ export function useRestockStockMatch () {
   const childEntries = parent.children(CHILD)
 
   const outletCode = computed(() => text(parent.record.value.OutletCode))
-  const isDirect = computed(() => pageState.getControls('RestockMode', null, PARENT) === 'DIRECT')
-  const warehouseCode = computed(() => (isDirect.value ? text(pageState.getControls('WarehouseCode', null, PARENT)) : ''))
+  const isDirect = computed(() => pageState.getControls(RESTOCK_CONTROL.DIRECT, false, PARENT) === true)
+  const warehouseCode = computed(() => (isDirect.value ? text(pageState.getControls(RESTOCK_CONTROL.WAREHOUSE, '', PARENT)) : ''))
 
   // Stock on hand at the chosen outlet, and — direct mode only — at the source
   // warehouse. Both are summed per SKU because a SKU can sit in several storages.

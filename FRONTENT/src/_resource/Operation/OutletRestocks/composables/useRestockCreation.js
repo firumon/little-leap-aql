@@ -1,6 +1,7 @@
 import { useAuth } from 'src/composables/core/useAuth'
+import { useDataStore } from 'src/stores/data'
 import { batchRef, textOrRef } from 'src/utils/appHelpers'
-import { resourceRow } from 'src/composables/resources/useResourceConfig'
+import { resourceRow, useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { stampFields } from 'src/utils/workflowStamp'
 import { splitByWarehouseStock } from './useRestockStockMatch'
 import { STOCK_REFERENCE, stockMovementsNode } from 'src/_resource/Operation/StockMovements/composables/useStockMovementPayload'
@@ -22,9 +23,20 @@ const actor = () => useAuth().user.value?.name || ''
 
 // Always writes every stamp column, blank when the step did not happen: turning a toggle
 // back OFF has to erase the stamp it wrote, or the row claims a step it never took.
-const stamp = (on, prefix, actorName, comment) => (on
-  ? stampFields(prefix, actorName, comment)
-  : { [`${prefix}At`]: '', [`${prefix}By`]: '', [`${prefix}Comment`]: '' })
+//
+// A stamp that is already there STANDS. The node is re-derived on every quantity change,
+// and re-stamping would walk the clock forward on each keystroke and re-date a decision
+// the user made minutes ago. Only a missing stamp is written.
+const stamp = (on, prefix, actorName, comment, existing = null) => {
+  if (!on) return { [`${prefix}At`]: '', [`${prefix}By`]: '', [`${prefix}Comment`]: '' }
+  const had = asRow(existing)
+  if (!text(had[`${prefix}At`])) return stampFields(prefix, actorName, comment)
+  return {
+    [`${prefix}At`]: text(had[`${prefix}At`]),
+    [`${prefix}By`]: text(had[`${prefix}By`]) || text(actorName),
+    [`${prefix}Comment`]: text(had[`${prefix}Comment`]) || text(comment)
+  }
+}
 
 const usableLines = (lines = []) => (Array.isArray(lines) ? lines : []).map(asRow)
   .filter((row) => text(row.SKU) && num(row.Quantity) > 0)
@@ -80,8 +92,8 @@ function restockItemFields (flags = {}, child = {}, actorName = '') {
     WarehouseCode: direct ? text(flags.warehouseCode) : '',
     StorageName: direct ? DEFAULT_STORAGE : '',
     Progress: restockItemProgress({ direct, deliver }),
-    ...stamp(direct, 'ProgressAllocated', actorName, 'Allocated from the source warehouse.'),
-    ...stamp(deliver, 'ProgressDelivered', actorName, 'Carried to the outlet on this visit.'),
+    ...stamp(direct, 'ProgressAllocated', actorName, 'Allocated from the source warehouse.', child),
+    ...stamp(deliver, 'ProgressDelivered', actorName, 'Carried to the outlet on this visit.', child),
     Status: 'Active'
   }
 }
@@ -94,18 +106,24 @@ export function restockItemRow (child = {}, extra = {}) {
 }
 
 // The one place a restock header's routing columns are decided.
-function restockParentFields (flags = {}, parent = {}, rows = [], actorName = '', origin = '') {
+//
+// `parent` is what DECIDES the progress (a blank one lets the lines decide); `existing` is
+// what already HOLDS the stamps. They are separate because a re-derive has to recompute
+// the progress from scratch while leaving stamps that were already written alone.
+function restockParentFields (flags = {}, parent = {}, rows = [], actorName = '', origin = '', existing = null) {
   const direct = flags.direct === true
   const deliver = flags.deliver === true
   const draft = flags.draft === true
+  const had = existing === null ? parent : existing
   return {
     Progress: draft ? 'DRAFT' : deriveParentRestockProgress(parent, rows),
     ApprovedUser: direct ? text(actorName) : '',
-    // A draft was not submitted, so it gets no stamp — that is what lets a later real
-    // submit record when it actually happened.
-    ...(draft ? {} : stampFields('ProgressSubmitted', actorName, origin)),
-    ...stamp(direct, 'ProgressApproved', actorName, 'Auto-approved as a direct restock from the source warehouse.'),
-    ...stamp(deliver, 'ProgressDelivered', actorName, 'Carried to the outlet on this visit.')
+    // A draft was not submitted, so its stamp is ERASED, not merely left unwritten: the
+    // routing derive may already have stamped it while the user was still deciding, and a
+    // blank is what lets a later real submit record when it actually happened.
+    ...stamp(!draft, 'ProgressSubmitted', actorName, origin, had),
+    ...stamp(direct, 'ProgressApproved', actorName, 'Auto-approved as a direct restock from the source warehouse.', had),
+    ...stamp(deliver, 'ProgressDelivered', actorName, 'Carried to the outlet on this visit.', had)
   }
 }
 
@@ -117,6 +135,41 @@ function restockParentFields (flags = {}, parent = {}, rows = [], actorName = ''
  */
 export function defaultSubmissionComment (withConsumption = true) {
   return withConsumption ? 'Submitted with an outlet consumption.' : 'Submitted from an outlet visit.'
+}
+
+/**
+ * Whether this user may route a restock themselves, and out of which warehouse.
+ *
+ * The two questions a routing screen asks — "is there stock I may draw from?" and "am I
+ * allowed to draw it?" — are one domain answer, not two UI conditions. A warehouse the
+ * user's region does not reach is not a source, and a user who cannot approve cannot
+ * self-approve either, so both live here rather than being re-tested per screen.
+ *
+ * `hasRegionAccess` also honours universe-scoped users and rolled-up child regions, which
+ * a flat `=== accessRegion` test silently excludes.
+ *
+ * Plain function, not a computed: called from inside a caller's own `computed` or `watch`
+ * it stays reactive, and called from a page contract's `ready` it still answers.
+ */
+export function restockDirectOptions () {
+  const { hasRegionAccess } = useAuth()
+  const config = useResourceConfig(RESOURCE_NAME)
+
+  const warehouses = (useDataStore().getRecords('Warehouses') || [])
+    .map(asRow)
+    .filter((row) => text(row.Status || 'Active') === 'Active')
+    .filter((row) => hasRegionAccess(row.AccessRegion))
+    .map((row) => ({
+      value: text(row.Code),
+      label: [text(row.Code), text(row.Name)].filter(Boolean).join(' · ')
+    }))
+    .filter((option) => option.value)
+
+  return {
+    warehouses,
+    canDirect: warehouses.length > 0 && config.allowed({ [RESOURCE_NAME]: 'Approve' }) === true,
+    canDeliver: config.allowed({ [RESOURCE_NAME]: 'MarkDelivered' }) === true
+  }
 }
 
 // NODE builder: a restock and its lines. `extra` carries the routing answers; the derive
@@ -184,17 +237,21 @@ export function restockRoutingOf (pageState) {
 }
 
 // Re-reads the routing controls and rewrites the progress they decide, on the parent and
-// on every line. Only what MOVED is written, so a re-run costs nothing.
+// on every line. Only what MOVED is written, so a re-run costs nothing and cannot loop.
 export function syncRestockProgressInPageState (pageState) {
   if (!pageState?.hasNode?.(RESOURCE_NAME)) return
   const actorName = actor()
   const flags = restockFlags(restockRoutingOf(pageState))
+  const record = asRow(pageState.getRecord?.(null, RESOURCE_NAME))
 
   const rows = pageState.getChildRows(RESTOCK_ITEMS, RESOURCE_NAME)
   const nextRows = rows.map((row) => restockItemFields(flags, row, actorName))
 
+  // `{}` as the parent so the progress is recomputed from the lines; the live record as
+  // `existing` so the stamps and the note the user is writing survive the recompute.
   pageState.setRecord(null,
-    restockParentFields(flags, {}, nextRows, actorName, 'Submitted with an outlet consumption.'),
+    restockParentFields(flags, {}, nextRows, actorName,
+      text(record.ProgressSubmittedComment), record),
     RESOURCE_NAME)
 
   rows.forEach((row, index) => {
@@ -207,13 +264,108 @@ export function syncRestockProgressInPageState (pageState) {
   })
 }
 
-// What the composed restock depends on: the three routing answers, nothing else.
+// The addresses the two ledger legs occupy, so a leg that stops applying can be dropped.
+const LEDGER_ADDRESSES = [
+  ['StockMovements', ''],
+  ['OutletMovements', OUTLET_ROLE.DELIVERY]
+]
+
+/**
+ * Rebuilds both ledgers from the lines as they stand.
+ *
+ * The ledgers are LIVE, not a submit-time afterthought: a screen watching the nodes has to
+ * see the warehouse leg move the moment a quantity does. Each leg is addressed by resource
+ * (plus role), so re-applying REPLACES its rows instead of stacking a second set, and a leg
+ * the routing no longer calls for is removed rather than left holding stale rows.
+ */
+export function syncRestockLedgersInPageState (pageState) {
+  if (!pageState?.hasNode?.(RESOURCE_NAME)) return
+  const flags = restockFlags(restockRoutingOf(pageState))
+  const record = asRow(pageState.getRecord?.(null, RESOURCE_NAME))
+
+  const nodes = buildRestockMovementNodes({
+    outletCode: text(record.OutletCode),
+    warehouseCode: flags.warehouseCode,
+    date: text(record.Date) || todayISO(),
+    items: pageState.getChildRows(RESTOCK_ITEMS, RESOURCE_NAME),
+    direct: flags.direct,
+    deliver: flags.deliver
+  })
+
+  const wanted = new Set(nodes.map((node) => `${node.resource}|${text(node.role)}`))
+  LEDGER_ADDRESSES.forEach(([name, role]) => {
+    if (!wanted.has(`${name}|${role}`)) pageState.removeNode?.(name, role || undefined)
+  })
+  if (nodes.length) pageState.applyNodes(nodes)
+}
+
+// The whole incremental re-derive: progress first, because the ledgers read it off the
+// lines. This is what every user action runs - a toggle, a quantity, a step move.
+export function syncRestockInPageState (pageState) {
+  syncRestockProgressInPageState(pageState)
+  syncRestockLedgersInPageState(pageState)
+}
+
+/**
+ * The LAST MILE of a submission, for a page whose node is already live.
+ *
+ * The Add wizard has been maintaining the whole restock in pageState since `ready` - the
+ * header, the lines, the routing controls and both ledger legs, all re-derived on every
+ * edit. Rebuilding that from scratch at submit would compute a second answer to a question
+ * already answered, and any drift between the two would be invisible until it reached the
+ * sheet. So this returns a MERGE node carrying only what submit itself decides.
+ *
+ * That is exactly two things, and neither can be known before the button is pressed:
+ * whether this is a draft, and the note the user finally typed. Everything else is read
+ * back off the live node. Ledgers are not returned at all - they are already standing.
+ *
+ * Use `buildRestockChainNodes` instead when there is no live node to finish, which is the
+ * consumption chain's case: it raises a restock from nothing alongside other resources.
+ */
+export function restockSubmissionNodes (pageState, { draft = false, comment = '' } = {}) {
+  if (!pageState?.hasNode?.(RESOURCE_NAME)) return [{ valid: false, message: 'Nothing to submit.' }]
+
+  const record = asRow(pageState.getRecord?.(null, RESOURCE_NAME))
+  const rows = usableLines(pageState.getChildRows(RESTOCK_ITEMS, RESOURCE_NAME))
+  const flags = restockFlags({ ...restockRoutingOf(pageState), draft })
+
+  if (!text(record.OutletCode)) return [{ valid: false, message: 'Select an outlet before submitting.' }]
+  if (flags.direct && !text(flags.warehouseCode)) {
+    return [{ valid: false, message: 'Select a source warehouse before submitting a direct restock.' }]
+  }
+  if (!rows.length) return [{ valid: false, message: 'Add at least one item with a quantity greater than zero.' }]
+
+  const actorName = actor()
+  const origin = text(comment) || text(record.ProgressSubmittedComment) || defaultSubmissionComment(false)
+
+  return [{
+    resource: RESOURCE_NAME,
+    // Merge, never replace: the lines and the controls on this node are the user's work.
+    merge: true,
+    record: restockParentFields(flags, {}, rows, actorName, origin, record),
+    permissions: {
+      create: 'You are not allowed to create a restock request.',
+      ...(flags.direct ? { approve: 'You are not allowed to approve a direct restock.' } : {})
+    },
+    reload: [RESOURCE_NAME, RESTOCK_ITEMS],
+    successMsg: flags.draft ? 'Restock request saved as draft.' : 'Restock request submitted.'
+  }]
+}
+
+// What the composed restock depends on: the three routing answers, and the lines
+// themselves. The lines are in the list because the ledgers are built from their
+// quantities - without that rule a `+` click would move the restock and leave the two
+// stock legs behind, and the batch would only agree with itself at submit.
+//
+// Re-entrancy is safe: the handler writes only columns that actually MOVED, and none of
+// them depend on Quantity, so a quantity change settles in one pass with no second write.
 export function restockProgressDerive () {
-  const handler = (value, pageState) => syncRestockProgressInPageState(pageState)
+  const handler = (value, pageState) => syncRestockInPageState(pageState)
   return [
     { on: { resource: RESOURCE_NAME, control: RESTOCK_CONTROL.DIRECT }, handler },
     { on: { resource: RESOURCE_NAME, control: RESTOCK_CONTROL.DELIVER }, handler },
-    { on: { resource: RESOURCE_NAME, control: RESTOCK_CONTROL.WAREHOUSE }, handler }
+    { on: { resource: RESOURCE_NAME, control: RESTOCK_CONTROL.WAREHOUSE }, handler },
+    { on: { resource: RESOURCE_NAME, children: RESTOCK_ITEMS }, handler }
   ]
 }
 
@@ -345,12 +497,16 @@ export function useRestockCreation () {
     buildRestockMovementNodes,
     defaultSubmissionComment,
     deriveParentRestockProgress,
+    restockDirectOptions,
     restockNode,
     restockNodeForConsumption,
     restockItemRow,
     restockFlags,
     restockItemProgress,
     restockProgressDerive,
+    restockSubmissionNodes,
+    syncRestockInPageState,
+    syncRestockLedgersInPageState,
     syncRestockProgressInPageState
   }
 }

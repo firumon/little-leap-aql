@@ -1,0 +1,111 @@
+/**
+ * OutletRestocks › restock volume — Layer 2, the resource's own analytics projection.
+ *
+ * ONE pass over the last 30 days of requests and their lines, producing the two ranked
+ * readings the Index page draws: which SKUs moved the most, and which outlets took the
+ * most. Both come off the SAME counted set, so the two bar groups can never disagree
+ * about which requests were in the window.
+ *
+ * The counted set is decided ONCE, by `countedRestocks`, and the workflow vocabulary it
+ * reads comes from `useRestockProgress` — this file never restates what `DRAFT` or
+ * `REJECTED` mean (UI_RESOURCE_DOMAIN_LOGIC.md §3.3).
+ *
+ * Built through `defineSharedComposable`, like `useOutletIndex`, so the pass runs once per
+ * app and every caller reads the same memoized computeds.
+ */
+
+import { computed } from 'vue'
+import { defineSharedComposable } from 'src/utils/appHelpers'
+import { useDataStore } from 'src/stores/data'
+import { daysFromToday } from 'src/utils/dateHelpers'
+import { DRAFT, REJECTED, CANCELLED, progressOf, isActiveRow } from './useRestockProgress'
+
+export const VOLUME_WINDOW_DAYS = 30
+export const VOLUME_TOP_LIMIT = 5
+
+const asRow = (value) => (value && typeof value === 'object' ? value : {})
+const text = (value) => (value == null ? '' : String(value).trim())
+const num = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0)
+
+// A request nobody committed to is not volume: a draft was never submitted, and a
+// rejected or cancelled one never left the warehouse.
+const UNCOUNTED = [DRAFT, REJECTED, CANCELLED]
+
+/**
+ * The requests inside the window that actually count, keyed by their own code.
+ *
+ * A Map rather than an array because every line then resolves its parent in O(1) — a
+ * linear scan per line is what makes this widget quadratic on a busy tenant.
+ */
+export function countedRestocks (restocks = [], days = VOLUME_WINDOW_DAYS) {
+  const kept = new Map()
+  for (const raw of (Array.isArray(restocks) ? restocks : [])) {
+    const row = asRow(raw)
+    if (!isActiveRow(row)) continue
+    if (UNCOUNTED.includes(progressOf(row))) continue
+    const age = -daysFromToday(row.Date)
+    if (Number.isNaN(age) || age > days || age < 0) continue
+    const code = text(row.Code)
+    if (code) kept.set(code, row)
+  }
+  return kept
+}
+
+/**
+ * Ranked `[{ label, count }]` — quantities summed per whatever key `labelOf` returns.
+ *
+ * ONE arithmetic path for both readings: the item ranking and the outlet ranking differ
+ * only in the key each line is filed under, so they share this engine rather than each
+ * carrying its own sum (AGENTS.md — Rule of One).
+ */
+export function topRestockedBy (counted, items = [], labelOf, limit = VOLUME_TOP_LIMIT) {
+  const totals = new Map()
+
+  for (const raw of (Array.isArray(items) ? items : [])) {
+    const line = asRow(raw)
+    if (!isActiveRow(line)) continue
+    const parent = counted.get(text(line.OutletRestockCode))
+    if (!parent) continue
+    const quantity = num(line.Quantity)
+    if (quantity <= 0) continue
+    const label = text(labelOf(line, parent))
+    if (!label) continue
+    totals.set(label, (totals.get(label) || 0) + quantity)
+  }
+
+  return Array.from(totals.entries())
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit)
+}
+
+const shared = defineSharedComposable((dataStore) => {
+  const rows = (name) => (dataStore.getRecords(name) || []).map(asRow)
+
+  const counted = computed(() => countedRestocks(rows('OutletRestocks')))
+
+  // A SKU is read by its product name, not its code: a bar labelled `SKU-0147` names the
+  // row it came from and not the thing that moved.
+  const skuLabel = computed(() => {
+    const productName = new Map(rows('Products').map((row) => [text(row.Code), text(row.Name)]))
+    return new Map(rows('SKUs').map((row) => {
+      const code = text(row.Code)
+      return [code, productName.get(text(row.ProductCode)) || code]
+    }))
+  })
+
+  const outletLabel = computed(() =>
+    new Map(rows('Outlets').map((row) => [text(row.Code), text(row.Name)])))
+
+  const topItems = computed(() => topRestockedBy(counted.value, rows('OutletRestockItems'),
+    (line) => skuLabel.value.get(text(line.SKU)) || text(line.SKU)))
+
+  const topOutlets = computed(() => topRestockedBy(counted.value, rows('OutletRestockItems'),
+    (line, parent) => outletLabel.value.get(text(parent.OutletCode)) || text(parent.OutletCode)))
+
+  return { windowDays: VOLUME_WINDOW_DAYS, topItems, topOutlets }
+})
+
+export function useRestockVolume () {
+  return shared(useDataStore())
+}

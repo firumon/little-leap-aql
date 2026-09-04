@@ -29,7 +29,7 @@ If the user asks a question about general programming, software patterns, busine
 If the user attempts to apply, implement, or align conceptual knowledge with the AQL repository (e.g., "Now, let's implement this design in AQL"):
 1. **Consult CODEBASE_INDEX.md**: Read [CODEBASE_INDEX.md](file:///f:/LITTLE%20LEAP/AQL/References/CODEBASE_INDEX.md) to locate the exact tags, features, and files related to the request. This is the fastest, most token-efficient way to find files.
 2. **Consult CORE_DOC_ROUTING.md**: If needed, read [CORE_DOC_ROUTING.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_DOC_ROUTING.md) to identify which canonical documents cover the target area.
-3. **Read Architecture Rules**: Read [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md) before any frontend-related work.
+3. **Read Architecture Rules**: Read [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md) before any frontend-related work.
 4. **Map to AQL Constructs**:
    - Align backend logic with existing Apps Script patterns in [GAS_PATTERNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/GAS_PATTERNS.md).
    - Align frontend logic with the Vue Reactivity Contract (thin pages, logic in composables, state in Pinia stores).

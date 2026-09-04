@@ -24,7 +24,7 @@ The AQL Dashboard is a fully declarative, metadata-driven widget system. Widgets
 Before writing any dashboard code:
 * Full development guide: [FEATURE_DASHBOARD_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_DASHBOARD_GUIDE.md)
 * Widget registry and config contracts: [dashboard/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/dashboard/REGISTRY.md)
-* Frontend architecture rules: [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md)
+* Frontend architecture rules: [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md)
 
 ---
 

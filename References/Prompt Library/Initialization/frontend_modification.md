@@ -17,7 +17,7 @@ Use this document to initialize an AI agent session when the task involves modif
 > | [`colorHelpers.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/colorHelpers.js) | `resolveCssColor(value, fallback)` — Quasar brand names, Material palette names and raw CSS all resolve to one inline custom property. |
 > | [`placeholderProps.js`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/utils/placeholderProps.js) | `resolvePlaceholderProps(props, identity, kind)` — the `Props<Identity>` merge. Call it in a resolver; never re-implement it inline. |
 >
-> **The rule this enforces**: a pure helper that is not resource knowledge belongs in `src/utils/`. It must NOT be duplicated into a `_ui/` composable, and a `_ui/` composable must NEVER import another resource's composable to borrow one — `_ui/**/OutletRestocks/**` reaching into `_ui/**/OutletVisits/**` is exactly the cross-resource dependency [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md) §5 forbids. Promote the helper to `src/utils/` and re-export it from the composable if the old import path must keep working.
+> **The rule this enforces**: a pure helper that is not resource knowledge belongs in `src/utils/`. It must NOT be duplicated into a `_ui/` composable, and a `_ui/` composable must NEVER import another resource's composable to borrow one — `_ui/**/OutletRestocks/**` reaching into `_ui/**/OutletVisits/**` is exactly the cross-resource dependency [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md) §5 forbids. Promote the helper to `src/utils/` and re-export it from the composable if the old import path must keep working.
 
 ## 1. Role Boundaries (Mandatory)
 
@@ -40,7 +40,7 @@ AQL's frontend stack consists of Vue 3, Quasar Framework (v2), Pinia state manag
 ## 3. Mandatory Pre-Reads (With Line-Level Links)
 
 Before writing any code under `FRONTENT/`, you must read the following architectural rules:
-* Core Architectural Boundaries: [AQL Frontend Architecture Rules in CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md#L1-L77)
+* Core Architectural Boundaries: [AQL Frontend Architecture Rules in CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md#L1-L77)
 * General Frontend Layout conventions: [CORE_OVERVIEW.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_OVERVIEW.md)
 * Login Payload Specification: [API_LOGIN_RESPONSE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/API_LOGIN_RESPONSE.md)
 
@@ -86,7 +86,7 @@ Before modifying code:
 1. If a new reusable composable or component is created (or signature changes), log it in the corresponding registry:
    * [components/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md)
    * [composables/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/REGISTRY.md)
-2. Ensure that any page or layout files added conform to [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md).
+2. Ensure that any page or layout files added conform to [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md).
 
 ---
 
@@ -123,5 +123,5 @@ To test changes in real time:
 ## 8. Communication Standards
 
 * **Role Declaration**: Explicitly state that you are acting as a **Frontend Developer**.
-* **Docs Declaration**: Explicitly list all required documents read (including [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md)) before proceeding with implementation.
+* **Docs Declaration**: Explicitly list all required documents read (including [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md)) before proceeding with implementation.
 * **Architecture Compliance**: If a user request conflicts with the project's architecture rules, explain the conflict clearly and propose the compliant approach.

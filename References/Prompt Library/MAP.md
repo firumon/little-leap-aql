@@ -71,7 +71,7 @@ The agent asks for the plan file:
 - **Rules**:
   - Directly edit code, configuration, and documentation in real-time.
   - Written plans (`PLANS/*.md`) are **not** created unless explicitly requested by the user.
-  - Strictest compliance with [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md).
+  - Strictest compliance with [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md).
 
 ### 3.3 🧠 Brain Agent
 - **Purpose**: Convert approved requirements into an actionable, structured implementation plan.
@@ -104,7 +104,7 @@ Whenever implementation changes are made, the following cross-surface synchroniz
 - Advise the user to create a new Web App deployment version only if the backend API contract changed.
 
 ### 4.3 When Frontend Code Changes
-- Read [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md) before modifying any file under `FRONTENT/`.
+- Read [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md) before modifying any file under `FRONTENT/`.
 - Keep pages thin; move stateful logic into composables and reusable presentation into components.
 - Update frontend registries (`FRONTENT/src/components/REGISTRY.md`, `FRONTENT/src/composables/REGISTRY.md`) when reusable interfaces change.
 

@@ -14,7 +14,7 @@ It governs **how a component exposes its cells for customization**. It does NOT 
 
 ## Required Pre-Reads
 1. **The contract**: [UI_RENDERABLE_CONTRACT.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RENDERABLE_CONTRACT.md) — dispatch order, prop table, the prop-type widening rule, and known limits.
-2. **Architecture constraints**: [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md) — mandatory before touching anything under `FRONTENT/`.
+2. **Architecture constraints**: [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md) — mandatory before touching anything under `FRONTENT/`.
 3. **The reference implementation**: `FRONTENT/src/components/abstract/Renderable.js` and its three call sites in `FRONTENT/src/components/abstract/List.vue`.
 
 ---

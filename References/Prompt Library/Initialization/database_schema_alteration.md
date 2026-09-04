@@ -84,7 +84,7 @@ Once approved by the user:
 1. Update corresponding resource domain logic under `FRONTENT/src/_resource/{Scope}/{Resource}/` to keep domain aggregations, enrichment mappings, and business rules synchronized with the altered schema and `APP.Resources` config.
 2. Update any Vue pages or custom dialogs under `FRONTENT/src/pages/` binding to the altered fields.
 3. Update feature workflows or input parsing in the corresponding composables under `FRONTENT/src/composables/`.
-4. Adhere strictly to the [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md), specifically keeping Vue page templates thin and encapsulating business/payload adjustments inside composables.
+4. Adhere strictly to the [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md), specifically keeping Vue page templates thin and encapsulating business/payload adjustments inside composables.
 
 ### Step 4: Documentation Synchronization
 1. Document the column additions, removals, or type changes in the relevant sheet structure document under `Documents/` (e.g., [SHEET_OPERATION_STRUCTURE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHEET_OPERATION_STRUCTURE.md)).

@@ -26,7 +26,7 @@ Before modifying any tax or currency logic:
 * Full tax specification: [FEATURE_TAX_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_TAX_SYSTEM.md)
 * Frontend tax composable: [useTaxCalculator.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/useTaxCalculator.js)
 * Frontend currency helper: [useCurrency.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/useCurrency.js)
-* Frontend architecture rules: [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/ARCHITECTURE%20RULES.md)
+* Frontend architecture rules: [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md)
 
 ---
 

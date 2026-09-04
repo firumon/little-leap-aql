@@ -105,6 +105,23 @@ After classifying the query, read the appropriate initialization document(s) fro
 - These skills must defer to this file, `References/Prompt Library/MAP.md`, and `Documents/CORE_DOC_ROUTING.md` for role boundaries, required reads, and implementation rules.
 - If a skill conflicts with canonical docs, follow the canonical docs and update the skill.
 
+## Split Canonical Docs (read this before citing a §)
+
+Any doc in `Documents/` that grew past ~25KB is **split into parts**. The original filename
+is still the entry point and is still what the routing table above names — it is now a HUB
+that carries:
+
+- **Parts of this document** — what each part covers, with links.
+- **Where each section lives** — every `§N` mapped to the file holding it. Section numbers
+  did not change, so an existing `§` reference still resolves; look it up here.
+
+Read the hub first, then open only the part your task needs. Do not assume a hub still
+contains the section you remember — the hub deliberately does not restate its parts.
+
+Split hubs: `UI_MODULE_DEVELOPER_GUIDE.md`, `UI_PAGE_STATE.md`, `UI_ACTION_SYSTEM.md`,
+`UI_CREATE_AND_UPDATE_SYSTEM.md`, `UI_PAGE_AND_SECTION_SYSTEM.md`,
+`UI_RESOURCE_DOMAIN_LOGIC.md`, `UI_LIST_SWITCHER.md`, `UI_CONTENT_SYSTEM.md`.
+
 ## Implementation Notes
 - Keep docs, code, and sheets aligned only when the task modifies them.
 - For frontend edits, keep pages thin when the task materially changes page structure and update frontend registries only when reusable interfaces change.

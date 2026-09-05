@@ -153,6 +153,14 @@ Rules:
 - **Pure builder + shared reactive wrapper.** The builder takes plain rows so a
   `PageAction.js` outside setup can index a payload; `defineSharedComposable` memoizes the
   reactive index so the pass runs once per app per data change (CORE_ARCHITECTURE_RULES §6).
+- **STRICT — selector option lists are an index, and they belong here.** `skuOptions`,
+  `outletOptions`, `warehouseOptions` and their kind are projections of a master resource,
+  so the master resource publishes them: `useSkuResource().skuOptions`, not a `computed()`
+  inside a Layer 3 form composable. A form composable is memoized per call site, so an
+  option list built there is rebuilt once per card that imports it, on every invalidation
+  — the exact fan-out CORE_ARCHITECTURE_RULES §6 forbids, arrived at by the one route that
+  hides the count. Layer 3 may `.filter()` a published list down to what one page allows;
+  it may not build one.
 
 ### 10.6 Proactive domain elevation & future feature discovery
 

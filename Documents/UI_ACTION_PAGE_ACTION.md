@@ -92,13 +92,21 @@ Handlers are `async`-aware — a returned promise is awaited before the built-in
 Returned options are merged **over** the defaults, except `onSuccess`, which is only
 filled in when the handler did not supply one.
 
+> [!IMPORTANT]
+> **On a form page, `submit` is a VETO, not a builder.** The page's nodes were mounted at
+> `ready` and kept true by their `derive` rules, so they already ARE the batch. Returning
+> nothing lets `runSubmit` call `pageState.submit()`, which runs `build()` over them.
+> Returning an array or `{ requests }` skips `build()` entirely and makes every node on the
+> page inert — see `UI_PAGE_STATE_NODES.md` §5.7D and `UI_PAGE_STATE_SUBMISSION.md` §12.0.
+> Ask Layer 2 for the verdict (`validate<Resource>Draft`) rather than restating the rules here.
+
 ```javascript
 // _ui/AQL/components/operation/purchaseorders/add/pageaction.js
 export default {
   // Veto — the built-in pageState.submit() never runs
   submit: (name, { pageState }) => {
-    const node = pageState.state.nodes.get('PurchaseOrders')
-    if (!node?.children?.length) return { valid: false, message: 'Add at least one item.' }
+    const problem = validatePurchaseOrderDraft(pageState.getRecord(null, 'PurchaseOrders'))
+    if (problem) return { valid: false, message: problem }
   },
 
   // Confirm before discarding; returning false leaves the form untouched

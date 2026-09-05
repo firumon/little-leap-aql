@@ -48,20 +48,24 @@ A page contract may export `ready`. It runs **once per page**, in an
 
 ```js
 // _ui/AQL/pages/Operation/OutletConsumptions/Add.js
-import { watch } from 'vue'
+import { buildConsumptionInitNodes } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionPayload'
 
 export default {
   sections: ['PageHeader'],
   contents: ['Context', 'StockCount', 'RestockOptions'],
 
-  ready ({ pageState, resourceRecord, routeInfo }) {
-    pageState.initResource('OutletConsumptions', {
-      reset: true,
-      fields: { Date: today(), Status: 'Active' }
-    })
+  ready ({ pageState }) {
+    pageState.resetForResource('OutletConsumptions')
+    pageState.applyNodes(buildConsumptionInitNodes({ actorName }))
   }
 }
 ```
+
+> [!IMPORTANT]
+> **`ready` MOUNTS the draft; it never writes one.** The opening record, its controls and its
+> `derive` rules all come from a Layer 2 `build<Resource>InitNodes` (§5.7A). A `ready` that
+> lists columns in a `fields: { … }` bag is a second schema, and it drifts from the builder
+> that submits them.
 
 `ctx` is `{ pageState, pageProps, resourceConfig, resourceRecord, routeInfo }`.
 
@@ -93,27 +97,31 @@ would create a new watcher on every recompute.
 
 ### Use cases
 
-**Conditional node lifecycle** — the node's existence is the boolean (§5A.1):
-
-```js
-ready ({ pageState }) {
-  watch(() => pageState.getControls('isRestocking'), (on) => {
-    if (!on) return pageState.removeNode('OutletRestocks')
-    pageState.setResource('OutletRestocks', null, buildRestockPayload(rows, ctx))
-  })
-}
-```
-
-**Seeding a page** — defaults, deep-link params, the primary node:
+**Seeding a page** — the deep-link params travel into the Layer 2 builder, which owns
+everything else:
 
 ```js
 ready ({ pageState, routeInfo }) {
-  pageState.initResource('OutletConsumptions', {
-    reset: true,
-    fields: { OutletCode: routeInfo.value.query.outletCode || '', Date: today() }
-  })
-  pageState.setControls('isRestocking', true)
+  pageState.resetForResource('OutletConsumptions')
+  pageState.applyNodes(buildConsumptionInitNodes({
+    outletCode: routeInfo.value.query.outletCode || ''
+  }))
 }
+```
+
+**Conditional node lifecycle** — the node's existence is the boolean (§5A.1). Declare it as a
+`derive` on the init node rather than as a `watch` here, and mount it with `applyNodes`, which
+is the only path that checks the node's `permissions` (§5.7C):
+
+```js
+derive: [{
+  key: 'consumption:restock',
+  on: { control: 'isRestocking' },
+  handler: (on, api) => {
+    if (!on) return api.removeNode('OutletRestocks')
+    api.applyNodes(buildRestockNodes(rows, ctx))
+  }
+}]
 ```
 
 **Reacting to a different record** — `ready` does not re-run when only
@@ -131,16 +139,15 @@ Watch a **field** of `routeInfo`, not `routeInfo` itself — it returns a fresh
 object on every recompute, so watching the whole thing fires far more than you
 want.
 
-**Keeping a derived column in step** — until a first-class derive exists:
+**Keeping a derived column in step** — a `derive` entry on the node, declared by Layer 2
+(§5.4, §12.3). A hand-rolled `watch` here is the old spelling of the same thing:
 
 ```js
-ready ({ pageState }) {
-  const items = pageState.useNode('Invoices').children('InvoiceItems')
-  watch(items, (rows) => {
-    pageState.setRecord('Subtotal',
-      rows.reduce((s, r) => s + r.data.Qty * r.data.Price, 0), 'Invoices')
-  }, { deep: true })
-}
+derive: [{
+  on: { resource: 'InvoiceItems', records: true },
+  handler: (rows, api) => api.setRecord('Subtotal',
+    rows.reduce((total, row) => total + Number(row.Total || 0), 0), 'Invoices')
+}]
 ```
 
 **Declaring the batch tail** once, instead of at every submit site:

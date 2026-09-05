@@ -115,7 +115,7 @@ Rules, no exceptions:
   headers/permissions/`allowed()`.
 - **One workflow vocabulary** — states, order, and their label/colour/icon — declared here
   and read by every widget, chip, badge and gate (guide §4.5).
-- **Domain Payload Chains for Cross-Resource Mutations** — cross-resource side-effects (e.g. Order → Invoice, Audit → Restock) live exclusively in Layer 2 payload builders calling sibling domain builders. All builders must return the canonical envelope `{ valid, requests, permissions, message, successMsg }` ([UI_RESOURCE_DOMAIN_LOGIC.md §9](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md#9-domain-payload-chain-architecture)).
+- **Domain Payload Chains for Cross-Resource Mutations** — cross-resource side-effects (e.g. Order → Invoice, Audit → Restock) live exclusively in Layer 2 payload builders calling sibling domain builders. All builders return **Node Objects**, or an array of them; one that cannot build returns `[{ valid: false, message }]` ([UI_PAGE_STATE_NODES.md §5](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE_NODES.md)). There is no `{ valid, requests, permissions, … }` envelope.
 - No `inject()`, no `ref()` unless every caller is inside a UI Composable.
 - No import of a Pinia store, a service module, or anything under `_ui/`.
 
@@ -184,9 +184,16 @@ disagree (guide §7.4).
    (drafts default "Save as draft" ON; returned records show resubmission comments). Suppress
    page header reload on transactional contracts (`PropsPageHeader: { reload: false }`).
 5. **Route values correctly** (guide §13.5): real headers through `setRecord`; intent and
-   working state through `setControls`; stamps written by submit handler only.
-   Track multi-caller hydration in Edit via node control field `EditHydratedFor` and deduplicate
-   child lines by SKU key during seeding. Place draft toggle before comment box.
+   working state through `setControls`. Deduplicate child lines by business key during
+   seeding. Place draft toggle before comment box.
+6. **The live node IS the batch** ([UI_PAGE_STATE_NODES.md §5.7A–§5.7D](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE_NODES.md)) — build the page in this order:
+   - Layer 2 exports `build<Resource>InitNodes`, whose record is `resourceRow(RESOURCE, { …page stance })`, carrying the node's `controls`, its `derive` rules and its `permissions`.
+   - `Add.js` `ready` calls `pageState.resetForResource(RESOURCE)` then `pageState.applyNodes(build<Resource>InitNodes(…))`. It lists no columns of its own.
+   - Every UI setter writes ONE column and stops. Each consequence — a refilled price, a cleared link, a default warehouse — is a Layer 2 `derive` handler on that node, keyed, and `immediate: false` where it would overwrite the seed.
+   - A secondary node (a ledger movement, a tax row) is created and dropped by a `derive` through `applyNodes`, because its existence IS the answer to "does this also write there". `build()` does not check permissions; `applyNodes` does.
+   - `PageAction.js` `submit` asks Layer 2's `validate<Resource>Draft` and returns `{ valid: false, message }` or nothing. It builds no nodes and requests no reload.
+   - A derive fires only on a CHANGE, so a default the node opens with is seeded in the builder, or settled once after the master rows load.
+7. **One form surface for every card** ([UI_MODULE_DEVELOPER_FORM_ARCH.md §13.7](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_MODULE_DEVELOPER_FORM_ARCH.md)) — `use<Resource>FormFields` holds NO state (no `ref()`): reads of the live node plus one-column setters, imported by every card. Lifecycle (`onMounted`, hydration `watch`) goes in a separate `use<Resource>FormSeed(mode)` imported by exactly ONE card, because a composable six cards call mounts six times. **Never build option lists or any projection over a record set there** — it is memoized per call site, so it re-runs once per card; publish them from the owning resource's Layer 2 module behind `defineSharedComposable`.
 6. **Multi-step wizards** (guide §13.6): step assignments via `Props<Component>: { step: N }`;
    sticky bar with `get actions()` getter; review step read-only with active choices open and
    downstream inventory projections closed; latch `entryProgress` for stable button labels.
@@ -251,8 +258,13 @@ Import boundaries & Domain Chains (guide §6, [UI_RESOURCE_DOMAIN_LOGIC.md §9](
 - [ ] Every UI Composable imports only Resource Composables + generic Core Composables.
 - [ ] Every Resource Composable (`src/_resource/**`) imports only generic Core Composables.
 - [ ] Cross-resource mutations are encapsulated in Layer 2 Domain Payload Chains; zero secondary schema rows constructed in `_ui/` or `PageAction.js`.
-- [ ] All Domain Payload Chain builders return the canonical envelope `{ valid, requests, permissions, message, successMsg }`.
-- [ ] `PageAction.js` gates submissions using `resourceConfig.allowed(result.permissions)`.
+- [ ] All Domain Payload Chain builders return Node Objects (or `[{ valid: false, message }]`) — no `{ valid, requests, permissions }` envelope anywhere.
+- [ ] Permissions travel ON the node and are gated by `applyNodes`; no `allowed()` pre-check in `PageAction.js`.
+- [ ] No create page lists its draft's columns — the opening record comes from a Layer 2 `build<Resource>InitNodes` built on `resourceRow`.
+- [ ] No UI setter cascades — it writes one column; every consequence is a Layer 2 `derive` on the node.
+- [ ] A form page's `submit` validates only — it calls no builder, returns no `requests`, and asks for no `reload`.
+- [ ] The form surface holds no `ref()`; lifecycle sits in `use<Resource>FormSeed`, imported by exactly one card.
+- [ ] Zero option lists or record-set projections (`.map`/`.filter`/`.sort` over `items.value`) inside any composable that more than one component imports — they live in the owning resource's Layer 2 module behind `defineSharedComposable`.
 
 Visual contract & tokens (guide §10):
 
@@ -264,7 +276,6 @@ Visual contract & tokens (guide §10):
 Reactivity & Data (guide §11, §13):
 
 - [ ] No enriched record is spread, cloned with `Object.assign`, or JSON stringified.
-- [ ] Multi-component hydration in Edit tracks `EditHydratedFor` on node control fields.
 - [ ] Child lines are deduplicated by SKU key during form seeding.
 - [ ] Downstream checks block reversals once child lines are delivered.
 

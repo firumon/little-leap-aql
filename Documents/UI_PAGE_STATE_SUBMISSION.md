@@ -167,6 +167,26 @@ Hydrating is then one call (§10, `applyNodes`):
 pageState.applyNodes(buildRestockChainNodes(rows, context))
 ```
 
+### 12.0 Which of the two shapes — read this before writing a submit handler
+
+| The caller is… | It does |
+|---|---|
+| **A page with a live draft** (Add, Edit, a form action route) | mounts its nodes at `ready` / hydration, keeps them true through `derive`, and its submit handler **only validates** (§5.7D) |
+| **A headless or chained caller** (a bulk path, Resource A writing Resource B, an action with no form) | builds nodes on the spot and hands them to `applyNodes` |
+
+The example above is the second shape. The first is the one an Add page uses, and there the
+submit handler builds nothing:
+
+```js
+submit: () => {
+  const problem = validateReturnDraft(pageState.getRecord(null, NODE))
+  if (problem) return { valid: false, message: problem }
+}
+```
+
+Both call the SAME Layer 2 rule set, so the two paths cannot disagree about what a valid
+record is. What separates them is only whether a human is looking at the draft.
+
 ### 12.1 Addressing decides the shape
 
 A node is addressed by `resource` plus `role`, so **several roleless payloads for one
@@ -363,6 +383,11 @@ logs as opaque uid soup.
 13. **One representation.** No draft copy beside the payload. `build()` strips `_`-prefixed
     keys, so a row may carry frontend-only tags.
 14. Layer 3 hands the nodes a builder returns to `applyNodes`. A rebuild driven by user
+    input goes through the same door, so its permissions are checked the same way.
+15. A page with a live draft VALIDATES at submit and builds nothing. Returning an array or
+    `{ requests }` from a submit handler makes every node on the page inert (§12.0, §5.7D).
+16. The opening draft of a create page comes from a Layer 2 `build<Resource>InitNodes`, built
+    on `resourceRow` — never a `fields: { … }` column list in `ready` (§5.7A).
 
 ---
 

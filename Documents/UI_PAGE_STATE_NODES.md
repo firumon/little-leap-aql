@@ -102,8 +102,14 @@ the writer rather than stacking two on one column.
 | `{ control: 'header' }` | a control |
 | `{ action: 'ActionName' }` | a queued action's `data` |
 
-Each accepts `resource` and `role` to address another node; without them it reads the node
-the entry travelled on. `field: 'X'` is the older spelling of `record: 'X'` and still works.
+> [!WARNING]
+> **Every entry MUST name its `resource`.** Unlike `actions` (§5.2), a `derive` entry does
+> NOT inherit the address of the node it travelled on: `usePageStateDerive.sourceFor` calls
+> `registry.useNode(spec.resource)`, and `resolveTarget(undefined)` yields no name, so the
+> entry silently watches a permanently blank node and its handler never fires. There is no
+> error — the page simply stops reacting. Give the address explicitly.
+
+`field: 'X'` is the older spelling of `record: 'X'` and still works.
 
 ```js
 derive: [{
@@ -145,6 +151,135 @@ if (!outletCode) return [{ valid: false, message: 'Select an outlet before submi
 
 `applyNodes` notifies with that message and returns `{ valid: false, message }` without
 writing anything.
+
+### 5.7A The blank draft is a Node too
+
+**A page's opening draft is built by Layer 2, never spelled out in Layer 3.** A `ready` hook
+that lists twenty columns inline is a second schema — it drifts from the builder that
+submits them, and no other surface can reuse it.
+
+```js
+// ✘ Layer 3 inventing the schema
+pageState.initResource('OutletReturns', { fields: { Date: …, Qty: 1, Reason: 'DAMAGE', … } })
+
+// ✔ Layer 2 owns it; the page only mounts it
+pageState.resetForResource('OutletReturns')
+pageState.applyNodes(buildReturnInitNodes({ actorName }))
+```
+
+**The builder starts from `resourceRow`, not from a column list.** The sheet already
+declares the resource's defaults (`APP.Resources.DefaultValues`), and `resourceRow` merges
+them, then drops every key the sheet does not have:
+
+```js
+record: resourceRow('OutletReturns', {
+  Date: todayISO(), Username: actorName, SKU: '', Reason: 'DAMAGE',
+  // the page's opening STANCE, deliberately not the sheet's default
+  Qty: 1, WarehouseActionRequired: 'TRUE'
+})
+```
+
+Hardcoding `Status: 'Active'` or `Progress: 'SUBMITTED'` in the builder is a second copy of
+configuration: a tenant who changes a default in the sheet would see the View page honour it
+and the Add page ignore it (`CORE_ARCHITECTURE_RULES.md` §6). Pass only what the PAGE decides
+— the deep-link values, and any stance that deliberately differs from the sheet.
+
+The init node is an ordinary Node, so it carries its `controls`, its `derive` entries and
+its `permissions` with it. `resetForResource` first: it clears the nodes a previously
+visited page left behind and claims the page's `primaryKey`, so the node `applyNodes`
+mounts is the primary one.
+
+Name the builder `build<Resource>InitNodes`, beside the create/update builders it feeds.
+
+### 5.7B UI-driven regeneration belongs in `derive`
+
+When a choice on screen reshapes the record — picking a source invoice refills quantity,
+price and the flags that follow from it — **the reshape is domain logic and lives in a
+Layer 2 handler**, registered as a `derive` entry on the node the builder returns.
+
+```js
+// Layer 2
+export function applyReturnSourceInvoice (invoiceCode, pageState) { /* rewrites the record */ }
+
+derive: [{
+  key: 'returnAdd:sourceInvoice',
+  // `resource` is REQUIRED — a derive does not inherit the node's address (§5.4).
+  on: { resource: RESOURCE_NAME, record: 'SourceInvoiceCode' },
+  immediate: false,
+  handler: (code, api) => applyReturnSourceInvoice(code, api)
+}]
+```
+
+Layer 3 then writes the ONE column the user actually chose:
+
+```js
+function toggleInvoice (code) {
+  set('SourceInvoiceCode', selected.value === code ? '' : code)
+}
+```
+
+Rules for these handlers:
+
+* **Name the `resource` on every entry.** A derive does not inherit the node's address, and
+  an entry without one fails silently (§5.4).
+* **Give every entry a `key`.** Entries are keyed by their address, so a stable `key` makes
+  re-hydration replace the writer instead of stacking two on one column.
+* **Pass `immediate: false`** when the handler would otherwise fire against the blank draft
+  at mount and overwrite what the builder just seeded.
+* **Write only what changed.** Handlers cascade — one writes a column another watches — so
+  every write must be idempotent. Writing a value that is already there does not re-fire the
+  watcher, and that is what stops two handlers correcting each other forever.
+* **A derive only fires on a CHANGE.** A default the node opens with is therefore never
+  settled by its own derive. Seed it in the builder, or call the handler once after the
+  master rows load.
+* **The live node stays true at all times.** Do not park the reshape in the submit handler
+  "for the audit stamp" — validation, drafts and every card on the page read the node, and
+  a node that only becomes correct at submit is correct nowhere the user can see.
+
+### 5.7C A secondary node is state, not a submit-time afterthought
+
+**"Does this write also touch another resource" is answered by a node's EXISTENCE** (§5A.1,
+last row), so a derive creates and drops that node as the draft changes:
+
+```js
+function syncReturnDraftMovement (pageState) {
+  const qtyChange = returnQtyChange(draft.Qty, { … })
+  if (!qtyChange) { pageState.removeNode('OutletMovements'); return }
+  pageState.applyNodes(buildOutletMovementNode(outletMovementRow({ … })))
+}
+```
+
+`applyNodes` rather than `setResource`, deliberately: `build()` does **not** check
+`permissions`, only `applyNodes` does (§5.1). A secondary node mounted any other way ships
+with no gate on it.
+
+The node the page opened with holds slot 0, so a `$ref` naming the record this batch creates
+still resolves however many times the secondary node is rebuilt.
+
+### 5.7D Then submit validates, and nothing else
+
+Once the nodes are always true, the submit handler has no batch left to build:
+
+```js
+submit: () => {
+  const problem = validateReturnDraft(pageState.getRecord(null, NODE))
+  if (problem) return { valid: false, message: problem }
+}
+```
+
+Returning `undefined` lets the dispatcher run `pageState.submit()`, which calls `build()`
+over the live nodes (`PageAction.vue`). Returning an ARRAY, or `{ requests }`, is what makes
+those nodes inert (§5A.2) — so a submit that reaches for a builder is saying the page state
+was never the truth.
+
+Two consequences worth knowing:
+
+* **The permission gate moves to page load.** `applyNodes(build<Resource>InitNodes(...))` in
+  `ready` checks the node's `permissions` as the page opens, which is the right moment to
+  refuse (§5B.4). `build()` never re-checks.
+* **The validation rule set is shared.** Export it from Layer 2 (`validate<Resource>Draft`)
+  and have the create builder ask it too, so a headless bulk path and the page can never
+  disagree about what a valid record is.
 
 ### 5.8 Ledger nodes and action targets
 
@@ -314,9 +449,9 @@ A control is legitimate in exactly three cases:
 Anything else has a home: a column is `record`, a line is `children`, a bulk row is
 `records`, and "is this resource written at all" is the node's existence (§5A.1).
 
-**Bookkeeping controls are not one of the three.** A `HydratedFor` marker recording which
-record the node was built for is asking a question the node already answers — compare
-`useNode(...).code`. Do not add a control to remember something state already holds.
+**Bookkeeping controls are not one of the three.** A control recording something the node
+already answers — which record it was built for, whether it has been filled in — is a second
+copy of state. Ask the node: `useNode(...).code`, `hasNode(...)`.
 
 ### 5B.6 Bind the node directly
 

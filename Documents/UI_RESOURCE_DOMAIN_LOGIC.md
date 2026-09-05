@@ -98,6 +98,19 @@ Everything that answers "what can this record do right now, and why":
   before it becomes a request.
 - **Payload/request builders** — batch-request shaping and any sign/direction conventions
   for the underlying data mutation.
+- **Page initialization builders** — the blank draft a create page opens with. A `build<Resource>InitNodes`
+  returns the opening Node, with its record, its `controls`, its `derive` entries and its
+  `permissions`. Layer 3's `ready` hook calls `resetForResource` and then `applyNodes` on
+  the result; it never lists the columns itself. Spec: [UI_PAGE_STATE_NODES.md §5.7A](UI_PAGE_STATE_NODES.md).
+- **Node regeneration handlers** — the reshape a UI choice implies. When picking a source
+  invoice must refill quantity, price and the flags that follow, that rewrite is domain
+  logic: export it from Layer 2 and register it as a `derive` entry on the node. Layer 3
+  writes only the one column the user chose. A secondary node (a ledger movement) is created
+  and dropped the same way, because its existence IS the answer to "does this also write
+  there". Spec: [UI_PAGE_STATE_NODES.md §5.7B–§5.7C](UI_PAGE_STATE_NODES.md).
+- **The validation rule set** — `validate<Resource>Draft(record)`, returning why a record
+  cannot be submitted or `''`. One rule set, asked by the page's submit handler AND by the
+  create builder the headless paths use. Spec: [UI_PAGE_STATE_NODES.md §5.7D](UI_PAGE_STATE_NODES.md).
 
 ### 3.1 What does NOT belong here
 
@@ -105,7 +118,19 @@ Everything that answers "what can this record do right now, and why":
 - Anything that calls `inject()` or holds a component-lifecycle-bound `ref()`.
 - Anything that formats for display only (a row preset, a sort order for a specific list
   view) — that is presentation, and belongs in a UI Composable (§4) instead.
-- Anything that imports a Pinia store or a service module directly.
+- Anything that imports a **service** module directly.
+- A **pure** builder or predicate must not reach a store — it takes `record`/`records` and
+  answers from them, so a `PageAction.js` outside setup can call it.
+
+> [!NOTE]
+> **A resource INDEX is the exception, and the only one.** A module that publishes the
+> enriched rows and lookups of the sheet it owns — `useSkuResource`,
+> `usePriceListResource`, `useWarehouseResource`, `useInvoiceIndex` — reads
+> `useDataStore()` behind `defineSharedComposable`, because "once per app, not once per
+> consumer" (CORE_ARCHITECTURE_RULES §6) cannot be honoured anywhere else. The rule is one
+> pure builder taking plain rows, plus a shared reactive wrapper that feeds it the store's
+> rows (§10.4). What stays forbidden is a store read inside a payload builder or a
+> predicate, where it would make the function untestable and unusable outside setup.
 
 ### 3.2 Accessing resource config — self-identified, never route-dependent
 
@@ -191,6 +216,12 @@ themselves a business rule:
 - Per-view sort/format functions.
 - The **injection-relay composable** (§6) — owns `inject()`, calls into Layer 2 for
   derived values, exposes both to components.
+- The **form surface** — one stateless composable per resource that every card of a form
+  reads and writes through: reads of the live node, one-column setters, no `ref()`, and a
+  separate `use<Resource>FormSeed` owning the lifecycle for exactly one caller. It must not
+  build option lists or any projection over a record set — those are memoized per call
+  site and belong to the owning resource's Layer 2 module (§10.4). Spec:
+  [UI_MODULE_DEVELOPER_FORM_ARCH.md §13.7](UI_MODULE_DEVELOPER_FORM_ARCH.md).
 
 ---
 

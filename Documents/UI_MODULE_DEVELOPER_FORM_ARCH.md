@@ -144,23 +144,12 @@ A form collects two different kinds of value, and they are stored differently:
 | | Written with | Reaches the backend | Examples |
 |---|---|---|---|
 | **Record field** | `setRecord` / `setRecord` | yes, in the payload | a real resource header — `OutletCode`, `ProgressSubmittedComment` |
-| **Control field** | `setControls` | **no** | page-only intent and working state — `isDraft`, `RestockMode`, `EditHydratedFor`, an allocation plan |
+| **Control field** | `setControls` | **no** | page-only intent and working state — `isDraft`, `RestockMode`, an allocation plan |
 
-**Control fields as working surface.** The user's whole decision — which bins, how much from
-each, which lines arrived — accumulates in control fields, which is what lets the sticky bar's
-handler read the finished decision back and build the batch payload (§8.2).
-
-**Multi-caller node hydration keying (`EditHydratedFor`).** When multiple components on an
-Edit page invoke the same form composable (`useRestockEditForm`), track hydration using a
-node-level control field rather than a local closure variable:
-```javascript
-const hydratedFor = () => text(pageState.getControl?.('EditHydratedFor', null, PARENT_NODE))
-if (hydratedFor() !== text(parent.Code)) {
-  pageState.setControls('EditHydratedFor', text(parent.Code), PARENT_NODE)
-  // hydrate child lines...
-}
-```
-This prevents duplicate child-line seeding or wiping out in-progress edits across sibling cards.
+**A control is not a working copy of the payload.** Anything GAS stores is a `record`, a
+`children` line or a `records` row — never a control that the submit handler reads back to
+assemble a batch. Controls are for the three cases in `UI_PAGE_STATE_NODES.md` §5B.5: a UI
+switch with no column, one value shared by several nodes, and a node-level arrangement mode.
 
 **Child-line deduplication during hydration.** Normalize incoming lines by business key
 (e.g. `SkuCode`) and prioritize active records over deactivated rows before writing to
@@ -170,9 +159,10 @@ This prevents duplicate child-line seeding or wiping out in-progress edits acros
 draft") *before* the comment box, and hide the comment box when draft is toggled on (since
 a private draft has no reviewer or reader yet).
 
-**Stamps are written by the handler, under the hood.** `Progress`, `...At`, `...By` are set
-in the submit handler that causes the transition, never exposed as fields (§13.3) — so a
-submission cannot be back-dated or attributed to someone else. A save that is *not* a
+**Stamps are written by the domain, never exposed as fields** (§13.3) — so a submission
+cannot be back-dated or attributed to someone else. `Progress`, `...At` and `...By` belong to
+the Layer 2 builder or the node's `derive`, so the live node already carries them and the
+submit handler only validates (`UI_PAGE_STATE_NODES.md` §5.7D). A save that is *not* a
 submission (a draft) gets **no** stamp: leaving them empty is what lets a later real submit
 record when it actually happened.
 
@@ -310,6 +300,55 @@ record on is the point of the page. Which verb depends on the state the page was
 reads `Resubmit`, and calling a first submission "Resubmit" tells the user they have done
 this before. A page with exactly one possible outcome uses a static label; one whose label
 follows the record's state uses a getter (§11 rule 4).
+
+---
+
+### 13.7 The form surface — one composable, every card
+
+**Every card of a form reads and writes through ONE composable per resource, and that
+composable holds no state of its own.** This is the required shape for any multi-card form.
+The worked example is `OutletReturns`: six cards, one
+`_ui/AQL/composables/Operation/OutletReturns/useReturnFormFields.js`.
+
+It comes in two halves, and the split is the point:
+
+| | The **surface** — `use<Resource>FormFields` | The **owner** — `use<Resource>FormSeed(mode)` |
+|---|---|---|
+| Imported by | every card | **exactly one** card |
+| Holds | nothing — no `ref()`, ever | the `onMounted` and the `watch` |
+| Provides | reads of the live node, one-column setters | hydration and side effects |
+
+**Why it is safe for six components to call the same composable:** because there is nothing
+in it to keep in sync. Every read is a `computed()` over the pageState node and every write
+goes straight back to that node, so N callers are N views of ONE truth.
+
+That is also what separates it from the anti-pattern it replaced. The deleted 552-line
+`useConsumptionWizard.js` had the same shape — one composable, every step card — but it
+**held** the state, so the wizard and the submit handler drifted into two code paths
+(`UI_PAGE_STATE_NODES.md` §5A). *Shared* is not the virtue. **Stateless over shared state**
+is.
+
+Rules, no exceptions:
+
+1. **No `ref()` in the surface.** A value that needs to persist is a column (`record`), a
+   line (`children`), a row (`records`), or one of the three legitimate controls
+   (`UI_PAGE_STATE_NODES.md` §5B.5).
+2. **Setters write ONE column and stop.** Every consequence — a refilled price, a cleared
+   link, a defaulted warehouse, a ledger node — is a Layer 2 `derive` on the node
+   (§5.7B). A setter that cascades is the old shape.
+3. **Lifecycle lives in the owner, called by exactly one card.** `onMounted` in a composable
+   that six cards import runs six times. Put the reloads and the hydration watch in the
+   seed wrapper, and let one card own it.
+4. **The surface never injects.** It calls the resource's injection-relay composable
+   (§6.1), which owns the single `inject()`.
+5. **STRICT — no option lists, no projections over a record set.** The surface is memoized
+   per call site, so a `computed()` that maps or filters a whole resource runs once per
+   card and re-runs for all of them on every invalidation. Publish those from the owning
+   resource's Layer 2 module behind `defineSharedComposable`
+   (CORE_ARCHITECTURE_RULES §6, UI_RESOURCE_DOMAIN_LOGIC §10.4). The surface may narrow a
+   published list; it may not build one.
+6. **It sits at the resource tier**, not a page folder, whenever Add and Edit share the
+   cards — the placement ladder decides, not the file's name (§6.2).
 
 ---
 

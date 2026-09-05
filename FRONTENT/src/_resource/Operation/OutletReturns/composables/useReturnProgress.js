@@ -15,7 +15,7 @@ export const CANCELLED = 'CANCELLED'
 export const AWAITING_INVOICE_ADJUSTMENT = 'AWAITING_INVOICE_ADJUSTMENT'
 export const AWAITING_WAREHOUSE_RECEIPT = 'AWAITING_WAREHOUSE_RECEIPT'
 
-/** The legacy pair, named so a migration or a report can address them as a set. */
+/** The two in-flight waiting states, named so a report can address them as a set. */
 export const LEGACY_STATES = [AWAITING_INVOICE_ADJUSTMENT, AWAITING_WAREHOUSE_RECEIPT]
 
 /** Every state the Progress column may hold — the backend enum, in walk order. */
@@ -172,6 +172,15 @@ export function isReturnCompleted (record) {
   return invoiceTrackSettled(record) && warehouseTrackSettled(record)
 }
 
+// The one progress engine. Ask it of the row as it WILL be stored, not as it was.
+export function deriveReturnProgress (record) {
+  const row = asRow(record)
+  if (isCancelled(row)) return CANCELLED
+  if (invoiceAdjustmentRequired(row) && !invoiceAdjustmentDone(row)) return AWAITING_INVOICE_ADJUSTMENT
+  if (warehouseActionRequired(row) && !warehouseActionCompleted(row)) return AWAITING_WAREHOUSE_RECEIPT
+  return COMPLETED
+}
+
 export function returnRequiresTrack (record) {
   return invoiceAdjustmentRequired(record) || warehouseActionRequired(record)
 }
@@ -201,6 +210,34 @@ export function canConfirmWarehouseAction (record) {
 /** The credit is owed and unresolved — the `MarkInvoiceAdjusted` route's show condition. */
 export function canMarkInvoiceAdjusted (record) {
   return may('markInvoiceAdjusted') && invoiceAdjustmentRequired(record) && !invoiceAdjustmentDone(record)
+}
+
+export const INVOICE_MATCH_ACTIVE = 'ACTIVE'
+export const INVOICE_MATCH_CANCELLED = 'CANCELLED'
+export const INVOICE_MATCH_NONE = 'NONE'
+
+const returnCodesOf = (invoice) => text(asRow(invoice).OutletReturnCodes)
+  .split(',').map((part) => part.trim()).filter(Boolean)
+
+// Which invoice carries this return: a live one, only a cancelled one, or none.
+export function matchReturnInvoice (record, invoiceRows = []) {
+  const row = asRow(record)
+  const code = text(row.Code)
+  const outletCode = text(row.OutletCode)
+  const empty = { scenario: INVOICE_MATCH_NONE, invoice: null, cancelledInvoices: [] }
+  if (!code) return empty
+
+  const linked = (Array.isArray(invoiceRows) ? invoiceRows : [])
+    .filter((inv) => text(asRow(inv).OutletCode) === outletCode && returnCodesOf(inv).includes(code))
+  if (!linked.length) return empty
+
+  const active = linked
+    .filter((inv) => text(asRow(inv).Progress).toUpperCase() !== CANCELLED && isActiveRow(inv))
+    .sort((a, b) => String(b.Date || '').localeCompare(String(a.Date || '')) ||
+      String(b.Code || '').localeCompare(String(a.Code || '')))
+
+  if (active.length) return { scenario: INVOICE_MATCH_ACTIVE, invoice: active[0], cancelledInvoices: [] }
+  return { scenario: INVOICE_MATCH_CANCELLED, invoice: null, cancelledInvoices: linked }
 }
 
 export const TIMELINE_EVENTS = [
@@ -283,6 +320,11 @@ export function useReturnProgress () {
     invoiceTrackSettled,
     warehouseTrackSettled,
     isReturnCompleted,
+    deriveReturnProgress,
+    matchReturnInvoice,
+    INVOICE_MATCH_ACTIVE,
+    INVOICE_MATCH_CANCELLED,
+    INVOICE_MATCH_NONE,
     returnRequiresTrack,
     isEditable,
     canCancel,

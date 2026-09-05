@@ -1,45 +1,25 @@
-import { returnRequiresTrack, REASON_REQUIRING_COMMENT } from 'src/_resource/Operation/OutletReturns/composables/useReturnProgress'
+import { validateReturnDraft } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
 
+// The live nodes ARE the batch: the return and, when stock actually moves, its shelf
+// movement are both kept true by the node's derivations. So submit builds nothing and
+// reloads nothing — it only refuses a draft the domain says is not submittable.
 const NODE = 'OutletReturns'
 
-const text = (value) => (value == null ? '' : String(value).trim())
+export default (props, { pageState }) => ({
+  actions: ['cancel', 'submit'],
+  submitLabel: 'Submit Return',
+  successMessage: 'Return logged.',
 
-export default (props, { pageState, resourceConfig }) => {
-  const node = pageState.useNode(NODE)
-  const form = () => node.record.value || {}
+  cancel: (name, { nav }) => {
+    nav.goTo('index')
+    return false
+  },
 
-  return {
-    actions: ['cancel', 'submit'],
-    submitLabel: 'Submit Return',
+  submit: () => {
+    const problem = validateReturnDraft(pageState.getRecord(null, NODE))
+    if (problem) return { valid: false, message: problem }
+  },
 
-    cancel: (name, { nav }) => {
-      nav.goTo('index')
-      return false
-    },
-
-    submit: () => {
-      const entry = form()
-
-      if (!returnRequiresTrack(entry)) {
-        return {
-          valid: false,
-          message: 'A return must either be credited on an invoice or move stock off the shelf.'
-        }
-      }
-
-      if (text(entry.Reason) === REASON_REQUIRING_COMMENT && !text(entry.ReasonComment)) {
-        return { valid: false, message: 'Reason "Other" needs an explanation.' }
-      }
-
-      return {
-        successMsg: 'Return logged.',
-        // The typed form would otherwise survive the navigation and re-seed the next visit.
-        onSuccess: () => { pageState.reset() }
-      }
-    },
-
-    // Land on the record just created, so the officer sees which tracks are now open and
-    // can act on them immediately.
-    successRoute: 'view'
-  }
-}
+  // Land on the record just created, so the officer sees which tracks are now open.
+  successRoute: 'view'
+})

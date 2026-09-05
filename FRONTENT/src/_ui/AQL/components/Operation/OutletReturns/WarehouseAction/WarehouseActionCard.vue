@@ -12,20 +12,31 @@
     <SectionDividerLabel label="RETURNED STOCK" />
     <q-card flat bordered :class="ui.cardClass">
       <q-card-section>
-        <div class="row items-center no-wrap q-col-gutter-sm">
+        <!-- The item names itself in full; the count sits beside it with its own UOM, so a
+             long product name never squeezes the figure out of the row. -->
+        <div class="row items-start no-wrap q-col-gutter-sm">
           <div class="col" :class="ui.flexWrapTextClass">
             <div class="text-subtitle1 text-weight-medium">{{ skuName || '—' }}</div>
-            <div class="text-caption text-grey-8">
-              {{ outletName }}<template v-if="reasonText"> • {{ reasonText }}</template>
-            </div>
           </div>
-          <div class="col-auto text-right">
-            <div class="text-h6 text-weight-bold">{{ quantity }}</div>
-            <div class="text-caption text-grey-8">units</div>
+          <div class="col-auto text-right text-h6 text-weight-bold no-wrap">
+            {{ quantity }} {{ uomCode }}
           </div>
         </div>
-        <div v-if="reasonComment" class="q-mt-sm text-body2" style="white-space: pre-line">
-          {{ reasonComment }}
+      </q-card-section>
+
+      <q-separator />
+
+      <q-card-section>
+        <div :class="ui.detailGridClass">
+          <div
+            v-for="(line, index) in contextLines"
+            :key="line.label"
+            :class="[ui.detailLineClass, ui.detailRowClass]"
+            :style="rowDelay(index)"
+          >
+            <div :class="ui.detailKeyClass">{{ line.label }}</div>
+            <div :class="ui.detailValClass" style="white-space: pre-line">{{ line.value }}</div>
+          </div>
         </div>
       </q-card-section>
     </q-card>
@@ -35,11 +46,10 @@
     <q-card flat bordered :class="ui.cardClass">
       <q-card-section :class="gutterClass">
         <q-option-group
-          :model-value="actionType"
+          v-model="actionType"
           :options="actionOptions"
           color="primary"
           type="radio"
-          @update:model-value="setActionType"
         />
 
         <div class="text-caption text-grey-8">{{ dispositionCaption }}</div>
@@ -47,22 +57,20 @@
         <!-- Stocked: which bin the units land in. -->
         <FieldTextAdd
           v-if="isStocked"
-          :model-value="storageName"
+          v-model="storageName"
           :record="{}"
           :config="{ label: 'Storage Bin' }"
           header="StorageName"
-          @update:model-value="setStorageName"
         />
 
         <!-- Disposed: why they were written off. Mandatory — a write-off nobody can account
              for later is worse than no write-off at all. -->
         <FieldTextareaAdd
           v-if="!isStocked"
-          :model-value="disposalReason"
+          v-model="disposalReason"
           :record="{}"
           :config="{ label: 'Disposal Reason *', rows: 3 }"
           header="WarehouseActionDisposedReason"
-          @update:model-value="setDisposalReason"
         />
       </q-card-section>
     </q-card>
@@ -76,28 +84,10 @@
 </template>
 
 <script setup>
-/**
- * OutletReturns › WarehouseAction › WarehouseActionCard — the whole action route's content.
- *
- * Confirms what physically became of units that left an outlet shelf: they either went into
- * a warehouse bin, or they were written off. The two answers write different columns and
- * only one of them touches warehouse stock, which is why the card says which before the
- * operator commits.
- *
- * This card is the HYDRATION POINT (§5.5): an `_action` route has no `Create`/`Update`
- * content to seed the node, so `onMounted` here seeds the control fields the sticky bar
- * reads back and preloads the master rows the context lines need.
- *
- * Eligibility is `canConfirmWarehouseAction`, the same predicate that decides whether the
- * FAB offers this route at all and that `PageAction.js` re-checks on submit — three
- * consumers, one rule (§8.6).
- *
- * Navigation and submission belong to the sticky bar. This card collects; it never
- * dispatches (§8.3).
- *
- * No `<style>` block (ARCHITECTURE RULES §7).
- */
-import { computed, onMounted, useAttrs } from 'vue'
+// Confirm what became of units that left an outlet shelf: stocked into a warehouse bin, or
+// written off. This card is the HYDRATION POINT — it mounts the node and preloads masters.
+// No `<style>` block (ARCHITECTURE RULES §7).
+import { computed, onMounted, watch, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import FieldTextAdd from 'src/_fields/text/Add.vue'
 import FieldTextareaAdd from 'src/_fields/textarea/Add.vue'
@@ -105,6 +95,8 @@ import { useReturnFormContext } from 'src/_ui/AQL/composables/Operation/OutletRe
 import { useOutletResource } from 'src/_resource/Master/Outlets/composables/useOutletResource'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 import { useWarehouseResource } from 'src/_resource/Master/Warehouses/composables/useWarehouseResource'
+import { useAuth } from 'src/composables/core/useAuth'
+import { buildReturnWarehouseActionInitNodes } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
 import {
   STOCKED,
   DISPOSED,
@@ -133,11 +125,13 @@ const products = resource('Products')
 const warehouses = resource('Warehouses')
 
 const { getOutlet } = useOutletResource()
-const { skuLabelText } = useSkuResource()
+const { skuLabelText, skuLabelOf } = useSkuResource()
 const { getWarehouse } = useWarehouseResource()
+const { user } = useAuth()
 
 const text = (value) => (value == null ? '' : String(value).trim())
 
+const node = pageState.useNode(NODE)
 const record = computed(() => resourceRecord?.record?.value || null)
 
 const eligible = computed(() => !!record.value && canConfirmWarehouseAction(record.value))
@@ -168,12 +162,23 @@ const skuName = computed(() => {
 const warehouseName = computed(() => {
   const code = text(record.value?.WarehouseCode)
   if (!code) return ''
-  return text(getWarehouse(code)?.Name) || code
+  return text(getWarehouse(code)?.name) || code
 })
 
 const quantity = computed(() => Math.abs(Number(record.value?.Qty) || 0))
-const reasonText = computed(() => reasonLabel(record.value?.Reason))
-const reasonComment = computed(() => text(record.value?.ReasonComment))
+
+// The SKU's own unit of measure, from the one function that names a SKU anywhere.
+const uomCode = computed(() => skuLabelOf(text(record.value?.SKU)).uom)
+
+const rowDelay = (index) => ({ animationDelay: `${index * ui.rowStaggerMs}ms` })
+// Outlet, Reason and Reason Comment are the three facts the operator judges by, so each
+// gets its own labelled row rather than being packed into a caption.
+const contextLines = computed(() => [
+  { label: 'Outlet', value: outletName.value },
+  { label: 'Reason', value: reasonLabel(record.value?.Reason) },
+  { label: 'Reason Comment', value: text(record.value?.ReasonComment) },
+  { label: 'Target Warehouse', value: warehouseName.value }
+].filter((line) => String(line.value ?? '').trim()))
 
 // ─── The decision ─────────────────────────────────────────────────────────────
 
@@ -182,16 +187,12 @@ const actionOptions = [
   { label: 'Disposed — written off, not re-stocked', value: DISPOSED }
 ]
 
-// Two of the three answers are COLUMNS the builder writes, so they bind to the record;
-// the bin only names a target for the movement node, so it stays a control (§5B.5).
-const actionType = computed(() => pageState?.getRecord('WarehouseAction', NODE) || STOCKED)
-const isStocked = computed(() => actionType.value === STOCKED)
-const storageName = computed(() => pageState?.getControls('WarehouseStorageName', null, NODE) || '')
-const disposalReason = computed(() => pageState?.getRecord('WarehouseActionDisposedReason', NODE) || '')
+// Every answer is a column on the return, so it binds to the live node, not to controls.
+const actionType = pageState.useRecord('WarehouseAction', NODE)
+const storageName = pageState.useRecord('StorageName', NODE)
+const disposalReason = pageState.useRecord('WarehouseActionDisposedReason', NODE)
 
-const setActionType = (value) => pageState?.setRecord('WarehouseAction', value, NODE)
-const setStorageName = (value) => pageState?.setControls('WarehouseStorageName', value, NODE)
-const setDisposalReason = (value) => pageState?.setRecord('WarehouseActionDisposedReason', value, NODE)
+const isStocked = computed(() => actionType.value !== DISPOSED)
 
 const dispositionCaption = computed(() => isStocked.value
   ? `Adds ${quantity.value} units back to ${warehouseName.value || 'the target warehouse'}.`
@@ -217,13 +218,22 @@ const outcomeText = computed(() => {
   return `${ledger} ${closing}`
 })
 
-onMounted(async () => {
-  // Control fields only — this route changes no field the user typed into a form, so the
-  // node holds working state and nothing else (§13.5).
-  pageState.setRecord('WarehouseAction', STOCKED, NODE)
-  pageState.setControls('WarehouseStorageName', DEFAULT_STORAGE, NODE)
-  pageState.setControls('WarehouseDisposalReason', '', NODE)
+// The disposition, its stamp pair and the warehouse receipt node are all mounted by Layer 2
+// and follow the operator's choice from here on. Keyed on the record LANDING, because the
+// page contract's `ready` has already flushed whatever the previous page left behind.
+watch(record, (row) => {
+  const code = text(row?.Code)
+  // The contract's `ready` already flushed the previous page, so a plain attach is enough —
+  // a second `reset` here would detach the nodes this same pass is about to create.
+  if (!code || pageState.hasNode(NODE)) return
+  pageState.initResource(NODE, { isPrimaryKey: true, code })
+  pageState.applyNodes(buildReturnWarehouseActionInitNodes({
+    record: row,
+    actorName: text(user.value?.name || user.value?.email)
+  }))
+}, { immediate: true })
 
+onMounted(async () => {
   await Promise.all([outlets, skus, products, warehouses].map((res) => res.reload()))
 })
 </script>

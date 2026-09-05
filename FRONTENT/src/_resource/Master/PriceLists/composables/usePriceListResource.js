@@ -188,11 +188,18 @@ const shared = defineSharedComposable((dataStore) => {
     return pl.itemMap.get(skuCode) || null
   }
 
+  // Options for any PriceList selector. Built once per app (CORE_ARCHITECTURE_RULES §6).
+  const priceListOptions = computed(() => activePriceLists.value.map((priceList) => ({
+    label: priceList.name || priceList.code,
+    value: priceList.code
+  })))
+
   return {
     lookupMode,
     priceLists,
     allPriceLists: priceLists,
     activePriceLists,
+    priceListOptions,
     defaultPriceList,
     priceListMap,
     getPriceList,

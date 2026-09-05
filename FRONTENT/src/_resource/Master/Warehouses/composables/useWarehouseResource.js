@@ -9,6 +9,10 @@ export const enrichWarehouse = (wh) => {
   const isMain = type.trim().toLowerCase() === 'main'
 
   return {
+    // Every raw sheet column, untouched — an enricher decorates, it never narrows
+    // (CORE_ARCHITECTURE_RULES §6, Non-Destructive Entity Travel).
+    ...wh,
+
     code: wh.Code,
     warehouseCode: wh.Code,
     name: wh.Name || '',
@@ -53,10 +57,17 @@ const shared = defineSharedComposable((dataStore) => {
     return warehouseMap.value.get(code) || null
   }
 
+  // Options for any Warehouse selector. Built once per app (CORE_ARCHITECTURE_RULES §6).
+  const warehouseOptions = computed(() => activeWarehouses.value.map((warehouse) => ({
+    label: [warehouse.code, warehouse.name].filter(Boolean).join(' · '),
+    value: warehouse.code
+  })))
+
   return {
     warehouses,
     allWarehouses: warehouses,
     activeWarehouses,
+    warehouseOptions,
     mainWarehouse,
     warehouseMap,
     getWarehouse

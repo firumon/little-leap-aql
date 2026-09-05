@@ -1,4 +1,5 @@
 
+import { hoursFromNow, daysFromToday } from 'src/utils/dateHelpers'
 import {
   sortByDate,
   isCompleted,
@@ -88,7 +89,7 @@ export function awaitingInvoicePreset (items) {
     {
       direction: 'asc',
       extra: {
-        chip: () => 'Credit Owed',
+        chip: () => 'Awaiting Credit',
         chipColor: () => 'info',
         chipOutline: false
       }
@@ -106,12 +107,64 @@ export function awaitingWarehousePreset (items) {
     {
       direction: 'asc',
       extra: {
-        chip: () => 'Stock Owed',
+        chip: () => 'Awaiting Stock',
         chipColor: () => 'purple',
         chipOutline: false
       }
     }
   )
+}
+
+/** Human age label — "Today", "Yesterday", "6 days". Blank when unknown. */
+export function ageLabel (days) {
+  if (days === null || days === undefined || Number.isNaN(days)) return ''
+  if (days <= 0) return 'Today'
+  if (days === 1) return 'Yesterday'
+  return `${days} days`
+}
+
+/** The stamp that answers "when did this return last move?". No `settledAt` on this sheet. */
+export function lastMovedAt (row) {
+  return text(row?.UpdatedAt) || text(row?.CreatedAt) || text(row?.Date)
+}
+
+// `ageLabel` alone reads badly at both ends: "Today" hides a return logged a minute ago,
+// and "400 days" is a number nobody converts in their head.
+export function recentAgeLabel (row) {
+  const stamp = lastMovedAt(row)
+  const hours = hoursFromNow(stamp)
+  if (!Number.isNaN(hours)) {
+    const past = Math.max(0, -hours)
+    if (past < 1) return 'Just now'
+    if (past < 24) return past === 1 ? '1 hour ago' : `${past} hours ago`
+  }
+  const days = -daysFromToday(stamp)
+  if (days === null || days === undefined || Number.isNaN(days)) return ''
+  if (days > 99) return `${Math.floor(days / 30)} months`
+  return ageLabel(days)
+}
+
+/**
+ * "Recent" — the latest 50 live returns, newest first, whatever state they are in.
+ *
+ * Cancelled returns are left out: an abandoned return never settled anything, so it is not
+ * part of "what moved lately?". The cap is a hard 50 for the same reason.
+ */
+export function recentPreset (items) {
+  const live = asList(items).filter(isActiveRow).filter((row) => !isCancelled(row))
+
+  return basePreset(live, {
+    direction: 'desc',
+    extra: {
+      items: sortByDate(live, lastMovedAt, 'desc').slice(0, 50),
+      metaLayout: ['chip', 'badge'],
+      chip: recentAgeLabel,
+      chipColor: 'grey-7',
+      chipOutline: true,
+      badge: (row) => progressLabel(progressOf(row)),
+      badgeColor: (row) => progressColor(progressOf(row))
+    }
+  })
 }
 
 export function completedPreset (items) {
@@ -137,6 +190,10 @@ export function useReturnRowPresets () {
     outstandingCaption,
     quantityAndItem,
     dateAndUser,
+    ageLabel,
+    lastMovedAt,
+    recentAgeLabel,
+    recentPreset,
     submittedPreset,
     awaitingInvoicePreset,
     awaitingWarehousePreset,

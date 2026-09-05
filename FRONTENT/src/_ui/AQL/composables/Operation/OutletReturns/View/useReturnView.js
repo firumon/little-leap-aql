@@ -5,6 +5,7 @@ import { grandTotalOf } from 'src/_resource/Operation/OutletConsumptionInvoices/
 import { useOutletResource } from 'src/_resource/Master/Outlets/composables/useOutletResource'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 import { useWarehouseResource } from 'src/_resource/Master/Warehouses/composables/useWarehouseResource'
+import { usePriceListResource } from 'src/_resource/Master/PriceLists/composables/usePriceListResource'
 import {
   progressColor,
   progressIcon,
@@ -29,10 +30,14 @@ export function useReturnView () {
   const { getOutlet } = useOutletResource()
   const { skuLabelText } = useSkuResource()
   const { getWarehouse } = useWarehouseResource()
+  const { getPriceList } = usePriceListResource()
   const { _C } = useCurrency()
 
   const invoices = useRecord('OutletConsumptionInvoices')
   const invoiceItems = useRecord('OutletConsumptionInvoiceItems')
+  // Both cards render NAMES, so the master rows they resolve from must be opened too.
+  const warehouses = useRecord('Warehouses')
+  const priceLists = useRecord('PriceList')
 
   const text = (value) => (value == null ? '' : String(value).trim())
 
@@ -54,7 +59,7 @@ export function useReturnView () {
   const warehouseName = computed(() => {
     const code = text(record.value?.WarehouseCode)
     if (!code) return ''
-    return text(getWarehouse(code)?.Name) || code
+    return text(getWarehouse(code)?.name) || code
   })
 
   const commercialTrack = computed(() => {
@@ -129,6 +134,7 @@ export function useReturnView () {
       date: text(header?.Date),
       username: text(header?.Username),
       priceListCode: text(header?.PriceListCode),
+      priceListName: text(getPriceList(text(header?.PriceListCode))?.name) || text(header?.PriceListCode),
       invoiceTotal: header ? _C(grandTotalOf(header)) : '',
       billedQty: qty,
       billedUnitPrice: unitPrice === null ? '' : _C(unitPrice),
@@ -154,7 +160,8 @@ export function useReturnView () {
     commercialTrack,
     warehouseTrack,
     sourceInvoice,
-    invoiceResources: [invoices, invoiceItems],
+    invoiceResources: [invoices, invoiceItems, priceLists],
+    warehouseResources: [warehouses],
     timeline,
     creditValue,
     // Vocabulary passthroughs, so a card has ONE import for its data and its labels.

@@ -149,10 +149,19 @@ const shared = defineSharedComposable((dataStore) => {
     return skusByProduct.value.get(productCode) || []
   }
 
+  // Options for any SKU selector in the app. Built ONCE here rather than in each form
+  // composable that needs one (CORE_ARCHITECTURE_RULES §6). The label is `skuLabelText`,
+  // so a picker and a detail card can never name the same SKU differently.
+  const skuOptions = computed(() => activeSkus.value.map((sku) => ({
+    label: skuLabelText(sku.code),
+    value: sku.code
+  })))
+
   return {
     skus,
     allSkus: skus,
     activeSkus,
+    skuOptions,
     skuMap,
     skusByProduct,
     getSku,

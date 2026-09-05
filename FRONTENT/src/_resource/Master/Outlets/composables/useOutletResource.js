@@ -154,10 +154,17 @@ const shared = defineSharedComposable((dataStore) => {
     return o?.operatingRule || enrichOperatingRule(null, ruleDefaults.value)
   }
 
+  // Options for any Outlet selector. Built once per app (CORE_ARCHITECTURE_RULES §6).
+  const outletOptions = computed(() => activeOutlets.value.map((outlet) => ({
+    label: [outlet.code, outlet.name].filter(Boolean).join(' · '),
+    value: outlet.code
+  })))
+
   return {
     outlets,
     allOutlets: outlets,
     activeOutlets,
+    outletOptions,
     outletMap,
     getOutlet,
     getOperatingRule,

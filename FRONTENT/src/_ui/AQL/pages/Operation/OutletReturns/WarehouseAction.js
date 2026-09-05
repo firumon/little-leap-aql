@@ -1,15 +1,3 @@
-import { watch } from 'vue'
-import { useAuth } from 'src/composables/core/useAuth'
-import { buildReturnWarehouseActionNodes } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
-
-const NODE = 'OutletReturns'
-// Two of the three answers are COLUMNS the builder writes, so they bind straight to the
-// record. The bin is not — it only names a target for the movement node — so it stays a
-// control, which is what "one value shared across nodes" is for (UI_PAGE_STATE.md §5B.5).
-const ACTION_TYPE = 'WarehouseAction'
-const DISPOSAL_REASON = 'WarehouseActionDisposedReason'
-const STORAGE = 'WarehouseStorageName'
-
 /**
  * OutletReturns › WarehouseAction contract —
  * `/operation/outlet-returns/{code}/_action/warehouse-action`.
@@ -45,6 +33,13 @@ export default {
   sections: ['PageHeader'],
   contents: ['WarehouseActionCard'],
 
+  // Page.vue keeps ONE pageState per Page mount and never clears it, so the nodes and
+  // DERIVES of the page visited before this one are still here. Flush them before the card
+  // mounts this route's own (UI_PAGE_STATE_NODES.md §5.7A).
+  ready ({ pageState }) {
+    pageState.resetForResource('OutletReturns')
+  },
+
   // Declarative gating (useContentResolver / useSectionResolver). Each entry names the
   // registered action its route or its foreign resource actually needs; anything not
   // listed renders unconditionally, exactly as before.
@@ -55,34 +50,5 @@ export default {
   PropsPageHeader: {
     title: 'Confirm Warehouse Action',
     reload: false
-  },
-
-  // The batch is re-cut on every answer, so `PageAction.submit` only validates
-  // (UI_PAGE_STATE.md §5B).
-  ready ({ pageState, resourceRecord }) {
-    const { user } = useAuth()
-    const loaded = () => resourceRecord?.record?.value || {}
-
-    watch(() => [
-      String(loaded().Code ?? '').trim(),
-      pageState.getRecord(ACTION_TYPE, NODE),
-      pageState.getRecord(DISPOSAL_REASON, NODE),
-      pageState.getControls(STORAGE, '', NODE)
-    ], () => {
-      const record = loaded()
-      const code = String(record.Code ?? '').trim()
-      if (!code) return
-      // Created once, never replaced: initResource would drop the answers being given.
-      if (!pageState.hasNode(NODE)) pageState.initResource(NODE, { isPrimaryKey: true, code })
-      // `keep` drops the StockMovements node a Stocked pass queued once the operator
-      // switches to Disposed - applyNodes only ever adds.
-      pageState.applyLive(buildReturnWarehouseActionNodes({
-        record,
-        actionType: String(pageState.getRecord(ACTION_TYPE, NODE) ?? '').trim(),
-        storageName: String(pageState.getControls(STORAGE, '', NODE) ?? '').trim(),
-        disposalReason: String(pageState.getRecord(DISPOSAL_REASON, NODE) ?? '').trim(),
-        actorName: user.value?.name || user.value?.email || ''
-      }), { keep: [NODE] })
-    }, { immediate: true, deep: true })
   }
 }

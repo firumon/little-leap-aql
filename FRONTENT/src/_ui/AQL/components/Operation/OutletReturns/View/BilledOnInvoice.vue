@@ -87,7 +87,7 @@ const lines = computed(() => {
     { label: 'Invoiced Unit Price', value: row.billedUnitPrice },
     { label: 'Invoiced Line Value', value: row.billedLineTotal },
     { label: 'Invoice Total', value: row.invoiceTotal },
-    { label: 'Price List', value: row.priceListCode }
+    { label: 'Price List', value: row.priceListName }
   ].filter((line) => String(line.value).trim())
 })
 

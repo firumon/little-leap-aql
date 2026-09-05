@@ -1,4 +1,5 @@
 import {
+  recentPreset,
   submittedPreset,
   awaitingInvoicePreset,
   awaitingWarehousePreset,
@@ -23,6 +24,7 @@ export default {
   PropsSection: (pageProps) => ({ gutter: pageProps.gutter }),
 
   // Block names must match the sheet's ListViews `name` values or the row shape is ignored.
+  PropsListRecent: (props) => recentPreset(props.items),
   PropsListSubmitted: (props) => submittedPreset(props.items),
   PropsListAwaitingInvoiceAdjustment: (props) => awaitingInvoicePreset(props.items),
   PropsListAwaitingWarehouseReceipt: (props) => awaitingWarehousePreset(props.items),

@@ -26,7 +26,7 @@
  *
  * No `<style>` block (ARCHITECTURE RULES §7).
  */
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import TrackStatusCard from './TrackStatusCard.vue'
 import { useReturnView } from 'src/_ui/AQL/composables/Operation/OutletReturns/View/useReturnView'
 import { useReturnViewContext } from 'src/_ui/AQL/composables/Operation/OutletReturns/View/useReturnViewContext'
@@ -38,7 +38,7 @@ const props = defineProps({
 })
 
 const { evaluate } = useReturnViewContext()
-const { pending, warehouseTrack } = useReturnView()
+const { pending, warehouseTrack, warehouseResources } = useReturnView()
 
 const finalTitle = computed(() => evaluate(props.title))
 
@@ -51,6 +51,9 @@ const caption = computed(() => {
     ? 'The units were written off and did not re-enter stock.'
     : 'The units were received back into warehouse stock.'
 })
+
+// The card names the warehouse, so its master rows have to be open before it renders.
+onMounted(() => { warehouseResources.forEach((res) => res.reload()) })
 
 const lines = computed(() => {
   const track = warehouseTrack.value

@@ -1,42 +1,26 @@
-import { REASON_REQUIRING_COMMENT } from 'src/_resource/Operation/OutletReturns/composables/useReturnProgress'
+import { validateReturnDraft } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
 
+// The live node IS the batch: the corrected row and, when the correction moves stock, the
+// DELTA shelf movement are both kept true by the node's derivations. Submit only refuses a
+// draft the domain says cannot be saved.
 const NODE = 'OutletReturns'
 
 const text = (value) => (value == null ? '' : String(value).trim())
 
-export default (props, { pageState, resourceRecord, resourceConfig }) => {
-  // `state.nodes` is keyed by an opaque uid, never by resource name — `useNode` is the
-  // supported addressing layer, and it works outside setup.
-  const node = pageState.useNode(NODE)
+export default (props, { pageState, resourceRecord }) => ({
+  actions: ['cancel', 'submit'],
+  submitLabel: 'Save Changes',
 
-  const form = () => node.record.value || {}
-  const stored = () => resourceRecord?.record?.value || {}
+  cancel: (name, { nav }) => {
+    nav.goTo('view', { code: text(resourceRecord?.record?.value?.Code) })
+    return false
+  },
 
-  return {
-    actions: ['cancel', 'submit'],
-    submitLabel: 'Save Changes',
+  submit: () => {
+    const problem = validateReturnDraft(pageState.getRecord(null, NODE))
+    if (problem) return { valid: false, message: problem }
+  },
 
-    cancel: (name, { nav }) => {
-      nav.goTo('view', { code: text(stored().Code) })
-      return false
-    },
-
-    submit: () => {
-      const entry = form()
-
-      if (text(entry.Reason) === REASON_REQUIRING_COMMENT && !text(entry.ReasonComment)) {
-        return { valid: false, message: 'Reason "Other" needs an explanation.' }
-      }
-
-      return {
-        successMsg: `Return ${text(stored().Code)} updated.`,
-        // The typed form would otherwise survive the navigation and re-seed the next visit.
-        onSuccess: () => { pageState.reset() }
-      }
-    },
-
-    // Land back on the record, so the officer sees the corrected row and which tracks are
-    // now open on it.
-    successRoute: 'view'
-  }
-}
+  // Land back on the record, so the officer sees the corrected row and its open tracks.
+  successRoute: 'view'
+})

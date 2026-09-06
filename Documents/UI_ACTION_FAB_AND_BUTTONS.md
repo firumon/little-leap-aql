@@ -55,6 +55,11 @@ grow multiple competing right-side FABs:
 | Permissions | `ResourceActionEdit` | `permissions.canUpdate` **and** a record in context | `nav.goTo('edit')` |
 | `useAdditionalActions().entriesFor(record)` | `ResourceAction<Name>` (e.g. `ResourceActionPostpone`) | applied by the composable — record in context, `can<Action>` not explicitly `false`, `visibleWhen` satisfied | the entry's bound `run()` — `navigate` routes, `mutate` opens the shared dialog |
 
+| Local `_ui/` files | `ResourceAction<Name>` discovered by `useLocalResourceActions` | the file's own `visibleWhen` / `show` / `hide`, evaluated against the record | `navigate` routes, else the file's `run` / `handler` |
+
+**List order is fixed**: CRUD first, then sheet `AdditionalActions`, then local discovered
+actions. See §3.4.1.
+
 > [!IMPORTANT]
 > **`ResourceActions` owns no workflow logic.** It calls `entriesFor(record)` and merges
 > its resolver context into each returned entry's props — nothing more. Permission
@@ -107,6 +112,73 @@ it into the containing block for its fixed descendants and breaks FAB positionin
 > `crudactionsfab` → `resourceactionsfab`. No tenant override under any of the old names
 > exists in the repo, so the rename is behaviour-preserving. CSS classes renamed in step:
 > `.aql-crud-action-*` → `.aql-resource-action-*`.
+
+#### 3.4.1 Local action auto-discovery
+
+`composables/resources/useLocalResourceActions.js` scans the same Vite `_ui/` module
+registry the resolver uses and picks up every file named `ResourceAction*.{vue,js}` in the
+two standard tiers:
+
+| Tier | Path |
+|------|------|
+| 1 — page | `_ui/{ui}/components/{scope}/{resource}/{page}/resourceaction*.{vue,js}` |
+| 2 — resource | `_ui/{ui}/components/{scope}/{resource}/resourceaction*.{vue,js}` |
+
+`resourceactions.(vue\|js)` and `resourceactionsfab.(vue\|js)` are excluded — they are the
+container and the menu trigger, not items. Tier 1 wins over tier 2, and `.vue` wins over
+`.js` inside a tier, matching the resolver.
+
+**Local precedence.** Local code always beats framework and sheet defaults:
+
+* A file named after a CRUD item (`ResourceActionAdd`, `ResourceActionEdit`) overrides that
+  item **in place** — the resolver already does this, and the position in the list does not
+  move.
+* A file named after a sheet `AdditionalActions` item (`ResourceActionApprove`) overrides
+  that item **in place** the same way.
+* Only a file whose name matches nothing already listed is appended, as a **local
+  discovered action**.
+* Nothing is ever listed twice.
+
+**`.js` definition contract.** The default export is an object, or a
+`(ctx) => object` where `ctx = { record, config, pageState, nav }`. It mirrors the sheet
+`AdditionalAction` shape:
+
+| Key | Meaning |
+|-----|---------|
+| `action` | Action name (defaults to the name in the file name) |
+| `label` | Pill label (defaults to the file name, spaced) |
+| `icon` / `color` | Defaults `'bolt'` / `'primary'` |
+| `kind` | `'navigate'`, `'mutate'`, or a custom key |
+| `navigate` | `{ target, scope, resourceSlug, pageSlug, query }`; `query` may be an object or `(record) => object` |
+| `permission` / `permissions` | Access gate, checked with `resourceConfig.allowed()` |
+| `visibleWhen` | Conditions, evaluated with `isActionVisible(action, record)` |
+| `show` / `hide` | Boolean or `(record) => Boolean` |
+| `run` / `handler` | `({ record, config, pageState, nav }) => void` — custom click behaviour |
+
+`permission` (alias `permissions`) is passed straight to `allowed()` from
+`useResourceConfig`, so it takes any of the three shapes that helper accepts:
+
+| Shape | Example | Means |
+|-------|---------|-------|
+| String | `'create'` | that action on the **current** resource |
+| Array | `['create', 'update']` | all of those actions on the current resource |
+| Map | `{ OutletConsumptionInvoices: 'create' }` | that action on **another** resource; values may also be arrays, and every entry must pass (AND) |
+
+Use the map form whenever the action writes a resource other than the page's own —
+gating on the current resource would show a button the user cannot complete.
+
+An item that fails `permission`, `visibleWhen`, `show`, or `hide` never reaches the cluster. On click,
+`kind: 'navigate'` routes through `nav.goTo(target, { …params, query })`; otherwise `run`
+or `handler` is invoked. Because the same file is also the JS modifier for its own action
+name, its `icon`/`color`/`label`/`show`/`hide`/`handler` keys land on `ResourceActionItem`
+through the normal 10-tier resolve as well.
+
+**`.vue` action components.** A `ResourceAction<Name>.vue` file is mounted by the cluster
+like any other item (`<Action :action="…" :fallback="ResourceActionItem" as-fab-action …>`).
+It should render `<ResourceActionItem v-bind="$attrs" …>` for the shared push-glossy
+styling, stagger animation and pill label, and may host its own dialogs and state around it
+(see `_ui/AQL/components/Operation/OutletVisits/ResourceActionAdd.vue`). A `.vue` file
+carries no definition object, so its label defaults to its own name.
 
 ### 3.5 `ResourceReports.vue`
 Report downloads as a first-class action. `PageAction` mounts it on every **non-form**

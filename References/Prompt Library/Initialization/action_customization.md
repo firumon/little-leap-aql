@@ -271,6 +271,18 @@ export default {
   // handler: ({ nav, pageState }) => …   // REPLACES the default click behaviour
 }
 ```
+**Local auto-discovery (§3.4.1).** Any `ResourceAction*.{vue|js}` file under
+`_ui/.../{scope}/{resource}/` or `.../{resource}/{page}/` is picked up automatically by
+`useLocalResourceActions.js`. If its name matches a CRUD or sheet action it overrides that
+item **in place**; if the name is new, it is appended after the sheet actions. The cluster
+order is always **CRUD → Sheet AdditionalActions → Local discovered**, and no action
+appears twice. A `.js` file may carry a full action definition (`action`, `label`, `icon`,
+`color`, `kind`, `navigate` with an object or `(record) => object` `query`, `permission`
+(any shape `allowed()` takes, including `{ OtherResource: 'create' }`), `visibleWhen`,
+`show`/`hide`, `run`/`handler`) as an object or a `(ctx) => object`. A `.vue` file renders
+`<ResourceActionItem v-bind="$attrs" :handler="…" />` and may host its own dialog.
+`resourceactions.*` and `resourceactionsfab.*` are excluded from discovery.
+
 Item names: `ResourceActionAdd`, `ResourceActionEdit`, `ResourceAction<Name>`
 (PascalCased action name, lowercased on disk — `resourceactionapprove.(vue|js)`).
 A `.vue` item override must set `inheritAttrs: false`, bind `$attrs`, and emit

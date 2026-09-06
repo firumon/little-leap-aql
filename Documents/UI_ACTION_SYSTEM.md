@@ -54,6 +54,10 @@ Section numbers are unchanged, so an existing `§N` reference still resolves —
 | §7.4.1 | Conditional targets (`when`) | [UI_ACTION_MULTI_RECORD.md](UI_ACTION_MULTI_RECORD.md) |
 | §3.1 | `PageAction.vue` | [UI_ACTION_PAGE_ACTION.md](UI_ACTION_PAGE_ACTION.md) |
 | §3.2 | `FormActions.vue` — the configurable action array | [UI_ACTION_PAGE_ACTION.md](UI_ACTION_PAGE_ACTION.md) |
+| §3.3 | The button components | [UI_ACTION_FAB_AND_BUTTONS.md](UI_ACTION_FAB_AND_BUTTONS.md) |
+| §3.4 | `ResourceActions.vue` — the unified FAB cluster | [UI_ACTION_FAB_AND_BUTTONS.md](UI_ACTION_FAB_AND_BUTTONS.md) |
+| §3.4.1 | Local action auto-discovery (`ResourceAction*.{vue,js}` under `_ui/`) | [UI_ACTION_FAB_AND_BUTTONS.md](UI_ACTION_FAB_AND_BUTTONS.md) |
+| §3.5 | `ResourceReports.vue` | [UI_ACTION_FAB_AND_BUTTONS.md](UI_ACTION_FAB_AND_BUTTONS.md) |
 
 ## 1. Architectural Overview
 

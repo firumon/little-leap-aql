@@ -29,44 +29,32 @@
 
 <script setup>
 /**
- * Unified resource-action FAB cluster (evolution of the former `CrudActions.vue`).
+ * The one bottom-right FAB cluster on a non-form page.
  *
- * One bottom-right sticky cluster per page, unifying two sources so resource
- * pages never grow multiple competing right-side FABs:
- *   - resource permissions — Add (`canWrite`) and Edit (`canUpdate` + record),
- *   - AdditionalActions workflow items, whenever a record is in context.
+ * Entries, in this fixed order: CRUD (Add/Edit, permission gated), sheet
+ * AdditionalActions from `useAdditionalActions().entriesFor(record)`, then
+ * local-only actions found under `_ui/` by `useLocalResourceActions`. A local
+ * file named after a CRUD or sheet action is that entry's override, so it is
+ * never appended a second time.
  *
- * > The workflow half owns NO logic here. `useAdditionalActions().entriesFor(record)`
- * > returns them already gated (permissions, `visibleWhen`) with `run()` bound,
- * > and this component folds that array into `entries`. Permission and visibility
- * > rules live in exactly one place, shared with `AdditionalActionsButtons`.
- * > See AQL_ACTION_SYSTEM.md §7.
+ * The workflow half owns no logic here: entries arrive already gated with
+ * `run()` bound. Every item mounts through `<Action>` under its own name
+ * (`ResourceAction<Name>`) with `ResourceActionItem` as fallback, so each is
+ * overridable at all 10 `_ui/` tiers.
  *
- * Layout: a single item renders as one standalone FAB; multiple items collapse
- * into one expandable `ResourceActionsFab` menu.
+ * One item renders as a standalone FAB; two or more collapse into the
+ * expandable `ResourceActionsFab` menu.
  *
- * Every item is mounted through `<Action>` under a per-item action name —
- * `ResourceActionAdd` / `ResourceActionEdit` / `ResourceAction<Name>` — with
- * `ResourceActionItem` as the fallback base, so each item's icon/color/label/
- * visibility/click is overridable at all 10 `_ui/` tiers as
- * `resourceaction<name>.(vue|js)`. The menu trigger resolves the same way as
- * `ResourceActionsFab`.
- *
- * Dispatch: CRUD items navigate via `useResourceNav`; workflow items dispatch
- * through the composable (navigate → route, mutate → shared dialog). A JS
- * modifier may replace any item's behaviour by returning a `handler` prop
- * (see `ResourceActionItem.vue`).
- *
- * Entrance animation (`.aql-resource-action-container`) lives in
- * `src/css/custom.scss` on an inner wrapper — never on `q-page-sticky` itself,
- * since a transform on a `position: fixed` ancestor becomes its containing
- * block and breaks FAB positioning. No `<style>` block (ARCHITECTURE RULES §7).
+ * The entrance animation lives on the inner wrapper, never on `q-page-sticky`:
+ * a transform on a fixed ancestor becomes its containing block and breaks FAB
+ * positioning. No `<style>` block (ARCHITECTURE RULES §7).
  */
 import { computed, inject } from 'vue'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useActionResolver } from 'src/composables/resources/useActionResolver'
 import { useAdditionalActions } from 'src/composables/resources/useAdditionalActions'
+import { useLocalResourceActions } from 'src/composables/resources/useLocalResourceActions'
 import Action from 'components/Action.vue'
 import ResourceActionItem from './ResourceActionItem.vue'
 import ResourceActionsFab from './ResourceActionsFab.vue'
@@ -88,7 +76,7 @@ const resourceRecord = inject('resourceRecord', null)
 const nav = useResourceNav()
 const routeConfig = useRouteConfig()
 // No resource name passed: the cluster is page-level, so it follows the route.
-const { entriesFor } = useAdditionalActions()
+const { entriesFor, additionalActions } = useAdditionalActions()
 
 const pageKey = computed(() => (props.page || '').toLowerCase())
 // Form pages are owned by the FormActions sticky bar. PageAction already gates
@@ -104,6 +92,14 @@ const isFormPage = computed(() =>
 const permissions = computed(() => resourceConfig?.permissions?.value || {})
 const record = computed(() => resourceRecord?.record?.value || null)
 
+// ── Resolver context: explicit props win, injected resourceConfig is fallback ──
+const resolverContext = computed(() => ({
+  page:     props.page,
+  scope:    props.scope    ?? resourceConfig?.scope?.value        ?? 'master',
+  resource: props.resource ?? resourceConfig?.resourceSlug?.value ?? '',
+  uiName:   props.uiName   ?? resourceConfig?.customUIName?.value ?? 'AQL'
+}))
+
 // ── Unified entry list ────────────────────────────────────────────────────────
 //
 // Each entry's `props` are built here, not in the template: a `v-bind="fn(entry)"`
@@ -111,7 +107,7 @@ const record = computed(() => resourceRecord?.record?.value || null)
 // each child <Action> a new object identity (and a new reactive dependency set) each
 // time. Built inside the computed, they are re-created only when the entry list or
 // the resolver context actually changes.
-const entries = computed(() => {
+const sourcedEntries = computed(() => {
   const ctx = resolverContext.value
   const list = []
   if (!isFormPage.value && permissions.value.canWrite) {
@@ -150,17 +146,41 @@ const entries = computed(() => {
   return list
 })
 
+// Names owned by CRUD or by the sheet. A local file under one of these is that
+// item's override, not a new action, so it must not be appended again.
+//
+// Every DECLARED sheet action counts, not just the ones eligible right now: a
+// local file for an action the record has gated off must stay hidden with it.
+const takenActionNames = computed(() => {
+  const names = new Set(['resourceactionadd', 'resourceactionedit'])
+  for (const entry of sourcedEntries.value) names.add(entry.actionName.toLowerCase())
+  for (const action of additionalActions.value || []) {
+    const name = String(action?.action ?? '').trim()
+    if (name) names.add(`resourceaction${name}`.toLowerCase())
+  }
+  return names
+})
+
+const { localEntries } = useLocalResourceActions(resolverContext, takenActionNames)
+
+// Order is fixed: CRUD, then sheet AdditionalActions, then local-only actions.
+const entries = computed(() => {
+  if (isFormPage.value) return []
+  const ctx = resolverContext.value
+  return [
+    ...sourcedEntries.value,
+    ...localEntries.value.map((entry) => ({
+      key: entry.key,
+      actionName: entry.actionName,
+      props: { ...ctx, ...entry.props },
+      run: entry.run
+    }))
+  ]
+})
+
 function run (entry) {
   entry.run()
 }
-
-// ── Resolver context: explicit props win, injected resourceConfig is fallback ──
-const resolverContext = computed(() => ({
-  page:     props.page,
-  scope:    props.scope    ?? resourceConfig?.scope?.value        ?? 'master',
-  resource: props.resource ?? resourceConfig?.resourceSlug?.value ?? '',
-  uiName:   props.uiName   ?? resourceConfig?.customUIName?.value ?? 'AQL'
-}))
 
 // Item props carry explicit lookup context + presentation only (see `entries`).
 // `...attrs` is deliberately never spread into them: it carries whatever PageAction

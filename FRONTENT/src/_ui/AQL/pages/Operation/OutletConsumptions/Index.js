@@ -13,6 +13,7 @@ export default {
     'MetricCards',
     'Gauge',
     'AgeingBuckets',
+    'ConsumptionVolume',
     'FilterInput',
     'ListSwitcher'
   ],

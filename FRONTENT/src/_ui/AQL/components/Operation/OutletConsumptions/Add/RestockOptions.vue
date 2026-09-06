@@ -69,12 +69,10 @@
 // Step 4a - the restock decisions: leave one at all, route it direct or for approval,
 // and hand it over now. Every toggle is a control on the restock node, and Layer 2's
 // derive rules turn them into progress. The lines live in RestockItems, same node.
-import { computed, inject, useAttrs, watch } from 'vue'
+import { computed, useAttrs, watch } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
-import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
-import { useAuth } from 'src/composables/core/useAuth'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { useConsumptionAddContext } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/useConsumptionAddContext'
 import { RESTOCK_CONTROL, restockNodeForConsumption } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
 import { NODE, RESTOCKING, stepVisible } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/nodes'
 
@@ -85,10 +83,8 @@ const props = defineProps({ step: { type: [Number, String], default: null } })
 const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 
-const ui = useAQLConfig()
-const pageState = inject('pageState')
-const { hasRegionAccess } = useAuth()
-const warehouses = useRecord('Warehouses')
+const { pageState, ui, hasRegionAccess, resource } = useConsumptionAddContext()
+const warehouses = resource('Warehouses')
 
 const SelectField = resolveFieldComponent('select', 'add')
 

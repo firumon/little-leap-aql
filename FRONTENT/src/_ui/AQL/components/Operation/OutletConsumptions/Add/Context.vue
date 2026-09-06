@@ -87,16 +87,14 @@
 <script setup>
 // Step 1 - which outlet, and which planned visit. `Username`, `Date` and the visit code
 // are seeded by Layer 2 on the node, never rendered. Navigation lives in `PageAction.js`.
-import { computed, inject, onMounted, useAttrs } from 'vue'
+import { computed, onMounted, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
-import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
-import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { useConsumptionAddContext } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/useConsumptionAddContext'
 import { formatDate } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/View/useConsumptionView'
 import { useVisitResource } from 'src/_resource/Operation/OutletVisits/composables/useVisitResource'
 import { isPlanned } from 'src/_resource/Operation/OutletVisits/composables/useVisitProgress'
-import { WIZARD_RESOURCES, stepVisible } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/nodes'
+import { NODE, WIZARD_RESOURCES, stepVisible } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/nodes'
 
 defineOptions({ name: 'OutletConsumptionsAddContext', inheritAttrs: false })
 
@@ -108,9 +106,7 @@ const SUGGESTED_OUTLET_LIMIT = 8
 const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 
-const ui = useAQLConfig()
-const pageState = inject('pageState')
-const { query } = useRouteConfig()
+const { pageState, ui, query, resource } = useConsumptionAddContext()
 const { visitsOf } = useVisitResource()
 
 const text = (value) => (value == null ? '' : String(value).trim())
@@ -118,14 +114,14 @@ const isActive = (row) => !text(row?.Status) || text(row.Status).toUpperCase() =
 const todayISO = () => new Date().toISOString().slice(0, 10)
 
 // Every resource the later steps read, opened once here so no step fetches per card.
-const resources = WIZARD_RESOURCES.map((name) => useRecord(name))
+const resources = WIZARD_RESOURCES.map((name) => resource(name))
 const outlets = resources[WIZARD_RESOURCES.indexOf('Outlets')]
 const visits = resources[WIZARD_RESOURCES.indexOf('OutletVisits')]
 
-// Straight to the node's columns. No resource named, so it takes the page's primary one.
-const record = pageState.useRecord()
-const outletCode = pageState.useRecord('OutletCode')
-const visitCode = pageState.useRecord('OutletVisitCode')
+// Explicitly bound to the consumption node.
+const record = pageState.useRecord(null, NODE.CONSUMPTION)
+const outletCode = pageState.useRecord('OutletCode', NODE.CONSUMPTION)
+const visitCode = pageState.useRecord('OutletVisitCode', NODE.CONSUMPTION)
 
 const SelectField = resolveFieldComponent('select', 'add')
 
@@ -183,8 +179,8 @@ const earliestPlannedVisit = (outlet) => text(visitsOf(outlet).find(isPlanned)?.
 // outlet's visit, so the new outlet's earliest plan replaces it - or '' when it has none.
 function selectOutlet (value) {
   const outlet = text(value)
-  pageState.setRecord('OutletCode', outlet)
-  pageState.setRecord('OutletVisitCode', earliestPlannedVisit(outlet))
+  pageState.setRecord('OutletCode', outlet, NODE.CONSUMPTION)
+  pageState.setRecord('OutletVisitCode', earliestPlannedVisit(outlet), NODE.CONSUMPTION)
 }
 
 const isSelected = (visit) => text(visit.code) === text(visitCode.value)
@@ -192,7 +188,7 @@ const isSelected = (visit) => text(visit.code) === text(visitCode.value)
 // Tapping the chosen card clears it - the visit link is optional.
 function toggleVisit (code) {
   const next = text(code)
-  pageState.setRecord('OutletVisitCode', text(visitCode.value) === next ? '' : next)
+  pageState.setRecord('OutletVisitCode', text(visitCode.value) === next ? '' : next, NODE.CONSUMPTION)
 }
 
 // Only the outlet. `selectOutlet` picks the earliest planned visit, which is the same one
@@ -210,7 +206,7 @@ onMounted(async () => {
 
   const queryVisit = text(query.value.visitCode)
   if (queryVisit && plannedVisitCards.value.some((visit) => visit.code === queryVisit)) {
-    pageState.setRecord('OutletVisitCode', queryVisit)
+    pageState.setRecord('OutletVisitCode', queryVisit, NODE.CONSUMPTION)
   }
 })
 </script>

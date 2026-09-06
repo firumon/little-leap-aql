@@ -1,4 +1,9 @@
-import { RESTOCK_CONTROL } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
+import {
+  CONSUMPTION_ROLE,
+  CONSUMPTION_CONTROL,
+  VISIT_COMPLETE_COMMENT as DOMAIN_VISIT_COMPLETE_COMMENT,
+  VISIT_COMPLETE_COMMENT_FIELD as DOMAIN_VISIT_COMPLETE_COMMENT_FIELD
+} from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionDraft'
 
 // OutletConsumptions > Add - the pageState addresses the wizard writes.
 // Constants and two one-line accessors. No state, no injects, no computeds: the nodes
@@ -17,41 +22,22 @@ export const NODE = {
   OUTLET_MOVEMENTS: 'OutletMovements'
 }
 
-// The next visit is its own record beside the consumption, so it needs its own role. The
-// outlet ledger's two legs name theirs in the ledger domain itself (OUTLET_ROLE).
-export const ROLE = { NEXT: 'next' }
+// Relayed from the domain, never restated: the derive rules address the same names.
+export const ROLE = CONSUMPTION_ROLE
 
-// Working state only - never a sheet column. Addressed by the node whose editing session
-// it belongs to, except the two page-level ones that must outlive their node.
-export const CTRL = {
-  DIRECT_RESTOCK: { header: RESTOCK_CONTROL.DIRECT, resource: NODE.RESTOCKS },
-  WAREHOUSE: { header: RESTOCK_CONTROL.WAREHOUSE, resource: NODE.RESTOCKS },
-  MARK_DELIVERED: { header: RESTOCK_CONTROL.DELIVER, resource: NODE.RESTOCKS },
-  DISCOUNT_TYPE: { header: 'DiscountType', resource: NODE.INVOICES },
-  DISCOUNT_VALUE: { header: 'DiscountValue', resource: NODE.INVOICES },
-  INVOICE_COMMENT: { header: 'InvoiceComment', resource: NODE.INVOICES },
-  ADJUSTED_RETURNS: { header: 'AdjustedReturnCodes' },
-  COMPLETE_VISIT: { header: 'CompleteVisit' },
-  SCHEDULE_NEXT: { header: 'ScheduleNextVisit' },
-  NEXT_VISIT_DAYS: { header: 'NextVisitDays' },
-  NEXT_VISIT_COMMENT: { header: 'NextVisitComment' }
-}
+// Working state only - never a sheet column. Owned by the domain; relayed here so the
+// cards keep one import.
+export const CTRL = CONSUMPTION_CONTROL
 
-// One literal for both the toggle that queues the action and the submit that rebuilds it.
-export const VISIT_COMPLETE_COMMENT = 'Completed along with consumption'
-
-// The action system DERIVES a field's storage header from its column and outcome, so the
-// authored `Comment` on OutletVisits' Complete lands as `ProgressCompletedComment`. That
-// derived header is the one address on the queued entry — binding a screen to the short
-// authored name instead would write a second, stray key beside the real one.
-export const VISIT_COMPLETE_COMMENT_FIELD = 'ProgressCompletedComment'
+export const VISIT_COMPLETE_COMMENT = DOMAIN_VISIT_COMPLETE_COMMENT
+export const VISIT_COMPLETE_COMMENT_FIELD = DOMAIN_VISIT_COMPLETE_COMMENT_FIELD
 
 // The Complete action's own target for the visit it schedules next.
 export const NEXT_VISIT_TARGET = 'nextVisit'
 
 // Page-level, not on the invoice node: the answer must outlive the node it is about.
-export const INVOICING = 'invoicing'
-export const RESTOCKING = 'restocking'
+export const INVOICING = CONSUMPTION_CONTROL.INVOICING.header
+export const RESTOCKING = CONSUMPTION_CONTROL.RESTOCKING.header
 
 export const getCtrl = (pageState, ctrl, fallback = null) =>
   pageState.getControls(ctrl.header, fallback, ctrl.resource, ctrl.role)

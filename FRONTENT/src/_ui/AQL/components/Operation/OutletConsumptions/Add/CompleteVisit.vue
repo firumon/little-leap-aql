@@ -35,9 +35,8 @@
 <script setup>
 // Step 6b - close the planned visit. Its own content because it needs its own
 // permission: the contract gates it on `OutletVisits:complete`, not on scheduling.
-import { computed, inject } from 'vue'
-import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
-import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
+import { computed } from 'vue'
+import { useConsumptionAddContext } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/useConsumptionAddContext'
 import {
   NODE,
   CTRL,
@@ -53,8 +52,7 @@ const props = defineProps({ step: { type: [Number, String], default: null } })
 
 const ACTION = 'Complete'
 
-const ui = useAQLConfig()
-const pageState = inject('pageState')
+const { pageState, ui, allowed } = useConsumptionAddContext()
 
 const consumption = pageState.useNode(NODE.CONSUMPTION)
 
@@ -63,7 +61,7 @@ const visible = computed(() => stepVisible(pageState, props.step))
 const visitCode = computed(() => String(consumption.node.value.record.OutletVisitCode || '').trim())
 
 const canComplete = computed(() =>
-  !!visitCode.value && useResourceConfig(NODE.VISITS).allowed('complete') === true)
+  !!visitCode.value && allowed(NODE.VISITS, 'complete'))
 
 // A page control, not the node: the answer must survive the queued action being pulled
 // and re-queued as the outlet or the visit changes.

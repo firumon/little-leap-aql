@@ -10,7 +10,6 @@ export const DEFAULT_STORAGE = '_default'
 
 export const OUTLET_REFERENCE = {
   CONSUMPTION: 'Consumption',
-  CONSUMPTION_CANCELLED: 'ConsumptionCancelled',
   RESTOCK_DELIVERY: 'RestockDelivery',
   RETURN: 'OutletReturn'
 }

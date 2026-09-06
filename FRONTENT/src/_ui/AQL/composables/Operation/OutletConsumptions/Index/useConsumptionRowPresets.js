@@ -4,7 +4,8 @@ import {
   progressColor,
   settledAt,
   daysSince,
-  isActiveRow
+  isActiveRow,
+  isCancelled
 } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionProgress'
 
 /**
@@ -93,6 +94,21 @@ function baseRow (rows) {
 }
 
 /**
+ * `Recent` — the latest 50 live audits, newest first, whatever state they are in.
+ *
+ * Cancelled audits are left out: a cancelled audit recorded nothing that stands, so it is
+ * not part of "what moved lately?". The cap is a hard 50 for the same reason.
+ */
+export function recentPreset (rows = []) {
+  const live = (Array.isArray(rows) ? rows : []).filter(isActiveRow).filter((row) => !isCancelled(row))
+  const sorted = newestFirst(live).slice(0, 50)
+  return {
+    ...baseRow(sorted),
+    caption: (row) => [formatDate(asRow(row).Date), elapsedLabel(row)].filter(Boolean).join(' · ')
+  }
+}
+
+/**
  * `Completed` — consumptions that have been invoiced and are finished.
  *
  * Settled history, so: newest first, and the age chip is DROPPED. A colour-coded age is a
@@ -133,5 +149,5 @@ export { outletLabel, formatDate, elapsedLabel }
 
 // Composable shape for setup-context callers. Same functions, one import (§5).
 export function useConsumptionRowPresets () {
-  return { completedPreset, cancelledPreset, outletLabel, formatDate, elapsedLabel }
+  return { recentPreset, completedPreset, cancelledPreset, outletLabel, formatDate, elapsedLabel }
 }

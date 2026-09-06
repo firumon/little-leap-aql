@@ -3,7 +3,7 @@
 import { batchRef, isBatchRef, textOrRef } from 'src/utils/appHelpers'
 import { useAuth } from 'src/composables/core/useAuth'
 import { resourceRow } from 'src/composables/resources/useResourceConfig'
-import { stampFields, buildConsumptionInvoiceReleaseNodes } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionPayload'
+import { stampFields } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionPayload'
 // OutletReturns owns both directions of the return-credit link.
 import {
   buildReturnInvoiceAdjustmentLinkedNodes,
@@ -14,6 +14,7 @@ import { priceOf, priceListForOutlet } from 'src/_resource/Operation/OutletConsu
 import { dueDateFrom } from './useInvoiceCalculation'
 import { useOutletOperatingRulesResource } from 'src/_resource/Master/OutletOperatingRules/composables/useOutletOperatingRulesResource'
 import {
+  TAX_TRANSACTION_RESOURCES,
   buildTaxTransactionNodes,
   buildTaxTransactionReplacementNodes,
   buildTaxTransactionReversalNodes
@@ -209,6 +210,10 @@ export function invoiceCompositionDerive () {
 
 // THE one writer of an invoice document. The standalone page and the consumption wizard
 // both come through here, so they cannot drift on what an invoice is.
+// The nodes this document raises BESIDE the invoice. Each one `$ref`s the invoice's code,
+// so a caller that drops the invoice must drop these or the batch keeps a dangling ref.
+export const INVOICE_DOCUMENT_COMPANIONS = TAX_TRANSACTION_RESOURCES.map((resource) => ({ resource }))
+
 export function buildInvoiceDocumentNodes ({
   invoice = null,
   outletCode = '',
@@ -447,29 +452,17 @@ export function buildSettlementNodes ({
 
 // Cancel an invoice and release everything it held. Without the reversal the consumptions
 // and returns stay locked to an invoice that no longer bills them.
-export function buildCancellationNodes ({ record = {}, comment = '', actorName = '', returnRows = [], taxTransactionRows = null, releaseConsumptions = true } = {}) {
+export function buildCancellationNodes ({ record = {}, comment = '', actorName = '', returnRows = [], taxTransactionRows = null } = {}) {
   const invoice = asRow(record)
   const code = text(invoice.Code)
   if (!code) return [{ valid: false, message: 'The invoice could not be identified.' }]
   if (!text(comment)) return [{ valid: false, message: 'A cancellation comment is required.' }]
 
-  const consumptions = codeList(text(invoice.OutletConsumptionCode).split(','))
   const credits = (Array.isArray(returnRows) ? returnRows : []).map(asRow).filter((row) => text(row.Code))
 
   const nodes = [{ resource: INVOICES, actions: [{ ...{
     action: 'Cancel', column: 'Progress', columnValue: 'CANCELLED'
   }, code: textOrRef(code), data: { fields: stampFields('ProgressCancelled', actorName, text(comment)) } }], reload: [INVOICES] }]
-
-  // OutletConsumptions owns the invoiceable state and its stamp, so the release nodes are
-  // asked for, not written here. Skipped when the CONSUMPTION is what is being cancelled -
-  // walking it back to invoiceable would undo the cancellation that triggered this.
-  if (releaseConsumptions && consumptions.length) {
-    nodes.push(...buildConsumptionInvoiceReleaseNodes({
-      consumptionCodes: consumptions,
-      invoiceCode: code,
-      actorName
-    }))
-  }
 
   // Reversing the credit is the OutletReturns domain's own inverse of the forward link, so
   // both directions are written by one owner and cannot drift apart.

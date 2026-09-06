@@ -229,20 +229,16 @@ export function consumptionCodesOf (invoice) {
 /**
  * Whether this consumption may be cancelled, and why not when it may not.
  *
- * Three conditions, and the caller supplies the dependents so this stays pure:
- *   1. permission — `cancelConsumption`, the flag GAS publishes for the `CancelConsumption`
- *      AdditionalAction, so this predicate, the FAB gate and the action route agree;
- *   2. the record is not already cancelled — nothing to do;
- *   3. nothing downstream has been consumed irreversibly. A PAID invoice has money against
- *      it and an APPROVED/DELIVERED restock has moved stock; neither is undone by writing
- *      `CANCELLED` on this row (UI_MODULE_DEVELOPER_GUIDE.md §13.6, reason 3).
+ * Two conditions: the `cancelConsumption` permission, and the row not being cancelled yet.
+ * A settled dependent no longer blocks the audit — that verdict moved to
+ * `cascadeOptionsFor`, which locks that one toggle instead.
  *
  * Returns a `{ allowed, reason }` pair rather than a bare boolean because the View page
  * must SAY why the button is unavailable — a silently missing action reads as a bug.
  */
 export const RESTOCK_IRREVERSIBLE = ['APPROVED', 'DELIVERED', 'PARTIALLY_DELIVERED']
 
-export function cancellability (row, { invoice = null, restocks = [] } = {}) {
+export function cancellability (row) {
   const { allowed } = useResourceConfig(RESOURCE_NAME)
 
   if (allowed?.({ [RESOURCE_NAME]: 'cancelConsumption' }) !== true) {
@@ -250,16 +246,6 @@ export function cancellability (row, { invoice = null, restocks = [] } = {}) {
   }
   if (isCancelled(row)) {
     return { allowed: false, reason: 'This consumption is already cancelled.' }
-  }
-  if (invoice && progressOf(invoice) === 'PAID') {
-    return { allowed: false, reason: 'Its invoice has been paid and can no longer be reversed.' }
-  }
-  const committed = (Array.isArray(restocks) ? restocks : [])
-    .map(asRow)
-    .filter(isActiveRow)
-    .find((restock) => RESTOCK_IRREVERSIBLE.includes(progressOf(restock)))
-  if (committed) {
-    return { allowed: false, reason: `Restock ${text(committed.Code)} has already moved stock and can no longer be rejected.` }
   }
   return { allowed: true, reason: '' }
 }
@@ -281,6 +267,100 @@ export function rejectableRestocks (restocks = []) {
     .filter(isActiveRow)
     .filter((restock) => text(restock.Code))
     .filter((restock) => ![...RESTOCK_IRREVERSIBLE, 'REJECTED'].includes(progressOf(restock)))
+}
+
+
+// ─── The three cascade legs ───────────────────────────────────────────────────
+
+// `OutletReturns` has no consumption code, so outlet + date is the only link the sheet
+// supports. Stated once here, read by the View card and the cancel cascade alike.
+export function consumptionReturnRows (row, returns = []) {
+  const record = asRow(row)
+  const outletCode = text(record.OutletCode)
+  const date = text(record.Date)
+  if (!outletCode || !date) return []
+  return (Array.isArray(returns) ? returns : [])
+    .map(asRow)
+    .filter((entry) => isActiveRow(entry) &&
+      progressOf(entry) !== CANCELLED &&
+      text(entry.OutletCode) === outletCode &&
+      text(entry.Date) === date)
+}
+
+/** A return is only walked back before either of its two tracks has been acted on. */
+export function cancellableReturns (returns = []) {
+  return (Array.isArray(returns) ? returns : [])
+    .map(asRow)
+    .filter((entry) => text(entry.Code))
+    .filter((entry) => text(entry.InvoiceAdjustmentDone).toUpperCase() !== 'TRUE' &&
+      text(entry.WarehouseActionCompleted).toUpperCase() !== 'TRUE')
+}
+
+const INVOICE_SETTLED = ['PAID', 'PARTIALLY_PAID']
+
+// ONE description per leg, read by the toggle cards AND by the batch builder, so a toggle
+// the screen locks can never travel into the request.
+export function cascadeOptionsFor (row, { invoice = null, restocks = [], returns = [] } = {}) {
+  const liveRestocks = (Array.isArray(restocks) ? restocks : []).map(asRow).filter(isActiveRow)
+    .filter((entry) => text(entry.Code) && progressOf(entry) !== 'REJECTED' && progressOf(entry) !== CANCELLED)
+  const openRestocks = rejectableRestocks(liveRestocks)
+  const blockedRestock = liveRestocks.find((entry) => RESTOCK_IRREVERSIBLE.includes(progressOf(entry)))
+
+  const liveReturns = consumptionReturnRows(row, returns)
+  const openReturns = cancellableReturns(liveReturns)
+  const blockedReturn = liveReturns.find((entry) => !openReturns.includes(entry))
+
+  const invoiceRow = asRow(invoice)
+  const invoiceCode = text(invoiceRow.Code)
+  const invoiceProgress = progressOf(invoiceRow)
+
+  return {
+    restock: {
+      key: 'restock',
+      label: 'Restock Request',
+      icon: 'local_shipping',
+      slug: 'outlet-restocks',
+      exists: liveRestocks.length > 0,
+      rows: openRestocks,
+      linkCode: text(blockedRestock?.Code) || text(liveRestocks[0]?.Code),
+      cancellable: openRestocks.length > 0 && !blockedRestock,
+      message: !liveRestocks.length
+        ? 'No restock involved in this consumption.'
+        : blockedRestock
+          ? 'Approved restock cannot be cancelled from here. Please use the Restock page to cancel.'
+          : `Restock ${text(openRestocks[0]?.Code)} is still waiting for approval and will be rejected.`
+    },
+    returns: {
+      key: 'returns',
+      label: 'Outlet Returns',
+      icon: 'assignment_return',
+      slug: 'outlet-returns',
+      exists: liveReturns.length > 0,
+      rows: openReturns,
+      linkCode: text(blockedReturn?.Code) || text(liveReturns[0]?.Code),
+      cancellable: openReturns.length > 0 && !blockedReturn,
+      message: !liveReturns.length
+        ? 'No returns involved in this consumption.'
+        : blockedReturn
+          ? 'A return here was already credited or received, so it cannot be cancelled from this page. Please use the Return page.'
+          : `${openReturns.length} return${openReturns.length === 1 ? '' : 's'} will be cancelled and their stock put back.`
+    },
+    invoice: {
+      key: 'invoice',
+      label: 'Consumption Invoice',
+      icon: 'receipt_long',
+      slug: 'outlet-consumption-invoices',
+      exists: !!invoiceCode,
+      rows: invoiceCode ? [invoiceRow] : [],
+      linkCode: invoiceCode,
+      cancellable: !!invoiceCode && !INVOICE_SETTLED.includes(invoiceProgress) && invoiceProgress !== CANCELLED,
+      message: !invoiceCode
+        ? 'No invoice involved in this consumption.'
+        : INVOICE_SETTLED.includes(invoiceProgress)
+          ? 'This invoice has already taken payment, so it cannot be cancelled from here. Please use the Invoice page.'
+          : `Invoice ${invoiceCode} is still unpaid and will be cancelled.`
+    }
+  }
 }
 
 /**
@@ -463,6 +543,9 @@ export function useConsumptionProgress () {
     cancellability,
     isCancellable,
     rejectableRestocks,
+    consumptionReturnRows,
+    cancellableReturns,
+    cascadeOptionsFor,
     countsForUser,
     isOwnedBy,
     stampOf,

@@ -75,25 +75,20 @@
 <script setup>
 // Step 6c - plan the next visit. Its own content because it needs its own permission:
 // the contract gates it on `OutletVisits:create`, not on closing the current visit.
-import { computed, inject, watch } from 'vue'
+import { computed, watch } from 'vue'
 import AppDate from 'components/shared/AppDate.vue'
-import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
-import { useAuth } from 'src/composables/core/useAuth'
-import { useRecord } from 'src/composables/resources/useRecord'
-import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
+import { useConsumptionAddContext } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/useConsumptionAddContext'
 import { buildNextVisitNode } from 'src/_resource/Operation/OutletVisits/composables/useVisitPayload'
 import { visitDaysBetween } from 'src/_resource/Operation/OutletVisits/composables/useVisitCadence'
-import { nextVisitPlan } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/useNextVisitPlan'
+import { nextVisitPlan } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionDraft'
 import { NODE, ROLE, CTRL, getCtrl, setCtrl, stepVisible } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/nodes'
 
 defineOptions({ name: 'OutletConsumptionsAddScheduleNextVisit', inheritAttrs: false })
 
 const props = defineProps({ step: { type: [Number, String], default: null } })
 
-const ui = useAQLConfig()
-const pageState = inject('pageState')
-const { user } = useAuth()
-const operatingRules = useRecord('OutletOperatingRules')
+const { pageState, ui, user, resource, allowed } = useConsumptionAddContext()
+const operatingRules = resource('OutletOperatingRules')
 
 const text = (value) => (value == null ? '' : String(value).trim())
 const num = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0)
@@ -116,10 +111,10 @@ const nextVisitComment = computed(() => plan.value.comment)
 const onCompletion = computed(() =>
   !!text(consumption.node.value.record.OutletVisitCode) &&
   getCtrl(pageState, CTRL.COMPLETE_VISIT, true) === true &&
-  useResourceConfig(NODE.VISITS).allowed('complete') === true)
+  allowed(NODE.VISITS, 'complete'))
 
 const canSchedule = computed(() =>
-  !!outletCode.value && useResourceConfig(NODE.VISITS).allowed('create') === true)
+  !!outletCode.value && allowed(NODE.VISITS, 'create'))
 
 // The INTENT, and only the intent. Kept apart from whether the answers currently resolve
 // to a date: folding the two together let a day count of 0 empty the date, switch the card

@@ -624,9 +624,13 @@ export function buildReturnInvoiceCreditReversalNodes ({ returnRows = [] } = {})
 
 // The cancellation draft. The reversal depends only on the STORED row, so it stands from
 // mount; the reason is the one thing the operator adds.
-export function buildReturnCancelInitNodes ({ record = {} } = {}) {
+//
+// `role` addresses both nodes, so a caller cancelling SEVERAL returns in one batch does not
+// collapse them onto one address. `reason` lets a cascade write its own explanation.
+export function buildReturnCancelInitNodes ({ record = {}, reason = '', role = '' } = {}) {
   const row = asRow(record)
   const code = text(row.Code)
+  const at = text(role) ? { role: text(role) } : {}
 
   if (!code) return [{ valid: false, message: 'Return code is missing.' }]
   if (isCancelled(row)) return [{ valid: false, message: 'This return is already cancelled.' }]
@@ -635,8 +639,9 @@ export function buildReturnCancelInitNodes ({ record = {} } = {}) {
   // so a stamp here would be silently dropped by GAS.
   const nodes = [{
     resource: RESOURCE_NAME,
+    ...at,
     code: textOrRef(code),
-    record: { Progress: CANCELLED, ReasonComment: text(row.ReasonComment) },
+    record: { Progress: CANCELLED, ReasonComment: text(reason) || text(row.ReasonComment) },
     reload: ['OutletStorages'],
     permissions: { Cancel: 'You are not allowed to cancel this outlet return.' },
     successMsg: `Return ${code} cancelled.`
@@ -644,7 +649,7 @@ export function buildReturnCancelInitNodes ({ record = {} } = {}) {
 
   const reversal = -storedQtyChange(row)
   if (reversal !== 0) {
-    nodes.push(buildOutletMovementNode(outletMovementRow({
+    nodes.push({ ...buildOutletMovementNode(outletMovementRow({
       outletCode: row.OutletCode,
       storageName: row.StorageName,
       sku: row.SKU,
@@ -653,7 +658,7 @@ export function buildReturnCancelInitNodes ({ record = {} } = {}) {
       referenceType: OUTLET_REFERENCE.RETURN,
       referenceCode: code,
       movementDate: todayISO()
-    })))
+    })), ...at })
   }
 
   return nodes

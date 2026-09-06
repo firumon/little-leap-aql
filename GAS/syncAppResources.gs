@@ -1518,10 +1518,12 @@ function initAppResourcesCodeConfig() {
         Name: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTIONS,
         Scope: 'operation', IsActive: 'TRUE', SheetName: CONFIG.OPERATION_SHEETS.OUTLET_CONSUMPTIONS,
         CodePrefix: 'OC', CodeSequenceLength: 6, LastDataUpdatedAt: 0, Audit: 'TRUE', RequiredHeaders: 'OutletCode,Date,Username,Progress,Status', UniqueHeaders: '', UniqueCompositeHeaders: '', DefaultValues: '{"Status":"Active","Progress":"PENDING_INVOICE_GENERATION"}', RecordAccessPolicy: 'OWNER_AND_UPLINE', OwnerUserField: 'CreatedBy',
+        // `MarkInvoiceGenerated` is declared for the BATCH, not for a button. Its
+        // `visibleWhen` names a Progress value that never occurs, so the FAB never offers
+        // it, while `resolveAction` — which ignores `visibleWhen` — still queues it.
         AdditionalActions: JSON.stringify([
-            {"action":"MarkInvoiceGenerated","label":"Mark Invoice Generated","icon":"receipt_long","color":"positive","kind":"mutate","confirm":true,"column":"Progress","columnValue":"INVOICE_GENERATED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Comment","type":"textarea","required":false}],"visibleWhen":{"column":"Progress","op":"eq","value":"PENDING_INVOICE_GENERATION"}},
-            {"action":"CancelConsumption","label":"Cancel Consumption","icon":"cancel","color":"negative","kind":"navigate","navigate":{"target":"action","pageSlug":"cancel-consumption"},"visibleWhen":{"column":"Progress","op":"nin","value":["CANCELLED"]}},
-            {"action":"MarkPendingInvoiceGeneration","label":"Revert To Invoiceable","icon":"undo","color":"warning","kind":"mutate","confirm":true,"column":"Progress","columnValue":"PENDING_INVOICE_GENERATION","columnValueOptions":[],"fields":[{"name":"Comment","label":"Comment","type":"textarea","required":false}],"visibleWhen":{"column":"Progress","op":"eq","value":"INVOICE_GENERATED"}}
+            {"action":"MarkInvoiceGenerated","label":"Mark Invoice Generated","icon":"receipt_long","color":"positive","kind":"mutate","confirm":true,"column":"Progress","columnValue":"INVOICE_GENERATED","columnValueOptions":[],"fields":[{"name":"Comment","label":"Comment","type":"textarea","required":false}],"visibleWhen":{"column":"Progress","op":"eq","value":"__NEVER__"}},
+            {"action":"CancelConsumption","label":"Cancel Consumption","icon":"cancel","color":"negative","kind":"navigate","navigate":{"target":"action","pageSlug":"cancel-consumption"},"visibleWhen":{"column":"Progress","op":"nin","value":["CANCELLED"]}}
         ]),
         Menu: JSON.stringify([{ "group": ["Field Sales"], "order": 6, "label": "Outlet Consumptions", "icon": "point_of_sale", "route": "/operation/outlet-consumptions", "pageTitle": "Outlet Consumptions", "pageDescription": "Record outlet stock consumption", "show": true }]), UIFields: JSON.stringify([
             { header: 'OutletCode', label: 'Outlet Code', type: 'text' },
@@ -1544,22 +1546,11 @@ function initAppResourcesCodeConfig() {
             {"id":"rep_1776000000021","name":"consumption-receipt","label":"Consumption Receipt","templateSheet":"Consumption","isRecordLevel":true,"inputs":[{"targetCell":"AB6","field":"Code"}],"pdfOptions":{}},
             {"id":"rep_1776000000022","name":"consumption-records-log","label":"Consumption Log","templateSheet":"ConsumptionRecords","isRecordLevel":false,"inputs":[{"label":"Username","type":"select","targetCell":"J11","source":{"resource":"OutletConsumptions","field":"Username"},"default":"Any User","required":false},{"label":"Date","type":"select","targetCell":"J12","source":{"resource":"OutletConsumptions","field":"Date"},"default":"All Date","required":false}],"pdfOptions":{}}
         ]), CustomUIName: '',
-        // Four work queues, in the order a field officer walks through their day.
-        //
-        // The first two are PROJECTION views: what they list is not an
-        // OutletConsumptions row at all. `ScheduledOutlets` lists today's and overdue
-        // OutletVisits (the work still to be done), and `InvoiceableOutlets` lists
-        // OUTLETS carrying uninvoiced consumptions rather than the consumptions
-        // themselves. A sheet filter can only ever narrow this resource's own rows, so
-        // the filters below are the closest honest narrowing and the real projection is
-        // supplied by the per-view `.vue` overrides
-        // (_ui/AQL/components/Operation/OutletConsumptions/Index/List<View>.vue,
-        // UI_MODULE_DEVELOPER_GUIDE.md §7.1). The filters still matter: they drive the
-        // pill counts and keep a deep link to either view from showing settled history.
-        //
-        // The last two are ordinary state filters over this resource's own rows.
+        // `Recent` opens the page. `InvoiceableOutlets` is a PROJECTION: it lists OUTLETS
+        // carrying uninvoiced consumptions, supplied by its own `.vue` override; the filter
+        // here only drives the pill count. The last two are plain state filters.
         ListViews: JSON.stringify([
-            { "name": "ScheduledOutlets", "label": "Scheduled Outlets", "icon": "event_available", "color": "primary", "default": true, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "nin", "value": ["CANCELLED"] }] } },
+            { "name": "Recent", "label": "Recent", "icon": "history", "color": "indigo-7", "default": true, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }, { "type": "condition", "column": "Progress", "operator": "not_in", "value": ["CANCELLED"] }] } },
             { "name": "InvoiceableOutlets", "label": "Invoiceable Outlets", "icon": "request_quote", "color": "warning", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "PENDING_INVOICE_GENERATION" }] } },
             { "name": "Completed", "label": "Completed", "icon": "task_alt", "color": "positive", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "INVOICE_GENERATED" }] } },
             { "name": "Cancelled", "label": "Cancelled", "icon": "block", "color": "negative", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "CANCELLED" }] } }

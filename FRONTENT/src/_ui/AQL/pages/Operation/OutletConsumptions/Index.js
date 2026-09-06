@@ -1,4 +1,5 @@
 import {
+  recentPreset,
   completedPreset,
   cancelledPreset
 } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Index/useConsumptionRowPresets'
@@ -25,13 +26,12 @@ import {
  *
  * ── THE FOUR VIEWS ────────────────────────────────────────────────────────────
  *
- * The first two are PROJECTIONS and each needs a template, so each is a `.vue` override
- * rather than a props block:
+ * `Recent` (DEFAULT) opens the page — the latest 50 live audits, newest first, so a
+ * returning officer sees what moved without having to pick a queue first.
  *
- *   ScheduledOutlets    (DEFAULT) today's planned visits + everything overdue. Lists
- *                       OutletVisits, not consumptions — the work still to be done.
- *   InvoiceableOutlets  one row per OUTLET carrying uninvoiced consumptions, heaviest
- *                       backlog first, so a bundling trip is planned from one row.
+ * `InvoiceableOutlets` is a PROJECTION and needs a template, so it is a `.vue` override
+ * rather than a props block: one row per OUTLET carrying uninvoiced consumptions, heaviest
+ * backlog first, so a bundling trip is planned from one row.
  *
  * The last two are ordinary state filters over this resource's own rows, so they are
  * `Props<Identity>` blocks here — where the whole page's list behaviour reads in one place
@@ -66,6 +66,7 @@ export default {
     subtitle: 'Stock consumptions · count, invoice, restock'
   },
 
+  PropsListRecent: (props) => recentPreset(props.items),
   PropsListCompleted: (props) => completedPreset(props.items),
   PropsListCancelled: (props) => cancelledPreset(props.items)
 }

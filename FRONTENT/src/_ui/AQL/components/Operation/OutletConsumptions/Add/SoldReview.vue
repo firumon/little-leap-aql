@@ -110,12 +110,12 @@
 <script setup>
 // Step 3 - what sold, and the invoice terms. Every input writes straight into the
 // OutletConsumptionInvoices node; Layer 2's derive rules do the maths from there.
-import { computed, defineComponent, h, inject, useAttrs, watch } from 'vue'
+import { computed, defineComponent, h, useAttrs, watch } from 'vue'
 import { QItemLabel, QBtn } from 'quasar'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import AqlList from 'components/abstract/List.vue'
 import { useCurrency } from 'src/composables/useCurrency'
-import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
+import { useConsumptionAddContext } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/useConsumptionAddContext'
 import { usePriceListResource } from 'src/_resource/Master/PriceLists/composables/usePriceListResource'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
@@ -141,8 +141,7 @@ const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 const gutterClassColX = computed(() => `q-col-gutter-x-${attrs.gutter || 'sm'}`)
 
-const ui = useAQLConfig()
-const pageState = inject('pageState')
+const { pageState, ui } = useConsumptionAddContext()
 const { _C } = useCurrency()
 const { activePriceLists } = usePriceListResource()
 const { getSku } = useSkuResource()

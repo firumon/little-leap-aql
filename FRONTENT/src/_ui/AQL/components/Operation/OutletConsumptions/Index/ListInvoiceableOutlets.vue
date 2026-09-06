@@ -43,10 +43,10 @@
  * here, so the "Uninvoiced Outlets" metric card above and this list are counting the same
  * set (§7.4).
  *
- * `props.items` is deliberately ignored, as in `ListScheduledOutlets.vue` — the rows are a
- * different shape from the resource's own records. The sheet filter behind this pill
- * (`Progress = PENDING_INVOICE_GENERATION`) still drives its count and keeps a deep link
- * off settled history.
+ * The rows are a different SHAPE from the resource's own records, but not a different
+ * SET: `items` carries the rows this pill's filter and the search box have already
+ * narrowed, so the outlets are kept to the ones those rows belong to. That is what makes
+ * the pill count, the search box and this list agree instead of drifting apart.
  *
  * Clicking a row opens that outlet's LATEST consumption. The row stands for several
  * records, so the tap has to resolve to one, and the newest is what the reader is asking
@@ -60,15 +60,28 @@
  *
  * No `<style>` block (ARCHITECTURE RULES §7).
  */
-import { computed } from 'vue'
+import { computed, useAttrs } from 'vue'
 import AppList from 'components/app/AppList.vue'
 import { useConsumptionIndexContext } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Index/useConsumptionIndexContext'
 
 defineOptions({ name: 'OutletConsumptionsIndexListInvoiceableOutlets', inheritAttrs: false })
 
+const attrs = useAttrs()
 const { index, ui, nav } = useConsumptionIndexContext()
 
-const rows = computed(() => index.invoiceableOutlets.value)
+// The outlets the already-filtered rows belong to. `null` while `items` has not been
+// handed down yet, which means "do not narrow" rather than "narrow to nothing".
+const filteredOutlets = computed(() => {
+  const items = attrs.items
+  if (!Array.isArray(items)) return null
+  return new Set(items.map((row) => String(row?.OutletCode ?? '').trim()).filter(Boolean))
+})
+
+const rows = computed(() => {
+  const keep = filteredOutlets.value
+  const all = index.invoiceableOutlets.value
+  return keep ? all.filter((entry) => keep.has(entry.outletCode)) : all
+})
 
 const rowLabel = (row) => row.outletName
 

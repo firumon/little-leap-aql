@@ -21,10 +21,10 @@
 <script setup>
 // Step 6a - read-only recap, straight off the nodes. Figures only, no controls: a
 // decision stays editable only beside the evidence it was made against (§13.6).
-import { computed, inject, useAttrs } from 'vue'
+import { computed, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import { useCurrency } from 'src/composables/useCurrency'
-import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
+import { useConsumptionAddContext } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/useConsumptionAddContext'
 import { useOutletResource } from 'src/_resource/Master/Outlets/composables/useOutletResource'
 import { netPayableOf } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionInvoice'
 import { NODE, stepVisible } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/nodes'
@@ -36,8 +36,7 @@ const props = defineProps({ step: { type: [Number, String], default: null } })
 const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 
-const ui = useAQLConfig()
-const pageState = inject('pageState')
+const { pageState, ui } = useConsumptionAddContext()
 const { _C } = useCurrency()
 const { getOutlet } = useOutletResource()
 

@@ -119,11 +119,10 @@
 // Step 4b - what is being sent back. The lines are the restock node's OWN children, the
 // same rows step 2 writes and the same rows the submit reads. The routing decisions live
 // in RestockOptions.
-import { computed, inject, reactive, useAttrs } from 'vue'
+import { computed, reactive, useAttrs } from 'vue'
 import AqlAddItemsExpansion from 'components/shared/AqlAddItemsExpansion.vue'
 import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
-import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { useConsumptionAddContext } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/useConsumptionAddContext'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 import { useWarehouseStorageResource } from 'src/_resource/Operation/WarehouseStorages/composables/useWarehouseStorageResource'
 import { RESTOCK_CONTROL, restockItemRow, restockRoutingOf } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
@@ -137,11 +136,10 @@ const props = defineProps({ step: { type: [Number, String], default: null } })
 const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 
-const ui = useAQLConfig()
-const pageState = inject('pageState')
+const { pageState, ui, resource } = useConsumptionAddContext()
 const { getSku } = useSkuResource()
 const { index: warehouseStockIndex } = useWarehouseStorageResource()
-const skus = useRecord('SKUs')
+const skus = resource('SKUs')
 
 const NumberField = resolveFieldComponent('number', 'add')
 

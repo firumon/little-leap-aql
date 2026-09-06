@@ -1,23 +1,6 @@
-/**
- * OutletConsumptions › stock derivation & validation — Layer 2, the resource's domain logic.
- *
- * The arithmetic that turns a physical count into billable consumption, the return matrix
- * that decides what a surplus does to the ledger and the invoice, and the validation gate
- * every submission passes through. All of it is "what does this record mean", not "how is
- * it drawn", so all of it lives here rather than in a `_ui/` composable
- * (UI_RESOURCE_DOMAIN_LOGIC.md §3).
- *
- * PURE THROUGHOUT. Every export takes plain rows and returns plain values — no refs, no
- * `inject()`, no store, nothing rendered — so a `PageAction.js` running outside any
- * component setup can call the same functions the wizard cards call (§5).
- *
- * WHAT THIS FILE DELIBERATELY DOES NOT DO — price list resolution. `_resource/Master/
- * PriceLists` and `_resource/Master/Outlets` are already packed (§8.3): between them they
- * own the outlet-rule-then-global-default precedence AND the INLINE-vs-ITEMS lookup split,
- * keyed by `AppConfigMap.PriceListLookup`. Re-deriving either here would be a second
- * implementation of a solved rule, arrived at by the slowest possible route. `priceOf`
- * below is a thin, documented adapter onto those two — nothing more.
- */
+// OutletConsumptions stock maths, the return matrix, and the submit validation gate.
+// Layer 2, pure: plain rows in, plain values out. Price lists are NOT resolved here —
+// `priceOf` is a thin adapter onto Master/PriceLists and Master/Outlets.
 
 import { usePriceListResource } from 'src/_resource/Master/PriceLists/composables/usePriceListResource'
 import { useOutletResource } from 'src/_resource/Master/Outlets/composables/useOutletResource'
@@ -26,20 +9,10 @@ import {
   indexWarehouseStock,
   stockOf as warehouseStockOf
 } from 'src/_resource/Operation/WarehouseStorages/composables/useWarehouseStorageResource'
-/**
- * The return matrix below is DESCRIBED here but OWNED by OutletReturns (§10.1).
- *
- * A consumption decides which counted rows are surplus; what a surplus DOES — which way the
- * ledger moves, when the row counts as reconciled — is the returns domain's rule. Both
- * helpers below delegate to it so the wizard's preview banner and the payload builder can
- * never describe the same toggles differently.
- */
+// The return matrix is described here but OWNED by OutletReturns (§10.1), so both helpers
+// below delegate to it.
 import { returnQtyChange as returnDomainQtyChange } from 'src/_resource/Operation/OutletReturns/composables/useReturnPayload'
-import {
-  isReturnCompleted,
-  SUBMITTED as RETURN_SUBMITTED,
-  COMPLETED as RETURN_COMPLETED
-} from 'src/_resource/Operation/OutletReturns/composables/useReturnProgress'
+import { deriveReturnProgress, REASONS } from 'src/_resource/Operation/OutletReturns/composables/useReturnProgress'
 
 // ─── Primitives ───────────────────────────────────────────────────────────────
 
@@ -64,47 +37,23 @@ export function toNumber (value) {
 // in this module reads them from here, so the "Sold: 4" chip on the count card and the
 // `Qty: 4` the batch writes are guaranteed to be the same number.
 
-/**
- * Billable consumption — stock that left the outlet since the last audit.
- *
- * `max(0, …)` because a count ABOVE system stock is not negative consumption; it is a
- * return, which `returnQty` claims instead. Without the floor, a surplus would quietly
- * subtract from the invoice.
- */
+// Billable consumption. `max(0, …)` because a count ABOVE system stock is a return, which
+// `returnQty` claims instead.
 export function soldQty (systemQty, currentQty) {
   return Math.max(0, toNumber(systemQty) - toNumber(currentQty))
 }
 
-/**
- * Physical surplus — stock found at the outlet that the system did not know about, or a
- * damaged/expired unit entered by hand.
- *
- * The exact mirror of `soldQty`, so the two can never both be positive for one row and a
- * row can never be counted as both a sale and a return.
- */
+// Physical surplus — the exact mirror of `soldQty`, so no row can be both.
 export function returnQty (systemQty, currentQty) {
   return Math.max(0, toNumber(currentQty) - toNumber(systemQty))
 }
 
-/**
- * The default restock quantity for a counted row.
- *
- * Replenishment mirrors consumption: what was sold is what needs putting back. This is a
- * DEFAULT the user may override on the restock step, not a derived fact — which is why it
- * is a separate function rather than every caller reading `soldQty` and implying the rule.
- */
+// A DEFAULT the user may override on the restock step, not a derived fact.
 export function defaultRestockQty (systemQty, currentQty) {
   return soldQty(systemQty, currentQty)
 }
 
-/**
- * Count rows rebuilt from the wizard's own nodes.
- *
- * The consumption's item rows say what SOLD and the returns node's records say what came
- * BACK; the shelf says what the system held. Together they are the count row every builder
- * and validator in this module already reads, so the node graph does not need a second,
- * parallel copy of the count.
- */
+// Count rows rebuilt from the wizard's own nodes, so the node graph needs no second copy.
 export function countRowsOf (soldItems = [], returnRecords = [], storages = [], outletCode = '') {
   const outlet = text(outletCode)
   const shelf = new Map()
@@ -145,27 +94,24 @@ export function countRowsOf (soldItems = [], returnRecords = [], storages = [], 
   })
 }
 
+/** One positive-quantity filter for every row shape this module handles. */
+export function positiveRows (rows = [], key = 'Qty') {
+  return (Array.isArray(rows) ? rows : []).map(asRow).filter((row) => toNumber(row[key]) > 0)
+}
+
 /** The rows that produce `OutletConsumptionItems` and negative movements. */
 export function soldRowsOf (rows = []) {
-  return (Array.isArray(rows) ? rows : []).map(asRow).filter((row) => toNumber(row.SoldQty) > 0)
+  return positiveRows(rows, 'SoldQty')
 }
 
 /** The rows that produce `OutletReturns`. */
 export function returnRowsOf (rows = []) {
-  return (Array.isArray(rows) ? rows : []).map(asRow).filter((row) => toNumber(row.ReturnQty) > 0)
+  return positiveRows(rows, 'ReturnQty')
 }
 
-/**
- * The restock lines that will actually be requested.
- *
- * A different shape from the two above — restock rows are `{ SKU, Quantity }` collected on
- * step 4, not count rows — but it is the same question, so it is stated the same way and in
- * the same place. A zeroed line is not a restock; the wizard keeps it on screen until the
- * user leaves the step, and it is dropped here as well as there.
- */
+// A zeroed or SKU-less line is not a restock request.
 function restockRowsOf (rows = []) {
-  return (Array.isArray(rows) ? rows : []).map(asRow)
-    .filter((row) => text(row.SKU) && toNumber(row.Quantity) > 0)
+  return positiveRows(rows, 'Quantity').filter((row) => text(row.SKU))
 }
 
 // ─── The return matrix ────────────────────────────────────────────────────────
@@ -193,15 +139,11 @@ function restockRowsOf (rows = []) {
 // shipping it cancels out. Case 4 touches nothing at all: the unit stays where it is and
 // nobody is paid for it.
 
-export const RETURN_REASONS = ['DAMAGE', 'EXPIRED', 'SLOW_MOVING', 'RECALL', 'OVERSTOCK', 'SPECIFICATION_MISMATCH', 'OTHER']
+// The reason codes belong to OutletReturns, which owns the rows. Re-exported, never restated.
+export const RETURN_REASONS = REASONS
 
-/**
- * The ledger movement a return line writes, per the matrix above.
- *
- * Returns `0` for both cases where the two flags agree with each other, which is the
- * result — not an omission. A caller filters zero movements out rather than writing an
- * empty ledger row.
- */
+// The ledger movement a return line writes. `0` when the two flags agree — a result, not
+// an omission; the caller drops zero movements.
 export function returnQtyChange (quantity, meta = {}) {
   return returnDomainQtyChange(quantity, {
     invoiceRequired: asRow(meta).InvoiceAdjustmentRequired === true,
@@ -209,29 +151,16 @@ export function returnQtyChange (quantity, meta = {}) {
   })
 }
 
-/**
- * The Progress a newly-created return lands in.
- *
- * DELEGATED to the OutletReturns domain, which owns the completion rule. This used to key
- * COMPLETED off the warehouse track alone — so a return the outlet was owed a credit for,
- * with no warehouse leg, was stamped COMPLETED before anyone had credited it and could
- * never surface in a queue. The shared rule requires EVERY flagged track to be resolved.
- *
- * Kept as a named export with its original `(meta)` signature because the wizard's preview
- * banner (`Add/PendingReturns.vue`) calls it to tell the user what the toggles will do. It
- * MUST answer with whatever the payload builder will actually write, which is why it now
- * asks the same function the builder asks instead of restating the rule.
- */
+// The Progress a fresh return lands in. Asked of the row as OutletReturns will store it,
+// so the wizard's preview banner and the written row can never disagree.
 export function returnProgressFor (meta = {}) {
   const row = asRow(meta)
-  // The flags as the row will carry them, in the string form the domain reads.
-  const pending = {
+  return deriveReturnProgress({
     InvoiceAdjustmentRequired: row.InvoiceAdjustmentRequired === true ? 'TRUE' : 'FALSE',
     InvoiceAdjustmentDone: 'FALSE',
     WarehouseActionRequired: row.WarehouseActionRequired === true ? 'TRUE' : 'FALSE',
     WarehouseActionCompleted: 'FALSE'
-  }
-  return isReturnCompleted(pending) ? RETURN_COMPLETED : RETURN_SUBMITTED
+  })
 }
 
 /** Whether a return credits the invoice — the half of the matrix pricing cares about. */
@@ -241,15 +170,8 @@ export function creditsInvoice (meta = {}) {
 
 // ─── Price resolution — adapters, not a second implementation ─────────────────
 
-/**
- * The price list that applies to an outlet: its operating rule's, else the global default.
- *
- * Both halves of that precedence already live in `enrichOutlet` (which folds the outlet's
- * `OutletOperatingRules` row in and falls back to `defaultPriceList`), so this reads the
- * answer rather than recomputing it. Returns the ENRICHED price list, which already
- * carries the `priceMap` built under whichever lookup mode `AppConfigMap.PriceListLookup`
- * selected — so no caller ever branches on INLINE vs ITEMS.
- */
+// The outlet's price list: its operating rule's, else the global default. Read, not
+// recomputed — `enrichOutlet` already holds both halves of that precedence.
 export function priceListForOutlet (outletCode) {
   const { getOutlet } = useOutletResource()
   const { defaultPriceList } = usePriceListResource()
@@ -257,13 +179,8 @@ export function priceListForOutlet (outletCode) {
   return outlet?.priceList || defaultPriceList?.value || null
 }
 
-/**
- * A SKU's unit price under a given price list, or `null` when it has none.
- *
- * `null` rather than `0`, deliberately: an unpriced SKU is a condition the invoice step
- * must SURFACE, and silently billing it at zero is how a consignment gets given away.
- * `validateConsumption` treats it as an error when an invoice is being generated.
- */
+// A SKU's unit price, or `null` when it has none. `null` rather than `0`, deliberately:
+// silently billing an unpriced SKU at zero is how a consignment gets given away.
 export function priceOf (sku, priceListCode = '') {
   const { getPriceOf, defaultPriceList } = usePriceListResource()
   const code = text(priceListCode) || defaultPriceList?.value?.code || ''
@@ -276,12 +193,7 @@ export function lineTotal (qty, price) {
   return toNumber(qty) * toNumber(price)
 }
 
-/**
- * The monetary credit a set of return lines applies to the invoice.
- *
- * Only lines whose `InvoiceAdjustmentRequired` is set contribute — a return shipped back
- * without a credit reduces stock, not the bill.
- */
+// Only lines flagged `InvoiceAdjustmentRequired` credit the bill.
 export function returnDeductionTotal (returnRows = [], metaOf = () => ({}), priceListCode = '') {
   return (Array.isArray(returnRows) ? returnRows : []).map(asRow).reduce((total, row) => {
     if (!creditsInvoice(metaOf(row.SKU))) return total
@@ -300,25 +212,10 @@ export function discountAmount (subtotal, type = 'FLAT', value = 0) {
 
 // ─── The validation gate ──────────────────────────────────────────────────────
 
-/**
- * Everything that must be true before a consumption may be submitted.
- *
- * PURE and caller-fed: outlet storages arrive as an argument rather than being fetched, so
- * the same function validates the wizard's live rows and a replayed payload identically.
- *
- * Returns `{ valid, errors, warnings }`. Warnings do not block — an unpriced SKU is only
- * an error when an invoice is actually being generated, and is worth saying either way.
- *
- * ── THE "SOMETHING HAPPENED" RULE ──
- * A consumption needs at least one operational effect, and a RESTOCK is one of them. An
- * audit that counted every shelf exactly as the system had it, found no damage, and left a
- * replenishment request behind is a legitimate visit — the officer did the work and the
- * outlet is getting stock. Requiring a sale would force them to invent one.
- *
- * The check is SUBMIT-ONLY (`options.submitting`), and that is what makes the wizard
- * navigable: the restock lines are collected on step 4, so applying it while the user is
- * still on step 2 would refuse to let them reach the step where they would satisfy it.
- */
+// Everything that must be true before a consumption may be submitted. Pure and caller-fed.
+// A restock counts as an operational effect, so a count-and-replenish visit is legitimate.
+// The "at least one of the three" rule is submit-only, or step 2 would refuse to let the
+// user reach step 4 where they would satisfy it.
 export function validateConsumption (form = {}, rows = [], storages = [], options = {}) {
   const errors = []
   const warnings = []
@@ -402,12 +299,7 @@ export function validateConsumption (form = {}, rows = [], storages = [], option
   return { valid: errors.length === 0, errors, warnings }
 }
 
-/**
- * Warehouse stock available for a SKU at one warehouse.
- *
- * Used by the restock step to say, before submission, which lines the warehouse can
- * actually cover — so a partial allocation is a stated outcome rather than a surprise.
- */
+// Warehouse stock for one SKU, so the restock step can say what the warehouse can cover.
 export function warehouseAvailableQty (sku, warehouseCode, warehouseStorages = []) {
   const skuCode = text(sku)
   const warehouse = text(warehouseCode)
@@ -422,13 +314,8 @@ export function warehouseAvailableQty (sku, warehouseCode, warehouseStorages = [
   return warehouseStockOf(index, warehouse, skuCode)
 }
 
-/**
- * "What can the source warehouse cover for this restock" is an OutletRestocks question, so
- * `splitByWarehouseStock` is owned by
- * `_resource/Operation/OutletRestocks/composables/useRestockStockMatch.js` and merely
- * re-exported here — one definition, read by both modules (§3.3). Every existing caller
- * keeps its import line.
- */
+// Owned by OutletRestocks' useRestockStockMatch.js, re-exported so both modules read one
+// definition (§3.3).
 export { splitByWarehouseStock }
 
 // Composable shape for setup-context callers. Same functions, one import (§5).
@@ -441,6 +328,7 @@ export function useConsumptionStock () {
     returnQty,
     defaultRestockQty,
     countRowsOf,
+    positiveRows,
     soldRowsOf,
     returnRowsOf,
     returnQtyChange,

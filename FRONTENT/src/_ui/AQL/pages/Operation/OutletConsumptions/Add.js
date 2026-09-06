@@ -1,9 +1,9 @@
-import { consumptionNode } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionPayload'
-import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
-import { INVOICING, RESTOCKING, NODE } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/nodes'
-import { ledgerDerive } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/useLedgerPreview'
+import {
+  buildConsumptionInitNodes,
+  consumptionDraftDerivations
+} from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionDraft'
 
-const allowed = (resource, action) => useResourceConfig(resource).allowed(action) === true
+const RESOURCE = 'OutletConsumptions'
 
 // OutletConsumptions > Add - a six-step audit wizard. One content per decision;
 // the button table per step lives in `Add/PageAction.js`.
@@ -46,19 +46,18 @@ export default {
   PropsCompleteVisit: { step: 6 },
   PropsScheduleNextVisit: { step: 6 },
 
-  // Seeds the consumption node from the URL.
+  // Page.vue keeps ONE pageState per Page mount and never clears it, so the nodes and
+  // DERIVES of the last page visited are still here. Flush them, then mount the draft the
+  // domain builds. This contract lists no columns of its own (UI_PAGE_STATE_NODES §5.7A).
   ready ({ pageState, routeInfo }) {
     const query = routeInfo.value.query || {}
-    // The two page toggles start where the role's permissions leave them: a user who
-    // cannot create the record must never see its section switched on.
-    pageState.setControls(INVOICING, allowed(NODE.INVOICES, 'create'))
-    pageState.setControls(RESTOCKING, allowed(NODE.RESTOCKS, 'create'))
-    // Both ledgers follow the answers on their own. Declared here, not in a step card:
-    // only the page contract has a lifetime that outlives the steps (§14).
-    pageState.derive(ledgerDerive())
-    pageState.applyNodes(consumptionNode({
-      OutletCode: String(query.outletCode || '').trim(),
-      OutletVisitCode: String(query.visitCode || '').trim(),
-    }, [], {}))
+    pageState.resetForResource(RESOURCE)
+    // Page lifetime, not node lifetime: the consumption node is replaced whenever the
+    // outlet changes or the count settles, and rules riding on it would go with it.
+    pageState.derive(consumptionDraftDerivations())
+    pageState.applyNodes(buildConsumptionInitNodes({
+      outletCode: String(query.outletCode || '').trim(),
+      visitCode: String(query.visitCode || '').trim()
+    }))
   }
 }

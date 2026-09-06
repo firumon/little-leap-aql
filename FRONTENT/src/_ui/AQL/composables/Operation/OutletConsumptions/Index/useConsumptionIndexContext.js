@@ -1,6 +1,7 @@
-import { inject } from 'vue'
+import { inject, onMounted } from 'vue'
 import { evaluateProp } from 'src/composables/resources/useSectionResolver'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 import { useConsumptionIndex } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionIndex'
 
@@ -9,9 +10,8 @@ import { useConsumptionIndex } from 'src/_resource/Operation/OutletConsumptions/
  * (UI_RESOURCE_DOMAIN_LOGIC.md §6.1).
  *
  * PLACEMENT — `Index/`, the page tier (§6.2). Only `Index.js` provides this context, and
- * only `Index.js` resolves the two projection list overrides that read it
- * (`ListScheduledOutlets`, `ListInvoiceableOutlets`), both of which live under
- * `components/.../Index/`.
+ * only `Index.js` resolves the projection list override that reads it
+ * (`ListInvoiceableOutlets`), which lives under `components/.../Index/`.
  *
  * This is the ONLY `inject()` caller behind the Index page. The four widget modifiers do
  * not go through it — a JS modifier already RECEIVES `{ pageState, resourceRecord,
@@ -23,10 +23,18 @@ import { useConsumptionIndex } from 'src/_resource/Operation/OutletConsumptions/
  * here so a `.vue` under this page has one import rather than reaching into
  * `src/_resource/` alongside its context.
  */
+// The aggregate answers questions about outlets, visits and invoices, but the page's own
+// resolver fetches OutletConsumptions and nothing else. Without this the projection views
+// and the metric widgets read an empty store and show "nothing here" over real backlog.
+const INDEX_RESOURCES = ['Outlets', 'OutletVisits', 'OutletConsumptionInvoices', 'OutletOperatingRules']
+
 export function useConsumptionIndexContext () {
   const resourceRecord = inject('resourceRecord', null)
   const resourceConfig = inject('resourceConfig', null)
   const ui = useAQLConfig()
+
+  const sources = INDEX_RESOURCES.map((name) => useRecord(name))
+  onMounted(() => sources.forEach((resource) => resource.reload()))
 
   return {
     resourceRecord,

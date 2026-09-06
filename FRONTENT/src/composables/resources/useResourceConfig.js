@@ -44,9 +44,15 @@ function checkSingleAction(resConfig, action) {
   if (actionLower === 'update') return !!resConfig.permissions?.canUpdate
   if (actionLower === 'delete') return !!resConfig.permissions?.canDelete
 
-  // Dynamic action checks - resolving directly from permissions
+  // Dynamic action checks - resolving directly from permissions.
+  // A workflow action (Approve, MarkDelivered, Reallocate) is only a column in the
+  // permissions sheet when someone added one. With no column at all the flag is
+  // `undefined`, not `false` — so fall back to update/write instead of failing closed
+  // and blocking a user the sheet never meant to block.
   const pascalAction = cleanAction.charAt(0).toUpperCase() + cleanAction.slice(1)
-  return !!resConfig.permissions?.[`can${pascalAction}`]
+  const flag = resConfig.permissions?.[`can${pascalAction}`]
+  if (flag !== undefined && flag !== null && flag !== '') return !!flag
+  return !!(resConfig.permissions?.canUpdate || resConfig.permissions?.canWrite)
 }
 
 function checkActionsList(resConfig, actions) {

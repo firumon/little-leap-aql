@@ -302,12 +302,6 @@ export function useAdditionalActionsDialog () {
     dialog.outcome = value
   }
 
-// Console handle for debugging. Cleared on unmount so it is never a stale page.
-  if (process.env.DEV) {
-    window.ps = pageState
-    onUnmounted(() => { if (window.ps === pageState) delete window.ps })
-  }
-
   return {
     dialog,
     // Handed to the field components so a per-field `_ui/` override can bind straight

@@ -56,11 +56,12 @@ export const MetaBadge = defineComponent({
   name: 'MetaBadge',
   props: metaProps,
   setup(props, { slots }) {
+    // The slot, not the `label` prop: a slot returns VNODES, and QBadge's `label` takes
+    // a string, so passing them through it warned on every badge row.
     return () => h(QBadge, {
       color: props.color,
       textColor: props.textColor,
-      outline: props.outline,
-      label: slots.default ? slots.default() : ''
-    })
+      outline: props.outline
+    }, withDefaultSlot(slots))
   }
 })

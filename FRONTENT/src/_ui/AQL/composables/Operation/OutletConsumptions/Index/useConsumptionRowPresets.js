@@ -104,7 +104,8 @@ export function recentPreset (rows = []) {
   const sorted = newestFirst(live).slice(0, 50)
   return {
     ...baseRow(sorted),
-    caption: (row) => [formatDate(asRow(row).Date), elapsedLabel(row)].filter(Boolean).join(' · ')
+    caption: (row) => [formatDate(asRow(row).Date), elapsedLabel(row)].filter(Boolean).join(' · '),
+    metaLayout: ['chip']
   }
 }
 

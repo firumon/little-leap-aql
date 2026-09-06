@@ -8,6 +8,10 @@ export function usePageStateDerive ({ registry, mutations, actions }) {
   const scope = effectScope()
   const stoppers = new Map()
 
+  // Shut while a draft is being restored. A restored draft is already a fully
+  // derived snapshot, so re-running handlers over it would wipe its child rows.
+  let paused = 0
+
   // An `on` address names a reactive slice of the tree. Layer 2 is pure, so it can only
   // describe the slice — never hold a ref to it.
   function sourceFor (on) {
@@ -49,7 +53,10 @@ export function usePageStateDerive ({ registry, mutations, actions }) {
       stoppers.get(key)?.()
       scope.run(() => {
         const source = sourceFor(entry.on)
-        const stop = watch(source, (value, previous) => entry.handler(value, api, previous), {
+        const stop = watch(source, (value, previous) => {
+          if (paused) return
+          entry.handler(value, api, previous)
+        }, {
           deep: entry.deep !== false,
           immediate: entry.immediate !== false
         })
@@ -61,7 +68,16 @@ export function usePageStateDerive ({ registry, mutations, actions }) {
   function clear () {
     for (const stop of stoppers.values()) stop()
     stoppers.clear()
+    paused = 0
   }
 
-  return { register, clear, stop: () => { clear(); scope.stop() }, count: () => stoppers.size }
+  return {
+    register,
+    clear,
+    pause: () => { paused++ },
+    resume: () => { if (paused > 0) paused-- },
+    isPaused: () => paused > 0,
+    stop: () => { clear(); scope.stop() },
+    count: () => stoppers.size
+  }
 }

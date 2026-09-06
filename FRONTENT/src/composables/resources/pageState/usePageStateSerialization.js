@@ -69,7 +69,7 @@ export function usePageStateSerialization ({ state, meta, registry, setResource 
       else state.actions.push(entry)
     }
     if (payload.primaryKey) state.primaryKey = payload.primaryKey
-    if (payload.currentStep) meta.currentStep = payload.currentStep
+    if (payload.currentStep != null) meta.currentStep = payload.currentStep
     return true
   }
 

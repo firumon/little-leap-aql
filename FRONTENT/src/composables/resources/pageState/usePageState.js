@@ -1,4 +1,4 @@
-import { reactive, onScopeDispose } from 'vue'
+import { reactive, nextTick, onScopeDispose } from 'vue'
 import { useQuasar } from 'quasar'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { responseFailed, failureMessage, batchResultCode, resourceGetRequest } from '../resourceRequests'
@@ -66,15 +66,27 @@ export function usePageState (strategy = {}, options = {}) {
   const { validationErrors, nodeValidation } = usePageStateValidation({ state, registry, strategy })
   const { snapshot, serializeDraft, applyDraft } = usePageStateSerialization({ state, meta, registry, setResource: mutations.setResource })
 
+  // Derive watchers are pre-flush, so they run AFTER applyDraft returns. The gate
+  // is only reopened once that flush has drained, or a handler would re-seed the
+  // very child rows the draft just brought back.
+  function applyDraftQuietly (payload) {
+    derive.pause()
+    try {
+      return applyDraft(payload)
+    } finally {
+      nextTick(() => nextTick(() => derive.resume()))
+    }
+  }
+
   const draft = usePageStateDraft({
-    enabled: () => {
+    canPrompt: () => {
       const fromOptions = typeof options.persist === 'function' ? options.persist() : options.persist
       return fromOptions !== false && strategy.persist !== false
     },
     probe: () => ({ count: state.nodes.size, codes: [...state.nodes.values()].map((n) => n.code).filter(Boolean) }),
     sources: [state, () => meta.currentStep],
     serialize: serializeDraft,
-    apply: applyDraft
+    apply: applyDraftQuietly
   })
 
   function resetMeta () {
@@ -197,6 +209,12 @@ export function usePageState (strategy = {}, options = {}) {
     persistDraft: draft.persistDraft,
     restoreDraft: draft.restoreDraft,
     clearDraft: draft.clearDraft,
+    // Drives the action-bar draft pill and its preview dialog.
+    hasInitialDraft: draft.hasInitialDraft,
+    initialDraftInfo: draft.initialDraftInfo,
+    restoreInitialDraft: draft.restoreInitialDraft,
+    discardInitialDraft: draft.discardInitialDraft,
+    dismissInitialDraft: draft.dismissInitialDraft,
     validationErrors,
     snapshot,
     reset,

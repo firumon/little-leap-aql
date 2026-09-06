@@ -119,4 +119,10 @@ watch([pageReady, contractVersion], ([hook]) => {
 }, { immediate: true })
 
 onUnmounted(stopReadyScope)
+
+// Console handle for debugging. Cleared on unmount so it is never a stale page.
+if (process.env.DEV) {
+  window.pageState = pageState
+  onUnmounted(() => { if (window.pageState === pageState) delete window.pageState })
+}
 </script>

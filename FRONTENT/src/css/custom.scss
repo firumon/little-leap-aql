@@ -183,6 +183,14 @@
   gap: 10px;
 }
 
+// `justify-content: flex-end` right-aligns the bar, so this margin is what pins
+// the draft pill to the far left without touching the button order.
+.q-btn.aql-form-actions-draft-pill {
+  margin: 0 auto 0 0;
+  min-height: 36px;
+  min-width: 36px;
+}
+
 // Shared chrome for every button in the bar (FormActionSubmit/Reset/Cancel and any
 // tenant FormAction<Name>). Scoped as `.q-btn.…` so it outranks Quasar's own
 // equal-specificity `.q-btn--*` padding/typography rules regardless of load order.

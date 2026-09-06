@@ -1,5 +1,4 @@
-import { computed, watch } from 'vue'
-import { Dialog } from 'quasar'
+import { computed, ref, watch } from 'vue'
 import { useRouteConfig } from '../useRouteConfig'
 import { toPascalCase } from 'src/utils/appHelpers'
 
@@ -17,11 +16,21 @@ function storage () {
   }
 }
 
-const noop = { draftKey: computed(() => ''), restoreDraft: () => false, persistDraft: () => false, clearDraft: () => {} }
+const noop = {
+  draftKey: computed(() => ''),
+  restoreDraft: () => false,
+  persistDraft: () => false,
+  clearDraft: () => {},
+  hasInitialDraft: computed(() => false),
+  initialDraftInfo: computed(() => null),
+  restoreInitialDraft: () => false,
+  discardInitialDraft: () => {},
+  dismissInitialDraft: () => {}
+}
 
 // Draft persistence for usePageState. Owns the key, debounce and restore-once
 // lifecycle only; `serialize`/`apply` come from usePageState, which owns node shape.
-export function usePageStateDraft ({ enabled, probe, sources = [], serialize, apply } = {}) {
+export function usePageStateDraft ({ canPrompt, probe, sources = [], serialize, apply } = {}) {
   let route
   try {
     route = useRouteConfig()
@@ -43,7 +52,8 @@ export function usePageStateDraft ({ enabled, probe, sources = [], serialize, ap
     return name ? `${PREFIX}_${resource}_${toPascalCase(name)}${suffix}` : ''
   })
 
-  const isEnabled = () => (typeof enabled === 'function' ? enabled() !== false : enabled !== false)
+  // Gates the restore dialog only. Auto-saving never asks this.
+  const canAskToRestore = () => (typeof canPrompt === 'function' ? canPrompt() !== false : canPrompt !== false)
 
   // The form is only settled once the node the page is about actually exists. On a
   // record page that means the server row has been hydrated (its code is on a node);
@@ -100,7 +110,7 @@ export function usePageStateDraft ({ enabled, probe, sources = [], serialize, ap
   function persistDraft (force = false) {
     const key = draftKey.value
     const store = storage()
-    if (!key || !store || !isEnabled()) return false
+    if (!key || !store) return false
     const payload = serialize?.()
     // Nothing worth keeping — and writing here would bury a real draft under the
     // blank state a reset or a post-submit teardown leaves behind.
@@ -117,8 +127,7 @@ export function usePageStateDraft ({ enabled, probe, sources = [], serialize, ap
     }
   }
 
-  function restoreDraft (key = draftKey.value) {
-    const payload = read(key)
+  function applyPayload (key, payload) {
     if (!payload) return false
     try {
       return apply?.(payload) === true
@@ -129,15 +138,26 @@ export function usePageStateDraft ({ enabled, probe, sources = [], serialize, ap
     }
   }
 
+  function restoreDraft (key = draftKey.value) {
+    return applyPayload(key, read(key))
+  }
+
   function scheduleSave () {
     if (timer) clearTimeout(timer)
     timer = setTimeout(() => { timer = null; persistDraft() }, DEBOUNCE_MS)
   }
 
+  // Held in memory from mount so a later auto-save cannot overwrite the draft the
+  // pill is still offering. Set once per key, never by typing in this visit.
+  const initialDraft = ref(null)
+  const draftHandled = ref(false)
+
   watch(draftKey, () => {
     restoredFor = ''
     promptedFor = ''
     suspended = null
+    initialDraft.value = null
+    draftHandled.value = false
     if (timer) { clearTimeout(timer); timer = null }
   })
 
@@ -149,49 +169,79 @@ export function usePageStateDraft ({ enabled, probe, sources = [], serialize, ap
     scheduleSave()
   }
 
-  function askToRestore (key) {
-    Dialog.create({
-      title: 'Restore Unsaved Draft?',
-      message: 'We found unsaved changes for this form. Would you like to restore them or discard?',
-      persistent: true,
-      ok: { label: 'Restore', color: 'primary', flat: false },
-      cancel: { label: 'Discard', color: 'negative', flat: true }
-    })
-      .onOk(() => {
-        if (draftKey.value !== key) return
-        restoreDraft(key)
-        resumeSaving(key)
-      })
-      .onCancel(() => {
-        if (draftKey.value !== key) return
-        clearDraft(key)
-        resumeSaving(key)
-      })
+  const hasInitialDraft = computed(() => canAskToRestore() && !draftHandled.value && !!initialDraft.value)
+
+  // A short human summary of the saved work, so the user recognises it.
+  function previewOf (payload) {
+    const entries = payload.nodes || []
+    const main = entries.find((n) => n.resource === payload.primaryKey && n.record && Object.keys(n.record).length) ||
+      entries.find((n) => n.record && Object.keys(n.record).length)
+    const fields = Object.entries(main?.record || {})
+      .filter(([, value]) => value !== '' && value !== null && value !== undefined && typeof value !== 'object')
+      .slice(0, 6)
+      .map(([label, value]) => ({ label, value: String(value) }))
+    const rows = entries.reduce((sum, n) => sum + (n.records?.length || 0) +
+      (n.children || []).reduce((c, b) => c + (b.records?.length || 0), 0), 0)
+    return { resource: main?.resource || payload.primaryKey || '', fields, rows }
+  }
+
+  const initialDraftInfo = computed(() => {
+    const payload = initialDraft.value
+    if (!payload) return null
+    return { key: payload.key || draftKey.value, savedAt: payload.savedAt || null, ...previewOf(payload) }
+  })
+
+  function dismissInitialDraft () {
+    draftHandled.value = true
+    initialDraft.value = null
+  }
+
+  function restoreInitialDraft () {
+    const payload = initialDraft.value
+    const key = draftKey.value
+    dismissInitialDraft()
+    return applyPayload(key, payload)
+  }
+
+  function discardInitialDraft () {
+    clearDraft(draftKey.value)
+    dismissInitialDraft()
   }
 
   // Runs once per key, and only after the page has settled. A stored draft is
-  // never laid on the form until the user says so.
+  // only read here — it is never laid on the form until the user asks for it.
   watch(
     [draftKey, () => isSettled()],
     ([key, settled]) => {
-      if (!key || !settled || !isEnabled() || promptedFor === key) return
+      if (!key || !settled || promptedFor === key) return
       promptedFor = key
-      if (read(key)) askToRestore(key)
-      else resumeSaving(key)
+      initialDraft.value = read(key)
+      draftHandled.value = false
+      resumeSaving(key)
     },
     { immediate: true, flush: 'post' }
   )
 
-  // Auto-save stays shut until the restore attempt for this key is done, so the
+  // Auto-save stays shut until the restore step for this key is done, so the
   // freshly-initialized blank form can never overwrite the stored draft.
   watch(
     sources,
     () => {
-      if (!isEnabled() || !draftKey.value || restoredFor !== draftKey.value) return
+      if (!draftKey.value || restoredFor !== draftKey.value) return
       scheduleSave()
     },
     { deep: true }
   )
 
-  return { draftKey, restoreDraft, persistDraft: () => persistDraft(true), clearDraft }
+  return {
+    draftKey,
+    restoreDraft,
+    persistDraft: () => persistDraft(true),
+    clearDraft,
+    hasInitialDraft,
+    initialDraftInfo,
+    restoreInitialDraft,
+    discardInitialDraft,
+    dismissInitialDraft
+  }
 }

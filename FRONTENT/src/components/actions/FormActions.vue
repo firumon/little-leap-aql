@@ -16,6 +16,21 @@
         class="aql-form-actions-content"
         :class="{ 'aql-form-actions-content--stepping': stepping }"
       >
+        <!-- Pushed to the far left by its own margin, so the button set on the
+             right keeps its order and spacing exactly as before. -->
+        <q-btn
+          v-if="showDraftPill"
+          class="aql-form-actions-draft-pill"
+          round
+          dense
+          outline
+          color="warning"
+          icon="history"
+          @click="draftDialog = true"
+        >
+          <q-tooltip>Unsaved draft</q-tooltip>
+        </q-btn>
+
         <Action
           v-for="entry in resolvedActions"
           :key="entry.id"
@@ -24,6 +39,44 @@
         />
       </div>
     </div>
+
+    <q-dialog v-model="draftDialog">
+      <q-card style="min-width: 320px; max-width: 440px">
+        <q-card-section class="row items-center q-pb-sm">
+          <q-icon name="history" color="warning" size="24px" class="q-mr-sm" />
+          <div>
+            <div class="text-subtitle1 text-weight-medium">Unsaved Draft</div>
+            <div class="text-caption text-grey-7">{{ draftSavedLabel }}</div>
+          </div>
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-section class="q-py-sm">
+          <div
+            v-for="field in draftInfo?.fields || []"
+            :key="field.label"
+            class="row items-start q-py-xs"
+          >
+            <div class="col-5 text-caption text-grey-7 ellipsis">{{ field.label }}</div>
+            <div class="col-7 text-body2 ellipsis">{{ field.value }}</div>
+          </div>
+          <div v-if="draftInfo?.rows" class="text-caption text-grey-7 q-pt-xs">
+            {{ draftInfo.rows }} saved row(s)
+          </div>
+          <div v-if="!draftInfo?.fields?.length && !draftInfo?.rows" class="text-caption text-grey-7">
+            No field details were saved.
+          </div>
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-actions align="right">
+          <q-btn flat color="negative" label="Discard" @click="onDiscardDraft" />
+          <q-btn unelevated color="primary" label="Restore" @click="onRestoreDraft" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
@@ -48,8 +101,10 @@
  * All chrome (spacer height, gradient, blur, delayed slide-up entrance) lives in
  * `src/css/custom.scss` under `.aql-form-actions-*` — see ARCHITECTURE RULES §7.
  */
-import { computed, inject } from 'vue'
+import { computed, inject, ref } from 'vue'
+import { useQuasar } from 'quasar'
 import Action from 'components/Action.vue'
+import { relativeTimeLabel, toDateTime24 } from 'src/utils/dateHelpers'
 
 defineOptions({ name: 'ActionsFormActions', inheritAttrs: false })
 
@@ -90,6 +145,34 @@ const pageState = inject('pageState', null)
 // wizard step change, and always cleared by its timer. Drives the bar's fade and
 // mirrors the `disable` every FormAction* button already applies for it.
 const stepping = computed(() => !!pageState?.meta?.stepping)
+
+const $q = useQuasar()
+const draftDialog = ref(false)
+
+// A draft saved before this visit opened. Typing now never raises it.
+const showDraftPill = computed(() => !!pageState?.hasInitialDraft?.value)
+const draftInfo = computed(() => pageState?.initialDraftInfo?.value || null)
+
+const draftSavedLabel = computed(() => {
+  const savedAt = draftInfo.value?.savedAt
+  if (!savedAt) return 'Saved earlier'
+  return `Saved ${relativeTimeLabel(savedAt)} · ${toDateTime24(savedAt)}`
+})
+
+function onRestoreDraft () {
+  const ok = pageState?.restoreInitialDraft?.()
+  draftDialog.value = false
+  $q.notify({
+    type: ok ? 'positive' : 'negative',
+    message: ok ? 'Draft restored.' : 'Could not restore the draft.',
+    position: 'top'
+  })
+}
+
+function onDiscardDraft () {
+  pageState?.discardInitialDraft?.()
+  draftDialog.value = false
+}
 
 const resolvedScope    = computed(() => props.scope    ?? resourceConfig?.scope?.value        ?? 'master')
 const resolvedResource = computed(() => props.resource ?? resourceConfig?.resourceSlug?.value ?? '')

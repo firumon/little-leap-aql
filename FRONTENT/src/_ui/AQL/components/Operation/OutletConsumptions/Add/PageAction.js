@@ -66,12 +66,14 @@ export default (props, { pageState }) => {
     }
 
     if (step() === 2) {
-      const { sold, returned, restocks } = settleConsumptionCount(pageState)
+      const { sold, restocks } = settleConsumptionCount(pageState)
 
-      if (!sold.length && !restocks.length && !returned.length) {
+      // A consumption IS the sale. Returns or restocks alone are not one, so they cannot
+      // carry the wizard past this step on their own.
+      if (!sold.length) {
         return {
           valid: false,
-          message: 'Consumption requires at least one sold, restock, or return item to proceed.'
+          message: 'No any items sold to proceed ..'
         }
       }
 

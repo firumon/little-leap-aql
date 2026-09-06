@@ -16,12 +16,12 @@
       v-else
       :items="rows"
       item-key="outletCode"
-      :label="rowLabel"
-      :caption="rowCaption"
+      :layout="['label', 'caption', 'caption']"
+      :content="contentArray"
       :chip="rowChip"
       chip-color="warning"
       clickable
-      @click="openLatest"
+      @click="openOldest"
     />
   </div>
 </template>
@@ -48,11 +48,9 @@
  * narrowed, so the outlets are kept to the ones those rows belong to. That is what makes
  * the pill count, the search box and this list agree instead of drifting apart.
  *
- * Clicking a row opens that outlet's LATEST consumption. The row stands for several
- * records, so the tap has to resolve to one, and the newest is what the reader is asking
- * about — its View page then carries the invoice card and the "Recent Consumptions Here"
- * list, putting the rest of the backlog one tap away. Bundling itself still happens in the
- * Add wizard, which is reached from the record rather than jumped to blindly from here.
+ * Clicking a row opens that outlet's OLDEST consumption that still needs a bill. Its View
+ * page carries the invoice card and the "Recent Consumptions Here" list, so the rest of
+ * the backlog is one tap away. Bundling still happens in the Add wizard.
  *
  * NO ROW ACTION BUTTONS. Adding one would turn off `abstract/List.vue`'s whole-row tap and
  * force an explicit View button back on, which costs width on a phone for a row that has
@@ -63,6 +61,7 @@
 import { computed, useAttrs } from 'vue'
 import AppList from 'components/app/AppList.vue'
 import { useConsumptionIndexContext } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Index/useConsumptionIndexContext'
+import { formatRelativeAge } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Index/useConsumptionRowPresets'
 
 defineOptions({ name: 'OutletConsumptionsIndexListInvoiceableOutlets', inheritAttrs: false })
 
@@ -83,42 +82,31 @@ const rows = computed(() => {
   return keep ? all.filter((entry) => keep.has(entry.outletCode)) : all
 })
 
-const rowLabel = (row) => row.outletName
+const ageOf = (row, key) => formatRelativeAge(row[key] || row.lastAuditDate)
 
-/**
- * The caption states the FACT that puts this row in this queue — how long the oldest
- * unbilled audit has been sitting — rather than restating the outlet name in another form
- * (§7.2's queue-intent matrix).
- */
-const rowCaption = (row) => {
-  const days = row.daysSinceAudit
-  if (days === null || !Number.isFinite(days)) return 'Awaiting invoice'
-  if (days <= 0) return 'Counted today'
-  return `Last counted ${days === 1 ? '1 day' : `${days} days`} ago`
-}
+// Two ages show the SPREAD of the backlog, which is what a bundling trip needs to know.
+// One pending row has no spread, so it says "Consumption:" once and drops the third line.
+const contentArray = [
+  (row) => row.outletName,
+  (row) => {
+    const oldest = ageOf(row, 'oldestUninvoicedDate')
+    if (row.uninvoicedCount <= 1) return oldest ? `Consumption: ${oldest}` : 'Awaiting invoice'
+    return oldest ? `Oldest Consumption: ${oldest}` : ''
+  },
+  (row) => {
+    if (row.uninvoicedCount <= 1) return false
+    const newest = ageOf(row, 'newestUninvoicedDate')
+    return newest ? `Newest Consumption: ${newest}` : ''
+  }
+]
 
 const rowChip = (row) =>
-  `${row.uninvoicedCount} awaiting invoice`
+  `${row.uninvoicedCount}x Consumption${row.uninvoicedCount === 1 ? '' : 's'}`
 
-/**
- * Open the outlet's most recent consumption.
- *
- * The row aggregates several consumptions, so tapping it has to resolve to ONE of them.
- * The latest is the right target: it is the record the reader is asking about when they
- * pick this outlet off the queue, and its View page carries the invoice card, the sibling
- * "Recent Consumptions Here" list and the bundling context — so the rest of the backlog is
- * one tap further rather than hidden.
- *
- * The code is resolved by the shared aggregate in the same pass that computes the row's
- * age, so the record this opens is guaranteed to be the one the caption is describing.
- *
- * Fails CLOSED on a missing code rather than falling back to another destination: this
- * view only lists outlets that have at least one uninvoiced consumption, so a blank here
- * means the store has not settled yet, and navigating somewhere else would take the user
- * to a page they did not ask for.
- */
-function openLatest (row) {
-  const code = String(row?.latestConsumptionCode || '').trim()
+// The row stands for many consumptions, so a tap must pick one. Pick the oldest UNBILLED
+// one: a newer row here may already be invoiced. Do nothing if no code is ready yet.
+function openOldest (row) {
+  const code = String(row?.oldestUninvoicedCode || row?.uninvoicedCodes?.[0] || '').trim()
   if (!code) return
   nav.goTo('view', { code })
 }

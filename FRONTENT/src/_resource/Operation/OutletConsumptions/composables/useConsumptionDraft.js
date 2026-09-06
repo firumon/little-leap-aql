@@ -360,8 +360,8 @@ export function buildConsumptionInitNodes ({ outletCode = '', visitCode = '', ac
 // Why the wizard cannot be submitted, or '' when it can. The live rebuild already asked the
 // submit gates, so this only reads its verdict — it builds nothing.
 export function validateConsumptionDraft (pageState) {
-  if (!soldItemsOf(pageState).length && !returnItemsOf(pageState).length) {
-    return 'Count at least one item before submitting.'
+  if (!soldItemsOf(pageState).length) {
+    return 'No any items sold to proceed ..'
   }
   return text(pageState.getControls(CHAIN_BLOCK, ''))
 }

@@ -100,60 +100,29 @@ const shared = defineSharedComposable((dataStore) => {
     return covered
   })
 
-  /**
-   * Consumption code → the total quantity its item rows carry.
-   *
-   * BUILT BY JOIN, never from `row.$OutletConsumptionItems` — the store nests children onto
-   * a record only when that record is hydrated individually (a View page), so records read
-   * from a LIST carry no `$`-prefixed child arrays at all and a consumer reading them sees
-   * every consumption as empty. Same trap, same fix as `useInvoiceIndex`'s
-   * `consumptionItemsByCode`; see `uninvoicedConsumptions` below for what it cost here.
-   *
-   * ANSWERS `undefined`, NOT `0`, FOR A CONSUMPTION WITH NO ITEM ROWS LOADED. The child
-   * resource is fetched on demand, so "no rows for this code" means either an empty
-   * consumption or an unloaded one, and those must not render the same. A caller showing
-   * this figure has to decide what to print when it is missing rather than being handed a
-   * confident zero — which is exactly the lie the wizard was telling.
-   *
-   * One pass into a `Map`, so each lookup is O(1) rather than a scan per consumption
-   * (CORE_ARCHITECTURE_RULES §6).
-   */
-  const soldQtyByConsumption = computed(() => {
+  // Built by join. A list row has no `$OutletConsumptionItems`, so never read that.
+  // Returns `undefined`, not zero, when a code's lines are simply not loaded yet.
+  const consumptionLinesByCode = computed(() => {
     const map = new Map()
     consumptionItems.value.forEach((item) => {
       const code = text(item.OutletConsumptionCode)
       if (!code) return
-      map.set(code, (map.get(code) || 0) + num(item.Qty))
+      const entry = map.get(code) || { items: 0, qty: 0 }
+      entry.items += 1
+      entry.qty += num(item.Qty)
+      map.set(code, entry)
     })
     return map
   })
 
-  /** Total counted quantity of one consumption, or `undefined` if its lines are not loaded. */
-  const soldQtyOfConsumption = (code) => soldQtyByConsumption.value.get(text(code))
+  /** `{ items, qty }` for one consumption, or `undefined` if its lines are not loaded. */
+  const consumptionLinesOf = (code) => consumptionLinesByCode.value.get(text(code))
 
-  /**
-   * Consumptions still owed an invoice — the state column and the absence of a real
-   * invoice. Two conditions, both answerable from the PARENT row alone.
-   *
-   * NO LINE-ITEM CONDITION HERE, DELIBERATELY. An earlier version also required the
-   * consumption to carry a billable line, to keep ORPHAN headers out of the queue. That
-   * test cannot be asked at Index level: child rows are fetched only when a record is
-   * hydrated individually (a View page), so `OutletConsumptionItems` has zero rows on this
-   * page and `row.$OutletConsumptionItems` does not exist at all on records read from a
-   * LIST — see the same warning at `useInvoiceIndex.js`'s `itemsByConsumption`. The guard
-   * therefore reported EVERY consumption as empty and emptied the whole queue: 63 rows
-   * sitting in PENDING_INVOICE_GENERATION rendered as "Everything is invoiced".
-   *
-   * Loading every item row just to answer it would be the wrong trade — a whole child
-   * resource pulled into an index page for a guard against rows the submit path no longer
-   * writes (`Add/PageAction.js` writes no header unless something was actually consumed).
-   * A projection over parent rows must not depend on data the page does not load; the
-   * orphan case belongs where the items ARE loaded — the Add-invoice wizard, which reads
-   * the real lines before it offers a bill.
-   *
-   * The failure directions are not symmetric either: a stray empty header shows one extra
-   * row that resolves itself when opened, while this guard hid every real one.
-   */
+  /** Total counted quantity of one consumption, or `undefined` if its lines are not loaded. */
+  const soldQtyOfConsumption = (code) => consumptionLinesOf(code)?.qty
+
+  // Judge the PARENT row only. An added "must have a line" guard once emptied the whole
+  // queue, because item rows can still be missing here. Keep it out.
   const uninvoicedConsumptions = computed(() => {
     const covered = invoicedConsumptionCodes.value
     return consumptions.value.filter((row) =>
@@ -185,6 +154,10 @@ const shared = defineSharedComposable((dataStore) => {
           latestConsumptionCode: '',
           uninvoicedCount: 0,
           uninvoicedCodes: [],
+          oldestUninvoicedCode: '',
+          oldestUninvoicedDate: '',
+          newestUninvoicedCode: '',
+          newestUninvoicedDate: '',
           plannedToday: null,
           overdueVisits: []
         })
@@ -217,12 +190,32 @@ const shared = defineSharedComposable((dataStore) => {
       entry.latestConsumptionCode = code
     })
 
-    // Pass 2 — the uninvoiced backlog per outlet.
+    // Pass 2 — the backlog per outlet, and the OLDEST row in it. That is the one the queue
+    // is about. Same-second ties break on the lower Code, which always counts up.
     uninvoicedConsumptions.value.forEach((row) => {
       const entry = entryFor(row.OutletCode)
       if (!entry) return
       entry.uninvoicedCount += 1
-      entry.uninvoicedCodes.push(text(row.Code))
+      const code = text(row.Code)
+      entry.uninvoicedCodes.push(code)
+
+      const date = text(row.ProgressPendingInvoiceGenerationAt || row.Date)
+
+      const older = !entry.oldestUninvoicedDate ||
+        date < entry.oldestUninvoicedDate ||
+        (date === entry.oldestUninvoicedDate && code < entry.oldestUninvoicedCode)
+      if (older) {
+        entry.oldestUninvoicedDate = date
+        entry.oldestUninvoicedCode = code
+      }
+
+      const newer = !entry.newestUninvoicedDate ||
+        date > entry.newestUninvoicedDate ||
+        (date === entry.newestUninvoicedDate && code > entry.newestUninvoicedCode)
+      if (newer) {
+        entry.newestUninvoicedDate = date
+        entry.newestUninvoicedCode = code
+      }
     })
 
     // Pass 3 — planned visits, split into today's and everything already past.
@@ -381,6 +374,7 @@ const shared = defineSharedComposable((dataStore) => {
     invoicedConsumptionCodes,
     uninvoicedConsumptions,
     soldQtyOfConsumption,
+    consumptionLinesOf,
     outletAudits,
     auditByOutlet,
     consumptionsToday,

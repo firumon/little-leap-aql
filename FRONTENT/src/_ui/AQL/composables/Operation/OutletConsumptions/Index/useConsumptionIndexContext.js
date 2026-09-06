@@ -26,7 +26,14 @@ import { useConsumptionIndex } from 'src/_resource/Operation/OutletConsumptions/
 // The aggregate answers questions about outlets, visits and invoices, but the page's own
 // resolver fetches OutletConsumptions and nothing else. Without this the projection views
 // and the metric widgets read an empty store and show "nothing here" over real backlog.
-const INDEX_RESOURCES = ['Outlets', 'OutletVisits', 'OutletConsumptionInvoices', 'OutletOperatingRules']
+const INDEX_RESOURCES = [
+  'Outlets',
+  'OutletVisits',
+  'OutletConsumptionInvoices',
+  'OutletOperatingRules',
+  // The Invoiceable row shows "3 Items X 21 Qty", so the child lines must be on the page.
+  'OutletConsumptionItems'
+]
 
 export function useConsumptionIndexContext () {
   const resourceRecord = inject('resourceRecord', null)

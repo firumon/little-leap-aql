@@ -2208,6 +2208,11 @@ function initAppResourcesCodeConfig() {
 }
 
 function syncAppResourcesFromCode(silent) {
+    const protectedColumns = [
+        'FileID', 'CodePrefix', 'CodeSequenceLength', 'LastDataUpdatedAt',
+        'RecordAccessPolicy', 'Menu', 'Reports', 'ListViews', 'CustomUIName',
+        'Settings', 'Dashboard', 'Options'
+    ];
     initAppResourcesCodeConfig();
     if (!silent) resetLogSheet_();
     logToSheet_('Starting Sync APP.Resources from Code');
@@ -2216,7 +2221,7 @@ function syncAppResourcesFromCode(silent) {
     const sheet = ss.getSheetByName(CONFIG.SHEETS.RESOURCES);
     if (!sheet) throw new Error('Resources sheet not found');
 
-    // â”€â”€ Detect and add missing column headers â”€â”€
+    // Detect and add missing column headers
     var lastColumn = sheet.getLastColumn();
     var headers = [];
     if (lastColumn > 0) {
@@ -2272,13 +2277,17 @@ function syncAppResourcesFromCode(silent) {
         if (resourceRowMap[resource.Name]) {
             // Update existing record
             const rowNum = resourceRowMap[resource.Name];
+            const existingRowIndex = rowNum - 1;
             Object.keys(resource).forEach(function (key) {
-                // Preserve user-managed config columns on sync unless code explicitly provides a non-empty value.
-                if (idx[key] !== undefined && key !== 'FileID' && (key !== 'ListViews' || (resource.ListViews && resource.ListViews !== ''))) {
-                    sheet.getRange(rowNum, idx[key] + 1).setValue(resource[key]);
+                if (idx[key] !== undefined) {
+                    const cellVal = existingValues[existingRowIndex][idx[key]];
+                    const isBlank = cellVal === null || cellVal === undefined || (typeof cellVal === 'string' && cellVal.trim() === '');
+                    const isProtected = protectedColumns.indexOf(key) !== -1;
+                    if (!isProtected || isBlank) {
+                        sheet.getRange(rowNum, idx[key] + 1).setValue(resource[key]);
+                    }
                 }
             });
-            // FileID is intentionally left as-is on existing rows.
             updated++;
         } else {
             // Add new record â€” use setValues after clearing any inherited data validation

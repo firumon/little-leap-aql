@@ -1,4 +1,4 @@
-﻿# OPERATION Sheet Structure
+# OPERATION Sheet Structure
 
 ## Purpose
 This document describes the current operation-scope sheet families and their roles.
@@ -37,7 +37,7 @@ This document describes the current operation-scope sheet families and their rol
 ## Structural Expectations
 - operational sheets hold dynamic transaction/process records
 - sheets commonly use generated `Code`
-- audit/access columns depend on current resource metadata and setup rules
+- standard 5 audit columns on audited sheets: `CreatedAt`, `UpdatedAt`, `Revision`, `CreatedBy`, `UpdatedBy`
 - `WarehouseStorages` acts as the current-location inventory view derived from stock movement behavior
 - `POReceivings` is the editable inspection layer between `PurchaseOrders` and finalized `GoodsReceipts`; it stores direct `ProcurementCode` context and `POReceivingItems` stores entered inspection quantities only
 - `GoodsReceipts` and `GoodsReceiptItems` are finalized GRN resources; `GoodsReceiptItems.Qty` stores accepted quantity only
@@ -78,10 +78,12 @@ This document describes the current operation-scope sheet families and their rol
 > [!IMPORTANT]
 > **Inserting a column mid-sheet is a two-place change.** The report and view
 > templates read these sheets through bounded `IMPORTRANGE` ranges
-> (`OutletVisits!A2:R` / `A2:W`, `OutletConsumptionInvoices!A2:AB`,
+> (`OutletVisits!A2:R` / `A2:X`, `OutletConsumptionInvoices!A2:AB`,
 > `OutletOperatingRules!B2:G`) and address fields by fixed ordinal
 > (`INDEX(raw, 0, 18)`, `CHOOSECOLS(row, 5)`), so every column added, removed or
-> re-slotted shifts the templates that read past it. Whenever you change the
+> re-slotted shifts the templates that read past it. The introduction of the `Revision`
+> audit column shifted `CreatedBy` and `UpdatedBy` by one slot to the right across all
+> audited sheets, requiring bound ranges to widen by one column. Whenever you change the
 > header order of a sheet referenced from `Sheet Formulas/`, widen the range AND
 > re-number every ordinal in each affected template, then update
 > `Sheet Formulas/Reports/INDEX.md`. Adding a column at the END is the only

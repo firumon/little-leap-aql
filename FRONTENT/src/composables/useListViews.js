@@ -10,7 +10,7 @@ export { prepareFilter, evaluatePreparedFilter, evaluateFilter } from 'src/utils
 // Headers an auto-generated "categorical" view should never be built from.
 const AUTO_VIEW_EXCLUDED_HEADERS = new Set([
   'Code', 'Name', 'Status', 'Progress', 'Type',
-  'CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy', 'AccessRegion'
+  'CreatedAt', 'UpdatedAt', 'Revision', 'CreatedBy', 'UpdatedBy', 'AccessRegion'
 ])
 
 const POSITIVE_TOKENS = new Set([

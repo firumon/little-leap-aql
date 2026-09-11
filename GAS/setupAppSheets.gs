@@ -19,7 +19,6 @@ function setupAppSheets() {
       name: CONFIG.SHEETS.CONFIG,
       headers: ['Key', 'Value'],
       autoIdFormula: null,
-      validations: [],
       columnWidths: {
         Key: 200,
         Value: 400
@@ -41,6 +40,7 @@ function setupAppSheets() {
         'RequiredHeaders',
         'UniqueHeaders',
         'UniqueCompositeHeaders',
+        'Settings',
         'DefaultValues',
         'RecordAccessPolicy',
         'OwnerUserField',
@@ -51,42 +51,14 @@ function setupAppSheets() {
         'Functional',
         'PreAction',
         'PostAction',
+        'Dashboard',
         'Reports',
         'ListViews',
+        'Options',
         'CustomUIName',
         'Relations'
       ],
       autoIdFormula: null,
-      validations: [
-        {
-          colHeader: 'IsActive',
-          rule: SpreadsheetApp.newDataValidation()
-            .requireValueInList(['TRUE', 'FALSE'], true)
-            .setAllowInvalid(false)
-            .build()
-        },
-        {
-          colHeader: 'Audit',
-          rule: SpreadsheetApp.newDataValidation()
-            .requireValueInList(['TRUE', 'FALSE'], true)
-            .setAllowInvalid(false)
-            .build()
-        },
-        {
-          colHeader: 'IncludeInAuthorizationPayload',
-          rule: SpreadsheetApp.newDataValidation()
-            .requireValueInList(['TRUE', 'FALSE'], true)
-            .setAllowInvalid(false)
-            .build()
-        },
-        {
-          colHeader: 'Functional',
-          rule: SpreadsheetApp.newDataValidation()
-            .requireValueInList(['TRUE', 'FALSE'], true)
-            .setAllowInvalid(false)
-            .build()
-        }
-      ],
       columnWidths: {
         Name: 180,
         Scope: 100,
@@ -101,6 +73,7 @@ function setupAppSheets() {
         RequiredHeaders: 220,
         UniqueHeaders: 220,
         UniqueCompositeHeaders: 260,
+        Settings: 320,
         DefaultValues: 260,
         RecordAccessPolicy: 160,
         OwnerUserField: 150,
@@ -111,8 +84,10 @@ function setupAppSheets() {
         Functional: 100,
         PreAction: 180,
         PostAction: 180,
+        Dashboard: 320,
         Reports: 320,
         ListViews: 320,
+        Options: 320,
         CustomUIName: 160,
         Relations: 320
       }
@@ -121,7 +96,6 @@ function setupAppSheets() {
       name: CONFIG.SHEETS.ROLES,
       headers: ['RoleID', 'Name', 'Description'],
       autoIdFormula: null,
-      validations: [],
       columnWidths: {
         RoleID: 100,
         Name: 180,
@@ -132,7 +106,6 @@ function setupAppSheets() {
       name: CONFIG.SHEETS.ROLE_PERMISSIONS,
       headers: ['RoleID', 'Resource', 'Actions'],
       autoIdFormula: null,
-      validations: [],
       columnWidths: {
         RoleID: 100,
         Resource: 180,
@@ -143,15 +116,6 @@ function setupAppSheets() {
       name: CONFIG.SHEETS.DESIGNATIONS,
       headers: ['DesignationID', 'Name', 'HierarchyLevel', 'Status', 'Description'],
       autoIdFormula: null,
-      validations: [
-        {
-          colHeader: 'Status',
-          rule: SpreadsheetApp.newDataValidation()
-            .requireValueInList(['Active', 'Inactive'], true)
-            .setAllowInvalid(false)
-            .build()
-        }
-      ],
       columnWidths: {
         DesignationID: 120,
         Name: 180,
@@ -164,15 +128,6 @@ function setupAppSheets() {
       name: CONFIG.SHEETS.USERS,
       headers: ['UserID', 'Name', 'Email', 'PasswordHash', 'DesignationID', 'Roles', 'AccessRegion', 'Status', 'Avatar', 'ApiKey'],
       autoIdFormula: null,
-      validations: [
-        {
-          colHeader: 'Status',
-          rule: SpreadsheetApp.newDataValidation()
-            .requireValueInList(['Active', 'Inactive'], true)
-            .setAllowInvalid(false)
-            .build()
-        }
-      ],
       columnWidths: {
         UserID: 100,
         Name: 180,
@@ -190,15 +145,6 @@ function setupAppSheets() {
       name: CONFIG.SHEETS.ACCESS_REGIONS,
       headers: ['Code', 'Name', 'Parent'],
       autoIdFormula: null,
-      validations: [
-        {
-          colHeader: 'Code',
-          rule: SpreadsheetApp.newDataValidation()
-            .requireFormulaSatisfied('=REGEXMATCH(A2, "^[A-Z]{3}[0-9]{3}$")')
-            .setAllowInvalid(false)
-            .build()
-        }
-      ],
       columnWidths: {
         Code: 120,
         Name: 200,
@@ -209,7 +155,6 @@ function setupAppSheets() {
       name: CONFIG.SHEETS.METADATA,
       headers: ['Key', 'Value'],
       autoIdFormula: null,
-      validations: [],
       columnWidths: {
         Key: 300,
         Value: 600
@@ -268,14 +213,6 @@ function setupAppSheets() {
       }
     }
 
-    if (config.validations && config.validations.length > 0) {
-      const dataRows = Math.max(sheet.getMaxRows() - 1, 1);
-      config.validations.forEach(function (v) {
-        var colIndex = config.headers.indexOf(v.colHeader);
-        if (colIndex === -1) return;
-        sheet.getRange(2, colIndex + 1, dataRows, 1).setDataValidation(v.rule);
-      });
-    }
 
     // Banding
     const bandings = sheet.getBandings();
@@ -505,29 +442,6 @@ function setupAppSheets() {
  * Run this on existing APP sheets to fix Resources boolean validation
  * for text-based TSV paste (TRUE/FALSE).
  */
-function fixResourcesBooleanValidation() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(CONFIG.SHEETS.RESOURCES);
-  if (!sheet) throw new Error('Resources sheet not found');
-
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  const idx = {};
-  headers.forEach(function (h, i) { idx[h] = i; });
-
-  const targets = ['IsActive', 'Audit', 'IncludeInAuthorizationPayload', 'Functional'];
-  const rule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(['TRUE', 'FALSE'], true)
-    .setAllowInvalid(false)
-    .build();
-
-  const maxRows = Math.max(sheet.getMaxRows() - 1, 1);
-  targets.forEach(function (header) {
-    if (idx[header] === undefined) return;
-    sheet.getRange(2, idx[header] + 1, maxRows, 1).setDataValidation(rule);
-  });
-
-  SpreadsheetApp.getUi().alert('Resources boolean validation updated to TRUE/FALSE dropdown.');
-}
 
 /**
  * Run on existing APP files to add Access Region structures without rebuilding.
@@ -565,12 +479,6 @@ function upgradeAppSheetsForAccessRegions() {
     accessRegionSheet.setColumnWidth(3, 120);
     accessRegionSheet.getRange(1, 1, 1, 3).protect().setDescription('AccessRegions Headers - Do Not Edit').setWarningOnly(true);
   }
-
-  const codeRule = SpreadsheetApp.newDataValidation()
-    .requireFormulaSatisfied('=REGEXMATCH(A2, "^[A-Z]{3}[0-9]{3}$")')
-    .setAllowInvalid(false)
-    .build();
-  accessRegionSheet.getRange(2, 1, Math.max(accessRegionSheet.getMaxRows() - 1, 1), 1).setDataValidation(codeRule);
 
   SpreadsheetApp.getUi().alert('Upgrade complete: Users.AccessRegion and AccessRegions sheet are ready.');
 }

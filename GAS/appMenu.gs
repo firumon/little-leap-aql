@@ -21,6 +21,7 @@ function onOpen() {
       .addItem('Manage Actions', 'app_showActionManagerDialog')
       .addItem('Manage Lists', 'app_showListViewsManagerDialog')
       .addItem('Manage Relations', 'app_showRelationsManagerDialog')
+      .addItem('Manage Settings', 'app_showSettingsManagerDialog')
       .addSeparator()
       .addItem('Sync APP.Resources from Code', 'syncAppResourcesFromCode')
       .addItem('⚡ Recalculate LastDataUpdatedAt', 'recalculateAllResourcesLastDataUpdatedAtAndNotify')
@@ -29,10 +30,10 @@ function onOpen() {
     .addSubMenu(ui.createMenu('⚙️ Setup & Refactor')
       .addItem('Refactor APP Sheets', 'setupAppSheets')
       .addItem('Store APP File ID in Properties', 'setAppFileId')
-      .addItem('Refactor MASTER Sheets', 'setupMasterSheets')
+      .addItem('Refactor MASTER Sheets', 'app_showMasterRefactorDialog')
       .addSeparator()
-      .addItem('Setup All Operation', 'setupOperationSheets')
-      .addItem('Setup Base Accounts', 'setupAccountSheets'));
+      .addItem('Setup All Operation', 'app_showOperationRefactorDialog')
+      .addItem('Setup Base Accounts', 'app_showAccountRefactorDialog'));
 
   menu.addToUi();
 }
@@ -948,6 +949,137 @@ function app_saveResourceRelations(resourceName, relationsJson) {
   }
 }
 
+// =====================================================
+// Resource Settings Manager
+// =====================================================
+
+function app_showSettingsManagerDialog() {
+  const html = HtmlService.createHtmlOutputFromFile('settingsManager')
+    .setWidth(940)
+    .setHeight(660)
+    .setTitle('Manage Resource Settings');
+  SpreadsheetApp.getUi().showModalDialog(html, 'Manage Resource Settings');
+}
+
+/**
+ * Fetches all data needed for the Settings Manager UI.
+ * Returns every resource with its current settings array from config.
+ */
+function app_getSettingsManagerData() {
+  try {
+    var resources = getAllResourcesConfigs({ includeInactive: true });
+    var resourceList = resources.map(function(res) {
+      return {
+        name: res.name,
+        label: (Array.isArray(res.menus) && res.menus.length > 0 && res.menus[0].label) || res.name,
+        settings: Array.isArray(res.settings) ? res.settings : []
+      };
+    });
+
+    return { resources: resourceList };
+  } catch (e) {
+    throw new Error('Failed to load settings manager data: ' + e.message);
+  }
+}
+
+/**
+ * Saves settings for a specific resource as JSON to the Settings column.
+ * Validates identifier names, allowed types, and coerces values.
+ */
+function app_saveResourceSettings(resourceName, settingsJson) {
+  try {
+    if (!resourceName) throw new Error('Resource name is required');
+
+    var rawList = [];
+    if (typeof settingsJson === 'string') {
+      rawList = settingsJson.trim() ? JSON.parse(settingsJson) : [];
+    } else if (Array.isArray(settingsJson)) {
+      rawList = settingsJson;
+    }
+
+    if (!Array.isArray(rawList)) throw new Error('Settings must be an array');
+
+    var ALLOWED_TYPES = ['text', 'textarea', 'number', 'toggle', 'select', 'date', 'datetime', 'currency', 'tel', 'link'];
+    var nameRegex = /^[A-Za-z][A-Za-z0-9]*$/;
+    var seenNames = {};
+    var normalized = [];
+
+    for (var i = 0; i < rawList.length; i++) {
+      var item = rawList[i];
+      var rowNum = i + 1;
+      var name = (item.name || '').trim();
+
+      if (!name) {
+        throw new Error('Row ' + rowNum + ': Name is required and cannot be blank');
+      }
+      if (!nameRegex.test(name)) {
+        throw new Error('Row ' + rowNum + ': Name "' + name + '" is invalid. It must start with a letter and contain only letters and digits.');
+      }
+      if (seenNames[name]) {
+        throw new Error('Row ' + rowNum + ': Duplicate setting name "' + name + '"');
+      }
+      seenNames[name] = true;
+
+      var type = (item.type || 'text').trim().toLowerCase();
+      if (ALLOWED_TYPES.indexOf(type) === -1) {
+        throw new Error('Row ' + rowNum + ': Type "' + type + '" is not supported');
+      }
+
+      var detail = item.detail != null ? String(item.detail).trim() : '';
+      var value = item.value;
+      var options = [];
+
+      if (type === 'toggle') {
+        value = (value === true || value === 'true' || value === 1 || value === '1');
+      } else if (type === 'number') {
+        value = (value === '' || value == null) ? 0 : Number(value);
+        if (isNaN(value)) throw new Error('Row ' + rowNum + ': Value for number setting "' + name + '" must be a valid number');
+      } else if (type === 'select') {
+        value = value != null ? String(value) : '';
+        if (Array.isArray(item.options)) {
+          options = item.options.map(function(opt) { return String(opt).trim(); }).filter(function(opt) { return opt.length > 0; });
+        }
+      } else {
+        value = value != null ? String(value) : '';
+      }
+
+      normalized.push({
+        name: name,
+        detail: detail,
+        type: type,
+        value: value,
+        options: options
+      });
+    }
+
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(CONFIG.SHEETS.RESOURCES);
+    if (!sheet) throw new Error('Sheet ' + CONFIG.SHEETS.RESOURCES + ' not found');
+
+    var data = sheet.getDataRange().getValues();
+    var headers = data[0];
+    var nameIdx = headers.indexOf('Name');
+    var settingsIdx = headers.indexOf('Settings');
+
+    if (nameIdx === -1) throw new Error('Column "Name" not found in ' + CONFIG.SHEETS.RESOURCES);
+    if (settingsIdx === -1) throw new Error('Column "Settings" not found in ' + CONFIG.SHEETS.RESOURCES);
+
+    var valueToSave = normalized.length > 0 ? JSON.stringify(normalized) : '';
+
+    for (var r = 1; r < data.length; r++) {
+      if (data[r][nameIdx] === resourceName) {
+        sheet.getRange(r + 1, settingsIdx + 1).setValue(valueToSave);
+        clearResourceConfigCache();
+        return true;
+      }
+    }
+
+    throw new Error('Resource not found: ' + resourceName);
+  } catch (e) {
+    throw new Error('Failed to save settings: ' + e.message);
+  }
+}
+
 function recalculateAllResourcesLastDataUpdatedAtAndNotify() {
   resetLogSheet_();
   logToSheet_('Starting Recalculate LastDataUpdatedAt for All Resources');
@@ -1032,4 +1164,218 @@ function logToSheet_(msg) {
     }
   } catch(e) {}
 }
+
+// =====================================================
+// Schema Refactor Dialog & Handlers
+// =====================================================
+
+function app_showMasterRefactorDialog() {
+  app_showSchemaRefactorDialog_('master', 'Refactor MASTER Sheets');
+}
+
+function app_showOperationRefactorDialog() {
+  app_showSchemaRefactorDialog_('operation', 'Setup Operation Sheets');
+}
+
+function app_showAccountRefactorDialog() {
+  app_showSchemaRefactorDialog_('accounts', 'Setup Base Accounts');
+}
+
+function app_showSchemaRefactorDialog_(scope, title) {
+  var template = HtmlService.createTemplateFromFile('schemaRefactorManager');
+  template.scope = scope;
+  template.dialogTitle = title;
+  var html = template.evaluate()
+    .setWidth(850)
+    .setHeight(650)
+    .setTitle(title);
+  SpreadsheetApp.getUi().showModalDialog(html, title);
+}
+
+function app_getSchemaRefactorData(scope) {
+  try {
+    var schemas = [];
+    if (scope === 'master') {
+      schemas = setup_getMasterSchemas();
+    } else if (scope === 'operation') {
+      schemas = setup_getOperationSchemas();
+    } else if (scope === 'accounts') {
+      schemas = setup_getAccountSchemas();
+    }
+
+    var list = schemas.map(function(s) {
+      var sheetName = s.resourceName;
+      try {
+        var res = getResourceConfig(s.resourceName);
+        if (res && res.sheetName) sheetName = res.sheetName;
+      } catch (e) {}
+      return {
+        resourceName: s.resourceName,
+        sheetName: sheetName
+      };
+    });
+
+    return { scope: scope, sheets: list };
+  } catch (e) {
+    throw new Error('Failed to load schema data: ' + e.message);
+  }
+}
+
+function app_buildSchemaRefactorPlans(scope, selectedResourceNames) {
+  try {
+    var schemas = [];
+    if (scope === 'master') {
+      schemas = setup_getMasterSchemas();
+    } else if (scope === 'operation') {
+      schemas = setup_getOperationSchemas();
+    } else if (scope === 'accounts') {
+      schemas = setup_getAccountSchemas();
+    }
+
+    var selectedMap = {};
+    (selectedResourceNames || []).forEach(function(name) { selectedMap[name] = true; });
+
+    var plans = [];
+    schemas.forEach(function(schema) {
+      if (!selectedMap[schema.resourceName]) return;
+
+      try {
+        var resource = getResourceConfig(schema.resourceName);
+        var file = openSpreadsheetById(resource.fileId);
+        var sheet = file.getSheetByName(resource.sheetName);
+
+        if (!sheet) {
+          plans.push({
+            resourceName: schema.resourceName,
+            sheetName: resource.sheetName,
+            isNewSheet: true,
+            isEmpty: true,
+            hasChanges: true,
+            currentHeaders: [],
+            targetHeaders: schema.headers,
+            unchanged: [],
+            added: schema.headers.slice(),
+            removed: [],
+            moved: [],
+            renameSuspects: [],
+            hasQuestions: false,
+            summary: 'New sheet: all ' + schema.headers.length + ' columns will be created.'
+          });
+        } else {
+          var plan = setup_buildSchemaPlan(sheet, schema.headers);
+          plan.resourceName = schema.resourceName;
+          plans.push(plan);
+        }
+      } catch (err) {
+        plans.push({
+          resourceName: schema.resourceName,
+          sheetName: schema.resourceName,
+          error: err.message,
+          hasChanges: false,
+          hasQuestions: false,
+          summary: 'Error inspecting sheet: ' + err.message
+        });
+      }
+    });
+
+    return { plans: plans };
+  } catch (e) {
+    throw new Error('Failed to build schema refactor plans: ' + e.message);
+  }
+}
+
+function app_startSchemaRefactor(scope) {
+  try {
+    if (typeof clearAllAppCaches === 'function') clearAllAppCaches();
+    resetLogSheet_();
+    logToSheet_('Starting Schema Refactor via Dialog for scope: ' + scope);
+    return { success: true };
+  } catch (e) {
+    throw new Error('Failed to start schema refactor: ' + e.message);
+  }
+}
+
+function app_refactorOneSheet(scope, resourceName, decisions) {
+  try {
+    var schemas = [];
+    var headerColor, altColor;
+    if (scope === 'master') {
+      schemas = setup_getMasterSchemas();
+      headerColor = CONFIG.BRAND_COLOR;
+      altColor = '#f3f6fb';
+    } else if (scope === 'operation') {
+      schemas = setup_getOperationSchemas();
+      headerColor = (typeof OPERATION_HEADER_COLOR !== 'undefined') ? OPERATION_HEADER_COLOR : '#2E7D32';
+      altColor = (typeof OPERATION_ALT_ROW_COLOR !== 'undefined') ? OPERATION_ALT_ROW_COLOR : '#f0f7f1';
+    } else if (scope === 'accounts') {
+      schemas = setup_getAccountSchemas();
+      headerColor = (typeof ACCOUNTS_HEADER_COLOR !== 'undefined') ? ACCOUNTS_HEADER_COLOR : '#5C6BC0';
+      altColor = (typeof ACCOUNTS_ALT_ROW_COLOR !== 'undefined') ? ACCOUNTS_ALT_ROW_COLOR : '#f0f1fa';
+    } else {
+      throw new Error('Invalid scope: ' + scope);
+    }
+
+    var schema = null;
+    for (var i = 0; i < schemas.length; i++) {
+      if (schemas[i].resourceName === resourceName) {
+        schema = schemas[i];
+        break;
+      }
+    }
+    if (!schema) {
+      throw new Error('Schema definition not found for ' + resourceName);
+    }
+
+    var outcome = setup_refactorResourceSheet(schema, {
+      decisions: decisions || {},
+      allSchemas: schemas,
+      headerColor: headerColor,
+      altColor: altColor
+    });
+
+    return outcome;
+  } catch (e) {
+    return {
+      success: false,
+      resourceName: resourceName,
+      message: e.message
+    };
+  }
+}
+
+function app_finishSchemaRefactor(scope, summaryStats) {
+  try {
+    if (typeof clearAllAppCaches === 'function') clearAllAppCaches();
+    logToSheet_('Finished Schema Refactor via Dialog for scope: ' + scope);
+    return { success: true };
+  } catch (e) {
+    throw new Error('Failed to finish schema refactor: ' + e.message);
+  }
+}
+
+function app_runSchemaRefactor(scope, selectedResourceNames, decisions) {
+  try {
+    var options = {
+      selectedResources: selectedResourceNames,
+      decisions: decisions || {},
+      dialog: true
+    };
+
+    var summary = '';
+    if (scope === 'master') {
+      summary = setupMasterSheets(options);
+    } else if (scope === 'operation') {
+      summary = setupOperationSheets(options);
+    } else if (scope === 'accounts') {
+      summary = setupAccountSheets(options);
+    } else {
+      throw new Error('Invalid scope: ' + scope);
+    }
+
+    return { success: true, summary: summary };
+  } catch (e) {
+    throw new Error('Failed to run schema refactor: ' + e.message);
+  }
+}
+
 

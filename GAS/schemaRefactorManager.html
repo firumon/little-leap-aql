@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 13px;
+    color: #1e293b;
+    padding: 20px;
+    background-color: #F1F1F3;
+    line-height: 1.5;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #cbd5e1;
+    padding-bottom: 10px;
+    margin-bottom: 14px;
+    flex-shrink: 0;
+  }
+  h2 {
+    font-size: 17px;
+    font-weight: 700;
+    color: #000077;
+  }
+  .step-badge-group {
+    display: flex;
+    gap: 8px;
+  }
+  .step-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 12px;
+    background: #e2e8f0;
+    color: #64748b;
+  }
+  .step-badge.active {
+    background: #000077;
+    color: #fff;
+  }
+  .status-bar {
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    display: none;
+    font-weight: 500;
+    font-size: 12px;
+    border: 1px solid transparent;
+    flex-shrink: 0;
+  }
+  .status-bar.error {
+    display: block;
+    background: #fef2f2;
+    color: #991b1b;
+    border-color: #fca5a5;
+  }
+  .status-bar.success {
+    display: block;
+    background: #ecfdf5;
+    color: #065f46;
+    border-color: #a7f3d0;
+  }
+  .content-area {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .footer-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #cbd5e1;
+    padding-top: 12px;
+    margin-top: 12px;
+    flex-shrink: 0;
+  }
+  .footer-right {
+    display: flex;
+    gap: 8px;
+  }
+  button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+  button:hover { transform: translateY(-1px); }
+  button:active { transform: translateY(0); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-primary {
+    background: #000077;
+    color: #fff;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 119, 0.2);
+  }
+  .btn-primary:hover { background: #000055; }
+  .btn-secondary {
+    background: #fff;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+  }
+  .btn-secondary:hover { background: #f8fafc; }
+  .btn-sm {
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+  .card {
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    background: #fff;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  }
+  .sheet-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+  }
+  .sheet-checkbox-item {
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .sheet-checkbox-item:hover {
+    border-color: #94a3b8;
+    background: #fafafa;
+  }
+  .sheet-checkbox-item input {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+    accent-color: #000077;
+  }
+  .sheet-checkbox-label {
+    font-weight: 600;
+    color: #0f172a;
+    font-size: 13px;
+    user-select: none;
+  }
+  .badge {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+  }
+  .badge-ok { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+  .badge-change { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+  .badge-new { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+  .badge-suspect { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+  .mapping-row {
+    display: flex;
+    gap: 16px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #f1f5f9;
+  }
+  .mapping-col {
+    flex: 1;
+  }
+  .mapping-col-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+  }
+  .field-mapping-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 6px 10px;
+  }
+  .field-name {
+    font-weight: 600;
+    color: #1e293b;
+    font-size: 12px;
+  }
+  select {
+    padding: 6px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: inherit;
+    background: #fff;
+    color: #0f172a;
+    min-width: 170px;
+  }
+  select:focus {
+    outline: none;
+    border-color: #000077;
+    box-shadow: 0 0 0 2px rgba(0, 0, 119, 0.15);
+  }
+  .summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .summary-table th, .summary-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #e2e8f0;
+    text-align: left;
+  }
+  .summary-table th {
+    background: #f8fafc;
+    font-weight: 600;
+    color: #475569;
+  }
+  .log-box {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    background: #1e293b;
+    color: #f1f5f9;
+    border-radius: 8px;
+    padding: 14px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  .spinner {
+    border: 3px solid #e2e8f0;
+    border-top: 3px solid #000077;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    animation: spin 0.8s linear infinite;
+    display: inline-block;
+    vertical-align: middle;
+  }
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  .loading-container {
+    text-align: center;
+    padding: 40px 20px;
+    color: #475569;
+  }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #f1f5f9; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+</style>
+</head>
+<body>
+
+<div class="header-bar">
+  <h2 id="mainTitle">Refactor Sheets</h2>
+  <div class="step-badge-group">
+    <span id="badge1" class="step-badge active">1. Pick Sheets</span>
+    <span id="badge2" class="step-badge">2. Review & Resolve</span>
+    <span id="badge3" class="step-badge">3. Run</span>
+  </div>
+</div>
+
+<div id="status" class="status-bar"></div>
+
+<div class="content-area">
+  <!-- Step 1: Pick Sheets -->
+  <div id="step1View">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <p style="color:#475569; font-size:13px;">Choose which sheets to check and update:</p>
+      <div style="display:flex; gap:6px;">
+        <button class="btn-secondary btn-sm" onclick="selectAll(true)">Select All</button>
+        <button class="btn-secondary btn-sm" onclick="selectAll(false)">Deselect All</button>
+      </div>
+    </div>
+    <div id="sheetsGrid" class="sheet-grid">
+      <div class="loading-container">
+        <div class="spinner"></div>
+        <p style="margin-top:10px;">Loading sheet list...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: Resolve Columns & Review -->
+  <div id="step2View" style="display:none;">
+    <div id="questionsSection" style="margin-bottom:16px;"></div>
+
+    <div class="card">
+      <h3 style="font-size:13px; font-weight:700; color:#0f172a; margin-bottom:10px;">Summary of Changes for Ticked Sheets</h3>
+      <table class="summary-table">
+        <thead>
+          <tr>
+            <th>Sheet</th>
+            <th>Status</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody id="summaryTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Step 3: Run -->
+  <div id="step3View" style="display:none;">
+    <div class="card" style="margin-bottom:12px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+        <div id="runHeaderSpinner" class="spinner" style="width:20px; height:20px;"></div>
+        <h3 id="runHeaderTitle" style="font-size:14px; font-weight:700; color:#0f172a;">Refactoring sheets in-place...</h3>
+      </div>
+      <p style="color:#64748b; font-size:12px; line-height:1.4;">
+        Data is moved in-place without wiping sheets. Closing this window mid-run stops after the current sheet. Finished sheets stay finished. Re-running skips them safely.
+      </p>
+    </div>
+
+    <div class="card" style="padding:10px 14px; background:#fff;">
+      <div id="runProgressList" style="display:flex; flex-direction:column; gap:4px; max-height:360px; overflow-y:auto;"></div>
+    </div>
+
+    <div id="runResults" style="display:none; margin-top:12px;">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="badge badge-ok" style="font-size:13px; padding:6px 12px;">✓ Refactor Completed</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footer-bar">
+  <div>
+    <span id="selectedCountText" style="font-size:12px; color:#64748b;"></span>
+  </div>
+  <div class="footer-right">
+    <button id="cancelBtn" class="btn-secondary" onclick="google.script.host.close()">Cancel</button>
+    <button id="backBtn" class="btn-secondary" style="display:none;" onclick="goToStep1()">← Back</button>
+    <button id="nextBtn" class="btn-primary" onclick="goToStep2()" disabled>Next: Review Changes →</button>
+    <button id="runBtn" class="btn-primary" style="display:none;" onclick="runRefactor()">Run Refactor</button>
+    <button id="closeBtn" class="btn-primary" style="display:none;" onclick="google.script.host.close()">Close</button>
+  </div>
+</div>
+
+<div id="dialogParams" data-scope="<?!= scope ?>" data-title="<?!= dialogTitle ?>" style="display:none;"></div>
+
+<script>
+var _paramsEl = document.getElementById('dialogParams');
+var SCOPE = (_paramsEl && _paramsEl.getAttribute('data-scope')) || '<?!= scope ?>';
+var DIALOG_TITLE = (_paramsEl && _paramsEl.getAttribute('data-title')) || '<?!= dialogTitle ?>';
+
+var allSheets = [];
+var loadedPlans = [];
+var decisions = {}; // { [resourceName]: { [oldCol]: newCol } }
+
+document.getElementById('mainTitle').textContent = DIALOG_TITLE || 'Refactor Sheets';
+
+// Load initial sheets for this scope
+google.script.run
+  .withSuccessHandler(function(data) {
+    allSheets = data.sheets || [];
+    renderSheetsPicker();
+  })
+  .withFailureHandler(function(err) {
+    showStatus('Failed to load sheets: ' + err.message, 'error');
+  })
+  .app_getSchemaRefactorData(SCOPE);
+
+function showStatus(msg, type) {
+  var el = document.getElementById('status');
+  if (!msg) { el.style.display = 'none'; return; }
+  el.className = 'status-bar ' + (type || 'error');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function renderSheetsPicker() {
+  var container = document.getElementById('sheetsGrid');
+  container.innerHTML = '';
+  if (allSheets.length === 0) {
+    container.innerHTML = '<div style="color:#64748b; padding:20px;">No sheets configured in this scope.</div>';
+    return;
+  }
+
+  allSheets.forEach(function(s, idx) {
+    var item = document.createElement('label');
+    item.className = 'sheet-checkbox-item';
+    var chk = document.createElement('input');
+    chk.type = 'checkbox';
+    chk.value = s.resourceName;
+    chk.checked = true;
+    chk.id = 'chk_sheet_' + idx;
+    chk.onchange = updateSelectedCount;
+
+    var span = document.createElement('span');
+    span.className = 'sheet-checkbox-label';
+    span.textContent = s.sheetName || s.resourceName;
+
+    item.appendChild(chk);
+    item.appendChild(span);
+    container.appendChild(item);
+  });
+
+  updateSelectedCount();
+}
+
+function selectAll(val) {
+  allSheets.forEach(function(s, idx) {
+    var chk = document.getElementById('chk_sheet_' + idx);
+    if (chk) chk.checked = val;
+  });
+  updateSelectedCount();
+}
+
+function getSelectedSheets() {
+  var selected = [];
+  allSheets.forEach(function(s, idx) {
+    var chk = document.getElementById('chk_sheet_' + idx);
+    if (chk && chk.checked) selected.push(s.resourceName);
+  });
+  return selected;
+}
+
+function updateSelectedCount() {
+  var selected = getSelectedSheets();
+  document.getElementById('selectedCountText').textContent = selected.length + ' of ' + allSheets.length + ' sheets selected';
+  document.getElementById('nextBtn').disabled = (selected.length === 0);
+}
+
+function setStep(step) {
+  document.getElementById('step1View').style.display = (step === 1 ? 'block' : 'none');
+  document.getElementById('step2View').style.display = (step === 2 ? 'block' : 'none');
+  document.getElementById('step3View').style.display = (step === 3 ? 'block' : 'none');
+
+  document.getElementById('badge1').className = 'step-badge' + (step === 1 ? ' active' : '');
+  document.getElementById('badge2').className = 'step-badge' + (step === 2 ? ' active' : '');
+  document.getElementById('badge3').className = 'step-badge' + (step === 3 ? ' active' : '');
+
+  document.getElementById('cancelBtn').style.display = (step === 1 || step === 3 ? 'inline-flex' : 'none');
+  document.getElementById('backBtn').style.display = (step === 2 ? 'inline-flex' : 'none');
+  document.getElementById('nextBtn').style.display = (step === 1 ? 'inline-flex' : 'none');
+  document.getElementById('runBtn').style.display = (step === 2 ? 'inline-flex' : 'none');
+  document.getElementById('closeBtn').style.display = 'none';
+}
+
+function goToStep1() {
+  setStep(1);
+  showStatus(null);
+}
+
+function goToStep2() {
+  var selected = getSelectedSheets();
+  if (selected.length === 0) return;
+
+  showStatus(null);
+  document.getElementById('nextBtn').disabled = true;
+  document.getElementById('nextBtn').textContent = 'Inspecting Schemas...';
+
+  google.script.run
+    .withSuccessHandler(function(data) {
+      document.getElementById('nextBtn').disabled = false;
+      document.getElementById('nextBtn').textContent = 'Next: Review Changes →';
+      loadedPlans = data.plans || [];
+      initDecisionsAndRenderStep2();
+      setStep(2);
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('nextBtn').disabled = false;
+      document.getElementById('nextBtn').textContent = 'Next: Review Changes →';
+      showStatus('Failed to build plans: ' + err.message, 'error');
+    })
+    .app_buildSchemaRefactorPlans(SCOPE, selected);
+}
+
+function initDecisionsAndRenderStep2() {
+  decisions = {};
+  loadedPlans.forEach(function(plan) {
+    decisions[plan.resourceName] = {};
+    // Pre-select rename suspects
+    if (plan.renameSuspects && plan.renameSuspects.length > 0) {
+      plan.renameSuspects.forEach(function(suspect) {
+        decisions[plan.resourceName][suspect.oldName] = suspect.newName;
+      });
+    }
+  });
+
+  renderQuestions();
+  renderSummaryTable();
+}
+
+function renderQuestions() {
+  var container = document.getElementById('questionsSection');
+  container.innerHTML = '';
+
+  var questionPlans = loadedPlans.filter(function(p) { return p.hasQuestions; });
+
+  if (questionPlans.length === 0) {
+    container.innerHTML = '<div class="card" style="background:#f8fafc; border:1px solid #e2e8f0; color:#475569; font-size:12px;">' +
+      '✓ No column renames require resolution. All changes are clear and ready to apply.' +
+      '</div>';
+    return;
+  }
+
+  var headerCard = document.createElement('div');
+  headerCard.style.marginBottom = '10px';
+  headerCard.innerHTML = '<h3 style="font-size:13px; font-weight:700; color:#0f172a;">Column Rename Questions</h3>' +
+    '<p style="font-size:12px; color:#64748b;">The sheets below have both removed and added columns. Map any renamed columns to preserve historical data.</p>';
+  container.appendChild(headerCard);
+
+  questionPlans.forEach(function(plan) {
+    var card = document.createElement('div');
+    card.className = 'card';
+
+    var titleRow = document.createElement('div');
+    titleRow.style.display = 'flex';
+    titleRow.style.justifyContent = 'space-between';
+    titleRow.style.alignItems = 'center';
+    titleRow.innerHTML = '<strong style="font-size:13px; color:#0f172a;">' + (plan.sheetName || plan.resourceName) + '</strong>' +
+      (plan.renameSuspects.length > 0 ? '<span class="badge badge-suspect">Rename Suspect Detected</span>' : '');
+    card.appendChild(titleRow);
+
+    var mappingRow = document.createElement('div');
+    mappingRow.className = 'mapping-row';
+
+    // Left: Removed columns
+    var leftCol = document.createElement('div');
+    leftCol.className = 'mapping-col';
+    leftCol.innerHTML = '<div class="mapping-col-title">Removed Columns</div>';
+
+    plan.removed.forEach(function(oldCol) {
+      var item = document.createElement('div');
+      item.className = 'field-mapping-item';
+
+      var label = document.createElement('span');
+      label.className = 'field-name';
+      label.textContent = oldCol;
+
+      var sel = document.createElement('select');
+      sel.id = 'rem_' + plan.resourceName + '_' + oldCol;
+
+      var optDelete = document.createElement('option');
+      optDelete.value = '';
+      optDelete.textContent = 'Remove it';
+      sel.appendChild(optDelete);
+
+      plan.added.forEach(function(newCol) {
+        var opt = document.createElement('option');
+        opt.value = newCol;
+        opt.textContent = 'Rename to → ' + newCol;
+        sel.appendChild(opt);
+      });
+
+      var currentVal = decisions[plan.resourceName][oldCol] || '';
+      sel.value = currentVal;
+
+      sel.onchange = function() {
+        onRemovedChange(plan.resourceName, oldCol, sel.value);
+      };
+
+      item.appendChild(label);
+      item.appendChild(sel);
+      leftCol.appendChild(item);
+    });
+
+    // Right: Added columns
+    var rightCol = document.createElement('div');
+    rightCol.className = 'mapping-col';
+    rightCol.innerHTML = '<div class="mapping-col-title">Added Columns</div>';
+
+    plan.added.forEach(function(newCol) {
+      var item = document.createElement('div');
+      item.className = 'field-mapping-item';
+
+      var label = document.createElement('span');
+      label.className = 'field-name';
+      label.textContent = newCol;
+
+      var sel = document.createElement('select');
+      sel.id = 'add_' + plan.resourceName + '_' + newCol;
+
+      var optEmpty = document.createElement('option');
+      optEmpty.value = '';
+      optEmpty.textContent = 'Add as empty';
+      sel.appendChild(optEmpty);
+
+      plan.removed.forEach(function(oldCol) {
+        var opt = document.createElement('option');
+        opt.value = oldCol;
+        opt.textContent = 'Renamed from → ' + oldCol;
+        sel.appendChild(opt);
+      });
+
+      // Check which oldCol maps to this newCol
+      var mappedFrom = '';
+      Object.keys(decisions[plan.resourceName]).forEach(function(k) {
+        if (decisions[plan.resourceName][k] === newCol) mappedFrom = k;
+      });
+      sel.value = mappedFrom;
+
+      sel.onchange = function() {
+        onAddedChange(plan.resourceName, newCol, sel.value);
+      };
+
+      item.appendChild(label);
+      item.appendChild(sel);
+      rightCol.appendChild(item);
+    });
+
+    mappingRow.appendChild(leftCol);
+    mappingRow.appendChild(rightCol);
+    card.appendChild(mappingRow);
+    container.appendChild(card);
+  });
+}
+
+// Bidirectional synchronization handlers
+function onRemovedChange(resourceName, oldCol, selectedNewCol) {
+  var currentMappings = decisions[resourceName] || {};
+  var prevNewCol = currentMappings[oldCol] || '';
+
+  // Clear previous target select if changed
+  if (prevNewCol && prevNewCol !== selectedNewCol) {
+    var prevAddedSel = document.getElementById('add_' + resourceName + '_' + prevNewCol);
+    if (prevAddedSel) prevAddedSel.value = '';
+  }
+
+  // If another oldCol was mapped to selectedNewCol, clear it
+  if (selectedNewCol) {
+    Object.keys(currentMappings).forEach(function(otherOld) {
+      if (currentMappings[otherOld] === selectedNewCol && otherOld !== oldCol) {
+        currentMappings[otherOld] = '';
+        var otherRemSel = document.getElementById('rem_' + resourceName + '_' + otherOld);
+        if (otherRemSel) otherRemSel.value = '';
+      }
+    });
+
+    currentMappings[oldCol] = selectedNewCol;
+    var addedSel = document.getElementById('add_' + resourceName + '_' + selectedNewCol);
+    if (addedSel) addedSel.value = oldCol;
+  } else {
+    currentMappings[oldCol] = '';
+  }
+
+  decisions[resourceName] = currentMappings;
+}
+
+function onAddedChange(resourceName, newCol, selectedOldCol) {
+  var currentMappings = decisions[resourceName] || {};
+
+  // Find who was mapped to this newCol and clear them
+  Object.keys(currentMappings).forEach(function(k) {
+    if (currentMappings[k] === newCol && k !== selectedOldCol) {
+      currentMappings[k] = '';
+      var remSel = document.getElementById('rem_' + resourceName + '_' + k);
+      if (remSel) remSel.value = '';
+    }
+  });
+
+  if (selectedOldCol) {
+    // If selectedOldCol was mapped to something else, clear that added select
+    var prevTarget = currentMappings[selectedOldCol] || '';
+    if (prevTarget && prevTarget !== newCol) {
+      var prevAddSel = document.getElementById('add_' + resourceName + '_' + prevTarget);
+      if (prevAddSel) prevAddSel.value = '';
+    }
+
+    currentMappings[selectedOldCol] = newCol;
+    var remSel = document.getElementById('rem_' + resourceName + '_' + selectedOldCol);
+    if (remSel) remSel.value = newCol;
+  }
+
+  decisions[resourceName] = currentMappings;
+}
+
+function renderSummaryTable() {
+  var tbody = document.getElementById('summaryTableBody');
+  tbody.innerHTML = '';
+
+  loadedPlans.forEach(function(plan) {
+    var tr = document.createElement('tr');
+
+    var tdName = document.createElement('td');
+    tdName.innerHTML = '<strong>' + (plan.sheetName || plan.resourceName) + '</strong>';
+
+    var tdStatus = document.createElement('td');
+    if (!plan.hasChanges) {
+      tdStatus.innerHTML = '<span class="badge badge-ok">Up to date</span>';
+    } else if (plan.isNewSheet) {
+      tdStatus.innerHTML = '<span class="badge badge-new">New Sheet</span>';
+    } else {
+      tdStatus.innerHTML = '<span class="badge badge-change">Changes</span>';
+    }
+
+    var tdDetails = document.createElement('td');
+    var details = [];
+    if (plan.added && plan.added.length > 0) details.push('+' + plan.added.length + ' add (' + plan.added.join(', ') + ')');
+    if (plan.removed && plan.removed.length > 0) details.push('-' + plan.removed.length + ' remove (' + plan.removed.join(', ') + ')');
+    if (plan.moved && plan.moved.length > 0) details.push('↔ ' + plan.moved.length + ' move (' + plan.moved.join(', ') + ')');
+    if (details.length === 0) details.push('All ' + (plan.targetHeaders ? plan.targetHeaders.length : 0) + ' columns match');
+
+    tdDetails.textContent = details.join(' | ');
+    tdDetails.style.color = '#475569';
+
+    tr.appendChild(tdName);
+    tr.appendChild(tdStatus);
+    tr.appendChild(tdDetails);
+    tbody.appendChild(tr);
+  });
+}
+
+function runRefactor() {
+  var selected = getSelectedSheets();
+  if (!selected || selected.length === 0) return;
+
+  setStep(3);
+  showStatus(null);
+
+  var progressList = document.getElementById('runProgressList');
+  progressList.innerHTML = '';
+  document.getElementById('runResults').style.display = 'none';
+  document.getElementById('runHeaderSpinner').style.display = 'inline-block';
+  document.getElementById('runHeaderTitle').textContent = 'Refactoring sheets in-place (' + selected.length + ' sheets)...';
+
+  // Clean decisions: only keep entries where value is truthy
+  var cleanDecisions = {};
+  Object.keys(decisions).forEach(function(resName) {
+    cleanDecisions[resName] = {};
+    Object.keys(decisions[resName]).forEach(function(oldCol) {
+      if (decisions[resName][oldCol]) {
+        cleanDecisions[resName][oldCol] = decisions[resName][oldCol];
+      }
+    });
+  });
+
+  google.script.run
+    .withSuccessHandler(function() {
+      processNextSheet(0);
+    })
+    .withFailureHandler(function(err) {
+      document.getElementById('runHeaderSpinner').style.display = 'none';
+      showStatus('Error starting refactor: ' + err.message, 'error');
+    })
+    .app_startSchemaRefactor(SCOPE);
+
+  function processNextSheet(idx) {
+    if (idx >= selected.length) {
+      finishAll();
+      return;
+    }
+
+    var resourceName = selected[idx];
+    var itemEl = document.createElement('div');
+    itemEl.id = 'run_item_' + idx;
+    itemEl.style.display = 'flex';
+    itemEl.style.alignItems = 'baseline';
+    itemEl.style.gap = '8px';
+    itemEl.style.padding = '4px 0';
+    itemEl.style.borderBottom = '1px solid #f1f5f9';
+    itemEl.style.fontSize = '12px';
+
+    var iconSpan = document.createElement('span');
+    iconSpan.style.fontSize = '14px';
+    iconSpan.textContent = '⏳';
+
+    var nameSpan = document.createElement('span');
+    nameSpan.style.fontWeight = '600';
+    nameSpan.style.color = '#0f172a';
+    nameSpan.textContent = resourceName;
+
+    var detailSpan = document.createElement('span');
+    detailSpan.style.color = '#64748b';
+    detailSpan.textContent = '...';
+
+    itemEl.appendChild(iconSpan);
+    itemEl.appendChild(nameSpan);
+    itemEl.appendChild(detailSpan);
+    progressList.appendChild(itemEl);
+    progressList.scrollTop = progressList.scrollHeight;
+
+    var sheetDecisions = cleanDecisions[resourceName] || {};
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if (res && res.success) {
+          iconSpan.textContent = '✅';
+          detailSpan.style.color = '#475569';
+          detailSpan.textContent = '— ' + (res.message || (res.changed ? 'updated' : 'no change'));
+        } else {
+          iconSpan.textContent = '❌';
+          detailSpan.style.color = '#b91c1c';
+          detailSpan.textContent = '— ' + ((res && res.message) ? res.message : 'failed');
+        }
+        progressList.scrollTop = progressList.scrollHeight;
+        processNextSheet(idx + 1);
+      })
+      .withFailureHandler(function(err) {
+        iconSpan.textContent = '❌';
+        detailSpan.style.color = '#b91c1c';
+        detailSpan.textContent = '— ' + (err.message || 'error');
+        progressList.scrollTop = progressList.scrollHeight;
+        processNextSheet(idx + 1);
+      })
+      .app_refactorOneSheet(SCOPE, resourceName, sheetDecisions);
+  }
+
+  function finishAll() {
+    google.script.run
+      .withSuccessHandler(function() {
+        onComplete();
+      })
+      .withFailureHandler(function() {
+        onComplete();
+      })
+      .app_finishSchemaRefactor(SCOPE, {});
+  }
+
+  function onComplete() {
+    document.getElementById('runHeaderSpinner').style.display = 'none';
+    document.getElementById('runHeaderTitle').textContent = 'Refactor complete (' + selected.length + ' sheets processed)';
+    document.getElementById('runResults').style.display = 'block';
+    document.getElementById('cancelBtn').style.display = 'none';
+    document.getElementById('closeBtn').style.display = 'inline-flex';
+  }
+}
+</script>
+
+</body>
+</html>

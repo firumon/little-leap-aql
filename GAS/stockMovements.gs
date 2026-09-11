@@ -163,6 +163,10 @@ function applyStockMovementToWarehouseStorages(record, auth) {
         existingRow[idx.Quantity] = newQty;
         if (now > maxTimestamp) maxTimestamp = now;
         if (idx.UpdatedAt !== undefined) existingRow[idx.UpdatedAt] = now;
+        if (idx.Revision !== undefined) {
+          var curRev = Number(existingRow[idx.Revision]);
+          existingRow[idx.Revision] = (!curRev || isNaN(curRev) || curRev < 0) ? 1 : curRev + 1;
+        }
         if (idx.UpdatedBy !== undefined) existingRow[idx.UpdatedBy] = userId;
         sheet.getRange(matchedRowNumber, 1, 1, headers.length).setValues([existingRow]);
       }
@@ -248,6 +252,10 @@ function applyBatchStockMovementsToWarehouseStorages(records, auth) {
       existing[idx.Quantity] = Number(existing[idx.Quantity] || 0) + qtyChange;
       if (now > maxTimestamp) maxTimestamp = now;
       if (idx.UpdatedAt !== undefined) existing[idx.UpdatedAt] = now;
+      if (idx.Revision !== undefined) {
+        var curRev = Number(existing[idx.Revision]);
+        existing[idx.Revision] = (!curRev || isNaN(curRev) || curRev < 0) ? 1 : curRev + 1;
+      }
       if (idx.UpdatedBy !== undefined) existing[idx.UpdatedBy] = userId;
 
       if (existing[idx.Quantity] <= 0) {

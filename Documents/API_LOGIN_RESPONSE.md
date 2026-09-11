@@ -1,4 +1,4 @@
-﻿# Login Response — Canonical Specification
+# Login Response — Canonical Specification
 
 This document is the authoritative reference for the payload returned by `handleLogin()` in `GAS/auth.gs`.
 
@@ -183,9 +183,9 @@ Supplier Quotation additions:
 
 | Option Group | Values | Seeded at | Frontend consumer |
 |---|---|---|---|
-| `StockMovementReferenceType` | `['GRN', 'DirectEntry', 'StockAdjustment']` | `GAS/Constants.gs:66` + `GAS/setupOperationSheets.gs` (column dropdown validation) | `FRONTENT/src/components/Warehouse/ManageStockContextStep.vue` → type cards; `GAS/setupOperationSheets.gs` → ReferenceType dropdown |
+| `StockMovementReferenceType` | `['GRN', 'DirectEntry', 'StockAdjustment']` | `GAS/Constants.gs:66` + `GAS/setupOperationSheets.gs` (validation is no longer applied by setup scripts) | `FRONTENT/src/components/Warehouse/ManageStockContextStep.vue` → type cards |
 
-> Rule: When adding a new option group to `APP_OPTIONS_SEED`, also add a matching dropdown validation in the relevant setup script, update this table, and update any frontend consumers.
+> Rule: When adding a new option group to `APP_OPTIONS_SEED`, update this table and update any frontend consumers (dropdown/list validation is no longer applied to sheets by setup scripts).
 
 ---
 

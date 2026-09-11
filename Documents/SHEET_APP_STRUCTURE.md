@@ -1,4 +1,4 @@
-﻿# APP Sheet Structure
+# APP Sheet Structure
 
 ## Purpose
 This document describes the APP spreadsheet as the control plane for authentication, authorization, config, and resource metadata.
@@ -32,6 +32,7 @@ This document describes the APP spreadsheet as the control plane for authenticat
 
 ### Resources
 - runtime metadata registry for backend and frontend
+- includes resource configuration columns such as `Settings` (custom resource setting definitions), `Dashboard` (widget analytics declarations), and `Options` (resource-specific option lists, sitting immediately after `ListViews` and before `CustomUIName`)
 - column meanings are owned by [SCHEMA_RESOURCE_COLUMNS.md](F:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md)
 
 ### Config

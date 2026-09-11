@@ -44,7 +44,7 @@ Pricing behavior and discount-tax policies are configured at the price list leve
 *   **`TaxInclusive`** (Boolean `TRUE`/`FALSE`):
     *   `FALSE` (Exclusive): Prices in the price list are net values. Tax is calculated and added on top.
     *   `TRUE` (Inclusive): Prices in the price list are gross values. The engine back-calculates the net unit price before tax.
-*   **`DiscountTaxPolicy`** (Dropdown `PRE_TAX`/`POST_TAX`):
+*   **`DiscountTaxPolicy`** (Values `PRE_TAX`/`POST_TAX`; dropdown validation is no longer applied by setup scripts):
     *   `PRE_TAX`: Discounts are subtracted from the base price before tax is calculated.
     *   `POST_TAX`: Taxes are calculated on the full base price first, and discounts are subtracted from the gross total at the end.
 

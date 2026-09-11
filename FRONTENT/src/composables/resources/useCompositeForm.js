@@ -44,7 +44,7 @@ export function useCompositeForm(configRef) {
 
     const headers = Array.isArray(resource?.headers) ? resource.headers : []
     return headers
-      .filter((h) => !['Code', 'ParentCode', 'CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy'].includes(h))
+      .filter((h) => !['Code', 'ParentCode', 'CreatedAt', 'UpdatedAt', 'Revision', 'CreatedBy', 'UpdatedBy'].includes(h))
       .map((header) => ({
         header,
         label: header.replace(/([a-z])([A-Z])/g, '$1 $2'),

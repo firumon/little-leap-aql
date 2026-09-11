@@ -20,7 +20,7 @@ const TOGGLE_PAIRS = [
   ['True', 'False']
 ]
 
-const ignoredFields = ['AccessRegion', 'CreatedAt', 'CreatedBy', 'UpdatedAt', 'UpdatedBy']
+const ignoredFields = ['AccessRegion', 'CreatedAt', 'CreatedBy', 'Revision', 'UpdatedAt', 'UpdatedBy']
 
 // Matches either a parent path (`$product.Name`) or a bare word (`Variant1`)
 // inside a `labelHeader` template. Everything else is literal text.

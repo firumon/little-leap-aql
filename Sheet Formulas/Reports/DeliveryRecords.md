@@ -22,7 +22,7 @@ The **DeliveryRecords Report** provides a filtered search and checklist log for 
   SKUFileID, VLOOKUP("ViewFileID", Config!A:B, 2, 0),
   MasterFileID, VLOOKUP("masterFileID", Config!A:B, 2, 0),
 
-  RawDeliveries, IMPORTRANGE(OutletFileID, "OutletDeliveries!A2:T"),
+  RawDeliveries, IMPORTRANGE(OutletFileID, "OutletDeliveries!A2:U"),
   RawItems, IMPORTRANGE(OutletFileID, "OutletRestockItems!A2:Q"),
   RawOutlets, IMPORTRANGE(MasterFileID, "Outlets!A2:B"),
   RawSKUs, IMPORTRANGE(SKUFileID, "SKU!A2:G"),
@@ -51,7 +51,7 @@ The **DeliveryRecords Report** provides a filtered search and checklist log for 
       ((UserFilter = "") + (DeliveriesUser = UserFilter)) *
       ((DateFilter = "") + (ParsedDates = ParsedDateFilter))
     ),
-    MAKEARRAY(1, 20, LAMBDA(r, c, ""))
+    MAKEARRAY(1, 21, LAMBDA(r, c, ""))
   ),
 
   FirstCell, CHOOSEROWS(CHOOSECOLS(Filtered, 1), 1),
@@ -181,7 +181,7 @@ The **DeliveryRecords Report** provides a filtered search and checklist log for 
 ## Source Sheets & Column Dependencies
 
 The formula queries data from three spreadsheet files (`OutletFileID`, `ViewFileID`, `masterFileID`):
-1. **`OutletDeliveries`** (`OutletDeliveries!A2:T` in Outlet Spreadsheet):
+1. **`OutletDeliveries`** (`OutletDeliveries!A2:U` in Outlet Spreadsheet):
    - Column 1 (`A`): Delivery Code
    - Column 2 (`B`): Date
    - Column 3 (`C`): Delivery Driver/User (compared to `$J$11`)

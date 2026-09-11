@@ -19,7 +19,7 @@ This document is the canonical meaning reference for `APP.Resources` columns.
 - access and actions
   - `RecordAccessPolicy`, `OwnerUserField`, `AdditionalActions`
 - UI/runtime metadata
-  - `Menu`, `UIFields`, `IncludeInAuthorizationPayload`, `Functional`, `PreAction`, `PostAction`, `Reports`, `ListViews`, `CustomUIName`
+  - `Menu`, `UIFields`, `IncludeInAuthorizationPayload`, `Functional`, `PreAction`, `PostAction`, `Reports`, `ListViews`, `CustomUIName`, `Settings`, `Dashboard`, `Options`
 - cross-resource linking
   - `ParentResource`, `Relations`
 
@@ -54,7 +54,7 @@ This document is the canonical meaning reference for `APP.Resources` columns.
 - `Currencies` uses manual codes (e.g. `AED`, `INR`) via `Code` column; `CodePrefix` and `CodeSequenceLength` are empty/0. `ConversionFactor` stores the current conversion rate (not historical).
 - `OutletOperatingRules.PriceListCode` is optional; resolution falls back to `PriceList` where `IsDefault = TRUE`.
 - `OutletOperatingRules.InvoiceDueDays` (number, default `30`) is the credit period in days used to derive `OutletConsumptionInvoices.DueDate` from the invoice `Date`.
-- Reports and views read `OutletVisits`, `OutletConsumptionInvoices` and `OutletOperatingRules` through bounded `IMPORTRANGE` ranges and address fields by fixed ordinal (`INDEX(raw, 0, 18)`, `CHOOSECOLS(row, 5)`). Changing the header order of any sheet referenced from `Sheet Formulas/` means widening the range and re-numbering every ordinal in each affected template, plus `Sheet Formulas/Reports/INDEX.md`.
+- Reports and views read `OutletVisits`, `OutletConsumptionInvoices` and `OutletOperatingRules` through bounded `IMPORTRANGE` ranges and address fields by fixed ordinal (`INDEX(raw, 0, 18)`, `CHOOSECOLS(row, 5)`). Changing the header order of any sheet referenced from `Sheet Formulas/` means widening the range and re-numbering every ordinal in each affected template, plus `Sheet Formulas/Reports/INDEX.md`. The introduction of the `Revision` audit column shifted `CreatedBy` and `UpdatedBy` by one slot to the right across all audited sheets, requiring bound ranges (e.g. `A2:AB` -> `A2:AC`) to widen by one column. Adding a column at the END is the only change that leaves existing ordinals untouched.
 - `OutletVisits.RespondDate` (`datetime`) is blank when a visit is created and stamped `YYYY-MM-DD HH:mm:ss` when the visit is completed, postponed, or cancelled. `RespondDate` is a **by-convention column**: `handleExecuteAction` stamps it on any resource whose sheet declares it, on every action regardless of outcome, so one column answers "when was this responded to" without a coalesce across `ProgressCompletedAt` / `ProgressPostponedAt` / `ProgressCancelledAt` in every view, report and filter.
 - `OutletConsumptionInvoices` stores consumption invoice headers with optional `PriceListCode`, `Subtotal`, `Discount`, `Tax`, and `Progress` (`PENDING_PAYMENT`, `PARTIALLY_PAID`, `PAID`, `CANCELLED`). Pricing resolution can use `OutletOperatingRules.PriceListCode` or fallback to the default `PriceList`; paid/balance totals are deferred to the receipt module.
 - `OutletConsumptionInvoiceItems` stores invoice line items linked to `OutletConsumptionInvoices` by `OutletConsumptionInvoiceCode`. Each row records the priced `SKU`, `Qty`, and `Price`. Composite uniqueness is `OutletConsumptionInvoiceCode+SKU`. The invoice header `Subtotal` is generated as `sum(Qty * Price)` from active item rows.
@@ -176,6 +176,85 @@ The picker appends the stored value in parentheses, so `{"SKU": {"resource":"SKU
 `useDataStore._deriveAllRelations()` runs a two-pass pipeline:
 1. **Normalization** — builds one `effectiveRelations` map per resource: baseline heuristics first (`ParentResource`, `<Singular>Code` headers, `ParentCode` → self), then explicit `Relations` entries merged on top. **Explicit metadata wins.** Entries pointing at an unknown/unauthorized resource are dropped.
 2. **Topology** — `parents`, `children`, `linkRefs`, and `refs` are built *exclusively* from that normalized map, so heuristic and explicit relations behave identically downstream (`useRecord` `$parent`/`$children`/`$<singular>` getters, `useFormFields` pickers).
+
+## Settings Column Schema & Usage
+The `Settings` column in `APP.Resources` defines configurable setting descriptors for the resource.
+
+* **Purpose**: Allows declaring per-resource configuration settings that can be customized in the UI or runtime.
+* **Format**: A JSON array of setting objects.
+* **Fallback**: An empty array `[]` or blank cell means "no custom settings".
+* **Exposed on Metadata**: Populated on the resource metadata object as `settings` (defaulting to `[]`, never null or undefined).
+* **Setting Object Shape**:
+```json
+[
+  {
+    "key": "string",
+    "label": "string",
+    "type": "text | number | boolean | select",
+    "default": "any",
+    "options": ["string"]
+  }
+]
+```
+`options` is only required when `type` is `"select"`.
+
+## Dashboard Column Schema & Usage
+The `Dashboard` column in `APP.Resources` configures dashboard analytics widgets for the resource.
+
+* **Purpose**: Declares analytics widgets (cards, charts, counters) to display on the resource dashboard.
+* **Format**: A JSON array of widget descriptor objects.
+* **Widget Specification**: Defined in detail in [DASHBOARD_ENGINE_SPEC.md](file:///f:/LITTLE%20LEAP/AQL/References/DASHBOARD_ENGINE_SPEC.md) (§1–§4).
+* **Exposed on Metadata**: Populated on the resource metadata object under `ui.dashboard` (defaulting to `[]`, never null or undefined).
+* **Disabling**: An explicit empty array `[]` disables dashboard widgets for that resource.
+
+## Options Column Schema & Usage
+The `Options` column in `APP.Resources` holds option lists that belong to one resource.
+
+* **Purpose**: Stores option lists that belong only to this resource.
+* **Global Options**: `APP.AppOptions` is still the home for all global option lists. It is not being retired. This column holds only resource-specific ones.
+* **Format**: A JSON array of option list objects.
+* **Fallback**: An empty array `[]` or blank cell means "no resource-specific option lists". Blank or invalid JSON always falls back to `[]` and never throws.
+* **Exposed on Metadata**: Populated on the resource metadata object under `ui.options` (defaulting to `[]`, always an array).
+* **Option List Shape**:
+```json
+[
+  {
+    "name": "OutletRestockProgress",
+    "detail": "Track progress for outlet restock requests",
+    "values": ["DRAFT", "PENDING_APPROVAL", "APPROVED"]
+  }
+]
+```
+
+| Key | Meaning |
+|---|---|
+| `name` | The list name, e.g. `OutletRestockProgress` |
+| `detail` | Plain description of what the list is for |
+| `values` | Array of strings — the options themselves |
+
+## Audit Columns & Revision Lifecycle
+Every audited sheet across `master`, `operation`, and `accounts` scopes includes 5 standard audit columns at the trailing end:
+`CreatedAt`, `UpdatedAt`, `Revision`, `CreatedBy`, `UpdatedBy`.
+
+* **`CreatedAt`**: Timestamp (`YYYY-MM-DD HH:mm:ss`) when the row was first inserted.
+* **`UpdatedAt`**: Timestamp (`YYYY-MM-DD HH:mm:ss`) when the row was last updated.
+* **`Revision`**: Integer counter tracking how many times the record has been created or modified.
+  - **On Create**: Initialized to `1` by `applyAuditFields` in `GAS/resourceApi.gs`.
+  - **On Update**: Incremented by 1 (`currentVal + 1`). If the current value is missing, blank, or not a valid number, it defaults to `1`.
+  - **Special Hooks**: Stock and outlet movement ledger updates (`GAS/stockMovements.gs`, `GAS/outletMovements.gs`) increment `Revision` when updating existing rows.
+  - **Missing Column Guard**: If a sheet does not define `Revision` in its header schema, the bump logic safely and silently skips it without error.
+* **`CreatedBy`**: User display name or ID of the creator.
+* **`UpdatedBy`**: User display name or ID of the user performing the latest update.
+* **Frontend Handling**: `Revision` is classified as an audit header alongside `CreatedAt`, `UpdatedAt`, `CreatedBy`, and `UpdatedBy`. It is excluded from generated form fields (`useFormFields.js`, `useCompositeForm.js`), automatic list views (`useListViews.js`), list view columns (`useListStrategy.js`), and bulk upload template/payload processing (`useBulkUpload.js`).
+
+## Sync Protection Rule
+When `syncAppResourcesFromCode` executes, it protects designated metadata columns in `APP.Resources` from being overwritten by code defaults if the sheet cell already contains data.
+
+* **Protected Columns (12 total)**:
+  `FileID`, `CodePrefix`, `CodeSequenceLength`, `LastDataUpdatedAt`, `RecordAccessPolicy`, `Menu`, `Reports`, `ListViews`, `CustomUIName`, `Settings`, `Dashboard`, `Options`.
+* **Protection Logic**:
+  - If a column is in the protected list and the cell in Google Sheets is not blank (note: `0` and `false` are considered valid data and are protected), `syncAppResourcesFromCode` preserves the sheet value and skips overwriting.
+  - If the sheet cell is empty or blank, or if the column is not in the protected list, code-level config is written to the sheet.
 
 ## Scope Characteristics
 - `master`: Standard CRUD with auto-generated codes, audit columns, full sync.

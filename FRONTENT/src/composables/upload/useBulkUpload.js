@@ -3,7 +3,7 @@ import { useQuasar } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 
-const AUDIT_HEADERS = ['CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy']
+const AUDIT_HEADERS = ['CreatedAt', 'UpdatedAt', 'Revision', 'CreatedBy', 'UpdatedBy']
 
 export function useBulkUpload() {
   const $q = useQuasar()

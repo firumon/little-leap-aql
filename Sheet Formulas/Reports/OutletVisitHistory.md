@@ -32,7 +32,7 @@ Calculates the count of visits assigned to different progress stages for the act
   ```excel
   =LET(
     OutletFileID, VLOOKUP("OutletFileID", Config!A:B, 2, 0),
-    RawVisits, IMPORTRANGE(OutletFileID, "OutletVisits!A2:W"),
+    RawVisits, IMPORTRANGE(OutletFileID, "OutletVisits!A2:X"),
     Progress, "PLANNED",
     VisitsOutletCode, TOCOL(CHOOSECOLS(RawVisits, 2)),
     VisitsProgress, TOCOL(CHOOSECOLS(RawVisits, 5)),
@@ -173,7 +173,7 @@ The formulas import data from the Master Spreadsheet (`MasterFileID`) and Outlet
    - Column 3 (`C`): Contact Person
    - Column 4 (`D`): Phone
    - Column 6, 7, 8, 9 (`F:I`): Address components (City, Area, Province, Country)
-2. **`OutletVisits`** (`OutletVisits!A2:W` or `A2:R` in Outlet Spreadsheet):
+2. **`OutletVisits`** (`OutletVisits!A2:X` or `A2:R` in Outlet Spreadsheet):
    - Column 2 (`B`): Outlet Code (compared with `$H$11`)
    - Column 3 (`C`): Visit Date
    - Column 4 (`D`): Respond Date *(not read by this report)*

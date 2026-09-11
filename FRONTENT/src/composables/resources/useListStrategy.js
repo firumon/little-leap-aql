@@ -3,7 +3,7 @@ import { useDataStore } from 'src/stores/data'
 import { useCurrency } from 'src/composables/useCurrency'
 
 // Headers that never carry list-worthy meaning on their own.
-const AUDIT_HEADERS = new Set(['Code', 'CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy', 'AccessRegion'])
+const AUDIT_HEADERS = new Set(['Code', 'CreatedAt', 'UpdatedAt', 'Revision', 'CreatedBy', 'UpdatedBy', 'AccessRegion'])
 
 const VARIANT_HEADERS = ['Variant1', 'Variant2', 'Variant3', 'Variant4', 'Variant5']
 

@@ -23,7 +23,7 @@ The **ReturnRecords Report** provides a filtered search and checklist log for Ou
   MasterFileID, VLOOKUP("masterFileID", Config!A:B, 2, 0),
   SKUFileID, VLOOKUP("ViewFileID", Config!A:B, 2, 0),
 
-  RawReturns, IMPORTRANGE(OutletFileID, "OutletReturns!A2:AB"),
+  RawReturns, IMPORTRANGE(OutletFileID, "OutletReturns!A2:AC"),
   RawOutlets, IMPORTRANGE(MasterFileID, "Outlets!A2:B"),
   RawSKUs, IMPORTRANGE(SKUFileID, "SKU!A2:G"),
   RawWarehouses, IMPORTRANGE(MasterFileID, "Warehouses!A2:B"),
@@ -70,7 +70,7 @@ The **ReturnRecords Report** provides a filtered search and checklist log for Ou
         SEQUENCE(ROWS(RawReturns))*0 + 1
       ))
     ),
-    MAKEARRAY(1, 28, LAMBDA(r, c, ""))
+    MAKEARRAY(1, 29, LAMBDA(r, c, ""))
   ),
 
   FirstCell, CHOOSEROWS(CHOOSECOLS(Filtered, 1), 1),
@@ -170,7 +170,7 @@ The **ReturnRecords Report** provides a filtered search and checklist log for Ou
 ## Source Sheets & Column Dependencies
 
 The formula queries data from four spreadsheet files (`OutletFileID`, `ViewFileID`, `masterFileID`):
-1. **`OutletReturns`** (`OutletReturns!A2:AB` in Outlet Spreadsheet):
+1. **`OutletReturns`** (`OutletReturns!A2:AC` in Outlet Spreadsheet):
    - Column 1 (`A`): Code
    - Column 2 (`B`): Outlet Code
    - Column 3 (`C`): Date

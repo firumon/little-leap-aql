@@ -43,6 +43,7 @@ function app_showReportManagerDialog() { CORE_LIB.app_showReportManagerDialog();
 function app_showActionManagerDialog() { CORE_LIB.app_showActionManagerDialog(); }
 function app_showListViewsManagerDialog() { CORE_LIB.app_showListViewsManagerDialog(); }
 function app_showRelationsManagerDialog() { CORE_LIB.app_showRelationsManagerDialog(); }
+function app_showSettingsManagerDialog() { CORE_LIB.app_showSettingsManagerDialog(); }
 function syncAppResourcesFromCode() { CORE_LIB.syncAppResourcesFromCode(); }
 function recalculateAllResourcesLastDataUpdatedAtAndNotify() { CORE_LIB.recalculateAllResourcesLastDataUpdatedAtAndNotify(); }
 function regenerateAppCacheAndNotify() { CORE_LIB.regenerateAppCacheAndNotify(); }
@@ -53,6 +54,9 @@ function diagCacheHealth() { return CORE_LIB.diagCacheHealth(); }
 // --- Setup & Refactor Submenu ---
 function setupAppSheets() { CORE_LIB.setupAppSheets(); }
 function setAppFileId() { CORE_LIB.setAppFileId(); }
+function app_showMasterRefactorDialog() { CORE_LIB.app_showMasterRefactorDialog(); }
+function app_showOperationRefactorDialog() { CORE_LIB.app_showOperationRefactorDialog(); }
+function app_showAccountRefactorDialog() { CORE_LIB.app_showAccountRefactorDialog(); }
 function setupMasterSheets() { CORE_LIB.setupMasterSheets(); }
 function setupOperationSheets() { CORE_LIB.setupOperationSheets(); }
 function setupAccountSheets() { CORE_LIB.setupAccountSheets(); }
@@ -106,3 +110,25 @@ function app_saveResourceRelations(resourceName, json) { return CORE_LIB.app_sav
 // --- Roles Setup Progress Dialog ---
 function app_getRolesSetupSteps() { return CORE_LIB.app_getRolesSetupSteps(); }
 function app_executeRolesSetupStep(stepId) { return CORE_LIB.app_executeRolesSetupStep(stepId); }
+
+// --- Settings Manager Dialog ---
+function app_getSettingsManagerData() { return CORE_LIB.app_getSettingsManagerData(); }
+function app_saveResourceSettings(resourceName, settingsJson) {
+  return CORE_LIB.app_saveResourceSettings(resourceName, settingsJson);
+}
+
+// --- Schema Refactor Dialog ---
+function app_getSchemaRefactorData(scope) { return CORE_LIB.app_getSchemaRefactorData(scope); }
+function app_buildSchemaRefactorPlans(scope, selectedResourceNames) {
+  return CORE_LIB.app_buildSchemaRefactorPlans(scope, selectedResourceNames);
+}
+function app_startSchemaRefactor(scope) { return CORE_LIB.app_startSchemaRefactor(scope); }
+function app_refactorOneSheet(scope, resourceName, decisions) {
+  return CORE_LIB.app_refactorOneSheet(scope, resourceName, decisions);
+}
+function app_finishSchemaRefactor(scope, summaryStats) {
+  return CORE_LIB.app_finishSchemaRefactor(scope, summaryStats);
+}
+function app_runSchemaRefactor(scope, selectedResourceNames, decisions) {
+  return CORE_LIB.app_runSchemaRefactor(scope, selectedResourceNames, decisions);
+}

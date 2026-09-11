@@ -931,6 +931,14 @@ function applyAuditFields(row, idx, auth, resourceConfig, isCreate) {
   if (resourceConfig.audit) {
     if (isCreate && idx.CreatedAt !== undefined) row[idx.CreatedAt] = now;
     if (idx.UpdatedAt !== undefined) row[idx.UpdatedAt] = now;
+    if (idx.Revision !== undefined) {
+      if (isCreate) {
+        row[idx.Revision] = 1;
+      } else {
+        const curRev = Number(row[idx.Revision]);
+        row[idx.Revision] = (!curRev || isNaN(curRev) || curRev < 0) ? 1 : curRev + 1;
+      }
+    }
     if (isCreate && idx.CreatedBy !== undefined) row[idx.CreatedBy] = auth.user.UserID;
     if (idx.UpdatedBy !== undefined) row[idx.UpdatedBy] = auth.user.UserID;
   }
@@ -1026,7 +1034,7 @@ function isGenericLifecycleStatus(value) {
 }
 
 function isAuditHeader(header) {
-  return header === 'CreatedAt' || header === 'UpdatedAt' || header === 'CreatedBy' || header === 'UpdatedBy';
+  return header === 'CreatedAt' || header === 'UpdatedAt' || header === 'Revision' || header === 'CreatedBy' || header === 'UpdatedBy';
 }
 
 function generateNextCode(values, idx, prefix, sequenceLength) {

@@ -20,7 +20,7 @@ The **OutletReturnHistory Report** formats and displays a historical log of the 
   MasterFileID, VLOOKUP("masterFileID", Config!A:B, 2, 0),
   SKUFileID, VLOOKUP("ViewFileID", Config!A:B, 2, 0),
 
-  RawReturns, IMPORTRANGE(OutletFileID, "OutletReturns!A2:AB"),
+  RawReturns, IMPORTRANGE(OutletFileID, "OutletReturns!A2:AC"),
   RawOutlets, IMPORTRANGE(MasterFileID, "Outlets!A2:B"),
   RawSKUs, IMPORTRANGE(SKUFileID, "SKU!A2:G"),
   RawWarehouses, IMPORTRANGE(MasterFileID, "Warehouses!A2:B"),
@@ -46,8 +46,8 @@ The **OutletReturnHistory Report** formats and displays a historical log of the 
   FilteredReturns, IFERROR(FILTER(RawReturns, (OutletCodesInReturns = $AB$6) * (StatusInReturns = "Active")), ""),
   HasData, AND(NOT(ISERR(FilteredReturns)), CHOOSEROWS(CHOOSECOLS(FilteredReturns, 1), 1) <> ""),
 
-  SortedReturns, IF(HasData, SORT(FilteredReturns, 3, FALSE), MAKEARRAY(1, 28, LAMBDA(r, c, ""))),
-  RecentReturns, IF(HasData, CHOOSEROWS(SortedReturns, SEQUENCE(MIN(12, ROWS(SortedReturns)))), MAKEARRAY(1, 28, LAMBDA(r, c, ""))),
+  SortedReturns, IF(HasData, SORT(FilteredReturns, 3, FALSE), MAKEARRAY(1, 29, LAMBDA(r, c, ""))),
+  RecentReturns, IF(HasData, CHOOSEROWS(SortedReturns, SEQUENCE(MIN(12, ROWS(SortedReturns)))), MAKEARRAY(1, 29, LAMBDA(r, c, ""))),
 
   FormattedNow, TEXT(NOW(), "yyyy-mm-dd"),
 
@@ -132,7 +132,7 @@ The **OutletReturnHistory Report** formats and displays a historical log of the 
 ## Source Sheets & Column Dependencies
 
 The formula queries data from four spreadsheet files (`OutletFileID`, `ViewFileID`, `masterFileID`):
-1. **`OutletReturns`** (`OutletReturns!A2:AB` in Outlet Spreadsheet):
+1. **`OutletReturns`** (`OutletReturns!A2:AC` in Outlet Spreadsheet):
    - Column 1 (`A`): Code
    - Column 2 (`B`): Outlet Code (filtered against `$AB$6`)
    - Column 3 (`C`): Date (sorted descending)

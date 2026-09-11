@@ -156,7 +156,7 @@ export function useResourceConfig(resourceNameOverride) {
     }
 
     return (resourceHeaders.value || [])
-      .filter((header) => !['Code', 'CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy'].includes(header))
+      .filter((header) => !['Code', 'CreatedAt', 'UpdatedAt', 'Revision', 'CreatedBy', 'UpdatedBy'].includes(header))
       .map((header) => ({
         header,
         label: header.replace(/([a-z])([A-Z])/g, '$1 $2'),

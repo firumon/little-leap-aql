@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 13px;
+    color: #1e293b;
+    padding: 20px;
+    background-color: #F1F1F3;
+    line-height: 1.5;
+  }
+  h2 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: #000077;
+    border-bottom: 2px solid #cbd5e1;
+    padding-bottom: 8px;
+  }
+  .row { display: flex; gap: 12px; margin-bottom: 12px; }
+  .row > * { flex: 1; }
+  label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  select, input, textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+    background: #fff;
+    color: #0f172a;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+  select:focus, input:focus, textarea:focus {
+    outline: none;
+    border-color: #000077;
+    box-shadow: 0 0 0 3px rgba(0, 0, 119, 0.15);
+  }
+  .checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 38px;
+  }
+  .checkbox-container input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    margin: 0;
+  }
+  .checkbox-container span {
+    font-size: 13px;
+    font-weight: 500;
+    color: #0f172a;
+  }
+  button {
+    padding: 9px 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  }
+  button:hover { transform: translateY(-1px); }
+  button:active { transform: translateY(0); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-primary {
+    background: #000077;
+    color: #fff;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 119, 0.2);
+  }
+  .btn-primary:hover { background: #000055; }
+  .btn-danger {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+  }
+  .btn-danger:hover { background: #fecaca; }
+  .btn-secondary {
+    background: #fff;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+  }
+  .btn-secondary:hover { background: #f8fafc; }
+  .setting-card {
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+    background: #fff;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  }
+  .setting-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #f1f5f9;
+    padding-bottom: 8px;
+  }
+  .setting-title {
+    font-weight: 700;
+    font-size: 14px;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .type-badge {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+  }
+  .no-settings {
+    color: #64748b;
+    text-align: center;
+    padding: 32px;
+    font-size: 14px;
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+  }
+  .status-bar {
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    display: none;
+    font-weight: 500;
+    font-size: 12px;
+    border: 1px solid transparent;
+  }
+  .status-bar.error { display: block; background: #fef2f2; color: #991b1b; border-color: #fca5a5; }
+  .status-bar.success { display: block; background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+  .settings-toolbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .hint { font-size: 11px; color: #64748b; margin-top: 4px; }
+  .preview {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    padding: 10px;
+    margin-top: 12px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: #334155;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+
+  /* Custom scrollbars */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #f1f5f9; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+</style>
+</head>
+<body>
+
+<div id="status" class="status-bar"></div>
+
+<div class="row">
+  <div>
+    <label>Resource</label>
+    <select id="resourceSelect" onchange="onResourceChange()">
+      <option value="">-- Select Resource --</option>
+    </select>
+  </div>
+</div>
+
+<div class="settings-toolbar">
+  <h2 id="settingsTitle">Settings</h2>
+  <button class="btn-primary" onclick="addSetting()" id="addBtn" disabled>+ Add Setting</button>
+</div>
+
+<div id="settingsList"></div>
+<div id="preview" class="preview" style="display:none;"></div>
+
+<div style="margin-top:16px; display:flex; gap:8px; justify-content:flex-end;">
+  <button class="btn-secondary" onclick="google.script.host.close()">Close</button>
+  <button class="btn-primary" onclick="saveSettings()" id="saveBtn" disabled>Save Settings</button>
+</div>
+
+<script>
+var ALLOWED_TYPES = ['text', 'textarea', 'number', 'toggle', 'select', 'date', 'datetime', 'currency', 'tel', 'link'];
+var NAME_REGEX = /^[A-Za-z][A-Za-z0-9]*$/;
+var resourceData = [];
+var currentSettings = [];
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' || e.keyCode === 27) {
+    google.script.host.close();
+  }
+});
+
+google.script.run.withSuccessHandler(function(data) {
+  resourceData = data.resources || [];
+  var sel = document.getElementById('resourceSelect');
+  resourceData.forEach(function(r) {
+    var opt = document.createElement('option');
+    opt.value = r.name;
+    opt.textContent = r.label + ' (' + r.name + ')';
+    sel.appendChild(opt);
+  });
+}).withFailureHandler(function(err) {
+  showStatus('Failed to load: ' + err.message, 'error');
+}).app_getSettingsManagerData();
+
+function findResource(name) {
+  return resourceData.find(function(r) { return r.name === name; }) || null;
+}
+
+function onResourceChange() {
+  var name = document.getElementById('resourceSelect').value;
+  document.getElementById('addBtn').disabled = !name;
+  document.getElementById('saveBtn').disabled = !name;
+  if (!name) { currentSettings = []; renderSettings(); return; }
+
+  var res = findResource(name);
+  var raw = (res && Array.isArray(res.settings)) ? res.settings : [];
+  currentSettings = raw.map(function(s) {
+    var type = (s.type || 'text').trim().toLowerCase();
+    if (ALLOWED_TYPES.indexOf(type) === -1) type = 'text';
+
+    var val = s.value !== undefined ? s.value : (s.default !== undefined ? s.default : '');
+    if (type === 'toggle') {
+      val = (val === true || val === 'true' || val === 1 || val === '1');
+    } else if (type === 'number') {
+      val = (val === '' || val == null) ? 0 : Number(val);
+    } else {
+      val = val != null ? String(val) : '';
+    }
+
+    var opts = [];
+    if (type === 'select' && Array.isArray(s.options)) {
+      opts = s.options.map(function(o) { return String(o).trim(); }).filter(function(o) { return o.length > 0; });
+    }
+
+    return {
+      name: (s.name || s.key || '').trim(),
+      detail: (s.detail || s.label || '').trim(),
+      type: type,
+      value: val,
+      options: opts
+    };
+  });
+  renderSettings();
+}
+
+function addSetting() {
+  currentSettings.push({
+    name: '',
+    detail: '',
+    type: 'text',
+    value: '',
+    options: []
+  });
+  renderSettings();
+}
+
+function removeSetting(idx) {
+  currentSettings.splice(idx, 1);
+  renderSettings();
+}
+
+function onFieldChange(i, field, value) {
+  currentSettings[i][field] = value;
+  renderSettings();
+}
+
+function onTypeChange(i, newType) {
+  currentSettings[i].type = newType;
+  if (newType === 'toggle') {
+    currentSettings[i].value = false;
+    currentSettings[i].options = [];
+  } else if (newType === 'number') {
+    currentSettings[i].value = 0;
+    currentSettings[i].options = [];
+  } else if (newType === 'select') {
+    if (!Array.isArray(currentSettings[i].options)) currentSettings[i].options = [];
+    currentSettings[i].value = currentSettings[i].options[0] || '';
+  } else {
+    currentSettings[i].value = '';
+    currentSettings[i].options = [];
+  }
+  renderSettings();
+}
+
+function onOptionsChange(i, rawString) {
+  var arr = rawString.split(',').map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 0; });
+  currentSettings[i].options = arr;
+  if (currentSettings[i].type === 'select' && arr.indexOf(currentSettings[i].value) === -1) {
+    currentSettings[i].value = arr[0] || '';
+  }
+  renderSettings();
+}
+
+function renderSettings() {
+  var container = document.getElementById('settingsList');
+  if (!currentSettings.length) {
+    container.innerHTML = '<div class="no-settings">No settings configured for this resource. Click "+ Add Setting" to create one.</div>';
+    renderPreview();
+    return;
+  }
+
+  var html = '';
+  currentSettings.forEach(function(s, i) {
+    html += '<div class="setting-card">';
+    html += '<div class="setting-header">';
+    html += '<span class="setting-title">' + esc(s.name || 'New Setting');
+    html += '<span class="type-badge">' + esc(s.type) + '</span></span>';
+    html += '<button class="btn-danger" onclick="removeSetting(' + i + ')" style="padding:4px 8px;font-size:11px;">Remove</button>';
+    html += '</div>';
+
+    // Row 1: Name, Detail, Type
+    html += '<div class="row">';
+    html += '<div style="flex: 1.2;"><label>Setting Name (Identifier)</label>';
+    html += '<input value="' + esc(s.name) + '" onchange="onFieldChange(' + i + ', \'name\', this.value)" placeholder="e.g. taxRate">';
+    html += '<div class="hint">Plain identifier (letters & digits only, starts with a letter).</div></div>';
+
+    html += '<div style="flex: 1.8;"><label>Detail / Label (Optional)</label>';
+    html += '<input value="' + esc(s.detail) + '" onchange="onFieldChange(' + i + ', \'detail\', this.value)" placeholder="e.g. Default tax rate applied to invoices">';
+    html += '</div>';
+
+    html += '<div style="flex: 1;"><label>Type</label>';
+    html += '<select onchange="onTypeChange(' + i + ', this.value)">';
+    ALLOWED_TYPES.forEach(function(t) {
+      html += '<option value="' + t + '"' + (s.type === t ? ' selected' : '') + '>' + t + '</option>';
+    });
+    html += '</select></div>';
+    html += '</div>';
+
+    // Row 2: Value and (if select) Options
+    html += '<div class="row">';
+    if (s.type === 'select') {
+      html += '<div style="flex: 1.5;"><label>Options (Comma-separated)</label>';
+      html += '<input value="' + esc(s.options.join(', ')) + '" onchange="onOptionsChange(' + i + ', this.value)" placeholder="e.g. Option1, Option2, Option3">';
+      html += '<div class="hint">Comma-separated list of selectable string options.</div></div>';
+
+      html += '<div style="flex: 1.5;"><label>Current Value</label>';
+      html += '<select onchange="onFieldChange(' + i + ', \'value\', this.value)">';
+      if (!s.options.length) {
+        html += '<option value="">-- Add options first --</option>';
+      } else {
+        html += '<option value="">-- Select option --</option>';
+        s.options.forEach(function(opt) {
+          html += '<option value="' + esc(opt) + '"' + (s.value === opt ? ' selected' : '') + '>' + esc(opt) + '</option>';
+        });
+      }
+      if (s.value && s.options.indexOf(s.value) === -1) {
+        html += '<option value="' + esc(s.value) + '" selected>' + esc(s.value) + ' (custom)</option>';
+      }
+      html += '</select></div>';
+    } else if (s.type === 'toggle') {
+      html += '<div><label>Current Value</label>';
+      html += '<div class="checkbox-container">';
+      html += '<input type="checkbox"' + (s.value === true ? ' checked' : '') + ' onchange="onFieldChange(' + i + ', \'value\', this.checked)">';
+      html += '<span>' + (s.value === true ? 'Enabled (true)' : 'Disabled (false)') + '</span>';
+      html += '</div></div>';
+    } else if (s.type === 'number') {
+      html += '<div><label>Current Value (Number)</label>';
+      html += '<input type="number" value="' + esc(s.value) + '" onchange="onFieldChange(' + i + ', \'value\', this.value)" placeholder="0">';
+      html += '</div>';
+    } else if (s.type === 'textarea') {
+      html += '<div><label>Current Value (Textarea)</label>';
+      html += '<textarea rows="2" onchange="onFieldChange(' + i + ', \'value\', this.value)" placeholder="Enter multiline text...">' + esc(s.value) + '</textarea>';
+      html += '</div>';
+    } else if (s.type === 'date') {
+      html += '<div><label>Current Value (Date)</label>';
+      html += '<input type="date" value="' + esc(s.value) + '" onchange="onFieldChange(' + i + ', \'value\', this.value)">';
+      html += '</div>';
+    } else if (s.type === 'datetime') {
+      html += '<div><label>Current Value (Datetime)</label>';
+      html += '<input type="text" value="' + esc(s.value) + '" onchange="onFieldChange(' + i + ', \'value\', this.value)" placeholder="YYYY-MM-DD HH:mm:ss">';
+      html += '</div>';
+    } else {
+      // text, currency, tel, link
+      html += '<div><label>Current Value (' + esc(s.type) + ')</label>';
+      html += '<input type="text" value="' + esc(s.value) + '" onchange="onFieldChange(' + i + ', \'value\', this.value)" placeholder="Enter ' + esc(s.type) + ' value">';
+      html += '</div>';
+    }
+    html += '</div>';
+
+    html += '</div>';
+  });
+
+  container.innerHTML = html;
+  renderPreview();
+}
+
+function serializeSettings() {
+  return currentSettings.map(function(s) {
+    var val = s.value;
+    if (s.type === 'toggle') {
+      val = (val === true);
+    } else if (s.type === 'number') {
+      val = (val === '' || val == null) ? 0 : Number(val);
+    } else {
+      val = val != null ? String(val) : '';
+    }
+
+    return {
+      name: (s.name || '').trim(),
+      detail: (s.detail || '').trim(),
+      type: s.type,
+      value: val,
+      options: s.type === 'select' ? (s.options || []) : []
+    };
+  });
+}
+
+function renderPreview() {
+  var el = document.getElementById('preview');
+  if (!currentSettings.length) {
+    el.style.display = 'none';
+    return;
+  }
+  var list = serializeSettings();
+  el.style.display = 'block';
+  el.textContent = JSON.stringify(list, null, 2);
+}
+
+function validateSettings() {
+  var seen = {};
+  for (var i = 0; i < currentSettings.length; i++) {
+    var s = currentSettings[i];
+    var rowNum = i + 1;
+    var name = (s.name || '').trim();
+
+    if (!name) {
+      return 'Row ' + rowNum + ': Setting Name is required and cannot be blank.';
+    }
+    if (!NAME_REGEX.test(name)) {
+      return 'Row ' + rowNum + ': Setting Name "' + name + '" is invalid. It must start with a letter and contain only letters and digits (e.g. taxRate1).';
+    }
+    if (seen[name]) {
+      return 'Row ' + rowNum + ': Setting Name "' + name + '" is duplicated. Names must be unique within the resource.';
+    }
+    seen[name] = true;
+
+    if (s.type === 'number' && isNaN(Number(s.value))) {
+      return 'Row ' + rowNum + ': Setting "' + name + '" requires a valid number value.';
+    }
+  }
+  return null;
+}
+
+function saveSettings() {
+  var resourceName = document.getElementById('resourceSelect').value;
+  if (!resourceName) return;
+
+  var error = validateSettings();
+  if (error) {
+    showStatus(error, 'error');
+    return;
+  }
+
+  var list = serializeSettings();
+  var json = JSON.stringify(list);
+
+  document.getElementById('saveBtn').disabled = true;
+  document.getElementById('saveBtn').textContent = 'Saving...';
+
+  google.script.run.withSuccessHandler(function() {
+    showStatus('Settings saved successfully!', 'success');
+    document.getElementById('saveBtn').disabled = false;
+    document.getElementById('saveBtn').textContent = 'Save Settings';
+    var res = findResource(resourceName);
+    if (res) res.settings = list;
+    renderPreview();
+  }).withFailureHandler(function(err) {
+    showStatus('Failed to save: ' + err.message, 'error');
+    document.getElementById('saveBtn').disabled = false;
+    document.getElementById('saveBtn').textContent = 'Save Settings';
+  }).app_saveResourceSettings(resourceName, json);
+}
+
+function showStatus(msg, type) {
+  var el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status-bar ' + type;
+  if (type === 'success') {
+    setTimeout(function() { el.style.display = 'none'; }, 3000);
+  }
+}
+
+function esc(v) {
+  return (v == null ? '' : String(v)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

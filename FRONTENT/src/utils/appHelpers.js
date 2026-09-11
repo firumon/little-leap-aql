@@ -42,7 +42,7 @@ export function toPascalCase(str) {
 /**
  * Set of audit column headers always hidden in detail views.
  */
-export const AUDIT_HEADERS = new Set(['CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy'])
+export const AUDIT_HEADERS = new Set(['CreatedAt', 'UpdatedAt', 'Revision', 'CreatedBy', 'UpdatedBy'])
 
 /**
  * Derives the set of action stamp column headers to hide from a resource's additionalActions config.

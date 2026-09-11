@@ -219,6 +219,18 @@ function getResourceConfigMap() {
       preAction: (readOptionalCell(row, registry.idx.PreAction, '') || '').toString().trim(),
       postAction: (readOptionalCell(row, registry.idx.PostAction, '') || '').toString().trim(),
       reports: parseJsonCell(readOptionalCell(row, registry.idx.Reports, '[]'), []),
+      settings: (function() {
+        var v = parseJsonCell(readOptionalCell(row, registry.idx.Settings, '[]'), []);
+        return Array.isArray(v) ? v : [];
+      })(),
+      dashboard: (function() {
+        var v = parseJsonCell(readOptionalCell(row, registry.idx.Dashboard, '[]'), []);
+        return Array.isArray(v) ? v : [];
+      })(),
+      options: (function() {
+        var v = parseJsonCell(readOptionalCell(row, registry.idx.Options, '[]'), []);
+        return Array.isArray(v) ? v : [];
+      })(),
       customUIName: (readOptionalCell(row, registry.idx.CustomUIName, '') || '').toString().trim(),
       listViews: listViewsMeta.views,
       listViewsMode: listViewsMeta.mode,
@@ -1222,10 +1234,13 @@ function buildAuthorizedResourceEntry(resourceName, options) {
       fields: Array.isArray(config.uiFields) ? config.uiFields : [],
       customUIName: config.customUIName || '',
       listViews: Array.isArray(config.listViews) ? config.listViews : [],
-      listViewsMode: (config.listViewsMode || 'auto').toString()
+      listViewsMode: (config.listViewsMode || 'auto').toString(),
+      dashboard: Array.isArray(config.dashboard) ? config.dashboard : [],
+      options: Array.isArray(config.options) ? config.options : []
     };
     entry.additionalActions = Array.isArray(config.additionalActions) ? config.additionalActions : [];
     entry.reports = Array.isArray(config.reports) ? config.reports : [];
+    entry.settings = Array.isArray(config.settings) ? config.settings : [];
   }
 
   return entry;

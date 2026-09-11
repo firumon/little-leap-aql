@@ -20,7 +20,7 @@ The **Delivery Report** generates an Outlet Delivery Document for a specific dis
   SKUFileID, VLOOKUP("ViewFileID", Config!A:B, 2, 0),
   MasterFileID, VLOOKUP("masterFileID", Config!A:B, 2, 0),
 
-  RawDeliveries, IMPORTRANGE(OutletFileID, "OutletDeliveries!A2:T"),
+  RawDeliveries, IMPORTRANGE(OutletFileID, "OutletDeliveries!A2:U"),
   RawItems, IMPORTRANGE(OutletFileID, "OutletRestockItems!A2:Q"),
   RawOutlets, IMPORTRANGE(MasterFileID, "Outlets!A2:B"),
   RawSKUs, IMPORTRANGE(SKUFileID, "SKU!A2:G"),
@@ -38,7 +38,7 @@ The **Delivery Report** generates an Outlet Delivery Document for a specific dis
   MatchIdx, IFERROR(MATCH($AB$6, DeliveryCodes, 0), 0),
   HasOrder, MatchIdx > 0,
 
-  OrderRow, IF(HasOrder, CHOOSEROWS(RawDeliveries, MatchIdx), MAKEARRAY(1, 20, LAMBDA(r, c, ""))),
+  OrderRow, IF(HasOrder, CHOOSEROWS(RawDeliveries, MatchIdx), MAKEARRAY(1, 21, LAMBDA(r, c, ""))),
 
   DeliveryDate, CHOOSEROWS(CHOOSECOLS(OrderRow, 2), 1),
   DeliveryUser, CHOOSEROWS(CHOOSECOLS(OrderRow, 3), 1),
@@ -133,7 +133,7 @@ The **Delivery Report** generates an Outlet Delivery Document for a specific dis
 ## Source Sheets & Column Dependencies
 
 The formula queries data from three spreadsheet files (`OutletFileID`, `ViewFileID`, `masterFileID`):
-1. **`OutletDeliveries`** (`OutletDeliveries!A2:T` in Outlet Spreadsheet):
+1. **`OutletDeliveries`** (`OutletDeliveries!A2:U` in Outlet Spreadsheet):
    - Column 1 (`A`): Delivery Code (matches `$AB$6`)
    - Column 2 (`B`): Date
    - Column 3 (`C`): Delivery Driver/User

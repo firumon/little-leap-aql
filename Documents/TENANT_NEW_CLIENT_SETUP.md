@@ -68,7 +68,7 @@ In the `App` spreadsheet menu, execute the following setup actions in order:
 2. **`AQL 🚀` > `⚙️ Setup & Refactor` > `Setup All operation`**
 3. **`AQL 🚀` > `⚙️ Setup & Refactor` > `Setup Base Accounts`**
 
-This will automatically create all the normalized sheets and apply formatting, schemas, data validations, and protections in the respective target spreadsheets.
+This will automatically create all the normalized sheets and apply formatting, schemas, and protections in the respective target spreadsheets (data validation is no longer applied by the setup scripts).
 
 ---
 

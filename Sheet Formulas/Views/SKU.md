@@ -10,8 +10,8 @@ The **SKU View** consolidates normalized data from three separate source sheets 
 =LET(
   Master, VLOOKUP("MasterFileID",Config!A1:B,2,0),
 
-  Products, QUERY(IMPORTRANGE(Master, "Products!A2:I"), "where Col1 is not null", 0),
-  SKUs, QUERY(IMPORTRANGE(Master, "SKUs!A2:N"), "where Col1 is not null", 0),
+  Products, QUERY(IMPORTRANGE(Master, "Products!A2:J"), "where Col1 is not null", 0),
+  SKUs, QUERY(IMPORTRANGE(Master, "SKUs!A2:O"), "where Col1 is not null", 0),
   UOMs, QUERY(IMPORTRANGE(Master, "UOMs!A2:E"), "where Col1 is not null", 0),
 
   HEADER, {
@@ -106,8 +106,8 @@ The **SKU View** consolidates normalized data from three separate source sheets 
 ## Inputs & Dependencies
 
 The formula imports data from the spreadsheet corresponding to `MasterFileID` defined in the local `Config` sheet:
-1. **`Products`** (`Products!A2:I`): Supplies product name, variant names list, and product status.
-2. **`SKUs`** (`SKUs!A2:N`): Supplies the main list of SKU records, variant values, associated UOM codes, tax codes, and SKU status.
+1. **`Products`** (`Products!A2:J`): Supplies product name, variant names list, and product status.
+2. **`SKUs`** (`SKUs!A2:O`): Supplies the main list of SKU records, variant values, associated UOM codes, tax codes, and SKU status.
 3. **`UOMs`** (`UOMs!A2:E`): Supplies the UOM definitions (UOM Name, Base UOM, Conversion Factor, Status).
 
 ---

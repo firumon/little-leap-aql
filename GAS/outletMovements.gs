@@ -84,6 +84,10 @@ function applyBatchOutletMovementsToOutletStorages(records, auth) {
         existing[idx.Quantity] = nextQty;
         if (now > maxTimestamp) maxTimestamp = now;
         if (idx.UpdatedAt !== undefined) existing[idx.UpdatedAt] = now;
+        if (idx.Revision !== undefined) {
+          var curRev = Number(existing[idx.Revision]);
+          existing[idx.Revision] = (!curRev || isNaN(curRev) || curRev < 0) ? 1 : curRev + 1;
+        }
         if (idx.UpdatedBy !== undefined) existing[idx.UpdatedBy] = userId;
         if (nextQty <= 0) {
           rowsToDelete.push(matchedIndex + 1);

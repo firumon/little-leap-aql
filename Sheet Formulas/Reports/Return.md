@@ -20,7 +20,7 @@ The **Return Report** generates a comprehensive Outlet Return Document for a spe
   MasterFileID, VLOOKUP("masterFileID", Config!A:B, 2, 0),
   SKUFileID, VLOOKUP("ViewFileID", Config!A:B, 2, 0),
 
-  RawReturns, IMPORTRANGE(OutletFileID, "OutletReturns!A2:AB"),
+  RawReturns, IMPORTRANGE(OutletFileID, "OutletReturns!A2:AC"),
   RawOutlets, IMPORTRANGE(MasterFileID, "Outlets!A2:B"),
   RawSKUs, IMPORTRANGE(SKUFileID, "SKU!A2:G"),
   RawWarehouses, IMPORTRANGE(MasterFileID, "Warehouses!A2:B"),
@@ -40,7 +40,7 @@ The **Return Report** generates a comprehensive Outlet Return Document for a spe
   MatchIdx, IFERROR(MATCH($AB$6, ReturnCodes, 0), 0),
   HasOrder, MatchIdx > 0,
 
-  OrderRow, IF(HasOrder, CHOOSEROWS(RawReturns, MatchIdx), MAKEARRAY(1, 28, LAMBDA(r, c, ""))),
+  OrderRow, IF(HasOrder, CHOOSEROWS(RawReturns, MatchIdx), MAKEARRAY(1, 29, LAMBDA(r, c, ""))),
 
   ReturnDate, CHOOSEROWS(CHOOSECOLS(OrderRow, 3), 1),
   OutletCode, CHOOSEROWS(CHOOSECOLS(OrderRow, 2), 1),
@@ -132,7 +132,7 @@ The **Return Report** generates a comprehensive Outlet Return Document for a spe
 ## Source Sheets & Column Dependencies
 
 The formula queries data from four spreadsheet files (`OutletFileID`, `ViewFileID`, `masterFileID`):
-1. **`OutletReturns`** (`OutletReturns!A2:AB` in Outlet Spreadsheet):
+1. **`OutletReturns`** (`OutletReturns!A2:AC` in Outlet Spreadsheet):
    - Column 1 (`A`): Code (matches `$AB$6`)
    - Column 2 (`B`): Outlet Code
    - Column 3 (`C`): Date

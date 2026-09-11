@@ -12,21 +12,15 @@
 var OPERATION_HEADER_COLOR = '#2E7D32';
 var OPERATION_ALT_ROW_COLOR = '#f0f7f1';
 
-function setupOperationSheets() {
-    if (typeof clearAllAppCaches === 'function') clearAllAppCaches();
-    resetLogSheet_();
+function setup_getOperationSchemas() {
+    const commonAuditColumns = ['CreatedAt', 'UpdatedAt', 'Revision', 'CreatedBy', 'UpdatedBy'];
 
-    logToSheet_('Starting Setup All Operation');
-
-    const commonAuditColumns = ['CreatedAt', 'UpdatedAt', 'CreatedBy', 'UpdatedBy'];
-
-    const schemaByResource = [
+    return [
         {
             resourceName: CONFIG.OPERATION_SHEETS.PROCUREMENTS,
             headers: ['Code', 'Progress', 'InitiatedDate', 'CreatedUser', 'CreatedRole', 'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active',
             defaults: { Status: 'Active', Progress: 'INITIATED' },
-            progressValidation: APP_OPTIONS_SEED.ProcurementProgress,
             columnWidths: { Code: 150, Progress: 180, InitiatedDate: 150, CreatedUser: 150, CreatedRole: 150, Status: 100, AccessRegion: 130 }
         },
         {
@@ -38,9 +32,6 @@ function setupOperationSheets() {
                       'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active',
             defaults: { Status: 'Active', Progress: 'Draft' },
-            progressValidation: ['Draft', 'Pending Approval', 'Revision Required', 'Approved', 'Rejected', 'RFQ Processed'],
-            typeValidation: APP_OPTIONS_SEED.PurchaseRequisitionType,
-            priorityValidation: APP_OPTIONS_SEED.PurchaseRequisitionPriority,
             columnWidths: {
                 Code: 150, ProcurementCode: 150, PRDate: 130, Type: 100, Priority: 100,
                 RequiredDate: 130, WarehouseCode: 140, TypeReferenceCode: 160, Progress: 130,
@@ -63,7 +54,6 @@ function setupOperationSheets() {
                 'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active',
             defaults: { Status: 'Active', Progress: 'DRAFT' },
-            progressValidation: ['DRAFT', 'SENT', 'CLOSED', 'CANCELLED'],
             columnWidths: { Code: 150, ProcurementCode: 150, PurchaseRequisitionCode: 120,
             PurchaseRequisitionItemsCode: 120, RFQDate: 120, LeadTimeDays: 120, LeadTimeType: 120,
             ShippingTermMode: 120, ShippingTerm: 120, PaymentTermMode: 120, PaymentTerm: 120, PaymentTermDetail: 120,
@@ -77,7 +67,6 @@ function setupOperationSheets() {
             headers: ['Code', 'ProcurementCode', 'RFQCode', 'SupplierCode', 'SentDate', 'Progress', 'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active',
             defaults: { Status: 'Active', Progress: 'ASSIGNED' },
-            progressValidation: ['ASSIGNED','SENT','RESPONDED','DECLINED','CANCELLED'],
             columnWidths: { Code: 150, ProcurementCode: 150, RFQCode: 150, SupplierCode: 150, SentDate: 150,
             Progress: 150, Status: 100, AccessRegion: 130 }
         },
@@ -92,13 +81,6 @@ function setupOperationSheets() {
                 'ResponseRecordedAt', 'ResponseRecordedBy', 'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active',
             defaults: { Status: 'Active', Progress: 'RECEIVED', TotalAmount: 0, Currency: 'AED', ExtraChargesBreakup: '{"tax":0,"freight":0,"commission":0,"handling":0,"other":0}', AllowPartialPO: 'TRUE' },
-            responseTypeValidation: APP_OPTIONS_SEED.SupplierQuotationResponseType,
-            progressValidation: APP_OPTIONS_SEED.SupplierQuotationProgress,
-            leadTimeTypeValidation: APP_OPTIONS_SEED.RFQLeadTimeType,
-            deliveryModeValidation: APP_OPTIONS_SEED.RFQDeliveryMode,
-            shippingTermValidation: APP_OPTIONS_SEED.RFQShippingTerm,
-            paymentTermValidation: APP_OPTIONS_SEED.RFQPaymentTerm,
-            currencyValidation: APP_OPTIONS_SEED.Currency,
             columnWidths: {
                 Code: 150, ProcurementCode: 150, RFQCode: 150, SupplierCode: 150, ResponseType: 130,
                 ResponseDate: 130, DeclineReason: 220, AllowPartialPO: 120, SupplierQuotationReference: 150, LeadTimeDays: 120, LeadTimeType: 130,
@@ -132,8 +114,6 @@ function setupOperationSheets() {
                       'Currency', 'SubtotalAmount', 'ExtraChargesBreakup', 'TotalAmount', 'Remarks', 'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active',
             defaults: { Status: 'Active', Progress: 'CREATED', Currency: 'AED', SubtotalAmount: 0, TotalAmount: 0, ExtraChargesBreakup: '{"tax":0,"freight":0,"commission":0,"handling":0,"other":0}' },
-            progressValidation: APP_OPTIONS_SEED.PurchaseOrderProgress,
-            currencyValidation: APP_OPTIONS_SEED.Currency,
             columnWidths: { Code: 150, ProcurementCode: 150, SupplierQuotationCode: 150, SupplierCode: 150, PODate: 130, ShipToWarehouseCode: 140, Progress: 180,
                             ProgressSentAt: 160, ProgressSentBy: 150, ProgressSentComment: 200,
                             ProgressAcknowledgedAt: 160, ProgressAcknowledgedBy: 150, ProgressAcknowledgedComment: 200,
@@ -151,13 +131,12 @@ function setupOperationSheets() {
         {
             resourceName: CONFIG.OPERATION_SHEETS.PO_RECEIVINGS,
             headers: ['Code', 'ProcurementCode', 'PurchaseOrderCode', 'InspectionDate', 'InspectedUserName', 'Progress',
-                      'ProgressConfirmedAt', 'ProgressConfirmedBy', 'ProgressConfirmedComment',
-                      'ProgressCancelledAt', 'ProgressCancelledBy', 'ProgressCancelledComment',
-                      'ProgressGRNGeneratedAt', 'ProgressGRNGeneratedBy', 'ProgressGRNGeneratedComment',
-                      'Remarks', 'Status', 'AccessRegion'].concat(commonAuditColumns),
+                       'ProgressConfirmedAt', 'ProgressConfirmedBy', 'ProgressConfirmedComment',
+                       'ProgressCancelledAt', 'ProgressCancelledBy', 'ProgressCancelledComment',
+                       'ProgressGRNGeneratedAt', 'ProgressGRNGeneratedBy', 'ProgressGRNGeneratedComment',
+                       'Remarks', 'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active',
             defaults: { Status: 'Active', Progress: 'DRAFT' },
-            progressValidation: APP_OPTIONS_SEED.POReceivingProgress,
             columnWidths: { Code: 150, ProcurementCode: 150, PurchaseOrderCode: 150, InspectionDate: 130, InspectedUserName: 180, Progress: 150,
                             ProgressConfirmedAt: 160, ProgressConfirmedBy: 150, ProgressConfirmedComment: 220,
                             ProgressCancelledAt: 160, ProgressCancelledBy: 150, ProgressCancelledComment: 220,
@@ -176,31 +155,27 @@ function setupOperationSheets() {
             headers: ['Code', 'ProcurementCode', 'PurchaseOrderCode', 'POReceivingCode', 'Date', 'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active',
             defaults: { Status: 'Active' },
-            statusValidation: ['Active', 'Inactive'],
-            columnWidths: { Code: 150, ProcurementCode: 150, PurchaseOrderCode: 150, POReceivingCode: 150, Date: 130, Status: 100, AccessRegion: 130, CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140 }
+            columnWidths: { Code: 150, ProcurementCode: 150, PurchaseOrderCode: 150, POReceivingCode: 150, Date: 130, Status: 100, AccessRegion: 130, CreatedAt: 170, UpdatedAt: 170, Revision: 100, CreatedBy: 140, UpdatedBy: 140 }
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.GOODS_RECEIPT_ITEMS,
             headers: ['Code', 'GoodsReceiptCode', 'POReceivingItemCode', 'SKU', 'Qty', 'Status'].concat(commonAuditColumns),
             statusDefault: 'Active',
             defaults: { Status: 'Active' },
-            statusValidation: ['Active', 'Inactive'],
-            columnWidths: { Code: 150, GoodsReceiptCode: 160, POReceivingItemCode: 180, SKU: 150, Qty: 120, Status: 100, CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140 }
+            columnWidths: { Code: 150, GoodsReceiptCode: 160, POReceivingItemCode: 180, SKU: 150, Qty: 120, Status: 100, CreatedAt: 170, UpdatedAt: 170, Revision: 100, CreatedBy: 140, UpdatedBy: 140 }
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.STOCK_MOVEMENTS,
             headers: ['Code', 'WarehouseCode', 'StorageName', 'SKU', 'QtyChange', 'ReferenceType', 'ReferenceCode', 'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active',
             defaults: { Status: 'Active', QtyChange: 0 },
-            statusValidation: ['Active', 'Inactive'],
-            referenceTypeValidation: APP_OPTIONS_SEED.StockMovementReferenceType,
-            columnWidths: { Code: 150, WarehouseCode: 130, StorageName: 130, SKU: 150, QtyChange: 120, ReferenceType: 140, ReferenceCode: 150, Status: 100, AccessRegion: 130, CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140 }
+            columnWidths: { Code: 150, WarehouseCode: 130, StorageName: 130, SKU: 150, QtyChange: 120, ReferenceType: 140, ReferenceCode: 150, Status: 100, AccessRegion: 130, CreatedAt: 170, UpdatedAt: 170, Revision: 100, CreatedBy: 140, UpdatedBy: 140 }
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.WAREHOUSE_STORAGES,
             headers: ['Code', 'WarehouseCode', 'StorageName', 'SKU', 'Quantity'].concat(commonAuditColumns),
             defaults: { Quantity: 0 },
-            columnWidths: { Code: 150, WarehouseCode: 150, StorageName: 200, SKU: 150, Quantity: 120, CreatedAt: 170, UpdatedAt: 170, CreatedBy: 140, UpdatedBy: 140 }
+            columnWidths: { Code: 150, WarehouseCode: 150, StorageName: 200, SKU: 150, Quantity: 120, CreatedAt: 170, UpdatedAt: 170, Revision: 100, CreatedBy: 140, UpdatedBy: 140 }
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.OUTLET_VISITS,
@@ -210,7 +185,7 @@ function setupOperationSheets() {
                 'ProgressPostponedAt', 'ProgressPostponedBy', 'ProgressPostponedComment',
                 'ProgressCancelledAt', 'ProgressCancelledBy', 'ProgressCancelledComment',
                 'Status', 'AccessRegion'].concat(commonAuditColumns),
-            statusDefault: 'Active', defaults: { Status: 'Active', Progress: 'PLANNED' }, statusValidation: ['Active', 'Inactive'], progressValidation: APP_OPTIONS_SEED.OutletVisitProgress,
+            statusDefault: 'Active', defaults: { Status: 'Active', Progress: 'PLANNED' },
             columnWidths: { Code: 150, OutletCode: 140, Date: 130, RespondDate: 170, Progress: 140,
                 ProgressPlannedAt: 160, ProgressPlannedBy: 150, ProgressPlannedComment: 220,
                 ProgressCompletedAt: 160, ProgressCompletedBy: 150, ProgressCompletedComment: 220,
@@ -228,7 +203,7 @@ function setupOperationSheets() {
                 'ProgressDeliveredAt', 'ProgressDeliveredBy', 'ProgressDeliveredComment',
                 'ProgressCancelledAt', 'ProgressCancelledBy', 'ProgressCancelledComment',
                 'Status', 'AccessRegion'].concat(commonAuditColumns),
-            statusDefault: 'Active', defaults: { Status: 'Active', Progress: 'DRAFT' }, progressValidation: APP_OPTIONS_SEED.OutletRestockProgress,
+            statusDefault: 'Active', defaults: { Status: 'Active', Progress: 'DRAFT' },
             columnWidths: { Code: 150, Date: 130, OutletCode: 140, OutletConsumptionCode: 180, RequestedUser: 180, ApprovedUser: 180, Progress: 180,
                 ProgressSubmittedAt: 160, ProgressSubmittedBy: 150, ProgressSubmittedComment: 220,
                 ProgressRevisionRequiredAt: 170, ProgressRevisionRequiredBy: 170, ProgressRevisionRequiredComment: 240,
@@ -246,7 +221,6 @@ function setupOperationSheets() {
                 'ProgressCancelledAt', 'ProgressCancelledBy', 'ProgressCancelledComment',
                 'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active', defaults: { Status: 'Active', Quantity: 0, Progress: 'PENDING' },
-            progressValidation: APP_OPTIONS_SEED.OutletRestockItemProgress,
             columnWidths: { Code: 150, OutletRestockCode: 170, WarehouseCode: 150, SKU: 150, StorageName: 170, Quantity: 130, Progress: 140,
                 ProgressAllocatedAt: 170, ProgressAllocatedBy: 170, ProgressAllocatedComment: 220,
                 ProgressDeliveredAt: 170, ProgressDeliveredBy: 170, ProgressDeliveredComment: 220,
@@ -262,7 +236,7 @@ function setupOperationSheets() {
                 'CancelledAt', 'CancelledBy', 'CancelledComment',
                 'Status', 'AccessRegion'
             ].concat(commonAuditColumns),
-            statusDefault: 'Active', defaults: { Status: 'Active', Progress: 'DRAFT' }, progressValidation: APP_OPTIONS_SEED.OutletDeliveryProgress,
+            statusDefault: 'Active', defaults: { Status: 'Active', Progress: 'DRAFT' },
             columnWidths: { Code: 150, Date: 130, UserName: 180, Progress: 140, OutletRestockItemCodes: 300,
                 ProgressInTransitAt: 170, ProgressInTransitBy: 170, ProgressInTransitComment: 240,
                 ProgressCompletedAt: 170, ProgressCompletedBy: 170, ProgressCompletedComment: 240,
@@ -283,9 +257,6 @@ function setupOperationSheets() {
             ].concat(commonAuditColumns),
             statusDefault: 'Active',
             defaults: { Status: 'Active', Qty: 0, Price: 0, Progress: 'SUBMITTED', InvoiceAdjustmentRequired: 'FALSE', InvoiceAdjustmentDone: 'FALSE', WarehouseActionRequired: 'FALSE', WarehouseActionCompleted: 'FALSE', WarehouseAction: '', WarehouseActionDisposedReason: '', ConsumptionInvoiceCode: '', SourceInvoiceCode: '' },
-            progressValidation: APP_OPTIONS_SEED.OutletReturnProgress,
-            reasonValidation: APP_OPTIONS_SEED.OutletReturnReason,
-            warehouseActionValidation: APP_OPTIONS_SEED.OutletReturnWarehouseAction,
             columnWidths: {
                 Code: 150, OutletCode: 140, Date: 130, Username: 170, SKU: 150, Qty: 100, Price: 120,
                 Reason: 140, ReasonComment: 200,
@@ -305,7 +276,7 @@ function setupOperationSheets() {
                 'ProgressInvoiceGeneratedAt', 'ProgressInvoiceGeneratedBy', 'ProgressInvoiceGeneratedComment',
                 'ProgressCancelledAt', 'ProgressCancelledBy', 'ProgressCancelledComment',
                 'Status', 'AccessRegion'].concat(commonAuditColumns),
-            statusDefault: 'Active', defaults: { Status: 'Active', Progress: 'PENDING_INVOICE_GENERATION' }, progressValidation: APP_OPTIONS_SEED.OutletConsumptionProgress,
+            statusDefault: 'Active', defaults: { Status: 'Active', Progress: 'PENDING_INVOICE_GENERATION' },
             columnWidths: { Code: 150, OutletCode: 140, Date: 140, Username: 170, OutletVisitCode: 170, Progress: 180, ProgressPendingInvoiceGenerationAt: 190, ProgressPendingInvoiceGenerationBy: 190, ProgressPendingInvoiceGenerationComment: 240, ProgressInvoiceGeneratedAt: 170, ProgressInvoiceGeneratedBy: 170, ProgressInvoiceGeneratedComment: 220, ProgressCancelledAt: 160, ProgressCancelledBy: 160, ProgressCancelledComment: 220, Status: 100, AccessRegion: 130 }
         },
         {
@@ -322,8 +293,7 @@ function setupOperationSheets() {
                 'ProgressPaidAt', 'ProgressPaidBy', 'ProgressPaidComment',
                 'ProgressCancelledAt', 'ProgressCancelledBy', 'ProgressCancelledComment',
                 'Status', 'AccessRegion'].concat(commonAuditColumns),
-            statusDefault: 'Active', defaults: { Status: 'Active', Subtotal: 0, Discount: 0, TotalTaxableAmount: 0, TotalTaxAmount: 0, TaxDetails: '[]', OutletReturnCodes: '', ReturnDeductionTotal: 0, SettlementMismatchAmount: 0, SettlementReason: '', Progress: 'PENDING_PAYMENT' }, progressValidation: APP_OPTIONS_SEED.OutletConsumptionInvoiceProgress,
-            settlementReasonValidation: APP_OPTIONS_SEED.OutletConsumptionInvoiceSettlementReasons,
+            statusDefault: 'Active', defaults: { Status: 'Active', Subtotal: 0, Discount: 0, TotalTaxableAmount: 0, TotalTaxAmount: 0, TaxDetails: '[]', OutletReturnCodes: '', ReturnDeductionTotal: 0, SettlementMismatchAmount: 0, SettlementReason: '', Progress: 'PENDING_PAYMENT' },
             // OutletConsumptionCode holds a COMMA-SEPARATED list when several
             // consumptions are bundled onto one invoice, so it is sized for 3-4 codes.
             columnWidths: { Code: 150, OutletConsumptionCode: 320, Date: 140, DueDate: 140, OutletCode: 140, Username: 170, PriceListCode: 170, Subtotal: 120, Discount: 120, TotalTaxableAmount: 150, TotalTaxAmount: 120, TaxDetails: 250, OutletReturnCodes: 180, ReturnDeductionTotal: 150, SettlementMismatchAmount: 190, SettlementReason: 180, Progress: 170, ProgressPendingPaymentAt: 180, ProgressPendingPaymentBy: 180, ProgressPendingPaymentComment: 230, ProgressPartiallyPaidAt: 180, ProgressPartiallyPaidBy: 180, ProgressPartiallyPaidComment: 230, ProgressPaidAt: 160, ProgressPaidBy: 160, ProgressPaidComment: 210, ProgressCancelledAt: 170, ProgressCancelledBy: 170, ProgressCancelledComment: 220, Status: 100, AccessRegion: 130 }
@@ -342,8 +312,6 @@ function setupOperationSheets() {
                       'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active',
             defaults: { Status: 'Active', Amount: 0, Progress: 'SUBMITTED' },
-            progressValidation: APP_OPTIONS_SEED.OutletPaymentProgress,
-            modeValidation: APP_OPTIONS_SEED.OutletPaymentMode,
             columnWidths: {
                 Code: 150, Date: 130, OutletCode: 140, OutletConsumptionInvoiceCode: 220, Amount: 120, Mode: 130, Reference: 180, Username: 170, Progress: 140,
                 ProgressSubmittedAt: 160, ProgressSubmittedBy: 150, ProgressSubmittedComment: 200,
@@ -354,7 +322,7 @@ function setupOperationSheets() {
         {
             resourceName: CONFIG.OPERATION_SHEETS.OUTLET_MOVEMENTS,
             headers: ['Code', 'OutletCode', 'StorageName', 'SKU', 'QtyChange', 'ReferenceType', 'ReferenceCode', 'ReferenceItemCode', 'MovementDate', 'Status', 'AccessRegion'].concat(commonAuditColumns),
-            statusDefault: 'Active', defaults: { Status: 'Active', StorageName: '_default', QtyChange: 0 }, referenceTypeValidation: APP_OPTIONS_SEED.OutletMovementReferenceType,
+            statusDefault: 'Active', defaults: { Status: 'Active', StorageName: '_default', QtyChange: 0 },
             columnWidths: { Code: 150, OutletCode: 140, StorageName: 150, SKU: 150, QtyChange: 120, ReferenceType: 150, ReferenceCode: 160, ReferenceItemCode: 170, MovementDate: 130, Status: 100, AccessRegion: 130 }
         },
         {
@@ -373,8 +341,6 @@ function setupOperationSheets() {
                       'Status', 'AccessRegion'].concat(commonAuditColumns),
             statusDefault: 'Active',
             defaults: { Status: 'Active', Progress: 'DRAFT', IsInstant: 'FALSE' },
-            statusValidation: ['Active', 'Inactive'],
-            progressValidation: APP_OPTIONS_SEED.WarehouseTransferProgress,
             columnWidths: {
                 Code: 150, SourceWarehouseCode: 150, DestinationWarehouseCode: 180, Date: 130, Username: 150, Reference: 150, IsInstant: 100, Progress: 150,
                 ProgressPendingApprovalAt: 170, ProgressPendingApprovalBy: 160, ProgressPendingApprovalComment: 200,
@@ -392,8 +358,6 @@ function setupOperationSheets() {
                       'Status'].concat(commonAuditColumns),
             statusDefault: 'Active',
             defaults: { Status: 'Active', Quantity: 0, Progress: 'PENDING', SourceStorageName: '_default', DestinationStorageName: '_default' },
-            statusValidation: ['Active', 'Inactive'],
-            progressValidation: APP_OPTIONS_SEED.WarehouseTransferItemProgress,
             columnWidths: {
                 Code: 150, WarehouseTransferCode: 180, SKUCode: 150, Quantity: 100, SourceStorageName: 160, DestinationStorageName: 200, Progress: 130,
                 ProgressTransferredAt: 170, ProgressTransferredBy: 160, ProgressTransferredComment: 200,
@@ -420,104 +384,35 @@ function setupOperationSheets() {
             }
         }
     ];
+}
 
-    const fileSheetIndex = {};
+function setupOperationSheets(options) {
+    options = options || {};
+    if (typeof clearAllAppCaches === 'function') clearAllAppCaches();
+    resetLogSheet_();
+
+    logToSheet_('Starting Setup All Operation');
+
+    const schemaByResource = setup_getOperationSchemas();
+    const selectedResources = options.selectedResources;
+    const decisions = options.decisions || {};
+
+    const schemasToProcess = (selectedResources && selectedResources.length > 0)
+        ? schemaByResource.filter(function (s) { return selectedResources.indexOf(s.resourceName) !== -1; })
+        : schemaByResource;
+
     const results = [];
 
-    schemaByResource.forEach(function (schema) {
-        logToSheet_('Processing ' + schema.resourceName);
+    schemasToProcess.forEach(function (schema) {
         try {
-            const resource = getResourceConfig(schema.resourceName);
-            if (resource.codeSequenceLength > 0) {
-                if (!resource.codePrefix) {
-                    throw new Error('CodePrefix is missing in Resources for ' + schema.resourceName);
-                }
-            }
-
-            const file = openSpreadsheetById(resource.fileId);
-            let sheet = file.getSheetByName(resource.sheetName);
-            let isNewSheet = false;
-
-            if (!sheet) {
-                sheet = file.insertSheet(resource.sheetName);
-                isNewSheet = true;
-                results.push('Created: ' + schema.resourceName + ' in file ' + resource.fileId);
-            } else {
-                results.push('Updated: ' + schema.resourceName + ' in file ' + resource.fileId);
-            }
-
-            setup_normalizeSheetSchema(sheet, schema.headers);
-            setup_applyHeaderFormatting(sheet, schema.headers, schema.columnWidths, OPERATION_HEADER_COLOR);
-
-            if (isNewSheet) {
-                setup_trimToHeaderOnly(sheet);
-            }
-
-            setup_applyColumnDefaults(sheet, schema.headers, schema.defaults || {});
-            setup_clearDataValidations(sheet, schema.headers.length);
-
-            if (schema.statusValidation) {
-                setup_applyListValidation(sheet, schema.headers, 'Status', schema.statusValidation);
-            }
-            if (schema.customsStatusValidation) {
-                setup_applyListValidation(sheet, schema.headers, 'CustomsStatus', schema.customsStatusValidation);
-            }
-            if (schema.progressValidation && schema.headers.indexOf('Progress') !== -1) {
-                setup_applyListValidation(sheet, schema.headers, 'Progress', schema.progressValidation);
-            }
-            if (schema.referenceTypeValidation && schema.headers.indexOf('ReferenceType') !== -1) {
-                setup_applyListValidation(sheet, schema.headers, 'ReferenceType', schema.referenceTypeValidation);
-            }
-            if (schema.typeValidation && schema.headers.indexOf('Type') !== -1) {
-                setup_applyListValidation(sheet, schema.headers, 'Type', schema.typeValidation);
-            }
-            if (schema.priorityValidation && schema.headers.indexOf('Priority') !== -1) {
-                setup_applyListValidation(sheet, schema.headers, 'Priority', schema.priorityValidation);
-            }
-            if (schema.responseTypeValidation && schema.headers.indexOf('ResponseType') !== -1) {
-                setup_applyListValidation(sheet, schema.headers, 'ResponseType', schema.responseTypeValidation);
-            }
-            if (schema.leadTimeTypeValidation && schema.headers.indexOf('LeadTimeType') !== -1) {
-                setup_applyListValidation(sheet, schema.headers, 'LeadTimeType', schema.leadTimeTypeValidation);
-            }
-            if (schema.deliveryModeValidation && schema.headers.indexOf('DeliveryMode') !== -1) {
-                setup_applyListValidation(sheet, schema.headers, 'DeliveryMode', schema.deliveryModeValidation);
-            }
-            if (schema.shippingTermValidation && schema.headers.indexOf('ShippingTerm') !== -1) {
-                setup_applyListValidation(sheet, schema.headers, 'ShippingTerm', schema.shippingTermValidation);
-            }
-            if (schema.paymentTermValidation && schema.headers.indexOf('PaymentTerm') !== -1) {
-                setup_applyListValidation(sheet, schema.headers, 'PaymentTerm', schema.paymentTermValidation);
-            }
-            if (schema.currencyValidation && schema.headers.indexOf('Currency') !== -1) {
-                setup_applyListValidation(sheet, schema.headers, 'Currency', schema.currencyValidation);
-            }
-            if (schema.modeValidation && schema.headers.indexOf('Mode') !== -1) {
-                setup_applyListValidation(sheet, schema.headers, 'Mode', schema.modeValidation);
-            }
-            if (schema.reasonValidation && schema.headers.indexOf('Reason') !== -1) {
-                setup_applyListValidation(sheet, schema.headers, 'Reason', schema.reasonValidation);
-            }
-            if (schema.settlementReasonValidation && schema.headers.indexOf('SettlementReason') !== -1) {
-                setup_applyListValidation(sheet, schema.headers, 'SettlementReason', schema.settlementReasonValidation);
-            }
-            if (schema.warehouseActionValidation && schema.headers.indexOf('WarehouseAction') !== -1) {
-                setup_applyListValidation(sheet, schema.headers, 'WarehouseAction', schema.warehouseActionValidation);
-            }
-
-            if (schema.headers.indexOf('Status') !== -1) {
-                setup_fillBlankColumn(sheet, schema.headers, 'Status', schema.statusDefault || 'Active');
-            }
-
-            setup_protectHeaderRow(sheet, schema.headers.length);
-            setup_applyBanding(sheet, schema.headers.length, OPERATION_HEADER_COLOR, OPERATION_ALT_ROW_COLOR);
-            setup_setPlainTextFormat(sheet, schema.headers.length);
-
-            if (!fileSheetIndex[resource.fileId]) fileSheetIndex[resource.fileId] = 0;
-            fileSheetIndex[resource.fileId]++;
-            file.setActiveSheet(sheet);
-            file.moveActiveSheet(fileSheetIndex[resource.fileId]);
-
+            const outcome = setup_refactorResourceSheet(schema, {
+                decisions: decisions,
+                allSchemas: schemaByResource,
+                headerColor: OPERATION_HEADER_COLOR,
+                altColor: OPERATION_ALT_ROW_COLOR
+            });
+            const prefix = outcome.isNewSheet ? 'Created: ' : 'Updated: ';
+            results.push(prefix + schema.resourceName + (outcome.changed ? ' (' + outcome.message + ')' : ' (no change)'));
         } catch (err) {
             results.push('Error for ' + schema.resourceName + ': ' + err.message);
         }
@@ -531,9 +426,12 @@ function setupOperationSheets() {
     if (typeof clearAllAppCaches === 'function') clearAllAppCaches();
 
     Logger.log(summary);
-    try {
-        SpreadsheetApp.getUi().alert(summary);
-    } catch (e) {
-        // Non-UI context
+    if (!options.dialog) {
+        try {
+            SpreadsheetApp.getUi().alert(summary);
+        } catch (e) {
+            // Non-UI context
+        }
     }
+    return summary;
 }

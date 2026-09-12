@@ -287,8 +287,7 @@ function handleResourceCreateRecord(auth, payload) {
   const schema = buildMasterSchemaFromResourceConfig(resource.config);
 
   const sheet = resource.sheet;
-  const values = sheet.getDataRange().getValues();
-  const headers = values[0] || [];
+  const headers = getSheetHeadersByMeta(resource.config.fileId, resource.config.sheetName, sheet);
   const idx = getHeaderIndexMap(headers);
   const recordPayload = payload && typeof payload.record === 'object' && payload.record !== null
     ? payload.record
@@ -299,6 +298,27 @@ function handleResourceCreateRecord(auth, payload) {
 
   const providedValues = extractProvidedHeaderValues(headers, { record: recordPayload });
   const providedCode = resolveCodeValue({ record: recordPayload });
+
+  var maxColIdx = idx.Code !== undefined ? idx.Code : 0;
+  (schema.uniqueHeaders || []).forEach(function (h) {
+    if (idx[h] !== undefined && idx[h] > maxColIdx) maxColIdx = idx[h];
+  });
+  (schema.uniqueCompositeHeaders || []).forEach(function (combo) {
+    (combo || []).forEach(function (h) {
+      if (idx[h] !== undefined && idx[h] > maxColIdx) maxColIdx = idx[h];
+    });
+  });
+  var maxNeededCol = Math.min(headers.length, maxColIdx + 1);
+  if (maxNeededCol < 1) maxNeededCol = 1;
+
+  var lastRow = sheet.getLastRow();
+
+  var values;
+  if (lastRow > 1) {
+    values = sheet.getRange(1, 1, lastRow, maxNeededCol).getValues();
+  } else {
+    values = [headers.slice(0, maxNeededCol)];
+  }
 
   let code = providedCode;
   if (!code) {
@@ -320,23 +340,43 @@ function handleResourceCreateRecord(auth, payload) {
   validateRequiredFields(rowData, idx, schema.requiredHeaders, resourceName);
   validateMasterUniqueness(values, idx, rowData, schema, -1, resourceName);
 
-  const targetRow = sheet.getLastRow() + 1;
+  const targetRow = lastRow + 1;
   sheet.getRange(targetRow, 1, 1, headers.length).setValues([rowData]);
   updateResourceSyncCursor(resourceName, recordTimestamp);
 
   var savedRecord = rowArrayToObject(headers, rowData);
+  var directPayload = buildDirectWriteResourcePayload(resourceName, resource.config, headers, [rowData], auth, recordTimestamp);
+  var directResources = {};
+  directResources[resourceName] = directPayload;
+
   var result = {
     success: true,
     message: resourceName + ' record created successfully',
     data: mergeDeltaResourcesIntoResult(
       { code: code },
-      collectWriteDeltaResources(auth, payload, [resourceName])
+      directResources
     )
   };
   dispatchPostActionHook(resource.config, payload, result, auth, 'create', {
     headers: headers,
     savedRecord: savedRecord
   }, resourceName);
+
+  // Safe boundary for side-effect hooks (Bucket B)
+  var sideEffectResources = [];
+  if (resourceName === 'OutletMovements') {
+    sideEffectResources.push('OutletStorages');
+  } else if (resourceName === 'StockMovements') {
+    sideEffectResources.push('WarehouseStorages');
+  } else if (resourceName === 'Procurements') {
+    var rawPayload = payload || {};
+    var prCode = (rawPayload.linkedPurchaseRequisitionCode || (rawPayload.record && rawPayload.record.PurchaseRequisitionCode) || '').toString().trim();
+    if (prCode) sideEffectResources.push('PurchaseRequisitions');
+  }
+  if (sideEffectResources.length) {
+    var deltaPayloads = collectWriteDeltaResources(auth, payload, sideEffectResources);
+    result.data = mergeDeltaResourcesIntoResult(result.data, deltaPayloads);
+  }
   return result;
 }
 
@@ -440,8 +480,7 @@ function handleResourceUpdateRecord(auth, payload) {
   const schema = buildMasterSchemaFromResourceConfig(resource.config);
 
   const sheet = resource.sheet;
-  const values = sheet.getDataRange().getValues();
-  const headers = values[0] || [];
+  const headers = getSheetHeadersByMeta(resource.config.fileId, resource.config.sheetName, sheet);
   const idx = getHeaderIndexMap(headers);
 
   const code = sanitizeRequiredText(resolveCodeValue(payload), 'Code is required');
@@ -466,18 +505,43 @@ function handleResourceUpdateRecord(auth, payload) {
 
   const recordTimestamp = applyAuditFields(mergedRow, idx, auth, resource.config, false);
   validateRequiredFields(mergedRow, idx, schema.requiredHeaders, resourceName);
-  validateMasterUniqueness(values, idx, mergedRow, schema, rowNumber, resourceName);
+
+  var hasUniqueness = (schema.uniqueHeaders && schema.uniqueHeaders.length) || (schema.uniqueCompositeHeaders && schema.uniqueCompositeHeaders.length);
+  if (hasUniqueness) {
+    var maxColIdx = 0;
+    (schema.uniqueHeaders || []).forEach(function (h) {
+      if (idx[h] !== undefined && idx[h] > maxColIdx) maxColIdx = idx[h];
+    });
+    (schema.uniqueCompositeHeaders || []).forEach(function (combo) {
+      (combo || []).forEach(function (h) {
+        if (idx[h] !== undefined && idx[h] > maxColIdx) maxColIdx = idx[h];
+      });
+    });
+    var maxNeededCol = Math.min(headers.length, maxColIdx + 1);
+    if (maxNeededCol < 1) maxNeededCol = 1;
+
+    var lastRow = sheet.getLastRow();
+
+    if (lastRow > 1) {
+      var values = sheet.getRange(1, 1, lastRow, maxNeededCol).getValues();
+      validateMasterUniqueness(values, idx, mergedRow, schema, rowNumber, resourceName);
+    }
+  }
 
   sheet.getRange(rowNumber, 1, 1, headers.length).setValues([mergedRow]);
   updateResourceSyncCursor(resourceName, recordTimestamp);
 
   var savedRecord = rowArrayToObject(headers, mergedRow);
+  var directPayload = buildDirectWriteResourcePayload(resourceName, resource.config, headers, [mergedRow], auth, recordTimestamp);
+  var directResources = {};
+  directResources[resourceName] = directPayload;
+
   var result = {
     success: true,
     message: resourceName + ' record updated successfully',
     data: mergeDeltaResourcesIntoResult(
       { code: code },
-      collectWriteDeltaResources(auth, payload, [resourceName])
+      directResources
     )
   };
   dispatchPostActionHook(resource.config, payload, result, auth, 'update', {
@@ -485,6 +549,16 @@ function handleResourceUpdateRecord(auth, payload) {
     previousRecord: previousRecord,
     savedRecord: savedRecord
   }, resourceName);
+
+  // Side effect for WarehouseTransferItems update
+  var sideEffectResources = [];
+  if (resourceName === 'WarehouseTransferItems') {
+    sideEffectResources.push('WarehouseTransfers', 'StockMovements', 'WarehouseStorages');
+  }
+  if (sideEffectResources.length) {
+    var deltaPayloads = collectWriteDeltaResources(auth, payload, sideEffectResources);
+    result.data = mergeDeltaResourcesIntoResult(result.data, deltaPayloads);
+  }
   return result;
 }
 
@@ -1334,7 +1408,25 @@ function collectWriteDeltaResources(auth, payload, resourceNames) {
   return deltas;
 }
 
-function buildDirectWriteResourcePayload(resourceName, resourceConfig, headers, rows) {
+function buildDirectWriteResourcePayload(resourceName, resourceConfig, headers, rows, auth, lastDataUpdatedAt) {
+  var maxUpdatedAt = lastDataUpdatedAt;
+  if (!maxUpdatedAt && Array.isArray(rows) && rows.length && Array.isArray(headers)) {
+    var updatedAtIdx = headers.indexOf('UpdatedAt');
+    if (updatedAtIdx !== -1) {
+      for (var i = 0; i < rows.length; i++) {
+        var ts = normalizeUpdatedAtMillis(rows[i][updatedAtIdx]);
+        if (ts > maxUpdatedAt) maxUpdatedAt = ts;
+      }
+    }
+  }
+  if (!maxUpdatedAt) {
+    try {
+      maxUpdatedAt = getResourceSyncCursor(resourceName) || 0;
+    } catch (e) {
+      maxUpdatedAt = 0;
+    }
+  }
+
   return {
     success: true,
     rows: Array.isArray(rows) ? rows : [],
@@ -1343,67 +1435,23 @@ function buildDirectWriteResourcePayload(resourceName, resourceConfig, headers, 
       resource: resourceName,
       fileId: resourceConfig && resourceConfig.fileId ? resourceConfig.fileId : '',
       sheetName: resourceConfig && resourceConfig.sheetName ? resourceConfig.sheetName : '',
+      requestedBy: auth && auth.user ? auth.user.UserID : null,
       directWrite: true,
+      lastDataUpdatedAt: maxUpdatedAt || Date.now(),
       lastSyncAt: Date.now()
     }
   };
 }
 
-function mergeDirectWriteResourcePayloads(deltaResources, directResources) {
-  var merged = {};
-  var deltas = deltaResources && typeof deltaResources === 'object' ? deltaResources : {};
-  Object.keys(deltas).forEach(function (resourceName) {
-    merged[resourceName] = deltas[resourceName];
-  });
-
-  var direct = directResources && typeof directResources === 'object' ? directResources : {};
-  Object.keys(direct).forEach(function (resourceName) {
-    var directPayload = direct[resourceName];
-    var currentPayload = merged[resourceName];
-    if (!currentPayload || !Array.isArray(currentPayload.rows) || !currentPayload.rows.length) {
-      merged[resourceName] = directPayload;
-      return;
-    }
-
-    var headers = Array.isArray(currentPayload.headers) && currentPayload.headers.length
-      ? currentPayload.headers
-      : (Array.isArray(directPayload.headers) ? directPayload.headers : []);
-    var codeIdx = headers.indexOf('Code');
-    if (codeIdx === -1) {
-      return;
-    }
-
-    var seen = {};
-    currentPayload.rows.forEach(function (row) {
-      var code = Array.isArray(row) ? (row[codeIdx] || '').toString().trim() : '';
-      if (code) seen[code] = true;
-    });
-
-    var nextRows = currentPayload.rows.slice();
-    directPayload.rows.forEach(function (row) {
-      var code = Array.isArray(row) ? (row[codeIdx] || '').toString().trim() : '';
-      if (code && !seen[code]) {
-        seen[code] = true;
-        nextRows.push(row);
-      }
-    });
-
-    merged[resourceName] = Object.assign({}, currentPayload, {
-      rows: nextRows,
-      headers: headers
-    });
-  });
-
-  return merged;
-}
-
-function buildCompositeDirectWriteResources(parentResourceName, parentConfig, parentHeaders, parentRowData, childWriteOps) {
+function buildCompositeDirectWriteResources(parentResourceName, parentConfig, parentHeaders, parentRowData, childWriteOps, auth, parentTimestamp) {
   var resources = {};
   resources[parentResourceName] = buildDirectWriteResourcePayload(
     parentResourceName,
     parentConfig,
     parentHeaders,
-    [parentRowData]
+    [parentRowData],
+    auth,
+    parentTimestamp
   );
 
   (childWriteOps || []).forEach(function (ops) {
@@ -1422,7 +1470,9 @@ function buildCompositeDirectWriteResources(parentResourceName, parentConfig, pa
       ops.resourceName,
       ops.config,
       ops.headers,
-      rows
+      rows,
+      auth,
+      ops.maxTimestamp
     );
   });
 
@@ -1469,9 +1519,29 @@ function handleCompositeSave(auth, payload) {
   var parentSchema = buildMasterSchemaFromResourceConfig(parentResource.config);
 
   var parentSheet = parentResource.sheet;
-  var parentValues = parentSheet.getDataRange().getValues();
-  var parentHeaders = parentValues[0] || [];
+  var parentHeaders = getSheetHeadersByMeta(parentResource.config.fileId, parentResource.config.sheetName, parentSheet);
   var parentIdx = getHeaderIndexMap(parentHeaders);
+
+  var parentMaxColIdx = parentIdx.Code !== undefined ? parentIdx.Code : 0;
+  (parentSchema.uniqueHeaders || []).forEach(function (h) {
+    if (parentIdx[h] !== undefined && parentIdx[h] > parentMaxColIdx) parentMaxColIdx = parentIdx[h];
+  });
+  (parentSchema.uniqueCompositeHeaders || []).forEach(function (combo) {
+    (combo || []).forEach(function (h) {
+      if (parentIdx[h] !== undefined && parentIdx[h] > parentMaxColIdx) parentMaxColIdx = parentIdx[h];
+    });
+  });
+  var parentMaxNeededCol = Math.min(parentHeaders.length, parentMaxColIdx + 1);
+  if (parentMaxNeededCol < 1) parentMaxNeededCol = 1;
+
+  var parentLastRow = parentSheet.getLastRow();
+
+  var parentValues;
+  if (parentLastRow > 1) {
+    parentValues = parentSheet.getRange(1, 1, parentLastRow, parentMaxNeededCol).getValues();
+  } else {
+    parentValues = [parentHeaders.slice(0, parentMaxNeededCol)];
+  }
 
   // Build parent row
   var providedParentCode = resolveCodeValue({ record: parentData });
@@ -1538,14 +1608,34 @@ function handleCompositeSave(auth, payload) {
     var childResource = openResourceSheet(childResourceName);
     var childSchema = buildMasterSchemaFromResourceConfig(childResource.config);
     var childSheet = childResource.sheet;
-    var childValues = childSheet.getDataRange().getValues();
-    var childHeaders = childValues[0] || [];
+    var childHeaders = getSheetHeadersByMeta(childResource.config.fileId, childResource.config.sheetName, childSheet);
     var childIdx = getHeaderIndexMap(childHeaders);
     var childCodePrefix = (childResource.config.codePrefix || '').toString().trim();
     var childSeqLength = childResource.config.codeSequenceLength || 6;
+
+    var childMaxColIdx = childIdx.Code !== undefined ? childIdx.Code : 0;
+    (childSchema.uniqueHeaders || []).forEach(function (h) {
+      if (childIdx[h] !== undefined && childIdx[h] > childMaxColIdx) childMaxColIdx = childIdx[h];
+    });
+    (childSchema.uniqueCompositeHeaders || []).forEach(function (combo) {
+      (combo || []).forEach(function (h) {
+        if (childIdx[h] !== undefined && childIdx[h] > childMaxColIdx) childMaxColIdx = childIdx[h];
+      });
+    });
+    var childMaxNeededCol = Math.min(childHeaders.length, childMaxColIdx + 1);
+    if (childMaxNeededCol < 1) childMaxNeededCol = 1;
+
+    var childLastRow = childSheet.getLastRow();
+
+    var childValues;
+    if (childLastRow > 1) {
+      childValues = childSheet.getRange(1, 1, childLastRow, childMaxNeededCol).getValues();
+    } else {
+      childValues = [childHeaders.slice(0, childMaxNeededCol)];
+    }
     var childCurrentValues = childValues.slice();
 
-    var childOps = { resourceName: childResourceName, config: childResource.config, sheet: childSheet, headers: childHeaders, newRows: [], updateOps: [], maxTimestamp: 0 };
+    var childOps = { resourceName: childResourceName, config: childResource.config, sheet: childSheet, headers: childHeaders, newRows: [], updateOps: [], maxTimestamp: 0, lastRow: childLastRow };
 
     for (var r = 0; r < childRecords.length; r++) {
       var rec = childRecords[r];
@@ -1629,33 +1719,23 @@ function handleCompositeSave(auth, payload) {
   if (isEdit) {
     parentSheet.getRange(parentRowNumber, 1, 1, parentHeaders.length).setValues([parentRowData]);
   } else {
-    var parentTargetRow = parentSheet.getLastRow() + 1;
+    var parentTargetRow = parentLastRow + 1;
     parentSheet.getRange(parentTargetRow, 1, 1, parentHeaders.length).setValues([parentRowData]);
   }
   updateResourceSyncCursor(parentResourceName, parentTimestamp);
 
   // Write children
-  var affectedResources = [parentResourceName];
-  var touchedResourceMap = {};
-  touchedResourceMap[parentResourceName.toLowerCase()] = true;
   for (var w = 0; w < childWriteOps.length; w++) {
     var ops = childWriteOps[w];
     if (ops.newRows.length) {
-      var startRow = ops.sheet.getLastRow() + 1;
+      var startRow = ops.lastRow + 1;
       ops.sheet.getRange(startRow, 1, ops.newRows.length, ops.headers.length).setValues(ops.newRows);
     }
     for (var u = 0; u < ops.updateOps.length; u++) {
       ops.sheet.getRange(ops.updateOps[u].rowNumber, 1, 1, ops.headers.length).setValues([ops.updateOps[u].rowData]);
     }
     updateResourceSyncCursor(ops.resourceName, ops.maxTimestamp);
-
-    var touchedKey = (ops.resourceName || '').toString().trim().toLowerCase();
-    if (touchedKey && !touchedResourceMap[touchedKey]) {
-      touchedResourceMap[touchedKey] = true;
-      affectedResources.push(ops.resourceName);
-    }
   }
-  SpreadsheetApp.flush();
 
   var childResourceResults = childWriteOps.map(function(ops) {
     return {
@@ -1664,15 +1744,15 @@ function handleCompositeSave(auth, payload) {
       updatedRecords: ops.updateOps.map(function(op) { return rowArrayToObject(ops.headers, op.rowData); })
     };
   });
+  var directResources = buildCompositeDirectWriteResources(
+    parentResourceName, parentResource.config, parentHeaders, parentRowData, childWriteOps, auth, parentTimestamp
+  );
   var result = {
     success: true,
     message: parentResourceName + ' saved successfully',
     data: mergeDeltaResourcesIntoResult(
       { parentCode: parentCode },
-      mergeDirectWriteResourcePayloads(
-        collectWriteDeltaResources(auth, payload, affectedResources),
-        buildCompositeDirectWriteResources(parentResourceName, parentResource.config, parentHeaders, parentRowData, childWriteOps)
-      )
+      directResources
     )
   };
   dispatchPostActionHook(parentResource.config, payload, result, auth, 'compositeSave', {
@@ -1763,8 +1843,7 @@ function handleExecuteAction(auth, payload) {
 
   var resource = openResourceSheet(resourceName);
   var sheet = resource.sheet;
-  var values = sheet.getDataRange().getValues();
-  var headers = values[0] || [];
+  var headers = getSheetHeadersByMeta(resource.config.fileId, resource.config.sheetName, sheet);
   var idx = getHeaderIndexMap(headers);
 
   var actionConfig = findAdditionalActionConfig(resource.config, actionName);
@@ -1793,7 +1872,6 @@ function handleExecuteAction(auth, payload) {
     code = (created.data && created.data.code ? created.data.code : '').toString().trim();
     if (!code) return { success: false, message: 'Could not create the ' + resourceName + ' record for ' + actionName };
     SpreadsheetApp.flush();
-    values = sheet.getDataRange().getValues();
   }
 
   var rowNumber = findRowByValue(sheet, idx.Code, code, 2, true);
@@ -1862,7 +1940,6 @@ function handleExecuteAction(auth, payload) {
 
   // Write back
   sheet.getRange(rowNumber, 1, 1, headers.length).setValues([existingRow]);
-  SpreadsheetApp.flush();
   updateResourceSyncCursor(resourceName, recordTimestamp);
 
   var savedRecord = rowArrayToObject(headers, existingRow);
@@ -1872,7 +1949,7 @@ function handleExecuteAction(auth, payload) {
   // hydrates them without a follow-up fetch. A target writing back to the
   // SOURCE resource merges into one payload rather than clobbering it.
   var directWriteResources = {};
-  directWriteResources[resourceName] = buildDirectWriteResourcePayload(resourceName, resource.config, headers, [existingRow]);
+  directWriteResources[resourceName] = buildDirectWriteResourcePayload(resourceName, resource.config, headers, [existingRow], auth, recordTimestamp);
 
   Object.keys(targetOutcome.resources).forEach(function (targetResourceName) {
     var written = targetOutcome.resources[targetResourceName];
@@ -1883,20 +1960,16 @@ function handleExecuteAction(auth, payload) {
       return;
     }
     directWriteResources[targetResourceName] = buildDirectWriteResourcePayload(
-      targetResourceName, written.config, written.headers, written.rows
+      targetResourceName, written.config, written.headers, written.rows, auth
     );
   });
 
-  var touchedResources = [resourceName].concat(Object.keys(targetOutcome.resources));
   var result = {
     success: true,
     message: actionName + ' completed successfully',
     data: mergeDeltaResourcesIntoResult(
       { code: code, column: column, columnValue: columnValue, targets: summarizeActionTargetResults(targetOutcome.results) },
-      mergeDirectWriteResourcePayloads(
-        collectWriteDeltaResources(auth, payload, touchedResources),
-        directWriteResources
-      )
+      directWriteResources
     )
   };
   dispatchPostActionHook(resource.config, payload, result, auth, 'executeAction', {
@@ -1905,6 +1978,16 @@ function handleExecuteAction(auth, payload) {
     savedRecord: savedRecord,
     actionName: actionName
   }, resourceName);
+
+  // Safe boundary for side-effects (Bucket B)
+  var sideEffectResources = [];
+  if (resourceName === 'WarehouseTransfers') {
+    sideEffectResources.push('WarehouseTransferItems', 'StockMovements', 'WarehouseStorages');
+  }
+  if (sideEffectResources.length) {
+    var deltaPayloads = collectWriteDeltaResources(auth, payload, sideEffectResources);
+    result.data = mergeDeltaResourcesIntoResult(result.data, deltaPayloads);
+  }
   return result;
 }
 
@@ -1922,18 +2005,35 @@ function handleResourceBulkUpsertRecords(auth, payload) {
   var resource = openResourceSheet(targetResourceName);
   var schema = buildMasterSchemaFromResourceConfig(resource.config);
   var sheet = resource.sheet;
-  var values = sheet.getDataRange().getValues();
-  var headers = values[0] || [];
+  var headers = getSheetHeadersByMeta(resource.config.fileId, resource.config.sheetName, sheet);
   var idx = getHeaderIndexMap(headers);
   var codePrefix = (resource.config.codePrefix || '').toString().trim();
   var seqLength = resource.config.codeSequenceLength || 6;
 
+  var maxColIdx = idx.Code !== undefined ? idx.Code : 0;
+  (schema.uniqueHeaders || []).forEach(function (h) {
+    if (idx[h] !== undefined && idx[h] > maxColIdx) maxColIdx = idx[h];
+  });
+  (schema.uniqueCompositeHeaders || []).forEach(function (combo) {
+    (combo || []).forEach(function (h) {
+      if (idx[h] !== undefined && idx[h] > maxColIdx) maxColIdx = idx[h];
+    });
+  });
+  var maxNeededCol = Math.min(headers.length, maxColIdx + 1);
+  if (maxNeededCol < 1) maxNeededCol = 1;
+
+  var lastRow = sheet.getLastRow();
+
+  var currentValues;
+  if (lastRow > 1) {
+    currentValues = sheet.getRange(1, 1, lastRow, maxNeededCol).getValues();
+  } else {
+    currentValues = [headers.slice(0, maxNeededCol)];
+  }
+
   var results = { created: 0, updated: 0, skipped: 0, errors: [] };
   var createdRecords = [];
   var updatedRecords = [];
-
-  // Local copy for uniqueness checks within the batch
-  var currentValues = values.slice();
 
   var newRows = [];       // Array of rowData arrays to append
   var updateOps = [];     // Array of {rowNumber, rowData} to write back
@@ -2000,7 +2100,7 @@ function handleResourceBulkUpsertRecords(auth, payload) {
 
   // Batch write: new rows as a single block append
   if (newRows.length) {
-    var startRow = sheet.getLastRow() + 1;
+    var startRow = lastRow + 1;
     sheet.getRange(startRow, 1, newRows.length, headers.length).setValues(newRows);
   }
 
@@ -2013,13 +2113,12 @@ function handleResourceBulkUpsertRecords(auth, payload) {
   var allFailed = results.errors.length >= records.length;
   var hasErrors = results.errors.length > 0;
   var bulkMessage = buildBulkUpsertResultMessage(targetResourceName, results, records.length);
-  var deltaResources = collectWriteDeltaResources(auth, payload, [targetResourceName]);
-  deltaResources[targetResourceName] = mergeWrittenRowsIntoResourcePayload(
-    deltaResources[targetResourceName],
-    resource.config,
-    headers,
-    newRows.concat(updateOps.map(function (op) { return op.rowData; }))
-  );
+
+  var allRows = newRows.concat(updateOps.map(function (op) { return op.rowData; }));
+  var directPayload = buildDirectWriteResourcePayload(targetResourceName, resource.config, headers, allRows, auth, maxRecordTimestamp);
+  var directResources = {};
+  directResources[targetResourceName] = directPayload;
+
   var result = {
     success: !allFailed,
     message: bulkMessage,
@@ -2031,7 +2130,7 @@ function handleResourceBulkUpsertRecords(auth, payload) {
         skipped: results.skipped,
         errors: results.errors
       },
-      deltaResources
+      directResources
     )
   };
   dispatchPostActionHook(resource.config, payload, result, auth, 'bulk', {
@@ -2047,6 +2146,18 @@ function handleResourceBulkUpsertRecords(auth, payload) {
       errors: results.errors
     }
   }, targetResourceName);
+
+  // Safe boundary for side-effect hooks (Bucket B)
+  var sideEffectResources = [];
+  if (targetResourceName === 'OutletMovements') {
+    sideEffectResources.push('OutletStorages');
+  } else if (targetResourceName === 'StockMovements') {
+    sideEffectResources.push('WarehouseStorages');
+  }
+  if (sideEffectResources.length) {
+    var deltaPayloads = collectWriteDeltaResources(auth, payload, sideEffectResources);
+    result.data = mergeDeltaResourcesIntoResult(result.data, deltaPayloads);
+  }
   return result;
 }
 

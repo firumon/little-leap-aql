@@ -280,18 +280,23 @@ function normalizeActionData(action, requestResource, requestPayload, rawResult)
       };
       var envelope = buildApiEnvelope(normalizedReq, entry || { success: false, message: 'Empty batch item result' });
       mergeResourcePayloadMap(resources, envelope && envelope.data ? envelope.data.resources : {});
+      if (envelope && envelope.data && envelope.data.resources) {
+        delete envelope.data.resources;
+      }
       return envelope;
     });
-    // Replayed steps hold only a code, so their rows arrive as a runtime delta.
+
     var deltas = rawResult && rawResult.deltaResources;
     if (deltas && typeof deltas === 'object') {
+      var deltaPayloads = {};
       Object.keys(deltas).forEach(function (resourceName) {
         var delta = deltas[resourceName];
         if (!delta || !Array.isArray(delta.rows)) return;
-        resources[resourceName] = buildResourcePayload(
+        deltaPayloads[resourceName] = buildResourcePayload(
           resourceName, delta.rows, delta.meta, delta.headers, requestPayload
         );
       });
+      mergeResourcePayloadMap(resources, deltaPayloads);
     }
     return { resources: resources, result: result, artifacts: {} };
   }
@@ -339,8 +344,81 @@ function normalizeActionData(action, requestResource, requestPayload, rawResult)
 function mergeResourcePayloadMap(target, source) {
   var destination = target && typeof target === 'object' ? target : {};
   var incoming = source && typeof source === 'object' ? source : {};
+
   Object.keys(incoming).forEach(function (resourceName) {
-    destination[resourceName] = incoming[resourceName];
+    var inPayload = incoming[resourceName];
+    if (!inPayload || typeof inPayload !== 'object') return;
+
+    var destPayload = destination[resourceName];
+    if (!destPayload || typeof destPayload !== 'object') {
+      destination[resourceName] = inPayload;
+      return;
+    }
+
+    var destHeaders = Array.isArray(destPayload.headers) ? destPayload.headers : [];
+    var inHeaders = Array.isArray(inPayload.headers) ? inPayload.headers : [];
+    var headers = inHeaders.length >= destHeaders.length ? inHeaders : destHeaders;
+
+    var destCodeIdx = destHeaders.indexOf('Code');
+    var inCodeIdx = inHeaders.indexOf('Code');
+    if (destCodeIdx === -1) destCodeIdx = inCodeIdx;
+    if (inCodeIdx === -1) inCodeIdx = destCodeIdx;
+
+    var destRows = Array.isArray(destPayload.rows) ? destPayload.rows : [];
+    var inRows = Array.isArray(inPayload.rows) ? inPayload.rows : [];
+
+    var mergedRows = [];
+    if (!destRows.length && !inRows.length) {
+      mergedRows = [];
+    } else if (!destRows.length) {
+      mergedRows = inRows.slice();
+    } else if (!inRows.length) {
+      mergedRows = destRows.slice();
+    } else if (destCodeIdx === -1 && inCodeIdx === -1) {
+      mergedRows = destRows.concat(inRows);
+    } else {
+      var codeMap = {};
+      destRows.forEach(function (row) {
+        if (!Array.isArray(row)) return;
+        var code = destCodeIdx !== -1 ? (row[destCodeIdx] || '').toString().trim() : '';
+        if (code) codeMap[code] = mergedRows.length;
+        mergedRows.push(row);
+      });
+
+      inRows.forEach(function (row) {
+        if (!Array.isArray(row)) return;
+        var code = inCodeIdx !== -1 ? (row[inCodeIdx] || '').toString().trim() : '';
+        if (code && codeMap[code] !== undefined) {
+          mergedRows[codeMap[code]] = row;
+        } else {
+          if (code) codeMap[code] = mergedRows.length;
+          mergedRows.push(row);
+        }
+      });
+    }
+
+    var destMeta = destPayload.meta && typeof destPayload.meta === 'object' ? destPayload.meta : {};
+    var inMeta = inPayload.meta && typeof inPayload.meta === 'object' ? inPayload.meta : {};
+
+    var destDataUpdated = typeof normalizeUpdatedAtMillis === 'function' ? normalizeUpdatedAtMillis(destMeta.lastDataUpdatedAt) : (Number(destMeta.lastDataUpdatedAt) || 0);
+    var inDataUpdated = typeof normalizeUpdatedAtMillis === 'function' ? normalizeUpdatedAtMillis(inMeta.lastDataUpdatedAt) : (Number(inMeta.lastDataUpdatedAt) || 0);
+    var mergedDataUpdated = Math.max(destDataUpdated, inDataUpdated);
+
+    var destSyncAt = typeof normalizeUpdatedAtMillis === 'function' ? normalizeUpdatedAtMillis(destMeta.lastSyncAt) : (Number(destMeta.lastSyncAt) || 0);
+    var inSyncAt = typeof normalizeUpdatedAtMillis === 'function' ? normalizeUpdatedAtMillis(inMeta.lastSyncAt) : (Number(inMeta.lastSyncAt) || 0);
+    var mergedSyncAt = Math.max(destSyncAt, inSyncAt, Date.now());
+
+    var mergedMeta = Object.assign({}, destMeta, inMeta, {
+      lastDataUpdatedAt: mergedDataUpdated,
+      lastSyncAt: mergedSyncAt
+    });
+
+    destination[resourceName] = {
+      success: inPayload.success !== false && destPayload.success !== false,
+      rows: mergedRows,
+      headers: headers,
+      meta: mergedMeta
+    };
   });
 }
 

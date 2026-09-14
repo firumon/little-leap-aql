@@ -32,6 +32,7 @@ const MIN_QUEUE_WAIT_MS = 250
 const logger = createLogger('ResourceIoService')
 const resourceSyncQueue = new Map()
 const inFlightResourceNames = new Set()
+const skippedUnauthorizedHeaders = new Set()
 let queueTimerId = null
 let queueFlushPromise = null
 let queuedSyncHandler = null
@@ -130,7 +131,22 @@ export async function readCachedResourcePayload(resourceName, authorizedResource
   }
 }
 
+function isResourceInAuthorizedList(resourceName, authorizedResources = []) {
+  if (!Array.isArray(authorizedResources) || !authorizedResources.length) {
+    return true
+  }
+  return authorizedResources.some((entry) => entry?.name === resourceName)
+}
+
 export async function ensureHeaders(resourceName, authorizedResources = []) {
+  if (!isResourceInAuthorizedList(resourceName, authorizedResources)) {
+    if (!skippedUnauthorizedHeaders.has(resourceName)) {
+      skippedUnauthorizedHeaders.add(resourceName)
+      logger.info('Resource not in this role\'s list, skipping', { resource: resourceName })
+    }
+    return standardizeResponse(false, [], 'Headers unavailable')
+  }
+
   try {
     const meta = await withTimeout(getResourceMeta(resourceName), null)
     if (Array.isArray(meta?.headers) && meta.headers.length) {
@@ -369,7 +385,9 @@ export async function fetchResourceRecords(resourceName, authorizedResources = [
 
     const headersResp = await ensureHeaders(resourceName, authorizedResources)
     if (!headersResp.success || !headersResp.data.length) {
-      logger.warn('Headers not available', { resource: resourceName })
+      if (isResourceInAuthorizedList(resourceName, authorizedResources)) {
+        logger.warn('Headers not available', { resource: resourceName })
+      }
       return standardizeResponse(false, {
         headers: [],
         rows: [],

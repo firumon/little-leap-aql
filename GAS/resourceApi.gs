@@ -1409,7 +1409,7 @@ function collectWriteDeltaResources(auth, payload, resourceNames) {
 }
 
 function buildDirectWriteResourcePayload(resourceName, resourceConfig, headers, rows, auth, lastDataUpdatedAt) {
-  var maxUpdatedAt = lastDataUpdatedAt;
+  var maxUpdatedAt = normalizeUpdatedAtMillis(lastDataUpdatedAt) || 0;
   if (!maxUpdatedAt && Array.isArray(rows) && rows.length && Array.isArray(headers)) {
     var updatedAtIdx = headers.indexOf('UpdatedAt');
     if (updatedAtIdx !== -1) {

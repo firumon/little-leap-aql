@@ -100,23 +100,17 @@ function isCanonicalEnvelope(data) {
 async function fetchAuthorizedHeaders(token) {
   if (!token) return []
 
-  const requestBody = buildSessionPayload({
-    requestId: createRequestId(),
-    action: 'getAuthorizedResources',
-    token,
-    payload: {
-      includeHeaders: true
-    }
-  })
-
   try {
-    const response = await apiClient.post('', requestBody)
-    const data = response?.data
-    if (!isCanonicalEnvelope(data) || data.success !== true) {
+    const response = await executeGasApi(
+      'getAuthorizedResources',
+      { includeHeaders: true },
+      { token }
+    )
+    if (!response || response.success !== true) {
       return []
     }
-    return Array.isArray(data.data?.result?.resources)
-      ? data.data.result.resources
+    return Array.isArray(response.data?.result?.resources)
+      ? response.data.result.resources
       : []
   } catch {
     return []
@@ -232,7 +226,7 @@ export function getGasApiErrorMessage(error) {
   return 'Unable to connect to service'
 }
 
-export async function executeGasApi(action, payload = {}, options = {}) {
+async function executeGasApiCall(action, payload = {}, options = {}) {
   const {
     requireAuth = true,
     token = null,
@@ -301,4 +295,28 @@ export async function executeGasApi(action, payload = {}, options = {}) {
       notifyLifecycle(onApiResponseCallback, action, lifecycleMeta)
     }
   }
+}
+
+const inFlightRequests = new Map()
+
+// Skip 'get' because each resource fetches different data; any future action with per-call payloads also belongs here.
+const SKIP_IN_FLIGHT_ACTIONS = new Set(['get'])
+
+export function executeGasApi(action, payload = {}, options = {}) {
+  if (SKIP_IN_FLIGHT_ACTIONS.has(action)) {
+    return executeGasApiCall(action, payload, options)
+  }
+
+  const existingPromise = inFlightRequests.get(action)
+  if (existingPromise) {
+    return existingPromise
+  }
+
+  const requestPromise = executeGasApiCall(action, payload, options)
+    .finally(() => {
+      inFlightRequests.delete(action)
+    })
+
+  inFlightRequests.set(action, requestPromise)
+  return requestPromise
 }

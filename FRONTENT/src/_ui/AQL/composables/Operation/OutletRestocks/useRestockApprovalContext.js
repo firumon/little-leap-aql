@@ -1,6 +1,6 @@
 import { inject } from 'vue'
 import { evaluateProp } from 'src/composables/resources/useActionResolver'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 
 /**
@@ -38,11 +38,11 @@ export function useRestockApprovalContext () {
     ui,
     evaluate: (val) => evaluateProp(val, resourceRecord, resourceConfig),
     /**
-     * Core-composable relay: cards never call `useRecord` themselves (§6).
+     * Core-composable relay: cards never call `usePageRecord` themselves (§6).
      * Invoked by the caller, so each card still opens exactly the resources it
-     * opened before. Must be called from `setup()`, like `useRecord` itself.
+     * opened before. Must be called from `setup()`, like `usePageRecord` itself.
      */
-    resource: (name) => useRecord(name)
+    resource: (name) => usePageRecord(name)
   }
 }
 

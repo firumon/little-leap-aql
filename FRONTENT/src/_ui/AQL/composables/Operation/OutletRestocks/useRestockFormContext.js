@@ -1,5 +1,5 @@
 import { inject } from 'vue'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 
 /**
@@ -43,13 +43,13 @@ export function useRestockFormContext () {
     resourceConfig,
     ui,
     /**
-     * Core-composable relay: components never call `useRecord` themselves
+     * Core-composable relay: components never call `usePageRecord` themselves
      * (§6, "UI Components import ONLY UI Composables"). Invoked by the caller
      * rather than eagerly here, so each consumer still opens exactly the
      * resources it opened before — this relay adds no fetches of its own.
-     * Must be called from `setup()`, like `useRecord` itself.
+     * Must be called from `setup()`, like `usePageRecord` itself.
      */
-    resource: (name) => useRecord(name)
+    resource: (name) => usePageRecord(name)
   }
 }
 

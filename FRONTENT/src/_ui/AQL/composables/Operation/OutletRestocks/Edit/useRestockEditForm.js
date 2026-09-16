@@ -1,5 +1,5 @@
 import { computed, onMounted, watch } from 'vue'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useRestockFormContext } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockFormContext'
 
 /**
@@ -37,12 +37,12 @@ export function useRestockEditForm () {
   const { pageState, resourceRecord } = useRestockFormContext()
 
   // Same accessor idiom as the Add wizard, so the whole restock flow reads
-  // resources through `useRecord` and imports no store (ARCHITECTURE RULES §5).
-  const outlets = useRecord('Outlets')
-  const skus = useRecord('SKUs')
-  const products = useRecord('Products')
-  const outletStorages = useRecord('OutletStorages')
-  const warehouseStorages = useRecord('WarehouseStorages')
+  // resources through `usePageRecord` and imports no store (ARCHITECTURE RULES §5).
+  const outlets = usePageRecord('Outlets')
+  const skus = usePageRecord('SKUs')
+  const products = usePageRecord('Products')
+  const outletStorages = usePageRecord('OutletStorages')
+  const warehouseStorages = usePageRecord('WarehouseStorages')
 
   const parent = pageState.useNode(PARENT)
   const serverRecord = computed(() => resourceRecord?.record?.value || null)

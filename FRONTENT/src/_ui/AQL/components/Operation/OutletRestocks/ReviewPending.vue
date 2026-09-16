@@ -92,7 +92,7 @@
  * write off a line without seeing the stock they are writing it off against.
  *
  * The comment is the one input on this step, and it is a RECORD column
- * (`ProgressApprovedComment`) bound straight through `useRecord` — writing it re-cuts the
+ * (`ProgressApprovedComment`) bound straight through `pageState.useRecord` — writing it re-cuts the
  * live batch, so what is reviewed here is what is sent. It renders only on an initial
  * approval, because a later allocation writes no parent record to hold it.
  */

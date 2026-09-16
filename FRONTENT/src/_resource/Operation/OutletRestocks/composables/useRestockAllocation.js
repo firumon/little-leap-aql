@@ -27,8 +27,8 @@ const num = (value) => {
 /**
  * Normalize anything out of a records array into a safe object.
  *
- * `useRecord().items` CAN CONTAIN `null`. It maps every store row through
- * `enrichRecord(name, row.Code, …)`, which returns `null` outright when the row
+ * `usePageRecord().items` CAN CONTAIN `null`. It maps every store row through
+ * `useRecord().enrich(...)`, which returns `null` outright when the row
  * has no `Code` — and the map is 1:1, so that `null` lands in the array. A row
  * without a Code is reachable in normal operation: a freshly written row is
  * hydrated from a batch response before its generated Code comes back.
@@ -58,7 +58,7 @@ export function stockKey (sku, warehouseCode, storageName) {
 /**
  * Every storage bin holding `skuCode`, as raw on-hand candidates.
  *
- * Null-safe against the `null` entries `useRecord().items` can carry (see
+ * Null-safe against the `null` entries `usePageRecord().items` can carry (see
  * `asRow`): a non-object entry becomes `{}`, whose blank warehouse/storage then
  * fails the final filter, so it is dropped rather than dereferenced. The order of
  * the guards matters — the SKU comparison reads through `asRow`, never off the
@@ -84,7 +84,7 @@ export function storageBinsForSku (storages = [], skuCode = '') {
  * the whole sheet is now walked once and each line reads its own bucket.
  *
  * Same filtering contract as the single-SKU form: null-safe against the `null`
- * entries `useRecord().items` can carry (see `asRow`), and empty/negative bins are
+ * entries `usePageRecord().items` can carry (see `asRow`), and empty/negative bins are
  * excluded — a bin with nothing in it is not a candidate, and a negative balance is
  * a data fault that must not be presented as available stock.
  */

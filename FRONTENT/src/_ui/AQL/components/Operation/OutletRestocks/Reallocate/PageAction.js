@@ -47,7 +47,7 @@ const CHILD = 'OutletRestockItems'
 const text = (value) => String(value ?? '').trim()
 
 // `childRecordsByResource` is built from the same `enrichRecord` mapping as
-// `useRecord().items`, so it can carry `null` for a row whose Code has not landed
+// `usePageRecord().items`, so it can carry `null` for a row whose Code has not landed
 // yet. Normalizing to an object BEFORE any predicate is what stops a null from
 // passing the Status guard and then being dereferenced by the next read — the
 // failure mode `useRestockApproval.js` documents on `asRow`.

@@ -47,7 +47,7 @@ const num = (value) => {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : 0
 }
-// `useRecord().items` can carry `null` for a row with no Code, so every row read is
+// `usePageRecord().items` can carry `null` for a row with no Code, so every row read is
 // normalized before any predicate touches it (see `useRestockDelivery.js`).
 const asRow = (value) => (value && typeof value === 'object' ? value : {})
 const asList = (value) => (Array.isArray(value) ? value : [])

@@ -1,5 +1,5 @@
 import { computed } from 'vue'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useRestockFormContext } from './useRestockFormContext'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 import { useOutletStorageResource } from 'src/_resource/Operation/OutletStorages/composables/useOutletStorageResource'
@@ -64,12 +64,12 @@ const isActive = (row) => (row?.Status || 'Active') === 'Active'
 export function useRestockStockMatch () {
   // Injected once for the Add + Edit pages, by the shared relay (§6.1).
   const { pageState } = useRestockFormContext()
-  // Rows come through `useRecord`, the same accessor step 1 loads them with, so
+  // Rows come through `usePageRecord`, the same accessor step 1 loads them with, so
   // this file imports no store either — the whole restock flow reads resources
   // through one idiom.
   const { skuInfo } = useSkuResource()
 
-  const skus = useRecord('SKUs').items
+  const skus = usePageRecord('SKUs').items
   // Both stock sides come from their OWN resource's domain index (outlet × SKU and
   // warehouse × SKU, each built once for the whole app) rather than from a filter over the
   // storage sheet per code — this recomputes on every keystroke in the quantity field.

@@ -1,5 +1,5 @@
 ﻿import { computed, onMounted } from 'vue'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useRestockViewContext } from './useRestockViewContext'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 import { useOutletResource } from 'src/_resource/Master/Outlets/composables/useOutletResource'
@@ -51,7 +51,7 @@ const num = (value) => {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : 0
 }
-// `useRecord().items` CAN CONTAIN `null` — see `useRestockAllocation.js` for why. A
+// `usePageRecord().items` CAN CONTAIN `null` — see `useRestockAllocation.js` for why. A
 // null degrades to an empty row here and is then dropped by the field checks,
 // rather than being waved through one guard and dereferenced by the next.
 const asRow = (value) => (value && typeof value === 'object' ? value : {})
@@ -197,14 +197,14 @@ export function useRestockView () {
 
   // Same accessor idiom as the rest of the restock flow, so this file imports no
   // store (ARCHITECTURE RULES §5).
-  const restockItems = useRecord(CHILD)
-  const outlets = useRecord('Outlets')
-  const warehouses = useRecord('Warehouses')
-  const skus = useRecord('SKUs')
-  const products = useRecord('Products')
+  const restockItems = usePageRecord(CHILD)
+  const outlets = usePageRecord('Outlets')
+  const warehouses = usePageRecord('Warehouses')
+  const skus = usePageRecord('SKUs')
+  const products = usePageRecord('Products')
 
   // The SKU × Product, Outlet and Warehouse joins belong to the resource layer
-  // (§6 — Enrich Once, Then Project). The `useRecord` handles stay for their
+  // (§6 — Enrich Once, Then Project). The `usePageRecord` handles stay for their
   // `reload()` below: fetching the rows is a separate concern from reading them.
   const { getSku } = useSkuResource()
   const { getOutlet } = useOutletResource()

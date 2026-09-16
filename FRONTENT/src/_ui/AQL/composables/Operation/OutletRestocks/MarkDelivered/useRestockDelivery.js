@@ -1,6 +1,6 @@
 ﻿import { computed, onMounted, watch } from 'vue'
 import { useAuth } from 'src/composables/core/useAuth'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { buildRestockDeliveryNodes } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
 import { useRestockDeliveryContext } from './useRestockDeliveryContext'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
@@ -58,7 +58,7 @@ const num = (value) => {
   return Number.isFinite(parsed) ? parsed : 0
 }
 
-// `useRecord().items` CAN CONTAIN `null` — see `useRestockAllocation.js`'s `asRow` for
+// `usePageRecord().items` CAN CONTAIN `null` — see `useRestockAllocation.js`'s `asRow` for
 // the full account. A null degrades to an empty row and is then dropped by the field
 // checks, instead of being waved through one guard and dereferenced by the next.
 const asRow = (value) => (value && typeof value === 'object' ? value : {})
@@ -185,14 +185,14 @@ export function useRestockDelivery () {
 
   // Same accessor idiom as the rest of the restock flow, so this file imports no
   // store (ARCHITECTURE RULES §5).
-  const restocks = useRecord(PARENT)
-  const restockItems = useRecord(CHILD)
-  const outlets = useRecord('Outlets')
-  const skus = useRecord('SKUs')
-  const products = useRecord('Products')
+  const restocks = usePageRecord(PARENT)
+  const restockItems = usePageRecord(CHILD)
+  const outlets = usePageRecord('Outlets')
+  const skus = usePageRecord('SKUs')
+  const products = usePageRecord('Products')
 
   // The SKU × Product and Outlet joins belong to the resource layer (§6 — Enrich
-  // Once, Then Project). The `useRecord` handles stay for their `reload()` below:
+  // Once, Then Project). The `usePageRecord` handles stay for their `reload()` below:
   // fetching the rows is a separate concern from reading them.
   const { getSku } = useSkuResource()
   const { getOutlet } = useOutletResource()
@@ -276,7 +276,7 @@ export function useRestockDelivery () {
     ;[restocks, restockItems, outlets, skus, products].forEach((resource) => resource.reload())
   })
 
-  // The note is a COLUMN on the parent, bound straight through `useRecord` — not a
+  // The note is a COLUMN on the parent, bound straight through `pageState.useRecord` — not a
   // control. Writing it re-cuts the live batch.
   const commentField = pageState.useRecord(DELIVERED_COMMENT, PARENT)
   const comment = computed(() => text(commentField.value))

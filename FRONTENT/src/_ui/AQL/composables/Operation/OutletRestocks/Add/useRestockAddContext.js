@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
 import { useAuth } from 'src/composables/core/useAuth'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { restockDirectOptions } from 'src/_resource/Operation/OutletRestocks/composables/useRestockPayload'
 import { useRestockFormContext } from 'src/_ui/AQL/composables/Operation/OutletRestocks/useRestockFormContext'
@@ -36,8 +36,8 @@ export function useRestockAddContext () {
   const { user } = useAuth()
   const { query } = useRouteConfig()
 
-  // Opened here, in setup, because `useRecord` injects — never inside a computed.
-  const sources = WIZARD_RESOURCES.map((name) => useRecord(name))
+  // Opened here, in setup, because `usePageRecord` injects — never inside a computed.
+  const sources = WIZARD_RESOURCES.map((name) => usePageRecord(name))
   const outlets = sources[0]
 
   const loaded = ref(streamsLoaded)

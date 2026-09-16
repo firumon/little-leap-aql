@@ -1,5 +1,5 @@
 import { computed, onMounted, watch } from 'vue'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useRestockApprovalContext } from './useRestockApprovalContext'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 import { useWarehouseResource } from 'src/_resource/Master/Warehouses/composables/useWarehouseResource'
@@ -79,7 +79,7 @@ const num = (value) => {
   return Number.isFinite(parsed) ? parsed : 0
 }
 
-// `useRecord().items` CAN CONTAIN `null` — see `useRestockAllocation.js`'s `asRow` for
+// `usePageRecord().items` CAN CONTAIN `null` — see `useRestockAllocation.js`'s `asRow` for
 // the full account. A null degrades to an empty row here and is then dropped by the
 // field checks, rather than being waved through one guard and dereferenced by the next.
 const asRow = (value) => (value && typeof value === 'object' ? value : {})
@@ -133,16 +133,16 @@ export function useRestockApproval () {
 
   // Same accessor idiom as the rest of the restock flow, so this file imports no
   // store (ARCHITECTURE RULES §5).
-  const restocks = useRecord(PARENT)
-  const restockItems = useRecord(CHILD)
-  const outlets = useRecord('Outlets')
-  const warehouses = useRecord('Warehouses')
-  const warehouseStorages = useRecord('WarehouseStorages')
-  const skus = useRecord('SKUs')
-  const products = useRecord('Products')
+  const restocks = usePageRecord(PARENT)
+  const restockItems = usePageRecord(CHILD)
+  const outlets = usePageRecord('Outlets')
+  const warehouses = usePageRecord('Warehouses')
+  const warehouseStorages = usePageRecord('WarehouseStorages')
+  const skus = usePageRecord('SKUs')
+  const products = usePageRecord('Products')
 
   // The SKU × Product and Warehouse joins are the resource layer's, not this file's
-  // (§6 — Enrich Once, Then Project). The `useRecord` handles above stay for their
+  // (§6 — Enrich Once, Then Project). The `usePageRecord` handles above stay for their
   // `reload()` in `onMounted` — fetching the rows is a separate concern from reading
   // them, and these accessors are what the rest of the restock flow fetches with.
   const { getSku } = useSkuResource()

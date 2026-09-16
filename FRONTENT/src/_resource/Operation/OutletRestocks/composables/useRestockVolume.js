@@ -1,6 +1,5 @@
 import { computed } from 'vue'
-import { defineSharedComposable } from 'src/utils/appHelpers'
-import { useDataStore } from 'src/stores/data'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { daysFromToday } from 'src/utils/dateHelpers'
 import { DRAFT, REJECTED, CANCELLED, progressOf, isActiveRow } from './useRestockProgress'
 
@@ -51,8 +50,8 @@ export function topRestockedBy (counted, items = [], labelOf, limit = VOLUME_TOP
     .slice(0, limit)
 }
 
-const shared = defineSharedComposable((dataStore) => {
-  const rows = (name) => (dataStore.getRecords(name) || []).map(asRow)
+const build = (recordSource) => {
+  const rows = (name) => (recordSource.rows(name) || []).map(asRow)
 
   const counted = computed(() => countedRestocks(rows('OutletRestocks')))
 
@@ -75,8 +74,9 @@ const shared = defineSharedComposable((dataStore) => {
     (line, parent) => outletLabel.value.get(text(parent.OutletCode)) || text(parent.OutletCode)))
 
   return { windowDays: VOLUME_WINDOW_DAYS, topItems, topOutlets }
-})
+}
 
 export function useRestockVolume () {
-  return shared(useDataStore())
+  const recordSource = useRecord()
+  return recordSource.remember('useRestockVolume', () => build(recordSource))
 }

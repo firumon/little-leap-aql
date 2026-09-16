@@ -30,8 +30,8 @@ const text = (value) => String(value ?? '').trim()
 /**
  * Normalize anything out of a records array into a safe object.
  *
- * `useRecord().items` CAN CONTAIN `null` — it maps every store row through
- * `enrichRecord`, which returns `null` for a row with no `Code`, and the map is
+ * `usePageRecord().items` CAN CONTAIN `null` — it maps every store row through
+ * `useRecord().enrich`, which returns `null` for a row with no `Code`, and the
  * 1:1 so that `null` lands in the array. Optional chaining alone does not survive
  * it: a guard written as `row?.Status || 'Active'` waves the null through the
  * active filter, and the NEXT predicate dereferences it. Every row read in this

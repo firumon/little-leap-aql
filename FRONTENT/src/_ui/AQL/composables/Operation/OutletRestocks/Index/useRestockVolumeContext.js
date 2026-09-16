@@ -1,5 +1,5 @@
 import { computed, inject, ref } from 'vue'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 import { useRestockVolume } from 'src/_resource/Operation/OutletRestocks/composables/useRestockVolume'
 
@@ -33,7 +33,7 @@ export function useRestockVolumeContext () {
   const loaded = ref(streamsLoaded)
   if (!streamsLoaded) {
     if (!pendingLoad) {
-      const sources = SOURCE_RESOURCES.map((name) => useRecord(name))
+      const sources = SOURCE_RESOURCES.map((name) => usePageRecord(name))
       pendingLoad = Promise.all(sources.map((resource) => resource.reload()))
         .finally(() => { streamsLoaded = true; pendingLoad = null })
     }

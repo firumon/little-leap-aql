@@ -1,5 +1,5 @@
 import { useAuth } from 'src/composables/core/useAuth'
-import { useDataStore } from 'src/stores/data'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { batchRef, textOrRef } from 'src/utils/appHelpers'
 import { resourceRow, useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { stampFields } from 'src/utils/workflowStamp'
@@ -155,7 +155,7 @@ export function restockDirectOptions () {
   const { hasRegionAccess } = useAuth()
   const config = useResourceConfig(RESOURCE_NAME)
 
-  const warehouses = (useDataStore().getRecords('Warehouses') || [])
+  const warehouses = (useRecord().rows('Warehouses') || [])
     .map(asRow)
     .filter((row) => text(row.Status || 'Active') === 'Active')
     .filter((row) => hasRegionAccess(row.AccessRegion))

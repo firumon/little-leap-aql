@@ -2,8 +2,7 @@
 // LeadFollowUps sits DOWNSTREAM of Leads, so the lead name is read from the Leads module.
 
 import { computed } from 'vue'
-import { useDataStore } from 'src/stores/data'
-import { defineSharedComposable } from 'src/utils/appHelpers'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { useLeadResource } from 'src/_resource/Master/Leads/composables/useLeadResource'
 import {
   daysUntilFollowUp,
@@ -71,10 +70,10 @@ export function indexFollowUpsByLead (rows = []) {
   return byLead
 }
 
-const shared = defineSharedComposable((dataStore) => {
+const build = (recordSource) => {
   const { leadsByCode } = useLeadResource()
 
-  const rawFollowUps = computed(() => (dataStore.getRecords(RESOURCE_NAME) || []).map(asRow))
+  const rawFollowUps = computed(() => (recordSource.rows(RESOURCE_NAME) || []).map(asRow))
   const followUps = computed(() => rawFollowUps.value
     .filter(isActiveRow)
     .map((row) => enrichFollowUp(row, leadsByCode.value))
@@ -107,8 +106,9 @@ const shared = defineSharedComposable((dataStore) => {
     nextFollowUpOf: (leadCode) => openByLead.value.get(text(leadCode))?.next || null,
     lastFollowUpOf: (leadCode) => openByLead.value.get(text(leadCode))?.last || null
   }
-})
+}
 
 export function useFollowUpResource () {
-  return shared(useDataStore())
+  const recordSource = useRecord()
+  return recordSource.remember('useFollowUpResource', () => build(recordSource))
 }

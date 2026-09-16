@@ -2,8 +2,7 @@
 // Leads is UPSTREAM of LeadFollowUps, so this file never reads the follow-up sheet.
 
 import { computed } from 'vue'
-import { useDataStore } from 'src/stores/data'
-import { defineSharedComposable } from 'src/utils/appHelpers'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { parseAnyDate } from 'src/utils/dateHelpers'
 import { useLeadResource } from './useLeadResource'
 import {
@@ -25,7 +24,7 @@ function millisOf (value) {
   return date ? date.getTime() : null
 }
 
-const shared = defineSharedComposable(() => {
+const build = () => {
   const { leads, openLeads } = useLeadResource()
 
   const ofProgress = (progress) => leads.value.filter((lead) => lead.progress === progress)
@@ -97,8 +96,9 @@ const shared = defineSharedComposable(() => {
     /** Codes of every lead still being worked — the coverage denominator downstream. */
     processingCodes: computed(() => new Set(liveLeads.value.map((lead) => text(lead.code))))
   }
-})
+}
 
 export function useLeadIndex () {
-  return shared(useDataStore())
+  const recordSource = useRecord()
+  return recordSource.remember('useLeadIndex', build)
 }

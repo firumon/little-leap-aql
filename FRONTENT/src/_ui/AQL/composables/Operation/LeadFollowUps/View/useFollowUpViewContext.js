@@ -1,7 +1,7 @@
 import { ref, computed, inject } from 'vue'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useLeadResource } from 'src/_resource/Master/Leads/composables/useLeadResource'
 import {
   useFollowUpResource,
@@ -32,7 +32,7 @@ export function useFollowUpViewContext () {
   const loaded = ref(leadsLoaded)
   if (!leadsLoaded) {
     if (!pendingLoad) {
-      const leads = useRecord('Leads')
+      const leads = usePageRecord('Leads')
       pendingLoad = leads.reload().finally(() => {
         leadsLoaded = true
         pendingLoad = null

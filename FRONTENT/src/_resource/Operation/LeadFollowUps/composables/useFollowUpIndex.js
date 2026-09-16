@@ -2,8 +2,7 @@
 // Downstream of Leads, so the Processing-lead denominator comes from the Leads module.
 
 import { computed } from 'vue'
-import { useDataStore } from 'src/stores/data'
-import { defineSharedComposable } from 'src/utils/appHelpers'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { parseAnyDate, toDateOnly } from 'src/utils/dateHelpers'
 import { useLeadIndex } from 'src/_resource/Master/Leads/composables/useLeadIndex'
 import { useLeadResource } from 'src/_resource/Master/Leads/composables/useLeadResource'
@@ -35,7 +34,7 @@ function midnightOf (value) {
   return date ? new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime() : null
 }
 
-const shared = defineSharedComposable(() => {
+const build = () => {
   const { followUps, awaiting, overdue } = useFollowUpResource()
   const { liveLeads } = useLeadIndex()
   const { leads } = useLeadResource()
@@ -185,8 +184,9 @@ const shared = defineSharedComposable(() => {
     scheduledCoverage,
     dueCompletion
   }
-})
+}
 
 export function useFollowUpIndex () {
-  return shared(useDataStore())
+  const recordSource = useRecord()
+  return recordSource.remember('useFollowUpIndex', build)
 }

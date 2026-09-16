@@ -1,7 +1,7 @@
 import { ref, computed, inject } from 'vue'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useLeadResource } from 'src/_resource/Master/Leads/composables/useLeadResource'
 import { useFollowUpResource } from 'src/_resource/Operation/LeadFollowUps/composables/useFollowUpResource'
 import { sortByDate } from 'src/utils/sortHelpers'
@@ -29,7 +29,7 @@ export function useLeadViewContext () {
   const loaded = ref(followUpsLoaded)
   if (!followUpsLoaded) {
     if (!pendingLoad) {
-      const followUps = useRecord('LeadFollowUps')
+      const followUps = usePageRecord('LeadFollowUps')
       pendingLoad = followUps.reload().finally(() => {
         followUpsLoaded = true
         pendingLoad = null

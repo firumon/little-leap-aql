@@ -2,8 +2,7 @@
 // Leads sits UPSTREAM of LeadFollowUps, so this file never reads the follow-up sheet.
 
 import { computed } from 'vue'
-import { useDataStore } from 'src/stores/data'
-import { defineSharedComposable } from 'src/utils/appHelpers'
+import { useRecord } from 'src/composables/resources/useRecord'
 import {
   progressBucket,
   progressColor,
@@ -88,8 +87,8 @@ export function indexLeadsByType (leads = []) {
   return byType
 }
 
-const shared = defineSharedComposable((dataStore) => {
-  const rawLeads = computed(() => (dataStore.getRecords(RESOURCE_NAME) || []).map(asRow))
+const build = (recordSource) => {
+  const rawLeads = computed(() => (recordSource.rows(RESOURCE_NAME) || []).map(asRow))
   const activeRows = computed(() => rawLeads.value.filter(isActiveRow))
   const leadsByCode = computed(() => indexLeadsByCode(activeRows.value))
   const leads = computed(() => [...leadsByCode.value.values()])
@@ -110,8 +109,9 @@ const shared = defineSharedComposable((dataStore) => {
     leadsOfProgress: (progress) => leadsByProgress.value.get(text(progress)) || [],
     leadsOfType: (type) => leadsByType.value.get(text(type)) || []
   }
-})
+}
 
 export function useLeadResource () {
-  return shared(useDataStore())
+  const recordSource = useRecord()
+  return recordSource.remember('useLeadResource', () => build(recordSource))
 }

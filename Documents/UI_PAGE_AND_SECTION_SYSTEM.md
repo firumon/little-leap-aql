@@ -64,7 +64,7 @@ graph TD
     PageVue --> usePageResolver[usePageResolver.js]
     usePageResolver --> useResourceConfig[useResourceConfig.js]
     usePageResolver --> useRouteConfig[useRouteConfig.js]
-    usePageResolver --> useRecord[useRecord.js]
+    usePageResolver --> usePageRecord[usePageRecord.js]
     usePageResolver --> |Stage A: Load BP| BaseContract[pages/Scope/page.js]
     usePageResolver --> |Stage B: 6-candidate scan| CustomUiPages{Custom UI Page?}
 

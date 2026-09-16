@@ -108,7 +108,7 @@ After loading the BP, `usePageResolver` scans `src/_ui/[UiName]/pages/` for cust
   > The function form is invoked **inside the `pageProps` computed**, so it re-evaluates on every reactive read. Keep it pure and cheap — no side effects, no fetching. Unlike section/content/action JS modifiers, it receives only `baseProps`; it is not handed a `{ pageState, resourceRecord, resourceConfig }` context object.
 
 #### 1.3.3 Record Loading
-`usePageResolver` calls `useRecord()` once and exposes it as `resourceRecord` (which `Page.vue` then `provide`s). A single watch, keyed on the primitive `resourceName|code|canonicalPage`, drives the reload strategy per page:
+`usePageResolver` calls `usePageRecord()` once and exposes it as `resourceRecord` (which `Page.vue` then `provide`s). A single watch, keyed on the primitive `resourceName|code|canonicalPage`, drives the reload strategy per page:
 
 | Page | What loads |
 |------|------------|
@@ -122,7 +122,7 @@ The watch key is a template string, never an array literal: `watch` compares a g
 
 ##### The Enriched Record (and why you must never spread one)
 
-Neither `resourceRecord.record` nor `resourceRecord.records` hands out raw sheet rows. Both run every row through `enrichRecord(resourceName, code, dataStore)` (`useRecord.js`), which returns a **cached, reactive object built entirely out of `Object.defineProperty` getters** — there are no own data properties on it at all:
+Neither `resourceRecord.record` nor `resourceRecord.records` hands out raw sheet rows. Both run every row through `useRecord().enrich(resource, code)`, which returns a **cached, reactive Proxy** — there are no own data properties on it at all:
 
 | Key shape | Example | `enumerable` | Resolves to |
 |-----------|---------|--------------|-------------|

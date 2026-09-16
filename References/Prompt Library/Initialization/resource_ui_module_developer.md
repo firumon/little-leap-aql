@@ -33,7 +33,7 @@ single-piece, defer immediately to the matching narrower prompt and stop reading
      - **View Details / Business-Concept Card**: Read §7.4–§7.5 and [UI_VIEW_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_VIEW_SYSTEM.md).
      - **Create / Edit Form / Wizard Step**: Read §7.6, §11, [UI_CREATE_AND_UPDATE_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_CREATE_AND_UPDATE_SYSTEM.md), and [UI_PAGE_STATE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_PAGE_STATE.md).
 2. **Resource domain logic & import boundaries** — [UI_RESOURCE_DOMAIN_LOGIC.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RESOURCE_DOMAIN_LOGIC.md) — read in full before writing any `src/_resource/` file (Step 2) or any UI Composable (Step 3).
-3. **Architecture constraints** — [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md).
+3. **Architecture constraints & record access** — [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md) and [UI_RECORD_ACCESS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RECORD_ACCESS.md).
 4. **The three catalogues** the guide links rather than restates. Read the one your step needs — never restate their contents in a module:
    - [`_fields/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/_fields/REGISTRY.md) — every implemented field type, and the contract for mounting one by hand (Step 5).
    - [`components/REGISTRY.md`](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md) — every reusable Section/Content/app base, its props and its hide rules (Step 4).
@@ -193,7 +193,7 @@ disagree (guide §7.4).
    - A secondary node (a ledger movement, a tax row) is created and dropped by a `derive` through `applyNodes`, because its existence IS the answer to "does this also write there". `build()` does not check permissions; `applyNodes` does.
    - `PageAction.js` `submit` asks Layer 2's `validate<Resource>Draft` and returns `{ valid: false, message }` or nothing. It builds no nodes and requests no reload.
    - A derive fires only on a CHANGE, so a default the node opens with is seeded in the builder, or settled once after the master rows load.
-7. **One form surface for every card** ([UI_MODULE_DEVELOPER_FORM_ARCH.md §13.7](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_MODULE_DEVELOPER_FORM_ARCH.md)) — `use<Resource>FormFields` holds NO state (no `ref()`): reads of the live node plus one-column setters, imported by every card. Lifecycle (`onMounted`, hydration `watch`) goes in a separate `use<Resource>FormSeed(mode)` imported by exactly ONE card, because a composable six cards call mounts six times. **Never build option lists or any projection over a record set there** — it is memoized per call site, so it re-runs once per card; publish them from the owning resource's Layer 2 module behind `defineSharedComposable`.
+7. **One form surface for every card** ([UI_MODULE_DEVELOPER_FORM_ARCH.md §13.7](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_MODULE_DEVELOPER_FORM_ARCH.md)) — `use<Resource>FormFields` holds NO state (no `ref()`): reads of the live node plus one-column setters, imported by every card. Lifecycle (`onMounted`, hydration `watch`) goes in a separate `use<Resource>FormSeed(mode)` imported by exactly ONE card, because a composable six cards call mounts six times. **Never build option lists or any projection over a record set there** — it is memoized per call site, so it re-runs once per card; publish them from the owning resource's Layer 2 module behind `recordSource.remember(...)`.
 6. **Multi-step wizards** (guide §13.6): step assignments via `Props<Component>: { step: N }`;
    sticky bar with `get actions()` getter; review step read-only with active choices open and
    downstream inventory projections closed; latch `entryProgress` for stable button labels.
@@ -264,7 +264,7 @@ Import boundaries & Domain Chains (guide §6, [UI_RESOURCE_DOMAIN_LOGIC.md §9](
 - [ ] No UI setter cascades — it writes one column; every consequence is a Layer 2 `derive` on the node.
 - [ ] A form page's `submit` validates only — it calls no builder, returns no `requests`, and asks for no `reload`.
 - [ ] The form surface holds no `ref()`; lifecycle sits in `use<Resource>FormSeed`, imported by exactly one card.
-- [ ] Zero option lists or record-set projections (`.map`/`.filter`/`.sort` over `items.value`) inside any composable that more than one component imports — they live in the owning resource's Layer 2 module behind `defineSharedComposable`.
+- [ ] Zero option lists or record-set projections (`.map`/`.filter`/`.sort` over `items.value`) inside any composable that more than one component imports — they live in the owning resource's Layer 2 module behind `recordSource.remember(...)`.
 
 Visual contract & tokens (guide §10):
 

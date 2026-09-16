@@ -18,9 +18,8 @@ Sections 2–9 govern one resource's domain module. This section governs how two
 > defaults, its index and its vocabulary belong.
 
 **Ledgers are resources, not side effects.** `StockMovements` and `OutletMovements` own
-their sign rule, their `ReferenceType` vocabulary and their default storage. Five modules
-used to restate them — three separate definitions of the string `'OutletRestock'` alone.
-Every writer now calls `stockMovementRow` / `outletMovementRow`, so a row that would
+their sign rule, their `ReferenceType` vocabulary and their default storage.
+Every writer calls `stockMovementRow` / `outletMovementRow`, so a row that would
 credit a warehouse for a deduction cannot be written by getting a sign wrong at a call
 site. The direction is a NAME (`OUT_OF_WAREHOUSE`, `ONTO_THE_SHELF`), never a bare `-1`.
 
@@ -150,9 +149,10 @@ Rules:
 - **Offer the shape the call site needs.** A `Map` for lookups, a plain
   `{ [key]: value }` object where render loops already use bracket access — both projected
   from the ONE index, never rebuilt.
-- **Pure builder + shared reactive wrapper.** The builder takes plain rows so a
-  `PageAction.js` outside setup can index a payload; `defineSharedComposable` memoizes the
-  reactive index so the pass runs once per app per data change (CORE_ARCHITECTURE_RULES §6).
+- **Pure builder + shared reactive wrapper.** The builder takes plain rows so any domain
+  helper or test can index rows without setup; `recordSource.remember(...)` memoizes the
+  reactive index inside `useRecord` so the pass runs once per app per data change
+  (CORE_ARCHITECTURE_RULES §6, UI_RECORD_ACCESS.md).
 - **STRICT — selector option lists are an index, and they belong here.** `skuOptions`,
   `outletOptions`, `warehouseOptions` and their kind are projections of a master resource,
   so the master resource publishes them: `useSkuResource().skuOptions`, not a `computed()`
@@ -189,7 +189,7 @@ warehouses hold this", a dashboard wanting a rollup no aggregate publishes.
    Layer 2 export is a shared contract every future UI inherits — it is not a private detail
    of the page that prompted it, and it is not the page author's call alone.
 4. **Implement in Layer 2, to the full invariant set.** Pure builders taking plain rows, a
-   `defineSharedComposable` reactive wrapper, O(1) pre-indexed lookups (§10.4),
+   `recordSource.remember(...)` reactive wrapper, O(1) pre-indexed lookups (§10.4),
    non-destructive enrichment (§10.3), configured defaults (§10.2), one vocabulary (§3.3).
    A helper elevated in a hurry that skips the indexing rule is a second bottleneck wearing
    the right folder name.
@@ -225,7 +225,6 @@ if a second UI would reasonably want a different answer, it is presentation.
       with the user and implemented in the owning resource's Layer 2 module (§10.6).
 
 ---
-
 
 ---
 

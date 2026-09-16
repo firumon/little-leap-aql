@@ -44,9 +44,7 @@ so it outranks Quasar's equal-specificity rules regardless of load order).
 > push/glossy treatment.
 
 ### 3.4 `ResourceActions.vue` — the unified FAB cluster
-The single bottom-right action cluster on every non-form page (evolution of the former
-`CrudActions.vue`, which it replaces along with `AddFab`/`EditFab`/`CrudActionsFab`).
-It unifies **two action sources** into one responsive cluster, so resource pages never
+The single bottom-right action cluster on every non-form page. It unifies **two action sources** into one responsive cluster, so resource pages never
 grow multiple competing right-side FABs:
 
 | Source | Entry | Gate | Default click behaviour |
@@ -106,13 +104,6 @@ The `.aql-resource-action-container` entrance animation is applied to an **inner
 never to the `q-page-sticky` root — a CSS transform on a `position: fixed` ancestor turns
 it into the containing block for its fixed descendants and breaks FAB positioning.
 
-> [!NOTE]
-> **Migration from `CrudActions`.** Override names moved: `crudactions.(vue|js)` →
-> `resourceactions.(vue|js)`, `addfab`/`editfab` → `resourceactionadd`/`resourceactionedit`,
-> `crudactionsfab` → `resourceactionsfab`. No tenant override under any of the old names
-> exists in the repo, so the rename is behaviour-preserving. CSS classes renamed in step:
-> `.aql-crud-action-*` → `.aql-resource-action-*`.
-
 #### 3.4.1 Local action auto-discovery
 
 `composables/resources/useLocalResourceActions.js` scans the same Vite `_ui/` module
@@ -124,7 +115,7 @@ two standard tiers:
 | 1 — page | `_ui/{ui}/components/{scope}/{resource}/{page}/resourceaction*.{vue,js}` |
 | 2 — resource | `_ui/{ui}/components/{scope}/{resource}/resourceaction*.{vue,js}` |
 
-`resourceactions.(vue\|js)` and `resourceactionsfab.(vue\|js)` are excluded — they are the
+`resourceactions.(vue|js)` and `resourceactionsfab.(vue|js)` are excluded — they are the
 container and the menu trigger, not items. Tier 1 wins over tier 2, and `.vue` wins over
 `.js` inside a tier, matching the resolver.
 
@@ -263,11 +254,11 @@ per §7 of ARCHITECTURE RULES.
 > and elevation, not shape or colour.
 
 > [!NOTE]
-> The legacy `components/Reports/ResourceReports.vue` is untouched and still works for
-> every direct import in custom views and pages (`<ResourceReports :record="…" />`).
-> It resolves its record from the route code via `useDataStore`; the action version
-> uses the injected `resourceRecord` instead, which is what a resolver-backed
-> component is supposed to do. New work should use the action.
+> Resolver-backed report buttons (`components/actions/ResourceReports.vue`) read their
+> active record through the injected `resourceRecord`. The separate helper component
+> `components/Reports/ResourceReports.vue` accepts an explicit `:record` prop, and falls back to
+> looking up the record by route code using the data store when no prop is provided.
+> Pages and resolvers use the action component.
 
 ---
 
@@ -346,9 +337,7 @@ export default {
 ```javascript
 // _ui/AQL/components/operation/outletrestocks/resourceactionedit.js
 export default {
-  handler: ({ nav }) => nav.goTo('record', { pageSlug: 'draft' })
-}
-```
+  handler: ({ nav }) => nav.goTo('record', { pageSlug: 'draft' })\n}\n```
 
 **Replace one item's template entirely** — supply
 `_ui/AQL/components/operation/purchaseorders/view/resourceactionapprove.vue` with
@@ -397,11 +386,6 @@ export default {
 > `inheritAttrs: false` and bind `$attrs` **before** your custom properties.
 
 ---
-
-
----
-
-⬑ Back to **[﻿# AQL Action System Guide](UI_ACTION_SYSTEM.md)**.
 
 ---
 

@@ -123,13 +123,13 @@ Everything that answers "what can this record do right now, and why":
   answers from them, so a `PageAction.js` outside setup can call it.
 
 > [!NOTE]
-> **A resource INDEX is the exception, and the only one.** A module that publishes the
+> **A resource INDEX reads through `useRecord`.** A module that publishes the
 > enriched rows and lookups of the sheet it owns — `useSkuResource`,
 > `usePriceListResource`, `useWarehouseResource`, `useInvoiceIndex` — reads
-> `useDataStore()` behind `defineSharedComposable`, because "once per app, not once per
-> consumer" (CORE_ARCHITECTURE_RULES §6) cannot be honoured anywhere else. The rule is one
-> pure builder taking plain rows, plus a shared reactive wrapper that feeds it the store's
-> rows (§10.4). What stays forbidden is a store read inside a payload builder or a
+> rows from `useRecord()`, wrapped in `recordSource.remember(...)`, because "once per app, not once per
+> consumer" (CORE_ARCHITECTURE_RULES §6, UI_RECORD_ACCESS.md) cannot be honoured anywhere else. The rule is one
+> pure builder taking plain rows, plus a shared reactive wrapper that feeds it `useRecord`'s
+> rows (§10.4). Layer 2 never imports the data store directly. What stays forbidden is a store read inside a payload builder or a
 > predicate, where it would make the function untestable and unusable outside setup.
 
 ### 3.2 Accessing resource config — self-identified, never route-dependent

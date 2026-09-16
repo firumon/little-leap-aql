@@ -49,7 +49,6 @@ Generic, resource-agnostic string/object shaping. Imported widely by `_ui/` page
 | `batchRefList(path, codes, separator)` | `$ref` joined to literal codes for a separated-list column; join done server-side. Pure. |
 | `textOrRef(value)` | Pass `$ref` through untouched, else trim to string. Pure. |
 | `normalizeCodeOrRef(value)` | Alias of `textOrRef`. Pure. |
-| `defineSharedComposable(factory)` | Wrap a composable factory so its `computed()` graph is built once and shared (detached `effectScope`). **Not pure — runtime mechanism.** Use for ANY `use*` factory whose derived graph must not be duplicated per call site. |
 | `binColumnClass(count)` | Quasar grid class for `count` side-by-side inputs (`col-12`/`col-6`/`col-4`). Pure. |
 
 **When to reuse**: any string shaping, plural/singular, header filtering, row↔object mapping, or batch `$ref` building.

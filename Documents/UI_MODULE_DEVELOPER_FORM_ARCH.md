@@ -208,7 +208,7 @@ Document the flow as a table in the file's docblock — `step 1 outlet + mode �
 **A step is a screen, not a file.** Two or more contents may share one `step` — split the
 step's blocks by job and list each in the contract (UI_CONTENT_SYSTEM §6). Step 4 of the
 consumption wizard is `RestockOptions` (how the restock is routed) plus `RestockItems`
-(what is in it), both at `step: 4`.
+(what is in it), both at `step: 4``.
 
 **Steps are declared by the contract, not the card.** Each card takes a `step` prop and
 gates on it; the contract assigns it (§5.5). `step: null` means "no wizard, always render",
@@ -335,7 +335,7 @@ Rules, no exceptions:
    (`UI_PAGE_STATE_NODES.md` §5B.5).
 2. **Setters write ONE column and stop.** Every consequence — a refilled price, a cleared
    link, a defaulted warehouse, a ledger node — is a Layer 2 `derive` on the node
-   (§5.7B). A setter that cascades is the old shape.
+   (§5.7B). A setter must not cascade.
 3. **Lifecycle lives in the owner, called by exactly one card.** `onMounted` in a composable
    that six cards import runs six times. Put the reloads and the hydration watch in the
    seed wrapper, and let one card own it.
@@ -344,19 +344,16 @@ Rules, no exceptions:
 5. **STRICT — no option lists, no projections over a record set.** The surface is memoized
    per call site, so a `computed()` that maps or filters a whole resource runs once per
    card and re-runs for all of them on every invalidation. Publish those from the owning
-   resource's Layer 2 module behind `defineSharedComposable`
-   (CORE_ARCHITECTURE_RULES §6, UI_RESOURCE_DOMAIN_LOGIC §10.4). The surface may narrow a
+   resource's Layer 2 module wrapped in `recordSource.remember(...)`
+   (CORE_ARCHITECTURE_RULES §6, UI_RESOURCE_DOMAIN_LOGIC §10.4, UI_RECORD_ACCESS.md). The surface may narrow a
    published list; it may not build one.
 6. **It sits at the resource tier**, not a page folder, whenever Add and Edit share the
    cards — the placement ladder decides, not the file's name (§6.2).
 
 ---
 
-
 ---
 
 ⬑ Back to **[3-Layer UI — Resource UI Module Developer Guide](UI_MODULE_DEVELOPER_GUIDE.md)**.
 
 ---
-
-⬑ Back to **[3-Layer UI — Resource UI Module Developer Guide](UI_MODULE_DEVELOPER_GUIDE.md)**.

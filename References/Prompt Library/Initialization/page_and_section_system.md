@@ -41,7 +41,7 @@ This initialization prompt guides the creation, override, and customization of f
 > **Reach for `Props<Identity>` before writing an override file.** A page contract can address a single section/content/action by name — `PropsPageHeader: { title: '…' }` — without any file under `_ui/.../components/`. See §3.3 below and canonical doc §1.4.1.
 
 * **Page Orchestrator (`src/pages/Page.vue`)**:
-  - Dynamically resolved at runtime via `usePageResolver.js` (which also owns record loading via `useRecord`; form state lives in `usePageState.js`).
+  - Dynamically resolved at runtime via `usePageResolver.js` (which also owns record loading via `usePageRecord`; form state lives in `usePageState.js`).
   - Always renders `<ResourceBreadcrumb />` unconditionally — it is outside the section system.
   - Mounts a full-page custom override (`resolvedPageComponent`) if matched under `src/_ui/` via a **6-candidate ordered scan** (see canonical doc §1.3.2).
   - Otherwise, falls back to rendering placeholders for visible parts:

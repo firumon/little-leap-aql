@@ -76,7 +76,7 @@ graph TD
 2. **Shared Pages (`_common/`)**: [FRONTENT/src/pages/_common/](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/_common/) - The reusable layouts for all CRUD/Action pages.
 3. **Pinia Stores**: [FRONTENT/src/stores/](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/stores/) - Global state modules:
    - [auth.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/stores/auth.js): Login credentials and permission states.
-   - [data.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/stores/data.js): Primary local data caches.
+   - [data.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/stores/data.js) / [data/](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/stores/data/): Primary local data caches. Composed of `state.js` (raw rows and IndexedDB cache), `relations.js` (relation graphs), `sync.js` (cache synchronization), and `projections.js` (persistent projection caching and `remember()`).
    - [resourceIo.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/stores/resourceIo.js): Transaction, queues, and sync states.
 4. **API Services**: [FRONTENT/src/services/](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/services/) - Backend connectors:
    - [GasApiService.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/services/GasApiService.js): Primary service calling Google Apps Script backend.

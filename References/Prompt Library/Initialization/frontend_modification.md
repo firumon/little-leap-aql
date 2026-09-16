@@ -53,6 +53,7 @@ If backend metadata configuration, synced resources, or API options are required
 * [GAS/Constants.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/Constants.gs) (contains `appOptions` source of truth)
 * [GAS/syncAppResources.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/syncAppResources.gs) (source of truth for synced resources and columns)
 * Backend API Capabilities: [Documents/GAS_API_CAPABILITIES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/GAS_API_CAPABILITIES.md)
+* Architecture & Record Access: [Documents/CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md) and [Documents/UI_RECORD_ACCESS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RECORD_ACCESS.md)
 
 ---
 
@@ -60,7 +61,7 @@ If backend metadata configuration, synced resources, or API options are required
 
 * **Initial Hydration**: Auth user payload (roles, permissions, access region, allowed resources) is retrieved via `handleLogin` API and stored in Pinia `authStore` and locally.
 * **Reactive Cache Flow**:
-  * Master/Config resources read cache-first from IndexedDB via the Pinia `useDataStore` store.
+  * Master/Config resources read cache-first from IndexedDB. Prefer `useRecord()` for raw rows or projections; never call `useDataStore()` from the UI layer.
   * Writes (`create`, `update`, `bulk`, `executeAction`, `compositeSave`) send payloads containing update-delta checks and return updated structures to keep IndexedDB and state stores in sync.
 * **Reactivity Composition**: Combine related store vectors (e.g., Products, SKUs) using `computed()` properties inside a shared composable. All filters, sort criteria, and data grids derive from this unified aggregate object.
 * **Page-Level Context Sharing**: Page orchestrators (`IndexPage.vue`, `ViewPage.vue`, etc.) instantiate and `provide` their `resourceConfig` and `resourceRecord` contexts. Descendant components `inject` these instances, ensuring sibling components (e.g. search inputs and list views) share the exact same reactive state without redundant local instantiations.
@@ -86,7 +87,7 @@ Before modifying code:
 1. If a new reusable composable or component is created (or signature changes), log it in the corresponding registry:
    * [components/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md)
    * [composables/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/REGISTRY.md)
-2. Ensure that any page or layout files added conform to [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md).
+2. Ensure that any page or layout files added conform to [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md) and [UI_RECORD_ACCESS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/UI_RECORD_ACCESS.md).
 
 ---
 
@@ -94,7 +95,7 @@ Before modifying code:
 
 * **DO NOT** use `QTable` for record lists. Use vertical fluid scroll lists with `q-card` or `AqlList` / `AqlGroupedList` for mobile compatibility.
 * **DO NOT** import Pinia stores, services, or Axios wrappers directly into Vue page components.
-* **DO NOT** instantiate `useResourceConfig()` or `useRecord()` inside common child components. Always inject the page-level provided `resourceConfig` and `resourceRecord` instances to preserve unified page state.
+* **DO NOT** instantiate `useResourceConfig()` or `usePageRecord()` inside common child components. Always inject the page-level provided `resourceConfig` and `resourceRecord` instances to preserve unified page state.
 * **DO NOT** import `useRoute` from `vue-router` directly. Always use `useRouteConfig` from `src/composables/resources/useRouteConfig` to access route params, query, or path. It exposes `scope`, `resourceSlug`, `code`, `pageSlug` (the `resource`/`record` sub-route segment), `action` (the `_action/:action` segment — a signal of its own, never folded into `pageSlug`), `pageName` (`meta.page`), `level`, `query`, `path`.
 * **DO NOT** write manual watcher chains, mirror states, or parallel arrays to keep data in sync. Keep a single reactive source.
 * **DO NOT** call raw `router.push()` or `$router.back()` directly on elements. Always route using the generic helper `useResourceNav`.

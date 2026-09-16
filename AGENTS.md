@@ -17,6 +17,30 @@
 - Do not use double-meaning sentences or hard grammar.
 - Keep everything direct, clear, and very easy to understand.
 
+## Code Comments — Keep Them Rare
+
+Write code that explains itself. Do not narrate it.
+
+- **Default: no comment.** No JSDoc blocks, no file-header docblocks, no section banners, no restating what the next line does.
+- A comment is allowed only when the code cannot carry the information — a non-obvious constraint, a workaround, or a decision a reader would otherwise undo.
+- When one is truly warranted: **1 line, 2 at the very most.** Never a paragraph, never a rationale essay.
+- Prefer a clearer name, a smaller function, or a well-named constant over any comment.
+- This applies to every language in the repo — `.vue`, `.js`, `.gs` alike.
+- Write the few comments you keep in very simple, easy English. Short sentence. Small words.
+
+**Clean up as you go.** Whenever you edit a file, delete the long comments and docblocks you find in it. Keep nothing unless it is genuinely load-bearing, and then strip it to 1 line (2 at the very most). This is expected in the diff, not scope creep — but stay inside the file you were already editing.
+
+**One exception: dashboard item descriptors.**
+Every file under `FRONTENT/src/_resource/*/*/Data/` must start with a JSDoc
+block. There is no registry and no index that says what a dashboard item is
+for, so the file is the only place that can say it. These blocks are
+required. Never delete one. Never shorten one to fit the "keep comments rare"
+rule — that rule does not apply here.
+Write them for a person, not for a machine. Say what the item is for, what
+question it answers on the dashboard, which sheets and columns it reads, what
+it hands back, and what each control is meant to change. A file named with a
+leading `_` is a helper, not an item, and needs no block.
+
 ## Strict Truthfulness & Evidence-First Rule (STRICT)
 - Never speak from memory, assumptions, or guesses.
 - Never claim a feature exists without verifying it directly in the codebase or canonical docs first.
@@ -66,7 +90,7 @@ After classifying the query, read the appropriate initialization document(s) fro
 * **Git Actions (Commit, Push)**: Read [git_operations.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/git_operations.md).
 * **General Investigatory Query**: Read [general_query.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/general_query.md). Use this for any general investigatory queries that do not contain project-specific or repository-specific phrasing.
 * **AQL-Specific Codebase Investigation**: Read [codebase_investigation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/codebase_investigation.md) (covers systematic discovery, domain-to-doc mapping, data flow tracing, and response standards). Use this if the query contains repository/project-specific references or phrases (e.g., "in AQL", "in this project", "in this app", "our app", "our project", or "this AQL").
-* **Dashboard Implementation**: Read [dashboard_implementation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/dashboard_implementation.md) (covers widget config contracts, declarative pipelines, SVG widget creation, and dashboard registries).
+* **Dashboard Implementation**: Read [dashboard_implementation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/dashboard_implementation.md) (covers dashboard data items, the Dashboard sheet column, item descriptors under _resource/<Scope>/<Resource>/Data/, and the score — backed by canonical doc [FEATURE_DASHBOARD_ENGINE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_DASHBOARD_ENGINE.md)).
 * **Backend GAS Implementation**: Read [backend_gas_implementation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/backend_gas_implementation.md) (covers generic CRUD, post-write hooks, batch operation, and Apps Script patterns).
 * **Tax / Currency System Changes**: Read [tax_currency_system.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/tax_currency_system.md) (covers compound tax logic, currency helpers, tax-inclusive/exclusive pricing, and tax transaction storage).
 * **Sheet Views / Reports Formulation**: Read [sheet_views_formulation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/sheet_views_formulation.md) for View formulas, or [report_formula_generation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/report_formula_generation.md) for Report template formulas.

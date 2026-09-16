@@ -1,107 +1,97 @@
-﻿# AQL Dashboard Implementation
+# Dashboard Data Item Implementation
 
-> **Scope boundary**: This document covers dashboard widget implementation only — widget config contracts, declarative pipelines, SVG widget creation, dashboard registries. Its pre-reads reference FRONTENT files and canonical docs — read them by path. Do NOT load frontend_modification.md unless the task explicitly requires modifying non-dashboard frontend code.
+## Scope boundary
 
-Use this document to initialize an AI agent session when the task involves creating, modifying, extending, or debugging dashboard widgets, layouts, or the dashboard composable.
-
----
-
-## 1. System Architecture & Coordination
-
-The AQL Dashboard is a fully declarative, metadata-driven widget system. Widgets are defined as standalone `.js` configuration files — no Vue component creation is needed for standard widget types.
-
-### A. Core File Coordinates
-* **Widget Config Files**: `FRONTENT/src/dashboard/<scope>/<resource>/<widget>.js` (Vite eager-loaded)
-* **Central Composable**: [useDashboard.js](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/_dashboard/useDashboard.js) — orchestrates widget discovery, permission filtering, and data resolution
-* **Gateway Page**: [DashboardIndex.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/Dashboard/DashboardIndex.vue) — assembles and renders the widget grid
-* **Visual Widget Components**: `FRONTENT/src/dashboard/_widgets/` — Pure Vue SVG components (MetricWidget, BarChartWidget, DonutChartWidget, StackedBarChartWidget, TimelineWidget)
-* **Widget Registry**: [REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/dashboard/REGISTRY.md) — canonical catalog of all widget types and their config contracts
+This prompt covers adding, changing, or debugging a dashboard data item and its sheet item. It does NOT cover building a widget — that is in [CONTRACT.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/widgets/CONTRACT.md). It does NOT cover Index page summary cards — those are part of the resource UI module system. If the task is about a chart on a resource's own Index page, this is the wrong prompt.
 
 ---
 
-## 2. Mandatory Pre-Reads
+## Read these before you touch anything
 
-Before writing any dashboard code:
-* Full development guide: [FEATURE_DASHBOARD_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_DASHBOARD_GUIDE.md)
-* Widget registry and config contracts: [dashboard/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/dashboard/REGISTRY.md)
-* Frontend architecture rules: [CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md)
+Read these files in this exact order:
+
+1. [Documents/FEATURE_DASHBOARD_ENGINE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_DASHBOARD_ENGINE.md) — The whole engine. Not optional.
+2. [Documents/CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md) — Required before ANY edit under FRONTENT/.
+3. [FRONTENT/src/components/widgets/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/widgets/REGISTRY.md) — Which preset to pick. Only preset names go in the sheet, never a base name.
+4. [FRONTENT/src/components/widgets/WIDGETS.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/widgets/WIDGETS.md) — The deep guide. Every base with its full prop table, data shape, density tiers, slots and edge cases.
+5. [FRONTENT/src/components/widgets/CONTRACT.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/widgets/CONTRACT.md) — The rules every widget obeys.
+6. [FRONTENT/src/pages/Dev/sampleData.json](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/Dev/sampleData.json) — The 17 data shapes. Match your compute output to one of these EXACTLY.
+7. The resource's own Data/ folder — Read every file in it, including _shared.js.
+8. [Documents/SHARED_UTILITIES_INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHARED_UTILITIES_INDEX.md) — Read before you even think about a new helper.
 
 ---
 
-## 3. Widget Configuration Contract
+## The rules you must obey
 
-Every widget exports a default object with this structure:
-```javascript
-export default {
-  metadata: {
-    id: 'unique_widget_id',
-    scope: 'operations',              // 'operation' | 'accounts' | 'master'
-    resource: 'purchaseRequisitions', // Primary resource for permission gating
-    permission: { purchaseRequisitions: 'read' },
-    config: {
-      type: 'MetricWidget',           // Maps to registered widget component
-      title: 'Awaiting Approvals',
-      icon: 'pending_actions',
-      color: 'orange',
-      weight: 100,                    // Higher = floats to top
-      layout: { xs: 12, sm: 6, md: 4, lg: 3 }
-    },
-    dataSource: {
-      resource: 'purchaseRequisitions',
-      pipeline: {
-        filters: [{ field: 'Status', op: 'eq', value: 'Pending Approval' }],
-        aggregate: { type: 'count' }
-      }
-    }
-  }
-}
-```
+1. **One file, one item.** The file name IS the item name.
+2. **A leading underscore means a helper, not an item.** Shared constants go in `_shared.js` so two items can never drift apart.
+3. **Write the JSDoc block FIRST, before the code.** If you cannot say in plain words what the item is for, the item is not ready to build. The block is required and must never be deleted — see the exception in [AGENTS.md](file:///f:/LITTLE%20LEAP/AQL/AGENTS.md).
+4. **A descriptor is DATA ONLY.** Keys allowed: `name`, `title`, `subtitle`, `caption`, `controls`, `options`, `compute`. No permission, no resource list, no size, no colour. Those live on the sheet item.
+5. **Never import a store into a descriptor.** Everything you need is on `ctx`. If `ctx` lacks it, STOP and ask — do not reach around it.
+6. **Return `null` when there is nothing to show.** Never return a fake zero row and never return `undefined`.
+7. **Match an existing widget's data shape exactly.** Do not invent a shape and then ask for a widget to be changed to fit it.
+8. **Reuse before you build. This is a MUST, not a preference.**
+   Before creating ANY widget, or changing one, read all three widget docs: [REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/widgets/REGISTRY.md), [WIDGETS.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/widgets/WIDGETS.md) and [CONTRACT.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/widgets/CONTRACT.md). There are already 15 bases and 49 presets. Almost every need is already met.
+   Work down this list and stop at the first one that works:
+   1. Use an existing preset as it is.
+   2. Use an existing base with different props. A preset is only a base with props fixed.
+   3. Add a new preset — a few lines that fix props on an existing base.
+   4. Only if none of the 15 bases can draw it, propose a new base. A new base needs the user's yes first, and must follow CONTRACT.md in full.
+   Never copy a widget file to make a small change. Never add a base that overlaps one that exists. Say in your report which step you stopped at and why the steps above it did not work.
+9. **Do not add controls to a new item.** They are not wired — see §6 of the canonical doc. An item that needs a control is not buildable yet; say so and stop.
+10. **Never give an item the same name as another file in that resource's `_ui` folder**, such as `ListSwitcher` or `ResourceActionEdit`. Matching is case-blind and the wrong file would load. See §9 of the canonical doc.
+11. **Never add a helper to core.** `src/composables/core/`, `src/composables/resources/`, `src/utils/`, `src/stores/`, `src/services/`, `src/router/` and the shared component bases are READ-ONLY unless the user says otherwise. Ask BEFORE creating any new file or exported function, with the audit quote [AGENTS.md](file:///f:/LITTLE%20LEAP/AQL/AGENTS.md) requires.
 
-### Header-to-Widget Decision Matrix
+---
 
-| Data Pattern | Widget Type | DataSource Config |
+## Every surface a dashboard item touches
+
+| Surface | File | When it applies |
 |---|---|---|
-| Status column with discrete values | **MetricWidget** | `pipeline: { filters: [...], aggregate: 'count' }` |
-| Numeric fields needing totals | **MetricWidget** | `pipeline: { aggregate: { type: 'sum', field: 'Amount' } }` |
-| Groupable categories | **BarChartWidget** | `evaluate` function grouping rows |
-| Proportion segments | **DonutChartWidget** | `evaluate` function calculating percentages |
-| Sequential records with dates | **TimelineWidget** | `evaluate` function filtering and sorting by date |
+| The descriptor | `_resource/<Scope>/<Resource>/Data/<name>.js` | always |
+| The assembler | `_resource/<Scope>/<Resource>/Dashboard/index.js` | only when the folder is new |
+| Shared constants | `Data/_shared.js` | when two or more items share a rule |
+| The live sheet cell | `App.Resources`, `Dashboard` column | always |
+| The tenant seed | `GAS/syncAppResources.gs`, beside that resource's `ListViews` | always, or a new tenant gets no dashboard |
+| The canonical doc | `Documents/FEATURE_DASHBOARD_ENGINE.md` | when a RULE changes, not when an item is added |
+
+A new item that is not in `syncAppResources.gs` is not finished. It works for this client and silently misses every future one.
 
 ---
 
-## 4. Step-by-Step Implementation Checklist
+## How to add a new item
 
-### Adding a New Widget Config (Standard)
-1. **Identify Target**: Determine the scope, resource, and data pattern.
-2. **Choose Widget Type**: Use the Decision Matrix above or consult the [Dashboard Widget Registry](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/dashboard/REGISTRY.md).
-3. **Create Config File**: Place under `FRONTENT/src/dashboard/<scope>/<resource>/<widgetname>.js`.
-4. **Set Permission Gate**: Configure `permission: { ResourceName: 'read' }` to match user access.
-5. **Configure DataSource**: Use `pipeline` for declarative filter-aggregate or `evaluate` for custom logic.
-6. **Test**: Open the AQL Dashboard and verify widget loads, data displays correctly, and layout is responsive.
+Follow the nine steps in §10 of [Documents/FEATURE_DASHBOARD_ENGINE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_DASHBOARD_ENGINE.md). Do not copy those steps here. Copying them would let the two documents drift apart.
 
-### Creating a New Widget Type (Custom Visual)
-1. **Build Component**: Create under `FRONTENT/src/dashboard/_widgets/` using pure SVG rendering — no chart libraries.
-2. **Register**: Import in [DashboardIndex.vue](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/Dashboard/DashboardIndex.vue) `getWidgetComponent()` mapping.
-3. **Document**: Add to [dashboard/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/dashboard/REGISTRY.md).
+Here is what is extra for an agent:
+- State clearly which resource and scope you are working in.
+- Confirm the resource's scope from the auth payload before you use it in a score example.
+- Be careful: `OutletConsumptionInvoices` is `operation`, not `accounts`. Only six resources are `accounts`: `Assets`, `Equity`, `Expenses`, `Liabilities`, `Revenue`, and `TaxTransactions`.
 
 ---
 
-## 5. Explicit Guardrails (DOs and DO NOTs)
+## How to change an existing item
 
-- **DO NOT** hardcode resource names, status keys, legends, or colors inside widget Vue components. Parameterize everything in the `.js` config.
-- **DO NOT** use external charting libraries. All charts must use pure SVG with reactive Vue bindings.
-- **DO NOT** place business logic in the DashboardIndex.vue page. Logic belongs in `useDashboard.js`.
-- **DO NOT** exceed the strict **400 lines limit** per file. Split components and composables if they grow beyond this boundary.
-- **DO** use the `allowed()` permission helper for widget visibility gating.
-- **DO** use `_C(value)` from `useCurrency` for money formatting in `evaluate` functions.
-- **DO** follow the responsive grid layout system (`xs`, `sm`, `md`, `lg` columns out of 12).
+Read the JSDoc block first. It tells you what the item promised.
+If your change breaks that promise, UPDATE THE BLOCK in the same edit.
+A block that no longer matches its code is worse than no block.
+If the change needs a different picture, re-read [REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/widgets/REGISTRY.md) first — the preset you want probably already exists.
 
 ---
 
-## 6. Targeted Verification Plan
+## Verification
 
-1. **Visual Check**: Open the Dashboard page and verify the widget renders in the correct grid position.
-2. **Data Accuracy**: Cross-reference the widget's displayed value against the raw sheet data.
-3. **Permission Gate**: Log in with a restricted role and verify the widget is hidden.
-4. **Reactivity**: Modify underlying sheet data and confirm the widget updates without page reload.
-5. **Registry Update**: If a new widget type was created, verify it's documented in [REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/dashboard/REGISTRY.md).
+The build agent has NO browser pane. Never claim a dashboard item works. Report what you changed and what you did not do, and hand the browser checks back.
+
+The person checking in the browser must look at these things:
+1. **Count the tiles first.** An empty page reports zero problems and looks like success.
+2. **Read the real numbers off the tile.**
+3. **Confirm the tile is not showing an error card**, such as "Dashboard Item Not Defined" or "Dashboard Item Failed".
+
+---
+
+## Maintenance rule
+
+**When the engine itself changes — a new descriptor key, a change to ctx, a change to the score table, the override tiers, or controls becoming real — you MUST update Documents/FEATURE_DASHBOARD_ENGINE.md and this prompt in the SAME turn as the code. Neither one may lag behind the code.**
+
+If you hit a bug because this prompt or that doc was missing a rule, say so to the user, name the gap, and ask to fix it — follow the Documentation Gap and Self-Healing rule in [AGENTS.md](file:///f:/LITTLE%20LEAP/AQL/AGENTS.md).

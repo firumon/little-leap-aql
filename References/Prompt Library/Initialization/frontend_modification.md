@@ -1,4 +1,4 @@
-﻿# AQL Frontend Modification & Coding Workflow
+# AQL Frontend Modification & Coding Workflow
 
 > **Scope boundary**: This document covers FRONTENT/ changes only — Vue pages, composables, components, stores, services. Its blast-radius steps reference GAS backend files and sync config — read those files directly by path. Do NOT load backend_gas_implementation.md or database_schema_alteration.md unless the task explicitly requires modifying that code.
 
@@ -47,7 +47,7 @@ Before writing any code under `FRONTENT/`, you must read the following architect
 Depending on the widgets or workflows being modified, inspect the current registries:
 * Reusable Components: [components/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/REGISTRY.md)
 * Reusable Composables: [composables/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/composables/REGISTRY.md)
-* If the task involves dashboard widgets: [FEATURE_DASHBOARD_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_DASHBOARD_GUIDE.md)
+* If the task involves the dashboard engine or data items: [FEATURE_DASHBOARD_ENGINE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_DASHBOARD_ENGINE.md)
 
 If backend metadata configuration, synced resources, or API options are required, refer to:
 * [GAS/Constants.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/Constants.gs) (contains `appOptions` source of truth)

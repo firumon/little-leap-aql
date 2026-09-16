@@ -1,4 +1,4 @@
-﻿# AQL Codebase Investigation
+# AQL Codebase Investigation
 
 > **Scope boundary**: This document covers codebase investigation only — tracing data flow, understanding architecture, finding implementations. It tells you which canonical docs to READ by path for each domain — do NOT load other init prompts for investigation context.
 
@@ -32,7 +32,7 @@ Read only the docs relevant to the user's question. Use this lookup:
 | Backend API actions or GAS logic | [GAS_API_CAPABILITIES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/GAS_API_CAPABILITIES.md), [GAS_PATTERNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/GAS_PATTERNS.md) |
 | Resource schema, columns, or metadata | [SCHEMA_RESOURCE_COLUMNS.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SCHEMA_RESOURCE_COLUMNS.md), relevant sheet structure doc |
 | Module workflows (Reports, Bulk Upload, etc.) | Relevant section of [WORKFLOW_OUTLET_OPERATIONS.md / WORKFLOW_PROCUREMENT.md](file:///f:/LITTLE%20LEAP/AQL/Documents/WORKFLOW_OUTLET_OPERATIONS.md / WORKFLOW_PROCUREMENT.md) |
-| Dashboard widgets or layout | [FEATURE_DASHBOARD_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_DASHBOARD_GUIDE.md) |
+| Dashboard engine, items, or layout | [FEATURE_DASHBOARD_ENGINE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_DASHBOARD_ENGINE.md) |
 | Menu structure or permissions | [SHEET_TOOLBAR_MENU_GUIDE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHEET_TOOLBAR_MENU_GUIDE.md) |
 | Tax or currency calculations | [FEATURE_TAX_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_TAX_SYSTEM.md) |
 | Login, auth, or user payload | [API_LOGIN_RESPONSE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/API_LOGIN_RESPONSE.md) |

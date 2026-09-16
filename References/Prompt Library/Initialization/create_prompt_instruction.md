@@ -1,4 +1,4 @@
-﻿# Initialization: Prompt & Instruction Creation
+# Initialization: Prompt & Instruction Creation
 
 > **Scope boundary**: This document covers creating new initialization prompts only. Its discovery steps require exhaustive codebase reading — read source files directly by path. Do NOT load other init prompts for context; you are creating one.
 
@@ -28,7 +28,7 @@ Search the codebase using ripgrep (`grep_search`) for symbols, resource names, o
 2. **Frontend Pages & Composables**:
    - Locate the custom pages in `FRONTENT/src/pages/` (e.g., `Operations/Rfqs/`, `Masters/PriceLists/`).
    - Locate the composables in `FRONTENT/src/composables/` (e.g., `operations/`, `masters/`).
-   - Locate any related widgets in `FRONTENT/src/dashboard/`.
+   - Locate any related dashboard items in `FRONTENT/src/_resource/<Scope>/<Resource>/Data/`.
 3. **Frontend Registries**:
    - Check `FRONTENT/src/components/REGISTRY.md` and `FRONTENT/src/composables/REGISTRY.md` for reusable files that should be reused or updated.
 

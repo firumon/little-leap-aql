@@ -15,9 +15,8 @@ Read these files in this exact order:
 3. [FRONTENT/src/components/widgets/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/widgets/REGISTRY.md) — Which preset to pick. Only preset names go in the sheet, never a base name.
 4. [FRONTENT/src/components/widgets/WIDGETS.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/widgets/WIDGETS.md) — The deep guide. Every base with its full prop table, data shape, density tiers, slots and edge cases.
 5. [FRONTENT/src/components/widgets/CONTRACT.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/widgets/CONTRACT.md) — The rules every widget obeys.
-6. [FRONTENT/src/pages/Dev/sampleData.json](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/pages/Dev/sampleData.json) — The 17 data shapes. Match your compute output to one of these EXACTLY.
-7. The resource's own Data/ folder — Read every file in it, including _shared.js.
-8. [Documents/SHARED_UTILITIES_INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHARED_UTILITIES_INDEX.md) — Read before you even think about a new helper.
+6. The resource's own Data/ folder — Read every file in it, including _shared.js.
+7. [Documents/SHARED_UTILITIES_INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHARED_UTILITIES_INDEX.md) — Read before you even think about a new helper.
 
 ---
 
@@ -29,7 +28,7 @@ Read these files in this exact order:
 4. **A descriptor is DATA ONLY.** Keys allowed: `name`, `title`, `subtitle`, `caption`, `controls`, `options`, `compute`. No permission, no resource list, no size, no colour. Those live on the sheet item.
 5. **Never import a store into a descriptor.** Everything you need is on `ctx`. If `ctx` lacks it, STOP and ask — do not reach around it.
 6. **Return `null` when there is nothing to show.** Never return a fake zero row and never return `undefined`.
-7. **Match an existing widget's data shape exactly.** Do not invent a shape and then ask for a widget to be changed to fit it.
+7. **Match an existing widget's data shape exactly.** Do not invent a shape and then ask for a widget to be changed to fit it. The data shape each base needs is written in WIDGETS.md, under "Data shape" for that base. That is now the only place it is written.
 8. **Reuse before you build. This is a MUST, not a preference.**
    Before creating ANY widget, or changing one, read all three widget docs: [REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/widgets/REGISTRY.md), [WIDGETS.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/widgets/WIDGETS.md) and [CONTRACT.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/widgets/CONTRACT.md). There are already 15 bases and 49 presets. Almost every need is already met.
    Work down this list and stop at the first one that works:

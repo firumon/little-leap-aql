@@ -25,7 +25,7 @@ This document is the deep guide for all 15 base widgets.
   - `wide` (520px and above): Full picture with side legends and captions.
 - **Aspect and height unit**: Heights snap to 40px grid units using:
   `height = Math.ceil((aspect ? Math.max(minHeight, width / aspect) : minHeight) / 40) * 40`.
-- **Test harness**: Open `/dev/widgets` in dev mode to test every widget across all widths and sample data sets.
+- **No test harness.** There is no page that draws every widget at once any more. After changing a widget, check it on a real dashboard tile, and check the other presets that share its base — they are listed under "Presets" in this file.
 
 ---
 

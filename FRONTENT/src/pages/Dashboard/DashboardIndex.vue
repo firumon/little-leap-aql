@@ -1,177 +1,291 @@
 <template>
-  <q-page padding class="bg-grey-1">
-    <!-- Header -->
-<!--    <div class="row items-center justify-between q-mb-xl">
-      <div class="column">
-        <h1 class="text-h4 text-weight-bold text-slate-800 q-ma-none font-outfit">
-          Dashboard Overview
-        </h1>
-        <div class="text-subtitle2 text-grey-6 q-mt-xs">
-          Real-time metrics, analytics pipelines, and transactional queues
-        </div>
-      </div>
-      <q-btn
-        icon="refresh"
-        color="primary"
-        round
-        flat
-        class="bg-white shadow-1"
-        :loading="loading"
-        @click="triggerManualRefresh"
-      >
-        <q-tooltip>Refresh Live Feeds</q-tooltip>
-      </q-btn>
-    </div>-->
-
-    <!-- Active Grid packed into clean rows -->
-    <div v-if="packedRows.length > 0">
-      <div
-        v-for="(row, rowIndex) in packedRows"
-        :key="rowIndex"
-        class="row q-col-gutter-xs q-mb-xs"
-      >
-        <div
-          v-for="widget in row"
-          :key="widget.metadata.id"
-          :class="[
-            widget.metadata.config.layout?.xs ? `col-${widget.metadata.config.layout.xs}` : 'col-12',
-            widget.metadata.config.layout?.sm ? `col-sm-${widget.metadata.config.layout.sm}` : '',
-            widget.metadata.config.layout?.md ? `col-md-${widget.metadata.config.layout.md}` : 'col-md-4',
-            widget.metadata.config.layout?.lg ? `col-lg-${widget.metadata.config.layout.lg}` : 'col-lg-3'
-          ]"
-        >
-          <component
-            :is="getWidgetComponent(widget.metadata.config.type)"
-            :widget-config="widget"
-            :widget-value="widgetValues[widget.metadata.id]"
-            :loading="loading"
-          />
-        </div>
+  <q-page padding :class="dashboardProps.pageClass">
+    <div class="row items-center q-mb-md">
+      <div class="text-subtitle1">Dashboard</div>
+      <q-space />
+      <div class="text-caption text-grey-7">
+        {{ headerSummary }}
       </div>
     </div>
 
-    <!-- Empty State / No widgets assigned -->
+    <div v-if="loaded && !tiles.length" class="aql-dashboard-blank">
+      <q-icon name="dashboard_customize" size="40px" color="grey-5" />
+      <div class="aql-dashboard-blank__text">{{ blankMessage }}</div>
+    </div>
+
     <div
-      v-else-if="!loading"
-      class="column items-center justify-center q-pa-xl text-center empty-state-container shadow-1"
+      v-show="tiles.length"
+      ref="gridEl"
+      class="aql-dashboard-grid"
+      :class="dashboardProps.gridClass"
+      :style="gridStyle"
     >
-      <q-icon name="dashboard_customize" size="5rem" class="text-primary opacity-30 q-mb-lg" />
-      <h2 class="text-h5 text-weight-bold text-slate-800 q-ma-none">
-        No active dashboard widgets
-      </h2>
-      <p class="text-body2 text-grey-6 q-mt-sm">
-        Your current role permissions or dynamic dashboard settings do not have any active widgets assigned at this time.
-      </p>
-    </div>
-
-    <!-- Page Loading Skeleton -->
-    <div v-else class="row q-col-gutter-md">
-      <div v-for="i in 3" :key="i" class="col-12 col-sm-6 col-md-4">
-        <q-card class="skeleton-widget-card overflow-hidden">
-          <q-card-section class="q-pa-lg">
-            <q-skeleton type="text" width="50%" class="q-mb-md" />
-            <q-skeleton type="rect" height="60px" />
-          </q-card-section>
-        </q-card>
-      </div>
+      <Widget
+        v-for="tile in tiles"
+        :key="tile.key"
+        :item="tile.item"
+        :data="tile.data"
+        :error="tile.error"
+        :scope="tile.scope"
+        :resource="tile.resource"
+        :ui-name="tile.uiName"
+        :span="tile.span"
+        :grid-width="gridWidth"
+        :gap="dashboardProps.gap"
+        :row-unit="dashboardProps.rowUnit"
+      />
     </div>
   </q-page>
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { useDashboard } from 'src/composables/_dashboard/useDashboard'
-import { useResourceIoStore } from 'src/stores/resourceIo'
+import { computed, ref, onMounted, onBeforeUnmount, shallowRef } from 'vue'
+import { useQuasar } from 'quasar'
+import { useAuthStore } from 'src/stores/auth'
+import { useDataStore } from 'src/stores/data'
+import { findResourceConfig, evalPermissionRules } from 'src/composables/resources/useResourceConfig'
+import { buildDashboardContext } from 'src/composables/dashboard/useDashboardContext'
+import { useDashboardResolver } from 'src/composables/resources/useDashboardResolver'
+import { resolveDashboardItem } from 'src/composables/dashboard/useDashboardItem'
+import { scoreDashboardItem, multiplierOf } from 'src/composables/dashboard/useDashboardScore'
+import Widget from 'src/components/Widget.vue'
 
-// Import widgets directly to register in gateway assembler
-import MetricWidget from 'src/dashboard/_widgets/MetricWidget.vue'
-import BarChartWidget from 'src/dashboard/_widgets/BarChartWidget.vue'
-import DonutChartWidget from 'src/dashboard/_widgets/DonutChartWidget.vue'
-import TimelineWidget from 'src/dashboard/_widgets/TimelineWidget.vue'
-import StackedBarChartWidget from 'src/dashboard/_widgets/StackedBarChartWidget.vue'
-import ComparisonWidget from 'src/dashboard/_widgets/ComparisonWidget.vue'
-import ProgressBarWidget from 'src/dashboard/_widgets/ProgressBarWidget.vue'
+const $q = useQuasar()
+const auth = useAuthStore()
+const dataStore = useDataStore()
 
-const { activeWidgets, widgetValues, loading } = useDashboard()
-const resourceIo = useResourceIoStore()
+const { ready: dashboardReady, dashboardProps } = useDashboardResolver()
 
-function getWidgetComponent(type) {
-  const components = {
-    MetricWidget,
-    BarChartWidget,
-    DonutChartWidget,
-    TimelineWidget,
-    StackedBarChartWidget,
-    ComparisonWidget,
-    ProgressBarWidget
-  }
-  return components[type] || null
-}
+const gridStyle = computed(() => ({
+  gap: `${dashboardProps.value.gap}px`,
+  gridTemplateColumns: `repeat(${dashboardProps.value.columns}, 1fr)`
+}))
 
-// Greedy 12-Column Grid-Packing Algorithm (packs based on desktop md size)
-const packedRows = computed(() => {
-  const rows = []
-  const queue = [...activeWidgets.value]
+const descriptorModules = import.meta.glob('../../_resource/*/*/Dashboard/index.js')
 
-  while (queue.length > 0) {
-    const currentRow = []
-    let remainingSpace = 12
-
-    let idx = 0
-    while (idx < queue.length) {
-      const widget = queue[idx]
-      // Default to 4 columns if layout md is unspecified
-      const layoutWidth = Number(widget.metadata.config.layout?.md || 4)
-
-      if (layoutWidth <= remainingSpace) {
-        currentRow.push(widget)
-        remainingSpace -= layoutWidth
-        queue.splice(idx, 1) // Remove from queue
-      } else {
-        idx++ // Try next widget in the queue to fit remainingSpace
-      }
-    }
-
-    rows.push(currentRow)
-  }
-  return rows
+const descriptorRegistry = {}
+Object.keys(descriptorModules).forEach((rawPath) => {
+  const resource = rawPath.split('/').slice(-3)[0]
+  descriptorRegistry[resource.toLowerCase()] = descriptorModules[rawPath]
 })
 
-// Dynamic manual refresh of dashboard dependencies
-async function triggerManualRefresh() {
-  const uniqueResources = new Set()
-  activeWidgets.value.forEach((w) => {
-    const ds = w.metadata.dataSource
-    if (ds) {
-      if (ds.resource) uniqueResources.add(ds.resource)
-      if (Array.isArray(ds.resources)) {
-        ds.resources.forEach((r) => uniqueResources.add(r))
-      }
-    }
-  })
+const descriptorsByItemKey = shallowRef({})
+const loaded = ref(false)
 
-  const resourcesList = Array.from(uniqueResources)
-  if (resourcesList.length > 0) {
-    try {
-      await resourceIo.syncResources(resourcesList, { showLoading: true })
-    } catch (err) {
-      console.error('Manual dashboard sync failed:', err)
+const gridEl = ref(null)
+const gridWidth = ref(0)
+let observer = null
+
+onMounted(() => {
+  observer = new ResizeObserver(([entry]) => {
+    gridWidth.value = entry.contentRect.width
+  })
+  const attach = () => {
+    if (!gridEl.value) return false
+    gridWidth.value = gridEl.value.getBoundingClientRect().width
+    observer.observe(gridEl.value)
+    return true
+  }
+  if (!attach()) requestAnimationFrame(attach)
+})
+
+onBeforeUnmount(() => observer?.disconnect())
+
+const BREAKPOINTS = ['xs', 'sm', 'md', 'lg', 'xl']
+
+const allItems = computed(() => {
+  const out = []
+  for (const cfg of auth.resources || []) {
+    const list = cfg?.ui?.dashboard
+    if (!Array.isArray(list)) continue
+    for (const item of list) {
+      if (!item?.name || !item?.widget) continue
+      if (item.active === false) continue
+      if (multiplierOf(item) === 0) continue
+      out.push({
+        item,
+        resource: cfg.name,
+        scope: cfg.scope || 'master',
+        uiName: cfg.ui?.customUIName || 'AQL'
+      })
     }
   }
+  return out
+})
+
+const neededResources = computed(() => {
+  const set = new Set()
+  for (const { item, resource } of allItems.value) {
+    set.add(resource)
+    const p = item.permission
+    if (p && typeof p === 'object' && !Array.isArray(p)) {
+      Object.keys(p).forEach((r) => set.add(r))
+    }
+  }
+  return [...set]
+})
+
+const permitted = (item, ownerResource) => {
+  const p = item.permission
+  if (!p) return true
+
+  if (typeof p === 'string' || Array.isArray(p)) {
+    return evalPermissionRules(
+      (Array.isArray(p) ? p : [p]).map((a) => `${ownerResource}:${a}`)
+    )
+  }
+
+  return Object.entries(p).every(([resName, verbs]) => {
+    if (verbs === true) return !!findResourceConfig(auth, resName)
+    const list = Array.isArray(verbs) ? verbs : [verbs]
+    return evalPermissionRules(list.map((a) => `${resName}:${a}`))
+  })
 }
+
+const spanFor = (size) => {
+  if (!size || typeof size !== 'object') return 12
+  const at = BREAKPOINTS.indexOf($q.screen.name)
+  for (let i = at; i >= 0; i--) {
+    const v = size[BREAKPOINTS[i]]
+    if (v === undefined || v === null) continue
+    const picked = Array.isArray(v) ? v[0] : v
+    return Number(picked) || 12
+  }
+  return 0
+}
+
+const headerSummary = computed(() => {
+  const cutoff = auth.dashboardScoreCutoff
+  const cutoffSegment = cutoff > 0 ? ` · cutoff ${cutoff}` : ''
+  return `${tiles.value.length} of ${allItems.value.length} items${cutoffSegment} · ${$q.screen.name}`
+})
+
+const blankMessage = computed(() => allItems.value.length
+  ? 'Nothing to show for you right now.'
+  : 'No resource has anything in App.Resources.Dashboard.')
+
+const tiles = computed(() => {
+  if (!loaded.value) return []
+  const out = []
+  const cutoff = Number(auth.dashboardScoreCutoff) || 0
+
+  for (const { item, resource, scope, uiName } of allItems.value) {
+    if (!permitted(item, resource)) continue
+
+    const score = scoreDashboardItem(item, auth, resource)
+    if (cutoff > 0 && score < cutoff) continue
+
+    const span = spanFor(item.size)
+    if (!span) continue
+
+    const itemKey = `${resource}::${item.name}`
+    const descriptor = descriptorsByItemKey.value[itemKey] || null
+
+    let data = null
+    let error = null
+
+    if (descriptor) {
+      try {
+        const controls = Object.fromEntries(
+          (descriptor.controls || []).map((c) => [c.name, c.value])
+        )
+        const result = descriptor.compute(buildDashboardContext(controls))
+        data = {
+          name: descriptor.name,
+          title: descriptor.title,
+          subtitle: descriptor.subtitle,
+          caption: descriptor.caption,
+          controls: descriptor.controls,
+          ...(result || {})
+        }
+      } catch (err) {
+        console.error(`[Dashboard] Failed compute for "${resource}::${item.name}":`, err)
+        data = null
+        error = err?.message || String(err)
+      }
+    }
+
+    out.push({
+      key: itemKey,
+      item,
+      data,
+      error,
+      resource,
+      scope,
+      uiName,
+      span,
+      multiplier: multiplierOf(item),
+      score,
+      auth: Boolean(item.auth),
+      users: Boolean(item.users)
+    })
+  }
+
+  return [...out].sort((a, b) => b.score - a.score)
+})
+
+onMounted(async () => {
+  const resourceModules = {}
+  for (const resource of neededResources.value) {
+    const key = resource.toLowerCase()
+    if (!descriptorRegistry[key]) continue
+    try {
+      const mod = await descriptorRegistry[key]()
+      resourceModules[key] = mod.descriptors || mod.default || []
+    } catch (err) {
+      console.error(`[Dashboard] Failed to load dashboard data for "${resource}":`, err)
+    }
+  }
+
+  const resolvedByItemKey = {}
+  await Promise.all(
+    allItems.value.map(async ({ item, resource, scope, uiName }) => {
+      const source = item.source || item.name
+      const rawList = resourceModules[resource.toLowerCase()] || []
+      const descriptor = rawList.find((d) => d?.name === source) || null
+      if (!descriptor) return
+
+      const resolved = await resolveDashboardItem({
+        descriptor,
+        name: item.name,
+        scope,
+        resource,
+        uiName
+      })
+      resolvedByItemKey[`${resource}::${item.name}`] = resolved
+    })
+  )
+
+  descriptorsByItemKey.value = resolvedByItemKey
+  loaded.value = true
+
+  for (const resource of neededResources.value) {
+    if (dataStore.hasRows(resource)) continue
+    dataStore.loadResource(resource).catch(() => {})
+  }
+})
 </script>
 
-<style lang="scss" scoped>
-.empty-state-container {
-  background: #ffffff;
-  border-radius: 20px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  margin-top: 40px;
+<style scoped>
+.aql-dashboard-blank {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 48px 16px;
+  text-align: center;
 }
 
-.skeleton-widget-card {
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  height: 180px;
+.aql-dashboard-blank__text {
+  font-size: 13px;
+  opacity: 0.6;
+}
+
+.aql-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  grid-auto-rows: 40px;
+  grid-auto-flow: row dense;
 }
 </style>

@@ -199,13 +199,38 @@ The `Settings` column in `APP.Resources` defines configurable setting descriptor
 `options` is only required when `type` is `"select"`.
 
 ## Dashboard Column Schema & Usage
-The `Dashboard` column in `APP.Resources` configures dashboard analytics widgets for the resource.
+The `Dashboard` column in `APP.Resources` declares this resource's tiles on the **one global
+dashboard page**. It is not a per-resource dashboard.
 
-* **Purpose**: Declares analytics widgets (cards, charts, counters) to display on the resource dashboard.
-* **Format**: A JSON array of widget descriptor objects.
-* **Widget Specification**: Defined in detail in [DASHBOARD_ENGINE_SPEC.md](file:///f:/LITTLE%20LEAP/AQL/References/DASHBOARD_ENGINE_SPEC.md) (§1–§4).
-* **Exposed on Metadata**: Populated on the resource metadata object under `ui.dashboard` (defaulting to `[]`, never null or undefined).
-* **Disabling**: An explicit empty array `[]` disables dashboard widgets for that resource.
+* **Format**: A JSON array. Each object is one tile.
+* **The cell holds no data logic.** It says who sees the tile, how wide it is, which widget
+  draws it, and how that widget looks. The numbers come from a separate item descriptor in
+  code, at `FRONTENT/src/_resource/<Scope>/<Resource>/Data/<name>.js`.
+* **The join**: the tile's `source` (falling back to `name`) must match a descriptor `name`.
+* **Exposed on Metadata**: under `ui.dashboard`, defaulting to `[]`, never null or undefined.
+* **Disabling**: a blank cell or `[]` means this resource contributes no tiles.
+
+### Tile keys
+
+| Key | Type | Required | Default | Meaning |
+|---|---|---|---|---|
+| `name` | String | Yes | — | Tile key, unique inside the resource. Also the key a `_ui/` override file is named after |
+| `widget` | String | Yes | — | Which widget draws it. No widget means the tile is skipped |
+| `source` | String | No | `name` | Which descriptor to read. Set only when two tiles share one descriptor |
+| `permission` | String, Array, Object, `true` | No | shown to all | Gate. AND at every level. Also names every resource the numbers read |
+| `size` | Object | No | 12 everywhere | Columns out of 12, per breakpoint. Largest named key at or below the screen wins and keeps applying upward |
+| `active` | Boolean | No | `true` | `false` switches the tile off |
+| `multiplier` | Number 0–2 | No | `1` | Multiplies the score. `0` is off |
+| `auth` | Boolean | No | `false` | The tile is about the logged-in user's own work |
+| `users` | Boolean | No | `false` | The tile breaks its numbers down per person |
+| `title`, `subtitle`, `caption` | String | No | — | Pinned text. Loses to text the descriptor computes |
+| `props` | Object | No | `{}` | Passed straight to the widget. Colour roles, empty text, icons. Never a hex |
+
+There is **no `empty` key**. A tile always renders; zero shows as zero and a failure shows a
+card. Only `active: false` and `multiplier: 0` remove a tile.
+
+Full engine and authoring guide, including the descriptor side, score system, and `_ui/` override paths:
+[FEATURE_DASHBOARD_ENGINE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_DASHBOARD_ENGINE.md).
 
 ## Options Column Schema & Usage
 The `Options` column in `APP.Resources` holds option lists that belong to one resource.

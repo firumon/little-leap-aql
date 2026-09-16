@@ -90,7 +90,7 @@ Use when editing files under `FRONTENT/`.
 - If the task affects reusable building blocks, also read/update:
   - `FRONTENT/src/components/REGISTRY.md`
   - `FRONTENT/src/composables/REGISTRY.md`
-  - `FRONTENT/src/dashboard/REGISTRY.md` (if affecting dashboard widgets)
+  - `Documents/FEATURE_DASHBOARD_ENGINE.md` (if affecting dashboard data items, descriptors, or widgets)
 - If the task affects a documented module, also read only the relevant section of:
   - `Documents/WORKFLOW_OUTLET_OPERATIONS.md` (for retail outlets, visits, restocks, deliveries, invoicing, and payments)
   - `Documents/WORKFLOW_PROCUREMENT.md` (for product variants, POs, receiving, GRNs, and warehouse inventory)
@@ -217,9 +217,9 @@ Use when changing `handleLogin()` response shape, field sources, or frontend sto
   - `Documents/API_LOGIN_RESPONSE.md`
 
 ### Dashboard Implementation
-Use when implementing or customizing dashboard modules, widgets, composables, or layout grids.
+Use when implementing or customizing dashboard data items, descriptor files under `_resource/<Scope>/<Resource>/Data/`, sheet columns, or score calculations.
 - Read:
-  - `Documents/FEATURE_DASHBOARD_GUIDE.md`
+  - `Documents/FEATURE_DASHBOARD_ENGINE.md`
 
 ### Tax System Design & Configuration
 Use when customizing tax columns, calculating wholesale values, or modifying compound tax logic.

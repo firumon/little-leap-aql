@@ -1,6 +1,5 @@
 import { computed } from 'vue'
-import { useDataStore } from 'src/stores/data'
-import { defineSharedComposable } from 'src/utils/appHelpers'
+import { useRecord } from 'src/composables/resources/useRecord'
 
 // OutletVisits grouped by outlet - `{ OutletCode: [visit, ...] }`, soonest date first.
 // One pass for the whole app, so no caller filters the visit sheet per outlet.
@@ -31,8 +30,8 @@ export function indexVisitsByOutlet (rows = []) {
   return byOutlet
 }
 
-const shared = defineSharedComposable((dataStore) => {
-  const rawVisits = computed(() => (dataStore.getRecords(RESOURCE_NAME) || []).map(asRow))
+const build = (recordSource) => {
+  const rawVisits = computed(() => (recordSource.rows(RESOURCE_NAME) || []).map(asRow))
   const visitsByOutlet = computed(() => indexVisitsByOutlet(rawVisits.value))
 
   return {
@@ -41,8 +40,9 @@ const shared = defineSharedComposable((dataStore) => {
     visitsByOutlet,
     visitsOf: (outletCode) => visitsByOutlet.value.get(text(outletCode)) || []
   }
-})
+}
 
 export function useVisitResource () {
-  return shared(useDataStore())
+  const recordSource = useRecord()
+  return recordSource.remember('useVisitResource', () => build(recordSource))
 }

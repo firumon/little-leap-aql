@@ -53,7 +53,7 @@ import ResourceActionItem from 'components/actions/ResourceActionItem.vue'
 import FormRecord from 'components/contents/FormRecord.vue'
 import AqlDialog from 'components/shared/AqlDialog.vue'
 import { useFormFields } from 'src/composables/resources/useFormFields'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { isPlanned } from 'src/_resource/Operation/OutletVisits/composables/useVisitProgress'
 
 defineOptions({ name: 'OutletVisitsResourceActionAdd', inheritAttrs: false })
@@ -78,9 +78,9 @@ const { crossRefOptions } = useFormFields('OutletVisits')
 // No store import: a `_ui/` component must reach data through the injected page
 // context or a composable (ARCHITECTURE RULES §3). The page already provides the
 // OutletVisits record set — this override only ever resolves for OutletVisits, so
-// `resourceRecord.records` IS the visit list. `useRecord` is the standalone fallback
+// `resourceRecord.records` IS the visit list. `usePageRecord` is the standalone fallback
 // for a mount outside `Page.vue`, where nothing is provided.
-const fallbackRecord = useRecord('OutletVisits')
+const fallbackRecord = usePageRecord('OutletVisits')
 const visitRecords = computed(() =>
   resourceRecord?.records?.value ?? fallbackRecord.records.value ?? []
 )

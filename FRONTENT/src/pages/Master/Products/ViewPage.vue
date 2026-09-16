@@ -79,12 +79,12 @@ import MasterViewAudit from 'components/_common/sections/Content/Audit.vue'
 import { useProductVariants } from 'src/composables/master/products/useProductVariants'
 import { useProductSkuViewData } from 'src/composables/master/products/useProductSkuViewData'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
 const nav = useResourceNav()
 const resourceConfig = useResourceConfig()
-const resourceRecord = useRecord()
+const resourceRecord = usePageRecord()
 
 provide('resourceConfig', resourceConfig)
 provide('resourceRecord', resourceRecord)

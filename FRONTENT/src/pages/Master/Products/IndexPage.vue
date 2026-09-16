@@ -101,7 +101,7 @@ import GenericHeaderPanel from 'components/shared/GenericHeaderPanel.vue'
 import MasterListToolbar from 'components/_common/sections/Toolbar/Toolbar.vue'
 import MasterListViewSwitcher from 'components/_common/sections/ViewSwitcher.vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { parseVariantTypes } from 'src/composables/master/products/useProductVariants'
 import { useResourceNav } from 'src/composables/resources/useResourceNav.js'
 
@@ -118,8 +118,8 @@ const {
   activeViewName,
   setActiveView,
   filteredItems
-} = useRecord()
-const skusResource = useRecord('SKUs')
+} = usePageRecord()
+const skusResource = usePageRecord('SKUs')
 
 const skuRecords = skusResource.records
 

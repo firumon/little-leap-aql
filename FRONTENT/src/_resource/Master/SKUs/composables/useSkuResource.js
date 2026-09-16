@@ -1,6 +1,5 @@
 import { computed } from 'vue'
-import { useDataStore } from 'src/stores/data'
-import { defineSharedComposable } from 'src/utils/appHelpers'
+import { useRecord } from 'src/composables/resources/useRecord'
 
 export const MAX_VARIANTS = 5
 
@@ -77,11 +76,11 @@ export const enrichSku = (sku, productsMap = new Map(), uomsMap = new Map()) => 
 // time and shared by every caller. `useProductResource`, `usePriceListResource` and
 // every component reading SKU labels all land on the same `computed()` refs, so the
 // pass over the SKU sheet runs once per data change rather than once per consumer.
-const shared = defineSharedComposable((dataStore) => {
+const build = (recordSource) => {
   const skus = computed(() => {
-    const rawSkus = dataStore.getRecords('SKUs') || []
-    const rawProducts = dataStore.getRecords('Products') || []
-    const rawUoms = dataStore.getRecords('UOMs') || []
+    const rawSkus = recordSource.rows('SKUs') || []
+    const rawProducts = recordSource.rows('Products') || []
+    const rawUoms = recordSource.rows('UOMs') || []
 
     const productsMap = new Map(rawProducts.map((p) => [p.Code, p]))
     const uomsMap = new Map(rawUoms.map((u) => [u.Code, u]))
@@ -170,8 +169,9 @@ const shared = defineSharedComposable((dataStore) => {
     skuLabelText,
     getSkusByProduct
   }
-})
+}
 
-export function useSkuResource() {
-  return shared(useDataStore())
+export function useSkuResource () {
+  const recordSource = useRecord()
+  return recordSource.remember('useSkuResource', () => build(recordSource))
 }

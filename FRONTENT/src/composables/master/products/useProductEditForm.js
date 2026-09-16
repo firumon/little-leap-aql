@@ -3,7 +3,7 @@ import { useQuasar } from 'quasar'
 import { useProductVariants, hasDuplicateVariantSet, validateSkuVariants } from 'src/composables/master/products/useProductVariants'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useCompositeForm } from 'src/composables/resources/useCompositeForm'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
@@ -12,8 +12,8 @@ export function useProductEditForm() {
   const nav = useResourceNav()
   const { config, resourceName } = useResourceConfig()
   const { code } = useRouteConfig()
-  const { items, loading: resourceLoading, reload, updateLocalRecord } = useRecord(resourceName)
-  const skusResource = useRecord(ref('SKUs'))
+  const { items, loading: resourceLoading, reload, updateLocalRecord } = usePageRecord(resourceName)
+  const skusResource = usePageRecord(ref('SKUs'))
   const {
     parentForm,
     childGroups,

@@ -16,7 +16,6 @@ import TimelineBase from 'src/components/widgets/TimelineBase.vue'
 
 defineOptions({
   inheritAttrs: false,
-  aspect: 0.75,
-  minHeight: 120
+  minHeight: 240
 })
 </script>

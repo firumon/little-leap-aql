@@ -73,7 +73,7 @@ export function storedQtyChange (record) {
 const shelfDirection = (qtyChange) => (toNumber(qtyChange) < 0 ? OFF_THE_SHELF : ONTO_THE_SHELF)
 
 import { useAuth } from 'src/composables/core/useAuth'
-import { useDataStore } from 'src/stores/data'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { useWarehouseResource } from 'src/_resource/Master/Warehouses/composables/useWarehouseResource'
 import { effectivePriceListCode, priceFromList, resolveReturnUnitPrice } from './useReturnPricing'
 import { resourceRow } from 'src/composables/resources/useResourceConfig'
@@ -129,13 +129,13 @@ function invoiceLineFor (invoiceCode, sku) {
   const code = text(invoiceCode)
   if (!code) return null
 
-  const store = useDataStore()
-  const header = (store.getRecords('OutletConsumptionInvoices') || [])
+  const recordSource = useRecord()
+  const header = (recordSource.rows('OutletConsumptionInvoices') || [])
     .find((row) => text(row.Code) === code) || null
 
   let qty = 0
   let price = null
-  for (const line of store.getRecords('OutletConsumptionInvoiceItems') || []) {
+  for (const line of recordSource.rows('OutletConsumptionInvoiceItems') || []) {
     if (text(line.OutletConsumptionInvoiceCode) !== code) continue
     if (sku && text(line.SKU) !== text(sku)) continue
     qty += toNumber(line.Qty)

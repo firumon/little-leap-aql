@@ -1,5 +1,5 @@
 import { computed } from 'vue'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useCurrency } from 'src/composables/useCurrency'
 import { grandTotalOf } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceCalculation'
 import { useOutletResource } from 'src/_resource/Master/Outlets/composables/useOutletResource'
@@ -33,11 +33,11 @@ export function useReturnView () {
   const { getPriceList } = usePriceListResource()
   const { _C } = useCurrency()
 
-  const invoices = useRecord('OutletConsumptionInvoices')
-  const invoiceItems = useRecord('OutletConsumptionInvoiceItems')
+  const invoices = usePageRecord('OutletConsumptionInvoices')
+  const invoiceItems = usePageRecord('OutletConsumptionInvoiceItems')
   // Both cards render NAMES, so the master rows they resolve from must be opened too.
-  const warehouses = useRecord('Warehouses')
-  const priceLists = useRecord('PriceList')
+  const warehouses = usePageRecord('Warehouses')
+  const priceLists = usePageRecord('PriceList')
 
   const text = (value) => (value == null ? '' : String(value).trim())
 

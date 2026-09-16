@@ -37,7 +37,7 @@ export function useReturnFormFields () {
   const { warehouseOptions } = useWarehouseResource()
   const { priceListOptions } = usePriceListResource()
 
-  // Every resource goes through the relay's `useRecord` accessor, which owns both the
+  // Every resource goes through the relay's `usePageRecord` accessor, which owns both the
   // reactive rows and the `reload()` delta sync — no store is imported here (§5).
   const outlets = resource('Outlets')
   const skus = resource('SKUs')

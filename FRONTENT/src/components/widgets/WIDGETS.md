@@ -312,9 +312,9 @@ Expects a value, optional compare value, and caption:
 
 | Preset | Fixed props | Aspect | Min height |
 | --- | --- | --- | --- |
-| `MetricDelta` | `sentiment="auto"`, `invert=false` | ? | 48px |
-| `MetricDeltaInverse` | `sentiment="auto"`, `invert=true` | ? | 48px |
-| `MetricPlain` | `arrowStyle="none"`, `sentiment="neutral"` | ? | 48px |
+| `MetricDelta` | `sentiment="auto"`, `invert=false` | none | 48px |
+| `MetricDeltaInverse` | `sentiment="auto"`, `invert=true` | none | 48px |
+| `MetricPlain` | `arrowStyle="none"`, `sentiment="neutral"` | none | 48px |
 
 ### 6. Slots
 - `#value`: Replace the main number.
@@ -778,8 +778,8 @@ Expects a list of ranked items:
 
 | Preset | Fixed props | Aspect | Min height |
 | --- | --- | --- | --- |
-| `TopProductsList` | `rowSpacing="tight"`, `barStyle="fill"` | 1.33 | 120px |
-| `LowStockList` | `rowSpacing="cozy"`, `barStyle="capsule"`, `color="negative"` | 1.33 | 120px |
+| `TopProductsList` | `rowSpacing="tight"`, `barStyle="fill"` | none | 160px |
+| `LowStockList` | `rowSpacing="cozy"`, `barStyle="capsule"`, `color="negative"` | none | 220px |
 
 ### 6. Slots
 - `#rank`: Replace the rank number badge.

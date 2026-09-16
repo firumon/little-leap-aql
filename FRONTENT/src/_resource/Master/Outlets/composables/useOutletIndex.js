@@ -4,7 +4,7 @@
  * ONE pass over the five operational streams, producing every figure the Outlets module
  * shows: the geographic breakdown, the three pending queues, the two visit queues, the
  * activity-health ratio, the six list views, and the per-outlet slices the View page's cards
- * read. Built through `defineSharedComposable`, so the pass runs once per app and every
+ * read. Built once per app through the record layer's `remember`, so the pass runs once per app and every
  * caller reads the same memoized computeds.
  *
  * ── WHY ONE AGGREGATE AND NOT A COMPOSABLE PER WIDGET ──
@@ -24,8 +24,7 @@
  */
 
 import { computed } from 'vue'
-import { defineSharedComposable } from 'src/utils/appHelpers'
-import { useDataStore } from 'src/stores/data'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { useOutletResource } from './useOutletResource'
 import { useOutletStorageResource } from 'src/_resource/Operation/OutletStorages/composables/useOutletStorageResource'
 import {
@@ -87,10 +86,10 @@ function distinctOutlets (rows) {
   return seen.size
 }
 
-const shared = defineSharedComposable((dataStore) => {
+const build = (recordSource) => {
   const { outlets, activeOutlets, outletMap } = useOutletResource()
 
-  const rows = (name) => (dataStore.getRecords(name) || []).map(asRow).filter(isActiveRow)
+  const rows = (name) => (recordSource.rows(name) || []).map(asRow).filter(isActiveRow)
 
   // ── Raw streams ─────────────────────────────────────────────────────────────
 
@@ -382,8 +381,9 @@ const shared = defineSharedComposable((dataStore) => {
     returnsFor: (code) => sortedFor(returnsByOutlet.value, code, 'Date'),
     stockFor: (code) => stockRowsOf(code)
   }
-})
+}
 
 export function useOutletIndex () {
-  return shared(useDataStore())
+  const recordSource = useRecord()
+  return recordSource.remember('useOutletIndex', () => build(recordSource))
 }

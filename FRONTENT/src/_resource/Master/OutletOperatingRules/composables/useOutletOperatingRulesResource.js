@@ -31,8 +31,7 @@
  */
 
 import { computed } from 'vue'
-import { useDataStore } from 'src/stores/data'
-import { defineSharedComposable } from 'src/utils/appHelpers'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 
 const RESOURCE_NAME = 'OutletOperatingRules'
@@ -172,8 +171,8 @@ export function priceListCodeFor (outletCode, rules = [], defaults = null) {
  * ONCE PER APP (CORE_ARCHITECTURE_RULES §6): the index is built one time and every consumer
  * — `useOutletResource`, `useVisitCadence`, the invoice module — lands on the same computed.
  */
-const shared = defineSharedComposable((dataStore) => {
-  const rawRules = computed(() => (dataStore.getRecords(RESOURCE_NAME) || []).map(asRow))
+const build = (recordSource) => {
+  const rawRules = computed(() => (recordSource.rows(RESOURCE_NAME) || []).map(asRow))
 
   const defaults = computed(() => operatingRuleDefaults())
   const rulesByOutletMap = computed(() => indexRulesByOutlet(rawRules.value))
@@ -196,8 +195,9 @@ const shared = defineSharedComposable((dataStore) => {
     maxStockValueLimitOf: (outletCode) => ruleOf(outletCode).maxStockValueLimit,
     priceListCodeOf: (outletCode) => ruleOf(outletCode).priceListCode
   }
-})
+}
 
 export function useOutletOperatingRulesResource () {
-  return shared(useDataStore())
+  const recordSource = useRecord()
+  return recordSource.remember('useOutletOperatingRulesResource', () => build(recordSource))
 }

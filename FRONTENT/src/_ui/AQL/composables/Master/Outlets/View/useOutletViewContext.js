@@ -2,7 +2,7 @@ import { ref, computed, inject } from 'vue'
 import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useCurrencyResource } from 'src/_resource/Master/Currencies/composables/useCurrencyResource'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 import { useOutletIndex } from 'src/_resource/Master/Outlets/composables/useOutletIndex'
@@ -29,7 +29,7 @@ import { storedTaxBreakdown } from 'src/_resource/Operation/OutletConsumptionInv
  * (UI_RESOURCE_DOMAIN_LOGIC.md §6.1).
  *
  * ONE `inject()` for the nine cards on this page, and the one place this page's imports of
- * `useResourceNav`, `useRecord`, `useCurrencyResource` and the Layer 2 domain modules legally
+ * `useResourceNav`, `usePageRecord`, `useCurrencyResource` and the Layer 2 domain modules legally
  * live. Every `.vue` under `View/` imports this file and nothing else from outside its folder.
  *
  * ── ONE PROJECTION, NINE CARDS ──
@@ -94,7 +94,7 @@ export function useOutletViewContext () {
   const loaded = ref(streamsLoaded)
   if (!streamsLoaded) {
     if (!pendingLoad) {
-      const sources = SOURCE_RESOURCES.map((name) => useRecord(name))
+      const sources = SOURCE_RESOURCES.map((name) => usePageRecord(name))
       pendingLoad = Promise.all(sources.map((resource) => resource.reload()))
         .finally(() => { streamsLoaded = true; pendingLoad = null })
     }

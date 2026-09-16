@@ -25,8 +25,7 @@
  */
 
 import { computed } from 'vue'
-import { useDataStore } from 'src/stores/data'
-import { defineSharedComposable } from 'src/utils/appHelpers'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { usePriceListResource } from 'src/_resource/Master/PriceLists/composables/usePriceListResource'
 import {
   enrichOperatingRule,
@@ -110,13 +109,13 @@ export const enrichOutlet = (outlet, rulesByOutletMap = new Map(), priceListMap 
 
 // Composable for Outlets master resource//
 // ONCE PER APP (CORE_ARCHITECTURE_RULES §6) — see `useSkuResource` for the rationale.
-const shared = defineSharedComposable((dataStore) => {
+const build = (recordSource) => {
   const { priceListMap, defaultPriceList } = usePriceListResource()
   // The rules index is built by the rules domain, not here — one index, one owner.
   const { rulesByOutletMap, defaults: ruleDefaults } = useOutletOperatingRulesResource()
 
   const outlets = computed(() => {
-    const rawOutlets = dataStore.getRecords('Outlets') || []
+    const rawOutlets = recordSource.rows('Outlets') || []
 
     const rulesMap = rulesByOutletMap.value
     const plMap = priceListMap.value
@@ -171,10 +170,11 @@ const shared = defineSharedComposable((dataStore) => {
     getEffectivePriceListCode,
     getEffectivePriceList
   }
-})
+}
 
-export function useOutletResource() {
-  return shared(useDataStore())
+export function useOutletResource () {
+  const recordSource = useRecord()
+  return recordSource.remember('useOutletResource', () => build(recordSource))
 }
 
 // Re-exported so a caller holding raw rules rows (a `PageAction.js`, a replayed payload)

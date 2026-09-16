@@ -1,7 +1,7 @@
 import { ref, computed, inject } from 'vue'
 import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useOutletIndex } from 'src/_resource/Master/Outlets/composables/useOutletIndex'
 import {
   ACTIVITY_WINDOW_DAYS,
@@ -14,7 +14,7 @@ import {
  * (UI_RESOURCE_DOMAIN_LOGIC.md §6.1).
  *
  * ONE `inject()` for the Operation Hub's widgets AND for the six shared list views, and the
- * one place their imports of `useResourceNav`, `useRecord` and the Layer 2 aggregate legally
+ * one place their imports of `useResourceNav`, `usePageRecord` and the Layer 2 aggregate legally
  * live.
  *
  * ── PLACEMENT: the RESOURCE tier, not a page folder (§6.2) ──
@@ -81,7 +81,7 @@ export function useOutletOverviewContext () {
   const loaded = ref(streamsLoaded)
   if (!streamsLoaded) {
     if (!pendingLoad) {
-      const sources = SOURCE_RESOURCES.map((name) => useRecord(name))
+      const sources = SOURCE_RESOURCES.map((name) => usePageRecord(name))
       pendingLoad = Promise.all(sources.map((resource) => resource.reload()))
         .finally(() => { streamsLoaded = true; pendingLoad = null })
     }
@@ -100,7 +100,7 @@ export function useOutletOverviewContext () {
   /**
    * The live keyword from `FilterInput`, relayed off the injected record state.
    *
-   * `FilterInput` writes straight into `resourceRecord.filterTerm`, and `useRecord` applies
+   * `FilterInput` writes straight into `resourceRecord.filterTerm`, and `usePageRecord` applies
    * it to `filteredRecords`. Every list view on this page renders Layer 2 SUMMARIES instead
    * of those records — that is what lets a row state when its outlet was last paid — so the
    * framework's own search never reaches them and each view has to apply the same term

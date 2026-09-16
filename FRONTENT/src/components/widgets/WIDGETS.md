@@ -1008,7 +1008,7 @@ Expects an ordered array of event items:
 
 | Preset | Fixed props | Aspect | Min height |
 | --- | --- | --- | --- |
-| `EventTimeline` | `direction="vertical"`, `markerShape="dot"`, `showConnector=true` | 0.75 | 120px |
+| `EventTimeline` | `direction="vertical"`, `markerShape="dot"`, `showConnector=true` | none | 240px |
 | `CompactTimeline` | `direction="horizontal"`, `markerShape="dot"`, `showConnector=true` | 3 | 60px |
 
 ### 6. Slots

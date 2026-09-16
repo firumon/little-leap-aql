@@ -1,7 +1,6 @@
 import { computed } from 'vue'
 import { useAuthStore } from 'src/stores/auth'
-import { useDataStore } from 'src/stores/data'
-import { defineSharedComposable } from 'src/utils/appHelpers'
+import { useRecord } from 'src/composables/resources/useRecord'
 
 // Pure Currency enrichment function
 export const enrichCurrency = (curr) => {
@@ -37,7 +36,7 @@ export const enrichCurrency = (curr) => {
 // ONCE PER APP (CORE_ARCHITECTURE_RULES §6) — see `useSkuResource` for the rationale.
 // `_C()` is called from almost every money-rendering component, so this is the widest
 // consumer set in the app and the one that benefited least from per-call-site memoization.
-const shared = defineSharedComposable((dataStore) => {
+const build = (recordSource) => {
   const authStore = useAuthStore()
 
   // Dynamic default currency code from App Config
@@ -50,7 +49,7 @@ const shared = defineSharedComposable((dataStore) => {
 
   // Reactive enriched currencies
   const currencies = computed(() => {
-    const raw = dataStore.getRecords('Currencies') || []
+    const raw = recordSource.rows('Currencies') || []
     return raw.map(enrichCurrency).filter(Boolean)
   })
 
@@ -82,7 +81,7 @@ const shared = defineSharedComposable((dataStore) => {
     }
   })
 
-  const loading = computed(() => !!dataStore.loadingByResource?.Currencies)
+  const loading = computed(() => recordSource.isLoading('Currencies'))
 
   const getCurrency = (code) => {
     if (!code) return null
@@ -187,8 +186,9 @@ const shared = defineSharedComposable((dataStore) => {
     formatCurrency,
     _C
   }
-})
+}
 
-export function useCurrencyResource() {
-  return shared(useDataStore())
+export function useCurrencyResource () {
+  const recordSource = useRecord()
+  return recordSource.remember('useCurrencyResource', () => build(recordSource))
 }

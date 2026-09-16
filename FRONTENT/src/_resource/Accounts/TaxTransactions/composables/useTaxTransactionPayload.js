@@ -1,4 +1,4 @@
-import { useDataStore } from 'src/stores/data'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { textOrRef } from 'src/utils/appHelpers'
 
 // The tax ledger: one row per document per tax code, so a return can be filed without
@@ -22,7 +22,7 @@ export function taxTransactionRowsOf (resource = '', resourceCode = '') {
   const name = text(resource)
   const code = text(resourceCode)
   if (!name || !code) return []
-  return (useDataStore().getRecords(TAX_TRANSACTIONS) || [])
+  return (useRecord().rows(TAX_TRANSACTIONS) || [])
     .map(asRow)
     .filter((row) =>
       text(row.Resource) === name &&

@@ -178,7 +178,7 @@ a frozen server counter, and `SESSION_GEN_WINDOW` is 2.
 **So the first call of every session is a read-only `get`, never a write:**
 
 ```js
-(async () => { const res = await window.pageState.run({
+(async () => { const res = await window.__pageState.run({
     requests: [{ action: 'get', resource: ['Warehouses'], payload: {} }], notify: false })
   return JSON.stringify({ success: res?.success, error: res?.response?.error || '' }) })()
 ```
@@ -614,9 +614,9 @@ Trailing `get`: `['WarehouseStorages', 'OutletStorages']`
 criterion, not an omission. One timestamp per record, reused across every triple.
 
 > [!NOTE]
-> `src/pages/Page.vue` may already carry a `window.pageState` handle as an uncommitted
-> working-tree change. If so, **use it and edit nothing** — §9 then has nothing to
-> revert. Check before adding `window.__pageState`.
+> Use your own `window.__pageState` handle from §1, and revert it when you are done.
+> `Page.vue` may happen to carry some other console handle at any given time. Never
+> build a restore on one. Anything you did not add yourself can be gone tomorrow.
 
 **Masters to validate:** `SKUs`, `Outlets`, `Warehouses`.
 

@@ -13,10 +13,10 @@
  * widget beside it to disagree — they are the same array, counted twice
  * (CORE_ARCHITECTURE_RULES §6, UI_MODULE_DEVELOPER_GUIDE §7.4).
  *
- * ONCE PER APP, NOT ONCE PER CONSUMER (CORE_ARCHITECTURE_RULES §6). Built through
- * `defineSharedComposable`, the same shape every `_resource/Master/*` composable uses, so
- * six consuming widgets run the indexing pass once between them rather than six times over
- * the same rows.
+ * ONCE PER APP, NOT ONCE PER CONSUMER (CORE_ARCHITECTURE_RULES §6). Built once per app
+ * through the record layer's `remember`, the same shape every `_resource/*` composable uses,
+ * so six consuming widgets run the indexing pass once between them rather than six times
+ * over the same rows.
  *
  * INDEXED JOINS, NEVER LINEAR SCANS (§6). Every cross-resource lookup below resolves
  * through a `Map` built in a single pass. A `.find()` inside the per-outlet loop would
@@ -24,8 +24,7 @@
  */
 
 import { computed } from 'vue'
-import { defineSharedComposable } from 'src/utils/appHelpers'
-import { useDataStore } from 'src/stores/data'
+import { useRecord } from 'src/composables/resources/useRecord'
 import {
   progressOf,
   isActiveRow,
@@ -48,8 +47,8 @@ const num = (value) => {
 }
 const todayISO = () => new Date().toISOString().slice(0, 10)
 
-const shared = defineSharedComposable((dataStore) => {
-  const rows = (name) => (dataStore.getRecords(name) || []).map(asRow).filter(isActiveRow)
+const build = (recordSource) => {
+  const rows = (name) => (recordSource.rows(name) || []).map(asRow).filter(isActiveRow)
 
   const consumptions = computed(() => rows('OutletConsumptions'))
   const consumptionItems = computed(() => rows('OutletConsumptionItems'))
@@ -384,14 +383,9 @@ const shared = defineSharedComposable((dataStore) => {
     ageingBuckets,
     scheduledVisitRows
   }
-})
+}
 
-/**
- * The data store is passed IN rather than imported at module scope, matching every
- * `_resource/Master/*` composable: `defineSharedComposable` keys its cached scope on the
- * identity it is handed, so a store swap (a tenant switch) rebuilds the whole projection
- * instead of serving the previous tenant's index.
- */
 export function useConsumptionIndex () {
-  return shared(useDataStore())
+  const recordSource = useRecord()
+  return recordSource.remember('useConsumptionIndex', () => build(recordSource))
 }

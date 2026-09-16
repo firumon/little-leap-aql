@@ -19,7 +19,7 @@ import { deriveReturnProgress, REASONS } from 'src/_resource/Operation/OutletRet
 export const DEFAULT_STORAGE = '_default'
 
 const text = (value) => (value == null ? '' : String(value).trim())
-// `useRecord().items` can carry `null`, and an enriched relation getter yields `null` for
+// `usePageRecord().items` can carry `null`, and an enriched relation getter yields `null` for
 // a row whose Code has not landed. Normalizing BEFORE any predicate is what stops a null
 // passing one guard and being dereferenced by the next (§11 rule 2).
 const asRow = (value) => (value && typeof value === 'object' ? value : {})

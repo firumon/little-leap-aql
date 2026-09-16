@@ -2,7 +2,7 @@
 // the UI writes one column, the derives here regenerate every consequence, and submit only
 // validates (UI_PAGE_STATE_NODES.md §5.7A–§5.7D).
 
-import { useDataStore } from 'src/stores/data'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { useAuth } from 'src/composables/core/useAuth'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { toNumber, countRowsOf, positiveRows } from './useConsumptionStock'
@@ -75,7 +75,7 @@ const isTrue = (value) => text(value).toUpperCase() === 'TRUE'
 const getCtl = (pageState, ctl, fallback = null) =>
   pageState.getControls(ctl.header, fallback, ctl.resource)
 
-const storeRows = (name) => useDataStore().getRecords(name) || []
+const storeRows = (name) => useRecord().rows(name) || []
 
 const allowedTo = (resource, action) => useResourceConfig(resource).allowed(action) === true
 

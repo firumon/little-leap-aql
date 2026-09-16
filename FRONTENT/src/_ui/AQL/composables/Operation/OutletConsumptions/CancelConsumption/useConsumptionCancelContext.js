@@ -1,5 +1,5 @@
 import { inject, computed } from 'vue'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
@@ -19,12 +19,12 @@ export function useConsumptionCancelContext () {
   const ui = useAQLConfig()
   const { code } = useRouteConfig()
 
-  const consumptions = useRecord('OutletConsumptions')
-  const invoices = useRecord('OutletConsumptionInvoices')
-  const restocks = useRecord('OutletRestocks')
-  const returns = useRecord('OutletReturns')
-  const consumptionItems = useRecord('OutletConsumptionItems')
-  const outletMovements = useRecord('OutletMovements')
+  const consumptions = usePageRecord('OutletConsumptions')
+  const invoices = usePageRecord('OutletConsumptionInvoices')
+  const restocks = usePageRecord('OutletRestocks')
+  const returns = usePageRecord('OutletReturns')
+  const consumptionItems = usePageRecord('OutletConsumptionItems')
+  const outletMovements = usePageRecord('OutletMovements')
 
   const text = (value) => (value == null ? '' : String(value).trim())
   const asRow = (value) => (value && typeof value === 'object' ? value : {})

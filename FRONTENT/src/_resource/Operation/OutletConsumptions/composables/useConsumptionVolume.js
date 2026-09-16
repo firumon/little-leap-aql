@@ -1,6 +1,5 @@
 import { computed } from 'vue'
-import { defineSharedComposable } from 'src/utils/appHelpers'
-import { useDataStore } from 'src/stores/data'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { daysFromToday } from 'src/utils/dateHelpers'
 import { CANCELLED, progressOf, isActiveRow } from './useConsumptionProgress'
 
@@ -47,8 +46,8 @@ export function topConsumedBy (counted, items = [], labelOf, limit = VOLUME_TOP_
     .slice(0, limit)
 }
 
-const shared = defineSharedComposable((dataStore) => {
-  const rows = (name) => (dataStore.getRecords(name) || []).map(asRow)
+const build = (recordSource) => {
+  const rows = (name) => (recordSource.rows(name) || []).map(asRow)
 
   const counted = computed(() => countedConsumptions(rows('OutletConsumptions')))
 
@@ -71,8 +70,9 @@ const shared = defineSharedComposable((dataStore) => {
     (line, parent) => outletLabel.value.get(text(parent.OutletCode)) || text(parent.OutletCode)))
 
   return { windowDays: VOLUME_WINDOW_DAYS, topItems, topOutlets }
-})
+}
 
 export function useConsumptionVolume () {
-  return shared(useDataStore())
+  const recordSource = useRecord()
+  return recordSource.remember('useConsumptionVolume', () => build(recordSource))
 }

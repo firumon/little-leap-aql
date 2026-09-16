@@ -1,5 +1,5 @@
 import { inject } from 'vue'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useAuth } from 'src/composables/core/useAuth'
@@ -24,7 +24,7 @@ export function useConsumptionAddContext () {
     hasRegionAccess,
     query,
     // Core-composable relays. Called by the card, so this adds no fetches of its own.
-    resource: (name) => useRecord(name),
+    resource: (name) => usePageRecord(name),
     allowed: (name, action) => useResourceConfig(name).allowed(action) === true
   }
 }

@@ -124,7 +124,7 @@ export const WORKFLOW_STAMPS = [
 // ─── Primitives ───────────────────────────────────────────────────────────────
 
 const text = (value) => (value == null ? '' : String(value).trim())
-// `useRecord().items` can carry `null` entries, and an enriched relation getter yields
+// `usePageRecord().items` can carry `null` entries, and an enriched relation getter yields
 // `null` for a row whose Code has not landed yet (UI_MODULE_DEVELOPER_GUIDE.md §11 rule 2).
 // Normalizing BEFORE any predicate is what stops a null passing one guard and being
 // dereferenced by the next.

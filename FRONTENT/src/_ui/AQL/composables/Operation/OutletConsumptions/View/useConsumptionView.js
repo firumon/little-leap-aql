@@ -1,5 +1,5 @@
 import { computed, onMounted } from 'vue'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useConsumptionViewContext } from './useConsumptionViewContext'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 import { useOutletResource } from 'src/_resource/Master/Outlets/composables/useOutletResource'
@@ -60,19 +60,19 @@ export function useConsumptionView () {
   // Injected once for the whole page, by the relay — not a second time here.
   const { resourceRecord } = useConsumptionViewContext()
 
-  const items = useRecord('OutletConsumptionItems')
-  const invoices = useRecord('OutletConsumptionInvoices')
-  const restocks = useRecord('OutletRestocks')
-  const restockItems = useRecord('OutletRestockItems')
-  const returns = useRecord('OutletReturns')
-  const consumptions = useRecord('OutletConsumptions')
-  const skus = useRecord('SKUs')
-  const products = useRecord('Products')
-  const outlets = useRecord('Outlets')
-  const uoms = useRecord('UOMs')
+  const items = usePageRecord('OutletConsumptionItems')
+  const invoices = usePageRecord('OutletConsumptionInvoices')
+  const restocks = usePageRecord('OutletRestocks')
+  const restockItems = usePageRecord('OutletRestockItems')
+  const returns = usePageRecord('OutletReturns')
+  const consumptions = usePageRecord('OutletConsumptions')
+  const skus = usePageRecord('SKUs')
+  const products = usePageRecord('Products')
+  const outlets = usePageRecord('Outlets')
+  const uoms = usePageRecord('UOMs')
 
   // The SKU × Product and Outlet joins belong to the resource layer (§6 — Enrich Once,
-  // Then Project). The `useRecord` handles stay for their `reload()` below: fetching rows
+  // Then Project). The `usePageRecord` handles stay for their `reload()` below: fetching rows
   // is a separate concern from reading them.
   const { getSku } = useSkuResource()
   const { getOutlet } = useOutletResource()

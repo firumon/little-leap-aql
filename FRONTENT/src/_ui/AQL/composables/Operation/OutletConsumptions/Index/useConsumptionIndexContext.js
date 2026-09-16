@@ -1,7 +1,7 @@
 import { inject, onMounted } from 'vue'
 import { evaluateProp } from 'src/composables/resources/useSectionResolver'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 import { useConsumptionIndex } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionIndex'
 
@@ -40,7 +40,7 @@ export function useConsumptionIndexContext () {
   const resourceConfig = inject('resourceConfig', null)
   const ui = useAQLConfig()
 
-  const sources = INDEX_RESOURCES.map((name) => useRecord(name))
+  const sources = INDEX_RESOURCES.map((name) => usePageRecord(name))
   onMounted(() => sources.forEach((resource) => resource.reload()))
 
   return {

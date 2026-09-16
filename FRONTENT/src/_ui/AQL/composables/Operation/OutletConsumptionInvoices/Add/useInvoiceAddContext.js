@@ -1,5 +1,5 @@
 import { inject, computed } from 'vue'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 import { useCurrencyResource } from 'src/_resource/Master/Currencies/composables/useCurrencyResource'
@@ -83,7 +83,7 @@ export function useInvoiceAddContext () {
     ui,
     query,
     money: (value) => _C(num(value), true),
-    resource: (name) => useRecord(name),
+    resource: (name) => usePageRecord(name),
     skuLabelOf,
     skuCandidatesFor,
     outletOptions,

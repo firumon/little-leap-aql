@@ -1,5 +1,5 @@
 import { inject, computed, onMounted, watch } from 'vue'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useCurrencyResource } from 'src/_resource/Master/Currencies/composables/useCurrencyResource'
@@ -173,7 +173,7 @@ export function useInvoiceEditContext () {
 // has, and `taxTransactionRowsOf` reads the cache — unloaded, the save writes a second set.
 export function useInvoiceEditSeed () {
   const { pageState, record } = useInvoiceEditContext()
-  const ledger = useRecord('TaxTransactions')
+  const ledger = usePageRecord('TaxTransactions')
 
   onMounted(() => { ledger.reload() })
 

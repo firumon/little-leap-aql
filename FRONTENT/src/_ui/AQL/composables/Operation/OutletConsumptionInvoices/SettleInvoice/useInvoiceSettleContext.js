@@ -1,6 +1,6 @@
 import { inject, computed, ref, watch } from 'vue'
 import { useAuth } from 'src/composables/core/useAuth'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 import { useCurrencyResource } from 'src/_resource/Master/Currencies/composables/useCurrencyResource'
 import { useInvoiceIndex } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceIndex'
@@ -106,7 +106,7 @@ export function useInvoiceSettleSeed () {
 
   // An action route's resolver fetches the invoice alone, so the payments the balance is
   // derived from are opened here.
-  useRecord('OutletPayments')
+  usePageRecord('OutletPayments')
 
   mismatchTouched.value = false
 

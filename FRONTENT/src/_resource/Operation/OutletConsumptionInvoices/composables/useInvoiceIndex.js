@@ -11,8 +11,8 @@
  * That is what makes it impossible for the "12 unpaid" card and the Pending Invoices view
  * beside it to disagree — they are one array, counted twice.
  *
- * ONCE PER APP, NOT ONCE PER CONSUMER (§6). Built through `defineSharedComposable`, so the
- * dozen consuming widgets run the indexing pass once between them.
+ * ONCE PER APP, NOT ONCE PER CONSUMER (§6). Built once per app through the record layer's
+ * `remember`, so the dozen consuming widgets run the indexing pass once between them.
  *
  * INDEXED JOINS, NEVER LINEAR SCANS (§6). The payments join is the one that matters here:
  * resolving each invoice's balance with a `.filter()` over every payment in the tenant would
@@ -28,8 +28,7 @@
  */
 
 import { computed } from 'vue'
-import { defineSharedComposable } from 'src/utils/appHelpers'
-import { useDataStore } from 'src/stores/data'
+import { useRecord } from 'src/composables/resources/useRecord'
 import {
   progressOf,
   isOpen,
@@ -106,8 +105,8 @@ function assignTier (tiers, value) {
   return index >= 0 ? tiers[index] : tiers[tiers.length - 1]
 }
 
-const shared = defineSharedComposable((dataStore) => {
-  const rows = (name) => (dataStore.getRecords(name) || []).map(asRow).filter(isActiveRow)
+const build = (recordSource) => {
+  const rows = (name) => (recordSource.rows(name) || []).map(asRow).filter(isActiveRow)
 
   const invoices = computed(() => rows('OutletConsumptionInvoices'))
   const payments = computed(() => rows('OutletPayments'))
@@ -485,14 +484,9 @@ const shared = defineSharedComposable((dataStore) => {
     runtimeViews,
     storedViews
   }
-})
+}
 
-/**
- * The data store is passed IN rather than imported at module scope, matching every sibling
- * index composable: `defineSharedComposable` keys its cached scope on the identity it is
- * handed, so a tenant switch rebuilds the projection instead of serving the previous
- * tenant's index.
- */
 export function useInvoiceIndex () {
-  return shared(useDataStore())
+  const recordSource = useRecord()
+  return recordSource.remember('useInvoiceIndex', () => build(recordSource))
 }

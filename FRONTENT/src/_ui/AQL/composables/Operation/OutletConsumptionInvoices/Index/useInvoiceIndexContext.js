@@ -1,6 +1,6 @@
 import { computed, inject } from 'vue'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 import { useCurrencyResource } from 'src/_resource/Master/Currencies/composables/useCurrencyResource'
 import { useInvoiceIndex } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceIndex'
@@ -57,7 +57,7 @@ export function useInvoiceIndexContext () {
    * by the route.
    */
   const sources = ['OutletConsumptions', 'OutletConsumptionItems', 'OutletPayments', 'Outlets']
-    .map((name) => useRecord(name))
+    .map((name) => usePageRecord(name))
 
   /** Renders from cache and syncs the delta in the background — never blocks first paint. */
   const loadSources = () => Promise.all(sources.map((resource) => resource.reload()))

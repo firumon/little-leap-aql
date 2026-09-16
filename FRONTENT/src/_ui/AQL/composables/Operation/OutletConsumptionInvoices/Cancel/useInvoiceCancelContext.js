@@ -1,7 +1,6 @@
 import { inject, computed, onMounted, watch } from 'vue'
 import { useAuth } from 'src/composables/core/useAuth'
-import { useDataStore } from 'src/stores/data'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 import { useCurrencyResource } from 'src/_resource/Master/Currencies/composables/useCurrencyResource'
 import { useInvoiceIndex } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceIndex'
@@ -18,6 +17,7 @@ import {
 import { buildCancellationNodes } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoicePayload'
 import { consumptionCodesOf } from 'src/_resource/Operation/OutletConsumptions/composables/useConsumptionProgress'
 import { taxTransactionRowsOf } from 'src/_resource/Accounts/TaxTransactions/composables/useTaxTransactionPayload'
+import { useReturnResource } from 'src/_resource/Operation/OutletReturns/composables/useReturnResource'
 
 // OutletConsumptionInvoices > Cancel - the one inject() behind the three cards, and the
 // route's own hydration point. `CANCEL_COMMENT` is working state: the builder stamps it
@@ -40,6 +40,7 @@ export function useInvoiceCancelContext () {
   const ui = useAQLConfig()
   const { _C } = useCurrencyResource()
   const index = useInvoiceIndex()
+  const { returnsOfInvoice } = useReturnResource()
 
   const record = computed(() => resourceRecord?.record?.value || null)
   const code = computed(() => text(record.value?.Code))
@@ -89,8 +90,7 @@ export function useInvoiceCancelContext () {
   })
 
   /** The returns this invoice credited — the rows the cancellation hands back. */
-  const returnRows = computed(() => (useDataStore().getRecords('OutletReturns') || [])
-    .filter((row) => text(row?.ConsumptionInvoiceCode) === code.value))
+  const returnRows = computed(() => returnsOfInvoice(code.value))
 
   const comment = computed({
     get: () => text(pageState?.getControls(CANCEL_COMMENT, '', NODE)),
@@ -123,8 +123,8 @@ export function useInvoiceCancelSeed () {
   const context = useInvoiceCancelContext()
   const { pageState, record, code, comment } = context
   const { user } = useAuth()
-  const sources = SOURCES.map((name) => useRecord(name))
-  const creditedReturns = useRecord('OutletReturns')
+  const sources = SOURCES.map((name) => usePageRecord(name))
+  const creditedReturns = usePageRecord('OutletReturns')
 
   onMounted(() => { sources.forEach((resource) => resource.reload()) })
 

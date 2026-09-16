@@ -3,14 +3,11 @@
 import { settlementGate, SETTLEMENT_OTHER } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceWorkflow'
 import { countsAsPayment } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceCalculation'
 import { NODE } from 'src/_ui/AQL/composables/Operation/OutletConsumptionInvoices/SettleInvoice/useInvoiceSettleContext'
-import { useDataStore } from 'src/stores/data'
 
 const text = (value) => (value == null ? '' : String(value).trim())
 const asRow = (value) => (value && typeof value === 'object' ? value : {})
 
 export default (props, { pageState, resourceRecord }) => {
-  // Safe outside setup: it only reaches a Pinia store and calls no `inject()`.
-  const dataStore = useDataStore()
 
   const record = () => asRow(resourceRecord?.record?.value)
   const field = (header) => text(pageState?.getRecord(header, NODE))
@@ -18,9 +15,13 @@ export default (props, { pageState, resourceRecord }) => {
   const comment = () => field('ProgressPaidComment')
   const commentRequired = () => reason() === SETTLEMENT_OTHER
 
-  const paymentsFor = (code) => (dataStore.getRecords('OutletPayments') || [])
-    .map(asRow)
-    .filter((row) => text(row.OutletConsumptionInvoiceCode) === code && countsAsPayment(row))
+  const paymentsFor = (code) => {
+    const r = record()
+    const childRows = r?.$OutletPayments || r?.$outletpayments || []
+    return childRows
+      .map(asRow)
+      .filter((row) => text(row.OutletConsumptionInvoiceCode) === code && countsAsPayment(row))
+  }
 
   const eligible = () => settlementGate(record(), paymentsFor(text(record().Code))).allowed
 

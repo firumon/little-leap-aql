@@ -3,7 +3,7 @@
 // and submit only validates (UI_PAGE_STATE_NODES.md §5.7A–§5.7D).
 
 import { useAuth } from 'src/composables/core/useAuth'
-import { useDataStore } from 'src/stores/data'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { useInvoiceIndex } from './useInvoiceIndex'
 import {
   resolvePriceListCode,
@@ -309,7 +309,7 @@ export const INVOICE_LINE_BASE_PRICE = '_basePrice'
 export function creditedReturnsOfInvoice (invoiceCode) {
   const code = text(invoiceCode)
   if (!code) return []
-  return (useDataStore().getRecords(RETURNS) || [])
+  return (useRecord().rows(RETURNS) || [])
     .map(asRow)
     .filter((row) => text(row.ConsumptionInvoiceCode) === code && isActiveRow(row))
 }

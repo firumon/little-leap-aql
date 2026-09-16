@@ -1,7 +1,9 @@
-import { useDataStore } from 'src/stores/data'
 import { buildReceivingSaveChainNodes } from 'src/_resource/Operation/POReceivings/composables/usePOReceivingPayload'
 import { mergeInspectionLines } from 'src/_resource/Operation/POReceivings/composables/usePOReceivingInspection'
 import { isEditable } from 'src/_resource/Operation/POReceivings/composables/usePOReceivingProgress'
+import { usePurchaseOrderResource } from 'src/_resource/Operation/PurchaseOrders/composables/usePurchaseOrderResource'
+import { useProcurementResource } from 'src/_resource/Operation/Procurements/composables/useProcurementResource'
+import { usePOReceivingResource } from 'src/_resource/Operation/POReceivings/composables/usePOReceivingResource'
 
 const NODE = 'POReceivings'
 
@@ -10,9 +12,12 @@ const asRow = (value) => (value && typeof value === 'object' ? value : {})
 const isActive = (value) => text(asRow(value).Status || 'Active') === 'Active'
 
 // [ Cancel ] [ Save Receiving ]
-export default (props, { pageState, resourceConfig, resourceRecord }) => {
-  const dataStore = useDataStore()
+export default (props, { pageState, resourceRecord }) => {
   pageState.useNode(NODE)
+
+  const { getPurchaseOrder, orderItemsOf } = usePurchaseOrderResource()
+  const { getProcurement } = useProcurementResource()
+  const { receivingItemsOf } = usePOReceivingResource()
 
   const control = (key) => pageState.getControls(key, null, NODE)
   const form = () => control('Form') || {}
@@ -22,25 +27,20 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
     return text(row?.Code) ? row : null
   }
 
-  const purchaseOrder = () => dataStore.getRecords('PurchaseOrders')
-    .find((row) => text(row?.Code) === text(form().PurchaseOrderCode)) || null
+  const purchaseOrder = () => getPurchaseOrder(form().PurchaseOrderCode)
 
-  const procurement = () => {
-    const code = text(purchaseOrder()?.ProcurementCode)
-    if (!code) return null
-    return dataStore.getRecords('Procurements').find((row) => text(row?.Code) === code) || null
-  }
+  const procurement = () => getProcurement(purchaseOrder()?.ProcurementCode)
 
   const lines = () => {
     const orderCode = text(purchaseOrder()?.Code)
     if (!orderCode) return []
-    const orderLines = dataStore.getRecords('PurchaseOrderItems')
+    const orderLines = orderItemsOf(orderCode)
       .map(asRow)
-      .filter((row) => text(row.PurchaseOrderCode) === orderCode && isActive(row) && text(row.Code))
+      .filter((row) => isActive(row) && text(row.Code))
     const receivingCode = text(receiving()?.Code)
-    const savedByOrderItem = new Map(dataStore.getRecords('POReceivingItems')
+    const savedByOrderItem = new Map(receivingItemsOf(receivingCode)
       .map(asRow)
-      .filter((row) => text(row.POReceivingCode) === receivingCode && isActive(row))
+      .filter((row) => isActive(row))
       .map((row) => [text(row.PurchaseOrderItemCode), row]))
     const counts = control('Counts') && typeof control('Counts') === 'object' ? control('Counts') : {}
     return mergeInspectionLines({ orderLines, savedByOrderItem, counts })

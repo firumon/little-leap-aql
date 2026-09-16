@@ -1,38 +1,28 @@
 import { useAuth } from 'src/composables/core/useAuth'
-import { useDataStore } from 'src/stores/data'
 import { buildReceivingCancelChainNodes } from 'src/_resource/Operation/POReceivings/composables/usePOReceivingPayload'
+import { useGoodsReceiptResource } from 'src/_resource/Operation/GoodsReceipts/composables/useGoodsReceiptResource'
+import { useProcurementResource } from 'src/_resource/Operation/Procurements/composables/useProcurementResource'
 
 const NODE = 'POReceivings'
 
 const text = (value) => String(value ?? '').trim()
-const asRow = (value) => (value && typeof value === 'object' ? value : {})
-const isActive = (value) => text(asRow(value).Status || 'Active') === 'Active'
 
 // [ Cancel ] [ Cancel Receiving ]
-export default (props, { pageState, resourceConfig, resourceRecord }) => {
-  const dataStore = useDataStore()
+export default (props, { pageState, resourceRecord }) => {
   pageState.useNode(NODE)
 
   const { user } = useAuth()
+  const { goodsReceiptOfReceiving, goodsReceiptItems } = useGoodsReceiptResource()
+  const { getProcurement } = useProcurementResource()
 
   const receiving = () => {
     const row = resourceRecord?.record?.value
     return text(row?.Code) ? row : null
   }
 
-  const goodsReceipt = () => {
-    const code = text(receiving()?.Code)
-    if (!code) return null
-    return dataStore.getRecords('GoodsReceipts')
-      .map(asRow)
-      .find((row) => text(row.POReceivingCode) === code && isActive(row)) || null
-  }
+  const goodsReceipt = () => goodsReceiptOfReceiving(receiving()?.Code)
 
-  const procurement = () => {
-    const code = text(receiving()?.ProcurementCode)
-    if (!code) return null
-    return dataStore.getRecords('Procurements').find((row) => text(row?.Code) === code) || null
-  }
+  const procurement = () => getProcurement(receiving()?.ProcurementCode)
 
   return {
     actions: ['cancel', 'submit'],
@@ -47,7 +37,7 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
       const result = buildReceivingCancelChainNodes({
         receiving: receiving(),
         goodsReceipt: goodsReceipt(),
-        goodsReceiptItems: dataStore.getRecords('GoodsReceiptItems'),
+        goodsReceiptItems: goodsReceiptItems(),
         procurement: procurement(),
         comment: text(pageState.getControls('ActionComment', null, NODE)),
         actorName: user.value?.name || user.value?.email || ''

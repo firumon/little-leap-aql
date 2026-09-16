@@ -1,17 +1,14 @@
-import { useDataStore } from 'src/stores/data'
 import { isActiveRow, isInvalidated } from 'src/_resource/Operation/GoodsReceipts/composables/useGoodsReceiptProgress'
 import { goodsReceiptTotals } from 'src/_resource/Operation/GoodsReceipts/composables/useGoodsReceiptPayload'
 
 // Live receipts and the quantity they hold. An invalidated one posted nothing.
 export default function (props, { resourceRecord }) {
-  const dataStore = useDataStore()
 
   return {
     items: () => {
       const records = resourceRecord?.records?.value
       if (!records || !records.length) return []
 
-      const rows = dataStore.getRecords('GoodsReceiptItems')
       let live = 0
       let invalidated = 0
       let quantity = 0
@@ -23,7 +20,8 @@ export default function (props, { resourceRecord }) {
         }
         if (!isActiveRow(row)) continue
         live++
-        quantity += goodsReceiptTotals(row, rows).quantity
+        const childRows = row.$GoodsReceiptItems || row.$goodsreceiptitems || []
+        quantity += goodsReceiptTotals(row, childRows).quantity
       }
 
       if (!live && !invalidated && !quantity) return []

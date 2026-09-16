@@ -1,5 +1,5 @@
 import { computed, onMounted } from 'vue'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 import {
   progressLabel,
@@ -34,12 +34,12 @@ export function formatStampDate (value) {
 export function useGoodsReceiptView () {
   const { resourceRecord } = useGoodsReceiptViewContext()
 
-  const receiptItems = useRecord('GoodsReceiptItems')
-  const receivings = useRecord('POReceivings')
-  const purchaseOrders = useRecord('PurchaseOrders')
-  const stockMovements = useRecord('StockMovements')
-  const skus = useRecord('SKUs')
-  const products = useRecord('Products')
+  const receiptItems = usePageRecord('GoodsReceiptItems')
+  const receivings = usePageRecord('POReceivings')
+  const purchaseOrders = usePageRecord('PurchaseOrders')
+  const stockMovements = usePageRecord('StockMovements')
+  const skus = usePageRecord('SKUs')
+  const products = usePageRecord('Products')
 
   const { skuLabelOf } = useSkuResource()
 

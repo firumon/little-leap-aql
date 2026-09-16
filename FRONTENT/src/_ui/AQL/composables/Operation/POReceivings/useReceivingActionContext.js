@@ -1,6 +1,6 @@
 import { computed, inject, onMounted } from 'vue'
 import { useAuth } from 'src/composables/core/useAuth'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
@@ -27,14 +27,14 @@ export function useReceivingActionContext () {
   const { user } = useAuth()
   const { code: routeCode } = useRouteConfig()
 
-  const receivings = useRecord(NODE)
-  const receivingItems = useRecord('POReceivingItems')
-  const purchaseOrders = useRecord('PurchaseOrders')
-  const goodsReceipts = useRecord('GoodsReceipts')
-  const goodsReceiptItems = useRecord('GoodsReceiptItems')
-  const procurements = useRecord('Procurements')
-  const skus = useRecord('SKUs')
-  const products = useRecord('Products')
+  const receivings = usePageRecord(NODE)
+  const receivingItems = usePageRecord('POReceivingItems')
+  const purchaseOrders = usePageRecord('PurchaseOrders')
+  const goodsReceipts = usePageRecord('GoodsReceipts')
+  const goodsReceiptItems = usePageRecord('GoodsReceiptItems')
+  const procurements = usePageRecord('Procurements')
+  const skus = usePageRecord('SKUs')
+  const products = usePageRecord('Products')
 
   const { skuLabelOf } = useSkuResource()
 

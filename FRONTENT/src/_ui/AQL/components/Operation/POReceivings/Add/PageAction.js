@@ -1,6 +1,7 @@
-import { useDataStore } from 'src/stores/data'
 import { buildReceivingSaveChainNodes } from 'src/_resource/Operation/POReceivings/composables/usePOReceivingPayload'
 import { mergeInspectionLines } from 'src/_resource/Operation/POReceivings/composables/usePOReceivingInspection'
+import { usePurchaseOrderResource } from 'src/_resource/Operation/PurchaseOrders/composables/usePurchaseOrderResource'
+import { useProcurementResource } from 'src/_resource/Operation/Procurements/composables/useProcurementResource'
 
 const NODE = 'POReceivings'
 
@@ -9,30 +10,27 @@ const asRow = (value) => (value && typeof value === 'object' ? value : {})
 const isActive = (value) => text(asRow(value).Status || 'Active') === 'Active'
 
 // step 1 which order arrived | step 2 the counts
-export default (props, { pageState, resourceConfig }) => {
-  const dataStore = useDataStore()
+export default (props, { pageState }) => {
   pageState.useNode(NODE)
+
+  const { getPurchaseOrder, orderItemsOf } = usePurchaseOrderResource()
+  const { getProcurement } = useProcurementResource()
 
   const control = (key) => pageState.getControls(key, null, NODE)
   const step = () => pageState.meta?.currentStep || 1
   const form = () => control('Form') || {}
 
-  const purchaseOrder = () => dataStore.getRecords('PurchaseOrders')
-    .find((row) => text(row?.Code) === text(form().PurchaseOrderCode)) || null
+  const purchaseOrder = () => getPurchaseOrder(form().PurchaseOrderCode)
 
-  const procurement = () => {
-    const code = text(purchaseOrder()?.ProcurementCode)
-    if (!code) return null
-    return dataStore.getRecords('Procurements').find((row) => text(row?.Code) === code) || null
-  }
+  const procurement = () => getProcurement(purchaseOrder()?.ProcurementCode)
 
   // The same Layer 2 merge the grid renders, so the submit matches the screen.
   const lines = () => {
     const code = text(purchaseOrder()?.Code)
     if (!code) return []
-    const orderLines = dataStore.getRecords('PurchaseOrderItems')
+    const orderLines = orderItemsOf(code)
       .map(asRow)
-      .filter((row) => text(row.PurchaseOrderCode) === code && isActive(row) && text(row.Code))
+      .filter((row) => isActive(row) && text(row.Code))
     const counts = control('Counts') && typeof control('Counts') === 'object' ? control('Counts') : {}
     return mergeInspectionLines({ orderLines, counts })
   }

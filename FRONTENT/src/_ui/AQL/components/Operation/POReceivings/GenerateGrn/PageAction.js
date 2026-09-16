@@ -1,6 +1,8 @@
 import { useAuth } from 'src/composables/core/useAuth'
-import { useDataStore } from 'src/stores/data'
 import { buildGenerateGrnChainNodes } from 'src/_resource/Operation/POReceivings/composables/usePOReceivingPayload'
+import { usePOReceivingResource } from 'src/_resource/Operation/POReceivings/composables/usePOReceivingResource'
+import { usePurchaseOrderResource } from 'src/_resource/Operation/PurchaseOrders/composables/usePurchaseOrderResource'
+import { useProcurementResource } from 'src/_resource/Operation/Procurements/composables/useProcurementResource'
 
 const NODE = 'POReceivings'
 
@@ -9,11 +11,13 @@ const asRow = (value) => (value && typeof value === 'object' ? value : {})
 const isActive = (value) => text(asRow(value).Status || 'Active') === 'Active'
 
 // [ Cancel ] [ Generate Goods Receipt ]
-export default (props, { pageState, resourceConfig, resourceRecord }) => {
-  const dataStore = useDataStore()
+export default (props, { pageState, resourceRecord }) => {
   pageState.useNode(NODE)
 
   const { user } = useAuth()
+  const { receivingItemsOf } = usePOReceivingResource()
+  const { getPurchaseOrder } = usePurchaseOrderResource()
+  const { getProcurement } = useProcurementResource()
 
   const receiving = () => {
     const row = resourceRecord?.record?.value
@@ -23,22 +27,14 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
   const items = () => {
     const code = text(receiving()?.Code)
     if (!code) return []
-    return dataStore.getRecords('POReceivingItems')
+    return receivingItemsOf(code)
       .map(asRow)
-      .filter((row) => text(row.POReceivingCode) === code && isActive(row) && text(row.Code))
+      .filter((row) => isActive(row) && text(row.Code))
   }
 
-  const purchaseOrder = () => {
-    const code = text(receiving()?.PurchaseOrderCode)
-    if (!code) return null
-    return dataStore.getRecords('PurchaseOrders').find((row) => text(row?.Code) === code) || null
-  }
+  const purchaseOrder = () => getPurchaseOrder(receiving()?.PurchaseOrderCode)
 
-  const procurement = () => {
-    const code = text(receiving()?.ProcurementCode)
-    if (!code) return null
-    return dataStore.getRecords('Procurements').find((row) => text(row?.Code) === code) || null
-  }
+  const procurement = () => getProcurement(receiving()?.ProcurementCode)
 
   return {
     actions: ['cancel', 'submit'],

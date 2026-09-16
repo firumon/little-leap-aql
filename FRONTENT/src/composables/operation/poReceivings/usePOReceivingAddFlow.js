@@ -2,7 +2,7 @@ import { ref, computed, nextTick } from 'vue'
 import { useQuasar } from 'quasar'
 import { buildPurchaseRequisitionSkuInfo } from '../purchaseRequisitions/purchaseRequisitionSkuOptions.js'
 import { useAuthStore } from '../../../stores/auth.js'
-import { useRecord } from '../../resources/useRecord.js'
+import { usePageRecord } from '../../resources/usePageRecord.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceNav } from '../../resources/useResourceNav.js'
 import {
@@ -38,15 +38,15 @@ export function usePOReceivingAddFlow() {
   const auth = useAuthStore()
   const resourceIoStore = useResourceIoStore()
   const nav = useResourceNav()
-  const purchaseOrders = useRecord(ref('PurchaseOrders'))
-  const poItems = useRecord(ref('PurchaseOrderItems'))
-  const skus = useRecord(ref('SKUs'))
-  const products = useRecord(ref('Products'))
-  const receivings = useRecord(ref('POReceivings'))
-  const receivingItems = useRecord(ref('POReceivingItems'))
-  const goodsReceipts = useRecord(ref('GoodsReceipts'))
-  const goodsReceiptItems = useRecord(ref('GoodsReceiptItems'))
-  const procurements = useRecord(ref('Procurements'))
+  const purchaseOrders = usePageRecord(ref('PurchaseOrders'))
+  const poItems = usePageRecord(ref('PurchaseOrderItems'))
+  const skus = usePageRecord(ref('SKUs'))
+  const products = usePageRecord(ref('Products'))
+  const receivings = usePageRecord(ref('POReceivings'))
+  const receivingItems = usePageRecord(ref('POReceivingItems'))
+  const goodsReceipts = usePageRecord(ref('GoodsReceipts'))
+  const goodsReceiptItems = usePageRecord(ref('GoodsReceiptItems'))
+  const procurements = usePageRecord(ref('Procurements'))
   const loading = ref(false)
   const saving = ref(false)
   const selectedPurchaseOrderCode = ref('')

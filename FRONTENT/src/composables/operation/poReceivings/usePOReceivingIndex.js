@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue'
-import { useRecord } from '../../resources/useRecord.js'
+import { usePageRecord } from '../../resources/usePageRecord.js'
 import { useResourceConfig } from '../../resources/useResourceConfig.js'
 import { useResourceNav } from '../../resources/useResourceNav.js'
 import { useResourceIoStore } from 'src/stores/resourceIo'
@@ -15,8 +15,8 @@ function sortTime(row = {}) {
 
 export function usePOReceivingIndex() {
   const { permissions } = useResourceConfig()
-  const receivings = useRecord(ref('POReceivings'))
-  const purchaseOrders = useRecord(ref('PurchaseOrders'))
+  const receivings = usePageRecord(ref('POReceivings'))
+  const purchaseOrders = usePageRecord(ref('PurchaseOrders'))
   const resourceIoStore = useResourceIoStore()
   const nav = useResourceNav()
   const loading = ref(false)

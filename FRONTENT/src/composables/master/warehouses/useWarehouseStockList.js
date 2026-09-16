@@ -1,6 +1,6 @@
 import { computed, ref, unref } from 'vue'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { formatSkuVariants } from 'src/utils/appHelpers'
 
@@ -23,10 +23,10 @@ import { useProductSkuResolver } from 'src/composables/master/products/useProduc
 export function useWarehouseStockList(warehouseCodeRef = null) {
   const nav = useResourceNav()
   const { code } = useRouteConfig()
-  const warehouses = useRecord(ref('Warehouses'))
-  const storages = useRecord(ref('WarehouseStorages'))
-  const skus = useRecord(ref('SKUs'))
-  const products = useRecord(ref('Products'))
+  const warehouses = usePageRecord(ref('Warehouses'))
+  const storages = usePageRecord(ref('WarehouseStorages'))
+  const skus = usePageRecord(ref('SKUs'))
+  const products = usePageRecord(ref('Products'))
   const searchTerm = ref('')
   const { skuInfo } = useProductSkuResolver()
 

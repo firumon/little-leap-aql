@@ -7,7 +7,7 @@ import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useWarehouseStockList } from 'src/composables/master/warehouses/useWarehouseStockList'
 import { useProductSkuResolver } from 'src/composables/master/products/useProductSkuResolver'
 import { batchRef } from 'src/utils/appHelpers'
-import { useRecord } from '../../resources/useRecord.js'
+import { usePageRecord } from '../../resources/usePageRecord.js'
 
 export function useWarehouseTransfers() {
   const { pageName, code: editCode } = useRouteConfig()
@@ -26,12 +26,12 @@ export function useWarehouseTransfers() {
   const saving = ref(false)
   const viewMode = ref('storage')
 
-  const transfers = useRecord(ref('WarehouseTransfers'))
-  const transferItems = useRecord(ref('WarehouseTransferItems'))
-  const skus = useRecord(ref('SKUs'))
-  const products = useRecord(ref('Products'))
-  const warehouses = useRecord(ref('Warehouses'))
-  const warehouseStorages = useRecord(ref('WarehouseStorages'))
+  const transfers = usePageRecord(ref('WarehouseTransfers'))
+  const transferItems = usePageRecord(ref('WarehouseTransferItems'))
+  const skus = usePageRecord(ref('SKUs'))
+  const products = usePageRecord(ref('Products'))
+  const warehouses = usePageRecord(ref('Warehouses'))
+  const warehouseStorages = usePageRecord(ref('WarehouseStorages'))
 
   const form = ref({
     SourceWarehouseCode: '',

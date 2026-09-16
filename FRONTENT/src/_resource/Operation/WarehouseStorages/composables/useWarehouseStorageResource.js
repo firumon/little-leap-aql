@@ -33,8 +33,7 @@
  */
 
 import { computed } from 'vue'
-import { useDataStore } from 'src/stores/data'
-import { defineSharedComposable } from 'src/utils/appHelpers'
+import { useRecord } from 'src/composables/resources/useRecord'
 
 const RESOURCE_NAME = 'WarehouseStorages'
 
@@ -149,8 +148,8 @@ export function stockRowsOf (index, warehouseCode) {
  * per data change, and every wizard, allocation screen and metric reads the same memoized
  * indexes. The getters below drop the `index` argument — the shared computed supplies it.
  */
-const shared = defineSharedComposable((dataStore) => {
-  const rawStorages = computed(() => (dataStore.getRecords(RESOURCE_NAME) || []).map(asRow))
+const build = (recordSource) => {
+  const rawStorages = computed(() => (recordSource.rows(RESOURCE_NAME) || []).map(asRow))
 
   const index = computed(() => indexWarehouseStock(rawStorages.value))
 
@@ -181,8 +180,9 @@ const shared = defineSharedComposable((dataStore) => {
     totalStockOfSku: (skuCode) => totalStockOfSku(index.value, skuCode),
     stockRowsOf: (warehouseCode) => stockRowsOf(index.value, warehouseCode)
   }
-})
+}
 
 export function useWarehouseStorageResource () {
-  return shared(useDataStore())
+  const recordSource = useRecord()
+  return recordSource.remember('useWarehouseStorageResource', () => build(recordSource))
 }

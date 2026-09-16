@@ -306,7 +306,7 @@
 }
 
 .aql-widget-timeline--vertical {
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 
 .aql-widget-timeline__item {
@@ -315,7 +315,6 @@
   align-items: flex-start;
   width: 100%;
   min-width: 0;
-  flex: 1;
 }
 
 .aql-widget-timeline__marker-col {

@@ -1,7 +1,7 @@
 import { ref, watch, computed, shallowRef, markRaw, unref } from 'vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { toPascalCase } from 'src/utils/appHelpers'
 
 // All page JS/Vue files under src/pages/
@@ -58,7 +58,7 @@ export function usePageResolver() {
   // Record loading. Add/Edit form state and submission are owned by pageState
   // (usePageState.js) + the Create/Update content components + PageAction.vue —
   // see PAGE_STATE.md.
-  const resourceRecord = useRecord()
+  const resourceRecord = usePageRecord()
 
   // Keyed on a primitive, not an array literal, for the same reason as the
   // resolver scan below: `watch` compares a getter's result with Object.is, so a

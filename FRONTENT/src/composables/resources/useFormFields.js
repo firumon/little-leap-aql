@@ -2,7 +2,7 @@ import { computed } from 'vue'
 import { useDataStore } from 'src/stores/data'
 import { useAuthStore } from 'src/stores/auth'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
-import { enrichRecord } from 'src/composables/resources/useRecord'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { singularize, pluralize } from 'src/utils/appHelpers'
 import { normalizeFieldType } from 'src/_fields/useFieldResolver'
 import AqlFileUpload from 'components/shared/AqlFileUpload.vue'
@@ -40,7 +40,8 @@ function resolvePath(source, path) {
 function renderLabelExpression(expr, row, targetResource, targetHeaders, dataStore) {
   if (targetHeaders.includes(expr)) return row[expr] ?? null
 
-  const source = expr.includes('$') ? enrichRecord(targetResource, row.Code, dataStore) : row
+  const rec = useRecord()
+  const source = expr.includes('$') ? rec.enrich(targetResource, row.Code) : row
   if (!source) return null
 
   let resolvedAny = false

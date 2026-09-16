@@ -4,7 +4,7 @@ import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceStatusStore } from 'src/stores/resourceStatus'
 import { useDataStore } from 'src/stores/data'
 import { useResourceConfig } from './useResourceConfig.js'
-import { useRecord } from './useRecord.js'
+import { usePageRecord } from './usePageRecord.js'
 
 function normalizeName(value) {
   return (value || '').toString().trim()
@@ -33,7 +33,7 @@ export function useResourceReload() {
   const resourceStatus = useResourceStatusStore()
   const dataStore = useDataStore()
   const { resourceName, resourceHeaders, resolvedFields } = useResourceConfig()
-  const { parentResource, childResources } = useRecord(resourceName)
+  const { parentResource, childResources } = usePageRecord(resourceName)
 
   const authorizedResources = computed(() => Array.isArray(auth.resources) ? auth.resources : [])
 

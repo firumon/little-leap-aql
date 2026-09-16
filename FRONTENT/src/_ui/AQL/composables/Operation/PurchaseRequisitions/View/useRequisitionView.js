@@ -1,5 +1,5 @@
 import { computed, onMounted } from 'vue'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 import { useWarehouseResource } from 'src/_resource/Master/Warehouses/composables/useWarehouseResource'
 import {
@@ -43,11 +43,11 @@ export function formatStampDate (value) {
 export function useRequisitionView () {
   const { resourceRecord } = useRequisitionViewContext()
 
-  const requisitionItems = useRecord(CHILD)
-  const procurements = useRecord('Procurements')
-  const skus = useRecord('SKUs')
-  const products = useRecord('Products')
-  const warehouses = useRecord('Warehouses')
+  const requisitionItems = usePageRecord(CHILD)
+  const procurements = usePageRecord('Procurements')
+  const skus = usePageRecord('SKUs')
+  const products = usePageRecord('Products')
+  const warehouses = usePageRecord('Warehouses')
 
   const { skuLabelOf } = useSkuResource()
   const { getWarehouse } = useWarehouseResource()

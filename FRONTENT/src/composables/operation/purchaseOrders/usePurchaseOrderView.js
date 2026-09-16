@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue';
 import { useResourceConfig, isActionVisible } from '../../resources/useResourceConfig.js';
 import { useRouteConfig } from '../../resources/useRouteConfig.js';
-import { useRecord } from '../../resources/useRecord.js';
+import { usePageRecord } from '../../resources/usePageRecord.js';
 import { useResourceIoStore } from 'src/stores/resourceIo';
 import { useResourceNav } from '../../resources/useResourceNav.js';
 import { useQuasar } from 'quasar';
@@ -47,15 +47,15 @@ export function usePurchaseOrderView() {
     const $q = useQuasar();
     const { additionalActions } = useResourceConfig();
     const { code } = useRouteConfig();
-    const purchaseOrders = useRecord(ref('PurchaseOrders'));
-    const purchaseOrderItems = useRecord(ref('PurchaseOrderItems'));
-    const supplierQuotations = useRecord(ref('SupplierQuotations'));
-    const quotationItems = useRecord(ref('SupplierQuotationItems'));
-    const suppliers = useRecord(ref('Suppliers'));
-    const warehouses = useRecord(ref('Warehouses'));
-    const rfqs = useRecord(ref('RFQs'));
-    const rfqSuppliers = useRecord(ref('RFQSuppliers'));
-    const procurements = useRecord(ref('Procurements'));
+    const purchaseOrders = usePageRecord(ref('PurchaseOrders'));
+    const purchaseOrderItems = usePageRecord(ref('PurchaseOrderItems'));
+    const supplierQuotations = usePageRecord(ref('SupplierQuotations'));
+    const quotationItems = usePageRecord(ref('SupplierQuotationItems'));
+    const suppliers = usePageRecord(ref('Suppliers'));
+    const warehouses = usePageRecord(ref('Warehouses'));
+    const rfqs = usePageRecord(ref('RFQs'));
+    const rfqSuppliers = usePageRecord(ref('RFQSuppliers'));
+    const procurements = usePageRecord(ref('Procurements'));
     const resourceIoStore = useResourceIoStore();
     const nav = useResourceNav();
 

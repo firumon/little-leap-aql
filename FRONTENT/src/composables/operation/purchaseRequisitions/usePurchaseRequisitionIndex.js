@@ -1,6 +1,6 @@
 import { ref, computed, watch } from 'vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 
 const GROUP_DEFS = [
@@ -71,7 +71,7 @@ function isWithinLastTenDays(value) {
 export function usePurchaseRequisitionIndex() {
   const nav = useResourceNav()
   const { resourceName, permissions } = useResourceConfig()
-  const { items, loading, reload } = useRecord(resourceName)
+  const { items, loading, reload } = usePageRecord(resourceName)
 
   const searchTerm = ref('')
   const activeGroupKey = ref(null)

@@ -132,7 +132,7 @@
 import { ref, computed, watch } from 'vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useProcurements } from 'src/composables/operation/procurements/useProcurements'
 import PurchaseRequisitionEditablePage from './PurchaseRequisitionEditablePage.vue'
@@ -142,8 +142,8 @@ const nav = useResourceNav()
 const procurements = useProcurements()
 const { resourceName } = useResourceConfig()
 const { code } = useRouteConfig()
-const { records: items, record, loading: recordLoading, reload: reloadParent } = useRecord()
-const childResource = useRecord('PurchaseRequisitionItems')
+const { records: items, record, loading: recordLoading, reload: reloadParent } = usePageRecord()
+const childResource = usePageRecord('PurchaseRequisitionItems')
 
 const loading = computed(() => recordLoading.value || childResource.loading.value)
 const childItems = computed(() => childResource.records.value.filter((item) => item.PurchaseRequisitionCode === code.value))

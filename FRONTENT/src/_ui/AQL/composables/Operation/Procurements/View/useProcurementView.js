@@ -1,5 +1,5 @@
 import { computed, onMounted } from 'vue'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import {
   WORKFLOW_STATES,
   progressLabel,
@@ -37,12 +37,12 @@ export function formatStampDate (value) {
 export function useProcurementView () {
   const { resourceRecord } = useProcurementViewContext()
 
-  const requisitions = useRecord('PurchaseRequisitions')
-  const rfqs = useRecord('RFQs')
-  const quotations = useRecord('SupplierQuotations')
-  const purchaseOrders = useRecord('PurchaseOrders')
-  const receivings = useRecord('POReceivings')
-  const goodsReceipts = useRecord('GoodsReceipts')
+  const requisitions = usePageRecord('PurchaseRequisitions')
+  const rfqs = usePageRecord('RFQs')
+  const quotations = usePageRecord('SupplierQuotations')
+  const purchaseOrders = usePageRecord('PurchaseOrders')
+  const receivings = usePageRecord('POReceivings')
+  const goodsReceipts = usePageRecord('GoodsReceipts')
 
   onMounted(() => {
     ;[requisitions, rfqs, quotations, purchaseOrders, receivings, goodsReceipts]

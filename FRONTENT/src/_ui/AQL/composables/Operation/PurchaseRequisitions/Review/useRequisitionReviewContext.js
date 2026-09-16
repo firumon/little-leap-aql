@@ -1,6 +1,6 @@
 import { computed, inject, onMounted } from 'vue'
 import { useAuth } from 'src/composables/core/useAuth'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
@@ -33,12 +33,12 @@ export function useRequisitionReviewContext () {
   const { user } = useAuth()
   const { code: routeCode } = useRouteConfig()
 
-  const requisitions = useRecord(NODE)
-  const requisitionItems = useRecord(CHILD)
-  const procurements = useRecord('Procurements')
-  const skus = useRecord('SKUs')
-  const products = useRecord('Products')
-  const warehouses = useRecord('Warehouses')
+  const requisitions = usePageRecord(NODE)
+  const requisitionItems = usePageRecord(CHILD)
+  const procurements = usePageRecord('Procurements')
+  const skus = usePageRecord('SKUs')
+  const products = usePageRecord('Products')
+  const warehouses = usePageRecord('Warehouses')
 
   const { skuLabelOf } = useSkuResource()
   const { getWarehouse } = useWarehouseResource()

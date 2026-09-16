@@ -1,6 +1,6 @@
 import { useAuth } from 'src/composables/core/useAuth'
-import { useDataStore } from 'src/stores/data'
 import { buildRequisitionSaveChainNodes } from 'src/_resource/Operation/PurchaseRequisitions/composables/usePurchaseRequisitionPayload'
+import { useProcurementResource } from 'src/_resource/Operation/Procurements/composables/useProcurementResource'
 
 const NODE = 'PurchaseRequisitions'
 const CHILD = 'PurchaseRequisitionItems'
@@ -15,10 +15,10 @@ function toRows (entries) {
 }
 
 export default (props, { pageState, resourceConfig }) => {
-  const dataStore = useDataStore()
   const parent = pageState.useNode(NODE)
   const entries = parent.children(CHILD)
   const { user } = useAuth()
+  const { getProcurement } = useProcurementResource()
 
   const isDraft = () => pageState.getControls('isDraft', null, NODE) === true
 
@@ -36,10 +36,7 @@ export default (props, { pageState, resourceConfig }) => {
 
     submit: () => {
       const form = parent.record.value
-      const procurementCode = text(form.ProcurementCode)
-      const procurement = procurementCode
-        ? dataStore.getRecords('Procurements').find((row) => text(row?.Code) === procurementCode) || null
-        : null
+      const procurement = getProcurement(form.ProcurementCode)
 
       const result = buildRequisitionSaveChainNodes({
         form,

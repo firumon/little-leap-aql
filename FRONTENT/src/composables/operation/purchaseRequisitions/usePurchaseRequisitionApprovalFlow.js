@@ -2,7 +2,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useQuasar } from 'quasar'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useStockMovements } from 'src/composables/operation/stock/useStockMovements'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useProcurements } from 'src/composables/operation/procurements/useProcurements'
@@ -17,8 +17,8 @@ export function usePurchaseRequisitionApprovalFlow() {
   const { loadWarehouses } = useStockMovements()
   const { _C } = useCurrency()
 
-  const prResource = useRecord(ref('PurchaseRequisitions'))
-  const itemsResource = useRecord(ref('PurchaseRequisitionItems'))
+  const prResource = usePageRecord(ref('PurchaseRequisitions'))
+  const itemsResource = usePageRecord(ref('PurchaseRequisitionItems'))
 
   const loading = ref(true)
   const acting = ref('')

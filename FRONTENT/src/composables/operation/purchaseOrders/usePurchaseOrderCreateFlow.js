@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue';
-import { useRecord } from '../../resources/useRecord.js';
+import { usePageRecord } from '../../resources/usePageRecord.js';
 import { useResourceIoStore } from 'src/stores/resourceIo';
 import { useResourceNav } from '../../resources/useResourceNav.js';
 import { useAuthStore } from '../../../stores/auth.js';
@@ -47,16 +47,16 @@ function closeComment(userLabel) {
 export function usePurchaseOrderCreateFlow() {
     const $q = useQuasar();
     const auth = useAuthStore();
-    const supplierQuotationsResource = useRecord(ref('SupplierQuotations'));
-    const quotationItemsResource = useRecord(ref('SupplierQuotationItems'));
-    const purchaseOrdersResource = useRecord(ref('PurchaseOrders'));
-    const purchaseOrderItemsResource = useRecord(ref('PurchaseOrderItems'));
-    const suppliersResource = useRecord(ref('Suppliers'));
-    const warehousesResource = useRecord(ref('Warehouses'));
-    const rfqsResource = useRecord(ref('RFQs'));
-    const purchaseRequisitionsResource = useRecord(ref('PurchaseRequisitions'));
-    const prItemsResource = useRecord(ref('PurchaseRequisitionItems'));
-    const procurementsResource = useRecord(ref('Procurements'));
+    const supplierQuotationsResource = usePageRecord(ref('SupplierQuotations'));
+    const quotationItemsResource = usePageRecord(ref('SupplierQuotationItems'));
+    const purchaseOrdersResource = usePageRecord(ref('PurchaseOrders'));
+    const purchaseOrderItemsResource = usePageRecord(ref('PurchaseOrderItems'));
+    const suppliersResource = usePageRecord(ref('Suppliers'));
+    const warehousesResource = usePageRecord(ref('Warehouses'));
+    const rfqsResource = usePageRecord(ref('RFQs'));
+    const purchaseRequisitionsResource = usePageRecord(ref('PurchaseRequisitions'));
+    const prItemsResource = usePageRecord(ref('PurchaseRequisitionItems'));
+    const procurementsResource = usePageRecord(ref('Procurements'));
     const resourceIoStore = useResourceIoStore();
     const nav = useResourceNav();
 

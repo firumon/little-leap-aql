@@ -1,6 +1,6 @@
 import { computed, inject, onMounted } from 'vue'
 import { useAuth } from 'src/composables/core/useAuth'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 import {
@@ -24,13 +24,13 @@ export function useOrderCancelContext () {
   const { user } = useAuth()
   const { code: routeCode } = useRouteConfig()
 
-  const purchaseOrders = useRecord(NODE)
-  const orderItems = useRecord('PurchaseOrderItems')
-  const receivings = useRecord('POReceivings')
-  const rfqs = useRecord('RFQs')
-  const rfqSuppliers = useRecord('RFQSuppliers')
-  const suppliers = useRecord('Suppliers')
-  const procurements = useRecord('Procurements')
+  const purchaseOrders = usePageRecord(NODE)
+  const orderItems = usePageRecord('PurchaseOrderItems')
+  const receivings = usePageRecord('POReceivings')
+  const rfqs = usePageRecord('RFQs')
+  const rfqSuppliers = usePageRecord('RFQSuppliers')
+  const suppliers = usePageRecord('Suppliers')
+  const procurements = usePageRecord('Procurements')
 
   onMounted(() => {
     ;[purchaseOrders, orderItems, receivings, rfqs, rfqSuppliers, suppliers, procurements]

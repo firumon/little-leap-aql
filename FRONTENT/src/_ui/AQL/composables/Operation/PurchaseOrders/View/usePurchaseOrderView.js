@@ -1,5 +1,5 @@
 import { computed, onMounted } from 'vue'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useCurrency } from 'src/composables/useCurrency'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 import { useWarehouseResource } from 'src/_resource/Master/Warehouses/composables/useWarehouseResource'
@@ -46,13 +46,13 @@ export function formatStampDate (value) {
 export function usePurchaseOrderView () {
   const { resourceRecord } = usePurchaseOrderViewContext()
 
-  const orderItems = useRecord(CHILD)
-  const receivings = useRecord('POReceivings')
-  const receivingItems = useRecord('POReceivingItems')
-  const suppliers = useRecord('Suppliers')
-  const warehouses = useRecord('Warehouses')
-  const skus = useRecord('SKUs')
-  const products = useRecord('Products')
+  const orderItems = usePageRecord(CHILD)
+  const receivings = usePageRecord('POReceivings')
+  const receivingItems = usePageRecord('POReceivingItems')
+  const suppliers = usePageRecord('Suppliers')
+  const warehouses = usePageRecord('Warehouses')
+  const skus = usePageRecord('SKUs')
+  const products = usePageRecord('Products')
 
   const { skuLabelOf } = useSkuResource()
   const { getWarehouse } = useWarehouseResource()

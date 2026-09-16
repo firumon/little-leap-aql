@@ -1,5 +1,5 @@
 import { ref, computed } from 'vue';
-import { useRecord } from '../../resources/useRecord.js';
+import { usePageRecord } from '../../resources/usePageRecord.js';
 import { useResourceConfig } from '../../resources/useResourceConfig.js';
 import { useResourceNav } from '../../resources/useResourceNav.js';
 import { useResourceIoStore } from 'src/stores/resourceIo';
@@ -19,8 +19,8 @@ function sortableTime(row = {}) {
 
 export function usePurchaseOrderIndex() {
     const { permissions } = useResourceConfig();
-    const purchaseOrders = useRecord(ref('PurchaseOrders'));
-    const suppliersResource = useRecord(ref('Suppliers'));
+    const purchaseOrders = usePageRecord(ref('PurchaseOrders'));
+    const suppliersResource = usePageRecord(ref('Suppliers'));
     const resourceIoStore = useResourceIoStore();
     const nav = useResourceNav();
 

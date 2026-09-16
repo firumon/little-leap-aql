@@ -1,5 +1,4 @@
 import { useAuth } from 'src/composables/core/useAuth'
-import { useDataStore } from 'src/stores/data'
 import { buildRequisitionReviewChainNodes } from 'src/_resource/Operation/PurchaseRequisitions/composables/usePurchaseRequisitionPayload'
 import { isPendingApproval } from 'src/_resource/Operation/PurchaseRequisitions/composables/usePurchaseRequisitionProgress'
 
@@ -9,7 +8,6 @@ const text = (value) => String(value ?? '').trim()
 
 // [ Cancel ] [ Request Revision ] [ Reject ] [ Approve ]
 export default (props, { pageState, resourceConfig, resourceRecord }) => {
-  const dataStore = useDataStore()
   pageState.useNode(NODE)
 
   const { user } = useAuth()
@@ -19,11 +17,7 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
     return text(row?.Code) ? row : null
   }
 
-  const procurement = () => {
-    const code = text(requisition()?.ProcurementCode)
-    if (!code) return null
-    return dataStore.getRecords('Procurements').find((row) => text(row?.Code) === code) || null
-  }
+  const procurement = () => requisition()?.$procurement || requisition()?.$Procurement || null
 
   const comment = () => text(pageState.getControls('ReviewComment', null, NODE))
 

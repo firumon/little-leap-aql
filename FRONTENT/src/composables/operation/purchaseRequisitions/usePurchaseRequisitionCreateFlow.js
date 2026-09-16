@@ -5,7 +5,7 @@ import { useStockMovements } from 'src/composables/operation/stock/useStockMovem
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useAuthStore } from 'src/stores/auth'
 import { useResourceIoStore } from 'src/stores/resourceIo'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { formatSkuVariants, todayIsoSlash, todayLongLabel } from 'src/utils/appHelpers'
 import { useProductSkuResolver } from 'src/composables/master/products/useProductSkuResolver'
 import {
@@ -26,9 +26,9 @@ export function usePurchaseRequisitionCreateFlow() {
   const { loadWarehouses } = useStockMovements()
   const { skuInfo } = useProductSkuResolver()
 
-  const productsResource = useRecord(ref('Products'))
-  const skusResource = useRecord(ref('SKUs'))
-  const stockResource = useRecord(ref('WarehouseStorages'))
+  const productsResource = usePageRecord(ref('Products'))
+  const skusResource = usePageRecord(ref('SKUs'))
+  const stockResource = usePageRecord(ref('WarehouseStorages'))
 
   const steps = [
     { n: 1, key: 'setup', label: 'Setup' },

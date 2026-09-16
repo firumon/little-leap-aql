@@ -1,6 +1,9 @@
 import { useAuth } from 'src/composables/core/useAuth'
-import { useDataStore } from 'src/stores/data'
 import { buildPurchaseOrderCancelChainNodes } from 'src/_resource/Operation/PurchaseOrders/composables/usePurchaseOrderPayload'
+import { useRFQResource } from 'src/_resource/Operation/RFQs/composables/useRFQResource'
+import { useProcurementResource } from 'src/_resource/Operation/Procurements/composables/useProcurementResource'
+import { usePOReceivingResource } from 'src/_resource/Operation/POReceivings/composables/usePOReceivingResource'
+import { usePurchaseOrderResource } from 'src/_resource/Operation/PurchaseOrders/composables/usePurchaseOrderResource'
 
 const NODE = 'PurchaseOrders'
 
@@ -9,11 +12,14 @@ const asRow = (value) => (value && typeof value === 'object' ? value : {})
 const isActive = (value) => text(asRow(value).Status || 'Active') === 'Active'
 
 // [ Cancel ] [ Cancel Purchase Order ]
-export default (props, { pageState, resourceConfig, resourceRecord }) => {
-  const dataStore = useDataStore()
+export default (props, { pageState, resourceRecord }) => {
   pageState.useNode(NODE)
 
   const { user } = useAuth()
+  const { getRFQ, rfqOfProcurement, rfqSupplierRows } = useRFQResource()
+  const { getProcurement } = useProcurementResource()
+  const { receivingsOfOrder } = usePOReceivingResource()
+  const { purchaseOrders } = usePurchaseOrderResource()
 
   const purchaseOrder = () => {
     const row = resourceRecord?.record?.value
@@ -23,25 +29,20 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
   const rfq = () => {
     const record = purchaseOrder()
     const direct = text(record?.RFQCode)
-    if (direct) return dataStore.getRecords('RFQs').find((row) => text(row?.Code) === direct) || null
+    if (direct) return getRFQ(direct)
     const procurementCode = text(record?.ProcurementCode)
     if (!procurementCode) return null
-    return dataStore.getRecords('RFQs').find((row) => text(row?.ProcurementCode) === procurementCode) || null
+    return rfqOfProcurement(procurementCode)
   }
 
-  const procurement = () => {
-    const code = text(purchaseOrder()?.ProcurementCode)
-    if (!code) return null
-    return dataStore.getRecords('Procurements').find((row) => text(row?.Code) === code) || null
-  }
+  const procurement = () => getProcurement(purchaseOrder()?.ProcurementCode)
 
   const liveReceivings = () => {
     const code = text(purchaseOrder()?.Code)
     if (!code) return []
-    return dataStore.getRecords('POReceivings')
+    return receivingsOfOrder(code)
       .map(asRow)
-      .filter((row) => text(row.PurchaseOrderCode) === code &&
-        isActive(row) &&
+      .filter((row) => isActive(row) &&
         text(row.Progress).toUpperCase() !== 'CANCELLED')
   }
 
@@ -64,9 +65,9 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
         purchaseOrder: purchaseOrder(),
         comment: text(pageState.getControls('CancelComment', null, NODE)),
         actorName: user.value?.name || user.value?.email || '',
-        purchaseOrders: dataStore.getRecords('PurchaseOrders'),
+        purchaseOrders: purchaseOrders(),
         rfq: rfq(),
-        rfqSupplierRows: dataStore.getRecords('RFQSuppliers'),
+        rfqSupplierRows: rfqSupplierRows(),
         procurement: procurement()
       })
 

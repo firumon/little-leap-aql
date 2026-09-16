@@ -1,6 +1,5 @@
 import { computed } from 'vue'
-import { useDataStore } from 'src/stores/data'
-import { defineSharedComposable } from 'src/utils/appHelpers'
+import { useRecord } from 'src/composables/resources/useRecord'
 
 // Pure Supplier enrichment function
 export const enrichSupplier = (sup) => {
@@ -31,10 +30,10 @@ export const enrichSupplier = (sup) => {
 
 // Composable for Suppliers master resource//
 // ONCE PER APP (CORE_ARCHITECTURE_RULES §6) — see `useSkuResource` for the rationale.
-const shared = defineSharedComposable((dataStore) => {
+const build = (recordSource) => {
 
   const suppliers = computed(() => {
-    const raw = dataStore.getRecords('Suppliers') || []
+    const raw = recordSource.rows('Suppliers') || []
     return raw.map(enrichSupplier).filter(Boolean)
   })
 
@@ -54,8 +53,9 @@ const shared = defineSharedComposable((dataStore) => {
     supplierMap,
     getSupplier
   }
-})
+}
 
-export function useSupplierResource() {
-  return shared(useDataStore())
+export function useSupplierResource () {
+  const recordSource = useRecord()
+  return recordSource.remember('useSupplierResource', () => build(recordSource))
 }

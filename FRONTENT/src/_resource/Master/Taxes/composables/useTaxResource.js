@@ -1,6 +1,5 @@
 import { computed } from 'vue'
-import { useDataStore } from 'src/stores/data'
-import { defineSharedComposable } from 'src/utils/appHelpers'
+import { useRecord } from 'src/composables/resources/useRecord'
 
 /**
  * Group raw tax rows by their ParentCode — the child index, built in ONE pass.
@@ -109,9 +108,9 @@ export const enrichTax = (tax, childRows = []) => {
 // Composable for Taxes master resource.
 //
 // ONCE PER APP (CORE_ARCHITECTURE_RULES §6) — see `useSkuResource` for the rationale.
-const shared = defineSharedComposable((dataStore) => {
+const build = (recordSource) => {
   const taxes = computed(() => {
-    const raw = dataStore.getRecords('Taxes') || []
+    const raw = recordSource.rows('Taxes') || []
     const childrenByParent = groupTaxesByParent(raw)
     return raw.map((t) => enrichTax(t, childrenByParent.get(t.Code) || [])).filter(Boolean)
   })
@@ -234,8 +233,9 @@ const shared = defineSharedComposable((dataStore) => {
     getTaxComponents,
     calculateLineTax
   }
-})
+}
 
-export function useTaxResource() {
-  return shared(useDataStore())
+export function useTaxResource () {
+  const recordSource = useRecord()
+  return recordSource.remember('useTaxResource', () => build(recordSource))
 }

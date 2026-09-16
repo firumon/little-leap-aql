@@ -4,7 +4,7 @@ import { useAuthStore } from 'src/stores/auth'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceConfig, isActionVisible } from 'src/composables/resources/useResourceConfig'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { mapRFQOptions } from './rfqMeta'
 import { parsePrItemCodeCsv } from './rfqPayload'
@@ -48,7 +48,7 @@ export function useRFQEditableFlow() {
   const nav = useResourceNav()
   const { resourceName, additionalActions } = useResourceConfig()
   const { code } = useRouteConfig()
-  const rfqResource = useRecord(ref('RFQs'))
+  const rfqResource = usePageRecord(ref('RFQs'))
 
   const saving = ref(false)
   const loadedSnapshot = ref('')

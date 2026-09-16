@@ -1,5 +1,5 @@
 import { computed, onMounted } from 'vue'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useCurrency } from 'src/composables/useCurrency'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 import {
@@ -47,12 +47,12 @@ export function formatStampDate (value) {
 export function useQuotationView () {
   const { resourceRecord } = useQuotationViewContext()
 
-  const quotationItems = useRecord(CHILD)
-  const suppliers = useRecord('Suppliers')
-  const rfqs = useRecord('RFQs')
-  const purchaseOrders = useRecord('PurchaseOrders')
-  const skus = useRecord('SKUs')
-  const products = useRecord('Products')
+  const quotationItems = usePageRecord(CHILD)
+  const suppliers = usePageRecord('Suppliers')
+  const rfqs = usePageRecord('RFQs')
+  const purchaseOrders = usePageRecord('PurchaseOrders')
+  const skus = usePageRecord('SKUs')
+  const products = usePageRecord('Products')
 
   const { skuLabelOf } = useSkuResource()
   const { _C } = useCurrency()

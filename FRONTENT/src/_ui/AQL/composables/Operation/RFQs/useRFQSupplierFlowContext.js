@@ -1,6 +1,6 @@
 import { computed, inject, onMounted } from 'vue'
 import { useAuth } from 'src/composables/core/useAuth'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 import {
@@ -31,10 +31,10 @@ export function useRFQSupplierFlowContext () {
   const { user } = useAuth()
   const { code: routeCode } = useRouteConfig()
 
-  const rfqs = useRecord(NODE)
-  const rfqSuppliers = useRecord('RFQSuppliers')
-  const suppliers = useRecord('Suppliers')
-  const procurements = useRecord('Procurements')
+  const rfqs = usePageRecord(NODE)
+  const rfqSuppliers = usePageRecord('RFQSuppliers')
+  const suppliers = usePageRecord('Suppliers')
+  const procurements = usePageRecord('Procurements')
 
   onMounted(() => {
     ;[rfqs, rfqSuppliers, suppliers, procurements].forEach((resource) => resource.reload())

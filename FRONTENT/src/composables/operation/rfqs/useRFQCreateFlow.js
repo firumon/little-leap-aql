@@ -2,7 +2,7 @@
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
 import { useResourceIoStore } from 'src/stores/resourceIo'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useProcurements } from 'src/composables/operation/procurements/useProcurements'
 import { mapRFQOptions } from './rfqMeta'
@@ -28,9 +28,9 @@ export function useRFQCreateFlow() {
   const nav = useResourceNav()
   const procurements = useProcurements()
 
-  const prResource = useRecord(ref('PurchaseRequisitions'))
-  const itemResource = useRecord(ref('PurchaseRequisitionItems'))
-  const rfqResource = useRecord(ref('RFQs'))
+  const prResource = usePageRecord(ref('PurchaseRequisitions'))
+  const itemResource = usePageRecord(ref('PurchaseRequisitionItems'))
+  const rfqResource = usePageRecord(ref('RFQs'))
 
   const steps = [
     { n: 1, label: 'PR' },

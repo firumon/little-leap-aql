@@ -1,40 +1,39 @@
 import { useAuth } from 'src/composables/core/useAuth'
-import { useDataStore } from 'src/stores/data'
 import { buildQuotationCaptureChainNodes } from 'src/_resource/Operation/SupplierQuotations/composables/useSupplierQuotationPayload'
 import { DECLINED } from 'src/_resource/Operation/SupplierQuotations/composables/useSupplierQuotationProgress'
 import { parsePrItemCodeCsv, supplierRowsOf } from 'src/_resource/Operation/RFQs/composables/useRFQProgress'
+import { useRFQResource } from 'src/_resource/Operation/RFQs/composables/useRFQResource'
+import { useProcurementResource } from 'src/_resource/Operation/Procurements/composables/useProcurementResource'
+import { usePurchaseRequisitionResource } from 'src/_resource/Operation/PurchaseRequisitions/composables/usePurchaseRequisitionResource'
 
 const NODE = 'SupplierQuotations'
 
 const text = (value) => String(value ?? '').trim()
 
 // step 1 RFQ + supplier | step 2 quoted lines | step 3 terms and charges
-export default (props, { pageState, resourceConfig }) => {
-  const dataStore = useDataStore()
+export default (props, { pageState }) => {
   pageState.useNode(NODE)
 
   const { user } = useAuth()
+  const { getRFQ, rfqSupplierRows } = useRFQResource()
+  const { getProcurement } = useProcurementResource()
+  const { requisitionItemsByCodes } = usePurchaseRequisitionResource()
 
   const control = (key) => pageState.getControls(key, null, NODE)
   const step = () => pageState.meta?.currentStep || 1
   const form = () => control('Form') || {}
 
-  const rfq = () => dataStore.getRecords('RFQs').find((row) => text(row?.Code) === text(form().RFQCode)) || null
+  const rfq = () => getRFQ(form().RFQCode)
 
-  const supplierRow = () => supplierRowsOf(rfq(), dataStore.getRecords('RFQSuppliers'))
+  const supplierRow = () => supplierRowsOf(rfq(), rfqSupplierRows())
     .find((row) => text(row.SupplierCode) === text(form().SupplierCode)) || null
 
-  const procurement = () => {
-    const code = text(rfq()?.ProcurementCode)
-    if (!code) return null
-    return dataStore.getRecords('Procurements').find((row) => text(row?.Code) === code) || null
-  }
+  const procurement = () => getProcurement(rfq()?.ProcurementCode)
 
   const rfqItemCount = () => {
     const codes = parsePrItemCodeCsv(rfq()?.PurchaseRequisitionItemsCode)
     if (!codes.length) return 0
-    const wanted = new Set(codes)
-    return dataStore.getRecords('PurchaseRequisitionItems').filter((row) => wanted.has(text(row?.Code))).length
+    return requisitionItemsByCodes(codes).length
   }
 
   const lines = () => (Array.isArray(control('Lines')) ? control('Lines') : [])

@@ -1,4 +1,3 @@
-import { useDataStore } from 'src/stores/data'
 import { buildAssignSuppliersChainNodes } from 'src/_resource/Operation/RFQs/composables/useRFQPayload'
 
 const NODE = 'RFQs'
@@ -8,7 +7,6 @@ const text = (value) => String(value ?? '').trim()
 
 // [ Cancel ] [ Assign Suppliers ]
 export default (props, { pageState, resourceConfig, resourceRecord }) => {
-  const dataStore = useDataStore()
   pageState.useNode(NODE)
 
   const rfq = () => {
@@ -34,7 +32,7 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
       const result = buildAssignSuppliersChainNodes({
         rfq: rfq(),
         supplierCodes: selected(),
-        existingSupplierRows: dataStore.getRecords('RFQSuppliers')
+        existingSupplierRows: rfq()?.$RFQSuppliers || rfq()?.$rfqsuppliers || []
       })
 
 

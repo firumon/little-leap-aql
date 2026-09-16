@@ -3,7 +3,7 @@ import { useQuasar } from 'quasar'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceConfig, isActionVisible } from 'src/composables/resources/useResourceConfig'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { buildPrimaryMeta } from './rfqMeta'
 import { parsePrItemCodeCsv, toDateInputValue } from './rfqPayload'
@@ -48,10 +48,10 @@ export function useRFQSupplierFlow(rfqCodeRef) {
   const { additionalActions } = useResourceConfig()
   const { code: routeCode } = useRouteConfig()
 
-  const rfqResource = useRecord(ref('RFQs'))
-  const prResource = useRecord(ref('PurchaseRequisitions'))
-  const suppliersResource = useRecord(ref('Suppliers'))
-  const rfqSuppliersResource = useRecord(ref('RFQSuppliers'))
+  const rfqResource = usePageRecord(ref('RFQs'))
+  const prResource = usePageRecord(ref('PurchaseRequisitions'))
+  const suppliersResource = usePageRecord(ref('Suppliers'))
+  const rfqSuppliersResource = usePageRecord(ref('RFQSuppliers'))
 
   const isHeaderLoading = ref(true)
   const isSuppliersLoading = ref(true)

@@ -2,7 +2,7 @@ import { computed, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useAuthStore } from 'src/stores/auth'
 import { useResourceIoStore } from 'src/stores/resourceIo'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { mapOptions, formatCurrency, formatDate } from './supplierQuotationMeta'
 import { useSupplierQuotationTotals } from './useSupplierQuotationTotals'
@@ -41,12 +41,12 @@ export function useSupplierQuotationCreateFlow() {
   const resourceIoStore = useResourceIoStore()
   const nav = useResourceNav()
 
-  const rfqs = useRecord(ref('RFQs'))
-  const rfqSuppliers = useRecord(ref('RFQSuppliers'))
-  const suppliers = useRecord(ref('Suppliers'))
-  const quotations = useRecord(ref('SupplierQuotations'))
-  const prItems = useRecord(ref('PurchaseRequisitionItems'))
-  const procurements = useRecord(ref('Procurements'))
+  const rfqs = usePageRecord(ref('RFQs'))
+  const rfqSuppliers = usePageRecord(ref('RFQSuppliers'))
+  const suppliers = usePageRecord(ref('Suppliers'))
+  const quotations = usePageRecord(ref('SupplierQuotations'))
+  const prItems = usePageRecord(ref('PurchaseRequisitionItems'))
+  const procurements = usePageRecord(ref('Procurements'))
 
   const loading = ref(false)
   const saving = ref(false)

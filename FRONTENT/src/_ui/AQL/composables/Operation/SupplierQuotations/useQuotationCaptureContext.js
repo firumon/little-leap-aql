@@ -1,6 +1,6 @@
 import { computed, inject, onMounted } from 'vue'
 import { useAuth } from 'src/composables/core/useAuth'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useCurrency } from 'src/composables/useCurrency'
 import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
@@ -43,15 +43,15 @@ export function useQuotationCaptureContext () {
   const { code: routeCode } = useRouteConfig()
   const { defaultCurrencyCode, _C } = useCurrency()
 
-  const quotations = useRecord(NODE)
-  const quotationItems = useRecord('SupplierQuotationItems')
-  const rfqs = useRecord('RFQs')
-  const rfqSuppliers = useRecord('RFQSuppliers')
-  const suppliers = useRecord('Suppliers')
-  const requisitionItems = useRecord('PurchaseRequisitionItems')
-  const procurements = useRecord('Procurements')
-  const skus = useRecord('SKUs')
-  const products = useRecord('Products')
+  const quotations = usePageRecord(NODE)
+  const quotationItems = usePageRecord('SupplierQuotationItems')
+  const rfqs = usePageRecord('RFQs')
+  const rfqSuppliers = usePageRecord('RFQSuppliers')
+  const suppliers = usePageRecord('Suppliers')
+  const requisitionItems = usePageRecord('PurchaseRequisitionItems')
+  const procurements = usePageRecord('Procurements')
+  const skus = usePageRecord('SKUs')
+  const products = usePageRecord('Products')
 
   const { skuLabelOf } = useSkuResource()
 

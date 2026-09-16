@@ -1,16 +1,19 @@
-import { useDataStore } from 'src/stores/data'
 import { buildQuotationUpdateChainNodes } from 'src/_resource/Operation/SupplierQuotations/composables/useSupplierQuotationPayload'
 import { isEditable } from 'src/_resource/Operation/SupplierQuotations/composables/useSupplierQuotationProgress'
 import { parsePrItemCodeCsv } from 'src/_resource/Operation/RFQs/composables/useRFQProgress'
+import { useRFQResource } from 'src/_resource/Operation/RFQs/composables/useRFQResource'
+import { usePurchaseRequisitionResource } from 'src/_resource/Operation/PurchaseRequisitions/composables/usePurchaseRequisitionResource'
 
 const NODE = 'SupplierQuotations'
 
 const text = (value) => String(value ?? '').trim()
 
 // [ Cancel ] [ Save Quotation ]
-export default (props, { pageState, resourceConfig, resourceRecord }) => {
-  const dataStore = useDataStore()
+export default (props, { pageState, resourceRecord }) => {
   pageState.useNode(NODE)
+
+  const { getRFQ } = useRFQResource()
+  const { requisitionItemsByCodes } = usePurchaseRequisitionResource()
 
   const control = (key) => pageState.getControls(key, null, NODE)
   const form = () => control('Form') || {}
@@ -21,11 +24,10 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
   }
 
   const rfqItemCount = () => {
-    const rfq = dataStore.getRecords('RFQs').find((row) => text(row?.Code) === text(form().RFQCode))
+    const rfq = getRFQ(form().RFQCode)
     const codes = parsePrItemCodeCsv(rfq?.PurchaseRequisitionItemsCode)
     if (!codes.length) return 0
-    const wanted = new Set(codes)
-    return dataStore.getRecords('PurchaseRequisitionItems').filter((row) => wanted.has(text(row?.Code))).length
+    return requisitionItemsByCodes(codes).length
   }
 
   return {

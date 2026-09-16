@@ -1,5 +1,4 @@
 import { useAuth } from 'src/composables/core/useAuth'
-import { useDataStore } from 'src/stores/data'
 import {
   progressOf,
   countsForUser,
@@ -15,7 +14,6 @@ import {
 const { user } = useAuth()
 
 export default function (props, { resourceRecord }) {
-  const dataStore = useDataStore()
 
   return {
     items: () => {
@@ -23,7 +21,6 @@ export default function (props, { resourceRecord }) {
       if (!records || !records.length) return []
 
       const me = user.value?.id
-      const supplierRows = dataStore.getRecords('RFQSuppliers')
 
       let drafts = 0
       let outForQuoting = 0
@@ -37,7 +34,8 @@ export default function (props, { resourceRecord }) {
         else if (progress === SENT) {
           outForQuoting++
           if (isDeadlinePassed(row)) deadlinePassed++
-          const assigned = supplierRowsOf(row, supplierRows)
+          const childRows = row.$RFQSuppliers || row.$rfqsuppliers || []
+          const assigned = supplierRowsOf(row, childRows)
             .filter((entry) => String(entry.Progress ?? '').trim().toUpperCase() === SUPPLIER_ASSIGNED)
           if (assigned.length) awaitingDispatch++
         }

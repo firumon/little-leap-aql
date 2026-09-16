@@ -1,6 +1,6 @@
 import { computed, inject, onMounted } from 'vue'
 import { useAuth } from 'src/composables/core/useAuth'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 import { isRfqEligible, typeMeta, priorityMeta } from 'src/_resource/Operation/PurchaseRequisitions/composables/usePurchaseRequisitionProgress'
@@ -42,12 +42,12 @@ export function useRFQAddContext () {
   const ui = useAQLConfig()
   const { user } = useAuth()
 
-  const requisitions = useRecord('PurchaseRequisitions')
-  const requisitionItems = useRecord('PurchaseRequisitionItems')
-  const suppliers = useRecord('Suppliers')
-  const procurements = useRecord('Procurements')
-  const skus = useRecord('SKUs')
-  const products = useRecord('Products')
+  const requisitions = usePageRecord('PurchaseRequisitions')
+  const requisitionItems = usePageRecord('PurchaseRequisitionItems')
+  const suppliers = usePageRecord('Suppliers')
+  const procurements = usePageRecord('Procurements')
+  const skus = usePageRecord('SKUs')
+  const products = usePageRecord('Products')
 
   const { skuLabelOf } = useSkuResource()
 

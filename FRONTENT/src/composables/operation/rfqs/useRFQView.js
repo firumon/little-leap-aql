@@ -1,13 +1,13 @@
 import { computed, ref, watch } from 'vue'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { parsePrItemCodeCsv } from './rfqPayload'
 
 export function useRFQView() {
   const nav = useResourceNav()
   const { code } = useRouteConfig()
-  const rfqResource = useRecord(ref('RFQs'))
+  const rfqResource = usePageRecord(ref('RFQs'))
 
   const record = computed(() => rfqResource.items.value.find((row) => row.Code === code.value) || null)
   const itemCodes = computed(() => parsePrItemCodeCsv(record.value?.PurchaseRequisitionItemsCode))

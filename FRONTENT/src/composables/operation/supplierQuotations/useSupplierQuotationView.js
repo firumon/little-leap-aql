@@ -4,7 +4,7 @@ import { useAuthStore } from 'src/stores/auth'
 import { useResourceIoStore } from 'src/stores/resourceIo'
 import { useResourceConfig, isActionVisible } from 'src/composables/resources/useResourceConfig'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { parsePrItemCodeCsv } from 'src/composables/operation/rfqs/rfqPayload'
 import { mapOptions, formatCurrency, formatDate } from './supplierQuotationMeta'
@@ -39,11 +39,11 @@ export function useSupplierQuotationView() {
   const nav = useResourceNav()
   const { additionalActions } = useResourceConfig()
   const { code } = useRouteConfig()
-  const quotations = useRecord(ref('SupplierQuotations'))
-  const quotationItems = useRecord(ref('SupplierQuotationItems'))
-  const rfqs = useRecord(ref('RFQs'))
-  const suppliers = useRecord(ref('Suppliers'))
-  const prItems = useRecord(ref('PurchaseRequisitionItems'))
+  const quotations = usePageRecord(ref('SupplierQuotations'))
+  const quotationItems = usePageRecord(ref('SupplierQuotationItems'))
+  const rfqs = usePageRecord(ref('RFQs'))
+  const suppliers = usePageRecord(ref('Suppliers'))
+  const prItems = usePageRecord(ref('PurchaseRequisitionItems'))
 
   const saving = ref(false)
   const rejecting = ref(false)

@@ -1,4 +1,3 @@
-import { useDataStore } from 'src/stores/data'
 import { buildMarkAsSentChainNodes } from 'src/_resource/Operation/RFQs/composables/useRFQPayload'
 
 const NODE = 'RFQs'
@@ -8,7 +7,6 @@ const text = (value) => String(value ?? '').trim()
 
 // [ Cancel ] [ Mark As Sent ]
 export default (props, { pageState, resourceConfig, resourceRecord }) => {
-  const dataStore = useDataStore()
   pageState.useNode(NODE)
 
   const rfq = () => {
@@ -16,11 +14,7 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
     return text(row?.Code) ? row : null
   }
 
-  const procurement = () => {
-    const code = text(rfq()?.ProcurementCode)
-    if (!code) return null
-    return dataStore.getRecords('Procurements').find((row) => text(row?.Code) === code) || null
-  }
+  const procurement = () => rfq()?.$procurement || rfq()?.$Procurement || null
 
   const selected = () => {
     const value = pageState.getControls(DISPATCH, null, NODE)
@@ -40,7 +34,7 @@ export default (props, { pageState, resourceConfig, resourceRecord }) => {
       const result = buildMarkAsSentChainNodes({
         rfq: rfq(),
         supplierRowCodes: selected(),
-        supplierRows: dataStore.getRecords('RFQSuppliers'),
+        supplierRows: rfq()?.$RFQSuppliers || rfq()?.$rfqsuppliers || [],
         procurement: procurement()
       })
 

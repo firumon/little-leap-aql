@@ -1,31 +1,26 @@
-import { useDataStore } from 'src/stores/data'
 import { buildRFQCreateChainNodes } from 'src/_resource/Operation/RFQs/composables/useRFQPayload'
+import { usePurchaseRequisitionResource } from 'src/_resource/Operation/PurchaseRequisitions/composables/usePurchaseRequisitionResource'
+import { useProcurementResource } from 'src/_resource/Operation/Procurements/composables/useProcurementResource'
 
 const NODE = 'RFQs'
 
 const text = (value) => String(value ?? '').trim()
 
 // step 1 requisition + items | step 2 terms | step 3 suppliers + review
-export default (props, { pageState, resourceConfig }) => {
-  const dataStore = useDataStore()
+export default (props, { pageState }) => {
   pageState.useNode(NODE)
+
+  const { getPurchaseRequisition, requisitionItemsByCodes } = usePurchaseRequisitionResource()
+  const { getProcurement } = useProcurementResource()
 
   const control = (key) => pageState.getControls(key, null, NODE)
   const step = () => pageState.meta?.currentStep || 1
 
-  const requisition = () => dataStore.getRecords('PurchaseRequisitions')
-    .find((row) => text(row?.Code) === text(control('RequisitionCode'))) || null
+  const requisition = () => getPurchaseRequisition(control('RequisitionCode'))
 
-  const procurement = () => {
-    const code = text(requisition()?.ProcurementCode)
-    if (!code) return null
-    return dataStore.getRecords('Procurements').find((row) => text(row?.Code) === code) || null
-  }
+  const procurement = () => getProcurement(requisition()?.ProcurementCode)
 
-  const selectedItems = () => {
-    const wanted = new Set(Array.isArray(control('SelectedItemCodes')) ? control('SelectedItemCodes') : [])
-    return dataStore.getRecords('PurchaseRequisitionItems').filter((row) => wanted.has(text(row?.Code)))
-  }
+  const selectedItems = () => requisitionItemsByCodes(control('SelectedItemCodes'))
 
   return {
     get actions () {

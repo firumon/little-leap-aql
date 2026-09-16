@@ -1,5 +1,5 @@
 import { computed, onMounted } from 'vue'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 import {
   progressLabel,
@@ -46,13 +46,13 @@ export function formatStampDate (value) {
 export function useRFQView () {
   const { resourceRecord } = useRFQViewContext()
 
-  const rfqSuppliers = useRecord('RFQSuppliers')
-  const suppliers = useRecord('Suppliers')
-  const requisitionItems = useRecord('PurchaseRequisitionItems')
-  const quotations = useRecord('SupplierQuotations')
-  const procurements = useRecord('Procurements')
-  const skus = useRecord('SKUs')
-  const products = useRecord('Products')
+  const rfqSuppliers = usePageRecord('RFQSuppliers')
+  const suppliers = usePageRecord('Suppliers')
+  const requisitionItems = usePageRecord('PurchaseRequisitionItems')
+  const quotations = usePageRecord('SupplierQuotations')
+  const procurements = usePageRecord('Procurements')
+  const skus = usePageRecord('SKUs')
+  const products = usePageRecord('Products')
 
   const { skuLabelOf } = useSkuResource()
 

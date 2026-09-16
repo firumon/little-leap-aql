@@ -2,7 +2,7 @@ import { inject, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 import { useAuth } from 'src/composables/core/useAuth'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useCurrencyResource } from 'src/_resource/Master/Currencies/composables/useCurrencyResource'
 import { useOutletPaymentIndex } from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentIndex'
 import {
@@ -306,7 +306,7 @@ export function useOutletPaymentAddContext () {
   // `OutletConsumptionInvoices` must be here: the wizard IS a list of open invoices and
   // nothing else on this route fetches them. The rest supply names and current balances.
   const sources = ['OutletConsumptionInvoices', 'OutletPayments', 'Outlets']
-    .map((name) => useRecord(name))
+    .map((name) => usePageRecord(name))
 
   /** Renders from cache and syncs the delta in the background — never blocks first paint. */
   const loadSources = () => Promise.all(sources.map((resource) => resource.reload()))

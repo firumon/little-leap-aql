@@ -1,6 +1,5 @@
 import { computed } from 'vue'
-import { defineSharedComposable } from 'src/utils/appHelpers'
-import { useDataStore } from 'src/stores/data'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { parseAnyDate } from 'src/utils/dateHelpers'
 import {
   netInvoiceTotalOf,
@@ -33,8 +32,8 @@ function daysSince (iso) {
   return Math.round((today - date) / 86400000)
 }
 
-const shared = defineSharedComposable((dataStore) => {
-  const rows = (name) => (dataStore.getRecords(name) || []).map(asRow).filter(isActiveRow)
+const build = (recordSource) => {
+  const rows = (name) => (recordSource.rows(name) || []).map(asRow).filter(isActiveRow)
 
   const rawInvoices = computed(() => rows('OutletConsumptionInvoices'))
   const rawPayments = computed(() => rows('OutletPayments'))
@@ -279,8 +278,9 @@ const shared = defineSharedComposable((dataStore) => {
     linearProgressData,
     views
   }
-})
+}
 
 export function useOutletPaymentIndex () {
-  return shared(useDataStore())
+  const recordSource = useRecord()
+  return recordSource.remember('useOutletPaymentIndex', () => build(recordSource))
 }

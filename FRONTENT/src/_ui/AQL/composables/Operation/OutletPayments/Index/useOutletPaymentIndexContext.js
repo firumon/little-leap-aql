@@ -1,6 +1,6 @@
 import { computed, inject } from 'vue'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useOutletPaymentIndex } from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentIndex'
 
 /**
@@ -28,7 +28,7 @@ export function useOutletPaymentIndexContext () {
   const filterTerm = computed(() => String(resourceRecord?.filterTerm?.value ?? '').trim().toLowerCase())
 
   const sources = ['OutletConsumptionInvoices', 'Outlets']
-    .map((name) => useRecord(name))
+    .map((name) => usePageRecord(name))
 
   /** Renders from cache and syncs the delta in the background — never blocks first paint. */
   const loadSources = () => Promise.all(sources.map((resource) => resource.reload()))

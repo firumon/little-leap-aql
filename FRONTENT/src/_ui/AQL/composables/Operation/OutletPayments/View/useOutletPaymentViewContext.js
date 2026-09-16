@@ -2,7 +2,7 @@ import { computed, inject } from 'vue'
 import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useCurrencyResource } from 'src/_resource/Master/Currencies/composables/useCurrencyResource'
 import { useOutletPaymentIndex } from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentIndex'
 import {
@@ -61,7 +61,7 @@ export function useOutletPaymentViewContext () {
    * status and every other open invoice for the outlet come from it, and nothing on this route
    * fetches it. `Outlets` supplies the name the receipt is addressed to.
    */
-  const sources = ['OutletConsumptionInvoices', 'Outlets'].map((name) => useRecord(name))
+  const sources = ['OutletConsumptionInvoices', 'Outlets'].map((name) => usePageRecord(name))
   const loadSources = () => Promise.all(sources.map((resource) => resource.reload()))
 
   if (!pending) {

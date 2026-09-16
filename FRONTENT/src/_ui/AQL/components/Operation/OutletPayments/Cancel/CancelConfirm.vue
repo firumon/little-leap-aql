@@ -80,9 +80,8 @@
 import { computed, inject, watch, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useRouteConfig } from 'src/composables/resources/useRouteConfig'
-import { useDataStore } from 'src/stores/data'
 import { useAuth } from 'src/composables/core/useAuth'
 import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 import { useCurrencyResource } from 'src/_resource/Master/Currencies/composables/useCurrencyResource'
@@ -109,18 +108,16 @@ const resourceRecord = inject('resourceRecord', null)
 
 // An `_action` resolver fetches nothing (usePageResolver skips the load for action pages),
 // so this card opens every row it reads - its own receipt included.
-const sources = [useRecord(PAYMENTS), useRecord(INVOICES)]
+const sources = [usePageRecord(PAYMENTS), usePageRecord(INVOICES)]
 Promise.all(sources.map((source) => source.reload()))
 
 const ui = useAQLConfig()
-const dataStore = useDataStore()
 const { user } = useAuth()
 const { _C } = useCurrencyResource()
 const { getOutlet } = useOutletResource()
 
 const text = (value) => (value == null ? '' : String(value).trim())
 const num = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0)
-const rows = (name) => (dataStore.getRecords(name) || [])
 
 const { code: routeCode } = useRouteConfig()
 const code = computed(() => text(routeCode.value))
@@ -129,7 +126,7 @@ const code = computed(() => text(routeCode.value))
 // card just opened, with the record loader as the fallback once it settles.
 const record = computed(() => {
   if (!code.value) return resourceRecord?.record?.value || null
-  return rows(PAYMENTS).find((row) => text(row.Code) === code.value) ||
+  return (resourceRecord?.records?.value || []).find((row) => text(row.Code) === code.value) ||
     resourceRecord?.record?.value ||
     null
 })
@@ -145,9 +142,9 @@ const metaLine = computed(() => [
 
 const invoiceCode = computed(() => text(record.value?.OutletConsumptionInvoiceCode))
 const invoice = computed(() =>
-  rows(INVOICES).find((row) => text(row.Code) === invoiceCode.value) || null)
+  record.value?.$outletconsumptioninvoice || record.value?.$OutletConsumptionInvoice || null)
 
-const invoicePayments = computed(() => rows(PAYMENTS)
+const invoicePayments = computed(() => (resourceRecord?.records?.value || [])
   .filter((row) => text(row.OutletConsumptionInvoiceCode) === invoiceCode.value))
 
 const invoiceTotal = computed(() => (invoice.value ? netInvoiceTotalOf(invoice.value) : 0))

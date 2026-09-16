@@ -16,7 +16,6 @@ import RankedListBase from 'src/components/widgets/RankedListBase.vue'
 
 defineOptions({
   inheritAttrs: false,
-  aspect: 1.33,
-  minHeight: 120
+  minHeight: 160
 })
 </script>

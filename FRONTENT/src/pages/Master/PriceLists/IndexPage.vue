@@ -151,7 +151,7 @@ import { computed, ref, watch } from 'vue'
 import GenericHeaderPanel from 'components/shared/GenericHeaderPanel.vue'
 import MasterListToolbar from 'components/_common/sections/Toolbar/Toolbar.vue'
 import { useResourceConfig } from 'src/composables/resources/useResourceConfig'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { usePriceListEditor } from 'src/composables/master/priceLists/usePriceListEditor'
 import { useResourceIoStore } from 'src/stores/resourceIo'
@@ -159,7 +159,7 @@ import { useResourceIoStore } from 'src/stores/resourceIo'
 const nav = useResourceNav()
 const { resourceName, permissions } = useResourceConfig()
 const resourceIoStore = useResourceIoStore()
-const { records: items, filterTerm } = useRecord()
+const { records: items, filterTerm } = usePageRecord()
 const loading = ref(false)
 const backgroundSyncing = ref(false)
 const {

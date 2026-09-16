@@ -1,7 +1,6 @@
 import { computed } from 'vue'
-import { useDataStore } from 'src/stores/data'
+import { useRecord } from 'src/composables/resources/useRecord'
 import { useAuthStore } from 'src/stores/auth'
-import { defineSharedComposable } from 'src/utils/appHelpers'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 
 /**
@@ -130,7 +129,7 @@ export const enrichPriceList = (priceList, lookupMode = 'INLINE', ownItems = [],
 // Composable for PriceList master resource.
 //
 // ONCE PER APP (CORE_ARCHITECTURE_RULES §6) — see `useSkuResource` for the rationale.
-const shared = defineSharedComposable((dataStore) => {
+const build = (recordSource) => {
   const authStore = useAuthStore()
   const { skuMap } = useSkuResource()
 
@@ -140,8 +139,8 @@ const shared = defineSharedComposable((dataStore) => {
   })
 
   const priceLists = computed(() => {
-    const rawLists = dataStore.getRecords('PriceList') || []
-    const rawItems = dataStore.getRecords('PriceListItems') || []
+    const rawLists = recordSource.rows('PriceList') || []
+    const rawItems = recordSource.rows('PriceListItems') || []
     const mode = lookupMode.value
     const skus = skuMap.value
     const itemsByList = mode === 'ITEMS' ? groupPriceListItems(rawItems) : null
@@ -207,8 +206,9 @@ const shared = defineSharedComposable((dataStore) => {
     getRspOf,
     getItemOf
   }
-})
+}
 
-export function usePriceListResource() {
-  return shared(useDataStore())
+export function usePriceListResource () {
+  const recordSource = useRecord()
+  return recordSource.remember('usePriceListResource', () => build(recordSource))
 }

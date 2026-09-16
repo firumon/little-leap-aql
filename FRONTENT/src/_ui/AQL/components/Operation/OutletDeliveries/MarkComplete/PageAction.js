@@ -26,7 +26,7 @@ import { orsisForDelivery } from 'src/_resource/Operation/OutletDeliveries/compo
  * ── WHY THE ITEM ROWS ARE READ HERE ──
  * `canComplete` is a question about the manifest's LINES, which live on another resource;
  * the record loader brings none of them. They come from the Layer 2 accessor
- * (`useDeliveryRows`), which is safe outside a component setup where `useRecord` is not, and
+ * (`useDeliveryRows`), which is safe outside a component setup where `usePageRecord` is not, and
  * they go straight to Layer 2 — no rule is decided here.
  */
 const NODE = 'OutletDeliveries'

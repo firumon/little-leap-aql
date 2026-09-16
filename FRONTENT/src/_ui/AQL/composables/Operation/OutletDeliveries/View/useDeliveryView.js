@@ -1,5 +1,5 @@
 import { computed } from 'vue'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useOutletResource } from 'src/_resource/Master/Outlets/composables/useOutletResource'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 import { useWarehouseResource } from 'src/_resource/Master/Warehouses/composables/useWarehouseResource'
@@ -31,8 +31,8 @@ const isUserId = (value) => /^[A-Z]{1,3}\d{3,}$/.test(String(value || '').trim()
 export function useDeliveryView () {
   const { resourceRecord } = useDeliveryViewContext()
 
-  const restockItems = useRecord('OutletRestockItems')
-  const restocks = useRecord('OutletRestocks')
+  const restockItems = usePageRecord('OutletRestockItems')
+  const restocks = usePageRecord('OutletRestocks')
 
   const { getOutlet } = useOutletResource()
   const { skuLabelOf } = useSkuResource()

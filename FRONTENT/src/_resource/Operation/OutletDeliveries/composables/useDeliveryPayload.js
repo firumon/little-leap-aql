@@ -39,7 +39,7 @@
  * No function in this file reaches a store, but the MODULE GRAPH does, transitively and
  * not by this module's choice: `useRestockPayload` re-exports `useRestockCreation`, which
  * imports `useRestockStockMatch`, which reads `useWarehouseStorageResource` — and that is a
- * resource aggregate backed by `useDataStore`. So importing the restock delivery builder
+ * resource aggregate backed by `useRecord`. So importing the restock delivery builder
  * pulls the data store into the graph.
  *
  * That is pre-existing, and it is the same shape the codebase already accepts elsewhere

@@ -24,7 +24,7 @@ import {
  * precondition can be checked is worse than showing it a moment late.
  *
  * The rows come from the Layer 2 accessor (`useDeliveryRows`), which reads the cache without
- * a component setup — `useRecord` could not be used here, because it calls `useQuasar()`.
+ * a component setup — `usePageRecord` could not be used here, because it calls `useQuasar()`.
  * The rows are read and handed to Layer 2; no rule is decided locally.
  *
  * FUNCTION-VALUED so `evaluateProp` re-runs it per render — a driver delivering the first

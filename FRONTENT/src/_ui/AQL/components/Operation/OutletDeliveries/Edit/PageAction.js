@@ -8,7 +8,7 @@ import {
 import { NODE } from 'src/_ui/AQL/composables/Operation/OutletDeliveries/useDeliverySelection'
 
 // Submit re-checks `isEditable` because the run may have departed while this page was open.
-// Item rows come from Layer 2, not `useRecord`: a modifier runs outside component setup.
+// Item rows come from Layer 2, not `usePageRecord`: a modifier runs outside component setup.
 
 const text = (value) => (value == null ? '' : String(value).trim())
 

@@ -24,8 +24,8 @@ import { availableAllocatedItems } from 'src/_resource/Operation/OutletDeliverie
  * ── WHY THIS MODIFIER READS OTHER RESOURCES ──
  * Two of the four are about `OutletRestockItems`, not about this resource's own rows, and
  * `resourceRecord` only carries `OutletDeliveries`. The rows come from the Layer 2 accessor
- * (`useDeliveryRows`), NOT from `useRecord` — a modifier runs outside any component setup,
- * and `useRecord` calls `useQuasar()`, which needs one. That distinction is the whole reason
+ * (`useDeliveryRows`), NOT from `usePageRecord` — a modifier runs outside any component setup,
+ * and `usePageRecord` calls `useQuasar()`, which needs one. That distinction is the whole reason
  * the accessor exists; see its docblock. The rows are read here and handed straight to
  * Layer 2's predicate, so no eligibility is decided locally.
  *

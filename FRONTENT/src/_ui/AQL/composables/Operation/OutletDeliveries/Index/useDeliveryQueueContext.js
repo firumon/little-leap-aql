@@ -1,5 +1,5 @@
 import { computed } from 'vue'
-import { useRecord } from 'src/composables/resources/useRecord'
+import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useResourceNav } from 'src/composables/resources/useResourceNav'
 import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 import { useOutletResource } from 'src/_resource/Master/Outlets/composables/useOutletResource'
@@ -19,7 +19,7 @@ import {
  * which no other page resolves.
  *
  * It calls no `inject()`. It exists because §6 admits no exception for "generic reads that
- * carry no resource content": `useRecord` and `useResourceNav` are Core Composables and a
+ * carry no resource content": `usePageRecord` and `useResourceNav` are Core Composables and a
  * `.vue` file may not import one directly. This relay is where those imports legally live.
  *
  * ── WHAT THIS VIEW ACTUALLY SHOWS ──
@@ -35,12 +35,12 @@ export function useDeliveryQueueContext () {
   const nav = useResourceNav()
   const ui = useAQLConfig()
 
-  const restockItems = useRecord('OutletRestockItems')
-  const restocks = useRecord('OutletRestocks')
-  const deliveries = useRecord('OutletDeliveries')
-  const outlets = useRecord('Outlets')
-  const skus = useRecord('SKUs')
-  const products = useRecord('Products')
+  const restockItems = usePageRecord('OutletRestockItems')
+  const restocks = usePageRecord('OutletRestocks')
+  const deliveries = usePageRecord('OutletDeliveries')
+  const outlets = usePageRecord('Outlets')
+  const skus = usePageRecord('SKUs')
+  const products = usePageRecord('Products')
 
   const { getOutlet } = useOutletResource()
   const { skuLabelText } = useSkuResource()

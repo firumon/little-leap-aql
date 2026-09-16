@@ -7,7 +7,7 @@
  * places that need them most — Index widgets, `PageAction` handlers, `ResourceAction` gates
  * — are JS modifiers, which run OUTSIDE any component `setup()`.
  *
- * `useRecord()` cannot serve them: it calls `useQuasar()`, `useResourceConfig()` and
+ * `usePageRecord()` cannot serve them: it calls `useQuasar()`, `useResourceConfig()` and
  * `useRouteConfig()`, all of which require an active component instance or the current
  * route. Calling it from a modifier is a runtime failure a build will never catch, which is
  * exactly why no pre-existing modifier in this codebase does. This module is the sanctioned
@@ -28,7 +28,7 @@
  * relays.
  */
 
-import { useDataStore } from 'src/stores/data'
+import { useRecord } from 'src/composables/resources/useRecord'
 
 const RESTOCK_ITEMS = 'OutletRestockItems'
 const RESTOCKS = 'OutletRestocks'
@@ -42,17 +42,17 @@ const text = (value) => (value == null ? '' : String(value).trim())
 
 /** All `OutletRestockItems` rows currently in cache. Safe outside setup. */
 export function restockItemRows () {
-  return useDataStore().getRecords(RESTOCK_ITEMS) || []
+  return useRecord().rows(RESTOCK_ITEMS) || []
 }
 
 /** All `OutletRestocks` rows currently in cache. Safe outside setup. */
 export function restockRows () {
-  return useDataStore().getRecords(RESTOCKS) || []
+  return useRecord().rows(RESTOCKS) || []
 }
 
 /** All `OutletDeliveries` rows currently in cache. Safe outside setup. */
 export function deliveryRows () {
-  return useDataStore().getRecords(DELIVERIES) || []
+  return useRecord().rows(DELIVERIES) || []
 }
 
 /**

@@ -31,8 +31,8 @@ import { canDeliver } from 'src/_resource/Operation/OutletDeliveries/composables
  * The builder needs the full item and restock sets to group lines by parent, resolve each
  * line's outlet, and answer "is anything still outstanding on this request?" — a question
  * about rows NOT being delivered, which a builder handed only the selection cannot answer.
- * They come from the Layer 2 accessor (`useDeliveryRows`), NOT from `useRecord`: a modifier
- * runs outside any component setup and `useRecord` calls `useQuasar()`, which needs one. No
+ * They come from the Layer 2 accessor (`useDeliveryRows`), NOT from `usePageRecord`: a modifier
+ * runs outside any component setup and `usePageRecord` calls `useQuasar()`, which needs one. No
  * rule is decided locally; the rows are read and handed straight to Layer 2.
  */
 const NODE = 'OutletDeliveries'

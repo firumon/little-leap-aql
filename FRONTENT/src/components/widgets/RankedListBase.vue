@@ -11,7 +11,7 @@
 
     <div
       v-else
-      class="column full-width full-height justify-around"
+      class="column full-width full-height"
     >
       <div
         v-for="(it, idx) in visibleItems"

@@ -32,8 +32,7 @@
  */
 
 import { computed } from 'vue'
-import { useDataStore } from 'src/stores/data'
-import { defineSharedComposable } from 'src/utils/appHelpers'
+import { useRecord } from 'src/composables/resources/useRecord'
 
 const RESOURCE_NAME = 'OutletStorages'
 
@@ -133,8 +132,8 @@ export function stockOf (outletCode, sku, index) {
  * ONCE PER APP (CORE_ARCHITECTURE_RULES §6): the pass over the storage sheet runs one time
  * per data change, and every wizard, card and metric reads the same memoized indexes.
  */
-const shared = defineSharedComposable((dataStore) => {
-  const rawStorages = computed(() => (dataStore.getRecords(RESOURCE_NAME) || []).map(asRow))
+const build = (recordSource) => {
+  const rawStorages = computed(() => (recordSource.rows(RESOURCE_NAME) || []).map(asRow))
 
   const index = computed(() => indexOutletStock(rawStorages.value))
 
@@ -169,8 +168,9 @@ const shared = defineSharedComposable((dataStore) => {
       .filter((row) => num(row.Quantity) !== 0)
       .sort((a, b) => num(b.Quantity) - num(a.Quantity))
   }
-})
+}
 
 export function useOutletStorageResource () {
-  return shared(useDataStore())
+  const recordSource = useRecord()
+  return recordSource.remember('useOutletStorageResource', () => build(recordSource))
 }

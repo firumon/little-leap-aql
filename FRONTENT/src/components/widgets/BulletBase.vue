@@ -147,7 +147,7 @@
 <script setup>
 import { computed } from 'vue'
 import Renderable from 'src/components/abstract/Renderable.js'
-import { useWidgetTier } from 'src/composables/_widgets/useWidgetTier.js'
+import { useWidgetTier } from 'src/composables/widgets/useWidgetTier.js'
 import { resolveCssColor } from 'src/utils/colorHelpers.js'
 import { formatNumber, formatShort } from 'src/utils/widgetGeometry.js'
 

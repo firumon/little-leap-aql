@@ -66,7 +66,7 @@ export function signed (n) {
 }
 
 // Axis ticks on nice round numbers. Never the data range cut into equal parts.
-// See DASHBOARD_WIDGET_CONTRACT.md part 9.4.
+// See components/widgets/CONTRACT.md part 9.4.
 export function niceScale (min, max, wantedLines = 4) {
   let lo = Number(min) || 0
   let hi = Number(max) || 0

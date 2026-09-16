@@ -55,7 +55,7 @@
 <script setup>
 import { computed } from 'vue'
 import Renderable from 'src/components/abstract/Renderable.js'
-import { useWidgetTier } from 'src/composables/_widgets/useWidgetTier.js'
+import { useWidgetTier } from 'src/composables/widgets/useWidgetTier.js'
 import {
   signed,
   formatNumber,

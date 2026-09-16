@@ -71,8 +71,8 @@ Expects a single value and a maximum number:
 | Preset | Fixed props | Aspect | Min height |
 | --- | --- | --- | --- |
 | `SpeedoGauge` | `sweep="half"`, `showNeedle=true` | 2 | 80px |
-| `HorseshoeGauge` | `sweep="horseshoe"`, `showNeedle=false` | 1.33 | 80px |
-| `RingGauge` | `sweep="full"`, `showNeedle=false` | 1 | 80px |
+| `HorseshoeGauge` | `sweep="horseshoe"`, `thickness="medium"`, `showNeedle=false` | 1.33 | 90px |
+| `RingGauge` | `sweep="full"`, `thickness="thin"`, `showNeedle=false` | 1 | 90px |
 
 ### 6. Slots
 - `#empty`: Custom empty state replacement.
@@ -103,10 +103,9 @@ Pick ProgressBase when you have a linear target, like monthly sales goal reached
 | --- | --- | --- | --- | --- |
 | `value` | Number \| String | `null` | Any number | Current filled value |
 | `max` | Number \| String | `null` | Number > 0 | Total goal or capacity |
-| `styleVariant` | String | `'round'` | `'round'`, `'flat'`, `'segmented'` | End cap and bar styling |
 | `orientation` | String | `'horizontal'` | `'horizontal'`, `'vertical'` | Bar direction |
+| `shape` | String | `'round'` | `'round'`, `'flat'`, `'segmented'` | End cap and bar styling |
 | `showTrack` | Boolean | `true` | `true`, `false` | Shows quiet background track |
-| `showValueText` | Boolean | `true` | `true`, `false` | Shows percentage text |
 | `color` | String | `'primary'` | Any brand color name | Fill bar color |
 | `emptyText` | String \| Function \| Object | `'Nothing to show'` | Text or component | Empty state text |
 | `emptyIcon` | String | `'trending_up'` | Icon name | Empty state icon |
@@ -131,8 +130,8 @@ Expects a single value and maximum:
 
 | Preset | Fixed props | Aspect | Min height |
 | --- | --- | --- | --- |
-| `LinearProgress` | `styleVariant="round"`, `orientation="horizontal"` | 6 | 24px |
-| `StepProgress` | `styleVariant="segmented"`, `orientation="horizontal"` | 6 | 24px |
+| `LinearProgress` | `orientation="horizontal"`, `shape="round"`, `showTrack=true` | 6 | 64px |
+| `StepProgress` | `orientation="horizontal"`, `shape="segmented"`, `showTrack=true` | 6 | 64px |
 | `TankLevel` | `styleVariant="flat"`, `orientation="vertical"` | 0.25 | 80px |
 
 ### 6. Slots
@@ -192,8 +191,8 @@ Expects a value, target, optional max, and zones:
 
 | Preset | Fixed props | Aspect | Min height |
 | --- | --- | --- | --- |
-| `QuotaBullet` | `orientation="horizontal"`, zones enabled | 4 | 36px |
-| `DeliveryBullet` | `orientation="horizontal"`, plain zones | 5 | 32px |
+| `QuotaBullet` | `orientation="horizontal"`, `zoneStyle="muted"`, `markerShape="line"` | 5 | 64px |
+| `DeliveryBullet` | `orientation="vertical"`, `zoneStyle="contrast"`, `markerShape="triangle"` | 0.25 | 100px |
 
 ### 6. Slots
 - `#empty`: Custom empty state replacement.
@@ -252,7 +251,7 @@ Expects a value and a maximum:
 | Preset | Fixed props | Aspect | Min height |
 | --- | --- | --- | --- |
 | `PercentWaffle` | `gridSize="10x10"`, `blockShape="square"` | 1 | 80px |
-| `VisitDotGrid` | `gridSize="5x5"`, `blockShape="circle"` | 1 | 64px |
+| `VisitDotGrid` | `gridSize="5x5"`, `blockShape="circle"`, `fillDirection="left-right"` | 1 | 80px |
 
 ### 6. Slots
 - `#empty`: Custom empty state replacement.
@@ -281,13 +280,14 @@ MetricBase is pure HTML. Pick it when you want a fast, high-impact key number wi
 
 | Prop | Type | Default | Allowed values | What it does |
 | --- | --- | --- | --- | --- |
-| `value` | Number \| String | `null` | Any number | Main big number |
+| `value` | Number \| String \| Function \| Object | `null` | Any number or renderable | Main big number |
 | `compare` | Number \| String | `null` | Any number | Number from prior period |
-| `format` | String | `'integer'` | `'integer'`, `'currency'`, `'percent'` | Number formatting style |
-| `currency` | String | `'AED'` | Any currency code | Currency code prefix |
-| `showDelta` | Boolean | `true` | `true`, `false` | Shows change percentage badge |
-| `direction` | String | `'normal'` | `'normal'`, `'inverse'` | If inverse, down is green |
-| `caption` | String \| Function \| Object | `''` | Text or component | Subtitle text |
+| `deltaLabel` | String \| Function \| Object | `null` | Text or component | Custom delta text or component |
+| `caption` | String \| Function \| Object | `''` | Text or component | Subtitle text below number |
+| `arrowStyle` | String | `'angled'` | `'angled'`, `'vertical'`, `'none'` | Direction arrow style |
+| `badgeShape` | String | `'pill'` | `'pill'`, `'ghost'` | Change badge container style |
+| `sentiment` | String | `'auto'` | `'auto'`, `'neutral'` | Auto sets color by direction |
+| `invert` | Boolean | `false` | `true`, `false` | If true, down is good (e.g. returns, costs) |
 | `emptyText` | String \| Function \| Object | `'Nothing to show'` | Text or component | Empty state text |
 | `emptyIcon` | String | `'pin'` | Icon name | Empty state icon |
 | `emptyIconColor` | String | `'grey-5'` | Color name | Empty icon color |
@@ -312,9 +312,9 @@ Expects a value, optional compare value, and caption:
 
 | Preset | Fixed props | Aspect | Min height |
 | --- | --- | --- | --- |
-| `MetricDelta` | `showDelta=true`, `direction="normal"` | 1.6 | 60px |
-| `MetricDeltaInverse` | `showDelta=true`, `direction="inverse"` | 1.6 | 60px |
-| `MetricPlain` | `showDelta=false` | 2 | 48px |
+| `MetricDelta` | `sentiment="auto"`, `invert=false` | ? | 48px |
+| `MetricDeltaInverse` | `sentiment="auto"`, `invert=true` | ? | 48px |
+| `MetricPlain` | `arrowStyle="none"`, `sentiment="neutral"` | ? | 48px |
 
 ### 6. Slots
 - `#value`: Replace the main number.
@@ -338,6 +338,8 @@ Expects a value, optional compare value, and caption:
 ## BarBase
 
 ### 1. What it draws and when to pick it
+**This base replaces three.** A simple bar chart is a stack of one, so grouped and stacked are a `mode`, not separate widgets.
+
 It draws vertical columns or horizontal bars. It supports single series, grouped bars, stacked bars, and 100% share bars.
 
 **When to pick it over RankedListBase**:
@@ -396,12 +398,12 @@ Grouped or stacked mode uses `series`:
 | --- | --- | --- | --- |
 | `ColumnBar` | `orientation="vertical"`, `mode="single"` | 1.78 | 120px |
 | `HorizontalRankBar` | `orientation="horizontal"`, `mode="single"` | 1.33 | 120px |
-| `CompactBar` | `orientation="horizontal"`, `mode="single"` | 2.5 | 60px |
+| `CompactBar` | `orientation="auto"`, `mode="single"`, `barWidth="slim"`, `showValueLabels=false` | 1.78 | 80px |
 | `GroupedColumn` | `orientation="vertical"`, `mode="grouped"` | 1.78 | 130px |
 | `GroupedBar` | `orientation="horizontal"`, `mode="grouped"` | 1.33 | 130px |
-| `StackedColumn` | `orientation="vertical"`, `mode="stacked"` | 1.78 | 130px |
-| `StackedBar` | `orientation="horizontal"`, `mode="stacked"` | 1.33 | 130px |
-| `Percent100Bar` | `orientation="horizontal"`, `mode="percent100"` | 1.33 | 130px |
+| `StackedColumn` | `orientation="vertical"`, `mode="stacked"`, `minTier="compact"` | 1.78 | 120px |
+| `StackedBar` | `orientation="horizontal"`, `mode="stacked"`, `minTier="compact"` | 1.33 | 120px |
+| `Percent100Bar` | `orientation="horizontal"`, `mode="percent100"`, `barWidth="thick"`, `minTier="compact"` | 1.33 | 120px |
 
 ### 6. Slots
 - `#empty`: Custom empty state replacement.
@@ -460,9 +462,9 @@ Expects an array of items with values:
 
 | Preset | Fixed props | Aspect | Min height |
 | --- | --- | --- | --- |
-| `ShareStrip` | `orientation="horizontal"`, `splitStyle="flush"` | 3 | 64px |
-| `StockStatusStrip` | `orientation="horizontal"`, `splitStyle="gap"` | 3 | 64px |
-| `VerticalShareStrip` | `orientation="vertical"`, `splitStyle="gap"` | 0.4 | 120px |
+| `ShareStrip` | `orientation="horizontal"`, `splitStyle="continuous"`, `barHeight="thin"` | 6 | 64px |
+| `StockStatusStrip` | `orientation="horizontal"`, `splitStyle="gap"`, `barHeight="thick"` | 6 | 64px |
+| `VerticalShareStrip` | `orientation="vertical"`, `splitStyle="continuous"`, `barHeight="thick"` | 0.25 | 90px |
 
 ### 6. Slots
 - `#empty`: Custom empty state replacement.
@@ -522,9 +524,9 @@ Expects an array of items with values:
 
 | Preset | Fixed props | Aspect | Min height |
 | --- | --- | --- | --- |
-| `RingDonut` | `holeSize="medium"`, `sweepAngle="full"` | 1.33 | 100px |
-| `SolidPie` | `holeSize="none"`, `sweepAngle="full"` | 1.33 | 100px |
-| `HalfDonut` | `holeSize="medium"`, `sweepAngle="half"` | 1.6 | 80px |
+| `RingDonut` | `holeSize="medium"`, `sweepAngle="full"` | 1 | 90px |
+| `SolidPie` | `holeSize="none"`, `sweepAngle="full"`, `sliceGap="none"` | 1 | 90px |
+| `HalfDonut` | `holeSize="large"`, `sweepAngle="half"` | 2 | 70px |
 
 ### 6. Slots
 - `#empty`: Custom empty state replacement.
@@ -584,8 +586,8 @@ Expects up to 5 items, each with value and max:
 
 | Preset | Fixed props | Aspect | Min height |
 | --- | --- | --- | --- |
-| `ActivityRings` | `sweep="full"`, `capStyle="round"` | 1.2 | 100px |
-| `TargetArches` | `sweep="horseshoe"`, `capStyle="round"` | 1.2 | 100px |
+| `ActivityRings` | `capStyle="round"`, `sweep="full"`, `trackBackground=true` | 1 | 110px |
+| `TargetArches` | `capStyle="flat"`, `sweep="horseshoe"`, `trackBackground=true` | 1.33 | 110px |
 
 ### 6. Slots
 - `#empty`: Custom empty state replacement.
@@ -645,9 +647,9 @@ Expects an ordered list of stages:
 
 | Preset | Fixed props | Aspect | Min height |
 | --- | --- | --- | --- |
-| `SalesPipelineFunnel` | `direction="vertical"`, `styleVariant="smooth"` | 1.33 | 120px |
-| `ApprovalFunnel` | `direction="vertical"`, `styleVariant="stepped"` | 1.33 | 120px |
-| `HorizontalFunnel` | `direction="horizontal"`, `styleVariant="stepped"` | 2.5 | 80px |
+| `SalesPipelineFunnel` | `direction="vertical"`, `shape="smooth"`, `neckStyle="pinch"`, `minTier="compact"` | 0.75 | 120px |
+| `ApprovalFunnel` | `direction="vertical"`, `shape="stepped"`, `neckStyle="straight"`, `minTier="compact"` | 0.75 | 120px |
+| `HorizontalFunnel` | `direction="horizontal"`, `shape="smooth"`, `neckStyle="straight"`, `minTier="compact"` | 2 | 100px |
 
 ### 6. Slots
 - `#empty`: Custom empty state replacement.
@@ -706,8 +708,8 @@ Expects ordered age brackets:
 
 | Preset | Fixed props | Aspect | Min height |
 | --- | --- | --- | --- |
-| `DebtAgeing` | `bucketStyle="bar"` | 2.5 | 64px |
-| `OldStockAgeing` | `bucketStyle="blocks"` | 2.5 | 64px |
+| `DebtAgeing` | `bucketStyle="blocks"`, `dangerTint="escalating"`, `showBaseline=true` | 1.78 | 100px |
+| `OldStockAgeing` | `bucketStyle="staircase"`, `dangerTint="last-only"`, `showBaseline=false` | 1.78 | 100px |
 
 ### 6. Slots
 - `#empty`: Custom empty state replacement.
@@ -730,6 +732,15 @@ Expects ordered age brackets:
 It draws a neat HTML list of top items. Each row has a rank number badge, item name, subtitle caption, value number, and a soft tinted background bar.
 
 **When to pick it over BarBase**:
+
+**How it differs from a horizontal bar chart:**
+
+| Feature | RankedList | BarBase horizontal |
+|---|---|---|
+| Rank badge | **Yes** | No |
+| Caption line under each row | **Yes** | No |
+| Order | Always biggest first | Whatever order the data comes in |
+
 RankedListBase is built with pure HTML. Pick it when you have long product names, need subtitle captions, or want to put custom chips and badges into rows. Pick BarBase when you need a strict SVG chart with a numeric axis.
 
 ### 2. Full prop table
@@ -845,7 +856,7 @@ For a matrix (like 7 days x 4 shifts):
 
 | Preset | Fixed props | Aspect | Min height |
 | --- | --- | --- | --- |
-| `HourHeatStrip` | `layout="strip"` | 4 | 40px |
+| `HourHeatStrip` | `layout="strip"`, `cellRound="none"`, `cellGap="tight"` | 5 | 40px |
 | `WeekRouteMatrix` | `layout="matrix"` | 1.78 | 120px |
 
 ### 6. Slots
@@ -866,6 +877,8 @@ For a matrix (like 7 days x 4 shifts):
 ## LineBase
 
 ### 1. What it draws and when to pick it
+**This base replaces three.** Line, area, and sparkline are one picture with different switches.
+
 It draws a line or filled area chart plotting readings along a calendar date scale. It uses round Y-axis tick marks.
 
 **When to pick it over other widgets**:

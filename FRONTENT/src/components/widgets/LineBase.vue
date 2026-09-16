@@ -142,9 +142,9 @@
 <script setup>
 import { computed } from 'vue'
 import Renderable from 'src/components/abstract/Renderable.js'
-import { useWidgetTier } from 'src/composables/_widgets/useWidgetTier.js'
-import { useWidgetPalette } from 'src/composables/_widgets/useWidgetPalette.js'
-import { useLineLayout } from 'src/composables/_widgets/useLineLayout.js'
+import { useWidgetTier } from 'src/composables/widgets/useWidgetTier.js'
+import { useWidgetPalette } from 'src/composables/widgets/useWidgetPalette.js'
+import { useLineLayout } from 'src/composables/widgets/useLineLayout.js'
 
 defineOptions({
   inheritAttrs: false

@@ -42,7 +42,7 @@ function showManageUsersDialog() {
   showDialog('manageUsers', 'Manage Users', 620, 800, baseDialogData());
 }
 function showManageDesignationsDialog() {
-  showDialog('manageDesignations', 'Manage Designations', 500, 520, baseDialogData());
+  showDialog('manageDesignations', 'Manage Designations', 520, 640, baseDialogData());
 }
 function showManageAccessRegionsDialog() {
   showDialog('manageAccessRegions', 'Manage Access Regions', 520, 500, baseDialogData());
@@ -172,6 +172,8 @@ function handleCreateDesignation(form) {
       Name: name,
       HierarchyLevel: Number(form.hierarchyLevel || 0) || '',
       Status: txt(form.status || 'Active'),
+      AccessRegion: txt(form.accessRegion),
+      DashboardScoreCutoff: Number(form.dashboardScoreCutoff || 0) || '',
       Description: txt(form.description)
     }));
     return ok('Designation created.');
@@ -187,6 +189,8 @@ function handleUpdateDesignation(form) {
     put(ctx.sheet, row, ctx.idx.Name, txt(form.name));
     put(ctx.sheet, row, ctx.idx.HierarchyLevel, Number(form.hierarchyLevel || 0) || '');
     put(ctx.sheet, row, ctx.idx.Status, txt(form.status || 'Active'));
+    put(ctx.sheet, row, ctx.idx.AccessRegion, txt(form.accessRegion));
+    put(ctx.sheet, row, ctx.idx.DashboardScoreCutoff, Number(form.dashboardScoreCutoff || 0) || '');
     put(ctx.sheet, row, ctx.idx.Description, txt(form.description));
     return ok('Designation updated.');
   } catch (e) { return fail(e); }
@@ -335,7 +339,7 @@ function getUserDetails(userId) {
 function getDesignationDetails(designationId) {
   const ctx = ctxOf(CONFIG.SHEETS.DESIGNATIONS), row = findRow(ctx.sheet, ctx.idx.DesignationID, txt(designationId), 2, true);
   if (row === -1) return null;
-  return { designationId: get(ctx.sheet, row, ctx.idx.DesignationID), name: get(ctx.sheet, row, ctx.idx.Name), hierarchyLevel: get(ctx.sheet, row, ctx.idx.HierarchyLevel), status: get(ctx.sheet, row, ctx.idx.Status), description: get(ctx.sheet, row, ctx.idx.Description) };
+  return { designationId: get(ctx.sheet, row, ctx.idx.DesignationID), name: get(ctx.sheet, row, ctx.idx.Name), hierarchyLevel: get(ctx.sheet, row, ctx.idx.HierarchyLevel), status: get(ctx.sheet, row, ctx.idx.Status), accessRegion: get(ctx.sheet, row, ctx.idx.AccessRegion), dashboardScoreCutoff: get(ctx.sheet, row, ctx.idx.DashboardScoreCutoff), description: get(ctx.sheet, row, ctx.idx.Description) };
 }
 function getAccessRegionDetails(code) {
   const ctx = ctxOf(CONFIG.SHEETS.ACCESS_REGIONS), row = findRow(ctx.sheet, ctx.idx.Code, normalizeAccessRegionInputCode(code), 2, true);
@@ -602,6 +606,9 @@ function buildDialogBody(action, data) {
            '<div class="g"><label>Name</label><input name="name" required></div>' +
            '<div class="g"><label>HierarchyLevel</label><input name="hierarchyLevel" type="number"></div>' +
            '<div class="g"><label>Status</label><select name="status"><option>Active</option><option>Inactive</option></select></div>' +
+           '<div class="g"><label>Access Region</label><select name="accessRegion">' + apro + '</select></div>' +
+           '<div class="g"><label>Dashboard Score Cutoff</label><input name="dashboardScoreCutoff" type="number" min="0" step="1" placeholder="0"></div>' +
+           '<div class="small">Dashboard items scoring below this number are hidden from this designation. 0 shows everything.</div>' +
            '<div class="g"><label>Description</label><textarea name="description"></textarea></div>' +
            '<button id="submitBtn">Create Designation</button></form>';
   }

@@ -114,13 +114,15 @@ function setupAppSheets() {
     },
     {
       name: CONFIG.SHEETS.DESIGNATIONS,
-      headers: ['DesignationID', 'Name', 'HierarchyLevel', 'Status', 'Description'],
+      headers: ['DesignationID', 'Name', 'HierarchyLevel', 'Status', 'AccessRegion', 'DashboardScoreCutoff', 'Description'],
       autoIdFormula: null,
       columnWidths: {
         DesignationID: 120,
         Name: 180,
         HierarchyLevel: 120,
         Status: 100,
+        AccessRegion: 160,
+        DashboardScoreCutoff: 170,
         Description: 320
       }
     },

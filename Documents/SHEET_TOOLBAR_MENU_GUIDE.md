@@ -100,13 +100,21 @@ Required:
 Optional:
 - `HierarchyLevel`
 - `Status` (`Active` / `Inactive`)
+- `Access Region` — the region scope for this designation, picked from the Access Regions list
+- `Dashboard Score Cutoff` — a number. Dashboard items scoring below it are hidden from this
+  designation. Blank or `0` shows everything
 - `Description`
 
 ### 4.2 Update Designation
 Flow:
 1. Select designation.
-2. Edit fields.
+2. Edit fields. The form prefills from the sheet, including `Access Region` and
+   `Dashboard Score Cutoff`.
 3. Submit.
+
+> If the two newest fields are missing from the form, the sheet does not have their columns
+> yet. Run `⚙️ Setup & Refactor > Refactor APP Sheets` once. It adds missing columns and
+> keeps existing data.
 
 ## 5. Access Regions (`AQL 🚀 > 🌍 Access Regions`)
 

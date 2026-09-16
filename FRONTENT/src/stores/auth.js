@@ -54,6 +54,8 @@ export const useAuthStore = defineStore('auth', () => {
     return user.value?.role || 'User'
   })
   const userDesignation = computed(() => user.value?.designation?.name || '')
+  const userDesignationAccessRegion = computed(() => user.value?.designation?.accessRegion || '')
+  const dashboardScoreCutoff = computed(() => Number(user.value?.designation?.dashboardScoreCutoff) || 0)
   const userRoles = computed(() => {
     if (Array.isArray(user.value?.roles) && user.value.roles.length) {
       return user.value.roles.map((entry) => entry?.name || '').filter(Boolean)
@@ -199,6 +201,8 @@ export const useAuthStore = defineStore('auth', () => {
     userRole,
     userRoles,
     userDesignation,
+    userDesignationAccessRegion,
+    dashboardScoreCutoff,
     userAccessRegion,
     authorizedResources,
     appConfigMap,

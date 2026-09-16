@@ -63,7 +63,7 @@ Shape built by `buildAuthUserPayload()` at `GAS/auth.gs:205`:
   "email":        "string",
   "avatar":       "string",
   "accessRegion": { "code": "string", "isUniverse": true, "accessibleCodes": [], "accessibleRegions": [] },
-  "designation":  { "id": "string", "name": "string" },
+  "designation":  { "id": "string", "name": "string", "hierarchyLevel": "number|null", "accessRegion": "string", "dashboardScoreCutoff": "number" },
   "roles":        [{ "id": "string", "name": "string" }],
   "role":         "string"
 }
@@ -76,7 +76,7 @@ Shape built by `buildAuthUserPayload()` at `GAS/auth.gs:205`:
 | `email` | `APP.Users.Email` | `GAS/auth.gs:209` |
 | `avatar` | `APP.Users.Avatar` | `GAS/auth.gs:210` |
 | `accessRegion` | `APP.Users.AccessRegion` + `APP.AccessRegions` | `GAS/auth.gs:211` → `buildUserAccessRegionPayload()` in `GAS/accessRegion.gs` |
-| `designation` | `APP.Designations` via `APP.Users.DesignationID` | `GAS/auth.gs:212` → `getDesignationById()` in `GAS/auth.gs` |
+| `designation` | `APP.Designations` via `APP.Users.DesignationID` | `GAS/auth.gs:212` → `getDesignationById()` in `GAS/auth.gs`. Carries `id`, `name`, `hierarchyLevel`, `accessRegion`, `dashboardScoreCutoff`. Read in the app through `stores/auth.js` as `userDesignation`, `userDesignationAccessRegion` and `dashboardScoreCutoff` |
 | `roles` | `APP.Roles` via `APP.Users.Roles` (CSV of RoleIDs) | `GAS/auth.gs:213` → `getRoleNamesByIds()` in `GAS/auth.gs` |
 | `role` | `APP.Users.Role` (legacy primary role field) | `GAS/auth.gs:214` → `getPrimaryRoleName()` in `GAS/auth.gs` |
 

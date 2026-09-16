@@ -23,6 +23,12 @@ This document describes the APP spreadsheet as the control plane for authenticat
 
 ### Designations
 - hierarchy/authority model
+- columns: `DesignationID`, `Name`, `HierarchyLevel`, `Status`, `AccessRegion`, `DashboardScoreCutoff`, `Description`
+- `AccessRegion` holds the region scope at designation level. Access region was previously
+  held at role level; the column exists and is written by the menu, but nothing reads it yet
+- `DashboardScoreCutoff` is a number. A dashboard item scoring below it is not shown to this
+  designation. Blank or `0` shows everything
+- both columns reach the app on the login payload under `user.designation`
 
 ### Roles
 - functional role definitions

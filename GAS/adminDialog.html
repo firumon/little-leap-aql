@@ -428,6 +428,10 @@ function onManageDesignationsChange(designationId) {
     if (hlInput) hlInput.value = "";
     var statInput = document.querySelector("[name='status']");
     if (statInput) statInput.value = "Active";
+    var arInput = document.querySelector("[name='accessRegion']");
+    if (arInput) arInput.value = "";
+    var cutoffInput = document.querySelector("[name='dashboardScoreCutoff']");
+    if (cutoffInput) cutoffInput.value = "";
     var descInput = document.querySelector("[name='description']");
     if (descInput) descInput.value = "";
     if (btn) btn.innerText = "Create Designation";

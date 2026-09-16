@@ -608,7 +608,13 @@ function getDesignationsCache() {
           name: (row[idx.Name] || '').toString().trim(),
           hierarchyLevel: idx.HierarchyLevel === undefined
             ? null
-            : Number(row[idx.HierarchyLevel] || 0) || null
+            : Number(row[idx.HierarchyLevel] || 0) || null,
+          accessRegion: idx.AccessRegion === undefined
+            ? ''
+            : (row[idx.AccessRegion] || '').toString().trim(),
+          dashboardScoreCutoff: idx.DashboardScoreCutoff === undefined
+            ? 0
+            : Number(row[idx.DashboardScoreCutoff] || 0) || 0
         };
       }
     }
@@ -637,13 +643,13 @@ function clearDesignationsCache() {
 function getDesignationById(designationId) {
   const normalizedId = (designationId || '').toString().trim();
   if (!normalizedId) {
-    return { id: '', name: '', hierarchyLevel: null };
+    return { id: '', name: '', hierarchyLevel: null, accessRegion: '', dashboardScoreCutoff: 0 };
   }
 
   var cache = getDesignationsCache();
   var designation = cache.byId[normalizedId];
   if (!designation) {
-    return { id: normalizedId, name: '', hierarchyLevel: null };
+    return { id: normalizedId, name: '', hierarchyLevel: null, accessRegion: '', dashboardScoreCutoff: 0 };
   }
 
   return designation;

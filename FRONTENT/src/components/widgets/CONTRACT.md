@@ -14,9 +14,14 @@
 
 A widget draws **one picture**. That is all.
 
-It does not draw the card. It does not draw the title, the caption, or the control inputs. The engine owns those. See engine spec part 7.5.
+It does not draw the card. It does not draw the title, the caption, or the control inputs. The frame owns those.
 
-A widget lives at `FRONTENT/src/components/widgets/<Name>.vue`.
+The widget system consists of:
+- `FRONTENT/src/components/widgets/Widget.vue` — the single picture component.
+- `FRONTENT/src/components/widgets/abstract/<Base>.vue` — the 15 base drawing components.
+- `FRONTENT/src/components/widgets/<PresetName>.js` — preset data files with base reference, fixed props, and height hints.
+
+There is no `_ui` lookup for widgets. A tenant who wants a different card layout customizes the frame.
 
 ---
 
@@ -27,7 +32,7 @@ These are not new. They already bind every reusable component in AQL. A widget i
 | Rule | Where it comes from |
 |---|---|
 | **No `<style>` block. Ever.** Widget CSS goes to `src/css/widgets.scss` as a named class. | `CORE_ARCHITECTURE_RULES.md` §7 |
-| **`aspect` and `minHeight` go in `defineOptions`** on the preset, so the engine reads them off the component. | this contract, part 9.1 |
+| **`aspect`, `minHeight`, and `rowHeight` go in the preset `.js`** file, so the engine and frame can read them. | this contract, part 9.1 |
 | **Max ~400 lines per file.** Split if it grows. | §9 |
 | **Quasar first.** Custom CSS only when Quasar cannot do it. | §7 |
 | **`inheritAttrs: false`** on any component with a DOM root. | `renderable_contract.md` §3.5 |
@@ -87,6 +92,7 @@ This is what lets one `LineBase` serve a sparkline, an area chart, and a multi-l
 | Prop | Type | Default | Meaning |
 |---|---|---|---|
 | `color` | String | `'primary'` | A colour **role**, not a hex. See part 5. |
+| `valueFormat` | Function | `null` | Formats displayed item values and value-axis ticks. Defaults to standard number formatting when null. |
 | `orientation` | String | `'auto'` | `'horizontal'`, `'vertical'`, `'auto'` |
 | `dense` | Boolean | `false` | Tighter drawing |
 | `thickness` | String | — | `'thin'`, `'medium'`, `'thick'` |
@@ -131,7 +137,7 @@ That splits the set in two.
 **HTML widgets — Metric, RankedList, Timeline.** These are text and rows. Nothing in them needs SVG. They are built as plain HTML, and every caller-facing cell goes through `Renderable`:
 
 - Metric: the value, the delta label, the caption
-- RankedList: the rank badge, the name, the value, the caption
+- RankedList: the rank badge, the name, the value, the caption. Supports `valueFormat` (function to format the right-hand value label) and `captionPlacement` (`'below'` or `'inline'`). When `barStyle="capsule"`, inner content has horizontal padding so text does not touch the capsule ends.
 - Timeline: the label, the date, the caption, the marker
 
 So a tenant can drop a chip beside a row, or an icon in place of a dot, with a one-line `.js` modifier.
@@ -257,7 +263,9 @@ These come up in real data. Every widget answers them the same way.
 | Case | What the widget does |
 |---|---|
 | `max` is 0 or missing | **Empty.** Not 0%. A gauge, progress bar or waffle cannot divide by zero, and a full-looking ring on no data is a lie. |
-| `compare` is 0 or missing | Show the number with a plain **"new"** badge. No arrow, no up or down colour. A change from zero is not a percentage. |
+| `compare` is missing (`null`/`undefined`) | No badge at all. |
+| `value` 0 and `compare` 0 | No badge at all. |
+| `compare` is 0 and `value` > 0 | Show the number with a plain **"NEW"** badge. No arrow, no up or down colour. A change from zero is not a percentage. |
 | A part has value 0 | Keep its place in the legend, draw nothing. Do not drop it — a missing row reads as a bug. |
 | One part is 95% of the whole | Draw it true. Let small parts collapse to a sliver, and move their labels out to a leader line or the legend. Never fake a minimum slice size. |
 | Values go below zero | The baseline moves off the bottom. Bars and areas draw both ways from it. Only `BarBase` and `LineBase` handle this — a donut or funnel with negative parts is meaningless, so it is **empty**. See 6.2 for what stacking does. |
@@ -328,68 +336,82 @@ It is never hidden. The tile still says something true.
 ---
 
 ## 8. Base and preset
-
-One base holds the drawing. Presets are thin wrappers.
-
+ 
+One base holds the SVG/HTML drawing in `abstract/<Base>.vue`. Presets are thin data descriptors in `<PresetName>.js`.
+ 
 **Prop or new name:**
-
+ 
 - A **prop** when the data stays the same and only the drawing changes.
 - A **new name** when the data shape changes, or when the author thinks of it as a different thing.
-
-**A preset holds no drawing code.** It calls the base with fixed props and passes every slot straight through. If a preset starts drawing its own SVG, the base is wrong — fix the base.
-
-```html
-<!-- ColumnChart.vue — the whole file -->
-<template>
-  <BarsBase v-bind="$attrs" orientation="column">
-    <template v-for="(_, name) in $slots" #[name]="slotProps">
-      <slot :name="name" v-bind="slotProps || {}" />
-    </template>
-  </BarsBase>
-</template>
+ 
+**A preset holds no drawing code.** It is a small `.js` file declaring its base, fixed props, and height hints:
+ 
+```js
+// CompactBar.js
+export default {
+  base: 'BarBase',
+  props: { orientation: 'auto', mode: 'single', barWidth: 'slim', showValueLabels: false },
+  aspect: 1.78,
+  minHeight: 80
+}
 ```
 
-**Only presets are written in the sheet.** `BarChart`, `ColumnChart`, `SemiGauge`. A base is never named in `App.Resources.Dashboard`.
+### 8.1 Drawing with `Widget.vue`
 
+`FRONTENT/src/components/widgets/Widget.vue` accepts three optional props:
+- `name` (String) — preset file name.
+- `base` (String) — base in `abstract/` to draw with.
+- `preset` (Object) — inline preset object (`{ base, props, minHeight, aspect, rowHeight }`).
+
+All other attributes arrive via `$attrs` as **overrides**. `inheritAttrs: false` is set.
+
+**Resolution order**:
+1. `overrides = $attrs`
+2. `preset`: `props.preset` if given, else `widgets/<name>.js` if `name` is given, else no preset.
+3. `base = props.base ?? preset?.base`
+4. Draw `abstract/<base>.vue` with `{ ...(preset?.props || {}), ...overrides }`. Provided attributes win.
+
+This allows custom frames to render directly with no preset file: `<Widget base="DonutBase" :items="..." />`.
+
+**When nothing can be drawn**:
+- If no `name`, `preset`, or `base` was asked for → renders nothing.
+- If something was asked for but cannot be found → renders a small visible error:
+  - `name` given but no `widgets/<name>.js` → `No widget: <name>`
+  - no base could be resolved, or base not found in `abstract/` → `No base: <base or name>`
+A broken or misspelled tile is always visible and never fails silently.
+ 
+**Only presets are written in the sheet.** `ColumnBar`, `SolidPie`, `SpeedoGauge`. A base is never named in `App.Resources.Dashboard`.
+ 
 ---
-
+ 
 ## 9. Geometry
-
+ 
 ### 9.1 Height
 
-A widget does not choose its own height. It **asks**, and the engine decides.
+A widget does not choose its own height. The card is as tall as what is inside it. There is no grid-row maths. The body height comes from the widget's height hints via CSS in `Frame.vue`:
 
-Every widget carries two static numbers:
-
+Every widget preset carries up to three static numbers in its `.js` file:
+ 
 | Number | Meaning |
 |---|---|
-| `aspect` | width divided by height, as a **number**. A donut is `1`. A 16 by 9 chart is `1.78`. A wide strip is `6`. A plain metric has none. |
-| `minHeight` | the smallest height it can still be read at |
+| `aspect` | width divided by height, as a **number**. A donut is `1`. A 16 by 9 chart is `1.78`. A wide strip is `6`. Used for picture-style presets. |
+| `minHeight` | the smallest height it can still be read at. Used by all presets. |
+| `rowHeight` | the height of one row in a list or row-stack widget. Used for list-style presets. |
 
-**These sit on the preset, not the base.** One base can want very different shapes: a half gauge is `2`, a full ring is `1`. The base cannot hold one number for both. The preset knows which it is, so it declares them.
+**The list vs picture rule:**
+- **List-style presets** (horizontal/rank bars, ranked lists, vertical timelines, and row-stacked items): declare `rowHeight` and `minHeight`. Do NOT use `aspect`. The height grows and shrinks with the number of rows: `height = max(minHeight, items.length × rowHeight)`. A list with 1 row stays short; a list with 8 rows is tall.
+- **Picture-style presets** (donuts, rings, lines, columns, gauges, radials, funnels, heat grids, waffles): declare `aspect` and `minHeight`. They scale as a whole picture with the cell width.
+- **Metric presets**: declare `minHeight` only.
 
-The engine turns that wish into **grid row units of 40px**:
+**These sit on the preset `.js` file, not the base.** One base can want very different shapes: a half gauge is `2`, a full ring is `1`. The base cannot hold one number for both. The preset knows which it is, so it declares them.
 
-1. `wanted = max(minHeight, width / aspect)`. With no `aspect`, `wanted = minHeight`.
-2. `H = ceil(wanted / 40)`.
+`Frame.vue` applies these hints to the body using CSS:
+- `rowHeight` set → body min-height is the larger of `minHeight` and `items.length × rowHeight` (`items` or list data from the `widget` prop). A list with 2 rows is short; a list with 10 rows is tall.
+- `aspect` set → CSS `aspect-ratio: <aspect>` on the body, with `minHeight` as a floor.
+- neither → `minHeight` as `min-height`.
+- no preset (inline `preset` prop or raw `base`) → read hints from inline `preset` if provided, else natural content height.
 
-So a tile is 1 unit tall, or 2, or 3. Never 137px.
-
-Tiles in one row are **not** all the same height. A tall one spans down, and short ones stack beside it to fill the gap, like `rowspan` in a table. CSS Grid does that filling on its own. See engine spec part 9.
-
-| Widget | minHeight | Units |
-|---|---|---|
-| Progress bar | 24 | 1 |
-| Sparkline | 32 | 1 |
-| Metric | 48 | 2 |
-| Donut | 90 | 3 |
-| Bar chart | 120 | 3 or 4 |
-
-The widget declares this, not the sheet. A donut always wants to be roundish. That is a fact about the widget, not a client choice. So no new sheet key.
-
-**The rule this puts on widgets: fill the height you are given, not only the width.** The root is a flex box that stretches, and the SVG scales in both directions.
-
-Rounding up to a whole unit means the box is often a little taller than the wish. That is normal. The widget must look right in it, not only at its perfect ratio.
+**The rule this puts on widgets: fill the height you are given, not only the width.** The root is a flex box that stretches, and the SVG scales in both directions. Crucially, a list-style base must draw to its row count, not only the Frame body (as `BarBase` horizontal now does, sizing its internal rows and SVG viewBox to the category count).
 
 ### 9.2 Time is spaced by date, not by index
 
@@ -473,10 +495,10 @@ Plan for that now, not later: pull scales and ticks into a shared composable bot
 1. It draws only the picture.
 2. Its main data prop is one of `value`, `items`, `series`, `points`.
 3. Every replaceable cell goes through `Renderable`, and the widened type is mirrored on the preset too.
-3b. Its preset declares `aspect` and `minHeight`, and it fills the height it is given.
+3b. Its preset declares `aspect` and `minHeight` (and `rowHeight` for list and timeline presets), and it fills the height it is given.
 4. Every colour is a brand role through `resolveCssColor()` or `var(--q-*)`. No hex anywhere.
 5. Both states render, and the empty state has a `#empty` slot. No loading state — that is the engine's.
-5b. The edge cases in part 6.1 behave as written: `max: 0`, `compare: 0`, a zero part, a 95% part, and negative values.
+5b. The edge cases in part 6.1 behave as written: `max: 0`, missing `compare` / `0 vs 0` (no badge), `compare: 0` with positive value ("NEW" badge), a zero part, a 95% part, and negative values.
 6. It reads its own width and follows the four tiers.
 7. The picture still draws at `micro`, or the preset declares `minTier` and a stand-in.
 8. No `<style>` block. Any custom CSS is a named `.aql-widget-*` class in `widgets.scss`.

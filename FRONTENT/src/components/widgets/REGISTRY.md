@@ -1,6 +1,10 @@
+# Dashboard Widgets Registry
+
 Only preset names go in the sheet. You never write a base name in the sheet.
 
-## GaugeBase
+Each preset is a small data file at `FRONTENT/src/components/widgets/<PresetName>.js` specifying its base, fixed props, and height hints (`minHeight`, `aspect`, `rowHeight`).
+`<Widget name="PresetName" v-bind="data" />` loads the preset, draws its base from `widgets/abstract/<Base>.vue`, and renders the picture.
+Provided props win over preset props. If a widget name is unknown or its base is missing, a visible warning is rendered. There is no `_ui` lookup for widgets.
 
 | Widget | Draws | Data in | Use it for | Details |
 | --- | --- | --- | --- | --- |

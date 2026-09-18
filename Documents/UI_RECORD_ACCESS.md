@@ -62,6 +62,7 @@ The returned object provides:
 - `enriched(resource)`: A plain array of every record in the resource, each one enriched. Not a `computed` — wrap it if you need reactivity.
 - `recordsBy(resource, header, value)`: An array of the enriched records whose `header` equals `value`. Backed by one shared `O(1)` index per resource and header, built on first use. Returns `[]` when nothing matches or any argument is blank.
 - `recordBy(resource, header, value)`: The first enriched record whose `header` equals `value`, or `null`. With `header` set to `'Code'` it is a direct map read, not an index scan.
+- `indexOf(resource, header)`: Returns the unwrapped `Map` of value → rows from `getIndex`. Read inside a `computed`, it tracks the index. The rows in the map are raw store rows (read-only, not enriched proxies), and blank values are skipped. Use for fast grouping across a whole column.
 - `relations(resource)`: The resource's relation metadata — `parents`, `children`, `linkRefs`, `refs`.
 - `isLoading(resource)`: A plain `true`/`false` saying whether that resource is fetching right now. Not a ref.
 - `remember(key, build)`: Runs a build function once inside the long-lived store scope and caches the result forever. Use this for shared domain projections and option lists.

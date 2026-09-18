@@ -223,6 +223,12 @@ export function useRecord() {
       return matches && matches.length ? enrich(resource, matches[0].Code) : null
     }
 
+    function indexOf(resource, header) {
+      if (!resource || !header) return new Map()
+      // Raw store rows, read-only.
+      return getIndex(resource, header).value
+    }
+
     function isLoading(resource) {
       if (!resource) return false
       return !!dataStore.loadingByResource?.[resource]
@@ -234,6 +240,7 @@ export function useRecord() {
       enriched,
       recordsBy,
       recordBy,
+      indexOf,
       relations,
       isLoading,
       remember: (key, build) => dataStore.remember('shared:' + key, build)

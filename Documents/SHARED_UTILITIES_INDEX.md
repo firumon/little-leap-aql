@@ -150,17 +150,18 @@ Generic token registry + condition evaluator. Shared by `APP.Resources.ListViews
 
 ---
 
-## 6. Resource Config & Row Sanitization
-**File**: `FRONTENT/src/composables/resources/useResourceConfig.js`
+## 6. Resource Config, Record Access & Row Sanitization
+**Files**: `FRONTENT/src/composables/resources/useResourceConfig.js`, `FRONTENT/src/composables/resources/useRecord.js`
 
-The resource's schema, permissions and default values — and the one row sanitizer every
-Layer 2 builder uses. Pure apart from reading the auth store's resource registry.
+The resource's schema, permissions, default values, and data store access.
 
 | Function | Purpose |
 |----------|---------|
 | `useResourceConfig(resourceNameOverride?)` | The active (or named) resource's config: headers, fields, required headers, `defaultValues`, `additionalActions`, `allowed`, `missing`. |
 | `resourceRow(resource, ...sources)` | Merge sources over the backend defaults into one row for `resource`, dropping every key the sheet does not have. `_action` survives. |
 | `findResourceConfig(auth, nameOrSlug)` | Look up a resource config by name or slug, tolerant of plural/singular. |
+| `useRecord()` | Core singleton composable for data store record access. Exposes `rows`, `enrich`, `enriched`, `recordsBy`, `recordBy`, `indexOf`, `relations`, `isLoading`, `remember`. |
+| `indexOf(resource, header)` | Exposes the raw `Map` of value → rows from `getIndex`. Read inside a `computed`, it tracks the index. Rows are raw store rows (read-only); blank values are skipped. |
 
 **Node objects are written by hand.** There is no constructor module — `nodePayloads.js`
 was deleted on 2026-08-29. The Node shape is specified in
@@ -169,7 +170,7 @@ was deleted on 2026-08-29. The Node shape is specified in
 `FRONTENT/src/composables/resources/pageState/usePageStateActions.js`.
 
 **When to reuse**: any Layer 2 builder that shapes a sheet row, or any code that asks what
-the signed-in user may do to a resource.
+the signed-in user may do to a resource, or reads/groups resource rows.
 **When to extend**: add row/schema helpers here. Do not re-derive headers or default
 values elsewhere — that bypasses sanitization.
 

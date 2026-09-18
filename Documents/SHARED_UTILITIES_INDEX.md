@@ -221,6 +221,38 @@ values elsewhere — that bypasses sanitization.
 **When to reuse**: any PWA install/standalone detection.
 **When to extend**: add PWA helpers here.
 
+### 7e. Data Utilities & Dashboard Engine
+**Files**: `FRONTENT/src/composables/data/useDataContext.js`, `FRONTENT/src/composables/data/useDataControls.js`, `FRONTENT/src/composables/dashboard/useDashboardLayout.js`, `FRONTENT/src/composables/resources/useWidgetResolver.js`
+
+| Function | Purpose |
+|----------|---------|
+| `useDataContext()` | Stateless pure math utilities for domain data items (`countBy`, `sumBy`, `topN`, `mean`, `countAt`, `inRange`, `rangeLabel`, `daysSince`, `daysAgo`, `hoursBetween`). Functions take lists, never resource names. Pure. |
+| `useDashboardLayout(items, columns)` | Manages packed row column widths and visual order from tile size preferences and live empty state. Pure layout logic. |
+| `useWidgetResolver(tileProps, uiName)` | Resolves custom widget replacement (.vue) replacing the Frame, and tiered JS prop modifiers (.js) for dashboard tiles. |
+| `dataControl(name, { type, options, value, ...rest })` | Builds a data control descriptor for domain composables, preserving caller's own ref in `value` and normalizing options. |
+| `useDataControls(controls)` | Transforms a controls list/ref into reactive `ctl` (with box-opening writable computed `value`) and a single `Controls` component mapping control types to `_fields` edit pickers. |
+
+**When to reuse**: any domain data calculations, dashboard tile packing, widget/frame resolution, or domain/frame interactive controls.
+**When to extend**: add pure math helpers to `useDataContext.js`; adjust packing algorithms in `useDashboardLayout.js`; customize resolution rules in `useWidgetResolver.js`; add control bindings in `useDataControls.js`.
+
+### 7f. Widget Geometry & Formatting
+**File**: `FRONTENT/src/utils/widgetGeometry.js`
+
+| Function | Purpose |
+|----------|---------|
+| `tierOf(width)` / `tierAtLeast(tier, floor)` | Density tier classification (`micro`, `compact`, `standard`, `wide`). Pure. |
+| `polar(cx, cy, r, deg)` | Polar to Cartesian coordinates. Pure. |
+| `arcPath(cx, cy, r, a0, a1)` / `wedgePath(...)` | SVG arc and annular wedge path generators. Pure. |
+| `truncate(text, maxPx, fontSize)` | SVG label text truncation with ellipsis based on pixel width. Pure. |
+| `formatNumber(n)` | Locale number string. Pure. |
+| `formatShort(n)` | Compact human number string (`1.2K`, `3.4M`). Pure. |
+| `signed(n)` | Formatted number prefixed with true minus sign `−` when negative. Pure. |
+| `formatValue(v, valueFormat, fallback)` | Applies custom `valueFormat` function if provided, else falls back to given fallback or `signed(v)`. Pure. |
+| `niceScale(min, max, wantedLines)` | Axis ticks rounding outward to human-readable step intervals. Pure. |
+
+**When to reuse**: any SVG geometry, density tier math, tick scaling, or widget number/value formatting.
+**When to extend**: add shared widget math and formatters here; do not duplicate SVG calculations in individual widgets.
+
 ---
 
 ## Extension Cheat-Sheet (where a new helper belongs)

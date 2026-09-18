@@ -21,7 +21,7 @@
         <Renderable :value="displayValue" />
       </div>
 
-      <div v-if="tier !== 'micro'" class="aql-widget-metric__footer">
+      <div v-if="tier !== 'micro' && showBadge" class="aql-widget-metric__footer">
         <span
           class="aql-widget-metric__badge"
           :style="{
@@ -146,7 +146,17 @@ const hasCompare = computed(() => {
   return numCompare.value !== null && numCompare.value !== 0
 })
 
-const isNew = computed(() => !hasCompare.value)
+const isNew = computed(() => {
+  return numCompare.value === 0 && (numVal.value ?? 0) > 0
+})
+
+const showBadge = computed(() => {
+  if (props.deltaLabel !== null && props.deltaLabel !== undefined) return true
+  if (numCompare.value === null) return false
+  if ((numVal.value ?? 0) === 0 && numCompare.value === 0) return false
+  if (isNew.value) return true
+  return hasCompare.value
+})
 
 const delta = computed(() => {
   if (!hasCompare.value || numVal.value === null) return 0

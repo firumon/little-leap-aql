@@ -28,7 +28,10 @@
           }"
         />
 
-        <div class="aql-widget-ranked-list__content">
+        <div
+          class="aql-widget-ranked-list__content"
+          :class="{ 'aql-widget-ranked-list__content--capsule': barStyle === 'capsule' }"
+        >
           <span
             v-if="showRankNumber"
             class="aql-widget-ranked-list__badge"
@@ -36,7 +39,10 @@
             <Renderable :value="idx + 1" :item="it" />
           </span>
 
-          <div class="aql-widget-ranked-list__name-col">
+          <div
+            class="aql-widget-ranked-list__name-col"
+            :class="{ 'aql-widget-ranked-list__name-col--inline': captionPlacement === 'inline' }"
+          >
             <span class="aql-widget-ranked-list__name">
               <Renderable :value="it.label" :item="it" />
             </span>

@@ -549,7 +549,23 @@ function initAppResourcesCodeConfig() {
             { "name": "Rejected", "label": "Rejected", "icon": "cancel", "color": "negative", "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "Rejected" }] } },
             { "name": "Later", "label": "Later", "icon": "schedule", "color": "warning", "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "Later" }] } },
             { "name": "Approved", "label": "Approved", "icon": "verified", "color": "positive", "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "Approved" }] } }
-        ])
+        ]),
+        Dashboard: JSON.stringify([
+            { "name": "openLeads", "widget": "MetricPlain", "permission": { "Leads": "Read" }, "size": { "xs": 6, "sm": 6, "md": 3 } },
+            { "name": "newLeads", "widget": "MetricDelta", "permission": { "Leads": "Read" }, "size": { "xs": 6, "sm": 6, "md": 3 } },
+            { "name": "sleepingLeads", "widget": "MetricDeltaInverse", "permission": { "Leads": "Read" }, "size": { "xs": 6, "sm": 6, "md": 3 } },
+            { "name": "approvedThisMonth", "widget": "MetricDelta", "permission": { "Leads": "Read" }, "size": { "xs": 6, "sm": 6, "md": 3 } },
+            { "name": "conversionRate", "widget": "PercentWaffle", "permission": { "Leads": "Read" }, "size": { "xs": 12, "sm": 6, "md": 4 } },
+            { "name": "progressMix", "widget": "RingDonut", "permission": { "Leads": "Read" }, "size": { "xs": 12, "md": 4 } },
+            { "name": "monthOutcomes", "widget": "ColumnBar", "permission": { "Leads": "Read" }, "size": { "xs": 12, "md": 4 } },
+            { "name": "processingAgeing", "widget": "DebtAgeing", "permission": { "Leads": "Read" }, "size": { "xs": 12, "md": 6 } },
+            { "name": "leadsByType", "widget": "HorizontalRankBar", "permission": { "Leads": "Read" }, "size": { "xs": 12, "md": 6 } },
+            { "name": "leadsByPlace", "widget": "HorizontalRankBar", "permission": { "Leads": "Read" }, "size": { "xs": 12, "md": 6 } },
+            { "name": "wakeUpDue", "widget": "LowStockList", "permission": { "Leads": "Read" }, "size": { "xs": 12, "md": 6 }, "props": { "color": "warning" }, "hideOnEmpty": true },
+            { "name": "staleProcessing", "widget": "LowStockList", "permission": { "Leads": "Read" }, "size": { "xs": 12, "md": 6 }, "props": { "color": "negative" }, "hideOnEmpty": true },
+            { "name": "recentApprovals", "widget": "EventTimeline", "permission": { "Leads": "Read" }, "size": { "xs": 12, "md": 6 }, "hideOnEmpty": true },
+            { "name": "leadsPerDay", "widget": "DailySalesLine", "permission": { "Leads": "Read" }, "size": { "xs": 12, "md": 8 } }
+        ]),
     },
     {
         Name: CONFIG.OPERATION_SHEETS.PROCUREMENTS,
@@ -1383,6 +1399,12 @@ function initAppResourcesCodeConfig() {
             { "name": "Delivered", "label": "Delivered", "icon": "local_shipping", "color": "teal-7", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "DELIVERED" }] } },
             { "name": "Rejected", "label": "Rejected", "icon": "block", "color": "negative", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "REJECTED" }] } }
         ]),
+        Dashboard: JSON.stringify([
+            { "name": "awaitingApproval", "widget": "MetricDelta", "permission": { "OutletRestocks": "Approve" }, "size": { "xs": 6, "sm": 6, "md": 3 }, "auth": false, "users": false, "title": "Waiting for approval", "caption": "Sitting in PENDING_APPROVAL" },
+            { "name": "progressMix", "widget": "RingDonut", "permission": { "OutletRestocks": "Read" }, "size": { "xs": 12, "md": 4 } },
+            { "name": "topSkus", "widget": "TopProductsList", "permission": { "OutletRestocks": "Read", "OutletRestockItems": true }, "size": { "xs": 12, "md": 4 }, "props": { "color": "secondary" }, "hideOnEmpty": true },
+            { "name": "restocksPerDay", "widget": "DailySalesLine", "permission": { "OutletRestocks": "Read" }, "size": { "xs": 12, "md": 8 }, "multiplier": 1.5 }
+        ]),
         Relations: JSON.stringify({
             OutletCode: CONFIG.MASTER_SHEETS.OUTLETS
         })
@@ -1943,6 +1965,21 @@ function initAppResourcesCodeConfig() {
             { "name": "Completed", "label": "Completed", "icon": "task_alt", "color": "positive", "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "Completed" }] } },
             { "name": "Postponed", "label": "Postponed", "icon": "event_repeat", "color": "warning", "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "Postponed" }] } },
             { "name": "Cancelled", "label": "Cancelled", "icon": "cancel", "color": "negative", "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "Cancelled" }] } }
+        ]),
+        Dashboard: JSON.stringify([
+            { "name": "overdueFollowUps", "widget": "MetricDeltaInverse", "permission": { "LeadFollowUps": "Read" }, "size": { "xs": 6, "sm": 6, "md": 3 } },
+            { "name": "dueToday", "widget": "MetricPlain", "permission": { "LeadFollowUps": "Read" }, "size": { "xs": 6, "sm": 6, "md": 3 } },
+            { "name": "respondDelay", "widget": "MetricDeltaInverse", "permission": { "LeadFollowUps": "Read" }, "size": { "xs": 6, "sm": 6, "md": 3 } },
+            { "name": "unscheduledProcessing", "widget": "MetricDeltaInverse", "permission": { "LeadFollowUps": "Read", "Leads": "Read" }, "size": { "xs": 6, "sm": 6, "md": 3 } },
+            { "name": "postponeRate", "widget": "HalfDonut", "permission": { "LeadFollowUps": "Read" }, "size": { "xs": 12, "md": 4 } },
+            { "name": "followUpMix", "widget": "RingDonut", "permission": { "LeadFollowUps": "Read" }, "size": { "xs": 12, "md": 4 } },
+            { "name": "activityAgeing", "widget": "DebtAgeing", "permission": { "LeadFollowUps": "Read" }, "size": { "xs": 12, "md": 6 } },
+            { "name": "weekAhead", "widget": "ColumnBar", "permission": { "LeadFollowUps": "Read" }, "size": { "xs": 12, "md": 6 } },
+            { "name": "dueCompletion", "widget": "QuotaBullet", "permission": { "LeadFollowUps": "Read" }, "size": { "xs": 12, "md": 6 } },
+            { "name": "nextFollowUps", "widget": "EventTimeline", "permission": { "LeadFollowUps": "Read", "Leads": "Read" }, "size": { "xs": 12, "md": 6 }, "hideOnEmpty": true },
+            { "name": "leadsNeverFollowedUp", "widget": "LowStockList", "permission": { "LeadFollowUps": "Read", "Leads": "Read" }, "size": { "xs": 12, "md": 6 }, "props": { "color": "negative" }, "hideOnEmpty": true },
+            { "name": "teamActivity", "widget": "HorizontalRankBar", "permission": { "LeadFollowUps": "Read" }, "size": { "xs": 12, "md": 6 }, "users": true, "hideOnEmpty": true },
+            { "name": "responsesPerDay", "widget": "StaffVisitsLine", "permission": { "LeadFollowUps": "Read" }, "size": { "xs": 12, "md": 8 } }
         ]),
         Relations: JSON.stringify({
             LeadCode: { resource: CONFIG.MASTER_SHEETS.LEADS, targetHeader: 'Code', labelHeader: 'Name' }

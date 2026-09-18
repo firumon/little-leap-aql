@@ -1,13 +1,6 @@
 import { ref, watch, computed, shallowRef, markRaw } from 'vue'
 import { toPascalCase } from 'src/utils/appHelpers'
-
-const frameworkModules = import.meta.glob('../../components/widgets/*.vue')
-
-const frameworkRegistry = {}
-Object.keys(frameworkModules).forEach((rawPath) => {
-  const key = rawPath.replace(/^\.\.\/\.\.\//, '').toLowerCase()
-  frameworkRegistry[key] = frameworkModules[rawPath]
-})
+import Frame from 'src/components/Frame.vue'
 
 const customUiModules = import.meta.glob('../../_ui/**/*.{vue,js}')
 
@@ -17,47 +10,50 @@ Object.keys(customUiModules).forEach((rawPath) => {
   customUiRegistry[key] = customUiModules[rawPath]
 })
 
-// Base is found by `widget`. Override is found by the sheet item `name`, so two
-// tiles sharing one widget can still be changed apart.
-export function useWidgetResolver (preparedProps) {
+export function useWidgetResolver (tileProps, uiName) {
   const ready = ref(false)
-  const resolvedComponent = shallowRef(null)
-  const customized = ref(false)
+  const resolvedComponent = shallowRef(Frame)
+  const modifier = shallowRef(null)
 
-  const finalProps = computed(() => preparedProps.value || {})
+  const finalProps = computed(() => {
+    const current = tileProps.value || {}
+    const mod = modifier.value
+    const applied = typeof mod === 'function' ? mod(current) : mod
+    if (!applied || typeof applied !== 'object') return current
+    return { ...current, ...applied }
+  })
 
   let resolveToken = 0
 
+  const lookupKey = computed(() => {
+    const p = tileProps.value || {}
+    const widget = p.widget ?? ''
+    const name = p.name ?? ''
+    const scope = p.scope ?? ''
+    const resource = p.resource ?? ''
+    const ui = typeof uiName === 'string' ? uiName : (uiName?.value ?? '')
+    return `${widget}|${name}|${scope}|${resource}|${ui}`
+  })
+
   watch(
-    () => {
-      const p = preparedProps.value || {}
-      return `${p.widget ?? ''}|${p.name ?? ''}|${p.scope ?? ''}|${p.resource ?? ''}|${p.uiName ?? ''}`
-    },
+    lookupKey,
     async () => {
       const token = ++resolveToken
-      const { widget, name, scope, resource, uiName } = preparedProps.value || {}
+      const p = tileProps.value || {}
+      const widget = p.widget || ''
+      const name = p.name || ''
+      const scope = p.scope || ''
+      const resource = p.resource || ''
+      const currentUi = typeof uiName === 'string' ? uiName : (uiName?.value ?? '')
 
-      let nextComponent = null
-      let nextCustom = false
+      let nextComponent = Frame
+      let nextModifier = null
 
-      if (!resolvedComponent.value) ready.value = false
-
-      function commit () {
-        resolvedComponent.value = nextComponent
-        customized.value = nextCustom
-        ready.value = true
-      }
-
-      const widgetKey = (widget || '').toLowerCase()
-      const nameKey = (name || '').toLowerCase()
-      const scopeKey = (scope || '').toLowerCase()
-      const uiKey = (uiName || '').toLowerCase()
+      const widgetKey = widget.toLowerCase()
+      const nameKey = name.toLowerCase()
+      const scopeKey = scope.toLowerCase()
+      const uiKey = (currentUi || 'AQL').toLowerCase()
       const resourceKey = toPascalCase(resource || '').toLowerCase()
-
-      if (!widgetKey) {
-        commit()
-        return
-      }
 
       const uiBase = uiKey ? `_ui/${uiKey}/components` : null
 
@@ -73,66 +69,43 @@ export function useWidgetResolver (preparedProps) {
         }
       }
 
-      let baseWidget = null
-      if (uiBase) {
-        const mod = await loadCustomUiModule(`${uiBase}/widgets/${widgetKey}.vue`)
+      if (uiBase && widgetKey) {
+        const customWidgetPath = `${uiBase}/widgets/${widgetKey}.vue`
+        const mod = await loadCustomUiModule(customWidgetPath)
         if (mod) {
-          baseWidget = markRaw(mod)
-          nextCustom = true
+          nextComponent = markRaw(mod)
         }
       }
 
-      if (!baseWidget) {
-        const loader = frameworkRegistry[`components/widgets/${widgetKey}.vue`]
-        if (loader) {
-          try {
-            const mod = await loader()
-            baseWidget = markRaw(mod.default ?? mod)
-          } catch (err) {
-            console.error(`[useWidgetResolver] Failed to load framework widget "${widgetKey}":`, err)
+      if (uiBase && nameKey) {
+        const modifierCandidates = [
+          `${uiBase}/${scopeKey}/${resourceKey}/dashboard/${nameKey}.js`,
+          `${uiBase}/${scopeKey}/${resourceKey}/${nameKey}.js`,
+          `${uiBase}/${scopeKey}/dashboard/${nameKey}.js`
+        ]
+
+        for (const path of modifierCandidates) {
+          if (!customUiRegistry[path]) continue
+          const mod = await loadCustomUiModule(path)
+          if (mod) {
+            nextModifier = mod
+            break
           }
         }
       }
 
       if (token !== resolveToken) return
 
-      if (!baseWidget) {
-        commit()
-        return
-      }
-
-      if (!uiKey || !nameKey) {
-        nextComponent = baseWidget
-        commit()
-        return
-      }
-
-      const overrideCandidates = [
-        `${uiBase}/${scopeKey}/${resourceKey}/dashboard/${nameKey}.vue`,
-        `${uiBase}/${scopeKey}/${resourceKey}/${nameKey}.vue`,
-        `${uiBase}/${scopeKey}/dashboard/${nameKey}.vue`,
-        `${uiBase}/${scopeKey}/${nameKey}.vue`,
-        `${uiBase}/${nameKey}.vue`
-      ]
-
-      for (const path of overrideCandidates) {
-        if (!customUiRegistry[path]) continue
-        const exported = await loadCustomUiModule(path)
-        if (token !== resolveToken) return
-        if (!exported) continue
-
-        nextComponent = markRaw(exported)
-        nextCustom = true
-        break
-      }
-
-      if (!nextComponent) nextComponent = baseWidget
-
-      commit()
+      resolvedComponent.value = nextComponent
+      modifier.value = nextModifier
+      ready.value = true
     },
     { immediate: true }
   )
 
-  return { ready, customized, resolvedComponent, finalProps }
+  return {
+    ready,
+    resolvedComponent,
+    finalProps
+  }
 }
-

@@ -40,7 +40,7 @@ const routes = [
     component: () => import('layouts/MainLayout/MainLayout.vue'),
     meta: { requiresAuth: true },
     children: [
-      { path: '', name: 'dashboard', component: () => import('pages/Dashboard/DashboardIndex.vue') }
+      { path: '', name: 'dashboard', component: () => import('pages/Dashboard.vue') }
     ]
   },
   {

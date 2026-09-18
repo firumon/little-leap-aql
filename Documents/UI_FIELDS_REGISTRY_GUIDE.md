@@ -75,6 +75,9 @@ Every `Add.vue` / `Edit.vue` / `View.vue` implements exactly this surface, with 
 | `number` | `q-input type="number"` | `toLocaleString` |
 | `currency` | `q-input type="number"` prefixed with the dynamic symbol from `useCurrency` | `_C(value)` |
 | `toggle` | `q-toggle` | outlined `QChip`, positive when the value matches the column's `true-value` |
+| `plainselect` | `q-btn-toggle` (flat, dense, no-caps, toggle-color="primary") | resolved option label |
+| `menuselect` | `q-btn-dropdown` (flat, dense, no-caps, auto-close) displaying picked label, opening `q-list` menu | resolved option label |
+| `chipselect` | small clickable `q-chip` options with `q-gutter-xs`, filled primary for picked | resolved option label |
 
 `status` picks its control from `config.options`: absent ⇒ classic Active/Inactive column ⇒ `AqlStatusToggle`; present ⇒ `q-select`. This reproduces `mapField`'s two pre-existing status branches without a hardcoded header check in the component.
 

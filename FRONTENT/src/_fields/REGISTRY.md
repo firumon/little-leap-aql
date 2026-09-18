@@ -1,4 +1,4 @@
-﻿# `_fields/` Type Registry
+# `_fields/` Type Registry
 
 Purpose: single source of truth for every implemented field `type` under
 `src/_fields/`. `UI_MODULE_DEVELOPER_GUIDE.md` §13.1 and every other
@@ -27,6 +27,9 @@ to `text`. Adding the folder and updating this table is one change, never two.
 | `tel` | `phone`, `mobile`, `telephone` | `QInput type="tel"` | `tel:` anchor or plain span |
 | `link` | `url`, `uri`, `website`, `hyperlink` | `QInput type="url"` | Anchor, opens external |
 | `file` | `attachment`, `upload`, `image` | File picker / uploader | `AqlFilePreviewCard`, or a dense `attach_file` chip when `compact` |
+| `plainselect` | `plain` | `q-btn-toggle` (flat, dense, no-caps) horizontal row of text options, selected toggle-color is primary | Resolved option label span |
+| `menuselect` | `menu` | `q-btn-dropdown` (flat, dense, no-caps, auto-close) displaying picked label, opening a `q-list` of options | Resolved option label span |
+| `chipselect` | `chip` | Small clickable `q-chip` options with `q-gutter-xs`; selected is filled primary, others outlined | Resolved option label span |
 
 ## Cross-cutting behavior (applies to every type)
 

@@ -23,6 +23,9 @@ src/_fields/
 ├── link/{Add,Edit,View}.vue
 ├── number/{Add,Edit,View}.vue
 ├── openselect/{Add,Edit,View}.vue
+├── plainselect/{Add,Edit,View}.vue
+├── menuselect/{Add,Edit,View}.vue
+├── chipselect/{Add,Edit,View}.vue
 ├── select/{Add,Edit,View}.vue
 ├── status/{Add,Edit,View}.vue
 ├── tel/{Add,Edit,View}.vue
@@ -242,6 +245,18 @@ child-table rows.
 **Where it earns its place**: a settings-style choice that needs a sentence of explanation —
 `OutletRestocks` Add's draft-vs-direct switch, `OutletConsumptions` Add's restock toggle.
 For a bare boolean cell in a generated form, `toggle` is still the right type.
+
+### `plainselect`
+
+Uses Quasar's `q-btn-toggle` (`flat`, `dense`, `no-caps`, `toggle-color="primary"`). A clean, borderless row of text choices for dashboard cards and compact headers.
+
+### `menuselect`
+
+Uses Quasar's `q-btn-dropdown` (`flat`, `dense`, `no-caps`, `auto-close`, `color="primary"`) wrapping a `q-list` / `q-item` dropdown menu. Shows the currently selected option's label.
+
+### `chipselect`
+
+Uses Quasar's `q-chip` (`clickable`, `dense`, `size="sm"`) in a wrapping flex row with `q-gutter-xs`. The selected chip is filled primary, others are outlined.
 
 ### Textarea Field Invariant (STRICT)
 

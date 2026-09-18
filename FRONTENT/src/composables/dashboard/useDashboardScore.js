@@ -10,7 +10,7 @@ export function multiplierOf (item) {
   if (!item || item.multiplier === undefined || item.multiplier === null) return 1
   const n = Number(item.multiplier)
   if (!Number.isFinite(n) || n <= 0) return 0
-  return Math.min(n, 2)
+  return n
 }
 
 function normalizeVerbWeight (action) {
@@ -31,10 +31,16 @@ function resolvePermissionWeight (actionOrList) {
   return normalizeVerbWeight(actionOrList)
 }
 
-export function scoreDashboardItem (item, auth, ownerResource = '') {
+export function scoreDashboardItem (item, auth, ownerResource = '', isCustom = false) {
   if (!item) return 0
-  const mult = multiplierOf(item)
-  if (mult === 0) return 0
+
+  if (isCustom) {
+    const resName = ownerResource || item.resource || ''
+    const cfg = findResourceConfig(auth, resName)
+    if (!cfg) return 1
+    const scopeKey = String(cfg.scope || 'master').toLowerCase()
+    return SCOPE_WEIGHTS[scopeKey] || 1
+  }
 
   let sumResourceScore = 0
   const p = item.permission
@@ -71,6 +77,17 @@ export function scoreDashboardItem (item, auth, ownerResource = '') {
   if (item.auth === true) userScore += 3
   if (item.users === true) userScore += 5
 
-  return (sumResourceScore + userScore) * mult
+  return sumResourceScore + userScore
 }
+
+export function positionWeight (i, n) {
+  if (n <= 1) return 1.9
+  return 1.9 - (1.8 * i) / (n - 1)
+}
+
+export function shareWeight (n) {
+  if (!n || n <= 0) return 0
+  return 1 / Math.sqrt(n)
+}
+
 

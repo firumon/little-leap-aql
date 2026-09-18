@@ -190,6 +190,10 @@ const props = defineProps({
     type: String,
     default: 'primary'
   },
+  valueFormat: {
+    type: Function,
+    default: null
+  },
   emptyText: {
     type: [String, Function, Object],
     default: 'Nothing to show'
@@ -238,6 +242,7 @@ const {
   showPoints: computed(() => props.showPoints),
   showEndDot: computed(() => props.showEndDot),
   color: computed(() => props.color),
-  getSeriesColor
+  getSeriesColor,
+  valueFormat: computed(() => props.valueFormat)
 })
 </script>

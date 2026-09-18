@@ -45,7 +45,7 @@
         class="aql-widget__value-text"
         text-anchor="middle"
       >
-        {{ formatNumber(numVal) }} of {{ formatNumber(numMax) }} · {{ Math.round(pct * 100) }}%
+        {{ formatValue(numVal, valueFormat, formatNumber(numVal)) }} of {{ formatValue(numMax, valueFormat, formatNumber(numMax)) }} · {{ Math.round(pct * 100) }}%
       </text>
     </svg>
   </div>
@@ -56,7 +56,7 @@ import { computed } from 'vue'
 import Renderable from 'src/components/abstract/Renderable.js'
 import { useWidgetTier } from 'src/composables/widgets/useWidgetTier.js'
 import { resolveCssColor } from 'src/utils/colorHelpers.js'
-import { formatNumber } from 'src/utils/widgetGeometry.js'
+import { formatNumber, formatValue } from 'src/utils/widgetGeometry.js'
 
 defineOptions({
   inheritAttrs: false
@@ -89,6 +89,10 @@ const props = defineProps({
   color: {
     type: String,
     default: 'primary'
+  },
+  valueFormat: {
+    type: Function,
+    default: null
   },
   emptyText: {
     type: [String, Function, Object],

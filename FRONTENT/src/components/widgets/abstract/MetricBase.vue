@@ -59,6 +59,7 @@ import { useWidgetTier } from 'src/composables/widgets/useWidgetTier.js'
 import {
   signed,
   formatNumber,
+  formatValue,
   tierAtLeast
 } from 'src/utils/widgetGeometry.js'
 
@@ -69,6 +70,10 @@ defineOptions({
 const props = defineProps({
   value: {
     type: [Number, String, Function, Object],
+    default: null
+  },
+  valueFormat: {
+    type: Function,
     default: null
   },
   compare: {
@@ -184,7 +189,7 @@ const calculatedDeltaLabel = computed(() => {
 })
 
 const displayValue = computed(() => {
-  if (numVal.value !== null) return signed(numVal.value)
+  if (numVal.value !== null) return formatValue(numVal.value, props.valueFormat, signed(numVal.value))
   return props.value
 })
 

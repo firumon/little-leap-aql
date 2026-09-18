@@ -62,7 +62,7 @@
           class="aql-widget__value-text"
           text-anchor="middle"
         >
-          {{ formatNumber(numVal) }} / {{ formatNumber(numTarget) }}
+          {{ formatValue(numVal, valueFormat, formatNumber(numVal)) }} / {{ formatValue(numTarget, valueFormat, formatNumber(numTarget)) }}
         </text>
       </template>
 
@@ -74,7 +74,7 @@
             font-size="14"
             class="aql-widget__value-text"
           >
-            {{ formatNumber(numVal) }}
+            {{ formatValue(numVal, valueFormat, formatNumber(numVal)) }}
           </text>
           <text
             :x="width"
@@ -83,7 +83,7 @@
             class="aql-widget__sub-text"
             text-anchor="end"
           >
-            target {{ formatNumber(numTarget) }}
+            target {{ formatValue(numTarget, valueFormat, formatNumber(numTarget)) }}
           </text>
         </template>
 
@@ -149,7 +149,7 @@ import { computed } from 'vue'
 import Renderable from 'src/components/abstract/Renderable.js'
 import { useWidgetTier } from 'src/composables/widgets/useWidgetTier.js'
 import { resolveCssColor } from 'src/utils/colorHelpers.js'
-import { formatNumber, formatShort } from 'src/utils/widgetGeometry.js'
+import { formatNumber, formatShort, formatValue } from 'src/utils/widgetGeometry.js'
 
 defineOptions({
   inheritAttrs: false
@@ -190,6 +190,10 @@ const props = defineProps({
   color: {
     type: String,
     default: 'primary'
+  },
+  valueFormat: {
+    type: Function,
+    default: null
   },
   emptyText: {
     type: [String, Function, Object],

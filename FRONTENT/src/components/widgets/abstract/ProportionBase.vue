@@ -84,7 +84,7 @@
               class="aql-widget__value-text"
               text-anchor="end"
             >
-              {{ formatNumber(leg.value) }}
+              {{ formatValue(leg.value, valueFormat, formatNumber(leg.value)) }}
             </text>
           </g>
         </template>
@@ -99,7 +99,7 @@ import Renderable from 'src/components/abstract/Renderable.js'
 import { useWidgetTier } from 'src/composables/widgets/useWidgetTier.js'
 import { useWidgetPalette } from 'src/composables/widgets/useWidgetPalette.js'
 import { resolveCssColor } from 'src/utils/colorHelpers.js'
-import { formatNumber, truncate } from 'src/utils/widgetGeometry.js'
+import { formatNumber, formatValue, truncate } from 'src/utils/widgetGeometry.js'
 
 defineOptions({
   inheritAttrs: false
@@ -128,6 +128,10 @@ const props = defineProps({
   color: {
     type: String,
     default: 'primary'
+  },
+  valueFormat: {
+    type: Function,
+    default: null
   },
   emptyText: {
     type: [String, Function, Object],

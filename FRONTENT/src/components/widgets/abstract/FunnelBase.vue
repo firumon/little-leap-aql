@@ -59,7 +59,7 @@
               text-anchor="middle"
               :opacity="s.isDark ? 0.88 : 1"
             >
-              {{ formatNumber(s.value) }} · {{ Math.round(s.pct * 100) }}%
+              {{ formatValue(s.value, valueFormat, formatNumber(s.value)) }} · {{ Math.round(s.pct * 100) }}%
             </text>
           </template>
         </g>
@@ -77,6 +77,7 @@ import { resolveCssColor } from 'src/utils/colorHelpers.js'
 import {
   formatNumber,
   formatShort,
+  formatValue,
   truncate,
   tierAtLeast
 } from 'src/utils/widgetGeometry.js'
@@ -108,6 +109,10 @@ const props = defineProps({
   color: {
     type: String,
     default: 'primary'
+  },
+  valueFormat: {
+    type: Function,
+    default: null
   },
   minTier: {
     type: String,

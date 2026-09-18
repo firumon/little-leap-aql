@@ -1,4 +1,4 @@
-import { niceScale, signed, formatShort } from 'src/utils/widgetGeometry.js'
+import { niceScale, signed, formatShort, formatValue } from 'src/utils/widgetGeometry.js'
 
 export function computeBarScale (normalizedSeries, mode, categories, isWide) {
   if (!normalizedSeries || !normalizedSeries.length) {
@@ -39,7 +39,8 @@ export function computeHorizontalRows ({
   barWidth,
   tier,
   mode,
-  getItemColor
+  getItemColor,
+  valueFormat
 }) {
   if (!categories || !categories.length || !normalizedSeries || !normalizedSeries.length) return []
   const rowH = Math.min(46, plotH / categories.length)
@@ -129,7 +130,7 @@ export function computeHorizontalRows ({
       return {
         label: cat,
         value: totalVal,
-        totalLabel: signed(totalVal),
+        totalLabel: formatValue(totalVal, valueFormat, signed(totalVal)),
         y,
         barY,
         barH: bh,
@@ -164,7 +165,7 @@ export function computeHorizontalRows ({
       return {
         label: cat,
         value: totalVal,
-        totalLabel: signed(totalVal),
+        totalLabel: formatValue(totalVal, valueFormat, signed(totalVal)),
         y,
         barY,
         barH: bh,
@@ -183,7 +184,7 @@ export function computeHorizontalRows ({
     return {
       label: it.label || cat,
       value: val,
-      totalLabel: signed(val),
+      totalLabel: formatValue(val, valueFormat, signed(val)),
       y,
       barY,
       barH: bh,
@@ -210,7 +211,8 @@ export function computeVerticalColumns ({
   vPlotH,
   vZeroY,
   mode,
-  getItemColor
+  getItemColor,
+  valueFormat
 }) {
   if (!categories || !categories.length) return []
   const count = categories.length
@@ -330,7 +332,11 @@ export function computeVerticalColumns ({
       maxLabelW,
       totalAnchor,
       totalX,
-      totalLabel: mode === 'single' ? signed(totalVal) : formatShort(totalVal)
+      totalLabel: formatValue(
+        totalVal,
+        valueFormat,
+        mode === 'single' ? signed(totalVal) : formatShort(totalVal)
+      )
     }
   })
 }

@@ -65,6 +65,11 @@ export function signed (n) {
   return (v < 0 ? '−' : '') + formatNumber(Math.abs(v))
 }
 
+export function formatValue (v, valueFormat, fallback) {
+  if (typeof valueFormat === 'function') return valueFormat(v)
+  return fallback !== undefined ? fallback : signed(v)
+}
+
 // Axis ticks on nice round numbers. Never the data range cut into equal parts.
 // See components/widgets/CONTRACT.md part 9.4.
 export function niceScale (min, max, wantedLines = 4) {

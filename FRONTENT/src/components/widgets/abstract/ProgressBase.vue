@@ -54,7 +54,7 @@
           class="aql-widget__sub-text"
           text-anchor="middle"
         >
-          {{ formatShort(numVal) }} / {{ formatShort(numMax) }}
+          {{ formatValue(numVal, valueFormat, formatShort(numVal)) }} / {{ formatValue(numMax, valueFormat, formatShort(numMax)) }}
         </text>
       </template>
 
@@ -66,7 +66,7 @@
             font-size="13"
             class="aql-widget__value-text"
           >
-            {{ formatNumber(numVal) }} of {{ formatNumber(numMax) }}
+            {{ formatValue(numVal, valueFormat, formatNumber(numVal)) }} of {{ formatValue(numMax, valueFormat, formatNumber(numMax)) }}
           </text>
           <text
             :x="width"
@@ -136,6 +136,7 @@ import { resolveCssColor } from 'src/utils/colorHelpers.js'
 import {
   formatNumber,
   formatShort,
+  formatValue,
   tierAtLeast
 } from 'src/utils/widgetGeometry.js'
 
@@ -169,6 +170,10 @@ const props = defineProps({
   color: {
     type: String,
     default: 'primary'
+  },
+  valueFormat: {
+    type: Function,
+    default: null
   },
   emptyText: {
     type: [String, Function, Object],

@@ -55,7 +55,7 @@
             font-size="10.5"
             class="aql-widget__sub-text"
           >
-            {{ truncate(`${formatNumber(leg.value)} / ${formatNumber(leg.max)} · ${Math.round(leg.pct * 100)}%`, leg.maxW, 10.5) }}
+            {{ truncate(`${formatValue(leg.value, valueFormat, formatNumber(leg.value))} / ${formatValue(leg.max, valueFormat, formatNumber(leg.max))} · ${Math.round(leg.pct * 100)}%`, leg.maxW, 10.5) }}
           </text>
         </g>
       </template>
@@ -72,6 +72,7 @@ import { resolveCssColor } from 'src/utils/colorHelpers.js'
 import {
   arcPath,
   formatNumber,
+  formatValue,
   truncate
 } from 'src/utils/widgetGeometry.js'
 
@@ -101,6 +102,10 @@ const props = defineProps({
   color: {
     type: String,
     default: 'primary'
+  },
+  valueFormat: {
+    type: Function,
+    default: null
   },
   emptyText: {
     type: [String, Function, Object],

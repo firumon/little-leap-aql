@@ -224,6 +224,7 @@ const props = defineProps({
   showValueLabels: { type: Boolean, default: true },
   signColor: { type: Boolean, default: false },
   color: { type: String, default: 'primary' },
+  valueFormat: { type: Function, default: null },
   minTier: { type: String, default: 'micro' },
   emptyText: { type: [String, Function, Object], default: 'Nothing to show' },
   emptyIcon: { type: String, default: 'bar_chart' },
@@ -356,7 +357,8 @@ const hRows = computed(() => {
     barWidth: props.barWidth,
     tier: tier.value,
     mode: props.mode,
-    getItemColor
+    getItemColor,
+    valueFormat: props.valueFormat
   })
 })
 
@@ -389,7 +391,8 @@ const vColumns = computed(() => {
     vPlotH: vPlotH.value,
     vZeroY: vZeroY.value,
     mode: props.mode,
-    getItemColor
+    getItemColor,
+    valueFormat: props.valueFormat
   })
 })
 </script>

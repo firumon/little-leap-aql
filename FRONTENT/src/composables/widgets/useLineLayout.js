@@ -1,5 +1,5 @@
 import { computed } from 'vue'
-import { niceScale, formatShort, truncate } from 'src/utils/widgetGeometry.js'
+import { niceScale, formatShort, formatValue, truncate } from 'src/utils/widgetGeometry.js'
 import { resolveCssColor } from 'src/utils/colorHelpers.js'
 
 function parseDate (str) {
@@ -89,7 +89,8 @@ export function useLineLayout ({
   showPoints,
   showEndDot,
   color,
-  getSeriesColor
+  getSeriesColor,
+  valueFormat
 }) {
   const cleanSeries = computed(() => {
     return (seriesList.value || []).map((s, si) => {
@@ -223,7 +224,7 @@ export function useLineLayout ({
         x1: padLeft,
         x2: padLeft + plotW,
         labelX: padLeft - 6,
-        labelText: formatShort(v)
+        labelText: formatValue(v, valueFormat?.value, formatShort(v))
       }
     })
   })

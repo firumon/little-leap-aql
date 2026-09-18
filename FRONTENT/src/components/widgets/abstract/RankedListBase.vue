@@ -52,7 +52,7 @@
             class="aql-widget-ranked-list__value"
             :style="{ color: it.isNeg ? 'var(--q-negative)' : undefined }"
           >
-            <Renderable :value="signed(it.value)" :item="it" />
+            <Renderable :value="it.formattedValue" :item="it" />
           </span>
         </div>
       </div>
@@ -92,6 +92,15 @@ const props = defineProps({
     type: String,
     default: 'fill',
     validator: (v) => ['fill', 'capsule'].includes(v)
+  },
+  captionPlacement: {
+    type: String,
+    default: 'below',
+    validator: (v) => ['below', 'inline'].includes(v)
+  },
+  valueFormat: {
+    type: Function,
+    default: null
   },
   showRankNumber: {
     type: Boolean,
@@ -144,9 +153,12 @@ const visibleItems = computed(() => {
       barColor = resolveCssColor(it.color)
     }
 
+    const formattedValue = formatValue(val, props.valueFormat, signed(val))
+
     return {
       ...it,
       value: val,
+      formattedValue,
       isNeg,
       barPct,
       barColor

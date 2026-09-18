@@ -31,7 +31,7 @@
           class="aql-widget__value-text"
           text-anchor="middle"
         >
-          {{ formatShort(total) }}
+          {{ formatValue(total, valueFormat, formatShort(total)) }}
         </text>
         <text
           :x="cx"
@@ -110,6 +110,7 @@ import {
   wedgePath,
   polar,
   formatShort,
+  formatValue,
   truncate
 } from 'src/utils/widgetGeometry.js'
 
@@ -140,6 +141,10 @@ const props = defineProps({
   color: {
     type: String,
     default: 'primary'
+  },
+  valueFormat: {
+    type: Function,
+    default: null
   },
   emptyText: {
     type: [String, Function, Object],

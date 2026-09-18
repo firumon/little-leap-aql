@@ -32,7 +32,7 @@
             class="aql-widget__value-text"
             :text-anchor="bi === 0 && buckets.length > 1 ? 'start' : bi === buckets.length - 1 && buckets.length > 1 ? 'end' : 'middle'"
           >
-            {{ formatShort(b.value) }}
+            {{ formatValue(b.value, valueFormat, formatShort(b.value)) }}
           </text>
           <text
             :x="bi === 0 && buckets.length > 1 ? b.x + 2 : bi === buckets.length - 1 && buckets.length > 1 ? b.x + b.w - 2 : b.cx"
@@ -62,7 +62,7 @@
 import { computed } from 'vue'
 import Renderable from 'src/components/abstract/Renderable.js'
 import { useWidgetTier } from 'src/composables/widgets/useWidgetTier.js'
-import { formatShort, truncate } from 'src/utils/widgetGeometry.js'
+import { formatShort, formatValue, truncate } from 'src/utils/widgetGeometry.js'
 
 defineOptions({
   inheritAttrs: false
@@ -82,6 +82,10 @@ const props = defineProps({
     type: String,
     default: 'escalating',
     validator: (v) => ['last-only', 'escalating'].includes(v)
+  },
+  valueFormat: {
+    type: Function,
+    default: null
   },
   showBaseline: {
     type: Boolean,

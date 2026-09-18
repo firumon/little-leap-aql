@@ -112,6 +112,7 @@ import {
   arcPath,
   formatNumber,
   formatShort,
+  formatValue,
   tierAtLeast
 } from 'src/utils/widgetGeometry.js'
 
@@ -145,6 +146,10 @@ const props = defineProps({
   color: {
     type: String,
     default: 'primary'
+  },
+  valueFormat: {
+    type: Function,
+    default: null
   },
   emptyText: {
     type: [String, Function, Object],
@@ -242,5 +247,5 @@ const valueOffsetY = computed(() => {
   return -12
 })
 
-const formattedValue = computed(() => formatShort(numVal.value))
+const formattedValue = computed(() => formatValue(numVal.value, props.valueFormat, formatShort(numVal.value)))
 </script>

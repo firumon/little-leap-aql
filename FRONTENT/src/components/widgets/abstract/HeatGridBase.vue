@@ -60,7 +60,7 @@
             font-weight="600"
             text-anchor="middle"
           >
-            {{ cell.value }}
+            {{ cell.formattedValue }}
           </text>
         </g>
       </g>
@@ -75,6 +75,7 @@ import { useWidgetTier } from 'src/composables/widgets/useWidgetTier.js'
 import { resolveCssColor } from 'src/utils/colorHelpers.js'
 import {
   formatShort,
+  formatValue,
   truncate,
   tierAtLeast
 } from 'src/utils/widgetGeometry.js'
@@ -106,6 +107,10 @@ const props = defineProps({
   color: {
     type: String,
     default: 'primary'
+  },
+  valueFormat: {
+    type: Function,
+    default: null
   },
   minTier: {
     type: String,
@@ -212,6 +217,7 @@ const rows = computed(() => {
 
       return {
         value: val,
+        formattedValue: formatValue(val, props.valueFormat, formatShort(val)),
         x,
         w: cW,
         opacity,

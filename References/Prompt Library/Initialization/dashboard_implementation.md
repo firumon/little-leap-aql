@@ -10,13 +10,15 @@ This prompt covers adding, changing, or debugging a dashboard data item and its 
 
 Read these files in this exact order:
 
-1. [Documents/FEATURE_DASHBOARD_ENGINE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_DASHBOARD_ENGINE.md) — The whole engine. Not optional.
-2. [Documents/CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md) — Required before ANY edit under FRONTENT/.
-3. [FRONTENT/src/components/widgets/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/widgets/REGISTRY.md) — Which preset to pick. Only preset names go in the sheet, never a base name.
-4. [FRONTENT/src/components/widgets/WIDGETS.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/widgets/WIDGETS.md) — The deep guide. Every base with its full prop table, data shape, density tiers, slots and edge cases.
-5. [FRONTENT/src/components/widgets/CONTRACT.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/widgets/CONTRACT.md) — The rules every widget obeys.
-6. The resource's own Data/ folder — Read every file in it, including _shared.js.
-7. [Documents/SHARED_UTILITIES_INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHARED_UTILITIES_INDEX.md) — Read before you even think about a new helper.
+1. [Documents/FEATURE_DASHBOARD_ENGINE_CUSTOMIZATION.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_DASHBOARD_ENGINE_CUSTOMIZATION.md) — Complete guide to every option by where it lives.
+2. [Documents/FEATURE_DASHBOARD_ENGINE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_DASHBOARD_ENGINE.md) — The engine hub and flow overview.
+3. [Documents/FEATURE_DASHBOARD_ENGINE_DATA.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_DASHBOARD_ENGINE_DATA.md) — The data layer (DJS), item descriptors (DBI), controls, and empty rule.
+4. [Documents/CORE_ARCHITECTURE_RULES.md](file:///f:/LITTLE%20LEAP/AQL/Documents/CORE_ARCHITECTURE_RULES.md) — Required before ANY edit under FRONTENT/.
+5. [FRONTENT/src/components/widgets/REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/widgets/REGISTRY.md) — Which preset to pick. Only preset names go in the sheet, never a base name.
+6. [FRONTENT/src/components/widgets/WIDGETS.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/widgets/WIDGETS.md) — The deep guide hub. Every base with its full prop table, data shape, density tiers, slots and edge cases.
+7. [FRONTENT/src/components/widgets/CONTRACT.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/widgets/CONTRACT.md) — The rules every widget obeys.
+8. The resource's own Data/ folder — Read every file in it, including _shared.js.
+9. [Documents/SHARED_UTILITIES_INDEX.md](file:///f:/LITTLE%20LEAP/AQL/Documents/SHARED_UTILITIES_INDEX.md) — Read before you even think about a new helper.
 
 ---
 
@@ -71,9 +73,27 @@ Here is what is extra for an agent:
 
 ## How to change an existing item
 
+Adding a tile means one DBI file and one ARD sheet item. The standard sheet item is only
+`{"name":"<dbiFileName>"}`. Put it in the position that sets its order. Any other sheet key is an
+optional override; see [FEATURE_DASHBOARD_ENGINE_CUSTOMIZATION.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_DASHBOARD_ENGINE_CUSTOMIZATION.md)
+for the override keys.
+
 Read the JSDoc block first. It tells you what the item promised.
 If your change breaks that promise, UPDATE THE BLOCK in the same edit.
 A block that no longer matches its code is worse than no block.
+
+## Rules that must not break
+
+- A broken tile is always visible. Hide only a healthy tile that has nothing to say.
+- For the tile file and ARD line rule, see [How to change an existing item](#how-to-change-an-existing-item) above. Other keys are optional overrides.
+- Layer 1 core files are read-only unless the user says yes. Ask before creating any file or exported function, with the audit quote from `AGENTS.md`.
+- Use a Quasar component when one exists. Never rebuild it from `div`s.
+- No hidden features. Every option is documented, and every new feature updates its init prompt in the same task.
+- One-line, single-use logic stays inline, such as `valueFormat: (v) => v + ' days'`. Only multi-step logic gets a helper, and a reused helper is general.
+- No option is special. Widget options such as `valueFormat` and `color` are plain `widgetProps`.
+- Docs describe the present. No history.
+- Never push or deploy.
+
 If the change needs a different picture, re-read [REGISTRY.md](file:///f:/LITTLE%20LEAP/AQL/FRONTENT/src/components/widgets/REGISTRY.md) first — the preset you want probably already exists.
 
 ---

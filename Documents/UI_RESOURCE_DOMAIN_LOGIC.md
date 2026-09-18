@@ -111,6 +111,20 @@ Everything that answers "what can this record do right now, and why":
 - **The validation rule set** — `validate<Resource>Draft(record)`, returning why a record
   cannot be submitted or `''`. One rule set, asked by the page's submit handler AND by the
   create builder the headless paths use. Spec: [UI_PAGE_STATE_NODES.md §5.7D](UI_PAGE_STATE_NODES.md).
+- **Domain data composables (`Data/`)** — Atomic, topic-specific data composables (`use<Topic>Data.js`) that prepare facts, counts, series, lists, and data controls about one subject. They are singleton cached via `useRecord().remember`, read rows via `useRecord`, and know nothing about dashboard widgets or UI presentation.
+- **Dashboard item descriptors (`Dashboard/`)** — Individual tile descriptor files (`<name>.js`) that consume domain data composables and map them onto dashboard widgets with static metadata, controls, and reactive maps. There is no `index.js`; files match sheet item names directly.
+
+### 3.0.1 Resource Logic Folder Layout
+
+A resource's Layer 2 folder (`FRONTENT/src/_resource/{Scope}/{Resource}/`) contains:
+
+```
+src/_resource/{Scope}/{Resource}/
+├─ composables/               Workflow vocabularies, progress checks, payload builders, node helpers
+├─ Data/                      Domain data composables (DJS) — pure facts, counts, lists, controls
+├─ Dashboard/                 Dashboard items (DBI) — maps domain data to dashboard widgets (one per tile, no index.js)
+└─ utils/                     Resource-specific pure calculations and helpers
+```
 
 ### 3.1 What does NOT belong here
 

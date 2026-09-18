@@ -12,7 +12,7 @@
     <svg
       v-else
       class="aql-widget__svg"
-      :viewBox="`0 0 ${width} ${height}`"
+      :viewBox="`0 0 ${width} ${svgHeight}`"
     >
       <template v-if="isHoriz">
         <template v-if="showLegend && normalizedSeries.length > 1 && tier !== 'micro'">
@@ -176,6 +176,10 @@
   </div>
 </template>
 
+<script>
+export const ROW_HEIGHT = 46
+</script>
+
 <script setup>
 import { computed } from 'vue'
 import Renderable from 'src/components/abstract/Renderable.js'
@@ -216,6 +220,7 @@ const props = defineProps({
     default: 'normal',
     validator: (v) => ['slim', 'normal', 'thick'].includes(v)
   },
+  rowHeight: { type: Number, default: ROW_HEIGHT },
   showValueLabels: { type: Boolean, default: true },
   signColor: { type: Boolean, default: false },
   color: { type: String, default: 'primary' },
@@ -329,7 +334,11 @@ const scale = computed(() => {
 })
 
 const hTop = computed(() => showLegend.value && tier.value !== 'micro' ? 22 : 0)
-const hPlotHeight = computed(() => Math.max(10, height.value - hTop.value - 6))
+const hPlotHeight = computed(() => Math.max(props.rowHeight, categories.value.length * props.rowHeight))
+const svgHeight = computed(() => {
+  if (!isHoriz.value) return height.value
+  return hTop.value + hPlotHeight.value + 6
+})
 const hZeroX = computed(() => {
   const { lo, hi } = scale.value
   const span = hi - lo || 1

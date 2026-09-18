@@ -60,12 +60,19 @@
   </div>
 </template>
 
+<script>
+export const ROW_HEIGHTS = {
+  cozy: 44,
+  tight: 32
+}
+</script>
+
 <script setup>
 import { computed } from 'vue'
 import Renderable from 'src/components/abstract/Renderable.js'
 import { useWidgetTier } from 'src/composables/widgets/useWidgetTier.js'
 import { resolveCssColor } from 'src/utils/colorHelpers.js'
-import { signed, tierAtLeast } from 'src/utils/widgetGeometry.js'
+import { signed, formatValue, tierAtLeast } from 'src/utils/widgetGeometry.js'
 
 defineOptions({
   inheritAttrs: false
@@ -121,7 +128,7 @@ const hi = computed(() => {
 })
 
 const visibleItems = computed(() => {
-  const rowH = props.rowSpacing === 'cozy' ? 44 : 32
+  const rowH = props.rowSpacing === 'cozy' ? ROW_HEIGHTS.cozy : ROW_HEIGHTS.tight
   const maxRows = Math.max(1, Math.floor(height.value / rowH))
   const slice = sortedItems.value.slice(0, maxRows)
   const maxVal = hi.value

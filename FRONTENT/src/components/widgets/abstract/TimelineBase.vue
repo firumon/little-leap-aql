@@ -131,6 +131,13 @@
   </div>
 </template>
 
+<script>
+export const ROW_HEIGHTS = {
+  standard: 48,
+  compact: 34
+}
+</script>
+
 <script setup>
 import { computed } from 'vue'
 import Renderable from 'src/components/abstract/Renderable.js'
@@ -226,7 +233,7 @@ const visibleItems = computed(() => {
   }
 
   const h = height.value || 120
-  const rowH = tierAtLeast(tier.value, 'standard') ? 48 : 34
+  const rowH = tierAtLeast(tier.value, 'standard') ? ROW_HEIGHTS.standard : ROW_HEIGHTS.compact
   const maxRows = Math.max(2, Math.floor(h / rowH))
   return list.slice(0, maxRows)
 })

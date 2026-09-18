@@ -30,16 +30,19 @@ Write code that explains itself. Do not narrate it.
 
 **Clean up as you go.** Whenever you edit a file, delete the long comments and docblocks you find in it. Keep nothing unless it is genuinely load-bearing, and then strip it to 1 line (2 at the very most). This is expected in the diff, not scope creep — but stay inside the file you were already editing.
 
-**One exception: dashboard item descriptors.**
-Every file under `FRONTENT/src/_resource/*/*/Data/` must start with a JSDoc
-block. There is no registry and no index that says what a dashboard item is
-for, so the file is the only place that can say it. These blocks are
-required. Never delete one. Never shorten one to fit the "keep comments rare"
-rule — that rule does not apply here.
-Write them for a person, not for a machine. Say what the item is for, what
-question it answers on the dashboard, which sheets and columns it reads, what
-it hands back, and what each control is meant to change. A file named with a
-leading `_` is a helper, not an item, and needs no block.
+**One exception: data files (DJS) and dashboard items (DBI).**
+Every file under `FRONTENT/src/_resource/*/*/Data/` (a DJS) and
+`FRONTENT/src/_resource/*/*/Dashboard/` (a DBI) must start with a JSDoc block.
+There is no registry and no index that says what these files are for, so the
+file is the only place that can say it. These blocks are required. Never
+delete one. Never shorten one to fit the "keep comments rare" rule — that rule
+does not apply here.
+Write them for a person, not for a machine.
+- For a DJS: what topic it prepares, which sheets and columns it reads, every
+  key it exposes (one line each), and what each control changes.
+- For a DBI: what the tile is for, what question it answers on the dashboard,
+  which DJS values it uses, and which controls it shows.
+A file named with a leading `_` is a helper and needs no block.
 
 ## Strict Truthfulness & Evidence-First Rule (STRICT)
 - Never speak from memory, assumptions, or guesses.
@@ -90,7 +93,8 @@ After classifying the query, read the appropriate initialization document(s) fro
 * **Git Actions (Commit, Push)**: Read [git_operations.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/git_operations.md).
 * **General Investigatory Query**: Read [general_query.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/general_query.md). Use this for any general investigatory queries that do not contain project-specific or repository-specific phrasing.
 * **AQL-Specific Codebase Investigation**: Read [codebase_investigation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/codebase_investigation.md) (covers systematic discovery, domain-to-doc mapping, data flow tracing, and response standards). Use this if the query contains repository/project-specific references or phrases (e.g., "in AQL", "in this project", "in this app", "our app", "our project", or "this AQL").
-* **Dashboard Implementation**: Read [dashboard_implementation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/dashboard_implementation.md) (covers dashboard data items, the Dashboard sheet column, item descriptors under _resource/<Scope>/<Resource>/Data/, and the score — backed by canonical doc [FEATURE_DASHBOARD_ENGINE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_DASHBOARD_ENGINE.md)).
+* **Dashboard Implementation**: Read [dashboard_implementation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/dashboard_implementation.md) (covers data files (DJS) under _resource/<Scope>/<Resource>/Data/, dashboard items (DBI) under _resource/<Scope>/<Resource>/Dashboard/, the Dashboard sheet column, and the score — backed by canonical doc [FEATURE_DASHBOARD_ENGINE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_DASHBOARD_ENGINE.md)).
+* **Dashboard Custom Widget & Modifier**: Read [dashboard_custom_widget.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/dashboard_custom_widget.md) (covers building custom widget replacements replacing the Frame under _ui/<uiName>/components/widgets/<widget>.vue, and tiered JS prop modifiers under _ui/<uiName>/components/<scope>/<resource>/dashboard/<name>.js — backed by canonical doc [FEATURE_DASHBOARD_ENGINE.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_DASHBOARD_ENGINE.md)).
 * **Backend GAS Implementation**: Read [backend_gas_implementation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/backend_gas_implementation.md) (covers generic CRUD, post-write hooks, batch operation, and Apps Script patterns).
 * **Tax / Currency System Changes**: Read [tax_currency_system.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/tax_currency_system.md) (covers compound tax logic, currency helpers, tax-inclusive/exclusive pricing, and tax transaction storage).
 * **Sheet Views / Reports Formulation**: Read [sheet_views_formulation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/sheet_views_formulation.md) for View formulas, or [report_formula_generation.md](file:///f:/LITTLE%20LEAP/AQL/References/Prompt%20Library/Initialization/report_formula_generation.md) for Report template formulas.
@@ -143,7 +147,7 @@ that carries:
 Read the hub first, then open only the part your task needs. Do not assume a hub still
 contains the section you remember — the hub deliberately does not restate its parts.
 
-Split hubs: `UI_MODULE_DEVELOPER_GUIDE.md`, `UI_PAGE_STATE.md`, `UI_ACTION_SYSTEM.md`,
+Split hubs: `FEATURE_DASHBOARD_ENGINE.md`, `UI_MODULE_DEVELOPER_GUIDE.md`, `UI_PAGE_STATE.md`, `UI_ACTION_SYSTEM.md`,
 `UI_CREATE_AND_UPDATE_SYSTEM.md`, `UI_PAGE_AND_SECTION_SYSTEM.md`,
 `UI_RESOURCE_DOMAIN_LOGIC.md`, `UI_LIST_SWITCHER.md`, `UI_CONTENT_SYSTEM.md`.
 

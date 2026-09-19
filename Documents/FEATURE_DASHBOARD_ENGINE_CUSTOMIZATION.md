@@ -37,7 +37,8 @@ Every other key listed below is an **optional override**, used only when a tenan
 |---|---|
 | **Sheet only** | `name`, `active`, `activeExcept`, `hideOnEmpty`, order of items in cell |
 | **DBI only** | `permission`, `auth`, `users` |
-| **Both — sheet wins** | `widget`, `size`, `multiplier`, `widgetProps`, `title`, `subtitle`, `caption` |
+| **Both — sheet wins** | `widget`, `size`, `multiplier`, `widgetProps` |
+| **Data, then sheet, then DBI** | `title`, `subtitle`, `caption` — a value in the DBI `data` wins over the sheet, and the sheet wins over a static DBI value. The Frame draws them. `Tile.vue` also copies each non-empty one into `widgetProps` for widgets that read them. |
 | **Sheet (custom tiles)** | `source` — passed through untouched |
 
 ### All keys in detail
@@ -51,9 +52,9 @@ Every other key listed below is an **optional override**, used only when a tenan
 | `multiplier` | Number | `1` | Multiplies the tile score. Clamped between `0` and `2` for normal tiles, and `0` and `3` for custom tiles. Set to `0` to turn the tile off. |
 | `size` | Object | From DBI or `{ xs: [12] }` | Responsive allowed widths per breakpoint (`xs`, `sm`, `md`, `lg`, `xl`). Array of widths in preference order (e.g. `[6, 8, 12]`). Single numbers coerce to a single-element array (e.g. `6` → `[6]`). |
 | `widget` | String | From DBI | Name of the widget preset to render (e.g. `'HorizontalRankBar'`, `'MetricPlain'`). Overrides the DBI preset. |
-| `title` | String | From DBI | Title text on the card header. Overrides DBI title. |
-| `subtitle` | String | From DBI | Subtitle text below the title. Overrides DBI subtitle. |
-| `caption` | String | From DBI | Caption footer text. Overrides DBI caption. |
+| `title` | String | From DBI | Title text on the card header. Overrides the DBI static value. A `title` inside DBI `data` wins over this. |
+| `subtitle` | String | From DBI | Subtitle text below the title. Overrides the DBI static value. A `subtitle` inside DBI `data` wins over this. |
+| `caption` | String | From DBI | Caption footer text. Overrides the DBI static value. A `caption` inside DBI `data` wins over this. |
 | `widgetProps` | Object | `{}` | Visual properties passed to the widget. Shallow-merges over DBI `widgetProps`. |
 | `source` | String | `undefined` | Custom tile pass-through key for external or custom-rendered data. Untouched by the engine. |
 
@@ -140,8 +141,9 @@ export default (props) => {
 
 ### Static keys vs `data`
 
+- **What `props` is**: a copy of the sheet item's `widgetProps`. The DBI runs ONCE per `resource::name` and the result is cached (`dbiCallCache` in `useDashboardResolver.js`). A later sheet change does not re-run it until the page reloads.
 - **Static keys**: `widget`, `size`, `permission`, `widgetProps`, `users`, `auth`, `multiplier`, and static `title`/`subtitle`/`caption`. These are plain javascript values.
-- **`data`**: A single `computed` returning an object of plain unwrapped values (`.value` inside). Any property that updates dynamically (counts, lists, reactive titles) must live inside `data`.
+- **`data`**: A single `computed` returning an object of plain unwrapped values (`.value` inside). Any property that updates dynamically (counts, lists, reactive titles) must live inside `data`. A `title`, `subtitle` or `caption` in `data` wins over the sheet, and the sheet wins over the DBI static value.
 - A property must live either in static keys or inside `data`, never both.
 
 ### DBI properties in detail
@@ -351,4 +353,4 @@ When multiple DBIs import the same DJS singleton, they share the same control `r
 ## 7. Small Logic: Inline vs Helper Rule
 
 - **Inline logic**: Simple arithmetic, standard formatting, or single-line filtering should be written directly inside the DJS or DBI.
-- **Pure mathematical helpers**: Reusable date ranges, grouping math, or stat helpers belong in `FRONTENT/src/composables/dashboard/useDataContext.js` as pure functions taking raw arrays.
+- **Pure mathematical helpers**: Reusable date ranges, grouping math, or stat helpers belong in `FRONTENT/src/composables/data/useDataContext.js` as pure functions taking raw arrays.

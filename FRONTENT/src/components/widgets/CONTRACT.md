@@ -15,6 +15,7 @@
 A widget draws **one picture**. That is all.
 
 It does not draw the card. It does not draw the title, the caption, or the control inputs. The frame owns those.
+The tile still passes the card's non-empty `title`, `subtitle` and `caption` as props. A widget that declares them may use them. A widget that does not simply ignores them. An empty one is never passed, so a widget's own fallback text still works.
 
 The widget system consists of:
 - `FRONTENT/src/components/widgets/Widget.vue` — the single picture component.

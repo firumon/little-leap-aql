@@ -78,6 +78,7 @@ export default (props) => {
 
 ### Static keys vs `data`
 
+- **What `props` is**: a copy of the sheet item's `widgetProps`. The DBI runs ONCE per `resource::name` and the result is cached (`dbiCallCache` in `useDashboardResolver.js`). A later sheet change does not re-run it until the page reloads.
 - **Static keys**: `widget`, `size`, `permission`, `widgetProps`, `users`, `auth`, `multiplier`, and static `title`/`subtitle`/`caption`. Plain values only.
 - **`data`**: A single `computed` returning an object of plain unwrapped values (`.value` inside). A key exists either as a static key or in `data`, never both.
 - **No `name`, no `source`**: The file name is the name, and the DBI imports its DJS directly.
@@ -107,6 +108,8 @@ A control never changes the records; it only changes how the item looks at them.
 ### The return rule
 
 > **Name a const: good. Return it: only if something reads it.**
+
+`title`, `subtitle` and `caption` inside `data` go to the card. `Tile.vue` takes them out of `data`. Order: `data` wins, then the sheet, then the DBI static value. `Tile.vue` also copies each non-empty one into `widgetProps`, so a widget that reads them gets the same text. A key set in `widgetProps` itself wins over that copy.
 
 Only return keys that the widget reads (e.g. `value`, `items`, `series`, `points`, `max`, `compare`) or frame keys (`title`, `subtitle`, `caption`, `controls`, `options`). Do not leak internal intermediate computeds.
 
@@ -163,7 +166,7 @@ The frame or wrapper consumes the controls using `useDataControls(controls)`:
 
 ## §7 — useDataContext
 
-`FRONTENT/src/composables/dashboard/useDataContext.js` provides **stateless, pure mathematics helpers**. It has no stores and holds no state.
+`FRONTENT/src/composables/data/useDataContext.js` provides **stateless, pure mathematics helpers**. It has no stores and holds no state.
 
 ### Helpers take lists, never resource names
 

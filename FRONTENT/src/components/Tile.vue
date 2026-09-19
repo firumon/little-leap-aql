@@ -100,14 +100,20 @@ const tileProps = computed(() => componentProps.props || {})
 
 const tilePropsFlat = computed(() => {
   const p = tileProps.value
+  const { title, subtitle, caption, ...data } = componentProps.data?.value ?? componentProps.data ?? {}
+  const text = {
+    title: title ?? p.title ?? '',
+    subtitle: subtitle ?? p.subtitle ?? '',
+    caption: caption ?? p.caption ?? ''
+  }
+  // Empty keys stay out, so a widget can still use its own fallback text.
+  const widgetText = Object.fromEntries(Object.entries(text).filter(([, v]) => v))
   return {
-    title: p.title ?? '',
-    subtitle: p.subtitle ?? '',
-    caption: p.caption ?? '',
+    ...text,
     widget: p.widget ?? '',
-    widgetProps: p.widgetProps ?? {},
+    widgetProps: { ...widgetText, ...(p.widgetProps ?? {}) },
     controls: componentProps.controls ?? [],
-    data: componentProps.data?.value ?? componentProps.data ?? {},
+    data,
     error: p.error ?? '',
     name: p.name ?? '',
     resource: componentProps.resource ?? '',

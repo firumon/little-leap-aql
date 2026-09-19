@@ -10,12 +10,12 @@ The frame is a card wrapper with places to fill:
 - **Props**: `title`, `subtitle`, `caption`, `controls`, `error`, `loading`, `widget`, `widgetProps`, `data`.
   - `widget`: String — preset name (e.g. `'HorizontalRankBar'`).
   - `widgetProps`: Object — visual props from DBI and sheet.
-  - `data`: Object — domain data values.
+  - `data`: Object — domain data values. `Tile.vue` has already taken `title`, `subtitle` and `caption` out of it (order: `data`, then sheet, then DBI static value), so they reach the Frame as its own props. It also copies each non-empty one into `widgetProps`; a key set in `widgetProps` itself wins.
   - The Frame renders `<Widget :name="widget" v-bind="{ ...widgetProps, ...dataWithoutLoadingAndEmpty }" class="aql-widget-fill" />`.
   - `loading`: Object `{ inflight: [], state: false }`. Accepted for custom frames; Frame draws no spinner (Tile owns spinner).
 - **Attrs**: `$attrs.class` and `$attrs.style` go onto the outer `q-card`. Attrs no longer pass to `<Widget>`.
 - **Body order**:
-  1. `error` set → shows a small error block. A broken tile is always visible.
+  1. `error` set → shows a small error block. A DBI cannot set `error`; only a `.js` modifier can.
   2. else → `<Widget :name="widget" v-bind="{ ...widgetProps, ...dataWithoutLoadingAndEmpty }" class="aql-widget-fill" />`.
 - **Header controls and wrapping**: The frame renders title/subtitle and `<Controls />`. When both cannot fit on one line, controls drop onto their own full-width line below the title. Titles, subtitles, and control elements inside Frame use one-step smaller typography to prevent overflow. If no controls are defined, it renders nothing.
 - **Height from content**: The body height is driven by `widget` preset hints via CSS:

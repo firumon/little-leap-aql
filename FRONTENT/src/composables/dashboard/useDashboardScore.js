@@ -42,33 +42,23 @@ export function scoreDashboardItem (item, auth, ownerResource = '', isCustom = f
     return SCOPE_WEIGHTS[scopeKey] || 1
   }
 
+  const ownerCfg = findResourceConfig(auth, ownerResource || item.resource || '')
+  const weightOf = (cfg, verb) => {
+    if (!cfg) return 0
+    if (cfg.parentResource && cfg !== ownerCfg) return 0.75
+    const scopeWeight = SCOPE_WEIGHTS[String(cfg.scope || 'master').toLowerCase()] || 1
+    return resolvePermissionWeight(verb) * scopeWeight
+  }
+
   let sumResourceScore = 0
   const p = item.permission
 
   if (p) {
     if (typeof p === 'string' || Array.isArray(p) || p === true) {
-      const resName = ownerResource || item.resource || ''
-      const cfg = findResourceConfig(auth, resName)
-      if (cfg) {
-        if (cfg.parentResource) {
-          sumResourceScore += 0.75
-        } else {
-          const scopeKey = String(cfg.scope || 'master').toLowerCase()
-          const scopeWeight = SCOPE_WEIGHTS[scopeKey] || 1
-          sumResourceScore += resolvePermissionWeight(p) * scopeWeight
-        }
-      }
+      sumResourceScore += weightOf(ownerCfg, p)
     } else if (typeof p === 'object') {
       for (const [resName, verb] of Object.entries(p)) {
-        const cfg = findResourceConfig(auth, resName)
-        if (!cfg) continue
-        if (cfg.parentResource) {
-          sumResourceScore += 0.75
-        } else {
-          const scopeKey = String(cfg.scope || 'master').toLowerCase()
-          const scopeWeight = SCOPE_WEIGHTS[scopeKey] || 1
-          sumResourceScore += resolvePermissionWeight(verb) * scopeWeight
-        }
+        sumResourceScore += weightOf(findResourceConfig(auth, resName), verb)
       }
     }
   }

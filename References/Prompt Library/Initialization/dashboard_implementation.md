@@ -394,7 +394,7 @@ Every other key is an optional override (see section 3). Examples:
 
 `score = bag × position × share × multiplier`
 - **raw** (for each item) = permission verb weight × scope weight + bonus
-  - Scope weights: master 1, operation 2, accounts 2.5. A child resource counts a flat 0.75.
+  - Scope weights: master 1, operation 2, accounts 2.5. A child resource counts a flat 0.75 when it is only listed. When the child is the owner (the item lives in its own folder), it uses its scope and verb like any other.
   - Verb weights: `true` 1, Read or Delete 1.5, Update 2, Create or Write 3, any other action 2.5.
   - Bonus: `auth` +3, `users` +5.
   - An item that lists several resources adds up their weights.

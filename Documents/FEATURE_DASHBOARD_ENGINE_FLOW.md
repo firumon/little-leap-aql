@@ -96,7 +96,7 @@ raw = permission weight × scope weight + user bonus
 
 - **Scope weights**: `master` = 1.0, `operation` = 2.0, `accounts` = 2.5.
 - **Verb weights**: `true` = 1.0, `Read` = 1.5, `Delete` = 1.5, `Update` = 2.0, `Create` = 3.0, `Write` = 3.0, any other action = 2.5. A prefix of `can` is stripped first. The maximum verb weight is used when multiple verbs are specified.
-- **Child tables**: A child table (with `parentResource`) skips the scope/verb table and contributes a flat **0.75**.
+- **Child tables**: A child table (with `parentResource`) that is NOT the item's owner skips the scope/verb table and contributes a flat **0.75**. When the child table IS the owner (the item lives in its own `Dashboard/` folder), it is scored by its scope and verb like any other table.
 - **User bonuses**: `auth: true` adds **+3.0**. `users: true` adds **+5.0**.
 - Note: `multiplier` is NOT part of `raw`.
 
@@ -163,6 +163,16 @@ Assume a resource has 4 surviving items (n = 4), with raw values `[3.0, 3.0, 3.7
 - Item 1 (i = 1): position = 1.30. Score = 3.1875 × 1.30 × 0.5 × 1 ≈ 2.07.
 - Item 2 (i = 2): position = 0.70. Score = 3.1875 × 0.70 × 0.5 × 1 ≈ 1.12.
 - Item 3 (i = 3): position = 0.10. Score = 3.1875 × 0.10 × 0.5 × 1 ≈ 0.16.
+
+The `3.75` item lists its parent and one child: `{ OutletRestocks: 'Read', OutletRestockItems: true }` = 1.5 × 2 + 0.75.
+
+The same child scores differently when it owns the item:
+
+| Item lives in | `permission` | raw |
+|---|---|---|
+| `OutletRestocks/Dashboard/` | `{ OutletRestockItems: true }` | 0.75 (child, only listed) |
+| `OutletRestockItems/Dashboard/` | `{ OutletRestockItems: true }` | 1 × 2 = 2 (child is the owner, `operation` scope) |
+| `OutletRestockItems/Dashboard/` | `{ OutletRestockItems: 'Read', SKUs: true }` | 1.5 × 2 + 0.75 = 3.75 (`SKUs` is a child of `Products`, only listed) |
 
 The scores interleave naturally with items from other resources.
 

@@ -152,7 +152,7 @@ export default (props) => {
 |---|---|---|---|
 | `widget` | String | (Required) | Default widget preset name (e.g. `'MetricPlain'`, `'DonutProportion'`). |
 | `size` | Object | `{ xs: [12] }` | Default allowed widths per breakpoint. |
-| `permission` | Object, String, Boolean | `true` | Permission check tested against current user permissions (e.g. `{ Leads: 'Read' }` or `'canCreateLeads'`). |
+| `permission` | Object, String, Boolean | `true` | Permission check tested against current user permissions (e.g. `{ Leads: 'Read' }` or `'canCreateLeads'`). It also sets the raw score: each listed resource adds verb weight × scope weight. A child resource that is only listed adds a flat 0.75; a child resource that owns the item is weighted like any other. See [FEATURE_DASHBOARD_ENGINE_FLOW.md §3](FEATURE_DASHBOARD_ENGINE_FLOW.md). |
 | `auth` | Boolean | `false` | When `true`, awards a `+3.0` user bonus to the tile's raw score. |
 | `users` | Boolean | `false` | When `true`, awards a `+5.0` user bonus to the tile's raw score. |
 | `controls` | Array | `[]` | Array of control descriptors passed directly from the DJS `controls` array. |

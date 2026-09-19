@@ -113,7 +113,7 @@ After loading the BP, `usePageResolver` scans `src/_ui/[UiName]/pages/` for cust
 | Page | What loads |
 |------|------------|
 | `index` | `reload()` — the resource list |
-| `view` | `reload()`, then `loadRelations()` for parents/children |
+| `view` | `reload()`. Parents and children load on first read (UI_RECORD_ACCESS.md §3.1) |
 | `edit` (with a `code`) | `reload()` |
 | `add` | nothing — no server read is needed |
 | custom sub-route slug | nothing — the override page fetches what it needs itself |

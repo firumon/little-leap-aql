@@ -6,9 +6,9 @@ import { createSync } from './data/sync'
 
 export const useDataStore = defineStore('data', () => {
   const state = createState()
-  const projections = createProjections(state)
   const relations = createRelations(state)
-  const sync = createSync(state, projections, relations)
+  const sync = createSync(state, relations)
+  const projections = createProjections(state, sync.ensureResource)
 
   return {
     headers: state.headers,
@@ -34,8 +34,7 @@ export const useDataStore = defineStore('data', () => {
     getRelations: relations.getRelations,
     seedResourceFromCache: sync.seedResourceFromCache,
     seedAuthorizedResources: sync.seedAuthorizedResources,
-    loadResource: sync.loadResource,
-    syncResource: sync.syncResource,
+    ensureResource: sync.ensureResource,
     updateRowsFromSync: sync.updateRowsFromSync,
     cacheResourceRows: sync.cacheResourceRows,
     setResourceMetadata: sync.setResourceMetadata

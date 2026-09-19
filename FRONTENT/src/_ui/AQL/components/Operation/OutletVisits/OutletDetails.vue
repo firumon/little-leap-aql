@@ -68,8 +68,8 @@
  * `.aql-detail-line` / `.aql-detail-key` / `.aql-detail-val` row grammar with the same
  * 40ms stagger — so this card is indistinguishable from a framework detail card.
  *
- * The outlet is read through the visit's `$outlet` relation getter, which the View
- * page's `loadRelations()` has already fetched. The record reference is never spread —
+ * The outlet is read through the visit's `$outlet` relation getter; the data store
+ * fetches Outlets on first read. The record reference is never spread —
  * the relation getters are non-enumerable and a copy would drop them
  * (UI_PAGE_AND_SECTION_SYSTEM.md §1.3.3).
  */

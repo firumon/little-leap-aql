@@ -74,11 +74,6 @@ export function usePageResolver() {
       if (page !== 'index' && page !== 'view' && !(page === 'edit' && code.value)) return
 
       await resourceRecord.reload()
-      // Only the view page renders parents/children, so nothing else pays for
-      // the extra round of relation fetches.
-      if (page === 'view' && resourceRecord.record.value) {
-        await resourceRecord.loadRelations()
-      }
     },
     { immediate: true }
   )

@@ -226,7 +226,7 @@ Retained unchanged for the custom views and pages that import it directly.
 ### B. Reports Composable (`FRONTENT/src/composables/reports/useReports.js`)
 Handles state orchestration:
 *   **State Refs**: `isGenerating`, `showReportDialog`, `activeReport`, `reportInputs`, `activeRecord`.
-*   **`initiateReport(report, record)`**: Resolves if user inputs are required. If so, it pre-seeds defaults. If a select input uses a dynamic resource `source`, it triggers `dataStore.loadResource` to seed option lists.
+*   **`initiateReport(report, record)`**: Resolves if user inputs are required. If so, it pre-seeds defaults. A select input with a dynamic resource `source` needs no preload: the dialog reads it from the data store, which loads it on first read.
 *   **`executeReport(report, userValues, record)`**: Builds the payload array of `{ cell, value }` by joining context fields, static defaults, and user form inputs, triggers the store action `resourceIoStore.generateReportFile`, parses the Base64 response, and downloads the PDF via Quasar's `exportFile` helper.
 
 ---

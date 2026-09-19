@@ -231,8 +231,8 @@ export default { noReports: true }
 > therefore emits nothing and takes no `@`-handler from its container.
 
 **Layer boundary**: the component is presentation only. Input-dialog state, dynamic
-select preloading (`dataStore.loadResource` for `type: 'select'` inputs with a
-`source`), progress notifications, and the Base64 → Blob download all live in
+select options (read from the data store, which loads a `source` resource on first
+read), progress notifications, and the Base64 → Blob download all live in
 `useReports` (`src/composables/reports/useReports.js`) — see
 [FEATURE_REPORTS_SYSTEM.md](file:///f:/LITTLE%20LEAP/AQL/Documents/FEATURE_REPORTS_SYSTEM.md).
 

@@ -1,7 +1,7 @@
 import { computed, effectScope } from 'vue'
 
-export function createProjections(state) {
-  const { rows, headers, _touch, ensureResourceState } = state
+export function createProjections(state, ensureResource) {
+  const { rows, headers, _touch } = state
 
   // Per-resource projection, memoized so repeat reads never re-map the rows. The
   // scope is store-owned so a caller's component scope cannot stop these.
@@ -84,13 +84,13 @@ export function createProjections(state) {
 
   function getRows(resourceName) {
     if (!resourceName) return []
-    ensureResourceState(resourceName)
+    ensureResource(resourceName)
     return _projection(resourceName).rowList.value
   }
 
   function getRecords(resourceName) {
     if (!resourceName) return []
-    ensureResourceState(resourceName)
+    ensureResource(resourceName)
     return _projection(resourceName).records.value
   }
 
@@ -98,7 +98,7 @@ export function createProjections(state) {
   function getRecordsBy(resourceName, header, value) {
     if (!resourceName || !header) return []
     if (value === undefined || value === null || value === '') return []
-    ensureResourceState(resourceName)
+    ensureResource(resourceName)
     if (header === 'Code') {
       const match = _projection(resourceName).byCode.value.get(value)
       return match ? [match] : []
@@ -113,7 +113,7 @@ export function createProjections(state) {
 
   function getRecord(resourceName, code) {
     if (!resourceName || !code) return null
-    ensureResourceState(resourceName)
+    ensureResource(resourceName)
     return _projection(resourceName).byCode.value.get(code) || null
   }
 

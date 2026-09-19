@@ -189,21 +189,6 @@ export function usePageRecord(resourceNameOverride, codeOverride) {
     }
   }
 
-  async function loadRelations() {
-    const rels = relations.value
-    if (!rels) return
-
-    const resourceNames = new Set()
-    for (const p of rels.parents) resourceNames.add(p.resourceName)
-    for (const c of rels.children) resourceNames.add(c.name)
-    for (const refRes of Object.values(rels.linkRefs)) resourceNames.add(refRes)
-
-    const tasks = Array.from(resourceNames).map(name =>
-      resourceIoStore.fetchResource(name).catch(() => {})
-    )
-    await Promise.all(tasks)
-  }
-
   function getRecordByCode(code) {
     if (!code) return null
     const name = resolvedResourceName.value
@@ -276,7 +261,6 @@ export function usePageRecord(resourceNameOverride, codeOverride) {
     setActiveView,
 
     reload,
-    loadRelations,
     getRecordByCode,
     updateLocalRecord,
     notify,

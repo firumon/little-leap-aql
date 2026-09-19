@@ -262,17 +262,7 @@ export function useRestockDelivery () {
   watch([serverRecord, () => parent.identifier.value], () => { hydrate() }, { immediate: true })
 
   onMounted(() => {
-    // `usePageResolver` loads NOTHING for an `_action/:action` route — a custom
-    // sub-route is expected to fetch what it needs itself
-    // (UI_PAGE_AND_SECTION_SYSTEM.md §1.3.3), and `loadRelations()` is only
-    // called on a view route, so the child item rows are NOT there either. That
-    // includes the request itself: without this the injected
-    // `resourceRecord.record` never resolves on a cold deep link and the page
-    // renders an empty shell.
-    //
-    // SKUs × Products are what the Product → SKU labelling projects over.
-    // `reload()` renders from whatever the store already holds and syncs the
-    // delta in the background, so a warm cache shows the page immediately.
+    // The page resolver loads nothing on an `_action` route, so reload the page's own record here.
     ;[restocks, restockItems, outlets, skus, products].forEach((resource) => resource.reload())
   })
 

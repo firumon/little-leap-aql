@@ -67,6 +67,18 @@ The returned object provides:
 - `isLoading(resource)`: A plain `true`/`false` saying whether that resource is fetching right now. Not a ref.
 - `remember(key, build)`: Runs a build function once inside the long-lived store scope and caches the result forever. Use this for shared domain projections and option lists.
 
+### 3.1 Loading on first read
+
+You never have to load a resource before you read it. The data store does it for you.
+
+The first time any read touches a resource (`getRows`, `getRecords`, `getRecord`, `getRecordsBy`, `getRecordBy`), the store calls `ensureResource(name)` once:
+
+1. It sets the headers from the login resource list.
+2. It reads the rows from IndexedDB.
+3. If the resource was never fetched (`resourceStatus.byResource[name].initiated` is false), it queues it with `resourceIo.queueResource`. The queue waits a short time, merges every name asked for in that time, and sends them in one `action: get`.
+
+The read returns at once with what the store holds. When the rows arrive, every reader updates by itself. After the first fetch, polling keeps the resource fresh. Resources the user is not allowed to see are skipped.
+
 ---
 
 ## 4. The `usePageRecord()` Composable
@@ -81,7 +93,6 @@ It wraps `useRecord()` and adds page-level features:
 - `currentPage`: Current page number for list pagination.
 - `effectiveViews`, `activeViewName`, `activeView`, `setActiveView`: View tabs and filters.
 - `reload()`: Refreshes records and sync status for the page.
-- `loadRelations()`: Loads child and parent records for the active record.
 
 `usePageResolver.js` calls `usePageRecord()` once per page and provides it under the name `resourceRecord`. UI components inject `resourceRecord` rather than calling `usePageRecord()` themselves.
 

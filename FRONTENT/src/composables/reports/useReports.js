@@ -1,21 +1,10 @@
 import { ref } from 'vue'
 import { exportFile, useQuasar } from 'quasar'
 import { useResourceIoStore } from 'src/stores/resourceIo'
-import { useDataStore } from 'src/stores/data'
 
-/**
- * useReports composable
- *
- * Provides report generation logic for master/operation pages.
- * Reads report configs from the resource's `reports` array,
- * collects user inputs via a dialog, resolves context inputs
- * from the current record, and calls the GAS backend to
- * generate a PDF which is then downloaded.
- */
 export function useReports(resourceNameRef) {
   const $q = useQuasar()
   const resourceIoStore = useResourceIoStore()
-  const dataStore = useDataStore()
 
   const isGenerating = ref(false)
   const showReportDialog = ref(false)
@@ -23,59 +12,31 @@ export function useReports(resourceNameRef) {
   const reportInputs = ref({})
   const activeRecord = ref(null)
 
-  /**
-   * Get toolbar-level reports (not record-specific).
-   * @param {Object} config - Resource config from auth store
-   * @returns {Array} Reports where isRecordLevel !== true
-   */
   function getToolbarReports(config) {
     const reports = config?.reports || []
     return reports.filter((r) => !r.isRecordLevel)
   }
 
-  /**
-   * Get record-level reports (shown per row).
-   * @param {Object} config - Resource config from auth store
-   * @returns {Array} Reports where isRecordLevel === true
-   */
   function getRecordReports(config) {
     const reports = config?.reports || []
     return reports.filter((r) => r.isRecordLevel)
   }
 
-  /**
-   * Check if a report requires user input before generating.
-   * @param {Object} report - Single report config object
-   * @returns {boolean}
-   */
   function requiresUserInput(report) {
     if (!report?.inputs || !Array.isArray(report.inputs)) return false
     return report.inputs.some((input) => !input.field && input.type && input.label)
   }
 
-  /**
-   * Initiate report generation.
-   * If the report needs user input, opens a dialog first.
-   * Otherwise, generates immediately.
-   *
-   * @param {Object} report - Report config from `reports` array
-   * @param {Object|null} record - Current record context (for record-level reports)
-   */
   function initiateReport(report, record = null) {
     activeReport.value = report
     activeRecord.value = record
 
     if (requiresUserInput(report)) {
-      // Initialize form with defaults
       const formInit = {}
       report.inputs
         .filter((input) => !input.field && input.type && input.label)
         .forEach((input) => {
           formInit[input.label] = input.default || ''
-          if (input.type === 'select' && input.source && input.source.resource) {
-            dataStore.loadResource(input.source.resource, { cacheOnly: true }).catch(() => {})
-            dataStore.loadResource(input.source.resource).catch(() => {})
-          }
         })
       reportInputs.value = formInit
       showReportDialog.value = true
@@ -84,18 +45,12 @@ export function useReports(resourceNameRef) {
     }
   }
 
-  /**
-   * Called from the dialog after user confirms inputs.
-   */
   function confirmReportDialog() {
     if (!activeReport.value) return
     showReportDialog.value = false
     executeReport(activeReport.value, { ...reportInputs.value }, activeRecord.value)
   }
 
-  /**
-   * Cancel the report dialog.
-   */
   function cancelReportDialog() {
     showReportDialog.value = false
     activeReport.value = null
@@ -103,14 +58,6 @@ export function useReports(resourceNameRef) {
     reportInputs.value = {}
   }
 
-  /**
-   * Build cellData from report config inputs, user values, and record context.
-   *
-   * @param {Object} report - Report config
-   * @param {Object} userValues - Values from user dialog
-   * @param {Object|null} record - Row record for context inputs
-   * @returns {Array} Array of { cell, value } objects
-   */
   function buildCellData(report, record, userInputs) {
     const cellData = [];
     if (!report.inputs) return cellData;
@@ -120,13 +67,10 @@ export function useReports(resourceNameRef) {
       const targetCell = inp.targetCell || inp.cell;
 
       if (inp.field) {
-        // Source: Context (Record)
         value = record ? record[inp.field] : '';
       } else if (inp.type && inp.label) {
-        // Source: User Input
         value = userInputs[inp.label] || inp.default || '';
       } else if (inp.default) {
-        // Source: Static
         value = inp.default;
       }
 
@@ -138,13 +82,6 @@ export function useReports(resourceNameRef) {
     return cellData;
   }
 
-  /**
-   * Execute report generation call to backend.
-   *
-   * @param {Object} report - Report config
-   * @param {Object} userValues - User-provided input values
-   * @param {Object|null} record - Row record context
-   */
   async function executeReport(report, userValues = {}, record = null) {
     if (isGenerating.value) return
 
@@ -161,7 +98,6 @@ export function useReports(resourceNameRef) {
     try {
       const cellData = buildCellData(report, record, userValues)
 
-      // Resolve resource name from ref/computed, string, or fallback
       const resName = typeof resourceNameRef === 'function' ? resourceNameRef()
         : resourceNameRef?.value !== undefined ? resourceNameRef.value
         : (resourceNameRef || '')
@@ -173,14 +109,12 @@ export function useReports(resourceNameRef) {
         cellData
       })
 
-      // Dismiss progress notification
       dismissProgress()
 
       if (!result.success) {
         return
       }
 
-      // Convert Base64 to Blob and download
       const reportData = result.data || {}
       const binaryString = atob(reportData.base64 || '')
       const bytes = new Uint8Array(binaryString.length)
@@ -225,13 +159,11 @@ export function useReports(resourceNameRef) {
   }
 
   return {
-    // State
     isGenerating,
     showReportDialog,
     activeReport,
     reportInputs,
 
-    // Helpers
     getToolbarReports,
     getRecordReports,
     requiresUserInput,

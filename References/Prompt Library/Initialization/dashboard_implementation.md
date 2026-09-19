@@ -41,6 +41,20 @@ Short names used in this prompt only. Never use them in code, file names or vari
 
 A file whose name starts with `_` (like `Data/_shared.js`) is a helper, not an item. The engine skips it.
 
+### Words people use
+
+Users do not know AQL words. When they say any of these about the dashboard, they mean an **item** (one or more DBIs):
+
+| They say | They mean |
+|---|---|
+| widget, card, tile, box, panel | an item |
+| chart, graph, pie, bar, line, gauge | an item, with that kind of picture (the preset) |
+| KPI, metric, stat, number, count, total, figure | an item with a one-number preset (`Metric…`) |
+| report, summary, insight, analytics "on the dashboard" | one or more items |
+| "all possible widgets for X" | the full set of items for topic X (see 2e) |
+
+In AQL, "widget" means only the picture inside the card. Never take a user's "widget" to mean "build a new widget base". Build a new base only when the user clearly asks for a new kind of picture.
+
 ---
 
 ## 2. Step 0 — Understand the business FIRST (MUST)
@@ -81,16 +95,64 @@ Some requests name a topic, not a resource. Example: "invoice items" touches Con
 
 You do not need the full walk. You MUST understand the exact part you change: which column it reads, which state it counts, and what that state means in the workflow.
 
-### 2d. Show your understanding before you build
+### 2d. Show your understanding before you build (one list, one round of answers)
 
-Before any code, post a short note to the user:
+Before any code, post one short note to the user:
 - the resources involved, and what each one is for
 - how they connect
-- the list of items you plan: name, home resource, the question it answers, the preset, and which DJS it reads
+- anything you could not find in code or docs, as a question
+- the list of items you plan, **already sorted in the ARD order you propose for each resource** (section 7). For each item give: name, home resource, the question it answers, the preset, and which DJS it reads.
+- the ideas you left out, and why
 
-Wait for the user to agree.
+Show the list as a numbered table, one row per item, so the user can answer by number:
+
+| # | Item | Home | Answers | Preset | Data from | New data needed? |
+|---|---|---|---|---|---|---|
+
+Then ask the user to say, for each item:
+- **keep** it
+- **drop** it
+- **change** it (they say what: a different preset, question, text or size)
+- **move** it (a new place in the order)
+- and to name any item they want that is missing
+
+Apply every answer. Show the final list and order again, and get a clear yes. Only then build everything, and finish by writing the ARD in `syncAppResources.gs`.
+
+### 2e. "All possible items for X"
+
+Think of ideas in this order, and cover each group:
+1. **Needs action now**: waiting for approval, overdue, stuck too long, my drafts.
+2. **How things stand**: open counts, the mix of states, who or where has the most.
+3. **Speed and quality**: time between workflow steps, how many were rejected or changed.
+4. **Trends**: per day or per month, and this month vs last month.
+
+Use the workflow states and stamps from `AdditionalActions`, and the `ListViews`, as your idea source. Each list view is a hint about something people watch.
+
+Keep the list lean. Every extra item lowers the share of every other item of that resource. Drop ideas that repeat another item, and ideas that no one would act on. Say which ones you dropped.
+
+### 2f. Old or parked files
+
+A resource may already have item files in an old shape. For example, files in `Data/` that are not `use<Topic>Data.js`, or a `compute(ctx)` shape. Its ARD seed may also name tiles that have no DBI.
+- Read them for ideas and for business rules.
+- Rebuild them in the shape in this prompt.
+- Ask the user before you delete or rename any of them.
 
 ---
+
+### 2g. When the data files are not enough
+
+Often an item needs a fact that no DJS gives yet. You must then either **add to an existing DJS** (a new key, a new control) or **create a new DJS**. Never do either one silently. Never put the counting inside the DBI to avoid asking.
+
+Before you touch any DJS, ask the user. For each data change, tell them:
+- **What**: which DJS file, and which new key or control. Or the new file name and the topic it covers.
+- **Why it is needed**: which items need it, and why no current key can give that number.
+- **Why it matters**: what the user would miss without these items. Name the real business question.
+- **Why this way**: why you add to that file instead of making a new one, or the other way round. A topic that already has a DJS gets its fact added there. A new topic gets its own file.
+- **What it reads**: which sheets and columns, and whether it uses another resource's DJS or logic.
+
+Make a strong, honest case, so the user can decide. If the user says no, drop or change the items that needed it, and say which ones.
+
+You may ask this together with the item list in 2d, as one message. Build the data changes only after the user says yes.
 
 ## 3. Who owns which key
 
@@ -341,7 +403,7 @@ Every other key is an optional override (see section 3). Examples:
 - **share** = 1/√n, where n is the number of the resource's visible items.
 - After scoring, the user's `dashboardScoreCutoff` (from their designation) drops low scores. All items across all resources are then sorted by score.
 
-So the place of an item in the list decides how high it sits on the page. Adding items to a resource lowers every item's share in it. Suggest an order in this way: first what needs action now, then how things stand, then history and trends. **Show the full proposed order to the user and let them confirm it before you write anything.**
+So the place of an item in the list decides how high it sits on the page. Adding items to a resource lowers every item's share in it. Suggest an order in this way: first what needs action now, then how things stand, then history and trends. **The user confirms this order in the one note of step 2d, before you write anything.** For a change that moves an item's place, show the new order and get a yes.
 
 ### Where the ARD is written
 

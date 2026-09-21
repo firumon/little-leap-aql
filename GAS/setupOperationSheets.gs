@@ -327,9 +327,9 @@ function setup_getOperationSchemas() {
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.OUTLET_STORAGES,
-            headers: ['Code', 'OutletCode', 'SKU', 'Quantity'],
+            headers: ['Code', 'OutletCode', 'SKU', 'Quantity', 'UpdatedAt', 'Revision'],
             defaults: { Quantity: 0 },
-            columnWidths: { Code: 150, OutletCode: 140, SKU: 150, Quantity: 120 }
+            columnWidths: { Code: 150, OutletCode: 140, SKU: 150, Quantity: 120, UpdatedAt: 170, Revision: 100 }
         },
         {
             resourceName: CONFIG.OPERATION_SHEETS.WAREHOUSE_TRANSFERS,

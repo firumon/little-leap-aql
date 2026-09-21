@@ -1,8 +1,4 @@
-/**
- * AQL - Outlet Movement Hooks
- * PostAction = handleOutletMovementsBulkSave
- * Maintains OutletStorages from append-only OutletMovements ledger rows.
- */
+// PostAction = handleOutletMovementsBulkSave. Keeps OutletStorages in step with the OutletMovements ledger.
 
 function handleOutletMovementsBulkSave_afterBulk(payload, result, auth, action, meta, resourceName) {
   try {
@@ -31,6 +27,7 @@ function applyOutletMovementToOutletStorages(record, auth) {
   return applyBatchOutletMovementsToOutletStorages([record], auth);
 }
 
+// Zero and negative balances are kept as rows so delta reads carry them to the app.
 function applyBatchOutletMovementsToOutletStorages(records, auth) {
   try {
     if (!Array.isArray(records) || !records.length) return { success: true, skipped: true };
@@ -55,60 +52,43 @@ function applyBatchOutletMovementsToOutletStorages(records, auth) {
     var values = sheet.getDataRange().getValues();
     var headers = values[0] || [];
     var idx = getHeaderIndexMap(headers);
-    var currentValues = values.slice();
     var updatedRows = {};
     var newRows = [];
-    var rowsToDelete = [];
     var now = Date.now();
-    // Newest timestamp actually stamped on a row; `now` covers the update path,
-    // applyAuditFields' return covers the create path.
-    var maxTimestamp = 0;
     var userId = auth && auth.user ? (auth.user.UserID || '') : '';
 
     keys.forEach(function (key) {
       var entry = aggregates[key];
       if (!entry.qtyChange) return;
       var matchedIndex = -1;
-      for (var i = 1; i < currentValues.length; i++) {
-        var row = updatedRows[i] || currentValues[i];
-        if ((row[idx.OutletCode] || '').toString().trim() === entry.outletCode &&
-            (row[idx.SKU] || '').toString().trim() === entry.sku) {
+      for (var i = 1; i < values.length; i++) {
+        if ((values[i][idx.OutletCode] || '').toString().trim() === entry.outletCode &&
+            (values[i][idx.SKU] || '').toString().trim() === entry.sku) {
           matchedIndex = i;
           break;
         }
       }
       if (matchedIndex !== -1) {
-        var existing = (updatedRows[matchedIndex] || currentValues[matchedIndex]).slice();
+        var existing = values[matchedIndex].slice();
         var nextQty = Number(existing[idx.Quantity] || 0) + entry.qtyChange;
-        if (nextQty < 0) Logger.log('OutletStorages negative balance warning: ' + key + ' -> ' + nextQty);
         existing[idx.Quantity] = nextQty;
-        if (now > maxTimestamp) maxTimestamp = now;
         if (idx.UpdatedAt !== undefined) existing[idx.UpdatedAt] = now;
         if (idx.Revision !== undefined) {
           var curRev = Number(existing[idx.Revision]);
           existing[idx.Revision] = (!curRev || isNaN(curRev) || curRev < 0) ? 1 : curRev + 1;
         }
         if (idx.UpdatedBy !== undefined) existing[idx.UpdatedBy] = userId;
-        if (nextQty <= 0) {
-          rowsToDelete.push(matchedIndex + 1);
-          currentValues[matchedIndex] = new Array(headers.length).fill('');
-          if (updatedRows[matchedIndex]) delete updatedRows[matchedIndex];
-        } else {
-          updatedRows[matchedIndex] = existing;
-        }
+        updatedRows[matchedIndex] = existing;
       } else {
-        if (entry.qtyChange < 0) Logger.log('OutletStorages negative new balance warning: ' + key + ' -> ' + entry.qtyChange);
-        if (entry.qtyChange <= 0) return;
         var newRow = new Array(headers.length).fill('');
-        if (idx.Code !== undefined) newRow[idx.Code] = generateNextCode(currentValues, idx, (config.codePrefix || 'OST').toString().trim(), config.codeSequenceLength || 7);
+        if (idx.Code !== undefined) newRow[idx.Code] = generateNextCode(values.concat(newRows), idx, (config.codePrefix || 'OST').toString().trim(), config.codeSequenceLength || 7);
         if (idx.OutletCode !== undefined) newRow[idx.OutletCode] = entry.outletCode;
         if (idx.SKU !== undefined) newRow[idx.SKU] = entry.sku;
         if (idx.Quantity !== undefined) newRow[idx.Quantity] = entry.qtyChange;
-        var newRowTimestamp = applyAuditFields(newRow, idx, auth, config, true);
-        if (newRowTimestamp > maxTimestamp) maxTimestamp = newRowTimestamp;
-        if (idx.UpdatedBy !== undefined) newRow[idx.UpdatedBy] = userId;
+        applyAuditFields(newRow, idx, auth, config, true);
+        if (idx.UpdatedAt !== undefined) newRow[idx.UpdatedAt] = now;
+        if (idx.Revision !== undefined) newRow[idx.Revision] = 1;
         newRows.push(newRow);
-        currentValues.push(newRow);
       }
     });
 
@@ -117,39 +97,13 @@ function applyBatchOutletMovementsToOutletStorages(records, auth) {
       sheet.getRange(rowIndex + 1, 1, 1, headers.length).setValues([updatedRows[rowIndex]]);
     });
     if (newRows.length) sheet.getRange(sheet.getLastRow() + 1, 1, newRows.length, headers.length).setValues(newRows);
-    if (rowsToDelete.length > 0) {
-      rowsToDelete.sort(function (a, b) { return b - a; });
-      var uniqueRowsToDelete = [];
-      for (var d = 0; d < rowsToDelete.length; d++) {
-        if (uniqueRowsToDelete.indexOf(rowsToDelete[d]) === -1) uniqueRowsToDelete.push(rowsToDelete[d]);
-      }
-      for (var k = 0; k < uniqueRowsToDelete.length; k++) sheet.deleteRow(uniqueRowsToDelete[k]);
-    }
-    if (Object.keys(updatedRows).length || newRows.length || rowsToDelete.length > 0) {
-      // Deletions stamp no row, so fall back to wall-clock for a delete-only batch.
-      updateResourceSyncCursor('OutletStorages', maxTimestamp || Date.now());
+
+    if (Object.keys(updatedRows).length || newRows.length) {
+      updateResourceSyncCursor('OutletStorages', now);
     }
     return { success: true };
   } catch (e) {
     Logger.log('applyBatchOutletMovementsToOutletStorages ERROR: ' + String(e));
     return { success: false, error: String(e) };
   }
-}
-
-function cleanupZeroOutletStorages() {
-  var resource = openResourceSheet('OutletStorages');
-  var sheet = resource.sheet;
-  var values = sheet.getDataRange().getValues();
-  var headers = values[0] || [];
-  var idx = getHeaderIndexMap(headers);
-  if (idx.Quantity === undefined) return { success: false, error: 'Quantity column not found.' };
-  var rowsToDelete = [];
-  for (var i = 1; i < values.length; i++) {
-    if (Number(values[i][idx.Quantity] || 0) <= 0) rowsToDelete.push(i + 1);
-  }
-  rowsToDelete.sort(function (a, b) { return b - a; });
-  for (var d = 0; d < rowsToDelete.length; d++) sheet.deleteRow(rowsToDelete[d]);
-  // Deletions leave no row to read a timestamp from — stamp the removal itself.
-  if (rowsToDelete.length) updateResourceSyncCursor('OutletStorages', Date.now());
-  return { success: true, deletedRows: rowsToDelete.length };
 }

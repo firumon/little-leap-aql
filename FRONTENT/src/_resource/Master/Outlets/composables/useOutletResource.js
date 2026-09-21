@@ -1,29 +1,4 @@
-/**
- * Outlets › the enriched outlet — Layer 2, and the middle link of the outlet cascade.
- *
- *   OutletOperatingRules ─┐
- *                         ├─▶ Outlets (this file) ─▶ OutletVisits / Consumptions /
- *   PriceLists ───────────┘                          Restocks / Invoices / every UI
- *
- * Everything downstream asks THIS module for an outlet's commercial terms. It never asks the
- * rules sheet itself, and it never carries a fallback number of its own — the terms are
- * resolved once, here, by consuming `OutletOperatingRules`' own domain module in series
- * (UI_RESOURCE_DOMAIN_LOGIC.md §3.3).
- *
- * ── NO HARDCODED FALLBACK ──
- * `visitFrequencyDays` and `invoiceDueDays` used to fall back to a literal `30` compiled
- * into this file, which is why `useVisitCadence` had to bypass this module to read a
- * CONFIGURED number. Both now come from `APP.Resources.DefaultValues['OutletOperatingRules']`
- * through `operatingRuleDefaults()`, so the cascade has one answer and the bypass is gone.
- * `hasRules` still reports whether a ROW exists, so an outlet on the configured default is
- * correctly shown as unconfigured while still displaying the effective number.
- *
- * ── NON-DESTRUCTIVE ENRICHMENT ──
- * `enrichOutlet` spreads the raw row FIRST and adds derived keys beside it. A card, a list
- * preset or a tenant override that needs a sheet column this module never enumerated finds
- * it on the entity instead of re-deriving a parallel copy from the store.
- */
-
+// Outlets: Layer 2 enriched outlet master resource.
 import { computed } from 'vue'
 import { useRecord } from 'src/composables/resources/useRecord'
 import { usePriceListResource } from 'src/_resource/Master/PriceLists/composables/usePriceListResource'
@@ -33,14 +8,21 @@ import {
   useOutletOperatingRulesResource
 } from 'src/_resource/Master/OutletOperatingRules/composables/useOutletOperatingRulesResource'
 
-/**
- * Pure Outlet enrichment — Outlets × OutletOperatingRules (1:1) × PriceLists.
- *
- * The rule's terms are resolved by `enrichOperatingRule`, never restated here: this file
- * reads the effective numbers and does not know what the defaults are or where they come
- * from. `ruleDefaults` is threaded in so the whole sheet resolves against ONE read of the
- * resource config rather than one read per outlet.
- */
+const text = (value) => (value == null ? '' : String(value).trim())
+
+function outletLabelOf (outlet) {
+  const code = text(outlet?.code ?? outlet?.Code)
+  const name = text(outlet?.name ?? outlet?.Name)
+  if (!name) return code
+
+  const city = text(outlet?.city ?? outlet?.City)
+  const area = text(outlet?.area ?? outlet?.Area)
+  const location = [city, area].filter(Boolean).join('/')
+
+  return location ? `${name} - ${location} (${code})` : `${name} (${code})`
+}
+
+// Pure Outlet enrichment: Outlets x OutletOperatingRules (1:1) x PriceLists.
 export const enrichOutlet = (outlet, rulesByOutletMap = new Map(), priceListMap = new Map(), defaultPriceList = null, ruleDefaults = null) => {
   if (!outlet || !outlet.Code) return null
 
@@ -51,8 +33,6 @@ export const enrichOutlet = (outlet, rulesByOutletMap = new Map(), priceListMap 
   const priceList = priceListMap.get(priceListCode) || defaultPriceList || null
 
   return {
-    // Every raw sheet column, untouched — nothing downstream has to go back to the store
-    // for a field this list does not happen to name (§ Non-Destructive Entity Travel).
     ...outlet,
 
     // Core Outlet Fields
@@ -77,8 +57,7 @@ export const enrichOutlet = (outlet, rulesByOutletMap = new Map(), priceListMap 
     accessRegion: outlet.AccessRegion || '',
     status: outlet.Status || 'Active',
 
-    // Combined Operating Rules (1:1 relation) — EFFECTIVE terms, resolved by the rules
-    // domain against its own configured DefaultValues.
+    // Combined Operating Rules (1:1 relation)
     ruleCode: operatingRule.ruleCode,
     maxStockValueLimit: operatingRule.maxStockValueLimit,
     visitFrequencyDays: operatingRule.visitFrequencyDays,
@@ -88,11 +67,7 @@ export const enrichOutlet = (outlet, rulesByOutletMap = new Map(), priceListMap 
     ruleStatus: operatingRule.ruleStatus,
     hasRules: operatingRule.hasRules,
 
-    // The whole enriched rule, so a card needing a rule column this list does not name
-    // reads it here rather than joining the rules sheet again.
     operatingRule,
-
-    // Enriched Price List reference
     priceList,
 
     // Audit fields
@@ -101,17 +76,14 @@ export const enrichOutlet = (outlet, rulesByOutletMap = new Map(), priceListMap 
     createdBy: outlet.CreatedBy || '',
     updatedBy: outlet.UpdatedBy || '',
 
-    // Raw references
     _raw: outlet,
     _rule: rule
   }
 }
 
-// Composable for Outlets master resource//
-// ONCE PER APP (CORE_ARCHITECTURE_RULES §6) — see `useSkuResource` for the rationale.
+// Master Outlets composable memoized once per app.
 const build = (recordSource) => {
   const { priceListMap, defaultPriceList } = usePriceListResource()
-  // The rules index is built by the rules domain, not here — one index, one owner.
   const { rulesByOutletMap, defaults: ruleDefaults } = useOutletOperatingRulesResource()
 
   const outlets = computed(() => {
@@ -144,26 +116,38 @@ const build = (recordSource) => {
     return o?.priceList || defaultPriceList.value || null
   }
 
-  /**
-   * One outlet's effective operating terms, for a caller that wants the terms and not the
-   * whole outlet. Still resolved through the outlet, so the cascade has no side entrance.
-   */
   const getOperatingRule = (outletCode) => {
     const o = getOutlet(outletCode)
     return o?.operatingRule || enrichOperatingRule(null, ruleDefaults.value)
   }
 
-  // Options for any Outlet selector. Built once per app (CORE_ARCHITECTURE_RULES §6).
-  const outletOptions = computed(() => activeOutlets.value.map((outlet) => ({
-    label: [outlet.code, outlet.name].filter(Boolean).join(' · '),
-    value: outlet.code
-  })))
+  // Full option list from all outlets, sorted A-Z by name.
+  const allOutletOptions = computed(() =>
+    outlets.value
+      .map((outlet) => {
+        const code = text(outlet.code || outlet.Code)
+        const name = text(outlet.name || outlet.Name)
+        const status = text(outlet.status || outlet.Status) || 'Active'
+        return {
+          label: outletLabelOf(outlet),
+          value: code,
+          name,
+          status,
+          isActive: status.toUpperCase() === 'ACTIVE'
+        }
+      })
+      .sort((a, b) => (a.name || a.value).localeCompare(b.name || b.value))
+  )
+
+  const outletOptions = computed(() => allOutletOptions.value.filter((o) => o.isActive))
 
   return {
     outlets,
     allOutlets: outlets,
     activeOutlets,
+    allOutletOptions,
     outletOptions,
+    outletLabelOf,
     outletMap,
     getOutlet,
     getOperatingRule,
@@ -177,6 +161,5 @@ export function useOutletResource () {
   return recordSource.remember('useOutletResource', () => build(recordSource))
 }
 
-// Re-exported so a caller holding raw rules rows (a `PageAction.js`, a replayed payload)
-// resolves the SAME defaults this module enriches with, without a second import line (§3.3).
-export { operatingRuleDefaults }
+// Re-exported so a caller holding raw rules rows resolves the same defaults without a second import.
+export { operatingRuleDefaults, outletLabelOf }

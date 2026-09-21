@@ -85,20 +85,19 @@
 </template>
 
 <script setup>
-// Step 1 - which outlet, and which planned visit. `Username`, `Date` and the visit code
-// are seeded by Layer 2 on the node, never rendered. Navigation lives in `PageAction.js`.
+// Step 1 - which outlet, and which planned visit.
 import { computed, onMounted, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import { resolveFieldComponent } from 'src/_fields/useFieldResolver'
 import { useConsumptionAddContext } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/useConsumptionAddContext'
 import { formatDate } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/View/useConsumptionView'
+import { useOutletResource } from 'src/_resource/Master/Outlets/composables/useOutletResource'
 import { useVisitResource } from 'src/_resource/Operation/OutletVisits/composables/useVisitResource'
 import { isPlanned } from 'src/_resource/Operation/OutletVisits/composables/useVisitProgress'
 import { NODE, WIZARD_RESOURCES, stepVisible } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/nodes'
 
 defineOptions({ name: 'OutletConsumptionsAddContext', inheritAttrs: false })
 
-// Assigned by the contract. `step: null` means "always render".
 const props = defineProps({ step: { type: [Number, String], default: null } })
 
 const SUGGESTED_OUTLET_LIMIT = 8
@@ -108,17 +107,16 @@ const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 
 const { pageState, ui, query, resource } = useConsumptionAddContext()
 const { visitsOf } = useVisitResource()
+const { outletOptions } = useOutletResource()
 
 const text = (value) => (value == null ? '' : String(value).trim())
 const isActive = (row) => !text(row?.Status) || text(row.Status).toUpperCase() === 'ACTIVE'
 const todayISO = () => new Date().toISOString().slice(0, 10)
 
-// Every resource the later steps read, opened once here so no step fetches per card.
 const resources = WIZARD_RESOURCES.map((name) => resource(name))
 const outlets = resources[WIZARD_RESOURCES.indexOf('Outlets')]
 const visits = resources[WIZARD_RESOURCES.indexOf('OutletVisits')]
 
-// Explicitly bound to the consumption node.
 const record = pageState.useRecord(null, NODE.CONSUMPTION)
 const outletCode = pageState.useRecord('OutletCode', NODE.CONSUMPTION)
 const visitCode = pageState.useRecord('OutletVisitCode', NODE.CONSUMPTION)
@@ -129,14 +127,10 @@ const visible = computed(() => stepVisible(pageState, props.step))
 
 const activeOutlets = computed(() => outlets.items.value.filter(isActive))
 
-const outletOptions = computed(() => activeOutlets.value
-  .map((row) => ({ value: text(row.Code), label: text(row.Name) || text(row.Code) })))
-
 const plannedVisits = computed(() => visits.items.value
   .filter((row) => isActive(row) && isPlanned(row))
   .sort((a, b) => (text(a.Date) < text(b.Date) ? -1 : 1)))
 
-/** This outlet's planned visits as cards - a collapsed select hides how late they are. */
 const plannedVisitCards = computed(() => {
   const today = todayISO()
   return plannedVisits.value
@@ -147,10 +141,6 @@ const plannedVisitCards = computed(() => {
     })
 })
 
-/**
- * Outlets the officer is most likely to be standing in - one tap instead of a search.
- * Indexed in ONE pass rather than a `.find()` per visit (CORE_ARCHITECTURE_RULES §6).
- */
 const suggestedOutlets = computed(() => {
   const today = todayISO()
   const byCode = new Map(activeOutlets.value.map((row) => [text(row.Code), row]))
@@ -172,11 +162,8 @@ const suggestedOutlets = computed(() => {
   }, []).slice(0, SUGGESTED_OUTLET_LIMIT)
 })
 
-// Layer 2 groups visits by outlet, already sorted, so the first planned one is the earliest.
 const earliestPlannedVisit = (outlet) => text(visitsOf(outlet).find(isPlanned)?.Code)
 
-// The visit follows the outlet in ONE write. A different outlet must never keep the old
-// outlet's visit, so the new outlet's earliest plan replaces it - or '' when it has none.
 function selectOutlet (value) {
   const outlet = text(value)
   pageState.setRecord('OutletCode', outlet, NODE.CONSUMPTION)
@@ -185,14 +172,11 @@ function selectOutlet (value) {
 
 const isSelected = (visit) => text(visit.code) === text(visitCode.value)
 
-// Tapping the chosen card clears it - the visit link is optional.
 function toggleVisit (code) {
   const next = text(code)
   pageState.setRecord('OutletVisitCode', text(visitCode.value) === next ? '' : next, NODE.CONSUMPTION)
 }
 
-// Only the outlet. `selectOutlet` picks the earliest planned visit, which is the same one
-// the chip is showing.
 function pickSuggestion (suggestion) {
   selectOutlet(suggestion.code)
 }

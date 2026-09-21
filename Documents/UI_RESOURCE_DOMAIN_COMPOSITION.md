@@ -154,13 +154,13 @@ Rules:
   reactive index inside `useRecord` so the pass runs once per app per data change
   (CORE_ARCHITECTURE_RULES §6, UI_RECORD_ACCESS.md).
 - **STRICT — selector option lists are an index, and they belong here.** `skuOptions`,
-  `outletOptions`, `warehouseOptions` and their kind are projections of a master resource,
-  so the master resource publishes them: `useSkuResource().skuOptions`, not a `computed()`
-  inside a Layer 3 form composable. A form composable is memoized per call site, so an
+  `outletOptions` / `allOutletOptions`, `warehouseOptions` and their kind are projections of a master resource,
+  so the master resource publishes them: `useSkuResource().skuOptions`, `useOutletResource().outletOptions` / `allOutletOptions`, not a `computed()`
+  inside a Layer 3 form composable. All outlet options share one canonical label format `${name} - ${city}/${area} (${code})` (or `${name} (${code})` when city/area are blank, falling back to code) sorted A-Z by name. A form composable is memoized per call site, so an
   option list built there is rebuilt once per card that imports it, on every invalidation
   — the exact fan-out CORE_ARCHITECTURE_RULES §6 forbids, arrived at by the one route that
-  hides the count. Layer 3 may `.filter()` a published list down to what one page allows;
-  it may not build one.
+  hides the count. Consumers wrap their own filtering of these cached lists in their own `computed()`;
+  they may not build the list or the options themselves.
 
 ### 10.6 Proactive domain elevation & future feature discovery
 

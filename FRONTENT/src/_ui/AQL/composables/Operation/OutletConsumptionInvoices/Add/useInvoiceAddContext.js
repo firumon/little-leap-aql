@@ -5,29 +5,22 @@ import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 import { useCurrencyResource } from 'src/_resource/Master/Currencies/composables/useCurrencyResource'
 import { usePriceListResource } from 'src/_resource/Master/PriceLists/composables/usePriceListResource'
 import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
+import { useOutletResource } from 'src/_resource/Master/Outlets/composables/useOutletResource'
 import { useInvoiceIndex } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceIndex'
 import { INVOICE_CONTROL } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceDraft'
 
-// OutletConsumptionInvoices > Add - the one inject() behind the wizard, plus stateless UI
-// helpers. No draft state and no derive rules: the nodes hold the answers and
-// `useInvoiceDraft.js` does the domain work.
-
+// OutletConsumptionInvoices > Add - the one inject() behind the wizard, plus stateless UI helpers.
 export const NODE = 'OutletConsumptionInvoices'
 export const ITEMS = 'OutletConsumptionInvoiceItems'
 
-/** Relayed from the domain, never restated: the derive rules address the same names. */
 export const CTRL = INVOICE_CONTROL
 
-/** Every resource the three steps read. Step 1 loads them all so no later card fetches. */
 export const WIZARD_RESOURCES = [
   'Outlets', 'OutletOperatingRules', 'SKUs', 'Products', 'PriceList',
   'OutletConsumptions', 'OutletConsumptionItems', 'OutletReturns',
-  // Opened for the tax resolver, not for anything rendered: unloaded, every line taxes
-  // at zero.
   'Taxes'
 ]
 
-/** A card renders only on its own step. `step: null` means always. */
 export const stepVisible = (pageState, step) =>
   step == null || Number(step) === (pageState?.meta.currentStep || 1)
 
@@ -42,21 +35,18 @@ export function useInvoiceAddContext () {
   const { query } = useRouteConfig()
   const { _C } = useCurrencyResource()
   const { activePriceLists } = usePriceListResource()
-  // `skuLabelOf` is the ONE naming rule for a SKU, owned by the SKUs domain.
   const { skus, skuLabelOf } = useSkuResource()
+  const { outletOptions: activeOutletOptions } = useOutletResource()
   const index = useInvoiceIndex()
 
-  const outletOptions = computed(() => index.outlets.value
-    .map((outlet) => ({
-      value: text(outlet.Code),
-      label: text(outlet.Name) || text(outlet.Code)
-    }))
-    .sort((a, b) => a.label.localeCompare(b.label)))
+  const outletOptions = computed(() => {
+    const set = new Set((index.outlets.value || []).map((outlet) => text(outlet.Code)).filter(Boolean))
+    return activeOutletOptions.value.filter((o) => set.has(o.value))
+  })
 
   const priceListOptions = computed(() => (activePriceLists.value || [])
     .map((list) => ({ value: list.code, label: list.name || list.code })))
 
-  /** SKUs still addable by hand — one already on the bill would only merge into its line. */
   const skuCandidatesFor = (filter = '', taken = []) => {
     const onBill = new Set((taken || []).map(text))
     const term = text(filter).toLowerCase()

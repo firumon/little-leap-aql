@@ -4,6 +4,7 @@ import { useAQLConfig } from 'src/_ui/AQL/composables/useAQLConfig'
 import { useAuth } from 'src/composables/core/useAuth'
 import { usePageRecord } from 'src/composables/resources/usePageRecord'
 import { useCurrencyResource } from 'src/_resource/Master/Currencies/composables/useCurrencyResource'
+import { useOutletResource } from 'src/_resource/Master/Outlets/composables/useOutletResource'
 import { useOutletPaymentIndex } from 'src/_resource/Operation/OutletPayments/composables/useOutletPaymentIndex'
 import {
   autoDistribute as calcAutoDistribute,
@@ -57,25 +58,20 @@ export function useOutletPaymentAddContext () {
   const ui = useAQLConfig()
   const { _C } = useCurrencyResource()
   const { user } = useAuth()
+  const { outletOptions } = useOutletResource()
   const index = useOutletPaymentIndex()
 
   // Who is collecting and when. Read here and stamped by Layer 2 from the same two sources.
   const collectorName = computed(() => text(user.value?.name || user.value?.email) || 'Unknown')
   const collectionDate = computed(() => new Date().toISOString().slice(0, 10))
 
-  // ── The wizard's answers ────────────────────────────────────────────────────
+  // ── The wizard's answers ──────────────────────────────────────────────────────────
   const field = (header, fallback = '') => {
     const value = pageState?.getControls(header, null, NODE)
     return value === undefined || value === null ? fallback : value
   }
   const setField = (header, value) => pageState?.setControls(header, value, NODE)
 
-  const outletOptions = computed(() => index.rawOutlets.value
-    .map((outlet) => ({
-      value: text(outlet.Code),
-      label: text(outlet.Name) || text(outlet.Code)
-    }))
-    .sort((a, b) => a.label.localeCompare(b.label)))
 
   /** The outlet's open invoices, oldest first — the order a debt is settled in. */
   const outletInvoices = computed(() => {
@@ -170,7 +166,7 @@ export function useOutletPaymentAddContext () {
     set: (value) => setField('WaiverComment', text(value))
   })
 
-  // ── Selection ───────────────────────────────────────────────────────────────
+  // ── Selection ─────────────────────────────────────────────────────────────
 
   // The amount follows the selection: settling the chosen invoices in full is what a
   // collector means almost every time, and typing over it is one gesture.
@@ -218,7 +214,7 @@ export function useOutletPaymentAddContext () {
     }
   })
 
-  // ── Allocation ──────────────────────────────────────────────────────────────
+  // ── Allocation ────────────────────────────────────────────────────────────
 
   // Oldest invoice first. The rule is Layer 2's (`autoDistribute`) - it is an accounting
   // policy, not a presentation choice.
@@ -249,7 +245,7 @@ export function useOutletPaymentAddContext () {
     setField('Amount', totalAllocated.value)
   }
 
-  // ── Residual waiver ─────────────────────────────────────────────────────────
+  // ── Residual waiver ───────────────────────────────────────────────────────
 
   /** What would still be owed on the chosen invoices after this payment lands. */
   const residualBalance = computed(() => Math.max(0, money2(selectedBalance.value - amount.value)))
@@ -301,7 +297,7 @@ export function useOutletPaymentAddContext () {
     }
   }))
 
-  // ── Sources ─────────────────────────────────────────────────────────────────
+  // ── Sources ───────────────────────────────────────────────────────────────
 
   // `OutletConsumptionInvoices` must be here: the wizard IS a list of open invoices and
   // nothing else on this route fetches them. The rest supply names and current balances.

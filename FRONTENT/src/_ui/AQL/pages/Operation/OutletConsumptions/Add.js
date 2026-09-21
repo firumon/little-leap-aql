@@ -5,8 +5,7 @@ import {
 
 const RESOURCE = 'OutletConsumptions'
 
-// OutletConsumptions > Add - a six-step audit wizard. One content per decision;
-// the button table per step lives in `Add/PageAction.js`.
+// OutletConsumptions > Add - a six-step audit wizard.
 export default {
   sections: ['PageHeader'],
   contents: [
@@ -17,12 +16,12 @@ export default {
     'RestockItems',
     'PendingReturns',
     'VisitSummary',
+    'ConsumedItems',
     'CompleteVisit',
     'ScheduleNextVisit'
   ],
 
-  // Declarative gating (useContentResolver). Each leg claims the SAME action its Layer 2
-  // builder claims at submit time, so a role never sees a control it would be refused.
+  // Declarative gating (useContentResolver).
   permissions: {
     SoldReview: ['OutletConsumptionInvoices:create'],
     RestockOptions: ['OutletRestocks:create'],
@@ -43,17 +42,13 @@ export default {
   PropsRestockItems: { step: 4 },
   PropsPendingReturns: { step: 5 },
   PropsVisitSummary: { step: 6 },
+  PropsConsumedItems: { step: 6 },
   PropsCompleteVisit: { step: 6 },
   PropsScheduleNextVisit: { step: 6 },
 
-  // Page.vue keeps ONE pageState per Page mount and never clears it, so the nodes and
-  // DERIVES of the last page visited are still here. Flush them, then mount the draft the
-  // domain builds. This contract lists no columns of its own (UI_PAGE_STATE_NODES §5.7A).
   ready ({ pageState, routeInfo }) {
     const query = routeInfo.value.query || {}
     pageState.resetForResource(RESOURCE)
-    // Page lifetime, not node lifetime: the consumption node is replaced whenever the
-    // outlet changes or the count settles, and rules riding on it would go with it.
     pageState.derive(consumptionDraftDerivations())
     pageState.applyNodes(buildConsumptionInitNodes({
       outletCode: String(query.outletCode || '').trim(),

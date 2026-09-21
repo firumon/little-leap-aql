@@ -1,7 +1,10 @@
 <template>
   <div v-if="visible" :class="gutterClass">
-    <!-- Empty storage is a real audit outcome, not an error: a new outlet, or one that
-         sold out. -->
+    <q-input v-model="filter" outlined clearable debounce="150" label="Filter items">
+      <template #prepend><q-icon name="search" /></template>
+    </q-input>
+
+    <!-- Empty storage is a valid audit outcome: a new outlet or sold out. -->
     <q-card v-if="!skus.length" flat bordered :class="ui.cardClass">
       <q-card-section class="text-center q-py-lg">
         <q-icon name="inventory_2" :size="ui.emptyIconSize" :color="ui.emptyIconColor" class="q-mb-sm block q-mx-auto" />
@@ -13,8 +16,12 @@
       </q-card-section>
     </q-card>
 
+    <div v-else-if="!visibleSkus.length" :class="ui.emptyCaptionClass" class="text-center q-py-sm">
+      No items match "{{ text(filter) }}"
+    </div>
+
     <StockCountRow
-      v-for="sku in skus"
+      v-for="sku in visibleSkus"
       :key="sku"
       :sku="sku"
       :count="count"
@@ -28,17 +35,15 @@
 </template>
 
 <script setup>
-// Step 2 - the physical count. This card owns only the SHEET: which SKUs have a row, and
-// in what order. Counting one of them is `StockCountRow`; adding one the shelf does not
-// carry is `StockCountExtras`; what a count means is `useConsumptionCountFields`.
 import { computed, useAttrs } from 'vue'
 import StockCountRow from './StockCountRow.vue'
 import StockCountExtras from './StockCountExtras.vue'
+import { useSkuResource } from 'src/_resource/Master/SKUs/composables/useSkuResource'
 import { useOutletStorageResource } from 'src/_resource/Operation/OutletStorages/composables/useOutletStorageResource'
 import { useConsumptionAddContext } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/useConsumptionAddContext'
 import { useConsumptionCountFields } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/useConsumptionCountFields'
 import { useConsumptionCountSeed } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/useConsumptionCountSeed'
-import { NODE, stepVisible } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/nodes'
+import { COUNT_FILTER, NODE, stepVisible } from 'src/_ui/AQL/composables/Operation/OutletConsumptions/Add/nodes'
 
 defineOptions({ name: 'OutletConsumptionsAddStockCount', inheritAttrs: false })
 
@@ -48,12 +53,11 @@ const attrs = useAttrs()
 const gutterClass = computed(() => `q-gutter-y-${attrs.gutter || 'sm'}`)
 
 const { pageState, ui, allowed } = useConsumptionAddContext()
+const { skuLabelOf } = useSkuResource()
 const { stockRowsOf } = useOutletStorageResource()
 
 const visible = computed(() => stepVisible(pageState, props.step))
 
-// A surplus found on the shelf is a return, and a mirrored line is a restock. Each side of
-// this step is offered only to a role that may write its record.
 const returnsAllowed = allowed(NODE.RETURNS, 'create')
 const restocksAllowed = allowed(NODE.RESTOCKS, 'create')
 
@@ -62,11 +66,12 @@ useConsumptionCountSeed(pageState)
 
 const text = (value) => (value == null ? '' : String(value).trim())
 
+const filter = pageState.useControls(COUNT_FILTER, '')
+
 const items = pageState.useNode(NODE.CONSUMPTION).children(NODE.ITEMS)
 const returnsState = pageState.useNode(NODE.RETURNS)
 
-// The shelf FIRST, then anything found on top of it. Dropping the zero lines on the way to
-// step 3 therefore cannot empty this list when the officer steps back.
+// Shelf stock first, then items found on top of it.
 const skus = computed(() => {
   const seen = new Set()
   const push = (sku) => {
@@ -79,6 +84,18 @@ const skus = computed(() => {
   ;(items.value || []).forEach((row) => push(row.SKU))
   ;(returnsState.node.value.records || []).forEach((row) => push(row.SKU))
   return [...seen]
+})
+
+const visibleSkus = computed(() => {
+  const query = text(filter.value).toLowerCase()
+  if (!query) return skus.value
+  return skus.value.filter((sku) => {
+    const label = skuLabelOf(sku)
+    const code = text(sku).toLowerCase()
+    const primary = text(label?.primary).toLowerCase()
+    const secondary = text(label?.secondary).toLowerCase()
+    return code.includes(query) || primary.includes(query) || secondary.includes(query)
+  })
 })
 
 const listed = computed(() => new Set(skus.value))

@@ -117,7 +117,6 @@ Here is the honest status of the dashboard system:
   - `Frame.vue`: Generic card wrapper with title, subtitle, controls, caption, error/empty handling, content-driven CSS height hints, and responsive header wrapping.
   - `useWidgetResolver`: Tiered resolution for custom widgets (`.vue`) and modifiers (`.js`) under `src/_ui/`.
 - **Resource scope boundary**:
-  - Only `Leads` (14 items) and `LeadFollowUps` (13 items) are in scope.
-  - The 4 `OutletRestocks` item files keep the old `compute(ctx)` shape and are parked. They will be rebuilt from scratch later, along with every other resource.
+  - Live resources with dashboard items: `Leads` (14 items), `LeadFollowUps` (13 items), `OutletRestocks` (12 items), `OutletRestockItems` (7 items), `OutletReturns` (9 items), `OutletVisits` (10 items), `OutletConsumptionInvoices` (8 items), `OutletConsumptionInvoiceItems` (1 item), `OutletPayments` (6 items), `OutletConsumptions` (5 items), and `OutletConsumptionItems` (1 item).
 - **Not Built / Not Wired Yet**:
   - **Manage Dashboard sheet menu**: No Apps Script spreadsheet dialog exists yet to edit dashboard JSON cells visually.

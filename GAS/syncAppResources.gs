@@ -1336,6 +1336,18 @@ function initAppResourcesCodeConfig() {
             { "name": "Postponed", "label": "Postponed", "icon": "event_repeat", "color": "warning", "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "POSTPONED" }] } },
             { "name": "Cancelled", "label": "Cancelled", "icon": "cancel", "color": "negative", "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "CANCELLED" }] } }
         ]),
+        Dashboard: JSON.stringify([
+            { "name": "visitsToday" },
+            { "name": "overdueVisits" },
+            { "name": "outletsDueForVisit" },
+            { "name": "visitCoverage" },
+            { "name": "weekAhead" },
+            { "name": "visitOutcomes" },
+            { "name": "visitsByPerson" },
+            { "name": "respondDelay" },
+            { "name": "completedThisMonth" },
+            { "name": "visitsPerDay" }
+        ]),
         Relations: JSON.stringify({
             OutletCode: CONFIG.MASTER_SHEETS.OUTLETS
         })
@@ -1400,10 +1412,18 @@ function initAppResourcesCodeConfig() {
             { "name": "Rejected", "label": "Rejected", "icon": "block", "color": "negative", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "REJECTED" }] } }
         ]),
         Dashboard: JSON.stringify([
+            { "name": "myDrafts" },
             { "name": "awaitingApproval" },
+            { "name": "needsRevision" },
+            { "name": "approvalWaitAgeing" },
+            { "name": "approvedNotDelivered" },
+            { "name": "deliveryWaitAgeing" },
             { "name": "progressMix" },
-            { "name": "topSkus", "hideOnEmpty": true },
-            { "name": "restocksPerDay", "multiplier": 1.5 }
+            { "name": "approvalFunnel" },
+            { "name": "topOutlets" },
+            { "name": "hoursToApprove" },
+            { "name": "raisedToday" },
+            { "name": "restocksPerDay" }
         ]),
         Relations: JSON.stringify({
             OutletCode: CONFIG.MASTER_SHEETS.OUTLETS
@@ -1431,6 +1451,15 @@ function initAppResourcesCodeConfig() {
             { header: 'Status', label: 'Status', type: 'status' },
             { header: 'AccessRegion', label: 'Access Region', type: 'text' }
         ]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: '',
+        Dashboard: JSON.stringify([
+            { "name": "shortLines" },
+            { "name": "shortSkus" },
+            { "name": "allocatedByWarehouse" },
+            { "name": "allocatedAgeing" },
+            { "name": "lineMix" },
+            { "name": "topSkus" },
+            { "name": "requestedVsDelivered" }
+        ]),
         Relations: JSON.stringify({
             WarehouseCode: CONFIG.MASTER_SHEETS.WAREHOUSES,
             SKU: { resource: CONFIG.MASTER_SHEETS.SKUS, targetHeader: 'Code', labelHeader: '$product.Name' }
@@ -1528,6 +1557,18 @@ function initAppResourcesCodeConfig() {
             { "name": "Completed", "label": "Completed", "icon": "check_circle", "color": "positive", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }, { "type": "condition", "column": "Progress", "operator": "eq", "value": "COMPLETED" }] } },
             { "name": "Cancelled", "label": "Cancelled", "icon": "block", "color": "negative", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }, { "type": "condition", "column": "Progress", "operator": "eq", "value": "CANCELLED" }] } }
         ]),
+        Dashboard: JSON.stringify([
+            { "name": "awaitingCredit" },
+            { "name": "awaitingWarehouse" },
+            { "name": "openReturnAgeing" },
+            { "name": "returnValue" },
+            { "name": "returnsByReason" },
+            { "name": "topReturnedProducts" },
+            { "name": "returnsByOutlet" },
+            { "name": "warehouseOutcome" },
+            { "name": "returnsPerDay" }
+        ]),
+
         // No relation for either invoice column: `enrichRecord` keys the getter off the target
         // resource, so both would claim `$outletconsumptioninvoice` and shadow each other.
         Relations: JSON.stringify({
@@ -1579,6 +1620,13 @@ function initAppResourcesCodeConfig() {
             { "name": "Completed", "label": "Completed", "icon": "task_alt", "color": "positive", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "INVOICE_GENERATED" }] } },
             { "name": "Cancelled", "label": "Cancelled", "icon": "block", "color": "negative", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "CANCELLED" }] } }
         ]),
+        Dashboard: JSON.stringify([
+            { "name": "awaitingInvoice" },
+            { "name": "awaitingInvoiceAgeing" },
+            { "name": "countCadence" },
+            { "name": "countsThisMonth" },
+            { "name": "countsPerDay" }
+        ]),
         Relations: JSON.stringify({
             OutletCode: CONFIG.MASTER_SHEETS.OUTLETS,
             OutletVisitCode: CONFIG.OPERATION_SHEETS.OUTLET_VISITS
@@ -1593,6 +1641,9 @@ function initAppResourcesCodeConfig() {
             { header: 'Qty', label: 'Qty', type: 'number' },
             { header: 'Status', label: 'Status', type: 'status' }
         ]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: '',
+        Dashboard: JSON.stringify([
+            { "name": "topConsumedProducts" }
+        ]),
         Relations: JSON.stringify({
             SKU: { resource: CONFIG.MASTER_SHEETS.SKUS, targetHeader: 'Code', labelHeader: '$product.Name' }
         })
@@ -1657,6 +1708,16 @@ function initAppResourcesCodeConfig() {
             { "name": "Completed", "label": "Completed", "icon": "task_alt", "color": "positive", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "PAID" }] } },
             { "name": "Cancelled", "label": "Cancelled", "icon": "block", "color": "grey-7", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "CANCELLED" }] } }
         ]),
+        Dashboard: JSON.stringify([
+            { "name": "outstandingBalance" },
+            { "name": "overdueAmount" },
+            { "name": "debtAgeing" },
+            { "name": "topDebtors" },
+            { "name": "invoicedThisMonth" },
+            { "name": "topInvoicedOutlets" },
+            { "name": "invoicedPerDay" },
+            { "name": "writtenOffThisMonth" }
+        ]),
         Relations: JSON.stringify({
             OutletCode: CONFIG.MASTER_SHEETS.OUTLETS,
             PriceListCode: CONFIG.MASTER_SHEETS.PRICE_LIST
@@ -1677,6 +1738,9 @@ function initAppResourcesCodeConfig() {
             { header: 'TaxCode', label: 'Tax Code', type: 'text' },
             { header: 'Status', label: 'Status', type: 'status' }
         ]), IncludeInAuthorizationPayload: 'TRUE', Functional: 'FALSE', PreAction: '', PostAction: '', Reports: '', CustomUIName: '', ListViews: '',
+        Dashboard: JSON.stringify([
+            { "name": "topSellingProducts" }
+        ]),
         Relations: JSON.stringify({
             SKU: { resource: CONFIG.MASTER_SHEETS.SKUS, targetHeader: 'Code', labelHeader: '$product.Name' },
             TaxCode: CONFIG.MASTER_SHEETS.TAXES
@@ -1770,6 +1834,14 @@ function initAppResourcesCodeConfig() {
             { "name": "Recent", "label": "Recent", "icon": "history", "color": "indigo-7", "default": true, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Status", "operator": "eq", "value": "Active" }] } },
             { "name": "CompletedPayments", "label": "Completed Payments", "icon": "savings", "color": "teal-7", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "SUBMITTED" }] } },
             { "name": "CancelledPayments", "label": "Cancelled Payments", "icon": "block", "color": "grey-7", "default": false, "filter": { "type": "group", "logic": "AND", "items": [{ "type": "condition", "column": "Progress", "operator": "eq", "value": "CANCELLED" }] } }
+        ]),
+        Dashboard: JSON.stringify([
+            { "name": "collectedToday" },
+            { "name": "collectedThisMonth" },
+            { "name": "collectionsPerDay" },
+            { "name": "topPayingOutlets" },
+            { "name": "collectionsByPerson" },
+            { "name": "cancelledPayments" }
         ]),
         Relations: JSON.stringify({
             OutletCode: CONFIG.MASTER_SHEETS.OUTLETS

@@ -39,7 +39,7 @@ When modifying Quasar report UI components:
     *   In the **action** component, resolve context from the injected `resourceConfig` / `resourceRecord` — never from a store. Type every customizable prop as `[Type, Function]` and evaluate it via `evaluateProp` (ARCHITECTURE RULES §8), and carry no `<style>` block: report action styling is `.aql-report-action-*` in `src/css/custom.scss` (§7).
     *   The action is **self-dispatching** — a download never touches `pageState`, so it calls `useReports` directly instead of emitting intent to `PageAction.handleAction()`. Do not add report logic to that dispatcher.
 3.  **Dynamic Select Input Preloading**:
-    *   If a report input uses a dynamic resource lookup (`type: "select"` with `source: { resource, field }`), the composable **MUST** call `dataStore.loadResource(resource)` on report initiation to seed the list in state before the dialog opens.
+    *   If a report input uses a dynamic resource lookup (`type: "select"` with `source: { resource, field }`), do NOT preload it. The data store loads a resource on its first read (`UI_RECORD_ACCESS.md` §3.1), and the dialog reads it with `dataStore.getRecords`.
     *   Use the `getSelectOptions` helper in `ReportInputDialog.vue` to map unique sorted options:
         ```javascript
         const records = dataStore.getRecords(resourceName) || []

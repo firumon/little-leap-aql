@@ -39,6 +39,7 @@ This document describes the current operation-scope sheet families and their rol
 - sheets commonly use generated `Code`
 - standard 5 audit columns on audited sheets: `CreatedAt`, `UpdatedAt`, `Revision`, `CreatedBy`, `UpdatedBy`
 - `WarehouseStorages` acts as the current-location inventory view derived from stock movement behavior
+- Both storage sheets (`WarehouseStorages`, `OutletStorages`) follow one balance rule: rows are never deleted, so `0` and negative balances stay as rows, and every changed or new row stamps `UpdatedAt` and `Revision`. Keeping `0` rows lets delta reads (`UpdatedAt` > client cursor) carry the change to the app, which only upserts on a delta
 - `POReceivings` is the editable inspection layer between `PurchaseOrders` and finalized `GoodsReceipts`; it stores direct `ProcurementCode` context and `POReceivingItems` stores entered inspection quantities only
 - `GoodsReceipts` and `GoodsReceiptItems` are finalized GRN resources; `GoodsReceiptItems.Qty` stores accepted quantity only
 - `StockMovements` is the inventory ledger for direct stock entry and GRN stock posting; `WarehouseStorages` is updated from its post-write hook
@@ -58,7 +59,7 @@ This document describes the current operation-scope sheet families and their rol
 | `OutletConsumptionInvoices` | Consumption invoice headers. | `OutletConsumptionCode`, `Date`, `OutletCode`, `Username`, `Progress`, `Status` | `PriceListCode` is optional and can be resolved from outlet/default price-list assignment; `Progress` uses `PENDING_PAYMENT`, `PARTIALLY_PAID`, `PAID`, `CANCELLED`; amount fields are `Subtotal`, `Discount`, `Tax` and default to `0`; `DueDate` (`date`) is the payment due date, normally `Date + OutletOperatingRules.InvoiceDueDays`. |
 | `OutletConsumptionInvoiceItems` | Consumption invoice child line items. | `OutletConsumptionInvoiceCode`, `SKU`, `Qty`, `Price` | unique by `OutletConsumptionInvoiceCode+SKU`; `Qty` defaults to `0`; `Price` defaults to `0`; invoice header `Subtotal = sum(Qty * Price)`. |
 | `OutletMovements` | Ledger for positive delivery and negative consumption stock events. | `OutletCode`, `SKU`, `QtyChange`, `ReferenceType`, `ReferenceCode` | `StorageName = _default`, `QtyChange = 0`, `Status = Active`; post-write hook updates SKU-only `OutletStorages`. |
-| `OutletStorages` | Derived current outlet stock by outlet/SKU. | `OutletCode`, `SKU`, `Quantity` | unique by `OutletCode + SKU`; `Quantity = 0`; no audit columns; frontend read-only. |
+| `OutletStorages` | Derived current outlet stock by outlet/SKU. | `OutletCode`, `SKU`, `Quantity` | unique by `OutletCode + SKU`; `Quantity = 0`; `Quantity` may be `0` or negative and the row is kept; carries `UpdatedAt` and `Revision` only; frontend read-only. |
 
 ### Outlet Operation Columns
 - `Outlet-Visits`: `Code`, `OutletCode`, `Date`, `RespondDate`, `Progress`, planned/completed/postponed/cancelled progress stamp/comment columns, `Status`, `AccessRegion`, audit columns.
@@ -70,7 +71,7 @@ This document describes the current operation-scope sheet families and their rol
 - `OutletConsumptionInvoices`: `Code`, `OutletConsumptionCode`, `Date`, `DueDate`, `OutletCode`, `Username`, `PriceListCode`, `Subtotal`, `Discount`, `Tax`, `Progress`, progress action audit triplets (`PendingPayment`, `PartiallyPaid`, `Paid`, `Cancelled`), `Status`, `AccessRegion`, audit columns.
 - `OutletConsumptionInvoiceItems`: `Code`, `OutletConsumptionInvoiceCode`, `SKU`, `Qty`, `Price`, `Status`, audit columns.
 - `OutletMovements`: `Code`, `OutletCode`, `StorageName`, `SKU`, `QtyChange`, `ReferenceType`, `ReferenceCode`, `ReferenceItemCode`, `MovementDate`, `Status`, `AccessRegion`, audit columns.
-- `OutletStorages`: `Code`, `OutletCode`, `SKU`, `Quantity`.
+- `OutletStorages`: `Code`, `OutletCode`, `SKU`, `Quantity`, `UpdatedAt`, `Revision`.
 
 ## Related Master Columns
 - `OutletOperatingRules`: `Code`, `OutletCode`, `MaxStockValueLimit`, `VisitFrequencyDays`, `InvoiceDueDays` (default `30`), `CreditLimit`, `PriceListCode`, `AccessRegion`, `Status`, audit columns.

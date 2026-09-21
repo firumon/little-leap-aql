@@ -3,7 +3,6 @@ import { useRecord } from 'src/composables/resources/useRecord'
 
 export const MAX_VARIANTS = 5
 
-// Parse CSV variant types (e.g. "Color, Size" -> ['Color', 'Size'])
 export const parseVariantTypes = (csv) => {
   if (!csv || typeof csv !== 'string') return []
   return csv
@@ -13,7 +12,6 @@ export const parseVariantTypes = (csv) => {
     .slice(0, MAX_VARIANTS)
 }
 
-// Pure SKU enrichment function
 export const enrichSku = (sku, productsMap = new Map(), uomsMap = new Map()) => {
   if (!sku || !sku.Code) return null
   const product = productsMap.get(sku.ProductCode) || null
@@ -45,37 +43,23 @@ export const enrichSku = (sku, productsMap = new Map(), uomsMap = new Map()) => 
     updatedAt: sku.UpdatedAt || '',
     createdBy: sku.CreatedBy || '',
     updatedBy: sku.UpdatedBy || '',
-
-    // Enriched Product details
     productName: product?.Name || '',
     productStatus: product?.Status || 'Active',
     accessRegion: product?.AccessRegion || '',
-
-    // Variants (matching skuInfo contract)
     variantTypes,
     variantNames,
     variantValues,
     variantMap,
-
-    // Enriched UOM details & conversions
     uomName: uom?.Name || '',
     baseUom: baseUom?.Code || '',
     baseUomName: baseUom?.Name || '',
     conversionFactor: Number(uom?.ConversionFactor) || 1,
-
-    // Raw record references
     _raw: sku,
     _product: product,
     _uom: uom
   }
 }
 
-// Composable for SKU resource operations.
-//
-// ONCE PER APP (CORE_ARCHITECTURE_RULES §6): the enrichment graph below is built one
-// time and shared by every caller. `useProductResource`, `usePriceListResource` and
-// every component reading SKU labels all land on the same `computed()` refs, so the
-// pass over the SKU sheet runs once per data change rather than once per consumer.
 const build = (recordSource) => {
   const skus = computed(() => {
     const rawSkus = recordSource.rows('SKUs') || []
@@ -92,9 +76,6 @@ const build = (recordSource) => {
 
   const skuMap = computed(() => new Map(skus.value.map((s) => [s.code, s])))
 
-  // Indexed once, not re-filtered per lookup (§6 — Indexed Joins). `useProductResource`
-  // reads this same index to build its nested `skus`, so the grouping exists in exactly
-  // one place and both consumers are guaranteed to agree on it.
   const skusByProduct = computed(() => {
     const map = new Map()
     skus.value.forEach((s) => {
@@ -111,21 +92,6 @@ const build = (recordSource) => {
 
   const skuInfo = (skuCode) => getSku(skuCode)
 
-  /**
-   * How a SKU is NAMED anywhere in the app: the product on top, what distinguishes this
-   * variant beneath it.
-   *
-   *   { primary: 'Fruit Feeder', secondary: 'Red / 500ml', uom: 'PCS' }
-   *
-   * A SKU CODE IS NOT A NAME. `CK3-09` identifies a row to the system and means nothing to
-   * the person reading it, so the code is only ever the FALLBACK — used for `secondary` when
-   * a product declares no variant types, and for `primary` when the SKU resolves to no
-   * product at all. Everywhere else the reader sees words.
-   *
-   * This lives in Layer 2 because "what do we call this SKU" is one question with one
-   * answer for every screen that asks it. `useRestockView.skuLabelOf` is a UI-side copy —
-   * the drift §3.3 warns about. New callers take it from here.
-   */
   const skuLabelOf = (skuCode) => {
     const code = String(skuCode == null ? '' : skuCode).trim()
     const info = getSku(code) || {}
@@ -137,10 +103,15 @@ const build = (recordSource) => {
     }
   }
 
-  /** The same name as one string, for a select option or a single-line row. */
   const skuLabelText = (skuCode) => {
-    const { primary, secondary } = skuLabelOf(skuCode)
-    return secondary && secondary !== primary ? `${primary} · ${secondary}` : primary
+    const code = String(skuCode == null ? '' : skuCode).trim()
+    if (!code) return ''
+    const sku = getSku(code)
+    if (!sku?.productName) return code
+    const count = skusByProduct.value.get(sku.productCode)?.length || 0
+    if (count === 1) return sku.productName
+    const variants = (sku.variantValues || []).filter(Boolean).join(' / ')
+    return `${sku.productName} · ${variants || code}`
   }
 
   const getSkusByProduct = (productCode) => {
@@ -148,9 +119,6 @@ const build = (recordSource) => {
     return skusByProduct.value.get(productCode) || []
   }
 
-  // Options for any SKU selector in the app. Built ONCE here rather than in each form
-  // composable that needs one (CORE_ARCHITECTURE_RULES §6). The label is `skuLabelText`,
-  // so a picker and a detail card can never name the same SKU differently.
   const skuOptions = computed(() => activeSkus.value.map((sku) => ({
     label: skuLabelText(sku.code),
     value: sku.code

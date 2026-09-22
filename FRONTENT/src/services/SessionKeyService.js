@@ -55,6 +55,40 @@ function nextGeneration() {
   return generation
 }
 
+export function applySessionResync(token, encoded) {
+  if (!token || !encoded) return false
+
+  const params = deriveParams(token)
+  if (!params) return false
+
+  const uuidCode = deriveSessionCode(token, params.letterShift, params.digitShift)
+
+  let key
+  try {
+    key = BigInt((encoded || '').toString().trim())
+  } catch {
+    return false
+  }
+
+  const zero = BigInt(0)
+  const diff = key - BigInt(uuidCode)
+  if (diff < zero) return false
+
+  const val = diff - BigInt(params.genOffset)
+  if (val < zero) return false
+  if (val % BigInt(params.genPrime) !== zero) return false
+
+  const decoded = Number(val / BigInt(params.genPrime))
+  if (!Number.isFinite(decoded) || decoded < 0) return false
+
+  const current = Number.parseInt(localStorage.getItem(GENERATION_STORAGE_KEY) || '', 10)
+  const currentGen = Number.isFinite(current) && current > 0 ? current : 1
+
+  localStorage.setItem(GENERATION_STORAGE_KEY, String(Math.max(currentGen, decoded + 1)))
+
+  return true
+}
+
 export function createSessionKey(token) {
   const params = deriveParams(token)
   if (!params) return null

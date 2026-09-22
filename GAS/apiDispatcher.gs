@@ -30,7 +30,7 @@ function doPost(e) {
     // needs no user lookup at all.
     var proof = verifySessionProof(request.token, request.sessionKey);
     if (!proof.ok) {
-      return jsonResponse(buildErrorEnvelope(request, 'Unauthorized / ' + proof.message));
+      return jsonResponse(buildErrorEnvelope(request, 'Unauthorized / ' + proof.message, proof.resync));
     }
 
     var authContext = proof.auth;
@@ -218,8 +218,8 @@ function normalizeResourceSelector(resource) {
   return normalized || '';
 }
 
-function buildErrorEnvelope(request, message) {
-  return {
+function buildErrorEnvelope(request, message, sessionResync) {
+  var envelope = {
     success: false,
     requestId: request && request.requestId ? request.requestId : Utilities.getUuid(),
     action: request && request.action ? request.action : '',
@@ -235,6 +235,10 @@ function buildErrorEnvelope(request, message) {
       version: 'v1'
     }
   };
+  if (sessionResync) {
+    envelope.sessionResync = sessionResync;
+  }
+  return envelope;
 }
 
 function buildApiEnvelope(request, rawResult) {

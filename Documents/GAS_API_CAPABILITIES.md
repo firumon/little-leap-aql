@@ -28,7 +28,7 @@ Do not treat this as a universal startup read for every task.
 - lightweight resource update polling via `poll` action (metadata only, no row payloads)
 - strict nested write payloads (`payload.record` / `payload.data`)
 - delta-on-write for `create`, `update`, `bulk`, `executeAction`, and `compositeSave`
-- dynamic rolling session security handshake (`sessionKey` proof derived from UUID segments, verified in bounded window `WINDOW = 2`)
+- dynamic rolling session security handshake (`sessionKey` proof derived from UUID segments, verified in asymmetric window `SESSION_GEN_WINDOW_BACK = 2`, `SESSION_GEN_WINDOW_AHEAD = 30`, with encoded `sessionResync` handshake on out-of-window rejection)
 - zero-lookup authentication context caching in `CacheService` (`AQL_SESSION_<SpreadsheetId>_<token>`)
 - aligned action permissions in `executeAction` (evaluates specific action permission or `canUpdate`)
 - Form Ticket (FT) batch idempotency, step queue, heartbeat, and stale-run takeover (`payload.formTicket` on `batch`, backed by `CacheService`, no global script lock)

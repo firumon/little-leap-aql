@@ -58,7 +58,7 @@ Read only the files relevant to the query or task at hand:
   "payload": {}
 }
 ```
-- **Dynamic Session Security**: Protected requests carry a rolling `sessionKey` computed from UUID parameters and client generation counter. Verified by `verifySessionProof` in `GAS/sessionProof.gs` in a bounded window `WINDOW = 2`.
+- **Dynamic Session Security**: Protected requests carry a rolling `sessionKey` computed from UUID parameters and client generation counter. Verified by `verifySessionProof` in `GAS/sessionProof.gs` with asymmetric window (`stored - 2 <= clientGen <= stored + 30`; `SESSION_GEN_WINDOW_BACK = 2`, `SESSION_GEN_WINDOW_AHEAD = 30`). Out-of-window rejections return an encoded `sessionResync` token so the client can resync its generation counter and retry once without logout.
 - **Strict Payload Nesting**: For write actions (`create`, `update`, `bulk`, `record`, `compositeSave`, `executeAction`), fields must reside under nested keys (e.g. `payload.record`, `payload.data`, or `payload.records`). Direct top-level payload properties will be rejected by `validateStrictNestedPayload` in [apiDispatcher.gs](file:///f:/LITTLE%20LEAP/AQL/GAS/apiDispatcher.gs#L148-L169).
 
 ### B. Canonical Response Envelope

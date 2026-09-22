@@ -1,6 +1,6 @@
 import { apiClient } from 'src/services/ApiClientService'
 import { createLogger, standardizeResponse } from './_logger'
-import { buildSessionPayload } from 'src/services/SessionKeyService'
+import { applySessionResync, buildSessionPayload } from 'src/services/SessionKeyService'
 import {
   getResourceMeta,
   setResourceMeta,
@@ -241,8 +241,6 @@ async function executeGasApiCall(action, payload = {}, options = {}) {
     return standardizeResponse(false, null, 'Not authenticated')
   }
 
-  const requestBody = buildCanonicalRequest(action, payload, authToken, requireAuth)
-
   // `poll` is the background heartbeat itself, so it must not drive its own
   // pause/resume lifecycle. Every other action suspends the countdown while it
   // runs, but `background: true` marks a call the poller made on its own behalf
@@ -256,40 +254,62 @@ async function executeGasApiCall(action, payload = {}, options = {}) {
   }
 
   try {
-    logger.debug('Calling GAS API', { action, requestId: requestBody.requestId })
-    const response = await apiClient.post('', requestBody, timeout ? { timeout } : {})
-    const data = response?.data
+    let attempts = 0
+    while (attempts < 2) {
+      attempts++
+      const requestBody = buildCanonicalRequest(action, payload, authToken, requireAuth)
 
-    if (!isCanonicalEnvelope(data)) {
-      logger.error('Invalid GAS API envelope', { action, response: data })
-      return standardizeResponse(false, null, 'Invalid service response envelope')
-    }
+      try {
+        logger.debug('Calling GAS API', { action, requestId: requestBody.requestId, attempt: attempts })
+        const response = await apiClient.post('', requestBody, timeout ? { timeout } : {})
+        const data = response?.data
 
-    try {
-      await ingestResourcePayloads(data.data?.resources || {}, authToken)
-    } catch (ingestError) {
-      logger.warn('Resource ingestion warning', {
-        action,
-        requestId: data.requestId,
-        error: ingestError?.message || String(ingestError)
-      })
-    }
+        if (data && !data.success && data.sessionResync && attempts === 1) {
+          if (applySessionResync(authToken, data.sessionResync)) {
+            logger.info('Retrying GAS API call after session resync', { action, requestId: requestBody.requestId })
+            continue
+          }
+        }
 
-    const result = {
-      success: data.success === true,
-      requestId: data.requestId,
-      action: data.action,
-      data: data.data,
-      error: data.error || null,
-      message: data.message || '',
-      meta: data.meta || { version: API_VERSION }
+        if (!isCanonicalEnvelope(data)) {
+          logger.error('Invalid GAS API envelope', { action, response: data })
+          return standardizeResponse(false, null, 'Invalid service response envelope')
+        }
+
+        try {
+          await ingestResourcePayloads(data.data?.resources || {}, authToken)
+        } catch (ingestError) {
+          logger.warn('Resource ingestion warning', {
+            action,
+            requestId: data.requestId,
+            error: ingestError?.message || String(ingestError)
+          })
+        }
+
+        const result = {
+          success: data.success === true,
+          requestId: data.requestId,
+          action: data.action,
+          data: data.data,
+          error: data.error || null,
+          message: data.message || '',
+          meta: data.meta || { version: API_VERSION }
+        }
+        logger.debug('GAS API response', { action, requestId: data.requestId, success: result.success })
+        return result
+      } catch (error) {
+        const errorData = error?.response?.data
+        if (errorData && !errorData.success && errorData.sessionResync && attempts === 1) {
+          if (applySessionResync(authToken, errorData.sessionResync)) {
+            logger.info('Retrying GAS API call after session resync from error response', { action, requestId: requestBody.requestId })
+            continue
+          }
+        }
+        const errorMsg = getGasApiErrorMessage(error)
+        logger.error('GAS API error', { action, error: errorMsg })
+        return standardizeResponse(false, null, errorMsg)
+      }
     }
-    logger.debug('GAS API response', { action, requestId: data.requestId, success: result.success })
-    return result
-  } catch (error) {
-    const errorMsg = getGasApiErrorMessage(error)
-    logger.error('GAS API error', { action, error: errorMsg })
-    return standardizeResponse(false, null, errorMsg)
   } finally {
     if (isLifecycleAction) {
       notifyLifecycle(onApiResponseCallback, action, lifecycleMeta)

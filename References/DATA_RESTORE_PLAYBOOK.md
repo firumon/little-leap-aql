@@ -173,7 +173,7 @@ Worse, retrying makes it strictly worse. `createSessionKey()`
 (`src/services/SessionKeyService.js`) calls `nextGeneration()` on **every** request,
 success or failure, while `verifySessionProof()` (`GAS/sessionProof.gs`) only advances
 its stored generation on a **successful** verify. Failures ratchet the client away from
-a frozen server counter, and `SESSION_GEN_WINDOW` is 2.
+a frozen server counter, though the asymmetric window (`SESSION_GEN_WINDOW_BACK = 2`, `SESSION_GEN_WINDOW_AHEAD = 30`) and encoded `sessionResync` retry now recover out-of-window requests automatically.
 
 **So the first call of every session is a read-only `get`, never a write:**
 

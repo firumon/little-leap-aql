@@ -6,7 +6,8 @@
  * value derived from the session UUID, so a stolen token alone is not enough.
  */
 
-const SESSION_GEN_WINDOW = 2;
+const SESSION_GEN_WINDOW_BACK = 2;
+const SESSION_GEN_WINDOW_AHEAD = 30;
 
 var _session_proof_memory = {};
 var _session_auth_version = null;
@@ -117,6 +118,11 @@ function decodeSessionGeneration(sessionKey, uuidCode, params) {
   return Number(val / BigInt(params.genPrime));
 }
 
+function encodeSessionGeneration(generation, uuidCode, params) {
+  const encodedGen = (BigInt(generation) * BigInt(params.genPrime)) + BigInt(params.genOffset);
+  return (BigInt(uuidCode) + encodedGen).toString();
+}
+
 function readSessionProofState(token) {
   const version = getSessionAuthVersion();
 
@@ -154,7 +160,7 @@ function clearSessionProofState(token) {
 }
 
 /**
- * Returns { ok: true, generation } or { ok: false, message }.
+ * Returns { ok: true, generation } or { ok: false, message, resync? }.
  * A cache miss is a cold start, not a failure: the first generation seen wins.
  */
 function verifySessionProof(token, sessionKey) {
@@ -189,8 +195,12 @@ function verifySessionProof(token, sessionKey) {
   }
 
   const stored = state.generation;
-  if (clientGen < stored - SESSION_GEN_WINDOW || clientGen > stored + SESSION_GEN_WINDOW) {
-    return { ok: false, message: 'Invalid session proof' };
+  if (clientGen < stored - SESSION_GEN_WINDOW_BACK || clientGen > stored + SESSION_GEN_WINDOW_AHEAD) {
+    return {
+      ok: false,
+      message: 'Invalid session proof',
+      resync: encodeSessionGeneration(stored, expectedUuidCode, params)
+    };
   }
 
   state.uuid_code = expectedUuidCode;

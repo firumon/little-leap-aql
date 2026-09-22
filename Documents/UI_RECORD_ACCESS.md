@@ -107,19 +107,19 @@ A domain projection (like an option list, total stock map, or status bucket) mus
 ```javascript
 const build = (recordSource) => {
   const options = computed(() => {
-    return recordSource.rows('Products').map((p) => ({ label: p.Name, value: p.Code }))
+    return recordSource.rows('Leads').map((l) => ({ label: l.Name, value: l.Code }))
   })
   return { options }
 }
 
-export function useProductResource () {
+export function useLeadResource () {
   const recordSource = useRecord()
-  return recordSource.remember('useProductResource', () => build(recordSource))
+  return recordSource.remember('useLeadResource', () => build(recordSource))
 }
 ```
 
 Key points:
-- **Key naming rule**: The cache key must match the exported composable name (e.g. `'useProductResource'`). Every key must be unique across the app.
+- **Key naming rule**: The cache key must match the exported composable name (e.g. `'useLeadResource'`). Every key must be unique across the app.
 - **Built once**: The factory runs the first time the function is called. Future calls return the cached object.
 - **Survives unmount**: Built inside a detached scope on the store. It does not stop when a component leaves the screen.
 - **Stays reactive**: The computed properties track the store rows and update when new data arrives.

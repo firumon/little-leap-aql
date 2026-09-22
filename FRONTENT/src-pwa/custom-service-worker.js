@@ -54,7 +54,7 @@ function getDB () {
   return swDbPromise
 }
 
-const CONCURRENCY_LIMIT = 10
+const CONCURRENCY_LIMIT = 20
 
 // Depends on workbox-precaching v7 internals; falls back to default install when they change.
 const originalInstall = PrecacheController.prototype.install

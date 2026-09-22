@@ -6,6 +6,7 @@ const APPLY_FALLBACK_MS = 15000
 const isSupported = ref(typeof navigator !== 'undefined' && 'serviceWorker' in navigator)
 const isChecking = ref(false)
 const isDownloading = ref(false)
+const isPending = ref(false)
 const isUpdating = ref(false)
 const updateAvailable = ref(false)
 const isRegistered = ref(false)
@@ -23,12 +24,14 @@ let applyTimer = null
 let isWatcherInitialized = false
 let coldStartChecked = false
 let activeNotify = null
+let pendingGuardTimer = null
+let workerSeenDuringPending = false
 
 const status = computed(() => {
   if (!isSupported.value) return { label: 'Not supported', color: 'grey-6', icon: 'block' }
   if (isUpdating.value) return { label: 'Applying', color: 'orange', icon: 'sync' }
   if (updateAvailable.value) return { label: 'Update ready', color: 'warning', icon: 'system_update_alt' }
-  if (isDownloading.value) return { label: 'Downloading', color: 'info', icon: 'cloud_download' }
+  if (isDownloading.value || isPending.value) return { label: 'Downloading', color: 'info', icon: 'cloud_download' }
   if (isChecking.value) return { label: 'Checking', color: 'info', icon: 'sync' }
   if (isRegistered.value) return { label: 'Active', color: 'positive', icon: 'verified' }
   return { label: 'Inactive', color: 'grey-6', icon: 'cloud_off' }
@@ -40,6 +43,44 @@ const lastCheckedLabel = computed(() => {
 })
 
 const buildTimeLabel = computed(() => (buildTime ? new Date(buildTime).toLocaleString() : '—'))
+
+function clearPendingGuard () {
+  if (pendingGuardTimer) {
+    clearTimeout(pendingGuardTimer)
+    pendingGuardTimer = null
+  }
+}
+
+function notifyFailedDownload () {
+  Notify.create({
+    message: 'Update download did not finish. Please check again.',
+    color: 'negative',
+    icon: 'error',
+    position: 'top'
+  })
+}
+
+function startPendingGuard () {
+  clearPendingGuard()
+  workerSeenDuringPending = false
+  pendingGuardTimer = setTimeout(() => {
+    pendingGuardTimer = null
+    if (isPending.value && !workerSeenDuringPending && !updateAvailable.value) {
+      isPending.value = false
+      notifyFailedDownload()
+    }
+  }, 30000)
+}
+
+function onWorkerRedundant () {
+  const shouldNotify = isPending.value || isDownloading.value
+  clearPendingGuard()
+  isPending.value = false
+  isDownloading.value = false
+  if (shouldNotify) {
+    notifyFailedDownload()
+  }
+}
 
 function showReadyNotify (message = 'Update downloaded. Reload to apply.') {
   if (activeNotify) return
@@ -63,6 +104,8 @@ function showReadyNotify (message = 'Update downloaded. Reload to apply.') {
 }
 
 function markReady () {
+  clearPendingGuard()
+  isPending.value = false
   isDownloading.value = false
   updateAvailable.value = true
   showReadyNotify('Update downloaded. Reload to apply.')
@@ -71,13 +114,28 @@ function markReady () {
 function watchWorker (worker) {
   if (!worker || !navigator.serviceWorker?.controller) return
 
-  if (worker.state === 'installing') isDownloading.value = true
-  if (worker.state === 'installed') markReady()
+  if (worker.state === 'installing') {
+    workerSeenDuringPending = true
+    isDownloading.value = true
+  }
+  if (worker.state === 'installed') {
+    workerSeenDuringPending = true
+    markReady()
+  }
+  if (worker.state === 'redundant') {
+    onWorkerRedundant()
+  }
 
   worker.addEventListener('statechange', () => {
-    if (worker.state === 'installing') isDownloading.value = true
-    else if (worker.state === 'installed') markReady()
-    else if (worker.state === 'redundant') isDownloading.value = false
+    if (worker.state === 'installing') {
+      workerSeenDuringPending = true
+      isDownloading.value = true
+    } else if (worker.state === 'installed') {
+      workerSeenDuringPending = true
+      markReady()
+    } else if (worker.state === 'redundant') {
+      onWorkerRedundant()
+    }
   })
 }
 
@@ -112,10 +170,19 @@ function bindRegistration (reg) {
   if (!reg) return
 
   const coldApplied = checkColdStart(reg)
-  if (reg.waiting && !coldApplied) markReady()
-  if (reg.installing) watchWorker(reg.installing)
+  if (reg.waiting && !coldApplied) {
+    workerSeenDuringPending = true
+    markReady()
+  }
+  if (reg.installing) {
+    workerSeenDuringPending = true
+    watchWorker(reg.installing)
+  }
 
-  reg.addEventListener('updatefound', () => watchWorker(reg.installing))
+  reg.addEventListener('updatefound', () => {
+    workerSeenDuringPending = true
+    watchWorker(reg.installing)
+  })
 }
 
 function onControllerChange () {
@@ -140,6 +207,26 @@ async function fetchRemoteVersion () {
   }
 }
 
+function isNewerVersion (remote, current) {
+  if (!remote || !current || remote === current) return false
+  if (current === 'dev') return true
+  const rParts = String(remote).split('.')
+  const cParts = String(current).split('.')
+  for (let i = 0; i < Math.max(rParts.length, cParts.length); i++) {
+    const rNum = Number(rParts[i])
+    const cNum = Number(cParts[i])
+    if (Number.isFinite(rNum) && Number.isFinite(cNum)) {
+      if (rNum > cNum) return true
+      if (rNum < cNum) return false
+    } else {
+      const cmp = String(rParts[i] || '').localeCompare(String(cParts[i] || ''))
+      if (cmp > 0) return true
+      if (cmp < 0) return false
+    }
+  }
+  return false
+}
+
 export async function checkForUpdate () {
   lastError.value = ''
 
@@ -160,20 +247,33 @@ export async function checkForUpdate () {
     const remote = await fetchRemoteVersion()
     if (remote?.version) remoteVersion.value = remote.version
 
+    if (isNewerVersion(remoteVersion.value, currentVersion) && !updateAvailable.value) {
+      isPending.value = true
+      startPendingGuard()
+    }
+
     if (registration) {
       await registration.update()
+      if (registration.installing || registration.waiting) {
+        workerSeenDuringPending = true
+      }
+      if (registration.waiting) {
+        markReady()
+      } else if (registration.installing) {
+        watchWorker(registration.installing)
+      }
     }
 
     if (updateAvailable.value) {
       Notify.create({ message: 'A new version is ready to install.', color: 'warning', icon: 'system_update_alt', position: 'top' })
-    } else if (isDownloading.value) {
+    } else if (isDownloading.value || isPending.value) {
       Notify.create({ message: 'Downloading the new version…', color: 'info', icon: 'cloud_download', position: 'top' })
-    } else if (remoteVersion.value && remoteVersion.value !== currentVersion) {
-      Notify.create({ message: `Version ${remoteVersion.value} is on the server. Files are still being fetched.`, color: 'info', icon: 'info', position: 'top' })
     } else {
       Notify.create({ message: 'App is up to date.', color: 'positive', icon: 'check_circle', position: 'top' })
     }
   } catch (error) {
+    clearPendingGuard()
+    isPending.value = false
     lastError.value = error?.message || 'Update check failed.'
     Notify.create({ message: lastError.value, color: 'negative', icon: 'error', position: 'top' })
   } finally {
@@ -184,6 +284,8 @@ export async function checkForUpdate () {
 export async function applyUpdate () {
   if (isUpdating.value) return
 
+  clearPendingGuard()
+  isPending.value = false
   isUpdating.value = true
   applying = true
 
@@ -232,6 +334,7 @@ export function usePwaUpdate () {
     isRegistered,
     isChecking,
     isDownloading,
+    isPending,
     isUpdating,
     updateAvailable,
     lastError,

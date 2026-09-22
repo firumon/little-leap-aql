@@ -129,14 +129,14 @@
             <div class="col-12 col-sm">
               <div class="text-body2 text-weight-medium text-grey-9">
                 <template v-if="updateAvailable">A new version is ready</template>
-                <template v-else-if="isDownloading">Downloading the new version</template>
+                <template v-else-if="isDownloading || isPending">Downloading the new version</template>
                 <template v-else>Software update</template>
               </div>
               <div class="text-caption text-grey-7">
                 <template v-if="updateAvailable">
                   Reload now to use the latest version.
                 </template>
-                <template v-else-if="isDownloading">
+                <template v-else-if="isDownloading || isPending">
                   Downloading the update. You can keep working. We will tell you when it is ready.
                 </template>
                 <template v-else>
@@ -151,13 +151,13 @@
                 color="warning"
                 text-color="white"
                 icon="restart_alt"
-                label="Reload to Apply"
+                label="Tap to reload and apply update"
                 :loading="isUpdating"
                 class="full-width-xs"
                 @click="applyUpdate"
               />
               <q-btn
-                v-else-if="isDownloading"
+                v-else-if="isDownloading || isPending"
                 padding="sm"
                 color="info"
                 icon="cloud_download"
@@ -210,6 +210,7 @@ const {
   isRegistered,
   isChecking,
   isDownloading,
+  isPending,
   isUpdating,
   updateAvailable,
   lastError,

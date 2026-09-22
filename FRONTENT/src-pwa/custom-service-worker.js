@@ -1,8 +1,12 @@
 /* eslint-env serviceworker */
 
 import './idb-compat'
-import { clientsClaim } from 'workbox-core'
-import { precacheAndRoute, cleanupOutdatedCaches, createHandlerBoundToURL } from 'workbox-precaching'
+import {
+  precacheAndRoute,
+  cleanupOutdatedCaches,
+  createHandlerBoundToURL,
+  PrecacheController
+} from 'workbox-precaching'
 import { registerRoute, NavigationRoute } from 'workbox-routing'
 import { StaleWhileRevalidate, CacheFirst } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
@@ -13,11 +17,11 @@ const DB_NAME = 'aql-db'
 const DB_VERSION = 2
 
 let swDbPromise = null
-function getDB() {
+function getDB () {
   if (swDbPromise) return swDbPromise
 
   swDbPromise = openDB(DB_NAME, DB_VERSION, {
-    upgrade(db) {
+    upgrade (db) {
       if (!db.objectStoreNames.contains('api-cache')) {
         db.createObjectStore('api-cache', { keyPath: 'url' })
       }
@@ -36,13 +40,13 @@ function getDB() {
         store.createIndex('by-resource-updatedAt', ['resource', 'updatedAt'], { unique: false })
       }
     },
-    blocked() {
+    blocked () {
       console.warn('[SW] DB open blocked')
     },
-    blocking() {
+    blocking () {
       console.warn('[SW] DB version change requested elsewhere, closing...')
       if (swDbPromise) {
-        swDbPromise.then(db => db.close()).catch(() => {})
+        swDbPromise.then((db) => db.close()).catch(() => {})
         swDbPromise = null
       }
     }
@@ -50,31 +54,65 @@ function getDB() {
   return swDbPromise
 }
 
-clientsClaim()
+const CONCURRENCY_LIMIT = 10
 
-// Use with precache injection
+// Depends on workbox-precaching v7 internals; falls back to default install when they change.
+const originalInstall = PrecacheController.prototype.install
+
+PrecacheController.prototype.install = function (event) {
+  if (!(this._urlsToCacheKeys instanceof Map && typeof this.strategy?.handleAll === 'function')) {
+    console.warn('[SW] Parallel precache unavailable, using default install')
+    return originalInstall.call(this, event)
+  }
+
+  const p = (async () => {
+    const entries = Array.from(this._urlsToCacheKeys.entries())
+    let index = 0
+
+    const workers = Array.from({ length: Math.min(CONCURRENCY_LIMIT, entries.length) }, async () => {
+      while (index < entries.length) {
+        const [url, cacheKey] = entries[index++]
+        const integrity = this._cacheKeysToIntegrities?.get(cacheKey)
+        const cacheMode = this._urlsToCacheModes?.get(url)
+        const request = new Request(url, {
+          integrity,
+          cache: cacheMode,
+          credentials: 'same-origin'
+        })
+        await Promise.all(this.strategy.handleAll({
+          params: { cacheKey },
+          request,
+          event
+        }))
+      }
+    })
+
+    await Promise.all(workers)
+  })()
+
+  event.waitUntil(p)
+  return p
+}
+
 precacheAndRoute(self.__WB_MANIFEST)
 
 cleanupOutdatedCaches()
 
-// ── API Token & GAS Integration ──────────────────────────────
-
 let authToken = null
 
-// Listen for token updates from the app
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SET_AUTH_TOKEN') {
     authToken = event.data.token
     console.log('[SW] Auth Token updated')
     if (authToken === null && swDbPromise) {
-      swDbPromise.then(db => db.close()).catch(() => {})
+      swDbPromise.then((db) => db.close()).catch(() => {})
       swDbPromise = null
     }
   }
   if (event.data && event.data.type === 'CLOSE_DB') {
     console.log('[SW] Close DB requested')
     if (swDbPromise) {
-      swDbPromise.then(db => db.close()).catch(() => {})
+      swDbPromise.then((db) => db.close()).catch(() => {})
       swDbPromise = null
     }
   }
@@ -83,127 +121,78 @@ self.addEventListener('message', (event) => {
   }
 })
 
-// Intercept and handle GAS API requests
 registerRoute(
-  ({ url }) => url.href.includes('script.google.com/macros/s/'),
+  ({ request }) => request.mode === 'navigate',
+  createHandlerBoundToURL('index.html')
+)
+
+registerRoute(
+  ({ url }) =>
+    url.pathname.endsWith('.png') ||
+    url.pathname.endsWith('.jpg') ||
+    url.pathname.endsWith('.jpeg') ||
+    url.pathname.endsWith('.svg') ||
+    url.pathname.endsWith('.webp'),
+  new CacheFirst({
+    cacheName: 'image-cache',
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 100,
+        maxAgeSeconds: 30 * 24 * 60 * 60
+      }),
+      new CacheableResponsePlugin({
+        statuses: [0, 200]
+      })
+    ]
+  })
+)
+
+registerRoute(
+  ({ url }) => url.hostname.includes('fonts.googleapis.com') || url.hostname.includes('fonts.gstatic.com'),
+  new StaleWhileRevalidate({
+    cacheName: 'google-fonts',
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 30,
+        maxAgeSeconds: 365 * 24 * 60 * 60
+      })
+    ]
+  })
+)
+
+registerRoute(
+  ({ url }) => url.pathname.includes('/api/') || url.hostname.includes('script.google.com'),
   async ({ request }) => {
-    // Clone request to read body
-    const clonedRequest = request.clone()
-    let body
-    try {
-      body = await clonedRequest.json()
-    } catch (e) {
+    if (request.method !== 'GET') {
       return fetch(request)
     }
 
-    // Inject token for non-login actions
-    if (authToken && body.action !== 'login' && !body.token) {
-      body.token = authToken
-    }
+    const db = await getDB()
+    const cacheKey = request.url
 
-    const newRequest = new Request(request, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify(body),
-      mode: 'cors'
-    })
-
-    const response = await fetch(newRequest)
-
-    // Mirror successful JSON responses to IDB for optional offline diagnostics.
-    const clonedResponse = response.clone()
     try {
-      const data = await clonedResponse.json()
-      const db = await getDB()
-      await db.put('api-cache', {
-        url: newRequest.url,
-        data: data,
-        timestamp: Date.now()
-      })
-    } catch (e) {
-      // Ignore non-json or cache write errors
-    }
-
-    return response
-  },
-  'POST'
-)
-
-// ── Push Notifications ─────────────────────────────────────
-
-self.addEventListener('push', (event) => {
-  if (event.data) {
-    const data = event.data.json()
-    const options = {
-      body: data.body,
-      icon: '/icons/icon-192x192.png',
-      badge: '/icons/icon-128x128.png',
-      data: {
-        url: data.url || '/'
+      const response = await fetch(request)
+      if (response && response.status === 200) {
+        const clonedResponse = response.clone()
+        const data = await clonedResponse.json()
+        await db.put('api-cache', {
+          url: cacheKey,
+          data,
+          timestamp: Date.now()
+        })
       }
+      return response
+    } catch {
+      const cached = await db.get('api-cache', cacheKey)
+      if (cached) {
+        return new Response(JSON.stringify(cached.data), {
+          headers: { 'Content-Type': 'application/json' }
+        })
+      }
+      return new Response(JSON.stringify({ error: 'Offline and no cached data' }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' }
+      })
     }
-
-    event.waitUntil(
-      self.registration.showNotification(data.title, options)
-    )
   }
-})
-
-self.addEventListener('notificationclick', (event) => {
-  event.notification.close()
-  event.waitUntil(
-    clients.openWindow(event.notification.data.url)
-  )
-})
-
-// ── Standard Caching ─────────────────────────────────────────
-
-// Cache the Google Fonts stylesheets with a stale-while-revalidate strategy.
-registerRoute(
-  ({ url }) => url.origin === 'https://fonts.googleapis.com',
-  new StaleWhileRevalidate({
-    cacheName: 'google-fonts-stylesheets',
-  })
 )
-
-// Cache the underlying font files with a cache-first strategy for 1 year.
-registerRoute(
-  ({ url }) => url.origin === 'https://fonts.gstatic.com',
-  new CacheFirst({
-    cacheName: 'google-fonts-webfonts',
-    plugins: [
-      new CacheableResponsePlugin({
-        statuses: [0, 200],
-      }),
-      new ExpirationPlugin({
-        maxAgeSeconds: 60 * 60 * 24 * 365,
-        maxEntries: 30,
-      }),
-    ],
-  })
-)
-
-// Cache images
-registerRoute(
-  ({ request }) => request.destination === 'image',
-  new CacheFirst({
-    cacheName: 'images',
-    plugins: [
-      new ExpirationPlugin({
-        maxEntries: 60,
-        maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
-      }),
-    ],
-  })
-)
-
-// Non-SSR fallbacks to index.html
-if (process.env.MODE !== 'ssr' || process.env.PROD) {
-  const swRegex = process.env.PWA_SERVICE_WORKER_REGEX || 'sw.js'
-  registerRoute(
-    new NavigationRoute(
-      createHandlerBoundToURL(process.env.PWA_FALLBACK_HTML),
-      { denylist: [new RegExp(swRegex), /workbox-(.)*\.js$/] }
-    )
-  )
-}

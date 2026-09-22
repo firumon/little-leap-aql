@@ -210,16 +210,17 @@ values elsewhere — that bypasses sanitization.
 **When to extend**: rarely. Add a compat shim here rather than patching call sites.
 
 ### 7d. PWA Utilities
-**File**: `FRONTENT/src/utils/pwa-utils.js`
+**Files**: `FRONTENT/src/utils/pwa-utils.js`, `FRONTENT/src/composables/core/usePwaUpdate.js`
 
 | Function | Purpose |
 |----------|---------|
 | `isStandalone()` | Detect installed/PWA standalone mode. |
 | `setDeferredPrompt(e)` / `getDeferredPrompt()` / `clearDeferredPrompt()` | Hold the beforeinstallprompt event. |
 | `presentInstallPrompt()` | Trigger the install prompt; resolves `'accepted'` / `'dismissed'` / `'not-available'`. |
+| `usePwaUpdate()` | Core PWA update composable providing reactive singleton update state (`isChecking`, `isDownloading`, `isUpdating`, `updateAvailable`), background check/download, single app-level watcher (`initPwaWatcher`), cold-start auto-apply, and `applyUpdate()`. |
 
-**When to reuse**: any PWA install/standalone detection.
-**When to extend**: add PWA helpers here.
+**When to reuse**: any PWA install/standalone detection or update lifecycle tracking.
+**When to extend**: add PWA helpers here; keep update singleton logic in `usePwaUpdate.js`.
 
 ### 7e. Data Utilities & Dashboard Engine
 **Files**: `FRONTENT/src/composables/data/useDataContext.js`, `FRONTENT/src/composables/data/useDataControls.js`, `FRONTENT/src/composables/dashboard/useDashboardLayout.js`, `FRONTENT/src/composables/resources/useWidgetResolver.js`

@@ -137,7 +137,7 @@
                   Reload now to use the latest version.
                 </template>
                 <template v-else-if="isDownloading">
-                  Please wait. All files must finish downloading first.
+                  Downloading the update. You can keep working. We will tell you when it is ready.
                 </template>
                 <template v-else>
                   Last checked: {{ lastCheckedLabel }}

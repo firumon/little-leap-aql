@@ -7,59 +7,29 @@ import { onMounted } from 'vue'
 import { useAuthStore } from 'src/stores/auth'
 import { useAuthLogic } from 'src/composables/core/useAuthLogic'
 import { requestNotificationPermission, subscribeToPush } from 'src/utils/notifications'
-import { useQuasar } from 'quasar'
+import { initPwaWatcher } from 'src/composables/core/usePwaUpdate'
 
-// Use your actual VAPID public key here
 const VAPID_PUBLIC_KEY = 'BI-L6k-1_rY9m5_nL0E3X7pA_your_vapid_key_here'
 
 onMounted(async () => {
   const authStore = useAuthStore()
-  const $q = useQuasar()
 
-  document.addEventListener('swUpdated', (event) => {
-    const registration = event.detail
-    $q.notify({
-      message: 'App has been updated. Please refresh to use the latest version.',
-      color: 'primary',
-      icon: 'cloud_download',
-      timeout: 0,
-      position: 'top',
-      actions: [
-        {
-          label: 'Refresh',
-          color: 'white',
-          handler: () => {
-            if (registration && registration.waiting) {
-              registration.waiting.postMessage({ type: 'SKIP_WAITING' })
-            }
-            window.location.reload()
-          }
-        },
-        { label: 'Dismiss', color: 'white' }
-      ]
-    })
-  })
-  
-  // Sync token with Service Worker on app load
+  await initPwaWatcher()
+
   if (authStore.token) {
     authStore.notifyServiceWorker(authStore.token)
   }
 
-  // A reload never passes through login(), so the client bootstrap — cache
-  // init, resource status hydration, polling — has to be re-run here for an
-  // existing session. Awaited before notifications so the heartbeat is up
-  // regardless of what the permission prompt does.
   if (authStore.isAuthenticated) {
+    // A reload skips login(), so the session bootstrap must run again here.
     await useAuthLogic().restoreSession()
   }
 
-  // Handle Notifications
   const granted = await requestNotificationPermission()
   if (granted && authStore.token) {
     try {
       const subscription = await subscribeToPush(VAPID_PUBLIC_KEY)
       console.log('[App] Push Subscription:', subscription)
-      // TODO: Send subscription to your backend (GAS)
     } catch (error) {
       console.error('[App] Push subscription failed:', error)
     }

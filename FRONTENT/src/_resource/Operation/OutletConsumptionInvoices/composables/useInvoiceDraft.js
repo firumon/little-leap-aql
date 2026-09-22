@@ -149,25 +149,75 @@ export function seedInvoiceLines (pageState) {
     })
   })
 
-  // A hand-added row is never dropped here; only the card's own remove takes one off.
   for (let i = lineRows(pageState).length - 1; i >= 0; i--) {
     const row = lineRows(pageState)[i]
-    if (row._manual) continue
-    if (!bySku.has(text(row.SKU))) pageState.removeChild(INVOICE_ITEMS, i, INVOICES)
+    const sku = text(row.SKU)
+    if (!bySku.has(sku)) {
+      const manualQty = num(row._manualQty)
+      if (manualQty > 0) {
+        if (num(row.Qty) !== manualQty || (row._sources && row._sources.length > 0) || !row._manual) {
+          pageState.setChildren(INVOICE_ITEMS, i, null, {
+            Qty: manualQty,
+            _manual: true,
+            _manualQty: manualQty,
+            _sources: []
+          }, INVOICES)
+        }
+      } else {
+        pageState.removeChild(INVOICE_ITEMS, i, INVOICES)
+      }
+    }
   }
 
   bySku.forEach((entry, sku) => {
     const at = lineIndexOf(pageState, sku)
     if (at < 0) {
-      pageState.addChild(INVOICE_ITEMS, { SKU: sku, Qty: entry.Qty, _sources: entry.sources }, INVOICES)
+      pageState.addChild(INVOICE_ITEMS, {
+        SKU: sku,
+        Qty: entry.Qty,
+        _manual: false,
+        _manualQty: 0,
+        _sources: entry.sources
+      }, INVOICES)
       return
     }
-    // A hand-added row that a tick now also covers keeps its own quantity on top.
     const current = lineRows(pageState)[at]
-    const manual = current._manual ? num(current.Qty) : 0
-    pageState.setChildren(INVOICE_ITEMS, at, null,
-      { Qty: entry.Qty + manual, _sources: entry.sources }, INVOICES)
+    const manualQty = num(current._manualQty)
+    if (manualQty > 0) {
+      pageState.setChildren(INVOICE_ITEMS, at, null, {
+        Qty: entry.Qty + manualQty,
+        _manual: true,
+        _manualQty: manualQty,
+        _sources: entry.sources
+      }, INVOICES)
+    } else {
+      pageState.setChildren(INVOICE_ITEMS, at, null, {
+        Qty: entry.Qty,
+        _manual: false,
+        _manualQty: 0,
+        _sources: entry.sources
+      }, INVOICES)
+    }
   })
+}
+
+export function removeManualPart (pageState, at) {
+  const row = lineRows(pageState)[at]
+  if (!row) return
+
+  const sources = Array.isArray(row._sources) ? row._sources : []
+  const counted = sources.reduce((sum, s) => sum + num(s.qty), 0)
+
+  if (!sources.length || counted <= 0) {
+    pageState.removeChild(INVOICE_ITEMS, at, INVOICES)
+    return
+  }
+
+  pageState.setChildren(INVOICE_ITEMS, at, null, {
+    Qty: counted,
+    _manualQty: 0,
+    _manual: false
+  }, INVOICES)
 }
 
 // The returns toggle owns the whole set: on credits everything available, off clears it, so
@@ -458,6 +508,7 @@ export function useInvoiceDraft () {
     invoiceDraftLines,
     syncInvoiceDraft,
     seedInvoiceLines,
+    removeManualPart,
     applyInvoiceOutlet,
     invoiceableConsumptionsOf,
     creditableReturnsOf,

@@ -15,6 +15,8 @@ export const ITEMS = 'OutletConsumptionInvoiceItems'
 
 export const CTRL = INVOICE_CONTROL
 
+export { removeManualPart } from 'src/_resource/Operation/OutletConsumptionInvoices/composables/useInvoiceDraft'
+
 export const WIZARD_RESOURCES = [
   'Outlets', 'OutletOperatingRules', 'SKUs', 'Products', 'PriceList',
   'OutletConsumptions', 'OutletConsumptionItems', 'OutletReturns',

@@ -2,8 +2,6 @@
   <div v-if="visible" :class="gutterClass">
     <SectionDividerLabel label="ITEMS TO BILL" />
 
-    <!-- An invoice raised WITHOUT a consumption behind it bills the outlet but changes no
-         shelf: there was no count to deduct. Said only when it applies. -->
     <q-banner v-if="isDirectInvoice" dense rounded class="bg-orange-1 text-body2">
       <template #avatar><q-icon name="warning" color="warning" /></template>
       Creating an invoice directly without a consumption will not record any outlet or
@@ -20,10 +18,8 @@
       <q-list v-else separator>
         <q-item v-for="line in lines" :key="line.SKU">
           <q-item-section :class="ui.flexWrapTextClass">
-            <q-item-label class="text-weight-medium">{{ line.Qty }} x {{ line.primary }}</q-item-label>
             <q-item-label caption>{{ line.secondary }}</q-item-label>
-            <!-- With ONE consumption ticked every line came from it, so a source line under
-                 each row tells the reader nothing. -->
+            <q-item-label class="text-weight-medium">{{ line.primary }}</q-item-label>
             <q-item-label
               v-for="source in (showSources ? line.sources : [])"
               :key="source.key"
@@ -35,16 +31,7 @@
 
           <q-item-section side>
             <div class="row items-center no-wrap q-gutter-x-sm">
-              <div style="width: 72px">
-                <component
-                  :is="NumberField"
-                  :model-value="line.Qty"
-                  :record="line"
-                  :config="{ dense: true, inputClass: 'text-center' }"
-                  header="Qty"
-                  @update:model-value="(value) => setLine(line.at, 'Qty', value)"
-                />
-              </div>
+              <div class="text-subtitle1 text-weight-bold text-primary no-wrap">{{ line.Qty }} ×</div>
               <div style="width: 96px">
                 <component
                   :is="CurrencyField"
@@ -52,11 +39,9 @@
                   :record="line"
                   :config="{ label: 'Unit price', inputClass: 'text-right text-weight-bold' }"
                   header="Price"
-                  @update:model-value="(value) => setLine(line.at, 'Price', value)"
+                  @update:model-value="(value) => setLinePrice(line.at, value)"
                 />
               </div>
-              <!-- Only a hand-added line goes. A counted quantity is a fact; untick the
-                   consumption instead. -->
               <q-btn
                 v-if="line.manual"
                 flat round dense
@@ -71,8 +56,6 @@
       </q-list>
     </q-card>
 
-    <!-- The SHARED drawer, the same control the consumption wizard uses, so "add another
-         item" is one recurring pattern rather than three similar ones. -->
     <AqlAddItemsExpansion
       :items="visibleCandidates"
       label="Add more items"
@@ -106,9 +89,6 @@
 </template>
 
 <script setup>
-// Step 2 - the bill's lines and their prices. Ticked counts arrive grouped one row per SKU.
-// A typed price is stored ON the line, and Layer 2 re-prices tax, discount and the payable
-// around it.
 import { computed, reactive, useAttrs } from 'vue'
 import SectionDividerLabel from 'components/shared/SectionDividerLabel.vue'
 import AqlAddItemsExpansion from 'components/shared/AqlAddItemsExpansion.vue'
@@ -117,7 +97,8 @@ import {
   useInvoiceAddContext,
   NODE,
   ITEMS,
-  stepVisible
+  stepVisible,
+  removeManualPart
 } from 'src/_ui/AQL/composables/Operation/OutletConsumptionInvoices/Add/useInvoiceAddContext'
 
 defineOptions({ name: 'OutletConsumptionInvoicesAddInvoiceItems', inheritAttrs: false })
@@ -158,11 +139,9 @@ const lines = computed(() => {
   })
 })
 
-// Nothing counted behind this bill, so no stock anywhere moves. The banner says so.
 const isDirectInvoice = computed(() =>
   !text(pageState.getRecord('OutletConsumptionCode', NODE)))
 
-// With one count ticked every line came from it, so naming the source says nothing.
 const showSources = computed(() =>
   text(pageState.getRecord('OutletConsumptionCode', NODE)).split(',').filter(Boolean).length > 1)
 
@@ -171,15 +150,15 @@ const visibleCandidates = computed(() => candidates.value.slice(0, CANDIDATE_LIM
 
 const pendingQty = reactive({})
 
-const setLine = (at, key, value) => pageState.setChildren(ITEMS, at, key, num(value), NODE)
+const setLinePrice = (at, value) => pageState.setChildren(ITEMS, at, 'Price', num(value), NODE)
 
-const removeLine = (at) => pageState.removeChild(ITEMS, at, NODE)
+const removeLine = (at) => removeManualPart(pageState, at)
 
 function addItem (sku) {
   const code = text(sku)
   const qty = num(pendingQty[code] ?? 1)
   if (!code || qty <= 0) return
-  pageState.addChild(ITEMS, { SKU: code, Qty: qty, _manual: true, _sources: [] }, NODE)
+  pageState.addChild(ITEMS, { SKU: code, Qty: qty, _manual: true, _manualQty: qty, _sources: [] }, NODE)
   delete pendingQty[code]
 }
 </script>

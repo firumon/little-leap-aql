@@ -72,7 +72,7 @@ graph TD
 
 ### 3.5 Sales Consumptions & Invoicing (`OutletConsumptionInvoices`)
 1. **Consumption Tracking**: Recorded during regular audit cycles by comparing opening balance + deliveries vs. ending shelf stock.
-2. **Invoice Generation**: Consumed items generate an `OutletConsumptionInvoices` record calculating wholesale price, discounts, and applicable UAE VAT (5%).
+2. **Invoice Generation**: Consumed items generate an `OutletConsumptionInvoices` record calculating wholesale price, discounts, and applicable UAE VAT (5%). In the wizard (ITEMS TO BILL step), lines are seeded via `seedInvoiceLines` grouping consumption items per SKU, preserving any manual additions (`_manualQty`) when ticking/unticking consumptions.
 3. **Invoice Issuance**: Invoice PDF is generated via the Reports system and dispatched to the outlet's accounting department.
 
 ### 3.6 Payment Collections & Settlement (`OutletPayments`)

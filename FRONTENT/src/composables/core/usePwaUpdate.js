@@ -19,6 +19,7 @@ const appName = process.env.APP_NAME || 'AQL'
 const buildTime = process.env.BUILD_TIME || ''
 
 let registration = null
+let boundRegistration = null
 let applying = false
 let applyTimer = null
 let isWatcherInitialized = false
@@ -111,32 +112,36 @@ function markReady () {
   showReadyNotify('Update downloaded. Reload to apply.')
 }
 
-function watchWorker (worker) {
-  if (!worker || !navigator.serviceWorker?.controller) return
-
-  if (worker.state === 'installing') {
-    workerSeenDuringPending = true
-    isDownloading.value = true
-  }
-  if (worker.state === 'installed') {
-    workerSeenDuringPending = true
+async function markReadyIfNewer () {
+  if (applying) return
+  const remote = await fetchRemoteVersion()
+  if (remote?.version) remoteVersion.value = remote.version
+  if (isNewerVersion(remoteVersion.value, currentVersion)) {
     markReady()
+    return
   }
-  if (worker.state === 'redundant') {
-    onWorkerRedundant()
-  }
+  clearPendingGuard()
+  isPending.value = false
+  isDownloading.value = false
+}
 
-  worker.addEventListener('statechange', () => {
+function watchWorker (worker) {
+  if (!worker) return
+
+  const onState = () => {
     if (worker.state === 'installing') {
       workerSeenDuringPending = true
       isDownloading.value = true
-    } else if (worker.state === 'installed') {
+    } else if (worker.state === 'installed' || worker.state === 'activated') {
       workerSeenDuringPending = true
-      markReady()
+      markReadyIfNewer()
     } else if (worker.state === 'redundant') {
       onWorkerRedundant()
     }
-  })
+  }
+
+  onState()
+  worker.addEventListener('statechange', onState)
 }
 
 function checkColdStart (reg) {
@@ -165,9 +170,11 @@ function checkColdStart (reg) {
 }
 
 function bindRegistration (reg) {
+  if (reg && reg === boundRegistration) return
   registration = reg
   isRegistered.value = !!reg
   if (!reg) return
+  boundRegistration = reg
 
   const coldApplied = checkColdStart(reg)
   if (reg.waiting && !coldApplied) {
@@ -261,6 +268,8 @@ export async function checkForUpdate () {
         markReady()
       } else if (registration.installing) {
         watchWorker(registration.installing)
+      } else if (isNewerVersion(remoteVersion.value, currentVersion)) {
+        markReady()
       }
     }
 
@@ -325,6 +334,8 @@ export async function initPwaWatcher () {
   const reg = await navigator.serviceWorker.getRegistration()
   if (reg) {
     bindRegistration(reg)
+  } else {
+    navigator.serviceWorker.ready.then((readyReg) => bindRegistration(readyReg))
   }
 }
 

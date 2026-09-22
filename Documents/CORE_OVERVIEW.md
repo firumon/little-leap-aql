@@ -23,15 +23,7 @@ Inbound logistics, warehouse intake, and internal stock control support this com
 - **Frontend**: Quasar v2 (Vue 3, Pinia, Axios, Vite) as a responsive PWA.
   - Development: `npm run dev` inside `FRONTENT/`
   - Production Build: `npm run build` inside `FRONTENT/`
-
-### 2.1 PWA Lifecycle & Update Flow
-AQL delivers service-worker-driven offline capability and background updates through `custom-service-worker.js` and `usePwaUpdate.js`:
-- **Concurrent Precaching**: Service worker precaching runs with bounded concurrency (10 concurrent requests) via Workbox's `PrecacheController` to complete precache asset downloads in seconds rather than sequential minutes.
-- **Background Downloads**: When a new version is deployed or checked from Settings, the service worker downloads the update silently in the background while the user continues working unaffected.
-- **Strict `skipWaiting` Policy**: `skipWaiting` is never invoked automatically mid-session. The running app stays pinned to its current version until the user explicitly clicks the **Reload** action.
-- **Single App-Level Watcher**: A singleton watcher (`initPwaWatcher`) mounted once in `App.vue` listens for update readiness across all pages, presenting a persistent Quasar notification banner: *"Update downloaded. Reload to apply."*
-- **Cold-Start Auto-Apply**: If a waiting service worker exists upon a cold app boot, the app immediately posts `SKIP_WAITING` and reloads before user interaction starts, guarded by a session flag against infinite reload loops.
-- **Preload Error Safety Net**: Listens for Vite's `vite:preloadError` on `window`. If a stale dynamically imported code chunk fails to load over the network after an asset rotation, the app displays the reload prompt and applies any waiting worker rather than crashing the route.
+  - Runs as a PWA: updates download in the background and apply only when the user reloads (`src/composables/core/usePwaUpdate.js`).
 - **Backend**: Google Apps Script (GAS) Web App with a unified `doPost` dispatcher and JSON-based action routing.
   - Deployment: `npm run gas:push` from root or `cd GAS && clasp push`.
 - **Data Layer**: Google Sheets partitioned by domain:

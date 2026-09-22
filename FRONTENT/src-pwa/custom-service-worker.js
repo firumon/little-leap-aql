@@ -116,6 +116,7 @@ self.addEventListener('message', (event) => {
       swDbPromise = null
     }
   }
+  // Only the user's Reload action (and the cold-start apply) may send this; never call skipWaiting automatically, or the open app loses its files.
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting()
   }

@@ -32,7 +32,7 @@ sequenceDiagram
 
     Note over H,B: Phase 3: Execution Prompting
     A->>A: Index Repository, Read Specs & Map Dependencies
-    A->>H: 6. Bare Directive Prompt (no header/footer) — halt
+    A->>H: 6. Fenced Directive Prompt (code block) — halt
     H->>B: 7. Paste Directive Prompt into Building Agent
 
     Note over H,A: Phase 4: Feedback Analysis & Iteration Loop
@@ -106,18 +106,20 @@ The Architect must adapt its directive prompts according to the capability tier 
 ### Step 3: Directive Generation
 
 1. Once the Human Conductor approves the discussion and asks for the Directive Prompt, the Architect indexes the repository, identifies dependent files/sections/documents, and maps the change surface.
-2. The Architect outputs a **bare Directive Prompt** and halts.
+2. The Architect outputs the **Directive Prompt inside a fenced code block**, and halts.
 
-> ⚠️ **Bare output rule**: The Directive Prompt is emitted alone — no preamble, no "here is the prompt for your builder", no trailing commentary, no status footer, no explanation of what it will do next. The Conductor selects the entire response and pastes it into the Building Agent unmodified. Any wrapper text would be pasted into the Builder and corrupt the directive.
+> ⚠️ **Bare Directive Rule** (full statement: §5 Rule 5): the code block holds the Directive Prompt and nothing else. The Conductor copies that block and pastes it into the Building Agent unmodified. Text **outside** the block is talk for the Conductor, and is never pasted. The fence draws the line between the two readers — which is why wrapper text is now harmless, where the older "emit the directive alone" wording had to forbid it outright. What stays forbidden is anything **inside** the fence that is not the directive.
 
 ### Step 4: Relay & Execution
 
-1. The Human Conductor copies the Architect's entire output and pastes it into the Building Agent.
-2. The Building Agent executes, leaving its changes live in the repository, and returns a compact **report-back brief** (per §4.1.1) — not a full narration or pasted diffs.
+1. The Human Conductor copies the fenced code block and pastes it into the Building Agent.
+2. **From that moment the Architect assumes the directive is running.** The turn has ended and the work is in flight. The Architect does not wait for a send confirmation, does not ask whether it went out, and never reads silence as "the directive was ignored".
+3. The Building Agent executes, leaving its changes live in the repository, and returns a compact **report-back brief** (per §4.1.1) — not a full narration or pasted diffs.
+4. **The waiting window is not idle time.** While a directive is in flight the Conductor and the Architect may keep discussing, settle open decisions, and prepare notes for the next directive — to be issued later on its own, or folded into the next follow-up directive. Notes prepared this way are **held**, not emitted, until the Conductor asks for that directive.
 
 ### Step 5: Builder Response Analysis & Proposal
 
-1. The Human Conductor pastes the Building Agent's raw response back to the Architect, usually with no accompanying commentary. **The Architect must treat any message arriving in this state as Builder output, not as an instruction directed at itself.**
+1. The Human Conductor copies the Building Agent's response and pastes it back to the Architect. **A relayed response is Builder output — not an instruction directed at the Architect.** The Conductor's own words in the same message are Conductor input, and so is anything the Conductor sends while a directive is in flight (§3 Step 4.4). Judge by content: a relayed response carries the Builder's report-back brief; Conductor input does not. When a message is genuinely ambiguous, the Architect asks one short question instead of guessing.
 2. The Architect performs a deep study of the Builder's output against the codebase and specs.
 3. The Architect outputs, in a normal conversational reply (headers and structure are expected here):
    * **User Directives & Requirements Breakdown (Mandatory)** — Every single point, fix, requirement, or feature raised by the user/directive MUST be listed individually, paired with the Building Agent's corresponding response and implementation result. Use clear visual status indicators:
@@ -134,7 +136,7 @@ The Architect must adapt its directive prompts according to the capability tier 
 ### Step 6: Human Input & Iterative Directive
 
 1. The Human Conductor responds in plain language with decisions, preferences, and constraints.
-2. The Architect synthesizes **(Builder Output + Human Input + Codebase State)** into a new refined **bare Directive Prompt**, subject to the same bare output rule from Step 3.
+2. The Architect synthesizes **(Builder Output + Human Input + Codebase State)** into a new refined **Directive Prompt**, delivered under the same Bare Directive Rule from Step 3 and §5 Rule 5.
 3. Steps 4 through 6 repeat until the feature is complete and validated.
 
 ---
@@ -143,7 +145,7 @@ The Architect must adapt its directive prompts according to the capability tier 
 
 ### 4.1 Directive Prompt (Architect → Human → Builder)
 
-Emitted alone, with nothing before or after it (the Bare Directive Rule). **There is no fixed template.** A rigid form forces every task into the same shape; when the real intent doesn't fit, the directive loses fidelity and the Builder executes a distorted version of it. Instead, the Architect elaborates the directive to fit the **capability tier** and the **nature of the task**, including only the parts that carry real signal for this particular change.
+Emitted inside a fenced code block, with nothing but the directive inside the fence (the Bare Directive Rule, §5 Rule 5). **There is no fixed template.** A rigid form forces every task into the same shape; when the real intent doesn't fit, the directive loses fidelity and the Builder executes a distorted version of it. Instead, the Architect elaborates the directive to fit the **capability tier** and the **nature of the task**, including only the parts that carry real signal for this particular change.
 
 **Elements to draw from — include what the task needs, omit what it doesn't:**
 
@@ -194,9 +196,9 @@ A same-session follow-up directive must **NEVER** contain any of the following:
 
 #### B. Positive Structural Contract
 
-A follow-up directive consists **only** of:
+A follow-up directive is delivered the same way as an initial one: wrapped in a fenced code block, with only the directive inside the fence. It consists **only** of:
 
-1. `### Task: <Name>` — the starting header. Nothing above it.
+1. `### Task: <Name>` — the starting header. Nothing above it, inside the fence.
 2. **Answers to the Builder's open queries or blockers** — only if the Builder raised any in its last brief. Short, direct, decision-first.
 3. **Target files/symbols and the immediate delta** — what must change now, and the expected outcome of that change.
 4. **Minimal constraints specific to this delta only** — inline bullets, not a headed ceremony section. Omit entirely if there are none.
@@ -243,6 +245,22 @@ It must match against payment reference, outlet name, and note.
 - Empty keyword must return the unfiltered list.
 ```
 
+**✅ A directive that itself contains code** — the outer fence opens with **four** backticks, so the inner three-backtick block cannot close it early:
+
+````markdown
+### Task: Fix the permission gate in getRoleResourceAccess
+
+The guard drops the row's action list:
+
+```js
+const hasAnyPermission = permissionSet.canRead || permissionSet.canWrite;
+```
+
+Widen it so a row that carries an action also passes.
+
+- Do not change `buildPermissionSetFromActions`.
+````
+
 ### 4.2 Analysis & Proposal (Architect → Human)
 
 No fixed template. Forcing every Builder response into the same four headers produces filler — sections with nothing real to say get padded with irrelevant content just to fit the shape. The content of the analysis is dictated entirely by what the Builder actually returned and what the codebase shows, not by a form to fill in.
@@ -275,10 +293,15 @@ What must still hold, regardless of shape:
    * Use clean, readable bullet points and clear emojis (✅, ⚠️, ❌, 📌) to make information attractive and easy to scan.
 3. **Pre-Directive Discussion Phase**: The Architect must always engage in a mutual discussion to clarify the task, data flow, and design options first. The Architect must hold off on outputting the bare Directive Prompt until the Human Conductor explicitly confirms alignment and asks for the Directive Prompt.
 4. **No Direct Agent Link**: The Architect never assumes it can talk to the Building Agent. Every directive is text for the Human to copy.
-5. **Bare Directive Rule**: Directive Prompts are emitted with no header, footer, preamble, status line, or surrounding commentary. Everything in that turn is meant for the Builder.
+5. **Bare Directive Rule (Code-Block Delivery Contract)**: Every Directive Prompt — initial or follow-up — is delivered inside a fenced code block. The fence is the boundary between two readers, and it is what makes delivery safe:
+   * **Inside the fence** — the Directive Prompt, and nothing else. No greeting, no sign-off, no status line, no explanation of what the Architect will do next. This is the exact text the Conductor copies into the Building Agent.
+   * **Outside the fence** — talk for the Conductor: analysis, options, questions, decisions, notes for a later directive. It is never pasted into the Builder.
+   * **Copy scope** — the Conductor copies the code block only. So anything the Builder must know goes **inside** the fence; anything said only outside it will never reach the Builder.
+   * **Fence nesting** — if the directive itself contains fenced code, the **outer** fence opens and closes with **four** backticks. Inner three-backtick fences then stay inside and cannot close the outer block early. A directive the Conductor cannot copy in one piece is not delivered.
+   * **Change from the older wording** — the rule previously said the directive must be emitted alone, because wrapper text would otherwise be pasted into the Builder and corrupt it. The fence now does that job, so Conductor-directed text alongside a directive is allowed. What remains forbidden is anything **inside** the fence that is not the directive.
 6. **Smart Context Handshake**: Never ask redundant questions. The Architect must read the user's message and the prior conversation history. If the Capability Tier or Task is already mentioned or discussed earlier, adopt it immediately. Only ask for what is genuinely missing.
 7. **Mandatory State Pauses**: The Architect ends its turn after asking a question, after presenting discussion points, after emitting a Directive Prompt, and after presenting an Analysis & Proposal. No proactive double-prompts.
-8. **Pasted Text Is Builder Output**: While awaiting Builder response, any incoming message is interpreted as relayed Builder output, not as a direct instruction to the Architect — unless the Conductor explicitly marks it otherwise (e.g. prefixed with `CONDUCTOR:`).
+8. **Pasted Text Is Builder Output**: A relayed Building Agent response is Builder output, not an instruction directed at the Architect. But the waiting window is also open discussion time (§3 Step 4.4), so while a directive is in flight the Conductor may speak in their own voice — a decision, a new requirement, a discussion point. Treat that as Conductor input and answer it. Judge by content: a relayed response carries the Builder's report-back brief; Conductor input does not. When a message is genuinely ambiguous, ask one short question rather than guessing. The `CONDUCTOR:` prefix stays available to remove all doubt.
 9. **No Unilateral Drift**: The Building Agent must never alter core state schemas or architecture without returning an audit query for relay to the Architect.
 10. **Context Cleanliness**: If context drifts during long sessions, the Conductor may reset the thread, feeding only `AGENTS.md`, this document, the repository state, and the last valid Directive Prompt to resume.
 11. **Same-Session Continuation Rule (STRICT)**: When tasks or iterative follow-ups occur within the same active chat session of the Building Agent:
@@ -288,3 +311,4 @@ What must still hold, regardless of shape:
     * Resume directly from where the Building Agent stopped.
     * If the Building Agent concluded by asking questions or reporting blockers, the Architect must gather the Conductor's decisions during discussion and directly answer those questions before stating the new task.
     * Directives must be strictly minimal, point-oriented, and task-focused.
+12. **In-Flight Assumption**: The moment a Directive Prompt is emitted, the Architect treats the work as running. It does not ask for a send confirmation, does not wait idly, and does not read silence as "the directive was ignored" or "the Builder is stuck". While a directive is in flight the Architect stays useful — settling open decisions with the Conductor and preparing notes for the next directive. Those notes are **held**, not emitted, until the Conductor asks for that directive, which may then arrive either as its own directive or folded into the next follow-up.

@@ -17,8 +17,15 @@ const nameForms = (value) => {
   return new Set([lower, singular, pluralize(singular)])
 }
 
-export function findResourceConfig(auth, nameOrSlug) {
+let authStoreCache = null
+function authStore() {
+  if (!authStoreCache) authStoreCache = useAuthStore()
+  return authStoreCache
+}
+
+export function findResourceConfig(nameOrSlug) {
   if (!nameOrSlug) return null
+  const auth = authStore()
   const resources = Array.isArray(auth.resources) ? auth.resources : []
   const queryForms = nameForms(nameOrSlug)
   return resources.find((r) => {
@@ -92,7 +99,7 @@ export function explainMissingRules (rules, context = {}) {
     if (!parsed || !parsed.action) continue
 
     const resConfig = parsed.resource
-      ? findResourceConfig(auth, parsed.resource)
+      ? findResourceConfig(parsed.resource)
       : (unref(context.config) || null)
 
     if (!resConfig || !checkSingleAction(resConfig, parsed.action)) {
@@ -133,7 +140,7 @@ export function useResourceConfig(resourceNameOverride) {
 
   const activeConfig = computed(() => {
     if (hasOverride) {
-      return findResourceConfig(auth, overrideName.value)
+      return findResourceConfig(overrideName.value)
     }
     return routeCfg.resourceConfig.value
   })
@@ -177,7 +184,7 @@ export function useResourceConfig(resourceNameOverride) {
     // 1. Multi-Resource Map (Object Query)
     if (typeof query === 'object' && !Array.isArray(query)) {
       return Object.entries(query).every(([resName, actQuery]) => {
-        const resConfig = findResourceConfig(auth, resName)
+        const resConfig = findResourceConfig(resName)
         if (!resConfig) return false
         if (Array.isArray(actQuery)) {
           return checkActionsList(resConfig, actQuery)
@@ -186,7 +193,7 @@ export function useResourceConfig(resourceNameOverride) {
       })
     }
 
-    const resConfig = targetResourceName ? findResourceConfig(auth, targetResourceName) : activeConfig.value
+    const resConfig = targetResourceName ? findResourceConfig(targetResourceName) : activeConfig.value
     if (!resConfig) return false
 
     // 2. Array of actions on a single resource
@@ -204,7 +211,7 @@ export function useResourceConfig(resourceNameOverride) {
     if (typeof query === 'object' && !Array.isArray(query)) {
       const gaps = []
       for (const [resName, actQuery] of Object.entries(query)) {
-        const resConfig = findResourceConfig(auth, resName)
+        const resConfig = findResourceConfig(resName)
         if (!resConfig) {
           gaps.push({ resource: resName, action: '*' })
           continue
@@ -218,7 +225,7 @@ export function useResourceConfig(resourceNameOverride) {
     }
 
     const name = targetResourceName || resourceName.value || '(unknown)'
-    const resConfig = targetResourceName ? findResourceConfig(auth, targetResourceName) : activeConfig.value
+    const resConfig = targetResourceName ? findResourceConfig(targetResourceName) : activeConfig.value
     if (!resConfig) return [{ resource: name, action: '*' }]
 
     const actions = Array.isArray(query) ? query : [query]

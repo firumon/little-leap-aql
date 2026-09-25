@@ -1,16 +1,13 @@
 import { computed } from 'vue'
-import { useAuthStore } from 'src/stores/auth'
 import { findResourceConfig } from '../useResourceConfig'
 
 // Required-header checks for every node, plus any `strategy.validate` override.
 export function usePageStateValidation ({ state, registry, strategy = {} }) {
-  const auth = useAuthStore()
-
   // Per NODE, not per page. A batch writes several resources, and holding a
   // StockMovements row to OutletRestocks' required headers fails it for a column
   // its sheet does not have.
   function requiredHeadersFor (resource) {
-    const raw = findResourceConfig(auth, resource)?.requiredHeaders || ''
+    const raw = findResourceConfig(resource)?.requiredHeaders || ''
     return raw ? raw.split(',').map((h) => h.trim()).filter(Boolean) : []
   }
 

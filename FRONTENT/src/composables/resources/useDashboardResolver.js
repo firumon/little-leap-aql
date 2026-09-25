@@ -81,7 +81,7 @@ export function useDashboardResolver () {
     }
 
     return Object.entries(p).every(([resName, verbs]) => {
-      if (verbs === true) return !!findResourceConfig(auth, resName)
+      if (verbs === true) return !!findResourceConfig(resName)
       const list = Array.isArray(verbs) ? verbs : [verbs]
       return evalPermissionRules(list.map((a) => `${resName}:${a}`))
     })
@@ -206,7 +206,6 @@ export function useDashboardResolver () {
 
         const raw = scoreDashboardItem(
           isCustom ? props : (dbiResult || props),
-          auth,
           resource,
           isCustom
         )

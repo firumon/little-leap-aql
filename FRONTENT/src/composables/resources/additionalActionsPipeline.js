@@ -200,7 +200,7 @@ export function useAdditionalActionsPipeline (resourceName = null) {
 
     const key = String(raw ?? '').trim()
     if (!key) return { resource: name, action: null }
-    const config = findResourceConfig(auth, name)
+    const config = findResourceConfig(name)
     const action = normalizeAdditionalActions(config?.additionalActions)
       .find((entry) => String(entry.action) === key) || null
     return { resource: name, action }

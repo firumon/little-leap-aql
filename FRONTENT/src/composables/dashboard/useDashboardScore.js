@@ -31,18 +31,18 @@ function resolvePermissionWeight (actionOrList) {
   return normalizeVerbWeight(actionOrList)
 }
 
-export function scoreDashboardItem (item, auth, ownerResource = '', isCustom = false) {
+export function scoreDashboardItem (item, ownerResource = '', isCustom = false) {
   if (!item) return 0
 
   if (isCustom) {
     const resName = ownerResource || item.resource || ''
-    const cfg = findResourceConfig(auth, resName)
+    const cfg = findResourceConfig(resName)
     if (!cfg) return 1
     const scopeKey = String(cfg.scope || 'master').toLowerCase()
     return SCOPE_WEIGHTS[scopeKey] || 1
   }
 
-  const ownerCfg = findResourceConfig(auth, ownerResource || item.resource || '')
+  const ownerCfg = findResourceConfig(ownerResource || item.resource || '')
   const weightOf = (cfg, verb) => {
     if (!cfg) return 0
     if (cfg.parentResource && cfg !== ownerCfg) return 0.75
@@ -58,7 +58,7 @@ export function scoreDashboardItem (item, auth, ownerResource = '', isCustom = f
       sumResourceScore += weightOf(ownerCfg, p)
     } else if (typeof p === 'object') {
       for (const [resName, verb] of Object.entries(p)) {
-        sumResourceScore += weightOf(findResourceConfig(auth, resName), verb)
+        sumResourceScore += weightOf(findResourceConfig(resName), verb)
       }
     }
   }
